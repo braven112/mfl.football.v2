@@ -218,16 +218,23 @@ function restoreTimestampOnlyRewrites() {
   return restored;
 }
 
-/** The milestone baseline must be what is committed, or awards go unposted. */
+/**
+ * The milestone baseline must be what is committed, or awards go unposted.
+ *
+ * Fails closed on a snapshot that is on disk but NOT in HEAD, too: the producer
+ * would diff against that uncommitted file and treat everything in it as
+ * already posted. Genuinely absent from both is fine — the producer's own
+ * "no previous snapshot" path then seeds silently and emits nothing.
+ */
 function assertSnapshotsCommitted() {
   const dirty = chainLeagues()
     .map((league) => derivedPath(league, 'franchise-history.json'))
     .filter((file) => {
       const committed = headContent(file);
-      if (committed === null) return false;
       const current = currentContent(path.join(ROOT, file));
-      // A snapshot that is tracked but missing on disk is not a safe baseline
-      // either — the producer would read no previous badges and post nothing.
+      if (committed === null) return current !== null;
+      // Tracked but missing on disk is not a safe baseline either — the
+      // producer would read no previous badges and post nothing.
       return current === null || current !== committed;
     });
   if (dirty.length > 0) {

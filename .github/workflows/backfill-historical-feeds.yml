@@ -122,8 +122,16 @@ jobs:
       - name: Recompute record book
         run: node ./scripts/compute-record-book.mjs --league=${{ inputs.league }}
 
-      - name: Verify the derived chain agrees with itself
-        run: pnpm vitest run $(node ./scripts/recompute-derived-chain.mjs --print-guard-tests)
+      # The chain's own suites, PLUS the schedule-integrity replay — this lane
+      # is the one that refetches schedules, and MFL has served fabricated
+      # pairings with correct scores for AFL 2012-2015 (see the header). The
+      # backfill script's "never trade a fuller copy for a thinner one" guard
+      # compares counts, which a same-size fabrication passes, so without this
+      # the gate would bless a corrupted schedule and a chain derived from it.
+      - name: Verify the derived chain and the schedules it came from
+        run: |
+          pnpm vitest run tests/afl-schedule-integrity.test.ts \
+            $(node ./scripts/recompute-derived-chain.mjs --print-guard-tests)
 
       # This league's feeds and derived/ (record book included), plus every
       # file the chain lists — both leagues' chains and the feeds milestone

@@ -38,6 +38,7 @@ import {
   buildMilestonePost,
   mergeMilestonePosts,
   resolveMilestoneEmission,
+  EMIT_MILESTONE_POSTS_FLAG,
 } from './lib/franchise-milestone-posts.mjs';
 import { isSeasonComplete } from './lib/theleague-season-complete.mjs';
 import { aliasDivisionName, isUsableDivisionName } from '../src/utils/division-aliases.mjs';
@@ -1591,8 +1592,15 @@ if (!milestoneEmission.emit) {
         );
       }
     } else {
-      console.warn(
-        `[franchise-history] could not load ${SCHEFTER_FEED_PATH} — skipping milestone emission`
+      // Loudly, not a warning: emission was REQUESTED and there are awards to
+      // post. Writing the snapshot anyway would make them unpostable forever —
+      // the next run diffs against it and reads them as already handled. Throw
+      // before the snapshot is written, so the caller commits nothing.
+      throw new Error(
+        `[franchise-history] ${SCHEFTER_FEED_PATH} is missing or has no posts[] array, but ` +
+          `${EMIT_MILESTONE_POSTS_FLAG} was passed and ${milestonePosts.length} milestone(s) are ` +
+          `waiting. Committing the snapshot without them means they are never posted. Restore the ` +
+          `feed and re-run.`
       );
     }
   }

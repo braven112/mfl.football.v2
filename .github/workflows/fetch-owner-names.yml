@@ -152,20 +152,23 @@ jobs:
         if: inputs.write
         run: pnpm vitest run tests/fetch-owner-names.test.ts $(node ./scripts/recompute-derived-chain.mjs --print-guard-tests)
 
-      - name: Resolve paths to commit
-        if: inputs.write
-        id: paths
-        run: echo "add=src/data/owners-registry.json $(node ./scripts/recompute-derived-chain.mjs --print-outputs --sep=' ')" >> "$GITHUB_OUTPUT"
-
+      # commit-feed-and-push, not the generic commit-push action: the chain now
+      # carries the Schefter feed (milestone posts) into this commit, and the
+      # feed has several writers on overlapping crons — a plain push loses the
+      # race and this job's names go with it. The helper rebuilds on the fetched
+      # tip, merges the feed by post id and retries. "Nothing changed" is
+      # guarded inside it.
       - name: Commit and push
         if: inputs.write
-        uses: ./.github/actions/commit-push
-        with:
-          add-paths: ${{ steps.paths.outputs.add }}
-          commit-message: 'chore: name owners from MFL (${{ inputs.league }})'
-          no-changes-message: 'No new owner names — nothing to commit.'
-          git-user-name: 'Owner Names Bot'
-          push-ref: ${{ github.ref_name }}
+        env:
+          TARGET_BRANCH: ${{ github.ref_name }}
+        run: |
+          git config user.name "Owner Names Bot"
+          git config user.email "actions@users.noreply.github.com"
+          node ./scripts/commit-feed-and-push.mjs \
+            --branch "$TARGET_BRANCH" \
+            --message "chore: name owners from MFL (${{ inputs.league }})" \
+            --files "src/data/owners-registry.json,$(node ./scripts/recompute-derived-chain.mjs --print-outputs)"
 
       - name: Say what happens next
         if: always()
