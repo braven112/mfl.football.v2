@@ -242,6 +242,13 @@ describe('the fetcher', () => {
     expect(src).toMatch(/response\.status === 404 && !fs\.existsSync\(OUT_FILE\)/);
   });
 
+  it('refuses to write an implausible snap share', () => {
+    // The job is unattended and prunes the season it replaces, so a scale
+    // change upstream must fail loudly rather than publish and delete.
+    expect(src).toMatch(/if \(worst > 100\)/);
+    expect(src).toMatch(/throw new Error\(\s*`Implausible snap share/);
+  });
+
   it('prunes seasons the pages could never select', () => {
     expect(src).toMatch(/function pruneOldSeasons\(\)/);
     expect(src).toMatch(/const keepFrom = SNAP_YEAR - 1;/);

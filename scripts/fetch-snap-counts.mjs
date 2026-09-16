@@ -170,6 +170,20 @@ async function run() {
   const { matched, matchCount, missCount } = matchToMflPlayers(snapPlayers, mflPlayers);
   console.log(`Matched ${matchCount} players to MFL IDs (${missCount} unmatched)`);
 
+  // NFLverse ships `offense_pct` as a 0-1 fraction — verified at exactly 1.0
+  // max across all 25,395 REG rows of 2025 and 1,492 of 2026. The whole
+  // denominator (`snaps / pct` = implied team plays) rests on that. If a
+  // release ever switched to 0-100, every share would inflate ~100x, and this
+  // job runs unattended and now PRUNES the season it replaces — so refuse to
+  // write rather than publish it and delete the good copy behind it.
+  const worst = snapPlayers.reduce((m, p) => (p.offensePct > m ? p.offensePct : m), 0);
+  if (worst > 100) {
+    throw new Error(
+      `Implausible snap share ${worst}% — NFLverse's offense_pct is no longer a 0-1 fraction. ` +
+      `Fix the scale in scripts/lib/snap-counts.mjs before this writes.`,
+    );
+  }
+
   // The weeks covered are what tells a reader a 58% is one game, not a season.
   const weeksCovered = rows.reduce((max, r) => {
     if ((r.game_type || '') !== 'REG') return max;
