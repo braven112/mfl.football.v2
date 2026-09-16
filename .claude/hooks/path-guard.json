@@ -246,9 +246,11 @@
     {
       "name": "github-workflows",
       "paths": [
-        ".github/workflows/*.yml"
+        ".github/workflows/*.yml",
+        ".github/actions/**/*.yml",
+        "package.json"
       ],
-      "note": "No new vars.* feature gates (comment out cron: to disable a job; gate with a const in the script); league ids/hosts come from the registry; a weekly job needs isSeasonWindowOpen, not \"the feeds have a completed week\". See CLAUDE.md \"Feature flags \u2014 code, not GitHub Actions variables\".",
+      "note": "No new vars.* feature gates (comment out cron: to disable a job; gate with a const in the script); league ids/hosts come from the registry; a weekly job needs isSeasonWindowOpen, not \"the feeds have a completed week\". Dependencies install ONLY via `uses: ./.github/actions/setup` \u2014 never npm (it ignores pnpm-lock.yaml and re-resolves peers, which killed five crons for four days), and never a raw pnpm/action-setup (it installs nothing). The pnpm version lives only in package.json#packageManager. A workflow MAY skip the install, but only while every `node scripts/\u2026` it runs is dependency-free all the way down \u2014 an empty node_modules fails silently (dynamic import in a try/catch \u2192 exit 0, green check). See CLAUDE.md \"Feature flags \u2014 code, not GitHub Actions variables\" and docs/claude/rules/storage-and-build.md \u00a7 \"CI installs with pnpm, never npm\".",
       "tests": [
         "tests/workflow-feature-flag-guard.test.ts",
         "tests/league-literal-guard.test.ts",

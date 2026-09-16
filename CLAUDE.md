@@ -14,7 +14,16 @@ cross-cutting, add a line here. Keep this file short.
 ## Project basics
 
 - **Framework:** Astro (SSR + SSG). React for client-hydrated islands.
-- **Package manager:** pnpm (not npm). Scripts: see `package.json`.
+- **Package manager:** pnpm (not npm). Scripts: see `package.json`. This is
+  not a preference: `npm ci|install` ignores `pnpm-lock.yaml`, re-resolves
+  from the registry and enforces peers strictly, which is how an upstream
+  publish killed five CI workflows for four days with no code change here.
+  CI installs ONLY through `uses: ./.github/actions/setup`; the pnpm version
+  lives ONLY in `packageManager` (package.json), read by CI, Vercel and
+  corepack alike. A workflow may skip the install if its scripts are
+  dependency-free — that is a claim about the whole import graph, and it is
+  checked. See `docs/claude/rules/storage-and-build.md` § "CI installs with
+  pnpm, never npm". Guard: `tests/workflow-install-guard.test.ts`.
 - **Unit tests:** vitest. Run one file: `pnpm vitest run path/to/foo.test.ts`.
 - **Type errors are ratcheted, not clean.** `pnpm test:unit` does NOT
   type-check. The repo carries a four-figure `astro check` error count (over

@@ -1,12 +1,13 @@
 ---
 slug: ci-npm-eresolve
-status: open
+status: shipped
 severity: P1
 opened: 2026-09-15
+shipped: 2026-09-15
 hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1103
 hotfix_sha: ec49ea81c5
 followup_issue: 1106
-followup_pr:
+followup_pr: PENDING
 followup_session:
 ---
 
@@ -54,37 +55,73 @@ Verified with workflow_dispatch dry runs on the branch (35025027181,
 
 ## Deferred items
 
-- [ ] **F1 — path-guard does not cover `.github/actions`**
-  - Source: Copilot inline review on #1103
-  - Where: `.claude/hooks/path-guard.json:247-257` — the `github-workflows`
-    domain matches `.github/workflows/*.yml` only
-  - Why deferred: CI still runs the guard on every PR; only the edit-time hook
-    misses an edit to `.github/actions/setup/action.yml`. Add
-    `.github/actions/**/*.yml`; `tests/path-guard-map.test.ts` requires every
-    glob to match a file.
+All four re-validated against main @ 54c14c3d58. None were dropped; F3 came
+back materially **worse** than it was written, and grew a guard.
 
-- [ ] **F2 — No prose rule with a `Guard:` pointer**
-  - Source: Copilot inline review on #1103
-  - Where: `tests/workflow-install-guard.test.ts:1-20`; the prose belongs next
-    to CLAUDE.md "Project basics" (package manager line) or in
-    `docs/claude/rules/storage-and-build.md`
-  - Why deferred: docs-only; the test header already carries the reasoning.
+- [x] **F1 — path-guard does not cover `.github/actions`** — *still true, fixed*
+  - The `github-workflows` domain now matches `.github/workflows/*.yml`,
+    `.github/actions/**/*.yml` and `package.json` (the last so an edit that
+    removes the pnpm pin runs the guard that requires it). Its `note` — what
+    path-guard actually surfaces at edit time — now carries the install rule
+    too, not just the feature-flag one.
 
-- [ ] **F3 — ~8 workflows run raw `actions/setup-node` with no install at all**
-  - Source: deferred at implementation
-  - Where: `.github/workflows/{schefter-articles,groupme-post,schefter-announce,apply-pending-contracts,apply-august-cuts,backfill-standings-points,phase0-owner-cookie-spike,pr-external-review}.yml`
-  - Why deferred: not broken today. But schefter-scan's own comment records
-    that a job with no install degrades SILENTLY when a script dynamically
-    imports a package (`@upstash/redis` → "Redis import failed", exit 0).
-    Audit what each runs; move to the shared action where a dependency is
-    imported, and consider extending the guard.
+- [x] **F2 — No prose rule with a `Guard:` pointer** — *still true, fixed*
+  - New section in `docs/claude/rules/storage-and-build.md`, "CI installs with
+    pnpm, never npm — and a no-install job stays dependency-free", covering all
+    three failure modes with the `Guard:` line. `CLAUDE.md`'s package-manager
+    bullet now says *why* pnpm is not a preference and points there.
 
-- [ ] **F4 — pnpm version is single-sourced only inside the composite action**
-  - Source: deferred at implementation
-  - Where: `package.json` (no `packageManager`), `.github/actions/setup/action.yml:14-16`
-  - Why deferred: a toolchain change reaches local dev and Vercel; not needed
-    to restore CI. Consider `"packageManager": "pnpm@10.24.0"` and confirm
-    Vercel/corepack agree before shipping.
+- [x] **F3 — ~8 workflows run raw `actions/setup-node` with no install** —
+  *still true, and the hand-audit's answer was wrong*
+  - The audit says all eight are clean: every one uses only `redisCommand()`,
+    which is plain `fetch`. The import graph says five of them reach
+    `@upstash/redis` — `apply-august-cuts`, `apply-pending-contracts`,
+    `phase0-owner-cookie-spike`, and `schefter-articles` (twice, via
+    `generate-pecking-order` and `schefter-weekly-articles`) — because
+    `scripts/lib/redis.mjs` held the REST helpers and `createUpstashClient()`
+    in one file. Eleven REST-only scripts declared a dependency they never
+    used. Nothing was *broken* (the SDK factory is never called on those
+    paths), but the premise "these scripts only touch built-ins" was
+    unverifiable, which is the actual defect.
+  - Fixed structurally rather than by moving jobs onto the shared action:
+    `createUpstashClient()` now lives alone in `scripts/lib/redis-client.mjs`,
+    the only file in `scripts/lib` that names the package; the six SDK callers
+    take one extra import line. No workflow changed.
+  - Guard extended (this is the part that lasts): the suite now walks each
+    no-install workflow's `node …` entrypoints transitively via the new
+    `tests/helpers/module-graph.ts` and fails with the exact
+    `workflow -> script -> package` chain. Negative-tested by adding a static
+    `@upstash/redis` import to `scripts/lib/redis.mjs` — it flagged all five.
+
+- [x] **F4 — pnpm version is single-sourced only inside the composite action**
+  — *still true, fixed, verified both directions*
+  - `"packageManager": "pnpm@10.24.0"` in package.json; the `pnpm-version`
+    input and its `version:` are **removed** from `.github/actions/setup`,
+    because `pnpm/action-setup` reads the field when given no version and
+    *throws* `Multiple versions of pnpm specified` when both exist and
+    disagree — a second copy is worse than none, not a backup. Nothing passed
+    that input.
+  - Corepack: verified locally, not assumed. Corepack fetched 10.24.0 with no
+    interactive prompt, and `pnpm install --frozen-lockfile` under 10.24.0
+    reported "Lockfile is up to date" and left `pnpm-lock.yaml` untouched.
+  - Vercel: verified by this PR's own preview build (it installs through
+    Vercel, not the composite action). CI verifies the action half — 34
+    workflows including `ci.yml` go through it, so a bad resolve is a red PR,
+    not a silent cron.
+  - Guard: `packageManager` must be pinned, and the shared action must not
+    carry a `version:`.
+
+## Late review findings
+
+Copilot's two inline comments on #1103 are F1 and F2 above. No Gemini or
+CodeQL findings landed after the merge; nothing else to adjudicate.
+
+## Not in scope
+
+`tests/season-ledger.test.ts` fails on main (TheLeague franchise 0001, 2026:
+the ledger has 1 win / 99.11 PF / rank 10, `yearByYear` has 0 / 0 / null).
+Pre-existing, unrelated — the test reads only `data/**` and imports nothing
+this branch touches. Filed separately.
 
 ## Context to start cold
 

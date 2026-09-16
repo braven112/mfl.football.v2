@@ -30,7 +30,8 @@
 
 import fs from 'node:fs/promises';
 
-import { getRedisConfig, createUpstashClient } from './lib/redis.mjs';
+import { getRedisConfig } from './lib/redis.mjs';
+import { createUpstashClient } from './lib/redis-client.mjs';
 import { resolveLeagueGroupId, fetchGroupMembers } from './lib/groupme-groups.mjs';
 import { getSchefterLeague } from './lib/schefter-leagues.mjs';
 
