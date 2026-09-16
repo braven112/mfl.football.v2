@@ -18,6 +18,7 @@ import { readFileSync } from 'node:fs';
 import { relativeDayWord, waiverDeadlineCopy } from '../src/utils/waiver-deadline-copy';
 import { resolveWaiverWindow } from '../src/utils/waiver-window';
 import type { ViewerClock } from '../src/utils/viewer-preferences';
+import { leagueClock } from '../src/config/leagues';
 
 const PT = 'America/Los_Angeles';
 
@@ -32,11 +33,16 @@ const theLeagueCalendar = JSON.parse(
 ) as Record<string, unknown>;
 const theLeagueEvents = Object.values(theLeagueCalendar) as any[];
 
-/** A viewer who has actually chosen Sydney. */
+/**
+ * A viewer who has actually chosen Sydney. The league's own clock comes from
+ * the REGISTRY (`officialClock`), not a literal — the whole point of the
+ * trailing zone is that it is the league's setting, and a hand-written copy
+ * here would keep passing after someone changed it.
+ */
 const sydney: ViewerClock = {
   prefs: { country: 'AU', zoneId: 'SYD' },
   explicit: true,
-  leagueClock: { id: 'PT', zone: PT, label: 'PT' },
+  leagueClock: leagueClock('afl-fantasy'),
 };
 
 describe('relativeDayWord', () => {
