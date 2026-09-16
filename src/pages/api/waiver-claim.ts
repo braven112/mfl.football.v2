@@ -39,7 +39,7 @@ import { getAuthUser } from '../../utils/auth';
 import { getCurrentLeagueYear, getRolloverLeagueYear } from '../../utils/league-year';
 import { mflFetch, describeMflFailure } from '../../utils/mfl-fetch';
 import { createMFLApiClient } from '../../utils/mfl-matchup-api';
-import { getLeagueById, getLeagueBySlug, DEFAULT_LEAGUE_ID, DEFAULT_LEAGUE_SLUG } from '../../config/leagues';
+import { getLeagueById, getLeagueBySlug, leagueClock, DEFAULT_LEAGUE_ID, DEFAULT_LEAGUE_SLUG } from '../../config/leagues';
 import { bustRosterCaches } from '../../utils/mfl-roster-cache';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../utils/api-response';
 import { resolveWaiverWindow } from '../../utils/waiver-window';
@@ -153,7 +153,9 @@ export const POST: APIRoute = async ({ request }) => {
     const calendarBody = await calendarRes.json().catch(() => null);
     const rawEvents = calendarBody?.calendar?.event;
     const window = resolveWaiverWindow(
-      Array.isArray(rawEvents) ? rawEvents : rawEvents ? [rawEvents] : []
+      Array.isArray(rawEvents) ? rawEvents : rawEvents ? [rawEvents] : [],
+      new Date(),
+      leagueClock(league.slug).zone
     );
     // `unknown` means the calendar told us nothing. Fall back to the queued
     // claim rather than an immediate add — a claim that bounces is recoverable,

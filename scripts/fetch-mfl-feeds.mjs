@@ -157,6 +157,14 @@ if (!manualYear && yearConfig.yearsToFetch.length > 1) {
 // Only include a week param when explicitly provided; otherwise let MFL serve latest/YTD.
 const week = getNonEmpty(process.env.MFL_WEEK) || null;
 const host = getNonEmpty(process.env.MFL_HOST) || 'https://api.myfantasyleague.com';
+/**
+ * MFL's API gateway, NOT the per-league www## host and NOT overridable by
+ * MFL_HOST. A handful of exports (`nflSchedule&W=ALL`, `nflByeWeeks`) are
+ * rejected by the league hosts with `Invalid request. This API request must go
+ * to api.myfantasyleague.com` — served at HTTP 200, the usual MFL trap.
+ * scripts/fetch-nfl-week-starts.mjs hardcodes the same host for the same call.
+ */
+const API_HOST = 'https://api.myfantasyleague.com';
 const mflUserId = getNonEmpty(process.env.MFL_USER_ID);
 // Accept both spellings — the roster-sync workflow exports MFL_API_KEY while
 // this script historically read MFL_APIKEY, so the key silently never applied.
@@ -409,6 +417,29 @@ const endpoints = [
     // casting (kickoff-game headliner).
     key: 'nflSchedule',
     url: `${host}/${year}/export?TYPE=nflSchedule&JSON=1`,
+    parser: (t) => JSON.parse(t),
+  },
+  {
+    // The SAME export with W=ALL: every week of the season at once, under
+    // `fullNflSchedule.nflSchedule[]`. It is a strict superset of the
+    // current-week feed above (same kickoff/score/rank fields), but the two
+    // are kept as separate files on purpose — a pile of consumers read the
+    // live `nflSchedule.matchup` shape (kickoff hero, app badge, game-day
+    // alerts, Sunday Ticket) and tests/afl-hero-casting.test.ts pins that
+    // nflSchedule.json tracks the CURRENT week.
+    //
+    // Why it has to exist at all: outside the season MFL answers a W-less
+    // nflSchedule request with the FULL schedule, and from week 1 onward it
+    // answers with the current week only. Every consumer that needs all 18
+    // weeks therefore worked all offseason and silently lost its schedule the
+    // day the season opened — which is how PlayerDetailsModal's Season Results
+    // table came to render all 17 weeks as "Bye" with 0.00 points.
+    //
+    // API_HOST, not `host`: the per-league www## hosts reject W=ALL with
+    // `Invalid request. This API request must go to api.myfantasyleague.com`
+    // at HTTP 200. writeOut's error-payload guard keeps that off disk.
+    key: 'nflSchedule-full',
+    url: `${API_HOST}/${year}/export?TYPE=nflSchedule&W=ALL&JSON=1`,
     parser: (t) => JSON.parse(t),
   },
   {
@@ -924,7 +955,7 @@ const run = async () => {
   // the day; everything else (rosters, transactions, standings, brackets, …)
   // stays near-real-time on the 5-minute cadence. Roster/free-agent
   // freshness is unaffected — free agency is derived from rosters.
-  const dailyOnlyKeys = new Set(['players', 'nflSchedule', 'assets']);
+  const dailyOnlyKeys = new Set(['players', 'nflSchedule', 'nflSchedule-full', 'assets']);
 
   // Check if historical data is already cached (skip to avoid rate limits).
   // --refresh-live deliberately does NOT bypass this (unlike --force).
@@ -995,6 +1026,67 @@ const run = async () => {
       // Shared normalizer — handles both MFL payload shapes (matchup[] and the
       // older flat franchise[] used by archive-year regular seasons).
       writeOut('weekly-results', normalizeWeeklyResults(weeklyResults));
+    }
+  } else {
+    // Live refresh of the CURRENT week only — one request, merged into the
+    // committed 17-week array.
+    //
+    // The 17-call loop above runs once a day, which is the right cadence for
+    // sixteen finished weeks and the wrong one for the week being played: MFL
+    // populates a week's player scores as its games finalize, so the week that
+    // just ended stayed at 0.00 points in PlayerDetailsModal's Season Results
+    // table for up to a day after the fact. Week 1 2026 finalized on the
+    // Monday night and the site still showed 0.00 the next afternoon.
+    //
+    // No week derivation here on purpose (CLAUDE.md: kickoff is not a
+    // derivation) — a W-less weeklyResults request makes MFL name its own
+    // current week, and we merge on the week number it reports back.
+    const liveUrl = `${host}/${year}/export?TYPE=weeklyResults&L=${leagueId}&JSON=1`;
+    try {
+      console.log(`Fetching current-week weeklyResults from ${redactUrl(liveUrl)}`);
+      const live = JSON.parse(await fetchTextWithRetry(liveUrl, 3, 1500));
+      const liveWeek = Number(live?.weeklyResults?.week);
+      // `!= null` is not enough: MFL's `matchup` is a bare object when a week
+      // has one pairing, an array when it has several, and an EMPTY array is a
+      // week it has nothing to say about. An empty array is non-null, so it
+      // would sail past a null check and replace a committed week with nothing.
+      const liveMatchup = live?.weeklyResults?.matchup;
+      const hasMatchups = Array.isArray(liveMatchup)
+        ? liveMatchup.length > 0
+        : liveMatchup != null;
+      let existing = [];
+      try {
+        existing = JSON.parse(fs.readFileSync(path.join(outDir, 'weekly-results-raw.json'), 'utf8'));
+      } catch {
+        existing = []; // first run for this league-year — the daily loop fills the rest
+      }
+
+      // Never let a malformed or empty payload eat a committed week — same
+      // rule the playoff-bracket flow below follows.
+      const committed = Array.isArray(existing)
+        ? existing.find((entry) => Number(entry?.weeklyResults?.week) === liveWeek)
+        : null;
+      // A week already carrying scores must never be downgraded to one that
+      // carries none. This runs 288×/day, so a single odd MFL response would
+      // otherwise blank a finished week until the next daily loop 24h later.
+      const hasScores = (payload) => /"score"\s*:/.test(JSON.stringify(payload ?? null));
+      const wouldDowngrade = hasScores(committed) && !hasScores(live);
+
+      if (!Number.isInteger(liveWeek) || !hasMatchups || !Array.isArray(existing) || wouldDowngrade) {
+        console.log('Current-week weeklyResults unusable; leaving the committed weeks alone.');
+      } else {
+        const merged = existing.map((entry) =>
+          Number(entry?.weeklyResults?.week) === liveWeek ? live : entry,
+        );
+        if (!merged.some((entry) => Number(entry?.weeklyResults?.week) === liveWeek)) {
+          merged.push(live);
+          merged.sort((a, b) => Number(a?.weeklyResults?.week) - Number(b?.weeklyResults?.week));
+        }
+        writeOut('weekly-results-raw', merged);
+        writeOut('weekly-results', normalizeWeeklyResults(merged));
+      }
+    } catch (err) {
+      console.error('Failed current-week weeklyResults:', err.message);
     }
   }
 

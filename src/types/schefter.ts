@@ -343,6 +343,13 @@ export interface SchefterFeed {
   lastOddsWeek?: number;
   /** All posts, newest first */
   posts: SchefterPost[];
+  /**
+   * Ids taken down by scripts/schefter-retract-post.mjs. `mergeFeed` unions
+   * this list across both sides of a push and filters `posts` by it, so a
+   * concurrent cron holding a pre-retraction checkout cannot resurrect a
+   * retracted post. Permanent: re-publishing an id means deleting its entry.
+   */
+  retractedIds?: string[];
 }
 
 /** Fixed reaction emoji set — ❤️ is the primary "like" action */

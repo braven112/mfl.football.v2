@@ -192,3 +192,60 @@ describe('mergeFeed archival watermark', () => {
     expect('archivedThroughTimestamp' in merged).toBe(false);
   });
 });
+
+/**
+ * Retraction tombstones.
+ *
+ * `commit-feed-and-push` re-applies our posts on top of origin before pushing.
+ * That union is what resurrects a retracted post: a scan job that checked out
+ * BEFORE the retraction landed still carries the post in `ours` and pushes it
+ * straight back. `archivedThroughTimestamp` is no help — it only shields posts
+ * old enough to have been archived, and a post that needs taking down is hours
+ * old, not weeks.
+ */
+describe('mergeFeed retraction tombstones', () => {
+  const RETRACTED = 'sf_2026_schedule_release_theleague';
+
+  it('drops a retracted post that the other side still carries', () => {
+    const theirs = { posts: [post('sf_keep', '2026-09-15T21:00:00Z')], retractedIds: [RETRACTED] };
+    // A runner that checked out before the retraction: it still has the post
+    // and has never heard of the tombstone.
+    const ours = { posts: [post(RETRACTED, '2026-09-15T20:48:52Z'), post('sf_new', '2026-09-15T22:00:00Z')] };
+    const merged = mergeFeed(theirs, ours);
+    expect(merged.posts.map((p: any) => p.id)).toEqual(['sf_new', 'sf_keep']);
+    expect(merged.retractedIds).toEqual([RETRACTED]);
+  });
+
+  it('drops it whichever side carries the tombstone', () => {
+    const theirs = { posts: [post(RETRACTED, '2026-09-15T20:48:52Z')] };
+    const ours = { posts: [], retractedIds: [RETRACTED] };
+    expect(mergeFeed(theirs, ours).posts).toEqual([]);
+  });
+
+  /**
+   * Unioned, never replaced. A stale runner has the SHORTER list, so a
+   * last-writer-wins merge would let it erase tombstones main already had —
+   * and the next scan would put every one of those posts back.
+   */
+  it('unions both sides tombstones instead of taking one', () => {
+    const merged = mergeFeed(
+      { posts: [], retractedIds: ['sf_a'] },
+      { posts: [], retractedIds: ['sf_b'] },
+    );
+    expect(merged.retractedIds).toEqual(['sf_a', 'sf_b']);
+  });
+
+  it('leaves a feed with no retractions untouched — no empty key in the diff', () => {
+    const merged = mergeFeed({ posts: [post('sf_a', '2026-09-15T21:00:00Z')] }, { posts: [] });
+    expect(merged).not.toHaveProperty('retractedIds');
+    expect(merged.posts.map((p: any) => p.id)).toEqual(['sf_a']);
+  });
+
+  it('survives a round trip through mergeByPath, which is what the push runs', () => {
+    const theirs = JSON.stringify({ posts: [], retractedIds: [RETRACTED] });
+    const ours = JSON.stringify({ posts: [post(RETRACTED, '2026-09-15T20:48:52Z')] });
+    const merged = JSON.parse(mergeByPath('src/data/theleague/schefter-feed.json', theirs, ours));
+    expect(merged.posts).toEqual([]);
+    expect(merged.retractedIds).toEqual([RETRACTED]);
+  });
+});

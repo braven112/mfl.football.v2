@@ -44,7 +44,8 @@ import { SCHEFTER_LEAGUES, getSchefterLeague } from './lib/schefter-leagues.mjs'
 import { LEAGUES as REGISTRY_LEAGUES } from '../src/config/leagues-data.mjs';
 import { buildDropAdjustmentMap, resolveDropSalary } from './lib/drop-salary.mjs';
 
-import { getRedisConfig, createUpstashClient } from './lib/redis.mjs';
+import { getRedisConfig } from './lib/redis.mjs';
+import { createUpstashClient } from './lib/redis-client.mjs';
 import { getNonEmpty } from './lib/env.mjs';
 import { leagueYearFor } from './lib/schefter-league-year.mjs';
 import { postToGroupMe as sharedPostToGroupMe } from './lib/groupme.mjs';
@@ -1586,7 +1587,7 @@ function parseTradeBaitByFranchise(data) {
  * Minimal Upstash Redis adapter — mirrors the pattern in
  * schefter-rumor-scan.mjs so both scripts can share the tips queue and the
  * daily GroupMe post budget. Returns null when credentials are missing.
- * getRedisConfig/createUpstashClient now shared — see scripts/lib/redis.mjs.
+ * getRedisConfig (lib/redis.mjs) + createUpstashClient (lib/redis-client.mjs) are shared.
  * (Deliberately not memoized, matching the original — this adapter always
  * re-resolves credentials and re-imports on every call.)
  */

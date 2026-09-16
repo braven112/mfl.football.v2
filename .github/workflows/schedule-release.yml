@@ -52,9 +52,10 @@ jobs:
           ssh-key: ${{ secrets.DEPLOY_KEY }}
           fetch-depth: 0
 
-      # The shared action pins the pnpm version. A bare pnpm/action-setup
-      # with no `version:` fails "No pnpm version is specified" (package.json
-      # carries no packageManager field) — this job failed that way every day.
+      # Install through the shared action, never a bare pnpm/action-setup:
+      # on its own it installs nothing, and before package.json carried a
+      # `packageManager` field it could not even resolve a pnpm version
+      # ("No pnpm version is specified") — this job failed that way every day.
       - name: Setup pnpm + Node + install
         uses: ./.github/actions/setup
 

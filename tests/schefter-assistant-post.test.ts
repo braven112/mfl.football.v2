@@ -16,6 +16,7 @@ const base = {
   league,
   franchiseId: '0001',
   kind: 'lineup',
+  year: 2026,
   week: 6,
   headline: 'Check your lineup',
   body: 'Pacific Pigskins: Nico Collins (WR) is OUT',
@@ -51,9 +52,24 @@ describe('buildAssistantPost', () => {
 
   /** Both leagues have a franchise 0001, so the league must be in the id. */
   it('cannot collide across leagues', () => {
-    const afl = assistantPostId({ navSlug: 'afl', franchiseId: '0001', kind: 'lineup', week: 6 });
-    const tl = assistantPostId({ navSlug: 'theleague', franchiseId: '0001', kind: 'lineup', week: 6 });
+    const afl = assistantPostId({ navSlug: 'afl', franchiseId: '0001', kind: 'lineup', year: 2026, week: 6 });
+    const tl = assistantPostId({ navSlug: 'theleague', franchiseId: '0001', kind: 'lineup', year: 2026, week: 6 });
     expect(afl).not.toBe(tl);
+  });
+
+  /**
+   * The season is in the id because appendToFeed's dedup reads the season
+   * ARCHIVE as well as the live feed. A season-less `assist_..._lineup_w6`
+   * would be seen as already published the first time week 6 rotated out —
+   * every later season's week-6 warning silently dropped, forever.
+   */
+  it('cannot collide across seasons', () => {
+    expect(buildAssistantPost({ ...base, year: 2027 }).id).not.toBe(buildAssistantPost(base).id);
+  });
+
+  it('refuses to mint a season-less id rather than defaulting the year', () => {
+    expect(() => assistantPostId({ navSlug: 'theleague', franchiseId: '0001', kind: 'lineup', week: 6 } as any))
+      .toThrow(/year is required/);
   });
 
   it('omits playerIds entirely rather than writing an empty array', () => {

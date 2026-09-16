@@ -203,6 +203,44 @@ simplified avatars and text buttons reported zero truncation at 285px — it
 disagreed with the screenshot, which proved the harness, not the CSS, was
 wrong. Only after real markup reproduced the 5-name failure were its "after"
 numbers worth anything.
+## 2026-09-15 - A Server-Rendered List DERIVED From Client-Mutable State Is a Second Render, and It Will Drift
+
+**Context:** Set Lineup's bench is "every rostered player the nine slots did not
+seat." Both lineup pages rendered it once in `.astro` — from the `usedPlayerIds`
+set the server-side auto-fill happened to accumulate — while the slots directly
+above it were re-rendered by the page's own client script on every swap. So the
+first time an owner seated someone off the bench, the page showed him TWICE (in
+his new slot AND still on the bench) and dropped the man he replaced off the
+page entirely. Reported as "I added DJ Moore to my starting lineup but he still
+shows on the bottom."
+
+**Insight:** The bug is not a missing re-render call — it is that the page had
+**two independent definitions of the same derived value** and only one of them
+could move. The server's was a by-product of an unrelated loop (`usedPlayerIds`
+is correct only at the instant the fill runs, and has no client-side
+equivalent); the client had none at all. Nothing in the diff of either page
+looks wrong, because the defect lives in the *relationship* between two renders
+that never appear together.
+
+The tell is structural and worth grepping for: an `.astro` block whose contents
+are computed from state that a sibling `<script>` mutates. In this repo that
+shape recurs — a "remaining"/"available"/"unassigned" list beside an
+interactive picker.
+
+**Recommendation:** Give the derivation ONE definition in `src/utils/` that both
+renders import (`selectBenchPlayers` + `buildBenchRowHTML`), and derive it from
+the mutable state itself (the slots) rather than from a set accumulated on the
+way to building it. Hang the client re-render off the function every mutation
+path *already* funnels through — here `updateSubmitBar()`, which swap, undo,
+undo-clear, Set Optimal, Clear and the init-time draft restore all call — rather
+than adding six call sites for a seventh path to forget.
+
+Two things that are easy to miss in the client half: `innerHTML` wipes anything
+a later pass decorated the rows with (`applyRankChips` had to be re-run), and
+the two renders are styled by ONE stylesheet, so a class present in only one of
+them is an unstyled row after the first interaction. Both are cheap to pin —
+`tests/lineup-bench-sync.test.ts` asserts class-for-class parity between the
+`.astro` block and the builder's output.
 
 ---
 

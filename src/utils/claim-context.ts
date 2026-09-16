@@ -33,7 +33,7 @@
 import { getCurrentLeagueYear, getRolloverLeagueYear } from './league-year';
 import { mflFetch } from './mfl-fetch';
 import { createMFLApiClient, type RosterEntry } from './mfl-matchup-api';
-import { getLeagueById, type LeagueDefinition } from '../config/leagues';
+import { getLeagueById, leagueClock, type LeagueDefinition } from '../config/leagues';
 import { resolveWaiverWindow, describeWaiverWindow } from './waiver-window';
 import { DEFAULT_VIEWER_CLOCK, type ViewerClock } from './viewer-preferences';
 import { readBidRules, conferenceOfFranchise, freeAgencyIsLeagueWide, activeRosterIdsOf, rosterSlotOf } from './waiver-claim';
@@ -170,7 +170,7 @@ export async function resolveClaimContext(user: AuthUser, clock: ViewerClock = D
   // reasons that have nothing to do with the league's schedule.
   const live = await readWaiverEvents(year, leagueId, user.id);
   const events = live ?? committedWaiverEvents(league.dataPath, year);
-  const window = resolveWaiverWindow(events as never);
+  const window = resolveWaiverWindow(events as never, new Date(), leagueClock(league.slug).zone);
 
   // TheLeague replaces offseason free agency with a live auction on MFL. While
   // that window is open an in-place waiver claim is the wrong mechanism — the

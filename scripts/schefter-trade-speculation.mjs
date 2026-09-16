@@ -72,7 +72,8 @@ import {
 import { postSpeculationToGroupMe } from './lib/speculation-groupme.mjs';
 import { createPublicUrl, normalizeBaseUrl } from './lib/schefter-public-url.mjs';
 import { readActiveSeeds, seedSignals } from './lib/speculation-seeds.mjs';
-import { getRedisConfig, createUpstashClient } from './lib/redis.mjs';
+import { getRedisConfig } from './lib/redis.mjs';
+import { createUpstashClient } from './lib/redis-client.mjs';
 import { sendPushFanout, broadcast } from './lib/push-fanout.mjs';
 import { getLeagueBySlug, leagueOrigin } from '../src/config/leagues-data.mjs';
 import { getPtHour, secondsUntilPtMidnight } from './lib/pt-date.mjs';

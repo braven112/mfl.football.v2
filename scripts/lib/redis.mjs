@@ -13,13 +13,20 @@
  *    `${url}/hset`-shaped path form that issues the same HSET — migrated
  *    to the shared command-array form here, same net Redis effect).
  *
- *  - `createUpstashClient(config)` — the "resolve config, dynamically
- *    import '@upstash/redis', construct" plumbing shared by the
- *    schefter-scan.mjs / schefter-rumor-scan.mjs / schefter-trade-speculation.mjs
- *    getRedis() variants. Those three differ in memoization, required-vs-
- *    optional semantics, and log wording, so callers keep their own
- *    wrapper (memo variable, required-throw, warn message) around this and
- *    just delegate the shared plumbing.
+ * The SDK client factory (`createUpstashClient`) deliberately does NOT live
+ * here — it is in ./redis-client.mjs, so that THIS module stays reachable
+ * from scripts that run in workflows with no `pnpm install`. Import both when
+ * you need both; the config resolver is shared.
+ *
+ * Two flavors of caller, then:
+ *
+ *  - REST-only (this file alone): apply-pending-contracts, apply-august-cuts,
+ *    the push-* fan-outs, cut-watch — dependency-free, node built-ins + fetch.
+ *  - SDK (this file + ./redis-client.mjs): schefter-scan / -rumor-scan /
+ *    -trade-speculation / -lineup-check, roger-groupme-reply,
+ *    map-groupme-owners. Those differ in memoization, required-vs-optional
+ *    semantics, and log wording, so each keeps its own wrapper (memo
+ *    variable, required-throw, warn message) around the shared plumbing.
  */
 
 /** Resolve Redis REST credentials from the standard triple-fallback env chain. */
@@ -49,14 +56,4 @@ export async function redisCommand(redis, body) {
   if (!res.ok) throw new Error(`Redis command failed: ${res.status} ${await res.text()}`);
   const data = await res.json();
   return data.result;
-}
-
-/**
- * Construct an @upstash/redis client from an already-resolved config.
- * Callers own memoization, required-vs-optional handling, and logging —
- * this only shares the dynamic-import + construction step.
- */
-export async function createUpstashClient(config) {
-  const { Redis } = await import('@upstash/redis');
-  return new Redis({ url: config.url, token: config.token });
 }

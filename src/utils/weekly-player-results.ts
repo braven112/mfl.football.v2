@@ -50,13 +50,26 @@ function normalizeFpaCode(mflCode: string): string {
 /**
  * Build a per-week schedule map from the MFL nflSchedule response.
  * Returns: Map<week, Map<normalizedTeamCode, { opp: string, isHome: boolean }>>
+ *
+ * MFL serves this export in two shapes and which one you get depends on the
+ * date, not the request: `W=ALL` (and a W-less request in the OFFSEASON) gives
+ * `fullNflSchedule.nflSchedule[]`, one entry per week; once the season opens a
+ * W-less request gives `nflSchedule` — the current week alone. Read both, so a
+ * caller handed the single-week file degrades to "one week known, the rest
+ * unknown" instead of "no schedule at all".
  */
 function buildScheduleMap(
   nflScheduleData: any
 ): Map<number, Map<string, { opp: string; isHome: boolean }>> {
   const scheduleMap = new Map<number, Map<string, { opp: string; isHome: boolean }>>();
 
-  const weeks = nflScheduleData?.fullNflSchedule?.nflSchedule;
+  const full = nflScheduleData?.fullNflSchedule?.nflSchedule;
+  const single = nflScheduleData?.nflSchedule;
+  const weeks = Array.isArray(full)
+    ? full
+    : single && single.week != null
+      ? [single]
+      : null;
   if (!Array.isArray(weeks)) return scheduleMap;
 
   for (const weekData of weeks) {
@@ -140,7 +153,11 @@ export function buildWeeklyPlayerResults(
 
   // Extract player weekly data from weekly-results-raw
   // Structure: per player, per week → { pts, status, franchiseId }
-  const playerWeekData = new Map<string, Map<number, { pts: number; status: string; franchiseId: string }>>();
+  // `pts: null` = MFL listed the player in that week's lineup but has not
+  // scored the week yet. That is NOT zero: scoring it as zero counted every
+  // upcoming week as a game played, which is how a modal opened after week 1
+  // read "0.0 — 3 GAMES — 0.0 PER GAME" for a player who had scored 2.60.
+  const playerWeekData = new Map<string, Map<number, { pts: number | null; status: string; franchiseId: string }>>();
 
   const rawWeeks = Array.isArray(weeklyResultsRaw) ? weeklyResultsRaw : [];
   for (const weekPayload of rawWeeks) {
@@ -166,15 +183,17 @@ export function buildWeeklyPlayerResults(
           : franchise.player ? [franchise.player] : [];
 
         for (const player of playerList) {
-          if (!player.id) continue;
+          if (!player?.id) continue;
 
           if (!playerWeekData.has(player.id)) {
             playerWeekData.set(player.id, new Map());
           }
 
+          // A real 0.00 still parses to 0 and stays 0 — only an absent or
+          // unparseable score becomes "not scored yet".
           const score = parseFloat(player.score);
           playerWeekData.get(player.id)!.set(weekNum, {
-            pts: isNaN(score) ? 0 : score,
+            pts: isNaN(score) ? null : score,
             status: player.status === 'starter' ? 'S' : 'NS',
             franchiseId: franchiseId || '',
           });
@@ -197,8 +216,13 @@ export function buildWeeklyPlayerResults(
       const scheduleWeek = scheduleMap.get(w);
       const teamSchedule = scheduleWeek?.get(info.nflTeam);
 
-      // Determine if bye week (team not in schedule for this week)
-      const isBye = !teamSchedule;
+      // A bye is "this week's schedule loaded and this team isn't in it".
+      // A week we have NO schedule for at all is unknown, not a bye — the
+      // distinction is the whole bug: when MFL started serving the current
+      // week only (nflSchedule without W=ALL), the schedule map came back
+      // empty and every scored week rendered "Bye" with its points hidden.
+      // Unknown weeks now keep their points and simply show no opponent.
+      const isBye = Boolean(scheduleWeek) && !teamSchedule;
 
       if (weekData) {
         // Player was on a roster this week
@@ -208,7 +232,7 @@ export function buildWeeklyPlayerResults(
         weeks.push({
           w,
           p: weekData.pts,
-          opp: isBye ? null : (teamSchedule?.isHome ? 'vs ' : 'at ') + (oppCode || '??'),
+          opp: teamSchedule ? (teamSchedule.isHome ? 'vs ' : 'at ') + (oppCode || '??') : null,
           home: teamSchedule?.isHome ?? false,
           avg: oppStats?.avg ?? null,
           rank: oppStats?.rank ?? null,
@@ -230,12 +254,13 @@ export function buildWeeklyPlayerResults(
           fi: '',
         });
       } else {
-        // Player not on any roster this week but it wasn't bye
-        // Check if the player was on a roster at any point (fill gap weeks)
+        // Player not on any roster this week and not a bye — either a gap week
+        // or a week whose schedule we don't have. Null rather than "at ??":
+        // an unknown week must not invent an opponent.
         weeks.push({
           w,
           p: null,
-          opp: (teamSchedule?.isHome ? 'vs ' : 'at ') + (teamSchedule?.opp || '??'),
+          opp: teamSchedule ? (teamSchedule.isHome ? 'vs ' : 'at ') + (teamSchedule.opp || '??') : null,
           home: teamSchedule?.isHome ?? false,
           avg: null,
           rank: null,

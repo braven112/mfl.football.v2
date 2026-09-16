@@ -306,3 +306,20 @@ country cookie is still read as a fallback so nobody loses the country they
 picked; `rememberSundayTicketChoices` no longer writes it. Do not re-add a
 second writer — two cookies for one value diverge the first time someone
 changes it on the board.
+
+**A caller that can name its league must pass its zone — even while every
+league is Pacific.** `officialClock` is a REGISTRY setting, and the helpers that
+take a zone (`resolveWaiverWindow`'s third argument is the current one) default
+to the fallback league clock for "a caller that cannot name its league". A page
+or endpoint that already resolved its registry entry can, so it passes
+`leagueClock(<entry>.slug).zone`. Every league in the registry is Pacific today,
+so this is a total no-op — which is exactly why prose cannot hold it and
+`tests/waiver-window-callers.test.ts` scans the call sites instead: the day the
+no-op ends, nothing else would say so. Same shape as the league-literal rule.
+
+**A zone is not decoration when it feeds a RECURRENCE.** MFL's `HAPPENS=n`
+repeats on the wall clock, so expanding it needs the league's zone to survive a
+DST transition (`addWeeksOnWallClock`). Passing the wrong zone there does not
+mis-LABEL a time, it moves it — and `mode` is read by `/api/waiver-claim` to
+choose an MFL endpoint, so an hour of drift routes a live claim at a locked
+pool. Treat a zone argument on anything schedule-shaped as load-bearing.

@@ -217,7 +217,7 @@ const calendarModules = import.meta.glob(
 );
 const calendarEvents =
   (Object.entries(calendarModules).find(([p]) => p.includes(`/${claimYear}/`))?.[1] as any)?.default ?? [];
-const waiverWindow = resolveWaiverWindow(calendarEvents);
+const waiverWindow = resolveWaiverWindow(calendarEvents, new Date(), leagueClock(aflLeague.slug).zone);
 // The deadline in the header line, on the viewer's own clock when they have
 // named one (PT alone until then). Read-only: a page render must never write a
 // preference cookie, and only /preferences and the Sunday Ticket chips do.

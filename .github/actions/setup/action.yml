@@ -5,22 +5,22 @@ description: >
   `pnpm install --frozen-lockfile`. actions/checkout cannot run inside a
   composite action, so callers must check out the repo themselves in the
   step immediately before this one.
+
+  The pnpm VERSION is not set here. `pnpm/action-setup` reads it from the
+  `packageManager` field in package.json, which is the single source for CI,
+  Vercel and local corepack alike — a `version:` here would be a second copy
+  that can silently disagree with the one the lockfile was generated with.
 inputs:
   node-version:
     description: 'Node.js version to install'
     required: false
     default: '22'
-  pnpm-version:
-    description: 'pnpm version to install (keep in sync with the version used to generate pnpm-lock.yaml)'
-    required: false
-    default: '10.24.0'
 runs:
   using: 'composite'
   steps:
+    # No `version:` — see the note above; package.json#packageManager is it.
     - name: Setup pnpm
       uses: pnpm/action-setup@v5
-      with:
-        version: ${{ inputs.pnpm-version }}
 
     - name: Use Node.js
       uses: actions/setup-node@v6

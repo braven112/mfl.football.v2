@@ -466,6 +466,38 @@
       "impact": "user",
       "area": "rosters",
       "league": "theleague"
+    },
+    {
+      "date": "2026-09-15",
+      "type": "bug-fix",
+      "summary": "The player card’s Season Results table showed every week as a bye and 0.00 points. Week 1 scores, opponents and matchup ranks are back.",
+      "impact": "user",
+      "area": "other",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-09-15",
+      "type": "bug-fix",
+      "summary": "Set Lineup's bench now updates when you move someone: a player you start disappears from the bench instead of showing in both places, and the one he replaced drops back down.",
+      "impact": "user",
+      "area": "lineups",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-15",
+      "type": "bug-fix",
+      "summary": "The waiver hero said “claims run tonight” from Tuesday afternoon on. It now reads the real processing day and time off the league calendar and prints it in your own clock.",
+      "impact": "user",
+      "area": "free-agents",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-15",
+      "type": "bug-fix",
+      "summary": "Waiver deadlines keep the right hour after the November clock change. They were about to read an hour early, closing claims on the site while the window was still open.",
+      "impact": "user",
+      "area": "free-agents",
+      "league": "both"
     }
   ]
 }

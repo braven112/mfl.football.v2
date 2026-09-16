@@ -57,7 +57,8 @@ import { fileURLToPath } from 'node:url';
 import { ALL_LEAGUES } from '../src/config/leagues-data.mjs';
 import { getSchefterLeague } from './lib/schefter-leagues.mjs';
 import { schefterKey } from './lib/schefter-keys.mjs';
-import { getRedisConfig, createUpstashClient } from './lib/redis.mjs';
+import { getRedisConfig } from './lib/redis.mjs';
+import { createUpstashClient } from './lib/redis-client.mjs';
 import { postToGroupMe } from './lib/groupme.mjs';
 import { postToGroupMeCapped } from './lib/groupme-capped.mjs';
 import { sendPushFanout } from './lib/push-fanout.mjs';
@@ -422,6 +423,7 @@ async function checkLeague(league, now = new Date()) {
           league: schefterLeague,
           franchiseId: w.franchiseId,
           kind: 'lineup',
+          year,
           week,
           headline: w.noLineup ? 'No lineup submitted' : 'Check your lineup',
           body: formatWarningLine(w).replace(/^• /, ''),

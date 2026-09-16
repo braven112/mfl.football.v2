@@ -21,7 +21,7 @@
  * credentials.
  */
 
-import { DEFAULT_VIEWER_CLOCK, type ViewerClock } from './viewer-preferences';
+import { DEFAULT_VIEWER_CLOCK, LEAGUE_CLOCK, zoneOffsetMs, type ViewerClock } from './viewer-preferences';
 import { formatForViewer } from './viewer-clock';
 
 /** One MFL calendar event, as the export returns it. */
@@ -43,6 +43,26 @@ export interface WaiverWindow {
   changesAt: Date | null;
   /** The mode that begins at `changesAt`. */
   nextMode: WaiverMode;
+  /**
+   * Whether a claim-processing RUN happens at `changesAt`.
+   *
+   * `nextMode` is not enough to answer this, because the collapse below folds a
+   * simultaneous run-and-re-lock down to its resulting STATE and throws the run
+   * away. Both shapes report `nextMode: 'waiver'` and they say opposite things
+   * to an owner:
+   *
+   *   - TheLeague, Wed 2026-09-02 19:00 — `WAIVER_LOCK` + `WAIVER_BBID` at one
+   *     instant. Claims DO process then; the pool simply shuts again after. A
+   *     hero counting down to it is counting down to a real deadline.
+   *   - A bare `WAIVER_LOCK` with no run on it — a pool RE-lock. Nothing
+   *     processes, so naming it as a deadline invents one.
+   *   - A bare `WAIVER_UNLOCK` — free agency simply opens. It CLOSES the waiver
+   *     window (so it is in `PROCESS_TYPES`) but runs no claims, which is why
+   *     this reads `RUN_TYPES` and not that set.
+   *
+   * False whenever there is no next mark at all.
+   */
+  nextProcesses: boolean;
   /** Why we concluded this — surfaced in the UI when the answer is `unknown`. */
   reason: string;
 }
@@ -73,18 +93,73 @@ const OPEN_TYPES = new Set(['WAIVER_LOCK']);
 /** Events that CLOSE it: claims process and/or the pool unlocks, so adds are FCFS again. */
 const PROCESS_TYPES = new Set(['WAIVER_BBID', 'WAIVER_REVERSE', 'WAIVER_UNLOCK']);
 
+/**
+ * The subset of those that actually RUN claims — a strict subset, and the
+ * distinction is not pedantic.
+ *
+ * `WAIVER_UNLOCK` is "free agency opens" (docs/features/mfl-api.md): it ends the
+ * waiver window by unlocking the pool, without processing anything. It belongs
+ * in `PROCESS_TYPES` because it closes the window — that set answers "what is
+ * the pool's state after this" — but treating it as a run would let a bare
+ * unlock be worded as "Waivers process <then>" and counted down to, which is a
+ * deadline that does not exist. Only `nextProcesses` reads this set.
+ *
+ * Both leagues' in-season marks are real runs (`WAIVER_REVERSE` for the AFL,
+ * `WAIVER_BBID` for TheLeague), so this changes nothing there; the AFL's one
+ * `WAIVER_UNLOCK` of 2026 shares its instant with a `WAIVER_REVERSE`, and the
+ * collapse ORs the run back in.
+ */
+const RUN_TYPES = new Set(['WAIVER_BBID', 'WAIVER_REVERSE']);
+
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
- * Expand a possibly-recurring event into the concrete occurrences that could
- * bracket `now`. `HAPPENS=n` means "same time each week for n more weeks".
+ * MFL RECURS ON THE WALL CLOCK, NOT ON EPOCH TIME.
+ *
+ * `HAPPENS=n` means "the same time each week", and MFL means the same time a
+ * HUMAN reads, not the same number of seconds. Adding a fixed `7 × 24h` is
+ * therefore right for eight months of the year and an hour wrong for the rest:
+ * after the November DST change every expanded occurrence lands an hour early.
+ *
+ * This is not a deduction, it is what MFL did. Its own 2025 transaction log
+ * records every waiver run it processed, and the wall-clock hour is constant
+ * straight through the 2025-11-02 transition:
+ *
+ *   AFL        Wed 20:00 PDT  Sep 10 … Oct 29   →  Wed 20:00 PST  Nov 5 … Dec 31
+ *   TheLeague  Wed 19:00 PDT  Aug 27 … Oct 22   →  Wed 19:00 PST  Nov 5 … Dec 17
+ *
+ * 141 AFL awards and 58 TheLeague awards, all on the hour, on both sides of the
+ * boundary. Under the old fixed-epoch step the November occurrences came out at
+ * 19:00 and 18:00 — which is what made the hero read "claims have processed"
+ * for the last hour of a window that was still open, and, worse, could route a
+ * live claim through the FCFS endpoint while the pool was still locked.
+ *
+ * Solved in two passes for the same reason `nextSundayKickoffEpoch` is: the
+ * first guess can land on the wrong side of a transition. A weekly waiver run
+ * is never scheduled inside the ambiguous 1–2am hour, so the second pass
+ * settles it.
  */
-function occurrences(event: MflCalendarEvent): number[] {
+function addWeeksOnWallClock(startMs: number, weeks: number, zone: string): number {
+  if (weeks === 0) return startMs;
+  // The start's wall clock, expressed as if it were UTC. Adding whole weeks to
+  // THAT advances the calendar date and leaves the time of day alone, because
+  // UTC has no DST of its own.
+  const wall = startMs + zoneOffsetMs(startMs, zone) + weeks * SEVEN_DAYS_MS;
+  const guess = wall - zoneOffsetMs(wall, zone);
+  return wall - zoneOffsetMs(guess, zone);
+}
+
+/**
+ * Expand a possibly-recurring event into the concrete occurrences that could
+ * bracket `now`. `HAPPENS=n` means "same time each week for n more weeks" —
+ * same WALL-CLOCK time, per `addWeeksOnWallClock`.
+ */
+function occurrences(event: MflCalendarEvent, zone: string): number[] {
   const start = Number(event.start_time) * 1000;
   if (!Number.isFinite(start) || start <= 0) return [];
   const repeats = Math.max(0, Math.min(Number(event.happens) || 0, 30));
   const out: number[] = [];
-  for (let i = 0; i <= repeats; i++) out.push(start + i * SEVEN_DAYS_MS);
+  for (let i = 0; i <= repeats; i++) out.push(addWeeksOnWallClock(start, i, zone));
   return out;
 }
 
@@ -97,20 +172,29 @@ function occurrences(event: MflCalendarEvent): number[] {
  */
 export function resolveWaiverWindow(
   events: MflCalendarEvent[] | null | undefined,
-  now: Date = new Date()
+  now: Date = new Date(),
+  /**
+   * The zone MFL keeps this league's schedule in — its recurrences repeat on
+   * THAT wall clock (see `addWeeksOnWallClock`). Defaults to the registry's
+   * fallback league clock, Pacific, which is what every league in the registry
+   * is set to today; a caller that knows its league can pass
+   * `leagueClock(slug).zone` and stay correct if one ever isn't.
+   */
+  zone: string = LEAGUE_CLOCK.zone
 ): WaiverWindow {
   const list = Array.isArray(events) ? events : [];
   if (list.length === 0) {
-    return { mode: 'unknown', changesAt: null, nextMode: 'unknown', reason: 'No league calendar available.' };
+    return { mode: 'unknown', changesAt: null, nextMode: 'unknown', nextProcesses: false, reason: 'No league calendar available.' };
   }
 
-  const marks: Array<{ at: number; opens: boolean }> = [];
+  const marks: Array<{ at: number; opens: boolean; processes: boolean }> = [];
   for (const event of list) {
     const type = String(event?.type ?? '').toUpperCase();
     const opens = OPEN_TYPES.has(type);
     const closes = PROCESS_TYPES.has(type);
+    const runs = RUN_TYPES.has(type);
     if (!opens && !closes) continue;
-    for (const at of occurrences(event)) marks.push({ at, opens });
+    for (const at of occurrences(event, zone)) marks.push({ at, opens, processes: runs });
   }
 
   if (marks.length === 0) {
@@ -118,6 +202,7 @@ export function resolveWaiverWindow(
       mode: 'unknown',
       changesAt: null,
       nextMode: 'unknown',
+      nextProcesses: false,
       reason: 'The league calendar has no waiver open/process events.',
     };
   }
@@ -145,11 +230,17 @@ export function resolveWaiverWindow(
   // and the pool's state at the end of that moment is what the next window is.
   // Locked wins because a lock is a STATE while a run is an EVENT: after both
   // have happened the pool is shut, so the only way in is a claim.
-  const collapsed: Array<{ at: number; opens: boolean }> = [];
+  // `processes` is OR'd alongside `opens` rather than being decided by it: the
+  // collapse answers what the pool's STATE is afterwards, and that deliberately
+  // loses the fact that a run happened at the same instant. Anything wording a
+  // deadline needs the run back — see `nextProcesses`.
+  const collapsed: Array<{ at: number; opens: boolean; processes: boolean }> = [];
   for (const mark of marks) {
     const last = collapsed[collapsed.length - 1];
-    if (last && last.at === mark.at) last.opens = last.opens || mark.opens;
-    else collapsed.push({ ...mark });
+    if (last && last.at === mark.at) {
+      last.opens = last.opens || mark.opens;
+      last.processes = last.processes || mark.processes;
+    } else collapsed.push({ ...mark });
   }
 
   const t = now.getTime();
@@ -165,6 +256,7 @@ export function resolveWaiverWindow(
       mode: first.opens ? 'fcfs' : 'waiver',
       changesAt: new Date(first.at),
       nextMode: first.opens ? 'waiver' : 'fcfs',
+      nextProcesses: first.processes,
       reason: 'Before the first waiver event on the calendar.',
     };
   }
@@ -175,6 +267,7 @@ export function resolveWaiverWindow(
     mode,
     changesAt: next ? new Date(next.at) : null,
     nextMode: next ? (next.opens ? 'waiver' : 'fcfs') : 'unknown',
+    nextProcesses: next ? next.processes : false,
     reason: last.opens
       ? 'Waivers are open — claims are queued until they process.'
       : 'Waivers have processed — adds are first-come, first-served.',

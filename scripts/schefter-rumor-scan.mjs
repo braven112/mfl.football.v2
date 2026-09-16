@@ -157,7 +157,8 @@ import {
 } from './lib/schefter-team-naming.mjs';
 import { buildFormerNameCallback } from './lib/schefter-former-name.mjs';
 import { checkGroupMeQuality, RELAXED_QUALITY_THRESHOLD } from './lib/schefter-quality-gate.mjs';
-import { getRedisConfig, createUpstashClient } from './lib/redis.mjs';
+import { getRedisConfig } from './lib/redis.mjs';
+import { createUpstashClient } from './lib/redis-client.mjs';
 import { postToGroupMe as sharedPostToGroupMe } from './lib/groupme.mjs';
 import { postToGroupMeCapped } from './lib/groupme-capped.mjs';
 import { sendPushFanout, broadcast } from './lib/push-fanout.mjs';
@@ -602,7 +603,7 @@ function warn(...args) {
   console.warn(...args);
 }
 
-// ── Redis (Upstash) — getRedisConfig/createUpstashClient now shared, see scripts/lib/redis.mjs ──
+// ── Redis (Upstash) — getRedisConfig (lib/redis.mjs) + createUpstashClient (lib/redis-client.mjs) shared ──
 
 let _redis;
 

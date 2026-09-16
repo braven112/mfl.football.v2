@@ -72,6 +72,61 @@ personalization first.
 from 2026-08-16 is committed under `data/perf-baseline/`.
 
 
+## CI installs with pnpm, never npm — and a no-install job stays dependency-free
+
+Every workflow that needs `node_modules` installs through the one shared
+preamble, `uses: ./.github/actions/setup` (checkout first — `actions/checkout`
+cannot run inside a composite action). Three separate failure modes sit behind
+that one line, and all three have shipped:
+
+- **`npm ci` / `npm install` ignores `pnpm-lock.yaml`.** It re-resolves the
+  whole tree from the registry and enforces peer ranges strictly, so a publish
+  upstream breaks us with no code change here. On 2026-09-11 a new vite release
+  pulled a `vitest` peer that clashed with `@storybook-astro/framework`, npm
+  answered `ERESOLVE`, and every npm-installing workflow — Schefter scan, the
+  rumor mill, trade speculation (and with it the franchise-history milestone
+  scan), and Roger's Sunday lineup reminders — died at the install step. Four
+  days, silently, because a cron that fails is a red run nobody is watching.
+  This is also why the peer set is fragile at all: vitest 1.x + root `vite@^5`
+  are intentionally separate from Astro's vite 8 (see above), which npm reads
+  as a conflict and pnpm does not.
+- **A bare `pnpm/action-setup` installs nothing and may not even start.** With
+  no version resolvable it fails `No pnpm version is specified` — that is how
+  `schedule-release` failed daily from at least 09-10. Use the shared action;
+  it runs `pnpm install --frozen-lockfile`.
+- **A job with NO install does not fail — it goes green having done nothing.**
+  Nearly every package here is reached through a dynamic `import()` inside a
+  try/catch, so an empty `node_modules` surfaces as `schefter-scan`'s own
+  comment records it: "Redis import failed", exit 0, no posts, green check.
+  Eight workflows deliberately skip the install because their scripts are
+  dependency-free ESM (node built-ins + `fetch`). That is a claim about the
+  transitive import graph, not about the entrypoint, and it decays the moment
+  someone adds an import three modules deep.
+
+The last point is why **`scripts/lib/redis.mjs` is REST-only and the SDK client
+factory lives in `scripts/lib/redis-client.mjs`.** While both halves shared one
+file, eleven REST-only scripts declared an `@upstash/redis` dependency they
+never used, and five no-install workflows inherited it — so the question "does
+this job need an install?" could not be answered from the import graph at all.
+Keep `redis-client.mjs` as the only file in `scripts/lib` that names the
+package.
+
+The pnpm **version** has one home: `packageManager` in `package.json`. CI
+(`pnpm/action-setup` reads it when given no `version:`), Vercel and local
+corepack all read that field, and `action-setup` throws `Multiple versions of
+pnpm specified` if the composite action carries a second copy that disagrees.
+Bump it there and nowhere else.
+
+Guard: `tests/workflow-install-guard.test.ts` — forbids `npm ci|install|i` and
+a raw `uses: pnpm/action-setup@` anywhere under `.github/`, requires the
+`packageManager` pin and the absence of a `version:` in the shared action, and
+walks each no-install workflow's `node …` entrypoints transitively
+(`tests/helpers/module-graph.ts`) to fail with the exact
+`workflow → script → package` chain. Routed by the `github-workflows` domain in
+`.claude/hooks/path-guard.json`, which also covers `.github/actions/**` and
+`package.json`.
+
+
 ## Astro 7 — strict Rust compiler, pinned compressHTML
 
 Upgraded to Astro 7 (Vite 8/Rolldown, @astrojs/vercel 11) in July 2026.

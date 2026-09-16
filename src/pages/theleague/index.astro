@@ -28,7 +28,9 @@ import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.as
 import { getAuthUser } from '../../utils/auth';
 import InstallAppPrompt from '../../components/shared/pwa/InstallAppPrompt.astro';
 import { readViewerClock } from '../../utils/viewer-preferences-page';
-import { getLeagueBySlug } from '../../config/leagues';
+import { resolveWaiverWindow } from '../../utils/waiver-window';
+import { waiverDeadlineCopy } from '../../utils/waiver-deadline-copy';
+import { getLeagueBySlug, leagueClock } from '../../config/leagues';
 import { readInstallState } from '../../utils/app-install-state';
 import { resolveSchefterRail } from '../../utils/schefter-rail-view';
 import { resolveHeroFranchiseBackdrop } from '../../utils/hero-franchise-backdrop';
@@ -97,7 +99,8 @@ const showInstallBanner =
 // Whose broadcast channels the game-day hero names. Read-only: the homepage
 // must never write a preference cookie, and `readViewerClock` never does —
 // only /preferences and the Sunday Ticket chips write one.
-const viewerCountry = (await readViewerClock(Astro.cookies, authUser, THELEAGUE.slug)).prefs.country;
+const viewerClock = await readViewerClock(Astro.cookies, authUser, THELEAGUE.slug);
+const viewerCountry = viewerClock.prefs.country;
 
 const feed = feedData as FeedType;
 
@@ -188,6 +191,28 @@ if (throwbackPromo && isEntryInHeroWindow(throwbackPromo, effectiveDate ?? new D
 // window boundary — and since the page's ternary is exclusive, a request that
 // split them would render no hero at all (review finding, #569).
 const heroReferenceDate = effectiveDate ?? new Date();
+
+// ── The waiver deadline the hero counts down to ─────────────────────────────
+// From MFL's own calendar, never computed here. TheLeague's `WAIVER_BBID` runs
+// **Wed 7:00 PM PT**, not the 8pm the hero used to build by hand out of
+// server-local date arithmetic plus a hardcoded +7h offset — see the note in
+// WaiverWireHero.astro. Same glob shape as /players, which reads this feed.
+const tlCalendarModules = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/calendar.json',
+  { eager: true }
+);
+// Keyed by TheLeague's MFL LEAGUE year (Feb 14 rollover), not the
+// season-results year (Labor Day): between those two dates the feed has
+// rolled while `getCurrentSeasonYear` still names last season, so this lookup
+// would read a stale calendar — or miss the file and fall through to
+// `unknown`. `/players` uses `getCurrentLeagueYear` for this same feed.
+const tlWaiverYear = getCurrentLeagueYear(heroReferenceDate);
+const tlCalendarEvents =
+  (Object.entries(tlCalendarModules).find(([path]) => path.includes(`/${tlWaiverYear}/`))?.[1] as any)?.default ?? [];
+const tlWaiverCopy = waiverDeadlineCopy(
+  resolveWaiverWindow(tlCalendarEvents, heroReferenceDate, leagueClock(THELEAGUE.slug).zone),
+  { now: heroReferenceDate, clock: viewerClock },
+);
 
 // Saturday from 5pm: an owner whose lineup is already in gets the Sunday
 // Ticket hero instead of the game-of-the-week band. Resolved HERE, for the
@@ -834,6 +859,7 @@ if ((heroState.phase === 'playoffs' || heroState.phase === 'championship') && he
         breakingModel={breakingModel}
         breakingStory={breakingStory}
         heroBackdrop={heroBackdrop}
+        waiver={tlWaiverCopy}
       />
       )}
       {showAuctionsCard && activeAuctions.length > 0 && (
