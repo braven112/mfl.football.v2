@@ -37,9 +37,17 @@ import { randomHeroPlayer } from './hero-players';
 import { resolveFeatureHeadline } from './whats-new-hero-headline';
 import { MFL_EMAIL_DRAFT_OPTION, buildMflLiveDraftUrl, buildMflOptionUrl } from './mfl-url';
 import type { CompositeHeroTreatment } from '../types/composite-hero';
+import { getAuthor, getAuthorAvatar } from '../types/schefter';
 import { LEAGUES } from '../config/leagues';
 import { resolveRecapDestination, type RecapDestination } from './hero-recap-destination';
 import { waiverDeadlineCopy, type WaiverDeadlineCopy } from './waiver-deadline-copy';
+import {
+  articleDateLabel,
+  articleHeroView,
+  emptyArticleHeroView,
+  type ArticleHeroByline,
+  type LatestArticle,
+} from './article-hero-view';
 import { unknownWaiverCopy, waiverClaimsHeroView } from './waiver-claims-hero';
 
 /** How long a fresh What's New entry stays in the hero. */
@@ -56,12 +64,23 @@ export interface HeroSecondaryLink {
 /** Visual props passed straight to AflEventHero. */
 export interface EventHeroView {
   pill: string;
+  /**
+   * Small caps date shown beside the pill. Only the article card carries one —
+   * a story's dateline is part of the story; a keeper deadline's is not.
+   */
+  pillDate?: string;
   headline: string;
   accentWord?: string;
   summary: string;
   link?: string;
   linkLabel?: string;
   isExternal?: boolean;
+  /**
+   * Author's face and name, for a card promoting an AUTHORED article. Resolved
+   * from the post's own `authorId` (see article-hero-view.ts) — the feeds carry
+   * external bylines, so this is never assumed to be the house reporter.
+   */
+  byline?: ArticleHeroByline;
   /**
    * Extra links rendered beside the primary CTA. Only the conference drafts
    * populate this today, from two places that MERGE (see mergeSecondaryLinks):
@@ -207,6 +226,17 @@ export interface AflHeroResolverInput {
    * they ran the next.
    */
   waiver?: WaiverDeadlineCopy;
+  /**
+   * The latest Schefter article, with its byline resolved — what the news slot
+   * promotes. Passed in for the same reason `recap` and `waiver` are: the feed
+   * is on disk and this resolver is synchronous and pure.
+   *
+   * Omitted → the desk card, which names the beat rather than a story and is
+   * the ONE state allowed to point the CTA at the news listing. That listing
+   * used to be the destination for every article card, so a reader who came
+   * for the headline on the hero landed on an index and had to find it.
+   */
+  article?: LatestArticle;
   /**
    * Injectable random source (0..1) for the lead-up hero pool below; defaults
    * to Math.random. Override in tests for deterministic results. The pool is
@@ -609,6 +639,17 @@ const EVENT_VIEW: Record<string, ViewBuilder> = {
 // events. Player image is always randomized from the shared 21-image pool.
 // Voice: Claude Schefter — beat reporter, present tense, ALL CAPS headlines.
 
+/**
+ * The byline the desk card wears when there is no article to take one from.
+ * A real article's byline comes from ITS OWN `authorId` (see
+ * article-hero-view.ts) — the feeds carry external reporters, and putting the
+ * house face on someone else's story misattributes it.
+ */
+const SCHEFTER_DESK_BYLINE: ArticleHeroByline = {
+  name: getAuthor('claude').name,
+  avatar: getAuthorAvatar(getAuthor('claude')),
+};
+
 interface SlotContext {
   now: Date;
   slot?: DailySlot;
@@ -621,6 +662,8 @@ interface SlotContext {
   recap?: RecapDestination;
   /** Calendar-derived waiver deadline copy. See AflHeroResolverInput.waiver. */
   waiver?: WaiverDeadlineCopy;
+  /** The story the news slot promotes. See AflHeroResolverInput.article. */
+  article?: LatestArticle;
 }
 
 const GAME_WINDOW_LABEL: Record<NonNullable<GameWindow>, string> = {
@@ -823,20 +866,58 @@ const SLOT_VIEW: Record<SlotKey, (ctx: SlotContext) => EventHeroView> = {
 
   'slot:game-day-preview': (ctx) => gameDayPreviewSlotView(ctx),
 
-  'slot:article': ({ now, week }) => ({
-    pill: week ? `WEEK ${week}` : 'AROUND THE AFL',
-    headline: 'AROUND THE',
-    accentWord: 'AFL.',
-    summary: 'Schefter covers the moves, the matchups, and the storylines shaping the AL and NL races.',
-    link: '/afl-fantasy/news',
-    linkLabel: 'READ THE LATEST',
-    icon: 'news',
-    // Coverage of the whole league, not a dispatch from one clubhouse.
-    composite: { wordmark: 'NEWS', accent: 'navy', tone: null, scope: 'league' },
-    accent: ACCENT_GOLD,
-    glow: GLOW_GOLD,
-    player: randomHeroPlayer(now),
-  }),
+  // THE NEWS CARD NAMES THE STORY, AND ITS CTA IS THAT STORY'S PERMALINK.
+  //
+  // This slot used to render one hardcoded line — "AROUND THE AFL." into
+  // /afl-fantasy/news — every day it ran. It promoted the beat instead of the
+  // reporting: the card never said what had happened, and the button dropped
+  // the reader on a listing to go find it. The article is passed in by the
+  // page (see AflHeroResolverInput.article) and `articleHeroView` is the same
+  // builder TheLeague's card uses, so neither league can drift into its own
+  // idea of what a news card says.
+  //
+  // The old copy survives as the EMPTY state, which is the one place it was
+  // ever true: a feed with no article has no story to name and nowhere but
+  // the listing to send anyone.
+  //
+  // Both `composite` literals below are written out IN FULL rather than hoisted
+  // into a shared const: /showcase's guard reads the AFL's treatments straight
+  // out of this file's source (tests/hero-showcase-content.test.ts scans for
+  // `composite: { wordmark: …, accent: … }`), and a hoisted object makes the
+  // treatment invisible to it — which reads as "no AFL hero renders this", not
+  // as a scanner miss. Same reason `waiverClaimsHeroView` takes its treatment
+  // from the caller as a literal.
+  'slot:article': ({ now, week, article }) => {
+    const byline: ArticleHeroByline = article?.byline ?? SCHEFTER_DESK_BYLINE;
+    const base = article
+      ? articleHeroView(article.post, {
+          pill: week ? `WEEK ${week}` : 'AROUND THE AFL',
+          // Coverage of the whole league, not a dispatch from one clubhouse.
+          composite: { wordmark: 'NEWS', accent: 'navy', tone: null, scope: 'league' },
+          byline,
+          fallbackLink: '/afl-fantasy/news',
+          fallbackLinkLabel: 'READ THE LATEST',
+          dateLabel: articleDateLabel(article.post.timestamp),
+        })
+      : emptyArticleHeroView({
+          pill: week ? `WEEK ${week}` : 'AROUND THE AFL',
+          headline: 'AROUND THE',
+          accentWord: 'AFL.',
+          summary:
+            'Schefter covers the moves, the matchups, and the storylines shaping the AL and NL races.',
+          composite: { wordmark: 'NEWS', accent: 'navy', tone: null, scope: 'league' },
+          byline,
+          link: '/afl-fantasy/news',
+          linkLabel: 'READ THE LATEST',
+        });
+    return {
+      ...base,
+      icon: 'news',
+      accent: ACCENT_GOLD,
+      glow: GLOW_GOLD,
+      player: randomHeroPlayer(now),
+    };
+  },
 
   feature: ({ now, whatsNewEntry: entry }) => {
     const pillBase = entry ? WHATS_NEW_CATEGORY_LABELS[entry.category] : "WHAT'S NEW";
@@ -1523,7 +1604,7 @@ export function resolveAflHeroState(input: AflHeroResolverInput): AflHeroState {
     const week = getCurrentNFLWeek(now) ?? undefined;
     const slotKey = `slot:${slot}` as SlotKey;
     const builder = SLOT_VIEW[slotKey] ?? SLOT_VIEW['slot:article'];
-    const view = builder({ now, slot, gameWindow, week, lineupSubmitted: input.lineupSubmitted ?? null, recap: input.recap, waiver: input.waiver });
+    const view = builder({ now, slot, gameWindow, week, lineupSubmitted: input.lineupSubmitted ?? null, recap: input.recap, waiver: input.waiver, article: input.article });
     return {
       kind: 'regular-season',
       priority: 'P0',

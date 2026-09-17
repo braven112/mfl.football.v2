@@ -55,6 +55,10 @@ interface Props {
 }
 
 const { view, regionLabel, clampSummary = false, league = 'afl-fantasy' } = Astro.props;
+// The article card's author. Rendered in the footer beside the CTA rather than
+// over the art: the flank belongs to the player the STORY is about, and a
+// reporter's face there would displace the subject of his own reporting.
+const byline = view.byline ?? null;
 const treatment = view.composite!;
 const model = view.model ?? null;
 
@@ -123,6 +127,7 @@ const LOGO = league === 'theleague' ? '/assets/logos/theleague-logo-dark.svg' : 
   glowColor={glowColor}
   logoArt={artMode === 'shot' ? undefined : LOGO}
   pill={view.pill}
+  pillDate={view.pillDate}
   title={view.headline}
   titleAccent={view.accentWord}
   summary={view.summary}
@@ -130,6 +135,18 @@ const LOGO = league === 'theleague' ? '/assets/logos/theleague-logo-dark.svg' : 
   styleVars="--cmh-min-h: clamp(250px, 25vw, 300px); --cmh-min-h-mobile: 270px; --cmh-ghost-size: clamp(4rem, 9vw, 7rem); --cmh-ghost-style: italic; --cmh-model-w: clamp(230px, 30vw, 350px); --cmh-logo-w: clamp(170px, 22vw, 250px); --cmh-logo-opacity: 0.2; --cmh-eyebrow-mb: 0.625rem; --cmh-content-max: min(32rem, 62%); --cmh-title-mb: 0.45rem; --cmh-summary-max: 46ch; --cmh-model-w-mobile: 175px;"
 >
   <div class="cmh__footer">
+    {byline && (
+      <>
+        <span class="lch__byline">
+          <img class="lch__byline-avatar" src={byline.avatar} alt="" width="30" height="30" loading="lazy" decoding="async" />
+          <span class="lch__byline-text">
+            <span class="lch__byline-name">{byline.name}</span>
+            <span class="lch__byline-role">Schefter Report</span>
+          </span>
+        </span>
+        <span class="cmh__divider" aria-hidden="true"></span>
+      </>
+    )}
     {view.countValue !== undefined && (
       <>
         <div class="cmh__count" role="group" aria-label={view.countLabel ?? String(view.countValue)}>
@@ -217,5 +234,54 @@ const LOGO = league === 'theleague' ? '/assets/logos/theleague-logo-dark.svg' : 
 <style>
   .afl-cmh__links {
     margin-top: 0.75rem;
+  }
+
+  /* ── Byline — the author of the article this card promotes ───────────── */
+  .lch__byline {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+
+  .lch__byline-avatar {
+    border-radius: var(--radius-full, 9999px);
+    object-fit: cover;
+    flex-shrink: 0;
+    /* The avatar sits on a dark gradient in both themes, so it carries its own
+       ring rather than relying on the surface for separation. */
+    border: 1px solid var(--cmh-divider, rgba(255, 255, 255, 0.18));
+  }
+
+  .lch__byline-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    min-width: 0;
+  }
+
+  .lch__byline-name {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--cmh-ink);
+    white-space: nowrap;
+  }
+
+  .lch__byline-role {
+    font-size: 0.575rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--cmh-body);
+    white-space: nowrap;
+  }
+
+  /* The role line is the one thing that yields on a phone — the name and the
+     face are the byline; "SCHEFTER REPORT" is what the pill already said. */
+  @media (max-width: 640px) {
+    .lch__byline-role {
+      display: none;
+    }
   }
 </style>

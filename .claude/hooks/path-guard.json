@@ -331,6 +331,8 @@
         "src/types/hero-showcase.ts",
         "src/pages/*/showcase.astro",
         "src/utils/hero-crest.ts",
+        "src/utils/article-hero-view.ts",
+        "src/components/theleague/season-heroes/ArticleHero.astro",
         "src/pages/theleague/index.astro",
         "src/pages/afl-fantasy/index.astro"
       ],
@@ -352,7 +354,8 @@
         "tests/weekly-column-hero-claim.test.ts",
         "tests/hero-recap-destination.test.ts",
         "tests/waiver-deadline-copy.test.ts",
-        "tests/waiver-window-callers.test.ts"
+        "tests/waiver-window-callers.test.ts",
+        "tests/article-hero-view.test.ts"
       ]
     },
     {

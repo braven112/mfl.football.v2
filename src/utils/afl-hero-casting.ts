@@ -77,6 +77,15 @@ export interface AflCastingInput {
    * slot casts a generic headliner rather than a "Top Scorer" it cannot place.
    */
   recap?: { seasonYear: number; week: number };
+  /**
+   * The player the news slot's article named in its body (`heroPlayerId`).
+   *
+   * The card now promotes a SPECIFIC story, so the face should be the one the
+   * story is about — the same rule TheLeague's article hero has always used.
+   * Absent (an article that named nobody, or the desk card), a franchise
+   * headliner takes the flank, which is what this slot always cast.
+   */
+  articlePlayerId?: string;
 }
 
 /**
@@ -253,6 +262,14 @@ export function castAflHeroModel(state: AflHeroState, input: AflCastingInput): H
               : null;
           return top ?? headliner('Headliner');
         }
+        case 'article':
+          // The player the article is about. No headliner fallback is skipped
+          // here — unlike the feature card there is no screenshot to cover, so
+          // an article naming nobody still wants a face.
+          return (
+            castFeaturedModel(input.articlePlayerId, players, 'In the Spotlight') ??
+            headliner('Headliner')
+          );
         case 'standings':
           // The headliner of the team leading the race.
           return input.standingsLeaderId

@@ -128,7 +128,11 @@ export const STORY_ASSET_GLOBS = [
   'public/assets/icons/**',
   'public/assets/hero-players/**',
   'public/assets/fonts/**',
+  // The two bylines the article hero's stories render. Listed individually
+  // rather than as `public/assets/schefter/**`, which is where every article's
+  // static art lives — those change constantly and no story renders one.
   'public/assets/claude-schefter-avatar.webp',
+  'public/assets/schefter/adam-schefter-avatar.webp',
 ];
 
 /**

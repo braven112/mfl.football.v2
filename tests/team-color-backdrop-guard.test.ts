@@ -54,7 +54,6 @@ const ALLOWLIST: Record<string, string> = {
   'src/components/theleague/CutWatchCompositeHero.astro': 'composite hero',
   'src/components/theleague/PreseasonCompositeHero.astro': 'composite hero',
   'src/components/theleague/FaceoffComposite.astro': 'two-panel composite',
-  'src/components/theleague/season-heroes/ArticleHero.astro': 'composite hero',
   'src/components/theleague/trade-builder/TradeCompositeStrip.tsx': 'composite strip',
   'src/components/afl/AflEventHero.astro': 'AFL event hero glow',
   'src/components/shared/LeagueCompositeHero.astro': 'AFL composite hero glow',
