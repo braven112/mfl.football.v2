@@ -97,8 +97,12 @@ open** — see the verdicts below. The issue stays open; do not close it.
 - [ ] **F2 — Verify the AFL's `fantasyPointsAllowed.json` actually lands** — STILL OPEN
   - Verdict: **still true and still unexercised.** `data/afl-fantasy/mfl-feeds/2026/fantasyPointsAllowed.json`
     does not exist on `main` as of 2026-09-17. `weekly-stats-sync.yml` last ran
-    2026-09-15 (before the hotfix), and its next scheduled run is Tue
-    2026-09-23 13:00 UTC.
+    2026-09-15 (before the hotfix), and its next scheduled run is **Tue
+    2026-09-22** — and only nominally at 13:00 UTC: that last run landed at
+    17:26, because GitHub drops and delays this repo's scheduled events
+    (`docs/claude/rules/storage-and-build.md` § "GitHub's `schedule` is not a
+    cadence"). Unlike `roster-sync.yml`, this workflow has no Vercel cron
+    backing it, so "Tuesday" is the most that can be promised.
   - Blocked, not deferred again: **MFL egress is blocked from this session too**
     (`www45.myfantasyleague.com:443 — connect_rejected`), so the fetch cannot be
     exercised locally, and the one way to exercise it early — a
