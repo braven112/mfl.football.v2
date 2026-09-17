@@ -534,7 +534,7 @@
     {
       "date": "2026-09-17",
       "type": "bug-fix",
-      "summary": "Rosters, scores and transactions now refresh every 15 minutes. GitHub had quietly stopped running the sync on time, leaving pages hours stale — once a full hour past waivers.",
+      "summary": "Rosters, scores and transactions now refresh far faster when it matters — every 5 minutes for two hours after waivers run, and every 15 during games.",
       "impact": "user",
       "area": "other",
       "league": "both"

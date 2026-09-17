@@ -65,3 +65,23 @@ jobs:
           ARGS=""
           if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS="--dry-run"; fi
           node scripts/push-job-failures.mjs $ARGS
+
+      # ABSENCE, not failure. The step above finds jobs that ran and went red;
+      # it is structurally blind to a job that never ran, which is exactly how
+      # the 2026-08-27 scheduler collapse hid for three weeks. This one reads
+      # the age of the newest sync commit on main instead.
+      #
+      # It lives HERE, on GitHub, rather than on the Vercel cron that now drives
+      # the sync — a watchdog sharing a substrate with its subject goes dark in
+      # the one outage it exists to report. GitHub's delivery is unreliable, so
+      # this may be hours late; late still beats never, and the two schedulers
+      # now cover each other.
+      - name: Check the roster sync is still landing
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          TZ: America/Los_Angeles
+        run: |
+          ARGS=""
+          if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS="--dry-run"; fi
+          node scripts/check-sync-freshness.mjs $ARGS
