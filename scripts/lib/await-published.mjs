@@ -46,8 +46,29 @@ export const POLL_TIMEOUT_MS = 12 * 60_000;
 const sleepFor = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
+ * Defaulting a seam to the real implementation types the PARAMETER as that
+ * implementation, which then rejects every honest stub — `log = console` asks
+ * callers for all 21 Console methods, and `fetchImpl = fetch` asks for both
+ * fetch overloads. Same lesson as push-fanout.mjs's DEFAULT_LOG. Declare what
+ * this module actually calls instead.
+ *
+ * @typedef {{ log?: (...args: any[]) => void, warn?: (...args: any[]) => void }} ProbeLog
+ * @typedef {(url: string, init?: Record<string, unknown>) => Promise<{ status: number }>} ProbeFetch
+ */
+
+/** @type {ProbeLog} */
+const DEFAULT_LOG = {
+  log: (...args) => console.log(...args),
+  warn: (...args) => console.warn(...args),
+};
+
+/**
  * One probe. Returns the HTTP status, or a string describing why there wasn't
  * one — either way the caller only cares whether it is exactly 200.
+ *
+ * @param {string} url
+ * @param {ProbeFetch} fetchImpl
+ * @param {string} nonce
  *
  * Cache-busted and `no-store`: the route is SSR, but an edge cache holding the
  * pre-deploy response for the few minutes that matter would defeat the whole
@@ -80,10 +101,12 @@ export async function awaitPublished({
   path,
   timeoutMs = POLL_TIMEOUT_MS,
   intervalMs = POLL_INTERVAL_MS,
-  fetchImpl = fetch,
+  /** @type {ProbeFetch} */
+  fetchImpl = /** @type {any} */ (fetch),
   sleep = sleepFor,
   now = () => Date.now(),
-  log = console,
+  /** @type {ProbeLog} */
+  log = DEFAULT_LOG,
 }) {
   // Accept a registry ENTRY or a slug. `leagueUrl` needs the entry: handed a
   // bare string it finds no origin and silently falls back to the shared host,

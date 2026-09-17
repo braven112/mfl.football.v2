@@ -34,13 +34,36 @@ import { readAnnounceQueue, clearAnnounceQueue, queuePath } from './lib/announce
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 
 /**
+ * The seams this script takes for testing, declared rather than inferred from
+ * their defaults. A default of `console` types the parameter as the whole
+ * Console interface and a default of `awaitPublished` demands its full return
+ * shape, so both reject any honest stub — the same trap push-fanout.mjs's
+ * DEFAULT_LOG documents. `announceOne` only ever reads `live`.
+ *
+ * @typedef {{ log?: (...args: any[]) => void, warn?: (...args: any[]) => void }} AnnounceLog
+ * @typedef {(args: { league: any, path: string, log?: AnnounceLog }) => Promise<{ live: boolean }>} WaitForPublished
+ */
+
+/** @type {AnnounceLog} */
+const DEFAULT_LOG = {
+  log: (...args) => console.log(...args),
+  warn: (...args) => console.warn(...args),
+};
+
+/**
  * Send one queued announcement. Never throws.
  *
  * Exported for tests: every branch here is a lane that has broken in
  * production at least once (a missing bot id, a held day, a push with no
  * recipients), and they are cheaper to pin than to re-debug.
  */
-export async function announceOne(entry, { dryRun = false, log = console, wait = awaitPublished } = {}) {
+export async function announceOne(entry, {
+  dryRun = false,
+  /** @type {AnnounceLog} */
+  log = DEFAULT_LOG,
+  /** @type {WaitForPublished} */
+  wait = /** @type {any} */ (awaitPublished),
+} = {}) {
   const league = LEAGUES[entry.league];
   if (!league) {
     log.warn?.(`  [announce] Unknown league "${entry.league}" — skipping ${entry.postId}.`);
