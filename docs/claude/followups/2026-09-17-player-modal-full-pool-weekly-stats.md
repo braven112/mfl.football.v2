@@ -26,6 +26,17 @@ five `/code-review` findings were **fixed in the PR rather than deferred**, at
 the `/live` bar. What is left below is genuinely follow-up work, not review debt
 that got waved through.
 
+## Rejected findings (shipped unaddressed, on judgement)
+
+- **Copilot: "TypeScript annotations in a client `<script>` will throw a syntax
+  error in the browser"** (`PlayerDetailsModal.astro`, two comments). Wrong.
+  Astro compiles a `.astro` `<script>` through esbuild and strips TS with no
+  `lang="ts"` needed. Verified against the SHIPPED artifact, not reasoned about:
+  the production bundle for the `da30b4d` deploy carries both callbacks with the
+  types gone (`je.map(function(e){…})`, `q.some(function(e){…})`). The same block
+  also already shipped `as HTMLElement | null` and `as HTMLImageElement | null`
+  before this PR, and the modal was driven in a real Chromium on this branch.
+
 ## What broke
 
 The player card's **Season Results** table was missing entirely — section
@@ -94,11 +105,19 @@ page loaded won for the session, and both leagues have a franchise 0001).
   - Why deferred: MFL egress was blocked, so the committed files were seeded with
     **week 1 only**, re-keyed from the already-committed `playerScores.json` via
     `reduceWeekScores`. Real data, but a partial the pipeline did not write.
-  - Done when: the roster-sync daily loop has run and both files carry every
-    played week. If they do not, check that the daily branch is being reached at
-    all — `--refresh-live` + `isFreshToday()` means the 18-week loop only runs on
-    the first run of each day, and hotfix #1146 changed that job's trigger to a
-    Vercel cron ping.
+  - **When to expect it, measured rather than assumed:** `freshToday` is read
+    from `fetch.meta.json`'s `lastFetched` and compared by CALENDAR DAY, and at
+    merge time that file already read `2026-09-17T01:21:52Z` — today. So
+    `skipDailyFeeds` was already true and the 18-week loop does NOT run again
+    until the first sync after UTC midnight. Do not check an hour after the
+    merge and conclude it is broken.
+  - In the meantime the feed still grows: the live path merges whatever week
+    `playerScores.json` names on every sync, so the current week lands
+    continuously and only weeks 2..N-1 wait for the backfill.
+  - Done when: both files carry every played week. If they still do not after a
+    UTC-midnight rollover, check the daily branch is reached at all —
+    `--refresh-live` + `isFreshToday()` gates it, and hotfix #1146 changed that
+    job's trigger to a Vercel cron ping.
 
 - [ ] **F4 — Decide whether the payload belongs in the page at all**
   - Source: deferred at implementation (design decision, deliberately not made
@@ -118,6 +137,24 @@ page loaded won for the session, and both leagues have a franchise 0001).
     *smaller than before this PR* and would make the data live rather than baked —
     `rosters.astro`'s copy is currently frozen at build time. Weigh against the
     added round-trip on open.
+
+- [ ] **F6 — A row labelled "Bye" that also shows points**
+  - Source: Copilot review on #1150, `src/utils/weekly-player-results.ts:325`
+  - Why deferred: it is a judgement call about a PRE-EXISTING rendering rule, not
+    a regression this PR introduced, so it did not belong on a fast path.
+  - Copilot's prescription — force `p: null` whenever `isBye` — is the wrong
+    direction and was rejected. `isBye` is DERIVED from `info.nflTeam`, which
+    `players.json` reports as the player's CURRENT team, so after a mid-season
+    trade the computed bye is his NEW team's: a WR who moved from a week-12-bye
+    team to a week-5-bye team really played week 5 and MFL really scored him.
+    Discarding a score we were given because of a bye we inferred deletes a week
+    he played. The roster branch has kept points under `isBye` since the table
+    was written.
+  - What IS right about it: `Bye` beside `21.4` reads as a contradiction, and the
+    row counts toward Games / PPG via `X.p!==null&&(J+=X.p,Y++)` in the modal.
+    The defect is the LABEL, not the number — when we hold a score, "bye" is
+    probably just wrong, so the honest row drops the bye label and keeps the
+    points. Decide that deliberately, for both branches at once.
 
 - [ ] **F5 — Fold in the external reviewers**
   - Source: Gemini / Copilot / CodeQL, which `/hotfix` step 5 does not wait for
