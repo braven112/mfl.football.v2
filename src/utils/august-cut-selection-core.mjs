@@ -399,8 +399,16 @@ export function parseAcquisitionAdds(txnString) {
  * Parse a raw MFL transactions feed (transactions.transaction[]) into the
  * acquisition-event shape selectAutoCuts consumes. Filters to acquisition
  * types with actual adds — trades, drop-onlys, and batch markers are skipped,
- * matching contract-eligibility.ts#parseTransactions (parity locked by
- * tests/august-cutdown-date.test.ts).
+ * matching contract-eligibility.ts#parseTransactions.
+ *
+ * Parity is locked by the RECORDED-CORPUS test in
+ * tests/contract-eligibility.test.ts. It used to claim the cross-check in
+ * tests/august-cutdown-date.test.ts locked it, and that was half true in the
+ * way that matters: the test exists, but its case list was written by hand and
+ * did not contain a single one of the four shapes this parser got wrong — it
+ * even asserted `"14837,|1|,"`, a string MFL has never emitted. A parity test
+ * over invented strings proves the two sides agree about a format neither of
+ * them will ever see.
  *
  * @param {Array<{type?: string, timestamp?: string|number, transaction?: string, franchise?: string}>} rawTransactions
  * @param {string[]} [acquisitionTypes]
