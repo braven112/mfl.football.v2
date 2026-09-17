@@ -114,3 +114,47 @@ export function parsePlayerWeekScores(file) {
 
   return byPlayer;
 }
+
+/**
+ * The share of a committed week's rows an incoming response must still carry
+ * before it is allowed to replace that week.
+ *
+ * A finished week's scores are immutable: the pool MFL can score for week 5 is
+ * the same pool tomorrow as it was yesterday, so a response that lost most of
+ * it is a BAD RESPONSE, not a correction. MFL serves degraded bodies at HTTP
+ * 200 (the same failure mode `writeOut`'s error-payload guard exists for), and
+ * `playerScores-by-week.json` is the only record of a week — a truncated reply
+ * that overwrites it deletes those scores from the modal until some later run
+ * happens to come back complete.
+ *
+ * The floor is not 1.0 because a genuine MFL stat correction can void a
+ * handful of rows, and refusing those would strand the file on a stale week
+ * forever. 0.9 of a ~484-row week leaves ~48 rows of legitimate churn while
+ * still refusing every truncation class worth worrying about.
+ */
+export const WEEK_SHRINK_FLOOR = 0.9;
+
+/**
+ * Decide whether an incoming week of full-pool scores may replace the
+ * committed one.
+ *
+ * Split out of `scripts/fetch-mfl-feeds.mjs` so the POLICY is unit-testable
+ * rather than only reachable behind a live MFL fetch.
+ *
+ * @param {Record<string, number> | undefined | null} committed The week already on disk.
+ * @param {Record<string, number>} incoming The week MFL just answered with.
+ * @returns {{ accept: boolean, reason: 'ok' | 'empty' | 'shrank', had: number, count: number }}
+ *   `empty` — MFL's blank placeholder for a week not yet played, or a total
+ *   failure. `shrank` — a non-empty response that lost too much of a week we
+ *   already have. Both keep the committed week; `ok` replaces it.
+ */
+export function weekMergeDecision(committed, incoming) {
+  const had = Object.keys(committed ?? {}).length;
+  const count = Object.keys(incoming ?? {}).length;
+
+  if (count === 0) return { accept: false, reason: 'empty', had, count };
+  if (had > 0 && count < had * WEEK_SHRINK_FLOOR) {
+    return { accept: false, reason: 'shrank', had, count };
+  }
+  return { accept: true, reason: 'ok', had, count };
+}

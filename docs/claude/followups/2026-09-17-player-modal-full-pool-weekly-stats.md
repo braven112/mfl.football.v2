@@ -4,10 +4,11 @@ status: open
 severity: P2
 opened: 2026-09-17
 hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1150
-hotfix_sha: da30b4d
-followup_issue: 1152
-followup_pr:
-followup_session: session_01RPZtRevPBtkwT3BcpoFV4K
+hotfix_sha: da30b4d0640ebe8ba5a930a21407bf0853e7e56e
+followup_issue: https://github.com/braven112/mfl.football.v2/issues/1152
+followup_pr: https://github.com/braven112/mfl.football.v2/pull/1154
+followup_session: https://claude.ai/code/session_01RPZtRevPBtkwT3BcpoFV4K
+followup_worked: 2026-09-17
 ---
 
 # Follow-up: player modal showed no weekly stats for free agents, practice squad or IR
@@ -70,75 +71,116 @@ page loaded won for the session, and both leagues have a franchise 0001).
 
 ## Deferred items
 
-- [ ] **F1 — `mergeWeek` accepts a truncated response for a finished week**
-  - Source: Claude review, `/code-review` (LOW)
-  - Where: `scripts/fetch-mfl-feeds.mjs:1124`, the `count === 0` guard at `:1127`
-  - Why deferred: needs a policy decision, not a one-liner — what counts as
-    "suspiciously fewer rows than the committed week" without rejecting the
-    legitimate shrink when MFL drops inactive players from a late week.
-  - Detail: the guard only refuses an EMPTY week, but its own comment promises
-    that a transient bad response leaves a good week alone. A partial reply for
-    an already-finished week destructively replaces it, and a finished week's
-    scores are immutable — so a week that has ever been fuller should probably
-    never shrink. Compare the "never downgrade" rule the current-week
-    `weeklyResults` merge already implements 80 lines above (`wouldDowngrade`).
+Re-validated 2026-09-17 against `main` at `da30b4d`. **Two worked, three still
+open** — see the verdicts below. The issue stays open; do not close it.
 
-- [ ] **F2 — Verify the AFL's `fantasyPointsAllowed.json` actually lands**
-  - Source: Claude review, `/code-review` (MEDIUM — the fix shipped, the path is
-    unverified)
-  - Where: `.github/workflows/weekly-stats-sync.yml`, `scripts/fetch-fantasy-points-allowed.mjs`
-  - Why deferred: the cron is Tuesdays 13:00 UTC and MFL egress is blocked from
-    the session that wrote this, so it could not be exercised. The `--league`
-    resolution WAS verified live (`MFL_LEAGUE_ID=13522 … --league=afl` →
-    `afl-fantasy (19621)`); the MFL `pointsAllowed` fetch for league 19621 was not.
-  - Done when: `data/afl-fantasy/mfl-feeds/2026/fantasyPointsAllowed.json` exists
-    with 30+ teams, and the modal's Opp Avg / Opp Rank columns appear on an AFL
-    player card (they are hidden by `.wr-no-opp-stats` until then — that part is
-    correct behaviour, not a bug).
-  - Watch for: the script aborts on `teamCount < 30`. If the AFL's scoring rules
-    produce a short table, that threshold is the thing to look at, not the fetch.
+- [x] **F1 — `mergeWeek` accepts a truncated response for a finished week** — WORKED
+  - Verdict: **still true.** The code was unchanged and Copilot independently
+    found the same thing after the merge (PR #1150, `fetch-mfl-feeds.mjs:1130`).
+  - The policy call, made here: **a finished week's pool does not shrink.** MFL
+    can void a handful of rows in a genuine stat correction, so the floor is a
+    proportion rather than "never fewer", and a response carrying less than 90%
+    of the rows already committed for that week is refused with a
+    `::warning::`. A legitimate late-season shrink is not a thing this feed
+    does — `playerScores&W=<n>` scores the whole pool the league's rules can
+    score, not the week's actives — so the "MFL drops inactives from a late
+    week" worry the brief raised does not apply; the floor still leaves ~48
+    rows of slack on a 484-row week if it ever does.
+  - Shape: the decision moved OUT of the fetch script into
+    `weekMergeDecision` / `WEEK_SHRINK_FLOOR` (`src/utils/player-week-scores.mjs`),
+    because inline it is only reachable behind a live MFL fetch — which neither
+    CI nor an agent session can make. Now unit-tested on both sides of the
+    floor, plus a scan guard that the script has not re-inlined the policy.
+  - Recorded as a rule: `docs/claude/rules/storage-and-build.md` §
+    "A merged feed needs a FLOOR, not just an empty check".
 
-- [ ] **F3 — Confirm the by-week feed filled weeks 1–18, and drop the hand seed**
-  - Source: deferred at implementation
-  - Where: `data/theleague/mfl-feeds/2026/playerScores-by-week.json`,
-    `data/afl-fantasy/mfl-feeds/2026/playerScores-by-week.json`
-  - Why deferred: MFL egress was blocked, so the committed files were seeded with
-    **week 1 only**, re-keyed from the already-committed `playerScores.json` via
-    `reduceWeekScores`. Real data, but a partial the pipeline did not write.
-  - **When to expect it, measured rather than assumed:** `freshToday` is read
-    from `fetch.meta.json`'s `lastFetched` and compared by CALENDAR DAY, and at
-    merge time that file already read `2026-09-17T01:21:52Z` — today. So
-    `skipDailyFeeds` was already true and the 18-week loop does NOT run again
-    until the first sync after UTC midnight. Do not check an hour after the
-    merge and conclude it is broken.
-  - In the meantime the feed still grows: the live path merges whatever week
-    `playerScores.json` names on every sync, so the current week lands
-    continuously and only weeks 2..N-1 wait for the backfill.
-  - Done when: both files carry every played week. If they still do not after a
-    UTC-midnight rollover, check the daily branch is reached at all —
-    `--refresh-live` + `isFreshToday()` gates it, and hotfix #1146 changed that
-    job's trigger to a Vercel cron ping.
+- [ ] **F2 — Verify the AFL's `fantasyPointsAllowed.json` actually lands** — STILL OPEN
+  - Verdict: **still true and still unexercised.** `data/afl-fantasy/mfl-feeds/2026/fantasyPointsAllowed.json`
+    does not exist on `main` as of 2026-09-17. `weekly-stats-sync.yml` last ran
+    2026-09-15 (before the hotfix), and its next scheduled run is **Tue
+    2026-09-22** — and only nominally at 13:00 UTC: that last run landed at
+    17:26, because GitHub drops and delays this repo's scheduled events
+    (`docs/claude/rules/storage-and-build.md` § "GitHub's `schedule` is not a
+    cadence"). Unlike `roster-sync.yml`, this workflow has no Vercel cron
+    backing it, so "Tuesday" is the most that can be promised.
+  - Blocked, not deferred again: **MFL egress is blocked from this session too**
+    (`www45.myfantasyleague.com:443 — connect_rejected`), so the fetch cannot be
+    exercised locally, and the one way to exercise it early — a
+    `workflow_dispatch` of `weekly-stats-sync.yml` — needs a human to approve
+    it, because that workflow commits to `main` and therefore deploys
+    production.
+  - Next action: dispatch `weekly-stats-sync.yml` on `main` (it is
+    `workflow_dispatch`-enabled and takes no inputs), or wait for Tuesday.
+    Then check the file exists with 30+ teams.
+- [ ] **F3 — Confirm the by-week feed filled weeks 1–18, and drop the hand seed** — STILL OPEN, cause identified
+  - Verdict: **still true.** Both files still carry the week-1 hand seed only —
+    `{ weeks: { "1": 484 rows } }` for TheLeague and for the AFL.
+  - Cause, which the brief guessed at and is now measured: the 18-week loop
+    lives behind `skipDailyFeeds`, and `isFreshToday()` reads the committed
+    `fetch.meta.json` stamp — `2026-09-17T01:21:52Z` for TheLeague,
+    `01:22:46Z` for the AFL. The daily set had **already run today** when the
+    hotfix merged at 07:38 UTC, so the loop's first real pass is the first
+    roster-sync run after 2026-09-18T00:00Z. The Vercel cron ping IS being
+    delivered (runs at 07:00/07:15/07:30 today, all green), so nothing is
+    wrong with the trigger — this is just the daily gate doing its job.
+  - It is not frozen in the meantime: the `--refresh-live` path still merges
+    whatever week `playerScores.json` names on every sync, so the CURRENT week
+    lands continuously. Only weeks 2..N-1 are waiting on the backfill.
+  - Recorded as a rule: `docs/claude/rules/storage-and-build.md` §
+    "A daily-gated feed does not backfill on the day it ships".
+  - Next action: after 2026-09-18T01:00Z, confirm both files carry every played
+    week, then this item closes on its own — there is no hand seed to delete,
+    only to be grown past.
+  - While checking it, also settle the one open question under F5 below: with
+    weeks 5+ present, measure whether MFL emits a score for a player whose NFL
+    team was on bye. If it does, a true bye would count toward the modal's
+    Games / PPG denominator.
 
-- [ ] **F4 — Decide whether the payload belongs in the page at all**
-  - Source: deferred at implementation (design decision, deliberately not made
-    under a hotfix)
-  - Where: the `#weekly-player-results` island in five pages —
-    `src/pages/theleague/{players,rosters}.astro`,
-    `src/pages/theleague/front-office/projected-free-agents.astro`,
-    `src/pages/afl-fantasy/{players,rosters}.astro`
-  - Why deferred: it is an architecture change, not a fix. Shipping it inside a
-    hotfix would have put a new API route and a modal-open fetch on the fast lane.
-  - Detail: the island is now ~780 KB of raw JSON per page (was ~460 KB on
-    TheLeague; the AFL had none). Over the wire that is only **10.0 KB brotli**
-    (from 8.1), which is why it was judged acceptable — but it is still 780 KB of
-    HTML text the browser holds, and it is the WHOLE LEAGUE embedded to render ONE
-    player. Serving it from an endpoint on modal open (the modal already fetches
-    news that way, `/api/player-news.ts`) would make every one of those five pages
-    *smaller than before this PR* and would make the data live rather than baked —
-    `rosters.astro`'s copy is currently frozen at build time. Weigh against the
-    added round-trip on open.
+- [ ] **F4 — Decide whether the payload belongs in the page at all** — STILL OPEN, needs a human call
+  - Verdict: **still true**, and deliberately not decided here. It is the one
+    item the brief itself flags as an architecture change rather than a fix,
+    and `/followup` routes those to `/feature`, not to a free-hand refactor of
+    a 12k-line page's data flow.
+  - Recommendation, for whoever makes the call: **move it to an endpoint.** The
+    size argument is the weaker half (780 KB of HTML text, but only 10.0 KB
+    over the wire); the stronger half is that `rosters.astro`'s copy is frozen
+    at build time, so the table it renders is as stale as the last deploy,
+    while the modal's own `/api/player-news.ts` fetch next to it is live. One
+    endpoint would make all five pages smaller than they were before #1150 and
+    make the data current. The cost is one round-trip on modal open, on a
+    modal that already makes one.
+  - If it goes ahead: `scripts/roster-parity-check.mjs` before AND after
+    (dev server on :4399), per `docs/plans/rosters-page-split.md`.
 
-- [ ] **F6 — A row labelled "Bye" that also shows points**
+- [x] **F5 — Fold in the external reviewers** — WORKED
+  - Gemini did not run on #1150 (`pr-external-review.yml` is opt-in). CodeQL and
+    Analyze both passed. Copilot posted four comments after the merge; all four
+    are adjudicated:
+  - `scripts/fetch-mfl-feeds.mjs:1130` — **confirmed.** Same finding as F1,
+    reached independently. Fixed above.
+  - `PlayerDetailsModal.astro:1878` and `:1933` — **rejected.** Copilot read the
+    TypeScript annotations in the client `<script>` as a runtime syntax error.
+    That block is a plain Astro `<script>`, not `is:inline`, and it carries bare
+    module specifiers (`import { escapeHtml } from '../../utils/player-cell-html'`)
+    — so Vite/esbuild transpiles it at build and the browser never sees an
+    annotation. Copilot's own note says it could not run its full agentic suite.
+    It is also disproven empirically: the PR's Playwright pass drove
+    `openPlayerDetailsModal` against the preview deployment and read 484 players
+    back out of `#weekly-player-results`, which that script is what produces.
+    Pinned anyway, because adding `is:inline` to that tag WOULD break it:
+    "keeps its client script bundled, because it is TypeScript".
+  - `weekly-player-results.ts:325` — **rejected.** Copilot asks for `p: null`
+    whenever `isBye`, which is the exact inverse of review finding F-c, fixed
+    in this PR's second commit and already pinned by "keeps a real score on a
+    week it computed as a bye". `isBye` is DERIVED from `info.nflTeam`, the
+    player's current team, so for a mid-season trade it is the wrong team's bye
+    and the points being discarded are a real week he played. A score MFL gave
+    us outranks a bye we computed. The narrow sub-case Copilot is right about —
+    a TRUE bye that MFL nonetheless scores would count toward Games / PPG — is
+    tracked as **F6** below, which frames it better than this rejection does:
+    the defect is the LABEL, not the number.
+
+- [ ] **F6 — A row labelled "Bye" that also shows points** — STILL OPEN, and the sharper framing
   - Source: Copilot review on #1150, `src/utils/weekly-player-results.ts:325`
   - Why deferred: it is a judgement call about a PRE-EXISTING rendering rule, not
     a regression this PR introduced, so it did not belong on a fast path.
@@ -155,12 +197,16 @@ page loaded won for the session, and both leagues have a franchise 0001).
     The defect is the LABEL, not the number — when we hold a score, "bye" is
     probably just wrong, so the honest row drops the bye label and keeps the
     points. Decide that deliberately, for both branches at once.
-
-- [ ] **F5 — Fold in the external reviewers**
-  - Source: Gemini / Copilot / CodeQL, which `/hotfix` step 5 does not wait for
-  - Why deferred: by design — their findings land on the PR after the merge.
-  - Done when: PR #1150's comments have been re-read after merge and anything
-    real is either fixed or explicitly rejected with a reason here.
+  - Re-validated 2026-09-17: **still true, and it outranks the way F5 below
+    first filed the same Copilot comment.** F5 rejects Copilot's prescription,
+    which is right; F6 names what is actually wrong, which the rejection alone
+    does not. When we hold a score for a week, the BYE label is the thing that
+    is false — whether because the bye was derived from the wrong (current)
+    team, or because MFL scored a player his real bye week. Both branches of
+    `buildWeeklyPlayerResults` must answer it the same way, and neither should
+    be changed without the other.
+  - It is a judgement call with a user-visible answer, so it wants the `/live`
+    bar and a human, not a follow-up commit. Left open deliberately.
 
 ## Context to start cold
 
