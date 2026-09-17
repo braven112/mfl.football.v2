@@ -179,14 +179,43 @@ run count went 589 → 135. Push-triggered runs were never affected. This is
 GitHub declining to dispatch, which its docs reserve the right to do, and it is
 not a delay you can wait out.
 
-Why it is not merely late data: **the committed MFL feeds are baked into the
-build** (`import.meta.glob(..., { eager: true })`), and a sync commit to `main`
-is what redeploys production. No sync run means no commit, which means no
-redeploy, which means the site cannot move — however correct the page code is.
-On 2026-09-16 TheLeague sat a full hour past the Wed 19:00 PT waiver run still
-serving pre-waiver rosters: the last sync had landed at 18:20 PT and the next
-was hours out. `resolveWaiverWindow` had already flipped to "PROCESSED" on
-schedule; there was simply no deploy carrying the new rosters.
+Why it is not merely late data: **a committed MFL feed is baked into the build**
+(`import.meta.glob(..., { eager: true })`), and a sync commit to `main` is what
+redeploys production. No sync run means no commit, which means no redeploy,
+which means a surface reading that feed cannot move — however correct the page
+code is. On 2026-09-16 TheLeague sat a full hour past the Wed 19:00 PT waiver
+run: the last sync had landed at 18:20 PT and the next was hours out.
+`resolveWaiverWindow` had already flipped to "PROCESSED" on schedule; there was
+simply no deploy carrying the new data.
+
+**But check WHICH surface before blaming the cron — not everything is baked.**
+Two of the most-read surfaces already read MFL live, server-side per request,
+through a ~2-minute Redis cache that falls back to the static feed when Redis is
+unavailable:
+
+| Surface | Overlay | Covers |
+|---|---|---|
+| Rosters, homepage, league summary, Front Office | `mfl-roster-cache.ts` | membership, salary, contract year/info, status |
+| Transactions (the shared `TransactionsPage.astro`) | `mfl-transactions-cache.ts` | the last 3 days of moves |
+| Trade bait | `mfl-trade-bait-cache.ts` | — |
+
+`rosters.astro` prefers the cache for the CURRENT league year and only reads the
+committed feed for historical seasons or when Redis is empty — its own comment
+says "reflected within ~2 minutes without needing a manual data sync". So **a
+stale roster page is usually Redis, not the cron**, and triage that starts at
+the sync will chase the wrong thing.
+
+What is genuinely build-baked, and therefore what the cadence actually protects:
+the **Schefter feed** (`schefter-league-data.ts` uses a STATIC import, so it
+cannot even fall back), `activity.astro` (eager glob, no overlay), standings,
+weekly results, `players.json`, draft results and the derived payloads. Note
+that `schefter-scan` rides the same dropped scheduler, so after the 08-27 cliff
+the news feed was doubly behind.
+
+Nothing polls for rosters client-side. Every client `fetch` on `rosters.astro`
+is a write action (declare, cut, trade bait, auth); the only real client polling
+is live scoring and the broadcast/draft boards, which read ESPN rather than this
+sync.
 
 So the schedule lives in **`vercel.json` → `crons`**, which fires
 `/api/cron/roster-sync`, which `workflow_dispatch`es the workflow. That cron is
