@@ -1,0 +1,342 @@
+---
+/**
+ * Draft assets as a flex-wrap row of chips — the Front Office hub's draft
+ * section, BOTH leagues.
+ *
+ * This is the AFL's `kp-picks` layout (KeeperPlanner.astro), generalized and
+ * promoted. TheLeague's hub previously rendered the same information as up to
+ * TWO `ChartCard`s side by side, each holding a `DraftTeamAssetsView` (379
+ * lines, grouped by round with per-round headers) or a `DraftPicksCard` (340
+ * lines) — pre-rendered once per team per year, so the switcher could swap
+ * without a fetch. That is a great deal of vertical space and payload for a
+ * section read in two seconds. The chip row says the same thing in a fraction
+ * of both.
+ *
+ * `DraftPicksCard` and `DraftTeamAssetsView` are deliberately NOT deleted:
+ * `rosters.astro` still renders them and keeps doing so until its planner tab
+ * retires. See docs/plans/front-office-hub.md.
+ *
+ * TWO THINGS THE CHIP FACE CARRIES, and one it does not:
+ *
+ * - **Pick position** (`1.03`) where the league has a draft order to predict.
+ *   The AFL has none, so its chips read `1st round` instead — that is the
+ *   `label` the caller supplies, not a branch in here.
+ * - **Immediate origin** (`via Magicians`, or `Original`).
+ * - **NOT the multi-hop trade chain.** It does not fit a chip, so it is
+ *   revealed rather than dropped — see the accessibility note below.
+ *
+ * ACCESSIBILITY OF THE REVEAL: a chip with a chain is a real `<button>` with
+ * `aria-expanded` and `aria-describedby`, and the chain is a sibling element
+ * that is visible on hover, on focus AND on tap. It is deliberately not a
+ * `title` attribute: that never appears on touch and screen-reader support
+ * for it is inconsistent. A chip with no chain stays a plain `<span>` — a
+ * button that does nothing is worse than no button.
+ */
+
+export interface DraftAssetChip {
+  /** Stable key within its group. */
+  id: string;
+  /** Chip face, line 1 — "1.03" for TheLeague, "1st round" for the AFL. */
+  label: string;
+  /** Chip face, line 2 — "via Magicians", or null for an untraded pick. */
+  via: string | null;
+  /**
+   * Full provenance, e.g. "from Magicians via Warriors". Rendered as the
+   * revealed detail. Null when the pick never moved or only moved once, in
+   * which case `via` already says everything and no reveal is offered.
+   */
+  chain?: string | null;
+}
+
+export interface DraftAssetGroup {
+  /** Year heading above this group's chips, e.g. "2027". */
+  year: string;
+  chips: DraftAssetChip[];
+}
+
+interface Props {
+  /**
+   * One entry per draft year. Both years live in ONE card with a small year
+   * subhead each, rather than the two side-by-side cards TheLeague used to
+   * render — the chips are compact enough that splitting them into separate
+   * cards costs two card headers and buys nothing.
+   */
+  groups: DraftAssetGroup[];
+  /** Card heading. Pass `null` when the host already prints one above the
+   *  card — TheLeague's hub has a "Draft Assets" planner-section title, and
+   *  two identical headings stacked is noise. */
+  title?: string | null;
+  /** Optional "see the full order" link, rendered in the card header. */
+  href?: string | null;
+  hrefTitle?: string;
+  /** Rendered when every group is empty. */
+  emptyText?: string;
+}
+
+const {
+  groups,
+  title = 'Draft assets',
+  href = null,
+  hrefTitle = 'View full draft assets',
+  emptyText = 'No draft picks on the books.',
+} = Astro.props;
+
+const totalChips = groups.reduce((sum, g) => sum + g.chips.length, 0);
+// A single group does not need its year printed twice — the card subtitle
+// already carries it. Only print per-group headings when there is more than one.
+const showYearHeadings = groups.filter((g) => g.chips.length > 0).length > 1;
+const soleYear = groups.find((g) => g.chips.length > 0)?.year ?? '';
+---
+
+<div class="fo-picks">
+  <header class:list={['fo-picks__header', { 'fo-picks__header--untitled': !title }]}>
+    {title && <h3 class="fo-picks__title">{title}</h3>}
+    <div class="fo-picks__meta">
+      <span class="fo-picks__count">
+        {totalChips} {totalChips === 1 ? 'pick' : 'picks'}{!showYearHeadings && soleYear ? ` · ${soleYear}` : ''}
+      </span>
+      {href && (
+        <a class="fo-picks__link" href={href} title={hrefTitle} aria-label={hrefTitle}>
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M8.5 1.5H2.5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7.5M14.5 1.5l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </a>
+      )}
+    </div>
+  </header>
+
+  {totalChips === 0 ? (
+    <p class="fo-picks__empty">{emptyText}</p>
+  ) : (
+    groups
+      .filter((g) => g.chips.length > 0)
+      .map((group) => (
+        <div class="fo-picks__group">
+          {showYearHeadings && <h4 class="fo-picks__year">{group.year}</h4>}
+          <ul class="fo-picks__list">
+            {group.chips.map((chip) => {
+              const chainId = `fo-pick-chain-${group.year}-${chip.id}`.replace(/[^a-zA-Z0-9_-]/g, '-');
+              return chip.chain ? (
+                <li class="fo-picks__pick fo-picks__pick--chained">
+                  <button
+                    type="button"
+                    class="fo-picks__face fo-picks__face--button"
+                    aria-expanded="false"
+                    aria-describedby={chainId}
+                    data-pick-chain-toggle
+                  >
+                    <span class="fo-picks__round">{chip.label}</span>
+                    <span class="fo-picks__via">{chip.via ?? 'Original'}</span>
+                  </button>
+                  <span class="fo-picks__chain" id={chainId} role="note">{chip.chain}</span>
+                </li>
+              ) : (
+                <li class="fo-picks__pick">
+                  <span class="fo-picks__face">
+                    <span class="fo-picks__round">{chip.label}</span>
+                    <span class="fo-picks__via">{chip.via ?? 'Original'}</span>
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ))
+  )}
+</div>
+
+<script>
+  // Tap-to-reveal for the trade chain. Hover and focus are pure CSS; this
+  // exists for touch, where neither fires, and it is what makes
+  // `aria-expanded` truthful rather than decorative.
+  //
+  // Delegated from `document` with the handler held in a module variable and
+  // removed before re-adding: under the ClientRouter a `document` listener
+  // survives every navigation, so re-running init would otherwise stack a
+  // second, third and fourth copy of it.
+  let chainHandler: ((event: Event) => void) | null = null;
+
+  function initDraftChipChains() {
+    if (chainHandler) document.removeEventListener('click', chainHandler);
+
+    chainHandler = (event: Event) => {
+      const target = event.target as HTMLElement | null;
+      const toggle = target?.closest<HTMLElement>('[data-pick-chain-toggle]');
+
+      // A click anywhere else closes whatever is open, so a revealed chain
+      // does not sit over the page until the next reload.
+      document.querySelectorAll<HTMLElement>('[data-pick-chain-toggle][aria-expanded="true"]').forEach((el) => {
+        if (el !== toggle) el.setAttribute('aria-expanded', 'false');
+      });
+
+      if (!toggle) return;
+      const open = toggle.getAttribute('aria-expanded') === 'true';
+      toggle.setAttribute('aria-expanded', open ? 'false' : 'true');
+    };
+
+    document.addEventListener('click', chainHandler);
+  }
+
+  initDraftChipChains();
+  document.addEventListener('astro:page-load', initDraftChipChains);
+</script>
+
+<style>
+  /* Lifted from KeeperPlanner.astro's .kp-picks, with the year grouping,
+     header link and chain reveal added. */
+  .fo-picks {
+    background: var(--content-bg, #fff);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  }
+
+  :global(html.dark) .fo-picks {
+    box-shadow: 0 0 0 1px var(--content-border, #555555);
+  }
+
+  .fo-picks__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  /* With no title the meta would drift to the left edge; keep it right. */
+  .fo-picks__header--untitled {
+    justify-content: flex-end;
+  }
+
+  .fo-picks__title {
+    margin: 0;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--page-text, #374151);
+  }
+
+  .fo-picks__meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .fo-picks__count {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--content-text-muted, #6b7280);
+  }
+
+  .fo-picks__link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 0.375rem;
+    color: var(--content-text-muted, #6b7280);
+  }
+
+  .fo-picks__link:hover {
+    color: var(--league-accent, #1c497c);
+    background: var(--content-bg-muted, #f3f4f6);
+  }
+
+  .fo-picks__link:focus-visible {
+    outline: 2px solid var(--league-accent, #1c497c);
+    outline-offset: 2px;
+  }
+
+  .fo-picks__group + .fo-picks__group {
+    margin-top: 0.75rem;
+  }
+
+  .fo-picks__year {
+    margin: 0 0 0.375rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--content-text-muted, #6b7280);
+  }
+
+  .fo-picks__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+  }
+
+  .fo-picks__pick {
+    position: relative;
+  }
+
+  .fo-picks__face {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+    background: var(--content-bg-muted, #f3f4f6);
+    border-radius: 0.375rem;
+    padding: 0.25rem 0.625rem;
+    font-size: 0.75rem;
+    color: var(--page-text, #374151);
+    text-align: left;
+  }
+
+  .fo-picks__face--button {
+    border: 0;
+    /* Signals there is more behind this chip; a chainless chip has no cursor
+       change because it has nothing to reveal. */
+    cursor: help;
+    font: inherit;
+    font-size: 0.75rem;
+  }
+
+  .fo-picks__face--button:focus-visible {
+    outline: 2px solid var(--league-accent, #1c497c);
+    outline-offset: 2px;
+  }
+
+  .fo-picks__round {
+    font-weight: 700;
+  }
+
+  .fo-picks__via {
+    color: var(--content-text-muted, #6b7280);
+    font-size: 0.6875rem;
+  }
+
+  .fo-picks__chain {
+    position: absolute;
+    bottom: calc(100% + 0.25rem);
+    left: 0;
+    z-index: 5;
+    display: none;
+    width: max-content;
+    max-width: min(16rem, 80vw);
+    padding: 0.375rem 0.5rem;
+    border-radius: 0.375rem;
+    background: var(--page-text, #1a1a1a);
+    color: var(--content-bg, #fff);
+    font-size: 0.6875rem;
+    line-height: 1.35;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+  }
+
+  /* Hover and focus for pointer + keyboard; aria-expanded for touch, set by
+     the script above. All three reveal the same element. */
+  .fo-picks__pick--chained:hover .fo-picks__chain,
+  .fo-picks__face--button:focus-visible ~ .fo-picks__chain,
+  .fo-picks__face--button[aria-expanded='true'] ~ .fo-picks__chain {
+    display: block;
+  }
+
+  .fo-picks__empty {
+    margin: 0;
+    font-size: 0.75rem;
+    color: var(--content-text-muted, #6b7280);
+  }
+</style>

@@ -1,0 +1,244 @@
+---
+/**
+ * Cut candidates — every player on the roster, ranked by what cutting one
+ * actually frees up.
+ *
+ * "Action cards only, no roster table" was the call for this page, and a
+ * card that lists only the obvious candidates cannot cut a player it does
+ * not surface. So this lists the WHOLE roster, ordered by net cap saved
+ * (salary minus the dead money the cut leaves behind), and collapses to the
+ * top few with a "Show all" expander. It reads as a card; every player is
+ * still reachable from it.
+ *
+ * The penalty is `calculateCutPenalty` from salary-calculations.ts — 50% of
+ * salary this season plus 15/25/35/45% next by years remaining. Nothing is
+ * recomputed here.
+ *
+ * OWNER-ONLY by construction: `/api/cut-player` authenticates with the
+ * viewer's own MFL cookie and verifies they roster the player, so this card
+ * is rendered only when the selected team is the viewer's own. Showing it
+ * otherwise would offer a button the server is going to refuse.
+ */
+import PlayerCell from '../../theleague/PlayerCell.astro';
+import { calculateCutPenalty } from '../../../utils/salary-calculations';
+import { currencyFormatter } from '../../../utils/formatters';
+
+export interface CutCandidate {
+  id: string;
+  name: string;
+  position: string;
+  nflTeam: string;
+  headshot?: string;
+  salary: number;
+  contractYears: number;
+  points?: number;
+  franchiseId: string;
+  birthdate?: number | null;
+}
+
+interface Props {
+  players: CutCandidate[];
+  /** How many rows show before the expander. */
+  visibleCount?: number;
+}
+
+const { players, visibleCount = 8 } = Astro.props;
+
+const rows = players
+  .map((p) => {
+    const penalty = calculateCutPenalty(p.salary, p.contractYears);
+    return {
+      player: p,
+      penalty,
+      // What the cut is actually worth: this year's salary off the books,
+      // less the dead money it creates. Can be negative — cutting an
+      // expensive long deal costs more than it saves, and that is exactly
+      // the thing an owner needs to see before clicking.
+      netSaved: p.salary - penalty.totalPenalty,
+    };
+  })
+  .sort((a, b) => b.netSaved - a.netSaved);
+---
+
+<div class="fo-cuts">
+  <header class="fo-cuts__header">
+    <div>
+      <h3 class="fo-cuts__title">Cut candidates</h3>
+      <p class="fo-cuts__sub">Ranked by cap freed after dead money. Cuts are immediate and cannot be undone here.</p>
+    </div>
+    <span class="fo-cuts__count">{rows.length} on roster</span>
+  </header>
+
+  {rows.length === 0 ? (
+    <p class="fo-cuts__empty">No players on this roster.</p>
+  ) : (
+    <Fragment>
+      <ul class="fo-cuts__list">
+        {rows.map((row, i) => (
+          <li class="fo-cuts__row" data-cut-row hidden={i >= visibleCount}>
+            <div class="fo-cuts__player">
+              <PlayerCell
+                name={row.player.name}
+                headshot={row.player.headshot}
+                position={row.player.position}
+                nflTeam={row.player.nflTeam}
+                playerData={{
+                  id: row.player.id,
+                  name: row.player.name,
+                  position: row.player.position,
+                  nflTeam: row.player.nflTeam,
+                  salary: row.player.salary,
+                  contractYears: row.player.contractYears,
+                  points: row.player.points,
+                  franchiseId: row.player.franchiseId,
+                  birthdate: row.player.birthdate,
+                }}
+              />
+            </div>
+            <div class="fo-cuts__figures">
+              <span class="fo-cuts__salary">
+                {currencyFormatter.format(row.player.salary)} <span class="fo-cuts__x">x</span> {row.player.contractYears}
+              </span>
+              <span class="fo-cuts__dead">Dead {currencyFormatter.format(row.penalty.totalPenalty)}</span>
+              <span class:list={['fo-cuts__net', { 'fo-cuts__net--negative': row.netSaved < 0 }]}>
+                {row.netSaved < 0 ? '−' : '+'}{currencyFormatter.format(Math.abs(row.netSaved))}
+              </span>
+            </div>
+            <button
+              type="button"
+              class="fo-cut-btn"
+              data-cut-player-id={row.player.id}
+              data-cut-player-name={row.player.name}
+              data-cut-dead={row.penalty.totalPenalty}
+            >Cut</button>
+          </li>
+        ))}
+      </ul>
+      {rows.length > visibleCount && (
+        <button type="button" class="fo-cuts__more" data-cuts-expand aria-expanded="false">
+          Show all {rows.length}
+        </button>
+      )}
+    </Fragment>
+  )}
+</div>
+
+<style>
+  .fo-cuts {
+    background: var(--content-bg, #fff);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  }
+
+  :global(html.dark) .fo-cuts {
+    box-shadow: 0 0 0 1px var(--content-border, #555555);
+  }
+
+  .fo-cuts__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .fo-cuts__title {
+    margin: 0 0 0.125rem;
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--page-text, #1a1a1a);
+  }
+
+  .fo-cuts__sub {
+    margin: 0;
+    font-size: 0.75rem;
+    color: var(--content-text-muted, #6b7280);
+  }
+
+  .fo-cuts__count {
+    flex: 0 0 auto;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--content-text-muted, #6b7280);
+  }
+
+  .fo-cuts__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .fo-cuts__row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+    border-top: 1px solid var(--content-border, #e5e7eb);
+  }
+
+  .fo-cuts__row[hidden] { display: none; }
+
+  .fo-cuts__player {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .fo-cuts__figures {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.1rem;
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
+
+  .fo-cuts__salary { color: var(--page-text, #1a1a1a); font-weight: 600; }
+  .fo-cuts__x { color: var(--content-text-muted, #6b7280); }
+  .fo-cuts__dead { color: var(--content-text-muted, #6b7280); font-size: 0.6875rem; }
+
+  .fo-cuts__net {
+    font-weight: 700;
+    color: #16a34a;
+  }
+
+  /* A cut that costs more than it saves is the whole reason this column
+     exists; it must not read the same as one that helps. */
+  .fo-cuts__net--negative { color: #dc2626; }
+
+  .fo-cut-btn {
+    flex: 0 0 auto;
+    padding: 0.3rem 0.6rem;
+    border: 1px solid #dc2626;
+    border-radius: 0.375rem;
+    background: transparent;
+    color: #dc2626;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .fo-cut-btn:hover:not(:disabled) { background: #dc2626; color: #fff; }
+
+  .fo-cut-btn:focus-visible { outline: 2px solid #dc2626; outline-offset: 2px; }
+
+  .fo-cut-btn:disabled { opacity: 0.55; cursor: default; }
+
+  .fo-cuts__more {
+    margin-top: 0.5rem;
+    padding: 0.35rem 0.7rem;
+    border: 1px solid var(--content-border, #e5e7eb);
+    border-radius: 0.375rem;
+    background: transparent;
+    color: var(--league-accent, #1c497c);
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .fo-cuts__empty {
+    margin: 0;
+    font-size: 0.75rem;
+    color: var(--content-text-muted, #6b7280);
+  }
+</style>

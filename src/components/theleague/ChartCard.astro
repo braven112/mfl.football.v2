@@ -33,6 +33,13 @@ const { title, subtitle, class: className } = Astro.props;
 
 <style>
   .chart-card {
+    /* A grid/flex item's automatic min-width is its own content's
+       min-content, NOT 0 — so `overflow: auto` below could never engage:
+       the card simply grew to fit a wide table and pushed its track and
+       the page sideways. Measured at 533px inside a 412px phone viewport
+       on the Front Office hub. Same trap RosterAnalyticsPanel's own
+       .chart-card comment records. */
+    min-width: 0;
     background: var(--card-bg-color, #fff);
     border-radius: 1rem;
     padding: 1.5rem 1.5rem 2rem;
@@ -85,6 +92,11 @@ const { title, subtitle, class: className } = Astro.props;
 
   .chart-card__body {
     display: block;
+    /* Second link in the same chain: the body is a grid item of the card,
+       so it needs its own min-width: 0 before a wide child can scroll
+       instead of push. */
+    min-width: 0;
+    overflow-x: auto;
   }
 
   @media (max-width: 640px) {

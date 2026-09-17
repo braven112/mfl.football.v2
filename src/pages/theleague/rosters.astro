@@ -5378,7 +5378,18 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     calculatePositionCaps as calculatePositionCapsCore,
     calculateCapEfficiency as calculateCapEfficiencyCore,
     calculateContractYearsMeta as calculateContractYearsMetaCore,
+    calculateCutPenalty as calculateCutPenaltyCore,
+    FUTURE_PERCENT_BY_YEARS,
   } from '../../utils/salary-calculations';
+  import {
+    getReferenceSalary as getReferenceSalaryCore,
+    calculateFranchiseTag as calculateFranchiseTagCore,
+    calculateTeamOption as calculateTeamOptionCore,
+    calculateVeteranExtension as calculateVeteranExtensionCore,
+    formatSalaryCompact as formatSalaryCompactCore,
+    submitStagedActions,
+    DECLARATION_TYPE_LABELS as DECLARATION_TYPE_LABELS_CORE,
+  } from '../../utils/contract-actions-client';
   import {
     getPositionRank as getPositionRankCore,
     sortByPosition as sortByPositionCore,
@@ -5494,23 +5505,10 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
   const localDeclarations = {}; // Optimistic: { playerId: { status, years } }
   const ESCALATION_RATE = 1.10;
 
-  const DECLARATION_TYPE_LABELS = {
-    'new-acquisition': 'New Acquisition',
-    'rookie-override': 'Rookie Override',
-    'team-option': '1st Round Option',
-    'franchise-tag': 'Franchise Tag',
-    'veteran-extension': 'Veteran Extension',
-    'rookie-extension': 'Rookie Extension',
-  };
+  const DECLARATION_TYPE_LABELS = DECLARATION_TYPE_LABELS_CORE;
 
   /** Format salary as compact currency */
-  const formatSalaryCompact = (val) => {
-    const n = Number(val);
-    if (!Number.isFinite(n) || n === 0) return '$0';
-    if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
-    if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
-    return `$${n.toLocaleString()}`;
-  };
+  const formatSalaryCompact = formatSalaryCompactCore;
 
   /** Get eligibility for a player on a given team */
   const getPlayerEligibility = (playerId, teamId) => {
@@ -5686,82 +5684,33 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     return formatter.format(Math.round(value));
   };
 
-  const getReferenceSalary = (position, type, season) => {
-    const averages = config.salaryAverages?.[season];
-    if (!averages) return 0;
+  // Contract pricing — the formulas live in contract-actions-client.ts,
+  // which delegates to salary-calculations.ts. This page held its own copy
+  // of each: identical arithmetic, differing only in how it looked the
+  // position averages up (the client config ships flattened per-season maps;
+  // the shared helpers take MFL's nested shape). Two copies of a cap formula
+  // is two answers to "what does extending him cost".
+  const seasonAverages = (season) => config.salaryAverages?.[season];
+  const getReferenceSalary = (position, type, season) =>
+    getReferenceSalaryCore(seasonAverages(season), position, type);
+  const calculateFranchiseTag = (salary, position, season) =>
+    calculateFranchiseTagCore(salary, position, seasonAverages(season));
+  const calculateTeamOption = (salary, position, season) =>
+    calculateTeamOptionCore(position, seasonAverages(season));
 
-    if (type === 'franchise') return averages.franchiseSalaries?.[position] ?? 0;
-    if (type === 'team-option') return averages.teamOptionSalaries?.[position] ?? 0;
-    return averages.extensionSalaries?.[position] ?? 0;
-  };
+  const calculateVeteranExtension = (contractYears, position, season, extensionYears, currentSalary) =>
+    calculateVeteranExtensionCore(
+      contractYears,
+      position,
+      extensionYears,
+      currentSalary,
+      seasonAverages(season),
+    );
 
-  // Contract Action Calculations
-  const calculateFranchiseTag = (salary, position, season) => {
-    const increasedSalary = salary * 1.2;
-    const avgSalary = getReferenceSalary(position, 'franchise', season);
-    return {
-      newSalary: Math.round(Math.max(increasedSalary, avgSalary)),
-      newYears: 1
-    };
-  };
-
-  const calculateTeamOption = (salary, position, season) => {
-    const avgSalary = getReferenceSalary(position, 'team-option', season);
-    return {
-      newSalary: Math.round(avgSalary),
-      newYears: 1,
-    };
-  };
-
-  const calculateVeteranExtension = (
-    contractYears,
-    position,
-    season,
-    extensionYears,
-    currentSalary
-  ) => {
-    const existingYears = Number(contractYears ?? 0) || 0;
-    const extYears = Number(extensionYears ?? 0) || 0;
-    const avgSalary = getReferenceSalary(position, 'extension', season);
-
-    // Per rules: (top5 avg * extensionYears / (existing years + extensionYears)) + existing salary
-    const denominator = existingYears + extYears;
-    const proratedPortion =
-      denominator > 0 ? (avgSalary * extYears) / denominator : 0;
-    const baseSalary = Number(currentSalary ?? 0);
-    const newSalaryCurrent = Math.round(proratedPortion + baseSalary);
-
-    const totalYears = existingYears + extYears;
-
-    // Create salary breakdown for ALL years with 10% increases each year starting from newSalaryCurrent
-    const salaryBreakdown = {};
-    for (let i = 0; i < totalYears; i++) {
-      salaryBreakdown[`year${i}`] = Math.round(newSalaryCurrent * Math.pow(1.1, i));
-    }
-
-    return {
-      newSalary: newSalaryCurrent,
-      newYears: totalYears,
-      salaryBreakdown: salaryBreakdown
-    };
-  };
-
-  const calculateCutPenalty = (salary, contractYears) => {
-    const currentSeasonPenalty = salary * 0.5;
-    let futureSeasonPenalty = 0;
-
-    if (contractYears > 1) {
-      // Future penalty: 15% for 2 years, 25% for 3 years, 35% for 4 years, 45% for 5 years
-      const futurePercentByYears = { 1: 0, 2: 0.15, 3: 0.25, 4: 0.35, 5: 0.45 };
-      futureSeasonPenalty = salary * (futurePercentByYears[contractYears] ?? 0);
-    }
-
-    return {
-      currentPenalty: currentSeasonPenalty,
-      futurePenalty: futureSeasonPenalty,
-      totalPenalty: currentSeasonPenalty + futureSeasonPenalty
-    };
-  };
+  // Same story as the pricing helpers above: the rates (50% current, then
+  // 15/25/35/45% by years remaining) lived here AND in salary-calculations.
+  const calculateCutPenalty = (salary, contractYears) =>
+    calculateCutPenaltyCore(salary, contractYears);
 
   const switchView = (viewName) => {
     if (currentView === viewName) return;
@@ -6054,29 +6003,14 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     submitFranchiseTagsBtn.setAttribute('aria-label', 'Submitting declarations');
 
     try {
-      for (const action of actionsToSubmit) {
+      // Sequential, one at a time, stopping at the first failure — the API
+      // rejects a second franchise tag for the same team and that check
+      // reads the store, so firing them at once could race past it. The
+      // per-action callback keeps whatever already landed if a later one
+      // throws. Shared with the homepage card and the Front Office hub; see
+      // contract-actions-client.ts.
+      await submitStagedActions(actionsToSubmit, { leagueId, franchiseId, franchiseName }, (action) => {
         const isFranchise = action.type === 'franchise';
-        const res = await fetch('/api/contracts/declare', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            leagueId,
-            playerId: action.playerId,
-            playerName: action.playerName,
-            franchiseId,
-            franchiseName,
-            type: isFranchise ? 'franchise-tag' : 'veteran-extension',
-            currentYears: action.originalYears,
-            currentSalary: action.originalSalary,
-            currentContractInfo: '',
-            requestedYears: isFranchise ? 1 : action.newYears,
-            requestedSalary: action.newSalary,
-            requestedContractInfo: isFranchise ? 'F' : 'E',
-          }),
-        });
-        const result = await res.json();
-        if (!res.ok) throw new Error(result.error || 'Submission failed');
-
         // Optimistic update
         localDeclarations[action.playerId] = {
           status: 'pending',
@@ -6088,7 +6022,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
         } else if (!isFranchise) {
           currentVeteranExtension = null;
         }
-      }
+      });
 
       recalculateRoster();
       updateClearAllButton();
@@ -6971,12 +6905,11 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
         .filter((adj) => adj.franchiseId === franchiseId)
         .map((adj, idx) => {
           const baseOffset = Number(adj.yearOffset ?? adj.seasonOffset ?? 0) || 0;
-          const futurePercentByYears = { 1: 0, 2: 0.15, 3: 0.25, 4: 0.35, 5: 0.45 };
           const salary = Number(adj.salary) || Number(adj.amount) || 0;
           const yearsRemaining = adj.yearsRemaining ?? 1;
           const currentPenalty = 0.5 * salary;
           const futurePenalty =
-            (futurePercentByYears[yearsRemaining] ?? 0) * salary;
+            (FUTURE_PERCENT_BY_YEARS[yearsRemaining] ?? 0) * salary;
           return {
             ...adj,
             currentPenalty,
@@ -7678,10 +7611,9 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       const salary = Number(adj.salary) || Number(adj.amount) || 0;
       const yearsRemaining = adj.yearsRemaining;
       const hasYearsRemaining = Number.isFinite(yearsRemaining);
-      const futurePercentByYears = { 1: 0, 2: 0.15, 3: 0.25, 4: 0.35, 5: 0.45 };
       const currentPenalty = hasYearsRemaining ? 0.5 * salary : salary; // carryover hits 100% current year
       const futurePenalty =
-        hasYearsRemaining ? (futurePercentByYears[yearsRemaining] ?? 0) * salary : 0;
+        hasYearsRemaining ? (FUTURE_PERCENT_BY_YEARS[yearsRemaining] ?? 0) * salary : 0;
           let total = sum;
           if (idx === baseOffset) total += currentPenalty;
           if (idx === baseOffset + 1 && futurePenalty > 0) total += futurePenalty;

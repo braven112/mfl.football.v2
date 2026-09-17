@@ -1,0 +1,273 @@
+---
+/**
+ * "NFL and College Stacks" — which of this roster's players share an NFL
+ * team or an alma mater. Shared by both leagues' Front Office hubs.
+ *
+ * Extracted verbatim from AflKeeperPlannerPanel.astro, including the open-by-
+ * default `<details>` (the AFL owner asked for collapsible-but-expanded, and
+ * that preference carries to TheLeague rather than being re-litigated).
+ *
+ * Grouping is done by the caller via `groupByNflTeam` / `groupByCollege`
+ * (roster-analytics.ts), which already apply the 2+ player threshold — a
+ * "stack" of one is not a stack. This component only draws them.
+ *
+ * SELF-WIRING: the player names here open PlayerDetailsModal, and this markup
+ * sits outside whatever planner root the host rendered, so it attaches its own
+ * delegated listener rather than relying on the host's. The host must mount a
+ * PlayerDetailsModal somewhere on the page; both hub panels already do.
+ */
+import PlayerCell from '../../theleague/PlayerCell.astro';
+import CollegeLogoDarkStyles from '../../CollegeLogoDarkStyles.astro';
+import { getNFLTeamName, getNFLTeamLogo } from '../../../utils/nfl-logo';
+import { COLLEGE_LOGO_ONERROR, COLLEGE_LOGO_ONLOAD } from '../../../constants/roster-constants';
+import collegeLogos from '../../../data/college-logos.json';
+import type { AnalyticsPlayer, RosterGroup } from '../../../utils/roster-analytics';
+
+interface Props {
+  playersByNflTeam: RosterGroup<AnalyticsPlayer>[];
+  playersByCollege: RosterGroup<AnalyticsPlayer>[];
+}
+
+const { playersByNflTeam, playersByCollege } = Astro.props;
+
+const buildPlayerModalData = (p: AnalyticsPlayer) => ({
+  id: p.id,
+  espnId: p.espnId,
+  name: p.name,
+  position: p.position,
+  nflTeam: p.team,
+  status: p.status,
+  college: p.college,
+  height: p.height ? Number(p.height) : null,
+  weight: p.weight ? Number(p.weight) : null,
+  number: p.jersey ? Number(p.jersey) : null,
+  draftYear: p.draftYear,
+  draftRound: p.draftRound,
+  draftPick: p.draftPick,
+  draftTeam: p.draftTeam,
+});
+
+const collegeLogosNormalized: Record<string, { logo?: string; logoDark?: string }> = Object.fromEntries(
+  Object.entries(collegeLogos ?? {}).map(([name, data]: any) => [name.toLowerCase(), data]),
+);
+const getCollegeAssets = (collegeName?: string | null) => {
+  if (!collegeName) return null;
+  return collegeLogosNormalized[collegeName.toLowerCase()] ?? null;
+};
+---
+
+{(playersByNflTeam.length > 0 || playersByCollege.length > 0) && (
+  <details class="fo-stacks" open>
+    <summary>NFL and College Stacks</summary>
+
+    {playersByNflTeam.length > 0 && (
+      <div class="analytics-section">
+        <div class="section-header">
+          <h3 class="section-header__title">NFL Analysis</h3>
+          <p class="section-header__sub">Players on the same NFL team</p>
+        </div>
+        <div class="nfl-teams-grid">
+          {playersByNflTeam.map((group) => (
+            <article class="chart-card">
+              <header class="chart-card__header chart-card__header--group">
+                <img src={getNFLTeamLogo(group.key)} alt={group.key} class="team-group__logo" />
+                <span class="team-group__name">{getNFLTeamName(group.key)}</span>
+              </header>
+              <div class="team-group__players">
+                {group.players.map((player) => (
+                  <div class="players-team__player">
+                    <PlayerCell
+                      name={player.name}
+                      position={player.position}
+                      nflTeam={player.team}
+                      headshot={player.headshot}
+                      playerData={buildPlayerModalData(player)}
+                      mflId={player.id}
+                      espnId={player.espnId}
+                    />
+                  </div>
+                ))}
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
+    )}
+
+    {playersByCollege.length > 0 && (
+      <div class="analytics-section">
+        <div class="section-header">
+          <h3 class="section-header__title">College Analysis</h3>
+          <p class="section-header__sub">Players who played for the same college</p>
+        </div>
+        <div class="nfl-teams-grid">
+          {playersByCollege.map((group) => {
+            const assets = getCollegeAssets(group.key);
+            return (
+              <article class="chart-card">
+                <header class="chart-card__header chart-card__header--group">
+                  {assets?.logo ? (
+                    <img src={assets.logo} alt={group.key} class="team-group__logo" onerror={COLLEGE_LOGO_ONERROR} onload={COLLEGE_LOGO_ONLOAD} />
+                  ) : (
+                    <div class="team-group__logo team-group__logo--fallback">{group.key[0] ?? '?'}</div>
+                  )}
+                  <span class="team-group__name">{group.key}</span>
+                </header>
+                <div class="team-group__players">
+                  {group.players.map((player) => (
+                    <div class="players-team__player">
+                      <PlayerCell
+                        name={player.name}
+                        position={player.position}
+                        nflTeam={player.team}
+                        headshot={player.headshot}
+                        playerData={buildPlayerModalData(player)}
+                        mflId={player.id}
+                        espnId={player.espnId}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </div>
+    )}
+    <CollegeLogoDarkStyles />
+  </details>
+)}
+
+<script>
+  // Delegated player-modal wiring for this component's own root. Idempotent
+  // via a flag on the ELEMENT (not a module variable): under the ClientRouter
+  // the module instance survives a navigation but the element does not, so an
+  // element flag re-arms on the new DOM and a module flag would not.
+  //
+  // No league gate needed here, unlike a forked page's script: this is ONE
+  // shared component behaving identically in both leagues, so a cross-league
+  // swap re-running this init against the arriving DOM is the correct result,
+  // not the cross-wiring the gate exists to prevent.
+  import { initPlayerModalTrigger } from '../../../utils/player-modal-trigger';
+
+  function initStacksModalTrigger() {
+    document.querySelectorAll<HTMLElement>('.fo-stacks').forEach((el) => {
+      if (el.dataset.modalInit === '1') return;
+      el.dataset.modalInit = '1';
+      initPlayerModalTrigger(el);
+    });
+  }
+
+  initStacksModalTrigger();
+  document.addEventListener('astro:page-load', initStacksModalTrigger);
+</script>
+
+<style>
+  /* Moved verbatim from AflKeeperPlannerPanel.astro. The chart-card /
+     section-header rules are repeated here rather than imported because
+     Astro scopes component styles — this component must stand up on a
+     page that does not also render RosterAnalyticsPanel. */
+  .fo-stacks {
+    margin-top: 1rem;
+  }
+
+  .fo-stacks summary {
+    cursor: pointer;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--content-text-muted, #6b7280);
+    padding: 0.25rem 0;
+  }
+
+  .fo-stacks[open] summary {
+    margin-bottom: 0.75rem;
+  }
+
+  .analytics-section {
+    margin-top: 1rem;
+  }
+
+  .nfl-teams-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .team-group__logo {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+
+  .team-group__logo--fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--content-bg-muted, #f3f4f6);
+    border-radius: 50%;
+    font-weight: 700;
+    color: var(--content-text-muted, #6b7280);
+  }
+
+  .team-group__name {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--page-text, #1a1a1a);
+  }
+
+  .team-group__players {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    margin-top: 0.5rem;
+  }
+
+  @media (max-width: 640px) {
+    .nfl-teams-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Card + header rules duplicated from RosterAnalyticsPanel.astro. Astro
+     scopes styles to the component, so a shared class name is NOT shared
+     styling — this component renders standalone and must carry its own. */
+  .section-header {
+    margin-bottom: 0.75rem;
+  }
+
+  .section-header__title {
+    margin: 0 0 0.25rem;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--page-text, #1a1a1a);
+  }
+
+  .section-header__sub {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: var(--content-text-muted, #6b7280);
+  }
+
+  .chart-card {
+    min-width: 0;
+    background: var(--content-bg, #fff);
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  }
+
+  :global(html.dark) .chart-card {
+    box-shadow: 0 0 0 1px var(--content-border, #555555);
+  }
+
+  .chart-card__header {
+    margin-bottom: 0.75rem;
+  }
+
+  .chart-card__header--group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+</style>

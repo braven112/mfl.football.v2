@@ -1,0 +1,309 @@
+---
+/**
+ * The Front Office hub's write layer: declare an extension or a franchise
+ * tag, or cut a player, without leaving the page.
+ *
+ * WHY THIS IS NOT rosters.astro's CONTRACT DECISION MODAL. That flow is a
+ * multi-step wizard (cdm-wizard.ts) driven by the roster page's own state —
+ * it exists to walk an owner through choosing BETWEEN actions for a player
+ * they clicked in a table. Here the choice is already made by which card the
+ * button sits in and which button they pressed, so the wizard's whole job is
+ * already done. What is left is: show the price, get a yes, file it.
+ *
+ * Both paths file through the SAME module (contract-actions-client.ts), so
+ * the price an owner is shown here and the price the wizard shows there come
+ * from one formula and one `fetch`. That was Phase C's point.
+ *
+ * CONFIRM IN PLACE, NOT `confirm()`. A native dialog cannot show the cap
+ * consequence, and this repo already replaced it elsewhere with an inline
+ * button swap (see front-office/contracts.astro). Same shape here: the
+ * button becomes "Confirm · $4.2M × 5" plus a cancel, and only the second
+ * click writes.
+ *
+ * A CUT IS IRREVERSIBLE AND IMMEDIATE — `/api/cut-player` drops the player
+ * on MFL right then, with no pending-approval step a declaration gets. So
+ * its confirm names the dead money it will leave behind, and its label says
+ * so plainly.
+ */
+interface Props {
+  leagueId: string;
+  franchiseId: string;
+  franchiseName: string;
+  /** League year the cut endpoint should act on. */
+  year: number;
+  /** Per-season averages for the selected season, for pricing. */
+  salaryAverages: Record<string, unknown>;
+  extensionSeason: string;
+}
+
+const { leagueId, franchiseId, franchiseName, year, salaryAverages, extensionSeason } = Astro.props;
+
+const config = { leagueId, franchiseId, franchiseName, year, salaryAverages, extensionSeason };
+---
+
+<script id="fo-actions-config" type="application/json" set:html={JSON.stringify(config)}></script>
+
+<div class="fo-actions-status" id="fo-actions-status" role="status" aria-live="polite" hidden></div>
+
+<script>
+  import {
+    calculateFranchiseTag,
+    calculateVeteranExtension,
+    formatSalaryCompact,
+    submitDeclaration,
+    toDeclarationRequest,
+  } from '../../../utils/contract-actions-client';
+
+  // How many years a hub extension adds. The cards price and label the
+  // "Extended" column at +2 (VeteranExtensionCandidates' own arithmetic), so
+  // confirming has to file the same term the owner was quoted.
+  const HUB_EXTENSION_YEARS = 2;
+
+  let clickHandler: ((event: Event) => void) | null = null;
+
+  function initFrontOfficeActions() {
+    const configEl = document.getElementById('fo-actions-config');
+    if (!configEl) return; // not an owner view
+
+    const readConfig = () => {
+      try {
+        return JSON.parse(configEl.textContent || '{}');
+      } catch {
+        return {};
+      }
+    };
+
+    const statusEl = document.getElementById('fo-actions-status');
+    const say = (msg: string, isError = false) => {
+      if (!statusEl) return;
+      statusEl.textContent = msg;
+      statusEl.hidden = false;
+      statusEl.dataset.error = isError ? 'true' : 'false';
+    };
+
+    // `document`-level delegation, because both card bodies re-render
+    // themselves on every team switch — a listener bound to a row would be
+    // thrown away with it. Removed before re-adding so ClientRouter
+    // navigations cannot stack copies.
+    if (clickHandler) document.removeEventListener('click', clickHandler);
+
+    /** Swap a button for "Confirm / Cancel" and resolve on the choice. */
+    const confirmInPlace = (btn: HTMLButtonElement, confirmLabel: string): Promise<boolean> =>
+      new Promise((resolve) => {
+        const original = btn.textContent;
+        const row = btn.parentElement;
+        if (!row) return resolve(false);
+
+        const wrap = document.createElement('span');
+        wrap.className = 'fo-confirm';
+        const yes = document.createElement('button');
+        yes.type = 'button';
+        yes.className = 'fo-confirm__yes';
+        yes.textContent = confirmLabel;
+        const no = document.createElement('button');
+        no.type = 'button';
+        no.className = 'fo-confirm__no';
+        no.textContent = 'Cancel';
+        no.setAttribute('aria-label', 'Cancel');
+        wrap.append(yes, no);
+
+        const restore = () => {
+          wrap.remove();
+          btn.hidden = false;
+          btn.textContent = original;
+        };
+        yes.addEventListener('click', (e) => {
+          e.stopPropagation();
+          restore();
+          resolve(true);
+        });
+        no.addEventListener('click', (e) => {
+          e.stopPropagation();
+          restore();
+          resolve(false);
+        });
+
+        btn.hidden = true;
+        row.appendChild(wrap);
+        yes.focus();
+      });
+
+    clickHandler = async (event: Event) => {
+      const target = event.target as HTMLElement | null;
+
+      // --- show-all expander on the cut card ---
+      const expander = target?.closest<HTMLElement>('[data-cuts-expand]');
+      if (expander) {
+        const open = expander.getAttribute('aria-expanded') === 'true';
+        document.querySelectorAll<HTMLElement>('[data-cut-row]').forEach((row, i) => {
+          row.hidden = open && i >= 8;
+        });
+        expander.setAttribute('aria-expanded', open ? 'false' : 'true');
+        expander.textContent = open
+          ? `Show all ${document.querySelectorAll('[data-cut-row]').length}`
+          : 'Show fewer';
+        return;
+      }
+
+      // --- declare an extension or a franchise tag ---
+      const declareBtn = target?.closest<HTMLButtonElement>('.fo-declare-btn');
+      if (declareBtn) {
+        const cfg = readConfig();
+        const kind = declareBtn.dataset.declare as 'extension' | 'franchise';
+        const position = declareBtn.dataset.position ?? '';
+        const salary = Number(declareBtn.dataset.salary) || 0;
+        const years = Number(declareBtn.dataset.years) || 0;
+        const averages = (cfg.salaryAverages ?? {}) as any;
+
+        const priced =
+          kind === 'franchise'
+            ? calculateFranchiseTag(salary, position, averages)
+            : calculateVeteranExtension(years, position, HUB_EXTENSION_YEARS, salary, averages);
+
+        const label =
+          kind === 'franchise'
+            ? `Confirm · ${formatSalaryCompact(priced.newSalary)} × 1`
+            : `Confirm · ${formatSalaryCompact(priced.newSalary)} × ${priced.newYears}`;
+
+        if (!(await confirmInPlace(declareBtn, label))) return;
+
+        declareBtn.disabled = true;
+        declareBtn.textContent = 'Filing…';
+        try {
+          await submitDeclaration(
+            toDeclarationRequest(
+              {
+                playerId: declareBtn.dataset.playerId ?? '',
+                playerName: declareBtn.dataset.playerName ?? '',
+                type: kind,
+                originalYears: years,
+                originalSalary: salary,
+                newYears: priced.newYears,
+                newSalary: priced.newSalary,
+              },
+              {
+                leagueId: cfg.leagueId,
+                franchiseId: cfg.franchiseId,
+                franchiseName: cfg.franchiseName,
+              },
+            ),
+          );
+          declareBtn.textContent = 'Pending';
+          // No longer hypothetical: drop it from the what-if scenario so the
+          // cap projection does not count it twice — once as scratch and
+          // once as the pending declaration it just became.
+          document.dispatchEvent(
+            new CustomEvent('fo:action-filed', { detail: { playerId: declareBtn.dataset.playerId } }),
+          );
+          say(
+            `${declareBtn.dataset.playerName} — ${kind === 'franchise' ? 'franchise tag' : 'extension'} ` +
+              `submitted for commissioner approval.`,
+          );
+        } catch (err) {
+          // The API's own message ("already has a pending franchise tag",
+          // "not eligible") is the useful one; never replace it.
+          declareBtn.disabled = false;
+          declareBtn.textContent = kind === 'franchise' ? 'Tag' : 'Extend';
+          say(err instanceof Error ? err.message : 'Could not submit. Try again.', true);
+        }
+        return;
+      }
+
+      // --- cut a player ---
+      const cutBtn = target?.closest<HTMLButtonElement>('.fo-cut-btn');
+      if (cutBtn) {
+        const cfg = readConfig();
+        const dead = Number(cutBtn.dataset.cutDead) || 0;
+        const name = cutBtn.dataset.cutPlayerName ?? 'this player';
+        // Unlike a declaration, this writes to MFL immediately with no
+        // approval step, so the confirm names the cost rather than just asking.
+        if (!(await confirmInPlace(cutBtn, `Cut · ${formatSalaryCompact(dead)} dead`))) return;
+
+        cutBtn.disabled = true;
+        cutBtn.textContent = 'Cutting…';
+        try {
+          const res = await fetch('/api/cut-player', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ playerId: String(cutBtn.dataset.cutPlayerId), year: cfg.year }),
+          });
+          const data = await res.json().catch(() => ({}));
+          // 409 = already off the roster on MFL. The desired end state is
+          // true, so count it as done rather than as a failure to retry.
+          if (res.status !== 409 && (!res.ok || !data?.success)) {
+            throw new Error(data?.message || `HTTP ${res.status}`);
+          }
+          cutBtn.textContent = 'Cut';
+          document.dispatchEvent(
+            new CustomEvent('fo:action-filed', { detail: { playerId: cutBtn.dataset.cutPlayerId } }),
+          );
+          cutBtn.closest<HTMLElement>('[data-cut-row]')?.style.setProperty('opacity', '0.45');
+          say(`${name} cut. Reload to see the updated cap.`);
+        } catch (err) {
+          cutBtn.disabled = false;
+          cutBtn.textContent = 'Cut';
+          say(err instanceof Error ? err.message : 'Could not cut. Try again.', true);
+        }
+      }
+    };
+
+    document.addEventListener('click', clickHandler);
+  }
+
+  initFrontOfficeActions();
+  document.addEventListener('astro:page-load', initFrontOfficeActions);
+</script>
+
+<style>
+  .fo-actions-status {
+    margin: 0.5rem 0 0;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.375rem;
+    background: var(--content-bg-muted, #f3f4f6);
+    color: var(--page-text, #1a1a1a);
+    font-size: 0.8125rem;
+  }
+
+  .fo-actions-status[data-error='true'] {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+
+  :global(html.dark) .fo-actions-status[data-error='true'] {
+    background: #7f1d1d;
+    color: #fecaca;
+  }
+
+  :global(.fo-confirm) {
+    display: inline-flex;
+    gap: 0.25rem;
+    white-space: nowrap;
+  }
+
+  :global(.fo-confirm__yes),
+  :global(.fo-confirm__no) {
+    padding: 0.3rem 0.5rem;
+    border-radius: 0.375rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: 1px solid var(--league-accent, #1c497c);
+  }
+
+  :global(.fo-confirm__yes) {
+    background: var(--league-accent, #1c497c);
+    color: #fff;
+  }
+
+  :global(.fo-confirm__no) {
+    background: transparent;
+    color: var(--content-text-muted, #6b7280);
+    border-color: var(--content-border, #e5e7eb);
+  }
+
+  :global(.fo-confirm__yes:focus-visible),
+  :global(.fo-confirm__no:focus-visible) {
+    outline: 2px solid var(--league-accent, #1c497c);
+    outline-offset: 2px;
+  }
+</style>

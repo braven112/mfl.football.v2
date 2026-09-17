@@ -583,6 +583,9 @@ function getPickupLabel(type: UnsignedFaAlert['acquisitionType']): string {
   import { NFL_TEAM_CITIES, normalizeTeamCode } from '../../../utils/nfl';
   import { applyPlayerModalBand } from '../../../utils/player-modal-band';
   import { DEFAULT_LEAGUE_ID } from '../../../config/leagues';
+  // The declare POST is shared with rosters.astro's Contract Decision Modal
+  // and the Front Office hub — three surfaces filing the same paperwork.
+  import { submitDeclaration } from '../../../utils/contract-actions-client';
 
   const YEAR_OPTIONS = [1, 2, 3, 4, 5];
 
@@ -799,29 +802,22 @@ function getPickupLabel(type: UnsignedFaAlert['acquisitionType']): string {
       errorEl.style.display = 'none';
 
       try {
-        const res = await fetch('/api/contracts/declare', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            leagueId,
-            playerId: current.playerId,
-            playerName: document.getElementById('cdm-player-name')?.textContent || '',
-            franchiseId,
-            franchiseName,
-            type: 'new-acquisition',
-            currentYears: 1,
-            currentSalary: current.salary,
-            currentContractInfo: '',
-            requestedYears: selectedYears,
-            deadlineAt: current.deadlineTimestamp
-              ? new Date(current.deadlineTimestamp * 1000).toISOString()
-              : undefined,
-            acquisitionTimestamp: current.acquisitionTimestamp,
-          }),
+        await submitDeclaration({
+          leagueId,
+          playerId: current.playerId,
+          playerName: document.getElementById('cdm-player-name')?.textContent || '',
+          franchiseId,
+          franchiseName,
+          type: 'new-acquisition',
+          currentYears: 1,
+          currentSalary: current.salary,
+          currentContractInfo: '',
+          requestedYears: selectedYears,
+          deadlineAt: current.deadlineTimestamp
+            ? new Date(current.deadlineTimestamp * 1000).toISOString()
+            : undefined,
+          acquisitionTimestamp: current.acquisitionTimestamp,
         });
-
-        const result = await res.json();
-        if (!res.ok) throw new Error(result.error || 'Declaration failed');
 
         submitBtn.classList.remove('is-loading');
         submitBtn.removeAttribute('aria-busy');

@@ -138,35 +138,69 @@ describe('the Front Office AFL panel carries the same roster analytics', () => {
   // The panel used by /afl-fantasy/front-office (AflKeeperPlannerPanel.astro)
   // is a DIFFERENT render path from rosters.astro's ?view=planner tab and
   // never had analytics data at all — the Planner-view copy above doesn't
-  // reach it. This is its own wiring, via afl-roster-analytics.ts.
+  // reach it. This is its own wiring, via roster-analytics.ts.
+  //
+  // The analytics MARKUP no longer lives in the AFL panel: it was extracted
+  // verbatim into <RosterAnalyticsPanel> and <NflCollegeStacks> so
+  // TheLeague's hub could render the same thing instead of becoming a third
+  // inline copy. These guards follow it there, and additionally pin that the
+  // AFL panel did not keep a copy behind.
   const PANEL_SRC = readFileSync(
-    'src/components/shared/front-office-hub/AflKeeperPlannerPanel.astro',
+    'src/components/shared/front-office-hub/FrontOfficePanel.astro',
+    'utf-8',
+  );
+  const ANALYTICS_SRC = readFileSync(
+    'src/components/shared/front-office-hub/RosterAnalyticsPanel.astro',
+    'utf-8',
+  );
+  const STACKS_SRC = readFileSync(
+    'src/components/shared/front-office-hub/NflCollegeStacks.astro',
     'utf-8',
   );
   const KEEPER_DATA_SRC = readFileSync('src/utils/front-office-keeper-data.ts', 'utf-8');
 
   it('front-office-keeper-data.ts computes analytics via the shared util, not inline duplication', () => {
-    expect(KEEPER_DATA_SRC).toMatch(/from '\.\/afl-roster-analytics'/);
+    expect(KEEPER_DATA_SRC).toMatch(/from '\.\/roster-analytics'/);
     expect(KEEPER_DATA_SRC).toMatch(/buildRosterAnalytics\(/);
     expect(KEEPER_DATA_SRC).toMatch(/groupByNflTeam\(/);
     expect(KEEPER_DATA_SRC).toMatch(/groupByCollege\(/);
   });
 
-  it('the panel renders the 4-card grid below KeeperPlanner, with NFL/College Stacks open by default', () => {
+  it('renders the shared analytics + stacks components below KeeperPlanner', () => {
     const keeperPlannerIdx = PANEL_SRC.indexOf('<KeeperPlanner');
-    const analyticsIdx = PANEL_SRC.indexOf('fo-afl-analytics"');
+    const analyticsIdx = PANEL_SRC.indexOf('<RosterAnalyticsPanel');
+    const stacksIdx = PANEL_SRC.indexOf('<NflCollegeStacks');
     expect(keeperPlannerIdx).toBeGreaterThan(-1);
     expect(analyticsIdx).toBeGreaterThan(keeperPlannerIdx);
-    expect(PANEL_SRC).toMatch(/Position composition/);
-    expect(PANEL_SRC).toMatch(/Age by position/);
-    expect(PANEL_SRC).toMatch(/Age distribution/);
-    const extra = PANEL_SRC.match(/<details class="fo-afl-analytics__extra"[\s\S]*?<\/details>/)?.[0] ?? '';
+    expect(stacksIdx).toBeGreaterThan(analyticsIdx);
+  });
+
+  it('keeps NO inline copy of the analytics markup in the AFL panel', () => {
+    // The whole point of the extraction. A re-inlined chart here is a second
+    // implementation that will drift from TheLeague's within a release.
+    expect(PANEL_SRC).not.toMatch(/Position composition/);
+    expect(PANEL_SRC).not.toMatch(/Age by position/);
+    expect(PANEL_SRC).not.toMatch(/donut-chart/);
+    expect(PANEL_SRC).not.toMatch(/strip-plot/);
+    expect(PANEL_SRC).not.toMatch(/NFL Analysis/);
+  });
+
+  it('the shared panel still draws all four roster cards', () => {
+    expect(ANALYTICS_SRC).toMatch(/Position composition/);
+    expect(ANALYTICS_SRC).toMatch(/Age by position/);
+    expect(ANALYTICS_SRC).toMatch(/Age distribution/);
+    expect(ANALYTICS_SRC).toMatch(/age-stats__value/);
+  });
+
+  it('keeps NFL/College Stacks open by default', () => {
+    // Open by default here — unlike the rosters.astro Planner-view copy,
+    // which stays closed/de-emphasized. The AFL owner asked for
+    // collapsible-but-expanded and that carries to both leagues now.
+    const extra = STACKS_SRC.match(/<details class="fo-stacks"[\s\S]*?<\/details>/)?.[0] ?? '';
     expect(extra).toMatch(/NFL and College Stacks/);
     expect(extra).toMatch(/NFL Analysis/);
     expect(extra).toMatch(/College Analysis/);
-    // Open by default here — unlike the rosters.astro Planner-view copy,
-    // which stays closed/de-emphasized.
-    expect(extra).toMatch(/<details class="fo-afl-analytics__extra" open>/);
+    expect(extra).toMatch(/<details class="fo-stacks" open>/);
   });
 
   it('the Age card can shrink a long name without pushing the page sideways', () => {
@@ -179,19 +213,31 @@ describe('the Front Office AFL panel carries the same roster analytics', () => {
     // fixed live via Playwright, since jsdom doesn't lay out flex/grid.
     // Every box between the analytics grid and the ellipsis-truncated name
     // needs its own min-width: 0 or the chain breaks at whichever link is
-    // missing it.
-    const chartCard = PANEL_SRC.match(/\.chart-card\s*\{[\s\S]*?\}/)?.[0] ?? '';
-    const minmax = PANEL_SRC.match(/\.age-stats__minmax\s*\{[\s\S]*?\}/)?.[0] ?? '';
-    const rowName = PANEL_SRC.match(/\.age-stats__row-name\s*\{[\s\S]*?\}/)?.[0] ?? '';
+    // missing it. The chain moved into the shared panel with the markup.
+    const chartCard = ANALYTICS_SRC.match(/\.chart-card\s*\{[\s\S]*?\}/)?.[0] ?? '';
+    const minmax = ANALYTICS_SRC.match(/\.age-stats__minmax\s*\{[\s\S]*?\}/)?.[0] ?? '';
+    const rowName = ANALYTICS_SRC.match(/\.age-stats__row-name\s*\{[\s\S]*?\}/)?.[0] ?? '';
     expect(chartCard).toMatch(/min-width:\s*0/);
     expect(minmax).toMatch(/min-width:\s*0/);
     expect(rowName).toMatch(/min-width:\s*0/);
+  });
+
+  it('the stacks component carries its own card styles, since Astro scopes them', () => {
+    // A shared class name is not shared styling across components. Without
+    // its own .chart-card rule this section renders unstyled wherever it is
+    // mounted next to something that is not RosterAnalyticsPanel.
+    expect(STACKS_SRC).toMatch(/\.chart-card\s*\{/);
+    expect(STACKS_SRC).toMatch(/\.section-header\s*\{/);
   });
 });
 
 describe('the AFL Front Office panel turns on the player modal and a manage/watch kebab', () => {
   const PANEL_SRC = readFileSync(
-    'src/components/shared/front-office-hub/AflKeeperPlannerPanel.astro',
+    'src/components/shared/front-office-hub/FrontOfficePanel.astro',
+    'utf-8',
+  );
+  const STACKS_SRC = readFileSync(
+    'src/components/shared/front-office-hub/NflCollegeStacks.astro',
     'utf-8',
   );
 
@@ -200,22 +246,30 @@ describe('the AFL Front Office panel turns on the player modal and a manage/watc
     // playerData/data-player-modal attributes had nothing listening for a
     // click on this page, and there was no kebab at all — clicking a name
     // did nothing.
-    expect(PANEL_SRC).toMatch(/<PlayerDetailsModal\s+hideContract\s*\/>/);
-    // AFLActionModal, NOT the generic WatchListBridge sheet: this is the
-    // owner's own roster, so the sheet has to carry the real roster writes
-    // (IR / Cut / Trade block) the AFL roster page offers, not Watch alone.
-    expect(PANEL_SRC).toMatch(/<AFLActionModal \/>/);
-    expect(PANEL_SRC).not.toMatch(/WatchListBridge/);
+    // One shared panel now, so `hideContract` is an expression rather than a
+    // bare attribute — a league with no contracts hides those modal rows.
+    expect(PANEL_SRC).toMatch(/<PlayerDetailsModal hideContract=\{!contracts\} \/>/);
+    // AFLActionModal, NOT the generic WatchListBridge sheet, and only where
+    // the keeper board is: it carries real roster writes (IR / Cut / Trade
+    // block), so mounting it while browsing another owner's team would offer
+    // writes against a roster the viewer does not own.
+    expect(PANEL_SRC).toMatch(/\{keepers && <AFLActionModal \/>\}/);
+    expect(PANEL_SRC).toMatch(/\{contracts && <WatchListBridge/);
     expect(PANEL_SRC).toMatch(/<KeeperPlanner[\s\S]*?showActions/);
   });
 
   it("wires the NFL/College Stacks section's own player-modal trigger separately", () => {
     // That markup is a sibling of <KeeperPlanner>, not a descendant, so
     // KeeperPlanner's own (opt-in) delegated listener never sees clicks in
-    // it — this component needs its own, on its own .fo-afl-analytics root.
-    expect(PANEL_SRC).toMatch(/from '\.\.\/\.\.\/\.\.\/utils\/player-modal-trigger'/);
-    expect(PANEL_SRC).toMatch(/initPlayerModalTrigger\(el\)/);
-    expect(PANEL_SRC).toMatch(/document\.querySelectorAll<HTMLElement>\('\.fo-afl-analytics'\)/);
+    // it. The listener moved into the stacks component with the markup and
+    // self-wires on its own .fo-stacks root.
+    expect(STACKS_SRC).toMatch(/from '\.\.\/\.\.\/\.\.\/utils\/player-modal-trigger'/);
+    expect(STACKS_SRC).toMatch(/initPlayerModalTrigger\(el\)/);
+    expect(STACKS_SRC).toMatch(/document\.querySelectorAll<HTMLElement>\('\.fo-stacks'\)/);
+    // Idempotence must be an ELEMENT flag, not a module variable: under the
+    // ClientRouter the module survives a navigation and the element does not.
+    expect(STACKS_SRC).toMatch(/el\.dataset\.modalInit/);
+    expect(STACKS_SRC).toMatch(/astro:page-load/);
   });
 });
 

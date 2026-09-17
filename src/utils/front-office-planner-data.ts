@@ -42,13 +42,29 @@ import { getLeagueBySlug } from '../config/leagues';
 import { getCurrentLeagueYear, getCurrentSeasonYear } from './league-year';
 import { analyzeFreeAgentNeeds, type PositionNeed } from './free-agent-needs';
 import { getPlannerPhase, type PlannerPhaseInfo } from './planner-phase';
-import { calculateDraftOrder, buildActualDraftPicks, convertActualPicksToPredictions } from './draft-utils';
+import {
+  calculateDraftOrder,
+  buildActualDraftPicks,
+  convertActualPicksToPredictions,
+  formatTradeChain,
+} from './draft-utils';
 import { extractToiletBowlWinners, extractLeagueChampion } from './toilet-bowl-utils';
 import { convertAssetsToPredictions, isValidAssetsData, extractAssetsFromTransactions } from './assets-utils';
 import { calculateAverageAge } from './age-utils';
+import {
+  buildRosterAnalytics,
+  buildCapAnalytics,
+  groupByNflTeam,
+  groupByCollege,
+  type AnalyticsPlayer,
+  type RosterAnalytics,
+  type CapAnalytics,
+  type RosterGroup,
+} from './roster-analytics';
 import { currencyFormatter, formatCapSpaceDisplay } from './formatters';
 import {
   SALARY_CAP,
+  ROSTER_LIMIT,
   TARGET_ACTIVE_COUNT,
   RESERVE_FOR_ROOKIES,
   calculateCapCharges,
@@ -163,6 +179,44 @@ export interface FrontOfficeTagPlayer {
   birthdate: number | null;
 }
 
+/**
+ * One team's analytics bundle. Precomputed for EVERY team, like
+ * `teamMetrics` — the hub's switcher swaps a hidden panel rather than
+ * fetching, so all 16 have to be rendered up front. Charts are SVG and
+ * cheap; the stacks are the heavy part and are already thresholded to
+ * groups of 2+ by `groupByNflTeam` / `groupByCollege`.
+ */
+export interface FrontOfficeTeamAnalytics {
+  analytics: RosterAnalytics;
+  cap: CapAnalytics;
+  playersByNflTeam: RosterGroup<AnalyticsPlayer>[];
+  playersByCollege: RosterGroup<AnalyticsPlayer>[];
+}
+
+/**
+ * Draft assets for one team, already shaped for <DraftAssetChips>.
+ *
+ * ON THE MISSING TRADE CHAIN: the chip type supports a multi-hop
+ * `chain` ("from A via B"), but the hub's own source cannot supply one
+ * today. `extractAssetsFromTransactions` walks trades chronologically into
+ * an `ownershipMap` that is OVERWRITTEN on each hop, so by the time
+ * `convertAssetsToPredictions` runs, only the original franchise and the
+ * current one survive — `tradeHistory` is never populated on this path (the
+ * only producer is `future-draft-picks-utils.ts`, which the hub does not
+ * call, and even that records two entries). So a twice-traded pick reads
+ * the same as a once-traded one here.
+ *
+ * `via` therefore carries everything the data knows, and `chain` is passed
+ * through whenever a prediction does happen to carry `tradeHistory` rather
+ * than being synthesized. Retaining the intermediate owners means keeping
+ * the history in that shared util, which is a change with its own callers
+ * and its own test — deliberately not smuggled into a layout change.
+ */
+export interface FrontOfficeDraftChipGroup {
+  year: string;
+  chips: Array<{ id: string; label: string; via: string | null; chain: string | null }>;
+}
+
 export interface FrontOfficePlannerData {
   teamsList: FrontOfficeTeamSummary[];
   leagueYear: number;
@@ -172,6 +226,22 @@ export interface FrontOfficePlannerData {
   allPlayers: FrontOfficeTagPlayer[];
   freeAgentNeedsByTeam: Record<string, PositionNeed[]>;
   teamMetrics: Record<string, FrontOfficeTeamMetrics>;
+  teamAnalytics: Record<string, FrontOfficeTeamAnalytics>;
+  /** Footnote under the metric strip. Built here because it quotes the same
+   *  cap constants the metrics above it were computed from. */
+  metricsNote: string;
+  /** The SELECTED team's roster, for the cut card. Selected team only —
+   *  `/api/cut-player` acts on the viewer's own roster, so there is nothing
+   *  to pre-render for anyone else. */
+  cutCandidates: FrontOfficeTagPlayer[];
+  /** Existing dead money for the selected team, by year offset. */
+  deadMoneyByYearForTeam: number[];
+  /** Per-position averages in the nested shape the cap model reads. */
+  nestedSalaryAverages: unknown;
+  /** The league's cap for the year, from the feed rather than the constant. */
+  capLimit: number;
+  /** Per-team, already grouped by year, for the chip row. */
+  draftChipsByTeam: Record<string, FrontOfficeDraftChipGroup[]>;
   draftNextYear: number;
   draftPredictions: any[];
   actualDraftPicks: any[];
@@ -280,6 +350,51 @@ export async function buildFrontOfficePlannerData(selectedTeamId: string): Promi
   // ---- league-wide player list, trimmed, for FranchiseOptions /
   // VeteranExtensionCandidates (both filter this by franchiseId themselves —
   // see those components' own client scripts) ----
+  // ---- points fallback ----
+  //
+  // `points` arrives from src/data/mfl-player-salaries-<year>.json, which a
+  // cron refreshes. Between the February league rollover and the first
+  // scored week of the new season every row in it reads 0 — and the file can
+  // still be pre-scoring for a while after kickoff. That matters here and
+  // nowhere else on this page: FranchiseOptions and VeteranExtensionCandidates
+  // pick their candidates by position rank OR points, so a league-wide zero
+  // makes both cards rank arbitrarily, and the cap-efficiency chart divides
+  // by points and renders empty.
+  //
+  // rosters.astro has carried this exact fallback for as long as it has had
+  // those cards (its ~line 1242). The hub is meant to replace that page's
+  // planner tab, so it has to agree with it — a different candidate list on
+  // each page is worse than a stale one on both.
+  //
+  // NOT a clock check: whether the file has scoring is the question, and the
+  // file itself answers it. `data/<league>/mfl-feeds/<year>/playerScores-ytd.json`
+  // is fresher than this and would be the better source, but switching to it
+  // is a change both pages must make together or they diverge.
+  const priorSalaryData = loadSrcDataJson(`mfl-player-salaries-${priorYearStr}.json`);
+  const priorPointsById = new Map<string, number>();
+  for (const p of (priorSalaryData?.players ?? []) as any[]) {
+    const pts = Number(p?.points) || 0;
+    if (pts > 0) priorPointsById.set(String(p.id), pts);
+  }
+
+  // Applied to the SOURCE rows, before anything projects off them: the
+  // extension cards read `allPlayers` but the cap-efficiency chart reads
+  // seasonData.teams directly, and patching only one would have the two
+  // disagreeing on the same page.
+  const seasonRows: any[] = Object.values(seasonData.teams ?? {}).flatMap((team: any) => [
+    ...(team.players ?? []),
+    ...(team.practiceSquad ?? []),
+    ...(team.injuredReserve ?? []),
+  ]);
+  // Only when the WHOLE league reads zero — one player with no points is a
+  // real fact about that player, and overwriting it would be a lie.
+  if (priorPointsById.size > 0 && seasonRows.every((p) => (Number(p?.points) || 0) === 0)) {
+    for (const row of seasonRows) {
+      const prior = priorPointsById.get(String(row.id));
+      if (prior !== undefined) row.points = prior;
+    }
+  }
+
   const allPlayers: FrontOfficeTagPlayer[] = Object.values(seasonData.teams ?? {}).flatMap((team: any) =>
     [...(team.players ?? []), ...(team.practiceSquad ?? []), ...(team.injuredReserve ?? [])].map((player: any) => ({
       id: player.id,
@@ -297,9 +412,11 @@ export async function buildFrontOfficePlannerData(selectedTeamId: string): Promi
     })),
   );
 
+
   // ---- per-team precomputed metrics (Front Office is read-only — no cap
   // math ships to the client at all, only these ready-made strings) ----
   const teamMetrics: Record<string, FrontOfficeTeamMetrics> = {};
+  const teamAnalytics: Record<string, FrontOfficeTeamAnalytics> = {};
   for (const team of teamsList) {
     const teamData = seasonData.teams?.[team.id] ?? {
       players: [],
@@ -337,6 +454,39 @@ export async function buildFrontOfficePlannerData(selectedTeamId: string): Promi
           : null,
       deadMoneyDisplay: currencyFormatter.format(deadMoneyNextYear),
       averageAgeDisplay: averageAge !== null ? `${averageAge} years` : 'N/A',
+    };
+
+    // ---- analytics for the same team, off the SAME `rows` ----
+    //
+    // The cap charts describe the CURRENT year (index 0), not the next-year
+    // planning figures above them: "where is my money right now" is a
+    // different question from "what will I have to spend", and mixing the
+    // two in one panel is how a chart ends up quietly disagreeing with the
+    // metric strip beside it.
+    const analyticsRoster: AnalyticsPlayer[] = rows.map((p: any) => ({
+      id: p.id,
+      name: p.name,
+      position: p.position ?? 'N/A',
+      team: p.nflTeam ?? 'FA',
+      espnId: p.espnId ?? undefined,
+      status: p.status ?? 'ROSTER',
+      college: p.college ?? null,
+      birthdate: p.birthdate ?? null,
+      height: p.height ?? null,
+      weight: p.weight ?? null,
+      jersey: p.number != null ? String(p.number) : null,
+      draftYear: p.draftYear ?? null,
+      draftRound: p.draftRound ?? null,
+      draftPick: p.draftPick ?? null,
+      draftTeam: p.draftTeam ?? null,
+      headshot: p.headshot ?? undefined,
+    }));
+
+    teamAnalytics[team.id] = {
+      analytics: buildRosterAnalytics(analyticsRoster),
+      cap: buildCapAnalytics(rows, capLimit, deadMoney[0] ?? 0, ROSTER_LIMIT),
+      playersByNflTeam: groupByNflTeam(analyticsRoster),
+      playersByCollege: groupByCollege(analyticsRoster),
     };
   }
 
@@ -430,6 +580,46 @@ export async function buildFrontOfficePlannerData(selectedTeamId: string): Promi
     }
   }
 
+  // ---- draft assets, shaped for the chip row ----
+  //
+  // Source preference mirrors what the two ChartCards used to choose
+  // between: real assets-after-trades when we have them, the raw predicted
+  // order otherwise. Picking here rather than in the component keeps the
+  // component a pure renderer.
+  const chipSource = assetsPredictions.length > 0 ? assetsPredictions : draftPredictions;
+
+  const toChips = (predictions: any[], teamId: string) =>
+    predictions
+      .filter((p) => p.franchiseId === teamId)
+      .sort((a, b) => (a.overallPickNumber ?? 0) - (b.overallPickNumber ?? 0))
+      .map((p) => {
+        const pickInRound = p.pickInRound ?? p.pick ?? 0;
+        // "1.03", the same format DraftPicksCard prints, so an owner reading
+        // both pages sees one notation.
+        const label = `${p.round}.${String(pickInRound).padStart(2, '0')}`;
+        const chainTeams: string[] = (p.tradeHistory?.chain ?? []).map((c: any) => c.team).filter(Boolean);
+        return {
+          id: String(p.overallPickNumber ?? `${p.round}-${pickInRound}`),
+          label,
+          via: p.isTraded && p.originalTeamName ? `via ${p.originalTeamName}` : null,
+          // Only a genuine multi-hop history earns the reveal; a single hop
+          // is already fully stated by `via`. See this module's
+          // FrontOfficeDraftChipGroup comment for why this is usually null.
+          chain: chainTeams.length > 1 ? formatTradeChain(chainTeams) : null,
+        };
+      });
+
+  const draftChipsByTeam: Record<string, FrontOfficeDraftChipGroup[]> = {};
+  for (const team of teamsList) {
+    const groups: FrontOfficeDraftChipGroup[] = [
+      { year: String(draftNextYear), chips: toChips(chipSource, team.id) },
+    ];
+    if (plannerPhase.showDualDraftCards && assets2027Predictions.length > 0) {
+      groups.push({ year: String(draftNextYear + 1), chips: toChips(assets2027Predictions, team.id) });
+    }
+    draftChipsByTeam[team.id] = groups;
+  }
+
   return {
     teamsList,
     leagueYear,
@@ -439,6 +629,28 @@ export async function buildFrontOfficePlannerData(selectedTeamId: string): Promi
     allPlayers,
     freeAgentNeedsByTeam,
     teamMetrics,
+    teamAnalytics,
+    cutCandidates: allPlayers.filter((p) => p.franchiseId === selectedTeamId),
+    deadMoneyByYearForTeam: aggregateDeadMoney(seasonData.salaryAdjustments ?? [], selectedTeamId),
+    // The projection prices tags and extensions, which need MFL's nested
+    // shape; the client config ships flattened per-season maps.
+    nestedSalaryAverages: (() => {
+      const flat = (salaryAveragesBySeason[extensionSeason] ?? {}) as any;
+      const positions: Record<string, { top3Average: number; top5Average: number; top10Average: number }> = {};
+      for (const pos of Object.keys(flat.extensionSalaries ?? {})) {
+        positions[pos] = {
+          top3Average: flat.franchiseSalaries?.[pos] ?? 0,
+          top5Average: flat.extensionSalaries?.[pos] ?? 0,
+          top10Average: flat.teamOptionSalaries?.[pos] ?? 0,
+        };
+      }
+      return { positions };
+    })(),
+    capLimit,
+    metricsNote:
+      `*Based on filling to ${TARGET_ACTIVE_COUNT} active players. Reserves ` +
+      `$${(RESERVE_FOR_ROOKIES / 1_000_000).toFixed(0)}M for practice squad rookies and free agents.`,
+    draftChipsByTeam,
     draftNextYear,
     draftPredictions,
     actualDraftPicks,

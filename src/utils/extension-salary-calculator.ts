@@ -1,11 +1,31 @@
 /**
- * Centralized formula for calculating 2-year extension salary
+ * The 2-year extension price, in the shape the candidate cards want.
+ *
+ * The arithmetic is NOT defined here. `calculateVeteranExtension` in
+ * salary-calculations.ts is the league's extension formula and this is a
+ * presentation wrapper around it: same numbers, plus the intermediate
+ * (`extensionValuePerYear`, `totalNewValue`) the cards print. It was a
+ * fifth independent implementation of that formula until Phase D, agreeing
+ * by coincidence of both being written from the same rule — which is not
+ * the same as agreeing by construction.
+ *
+ * Original description, still accurate:
  * 
  * Formula:
  * 1. Extension Value Per Year = (Average of Top 5 at Position × 2) ÷ (Current Years + 2)
  * 2. New Contract Salary = Current Salary + Extension Value Per Year
  * 3. Future years follow 10% annual increase league-wide
  */
+
+import { calculateVeteranExtension } from './salary-calculations';
+
+/** This helper only ever prices a TWO-year extension — the cards' "Extended"
+ *  column is defined as +2. A different term goes through
+ *  calculateVeteranExtension directly. */
+const EXTENSION_YEARS = 2;
+/** The averages shape is keyed by position; this wrapper is handed a bare
+ *  top-5 number, so the key is arbitrary and never leaves this call. */
+const EXTENSION_POSITION_KEY = 'X';
 
 export interface ExtensionSalaryResult {
   currentSalary: number;
@@ -28,14 +48,20 @@ export const calculateExtensionSalary = (
   currentYears: number,
   top5Average: number
 ): ExtensionSalaryResult => {
-  // Extension value per year = (top 5 average × 2) / (current years + 2)
-  const extensionValuePerYear = (top5Average * 2) / (currentYears + 2);
-  
-  // New contract salary = current salary + extension value per year
-  const newContractSalary = currentSalary + extensionValuePerYear;
-  
-  // Total value over all years
-  const totalNewValue = newContractSalary * (currentYears + 2);
+  // The league formula, from the one module that owns it. `positions` is
+  // the shape it reads averages in; only top5 matters for an extension.
+  const { newSalary } = calculateVeteranExtension(
+    currentYears,
+    EXTENSION_POSITION_KEY,
+    EXTENSION_YEARS,
+    currentSalary,
+    { positions: { [EXTENSION_POSITION_KEY]: { top5Average } } },
+  );
+
+  const newContractSalary = newSalary;
+  // Kept for the cards, which print the delta and the total separately.
+  const extensionValuePerYear = newContractSalary - currentSalary;
+  const totalNewValue = newContractSalary * (currentYears + EXTENSION_YEARS);
 
   return {
     currentSalary,

@@ -35,6 +35,7 @@
  */
 
 import { createActionOption, createYearButton, formatDraftLine, cdmAge } from './cdm-ui';
+import { submitDeclaration } from './contract-actions-client';
 import { applyPlayerModalBand } from './player-modal-band';
 import { NFL_TEAM_CITIES, normalizeTeamCode } from './nfl';
 import { isWatched, getWatchListAuth } from './watch-list-client';
@@ -1614,31 +1615,27 @@ export function createCdmWizard(deps: CdmWizardContext) {
     else if (effectiveType === 'team-option') requestedContractInfo = ''; // TO designation removed
 
     try {
-      const res = await fetch('/api/contracts/declare', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          leagueId,
-          playerId: cdmState.playerData.id,
-          playerName: cdmState.playerData.name,
-          franchiseId,
-          franchiseName,
-          type: effectiveType,
-          currentYears: elig.currentYears,
-          currentSalary: elig.currentSalary,
-          currentContractInfo: elig.contractInfo ?? '',
-          requestedYears: cdmState.selectedYears,
-          requestedSalary: cdmState.selectedSalary ?? undefined,
-          requestedContractInfo,
-          deadlineAt: elig.deadlineTimestamp
-            ? new Date(elig.deadlineTimestamp * 1000).toISOString()
-            : undefined,
-          acquisitionTimestamp: elig.acquisitionTimestamp,
-        }),
+      // Shared with rosters.astro's bulk submit and the homepage's Unsigned
+      // FA card — one place files contract paperwork. It throws the API's
+      // own validation message, which is the useful one.
+      const result = await submitDeclaration({
+        leagueId,
+        playerId: cdmState.playerData.id,
+        playerName: cdmState.playerData.name,
+        franchiseId,
+        franchiseName,
+        type: effectiveType,
+        currentYears: elig.currentYears,
+        currentSalary: elig.currentSalary,
+        currentContractInfo: elig.contractInfo ?? '',
+        requestedYears: cdmState.selectedYears,
+        requestedSalary: cdmState.selectedSalary ?? undefined,
+        requestedContractInfo,
+        deadlineAt: elig.deadlineTimestamp
+          ? new Date(elig.deadlineTimestamp * 1000).toISOString()
+          : undefined,
+        acquisitionTimestamp: elig.acquisitionTimestamp,
       });
-
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error || 'Declaration failed');
 
       if (result.cancelled) {
         delete localDeclarations[cdmState.playerData.id];

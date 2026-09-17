@@ -1,0 +1,391 @@
+---
+/**
+ * Save, name, compare and clear cap what-if scenarios.
+ *
+ * This component owns the scenario STATE for the whole hub: the what-if
+ * toggles in CapProjectionTable dispatch into it, it re-projects, and it
+ * repaints that table's cells. Keeping the state in one place is what makes
+ * "clear" and "load a saved scenario" single operations rather than a hunt
+ * for every toggle that might be lit.
+ *
+ * THE BOUNDARY. Nothing in this file calls an API. A scenario is scratch
+ * that lives in memory and, when saved, in this browser. Filing is the
+ * separate act of pressing Extend/Tag/Cut in the cards above — and when one
+ * of those succeeds it dispatches `fo:action-filed`, which drops that player
+ * from the scenario so the projection cannot double-count a move that just
+ * became real. `tests/cap-scenario-boundary.test.ts` fails if a fetch
+ * appears here or in the projection table.
+ *
+ * STORAGE IS LEAGUE-SCOPED. Both leagues have a franchise 0001, so the key
+ * goes through `scopedLocalKey` from rankings-scope.ts rather than a bare
+ * string — the same mechanism the rankings boards use, for the same reason.
+ * localStorage only: these do not sync, do not reach the commissioner, and
+ * come back empty in a private window, all of which is fine for scratch and
+ * is why every read is wrapped.
+ */
+import type { FrontOfficeLeagueSlug } from '../front-office-nav/front-office-pages';
+
+interface Props {
+  leagueSlug: FrontOfficeLeagueSlug;
+  franchiseId: string;
+}
+
+const { leagueSlug, franchiseId } = Astro.props;
+---
+
+<div class="fo-scen" data-scenario-bar data-league={leagueSlug} data-franchise={franchiseId}>
+  <div class="fo-scen__row">
+    <label class="fo-scen__label" for="fo-scen-name">Scenario</label>
+    <input
+      class="fo-scen__input"
+      id="fo-scen-name"
+      type="text"
+      placeholder="Aggressive cuts"
+      maxlength="40"
+      autocomplete="off"
+    />
+    <button type="button" class="fo-scen__btn fo-scen__btn--primary" data-scenario-save>Save</button>
+    <label class="fo-scen__label" for="fo-scen-compare">Compare with</label>
+    <select class="fo-scen__select" id="fo-scen-compare" data-scenario-compare>
+      <option value="">Today’s books</option>
+    </select>
+  </div>
+  <ul class="fo-scen__saved" data-scenario-list aria-label="Saved scenarios"></ul>
+</div>
+
+<script>
+  import { project, applyScenario, diff, type Scenario, type ScenarioMove } from '../../../utils/cap-projection';
+  import { scopedLocalKey } from '../../../utils/rankings-scope';
+
+  interface SavedScenario extends Scenario { savedAt: string }
+
+  let teardown: Array<() => void> = [];
+
+  function initScenarioBar() {
+    const bar = document.querySelector<HTMLElement>('[data-scenario-bar]');
+    const inputEl = document.getElementById('fo-projection-input');
+    if (!bar || !inputEl) return;
+
+    for (const off of teardown) off();
+    teardown = [];
+
+    let input: any;
+    try {
+      input = JSON.parse(inputEl.textContent || '{}');
+    } catch {
+      return;
+    }
+
+    // Scope re-read per call, never captured at module load: with the
+    // ClientRouter one module instance survives a navigation from one
+    // league's hub to the other's, and a captured scope writes the previous
+    // league's bucket. Both leagues have a franchise 0001.
+    const storageKey = () =>
+      scopedLocalKey(`fo.scenarios.${bar.dataset.franchise ?? ''}`, bar.dataset.league === 'afl-fantasy' ? 'afl' : 'theleague');
+
+    const readSaved = (): SavedScenario[] => {
+      try {
+        return JSON.parse(localStorage.getItem(storageKey()) || '[]');
+      } catch {
+        // Private window, blocked site data, or corrupt JSON. Scratch is
+        // allowed to be missing; the page must still work.
+        return [];
+      }
+    };
+    const writeSaved = (list: SavedScenario[]) => {
+      try {
+        localStorage.setItem(storageKey(), JSON.stringify(list.slice(0, 12)));
+      } catch {
+        /* Quota or blocked storage — the in-memory scenario still works. */
+      }
+    };
+
+    let scenario: Scenario = { id: 'scratch', name: '', moves: [] };
+    let compareWith: Scenario | null = null;
+
+    const money = (n: number) =>
+      `${n < 0 ? '−' : '+'}$${Math.abs(Math.round(n)).toLocaleString('en-US')}`;
+
+    // Mirrors CapProjectionTable's own two spellings. Every money cell ships
+    // both — exact where there is room, short on a phone — and CSS picks
+    // one, so a repaint that wrote only the visible span would leave the
+    // other stale and wrong the moment the viewport changed.
+    const exact = (n: number) =>
+      `${n < 0 ? '−' : ''}$${Math.abs(Math.round(n)).toLocaleString('en-US')}`;
+    const short = (n: number) => {
+      const v = Math.abs(Math.round(n));
+      const sign = n < 0 ? '−' : '';
+      if (v >= 1_000_000) return `${sign}$${(v / 1_000_000).toFixed(1)}M`;
+      if (v >= 1_000) return `${sign}$${Math.round(v / 1_000)}K`;
+      return `${sign}$${v}`;
+    };
+
+    const setCell = (key: string, text: string, sign?: 'up' | 'down') => {
+      const el = document.querySelector<HTMLElement>(`[data-proj-cell="${key}"]`);
+      if (!el) return;
+      el.textContent = text;
+      if (sign) el.dataset.sign = sign;
+      else delete el.dataset.sign;
+    };
+
+    /** Write a money cell's exact AND short spellings. */
+    const setMoneyCell = (key: string, n: number) => {
+      const el = document.querySelector<HTMLElement>(`[data-proj-cell="${key}"]`);
+      if (!el) return;
+      const full = el.querySelector<HTMLElement>('.num--full');
+      const brief = el.querySelector<HTMLElement>('.num--short');
+      if (full && brief) {
+        full.textContent = exact(n);
+        brief.textContent = short(n);
+      } else {
+        // Defensive: a cell rendered without the two spans still updates.
+        el.textContent = exact(n);
+      }
+    };
+
+    const repaint = () => {
+      const years = project({ ...input, years: 3 }, scenario.moves.length ? scenario : null);
+      const baseline = project({ ...input, years: 3 }, compareWith);
+
+      years.forEach((y, i) => {
+        setMoneyCell(`committed-${i}`, y.committed);
+        setMoneyCell(`dead-${i}`, y.deadMoney);
+        setCell(`count-${i}`, String(y.playersUnderContract));
+        setMoneyCell(`space-${i}`, y.space);
+        document
+          .querySelector<HTMLElement>(`[data-proj-cell="space-${i}"]`)
+          ?.classList.toggle('fo-proj__space--negative', y.space < 0);
+      });
+
+      const deltaRow = document.querySelector<HTMLElement>('[data-proj-delta-row]');
+      const hasDelta = scenario.moves.length > 0 || !!compareWith;
+      if (deltaRow) deltaRow.hidden = !hasDelta;
+      if (hasDelta) {
+        diff(baseline, years).forEach((d, i) =>
+          setCell(`delta-${i}`, money(d.space), d.space >= 0 ? 'up' : 'down'),
+        );
+      }
+
+      const reset = document.querySelector<HTMLElement>('[data-scenario-reset]');
+      if (reset) reset.hidden = scenario.moves.length === 0;
+    };
+
+    const renderSaved = () => {
+      const list = document.querySelector<HTMLElement>('[data-scenario-list]');
+      const select = document.querySelector<HTMLSelectElement>('[data-scenario-compare]');
+      const saved = readSaved();
+      if (list) {
+        list.innerHTML = saved
+          .map(
+            (s) =>
+              `<li class="fo-scen__saved-item"><button type="button" class="fo-scen__load" data-scenario-load="${s.id}">${s.name}</button>` +
+              `<button type="button" class="fo-scen__del" data-scenario-delete="${s.id}" aria-label="Delete ${s.name}">×</button></li>`,
+          )
+          .join('');
+      }
+      if (select) {
+        const current = select.value;
+        select.innerHTML =
+          '<option value="">Today’s books</option>' +
+          saved.map((s) => `<option value="${s.id}">${s.name}</option>`).join('');
+        select.value = current;
+      }
+    };
+
+    const on = (el: EventTarget | null, ev: string, fn: (e: any) => void) => {
+      if (!el) return;
+      el.addEventListener(ev, fn);
+      teardown.push(() => el.removeEventListener(ev, fn));
+    };
+
+    // --- what-if toggles ---
+    on(document, 'click', (event: Event) => {
+      const btn = (event.target as HTMLElement | null)?.closest<HTMLButtonElement>('[data-move]');
+      if (btn) {
+        const playerId = btn.dataset.playerId!;
+        const kind = btn.dataset.move as ScenarioMove['kind'];
+        const already = btn.getAttribute('aria-pressed') === 'true';
+
+        // One move per player: picking a different one REPLACES rather than
+        // compounds, because tagging someone you already extended is a
+        // correction, not both.
+        scenario = { ...scenario, moves: scenario.moves.filter((m) => m.playerId !== playerId) };
+        document
+          .querySelectorAll<HTMLButtonElement>(`[data-move][data-player-id="${playerId}"]`)
+          .forEach((b) => b.setAttribute('aria-pressed', 'false'));
+
+        if (!already) {
+          scenario.moves.push(
+            kind === 'extend' ? { kind, playerId, years: 2 } : ({ kind, playerId } as ScenarioMove),
+          );
+          btn.setAttribute('aria-pressed', 'true');
+        }
+        repaint();
+        return;
+      }
+
+      const reset = (event.target as HTMLElement | null)?.closest('[data-scenario-reset]');
+      if (reset) {
+        scenario = { ...scenario, moves: [] };
+        document
+          .querySelectorAll<HTMLButtonElement>('[data-move]')
+          .forEach((b) => b.setAttribute('aria-pressed', 'false'));
+        repaint();
+        return;
+      }
+
+      const save = (event.target as HTMLElement | null)?.closest('[data-scenario-save]');
+      if (save) {
+        const nameEl = document.getElementById('fo-scen-name') as HTMLInputElement | null;
+        const name = (nameEl?.value || '').trim();
+        if (!name || scenario.moves.length === 0) return;
+        const saved = readSaved().filter((s) => s.name !== name);
+        saved.unshift({ id: `sc_${Date.now().toString(36)}`, name, moves: scenario.moves, savedAt: new Date().toISOString() });
+        writeSaved(saved);
+        if (nameEl) nameEl.value = '';
+        renderSaved();
+        return;
+      }
+
+      const load = (event.target as HTMLElement | null)?.closest<HTMLElement>('[data-scenario-load]');
+      if (load) {
+        const found = readSaved().find((s) => s.id === load.dataset.scenarioLoad);
+        if (!found) return;
+        scenario = { id: found.id, name: found.name, moves: found.moves };
+        document.querySelectorAll<HTMLButtonElement>('[data-move]').forEach((b) => {
+          const hit = scenario.moves.find(
+            (m) => m.playerId === b.dataset.playerId && m.kind === b.dataset.move,
+          );
+          b.setAttribute('aria-pressed', hit ? 'true' : 'false');
+        });
+        repaint();
+        return;
+      }
+
+      const del = (event.target as HTMLElement | null)?.closest<HTMLElement>('[data-scenario-delete]');
+      if (del) {
+        writeSaved(readSaved().filter((s) => s.id !== del.dataset.scenarioDelete));
+        renderSaved();
+      }
+    });
+
+    on(document.querySelector('[data-scenario-compare]'), 'change', (event: Event) => {
+      const id = (event.target as HTMLSelectElement).value;
+      const found = readSaved().find((s) => s.id === id);
+      compareWith = found ? { id: found.id, name: found.name, moves: found.moves } : null;
+      repaint();
+    });
+
+    // A filed action is no longer hypothetical. Dropping it keeps the
+    // projection from counting the same move twice — once as scratch and
+    // once as the pending declaration it just became.
+    on(document, 'fo:action-filed', (event: Event) => {
+      const playerId = (event as CustomEvent<{ playerId: string }>).detail?.playerId;
+      if (!playerId) return;
+      scenario = { ...scenario, moves: scenario.moves.filter((m) => m.playerId !== playerId) };
+      document
+        .querySelectorAll<HTMLButtonElement>(`[data-move][data-player-id="${playerId}"]`)
+        .forEach((b) => b.setAttribute('aria-pressed', 'false'));
+      repaint();
+    });
+
+    renderSaved();
+    repaint();
+  }
+
+  initScenarioBar();
+  document.addEventListener('astro:page-load', initScenarioBar);
+</script>
+
+<style>
+  .fo-scen {
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    border: 1px solid var(--content-border, #e5e7eb);
+    border-radius: 0.5rem;
+    background: var(--content-bg-muted, #f9fafb);
+  }
+
+  :global(html.dark) .fo-scen { background: transparent; }
+
+  .fo-scen__row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .fo-scen__label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--content-text-muted, #6b7280);
+  }
+
+  .fo-scen__input,
+  .fo-scen__select {
+    padding: 0.28rem 0.45rem;
+    border: 1px solid var(--content-border, #e5e7eb);
+    border-radius: 0.3rem;
+    background: var(--content-bg, #fff);
+    color: var(--page-text, #1a1a1a);
+    font-size: 0.78rem;
+  }
+
+  .fo-scen__input { min-width: 11rem; flex: 1 1 11rem; }
+
+  .fo-scen__btn {
+    padding: 0.3rem 0.6rem;
+    border-radius: 0.3rem;
+    border: 1px solid var(--league-accent, #1c497c);
+    background: transparent;
+    color: var(--league-accent, #1c497c);
+    font-size: 0.72rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .fo-scen__btn--primary {
+    background: var(--league-accent, #1c497c);
+    color: #fff;
+  }
+
+  .fo-scen__saved {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin: 0.5rem 0 0;
+    padding: 0;
+  }
+
+  :global(.fo-scen__saved-item) {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--content-border, #e5e7eb);
+    border-radius: 999px;
+    background: var(--content-bg, #fff);
+    overflow: hidden;
+  }
+
+  :global(.fo-scen__load) {
+    padding: 0.22rem 0.55rem;
+    border: 0;
+    background: transparent;
+    color: var(--page-text, #1a1a1a);
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  :global(.fo-scen__del) {
+    padding: 0.22rem 0.45rem 0.22rem 0.2rem;
+    border: 0;
+    background: transparent;
+    color: var(--content-text-muted, #6b7280);
+    font-size: 0.8rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+</style>
