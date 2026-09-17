@@ -85,6 +85,14 @@ export interface FrontOfficePanelData {
   /** Present only where `leagueHasFeature(slug, 'contracts')`. */
   contracts: FrontOfficePlannerData | null;
   /**
+   * Whether to render the write affordances — declare buttons and the cut
+   * card. Owner-only AND contracts-only: `/api/cut-player` authenticates
+   * with the viewer's own MFL cookie and verifies they roster the player,
+   * and `/api/contracts/declare` checks `isFranchiseOwner`, so offering
+   * either for someone else's team is offering a button the server refuses.
+   */
+  canAct: boolean;
+  /**
    * Present only where `leagueHasFeature(slug, 'keepers')` AND the viewer
    * owns the selected team.
    *
@@ -137,6 +145,7 @@ export async function buildFrontOfficePanelData(args: {
       playersByNflTeam: selected?.playersByNflTeam ?? [],
       playersByCollege: selected?.playersByCollege ?? [],
       contracts: planner,
+      canAct: isOwnTeam,
       keepers: null,
     };
   }
@@ -161,6 +170,8 @@ export async function buildFrontOfficePanelData(args: {
     playersByNflTeam: afl.playersByNflTeam,
     playersByCollege: afl.playersByCollege,
     contracts: null,
+    // The AFL has no contracts or cap; its write surface is the keeper board.
+    canAct: false,
     keepers: isOwnTeam ? afl.keepers : null,
   };
 }

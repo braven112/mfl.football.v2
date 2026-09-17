@@ -203,3 +203,36 @@ describe('the declaration body carries the letters MFL shows on a roster', () =>
     expect(body.currentSalary).toBe(2_000_000);
   });
 });
+
+describe('the extension candidate cards price what the confirm files', () => {
+  // The cards print "Extended: $5,569,156 × 5" from
+  // extension-salary-calculator.ts; the hub's confirm button prices the same
+  // move through calculateVeteranExtension. If those two ever disagree, an
+  // owner is shown one number and files another — the worst possible bug in
+  // this feature, and a silent one.
+  it('calculateExtensionSalary is the league formula, not a fifth copy', async () => {
+    const mod = readFileSync('src/utils/extension-salary-calculator.ts', 'utf-8');
+    expect(mod).toMatch(/from '\.\/salary-calculations'/);
+    expect(mod).toMatch(/calculateVeteranExtension\(/);
+    // The arithmetic it used to carry itself.
+    expect(mod).not.toMatch(/\(top5Average \* 2\) \/ \(currentYears \+ 2\)/);
+  });
+
+  it('agrees with the hub confirm across a table of real contracts', async () => {
+    const { calculateExtensionSalary } = await import('../src/utils/extension-salary-calculator');
+    for (const [salary, years, top5] of [
+      [2_125_000, 3, 8_610_390],
+      [1_200_000, 3, 8_610_390],
+      [660_000, 4, 2_500_000],
+      [500_000, 2, 7_000_000],
+    ] as const) {
+      const card = calculateExtensionSalary(salary, years, top5);
+      const hub = calculateVeteranExtension(years, 'X', 2, salary, {
+        extensionSalaries: { X: top5 },
+      });
+      expect(card.newContractSalary).toBe(hub.newSalary);
+      // …and the term the row advertises is the term the declaration files.
+      expect(card.currentYears + 2).toBe(hub.newYears);
+    }
+  });
+});

@@ -230,6 +230,10 @@ export interface FrontOfficePlannerData {
   /** Footnote under the metric strip. Built here because it quotes the same
    *  cap constants the metrics above it were computed from. */
   metricsNote: string;
+  /** The SELECTED team's roster, for the cut card. Selected team only —
+   *  `/api/cut-player` acts on the viewer's own roster, so there is nothing
+   *  to pre-render for anyone else. */
+  cutCandidates: FrontOfficeTagPlayer[];
   /** Per-team, already grouped by year, for the chip row. */
   draftChipsByTeam: Record<string, FrontOfficeDraftChipGroup[]>;
   draftNextYear: number;
@@ -340,6 +344,51 @@ export async function buildFrontOfficePlannerData(selectedTeamId: string): Promi
   // ---- league-wide player list, trimmed, for FranchiseOptions /
   // VeteranExtensionCandidates (both filter this by franchiseId themselves —
   // see those components' own client scripts) ----
+  // ---- points fallback ----
+  //
+  // `points` arrives from src/data/mfl-player-salaries-<year>.json, which a
+  // cron refreshes. Between the February league rollover and the first
+  // scored week of the new season every row in it reads 0 — and the file can
+  // still be pre-scoring for a while after kickoff. That matters here and
+  // nowhere else on this page: FranchiseOptions and VeteranExtensionCandidates
+  // pick their candidates by position rank OR points, so a league-wide zero
+  // makes both cards rank arbitrarily, and the cap-efficiency chart divides
+  // by points and renders empty.
+  //
+  // rosters.astro has carried this exact fallback for as long as it has had
+  // those cards (its ~line 1242). The hub is meant to replace that page's
+  // planner tab, so it has to agree with it — a different candidate list on
+  // each page is worse than a stale one on both.
+  //
+  // NOT a clock check: whether the file has scoring is the question, and the
+  // file itself answers it. `data/<league>/mfl-feeds/<year>/playerScores-ytd.json`
+  // is fresher than this and would be the better source, but switching to it
+  // is a change both pages must make together or they diverge.
+  const priorSalaryData = loadSrcDataJson(`mfl-player-salaries-${priorYearStr}.json`);
+  const priorPointsById = new Map<string, number>();
+  for (const p of (priorSalaryData?.players ?? []) as any[]) {
+    const pts = Number(p?.points) || 0;
+    if (pts > 0) priorPointsById.set(String(p.id), pts);
+  }
+
+  // Applied to the SOURCE rows, before anything projects off them: the
+  // extension cards read `allPlayers` but the cap-efficiency chart reads
+  // seasonData.teams directly, and patching only one would have the two
+  // disagreeing on the same page.
+  const seasonRows: any[] = Object.values(seasonData.teams ?? {}).flatMap((team: any) => [
+    ...(team.players ?? []),
+    ...(team.practiceSquad ?? []),
+    ...(team.injuredReserve ?? []),
+  ]);
+  // Only when the WHOLE league reads zero — one player with no points is a
+  // real fact about that player, and overwriting it would be a lie.
+  if (priorPointsById.size > 0 && seasonRows.every((p) => (Number(p?.points) || 0) === 0)) {
+    for (const row of seasonRows) {
+      const prior = priorPointsById.get(String(row.id));
+      if (prior !== undefined) row.points = prior;
+    }
+  }
+
   const allPlayers: FrontOfficeTagPlayer[] = Object.values(seasonData.teams ?? {}).flatMap((team: any) =>
     [...(team.players ?? []), ...(team.practiceSquad ?? []), ...(team.injuredReserve ?? [])].map((player: any) => ({
       id: player.id,
@@ -356,6 +405,7 @@ export async function buildFrontOfficePlannerData(selectedTeamId: string): Promi
       birthdate: player.birthdate ?? null,
     })),
   );
+
 
   // ---- per-team precomputed metrics (Front Office is read-only — no cap
   // math ships to the client at all, only these ready-made strings) ----
@@ -574,6 +624,7 @@ export async function buildFrontOfficePlannerData(selectedTeamId: string): Promi
     freeAgentNeedsByTeam,
     teamMetrics,
     teamAnalytics,
+    cutCandidates: allPlayers.filter((p) => p.franchiseId === selectedTeamId),
     metricsNote:
       `*Based on filling to ${TARGET_ACTIVE_COUNT} active players. Reserves ` +
       `$${(RESERVE_FOR_ROOKIES / 1_000_000).toFixed(0)}M for practice squad rookies and free agents.`,

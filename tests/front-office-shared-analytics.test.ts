@@ -35,6 +35,8 @@ const PANEL = readFileSync(
 );
 const MODULE = readFileSync('src/utils/roster-analytics.ts', 'utf-8');
 const TL_DATA = readFileSync('src/utils/front-office-planner-data.ts', 'utf-8');
+// Same file; a second name because the Phase D blocks read it for different rules.
+const PANEL_DATA_PLANNER = TL_DATA;
 const KEEPER_DATA = readFileSync('src/utils/front-office-keeper-data.ts', 'utf-8');
 const PANEL_DATA = readFileSync('src/utils/front-office-panel-data.ts', 'utf-8');
 const TL_ROUTE = readFileSync('src/pages/theleague/front-office/index.astro', 'utf-8');
@@ -268,5 +270,127 @@ describe("the panel's client script survives a cross-league swap", () => {
     // that hardcodes `fo-metric-cap` silently no-ops on the other league.
     expect(PANEL).toMatch(/for \(const m of metrics\)/);
     expect(PANEL).not.toMatch(/setText\('fo-metric-cap'/);
+  });
+});
+
+describe('Phase D — the hub can act, but only where the server will let it', () => {
+  const ACTIONS = readFileSync('src/components/shared/front-office-hub/FrontOfficeActions.astro', 'utf-8');
+  const CUTS = readFileSync('src/components/shared/front-office-hub/CutCandidatesCard.astro', 'utf-8');
+
+  it('every write affordance is gated on canAct', () => {
+    // /api/cut-player authenticates with the viewer's own MFL cookie and
+    // verifies they roster the player; /api/contracts/declare checks
+    // isFranchiseOwner. Rendering either for someone else's team offers a
+    // button the server is going to refuse.
+    expect(PANEL).toMatch(/\{contracts && canAct && \(\s*<FrontOfficeActions/);
+    expect(PANEL).toMatch(/\{contracts && canAct && \(\s*<div class="planner-section planner-section--cuts"/);
+    expect(PANEL).toMatch(/showActions=\{canAct\}/);
+    expect(PANEL_DATA).toMatch(/canAct: isOwnTeam/);
+    // The AFL has no contracts or cap, so no declare/cut surface at all.
+    expect(PANEL_DATA).toMatch(/canAct: false/);
+  });
+
+  it('the candidate cards default showActions OFF so rosters.astro is unaffected', () => {
+    // That page has its own Contract Decision Modal flow and its own bulk
+    // submit; a second button wired to neither would be live and wrong.
+    for (const f of [
+      'src/components/theleague/VeteranExtensionCandidates.astro',
+      'src/components/theleague/FranchiseOptions.astro',
+    ]) {
+      expect(readFileSync(f, 'utf-8')).toMatch(/showActions = false/);
+    }
+    const ROSTERS = readFileSync('src/pages/theleague/rosters.astro', 'utf-8');
+    expect(ROSTERS).not.toMatch(/<FranchiseOptions[\s\S]{0,300}?showActions/);
+    expect(ROSTERS).not.toMatch(/<VeteranExtensionCandidates[\s\S]{0,300}?showActions/);
+  });
+
+  it('both render paths of each card carry the button, not just the SSR one', () => {
+    // These cards re-render themselves in JS on every team switch. A button
+    // added only to the Astro pass disappears the first time you switch.
+    for (const f of [
+      'src/components/theleague/VeteranExtensionCandidates.astro',
+      'src/components/theleague/FranchiseOptions.astro',
+    ]) {
+      const src = readFileSync(f, 'utf-8');
+      expect(src).toMatch(/\{showActions && \(/); // Astro pass
+      expect(src).toMatch(/\$\{showActions \? `<td/); // client re-render
+      // …and the client pass reads the flag off the DOM each time rather
+      // than capturing it, because ClientRouter keeps one module instance.
+      expect(src).toMatch(/dataset\.showActions === 'true'/);
+    }
+  });
+
+  it('confirms in place rather than with a native dialog', () => {
+    // A native confirm() cannot show the cap consequence, which is the
+    // whole point of confirming. Same inline swap front-office/contracts
+    // already uses.
+    // Strip comments first — the block above legitimately NAMES confirm().
+    const code = ACTIONS.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*/g, '');
+    expect(code).not.toMatch(/\bwindow\.confirm\(/);
+    expect(code).not.toMatch(/[^.\w]confirm\(/);
+    expect(ACTIONS).toMatch(/confirmInPlace/);
+    expect(ACTIONS).toMatch(/fo-confirm__yes/);
+  });
+
+  it('a cut names the dead money it leaves behind', () => {
+    // Unlike a declaration, a cut writes to MFL immediately with no
+    // approval step. The confirm has to state the cost, not just ask.
+    expect(ACTIONS).toMatch(/Cut · \$\{formatSalaryCompact\(dead\)\} dead|Cut · \$\{formatSalaryCompact/);
+    expect(CUTS).toMatch(/cannot be undone/i);
+  });
+
+  it('the cut card reaches the whole roster, not just obvious candidates', () => {
+    // "Action cards only" was the call, but a card that lists only the
+    // obvious candidates cannot cut a player it does not surface.
+    expect(CUTS).toMatch(/players: CutCandidate\[\]/);
+    expect(CUTS).toMatch(/data-cuts-expand/);
+    expect(PANEL_DATA_PLANNER).toMatch(/cutCandidates: allPlayers\.filter\(\(p\) => p\.franchiseId === selectedTeamId\)/);
+  });
+
+  it('surfaces a negative cut differently from a positive one', () => {
+    // Cutting an expensive long deal costs more than it saves. If that read
+    // the same as a cut that helps, the card would actively mislead.
+    expect(CUTS).toMatch(/fo-cuts__net--negative/);
+    expect(CUTS).toMatch(/netSaved: p\.salary - penalty\.totalPenalty/);
+  });
+
+  it('prices and files through the shared core, never its own formula', () => {
+    expect(ACTIONS).toMatch(/from '\.\.\/\.\.\/\.\.\/utils\/contract-actions-client'/);
+    expect(ACTIONS).toMatch(/submitDeclaration\(/);
+    expect(ACTIONS).toMatch(/toDeclarationRequest\(/);
+    expect(ACTIONS).not.toMatch(/\* 1\.2\b/);
+    expect(CUTS).toMatch(/from '\.\.\/\.\.\/\.\.\/utils\/salary-calculations'/);
+  });
+
+  it('surfaces the API\'s own error rather than a generic one', () => {
+    expect(ACTIONS).toMatch(/err instanceof Error \? err\.message/);
+  });
+
+  it('treats a 409 cut as done, not as a failure to retry', () => {
+    // 409 = already off the roster on MFL. The desired end state is true.
+    expect(ACTIONS).toMatch(/res\.status !== 409/);
+  });
+});
+
+describe('the hub feeds its candidate cards real points', () => {
+  // Every player on the hub read points: 0 before this — the salary file a
+  // cron writes reads zero between the league rollover and the first scored
+  // week, and the builder had no fallback. The extension and franchise-tag
+  // cards pick candidates by rank OR points, so the two cards the declare
+  // buttons hang off were ranking arbitrarily.
+  it('falls back to the prior season when the whole league reads zero', () => {
+    expect(PANEL_DATA_PLANNER).toMatch(/priorPointsById/);
+    expect(PANEL_DATA_PLANNER).toMatch(/seasonRows\.every\(\(p\) => \(Number\(p\?\.points\) \|\| 0\) === 0\)/);
+  });
+
+  it('patches the SOURCE rows so the cards and the cap chart agree', () => {
+    // The cards read allPlayers; the cap-efficiency chart reads
+    // seasonData.teams. Patching one would have them disagreeing on one page.
+    expect(PANEL_DATA_PLANNER).toMatch(/const seasonRows: any\[\] = Object\.values\(seasonData\.teams/);
+  });
+
+  it('never overwrites a single player\'s real zero', () => {
+    // One player with no points is a fact about that player.
+    expect(PANEL_DATA_PLANNER).toMatch(/priorPointsById\.size > 0 && seasonRows\.every/);
   });
 });

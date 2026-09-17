@@ -36,6 +36,8 @@ import VeteranExtensionCandidates from '../../theleague/VeteranExtensionCandidat
 import FreeAgentNeedsCard from '../../theleague/FreeAgentNeedsCard.astro';
 import KeeperPlanner from '../../afl-fantasy/KeeperPlanner.astro';
 import AFLActionModal from '../../afl-fantasy/AFLActionModal.astro';
+import CutCandidatesCard from './CutCandidatesCard.astro';
+import FrontOfficeActions from './FrontOfficeActions.astro';
 import DraftAssetChips from './DraftAssetChips.astro';
 import RosterAnalyticsPanel from './RosterAnalyticsPanel.astro';
 import NflCollegeStacks from './NflCollegeStacks.astro';
@@ -60,6 +62,7 @@ const {
   playersByNflTeam,
   playersByCollege,
   contracts,
+  canAct,
   keepers,
 } = Astro.props;
 
@@ -105,9 +108,26 @@ const clientConfig = {
 {contracts && <WatchListBridge signedIn={signedIn} claimVerb={claimVerb} />}
 
 <div class="fo-planner" data-planner-phase={plannerPhase} data-league={leagueSlug}>
+  {contracts && canAct && (
+    <FrontOfficeActions
+      leagueId={league.id}
+      franchiseId={selectedTeamId}
+      franchiseName={teamsList.find((t) => t.id === selectedTeamId)?.name ?? selectedTeamId}
+      year={leagueYear}
+      salaryAverages={contracts.salaryAveragesBySeason[contracts.extensionSeason] ?? {}}
+      extensionSeason={contracts.extensionSeason}
+    />
+  )}
+
   {contracts && (
     <div class="planner-section planner-section--extensions">
       <h2 class="planner-section__title">Extensions</h2>
+      {canAct && (
+        <p class="planner-section__lede">
+          Tagging or extending files a declaration for the commissioner to approve — it does not
+          change your roster on MFL by itself.
+        </p>
+      )}
       <div class="chart-grid">
         <ChartCard title={`Franchise Tag Options (${leagueYear + 1})`} subtitle="Potential franchise tag candidates">
           <FranchiseOptions
@@ -115,6 +135,7 @@ const clientConfig = {
             salaryAverages={contracts.salaryAveragesBySeason as any}
             season={contracts.extensionSeason}
             franchiseId={selectedTeamId}
+            showActions={canAct}
           />
         </ChartCard>
         <ChartCard title="Veteran Extension Candidates" subtitle="Potential contract extension candidates">
@@ -123,9 +144,17 @@ const clientConfig = {
             salaryAverages={contracts.salaryAveragesBySeason as any}
             season={contracts.extensionSeason}
             franchiseId={selectedTeamId}
+            showActions={canAct}
           />
         </ChartCard>
       </div>
+    </div>
+  )}
+
+  {contracts && canAct && (
+    <div class="planner-section planner-section--cuts">
+      <h2 class="planner-section__title">Cuts</h2>
+      <CutCandidatesCard players={contracts.cutCandidates} />
     </div>
   )}
 
@@ -456,6 +485,12 @@ const clientConfig = {
   .fo-private__cta:focus-visible {
     outline: 2px solid var(--league-accent, #c41e3a);
     outline-offset: 2px;
+  }
+
+  .planner-section__lede {
+    margin: -0.25rem 0 0.75rem;
+    font-size: 0.8125rem;
+    color: var(--content-text-muted, #6b7280);
   }
 
   .fo-stacks-link {
