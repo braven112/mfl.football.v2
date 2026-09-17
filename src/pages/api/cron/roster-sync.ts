@@ -16,9 +16,27 @@ import type { APIRoute } from 'astro';
 import { outboundAllowed } from '../../../utils/deploy-environment';
 
 export const GET: APIRoute = async ({ request }) => {
-  // Verify the request is from Vercel Cron
-  const authHeader = request.headers.get('authorization');
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  // Verify the request is from Vercel Cron.
+  //
+  // Fail CLOSED on an unconfigured secret, exactly as api/cron/push-fanout.ts
+  // and api/groupme/sync.ts already do. Comparing straight against
+  // `Bearer ${process.env.CRON_SECRET}` reads as a check but is not one when
+  // the variable is missing: the template literal becomes the literal string
+  // "Bearer undefined", so an environment that merely FORGOT the variable
+  // accepts `Authorization: Bearer undefined` from anyone — and this route
+  // dispatches a workflow that commits to main with Actions secrets.
+  //
+  // This is the original of the three bridges; the other two grew the guard
+  // later and nobody came back for this one. It matters more now that
+  // vercel.json points a cron at it.
+  const secret = process.env.CRON_SECRET;
+  if (!secret) {
+    return new Response(
+      JSON.stringify({ error: 'CRON_SECRET not configured' }),
+      { status: 503, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+  if (request.headers.get('authorization') !== `Bearer ${secret}`) {
     return new Response('Unauthorized', { status: 401 });
   }
 

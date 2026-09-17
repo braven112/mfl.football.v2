@@ -59,6 +59,20 @@ const crons = vercelConfig.crons ?? [];
  */
 const SCHEDULED_BRIDGES = ['src/pages/api/cron/roster-sync.ts'];
 
+/**
+ * Strip comments before scanning for CODE shapes.
+ *
+ * Without this the guard reads prose as an offence: the fix for the very bug
+ * this pins carries a comment QUOTING the broken form to explain why it is
+ * broken, and the scan flagged it. Same trap
+ * `tests/workflow-push-triggers-ci.test.ts` documents for `git push` in a
+ * header comment — a scanner that cannot tell code from commentary fails the
+ * file that is doing it right.
+ */
+function codeOnly(src: string): string {
+  return src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+}
+
 /** `/api/cron/roster-sync` → `src/pages/api/cron/roster-sync.ts` */
 function routeFileFor(cronPath: string): string {
   const clean = cronPath.split('?')[0].replace(/^\/+|\/+$/g, '');
@@ -95,6 +109,30 @@ describe('vercel.json crons ↔ API routes', () => {
         `${routeFileFor(cron.path)} is fired by a Vercel cron but never checks ` +
           `CRON_SECRET. A cron path is an ordinary public route, and these ` +
           `routes start workflows that commit to main with Actions secrets.`,
+      ).toBe(true);
+    }
+  });
+
+  it('fails CLOSED on an unconfigured CRON_SECRET', () => {
+    for (const cron of crons) {
+      const file = routeFileFor(cron.path);
+      const src = codeOnly(read(file));
+      // Comparing straight against `Bearer ${process.env.CRON_SECRET}` reads
+      // as a check and is not one when the variable is missing: the template
+      // literal becomes the literal "Bearer undefined", which anyone can send.
+      expect(
+        /Bearer \$\{\s*process\.env\.CRON_SECRET\s*\}/.test(src),
+        `${file} compares the bearer token against ` +
+          '`Bearer ${process.env.CRON_SECRET}` directly. With the variable ' +
+          'unset that string is "Bearer undefined" and the gate opens to ' +
+          'anyone. Read it into a local and bail when it is falsy first — ' +
+          'api/cron/push-fanout.ts is the shape.',
+      ).toBe(false);
+      expect(
+        /if\s*\(\s*!\s*secret\s*\)/.test(src),
+        `${file} never bails on a missing CRON_SECRET. These routes dispatch ` +
+          'workflows that commit to main with Actions secrets, so an ' +
+          'environment that merely forgot the variable must refuse, not open.',
       ).toBe(true);
     }
   });
