@@ -1482,8 +1482,9 @@ far better targeted:
 
 Three things that are load-bearing:
 
-- **`transaction` stays push-only.** Every add, drop and waiver claim, scanned
-  every 15 minutes, is the firehose that got the chat muted. Trades are
+- **`transaction` stays push-only.** Every add, drop and waiver claim — scanned
+  as often as every five minutes in a waiver tail now that the scan rides the
+  Vercel cron bridge — is the firehose that got the chat muted. Trades are
   separable (`raw.type === 'TRADE'` → `breaking` tier) if that ever changes.
 - **Speculation is budgeted ONCE, by its script, and the sender must not look
   again.** `schefter-trade-speculation.mjs` checks the shared 3/day + 4h gate

@@ -1,8 +1,15 @@
 name: GroupMe Sync
 
 on:
-  schedule:
-    - cron: "*/5 * * * *"
+  # NO `schedule:`, deliberately — see roster-sync.yml. GitHub delivered this
+  # job's five-minute schedule 5-8 times a day from 2026-08-27, so the chat
+  # mirror the site reads ran hours behind the group. The only scheduled
+  # trigger is now the Vercel cron in vercel.json firing api/cron/groupme-sync.
+  #
+  # That bridge dispatches on EVERY tick rather than through sync-cadence.ts,
+  # because this job commits nothing: it reads GroupMe and writes Redis, so a
+  # run costs no production build and there is no spend to ration. If a commit
+  # step is ever added here, the tiered cadence comes with it.
   workflow_dispatch:
 
 concurrency:
