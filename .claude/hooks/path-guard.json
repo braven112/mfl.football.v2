@@ -156,7 +156,8 @@
         "tests/fixtures/mfl-transaction-strings.json",
         "scripts/apply-pending-contracts.mjs",
         "scripts/mint-mfl-session.mjs",
-        "scripts/sync-draft-pick-contracts.mjs"
+        "scripts/sync-draft-pick-contracts.mjs",
+        "src/utils/contract-actions-client.ts"
       ],
       "tests": [
         "tests/contract-eligibility.test.ts",
@@ -165,7 +166,8 @@
         "tests/contract-declaration-api.test.ts",
         "tests/august-cut-selection.test.ts",
         "tests/august-cutdown-date.test.ts",
-        "tests/mfl-credential-precedence.test.ts"
+        "tests/mfl-credential-precedence.test.ts",
+        "tests/contract-actions-client.test.ts"
       ]
     },
     {
