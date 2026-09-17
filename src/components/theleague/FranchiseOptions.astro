@@ -448,6 +448,18 @@ const getPlayerDisplayName = (player: typeof players[0]): string => {
 <style is:global>
   .franchise-tag-eligibility {
     width: 100%;
+    /* A grid/flex item's automatic min-width is its own min-content, not 0,
+       so without this the table below sizes this component, its card, and
+       the page — see ChartCard.astro, where the same chain starts. */
+    min-width: 0;
+  }
+
+  /* The markup has always used .table-wrapper here but nothing styled it,
+     so a four-column table had nothing to scroll inside and simply pushed.
+     Matches VeteranExtensionCandidates' wrapper. */
+  .franchise-tag-eligibility .table-wrapper {
+    min-width: 0;
+    overflow-x: auto;
   }
 
   .no-results {
