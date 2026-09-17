@@ -373,10 +373,19 @@ describe('announceOne', () => {
     // A LIVE entry: the dry-run path deliberately skips the wait, so it cannot
     // show the ordering. No bot id is set for this env name, so the send stops
     // at onMissingBotId without reaching the network.
+    //
+    // `kind` MUST BYPASS THE DAY CAP, and that is not a detail. This asserted
+    // `schedule-strength`, which `groupme-day-plan.mjs` plans for Wednesday PT
+    // only — and `announceOne` does not thread a `now`, so `isPlannedToday`
+    // read the real clock. The send was held before it ever reached
+    // `onMissingBotId`, so this passed on Wednesdays and failed the other six
+    // days: red on `staging` CI most of the week, for a test about ORDERING
+    // that never meant to involve the calendar at all. `roger-reply` is exempt
+    // (`EXEMPT_KINDS`), so the ordering is now the only thing under test.
     await announceOne(
       {
         league: 'theleague',
-        kind: 'schedule-strength',
+        kind: 'roger-reply',
         postId: 'sf_order',
         verifyPath: '/theleague/news/sf_order',
         groupMeText: 'x',
