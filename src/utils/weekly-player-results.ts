@@ -329,22 +329,29 @@ export function buildWeeklyPlayerResults(
         // Only the multi-owner case pays for the list (see WeekEntry.o).
         if (owners.length > 1) entry.o = owners;
         weeks.push(entry);
-      } else if (hasFallback && !isBye) {
+      } else if (hasFallback) {
         // No roster carried him, but the league scored him — a free agent, or
         // a practice-squad / injured-reserve player, who has real points and
         // used to have no row at all. Opponent and points-allowed context are
         // properties of the NFL matchup, not of a fantasy roster, so they are
         // just as true here. Status stays empty: nobody's lineup, nothing to
         // say (see WeekEntry.st).
+        //
+        // `isBye` labels the row but NEVER discards the score, exactly as the
+        // roster branch above does. `info.nflTeam` is the player's CURRENT
+        // team (players.json), so for anyone traded mid-season the bye it
+        // computes is his new team's — and dropping points on it would delete
+        // a real week he played for the old one. A score MFL gave us outranks
+        // a bye we derived.
         const oppStats = oppCode ? fpa[oppCode]?.[info.position] : null;
         weeks.push({
           w,
           p: fallbackPts,
-          opp: oppLabel,
+          opp: isBye ? null : oppLabel,
           home: teamSchedule?.isHome ?? false,
           avg: oppStats?.avg ?? null,
           rank: oppStats?.rank ?? null,
-          st: '',
+          st: isBye ? 'BYE' : '',
           fn: '',
           fi: '',
         });

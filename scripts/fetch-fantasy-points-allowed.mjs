@@ -11,8 +11,8 @@
  * Runs weekly via GitHub Actions (weekly-stats-sync.yml).
  *
  * Env variables:
- *   MFL_LEAGUE_ID (optional; overrides --league, defaults to the registry's
- *                  default league)
+ *   MFL_LEAGUE_ID (optional; used when --league is absent, defaults to the
+ *                  registry's default league)
  *   MFL_YEAR      (optional, auto-detected from league calendar)
  *
  * Usage:
@@ -236,10 +236,17 @@ async function main() {
   // wants the AFL's file never has to name '19621'. That matters because the
   // caller is a GitHub workflow, and workflow YAML cannot import
   // leagues-data.mjs — the alternative is a hardcoded id in the YAML plus an
-  // exemption in tests/league-literal-guard.test.ts. MFL_LEAGUE_ID still works
-  // and still wins, for anyone driving this by env the old way.
+  // exemption in tests/league-literal-guard.test.ts.
+  //
+  // AN EXPLICIT FLAG BEATS AMBIENT ENV. The per-league loop in
+  // weekly-stats-sync.yml asks for a specific league by name, and if
+  // MFL_LEAGUE_ID happened to be set in the environment it would answer both
+  // iterations with the same league: TheLeague's file written twice, the AFL's
+  // never created, exit 0 and a green check over a job that did half its work.
+  // MFL_LEAGUE_ID still drives the script on its own, for anyone invoking it
+  // by env the old way.
   const league = resolveLeagueArg();
-  const leagueId = getNonEmpty(process.env.MFL_LEAGUE_ID) || league?.id || DEFAULT_LEAGUE_ID;
+  const leagueId = league?.id || getNonEmpty(process.env.MFL_LEAGUE_ID) || DEFAULT_LEAGUE_ID;
   const year = getNonEmpty(process.env.MFL_YEAR) || String(getCurrentSeasonYear());
   const leagueName = getLeagueById(leagueId)?.slug ?? DEFAULT_LEAGUE_SLUG;
 

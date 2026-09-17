@@ -73,9 +73,14 @@ export function loadWeeklyPlayerResults(
     ? parsedEnd
     : DEFAULT_END_WEEK;
 
-  const payload = schedule && Array.isArray(weeklyResultsRaw)
+  // Gated on the SCHEDULE alone, deliberately not on `weeklyResultsRaw`.
+  // Requiring the lineup feed here would let the very blind spot this loader
+  // exists to cover suppress its own fix: a league-season with no readable
+  // weeklyResults but real full-pool scores would return `{}` and hide the
+  // table again. `buildWeeklyPlayerResults` already normalizes a non-array.
+  const payload = schedule
     ? buildWeeklyPlayerResults(
-        weeklyResultsRaw,
+        weeklyResultsRaw ?? [],
         schedule,
         readFeed(dataPath, year, 'fantasyPointsAllowed.json'),
         readFeed(dataPath, year, 'players.json'),

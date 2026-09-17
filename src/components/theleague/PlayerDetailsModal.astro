@@ -1074,7 +1074,7 @@ const t = (value?: string) => value ?? '\u2014';
 
 <script>
   import { NFL_TEAM_CITIES } from '../../utils/nfl';
-  import { applyPlayerModalBand, franchiseTintHue, getFranchiseBandBrand } from '../../utils/player-modal-band';
+  import { applyPlayerModalBand, franchiseTintHue, getFranchiseBandBrand, readFranchiseBandBrands } from '../../utils/player-modal-band';
   // The repo's one exported HTML escaper (src/utils/player-cell-html.ts) —
   // franchise names come straight from MFL and land in innerHTML here.
   import { escapeHtml } from '../../utils/player-cell-html';
@@ -1812,17 +1812,34 @@ const t = (value?: string) => value ?? '\u2014';
       var rankHeader = document.getElementById('wr-rank-header');
 
       if (weeklySection && weeklyBody) {
-        if (!window._weeklyPlayerData) {
-          var dataEl = document.getElementById('weekly-player-results');
-          if (dataEl) {
-            try { window._weeklyPlayerData = JSON.parse(dataEl.textContent || '{}'); }
-            catch (_e) { window._weeklyPlayerData = {}; }
-          } else {
-            window._weeklyPlayerData = {};
-          }
+        // Re-read the island on EVERY open, and never cache it on `window`.
+        //
+        // `window` is one of the two nodes the ClientRouter does not replace,
+        // so a value parked there outlives a navigation. While only TheLeague
+        // emitted `#weekly-player-results` a cached copy was harmless — it
+        // could only ever hold TheLeague's payload. Both leagues emit it now,
+        // so the first page loaded would win for the whole session: switch
+        // leagues from the nav and the AFL's crests would sit beside
+        // TheLeague's points and franchise names (BOTH LEAGUES HAVE A
+        // FRANCHISE 0001, so nothing would look wrong). It also stales out
+        // `?year=` on the AFL rosters page and the players -> rosters hop,
+        // which key different seasons between Labor Day and kickoff.
+        //
+        // This is the trap rankings-scope.ts and player-modal-band.ts both
+        // document: re-read per call, because the parse is cheap and the
+        // correctness bug is not.
+        var weeklyDataEl = document.getElementById('weekly-player-results');
+        var weeklyPlayerData = {};
+        if (weeklyDataEl) {
+          try { weeklyPlayerData = JSON.parse(weeklyDataEl.textContent || '{}'); }
+          catch (_e) { weeklyPlayerData = {}; }
         }
 
-        var playerWeeks = window._weeklyPlayerData[playerData.id];
+        // One read of the brand map per open, not one per owner per week —
+        // 18 weeks x 2 AFL owners was up to 36 JSON.parse of the same island.
+        var weeklyBrands = readFranchiseBandBrands();
+
+        var playerWeeks = weeklyPlayerData[playerData.id];
 
         if (playerWeeks && playerWeeks.length > 0) {
           weeklySection.style.display = '';
@@ -1867,7 +1884,7 @@ const t = (value?: string) => value ?? '\u2014';
                 // whose crests are named by slug rather than by id. The map is
                 // league-scoped and re-read per open, so it also survives a
                 // ClientRouter navigation between the two.
-                var ownerBrand = getFranchiseBandBrand(owner.fi);
+                var ownerBrand = (weeklyBrands && weeklyBrands.teams && weeklyBrands.teams[owner.fi]) || null;
                 var crest = ownerBrand && (ownerBrand.crestLight || ownerBrand.crest);
                 var label = escapeHtml(owner.fn || (ownerBrand ? ownerBrand.name : ''));
                 var crestImg = crest

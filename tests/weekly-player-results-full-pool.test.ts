@@ -129,6 +129,29 @@ describe('the full-pool per-week fallback', () => {
     expect(build([], new Map([['200', {}]]))['200']).toBeUndefined();
   });
 
+  it('keeps a real score on a week it computed as a bye', () => {
+    // `info.nflTeam` is the player's CURRENT team, so for anyone traded
+    // mid-season the derived bye is his NEW team's — and discarding points on
+    // it deletes a real week he played for the old one. The roster branch has
+    // always kept points under `isBye`; the fallback must not disagree.
+    // '200' is on PIT; week 2 of the fixture schedule has PIT playing, so
+    // score a week where the schedule loaded and PIT is absent.
+    const schedule = {
+      fullNflSchedule: {
+        nflSchedule: [
+          { week: '1', matchup: [{ team: [{ id: 'PIT', isHome: '1' }, { id: 'ATL', isHome: '0' }] }] },
+          { week: '2', matchup: [{ team: [{ id: 'CLV', isHome: '1' }, { id: 'ATL', isHome: '0' }] }] },
+        ],
+      },
+    };
+    const weeks = buildWeeklyPlayerResults(
+      [], schedule, {}, PLAYERS, LEAGUE, 2, new Map([['200', { 2: 21.4 }]]),
+    )['200'];
+
+    expect(weeks[1].st, 'the row is still labelled a bye').toBe('BYE');
+    expect(weeks[1].p, 'but the score MFL gave us survives it').toBe(21.4);
+  });
+
   it('never turns a bye into a scored week', () => {
     // '200' is on PIT; week 2 of the fixture schedule has PIT playing, week 1
     // too — so use a team-less week by scoring a week outside the schedule.
@@ -224,6 +247,33 @@ describe('reading MFL’s playerScores payload', () => {
   });
 });
 
+describe('the per-league points-allowed sync', () => {
+  const wf = readFileSync(join(ROOT, '.github/workflows/weekly-stats-sync.yml'), 'utf8');
+  const fpa = readFileSync(join(ROOT, 'scripts/fetch-fantasy-points-allowed.mjs'), 'utf8');
+
+  it('names no MFL league id in the workflow', () => {
+    // The script resolves the id through the registry, so the YAML needs no
+    // literal and therefore no league-literal-guard exemption.
+    expect(wf).toMatch(/--league="\$SLUG"/);
+    expect(wf).not.toMatch(/\b(13522|19621)\b/);
+  });
+
+  it('lets one league fail without discarding the other league\u2019s file', () => {
+    // The script exits 1 on a fetch error or a short team count. Under
+    // `bash -e` that kills the step, and `Commit and push updates` has no
+    // `if:` — so the league that already wrote its file loses that write
+    // because the other league had a bad day.
+    expect(wf).toMatch(/if node \.\/scripts\/fetch-fantasy-points-allowed\.mjs/);
+    expect(wf).toMatch(/\$\{#OK\[@\]\} -eq 0/);
+  });
+
+  it('lets an explicit --league beat an ambient MFL_LEAGUE_ID', () => {
+    // Otherwise the per-league loop answers both iterations with the env's
+    // league: one file written twice, the other never created, exit 0.
+    expect(fpa).toMatch(/league\?\.id \|\| getNonEmpty\(process\.env\.MFL_LEAGUE_ID\)/);
+  });
+});
+
 describe('the feed that supplies it', () => {
   const src = readFileSync(FETCH_SCRIPT, 'utf8');
 
@@ -257,6 +307,28 @@ describe('the feed that supplies it', () => {
 describe('the modal that renders it', () => {
   const src = readFileSync(MODAL, 'utf8');
 
+  it('never caches the payload on `window`', () => {
+    // `window` is one of the two nodes the ClientRouter does not replace, so a
+    // value parked there outlives a navigation. This was harmless only while
+    // ONE league emitted #weekly-player-results; both do now, and both have a
+    // franchise 0001, so the first page loaded would win for the session and
+    // show one league's points and franchise names under the other league's
+    // crests — with nothing on screen looking wrong. Same trap as
+    // rankings-scope.ts's "re-read per call, never capture at module load".
+    // It also stales `?year=` and the players -> rosters hop, which key
+    // different seasons between Labor Day and kickoff.
+    expect(src).not.toMatch(/window\._weeklyPlayerData/);
+    expect(
+      /getElementById\('weekly-player-results'\)/.test(src),
+      'the island must be read inside the open handler',
+    ).toBe(true);
+  });
+
+  it('reads the brand map once per open, not once per badge', () => {
+    // 18 weeks x 2 AFL owners is up to 36 JSON.parse of the same island.
+    expect(src).toMatch(/var weeklyBrands = readFranchiseBandBrands\(\)/);
+  });
+
   it('builds a franchise crest from the page’s brand map, not a league path', () => {
     // The badge used to hardcode `/assets/theleague/icons/<franchiseId>.png`.
     // That is correct for exactly one league: the AFL's crests are named by
@@ -264,7 +336,10 @@ describe('the modal that renders it', () => {
     // league-scoped AND re-read per open, so it survives a ClientRouter
     // navigation between the two leagues as well.
     expect(src).not.toContain('/assets/theleague/icons/');
-    expect(src).toMatch(/getFranchiseBandBrand\(owner\.fi\)/);
+    // However the map is read (it is hoisted once per open, see below), the
+    // crest must come OUT of it and never out of a constructed path.
+    expect(src).toMatch(/weeklyBrands\.teams\[owner\.fi\]/);
+    expect(src).toMatch(/ownerBrand && \(ownerBrand\.crestLight \|\| ownerBrand\.crest\)/);
   });
 
   it('escapes the franchise name it puts in innerHTML', () => {
