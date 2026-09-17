@@ -73,6 +73,32 @@ function codeOnly(src: string): string {
   return src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
 }
 
+/**
+ * The minutes of the hour a 5-field cron's MINUTE field fires on.
+ *
+ * Handles the three forms in play here — a step, a comma list, and a bare
+ * minute — because the fallback schedule is deliberately an OFFSET LIST
+ * (`7,37`) rather than a step, and a checker that understood only the step
+ * form would skip it silently and enforce nothing.
+ */
+function minuteSet(expr: string): Set<number> {
+  const minute = expr.trim().split(/\s+/)[0];
+  const out = new Set<number>();
+  for (const part of minute.split(',')) {
+    const step = /^\*\/(\d+)$/.exec(part);
+    if (step) {
+      for (let m = 0; m < 60; m += Number(step[1])) out.add(m);
+    } else if (part === '*') {
+      for (let m = 0; m < 60; m += 1) out.add(m);
+    } else if (/^\d+$/.test(part)) {
+      out.add(Number(part));
+    }
+  }
+  return out;
+}
+
+const firingsPerHour = (expr: string) => minuteSet(expr).size;
+
 /** `/api/cron/roster-sync` → `src/pages/api/cron/roster-sync.ts` */
 function routeFileFor(cronPath: string): string {
   const clean = cronPath.split('?')[0].replace(/^\/+|\/+$/g, '');
@@ -103,7 +129,11 @@ describe('vercel.json crons ↔ API routes', () => {
 
   it('gates every cron target behind CRON_SECRET', () => {
     for (const cron of crons) {
-      const src = read(routeFileFor(cron.path));
+      // codeOnly, not the raw source: a route that merely NAMES CRON_SECRET in
+      // a comment while checking nothing would otherwise satisfy this — the
+      // same prose-for-code confusion `codeOnly` exists to stop, and it would
+      // be incoherent to strip comments in the check below but not this one.
+      const src = codeOnly(read(routeFileFor(cron.path)));
       expect(
         src.includes('CRON_SECRET'),
         `${routeFileFor(cron.path)} is fired by a Vercel cron but never checks ` +
@@ -128,8 +158,11 @@ describe('vercel.json crons ↔ API routes', () => {
           'anyone. Read it into a local and bail when it is falsy first — ' +
           'api/cron/push-fanout.ts is the shape.',
       ).toBe(false);
+      // Any *secret*-ish local, not the literal identifier `secret` — a future
+      // bridge naming it `cronSecret` is writing correct code and must not
+      // fail the build for it.
       expect(
-        /if\s*\(\s*!\s*secret\s*\)/.test(src),
+        /if\s*\(\s*!\s*\w*[sS]ecret\w*\s*\)/.test(src),
         `${file} never bails on a missing CRON_SECRET. These routes dispatch ` +
           'workflows that commit to main with Actions secrets, so an ' +
           'environment that merely forgot the variable must refuse, not open.',
@@ -170,16 +203,40 @@ describe('roster-sync.yml schedule is a fallback, not the primary trigger', () =
     );
     expect(cronLines.length).toBeGreaterThan(0);
     for (const expr of cronLines) {
-      const minute = expr.trim().split(/\s+/)[0];
-      const step = /^\*\/(\d+)$/.exec(minute);
-      if (!step) continue;
       expect(
-        Number(step[1]),
-        `roster-sync.yml asks GitHub for "${expr}". GitHub does not deliver ` +
-          `sub-30-minute schedules on this repo (measured: 5-8 runs a day ` +
-          `against 288 requested), and the Vercel cron is the primary trigger ` +
-          `now — a tight schedule here only multiplies production builds.`,
-      ).toBeGreaterThanOrEqual(30);
+        firingsPerHour(expr),
+        `roster-sync.yml asks GitHub for "${expr}", which fires ` +
+          `${firingsPerHour(expr)}× an hour. GitHub does not deliver a ` +
+          `high-frequency schedule on this repo (measured: 5-8 runs a day ` +
+          `against the 288 that */5 requested), the Vercel cron is the ` +
+          `primary trigger now, and every extra run is a production build.`,
+      ).toBeLessThanOrEqual(2);
+    }
+  });
+
+  it('offsets the fallback off the Vercel cron\'s own slots', () => {
+    const primary = crons.find((c) => c.path === '/api/cron/roster-sync');
+    expect(primary, 'no Vercel cron for the roster sync to offset against').toBeTruthy();
+    const primaryMinutes = minuteSet(primary!.schedule);
+
+    const cronLines = [...workflow.matchAll(/^\s*-\s*cron:\s*["']([^"']+)["']/gm)].map(
+      (m) => m[1],
+    );
+    for (const expr of cronLines) {
+      const overlap = [...minuteSet(expr)].filter((m) => primaryMinutes.has(m));
+      expect(
+        overlap,
+        `roster-sync.yml's fallback "${expr}" fires at minute(s) ` +
+          `${overlap.join(', ')}, which the Vercel cron "${primary!.schedule}" ` +
+          `already covers. A fallback landing on the primary's own slots adds ` +
+          `no coverage at any minute not already covered, and collides: every ` +
+          `trigger shares \`concurrency: roster-sync\` with ` +
+          `\`cancel-in-progress: true\`, so a delivered scheduled event kills ` +
+          `the Vercel-dispatched run mid-flight — and the push-alert steps ` +
+          `send their fan-out BEFORE writing the Redis snapshot of what was ` +
+          `sent, so a cancel in that gap re-sends injury pushes to owners' ` +
+          `devices. Offset it (e.g. "7,37 * * * *").`,
+      ).toEqual([]);
     }
   });
 });
