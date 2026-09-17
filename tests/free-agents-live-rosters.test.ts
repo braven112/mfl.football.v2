@@ -57,6 +57,22 @@ describe('free agents are derived from a LIVE roster read', () => {
     ).toBe(true);
   });
 
+  it('treats an EMPTY live map as unavailable, not as "nobody is rostered"', () => {
+    const src = read(THELEAGUE);
+    // getCachedRosters returns null when Redis is down but `{}` when the cached
+    // payload held no players — and `{}` is TRUTHY. A bare truthiness check
+    // therefore takes the live branch on an empty map, leaves the roster map
+    // empty, and reports EVERY rostered player in the league as a free agent:
+    // strictly worse than stale, and the exact failure the fallback exists to
+    // prevent. Caught by review on #1157 before it shipped.
+    expect(
+      /Object\.keys\(cachedRosterPlayers\)\.length\s*>\s*0/.test(src),
+      `${THELEAGUE} must reject an EMPTY live roster map, not just a null one. ` +
+        '`{}` is truthy, so a bare `if (cachedRosterPlayers)` skips the static ' +
+        'fallback and reports the whole league as free agents.',
+    ).toBe(true);
+  });
+
   it('the live read precedes the static one', () => {
     const src = read(THELEAGUE);
     const live = src.indexOf('getCachedRosters(');
@@ -70,13 +86,19 @@ describe('free agents are derived from a LIVE roster read', () => {
     ).toBe(true);
   });
 
-  it("the AFL's players page keeps its own live overlay", () => {
+  it("the AFL's players page keeps its own live overlay — and CALLS it", () => {
     const src = read(AFL);
-    expect(
-      /afl-free-agents-live/.test(src),
-      `${AFL} must keep its live roster overlay. It is the copy that had this ` +
-        'right first; losing it would re-open the gap on the other side.',
-    ).toBe(true);
+    // Not the module name: that is satisfied by the import line alone, so
+    // deleting the call while leaving the import would keep this green and the
+    // guard would pin nothing. Assert the call sites.
+    for (const fn of ['fetchLiveAflRosters', 'applyLiveRosters']) {
+      expect(
+        new RegExp(`${fn}\\s*\\(`).test(src),
+        `${AFL} imports its live overlay but no longer calls ${fn}(). It is the ` +
+          'copy that had this right first; losing the call would re-open the gap ' +
+          'on the other side while every import-level check stayed green.',
+      ).toBe(true);
+    }
   });
 
   it('neither page derives availability from the static feed alone', () => {
