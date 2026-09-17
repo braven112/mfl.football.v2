@@ -4,10 +4,10 @@ status: open
 severity: P2
 opened: 2026-09-17
 hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1156
-hotfix_sha: 4bf64f3
-followup_issue:
+hotfix_sha: 96d2b71
+followup_issue: 1158
 followup_pr:
-followup_session:
+followup_session: session_013bTc8oqnPeFXqWfMo39cFf
 ---
 
 # Follow-up: the waiver column named players by MFL id
