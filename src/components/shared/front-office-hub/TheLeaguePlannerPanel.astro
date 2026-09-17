@@ -15,14 +15,25 @@
  *   declare / extend actions, so every team's metrics are precomputed
  *   server-side as display strings (front-office-planner-data.ts) and the
  *   team switch just swaps which team's precomputed panels/strings show.
+ *
+ * Two sections do NOT come from rosters.astro's planner view, because that
+ * view does not have them:
+ * - **Roster Analytics** — the shared <RosterAnalyticsPanel> the AFL's hub
+ *   introduced, plus the four cap charts TheLeague's rosters.astro renders
+ *   on a DIFFERENT tab (Analytics) and only client-side. Here they are
+ *   server-rendered, per team.
+ * - **Draft Assets** — now one <DraftAssetChips> card instead of up to two
+ *   ChartCards holding DraftTeamAssetsView / DraftPicksCard. Those two
+ *   components are untouched and still serve rosters.astro.
  */
 import ChartCard from '../../theleague/ChartCard.astro';
 import MetricCard from '../../theleague/MetricCard.astro';
 import FranchiseOptions from '../../theleague/FranchiseOptions.astro';
 import VeteranExtensionCandidates from '../../theleague/VeteranExtensionCandidates.astro';
 import FreeAgentNeedsCard from '../../theleague/FreeAgentNeedsCard.astro';
-import DraftTeamAssetsView from '../../theleague/DraftTeamAssetsView.astro';
-import DraftPicksCard from '../../theleague/DraftPicksCard.astro';
+import DraftAssetChips from './DraftAssetChips.astro';
+import RosterAnalyticsPanel from './RosterAnalyticsPanel.astro';
+import NflCollegeStacks from './NflCollegeStacks.astro';
 import PlayerDetailsModal from '../../theleague/PlayerDetailsModal.astro';
 import WatchListBridge from '../WatchListBridge.astro';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
@@ -46,19 +57,26 @@ const {
   allPlayers,
   freeAgentNeedsByTeam,
   teamMetrics,
-  draftNextYear,
-  draftPredictions,
-  actualDraftPicks,
-  assetsPredictions,
-  assetTeamIds,
-  assets2027Predictions,
-  asset2027TeamIds,
+  teamAnalytics,
+  draftChipsByTeam,
   selectedTeamId,
   signedIn,
 } = Astro.props;
 
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 const r = (path: string) => resolveLeaguePath(`/theleague${path}`, hideLeaguePrefix);
+
+// A team absent from the season payload (a brand-new franchise, or a feed
+// that has not landed yet) must render an empty panel, not throw.
+const EMPTY_ANALYTICS = {
+  rosterSize: 0,
+  positionDistribution: [],
+  donutSegments: [],
+  ageBuckets: [],
+  ageStats: { avg: null, oldest: null, youngest: null },
+  ageByPositionDots: [],
+  ageStripRange: { min: 22, max: 36, ticks: [] },
+};
 
 const selectedMetrics = teamMetrics[selectedTeamId] ?? {
   capSpaceDisplay: '—',
@@ -140,113 +158,69 @@ const clientConfig = {
 
   <div class="planner-section planner-section--draft-assets">
     <h2 class="planner-section__title">Draft Assets</h2>
-    {plannerPhase.showDualDraftCards && assets2027Predictions.length > 0 ? (
-      <div class="draft-cards-grid">
-        <div class="draft-card-wrapper">
-          {assetsPredictions.length > 0 ? (
-            <ChartCard title={`${draftNextYear} Draft Assets`} subtitle="Picks your team owns after all trades">
-              <a href={r('/draft/order?view=assets')} class="chart-card-link" title="View full draft assets" slot="actions">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                  <path d="M8.5 1.5H2.5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7.5M14.5 1.5l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-                </svg>
-              </a>
-              <div id="fo-draft-assets-panels">
-                {assetTeamIds.map((teamId) => (
-                  <div
-                    class="draft-assets-panel"
-                    data-assets-team-id={teamId}
-                    style={`display: ${teamId === selectedTeamId ? 'block' : 'none'}`}
-                  >
-                    <DraftTeamAssetsView
-                      predictions={assetsPredictions}
-                      teams={teamsList}
-                      hideTeamSelector={true}
-                      franchiseId={teamId}
-                    />
-                  </div>
-                ))}
-              </div>
-            </ChartCard>
-          ) : draftPredictions.length > 0 ? (
-            <ChartCard title={`${draftNextYear} Draft Picks`} subtitle="Pick positions from the current draft order">
-              <a href={r('/draft/order')} class="chart-card-link" title="View full draft order" slot="actions">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                  <path d="M8.5 1.5H2.5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7.5M14.5 1.5l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-                </svg>
-              </a>
-              <DraftPicksCard
-                franchiseId={selectedTeamId}
-                draftPredictions={draftPredictions}
-                actualPicks={actualDraftPicks}
-                season={draftNextYear}
-              />
-            </ChartCard>
-          ) : null}
+    {/* One card with a year subhead per group — not the two side-by-side
+        ChartCards this used to render. See DraftAssetChips.astro's header
+        for why the chip row replaced DraftTeamAssetsView / DraftPicksCard
+        here, and why those two components still exist for rosters.astro. */}
+    <div id="fo-draft-chip-panels">
+      {teamsList.map((team) => (
+        <div
+          class="draft-chips-panel"
+          data-draft-chips-team-id={team.id}
+          style={`display: ${team.id === selectedTeamId ? 'block' : 'none'}`}
+        >
+          <DraftAssetChips
+            groups={draftChipsByTeam[team.id] ?? []}
+            title={null}
+            href={r('/draft/order?view=assets')}
+            hrefTitle="View full draft assets"
+          />
         </div>
-        <div class="draft-card-wrapper">
-          <ChartCard title={`${draftNextYear + 1} Draft Assets`} subtitle="Future draft picks your team owns after all trades">
-            <div id="fo-draft-assets-2027-panels">
-              {asset2027TeamIds.map((teamId) => (
-                <div
-                  class="draft-assets-panel"
-                  data-assets-2027-team-id={teamId}
-                  style={`display: ${teamId === selectedTeamId ? 'block' : 'none'}`}
-                >
-                  <DraftTeamAssetsView
-                    predictions={assets2027Predictions}
-                    teams={teamsList}
-                    hideTeamSelector={true}
-                    franchiseId={teamId}
-                  />
-                </div>
-              ))}
-            </div>
-          </ChartCard>
+      ))}
+    </div>
+  </div>
+
+  <div class="planner-section planner-section--analytics">
+    <h2 class="planner-section__title">Roster Analytics</h2>
+    {/* CHARTS are pre-rendered for every team and toggled by the switcher,
+        exactly like the FA-needs panels above — the hub swaps display, it
+        never fetches. They are pure SVG and cost ~26 KB a team. */}
+    <div id="fo-analytics-panels">
+      {teamsList.map((team) => (
+        <div
+          class="analytics-panel"
+          data-analytics-team-id={team.id}
+          style={`display: ${team.id === selectedTeamId ? 'block' : 'none'}`}
+        >
+          <RosterAnalyticsPanel
+            analytics={teamAnalytics[team.id]?.analytics ?? EMPTY_ANALYTICS}
+            cap={teamAnalytics[team.id]?.cap ?? null}
+            title={null}
+          />
         </div>
-      </div>
-    ) : (
-      <Fragment>
-        {assetsPredictions.length > 0 ? (
-          <ChartCard title={`${draftNextYear} Draft Assets`} subtitle="Picks your team owns after all trades">
-            <a href={r('/draft/order?view=assets')} class="chart-card-link" title="View full draft assets" slot="actions">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M8.5 1.5H2.5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7.5M14.5 1.5l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-              </svg>
-            </a>
-            <div id="fo-draft-assets-panels">
-              {assetTeamIds.map((teamId) => (
-                <div
-                  class="draft-assets-panel"
-                  data-assets-team-id={teamId}
-                  style={`display: ${teamId === selectedTeamId ? 'block' : 'none'}`}
-                >
-                  <DraftTeamAssetsView
-                    predictions={assetsPredictions}
-                    teams={teamsList}
-                    hideTeamSelector={true}
-                    franchiseId={teamId}
-                  />
-                </div>
-              ))}
-            </div>
-          </ChartCard>
-        ) : draftPredictions.length > 0 ? (
-          <ChartCard title={`${draftNextYear} Draft Picks`} subtitle="Pick positions from the current draft order">
-            <a href={r('/draft/order')} class="chart-card-link" title="View full draft order" slot="actions">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M8.5 1.5H2.5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7.5M14.5 1.5l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-              </svg>
-            </a>
-            <DraftPicksCard
-              franchiseId={selectedTeamId}
-              draftPredictions={draftPredictions}
-              actualPicks={actualDraftPicks}
-              season={draftNextYear}
-            />
-          </ChartCard>
-        ) : null}
-      </Fragment>
-    )}
+      ))}
+    </div>
+
+    {/* STACKS are NOT pre-rendered per team, unlike everything else on this
+        page. Each one is ~19 PlayerCells and a PlayerCell is ~2 KB rendered
+        (a three-deep headshot `onerror` chain plus the modal's JSON), so all
+        16 teams came to 1.45 MB raw / 133 KB gzipped — a doubling of the
+        whole page to pre-paint fifteen teams nobody is looking at. Measured,
+        not estimated.
+
+        So only the selected team's stacks render, and switching to another
+        team offers a link that reloads the page for it. The charts above
+        still swap instantly, which is the part of this section an owner
+        actually flips between teams to compare. */}
+    <div id="fo-stacks-host" data-stacks-team-id={selectedTeamId}>
+      <NflCollegeStacks
+        playersByNflTeam={teamAnalytics[selectedTeamId]?.playersByNflTeam ?? []}
+        playersByCollege={teamAnalytics[selectedTeamId]?.playersByCollege ?? []}
+      />
+    </div>
+    <p id="fo-stacks-link" class="fo-stacks-link" hidden>
+      <a href="#" data-stacks-href>View this team’s NFL &amp; college stacks →</a>
+    </p>
   </div>
 </div>
 
@@ -322,8 +296,27 @@ const clientConfig = {
         });
       };
       togglePanels('[data-fa-needs-team-id]', 'data-fa-needs-team-id');
-      togglePanels('[data-assets-team-id]', 'data-assets-team-id');
-      togglePanels('[data-assets-2027-team-id]', 'data-assets-2027-team-id');
+      togglePanels('[data-draft-chips-team-id]', 'data-draft-chips-team-id');
+      togglePanels('[data-analytics-team-id]', 'data-analytics-team-id');
+
+      // The stacks exist for the loaded team only (see the markup comment).
+      // Show them when the viewer switches back to that team; otherwise
+      // offer a link that reloads the page for the team they picked.
+      const stacksHost = document.getElementById('fo-stacks-host');
+      const stacksLink = document.getElementById('fo-stacks-link');
+      if (stacksHost && stacksLink) {
+        const isLoadedTeam = stacksHost.dataset.stacksTeamId === teamId;
+        stacksHost.style.display = isLoadedTeam ? '' : 'none';
+        stacksLink.hidden = isLoadedTeam;
+        const anchor = stacksLink.querySelector<HTMLAnchorElement>('[data-stacks-href]');
+        if (anchor && !isLoadedTeam) {
+          // Same param the route already resolves (and writes its cookie
+          // from), so the reloaded page lands on this team everywhere.
+          const url = new URL(window.location.href);
+          url.searchParams.set('myteam', teamId);
+          anchor.href = `${url.pathname}${url.search}`;
+        }
+      }
 
       const franchiseTagEl = document.querySelector<HTMLElement>('.franchise-tag-eligibility');
       if (franchiseTagEl) franchiseTagEl.dataset.currentTeam = teamId;
@@ -377,21 +370,27 @@ const clientConfig = {
     grid-template-columns: 1fr;
   }
 
-  .draft-cards-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: var(--padding-md, 1rem);
-  }
-
+  /* `.draft-cards-grid` is gone with the two side-by-side draft ChartCards
+     it existed to lay out — DraftAssetChips renders one card carrying both
+     years. */
   @container fo-main (min-width: 1150px) {
-    .chart-grid,
-    .draft-cards-grid {
+    .chart-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .chart-grid:has(> :only-child) {
       grid-template-columns: 1fr;
     }
+  }
+
+  .fo-stacks-link {
+    margin: 0.75rem 0 0;
+    font-size: 0.8125rem;
+  }
+
+  .fo-stacks-link a {
+    color: var(--league-accent, #1c497c);
+    font-weight: 600;
   }
 
   .chart-metrics {
@@ -411,18 +410,4 @@ const clientConfig = {
     font-size: 0.78rem;
   }
 
-  .chart-card-link {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: 0.4rem;
-    color: var(--content-text-muted, #6b7280);
-  }
-
-  .chart-card-link:hover {
-    color: var(--league-accent, #1c497c);
-    background-color: var(--color-gray-50, #f9fafb);
-  }
 </style>

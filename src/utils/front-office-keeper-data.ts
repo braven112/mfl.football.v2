@@ -22,9 +22,10 @@ import {
   buildRosterAnalytics,
   groupByNflTeam,
   groupByCollege,
+  type AnalyticsPlayer,
   type RosterAnalytics,
   type RosterGroup,
-} from './afl-roster-analytics';
+} from './roster-analytics';
 import type { KeeperPlannerPlayer, KeeperPlannerDraftPick } from '../components/afl-fantasy/KeeperPlanner.astro';
 
 const loadFeedJson = (leagueYearStr: string, filename: string): any => {
@@ -37,33 +38,21 @@ const loadFeedJson = (leagueYearStr: string, filename: string): any => {
   return null;
 };
 
-/** A roster row with the extra fields the analytics cards and player-details
- *  modal need (college, birthdate, draft/measurables) that KeeperPlanner
- *  itself has no use for. */
-export interface FrontOfficeAnalyticsPlayer {
-  id: string;
-  name: string;
-  position: string;
-  team: string;
-  espnId?: string;
-  status: string;
-  college: string | null;
-  birthdate: string | null;
-  height: string | null;
-  weight: string | null;
-  jersey: string | null;
-  draftYear: number | null;
-  draftRound: number | null;
-  draftPick: number | null;
-  draftTeam: string | null;
-}
+/**
+ * The analytics row type moved to `roster-analytics.ts` as `AnalyticsPlayer`
+ * when TheLeague's hub needed the same shape — a league's data module should
+ * not have to import a type out of the OTHER league's data module to
+ * describe the same player. Re-exported under the old name so existing
+ * importers keep working.
+ */
+export type FrontOfficeAnalyticsPlayer = AnalyticsPlayer;
 
 export interface FrontOfficeKeeperData {
   roster: KeeperPlannerPlayer[];
   draftPicks: KeeperPlannerDraftPick[];
   analytics: RosterAnalytics;
-  playersByNflTeam: RosterGroup<FrontOfficeAnalyticsPlayer>[];
-  playersByCollege: RosterGroup<FrontOfficeAnalyticsPlayer>[];
+  playersByNflTeam: RosterGroup<AnalyticsPlayer>[];
+  playersByCollege: RosterGroup<AnalyticsPlayer>[];
 }
 
 export async function buildFrontOfficeKeeperPlannerData(
@@ -164,7 +153,7 @@ export async function buildFrontOfficeKeeperPlannerData(
   // Richer rows for the analytics cards + player-details modal — kept
   // separate from `roster` (KeeperPlannerPlayer[]) rather than widening that
   // shared type with fields the planner board itself never reads.
-  const analyticsRoster: FrontOfficeAnalyticsPlayer[] = rosterPlayers.map((p) => {
+  const analyticsRoster: AnalyticsPlayer[] = rosterPlayers.map((p) => {
     const info = playersMap.get(p.id);
     return {
       id: p.id,

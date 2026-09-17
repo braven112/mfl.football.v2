@@ -1,5 +1,5 @@
 /**
- * Pure-logic guard for src/utils/afl-roster-analytics.ts — the Front Office
+ * Pure-logic guard for src/utils/roster-analytics.ts — the Front Office
  * AFL panel's roster-analytics data (position composition, age-by-position,
  * age stats/distribution, NFL/college groupings). A fresh implementation of
  * the same analysis AFL rosters.astro's Analytics view computes inline, not
@@ -12,7 +12,7 @@ import {
   groupByCollege,
   calculateAgeFromBirthdate,
   type RosterAnalyticsInput,
-} from '../src/utils/afl-roster-analytics';
+} from '../src/utils/roster-analytics';
 
 const AGE_30_BIRTHDATE = Math.floor(
   new Date(new Date().getFullYear() - 30, 0, 1).getTime() / 1000,

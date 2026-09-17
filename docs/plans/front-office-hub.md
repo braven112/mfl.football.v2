@@ -241,7 +241,7 @@ comes back.
 
 Each phase is independently shippable and leaves the tree green.
 
-### Phase A — shared analytics (no behavior change to actions)
+### Phase A — shared analytics — **SHIPPED 2026-09-17**
 1. Generalize `afl-roster-analytics.ts` → `roster-analytics.ts`; add the cap builders.
 2. Build `RosterAnalyticsPanel.astro` + `NflCollegeStacks.astro`.
 3. Mount in **both** hub panels (still two panels at this point).
@@ -249,8 +249,37 @@ Each phase is independently shippable and leaves the tree green.
    Presentational and self-contained, so it rides along with the analytics work.
 5. TheLeague's hub gains analytics — the headline ask, delivered first.
 
-**Done when:** both hubs render the same analytics component, cap charts present only
-on TheLeague, and `pnpm vitest run tests/afl-keeper-planner-features.test.ts` passes.
+**Done.** Both hubs render `RosterAnalyticsPanel` + `NflCollegeStacks`; the cap block
+is gated on the `cap` prop (fed from the registry's `salaryCap`), never on a slug.
+`afl-roster-analytics.ts` → `roster-analytics.ts`, widened with `buildCapAnalytics`,
+which composes `salary-calculations.ts` and declares no cap formula of its own.
+
+Two things the build turned up that the plan had not anticipated:
+
+**1. The AFL's rendering is provably unchanged.** Diffed the authenticated
+`/afl-fantasy/front-office` DOM before and after the extraction: byte-identical apart
+from one `</div>` — the stacks are now a sibling of the analytics block rather than a
+child, because each component owns its root. No visual or behavioural effect; the
+modal listener moved with the markup it serves.
+
+**2. Pre-rendering 16 teams of NFL/college stacks doubled the page.** TheLeague's hub
+switches teams by toggling pre-rendered panels, so the first cut rendered every team's
+stacks: 300 `PlayerCell`s at ~2 KB each (a three-deep headshot `onerror` chain plus
+the modal's JSON payload) — **1.45 MB raw / 133 KB gzipped, for fifteen teams nobody
+is looking at.** Page went 1.45 MB → 3.29 MB raw, 134 KB → 267 KB gzipped.
+
+The charts are cheap (~26 KB a team, pure SVG) and stay pre-rendered for all 16, so
+switching teams is still instant for the part an owner actually compares. The stacks
+now render for the selected team only, and switching offers a link that reloads the
+page for that team. Final: **1.92 MB raw / 160 KB gzipped** — +26 KB gzipped over
+baseline for the whole analytics suite, with the chip row giving ~20 KB raw back.
+`tests/front-office-shared-analytics.test.ts` pins the stacks outside the per-team
+loop so this cannot silently regress.
+
+Guards: `tests/front-office-shared-analytics.test.ts` (new, 17 assertions) plus the
+existing AFL suite, updated to follow the extraction rather than weakened. New
+`front-office-hub` domain in `.claude/hooks/path-guard.json` runs them on every edit
+in that territory.
 
 ### Phase B — one panel
 6. Fold both panels into `FrontOfficePanel.astro`, sections gated on feature flags.
@@ -271,6 +300,29 @@ team's hub read-only.
 hosts share one driver.
 
 ### Phase D — actions on the hub
+
+**PREREQUISITE found during Phase A — the hub's players all have `points: 0`.**
+All 393 players in the hub's shipped player list carry zero points.
+`rosters.astro` has an explicit fallback for this (its ~line 1242: "Between Feb 15
+and Labor Day, current season points are 0. Fall back to last season's points so
+extension/franchise tag filtering works"), and `front-office-planner-data.ts` never
+ported it — it deliberately loads ONE season, so there is no prior season to fall back
+to. Consequences, in order of importance:
+
+- `VeteranExtensionCandidates` and `FranchiseOptions` on the hub filter on points, so
+  the two cards Phase D hangs its declare buttons off are already picking candidates
+  from zero-point rosters. **Fix this before wiring actions to them**, or the buttons
+  will be attached to the wrong players.
+- The Cap efficiency chart added in Phase A reads empty ("No scoring yet this season")
+  for the same reason. That copy is accurate, and the chart fills in on its own once
+  the feed carries scoring, so it is not itself a bug — but it is the symptom that
+  surfaced this.
+
+The fix is to load the prior season's points into the builder, which is a real change
+to a module narrowed to one season on purpose. Size it in Phase D rather than
+smuggling it into a presentational change.
+
+
 11. Mount `ContractDeclarationModal` + `ContractActionsBar` in `FrontOfficePanel`,
     owner-only, `contracts`-gated.
 12. Add the action kebab to `FranchiseOptions` / `VeteranExtensionCandidates` rows,
@@ -330,6 +382,16 @@ commit only the extension — with the other two still sitting as untouched scra
   navigation from one league's hub to the other's.
 - **Reveal-on-hover is not enough.** The trade-chain reveal on a draft chip must work
   on touch and for a screen reader — `aria-expanded` + `aria-describedby`, not `title`.
+  **Note from Phase A:** the hub's own data cannot supply a multi-hop chain today.
+  `extractAssetsFromTransactions` walks trades into an `ownershipMap` it OVERWRITES at
+  each hop, so only the original and current owners survive; `tradeHistory` is never
+  populated on this path. `via` carries everything known, and the reveal is wired but
+  latent until that util retains its history — a small, separate change with its own
+  callers and its own test.
+- **Do not pre-render a heavy per-player component once per team.** The hub's switcher
+  tempts you to: FA needs and draft chips are pre-rendered for all 16 and that is
+  correct, because they are small. A `PlayerCell` is ~2 KB rendered. Measure before
+  adding a section to the per-team loop.
 - **Sibling drift.** Run the `sibling-drift-checker` agent before `/live`: this work
   touches both leagues' rosters pages and both hub routes.
 - **Which clock.** The hub is roster-management-shaped throughout —
