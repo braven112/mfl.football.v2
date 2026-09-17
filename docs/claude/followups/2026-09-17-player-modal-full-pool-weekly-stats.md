@@ -4,10 +4,10 @@ status: open
 severity: P2
 opened: 2026-09-17
 hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1150
-hotfix_sha:
-followup_issue:
+hotfix_sha: da30b4d
+followup_issue: 1152
 followup_pr:
-followup_session:
+followup_session: session_01RPZtRevPBtkwT3BcpoFV4K
 ---
 
 # Follow-up: player modal showed no weekly stats for free agents, practice squad or IR
