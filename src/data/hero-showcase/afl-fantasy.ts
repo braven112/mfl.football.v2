@@ -202,14 +202,25 @@ const content: ShowcaseContent = {
       model: { name: 'Rome Odunze', descriptor: 'Top Target', pos: 'WR', code: 'CHI', espnId: '4431299' },
     },
     {
+      // The LATEST ARTICLE's own headline and permalink, not the beat's name
+      // and the listing page — see article-hero-view.ts. The copy here is
+      // illustrative because the real card's is whatever Schefter filed; what
+      // is NOT illustrative is the shape: a dateline beside the pill, the
+      // story's headline split as the display line, and a CTA that opens that
+      // story. The live card also carries the author's byline in its footer,
+      // which this gallery cannot render (the byline markup lives in
+      // LeagueCompositeHero, and duplicating it here is the fork this whole
+      // component exists to avoid) — see
+      // docs/claude/followups/2026-09-17-showcase-byline-gap.md.
       key: 'news', accent: 'navy', scope: 'league',
-      component: 'LeagueCompositeHero \u00b7 around the AFL', wordmark: 'NEWS',
-      pill: 'Around the AFL', title: 'Around', titleAccent: 'the AFL.',
+      component: 'LeagueCompositeHero \u00b7 latest article', wordmark: 'NEWS',
+      pill: 'Week 2', title: 'Week 2 is a league-wide buzz saw \u2014 get ready for the',
+      titleAccent: 'reckoning.',
       summary:
-        'Schefter\u2019s coverage of the moves and the matchups shaping both races. Coverage of the whole ' +
-        'league, not a dispatch from one clubhouse.',
-      ctaLabel: 'Read the latest',
-      model: { name: 'Brock Bowers', descriptor: 'Headliner', pos: 'TE', code: 'LV', espnId: '4432665' },
+        'Every contender draws a top-ten schedule this week, and the two records built on soft ' +
+        'opponents are about to be audited in public.',
+      ctaLabel: 'Read The Gauntlet',
+      model: { name: 'Brock Bowers', descriptor: 'In the Spotlight', pos: 'TE', code: 'LV', espnId: '4432665' },
     },
     {
       key: 'finale', accent: 'navy', scope: 'league',
