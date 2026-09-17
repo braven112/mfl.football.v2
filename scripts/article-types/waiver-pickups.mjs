@@ -81,6 +81,17 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
     const teamName = teams.get(fid)?.name ?? `Team ${fid}`;
     if (!claimsByTeam[fid]) claimsByTeam[fid] = { name: teamName, claims: [] };
 
+    // A BBID row whose bid the parser could not read would price as $0 and be
+    // indistinguishable in the prose from a free pickup. That is the same
+    // silent-wrong-number failure as the placeholder name, so say so loudly
+    // rather than publishing a claim at the wrong price.
+    if (txn.type === 'BBID_WAIVER' && !Number.isFinite(bbidAmount)) {
+      console.warn(
+        `  [waiver-pickups] unreadable BBID bid, skipping claim: ${JSON.stringify(txn.transaction)}`
+      );
+      continue;
+    }
+
     for (const playerId of addedIds) {
       // A BBID bid buys the one player on the add side; a free-agent add costs
       // nothing. Only the BBID segment is ever a price.
@@ -134,7 +145,15 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
 
   lines.push('=== SPENDING SUMMARY ===');
   lines.push(`Biggest spender: ${sortedTeams[0]?.[1]?.name} (${formatSalary(sortedTeams[0]?.[1]?.claims.reduce((s, c) => s + c.bid, 0))})`);
-  lines.push(`Highest single bid: ${formatSalary(highestBid.amount)} for ${highestBid.player} by ${highestBid.team}`);
+  // A week of nothing but free-agent adds has no priced claim, so highestBid is
+  // still its {0, '', ''} seed — printing it emits "Highest single bid: $0 for
+  // by " into the model's only source of truth. The AFL has never had a BBID
+  // row at all, so that is every AFL week. Omit the line instead.
+  if (highestBid.amount > 0) {
+    lines.push(`Highest single bid: ${formatSalary(highestBid.amount)} for ${highestBid.player} by ${highestBid.team}`);
+  } else {
+    lines.push('Highest single bid: none — no claim this week carried a bid.');
+  }
   // sortedTeams is ordered by SPEND, so [0] is the biggest spender — asking it
   // for "most claims" reported the top spender's single bid as the week's
   // busiest team while another team had twice the moves. Max by COUNT.

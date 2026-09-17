@@ -16,6 +16,37 @@ describe('parseRosterMove — MFL roster-move transaction parsing', () => {
     expect(droppedIds).toEqual([]);
   });
 
+  // These three BBID variations are all real in this league's feeds. A shape the
+  // BBID pattern misses does not fail — it falls through to the FREE_AGENT
+  // branch, where the BID is read as a dropped player id and the caller gets no
+  // bid at all, so a $775K claim prices as $0. 738 of the 1307 recorded BBID
+  // rows were being read that way.
+  it('parses a BBID claim written without the comma after the add id (pre-2017)', () => {
+    const { addedIds, droppedIds, bbidAmount } = parseRosterMove('8838|425000|0000');
+    expect(addedIds).toEqual(['8838']);
+    expect(droppedIds).toEqual(['0000']);
+    expect(bbidAmount).toBe(425000);
+  });
+
+  it('parses a decimal BBID bid, including a bare trailing dot', () => {
+    expect(parseRosterMove('8838|425000.5|16444').bbidAmount).toBe(425000);
+    expect(parseRosterMove('8838|425000.|16444').bbidAmount).toBe(425000);
+    expect(parseRosterMove('8838|425000.5|16444').droppedIds).toEqual(['16444']);
+  });
+
+  it('parses a BBID claim that drops several players', () => {
+    const { addedIds, droppedIds, bbidAmount } = parseRosterMove('16171,|775000|16752,15749,');
+    expect(addedIds).toEqual(['16171']);
+    expect(droppedIds).toEqual(['16752', '15749']);
+    expect(bbidAmount).toBe(775000);
+  });
+
+  it('never reads a BBID bid as a dropped player', () => {
+    for (const raw of ['8838|425000|0000', '8838,|425000|0000,', '8838|425000.5|16444']) {
+      expect(parseRosterMove(raw).droppedIds, raw).not.toContain('425000');
+    }
+  });
+
   it('parses an add/drop swap', () => {
     const { addedIds, droppedIds } = parseRosterMove('11643,|13128,');
     expect(addedIds).toEqual(['11643']);

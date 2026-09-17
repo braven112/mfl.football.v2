@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -110,6 +110,49 @@ describe('waiver article transaction parsing', () => {
     expect(factSheet).toContain('Highest single bid: $775K for Kendre Miller');
   });
 
+  it('prices a pre-2017 comma-less BBID claim at its real bid, not $0', async () => {
+    // A shape the BBID pattern misses falls through to the FREE_AGENT branch,
+    // where the bid becomes a "dropped player" and the claim prices as $0 —
+    // wrong money in the prose, with nothing to signal it.
+    const { factSheet } = await sheetFor([
+      { type: 'BBID_WAIVER', franchise: '0015', transaction: '16171|775000|15749' },
+    ]);
+    expect(factSheet).toContain('Kendre Miller');
+    expect(factSheet).toContain('$775K');
+    expect(factSheet).not.toContain('($0)');
+  });
+
+  it('skips a BBID claim whose bid cannot be read rather than pricing it $0', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const { factSheet } = await sheetFor([
+        // A BBID row whose string carries no bid segment: the add id reads
+        // fine, so this is not caught by the empty-add skip above.
+        { type: 'BBID_WAIVER', franchise: '0015', transaction: '16171,|' },
+        { type: 'FREE_AGENT', franchise: '0016', transaction: '17668,|' },
+      ]);
+      // The free add still reports; the unreadable claim does not appear at $0.
+      expect(factSheet).toContain('Trey Smack');
+      expect(factSheet).not.toContain('Kendre Miller');
+      expect(factSheet).toContain('Total claims this week: 1');
+      expect(warn).toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it('never prints a blank highest-bid line on an all-free-agent week', async () => {
+    // highestBid's {0, '', ''} seed rendered as "Highest single bid: $0 for  by "
+    // — blank player and team into the model's only source of truth. The AFL has
+    // never had a BBID row, so that is every AFL week.
+    const { factSheet } = await sheetFor([
+      { type: 'FREE_AGENT', franchise: '0016', transaction: '17668,|' },
+      { type: 'FREE_AGENT', franchise: '0008', transaction: '15749,|' },
+    ]);
+    expect(factSheet).not.toMatch(/Highest single bid: \$0 for\s+by\s*$/m);
+    expect(factSheet).toContain('Highest single bid: none');
+  });
+
   it('names the genuinely featured player on the composite hero', async () => {
     const { enrichment } = await sheetFor([
       { type: 'BBID_WAIVER', franchise: '0015', transaction: '16171,|775000|' },
@@ -146,6 +189,26 @@ describe('article pipeline does not hand-parse MFL transaction strings', () => {
       .map((f) => ({ rel: `${dir}/${f}`, source: fs.readFileSync(path.join(abs, f), 'utf8') }));
   });
 
+  it('does not flag a comment that quotes the pattern', () => {
+    // The guard reads real files, so this pins the filter directly: a rule is
+    // usually quoted in the prose explaining it, and a guard that fails on its
+    // own documentation blocks every edit in the schefter-columns domain.
+    const commentLines = [
+      "// never use .split('|') here",
+      "  * a `.split('|')` erases the empty add segment",
+      "/* .split('|') is wrong */",
+    ];
+    for (const line of commentLines) {
+      const trimmed = line.trim();
+      const flagged =
+        /\.split\(\s*['"`]\|['"`]\s*\)/.test(trimmed) &&
+        !trimmed.startsWith('*') &&
+        !trimmed.startsWith('//') &&
+        !trimmed.startsWith('/*');
+      expect(flagged, line).toBe(false);
+    }
+  });
+
   it('finds article sources to scan', () => {
     expect(files.length).toBeGreaterThan(5);
   });
@@ -155,7 +218,16 @@ describe('article pipeline does not hand-parse MFL transaction strings', () => {
     const offenders = source
       .split('\n')
       .map((line, i) => ({ line: line.trim(), no: i + 1 }))
-      .filter(({ line }) => /\.split\(\s*['"`]\|['"`]\s*\)/.test(line) && !line.startsWith('*'));
+      // Skip comment lines: a rule is often quoted in the prose that explains it,
+      // and a guard that fails on its own documentation blocks every edit in the
+      // domain (this file's own header quotes the pattern).
+      .filter(
+        ({ line }) =>
+          /\.split\(\s*['"`]\|['"`]\s*\)/.test(line) &&
+          !line.startsWith('*') &&
+          !line.startsWith('//') &&
+          !line.startsWith('/*'),
+      );
     expect(
       offenders,
       `${rel} hand-parses an MFL transaction string. Use parseRosterMove from ` +

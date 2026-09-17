@@ -1,5 +1,5 @@
 {
-  "$comment": "Path \u2192 guard-tests \u2192 rules-doc map consumed by .claude/hooks/path-guard.mjs on every Write/Edit. Globs use Node's path.matchesGlob against repo-relative paths. Keep each domain's tests FAST (scan-style guards, pure-function suites) \u2014 they run on every edit that matches. tests/path-guard-map.test.ts validates this file: every glob must match a real file, every test and rules doc must exist, and every docs/claude/rules/*.md must be routed by at least one domain.",
+  "$comment": "Path → guard-tests → rules-doc map consumed by .claude/hooks/path-guard.mjs on every Write/Edit. Globs use Node's path.matchesGlob against repo-relative paths. Keep each domain's tests FAST (scan-style guards, pure-function suites) — they run on every edit that matches. tests/path-guard-map.test.ts validates this file: every glob must match a real file, every test and rules doc must exist, and every docs/claude/rules/*.md must be routed by at least one domain.",
   "domains": [
     {
       "name": "salary-points",
@@ -73,7 +73,7 @@
         "src/utils/signin-resume.ts",
         "src/utils/url-guard.ts"
       ],
-      "note": "Session JWT only \u2014 never re-add unsigned identity sources. See CLAUDE.md \"Auth \u2014 session JWT only\".",
+      "note": "Session JWT only — never re-add unsigned identity sources. See CLAUDE.md \"Auth — session JWT only\".",
       "tests": [
         "tests/url-guard.test.ts",
         "tests/mfl-cookie-redirect-guard.test.ts",
@@ -275,7 +275,7 @@
         "src/scripts/transaction-hub.ts",
         "src/components/theleague/TransactionHubModal.astro"
       ],
-      "note": "The \u22ee menu sits right after the Player column (it was nine columns off-screen on a phone, #974) and its header carries the league's own verb; the acquisition itself lives in PlayerDetailsModal, so it reaches every page the modal does \u2014 which means WaiverClaimModal is mounted by that modal and by no page, the offer is a SESSION verdict from /api/claim-context (both leagues have a franchise 0001), and the form must survive landing before or after the context does. The waiver priority dialog opens on the synced order and time-boxes the live read; the page's signed-in verdict is computed ONCE (franchiseIdForLeague) and read back off #watch-list-bridge[data-signed-in], never a second copy. The Auction view is a LIVE board (Place Bid deep links, a 60s poll, a 36h clock), so it belongs to resolveAuctionWindow and not to `hasAuctionData` \u2014 the auction RESULTS feed keeps its rows all year, which left the board on the page in September. See docs/claude/insights/features/waiver-claims.md and watch-list.md.",
+      "note": "The ⋮ menu sits right after the Player column (it was nine columns off-screen on a phone, #974) and its header carries the league's own verb; the acquisition itself lives in PlayerDetailsModal, so it reaches every page the modal does — which means WaiverClaimModal is mounted by that modal and by no page, the offer is a SESSION verdict from /api/claim-context (both leagues have a franchise 0001), and the form must survive landing before or after the context does. The waiver priority dialog opens on the synced order and time-boxes the live read; the page's signed-in verdict is computed ONCE (franchiseIdForLeague) and read back off #watch-list-bridge[data-signed-in], never a second copy. The Auction view is a LIVE board (Place Bid deep links, a 60s poll, a 36h clock), so it belongs to resolveAuctionWindow and not to `hasAuctionData` — the auction RESULTS feed keeps its rows all year, which left the board on the page in September. See docs/claude/insights/features/waiver-claims.md and watch-list.md.",
       "tests": [
         "tests/auction-bid-link-gating.test.ts",
         "tests/free-agents-action-placement.test.ts",
@@ -495,7 +495,7 @@
     },
     {
       "name": "nav-and-footer",
-      "note": "Two independent link registries, and \"the footer\" names both. nav-config.json's `footerLinks` is the nav DRAWER's bottom strip (one link, \"Back to MFL\"); the site footer deck is footer-config.ts, which lists page-directory IDS rather than paths. A page can sit in one, the other, or both \u2014 so a link removed from the nav is still reachable, and `routeEquivalence` (keyed by path, unrelated to the drawer) is what keeps the league toggle crossing between the two leagues' copies. The trap is guard COVERAGE, not the link: TheLeague's bare paths are clean URLs rewritten at runtime, so those pages must never be prerendered \u2014 and nav-drawer-links.test.ts only asserts that for pages listed in nav-config.json. Tidying a duplicate nav entry away therefore silently takes the page's prerender guard with it (this happened to /owners in Sept 2026), which is why footer-links.test.ts now asserts the same rule over its own link set.",
+      "note": "Two independent link registries, and \"the footer\" names both. nav-config.json's `footerLinks` is the nav DRAWER's bottom strip (one link, \"Back to MFL\"); the site footer deck is footer-config.ts, which lists page-directory IDS rather than paths. A page can sit in one, the other, or both — so a link removed from the nav is still reachable, and `routeEquivalence` (keyed by path, unrelated to the drawer) is what keeps the league toggle crossing between the two leagues' copies. The trap is guard COVERAGE, not the link: TheLeague's bare paths are clean URLs rewritten at runtime, so those pages must never be prerendered — and nav-drawer-links.test.ts only asserts that for pages listed in nav-config.json. Tidying a duplicate nav entry away therefore silently takes the page's prerender guard with it (this happened to /owners in Sept 2026), which is why footer-links.test.ts now asserts the same rule over its own link set.",
       "paths": [
         "src/config/nav-config.json",
         "src/config/nav-config.ts",
@@ -519,7 +519,7 @@
     {
       "name": "nfl-week-starts",
       "rules": "docs/claude/rules/schedule-optimization.md",
-      "note": "Anything asking when an NFL week starts reads src/utils/nfl-week-starts.mjs. Never re-derive kickoff from Labor Day and never hardcode a Week 1 Thursday \u2014 2026 opened on a WEDNESDAY. Refresh the data with `node scripts/fetch-nfl-week-starts.mjs`.",
+      "note": "Anything asking when an NFL week starts reads src/utils/nfl-week-starts.mjs. Never re-derive kickoff from Labor Day and never hardcode a Week 1 Thursday — 2026 opened on a WEDNESDAY. Refresh the data with `node scripts/fetch-nfl-week-starts.mjs`.",
       "paths": [
         "src/utils/nfl-week-starts.mjs",
         "src/utils/labor-day.mjs",
@@ -592,7 +592,7 @@
         "src/components/shared/whats-new/*.astro",
         "src/components/theleague/WhatsNewRow.astro"
       ],
-      "note": "See CLAUDE.md \"Changelog \u2014 one article a week, everything else stages\". Everything user-facing STAGES; the Monday rollup publishes one article per league. A staged summary is one line (200 visible chars) because it renders as a bullet \u2014 depth belongs in a /guides page the line links to. Guide screenshots live in public/assets/guides/, never the changelog's directory. `both` means the full-management leagues only (registry `bestBall` flag), and both the rollup and the data test must route through leaguesForStagedChange(). And a link inside a description LIST item must stay reachable from whats-new-links.ts#htmlFragments: a fragment the guards cannot see is league-prefixed by the renderer anyway and ships pointing at the wrong league.",
+      "note": "See CLAUDE.md \"Changelog — one article a week, everything else stages\". Everything user-facing STAGES; the Monday rollup publishes one article per league. A staged summary is one line (200 visible chars) because it renders as a bullet — depth belongs in a /guides page the line links to. Guide screenshots live in public/assets/guides/, never the changelog's directory. `both` means the full-management leagues only (registry `bestBall` flag), and both the rollup and the data test must route through leaguesForStagedChange(). And a link inside a description LIST item must stay reachable from whats-new-links.ts#htmlFragments: a fragment the guards cannot see is league-prefixed by the renderer anyway and ships pointing at the wrong league.",
       "tests": [
         "tests/page-directory-data.test.ts",
         "tests/afl-hero-feature-headline.test.ts",
@@ -628,7 +628,7 @@
         "src/components/shared/WaiverClaimModal.astro",
         "src/components/theleague/PlayerDetailsModal.astro"
       ],
-      "note": "The player card offers exactly one acquisition per player, decided by the SERVER: free agent -> Claim/Bid, held by a rival in the viewer's scope -> Trade for him, on the viewer's own roster -> neither. The scope is conference-aware (the AFL rosters the same player once per conference), and the two Trade Builders take different query params. Never gate the trade affordance on `canClaim` \u2014 that goes false for the whole auction season.",
+      "note": "The player card offers exactly one acquisition per player, decided by the SERVER: free agent -> Claim/Bid, held by a rival in the viewer's scope -> Trade for him, on the viewer's own roster -> neither. The scope is conference-aware (the AFL rosters the same player once per conference), and the two Trade Builders take different query params. Never gate the trade affordance on `canClaim` — that goes false for the whole auction season.",
       "tests": [
         "tests/player-claim-offer.test.ts",
         "tests/player-trade-offer.test.ts",
@@ -680,7 +680,7 @@
     {
       "name": "rosters-page",
       "rules": "docs/plans/rosters-page-split.md",
-      "note": "Run `node scripts/roster-parity-check.mjs` before AND after editing \u2014 it is the only test of this 12k-line page's hydrated output.",
+      "note": "Run `node scripts/roster-parity-check.mjs` before AND after editing — it is the only test of this 12k-line page's hydrated output.",
       "paths": [
         "src/pages/*/rosters.astro",
         "scripts/roster-parity-check.mjs"
@@ -752,7 +752,7 @@
     {
       "name": "schefter-columns",
       "rules": "docs/claude/rules/schefter.md",
-      "note": "A column on a weekly cron is NOT breaking news: tier:'breaking' hands the post the homepage at P0 for 48h (selectBreakingStory \u2192 resolveHeroState), and three weekly columns at that tier preempted the regular-season daily rotation ~4 days in 7. Every article type must also export the full pipeline interface and declare relatedLinks. See tests/weekly-column-hero-claim.test.ts. The workflow is in this domain deliberately: the guard derives the weekly set from its cron\u2192type map, so an edit there must re-run the guard. Dedup for a once-per-season id must read the season ARCHIVE, not just the live feed: the weekly archiver rotating the original out is what re-posted the 2026 schedule-release column to GroupMe six days into the season. isDuplicate and appendToFeed share that check and fail closed on an unreadable shard, and --week does not waive the season guard for a type whose id ignores the week. A roster-move `transaction` string is POSITIONAL with a TRAILING COMMA on the add side, so it goes through parseRosterMove (scripts/lib/roster-move-parse.mjs) and never an ad-hoc split: `split('|')[0]` yields \"16171,\", a key no player map holds, which published a whole waiver column naming \"Player 16171\" instead of Kendre Miller and silently nulled its composite hero; and a `.filter(Boolean)` before indexing erases the empty add segment that marks a pure DROP (\"|15749,\"), crediting a team with a free pickup of the player they just cut.",
+      "note": "A column on a weekly cron is NOT breaking news: tier:'breaking' hands the post the homepage at P0 for 48h (selectBreakingStory \u2192 resolveHeroState), and three weekly columns at that tier preempted the regular-season daily rotation ~4 days in 7. Every article type must also export the full pipeline interface and declare relatedLinks. See tests/weekly-column-hero-claim.test.ts. The workflow is in this domain deliberately: the guard derives the weekly set from its cron\u2192type map, so an edit there must re-run the guard. Dedup for a once-per-season id must read the season ARCHIVE, not just the live feed: the weekly archiver rotating the original out is what re-posted the 2026 schedule-release column to GroupMe six days into the season. isDuplicate and appendToFeed share that check and fail closed on an unreadable shard, and --week does not waive the season guard for a type whose id ignores the week. A roster-move `transaction` string is POSITIONAL and its add side carries a TRAILING COMMA, so it goes through parseRosterMove (scripts/lib/roster-move-parse.mjs) and never an ad-hoc split: splitting on the pipe and taking index 0 yields \"16171,\", a key no player map holds, which published a whole waiver column naming \"Player 16171\" instead of Kendre Miller and silently nulled its composite hero; and a `.filter(Boolean)` before indexing erases the empty add segment that marks a pure DROP (\"|15749,\"), crediting a team with a free pickup of the player it just cut. A BBID row whose bid the parser cannot read must never price as $0: a silent 0 is the same class of bug as the placeholder name.",
       "paths": [
         "scripts/article-types/*.mjs",
         "scripts/article-utils/*.mjs",
@@ -771,7 +771,7 @@
     },
     {
       "name": "staging-and-deploy-environment",
-      "note": "The staging sites share PRODUCTION'S database and PRODUCTION'S secrets. Reads and Redis writes are the accepted cost; the outbound half is not, because none of it can be undone \u2014 an MFL write mutates the real league, a push reaches real phones, a GroupMe post lands in the real chat, an issue lands in the real backlog. Every outbound path calls assertOutboundAllowed/outboundAllowed from src/utils/deploy-environment.ts immediately before the network call, never at the route layer (a dozen routes, and the one that forgot fails open). The predicate is the DEPLOYMENT (VERCEL_ENV), not the request host, so PR previews are covered too; isStagingHost is the separate host question, for the noindex header and the banner. Unknown fails OPEN so cron scripts and pnpm dev keep working. A blocked write must also REPORT itself: every MFL write's catch runs through describeMflFailure (src/utils/mfl-fetch.ts), which is why the writer utils and write routes are routed here \u2014 collapsed into the network-failure branch, a staging refusal reached owners as HTTP 502 \"Could not reach MFL\". See docs/plans/staging-release-process.md. Release-day blackout windows are mechanical (scripts/release-blackout.mjs, run by /promote): NFL game days in season, the Feb 14 and Labor Day rollovers, and the AFL draft \u2014 all evaluated in PT, because the league's clock is PT and a UTC-evaluated Sunday starts at 4pm Saturday Pacific.",
+      "note": "The staging sites share PRODUCTION'S database and PRODUCTION'S secrets. Reads and Redis writes are the accepted cost; the outbound half is not, because none of it can be undone — an MFL write mutates the real league, a push reaches real phones, a GroupMe post lands in the real chat, an issue lands in the real backlog. Every outbound path calls assertOutboundAllowed/outboundAllowed from src/utils/deploy-environment.ts immediately before the network call, never at the route layer (a dozen routes, and the one that forgot fails open). The predicate is the DEPLOYMENT (VERCEL_ENV), not the request host, so PR previews are covered too; isStagingHost is the separate host question, for the noindex header and the banner. Unknown fails OPEN so cron scripts and pnpm dev keep working. A blocked write must also REPORT itself: every MFL write's catch runs through describeMflFailure (src/utils/mfl-fetch.ts), which is why the writer utils and write routes are routed here — collapsed into the network-failure branch, a staging refusal reached owners as HTTP 502 \"Could not reach MFL\". See docs/plans/staging-release-process.md. Release-day blackout windows are mechanical (scripts/release-blackout.mjs, run by /promote): NFL game days in season, the Feb 14 and Labor Day rollovers, and the AFL draft — all evaluated in PT, because the league's clock is PT and a UTC-evaluated Sunday starts at 4pm Saturday Pacific.",
       "paths": [
         "src/utils/deploy-environment.ts",
         "src/utils/mfl-fetch.ts",
@@ -1021,7 +1021,7 @@
     },
     {
       "name": "web-push-and-pwa",
-      "note": "Two AFL-only bugs, both invisible in a diff. A manifest whose `scope` is not `/` is DISCARDED on the league's apex domain (every league is served at the root there, and vercel.json 301s `/<slug>/*` away), taking the install and the app icon with it. And Android renders a notification `badge` from its ALPHA CHANNEL alone, so an opaque favicon becomes a solid white square \u2014 badges are the white-on-transparent `badge-96.png` stencils, regenerated by scripts/generate-notification-icons.mjs, never a favicon. Admin-only `ops` categories (a failed cron, drifted MFL settings) are gated on the RECIPIENT, not the league: sendPushToFranchise recomputes admin-ness from the franchise id, so a fan-out payload cannot address them to the whole league. And \"does this owner have the app?\" is NOT a question the device can answer: `display-mode: standalone` is false in the desktop browser of someone whose phone has had it installed for a month, and Chrome keeps firing `beforeinstallprompt` there because on that device it genuinely is installable \u2014 so the install banner is suppressed by an ACCOUNT record (src/utils/app-install-state.ts), never by a device-local dismissal alone. The banner is also a direct child of both homepages' two-column grid, so it must span every track or it takes a column and folds the page.",
+      "note": "Two AFL-only bugs, both invisible in a diff. A manifest whose `scope` is not `/` is DISCARDED on the league's apex domain (every league is served at the root there, and vercel.json 301s `/<slug>/*` away), taking the install and the app icon with it. And Android renders a notification `badge` from its ALPHA CHANNEL alone, so an opaque favicon becomes a solid white square — badges are the white-on-transparent `badge-96.png` stencils, regenerated by scripts/generate-notification-icons.mjs, never a favicon. Admin-only `ops` categories (a failed cron, drifted MFL settings) are gated on the RECIPIENT, not the league: sendPushToFranchise recomputes admin-ness from the franchise id, so a fan-out payload cannot address them to the whole league. And \"does this owner have the app?\" is NOT a question the device can answer: `display-mode: standalone` is false in the desktop browser of someone whose phone has had it installed for a month, and Chrome keeps firing `beforeinstallprompt` there because on that device it genuinely is installable — so the install banner is suppressed by an ACCOUNT record (src/utils/app-install-state.ts), never by a device-local dismissal alone. The banner is also a direct child of both homepages' two-column grid, so it must span every track or it takes a column and folds the page.",
       "paths": [
         "public/sw.js",
         "public/manifest.json",
@@ -1062,7 +1062,7 @@
         "src/utils/league-year*",
         "src/utils/pecking-order-season-window.mjs"
       ],
-      "note": "Two independent clocks (Feb 14 \u2192 getCurrentLeagueYear, Labor Day \u2192 getCurrentSeasonYear); the base year is ALWAYS calendarYear - 1. See CLAUDE.md \"Year rollover \u2014 two independent clocks\".",
+      "note": "Two independent clocks (Feb 14 → getCurrentLeagueYear, Labor Day → getCurrentSeasonYear); the base year is ALWAYS calendarYear - 1. See CLAUDE.md \"Year rollover — two independent clocks\".",
       "tests": [
         "tests/league-year-rollover.test.ts",
         "tests/afl-league-year.test.ts",
