@@ -1,45 +1,43 @@
 name: Roster Sync
 
 on:
-  schedule:
-    # FALLBACK ONLY — the primary trigger is the Vercel cron in vercel.json,
-    # which dispatches this workflow every 15 minutes.
-    #
-    # GitHub does not honour a high-frequency `schedule` on this repo, and it
-    # is not a delay you can wait out. Measured over 300 runs: from 2026-08-27
-    # the delivered cadence collapsed from a 21-47 min median to a 2-5 HOUR
-    # median, while `*/5` asked for 288 runs a day and got 5-8. Nothing here
-    # changed on that date and no run was cancelled — GitHub simply stopped
-    # dispatching the event, as it is explicitly allowed to do. Every other
-    # scheduled job in this repo degraded identically on the same day.
-    #
-    # That is how TheLeague's site went a full hour past the Wed 19:00 PT
-    # waiver run still showing pre-waiver rosters (2026-09-16): the last sync
-    # had landed at 18:20 PT and the next was hours away. The committed feeds
-    # are baked into the build, so no sync commit means no redeploy and the
-    # page cannot move, however correct the page code is.
-    #
-    # This is a genuine fallback for a Vercel outage, not the schedule the
-    # site depends on. Do not "restore" this to `*/5` — that number was never
-    # being delivered, and combined with the Vercel cron it would only
-    # multiply production builds, which are 91% of the Vercel bill.
-    #
-    # OFFSET DELIBERATELY, not `*/30`. The Vercel cron fires at :00/:15/:30/:45,
-    # so a `*/30` fallback lands on :00 and :30 — a strict SUBSET of those
-    # slots, which means it adds no coverage at any minute the primary does
-    # not already cover, and collides. Every trigger shares the
-    # `concurrency: roster-sync` group with `cancel-in-progress: true`, so a
-    # scheduled event GitHub does deliver cancels the Vercel-dispatched run
-    # mid-flight. That is not merely wasted work: the push-alert steps below
-    # send their fan-out BEFORE writing the Redis snapshot that records what
-    # was sent, so a cancel in that gap re-sends the same injury pushes to
-    # owners' devices on the next run. :07/:37 interleaves instead.
-    - cron: "7,37 * * * *"
+  # NO `schedule:`, deliberately. The only scheduled trigger is the Vercel cron
+  # in vercel.json, which fires api/cron/roster-sync every five minutes and lets
+  # src/utils/sync-cadence.ts decide which ticks become dispatches.
+  #
+  # GitHub does not honour a high-frequency schedule on this repo and it is not
+  # a delay you can wait out. Measured over 300 runs: from 2026-08-27 the
+  # delivered cadence collapsed from a 21-47 min median to a 2-5 HOUR median,
+  # 5-8 runs a day against the 288 a five-minute cron asks for. Nothing here
+  # changed that day and nothing was cancelled — GitHub simply stopped
+  # dispatching, as it is allowed to. Every other scheduled job in this repo
+  # degraded identically on the same day.
+  #
+  # A fallback schedule was tried and REMOVED after one night. It cannot be
+  # offset out of the way, because GitHub delivers whenever it likes: the
+  # `7,37` offset chosen to interleave with the primary was delivered at :16
+  # and collided anyway. On 2026-09-17T15:16Z it cancelled a dispatch that had
+  # already pushed, then failed its own rebase against six single-line feed
+  # JSONs that git cannot merge — one sync lost, for a trigger contributing two
+  # unpredictable runs a day and zero freshness the primary did not already
+  # provide.
+  #
+  # Absence is watched instead of papered over: job-failure-watch.yml runs
+  # scripts/check-sync-freshness.mjs, which alerts when main's newest sync
+  # commit ages past two hours. That lives on GitHub ON PURPOSE — a watchdog
+  # sharing a substrate with its subject goes dark in the one outage it exists
+  # to report.
   workflow_dispatch:
 
 concurrency:
   group: roster-sync
-  cancel-in-progress: true
+  # QUEUE, never cancel. `cancel-in-progress: true` killed a run on
+  # 2026-09-17 *after* its push had already landed, leaving the surviving run
+  # to rebase onto a main that had moved under it and fail on unmergeable
+  # feed JSONs. A cancel cannot undo a push, and these steps push. Runs take
+  # ~2 minutes against a 5-minute floor, so queueing settles long before the
+  # next tick.
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -52,7 +50,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           ssh-key: ${{ secrets.DEPLOY_KEY }}
-          # Shallow on purpose: this job runs ~96×/day and only needs the tip
+          # Shallow on purpose: this job runs ~35×/day and only needs the tip
           # to commit on top of. commit-push's `git pull --rebase origin main`
           # still works from a depth-1 clone (the pre-push fetch deepens as
           # needed). A full clone here re-downloads the entire multi-GB pack

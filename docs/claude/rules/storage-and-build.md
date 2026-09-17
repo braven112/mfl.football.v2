@@ -189,8 +189,24 @@ was hours out. `resolveWaiverWindow` had already flipped to "PROCESSED" on
 schedule; there was simply no deploy carrying the new rosters.
 
 So the schedule lives in **`vercel.json` → `crons`**, which fires
-`/api/cron/roster-sync`, which `workflow_dispatch`es the workflow. The
-workflow's own `schedule:` is a fallback for a Vercel outage, at `*/30`.
+`/api/cron/roster-sync`, which `workflow_dispatch`es the workflow. That cron is
+now the sync's ONLY scheduled trigger — the workflow has no `schedule:` at all.
+
+**The cadence is a function, not a cron expression.** Vercel fires every five
+minutes and `src/utils/sync-cadence.ts` decides which ticks become dispatches:
+
+| Tier | When | Cadence |
+|---|---|---|
+| `waiver` | a waiver run → +2h | 5 min |
+| `game` | a kickoff → +3.5h | 15 min |
+| `idle` | everything else | 60 min |
+
+It has to be a function because the windows come from MFL's real waiver calendar
+and the real per-game `kickoff` times in `nflSchedule.json`. A day-of-week cron
+(`Sunday, Monday, Thursday`) would be the derivation this repo bans — 2026 alone
+opened on a Wednesday, moved week 12 to Wednesday for Thanksgiving, and ends
+week 18 all-Sunday. The windows are a UNION over both leagues, because one run
+syncs every league and their waiver runs are an hour apart.
 
 - **This bridge already existed and was dead for six months.** It shipped
   2026-03-21 with its `crons` entry and the entry was removed eleven hours
@@ -199,11 +215,29 @@ workflow's own `schedule:` is a fallback for a Vercel outage, at `*/30`.
   minute-granularity crons; Hobby is daily-only, which is what made it look
   broken. Two other files cite the route in their comments as the bridge shape
   to copy, so it read as live infrastructure the whole time.
-- **Do not "restore" the workflow to `*/5`.** That number was never being
-  delivered, and alongside the Vercel cron it only multiplies production builds
-  — 91% of the Vercel bill (see `scripts/vercel-ignore-build.mjs`). Every sync
-  commit to `main` is a production build, so the cron's cadence IS a spend
-  decision. `*/15` is the deliberate balance.
+- **A second scheduled trigger cannot be offset out of the way — do not add
+  one back.** A `*/30` GitHub fallback was tried for one night. Offsetting it
+  to `7,37` to interleave with the primary does not work, because the premise
+  of this entire mechanism is that GitHub delivers whenever it likes: the `:07`
+  firing was delivered at `:16`, cancelled a dispatch that had already pushed,
+  and then failed its own rebase against six single-line feed JSONs git cannot
+  merge. One sync lost, for two unpredictable runs a day and no freshness the
+  primary did not already provide.
+- **`cancel-in-progress: false` on any job that pushes.** A cancel cannot
+  un-push. Cancelling mid-flight is what left the surviving run rebasing onto a
+  main that had moved under it.
+- **Absence is watched separately, and NOT from Vercel.**
+  `scripts/check-sync-freshness.mjs` alerts (`ops-job-failure`, admin-only) when
+  `main`'s newest sync commit ages past two hours. It runs from
+  `job-failure-watch.yml` on GitHub deliberately: a watchdog sharing a substrate
+  with its subject goes dark in the one outage it exists to report. GitHub's
+  delivery is unreliable, so detection may be hours late — late still beats
+  never, and the two schedulers now cover each other.
+- **The cadence is a SPEND decision.** Every changed sync commits to `main`, and
+  every commit to `main` is a production build — 91% of the Vercel bill. A flat
+  15-minute cadence measured 43 sync commits in 10.4 hours (~122 builds/day
+  against ~37 before); the tiers bring that to ~35/day while being *faster* at
+  the waiver moment.
 - **A cron path is an ordinary public route.** These bridges start workflows
   that commit to `main` with Actions secrets, so the `CRON_SECRET` bearer check
   is load-bearing, as is `outboundAllowed()` — staging and previews carry
@@ -216,69 +250,21 @@ workflow's own `schedule:` is a fallback for a Vercel outage, at `*/30`.
   contains the two characters that close one, so the comment ends mid-sentence
   and the remaining prose is handed to the compiler as code. Writing one into
   this route's JSDoc cost 39 type errors in a single file, and **nothing but
-  `astro check` can see it**: `pnpm test:unit` does not type-check and no unit
-  test imports an API route, so the whole suite stays green. Spell the cadence
-  out in words, or use a line comment.
+  `astro check` sees it** when it lands in an API route: `pnpm test:unit` does
+  not type-check and no unit test imports a route, so the whole suite stays
+  green. It happened three times in one session, twice in files about cron
+  cadence. Spell the cadence out in words, or use a line comment.
 
-Guard: `tests/vercel-cron-targets.test.ts` — checks both directions, because
-each failure is silent in its own way. An orphaned bridge (a route with no cron)
-is dead code wearing the costume of a live path; a dangling cron (a cron with no
-route) is a 404 on a schedule nobody reads. It also pins the `CRON_SECRET` gate
-on every cron target and fails a sub-30-minute `schedule:` in `roster-sync.yml`.
-Routed by the `github-workflows` domain.
-
-
-## A merged feed needs a FLOOR, not just an empty check
-
-`data/<league>/mfl-feeds/<year>/playerScores-by-week.json` is written by
-accumulation: every daily pass refetches weeks 1-18 and merges each one in, so
-the committed file is the only record of a finished week. **MFL serves degraded
-bodies at HTTP 200** — that is the whole reason `writeOut` carries its own
-error-payload guard — so "the response parsed" is not "the response is
-complete".
-
-The first version of that merge refused only `count === 0`, while its own doc
-comment promised that a transient bad response would leave a good week alone.
-Those are different claims. An empty answer is MFL saying "not played yet"; a
-truncated answer is MFL answering wrongly, and any non-zero row count was
-enough to overwrite 484 committed scores with a handful — deleting every other
-player's week from the player modal, with nothing left to re-derive it from.
-
-The rule: **a finished week's pool does not shrink.** `weekMergeDecision`
-(`src/utils/player-week-scores.mjs`) refuses an incoming week that carries less
-than `WEEK_SHRINK_FLOOR` (0.9) of the rows already committed for that week, and
-logs `::warning::` when it does. The floor is not 1.0 because a genuine MFL stat
-correction can void a handful of rows and refusing those would strand the week
-on stale data forever. This is the same shape as the `wouldDowngrade` check the
-current-week `weeklyResults` merge above it already applies.
-
-Keep the policy in `weekMergeDecision` rather than inline in the fetch script:
-inline, it is only reachable behind a live MFL fetch, which is exactly what CI
-and every agent session cannot do. Guard:
-`tests/weekly-player-results-full-pool.test.ts`.
-
-## A daily-gated feed does not backfill on the day it ships
-
-`fetch-mfl-feeds.mjs` runs under `--refresh-live` ~96x a day, and the expensive
-daily-only work — `players.json`, the weeklyResults loop, the 18-week
-`playerScores` loop — is skipped when `isFreshToday()` says the daily set
-already ran (`skipDailyFeeds`). `isFreshToday` reads the committed
-`fetch.meta.json` stamp and compares Y/M/D in the runner's clock, which on
-GitHub is UTC.
-
-So **a new daily feed added mid-morning UTC does not start filling until the
-first run after the next UTC midnight** — up to 24 hours of the feature
-shipping with only whatever was committed by hand. `playerScores-by-week.json`
-shipped at 07:38 UTC on 2026-09-17 against a stamp of 01:21 UTC that same day,
-so both leagues sat on a week-1-only seed for the rest of the day and the newly
-visible free agents, taxi-squad and IR players showed one scored week instead of
-all of them.
-
-Nothing is broken by this and nothing should be "fixed" to bypass it — the gate
-is what keeps 18 requests per league from running 96 times a day. Just know the
-latency is real when you ship one, say so in the PR, and either seed the file
-honestly or wait for the next UTC day before verifying.
-
+Guards: `tests/vercel-cron-targets.test.ts` checks the cron table and the routes
+it fires in BOTH directions, because each failure is silent in its own way — an
+orphaned bridge is dead code wearing the costume of a live path; a dangling cron
+is a 404 on a schedule nobody reads. It also pins the `CRON_SECRET` gate, the
+absence of a `schedule:` in `roster-sync.yml`, and that the Vercel tick still
+matches `TICK_MINUTES`. `tests/sync-cadence.test.ts` pins the tiers, the
+both-leagues union and the DST wall-clock recurrence.
+`tests/block-comment-terminators.test.ts` catches the comment trap at edit time
+rather than 2.5 minutes into CI. All three are routed by the `github-workflows`
+domain.
 
 ## Astro 7 — strict Rust compiler, pinned compressHTML
 

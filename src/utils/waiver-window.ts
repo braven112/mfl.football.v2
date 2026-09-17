@@ -154,7 +154,30 @@ function addWeeksOnWallClock(startMs: number, weeks: number, zone: string): numb
  * bracket `now`. `HAPPENS=n` means "same time each week for n more weeks" —
  * same WALL-CLOCK time, per `addWeeksOnWallClock`.
  */
+/**
+ * Memoised, because the expansion is pure and its cost is `Intl`.
+ *
+ * `addWeeksOnWallClock` runs two `zoneOffsetMs` lookups per occurrence and each
+ * one builds an `Intl.DateTimeFormat` view — cheap once, ruinous in a loop. A
+ * caller that asks per minute rather than per render (the sync cadence walks a
+ * week of ticks) turned a millisecond into fifteen seconds. Keyed on the fields
+ * the expansion actually reads plus the zone.
+ *
+ * The cached array is handed back by reference, so callers READ it and never
+ * mutate it — both call sites here only iterate.
+ */
+const occurrenceCache = new Map<string, number[]>();
+
 function occurrences(event: MflCalendarEvent, zone: string): number[] {
+  const key = `${event.start_time}|${event.happens ?? ''}|${zone}`;
+  const hit = occurrenceCache.get(key);
+  if (hit) return hit;
+  const computed = computeOccurrences(event, zone);
+  occurrenceCache.set(key, computed);
+  return computed;
+}
+
+function computeOccurrences(event: MflCalendarEvent, zone: string): number[] {
   const start = Number(event.start_time) * 1000;
   if (!Number.isFinite(start) || start <= 0) return [];
   const repeats = Math.max(0, Math.min(Number(event.happens) || 0, 30));
@@ -272,6 +295,38 @@ export function resolveWaiverWindow(
       ? 'Waivers are open — claims are queued until they process.'
       : 'Waivers have processed — adds are first-come, first-served.',
   };
+}
+
+/**
+ * The most recent instant at which claims actually PROCESSED, at or before
+ * `now` — or null if none has yet.
+ *
+ * Exists so the sync cadence can ask "did waivers just run?" without growing a
+ * second copy of the recurrence expansion. That expansion is not incidental:
+ * `HAPPENS=n` repeats on MFL's WALL CLOCK, so a naive `+7 days` in epoch
+ * milliseconds lands an hour early for every occurrence after the November DST
+ * change (see `addWeeksOnWallClock`). One implementation, reused.
+ *
+ * Reads `RUN_TYPES`, not `PROCESS_TYPES`, for the reason `nextProcesses`
+ * documents: a bare `WAIVER_UNLOCK` closes the waiver window without running
+ * any claims, so treating it as a run would name a roster-churn moment that
+ * never happens.
+ */
+export function lastWaiverRunAtOrBefore(
+  events: MflCalendarEvent[] | null | undefined,
+  now: Date = new Date(),
+  zone: string = LEAGUE_CLOCK.zone
+): Date | null {
+  const list = Array.isArray(events) ? events : [];
+  const t = now.getTime();
+  let best: number | null = null;
+  for (const event of list) {
+    if (!RUN_TYPES.has(String(event?.type ?? '').toUpperCase())) continue;
+    for (const at of occurrences(event, zone)) {
+      if (at <= t && (best === null || at > best)) best = at;
+    }
+  }
+  return best === null ? null : new Date(best);
 }
 
 /**

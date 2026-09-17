@@ -20,6 +20,10 @@
  * pre-waiver rosters. The one mechanism built to make the cadence reliable was
  * sitting right there, unwired, and no test could tell.
  *
+ * The workflow's own `schedule:` is gone now, so this cron is the only thing
+ * that makes the sync run at all — which is why the checks below are two-way
+ * and why the tick has to stay in step with `src/utils/sync-cadence.ts`.
+ *
  * ## Why both directions
  *
  * An ORPHANED ROUTE is silent, as above — dead code wearing the costume of a
@@ -37,6 +41,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { TICK_MINUTES, TIER_INTERVAL_MINUTES } from '../src/utils/sync-cadence';
 
 const root = resolve(__dirname, '..');
 const read = (p: string) => readFileSync(resolve(root, p), 'utf8');
@@ -77,9 +82,9 @@ function codeOnly(src: string): string {
  * The minutes of the hour a 5-field cron's MINUTE field fires on.
  *
  * Handles the three forms in play here — a step, a comma list, and a bare
- * minute — because the fallback schedule is deliberately an OFFSET LIST
- * (`7,37`) rather than a step, and a checker that understood only the step
- * form would skip it silently and enforce nothing.
+ * minute. The list form matters because a schedule that is not a plain step is
+ * exactly what a checker written for steps alone skips silently, enforcing
+ * nothing; the removed `7,37` fallback was that shape.
  */
 function minuteSet(expr: string): Set<number> {
   const minute = expr.trim().split(/\s+/)[0];
@@ -97,8 +102,6 @@ function minuteSet(expr: string): Set<number> {
   return out;
 }
 
-const firingsPerHour = (expr: string) => minuteSet(expr).size;
-
 /** `/api/cron/roster-sync` → `src/pages/api/cron/roster-sync.ts` */
 function routeFileFor(cronPath: string): string {
   const clean = cronPath.split('?')[0].replace(/^\/+|\/+$/g, '');
@@ -109,9 +112,9 @@ describe('vercel.json crons ↔ API routes', () => {
   it('declares at least one cron (the roster sync is not optional)', () => {
     expect(
       crons.length,
-      'vercel.json has no `crons`. The Vercel cron is the PRIMARY trigger for ' +
-        'the roster sync — GitHub Actions `schedule` is a fallback that this ' +
-        'repo has measured at a 2-5 hour median. Removing this table is how ' +
+      'vercel.json has no `crons`. This is the roster sync\'s ONLY scheduled ' +
+        'trigger — the workflow has no `schedule:` of its own, because GitHub ' +
+        'delivers this repo\'s at a 2-5 hour median. Removing this table is how ' +
         'the site went an hour stale through a waiver run.',
     ).toBeGreaterThan(0);
   });
@@ -194,49 +197,66 @@ describe('vercel.json crons ↔ API routes', () => {
   });
 });
 
-describe('roster-sync.yml schedule is a fallback, not the primary trigger', () => {
+describe('roster-sync.yml has no schedule of its own', () => {
   const workflow = read('.github/workflows/roster-sync.yml');
 
-  it('does not ask GitHub for a high-frequency schedule', () => {
+  it('carries NO `schedule:` trigger at all', () => {
+    // A fallback schedule was tried for one night and removed. It cannot be
+    // offset out of the primary's way, because the premise of this whole
+    // mechanism is that GitHub delivers whenever it likes: the `7,37` chosen to
+    // interleave with the Vercel cron was delivered at :16 and collided anyway.
+    // On 2026-09-17T15:16Z it cancelled a dispatch that had already pushed and
+    // then failed its own rebase against six single-line feed JSONs git cannot
+    // merge — one sync lost, for a trigger giving two unpredictable runs a day
+    // and no freshness the primary did not already provide.
     const cronLines = [...workflow.matchAll(/^\s*-\s*cron:\s*["']([^"']+)["']/gm)].map(
       (m) => m[1],
     );
-    expect(cronLines.length).toBeGreaterThan(0);
-    for (const expr of cronLines) {
-      expect(
-        firingsPerHour(expr),
-        `roster-sync.yml asks GitHub for "${expr}", which fires ` +
-          `${firingsPerHour(expr)}× an hour. GitHub does not deliver a ` +
-          `high-frequency schedule on this repo (measured: 5-8 runs a day ` +
-          `against the 288 that */5 requested), the Vercel cron is the ` +
-          `primary trigger now, and every extra run is a production build.`,
-      ).toBeLessThanOrEqual(2);
-    }
+    expect(
+      cronLines,
+      'roster-sync.yml has a `schedule:` again. The Vercel cron in vercel.json ' +
+        'is the only scheduled trigger; a second one cannot be offset clear of ' +
+        'it and collides with a job that pushes. Absence is covered by ' +
+        'scripts/check-sync-freshness.mjs, not by a fallback schedule.',
+    ).toEqual([]);
   });
 
-  it('offsets the fallback off the Vercel cron\'s own slots', () => {
-    const primary = crons.find((c) => c.path === '/api/cron/roster-sync');
-    expect(primary, 'no Vercel cron for the roster sync to offset against').toBeTruthy();
-    const primaryMinutes = minuteSet(primary!.schedule);
+  it('queues concurrent runs instead of cancelling them', () => {
+    // `cancel-in-progress: true` killed a run AFTER its push had landed, which
+    // is not something a cancel can undo — it just left the survivor rebasing
+    // onto a main that had moved under it.
+    expect(
+      /cancel-in-progress:\s*false/.test(workflow),
+      'roster-sync.yml must set `cancel-in-progress: false`. These steps push, ' +
+        'and a cancel cannot un-push; cancelling mid-flight is what lost a sync ' +
+        'to an unmergeable feed conflict on 2026-09-17.',
+    ).toBe(true);
+  });
+});
 
-    const cronLines = [...workflow.matchAll(/^\s*-\s*cron:\s*["']([^"']+)["']/gm)].map(
-      (m) => m[1],
-    );
-    for (const expr of cronLines) {
-      const overlap = [...minuteSet(expr)].filter((m) => primaryMinutes.has(m));
-      expect(
-        overlap,
-        `roster-sync.yml's fallback "${expr}" fires at minute(s) ` +
-          `${overlap.join(', ')}, which the Vercel cron "${primary!.schedule}" ` +
-          `already covers. A fallback landing on the primary's own slots adds ` +
-          `no coverage at any minute not already covered, and collides: every ` +
-          `trigger shares \`concurrency: roster-sync\` with ` +
-          `\`cancel-in-progress: true\`, so a delivered scheduled event kills ` +
-          `the Vercel-dispatched run mid-flight — and the push-alert steps ` +
-          `send their fan-out BEFORE writing the Redis snapshot of what was ` +
-          `sent, so a cancel in that gap re-sends injury pushes to owners' ` +
-          `devices. Offset it (e.g. "7,37 * * * *").`,
-      ).toEqual([]);
+describe('the Vercel tick and the cadence module agree', () => {
+  it('fires at exactly TICK_MINUTES', () => {
+    // sync-cadence.ts decides which ticks dispatch by taking the minute modulo
+    // the tier interval. If the cron fires less often than TICK_MINUTES, the
+    // waiver tier silently cannot hit its 5-minute cadence; if it fires more
+    // often, every tier dispatches more than it claims to — and each extra
+    // dispatch is a production build.
+    const roster = crons.find((c) => c.path === '/api/cron/roster-sync');
+    expect(roster, 'no Vercel cron for the roster sync').toBeTruthy();
+    const minutes = minuteSet(roster!.schedule);
+    const expected = new Set<number>();
+    for (let m = 0; m < 60; m += TICK_MINUTES) expected.add(m);
+    expect(
+      [...minutes].sort((a, b) => a - b),
+      `vercel.json fires the roster sync on "${roster!.schedule}", which does ` +
+        `not match TICK_MINUTES=${TICK_MINUTES} in src/utils/sync-cadence.ts. ` +
+        `Change both together or the tiers stop meaning what they say.`,
+    ).toEqual([...expected].sort((a, b) => a - b));
+  });
+
+  it('keeps every tier interval a multiple of the tick', () => {
+    for (const [tier, minutes] of Object.entries(TIER_INTERVAL_MINUTES)) {
+      expect(minutes % TICK_MINUTES, `${tier}`).toBe(0);
     }
   });
 });

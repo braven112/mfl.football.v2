@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/cron/roster-sync",
-      "schedule": "*/15 * * * *"
+      "schedule": "*/5 * * * *"
     }
   ],
   "ignoreCommand": "node scripts/vercel-ignore-build.mjs",
