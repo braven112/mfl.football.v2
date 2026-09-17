@@ -17,6 +17,7 @@ import type {
 import { ACQUISITION_TYPES } from '../src/utils/contract-eligibility';
 import { parseRosterMove } from '../scripts/lib/roster-move-parse.mjs';
 import { collectRows, censusShapes } from '../scripts/record-transaction-shapes.mjs';
+import { parseAcquisitionAdds } from '../src/utils/august-cut-selection-core.mjs';
 import corpus from './fixtures/mfl-transaction-strings.json';
 
 // Helper: create a date in a specific contract window
@@ -704,7 +705,11 @@ describe('recorded MFL transaction strings', () => {
     expect(leagues.size, 'corpus must cover more than one league').toBeGreaterThan(1);
     const seasons = corpus.shapes.flatMap(s => String(s.seasons).split('-'));
     expect(Math.min(...seasons.map(Number))).toBeLessThanOrEqual(2007);
-    expect(corpus.shapes.length, 'corpus shrank — re-record, do not trim').toBeGreaterThanOrEqual(55);
+    // A FLOOR against wholesale narrowing (the fixture was once 10 shapes from
+    // a single export), not an exact count — the exact count is the census
+    // ratchet's job below. Deliberately slack: `shapeOf` collapses a list to
+    // one shape, so this number tracks MFL's grammar, not its volume.
+    expect(corpus.shapes.length, 'corpus shrank — re-record, do not trim').toBeGreaterThanOrEqual(30);
   });
 
   it('has seen every shape the committed feeds actually hold', () => {
@@ -739,7 +744,16 @@ describe('recorded MFL transaction strings', () => {
 
   it('extracts an added player from every acquisition string that has one', () => {
     for (const entry of acquisitionShapes) {
-      const parsed = parseTransactionString(entry.example);
+      // Pass the type, as the real caller does. Without it this swept every
+      // recorded shape and still could not have caught the AUCTION_WON
+      // regression (1744 rows), because it only asked whether an add existed —
+      // and the add is right either way; it is the PRICE that lands in
+      // droppedPlayerIds. The drop assertion below is what pins that.
+      const parsed = parseTransactionString(entry.example, entry.type);
+      expect(
+        parsed.droppedPlayerIds.every(id => id !== String(parsed.bbidAmount)),
+        `${entry.type} ${JSON.stringify(entry.example)} reported its own price as a dropped player`,
+      ).toBe(true);
       // A leading pipe is a pure drop and legitimately adds nobody.
       const expectsAdd = !entry.example.startsWith('|') && entry.example !== '';
       expect(
@@ -781,6 +795,24 @@ describe('recorded MFL transaction strings', () => {
       expect(mine.addedPlayerIds, `adds for ${JSON.stringify(entry.example)}`).toEqual(theirs.addedIds);
       expect(mine.droppedPlayerIds, `drops for ${JSON.stringify(entry.example)}`).toEqual(theirs.droppedIds);
       expect(mine.bbidAmount, `bid for ${JSON.stringify(entry.example)}`).toEqual(theirs.bbidAmount);
+    }
+  });
+
+  it('agrees with the August-cut selector on the ADD side of every acquisition', () => {
+    // The THIRD parser of this field (`parseAcquisitionAdds`, the add-side
+    // mirror the cutdown ordering runs on) was excluded from this corpus, and
+    // it was the strictest of the three: it enumerated shapes and returned NO
+    // ADDS for anything it had not enumerated — including "0502,|425000|", a
+    // winning claim with nothing cut, in the CURRENT format, 281 rows. An
+    // acquisition that parses to no adds does not error, it silently never
+    // happened, and scripts/apply-august-cuts.mjs cuts real players off that
+    // ordering. Three parsers, one corpus, or the drift comes back.
+    for (const entry of acquisitionShapes) {
+      const mine = parseTransactionString(entry.example, entry.type);
+      expect(
+        parseAcquisitionAdds(entry.example),
+        `adds for ${entry.type} ${JSON.stringify(entry.example)} (${entry.occurrences} rows)`,
+      ).toEqual(mine.addedPlayerIds);
     }
   });
 

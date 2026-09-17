@@ -132,6 +132,30 @@ code was written. Three worked, one dropped, one still blocked.
     domain, so editing it ran no guard at all. It and the new recorder are in
     `contracts-eligibility` now, which also runs `tests/roster-move-parse.test.ts`.
 
+- [x] **F6 — A THIRD parser of the same field, and the worst of them** — FOUND AND
+      FIXED during this follow-up's own review round
+  - Where: `src/utils/august-cut-selection-core.mjs#parseAcquisitionAdds`
+  - The brief said "two independent parsers". There were three. This one was
+    never in the corpus, never in the parity test, and never in a path-guard
+    domain — and it was the **strictest** of the three, which made it the
+    wrongest: it enumerated shapes, and every shape it had not enumerated
+    returned no adds rather than failing. It missed `"0502,|425000|"` — a
+    winning claim with nothing cut, in the **current** format, **281 rows** —
+    plus all 738 pre-2017 rows and the 17 decimal-bid ones.
+  - Its docstring advertised `"addId,|bbid|,"` as a supported shape: the
+    hand-written string MFL has never emitted, and the exact fabrication that
+    hid this same bug in `contract-eligibility.ts` a week earlier.
+  - Impact: an acquisition that parses to no adds does not error, it silently
+    never happened. A rookie won on a claim with nothing cut produced no
+    acquisition event, so `selectAutoCuts` ordered the August cuts off an
+    incomplete history — and that reaches `scripts/apply-august-cuts.mjs`,
+    which cuts real players, plus `rosters.astro` and the admin cutdown report.
+  - Rewritten onto the one positional grammar and added to the corpus parity
+    test, which was verified to fail against the old version on the 281-row
+    shape. Also fixed on the way: the two-segment branch stripped **all**
+    commas from the add side, so a multi-add `"0519,15434,|"` spliced two
+    player ids into one number that passed a digit test.
+
 - [x] **F3 — A BBID row with no readable add id is skipped with no warning** — WORKED
   - Source: cross-cutting lens, step 5
   - Where: `scripts/article-types/waiver-pickups.mjs`

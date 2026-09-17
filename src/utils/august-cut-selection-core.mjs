@@ -342,13 +342,33 @@ export function buildRookiePriorityFromFeeds({ playersFeed, draftResultsFeed }) 
  * Extract the player ids ADDED by one raw MFL transaction string.
  *
  * Mirrors the add-side of contract-eligibility.ts#parseTransactionString
- * (the script only needs adds for acquisition ordering). Formats:
- *   "|playerId,"          -> drop only (no adds)
- *   "addId|dropId,"       -> add/drop swap
- *   "addId|,"             -> add only (no drop)
- *   "addId,|bbid|dropId," -> BBID add/drop with bid amount
- *   "addId,|bbid|,"       -> BBID add only
- *   "playerId|amount|"    -> auction won (AUCTION_WON)
+ * (this module only needs adds, for acquisition ordering).
+ *
+ * This was the THIRD parser of the same MFL field and it was the strictest of
+ * them, which made it the wrongest: it enumerated shapes, and every shape it
+ * did not enumerate returned NO ADDS rather than failing. It missed
+ *
+ *   "0502,|425000|"        a winning claim with nothing cut -- 281 recorded
+ *                          rows, and the CURRENT format, not a legacy one
+ *   "0501|425000|3969"     the pre-2017 spelling, 452 rows
+ *   "0502|500000|0000"     the same with MFL's nothing-cut sentinel, 269 rows
+ *   "0514|1000000.00|9694" a decimal bid, 17 rows
+ *
+ * Its docstring even named `"addId,|bbid|,"` as a supported shape -- the
+ * hand-written string MFL has never emitted, which is the exact fabrication
+ * that hid the drop-free claim bug in contract-eligibility.ts. An acquisition
+ * that parses to no adds does not error; it silently never happened, so a
+ * rookie won on a claim with nothing cut produced no acquisition event and
+ * `selectAutoCuts` ordered the August cuts off an incomplete history. That
+ * reaches `scripts/apply-august-cuts.mjs`, which cuts real players.
+ *
+ * So: ONE grammar, positional, no enumeration. Three segments is
+ * "add | price | drops" (the comma after the add id is optional and the price
+ * may be decimal); two is "add | drops", except on an AUCTION_WON where the
+ * second segment is the price. Kept in step with
+ * `src/utils/contract-eligibility.ts` and `scripts/lib/roster-move-parse.mjs`
+ * by the corpus parity test in tests/contract-eligibility.test.ts, which now
+ * covers this parser too.
  *
  * @param {string} txnString
  * @returns {string[]}
@@ -356,22 +376,21 @@ export function buildRookiePriorityFromFeeds({ playersFeed, draftResultsFeed }) 
 export function parseAcquisitionAdds(txnString) {
   if (!txnString || txnString.trim() === '') return [];
 
-  // BBID formats: "addId,|bbidAmount|dropId," and "addId,|bbidAmount|,"
-  const bbidMatch = txnString.match(/^(\d+),\|(\d+)\|(\d+),$/) || txnString.match(/^(\d+),\|(\d+)\|,$/);
-  if (bbidMatch) return [bbidMatch[1]];
+  // "addId|price|drops" — a BBID claim or an auction win. Same grammar.
+  const priced = txnString.match(/^(\d+),?\|(?:\d+(?:\.\d*)?)\|/);
+  if (priced) return [priced[1]];
 
   // Drop-only: "|playerId," — nothing added.
   if (txnString.startsWith('|')) return [];
 
-  // Auction format: "playerId|amount|" (no commas, trailing pipe)
-  const auctionMatch = txnString.match(/^(\d+)\|(\d+)\|$/);
-  if (auctionMatch) return [auctionMatch[1]];
-
-  // Add/drop swap: "addId|dropId," or "addId|,"
+  // Two segments: "addId|drops", or "addId|price" on a pre-2017 auction win.
+  // Either way the ADD side is the first segment, which is all this function
+  // wants. Read it as the comma-delimited LIST it is — MFL does write more
+  // than one id there ("0519,15434,|") and stripping the commas out of that
+  // would splice two player ids into one number that passes a digit test.
   const parts = txnString.split('|');
   if (parts.length === 2) {
-    const addId = parts[0].replace(',', '').trim();
-    if (addId && /^\d+$/.test(addId)) return [addId];
+    return parts[0].split(',').map(s => s.trim()).filter(s => /^\d+$/.test(s));
   }
   return [];
 }

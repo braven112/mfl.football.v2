@@ -1182,10 +1182,24 @@ correctness: "1 claims" is a sentence the column can echo verbatim.
 
 ### A parity test is only as strong as its corpus
 
-Two parsers read this same MFL field — `parseRosterMove` for the scanner and
+**Three** parsers read this same MFL field — `parseRosterMove` for the scanner,
 `parseTransactionString` (`src/utils/contract-eligibility.ts`) for the
-contract-declaration window — and `tests/contract-eligibility.test.ts` runs
-both over `tests/fixtures/mfl-transaction-strings.json` to hold them equal.
+contract-declaration window, and `parseAcquisitionAdds`
+(`src/utils/august-cut-selection-core.mjs`) for the August cutdown ordering —
+and `tests/contract-eligibility.test.ts` runs all three over
+`tests/fixtures/mfl-transaction-strings.json` to hold them equal.
+
+The third one is the cautionary tale. It was never in the corpus, and it was
+the **strictest** of the three, which made it the wrongest: it enumerated
+shapes, and every shape it had not enumerated returned no adds rather than
+failing. It missed `"0502,|425000|"` — a winning claim with nothing cut, in the
+**current** format, 281 rows — and its docstring advertised support for
+`"addId,|bbid|,"`, the hand-written string MFL has never emitted, which is the
+exact fabrication that hid this same bug in `contract-eligibility.ts` a week
+earlier. An acquisition that parses to no adds does not error; it silently
+never happened, and `scripts/apply-august-cuts.mjs` cuts real players off that
+ordering. **Enumerate segments, never shapes** — and if you write a fourth
+parser of this field, add it to the corpus test in the same commit.
 That test was green for months while the two genuinely disagreed, because the
 fixture had been recorded from **one league's one season**: 10 shapes out of
 the 60 MFL has actually sent. All three disagreements lived in shapes it did

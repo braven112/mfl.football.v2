@@ -53,7 +53,17 @@ export function shapeOf(txnString) {
     .replace(/(^|[|,])0000(?=$|[|,])/g, '$1Z')
     .replace(/\d+(?:\.\d*)?[eE][+-]?\d+/g, 'E')
     .replace(/\d+\.\d*/g, 'D')
-    .replace(/\d+/g, 'N');
+    .replace(/\d+/g, 'N')
+    // A LIST is one grammar, not one grammar per length. Left uncollapsed the
+    // alphabet is unbounded — MFL has cut 1-12 and 14 players in a single move,
+    // so a 13-drop row would be a brand-new "shape" for a string both parsers
+    // read correctly, and the census ratchet would go red on an ordinary
+    // `chore: sync rosters` commit. `N,+` means "two or more ids".
+    .replace(/(?:N,){2,}/g, 'N,+')
+    // Free text, likewise bounded: an owner once typed a sentence into an
+    // AUCTION_BID comment, and every distinct sentence would otherwise be its
+    // own shape forever.
+    .replace(/[^NDEZ,|+]+/g, 'T');
 }
 
 /** Read every roster/transaction row the committed feeds hold. Exported for tests. */
@@ -103,9 +113,12 @@ export function censusShapes(rows) {
       return {
         type: g.type,
         shape: g.shape,
-        // Smallest by codepoint, so the example does not change when MFL
-        // reorders its array or a new season adds another row of the shape.
-        example: g.examples.sort()[0],
+        // The WORST case in the group, tie-broken by codepoint. Now that a
+        // list collapses to one shape, "the smallest example" would have put a
+        // two-drop string in the corpus and left the fourteen-drop one
+        // untested — the opposite of what a census is for. Deterministic: this
+        // only moves when MFL sends a longer row than it ever has.
+        example: g.examples.sort((a, b) => b.length - a.length || a.localeCompare(b))[0],
         occurrences: g.occurrences,
         leagues: [...g.leagues].sort(),
         seasons: seasons.length === 1 ? seasons[0] : `${seasons[0]}-${seasons[seasons.length - 1]}`,
