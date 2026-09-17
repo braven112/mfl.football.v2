@@ -19,6 +19,7 @@ import { NFL_LOGO_ONERROR, positionOrder } from '../../../constants/roster-const
 import { getCurrentLeagueYear } from '../../../utils/league-year';
 import { getPlayerMap } from '../../../utils/player-map';
 import { buildWeeklyPlayerResults } from '../../../utils/weekly-player-results';
+import { parsePlayerWeekScores } from '../../../utils/player-week-scores.mjs';
 import { resolveStatsSeasonYear, parseYtdPlayerScores } from '../../../utils/stats-season.mjs';
 import { getCachedRosters } from '../../../utils/mfl-roster-cache';
 import { chooseTeamName } from '../../../utils/team-names';
@@ -58,6 +59,14 @@ const seasonWeeklyModules = import.meta.glob(
 // Full-pool season-to-date scoring — see src/utils/stats-season.mjs.
 const seasonYtdModules = import.meta.glob(
   '../../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/playerScores-ytd.json',
+  { eager: true }
+);
+// Per-week points for the WHOLE player pool — the fallback that lets the
+// modal's Season Results table exist for a practice-squad, injured-reserve or
+// free-agent player. weekly-results-raw above is MFL's ACTIVE-LINEUP export and
+// has no row for any of them. See src/utils/player-week-scores.mjs.
+const playerWeekScoreModules = import.meta.glob(
+  '../../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/playerScores-by-week.json',
   { eager: true }
 );
 const nflScheduleModules = import.meta.glob(
@@ -364,8 +373,11 @@ const nflScheduleData =
 const fpaData = findForYear(fpaModules, statsSeasonYear);
 const leagueData = findForYear(leagueModules, statsSeasonYear);
 const playersDataForSeason = findForYear(playerModules, statsSeasonYear) || playersData;
+const playerWeekScores = parsePlayerWeekScores(
+  findForYear(playerWeekScoreModules, statsSeasonYear)
+);
 const weeklyPlayerResults = (nflScheduleData && Array.isArray(seasonWeeklyData))
-  ? buildWeeklyPlayerResults(seasonWeeklyData, nflScheduleData, fpaData, playersDataForSeason, leagueData)
+  ? buildWeeklyPlayerResults(seasonWeeklyData, nflScheduleData, fpaData, playersDataForSeason, leagueData, 17, playerWeekScores)
   : {};
 
 // ── Serialize for client ──

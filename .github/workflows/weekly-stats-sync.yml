@@ -22,7 +22,43 @@ jobs:
         uses: ./.github/actions/setup
 
       - name: Fetch fantasy points allowed
-        run: node ./scripts/fetch-fantasy-points-allowed.mjs
+        # Once per FULL-MANAGEMENT league. The numbers are scored with the
+        # league's OWN scoring rules and land in data/<slug>/mfl-feeds/<year>/,
+        # so the two files are genuinely different data and neither can stand in
+        # for the other — the AFL simply had no file, which is why the player
+        # modal's "Opp Avg" / "Opp Rank" columns were empty there.
+        #
+        # `--league=<slug>` rather than MFL_LEAGUE_ID: the script resolves the
+        # id through src/config/leagues-data.mjs, so no MFL league id is spelled
+        # out in this YAML (CLAUDE.md § League registry).
+        #
+        # Each league is attempted independently and a failure does NOT abort
+        # the step. The script exits 1 on a fetch error or a short team count,
+        # and with `bash -e` that would kill the step — taking the `Commit and
+        # push updates` step with it, since it carries no `if:`. The league
+        # that DID succeed has already written its file by then, so one
+        # league's bad day would throw away the other's good data. Only an
+        # all-leagues failure fails the step.
+        run: |
+          FAILED=()
+          OK=()
+          for SLUG in theleague afl; do
+            echo "::group::Fantasy points allowed ($SLUG)"
+            if node ./scripts/fetch-fantasy-points-allowed.mjs --league="$SLUG"; then
+              OK+=("$SLUG")
+            else
+              FAILED+=("$SLUG")
+              echo "::warning::fantasyPointsAllowed failed for $SLUG — keeping its existing file."
+            fi
+            echo "::endgroup::"
+          done
+
+          echo "Succeeded: ${OK[*]:-none}"
+          echo "Failed:    ${FAILED[*]:-none}"
+          if [ ${#OK[@]} -eq 0 ]; then
+            echo "::error::fantasyPointsAllowed failed for every league."
+            exit 1
+          fi
 
       - name: Commit and push updates
         uses: ./.github/actions/commit-push
