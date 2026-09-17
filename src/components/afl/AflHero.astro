@@ -87,6 +87,18 @@ const { state, config, standings, userFranchiseId, backdrop = null, liveScoring}
 // Built from the registry, never written as a literal — this component sits
 // under afl/ but the path it needs belongs to the league entry.
 const AFL_TRADE_BUILDER = ensureLeaguePrefix(getLeagueBySlug('afl-fantasy')!, '/front-office/trade-builder');
+/**
+ * Two states clamp their summary to two lines, and for the same reason: their
+ * copy is not resolver-written. The feature card's is a What's New entry
+ * description; the news card's is an ARTICLE EXCERPT. At the width the copy
+ * column keeps beside the cutout an excerpt runs four lines and pushes the card
+ * past its own min-height. Every other state's summary is short by
+ * construction, and the one thing worse than a tall card is a keeper deadline
+ * whose instruction stops mid-sentence.
+ */
+const clampsSummary =
+  state.kind === 'feature' || (state.kind === 'regular-season' && state.slot === 'article');
+
 ---
 
 {/* Live scoring outranks the composite during game windows: while games are
@@ -126,7 +138,7 @@ const AFL_TRADE_BUILDER = ensureLeaguePrefix(getLeagueBySlug('afl-fantasy')!, '/
   <LeagueCompositeHero
     view={state.view}
     regionLabel={REGION_LABEL[state.kind] ?? 'AFL hero'}
-    clampSummary={state.kind === 'feature'}
+    clampSummary={clampsSummary}
   />
 ) : (
   <AflEventHero

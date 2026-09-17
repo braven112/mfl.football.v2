@@ -2146,3 +2146,41 @@ its own list card. What made that cheap, and what to keep true:
   also true to the waiver card. A team-scoped story would need its crest file
   named literally in the fixture first.
 
+
+## 2026-09-17 — The article card, and a fallback that was actually the default
+
+The follow-up: both leagues' news slots now render `LeagueCompositeHero` from
+one builder (`src/utils/article-hero-view.ts`). Four things worth keeping.
+
+- **A "fallback" the majority case reaches is not a fallback, it is the
+  design.** `ArticleHero` had two layouts — a composite for posts naming a
+  `heroPlayerId`, and a plain bordered card for everything else. Most Schefter
+  articles name nobody, so the plain card was what the homepage actually
+  showed: an unstyled white box beside seven branded composites, shipped for
+  weeks because the file read as "composite hero, with a fallback". When a
+  component branches on a data field, check how often that field is populated
+  in the real feed before calling either branch the exception. Routing through
+  the shared card removed the branch entirely — a post with no cast player now
+  gets the league mark on the flank, the same silhouette rule every other
+  composite already had.
+- **A card that prints a headline must link THAT headline.** The AFL's slot
+  hardcoded `link: '/afl-fantasy/news'` — the listing — so the CTA under a
+  named story dropped the reader on an index to go find it. The listing page is
+  now reachable from exactly one state, `emptyArticleHeroView`, which is the
+  only one with no story to link. Pinned by `tests/article-hero-view.test.ts`.
+- **"Latest" is a timestamp sort, never `posts[0]`.** MFL returns arrays in
+  nondeterministic order and the feeds are cron-merged, so feed position is a
+  guess that is right most days. `pickLatestArticle` sorts by `timestamp` and
+  takes a `within` bound, because a quiet week otherwise promotes a
+  three-month-old article as this week's news — and falls back to the newest
+  stale one rather than to nothing, since the slot is already on the page.
+- **The byline comes from the POST's `authorId`.** The feeds carry external
+  reporters (Adam Schefter, Mel Kiper) alongside the house voice, so a
+  hardcoded Claude byline attributes someone else's reporting to him. Same
+  shape as the redaction rule in `docs/claude/rules/schefter.md`: identity on a
+  Schefter surface is read from the record, never assumed from context.
+
+The byline renders in the FOOTER beside the CTA, not over the art. The flank
+belongs to the player the story is about — casting the reporter there displaces
+the subject of his own reporting, which is the same rule the feature card
+follows when it refuses to put a cutout over its screenshot.

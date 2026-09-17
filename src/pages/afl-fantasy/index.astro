@@ -37,9 +37,10 @@ import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 import feedData from '../../../data/afl-fantasy/schefter-feed.json';
 import { getWhatsNewEntriesForLeague } from '../../utils/whats-new-entries';
 
-import type { SchefterFeed as FeedType } from '../../types/schefter';
+import { getAuthor, getAuthorAvatar, type SchefterFeed as FeedType } from '../../types/schefter';
 import { parseTestDate } from '../../utils/hero-resolver';
 import { resolveAflHeroState } from '../../utils/afl-hero-resolver';
+import { pickLatestArticle } from '../../utils/article-hero-view';
 import { isSaturdayEveningPT } from '../../utils/sunday-ticket-window';
 import { hasSubmittedLineup } from '../../utils/lineup-submitted';
 import { getCurrentNFLWeek as currentNflWeekForHero } from '../../utils/current-week';
@@ -271,6 +272,28 @@ const aflWaiverCopy = waiverDeadlineCopy(
   { now: effectiveDate, clock: aflViewerClock },
 );
 
+// ── The story the news slot promotes ────────────────────────────────────────
+// Resolved HERE rather than in the resolver, for the same reason `recap` and
+// `waiver` are: the feed is on disk and the resolver is synchronous and pure.
+// Bounded to the last week so the slot cannot promote a three-month-old
+// article as this week's news — past that it falls through to the desk card,
+// which is the only state allowed to point at the news listing.
+const aflLatestPost = pickLatestArticle((feedData as FeedType).posts, {
+  now: effectiveDate,
+  within: 7 * 24 * 60 * 60 * 1000,
+});
+// The byline is the POST's own author — the feeds carry external reporters,
+// and the house face on someone else's story misattributes it.
+const aflLatestArticle = aflLatestPost
+  ? {
+      post: aflLatestPost,
+      byline: {
+        name: getAuthor(aflLatestPost.authorId).name,
+        avatar: getAuthorAvatar(getAuthor(aflLatestPost.authorId)),
+      },
+    }
+  : undefined;
+
 const heroState = resolveAflHeroState({
   referenceDate: effectiveDate,
   lineupSubmitted,
@@ -282,6 +305,7 @@ const heroState = resolveAflHeroState({
   scheduleReleaseRevealed: aflScheduleReleaseRevealed,
   recap: aflRecap,
   waiver: aflWaiverCopy,
+  article: aflLatestArticle,
 });
 
 
@@ -406,6 +430,8 @@ if ('view' in heroState) {
     // week was derived from, which is NOT `heroLeagueYear` between June 1 and
     // Labor Day (the league year advances first). See AflCastingInput.recap.
     recap: { seasonYear: liveSeasonYear, week: aflRecap.week },
+    // The news card promotes a specific story, so it casts that story's player.
+    articlePlayerId: aflLatestArticle?.post.heroPlayerId,
   });
   // Tint the glow with the viewer's OWN franchise when their conference
   // rosters the cast player — the hero is then visibly about their team, not
