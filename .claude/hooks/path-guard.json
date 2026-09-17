@@ -299,16 +299,20 @@
         "src/utils/front-office-planner-data.ts",
         "src/utils/front-office-keeper-data.ts",
         "src/pages/*/front-office/index.astro",
-        "src/utils/front-office-panel-data.ts"
+        "src/utils/front-office-panel-data.ts",
+        "src/utils/cap-projection.ts",
+        "src/utils/contract-actions-client.ts"
       ],
-      "note": "ONE panel serves both leagues (FrontOfficePanel.astro) and both routes are thin wrappers that must stay under 75 lines. Sections are gated on registry features and data presence, never on a league slug (the claim verb is the one documented exception). roster-analytics.ts declares no cap formula of its own. The AFL keeper board is owner-PRIVATE, not merely un-actionable \u2014 /api/afl-keepers enforces owner-only read. NFL/College stacks render for the SELECTED team only (16 teams of them measured 1.45 MB raw / 133 KB gzipped). See docs/plans/front-office-hub.md.",
+      "note": "ONE panel serves both leagues (FrontOfficePanel.astro) and both routes are thin wrappers that must stay under 75 lines. Sections are gated on registry features and data presence, never on a league slug (the claim verb is the one documented exception). roster-analytics.ts declares no cap formula of its own. The AFL keeper board is owner-PRIVATE, not merely un-actionable \u2014 /api/afl-keepers enforces owner-only read. NFL/College stacks render for the SELECTED team only (16 teams of them measured 1.45 MB raw / 133 KB gzipped). See docs/plans/front-office-hub.md. A what-if toggle NEVER reaches the network: scenarios are scratch, and filing is the separate act of pressing Extend/Tag/Cut, which clears that player from the scenario so the projection cannot double-count it. Scenario storage goes through scopedLocalKey because both leagues have a franchise 0001.",
       "tests": [
         "tests/front-office-shared-analytics.test.ts",
         "tests/front-office-player-actions.test.ts",
         "tests/front-office-section.test.ts",
         "tests/afl-keeper-planner-features.test.ts",
         "tests/roster-analytics.test.ts",
-        "tests/cross-league-init-gate.test.ts"
+        "tests/cross-league-init-gate.test.ts",
+        "tests/cap-scenario-boundary.test.ts",
+        "tests/contract-actions-client.test.ts"
       ]
     },
     {

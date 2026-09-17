@@ -189,6 +189,12 @@ const config = { leagueId, franchiseId, franchiseName, year, salaryAverages, ext
             ),
           );
           declareBtn.textContent = 'Pending';
+          // No longer hypothetical: drop it from the what-if scenario so the
+          // cap projection does not count it twice — once as scratch and
+          // once as the pending declaration it just became.
+          document.dispatchEvent(
+            new CustomEvent('fo:action-filed', { detail: { playerId: declareBtn.dataset.playerId } }),
+          );
           say(
             `${declareBtn.dataset.playerName} — ${kind === 'franchise' ? 'franchise tag' : 'extension'} ` +
               `submitted for commissioner approval.`,
@@ -228,6 +234,9 @@ const config = { leagueId, franchiseId, franchiseName, year, salaryAverages, ext
             throw new Error(data?.message || `HTTP ${res.status}`);
           }
           cutBtn.textContent = 'Cut';
+          document.dispatchEvent(
+            new CustomEvent('fo:action-filed', { detail: { playerId: cutBtn.dataset.cutPlayerId } }),
+          );
           cutBtn.closest<HTMLElement>('[data-cut-row]')?.style.setProperty('opacity', '0.45');
           say(`${name} cut. Reload to see the updated cap.`);
         } catch (err) {

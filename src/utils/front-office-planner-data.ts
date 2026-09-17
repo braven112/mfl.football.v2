@@ -234,6 +234,12 @@ export interface FrontOfficePlannerData {
    *  `/api/cut-player` acts on the viewer's own roster, so there is nothing
    *  to pre-render for anyone else. */
   cutCandidates: FrontOfficeTagPlayer[];
+  /** Existing dead money for the selected team, by year offset. */
+  deadMoneyByYearForTeam: number[];
+  /** Per-position averages in the nested shape the cap model reads. */
+  nestedSalaryAverages: unknown;
+  /** The league's cap for the year, from the feed rather than the constant. */
+  capLimit: number;
   /** Per-team, already grouped by year, for the chip row. */
   draftChipsByTeam: Record<string, FrontOfficeDraftChipGroup[]>;
   draftNextYear: number;
@@ -625,6 +631,22 @@ export async function buildFrontOfficePlannerData(selectedTeamId: string): Promi
     teamMetrics,
     teamAnalytics,
     cutCandidates: allPlayers.filter((p) => p.franchiseId === selectedTeamId),
+    deadMoneyByYearForTeam: aggregateDeadMoney(seasonData.salaryAdjustments ?? [], selectedTeamId),
+    // The projection prices tags and extensions, which need MFL's nested
+    // shape; the client config ships flattened per-season maps.
+    nestedSalaryAverages: (() => {
+      const flat = (salaryAveragesBySeason[extensionSeason] ?? {}) as any;
+      const positions: Record<string, { top3Average: number; top5Average: number; top10Average: number }> = {};
+      for (const pos of Object.keys(flat.extensionSalaries ?? {})) {
+        positions[pos] = {
+          top3Average: flat.franchiseSalaries?.[pos] ?? 0,
+          top5Average: flat.extensionSalaries?.[pos] ?? 0,
+          top10Average: flat.teamOptionSalaries?.[pos] ?? 0,
+        };
+      }
+      return { positions };
+    })(),
+    capLimit,
     metricsNote:
       `*Based on filling to ${TARGET_ACTIVE_COUNT} active players. Reserves ` +
       `$${(RESERVE_FOR_ROOKIES / 1_000_000).toFixed(0)}M for practice squad rookies and free agents.`,

@@ -333,15 +333,31 @@ Sizes: the AFL hub went 526 KB raw / 80 KB gzipped → 971 KB / 101 KB, the cost
 pre-rendering 24 teams of charts so the switcher never fetches. TheLeague's moved
 160 KB → 167 KB gzipped.
 
-### Phase C — extract the contract driver
+### Phase C — extract the contract driver — **SHIPPED 2026-09-17**
 9. Lift the CDM driver out of `rosters.astro` into `contract-actions-client.ts`.
 10. Re-point `rosters.astro` and `HpUnsignedFaCard` at it. **No behavior change here** —
     this phase is a pure move, proved by `scripts/roster-parity-check.mjs`.
 
-**Done when:** parity check output is byte-identical before and after, and the three
-hosts share one driver.
+**Done.** `contract-actions-client.ts` holds the pricing adapter and the submit; all
+four hosts (rosters.astro's bulk submit, `cdm-wizard.ts`, the homepage's Unsigned FA
+card, the hub) file through it. `scripts/roster-parity-check.mjs` reported
+**"PARITY: 12 (season, team) renders identical"** before and after, run three times
+across the change.
 
-### Phase D — actions on the hub
+**Less was left than the plan assumed, and more.** The CDM wizard had already been
+extracted to `cdm-wizard.ts` by `docs/plans/rosters-page-split.md` phase 6.1 — the
+plan's "lift the CDM driver" was largely already done. What was still duplicated was
+the *arithmetic*: `rosters.astro` carried its own franchise tag, team option, veteran
+extension and cut penalty, byte-identical to `salary-calculations.ts` and differing
+only in how they looked position averages up. Plus **three** copies of the dead-money
+percentage table inside that one page. All now delegate.
+
+The modal's open/populate/step flow deliberately stays page-local: it closes over
+`contractActions`, `recalculateRoster`, `currentTeam` and the row it launched from,
+and lifting it would mean inventing an abstraction over a 7k-line script to serve one
+caller. The hub uses its own small trigger and the shared core instead.
+
+### Phase D — actions on the hub — **SHIPPED 2026-09-17**
 
 **PREREQUISITE found during Phase A — the hub's players all have `points: 0`.**
 All 393 players in the hub's shipped player list carry zero points.
@@ -376,10 +392,27 @@ smuggling it into a presentational change.
     "no live client-side cap-math recomputation… Front Office has no cut / declare /
     extend actions" **stops being true** and must be rewritten, not left.
 
-**Done when:** an owner can tag, extend and cut from `/front-office` and see the
-declaration land on `/front-office/contracts`.
+**Done.** An owner can file a franchise tag or extension and cut a player from the
+hub. The zero-points prerequisite was the first thing fixed (see below); a **fifth**
+copy of the extension formula turned up in `extension-salary-calculator.ts` — the one
+the candidate cards print from — and now delegates, with a test pinning it against
+`salary-calculations` across a table of real contracts. That one mattered most: a
+disagreement there would show an owner one price and file another.
 
-### Phase E — cap planning
+Verified in a browser with the writes intercepted: the row reads `$5,569,156 × 5`,
+the confirm reads `$5.57M × 5`, and the filed body carries `requestedSalary 5569156`,
+`requestedYears 5`, `requestedContractInfo "E"`. Cancel restores without filing. The
+cut posts `{playerId, year}` and treats a 409 as done.
+
+**The points prerequisite, resolved.** All 393 players read `points: 0`, because
+`src/data/mfl-player-salaries-<year>.json` is cron-written and reads zero for every
+row between the February rollover and the first scored week. The fallback patches the
+SOURCE rows (the cards read `allPlayers`, the cap chart reads `seasonData.teams` —
+patching one would have them disagreeing on one page) and applies only when the WHOLE
+league reads zero, because one player with no points is a fact about that player.
+297 of 393 now carry points and all 16 efficiency charts render.
+
+### Phase E — cap planning — **SHIPPED 2026-09-17**
 15. Delete `TeamCapAnalysis`, `BudgetPlannerPanel`, `FranchiseTagPanel`.
 16. Build `cap-projection.ts` (pure) + `CapProjectionTable.astro` — 3 seasons side by
     side, static first, no toggles. Shippable on its own and already a real upgrade on
@@ -390,9 +423,22 @@ declaration land on `/front-office/contracts`.
 18. `ScenarioBar` — save, name, load, compare two, reset. localStorage, scoped.
 19. Comp-pick projection: **blocked**, see above.
 
-**Done when:** an owner can tick "extend Hall, cut Misack, tag Chase", see 2027/28/29
-recompute live, save it as "aggressive", compare it against "hoard cap", and then
-commit only the extension — with the other two still sitting as untouched scratch.
+**Done**, except the comp-pick item, which stays blocked. The three orphaned panels
+are deleted. `cap-projection.ts` is pure and declares no cap arithmetic of its own;
+`CapProjectionTable` shows three seasons and re-projects live; `ScenarioBar` saves,
+names, loads, compares and clears, through `scopedLocalKey`.
+
+Driven in a browser: ticking a cut, then an extend, then a tag on the same player
+leaves **two** moves lit, not three — one move per player, the last replacing rather
+than compounding. Save produces a chip, reset returns the numbers to baseline with
+nothing lit, load restores both. **No write endpoint is touched by any toggle**, which
+`tests/cap-scenario-boundary.test.ts` now pins as a scan: a `fetch` in either
+component fails the build, and the only literal URL allowed in the action component
+is `/api/cut-player`.
+
+Filing dispatches `fo:action-filed`, which drops that player from the scenario — so
+the projection cannot count the same move twice, once as scratch and once as the
+pending declaration it just became.
 
 ## Hazards (each one is a rule that has already bitten this repo)
 

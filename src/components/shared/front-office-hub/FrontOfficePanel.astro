@@ -36,6 +36,8 @@ import VeteranExtensionCandidates from '../../theleague/VeteranExtensionCandidat
 import FreeAgentNeedsCard from '../../theleague/FreeAgentNeedsCard.astro';
 import KeeperPlanner from '../../afl-fantasy/KeeperPlanner.astro';
 import AFLActionModal from '../../afl-fantasy/AFLActionModal.astro';
+import CapProjectionTable from './CapProjectionTable.astro';
+import ScenarioBar from './ScenarioBar.astro';
 import CutCandidatesCard from './CutCandidatesCard.astro';
 import FrontOfficeActions from './FrontOfficeActions.astro';
 import DraftAssetChips from './DraftAssetChips.astro';
@@ -148,6 +150,27 @@ const clientConfig = {
           />
         </ChartCard>
       </div>
+    </div>
+  )}
+
+  {contracts && canAct && (
+    <div class="planner-section planner-section--projection">
+      <h2 class="planner-section__title">Cap Planning</h2>
+      <CapProjectionTable
+        roster={contracts.cutCandidates.map((p) => ({
+          id: p.id,
+          name: p.name,
+          position: p.position,
+          salary: p.salary,
+          contractYears: p.contractYears,
+          displayTag: 'active',
+        }))}
+        deadMoneyByYear={contracts.deadMoneyByYearForTeam}
+        salaryAverages={contracts.nestedSalaryAverages}
+        capLimit={contracts.capLimit}
+        startYear={leagueYear}
+      />
+      <ScenarioBar leagueSlug={leagueSlug} franchiseId={selectedTeamId} />
     </div>
   )}
 
