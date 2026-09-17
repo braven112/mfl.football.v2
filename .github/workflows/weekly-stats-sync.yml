@@ -22,7 +22,21 @@ jobs:
         uses: ./.github/actions/setup
 
       - name: Fetch fantasy points allowed
-        run: node ./scripts/fetch-fantasy-points-allowed.mjs
+        # Once per FULL-MANAGEMENT league. The numbers are scored with the
+        # league's OWN scoring rules and land in data/<slug>/mfl-feeds/<year>/,
+        # so the two files are genuinely different data and neither can stand in
+        # for the other — the AFL simply had no file, which is why the player
+        # modal's "Opp Avg" / "Opp Rank" columns were empty there.
+        #
+        # `--league=<slug>` rather than MFL_LEAGUE_ID: the script resolves the
+        # id through src/config/leagues-data.mjs, so no MFL league id is spelled
+        # out in this YAML (CLAUDE.md § League registry).
+        run: |
+          for SLUG in theleague afl; do
+            echo "::group::Fantasy points allowed ($SLUG)"
+            node ./scripts/fetch-fantasy-points-allowed.mjs --league="$SLUG"
+            echo "::endgroup::"
+          done
 
       - name: Commit and push updates
         uses: ./.github/actions/commit-push

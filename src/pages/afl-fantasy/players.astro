@@ -27,6 +27,7 @@
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import CollegeLogoDarkStyles from '../../components/CollegeLogoDarkStyles.astro';
 import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.astro';
+import { loadWeeklyPlayerResults } from '../../utils/weekly-player-results-feed';
 import { resolveLeaguePath } from '../../utils/nav-utils';
 import { getLeagueBySlug, leagueClock } from '../../config/leagues';
 import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD, COLLEGE_LOGO_ONERROR, COLLEGE_LOGO_ONLOAD, positionOrder } from '../../constants/roster-constants';
@@ -136,6 +137,14 @@ const hasSeasonPts = freeAgentsData.hasSeasonPts;
 // why each names its own: the label always matches the data under it, and a
 // deploy (every data-sync commit) closes the gap.
 const statsSeasonYear = freeAgentsData.statsSeasonYear;
+
+// ── Season Results for the player modal ──
+// Keyed by the season the Pts column above already resolved, so the modal's
+// table and the column that opened it can never name different years. Read off
+// the committed feeds at request time (see weekly-player-results-feed.ts) — no
+// eager glob, so the SSR-slim property this page was refactored for holds.
+const weeklyPlayerResults = loadWeeklyPlayerResults(aflLeague.dataPath, statsSeasonYear);
+
 const hasAdp = freeAgentsData.hasAdp;
 const defaultSort = freeAgentsData.defaultSort;
 const defaultDir = freeAgentsData.defaultDir;
@@ -698,6 +707,12 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     </div>
   </div>
   <PlayerDetailsModal hideContract={true} />
+
+  <script
+    type="application/json"
+    id="weekly-player-results"
+    set:html={JSON.stringify(weeklyPlayerResults)}
+  ></script>
 </TheLeagueLayout>
 
 <script define:vars={{ playerDataJson, hasProjected, hasSeasonPts, hasAdp, hasSnapCounts, defaultSort, defaultDir, mflHost, defSpotlightJson, conferenceMetaJson, activeConfIdJson, nflAvatarBgJson, nflAvatarBorderJson, nflAvatarBgFallback, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, noHeadshot, logoOnerror: NFL_LOGO_ONERROR, collegeLogoOnerror: COLLEGE_LOGO_ONERROR, collegeLogoOnload: COLLEGE_LOGO_ONLOAD }}>

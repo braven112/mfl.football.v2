@@ -11,18 +11,26 @@
  * Runs weekly via GitHub Actions (weekly-stats-sync.yml).
  *
  * Env variables:
- *   MFL_LEAGUE_ID (required in CI, defaults to 13522 locally)
+ *   MFL_LEAGUE_ID (optional; overrides --league, defaults to the registry's
+ *                  default league)
  *   MFL_YEAR      (optional, auto-detected from league calendar)
  *
  * Usage:
  *   node scripts/fetch-fantasy-points-allowed.mjs
+ *   node scripts/fetch-fantasy-points-allowed.mjs --league=afl
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getNonEmpty } from './lib/env.mjs';
-import { DEFAULT_LEAGUE_ID, getLeagueById, DEFAULT_LEAGUE_SLUG } from '../src/config/leagues-data.mjs';
+import {
+  DEFAULT_LEAGUE_ID,
+  getLeagueById,
+  getLeagueBySlug,
+  DEFAULT_LEAGUE_SLUG,
+  ALL_LEAGUES,
+} from '../src/config/leagues-data.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -198,13 +206,40 @@ function transformPointsAllowed(mflData, completedWeeks) {
   return teamAverages;
 }
 
+/**
+ * The league named by `--league=<slug>`, or null when the flag is absent.
+ * `afl` is accepted for `afl-fantasy`, the same alias the other multi-league
+ * scripts take. An unknown slug is fatal rather than a silent fall back to
+ * TheLeague — writing one league's numbers into another league's directory is
+ * exactly the failure this flag exists to prevent.
+ */
+function resolveLeagueArg() {
+  const arg = process.argv.find((a) => a.startsWith('--league='))?.slice('--league='.length);
+  if (!arg) return null;
+  const league = getLeagueBySlug(arg === 'afl' ? 'afl-fantasy' : arg);
+  if (!league) {
+    console.error(
+      `Unknown --league=${arg}. Known: ${ALL_LEAGUES.map((l) => l.slug).join(', ')} (or the alias 'afl').`,
+    );
+    process.exit(1);
+  }
+  return league;
+}
+
 async function main() {
   console.log('═'.repeat(50));
   console.log('  Fantasy Points Allowed (MFL)');
   console.log('═'.repeat(50));
   console.log('');
 
-  const leagueId = getNonEmpty(process.env.MFL_LEAGUE_ID) || DEFAULT_LEAGUE_ID;
+  // `--league=<slug>` resolves the id THROUGH THE REGISTRY, so a caller that
+  // wants the AFL's file never has to name '19621'. That matters because the
+  // caller is a GitHub workflow, and workflow YAML cannot import
+  // leagues-data.mjs — the alternative is a hardcoded id in the YAML plus an
+  // exemption in tests/league-literal-guard.test.ts. MFL_LEAGUE_ID still works
+  // and still wins, for anyone driving this by env the old way.
+  const league = resolveLeagueArg();
+  const leagueId = getNonEmpty(process.env.MFL_LEAGUE_ID) || league?.id || DEFAULT_LEAGUE_ID;
   const year = getNonEmpty(process.env.MFL_YEAR) || String(getCurrentSeasonYear());
   const leagueName = getLeagueById(leagueId)?.slug ?? DEFAULT_LEAGUE_SLUG;
 

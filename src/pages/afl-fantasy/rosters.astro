@@ -4,6 +4,7 @@ import FrontOfficeNav from '../../components/shared/front-office-nav/FrontOffice
 import CollegeLogoDarkStyles from '../../components/CollegeLogoDarkStyles.astro';
 import PlayerCell from '../../components/theleague/PlayerCell.astro';
 import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.astro';
+import { loadWeeklyPlayerResults } from '../../utils/weekly-player-results-feed';
 import AFLActionModal from '../../components/afl-fantasy/AFLActionModal.astro';
 import SignInModal from '../../components/shared/SignInModal.astro';
 import KeeperPlanner, {
@@ -387,6 +388,16 @@ const aflYtdPoints = parseYtdPlayerScores(
   )
 );
 const aflProjections = loadAflProjections(selectedYear);
+
+// ── Season Results for the player modal ──
+// Same season as the Pts / Avg columns above, so the table and the row that
+// opened it can never name different years. Read off the committed feeds at
+// request time (see weekly-player-results-feed.ts) rather than through an eager
+// glob, and cached per league-season — the payload covers the whole league, so
+// it must not be rebuilt for every roster view.
+const weeklyPlayerResults = aflLeague
+  ? loadWeeklyPlayerResults(aflLeague.dataPath, selectedYear)
+  : {};
 
 interface PlayerMatchup {
   matchup: NflMatchup | null;
@@ -1632,6 +1643,11 @@ const pageConfig = {
   </section>
 
   <PlayerDetailsModal hideContract />
+  <script
+    type="application/json"
+    id="weekly-player-results"
+    set:html={JSON.stringify(weeklyPlayerResults)}
+  ></script>
   <AFLActionModal />
   {!signedIn && <SignInModal config={signInConfig} />}
 

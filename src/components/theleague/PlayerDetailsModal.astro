@@ -221,7 +221,7 @@ const t = (value?: string) => value ?? '\u2014';
       <div class="pdm-section" id="section-weekly-results" style="display: none;">
         <h4 class="pdm-section__title" id="weekly-results-title">Season Results</h4>
         <div class="weekly-results-table-wrapper">
-          <table class="weekly-results-table">
+          <table class="weekly-results-table" id="weekly-results-table">
             <thead>
               <tr>
                 <th class="wr-wk">Wk</th>
@@ -884,8 +884,41 @@ const t = (value?: string) => value ?? '\u2014';
     text-align: center;
   }
 
+  /* A league with no committed fantasyPointsAllowed.json has nothing to put in
+     these two columns — the AFL had none at all, so they rendered as a pair of
+     permanently blank headers. Hidden as a unit rather than per row: a column
+     that is empty for every week of every player is not a column. */
+  .weekly-results-table.wr-no-opp-stats thead th.wr-avg,
+  .weekly-results-table.wr-no-opp-stats thead th.wr-rank,
+  .weekly-results-table.wr-no-opp-stats :global(td.wr-avg),
+  .weekly-results-table.wr-no-opp-stats :global(td.wr-rank) {
+    display: none;
+  }
+
   .weekly-results-table :global(.wr-badge--starter) { background: #2563eb; }
   .weekly-results-table :global(.wr-badge--nonstarter) { background: #9333ea; }
+
+  /* TWO ROSTERS IN ONE WEEK is the AFL's ordinary case — the same NFL player
+     is routinely kept in both conferences — so this cell holds more than one
+     badge. The pill overhangs its crest by 5px, so a plain inline run would
+     park it on the next crest's face. */
+  .weekly-results-table :global(.wr-badge-wrap + .wr-badge-wrap) { margin-left: 9px; }
+
+  /* No crest artwork for this franchise (the page's brand map has no entry, or
+     the franchise has no icon) → the pill IS the badge. Without this the cell
+     renders an empty 28px box with a pill floating off its corner. */
+  .weekly-results-table :global(.wr-badge-wrap--bare) {
+    width: auto;
+    height: auto;
+    vertical-align: middle;
+  }
+  .weekly-results-table :global(.wr-badge-wrap--bare .wr-badge) {
+    position: static;
+    border: 0;
+    border-radius: 999px;
+    padding: 2px 5px;
+    font-size: 0.5625rem;
+  }
 
   /* Dark: brighter pill fills for contrast on the dark table; ring already
      follows --card-bg (#1e1e1e) via the base rule. */
@@ -1042,6 +1075,9 @@ const t = (value?: string) => value ?? '\u2014';
 <script>
   import { NFL_TEAM_CITIES } from '../../utils/nfl';
   import { applyPlayerModalBand, franchiseTintHue, getFranchiseBandBrand } from '../../utils/player-modal-band';
+  // The repo's one exported HTML escaper (src/utils/player-cell-html.ts) —
+  // franchise names come straight from MFL and land in innerHTML here.
+  import { escapeHtml } from '../../utils/player-cell-html';
   import { isWatched, loadWatchList, toggleWatch, getWatchListAuth, onWatchListChange } from '../../utils/watch-list-client';
   import { requestSignIn } from '../../utils/player-actions';
   // No per-navigation reset: player-claim-client keys its state by league and
@@ -1811,12 +1847,36 @@ const t = (value?: string) => value ?? '\u2014';
             // Badge colors/border ring live in scoped CSS (.wr-badge*) so
             // dark mode can retint them — the ring must match the card
             // surface, not stay hard #fff, or it halos on a dark table.
-            var badgeClass = w.st === 'S' ? 'wr-badge wr-badge--starter' : 'wr-badge wr-badge--nonstarter';
+            //
+            // `w.o` is present only when TWO OR MORE rosters held the player
+            // that week. The AFL rosters the same NFL player in both
+            // conferences as a matter of course, so one badge would name one
+            // of two real owners; TheLeague never has two and takes the
+            // single-owner path below unchanged.
+            var weekOwners = w.o && w.o.length ? w.o : (w.fi && w.st ? [{ fi: w.fi, fn: w.fn, st: w.st }] : []);
             var statusStr = '';
             if (isBye) {
               statusStr = '';
-            } else if (w.fi && w.st) {
-              statusStr = '<div class="wr-badge-wrap"><img src="/assets/theleague/icons/' + w.fi + '.png" alt="' + (w.fn || '') + '" class="wr-badge-icon" onerror="this.style.display=\'none\'"><span class="' + badgeClass + '">' + w.st + '</span></div>';
+            } else if (weekOwners.length) {
+              statusStr = weekOwners.map(function (owner: { fi: string; fn: string; st: string }) {
+                var ownerBadgeClass = owner.st === 'S' ? 'wr-badge wr-badge--starter' : 'wr-badge wr-badge--nonstarter';
+                // The crest comes from the PAGE'S franchise brand map, not
+                // from a path built out of the franchise id. This used to
+                // hardcode one league's asset directory plus `<id>.png` —
+                // correct for that league, a 404 on every row for the other,
+                // whose crests are named by slug rather than by id. The map is
+                // league-scoped and re-read per open, so it also survives a
+                // ClientRouter navigation between the two.
+                var ownerBrand = getFranchiseBandBrand(owner.fi);
+                var crest = ownerBrand && (ownerBrand.crestLight || ownerBrand.crest);
+                var label = escapeHtml(owner.fn || (ownerBrand ? ownerBrand.name : ''));
+                var crestImg = crest
+                  ? '<img src="' + escapeHtml(crest) + '" alt="' + label + '" class="wr-badge-icon" loading="lazy" onerror="this.style.display=\'none\'">'
+                  : '';
+                var wrapClass = crest ? 'wr-badge-wrap' : 'wr-badge-wrap wr-badge-wrap--bare';
+                return '<div class="' + wrapClass + '" title="' + label + '">' + crestImg +
+                  '<span class="' + ownerBadgeClass + '">' + owner.st + '</span></div>';
+              }).join('');
             } else if (w.st) {
               statusStr = w.st;
             }
@@ -1846,6 +1906,17 @@ const t = (value?: string) => value ?? '\u2014';
           }
 
           weeklyBody.innerHTML = html;
+
+          // Drop the two opponent-strength columns when this league has no
+          // points-allowed data for them (see .wr-no-opp-stats). Decided from
+          // the rendered rows, so it follows the data rather than a league flag.
+          var weeklyTable = document.getElementById('weekly-results-table');
+          if (weeklyTable) {
+            var hasOppStats = playerWeeks.some(
+              function (wk: { avg: number | null; rank: number | null }) { return wk.avg !== null || wk.rank !== null; },
+            );
+            weeklyTable.classList.toggle('wr-no-opp-stats', !hasOppStats);
+          }
 
           if (weeklyFoot && weeklyTotal && gamesPlayed > 0) {
             weeklyFoot.style.display = '';
