@@ -55,13 +55,17 @@ export const aflWaiverDay: EventHeroView = {
   countLabel: 'Process at Wed 8:00 PM PT',
 };
 
-/** After the run: the `fcfs` state, the only one that reads as cleared. */
+/**
+ * After the run: the `fcfs` state, the only one that reads as cleared. Strings
+ * copied from `waiverDeadlineCopy`'s cleared branch — keep them in step, or the
+ * snapshot baselines copy the site never renders.
+ */
 export const theLeagueWaiversCleared: EventHeroView = {
   ...theLeagueWaiverDay,
   pill: 'WAIVERS CLEARED',
   headline: 'CLAIMS HAVE',
-  accentWord: 'RUN.',
-  summary: 'Free agents are first-come, first-served until waivers reopen Sun 1:00 PM PT.',
+  accentWord: 'PROCESSED.',
+  summary: 'Claims are in. Free agents are first-come, first-served through Sunday kickoff — the next claim window opens Sun 1:00 PM PT.',
   linkLabel: 'BROWSE FREE AGENTS',
   countValue: 'OPEN NOW',
   countLabel: 'Waivers reopen Sun 1:00 PM PT',
