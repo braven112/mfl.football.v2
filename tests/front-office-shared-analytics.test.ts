@@ -394,3 +394,52 @@ describe('the hub feeds its candidate cards real points', () => {
     expect(PANEL_DATA_PLANNER).toMatch(/priorPointsById\.size > 0 && seasonRows\.every/);
   });
 });
+
+describe('the candidate tables stack rather than clip on a phone', () => {
+  // Four columns (player, two figures, the action) cannot fit 412px. A
+  // sideways scroll hides the Extended/Tag price — the one number an owner
+  // needs BEFORE deciding — so each row becomes a card and the figures
+  // label themselves from `data-label`.
+  const CARDS = [
+    ['VeteranExtensionCandidates', '.veteran-extension-candidates'],
+    ['FranchiseOptions', '.franchise-tag-eligibility'],
+  ] as const;
+
+  it('both cards carry the stacked media query', () => {
+    for (const [name, root] of CARDS) {
+      const src = readFileSync(`src/components/theleague/${name}.astro`, 'utf-8');
+      expect(src, `${name} lost its stacked mode`).toMatch(/@media \(max-width: 560px\)/);
+      expect(src).toMatch(new RegExp(`\\${root} \\.eligibility-table thead`));
+      expect(src).toMatch(/content: attr\(data-label\)/);
+    }
+  });
+
+  it('every figure cell carries a data-label in BOTH render paths', () => {
+    // The label is drawn by ::before from this attribute. These cards
+    // re-render themselves in JS on every team switch, so a data-label
+    // present only in the Astro pass means the labels vanish the first
+    // time you switch teams on a phone.
+    for (const [name] of CARDS) {
+      const src = readFileSync(`src/components/theleague/${name}.astro`, 'utf-8');
+      const astroLabels = (src.match(/<td data-label=/g) ?? []).length;
+      const clientLabels = (src.match(/<td data-label=\\?"/g) ?? []).length;
+      expect(astroLabels, `${name}: no data-labels in the Astro pass`).toBeGreaterThan(0);
+      expect(clientLabels, `${name}: no data-labels in the client re-render`).toBeGreaterThan(0);
+    }
+  });
+
+  it('the wrapper can actually scroll — min-width chain intact', () => {
+    // A grid item's automatic min-width is its min-content, not 0, so
+    // `overflow-x: auto` never engages without every link in the chain.
+    // Measured at 533px inside a 412px viewport before this was fixed.
+    const chart = readFileSync('src/components/theleague/ChartCard.astro', 'utf-8');
+    expect(chart).toMatch(/\.chart-card \{[\s\S]*?min-width: 0/);
+    expect(chart).toMatch(/\.chart-card__body \{[\s\S]*?min-width: 0/);
+    for (const [name, root] of CARDS) {
+      const src = readFileSync(`src/components/theleague/${name}.astro`, 'utf-8');
+      expect(src, `${name}: wrapper has no overflow-x`).toMatch(
+        new RegExp(`\\${root} \\.table-wrapper \\{[\\s\\S]*?overflow-x: auto`),
+      );
+    }
+  });
+});
