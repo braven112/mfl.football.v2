@@ -756,7 +756,7 @@
     {
       "name": "schefter-columns",
       "rules": "docs/claude/rules/schefter.md",
-      "note": "A column on a weekly cron is NOT breaking news: tier:'breaking' hands the post the homepage at P0 for 48h (selectBreakingStory \u2192 resolveHeroState), and three weekly columns at that tier preempted the regular-season daily rotation ~4 days in 7. Every article type must also export the full pipeline interface and declare relatedLinks. See tests/weekly-column-hero-claim.test.ts. The workflow is in this domain deliberately: the guard derives the weekly set from its cron\u2192type map, so an edit there must re-run the guard. Dedup for a once-per-season id must read the season ARCHIVE, not just the live feed: the weekly archiver rotating the original out is what re-posted the 2026 schedule-release column to GroupMe six days into the season. isDuplicate and appendToFeed share that check and fail closed on an unreadable shard, and --week does not waive the season guard for a type whose id ignores the week.",
+      "note": "A column on a weekly cron is NOT breaking news: tier:'breaking' hands the post the homepage at P0 for 48h (selectBreakingStory \u2192 resolveHeroState), and three weekly columns at that tier preempted the regular-season daily rotation ~4 days in 7. Every article type must also export the full pipeline interface and declare relatedLinks. See tests/weekly-column-hero-claim.test.ts. The workflow is in this domain deliberately: the guard derives the weekly set from its cron\u2192type map, so an edit there must re-run the guard. Dedup for a once-per-season id must read the season ARCHIVE, not just the live feed: the weekly archiver rotating the original out is what re-posted the 2026 schedule-release column to GroupMe six days into the season. isDuplicate and appendToFeed share that check and fail closed on an unreadable shard, and --week does not waive the season guard for a type whose id ignores the week. A roster-move `transaction` string is POSITIONAL and its add side carries a TRAILING COMMA, so it goes through parseRosterMove (scripts/lib/roster-move-parse.mjs) and never an ad-hoc split: splitting on the pipe and taking index 0 yields \"16171,\", a key no player map holds, which published a whole waiver column naming \"Player 16171\" instead of Kendre Miller and silently nulled its composite hero; and a `.filter(Boolean)` before indexing erases the empty add segment that marks a pure DROP (\"|15749,\"), crediting a team with a free pickup of the player it just cut. A BBID row whose bid the parser cannot read must never price as $0: a silent 0 is the same class of bug as the placeholder name.",
       "paths": [
         "scripts/article-types/*.mjs",
         "scripts/article-utils/*.mjs",
@@ -769,7 +769,8 @@
         "tests/article-type-interface.test.ts",
         "tests/article-type-league-option.test.ts",
         "tests/article-links.test.ts",
-        "tests/schefter-once-per-season-dedupe.test.ts"
+        "tests/schefter-once-per-season-dedupe.test.ts",
+        "tests/article-transaction-parse-guard.test.ts"
       ]
     },
     {

@@ -10,6 +10,7 @@ import { loadTeams, formatSalary, flipName, normalizePosition, formatDefName } f
 import { buildCachedSystem } from '../article-utils/ai-client.mjs';
 import { isRegularSeasonOrPlayoffs } from '../article-utils/season-guards.mjs';
 import { pickHeroPlayer } from '../article-utils/hero-player.mjs';
+import { parseRosterMove } from '../lib/roster-move-parse.mjs';
 import { primaryLink, articleLink, featureLink, linkList } from '../article-utils/article-links.mjs';
 import { LEAGUES, DEFAULT_LEAGUE_SLUG } from '../../src/config/leagues-data.mjs';
 
@@ -63,41 +64,67 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
   // Scored candidates for the composite hero — the biggest bid gets the face.
   const heroCandidates = [];
 
+  // Parse each move with the SHARED positional parser, never an ad-hoc split.
+  // MFL writes the add side with a TRAILING COMMA ("16171,|775000|16752,"), so
+  // `split('|')[0]` is "16171," — a key no player map holds, which is how a
+  // whole column shipped calling Kendre Miller "Player 16171". And a pure drop
+  // is encoded as an EMPTY add segment ("|15749,"), so a `.filter(Boolean)`
+  // before indexing promotes the dropped player to a phantom pickup — the same
+  // bug the scanner already shipped once (see scripts/lib/roster-move-parse.mjs).
+  let claimCount = 0;
   for (const txn of txns) {
+    const { addedIds, bbidAmount } = parseRosterMove(txn.transaction);
+    // Nothing added — this row is a drop, not a claim. Skip it entirely.
+    if (addedIds.length === 0) continue;
+
     const fid = txn.franchise;
     const teamName = teams.get(fid)?.name ?? `Team ${fid}`;
     if (!claimsByTeam[fid]) claimsByTeam[fid] = { name: teamName, claims: [] };
 
-    // Parse transaction string: "playerId|bidAmount|" or "playerId|bidAmount|droppedPlayerId|"
-    const parts = (txn.transaction || '').split('|').filter(Boolean);
-    const playerId = parts[0];
-    const bidAmount = parseInt(parts[1] || '0', 10);
-    const playerInfo = players.get(playerId);
+    // A BBID row whose bid the parser could not read would price as $0 and be
+    // indistinguishable in the prose from a free pickup. That is the same
+    // silent-wrong-number failure as the placeholder name, so say so loudly
+    // rather than publishing a claim at the wrong price.
+    if (txn.type === 'BBID_WAIVER' && !Number.isFinite(bbidAmount)) {
+      console.warn(
+        `  [waiver-pickups] unreadable BBID bid, skipping claim: ${JSON.stringify(txn.transaction)}`
+      );
+      continue;
+    }
 
-    const claim = {
-      player: playerInfo?.name ?? `Player ${playerId}`,
-      position: playerInfo?.position ?? '??',
-      bid: bidAmount,
-      bidDisplay: formatSalary(bidAmount),
-      type: txn.type,
-    };
+    for (const playerId of addedIds) {
+      // A BBID bid buys the one player on the add side; a free-agent add costs
+      // nothing. Only the BBID segment is ever a price.
+      const bidAmount = addedIds.length === 1 && Number.isFinite(bbidAmount) ? bbidAmount : 0;
+      const playerInfo = players.get(playerId);
 
-    claimsByTeam[fid].claims.push(claim);
-    totalSpent += bidAmount;
-    if (playerId) heroCandidates.push({ id: playerId, score: bidAmount });
+      const claim = {
+        player: playerInfo?.name ?? `Player ${playerId}`,
+        position: playerInfo?.position ?? '??',
+        bid: bidAmount,
+        bidDisplay: formatSalary(bidAmount),
+        type: txn.type,
+      };
 
-    if (bidAmount > highestBid.amount) {
-      highestBid = { amount: bidAmount, player: claim.player, team: teamName };
+      claimsByTeam[fid].claims.push(claim);
+      claimCount += 1;
+      totalSpent += bidAmount;
+      heroCandidates.push({ id: playerId, score: bidAmount });
+
+      if (bidAmount > highestBid.amount) {
+        highestBid = { amount: bidAmount, player: claim.player, team: teamName };
+      }
     }
   }
 
   const lines = [];
   lines.push(`WEEK ${week} WAIVER PICKUPS — ${LEAGUES[league].name} (${year} Season)`);
-  lines.push(`Total claims this week: ${txns.length}`);
+  lines.push(`Total claims this week: ${claimCount}`);
   lines.push(`Total spent: ${formatSalary(totalSpent)}`);
   lines.push('');
 
-  if (txns.length === 0) {
+  // Counts CLAIMS, not rows: a week of nothing but drops has txns but no pickups.
+  if (claimCount === 0) {
     lines.push('No waiver claims or free agent pickups this week.');
     return { factSheet: lines.join('\n'), enrichment: {} };
   }
@@ -118,8 +145,23 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
 
   lines.push('=== SPENDING SUMMARY ===');
   lines.push(`Biggest spender: ${sortedTeams[0]?.[1]?.name} (${formatSalary(sortedTeams[0]?.[1]?.claims.reduce((s, c) => s + c.bid, 0))})`);
-  lines.push(`Highest single bid: ${formatSalary(highestBid.amount)} for ${highestBid.player} by ${highestBid.team}`);
-  lines.push(`Most claims: ${sortedTeams[0]?.[1]?.name} (${sortedTeams[0]?.[1]?.claims.length})`);
+  // A week of nothing but free-agent adds has no priced claim, so highestBid is
+  // still its {0, '', ''} seed — printing it emits "Highest single bid: $0 for
+  // by " into the model's only source of truth. The AFL has never had a BBID
+  // row at all, so that is every AFL week. Omit the line instead.
+  if (highestBid.amount > 0) {
+    lines.push(`Highest single bid: ${formatSalary(highestBid.amount)} for ${highestBid.player} by ${highestBid.team}`);
+  } else {
+    lines.push('Highest single bid: none — no claim this week carried a bid.');
+  }
+  // sortedTeams is ordered by SPEND, so [0] is the biggest spender — asking it
+  // for "most claims" reported the top spender's single bid as the week's
+  // busiest team while another team had twice the moves. Max by COUNT.
+  const busiest = sortedTeams.reduce(
+    (a, b) => (b[1].claims.length > a[1].claims.length ? b : a),
+    sortedTeams[0]
+  );
+  lines.push(`Most claims: ${busiest?.[1]?.name} (${busiest?.[1]?.claims.length})`);
 
   const heroPlayerId = pickHeroPlayer(heroCandidates, playerMeta);
   return { factSheet: lines.join('\n'), enrichment: { heroPlayerId } };

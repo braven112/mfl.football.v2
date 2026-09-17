@@ -1122,6 +1122,54 @@ one, so the callback would point at a live team that isn't the subject).
 `pickFormerName` excludes both.
 
 
+## A fact sheet parses MFL's transaction string with `parseRosterMove` — never a split
+
+MFL encodes a roster move as a **positional** pipe-delimited string whose add
+side carries a **trailing comma**:
+
+```
+FREE_AGENT / WAIVER:  "addId,|dropId,"      either side may be empty
+BBID_WAIVER:          "addId,|bid|dropId,"  middle segment is a PRICE, not a player
+```
+
+`scripts/lib/roster-move-parse.mjs#parseRosterMove` is the one parser that
+reads it correctly. `waiver-pickups.mjs` rolled its own
+`.split('|').filter(Boolean)` and published a column that was wrong twice over:
+
+- **The trailing comma is part of `parts[0]`.** The lookup key was `"16171,"`,
+  which no player map holds, so every claim fell through to its
+  `` `Player ${playerId}` `` placeholder and the article read *"dropping
+  three-quarters of a million on Player 16171"* for what was Kendre Miller.
+  Nothing threw — the placeholder IS the fallback. The same bad key also missed
+  `playerMeta`, so `pickHeroPlayer` returned null and the article lost its
+  composite hero with no error either.
+- **`.filter(Boolean)` erases the empty segment that marks a pure drop.**
+  `"|15749,"` collapsed to `["15749,"]` and was indexed as an add, so the column
+  credited Bring The Pain with *"snagging Player 15749 at no cost"* in a week
+  they had **dropped** Isiah Pacheco. This is the identical bug
+  `roster-move-parse.mjs`'s own header records shipping once already in the
+  scanner — which is the point: the rule is only safe where the shared parser
+  is actually called.
+
+So: an add side that parses EMPTY is a drop — `continue`, never a claim. Count
+CLAIMS rather than transaction rows, or a week of nothing but drops reports
+pickups it does not have. And a bid buys the one player on the add side; a
+free-agent add is $0, never the previous row's price.
+
+A placeholder is not a safe degradation here. It is prose the pipeline will
+publish, so the fact sheet asserts it never contains `Player <digits>` or a
+`??` position.
+
+Guard: `tests/article-transaction-parse-guard.test.ts` — the behavioral half
+over `buildFactSheet`, plus a scan that no file in `scripts/article-types/` or
+`scripts/article-utils/` re-grows its own `split('|')`.
+
+While in that fact sheet: `sortedTeams` is ordered by **spend**, so
+`sortedTeams[0]` is the biggest spender. Reading its `claims.length` for
+"Most claims" told the model a one-bid team was the week's busiest while
+another had twice the moves. Max by count.
+
+
 ## Articles must link — and must plug the site
 
 Schefter has two jobs: report the league, and get owners USING the site. Until

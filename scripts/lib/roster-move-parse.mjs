@@ -38,11 +38,20 @@ export function parseRosterMove(txnStr) {
 
   // BBID_WAIVER: "addId,|bid|dropId," — the middle segment is the bid amount,
   // not a player. The drop segment may be empty (add-only winning bid).
-  const bbid = txnStr.match(/^(\d+),\|(\d+)\|(\d*),?$/);
+  //
+  // Three variations are all real in this league's history, and a shape that
+  // misses here does NOT fail — it falls through to the FREE_AGENT branch,
+  // where the BID is read as a dropped player id and the caller sees no bid at
+  // all (a $775K claim prices as $0). So the pattern has to cover them:
+  //   - the add side's comma is OPTIONAL: MFL wrote "8838|425000|0000" through
+  //     2016 and "8838,|425000|0000," from 2017 on.
+  //   - the bid may be DECIMAL ("425000.5", and a bare trailing dot "425000.").
+  //   - the drop side may name SEVERAL players, so it is parsed as a list.
+  const bbid = txnStr.match(/^(\d+),?\|(\d+(?:\.\d*)?)\|([\d,]*)$/);
   if (bbid) {
     addedIds.push(bbid[1]);
     bbidAmount = parseInt(bbid[2], 10);
-    if (bbid[3]) droppedIds.push(bbid[3]);
+    droppedIds.push(...idsIn(bbid[3]));
     return { addedIds, droppedIds, bbidAmount };
   }
 
