@@ -28,7 +28,7 @@ const read = (rel: string) => readFileSync(join(ROOT, rel), 'utf8');
 
 const SHOT_COMPOSITES: Array<[string, string]> = [
   ['TheLeague', 'src/components/theleague/FeatureCompositeHero.astro'],
-  ['AFL', 'src/components/afl/AflCompositeHero.astro'],
+  ['AFL', 'src/components/shared/LeagueCompositeHero.astro'],
 ];
 
 /** The `onerror` attribute on the img carrying `cls`. */

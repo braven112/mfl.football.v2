@@ -2,7 +2,13 @@
 /**
  * WaiverWireHero — the Tuesday-PM-through-Wednesday waiver slot.
  *
- * Shows top 3 projected free agents (unrostered players) with a countdown to
+ * Renders the AFL's waiver-day composite — the SAME component
+ * (`LeagueCompositeHero`) and the same copy (`waiverClaimsHeroView`) — in
+ * TheLeague's blue, with a top unrostered TheLeague player as the face.
+ * Rosters and ADP are roster-shaped, so they read the LEAGUE year.
+ *
+ * With no castable free agent (a missing feed) it falls back to the list below:
+ * top 3 projected free agents (unrostered players) with a countdown to
  * the deadline MFL's own calendar names, and the deadline itself printed in the
  * viewer's chosen clock.
  * Falls back to WaiverWireHeroStub if no projection data is available.
@@ -26,7 +32,12 @@
  */
 import type { HeroState } from '../../../types/hero-state';
 import type { WaiverDeadlineCopy } from '../../../utils/waiver-deadline-copy';
-import { getCurrentSeasonYear } from '../../../utils/league-year';
+import { getCurrentLeagueYear, getCurrentSeasonYear } from '../../../utils/league-year';
+import { castTopFreeAgentModel } from '../../../utils/hero-casting';
+import { getAdpRankedIds, getRosteredPlayerIds } from '../../../utils/offseason-hero-data';
+import { unknownWaiverCopy, waiverClaimsHeroView } from '../../../utils/waiver-claims-hero';
+import type { EventHeroView } from '../../../utils/afl-hero-resolver';
+import LeagueCompositeHero from '../../shared/LeagueCompositeHero.astro';
 import { getPlayerMap as getUnifiedPlayerMap } from '../../../utils/player-map';
 import PlayerCell from '../PlayerCell.astro';
 import WaiverWireHeroStub from '../hero-stubs/WaiverWireHeroStub.astro';
@@ -45,17 +56,41 @@ export interface Props {
 
 const { state, resolveLeaguePath: r, waiver = null } = Astro.props;
 
-const year = getCurrentSeasonYear(state.metadata.referenceDate);
+const referenceDate = state.metadata.referenceDate;
 
+// The composite's face: a player nobody in TheLeague rosters, in dynasty-ADP
+// order — the same cast as the AFL's waiver card. An empty roster set means the
+// feed is unreadable, so nobody is claimed to be available.
+const castYear = getCurrentLeagueYear(referenceDate);
+const rosteredForCast = getRosteredPlayerIds(castYear, 'theleague');
+const castModel = rosteredForCast.size > 0
+  ? castTopFreeAgentModel(getUnifiedPlayerMap(castYear), referenceDate, rosteredForCast, getAdpRankedIds(castYear, 'theleague'))
+  : null;
+const compositeView: EventHeroView | null = castModel
+  ? {
+      ...waiverClaimsHeroView(waiver ?? unknownWaiverCopy(referenceDate), {
+        link: r('/theleague/players'),
+        // TheLeague's blue; same wordmark and league scope as the AFL's card.
+        composite: { wordmark: 'WAIVERS', accent: 'kickoff', tone: null, scope: 'league' },
+      }),
+      model: { ...castModel, descriptor: 'Top Target' },
+    }
+  : null;
+
+const year = getCurrentSeasonYear(referenceDate);
+
+// The list below is only the fallback, so its feeds load only when it renders.
 let projData: any, playersData: any, rostersData: any;
-try {
-  [projData, playersData, rostersData] = await Promise.all([
-    import(`../../../../data/theleague/mfl-feeds/${year}/projectedScores.json`),
-    import(`../../../../data/theleague/mfl-feeds/${year}/players.json`),
-    import(`../../../../data/theleague/mfl-feeds/${year}/rosters.json`),
-  ]);
-} catch {
-  projData = null;
+if (!compositeView) {
+  try {
+    [projData, playersData, rostersData] = await Promise.all([
+      import(`../../../../data/theleague/mfl-feeds/${year}/projectedScores.json`),
+      import(`../../../../data/theleague/mfl-feeds/${year}/players.json`),
+      import(`../../../../data/theleague/mfl-feeds/${year}/rosters.json`),
+    ]);
+  } catch {
+    projData = null;
+  }
 }
 
 const rawScores = projData?.projectedScores?.playerScore ?? projData?.default?.projectedScores?.playerScore;
@@ -132,7 +167,9 @@ const waiversOpen = waiver ? waiver.mode !== 'fcfs' : true;
 const week = projData?.projectedScores?.week ?? projData?.default?.projectedScores?.week ?? '?';
 ---
 
-{hasData && freeAgents.length > 0 ? (
+{compositeView ? (
+  <LeagueCompositeHero view={compositeView} regionLabel="Waiver Wire" league="theleague" />
+) : hasData && freeAgents.length > 0 ? (
   <section class="ww-hero" aria-label="Waiver Wire">
     <div class="ww-hero__header">
       <div class="ww-hero__title-row">

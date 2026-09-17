@@ -15,7 +15,7 @@
  * In the LEAD-UP to each of those, AflEventHero takes over.
  *
  * Phases with an identity of their own — the keeper window and the two
- * conference drafts — render as COMPOSITES instead (`AflCompositeHero`), on
+ * conference drafts — render as COMPOSITES instead (`LeagueCompositeHero`), on
  * the shared shell TheLeague's heroes use. That routing is deliberately
  * conservative and lives here rather than in the resolver: a state whose view
  * carries no `composite` treatment, or for which neither a player nor a
@@ -42,7 +42,7 @@ import { getLeagueBySlug, ensureLeaguePrefix } from '../../config/leagues';
 import AflPlayoffsHero from './AflPlayoffsHero.astro';
 import AflChampionshipHero from './AflChampionshipHero.astro';
 import AflEventHero from './AflEventHero.astro';
-import AflCompositeHero from './AflCompositeHero.astro';
+import LeagueCompositeHero from '../shared/LeagueCompositeHero.astro';
 import LiveScoringHero from '../shared/LiveScoringHero';
 import '../../styles/live-scoring-hero.css';
 import '../../styles/trade-deadline-hero.css';
@@ -123,7 +123,7 @@ const AFL_TRADE_BUILDER = ensureLeaguePrefix(getLeagueBySlug('afl-fantasy')!, '/
     userFranchiseId={userFranchiseId}
   />
 ) : 'view' in state && state.view.composite && (state.view.model || state.view.screenshot) ? (
-  <AflCompositeHero
+  <LeagueCompositeHero
     view={state.view}
     regionLabel={REGION_LABEL[state.kind] ?? 'AFL hero'}
     clampSummary={state.kind === 'feature'}

@@ -154,7 +154,7 @@ describe('hero crest rendering', () => {
       'src/components/theleague/CutWatchCompositeHero.astro',
       'src/components/theleague/PreseasonCompositeHero.astro',
       'src/components/theleague/season-heroes/RecapCompositeHero.astro',
-      'src/components/afl/AflCompositeHero.astro',
+      'src/components/shared/LeagueCompositeHero.astro',
     ];
     for (const h of heroes) {
       const src = read(h);
@@ -168,7 +168,7 @@ describe('hero crest rendering', () => {
     const page = read('src/pages/afl-fantasy/index.astro');
     expect(page).toContain('heroState.view.modelAccent = heroAccent.color');
     expect(page).toContain('heroState.view.modelFranchiseId = heroAccent.franchiseId');
-    expect(read('src/components/afl/AflCompositeHero.astro')).toContain('view.modelFranchiseId');
+    expect(read('src/components/shared/LeagueCompositeHero.astro')).toContain('view.modelFranchiseId');
   });
 });
 
@@ -217,7 +217,7 @@ describe('league events vs team events', () => {
   });
 
   it('the AFL gates its skin on the treatment’s scope', () => {
-    const afl = read('src/components/afl/AflCompositeHero.astro');
+    const afl = read('src/components/shared/LeagueCompositeHero.astro');
     expect(afl).toMatch(/treatment\.scope === 'team'/);
   });
 

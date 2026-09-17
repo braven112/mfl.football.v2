@@ -172,7 +172,7 @@ describe('AFL composite hero routing', () => {
       /'view' in state && state\.view\.composite && \(state\.view\.model \|\| state\.view\.screenshot\)/,
     );
     // The fallback must still exist after the composite branch.
-    const composite = hero.indexOf('<AflCompositeHero');
+    const composite = hero.indexOf('<LeagueCompositeHero');
     const fallback = hero.indexOf('<AflEventHero');
     expect(composite).toBeGreaterThan(-1);
     expect(fallback).toBeGreaterThan(composite);
@@ -183,7 +183,7 @@ describe('AFL composite hero routing', () => {
     // the viewer's colours, the composite's glow already says it. Stacking them
     // floats the cast player on a second team's gradient.
     const hero = readFileSync(join(__dirname, '../src/components/afl/AflHero.astro'), 'utf8');
-    const block = hero.slice(hero.indexOf('<AflCompositeHero'), hero.indexOf('<AflEventHero'));
+    const block = hero.slice(hero.indexOf('<LeagueCompositeHero'), hero.indexOf('<AflEventHero'));
     expect(block).not.toContain('backdrop');
   });
 });
