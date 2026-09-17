@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-09-17T11:01:16.527Z"
+    "fetchedAt": "2026-09-17T14:46:17.257Z"
   },
   "players": [
     {
@@ -2280,7 +2280,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 1,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "TE"
         ],
@@ -2308,7 +2308,12 @@
         ]
       },
       "gamesPlayed": 1,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "13192",
+          "name": "Njoku, David"
+        }
+      ]
     },
     {
       "id": "16152",
@@ -9350,7 +9355,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 2,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "WR"
         ],
@@ -10170,7 +10175,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 3,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "RB"
         ],
@@ -13219,12 +13224,12 @@
       "gamesPlayed": 1,
       "depthChartAhead": [
         {
-          "id": "17099",
-          "name": "Gadsden, Oronde"
-        },
-        {
           "id": "13192",
           "name": "Njoku, David"
+        },
+        {
+          "id": "17099",
+          "name": "Gadsden, Oronde"
         }
       ]
     },
@@ -23683,7 +23688,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 2,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "TE"
         ],
@@ -23711,12 +23716,7 @@
         ]
       },
       "gamesPlayed": 1,
-      "depthChartAhead": [
-        {
-          "id": "17099",
-          "name": "Gadsden, Oronde"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "15252",
