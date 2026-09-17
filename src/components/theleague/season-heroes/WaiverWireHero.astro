@@ -79,15 +79,18 @@ const compositeView: EventHeroView | null = castModel
 
 const year = getCurrentSeasonYear(referenceDate);
 
+// The list below is only the fallback, so its feeds load only when it renders.
 let projData: any, playersData: any, rostersData: any;
-try {
-  [projData, playersData, rostersData] = await Promise.all([
-    import(`../../../../data/theleague/mfl-feeds/${year}/projectedScores.json`),
-    import(`../../../../data/theleague/mfl-feeds/${year}/players.json`),
-    import(`../../../../data/theleague/mfl-feeds/${year}/rosters.json`),
-  ]);
-} catch {
-  projData = null;
+if (!compositeView) {
+  try {
+    [projData, playersData, rostersData] = await Promise.all([
+      import(`../../../../data/theleague/mfl-feeds/${year}/projectedScores.json`),
+      import(`../../../../data/theleague/mfl-feeds/${year}/players.json`),
+      import(`../../../../data/theleague/mfl-feeds/${year}/rosters.json`),
+    ]);
+  } catch {
+    projData = null;
+  }
 }
 
 const rawScores = projData?.projectedScores?.playerScore ?? projData?.default?.projectedScores?.playerScore;
