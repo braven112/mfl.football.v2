@@ -2,8 +2,20 @@
  * Vercel Cron → GitHub Actions bridge
  *
  * Triggers the "Roster Sync" workflow via workflow_dispatch so we get
- * precise 4-minute scheduling from Vercel while the heavy lifting
- * (MFL fetch, salary update, git commit) stays in GitHub Actions.
+ * RELIABLE scheduling from Vercel while the heavy lifting (MFL fetch,
+ * salary update, git commit) stays in GitHub Actions.
+ *
+ * Reliable is the point, not fast. GitHub drops this repo's `schedule`
+ * events in bulk — a five-minute cron delivered 5-8 runs a day, not 288,
+ * from 2026-08-27 — and because the committed feeds are baked into the
+ * build, a sync that does not run is a site that cannot update. The cadence
+ * lives in vercel.json; the workflow's own schedule is an offset fallback.
+ *
+ * (Spelled out rather than written as a cron step on purpose: a step
+ * expression contains the two characters that END a block comment, so
+ * quoting one here silently terminates this JSDoc and hands the rest of it
+ * to the compiler as code. That cost 39 type errors on this very file — and
+ * nothing but `astro check` can see it, since no unit test imports a route.)
  *
  * Required env vars:
  *   CRON_SECRET   – shared secret Vercel sends as Bearer token
@@ -16,9 +28,27 @@ import type { APIRoute } from 'astro';
 import { outboundAllowed } from '../../../utils/deploy-environment';
 
 export const GET: APIRoute = async ({ request }) => {
-  // Verify the request is from Vercel Cron
-  const authHeader = request.headers.get('authorization');
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  // Verify the request is from Vercel Cron.
+  //
+  // Fail CLOSED on an unconfigured secret, exactly as api/cron/push-fanout.ts
+  // and api/groupme/sync.ts already do. Comparing straight against
+  // `Bearer ${process.env.CRON_SECRET}` reads as a check but is not one when
+  // the variable is missing: the template literal becomes the literal string
+  // "Bearer undefined", so an environment that merely FORGOT the variable
+  // accepts `Authorization: Bearer undefined` from anyone — and this route
+  // dispatches a workflow that commits to main with Actions secrets.
+  //
+  // This is the original of the three bridges; the other two grew the guard
+  // later and nobody came back for this one. It matters more now that
+  // vercel.json points a cron at it.
+  const secret = process.env.CRON_SECRET;
+  if (!secret) {
+    return new Response(
+      JSON.stringify({ error: 'CRON_SECRET not configured' }),
+      { status: 503, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+  if (request.headers.get('authorization') !== `Bearer ${secret}`) {
     return new Response('Unauthorized', { status: 401 });
   }
 

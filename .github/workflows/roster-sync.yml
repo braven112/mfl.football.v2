@@ -2,7 +2,39 @@ name: Roster Sync
 
 on:
   schedule:
-    - cron: "*/5 * * * *"
+    # FALLBACK ONLY — the primary trigger is the Vercel cron in vercel.json,
+    # which dispatches this workflow every 15 minutes.
+    #
+    # GitHub does not honour a high-frequency `schedule` on this repo, and it
+    # is not a delay you can wait out. Measured over 300 runs: from 2026-08-27
+    # the delivered cadence collapsed from a 21-47 min median to a 2-5 HOUR
+    # median, while `*/5` asked for 288 runs a day and got 5-8. Nothing here
+    # changed on that date and no run was cancelled — GitHub simply stopped
+    # dispatching the event, as it is explicitly allowed to do. Every other
+    # scheduled job in this repo degraded identically on the same day.
+    #
+    # That is how TheLeague's site went a full hour past the Wed 19:00 PT
+    # waiver run still showing pre-waiver rosters (2026-09-16): the last sync
+    # had landed at 18:20 PT and the next was hours away. The committed feeds
+    # are baked into the build, so no sync commit means no redeploy and the
+    # page cannot move, however correct the page code is.
+    #
+    # This is a genuine fallback for a Vercel outage, not the schedule the
+    # site depends on. Do not "restore" this to `*/5` — that number was never
+    # being delivered, and combined with the Vercel cron it would only
+    # multiply production builds, which are 91% of the Vercel bill.
+    #
+    # OFFSET DELIBERATELY, not `*/30`. The Vercel cron fires at :00/:15/:30/:45,
+    # so a `*/30` fallback lands on :00 and :30 — a strict SUBSET of those
+    # slots, which means it adds no coverage at any minute the primary does
+    # not already cover, and collides. Every trigger shares the
+    # `concurrency: roster-sync` group with `cancel-in-progress: true`, so a
+    # scheduled event GitHub does deliver cancels the Vercel-dispatched run
+    # mid-flight. That is not merely wasted work: the push-alert steps below
+    # send their fan-out BEFORE writing the Redis snapshot that records what
+    # was sent, so a cancel in that gap re-sends the same injury pushes to
+    # owners' devices on the next run. :07/:37 interleaves instead.
+    - cron: "7,37 * * * *"
   workflow_dispatch:
 
 concurrency:
@@ -20,11 +52,11 @@ jobs:
         uses: actions/checkout@v6
         with:
           ssh-key: ${{ secrets.DEPLOY_KEY }}
-          # Shallow on purpose: this job runs 288×/day and only needs the tip
+          # Shallow on purpose: this job runs ~96×/day and only needs the tip
           # to commit on top of. commit-push's `git pull --rebase origin main`
           # still works from a depth-1 clone (the pre-push fetch deepens as
           # needed). A full clone here re-downloads the entire multi-GB pack
-          # every 5 minutes.
+          # on every run.
           fetch-depth: 1
 
       - name: Setup pnpm + Node + install
@@ -34,7 +66,7 @@ jobs:
       # strategy.matrix: a matrix would spin up a separate job (and separate
       # checkout/install) per league, and this workflow ends with ONE shared
       # commit+push covering every league's output. Two matrix jobs racing to
-      # commit/push at the end of a 5-minute cron is exactly the kind of
+      # commit/push at the end of a high-frequency cron is exactly the kind of
       # non-fast-forward push failure this refactor should avoid introducing
       # — so the fetch stays one job with a loop. Adding a league is still a
       # one-entry change: add a "slug:id:hasSalarySync" tuple to LEAGUES
@@ -104,22 +136,37 @@ jobs:
       # from ESPN's scoreboard API independent of any per-league MFL data,
       # so this reordering doesn't change what it reads or writes.
       # ESPN athlete-id backfill for the players MFL omits an espn_id for.
-      # Runs ONCE A DAY, not on the 5-minute cron: it costs 32 ESPN roster
+      # Runs ONCE A DAY, not on every run: it costs 32 ESPN roster
       # fetches, and the only thing that can change the gap it fills is the
-      # daily players.json refresh above. Rosters DO change on the 5-minute
+      # daily players.json refresh above. Rosters DO change on the sync
       # cadence though, so a daily pass is what keeps a newly-added player
       # from sitting without an id (and tests/espn-athlete-id-coverage.test.ts
       # red) for longer than a day. The script is non-fatal by design and
       # writes nothing when ESPN is unreachable, so a bad day leaves the
       # committed backfill in place.
+      # THE WINDOW MUST BE AT LEAST THE DISPATCH INTERVAL, or the backfill
+      # silently never runs. It was `MIN -lt 5`, sized for the old `*/5`
+      # schedule where a run started every five minutes and an overrunning
+      # 11:55 run was a second chance at the window. The primary trigger is
+      # now the Vercel cron at :00/:15/:30/:45, so 12:00 is the ONLY dispatch
+      # that can reach this step in time — and only if queue, install and the
+      # two-league fetch all finish inside four minutes. A slow queue meant a
+      # whole day with no backfill and nothing saying so.
+      #
+      # 15 minutes matches the dispatch interval, so the 12:00 run always
+      # lands inside it and the 12:15 run (reaching this step at ~:16) never
+      # does — still exactly one pass a day. The offset :07 fallback can add a
+      # second pass on a day it fires, which is harmless: the script is
+      # idempotent and non-fatal, and it costs 32 ESPN fetches on the rare day
+      # Vercel was down.
       - name: Refresh ESPN athlete-id backfill (daily)
         run: |
           HOUR=$(date -u +%H)
           MIN=$((10#$(date -u +%M)))
-          if [ "$HOUR" = "12" ] && [ "$MIN" -lt 5 ]; then
+          if [ "$HOUR" = "12" ] && [ "$MIN" -lt 15 ]; then
             node ./scripts/fetch-espn-athlete-ids.mjs
           else
-            echo "Skipping — this step runs once daily, in the 12:00-12:04 UTC window."
+            echo "Skipping — this step runs once daily, in the 12:00-12:14 UTC window."
           fi
 
       - name: Fetch live NFL odds
@@ -133,7 +180,7 @@ jobs:
         run: node ./scripts/consolidate-roster-history.mjs
 
       # Push alerts ride this job rather than getting crons of their own:
-      # it already runs every five minutes with a checkout in hand, and both
+      # it already runs every fifteen minutes with a checkout in hand, and both
       # scripts read the feeds fetched above. Each is non-fatal by design and
       # exits 0 on any failure — they run BEFORE the commit, and a push
       # outage must not cost us the feed write that already succeeded.

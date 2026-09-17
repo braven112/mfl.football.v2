@@ -167,6 +167,67 @@ telling a human what to run locally, and pushes nothing. Routed by the
 `github-workflows` domain.
 
 
+## GitHub's `schedule` is not a cadence — the Vercel cron is the primary trigger
+
+GitHub Actions may drop a scheduled event, and on this repo it does, in bulk.
+Measured over 300 `roster-sync.yml` runs: until 2026-08-26 the delivered cadence
+held a 21-47 min median; **from 2026-08-27 it collapsed to a 2-5 HOUR median and
+5-8 runs a day, against the 288 that `*/5` asks for.** No workflow file changed
+on that date, no run was cancelled, every conclusion was `success`, and every
+other scheduled job in the repo degraded identically the same day — the repo-wide
+run count went 589 → 135. Push-triggered runs were never affected. This is
+GitHub declining to dispatch, which its docs reserve the right to do, and it is
+not a delay you can wait out.
+
+Why it is not merely late data: **the committed MFL feeds are baked into the
+build** (`import.meta.glob(..., { eager: true })`), and a sync commit to `main`
+is what redeploys production. No sync run means no commit, which means no
+redeploy, which means the site cannot move — however correct the page code is.
+On 2026-09-16 TheLeague sat a full hour past the Wed 19:00 PT waiver run still
+serving pre-waiver rosters: the last sync had landed at 18:20 PT and the next
+was hours out. `resolveWaiverWindow` had already flipped to "PROCESSED" on
+schedule; there was simply no deploy carrying the new rosters.
+
+So the schedule lives in **`vercel.json` → `crons`**, which fires
+`/api/cron/roster-sync`, which `workflow_dispatch`es the workflow. The
+workflow's own `schedule:` is a fallback for a Vercel outage, at `*/30`.
+
+- **This bridge already existed and was dead for six months.** It shipped
+  2026-03-21 with its `crons` entry and the entry was removed eleven hours
+  later (`4179e14`, "unreliable on Hobby plan") with the route left behind.
+  That reason expired when the account moved to **Vercel Pro**, which supports
+  minute-granularity crons; Hobby is daily-only, which is what made it look
+  broken. Two other files cite the route in their comments as the bridge shape
+  to copy, so it read as live infrastructure the whole time.
+- **Do not "restore" the workflow to `*/5`.** That number was never being
+  delivered, and alongside the Vercel cron it only multiplies production builds
+  — 91% of the Vercel bill (see `scripts/vercel-ignore-build.mjs`). Every sync
+  commit to `main` is a production build, so the cron's cadence IS a spend
+  decision. `*/15` is the deliberate balance.
+- **A cron path is an ordinary public route.** These bridges start workflows
+  that commit to `main` with Actions secrets, so the `CRON_SECRET` bearer check
+  is load-bearing, as is `outboundAllowed()` — staging and previews carry
+  production's credentials and must never dispatch.
+- Requires `CRON_SECRET` and a `GH_PAT` with `actions:write` in Vercel's
+  **production** environment. Vercel only sends the bearer token when
+  `CRON_SECRET` is set, and only production deployments run crons.
+- Trigger one by hand with `pnpm dlx vercel crons run /api/cron/roster-sync`.
+- **Never quote a cron STEP expression inside a `/** … *\/` block comment.** It
+  contains the two characters that close one, so the comment ends mid-sentence
+  and the remaining prose is handed to the compiler as code. Writing one into
+  this route's JSDoc cost 39 type errors in a single file, and **nothing but
+  `astro check` can see it**: `pnpm test:unit` does not type-check and no unit
+  test imports an API route, so the whole suite stays green. Spell the cadence
+  out in words, or use a line comment.
+
+Guard: `tests/vercel-cron-targets.test.ts` — checks both directions, because
+each failure is silent in its own way. An orphaned bridge (a route with no cron)
+is dead code wearing the costume of a live path; a dangling cron (a cron with no
+route) is a 404 on a schedule nobody reads. It also pins the `CRON_SECRET` gate
+on every cron target and fails a sub-30-minute `schedule:` in `roster-sync.yml`.
+Routed by the `github-workflows` domain.
+
+
 ## Astro 7 — strict Rust compiler, pinned compressHTML
 
 Upgraded to Astro 7 (Vite 8/Rolldown, @astrojs/vercel 11) in July 2026.
