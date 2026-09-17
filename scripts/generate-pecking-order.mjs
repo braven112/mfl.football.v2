@@ -708,17 +708,28 @@ export function buildGroupMeAnnouncement(issue, teams, league) {
 }
 
 /**
- * The issue's own permalink — the readiness probe for this week's column.
+ * WHY THIS LANE QUEUES BUT DOES NOT WAIT.
  *
- * `/<league>/pecking-order/<year>/<week>` is PRERENDERED from a getStaticPaths
- * glob over the committed issue files, so a week that has not deployed yet has
- * no path at all and answers 404. That makes it the honest "is this week live"
- * signal, where `/pecking-order` is not: that page exists every week of the
- * year and would simply show LAST week's column to everyone the announcement
- * just told to go read this one.
+ * The announcement still moves behind the workflow's commit step (so it cannot
+ * go out at all if that step failed, and never before the push) — but unlike
+ * the Schefter columns it does not probe a URL first, because neither
+ * candidate can answer honestly today:
+ *
+ *  - `/pecking-order` answers 200 in every week of the season. It is the page
+ *    that shows LAST week's column while the deploy is in flight, so waiting
+ *    on it is waiting on nothing.
+ *  - `/<league>/pecking-order/<year>/<week>` would be the honest probe — it is
+ *    prerendered per issue, so an undeployed week has no path — except that
+ *    route returns **500 in production today**, on every issue, in both
+ *    leagues. A probe against it could only ever burn its full timeout and
+ *    push the announcement 12 minutes late. The Thursday reveal, which lands
+ *    against a kickoff margin, is the worst possible place for that.
+ *
+ * Both halves — the 500, and the marker the reveal needs on top of a status
+ * code because it AMENDS a page rather than creating one — are written up in
+ * docs/claude/followups/2026-09-17-pecking-order-permalink-500.md.
  */
-const issuePermalink = (league, year, week) =>
-  `/${league.slug}/pecking-order/${year}/${week}`;
+const VERIFY_PATH = null;
 
 /**
  * Queue Tuesday's announcement. It is SENT by
@@ -732,7 +743,7 @@ async function queueAnnouncement(issue, teams, league, { year, week, push, voter
     league: league.slug,
     kind: 'pecking-order',
     postId: `pecking-order-${year}-${week}`,
-    verifyPath: issuePermalink(league, year, week),
+    verifyPath: VERIFY_PATH,
     groupMeText: buildGroupMeAnnouncement(issue, teams, league),
     botEnv: GROUPME_BOT_ENV[league.slug],
     push,
@@ -836,9 +847,7 @@ async function runClosePoll(opts, league) {
   // the site, not an announcement, and a dry operator run that skips chat
   // still wants the archive correct. Replace-by-id, so a re-run cannot leave
   // two Owners' Poll posts for the same week.
-  const revealPostId = await writeRevealFeedPost({
-    league, issue, teams: teamsConfig.teams, priorIssues,
-  });
+  await writeRevealFeedPost({ league, issue, teams: teamsConfig.teams, priorIssues });
 
   if (opts.publish) {
     const callback = buildCallback({ issue, priorIssues, teams: teamsConfig.teams });
@@ -861,14 +870,16 @@ async function runClosePoll(opts, league) {
     // QUEUED, not sent — same reason as the Tuesday column. The reveal names
     // a tally that only exists in the amended issue file, so announcing
     // before the deploy sends every owner to a page still showing an open
-    // ballot. `revealPostId` is the probe: that feed post and the amended
-    // issue are in the SAME commit, so its permalink going live means the
-    // tally is live. No post (a league that wrote none) → nothing to wait on.
+    // ballot and inviting them to vote in a poll that has closed.
+    //
+    // No probe — see VERIFY_PATH. Note the reveal's own feed post could not
+    // have served as one either: buildRevealFeedPost emits
+    // type 'power-ranking', and news/[id].astro only ever serves an article.
     const { file, size } = await enqueueAnnounce(projectRoot, {
       league: league.slug,
       kind: 'owners-poll-close',
-      postId: revealPostId ?? `owners-poll-close-${redisWindowYear}-${week}`,
-      verifyPath: revealPostId ? `/${league.slug}/news/${revealPostId}` : null,
+      postId: `owners-poll-close-${redisWindowYear}-${week}`,
+      verifyPath: VERIFY_PATH,
       groupMeText: text || null,
       botEnv: GROUPME_BOT_ENV[league.slug],
       push: null,
@@ -883,25 +894,24 @@ async function runClosePoll(opts, league) {
 /**
  * Write (or replace) the Owners' Poll reveal post in the league's feed.
  *
- * RETURNS the post id, because that permalink is the readiness probe for the
- * whole close pass: the reveal post and the amended issue ride the SAME
- * commit, so `/news/<id>` answering 200 means the tally is live on the issue
- * page too. The issue's own permalink cannot serve — it has existed since
- * Tuesday and would answer 200 while still showing an open ballot.
+ * Note it is NOT the close pass's readiness probe, tempting as that looks: the
+ * post is `type: 'power-ranking'`, and `news/[id].astro` serves only
+ * `type === 'article'` with content or grades. A probe on its permalink could
+ * never do anything but time out. The probe is the issue permalink plus a
+ * marker — see runClosePoll.
  */
 async function writeRevealFeedPost({ league, issue, teams, priorIssues = [] }) {
   const post = buildRevealFeedPost({ league, issue, teams, priorIssues });
-  if (!post) return null;
+  if (!post) return;
 
   const feedPath = path.join(projectRoot, league.schefterFeedPath);
   const feed = await tryLoadJSON(feedPath);
   if (!feed) {
     console.warn(`  [poll] No feed at ${league.schefterFeedPath} — skipping the reveal post.`);
-    return null;
+    return;
   }
   await fs.writeFile(feedPath, JSON.stringify(upsertFeedPost(feed, post), null, 2) + '\n', 'utf8');
   console.log(`  ✓ Feed post ${post.id}`);
-  return post.id;
 }
 
 /**

@@ -36,10 +36,13 @@ export function queuePath(projectRoot) {
  * @property {string} league      Registry slug ('theleague' | 'afl-fantasy').
  * @property {string} kind        Day-cap kind — see scripts/lib/groupme-day-plan.mjs.
  * @property {string} postId      For logs and the push `tag`.
- * @property {string} verifyPath  League-PREFIXED route that must answer 200
- *   before we announce. The article PERMALINK, even when the promo links
- *   somewhere else: the permalink is the page that 404s into a redirect while
- *   a deploy is in flight, so it is the honest readiness signal.
+ * @property {string|null} verifyPath  League-PREFIXED route that must answer
+ *   200 before we announce, or null to send as soon as the commit step has
+ *   run. The article PERMALINK, even when the promo links somewhere else: the
+ *   permalink is the page that 404s into a redirect while a deploy is in
+ *   flight, so it is the honest readiness signal. Null is for a lane with no
+ *   page that can honestly answer — see the Pecking Order in
+ *   docs/claude/followups/2026-09-17-pecking-order-permalink-500.md.
  * @property {string|null} groupMeText  Null skips the chat post.
  * @property {string} botEnv      Name of the env var holding this league's
  *   Schefter bot id. Carried rather than re-derived so the league → bot map

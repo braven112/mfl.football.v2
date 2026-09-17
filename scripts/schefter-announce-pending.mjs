@@ -49,13 +49,15 @@ export async function announceOne(entry, { dryRun = false, log = console, wait =
 
   log.log?.(`\n📣 ${entry.postId} (${entry.league})`);
 
+  const isDry = dryRun || entry.dryRun === true;
+
   // The permalink is the readiness signal even when the promo points
-  // elsewhere — see AnnounceEntry.verifyPath.
-  const published = entry.verifyPath
+  // elsewhere — see AnnounceEntry.verifyPath. Skipped on a dry run: nothing
+  // was committed, so the wait could only ever burn its full timeout probing
+  // production for a page that is never going to appear.
+  const published = entry.verifyPath && !isDry
     ? await wait({ league, path: entry.verifyPath, log })
     : { live: true, attempts: 0 };
-
-  const isDry = dryRun || entry.dryRun === true;
   let posted = false;
 
   if (entry.groupMeText && isDry) {

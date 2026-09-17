@@ -203,14 +203,25 @@ describe('the generator queues; the workflow sends after the push', () => {
     expect(commit).toBeGreaterThan(generate);
   });
 
-  it('both steps share one queue path, and it is outside the workspace', async () => {
+  it('both steps share one queue path, declared per STEP and outside the workspace', async () => {
     const wf = parseYaml(
       await fs.readFile(path.join(REPO_ROOT, '.github/workflows/schefter-articles.yml'), 'utf8'),
     );
-    const queue = wf.jobs.generate.env?.SCHEFTER_ANNOUNCE_QUEUE ?? '';
-    // Job-level: the Gauntlet's two per-league processes must append to the
-    // same file, and the file must not be committable.
-    expect(queue).toContain('runner.temp');
+    const job = wf.jobs.generate;
+
+    // `runner` does not exist as a context at JOB level — a runner is not
+    // assigned until steps run, so `jobs.<id>.env` referencing it is rejected
+    // outright. This assertion used to pin that broken form.
+    expect(JSON.stringify(job.env ?? {})).not.toContain('runner.');
+
+    const queues = (job.steps as { env?: Record<string, string> }[])
+      .map((s) => s.env?.SCHEFTER_ANNOUNCE_QUEUE)
+      .filter(Boolean);
+    // The generator writes it and the announce step reads it: two steps, ONE
+    // path, and outside the workspace so it can never be committed.
+    expect(queues).toHaveLength(2);
+    expect(new Set(queues).size).toBe(1);
+    expect(queues[0]).toContain('runner.temp');
   });
 
   it('the announce step carries the credentials the senders need', async () => {
@@ -241,31 +252,49 @@ describe('the Pecking Order queues too — same race, softer symptom', () => {
    * poll section was not there either.
    */
   let generator = '';
+  let POLL_SECTION = '';
+  let REVEAL_POST = '';
   beforeEach(async () => {
     generator ||= await fs.readFile(
       path.join(REPO_ROOT, 'scripts/generate-pecking-order.mjs'),
       'utf8',
     );
+    POLL_SECTION ||= await fs.readFile(
+      path.join(REPO_ROOT, 'src/components/shared/owners-poll/OwnersPollSection.astro'),
+      'utf8',
+    );
+    if (!REVEAL_POST) {
+      const posts = await fs.readFile(
+        path.join(REPO_ROOT, 'scripts/lib/owners-poll-posts.mjs'),
+        'utf8',
+      );
+      REVEAL_POST = posts.slice(posts.indexOf('export function buildRevealFeedPost'));
+    }
   });
 
-  it('waits on the ISSUE PERMALINK, not on /pecking-order', () => {
-    // `/pecking-order` answers 200 in every week of the season, so it proves
-    // nothing. `/<league>/pecking-order/<year>/<week>` is prerendered from a
-    // glob over the committed issues: no file, no path, 404 — which is the
-    // readiness signal this needs.
-    expect(generator).toMatch(/pecking-order\/\$\{year\}\/\$\{week\}/);
-    const queuedPaths = generator.match(/verifyPath: [^\n]+/g) ?? [];
-    expect(queuedPaths).toHaveLength(2);
-    expect(queuedPaths.join('\n')).not.toMatch(/verifyPath: '\/pecking-order'/);
+  it('queues without a probe — neither candidate URL can answer honestly', () => {
+    // `/pecking-order` answers 200 every week of the season, so waiting on it
+    // is waiting on nothing. The per-issue permalink WOULD be honest (it is
+    // prerendered, so an undeployed week has no path) except that route 500s
+    // in production today, in both leagues — a probe against it could only
+    // burn its full timeout and push the reveal into the kickoff margin.
+    // docs/claude/followups/2026-09-17-pecking-order-permalink-500.md
+    expect(generator).toMatch(/const VERIFY_PATH = null;/);
+    expect(generator.match(/verifyPath: VERIFY_PATH,/g) ?? []).toHaveLength(2);
+    expect(generator).not.toMatch(/verifyPath: '\/pecking-order'/);
+
+    // Queueing is still the point: the announcement cannot go out ahead of the
+    // commit step, and cannot go out at all if that step failed.
+    expect(generator.match(/enqueueAnnounce\(/g) ?? []).toHaveLength(2);
   });
 
-  it("the reveal waits on the feed post that rides its own commit", () => {
-    // The issue permalink has existed since Tuesday and would answer 200 while
-    // still showing an open ballot. The reveal's feed post is NEW and lands in
-    // the same commit as the amended issue, so its permalink going live means
-    // the tally is live.
-    expect(generator).toMatch(/revealPostId \? `\/\$\{league\.slug\}\/news\/\$\{revealPostId\}` : null/);
-    expect(generator).toMatch(/return post\.id;/);
+  it('the reveal could not have probed its own feed post', () => {
+    // buildRevealFeedPost emits type 'power-ranking', and news/[id].astro
+    // serves only `type === 'article'` with content or grades — so that
+    // permalink never resolves, however tempting it looks as a probe.
+    expect(REVEAL_POST).toMatch(/type: 'power-ranking'/);
+    expect(REVEAL_POST).not.toMatch(/type: 'article'/);
+    expect(generator).not.toMatch(/\/news\/\$\{revealPostId\}/);
   });
 
   it('carries the column push category and the ballot pushes with it', () => {
@@ -317,9 +346,33 @@ describe('announceOne', () => {
     expect(lines.join('\n')).toContain('[dry-run] Would post to GroupMe');
   });
 
+  it('a dry run does not wait on the live site either', async () => {
+    // Nothing was committed, so the probe could only burn its full 12-minute
+    // timeout against a page that is never going to appear.
+    const { announceOne } = await import('../scripts/schefter-announce-pending.mjs');
+    let waited = false;
+    await announceOne(
+      {
+        league: 'theleague',
+        kind: 'schedule-strength',
+        postId: 'sf_dry_nowait',
+        verifyPath: '/theleague/news/sf_dry_nowait',
+        groupMeText: 'x',
+        botEnv: 'GROUPME_SCHEFTER_BOT_ID',
+        push: null,
+        dryRun: true,
+      },
+      { dryRun: true, wait: async () => { waited = true; return { live: true, attempts: 1 }; }, log: silent },
+    );
+    expect(waited).toBe(false);
+  });
+
   it('waits before it sends, and reports an unknown league instead of guessing', async () => {
     const { announceOne } = await import('../scripts/schefter-announce-pending.mjs');
     const order: string[] = [];
+    // A LIVE entry: the dry-run path deliberately skips the wait, so it cannot
+    // show the ordering. No bot id is set for this env name, so the send stops
+    // at onMissingBotId without reaching the network.
     await announceOne(
       {
         league: 'theleague',
@@ -327,14 +380,15 @@ describe('announceOne', () => {
         postId: 'sf_order',
         verifyPath: '/theleague/news/sf_order',
         groupMeText: 'x',
-        botEnv: 'GROUPME_SCHEFTER_BOT_ID',
+        botEnv: 'GROUPME_BOT_ID_DELIBERATELY_UNSET',
         push: null,
-        dryRun: true,
       },
       {
-        dryRun: true,
         wait: async () => { order.push('wait'); return { live: true, attempts: 1 }; },
-        log: { log: (m: string) => { if (String(m).includes('dry-run')) order.push('send'); }, warn: () => {} },
+        log: {
+          log: (m: string) => { if (String(m).includes('not set')) order.push('send'); },
+          warn: () => {},
+        },
       },
     );
     expect(order).toEqual(['wait', 'send']);

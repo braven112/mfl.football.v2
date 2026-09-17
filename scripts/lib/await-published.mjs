@@ -18,7 +18,15 @@
  *
  * WHY A 3xx MEANS "NOT YET" rather than "broken": the article route's only
  * redirect IS the not-found path. `redirect: 'manual'` keeps it visible —
- * following it would return the index's own 200 and read as success.
+ * following it would return the index's own 200 and read as success. Verified
+ * against production on 2026-09-17: a real permalink answers 200, a missing
+ * one 302s to `/<league>/news`.
+ *
+ * A STATUS CODE IS ONLY ENOUGH FOR A PAGE THAT IS CREATED. If you ever point
+ * this at a page the run AMENDS, it has answered 200 since the day it was
+ * created and this wait becomes vacuous — you need a marker in the body. The
+ * Owners' Poll reveal is exactly that case; see
+ * docs/claude/followups/2026-09-17-pecking-order-permalink-500.md.
  *
  * FAILING OPEN IS DELIBERATE. On timeout the caller is told `live: false` and
  * announces anyway: the post is committed by then and the deploy is minutes

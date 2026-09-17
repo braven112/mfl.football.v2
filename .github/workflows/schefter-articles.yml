@@ -78,12 +78,6 @@ permissions:
 jobs:
   generate:
     runs-on: ubuntu-latest
-    env:
-      # Where the generator parks an announcement for the post-deploy step to
-      # send. RUNNER_TEMP, not the workspace: the queue is never committed, and
-      # the Gauntlet's two per-league invocations are separate processes that
-      # have to append to the SAME file. See scripts/lib/announce-queue.mjs.
-      SCHEFTER_ANNOUNCE_QUEUE: ${{ runner.temp }}/schefter-announce-queue.json
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -132,6 +126,12 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           ARTICLE_TYPE: ${{ steps.resolve.outputs.type }}
+          # Where the generator parks an announcement for the post-deploy step
+          # below. RUNNER_TEMP, not the workspace: the queue is never
+          # committed, and the Gauntlet's two per-league invocations are
+          # separate processes that must append to the SAME file. Set per STEP
+          # because the `runner` context does not exist at job level.
+          SCHEFTER_ANNOUNCE_QUEUE: ${{ runner.temp }}/schefter-announce-queue.json
           WEEK_OVERRIDE: ${{ github.event.inputs.week }}
           GROUPME_SCHEFTER_BOT_ID: ${{ secrets.GROUPME_SCHEFTER_BOT_ID }}
           GROUPME_AFL_SCHEFTER_BOT_ID: ${{ secrets.GROUPME_AFL_SCHEFTER_BOT_ID }}
@@ -271,6 +271,8 @@ jobs:
       - name: Announce after the deploy is live
         if: steps.resolve.outputs.type != ''
         env:
+          # Same path the generate step wrote to — they are one queue.
+          SCHEFTER_ANNOUNCE_QUEUE: ${{ runner.temp }}/schefter-announce-queue.json
           GROUPME_SCHEFTER_BOT_ID: ${{ secrets.GROUPME_SCHEFTER_BOT_ID }}
           GROUPME_AFL_SCHEFTER_BOT_ID: ${{ secrets.GROUPME_AFL_SCHEFTER_BOT_ID }}
           # The day-cap claim (Redis) and the push fan-out (which POSTs back to
