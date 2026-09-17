@@ -1,6 +1,6 @@
 ---
 slug: waiver-column-player-ids
-status: in-review
+status: shipped
 severity: P2
 opened: 2026-09-17
 hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1156
@@ -8,6 +8,8 @@ hotfix_sha: 96d2b71
 followup_issue: 1158
 followup_pr: https://github.com/braven112/mfl.football.v2/pull/1159
 followup_worked: 2026-09-17
+followup_merged: 2026-09-17
+followup_sha: 27b91c3
 followup_session: session_013bTc8oqnPeFXqWfMo39cFf
 ---
 
@@ -235,7 +237,8 @@ family are worth knowing about because `ACQUISITION_TYPES` includes
 
 ## Shipping
 
-PR: https://github.com/braven112/mfl.football.v2/pull/1159 — targets `main`, not
+PR: https://github.com/braven112/mfl.football.v2/pull/1159 — **merged as `27b91c3`**.
+Targets `main`, not
 `staging`. This is a bug fix, which `docs/plans/staging-release-process.md`
 (line 117) puts straight to prod, and `staging` has not taken #1156 yet: a PR
 against it would drag the whole hotfix plus ~100 cron commits along.
