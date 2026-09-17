@@ -84,7 +84,7 @@ Verified on production at 1280px: computed `right` 25.6px → -24.4px.
 - **There is no AFL twin.** `scripts/sibling-drift.mjs` reports
   `afl-fantasy/season-heroes/RecapCompositeHero.astro` MISSING. The AFL's recap
   slot is an event-shaped hero (`afl-hero-resolver.ts:1182`), and
-  `AflCompositeHero.astro` sets no `--cmh-model-right` at all. Nothing to mirror
+  `LeagueCompositeHero.astro` sets no `--cmh-model-right` at all. Nothing to mirror
   — but if you add `--cmh-model-shift` to the shared CSS, that DOES reach the
   AFL composites, so re-run the drift check.
 - **Below 640px is genuinely unaffected** and should stay that way: the cutout

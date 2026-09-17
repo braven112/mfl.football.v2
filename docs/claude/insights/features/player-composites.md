@@ -25,7 +25,7 @@ per player.
 | `src/components/shared/CompositeHero.astro` + `src/styles/composite-hero.css` | **The** spotlight shell — gradient, ghost wordmark, glow, cutout, frosted caption, editorial column. Every per-hero dimension is a `--cmh-*` custom property; every palette is a named accent. |
 | `src/components/shared/CompositePanelBoard.astro` + `src/styles/composite-panel-board.css` | **The** four-panel board (UDFA, tag showcase). `fill="pad"` keeps it full, `fill="drop"` shows only real faces. |
 | `src/components/theleague/*CompositeHero.astro` | Per-phase configurations of those two shells — copy, casting, geometry. They no longer own any of the treatment. (An earlier note here said the heroes share no base component; that stopped being true in Sep 2026.) |
-| `src/components/afl/AflCompositeHero.astro` | The AFL's keeper + conference-draft composites, on the same shell. |
+| `src/components/shared/LeagueCompositeHero.astro` | Renders an `EventHeroView` as a composite for either league (`league` prop; was `AflCompositeHero`). Every AFL composite state, plus TheLeague's waiver day. |
 | `src/utils/hero-franchise-accent.ts` | Which colour tints the glow — the player's NFL team, or the viewer's own franchise. |
 | `src/utils/hero-crest.ts` | Which CREST sits behind the hero — the franchise's when one owns the story, the cast player's NFL team otherwise. |
 | `src/utils/nfl-team-colors.ts` | 32-team primary/secondary hex map (ESPN codes), nickname helper, `hexToRgba` |
@@ -2113,8 +2113,36 @@ Three things to keep if this is touched again:
   `.cmh__content`, so a missing reset holds a column open for absent art.
 - **`clampSummary` is the router's call, not the component's.**
   `FeatureCompositeHero` is What's New-only and clamps unconditionally;
-  `AflCompositeHero` serves every AFL phase, so `AflHero` passes
+  `LeagueCompositeHero` serves every AFL phase, so `AflHero` passes
   `clampSummary={state.kind === 'feature'}`. Not derived from
   `view.screenshot` — an image-less bug-fix rollup is still an article-length
   description — and not always-on, because the keeper and conference-draft
   summaries are resolver-written instructions that must not stop mid-sentence.
+
+## 2026-09-16 — One waiver card, two leagues (`LeagueCompositeHero`)
+
+TheLeague's waiver slot now renders the AFL's composite component rather than
+its own list card. What made that cheap, and what to keep true:
+
+- **The component was already league-neutral except for four things**: crest
+  artwork, franchise skin, the fallback mark and the screenshot frame's domain.
+  Those are what the `league` prop selects. The PALETTE is never the league's —
+  it is `view.composite.accent` (TheLeague uses `kickoff`, the AFL `navy`), so a
+  third league adopts it by passing a view, not by adding a branch.
+- **Copy is shared through `waiverClaimsHeroView`** (`src/utils/waiver-claims-hero.ts`),
+  which the AFL resolver's `slot:waiver-wire` spreads. It stays PURE (no feed
+  reads) because `afl-hero-resolver.ts` imports it; the free-agent cast
+  (`castTopFreeAgentModel` over the league's rosters + dynasty ADP, league
+  year) is done by each caller.
+- **The `composite: { wordmark, accent }` literal must stay in the resolver
+  source.** `tests/hero-showcase-content.test.ts` reads the AFL's treatments by
+  regex out of `afl-hero-resolver.ts`; moving the literal into a helper with
+  `accent: opts.accent` made the waiver card "unshipped" to that guard. So the
+  helper takes the whole treatment as a parameter and each caller writes it.
+- **Storybook fixtures cast an `FA` player.** A valid NFL team makes the
+  component watermark the card with an a.espncdn.com logo (a network request
+  per snapshot), and a franchise crest resolved from an id is invisible to
+  `computeStoryAssetLiterals()`. A free agent yields no crest at all, which is
+  also true to the waiver card. A team-scoped story would need its crest file
+  named literally in the fixture first.
+

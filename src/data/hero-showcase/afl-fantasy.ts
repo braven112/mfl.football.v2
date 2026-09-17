@@ -54,7 +54,7 @@ const content: ShowcaseContent = {
   gallery: [
     {
       key: 'keepers', accent: 'gold', scope: 'team',
-      component: 'AflCompositeHero · keeper window', wordmark: 'KEEPERS',
+      component: 'LeagueCompositeHero · keeper window', wordmark: 'KEEPERS',
       pill: '2026 Keeper Deadline', title: 'Lock in', titleAccent: 'your core.',
       summary:
         'Trophy gold is the keeper window’s colour, and the face is your keeper cornerstone. Keepers are ' +
@@ -65,7 +65,7 @@ const content: ShowcaseContent = {
     },
     {
       key: 'keepers-deadline', accent: 'gold', tone: 'red', scope: 'team',
-      component: 'AflCompositeHero · keeper deadline day', wordmark: 'KEEPERS',
+      component: 'LeagueCompositeHero · keeper deadline day', wordmark: 'KEEPERS',
       pill: 'Keepers due today', title: 'Last call', titleAccent: 'on your keepers.',
       summary:
         'On the deadline itself — and only then — the card takes the red tone over the same gold accent, ' +
@@ -76,7 +76,7 @@ const content: ShowcaseContent = {
     },
     {
       key: 'al-draft', accent: 'navy', scope: 'league',
-      component: 'AflCompositeHero · AL draft', wordmark: 'AL DRAFT',
+      component: 'LeagueCompositeHero · AL draft', wordmark: 'AL DRAFT',
       pill: 'AL · Draft scheduled', title: 'Build', titleAccent: 'your empire.',
       summary:
         'The conferences draft on different days off different pages, so each names itself in the ' +
@@ -86,7 +86,7 @@ const content: ShowcaseContent = {
     },
     {
       key: 'al-draft-live', accent: 'navy', tone: 'red', scope: 'league',
-      component: 'AflCompositeHero · AL draft live', wordmark: 'AL DRAFT',
+      component: 'LeagueCompositeHero · AL draft live', wordmark: 'AL DRAFT',
       pill: 'AL · On the clock', title: 'The AL is', titleAccent: 'on the clock.',
       summary:
         'A draft actually running takes the red tone. The AL drafts live and the NL by email, which MFL’s ' +
@@ -96,7 +96,7 @@ const content: ShowcaseContent = {
     },
     {
       key: 'nl-draft', accent: 'navy', scope: 'league',
-      component: 'AflCompositeHero · NL draft', wordmark: 'NL DRAFT',
+      component: 'LeagueCompositeHero · NL draft', wordmark: 'NL DRAFT',
       pill: 'NL · Draft scheduled', title: 'The NL board', titleAccent: 'opens Thursday.',
       summary:
         'Same treatment, its own wordmark and its own clock. An NL owner never sees the AL’s countdown ' +
@@ -106,7 +106,7 @@ const content: ShowcaseContent = {
     },
     {
       key: 'nl-draft-live', accent: 'navy', tone: 'red', scope: 'league',
-      component: 'AflCompositeHero · NL draft live', wordmark: 'NL DRAFT',
+      component: 'LeagueCompositeHero · NL draft live', wordmark: 'NL DRAFT',
       pill: 'NL · Drafting now', title: 'The NL', titleAccent: 'is drafting.',
       summary:
         'The sixth and last composite state the AFL ships. Both conferences can be mid-draft on the same ' +
@@ -119,7 +119,7 @@ const content: ShowcaseContent = {
     },
     {
       key: 'kickoff', accent: 'navy', scope: 'league',
-      component: 'AflCompositeHero \u00b7 NFL kickoff', wordmark: 'KICKOFF',
+      component: 'LeagueCompositeHero \u00b7 NFL kickoff', wordmark: 'KICKOFF',
       pill: 'Season opener', title: 'Football is', titleAccent: 'back.',
       summary:
         'Your likely starter in the first game you play in \u2014 so the face is personal even though the ' +
@@ -129,7 +129,7 @@ const content: ShowcaseContent = {
     },
     {
       key: 'game-day', accent: 'gold', scope: 'team',
-      component: 'AflCompositeHero \u00b7 game day', wordmark: 'GAME\u00a0DAY',
+      component: 'LeagueCompositeHero \u00b7 game day', wordmark: 'GAME\u00a0DAY',
       pill: 'Game day', title: 'Lineups lock at', titleAccent: 'kickoff.',
       summary:
         'Last call to set starters. Your lineup and your deadline, so the card wears your club\u2019s colours ' +
@@ -140,7 +140,7 @@ const content: ShowcaseContent = {
     },
     {
       key: 'sunday-ticket', accent: 'navy', scope: 'team',
-      component: 'AflCompositeHero \u00b7 Sunday Ticket', wordmark: 'SUNDAY\u00a0TICKET',
+      component: 'LeagueCompositeHero \u00b7 Sunday Ticket', wordmark: 'SUNDAY\u00a0TICKET',
       pill: 'Sunday Ticket', title: 'Build your', titleAccent: 'multiview.',
       summary:
         'Once your lineup is in, the same slot flips to the multiview board \u2014 four boxes a window, ranked ' +
@@ -151,7 +151,7 @@ const content: ShowcaseContent = {
     },
     {
       key: 'recap', accent: 'recap', scope: 'team',
-      component: 'AflCompositeHero \u00b7 Tuesday recap', wordmark: 'RECAP',
+      component: 'LeagueCompositeHero \u00b7 Tuesday recap', wordmark: 'RECAP',
       pill: 'Tuesday recap', title: 'The week in', titleAccent: 'review.',
       summary:
         'The week\u2019s top scorer is cast deterministically \u2014 he IS the headline \u2014 so the card belongs to ' +
@@ -162,7 +162,7 @@ const content: ShowcaseContent = {
     },
     {
       key: 'whats-new', accent: 'navy', scope: 'league',
-      component: 'AflCompositeHero \u00b7 feature', wordmark: "WHAT'S\u00a0NEW",
+      component: 'LeagueCompositeHero \u00b7 feature', wordmark: "WHAT'S\u00a0NEW",
       pill: 'New this week', title: 'A feature just', titleAccent: 'shipped.',
       summary:
         'The only state that renders with no player at all: the entry\u2019s own screenshot is the art, framed ' +
@@ -172,7 +172,7 @@ const content: ShowcaseContent = {
     },
     {
       key: 'trade-deadline', accent: 'gold', tone: 'red', scope: 'team',
-      component: 'AflCompositeHero \u00b7 trade deadline', wordmark: 'DEADLINE',
+      component: 'LeagueCompositeHero \u00b7 trade deadline', wordmark: 'DEADLINE',
       pill: 'Trade Deadline', title: 'Last call', titleAccent: 'to deal.',
       summary:
         'The face is a player actually on YOUR block, pulled from your trade bait \u2014 so the card wears ' +
@@ -183,7 +183,7 @@ const content: ShowcaseContent = {
     },
     {
       key: 'standings', accent: 'navy', scope: 'league',
-      component: 'AflCompositeHero \u00b7 Monday standings', wordmark: 'STANDINGS',
+      component: 'LeagueCompositeHero \u00b7 Monday standings', wordmark: 'STANDINGS',
       pill: 'Monday standings', title: 'The race', titleAccent: 'tightens.',
       summary:
         'Cast from the leader\u2019s headliner \u2014 but league-coloured, because the leader may be in the ' +
@@ -193,7 +193,7 @@ const content: ShowcaseContent = {
     },
     {
       key: 'waivers', accent: 'navy', scope: 'league',
-      component: 'AflCompositeHero \u00b7 waiver day', wordmark: 'WAIVERS',
+      component: 'LeagueCompositeHero \u00b7 waiver day', wordmark: 'WAIVERS',
       pill: 'Waiver day', title: 'Claims run', titleAccent: 'tonight.',
       summary:
         'The face is a free agent \u2014 nobody rosters him, so there is no club whose colours this could ' +
@@ -203,7 +203,7 @@ const content: ShowcaseContent = {
     },
     {
       key: 'news', accent: 'navy', scope: 'league',
-      component: 'AflCompositeHero \u00b7 around the AFL', wordmark: 'NEWS',
+      component: 'LeagueCompositeHero \u00b7 around the AFL', wordmark: 'NEWS',
       pill: 'Around the AFL', title: 'Around', titleAccent: 'the AFL.',
       summary:
         'Schefter\u2019s coverage of the moves and the matchups shaping both races. Coverage of the whole ' +
@@ -213,7 +213,7 @@ const content: ShowcaseContent = {
     },
     {
       key: 'finale', accent: 'navy', scope: 'league',
-      component: 'AflCompositeHero \u00b7 season finale', wordmark: 'FINALE',
+      component: 'LeagueCompositeHero \u00b7 season finale', wordmark: 'FINALE',
       pill: 'Season finale', title: 'Seeds are', titleAccent: 'locking.',
       summary:
         'The last week before the bracket. Every club\u2019s seed moves on the same Sunday, so this one ' +
@@ -223,7 +223,7 @@ const content: ShowcaseContent = {
     },
     {
       key: 'playoffs-incoming', accent: 'navy', scope: 'league',
-      component: 'AflCompositeHero \u00b7 playoffs incoming', wordmark: 'PLAYOFFS',
+      component: 'LeagueCompositeHero \u00b7 playoffs incoming', wordmark: 'PLAYOFFS',
       pill: 'Playoffs incoming', title: 'Bracket time', titleAccent: 'is here.',
       summary:
         'The countdown into the bracket. Once the games actually start, the bespoke bracket hero takes ' +
@@ -233,7 +233,7 @@ const content: ShowcaseContent = {
     },
     {
       key: 'title-game', accent: 'gold', scope: 'league',
-      component: 'AflCompositeHero \u00b7 world championship', wordmark: 'TITLE\u00a0GAME',
+      component: 'LeagueCompositeHero \u00b7 world championship', wordmark: 'TITLE\u00a0GAME',
       pill: 'World Championship', title: 'One game for', titleAccent: 'the crown.',
       summary:
         'Trophy gold for the one game the whole league watches. Both finalists are somebody\u2019s club, ' +
@@ -243,7 +243,7 @@ const content: ShowcaseContent = {
     },
     {
       key: 'champion', accent: 'gold', scope: 'league',
-      component: 'AflCompositeHero \u00b7 champion crowned', wordmark: 'CHAMPION',
+      component: 'LeagueCompositeHero \u00b7 champion crowned', wordmark: 'CHAMPION',
       pill: 'Champion crowned', title: 'A new', titleAccent: 'champion.',
       summary:
         'League scope on purpose: the face here is a league-wide headliner, not the winner\u2019s own ' +
@@ -253,7 +253,7 @@ const content: ShowcaseContent = {
     },
     {
       key: 'new-year', accent: 'navy', scope: 'league',
-      component: 'AflCompositeHero \u00b7 new league year', wordmark: 'NEW\u00a0YEAR',
+      component: 'LeagueCompositeHero \u00b7 new league year', wordmark: 'NEW\u00a0YEAR',
       pill: 'New league year', title: 'The season', titleAccent: 'resets.',
       summary:
         'A rookie models the reset \u2014 the newest class is the one nobody has rostered yet, which is ' +
@@ -263,7 +263,7 @@ const content: ShowcaseContent = {
     },
     {
       key: 'league-event', accent: 'gold', scope: 'league',
-      component: 'AflCompositeHero \u00b7 calendar event', wordmark: 'EVENT',
+      component: 'LeagueCompositeHero \u00b7 calendar event', wordmark: 'EVENT',
       pill: 'Happening now', title: 'A dated league', titleAccent: 'event.',
       summary:
         'The catch-all for anything on the calendar without a phase of its own. It still gets a face and ' +
@@ -273,7 +273,7 @@ const content: ShowcaseContent = {
     },
     {
       key: 'default', accent: 'navy', scope: 'league',
-      component: 'AflCompositeHero \u00b7 default', wordmark: 'AFL',
+      component: 'LeagueCompositeHero \u00b7 default', wordmark: 'AFL',
       pill: 'AFL', title: 'Two conferences.', titleAccent: 'One champion.',
       summary:
         'The league\u2019s own card, shown on a day no phase claims. Twenty-four teams, two conferences, ' +
@@ -283,7 +283,7 @@ const content: ShowcaseContent = {
     },
     {
       key: 'schedule-release', accent: 'navy', scope: 'league',
-      component: 'AflCompositeHero \u00b7 schedule release', wordmark: 'SCHEDULE',
+      component: 'LeagueCompositeHero \u00b7 schedule release', wordmark: 'SCHEDULE',
       pill: 'Just dropped', title: 'The schedule', titleAccent: 'is out.',
       summary:
         'The one hero cast from the league\u2019s BEST players rather than a franchise headliner \u2014 a ' +
@@ -558,9 +558,9 @@ if (mine.length !== 1) return fallback;`,
         {
           kind: 'shipped',
           items: [
-            { name: 'AflCompositeHero · keepers', cast: 'castRosterModel', desc: 'Trophy gold, <code>KEEPERS</code> wordmark, your keeper cornerstone. Flips to urgency red on the deadline itself.' },
-            { name: 'AflCompositeHero · AL draft', cast: 'castTopFreeAgentModel', desc: 'Navy, <code>AL&nbsp;DRAFT</code> wordmark, best available on the board. Red while the room is live; the CTA becomes the room itself for an AL owner.' },
-            { name: 'AflCompositeHero · NL draft', cast: 'castTopFreeAgentModel', desc: 'The same card, one page different — the NL drafts by email, so its CTA opens MFL’s email-draft page rather than the live applet.' },
+            { name: 'LeagueCompositeHero · keepers', cast: 'castRosterModel', desc: 'Trophy gold, <code>KEEPERS</code> wordmark, your keeper cornerstone. Flips to urgency red on the deadline itself.' },
+            { name: 'LeagueCompositeHero · AL draft', cast: 'castTopFreeAgentModel', desc: 'Navy, <code>AL&nbsp;DRAFT</code> wordmark, best available on the board. Red while the room is live; the CTA becomes the room itself for an AL owner.' },
+            { name: 'LeagueCompositeHero · NL draft', cast: 'castTopFreeAgentModel', desc: 'The same card, one page different — the NL drafts by email, so its CTA opens MFL’s email-draft page rather than the live applet.' },
             { name: 'AflEventHero', cast: 'every other phase', desc: 'The branded promo card still renders the calendar events, the daily slot rotation and fresh What’s New entries — and is the fallback whenever a composite can’t cast anyone.' },
             { name: 'Honest scope', cast: 'not composites', desc: 'The playoff and championship heroes are a bracket and a matchup card; the trade-deadline hero is a live countdown. Those do jobs a player composite cannot, so they keep their bespoke components.', muted: true },
           ],
@@ -587,7 +587,7 @@ if (mine.length !== 1) return fallback;`,
       'src/utils/afl-hero-resolver.ts',
       'src/utils/afl-hero-casting.ts',
       'src/utils/hero-franchise-accent.ts',
-      'src/components/afl/AflCompositeHero.astro',
+      'src/components/shared/LeagueCompositeHero.astro',
       'src/components/shared/CompositeHero.astro',
     ],
     ctas: [

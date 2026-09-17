@@ -123,7 +123,7 @@ html.dark .fch .fch__shot--no-dark .fch__shot-img--dark {
 
 /* The reservation itself. Sibling-keyed rather than root-keyed on purpose: the
    frame is only in the DOM when the entry HAS a screenshot (art precedence in
-   FeatureCompositeHero / AflCompositeHero), so the selector switches itself off
+   FeatureCompositeHero / LeagueCompositeHero), so the selector switches itself off
    for a model, entry-artwork or silhouette hero and those keep the shell's
    `--cmh-content-max` untouched. The shell renders the art slot before
    `.cmh__content`, which is what makes `~` reach it.

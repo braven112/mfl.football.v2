@@ -1,8 +1,11 @@
 ---
 /**
- * AflCompositeHero — an AFL hero state rendered as a composite.
+ * LeagueCompositeHero — a resolved hero view (`EventHeroView`) rendered as a
+ * composite, for any league. The AFL routes most of its hero states here
+ * (`AflHero`); TheLeague routes its waiver-day card here (`WaiverWireHero`).
+ * The `league` prop picks the crest, franchise skin and fallback mark.
  *
- * The AFL's answer to TheLeague's per-phase composites: instead of one branded
+ * It began as the AFL's answer to TheLeague's per-phase composites: instead of one branded
  * promo card for every state, the phases with a real identity get the spotlight
  * treatment — a navy or trophy-gold gradient, the phase's own ghost wordmark,
  * a glow tinted by whoever the hero is about, and the cast player's cutout.
@@ -23,7 +26,7 @@ import { LEAGUES } from '../../config/leagues';
 import { getNflTeamColors } from '../../utils/nfl-team-colors';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
 import { resolveHeroCrest, resolveHeroFranchiseSkin } from '../../utils/hero-crest';
-import CompositeHero from '../shared/CompositeHero.astro';
+import CompositeHero from './CompositeHero.astro';
 import '../../styles/whats-new-hero-shot.css';
 
 interface Props {
@@ -42,9 +45,16 @@ interface Props {
    * The router knows the state's kind; this component does not.
    */
   clampSummary?: boolean;
+  /**
+   * Whose card this is. The AFL's by default; TheLeague renders its waiver-day
+   * card through this same component (`WaiverWireHero`), and the league picks
+   * the crest artwork, the franchise skin, the fallback mark and the
+   * screenshot frame's domain — never the palette, which is `view.composite`.
+   */
+  league?: 'afl-fantasy' | 'theleague';
 }
 
-const { view, regionLabel, clampSummary = false } = Astro.props;
+const { view, regionLabel, clampSummary = false, league = 'afl-fantasy' } = Astro.props;
 const treatment = view.composite!;
 const model = view.model ?? null;
 
@@ -62,10 +72,10 @@ const model = view.model ?? null;
  */
 const shotSrc = view.screenshot ? `/assets/whats-new/${view.screenshot}` : null;
 const shotDarkSrc = shotSrc ? shotSrc.replace(/\.(\w+)$/, '-dark.$1') : null;
-const aflLeague = LEAGUES['afl-fantasy'];
+const leagueEntry = LEAGUES[league];
 const shotFrameUrl = view.link
-  ? `${aflLeague.domains[0]}${view.link.replace(`/${aflLeague.slug}`, '')}`
-  : aflLeague.domains[0];
+  ? `${leagueEntry.domains[0]}${view.link.replace(`/${leagueEntry.slug}`, '')}`
+  : leagueEntry.domains[0];
 // The model wins when there is one: a named player is a deliberate casting
 // choice by whoever wrote the entry, and the screenshot is the fallback art.
 const artMode: 'model' | 'shot' | 'logo' = model ? 'model' : shotSrc ? 'shot' : 'logo';
@@ -80,18 +90,18 @@ const glowColor = view.modelAccent || (model ? getNflTeamColors(teamCode).primar
 // and the mark cannot disagree), otherwise his NFL team's.
 const crest = resolveHeroCrest({
   franchiseId: view.modelFranchiseId,
-  league: 'afl-fantasy',
+  league,
   nflTeam: model?.nflTeam ?? null,
 });
 
 // A TEAM event wears the owning club's colours; a league event (both conference
 // drafts) keeps the AFL's own navy. See CompositeHeroTreatment.scope.
 const franchise =
-  treatment.scope === 'team' ? resolveHeroFranchiseSkin(view.modelFranchiseId, 'afl-fantasy') : null;
+  treatment.scope === 'team' ? resolveHeroFranchiseSkin(view.modelFranchiseId, league) : null;
 
-// The AFL's crest stands in when the ESPN cutout 404s — same silhouette rule as
-// TheLeague's composites, different mark.
-const LOGO = '/assets/logos/afl-logo-dark.svg';
+// The league's crest stands in when the ESPN cutout 404s — same silhouette
+// rule in both leagues, each with its own mark.
+const LOGO = league === 'theleague' ? '/assets/logos/theleague-logo-dark.svg' : '/assets/logos/afl-logo-dark.svg';
 
 // `crest` is passed only in model mode: behind a browser-framed screenshot a
 // watermark reads as smudge rather than as a mark.
