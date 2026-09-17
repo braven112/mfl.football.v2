@@ -6,10 +6,16 @@
  * salary update, git commit) stays in GitHub Actions.
  *
  * Reliable is the point, not fast. GitHub drops this repo's `schedule`
- * events in bulk — `*/5` delivered 5-8 runs a day, not 288, from 2026-08-27
- * — and because the committed feeds are baked into the build, a sync that
- * does not run is a site that cannot update. The cadence lives in
- * vercel.json; the workflow's own schedule is an offset fallback.
+ * events in bulk — a five-minute cron delivered 5-8 runs a day, not 288,
+ * from 2026-08-27 — and because the committed feeds are baked into the
+ * build, a sync that does not run is a site that cannot update. The cadence
+ * lives in vercel.json; the workflow's own schedule is an offset fallback.
+ *
+ * (Spelled out rather than written as a cron step on purpose: a step
+ * expression contains the two characters that END a block comment, so
+ * quoting one here silently terminates this JSDoc and hands the rest of it
+ * to the compiler as code. That cost 39 type errors on this very file — and
+ * nothing but `astro check` can see it, since no unit test imports a route.)
  *
  * Required env vars:
  *   CRON_SECRET   – shared secret Vercel sends as Bearer token

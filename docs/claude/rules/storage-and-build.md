@@ -212,6 +212,13 @@ workflow's own `schedule:` is a fallback for a Vercel outage, at `*/30`.
   **production** environment. Vercel only sends the bearer token when
   `CRON_SECRET` is set, and only production deployments run crons.
 - Trigger one by hand with `pnpm dlx vercel crons run /api/cron/roster-sync`.
+- **Never quote a cron STEP expression inside a `/** … *\/` block comment.** It
+  contains the two characters that close one, so the comment ends mid-sentence
+  and the remaining prose is handed to the compiler as code. Writing one into
+  this route's JSDoc cost 39 type errors in a single file, and **nothing but
+  `astro check` can see it**: `pnpm test:unit` does not type-check and no unit
+  test imports an API route, so the whole suite stays green. Spell the cadence
+  out in words, or use a line comment.
 
 Guard: `tests/vercel-cron-targets.test.ts` — checks both directions, because
 each failure is silent in its own way. An orphaned bridge (a route with no cron)
