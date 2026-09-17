@@ -1,5 +1,18 @@
 # Cap Projection — Gap Analysis vs. Idea #13
 
+> **Superseded 2026-09-17 by `docs/plans/front-office-hub.md` (Phase E).**
+> Its "Open questions" are answered there: all four phases are wanted, and they land
+> on the Front Office hub rather than the rosters page. Two corrections this document
+> gets wrong and the new plan fixes:
+> - `TeamCapAnalysis.astro`, `BudgetPlannerPanel.astro` and `FranchiseTagPanel.astro`
+>   are listed below as live capabilities. They are imported **nowhere** — 1,549 lines
+>   of orphaned UI, now scheduled for deletion.
+> - Phase 4's free-agency comp pick **is not a league rule**. TheLeague's only
+>   compensatory picks are the three toilet bowl slots (1.17, 2.17, 2.18). That item
+>   is blocked pending a rule, not scheduled.
+>
+> Kept for the audit table and the phase reasoning, which remain sound.
+
 ## Original idea
 
 Multi-year cap simulator where you toggle extensions, cuts, and tags and see resulting cap space across the next 3 seasons.

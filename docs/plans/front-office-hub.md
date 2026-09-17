@@ -4,6 +4,8 @@
 **Supersedes the "eventual cutover" note in** `src/components/shared/front-office-nav/front-office-pages.ts`
 **Predecessors:** Front Office Phase 1 (link grid), Phase 2 (hub became the planner —
 `docs/claude/followups/2026-09-16-league-planner-two-destinations.md`)
+**Absorbs:** `docs/plans/cap-projection-gap-analysis.md` — its open question
+("confirm with Brandon") is answered here; its four phases become Phase E below.
 
 ## The ask
 
@@ -33,6 +35,12 @@ Three things, in dependency order:
 | Layout | **One long stacked page.** No tabs. |
 | Roster surface for cuts | **Action cards only** — no roster table on the hub. |
 | Team switcher | **Browse any team, act only on your own.** The AFL gets a switcher too. |
+| Draft assets layout | **The AFL's chip layout wins** — TheLeague's two ChartCards take far too much real estate. |
+| What a chip shows | Pick position + immediate origin (`1.03 · via Magicians`), full trade chain on reveal. |
+| Two draft years | **One card**, a year subhead per chip group. No side-by-side ChartCards. |
+| Cap planning depth | **All four phases** of `cap-projection-gap-analysis.md`: 3-year projection, live what-if toggles, saved/comparable scenarios, comp-pick projection. |
+| The three orphaned cap panels | **Delete all three**, build fresh against the current shared math. |
+| Simulate vs commit | **Simulate freely, commit deliberately** — toggles are local scratch; nothing reaches MFL or the declaration store until an explicit Submit. |
 
 ### One consequence of "action cards only", stated up front
 
@@ -53,6 +61,7 @@ Counted, not remembered:
 | NFL / College stacks | AFL panel (SSR), AFL rosters (inline), TheLeague rosters (client-rendered into empty containers) — **3** |
 | Contract-decision driver (CDM open → compute → stage → submit) | `rosters.astro` (~lines 5488–6130), `HpUnsignedFaCard.astro` (~lines 578–760) — **2** |
 | Front Office hub panel | `TheLeaguePlannerPanel` + `AflKeeperPlannerPanel` — **2** |
+| Draft assets on the hub | AFL `kp-picks` chips (~60 lines) vs TheLeague `DraftPicksCard` (340) + `DraftTeamAssetsView` (379) inside up to two `ChartCard`s — **2 layouts, ~12x the code** |
 
 The *math* is already shared and must not be re-derived:
 `src/utils/salary-calculations.ts` (`calculateFranchiseTag`, `calculateVeteranExtension`,
@@ -73,6 +82,8 @@ FrontOfficeHubPage.astro                 (shell — unchanged)
 └── FrontOfficePanel.astro               (NEW — replaces both league panels)
     ├── FrontOfficeMetricStrip           cap space / avg per player / signed / dead $ / avg age
     │                                    AFL variant: roster size / keepers used / avg age
+    ├── CapProjectionTable                NEW  [salaryCap] — 3 years side by side, scenario-aware
+    ├── ScenarioBar                       NEW  [salaryCap] — save / name / compare / reset what-ifs
     ├── ContractActionsSection           owner-only  [contracts]
     │   ├── FranchiseOptions             existing card + action kebab
     │   ├── VeteranExtensionCandidates   existing card + action kebab
@@ -80,7 +91,7 @@ FrontOfficeHubPage.astro                 (shell — unchanged)
     │   └── ContractActionsBar           NEW — staged actions + Submit + Clear All
     ├── KeeperPlanner                    owner-only  [keepers]   (AFL, unchanged)
     ├── FreeAgentNeedsCard               [contracts]
-    ├── DraftPicksCard / DraftTeamAssetsView
+    ├── DraftAssetChips                   NEW SHARED — the AFL's chip row, both leagues
     ├── RosterAnalyticsPanel             NEW SHARED — the AFL set, plus cap charts [salaryCap]
     └── <details> NFL & College stacks   NEW SHARED — SSR both leagues, open by default
 ```
@@ -99,11 +110,132 @@ action sections join that ordering rather than inventing a second one.
 | `src/utils/contract-actions-client.ts` | **New** — the extracted CDM driver: eligibility → open CDM → compute via `salary-calculations` → stage → `POST /api/contracts/declare`. One module, three hosts. |
 | `src/components/shared/front-office-hub/ContractActionsBar.astro` | **New** — "Submit Tags/Extensions" + "Clear All", moved out of `rosters.astro`'s roster-controls. |
 | `src/components/shared/front-office-hub/CutCandidatesCard.astro` | **New** — whole roster ranked by cut value, `calculateCutPenalty` preview, confirm → `POST /api/cut-player`. |
+| `src/components/shared/front-office-hub/DraftAssetChips.astro` | **New** — the AFL's `kp-picks` chip row, generalized. Replaces `DraftPicksCard` + `DraftTeamAssetsView` **on the hub only**. |
+| `src/utils/cap-projection.ts` | **New** — pure module: roster + a scenario → cap space for N seasons. Escalation and cap charges come from `salary-calculations.ts`; nothing is re-derived. |
+| `src/components/shared/front-office-hub/CapProjectionTable.astro` | **New** — 3 seasons side by side, re-rendered live as toggles change. |
+| `src/components/shared/front-office-hub/ScenarioBar.astro` | **New** — save / name / load / compare / reset. |
+| `src/utils/cap-scenarios.ts` | **New** — scenario storage, scoped via `rankings-scope.ts`'s helpers (see Hazards). |
+| `src/components/theleague/{TeamCapAnalysis,BudgetPlannerPanel,FranchiseTagPanel}.astro` | **Deleted** — 1,549 lines imported nowhere. |
 | `src/components/shared/front-office-hub/FrontOfficePanel.astro` | **New** — replaces `TheLeaguePlannerPanel` + `AflKeeperPlannerPanel`. |
 | `src/utils/front-office-panel-data.ts` | **New** — merges `front-office-planner-data.ts` + `front-office-keeper-data.ts` behind one `buildFrontOfficePanelData(slug, franchiseId)`. |
 | `src/pages/{theleague,afl-fantasy}/front-office/index.astro` | Thin wrappers only — auth gate, cookie write, data import, one component. **Must stay under 80 lines** (see Hazards). |
 | `src/pages/theleague/rosters.astro` | Mounts the extracted driver instead of its inline copy. Analytics + planner tabs stay for now. |
 | `src/components/theleague/hp-sections/HpUnsignedFaCard.astro` | Drops its hand-copy of the driver. |
+
+## Draft assets: the AFL's chip layout wins
+
+TheLeague's hub currently renders draft assets as up to **two `ChartCard`s side by
+side**, each holding a `DraftTeamAssetsView` (379 lines, grouped by round with team
+icons and per-round headers) or a `DraftPicksCard` (340 lines, pick rows with trade
+chains) — and it pre-renders one hidden copy **per team, per year**, so the team
+switcher can swap without a fetch. That is 16 x 2 full asset views in the SSR payload
+for a section most owners read in two seconds.
+
+The AFL does the same job in a `kp-picks` flex-wrap row of two-line chips, roughly 60
+lines of markup and CSS, one card, no per-round chrome. It wins on real estate and on
+payload, and it is what ships.
+
+`DraftAssetChips.astro` generalizes it:
+
+- **Chip face:** `1.03` over `via Magicians` for TheLeague, `2nd round` over
+  `via Dynasty Warriors` for the AFL (no predicted order exists there). Untraded picks
+  read `Original`, exactly as the AFL's do today.
+- **Full trade chain on reveal.** `formatTradeChain`'s multi-hop provenance does not
+  fit a chip, so it is revealed rather than dropped. **Not a bare `title` attribute** —
+  that is invisible on touch and unreliable for screen readers. The chip is a
+  `<button type="button">` with `aria-expanded` and `aria-describedby` pointing at the
+  chain text, revealed on hover, on focus, and on tap. A pick with no chain is a plain
+  `<span>`, not a button that does nothing.
+- **Both years in one card**, each year a small group label above its own chip row.
+  The `showDualDraftCards` branch in `planner-phase.ts` stops selecting between two
+  `ChartCard`s and instead selects how many year groups the one card renders — the
+  phase logic is reused, the layout fork is not.
+- **The team switcher swap gets cheaper.** Per-team chip rows are small enough to keep
+  pre-rendering all of them, so switching stays fetch-free.
+
+**`DraftPicksCard` and `DraftTeamAssetsView` are not deleted and not edited.**
+`rosters.astro` is their only other host, and it keeps them until its planner tab is
+retired. Changing them would put a cosmetic refactor inside the 12k-line page for no
+benefit — the hub simply stops importing them.
+
+## Salary cap planning: from one reactive year to three simulated ones
+
+Today the hub's cap planning is **one year, precomputed, read-only** — five
+`MetricCard`s of display strings. `docs/plans/cap-projection-gap-analysis.md` already
+specced the fix and ended on "confirm with Brandon"; confirmed, all four phases.
+
+### First, a find: 1,549 lines of cap-planning UI that nothing renders
+
+| Component | Lines | Imported by |
+|---|---|---|
+| `TeamCapAnalysis.astro` | 543 | **nothing** |
+| `BudgetPlannerPanel.astro` | 559 | **nothing** |
+| `FranchiseTagPanel.astro` | 447 | **nothing** |
+
+The gap-analysis doc describes all three as live capabilities — they are not, and have
+not been for long enough that nobody noticed. **All three are deleted.** They carry no
+guard test, have had no eyes on them, and their cap math predates the current shared
+`salary-calculations.ts`; mounting stale cap math on a planning page is worse than
+having no page. What is worth keeping from them is the *design* (BudgetPlanner's
+planned-spend-vs-cap summary and warning strip is a good shape), and that is reused in
+`ScenarioBar` deliberately rather than by import.
+
+### The model: simulate freely, commit deliberately
+
+One scratch object, `Scenario`, holds a bag of hypothetical moves:
+
+```ts
+type ScenarioMove =
+  | { kind: 'extend'; playerId: string; years: number }
+  | { kind: 'tag';    playerId: string }
+  | { kind: 'cut';    playerId: string }
+  | { kind: 'walk';   playerId: string };   // let an expiring contract go
+```
+
+`cap-projection.ts` is pure: `(roster, scenario, years) => CapYear[]`. It composes
+`calculateCapChargesWithActions`, `calculateVeteranExtension`, `calculateFranchiseTag`,
+`calculateCutPenalty` and `ANNUAL_ESCALATION` from `salary-calculations.ts`. **No cap
+formula is written in this module** — if a number is wrong it is wrong in one shared
+place, the same place the Trade Builder and `rosters.astro` read.
+
+The hard line, and the reason this design was chosen:
+
+- A **toggle** mutates the scenario in memory and re-renders the projection. It never
+  calls an API. Nothing is filed, nothing is visible to the commissioner, nothing
+  reaches MFL.
+- A **Submit** on a specific action posts exactly that action to
+  `/api/contracts/declare` or `/api/cut-player`, and the action bar names what is being
+  filed before it goes.
+- Committing an action **clears it from the scenario** and it reappears as a real
+  pending declaration, so the projection never double-counts a move that is now real.
+
+That boundary is guard-tested, not just documented — a toggle handler that reaches a
+`fetch` is the failure this feature can most plausibly ship.
+
+### Scenario storage
+
+Named scenarios are per-owner, per-league. **Both leagues have a franchise 0001**, so
+the keys go through `src/utils/rankings-scope.ts`'s existing helpers rather than a new
+scheme: `scopedLocalKey('fo.scenarios', scope)` for localStorage, and — if these should
+follow an owner between devices — `scopedKvKey('fo:scenarios', scope, franchiseId)`
+behind the same `?league=` check the rankings sync uses, where the KV scope comes from
+the session and the param is a check, never an input. **localStorage first**; the Redis
+mirror is a follow-up, not a prerequisite.
+
+### Comp-pick projection is BLOCKED — the rule may not exist
+
+The gap-analysis doc's Phase 4 assumes a free-agency compensatory pick: "if you let
+this guy walk, here's the comp pick you'd get and when." **There is no such rule in
+`docs/claude/league-rules.md`.** The only compensatory picks in TheLeague are the three
+**toilet bowl** slots (1.17, 2.17, 2.18), awarded by consolation bracket results and
+already handled in `src/utils/draft-utils.ts` — nothing to do with free agency.
+
+So the projection would have to invent a formula, and a planning page that invents a
+league rule is worse than one that omits it. This item stays specced and unbuilt until
+Brandon either points at the rule or states it. Everything else in Phase E is
+unblocked and does not depend on it; the `{ kind: 'walk' }` move is still built,
+because letting a contract expire has a real cap effect regardless of whether any pick
+comes back.
 
 ## Phases
 
@@ -113,15 +245,17 @@ Each phase is independently shippable and leaves the tree green.
 1. Generalize `afl-roster-analytics.ts` → `roster-analytics.ts`; add the cap builders.
 2. Build `RosterAnalyticsPanel.astro` + `NflCollegeStacks.astro`.
 3. Mount in **both** hub panels (still two panels at this point).
-4. TheLeague's hub gains analytics — the headline ask, delivered first.
+4. Build `DraftAssetChips.astro` and swap TheLeague's two draft `ChartCard`s for it.
+   Presentational and self-contained, so it rides along with the analytics work.
+5. TheLeague's hub gains analytics — the headline ask, delivered first.
 
 **Done when:** both hubs render the same analytics component, cap charts present only
 on TheLeague, and `pnpm vitest run tests/afl-keeper-planner-features.test.ts` passes.
 
 ### Phase B — one panel
-5. Fold both panels into `FrontOfficePanel.astro`, sections gated on feature flags.
-6. Merge the two data builders into `front-office-panel-data.ts`.
-7. Give the AFL a team switcher; `isOwner` becomes
+6. Fold both panels into `FrontOfficePanel.astro`, sections gated on feature flags.
+7. Merge the two data builders into `front-office-panel-data.ts`.
+8. Give the AFL a team switcher; `isOwner` becomes
    `selectedTeamId === viewer's own franchise`, not `signedIn`.
 
 **Done when:** `AflKeeperPlannerPanel.astro` and `TheLeaguePlannerPanel.astro` are
@@ -129,27 +263,42 @@ deleted, both route wrappers are under 80 lines, and an AFL owner can browse ano
 team's hub read-only.
 
 ### Phase C — extract the contract driver
-8. Lift the CDM driver out of `rosters.astro` into `contract-actions-client.ts`.
-9. Re-point `rosters.astro` and `HpUnsignedFaCard` at it. **No behavior change here** —
-   this phase is a pure move, proved by `scripts/roster-parity-check.mjs`.
+9. Lift the CDM driver out of `rosters.astro` into `contract-actions-client.ts`.
+10. Re-point `rosters.astro` and `HpUnsignedFaCard` at it. **No behavior change here** —
+    this phase is a pure move, proved by `scripts/roster-parity-check.mjs`.
 
 **Done when:** parity check output is byte-identical before and after, and the three
 hosts share one driver.
 
 ### Phase D — actions on the hub
-10. Mount `ContractDeclarationModal` + `ContractActionsBar` in `FrontOfficePanel`,
+11. Mount `ContractDeclarationModal` + `ContractActionsBar` in `FrontOfficePanel`,
     owner-only, `contracts`-gated.
-11. Add the action kebab to `FranchiseOptions` / `VeteranExtensionCandidates` rows,
+12. Add the action kebab to `FranchiseOptions` / `VeteranExtensionCandidates` rows,
     `showActions`-opt-in exactly as `FreeAgentNeedsCard` already does (defaulting off
     so `rosters.astro`'s planner tab is unaffected — the rule
     `tests/front-office-player-actions.test.ts` already pins).
-12. Build `CutCandidatesCard`.
-13. Live cap recomputation returns to the hub: `TheLeaguePlannerPanel`'s header note
+13. Build `CutCandidatesCard`.
+14. Live cap recomputation returns to the hub: `TheLeaguePlannerPanel`'s header note
     "no live client-side cap-math recomputation… Front Office has no cut / declare /
     extend actions" **stops being true** and must be rewritten, not left.
 
 **Done when:** an owner can tag, extend and cut from `/front-office` and see the
 declaration land on `/front-office/contracts`.
+
+### Phase E — cap planning
+15. Delete `TeamCapAnalysis`, `BudgetPlannerPanel`, `FranchiseTagPanel`.
+16. Build `cap-projection.ts` (pure) + `CapProjectionTable.astro` — 3 seasons side by
+    side, static first, no toggles. Shippable on its own and already a real upgrade on
+    the single-year metric strip.
+17. Wire the what-if toggles: extend / tag / cut / walk mutate the scenario and
+    re-render the projection. Reuses Phase D's eligibility, which is why it comes
+    after it.
+18. `ScenarioBar` — save, name, load, compare two, reset. localStorage, scoped.
+19. Comp-pick projection: **blocked**, see above.
+
+**Done when:** an owner can tick "extend Hall, cut Misack, tag Chase", see 2027/28/29
+recompute live, save it as "aggressive", compare it against "hoard cap", and then
+commit only the extension — with the other two still sitting as untouched scratch.
 
 ## Hazards (each one is a rule that has already bitten this repo)
 
@@ -172,6 +321,15 @@ declaration land on `/front-office/contracts`.
 - **`/api/cut-player` is an owner-cookie write against MFL.** It cannot run for a
   browsed team. The Cut card renders only when the selected team is the viewer's own —
   the same `isOwner` gate as the extension cards, not a separate check.
+- **A toggle must never call an API.** The whole value of "simulate freely" is that
+  scratch is scratch. Guard-tested (below), because this is the most plausible way the
+  feature ships broken.
+- **Scenario keys are league-scoped or they are wrong.** Both leagues have a franchise
+  0001. Go through `rankings-scope.ts`, and re-read the scope per call rather than
+  capturing it at module load — under the ClientRouter one module instance survives a
+  navigation from one league's hub to the other's.
+- **Reveal-on-hover is not enough.** The trade-chain reveal on a draft chip must work
+  on touch and for a screen reader — `aria-expanded` + `aria-describedby`, not `title`.
 - **Sibling drift.** Run the `sibling-drift-checker` agent before `/live`: this work
   touches both leagues' rosters pages and both hub routes.
 - **Which clock.** The hub is roster-management-shaped throughout —
@@ -189,6 +347,12 @@ declaration land on `/front-office/contracts`.
    "never inline a second copy" shape `owner-boundary-parity.test.ts` uses, and it is
    what stops the driver forking a fourth time.
 4. Add `/front-office` to `tests/cross-league-init-gate.test.ts`'s pair list.
+5. `tests/cap-scenario-boundary.test.ts` — no scenario-toggle handler reaches `fetch`,
+   and `cap-projection.ts` declares no cap formula of its own (every rate and threshold
+   is imported from `salary-calculations.ts`). This is the `owner-boundary-parity`
+   shape again, applied to cap math.
+6. `tests/cap-projection.test.ts` — unit-test the pure module against known rosters,
+   including a scenario that extends, cuts and tags the same team in one pass.
 
 Write each with `/guard-test` so the path-guard map entry comes along.
 
@@ -213,3 +377,5 @@ Write each with `/guard-test` so the path-guard map entry comes along.
   remove the planner pages eventually" still holds, but the deletion is its own change
   after the hub has carried the traffic for a while.
 - A roster table on the hub.
+- Comp-pick projection, until the rule exists (see above).
+- Syncing saved scenarios to Redis. localStorage first; cross-device is a follow-up.
