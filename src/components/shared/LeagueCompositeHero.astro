@@ -100,7 +100,10 @@ const franchise =
   treatment.scope === 'team' ? resolveHeroFranchiseSkin(view.modelFranchiseId, league) : null;
 
 // The league's crest stands in when the ESPN cutout 404s — same silhouette
-// rule in both leagues, each with its own mark.
+// rule in both leagues, each with its own mark. It ships in model mode too:
+// CompositeHero's CSS keeps it hidden until the cutout's onerror fires (and
+// while a crest fills the card), so passing it only in logo mode left a free
+// agent — who has no crest — with an empty flank when his headshot 404'd.
 const LOGO = league === 'theleague' ? '/assets/logos/theleague-logo-dark.svg' : '/assets/logos/afl-logo-dark.svg';
 
 // `crest` is passed only in model mode: behind a browser-framed screenshot a
@@ -118,7 +121,7 @@ const LOGO = league === 'theleague' ? '/assets/logos/theleague-logo-dark.svg' : 
   artSlot={artMode === 'shot'}
   model={artMode === 'model' ? model : null}
   glowColor={glowColor}
-  logoArt={artMode === 'logo' ? LOGO : undefined}
+  logoArt={artMode === 'shot' ? undefined : LOGO}
   pill={view.pill}
   title={view.headline}
   titleAccent={view.accentWord}
