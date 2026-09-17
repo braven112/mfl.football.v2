@@ -92,8 +92,15 @@ export function articleExcerpt(body: string | undefined, limit = EXCERPT_CHARS):
  * Friday). A miss falls back to the newest article rather than to nothing: the
  * slot is already showing, and yesterday's story beats an empty card.
  *
- * `within` (ms) bounds "latest" — a slot that would otherwise promote a
- * three-month-old article as this week's news.
+ * `within` (ms) BOUNDS "latest": nothing fresh enough returns null, and the
+ * caller shows its empty state. It is not a preference that degrades to the
+ * archive — that was this function's first shape, and it made the empty state
+ * unreachable for any feed that had ever carried an article. The AFL's pill is
+ * the CURRENT week, so the failure was not merely a stale card: on 2026-09-24
+ * it rendered `WEEK 3` over a story filed Sep 16. A card that cannot be
+ * current must say so, not wear this week's number over last week's news.
+ *
+ * Omit `within` to take the newest article whatever its age.
  */
 export function pickLatestArticle<T extends ArticleHeroSource>(
   posts: readonly T[],
@@ -107,11 +114,11 @@ export function pickLatestArticle<T extends ArticleHeroSource>(
     .sort((a, b) => new Date(b.timestamp ?? 0).getTime() - new Date(a.timestamp ?? 0).getTime());
   if (articles.length === 0) return null;
 
-  const fresh =
+  const pool =
     within === undefined
       ? articles
       : articles.filter((p) => now.getTime() - new Date(p.timestamp ?? 0).getTime() <= within);
-  const pool = fresh.length > 0 ? fresh : articles;
+  if (pool.length === 0) return null;
 
   if (prefer) {
     const match = pool.find((p) => prefer.test(p.headline));
@@ -133,12 +140,24 @@ export interface LatestArticle {
   byline: ArticleHeroByline;
 }
 
-/** The dateline beside the pill. One formatter, so both leagues read alike. */
-export function articleDateLabel(timestamp: string | undefined): string | undefined {
+/**
+ * The dateline beside the pill. One formatter, so both leagues read alike.
+ *
+ * THE ZONE IS REQUIRED, and it is the LEAGUE's own (`leagueClock(slug).zone`),
+ * not the host's. Without it `toLocaleDateString` formats in the server's zone,
+ * which on Vercel is UTC — and the article cron files at `30 0 * * 5`, i.e.
+ * Thursday 4:30 PM PT, which is already Friday in UTC. The card would have
+ * datelined Thursday's column "Fri" for every reader.
+ *
+ * The league's clock rather than the viewer's on purpose: this is a league
+ * surface, and resolving a viewer preference writes a cookie, which an
+ * imported component may not do (see docs/claude/rules/viewer-preferences.md).
+ */
+export function articleDateLabel(timestamp: string | undefined, timeZone: string): string | undefined {
   if (!timestamp) return undefined;
   const at = new Date(timestamp);
   if (Number.isNaN(at.getTime())) return undefined;
-  return at.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  return at.toLocaleDateString('en-US', { timeZone, weekday: 'short', month: 'short', day: 'numeric' });
 }
 
 /** Everything the composite hero needs that is not the cast player. */

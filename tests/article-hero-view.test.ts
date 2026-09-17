@@ -15,6 +15,7 @@ import type { CompositeHeroTreatment } from '../src/types/composite-hero';
 const ROOT = join(__dirname, '..');
 const COMPOSITE: CompositeHeroTreatment = { wordmark: 'NEWS', accent: 'navy', tone: null, scope: 'league' };
 const BYLINE = { name: 'Claude Schefter', avatar: '/assets/claude-schefter-avatar.webp' };
+const PT = 'America/Los_Angeles';
 
 const OPTS = {
   pill: 'WAIVER REPORT',
@@ -112,15 +113,28 @@ describe('pickLatestArticle', () => {
     expect(pickLatestArticle([older, newer], { prefer: /nothing/ })?.headline).toBe('Newer story');
   });
 
-  it('honours `within` — a stale feed does not become this week’s news…', () => {
+  it('`within` is a HARD bound — an all-stale feed yields the empty state', () => {
+    // Not a preference that degrades to the archive. The AFL's pill is the
+    // CURRENT week, so a lenient fallback rendered "WEEK 3" over a story filed
+    // eight days earlier, and made emptyArticleHeroView unreachable for any
+    // feed that had ever carried an article.
     const stale = post({ headline: 'June story', timestamp: '2026-06-01T00:00:00.000Z' });
     const now = new Date('2026-09-17T00:00:00Z');
     const week = 7 * 24 * 60 * 60 * 1000;
-    // …but an ALL-stale feed still shows its newest rather than nothing: the
-    // slot is already on the page, and the card degrades by being old, not by
-    // being empty.
-    expect(pickLatestArticle([stale], { now, within: week })?.headline).toBe('June story');
+    expect(pickLatestArticle([stale], { now, within: week })).toBeNull();
     expect(pickLatestArticle([stale, newer], { now, within: week })?.headline).toBe('Newer story');
+    // Unbounded is still available for a caller that wants the newest at any age.
+    expect(pickLatestArticle([stale], { now })?.headline).toBe('June story');
+  });
+
+  it('`prefer` cannot reach outside the window', () => {
+    // The stale one matches the regex and the fresh one does not; the window
+    // wins, because a year-old waiver column is not this week's waiver report.
+    const staleMatch = post({ headline: 'Waiver wire winners', timestamp: '2025-09-01T00:00:00.000Z' });
+    const now = new Date('2026-09-17T00:00:00Z');
+    const week = 7 * 24 * 60 * 60 * 1000;
+    const picked = pickLatestArticle([staleMatch, newer], { prefer: /waiver/i, now, within: week });
+    expect(picked?.headline).toBe('Newer story');
   });
 
   it('returns null for a feed with no article', () => {
@@ -154,9 +168,18 @@ describe('copy shaping', () => {
   });
 
   it('returns no dateline rather than "Invalid Date"', () => {
-    expect(articleDateLabel(undefined)).toBeUndefined();
-    expect(articleDateLabel('not-a-date')).toBeUndefined();
-    expect(articleDateLabel('2026-09-16T19:27:28.364Z')).toMatch(/Sep/);
+    expect(articleDateLabel(undefined, PT)).toBeUndefined();
+    expect(articleDateLabel('not-a-date', PT)).toBeUndefined();
+    expect(articleDateLabel('2026-09-16T19:27:28.364Z', PT)).toMatch(/Sep/);
+  });
+
+  it('datelines in the LEAGUE’s zone, not the host’s', () => {
+    // The article cron files at `30 0 * * 5` — Thursday 4:30 PM PT, which is
+    // already Friday in UTC. Vercel runs UTC, so a zone-less format datelined
+    // every Thursday column "Fri".
+    const thursdayAfternoonPT = '2026-09-18T00:30:00.000Z';
+    expect(articleDateLabel(thursdayAfternoonPT, PT)).toBe('Thu, Sep 17');
+    expect(articleDateLabel(thursdayAfternoonPT, 'UTC')).toBe('Fri, Sep 18');
   });
 });
 
@@ -182,7 +205,15 @@ describe('both leagues render the ONE shared card', () => {
 
   it('the AFL news slot no longer hardcodes the listing page as its CTA', () => {
     const src = readFileSync(join(ROOT, 'src/utils/afl-hero-resolver.ts'), 'utf8');
-    const slot = src.slice(src.indexOf("'slot:article':"), src.indexOf("feature: ({ now, whatsNewEntry"));
+    const start = src.indexOf("'slot:article':");
+    const end = src.indexOf('feature: ({ now, whatsNewEntry');
+    // Assert the markers BEFORE slicing. A missing end marker makes `slice`
+    // run to EOF, and the assertions below then pass against the whole file —
+    // the scanner would go quiet rather than fail, which is the failure mode
+    // hero-showcase-content.test.ts already carries a comment about.
+    expect(start, "'slot:article': marker moved — re-anchor this scan").toBeGreaterThan(-1);
+    expect(end, 'feature-slot marker moved — re-anchor this scan').toBeGreaterThan(start);
+    const slot = src.slice(start, end);
     // The listing may appear as the FALLBACK and as the empty-desk link, but
     // the slot must go through the shared builder to decide.
     expect(slot).toMatch(/articleHeroView\(/);

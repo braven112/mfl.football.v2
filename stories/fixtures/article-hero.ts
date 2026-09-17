@@ -2,11 +2,17 @@
  * Fixtures for the ARTICLE state of LeagueCompositeHero — the homepage card
  * that promotes the latest Schefter story.
  *
- * Frozen copies of what `articleHeroView()` returns for the two stories that
- * were actually on the homepages the day this card was built, so the story
- * needs no feed and no clock. Keep them in step with that builder: the split
- * headline, the 180-char excerpt and the ARTICLE'S OWN `link` are the three
- * things the card exists to get right.
+ * Frozen copies of what `articleHeroView()` ACTUALLY returns for the two
+ * stories that were on the homepages the day this card was built, so the story
+ * needs no feed and no clock.
+ *
+ * "Actually" is load-bearing and was wrong on the first pass. These were
+ * hand-written to the split a human would choose — `League Walks Into` /
+ * `Buzz Saw.` — but `splitTitleHeadline` accents the LAST word, so production
+ * renders `League Walks Into Buzz` / `Saw.`. A fixture that flatters the code
+ * is worse than no fixture: Chromatic then pins a shape the site never draws,
+ * and the screenshots reviewed before shipping showed a card nobody would see.
+ * If you change these, re-derive them by RUNNING the builder, never by taste.
  *
  * Offline on purpose, same two ways as league-composite-hero.ts: an inline
  * data-URI face rather than an ESPN cutout, and a free-agent `nflTeam` so no
@@ -45,8 +51,10 @@ export const gauntletModel: HeroModel = {
 export const theLeagueWaiverReport: EventHeroView = {
   pill: 'WAIVER REPORT',
   pillDate: 'Wed, Sep 16',
-  headline: 'League Walks Into',
-  accentWord: 'Buzz Saw.',
+  // splitTitleHeadline('League Walks Into Buzz Saw') — the kicker
+  // ("Week 2 Wall: ") is dropped by stripHeadlineKicker first.
+  headline: 'League Walks Into Buzz',
+  accentWord: 'Saw.',
   summary:
     'Dark Magicians of Chaos face the gauntlet’s hardest road at 54 difficulty. But two undefeated teams built their records on cupcakes—and reality is coming.',
   link: '/theleague/news/sf_2026_gauntlet_w02',

@@ -32,6 +32,7 @@ import { castArticleModel } from '../../../utils/hero-casting';
 import { articleDateLabel, articleHeroView, pickLatestArticle } from '../../../utils/article-hero-view';
 import type { EventHeroView } from '../../../utils/afl-hero-resolver';
 import LeagueCompositeHero from '../../shared/LeagueCompositeHero.astro';
+import { LEAGUES, leagueClock } from '../../../config/leagues';
 import ArticleHeroStub from '../hero-stubs/ArticleHeroStub.astro';
 import feedData from '../../../data/theleague/schefter-feed.json';
 
@@ -99,7 +100,8 @@ const view: EventHeroView | null =
           composite: { wordmark: 'NEWS', accent: 'kickoff', tone: null, scope: 'league' },
           byline: { name: author.name, avatar: getAuthorAvatar(author) },
           fallbackLink: '/theleague/news',
-          dateLabel: articleDateLabel(article.timestamp),
+          // The LEAGUE's clock, never the host's — see articleDateLabel.
+          dateLabel: articleDateLabel(article.timestamp, leagueClock(LEAGUES.theleague.slug).zone),
         }),
         model,
       }

@@ -38,11 +38,12 @@ import { resolveFeatureHeadline } from './whats-new-hero-headline';
 import { MFL_EMAIL_DRAFT_OPTION, buildMflLiveDraftUrl, buildMflOptionUrl } from './mfl-url';
 import type { CompositeHeroTreatment } from '../types/composite-hero';
 import { getAuthor, getAuthorAvatar } from '../types/schefter';
-import { LEAGUES } from '../config/leagues';
+import { LEAGUES, leagueClock } from '../config/leagues';
 import { resolveRecapDestination, type RecapDestination } from './hero-recap-destination';
 import { waiverDeadlineCopy, type WaiverDeadlineCopy } from './waiver-deadline-copy';
 import {
   articleDateLabel,
+  articleExcerpt,
   articleHeroView,
   emptyArticleHeroView,
   type ArticleHeroByline,
@@ -897,7 +898,7 @@ const SLOT_VIEW: Record<SlotKey, (ctx: SlotContext) => EventHeroView> = {
           byline,
           fallbackLink: '/afl-fantasy/news',
           fallbackLinkLabel: 'READ THE LATEST',
-          dateLabel: articleDateLabel(article.post.timestamp),
+          dateLabel: articleDateLabel(article.post.timestamp, leagueClock(LEAGUES['afl-fantasy'].slug).zone),
         })
       : emptyArticleHeroView({
           pill: week ? `WEEK ${week}` : 'AROUND THE AFL',
@@ -1271,7 +1272,7 @@ function eventToHero(event: ResolvedLeagueEvent): HeroContent {
   };
 }
 
-function buildRegularSeasonHero(slot: DailySlot, week: number | undefined, gameWindow: GameWindow, now: Date = new Date(), lineupSubmitted: boolean | null = null, recap?: RecapDestination, waiver?: WaiverDeadlineCopy): HeroContent {
+function buildRegularSeasonHero(slot: DailySlot, week: number | undefined, gameWindow: GameWindow, now: Date = new Date(), lineupSubmitted: boolean | null = null, recap?: RecapDestination, waiver?: WaiverDeadlineCopy, article?: LatestArticle): HeroContent {
   const weekLabel = week ? `Week ${week}` : 'Regular Season';
   switch (slot) {
     case 'live-scoring': {
@@ -1367,12 +1368,19 @@ function buildRegularSeasonHero(slot: DailySlot, week: number | undefined, gameW
       };
     case 'article':
     default:
+      // KEPT IN STEP WITH THE `view` ABOVE. Nothing renders these fields today
+      // — the AFL page reads only `heroEventId` / `heroEntryId` off `content`
+      // — but the recap and waiver cases keep both objects agreeing for a
+      // reason, and leaving the listing-page link here would quietly restore
+      // the exact bug the view just fixed the moment anything read it.
       return {
         source: 'event',
-        title: `${weekLabel} — Around the AFL`,
-        summary: 'Schefter covers the moves, the matchups, and the storylines shaping the AL and NL races.',
-        link: '/afl-fantasy/news',
-        linkLabel: 'Read the latest',
+        title: article ? article.post.headline : `${weekLabel} — Around the AFL`,
+        summary: article
+          ? articleExcerpt(article.post.body)
+          : 'Schefter covers the moves, the matchups, and the storylines shaping the AL and NL races.',
+        link: article?.post.link ?? '/afl-fantasy/news',
+        linkLabel: article?.post.linkLabel ?? 'Read the latest',
         icon: 'news',
         accentColor: 'var(--cat-regular-season, #1c497c)',
         kicker: 'The Beat',
@@ -1615,7 +1623,7 @@ export function resolveAflHeroState(input: AflHeroResolverInput): AflHeroState {
       // and the games stop at 8:30. This is what stops the hero polling all
       // evening and badging finished games LIVE.
       isLive: isGameLive(now),
-      content: buildRegularSeasonHero(slot, week, gameWindow, now, input.lineupSubmitted ?? null, input.recap, input.waiver),
+      content: buildRegularSeasonHero(slot, week, gameWindow, now, input.lineupSubmitted ?? null, input.recap, input.waiver, input.article),
       view,
     };
   }
