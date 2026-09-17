@@ -34,6 +34,7 @@ import collegeLogos from '../../data/college-logos.json';
 import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
 import leagueConfig from '../../data/theleague.config.json';
 import { getLeagueBySlug, leagueClock } from '../../config/leagues';
+import { getCachedRosters } from '../../utils/mfl-roster-cache';
 import { resolveAuctionWindow } from '../../utils/auction-window';
 import { NO_HEADSHOT_SILHOUETTE, getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark, getPlayerAvatarStyleMaps } from '../../utils/nfl-team-colors';
 import { isDraftComplete } from '../../utils/draft-utils';
@@ -305,8 +306,40 @@ if (projectedScoresData?.projectedScores?.playerScore) {
 // Build rostered player map with contract info + the OWNING franchise, which
 // is what lets a rostered player's modal wear the fantasy team (band colors,
 // crest, "Rostered by" line) instead of the free-agent fallback.
+//
+// LIVE FIRST. Everything below keys off this map — `isRostered`, and therefore
+// the entire free-agent list this page exists to show. Built from the committed
+// feed alone it is only as current as the last DEPLOY, so a waiver claim or a
+// drop kept showing the old state until a sync commit shipped: an owner opened
+// the page to find a free agent who was claimed two hours earlier, which is the
+// one thing a free-agent page must not do.
+//
+// The AFL's copy of this page already solved it (`afl-free-agents-live.ts`,
+// which overlays roster membership from the live export). This reads the Redis
+// cache instead, for two reasons: it is SHARED across serverless instances
+// rather than per-warm-instance, and `rosters.astro` already populates the very
+// same key — so on a warm cache this page usually costs zero extra MFL calls,
+// and MFL sees at most one fetch per league per TTL no matter how many owners
+// are browsing.
+//
+// Falls back to the committed feed whenever Redis is unavailable or empty. That
+// fallback is not decoration: without it a Redis outage would empty the roster
+// map and report the whole league as free agents.
+const cachedRosterPlayers = await getCachedRosters(String(currentYear), mflLeagueId);
+
 const rosteredPlayers = new Map<string, { salary: number | null; contractYrs: number | null; franchiseId: string }>();
-if (rostersData?.rosters?.franchise) {
+if (cachedRosterPlayers) {
+  for (const [playerId, entry] of Object.entries(cachedRosterPlayers)) {
+    if (!playerId || !entry?.franchiseId) continue;
+    const salary = entry.salary ? parseFloat(entry.salary) : null;
+    const contractYrs = entry.contractYear ? parseInt(entry.contractYear, 10) : null;
+    rosteredPlayers.set(playerId, {
+      salary: salary && salary > 0 ? salary : null,
+      contractYrs: contractYrs && contractYrs > 0 ? contractYrs : null,
+      franchiseId: entry.franchiseId,
+    });
+  }
+} else if (rostersData?.rosters?.franchise) {
   const franchises = Array.isArray(rostersData.rosters.franchise)
     ? rostersData.rosters.franchise
     : [rostersData.rosters.franchise];
