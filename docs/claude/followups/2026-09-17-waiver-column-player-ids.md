@@ -1,12 +1,12 @@
 ---
 slug: waiver-column-player-ids
-status: shipped
+status: in-review
 severity: P2
 opened: 2026-09-17
 hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1156
 hotfix_sha: 96d2b71
 followup_issue: 1158
-followup_pr: (pending — see "Shipping" below)
+followup_pr: https://github.com/braven112/mfl.football.v2/pull/1159
 followup_worked: 2026-09-17
 followup_session: session_013bTc8oqnPeFXqWfMo39cFf
 ---
@@ -235,11 +235,29 @@ family are worth knowing about because `ACQUISITION_TYPES` includes
 
 ## Shipping
 
+PR: https://github.com/braven112/mfl.football.v2/pull/1159 — targets `main`, not
+`staging`. This is a bug fix, which `docs/plans/staging-release-process.md`
+(line 117) puts straight to prod, and `staging` has not taken #1156 yet: a PR
+against it would drag the whole hotfix plus ~100 cron commits along.
+
 Worked on branch `followup/waiver-column-player-ids`, off `origin/main`.
 `pnpm test:unit` green at 505 files / 12,221 tests. The two new behavioral
 guards were verified to fail against the pre-fix code (F3: `warn` not called;
 F4: `(1 claim,` absent), and the widened corpus was verified to surface 3
 parity mismatches the old one could not see.
+
+The review round found four more things, all confirmed and fixed in the PR —
+the significant one being **F6** above, a third parser. It also found that six
+places read this one MFL field, not two; the three still unpinned are filed as
+`docs/claude/followups/2026-09-17-transaction-parser-proliferation.md`, one of
+them (`offseason-hero-data.ts:999`) a live inversion that reports the players a
+team CUT as its recent pickups.
+
+Reviewers: Claude correctness / cross-cutting / quality all ran. Copilot ran and
+independently raised F6. CodeQL and Analyze green. **Codex did not run** (CLI
+absent in the cloud sandbox) and **Gemini did not run** (`workflow_dispatch`
+403s for this token — `actions: read`, not `actions: write`, the same gap F1
+records). Neither is a clean pass.
 
 `/update-whats-new`: **skip**. Nothing here is reader-facing — the parser
 divergence only ever affected pre-2017 rows, and the fact-sheet wording is
