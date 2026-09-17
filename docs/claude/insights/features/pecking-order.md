@@ -6,6 +6,18 @@ TheLeague August 2026; ported to the AFL 2026-08-15.
 
 ---
 
+## 2026-09-16 - Choosing the Readiness Probe: the Landing Page Always 200s, and the Issue Permalink 200s While the Ballot Is Still Open
+
+**Context:** Both poll lanes had the announce-before-deploy race described in `schefter-weekly-articles.md` (2026-09-16), but neither showed the Schefter symptom. The column's announcement links `/pecking-order`, which exists every week of the year — so instead of a redirect, everyone it sent there was shown LAST week's rankings, and the ballot it invited them to vote in was not on the page because the poll block lives inside the issue file that had not deployed.
+
+**Insight:** Once you wait on a URL before announcing, the whole fix rests on picking a URL that can actually FAIL, and the obvious candidate is usually the one that cannot. Three shapes here, and each needed a different answer. (1) The **landing page** is useless as a probe — `/pecking-order` answers 200 in every week of the season and its staleness is exactly the thing being announced. (2) The **issue permalink** `/<league>/pecking-order/<year>/<week>` works for the Tuesday column, and only because that route is `prerender = true` off a `getStaticPaths` glob over the committed issues: no file, no path, 404. That property is not incidental — an SSR route reading the same glob would have rendered *something* and passed. (3) For the Thursday reveal the permalink is **actively wrong**: the close pass AMENDS Tuesday's issue, so the page has existed for two days and answers 200 while still showing an open ballot. The probe there is the reveal's own feed post — new, and committed in the same push as the amended issue, so `/news/<id>` going live proves the tally did too. General rule: for a CREATE, probe the thing created; for an UPDATE, find something new riding the same commit, because no status code distinguishes fresh content from stale at the same URL.
+
+**Recommendation:** The column's GroupMe message, its `column` push and the ballot-open pushes travel in ONE queue entry, so they cannot land apart from each other — an owner told to vote should never arrive before the ballot renders. Note `pushCategory` is part of that entry for a reason: owners subscribe per category (`src/config/notification-categories.ts`) and the server drops a wrong one silently, so the column push has to stay `'column'` rather than inheriting the article default. The turnout nag is the one lane left sending inline, correctly — it is push-only and writes no file, so it has nothing to wait for. `tests/owners-poll-chat-budget.test.ts` now counts the two-a-week chat budget against `enqueueAnnounce` calls instead of the two send functions that used to exist, and fails on any direct GroupMe call surviving in the generator.
+
+**Evidence:** `scripts/generate-pecking-order.mjs` (`issuePermalink`, `queueAnnouncement`, `writeRevealFeedPost` returning the post id), `src/pages/*/pecking-order/[year]/[week].astro`, `tests/schefter-announce-pending.test.ts`, `tests/owners-poll-chat-budget.test.ts`.
+
+---
+
 ## 2026-08-15 - The AI Response Is Keyed by franchiseId, and the Fact Sheet Never Carried One — Every Blurb Silently Fell Back
 
 **Context:** `applyAIVoice` maps the model's `blurbs` object onto the rankings

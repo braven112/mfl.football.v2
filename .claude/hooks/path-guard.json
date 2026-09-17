@@ -562,8 +562,11 @@
         "tests/owners-poll-window.test.ts",
         "tests/owners-poll-voters.test.ts",
         "tests/owners-poll-posts.test.ts",
-        "tests/owners-poll-lineup-styles.test.ts"
-      ]
+        "tests/owners-poll-lineup-styles.test.ts",
+        "tests/owners-poll-chat-budget.test.ts",
+        "tests/schefter-announce-pending.test.ts"
+      ],
+      "note": "The poll's chat budget is TWO posts a week (the column, with the ballot invite folded in, and the reveal) and the nag is push-only. Neither is SENT here any more: generate-pecking-order.mjs queues them and scripts/schefter-announce-pending.mjs delivers after the commit step. Neither lane PROBES a URL first \u2014 /pecking-order answers 200 every week of the season, and the per-issue permalink 500s in production today (docs/claude/followups/2026-09-17-pecking-order-permalink-500.md) \u2014 so queueing alone is what keeps the announcement behind the commit."
     },
     {
       "name": "page-directory-and-whats-new",
@@ -746,14 +749,18 @@
     {
       "name": "schefter-columns",
       "rules": "docs/claude/rules/schefter.md",
-      "note": "A column on a weekly cron is NOT breaking news: tier:'breaking' hands the post the homepage at P0 for 48h (selectBreakingStory \u2192 resolveHeroState), and three weekly columns at that tier preempted the regular-season daily rotation ~4 days in 7. Every article type must also export the full pipeline interface and declare relatedLinks. See tests/weekly-column-hero-claim.test.ts. The workflow is in this domain deliberately: the guard derives the weekly set from its cron\u2192type map, so an edit there must re-run the guard. Dedup for a once-per-season id must read the season ARCHIVE, not just the live feed: the weekly archiver rotating the original out is what re-posted the 2026 schedule-release column to GroupMe six days into the season. isDuplicate and appendToFeed share that check and fail closed on an unreadable shard, and --week does not waive the season guard for a type whose id ignores the week.",
+      "note": "A column on a weekly cron is NOT breaking news: tier:'breaking' hands the post the homepage at P0 for 48h (selectBreakingStory \u2192 resolveHeroState), and three weekly columns at that tier preempted the regular-season daily rotation ~4 days in 7. Every article type must also export the full pipeline interface and declare relatedLinks. See tests/weekly-column-hero-claim.test.ts. The workflow is in this domain deliberately: the guard derives the weekly set from its cron\u2192type map, so an edit there must re-run the guard. Dedup for a once-per-season id must read the season ARCHIVE, not just the live feed: the weekly archiver rotating the original out is what re-posted the 2026 schedule-release column to GroupMe six days into the season. isDuplicate and appendToFeed share that check and fail closed on an unreadable shard, and --week does not waive the season guard for a type whose id ignores the week. An announcement is published in TWO steps: the generator ENQUEUES it (scripts/lib/announce-queue.mjs) and scripts/schefter-announce-pending.mjs sends it after the commit step, once the permalink answers 200 \u2014 posting from the generator advertises a permalink the deploy has not shipped yet, and news/[id].astro answers that with a redirect to the Schefter index.",
       "paths": [
         "scripts/article-types/*.mjs",
         "scripts/article-utils/*.mjs",
         "scripts/schefter-weekly-articles.mjs",
-        ".github/workflows/schefter-articles.yml"
+        ".github/workflows/schefter-articles.yml",
+        "scripts/schefter-announce-pending.mjs",
+        "scripts/lib/announce-queue.mjs",
+        "scripts/lib/await-published.mjs"
       ],
       "tests": [
+        "tests/schefter-announce-pending.test.ts",
         "tests/weekly-column-hero-claim.test.ts",
         "tests/preview-empty-week.test.ts",
         "tests/article-type-interface.test.ts",

@@ -72,17 +72,29 @@ describe('the nag is push-only', () => {
     );
     expect(nagBody).toMatch(/buildNagPushes/);
     expect(nagBody).toMatch(/sendVoterPushes/);
-    expect(nagBody).not.toMatch(/postPollMessage/);
+    // It must not reach chat by either route — the direct one, or by queueing
+    // a message for the post-deploy announce pass.
+    expect(nagBody).not.toMatch(/postToGroupMe/);
+    expect(nagBody).not.toMatch(/enqueueAnnounce/);
   });
 });
 
 describe('the poll only ever posts to chat twice a week', () => {
   it('posts on open (with the column) and on reveal, and nowhere else', () => {
-    // postPollMessage is the poll's only chat path; postAnnouncement is the
-    // column's, which the ballot invite rides along with.
-    const calls = GENERATOR.match(/await postPollMessage\(/g) ?? [];
-    expect(calls).toHaveLength(1); // the reveal
-    expect(GENERATOR.match(/await postAnnouncement\(/g) ?? []).toHaveLength(1);
+    // The generator no longer sends to GroupMe itself: it QUEUES, and
+    // scripts/schefter-announce-pending.mjs delivers after the commit, once
+    // the issue is live (see scripts/lib/await-published.mjs). The budget is
+    // unchanged and counted the same way — one queued chat message for the
+    // column the ballot invite rides along with, one for the reveal.
+    const queued = GENERATOR.match(/enqueueAnnounce\(/g) ?? [];
+    expect(queued).toHaveLength(2);
+    expect(GENERATOR.match(/kind: 'pecking-order'/g) ?? []).toHaveLength(1);
+    expect(GENERATOR.match(/kind: 'owners-poll-close'/g) ?? []).toHaveLength(1);
+
+    // And no direct chat path survives anywhere in the generator — one that
+    // did would be a post that goes out before the deploy, which is the bug.
+    expect(GENERATOR).not.toMatch(/postToGroupMeCapped\s*\(/);
+    expect(GENERATOR).not.toMatch(/\bpostToGroupMe\s*\(/);
   });
 
   it('folds the ballot invite into the column post instead of adding one', () => {

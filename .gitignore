@@ -79,3 +79,8 @@ build-storybook.log
 
 # Diagnostic output from scripts/roster-parity-check.mjs (written to cwd).
 roster-parity.json
+
+# Schefter announce queue — a runner-local handoff between the article
+# generator and the post-deploy announce pass (scripts/lib/announce-queue.mjs).
+# CI keeps it in RUNNER_TEMP; this covers a local run.
+.schefter-announce-queue.json
