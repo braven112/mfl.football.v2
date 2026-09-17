@@ -24,7 +24,6 @@
  *   ANTHROPIC_API_KEY — Required for Schefter voice generation
  */
 
-import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadJSON, resolveDataDir, getFeedPath, loadTeams } from './article-utils/data-loaders.mjs';
