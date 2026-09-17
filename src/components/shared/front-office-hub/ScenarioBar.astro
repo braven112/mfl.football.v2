@@ -106,6 +106,20 @@ const { leagueSlug, franchiseId } = Astro.props;
     const money = (n: number) =>
       `${n < 0 ? '−' : '+'}$${Math.abs(Math.round(n)).toLocaleString('en-US')}`;
 
+    // Mirrors CapProjectionTable's own two spellings. Every money cell ships
+    // both — exact where there is room, short on a phone — and CSS picks
+    // one, so a repaint that wrote only the visible span would leave the
+    // other stale and wrong the moment the viewport changed.
+    const exact = (n: number) =>
+      `${n < 0 ? '−' : ''}$${Math.abs(Math.round(n)).toLocaleString('en-US')}`;
+    const short = (n: number) => {
+      const v = Math.abs(Math.round(n));
+      const sign = n < 0 ? '−' : '';
+      if (v >= 1_000_000) return `${sign}$${(v / 1_000_000).toFixed(1)}M`;
+      if (v >= 1_000) return `${sign}$${Math.round(v / 1_000)}K`;
+      return `${sign}$${v}`;
+    };
+
     const setCell = (key: string, text: string, sign?: 'up' | 'down') => {
       const el = document.querySelector<HTMLElement>(`[data-proj-cell="${key}"]`);
       if (!el) return;
@@ -114,19 +128,33 @@ const { leagueSlug, franchiseId } = Astro.props;
       else delete el.dataset.sign;
     };
 
+    /** Write a money cell's exact AND short spellings. */
+    const setMoneyCell = (key: string, n: number) => {
+      const el = document.querySelector<HTMLElement>(`[data-proj-cell="${key}"]`);
+      if (!el) return;
+      const full = el.querySelector<HTMLElement>('.num--full');
+      const brief = el.querySelector<HTMLElement>('.num--short');
+      if (full && brief) {
+        full.textContent = exact(n);
+        brief.textContent = short(n);
+      } else {
+        // Defensive: a cell rendered without the two spans still updates.
+        el.textContent = exact(n);
+      }
+    };
+
     const repaint = () => {
       const years = project({ ...input, years: 3 }, scenario.moves.length ? scenario : null);
       const baseline = project({ ...input, years: 3 }, compareWith);
 
       years.forEach((y, i) => {
-        setCell(`committed-${i}`, `${y.committed < 0 ? '−' : ''}$${Math.abs(Math.round(y.committed)).toLocaleString('en-US')}`);
-        setCell(`dead-${i}`, `$${Math.round(y.deadMoney).toLocaleString('en-US')}`);
+        setMoneyCell(`committed-${i}`, y.committed);
+        setMoneyCell(`dead-${i}`, y.deadMoney);
         setCell(`count-${i}`, String(y.playersUnderContract));
-        const spaceEl = document.querySelector<HTMLElement>(`[data-proj-cell="space-${i}"]`);
-        if (spaceEl) {
-          spaceEl.textContent = `${y.space < 0 ? '−' : ''}$${Math.abs(Math.round(y.space)).toLocaleString('en-US')}`;
-          spaceEl.classList.toggle('fo-proj__space--negative', y.space < 0);
-        }
+        setMoneyCell(`space-${i}`, y.space);
+        document
+          .querySelector<HTMLElement>(`[data-proj-cell="space-${i}"]`)
+          ?.classList.toggle('fo-proj__space--negative', y.space < 0);
       });
 
       const deltaRow = document.querySelector<HTMLElement>('[data-proj-delta-row]');

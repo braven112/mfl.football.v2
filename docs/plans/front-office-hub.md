@@ -189,7 +189,7 @@ type ScenarioMove =
   | { kind: 'extend'; playerId: string; years: number }
   | { kind: 'tag';    playerId: string }
   | { kind: 'cut';    playerId: string }
-  | { kind: 'walk';   playerId: string };   // let an expiring contract go
+  // NB: a "walk" move was built and then REMOVED — see Phase E's outcome.
 ```
 
 `cap-projection.ts` is pure: `(roster, scenario, years) => CapYear[]`. It composes
@@ -233,9 +233,7 @@ already handled in `src/utils/draft-utils.ts` — nothing to do with free agency
 So the projection would have to invent a formula, and a planning page that invents a
 league rule is worse than one that omits it. This item stays specced and unbuilt until
 Brandon either points at the rule or states it. Everything else in Phase E is
-unblocked and does not depend on it; the `{ kind: 'walk' }` move is still built,
-because letting a contract expire has a real cap effect regardless of whether any pick
-comes back.
+unblocked and does not depend on it.
 
 ## Phases
 
@@ -417,7 +415,7 @@ league reads zero, because one player with no points is a fact about that player
 16. Build `cap-projection.ts` (pure) + `CapProjectionTable.astro` — 3 seasons side by
     side, static first, no toggles. Shippable on its own and already a real upgrade on
     the single-year metric strip.
-17. Wire the what-if toggles: extend / tag / cut / walk mutate the scenario and
+17. Wire the what-if toggles: extend / tag / cut mutate the scenario and
     re-render the projection. Reuses Phase D's eligibility, which is why it comes
     after it.
 18. `ScenarioBar` — save, name, load, compare two, reset. localStorage, scoped.
@@ -427,6 +425,14 @@ league reads zero, because one player with no points is a fact about that player
 are deleted. `cap-projection.ts` is pure and declares no cap arithmetic of its own;
 `CapProjectionTable` shows three seasons and re-projects live; `ScenarioBar` saves,
 names, loads, compares and clears, through `scopedLocalKey`.
+
+**A fourth toggle was built and removed.** "Walk" dropped a player from every season
+at zero cost — a move no mechanism in this league offers, since a cut leaves dead
+money and a trade is the only other way out. It invited planning against cap space
+that cannot exist. The thing it was reaching for, a contract lapsing, is not a move at
+all: `calculateCapCharges` counts a player in season `index` only while
+`contractYears > index`, so a player with one year left already drops off the 2027
+column with nothing ticked. Guarded, so it cannot come back.
 
 Driven in a browser: ticking a cut, then an extend, then a tag on the same player
 leaves **two** moves lit, not three — one move per player, the last replacing rather

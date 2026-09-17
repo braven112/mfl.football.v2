@@ -2,7 +2,7 @@
  * The line between "simulate" and "commit", pinned mechanically.
  *
  * The Front Office hub's cap planner promises an owner they can tick
- * extend / tag / cut / walk and watch three seasons move WITHOUT filing
+ * extend / tag / cut and watch three seasons move WITHOUT filing
  * anything. That promise is the whole reason the feature is safe to put on
  * the same page as the real buttons — and it is exactly one careless
  * `fetch` away from being false. A toggle that quietly declared a contract
@@ -134,11 +134,25 @@ describe('the projection model', () => {
     expect(addedDeadMoney[1]).toBe(penalty.futurePenalty);
   });
 
-  it('a walk costs nothing — that is the whole difference from a cut', () => {
-    const scenario = { ...emptyScenario(), moves: [{ kind: 'walk' as const, playerId: '1' }] };
-    const { rows, addedDeadMoney } = applyScenario(roster, scenario);
-    expect(rows.map((r) => r.id)).toEqual(['2', '3']);
-    expect(addedDeadMoney.every((n) => n === 0)).toBe(true);
+  it('offers NO move that frees a player at zero cost', () => {
+    // There was briefly a "walk" move that removed a player from every
+    // season for nothing. No mechanism in this league does that — a cut
+    // leaves dead money and a trade is the only other way out — so it let
+    // an owner plan against cap space that cannot exist.
+    const kinds = MODEL.match(/kind: '(\w+)'/g) ?? [];
+    expect(kinds).not.toContain("kind: 'walk'");
+    expect(readFileSync('src/components/shared/front-office-hub/CapProjectionTable.astro', 'utf-8'))
+      .not.toMatch(/data-move="walk"/);
+  });
+
+  it('a lapsing contract needs no move — it is the baseline', () => {
+    // What "walk" was reaching for. Player 2 has one year left and is
+    // already gone from 2027 with nothing ticked, at no cost.
+    const years = project({ ...base, years: 3 });
+    expect(years[0].playersUnderContract).toBe(3);
+    expect(years[1].playersUnderContract).toBe(2);
+    // …and no dead money appears for the contract simply ending.
+    expect(years[1].deadMoney).toBe(0);
   });
 
   it('a tag re-prices to one year', () => {

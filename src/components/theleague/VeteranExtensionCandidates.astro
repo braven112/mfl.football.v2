@@ -463,7 +463,14 @@ const getPlayerDisplayName = (player: typeof players[0]): string => {
     font-size: 0.95rem;
   }
 
+  /* Third link in the min-width chain — see ChartCard.astro. Without it
+     the wrapper is sized by the table and its overflow-x never engages. */
+  .veteran-extension-candidates {
+    min-width: 0;
+  }
+
   .veteran-extension-candidates .table-wrapper {
+    min-width: 0;
     overflow-x: auto;
   }
 

@@ -8,7 +8,7 @@
  * the gap docs/plans/cap-projection-gap-analysis.md opened and never closed.
  *
  * THE LINE THIS COMPONENT DEFENDS: a toggle is scratch. Ticking extend, tag,
- * cut or walk mutates an in-memory scenario and re-renders these numbers. It
+ * or cut mutates an in-memory scenario and re-renders these numbers. It
  * never calls an API, never files a declaration, never touches MFL. Filing
  * is the separate, deliberate act of pressing Extend/Tag/Cut in the cards
  * above — and committing one CLEARS it from the scenario, so the projection
@@ -51,6 +51,27 @@ const clientInput = {
 
 const money = (n: number) =>
   `${n < 0 ? '−' : ''}${currencyFormatter.format(Math.abs(Math.round(n)))}`;
+
+/**
+ * Same figure, short enough for three columns on a phone. Three columns of
+ * full currency simply do not fit 412px — the 2028 column clipped — and a
+ * horizontal scroll an owner has to discover is a poor substitute for
+ * seeing all three seasons at once, which is the whole point of the table.
+ *
+ * Precision follows magnitude rather than a fixed rule: `$42.0M` is plenty
+ * for a committed total, but cap space is routinely five figures and
+ * "−$0.0M" would be useless, so anything under a million keeps thousands.
+ */
+const moneyShort = (n: number) => {
+  const v = Math.abs(Math.round(n));
+  const sign = n < 0 ? '−' : '';
+  if (v >= 1_000_000) return `${sign}$${(v / 1_000_000).toFixed(1)}M`;
+  if (v >= 1_000) return `${sign}$${Math.round(v / 1_000)}K`;
+  return `${sign}$${v}`;
+};
+
+/** Both spellings ship; CSS shows one. The client repaint writes both. */
+const cell = (n: number) => ({ full: money(n), short: moneyShort(n) });
 ---
 
 <div class="fo-proj" id="fo-projection">
@@ -65,7 +86,8 @@ const money = (n: number) =>
     <button type="button" class="fo-proj__reset" data-scenario-reset hidden>Clear what-ifs</button>
   </header>
 
-  <table class="fo-proj__table">
+  <div class="fo-proj__scroll">
+    <table class="fo-proj__table">
     <thead>
       <tr>
         <th scope="col">Season</th>
@@ -76,13 +98,19 @@ const money = (n: number) =>
       <tr>
         <th scope="row">Committed</th>
         {initial.map((y, i) => (
-          <td class="align-right" data-proj-cell={`committed-${i}`}>{money(y.committed)}</td>
+          <td class="align-right" data-proj-cell={`committed-${i}`}>
+            <span class="num num--full">{cell(y.committed).full}</span
+            ><span class="num num--short">{cell(y.committed).short}</span>
+          </td>
         ))}
       </tr>
       <tr>
         <th scope="row">Dead money</th>
         {initial.map((y, i) => (
-          <td class="align-right" data-proj-cell={`dead-${i}`}>{money(y.deadMoney)}</td>
+          <td class="align-right" data-proj-cell={`dead-${i}`}>
+            <span class="num num--full">{cell(y.deadMoney).full}</span
+            ><span class="num num--short">{cell(y.deadMoney).short}</span>
+          </td>
         ))}
       </tr>
       <tr class="fo-proj__row--space">
@@ -91,7 +119,10 @@ const money = (n: number) =>
           <td
             class:list={['align-right', 'fo-proj__space', { 'fo-proj__space--negative': y.space < 0 }]}
             data-proj-cell={`space-${i}`}
-          >{money(y.space)}</td>
+          >
+            <span class="num num--full">{cell(y.space).full}</span
+            ><span class="num num--short">{cell(y.space).short}</span>
+          </td>
         ))}
       </tr>
       <tr>
@@ -106,8 +137,9 @@ const money = (n: number) =>
           <td class="align-right fo-proj__delta" data-proj-cell={`delta-${i}`}></td>
         ))}
       </tr>
-    </tbody>
-  </table>
+      </tbody>
+    </table>
+  </div>
 
   <div class="fo-proj__whatif">
     <p class="fo-proj__whatif-label" id="fo-whatif-label">What if you…</p>
@@ -119,7 +151,6 @@ const money = (n: number) =>
             <button type="button" class="fo-move__btn" data-move="extend" data-player-id={p.id} aria-pressed="false">Extend</button>
             <button type="button" class="fo-move__btn" data-move="tag" data-player-id={p.id} aria-pressed="false">Tag</button>
             <button type="button" class="fo-move__btn" data-move="cut" data-player-id={p.id} aria-pressed="false">Cut</button>
-            <button type="button" class="fo-move__btn" data-move="walk" data-player-id={p.id} aria-pressed="false">Walk</button>
           </span>
         </li>
       ))}
@@ -131,6 +162,11 @@ const money = (n: number) =>
 
 <style>
   .fo-proj {
+    /* A grid item's automatic min-width is its own content's min-content,
+       not 0 — so without this the table's natural width pushed this card,
+       its track, and the page past the viewport on a phone. Same failure
+       the analytics cards hit; see RosterAnalyticsPanel's .chart-card. */
+    min-width: 0;
     background: var(--content-bg, #fff);
     border-radius: 0.75rem;
     padding: 1rem;
@@ -173,6 +209,13 @@ const money = (n: number) =>
     cursor: pointer;
   }
 
+  /* Backstop for the narrowest phones: the table scrolls inside the card
+     rather than the page scrolling sideways. */
+  .fo-proj__scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
   .fo-proj__table {
     width: 100%;
     border-collapse: collapse;
@@ -199,6 +242,23 @@ const money = (n: number) =>
   }
 
   .align-right { text-align: right; }
+
+  /* Exact figures where there is room; the short spelling on a phone. */
+  .num--short { display: none; }
+
+  @media (max-width: 560px) {
+    .fo-proj__table { font-size: 0.8125rem; }
+
+    .fo-proj__table th,
+    .fo-proj__table td { padding: 0.3rem 0.35rem; }
+
+    .num--full { display: none; }
+    .num--short { display: inline; }
+
+    /* The season header is the one column that can lose its label without
+       losing meaning — the row headings already say what each row is. */
+    .fo-proj__table thead th:first-child { font-size: 0; }
+  }
 
   .fo-proj__row--space th,
   .fo-proj__row--space td {

@@ -80,7 +80,7 @@ costs about ninety seconds.
 
 ## The line the cap planner defends
 
-Ticking extend / tag / cut / walk mutates an in-memory scenario and
+Ticking extend / tag / cut mutates an in-memory scenario and
 re-projects three seasons. It never calls an API. Filing is the separate
 act of pressing a button in the cards above, and doing so dispatches
 `fo:action-filed`, which drops that player from the scenario — otherwise
@@ -100,8 +100,16 @@ walk, here's the comp pick you'd get". There is no such rule:
 `docs/claude/league-rules.md` has none, and TheLeague's only compensatory
 picks are the three toilet bowl slots (1.17, 2.17, 2.18), already handled
 in `draft-utils.ts`. Building it would mean inventing a league rule on a
-page owners plan against. The `walk` move exists anyway, because letting a
-contract lapse has a real cap effect whether or not a pick comes back.
+page owners plan against. Note this is unrelated to the removed `walk`
+toggle above — a lapsing contract is already the baseline.
+
+**A "walk" toggle, built and then removed.** It dropped a player from every
+season at zero cost. Nothing in this league does that — a cut leaves dead
+money, a trade is the only other exit — so it offered cap space that cannot
+exist. Worth remembering as a shape: a simulator's danger is not a wrong
+number, it is a lever for a move the real world does not have. And what it
+was reaching for, a contract running out, was never a move: the baseline
+projection already drops a player the season their years expire.
 
 **The draft chip's multi-hop trade chain.** The reveal is built and
 accessible (button + `aria-expanded` + `aria-describedby`, hover/focus/tap

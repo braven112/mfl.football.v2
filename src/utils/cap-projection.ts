@@ -42,12 +42,25 @@ export interface ProjectionPlayer extends CapPlayer {
   displayTag?: string;
 }
 
+/**
+ * THERE IS NO "WALK" MOVE, and there was briefly — removing it is the point
+ * of this comment.
+ *
+ * It removed a player from every season at zero cost, which models losing
+ * someone and recovering 100% of their cap. Nothing in this league does
+ * that: a cut leaves dead money, and a trade is the only other way out.
+ *
+ * The real thing it was reaching for — a contract simply running out — is
+ * not a move at all. It is the BASELINE: `calculateCapCharges` counts a
+ * player in season `index` only while `contractYears > index`, so a player
+ * with one year left already drops off the 2027 column with nothing ticked.
+ * Offering it as a lever invited an owner to plan against cap space that
+ * cannot exist.
+ */
 export type ScenarioMove =
   | { kind: 'extend'; playerId: string; years: number }
   | { kind: 'tag'; playerId: string }
-  | { kind: 'cut'; playerId: string }
-  /** Let an expiring contract lapse rather than re-signing. */
-  | { kind: 'walk'; playerId: string };
+  | { kind: 'cut'; playerId: string };
 
 export interface Scenario {
   /** Stable id, for storage and comparison. */
@@ -124,13 +137,6 @@ export function applyScenario(
       const penalty = calculateCutPenalty(player.salary, player.contractYears);
       addedDeadMoney[0] += penalty.currentPenalty;
       addedDeadMoney[1] += penalty.futurePenalty;
-      continue;
-    }
-
-    if (move.kind === 'walk') {
-      // An expiring contract simply is not renewed. No penalty — that is
-      // the whole difference between walking and cutting, and the reason
-      // both moves exist.
       continue;
     }
 
