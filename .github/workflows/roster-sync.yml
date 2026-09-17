@@ -2,7 +2,28 @@ name: Roster Sync
 
 on:
   schedule:
-    - cron: "*/5 * * * *"
+    # FALLBACK ONLY — the primary trigger is the Vercel cron in vercel.json,
+    # which dispatches this workflow every 15 minutes.
+    #
+    # GitHub does not honour a high-frequency `schedule` on this repo, and it
+    # is not a delay you can wait out. Measured over 300 runs: from 2026-08-27
+    # the delivered cadence collapsed from a 21-47 min median to a 2-5 HOUR
+    # median, while `*/5` asked for 288 runs a day and got 5-8. Nothing here
+    # changed on that date and no run was cancelled — GitHub simply stopped
+    # dispatching the event, as it is explicitly allowed to do. Every other
+    # scheduled job in this repo degraded identically on the same day.
+    #
+    # That is how TheLeague's site went a full hour past the Wed 19:00 PT
+    # waiver run still showing pre-waiver rosters (2026-09-16): the last sync
+    # had landed at 18:20 PT and the next was hours away. The committed feeds
+    # are baked into the build, so no sync commit means no redeploy and the
+    # page cannot move, however correct the page code is.
+    #
+    # `*/30` here is a genuine fallback for a Vercel outage, not the schedule
+    # the site depends on. Do not "restore" this to `*/5` — that number was
+    # never being delivered, and combined with the Vercel cron it would only
+    # multiply production builds, which are 91% of the Vercel bill.
+    - cron: "*/30 * * * *"
   workflow_dispatch:
 
 concurrency:
