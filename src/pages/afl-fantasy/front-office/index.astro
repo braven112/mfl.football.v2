@@ -2,54 +2,69 @@
 /**
  * Front Office hub (AFL) — thin route wrapper.
  *
- * The hub's primary content is the Keeper Planner (AflKeeperPlannerPanel.astro),
- * reusing the already-shared `<KeeperPlanner>` component exactly as
- * `src/pages/afl-fantasy/rosters.astro`'s `?view=planner` tab does. Data
- * assembly lives in front-office-keeper-data.ts, not here — see that
- * module's header comment.
+ * Same shell, same panel, same switcher as TheLeague's: the hub is one
+ * component now (FrontOfficePanel), and what differs between the leagues is
+ * decided by registry features, not by which file you are looking at.
  *
- * No team switcher: the Keeper Planner only ever shows the signed-in owner's
- * OWN team, so there's no `?franchise=` override here — that's the one
- * simplification versus rosters.astro's version, which lets ANY visitor
- * browse to any team's (read-only, for non-owners) planner tab.
+ * The AFL gained a team switcher here. Its analytics, draft assets and
+ * stacks are public roster data, so any team is browsable read-only; its
+ * KEEPER BOARD is not, and the panel explains that absence itself.
+ *
+ * The cookie WRITE stays in this route: `Astro.cookies.set()` from an
+ * imported component runs after the headers are committed and throws.
+ * Keep this file thin (tests/page-fork-ratchet.test.ts).
  */
 import FrontOfficeHubPage from '../../../components/shared/front-office-hub/FrontOfficeHubPage.astro';
-import AflKeeperPlannerPanel from '../../../components/shared/front-office-hub/AflKeeperPlannerPanel.astro';
-import { buildFrontOfficeKeeperPlannerData } from '../../../utils/front-office-keeper-data';
-import { buildRosterAnalytics } from '../../../utils/roster-analytics';
-import { getAuthUser } from '../../../utils/auth';
+import FrontOfficeTeamSwitcher from '../../../components/shared/front-office-hub/FrontOfficeTeamSwitcher.astro';
+import FrontOfficePanel from '../../../components/shared/front-office-hub/FrontOfficePanel.astro';
+import { buildFrontOfficePanelData } from '../../../utils/front-office-panel-data';
+import { getAuthUser, isAuthorizedForLeague } from '../../../utils/auth';
 import { getLeagueBySlug } from '../../../config/leagues';
-import { getLeagueYearForSlug } from '../../../utils/league-year';
 import { getTeam } from '../../../utils/afl-conference';
+import {
+  getAFLPreference,
+  rememberAflTeamChoice,
+  resolveAFLTeamSelection,
+} from '../../../utils/team-preferences';
 
 export const prerender = false;
 
 const league = getLeagueBySlug('afl-fantasy')!;
-const authUser = getAuthUser(Astro.request);
-const signedIn = !!authUser && authUser.leagueId === league.id && !!authUser.franchiseId;
-const selectedFranchiseId = signedIn ? authUser!.franchiseId : null;
-const isOwner = signedIn;
+const user = getAuthUser(Astro.request);
+const myFranchiseId = user && isAuthorizedForLeague(user, league.id) ? user.franchiseId : null;
 
-const leagueYear = getLeagueYearForSlug('afl-fantasy');
+const myTeamParam = Astro.url.searchParams.get('myteam');
+const franchiseParam =
+  Astro.url.searchParams.get('franchise') ??
+  Astro.url.searchParams.get('team') ??
+  Astro.url.searchParams.get('franchiseId');
 
-const myTeamInfo = selectedFranchiseId ? getTeam(selectedFranchiseId) : undefined;
+// Cookie WRITE — route frontmatter only (see this file's header).
+rememberAflTeamChoice(Astro.cookies, myTeamParam);
+const cookiePreference = getAFLPreference(Astro.cookies);
+
+// Priority: param > cookie > the viewer's own team > first team. `defaultTeam`
+// is where the owner's franchise lands, which puts it behind an explicit
+// choice but ahead of the arbitrary fallback — the same order TheLeague uses.
+const selectedTeamId = resolveAFLTeamSelection({
+  myTeamParam,
+  franchiseParam,
+  cookiePreference: cookiePreference?.franchiseId,
+  defaultTeam: myFranchiseId ?? undefined,
+});
+
+const data = await buildFrontOfficePanelData({
+  leagueSlug: 'afl-fantasy',
+  selectedTeamId,
+  viewerFranchiseId: myFranchiseId,
+  viewerMflCookie: user?.id,
+});
+
+const myTeamInfo = myFranchiseId ? getTeam(myFranchiseId) : undefined;
 const myTeam = myTeamInfo ? { id: myTeamInfo.franchiseId, name: myTeamInfo.name, icon: myTeamInfo.icon } : null;
-
-const keeperData = isOwner && selectedFranchiseId
-  ? await buildFrontOfficeKeeperPlannerData(selectedFranchiseId, leagueYear, league.id, authUser?.id)
-  : { roster: [], draftPicks: [], analytics: buildRosterAnalytics([]), playersByNflTeam: [], playersByCollege: [] };
 ---
 
-<FrontOfficeHubPage leagueSlug="afl-fantasy" myTeam={myTeam} leagueYear={leagueYear}>
-  <AflKeeperPlannerPanel
-    isOwner={isOwner}
-    signedIn={signedIn}
-    franchiseId={selectedFranchiseId ?? ''}
-    year={leagueYear}
-    roster={keeperData.roster}
-    draftPicks={keeperData.draftPicks}
-    analytics={keeperData.analytics}
-    playersByNflTeam={keeperData.playersByNflTeam}
-    playersByCollege={keeperData.playersByCollege}
-  />
+<FrontOfficeHubPage leagueSlug="afl-fantasy" myTeam={myTeam} leagueYear={data.leagueYear}>
+  <FrontOfficeTeamSwitcher slot="switcher" teams={data.teamsList} selectedTeamId={selectedTeamId} />
+  <FrontOfficePanel {...data} />
 </FrontOfficeHubPage>

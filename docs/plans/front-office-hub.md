@@ -281,15 +281,57 @@ existing AFL suite, updated to follow the extraction rather than weakened. New
 `front-office-hub` domain in `.claude/hooks/path-guard.json` runs them on every edit
 in that territory.
 
-### Phase B — one panel
+### Phase B — one panel — **SHIPPED 2026-09-17**
 6. Fold both panels into `FrontOfficePanel.astro`, sections gated on feature flags.
 7. Merge the two data builders into `front-office-panel-data.ts`.
 8. Give the AFL a team switcher; `isOwner` becomes
    `selectedTeamId === viewer's own franchise`, not `signedIn`.
 
-**Done when:** `AflKeeperPlannerPanel.astro` and `TheLeaguePlannerPanel.astro` are
-deleted, both route wrappers are under 80 lines, and an AFL owner can browse another
-team's hub read-only.
+**Done.** Both league panels are deleted and replaced by `FrontOfficePanel.astro`;
+`buildFrontOfficePanelData` is the single entry point; both routes are 70 lines. The
+AFL has a team switcher for the first time, and an AFL owner can browse any of the 24
+teams read-only.
+
+**The keeper board is owner-PRIVATE, which the plan had not distinguished.** "Browse
+any team, act only on your own" assumed every section is public data that is merely
+un-actionable for someone else. The AFL keeper plan is not: it is a private strategic
+scratchpad, and `/api/afl-keepers` enforces owner-only read in so many words ("owners
+can only read/write their own plan… the plan is private (no public read) since it's a
+strategic scratchpad"). Rendering it for another team would draw an empty board backed
+by a 403. So the board renders for the viewer's own team only and the panel says why;
+everything else on the AFL hub — analytics, stacks, draft chips, metrics — is public
+roster data and follows the switcher. `tests/front-office-shared-analytics.test.ts`
+pins both halves, including a check that the API really is owner-only, so if that ever
+becomes a public read the privacy argument gets re-examined rather than silently
+outliving its reason.
+
+Three smaller things the build settled:
+
+- **The metric strip is a list, not five fixed tiles.** TheLeague's are cap-shaped
+  (cap space, avg per player, players signed, dead money, age); the AFL's are
+  roster-shaped (size, average age, youngest, oldest). The switcher's script walks
+  whatever the server sent rather than naming `fo-metric-cap`, which would no-op on
+  the other league.
+- **`MetricCard`'s `hint` is red.** The AFL's youngest/oldest tiles put a player's
+  name there at first and it rendered as an error. A neutral fact belongs in
+  `subtitle`; `hint` is for something the owner must act on, like "Must cut 3 players".
+- **Action sheets are not interchangeable.** `AFLActionModal` carries real roster
+  writes (IR / Cut / Trade block), so it mounts only with the keeper board — i.e. only
+  for the viewer's own team. Mounting it while browsing someone else's would offer
+  writes against a roster you do not own. `WatchListBridge` (watch/bid) mounts for
+  contract leagues. Browsing another AFL team mounts neither, because nothing there
+  triggers one.
+
+`page-fork-ratchet.test.ts` earned its keep: the AFL wrapper first landed at 77 lines,
+inside the 75–98 band that test asserts is empty so the 80-line threshold stays a
+clear call rather than a judgement one. Rather than re-argue the threshold, the cookie
+assembly moved into `rememberAflTeamChoice` (the `rememberSundayTicketChoices`
+precedent — the route still makes the call, the helper only builds the arguments) and
+both routes came to 70.
+
+Sizes: the AFL hub went 526 KB raw / 80 KB gzipped → 971 KB / 101 KB, the cost of
+pre-rendering 24 teams of charts so the switcher never fetches. TheLeague's moved
+160 KB → 167 KB gzipped.
 
 ### Phase C — extract the contract driver
 9. Lift the CDM driver out of `rosters.astro` into `contract-actions-client.ts`.

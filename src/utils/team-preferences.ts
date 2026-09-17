@@ -407,3 +407,27 @@ export function resolveAFLTeamSelection(params: {
   // Final fallback
   return '0001';
 }
+
+/**
+ * Resolve and write the AFL team-preference cookie in one call.
+ *
+ * The AFL's cookie carries the conference and tier alongside the franchise
+ * id, so setting it means looking both up first. That assembly is the same
+ * three lines at every call site, and leaving it inline tempts a route into
+ * handing `setAFLPreference` a bare id and silently writing nothing (it
+ * validates and warns).
+ *
+ * The WRITE still happens where the caller calls it — this must be invoked
+ * from a route's frontmatter, never from an imported component, because
+ * `Astro.cookies.set()` after the response headers are committed throws and
+ * blanks the page. Same shape as `rememberSundayTicketChoices`.
+ *
+ * No-ops for an unknown franchise, so a junk `?myteam=` leaves the existing
+ * preference alone rather than clearing it.
+ */
+export function rememberAflTeamChoice(cookies: AstroCookies, franchiseId: string | null | undefined): void {
+  if (!franchiseId) return;
+  const meta = getAFLTeamData(franchiseId);
+  if (!meta) return;
+  setAFLPreference(cookies, franchiseId, meta.conference, meta.tier);
+}

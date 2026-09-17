@@ -227,6 +227,9 @@ export interface FrontOfficePlannerData {
   freeAgentNeedsByTeam: Record<string, PositionNeed[]>;
   teamMetrics: Record<string, FrontOfficeTeamMetrics>;
   teamAnalytics: Record<string, FrontOfficeTeamAnalytics>;
+  /** Footnote under the metric strip. Built here because it quotes the same
+   *  cap constants the metrics above it were computed from. */
+  metricsNote: string;
   /** Per-team, already grouped by year, for the chip row. */
   draftChipsByTeam: Record<string, FrontOfficeDraftChipGroup[]>;
   draftNextYear: number;
@@ -571,6 +574,9 @@ export async function buildFrontOfficePlannerData(selectedTeamId: string): Promi
     freeAgentNeedsByTeam,
     teamMetrics,
     teamAnalytics,
+    metricsNote:
+      `*Based on filling to ${TARGET_ACTIVE_COUNT} active players. Reserves ` +
+      `$${(RESERVE_FOR_ROOKIES / 1_000_000).toFixed(0)}M for practice squad rookies and free agents.`,
     draftChipsByTeam,
     draftNextYear,
     draftPredictions,

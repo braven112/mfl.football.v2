@@ -146,7 +146,7 @@ describe('the Front Office AFL panel carries the same roster analytics', () => {
   // inline copy. These guards follow it there, and additionally pin that the
   // AFL panel did not keep a copy behind.
   const PANEL_SRC = readFileSync(
-    'src/components/shared/front-office-hub/AflKeeperPlannerPanel.astro',
+    'src/components/shared/front-office-hub/FrontOfficePanel.astro',
     'utf-8',
   );
   const ANALYTICS_SRC = readFileSync(
@@ -233,7 +233,7 @@ describe('the Front Office AFL panel carries the same roster analytics', () => {
 
 describe('the AFL Front Office panel turns on the player modal and a manage/watch kebab', () => {
   const PANEL_SRC = readFileSync(
-    'src/components/shared/front-office-hub/AflKeeperPlannerPanel.astro',
+    'src/components/shared/front-office-hub/FrontOfficePanel.astro',
     'utf-8',
   );
   const STACKS_SRC = readFileSync(
@@ -246,12 +246,15 @@ describe('the AFL Front Office panel turns on the player modal and a manage/watc
     // playerData/data-player-modal attributes had nothing listening for a
     // click on this page, and there was no kebab at all — clicking a name
     // did nothing.
-    expect(PANEL_SRC).toMatch(/<PlayerDetailsModal\s+hideContract\s*\/>/);
-    // AFLActionModal, NOT the generic WatchListBridge sheet: this is the
-    // owner's own roster, so the sheet has to carry the real roster writes
-    // (IR / Cut / Trade block) the AFL roster page offers, not Watch alone.
-    expect(PANEL_SRC).toMatch(/<AFLActionModal \/>/);
-    expect(PANEL_SRC).not.toMatch(/WatchListBridge/);
+    // One shared panel now, so `hideContract` is an expression rather than a
+    // bare attribute — a league with no contracts hides those modal rows.
+    expect(PANEL_SRC).toMatch(/<PlayerDetailsModal hideContract=\{!contracts\} \/>/);
+    // AFLActionModal, NOT the generic WatchListBridge sheet, and only where
+    // the keeper board is: it carries real roster writes (IR / Cut / Trade
+    // block), so mounting it while browsing another owner's team would offer
+    // writes against a roster the viewer does not own.
+    expect(PANEL_SRC).toMatch(/\{keepers && <AFLActionModal \/>\}/);
+    expect(PANEL_SRC).toMatch(/\{contracts && <WatchListBridge/);
     expect(PANEL_SRC).toMatch(/<KeeperPlanner[\s\S]*?showActions/);
   });
 

@@ -1,18 +1,32 @@
 /**
- * SSR data assembly for the AFL's Front Office Keeper Planner
- * (components/shared/front-office-hub/AflKeeperPlannerPanel.astro).
+ * SSR data assembly for the AFL's half of the Front Office hub.
  *
- * Duplicated from `src/pages/afl-fantasy/rosters.astro`'s roster-building
- * (~lines 141-177) and `plannerDraftPicks` assembly (~lines 388-422) — see
- * that panel's header comment for why this is a duplicate, not an
- * extraction. Much smaller than TheLeague's equivalent
- * (front-office-planner-data.ts) because the AFL's Keeper Planner only ever
- * shows the signed-in owner's own team — no cap math, no league-wide player
- * list, no team switching.
+ * Called through `buildFrontOfficePanelData` (front-office-panel-data.ts),
+ * never directly by a route — that module owns the shape both leagues
+ * render through `FrontOfficePanel.astro`.
+ *
+ * Roster-building is duplicated from `src/pages/afl-fantasy/rosters.astro`
+ * (~lines 141-177) and its `plannerDraftPicks` assembly (~lines 388-422),
+ * on purpose rather than extracted, so this does not touch that page.
+ *
+ * TWO SCOPES, AND THE DIFFERENCE MATTERS
+ *
+ * - **Every team** gets analytics and draft chips. The hub's switcher swaps
+ *   display without fetching, so all 24 have to be in the payload. Both
+ *   come off ONE read of players.json + rosters.json, so widening from one
+ *   team to all of them is CPU on already-loaded data, not 24× the I/O.
+ * - **The viewer's own team only** gets the keeper board and trade-block
+ *   state. This is a privacy boundary, not a size one: an AFL keeper plan
+ *   is a private strategic scratchpad and `/api/afl-keepers` enforces
+ *   owner-only read. Rendering another owner's board would draw an empty
+ *   planner backed by a 403.
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { getAllTeams } from './afl-conference';
+import { getLeagueYearForSlug } from './league-year';
+import { EMPTY_ANALYTICS, type FrontOfficeTeamSummary, type FrontOfficeTeamView } from './front-office-panel-data';
+import type { FrontOfficeDraftChipGroup } from './front-office-planner-data';
 import { getCachedRosterFranchises } from './mfl-roster-cache';
 import { getCachedTradeBait } from './mfl-trade-bait-cache';
 import { parseTradeBaitByFranchise } from './trade-bait';
@@ -47,57 +61,157 @@ const loadFeedJson = (leagueYearStr: string, filename: string): any => {
  */
 export type FrontOfficeAnalyticsPlayer = AnalyticsPlayer;
 
-export interface FrontOfficeKeeperData {
-  roster: KeeperPlannerPlayer[];
-  draftPicks: KeeperPlannerDraftPick[];
-  analytics: RosterAnalytics;
+/** The AFL's contribution to the panel. Shapes match front-office-panel-data.ts. */
+export interface AflFrontOfficeData {
+  leagueYear: number;
+  teamsList: FrontOfficeTeamSummary[];
+  byTeam: Record<string, FrontOfficeTeamView>;
+  /** Stacks for the SELECTED team only — 24 teams' worth would double the page. */
   playersByNflTeam: RosterGroup<AnalyticsPlayer>[];
   playersByCollege: RosterGroup<AnalyticsPlayer>[];
+  /** Owner-private. Null unless the viewer owns the selected team. */
+  keepers: { roster: KeeperPlannerPlayer[]; draftPicks: KeeperPlannerDraftPick[] } | null;
 }
 
-export async function buildFrontOfficeKeeperPlannerData(
-  franchiseId: string,
-  leagueYear: number,
-  leagueId: string,
-  /**
-   * The viewer's own MFL cookie (authUser.id). MFL's tradeBait export is
-   * owner-gated for a private league like the AFL and this deployment holds
-   * no server-level MFL credentials, so without it the trade-block state is
-   * simply unknown — the action sheet then offers "Add to trade block" for
-   * everyone, which the API handles idempotently (it reads, merges, writes).
-   */
-  viewerMflCookie?: string,
-): Promise<FrontOfficeKeeperData> {
+export async function buildAflFrontOfficeData(args: {
+  selectedTeamId: string;
+  viewerFranchiseId: string | null;
+  viewerMflCookie?: string;
+  leagueId: string;
+}): Promise<AflFrontOfficeData> {
+  const { selectedTeamId, viewerFranchiseId, viewerMflCookie, leagueId } = args;
+  const leagueYear = getLeagueYearForSlug('afl-fantasy');
   const leagueYearStr = String(leagueYear);
+  const isOwnTeam = !!viewerFranchiseId && viewerFranchiseId === selectedTeamId;
 
+  const allTeams = getAllTeams();
+  const teamsList: FrontOfficeTeamSummary[] = allTeams.map((t) => ({
+    id: t.franchiseId,
+    name: t.nameShort || t.name,
+    division: t.division ?? '',
+    icon: t.icon ?? '',
+    banner: t.banner ?? '',
+  }));
+  const teamNameLookup = new Map<string, string>(allTeams.map((t) => [t.franchiseId, t.nameShort || t.name]));
+
+  const playersMap = loadPlayersMap(leagueYearStr);
+
+  let rostersData = loadFeedJson(leagueYearStr, 'rosters.json');
+  const liveFranchises = await getCachedRosterFranchises(leagueYearStr, leagueId);
+  if (liveFranchises && liveFranchises.length > 0) {
+    rostersData = { ...rostersData, rosters: { franchise: liveFranchises } };
+  }
+  const franchises = (rostersData?.rosters?.franchise as any[] | undefined) ?? [];
+  const rosterByTeam = new Map<string, Array<{ id: string; status: string }>>(
+    franchises.map((f: any) => [String(f?.id), (f?.player ?? []) as Array<{ id: string; status: string }>]),
+  );
+
+  const futurePicksData = loadFeedJson(leagueYearStr, 'futureDraftPicks.json');
+  const picksByTeam = new Map<string, KeeperPlannerDraftPick[]>();
+  for (const f of (futurePicksData?.futureDraftPicks?.franchise as any[] | undefined) ?? []) {
+    picksByTeam.set(String(f?.id), toDraftPicks(f?.futureDraftPick, String(f?.id), teamNameLookup));
+  }
+
+  // ---- every team: analytics + draft chips, off the one feed read ----
+  const byTeam: Record<string, FrontOfficeTeamView> = {};
+  let selectedAnalyticsRoster: AnalyticsPlayer[] = [];
+  for (const team of teamsList) {
+    const rows = rosterByTeam.get(team.id) ?? [];
+    const analyticsRoster = rows.map((p) => toAnalyticsPlayer(p, playersMap));
+    if (team.id === selectedTeamId) selectedAnalyticsRoster = analyticsRoster;
+    const analytics = analyticsRoster.length ? buildRosterAnalytics(analyticsRoster) : EMPTY_ANALYTICS;
+    byTeam[team.id] = {
+      metrics: aflMetrics(analytics, rows.length),
+      analytics,
+      // The AFL runs salaryCap: false, so there is nothing to put here and
+      // the cap block does not render. Not a slug check — an absent value.
+      cap: null,
+      draftChips: toDraftChipGroups(picksByTeam.get(team.id) ?? []),
+    };
+  }
+
+  // ---- viewer's own team only: the keeper board ----
+  let keepers: AflFrontOfficeData['keepers'] = null;
+  if (isOwnTeam) {
+    const rows = rosterByTeam.get(selectedTeamId) ?? [];
+    const statsById = buildKeeperPlannerStats(leagueYear);
+    // MFL's tradeBait export is owner-gated for a private league like the
+    // AFL and this deployment holds no server-level MFL credentials, so
+    // without the viewer's cookie the trade-block state is simply unknown —
+    // the action sheet then offers "Add to trade block" for everyone, which
+    // the API handles idempotently (it reads, merges, writes).
+    const liveTradeBait = await getCachedTradeBait(leagueYearStr, leagueId, viewerMflCookie);
+    const tradeBaitSet = liveTradeBait
+      ? (parseTradeBaitByFranchise({ franchises: liveTradeBait })?.get(selectedTeamId) ?? new Set<string>())
+      : new Set<string>();
+
+    keepers = {
+      roster: rows.map((p) => {
+        const info = playersMap.get(p.id);
+        const stats = statsById.get(p.id);
+        return {
+          id: p.id,
+          status: p.status || 'ROSTER',
+          name: info?.name || `Player ${p.id}`,
+          position: info?.position || 'N/A',
+          team: info?.team || 'FA',
+          age: info?.age || 'N/A',
+          espnId: info?.espn_id,
+          birthdate: info?.birthdate ? Number(info.birthdate) : null,
+          isOnTradeBait: tradeBaitSet.has(p.id),
+          ppg: stats?.ppg ?? null,
+          gamesPlayed: stats?.gamesPlayed,
+          positionalFinish: stats?.positionalFinish ?? null,
+          dynastyAdpRank: stats?.dynastyAdpRank ?? null,
+          redraftAdpRank: stats?.redraftAdpRank ?? null,
+        };
+      }),
+      // The chip row above already prints this team's picks, so the board's
+      // own `kp-picks` strip stays empty here. KeeperPlanner still renders
+      // it for rosters.astro, which has no chip row.
+      draftPicks: [],
+    };
+  }
+
+  return {
+    leagueYear,
+    teamsList,
+    byTeam,
+    playersByNflTeam: groupByNflTeam(selectedAnalyticsRoster),
+    playersByCollege: groupByCollege(selectedAnalyticsRoster),
+    keepers,
+  };
+}
+
+// ---- helpers ----
+
+type PlayerInfo = {
+  name: string;
+  position: string;
+  team: string;
+  age: string;
+  espn_id?: string;
+  college?: string;
+  birthdate?: string;
+  height?: string;
+  weight?: string;
+  jersey?: string;
+  draft_year?: string;
+  draft_round?: string;
+  draft_pick?: string;
+  draft_team?: string;
+};
+
+function loadPlayersMap(leagueYearStr: string): Map<string, PlayerInfo> {
   const playersData = loadFeedJson(leagueYearStr, 'players.json');
-  const playersMap = new Map<
-    string,
-    {
-      name: string;
-      position: string;
-      team: string;
-      age: string;
-      espn_id?: string;
-      college?: string;
-      birthdate?: string;
-      height?: string;
-      weight?: string;
-      jersey?: string;
-      draft_year?: string;
-      draft_round?: string;
-      draft_pick?: string;
-      draft_team?: string;
-    }
-  >();
+  const map = new Map<string, PlayerInfo>();
   for (const p of (playersData?.players?.player ?? []) as any[]) {
-    playersMap.set(p.id, {
+    map.set(p.id, {
       name: p.name || `Player ${p.id}`,
       position: p.position || 'N/A',
       team: p.team || 'FA',
       // MFL's players feed has no `age` field, only `birthdate` (Unix
-      // seconds) — see calculateAgeFromBirthdate's header comment in
-      // rosters.astro, which this mirrors via the shared age-utils helper.
+      // seconds) — the shared age-utils helper mirrors rosters.astro.
       age: String(calculateAge(p.birthdate) ?? 'N/A'),
       espn_id: p.espn_id,
       college: p.college,
@@ -111,93 +225,105 @@ export async function buildFrontOfficeKeeperPlannerData(
       draft_team: p.draft_team,
     });
   }
+  return map;
+}
 
-  let rostersData = loadFeedJson(leagueYearStr, 'rosters.json');
-  const liveFranchises = await getCachedRosterFranchises(leagueYearStr, leagueId);
-  if (liveFranchises && liveFranchises.length > 0) {
-    rostersData = { ...rostersData, rosters: { franchise: liveFranchises } };
+function toAnalyticsPlayer(
+  p: { id: string; status: string },
+  playersMap: Map<string, PlayerInfo>,
+): AnalyticsPlayer {
+  const info = playersMap.get(p.id);
+  return {
+    id: p.id,
+    status: p.status || 'ROSTER',
+    name: info?.name || `Player ${p.id}`,
+    position: info?.position || 'N/A',
+    team: info?.team || 'FA',
+    espnId: info?.espn_id,
+    college: info?.college ?? null,
+    birthdate: info?.birthdate ?? null,
+    height: info?.height ?? null,
+    weight: info?.weight ?? null,
+    jersey: info?.jersey ?? null,
+    draftYear: info?.draft_year ? Number(info.draft_year) : null,
+    draftRound: info?.draft_round ? Number(info.draft_round) : null,
+    draftPick: info?.draft_pick ? Number(info.draft_pick) : null,
+    draftTeam: info?.draft_team ?? null,
+  };
+}
+
+function toDraftPicks(
+  picks: any,
+  franchiseId: string,
+  teamNameLookup: Map<string, string>,
+): KeeperPlannerDraftPick[] {
+  if (!picks) return [];
+  const arr = Array.isArray(picks) ? picks : [picks];
+  return arr
+    .filter((p: any) => p?.year && p?.round && p?.originalPickFor)
+    .map((p: any) => ({
+      year: String(p.year),
+      round: String(p.round),
+      originalPickFor: String(p.originalPickFor),
+      originalPickForName: teamNameLookup.get(String(p.originalPickFor)),
+      isTraded: String(p.originalPickFor) !== franchiseId,
+    }))
+    .sort((a, b) =>
+      a.year !== b.year ? a.year.localeCompare(b.year) : parseInt(a.round, 10) - parseInt(b.round, 10),
+    );
+}
+
+/** Round labels (1st / 2nd / 3rd / Nth) — the AFL has no predicted draft
+ *  order, so a chip names its round rather than a pick position. */
+const roundLabel = (round: string): string => {
+  const n = parseInt(round, 10);
+  if (!Number.isFinite(n)) return round;
+  const tens = n % 100;
+  if (tens >= 11 && tens <= 13) return `${n}th`;
+  const ones = n % 10;
+  if (ones === 1) return `${n}st`;
+  if (ones === 2) return `${n}nd`;
+  if (ones === 3) return `${n}rd`;
+  return `${n}th`;
+};
+
+function toDraftChipGroups(picks: KeeperPlannerDraftPick[]): FrontOfficeDraftChipGroup[] {
+  const byYear = new Map<string, FrontOfficeDraftChipGroup['chips']>();
+  for (const p of picks) {
+    if (!byYear.has(p.year)) byYear.set(p.year, []);
+    byYear.get(p.year)!.push({
+      id: `${p.year}-${p.round}-${p.originalPickFor}`,
+      label: `${roundLabel(p.round)} round`,
+      via: p.isTraded ? `via ${p.originalPickForName ?? p.originalPickFor}` : null,
+      // MFL's futureDraftPicks carries only the ORIGINAL franchise, not the
+      // hops between, so the AFL has no multi-hop chain either.
+      chain: null,
+    });
   }
-  const franchiseRoster = (rostersData?.rosters?.franchise as any[] | undefined)?.find((f) => f?.id === franchiseId);
-  const rosterPlayers = (franchiseRoster?.player ?? []) as Array<{ id: string; status: string }>;
-  const statsById = buildKeeperPlannerStats(leagueYear);
+  return [...byYear.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([year, chips]) => ({ year, chips }));
+}
 
-  // Which of these players the owner already has on the trade block, so the
-  // action sheet offers Remove rather than Add. Redis-cached (2 min) and
-  // owner-gated — null on any failure, which reads as "none on the block".
-  const liveTradeBait = await getCachedTradeBait(leagueYearStr, leagueId, viewerMflCookie);
-  const tradeBaitSet = liveTradeBait
-    ? (parseTradeBaitByFranchise({ franchises: liveTradeBait })?.get(franchiseId) ?? new Set<string>())
-    : new Set<string>();
-
-  const roster: KeeperPlannerPlayer[] = rosterPlayers.map((p) => {
-    const info = playersMap.get(p.id);
-    const stats = statsById.get(p.id);
-    return {
-      id: p.id,
-      status: p.status || 'ROSTER',
-      name: info?.name || `Player ${p.id}`,
-      position: info?.position || 'N/A',
-      team: info?.team || 'FA',
-      age: info?.age || 'N/A',
-      espnId: info?.espn_id,
-      birthdate: info?.birthdate ? Number(info.birthdate) : null,
-      isOnTradeBait: tradeBaitSet.has(p.id),
-      ppg: stats?.ppg ?? null,
-      gamesPlayed: stats?.gamesPlayed,
-      positionalFinish: stats?.positionalFinish ?? null,
-      dynastyAdpRank: stats?.dynastyAdpRank ?? null,
-      redraftAdpRank: stats?.redraftAdpRank ?? null,
-    };
-  });
-
-  // Richer rows for the analytics cards + player-details modal — kept
-  // separate from `roster` (KeeperPlannerPlayer[]) rather than widening that
-  // shared type with fields the planner board itself never reads.
-  const analyticsRoster: AnalyticsPlayer[] = rosterPlayers.map((p) => {
-    const info = playersMap.get(p.id);
-    return {
-      id: p.id,
-      status: p.status || 'ROSTER',
-      name: info?.name || `Player ${p.id}`,
-      position: info?.position || 'N/A',
-      team: info?.team || 'FA',
-      espnId: info?.espn_id,
-      college: info?.college ?? null,
-      birthdate: info?.birthdate ?? null,
-      height: info?.height ?? null,
-      weight: info?.weight ?? null,
-      jersey: info?.jersey ?? null,
-      draftYear: info?.draft_year ? Number(info.draft_year) : null,
-      draftRound: info?.draft_round ? Number(info.draft_round) : null,
-      draftPick: info?.draft_pick ? Number(info.draft_pick) : null,
-      draftTeam: info?.draft_team ?? null,
-    };
-  });
-  const analytics = buildRosterAnalytics(analyticsRoster);
-  const playersByNflTeam = groupByNflTeam(analyticsRoster);
-  const playersByCollege = groupByCollege(analyticsRoster);
-
-  const futurePicksData = loadFeedJson(leagueYearStr, 'futureDraftPicks.json');
-  const allTeams = getAllTeams();
-  const teamNameLookup = new Map<string, string>(allTeams.map((t) => [t.franchiseId, t.nameShort || t.name]));
-  const franchise = (futurePicksData?.futureDraftPicks?.franchise as any[] | undefined)?.find(
-    (f) => f?.id === franchiseId,
-  );
-  const picks = franchise?.futureDraftPick;
-  let draftPicks: KeeperPlannerDraftPick[] = [];
-  if (picks) {
-    const arr = Array.isArray(picks) ? picks : [picks];
-    draftPicks = arr
-      .filter((p: any) => p?.year && p?.round && p?.originalPickFor)
-      .map((p: any) => ({
-        year: String(p.year),
-        round: String(p.round),
-        originalPickFor: String(p.originalPickFor),
-        originalPickForName: teamNameLookup.get(String(p.originalPickFor)),
-        isTraded: String(p.originalPickFor) !== franchiseId,
-      }))
-      .sort((a, b) => (a.year !== b.year ? a.year.localeCompare(b.year) : parseInt(a.round, 10) - parseInt(b.round, 10)));
-  }
-
-  return { roster, draftPicks, analytics, playersByNflTeam, playersByCollege };
+function aflMetrics(analytics: RosterAnalytics, rosterSize: number): FrontOfficeTeamView['metrics'] {
+  // No cap, no contracts — so the AFL's strip answers roster-shape questions
+  // instead of money ones. Same component, different tiles.
+  const avg = analytics.ageStats.avg;
+  return [
+    { label: 'Roster Size', value: String(rosterSize), valueId: 'fo-metric-roster' },
+    { label: 'Average Age', value: avg ? `${avg.toFixed(1)} years` : 'N/A', valueId: 'fo-metric-age' },
+    {
+      label: 'Youngest',
+      value: analytics.ageStats.youngest ? `${analytics.ageStats.youngest.age}` : '—',
+      valueId: 'fo-metric-youngest',
+      // A name is a fact, not a warning — subtitle, so it renders neutral.
+      subtitle: analytics.ageStats.youngest?.name ?? null,
+      subtitleId: 'fo-metric-youngest-sub',
+    },
+    {
+      label: 'Oldest',
+      value: analytics.ageStats.oldest ? `${analytics.ageStats.oldest.age}` : '—',
+      valueId: 'fo-metric-oldest',
+      subtitle: analytics.ageStats.oldest?.name ?? null,
+      subtitleId: 'fo-metric-oldest-sub',
+    },
+  ];
 }

@@ -121,9 +121,14 @@ describe('the hub is a real page now, not a links-only landing page', () => {
   const aflHub = readFileSync('src/pages/afl-fantasy/front-office/index.astro', 'utf-8');
   const hubShell = readFileSync('src/components/shared/front-office-hub/FrontOfficeHubPage.astro', 'utf-8');
 
-  it('renders the League Planner / Keeper Planner as the hub\'s own content', () => {
-    expect(theLeagueHub).toMatch(/<TheLeaguePlannerPanel\b/);
-    expect(aflHub).toMatch(/<AflKeeperPlannerPanel\b/);
+  it('renders ONE shared panel as the hub\'s own content, in both leagues', () => {
+    // Phase B replaced TheLeaguePlannerPanel + AflKeeperPlannerPanel with a
+    // single FrontOfficePanel whose sections are gated on registry features.
+    // A second league-specific panel here is the regression to catch.
+    expect(theLeagueHub).toMatch(/<FrontOfficePanel\b/);
+    expect(aflHub).toMatch(/<FrontOfficePanel\b/);
+    expect(existsSync('src/components/shared/front-office-hub/TheLeaguePlannerPanel.astro')).toBe(false);
+    expect(existsSync('src/components/shared/front-office-hub/AflKeeperPlannerPanel.astro')).toBe(false);
   });
 
   it('renders the tool sidebar on both hubs', () => {
@@ -136,9 +141,13 @@ describe('the hub is a real page now, not a links-only landing page', () => {
     }
   });
 
-  it('gives TheLeague a team switcher above the headline; the AFL none (Keeper Planner is owner-private)', () => {
+  it('gives BOTH leagues a team switcher above the headline', () => {
+    // The AFL had none until Phase B, because its Keeper Planner is
+    // owner-private. That is still true of the BOARD — the panel renders it
+    // for the viewer's own team only — but everything else on the hub is
+    // public roster data, so there is a team worth switching to.
     expect(theLeagueHub).toMatch(/<FrontOfficeTeamSwitcher\b/);
-    expect(aflHub).not.toMatch(/FrontOfficeTeamSwitcher/);
+    expect(aflHub).toMatch(/<FrontOfficeTeamSwitcher\b/);
     // Above the H1: the switcher slot must appear before the header in the
     // shared shell, not after — this is what "above the headline" means.
     const switcherIdx = hubShell.indexOf('name="switcher"');
@@ -152,12 +161,20 @@ describe('the hub is a real page now, not a links-only landing page', () => {
     // A component writing Astro.cookies runs after headers are committed
     // and throws — see CLAUDE.md's Sunday Ticket board precedent.
     expect(theLeagueHub).toMatch(/setTheLeaguePreference\(/);
+    // The AFL writes through rememberAflTeamChoice, which resolves the
+    // conference/tier its cookie carries. Still a ROUTE call — the helper
+    // only assembles the arguments.
+    expect(aflHub).toMatch(/rememberAflTeamChoice\(Astro\.cookies/);
     for (const componentFile of [
-      'src/components/shared/front-office-hub/TheLeaguePlannerPanel.astro',
+      'src/components/shared/front-office-hub/FrontOfficePanel.astro',
       'src/components/shared/front-office-hub/FrontOfficeTeamSwitcher.astro',
       'src/components/shared/front-office-hub/FrontOfficeHubPage.astro',
     ]) {
-      expect(readFileSync(componentFile, 'utf-8')).not.toMatch(/setTheLeaguePreference\(/);
+      const src = readFileSync(componentFile, 'utf-8');
+      expect(src).not.toMatch(/setTheLeaguePreference\(/);
+      expect(src).not.toMatch(/setAFLPreference\(/);
+      expect(src).not.toMatch(/rememberAflTeamChoice\(/);
+      expect(src).not.toMatch(/Astro\.cookies\.set\(/);
     }
   });
 

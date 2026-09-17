@@ -296,9 +296,10 @@
         "src/utils/roster-analytics.ts",
         "src/utils/front-office-planner-data.ts",
         "src/utils/front-office-keeper-data.ts",
-        "src/pages/*/front-office/index.astro"
+        "src/pages/*/front-office/index.astro",
+        "src/utils/front-office-panel-data.ts"
       ],
-      "note": "One implementation per UI, both leagues. Roster analytics existed three times before the hub shared it; the cap charts are gated on the salaryCap FEATURE, never on a league slug; roster-analytics.ts declares no cap formula of its own; and the NFL/College stacks render for the SELECTED team only (16 teams of them measured 1.45 MB raw / 133 KB gzipped). See docs/plans/front-office-hub.md.",
+      "note": "ONE panel serves both leagues (FrontOfficePanel.astro) and both routes are thin wrappers that must stay under 75 lines. Sections are gated on registry features and data presence, never on a league slug (the claim verb is the one documented exception). roster-analytics.ts declares no cap formula of its own. The AFL keeper board is owner-PRIVATE, not merely un-actionable \u2014 /api/afl-keepers enforces owner-only read. NFL/College stacks render for the SELECTED team only (16 teams of them measured 1.45 MB raw / 133 KB gzipped). See docs/plans/front-office-hub.md.",
       "tests": [
         "tests/front-office-shared-analytics.test.ts",
         "tests/front-office-player-actions.test.ts",

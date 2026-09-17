@@ -1,0 +1,488 @@
+---
+/**
+ * The Front Office hub's content, BOTH leagues. Replaces
+ * TheLeaguePlannerPanel.astro (428 lines) and AflKeeperPlannerPanel.astro
+ * (751 → 138 after Phase A), which rendered the same page shape twice.
+ *
+ * Every section is gated on whether its DATA IS PRESENT, and what is
+ * present is decided by `leagueHasFeature` in front-office-panel-data.ts —
+ * never by a slug compare in here. That is what makes a third league a
+ * registry entry rather than a third panel.
+ *
+ * | Section          | Renders when                                   |
+ * |------------------|------------------------------------------------|
+ * | Extensions       | `contracts` (TheLeague)                        |
+ * | Keeper board     | `keepers` — the viewer's OWN team only         |
+ * | Free Agent Needs | `contracts`                                    |
+ * | At a Glance      | always (tiles differ per league)               |
+ * | Draft Assets     | always                                         |
+ * | Roster Analytics | always; cap charts only when `cap` is present  |
+ *
+ * ON THE KEEPER BOARD BEING OWNER-ONLY. Every other section here is public
+ * roster data, so the switcher shows any team read-only. The AFL keeper
+ * plan is not: it is a private strategic scratchpad and `/api/afl-keepers`
+ * enforces owner-only read. Rendering it for another team would draw an
+ * empty board backed by a 403, so it is absent instead.
+ *
+ * NO LIVE CAP MATH YET. Every metric is a precomputed display string and
+ * the team switch swaps which team's strings show. Phase D adds cut /
+ * declare / extend actions, and that is when client-side recomputation
+ * comes back — see docs/plans/front-office-hub.md.
+ */
+import ChartCard from '../../theleague/ChartCard.astro';
+import MetricCard from '../../theleague/MetricCard.astro';
+import FranchiseOptions from '../../theleague/FranchiseOptions.astro';
+import VeteranExtensionCandidates from '../../theleague/VeteranExtensionCandidates.astro';
+import FreeAgentNeedsCard from '../../theleague/FreeAgentNeedsCard.astro';
+import KeeperPlanner from '../../afl-fantasy/KeeperPlanner.astro';
+import AFLActionModal from '../../afl-fantasy/AFLActionModal.astro';
+import DraftAssetChips from './DraftAssetChips.astro';
+import RosterAnalyticsPanel from './RosterAnalyticsPanel.astro';
+import NflCollegeStacks from './NflCollegeStacks.astro';
+import PlayerDetailsModal from '../../theleague/PlayerDetailsModal.astro';
+import WatchListBridge from '../WatchListBridge.astro';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { loginUrlFor } from '../../../utils/login-redirect';
+import { getLeagueBySlug, leagueHasFeature } from '../../../config/leagues';
+import { EMPTY_ANALYTICS, type FrontOfficePanelData } from '../../../utils/front-office-panel-data';
+
+type Props = FrontOfficePanelData;
+
+const {
+  leagueSlug,
+  leagueYear,
+  teamsList,
+  selectedTeamId,
+  isOwnTeam,
+  signedIn,
+  byTeam,
+  metricsNote,
+  playersByNflTeam,
+  playersByCollege,
+  contracts,
+  keepers,
+} = Astro.props;
+
+const league = getLeagueBySlug(leagueSlug)!;
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+const r = (path: string) => resolveLeaguePath(`/${leagueSlug}${path}`, hideLeaguePrefix);
+
+const selected = byTeam[selectedTeamId];
+const selectedMetrics = selected?.metrics ?? [];
+
+// "TheLeague bids, the AFL claims — never normalize these."
+const claimVerb = leagueSlug === 'afl-fantasy' ? 'Claim' : 'Bid';
+
+// Section order is phase-driven for a contracts league (extensions float to
+// the top during the extensions-and-tags window); a keeper league has no
+// phases, so it reads in a fixed order.
+const plannerPhase = contracts?.plannerPhase.phase ?? 'default';
+
+const signInHref = loginUrlFor({
+  league,
+  returnTo: `/${leagueSlug}/front-office?franchise=${selectedTeamId}`,
+  hideLeaguePrefix,
+});
+
+// One JSON blob of precomputed display strings — no cap math ships.
+const clientConfig = {
+  teams: Object.fromEntries(Object.entries(byTeam).map(([id, v]) => [id, { metrics: v.metrics }])),
+};
+---
+
+{/* The player modal hides contract rows for a league that has none. */}
+<PlayerDetailsModal hideContract={!contracts} />
+
+{/* Action sheets are mounted only where something on the page triggers one,
+    and they are NOT interchangeable. AFLActionModal carries real roster
+    writes (IR / Cut / Trade block), so it belongs to the keeper board and
+    therefore to the viewer's OWN team — mounting it while browsing someone
+    else's would offer writes against a roster you do not own. TheLeague's
+    FA-needs kebab is a watch/bid claim, which is what WatchListBridge is.
+    Browsing another AFL team triggers neither: its stacks open the details
+    modal, not an action sheet. */}
+{keepers && <AFLActionModal />}
+{contracts && <WatchListBridge signedIn={signedIn} claimVerb={claimVerb} />}
+
+<div class="fo-planner" data-planner-phase={plannerPhase} data-league={leagueSlug}>
+  {contracts && (
+    <div class="planner-section planner-section--extensions">
+      <h2 class="planner-section__title">Extensions</h2>
+      <div class="chart-grid">
+        <ChartCard title={`Franchise Tag Options (${leagueYear + 1})`} subtitle="Potential franchise tag candidates">
+          <FranchiseOptions
+            players={contracts.allPlayers as any}
+            salaryAverages={contracts.salaryAveragesBySeason as any}
+            season={contracts.extensionSeason}
+            franchiseId={selectedTeamId}
+          />
+        </ChartCard>
+        <ChartCard title="Veteran Extension Candidates" subtitle="Potential contract extension candidates">
+          <VeteranExtensionCandidates
+            players={contracts.allPlayers as any}
+            salaryAverages={contracts.salaryAveragesBySeason as any}
+            season={contracts.extensionSeason}
+            franchiseId={selectedTeamId}
+          />
+        </ChartCard>
+      </div>
+    </div>
+  )}
+
+  {keepers && (
+    <div class="planner-section planner-section--keepers">
+      <h2 class="planner-section__title">Keeper Planner</h2>
+      <KeeperPlanner
+        franchiseId={selectedTeamId}
+        year={leagueYear}
+        roster={keepers.roster}
+        draftPicks={keepers.draftPicks}
+        showActions
+      />
+    </div>
+  )}
+
+  {/* The keeper board's absence needs explaining, because it is the one
+      section a viewer might expect and not get. Only shown where the league
+      HAS keepers — TheLeague never prints this. */}
+  {!keepers && leagueHasFeature(leagueSlug, 'keepers') && (
+    <div class="planner-section planner-section--keepers">
+      <h2 class="planner-section__title">Keeper Planner</h2>
+      <div class="fo-private">
+        <p class="fo-private__lead">
+          {signedIn
+            ? 'A keeper plan is private to its own owner. Switch back to your team to see yours.'
+            : 'The keeper planner is private to each team owner.'}
+        </p>
+        {!signedIn && (
+          <p><a class="fo-private__cta" href={signInHref}>Sign in to {league.name} →</a></p>
+        )}
+      </div>
+    </div>
+  )}
+
+  {contracts && (
+    <div class="planner-section planner-section--fa-needs">
+      <h2 class="planner-section__title">Free Agent Needs</h2>
+      <div id="fo-fa-needs-panels">
+        {teamsList.map((team) => (
+          <div
+            class="fa-needs-panel"
+            data-fa-needs-team-id={team.id}
+            style={`display: ${team.id === selectedTeamId ? 'block' : 'none'}`}
+          >
+            <FreeAgentNeedsCard needs={contracts.freeAgentNeedsByTeam[team.id] ?? []} franchiseId={team.id} showActions />
+          </div>
+        ))}
+      </div>
+    </div>
+  )}
+
+  <div class="planner-section planner-section--metrics">
+    <h2 class="planner-section__title">{leagueYear} at a Glance</h2>
+    <div class="chart-metrics">
+      {selectedMetrics.map((m) => (
+        <MetricCard
+          label={m.label}
+          value={m.value}
+          valueId={m.valueId}
+          subtitle={m.subtitle ?? undefined}
+          subtitleId={m.subtitleId}
+          hint={m.hint ?? undefined}
+          hintVariant="error"
+          hintId={m.hintId}
+        />
+      ))}
+    </div>
+    {metricsNote && <small class="chart-metrics__hint">{metricsNote}</small>}
+  </div>
+
+  <div class="planner-section planner-section--draft-assets">
+    <h2 class="planner-section__title">Draft Assets</h2>
+    {/* One card with a year subhead per group — not the two side-by-side
+        ChartCards TheLeague used to render. See DraftAssetChips.astro. */}
+    <div id="fo-draft-chip-panels">
+      {teamsList.map((team) => (
+        <div
+          class="draft-chips-panel"
+          data-draft-chips-team-id={team.id}
+          style={`display: ${team.id === selectedTeamId ? 'block' : 'none'}`}
+        >
+          <DraftAssetChips
+            groups={byTeam[team.id]?.draftChips ?? []}
+            title={null}
+            href={contracts ? r('/draft/order?view=assets') : null}
+            hrefTitle="View full draft assets"
+          />
+        </div>
+      ))}
+    </div>
+  </div>
+
+  <div class="planner-section planner-section--analytics">
+    <h2 class="planner-section__title">Roster Analytics</h2>
+    {/* CHARTS are pre-rendered for every team and toggled by the switcher,
+        like the FA-needs panels — pure SVG, ~26 KB a team. */}
+    <div id="fo-analytics-panels">
+      {teamsList.map((team) => (
+        <div
+          class="analytics-panel"
+          data-analytics-team-id={team.id}
+          style={`display: ${team.id === selectedTeamId ? 'block' : 'none'}`}
+        >
+          <RosterAnalyticsPanel
+            analytics={byTeam[team.id]?.analytics ?? EMPTY_ANALYTICS}
+            cap={byTeam[team.id]?.cap ?? null}
+            title={null}
+          />
+        </div>
+      ))}
+    </div>
+
+    {/* STACKS are NOT pre-rendered per team, unlike everything else here.
+        Each is ~19 PlayerCells and a PlayerCell is ~2 KB rendered (a
+        three-deep headshot `onerror` chain plus the modal's JSON), so all
+        16 of TheLeague's came to 1.45 MB raw / 133 KB gzipped — a doubling
+        of the page to pre-paint teams nobody is looking at. Measured, not
+        estimated; the AFL's 24 would be worse. Only the selected team
+        renders, and switching offers a link that reloads the page. */}
+    <div id="fo-stacks-host" data-stacks-team-id={selectedTeamId}>
+      <NflCollegeStacks playersByNflTeam={playersByNflTeam} playersByCollege={playersByCollege} />
+    </div>
+    <p id="fo-stacks-link" class="fo-stacks-link" hidden>
+      <a href="#" data-stacks-href>View this team’s NFL &amp; college stacks →</a>
+    </p>
+  </div>
+</div>
+
+<script id="front-office-panel-config" type="application/json" set:html={JSON.stringify(clientConfig)}></script>
+
+<script>
+  // Team switching is display-only — no cap math runs client-side (see this
+  // file's header). On `fo:team-change`, dispatched by
+  // FrontOfficeTeamSwitcher.astro (a SIBLING under a different slot, so the
+  // listener has to be on `document` rather than an ancestor of both):
+  //   - retarget the precomputed metric strings for the newly selected team
+  //   - toggle the FA-needs / draft-chip / analytics panels by team id
+  //   - swap the stacks for a link, since only one team's are rendered
+  //   - mutate the two extension components' `data-current-team` so THEY
+  //     re-render (they hold the full league-wide player list themselves)
+  //
+  // Re-init on every ClientRouter navigation, guarded on DOM identity rather
+  // than a module flag. The `document` listener is removed before it is
+  // re-added, via a module-scoped handler reference, so navigations do not
+  // stack a second and third copy of it.
+  //
+  // THE LEAGUE GATE. This is one shared component, but a cross-league
+  // navigation (mfl.football's own league switcher emits a relative href) is
+  // a same-origin swap, not a fresh document — and both leagues render the
+  // same element ids here. The root carries `data-league`, and init reads it
+  // from the CURRENT DOM on every page-load rather than capturing it, so the
+  // arriving league's panel is what gets wired.
+  let currentHandler: ((event: Event) => void) | null = null;
+
+  function initFrontOfficePanel() {
+    const root = document.querySelector<HTMLElement>('.fo-planner[data-league]');
+    if (!root) return; // not a Front Office hub page
+
+    const configEl = document.getElementById('front-office-panel-config');
+    const readConfig = (): { teams: Record<string, { metrics?: Array<any> }> } => {
+      try {
+        return configEl ? JSON.parse(configEl.textContent || '{}') : { teams: {} };
+      } catch {
+        return { teams: {} };
+      }
+    };
+
+    if (currentHandler) document.removeEventListener('fo:team-change', currentHandler);
+
+    currentHandler = (event: Event) => {
+      const teamId = (event as CustomEvent<{ teamId: string }>).detail?.teamId;
+      if (!teamId) return;
+
+      // Metrics are a LIST now, not a fixed five: TheLeague's tiles are
+      // cap-shaped and the AFL's are roster-shaped, so the script walks
+      // whatever the server sent rather than naming the ids it expects.
+      const metrics = readConfig().teams?.[teamId]?.metrics ?? [];
+      for (const m of metrics) {
+        const valueEl = document.getElementById(m.valueId);
+        if (valueEl) valueEl.textContent = m.value ?? '—';
+        for (const [id, text] of [[m.subtitleId, m.subtitle], [m.hintId, m.hint]] as const) {
+          if (!id) continue;
+          const el = document.getElementById(id);
+          if (el) {
+            el.textContent = text ?? '';
+            el.style.display = text ? '' : 'none';
+          }
+        }
+      }
+
+      const togglePanels = (selector: string, attr: string) => {
+        document.querySelectorAll<HTMLElement>(selector).forEach((panel) => {
+          panel.style.display = panel.getAttribute(attr) === teamId ? 'block' : 'none';
+        });
+      };
+      togglePanels('[data-fa-needs-team-id]', 'data-fa-needs-team-id');
+      togglePanels('[data-draft-chips-team-id]', 'data-draft-chips-team-id');
+      togglePanels('[data-analytics-team-id]', 'data-analytics-team-id');
+
+      // The stacks exist for the loaded team only (see the markup comment).
+      // Show them when the viewer switches back to that team; otherwise
+      // offer a link that reloads the page for the team they picked.
+      const stacksHost = document.getElementById('fo-stacks-host');
+      const stacksLink = document.getElementById('fo-stacks-link');
+      if (stacksHost && stacksLink) {
+        const isLoadedTeam = stacksHost.dataset.stacksTeamId === teamId;
+        stacksHost.style.display = isLoadedTeam ? '' : 'none';
+        stacksLink.hidden = isLoadedTeam;
+        const anchor = stacksLink.querySelector<HTMLAnchorElement>('[data-stacks-href]');
+        if (anchor && !isLoadedTeam) {
+          // Same param the route resolves (and writes its cookie from), so
+          // the reloaded page lands on this team everywhere.
+          const url = new URL(window.location.href);
+          url.searchParams.set('myteam', teamId);
+          anchor.href = `${url.pathname}${url.search}`;
+        }
+      }
+
+      // The keeper board is owner-private, so it cannot follow the switcher
+      // at all — a reload is the only way to see your own again.
+      const keeperSection = document.querySelector<HTMLElement>('.planner-section--keepers');
+      if (keeperSection) keeperSection.dataset.viewingTeam = teamId;
+
+      const franchiseTagEl = document.querySelector<HTMLElement>('.franchise-tag-eligibility');
+      if (franchiseTagEl) franchiseTagEl.dataset.currentTeam = teamId;
+      const veteranExtensionEl = document.querySelector<HTMLElement>('.veteran-extension-candidates');
+      if (veteranExtensionEl) veteranExtensionEl.dataset.currentTeam = teamId;
+    };
+
+    document.addEventListener('fo:team-change', currentHandler);
+  }
+
+  initFrontOfficePanel();
+  document.addEventListener('astro:page-load', initFrontOfficePanel);
+</script>
+<style>
+  .fo-planner {
+    container-type: inline-size;
+    container-name: fo-main;
+    display: grid;
+    gap: 1.5rem;
+    min-width: 0;
+  }
+
+  .fo-planner > * {
+    min-width: 0;
+  }
+
+  .planner-section__title {
+    margin: 0 0 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--page-text, #111827);
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--league-accent, #1c497c);
+  }
+
+  :global(html.dark) .planner-section__title {
+    color: var(--page-text, #ededed);
+  }
+
+  .chart-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--padding-md, 1rem);
+    row-gap: var(--padding-lg, 1.5rem);
+  }
+
+  .chart-grid:has(> :only-child) {
+    grid-template-columns: 1fr;
+  }
+
+  /* `.draft-cards-grid` is gone with the two side-by-side draft ChartCards
+     it existed to lay out — DraftAssetChips renders one card carrying both
+     years. */
+  @container fo-main (min-width: 1150px) {
+    .chart-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .chart-grid:has(> :only-child) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Owner-private keeper board's stand-in. Carried over from
+     AflKeeperPlannerPanel's .fo-afl-coming-soon. */
+  .fo-private {
+    background: var(--content-bg, #fff);
+    border-radius: 0.75rem;
+    padding: 2rem 1.5rem;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    color: var(--content-text-muted, #6b7280);
+  }
+
+  :global(html.dark) .fo-private {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      0 4px 12px rgba(0, 0, 0, 0.06);
+  }
+
+  .fo-private__lead {
+    margin: 0;
+  }
+
+  .fo-private__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin-top: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: var(--league-accent, #c41e3a);
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    border-radius: 8px;
+    text-decoration: none;
+  }
+
+  .fo-private__cta:hover {
+    filter: brightness(0.92);
+  }
+
+  .fo-private__cta:focus-visible {
+    outline: 2px solid var(--league-accent, #c41e3a);
+    outline-offset: 2px;
+  }
+
+  .fo-stacks-link {
+    margin: 0.75rem 0 0;
+    font-size: 0.8125rem;
+  }
+
+  .fo-stacks-link a {
+    color: var(--league-accent, #1c497c);
+    font-weight: 600;
+  }
+
+  .chart-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(170px, 100%), 1fr));
+    gap: 0.75rem;
+  }
+
+  .chart-metrics__headline {
+    margin: 0 0 0.75rem;
+  }
+
+  .chart-metrics__hint {
+    display: block;
+    margin-top: 0.5rem;
+    color: var(--content-text-muted, #6b7280);
+    font-size: 0.78rem;
+  }
+
+</style>
