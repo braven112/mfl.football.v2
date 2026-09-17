@@ -26,6 +26,14 @@ export function guardSeason(week, year, now, { completedWeek }) {
   return isRegularSeasonOrPlayoffs(completedWeek);
 }
 
+/**
+ * "1 claim" / "2 claims". The fact sheet is the model's ONLY source of truth
+ * and it reads it as prose, so "1 claims" is a sentence the column can echo.
+ */
+function countOf(n, noun) {
+  return `${n} ${noun}${n === 1 ? '' : 's'}`;
+}
+
 export async function buildFactSheet(data, week, year, projectRoot, { league = DEFAULT_LEAGUE_SLUG } = {}) {
   const players = new Map();
   // Raw feed records (position + espn_id) for hero-player selection.
@@ -74,23 +82,29 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
   let claimCount = 0;
   for (const txn of txns) {
     const { addedIds, bbidAmount } = parseRosterMove(txn.transaction);
-    // Nothing added — this row is a drop, not a claim. Skip it entirely.
-    if (addedIds.length === 0) continue;
+
+    // A BBID row the parser could not read is UNPARSED, not a drop and not a
+    // free pickup — so both of its failure modes warn, and neither is decided
+    // by which check happens to run first. The bid check used to sit BELOW the
+    // drop-skip, which meant a BBID string mangled badly enough to yield no add
+    // at all was silently classified as a drop and vanished, while the very
+    // same string with a readable add warned loudly three lines later. The
+    // quiet half is the dangerous one: a claim that never reaches the fact
+    // sheet cannot be noticed in the published prose either (#1158 F3).
+    const unreadableBid = txn.type === 'BBID_WAIVER' && !Number.isFinite(bbidAmount);
+    if (unreadableBid || addedIds.length === 0) {
+      if (unreadableBid) {
+        console.warn(
+          `  [waiver-pickups] unreadable BBID bid, skipping claim: ${JSON.stringify(txn.transaction)}`
+        );
+      }
+      // Nothing added and nothing wrong with it — a plain drop, not a claim.
+      continue;
+    }
 
     const fid = txn.franchise;
     const teamName = teams.get(fid)?.name ?? `Team ${fid}`;
     if (!claimsByTeam[fid]) claimsByTeam[fid] = { name: teamName, claims: [] };
-
-    // A BBID row whose bid the parser could not read would price as $0 and be
-    // indistinguishable in the prose from a free pickup. That is the same
-    // silent-wrong-number failure as the placeholder name, so say so loudly
-    // rather than publishing a claim at the wrong price.
-    if (txn.type === 'BBID_WAIVER' && !Number.isFinite(bbidAmount)) {
-      console.warn(
-        `  [waiver-pickups] unreadable BBID bid, skipping claim: ${JSON.stringify(txn.transaction)}`
-      );
-      continue;
-    }
 
     for (const playerId of addedIds) {
       // A BBID bid buys the one player on the add side; a free-agent add costs
@@ -135,7 +149,7 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
 
   for (const [fid, teamData] of sortedTeams) {
     const teamSpend = teamData.claims.reduce((s, c) => s + c.bid, 0);
-    lines.push(`── ${teamData.name} (${teamData.claims.length} claims, ${formatSalary(teamSpend)} spent) ──`);
+    lines.push(`── ${teamData.name} (${countOf(teamData.claims.length, 'claim')}, ${formatSalary(teamSpend)} spent) ──`);
     for (const c of teamData.claims.sort((a, b) => b.bid - a.bid)) {
       const typeLabel = c.type === 'FREE_AGENT' ? ' [FA]' : '';
       lines.push(`  - ${c.position} ${c.player} (${c.bidDisplay})${typeLabel}`);

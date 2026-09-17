@@ -28,12 +28,24 @@ const OFFSEASON_DEADLINE_MS = 48 * 60 * 60 * 1000;   // 48 hours
 // instead of re-declaring it.
 export const ACQUISITION_TYPES = ['BBID_WAIVER', 'FREE_AGENT', 'AUCTION_WON'];
 
+/**
+ * MFL's legacy "nothing was cut" marker in the drop segment of a pre-2017
+ * BBID row ("8838|425000|0000"). It is a SENTINEL, not a player: no season of
+ * either league has a player with that id, it never appears in a FREE_AGENT
+ * row or in any post-2016 shape, and it sits exactly where the modern format
+ * writes an empty segment. 276 rows carry it. Read as an id it becomes a
+ * dropped player nobody can look up — which in the Schefter scanner resolves
+ * to the literal prose "Player 0000", the same placeholder-ships-unread
+ * failure as #1156. Shared with scripts/lib/roster-move-parse.mjs.
+ */
+const NO_DROP_SENTINEL = '0000';
+
 /** Extract numeric player ids from one comma-delimited transaction segment. */
 function idsIn(segment: string | undefined): string[] {
   return (segment ?? '')
     .split(',')
     .map(part => part.trim())
-    .filter(part => /^\d+$/.test(part));
+    .filter(part => /^\d+$/.test(part) && part !== NO_DROP_SENTINEL);
 }
 
 /**
@@ -41,24 +53,37 @@ function idsIn(segment: string | undefined): string[] {
  *
  * MFL formats:
  *   "|playerId,"          -> drop only
- *   "addId|dropId,"       -> add/drop swap
- *   "addId|"              -> add only (no drop)
+ *   "|a,b,"               -> several players cut in one move
+ *   "addId,|dropId,"      -> add/drop swap
+ *   "addId,|"             -> add only (no drop)
  *   "addId,|bbid|dropId," -> BBID add/drop with bid amount
  *   "addId,|bbid|"        -> BBID add with NO drop (winning claim, nothing cut)
  *   "addId,|bbid|a,b,"    -> BBID add with more than one cut
+ *   "addId|bbid|dropId"   -> the same BBID claim, pre-2017, without the commas
+ *   "addId|bbid|0000"     -> pre-2017 BBID claim with NOTHING cut (see the
+ *                            sentinel above -- "0000" is not a player)
+ *   "addId|1525000.00|x"  -> pre-2012 BBID claim, bid written as a decimal
  *   "playerId|amount|"    -> auction won (AUCTION_WON), with or without a cut
+ *   "playerId|amount"     -> the same auction win, pre-2017 (needs `type`)
  *   ""                    -> empty (batch marker like BBID_AUTO_PROCESS_WAIVERS)
  *
  * The segments are POSITIONAL and an empty segment is meaningful: a claim that
  * needed no corresponding cut ends at the pipe ("16778,|500000|"), it does not
  * carry a placeholder comma after it. Reading these shapes strictly is what
- * broke this parser once already -- see the BBID branch below.
+ * broke this parser once already -- see the priced branch below.
+ *
+ * `type` is the row's MFL transaction type. It is OPTIONAL because only one
+ * shape is ambiguous without it (two segments: a cut list on a roster move, a
+ * price on a pre-2017 auction win) -- but pass it wherever it is known.
  *
  * scripts/lib/roster-move-parse.mjs parses the same MFL field for the Schefter
  * scanner. The two must agree; tests/contract-eligibility.test.ts runs both
- * over a shared corpus of real strings recorded off MFL.
+ * over a shared corpus of real strings recorded off MFL by
+ * scripts/record-transaction-shapes.mjs. That corpus held ONE league's ONE
+ * season until #1158, which is why it could not see the drift it existed to
+ * catch -- widen it, never trim it.
  */
-export function parseTransactionString(txnString: string): {
+export function parseTransactionString(txnString: string, type?: string): {
   addedPlayerIds: string[];
   droppedPlayerIds: string[];
   bbidAmount?: number;
@@ -71,23 +96,28 @@ export function parseTransactionString(txnString: string): {
     return { addedPlayerIds, droppedPlayerIds };
   }
 
-  // BBID format: "addId,|bbidAmount|dropId," -- the MIDDLE segment is the bid,
-  // not a player, and the DROP SEGMENT MAY BE EMPTY when the winning claim
-  // needed no corresponding cut. MFL writes that as "16778,|500000|": a
-  // trailing pipe with nothing after it, NOT the "16778,|500000|," this
-  // parser used to require. Under the strict pattern every drop-free claim
-  // fell through to the generic swap branch, split into THREE segments there,
-  // and returned zero adds -- so parseTransactions() discarded it and the
-  // owner's 24-hour declaration window never opened. Keep both the drop id
-  // and the trailing comma optional.
-  // The drop segment is comma-delimited like every other one, so read it with
-  // idsIn rather than enumerating "one id" and "no id" as separate shapes —
-  // enumerating shapes is what left the no-drop case out in the first place.
-  const bbidMatch = txnString.match(/^(\d+),\|(\d+)\|(.*)$/);
-  if (bbidMatch) {
-    addedPlayerIds.push(bbidMatch[1]);
-    bbidAmount = parseInt(bbidMatch[2], 10);
-    droppedPlayerIds.push(...idsIn(bbidMatch[3]));
+  // PRICED shape: "addId|price|drops" — ONE branch for the BBID claim and the
+  // auction win alike, because at three segments they are the same grammar:
+  // the middle segment is a PRICE, never a player, and the third is the cut
+  // list. Splitting them into a "BBID" branch that required the comma and an
+  // "auction" branch that forbade it was the drift #1158 F2 went looking for:
+  // a census of both leagues' 20 seasons finds 738 of 1307 BBID_WAIVER rows
+  // written WITHOUT the comma (2007-2016), so the label was simply wrong, and
+  // the 17 rows carrying a DECIMAL bid ("7598|1525000.00|0000") matched
+  // neither integer-only pattern and fell through to the swap branch — which
+  // sees three segments, returns zero adds, and is therefore discarded whole
+  // by parseTransactions() below. That is the exact end state of the
+  // drop-free-claim bug this parser was already fixed for once.
+  //
+  // So: the comma after the add id is OPTIONAL, the price may be DECIMAL, and
+  // the drop segment is read with idsIn — comma-delimited, possibly empty,
+  // possibly several ids. Enumerating shapes is what left the no-drop case
+  // out in the first place; do not go back to it.
+  const pricedMatch = txnString.match(/^(\d+),?\|(\d+(?:\.\d*)?)\|(.*)$/);
+  if (pricedMatch) {
+    addedPlayerIds.push(pricedMatch[1]);
+    bbidAmount = parseInt(pricedMatch[2], 10);
+    droppedPlayerIds.push(...idsIn(pricedMatch[3]));
     return { addedPlayerIds, droppedPlayerIds, bbidAmount };
   }
 
@@ -102,23 +132,23 @@ export function parseTransactionString(txnString: string): {
     return { addedPlayerIds, droppedPlayerIds };
   }
 
-  // Auction format: "playerId|amount|" — no comma after the id, which is what
-  // separates it from the BBID shape above. The trailing segment is a drop
-  // when the won player needed room made for him.
-  const auctionMatch = txnString.match(/^(\d+)\|(\d+)\|(.*)$/);
-  if (auctionMatch) {
-    addedPlayerIds.push(auctionMatch[1]);
-    bbidAmount = parseInt(auctionMatch[2], 10);
-    droppedPlayerIds.push(...idsIn(auctionMatch[3]));
-    return { addedPlayerIds, droppedPlayerIds, bbidAmount };
-  }
-
-  // Add/drop swap: "addId|dropId,", "addId|," or "addId|" -- positional, and
-  // either side may be empty or carry more than one comma-delimited id.
+  // TWO segments, "addId|rest" — and this is the one shape the string alone
+  // CANNOT resolve. On a roster move the second segment is the cut list
+  // ("11957,|9122,"); on a pre-2017 auction win it is the price with no cut
+  // ("8925|625000", 1410 rows, plus 334 more in MFL's scientific notation
+  // "6616|1.525e+06"). Both are bare digits, so only `type` separates them,
+  // and without it the auction's PRICE is reported as a dropped player id.
+  // Callers that know the type should pass it; the type-less default keeps
+  // the historical positional reading.
   const parts = txnString.split('|');
   if (parts.length === 2) {
     addedPlayerIds.push(...idsIn(parts[0]));
-    droppedPlayerIds.push(...idsIn(parts[1]));
+    if (type === 'AUCTION_WON') {
+      const price = parseFloat(parts[1]);
+      if (Number.isFinite(price)) bbidAmount = Math.trunc(price);
+    } else {
+      droppedPlayerIds.push(...idsIn(parts[1]));
+    }
   }
 
   return { addedPlayerIds, droppedPlayerIds, bbidAmount };
@@ -144,7 +174,8 @@ export function parseTransactions(
     // Skip non-acquisition types
     if (!ACQUISITION_TYPES.includes(raw.type)) continue;
 
-    const { addedPlayerIds, droppedPlayerIds, bbidAmount } = parseTransactionString(raw.transaction);
+    // Pass the type: "8925|625000" is an auction PRICE, not a dropped player.
+    const { addedPlayerIds, droppedPlayerIds, bbidAmount } = parseTransactionString(raw.transaction, raw.type);
 
     // Only include transactions that actually add a player
     if (addedPlayerIds.length === 0) continue;

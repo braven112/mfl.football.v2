@@ -1,12 +1,13 @@
 ---
 slug: waiver-column-player-ids
-status: open
+status: shipped
 severity: P2
 opened: 2026-09-17
 hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1156
 hotfix_sha: 96d2b71
 followup_issue: 1158
-followup_pr:
+followup_pr: (pending — see "Shipping" below)
+followup_worked: 2026-09-17
 followup_session: session_013bTc8oqnPeFXqWfMo39cFf
 ---
 
@@ -45,7 +46,22 @@ was not deferred.
 
 ## Deferred items
 
-- [ ] **F1 — The published Week 1 article is still wrong**
+Re-validated 2026-09-17 against what actually shipped in `96d2b71`, before any
+code was written. Three worked, one dropped, one still blocked.
+
+- [ ] **F1 — The published Week 1 article is still wrong** — STILL TRUE, STILL BLOCKED
+  - Re-checked: `sf_2026_waiver_pickups_w01` on `main` still carries **eight**
+    `Player <digits>` placeholders (16171, 17668, 15749, 14983, 16342, 13418,
+    12610) and no `heroPlayerId`. Nothing since the hotfix has touched it, and
+    nothing will — the fix is to the generator.
+  - Still not doable from a Claude session, for the same two reasons plus one
+    more that is worth recording: there is no `ANTHROPIC_API_KEY` and no
+    `.env.local` in the container, and dispatching `schefter-articles.yml` is
+    refused here as a **production deploy** (that workflow commits to `main`
+    and republishes the live feed) independently of whether the token would
+    have carried `actions: write`.
+  - **This one needs a human.** The two routes below are unchanged and still
+    correct; (a) is the cheaper one.
   - Source: deferred at implementation — cannot be done from a Claude session
   - Where: `sf_2026_waiver_pickups_w01` in `src/data/theleague/schefter-feed.json`
   - Why deferred: the fix is to the GENERATOR, so it governs the next run and
@@ -68,44 +84,80 @@ was not deferred.
     re-ping the chat. Rebuilt fact sheet was verified correct against the live
     feeds: real names, no phantom, `heroPlayerId: "16171"`, $3.325M unchanged.
 
-- [ ] **F2 — Two independent MFL transaction parsers disagree on the comma-less shape**
+- [x] **F2 — Two independent MFL transaction parsers disagree** — WORKED, and the
+      premise was partly wrong
   - Source: cross-cutting lens, step 5 (found while verifying the review's finding 1)
-  - Where: `scripts/lib/roster-move-parse.mjs:50` and
-    `src/utils/contract-eligibility.ts:86` / `:107`
-  - Why deferred: an audit, not a fix; widening a fast-path PR into the
-    contract-declaration path is the wrong trade.
-  - The question: `contract-eligibility.ts` reads a comma-less `N|N|N` as an
-    **AUCTION** shape ("no comma after the id, which is what separates it from
-    the BBID shape above"), while the feeds carry 738 rows typed
-    `BBID_WAIVER` in exactly that shape (2007–2016). This PR made the comma
-    optional in `parseRosterMove`'s BBID branch, which is right for those rows
-    and also improves genuine auction strings there (`parseRosterMove` has no
-    auction branch at all — it previously read an auction bid as a dropped
-    player). But the two parsers now classify the same string differently, and
-    `tests/contract-eligibility.test.ts:730` passes either way, so the parity
-    test is not actually pinning this. Decide which reading is correct per
-    `type`, and make the parity test able to fail.
+  - Where: `scripts/lib/roster-move-parse.mjs` and `src/utils/contract-eligibility.ts`
+  - **The comma-less `N|N|N` shape does NOT actually diverge.** Ran both parsers
+    over all 5,908 distinct roster-move strings in both leagues' 20 seasons
+    (36,471 rows): the "auction" branch and the BBID branch are different
+    *labels* for the same grammar — segment 2 is a price, segment 3 is the cut
+    list — so they return identical output. The label was wrong; the reading
+    was not.
+  - **The real divergence was one shape: the DECIMAL bid** (`N|D|N`,
+    `"7598|1525000.00|0000"`, 17 rows, 2007–2011). It matched neither
+    integer-only pattern in `contract-eligibility.ts`, fell through to the
+    two-segment branch, split into three, and returned **zero adds** — which
+    `parseTransactions()` discards whole, so the declaration window never
+    opens. That is the exact end state of the drop-free-claim bug that file was
+    already fixed for once.
+  - **Answering "which reading is correct per `type`":** at three segments the
+    string is unambiguous and the type is not needed. At **two** segments it is
+    the only thing that can decide — `"8925|625000"` is an auction price (1410
+    rows) where `"11957,|9122,"` is a cut list, both bare digits. Without it,
+    the auction's price is returned as a dropped player id. `parseTransactionString`
+    now takes an optional `type` and `parseTransactions` passes it.
+  - **Found while censusing:** `0000` in a pre-2017 drop segment is MFL's
+    NOTHING-CUT sentinel, not a player. 276 rows carry it; no season of either
+    league has a player with that id; it never appears in a FREE_AGENT row or
+    any post-2016 shape. **Both** parsers were returning it as a dropped id, and
+    in the scanner it reaches `describePlayer` → the published prose
+    `Player 0000` — the same latent placeholder failure as #1156, waiting on a
+    backfill that replays an old season. Filtered in both.
+  - **"Make the parity test able to fail" — done, and proved.** The test never
+    changed; its *corpus* did. `tests/fixtures/mfl-transaction-strings.json`
+    held 10 shapes recorded from TheLeague's 2026 export alone; MFL has sent
+    **60**. All three real disagreements live in shapes it did not contain, so
+    it could not have failed on any of them. Re-recorded from the committed
+    feeds — every league, every season — with the new
+    `scripts/record-transaction-shapes.mjs` (offline, deterministic, no API
+    key). Verified by running the **pre-fix** parser against the widened corpus:
+    3 mismatches surface, **0** of which the old corpus could see.
+  - Also added: a ratchet asserting the fixture still covers every shape the
+    feeds hold (so a new MFL shape fails loudly instead of being parsed on
+    faith), and a guard on the corpus's own breadth so it cannot be trimmed
+    back to green.
+  - **Gap closed on the way past:** `scripts/lib/roster-move-parse.mjs` — the
+    file at the centre of this whole incident — belonged to **no** path-guard
+    domain, so editing it ran no guard at all. It and the new recorder are in
+    `contracts-eligibility` now, which also runs `tests/roster-move-parse.test.ts`.
 
-- [ ] **F3 — A BBID row with no readable add id is skipped with no warning**
+- [x] **F3 — A BBID row with no readable add id is skipped with no warning** — WORKED
   - Source: cross-cutting lens, step 5
-  - Where: `scripts/article-types/waiver-pickups.mjs:77`
-  - Why deferred: not wrong (nothing gets published either way), but
-    inconsistent with the bid check three lines below, which does warn.
-  - Detail: the `addedIds.length === 0` drop-skip runs before the
-    `BBID_WAIVER && !Number.isFinite(bbidAmount)` check, so a nonsense BBID
-    string is silently treated as a drop. A test documents the ordering.
+  - Where: `scripts/article-types/waiver-pickups.mjs`
+  - Confirmed still true. An unreadable row is *unparsed* — neither a drop nor a
+    free pickup — and which of those two silent readings it got depended only on
+    which check ran first. Both halves warn now; an ordinary drop still does not,
+    because a warning that fires on normal rows is one the operator learns to skip.
+  - Side effect worth noting: the unreadable row no longer creates an empty
+    `claimsByTeam` entry, so it can no longer surface as a `(0 claims, $0 spent)`
+    team or win the `Most claims` reduce.
 
-- [ ] **F4 — Fact sheet says "1 claims"**
-  - Source: deferred at implementation
-  - Where: `scripts/article-types/waiver-pickups.mjs:118`
-  - Why deferred: cosmetic, and model-facing rather than reader-facing.
+- [x] **F4 — Fact sheet says "1 claims"** — WORKED
+  - Where: `scripts/article-types/waiver-pickups.mjs`
+  - The fact sheet is the model's only source of truth and is read as prose, so
+    a broken plural is a sentence the column can echo verbatim. Local `countOf`
+    helper; one call site.
 
-- [ ] **F5 — Re-read the PR for post-merge reviewer findings**
+- [x] **F5 — Re-read the PR for post-merge reviewer findings** — DROPPED, nothing found
   - Source: `/hotfix` step 5 — CodeQL (`Analyze`) was not waited on
   - Where: https://github.com/braven112/mfl.football.v2/pull/1156
-  - Why deferred: the diff touches no auth, no server route and no
-    user-supplied URL, so CodeQL was not in the blocking bucket. Gemini and
-    Copilot were not waited on either.
+  - All five checks on the head commit (`1a4ceb3`) are green, including the two
+    that landed **after** the 18:24:10 merge: `CodeQL` at 18:24:45 and `Analyze`
+    at 18:24:50. Copilot reviewed at 18:06 — "Approval recommended", 0 comments.
+    Gemini never ran (the external reviewer is opt-in since Aug 2026 and was not
+    requested). No comment of any kind was posted after the merge except the
+    hand-off note. Nothing to adjudicate.
 
 ## Context to start cold
 
@@ -126,3 +178,46 @@ was not deferred.
   present in any other article type or in either league's archive — a scan of
   both feeds (786 posts) plus the archive shards found exactly one post
   carrying a `Player <digits>` placeholder.
+
+## Census, corrected and widened (2026-09-17 follow-up)
+
+The brief's summary above was right but partial. The full census — both
+leagues, every season on disk, 36,471 rows — is now a committed artifact rather
+than a paragraph: `tests/fixtures/mfl-transaction-strings.json`, regenerated by
+`node scripts/record-transaction-shapes.mjs`. **60** distinct (type, shape)
+pairs, against the 10 the fixture used to hold.
+
+`BBID_WAIVER`, all of it TheLeague (the AFL has never had one row):
+
+| shape | rows | seasons |
+|---|---|---|
+| `N,\|N\|N,` | 288 | 2017–2026 |
+| `N,\|N\|` | 281 | 2017–2026 |
+| `N\|N\|N` | 452 | 2007–2016 |
+| `N\|N\|Z` | 269 | 2007–2016 |
+| `N\|D\|N` | 10 | 2007–2011 |
+| `N\|D\|Z` | 7 | 2007–2010 |
+
+`D` is a decimal bid; `Z` is the `0000` nothing-cut sentinel, which gets its own
+token in the shape mask precisely so the corpus can carry it as its own case —
+folded in with `N` it shares a group with a real drop id and disappears.
+569 modern + 738 legacy = 1307, matching the hotfix's adjudication exactly.
+
+`FREE_AGENT` runs to 14 comma-delimited drops (`|N,N,…`), and the AFL has the
+only `N,\|N,N,` row in either league (2024). Two shapes outside the roster-move
+family are worth knowing about because `ACQUISITION_TYPES` includes
+`AUCTION_WON`: `"8925|625000"` (1410 rows) and MFL's scientific notation
+`"6616|1.525e+06"` (334 rows), both two-segment and both needing the `type`.
+
+## Shipping
+
+Worked on branch `followup/waiver-column-player-ids`, off `origin/main`.
+`pnpm test:unit` green at 505 files / 12,221 tests. The two new behavioral
+guards were verified to fail against the pre-fix code (F3: `warn` not called;
+F4: `(1 claim,` absent), and the widened corpus was verified to surface 3
+parity mismatches the old one could not see.
+
+`/update-whats-new`: **skip**. Nothing here is reader-facing — the parser
+divergence only ever affected pre-2017 rows, and the fact-sheet wording is
+model-facing. F1 is the only user-visible half of this incident and it remains
+open.

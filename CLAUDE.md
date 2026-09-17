@@ -45,7 +45,13 @@ cross-cutting, add a line here. Keep this file short.
   parallel. Add new build-time fetches there.
 - **Guard tests are the real memory.** ~228 suites in `tests/` mechanically
   enforce most rules in this repo. When a rule below names a test, that test
-  is what stops the regression — read it before working around it.
+  is what stops the regression — read it before working around it. A guard that
+  reads a FIXTURE is only as strong as that fixture's coverage: the two MFL
+  transaction parsers were pinned equal by a corpus recorded from one league's
+  one season, and it stayed green for months while they disagreed on three
+  shapes it did not contain. Record a corpus as a CENSUS, and widen it rather
+  than trimming it to green (`docs/claude/rules/schefter.md` § "A parity test is
+  only as strong as its corpus").
 - **Prefer the mechanical path.** Several procedures here are scripts, not
   memory: `/guard-test` (turn a rule into a scan guard), `/ratchet`
   (re-measure every baseline), `/rebase` (conflicts by class, correct

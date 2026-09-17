@@ -141,6 +141,57 @@ describe('waiver article transaction parsing', () => {
     }
   });
 
+  it('warns on an unreadable BBID row even when it yields no add at all', async () => {
+    // #1158 F3. The bid check used to sit BELOW the "nothing added" skip, so a
+    // BBID string mangled badly enough to lose its add id was classified as a
+    // plain drop and vanished in silence — while the very same row with a
+    // readable add warned three lines later. The quiet half is the dangerous
+    // one: a claim that never reaches the fact sheet cannot be noticed in the
+    // published prose either. Both halves warn now.
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const { factSheet } = await sheetFor([
+        { type: 'BBID_WAIVER', franchise: '0015', transaction: '|' },
+        { type: 'FREE_AGENT', franchise: '0016', transaction: '17668,|' },
+      ]);
+      expect(warn).toHaveBeenCalled();
+      expect(factSheet).toContain('Total claims this week: 1');
+      expect(factSheet).toContain('Trey Smack');
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it('stays silent on an ordinary drop, which is not an unreadable row', async () => {
+    // The other side of the ordering: a pure drop is a normal row, not a parse
+    // failure. Warning on it would train the operator to ignore the warning.
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      await sheetFor([{ type: 'FREE_AGENT', franchise: '0008', transaction: '|15749,' }]);
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it('writes "1 claim", not "1 claims"', async () => {
+    // #1158 F4. The fact sheet is the model's only source of truth and it is
+    // read as prose, so a broken plural is a sentence the column can echo.
+    const { factSheet } = await sheetFor([
+      { type: 'BBID_WAIVER', franchise: '0015', transaction: '16171,|775000|' },
+    ]);
+    expect(factSheet).toContain('(1 claim,');
+    expect(factSheet).not.toContain('(1 claims,');
+  });
+
+  it('pluralizes a team with more than one claim', async () => {
+    const { factSheet } = await sheetFor([
+      { type: 'BBID_WAIVER', franchise: '0015', transaction: '16171,|775000|' },
+      { type: 'FREE_AGENT', franchise: '0015', transaction: '17668,|' },
+    ]);
+    expect(factSheet).toContain('(2 claims,');
+  });
+
   it('never prints a blank highest-bid line on an all-free-agent week', async () => {
     // highestBid's {0, '', ''} seed rendered as "Highest single bid: $0 for  by "
     // — blank player and team into the model's only source of truth. The AFL has

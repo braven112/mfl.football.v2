@@ -16,6 +16,7 @@ import type {
 } from '../src/types/contract-eligibility';
 import { ACQUISITION_TYPES } from '../src/utils/contract-eligibility';
 import { parseRosterMove } from '../scripts/lib/roster-move-parse.mjs';
+import { collectRows, censusShapes } from '../scripts/record-transaction-shapes.mjs';
 import corpus from './fixtures/mfl-transaction-strings.json';
 
 // Helper: create a date in a specific contract window
@@ -678,18 +679,62 @@ describe('getTeamEligibility', () => {
 // --- Recorded MFL corpus ---
 //
 // tests/fixtures/mfl-transaction-strings.json holds one entry per DISTINCT
-// (type, string shape) in TheLeague's full 2026 transactions export. It exists
-// because the shape this parser got wrong was one nobody had ever looked at:
-// the add-only BBID case was asserted against a hand-written string with a
-// trailing comma MFL does not send. Real strings, or the test proves nothing.
+// (type, string shape) MFL has ever sent either league, across every season on
+// disk. It exists because the shape this parser got wrong was one nobody had
+// ever looked at: the add-only BBID case was asserted against a hand-written
+// string with a trailing comma MFL does not send. Real strings, or the test
+// proves nothing.
+//
+// It used to hold ONE league's ONE season — 10 shapes out of the 60 that exist
+// — and that is why the parity test below passed for months while the two
+// parsers genuinely disagreed (#1158 F2). All three of the disagreements are in
+// shapes the old corpus did not contain, so the test could not have failed on
+// any of them. A corpus that cannot contain the counterexample is decoration.
+// Re-record with `node scripts/record-transaction-shapes.mjs`; never trim it to
+// make a test pass, because every entry is a row that really happened.
 
 describe('recorded MFL transaction strings', () => {
   const acquisitionShapes = corpus.shapes.filter(s => ACQUISITION_TYPES.includes(s.type));
 
-  it('covers both BBID claim shapes — with a drop and without one', () => {
+  it('spans both full-management leagues and the whole archive', () => {
+    // The guard on the corpus itself. Narrowing it back to one league or one
+    // season is the failure mode that made the parity test decorative, and it
+    // is invisible in a diff that only shows a shorter fixture.
+    const leagues = new Set(corpus.shapes.flatMap(s => s.leagues));
+    expect(leagues.size, 'corpus must cover more than one league').toBeGreaterThan(1);
+    const seasons = corpus.shapes.flatMap(s => String(s.seasons).split('-'));
+    expect(Math.min(...seasons.map(Number))).toBeLessThanOrEqual(2007);
+    expect(corpus.shapes.length, 'corpus shrank — re-record, do not trim').toBeGreaterThanOrEqual(55);
+  });
+
+  it('has seen every shape the committed feeds actually hold', () => {
+    // The ratchet that keeps the corpus honest. The fixture is only a fixture
+    // because it is a CENSUS — the moment MFL emits a shape it does not
+    // contain, both parsers are reading that shape on faith, which is exactly
+    // the position this repo was in for the comma-less BBID claim. Cheap
+    // (~150ms over 36k rows) because it reads the feeds already on disk.
+    const live = new Set(censusShapes(collectRows()).map(s => `${s.type} ${s.shape}`));
+    const recorded = new Set(corpus.shapes.map(s => `${s.type} ${s.shape}`));
+    const unseen = [...live].filter(k => !recorded.has(k));
+    expect(
+      unseen,
+      `MFL is sending shapes the corpus has never seen. Re-record with `
+        + `\`node scripts/record-transaction-shapes.mjs\`, then CHECK both parsers read them: `
+        + `${JSON.stringify(unseen)}`,
+    ).toEqual([]);
+  });
+
+  it('covers every BBID claim shape, modern and pre-2017', () => {
     const bbid = corpus.shapes.filter(s => s.type === 'BBID_WAIVER').map(s => s.shape);
     expect(bbid).toContain('N,|N|');    // claim, nothing cut
     expect(bbid).toContain('N,|N|N,');  // claim + cut
+    // The four the old corpus was missing — 738 rows, and the reason the
+    // parity test below could not fail. `Z` is the legacy no-drop marker
+    // "0000"; `D` is a bid MFL wrote as a decimal.
+    expect(bbid).toContain('N|N|N');    // pre-2017, no commas
+    expect(bbid).toContain('N|N|Z');    // pre-2017, nothing cut
+    expect(bbid).toContain('N|D|N');    // decimal bid
+    expect(bbid).toContain('N|D|Z');    // decimal bid, nothing cut
   });
 
   it('extracts an added player from every acquisition string that has one', () => {
@@ -724,14 +769,75 @@ describe('recorded MFL transaction strings', () => {
     // was the bug. Scoped to the roster-move types the scanner is fed —
     // AUCTION_* strings are a different grammar (the leading segment of an
     // AUCTION_BID is a FRANCHISE id) and that parser never sees them.
+    //
+    // This assertion did not change in #1158; the CORPUS it reads did. Against
+    // the 10 shapes recorded from one 2026 export it was green while the two
+    // parsers disagreed on three shapes worth 286 rows. Widening the fixture
+    // is what gave it the power to fail.
     const rosterMoveTypes = ['FREE_AGENT', 'WAIVER', 'BBID_WAIVER'];
     for (const entry of corpus.shapes.filter(s => rosterMoveTypes.includes(s.type))) {
-      const mine = parseTransactionString(entry.example);
+      const mine = parseTransactionString(entry.example, entry.type);
       const theirs = parseRosterMove(entry.example);
       expect(mine.addedPlayerIds, `adds for ${JSON.stringify(entry.example)}`).toEqual(theirs.addedIds);
       expect(mine.droppedPlayerIds, `drops for ${JSON.stringify(entry.example)}`).toEqual(theirs.droppedIds);
       expect(mine.bbidAmount, `bid for ${JSON.stringify(entry.example)}`).toEqual(theirs.bbidAmount);
     }
+  });
+
+  it('prices a pre-2017 BBID claim the same with or without the commas', () => {
+    // The two spellings of one claim. 738 of 1307 BBID_WAIVER rows are the
+    // comma-less one, so reading it as a different grammar was never a
+    // tolerable ambiguity — it is the majority spelling.
+    const withCommas = parseTransactionString('8838,|425000|3969,', 'BBID_WAIVER');
+    const without = parseTransactionString('8838|425000|3969', 'BBID_WAIVER');
+    expect(without).toEqual(withCommas);
+    expect(without.bbidAmount).toBe(425000);
+    expect(without.droppedPlayerIds).toEqual(['3969']);
+  });
+
+  it('reads a decimal bid rather than discarding the whole claim', () => {
+    // "7598|1525000.00|0000" matched neither integer-only pattern, fell to the
+    // two-segment branch, split into three, and returned NO ADDS — which
+    // parseTransactions() discards entirely, so the owner's declaration window
+    // never opened. Same end state as the drop-free claim bug, different shape.
+    const parsed = parseTransactionString('7598|1525000.00|9694', 'BBID_WAIVER');
+    expect(parsed.addedPlayerIds).toEqual(['7598']);
+    expect(parsed.bbidAmount).toBe(1525000);
+    expect(parsed.droppedPlayerIds).toEqual(['9694']);
+  });
+
+  it('reads the legacy 0000 marker as NOTHING CUT, not as a player', () => {
+    // MFL's pre-2017 way of writing the empty drop segment. Neither league has
+    // a player with that id in any season, and 276 rows carry it.
+    expect(parseTransactionString('8838|425000|0000', 'BBID_WAIVER').droppedPlayerIds).toEqual([]);
+    expect(parseTransactionString('8838|425000|0000', 'BBID_WAIVER').addedPlayerIds).toEqual(['8838']);
+    // Still a sentinel only where MFL writes one — a real cut alongside it stays.
+    expect(parseTransactionString('8838|425000|0000,3969', 'BBID_WAIVER').droppedPlayerIds).toEqual(['3969']);
+  });
+
+  it('needs the TYPE to read a two-segment string, and is given it', () => {
+    // The one shape the string alone cannot resolve: "8925|625000" is an
+    // auction PRICE (1410 rows, 2007-2016) but "11957,|9122," is a cut list,
+    // and both are bare digits. Without the type the auction's price is
+    // reported as a dropped player — a player id no lookup can resolve, which
+    // is how "Player <digits>" reaches published prose.
+    const auction = parseTransactionString('8925|625000', 'AUCTION_WON');
+    expect(auction.addedPlayerIds).toEqual(['8925']);
+    expect(auction.droppedPlayerIds).toEqual([]);
+    expect(auction.bbidAmount).toBe(625000);
+
+    const swap = parseTransactionString('11957,|9122,', 'FREE_AGENT');
+    expect(swap.addedPlayerIds).toEqual(['11957']);
+    expect(swap.droppedPlayerIds).toEqual(['9122']);
+    expect(swap.bbidAmount).toBeUndefined();
+
+    // parseTransactions() is the caller that knows the type; pin that it passes it.
+    const records = parseTransactions([
+      { type: 'AUCTION_WON', franchise: '0008', timestamp: '1788919200', transaction: '8925|625000' },
+    ]);
+    expect(records).toHaveLength(1);
+    expect(records[0].droppedPlayerIds).toEqual([]);
+    expect(records[0].bbidAmount).toBe(625000);
   });
 
   it('ignores AUCTION_BID, whose leading segment is a franchise id', () => {

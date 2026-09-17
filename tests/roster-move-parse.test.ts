@@ -22,10 +22,24 @@ describe('parseRosterMove — MFL roster-move transaction parsing', () => {
   // bid at all, so a $775K claim prices as $0. 738 of the 1307 recorded BBID
   // rows were being read that way.
   it('parses a BBID claim written without the comma after the add id (pre-2017)', () => {
-    const { addedIds, droppedIds, bbidAmount } = parseRosterMove('8838|425000|0000');
+    const { addedIds, droppedIds, bbidAmount } = parseRosterMove('8838|425000|3969');
     expect(addedIds).toEqual(['8838']);
-    expect(droppedIds).toEqual(['0000']);
+    expect(droppedIds).toEqual(['3969']);
     expect(bbidAmount).toBe(425000);
+  });
+
+  // "0000" is MFL's pre-2017 way of writing "nothing was cut" — the slot the
+  // modern format leaves empty. Neither league has ever had a player with that
+  // id, and 276 rows carry it. Returned as a dropped id it reaches
+  // describePlayer() in schefter-scan.mjs, which cannot look it up and falls
+  // through to the literal prose `Player 0000` — the same failure as #1156,
+  // armed for whenever a backfill replays an old season.
+  it('reads the legacy 0000 marker as NOTHING CUT, not as a player', () => {
+    expect(parseRosterMove('8838|425000|0000').droppedIds).toEqual([]);
+    expect(parseRosterMove('8838|425000|0000').addedIds).toEqual(['8838']);
+    expect(parseRosterMove('7598|1525000.00|0000').droppedIds).toEqual([]);
+    // It is a sentinel only where MFL writes one; a real id keeps its place.
+    expect(parseRosterMove('8838|425000|0000,3969').droppedIds).toEqual(['3969']);
   });
 
   it('parses a decimal BBID bid, including a bare trailing dot', () => {
