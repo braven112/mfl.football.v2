@@ -39,7 +39,7 @@ import { getNonEmpty } from './lib/env.mjs';
 import { getLeagueById, DEFAULT_LEAGUE_SLUG } from '../src/config/leagues-data.mjs';
 import { writeJsonIfChanged, jsonEquivalent } from './lib/canonical-json.mjs';
 import { isKeeperWindowDate } from './lib/retention-policy.mjs';
-import { reduceWeekScores, weekOfScores } from '../src/utils/player-week-scores.mjs';
+import { reduceWeekScores, weekOfScores, weekMergeDecision } from '../src/utils/player-week-scores.mjs';
 
 /**
  * Calculate Labor Day for a given year (first Monday in September)
@@ -1120,12 +1120,25 @@ const run = async () => {
      * every daily pass for all 18 weeks, so an unplayed week (blank placeholder
      * row) and a transient bad response must both leave a good week alone —
      * the same rule the current-week weeklyResults merge above follows.
+     *
+     * Both halves of that promise live in `weekMergeDecision`: empty is
+     * refused, and so is a non-empty response that lost more than
+     * `WEEK_SHRINK_FLOOR` of a week we already hold. An empty week is MFL
+     * saying "not played yet"; a week that shrank is MFL answering 200 with a
+     * truncated body, and this file is the only record of what it truncated.
      */
     const mergeWeek = (weekNum, scores) => {
-      const count = Object.keys(scores).length;
-      const had = Object.keys(weeks[String(weekNum)] ?? {}).length;
-      if (count === 0) {
-        if (had > 0) console.log(`playerScores week ${weekNum} came back empty; keeping ${had} committed scores.`);
+      const { accept, reason, had, count } = weekMergeDecision(weeks[String(weekNum)], scores);
+      if (!accept) {
+        if (reason === 'shrank') {
+          // Loud, because this one is MFL answering 200 with a body that is
+          // wrong rather than absent — the class the empty guard cannot see.
+          console.warn(
+            `::warning::playerScores week ${weekNum} returned ${count} rows vs ${had} committed — keeping the committed week.`,
+          );
+        } else if (had > 0) {
+          console.log(`playerScores week ${weekNum} came back empty; keeping ${had} committed scores.`);
+        }
         return false;
       }
       weeks[String(weekNum)] = scores;

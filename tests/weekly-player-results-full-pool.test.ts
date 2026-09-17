@@ -29,6 +29,7 @@ import {
   reduceWeekScores,
   weekOfScores,
   parsePlayerWeekScores,
+  weekMergeDecision,
 } from '../src/utils/player-week-scores.mjs';
 
 const ROOT = join(__dirname, '..');
@@ -292,9 +293,40 @@ describe('the feed that supplies it', () => {
     // with a blank placeholder, so each daily pass must accumulate.
     expect(src).toMatch(/const mergeWeek = \(weekNum, scores\)/);
     expect(
-      /if \(count === 0\) \{[\s\S]{0,200}return false;/.test(src),
-      'an empty week must leave a committed week alone',
+      /weekMergeDecision\(weeks\[String\(weekNum\)\], scores\)/.test(src),
+      'the merge policy must come from weekMergeDecision, not be re-inlined here',
     ).toBe(true);
+  });
+
+  it('refuses a truncated response for a week it already holds', () => {
+    // MFL serves degraded bodies at HTTP 200, and playerScores-by-week.json is
+    // the ONLY record of a finished week — a partial reply that replaced it
+    // would delete those players' rows from the modal with nothing to
+    // re-derive them from. A finished week's pool does not shrink.
+    const committed = Object.fromEntries(
+      Array.from({ length: 484 }, (_, i) => [String(i), i * 0.1]),
+    );
+
+    expect(weekMergeDecision(committed, { '1': 1.5 }).accept).toBe(false);
+    expect(weekMergeDecision(committed, { '1': 1.5 }).reason).toBe('shrank');
+
+    // …but a handful of voided rows is a real MFL correction, not a bad
+    // response, and refusing those would strand the week on stale data.
+    const nudged = { ...committed };
+    delete nudged['0'];
+    delete nudged['1'];
+    expect(weekMergeDecision(committed, nudged).accept).toBe(true);
+  });
+
+  it('keeps a committed week when MFL answers it empty, and fills an unseen one', () => {
+    // The blank placeholder row reduces to {} — that is "not played yet",
+    // never "everyone scored nothing".
+    expect(weekMergeDecision({ '1': 12.3 }, {}).reason).toBe('empty');
+    expect(weekMergeDecision({ '1': 12.3 }, {}).accept).toBe(false);
+    // Nothing committed yet: any non-empty answer is strictly better than none,
+    // which is what lets the week-1-only hand seed grow into weeks 1-18.
+    expect(weekMergeDecision(undefined, { '1': 12.3 }).accept).toBe(true);
+    expect(weekMergeDecision({}, { '1': 12.3 }).accept).toBe(true);
   });
 
   it('does not spend a second request on the live week', () => {
@@ -349,6 +381,18 @@ describe('the modal that renders it', () => {
 
   it('renders every roster that held the player, not just the first', () => {
     expect(src).toMatch(/w\.o && w\.o\.length/);
+  });
+
+  it('keeps its client script bundled, because it is TypeScript', () => {
+    // The handler carries type annotations (`function (owner: { fi: string ...`)
+    // and bare module specifiers. Astro runs a plain <script> through Vite, so
+    // esbuild strips the types and resolves the imports at build — both are
+    // fine. Marking it `is:inline` ships the source verbatim instead, and the
+    // browser throws on the first annotation, taking the whole modal with it.
+    // An external reviewer read the annotations as already-broken on PR #1150;
+    // they are not, and this is what keeps that true.
+    expect(src).toMatch(/import \{[^}]*escapeHtml[^}]*\} from '\.\.\/\.\.\/utils\/player-cell-html'/);
+    expect(src).not.toMatch(/<script[^>]*\bis:inline\b/);
   });
 
   it('drops the opponent-strength columns when the league has no data for them', () => {
