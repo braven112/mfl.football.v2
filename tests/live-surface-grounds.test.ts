@@ -22,7 +22,30 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { SURFACE_GROUNDS, surfaceForLeague, type LiveSurface } from '../src/utils/live/surface';
+import { resolveMatchupColorVars } from '../src/utils/live/model';
+import {
+  colorDistance,
+  DEFAULT_MIN_BG_CONTRAST,
+  resolveTeamColorPair,
+} from '../src/utils/team-color-contrast';
+import type { FranchiseColorClaim } from '../src/utils/mfl-live-identity';
 import { ALL_LEAGUES } from '../src/config/leagues-data.mjs';
+
+/** Every franchise in one league's config, as a colour claim. */
+function loadTeams(configPath: string): Array<{ franchiseId: string; name: string; claim: FranchiseColorClaim }> {
+  const raw = JSON.parse(readFileSync(resolve(process.cwd(), configPath), 'utf-8'));
+  return (raw.teams ?? []).map((t: Record<string, string>) => ({
+    franchiseId: t.franchiseId,
+    name: t.name,
+    claim: {
+      color: t.color ?? t.colorPrimary,
+      colorPrimary: t.colorPrimary,
+      colorSecondary: t.colorSecondary,
+      colorPrimaryDark: t.colorPrimaryDark,
+      colorSecondaryDark: t.colorSecondaryDark,
+    },
+  }));
+}
 
 /**
  * Comments are stripped FIRST. A scan guard that reads raw CSS is satisfied by
@@ -126,5 +149,115 @@ describe('every registry league maps to a surface', () => {
     for (const league of ALL_LEAGUES as Array<{ slug: string; navSlug: string }>) {
       expect(surfaceForLeague(league.slug)).toBe(league.navSlug);
     }
+  });
+});
+
+/**
+ * ── THE BUG THE SURFACE CONTRACT EXISTS TO FIX ────────────────────────────
+ *
+ * `LiveScoreboard.tsx` hardcodes its two grounds:
+ *
+ *     const LS_LIGHT_BG = '#ffffff'; // --card-surface (light)
+ *     const LS_DARK_BG  = '#262626'; // --card-surface (dark)
+ *
+ * `#262626` is TheLeague's dark card. But the AFL renders the SAME island, and
+ * the AFL's dark card is `#16283c` — a navy, because the AFL's whole theme is
+ * navy. The island is handed `leagueId` and never uses it for colour.
+ *
+ * So every AFL franchise colour is nudged until it is legible against a card
+ * it is not drawn on. Measured over the real config:
+ *
+ *   judged against #262626 (as shipped) -> worst is ΔE 10.7 against #16283c
+ *   judged against #16283c (correct)    -> worst is ΔE 21.5
+ *
+ * 18 is not a number this test invented: it is `DEFAULT_MIN_BG_CONTRAST`, the
+ * separation `resolveTeamColorPair` itself promises to deliver against the
+ * background it is given. Handing it the wrong background does not make it
+ * fail — it makes it succeed at the wrong question, which is why this shipped.
+ * `A Bruin Pegs Me` renders `#002244` on a `#16283c` card: a 1.07:1 luminance
+ * ratio, indistinguishable from the card.
+ *
+ * And it is invisible in review: correct in light mode, correct on TheLeague,
+ * wrong only for some franchises, on one league, in one theme.
+ * `toBroadcastPair` would not have helped either — it only ever DARKENS, so it
+ * cannot make a colour visible.
+ *
+ * These assertions run over the REAL league configs, so they are a CENSUS
+ * rather than a sample: a franchise that recolours itself into the hazard
+ * fails the build, and so does a league whose card moves without its
+ * SURFACE_GROUNDS entry moving with it.
+ */
+describe('a franchise is separable from ITS OWN league’s card, in both themes', () => {
+  const leagues = ALL_LEAGUES as Array<{ slug: string; configPath: string }>;
+
+  for (const league of leagues) {
+    const surface = surfaceForLeague(league.slug);
+    const grounds = SURFACE_GROUNDS[surface];
+    const teams = loadTeams(league.configPath);
+
+    for (const theme of ['light', 'dark'] as const) {
+      it(`${league.slug}: ${teams.length} franchises clear ΔE ${DEFAULT_MIN_BG_CONTRAST} on ${grounds[theme]} (${theme})`, () => {
+        const failures: string[] = [];
+        for (const team of teams) {
+          // Paired against every OTHER franchise, because the pair is resolved
+          // TOGETHER: a greyscale stop borrows the other side's hue, so the
+          // foil changes the answer for the team under test.
+          for (const foil of teams) {
+            if (foil.franchiseId === team.franchiseId) continue;
+            const vars = resolveMatchupColorVars(team.claim, foil.claim, surface);
+            const resolved = vars[theme === 'light' ? '--t0-light' : '--t0-dark'];
+            const de = colorDistance(resolved, grounds[theme]);
+            if (de < DEFAULT_MIN_BG_CONTRAST) {
+              failures.push(
+                `${team.franchiseId} ${team.name} vs ${foil.franchiseId}: ` +
+                  `${resolved} on ${grounds[theme]} = ΔE ${de.toFixed(1)}`,
+              );
+            }
+          }
+        }
+        expect(failures.slice(0, 8)).toEqual([]);
+      });
+    }
+  }
+
+  it('the AFL’s casualties are fixed by using the right ground, and broken by the wrong one', () => {
+    const teams = loadTeams(leagues.find((l) => l.slug === 'afl-fantasy')!.configPath);
+    const aflGround = SURFACE_GROUNDS.afl.dark;
+    const theLeagueGround = SURFACE_GROUNDS.theleague.dark;
+    const opts = { forceAdjust: true, homeVisibilityFallback: true } as const;
+    const darkOf = (c: FranchiseColorClaim): FranchiseColorClaim => ({
+      ...c,
+      colorPrimary: c.colorPrimaryDark ?? c.colorPrimary,
+      colorSecondary: c.colorSecondaryDark ?? c.colorSecondary,
+    });
+
+    let brokenByWrongGround = 0;
+    for (const team of teams) {
+      for (const foil of teams) {
+        if (foil.franchiseId === team.franchiseId) continue;
+
+        // The correct resolve clears the function's own promise.
+        const right = resolveMatchupColorVars(team.claim, foil.claim, 'afl')['--t0-dark'];
+        expect(
+          colorDistance(right, aflGround),
+          `${team.franchiseId} ${team.name} on its own card`,
+        ).toBeGreaterThanOrEqual(DEFAULT_MIN_BG_CONTRAST);
+
+        // The shipped resolve — same inputs, TheLeague's ground — does not.
+        const shipped = resolveTeamColorPair(darkOf(team.claim), darkOf(foil.claim), {
+          ...opts,
+          background: theLeagueGround,
+        }).home;
+        if (colorDistance(shipped, aflGround) < DEFAULT_MIN_BG_CONTRAST) brokenByWrongGround += 1;
+      }
+    }
+
+    // If this ever reaches zero the bug is gone from the DATA rather than from
+    // the code, and the assertion above is the one still doing the work — so
+    // say so out loud rather than letting a green test imply a fix.
+    expect(
+      brokenByWrongGround,
+      'no AFL franchise is harmed by the wrong ground any more — re-read this test',
+    ).toBeGreaterThan(0);
   });
 });
