@@ -35,7 +35,7 @@ vi.mock('../src/utils/player-map', async (importOriginal) => {
   return { ...actual, getPlayerMap: () => playerMapEntries };
 });
 
-import { readLeagueLive } from '../src/utils/live/read';
+import { buildBoardFromSnapshot, readLeagueLive } from '../src/utils/live/read';
 import { getLeagueBySlug } from '../src/config/leagues';
 
 const WEEK = 3;
@@ -374,5 +374,147 @@ describe('the board’s own frame', () => {
     expect(board.games).toEqual([]);
     expect(board.moments).toEqual([]);
     expect(board.redZone).toEqual([]);
+  });
+});
+
+describe('Throwback Week dresses the board, and only in art', () => {
+  const dressed = async (over: Record<string, { name?: string; nameShort?: string; icon?: string }>) =>
+    panelOf({
+      slug: 'theleague',
+      week: WEEK,
+      year: YEAR,
+      identityOverrides: over,
+    });
+
+  beforeEach(() => {
+    loadLiveScoringPayload.mockResolvedValue(
+      payload({ matchups: [{ home: '0001', away: '0002' }] }),
+    );
+  });
+
+  it('renames and re-crests the franchise the caller dressed', async () => {
+    // Throwback mutates the page's configTeams; without this the board keeps
+    // showing the club's present-day mark and the whole feature is invisible.
+    const panel = await dressed({
+      '0001': { name: 'Steel City Maulers', icon: '/assets/era/maulers.png' },
+    });
+    expect(panel.matchups[0].sides[0].name).toBe('Steel City Maulers');
+    expect(panel.matchups[0].sides[0].icon).toBe('/assets/era/maulers.png');
+  });
+
+  it('RE-DERIVES the initials from the era name', async () => {
+    // The initials are the text rung's fallback mark. A 1997 name showing
+    // today's initials is the same half-dressed board this exists to prevent.
+    const panel = await dressed({ '0001': { name: 'Steel City Maulers' } });
+    expect(panel.matchups[0].sides[0].initials).not.toBe('');
+    expect(panel.matchups[0].sides[0].initials).toBe('SC');
+  });
+
+  it('leaves a franchise the caller did not dress alone', async () => {
+    const plain = (await panelOf({ slug: 'theleague', week: WEEK, year: YEAR })).matchups[0];
+    const panel = await dressed({ '0001': { name: 'Steel City Maulers' } });
+    expect(panel.matchups[0].sides[1].name).toBe(plain.sides[1].name);
+    expect(panel.matchups[0].sides[1].icon).toBe(plain.sides[1].icon);
+  });
+
+  it('does NOT let an era change the colour pair', async () => {
+    // The pair is resolved against this surface's card ground and an era's
+    // palette has not been through that check. Throwback swaps art, not colour.
+    const plain = (await panelOf({ slug: 'theleague', week: WEEK, year: YEAR })).matchups[0];
+    const panel = await dressed({
+      '0001': { name: 'Steel City Maulers', icon: '/assets/era/maulers.png' },
+    });
+    expect(panel.matchups[0].colorVars).toEqual(plain.colorVars);
+  });
+
+  it('is a no-op when the caller supplies nothing', async () => {
+    const plain = (await panelOf({ slug: 'theleague', week: WEEK, year: YEAR })).matchups[0];
+    const panel = await dressed({});
+    expect(panel.matchups[0].sides[0].name).toBe(plain.sides[0].name);
+  });
+});
+
+describe('buildBoardFromSnapshot — the half the offseason sample reuses', () => {
+  /**
+   * MFL turns the liveScoring feed off out of season, and the bundled replay is
+   * recorded in exactly the `LiveSnapshot` shape the live read produces. Both
+   * callers going through one builder is what stops the sample board and the
+   * live one disagreeing about totals, the identity ladder, the bench split or
+   * the four statuses.
+   */
+  const snapshot = (over: Partial<Record<string, unknown>> = {}) => {
+    const { ok: _ok, ...rest } = payload(over);
+    return rest as Parameters<typeof buildBoardFromSnapshot>[0]['snapshot'];
+  };
+
+  const build = (over: Partial<Parameters<typeof buildBoardFromSnapshot>[0]> = {}) =>
+    buildBoardFromSnapshot({
+      slug: 'theleague',
+      week: WEEK,
+      year: YEAR,
+      ok: true,
+      snapshot: snapshot(),
+      projections: new Map(),
+      ...over,
+    });
+
+  it('builds the same board the live read does, with no network at all', () => {
+    const board = build();
+    expect(board.panels[0].status).toBe('ok');
+    expect(board.panels[0].matchups).toHaveLength(1);
+    expect(board.panels[0].matchups[0].sides[0].live).toBe(100);
+  });
+
+  it('carries the statuses that are a property of the DATA', () => {
+    expect(build({ ok: false }).panels[0].status).toBe('unavailable');
+    expect(
+      build({ snapshot: snapshot({ matchups: [], players: {}, scores: {} }) }).panels[0].status,
+    ).toBe('not-played');
+  });
+
+  it('leaves the PRE-KICKOFF clamp to the read, deliberately', () => {
+    // Week 0 means "MFL has not opened the season yet", which is a fact about
+    // the request rather than about a snapshot already in hand — the sample
+    // replay is a real past week and must not be blanked for having week 0
+    // asked of it.
+    expect(build({ week: 0 }).panels[0].status).toBe('ok');
+  });
+
+  it('prefers the CALLER\u2019s player identity when it has one', () => {
+    // The sample is a replay of a past week, and the current player map has
+    // since lost players who were on those rosters — without this the bundled
+    // board prints "Player 12345" for half its rows.
+    const board = build({
+      playerMeta: {
+        p1: {
+          id: 'p1',
+          name: 'Retired Back',
+          position: 'RB',
+          nflTeam: 'KC',
+          headshot: 'r.png',
+          espnId: null,
+          projected: 0,
+        },
+      },
+    });
+    expect(board.playerMeta.p1.name).toBe('Retired Back');
+    // A row the caller's map does not cover still gets an honest placeholder
+    // rather than nothing.
+    expect(board.playerMeta.p2.name).toBe('Player p2');
+  });
+
+  it('does not mutate the caller\u2019s map', () => {
+    // The sample's map is a module-level constant; writing into it would leak
+    // one render's rows into the next.
+    const mine: Record<string, never> = {};
+    build({ playerMeta: mine as never });
+    expect(Object.keys(mine)).toHaveLength(0);
+  });
+
+  it('never ships an ESPN athlete id, on this path either', () => {
+    // A college athlete id and an NFL one are both plain digits, so a bad join
+    // resolves the wrong person rather than failing.
+    const board = build();
+    expect(Object.values(board.playerMeta).every((m) => m.espnId === null)).toBe(true);
   });
 });
