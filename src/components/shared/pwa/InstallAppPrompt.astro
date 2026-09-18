@@ -404,7 +404,10 @@ const isBanner = variant === 'banner';
   }
 
   .install-prompt__steps strong {
-    color: var(--content-text);
+    /* --page-text, NOT --content-text: the latter is not a token in this repo,
+       so this rule was invalid-at-computed-value-time and the emphasis simply
+       inherited the muted color from .install-prompt__steps. */
+    color: var(--page-text);
     font-weight: 600;
   }
 
@@ -457,7 +460,8 @@ const isBanner = variant === 'banner';
   }
 
   .install-prompt__link:hover {
-    color: var(--content-text);
+    /* Same undefined token — the hover was a no-op in both themes. */
+    color: var(--page-text);
   }
 
   .install-prompt__btn:disabled {

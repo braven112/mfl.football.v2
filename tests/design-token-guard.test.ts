@@ -28,6 +28,17 @@
  * If you add a genuinely intentional reference to a token defined outside
  * src/ (e.g. injected by a third-party script at runtime), add it to
  * ALLOWED_EXTERNAL_TOKENS with a comment explaining where it comes from.
+ *
+ * COMMENTS ARE STRIPPED ON BOTH SIDES, and the definition side is the one that
+ * matters. Until Sept 2026 only references were stripped, so prose inside a
+ * /* … *\/ that happened to contain `--name:` registered that name as DEFINED
+ * repo-wide. Two comments reading "--color-gray-900, NOT --content-text: the
+ * latter is not a token here" were themselves what taught this guard that
+ * --content-text was a token — a warning about a trap that disarmed the guard
+ * against it. Three separate sessions then hit `var(--content-text)` with this
+ * test green, and two of those references shipped
+ * (src/components/shared/pwa/InstallAppPrompt.astro). Never collect
+ * definitions from raw file text.
  */
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
@@ -73,6 +84,12 @@ const definitionFiles = walk(SRC, DEFINITION_EXTS);
 // ---------------------------------------------------------------------------
 const defined = new Set<string>(ALLOWED_EXTERNAL_TOKENS);
 
+// Blank out /* … */ block comments (preserving line structure) so commented-out
+// or prose references to var(--x) don't count.
+function stripBlockComments(text: string): string {
+  return text.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '));
+}
+
 const DEFINITION_PATTERNS = [
   // CSS declaration: `--name: value`. The leading char class includes quotes
   // and backticks so definitions inside template-literal style attributes
@@ -91,7 +108,7 @@ const DEFINITION_PATTERNS = [
 const DEFINE_VARS = /define:vars=\{\{([\s\S]*?)\}\}/g;
 
 for (const file of definitionFiles) {
-  const text = fs.readFileSync(file, 'utf8');
+  const text = stripBlockComments(fs.readFileSync(file, 'utf8'));
   for (const pattern of DEFINITION_PATTERNS) {
     for (const m of text.matchAll(pattern)) defined.add(m[1]);
   }
@@ -110,12 +127,6 @@ type Violation = { file: string; line: number; token: string; snippet: string };
 const violations: Violation[] = [];
 
 const REFERENCE = /var\(\s*--([a-zA-Z][\w-]*)/g;
-
-// Blank out /* … */ block comments (preserving line structure) so commented-out
-// or prose references to var(--x) don't count.
-function stripBlockComments(text: string): string {
-  return text.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '));
-}
 
 for (const file of referenceFiles) {
   const lines = stripBlockComments(fs.readFileSync(file, 'utf8')).split('\n');

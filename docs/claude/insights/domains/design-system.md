@@ -3191,3 +3191,46 @@ The general rule: **a custom property that exists only in JS must appear as a
 literal string there.** Composing the name moves it out of every static
 analysis this repo has, and the failure is attributed to whatever stylesheet
 references it rather than to the file that broke it.
+
+---
+
+## 2026-09-18 — A comment warning about a token can register that token as defined
+
+**Context:** While adding a per-team element to the live-scoring card I reached
+for `var(--content-text)` by analogy with the real `--content-text-muted`. It is
+not a token. `tests/design-token-guard.test.ts` — whose entire job is "fails the
+build when a stylesheet references a CSS custom property that is DEFINED
+NOWHERE" — passed.
+
+**Insight:** the guard stripped `/* … */` comments when collecting REFERENCES
+but not when collecting DEFINITIONS. Its definition pattern is
+`[\s{;("'`]--([a-zA-Z][\w-]*)\s*:`, which matches prose as happily as CSS. Two
+existing comments — `src/styles/my-rank-editor.css:49` and
+`src/pages/theleague/rosters.astro:5173`, both reading *"--color-gray-900, not
+--content-text: the latter is not a token here"* — therefore registered
+`content-text` as defined, repo-wide.
+
+A warning about the trap was what disarmed the guard against the trap. The
+warnings were correct, prominent, and the direct cause of the gap.
+
+**Cost:** `--content-text` is now the token this repo has reached for wrongly
+more than any other (`docs/claude/insights/features/rankings-integration.md`,
+`.../waiver-claims.md`, and this session). Stripping comments on the definition
+side too immediately surfaced two references that had SHIPPED:
+`src/components/shared/pwa/InstallAppPrompt.astro:407` and `:460`. Both were
+`color:` declarations, so both were invalid at computed-value time and
+inherited instead — the install prompt's `<strong>` steps rendered muted rather
+than emphasized, and its link hover was a no-op. In both themes, for months,
+with a green guard.
+
+**The general rule:** a guard that scans source text must normalize that text
+IDENTICALLY on every side it reads. An asymmetry between what it counts as a
+use and what it counts as a definition is not a rounding error — it is a
+one-directional blind spot, and the blind spot lands exactly on the tokens
+people write comments about, which are the dangerous ones.
+
+**Corollary for the head's table:** the "Defined nowhere → Guard? **Yes**" row
+was aspirational until this fix. It is now accurate.
+
+**Evidence:** `tests/design-token-guard.test.ts` (definition collection now goes
+through `stripBlockComments`; the file header records why).
