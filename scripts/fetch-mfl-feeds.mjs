@@ -40,6 +40,7 @@ import { getLeagueById, DEFAULT_LEAGUE_SLUG } from '../src/config/leagues-data.m
 import { writeJsonIfChanged, jsonEquivalent } from './lib/canonical-json.mjs';
 import { isSeasonWindowOpen } from '../src/utils/pecking-order-season-window.mjs';
 import { isKeeperWindowDate } from './lib/retention-policy.mjs';
+import { reduceWeekScores, weekOfScores, weekMergeDecision } from '../src/utils/player-week-scores.mjs';
 
 /**
  * Calculate Labor Day for a given year (first Monday in September)
@@ -1210,6 +1211,103 @@ const run = async () => {
     }
 
     if (weeks.length > 0) writeOut(KEY, weeks);
+  }
+
+  // ── playerScores by week: the FULL-POOL per-week scores ──────────────────
+  //
+  // `weekly-results-raw` above is MFL's weeklyResults export, which lists a
+  // franchise's ACTIVE LINEUP and nothing else. Practice-squad, injured-reserve
+  // and free-agent players are therefore structurally absent from it — 44 of
+  // TheLeague's 45 TAXI_SQUAD players had no row at all in 2026 — which is what
+  // left PlayerDetailsModal's Season Results table hidden for them. This is the
+  // per-week twin of the `W=YTD` full-pool feed above; see
+  // src/utils/player-week-scores.mjs for the whole rationale.
+  //
+  // Merged, never replaced. A finished week's scores are immutable, and MFL
+  // answers a week it has not played with a blank placeholder row, so the file
+  // accumulates: a week that came back empty keeps whatever it already had.
+  {
+    const scoresFile = path.join(outDir, 'playerScores-by-week.json');
+    /** @type {Record<string, Record<string, number>>} */
+    let weeks = {};
+    try {
+      const existing = JSON.parse(fs.readFileSync(scoresFile, 'utf8'));
+      if (existing?.weeks && typeof existing.weeks === 'object') weeks = existing.weeks;
+    } catch {
+      weeks = {}; // first run for this league-year
+    }
+
+    /**
+     * Merge one week's reduced scores in, refusing the downgrade. This runs on
+     * every daily pass for all 18 weeks, so an unplayed week (blank placeholder
+     * row) and a transient bad response must both leave a good week alone —
+     * the same rule the current-week weeklyResults merge above follows.
+     *
+     * Both halves of that promise live in `weekMergeDecision`: empty is
+     * refused, and so is a non-empty response that lost more than
+     * `WEEK_SHRINK_FLOOR` of a week we already hold. An empty week is MFL
+     * saying "not played yet"; a week that shrank is MFL answering 200 with a
+     * truncated body, and this file is the only record of what it truncated.
+     */
+    const mergeWeek = (weekNum, scores) => {
+      const { accept, reason, had, count } = weekMergeDecision(weeks[String(weekNum)], scores);
+      if (!accept) {
+        if (reason === 'shrank') {
+          // Loud, because this one is MFL answering 200 with a body that is
+          // wrong rather than absent — the class the empty guard cannot see.
+          console.warn(
+            `::warning::playerScores week ${weekNum} returned ${count} rows vs ${had} committed — keeping the committed week.`,
+          );
+        } else if (had > 0) {
+          console.log(`playerScores week ${weekNum} came back empty; keeping ${had} committed scores.`);
+        }
+        return false;
+      }
+      weeks[String(weekNum)] = scores;
+      return true;
+    };
+
+    if (!skipDailyFeeds) {
+      // Weeks 1–18. Week 18 is included because the NFL plays one (2026 ran its
+      // week 18 on a Sunday) even though no league scores a fantasy week there;
+      // an unplayed week costs one request and merges as a no-op.
+      for (let weekNum = 1; weekNum <= 18; weekNum++) {
+        const weekUrl = `${host}/${year}/export?TYPE=playerScores&L=${leagueId}&W=${weekNum}&JSON=1`;
+        try {
+          console.log(`Fetching playerScores week ${weekNum} from ${redactUrl(weekUrl)}`);
+          const parsed = JSON.parse(await fetchTextWithRetry(weekUrl, 4, 2000));
+          mergeWeek(weekNum, reduceWeekScores(parsed));
+        } catch (err) {
+          console.error(`Failed playerScores week ${weekNum}:`, err.message);
+        }
+        await delay(1200);
+      }
+    } else {
+      // Live refresh: the current week alone, and WITHOUT a request. The
+      // endpoints loop above already fetches W-less `playerScores` on every
+      // run — including this one, since it is not a daily-only key — so the
+      // current week is sitting in `playerScores.json` on disk. Re-requesting
+      // it would be 288 identical extra calls per league per day.
+      //
+      // No week derivation here on purpose, same as the weeklyResults merge
+      // above: a W-less request is exactly a request for MFL to name its own
+      // current week, and we merge on the week it named.
+      try {
+        const live = JSON.parse(fs.readFileSync(path.join(outDir, 'playerScores.json'), 'utf8'));
+        const liveWeek = weekOfScores(live);
+        if (liveWeek == null) {
+          console.log('Current-week playerScores named no usable week; leaving the committed weeks alone.');
+        } else {
+          mergeWeek(liveWeek, reduceWeekScores(live));
+        }
+      } catch (err) {
+        console.error('Failed current-week playerScores:', err.message);
+      }
+    }
+
+    if (Object.keys(weeks).length > 0) {
+      writeOut('playerScores-by-week', { weeks });
+    }
   }
 
   // Fetch playoff brackets (metadata + individual bracket details)

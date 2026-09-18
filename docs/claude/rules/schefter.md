@@ -1122,6 +1122,113 @@ one, so the callback would point at a live team that isn't the subject).
 `pickFormerName` excludes both.
 
 
+## A fact sheet parses MFL's transaction string with `parseRosterMove` — never a split
+
+MFL encodes a roster move as a **positional** pipe-delimited string whose add
+side carries a **trailing comma**:
+
+```
+FREE_AGENT / WAIVER:  "addId,|dropId,"      either side may be empty
+BBID_WAIVER:          "addId,|bid|dropId,"  middle segment is a PRICE, not a player
+```
+
+`scripts/lib/roster-move-parse.mjs#parseRosterMove` is the one parser that
+reads it correctly. `waiver-pickups.mjs` rolled its own
+`.split('|').filter(Boolean)` and published a column that was wrong twice over:
+
+- **The trailing comma is part of `parts[0]`.** The lookup key was `"16171,"`,
+  which no player map holds, so every claim fell through to its
+  `` `Player ${playerId}` `` placeholder and the article read *"dropping
+  three-quarters of a million on Player 16171"* for what was Kendre Miller.
+  Nothing threw — the placeholder IS the fallback. The same bad key also missed
+  `playerMeta`, so `pickHeroPlayer` returned null and the article lost its
+  composite hero with no error either.
+- **`.filter(Boolean)` erases the empty segment that marks a pure drop.**
+  `"|15749,"` collapsed to `["15749,"]` and was indexed as an add, so the column
+  credited Bring The Pain with *"snagging Player 15749 at no cost"* in a week
+  they had **dropped** Isiah Pacheco. This is the identical bug
+  `roster-move-parse.mjs`'s own header records shipping once already in the
+  scanner — which is the point: the rule is only safe where the shared parser
+  is actually called.
+
+So: an add side that parses EMPTY is a drop — `continue`, never a claim. Count
+CLAIMS rather than transaction rows, or a week of nothing but drops reports
+pickups it does not have. And a bid buys the one player on the add side; a
+free-agent add is $0, never the previous row's price.
+
+A placeholder is not a safe degradation here. It is prose the pipeline will
+publish, so the fact sheet asserts it never contains `Player <digits>` or a
+`??` position.
+
+Guard: `tests/article-transaction-parse-guard.test.ts` — the behavioral half
+over `buildFactSheet`, plus a scan that no file in `scripts/article-types/` or
+`scripts/article-utils/` re-grows its own `split('|')`.
+
+While in that fact sheet: `sortedTeams` is ordered by **spend**, so
+`sortedTeams[0]` is the biggest spender. Reading its `claims.length` for
+"Most claims" told the model a one-bid team was the week's busiest while
+another had twice the moves. Max by count.
+
+A row the parser could not read is **unparsed** — not a drop, and not a free
+pickup. Both of those readings are silent, and which one a mangled row got
+depended on nothing but the order of two checks: the bid check sat below the
+"nothing added" skip, so a BBID string bad enough to lose its add id was filed
+as a plain drop and vanished, while the same string with a readable add warned
+loudly three lines later. Warn on both, and warn on neither ordinary drop — a
+warning that fires on normal rows is one the operator learns to skip.
+
+The fact sheet is read as **prose**, so its own grammar is part of its
+correctness: "1 claims" is a sentence the column can echo verbatim.
+
+### A parity test is only as strong as its corpus
+
+**Three** parsers read this same MFL field — `parseRosterMove` for the scanner,
+`parseTransactionString` (`src/utils/contract-eligibility.ts`) for the
+contract-declaration window, and `parseAcquisitionAdds`
+(`src/utils/august-cut-selection-core.mjs`) for the August cutdown ordering —
+and `tests/contract-eligibility.test.ts` runs all three over
+`tests/fixtures/mfl-transaction-strings.json` to hold them equal.
+
+The third one is the cautionary tale. It was never in the corpus, and it was
+the **strictest** of the three, which made it the wrongest: it enumerated
+shapes, and every shape it had not enumerated returned no adds rather than
+failing. It missed `"0502,|425000|"` — a winning claim with nothing cut, in the
+**current** format, 281 rows — and its docstring advertised support for
+`"addId,|bbid|,"`, the hand-written string MFL has never emitted, which is the
+exact fabrication that hid this same bug in `contract-eligibility.ts` a week
+earlier. An acquisition that parses to no adds does not error; it silently
+never happened, and `scripts/apply-august-cuts.mjs` cuts real players off that
+ordering. **Enumerate segments, never shapes** — and if you write a fourth
+parser of this field, add it to the corpus test in the same commit.
+That test was green for months while the two genuinely disagreed, because the
+fixture had been recorded from **one league's one season**: 10 shapes out of
+the 60 MFL has actually sent. All three disagreements lived in shapes it did
+not contain, so it could not have failed on any of them. A corpus that cannot
+contain the counterexample is decoration, not a guard.
+
+Re-record with `node scripts/record-transaction-shapes.mjs` — offline, reading
+the committed feeds for every league and every season. **Widen it; never trim
+it to make a test pass.** Every entry is a row that really happened.
+
+The census also settles two things the string alone cannot:
+
+- **`type` decides the two-segment shape.** `"8925|625000"` is an auction
+  **price** (1410 rows) where `"11957,|9122,"` is a cut list, and both are bare
+  digits. Without the type, an auction's price is reported as a dropped player
+  id — a number no lookup resolves, which is precisely how `Player <digits>`
+  reaches published prose. Pass the type wherever it is known.
+- **`0000` in a pre-2017 drop segment is a SENTINEL, not a player.** It is
+  where MFL used to write "nothing was cut", 276 rows carry it, and no season
+  of either league has a player with that id. Returned as a dropped id it
+  reaches `describePlayer` and publishes *"Player 0000"*.
+
+Both parsers keep these rules and the parity test is what holds them in step —
+so an edit to either one is an edit to both. The shared parser
+(`scripts/lib/roster-move-parse.mjs`) belonged to no path-guard domain until
+this follow-up, which meant the file at the centre of the incident ran no guard
+on edit at all; it is in `contracts-eligibility` now.
+
+
 ## Articles must link — and must plug the site
 
 Schefter has two jobs: report the league, and get owners USING the site. Until

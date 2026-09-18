@@ -14,12 +14,28 @@
  * pickup. Parse positionally and never strip a leading pipe.
  */
 
+/**
+ * MFL's legacy "nothing was cut" marker in the drop segment of a pre-2017 BBID
+ * row ("8838|425000|0000"). It is a SENTINEL, not a player: neither league has
+ * a player with that id in any of its 20 seasons, it never appears in a
+ * FREE_AGENT row or in any post-2016 shape, and it sits exactly where the
+ * modern format writes an empty segment. 276 rows carry it.
+ *
+ * Returned as a dropped id it reaches `describePlayer` in schefter-scan.mjs,
+ * whose lookup miss falls through to the literal prose `Player 0000` — the
+ * same "a placeholder is not a safe degradation in a generator whose output
+ * ships unread" failure as #1156, waiting on the first backfill that replays
+ * an old season. Kept in step with src/utils/contract-eligibility.ts; the
+ * parity test in tests/contract-eligibility.test.ts is what holds them equal.
+ */
+const NO_DROP_SENTINEL = '0000';
+
 /** Extract numeric player IDs from one comma-delimited segment. */
 function idsIn(segment) {
   return (segment ?? '')
     .split(',')
     .map(s => s.trim())
-    .filter(s => /^\d+$/.test(s));
+    .filter(s => /^\d+$/.test(s) && s !== NO_DROP_SENTINEL);
 }
 
 /**
@@ -38,11 +54,27 @@ export function parseRosterMove(txnStr) {
 
   // BBID_WAIVER: "addId,|bid|dropId," — the middle segment is the bid amount,
   // not a player. The drop segment may be empty (add-only winning bid).
-  const bbid = txnStr.match(/^(\d+),\|(\d+)\|(\d*),?$/);
+  //
+  // Three variations are all real in this league's history, and a shape that
+  // misses here does NOT fail — it falls through to the FREE_AGENT branch,
+  // where the BID is read as a dropped player id and the caller sees no bid at
+  // all (a $775K claim prices as $0). So the pattern has to cover them:
+  //   - the add side's comma is OPTIONAL: MFL wrote "8838|425000|0000" through
+  //     2016 and "8838,|425000|0000," from 2017 on.
+  //   - the bid may be DECIMAL ("425000.5", and a bare trailing dot "425000.").
+  //   - the drop side may name SEVERAL players, so it is parsed as a list.
+  //   - the drop segment is read WHOLE and filtered by idsIn, rather than
+  //     matched as `[\d,]*`. A stricter class does not reject a malformed drop
+  //     side, it makes the ENTIRE row miss this branch and fall through to
+  //     FREE_AGENT — where the bid becomes a dropped player id and the claim
+  //     prices at $0, which is the failure this branch exists to prevent. It
+  //     also kept this pattern out of step with the one in
+  //     src/utils/contract-eligibility.ts for no gain.
+  const bbid = txnStr.match(/^(\d+),?\|(\d+(?:\.\d*)?)\|(.*)$/);
   if (bbid) {
     addedIds.push(bbid[1]);
     bbidAmount = parseInt(bbid[2], 10);
-    if (bbid[3]) droppedIds.push(bbid[3]);
+    droppedIds.push(...idsIn(bbid[3]));
     return { addedIds, droppedIds, bbidAmount };
   }
 

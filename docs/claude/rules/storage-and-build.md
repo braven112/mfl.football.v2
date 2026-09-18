@@ -167,6 +167,134 @@ telling a human what to run locally, and pushes nothing. Routed by the
 `github-workflows` domain.
 
 
+## GitHub's `schedule` is not a cadence — the Vercel cron is the primary trigger
+
+GitHub Actions may drop a scheduled event, and on this repo it does, in bulk.
+Measured over 300 `roster-sync.yml` runs: until 2026-08-26 the delivered cadence
+held a 21-47 min median; **from 2026-08-27 it collapsed to a 2-5 HOUR median and
+5-8 runs a day, against the 288 that `*/5` asks for.** No workflow file changed
+on that date, no run was cancelled, every conclusion was `success`, and every
+other scheduled job in the repo degraded identically the same day — the repo-wide
+run count went 589 → 135. Push-triggered runs were never affected. This is
+GitHub declining to dispatch, which its docs reserve the right to do, and it is
+not a delay you can wait out.
+
+Why it is not merely late data: **a committed MFL feed is baked into the build**
+(`import.meta.glob(..., { eager: true })`), and a sync commit to `main` is what
+redeploys production. No sync run means no commit, which means no redeploy,
+which means a surface reading that feed cannot move — however correct the page
+code is. On 2026-09-16 TheLeague sat a full hour past the Wed 19:00 PT waiver
+run: the last sync had landed at 18:20 PT and the next was hours out.
+`resolveWaiverWindow` had already flipped to "PROCESSED" on schedule; there was
+simply no deploy carrying the new data.
+
+**But check WHICH surface before blaming the cron — not everything is baked.**
+Two of the most-read surfaces already read MFL live, server-side per request,
+through a ~2-minute Redis cache that falls back to the static feed when Redis is
+unavailable:
+
+| Surface | Overlay | Covers |
+|---|---|---|
+| Rosters, homepage, league summary, Front Office | `mfl-roster-cache.ts` | membership, salary, contract year/info, status |
+| Transactions (the shared `TransactionsPage.astro`) | `mfl-transactions-cache.ts` | the last 3 days of moves |
+| Trade bait | `mfl-trade-bait-cache.ts` | — |
+
+`rosters.astro` prefers the cache for the CURRENT league year and only reads the
+committed feed for historical seasons or when Redis is empty — its own comment
+says "reflected within ~2 minutes without needing a manual data sync". So **a
+stale roster page is usually Redis, not the cron**, and triage that starts at
+the sync will chase the wrong thing.
+
+What is genuinely build-baked, and therefore what the cadence actually protects:
+the **Schefter feed** (`schefter-league-data.ts` uses a STATIC import, so it
+cannot even fall back), `activity.astro` (eager glob, no overlay), standings,
+weekly results, `players.json`, draft results and the derived payloads. Note
+that `schefter-scan` rides the same dropped scheduler, so after the 08-27 cliff
+the news feed was doubly behind.
+
+Nothing polls for rosters client-side. Every client `fetch` on `rosters.astro`
+is a write action (declare, cut, trade bait, auth); the only real client polling
+is live scoring and the broadcast/draft boards, which read ESPN rather than this
+sync.
+
+So the schedule lives in **`vercel.json` → `crons`**, which fires
+`/api/cron/roster-sync`, which `workflow_dispatch`es the workflow. That cron is
+now the sync's ONLY scheduled trigger — the workflow has no `schedule:` at all.
+
+**The cadence is a function, not a cron expression.** Vercel fires every five
+minutes and `src/utils/sync-cadence.ts` decides which ticks become dispatches:
+
+| Tier | When | Cadence |
+|---|---|---|
+| `waiver` | a waiver run → +2h | 5 min |
+| `game` | a kickoff → +3.5h | 15 min |
+| `idle` | everything else | 60 min |
+
+It has to be a function because the windows come from MFL's real waiver calendar
+and the real per-game `kickoff` times in `nflSchedule.json`. A day-of-week cron
+(`Sunday, Monday, Thursday`) would be the derivation this repo bans — 2026 alone
+opened on a Wednesday, moved week 12 to Wednesday for Thanksgiving, and ends
+week 18 all-Sunday. The windows are a UNION over both leagues, because one run
+syncs every league and their waiver runs are an hour apart.
+
+- **This bridge already existed and was dead for six months.** It shipped
+  2026-03-21 with its `crons` entry and the entry was removed eleven hours
+  later (`4179e14`, "unreliable on Hobby plan") with the route left behind.
+  That reason expired when the account moved to **Vercel Pro**, which supports
+  minute-granularity crons; Hobby is daily-only, which is what made it look
+  broken. Two other files cite the route in their comments as the bridge shape
+  to copy, so it read as live infrastructure the whole time.
+- **A second scheduled trigger cannot be offset out of the way — do not add
+  one back.** A `*/30` GitHub fallback was tried for one night. Offsetting it
+  to `7,37` to interleave with the primary does not work, because the premise
+  of this entire mechanism is that GitHub delivers whenever it likes: the `:07`
+  firing was delivered at `:16`, cancelled a dispatch that had already pushed,
+  and then failed its own rebase against six single-line feed JSONs git cannot
+  merge. One sync lost, for two unpredictable runs a day and no freshness the
+  primary did not already provide.
+- **`cancel-in-progress: false` on any job that pushes.** A cancel cannot
+  un-push. Cancelling mid-flight is what left the surviving run rebasing onto a
+  main that had moved under it.
+- **Absence is watched separately, and NOT from Vercel.**
+  `scripts/check-sync-freshness.mjs` alerts (`ops-job-failure`, admin-only) when
+  `main`'s newest sync commit ages past two hours. It runs from
+  `job-failure-watch.yml` on GitHub deliberately: a watchdog sharing a substrate
+  with its subject goes dark in the one outage it exists to report. GitHub's
+  delivery is unreliable, so detection may be hours late — late still beats
+  never, and the two schedulers now cover each other.
+- **The cadence is a SPEND decision.** Every changed sync commits to `main`, and
+  every commit to `main` is a production build — 91% of the Vercel bill. A flat
+  15-minute cadence measured 43 sync commits in 10.4 hours (~122 builds/day
+  against ~37 before); the tiers bring that to ~35/day while being *faster* at
+  the waiver moment.
+- **A cron path is an ordinary public route.** These bridges start workflows
+  that commit to `main` with Actions secrets, so the `CRON_SECRET` bearer check
+  is load-bearing, as is `outboundAllowed()` — staging and previews carry
+  production's credentials and must never dispatch.
+- Requires `CRON_SECRET` and a `GH_PAT` with `actions:write` in Vercel's
+  **production** environment. Vercel only sends the bearer token when
+  `CRON_SECRET` is set, and only production deployments run crons.
+- Trigger one by hand with `pnpm dlx vercel crons run /api/cron/roster-sync`.
+- **Never quote a cron STEP expression inside a `/** … *\/` block comment.** It
+  contains the two characters that close one, so the comment ends mid-sentence
+  and the remaining prose is handed to the compiler as code. Writing one into
+  this route's JSDoc cost 39 type errors in a single file, and **nothing but
+  `astro check` sees it** when it lands in an API route: `pnpm test:unit` does
+  not type-check and no unit test imports a route, so the whole suite stays
+  green. It happened three times in one session, twice in files about cron
+  cadence. Spell the cadence out in words, or use a line comment.
+
+Guards: `tests/vercel-cron-targets.test.ts` checks the cron table and the routes
+it fires in BOTH directions, because each failure is silent in its own way — an
+orphaned bridge is dead code wearing the costume of a live path; a dangling cron
+is a 404 on a schedule nobody reads. It also pins the `CRON_SECRET` gate, the
+absence of a `schedule:` in `roster-sync.yml`, and that the Vercel tick still
+matches `TICK_MINUTES`. `tests/sync-cadence.test.ts` pins the tiers, the
+both-leagues union and the DST wall-clock recurrence.
+`tests/block-comment-terminators.test.ts` catches the comment trap at edit time
+rather than 2.5 minutes into CI. All three are routed by the `github-workflows`
+domain.
+
 ## Astro 7 — strict Rust compiler, pinned compressHTML
 
 Upgraded to Astro 7 (Vite 8/Rolldown, @astrojs/vercel 11) in July 2026.

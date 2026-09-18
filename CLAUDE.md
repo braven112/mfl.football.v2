@@ -45,7 +45,13 @@ cross-cutting, add a line here. Keep this file short.
   parallel. Add new build-time fetches there.
 - **Guard tests are the real memory.** ~228 suites in `tests/` mechanically
   enforce most rules in this repo. When a rule below names a test, that test
-  is what stops the regression — read it before working around it.
+  is what stops the regression — read it before working around it. A guard that
+  reads a FIXTURE is only as strong as that fixture's coverage: the two MFL
+  transaction parsers were pinned equal by a corpus recorded from one league's
+  one season, and it stayed green for months while they disagreed on three
+  shapes it did not contain. Record a corpus as a CENSUS, and widen it rather
+  than trimming it to green (`docs/claude/rules/schefter.md` § "A parity test is
+  only as strong as its corpus").
 - **Prefer the mechanical path.** Several procedures here are scripts, not
   memory: `/guard-test` (turn a rule into a scan guard), `/ratchet`
   (re-measure every baseline), `/rebase` (conflicts by class, correct
@@ -70,6 +76,7 @@ cross-cutting, add a line here. Keep this file short.
 | Error pages, the 404/500 boundary, "the page is 404ing" triage | `docs/claude/rules/error-pages.md` | Astro finds its error page by the EXACT route `/500`, so without `src/pages/500.astro` the lookup falls through to `[...path].astro` and every SSR crash on the site renders as the styled 404 page — which is how a total outage got triaged as a deleted route for hours. |
 | Colors, tokens, logos, headshots, service worker | `docs/claude/rules/theming-and-assets.md` | A `var(--x)` with no definition renders its fallback in *both* themes — light looks perfect, dark ships white-on-black. |
 | Feed writers, globs, `.git` size, Astro 7 compiler | `docs/claude/rules/storage-and-build.md` | MFL returns arrays in nondeterministic order — a plain `writeFileSync` + byte diff regrows a 7 GB `.git`. |
+| Cron cadence, "the site is showing stale data", `vercel.json` crons | `docs/claude/rules/storage-and-build.md` § "GitHub's `schedule` is not a cadence" | GitHub DROPS this repo's scheduled events in bulk — a five-minute cron delivered 5-8 runs a day since 2026-08-27, not 288 — and a surface with no live overlay cannot move until a sync commit redeploys it. Check WHICH surface before blaming the cron: rosters and transactions read live MFL through `mfl-roster-cache` / `mfl-transactions-cache` (~2 min, Redis), so a stale roster page usually means Redis, not the sync; Schefter, `activity` and standings are genuinely build-baked and are what the cadence protects. The ONLY scheduled trigger is the Vercel cron in `vercel.json`; a second one cannot be offset clear of it and collides with a job that pushes. Which ticks actually dispatch is decided in `src/utils/sync-cadence.ts`, from MFL's real waiver calendar and real kickoff times rather than a day-of-week cron, because that cadence is a BUILD SPEND decision — every sync commit to `main` is a production build. |
 | Absolute URLs, GroupMe message text | `docs/claude/rules/league-urls.md` | Never concatenate origin + path; and GroupMe autolinks the period after a URL, 404ing it for every owner. |
 | Best-ball leagues | `docs/claude/rules/best-ball.md` | Draft-only: nav is opt-in, ADP is redraft, no live MFL syncing. |
 | AFL waiver order (`waiverSortOrder`, `import?TYPE=franchises`) | `docs/claude/afl-rules.md` § Setting the waiver order | MFL drops waiver priority at every league-year rollover and the AFL is rolling-priority, so the default reverse-franchise-id order IS a live wrong waiver order — but NO import type can set it back: the franchises import answers `<status>OK</status>` and ignores the field. |

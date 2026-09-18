@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-09-17T04:41:44.743Z"
+    "fetchedAt": "2026-09-18T00:46:22.751Z"
   },
   "players": [
     {
@@ -2280,7 +2280,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 1,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "TE"
         ],
@@ -2308,7 +2308,12 @@
         ]
       },
       "gamesPlayed": 1,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "13192",
+          "name": "Njoku, David"
+        }
+      ]
     },
     {
       "id": "16152",
@@ -2348,8 +2353,8 @@
           "QB"
         ],
         "experience": 3,
-        "injuryStatus": "Questionable",
-        "injuryBodyPart": "Groin",
+        "injuryStatus": null,
+        "injuryBodyPart": null,
         "gsisId": null
       },
       "nflverse": null,
@@ -3093,8 +3098,8 @@
           "WR"
         ],
         "experience": 4,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Questionable",
+        "injuryBodyPart": "Heel",
         "gsisId": null
       },
       "nflverse": {
@@ -5151,8 +5156,8 @@
           "RB"
         ],
         "experience": 9,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Questionable",
+        "injuryBodyPart": "Knee",
         "gsisId": "00-0033526"
       },
       "nflverse": {
@@ -7138,7 +7143,7 @@
         "active": true,
         "position": "QB",
         "depthChartPosition": "QB",
-        "depthChartOrder": 1,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "QB"
         ],
@@ -9350,7 +9355,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 2,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "WR"
         ],
@@ -10170,7 +10175,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 3,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "RB"
         ],
@@ -12267,8 +12272,8 @@
           "RB"
         ],
         "experience": 1,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Questionable",
+        "injuryBodyPart": "Knee",
         "gsisId": null
       },
       "nflverse": null,
@@ -13219,12 +13224,12 @@
       "gamesPlayed": 1,
       "depthChartAhead": [
         {
-          "id": "17099",
-          "name": "Gadsden, Oronde"
-        },
-        {
           "id": "13192",
           "name": "Njoku, David"
+        },
+        {
+          "id": "17099",
+          "name": "Gadsden, Oronde"
         }
       ]
     },
@@ -13329,7 +13334,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": null,
-        "depthChartOrder": 9,
+        "depthChartOrder": 10,
         "fantasyPositions": [
           "WR"
         ],
@@ -13456,8 +13461,8 @@
           "RB"
         ],
         "experience": 0,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Questionable",
+        "injuryBodyPart": "Illness",
         "gsisId": null
       },
       "nflverse": {
@@ -13785,8 +13790,8 @@
           "RB"
         ],
         "experience": 2,
-        "injuryStatus": "Questionable",
-        "injuryBodyPart": "Illness",
+        "injuryStatus": null,
+        "injuryBodyPart": null,
         "gsisId": null
       },
       "nflverse": {
@@ -16703,8 +16708,8 @@
           "WR"
         ],
         "experience": 4,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Questionable",
+        "injuryBodyPart": "Hamstring",
         "gsisId": null
       },
       "nflverse": {
@@ -17812,6 +17817,74 @@
       "depthChartAhead": null
     },
     {
+      "id": "16036",
+      "name": "Tonges, Jake",
+      "position": "TE",
+      "salary": 800000,
+      "franchiseId": "0012",
+      "status": "INJURED_RESERVE",
+      "contractYear": "3",
+      "points": 0,
+      "team": "SF",
+      "draftYear": 2022,
+      "draftTeam": "FA",
+      "birthdate": 931410000,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/16036_thumb.jpg",
+      "externalIds": {
+        "mfl": "16036",
+        "sleeper": "8698",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "8698",
+        "fullName": "Jake Tonges",
+        "team": "SF",
+        "age": 27,
+        "height": "76",
+        "weight": "240",
+        "number": 88,
+        "college": "California",
+        "birthDate": "1999-07-08",
+        "status": "Inactive",
+        "active": true,
+        "position": "TE",
+        "depthChartPosition": "TE",
+        "depthChartOrder": 4,
+        "fantasyPositions": [
+          "TE"
+        ],
+        "experience": 4,
+        "injuryStatus": "IR",
+        "injuryBodyPart": "Knee",
+        "gsisId": null
+      },
+      "nflverse": {
+        "week": 1,
+        "season": "2026",
+        "player": "Jake Tonges",
+        "team": "SF",
+        "position": "TE",
+        "offenseSnaps": 8,
+        "offenseSnapPct": 0.12,
+        "defenseSnaps": 0,
+        "defenseSnapPct": 0,
+        "stSnaps": 4,
+        "stSnapPct": 0.2,
+        "pfrPlayerId": "TongJa00",
+        "gamesPlayed": 1,
+        "gamesPlayedWeeks": [
+          1
+        ]
+      },
+      "gamesPlayed": 1,
+      "depthChartAhead": [
+        {
+          "id": "13299",
+          "name": "Kittle, George"
+        }
+      ]
+    },
+    {
       "id": "17528",
       "name": "Coleman, Kevin",
       "position": "WR",
@@ -17940,7 +18013,7 @@
         "number": 6,
         "college": "USC",
         "birthDate": "2004-05-05",
-        "status": "Active",
+        "status": "Inactive",
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
@@ -19749,8 +19822,8 @@
           "WR"
         ],
         "experience": 9,
-        "injuryStatus": "Questionable",
-        "injuryBodyPart": "Back",
+        "injuryStatus": null,
+        "injuryBodyPart": null,
         "gsisId": "00-0033908"
       },
       "nflverse": {
@@ -20753,8 +20826,8 @@
           "WR"
         ],
         "experience": 0,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Out",
+        "injuryBodyPart": "Coach's Decision",
         "gsisId": null
       },
       "nflverse": null,
@@ -21539,7 +21612,7 @@
           "RB"
         ],
         "experience": 7,
-        "injuryStatus": "Questionable",
+        "injuryStatus": "Out",
         "injuryBodyPart": "Hamstring",
         "gsisId": " 00-0035537"
       },
@@ -23615,7 +23688,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 2,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "TE"
         ],
@@ -23643,12 +23716,7 @@
         ]
       },
       "gamesPlayed": 1,
-      "depthChartAhead": [
-        {
-          "id": "17099",
-          "name": "Gadsden, Oronde"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "15252",
@@ -23962,7 +24030,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 3,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "RB"
         ],

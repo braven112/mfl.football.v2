@@ -104,6 +104,17 @@ describe('parseAcquisitionEvents (.mjs) vs parseTransactions (.ts)', () => {
     { timestamp: '1783011000', type: 'FREE_AGENT', transaction: '15281|13193,', franchise: '0007' }, // add/drop swap
     { timestamp: '1782000000', type: 'BBID_WAIVER', transaction: '14836,|5000000|13604,', franchise: '0002' },
     { timestamp: '1782000500', type: 'BBID_WAIVER', transaction: '14837,|1|,', franchise: '0002' }, // BBID add-only
+    // The shapes this hand-written list was MISSING, which is why it locked
+    // nothing: parseAcquisitionAdds returned [] for all four while this test
+    // stayed green. `"14837,|1|,"` above is the giveaway — MFL has never
+    // emitted a trailing comma after an empty drop segment; it was written by
+    // hand, exactly like the one that hid the same bug in contract-eligibility.
+    // The recorded corpus in tests/contract-eligibility.test.ts is the real
+    // guard now; these are here so this suite cannot go green on its own again.
+    { timestamp: '1782001000', type: 'BBID_WAIVER', transaction: '10313,|1250000|', franchise: '0002' }, // claim, nothing cut (281 rows)
+    { timestamp: '1782001500', type: 'BBID_WAIVER', transaction: '8838|425000|3969', franchise: '0002' }, // pre-2017, no commas (452 rows)
+    { timestamp: '1782002000', type: 'BBID_WAIVER', transaction: '8838|425000|0000', franchise: '0002' }, // pre-2017, nothing cut (269 rows)
+    { timestamp: '1782002500', type: 'BBID_WAIVER', transaction: '7598|1525000.00|9694', franchise: '0002' }, // decimal bid (17 rows)
     { timestamp: '1781000000', type: 'TRADE', transaction: '13604,|16752,', franchise: '0001' }, // trades NEVER count
     { timestamp: '1780517920', type: 'BBID_AUTO_PROCESS_WAIVERS', transaction: '', franchise: '0000' }, // batch marker
   ] as never[];
@@ -124,6 +135,10 @@ describe('parseAcquisitionEvents (.mjs) vs parseTransactions (.ts)', () => {
       '15281',
       '14836',
       '14837',
+      '10313',
+      '8838',
+      '8838',
+      '7598',
     ]);
   });
 });

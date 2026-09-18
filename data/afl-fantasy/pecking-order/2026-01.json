@@ -1073,12 +1073,57 @@
     ]
   },
   "ownersPoll": {
-    "status": "open",
+    "status": "closed",
     "opensAt": "2026-09-16T00:55:14.283Z",
     "closesAt": "2026-09-17T23:00:00.000Z",
     "slots": 10,
     "quorum": 12,
     "eligibleVoters": 24,
-    "methodology": "Each owner ranks 10 teams · 10 points for 1st down to 1 for 10th · 12 of 24 ballots required"
+    "ballotsIn": 2,
+    "hasQuorum": false,
+    "methodology": "Each owner ranks 10 teams · 10 points for 1st down to 1 for 10th · 12 of 24 ballots required",
+    "ranked": null,
+    "unranked": null,
+    "ballots": [
+      {
+        "franchiseId": "0001",
+        "ranking": [
+          "0015",
+          "0022",
+          "0001",
+          "0012",
+          "0014",
+          "0002",
+          "0008",
+          "0010",
+          "0007",
+          "0018"
+        ],
+        "submittedAt": "2026-09-16T03:33:00.681Z",
+        "updatedAt": "2026-09-16T03:33:00.681Z",
+        "contrarianIndex": null,
+        "homerIndex": 3
+      },
+      {
+        "franchiseId": "0011",
+        "ranking": [
+          "0011",
+          "0015",
+          "0014",
+          "0022",
+          "0018",
+          "0024",
+          "0020",
+          "0021",
+          "0017",
+          "0023"
+        ],
+        "submittedAt": "2026-09-17T05:03:44.793Z",
+        "updatedAt": "2026-09-17T05:03:44.793Z",
+        "contrarianIndex": null,
+        "homerIndex": 18
+      }
+    ],
+    "nonVoterCount": 22
   }
 }
