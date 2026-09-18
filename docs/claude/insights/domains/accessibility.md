@@ -610,7 +610,7 @@ Four details, each of which broke a version of this:
 
 ## 2026-09-11 - Hiding a Visible Duplicate With `display: none` Can Delete the Only Announced Copy — Check What the Other Copy Lives Inside
 
-**Context:** Live Scoring's phone layout folded the two "yet to play" counts into
+**Context:** Live Scoring's phone layout folded the two "to play" counts into
 the win-probability bar's percentage labels to save a line of header, then hid
 the standalone `.ls-ytp` line that had carried them.
 
@@ -658,7 +658,7 @@ in `src/components/shared/LiveScoreboard.tsx#WinProbBar`.
 
 ## 2026-09-18 - A card that is a `<button aria-label>` hides everything inside it
 
-**Context:** The live-scoring board's "yet to play" count was split per team, so
+**Context:** The live-scoring board's "to play" count was split per team, so
 each card header now carries two numbers instead of one. The visual work was
 straightforward; the a11y finding was that the numbers were never announced —
 and had not been before the change either.
@@ -682,7 +682,7 @@ every layout variant of that card:
 
 ```tsx
 const cardLabel = `Open ${A?.name} at ${H?.name}`
-  + (showYtp ? `. ${awayName} ${away.yetToPlay} yet to play, ${homeName} ${home.yetToPlay} yet to play` : '');
+  + (showYtp ? `. ${awayName} ${away.yetToPlay} to play, ${homeName} ${home.yetToPlay} to play` : '');
 ```
 
 Do not reach for `aria-describedby` pointing at inner nodes as the fix: it is

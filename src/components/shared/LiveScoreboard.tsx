@@ -5,7 +5,7 @@
  * team totals, projected finals, and a win-probability bar. Tap a matchup to
  * open the head-to-head detail: starter-by-starter rows with live points,
  * projected finals, NFL logo + REAL game state, the player's live box-score
- * line, and "yet to play" counts.
+ * line, and "to play" counts.
  *
  * Three data sources, two of them polled:
  *   - PlayerMeta (props)         — static identity + weekly projection.
@@ -312,7 +312,7 @@ function ScoreCard({ matchup, teams, calc, featured, variant = 'faceoff', isYour
   const awaySplit = `${100 - Math.round(calc.homeWinProb * 100)}%`;
   const cardStyle = { ...teamColorVars(H, A), ['--wp-split' as any]: awaySplit };
 
-  /* The header's "yet to play" is split PER TEAM, away then home, each behind a
+  /* The header's "to play" count is split PER TEAM, away then home, each behind a
      dot in that team's own predictor color — the same `--ta`/`--th` the top
      border and the win-probability bar are drawn from, so the left dot is
      always the left team and the pair needs no legend. A single summed count
@@ -322,14 +322,22 @@ function ScoreCard({ matchup, teams, calc, featured, variant = 'faceoff', isYour
      is harder to read at a glance than one that never moves.
      Colour alone does not carry it — position matches the card, each number
      carries a `title`, and the button's own aria-label spells both out, since
-     that label is what a screen reader announces INSTEAD of this markup. */
+     that label is what a screen reader announces INSTEAD of this markup.
+
+     The wording is "to play", not "yet to play", everywhere it appears — here,
+     in the titles, in the aria-label, and on the matchup detail line below.
+     Four other surfaces print this same count (BroadcastScoreHeader,
+     MflLiveBoard, SundayTicketMatchups, and the win-probability bar's own
+     folded copies) and all four already said "to play"; this card was the only
+     holdout, so the same number read two different ways depending on which
+     screen you were on. `tests/live-scoring-layout-css.test.ts` pins it. */
   const ytpTotal = calc.away.yetToPlay + calc.home.yetToPlay;
   const showYtp = !calc.isFinal && ytpTotal > 0;
   const awayName = A?.nameShort ?? A?.name ?? 'Away';
   const homeName = H?.nameShort ?? H?.name ?? 'Home';
   const cardLabel = `Open ${A?.name ?? 'away team'} at ${H?.name ?? 'home team'}`
     + (showYtp
-      ? `. ${awayName} ${calc.away.yetToPlay} yet to play, ${homeName} ${calc.home.yetToPlay} yet to play`
+      ? `. ${awayName} ${calc.away.yetToPlay} to play, ${homeName} ${calc.home.yetToPlay} to play`
       : '');
 
   const head = (
@@ -339,13 +347,13 @@ function ScoreCard({ matchup, teams, calc, featured, variant = 'faceoff', isYour
         : <span className="ls-badge live"><span className="ls-dot live" />Live</span>}
       {showYtp && (
         <span className="ls-rem">
-          <span className="ls-rem-n" title={`${awayName}: ${calc.away.yetToPlay} yet to play`}>
+          <span className="ls-rem-n" title={`${awayName}: ${calc.away.yetToPlay} to play`}>
             <span className="ls-rem-dot away" aria-hidden="true" />{calc.away.yetToPlay}
           </span>
-          <span className="ls-rem-n" title={`${homeName}: ${calc.home.yetToPlay} yet to play`}>
+          <span className="ls-rem-n" title={`${homeName}: ${calc.home.yetToPlay} to play`}>
             <span className="ls-rem-dot home" aria-hidden="true" />{calc.home.yetToPlay}
           </span>
-          <span className="ls-rem-lbl">yet to play</span>
+          <span className="ls-rem-lbl">to play</span>
         </span>
       )}
       {isYours && <span className="ls-your">YOUR MATCHUP</span>}
@@ -812,8 +820,8 @@ function MatchupDetail({
           `:has()` on the bar: a final matchup draws no bar, and then this line
           is the only place the counts exist. */}
       <div className={`ls-ytp${calc.isFinal ? '' : ' folded'}`}>
-        <span>{calc.away.yetToPlay} yet to play</span>
-        <span>{calc.home.yetToPlay} yet to play</span>
+        <span>{calc.away.yetToPlay} to play</span>
+        <span>{calc.home.yetToPlay} to play</span>
       </div>
 
       <div className="ls-mx-body">

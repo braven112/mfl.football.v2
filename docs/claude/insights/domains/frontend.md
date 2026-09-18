@@ -3676,3 +3676,54 @@ BRAND-NEW page:
 Cheapest prevention when hoisting a declaration: `grep -n 'const <name>'` the
 file afterwards and confirm there is exactly one. The same edit in a `.ts`
 module surfaces as a real build error; only `.astro` pages swallow it.
+
+---
+
+## 2026-09-18 — One fact, six surfaces, two wordings
+
+**Context:** the live yet-to-play count is printed by six different components
+— the scoreboard card header, its matchup detail line, the win-probability
+bar's folded copies, `BroadcastScoreHeader`, `MflLiveBoard` and
+`SundayTicketMatchups`. Five said "to play". The card said "yet to play".
+
+**Insight:** nobody files a bug for this and everybody notices it. A sibling
+PAGE drifting is a known class here and has guards; a shared *phrase* drifting
+across unrelated components has neither, because each component reads correctly
+on its own and the inconsistency only exists in the head of someone who used
+two screens in one session. The count had been split that way for months.
+
+The tell is structural rather than visual: **when a value is derived once and
+rendered by more than two components, the label is part of the contract, not
+part of each component.** Either hoist the string, or scan for it.
+
+**Pattern — scanning is usually the right weight.** A shared constant for three
+words imports a module into six files to save nothing; a guard costs one test
+and names the offender:
+
+```ts
+const text = readFileSync(join(process.cwd(), rel), 'utf-8')
+  .replace(/\/\*[\s\S]*?\*\//g, ' ')        // block
+  .replace(/<!--[\s\S]*?-->/g, ' ')          // HTML — .astro surfaces use these
+  .replace(/(^|[^:])\/\/.*$/gm, '$1');       // trailing line; [^:] spares https://
+if (/yet to play/.test(text)) offenders.push(rel);
+```
+
+Strip comments first, and only scan RENDERED text. Prose may legitimately say
+"yet to play" (it reads better in a sentence), and `yetToPlay` is the field name
+in `live-scoring-view.ts` and every type — a naive grep flags both and the guard
+gets deleted for crying wolf.
+
+**All three comment forms, or the guard fails on its own explanation.** The
+first version of this anchored the line-comment pattern to line start
+(`/^\s*\/\/.*$/gm`), which leaves a TRAILING comment intact — so
+`<span>{n} to play</span> // never "yet to play"` tripped the guard, in a file
+that was correct. Review caught it before it shipped. An over-eager stripper is
+the opposite failure and just as fatal: `.replace(/\/\/.*$/gm, '')` eats the
+rest of every line holding an `https://` URL, so the `[^:]` is load-bearing.
+
+**Where to look for the next one:** any value with a `*-view.ts` computing it
+and 3+ components consuming it. Projections, win probability and the game clock
+all have this shape.
+
+**Evidence:** `tests/live-scoring-layout-css.test.ts` — "prints 'to play', never
+'yet to play', on every surface".

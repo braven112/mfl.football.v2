@@ -265,7 +265,7 @@ html.dark .ls-detail {
 }
 .ls-badge.live { color: var(--ls-live); background: color-mix(in srgb, var(--ls-live) 15%, transparent); }
 .ls-badge.final { color: var(--content-text-muted); background: var(--content-bg-muted); }
-/* Per-team "yet to play": two dotted counts, away then home, sharing one
+/* Per-team "to play": two dotted counts, away then home, sharing one
    label. The dots take the card's own --ta/--th, so they match the top border
    and the win-probability bar exactly and stay legible in both themes
    (teamColorVars resolves them against each surface). Do not swap in a
