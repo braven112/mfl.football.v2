@@ -1,4 +1,5 @@
 import type { StorybookConfig } from '@storybook-astro/framework';
+import { react } from '@storybook-astro/framework/integrations';
 
 /**
  * Storybook lives entirely outside the shipped app.
@@ -60,9 +61,30 @@ const config: StorybookConfig = {
     { from: './static/nfl-dark', to: '/storybook-nfl-dark' },
   ],
 
+  /**
+   * `options.integrations` is the ONLY place the framework learns which UI
+   * frameworks this app renders, and it does NOT read `astro.config.ts` for
+   * them. It feeds two things:
+   *
+   *   - the Astro Container's client/server renderers, so a React island
+   *     inside an `.astro` story actually renders; and
+   *   - `virtual:storybook-renderer-fallback`, the registry a story consults
+   *     when its component is NOT an Astro component.
+   *
+   * Left empty, that registry is an empty module — and a story over a React
+   * component dies at CAPTURE time with
+   * `Renderer 'astro' not found. Available renderers:` and nothing after the
+   * colon, because there are none. `storybook build` still exits 0, so the
+   * only place it shows is Chromatic, as a component ERROR rather than a
+   * diff. That is what failed Chromatic build 455 eighteen times once the
+   * live-scoring kit added the repo's first React-component story.
+   *
+   * `react()` here mirrors `integrations: [react()]` in `astro.config.ts`.
+   * Adding a framework to one means adding it to the other.
+   */
   framework: {
     name: '@storybook-astro/framework',
-    options: {},
+    options: { integrations: [react()] },
   },
 };
 

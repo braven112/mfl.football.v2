@@ -266,6 +266,43 @@ args never constructed and every one of that component's stories rendered
 Symptom to recognize: a story that builds and appears in `index.json` but
 renders zero characters, while its siblings from another fixture are fine.
 
+## Trap 8 — a story over a REACT component needs two things, or it errors only in Chromatic
+
+Every story here rendered an `.astro` component until the shared live-scoring
+kit arrived. A story whose `component:` is a React `.tsx` needs BOTH of these,
+and neither is optional:
+
+1. **`parameters: { renderer: 'react' }` on the story.**
+   `@storybook-astro/renderer`'s `render()` short-circuits only on an
+   `isAstroComponentFactory` marker. A plain function component falls through
+   to the renderer named in parameters — and the framework's own preview sets
+   that to `'astro'` globally, which is never a key in the fallback registry.
+2. **`framework.options.integrations: [react()]` in `.storybook/main.ts`**,
+   imported from `@storybook-astro/framework/integrations`. The framework does
+   **NOT** read `astro.config.ts` for this. That option is the sole input to
+   `virtual:storybook-renderer-fallback`, the registry a non-Astro story
+   consults; ours was `options: {}`, so the registry was an empty module.
+
+**Why this is Chromatic-only.** The throw happens in the browser at render
+time. `storybook build` exits 0, the story is indexed, and the static output
+looks complete. Chromatic reports it as a component ERROR, not a diff — 18 of
+them on build 455, one per snapshot, which is how the arithmetic gives the
+story away (3 stories × 6 modes). The tell in the error text is the empty
+list: `Renderer 'astro' not found. Available renderers:` with nothing after
+the colon means the registry is empty, i.e. fault 2; a populated list means
+fault 1 alone.
+
+Guard: `tests/storybook-story-renderer.test.ts` checks both ends — every story
+over a non-`.astro` component names a renderer, and every renderer it names is
+registered in `main.ts` (and is one `astro.config.ts` actually runs). Fixing
+either half alone still fails, so it asserts both.
+
+**Modes widen; they never narrow.** Storybook DEEP-merges parameters, so a
+story-level `chromatic.modes` map is unioned with the component-level one
+rather than replacing it. Put the CHEAP map at component level and let
+individual stories opt UP. `Live/WinProbBar` originally did the reverse and
+`Mini`'s attempt to drop back to two modes silently still cost six.
+
 ## Trap 7 — a snapshot's network request can live in the CSS, not in the args
 
 **"Fixtures are offline" is checked at the wrong layer if you only check
