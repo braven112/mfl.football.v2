@@ -653,3 +653,48 @@ correct here; adding a second markup copy would not be.
 
 **Evidence:** `src/styles/live-scoring.css` (760px block), `.ls-wp`'s `role="img"`
 in `src/components/shared/LiveScoreboard.tsx#WinProbBar`.
+
+---
+
+## 2026-09-18 - A card that is a `<button aria-label>` hides everything inside it
+
+**Context:** The live-scoring board's "yet to play" count was split per team, so
+each card header now carries two numbers instead of one. The visual work was
+straightforward; the a11y finding was that the numbers were never announced —
+and had not been before the change either.
+
+**Insight:** Every scoring card is a `<button>` with its own `aria-label`
+(`Open <away> at <home>`). An `aria-label` on an element **replaces** its
+subtree as the accessible name — it does not augment it. So the score, the
+projection, the win probability and the yet-to-play counts are all present in
+the DOM, styled, and completely absent from the a11y tree. Nothing warns you:
+the markup is semantic, the contrast passes, and the element is focusable and
+operable. The only symptom is that a screen reader reads sixteen cards as
+sixteen identical "Open X at Y" buttons.
+
+This generalizes past this page. Any card-as-button, row-as-button or
+tile-as-button pattern has it, and the pattern is common here because a whole
+card being clickable is a better touch target than a link inside it.
+
+**Pattern:** when the label is doing the naming, it owns ALL the information —
+build it from the same values the card renders, in one place, and use it for
+every layout variant of that card:
+
+```tsx
+const cardLabel = `Open ${A?.name} at ${H?.name}`
+  + (showYtp ? `. ${awayName} ${away.yetToPlay} yet to play, ${homeName} ${home.yetToPlay} yet to play` : '');
+```
+
+Do not reach for `aria-describedby` pointing at inner nodes as the fix: it is
+announced after a pause and only in some modes, so it is where supplementary
+detail goes, not where the numbers the card exists to show go.
+
+**Corollary for `title`:** a `title` on an inner span is a mouse affordance, not
+an a11y one. Both are worth having and neither substitutes for the other.
+
+**When this bites hardest:** adding information to a card. The instinct is to
+check contrast and layout, both of which pass, and the new information silently
+reaches nobody using AT.
+
+**Evidence:** `src/components/shared/LiveScoreboard.tsx#ScoreCard` — one
+`cardLabel` feeds the faceoff, row and compact variants.
