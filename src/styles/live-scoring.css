@@ -250,7 +250,13 @@ html.dark .ls-detail {
 .ls-dh { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-md); }
 .ls-dh .ls-card.feat { grid-column: auto; }
 @media (max-width: 640px) { .ls-dh { grid-template-columns: 1fr; } }
-.ls-card-head { display: flex; align-items: center; gap: 0.5rem; }
+/* `flex-wrap` + the nowrap on each child is a pair, not two tweaks. The header
+   carries a badge, two dotted counts with a shared label, and "YOUR MATCHUP";
+   at 320px that does not fit on one line. Without this, the overflow is
+   absorbed by breaking TEXT — "yet to / play" and "YOUR / MATCHUP" split
+   mid-phrase. With it, whole items move to a second line instead, which is
+   what the eye expects from a badge row. */
+.ls-card-head { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
 .ls-badge {
   display: inline-flex; align-items: center; gap: 0.3rem;
   font-size: 0.66rem; font-weight: var(--font-weight-bold);
@@ -259,10 +265,39 @@ html.dark .ls-detail {
 }
 .ls-badge.live { color: var(--ls-live); background: color-mix(in srgb, var(--ls-live) 15%, transparent); }
 .ls-badge.final { color: var(--content-text-muted); background: var(--content-bg-muted); }
-.ls-rem { font-size: 0.72rem; color: var(--content-text-muted); }
+/* Per-team "yet to play": two dotted counts, away then home, sharing one
+   label. The dots take the card's own --ta/--th, so they match the top border
+   and the win-probability bar exactly and stay legible in both themes
+   (teamColorVars resolves them against each surface). Do not swap in a
+   generic muted colour here — the dot IS the team identifier. */
+.ls-rem {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  color: var(--content-text-muted);
+  white-space: nowrap;
+}
+.ls-rem-n {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-weight: var(--font-weight-bold);
+  color: var(--page-text);
+  font-variant-numeric: tabular-nums;
+}
+.ls-rem-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  flex: none;
+}
+.ls-rem-dot.away { background: var(--ta); }
+.ls-rem-dot.home { background: var(--th); }
+.ls-rem-lbl { margin-left: -0.1rem; }
 .ls-your {
   margin-left: auto; font-size: 0.62rem; font-weight: var(--font-weight-bold);
-  letter-spacing: 0.1em; color: var(--league-accent);
+  letter-spacing: 0.1em; color: var(--league-accent); white-space: nowrap;
 }
 
 .ls-teams { display: flex; flex-direction: column; gap: 0.15rem; }
