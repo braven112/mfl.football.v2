@@ -591,9 +591,14 @@ describe('the no-games board fits the phone', () => {
     const offenders: string[] = [];
     for (const [name, rel] of SURFACES) {
       const text = readFileSync(join(process.cwd(), rel), 'utf-8')
-        // Block and line comments are prose, not UI.
-        .replace(/\/\*[\s\S]*?\*\//g, '')
-        .replace(/^\s*\/\/.*$/gm, '');
+        // Comments are prose, not UI. All three forms have to go: a block
+        // comment, an HTML comment (the .astro surface uses those), and a
+        // TRAILING line comment — an earlier version anchored `//` to line
+        // start, so `<span>{n} to play</span> // not "yet to play"` failed the
+        // guard on its own explanation. The `[^:]` keeps `https://` intact.
+        .replace(/\/\*[\s\S]*?\*\//g, ' ')
+        .replace(/<!--[\s\S]*?-->/g, ' ')
+        .replace(/(^|[^:])\/\/.*$/gm, '$1');
       if (/yet to play/.test(text)) offenders.push(`${name} (${rel})`);
       if (!/to play/.test(text)) offenders.push(`${name} renders no "to play" at all (${rel})`);
     }

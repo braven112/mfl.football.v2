@@ -456,7 +456,8 @@
         "tests/broadcast-selection.test.ts",
         "tests/broadcast-shell-guards.test.ts",
         "tests/espn-notable-plays.test.ts",
-        "tests/nfl-live-routes.test.ts"
+        "tests/nfl-live-routes.test.ts",
+        "tests/live-scoring-layout-css.test.ts"
       ]
     },
     {
@@ -474,7 +475,8 @@
         "src/hooks/useNfl*",
         "src/hooks/useLiveScoring*",
         "src/components/shared/LiveScore*",
-        "src/pages/api/live-scoring.ts"
+        "src/pages/api/live-scoring.ts",
+        "src/components/shared/mfl-live/*"
       ],
       "tests": [
         "tests/live-scoring-host-resolution.test.ts",
@@ -485,7 +487,8 @@
         "tests/sunday-ticket-live.test.ts",
         "tests/sunday-ticket-chip-rails.test.ts",
         "tests/nfl-scoreboard-cadence.test.ts",
-        "tests/live-scoring-self-fetch-guard.test.ts"
+        "tests/live-scoring-self-fetch-guard.test.ts",
+        "tests/live-scoring-layout-css.test.ts"
       ]
     },
     {

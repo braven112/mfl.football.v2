@@ -3702,8 +3702,9 @@ and names the offender:
 
 ```ts
 const text = readFileSync(join(process.cwd(), rel), 'utf-8')
-  .replace(/\/\*[\s\S]*?\*\//g, '')   // comments are prose, not UI
-  .replace(/^\s*\/\/.*$/gm, '');
+  .replace(/\/\*[\s\S]*?\*\//g, ' ')        // block
+  .replace(/<!--[\s\S]*?-->/g, ' ')          // HTML — .astro surfaces use these
+  .replace(/(^|[^:])\/\/.*$/gm, '$1');       // trailing line; [^:] spares https://
 if (/yet to play/.test(text)) offenders.push(rel);
 ```
 
@@ -3711,6 +3712,14 @@ Strip comments first, and only scan RENDERED text. Prose may legitimately say
 "yet to play" (it reads better in a sentence), and `yetToPlay` is the field name
 in `live-scoring-view.ts` and every type — a naive grep flags both and the guard
 gets deleted for crying wolf.
+
+**All three comment forms, or the guard fails on its own explanation.** The
+first version of this anchored the line-comment pattern to line start
+(`/^\s*\/\/.*$/gm`), which leaves a TRAILING comment intact — so
+`<span>{n} to play</span> // never "yet to play"` tripped the guard, in a file
+that was correct. Review caught it before it shipped. An over-eager stripper is
+the opposite failure and just as fatal: `.replace(/\/\/.*$/gm, '')` eats the
+rest of every line holding an `https://` URL, so the `[^:]` is load-bearing.
 
 **Where to look for the next one:** any value with a `*-view.ts` computing it
 and 3+ components consuming it. Projections, win probability and the game clock
