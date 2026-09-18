@@ -551,7 +551,7 @@ describe('the no-games board fits the phone', () => {
     );
     // And the standalone line must still carry the counts in both branches —
     // it is the only copy the accessibility tree ever sees.
-    expect(island).toMatch(/ls-ytp[\s\S]{0,200}\{calc\.away\.yetToPlay\} yet to play/);
+    expect(island).toMatch(/ls-ytp[\s\S]{0,200}\{calc\.away\.yetToPlay\} to play/);
     // The in-bar copies are decorative: `.ls-wp` is role="img", so they are
     // never announced. That is why the folded line is CLIPPED, not removed —
     // and the role has to still be there, or this whole precaution is moot.
@@ -565,5 +565,38 @@ describe('the no-games board fits the phone', () => {
       valueOf(phone, '.ls-ytp.folded', 'display'),
       '.ls-ytp.folded must not be display:none — role="img" hides the other copy from AT',
     ).toBeUndefined();
+  });
+
+  /**
+   * One wording for one number, across every surface that prints it.
+   *
+   * Five places render a yet-to-play count: this island's card header, its
+   * matchup detail line, the win-probability bar's folded copies,
+   * BroadcastScoreHeader, MflLiveBoard and SundayTicketMatchups. Four of them
+   * said "to play" and the card said "yet to play", so the same fact read two
+   * different ways depending on which screen an owner was looking at — the
+   * kind of drift nobody files a bug for and everybody notices.
+   *
+   * The check is on RENDERED text only. Prose in comments may still say "yet
+   * to play" (it reads better in a sentence), and `yetToPlay` is the field
+   * name everywhere — neither is what a user sees, so neither is scanned.
+   */
+  it('prints "to play", never "yet to play", on every surface', () => {
+    const SURFACES: Array<[string, string]> = [
+      ['LiveScoreboard', 'src/components/shared/LiveScoreboard.tsx'],
+      ['BroadcastScoreHeader', 'src/components/shared/live-broadcast/BroadcastScoreHeader.tsx'],
+      ['MflLiveBoard', 'src/components/shared/mfl-live/MflLiveBoard.tsx'],
+      ['SundayTicketMatchups', 'src/components/shared/sunday-ticket/SundayTicketMatchups.astro'],
+    ];
+    const offenders: string[] = [];
+    for (const [name, rel] of SURFACES) {
+      const text = readFileSync(join(process.cwd(), rel), 'utf-8')
+        // Block and line comments are prose, not UI.
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/^\s*\/\/.*$/gm, '');
+      if (/yet to play/.test(text)) offenders.push(`${name} (${rel})`);
+      if (!/to play/.test(text)) offenders.push(`${name} renders no "to play" at all (${rel})`);
+    }
+    expect(offenders, 'every surface prints the count as "<n> to play"').toEqual([]);
   });
 });
