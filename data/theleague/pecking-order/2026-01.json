@@ -741,12 +741,35 @@
     ]
   },
   "ownersPoll": {
-    "status": "open",
+    "status": "closed",
     "opensAt": "2026-09-16T00:54:59.864Z",
     "closesAt": "2026-09-17T23:00:00.000Z",
     "slots": 7,
     "quorum": 8,
     "eligibleVoters": 16,
-    "methodology": "Each owner ranks 7 teams · 7 points for 1st down to 1 for 7th · 8 of 16 ballots required"
+    "ballotsIn": 1,
+    "hasQuorum": false,
+    "methodology": "Each owner ranks 7 teams · 7 points for 1st down to 1 for 7th · 8 of 16 ballots required",
+    "ranked": null,
+    "unranked": null,
+    "ballots": [
+      {
+        "franchiseId": "0001",
+        "ranking": [
+          "0016",
+          "0009",
+          "0002",
+          "0013",
+          "0012",
+          "0005",
+          "0014"
+        ],
+        "submittedAt": "2026-09-04T16:22:40.445Z",
+        "updatedAt": "2026-09-16T06:15:12.008Z",
+        "contrarianIndex": null,
+        "homerIndex": null
+      }
+    ],
+    "nonVoterCount": 15
   }
 }
