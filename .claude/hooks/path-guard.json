@@ -476,6 +476,7 @@
       "rules": "docs/claude/rules/live-scoring.md",
       "paths": [
         "src/utils/live-*",
+        "src/utils/live/**",
         "src/utils/espn*",
         "scripts/fetch-live-*",
         "scripts/fetch-espn*",
@@ -499,7 +500,8 @@
         "tests/sunday-ticket-chip-rails.test.ts",
         "tests/nfl-scoreboard-cadence.test.ts",
         "tests/live-scoring-self-fetch-guard.test.ts",
-        "tests/live-scoring-layout-css.test.ts"
+        "tests/live-scoring-layout-css.test.ts",
+        "tests/live-projections-week.test.ts"
       ]
     },
     {
