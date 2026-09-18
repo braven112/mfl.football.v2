@@ -54,8 +54,9 @@ vi.mock('../src/utils/redis-client', () => ({
 
 import { GET as ballotGET, POST as ballotPOST } from '../src/pages/api/owners-poll/ballot';
 import { GET as turnoutGET } from '../src/pages/api/owners-poll/turnout';
+import { POST as affirmPOST } from '../src/pages/api/owners-poll/affirm';
 import { POST as windowPOST, GET as windowGET } from '../src/pages/api/owners-poll/window';
-import { ownersPollBallotsKey, ownersPollCurrentKey } from '../src/utils/owners-poll-ballot.mjs';
+import { ownersPollStandingKey, ownersPollCurrentKey } from '../src/utils/owners-poll-ballot.mjs';
 import { resolveOwnersPollCaller } from '../src/utils/owners-poll-store';
 import { resolveOwnersPollAccess } from '../src/utils/owners-poll-access';
 
@@ -217,7 +218,7 @@ describe('POST /api/owners-poll/ballot', () => {
     expect(body.ballot.ranking).toEqual(OK);
     expect(body.turnout).toEqual({ ballotsIn: 1, eligible: 16 });
 
-    const key = ownersPollBallotsKey(THELEAGUE.navSlug, 2026, 5);
+    const key = ownersPollStandingKey(THELEAGUE.navSlug, 2026);
     expect(hashes.get(key)?.has('0003')).toBe(true);
   });
 
@@ -231,7 +232,7 @@ describe('POST /api/owners-poll/ballot', () => {
         }),
       ),
     );
-    const key = ownersPollBallotsKey(THELEAGUE.navSlug, 2026, 5);
+    const key = ownersPollStandingKey(THELEAGUE.navSlug, 2026);
     expect(hashes.get(key)?.has('0003')).toBe(true);
     expect(hashes.get(key)?.has('0011')).toBe(false);
   });
@@ -318,7 +319,7 @@ describe('POST /api/owners-poll/ballot', () => {
 describe('GET /api/owners-poll/ballot', () => {
   it('returns only the caller\'s own ballot, never anyone else\'s', async () => {
     openTheBallot();
-    const key = ownersPollBallotsKey(THELEAGUE.navSlug, 2026, 5);
+    const key = ownersPollStandingKey(THELEAGUE.navSlug, 2026);
     hashes.set(
       key,
       new Map([
@@ -360,7 +361,7 @@ describe('GET /api/owners-poll/ballot', () => {
 describe('GET /api/owners-poll/turnout', () => {
   it('returns counts only — never who voted', async () => {
     openTheBallot();
-    const key = ownersPollBallotsKey(THELEAGUE.navSlug, 2026, 5);
+    const key = ownersPollStandingKey(THELEAGUE.navSlug, 2026);
     hashes.set(
       key,
       new Map([
@@ -405,66 +406,78 @@ describe('GET /api/owners-poll/turnout', () => {
   });
 });
 
-describe('prefill from last week', () => {
-  const lastWeek = ['0009', '0010', '0011', '0012', '0013', '0014', '0015'];
+describe('"Still good" — affirming a standing ballot', () => {
+  const THREE_WEEKS_AGO = new Date(Date.now() - 22 * 86400 * 1000).toISOString();
+  const YESTERDAY = new Date(Date.now() - 86400 * 1000).toISOString();
 
-  function storeLastWeeksBallot(ranking = lastWeek, franchiseId = '0003') {
+  function standing(updatedAt: string, ranking = OK, franchiseId = '0003') {
     hashes.set(
-      ownersPollBallotsKey(THELEAGUE.navSlug, 2026, 4),
-      new Map([[franchiseId, JSON.stringify({ franchiseId, ranking })]]),
+      ownersPollStandingKey(THELEAGUE.navSlug, 2026),
+      new Map([
+        [
+          franchiseId,
+          JSON.stringify({ franchiseId, ranking, submittedAt: THREE_WEEKS_AGO, updatedAt }),
+        ],
+      ]),
     );
   }
 
-  it('offers last week\'s ballot when this week has none', async () => {
+  it('flags a ballot nobody has touched in three weeks', async () => {
     openTheBallot();
-    storeLastWeeksBallot();
-    const res = await ballotGET(makeContext(authed('/api/owners-poll/ballot', sessionCookie('0003'))));
-    const body = await res.json();
-    expect(body.ballot).toBeNull();
-    expect(body.prefill).toEqual(lastWeek);
+    standing(THREE_WEEKS_AGO);
+    const body = await (
+      await ballotGET(makeContext(authed('/api/owners-poll/ballot', sessionCookie('0003'))))
+    ).json();
+    expect(body.stale).toBe(true);
+    expect(body.staleAfterWeeks).toBe(3);
   });
 
-  it('does NOT offer a prefill once this week\'s ballot exists', async () => {
-    // Shipping both would let a stale prefill overwrite a submitted ballot.
+  it('does not flag a ballot edited yesterday', async () => {
     openTheBallot();
-    storeLastWeeksBallot();
-    hashes.set(
-      ownersPollBallotsKey(THELEAGUE.navSlug, 2026, 5),
-      new Map([['0003', JSON.stringify({ franchiseId: '0003', ranking: OK })]]),
+    standing(YESTERDAY);
+    const body = await (
+      await ballotGET(makeContext(authed('/api/owners-poll/ballot', sessionCookie('0003'))))
+    ).json();
+    expect(body.stale).toBe(false);
+  });
+
+  it('bumps updatedAt without touching the ranking', async () => {
+    openTheBallot();
+    standing(THREE_WEEKS_AGO);
+    const res = await affirmPOST(
+      makeContext(authed('/api/owners-poll/affirm', sessionCookie('0003'), { method: 'POST' })),
     );
-    const body = await (
-      await ballotGET(makeContext(authed('/api/owners-poll/ballot', sessionCookie('0003'))))
-    ).json();
+    expect(res.status).toBe(200);
+    const body = await res.json();
     expect(body.ballot.ranking).toEqual(OK);
-    expect(body.prefill).toBeNull();
+    expect(Date.parse(body.ballot.updatedAt)).toBeGreaterThan(Date.parse(THREE_WEEKS_AGO));
+    // submittedAt is the owner's FIRST ballot of the season and never moves.
+    expect(body.ballot.submittedAt).toBe(THREE_WEEKS_AGO);
   });
 
-  it('offers nothing in week 1', async () => {
-    openTheBallot({ ...OPEN_WINDOW, week: 1 });
-    const body = await (
-      await ballotGET(makeContext(authed('/api/owners-poll/ballot', sessionCookie('0003'))))
-    ).json();
-    expect(body.prefill).toBeNull();
-  });
-
-  it('drops a prefill that no longer validates against this week\'s field', async () => {
-    // A franchise left the league since last week. Prefilling a ballot the
-    // owner would have to repair is worse than prefilling nothing.
+  it('never takes a ranking from the request — the stored one wins', async () => {
+    // An owner who edited on their phone and then pressed "Still good" on a
+    // stale desktop tab must not overwrite the newer ballot with the older one.
     openTheBallot();
-    storeLastWeeksBallot([...lastWeek.slice(0, 6), '0099']);
-    const body = await (
-      await ballotGET(makeContext(authed('/api/owners-poll/ballot', sessionCookie('0003'))))
-    ).json();
-    expect(body.prefill).toBeNull();
+    standing(THREE_WEEKS_AGO);
+    const ctx = makeContext(
+      authed('/api/owners-poll/affirm', sessionCookie('0003'), {
+        method: 'POST',
+        body: JSON.stringify({
+          ranking: ['0016', '0015', '0014', '0013', '0012', '0011', '0010'],
+        }),
+      }),
+    );
+    const body = await (await affirmPOST(ctx)).json();
+    expect(body.ballot.ranking).toEqual(OK);
   });
 
-  it('never offers another owner\'s ballot as a prefill', async () => {
+  it('refuses when there is no ballot on file to affirm', async () => {
     openTheBallot();
-    storeLastWeeksBallot(lastWeek, '0011');
-    const body = await (
-      await ballotGET(makeContext(authed('/api/owners-poll/ballot', sessionCookie('0003'))))
-    ).json();
-    expect(body.prefill).toBeNull();
+    const res = await affirmPOST(
+      makeContext(authed('/api/owners-poll/affirm', sessionCookie('0003'), { method: 'POST' })),
+    );
+    expect(res.status).toBe(409);
   });
 });
 
@@ -636,7 +649,7 @@ describe('POST /api/owners-poll/window (commissioner control)', () => {
   it('close stops voting WITHOUT touching ballots', async () => {
     await postWindow({ action: 'open', week: 3, hours: 48 }, commishCookie());
     hashes.set(
-      ownersPollBallotsKey(THELEAGUE.navSlug, new Date().getUTCFullYear(), 3),
+      ownersPollStandingKey(THELEAGUE.navSlug, new Date().getUTCFullYear()),
       new Map([['0003', JSON.stringify({ franchiseId: '0003', ranking: OK })]]),
     );
 
@@ -648,7 +661,7 @@ describe('POST /api/owners-poll/window (commissioner control)', () => {
     const ballot = await ballotGET(makeContext(authed('/api/owners-poll/ballot', sessionCookie())));
     expect((await ballot.json()).status).toBe('none');
     // ...but the vote itself survives, so re-opening picks it back up.
-    const key = ownersPollBallotsKey(THELEAGUE.navSlug, new Date().getUTCFullYear(), 3);
+    const key = ownersPollStandingKey(THELEAGUE.navSlug, new Date().getUTCFullYear());
     expect(hashes.get(key)?.size).toBe(1);
   });
 
@@ -657,7 +670,7 @@ describe('POST /api/owners-poll/window (commissioner control)', () => {
     // non-zero count on a "fresh" open.
     const year = new Date().getUTCFullYear();
     hashes.set(
-      ownersPollBallotsKey(THELEAGUE.navSlug, year, 3),
+      ownersPollStandingKey(THELEAGUE.navSlug, year),
       new Map([['0003', JSON.stringify({ franchiseId: '0003', ranking: OK })]]),
     );
     const body = await (

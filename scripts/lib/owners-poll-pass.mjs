@@ -30,6 +30,7 @@ import {
   clearWindow,
   countBallots,
   readAllBallots,
+  readStandingBallots,
 } from './owners-poll-redis.mjs';
 
 /**
@@ -257,17 +258,38 @@ export async function closePoll({ league, issue, compositeRankByFid, now = new D
     return null;
   }
 
-  const { ballots, dropped, stored } = await readAllBallots(
+  // Standing ballots for the SEASON, not the week. Nothing is cleared after
+  // this read — every ballot keeps standing into the next snapshot until its
+  // owner changes it.
+  const { ballots, dropped, stored } = await readStandingBallots(
     redis,
     league.navSlug,
-    window.year,
-    window.week,
+    issue.year,
     { slots: window.slots, eligibleFranchiseIds: window.eligibleFranchiseIds },
   );
   if (dropped > 0) {
-    // Said out loud rather than swallowed: the turnout meter counted these,
+    // Said out loud rather than swallowed: the coverage meter counted these,
     // so a silent drop makes the published poll smaller than owners were told.
     log.warn?.(`  [poll] Dropped ${dropped} of ${stored} stored ballots (no longer valid).`);
+  }
+
+  // EVERY ballot on file failed validation. That is never a legitimate quiet
+  // week — it is a misconfiguration, and the overwhelmingly likely one is
+  // `slots` changing in the registry mid-season, because validateBallot's
+  // length check is exact and would reject the entire hash at once.
+  //
+  // This has to be fatal, and the reason is the silence rule: a zero-ballot
+  // week now publishes nothing at all — no chat post, no feed post, no poll
+  // section. So a config error and a week nobody voted in produce byte-for-byte
+  // identical output, and the error would hide until someone noticed the poll
+  // had quietly stopped existing. Failing the job is the only thing that
+  // distinguishes them.
+  if (stored > 0 && ballots.length === 0) {
+    throw new Error(
+      `Owners' Poll: all ${stored} stored ballots failed validation for ${league.name}. ` +
+        `Refusing to publish an empty week — check ownersPoll.slots (${window.slots}) ` +
+        `against what owners actually submitted.`,
+    );
   }
 
   const { block, tally } = buildClosedPollBlock({
@@ -279,6 +301,12 @@ export async function closePoll({ league, issue, compositeRankByFid, now = new D
   // The pointer goes LAST, and only once the tally succeeded: clearing it
   // first would close voting on a run that then threw, leaving a week with no
   // ballot and no result.
+  //
+  // NOTE this clears the WINDOW POINTER only. The ballots themselves are never
+  // touched — they are standing votes and they carry into next week's snapshot
+  // untouched. Deleting them here would silently reset the whole league to
+  // zero every Thursday, which is the exact behaviour standing votes exist to
+  // remove.
   await clearWindow(redis, league.navSlug);
 
   log.log?.(
@@ -396,7 +424,7 @@ export async function readTurnout({ league }) {
   // server-side in the close/nag cron and never crosses an HTTP boundary — the
   // public /api/owners-poll/turnout endpoint still uses HLEN and still cannot
   // name a voter.
-  const { ballots } = await readAllBallots(redis, league.navSlug, window.year, window.week, {
+  const { ballots } = await readStandingBallots(redis, league.navSlug, window.year, {
     slots: window.slots,
     eligibleFranchiseIds: window.eligibleFranchiseIds,
   });

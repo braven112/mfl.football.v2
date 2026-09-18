@@ -12,8 +12,9 @@ import { getAuthUser } from './auth';
 import { getRedis } from './redis-client';
 import { ALL_LEAGUES, getLeagueById, type LeagueDefinition } from '../config/leagues';
 import {
-  ownersPollBallotsKey,
+  ownersPollStandingKey,
   ownersPollCurrentKey,
+  affirmBallotRecord,
   parseStoredBallot,
   parseStoredWindow,
   resolveBallotWindow,
@@ -32,8 +33,11 @@ export interface OwnersPollWindow {
 export interface StoredBallot {
   franchiseId: string;
   ranking: string[];
+  /** The owner's FIRST ballot of the season. Never moves after that. */
   submittedAt: string | null;
+  /** Last edit — may be many weeks before the snapshot that publishes it. */
   updatedAt: string | null;
+  seasonYear: number | null;
 }
 
 export interface OwnersPollCaller {
@@ -205,10 +209,11 @@ export async function readBallot(
   const redis = await getRedis();
   if (!redis) return null;
   try {
-    const raw = await redis.hget(ownersPollBallotsKey(scope, window.year, window.week), franchiseId);
+    const raw = await redis.hget(ownersPollStandingKey(scope, window.year), franchiseId);
     return parseStoredBallot(raw, {
       slots: window.slots,
       eligibleFranchiseIds: window.eligibleFranchiseIds,
+      seasonYear: window.year,
     }) as StoredBallot | null;
   } catch (err) {
     console.error('[owners-poll] failed to read ballot:', err);
@@ -217,27 +222,32 @@ export async function readBallot(
 }
 
 /**
- * The caller's ballot from the PREVIOUS week, for prefill.
+ * Re-affirm the caller's standing ballot without changing it — "Still good".
  *
- * From week 2 onward the ballot opens pre-populated with the owner's own prior
- * ballot, which is the single largest ongoing reduction in effort — by week 6
- * the ask becomes "submit as-is or move two teams" rather than a fresh
- * seven-tap build. It is not the anchoring hazard a system-suggested seed
- * would be: it is that owner's own previous opinion, not an ordering the site
- * is nudging them toward.
+ * Read-modify-write, deliberately: the ranking comes from the STORED record,
+ * never from the request. An owner who edited their ballot on a phone and then
+ * pressed the button on a stale desktop tab would otherwise write the older
+ * ranking back over the newer one. The client sends no ranking at all, so that
+ * race cannot be expressed.
  *
- * Returns null in week 1, when they didn't vote last week, or when last week's
- * ballot no longer validates against this week's field or depth — a franchise
- * can leave, and `slots` can change. Dropping it is right: prefilling a ballot
- * the owner would have to repair is worse than prefilling nothing.
+ * This replaced `readPreviousBallot`, which prefilled a new week's ballot from
+ * the previous week's. Under standing votes there is nothing to prefill FROM —
+ * your ballot simply is your ballot — so the prefill machinery went with it.
+ *
+ * Returns the bumped record, or null when there is nothing on file.
  */
-export async function readPreviousBallot(
+export async function affirmBallot(
   scope: string,
   window: OwnersPollWindow,
   franchiseId: string,
+  now: Date = new Date(),
 ): Promise<StoredBallot | null> {
-  if (window.week <= 1) return null;
-  return readBallot(scope, { ...window, week: window.week - 1 }, franchiseId);
+  const current = await readBallot(scope, window, franchiseId);
+  if (!current) return null;
+  const bumped = affirmBallotRecord(current, now) as StoredBallot | null;
+  if (!bumped) return null;
+  const ok = await writeBallot(scope, window, bumped);
+  return ok ? bumped : null;
 }
 
 /**
@@ -255,7 +265,7 @@ export async function writeBallot(
   const redis = await getRedis();
   if (!redis) return false;
   try {
-    await redis.hset(ownersPollBallotsKey(scope, window.year, window.week), {
+    await redis.hset(ownersPollStandingKey(scope, window.year), {
       [record.franchiseId]: JSON.stringify(record),
     });
     return true;
@@ -276,7 +286,7 @@ export async function countBallots(scope: string, window: OwnersPollWindow): Pro
   const redis = await getRedis();
   if (!redis) return 0;
   try {
-    return await redis.hlen(ownersPollBallotsKey(scope, window.year, window.week));
+    return await redis.hlen(ownersPollStandingKey(scope, window.year));
   } catch (err) {
     console.error('[owners-poll] failed to count ballots:', err);
     return 0;

@@ -53,7 +53,7 @@ const {
   buildOpenLine,
   normalizeFranchiseIds,
 } = await import('../scripts/lib/owners-poll-pass.mjs');
-const { ownersPollBallotsKey, ownersPollCurrentKey } = await import(
+const { ownersPollStandingKey, ownersPollCurrentKey } = await import(
   '../src/utils/owners-poll-ballot.mjs'
 );
 
@@ -84,7 +84,8 @@ function seedBallots(count: number, year = 2026, week = 5) {
     const ranking = Array.from({ length: SLOTS }, (_, k) => FIELD[(i + k) % FIELD.length]);
     h.set(franchiseId, JSON.stringify({ franchiseId, ranking, submittedAt: null, updatedAt: null }));
   }
-  hashes.set(ownersPollBallotsKey(LEAGUE.navSlug, year, week), h);
+  // Standing ballots live on the SEASON key now, not the week key.
+  hashes.set(ownersPollStandingKey(LEAGUE.navSlug, year), h);
   return h;
 }
 
