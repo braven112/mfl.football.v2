@@ -18,12 +18,11 @@ const COMPOSITE = Object.fromEntries(FIELD.map((fid, i) => [fid, i + 1]));
 
 const ballot = (franchiseId: string, ranking: string[]) => ({ franchiseId, ranking });
 
-function tally(ballots: Array<{ franchiseId: string; ranking: string[] }>, quorum = 1) {
+function tally(ballots: Array<{ franchiseId: string; ranking: string[] }>) {
   return tallyOwnersPoll({
     ballots,
     eligibleFranchiseIds: FIELD,
     slots: SLOTS,
-    quorum,
     compositeRankByFid: COMPOSITE,
   });
 }
@@ -81,7 +80,6 @@ describe('tallyOwnersPoll', () => {
       ],
       eligibleFranchiseIds: FIELD,
       slots: SLOTS,
-      quorum: 1,
       compositeRankByFid: COMPOSITE,
     });
     expect(firstPlaceWins.ranked![0].franchiseId).toBe('0003');
@@ -100,15 +98,32 @@ describe('tallyOwnersPoll', () => {
     ]);
   });
 
-  it('returns null blocks — not empty ones — below quorum', () => {
-    // A caller that forgets to check hasQuorum must crash, not silently render
-    // a "consensus" backed by nobody.
-    const result = tally([ballot('0001', ['0001', '0002', '0003', '0004', '0005', '0006', '0007'])], 8);
-    expect(result.hasQuorum).toBe(false);
-    expect(result.ranked).toBeNull();
-    expect(result.unranked).toBeNull();
+  it('publishes a consensus off a SINGLE ballot — there is no quorum', () => {
+    // The whole point of removing the quorum: whatever came in is the result.
+    // One owner's ballot is a poll of one, and the published count says so.
+    const result = tally([ballot('0001', ['0001', '0002', '0003', '0004', '0005', '0006', '0007'])]);
     expect(result.ballotsIn).toBe(1);
     expect(result.eligibleVoters).toBe(16);
+    expect(result.ranked).not.toBeNull();
+    expect(result.ranked!.map((r) => r.franchiseId)).toEqual([
+      '0001', '0002', '0003', '0004', '0005', '0006', '0007',
+    ]);
+    // The nine nobody ranked are unranked, not ranked 8th-16th.
+    expect(result.unranked!.length).toBe(9);
+  });
+
+  it('returns null blocks — not empty ones — when NOBODY voted', () => {
+    // The one remaining silent case. A caller that forgets to check must crash
+    // rather than render a "consensus" backed by nobody.
+    const result = tally([]);
+    expect(result.ballotsIn).toBe(0);
+    expect(result.ranked).toBeNull();
+    expect(result.unranked).toBeNull();
+  });
+
+  it('no longer reports a quorum verdict at all', () => {
+    expect(tally([ballot('0001', ['0001', '0002', '0003', '0004', '0005', '0006', '0007'])]))
+      .not.toHaveProperty('hasQuorum');
   });
 
   it('reports delta as composite rank minus poll rank', () => {
@@ -137,7 +152,6 @@ describe('tallyOwnersPoll', () => {
       ballots: [ballot('1', ['2', '3', '4', '5', '6', '7', '8'])],
       eligibleFranchiseIds: FIELD,
       slots: SLOTS,
-      quorum: 1,
       compositeRankByFid: COMPOSITE,
     });
     expect(result.ranked![0].franchiseId).toBe('0002');
@@ -168,8 +182,8 @@ describe('consensusRankMap', () => {
     expect(map.size).toBe(16);
   });
 
-  it('is empty below quorum', () => {
-    expect(consensusRankMap(tally([], 8)).size).toBe(0);
+  it('is empty when nobody voted', () => {
+    expect(consensusRankMap(tally([])).size).toBe(0);
   });
 });
 

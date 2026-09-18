@@ -183,7 +183,7 @@ async function open(redis, league, opts) {
   const hours = windowHours(record);
   console.log(`\n  ✓ ${league.name} — ballot OPEN for Week ${week} (${year})`);
   console.log(`    closes ${record.closesAt}  (${hours.toFixed(1)}h)`);
-  console.log(`    ${record.slots} slots · quorum ${poll.quorum} of ${eligibleFranchiseIds.length}`);
+  console.log(`    ${record.slots} slots · ${eligibleFranchiseIds.length} eligible voters`);
   if (hours < SHORT_WINDOW_HOURS) {
     console.warn(
       `    [warn] That is under ${SHORT_WINDOW_HOURS}h. Owners may not see it in time.`,

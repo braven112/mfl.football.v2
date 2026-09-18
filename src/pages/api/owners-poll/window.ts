@@ -163,7 +163,6 @@ export const POST: APIRoute = async ({ request }) => {
       // commissioner is not surprised by a non-zero count on a "fresh" open.
       ballotsIn,
       eligibleVoters: eligibleFranchiseIds.length,
-      quorum: poll.quorum,
       shortWindow: hours < SHORT_WINDOW_HOURS,
     },
     200,

@@ -554,7 +554,7 @@ describe('POST /api/owners-poll/window (commissioner control)', () => {
     const res = await postWindow({ action: 'open', week: 3, hours: 48 }, commishCookie());
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body).toMatchObject({ ok: true, status: 'open', quorum: 8, eligibleVoters: 16 });
+    expect(body).toMatchObject({ ok: true, status: 'open', eligibleVoters: 16 });
     expect(body.window).toMatchObject({ week: 3, slots: 7 });
     expect(body.hours).toBeCloseTo(48, 0);
 
@@ -592,7 +592,7 @@ describe('POST /api/owners-poll/window (commissioner control)', () => {
 
   it('lets an AFL commissioner open the AFL ballot, on the AFL scope', async () => {
     // The port's end-to-end check: the AFL's own numbers come back (10 slots,
-    // quorum 12, 24 eligible voters — one league-wide ballot, not one per
+    // 24 eligible voters — one league-wide ballot, not one per
     // conference), and the window lands under the AFL key, never TheLeague's.
     const res = await postWindow(
       { action: 'open', week: 3, hours: 48 },
@@ -603,7 +603,6 @@ describe('POST /api/owners-poll/window (commissioner control)', () => {
     expect(await res.json()).toMatchObject({
       ok: true,
       status: 'open',
-      quorum: 12,
       eligibleVoters: 24,
       window: { week: 3, slots: 10 },
     });

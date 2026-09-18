@@ -46,10 +46,15 @@ export interface OwnersPollBlock {
   opensAt: string;
   closesAt: string;
   slots: number;
-  quorum: number;
   eligibleVoters: number;
   methodology?: string;
   ballotsIn?: number;
+  /**
+   * LEGACY. Committed archives from before the quorum was removed still carry
+   * this, and history is never rewritten — so the field is tolerated on read
+   * and branched on nowhere. `ranked` is the only test of whether a week has a
+   * consensus to show.
+   */
   hasQuorum?: boolean;
   ranked?: OwnersPollRankedRow[] | null;
   unranked?: { franchiseId: string; compositeRank: number }[] | null;
@@ -93,9 +98,16 @@ const unranked = poll?.unranked ?? [];
 // The single most interesting number in the section: where the room and the
 // machine disagree most. Surfaced rather than left for the reader to scan for.
 const biggestSplit = [...ranked].sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))[0];
+
+// A closed week with no consensus renders NOTHING — not even the header. With
+// the quorum gone the only way to get here is a week nobody voted in, and a
+// section announcing that is the on-page twin of the chat post we stopped
+// sending. Silence is the whole point; an empty-state banner would reinstate it.
+const hasConsensus = ranked.length > 0;
+const show = !!poll && (poll.status === 'open' || hasConsensus);
 ---
 
-{poll && (
+{show && poll && (
   <section class="op-strip" aria-label="The Owners' Poll">
     <header class="op-strip__head">
       <h2 class="op-strip__title">The Owners’ Poll</h2>
@@ -109,7 +121,6 @@ const biggestSplit = [...ranked].sort((a, b) => Math.abs(b.delta) - Math.abs(a.d
         client:visible
         ballotHref={ballotHref}
         slots={poll.slots}
-        quorum={poll.quorum}
         eligibleVoters={poll.eligibleVoters}
         leagueParam={leagueParam}
         issueWeek={issueWeek}
@@ -117,22 +128,7 @@ const biggestSplit = [...ranked].sort((a, b) => Math.abs(b.delta) - Math.abs(a.d
       />
     )}
 
-    {poll.status === 'closed' && !poll.hasQuorum && (
-      <div class="op-strip__noquorum">
-        <p>
-          <strong>
-            No quorum — {poll.ballotsIn} of {poll.eligibleVoters} ballots cast.
-          </strong>
-        </p>
-        <p>
-          The poll needs {poll.quorum} to publish a consensus, so this week’s
-          rankings above are the numbers alone. A consensus backed by
-          {' '}{poll.ballotsIn} {poll.ballotsIn === 1 ? 'ballot' : 'ballots'} would not be one.
-        </p>
-      </div>
-    )}
-
-    {poll.status === 'closed' && poll.hasQuorum && (
+    {poll.status === 'closed' && hasConsensus && (
       <>
         <p class="op-strip__meta">
           {poll.ballotsIn} of {poll.eligibleVoters} owners voted

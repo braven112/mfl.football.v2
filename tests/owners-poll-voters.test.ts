@@ -80,8 +80,11 @@ describe('computeVoterSeason', () => {
     ]);
   });
 
-  it('excludes no-quorum weeks entirely', () => {
-    // With no consensus there is nothing to measure a ballot against.
+  it('counts a legacy no-quorum week — the bar is a ballot, not a quorum', () => {
+    // Archives written before the quorum was removed still carry
+    // `hasQuorum: false`, and history is never rewritten. Those weeks now
+    // count: the owner DID file a ballot, and dropping it punished the people
+    // who turned up on a light week.
     const season = computeVoterSeason(
       [
         issue(1, FIELD, [{ franchiseId: '0001', ranking: ['0001', '0002', '0003', '0004'] }], {
@@ -91,6 +94,12 @@ describe('computeVoterSeason', () => {
       ],
       FIELD,
     );
+    expect(season.weeks).toEqual([1]);
+    expect(season.voters.find((v) => v.franchiseId === '0001')!.ballotsCast).toBe(1);
+  });
+
+  it('still excludes a week nobody voted in', () => {
+    const season = computeVoterSeason([issue(1, FIELD, []), issue(2, FIELD)], FIELD);
     expect(season.weeks).toEqual([]);
     expect(season.voters.every((v) => v.ballotsCast === 0)).toBe(true);
   });

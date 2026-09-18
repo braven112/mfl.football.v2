@@ -48,12 +48,16 @@ export function ballotPointPool(slots) {
   return (slots * (slots + 1)) / 2;
 }
 
-/** Human-readable scoring line, derived so it can't drift from the math. */
-export function describeScoring(slots, quorum, eligibleVoters) {
+/**
+ * Human-readable scoring line, derived so it can't drift from the math.
+ *
+ * There is no ballot minimum to state. The poll publishes whatever came in —
+ * see `tallyOwnersPoll` on why the quorum gate was removed.
+ */
+export function describeScoring(slots, eligibleVoters) {
   return (
-    `Each owner ranks ${slots} teams · ` +
-    `${slots} points for 1st down to 1 for ${ordinal(slots)} · ` +
-    `${quorum} of ${eligibleVoters} ballots required`
+    `Each owner ranks ${slots} of ${eligibleVoters} teams · ` +
+    `${slots} points for 1st down to 1 for ${ordinal(slots)}`
   );
 }
 
@@ -72,38 +76,42 @@ function ordinal(n) {
  *   `slots` long, deduped, and restricted to this league's franchises.
  * @param {string[]} args.eligibleFranchiseIds Every franchise in the league.
  * @param {number} args.slots Ballot depth.
- * @param {number} args.quorum Minimum ballots to publish a consensus.
  * @param {Map<string, number>|Record<string, number>} args.compositeRankByFid
  *   The Pecking Order's algorithmic rank per franchise — the tiebreaker, and
  *   the ordering of the unranked block.
  *
  * @returns {{
- *   ballotsIn: number, eligibleVoters: number, quorum: number,
- *   hasQuorum: boolean,
+ *   ballotsIn: number, eligibleVoters: number,
  *   ranked: Array<{ rank, franchiseId, points, firstPlaceVotes, ballotsRanking,
  *     avgBallotRank, compositeRank, delta }>|null,
  *   unranked: Array<{ franchiseId, compositeRank }>|null,
  * }}
  *
- * `ranked` and `unranked` are **null**, not empty arrays, when quorum isn't
- * met. A caller that forgets to check gets a crash rather than a page that
- * silently renders a consensus of nobody.
+ * **There is no quorum.** Whatever ballots came in are the result; a poll of
+ * three owners is a poll of three owners, and the published ballot count says
+ * so. The old `quorum` gate suppressed the consensus on a light week and made
+ * the feature announce its own failure in chat, which is the one thing a
+ * weekly poll must never spend its message on.
+ *
+ * `ranked` and `unranked` are **null**, not empty arrays, in the ONE case
+ * where there is genuinely nothing to tally: zero ballots. A caller that
+ * forgets to check gets a crash rather than a page that silently renders a
+ * consensus of nobody. Callers treat that week as a non-event — no chat post,
+ * no feed post, no poll section.
  */
 export function tallyOwnersPoll({
   ballots,
   eligibleFranchiseIds,
   slots,
-  quorum,
   compositeRankByFid,
 }) {
   const eligible = Array.from(eligibleFranchiseIds ?? [], (id) => normalizeFranchiseId(id));
   const composite = toRankMap(compositeRankByFid);
   const ballotsIn = Array.isArray(ballots) ? ballots.length : 0;
   const eligibleVoters = eligible.length;
-  const hasQuorum = Number.isInteger(quorum) && ballotsIn >= quorum;
 
-  const base = { ballotsIn, eligibleVoters, quorum, hasQuorum };
-  if (!hasQuorum) return { ...base, ranked: null, unranked: null };
+  const base = { ballotsIn, eligibleVoters };
+  if (ballotsIn === 0) return { ...base, ranked: null, unranked: null };
 
   const rows = new Map(
     eligible.map((fid) => [
@@ -192,7 +200,7 @@ export function consensusRankMap(tally) {
  *
  * Independence, not accuracy — a high score is a badge, not a demerit, and the
  * UI must label it that way. Null when the consensus has no rank for anything
- * on the ballot (i.e. no quorum).
+ * on the ballot (i.e. a week nobody voted in).
  */
 export function contrarianIndex(ranking, consensusRankByFid) {
   const consensus = toRankMap(consensusRankByFid);

@@ -16,7 +16,6 @@ import { useCallback, useEffect, useState } from 'react';
 
 interface Props {
   leagueParam: string;
-  quorum: number;
   slots: number;
 }
 
@@ -28,7 +27,7 @@ interface WindowState {
   pushCoverage?: { withPush: number; of: number; devices: number };
 }
 
-export default function PollWindowAdmin({ leagueParam, quorum, slots }: Props) {
+export default function PollWindowAdmin({ leagueParam, slots }: Props) {
   const [state, setState] = useState<WindowState | null>(null);
   const [week, setWeek] = useState('1');
   const [hours, setHours] = useState('48');
@@ -78,7 +77,7 @@ export default function PollWindowAdmin({ leagueParam, quorum, slots }: Props) {
         if (action === 'open') {
           setMessage(
             `Ballot open for Week ${data.window.week} — closes in ${data.hours}h. ` +
-              `${data.ballotsIn} of ${data.eligibleVoters} ballots in, quorum ${data.quorum}.` +
+              `${data.ballotsIn} of ${data.eligibleVoters} ballots in.` +
               (data.shortWindow ? ' (Short window.)' : ''),
           );
         } else {
@@ -187,7 +186,7 @@ export default function PollWindowAdmin({ leagueParam, quorum, slots }: Props) {
           )}
 
           <p className="op-admin__note">
-            {slots} slots · quorum {quorum}
+            {slots} slots
             {live && state.window ? ` · closes ${new Date(state.window.closesAt).toLocaleString()}` : ''}
           </p>
 

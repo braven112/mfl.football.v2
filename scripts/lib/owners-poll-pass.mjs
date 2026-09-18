@@ -123,9 +123,9 @@ export async function openPoll({
     opensAt: window.opensAt,
     closesAt: window.closesAt,
     slots: poll.slots,
-    quorum: poll.quorum,
     eligibleVoters: eligibleFranchiseIds.length,
-    methodology: describeScoring(poll.slots, poll.quorum, eligibleFranchiseIds.length),
+    methodology: describeScoring(poll.slots, eligibleFranchiseIds.length),
+    clampedToKickoff: window.clampedToKickoff,
   };
 }
 
@@ -153,7 +153,6 @@ export const SYNTHETIC_POLL_SOURCE = 'synthetic';
  * @param {object} args
  * @param {Array<{ franchiseId: string, ranking: string[], submittedAt: string|null, updatedAt: string|null }>} args.ballots
  * @param {{ opensAt: string, closesAt: string, slots: number, eligibleFranchiseIds: string[] }} args.window
- * @param {number} args.quorum
  * @param {Map<string, number>|Record<string, number>} args.compositeRankByFid
  * @returns {{
  *   block: {
@@ -161,10 +160,8 @@ export const SYNTHETIC_POLL_SOURCE = 'synthetic';
  *     opensAt: string,
  *     closesAt: string,
  *     slots: number,
- *     quorum: number,
  *     eligibleVoters: number,
  *     ballotsIn: number,
- *     hasQuorum: boolean,
  *     methodology: string,
  *     ranked: Array<Record<string, unknown>>|null,
  *     unranked: Array<Record<string, unknown>>|null,
@@ -175,12 +172,11 @@ export const SYNTHETIC_POLL_SOURCE = 'synthetic';
  *   tally: Record<string, unknown>,
  * }}
  */
-export function buildClosedPollBlock({ ballots, window, quorum, compositeRankByFid }) {
+export function buildClosedPollBlock({ ballots, window, compositeRankByFid }) {
   const tally = tallyOwnersPoll({
     ballots,
     eligibleFranchiseIds: window.eligibleFranchiseIds,
     slots: window.slots,
-    quorum,
     compositeRankByFid,
   });
 
@@ -209,11 +205,9 @@ export function buildClosedPollBlock({ ballots, window, quorum, compositeRankByF
     opensAt: window.opensAt,
     closesAt: window.closesAt,
     slots: window.slots,
-    quorum,
     eligibleVoters: window.eligibleFranchiseIds.length,
     ballotsIn: tally.ballotsIn,
-    hasQuorum: tally.hasQuorum,
-    methodology: describeScoring(window.slots, quorum, window.eligibleFranchiseIds.length),
+    methodology: describeScoring(window.slots, window.eligibleFranchiseIds.length),
     ranked: tally.ranked,
     unranked: tally.unranked,
     // Published in full — every ballot becomes public once its week closes.
@@ -232,7 +226,7 @@ export function buildClosedPollBlock({ ballots, window, quorum, compositeRankByF
 /**
  * Close the ballot and tally it.
  *
- * @returns {{ block, ballotsIn, dropped, hasQuorum }} the `ownersPoll` block to
+ * @returns {{ block, ballotsIn, dropped }} the `ownersPoll` block to
  *   write over the issue's open one.
  *
  * Unlike the open pass, missing Redis here IS fatal — writing an empty
@@ -279,7 +273,6 @@ export async function closePoll({ league, issue, compositeRankByFid, now = new D
   const { block, tally } = buildClosedPollBlock({
     ballots,
     window,
-    quorum: poll.quorum,
     compositeRankByFid,
   });
 
@@ -289,11 +282,11 @@ export async function closePoll({ league, issue, compositeRankByFid, now = new D
   await clearWindow(redis, league.navSlug);
 
   log.log?.(
-    `  [poll] Closed Week ${window.week}: ${tally.ballotsIn}/${window.eligibleFranchiseIds.length} ballots, ` +
-      `quorum ${tally.hasQuorum ? 'met' : 'NOT met'}.`,
+    `  [poll] Closed Week ${window.week}: ${tally.ballotsIn}/${window.eligibleFranchiseIds.length} ballots.` +
+      (tally.ballotsIn === 0 ? ' Nobody voted — the week publishes without a poll.' : ''),
   );
 
-  return { block, ballotsIn: tally.ballotsIn, dropped, hasQuorum: tally.hasQuorum };
+  return { block, ballotsIn: tally.ballotsIn, dropped };
 }
 
 function round2(x) {
@@ -335,13 +328,12 @@ export function buildRevealMessage({ league, issue, teams, callback = null }) {
   if (!poll || poll.status !== 'closed') return null;
   const name = (fid) => teams.get(fid)?.nameMedium ?? fid;
 
-  if (!poll.hasQuorum) {
-    return [
-      `🗳️ Owners' Poll — Week ${issue.week}: only ${poll.ballotsIn} of ${poll.eligibleVoters} ballots came in.`,
-      `That is short of the ${poll.quorum} needed, so there is no consensus this week and the column runs on the numbers alone.`,
-      `Next Tuesday ▸ ${leagueUrl(league, BALLOT_PATH)}`,
-    ].join('\n');
-  }
+  // A week nobody voted in is NOT news, and the chat's one automated post a
+  // day is too scarce to spend saying so. Returning null makes the generator
+  // post nothing at all and lets the day's GroupMe slot fall through to the
+  // next kind with something to say. There is no quorum any more, so this is
+  // the only silent case: whatever ballots came in are the result.
+  if (!poll.ranked || poll.ballotsIn === 0) return null;
 
   const lines = [`🗳️ THE OWNERS' POLL — Week ${issue.week} (${poll.ballotsIn}/${poll.eligibleVoters} ballots)`];
   poll.ranked.slice(0, 3).forEach((row) => {

@@ -257,36 +257,33 @@ describe('registry config', () => {
       if (!league.ownersPoll.enabled) continue;
       const fieldSize = FIELD_SIZES[league.slug] ?? null;
       expect(league.ownersPoll.slots).toBeGreaterThan(0);
-      expect(league.ownersPoll.quorum).toBeGreaterThan(0);
+      // No quorum field at all — whatever ballots come in are the result.
+      expect(league.ownersPoll, `${slug}`).not.toHaveProperty('quorum');
       if (fieldSize) {
         expect(league.ownersPoll.slots, `${slug} slots`).toBeLessThan(fieldSize);
-        expect(league.ownersPoll.quorum, `${slug} quorum`).toBeLessThanOrEqual(fieldSize);
       }
     }
   });
 
-  it('pins TheLeague at the decided 7 slots / 8 quorum, closing Thursday', () => {
+  it('pins TheLeague at the decided 7 slots, closing Thursday', () => {
     // Thursday, not Wednesday: the deadline rides the one owners already obey
     // (lineups before the first kickoff) rather than competing with it.
     expect(LEAGUES.theleague.ownersPoll).toMatchObject({
       enabled: true,
       slots: 7,
-      quorum: 8,
       closeWeekday: 4,
       closeHourPT: 16,
     });
   });
 
-  it('pins the AFL at 10 slots / 12 quorum — scaled to 24, not copied from 16', () => {
-    // The AFL's numbers are TheLeague's RULES re-applied to a 24-team field,
-    // not TheLeague's numbers reused: 10 keeps roughly the same share of the
-    // field ranked (7/16 ≈ 10/24), and 12 is the same "half the field" quorum
-    // that 8-of-16 is. Copying 7/8 across would have ranked under a third of
-    // the AFL and set a quorum a third of the league could hit alone.
+  it('pins the AFL at 10 slots — scaled to 24, not copied from 16', () => {
+    // The AFL's depth is TheLeague's RULE re-applied to a 24-team field, not
+    // TheLeague's number reused: 10 keeps roughly the same share of the field
+    // ranked (7/16 ≈ 10/24). Copying 7 across would have ranked under a third
+    // of the AFL.
     expect(LEAGUES['afl-fantasy'].ownersPoll).toMatchObject({
       enabled: true,
       slots: 10,
-      quorum: 12,
       closeWeekday: 4,
       closeHourPT: 16,
     });
