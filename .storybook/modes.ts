@@ -51,8 +51,38 @@ export const leagueModes = {
   'AFL dark': { theme: 'dark', league: 'afl' },
 } as const;
 
+/**
+ * MFL Live's surface.
+ *
+ * Added for the shared live-scoring kit, which is the first component set that
+ * genuinely renders under `data-league="mfl"` — and whose card ground
+ * (`#1e2126`) differs from BOTH TheLeague's `#262626` and the AFL's `#16283c`.
+ * Franchise colours are resolved server-side against whichever of those three
+ * the surface actually uses, so without this pair the one surface with its own
+ * ground would never be snapshotted at all.
+ *
+ * Kept separate from `leagueModes` so existing stories do not silently gain
+ * two snapshots each — the budget note above applies to this as much as to the
+ * AFL pair.
+ */
+export const mflModes = {
+  'MFL light': { theme: 'light', league: 'mfl' },
+  'MFL dark': { theme: 'dark', league: 'mfl' },
+} as const;
+
 /** Theme + league matrix — for components that genuinely render in both leagues. */
 export const allModes = {
   ...themeModes,
   ...leagueModes,
+} as const;
+
+/**
+ * Every surface the shared live-scoring kit draws on: TheLeague, the AFL and
+ * MFL Live, light and dark. Six snapshots a story — spent only where a
+ * component's colours are resolved against a per-surface ground.
+ */
+export const liveSurfaceModes = {
+  ...themeModes,
+  ...leagueModes,
+  ...mflModes,
 } as const;
