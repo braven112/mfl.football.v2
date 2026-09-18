@@ -353,6 +353,15 @@ describe('buildNagPushes — the "still good?" prompt', () => {
     expect(pushes[0].body).toMatch(/no ballot on file/i);
   });
 
+  it('does NOT ask a never-voter whether their ballot still stands', () => {
+    // It shipped conflated and read "You have no ballot on file. Still how you
+    // see it?" — a question about a ballot that does not exist. Two audiences,
+    // two asks: a ballot-holder gets the question, a never-voter an invitation.
+    const pushes = send([{ franchiseId: '0007', updatedAt: null, stale: false }]);
+    expect(pushes[0].body).not.toMatch(/still how you see it/i);
+    expect(pushes[0].body).toMatch(/rank the league/i);
+  });
+
   it('sends NOTHING to an owner whose ballot is current', () => {
     // The whole reason the old nag was retired: it must never become a weekly
     // message to people who already did the thing.
