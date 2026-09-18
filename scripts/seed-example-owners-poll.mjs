@@ -234,7 +234,16 @@ async function main() {
   // publishes. `source` is the only key this script adds.
   const { block } = buildClosedPollBlock({
     ballots,
-    window: { ...window, slots: poll.slots, eligibleFranchiseIds },
+    // The league's real close schedule rides along, so the seeded example's
+    // section states the same deadline a real week would rather than falling
+    // back to the component's defaults.
+    window: {
+      ...window,
+      slots: poll.slots,
+      eligibleFranchiseIds,
+      closeWeekday: poll.closeWeekday,
+      closeHourPT: poll.closeHourPT,
+    },
     compositeRankByFid,
   });
   block.source = SYNTHETIC_POLL_SOURCE;
