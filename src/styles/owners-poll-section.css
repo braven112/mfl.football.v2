@@ -206,3 +206,46 @@
 @media (max-width: 34rem) {
   .op-ballot__owner { min-width: 0; }
 }
+
+/* --- standing-vote schedule + staleness prompt ------------------------- */
+
+/* The sentence that answers "when does this start and end". Deliberately not
+   fine print: not knowing was the complaint that prompted the rewrite. */
+.op-strip__schedule {
+  margin: 0.4rem 0 0;
+  font-size: 0.875rem;
+  color: var(--content-text-muted);
+}
+
+.op-coverage {
+  margin: 0 0 0.6rem;
+  font-size: 0.875rem;
+  color: var(--content-text-muted);
+}
+.op-coverage strong { color: var(--page-text); }
+
+/* "Still good?" — shown only once a ballot passes the stale threshold. */
+.op-strip__stale {
+  margin: 0.5rem 0 0;
+  font-size: 0.875rem;
+  color: var(--content-text-muted);
+}
+
+.op-strip__affirm {
+  display: inline-block;
+  padding: 0.25rem 0.7rem;
+  border: 1px solid var(--primary-color);
+  border-radius: var(--radius-sm, 6px);
+  background: transparent;
+  color: var(--primary-color);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.op-strip__affirm:hover:not(:disabled) {
+  background: var(--primary-color);
+  /* Dark ink on the filled accent, never white. --league-accent is LIGHT in
+     dark mode, where white-on-accent measures under the 4.5:1 floor. */
+  color: var(--content-bg);
+}
+.op-strip__affirm:disabled { opacity: 0.6; cursor: default; }

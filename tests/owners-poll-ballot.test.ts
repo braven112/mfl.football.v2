@@ -71,7 +71,9 @@ describe('validateBallot', () => {
       eligibleFranchiseIds: FIELD,
     });
     expect(result.ok).toBe(false);
-    expect(result.error).toMatch(/only appear once/i);
+    // The return is a discriminated union now, so `error` needs the narrowing
+    // the `ok` check already proves.
+    expect(result.ok === false && result.error).toMatch(/only appear once/i);
   });
 
   it('rejects a franchise from another league', () => {
@@ -81,7 +83,9 @@ describe('validateBallot', () => {
       eligibleFranchiseIds: FIELD,
     });
     expect(result.ok).toBe(false);
-    expect(result.error).toMatch(/not in this league/i);
+    // The return is a discriminated union now, so `error` needs the narrowing
+    // the `ok` check already proves.
+    expect(result.ok === false && result.error).toMatch(/not in this league/i);
   });
 
   it('rejects non-id entries and non-array input', () => {

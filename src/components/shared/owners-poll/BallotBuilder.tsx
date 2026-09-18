@@ -311,7 +311,7 @@ export default function BallotBuilder({
       {justSaved && !dirty && (
         <>
           <p className="op-saved" role="status">
-            Ballot saved. You can change it until the poll closes.
+            Ballot saved. It stands until you change it.
           </p>
           {/* Asked HERE and not before: they have just shown they care about
               the result, and the thing being offered is that result. */}
@@ -416,14 +416,16 @@ function ClosesAt({ iso, league }: { iso: string; league?: LeagueClock }) {
   return <>{text || 'soon'}</>;
 }
 
-function closedHeadline(status: WindowStatus): string {
-  if (status === 'pending') return 'The ballot isn’t open yet.';
-  if (status === 'closed') return 'This week’s ballot is closed.';
-  return 'No ballot is open right now.';
+function closedHeadline(status: string) {
+  // 'pending' and 'none' cannot happen any more — voting is always open — so
+  // the only state left is a commissioner pause.
+  if (status === 'paused') return 'Voting is paused.';
+  return 'Voting is open.';
 }
 
-function closedBody(status: WindowStatus): string {
-  if (status === 'pending') return 'It opens with Tuesday morning’s column.';
-  if (status === 'closed') return 'Results publish with the column.';
-  return 'The poll runs weekly during the season.';
+function closedBody(status: string) {
+  if (status === 'paused') {
+    return 'The commissioner has suspended the poll. Your standing ballot is untouched.';
+  }
+  return 'Your ballot stands until you change it.';
 }

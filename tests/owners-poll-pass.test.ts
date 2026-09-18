@@ -328,6 +328,8 @@ describe('buildClosedPollBlock — shared with the seeded example', () => {
       [
         'ballots',
         'ballotsIn',
+        'closeHourPT',
+        'closeWeekday',
         'closesAt',
         'eligibleVoters',
         'methodology',
@@ -441,10 +443,12 @@ describe('chat copy', () => {
     expect(mod.buildNagMessage).toBeUndefined();
   });
 
-  it('open line leads with the disagreement, not the chore', () => {
+  it('open line leads with the disagreement and STATES when the result lands', () => {
+    // "I don't understand when a poll starts or ends" was the complaint that
+    // started this. Every surface now names the result time.
     const text = buildOpenLine(
       {
-        ownersPoll: { status: 'open', slots: 7 },
+        ownersPoll: { status: 'open', slots: 7, closesAt: '2026-09-10T23:00:00.000Z' },
         rankings: [{ franchiseId: '0001' }, { franchiseId: '0016' }],
       },
       teams,
@@ -452,7 +456,9 @@ describe('chat copy', () => {
     )!;
     expect(text).toContain('Team 1');
     expect(text).toContain('Team 16');
-    expect(text).toMatch(/argue with it/i);
+    expect(text).toMatch(/always open/i);
+    expect(text).toMatch(/stands until you change it/i);
+    expect(text).toMatch(/Thursday/);
     expect(text).toContain('/pecking-order/ballot');
   });
 

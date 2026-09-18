@@ -11,6 +11,13 @@
 
 import { leagueUrl } from '../../src/config/leagues-data.mjs';
 import { pairwiseAccuracy } from '../../src/utils/owners-poll-accuracy.mjs';
+import {
+  standingVoteLine,
+  stillGoodPrompt,
+  weeksSince,
+  resultTimingPhrase,
+} from '../../src/utils/owners-poll-copy.mjs';
+import { formatResultTimePT } from './owners-poll-pass.mjs';
 
 const BALLOT_PATH = '/pecking-order/ballot';
 const COLUMN_PATH = '/pecking-order';
@@ -110,10 +117,14 @@ export function buildOpenPushes({ issue, teams, eligibleFranchiseIds }) {
       ? `The computer has ${name(top.franchiseId)} #1 and ${name(bottom.franchiseId)} last.`
       : 'The column is up.';
 
+  const when = resultTimingPhrase(
+    formatResultTimePT(poll.closesAt),
+    Boolean(poll.clampedToKickoff),
+  );
   return eligibleFranchiseIds.map((franchiseId) => ({
     franchiseId,
-    title: `Owners' Poll — Week ${issue.week} is open`,
-    body: `${bait} Rank your top ${poll.slots} — about a minute.`,
+    title: `The Owners' Poll — Week ${issue.week}`,
+    body: `${bait} ${standingVoteLine(when)}`,
     url: BALLOT_PATH,
     tag: `owners-poll-open-${issue.year}-${issue.week}`,
     category: 'poll-open',
@@ -121,32 +132,48 @@ export function buildOpenPushes({ issue, teams, eligibleFranchiseIds }) {
 }
 
 /**
- * The turnout reminder, as push, to the owners who have NOT voted.
+ * The "still good?" push — the old turnout nag, repointed.
  *
- * This is the post that most deserved to leave the chat. A count-only nag is
- * the least newsworthy thing the poll produces and the most repetitive, and in
- * a personal channel it can do what it could never do publicly: address the
- * person who actually still needs to act, without naming them to anyone else.
+ * It used to tell an owner they had not voted. Under standing votes that
+ * message stops being true for almost everyone by about Week 5, and a cron
+ * whose audience shrinks to nothing is dead weight.
  *
- * The count-only rule still holds in what it SAYS — an owner is told how many
- * ballots are in, never who is missing.
+ * What replaced it is the one thing standing votes genuinely need. A ballot
+ * nobody has revisited is republished in every snapshot as though its owner
+ * re-affirmed it, so by midseason a real share of the consensus is inertia.
+ * This asks the owners whose ballot has gone stale whether it still stands —
+ * one tap either way, and standing pat becomes a choice rather than silence.
+ *
+ * Two audiences, one message shape:
+ *   - never voted        → "you have no ballot on file"
+ *   - stale ballot       → "your ballot is N weeks old"
+ *
+ * Owners whose ballot is current get nothing, which is the point: this can
+ * never become the weekly nag it replaced.
+ *
+ * @param {object} args
+ * @param {number} args.week
+ * @param {string} args.closesAt
+ * @param {Array<{ franchiseId: string, updatedAt: string|null, stale?: boolean }>} [args.standing]
+ * @param {Date} [args.now]
  */
-export function buildNagPushes({ league, week, ballotsIn, eligibleVoters, closesAt, nonVoters }) {
-  if (!Array.isArray(nonVoters) || nonVoters.length === 0) return [];
-  const closes = new Date(closesAt).toLocaleString('en-US', {
-    timeZone: 'America/Los_Angeles',
-    weekday: 'long',
-    hour: 'numeric',
-    hour12: true,
-  });
-  return nonVoters.map((franchiseId) => ({
-    franchiseId,
-    title: `Owners' Poll closes ${closes} PT`,
-    body: `${ballotsIn} of ${eligibleVoters} ballots are in and yours isn't. Same deadline as your lineup.`,
-    url: BALLOT_PATH,
-    tag: `owners-poll-nag-${week}`,
-    category: 'poll-reminder',
-  }));
+export function buildNagPushes({ week, closesAt, standing = /** @type {any[]} */ ([]), now = new Date() }) {
+  const when = formatResultTimePT(closesAt);
+  return standing
+    .map(({ franchiseId, updatedAt, stale }) => {
+      const weeksOld = weeksSince(updatedAt, now);
+      const never = updatedAt == null;
+      if (!never && !stale) return null;
+      return {
+        franchiseId,
+        title: never ? "You have no Owners' Poll ballot" : 'Is your ballot still good?',
+        body: `${stillGoodPrompt(never ? null : weeksOld)} Next result ${when}.`,
+        url: BALLOT_PATH,
+        tag: `owners-poll-still-good-${week}`,
+        category: 'poll-reminder',
+      };
+    })
+    .filter(Boolean);
 }
 
 /**
