@@ -3,6 +3,96 @@
 Weekly owner vote that publishes inside The Pecking Order. Plan:
 `docs/plans/owners-poll.md`.
 
+## 2026-09-18 — The quorum was the thing making the feature announce its own failure
+
+Four complaints arrived together and only one of them was really four:
+the GroupMe post, the missing schedule, the quorum, and the lineup strip.
+Pulling the quorum made the first one disappear on its own.
+
+A sub-quorum week had no consensus to publish, so the reveal had to say
+SOMETHING — and what it said was "only 5 of 16 ballots came in, short of the 8
+needed." That went into a chat capped at ONE automated post per Pacific day
+(`groupme-day-plan.mjs`), so the poll spent the league's whole daily budget
+announcing that the poll had not worked. It also wrote a matching Schefter
+article, which put "nobody used this feature" on every owner's homepage as a
+durable record.
+
+Nothing here was a bug. Every piece behaved as designed; the design just had a
+state whose only honest output was self-criticism. **A feature with a "did not
+reach threshold" branch will eventually spend its most expensive channel on
+that branch** — and the fix was not better copy for it, it was removing the
+threshold so the state stops existing. With no quorum the only silent case is a
+week nobody voted in, which is genuinely not news.
+
+The generalizable half: when a gate produces an output nobody wants to read,
+ask whether the gate is earning its keep before you rewrite the message.
+
+## 2026-09-18 — Standing votes move the failure mode from turnout to inertia
+
+Making a ballot stand until changed fixes turnout permanently and creates a
+subtler problem in its place: an owner who files in Week 2 and never returns is
+republished in every snapshot as though they re-affirmed it. By midseason a
+real share of the "consensus" is nobody's current opinion.
+
+Three consequences that were not obvious until the model changed:
+
+- **Turnout stops being turnout.** A standing count only grows and settles near
+  the whole league. It is COVERAGE — "how much of the league has an opinion on
+  file" — and presenting a climbing number as weekly participation would be
+  false. The progress bar went with it: the quorum mark's own comment said it
+  "is the point of the meter: a bar with no threshold on it is just
+  decoration", which, once there is no threshold, argues for deleting the bar.
+- **The nag's audience empties out.** "You have not voted" stops being true for
+  almost everyone by about Week 5, so the cron becomes dead weight. Repointed at
+  "your ballot is N weeks old — still good?", it earns its slot again and turns
+  standing pat back into an affirmative act.
+- **`updatedAt` becomes load-bearing and must NOT be refreshed at snapshot
+  time.** Rewriting it to the announce instant is the tempting shortcut and it
+  destroys the only fact worth having: that this owner has not changed their
+  mind in five weeks. Every week would falsely claim a full slate of fresh
+  ballots.
+
+Also: a longer-lived ballot makes validation failures likelier, and under the
+new silence rule a mid-season `slots` change produces output BYTE-IDENTICAL to
+"nobody voted" — no chat post, no feed post, no section. `snapshotPoll` treats
+`dropped > 0 && ballots.length === 0` as a hard error for exactly that reason.
+Silence as a feature requires a loud failure mode underneath it, or a config
+bug hides for a season.
+
+## 2026-09-18 — A derived fact must not be made durable
+
+The always-open window nearly shipped as a stored pointer with a TTL, the way
+the week-scoped one was. That would have been a time bomb: nothing rewrites an
+always-open pointer, so it expires, and an expired pointer reads as "no ballot
+is open". The feature would have switched itself off with no error, no alert
+and no deploy to correlate it with.
+
+The pause flag is the inverse and deliberately so — it stores "voting is
+suspended", is ABSENT in the normal case, and therefore fails OPEN. Losing the
+key restores the normal state instead of breaking it.
+
+## 2026-09-18 — Three quiet failures that compiled fine
+
+None of these was catchable by "does it build", and all three were found by
+rendering the output and reading it rather than trusting a green suite.
+
+- **Naming a JSDoc tag in prose voids the block.** A sentence like "The @param
+  block is not decoration" sitting above real declarations is parsed as a
+  malformed tag, and every genuine tag after it is silently discarded. The
+  block written specifically to make options optional was a complete no-op; the
+  tell was the expected type coming back all-`any` and all-required.
+- **Stacked JSDoc blocks discard the earlier one.** TypeScript reads only the
+  LAST block before a declaration, so adding a `@param` block above an existing
+  prose block throws the prose away from every tooltip.
+- **A sentence can be grammatical and absurd.** The "Still good?" push served
+  two audiences with one line and told never-voters: "You have no ballot on
+  file. Still how you see it?" — a question about a ballot that does not exist.
+  Only visible once addressed to a real person.
+
+The practice worth keeping: for anything that produces WORDS, build a tiny
+script that renders the real output with real data and read it. Three bugs in
+one session, none of which any test would have been written to catch.
+
 ## 2026-09-06 — A section that renders nothing when its data is absent can ship invisible
 
 `OwnersPollSection.astro` correctly renders NOTHING when an issue has no
