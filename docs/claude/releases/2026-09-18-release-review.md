@@ -3,8 +3,11 @@
 **Verdict: GO**
 
 **Range:** `3a6fc0b266..7f35c78fe3` — 15 commits, 114 files, +38,821/−4,254
-**Run at:** 2026-09-17 23:40 PT (the promotion itself is blocked until the
-Thursday-night NFL blackout clears — see *Promotion timing* below).
+**Reviewed at:** 2026-09-17 23:40 PT · **Promoted:** 2026-09-17 23:47 PT
+**Promoted as:** `main` `3a6fc0b266` → `5dc25ad359` (clean fast-forward).
+The blackout was OVERRIDDEN and the release tag did NOT push — see
+*Promotion outcome* at the end, which is the authoritative record of what
+actually shipped and what is still outstanding.
 
 ## Features on the train
 
@@ -128,10 +131,78 @@ model to compare them against all 380 utils. That is a narrower net: it found
 the money-formatting cluster, but a semantic duplicate under a different name
 could have been missed.
 
-## Promotion timing
+## Promotion outcome — promoted 2026-09-17 23:47 PT
 
-`/promote` remains blocked at step 3 until the blackout clears —
-`scripts/release-blackout.mjs` exits 1 for Thursday 2026-09-17, an NFL week
-start. Friday or Saturday morning PT is clear of the routine Thu/Sat/Sun/Mon
-game days. Confirm TheLeague's own draft date is not within a day; it lives in
-the league-events registry and is the one blackout rule the script cannot check.
+Promoted the same night the review was written, not on the Friday this
+document originally projected. What actually happened, including the two gates
+that were not satisfied the normal way:
+
+**Blackout (step 3) — OVERRIDDEN, explicitly, by Brandon.**
+`scripts/release-blackout.mjs` exited 1: Thursday 2026-09-17 is an NFL week
+start. The override was a deliberate call on the grounds that the blackout
+guards AUTOMATED promotions and this one was being run by hand. Recorded here
+because the skill requires the override be the user's, said out loud, and
+reviewable afterwards.
+
+Worth keeping for next time: the promotion ran at 23:47 PT, **13 minutes**
+before the blackout would have cleared on its own. Waiting would have cost
+nothing and needed no override.
+
+Also correcting this document's own earlier line: Friday 2026-09-18 is clear
+(exit 0), but **Saturday is NOT** — `Sat/Sun/Mon` are all game days in season.
+The window was Friday or the following Tuesday, not "Friday or Saturday".
+
+**Chromatic (step 5b) — NOT captured on `staging`.**
+The session could not dispatch it (`403 Resource not accessible by
+integration`), and Brandon took the capture manually. The promotion push
+therefore fired Chromatic run 465 on `main`, which takes the
+`--auto-accept-changes` branch of `chromatic.yml:552`. Anyone auditing this
+week's visual baseline should know it may have been accepted without a human
+diff review.
+
+**Step 6 — clean fast-forward.** `main` `3a6fc0b266` → `5dc25ad359`, verified
+`HEAD == origin/staging` exactly, no merge commit. 16 commits, 117 files,
++39,067/−4,254.
+
+**The tag — FAILED, and this blocks step 8.**
+`git push origin refs/tags/v2026.09.18` returned **HTTP 403** on five attempts
+with backoff. Branch pushes from the same credentials succeed (`main` landed
+two minutes earlier), so this is a tag-specific permission limit, not a network
+fault. There is no MCP fallback — the GitHub tools expose only read operations
+for tags and releases.
+
+Consequence: `weekly-changelog-rollup.yml` fires on `push: tags: ['v*']`, so
+**no What's New article and no `site-update` notification went out** with this
+release. The 79 staged changes remain queued and valid — one `featured` entry
+per league, zero untagged. The tag must be pushed by hand:
+
+```bash
+git tag -a v2026.09.18 5dc25ad359 -m "Release 2026-09-18"
+git push origin v2026.09.18
+```
+
+One timing note: if the Monday 8pm PT cron fires first,
+`scripts/changelog-rollup-gate.mjs` should make it yield while a release is
+pending; if it does not, it burns `weekly-rollup-2026-09-21` on whatever is
+queued and this release's entries roll to the following Monday.
+
+**Step 7 — production verified up, on the new build.**
+
+| Check | Result |
+|---|---|
+| `theleague.us` → `www.theleague.us` | 200, 290 KB, "Home" |
+| `afl-fantasy.com` → `www.afl-fantasy.com` | 200, 293 KB, "AFL — American Football League" |
+| `/top-players` (TheLeague) | 200, 553 KB, "Top Players · 2026" |
+| `/top-players` (AFL) | 200, 579 KB, "Top Players · 2026" |
+| `/front-office`, both leagues | 200 |
+| `/no-such-page-xyz` | 404 |
+
+`/top-players` is the load-bearing check: that route did not exist before this
+release, so a 200 with rendered content proves the NEW build is serving rather
+than the old one still answering. The 404 on a bogus path rules out the
+`error-pages.md` failure mode where a missing `/500` route makes every SSR
+crash render as the styled 404.
+
+Two method notes for whoever runs step 7 next: both apexes 307 to `www`, so the
+check needs `curl -L`; and `mfl.football` answers **406** to a non-browser
+user-agent, which is UA filtering, not an outage — pass a browser UA.
