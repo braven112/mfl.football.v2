@@ -17,6 +17,8 @@ import { resolve } from 'node:path';
 import LvWinProbBar from '../src/components/shared/live/LvWinProbBar';
 import LvRedZoneBanner from '../src/components/shared/live/LvRedZoneBanner';
 import LvEmptyState, { type LvEmptyReason } from '../src/components/shared/live/LvEmptyState';
+import LvFeedStatus from '../src/components/shared/live/LvFeedStatus';
+import type { FeedSnapshot } from '../src/utils/live-scoring-view';
 import type { RedZoneAlert } from '../src/utils/broadcast-moments';
 
 /**
@@ -223,5 +225,91 @@ describe('LvEmptyState — four states that must never collapse into two', () =>
   it('names the league when a board holds several', () => {
     expect(empty('no-matchup', 'AFL')).toContain('AFL —');
     expect(empty('no-matchup')).not.toContain('—');
+  });
+});
+
+// ── LvFeedStatus ──────────────────────────────────────────────────────────
+
+const feed = (over: Partial<FeedSnapshot> = {}): FeedSnapshot => ({
+  status: 'ok',
+  fetchedAt: Date.now(),
+  ...over,
+});
+
+const pill = (feeds: FeedSnapshot[], anyLive = false, gamesLive = 0, compact = false) =>
+  text(
+    renderToString(
+      createElement(LvFeedStatus, { feeds, anyLive, gamesLive, compact }),
+    ),
+  );
+
+describe('LvFeedStatus — a heartbeat, or nothing at all', () => {
+  it('renders NOTHING when no poller is enabled', () => {
+    // With both feeds off (a bundled sample, a story) there is no freshness to
+    // report. A pill stuck on "Connecting…" would be a lie in the other
+    // direction from the static "Live" badge this replaced.
+    expect(pill([])).toBe('');
+  });
+
+  it('says Connecting before anything has landed, and claims no age', () => {
+    const html = pill([feed({ status: 'loading', fetchedAt: 0 })]);
+    expect(html).toContain('Connecting');
+    // fetchedAt 0 is not a timestamp — treating it as one printed "56 years
+    // ago" on the board this ports from.
+    expect(html).not.toMatch(/updated/);
+    expect(html).not.toMatch(/ago/);
+  });
+
+  it('keeps a FAILED poll visually distinct from an idle one', () => {
+    const failing = pill([feed({ status: 'error', fetchedAt: 0 })]);
+    const idle = pill([feed({ status: 'loading', fetchedAt: 0 })]);
+    expect(failing).toContain('lv-status--error');
+    expect(failing).toContain('lv-dot--err');
+    expect(idle).toContain('lv-status--pending');
+    expect(failing).not.toBe(idle);
+  });
+
+  it('is announced as a status, not read as a caption', () => {
+    expect(pill([feed()])).toContain('role="status"');
+  });
+
+  it('counts live games, and pluralises', () => {
+    expect(pill([feed()], true, 1)).toContain('1 game live');
+    expect(pill([feed()], true, 4)).toContain('4 games live');
+  });
+
+  it('drops the games clause in compact (detail-header) mode', () => {
+    expect(pill([feed()], true, 4, true)).not.toContain('games live');
+  });
+
+  it('hides the games clause entirely when none is being played', () => {
+    expect(pill([feed()], false, 0)).not.toMatch(/game/);
+  });
+
+  it('reports the NEWEST successful poll, not the first', () => {
+    const html = pill([
+      feed({ fetchedAt: Date.now() - 600_000 }),
+      feed({ fetchedAt: Date.now() }),
+    ]);
+    expect(html).toMatch(/just now/);
+  });
+
+  it('keeps the error tone even when one feed is fresh', () => {
+    // A failed poller outranks a healthy one: the board is showing the last
+    // numbers it could confirm, and the pill must stop claiming they are
+    // current.
+    expect(pill([feed(), feed({ status: 'error' })])).toContain('lv-status--error');
+  });
+});
+
+describe('LvFeedStatus\u2019s stylesheet carries every tone it can emit', () => {
+  const css = readFileSync(resolve(__dirname, '../src/styles/live.css'), 'utf8');
+
+  it.each(['live', 'idle', 'error', 'pending'])('defines .lv-status--%s', (tone) => {
+    expect(css).toContain(`.lv-status--${tone}`);
+  });
+
+  it('defines the error dot, which no other component emits', () => {
+    expect(css).toContain('.lv-dot--err');
   });
 });

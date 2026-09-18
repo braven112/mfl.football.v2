@@ -75,6 +75,64 @@ export function renderOrder(
   return [0, 1];
 }
 
+/* ── board order ─────────────────────────────────────────────────────────── */
+
+/** One panel's matchups, split into the ones that lead the board and the rest. */
+export interface OrderedMatchups {
+  /** Rendered large, at the top. The viewer's own, or one promoted filler. */
+  featured: LiveMatchup[];
+  /** Everything else, closest game first. */
+  rest: LiveMatchup[];
+  /**
+   * Whether `featured` is genuinely the viewer's. Only a real one earns the
+   * "YOUR MATCHUP" badge — a promoted closest-game filler must not claim it.
+   */
+  hasYours: boolean;
+}
+
+/**
+ * A stable identity for a pairing, independent of the order MFL sent it in.
+ *
+ * MFL returns arrays in nondeterministic order, so the feed index is not a
+ * tiebreak — two matchups at the same margin could swap places between two
+ * polls of an unchanged board. The sorted franchise-id pair cannot.
+ */
+function pairingKey(matchup: LiveMatchup): string {
+  return [matchup.sides[0].franchiseId, matchup.sides[1].franchiseId].sort().join(':');
+}
+
+/**
+ * Split a panel into featured and rest, closest game first.
+ *
+ * Three rules, each with a reason:
+ *
+ *  - **The viewer's matchups lead**, and a doubleheader puts them in several,
+ *    so this is a FILTER rather than a find. Membership comes from
+ *    `viewerSide`, never from comparing a franchise id — both leagues have a
+ *    franchise `0001`, and the reader is the only layer that knows which
+ *    league a side belongs to.
+ *  - **With no matchup of the viewer's, the closest game is promoted** so the
+ *    board still has a lead card, but `hasYours` stays false.
+ *  - **The rest sort by live margin**, ascending — the closest game is the one
+ *    worth looking at. Ties break on the pairing key, so an unchanged board
+ *    never reshuffles between polls.
+ */
+export function orderPanelMatchups(matchups: readonly LiveMatchup[]): OrderedMatchups {
+  const yours = matchups.filter(isViewerMatchup);
+  const others = matchups
+    .filter((m) => !isViewerMatchup(m))
+    .sort((a, b) => {
+      const ma = Math.abs(a.sides[0].live - a.sides[1].live);
+      const mb = Math.abs(b.sides[0].live - b.sides[1].live);
+      if (ma !== mb) return ma - mb;
+      return pairingKey(a).localeCompare(pairingKey(b));
+    });
+
+  return yours.length > 0
+    ? { featured: yours, rest: others, hasYours: true }
+    : { featured: others.slice(0, 1), rest: others.slice(1), hasYours: false };
+}
+
 /* ── colours ─────────────────────────────────────────────────────────────── */
 
 /** A colour claim with its hand-picked dark variants swapped in. */

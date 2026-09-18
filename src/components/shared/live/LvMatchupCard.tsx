@@ -27,6 +27,13 @@ export interface LvMatchupCardProps {
   viewerFirst?: boolean;
   /** Every starter's game is final. Drops the win-prob bar and the live dot. */
   isFinal?: boolean;
+  /**
+   * This card LEADS its panel — the viewer's own matchup, or the closest game
+   * promoted in its place. Presentation only: the "YOUR MATCHUP" badge is
+   * decided by `viewerSide`, never by this, so a promoted filler is rendered
+   * large without claiming to be anybody's.
+   */
+  lead?: boolean;
   onOpen: () => void;
 }
 
@@ -34,6 +41,7 @@ export default function LvMatchupCard({
   matchup,
   viewerFirst = false,
   isFinal = false,
+  lead = false,
   onOpen,
 }: LvMatchupCardProps): JSX.Element {
   const [first, second] = renderOrder(matchup, viewerFirst);
@@ -44,8 +52,10 @@ export default function LvMatchupCard({
   const yetToPlay = a.yetToPlay + b.yetToPlay;
   const aLeads = a.live >= b.live;
 
-  const sideRow = (team: LiveTeam, lead: boolean, which: 0 | 1) => (
-    <div className={`lv-side${lead ? ' lv-side--lead' : ''}`}>
+  // `ahead` is which SIDE is winning, not whether this CARD leads its panel —
+  // two different "lead"s, and naming them the same shadowed the prop.
+  const sideRow = (team: LiveTeam, ahead: boolean, which: 0 | 1) => (
+    <div className={`lv-side${ahead ? ' lv-side--lead' : ''}`}>
       {team.icon ? (
         <span className="lv-side__crest">
           <img src={team.icon} alt={team.iconAlt} loading="lazy" />
@@ -68,7 +78,7 @@ export default function LvMatchupCard({
   return (
     <button
       type="button"
-      className="lv-card lv-matchup"
+      className={`lv-card lv-matchup${lead ? ' lv-card--lead' : ''}`}
       style={matchup.colorVars}
       onClick={onOpen}
       aria-label={`Open ${a.name} against ${b.name}`}

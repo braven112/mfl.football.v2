@@ -11,6 +11,7 @@ import {
   buildLiveMatchup,
   buildLiveTeam,
   isViewerMatchup,
+  orderPanelMatchups,
   opponentTeam,
   renderOrder,
   resolveMatchupColorVars,
@@ -285,5 +286,96 @@ describe('colours are resolved per theme, against THIS surface’s card', () => 
     const vars = resolveMatchupColorVars({ color: '#1c497c' }, { color: '#1c4a7d' }, 'theleague');
     expect(vars['--t0-light']).not.toBe(vars['--t1-light']);
     expect(vars['--t0-dark']).not.toBe(vars['--t1-dark']);
+  });
+});
+
+describe('orderPanelMatchups — the viewer leads, then the closest game', () => {
+  /** A pairing between two named franchises at two given live scores. */
+  const pair = (
+    fidA: string,
+    fidB: string,
+    a: number,
+    b: number,
+    viewerFranchiseId: string | null = null,
+    index = 0,
+  ) =>
+    buildLiveMatchup({
+      index,
+      side0: team(fidA, a),
+      side1: team(fidB, b),
+      side0Colors: { color: '#1c497c' },
+      side1Colors: { color: '#c41e3a' },
+      surface: 'theleague',
+      viewerFranchiseId,
+    });
+
+  it('features the viewer\u2019s matchup and flags it as genuinely theirs', () => {
+    const board = [pair('0003', '0004', 100, 99), pair('0001', '0002', 120, 60, '0001')];
+    const { featured, rest, hasYours } = orderPanelMatchups(board);
+    expect(hasYours).toBe(true);
+    expect(featured).toHaveLength(1);
+    expect(featured[0].sides[0].franchiseId).toBe('0001');
+    expect(rest).toHaveLength(1);
+  });
+
+  it('features EVERY matchup the viewer is in — a doubleheader puts them in several', () => {
+    const board = [
+      pair('0001', '0002', 100, 90, '0001', 0),
+      pair('0001', '0005', 80, 95, '0001', 1),
+      pair('0003', '0004', 70, 71),
+    ];
+    const { featured, hasYours } = orderPanelMatchups(board);
+    expect(hasYours).toBe(true);
+    expect(featured).toHaveLength(2);
+  });
+
+  it('promotes the closest game when the viewer is in none, WITHOUT claiming it', () => {
+    // The badge is the thing at stake: a promoted filler that says "YOUR
+    // MATCHUP" names somebody else's team as yours.
+    const board = [pair('0003', '0004', 120, 60), pair('0005', '0006', 100, 99)];
+    const { featured, rest, hasYours } = orderPanelMatchups(board);
+    expect(hasYours).toBe(false);
+    expect(featured).toHaveLength(1);
+    expect(featured[0].sides[0].franchiseId).toBe('0005');
+    expect(rest).toHaveLength(1);
+  });
+
+  it('sorts the rest by live margin, closest first', () => {
+    const board = [
+      pair('0001', '0002', 100, 40, '0001'),
+      pair('0003', '0004', 100, 60),
+      pair('0005', '0006', 100, 98),
+      pair('0007', '0008', 100, 80),
+    ];
+    const margins = orderPanelMatchups(board).rest.map((m) =>
+      Math.abs(m.sides[0].live - m.sides[1].live),
+    );
+    expect(margins).toEqual([2, 20, 40]);
+  });
+
+  it('does NOT reshuffle equal margins between polls of an unchanged board', () => {
+    // MFL returns arrays in nondeterministic order, so the feed index is not a
+    // tiebreak. Two matchups at the same margin must land the same way round
+    // however the feed happened to send them.
+    const forward = [pair('0003', '0004', 100, 90, null, 0), pair('0005', '0006', 80, 70, null, 1)];
+    const shuffled = [pair('0005', '0006', 80, 70, null, 0), pair('0003', '0004', 100, 90, null, 1)];
+    const keys = (list: ReturnType<typeof orderPanelMatchups>) =>
+      [...list.featured, ...list.rest].map((m) => m.sides[0].franchiseId);
+    expect(keys(orderPanelMatchups(forward))).toEqual(keys(orderPanelMatchups(shuffled)));
+  });
+
+  it('handles an empty panel without inventing a featured card', () => {
+    expect(orderPanelMatchups([])).toEqual({ featured: [], rest: [], hasYours: false });
+  });
+
+  it('never drops or duplicates a matchup', () => {
+    const board = [
+      pair('0001', '0002', 100, 90, '0001'),
+      pair('0003', '0004', 70, 71),
+      pair('0005', '0006', 60, 20),
+    ];
+    const { featured, rest } = orderPanelMatchups(board);
+    expect(featured.length + rest.length).toBe(board.length);
+    expect(new Set([...featured, ...rest]).size).toBe(board.length);
   });
 });

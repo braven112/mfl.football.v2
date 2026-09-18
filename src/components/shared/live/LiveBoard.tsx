@@ -20,11 +20,15 @@
  * an outage this repo has already shipped.
  */
 import { useEffect, useRef, useState, type JSX, type ReactNode } from 'react';
-import type { LiveBoard as Board, LiveMatchup } from '../../../types/live';
+import type { LiveBoard as Board, LiveMatchup, LivePanel } from '../../../types/live';
 import LvMatchupCard from './LvMatchupCard';
 import LvMatchupDetail from './LvMatchupDetail';
 import LvRedZoneBanner from './LvRedZoneBanner';
 import LvEmptyState from './LvEmptyState';
+import LvFeedStatus from './LvFeedStatus';
+import LvWeekPicker from './LvWeekPicker';
+import { orderPanelMatchups } from '../../../utils/live/model';
+import type { FeedSnapshot } from '../../../utils/live-scoring-view';
 import { shouldPollLive } from '../../../hooks/useNflScoreboard';
 import { fromMflLiveBoard } from '../../../utils/live/from-mfl-live';
 import type { MflLiveBoard } from '../../../types/mfl-live';
@@ -62,8 +66,24 @@ export interface LiveBoardProps {
   viewerFirst?: boolean;
   /** The NFL games rail, rendered by the page so it keeps its own poller. */
   rail?: ReactNode;
-  /** The freshness pill, likewise. */
-  status?: ReactNode;
+  /** Page heading. */
+  title?: string;
+  /**
+   * Bundled-sample mode. The label is shown as a badge and the pill is
+   * suppressed, because with the pollers off there is no freshness to report
+   * and a pill stuck on "Connecting…" would be a lie.
+   */
+  demoLabel?: string;
+  /**
+   * Feed snapshots from pollers this island does NOT own — the NFL scoreboard
+   * one that the rail runs. Its own board poll is tracked internally, so the
+   * pill reports every enabled feed without the page having to assemble them.
+   */
+  extraFeeds?: FeedSnapshot[];
+  /** Hide the week selector. A story does; no production surface should. */
+  hideWeekPicker?: boolean;
+  /** Intercept the week change instead of navigating. For a story. */
+  onSelectWeek?: (week: number) => void;
 }
 
 /**
@@ -78,6 +98,35 @@ function isMatchupFinal(matchup: LiveMatchup): boolean {
   return rows.length > 0 && rows.every((r) => r.secondsRemaining <= 0);
 }
 
+/**
+ * One panel's cards: the lead row, then the rest.
+ *
+ * A component rather than an inline block so the ordering is computed once per
+ * panel per render and the empty arm above keeps `panel.status` narrowed —
+ * branching on a derived `ordered ?? null` widened it back to including 'ok'.
+ */
+function PanelCards({
+  panel,
+  card,
+}: {
+  panel: LivePanel;
+  card: (panel: LivePanel, matchup: LiveMatchup, lead: boolean) => JSX.Element;
+}): JSX.Element {
+  const ordered = orderPanelMatchups(panel.matchups);
+  return (
+    <>
+      {ordered.featured.length > 0 && (
+        <div className="lv-cards lv-cards--lead">
+          {ordered.featured.map((m) => card(panel, m, true))}
+        </div>
+      )}
+      {ordered.rest.length > 0 && (
+        <div className="lv-cards">{ordered.rest.map((m) => card(panel, m, false))}</div>
+      )}
+    </>
+  );
+}
+
 export default function LiveBoard({
   board: initialBoard,
   pollUrl,
@@ -85,10 +134,22 @@ export default function LiveBoard({
   isLive = false,
   viewerFirst = false,
   rail,
-  status,
+  title = 'Live Scoring',
+  demoLabel,
+  extraFeeds,
+  hideWeekPicker = false,
+  onSelectWeek,
 }: LiveBoardProps): JSX.Element {
   const [board, setBoard] = useState<Board>(initialBoard);
   const [selected, setSelected] = useState<LiveMatchup | null>(null);
+  /**
+   * This island's own poll, as the pill reads it. `fetchedAt` stays 0 until a
+   * poll SUCCEEDS — treating 0 as a timestamp prints "56 years ago" — and a
+   * failure raises the status without clearing the last good time, which is
+   * what lets the pill say "we could not confirm these" while the scores from
+   * a minute ago stay on screen.
+   */
+  const [feed, setFeed] = useState<FeedSnapshot>({ status: 'idle', fetchedAt: 0 });
 
   // Read inside the loop so the cadence follows the LATEST slate without the
   // effect re-subscribing on every poll.
@@ -114,10 +175,16 @@ export default function LiveBoard({
         // could not reach the feed" stay separate all the way to the screen.
         if (data && data.ok !== false) {
           setBoard(pollShape === 'mfl-live' ? fromMflLiveBoard(data as MflLiveBoard) : (data as Board));
+          setFeed({ status: 'ok', fetchedAt: Date.now() });
+        } else {
+          // A payload that arrived but says it is not ok is a FAILURE, not
+          // silence. `res.ok` and a truthy `{}` are both worthless as guards.
+          setFeed((prev) => ({ status: 'error', fetchedAt: prev.fetchedAt }));
         }
       } catch {
         // Keep the last good board. A dropped poll must degrade to "numbers
         // from a minute ago", never to a blank screen.
+        if (!cancelled) setFeed((prev) => ({ status: 'error', fetchedAt: prev.fetchedAt }));
       } finally {
         if (!cancelled) {
           const live = shouldPollLive(boardRef.current.games ?? [], isLive);
@@ -139,8 +206,48 @@ export default function LiveBoard({
   // repeat its own name over every card.
   const multiLeague = board.panels.length > 1;
 
+  /**
+   * "Live" is claimed from the NFL SLATE, never from a franchise still having
+   * seconds left — that is true all week and says nothing about right now.
+   */
+  const gamesLive = (board.games ?? []).filter((g) => g.state === 'in').length;
+
+  /**
+   * Only the pollers actually running. In bundled-sample mode there are none,
+   * so `LvFeedStatus` renders nothing rather than a pill that cannot age.
+   */
+  const feeds: FeedSnapshot[] = demoLabel
+    ? []
+    : [...(pollUrl ? [feed] : []), ...(extraFeeds ?? [])];
+
+  const pill = (
+    <LvFeedStatus feeds={feeds} anyLive={gamesLive > 0} gamesLive={gamesLive} />
+  );
+
+  const card = (panel: LivePanel, matchup: LiveMatchup, lead: boolean) => (
+    <LvMatchupCard
+      key={`${panel.leagueId}:${matchup.index}:${matchup.sides[0].franchiseId}`}
+      matchup={matchup}
+      viewerFirst={viewerFirst}
+      isFinal={isMatchupFinal(matchup)}
+      lead={lead}
+      onOpen={() => setSelected(matchup)}
+    />
+  );
+
   return (
     <div className="lv">
+      <div className="lv-head">
+        <h1>
+          {title}
+          {demoLabel && <span className="lv-sample">{demoLabel}</span>}
+        </h1>
+        <div className="lv-head__right">
+          {!hideWeekPicker && <LvWeekPicker week={board.week} onSelect={onSelectWeek} />}
+          {pill}
+        </div>
+      </div>
+
       {/* Outside the branch, on purpose — see the header. */}
       {rail}
       <LvRedZoneBanner alerts={board.redZone} showLeague={multiLeague} />
@@ -151,7 +258,14 @@ export default function LiveBoard({
           meta={board.playerMeta}
           viewerFirst={viewerFirst}
           isFinal={isMatchupFinal(selected)}
-          status={status}
+          status={
+            <LvFeedStatus
+              feeds={feeds}
+              anyLive={gamesLive > 0}
+              gamesLive={gamesLive}
+              compact
+            />
+          }
           onBack={() => setSelected(null)}
         />
       ) : (
@@ -161,17 +275,12 @@ export default function LiveBoard({
               {multiLeague && <h2 className="lv-panel__name">{panel.leagueName}</h2>}
 
               {panel.status === 'ok' ? (
-                <div className="lv-cards">
-                  {panel.matchups.map((matchup) => (
-                    <LvMatchupCard
-                      key={`${panel.leagueId}:${matchup.index}`}
-                      matchup={matchup}
-                      viewerFirst={viewerFirst}
-                      isFinal={isMatchupFinal(matchup)}
-                      onOpen={() => setSelected(matchup)}
-                    />
-                  ))}
-                </div>
+                // Featured first, then the closest game. Ordered per PANEL, so
+                // a cross-league board leads each league with that league's own
+                // matchup rather than picking one winner for the whole page.
+                // The branch is on `panel.status` itself and not on a derived
+                // value, so the empty arm keeps its narrowed reason type.
+                <PanelCards panel={panel} card={card} />
               ) : (
                 // A league with nothing to show still gets its place in the
                 // list, saying why. Dropping it would re-order the board
@@ -183,7 +292,6 @@ export default function LiveBoard({
               )}
             </section>
           ))}
-          {status && <div className="lv-foot">{status}</div>}
         </>
       )}
     </div>
