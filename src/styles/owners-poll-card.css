@@ -1,0 +1,137 @@
+/*
+ * The Owners' Poll homepage card.
+ *
+ * Imported by the COMPONENT's own frontmatter, not by either homepage. That is
+ * why the ballot and voters routes never needed a stylesheet import of their
+ * own while the deleted lineup strip did: a page rendering a React island
+ * directly has to bring the CSS, but an Astro component brings its own.
+ */
+
+.ophc {
+  border: 1px solid var(--content-border);
+  border-radius: var(--radius-md, 8px);
+  background: var(--card-surface, var(--content-bg));
+  padding: 1rem 1.1rem;
+  margin: 1.25rem 0;
+}
+
+.ophc__head { margin-bottom: 0.75rem; }
+
+.ophc__title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-left: 3px solid var(--primary-color);
+  padding-left: 0.6rem;
+}
+
+.ophc__sub {
+  margin: 0.3rem 0 0 0.85rem;
+  font-size: 0.85rem;
+  color: var(--content-text-muted);
+}
+
+.ophc__empty {
+  margin: 0 0 0.85rem;
+  font-size: 0.9rem;
+  color: var(--content-text-muted);
+}
+
+.ophc__list {
+  list-style: none;
+  margin: 0 0 0.85rem;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.ophc__row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.9rem;
+}
+
+.ophc__rank {
+  min-width: 1.3rem;
+  font-weight: 700;
+  /* Numerals must not jitter between rows. */
+  font-variant-numeric: tabular-nums;
+  color: var(--content-text-muted);
+}
+
+.ophc__crest { flex: none; border-radius: 3px; }
+
+.ophc__team {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ophc__delta {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8rem;
+  color: var(--content-text-muted);
+}
+.ophc__delta.is-up { color: var(--color-success); }
+.ophc__delta.is-down { color: var(--color-warning); }
+
+.ophc__prompt {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+  color: var(--content-text-muted);
+}
+
+.ophc__affirm {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border: 1px solid var(--primary-color);
+  border-radius: var(--radius-sm, 6px);
+  background: transparent;
+  color: var(--primary-color);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.ophc__affirm:hover:not(:disabled) {
+  background: var(--primary-color);
+  /* Dark ink on the filled accent. --league-accent is LIGHT in dark mode,
+     where white-on-accent measures ~3.5:1 — under the 4.5:1 floor, and 14px
+     bold is NOT large text, so the 3:1 allowance does not apply. */
+  color: var(--content-bg);
+}
+.ophc__affirm:disabled { opacity: 0.6; cursor: default; }
+
+.ophc__links {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin: 0;
+}
+
+.ophc__button {
+  display: inline-block;
+  padding: 0.4rem 0.85rem;
+  border-radius: var(--radius-sm, 6px);
+  background: var(--primary-color);
+  color: var(--content-bg);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+.ophc__button:hover { opacity: 0.9; }
+
+.ophc__more {
+  font-size: 0.85rem;
+  color: var(--link-color, var(--primary-color));
+}
+
+@media (max-width: 640px) {
+  .ophc { padding: 0.85rem 0.9rem; }
+  .ophc__links { gap: 0.5rem; }
+}

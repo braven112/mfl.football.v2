@@ -1,0 +1,132 @@
+---
+/**
+ * The Owners' Poll — permanent homepage card.
+ *
+ * Full-time by request: the room's ranking, visible on the homepage every day
+ * of the season, with a link to the ballot. It is not a hero and does not
+ * compete for the hero slot — it sits below it as its own module, so the hero
+ * stays free for whatever the week actually is (and for the Thursday reveal).
+ *
+ * **It reads the committed archive, never Redis.** Three reasons, in order of
+ * weight:
+ *
+ *  1. Redis holds BALLOTS, not a tally. Rendering "the current ranking" from
+ *     it would mean tallying on every homepage load — which publishes a
+ *     running total mid-cycle and lets a late voter see where things stand
+ *     before deciding. `/api/owners-poll/ballot` refuses to do that on
+ *     purpose; a permanent homepage card doing it would route straight around
+ *     the rule.
+ *  2. Both homepages are `prerender = false` and are the hottest routes on the
+ *     site, rendered for signed-out visitors too. The archive is a build-time
+ *     glob — zero request-time I/O. Redis would add a round trip and an
+ *     Upstash-billed request to every single homepage load.
+ *  3. The archive is the same fact the column and the voters page show, so the
+ *     card cannot disagree with them.
+ *
+ * The one per-viewer thing — "your ballot has gone stale" — is therefore the
+ * ONLY hydrated part, and it is a separate island that renders nothing unless
+ * it applies. See OwnersPollHomeCardPrompt.
+ */
+import { getLeagueBySlug, leagueClock } from '../../../config/leagues';
+import type { CanonicalLeagueSlug } from '../../../config/leagues';
+import OwnersPollHomeCardPrompt from './OwnersPollHomeCardPrompt';
+import '../../../styles/owners-poll-card.css';
+
+interface RankedRow {
+  rank: number;
+  franchiseId: string;
+  points: number;
+  firstPlaceVotes: number;
+  delta: number;
+}
+
+interface Props {
+  /** The most recent issue whose poll actually published a consensus. */
+  issue: {
+    year: number;
+    week: number;
+    ownersPoll?: { ranked?: RankedRow[] | null; ballotsIn?: number; eligibleVoters?: number } | null;
+  } | null;
+  teams: Map<string, any> | Record<string, any>;
+  leagueSlug: CanonicalLeagueSlug;
+  ballotHref: string;
+  columnHref: string;
+  /** How many rows to show. The card is a teaser, not the column. */
+  limit?: number;
+}
+
+const { issue, teams, leagueSlug, ballotHref, columnHref, limit = 5 } = Astro.props as Props;
+
+const league = getLeagueBySlug(leagueSlug)!;
+const teamMap = teams instanceof Map ? teams : new Map(Object.entries(teams ?? {}));
+const name = (fid: string) =>
+  teamMap.get(fid)?.nameShort ?? teamMap.get(fid)?.nameMedium ?? teamMap.get(fid)?.name ?? fid;
+const icon = (fid: string) => teamMap.get(fid)?.icon ?? '';
+
+const poll = issue?.ownersPoll ?? null;
+const ranked = (poll?.ranked ?? []).slice(0, limit);
+
+// Before the season's first count there is no ranking to show — and showing
+// LAST season's would be worse than showing none. The card still renders: it
+// is full-time, and this is the one place a week with no result is allowed to
+// say something, because the card's whole job is to be a standing entry point.
+// (The silence rule covers chat, the feed post and the column's poll section.)
+const recruiting = ranked.length === 0;
+---
+
+<section class="ophc" aria-labelledby="ophc-title">
+  <header class="ophc__head">
+    <h2 class="ophc__title" id="ophc-title">The Owners&rsquo; Poll</h2>
+    <p class="ophc__sub">
+      {recruiting
+        ? 'How the room ranks the league — voted by the owners.'
+        : `How the room ranks the league · Week ${issue!.week}`}
+    </p>
+  </header>
+
+  {recruiting ? (
+    <p class="ophc__empty">
+      No result yet this season. Voting is always open — cast a ballot and it
+      stands until you change it.
+    </p>
+  ) : (
+    <ol class="ophc__list">
+      {ranked.map((row) => (
+        <li class="ophc__row">
+          <span class="ophc__rank">{row.rank}</span>
+          {icon(row.franchiseId) && (
+            <img class="ophc__crest" src={icon(row.franchiseId)} alt="" width="22" height="22" loading="lazy" />
+          )}
+          <span class="ophc__team">{name(row.franchiseId)}</span>
+          {/* The Δ is the reason the card is interesting rather than a second
+              copy of the standings: it is where the room and the machine
+              disagree. */}
+          <span
+            class:list={['ophc__delta', row.delta > 0 && 'is-up', row.delta < 0 && 'is-down']}
+            title="Spots above or below the computer's ranking"
+          >
+            {row.delta === 0 ? '—' : `${row.delta > 0 ? '+' : ''}${row.delta}`}
+          </span>
+        </li>
+      ))}
+    </ol>
+  )}
+
+  <!--
+    client:idle, NEVER client:visible. The prompt renders nothing until it
+    knows whether THIS viewer's ballot is stale, so a client:visible island has
+    zero height, never intersects, and never hydrates — it would silently never
+    appear. That is the exact bug the old lineup-page strip documented.
+  -->
+  <OwnersPollHomeCardPrompt
+    client:idle
+    leagueParam={league.navSlug}
+    ballotHref={ballotHref}
+    officialClock={leagueClock(league.slug)}
+  />
+
+  <p class="ophc__links">
+    <a class="ophc__button" href={ballotHref}>{recruiting ? 'Cast your ballot' : 'Change your vote'}</a>
+    <a class="ophc__more" href={columnHref}>The Pecking Order &rsaquo;</a>
+  </p>
+</section>

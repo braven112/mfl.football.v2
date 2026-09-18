@@ -17,6 +17,11 @@ import {
 } from '../../src/utils/owners-poll-window.mjs';
 import { normalizeFranchiseId } from '../../src/utils/franchise-id.mjs';
 import {
+  standingVoteLine,
+  nextResultLine,
+  resultTimingPhrase,
+} from '../../src/utils/owners-poll-copy.mjs';
+import {
   tallyOwnersPoll,
   consensusRankMap,
   contrarianIndex,
@@ -49,6 +54,26 @@ const DEFAULT_LOG = { log: (...a) => console.log(...a), warn: (...a) => console.
 
 /** Where the ballot lives, for every message that links to it. */
 export const BALLOT_PATH = '/pecking-order/ballot';
+
+/**
+ * Format an announce instant for CHAT and PUSH.
+ *
+ * The league's own clock, unconditionally. A GroupMe post has no viewer whose
+ * preference could be read and no cookie to read it from, so this is the one
+ * place a fixed zone is correct rather than a shortcut — the web surfaces
+ * render the same sentence through `viewer-clock` instead.
+ */
+export function formatResultTimePT(iso, zone = 'America/Los_Angeles') {
+  const at = new Date(iso);
+  if (Number.isNaN(at.getTime())) return 'soon';
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: zone,
+    weekday: 'long',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  }).format(at) + ' PT';
+}
 
 /**
  * Open a ballot alongside a freshly written issue.
@@ -127,6 +152,12 @@ export async function openPoll({
     eligibleVoters: eligibleFranchiseIds.length,
     methodology: describeScoring(poll.slots, eligibleFranchiseIds.length),
     clampedToKickoff: window.clampedToKickoff,
+    // Carried onto the issue so the column's poll section can STATE the
+    // schedule rather than hardcode it. The issue pages are prerendered and
+    // cannot reach the registry at render time, and a second copy of
+    // "Thursday 4pm" in a component is exactly how the two drift.
+    closeWeekday: poll.closeWeekday,
+    closeHourPT: poll.closeHourPT,
   };
 }
 
@@ -209,6 +240,8 @@ export function buildClosedPollBlock({ ballots, window, compositeRankByFid }) {
     eligibleVoters: window.eligibleFranchiseIds.length,
     ballotsIn: tally.ballotsIn,
     methodology: describeScoring(window.slots, window.eligibleFranchiseIds.length),
+    closeWeekday: window.closeWeekday ?? null,
+    closeHourPT: window.closeHourPT ?? null,
     ranked: tally.ranked,
     unranked: tally.unranked,
     // Published in full — every ballot becomes public once its week closes.
@@ -337,9 +370,16 @@ export function buildOpenLine(issue, teams, league) {
   const top = issue.rankings[0];
   const bottom = issue.rankings[issue.rankings.length - 1];
   const name = (fid) => teams.get(fid)?.nameMedium ?? fid;
+  const when = resultTimingPhrase(
+    formatResultTimePT(poll.closesAt),
+    Boolean(poll.clampedToKickoff),
+  );
   return [
-    `🗳️ THE OWNERS' POLL is open — rank your top ${poll.slots}.`,
-    `The computer has ${name(top.franchiseId)} #1 and ${name(bottom.franchiseId)} last. Argue with it ▸ ${leagueUrl(league, BALLOT_PATH)}`,
+    `🗳️ THE OWNERS' POLL — the computer has ${name(top.franchiseId)} #1 and ${name(bottom.franchiseId)} last.`,
+    // Never "go vote" any more: most of the league already has a ballot on
+    // file, and telling them to cast one reads as a chore they already did.
+    // The ask is to CHANGE it, which is the only action left.
+    `Disagree? ${standingVoteLine(when)} ▸ ${leagueUrl(league, BALLOT_PATH)}`,
   ].join('\n');
 }
 
@@ -392,7 +432,11 @@ export function buildRevealMessage({ league, issue, teams, callback = null }) {
   // weekly form, so it goes in the chat post, not only the feed.
   if (callback) lines.push(`📼 ${callback}`);
 
-  lines.push(`Every ballot ▸ ${leagueUrl(league, '/pecking-order')}`);
+  // The reveal is also the moment to say the poll did not just close: an owner
+  // reading this can change their vote right now and it counts next time.
+  lines.push(
+    `Ballots stand until you change them — next result in a week. Every ballot ▸ ${leagueUrl(league, '/pecking-order')}`,
+  );
   return lines.join('\n');
 }
 

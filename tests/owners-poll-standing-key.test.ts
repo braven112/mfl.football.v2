@@ -45,15 +45,13 @@ describe('ownersPollStandingKey', () => {
   it('throws on a bad scope rather than defaulting to one', () => {
     expect(() => ownersPollStandingKey('', 2026)).toThrow();
     expect(() => ownersPollStandingKey('Not A Slug', 2026)).toThrow();
-    // @ts-expect-error — deliberately wrong type
-    expect(() => ownersPollStandingKey(null, 2026)).toThrow();
+    expect(() => ownersPollStandingKey(null as any, 2026)).toThrow();
   });
 
   it('throws on a bad season year', () => {
     expect(() => ownersPollStandingKey('theleague', 0)).toThrow();
     expect(() => ownersPollStandingKey('theleague', 1999)).toThrow();
-    // @ts-expect-error — deliberately wrong type
-    expect(() => ownersPollStandingKey('theleague', '2026')).toThrow();
+    expect(() => ownersPollStandingKey('theleague', '2026' as any)).toThrow();
   });
 });
 
@@ -109,7 +107,7 @@ describe('affirmBallotRecord', () => {
       now: new Date('2026-09-01T12:00:00Z'),
       seasonYear: 2026,
     });
-    const affirmed = affirmBallotRecord(first, now);
+    const affirmed = affirmBallotRecord(first, now)!;
     expect(affirmed.ranking).toEqual(first.ranking);
     expect(affirmed.submittedAt).toBe(first.submittedAt);
     expect(affirmed.seasonYear).toBe(2026);

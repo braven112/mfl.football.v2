@@ -113,6 +113,12 @@ export const STALE_BALLOT_WEEKS = 3;
  * stale: an unparseable timestamp is a storage question, and prompting on it
  * would nag every owner over a bug none of them can fix.
  */
+/**
+ * @param {string|null|undefined} updatedAt
+ * @param {Date|number} now
+ * @param {number} [weeks]
+ * @returns {boolean}
+ */
 export function isBallotStale(updatedAt, now, weeks = STALE_BALLOT_WEEKS) {
   const then = Date.parse(updatedAt ?? '');
   if (!Number.isFinite(then)) return false;
@@ -211,6 +217,17 @@ export function resolveBallotWindow(now, window) {
  * Length is exact, not a minimum: Borda scoring assumes every ballot carries
  * the same point pool, so a short ballot is not a smaller opinion, it is a
  * differently-weighted one. Rejecting it here is what keeps the tally fair.
+ *
+ * The return is declared as a DISCRIMINATED union so a caller that checks
+ * `ok` gets `ranking` narrowed to a real array. Left undeclared, TS unions the
+ * two shapes and every caller sees `string[] | undefined` after the check it
+ * just made.
+ *
+ * @param {object} args
+ * @param {unknown} args.ranking
+ * @param {number} args.slots
+ * @param {Iterable<string>} args.eligibleFranchiseIds
+ * @returns {{ ok: true, ranking: string[] } | { ok: false, error: string }}
  */
 export function validateBallot({ ranking, slots, eligibleFranchiseIds }) {
   if (!Number.isInteger(slots) || slots < 1) {
@@ -258,6 +275,24 @@ export function validateBallot({ ranking, slots, eligibleFranchiseIds }) {
  * accountability page can tell a first-hour voter from one who was still
  * tinkering at the deadline — and so a re-submission never looks like a
  * fresh ballot.
+ *
+ * The declared parameter block below is not decoration. A destructured option
+ * in a .mjs is typed from the destructuring ALONE, so a bare name infers as
+ * REQUIRED and every honest caller omitting one becomes a ts(2345). Declaring
+ * them is the only thing that says "optional, of this type" — the same fix
+ * `redactTradeOffer`'s options needed, recorded in the typecheck baseline.
+ *
+ * (And the tag must not be NAMED in the prose above: a bare tag mid-sentence
+ * is parsed as a malformed tag and silently voids every real one after it,
+ * which is what made this block a no-op on the first attempt.)
+ *
+ * @param {object} args
+ * @param {string} args.franchiseId
+ * @param {string[]} args.ranking
+ * @param {Date|number|string} args.now
+ * @param {{ submittedAt?: string|null, seasonYear?: number|null }|null} [args.previous]
+ * @param {number|null} [args.seasonYear]
+ * @returns {{ franchiseId: string, ranking: string[], submittedAt: string, updatedAt: string, seasonYear: number|null }}
  */
 export function buildBallotRecord({ franchiseId, ranking, now, previous, seasonYear }) {
   const iso = (now instanceof Date ? now : new Date(now)).toISOString();
@@ -274,7 +309,7 @@ export function buildBallotRecord({ franchiseId, ranking, now, previous, seasonY
     updatedAt: iso,
     // Stamped so a mis-keyed read is DETECTABLE rather than silent — the same
     // reason the hash field is treated as the authoritative franchise id.
-    seasonYear: Number.isInteger(seasonYear) ? seasonYear : (previous?.seasonYear ?? null),
+    seasonYear: Number.isInteger(seasonYear) ? Number(seasonYear) : (previous?.seasonYear ?? null),
   };
 }
 
@@ -288,6 +323,11 @@ export function buildBallotRecord({ franchiseId, ranking, now, previous, seasonY
  * so that race cannot be expressed.
  *
  * Returns null when there is nothing on file to affirm.
+ */
+/**
+ * @param {Record<string, any>|null|undefined} previous
+ * @param {Date|number} now
+ * @returns {Record<string, any>|null}
  */
 export function affirmBallotRecord(previous, now) {
   if (!previous || !Array.isArray(previous.ranking)) return null;
@@ -303,7 +343,14 @@ export function affirmBallotRecord(previous, now) {
  * DROPPED rather than repaired: silently padding or truncating it would put
  * an opinion nobody cast into the published consensus.
  */
-export function parseStoredBallot(value, { slots, eligibleFranchiseIds, seasonYear = null }) {
+/**
+ * @param {unknown} value
+ * @param {object} opts
+ * @param {number} opts.slots
+ * @param {Iterable<string>} opts.eligibleFranchiseIds
+ * @param {number|null} [opts.seasonYear]
+ */
+export function parseStoredBallot(value, { slots, eligibleFranchiseIds, seasonYear }) {
   let record = value;
   if (typeof record === 'string') {
     try {
