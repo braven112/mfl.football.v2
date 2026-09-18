@@ -21,7 +21,6 @@ import type { CanonicalLeagueSlug } from '../config/leagues';
 import { resolveThrowbackIdentity, type ThrowbackPick } from './throwback-identity';
 import { DEFAULT_THROWBACK_SCOPE, type ThrowbackScope } from './throwback-scope';
 import type { FranchiseHistoryEntry } from './team-names';
-import type { LineupSlotRules } from './live-scoring-view';
 import type {
   LivePlayerRow,
   MatchupPairing,
@@ -166,37 +165,6 @@ export function buildTeamsMap(configTeams: ConfigTeam[]): Record<string, TeamInf
   return map;
 }
 
-/**
- * The league's own starting requirements, read from its MFL `league.json`.
- *
- * Drives the slot labels on the board (see assignLineupSlots). MFL states them
- * as `{ name: 'RB', limit: '1-4' }` plus a total `count`, so the minimum of
- * each range is what must start and the leftover slots are flex. Falls back to
- * the shape both our leagues actually use if the feed is missing.
- */
-export function loadStarterRules(dataPath: string, year: number): LineupSlotRules {
-  const fallback: LineupSlotRules = {
-    required: { QB: 1, RB: 1, WR: 1, TE: 1, PK: 1, DEF: 1 },
-    total: 9,
-  };
-  try {
-    const file = join(process.cwd(), dataPath, 'mfl-feeds', String(year), 'league.json');
-    const starters = JSON.parse(readFileSync(file, 'utf-8'))?.league?.starters;
-    const rows = Array.isArray(starters?.position) ? starters.position : [];
-    if (rows.length === 0) return fallback;
-    const required: Record<string, number> = {};
-    for (const r of rows) {
-      const raw = String(r?.name ?? '');
-      const name = raw === 'Def' ? 'DEF' : raw.toUpperCase();
-      const min = Number(String(r?.limit ?? '').split('-')[0]) || 0;
-      if (name && min > 0) required[name] = min;
-    }
-    const total = Number(starters?.count) || fallback.total;
-    return Object.keys(required).length ? { required, total } : fallback;
-  } catch {
-    return fallback;
-  }
-}
 
 /** Resolve static identity + projection for every player id in the snapshot. */
 export function buildPlayerMeta(
