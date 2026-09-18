@@ -18,6 +18,7 @@ export interface VoterIssue {
   rankings?: Array<{ franchiseId: string; rank: number }>;
   ownersPoll?: {
     status?: string;
+    /** LEGACY: present on archives written before the quorum was removed. */
     hasQuorum?: boolean;
     slots?: number;
     ballotsIn?: number;
@@ -76,11 +77,18 @@ export function computeVoterSeason(
 ): VoterSeason {
   const ordered = [...issues].sort((a, b) => a.year - b.year || a.week - b.week);
 
-  // Only weeks that actually published a poll with a quorum count. A
-  // no-quorum week has no consensus, so its contrarian/homer numbers were
-  // never computed and its ballots cannot be scored against a consensus.
+  // Every closed week somebody voted in counts. This used to require a quorum,
+  // which silently dropped light weeks off the season boards — including from
+  // the ballot counts of the owners who DID turn up that week. With the quorum
+  // gone the only unscoreable week is one with no ballots at all.
+  //
+  // This reaches backwards too: archives written under the old rule still carry
+  // `hasQuorum: false`, and those weeks now count. Their `contrarianIndex` is
+  // null (it was computed against a consensus that was never published), which
+  // every consumer already handles; accuracy and homer were never consensus-
+  // derived and are unaffected.
   const polled = ordered.filter(
-    (i) => i.ownersPoll?.status === 'closed' && i.ownersPoll?.hasQuorum,
+    (i) => i.ownersPoll?.status === 'closed' && (i.ownersPoll?.ballots?.length ?? 0) > 0,
   );
 
   // Next issue that carries a ranking, for accuracy. Keyed by the ballot week.

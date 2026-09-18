@@ -58,8 +58,9 @@ export const LEAGUES = {
      * because tests/league-literal-guard.test.ts is the thing that keeps a
      * number like this from being retyped into three modules.
      *
-     * `quorum` is the minimum ballots required to publish a consensus at all —
-     * below it the column runs algorithm-only and says so. Half the field.
+     * There is NO ballot minimum. Whatever ballots come in are the result —
+     * a quorum used to gate the consensus, and all it achieved was suppressing
+     * the poll on light weeks and spending the chat's one daily post saying so.
      *
      * `closeWeekday` / `closeHourPT` are when the ballot shuts (0=Sun).
      * THURSDAY, not Wednesday, and that is a turnout decision: setting a
@@ -73,7 +74,6 @@ export const LEAGUES = {
     ownersPoll: {
       enabled: true,
       slots: 7,
-      quorum: 8,
       closeWeekday: 4,
       closeHourPT: 16,
     },
@@ -216,15 +216,10 @@ export const LEAGUES = {
      * of the league tied at zero. It stays well under the field size (the
      * unranked block is the design; see the plan's "One tension worth
      * naming").
-     *
-     * `quorum` is 12 — half the field, the same RULE as TheLeague's 8-of-16
-     * rather than the same number. Below it the column runs algorithm-only and
-     * says so.
      */
     ownersPoll: {
       enabled: true,
       slots: 10,
-      quorum: 12,
       closeWeekday: 4,
       closeHourPT: 16,
     },
@@ -371,7 +366,7 @@ export const LEAGUES = {
      * (docs/claude/rules/best-ball.md). The entry exists disabled so the shape
      * is present everywhere and shared components never branch on undefined.
      */
-    ownersPoll: { enabled: false, slots: 0, quorum: 0, closeWeekday: 4, closeHourPT: 16 },
+    ownersPoll: { enabled: false, slots: 0, closeWeekday: 4, closeHourPT: 16 },
     /**
      * THE LEAGUE'S OFFICIAL CLOCK — the zone this league keeps its own time
      * in. Lineup locks, auction windows, waiver deadlines and the 8:45

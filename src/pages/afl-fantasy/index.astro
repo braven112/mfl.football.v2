@@ -19,6 +19,7 @@ export const prerender = false;
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import SchefterFeedCompact from '../../components/shared/SchefterFeedCompact.astro';
 import AflHero from '../../components/afl/AflHero.astro';
+import OwnersPollHomeCard from '../../components/shared/owners-poll/OwnersPollHomeCard.astro';
 // TEMPORARY (2026-08-20 → 08-23): for this preseason weekend the hero IS the
 // live-scoring test drive — it REPLACES AflHero rather than stacking above it.
 // Both halves gate on the same showTestDriveHero() call so the page can never
@@ -58,6 +59,9 @@ import {
 } from '../../utils/live-scoring-hero-props';
 import { getAflWhatsNextTimeline } from '../../utils/league-event-resolver';
 import { getAflLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
+import { isSeasonWindowOpen } from '../../utils/pecking-order-season-window.mjs';
+import { getLeagueTeamBrands } from '../../utils/league-team-brands';
+import { ensureLeaguePrefix } from '../../config/leagues';
 import { getCurrentNFLWeek } from '../../utils/current-week';
 import { findNextGame, franchiseSchedule, parseWeeklySchedule } from '../../utils/schedule-data.mjs';
 import { chooseTeamName } from '../../utils/team-names';
@@ -162,6 +166,29 @@ const effectiveDate = parseTestDate(testDateParam) ?? new Date();
 // creates. `effectiveDate` is always defined here, which is why this page was
 // already correct; the shared const keeps it that way.
 const testDriveHero = showTestDriveHero(AFL.slug, effectiveDate);
+
+// ---------------------------------------------------------------------------
+// The Owners' Poll card. Same shape as TheLeague's — one shared component, each
+// route bringing its own league's data — because a static glob specifier
+// cannot be a runtime variable. See that page for why this reads the committed
+// archive rather than Redis.
+const ownersPollIssues = import.meta.glob<any>(
+  '../../../data/afl-fantasy/pecking-order/*.json',
+  { eager: true, import: 'default' },
+);
+
+const ownersPollIssue = Object.entries(ownersPollIssues)
+  .map(([file, data]) => {
+    const m = file.match(/(\d{4})-(\d{1,2})\.json$/);
+    return m ? { year: Number(m[1]), week: Number(m[2]), data } : null;
+  })
+  .filter((x): x is { year: number; week: number; data: any } => !!x)
+  .filter((x) => (x.data?.ownersPoll?.ranked?.length ?? 0) > 0)
+  .sort((a, b) => b.year - a.year || b.week - a.week)[0] ?? null;
+
+const showOwnersPollCard =
+  AFL.ownersPoll?.enabled &&
+  isSeasonWindowOpen(getCurrentSeasonYear(effectiveDate), effectiveDate);
 const testMode = !!testDateParam;
 
 const timeline = getAflWhatsNextTimeline(effectiveDate);
@@ -503,6 +530,16 @@ if (heroState.kind === 'regular-season' && heroState.slot === 'live-scoring' && 
           standings={standingsFranchises}
           userFranchiseId={userFranchiseId}
           backdrop={heroBackdrop}
+        />
+      )}
+
+      {showOwnersPollCard && (
+        <OwnersPollHomeCard
+          issue={ownersPollIssue ? { year: ownersPollIssue.year, week: ownersPollIssue.week, ownersPoll: ownersPollIssue.data.ownersPoll } : null}
+          teams={getLeagueTeamBrands(AFL.slug)}
+          leagueSlug={AFL.slug}
+          ballotHref={ensureLeaguePrefix(AFL, '/pecking-order/ballot')}
+          columnHref={ensureLeaguePrefix(AFL, '/pecking-order')}
         />
       )}
 

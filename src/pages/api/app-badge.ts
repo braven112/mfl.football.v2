@@ -39,8 +39,7 @@ import { getRedis } from '../../utils/redis-client';
 import { appBadgeCacheKey } from '../../utils/app-badge-cache';
 import {
   readBallot,
-  readOwnersPollWindow,
-  windowState,
+  activePollWindow,
 } from '../../utils/owners-poll-store';
 import {
   EMPTY_PARTS,
@@ -193,12 +192,29 @@ async function countLineup(
   return ownerLineupNeedsAttention(warnings, franchiseId);
 }
 
-/** An open ballot this owner has not cast. */
+/**
+ * No ballot on file at all, with an announce close enough to matter.
+ *
+ * Both halves are load-bearing under standing votes. Voting is now ALWAYS
+ * open, so "the ballot is open and you haven't cast it" would badge every
+ * never-voted owner permanently — a number on their app icon that nothing
+ * they do that week can clear, which is how people learn to ignore a badge.
+ *
+ * So: only when they have nothing on file (not merely nothing NEW — a standing
+ * ballot is already counted), and only inside the last stretch before the
+ * result, when acting on it is actually urgent.
+ */
+const POLL_BADGE_LEAD_HOURS = 48;
+
 async function countPoll(league: LeagueDefinition, franchiseId: string): Promise<number> {
   if (!league.ownersPoll?.enabled) return 0;
   const scope = league.navSlug;
-  const window = await readOwnersPollWindow(scope);
-  if (!window || windowState(window) !== 'open') return 0;
+  const window = await activePollWindow(league, scope);
+  if (!window) return 0;
+
+  const msToClose = Date.parse(window.closesAt) - Date.now();
+  if (!Number.isFinite(msToClose) || msToClose > POLL_BADGE_LEAD_HOURS * 3600_000) return 0;
+
   const ballot = await readBallot(scope, window, franchiseId);
   return ballot ? 0 : 1;
 }

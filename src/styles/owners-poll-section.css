@@ -64,37 +64,12 @@
   background: var(--primary-color);
   transition: width 240ms ease;
 }
-/* The quorum mark is the reason the meter exists — a bar with no threshold on
-   it says nothing about whether the poll will publish at all. */
-.op-meter__quorum {
-  position: absolute;
-  top: -2px;
-  bottom: -2px;
-  width: 2px;
-  background: var(--page-text);
-  opacity: 0.55;
-}
 .op-meter__label {
   margin: 0.4rem 0 0;
   font-size: 0.85rem;
   color: var(--content-text-muted);
 }
 .op-meter__label strong { color: var(--page-text); }
-.op-meter__ok { color: var(--color-success); }
-.op-meter__short { color: var(--color-warning); }
-
-/* --- no quorum ---------------------------------------------------------- */
-
-.op-strip__noquorum {
-  margin-top: 0.75rem;
-  padding: 0.85rem 1rem;
-  background: var(--content-bg-muted);
-  border-left: 4px solid var(--color-warning);
-  border-radius: var(--radius-md, 8px);
-  font-size: 0.925rem;
-}
-.op-strip__noquorum p { margin: 0 0 0.4rem; }
-.op-strip__noquorum p:last-child { margin-bottom: 0; color: var(--content-text-muted); }
 
 /* --- consensus table ---------------------------------------------------- */
 
@@ -231,3 +206,46 @@
 @media (max-width: 34rem) {
   .op-ballot__owner { min-width: 0; }
 }
+
+/* --- standing-vote schedule + staleness prompt ------------------------- */
+
+/* The sentence that answers "when does this start and end". Deliberately not
+   fine print: not knowing was the complaint that prompted the rewrite. */
+.op-strip__schedule {
+  margin: 0.4rem 0 0;
+  font-size: 0.875rem;
+  color: var(--content-text-muted);
+}
+
+.op-coverage {
+  margin: 0 0 0.6rem;
+  font-size: 0.875rem;
+  color: var(--content-text-muted);
+}
+.op-coverage strong { color: var(--page-text); }
+
+/* "Still good?" — shown only once a ballot passes the stale threshold. */
+.op-strip__stale {
+  margin: 0.5rem 0 0;
+  font-size: 0.875rem;
+  color: var(--content-text-muted);
+}
+
+.op-strip__affirm {
+  display: inline-block;
+  padding: 0.25rem 0.7rem;
+  border: 1px solid var(--primary-color);
+  border-radius: var(--radius-sm, 6px);
+  background: transparent;
+  color: var(--primary-color);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.op-strip__affirm:hover:not(:disabled) {
+  background: var(--primary-color);
+  /* Dark ink on the filled accent, never white. --league-accent is LIGHT in
+     dark mode, where white-on-accent measures under the 4.5:1 floor. */
+  color: var(--content-bg);
+}
+.op-strip__affirm:disabled { opacity: 0.6; cursor: default; }

@@ -12,13 +12,18 @@ import { getAuthUser } from './auth';
 import { getRedis } from './redis-client';
 import { ALL_LEAGUES, getLeagueById, type LeagueDefinition } from '../config/leagues';
 import {
-  ownersPollBallotsKey,
+  ownersPollStandingKey,
   ownersPollCurrentKey,
+  ownersPollPauseKey,
+  affirmBallotRecord,
   parseStoredBallot,
   parseStoredWindow,
   resolveBallotWindow,
 } from './owners-poll-ballot.mjs';
 import { getLeagueTeamBrands } from './league-team-brands';
+import { getCurrentWeekForYear } from './current-week';
+import { getCurrentSeasonYear } from './league-year';
+import { resolveOwnersPollCycle } from './owners-poll-window.mjs';
 
 export interface OwnersPollWindow {
   year: number;
@@ -32,8 +37,11 @@ export interface OwnersPollWindow {
 export interface StoredBallot {
   franchiseId: string;
   ranking: string[];
+  /** The owner's FIRST ballot of the season. Never moves after that. */
   submittedAt: string | null;
+  /** Last edit — may be many weeks before the snapshot that publishes it. */
   updatedAt: string | null;
+  seasonYear: number | null;
 }
 
 export interface OwnersPollCaller {
@@ -121,6 +129,107 @@ export function eligibleFranchiseIdsFor(league: LeagueDefinition): string[] {
 }
 
 /**
+ * The league's CURRENT voting cycle — the always-open path.
+ *
+ * Derived, never read from storage. Voting never stops, so there is always an
+ * answer: the pending announce instant, the league's field, and its ballot
+ * depth. The old `readOwnersPollWindow` pointer survives for exactly one
+ * purpose now — a commissioner PAUSE — and this returns null only when one is
+ * in force.
+ *
+ * The year is the SEASON year, matching the standing hash: the poll ranks how
+ * teams are playing, so it rolls at Labor Day with the standings rather than
+ * on MFL's February league rollover. `week` is informational — it labels the
+ * ballot in the UI and no longer selects any key.
+ */
+export function resolvePollCycle(
+  league: LeagueDefinition,
+  now: Date = new Date(),
+): OwnersPollWindow | null {
+  const poll = league.ownersPoll;
+  if (!poll?.enabled) return null;
+
+  const seasonYear = getCurrentSeasonYear(now);
+  const eligibleFranchiseIds = eligibleFranchiseIdsFor(league);
+  // A field no larger than the ballot cannot produce a ranking — the same
+  // refusal the open pass makes, applied where the API can see it too.
+  if (eligibleFranchiseIds.length <= poll.slots) return null;
+
+  const cycle = resolveOwnersPollCycle({
+    now,
+    closeHourPT: poll.closeHourPT,
+    closeWeekday: poll.closeWeekday,
+  });
+
+  return {
+    year: seasonYear,
+    week: getCurrentWeekForYear(seasonYear),
+    opensAt: cycle.opensAt,
+    closesAt: cycle.closesAt,
+    slots: poll.slots,
+    eligibleFranchiseIds,
+  };
+}
+
+/** Is the poll suspended by the commissioner? Absent key = open. */
+export async function isPollPaused(scope: string): Promise<boolean> {
+  const redis = await getRedis();
+  if (!redis) return false;
+  try {
+    return Boolean(await redis.get(ownersPollPauseKey(scope)));
+  } catch (err) {
+    // Fails OPEN, on purpose. A storage blip must not silently stop the league
+    // voting; the worst case is that a deliberate pause lapses, which someone
+    // will notice, rather than the poll disappearing, which nobody would.
+    console.error('[owners-poll] failed to read pause flag:', err);
+    return false;
+  }
+}
+
+/** Suspend or resume voting. `hours` expires the pause automatically. */
+export async function setPollPaused(
+  scope: string,
+  paused: boolean,
+  hours?: number,
+): Promise<boolean> {
+  const redis = await getRedis();
+  if (!redis) return false;
+  try {
+    if (!paused) {
+      await redis.del(ownersPollPauseKey(scope));
+      return true;
+    }
+    const ttl = Number.isFinite(hours) && (hours as number) > 0
+      ? Math.ceil((hours as number) * 3600)
+      : undefined;
+    await redis.set(
+      ownersPollPauseKey(scope),
+      new Date().toISOString(),
+      ttl ? { ex: ttl } : undefined,
+    );
+    return true;
+  } catch (err) {
+    console.error('[owners-poll] failed to set pause flag:', err);
+    return false;
+  }
+}
+
+/**
+ * The window a request should act on: the derived cycle, unless paused.
+ *
+ * Every route goes through this rather than reading storage for a window, so
+ * "is voting open?" has exactly one answer and one implementation.
+ */
+export async function activePollWindow(
+  league: LeagueDefinition,
+  scope: string,
+  now: Date = new Date(),
+): Promise<OwnersPollWindow | null> {
+  if (await isPollPaused(scope)) return null;
+  return resolvePollCycle(league, now);
+}
+
+/**
  * Open (or replace) a league's ballot window.
  *
  * The commissioner path. The Tuesday cron does the same write from node via
@@ -205,10 +314,11 @@ export async function readBallot(
   const redis = await getRedis();
   if (!redis) return null;
   try {
-    const raw = await redis.hget(ownersPollBallotsKey(scope, window.year, window.week), franchiseId);
+    const raw = await redis.hget(ownersPollStandingKey(scope, window.year), franchiseId);
     return parseStoredBallot(raw, {
       slots: window.slots,
       eligibleFranchiseIds: window.eligibleFranchiseIds,
+      seasonYear: window.year,
     }) as StoredBallot | null;
   } catch (err) {
     console.error('[owners-poll] failed to read ballot:', err);
@@ -217,27 +327,32 @@ export async function readBallot(
 }
 
 /**
- * The caller's ballot from the PREVIOUS week, for prefill.
+ * Re-affirm the caller's standing ballot without changing it — "Still good".
  *
- * From week 2 onward the ballot opens pre-populated with the owner's own prior
- * ballot, which is the single largest ongoing reduction in effort — by week 6
- * the ask becomes "submit as-is or move two teams" rather than a fresh
- * seven-tap build. It is not the anchoring hazard a system-suggested seed
- * would be: it is that owner's own previous opinion, not an ordering the site
- * is nudging them toward.
+ * Read-modify-write, deliberately: the ranking comes from the STORED record,
+ * never from the request. An owner who edited their ballot on a phone and then
+ * pressed the button on a stale desktop tab would otherwise write the older
+ * ranking back over the newer one. The client sends no ranking at all, so that
+ * race cannot be expressed.
  *
- * Returns null in week 1, when they didn't vote last week, or when last week's
- * ballot no longer validates against this week's field or depth — a franchise
- * can leave, and `slots` can change. Dropping it is right: prefilling a ballot
- * the owner would have to repair is worse than prefilling nothing.
+ * This replaced `readPreviousBallot`, which prefilled a new week's ballot from
+ * the previous week's. Under standing votes there is nothing to prefill FROM —
+ * your ballot simply is your ballot — so the prefill machinery went with it.
+ *
+ * Returns the bumped record, or null when there is nothing on file.
  */
-export async function readPreviousBallot(
+export async function affirmBallot(
   scope: string,
   window: OwnersPollWindow,
   franchiseId: string,
+  now: Date = new Date(),
 ): Promise<StoredBallot | null> {
-  if (window.week <= 1) return null;
-  return readBallot(scope, { ...window, week: window.week - 1 }, franchiseId);
+  const current = await readBallot(scope, window, franchiseId);
+  if (!current) return null;
+  const bumped = affirmBallotRecord(current, now) as StoredBallot | null;
+  if (!bumped) return null;
+  const ok = await writeBallot(scope, window, bumped);
+  return ok ? bumped : null;
 }
 
 /**
@@ -255,7 +370,7 @@ export async function writeBallot(
   const redis = await getRedis();
   if (!redis) return false;
   try {
-    await redis.hset(ownersPollBallotsKey(scope, window.year, window.week), {
+    await redis.hset(ownersPollStandingKey(scope, window.year), {
       [record.franchiseId]: JSON.stringify(record),
     });
     return true;
@@ -276,7 +391,7 @@ export async function countBallots(scope: string, window: OwnersPollWindow): Pro
   const redis = await getRedis();
   if (!redis) return 0;
   try {
-    return await redis.hlen(ownersPollBallotsKey(scope, window.year, window.week));
+    return await redis.hlen(ownersPollStandingKey(scope, window.year));
   } catch (err) {
     console.error('[owners-poll] failed to count ballots:', err);
     return 0;

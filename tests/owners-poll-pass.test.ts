@@ -53,7 +53,7 @@ const {
   buildOpenLine,
   normalizeFranchiseIds,
 } = await import('../scripts/lib/owners-poll-pass.mjs');
-const { ownersPollBallotsKey, ownersPollCurrentKey } = await import(
+const { ownersPollStandingKey, ownersPollCurrentKey } = await import(
   '../src/utils/owners-poll-ballot.mjs'
 );
 
@@ -84,7 +84,8 @@ function seedBallots(count: number, year = 2026, week = 5) {
     const ranking = Array.from({ length: SLOTS }, (_, k) => FIELD[(i + k) % FIELD.length]);
     h.set(franchiseId, JSON.stringify({ franchiseId, ranking, submittedAt: null, updatedAt: null }));
   }
-  hashes.set(ownersPollBallotsKey(LEAGUE.navSlug, year, week), h);
+  // Standing ballots live on the SEASON key now, not the week key.
+  hashes.set(ownersPollStandingKey(LEAGUE.navSlug, year), h);
   return h;
 }
 
@@ -108,7 +109,7 @@ describe('openPoll', () => {
       log: silent,
     });
 
-    expect(block).toMatchObject({ status: 'open', slots: 7, quorum: 8, eligibleVoters: 16 });
+    expect(block).toMatchObject({ status: 'open', slots: 7, eligibleVoters: 16 });
     const stored = JSON.parse(store.get(ownersPollCurrentKey(LEAGUE.navSlug)) as string);
     expect(stored).toMatchObject({ year: 2026, week: 5, slots: 7 });
     expect(stored.eligibleFranchiseIds).toHaveLength(16);
@@ -170,7 +171,6 @@ describe('closePoll', () => {
 
     expect(result!.block.status).toBe('closed');
     expect(result!.block.ballotsIn).toBe(11);
-    expect(result!.block.hasQuorum).toBe(true);
     expect(result!.block.ranked!.length).toBeGreaterThan(0);
     expect(result!.block.ballots).toHaveLength(11);
     // 16 franchises, 11 voted.
@@ -200,7 +200,7 @@ describe('closePoll', () => {
     }
   });
 
-  it('records no consensus below quorum, and still clears the pointer', async () => {
+  it('publishes a light week rather than suppressing it — no quorum', async () => {
     seedWindow();
     seedBallots(3);
     const result = await closePoll({
@@ -210,7 +210,24 @@ describe('closePoll', () => {
       now: after,
       log: silent,
     });
-    expect(result!.block.hasQuorum).toBe(false);
+    expect(result!.block.ballotsIn).toBe(3);
+    expect(result!.block.ranked).not.toBeNull();
+    expect(result!.block.ranked!.length).toBeGreaterThan(0);
+    expect(result!.block).not.toHaveProperty('hasQuorum');
+    expect(store.get(ownersPollCurrentKey(LEAGUE.navSlug))).toBeUndefined();
+  });
+
+  it('records NO consensus when nobody voted, and still clears the pointer', async () => {
+    seedWindow();
+    seedBallots(0);
+    const result = await closePoll({
+      league: LEAGUE,
+      issue: issue(),
+      compositeRankByFid: composite,
+      now: after,
+      log: silent,
+    });
+    expect(result!.block.ballotsIn).toBe(0);
     expect(result!.block.ranked).toBeNull();
     expect(result!.block.unranked).toBeNull();
     expect(store.get(ownersPollCurrentKey(LEAGUE.navSlug))).toBeUndefined();
@@ -304,7 +321,6 @@ describe('buildClosedPollBlock — shared with the seeded example', () => {
     const { block } = buildClosedPollBlock({
       ballots,
       window,
-      quorum: 8,
       compositeRankByFid: composite,
     });
 
@@ -312,13 +328,13 @@ describe('buildClosedPollBlock — shared with the seeded example', () => {
       [
         'ballots',
         'ballotsIn',
+        'closeHourPT',
+        'closeWeekday',
         'closesAt',
         'eligibleVoters',
-        'hasQuorum',
         'methodology',
         'nonVoterCount',
         'opensAt',
-        'quorum',
         'ranked',
         'slots',
         'status',
@@ -327,7 +343,6 @@ describe('buildClosedPollBlock — shared with the seeded example', () => {
     );
     expect(block.status).toBe('closed');
     expect(block.ballotsIn).toBe(10);
-    expect(block.hasQuorum).toBe(true);
     expect(block.nonVoterCount).toBe(FIELD.length - 10);
   });
 
@@ -344,7 +359,6 @@ describe('buildClosedPollBlock — shared with the seeded example', () => {
     const { block } = buildClosedPollBlock({
       ballots,
       window,
-      quorum: LEAGUE.ownersPoll.quorum,
       compositeRankByFid: composite,
     });
 
@@ -429,10 +443,12 @@ describe('chat copy', () => {
     expect(mod.buildNagMessage).toBeUndefined();
   });
 
-  it('open line leads with the disagreement, not the chore', () => {
+  it('open line leads with the disagreement and STATES when the result lands', () => {
+    // "I don't understand when a poll starts or ends" was the complaint that
+    // started this. Every surface now names the result time.
     const text = buildOpenLine(
       {
-        ownersPoll: { status: 'open', slots: 7 },
+        ownersPoll: { status: 'open', slots: 7, closesAt: '2026-09-10T23:00:00.000Z' },
         rankings: [{ franchiseId: '0001' }, { franchiseId: '0016' }],
       },
       teams,
@@ -440,7 +456,9 @@ describe('chat copy', () => {
     )!;
     expect(text).toContain('Team 1');
     expect(text).toContain('Team 16');
-    expect(text).toMatch(/argue with it/i);
+    expect(text).toMatch(/always open/i);
+    expect(text).toMatch(/stands until you change it/i);
+    expect(text).toMatch(/Thursday/);
     expect(text).toContain('/pecking-order/ballot');
   });
 
@@ -448,18 +466,44 @@ describe('chat copy', () => {
     expect(buildOpenLine({ rankings: [{ franchiseId: '0001' }] }, teams, LEAGUE)).toBeNull();
   });
 
-  it('reveal reports a no-quorum week honestly instead of a top 3', () => {
+  it('posts NOTHING for a week nobody voted in', () => {
+    // "There is no point of posting about no poll." The chat gets one
+    // automated message a day; a null here lets that slot fall through to a
+    // kind with something to say.
+    expect(
+      buildRevealMessage({
+        league: LEAGUE,
+        issue: {
+          week: 5,
+          ownersPoll: { status: 'closed', ballotsIn: 0, eligibleVoters: 16, ranked: null },
+        },
+        teams,
+      }),
+    ).toBeNull();
+  });
+
+  it('reveals a light week normally — a poll of four is still a poll', () => {
     const text = buildRevealMessage({
       league: LEAGUE,
       issue: {
         week: 5,
-        ownersPoll: { status: 'closed', hasQuorum: false, ballotsIn: 4, eligibleVoters: 16, quorum: 8 },
+        ownersPoll: {
+          status: 'closed',
+          ballotsIn: 4,
+          eligibleVoters: 16,
+          ranked: [
+            { rank: 1, franchiseId: '0001', points: 28, firstPlaceVotes: 4, delta: 0 },
+            { rank: 2, franchiseId: '0002', points: 20, firstPlaceVotes: 0, delta: 1 },
+            { rank: 3, franchiseId: '0003', points: 12, firstPlaceVotes: 0, delta: -1 },
+          ],
+          ballots: [],
+        },
       },
       teams,
     })!;
-    expect(text).toContain('4 of 16');
-    expect(text).toMatch(/no consensus/i);
-    expect(text).not.toMatch(/^1\./m);
+    expect(text).toContain('4/16');
+    expect(text).toMatch(/^1\./m);
+    expect(text).not.toMatch(/quorum|no consensus/i);
   });
 
   it('reveal leads with the top 3 and the biggest split', () => {
@@ -469,7 +513,6 @@ describe('chat copy', () => {
         week: 5,
         ownersPoll: {
           status: 'closed',
-          hasQuorum: true,
           ballotsIn: 11,
           eligibleVoters: 16,
           ranked: [
