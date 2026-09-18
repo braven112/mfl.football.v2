@@ -570,12 +570,14 @@ describe('the no-games board fits the phone', () => {
   /**
    * One wording for one number, across every surface that prints it.
    *
-   * Five places render a yet-to-play count: this island's card header, its
+   * Six places render a yet-to-play count: this island's card header, its
    * matchup detail line, the win-probability bar's folded copies,
-   * BroadcastScoreHeader, MflLiveBoard and SundayTicketMatchups. Four of them
-   * said "to play" and the card said "yet to play", so the same fact read two
-   * different ways depending on which screen an owner was looking at — the
-   * kind of drift nobody files a bug for and everybody notices.
+   * BroadcastScoreHeader, MflLiveBoard, and the Sunday Ticket pair —
+   * SundayTicketMatchups server-side plus SundayTicketLive, which rewrites
+   * that same span on every poll. All but the card said "to play", so the
+   * same fact read two different ways depending on which screen an owner was
+   * looking at — the kind of drift nobody files a bug for and everybody
+   * notices.
    *
    * The check is on RENDERED text only. Prose in comments may still say "yet
    * to play" (it reads better in a sentence), and `yetToPlay` is the field
@@ -587,6 +589,12 @@ describe('the no-games board fits the phone', () => {
       ['BroadcastScoreHeader', 'src/components/shared/live-broadcast/BroadcastScoreHeader.tsx'],
       ['MflLiveBoard', 'src/components/shared/mfl-live/MflLiveBoard.tsx'],
       ['SundayTicketMatchups', 'src/components/shared/sunday-ticket/SundayTicketMatchups.astro'],
+      // The CLIENT half of the Sunday Ticket pair. SundayTicketMatchups
+      // server-renders `.st-game__ytp`; this file rewrites that same span on
+      // every poll. Leaving it out would let the phrase drift between the
+      // first paint and the first refresh OF THE SAME ELEMENT — the one place
+      // an owner would see both wordings without changing screens.
+      ['SundayTicketLive', 'src/components/shared/sunday-ticket/SundayTicketLive.tsx'],
     ];
     const offenders: string[] = [];
     for (const [name, rel] of SURFACES) {
