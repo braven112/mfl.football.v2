@@ -247,6 +247,18 @@ html.dark .lv-matchup {
   gap: var(--spacing-sm);
 }
 
+/* ── the page frame ──────────────────────────────────────────────────────── */
+
+.lv-page {
+  max-width: var(--container-max-width);
+  margin: 0 auto;
+  padding: var(--spacing-lg) var(--spacing-md) var(--spacing-3xl);
+}
+
+/* The NFL games rail sits below the board and OUTSIDE the island, so opening a
+   matchup cannot take it off screen. */
+.lv-page__strip { margin-top: var(--spacing-2xl); }
+
 /* ── the card grid ───────────────────────────────────────────────────────── */
 
 /**

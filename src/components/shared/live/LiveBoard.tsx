@@ -32,7 +32,7 @@ import { orderPanelMatchups, selectMatchupMoments } from '../../../utils/live/mo
 import { buildLiveMoments } from '../../../utils/live/moments';
 import { useNflGameDetail } from '../../../hooks/useNflGameDetail';
 import type { FeedSnapshot } from '../../../utils/live-scoring-view';
-import { shouldPollLive } from '../../../hooks/useNflScoreboard';
+import { shouldPollLive, useNflScoreboard } from '../../../hooks/useNflScoreboard';
 import { fromMflLiveBoard } from '../../../utils/live/from-mfl-live';
 import type { MflLiveBoard } from '../../../types/mfl-live';
 
@@ -166,6 +166,12 @@ export default function LiveBoard({
   // effect re-subscribing on every poll.
   const boardRef = useRef(board);
   boardRef.current = board;
+  /**
+   * The slate the cadence is judged against, read inside the loop so it
+   * follows the LATEST games without the effect re-subscribing every poll.
+   * `board.games` is the server's copy and never moves after the first paint.
+   */
+  const slateRef = useRef<NflGame[]>(board.games ?? []);
 
   useEffect(() => {
     if (!pollUrl) return;
@@ -198,7 +204,7 @@ export default function LiveBoard({
         if (!cancelled) setFeed((prev) => ({ status: 'error', fetchedAt: prev.fetchedAt }));
       } finally {
         if (!cancelled) {
-          const live = shouldPollLive(boardRef.current.games ?? [], isLive);
+          const live = shouldPollLive(slateRef.current, isLive);
           timer = setTimeout(tick, live ? POLL_LIVE_MS : POLL_IDLE_MS);
         }
       }
@@ -206,7 +212,7 @@ export default function LiveBoard({
 
     // Polling is UNCONDITIONAL. A flag that can be wrong must never be able to
     // stop the board asking for a score; it only sets how often.
-    timer = setTimeout(tick, shouldPollLive(board.games ?? [], isLive) ? POLL_LIVE_MS : POLL_IDLE_MS);
+    timer = setTimeout(tick, shouldPollLive(slateRef.current, isLive) ? POLL_LIVE_MS : POLL_IDLE_MS);
     return () => {
       cancelled = true;
       clearTimeout(timer);
@@ -218,10 +224,30 @@ export default function LiveBoard({
   const multiLeague = board.panels.length > 1;
 
   /**
+   * The NFL slate.
+   *
+   * Through `useNflScoreboard` rather than off `board.games`, for three
+   * reasons: it SHARES the poll store with the games rail, so there is no
+   * second poller; it keeps the slate current between board polls, which a
+   * board payload carrying `games: []` would otherwise blank; and it supplies
+   * `byTeam` and the live count the rows and the pill both need.
+   *
+   * The server-rendered slate rides in on `board.games` as the fallback, which
+   * is what puts it in the markup — the store is empty during SSR.
+   */
+  const slate = useNflScoreboard(board.week, board.year, {
+    enabled: !demoLabel && !!pollUrl,
+    live: isLive,
+    fallbackGames: board.games,
+  });
+
+  /**
    * "Live" is claimed from the NFL SLATE, never from a franchise still having
    * seconds left — that is true all week and says nothing about right now.
    */
-  const gamesLive = (board.games ?? []).filter((g) => g.state === 'in').length;
+  const gamesLive = slate.liveCount;
+  // Kept current for the poll loop's cadence, which reads it at tick time.
+  slateRef.current = slate.games;
 
   /**
    * ESPN box scores and scoring plays.
@@ -249,21 +275,22 @@ export default function LiveBoard({
    */
   const feeds: FeedSnapshot[] = demoLabel || !pollUrl
     ? (extraFeeds ?? [])
-    : [feed, { status: detail.status, fetchedAt: detail.fetchedAt }, ...(extraFeeds ?? [])];
+    : [
+        feed,
+        { status: slate.status, fetchedAt: slate.fetchedAt },
+        { status: detail.status, fetchedAt: detail.fetchedAt },
+        ...(extraFeeds ?? []),
+      ];
 
   const pill = (
     <LvFeedStatus feeds={feeds} anyLive={gamesLive > 0} gamesLive={gamesLive} />
   );
 
-  /** A row's real NFL game, by club code. Both sides of every game. */
-  const gamesByTeam = useMemo(() => {
-    const out: Record<string, NflGame> = {};
-    for (const g of board.games ?? []) {
-      if (g.home.code) out[g.home.code] = g;
-      if (g.away.code) out[g.away.code] = g;
-    }
-    return out;
-  }, [board.games]);
+  /** A row's real NFL game, by club code. `byTeam` already holds both sides. */
+  const gamesByTeam = useMemo(
+    () => Object.fromEntries(slate.byTeam) as Record<string, NflGame>,
+    [slate.byTeam],
+  );
 
   /**
    * `error` SUPPRESSES the stat-line slot rather than rendering every starter

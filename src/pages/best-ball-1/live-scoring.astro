@@ -2,135 +2,32 @@
 /**
  * Best Ball #1 — Live Scoring (/best-ball-1/live-scoring)
  *
- * Imported from TheLeague's live-scoring page, minus the parts that don't
- * apply here: no Throwback Week (TheLeague-only), and no offseason sample
- * replay (the bundled sample is TheLeague's teams — a brand-new best-ball
- * league has no season to replay, so pre-season the scoreboard island shows
- * its own honest empty state instead).
+ * A thin wrapper over the shared `LiveBoardPage`. This page matters MORE here
+ * than in the other leagues: with no lineups to set, scoreboard watching is
+ * the entire in-season experience.
  *
- * In best ball this page matters MORE than in the other leagues: with no
- * lineups to set, scoreboard watching is the entire in-season experience.
- * The data plumbing (assembleLiveScoringData / LiveScoreboard) is already
- * league-agnostic — everything is keyed off this league's registry entry.
+ * Two things it does NOT get, both decided in the registry rather than here:
+ * Throwback Week (no `history[]`, so `strictThrowbackScopeForLeagueSlug`
+ * returns null) and the offseason replay (`liveScoringSample: false` — the
+ * bundled sample is another league's teams, and the board's own empty state is
+ * the honest answer out of season).
+ *
+ * What stays here is what cannot move into a component: the feature gate's
+ * `Astro.redirect()`, which from an imported component only stops rendering it
+ * and ships a blank 200.
  */
-
-import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
-import bb1Config from '../../../data/best-ball-1/bb1.config.json';
-import { getAuthUser } from '../../utils/auth';
-import { readViewerClock } from '../../utils/viewer-preferences-page';
+import LiveBoardPage from '../../components/shared/live/LiveBoardPage.astro';
 import { getLeagueContext } from '../../utils/league-context';
 import { leagueHasFeature } from '../../config/leagues';
-import { getCurrentSeasonYear } from '../../utils/league-year';
-import { getCurrentNFLWeek } from '../../utils/current-week';
-import { getDailySlot } from '../../utils/hero-resolver';
-import { assembleLiveScoringData, type ConfigTeam } from '../../utils/live-scoring-data';
-import LiveScoreboard from '../../components/shared/LiveScoreboard';
-import NflGamesStrip from '../../components/shared/NflGamesStrip';
-import { fetchInitialNflGames } from '../../utils/nfl-scoreboard-source';
-import type { LiveScoringPageProps } from '../../types/live-scoring';
-import '../../styles/live-scoring.css';
-import '../../styles/nfl-games-strip.css';
-import '../../styles/network-badge.css';
 
 // Live-fetch on every request — scores must never be cached.
 export const prerender = false;
 
 const league = getLeagueContext(Astro.url);
 
-// Gate on the registry feature flag.
 if (!leagueHasFeature(league.slug, 'liveScoring')) {
   return Astro.redirect('/best-ball-1');
 }
-
-const now = new Date();
-const year = getCurrentSeasonYear();
-const weekParam = Astro.url.searchParams.get('week');
-const parsedWeek = weekParam ? parseInt(weekParam, 10) : NaN;
-const week = Number.isFinite(parsedWeek) && parsedWeek > 0
-  ? parsedWeek
-  : (getCurrentNFLWeek(now) ?? 1);
-
-// Same game-day clock as the homepage hero: Thu/Sun/Mon windows drive whether
-// the island polls for live updates and which game-window label to show.
-const daily = getDailySlot(now);
-const isLive = daily.slot === 'live-scoring';
-
-const authUser = getAuthUser(Astro.request);
-// The country whose channels the games rail names. READ, never resolve: the
-// resolver writes preference cookies and this page has none of its own to set,
-// and a viewer who has chosen nothing gets the US default — exactly what this
-// rail showed before it named a channel at all.
-const viewerCountry = (await readViewerClock(Astro.cookies, authUser, league.slug)).prefs.country;
-
-const userFranchiseId =
-  authUser?.leagueId === league.leagueId ? authUser.franchiseId : undefined;
-
-const configTeams = ((bb1Config as { teams?: ConfigTeam[] }).teams ?? []) as ConfigTeam[];
-
-// Started before the MFL assembly so the two overlap; awaited below.
-const nflGamesPromise = fetchInitialNflGames({ week, year, params: Astro.url.searchParams });
-
-const data = await assembleLiveScoringData({
-  siteUrl: Astro.url,
-  week,
-  year,
-  leagueId: league.leagueId,
-  host: league.host,
-  slug: 'best-ball-1',
-  configTeams,
-  userFranchiseId,
-});
-
-const islandProps: LiveScoringPageProps = {
-  week,
-  year,
-  leagueId: league.leagueId,
-  host: league.host,
-  slug: league.slug,
-  isLive,
-  gameWindow: daily.gameWindow,
-  userFranchiseId,
-  matchups: data.matchups,
-  teams: data.teams,
-  playerMeta: data.playerMeta,
-  initialScores: data.scores,
-  initialRemaining: data.remaining,
-  initialPlayers: data.players,
-  initialBench: data.bench,
-  initialYetToPlay: data.playersYetToPlay,
-};
-
-// The rail's SERVER slate. The strip draws nothing without games, and an
-// <astro-island> with no children is never observed by `client:visible`, so it
-// never hydrates — this rail was invisible here on every load. It reaches the
-// markup only because `useNflScoreboard` treats `fallbackGames` as the value
-// until the first poll lands.
-const nflGames = await nflGamesPromise;
 ---
 
-<TheLeagueLayout title="Live Scoring | Best Ball #1">
-  <div class="ls-page">
-    <LiveScoreboard client:load {...islandProps} />
-    <!-- `client:idle`, NOT `client:visible`. The strip renders null when it has
-         no games, and Astro's visible directive observes the island's CHILDREN —
-         an island that server-rendered nothing has none, so it is never observed
-         and never hydrates. The server slate above normally prevents that, but an
-         ESPN outage would put it right back; idle hydrates either way, so the
-         client poll can still recover the rail. -->
-    <div class="ls-page-strip">
-      <NflGamesStrip client:idle week={week} year={year} isLive={isLive}
-                     initialGames={nflGames} country={viewerCountry} />
-    </div>
-  </div>
-</TheLeagueLayout>
-
-<style>
-  .ls-page {
-    max-width: var(--container-max-width);
-    margin: 0 auto;
-    padding: var(--spacing-lg) var(--spacing-md) var(--spacing-3xl);
-  }
-  .ls-page-strip {
-    margin-top: var(--spacing-2xl);
-  }
-</style>
+<LiveBoardPage title="Live Scoring | Best Ball #1" />

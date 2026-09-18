@@ -57,11 +57,17 @@ function stripMountFiles(): string[] {
   return out.sort();
 }
 
-/** Routes that mount the React island and therefore must hand it a country. */
+/**
+ * Files that mount the React island and therefore must hand it a country.
+ *
+ * ONE file now, not three. The three `live-scoring.astro` routes were unified
+ * onto `LiveBoardPage` — they are ~30-line wrappers holding only the feature
+ * gate's redirect, which cannot live in a component. Re-pointed rather than
+ * relaxed: every assertion below still runs, against the file that now does
+ * the mounting.
+ */
 const STRIP_ROUTES = [
-  'src/pages/theleague/live-scoring.astro',
-  'src/pages/afl-fantasy/live-scoring.astro',
-  'src/pages/best-ball-1/live-scoring.astro',
+  'src/components/shared/live/LiveBoardPage.astro',
 ] as const;
 
 const LINEUP_PAGES = [
@@ -179,31 +185,33 @@ describe('NFL games rail — it must survive its own empty server render', () =>
     expect(offenders, 'client:visible cannot hydrate an island with no children').toEqual([]);
   });
 
-  it.each(['src/pages/theleague/live-scoring.astro', 'src/pages/afl-fantasy/live-scoring.astro'])(
-    '%s does not seed the NFL side from the sample under ?demo=live',
-    (route) => {
-      const src = read(route);
-      // ?demo=live is "sampled fantasy, REAL live NFL". The hook serves
-      // `fallbackGames` until the first poll lands, so handing it the bundled
-      // slate there would show last season's games as the live ones — and
-      // permanently, because the store holds no data while ESPN is unreachable.
-      expect(src, `${route}: rail seeded from the sample under ?demo=live`)
-        .toMatch(/nflGames = useRosterDemo \? undefined : sample\.nflGames/);
-      expect(src, `${route}: scoreboard seeded from the sample under ?demo=live`)
-        .toMatch(/initialNflGames: useRosterDemo \? undefined : sample\.nflGames/);
-    },
-  );
+  it('does not seed the NFL side from the sample under ?demo=live', () => {
+    // ?demo=live is "sampled fantasy, REAL live NFL". The hook serves
+    // `fallbackGames` until the first poll lands, so handing it the bundled
+    // slate there would show last season's games as the live ones — and
+    // permanently, because the store holds no data while ESPN is unreachable.
+    //
+    // The rule now lives in two halves and both are checked: the assembler
+    // withholds the bundled slate for a roster sample, and the page takes the
+    // live read for anything that is not a PLAIN replay.
+    const assembler = read('src/utils/live/league-board.ts');
+    expect(assembler, 'assembler hands a roster sample the bundled slate')
+      .toMatch(/sampleGames: isRosterSample \? undefined : replay\.nflGames/);
 
-  it.each(['src/pages/theleague/live-scoring.astro', 'src/pages/afl-fantasy/live-scoring.astro'])(
-    '%s abandons the parallel ESPN fetch when it falls back to the sample',
-    (route) => {
-      const src = read(route);
-      // The fetch starts before the MFL feed can say it is empty — which it is
-      // for the whole offseason — so the flip has to drop it rather than leave
-      // a request and its timer running on every such view.
-      expect(src).toMatch(/nflGamesAbort\.abort\(\)/);
-    },
-  );
+    const page = read('src/components/shared/live/LiveBoardPage.astro');
+    expect(page, 'page seeds the rail from the sample under ?demo=live')
+      .toMatch(/const plainReplay = assembled\.isSample && !assembled\.isRosterSample/);
+    expect(page, 'page does not take the live slate for ?demo=live')
+      .toMatch(/plainReplay \? assembled\.sampleGames : await nflGamesPromise/);
+  });
+
+  it('abandons the parallel ESPN fetch when it falls back to the sample', () => {
+    // The fetch starts before the MFL feed can say it is empty — which it is
+    // for the whole offseason — so the flip has to drop it rather than leave a
+    // request and its timer running on every such view.
+    expect(read('src/components/shared/live/LiveBoardPage.astro'))
+      .toMatch(/if \(plainReplay\) nflGamesAbort\.abort\(\)/);
+  });
 
   it("the component's own example does not recommend client:visible", () => {
     // The example is what a fourth page gets copied from.

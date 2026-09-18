@@ -123,6 +123,7 @@ export const LEAGUES = {
       schefterFeed: true,
       schefterTips: true,
       liveScoring: true,
+      liveScoringSample: true,
       /** Rookies only, cap of 3. */
       taxiSquad: true,
       offseasonAuction: true,
@@ -270,6 +271,7 @@ export const LEAGUES = {
       schefterFeed: true,
       schefterTips: true,
       liveScoring: true,
+      liveScoringSample: true,
       /** The AFL has no practice squad — keepers are its off-roster mechanic. */
       taxiSquad: false,
       offseasonAuction: false,
@@ -416,6 +418,11 @@ export const LEAGUES = {
        * scoreboard watching is the whole in-season experience here.
        */
       liveScoring: true,
+      /**
+       * No season to replay. The bundled sample is another league's teams, so
+       * the board's own empty state is the honest answer out of season here.
+       */
+      liveScoringSample: false,
       /** Draft-only: no roster management at all, so nothing to park. */
       taxiSquad: false,
       /** Draft-only: nothing is acquired here after the draft. */

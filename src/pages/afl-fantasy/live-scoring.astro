@@ -1,266 +1,35 @@
 ---
 /**
- * AFL Fantasy — Live Scoring (/afl-fantasy/live-scoring)
+ * AFL Fantasy — Live Scoring (/afl/live-scoring)
  *
- * The AFL's counterpart to TheLeague's board. Everything is shared:
- * assembleLiveScoringData and the LiveScoreboard island are league-agnostic
- * and key off the registry entry, so the ESPN box scores / real game clock /
- * red-zone flags / scoring plays all arrive here with no per-league wiring.
+ * A thin wrapper over the shared `LiveBoardPage`. Two AFL facts shape what it
+ * renders, and both are handled below this page rather than here:
  *
- * Throwback Week runs here too as of September 2026 — NFL Week 8, against
- * TheLeague's Week 4 — through the same `applyThrowbackToBoard` chokepoint and
- * the same preview bar, differing only by `scope`.
- *
- * Two AFL facts that shape this page, both from the registry:
- *
- *  - **24 franchises playing doubleheaders.** MFL's liveScoring returns 24
- *    matchup elements for a week — distinct pairs, not duplicates, because
- *    every AFL team plays twice (intra-conference then interconference). The
- *    board already handles an arbitrary matchup count and pins the viewer's
- *    own games first.
+ *  - **24 franchises playing doubleheaders.** MFL returns 24 matchup elements
+ *    for a week — distinct pairs, not duplicates, because every team plays
+ *    twice. The board takes an arbitrary matchup count and leads with every
+ *    one the viewer is in, which is what a doubleheader needs.
  *  - **`duplicatePlayers`.** The same NFL player is routinely started by two
  *    AFL franchises at once (85 of 131 starters in a real week), so anything
- *    mapping a player back to "his" franchise has to handle a LIST. That is
- *    why buildMoments keys owners as playerId → fid[]; a single-owner map
- *    silently drops the play from the second owner's ticker.
+ *    mapping a player back to "his" franchise handles a LIST — see
+ *    `buildLiveMoments`, whose owner map is keyed playerId → franchises.
+ *
+ * What stays here is what cannot move into a component: the feature gate's
+ * `Astro.redirect()`, which from an imported component only stops rendering it
+ * and ships a blank 200.
  */
-
-import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
-import aflConfig from '../../../data/afl-fantasy/afl.config.json';
-import { getAuthUser } from '../../utils/auth';
-import { readViewerClock } from '../../utils/viewer-preferences-page';
+import LiveBoardPage from '../../components/shared/live/LiveBoardPage.astro';
 import { getLeagueContext } from '../../utils/league-context';
 import { leagueHasFeature } from '../../config/leagues';
-import { getCurrentSeasonYear, getLeagueYearForSlug } from '../../utils/league-year';
-import { getCurrentNFLWeek } from '../../utils/current-week';
-import { getDailySlot } from '../../utils/hero-resolver';
-import { assembleLiveScoringData, buildTeamsMap, loadStarterRules, type ConfigTeam } from '../../utils/live-scoring-data';
-import { applyThrowbackToBoard } from '../../utils/throwback-live-scoring';
-import ThrowbackPreviewBar from '../../components/shared/ThrowbackPreviewBar.astro';
-import { resolveLeaguePath } from '../../utils/nav-utils';
-import { getCurrentRosterSample, getLiveScoringSample } from '../../data/live-scoring-sample';
-import LiveScoreboard from '../../components/shared/LiveScoreboard';
-import NflGamesStrip from '../../components/shared/NflGamesStrip';
-import { fetchInitialNflGames } from '../../utils/nfl-scoreboard-source';
-import type { LiveScoringPageProps, NflGame } from '../../types/live-scoring';
-import '../../styles/live-scoring.css';
-import '../../styles/nfl-games-strip.css';
-import '../../styles/network-badge.css';
 
 // Live-fetch on every request — scores must never be cached.
 export const prerender = false;
 
 const league = getLeagueContext(Astro.url);
 
-// Gate on the registry feature flag.
 if (!leagueHasFeature(league.slug, 'liveScoring')) {
-  return Astro.redirect('/afl-fantasy');
-}
-
-const now = new Date();
-const year = getCurrentSeasonYear();
-const weekParam = Astro.url.searchParams.get('week');
-const parsedWeek = weekParam ? parseInt(weekParam, 10) : NaN;
-const week = Number.isFinite(parsedWeek) && parsedWeek > 0
-  ? parsedWeek
-  : (getCurrentNFLWeek(now) ?? 1);
-
-// Same game-day clock as the homepage hero: Thu/Sun/Mon windows drive whether
-// the island polls for live updates and which game-window label to show.
-const daily = getDailySlot(now);
-const isLive = daily.slot === 'live-scoring';
-
-const authUser = getAuthUser(Astro.request);
-// The country whose channels the games rail names. READ, never resolve: the
-// resolver writes preference cookies and this page has none of its own to set,
-// and a viewer who has chosen nothing gets the US default — exactly what this
-// rail showed before it named a channel at all.
-const viewerCountry = (await readViewerClock(Astro.cookies, authUser, league.slug)).prefs.country;
-
-// League-scoped on purpose: AFL franchise ids collide with TheLeague's, so a
-// TheLeague session must not light up "YOUR MATCHUP" on an unrelated AFL team.
-const userFranchiseId =
-  authUser?.leagueId === league.leagueId ? authUser.franchiseId : undefined;
-
-let configTeams = ((aflConfig as { teams?: ConfigTeam[] }).teams ?? []) as ConfigTeam[];
-
-// Throwback Week: swap every franchise to its resolved legacy identity BEFORE
-// any downstream assembly touches configTeams, so the scoreboard, the matchup
-// pairings and the sample replay all pick it up for free.
-//
-// `scope: 'afl'` is load-bearing, not a label. Franchise ids 0001-0016 exist
-// in BOTH leagues with different `history[]` arrays, so resolving with the
-// default scope would hand AFL teams TheLeague's era rules.
-const throwback = await applyThrowbackToBoard({
-  configTeams,
-  week,
-  scope: 'afl',
-  leagueId: league.leagueId,
-  authUser,
-  searchParams: Astro.url.searchParams,
-});
-configTeams = throwback.configTeams;
-const throwbackPreview = throwback.preview;
-const settingsPath = resolveLeaguePath(
-  '/afl-fantasy/throwback-settings',
-  Astro.locals.hideLeaguePrefix ?? false
-);
-
-// Demo/sample mode, same contract as TheLeague's page. MFL turns the
-// liveScoring feed off in the offseason, so an empty-but-healthy feed falls
-// back to a bundled replay of the last completed AFL regular-season week
-// (badged "Sample data"). ?demo=1 forces it year-round for validation;
-// ?demo=0 forces the live path so the offseason empty state can be debugged.
-const demoParam = Astro.url.searchParams.get('demo');
-
-// ?demo=live — real CURRENT rosters on the fantasy side, a genuinely live NFL
-// slate on the other. MFL serves nothing before the season starts (liveScoring
-// errors outright and week 1's weeklyResults comes back with empty starters),
-// so this is the only way to put real rostered players in front of a game that
-// is actually being played. Pair it with the ?espnSeason/?espnWeek/?espnYear
-// override to choose the slate.
-const useRosterDemo = demoParam === 'live';
-// Each league rolls its MFL league year on its own date (TheLeague Feb 14, the
-// AFL June 1), and this reads that year's rosters off disk — so it must be the
-// per-league clock, not TheLeague's.
-const rosterDemoYear = getLeagueYearForSlug(league.slug);
-// Slot labels (QB/RB/…/Flex) come from the league's own starter config.
-const starterRules = loadStarterRules(league.dataPath, rosterDemoYear);
-let useDemo = demoParam === '1' || useRosterDemo;
-let data: Awaited<ReturnType<typeof assembleLiveScoringData>> | undefined;
-
-// Started HERE, awaited in the live branch below, so ESPN overlaps the MFL
-// assembly instead of adding its timeout to every render. Skipped entirely when
-// the caller already asked for the sample.
-const nflGamesAbort = new AbortController();
-const nflGamesPromise = useDemo
-  ? undefined
-  : fetchInitialNflGames({ week, year, params: Astro.url.searchParams, signal: nflGamesAbort.signal });
-
-if (!useDemo) {
-  data = await assembleLiveScoringData({
-    siteUrl: Astro.url,
-    week,
-    year,
-    leagueId: league.leagueId,
-    host: league.host,
-    slug: 'afl-fantasy',
-    configTeams,
-    userFranchiseId,
-  });
-  // Require the fetch to have SUCCEEDED (`ok`). A failed live request also
-  // yields no matchups, and papering over an in-season outage with last
-  // season's replay is worse than showing the island's empty/error state.
-  if (demoParam !== '0' && data.ok && data.matchups.length === 0) {
-    useDemo = true;
-    // The slate was started in parallel before we could know the feed was
-    // empty. It is worthless now — the sample supplies the rail — so drop it
-    // rather than leave a request and its 5s timer running on every offseason
-    // view.
-    nflGamesAbort.abort();
-  }
-}
-
-let islandProps: LiveScoringPageProps;
-let nflGames: NflGame[] | undefined;
-
-if (useDemo) {
-  const sample = useRosterDemo
-    ? getCurrentRosterSample({ slug: league.slug, year: rosterDemoYear })
-    : getLiveScoringSample({ slug: league.slug });
-  // ?demo=live means REAL NFL alongside sampled fantasy, so it must not seed the
-  // rail from last season's bundle: the hook now serves `fallbackGames` until
-  // the first poll lands, which would show the sample slate as the live one —
-  // and permanently, since the store keeps no data when ESPN is unreachable.
-  nflGames = useRosterDemo ? undefined : sample.nflGames;
-  islandProps = {
-    week: sample.week,
-    year,
-    leagueId: league.leagueId,
-    host: league.host,
-    slug: league.slug,
-    // The MFL poll stays off either way: there is nothing to poll before the
-    // season. The ESPN pollers are re-enabled by demoLiveNfl below.
-    isLive: false,
-    gameWindow: daily.gameWindow,
-    userFranchiseId,
-    matchups: sample.matchups,
-    teams: buildTeamsMap(configTeams),
-    playerMeta: sample.playerMeta,
-    starterRules,
-    initialScores: sample.scores,
-    initialRemaining: sample.remaining,
-    initialPlayers: sample.players,
-    initialBench: sample.bench,
-    initialYetToPlay: sample.playersYetToPlay,
-    demo: true,
-    demoLiveNfl: useRosterDemo,
-    demoLabel: useRosterDemo ? `Live NFL · ${rosterDemoYear} rosters · no fantasy scoring yet` : undefined,
-    initialNflGames: useRosterDemo ? undefined : sample.nflGames,
-    initialDetail: sample.detail,
-  };
-} else {
-  // data is always assigned in the non-demo branch above.
-  const liveData = data!;
-
-  // The rail's SERVER slate. Not an optimisation — the strip draws nothing
-  // without games, and an <astro-island> with no children is never observed by
-  // `client:visible`, so it never hydrates. It reaches the markup only because
-  // `useNflScoreboard` treats `fallbackGames` as the value until the first poll
-  // lands; it used to read that prop in demo mode ALONE, which is why this rail
-  // server-rendered nothing for its whole life. Undefined on an ESPN outage, so
-  // the island still falls back to its own poll.
-  nflGames = await nflGamesPromise;
-  islandProps = {
-    week,
-    year,
-    leagueId: league.leagueId,
-    host: league.host,
-    slug: league.slug,
-    isLive,
-    gameWindow: daily.gameWindow,
-    userFranchiseId,
-    matchups: liveData.matchups,
-    teams: liveData.teams,
-    playerMeta: liveData.playerMeta,
-    starterRules,
-    initialScores: liveData.scores,
-    initialRemaining: liveData.remaining,
-    initialPlayers: liveData.players,
-    initialBench: liveData.bench,
-    initialYetToPlay: liveData.playersYetToPlay,
-  };
+  return Astro.redirect('/afl');
 }
 ---
 
-<TheLeagueLayout title="Live Scoring | AFL Fantasy">
-  <div class="ls-page">
-    {throwbackPreview && (
-      <ThrowbackPreviewBar preview={throwbackPreview} settingsPath={settingsPath} />
-    )}
-    <LiveScoreboard client:load {...islandProps} />
-    <!-- `client:idle`, NOT `client:visible`. The strip renders null when it has
-         no games, and Astro's visible directive observes the island's CHILDREN —
-         an island that server-rendered nothing has none, so it is never observed
-         and never hydrates. The server slate above normally prevents that, but an
-         ESPN outage would put it right back; idle hydrates either way, so the
-         client poll can still recover the rail. -->
-    <div class="ls-page-strip">
-      <NflGamesStrip client:idle week={islandProps.week} year={year}
-                     isLive={useRosterDemo ? true : (useDemo ? false : isLive)}
-                     demo={useDemo && !useRosterDemo} initialGames={nflGames}
-                     country={viewerCountry} />
-    </div>
-  </div>
-</TheLeagueLayout>
-
-<style>
-  .ls-page {
-    max-width: var(--container-max-width);
-    margin: 0 auto;
-    padding: var(--spacing-lg) var(--spacing-md) var(--spacing-3xl);
-  }
-  .ls-page-strip {
-    margin-top: var(--spacing-2xl);
-  }
-</style>
+<LiveBoardPage title="Live Scoring | AFL Fantasy" />
