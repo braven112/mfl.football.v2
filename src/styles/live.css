@@ -1065,7 +1065,21 @@ button.lv-card:focus-visible {
    classic space-consuming scrollbar, so it overflows by the scrollbar's width
    on every desktop that has one. */
 @media (max-width: 760px) {
-  .lv-detail {
+  /*
+   * SCOPED TO `.lv-page`, and that is the whole rule.
+   *
+   * This cancels two gutters BY NAME — the layout's `main` inline padding and
+   * `.lv-page`'s own — so it is only correct under an ancestor that actually
+   * has those two. MFL Live (`/live`) renders the same board inside
+   * `MflAppLayout`, which has NO `.lv-page` wrapper and uses clamp-based
+   * gutters of its own; unscoped, this pulled the card left and right by two
+   * tokens that did not match, and both edges overflowed the screen — the team
+   * names and scores were clipped off either side on a phone.
+   *
+   * A negative margin that cancels a named gutter must name the ancestor it is
+   * cancelling for, or it lands on a surface with different ones.
+   */
+  .lv-page .lv-detail {
     margin-inline: calc((var(--padding-sm) + var(--spacing-md)) * -1);
     border-left: 0;
     border-right: 0;

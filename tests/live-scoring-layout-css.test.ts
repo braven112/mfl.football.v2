@@ -609,15 +609,37 @@ describe('the no-games board fits the phone', () => {
     // clips it (`main`'s `container-type: inline-size` is layout containment,
     // not paint). A mobile emulator uses overlay scrollbars and never shows it,
     // which is why only a guard catches this one.
-    const bleed = declarationsFor(phone, '.lv-detail').map(([, v]) => v).join(' ');
+    const bleed = declarationsFor(phone, '.lv-page .lv-detail').map(([, v]) => v).join(' ');
     expect(bleed, '.lv-detail must not size itself in vw').not.toMatch(/\d\s*vw/);
     // It must still actually cancel BOTH ancestor gutters: the layout's `main`
     // inline padding and `.lv-page`'s own. Either one alone leaves a visible
     // asymmetric inset that reads as "nearly right".
-    const inline = valueOf(phone, '.lv-detail', 'margin-inline') ?? '';
+    const inline = valueOf(phone, '.lv-page .lv-detail', 'margin-inline') ?? '';
     expect(inline, 'must cancel main + .lv-page by token').toContain('--padding-sm');
     expect(inline).toContain('--spacing-md');
     expect(inline, 'a cancel is negative').toMatch(/-1|\* *-|-\(/);
+  });
+
+  it('never cancels a gutter it cannot name the ancestor for', () => {
+    // SHIPPED, on MFL Live. The full-bleed above cancels two gutters BY NAME,
+    // so it is only correct under an ancestor that has those two. `/live`
+    // renders the same board inside `MflAppLayout` — no `.lv-page`, clamp-based
+    // gutters of its own — and unscoped the rule pulled the card left and right
+    // by two tokens that did not match. Both edges overflowed the screen: the
+    // team names and the scores were clipped off either side on a phone.
+    //
+    // So a negative inline margin on a kit element has to be scoped to the
+    // ancestor whose padding it is cancelling. A BARE `.lv-detail` rule with
+    // one is the bug.
+    for (const block of [base, phone] as const) {
+      for (const prop of ['margin-inline', 'margin-left', 'margin-right']) {
+        const v = valueOf(block, '.lv-detail', prop);
+        expect(
+          v === undefined || !/-/.test(v),
+          `a bare .lv-detail must not carry a negative ${prop} — scope it to the ancestor whose gutter it cancels`,
+        ).toBe(true);
+      }
+    }
   });
 
   it('does not pull the card up over the Throwback preview bar', () => {
