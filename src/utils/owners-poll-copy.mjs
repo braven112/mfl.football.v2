@@ -44,8 +44,7 @@ export function nextResultLine(formattedResultTime) {
  * week whose games start earlier — Thanksgiving opens around 10:00 PT — it is
  * pulled back to just before the first snap, and saying "Thursday 4pm" then
  * would be a lie an owner discovers by being locked out.
- */
-/**
+ *
  * @param {string} formattedResultTime
  * @param {boolean} [clampedToKickoff]
  */
@@ -59,8 +58,9 @@ export function resultTimingPhrase(formattedResultTime, clampedToKickoff = false
  * How an owner's own standing ballot is described back to them.
  *
  * `weeksOld` is null when they have never voted.
+ *
+ * @param {number|null} weeksOld
  */
-/** @param {number|null} weeksOld */
 export function ballotAgeLine(weeksOld) {
   if (weeksOld == null) return 'You have no ballot on file.';
   if (weeksOld < 1) return 'Your ballot is current.';
@@ -68,9 +68,21 @@ export function ballotAgeLine(weeksOld) {
   return `Your ballot is ${weeksOld} weeks old.`;
 }
 
-/** The "Still good" prompt, shown once a ballot passes the stale threshold. */
-/** @param {number|null} weeksOld */
+/**
+ * The "Still good" prompt.
+ *
+ * Two audiences, two asks — and conflating them produces nonsense. An owner
+ * who has NEVER voted cannot be asked whether their ballot is still how they
+ * see it; they get an invitation. Only someone with a ballot gets the
+ * question. (The conflated version shipped to the preview and read "You have
+ * no ballot on file. Still how you see it?")
+ *
+ * @param {number|null} weeksOld
+ */
 export function stillGoodPrompt(weeksOld) {
+  if (weeksOld == null) {
+    return 'You have no ballot on file — rank the league and it stands until you change it.';
+  }
   return `${ballotAgeLine(weeksOld)} Still how you see it?`;
 }
 
@@ -82,8 +94,7 @@ export function stillGoodPrompt(weeksOld) {
  * stale, it is false. What it honestly measures is how much of the league has
  * an opinion on file — and the weekly signal, when there is one, is how many
  * owners CHANGED their mind.
- */
-/**
+ *
  * @param {number} onFile
  * @param {number} eligible
  * @param {number|null} [changedThisCycle]
@@ -95,8 +106,9 @@ export function coverageLine(onFile, eligible, changedThisCycle = null) {
   return `${base} · ${changedThisCycle} ${verb} changed theirs since the last result.`;
 }
 
-/** Whole weeks between an edit and now — the unit every age line uses. */
 /**
+ * Whole weeks between an edit and now — the unit every age line uses.
+ *
  * @param {string|null|undefined} updatedAt
  * @param {Date|number} now
  * @returns {number|null}
