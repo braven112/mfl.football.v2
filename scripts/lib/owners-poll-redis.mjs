@@ -11,6 +11,7 @@
 import { getRedisConfig, redisCommand } from './redis.mjs';
 import {
   ownersPollBallotsKey,
+  ownersPollStandingKey,
   ownersPollCurrentKey,
   parseStoredBallot,
   parseStoredWindow,
@@ -56,6 +57,35 @@ export async function clearWindow(redis, navSlug) {
 }
 
 /** How many ballots are in. HLEN, so no ballot content is transferred. */
+export async function countStandingBallots(redis, navSlug, seasonYear) {
+  return redisCommand(redis, ['HLEN', ownersPollStandingKey(navSlug, seasonYear)]);
+}
+
+/**
+ * Every standing ballot a league has on file this season.
+ *
+ * One HGETALL. Nothing is cleared afterwards — that is the whole point of a
+ * standing vote, and it is the single most important difference from the
+ * week-scoped read this replaced.
+ */
+export async function readStandingBallots(redis, navSlug, seasonYear, opts) {
+  return readAllBallots(redis, navSlug, ownersPollStandingKey(navSlug, seasonYear), {
+    ...opts,
+    seasonYear,
+  });
+}
+
+/** Upsert one franchise's standing ballot. Atomic per field. */
+export async function writeStandingBallot(redis, navSlug, seasonYear, record) {
+  await redisCommand(redis, [
+    'HSET',
+    ownersPollStandingKey(navSlug, seasonYear),
+    record.franchiseId,
+    JSON.stringify(record),
+  ]);
+}
+
+/** LEGACY week-scoped count — used only by the adopt one-shot. */
 export async function countBallots(redis, navSlug, year, week) {
   const n = await redisCommand(redis, ['HLEN', ownersPollBallotsKey(navSlug, year, week)]);
   return Number(n) || 0;
@@ -69,8 +99,8 @@ export async function countBallots(redis, navSlug, year, week) {
  * pass can say so out loud rather than quietly publishing a smaller poll than
  * the turnout meter promised.
  */
-export async function readAllBallots(redis, navSlug, year, week, { slots, eligibleFranchiseIds }) {
-  const raw = await redisCommand(redis, ['HGETALL', ownersPollBallotsKey(navSlug, year, week)]);
+export async function readAllBallots(redis, navSlug, key, { slots, eligibleFranchiseIds, seasonYear = null }) {
+  const raw = await redisCommand(redis, ['HGETALL', key]);
 
   // Upstash returns a flat [field, value, field, value, …] array for HGETALL.
   const entries = [];
@@ -83,7 +113,7 @@ export async function readAllBallots(redis, navSlug, year, week, { slots, eligib
   const ballots = [];
   let dropped = 0;
   for (const [field, value] of entries) {
-    const parsed = parseStoredBallot(value, { slots, eligibleFranchiseIds });
+    const parsed = parseStoredBallot(value, { slots, eligibleFranchiseIds, seasonYear });
     if (!parsed) {
       dropped += 1;
       continue;

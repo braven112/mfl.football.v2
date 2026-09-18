@@ -21,12 +21,13 @@ import { invalidateAppBadge } from '../../../utils/app-badge-cache';
 import {
   buildBallotRecord,
   validateBallot,
+  isBallotStale,
+  STALE_BALLOT_WEEKS,
 } from '../../../utils/owners-poll-ballot.mjs';
 import {
   countBallots,
   readBallot,
   readOwnersPollWindow,
-  readPreviousBallot,
   resolveOwnersPollCaller,
   windowState,
   writeBallot,
@@ -63,9 +64,8 @@ export const GET: APIRoute = async ({ request }) => {
     return json({ status: state, window: null, ballot: null }, 200, headers);
   }
 
-  const [ballot, previous, ballotsIn] = await Promise.all([
+  const [ballot, ballotsIn] = await Promise.all([
     readBallot(scope, window, franchiseId),
-    readPreviousBallot(scope, window, franchiseId),
     countBallots(scope, window),
   ]);
 
@@ -74,10 +74,14 @@ export const GET: APIRoute = async ({ request }) => {
       status: 'open',
       window: publicWindow(window),
       ballot,
-      // Only offered when they haven't voted THIS week — once a ballot exists
-      // it is the thing to edit, and shipping both would let a stale prefill
-      // overwrite a submitted ballot.
-      prefill: ballot ? null : (previous?.ranking ?? null),
+      // Whether to ask "still good?". Computed SERVER-side against one clock,
+      // so the column island, the homepage card and the push builder cannot
+      // disagree about whose ballot has gone stale.
+      stale: isBallotStale(ballot?.updatedAt ?? null, new Date()),
+      staleAfterWeeks: STALE_BALLOT_WEEKS,
+      // Coverage, not turnout: under standing votes this only ever grows, so
+      // it answers "how much of the league has an opinion on file", which is
+      // a different — and honest — question from "who voted this week".
       turnout: { ballotsIn, eligible: window.eligibleFranchiseIds.length },
     },
     200,
@@ -133,6 +137,7 @@ export const POST: APIRoute = async ({ request }) => {
     ranking: result.ranking,
     now: new Date(),
     previous,
+    seasonYear: window.year,
   });
 
   const saved = await writeBallot(scope, window, record);
