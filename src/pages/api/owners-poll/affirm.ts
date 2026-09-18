@@ -27,8 +27,7 @@ import { json, JSON_HEADERS_NO_STORE } from '../../../utils/api-response';
 import { checkRateLimit } from '../../../utils/rate-limit';
 import {
   resolveOwnersPollCaller,
-  readOwnersPollWindow,
-  windowState,
+  activePollWindow,
   affirmBallot,
 } from '../../../utils/owners-poll-store';
 
@@ -57,10 +56,9 @@ export const POST: APIRoute = async ({ request }) => {
     return json({ error: 'Too many requests — try again shortly' }, 429, headers);
   }
 
-  const window = await readOwnersPollWindow(scope);
-  const state = windowState(window);
-  if (!window || state !== 'open') {
-    return json({ error: 'The ballot is not open', status: state }, 409, headers);
+  const window = await activePollWindow(resolved.caller.league, scope);
+  if (!window) {
+    return json({ error: 'Voting is paused', status: 'paused' }, 409, headers);
   }
 
   const bumped = await affirmBallot(scope, window, franchiseId);

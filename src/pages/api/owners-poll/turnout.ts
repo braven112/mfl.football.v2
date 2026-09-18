@@ -18,9 +18,8 @@ import type { APIRoute } from 'astro';
 import { json, JSON_HEADERS_NO_STORE } from '../../../utils/api-response';
 import {
   countBallots,
-  readOwnersPollWindow,
+  activePollWindow,
   resolvePublicLeague,
-  windowState,
 } from '../../../utils/owners-poll-store';
 
 export const GET: APIRoute = async ({ request }) => {
@@ -31,12 +30,16 @@ export const GET: APIRoute = async ({ request }) => {
     return json({ error: 'Unknown league' }, 404, headers);
   }
 
-  const window = await readOwnersPollWindow(league.navSlug);
-  const state = windowState(window);
-  if (!window || state !== 'open') {
-    return json({ status: state, turnout: null }, 200, headers);
+  const window = await activePollWindow(league, league.navSlug);
+  if (!window) {
+    return json({ status: 'paused', turnout: null }, 200, headers);
   }
 
+  // HLEN, still — this endpoint is public and must never be able to name a
+  // voter even if a caller wanted it to. Under standing votes the number it
+  // returns is COVERAGE ("owners with a ballot on file"), not weekly turnout:
+  // it only ever grows, and the UI has to say so rather than presenting a
+  // climbing count as this week's participation.
   const ballotsIn = await countBallots(league.navSlug, window);
   return json(
     {

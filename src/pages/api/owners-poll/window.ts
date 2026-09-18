@@ -28,21 +28,14 @@ import type { APIRoute } from 'astro';
 import { json, JSON_HEADERS_NO_STORE } from '../../../utils/api-response';
 import { isCommissionerOrAdmin, getAuthUser } from '../../../utils/auth';
 import { checkRateLimit } from '../../../utils/rate-limit';
-import { getCurrentSeasonYear } from '../../../utils/league-year';
-import {
-  resolveOwnersPollWindow,
-  windowHours,
-  SHORT_WINDOW_HOURS,
-} from '../../../utils/owners-poll-window.mjs';
 import { getSubscriptions } from '../../../utils/push-subscriptions';
 import {
-  clearOwnersPollWindow,
   countBallots,
   eligibleFranchiseIdsFor,
-  readOwnersPollWindow,
+  activePollWindow,
+  resolvePollCycle,
+  setPollPaused,
   resolveOwnersPollCaller,
-  windowState,
-  writeOwnersPollWindow,
 } from '../../../utils/owners-poll-store';
 
 const headers = JSON_HEADERS_NO_STORE;
@@ -76,94 +69,49 @@ export const POST: APIRoute = async ({ request }) => {
     return json({ error: 'Invalid request body' }, 400, headers);
   }
 
-  if (body.action === 'close') {
-    const existing = await readOwnersPollWindow(scope);
-    if (!existing) {
-      return json({ ok: true, status: 'none', message: 'No ballot was open.' }, 200, headers);
-    }
-    const cleared = await clearOwnersPollWindow(scope);
-    if (!cleared) {
-      return json({ error: 'Storage unavailable — nothing changed' }, 503, headers);
-    }
-    return json(
-      {
-        ok: true,
-        status: 'closed',
-        message: `Week ${existing.week} is no longer accepting votes. Ballots are untouched.`,
-      },
-      200,
-      headers,
-    );
+  // Voting is always open now, so the commissioner's control is no longer
+  // "open a week" — it is an emergency stop. `pause` suspends the poll for
+  // every owner; `resume` lifts it. Ballots are never touched by either.
+  if (body.action !== 'pause' && body.action !== 'resume') {
+    return json({ error: "action must be 'pause' or 'resume'" }, 400, headers);
   }
 
-  if (body.action !== 'open') {
-    return json({ error: "action must be 'open' or 'close'" }, 400, headers);
-  }
-
-  const poll = league.ownersPoll;
-  const week = Number(body.week);
-  if (!Number.isInteger(week) || week < 1 || week > 25) {
-    return json({ error: 'week must be a week number (1-25)' }, 400, headers);
-  }
-  // getCurrentSeasonYear, not getUTCFullYear: a ballot is results-shaped, and
-  // between January and Labor Day the calendar year is one AHEAD of the season
-  // being played. A January open would store 2027 against a 2026 season, and
-  // the close pass — which matches on year — would then refuse to tally it,
-  // stranding every ballot cast.
-  const year = Number.isInteger(body.year) ? Number(body.year) : getCurrentSeasonYear();
-
-  const eligibleFranchiseIds = eligibleFranchiseIdsFor(league);
-  if (eligibleFranchiseIds.length <= poll.slots) {
-    // A top-N ballot needs a field bigger than N, or "rank your top 7" is the
-    // whole league and the unranked block is a contradiction.
-    return json(
-      {
-        error: `${league.name} has ${eligibleFranchiseIds.length} franchises but a ballot depth of ${poll.slots}.`,
-      },
-      409,
-      headers,
-    );
-  }
-
-  const now = new Date();
-  let opensAt: string;
-  let closesAt: string;
-  if (body.hours != null) {
+  const paused = body.action === 'pause';
+  if (paused && body.hours != null) {
     const hours = Number(body.hours);
     if (!Number.isFinite(hours) || hours <= 0 || hours > MAX_HOURS) {
       return json({ error: `hours must be between 0 and ${MAX_HOURS}` }, 400, headers);
     }
-    opensAt = now.toISOString();
-    closesAt = new Date(now.getTime() + hours * 3600000).toISOString();
-  } else {
-    // The real schedule: close on the next Wednesday at the league's hour.
-    ({ opensAt, closesAt } = resolveOwnersPollWindow({
-      publishedAt: now,
-      closeHourPT: poll.closeHourPT,
-      closeWeekday: poll.closeWeekday,
-    }));
   }
 
-  const window = { year, week, opensAt, closesAt, slots: poll.slots, eligibleFranchiseIds };
-  const saved = await writeOwnersPollWindow(scope, window);
-  if (!saved) {
+  const ok = await setPollPaused(scope, paused, paused ? Number(body.hours) : undefined);
+  if (!ok) {
     return json({ error: 'Storage unavailable — nothing changed' }, 503, headers);
   }
 
-  const hours = windowHours(window);
-  const ballotsIn = await countBallots(scope, window);
+  const window = paused ? null : resolvePollCycle(league);
+  const ballotsIn = window ? await countBallots(scope, window) : 0;
 
   return json(
     {
       ok: true,
-      status: 'open',
-      window: { year, week, opensAt, closesAt, slots: poll.slots },
-      hours: Math.round(hours * 10) / 10,
-      // Re-opening a week picks its existing ballots back up — say so, so a
-      // commissioner is not surprised by a non-zero count on a "fresh" open.
+      status: paused ? 'paused' : 'open',
+      window: window
+        ? {
+            year: window.year,
+            week: window.week,
+            opensAt: window.opensAt,
+            closesAt: window.closesAt,
+            slots: window.slots,
+          }
+        : null,
+      // Standing ballots are untouched by a pause, and a commissioner should
+      // not be surprised by a non-zero count on resume.
       ballotsIn,
-      eligibleVoters: eligibleFranchiseIds.length,
-      shortWindow: hours < SHORT_WINDOW_HOURS,
+      eligibleVoters: eligibleFranchiseIdsFor(league).length,
+      message: paused
+        ? 'Voting is suspended. Every standing ballot is untouched.'
+        : 'Voting is open. Standing ballots were never cleared.',
     },
     200,
     headers,
@@ -189,12 +137,11 @@ export const GET: APIRoute = async ({ request }) => {
   // real reach. Counts only — never which owners, and never an endpoint.
   const pushCoverage = await countPushCoverage(league.id, eligibleFranchiseIdsFor(league));
 
-  const window = await readOwnersPollWindow(scope);
-  const state = windowState(window);
+  const window = await activePollWindow(league, scope);
   if (!window) {
     return json(
       {
-        status: state,
+        status: 'paused',
         window: null,
         eligibleVoters: eligibleFranchiseIdsFor(league).length,
         pushCoverage,
@@ -206,7 +153,7 @@ export const GET: APIRoute = async ({ request }) => {
   const ballotsIn = await countBallots(scope, window);
   return json(
     {
-      status: state,
+      status: 'open',
       window: {
         year: window.year,
         week: window.week,
