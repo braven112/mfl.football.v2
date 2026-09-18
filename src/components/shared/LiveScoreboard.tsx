@@ -312,13 +312,41 @@ function ScoreCard({ matchup, teams, calc, featured, variant = 'faceoff', isYour
   const awaySplit = `${100 - Math.round(calc.homeWinProb * 100)}%`;
   const cardStyle = { ...teamColorVars(H, A), ['--wp-split' as any]: awaySplit };
 
+  /* The header's "yet to play" is split PER TEAM, away then home, each behind a
+     dot in that team's own predictor color — the same `--ta`/`--th` the top
+     border and the win-probability bar are drawn from, so the left dot is
+     always the left team and the pair needs no legend. A single summed count
+     answered "how much football is left" but never "left for WHOM", which is
+     the question a 2.5–0.0 board is actually asking. It stays split when the
+     two counts are equal: a number that changes shape depending on the values
+     is harder to read at a glance than one that never moves.
+     Colour alone does not carry it — position matches the card, each number
+     carries a `title`, and the button's own aria-label spells both out, since
+     that label is what a screen reader announces INSTEAD of this markup. */
+  const ytpTotal = calc.away.yetToPlay + calc.home.yetToPlay;
+  const showYtp = !calc.isFinal && ytpTotal > 0;
+  const awayName = A?.nameShort ?? A?.name ?? 'Away';
+  const homeName = H?.nameShort ?? H?.name ?? 'Home';
+  const cardLabel = `Open ${A?.name ?? 'away team'} at ${H?.name ?? 'home team'}`
+    + (showYtp
+      ? `. ${awayName} ${calc.away.yetToPlay} yet to play, ${homeName} ${calc.home.yetToPlay} yet to play`
+      : '');
+
   const head = (
     <div className="ls-card-head">
       {calc.isFinal
         ? <span className="ls-badge final">Final</span>
         : <span className="ls-badge live"><span className="ls-dot live" />Live</span>}
-      {!calc.isFinal && (calc.home.yetToPlay + calc.away.yetToPlay > 0) && (
-        <span className="ls-rem">{calc.home.yetToPlay + calc.away.yetToPlay} yet to play</span>
+      {showYtp && (
+        <span className="ls-rem">
+          <span className="ls-rem-n" title={`${awayName}: ${calc.away.yetToPlay} yet to play`}>
+            <span className="ls-rem-dot away" aria-hidden="true" />{calc.away.yetToPlay}
+          </span>
+          <span className="ls-rem-n" title={`${homeName}: ${calc.home.yetToPlay} yet to play`}>
+            <span className="ls-rem-dot home" aria-hidden="true" />{calc.home.yetToPlay}
+          </span>
+          <span className="ls-rem-lbl">yet to play</span>
+        </span>
       )}
       {isYours && <span className="ls-your">YOUR MATCHUP</span>}
     </div>
@@ -347,7 +375,7 @@ function ScoreCard({ matchup, teams, calc, featured, variant = 'faceoff', isYour
     );
     return (
       <button className="ls-card feat row" style={cardStyle} onClick={onOpen}
-              aria-label={`Open ${A?.name} at ${H?.name}`}>
+              aria-label={cardLabel}>
         {head}
         <div className="ls-faceoff-row">
           {teamBlock(A, calc.away, !homeLead, 'away')}
@@ -373,7 +401,7 @@ function ScoreCard({ matchup, teams, calc, featured, variant = 'faceoff', isYour
     );
     return (
       <button className="ls-card feat" style={cardStyle} onClick={onOpen}
-              aria-label={`Open ${A?.name} at ${H?.name}`}>
+              aria-label={cardLabel}>
         {head}
         <div className="ls-faceoff">
           {foTeam(A, calc.away, !homeLead, 'away')}
@@ -397,7 +425,7 @@ function ScoreCard({ matchup, teams, calc, featured, variant = 'faceoff', isYour
   );
   return (
     <button className="ls-card" style={cardStyle} onClick={onOpen}
-            aria-label={`Open ${A?.name} at ${H?.name}`}>
+            aria-label={cardLabel}>
       {head}
       <div className="ls-teams">
         {row(A, calc.away, !homeLead)}

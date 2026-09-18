@@ -118,3 +118,43 @@ describe('per-league live-scoring accent', () => {
     expect(afl.light).not.toBe(afl.dark);
   });
 });
+
+/**
+ * The scoreboard card's per-team "yet to play" dots.
+ *
+ * The header prints two counts, away then home, and the ONLY thing saying
+ * which is which is the dot's color. That color has to be the card's own
+ * `--ta` / `--th` — the same pair `teamColorVars` resolves for the top border
+ * and the win-probability bar — because those are the values already matched
+ * to each team and already contrast-adjusted against both card surfaces. A
+ * generic `--content-text-muted` dot (the obvious "tidy-up") would render two
+ * identical grey dots and silently turn the split back into an unlabelled
+ * pair of numbers, which is worse than the single total it replaced.
+ *
+ * This also pins the away/home ASSIGNMENT. Swapping the two would be invisible
+ * on any card whose teams are evenly matched and actively wrong on every other
+ * one, and `8 – 6` reads perfectly either way.
+ */
+describe('per-team yet-to-play dots', () => {
+  const BOARD = stripComments(read('src/styles/live-scoring.css'));
+  const ruleBody = (selector: string) =>
+    BOARD.match(new RegExp(`${selector.replace('.', '\\.')}\\s*\\{([^}]*)\\}`))?.[1] ?? '';
+
+  it('colors each dot from the card team-color pair, away → --ta, home → --th', () => {
+    expect(ruleBody('.ls-rem-dot.away')).toMatch(/background:\s*var\(--ta\)/);
+    expect(ruleBody('.ls-rem-dot.home')).toMatch(/background:\s*var\(--th\)/);
+  });
+
+  it('never falls back to a shared neutral for either dot', () => {
+    for (const sel of ['.ls-rem-dot.away', '.ls-rem-dot.home']) {
+      expect(ruleBody(sel)).not.toMatch(/--content-text|--page-text|currentColor/);
+    }
+  });
+
+  it('gives the dot a size, so it cannot collapse to nothing', () => {
+    const base = ruleBody('.ls-rem-dot');
+    expect(base).toMatch(/width:\s*[\d.]+/);
+    expect(base).toMatch(/height:\s*[\d.]+/);
+    expect(base).toMatch(/border-radius:\s*50%/);
+  });
+});
