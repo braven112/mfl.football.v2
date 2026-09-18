@@ -137,12 +137,48 @@ describe('per-league live-scoring accent', () => {
  */
 describe('per-team yet-to-play dots', () => {
   const BOARD = stripComments(read('src/styles/live-scoring.css'));
-  const ruleBody = (selector: string) =>
-    BOARD.match(new RegExp(`${selector.replace('.', '\\.')}\\s*\\{([^}]*)\\}`))?.[1] ?? '';
+  const ISLAND = read('src/components/shared/LiveScoreboard.tsx');
+
+  /**
+   * Escapes EVERY regex metacharacter, and fails loudly when the selector is
+   * absent rather than returning ''. Both matter: `replace('.', '\\.')` takes a
+   * string pattern, so it escapes only the FIRST dot and leaves the second one
+   * a wildcard; and a `?? ''` fallback makes every `not.toMatch` assertion
+   * below pass vacuously the moment a selector is renamed. A guard that goes
+   * green by failing to find its subject is worse than no guard.
+   */
+  const ruleBody = (selector: string) => {
+    const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const m = BOARD.match(new RegExp(`${escaped}\\s*\\{([^}]*)\\}`));
+    expect(m, `live-scoring.css has no rule for ${selector}`).not.toBeNull();
+    return m![1];
+  };
 
   it('colors each dot from the card team-color pair, away → --ta, home → --th', () => {
     expect(ruleBody('.ls-rem-dot.away')).toMatch(/background:\s*var\(--ta\)/);
     expect(ruleBody('.ls-rem-dot.home')).toMatch(/background:\s*var\(--th\)/);
+  });
+
+  /**
+   * The CSS assertions above pin `.away → --ta`, but the SIDE a dot is painted
+   * for is decided in the JSX, where the class is written next to the count it
+   * labels. Swapping just those two class names paints each team's count in
+   * the other team's colour with every CSS assertion still green — which is
+   * the exact silent-swap this block exists to prevent. So read the pairing
+   * from the island itself.
+   */
+  it('pairs each dot class with the matching side in the island', () => {
+    const away = ISLAND.match(/ls-rem-dot away[^]{0,80}?\{calc\.(away|home)\.yetToPlay\}/)?.[1];
+    const home = ISLAND.match(/ls-rem-dot home[^]{0,80}?\{calc\.(away|home)\.yetToPlay\}/)?.[1];
+    expect(away, 'no `ls-rem-dot away` followed by a yetToPlay count').toBe('away');
+    expect(home, 'no `ls-rem-dot home` followed by a yetToPlay count').toBe('home');
+  });
+
+  it('renders the away side first, so the left dot is the left team', () => {
+    // The card draws away-left / home-right (see the top-border gradient and
+    // every faceoff variant), so the header must list them in that order too.
+    expect(ISLAND.indexOf('ls-rem-dot away')).toBeGreaterThan(-1);
+    expect(ISLAND.indexOf('ls-rem-dot away')).toBeLessThan(ISLAND.indexOf('ls-rem-dot home'));
   });
 
   it('never falls back to a shared neutral for either dot', () => {
