@@ -24,10 +24,8 @@ function issue(over: Record<string, any> = {}) {
     rankings: FIELD.map((franchiseId, i) => ({ franchiseId, rank: i + 1 })),
     ownersPoll: {
       status: 'closed',
-      hasQuorum: true,
       ballotsIn: 3,
       eligibleVoters: 16,
-      quorum: 8,
       ranked: [
         { rank: 1, franchiseId: '0001', points: 20, firstPlaceVotes: 2, delta: 0 },
         { rank: 2, franchiseId: '0002', points: 15, firstPlaceVotes: 1, delta: 5 },
@@ -93,8 +91,10 @@ describe('buildVoterPushes', () => {
     expect(new Set(pushes.map((p: any) => p.tag))).toEqual(new Set(['owners-poll-2026-5']));
   });
 
-  it('sends nothing without a quorum, or before the poll closes', () => {
-    expect(buildVoterPushes({ league: LEAGUE, issue: issue({ hasQuorum: false }), teams })).toEqual([]);
+  it('sends nothing when nobody voted, or before the poll closes', () => {
+    expect(
+      buildVoterPushes({ league: LEAGUE, issue: issue({ ranked: null, ballotsIn: 0, ballots: [] }), teams }),
+    ).toEqual([]);
     expect(buildVoterPushes({ league: LEAGUE, issue: issue({ status: 'open' }), teams })).toEqual([]);
   });
 });
@@ -117,14 +117,22 @@ describe('buildRevealFeedPost', () => {
     expect(post.franchiseIds).toContain('0002'); // biggest split AND the homer
   });
 
-  it('reports a no-quorum week honestly rather than skipping', () => {
-    const post = buildRevealFeedPost({
-      league: LEAGUE,
-      issue: issue({ hasQuorum: false, ballotsIn: 4 }),
-      teams,
-    })!;
-    expect(post.body).toContain('4 of 16');
-    expect(post.headline).toMatch(/came up short/i);
+  it('writes NO post for a week nobody voted in', () => {
+    // The feed is a durable record. "Nobody used the feature" is not a record
+    // worth keeping on every owner's homepage — same call as the chat post.
+    expect(
+      buildRevealFeedPost({
+        league: LEAGUE,
+        issue: issue({ ranked: null, ballotsIn: 0, ballots: [] }),
+        teams,
+      }),
+    ).toBeNull();
+  });
+
+  it('still posts a light week — four ballots is a result, not a failure', () => {
+    const post = buildRevealFeedPost({ league: LEAGUE, issue: issue({ ballotsIn: 4 }), teams })!;
+    expect(post.headline).toContain('Team 1');
+    expect(post.body).not.toMatch(/quorum|came up short|no consensus/i);
   });
 
   it('returns null before the poll closes', () => {
@@ -222,10 +230,10 @@ describe('buildCallback', () => {
     ).toBeNull();
   });
 
-  it('skips weeks that never reached quorum', () => {
+  it('skips weeks with no published consensus', () => {
     // No consensus means there is no "the room" to have been wrong.
     const noQuorum = pollOf(5, FIELD.slice(0, 7), FIELD.slice(7));
-    (noQuorum.ownersPoll as any).hasQuorum = false;
+    (noQuorum.ownersPoll as any).ranked = null;
     expect(
       buildCallback({
         issue: columnOf(8, ['0016', ...FIELD.filter((f) => f !== '0016')]),

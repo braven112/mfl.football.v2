@@ -31,7 +31,7 @@ const COLUMN_PATH = '/pecking-order';
  */
 export function buildVoterPushes({ league, issue, teams, previousIssue = null }) {
   const poll = issue?.ownersPoll;
-  if (!poll || poll.status !== 'closed' || !poll.hasQuorum) return [];
+  if (!poll || poll.status !== 'closed' || !poll.ranked) return [];
 
   const name = (fid) => teams.get(fid)?.nameMedium ?? teams.get(fid)?.name ?? fid;
   const consensusRank = new Map((poll.ranked ?? []).map((r) => [r.franchiseId, r]));
@@ -224,24 +224,11 @@ export function buildRevealFeedPost({
   const id = `sf_owners_poll_${league.slug}_${issue.year}_w${issue.week}`;
   const link = `${COLUMN_PATH}/${issue.year}/${issue.week}`;
 
-  if (!poll.hasQuorum) {
-    return {
-      id,
-      timestamp: new Date().toISOString(),
-      type: 'power-ranking',
-      category: 'articles',
-      tier: 'standard',
-      headline: `The Owners' Poll came up short in Week ${issue.week}`,
-      body:
-        `Only ${poll.ballotsIn} of ${poll.eligibleVoters} owners filed a ballot, short of the ` +
-        `${poll.quorum} the poll needs. No consensus this week — the rankings are the numbers alone.`,
-      franchiseIds: [],
-      link,
-      linkLabel: 'See the column',
-      league: league.slug,
-      authorId: 'claude',
-    };
-  }
+  // No post for a week nobody voted in. The feed is a durable record of what
+  // happened, and "nothing happened" is not a record worth keeping — it is an
+  // article on every owner's homepage announcing that the feature went unused.
+  // Silence here is the same decision buildRevealMessage makes for the chat.
+  if (!poll.ranked || poll.ballotsIn === 0) return null;
 
   const top = poll.ranked.slice(0, 3);
   const biggest = [...poll.ranked].sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))[0];
@@ -329,7 +316,7 @@ export function buildCallback({
   let best = null;
   for (const prior of priorIssues ?? []) {
     const poll = prior?.ownersPoll;
-    if (!poll || poll.status !== 'closed' || !poll.hasQuorum) continue;
+    if (!poll || poll.status !== 'closed' || !poll.ranked) continue;
     const weeksBack = issue.week - prior.week;
     if (weeksBack < minWeeksBack) continue;
 

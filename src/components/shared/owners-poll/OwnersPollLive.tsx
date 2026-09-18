@@ -20,7 +20,6 @@ import type { LeagueClock } from '../../../utils/viewer-preferences';
 interface Props {
   ballotHref: string;
   slots: number;
-  quorum: number;
   eligibleVoters: number;
   leagueParam: string;
   /** Week from the rendered issue — used only to detect a stale build. */
@@ -45,7 +44,6 @@ interface BallotResponse {
 export default function OwnersPollLive({
   ballotHref,
   slots,
-  quorum,
   eligibleVoters,
   leagueParam,
   issueWeek,
@@ -117,7 +115,7 @@ export default function OwnersPollLive({
 
   return (
     <div className="op-strip__live">
-      <Meter turnout={turnout} eligibleVoters={eligibleVoters} quorum={quorum} />
+      <Meter turnout={turnout} eligibleVoters={eligibleVoters} />
 
       {phase === 'voted' ? (
         <p className="op-strip__cta">
@@ -147,17 +145,13 @@ export default function OwnersPollLive({
 function Meter({
   turnout,
   eligibleVoters,
-  quorum,
 }: {
   turnout: { ballotsIn: number; eligible: number } | null;
   eligibleVoters: number;
-  quorum: number;
 }) {
   const total = turnout?.eligible ?? eligibleVoters;
   const inCount = turnout?.ballotsIn ?? 0;
   const pct = total > 0 ? Math.min(100, (inCount / total) * 100) : 0;
-  const quorumPct = total > 0 ? Math.min(100, (quorum / total) * 100) : 0;
-  const metQuorum = inCount >= quorum;
 
   return (
     <div className="op-meter">
@@ -170,25 +164,12 @@ function Meter({
         aria-label={`${inCount} of ${total} ballots cast`}
       >
         <div className="op-meter__fill" style={{ width: `${pct}%` }} />
-        {/* The quorum mark is the point of the meter: turnout is a collective
-            stake, and a bar with no threshold on it is just decoration. */}
-        <div
-          className="op-meter__quorum"
-          style={{ left: `${quorumPct}%` }}
-          aria-hidden="true"
-          title={`Quorum: ${quorum}`}
-        />
       </div>
       <p className="op-meter__label">
         <strong>
           {inCount} of {total}
         </strong>{' '}
-        ballots in ·{' '}
-        {metQuorum ? (
-          <span className="op-meter__ok">quorum met</span>
-        ) : (
-          <span className="op-meter__short">{quorum - inCount} more for quorum</span>
-        )}
+        ballots in
       </p>
     </div>
   );
