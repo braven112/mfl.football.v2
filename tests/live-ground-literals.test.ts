@@ -50,6 +50,10 @@ const GOVERNED = [
   'src/utils/live-scoring-data.ts',
   'src/utils/live/model.ts',
   'src/utils/live/read.ts',
+  'src/components/shared/live/LvWinProbBar.tsx',
+  'src/components/shared/live/LvRedZoneBanner.tsx',
+  'src/components/shared/live/LvEmptyState.tsx',
+  'src/styles/live.css',
 ];
 
 /** Comments stripped FIRST — a guard satisfied by prose is worse than none. */

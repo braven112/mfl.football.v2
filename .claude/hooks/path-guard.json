@@ -477,6 +477,8 @@
       "paths": [
         "src/utils/live-*",
         "src/utils/live/**",
+        "src/components/shared/live/**",
+        "src/styles/live.css",
         "src/utils/espn*",
         "scripts/fetch-live-*",
         "scripts/fetch-espn*",
@@ -505,7 +507,8 @@
         "tests/live-model.test.ts",
         "tests/live-read-league.test.ts",
         "tests/live-surface-grounds.test.ts",
-        "tests/live-ground-literals.test.ts"
+        "tests/live-ground-literals.test.ts",
+        "tests/live-kit-leaves.test.ts"
       ]
     },
     {
