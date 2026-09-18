@@ -43,16 +43,25 @@ import { SURFACE_GROUNDS } from '../src/utils/live/surface';
  * condition that made naming one league's ground a bug.
  */
 const GOVERNED = [
-  'src/components/shared/LiveScoreboard.tsx',
-  'src/components/shared/mfl-live/MflLiveBoard.tsx',
   'src/components/shared/mfl-live/LeagueToggles.tsx',
   'src/utils/mfl-live-board.ts',
   'src/utils/live-scoring-data.ts',
   'src/utils/live/model.ts',
   'src/utils/live/read.ts',
+  'src/utils/live/league-board.ts',
+  'src/components/shared/live/LiveBoard.tsx',
+  'src/components/shared/live/LiveBoardPage.astro',
   'src/components/shared/live/LvWinProbBar.tsx',
   'src/components/shared/live/LvRedZoneBanner.tsx',
   'src/components/shared/live/LvEmptyState.tsx',
+  'src/components/shared/live/LvMatchupCard.tsx',
+  'src/components/shared/live/LvMatchupDetail.tsx',
+  'src/components/shared/live/LvPlayerRow.tsx',
+  'src/components/shared/live/LvLineup.tsx',
+  'src/components/shared/live/LvBench.tsx',
+  'src/components/shared/live/LvMomentTicker.tsx',
+  'src/components/shared/live/LvFeedStatus.tsx',
+  'src/components/shared/live/LvWeekPicker.tsx',
   'src/styles/live.css',
 ];
 

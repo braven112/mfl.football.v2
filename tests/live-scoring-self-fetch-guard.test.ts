@@ -126,7 +126,7 @@ describe('the game-day hint sets cadence, it does not gate polling', () => {
   // identical `if (!isLive) return;` one file over and froze the HOMEPAGE for
   // the same Wednesday game.
   const POLLING_ISLANDS = [
-    'src/components/shared/LiveScoreboard.tsx',
+    'src/components/shared/live/LiveBoard.tsx',
     'src/components/shared/LiveScoringHero.tsx',
   ];
 
@@ -148,15 +148,20 @@ describe('the game-day hint sets cadence, it does not gate polling', () => {
     // A consumer that writes it through paints `0.0 - 0.0` over a real game or,
     // on the playoffs page, reads as "all final" and kills its own refresh.
     const CONSUMERS = [
-      'src/components/shared/LiveScoreboard.tsx',
+      'src/components/shared/live/LiveBoard.tsx',
       'src/components/shared/LiveScoringHero.tsx',
       'src/hooks/useLiveScoringFeed.ts',
       'src/pages/theleague/playoffs.astro',
       'src/pages/afl-fantasy/playoffs.astro',
     ];
+    // Either spelling READS the flag, which is the whole rule. The kit's
+    // island writes `data.ok !== false` because it is deciding whether to
+    // ACCEPT a payload rather than whether to reject one; the older consumers
+    // ask the opposite way round. A guard that insisted on one spelling would
+    // be testing style rather than the rule.
     const missing = CONSUMERS.filter((path) => {
       const file = FILES.find((f) => f.path === path);
-      return !file || !/\bok === false\b/.test(file.text);
+      return !file || !/\bok\s*(===|!==)\s*false\b/.test(file.text);
     });
     expect(missing, `these read /api/live-scoring without checking ok:\n${missing.join('\n')}`)
       .toEqual([]);

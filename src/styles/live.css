@@ -326,16 +326,15 @@ button.lv-card:focus-visible {
   border-color: var(--t0);
 }
 
-/**
- * The empty state is the card SHELL without the button behaviour: no pointer,
- * no hover accent, and NO win-probability bar. That bar encodes a matchup's
- * win share, and over an empty card it renders as a stray grey bar that reads
- * as a scrollbar rather than as a border.
+/*
+ * NOTE there is no empty-card variant. The board this replaces rendered its
+ * empty state as the card SHELL and then had to cancel the button affordances
+ * and the win-probability bar on it — that bar encodes a matchup's win share,
+ * and over an empty card it renders as a stray grey bar reading as a scrollbar
+ * rather than a border. `.lv-empty` is a plain <div> instead, so there is
+ * nothing to cancel: the hover accent above is scoped to `button.lv-card` and
+ * cannot reach it, and no bar is mounted in the first place.
  */
-.lv-card--empty {
-  cursor: default;
-  color: var(--content-text-muted);
-}
 
 .lv-card__head {
   display: flex;
@@ -556,7 +555,18 @@ button.lv-card:focus-visible {
   gap: 0.35rem;
   /* The divider is a pseudo-element, so the row itself carries no border. */
   position: relative;
-  align-items: start;
+  /*
+   * `stretch`, not `start`, and never `center`.
+   *
+   * A box-score line only exists for a player who has touched the ball, so one
+   * side of a row is routinely taller than the other. Centred, the quiet
+   * side's name floats half a line below its opponent's — the two players
+   * stopped lining up the moment real stats arrived (owner, 2026-08-21).
+   * `start` fixes that much but sizes each side to its own content, so the two
+   * spans no longer share a bottom edge for the score to anchor to; stretch is
+   * what makes the shared tracks below actually shared.
+   */
+  align-items: stretch;
 }
 
 .lv-mx-row > div { min-width: 0; }
@@ -564,8 +574,15 @@ button.lv-card:focus-visible {
 /**
  * Each side's wrapper is REMOVED from the layout so the row below becomes a
  * direct grid item of the pair — which is what lets it adopt the pair's tracks.
+ *
+ * No exception for a CENTRE position column, because this kit does not render
+ * one at any width. The board this replaces had a third column carrying the
+ * shared slot label and hid it on a phone, for the reason that makes it wrong
+ * everywhere: it can only show ONE of the two paired positions, and mislabels
+ * the other whenever the sides run different lineup shapes. The slot label
+ * lives on each row instead.
  */
-.lv-mx-row > div:not(.lv-mx-pos) { display: contents; }
+.lv-mx-row > div { display: contents; }
 
 /**
  * Row dividers: inset hairlines via a pseudo-element, never a full-bleed
@@ -599,6 +616,8 @@ button.lv-card:focus-visible {
   grid-column: 1;
   grid-row: 1 / -1;
 
+  /* A single flex line in a stretched cell would otherwise be centred in it. */
+  align-content: flex-start;
   /* BOTH declarations, and `subgrid` LAST. The first is the fallback for a
      browser without subgrid support; if the order flips, source order quietly
      reinstates per-side tracks and the two sides drift apart again with
@@ -611,6 +630,11 @@ button.lv-card:focus-visible {
   row-gap: 0.1rem;
   padding: var(--lv-row-pad-y) var(--lv-gutter);
   min-width: 0;
+  /* Fill the span. Without this the cell is sized to its own content, there is
+     no slack for the `1fr` stat track to take, and the score stops sitting at
+     the same offset on the two sides — which is the whole point of the shared
+     tracks above. */
+  height: 100%;
 }
 
 /* The mirrored side: same three tracks, columns reversed. */
@@ -813,13 +837,15 @@ button.lv-card:focus-visible {
 }
 .lv-bench__cap--right { text-align: right; }
 
+/* Same tracks and the same `stretch` as a starter row — a bench row renders
+   the identical player row, so anything it does differently is drift. */
 .lv-bench-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   grid-template-rows: auto auto 1fr;
   gap: 0.35rem;
   position: relative;
-  align-items: start;
+  align-items: stretch;
 }
 .lv-bench-row > div { min-width: 0; }
 .lv-bench-row > div { display: contents; }
@@ -1024,4 +1050,53 @@ button.lv-card:focus-visible {
    must not be the thing that decides. */
 @media (max-width: 560px) {
   .lv-cards--lead { --lv-cards-lead-floor: 100%; }
+}
+
+/* ══ Phone: the detail card goes FULL BLEED ══
+   Three gutters stacked on each side before a player's name could start — the
+   layout's `main` inline padding, `.lv-page`'s own, and the card border —
+   roughly 30px a side, 16% of a 390px screen, spent on chrome the phone does
+   not need. The card still reads as a card because it has a surface and a
+   header, not because it is inset from an edge it cannot use.
+
+   Cancel the two gutters BY NAME, never with the `100vw` centring trick. That
+   trick needs no knowledge of the ancestors, which is why it is tempting — but
+   `100vw` resolves against the initial containing block, which INCLUDES a
+   classic space-consuming scrollbar, so it overflows by the scrollbar's width
+   on every desktop that has one. */
+@media (max-width: 760px) {
+  .lv-detail {
+    margin-inline: calc((var(--padding-sm) + var(--spacing-md)) * -1);
+    border-left: 0;
+    border-right: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  /* Cancels `.lv-page`'s own `padding-top: var(--spacing-lg)` — the SAME token
+     it is declared with, so the two cannot drift apart. Behind a rounded, inset
+     card that padding read as the margin around it; behind a full-bleed one only
+     its top edge survives, as a band of page background with nothing beside it
+     to explain what it is (plain in light mode, invisible in dark). It is also
+     24px of the lineup on a screen this view is trying to give back.
+
+     Gated on the Throwback preview bar's ABSENCE: `.ls-tb-preview` is a sibling
+     of the island inside `.lv-page` and carries a `margin-bottom` of this very
+     token, so during Throwback Week the pull-up would eat the gap under the bar
+     and sit the card flush against it. Written as `:not(:has(…))` so a browser
+     without `:has()` drops the rule and keeps the band — the harmless half of
+     the two outcomes. The bar keeps its own `.ls-` class because the component
+     is unchanged; renaming it here would silently un-gate this. */
+  .lv-page:not(:has(.ls-tb-preview)) .lv-detail {
+    margin-top: calc(var(--spacing-lg) * -1);
+  }
+
+  /* Stack each team vertically (name above the big score) so the three columns
+     stay narrow enough to fit a phone without overflowing. */
+  .lv-scorehead {
+    gap: 0.4rem;
+    padding: 0.55rem 0.6rem;
+    align-items: center;
+  }
+  .lv-scorehead__name { overflow-wrap: anywhere; }
 }
