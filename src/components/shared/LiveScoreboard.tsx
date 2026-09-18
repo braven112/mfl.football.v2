@@ -67,6 +67,7 @@ import { normalizeTeamCode } from '../../utils/nfl-logo';
 import { nflLogoErrorHandler, nflLogoLoadHandler, nflLogoRefCallback } from '../../constants/roster-constants';
 import { getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark } from '../../utils/nfl-team-colors';
 import { resolveTeamColorPair } from '../../utils/team-color-contrast';
+import { groundsFor, surfaceForLeague, type LiveSurface } from '../../utils/live/surface';
 
 /** Weeks offered in the week selector (regular season 1–18). */
 const MAX_WEEK = 18;
@@ -196,8 +197,27 @@ const fmt = (n: number) => n.toFixed(1);
  * whose primary vanishes on the surface fall to a visible brand color. The CSS
  * derives --th/--ta from the theme-matched pair; D (the seam) lives in CSS.
  */
-const LS_LIGHT_BG = '#ffffff'; // --card-surface (light)
-const LS_DARK_BG = '#262626'; // --card-surface (dark)
+/**
+ * The two grounds a franchise colour is judged against come from the SURFACE,
+ * never from a constant here.
+ *
+ * They were `'#ffffff'` and `'#262626'` — TheLeague's cards. But the AFL
+ * renders this same island on a `#16283c` navy card (`--card-surface` is
+ * overridden per `data-league` in tokens-dark.css), and Best Ball on
+ * TheLeague's. So `resolveTeamColorPair` was being asked to separate each
+ * colour from a card it is not drawn on, and did exactly that — correctly,
+ * for the wrong question.
+ *
+ * Measured over the real AFL config: judged against `#262626`, the worst
+ * franchise landed at ΔE 10.7 against the card it actually renders on, below
+ * the ΔE 18 `resolveTeamColorPair` itself promises; judged correctly it is
+ * 21.5. In luminance terms `A Bruin Pegs Me` drew `#002244` on `#16283c` —
+ * 1.07:1, indistinguishable from the card. Three of twenty-four.
+ *
+ * `toBroadcastPair` could not have helped: it only ever DARKENS, so it cannot
+ * make a colour visible. The ground is the whole input.
+ * `tests/live-surface-grounds.test.ts` is the census that keeps this honest.
+ */
 /**
  * Map a team to the color set for a theme. Dark mode prefers the explicit
  * `colorPrimaryDark`/`colorSecondaryDark` brand colors (config) so teams whose
@@ -214,11 +234,16 @@ function themeColors(t: TeamInfo | undefined, dark: boolean) {
     colorSecondary: t.colorSecondaryDark ?? t.colorSecondary,
   };
 }
-function teamColorVars(home?: TeamInfo, away?: TeamInfo): Record<string, string> {
+function teamColorVars(
+  home: TeamInfo | undefined,
+  away: TeamInfo | undefined,
+  surface: LiveSurface,
+): Record<string, string> {
+  const grounds = groundsFor(surface);
   const opts = { forceAdjust: true, homeVisibilityFallback: true } as const;
-  const light = resolveTeamColorPair(home, away, { ...opts, background: LS_LIGHT_BG });
+  const light = resolveTeamColorPair(home, away, { ...opts, background: grounds.light });
   const dark = resolveTeamColorPair(
-    themeColors(home, true), themeColors(away, true), { ...opts, background: LS_DARK_BG },
+    themeColors(home, true), themeColors(away, true), { ...opts, background: grounds.dark },
   );
   return {
     '--th-light': light.home, '--ta-light': light.away,
@@ -292,7 +317,7 @@ function WinProbBar({ home, mini, homeLabel, awayLabel, awayYetToPlay, homeYetTo
 
 // ── scoreboard card ──
 
-function ScoreCard({ matchup, teams, calc, featured, variant = 'faceoff', isYours, onOpen }: {
+function ScoreCard({ matchup, teams, calc, featured, variant = 'faceoff', isYours, surface, onOpen }: {
   matchup: MatchupPairing;
   teams: Record<string, TeamInfo>;
   calc: { home: TeamCalc; away: TeamCalc; homeWinProb: number; isFinal: boolean };
@@ -300,6 +325,8 @@ function ScoreCard({ matchup, teams, calc, featured, variant = 'faceoff', isYour
   /** 'row' = single-game full-width row; 'faceoff' = stacked column (doubleheader). */
   variant?: 'row' | 'faceoff';
   isYours: boolean;
+  /** Which card this is drawn on — decides the ground the colours are judged against. */
+  surface: LiveSurface;
   onOpen: () => void;
 }) {
   const H = teams[matchup.home];
@@ -310,7 +337,7 @@ function ScoreCard({ matchup, teams, calc, featured, variant = 'faceoff', isYour
   // Top border + win-prob bar split at the away team's win share (measured
   // from the left, which is the away side).
   const awaySplit = `${100 - Math.round(calc.homeWinProb * 100)}%`;
-  const cardStyle = { ...teamColorVars(H, A), ['--wp-split' as any]: awaySplit };
+  const cardStyle = { ...teamColorVars(H, A, surface), ['--wp-split' as any]: awaySplit };
 
   /* The header's "to play" count is split PER TEAM, away then home, each behind a
      dot in that team's own predictor color — the same `--ta`/`--th` the top
@@ -745,7 +772,7 @@ function BenchSection({ away, home, teams, matchup, meta, gamesByTeam, boxScore,
 
 function MatchupDetail({
   matchup, teams, players, bench, meta, calc, moments, gamesByTeam, boxScore, detailStatus,
-  detailLoaded, detailPartial, starterRules, feeds, nflAnyLive, nflLiveCount, onBack,
+  detailLoaded, detailPartial, starterRules, feeds, nflAnyLive, nflLiveCount, surface, onBack,
 }: {
   matchup: MatchupPairing;
   teams: Record<string, TeamInfo>;
@@ -766,6 +793,8 @@ function MatchupDetail({
   detailPartial: boolean;
   /** League starting requirements, for slot labels. */
   starterRules: LineupSlotRules;
+  /** Which card this is drawn on — decides the ground the colours are judged against. */
+  surface: LiveSurface;
   /** Enabled pollers, for the freshness pill. */
   feeds: FeedSnapshot[];
   nflAnyLive: boolean;
@@ -787,7 +816,7 @@ function MatchupDetail({
 
   const awaySplit = `${100 - Math.round(calc.homeWinProb * 100)}%`;
   return (
-    <div className="ls-detail" style={{ ...teamColorVars(H, A), ['--wp-split' as any]: awaySplit }}>
+    <div className="ls-detail" style={{ ...teamColorVars(H, A, surface), ['--wp-split' as any]: awaySplit }}>
       <div className="ls-detail-top">
         <button className="ls-back" onClick={onBack}>← All matchups</button>
         <LiveFeedStatus feeds={feeds} anyLive={nflAnyLive} gamesLive={nflLiveCount} compact />
@@ -892,6 +921,11 @@ function goToWeek(w: number) {
 }
 
 export default function LiveScoreboard(props: LiveScoringPageProps) {
+  // Which card the franchise colours are judged against. Derived from THIS
+  // board's league, so the AFL's navy card and TheLeague's grey one get
+  // different — and each correct — answers. Never a constant: see the note
+  // above `themeColors`.
+  const surface = surfaceForLeague(props.slug);
   const { teams, playerMeta, userFranchiseId, week } = props;
   // Both our leagues start one of each position plus three flex; the page
   // supplies the league's real config, this is only a floor for older callers.
@@ -994,6 +1028,7 @@ export default function LiveScoreboard(props: LiveScoringPageProps) {
           gamesByTeam={gamesByTeam} boxScore={detail.boxScore}
           detailStatus={detail.status} detailLoaded={detail.loaded} detailPartial={detail.partial}
           starterRules={starterRules}
+          surface={surface}
           feeds={feeds} nflAnyLive={anyNflGameLive} nflLiveCount={nflLiveCount}
           onBack={() => setSelected(null)}
         />
@@ -1043,19 +1078,19 @@ export default function LiveScoreboard(props: LiveScoringPageProps) {
               {ordered.featured.map((m, i) => (
                 <ScoreCard key={`f-${m.home}-${m.away}`} matchup={m} teams={teams} calc={calcFor(m)}
                            featured variant="faceoff" isYours={i === 0 && ordered.hasYours}
-                           onOpen={() => setSelected(m)} />
+                           surface={surface} onOpen={() => setSelected(m)} />
               ))}
             </div>
           ) : (
             ordered.featured.map((m) => (
               <ScoreCard key={`f-${m.home}-${m.away}`} matchup={m} teams={teams} calc={calcFor(m)}
                          featured variant="row" isYours={ordered.hasYours}
-                         onOpen={() => setSelected(m)} />
+                         surface={surface} onOpen={() => setSelected(m)} />
             ))
           )}
           {ordered.rest.map((m) => (
             <ScoreCard key={`${m.home}-${m.away}`} matchup={m} teams={teams} calc={calcFor(m)}
-                       featured={false} isYours={false} onOpen={() => setSelected(m)} />
+                       featured={false} isYours={false} surface={surface} onOpen={() => setSelected(m)} />
           ))}
         </div>
       )}
