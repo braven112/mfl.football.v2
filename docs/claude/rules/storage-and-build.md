@@ -295,6 +295,65 @@ both-leagues union and the DST wall-clock recurrence.
 rather than 2.5 minutes into CI. All three are routed by the `github-workflows`
 domain.
 
+## A merged feed needs a FLOOR, not just an empty check
+
+`data/<league>/mfl-feeds/<year>/playerScores-by-week.json` is written by
+accumulation: every daily pass refetches weeks 1-18 and merges each one in, so
+the committed file is the only record of a finished week. **MFL serves degraded
+bodies at HTTP 200** — that is the whole reason `writeOut` carries its own
+error-payload guard — so "the response parsed" is not "the response is
+complete".
+
+The first version of that merge refused only `count === 0`, while its own doc
+comment promised that a transient bad response would leave a good week alone.
+Those are different claims. An empty answer is MFL saying "not played yet"; a
+truncated answer is MFL answering wrongly, and any non-zero row count was
+enough to overwrite 484 committed scores with a handful — deleting every other
+player's week from the player modal, with nothing left to re-derive it from.
+
+The rule: **a finished week's pool does not shrink.** `weekMergeDecision`
+(`src/utils/player-week-scores.mjs`) refuses an incoming week that carries less
+than `WEEK_SHRINK_FLOOR` (0.9) of the rows already committed for that week, and
+logs `::warning::` when it does. The floor is not 1.0 because a genuine MFL stat
+correction can void a handful of rows and refusing those would strand the week
+on stale data forever. This is the same shape as the `wouldDowngrade` check the
+current-week `weeklyResults` merge above it already applies.
+
+Keep the policy in `weekMergeDecision` rather than inline in the fetch script:
+inline, it is only reachable behind a live MFL fetch, which is exactly what CI
+and every agent session cannot do. Guard:
+`tests/weekly-player-results-full-pool.test.ts`.
+
+## A daily-gated feed does not backfill on the day it ships
+
+`fetch-mfl-feeds.mjs` runs under `--refresh-live` many times a day, and the
+expensive daily-only work — `players.json`, the weeklyResults loop, the 18-week
+`playerScores` loop — is skipped when `isFreshToday()` says the daily set
+already ran (`skipDailyFeeds`). `isFreshToday` reads the committed
+`fetch.meta.json` stamp and compares Y/M/D in the runner's clock, which on
+GitHub is UTC. The tiered cadence above changes how often the live half runs;
+it does not touch this gate.
+
+So **a new daily feed added mid-morning UTC does not start filling until the
+first run after the next UTC midnight** — up to 24 hours of the feature
+shipping with only whatever was committed by hand. `playerScores-by-week.json`
+shipped at 07:38 UTC on 2026-09-17 against a stamp of 01:21 UTC that same day,
+so its first real 18-week pass was the 00:03 UTC run the next morning, and both
+leagues ran the day on a hand seed.
+
+That one turned out harmless — the season had played exactly one week, so the
+seed and the pipeline's answer covered the same ground — but **only by luck of
+the calendar**, which is the reason to write it down rather than not. Ship the
+same feed mid-season and every week BETWEEN the seed and the one MFL is
+currently naming is missing from a live page for a full day — the live path
+fills only that current week, so a week-1 seed shipped in week 13 leaves
+weeks 2–12 blank until the next UTC day.
+
+Nothing is broken by this and nothing should be "fixed" to bypass it — the gate
+is what keeps 18 requests per league from running on every live tick. Just know
+the latency is real when you ship one, say so in the PR, and either seed the
+file honestly or wait for the next UTC day before verifying.
+
 ## Astro 7 — strict Rust compiler, pinned compressHTML
 
 Upgraded to Astro 7 (Vite 8/Rolldown, @astrojs/vercel 11) in July 2026.
