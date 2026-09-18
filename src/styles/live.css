@@ -861,6 +861,49 @@ button.lv-card:focus-visible {
 
 .lv-dd { color: var(--content-text-muted); }
 
+/* ── the scoring-play ticker ─────────────────────────────────────────────── */
+
+.lv-moments {
+  padding: 1rem 1.2rem 1.3rem;
+  background: var(--content-bg-muted);
+  border-top: 1px solid var(--content-border);
+}
+.lv-moments h3 {
+  margin: 0 0 0.6rem;
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-weight: var(--font-weight-bold);
+  color: var(--content-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.lv-moment {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px dashed var(--content-border);
+}
+.lv-moment:last-child { border-bottom: 0; }
+
+.lv-moment__clock {
+  min-width: 4.6rem;
+  font-size: 0.7rem;
+  color: var(--content-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.lv-moment__nfl { width: 17px; height: 17px; object-fit: contain; }
+.lv-moment__txt { flex: 1; font-size: 0.86rem; color: var(--page-text); }
+
+.lv-moments__note {
+  margin: 0.3rem 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--content-text-muted);
+}
+/* "We couldn't read the feed" must not look like "nothing happened". */
+.lv-moments__note--error { color: var(--color-error); }
+
 /* ── the week selector ───────────────────────────────────────────────────── */
 
 .lv-weeksel {

@@ -39,7 +39,7 @@
 import type { CanonicalLeagueSlug } from '../config/leagues';
 import type { LivePlayerRow, NflGame, PlayerMeta } from './live-scoring';
 import type { IdentityRung } from '../utils/mfl-live-identity';
-import type { BroadcastMoment, RedZoneAlert } from '../utils/broadcast-moments';
+import type { RedZoneAlert } from '../utils/broadcast-moments';
 
 /**
  * One franchise in one matchup: who they are, and what they have scored.
@@ -165,6 +165,45 @@ export interface LivePanel {
   matchups: LiveMatchup[];
 }
 
+/**
+ * One scoring play, credited to one franchise in one league.
+ *
+ * ── WHY THIS IS NOT `BroadcastMoment` ─────────────────────────────────────
+ * That type carries `side: 'mine' | 'opponent'`, which is viewer-relative and
+ * therefore a LIE on a league board: most of a 16-team board's matchups are
+ * nobody's, and every moment on them would have to claim to be one or the
+ * other. It is the same objection the canonical matchup answers with a
+ * nullable `viewerSide`, so this answers it the same way — by not carrying the
+ * claim at all. A caller that wants it asks the PANEL who the viewer is.
+ *
+ * Everything else is the same shape, and `fromMflLiveBoard` maps one to the
+ * other by dropping `side`.
+ */
+export interface LiveMoment {
+  /**
+   * Stable across polls and unique per (play, league, franchise).
+   *
+   * The league id is load-bearing, not decoration: both leagues have a
+   * franchise `0001`, so `playId:0001` would merge my TheLeague team's
+   * touchdown with my AFL opponent's.
+   */
+  key: string;
+  playId: string;
+  leagueId: string;
+  leagueName: string;
+  /** The franchise that started the credited player, in THIS league. */
+  franchiseId: string;
+  franchiseName: string;
+  playerId: string;
+  playerName: string;
+  /** Canonical NFL team code of the scoring team. */
+  team: string;
+  /** ESPN's own one-line summary. Never rewritten. */
+  text: string;
+  /** Real game clock, "Q3 4:08". '' when ESPN gave us neither period nor clock. */
+  clock: string;
+}
+
 /** One assembly of a whole board. A poll replaces this wholesale. */
 export interface LiveBoard {
   /**
@@ -203,7 +242,7 @@ export interface LiveBoard {
    * its league and franchise, which is what keeps that honest; collapsing them
    * silently drops the credit from every league but one.
    */
-  moments: BroadcastMoment[];
+  moments: LiveMoment[];
   /**
    * Teams with the ball inside the 20, right now.
    *

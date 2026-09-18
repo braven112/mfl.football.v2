@@ -27,7 +27,7 @@ import {
 } from '../../../utils/live-scoring-view';
 import { projectPlayerFinal } from '../../../utils/live-win-probability';
 import { positionLabel } from '../../../utils/mfl-live-lineup';
-import { normalizeTeamCode } from '../../../utils/nfl-logo';
+import { nflLogoUrl } from '../../../utils/live/nfl-logo-url';
 import {
   nflLogoErrorHandler,
   nflLogoLoadHandler,
@@ -42,17 +42,6 @@ import {
 
 /** One decimal, always — a score that gains a digit must not shift the column. */
 const fmt = (n: number) => n.toFixed(1);
-
-/**
- * The LOCAL mark, not `getNFLTeamLogo`'s ESPN CDN URL.
- *
- * `nfl-logo-dark-css.ts` generates an `html.dark`-keyed swap to the mirrored
- * cut for every mark with dark outlines, and it is keyed on the `src` — so a
- * CDN URL here would silently opt this row out of the dark-mode treatment
- * every other surface gets.
- */
-const nflLogoUrl = (team: string) =>
-  team ? `/assets/nfl-logos/${normalizeTeamCode(team)}.svg` : '';
 
 export interface LvPlayerRowProps {
   row: LivePlayerRow;

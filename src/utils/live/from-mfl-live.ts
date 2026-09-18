@@ -17,7 +17,8 @@
  * a viewer by construction, so `viewerSide` is always 0.
  */
 
-import type { LiveBoard, LiveMatchup, LivePanel, LiveTeam } from '../../types/live';
+import type { BroadcastMoment } from '../broadcast-moments';
+import type { LiveBoard, LiveMatchup, LiveMoment, LivePanel, LiveTeam } from '../../types/live';
 import type { MflLiveBoard, MflLiveMatchup, MflLiveTeam } from '../../types/mfl-live';
 import type { CanonicalLeagueSlug } from '../../config/leagues';
 
@@ -86,6 +87,35 @@ export function fromMflLiveBoard(board: MflLiveBoard): LiveBoard {
     matchups: panel.matchups.map(toMatchup),
   }));
 
+/**
+ * Drop the viewer-relative `side`.
+ *
+ * MFL Live's assembler emits `BroadcastMoment`, whose `side` is 'mine' or
+ * 'opponent'. Every moment on THAT board genuinely is one of the two, so
+ * nothing is lost here — but the kit's board also serves a league board where
+ * most matchups are nobody's, and a moment that must claim a side there would
+ * be the same lie the canonical matchup avoids with a nullable `viewerSide`.
+ * A caller that wants the relationship asks the PANEL who the viewer is.
+ *
+ * Listed field by field rather than spread, so a field added to either type is
+ * a compile error here instead of a silent drop.
+ */
+function toMoment(moment: BroadcastMoment): LiveMoment {
+  return {
+    key: moment.key,
+    playId: moment.playId,
+    leagueId: moment.leagueId,
+    leagueName: moment.leagueName,
+    franchiseId: moment.franchiseId,
+    franchiseName: moment.franchiseName,
+    playerId: moment.playerId,
+    playerName: moment.playerName,
+    team: moment.team,
+    text: moment.text,
+    clock: moment.clock,
+  };
+}
+
   return {
     ok: board.ok,
     scope: 'cross-league',
@@ -94,7 +124,7 @@ export function fromMflLiveBoard(board: MflLiveBoard): LiveBoard {
     fetchedAt: board.fetchedAt,
     panels,
     games: board.games,
-    moments: board.moments,
+    moments: board.moments.map(toMoment),
     redZone: board.redZone,
     playerMeta: board.playerMeta,
   };

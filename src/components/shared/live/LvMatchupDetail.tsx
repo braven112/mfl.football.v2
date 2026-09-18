@@ -14,12 +14,13 @@
  * the pill starts at the same x as the button above it.
  */
 import type { JSX, ReactNode } from 'react';
-import type { LiveMatchup, LiveTeam } from '../../../types/live';
+import type { LiveMatchup, LiveMoment, LiveTeam } from '../../../types/live';
 import type { NflGame, PlayerBoxScore, PlayerMeta } from '../../../types/live-scoring';
 import { renderOrder, winProbabilityFor } from '../../../utils/live/model';
 import LvWinProbBar from './LvWinProbBar';
 import LvLineup from './LvLineup';
 import LvBench from './LvBench';
+import LvMomentTicker from './LvMomentTicker';
 
 const fmt = (n: number) => n.toFixed(1);
 
@@ -29,6 +30,15 @@ export interface LvMatchupDetailProps {
   gamesByTeam?: Record<string, NflGame>;
   boxScore?: Record<string, PlayerBoxScore>;
   detailStatus?: 'ok' | 'error' | 'pending';
+  /** This matchup's scoring plays, already selected and deduped. */
+  moments?: LiveMoment[];
+  /**
+   * How the play feed is doing. 'error' is NOT "no plays" — an empty ticker
+   * during an ESPN outage lets an owner believe his starters did nothing.
+   */
+  momentStatus?: 'idle' | 'ok' | 'error';
+  /** Some games could not be expanded. Normal, and said out loud. */
+  momentPartial?: boolean;
   viewerFirst?: boolean;
   isFinal?: boolean;
   /** The freshness pill, rendered by the board so it keeps its own ticker. */
@@ -42,6 +52,9 @@ export default function LvMatchupDetail({
   gamesByTeam,
   boxScore,
   detailStatus,
+  moments,
+  momentStatus,
+  momentPartial,
   viewerFirst = false,
   isFinal = false,
   status,
@@ -109,6 +122,12 @@ export default function LvMatchupDetail({
           detailStatus={detailStatus}
         />
       </div>
+
+      <LvMomentTicker
+        moments={moments ?? []}
+        status={momentStatus}
+        partial={momentPartial}
+      />
     </div>
   );
 }

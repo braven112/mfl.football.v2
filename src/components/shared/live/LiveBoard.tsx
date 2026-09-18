@@ -19,15 +19,18 @@
  * API to render itself puts our edge in the path of its first paint, which is
  * an outage this repo has already shipped.
  */
-import { useEffect, useRef, useState, type JSX, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type JSX, type ReactNode } from 'react';
 import type { LiveBoard as Board, LiveMatchup, LivePanel } from '../../../types/live';
+import type { NflGame } from '../../../types/live-scoring';
 import LvMatchupCard from './LvMatchupCard';
 import LvMatchupDetail from './LvMatchupDetail';
 import LvRedZoneBanner from './LvRedZoneBanner';
 import LvEmptyState from './LvEmptyState';
 import LvFeedStatus from './LvFeedStatus';
 import LvWeekPicker from './LvWeekPicker';
-import { orderPanelMatchups } from '../../../utils/live/model';
+import { orderPanelMatchups, selectMatchupMoments } from '../../../utils/live/model';
+import { buildLiveMoments } from '../../../utils/live/moments';
+import { useNflGameDetail } from '../../../hooks/useNflGameDetail';
 import type { FeedSnapshot } from '../../../utils/live-scoring-view';
 import { shouldPollLive } from '../../../hooks/useNflScoreboard';
 import { fromMflLiveBoard } from '../../../utils/live/from-mfl-live';
@@ -141,7 +144,15 @@ export default function LiveBoard({
   onSelectWeek,
 }: LiveBoardProps): JSX.Element {
   const [board, setBoard] = useState<Board>(initialBoard);
-  const [selected, setSelected] = useState<LiveMatchup | null>(null);
+  /**
+   * The open matchup AND the panel it came from. The panel is not redundant:
+   * a moment belongs to a franchise IN A LEAGUE, and both leagues have a
+   * franchise `0001`, so selecting this matchup's ticker rows by franchise id
+   * alone would pull another league's `0001` into it on a cross-league board.
+   */
+  const [selected, setSelected] = useState<{ matchup: LiveMatchup; panel: LivePanel } | null>(
+    null,
+  );
   /**
    * This island's own poll, as the pill reads it. `fetchedAt` stays 0 until a
    * poll SUCCEEDS — treating 0 as a timestamp prints "56 years ago" — and a
@@ -213,15 +224,71 @@ export default function LiveBoard({
   const gamesLive = (board.games ?? []).filter((g) => g.state === 'in').length;
 
   /**
-   * Only the pollers actually running. In bundled-sample mode there are none,
-   * so `LvFeedStatus` renders nothing rather than a pill that cannot age.
+   * ESPN box scores and scoring plays.
+   *
+   * Off in bundled-sample mode so a live fetch cannot overwrite the replay,
+   * and off when the board itself is not polling — a static render (a story, a
+   * server snapshot) has no business opening a second poller, and `pollUrl` is
+   * the one prop that already says "this board is live".
+   *
+   * Everything it returns is keyed by MFL PLAYER ID. The join to ESPN athlete
+   * ids happens server-side, deliberately: `PlayerMeta.espnId` can hold a
+   * COLLEGE athlete id and both are plain digits, so a bad join resolves the
+   * wrong person instead of failing.
    */
-  const feeds: FeedSnapshot[] = demoLabel
-    ? []
-    : [...(pollUrl ? [feed] : []), ...(extraFeeds ?? [])];
+  const detail = useNflGameDetail(board.week, board.year, {
+    enabled: !demoLabel && !!pollUrl,
+    anyLive: gamesLive > 0,
+  });
+
+  /**
+   * Only the pollers actually RUNNING for this render. In bundled-sample mode
+   * there are none, so `LvFeedStatus` renders nothing rather than a pill that
+   * can never age — a disabled poller neither fails nor goes stale, so
+   * including one would pin the pill at "Connecting…" forever.
+   */
+  const feeds: FeedSnapshot[] = demoLabel || !pollUrl
+    ? (extraFeeds ?? [])
+    : [feed, { status: detail.status, fetchedAt: detail.fetchedAt }, ...(extraFeeds ?? [])];
 
   const pill = (
     <LvFeedStatus feeds={feeds} anyLive={gamesLive > 0} gamesLive={gamesLive} />
+  );
+
+  /** A row's real NFL game, by club code. Both sides of every game. */
+  const gamesByTeam = useMemo(() => {
+    const out: Record<string, NflGame> = {};
+    for (const g of board.games ?? []) {
+      if (g.home.code) out[g.home.code] = g;
+      if (g.away.code) out[g.away.code] = g;
+    }
+    return out;
+  }, [board.games]);
+
+  /**
+   * `error` SUPPRESSES the stat-line slot rather than rendering every starter
+   * as though he had done nothing. Silence must mean "no stats yet", never
+   * "feed down".
+   */
+  const detailStatus: 'ok' | 'error' | 'pending' =
+    detail.status === 'error' ? 'error' : detail.loaded ? 'ok' : 'pending';
+
+  /**
+   * Derived from the CURRENT payload every poll, never accumulated.
+   *
+   * The board's own `moments` are the server's (MFL Live's assembler fills
+   * them; a league read leaves them empty, because ESPN is per-NFL-GAME and is
+   * read client-side). Once the play feed has landed the client list is the
+   * better one — it covers every franchise on the board rather than only the
+   * viewer's — so it wins, and both are keyed `playId:leagueId:franchiseId`,
+   * which is what makes the swap invisible.
+   */
+  const moments = useMemo(
+    () =>
+      detail.loaded
+        ? buildLiveMoments(detail.plays, board.panels, board.playerMeta)
+        : board.moments,
+    [detail.loaded, detail.plays, board.panels, board.playerMeta, board.moments],
   );
 
   const card = (panel: LivePanel, matchup: LiveMatchup, lead: boolean) => (
@@ -231,7 +298,7 @@ export default function LiveBoard({
       viewerFirst={viewerFirst}
       isFinal={isMatchupFinal(matchup)}
       lead={lead}
-      onOpen={() => setSelected(matchup)}
+      onOpen={() => setSelected({ matchup, panel })}
     />
   );
 
@@ -254,10 +321,18 @@ export default function LiveBoard({
 
       {selected ? (
         <LvMatchupDetail
-          matchup={selected}
+          matchup={selected.matchup}
           meta={board.playerMeta}
+          gamesByTeam={gamesByTeam}
+          boxScore={detail.boxScore}
+          detailStatus={detailStatus}
+          moments={selectMatchupMoments(moments, selected.panel.leagueId, selected.matchup)}
+          momentStatus={
+            detail.status === 'error' ? 'error' : detail.loaded ? 'ok' : 'idle'
+          }
+          momentPartial={detail.partial}
           viewerFirst={viewerFirst}
-          isFinal={isMatchupFinal(selected)}
+          isFinal={isMatchupFinal(selected.matchup)}
           status={
             <LvFeedStatus
               feeds={feeds}

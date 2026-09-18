@@ -12,7 +12,7 @@
  */
 
 import type { LivePlayerRow, PlayerMeta } from '../../types/live-scoring';
-import type { LiveMatchup, LiveTeam } from '../../types/live';
+import type { LiveMatchup, LiveMoment, LiveTeam } from '../../types/live';
 import type { TeamTotals } from '../live-scoring-view';
 import { winProbability } from '../live-win-probability';
 import { orderLineupRows } from '../mfl-live-lineup';
@@ -131,6 +131,48 @@ export function orderPanelMatchups(matchups: readonly LiveMatchup[]): OrderedMat
   return yours.length > 0
     ? { featured: yours, rest: others, hasYours: true }
     : { featured: others.slice(0, 1), rest: others.slice(1), hasYours: false };
+}
+
+/* ── moments ─────────────────────────────────────────────────────────────── */
+
+/**
+ * The rows one matchup's ticker should render: newest first, one row per PLAY,
+ * capped.
+ *
+ * ── TWO DEDUPES, OPPOSITE DIRECTIONS ──────────────────────────────────────
+ * The board's `moments` are keyed `playId:leagueId:franchiseId`, which is what
+ * lets a QB→WR touchdown reach BOTH owners' boards and what keeps my
+ * TheLeague franchise `0001` apart from an AFL franchise `0001`. Here the two
+ * franchises are merged into ONE list, and the AFL's conferences run duplicate
+ * rosters, so both sides of a matchup legitimately start the same player — the
+ * identical line then appears twice in a row with no attribution anywhere in
+ * the ticker to tell them apart, carrying no information at all. That shipped
+ * for five of 24 AFL matchups. So: `playId` dedupe for RENDER.
+ *
+ * ── THE LEAGUE IS PART OF THE MATCH, NOT DECORATION ───────────────────────
+ * A moment belongs to a franchise IN A LEAGUE. On a cross-league board,
+ * matching on `franchiseId` alone would pull another league's franchise `0001`
+ * into this matchup's ticker.
+ */
+export function selectMatchupMoments(
+  moments: readonly LiveMoment[],
+  leagueId: string,
+  matchup: LiveMatchup,
+  limit = 8,
+): LiveMoment[] {
+  const sides = new Set([matchup.sides[0].franchiseId, matchup.sides[1].franchiseId]);
+  const seenPlays = new Set<string>();
+  const out: LiveMoment[] = [];
+
+  for (const moment of moments) {
+    if (moment.leagueId !== leagueId) continue;
+    if (!sides.has(moment.franchiseId)) continue;
+    if (seenPlays.has(moment.playId)) continue;
+    seenPlays.add(moment.playId);
+    out.push(moment);
+    if (out.length >= limit) break;
+  }
+  return out;
 }
 
 /* ── colours ─────────────────────────────────────────────────────────────── */
