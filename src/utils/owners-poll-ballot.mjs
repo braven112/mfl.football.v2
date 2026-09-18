@@ -160,6 +160,24 @@ export function ownersPollCurrentKey(navSlug) {
 }
 
 /**
+ * Commissioner PAUSE switch — the only stored state the live path still has.
+ *
+ * Voting is always open, so there is no "current window" to point at any more.
+ * What remains is an emergency stop: a key whose mere presence suspends the
+ * poll. Absent (the normal case) means open.
+ *
+ * It is deliberately the inverse of the old pointer. The old model stored
+ * "voting is allowed until X" and failed CLOSED when the key vanished — which
+ * is how an expired TTL could have switched the feature off silently. This
+ * stores "voting is suspended" and fails OPEN, so losing the key restores the
+ * normal state rather than breaking it.
+ */
+export function ownersPollPauseKey(navSlug) {
+  assertScope(navSlug);
+  return `${OWNERS_POLL_PREFIX}:${navSlug}:paused`;
+}
+
+/**
  * Where a ballot sits relative to its window.
  *
  * Pure and takes `now` explicitly so both the route and the tests can pin it —

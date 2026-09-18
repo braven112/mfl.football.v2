@@ -20,6 +20,7 @@ import {
   CLOSE_WEEKDAY_PT,
   KICKOFF_BUFFER_MINUTES,
   SHORT_WINDOW_HOURS,
+  resolveOwnersPollCycle,
 } from '../src/utils/owners-poll-window.mjs';
 
 const pt = (iso: string, opts: Intl.DateTimeFormatOptions) =>
@@ -174,5 +175,80 @@ describe('ptCalendarParts', () => {
       day: 8,
       weekday: 2,
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+
+describe('resolveOwnersPollCycle — the always-open model', () => {
+  const CLOSE_HOUR = 16; // 4pm PT, both leagues
+
+  const cycle = (now: string, over: Record<string, unknown> = {}) =>
+    resolveOwnersPollCycle({ now: new Date(now), closeHourPT: CLOSE_HOUR, ...over });
+
+  it('always resolves a close in the FUTURE, whenever it is asked', () => {
+    // The whole point: there is no moment in the season where the poll has no
+    // answer for "when is the next result?".
+    for (const iso of [
+      '2026-09-08T14:00:00Z', // Tue morning PT
+      '2026-09-10T22:59:00Z', // Thu, one minute before the announce
+      '2026-09-10T23:01:00Z', // Thu, one minute AFTER it
+      '2026-09-12T06:00:00Z', // Fri night PT
+      '2026-09-14T18:00:00Z', // Mon
+    ]) {
+      const c = cycle(iso);
+      expect(Date.parse(c.closesAt), iso).toBeGreaterThan(Date.parse(iso));
+    }
+  });
+
+  it('rolls to the NEXT Thursday the moment one passes', () => {
+    // This is the behaviour that removes the dead period: a vote cast at 4:01pm
+    // Thursday is a vote for next week, not a vote that is refused.
+    const before = cycle('2026-09-10T22:59:00Z');
+    const after = cycle('2026-09-10T23:01:00Z');
+    expect(after.closesAt).not.toBe(before.closesAt);
+    expect(Date.parse(after.closesAt) - Date.parse(before.closesAt)).toBe(7 * 86400 * 1000);
+  });
+
+  it('still clamps to just before the first kickoff', () => {
+    // Thanksgiving: games at ~10:00 PT, hours before the scheduled 4pm.
+    const kickoff = '2026-11-26T18:00:00Z';
+    const c = cycle('2026-11-24T14:00:00Z', { firstKickoff: kickoff });
+    expect(c.clampedToKickoff).toBe(true);
+    expect(Date.parse(c.closesAt)).toBe(Date.parse(kickoff) - 15 * 60000);
+  });
+
+  it('ignores a kickoff already in the past rather than producing a dead cycle', () => {
+    const c = cycle('2026-09-08T14:00:00Z', { firstKickoff: '2026-09-01T18:00:00Z' });
+    expect(c.clampedToKickoff).toBe(false);
+    expect(Date.parse(c.closesAt)).toBeGreaterThan(Date.parse('2026-09-08T14:00:00Z'));
+  });
+
+  it('gives one stable cycleKey per announce, in Pacific', () => {
+    const a = cycle('2026-09-08T14:00:00Z');
+    const b = cycle('2026-09-10T22:59:00Z');
+    expect(a.cycleKey).toBe(b.cycleKey);
+    expect(a.cycleKey).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(cycle('2026-09-10T23:01:00Z').cycleKey).not.toBe(a.cycleKey);
+  });
+
+  it('holds the announce hour across the November DST flip', () => {
+    // A hardcoded -8/-7 moves the deadline by an hour without anyone noticing.
+    const before = cycle('2026-10-27T14:00:00Z');
+    const after = cycle('2026-11-10T14:00:00Z');
+    const hourPT = (iso: string) =>
+      new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/Los_Angeles',
+        hour: 'numeric',
+        hour12: false,
+      }).format(new Date(iso));
+    expect(hourPT(before.closesAt)).toBe(hourPT(after.closesAt));
+  });
+
+  it('rejects a bad clock rather than guessing', () => {
+    expect(() => cycle('not a date')).toThrow();
+    expect(() =>
+      resolveOwnersPollCycle({ now: new Date(), closeHourPT: 25 }),
+    ).toThrow();
   });
 });

@@ -14,12 +14,16 @@ import { ALL_LEAGUES, getLeagueById, type LeagueDefinition } from '../config/lea
 import {
   ownersPollStandingKey,
   ownersPollCurrentKey,
+  ownersPollPauseKey,
   affirmBallotRecord,
   parseStoredBallot,
   parseStoredWindow,
   resolveBallotWindow,
 } from './owners-poll-ballot.mjs';
 import { getLeagueTeamBrands } from './league-team-brands';
+import { getCurrentWeekForYear } from './current-week';
+import { getCurrentSeasonYear } from './league-year';
+import { resolveOwnersPollCycle } from './owners-poll-window.mjs';
 
 export interface OwnersPollWindow {
   year: number;
@@ -122,6 +126,107 @@ export function resolvePublicLeague(request: Request): LeagueDefinition | null {
  */
 export function eligibleFranchiseIdsFor(league: LeagueDefinition): string[] {
   return Object.keys(getLeagueTeamBrands(league.slug));
+}
+
+/**
+ * The league's CURRENT voting cycle — the always-open path.
+ *
+ * Derived, never read from storage. Voting never stops, so there is always an
+ * answer: the pending announce instant, the league's field, and its ballot
+ * depth. The old `readOwnersPollWindow` pointer survives for exactly one
+ * purpose now — a commissioner PAUSE — and this returns null only when one is
+ * in force.
+ *
+ * The year is the SEASON year, matching the standing hash: the poll ranks how
+ * teams are playing, so it rolls at Labor Day with the standings rather than
+ * on MFL's February league rollover. `week` is informational — it labels the
+ * ballot in the UI and no longer selects any key.
+ */
+export function resolvePollCycle(
+  league: LeagueDefinition,
+  now: Date = new Date(),
+): OwnersPollWindow | null {
+  const poll = league.ownersPoll;
+  if (!poll?.enabled) return null;
+
+  const seasonYear = getCurrentSeasonYear(now);
+  const eligibleFranchiseIds = eligibleFranchiseIdsFor(league);
+  // A field no larger than the ballot cannot produce a ranking — the same
+  // refusal the open pass makes, applied where the API can see it too.
+  if (eligibleFranchiseIds.length <= poll.slots) return null;
+
+  const cycle = resolveOwnersPollCycle({
+    now,
+    closeHourPT: poll.closeHourPT,
+    closeWeekday: poll.closeWeekday,
+  });
+
+  return {
+    year: seasonYear,
+    week: getCurrentWeekForYear(seasonYear),
+    opensAt: cycle.opensAt,
+    closesAt: cycle.closesAt,
+    slots: poll.slots,
+    eligibleFranchiseIds,
+  };
+}
+
+/** Is the poll suspended by the commissioner? Absent key = open. */
+export async function isPollPaused(scope: string): Promise<boolean> {
+  const redis = await getRedis();
+  if (!redis) return false;
+  try {
+    return Boolean(await redis.get(ownersPollPauseKey(scope)));
+  } catch (err) {
+    // Fails OPEN, on purpose. A storage blip must not silently stop the league
+    // voting; the worst case is that a deliberate pause lapses, which someone
+    // will notice, rather than the poll disappearing, which nobody would.
+    console.error('[owners-poll] failed to read pause flag:', err);
+    return false;
+  }
+}
+
+/** Suspend or resume voting. `hours` expires the pause automatically. */
+export async function setPollPaused(
+  scope: string,
+  paused: boolean,
+  hours?: number,
+): Promise<boolean> {
+  const redis = await getRedis();
+  if (!redis) return false;
+  try {
+    if (!paused) {
+      await redis.del(ownersPollPauseKey(scope));
+      return true;
+    }
+    const ttl = Number.isFinite(hours) && (hours as number) > 0
+      ? Math.ceil((hours as number) * 3600)
+      : undefined;
+    await redis.set(
+      ownersPollPauseKey(scope),
+      new Date().toISOString(),
+      ttl ? { ex: ttl } : undefined,
+    );
+    return true;
+  } catch (err) {
+    console.error('[owners-poll] failed to set pause flag:', err);
+    return false;
+  }
+}
+
+/**
+ * The window a request should act on: the derived cycle, unless paused.
+ *
+ * Every route goes through this rather than reading storage for a window, so
+ * "is voting open?" has exactly one answer and one implementation.
+ */
+export async function activePollWindow(
+  league: LeagueDefinition,
+  scope: string,
+  now: Date = new Date(),
+): Promise<OwnersPollWindow | null> {
+  if (await isPollPaused(scope)) return null;
+  return resolvePollCycle(league, now);
 }
 
 /**

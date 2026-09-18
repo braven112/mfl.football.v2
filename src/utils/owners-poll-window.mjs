@@ -196,8 +196,100 @@ export function resolveOwnersPollWindow({
 }
 
 /**
+ * Resolve the CURRENT voting cycle — the always-open model.
+ *
+ * Voting never stops. There is no open instant to anchor to and no closed
+ * period to be in: at any moment during the season there is exactly one
+ * pending announce, and a ballot changed before it counts toward it. Change
+ * your ballot after it and you have changed your vote for the next one.
+ *
+ * This replaces `resolveOwnersPollWindow` on the live path. The difference is
+ * the anchor: that one measured forward from the instant the column published
+ * and was CLEARED at the close, which is what created a multi-day stretch each
+ * week where the ballot refused votes. This measures forward from `now`, so it
+ * is always answerable and never expires.
+ *
+ * **The cycle is derived, never stored**, and that is deliberate rather than a
+ * simplification. The old pointer carried a TTL. An always-open pointer that
+ * nothing rewrites would eventually expire, and an expired pointer reads as
+ * "no ballot is open" — the feature would switch itself off with no error and
+ * no deploy. A fact you can compute must not be made durable.
+ *
+ * @param {object} args
+ * @param {Date|number|string} args.now
+ * @param {number} args.closeHourPT League config, 24h Pacific.
+ * @param {number} [args.closeWeekday] Defaults to Thursday.
+ * @param {Date|number|string|null} [args.firstKickoff] First kickoff of the
+ *   upcoming NFL week, when the schedule feed can supply it.
+ * @param {number} [args.kickoffBufferMinutes]
+ * @returns {{ opensAt: string, closesAt: string, clampedToKickoff: boolean, cycleKey: string }}
+ */
+export function resolveOwnersPollCycle({
+  now = new Date(),
+  closeHourPT,
+  closeWeekday = CLOSE_WEEKDAY_PT,
+  firstKickoff = null,
+  kickoffBufferMinutes = KICKOFF_BUFFER_MINUTES,
+}) {
+  const nowMs = now instanceof Date ? now.getTime() : new Date(now).getTime();
+  if (!Number.isFinite(nowMs)) {
+    throw new TypeError(`owners-poll: invalid now ${JSON.stringify(now)}`);
+  }
+  if (!Number.isInteger(closeHourPT) || closeHourPT < 0 || closeHourPT > 23) {
+    throw new TypeError(`owners-poll: invalid closeHourPT ${JSON.stringify(closeHourPT)}`);
+  }
+
+  const { year, month, day, weekday } = ptCalendarParts(nowMs);
+  const daysAhead = (closeWeekday - weekday + 7) % 7;
+
+  let closesMs = ptWallTimeToInstant(year, month, day + daysAhead, closeHourPT);
+  if (closesMs <= nowMs) {
+    closesMs = ptWallTimeToInstant(year, month, day + daysAhead + 7, closeHourPT);
+  }
+
+  // Never let voting run past the first snap — unchanged from the windowed
+  // model, and for the same reason: on a Thanksgiving week the scheduled hour
+  // sits HOURS after two games have been played, and voting with results in
+  // hand is not the same poll.
+  let clampedToKickoff = false;
+  const kickoffMs =
+    firstKickoff == null
+      ? NaN
+      : firstKickoff instanceof Date
+        ? firstKickoff.getTime()
+        : new Date(firstKickoff).getTime();
+  if (Number.isFinite(kickoffMs)) {
+    const cutoff = kickoffMs - kickoffBufferMinutes * 60000;
+    // Only when it still leaves a cycle at all. A kickoff already in the past
+    // means the feed is describing a different week, and trusting it would
+    // produce an announce instant that has already gone by.
+    if (cutoff < closesMs && cutoff > nowMs) {
+      closesMs = cutoff;
+      clampedToKickoff = true;
+    }
+  }
+
+  // Informational only — nothing gates a write on it, because voting is always
+  // open. It exists so copy can say "since Thursday" without a second clock.
+  const opensMs = closesMs - 7 * 86400000;
+  const c = ptCalendarParts(closesMs);
+
+  return {
+    opensAt: new Date(opensMs).toISOString(),
+    closesAt: new Date(closesMs).toISOString(),
+    clampedToKickoff,
+    // Stable per announce, in Pacific — the identifier a snapshot and a reveal
+    // hero dedupe on, so neither depends on a stored pointer.
+    cycleKey: `${c.year}-${String(c.month).padStart(2, '0')}-${String(c.day).padStart(2, '0')}`,
+  };
+}
+
+/**
  * Below this, the generator warns rather than silently opening a ballot
  * nobody has time to fill in. Not enforced in the math — see above.
+ *
+ * Meaningful only on the commissioner override path now: a derived cycle is
+ * always about a week long.
  */
 export const SHORT_WINDOW_HOURS = 12;
 

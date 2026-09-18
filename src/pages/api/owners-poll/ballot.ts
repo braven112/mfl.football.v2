@@ -27,9 +27,8 @@ import {
 import {
   countBallots,
   readBallot,
-  readOwnersPollWindow,
+  activePollWindow,
   resolveOwnersPollCaller,
-  windowState,
   writeBallot,
   type OwnersPollRefusal,
 } from '../../../utils/owners-poll-store';
@@ -58,10 +57,12 @@ export const GET: APIRoute = async ({ request }) => {
   }
   const { scope, franchiseId } = resolved.caller;
 
-  const window = await readOwnersPollWindow(scope);
-  const state = windowState(window);
-  if (!window || state !== 'open') {
-    return json({ status: state, window: null, ballot: null }, 200, headers);
+  // Always open unless a commissioner paused it — the cycle is derived, so
+  // there is no stored window to have expired and no dead stretch between
+  // Thursday's result and the next column.
+  const window = await activePollWindow(resolved.caller.league, scope);
+  if (!window) {
+    return json({ status: 'paused', window: null, ballot: null }, 200, headers);
   }
 
   const [ballot, ballotsIn] = await Promise.all([
@@ -104,12 +105,9 @@ export const POST: APIRoute = async ({ request }) => {
     return json({ error: 'Too many ballot submissions — try again shortly' }, 429, headers);
   }
 
-  const window = await readOwnersPollWindow(scope);
-  const state = windowState(window);
-  if (!window || state !== 'open') {
-    // 'closed' covers both "already closed" and "never opened"; the client
-    // shows the window state it last read rather than guessing from a 409.
-    return json({ error: 'The ballot is not open', status: state }, 409, headers);
+  const window = await activePollWindow(resolved.caller.league, scope);
+  if (!window) {
+    return json({ error: 'Voting is paused', status: 'paused' }, 409, headers);
   }
 
   let body: unknown;
