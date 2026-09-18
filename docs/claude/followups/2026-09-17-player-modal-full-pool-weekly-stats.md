@@ -115,7 +115,9 @@ the verdicts below. The issue stays open; do not close it.
     Then check the file exists with 30+ teams.
   - Re-checked 2026-09-18T01:15Z: still absent, as expected — the workflow has
     not run since 2026-09-15.
-- [x] **F3 — Confirm the by-week feed filled weeks 1–18, and drop the hand seed** — DONE 2026-09-18
+- [x] **F3 — Confirm the by-week feed carries EVERY PLAYED WEEK, and drop the hand seed** — DONE 2026-09-18
+  - Retitled: it was filed as "filled weeks 1–18", which is not the bar and is
+    what sent the first verification pass looking for a partial that was not one.
   - **The item was framed wrong, mine included.** "Weeks 1–18" was never the bar
     on 2026-09-17: the 2026 season had played ONE week. Week 2 kicked off
     `2026-09-17T17:15-07:00` = 2026-09-18T00:15Z (`src/data/nfl/week-starts.mjs`),

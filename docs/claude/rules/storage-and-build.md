@@ -344,8 +344,10 @@ leagues ran the day on a hand seed.
 That one turned out harmless — the season had played exactly one week, so the
 seed and the pipeline's answer covered the same ground — but **only by luck of
 the calendar**, which is the reason to write it down rather than not. Ship the
-same feed in November and it is thirteen weeks of missing rows on a live page
-for a full day.
+same feed mid-season and every week BETWEEN the seed and the one MFL is
+currently naming is missing from a live page for a full day — the live path
+fills only that current week, so a week-1 seed shipped in week 13 leaves
+weeks 2–12 blank until the next UTC day.
 
 Nothing is broken by this and nothing should be "fixed" to bypass it — the gate
 is what keeps 18 requests per league from running on every live tick. Just know
