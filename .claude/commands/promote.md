@@ -21,12 +21,57 @@ must stop rather than be resolved on release day. Never replace it with a plain
 
 ---
 
+## Step 0: Is merge-down healthy? (ask this FIRST)
+
+Before any local git. The Step 2 fast-forward is an EFFECT;
+`.github/workflows/staging-merge-down.yml` is the cause. If that job is
+failing, `staging` cannot contain `main` and the promotion is already dead —
+discovering it three steps later off a local clone just spends time reaching
+the same answer, and a shallow clone will lie to you about *why* (Step 1).
+
+```bash
+gh api "repos/braven112/mfl.football.v2/actions/workflows/staging-merge-down.yml/runs?per_page=5" \
+  --jq '.workflow_runs[] | "\(.created_at)\t\(.conclusion // .status)\t\(.head_sha[0:10])"'
+```
+
+No `gh` in the session (Claude Code on the web has none) — use the GitHub MCP
+tools instead: `actions_list` with `list_workflow_runs`, then `get_job_logs`
+with `failed_only` for the reason.
+
+A `failure` on the most recent run means **STOP and fix that job** — resolve
+the conflict it names on a branch and push to `staging`, per Step 2. Every
+cron push to `main` retries it, so a broken merge-down shows up as a wall of
+identical failures, not one: ten runs in the 2.5 hours before the 2026-09-17
+attempt, each triggered by a routine sync commit.
+
 ## Step 1: Preflight
 
 ```bash
 git fetch origin main staging
 git status --short          # must be clean
 ```
+
+**Check the clone is not shallow before trusting any ancestry check.**
+
+```bash
+git rev-parse --is-shallow-repository    # must print false
+```
+
+A shallow clone — a CI checkout, or a fresh agent session — fabricates a root
+commit at the graft boundary. `git merge-base` then reports NO common ancestor
+and the left/right divergence counts are nonsense. Read literally, that is
+indistinguishable from `main` having been force-pushed and its history
+destroyed, which is how a routine "merge-down is behind" became a 20-minute
+incident investigation on 2026-09-17. If it prints `true`, deepen until a
+merge base exists and only then run Step 2:
+
+```bash
+git fetch --deepen=250 origin main staging
+git merge-base origin/main origin/staging    # must print a sha
+```
+
+Prefer `--deepen` over `--unshallow`: this repo's `.git` is 3.3 GB at depth 50
+and the session disk allowance is finite.
 
 **If `staging` does not exist**, stop and say so. The release train is not set
 up; `docs/plans/staging-release-process.md` has the build order.
@@ -62,6 +107,15 @@ here would paper over a broken one.
 
 ```bash
 node scripts/release-blackout.mjs
+```
+
+**It evaluates the PT clock, not your shell's — read the day it prints.** A
+session running in UTC is a day ahead from 5pm PT on, so `date` saying Friday
+while the script says `Thursday … DO NOT PROMOTE` is the script being right and
+the shell being in the wrong zone. Print both before you argue with it:
+
+```bash
+date -u; TZ=America/Los_Angeles date
 ```
 
 Exit 0 is clear; exit 1 prints every applicable reason. It covers, in PT:
