@@ -1,5 +1,24 @@
 # The Owners' Poll — owner-voted team rankings inside The Pecking Order
 
+> **SUPERSEDED IN PART (2026-09-18).** This document describes the poll as
+> originally designed and built. Three of its decisions have since been
+> reversed, and the text below has NOT been rewritten — it is kept as the
+> record of what was built and why, because the reasoning still explains the
+> parts that survive.
+>
+> What changed, and where the current behaviour lives:
+>
+> | This doc says | Now |
+> |---|---|
+> | Quorum of 8/16 (12/24 AFL); no consensus below it | **No quorum.** Whatever ballots come in are the result. `tallyOwnersPoll` returns null blocks only for a week with ZERO ballots. |
+> | The ballot opens Tuesday with the column and closes Thursday | **Voting is always open.** `resolveOwnersPollCycle` derives the next announce from `now`; a ballot changed after one counts toward the next. |
+> | A ballot is cast per week; prefill from last week's | **A ballot is a standing vote** on a season-scoped hash, carried forward until changed. Prefill is gone — there is nothing to prefill from. |
+> | A no-quorum week posts an honest "came up short" | **A zero-ballot week posts nothing at all** — no chat post, no feed post, no poll section. |
+> | The ballot strip lives on the Set Lineup page | Removed. |
+>
+> See `docs/claude/insights/features/owners-poll.md` (2026-09-18 entries) for
+> the reasoning behind each reversal.
+
 **Status:** plan, not built. Decisions below marked **[DECIDED]** came from
 Brandon; **[OPEN]** ones still need a call before implementation starts.
 
