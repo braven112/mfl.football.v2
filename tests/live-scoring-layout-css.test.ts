@@ -706,6 +706,89 @@ describe('the no-games board fits the phone', () => {
   });
 
   /**
+   * THE CARD'S "TO PLAY" COUNT IS SPLIT PER TEAM, and stays split.
+   *
+   * The kit shipped this SUMMED — `a.yetToPlay + b.yetToPlay` behind one
+   * label — which silently undid a fix the league board already carried. A
+   * total answers "how much football is left" but never "left for WHOM",
+   * which is the question a card reading 87.0 – 106.5 is actually being
+   * asked, and the regression was invisible because a single number beside
+   * "to play" looks entirely correct on its own.
+   *
+   * Four separate claims, because collapsing any one of them is how the
+   * feature half-returns:
+   *
+   *  1. BOTH sides' counts are rendered, from `a.` and `b.` — a guard on the
+   *     class alone would pass a summed number wearing the split markup.
+   *  2. Neither is summed into what is printed.
+   *  3. Each dot is coloured from its OWN side's variable, and the two differ.
+   *     One `--t0` on both dots is worse than no dots: it states a pairing
+   *     that is not there.
+   *  4. Both counts reach the `aria-label`. That label REPLACES the header's
+   *     markup for a screen reader — the `title` attributes and the dots are
+   *     never announced — so a count missing from it is a count half the
+   *     audience does not get at all.
+   */
+  it('splits the card\u2019s "to play" count per team, in each side\u2019s own colour', () => {
+    const card = readFileSync(
+      join(process.cwd(), 'src/components/shared/live/LvMatchupCard.tsx'),
+      'utf-8',
+    ).replace(/\/\*[\s\S]*?\*\//g, ' ');
+
+    // 1 — both sides' counts are printed.
+    expect(card, 'the first side\u2019s count is not rendered').toMatch(/\{a\.yetToPlay\}/);
+    expect(card, 'the second side\u2019s count is not rendered').toMatch(/\{b\.yetToPlay\}/);
+
+    // 2 — and neither is summed into a printed value.
+    expect(card, 'the two counts are summed into what is printed').not.toMatch(
+      /\{\s*a\.yetToPlay\s*\+\s*b\.yetToPlay\s*\}/,
+    );
+
+    // 3 — two dots, each from its own side's colour variable.
+    const dots = [...card.matchAll(/lv-rem__dot[^]{0,160}?var\(--t\$\{(\w+)\}\)/g)].map(
+      (m) => m[1],
+    );
+    expect(dots, 'expected two dots, one per side').toHaveLength(2);
+    expect(dots[0], 'both dots read the same side\u2019s colour').not.toBe(dots[1]);
+
+    // 4 — both counts reach the announced label.
+    const label = /aria-label=\{([^]*?)\n      \}/.exec(card)?.[1] ?? '';
+    expect(label, 'the first side\u2019s count is missing from the aria-label').toMatch(
+      /a\.yetToPlay/,
+    );
+    expect(label, 'the second side\u2019s count is missing from the aria-label').toMatch(
+      /b\.yetToPlay/,
+    );
+  });
+
+  /**
+   * The dots are a FILL, so they take the ΔE pair, not the ink pair.
+   *
+   * `--t0`/`--t1` promise perceptual distance from the card, which is exactly
+   * what a small solid shape needs. The ink pair exists for TEXT and steps
+   * toward the card\u2019s opposite until it clears WCAG — applied to a dot it
+   * would wash the colour for no reading benefit, and it would make the dot
+   * stop matching the win-probability bar segment it is meant to key to.
+   */
+  it('keeps the split dots on the fill pair and the digits on ordinary ink', () => {
+    const dot = declarationsFor(base, '.lv-rem__dot');
+    expect(dot.length, '.lv-rem__dot is missing from the sheet').toBeGreaterThan(0);
+    // The colour is set inline per side, so the rule must not paint one here.
+    expect(
+      dot.find(([prop]) => prop === 'background' || prop === 'background-color'),
+      '.lv-rem__dot hardcodes a colour \u2014 the side\u2019s own variable is set inline',
+    ).toBeUndefined();
+    // A dot with no `flex: none` is squeezed to an ellipse by the digits.
+    expect(valueOf(base, '.lv-rem__dot', 'flex'), 'the dot can be squeezed to an ellipse').toBe(
+      'none',
+    );
+    // The digits are ordinary page text, NOT a franchise colour: two numbers
+    // a rem apart, each tinted its own team, is a legibility problem the dot
+    // already solves without touching the digits.
+    expect(valueOf(base, '.lv-rem__n', 'color')).toBe('var(--page-text)');
+  });
+
+  /**
    * One wording for one number, across every surface that prints it.
    *
    * Six places render a yet-to-play count: this island's card header, its

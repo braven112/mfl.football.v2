@@ -49,7 +49,27 @@ export default function LvMatchupCard({
   const b: LiveTeam = matchup.sides[second];
   const pFirst = winProbabilityFor(matchup, first);
 
-  const yetToPlay = a.yetToPlay + b.yetToPlay;
+  /**
+   * THE COUNT IS SPLIT PER TEAM, never summed.
+   *
+   * A single total answers "how much football is left" but never "left for
+   * WHOM", which is the question a board showing 87.0 – 106.5 is actually
+   * being asked. Each number sits behind a dot in that side's own colour —
+   * the same `--t0`/`--t1` the win-probability bar is drawn from — so the
+   * first dot is always the first row and the pair needs no legend.
+   *
+   * It stays split when the two counts are EQUAL. A number that changes shape
+   * depending on its value is harder to read at a glance than one that never
+   * moves.
+   *
+   * Colour alone does not carry it: position matches the rows below, each
+   * number carries a `title`, and the button's own `aria-label` spells both
+   * out — that label is what a screen reader announces INSTEAD of this markup,
+   * so a count left out of it is a count a screen reader never hears.
+   */
+  const showYtp = !isFinal && a.yetToPlay + b.yetToPlay > 0;
+  const aName = a.nameShort || a.name;
+  const bName = b.nameShort || b.name;
   const aLeads = a.live >= b.live;
 
   // `ahead` is which SIDE is winning, not whether this CARD leads its panel —
@@ -83,7 +103,12 @@ export default function LvMatchupCard({
       className={`lv-card lv-matchup${lead ? ' lv-card--lead' : ''}`}
       style={matchup.colorVars}
       onClick={onOpen}
-      aria-label={`Open ${a.name} against ${b.name}`}
+      aria-label={
+        `Open ${a.name} against ${b.name}` +
+        (showYtp
+          ? `. ${aName} ${a.yetToPlay} to play, ${bName} ${b.yetToPlay} to play`
+          : '')
+      }
     >
       <div className="lv-card__head">
         {isFinal ? (
@@ -94,7 +119,30 @@ export default function LvMatchupCard({
             Live
           </span>
         )}
-        {!isFinal && yetToPlay > 0 && <span>{yetToPlay} to play</span>}
+        {showYtp && (
+          <span className="lv-rem">
+            <span className="lv-rem__n" title={`${aName}: ${a.yetToPlay} to play`}>
+              {/* A FILL, so `--t0`/`--t1` is right here — a dot is a shape
+                  against the card, which is what ΔE measures. The ink pair is
+                  for TEXT only. */}
+              <span
+                className="lv-rem__dot"
+                style={{ background: `var(--t${first})` }}
+                aria-hidden="true"
+              />
+              {a.yetToPlay}
+            </span>
+            <span className="lv-rem__n" title={`${bName}: ${b.yetToPlay} to play`}>
+              <span
+                className="lv-rem__dot"
+                style={{ background: `var(--t${second})` }}
+                aria-hidden="true"
+              />
+              {b.yetToPlay}
+            </span>
+            <span className="lv-rem__lbl">to play</span>
+          </span>
+        )}
         {matchup.viewerSide !== null && <span className="lv-card__yours">YOUR MATCHUP</span>}
       </div>
 
