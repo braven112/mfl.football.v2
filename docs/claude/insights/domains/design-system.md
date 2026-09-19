@@ -137,6 +137,53 @@ numbers. For SVG ink use an alpha bounding box over rendered pixels: `getBBox()`
 excludes stroke, and the halo on every `-dark` badge *is* a stroke.
 <!-- /CURATED-HEAD -->
 
+## 2026-09-19 - On A Fixed-Dark Band, A Token Accent And Its Hardcoded Halo Drift Apart
+
+**Context:** the splash's new Live Scoring band is dark in both themes (`#14161a`,
+MFL Live's own ground). Its "live" dot was written the obvious way —
+`background: var(--secondary-color, #b22222)` — with the pulse halo beneath it
+as a literal, `box-shadow: 0 0 0 .25rem rgb(178 34 34 / 25%)`. Light mode was
+correct. Dark mode rendered a GREEN dot inside a RED halo.
+
+**Insight:** the head already carries both halves of this separately — that a
+surface which must stay dark in both themes takes a literal, and that
+`--secondary-color` is an alias for TheLeague's brand green that genuinely
+resolves everywhere. The part neither states is what happens when they meet:
+
+- **The rule extends from the surface to its CONTENTS.** A ground that does not
+  flip makes every theme-reactive token drawn on it a bug, not just the gray
+  ramp. The band's ink, accents and borders are as fixed as its background.
+- **The mismatch is the tell, and it is visible.** Had the halo also been
+  tokenized, dark mode would have shipped a uniformly green "live" dot — wrong,
+  but self-consistent and easy to skim past. It was the token/literal PAIR
+  splitting that made the bug obvious in a screenshot, because one half moved
+  and the other did not.
+
+So a half-tokenized element is not merely sloppier than a fully-tokenized one:
+on a fixed ground it is the version that announces itself. The fully-tokenized
+one is the one that ships.
+
+**The fix is one declaration, not two corrected values.** A single local custom
+property feeds every use, so they cannot diverge again:
+
+```css
+.live-band { --live-accent: #e8453c; }        /* literal: the ground is fixed */
+.live-band__dot {
+  background: var(--live-accent);
+  box-shadow: 0 0 0 .25rem color-mix(in srgb, var(--live-accent) 25%, transparent);
+}
+```
+
+`color-mix` derives the halo from the accent rather than restating it — the
+repo already uses it in ~10 stylesheets, so it needs no new tooling.
+
+**No guard.** "Is this surface theme-fixed?" is not decidable from the
+stylesheet — `#14161a` on a band and `#14161a` on a themed card look identical
+to a scanner. The reviewable signal is the one above: a `var(--…)` and a raw
+`rgb()`/hex of a DIFFERENT hue in the same rule block. Grep `color-mix` or
+`live-band` in `src/pages/index.astro` for the shape.
+
+
 ## 2026-09-14 - A Token Defined DARK-Only Breaks LIGHT, And Not The Same Way Twice
 
 **Context:** MFL Live's stylesheet read five tokens — `--color-text-primary`,
