@@ -237,12 +237,27 @@ describe('a team’s two lists are ordered together and never merged', () => {
 });
 
 describe('colours are resolved per theme, against THIS surface’s card', () => {
-  it('emits a light and a dark value for both sides', () => {
+  /**
+   * EIGHT keys, not four: a light and a dark value for both sides, TWICE —
+   * once for fills and once for text.
+   *
+   * The fill pair (`--t0`/`--t1`) clears ΔE against the card, which is the
+   * right metric for a bar segment. The ink pair (`--t0-ink`/`--t1-ink`)
+   * clears WCAG AA body contrast, which is the only metric for reading. They
+   * were one pair until the AFL's #314d78 shipped at ΔE 31 and 1.89:1 — it
+   * passed the fill gate and was unreadable as a score.
+   * `tests/live-ink-contrast.test.ts` owns that rule; this just pins the shape.
+   */
+  it('emits a fill and an ink value per side, per theme', () => {
     const vars = resolveMatchupColorVars({ color: '#1c497c' }, { color: '#c41e3a' }, 'theleague');
     expect(Object.keys(vars).sort()).toEqual([
       '--t0-dark',
+      '--t0-ink-dark',
+      '--t0-ink-light',
       '--t0-light',
       '--t1-dark',
+      '--t1-ink-dark',
+      '--t1-ink-light',
       '--t1-light',
     ]);
   });

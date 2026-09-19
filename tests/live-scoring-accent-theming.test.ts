@@ -161,9 +161,24 @@ describe('per-team yet-to-play counts', () => {
     return m![1];
   };
 
-  it('colours each label from the card pair, left → --t1, right → --t0', () => {
-    expect(ruleBody('.lv-wp__l')).toMatch(/color:\s*var\(--t1\)/);
-    expect(ruleBody('.lv-wp__r')).toMatch(/color:\s*var\(--t0\)/);
+  /**
+   * The INK pair, because these are text.
+   *
+   * The left → side 1 / right → side 0 mapping is what this pins, and it has
+   * not changed. The VARIABLE did: `--t0`/`--t1` clear ΔE against the card,
+   * which is right for the bar segments below and wrong for a 0.72rem label —
+   * the AFL's #314d78 sat at 1.89:1 and was unreadable. `--t0-ink`/`--t1-ink`
+   * are the same colours run through `ensureContrastOn` at AA body.
+   *
+   * Asserted as the exact ink names rather than a loose `--t[01]` so a revert
+   * to the fill pair still fails here, not just in live-ink-contrast.
+   */
+  it('colours each label from the card INK pair, left → --t1-ink, right → --t0-ink', () => {
+    expect(ruleBody('.lv-wp__l')).toMatch(/color:\s*var\(--t1-ink\)/);
+    expect(ruleBody('.lv-wp__r')).toMatch(/color:\s*var\(--t0-ink\)/);
+    // And never the fill pair, which is the regression this replaced.
+    expect(ruleBody('.lv-wp__l')).not.toMatch(/color:\s*var\(--t1\)/);
+    expect(ruleBody('.lv-wp__r')).not.toMatch(/color:\s*var\(--t0\)/);
   });
 
   it('pairs each label with the matching side in the component', () => {
