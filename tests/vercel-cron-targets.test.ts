@@ -41,7 +41,9 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { parse as parseYaml } from 'yaml';
 import { TICK_MINUTES, TIER_INTERVAL_MINUTES } from '../src/utils/sync-cadence';
+import { workflowPushes } from './helpers/workflow-push';
 
 const root = resolve(__dirname, '..');
 const read = (p: string) => readFileSync(resolve(root, p), 'utf8');
@@ -213,13 +215,28 @@ function dispatchedWorkflowFor(routeFile: string): string | null {
   return m ? m[1] : null;
 }
 
-/** Does this workflow push commits? Both mechanisms, ignoring prose. */
+/**
+ * Does this workflow push commits?
+ *
+ * Through the SHARED detector, not a local regex. The first cut of this guard
+ * recognised only `commit-feed-and-push.mjs` and the `commit-push` action —
+ * and four workflows in this repo push with a bare `git push`, so a bridged
+ * workflow written that way would have skipped both the
+ * `cancel-in-progress: false` and the cadence-gate assertions below in
+ * silence. A guard that passes by not looking is one layer up from the bug it
+ * exists to prevent, which is the whole lesson of this file's header.
+ *
+ * It takes the PARSED workflow because that is what the shared helper needs to
+ * tell a real push from one an `echo` merely prints.
+ */
 function workflowCommits(workflowSource: string): boolean {
-  const code = workflowSource
-    .split('\n')
-    .filter((line) => !line.trim().startsWith('#'))
-    .join('\n');
-  return /commit-feed-and-push\.mjs|actions\/commit-push/.test(code);
+  try {
+    return workflowPushes(parseYaml(workflowSource));
+  } catch {
+    // Unparseable workflows are the business of
+    // tests/workflow-install-guard.test.ts, which fails on them by name.
+    return false;
+  }
 }
 
 describe('every bridged workflow', () => {
@@ -288,6 +305,26 @@ describe('every bridged workflow', () => {
           `cannot un-push, un-post or un-send.`,
       ).toBe(true);
     }
+  });
+
+  it('classifies the bridges it has, so the two checks below are not vacuous', () => {
+    // Both of the checks that follow are `if (!workflowCommits(...)) continue`,
+    // so a detector that answered "no" to everything would pass them by
+    // enforcing nothing — the same shape as the orphaned route this whole file
+    // exists for. Pin the real answers: the two committers are seen, and the
+    // poller is not mistaken for one (if it were, the cadence check would
+    // demand a tier this route deliberately does not have).
+    const seen = Object.fromEntries(
+      bridged.map(({ workflow }) => [
+        workflow,
+        workflowCommits(read(`.github/workflows/${workflow}`)),
+      ]),
+    );
+    expect(seen).toEqual({
+      'roster-sync.yml': true,
+      'schefter-scan.yml': true,
+      'groupme-sync.yml': false,
+    });
   });
 
   it('is cadence-gated when a dispatch costs a production build', () => {

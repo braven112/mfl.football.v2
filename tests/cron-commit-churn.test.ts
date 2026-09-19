@@ -64,7 +64,14 @@ const CHURNY_WRITERS: { file: string; key: string; writes: number; committedBy: 
     file: 'scripts/schefter-rumor-scan.mjs',
     key: 'generatedAt',
     writes: 1,
-    committedBy: 'schefter-rumor-scan.yml, which shares the suppressions file',
+    // NOT committed by its own workflow, and that is a separate pre-existing
+    // bug rather than a reason to leave the write churny: schefter-rumor-scan.yml's
+    // `--files` list does not name groupme-suppressions.json, so the rumor
+    // mill's quality-gate suppressions are written to the runner and thrown
+    // away with it — no commit, no issue filed, no record that a send was
+    // held. It is in this list because it writes the same path schefter-scan.yml
+    // DOES commit, and the two writers must not disagree about how they write it.
+    committedBy: 'schefter-scan.yml, which commits the same path this writer shares',
   },
 ];
 
