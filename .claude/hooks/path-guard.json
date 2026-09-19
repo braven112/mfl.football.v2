@@ -518,6 +518,17 @@
       ]
     },
     {
+      "name": "mfl-live-shell",
+      "note": "MFL Live's shell is a bar with two things in it (brand, hamburger) and one drawer behind the hamburger \u2014 every destination, the theme control and sign in/out live in MflAppMenu, at every width. Two of that drawer's declarations are FIXES, not style, and both were measured in a browser: `visibility 200ms ease` interpolates discretely and stays hidden for the first instant of the open transition, so .focus() is a silent no-op and the drawer opens with focus stranded on the hamburger, one Tab from the page behind it (hence `visibility 0s linear` with the delay on CLOSE only); and content-box makes the panel 100dvh PLUS the safe-area insets on a notched phone, putting Sign out below the fold with nothing to scroll. See src/components/shared/mfl-live/MflAppMenu.astro.",
+      "paths": [
+        "src/layouts/MflAppLayout.astro",
+        "src/components/shared/mfl-live/MflAppMenu.astro"
+      ],
+      "tests": [
+        "tests/mfl-live-menu.test.ts"
+      ]
+    },
+    {
       "name": "error-pages",
       "rules": "docs/claude/rules/error-pages.md",
       "paths": [

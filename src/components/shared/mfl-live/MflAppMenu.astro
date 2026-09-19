@@ -1,0 +1,562 @@
+---
+/**
+ * MflAppMenu — the one menu for MFL Live.
+ *
+ * The bar used to carry everything: both league-site links, a settings gear,
+ * the theme toggle and sign in/out. That fits five items and the app is meant
+ * to grow past five, so the bar is now BRAND + HAMBURGER and this drawer holds
+ * the rest. Adding a destination is a line in `BOARD_LINKS` (or a new
+ * `<MenuSection>`-shaped block), not another thing competing for bar width.
+ *
+ * ── WHY NOT `components/nav/NavDrawer.astro` ──────────────────────────────
+ * That drawer is 3,486 lines across five components and takes `leagueId`, an
+ * MFL `host`, a `year`, `teamInfo` and `adminFranchiseIds`. MFL Live is
+ * league-NEUTRAL by design — it spans every league the signed-in MFL account
+ * is in and claims none of them — so every one of those props would have to be
+ * faked or made optional, which is the forked-sibling trap CLAUDE.md warns
+ * about, pointed at two live league sites. This is the small, neutral drawer
+ * instead; when a third shared-host page appears it takes this one as-is.
+ *
+ * ── HAMBURGER AT EVERY WIDTH ──────────────────────────────────────────────
+ * Deliberately not a mobile-only pattern. The old bar dropped the league links
+ * entirely below 640px, so the phone — the device this app is FOR — was the
+ * one that lost navigation. One menu at all widths means one code path and no
+ * breakpoint deciding which items are expendable.
+ *
+ * ── LIFECYCLE ─────────────────────────────────────────────────────────────
+ * `MflAppLayout` mounts `<ClientRouter />`, so a bundled script evaluates once
+ * per browser session while the DOM is swapped underneath it. Init therefore
+ * runs on `astro:page-load` (which also fires on the first load, so
+ * DOMContentLoaded is never needed), re-reads every element inside that init,
+ * and carries a `dataset` guard so a script that survived the swap does not
+ * stack a second listener on a button that also survived.
+ *
+ * ── CLOSED MEANS `visibility: hidden`, NOT `display: none` ────────────────
+ * The panel stays in the DOM so it can transition. `visibility: hidden` is
+ * what keeps that honest: unlike `opacity: 0` or an off-screen transform, it
+ * takes every link inside out of the tab order, so a closed drawer cannot be
+ * tabbed into from the page behind it.
+ */
+import ThemeToggle from '../../ThemeToggle.astro';
+
+export interface Props {
+	/** The league sites this project runs. Absolute URLs, built by `leagueUrl`. */
+	leagueLinks: { name: string; href: string }[];
+	/** Signed-in owner's display name, for the account block. */
+	ownerName?: string | null;
+	signedIn: boolean;
+	/** Where "Sign in" goes when signed out. */
+	signInHref: string;
+	/** `Astro.url.pathname`, for `aria-current`. */
+	currentPath: string;
+}
+
+const { leagueLinks, ownerName, signedIn, signInHref, currentPath } = Astro.props as Props;
+
+/**
+ * The app's own destinations. Settings is signed-in only — it lists the
+ * leagues the MFL cookie can see, so there is nothing on it to show a
+ * signed-out visitor.
+ */
+const BOARD_LINKS = [
+	{ href: '/live', label: 'Live board', icon: 'board', requiresAuth: false },
+	{ href: '/live/settings', label: 'Leagues & settings', icon: 'gear', requiresAuth: true },
+] as const;
+
+const boardLinks = BOARD_LINKS.filter((link) => signedIn || !link.requiresAuth);
+
+/** Exact match only: `/live` must not light up while you are on `/live/settings`. */
+const isCurrent = (href: string) => currentPath === href || currentPath === `${href}/`;
+---
+
+<button
+	type="button"
+	class="mfl-menu__button"
+	aria-expanded="false"
+	aria-controls="mfl-menu-panel"
+	aria-label="Menu"
+	data-mfl-menu-button
+>
+	<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true">
+		<path d="M4 7h16" />
+		<path d="M4 12h16" />
+		<path d="M4 17h16" />
+	</svg>
+</button>
+
+<div class="mfl-menu__backdrop" data-mfl-menu-backdrop></div>
+
+<div id="mfl-menu-panel" class="mfl-menu__panel" data-mfl-menu-panel>
+	<div class="mfl-menu__top">
+		<span class="mfl-menu__title">Menu</span>
+		<button type="button" class="mfl-menu__close" aria-label="Close menu" data-mfl-menu-close>
+			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true">
+				<path d="M6 6l12 12" />
+				<path d="M18 6L6 18" />
+			</svg>
+		</button>
+	</div>
+
+	<nav class="mfl-menu__scroll" aria-label="MFL Live">
+		<p class="mfl-menu__heading" id="mfl-menu-app">MFL Live</p>
+		<ul class="mfl-menu__list" aria-labelledby="mfl-menu-app">
+			{boardLinks.map((link) => (
+				<li>
+					<a
+						class="mfl-menu__link"
+						href={link.href}
+						aria-current={isCurrent(link.href) ? 'page' : undefined}
+					>
+						<svg class="mfl-menu__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+							{link.icon === 'board' ? (
+								<Fragment>
+									<rect x="3" y="4" width="18" height="16" rx="2" />
+									<path d="M3 10h18" />
+									<path d="M12 10v10" />
+								</Fragment>
+							) : (
+								<Fragment>
+									<circle cx="12" cy="12" r="3.2" />
+									<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+								</Fragment>
+							)}
+						</svg>
+						<span>{link.label}</span>
+					</a>
+				</li>
+			))}
+		</ul>
+
+		{leagueLinks.length > 0 && (
+			<Fragment>
+				<p class="mfl-menu__heading" id="mfl-menu-leagues">League sites</p>
+				<ul class="mfl-menu__list" aria-labelledby="mfl-menu-leagues">
+					{leagueLinks.map((league) => (
+						<li>
+							{/* Absolute, and off this host — each league apex carries its own
+							    host-only session cookie, so these leave the app. */}
+							<a class="mfl-menu__link" href={league.href}>
+								<svg class="mfl-menu__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+									<path d="M7 17L17 7" />
+									<path d="M9 7h8v8" />
+								</svg>
+								<span>{league.name}</span>
+							</a>
+						</li>
+					))}
+				</ul>
+			</Fragment>
+		)}
+	</nav>
+
+	<div class="mfl-menu__foot">
+		<div class="mfl-menu__theme">
+			<span class="mfl-menu__foot-label">Theme</span>
+			<ThemeToggle size="compact" />
+		</div>
+
+		{signedIn ? (
+			<div class="mfl-menu__account">
+				{ownerName && <span class="mfl-menu__owner">{ownerName}</span>}
+				{/* Sign-out is a POST, so it cannot be a link. The layout owns the
+				    handler; this is the same `data-mfl-signout` hook it binds. */}
+				<button type="button" class="mfl-menu__signout" data-mfl-signout>Sign out</button>
+			</div>
+		) : (
+			<a class="mfl-menu__signin" href={signInHref}>Sign in with MyFantasyLeague</a>
+		)}
+	</div>
+</div>
+
+<script is:inline>
+	(function () {
+		function initMflMenu() {
+			var button = document.querySelector('[data-mfl-menu-button]');
+			var panel = document.querySelector('[data-mfl-menu-panel]');
+			var backdrop = document.querySelector('[data-mfl-menu-backdrop]');
+			if (!button || !panel || !backdrop) return;
+			// The button survives a ClientRouter swap when the shell does; without
+			// this every navigation would stack another set of listeners on it.
+			if (button.dataset.menuBound === '1') return;
+			button.dataset.menuBound = '1';
+
+			var FOCUSABLE = 'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])';
+			var lastFocused = null;
+
+			function isOpen() {
+				return document.documentElement.classList.contains('mfl-menu-open');
+			}
+
+			function open() {
+				if (isOpen()) return;
+				lastFocused = document.activeElement;
+				document.documentElement.classList.add('mfl-menu-open');
+				button.setAttribute('aria-expanded', 'true');
+				// The board behind the drawer is not just dimmed — it is out of
+				// reach of Tab and of a screen reader's virtual cursor too.
+				var main = document.getElementById('mfl-main');
+				if (main) main.inert = true;
+				// Safe in this task only because the panel's `visibility` steps to
+				// `visible` with a 0s delay on open (see the stylesheet note) —
+				// `.focus()` on a still-invisible element is a silent no-op.
+				var first = panel.querySelector('[data-mfl-menu-close]');
+				if (first) first.focus();
+			}
+
+			function close(restoreFocus) {
+				if (!isOpen()) return;
+				document.documentElement.classList.remove('mfl-menu-open');
+				button.setAttribute('aria-expanded', 'false');
+				var main = document.getElementById('mfl-main');
+				if (main) main.inert = false;
+				// Only pull focus back on a deliberate close (Escape, the X, the
+				// backdrop). A close caused by NAVIGATING must leave focus where the
+				// new page put it.
+				if (restoreFocus) {
+					var target = lastFocused && document.contains(lastFocused) ? lastFocused : button;
+					if (target && target.focus) target.focus();
+				}
+				lastFocused = null;
+			}
+
+			button.addEventListener('click', function () {
+				if (isOpen()) close(true);
+				else open();
+			});
+
+			panel.addEventListener('click', function (event) {
+				if (event.target.closest('[data-mfl-menu-close]')) {
+					close(true);
+					return;
+				}
+				// A link to a page we are ALREADY on fires no navigation, so the
+				// drawer would sit open over the board it just "went" to.
+				var link = event.target.closest('a[href]');
+				if (link) close(false);
+			});
+
+			backdrop.addEventListener('click', function () {
+				close(true);
+			});
+
+			document.addEventListener('keydown', function (event) {
+				if (!isOpen()) return;
+				if (event.key === 'Escape') {
+					event.preventDefault();
+					close(true);
+					return;
+				}
+				if (event.key !== 'Tab') return;
+				// Focus trap. Re-queried per keystroke because the account block
+				// differs signed-in vs out and the theme toggle re-renders itself.
+				// `getClientRects()`, not `offsetParent`: the panel is
+				// position:fixed, where offsetParent answers a different question
+				// than "is this rendered". And visibility is checked EXPLICITLY —
+				// a `visibility: hidden` element still reports client rects, so
+				// rects alone would count a closed drawer's links as focusable.
+				var items = Array.prototype.filter.call(
+					panel.querySelectorAll(FOCUSABLE),
+					function (el) {
+						return el.getClientRects().length > 0 &&
+							window.getComputedStyle(el).visibility !== 'hidden';
+					}
+				);
+				if (items.length === 0) return;
+				var first = items[0];
+				var last = items[items.length - 1];
+				if (event.shiftKey && document.activeElement === first) {
+					event.preventDefault();
+					last.focus();
+				} else if (!event.shiftKey && document.activeElement === last) {
+					event.preventDefault();
+					first.focus();
+				}
+			});
+		}
+
+		// The open class lives on <html>, which ClientRouter does NOT replace — so
+		// a navigation with the drawer open would leave the page scroll-locked
+		// under a closed drawer. Clear it before every swap.
+		document.addEventListener('astro:before-swap', function () {
+			document.documentElement.classList.remove('mfl-menu-open');
+			var main = document.getElementById('mfl-main');
+			if (main) main.inert = false;
+		});
+		document.addEventListener('astro:page-load', initMflMenu);
+	})();
+</script>
+
+<style>
+	/* ── The button ── */
+	.mfl-menu__button {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		/* 44px hit target: the bar is the one thing reachable one-handed. */
+		width: 2.75rem;
+		height: 2.75rem;
+		margin: -0.5rem -0.4rem -0.5rem 0;
+		padding: 0;
+		border: 0;
+		background: none;
+		cursor: pointer;
+		/* The bar is the brand near-black in BOTH themes, so its ink is fixed
+		   white rather than a theme token — a token here would go near-black on
+		   near-black in light mode. */
+		color: rgba(255, 255, 255, 0.82);
+	}
+	.mfl-menu__button:hover,
+	.mfl-menu__button:focus-visible {
+		color: #ffffff;
+	}
+	.mfl-menu__button svg {
+		width: 1.45rem;
+		height: 1.45rem;
+	}
+
+	/* ── Backdrop ── */
+	.mfl-menu__backdrop {
+		position: fixed;
+		inset: 0;
+		z-index: 40;
+		background: rgba(0, 0, 0, 0.5);
+		opacity: 0;
+		visibility: hidden;
+		/* See the panel's note: visibility is stepped, not eased. */
+		transition: opacity 180ms ease, visibility 0s linear 180ms;
+	}
+	:global(html.mfl-menu-open) .mfl-menu__backdrop {
+		opacity: 1;
+		visibility: visible;
+		transition: opacity 180ms ease, visibility 0s linear 0s;
+	}
+
+	/* ── Panel ──
+	   Fixed to the viewport rather than to the sticky bar, so it is full-height
+	   on a phone and does not scroll away with the header. */
+	.mfl-menu__panel {
+		position: fixed;
+		top: 0;
+		right: 0;
+		z-index: 41;
+		display: flex;
+		flex-direction: column;
+		width: min(20rem, 85vw);
+		height: 100dvh;
+		/* Load-bearing: the safe-area padding below is INSIDE the 100dvh, not
+		   added to it. Under the default content-box the panel would be
+		   `100dvh + inset-top + inset-bottom` tall on a notched phone — taller
+		   than the screen — and the footer holding Sign out would sit below the
+		   fold with nothing to scroll. */
+		box-sizing: border-box;
+		background: var(--content-bg);
+		border-inline-start: 1px solid var(--color-border-subtle);
+		box-shadow: -8px 0 28px rgba(0, 0, 0, 0.28);
+		/* Under the notch and above the home indicator — this app installs. */
+		padding-top: env(safe-area-inset-top, 0px);
+		padding-bottom: env(safe-area-inset-bottom, 0px);
+		transform: translateX(100%);
+		/* `visibility` (not opacity/transform alone) is what takes the links out
+		   of the tab order while closed. */
+		visibility: hidden;
+		/* ── visibility is STEPPED, and the step has to land on OPEN ──
+		   `transition: … visibility 200ms ease` looks equivalent and is not:
+		   visibility interpolates discretely, so it stays `hidden` for the first
+		   instant of the open transition. The script focuses the close button in
+		   that instant, `.focus()` on a still-invisible element is a silent
+		   no-op, and the drawer opens with focus stranded on the hamburger —
+		   one Tab from the page behind it. Measured, not theorised.
+		   So: `0s` with a DELAY, flipping visible immediately on open (delay 0
+		   below) and waiting out the slide on close (delay 200ms here). */
+		transition: transform 200ms ease, visibility 0s linear 200ms;
+	}
+	:global(html.mfl-menu-open) .mfl-menu__panel {
+		transform: translateX(0);
+		visibility: visible;
+		transition: transform 200ms ease, visibility 0s linear 0s;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.mfl-menu__backdrop,
+		.mfl-menu__panel {
+			transition: none;
+		}
+	}
+
+	/* Scroll lock. The class sits on <html>, which the ClientRouter never
+	   replaces — the script clears it on `astro:before-swap`. */
+	:global(html.mfl-menu-open) {
+		overflow: hidden;
+	}
+
+	.mfl-menu__top {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.5rem;
+		padding: 0.65rem 0.75rem 0.65rem 1rem;
+		border-bottom: 1px solid var(--color-border-subtle);
+	}
+
+	.mfl-menu__title {
+		font-size: 0.8rem;
+		font-weight: 600;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--color-text-secondary);
+	}
+
+	.mfl-menu__close {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 2.5rem;
+		height: 2.5rem;
+		margin: -0.35rem -0.35rem -0.35rem 0;
+		padding: 0;
+		border: 0;
+		border-radius: 0.4rem;
+		background: none;
+		color: var(--color-text-secondary);
+		cursor: pointer;
+	}
+	.mfl-menu__close:hover,
+	.mfl-menu__close:focus-visible {
+		background: var(--nav-hover-bg);
+		color: var(--page-text);
+	}
+	.mfl-menu__close svg {
+		width: 1.25rem;
+		height: 1.25rem;
+	}
+
+	.mfl-menu__scroll {
+		flex: 1;
+		overflow-y: auto;
+		padding: 0.75rem 0.6rem 1rem;
+	}
+
+	.mfl-menu__heading {
+		margin: 0.85rem 0 0.35rem;
+		padding-inline: 0.55rem;
+		font-size: 0.7rem;
+		font-weight: 600;
+		letter-spacing: 0.07em;
+		text-transform: uppercase;
+		color: var(--color-text-secondary);
+	}
+	.mfl-menu__heading:first-child {
+		margin-top: 0;
+	}
+
+	.mfl-menu__list {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.mfl-menu__link {
+		display: flex;
+		align-items: center;
+		gap: 0.7rem;
+		/* 44px row: this is a thumb target, not a dense desktop list. */
+		min-height: 2.75rem;
+		padding: 0.4rem 0.55rem;
+		border-radius: 0.5rem;
+		font-size: 0.95rem;
+		text-decoration: none;
+		color: var(--page-text);
+	}
+	.mfl-menu__link:hover,
+	.mfl-menu__link:focus-visible {
+		background: var(--nav-hover-bg);
+	}
+	.mfl-menu__link[aria-current='page'] {
+		background: var(--nav-active-bg);
+		color: var(--league-accent);
+		font-weight: 600;
+	}
+
+	.mfl-menu__icon {
+		flex: none;
+		width: 1.15rem;
+		height: 1.15rem;
+		color: var(--color-text-secondary);
+	}
+	.mfl-menu__link[aria-current='page'] .mfl-menu__icon {
+		color: var(--league-accent);
+	}
+
+	.mfl-menu__foot {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		padding: 0.85rem 1rem 1rem;
+		border-top: 1px solid var(--color-border-subtle);
+	}
+
+	.mfl-menu__theme {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem;
+	}
+
+	.mfl-menu__foot-label {
+		font-size: 0.8rem;
+		color: var(--color-text-secondary);
+	}
+
+	.mfl-menu__account {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem;
+	}
+
+	.mfl-menu__owner {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		font-size: 0.85rem;
+		font-weight: 600;
+		color: var(--page-text);
+	}
+
+	.mfl-menu__signout {
+		flex: none;
+		padding: 0.4rem 0.7rem;
+		border: 1px solid var(--color-border-subtle);
+		border-radius: 0.45rem;
+		background: none;
+		font: inherit;
+		font-size: 0.82rem;
+		color: var(--color-text-secondary);
+		cursor: pointer;
+	}
+	.mfl-menu__signout:hover,
+	.mfl-menu__signout:focus-visible {
+		background: var(--nav-hover-bg);
+		color: var(--page-text);
+	}
+	.mfl-menu__signout:disabled {
+		opacity: 0.5;
+		cursor: default;
+	}
+
+	.mfl-menu__signin {
+		display: block;
+		padding: 0.6rem 0.8rem;
+		border-radius: 0.5rem;
+		background: var(--league-accent);
+		color: #ffffff;
+		font-size: 0.9rem;
+		font-weight: 600;
+		text-align: center;
+		text-decoration: none;
+	}
+	.mfl-menu__signin:hover,
+	.mfl-menu__signin:focus-visible {
+		filter: brightness(1.08);
+	}
+</style>

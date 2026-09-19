@@ -21,6 +21,14 @@
  * written as a literal here rather than derived from a league lookup. There
  * is no league to look up.
  *
+ * ── THE BAR HOLDS TWO THINGS ─────────────────────────────────────────────
+ * Brand, and a hamburger. Every destination — the board, settings, the league
+ * sites — plus the theme control and sign in/out live in `MflAppMenu`. The bar
+ * used to carry all of them inline and drop the league links entirely below
+ * 640px, which meant the phone this app is FOR was the device that lost
+ * navigation. One menu at every width; adding a destination no longer competes
+ * for bar space.
+ *
  * ── THE MANIFEST IS GATED ─────────────────────────────────────────────────
  * TheLeagueLayout already refuses to serve a league's manifest on a foreign
  * host, because a manifest's scope claims the origin it is served from. The
@@ -37,7 +45,7 @@ import { Font } from 'astro:assets';
 import { mflLoginUrl } from '../utils/mfl-login-redirect';
 import { ClientRouter } from 'astro:transitions';
 import ThemeScript from '../components/ThemeScript.astro';
-import ThemeToggle from '../components/ThemeToggle.astro';
+import MflAppMenu from '../components/shared/mfl-live/MflAppMenu.astro';
 import NflLogoDarkStyles from '../components/NflLogoDarkStyles.astro';
 import TeamIconDarkStyles from '../components/TeamIconDarkStyles.astro';
 import { getThemePreference } from '../utils/theme-preference';
@@ -128,27 +136,14 @@ const leagueLinks = ALL_LEAGUES.map((league) => ({
 				<span class="mfl-bar__live">Live</span>
 			</a>
 
-			<nav class="mfl-bar__nav" aria-label="League sites">
-				{leagueLinks.map((l) => (
-					<a class="mfl-bar__link" href={l.href}>{l.name}</a>
-				))}
-			</nav>
-
 			<div class="mfl-bar__end">
-				{authUser && (
-					<a class="mfl-bar__gear" href="/live/settings" aria-label="Leagues and settings">
-						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-							<circle cx="12" cy="12" r="3.2" />
-							<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-						</svg>
-					</a>
-				)}
-				<ThemeToggle size="compact" />
-				{authUser ? (
-					<button type="button" class="mfl-bar__link mfl-bar__signout" data-mfl-signout>Sign out</button>
-				) : (
-					<a class="mfl-bar__link" href={mflLoginUrl(Astro.url.pathname + Astro.url.search)}>Sign in</a>
-				)}
+				<MflAppMenu
+					leagueLinks={leagueLinks}
+					ownerName={authUser?.name ?? null}
+					signedIn={Boolean(authUser)}
+					signInHref={mflLoginUrl(Astro.url.pathname + Astro.url.search)}
+					currentPath={Astro.url.pathname}
+				/>
 			</div>
 		</header>
 
@@ -264,80 +259,17 @@ const leagueLinks = ALL_LEAGUES.map((league) => ({
 		color: var(--league-accent);
 	}
 
-	.mfl-bar__nav {
-		display: flex;
-		gap: 0.75rem;
-		margin-inline-start: auto;
-		overflow-x: auto;
-		scrollbar-width: none;
-	}
-	.mfl-bar__nav::-webkit-scrollbar {
-		display: none;
-	}
-
+	/* Everything that is not the brand now lives behind the hamburger, so the
+	   bar has exactly two things in it at every width. See MflAppMenu. */
 	.mfl-bar__end {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
-	}
-
-	.mfl-bar__link {
-		white-space: nowrap;
-		font-size: 0.85rem;
-		text-decoration: none;
-		color: rgba(255, 255, 255, 0.72);
-		padding: 0.3rem 0.1rem;
-	}
-	.mfl-bar__link:hover,
-	.mfl-bar__link:focus-visible {
-		color: #ffffff;
-		text-decoration: underline;
-	}
-
-	.mfl-bar__gear {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		/* 44px hit target — the bar is the one thing reachable one-handed. */
-		width: 2.75rem;
-		height: 2.75rem;
-		margin: -0.5rem -0.4rem -0.5rem 0;
-		color: rgba(255, 255, 255, 0.72);
-	}
-	.mfl-bar__gear svg {
-		width: 1.3rem;
-		height: 1.3rem;
-	}
-	.mfl-bar__gear:hover,
-	.mfl-bar__gear:focus-visible {
-		color: #ffffff;
-	}
-
-	.mfl-bar__signout {
-		border: 0;
-		background: none;
-		font: inherit;
-		font-size: 0.85rem;
-		cursor: pointer;
-	}
-	.mfl-bar__signout:disabled {
-		opacity: 0.5;
-		cursor: default;
+		margin-inline-start: auto;
 	}
 
 	.mfl-main {
 		padding: clamp(1rem, 4vw, 2rem) clamp(0.75rem, 3vw, 1.25rem);
 		padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0px));
-	}
-
-	/* Phone first: the league links are the first thing to go. They are a way
-	   OUT of this app, and the board is the point. */
-	@media (max-width: 640px) {
-		.mfl-bar__nav {
-			display: none;
-		}
-		.mfl-bar__end {
-			margin-inline-start: auto;
-		}
 	}
 </style>
