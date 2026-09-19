@@ -32,15 +32,6 @@ const read = (rel: string) => readFileSync(join(ROOT, rel), 'utf8');
 
 /** Tokens set at RUNTIME rather than in a token sheet. */
 const RUNTIME_TOKENS = [
-  // Per-matchup team colours: the assembler ships --tm-light/--tm-dark and
-  // the stylesheet maps them per theme, so they are defined in the file
-  // itself rather than in tokens.css.
-  '--tm',
-  '--to',
-  '--tm-light',
-  '--tm-dark',
-  '--to-light',
-  '--to-dark',
   // The win-probability split, set inline per card.
   '--wp-split',
   // PlayerCell's avatar treatment, set inline per row by the shared component.
