@@ -170,62 +170,132 @@ const isCurrent = (href: string) => currentPath === href || currentPath === `${h
 
 <script is:inline>
 	(function () {
+		/**
+		 * ── WHY THE DOCUMENT LISTENERS ARE REGISTERED OUT HERE ──────────────
+		 * `document` is one of the two nodes the ClientRouter never replaces, so
+		 * anything bound to it OUTLIVES every navigation. The hamburger does not:
+		 * it is swapped with the rest of the body, so a `dataset` flag on the
+		 * BUTTON cannot guard a DOCUMENT listener — the fresh button arrives
+		 * without the flag, init runs again, and another keydown listener joins
+		 * the pile, one per navigation, each closed over a detached panel.
+		 *
+		 * That is not theoretical: the stale listener fires FIRST (registration
+		 * order), strips the open class off the live <html>, then sets
+		 * aria-expanded on a button nobody can see. The real one then finds
+		 * `isOpen()` already false and returns early — leaving the live hamburger
+		 * announcing `aria-expanded="true"` to a screen reader with the drawer
+		 * shut, and focus dropped on <body>.
+		 *
+		 * So: element listeners bind per swap inside `initMflMenu` (where the
+		 * dataset flag IS the right guard), document listeners bind exactly once
+		 * out here, and every one of them re-queries the live nodes at event
+		 * time rather than closing over the ones present at registration.
+		 */
+		var FOCUSABLE = 'a[href], button, input, select, textarea, [tabindex]';
+		var lastFocused = null;
+
+		function panelEl() { return document.querySelector('[data-mfl-menu-panel]'); }
+		function buttonEl() { return document.querySelector('[data-mfl-menu-button]'); }
+
+		function isOpen() {
+			return document.documentElement.classList.contains('mfl-menu-open');
+		}
+
+		function open() {
+			if (isOpen()) return;
+			var button = buttonEl();
+			var panel = panelEl();
+			if (!button || !panel) return;
+			var active = document.activeElement;
+			// Safari does not focus a <button> on click, so `activeElement` is
+			// <body> — which passes a `document.contains()` check and is not
+			// focusable, so restoring to it silently loses focus instead of
+			// falling back to the hamburger. Treat it as "nothing was focused".
+			lastFocused = active && active !== document.body ? active : null;
+			document.documentElement.classList.add('mfl-menu-open');
+			button.setAttribute('aria-expanded', 'true');
+			// The board behind the drawer is not just dimmed — it is out of
+			// reach of Tab and of a screen reader's virtual cursor too.
+			var main = document.getElementById('mfl-main');
+			if (main) main.inert = true;
+			// Safe in this task only because the panel's `visibility` steps to
+			// `visible` with a 0s delay on open (see the stylesheet note) —
+			// `.focus()` on a still-invisible element is a silent no-op.
+			var first = panel.querySelector('[data-mfl-menu-close]');
+			if (first) first.focus();
+		}
+
+		function close(restoreFocus) {
+			if (!isOpen()) return;
+			document.documentElement.classList.remove('mfl-menu-open');
+			var button = buttonEl();
+			if (button) button.setAttribute('aria-expanded', 'false');
+			var main = document.getElementById('mfl-main');
+			if (main) main.inert = false;
+			// Only pull focus back on a deliberate close (Escape, the X, the
+			// backdrop). A close caused by NAVIGATING must leave focus where the
+			// new page put it.
+			if (restoreFocus) {
+				var target = lastFocused && document.contains(lastFocused) ? lastFocused : button;
+				if (target && target.focus) target.focus();
+			}
+			lastFocused = null;
+		}
+
+		function onKeydown(event) {
+			if (!isOpen()) return;
+			if (event.key === 'Escape') {
+				event.preventDefault();
+				close(true);
+				return;
+			}
+			if (event.key !== 'Tab') return;
+			var panel = panelEl();
+			if (!panel) return;
+			// Focus trap. Re-queried per keystroke because the account block
+			// differs signed-in vs out and the theme toggle re-renders itself.
+			// `getClientRects()`, not `offsetParent`: the panel is
+			// position:fixed, where offsetParent answers a different question
+			// than "is this rendered". And visibility is checked EXPLICITLY —
+			// a `visibility: hidden` element still reports client rects, so
+			// rects alone would count a closed drawer's links as focusable.
+			// `button` is collected bare and filtered here rather than via
+			// `button:not([disabled])`, because that selector still matches a
+			// roving tabindex="-1" button — and the theme toggle is an ARIA
+			// radiogroup built on exactly that pattern, so two of its three
+			// buttons are never tabbable. Counted, they make items[last] an
+			// element Tab skips and the wrap never fires.
+			var items = Array.prototype.filter.call(
+				panel.querySelectorAll(FOCUSABLE),
+				function (el) {
+					return !el.disabled &&
+						el.getAttribute('tabindex') !== '-1' &&
+						el.getClientRects().length > 0 &&
+						window.getComputedStyle(el).visibility !== 'hidden';
+				}
+			);
+			if (items.length === 0) return;
+			var first = items[0];
+			var last = items[items.length - 1];
+			if (event.shiftKey && document.activeElement === first) {
+				event.preventDefault();
+				last.focus();
+			} else if (!event.shiftKey && document.activeElement === last) {
+				event.preventDefault();
+				first.focus();
+			}
+		}
+
 		function initMflMenu() {
-			var button = document.querySelector('[data-mfl-menu-button]');
-			var panel = document.querySelector('[data-mfl-menu-panel]');
+			var button = buttonEl();
+			var panel = panelEl();
 			var backdrop = document.querySelector('[data-mfl-menu-backdrop]');
 			if (!button || !panel || !backdrop) return;
-			// The button survives a ClientRouter swap when the shell does; without
-			// this every navigation would stack another set of listeners on it.
+			// These three ARE swapped with the body, so a fresh node needs fresh
+			// listeners — and the flag stops a second set stacking on a node that
+			// happened to survive.
 			if (button.dataset.menuBound === '1') return;
 			button.dataset.menuBound = '1';
-
-			// `button` bare, with tabindex filtered in the predicate below rather
-			// than in the selector: `button:not([disabled])` matches a roving
-			// tabindex="-1" button too, and the theme toggle is a radiogroup built
-			// on exactly that pattern — two of its three buttons are never
-			// tabbable. Counting them makes `items[last]` an element Tab skips, so
-			// the wrap never fires and focus leaves the drawer. It survives today
-			// only because Sign out happens to sit after the toggle; reordering
-			// the footer would break the trap with nothing to show for it.
-			var FOCUSABLE = 'a[href], button, input, select, textarea, [tabindex]';
-			var lastFocused = null;
-
-			function isOpen() {
-				return document.documentElement.classList.contains('mfl-menu-open');
-			}
-
-			function open() {
-				if (isOpen()) return;
-				lastFocused = document.activeElement;
-				document.documentElement.classList.add('mfl-menu-open');
-				button.setAttribute('aria-expanded', 'true');
-				// The board behind the drawer is not just dimmed — it is out of
-				// reach of Tab and of a screen reader's virtual cursor too.
-				var main = document.getElementById('mfl-main');
-				if (main) main.inert = true;
-				// Safe in this task only because the panel's `visibility` steps to
-				// `visible` with a 0s delay on open (see the stylesheet note) —
-				// `.focus()` on a still-invisible element is a silent no-op.
-				var first = panel.querySelector('[data-mfl-menu-close]');
-				if (first) first.focus();
-			}
-
-			function close(restoreFocus) {
-				if (!isOpen()) return;
-				document.documentElement.classList.remove('mfl-menu-open');
-				button.setAttribute('aria-expanded', 'false');
-				var main = document.getElementById('mfl-main');
-				if (main) main.inert = false;
-				// Only pull focus back on a deliberate close (Escape, the X, the
-				// backdrop). A close caused by NAVIGATING must leave focus where the
-				// new page put it.
-				if (restoreFocus) {
-					var target = lastFocused && document.contains(lastFocused) ? lastFocused : button;
-					if (target && target.focus) target.focus();
-				}
-				lastFocused = null;
-			}
 
 			button.addEventListener('click', function () {
 				if (isOpen()) close(true);
@@ -246,43 +316,10 @@ const isCurrent = (href: string) => currentPath === href || currentPath === `${h
 			backdrop.addEventListener('click', function () {
 				close(true);
 			});
-
-			document.addEventListener('keydown', function (event) {
-				if (!isOpen()) return;
-				if (event.key === 'Escape') {
-					event.preventDefault();
-					close(true);
-					return;
-				}
-				if (event.key !== 'Tab') return;
-				// Focus trap. Re-queried per keystroke because the account block
-				// differs signed-in vs out and the theme toggle re-renders itself.
-				// `getClientRects()`, not `offsetParent`: the panel is
-				// position:fixed, where offsetParent answers a different question
-				// than "is this rendered". And visibility is checked EXPLICITLY —
-				// a `visibility: hidden` element still reports client rects, so
-				// rects alone would count a closed drawer's links as focusable.
-				var items = Array.prototype.filter.call(
-					panel.querySelectorAll(FOCUSABLE),
-					function (el) {
-						return !el.disabled &&
-							el.getAttribute('tabindex') !== '-1' &&
-							el.getClientRects().length > 0 &&
-							window.getComputedStyle(el).visibility !== 'hidden';
-					}
-				);
-				if (items.length === 0) return;
-				var first = items[0];
-				var last = items[items.length - 1];
-				if (event.shiftKey && document.activeElement === first) {
-					event.preventDefault();
-					last.focus();
-				} else if (!event.shiftKey && document.activeElement === last) {
-					event.preventDefault();
-					first.focus();
-				}
-			});
 		}
+
+		// Registered ONCE per browser session — see the note at the top.
+		document.addEventListener('keydown', onKeydown);
 
 		// The open class lives on <html>, which ClientRouter does NOT replace — so
 		// a navigation with the drawer open would leave the page scroll-locked
@@ -291,6 +328,7 @@ const isCurrent = (href: string) => currentPath === href || currentPath === `${h
 			document.documentElement.classList.remove('mfl-menu-open');
 			var main = document.getElementById('mfl-main');
 			if (main) main.inert = false;
+			lastFocused = null;
 		});
 		document.addEventListener('astro:page-load', initMflMenu);
 	})();
@@ -386,9 +424,16 @@ const isCurrent = (href: string) => currentPath === href || currentPath === `${h
 		transition: transform 200ms ease, visibility 0s linear 0s;
 	}
 
+	/* The open-state rules below are `html.mfl-menu-open .mfl-menu__panel`, which
+	   outranks a bare `.mfl-menu__panel` — a media query adds no specificity, so
+	   the short version of this block suppressed only the CLOSE animation and
+	   left reduced-motion users the full 200ms slide-IN on every open. The
+	   open-state selectors are repeated here so both directions are covered. */
 	@media (prefers-reduced-motion: reduce) {
 		.mfl-menu__backdrop,
-		.mfl-menu__panel {
+		.mfl-menu__panel,
+		:global(html.mfl-menu-open) .mfl-menu__backdrop,
+		:global(html.mfl-menu-open) .mfl-menu__panel {
 			transition: none;
 		}
 	}

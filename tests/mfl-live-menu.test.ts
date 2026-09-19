@@ -77,6 +77,37 @@ describe('the drawer survives the ClientRouter', () => {
     expect(menu).toMatch(/dataset\.menuBound/);
   });
 
+  it('registers its DOCUMENT listeners once per session, not once per navigation', () => {
+    // `document` is never replaced by the router, but the hamburger IS — so a
+    // `dataset` flag on the button cannot guard a document listener. Bound
+    // inside init, `keydown` accumulated one listener per navigation, each
+    // closed over a detached panel; the stale one fires first, strips the open
+    // class off the live <html>, and leaves the real hamburger announcing
+    // aria-expanded="true" with the drawer shut.
+    const initBody = script.slice(
+      script.indexOf('function initMflMenu()'),
+      script.indexOf('document.addEventListener(\'keydown\''),
+    );
+    expect(initBody).not.toContain('document.addEventListener');
+    // …and exactly one keydown registration exists in the whole script.
+    expect(script.match(/document\.addEventListener\('keydown'/g) ?? []).toHaveLength(1);
+  });
+
+  it('re-queries the live nodes instead of closing over the swapped ones', () => {
+    // A document listener that survives the swap must not hold the panel or
+    // button it saw at registration time.
+    expect(script).toMatch(/function panelEl\(\)/);
+    expect(script).toMatch(/function buttonEl\(\)/);
+    expect(script).toMatch(/function onKeydown\(event\)[\s\S]{0,400}panelEl\(\)/);
+  });
+
+  it('does not restore focus to <body>', () => {
+    // Safari does not focus a <button> on click, so activeElement is <body> —
+    // which passes document.contains() and is not focusable, so the fallback
+    // to the hamburger never engages and focus is silently lost.
+    expect(script).toMatch(/active !== document\.body/);
+  });
+
   it('clears the open state before every swap', () => {
     // The open class lives on <html>, which the router does NOT replace. Left
     // set, the next page is scroll-locked under a drawer that is not there.
@@ -186,5 +217,16 @@ describe('the panel stylesheet carries two fixes that look like style', () => {
 
   it('keeps the closed panel out of the tab order with visibility, not opacity', () => {
     expect(panel).toMatch(/visibility: hidden/);
+  });
+
+  it('suppresses the OPEN animation too under prefers-reduced-motion', () => {
+    // A media query adds no specificity, so a bare `.mfl-menu__panel` inside it
+    // loses to the `html.mfl-menu-open .mfl-menu__panel` open-state rule — and
+    // reduced-motion users still got the full slide-IN, which is the direction
+    // that actually plays on a tap.
+    const rm = menu.slice(menu.indexOf('@media (prefers-reduced-motion'));
+    const block = rm.slice(0, rm.indexOf('\n\t}') + 3);
+    expect(block).toMatch(/html\.mfl-menu-open\) \.mfl-menu__panel/);
+    expect(block).toMatch(/html\.mfl-menu-open\) \.mfl-menu__backdrop/);
   });
 });
