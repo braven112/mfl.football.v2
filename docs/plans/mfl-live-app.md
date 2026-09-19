@@ -43,7 +43,7 @@ of your pocket at 10:40 on a Sunday. Same data, opposite interaction model.
 | 6 | Device | Phone-first, installable (PWA) | The shared host carries no manifest today; this needs a neutral one. |
 | 7 | Settings | Its own route, `/live/settings` | Room to grow past league toggles (ordering, which leagues alert). |
 | 8 | Off-season / pre-kickoff | Honest empty state | No sample replay. Gate on `hasLiveSignal` so a zeros payload can never render as a real 0-0. |
-| 9 | Shell | Full cross-league nav for the shared host | A neutral nav this page and every future `mfl.football` page share. |
+| 9 | Shell | Full cross-league nav for the shared host, **behind one hamburger** | A neutral nav this page and every future `mfl.football` page share. Revised 2026-09-19: inline was fine for five items and this app is meant to grow past five. See **The shell's menu**. |
 | 10 | Push | Close finishes only | One narrow alert: a matchup of yours within N points, late. No red-zone or every-score push. |
 | 11 | Branding | AFL's design language, **black where the AFL is navy**; **light AND dark themes** | New `data-league="mfl"` theme following the repo's existing token rules — `tokens.css` for light, `tokens-dark.css` under `html.dark`. Black is what navy is to the AFL: the dark theme's ground and the light theme's dark accent. NOT a black ground in both themes. See **Branding**. |
 | 12 | Deploy | Feature branch + PR preview | `claude/multi-league-live-scoring-kimyws` → PR #1078. Previews are cancelled for a branch with no open PR, and `vercel-ignore-build.mjs` asks GitHub for one at build time — so a push made BEFORE the PR exists is skipped and does not retro-build when the PR opens. Open the PR first, or push again after. |
@@ -399,6 +399,47 @@ own view assembly on top. That is one refactor of an existing file, not a fork.
   its starter rows arrive in the same payload; tapping does not fire a request.
   Rationale: on a phone, a spinner on tap is worse than a slightly larger
   payload, and the poll already carries the rows for the ticker.
+
+### The shell's menu — decided 2026-09-19
+
+The bar is **brand + hamburger**, at every width. Everything else —
+`/live`, `/live/settings`, the league sites, the theme control, sign in/out —
+lives in `MflAppMenu.astro`, the drawer behind it.
+
+What was wrong with the inline bar it replaced:
+
+- It **dropped the league links entirely below 640px**, so the phone this app
+  is FOR was the one device that lost navigation. The links were judged "a way
+  OUT of this app" and cut first; the hamburger makes that trade unnecessary.
+- Every new destination had to win bar width against the ones already there.
+  Adding one is now a line in the menu's `BOARD_LINKS`.
+
+Deliberately NOT `components/nav/NavDrawer.astro`: that drawer is 3,486 lines
+across five components and takes `leagueId`, an MFL `host`, a `year`,
+`teamInfo` and `adminFranchiseIds`. This surface is league-NEUTRAL, so every
+one of those would be faked — the forked-sibling trap, aimed at two live league
+sites. When a third `mfl.football` page appears it takes this drawer as-is.
+
+**Two of its declarations are fixes, not style**, both measured in a browser
+and both pinned by `tests/mfl-live-menu.test.ts`:
+
+1. `transition: … visibility 200ms ease` looks right and is not. Visibility
+   interpolates DISCRETELY, so it is still `hidden` for the first instant of
+   the open transition; `.focus()` on an invisible element is a silent no-op,
+   and the drawer opened with focus stranded on the hamburger — one Tab from
+   the page behind it. It is `visibility 0s linear` with the delay on CLOSE
+   only, so the panel is focusable the moment it opens.
+2. `box-sizing` must be `border-box`. With the default content-box, the
+   panel's safe-area padding ADDS to `height: 100dvh`, making it taller than a
+   notched phone's screen and putting Sign out below the fold with nothing to
+   scroll. This app installs to a home screen; that phone is the target.
+
+The rest is the usual drawer contract: Escape and a backdrop click close it,
+focus is trapped while open, `#mfl-main` goes `inert` so the board behind is
+out of reach of Tab and of a screen reader, and the open class is cleared on
+`astro:before-swap` — it lives on `<html>`, which the ClientRouter does not
+replace, so left set it scroll-locks the next page under a drawer that is not
+there.
 
 ### PWA
 

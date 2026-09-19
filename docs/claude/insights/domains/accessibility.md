@@ -698,3 +698,93 @@ reaches nobody using AT.
 
 **Evidence:** `src/components/shared/LiveScoreboard.tsx#ScoreCard` — one
 `cardLabel` feeds the faceoff, row and compact variants.
+
+## 2026-09-19 - A focus-trap selector does not exclude a roving `tabindex="-1"`
+
+**Context:** Building MFL Live's drawer (`src/components/shared/mfl-live/MflAppMenu.astro`)
+and driving its focus trap in Chromium.
+
+**Insight:** The trap selector recorded in the 2026-01-18 entry above —
+
+```
+'a[href], button:not([disabled]), …, [tabindex]:not([tabindex="-1"])'
+```
+
+— reads as though it excludes `tabindex="-1"`, and it does not. That clause
+qualifies only the bare `[tabindex]` term. A `<button tabindex="-1">` is still
+matched by `button:not([disabled])`, so the trap counts an element the browser
+will never Tab to.
+
+That matters here because **this repo's own `ThemeToggle` is an ARIA radiogroup
+built on roving tabindex** (`tabindex={i === 0 ? 0 : -1}`), and it is rendered
+inside drawers. Two of its three buttons are never tabbable. When one of them
+lands at either end of the collected list, `items[last]` (or `items[0]`) is an
+element Tab skips, the wrap never fires, and **focus walks out of the open
+drawer into the page behind it**.
+
+**Both drawers in this repo are one edit away from that, and neither shows it
+today:**
+
+| Drawer | Why it currently holds |
+|---|---|
+| `MflAppMenu` (MFL Live) | Sign out happened to be rendered after the toggle. **Fixed** — the selector is now bare and the predicate filters. |
+| `NavDrawer` (both league sites) | `footerLinks` is a hardcoded one-element array, so "Back to MFL" always sits after the toggle. Make that list conditional or empty and the trap leaks. |
+
+So neither is a live bug, and both are live *accidents*. Ordering is not a
+focus-trap contract.
+
+**Recommendation:** Collect with a bare selector and filter in the predicate,
+where `disabled` and `tabindex` can both be asked properly:
+
+```js
+var FOCUSABLE = 'a[href], button, input, select, textarea, [tabindex]';
+items = [...panel.querySelectorAll(FOCUSABLE)].filter((el) =>
+  !el.disabled &&
+  el.getAttribute('tabindex') !== '-1' &&
+  el.getClientRects().length > 0 &&
+  getComputedStyle(el).visibility !== 'hidden');
+```
+
+Two related traps in that predicate, both measured rather than reasoned:
+
+- **`getClientRects()` is not a visibility test.** A `visibility: hidden`
+  element still reports rects, so rects alone count a closed drawer's links as
+  focusable. Check computed `visibility` explicitly.
+- **`offsetParent !== null` is the wrong question inside a `position: fixed`
+  panel** — it answers about positioning ancestry, not renderedness.
+
+**Evidence:** PR #1170. `tests/mfl-live-menu.test.ts` pins the predicate;
+verified in Chromium that the trap collects 8 controls, excludes both roving
+buttons, and holds through 30 Tabs and 30 Shift+Tabs. `NavDrawer.astro:503`
+still carries the original selector — see
+`docs/claude/followups/2026-09-19-navdrawer-roving-tabindex-trap.md`.
+
+## 2026-09-19 - `transition: visibility <time> ease` makes `.focus()` a silent no-op
+
+**Context:** The same drawer. It opened with focus stranded on the hamburger
+button — one Tab from the page behind it — despite `open()` calling
+`.focus()` on the close button immediately after adding the open class.
+
+**Insight:** `visibility` interpolates **discretely**, not continuously. With
+`transition: … visibility 200ms ease`, the computed value is still `hidden` for
+the first instant of the open transition. `.focus()` on a `visibility: hidden`
+element does nothing **and throws nothing**, so the call looks like it ran.
+
+The fix is a `0s` duration with the delay on **close** only, which keeps the
+slide-out animating while making the panel focusable the moment it opens:
+
+```css
+.panel        { visibility: hidden;  transition: transform 200ms ease, visibility 0s linear 200ms; }
+.panel--open  { visibility: visible; transition: transform 200ms ease, visibility 0s linear 0s; }
+```
+
+`requestAnimationFrame` around the `.focus()` is the other way out, and it is
+worse: it hides the cause and still races the frame the class landed on.
+
+**Note for anyone diffing built CSS:** the minifier rewrites the open rule to
+`transition: transform .2s, visibility linear`, which is equivalent — with no
+time values, duration and delay both default to `0s`. Verified on the deployed
+bundle rather than assumed.
+
+**Evidence:** PR #1170. Caught only by asserting on `document.activeElement`
+after the click in Playwright; every static check passed while it was broken.
