@@ -28,7 +28,7 @@ import LvRedZoneBanner from './LvRedZoneBanner';
 import LvEmptyState from './LvEmptyState';
 import LvFeedStatus from './LvFeedStatus';
 import LvWeekPicker from './LvWeekPicker';
-import { orderPanelMatchups, selectMatchupMoments } from '../../../utils/live/model';
+import { orderPanelMatchups, pairingKey, selectMatchupMoments } from '../../../utils/live/model';
 import { buildLiveMoments } from '../../../utils/live/moments';
 import { useNflGameDetail } from '../../../hooks/useNflGameDetail';
 import type { FeedSnapshot } from '../../../utils/live-scoring-view';
@@ -145,14 +145,25 @@ export default function LiveBoard({
 }: LiveBoardProps): JSX.Element {
   const [board, setBoard] = useState<Board>(initialBoard);
   /**
-   * The open matchup AND the panel it came from. The panel is not redundant:
-   * a moment belongs to a franchise IN A LEAGUE, and both leagues have a
-   * franchise `0001`, so selecting this matchup's ticker rows by franchise id
-   * alone would pull another league's `0001` into it on a cross-league board.
+   * WHAT IS OPEN, AS AN IDENTITY — never the matchup object itself.
+   *
+   * `LiveMatchup` carries its own scores, projections, yet-to-play counts and
+   * player rows, and every poll REPLACES the board with fresh objects. So
+   * storing the object that was clicked freezes the drill-in at the moment it
+   * was opened: the reader watches a dead screen while the rail, the pill and
+   * the ticker beside it keep updating. That is the worst version of this bug,
+   * because everything around it proves the page is live.
+   *
+   * The island this replaced stored `{ home, away }` — two franchise ids — and
+   * passed the LIVE `teams`/`players`/`bench` maps alongside it, so its detail
+   * stayed current. The canonical model moved the data inside the matchup, and
+   * carrying the old pattern across without noticing is what broke it.
+   *
+   * `leagueId` is not redundant with the pairing: both leagues have a
+   * franchise `0001`, so a cross-league board needs the league to resolve the
+   * right panel AND to select the ticker's rows.
    */
-  const [selected, setSelected] = useState<{ matchup: LiveMatchup; panel: LivePanel } | null>(
-    null,
-  );
+  const [selected, setSelected] = useState<{ leagueId: string; pairing: string } | null>(null);
   /**
    * This island's own poll, as the pill reads it. `fetchedAt` stays 0 until a
    * poll SUCCEEDS — treating 0 as a timestamp prints "56 years ago" — and a
@@ -318,6 +329,34 @@ export default function LiveBoard({
     [detail.loaded, detail.plays, board.panels, board.playerMeta, board.moments],
   );
 
+  /**
+   * Resolve what is open against the LATEST board, every render.
+   *
+   * This is the half that makes the identity above worth storing: the drill-in
+   * renders from `open.matchup`, which is re-found in the current payload each
+   * poll, so scores, projections, the win-probability bar and both lineups
+   * move exactly as the cards behind it do.
+   *
+   * THE FALLBACK IS DELIBERATE. A poll can legitimately arrive without this
+   * matchup in it — on a cross-league board one league's panel can come back
+   * `unavailable` while the rest are fine — and throwing the reader back out
+   * to the board mid-read would be a worse answer than briefly holding the
+   * last good screen. That is the same posture the poller already takes with
+   * `data.ok !== false`: a feed we could not read never wipes what is on
+   * screen. `openRef` lags one render behind by construction (an effect
+   * writes it after commit), which is exactly the previous good resolution.
+   */
+  const openRef = useRef<{ matchup: LiveMatchup; panel: LivePanel } | null>(null);
+  let open: { matchup: LiveMatchup; panel: LivePanel } | null = null;
+  if (selected) {
+    const panel = board.panels.find((p) => p.leagueId === selected.leagueId) ?? null;
+    const matchup = panel?.matchups.find((m) => pairingKey(m) === selected.pairing) ?? null;
+    open = panel && matchup ? { matchup, panel } : openRef.current;
+  }
+  useEffect(() => {
+    openRef.current = open;
+  });
+
   const card = (panel: LivePanel, matchup: LiveMatchup, lead: boolean) => (
     <LvMatchupCard
       key={`${panel.leagueId}:${matchup.index}:${matchup.sides[0].franchiseId}`}
@@ -325,7 +364,9 @@ export default function LiveBoard({
       viewerFirst={viewerFirst}
       isFinal={isMatchupFinal(matchup)}
       lead={lead}
-      onOpen={() => setSelected({ matchup, panel })}
+      onOpen={() =>
+        setSelected({ leagueId: panel.leagueId, pairing: pairingKey(matchup) })
+      }
     />
   );
 
@@ -346,20 +387,20 @@ export default function LiveBoard({
       {rail}
       <LvRedZoneBanner alerts={board.redZone} showLeague={multiLeague} />
 
-      {selected ? (
+      {open ? (
         <LvMatchupDetail
-          matchup={selected.matchup}
+          matchup={open.matchup}
           meta={board.playerMeta}
           gamesByTeam={gamesByTeam}
           boxScore={detail.boxScore}
           detailStatus={detailStatus}
-          moments={selectMatchupMoments(moments, selected.panel.leagueId, selected.matchup)}
+          moments={selectMatchupMoments(moments, open.panel.leagueId, open.matchup)}
           momentStatus={
             detail.status === 'error' ? 'error' : detail.loaded ? 'ok' : 'idle'
           }
           momentPartial={detail.partial}
           viewerFirst={viewerFirst}
-          isFinal={isMatchupFinal(selected.matchup)}
+          isFinal={isMatchupFinal(open.matchup)}
           status={
             <LvFeedStatus
               feeds={feeds}

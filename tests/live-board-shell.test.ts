@@ -233,7 +233,7 @@ describe('the shell outlives the screen switch', () => {
   it('renders the rail and the red-zone banner BEFORE the branch', () => {
     const rail = src.indexOf('{rail}');
     const banner = src.indexOf('<LvRedZoneBanner');
-    const branch = src.indexOf('{selected ? (');
+    const branch = src.indexOf('{open ? (');
     expect(rail).toBeGreaterThan(-1);
     expect(banner).toBeGreaterThan(-1);
     expect(branch).toBeGreaterThan(-1);
@@ -246,6 +246,57 @@ describe('the shell outlives the screen switch', () => {
   });
 
   it('keeps the head above the branch too, so the week picker never disappears', () => {
-    expect(src.indexOf('<div className="lv-head">')).toBeLessThan(src.indexOf('{selected ? ('));
+    expect(src.indexOf('<div className="lv-head">')).toBeLessThan(src.indexOf('{open ? ('));
+  });
+
+  /**
+   * THE DRILL-IN STORES AN IDENTITY AND RESOLVES IT EVERY POLL.
+   *
+   * This shipped broken and was caught in review. `LiveMatchup` carries its
+   * own scores, projections, yet-to-play counts and player rows, and each poll
+   * REPLACES the board with fresh objects — so a `selected` that holds the
+   * clicked matchup freezes the open screen at the moment it was opened, while
+   * the rail, the freshness pill and the ticker beside it keep updating. Live
+   * scoring's whole job, stopped, on the one screen an owner sits on.
+   *
+   * The island this replaced stored `{ home, away }` — franchise ids — and
+   * passed the live `teams`/`players`/`bench` maps alongside, so its detail
+   * stayed current. Moving the data inside the matchup (the right call) made
+   * that pattern unsafe, and it was carried over unchanged.
+   *
+   * Scanned rather than driven: the bug only appears across two polls, which
+   * `renderToString` cannot stage, and the three facts below are exactly what
+   * makes it impossible.
+   */
+  describe('the open matchup is an identity, resolved against the latest board', () => {
+    const decl = /const \[selected, setSelected\] = useState<([^>]*)>/.exec(src)?.[1] ?? '';
+
+    it('finds the selection state', () => {
+      expect(decl, 'the `selected` useState declaration moved or was renamed').not.toBe('');
+    });
+
+    it('never stores the matchup or panel OBJECT', () => {
+      // The whole bug in one assertion: a selection typed to hold a
+      // `LiveMatchup` is a selection that cannot follow a poll.
+      expect(decl).not.toMatch(/LiveMatchup|LivePanel/);
+    });
+
+    it('stores the pairing key, which survives MFL reordering the feed', () => {
+      // `index` is a position in the feed's own order and MFL returns arrays
+      // nondeterministically, so it can point at a DIFFERENT matchup after a
+      // poll — a worse failure than a frozen one.
+      expect(src).toMatch(/setSelected\(\{[^}]*pairing:\s*pairingKey\(/);
+      expect(decl).not.toMatch(/index/);
+    });
+
+    it('re-finds it in the CURRENT board before rendering', () => {
+      expect(src).toMatch(/board\.panels\.find\(/);
+      expect(src).toMatch(/\.matchups\.find\(\(m\) => pairingKey\(m\)/);
+    });
+
+    it('renders the detail from the resolved matchup, never from the stored selection', () => {
+      expect(src).toMatch(/matchup=\{open\.matchup\}/);
+      expect(src).not.toMatch(/matchup=\{selected\./);
+    });
   });
 });

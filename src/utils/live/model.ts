@@ -96,8 +96,16 @@ export interface OrderedMatchups {
  * MFL returns arrays in nondeterministic order, so the feed index is not a
  * tiebreak — two matchups at the same margin could swap places between two
  * polls of an unchanged board. The sorted franchise-id pair cannot.
+ *
+ * EXPORTED because it is also the board's SELECTION IDENTITY. A drill-in must
+ * store what a matchup IS, never the matchup object: `LiveMatchup` carries its
+ * own scores, projections and player rows, so a stored object freezes the
+ * screen at the moment it was opened while the board keeps polling behind it.
+ * `index` cannot serve either — it is a position in the feed's own order and
+ * that order is nondeterministic, so it can point at a different matchup after
+ * a poll. The franchise pair is the only thing that survives both.
  */
-function pairingKey(matchup: LiveMatchup): string {
+export function pairingKey(matchup: LiveMatchup): string {
   return [matchup.sides[0].franchiseId, matchup.sides[1].franchiseId].sort().join(':');
 }
 
