@@ -1,7 +1,18 @@
 # Live Scoring — Insights
 
-Self-hosted live scoring for TheLeague (and, next, AFL). Astro SSR page +
-`LiveScoreboard.tsx` island polling `/api/live-scoring`. Direction C (Editorial).
+**Architecture, as of 2026-09-18 (PR #1165):** ONE shared kit serves four
+routes — `/theleague/live-scoring`, `/afl-fantasy/live-scoring`,
+`/best-ball-1/live-scoring` and `/live` (MFL Live). Thin Astro route wrappers
+(28-35 lines) + `LiveBoardPage.astro` + a single React island,
+`src/components/shared/live/LiveBoard.tsx`, over `src/styles/live.css`.
+Per-league identity is the existing `data-league` × `html.dark` token
+mechanism; nothing in the kit is per-league code.
+
+**Entries below dated before 2026-09-18 describe the ISLAND THIS REPLACED**
+(`LiveScoreboard.tsx`, `live-scoring.css`, `MflLiveBoard.tsx`, all deleted).
+Their reasoning is still why the current code looks the way it does — the CSS
+rules in particular were harvested into the rewrite — but the file and symbol
+names in them no longer exist. Read them as history, not as a map.
 
 ## 2026-07-08 - Reusable two-team color contrast system
 
@@ -557,3 +568,117 @@ negative margin depends on.
 **Evidence:** `src/styles/live-scoring.css` (760px block),
 `src/components/shared/LiveScoreboard.tsx` (`WinProbBar`, `MatchupDetail`),
 `tests/live-scoring-layout-css.test.ts`.
+
+## 2026-09-18 - A model that CARRIES its data makes "store the selection" unsafe
+
+**Context:** The unified board drills in: tapping a matchup replaces the board
+with a full-screen detail. The island stored what was clicked in
+`useState<{ matchup, panel }>` and rendered the detail from it. Copilot caught
+in review that the open screen never updated — it froze at the moment it was
+opened while the games rail, the freshness pill and the red-zone banner beside
+it kept polling.
+
+**Insight:** The pattern was inherited, and it had been *correct* in the island
+this replaced. That one stored `MatchupPairing = { home, away }` — two franchise
+ids, an IDENTITY — and was handed the live `teams` / `players` / `bench` maps
+alongside it, so its detail rendered from state that kept polling. The
+canonical model then moved the data INSIDE the matchup (`sides: [LiveTeam,
+LiveTeam]`, each carrying live points, projected final, yet-to-play and the
+player rows), which is the right shape. That single change silently invalidated
+every call site that *held on to* a matchup, and the pattern was carried across
+unexamined.
+
+The general rule: **when a refactor moves data from a side table into the
+object, audit everything that STORES that object.** A stored reference that used
+to be a cheap identifier becomes a snapshot. Nothing type-checks differently and
+nothing throws — the screen just stops moving, which is the hardest failure to
+see in review because every other element on the page proves the page is live.
+
+Two specifics worth keeping:
+- **The key is the sorted franchise pair (`pairingKey`), never `index`.**
+  `index` is a position in MFL's own array order, which is nondeterministic
+  between polls, so resolving by it can return a DIFFERENT matchup — a worse
+  failure than a frozen one.
+- **The league must be part of the selection.** Both leagues have a franchise
+  `0001`, so a cross-league board needs `leagueId` to find the right panel *and*
+  to select the ticker's rows.
+- **An unresolvable selection falls back to the last good one rather than
+  bouncing the reader out.** A poll can legitimately arrive without this matchup
+  (one league's panel comes back `unavailable` while the rest are fine), and
+  that is the same posture the poller already takes with `data.ok !== false`: a
+  feed we could not read never wipes what is on screen.
+
+**Evidence:** `src/components/shared/live/LiveBoard.tsx` (the `open` resolution),
+`pairingKey` in `src/utils/live/model.ts`, five cases in
+`tests/live-board-shell.test.ts` (proven to bite — restoring the object-storing
+pattern fails 3 of 20). Scanned rather than driven: the bug only appears across
+two polls, which `renderToString` cannot stage.
+
+## 2026-09-18 - Name a matchup's sides for an INDEX, not for a relationship
+
+**Context:** Two matchup shapes existed and had to become one. The league board
+rendered every matchup as `home`/`away`; MFL Live rendered only yours as
+`mine`/`opponent`.
+
+**Insight:** Each name is a LIE on the other board, so neither could win:
+- `mine`/`opponent` is a lie on a league board, which shows the fifteen
+  matchups the viewer is *not* in — every one would have to claim to be
+  somebody's. That is the exact shape of the composite-hero bug that put a
+  rival's player on an owner's own homepage.
+- `home`/`away` is a lie on a cross-league board, because a home-relative win
+  probability means the opposite thing depending on which side MFL happened to
+  put the owner on.
+
+So the pairing carries NO claim: `sides: [LiveTeam, LiveTeam]` in MFL's own
+order, plus `viewerSide: 0 | 1 | null` as a separate, nullable index, and `p0`
+stated for side 0 and read through `winProbabilityFor`. A board with a viewer
+gets exactly what it had; a board without one cannot accidentally assert
+anything.
+
+`viewerSide` is per MATCHUP, not per board — a doubleheader week puts the viewer
+in several.
+
+The same objection recurred for scoring plays and got the same answer:
+`BroadcastMoment` carries `side: 'mine' | 'opponent'`, so the kit's `LiveMoment`
+does not carry the claim at all and a caller that wants the relationship asks
+the PANEL who the viewer is.
+
+**Recommendation:** Any shared model spanning "your view" and "everyone's view"
+should state relationships as nullable indices into a neutral pair. The test is
+whether the field can be filled in honestly on the surface that has no viewer.
+
+**Evidence:** `src/types/live.ts`, `src/utils/live/model.ts`,
+`tests/live-model.test.ts`.
+
+## 2026-09-18 - A franchise colour needs the GROUND it is drawn on, per surface
+
+**Context:** `LiveScoreboard.tsx` hardcoded `LS_DARK_BG = '#262626'` —
+TheLeague's dark card — and the AFL rendered the same island on a `#16283c`
+navy card.
+
+**Insight:** `resolveTeamColorPair` guarantees a ΔE against a background you
+give it, so giving it the wrong background voids the guarantee silently.
+Measured over the real config: judged against `#262626` the worst AFL franchise
+landed at **ΔE 10.7** on the card it was actually drawn on — below the helper's
+own `DEFAULT_MIN_BG_CONTRAST` of 18 — and `A Bruin Pegs Me` shipped `#002244`
+on `#16283c` at **1.07:1**. Judged correctly it is ΔE 21.5.
+
+It survived review because it was correct in light mode, correct on TheLeague,
+and wrong only for three of twenty-four franchises, on one league, in one
+theme. No screenshot anybody was likely to take would show it.
+
+The fix is structural rather than a corrected constant: grounds live in ONE
+table (`SURFACE_GROUNDS` in `src/utils/live/surface.ts`, keyed by the four
+surfaces) and a kit component may not name a ground at all — colours arrive
+already resolved as `--t0-light/-dark` and `--t1-light/-dark`, and the
+stylesheet aliases `--t0`/`--t1` per theme in one rule.
+
+**Recommendation:** When one component renders on more than one card colour,
+make the ground a parameter of the RESOLVER and forbid the literal in the
+component. `tests/live-ground-literals.test.ts` scans for both directions — a
+hardcoded ground, and a file that judges colours without asking for one.
+
+**Evidence:** `src/utils/live/surface.ts`, `resolveMatchupColorVars` in
+`src/utils/live/model.ts`, `tests/live-ground-literals.test.ts`,
+`tests/live-surface-grounds.test.ts`, and the `Live/MatchupCard` Chromatic story
+(six modes, one per surface × theme).

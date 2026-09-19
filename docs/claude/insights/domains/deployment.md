@@ -809,3 +809,48 @@ and *throws* if both exist and disagree, so a second copy is worse than none.
 Verified locally: corepack fetched 10.24.0 without prompting and
 `pnpm install --frozen-lockfile` left the lockfile untouched.
 
+
+## 2026-09-18 - A committed derived payload goes stale the moment its SOURCE is synced
+
+**Context:** `tests/top-players-data.test.ts` went red on PR #1165 and stayed
+red. It had nothing to do with the PR. Over four hours it broke and was fixed
+four separate times, once per roster sync landing on `main`.
+
+**Insight:** `data/<league>/derived/top-players.json` is computed from
+`rosters.json` by `scripts/compute-top-players.mjs`, which is wired into
+**prebuild**. Prebuild runs on Vercel and writes into the build, so the
+COMMITTED copy only ever changes when a human commits it. Meanwhile
+`roster-sync.yml` commits `rosters.json` on its own cadence and never
+recomputes the derived file. Every sync that moves a player therefore leaves
+the two disagreeing, and the guard — which exists to catch a player attributed
+to the wrong franchise — reads that disagreement as exactly the bug it is
+shaped to find.
+
+Three things made this cost far more than it should have:
+
+- **It fails on the MERGE COMMIT, not on the branch.** `pull_request` CI tests
+  the merge of head into base, so a branch whose own tree is internally
+  consistent still goes red. Running the test locally on the branch passes and
+  is worthless as a check. Reproduce by rebasing onto `origin/main` first.
+- **"It is not mine, it will clear on the next sync" is the wrong diagnosis,**
+  and I shipped it twice. The sync is the CAUSE, so waiting for one is waiting
+  for the thing that breaks it. `main` already carried one hand-recompute
+  (`3878727`) and the sync right after re-opened the gap.
+- **It does not fail every sync,** only the ones that actually move a player,
+  so a green check does not mean it is fixed.
+
+The fix while it recurs is to run the generator and commit the result:
+`node scripts/compute-top-players.mjs --league=<slug>` for each full-management
+league (prebuild calls them as `compute:top-players` / `:afl`).
+
+**Recommendation:** Any file that is (a) generated at prebuild, (b) committed to
+the repo, and (c) derived from a cron-synced source is in this trap. Either have
+the sync workflow regenerate it in the same commit as its source, or have the
+guard compare against the feed the payload was derived FROM rather than the feed
+as of HEAD. Both close it; neither is in place yet, so expect this to recur.
+
+**Evidence:** `scripts/compute-top-players.mjs`, steps `compute:top-players`
+and `compute:top-players:afl` in `scripts/prebuild.mjs`,
+`.github/workflows/roster-sync.yml` (no recompute step),
+`tests/top-players-data.test.ts`, and PR #1165's comment
+`issuecomment-5736448643`.
