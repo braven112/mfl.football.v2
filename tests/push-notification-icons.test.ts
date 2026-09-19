@@ -50,11 +50,14 @@ function findManifests(dir: string, out: string[] = []): string[] {
  * league's and must not be swept into the league assertions below.
  *
  * A league is served at the ROOT of its own apex, so its manifest scope is
- * "/". mfl.football is the opposite case: it serves EVERY league by path
- * prefix, so a scope of "/" there would make an installed MFL Live claim
- * /theleague/* and /afl-fantasy/* as its own app. Its scope is "/live", and
- * nothing 301s that prefix away, so the scope really does cover every page
- * that links it. Pinned in its own describe block at the bottom.
+ * "/" AND its start_url is "/". The shared host reaches the same two values by
+ * a different argument and must not be swept into the league assertions that
+ * produce them, because the rules that matter here (a league-neutral name, an
+ * id that is NOT its start_url, a host gate on every layout that links it) are
+ * the inverse of a league's. Pinned in its own describe block at the bottom.
+ *
+ * Its scope was "/live" until Sep 2026, to stop an installed app claiming the
+ * leagues this host serves by path prefix. It is "/" now — see that block.
  */
 const SHARED_APP_MANIFEST = path.join(PUBLIC, 'assets', 'mfl-live', 'site.webmanifest');
 
@@ -364,42 +367,87 @@ describe('manifest shortcuts and share target', () => {
 describe('shared-host app manifest (MFL Live)', () => {
   const manifest = JSON.parse(fs.readFileSync(SHARED_APP_MANIFEST, 'utf8'));
 
-  it('does NOT claim the whole shared origin', () => {
-    // The failure this prevents: scope "/" on mfl.football makes an installed
-    // MFL Live the app for /theleague/* and /afl-fantasy/* as well, so opening
-    // a league page from a link launches it inside the scoreboard app. The
-    // league rule ("scope must be /") is right for an apex and wrong here.
-    expect(manifest.scope, 'scope').not.toBe('/');
-    expect(manifest.scope, 'scope').toBe('/live');
+  it('claims the whole shared origin, and starts at its front door', () => {
+    // Sep 2026: this REPLACED the inverse assertion (`scope` must not be '/').
+    //
+    // The old rule existed because a '/' scope makes the installed app the app
+    // for every league this host serves by path prefix. What changed is the
+    // product decision, not the mechanics: v2.mfl.football itself is now the
+    // installable app, so its scope has to be the origin and its start_url has
+    // to be the splash. /theleague/* and /afl-fantasy/* are not served on the
+    // shared host (they 404 there), so the only league actually pulled into
+    // scope is Best Ball #1 — which has no apex of its own and has only ever
+    // lived on this host.
+    //
+    // Both values are pinned, because widening scope WITHOUT moving start_url
+    // is the silent half-change: the app would claim the origin but still open
+    // on the board, and the splash would never be the front door it now is.
+    expect(manifest.scope, 'scope').toBe('/');
+    expect(manifest.start_url, 'start_url').toBe('/');
   });
 
   it('starts inside its own scope', () => {
     // A start_url outside scope makes the manifest inapplicable — the same
     // class of bug as the AFL's /afl-fantasy/ scope, arrived at from the
-    // other direction.
+    // other direction. Trivially true while both are '/', and the assertion
+    // that keeps it true if either one moves again.
     expect(String(manifest.start_url).startsWith(manifest.scope)).toBe(true);
   });
 
-  it('carries a distinct app id so it can never merge with a league app', () => {
-    // Ids default to start_url, and this manifest shares an origin with
-    // nothing today — but mfl.football is where every future shared-host page
-    // will live, so the id is explicit rather than inferred.
-    expect(manifest.id, 'id').toBeTruthy();
-    expect(manifest.id).toBe('/live');
+  it('keeps the app id it shipped with, so installs update in place', () => {
+    // An app id is an identity key. It is resolved against the origin and is
+    // NOT required to sit inside `scope`, which is the whole reason this one
+    // could stay '/live' when start_url moved to '/'. Changing it would make
+    // every phone that already installed MFL Live treat the widened app as a
+    // DIFFERENT app: the old install would stay behind, pinned to the old
+    // scope, and the owner would end up with two.
+    //
+    // It also has to differ from '/' so it can never merge with a league app
+    // on an origin that serves one — the 'DISTINCT app id' test above pins
+    // that across the whole set.
+    expect(manifest.id, 'id').toBe('/live');
+    expect(manifest.id, 'id must not collapse into start_url').not.toBe(manifest.start_url);
   });
 
-  it('is linked only on the shared host', () => {
+  it('offers live scoring as a shortcut, since start_url is no longer the board', () => {
+    // Moving start_url to the splash cost the board its position as the thing
+    // the app opens on. A manifest shortcut (long-press the installed icon) is
+    // half of what replaces it; the visible band on the splash is the other
+    // half, pinned below.
+    const urls = (manifest.shortcuts ?? []).map((s: { url?: string }) => s.url);
+    expect(urls, 'shortcuts').toContain('/live');
+  });
+
+  it('is linked on the shared host only, from EVERY layout that links it', () => {
     // Mirror of "never serves one league's manifest on another league's apex".
     // If /live/ is ever added to SKIP_REWRITE_PREFIXES so the app answers on
     // theleague.us too, this gate is what stops MFL Live's manifest from
     // landing on a league's origin and competing with that league's own app.
-    const layout = fs.readFileSync(path.join(ROOT, 'src/layouts/MflAppLayout.astro'), 'utf8');
-    const normalized = layout.replace(/\s+/g, ' ');
-    expect(normalized).toContain('const onSharedHost = isSharedAppHost(Astro.url.hostname)');
-    expect(normalized).toContain('{onSharedHost && (');
-    // And it must be THIS manifest behind that gate, not a league's.
-    expect(normalized).toContain('href="/assets/mfl-live/site.webmanifest"');
+    //
+    // Two layouts link it now: MflAppLayout (the board) and SplashLayout (the
+    // start_url). A gate on one and not the other is the bug this iterates —
+    // the manifest is only as host-scoped as its LEAKIEST link site.
+    for (const rel of ['src/layouts/MflAppLayout.astro', 'src/layouts/SplashLayout.astro']) {
+      const normalized = fs.readFileSync(path.join(ROOT, rel), 'utf8').replace(/\s+/g, ' ');
+      expect(normalized, `${rel} resolves the gate`).toContain(
+        'const onSharedHost = isSharedAppHost(Astro.url.hostname)',
+      );
+      expect(normalized, `${rel} applies the gate`).toContain('{onSharedHost && (');
+      // And it must be THIS manifest behind that gate, not a league's.
+      expect(normalized, `${rel} links the shared-host manifest`).toContain(
+        'href="/assets/mfl-live/site.webmanifest"',
+      );
+    }
     expect(isSharedAppHost('mfl.football'), 'registry still knows the shared host').toBe(true);
+  });
+
+  it('is reachable from the splash it now opens on', () => {
+    // start_url is the splash, so the splash is where an owner lands — both on
+    // first visit and every time they launch the installed app. Without a link
+    // out to the board, widening the scope would have BURIED the surface it
+    // was widened to carry.
+    const splash = fs.readFileSync(path.join(ROOT, 'src/pages/index.astro'), 'utf8');
+    expect(splash, 'splash links /live').toMatch(/href="\/live"/);
   });
 
   it('names no league', () => {

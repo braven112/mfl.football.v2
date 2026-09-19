@@ -3,10 +3,9 @@
   "name": "MFL Live",
   "short_name": "MFL Live",
   "description": "Live scoring for every one of your MyFantasyLeague teams, in one place",
-  "start_url": "/live",
-  "scope": "/live",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "orientation": "portrait",
   "theme_color": "#14161a",
   "background_color": "#14161a",
   "icons": [
@@ -25,6 +24,14 @@
       "type": "image/png",
       "sizes": "512x512",
       "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Live Scoring",
+      "short_name": "Live",
+      "description": "Live scoring for every one of your MyFantasyLeague teams",
+      "url": "/live"
     }
   ]
 }

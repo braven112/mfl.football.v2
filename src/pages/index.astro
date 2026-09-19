@@ -67,6 +67,22 @@ const hrefFromHere = (path: string) => crossHostLeagueHref(Astro.url.hostname, p
     <h1>{countWord} Leagues. One Home.</h1>
   </section>
 
+  {/* The shared host is installable as one PWA whose start_url is this page
+      (see SplashLayout). Live scoring is the reason most owners open it on a
+      Sunday, so it gets a front-door link rather than only a manifest
+      shortcut. A bare path is correct: `/live` is NOT in SKIP_REWRITE_PREFIXES,
+      so it resolves only on the hosts this splash actually renders on — the
+      shared host, localhost and previews. A league apex rewrites `/` under its
+      own prefix and never renders this page at all. */}
+  <a class="live-band" href="/live">
+    <span class="live-band__dot" aria-hidden="true"></span>
+    <span class="live-band__text">
+      <strong>Live Scoring</strong>
+      <span class="live-band__sub">Every one of your MFL teams on one board</span>
+    </span>
+    <span class="live-band__arrow" aria-hidden="true">&rarr;</span>
+  </a>
+
   <section class="hero" aria-label="Choose your league">
     {ALL_LEAGUES.map((league) => {
       const meta = PANEL_META[league.slug];
@@ -127,6 +143,89 @@ const hrefFromHere = (path: string) => crossHostLeagueHref(Astro.url.hostname, p
     letter-spacing: -0.01em;
     margin: 0.4rem 0 0;
     text-wrap: balance;
+  }
+
+  /* ---------- Live scoring band ---------- */
+
+  /* Dark in BOTH themes, like .panel below — this band wears MFL Live's own
+     palette (#14161a), which is also the installed app's theme_color, so the
+     front door matches the app it installs.
+
+     Its accent is a LITERAL, not a token, for that same reason. The band's
+     ground does not flip with the theme, so nothing drawn on it may: this was
+     `var(--secondary-color, #b22222)`, which the dark token set redefines to
+     green — the dot went green in dark mode while the halo beneath it, a
+     hardcoded rgb(), stayed red. One custom property now feeds the dot, its
+     halo and the hover border, so they cannot drift apart again. */
+  .live-band {
+    --live-accent: #e8453c;
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    margin: 0 0 var(--spacing-lg, 1.5rem);
+    padding: 1rem 1.25rem;
+    border-radius: var(--radius-lg, 10px);
+    background: #14161a;
+    color: #ffffff;
+    text-decoration: none;
+    border: 1px solid #2a2f37;
+  }
+
+  .live-band:hover,
+  .live-band:focus-visible {
+    border-color: var(--live-accent);
+  }
+
+  .live-band:focus-visible {
+    outline: 2px solid var(--live-accent);
+    outline-offset: 2px;
+  }
+
+  .live-band__dot {
+    flex: none;
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 50%;
+    background: var(--live-accent);
+    box-shadow: 0 0 0 0.25rem color-mix(in srgb, var(--live-accent) 25%, transparent);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .live-band__dot {
+      animation: live-band-pulse 2s ease-in-out infinite;
+    }
+  }
+
+  @keyframes live-band-pulse {
+    50% {
+      box-shadow: 0 0 0 0.45rem color-mix(in srgb, var(--live-accent) 0%, transparent);
+    }
+  }
+
+  .live-band__text {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.2rem 0.6rem;
+    min-width: 0;
+  }
+
+  .live-band__text strong {
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .live-band__sub {
+    font-size: 0.85rem;
+    color: #b9bfc9;
+  }
+
+  .live-band__arrow {
+    margin-left: auto;
+    flex: none;
+    font-size: 1.1rem;
   }
 
   /* ---------- Hero: league split panels ---------- */
