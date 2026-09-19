@@ -73,9 +73,22 @@ const now = new Date();
 const year = getCurrentSeasonYear();
 const weekParam = Astro.url.searchParams.get('week');
 const parsedWeek = weekParam ? parseInt(weekParam, 10) : NaN;
-const week = Number.isFinite(parsedWeek) && parsedWeek > 0
-  ? parsedWeek
-  : (getCurrentNFLWeek(now) ?? 1);
+/**
+ * NO CLAMPING TO WEEK 1 BEFORE THE SEASON STARTS.
+ *
+ * `getCurrentNFLWeek` answers `null` until the Week 1 Thursday, and `?? 1`
+ * turned that into a week-1 request against a league that has not played one —
+ * which is exactly the gap `readLeagueLive`'s `week <= 0` guard exists to
+ * catch, defeated before it could fire. `/live` has never clamped; the three
+ * league pages this replaced all did, so the unification inherited the worse
+ * of the two and left `LvEmptyState`'s `pre-season` reason unreachable.
+ *
+ * An explicit `?week=` still wins, so the week picker can look back.
+ */
+const currentWeek = getCurrentNFLWeek(now);
+const week = Number.isFinite(parsedWeek) && parsedWeek > 0 ? parsedWeek : (currentWeek ?? 0);
+/** No week at all, and none asked for: the season has not started. */
+const preSeason = week <= 0;
 
 // The homepage hero's game-day clock. A HINT only: it may raise the island's
 // cadence and may never decide whether to poll — the 2026 season opened on a
@@ -151,6 +164,7 @@ const settingsPath = resolveLeaguePath(
       board={board}
       pollUrl={`/api/league-board?league=${slug}`}
       isLive={isLive}
+      preSeason={preSeason}
       demoLabel={assembled.demoLabel}
     />
 

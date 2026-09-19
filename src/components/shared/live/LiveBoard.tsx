@@ -69,6 +69,16 @@ export interface LiveBoardProps {
   viewerFirst?: boolean;
   /** The NFL games rail, rendered by the page so it keeps its own poller. */
   rail?: ReactNode;
+  /**
+   * There is no NFL week yet — the pre-Week-1 window.
+   *
+   * Its own state, not a flavour of `not-played`. MFL serves no live scoring
+   * before the Week 1 Thursday and `getCurrentNFLWeek` answers `null` until
+   * then, so "this week hasn't kicked off" is the wrong sentence: the SEASON
+   * has not started. `/live` has said so since it shipped; the league boards
+   * clamped the week to 1 instead, so they could never reach it.
+   */
+  preSeason?: boolean;
   /** Page heading. */
   title?: string;
   /**
@@ -137,6 +147,7 @@ export default function LiveBoard({
   isLive = false,
   viewerFirst = false,
   rail,
+  preSeason = false,
   title = 'Live Scoring',
   demoLabel,
   extraFeeds,
@@ -180,7 +191,11 @@ export default function LiveBoard({
   /**
    * The slate the cadence is judged against, read inside the loop so it
    * follows the LATEST games without the effect re-subscribing every poll.
-   * `board.games` is the server's copy and never moves after the first paint.
+   *
+   * SEEDED from `board.games` and then REWRITTEN every render from the live
+   * `useNflScoreboard` slate (below). The seed is the server's copy, which
+   * never moves after the first paint — judging the cadence on it was the bug
+   * this ref exists to fix, so do not read the seed as "this ref is stable".
    */
   const slateRef = useRef<NflGame[]>(board.games ?? []);
 
@@ -429,7 +444,7 @@ export default function LiveBoard({
                 // list, saying why. Dropping it would re-order the board
                 // mid-afternoon and make an owner wonder where a team went.
                 <LvEmptyState
-                  reason={panel.status}
+                  reason={preSeason ? 'pre-season' : panel.status}
                   leagueName={multiLeague ? panel.leagueName : undefined}
                 />
               )}

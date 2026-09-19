@@ -299,4 +299,41 @@ describe('the shell outlives the screen switch', () => {
       expect(src).not.toMatch(/matchup=\{selected\./);
     });
   });
+
+  /**
+   * BEFORE WEEK 1, THE SEASON HAS NOT STARTED — AND THAT IS ITS OWN SENTENCE.
+   *
+   * `getCurrentNFLWeek` answers `null` until the Week 1 Thursday. The three
+   * league pages this kit replaced all wrote `?? 1`, which turned that into a
+   * week-1 request against a league that had not played one and defeated
+   * `readLeagueLive`'s `week <= 0` guard before it could fire. `/live` never
+   * clamped, so the unification inherited the worse of the two behaviours —
+   * and shipped `LvEmptyState`'s `pre-season` reason as UNREACHABLE code,
+   * since `reason={panel.status}` can only ever be a `LiveLeagueStatus`.
+   *
+   * Caught in review, not by a test, which is why there is now a test.
+   */
+  describe('the pre-Week-1 window is its own state', () => {
+    const page = readFileSync(
+      resolve(__dirname, '../src/components/shared/live/LiveBoardPage.astro'),
+      'utf8',
+    );
+
+    it('never clamps a missing current week up to 1', () => {
+      expect(page).not.toMatch(/getCurrentNFLWeek\([^)]*\)\s*\?\?\s*1/);
+    });
+
+    it('derives the pre-season flag from having no week at all', () => {
+      expect(page).toMatch(/const preSeason = week <= 0/);
+      expect(page).toMatch(/preSeason=\{preSeason\}/);
+    });
+
+    it('lets an explicit ?week= still win, so the week picker can look back', () => {
+      expect(page).toMatch(/Number\.isFinite\(parsedWeek\) && parsedWeek > 0 \? parsedWeek/);
+    });
+
+    it('renders the pre-season reason rather than "this week has not kicked off"', () => {
+      expect(src).toMatch(/reason=\{preSeason \? 'pre-season' : panel\.status\}/);
+    });
+  });
 });
