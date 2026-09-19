@@ -59,8 +59,11 @@ const CHOKE_POINTS: { file: string; why: string }[] = [
       'workflow commits the feed and posts to GroupMe with Actions secrets',
   },
   {
-    file: 'src/pages/api/cron/roster-sync.ts',
-    why: 'dispatches roster-sync.yml, which syncs rosters and commits to main',
+    file: 'src/utils/workflow-dispatch.ts',
+    why:
+      'the single door every Vercel cron bridge dispatches through — ' +
+      'roster-sync.yml, schefter-scan.yml and groupme-sync.yml all commit, ' +
+      'post or push with Actions secrets, and staging holds the same GH_PAT',
   },
 ];
 
@@ -87,6 +90,10 @@ const DIRECT_REACHES: { pattern: RegExp; owner: string; label: string }[] = [
     // A dispatch is a write one hop away: the workflow it starts commits and
     // posts with Actions secrets. Guarding only direct calls left this open.
     pattern: /actions\/workflows\/[^'"`]*\/dispatches/,
+    // Two owners, deliberately: the cron bridges share
+    // src/utils/workflow-dispatch.ts, while the admin announce route keeps its
+    // own copy for the timeout and 401/403/404 diagnostics a human pressing a
+    // button needs. Both hold the guard, which is what the filter below checks.
     owner: 'src/pages/api/admin/schefter-announce.ts',
     label: 'GitHub Actions workflow dispatch',
   },

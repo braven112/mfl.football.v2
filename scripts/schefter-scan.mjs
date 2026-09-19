@@ -34,6 +34,7 @@ import {
 import { detectTradeBaitChanges } from './lib/trade-bait-detector.mjs';
 import { checkGroupMeQuality } from './lib/schefter-quality-gate.mjs';
 import { parseRosterMove } from './lib/roster-move-parse.mjs';
+import { writeJsonIfChanged } from './lib/canonical-json.mjs';
 import {
   evaluatePingWindow,
   consumeDailyPost,
@@ -3123,12 +3124,20 @@ for (const league of LEAGUES) {
 // Flush GroupMe quality-gate suppressions for the workflow to act on. We
 // always write the file (even when empty) so the workflow's "did anything
 // get suppressed?" check is a single read, not a does-the-file-exist dance.
+//
+// `writeJsonIfChanged` with `generatedAt` ignored, NOT a plain write: this file
+// is rewritten every scan and is empty on almost all of them, so a plain write
+// left a one-line timestamp diff behind on a scan that suppressed nothing —
+// which committed to `main`, which is a production build (91% of the Vercel
+// bill). "Always write" above means "always leave a readable file", and a file
+// whose content is already correct satisfies that without a diff.
 try {
   const suppressionsPath = path.join(projectRoot, 'data', 'schefter', 'groupme-suppressions.json');
   await fs.mkdir(path.dirname(suppressionsPath), { recursive: true });
-  await fs.writeFile(
+  writeJsonIfChanged(
     suppressionsPath,
     JSON.stringify({ generatedAt: new Date().toISOString(), suppressions: groupMeSuppressions }, null, 2) + '\n',
+    { ignoreKeys: ['generatedAt'] },
   );
   if (groupMeSuppressions.length > 0) {
     console.log(`⚠️  Suppressed ${groupMeSuppressions.length} GroupMe send(s) (see ${path.relative(projectRoot, suppressionsPath)})`);

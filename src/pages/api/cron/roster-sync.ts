@@ -17,8 +17,11 @@
  * become dispatches — see its header for the tiers and why the decision
  * cannot live in the cron expression.
  *
- * Its counterpart is `api/cron/sync-health.ts`: this route makes the sync
- * run, that one notices when it has stopped.
+ * Its counterpart is `scripts/check-sync-freshness.mjs`, run from
+ * `job-failure-watch.yml` on GitHub: this route makes the sync run, that one
+ * notices when it has stopped. The watchdog stays on the OTHER scheduler on
+ * purpose — one sharing a substrate with its subject goes dark in the single
+ * outage it exists to report.
  *
  * (Spelled out rather than written as a cron step on purpose: a step
  * expression contains the two characters that END a block comment, so
@@ -34,7 +37,7 @@
  */
 
 import type { APIRoute } from 'astro';
-import { outboundAllowed } from '../../../utils/deploy-environment';
+import { dispatchWorkflow } from '../../../utils/workflow-dispatch';
 import { syncCadenceDecision } from '../../../utils/sync-cadence';
 import type { MflCalendarEvent } from '../../../utils/waiver-window';
 
@@ -116,56 +119,9 @@ export const GET: APIRoute = async ({ request }) => {
     );
   }
 
-  const token = process.env.GH_PAT;
-  const owner = process.env.GH_REPO_OWNER ?? 'braven112';
-  const repo = process.env.GH_REPO_NAME ?? 'mfl.football.v2';
-
-  if (!token) {
-    return new Response(
-      JSON.stringify({ error: 'GH_PAT not configured' }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } },
-    );
-  }
-
-  // Same one-hop write as the announce route: this POST is harmless, but the
-  // workflow it starts syncs rosters and commits to main with Actions secrets.
-  // Staging holds the same GH_PAT.
-  if (!outboundAllowed()) {
-    return new Response(
-      JSON.stringify({
-        error: 'Workflow dispatch is disabled on this deployment.',
-        detail:
-          'Staging and preview share production credentials, so they never dispatch ' +
-          'the roster sync — run it from production or the Actions tab.',
-      }),
-      { status: 503, headers: { 'Content-Type': 'application/json' } },
-    );
-  }
-
-  const res = await fetch(
-    `https://api.github.com/repos/${owner}/${repo}/actions/workflows/roster-sync.yml/dispatches`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/vnd.github+json',
-        'X-GitHub-Api-Version': '2022-11-28',
-      },
-      signal: AbortSignal.timeout(10_000),
-      body: JSON.stringify({ ref: 'main' }),
-    },
-  );
-
-  if (!res.ok) {
-    const body = await res.text();
-    return new Response(
-      JSON.stringify({ error: 'GitHub API error', status: res.status, body }),
-      { status: 502, headers: { 'Content-Type': 'application/json' } },
-    );
-  }
-
-  return new Response(
-    JSON.stringify({ success: true, triggered: 'roster-sync.yml' }),
-    { status: 200, headers: { 'Content-Type': 'application/json' } },
-  );
+  // Every refusal and the success alike come back from the shared bridge
+  // helper, which owns the `outboundAllowed()` check and the GH_PAT check —
+  // see its header for why those two do not live here while the CRON_SECRET
+  // gate above does.
+  return dispatchWorkflow('roster-sync.yml');
 };

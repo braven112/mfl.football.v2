@@ -39,7 +39,7 @@ regrows a 7 GB `.git` or a 30 MB server chunk:
 - **The schefter feeds are bounded, not append-forever.** Active window =
   `SCHEFTER_ACTIVE_MAX` (300) posts; a weekly workflow rotates the tail
   into `schefter-archive/<year>.json` beside each feed, and `mergeFeed`'s
-  `archivedThroughTimestamp` watermark stops the 15-minute scans from
+  `archivedThroughTimestamp` watermark stops the recurring scans from
   resurrecting archived posts. Article permalinks and the OG renderer
   fall back to the archives — new single-post surfaces must too.
 - **The build never writes a committed feed.** Only a run that COMMITS
@@ -221,6 +221,27 @@ So the schedule lives in **`vercel.json` → `crons`**, which fires
 `/api/cron/roster-sync`, which `workflow_dispatch`es the workflow. That cron is
 now the sync's ONLY scheduled trigger — the workflow has no `schedule:` at all.
 
+**Three workflows ride the bridge now**, all three with no `schedule:` of their
+own, all three dispatching through `src/utils/workflow-dispatch.ts` (the single
+door that holds the `outboundAllowed()` check, because staging and every PR
+preview carry production's `GH_PAT`):
+
+| Cron path | Workflow | Cadence | Why |
+|---|---|---|---|
+| `/api/cron/roster-sync` | `roster-sync.yml` | tiered | rosters, standings, the feeds |
+| `/api/cron/schefter-scan` | `schefter-scan.yml` | tiered | Roger's deadline reminders + the news feed |
+| `/api/cron/groupme-sync` | `groupme-sync.yml` | every tick | the chat mirror — commits nothing |
+
+`schefter-scan` is the one with owner-facing lateness: Roger's deadline
+reminders are push-first and held through quiet hours, so the first tick after
+07:00 PT is the one that fires them, and a tick delivered at noon is a reminder
+at noon. It shares the roster sync's tiers on purpose — news breaks when
+rosters churn. `groupme-sync` is the exception that proves the rule about
+spend: it reads GroupMe and writes Redis, commits nothing, costs no build, and
+therefore has nothing to ration, so it dispatches on every tick. Its concurrency
+still queues rather than cancels, for the watermark reason below rather than the
+push one.
+
 **The cadence is a function, not a cron expression.** Vercel fires every five
 minutes and `src/utils/sync-cadence.ts` decides which ticks become dispatches:
 
@@ -252,9 +273,21 @@ syncs every league and their waiver runs are an hour apart.
   and then failed its own rebase against six single-line feed JSONs git cannot
   merge. One sync lost, for two unpredictable runs a day and no freshness the
   primary did not already provide.
-- **`cancel-in-progress: false` on any job that pushes.** A cancel cannot
-  un-push. Cancelling mid-flight is what left the surviving run rebasing onto a
-  main that had moved under it.
+- **`cancel-in-progress: false` on any job that pushes — or that advances a
+  WATERMARK.** A cancel cannot un-push. Cancelling mid-flight is what left the
+  surviving roster-sync run rebasing onto a main that had moved under it, and
+  `schefter-scan` is worse: it posts to GroupMe and pushes to real devices
+  *before* committing the watermark recording that it did, so a cancel in
+  between re-sends rather than merely losing a run. The watermark half catches
+  a job with no commit at all — `groupme-sync` reads GroupMe since
+  `getLastMessageId` and advances that id only after storing what it fetched,
+  so a cancelled run leaves the mirror where it was. That was unreachable at
+  5-8 delivered runs a day and is not at one dispatch per tick: a run slower
+  than the tick gets killed by its successor, and a persistent slowdown kills
+  every successor too, freezing the mirror behind nothing but `cancelled` runs
+  — which the failure watcher does not look at, because it queries
+  `?status=failure`. GitHub keeps a single pending run per group, so queueing
+  cannot pile up in exchange.
 - **Absence is watched separately, and NOT from Vercel.**
   `scripts/check-sync-freshness.mjs` alerts (`ops-job-failure`, admin-only) when
   `main`'s newest sync commit ages past two hours. It runs from
@@ -267,6 +300,16 @@ syncs every league and their waiver runs are an hour apart.
   15-minute cadence measured 43 sync commits in 10.4 hours (~122 builds/day
   against ~37 before); the tiers bring that to ~35/day while being *faster* at
   the waiver moment.
+- **A run that found nothing must commit nothing** — otherwise the tiers ration
+  a cost the job pays anyway. `schefter-scan` committed on EVERY run, because
+  two of the six files it commits are rewritten from scratch each time and carry
+  a top-level run clock: `resolved-events.json` (`computedAt`) and
+  `groupme-suppressions.json` (`generatedAt`). Both writers now go through
+  `writeJsonIfChanged` with that key in `ignoreKeys`, so an unchanged payload
+  keeps its old timestamp and produces no diff. It hid for months behind the
+  dropped scheduler: 5-8 deliveries a day and 5-8 commits a day reads as "every
+  run had news" rather than "every run commits regardless". Guard:
+  `tests/cron-commit-churn.test.ts`.
 - **A cron path is an ordinary public route.** These bridges start workflows
   that commit to `main` with Actions secrets, so the `CRON_SECRET` bearer check
   is load-bearing, as is `outboundAllowed()` — staging and previews carry
@@ -287,9 +330,25 @@ syncs every league and their waiver runs are an hour apart.
 Guards: `tests/vercel-cron-targets.test.ts` checks the cron table and the routes
 it fires in BOTH directions, because each failure is silent in its own way — an
 orphaned bridge is dead code wearing the costume of a live path; a dangling cron
-is a 404 on a schedule nobody reads. It also pins the `CRON_SECRET` gate, the
-absence of a `schedule:` in `roster-sync.yml`, and that the Vercel tick still
-matches `TICK_MINUTES`. `tests/sync-cadence.test.ts` pins the tiers, the
+is a 404 on a schedule nobody reads. It also pins the `CRON_SECRET` gate, and
+then works from each route's own `dispatchWorkflow('<file>.yml')` call: that
+workflow must exist, must carry no `schedule:`, must set
+`cancel-in-progress: false` if it pushes, and — if it commits — its route must
+read `sync-cadence.ts`, since every commit is a build. The tick check applies to
+whichever crons read the cadence module, so a new tiered bridge is covered the
+day it is written, and one assertion pins how each bridge is CLASSIFIED, because
+both of those checks skip a workflow they read as non-committing and would
+therefore pass by enforcing nothing.
+
+**"Does this workflow push?" has one implementation**,
+`tests/helpers/workflow-push.ts`, shared with
+`tests/workflow-push-triggers-ci.test.ts`. Pushing is three mechanisms here —
+a bare `git push` in a `run:` step, `./.github/actions/commit-push`, and
+`scripts/commit-feed-and-push.mjs` — and the cron guard's first cut knew only
+the last two, so a bridged workflow written the first way would have skipped
+both assertions above in silence. It also has to tell code from prose:
+`roger-date-audit.yml` names `git push` in a header comment and in an `echo`
+telling a human what to run, and pushes nothing. `tests/sync-cadence.test.ts` pins the tiers, the
 both-leagues union and the DST wall-clock recurrence.
 `tests/block-comment-terminators.test.ts` catches the comment trap at edit time
 rather than 2.5 minutes into CI. All three are routed by the `github-workflows`
