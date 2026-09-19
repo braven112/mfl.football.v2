@@ -32,11 +32,22 @@ import { LEAGUES } from '../src/config/leagues-data.mjs';
 
 /**
  * Weekdays that routinely carry NFL games, as JS day numbers (0 = Sunday):
- * Thursday, Saturday, Sunday, Monday.
+ * Thursday, Sunday, Monday.
  *
- * Saturday only carries games from ~week 15 on, but is included whenever the
- * season is open: a false blackout costs a day's wait, a miss deploys into a
- * live slate.
+ * SATURDAY WAS DELIBERATELY REMOVED (2026-09-19, Brandon's call). It used to be
+ * in this set on the reasoning that "a false blackout costs a day's wait, a
+ * miss deploys into a live slate" — but the NFL plays no Saturday games for
+ * the great majority of the season (the Sports Broadcasting Act keeps the NFL
+ * off Saturdays while college football is in its regular season), so the rule
+ * blacked out ~13 Saturdays a year to protect the two or three at the end that
+ * carry a late-season slate. That is a standing weekly tax for an outlier, and
+ * the outlier is the thing to ignore.
+ *
+ * WHAT THIS NOW DOES NOT COVER: the week-15-onward Saturday slates and the
+ * wild-card Saturday. They are NOT week starts, so `officialWeekStartDays()`
+ * below does not catch them either. From roughly mid-December through the
+ * postseason, a Saturday promotion is on the promoter to check. Everything the
+ * real schedule opens a week on is still caught automatically, year-round.
  *
  * THIS SET IS NOT THE WHOLE ANSWER, and treating it as such was a bug. The
  * NFL's opening week and its Thanksgiving week do not start on Thursday —
@@ -46,7 +57,7 @@ import { LEAGUES } from '../src/config/leagues-data.mjs';
  * `officialWeekStartDays()` below, which adds whatever days the real calendar
  * says a week begins on.
  */
-const ROUTINE_GAME_WEEKDAYS = new Set([0, 1, 4, 6]);
+const ROUTINE_GAME_WEEKDAYS = new Set([0, 1, 4]);
 
 /**
  * The ISO days a season's weeks actually begin on, from the committed
@@ -173,7 +184,7 @@ export function resolveBlackout(now = new Date()) {
     } else if (ROUTINE_GAME_WEEKDAYS.has(today.weekday)) {
       reasons.push(
         `${WEEKDAY_NAMES[today.weekday]} in the ${seasonYear} season — games run ` +
-          `Thu/Sat/Sun/Mon, and live scoring is the surface owners are watching`,
+          `Thu/Sun/Mon, and live scoring is the surface owners are watching`,
       );
     }
   }
