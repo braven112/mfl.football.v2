@@ -327,6 +327,7 @@
         "package.json",
         "vercel.json",
         "src/pages/api/cron/*.ts",
+        "src/utils/workflow-dispatch.ts",
         "src/utils/sync-cadence.ts",
         "scripts/check-sync-freshness.mjs"
       ],
@@ -341,7 +342,8 @@
         "tests/vercel-cron-targets.test.ts",
         "tests/sync-cadence.test.ts",
         "tests/block-comment-terminators.test.ts",
-        "tests/cron-commit-churn.test.ts"
+        "tests/cron-commit-churn.test.ts",
+        "tests/workflow-dispatch.test.ts"
       ]
     },
     {
