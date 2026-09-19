@@ -74,17 +74,20 @@ export default function LvMatchupDetail({
         {status}
       </div>
 
+      {/* The scores take the INK pair, not the fill pair: `--t0`/`--t1` only
+          clear ΔE against the card and are unreadable as text for some
+          franchises. See `resolveMatchupColorVars`. */}
       <div className="lv-scorehead">
         <div className="lv-scorehead__side">
           <div className="lv-scorehead__name">{a.nameShort || a.name}</div>
-          <div className="lv-scorehead__score" style={{ color: `var(--t${first})` }}>
+          <div className="lv-scorehead__score" style={{ color: `var(--t${first}-ink)` }}>
             {fmt(a.live)}
           </div>
         </div>
         <span className="lv-scorehead__at">@</span>
         <div className="lv-scorehead__side lv-scorehead__side--right">
           <div className="lv-scorehead__name">{b.nameShort || b.name}</div>
-          <div className="lv-scorehead__score" style={{ color: `var(--t${second})` }}>
+          <div className="lv-scorehead__score" style={{ color: `var(--t${second}-ink)` }}>
             {fmt(b.live)}
           </div>
         </div>

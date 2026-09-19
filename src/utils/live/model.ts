@@ -21,7 +21,7 @@ import {
   type FranchiseColorClaim,
   type FranchiseIdentity,
 } from '../mfl-live-identity';
-import { resolveTeamColorPair } from '../team-color-contrast';
+import { resolveTeamColorPair, AA_BODY_TEXT_RATIO, ensureContrastOn } from '../team-color-contrast';
 import { groundsFor, type LiveSurface } from './surface';
 
 /* ── reading a matchup ───────────────────────────────────────────────────── */
@@ -210,6 +210,29 @@ function darkClaim(claim: FranchiseColorClaim): FranchiseColorClaim {
  * when their brand colours are neighbours, and a colour that cannot be made
  * visible has to fall back rather than be drawn invisible.
  */
+/**
+ * ── AND A SECOND PAIR, FOR TEXT ───────────────────────────────────────────
+ * `resolveTeamColorPair` guarantees ΔE — PERCEPTUAL DISTANCE from the ground.
+ * That is the right metric for a filled bar segment or a border: it says the
+ * colour is tellable apart from what it sits on. It says nothing about
+ * READING small text, which needs luminance contrast.
+ *
+ * The two come apart badly. Measured on the AFL's `Drunk Indians` (#314d78)
+ * against MFL Live's #1e2126 card: ΔE 31.3, comfortably past the gate of 18 —
+ * and 1.89:1, which fails WCAG AA for body text (4.5) and even for large text
+ * (3). `ensureLegibleOn` returned it completely unchanged, because the gate it
+ * enforces had already been cleared. An owner reported it as simply
+ * unreadable, which it was.
+ *
+ * So the ink pair runs the SAME resolved colours through `ensureContrastOn` —
+ * the app's existing a11y helper, already used by `franchise-band-brand`,
+ * `broadcast-board` and `hero-franchise-backdrop` — at `AA_BODY_TEXT_RATIO`.
+ * Body, not large: `.lv-side__score` is 1.05rem bold = 16.8px, under the
+ * 18.66px-bold threshold that would let 3:1 apply, and the win-probability
+ * labels are 0.72rem. `ensureContrastOn` steps in small increments and stops
+ * at the first passing shade, so a colour that already reads stays exactly
+ * on-brand — only the ones that genuinely fail move.
+ */
 export function resolveMatchupColorVars(
   side0: FranchiseColorClaim,
   side1: FranchiseColorClaim,
@@ -227,6 +250,12 @@ export function resolveMatchupColorVars(
     '--t1-light': light.away,
     '--t0-dark': dark.home,
     '--t1-dark': dark.away,
+    // TEXT variants. See the header — ΔE is not a reading metric, and these
+    // four are the only values a kit component may colour text with.
+    '--t0-ink-light': ensureContrastOn(light.home, grounds.light, AA_BODY_TEXT_RATIO),
+    '--t1-ink-light': ensureContrastOn(light.away, grounds.light, AA_BODY_TEXT_RATIO),
+    '--t0-ink-dark': ensureContrastOn(dark.home, grounds.dark, AA_BODY_TEXT_RATIO),
+    '--t1-ink-dark': ensureContrastOn(dark.away, grounds.dark, AA_BODY_TEXT_RATIO),
   };
 }
 

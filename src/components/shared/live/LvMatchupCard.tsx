@@ -69,7 +69,9 @@ export default function LvMatchupCard({
       )}
       <span className="lv-side__name">{team.nameShort || team.name}</span>
       <span className="lv-side__proj">{fmt(team.projectedFinal)}</span>
-      <span className="lv-side__score" style={{ color: `var(--t${which})` }}>
+      {/* INK, not the fill pair: this is text, and `--t0`/`--t1` only clear ΔE
+          against the card. See `resolveMatchupColorVars`. */}
+      <span className="lv-side__score" style={{ color: `var(--t${which}-ink)` }}>
         {fmt(team.live)}
       </span>
     </div>
