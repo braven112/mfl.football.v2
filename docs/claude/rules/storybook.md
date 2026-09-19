@@ -303,6 +303,46 @@ rather than replacing it. Put the CHEAP map at component level and let
 individual stories opt UP. `Live/WinProbBar` originally did the reverse and
 `Mini`'s attempt to drop back to two modes silently still cost six.
 
+## Trap 9 — `chromatic.modes` and `chromatic.viewports` on one story kills the BUILD
+
+Not the story. The whole build, with zero snapshots taken:
+
+```
+✖ Failed to extract stories from your Storybook
+Error: Chromatic does not support viewports and modes on the same story.
+       in story 'live-matchupdetail--phone-width'
+ ELIFECYCLE  Command failed with exit code 23.
+```
+
+That was build 460, from one story declaring
+`chromatic: { modes: themeModes, viewports: [390] }`. Modes supersede the
+older `viewports` array and a mode may carry its own `viewport`, so the two
+are alternatives, not a pair.
+
+**The width goes INSIDE the mode**, which is what `phoneModes` in
+`.storybook/modes.ts` is for:
+
+```ts
+export const phoneModes = {
+  'Phone light': { theme: 'light', league: 'theleague', viewport: { width: 390, height: 1200 } },
+  'Phone dark':  { theme: 'dark',  league: 'theleague', viewport: { width: 390, height: 1200 } },
+} as const;
+```
+
+**Nothing local catches this**, which is why it is a guard and not a note.
+`storybook build` exits 0, the story indexes, it renders correctly in a
+browser, and driving all 102 stories through Chromium shows no error display —
+the same verification that DID catch Trap 8. The constraint belongs to
+Chromatic's story extractor, so only a Chromatic build says so, and it says so
+by failing everything.
+
+Guard: `tests/storybook-story-renderer.test.ts` scans each `chromatic: { … }`
+block for both keys. Proven to bite by putting the pair back.
+
+It is also expensive in a way a normal red build is not: a build that fails
+extraction takes no snapshots, so the push buys no visual signal at all and
+needs a full re-trigger (remove and re-add `visual-check`) once fixed.
+
 ## Trap 7 — a snapshot's network request can live in the CSS, not in the args
 
 **"Fixtures are offline" is checked at the wrong layer if you only check

@@ -134,4 +134,47 @@ describe('storybook story renderers', () => {
       ).toContain(name);
     }
   });
+
+  /**
+   * A story may declare `chromatic.modes` OR `chromatic.viewports`, never both.
+   *
+   * Chromatic rejects the combination at story-extraction time and fails the
+   * WHOLE BUILD, not the one story:
+   *
+   *   ✖ Failed to extract stories from your Storybook
+   *   Error: Chromatic does not support viewports and modes on the same story.
+   *          in story 'live-matchupdetail--phone-width'
+   *
+   * That is exit 23 on build 460 — a build failure with zero snapshots taken,
+   * so it also costs a re-run to get any visual signal at all.
+   *
+   * NOTHING ELSE CATCHES IT, which is the whole reason this is a test.
+   * `storybook build` exits 0, the story indexes, it renders correctly in a
+   * browser, and driving all 102 stories through Chromium shows no error
+   * display — the constraint belongs to Chromatic's extractor, not to the
+   * story. The same class as Trap 8: locally invisible, and only a Chromatic
+   * build says so.
+   *
+   * A width still belongs on a story that needs one — it goes INSIDE a mode
+   * (`viewport: { width, height }`, as `phoneModes` does), not beside it.
+   */
+  it.each(FILES.map((f) => [f.slice(ROOT.length + 1), f] as const))(
+    '%s — never declares chromatic viewports and modes together',
+    (label, file) => {
+      const src = stripComments(readFileSync(file, 'utf8'));
+      // Scoped to a `chromatic: { … }` object so an unrelated `modes` or
+      // `viewports` identifier elsewhere in the file cannot trip this.
+      for (const block of src.matchAll(/chromatic:\s*\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}/g)) {
+        const body = block[1];
+        const hasModes = /\bmodes\s*:/.test(body);
+        const hasViewports = /\bviewports\s*:/.test(body);
+        expect(
+          hasModes && hasViewports,
+          `${label} declares both chromatic.modes and chromatic.viewports. ` +
+            `Chromatic fails the entire build on this — put the width inside ` +
+            `a mode (viewport: { width, height }) instead.`,
+        ).toBe(false);
+      }
+    },
+  );
 });

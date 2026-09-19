@@ -86,3 +86,33 @@ export const liveSurfaceModes = {
   ...leagueModes,
   ...mflModes,
 } as const;
+
+/**
+ * Light + dark at PHONE width.
+ *
+ * ── A VIEWPORT GOES INSIDE A MODE, NEVER BESIDE IT ────────────────────────
+ * Chromatic rejects a story that declares both, and it rejects the whole
+ * BUILD rather than that one story:
+ *
+ *   ✖ Failed to extract stories from your Storybook
+ *   Error: Chromatic does not support viewports and modes on the same story.
+ *          in story 'live-matchupdetail--phone-width'
+ *
+ * That is exit 23 — a build failure, not a diff — from `chromatic.viewports`
+ * sitting alongside `chromatic.modes` on one story. Modes supersede the older
+ * `viewports` array, and a mode may carry its own `viewport`, so the width
+ * belongs in the mode map.
+ *
+ * It is worth knowing that NOTHING LOCAL CATCHES THIS. `storybook build` exits
+ * 0, the story renders correctly in a browser, and driving every story through
+ * Chromium shows no error display — because this is a constraint of
+ * Chromatic's story extractor, not of the story. Only a Chromatic build says
+ * so. Guarded instead by `tests/storybook-story-renderer.test.ts`.
+ *
+ * Two snapshots, not four: this REPLACES the default viewport rather than
+ * adding to it, so it is one width x two themes.
+ */
+export const phoneModes = {
+  'Phone light': { theme: 'light', league: 'theleague', viewport: { width: 390, height: 1200 } },
+  'Phone dark': { theme: 'dark', league: 'theleague', viewport: { width: 390, height: 1200 } },
+} as const;

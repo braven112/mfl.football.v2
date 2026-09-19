@@ -2,7 +2,7 @@ import { createElement } from 'react';
 import type { ReactElement } from 'react';
 import LvMatchupDetail from '../../src/components/shared/live/LvMatchupDetail';
 import { LIVE_BOX, LIVE_GAMES, LIVE_META, LIVE_MATCHUP } from '../fixtures/live-kit';
-import { themeModes } from '../../.storybook/modes';
+import { phoneModes } from '../../.storybook/modes';
 
 /**
  * The drill-in screen, at phone width — where the bug an owner actually
@@ -41,11 +41,18 @@ import { themeModes } from '../../.storybook/modes';
  * with a full bleed, and the `.lv-page` gutters exist only in the real layout,
  * which a story does not mount.
  *
- * ── ONE STORY, TWO MODES, ONE VIEWPORT ────────────────────────────────────
- * `viewports: [390]` replaces Chromatic's default rather than adding to it, so
- * this is 1 viewport x 2 themes = 2 snapshots. No league modes: nothing on
- * this screen resolves a colour against a card ground — the per-surface axis
- * is spent once, on `MatchupCard`.
+ * ── ONE STORY, TWO SNAPSHOTS, AND THE WIDTH LIVES IN THE MODE ─────────────
+ * `phoneModes` carries `viewport` inside each mode. Declaring
+ * `chromatic.viewports` ALONGSIDE `chromatic.modes` fails the whole Chromatic
+ * build — exit 23, "Chromatic does not support viewports and modes on the same
+ * story" — and nothing local catches it: `storybook build` exits 0 and the
+ * story renders fine in a browser, because the constraint belongs to
+ * Chromatic's story extractor. That is why `tests/storybook-story-renderer.ts`
+ * now scans for the combination.
+ *
+ * Two snapshots: one width x two themes. No league modes — nothing on this
+ * screen resolves a colour against a card ground, so the per-surface axis is
+ * spent once, on `MatchupCard`.
  */
 export default {
   title: 'Live/MatchupDetail',
@@ -55,7 +62,7 @@ export default {
     // capture time while `storybook build` still exits 0.
     renderer: 'react',
     layout: 'fullscreen',
-    chromatic: { modes: themeModes, viewports: [390] },
+    chromatic: { modes: phoneModes },
   },
 };
 
