@@ -115,14 +115,15 @@ export async function dispatchWorkflow(
     // A thrown fetch (abort, DNS, TLS) is the same class of outcome as a 5xx
     // from GitHub, and an unhandled one would surface as a 500 from the route
     // with no hint of which hop failed.
-    return json(
-      {
-        error: 'GitHub dispatch failed',
-        workflow: workflowFile,
-        detail: err instanceof Error ? err.message : String(err),
-      },
-      502,
-    );
+    //
+    // The cause is LOGGED, not returned. CodeQL flagged the returned form as
+    // information exposure through a stack trace, and although the route is
+    // behind the CRON_SECRET bearer check, the diagnostic value was never in
+    // the response anyway: the only caller is a cron that does not read the
+    // body, and the human debugging this reads the Vercel function log. So the
+    // detail goes where it is actually useful and the body stays generic.
+    console.error(`[workflow-dispatch] ${workflowFile} dispatch threw:`, err);
+    return json({ error: 'GitHub dispatch failed', workflow: workflowFile }, 502);
   }
 
   if (!res.ok) {
