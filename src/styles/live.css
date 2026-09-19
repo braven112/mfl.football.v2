@@ -369,6 +369,48 @@ button.lv-card:focus-visible {
 .lv-badge--live { color: var(--lv-live); }
 .lv-badge--final { color: var(--lv-final); }
 
+/* ── the split "to play" count ────────────────────────────────────
+   Two numbers, each behind a dot in its own side's colour, then ONE shared
+   label. The label is shared deliberately: "3 to play 5 to play" reads as two
+   separate facts, while "●3 ●5 to play" reads as one split number.
+
+   The dots take `--t0`/`--t1` — the FILL pair. A dot is a shape against the
+   card, which is exactly what ΔE measures; the ink pair exists for text and
+   would wash these toward the card for no reading benefit.
+
+   `white-space: nowrap` on the group, because the head is `flex-wrap: wrap`
+   and a count that breaks between its dot and its digit loses the only thing
+   tying the number to a team. */
+.lv-rem {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--content-text-muted);
+  white-space: nowrap;
+}
+.lv-rem__n {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-weight: var(--font-weight-bold);
+  color: var(--page-text);
+  /* Tabular, so a 9 -> 10 tick does not shift the second count sideways. */
+  font-variant-numeric: tabular-nums;
+}
+.lv-rem__dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  /* `flex: none` or the dot is squeezed to an ellipse by the digits beside
+     it on a narrow card. */
+  flex: none;
+}
+/* Pulls the shared label against the second count, so the pair groups as
+   "●3 ●5 to play" rather than three evenly spaced things. */
+.lv-rem__lbl {
+  margin-left: -0.1rem;
+}
+
 .lv-card__yours {
   margin-left: auto;
   padding: 0.1rem 0.35rem;
