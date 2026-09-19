@@ -60,8 +60,19 @@ export function mergeAndRankEntries(
     }));
 }
 
-/** Latest guest-visible entries across every league, newest first. */
-export function getLatestWhatsNewAcrossLeagues(limit = 6): HomepageWhatsNewEntry[] {
-  const slices = ALL_LEAGUES.map((league) => getWhatsNewEntriesForLeague(league.navSlug));
+/**
+ * Latest guest-visible entries across every league, newest first.
+ *
+ * `navSlugs` narrows WHICH leagues are read, defaulting to all of them. The
+ * splash passes the leagues it actually advertises, so a card can never offer
+ * a league the page gives no way into. Scoping the slices rather than
+ * filtering the result is deliberate: a dropped entry must not first consume
+ * one of `limit` slots.
+ */
+export function getLatestWhatsNewAcrossLeagues(
+  limit = 6,
+  navSlugs: readonly LeagueSlug[] = ALL_LEAGUES.map((league) => league.navSlug),
+): HomepageWhatsNewEntry[] {
+  const slices = navSlugs.map((navSlug) => getWhatsNewEntriesForLeague(navSlug));
   return mergeAndRankEntries(slices, limit);
 }

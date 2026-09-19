@@ -13,6 +13,9 @@ import { getLeagueSwitchTargets } from '../src/utils/nav-utils';
 const ROOT = join(__dirname, '..');
 const read = (rel: string) => readFileSync(join(ROOT, rel), 'utf8');
 
+/** Every hostname that serves the shared app, in both environments. */
+const SHARED_HOSTS = ['mfl.football', 'v2.mfl.football', 'staging.mfl.football'];
+
 /**
  * The shared app host (mfl.football, v2.mfl.football) is the MFL app — MFL
  * Live, the splash, sign-in, and the leagues that live nowhere else. It is
@@ -28,7 +31,7 @@ const read = (rel: string) => readFileSync(join(ROOT, rel), 'utf8');
  * and expose a fourth full league the day one is added.
  */
 describe('the shared host does not serve a league that has its own domain', () => {
-  const SHARED = ['mfl.football', 'v2.mfl.football', 'staging.mfl.football'];
+  const SHARED = SHARED_HOSTS;
 
   /**
    * The expectation is computed from the registry DATA (`domains`), never from
@@ -262,5 +265,82 @@ describe('the nav switcher does not offer a link the current host refuses', () =
     expect(src, 'an optional hostname is a footgun').not.toMatch(/hostname\?: string/);
     expect(readFileSync(join(ROOT, 'src/components/nav/NavHeader.astro'), 'utf8'))
       .toContain('Astro.url.hostname');
+  });
+});
+
+/**
+ * The front door advertises the FULL-MANAGEMENT leagues only (Sep 2026).
+ *
+ * This is the only rule in this file that hides a league with nowhere else to
+ * be, which makes it the one most likely to be mistaken for the ROUTING rule
+ * above and "corrected" into it. It is a presentation rule and nothing more:
+ * the splash stops naming Best Ball, and every way of actually reaching Best
+ * Ball keeps working. The assertions below are split along exactly that line.
+ */
+describe('the splash advertises only the full-management leagues', () => {
+  const src = read('src/pages/index.astro');
+
+  it('has something to exclude and something to keep', () => {
+    // The premise. Without both halves every assertion below is vacuous.
+    expect(ALL_LEAGUES.some((l) => l.bestBall), 'a best-ball league exists').toBe(true);
+    expect(ALL_LEAGUES.some((l) => !l.bestBall), 'a full-management league exists').toBe(true);
+  });
+
+  it('derives the advertised set from `bestBall` rather than listing slugs', () => {
+    // Same derivation BOTH_LEAGUES uses for the changelog. A slug list reads
+    // identically today and diverges the day a league is added — the failure
+    // this file's opening docblock describes, arrived at from a new direction.
+    expect(src).toContain('ALL_LEAGUES.filter((league) => !league.bestBall)');
+  });
+
+  it('renders the panels from that set, not from ALL_LEAGUES', () => {
+    // The one-character regression: restoring `ALL_LEAGUES.map` in the markup
+    // puts the panel back while every other assertion here still passes.
+    expect(src).toMatch(/\{splashLeagues\.map\(\(league\) => \{/);
+    expect(src, 'the panels must not iterate the full registry')
+      .not.toMatch(/\{ALL_LEAGUES\.map\(\(league\) => \{/);
+  });
+
+  it('counts the headline from the advertised set, not the registry', () => {
+    // "Three Leagues. One Home." over two panels is the visible half of
+    // forgetting that these are now two different numbers.
+    expect(src).toContain('const leagueCount = splashLeagues.length');
+  });
+
+  it('scopes the What’s New feed to the same set', () => {
+    // A card for a league the page offers no way into, linking to a league
+    // prefix the splash no longer names.
+    expect(src).toMatch(/getLatestWhatsNewAcrossLeagues\(\s*6,\s*splashLeagues\.map/);
+    expect(src).toContain('advertisedNavSlugs.has(slug)');
+  });
+
+  /**
+   * The half that must NOT have changed. Everything above is about what the
+   * splash says; everything below is about whether Best Ball still exists.
+   */
+  it('still SERVES every hidden-from-the-splash league on the shared host', () => {
+    for (const league of ALL_LEAGUES.filter((l) => l.bestBall)) {
+      for (const host of SHARED_HOSTS) {
+        for (const p of [`/${league.slug}`, `/${league.slug}/draft`]) {
+          expect(
+            resolveSharedHostHiddenLeague(host, p),
+            `${host}${p} must still be served — this league has no other address`,
+          ).toBeNull();
+        }
+      }
+    }
+  });
+
+  it('still offers it in the nav switcher, which is now how it is found', () => {
+    // With the panel gone, the switcher on the two league sites is the
+    // remaining discoverable route in. It must be absolute: bb1 has no apex,
+    // so buildSwitchUrl sends it to the shared origin.
+    for (const league of ALL_LEAGUES.filter((l) => l.bestBall)) {
+      const targets = getLeagueSwitchTargets('theleague', '/theleague/rosters', true, 'theleague.us');
+      const target = targets.find((t) => t.navSlug === league.navSlug);
+      expect(target, `${league.name} must stay in the switcher`).toBeTruthy();
+      expect(target!.href.startsWith('http'), `${target!.href} must leave the league apex`).toBe(true);
+      expect(target!.href).toContain(`/${league.slug}`);
+    }
   });
 });

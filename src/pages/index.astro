@@ -40,11 +40,45 @@ const CHIP_LABELS: Record<string, string> = {
   bb1: 'Best Ball #1',
 };
 
-const leagueCount = ALL_LEAGUES.length;
+/**
+ * Which leagues the front door ADVERTISES.
+ *
+ * Derived from the registry's `bestBall` flag — the same derivation
+ * `BOTH_LEAGUES` uses for the weekly changelog — and never a slug list, so a
+ * best-ball sister league added later is dropped from here automatically, and
+ * a fourth full-management league appears automatically.
+ *
+ * ── THIS IS A PRESENTATION RULE AND MUST NOT BECOME A ROUTING ONE ─────────
+ * Best Ball #1 declares `domains: []`: the shared host's path prefix is the
+ * ONLY address it has, so hiding it at the ROUTE level would remove it from
+ * the internet rather than send it somewhere else — which is exactly what
+ * `resolveSharedHostHiddenLeague` refuses to do, and what the 'never hides a
+ * league that has nowhere else to be' guard exists to keep refusing.
+ *
+ * So this list governs the splash and nothing else. `/best-ball-1/*` is still
+ * served here, and the league switcher in the nav on both league sites still
+ * offers it (`buildSwitchUrl` sends it to SHARED_APP_ORIGIN, since it has no
+ * apex to link to), which is what keeps it reachable now that the front door
+ * no longer names it. Pinned in tests/shared-host-league-hiding.test.ts.
+ *
+ * PANEL_META is deliberately left complete — it is keyed by every canonical
+ * slug, so the entry stays whether or not the panel renders.
+ */
+const splashLeagues = ALL_LEAGUES.filter((league) => !league.bestBall);
+const advertisedNavSlugs = new Set(splashLeagues.map((league) => league.navSlug));
+
+const leagueCount = splashLeagues.length;
 const COUNT_WORDS = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six'];
 const countWord = COUNT_WORDS[leagueCount] ?? String(leagueCount);
 
-const entries = getLatestWhatsNewAcrossLeagues(6);
+// Same list, so the feed cannot advertise a league the panels above do not.
+// Scoping the SLICES (rather than filtering afterwards) is what keeps a
+// best-ball-only article out of the pool entirely instead of letting it
+// occupy one of the six slots and then be dropped.
+const entries = getLatestWhatsNewAcrossLeagues(
+  6,
+  splashLeagues.map((league) => league.navSlug),
+);
 
 // This splash renders on every NON-league host: the shared app host, and also
 // localhost and Vercel previews. On the shared host TheLeague and the AFL are
@@ -83,8 +117,8 @@ const hrefFromHere = (path: string) => crossHostLeagueHref(Astro.url.hostname, p
     <span class="live-band__arrow" aria-hidden="true">&rarr;</span>
   </a>
 
-  <section class="hero" aria-label="Choose your league">
-    {ALL_LEAGUES.map((league) => {
+  <section class="hero" aria-label="Choose your league" style={`--panel-count: ${leagueCount}`}>
+    {splashLeagues.map((league) => {
       const meta = PANEL_META[league.slug];
       return (
         <a class="panel" data-league={league.navSlug} href={hrefFromHere(`/${league.slug}`)}>
@@ -108,7 +142,7 @@ const hrefFromHere = (path: string) => crossHostLeagueHref(Astro.url.hostname, p
         <li>
           <a class="wn-card" href={hrefFromHere(entry.detailPath)}>
             <span class="wn-meta">
-              {entry.leagues.map((slug) => (
+              {entry.leagues.filter((slug) => advertisedNavSlugs.has(slug)).map((slug) => (
                 <span class={`chip chip--${slug}`}>{CHIP_LABELS[slug] ?? slug}</span>
               ))}
               <time datetime={entry.date}>{entry.formattedDate}</time>
@@ -232,7 +266,9 @@ const hrefFromHere = (path: string) => crossHostLeagueHref(Astro.url.hostname, p
 
   .hero {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    /* Follows the advertised league count rather than a literal 3 — two
+       panels in a three-column grid leave a hole where Best Ball used to be. */
+    grid-template-columns: repeat(var(--panel-count, 3), 1fr);
     gap: var(--spacing-lg, 1.5rem);
   }
 
