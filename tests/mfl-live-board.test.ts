@@ -24,6 +24,8 @@ vi.mock('../src/utils/cross-league-live', () => ({
 }));
 
 const { assembleMflLiveBoard } = await import('../src/utils/mfl-live-board');
+const { fromMflLiveBoard } = await import('../src/utils/live/from-mfl-live');
+const { resolveMatchupColorVars } = await import('../src/utils/live/model');
 
 const user = {
   id: 'mfl-cookie',
@@ -160,16 +162,62 @@ describe('the matchup row', () => {
     expect(m.winProbability).toBeLessThanOrEqual(1);
   });
 
+  /**
+   * SHIPS EVERY KEY THE KIT'S RESOLVER DEFINES — derived, never listed.
+   *
+   * This board used to resolve its own pair, under its own names. When
+   * `resolveMatchupColorVars` grew the four INK variants (a franchise colour
+   * used as text must clear WCAG, not ΔE) the second copy did not, and MFL
+   * Live shipped coloured win-probability bars beside GREY scores: the sheet's
+   * `--t0-ink` fallback is a neutral, so the miss had no error, no warning and
+   * a fully green suite. The case that used to stand here passed throughout,
+   * because it NAMED the four keys it expected.
+   *
+   * So the expected set comes FROM the canonical resolver. Add a key there and
+   * this fails here until the board carries it, which is the only thing that
+   * would have caught the regression.
+   */
+  it('carries every key the canonical resolver emits', async () => {
+    readCrossLeagueLive.mockResolvedValue([read({})]);
+    const { board } = await assembleMflLiveBoard({ user, week: 2, year: 2026 });
+    const vars = board.leagues[0].matchups[0].colorVars;
+
+    const grey = { color: '#8a8a8a', colorPrimary: '#8a8a8a' };
+    const expected = Object.keys(resolveMatchupColorVars(grey, grey, 'mfl')).sort();
+
+    expect(Object.keys(vars).sort()).toEqual(expected);
+    for (const key of expected) expect(vars[key], key).toMatch(/^#[0-9a-f]{6}$/i);
+  });
+
   it('ships BOTH themes’ colours, because the board renders in both', async () => {
     readCrossLeagueLive.mockResolvedValue([read({})]);
     const { board } = await assembleMflLiveBoard({ user, week: 2, year: 2026 });
     const vars = board.leagues[0].matchups[0].colorVars;
-    for (const key of ['--tm-light', '--to-light', '--tm-dark', '--to-dark']) {
-      expect(vars[key], key).toMatch(/^#[0-9a-f]{6}$/i);
-    }
-    // Named from the viewer's side to match winProbability — not home/away,
-    // which swaps meaning depending on where MFL put the owner.
-    expect(vars['--tm-light']).not.toBe(vars['--to-light']);
+    // Side-INDEXED, and the viewer is side 0 — matching `winProbability`,
+    // which is stated from the viewer. Home/away would swap meaning depending
+    // on where MFL put the owner in the pairing.
+    expect(vars['--t0-light']).not.toBe(vars['--t1-light']);
+    // NOT asserted: that light and dark differ. A colour legible on both
+    // cards comes back byte-identical, by design — `ensureContrastOn` returns
+    // anything that already passes untouched — so demanding a difference
+    // would fail on exactly the franchises that need no help.
+  });
+
+  /**
+   * And the names survive the bridge untouched.
+   *
+   * There was a rename here for as long as the old island's sheet read the
+   * viewer-relative ones. It is gone, so this asserts the pass-through: the
+   * set the kit sees is the set the assembler built, key for key.
+   */
+  it('reaches the kit under the same names', async () => {
+    readCrossLeagueLive.mockResolvedValue([read({})]);
+    const { board } = await assembleMflLiveBoard({ user, week: 2, year: 2026 });
+    const kit = fromMflLiveBoard(board);
+
+    expect(kit.panels[0].matchups[0].colorVars).toEqual(
+      board.leagues[0].matchups[0].colorVars,
+    );
   });
 
   it('carries starter rows for the expansion and no bench', async () => {

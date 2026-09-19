@@ -29,8 +29,7 @@ import { fetchNflScoreboard } from './nfl-scoreboard-source';
 import { resolveMflLiveLeagues } from './mfl-live-selection';
 import { orderLineupRows } from './mfl-live-lineup';
 import { resolveFranchiseIdentity, identityIconAlt, type FranchiseColorClaim } from './mfl-live-identity';
-import { resolveTeamColorPair } from './team-color-contrast';
-import { groundsFor } from './live/surface';
+import { resolveMatchupColorVars } from './live/model';
 import { getPlayerMap } from './player-map';
 import { getLeagueTeamBrands } from './league-team-brands';
 import type { NflGame, PlayerMeta } from '../types/live-scoring';
@@ -43,18 +42,20 @@ import type {
 } from '../types/mfl-live';
 
 /**
- * The two grounds a colour is judged against — `--card-bg` in each theme, from
- * `tokens.css` / `tokens-dark.css` under `[data-league="mfl"]`, read through
- * `live/surface.ts` so this board does not carry a second copy of them.
+ * Which card a colour is judged against — a SURFACE name, not a pair of hexes.
+ *
+ * `live/surface.ts` turns it into `--card-bg` in each theme, from `tokens.css`
+ * / `tokens-dark.css` under `[data-league="mfl"]`, and
  * `tests/live-surface-grounds.test.ts` pins that lookup against the real
  * stylesheets, which two literals here could never be.
  *
- * Both, every time. A single resolved colour would bake in one theme's ground,
- * and this board renders in both: seven TheLeague franchises are `#181818` and
- * several NFL primaries are near-black (LV `#101820`, CHI `#0b162a`), all of
- * which are invisible on the dark card and perfectly fine on the light one.
+ * Both themes, every time. A single resolved colour would bake in one theme's
+ * ground, and this board renders in both: seven TheLeague franchises are
+ * `#181818` and several NFL primaries are near-black (LV `#101820`, CHI
+ * `#0b162a`), all of which are invisible on the dark card and perfectly fine
+ * on the light one.
  */
-const MFL_LIVE_CARDS = groundsFor('mfl');
+const MFL_LIVE_SURFACE = 'mfl' as const;
 
 export interface AssembleMflLiveInput {
   user: AuthUser;
@@ -73,37 +74,26 @@ export interface AssembledMflLive {
   enabled: string[];
 }
 
-/** A franchise's colour claim, with the dark-mode brand values swapped in. */
-function darkClaim(claim: FranchiseColorClaim): FranchiseColorClaim {
-  // A franchise that hand-picked a dark variant gets it; everyone else falls
-  // back to their light value and relies on the legibility nudge below.
-  return {
-    ...claim,
-    colorPrimary: claim.colorPrimaryDark ?? claim.colorPrimary,
-    colorSecondary: claim.colorSecondaryDark ?? claim.colorSecondary,
-  };
-}
-
 /**
  * Split-bar colours for one matchup, resolved per theme.
  *
- * `--tm-*` is MINE and `--to-*` is the opponent's — named from the viewer's
- * side to match `winProbability`, rather than home/away, which would swap
- * meaning depending on where MFL put the owner in the pairing.
+ * ONE RESOLVER, ONE SET OF NAMES. This function used to resolve the pair
+ * itself against MFL Live's card, under viewer-relative names (`--tm-` mine,
+ * `--to-` theirs) that `live/from-mfl-live.ts` then renamed to the kit's
+ * side-indexed ones. Two names for one thing is what shipped the bug: when the
+ * canonical resolver grew the INK variants — a franchise colour used as text
+ * must clear WCAG, not ΔE — this copy did not, so MFL Live drew coloured
+ * win-probability bars beside GREY scores. Nothing failed: the sheet's
+ * `--t0-ink` fallback is a neutral, and the assembler's own test named the
+ * four keys it expected, so the whole suite stayed green.
+ *
+ * `--t0` is the viewer and `--t1` the opponent, because this board only ever
+ * assembles the viewer's own matchups and `fromMflLiveBoard` puts him on side
+ * 0. Side-INDEXED rather than home/away, which would swap meaning depending on
+ * where MFL put the owner in the pairing.
  */
 function matchupColorVars(mine: FranchiseColorClaim, theirs: FranchiseColorClaim): Record<string, string> {
-  const opts = { forceAdjust: true, homeVisibilityFallback: true } as const;
-  const light = resolveTeamColorPair(mine, theirs, { ...opts, background: MFL_LIVE_CARDS.light });
-  const dark = resolveTeamColorPair(darkClaim(mine), darkClaim(theirs), {
-    ...opts,
-    background: MFL_LIVE_CARDS.dark,
-  });
-  return {
-    '--tm-light': light.home,
-    '--to-light': light.away,
-    '--tm-dark': dark.home,
-    '--to-dark': dark.away,
-  };
+  return resolveMatchupColorVars(mine, theirs, MFL_LIVE_SURFACE);
 }
 
 /**

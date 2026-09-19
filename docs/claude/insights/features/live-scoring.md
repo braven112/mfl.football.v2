@@ -682,3 +682,66 @@ hardcoded ground, and a file that judges colours without asking for one.
 `src/utils/live/model.ts`, `tests/live-ground-literals.test.ts`,
 `tests/live-surface-grounds.test.ts`, and the `Live/MatchupCard` Chromatic story
 (six modes, one per surface × theme).
+
+## 2026-09-19 - Two names for one value is how a new key goes missing
+
+**Context:** The day after the ink pair shipped (a franchise colour used as
+TEXT must clear WCAG, not ΔE — previous entry), an owner reported that the AFL
+board coloured its scores by team while MFL Live drew them white and grey.
+Same kit, same stylesheet, same theme.
+
+**The cause was mine, and it was structural, not arithmetic.** There were TWO
+producers of a matchup's colour custom properties:
+
+| Producer | Serves | Emitted |
+|---|---|---|
+| `live/model.ts#resolveMatchupColorVars` | the league boards | fill **+ ink** (8 keys) |
+| `mfl-live-board.ts#matchupColorVars` | MFL Live | fill only (4 keys) |
+
+The ink commit added four keys to the first and none to the second. MFL Live's
+cards therefore carried `--t0-light`/`--t0-dark` but no `--t0-ink-*`, so
+`live.css`'s per-theme alias fell through to its neutral fallback
+(`--t0-ink: var(--t0-ink-dark, #94a3b8)`). The BARS stayed on brand, because
+they read the fill pair, which was supplied — which is exactly the pattern the
+owner described and the reason it did not look like a missing value.
+
+**Why the suite was green throughout.** `tests/mfl-live-board.test.ts` asserted
+the colour keys by NAMING them:
+
+```ts
+for (const key of ['--tm-light', '--to-light', '--tm-dark', '--to-dark'])
+```
+
+A hand-listed expectation cannot notice a key it does not list. So it now
+derives the expected set from the canonical resolver and compares key-for-key —
+add a key there and the MFL Live case fails until the board carries it. Proven
+to bite: restoring the four-key literal fails exactly the two new cases and
+none of the eighteen old ones.
+
+**What actually fixed it was deleting the second producer, not patching it.**
+`matchupColorVars` is one line now — it delegates to
+`resolveMatchupColorVars(mine, theirs, 'mfl')`. The intermediate step of
+delegating *and keeping the old names* (a prefix rename on the way out, undone
+by `from-mfl-live.ts` on the way in) round-tripped correctly but left the
+hazard's shape intact, and the rename's justification had already expired:
+
+- `--tm-`/`--to-` (viewer-relative) existed for the OLD island's stylesheet.
+- That island is gone, `/live` renders the kit, and **no page rendered a single
+  `.mlb-*` class any more** — 530 of `mfl-live.css`'s 754 lines were dead, the
+  `/live/settings` league picker (`.mls-*`) being the only live part. `/live`
+  was still importing the sheet for nothing.
+
+**`design-token-guard` is what proved the dead half was not harmless.** The
+moment the assembler stopped hand-listing `'--tm-light'` as a string literal,
+the guard reported four `var()` references defined nowhere in `src/` — it
+counts a TS string literal as a definition, so the rule had been passing on the
+assembler's own hardcoding rather than on anything real. The fork in the road
+was to allowlist the four as "runtime" tokens or to delete the rules reading
+them. They were dead: allowlisting would have asserted that something still set
+them. Deleted.
+
+**The rule:** one value, one name, one producer. A second producer of the same
+shape does not diverge on the day you write it — it diverges on the day
+somebody extends the first one, and nothing about that day points at the
+second. A guard that lists the shape by hand cannot see the divergence either;
+derive the expectation from the thing being copied.

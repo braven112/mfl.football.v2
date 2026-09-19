@@ -46,22 +46,6 @@ function toTeam(team: MflLiveTeam): LiveTeam {
   };
 }
 
-/**
- * The colour custom properties, renamed from viewer-relative to side-indexed.
- *
- * `--tm-*` (mine) becomes `--t0-*` and `--to-*` (opponent) becomes `--t1-*`,
- * which is consistent because `mine` always lands on side 0 here. The VALUES
- * are untouched: they were already resolved server-side, once per theme,
- * against MFL Live's own card.
- */
-function toColorVars(vars: Record<string, string>): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const [key, value] of Object.entries(vars)) {
-    out[key.replace(/^--tm-/, '--t0-').replace(/^--to-/, '--t1-')] = value;
-  }
-  return out;
-}
-
 function toMatchup(matchup: MflLiveMatchup): LiveMatchup {
   return {
     index: matchup.index,
@@ -72,7 +56,12 @@ function toMatchup(matchup: MflLiveMatchup): LiveMatchup {
     // `winProbability` is stated from the viewer, and the viewer is side 0 —
     // so it is already `p0` and needs no complement.
     p0: matchup.winProbability,
-    colorVars: toColorVars(matchup.colorVars),
+    // Already the kit's own names, resolved against MFL Live's card by the
+    // assembler's single call to `resolveMatchupColorVars`. There was a rename
+    // here (`--tm-`/`--to-` -> `--t0-`/`--t1-`) while the old island's sheet
+    // still read the viewer-relative names; it outlived that sheet, and a
+    // rename nobody reads is how the ink variants went missing on this board.
+    colorVars: matchup.colorVars,
   };
 }
 
