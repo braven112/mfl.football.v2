@@ -199,6 +199,20 @@ const showSignIn = !signedIn && !isCurrent(signInHref.split('?')[0]);
 		 * dataset flag IS the right guard), document listeners bind exactly once
 		 * out here, and every one of them re-queries the live nodes at event
 		 * time rather than closing over the ones present at registration.
+		 *
+		 * Note the two halves are deduped by DIFFERENT mechanisms, which is why
+		 * one of them still leaked. This `is:inline` BODY evaluates once per
+		 * document — Astro keys it into `scriptsAlreadyRan`, so it is skipped on
+		 * later swaps unless marked `data-astro-rerun`
+		 * (`docs/claude/insights/domains/frontend.md`, 2026-09-09). But
+		 * `initMflMenu` is invoked by an `astro:page-load` listener on
+		 * `document`, which DOES survive, so init itself runs on every
+		 * navigation. One-shot script body, per-navigation init — anything
+		 * registered on a surviving node from inside init stacks.
+		 *
+		 * Keep this script UNCONDITIONAL for the same reason: wrapping it in
+		 * `{cond && (<script>…)}` defeats Astro's content-hash dedup and the
+		 * body would then re-evaluate per swap too.
 		 */
 		var FOCUSABLE = 'a[href], button, input, select, textarea, [tabindex]';
 		var lastFocused = null;
