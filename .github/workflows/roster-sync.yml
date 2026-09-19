@@ -177,6 +177,31 @@ jobs:
       - name: Consolidate roster history
         run: node ./scripts/consolidate-roster-history.mjs
 
+      # Top Players serves the COMMITTED derived payload
+      # (data/<league>/derived/top-players.json), whose owner list is built
+      # from rosters.json. This job commits a fresh rosters.json on every
+      # cadence but used to leave the payload alone, so the two drifted apart
+      # the moment a player changed hands — and
+      # tests/top-players-data.test.ts ("agrees with rosters.json about who
+      # owns whom — as a LIST") went red and STAYED red: five consecutive
+      # staging runs on 2026-09-18, reporting Antonio Williams as owned by
+      # 0002 when the rosters said 0002 + 0013. The 2026-09-18 release had to
+      # recompute it by hand (3878727) to clear the lane.
+      #
+      # prebuild.mjs runs these same two producers at deploy time but commits
+      # nothing, so this is the ONLY lane that keeps the committed payload
+      # honest. Not part of the derived chain (franchise-history,
+      # season-ledger, owner-tenures, division-strength), so it is safe to
+      # commit from here rather than through recompute-derived-chain.mjs.
+      #
+      # writeJsonIfChanged makes an unchanged run free — the same
+      # skip-if-unchanged canonical write every feed above uses — so this
+      # costs nothing on the runs where no roster moved.
+      - name: Recompute Top Players leaderboards
+        run: |
+          node ./scripts/compute-top-players.mjs
+          node ./scripts/compute-top-players.mjs --league=afl-fantasy
+
       # Push alerts ride this job rather than getting crons of their own:
       # it already runs every fifteen minutes with a checkout in hand, and both
       # scripts read the feeds fetched above. Each is non-fatal by design and

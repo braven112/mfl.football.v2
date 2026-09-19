@@ -105,7 +105,21 @@ describe('top-players derived payload', () => {
         for (const p of players) {
           expect(p.games, `${p.name} games`).toBe(Object.keys(p.weeks).length);
           if (p.games > 0) {
-            expect(p.avg, `${p.name} avg`).toBeCloseTo(p.total / p.games, 2);
+            // avg is rounded from the UNROUNDED total, while `p.total` is the
+            // rounded one, so the test cannot reconstruct avg exactly — a
+            // tolerance is the right shape. But toBeCloseTo(_, 2) demands a
+            // difference STRICTLY below 0.005 and so fails on the .xx5 boundary:
+            // Detroit Lions' 3.59 / 2 = 1.795 rounds to 1.8, a difference of
+            // exactly 0.005, which reddened CI on 2026-09-19.
+            //
+            // Bound both rounding steps instead: |p.total - raw| <= 0.005 and
+            // |p.avg - raw/games| <= 0.005, so by the triangle inequality
+            // |p.avg - p.total/games| <= 0.005 + 0.005/games. The 1e-9 absorbs
+            // float representation error at the boundary.
+            expect(
+              Math.abs(p.avg - p.total / p.games),
+              `${p.name} avg (total=${p.total}, games=${p.games})`,
+            ).toBeLessThanOrEqual(0.005 + 0.005 / p.games + 1e-9);
             expect(p.best, `${p.name} best`).toBe(Math.max(...Object.values(p.weeks)));
           }
         }
