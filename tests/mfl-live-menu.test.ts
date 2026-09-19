@@ -162,6 +162,27 @@ describe('the drawer is reachable, trappable and dismissable', () => {
   });
 });
 
+describe('the shell is shared by three pages, not just the board', () => {
+  const menu = read(MENU);
+  const layout = read(LAYOUT);
+
+  it('does not offer a sign-in link to the page you are already on', () => {
+    // MflAppLayout renders /live, /live/settings AND /login. On /login the CTA
+    // pointed at /login — a control that visibly does nothing. Paths are
+    // compared, not hrefs: signInHref carries a ?redirect= the route does not.
+    expect(menu).toMatch(/const showSignIn = !signedIn && !isCurrent\(signInHref\.split\('\?'\)\[0\]\)/);
+    expect(menu).toMatch(/showSignIn \? \(/);
+  });
+
+  it('keeps the sign-out hook and its handler in agreement across the two files', () => {
+    // The button is rendered by the MENU; the click handler lives in the
+    // LAYOUT. Rename the attribute on either side and sign-out silently stops
+    // working — querySelector returns null and the init bails with no error.
+    expect(menu).toContain('data-mfl-signout');
+    expect(layout).toContain("querySelector('[data-mfl-signout]')");
+  });
+});
+
 describe('the league links skip draft-only leagues', () => {
   const layout = read(LAYOUT);
 

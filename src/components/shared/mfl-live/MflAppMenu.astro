@@ -67,6 +67,15 @@ const boardLinks = BOARD_LINKS.filter((link) => signedIn || !link.requiresAuth);
 
 /** Exact match only: `/live` must not light up while you are on `/live/settings`. */
 const isCurrent = (href: string) => currentPath === href || currentPath === `${href}/`;
+
+/**
+ * `/login` renders this same shell (it is one of MflAppLayout's three pages,
+ * with /live and /live/settings), and there the sign-in CTA pointed at the
+ * page the reader was already on — a button that visibly does nothing. Compare
+ * PATHS, not the whole href: `signInHref` carries a `?redirect=` that differs
+ * from the bare route.
+ */
+const showSignIn = !signedIn && !isCurrent(signInHref.split('?')[0]);
 ---
 
 <button
@@ -162,9 +171,9 @@ const isCurrent = (href: string) => currentPath === href || currentPath === `${h
 				    handler; this is the same `data-mfl-signout` hook it binds. */}
 				<button type="button" class="mfl-menu__signout" data-mfl-signout>Sign out</button>
 			</div>
-		) : (
+		) : showSignIn ? (
 			<a class="mfl-menu__signin" href={signInHref}>Sign in with MyFantasyLeague</a>
-		)}
+		) : null}
 	</div>
 </div>
 
