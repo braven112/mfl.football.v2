@@ -451,6 +451,33 @@ applies here in reverse: **the shared host must not serve TheLeague's
 manifest.** MFL Live needs its own (`/live/manifest.webmanifest`, distinct
 `id`, `scope: "/live"`, neutral icons) linked only from the new shell.
 
+**Update, Sep 2026 — the scope is now the whole host.** The paragraph above
+is the original design and is kept because its REASONING still governs (a
+manifest claims the origin it is served from, so the shared host must not
+serve a league's). What changed is only the app's own boundary:
+`/assets/mfl-live/site.webmanifest` now has `scope: "/"` and
+`start_url: "/"` — v2.mfl.football itself is the installable app, opening on
+the splash, with the board reachable by a manifest shortcut and a visible
+band on the splash.
+
+Three things make that a narrowing of risk rather than the bug the `/live`
+scope was chosen to prevent, and all three are pinned in
+`tests/push-notification-icons.test.ts`:
+
+- **There is no league page on this host to swallow.** `/theleague/*` and
+  `/afl-fantasy/*` 404 on the shared host. Best Ball #1 IS served here and IS
+  now in the app's scope — accepted deliberately: `domains: []` means this
+  host is the only front door bb1 has ever had.
+- **The `id` did NOT change.** It stays `/live` even though `start_url` is
+  now `/`. An app id is an identity key resolved against the origin and is
+  not required to sit inside `scope`, so keeping it is what lets a phone that
+  already installed MFL Live update in place instead of ending up with two
+  apps.
+- **The host gate had to be duplicated, not moved.** `SplashLayout` links the
+  manifest too now (it is the `start_url`), behind the same
+  `isSharedAppHost` check. The manifest is only as host-scoped as its leakiest
+  link site, so the guard asserts the gate in BOTH layouts rather than one.
+
 ## Phases
 
 **Phase 0 — sign-in. DONE.** Borrowing `/theleague/login` turned out not to be

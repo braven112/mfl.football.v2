@@ -37,9 +37,27 @@
  * rewrites it under the league prefix and 404s), but the gate is what keeps
  * that true if `/live/` is ever added to SKIP_REWRITE_PREFIXES.
  *
- * Its `scope` is `/live`, not `/` — the shared host serves every league by
- * path prefix, so an installed app that claimed the whole origin would
- * swallow `/theleague/*` and `/afl-fantasy/*` too.
+ * ── ITS SCOPE IS THE WHOLE HOST, DELIBERATELY (Sep 2026) ─────────────────
+ * `scope` was `/live` so an installed app could not swallow the other leagues
+ * served here by path prefix. It is now `/`, and `start_url` is `/` — the
+ * splash — because the ask was for v2.mfl.football ITSELF to be the installed
+ * app, not one board inside it. Two things make that safe rather than the bug
+ * the old scope prevented:
+ *
+ *  - `/theleague/*` and `/afl-fantasy/*` are NOT served on the shared host
+ *    (they 404 there; see the comment in src/pages/index.astro), so there is
+ *    no league page for the app to swallow. `/best-ball-1/*` IS served here
+ *    and IS now in scope — accepted, since bb1 has no apex of its own and the
+ *    shared host is the only front door it has ever had.
+ *  - `id` stays `/live`. An app id is an identity key, resolved against the
+ *    origin and NOT required to sit inside `scope`, so keeping it is what
+ *    lets an already-installed MFL Live UPDATE in place to the wider scope
+ *    instead of appearing as a second, competing app.
+ *
+ * The consequence for this layout: the manifest is no longer linked only from
+ * here. SplashLayout links it too, behind the same `isSharedAppHost` gate, so
+ * the app is installable from the host's front door. Both gates are pinned by
+ * tests/push-notification-icons.test.ts.
  */
 import { Font } from 'astro:assets';
 import { mflLoginUrl } from '../utils/mfl-login-redirect';

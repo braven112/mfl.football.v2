@@ -13,6 +13,7 @@
 import { Font } from 'astro:assets';
 import { getThemePreference } from '../utils/theme-preference';
 import ThemeScript from '../components/ThemeScript.astro';
+import { isSharedAppHost } from '../config/leagues';
 // Global utility classes (.visually-hidden, etc.) — frontmatter import so the
 // CSS ships unscoped; @import inside the <style> block below would get scoped.
 import '../styles/utilities.css';
@@ -26,6 +27,22 @@ const { title } = Astro.props as Props;
 // Resolve theme preference (server-side). 'auto' renders no class — the
 // pre-paint ThemeScript resolves it against prefers-color-scheme.
 const themePref = getThemePreference(Astro.cookies);
+
+/**
+ * This page is the front door of the SHARED APP HOST, and as of Sep 2026 that
+ * host is installable as one PWA whose `start_url` is this splash. The
+ * manifest is MFL Live's (`/assets/mfl-live/site.webmanifest`), now widened to
+ * `scope: "/"` — see the scope note in MflAppLayout.astro for why that is
+ * deliberate and why its `id` deliberately did NOT change.
+ *
+ * The gate is the same one MflAppLayout uses, for the same reason: a manifest
+ * claims the ORIGIN it is served from, so MFL Live's must never be linked on a
+ * league's apex where it would compete with that league's own installed app.
+ * This layout only renders on non-league hosts today (a league apex rewrites
+ * `/` under its own prefix), but the gate is what keeps that true.
+ */
+const onSharedHost = isSharedAppHost(Astro.url.hostname);
+
 import StagingBanner from '../components/shared/StagingBanner.astro';
 ---
 
@@ -37,6 +54,33 @@ import StagingBanner from '../components/shared/StagingBanner.astro';
 		<ThemeScript />
 		<link rel="icon" type="image/svg+xml" href="/assets/logos/theleague-logo.svg" />
 		<link rel="icon" type="image/x-icon" href="/favicon.ico" />
+		{/* iOS ignores the manifest's icons for "Add to Home Screen" and uses
+		    this one, so the installed app is a neutral MFL mark rather than a
+		    screenshot of the page. Ungated: this layout never renders on a
+		    league apex, and an icon claims nothing the way a manifest does. */}
+		<link rel="apple-touch-icon" href="/assets/mfl-live/apple-touch-icon.png" />
+		{onSharedHost && (
+			<link rel="manifest" href="/assets/mfl-live/site.webmanifest" crossorigin="use-credentials" />
+		)}
+		{/* This page FLIPS with the theme (#eeeeee light, near-black dark). MFL
+		    Live's board does not — it is #14161a in both — so its chrome metas
+		    must not be copied here wholesale, which is what shipped first:
+
+		     - ThemeScript rewrites this meta to #121212 in dark and back to
+		       `data-theme-color-light` in light, so the light value has to be
+		       the splash's OWN light ground. Handing it #14161a made the light
+		       value a dark one and painted Android's bar near-black over a
+		       light-grey page, defeating the swap the attribute exists for.
+		     - The iOS status bar takes `default` (dark glyphs on a light bar),
+		       never `black-translucent`: that style draws WHITE glyphs, which
+		       on #eeeeee is unreadable, and it assumes the `viewport-fit=cover`
+		       plus safe-area insets that MflAppLayout sets and this layout does
+		       not. TheLeagueLayout, also a theme-flipping page, uses `default`
+		       for the same reason. */}
+		<meta name="theme-color" content="#eeeeee" data-theme-color-light="#eeeeee" />
+		<meta name="mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+		<meta name="apple-mobile-web-app-title" content="MFL Live" />
 		<meta name="generator" content={Astro.generator} />
 		<Font cssVariable="--font-vend-sans" />
 		<title>{title}</title>
