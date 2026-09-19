@@ -14,7 +14,19 @@ on:
 
 concurrency:
   group: groupme-sync
-  cancel-in-progress: true
+  # QUEUE, never cancel — for a different reason than the two committing
+  # siblings. This job pushes nothing, so there is no un-doable write; what it
+  # does have is a WATERMARK. It reads GroupMe since `getLastMessageId` and
+  # advances that id only after storing what it fetched, so a run cancelled
+  # mid-flight leaves the watermark where it was. Under the old schedule that
+  # was unreachable (5-8 delivered runs a day), but the Vercel cron dispatches
+  # every tick, so a run slower than five minutes would now be killed by its
+  # successor — and if the slowness persisted, every successor too, freezing
+  # the mirror with nothing but `cancelled` runs, which no monitor looks at.
+  # Measured runtime is 24-38s, so the margin is ~8x and this is insurance
+  # rather than a fix. GitHub keeps a single pending run per group, so queueing
+  # cannot pile up either.
+  cancel-in-progress: false
 
 jobs:
   sync:
