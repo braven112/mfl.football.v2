@@ -76,7 +76,17 @@ const authUser = getAuthUser(Astro.request);
 // never an origin concatenated with a path (docs/claude/rules/league-urls.md),
 // and never a bare path, because these leave the shared host for a league's
 // own apex where the session cookie is a different one.
-const leagueLinks = ALL_LEAGUES.map((league) => ({
+//
+// Draft-only leagues are FILTERED OUT, from the registry's own `bestBall`
+// flag rather than a slug literal (same derivation as `BOTH_LEAGUES` in
+// scripts/lib/weekly-changelog-format.mjs, so a new best-ball league drops
+// out here automatically). This app is a live-scoring board, and
+// docs/claude/rules/best-ball.md is explicit that a best-ball league has
+// "no live MFL syncing by design" and that its nav is OPT-IN — an untagged
+// link into it is management UI the league does not have. Listing one here
+// sends an owner to a site that cannot answer the only question this app
+// exists to answer.
+const leagueLinks = ALL_LEAGUES.filter((league) => !league.bestBall).map((league) => ({
 	name: league.name,
 	href: leagueUrl(league, '/'),
 }));

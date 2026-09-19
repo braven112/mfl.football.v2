@@ -1,6 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+// The TYPED module, not leagues-data.mjs: `LeagueDefinition` declares
+// `bestBall?: boolean`, where the .mjs infers its element type from the object
+// literal — and the leagues WITHOUT the flag then have "no properties in
+// common" with a `{ bestBall?: boolean }` annotation, which is a weak-type
+// error rather than the assertion anyone meant. This is also the exact module
+// the layout reads, so the test sees what it sees.
+import { ALL_LEAGUES } from '../src/config/leagues';
 
 const ROOT = join(__dirname, '..');
 const read = (rel: string) => readFileSync(join(ROOT, rel), 'utf8');
@@ -121,6 +128,31 @@ describe('the drawer is reachable, trappable and dismissable', () => {
     const trap = menu.slice(menu.indexOf('querySelectorAll(FOCUSABLE)'));
     expect(trap).toMatch(/getAttribute\('tabindex'\) !== '-1'/);
     expect(trap).toMatch(/!el\.disabled/);
+  });
+});
+
+describe('the league links skip draft-only leagues', () => {
+  const layout = read(LAYOUT);
+
+  it('filters on the registry flag, never on a slug literal', () => {
+    // Same derivation as BOTH_LEAGUES in weekly-changelog-format.mjs, so a
+    // new best-ball league drops out of this menu without anyone editing it.
+    expect(layout).toMatch(/ALL_LEAGUES\.filter\(\(league\) => !league\.bestBall\)/);
+    // Comments stripped: the rule is cited by name in the prose above the
+    // filter, and a doc reference is not a hardcoded league constant.
+    const code = layout
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/^\s*\/\/.*$/gm, '');
+    expect(code).not.toMatch(/best-ball-\d/);
+  });
+
+  it('leaves at least one league to link, and no best-ball one', () => {
+    // Guards both directions: a filter that matched everything would empty
+    // the menu silently, and the whole point is that draft-only leagues go.
+    const linked = ALL_LEAGUES.filter((l) => !l.bestBall);
+    expect(linked.length).toBeGreaterThan(0);
+    expect(linked.some((l) => l.bestBall)).toBe(false);
+    expect(ALL_LEAGUES.length).toBeGreaterThan(linked.length);
   });
 });
 
