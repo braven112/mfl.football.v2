@@ -441,6 +441,34 @@ describe('shared-host app manifest (MFL Live)', () => {
     expect(isSharedAppHost('mfl.football'), 'registry still knows the shared host').toBe(true);
   });
 
+  it('does not hand the splash the board\u2019s fixed-dark chrome', () => {
+    // The splash is the start_url, so it inherited MFL Live's PWA head block —
+    // including two metas that are only correct on a surface that stays dark.
+    // The splash flips (#eeeeee light, near-black dark), so:
+    //
+    //  - ThemeScript rewrites theme-color to #121212 in dark and back to
+    //    `data-theme-color-light` in light. A DARK value in that attribute is
+    //    therefore not a theme color at all, it is a permanently dark bar over
+    //    a light page, and the swap it was written for never happens.
+    //  - `black-translucent` draws WHITE status-bar glyphs and assumes the
+    //    `viewport-fit=cover` + safe-area insets MflAppLayout sets. On this
+    //    layout it is white-on-#eeeeee with no inset.
+    const splash = fs.readFileSync(path.join(ROOT, 'src/layouts/SplashLayout.astro'), 'utf8');
+    const light = splash.match(/data-theme-color-light="([^"]+)"/)?.[1];
+    expect(light, 'the splash declares a light theme-color').toBeTruthy();
+    expect(light!.toLowerCase(), 'the LIGHT theme color must not be the board\u2019s dark ground')
+      .not.toBe('#14161a');
+    // Read the META, not the file: the layout's comment explains why
+    // `black-translucent` is wrong here, and a whole-file scan matches the
+    // explanation as if it were the bug.
+    const statusBar = splash.match(
+      /<meta\s+name="apple-mobile-web-app-status-bar-style"\s+content="([^"]+)"/,
+    )?.[1];
+    expect(statusBar, 'the splash declares a status bar style').toBeTruthy();
+    expect(statusBar, 'a light-flipping page takes the `default` status bar style')
+      .toBe('default');
+  });
+
   it('is reachable from the splash it now opens on', () => {
     // start_url is the splash, so the splash is where an owner lands — both on
     // first visit and every time they launch the installed app. Without a link

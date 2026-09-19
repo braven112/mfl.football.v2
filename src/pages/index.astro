@@ -61,8 +61,11 @@ const CHIP_LABELS: Record<string, string> = {
  * apex to link to), which is what keeps it reachable now that the front door
  * no longer names it. Pinned in tests/shared-host-league-hiding.test.ts.
  *
- * PANEL_META is deliberately left complete — it is keyed by every canonical
- * slug, so the entry stays whether or not the panel renders.
+ * PANEL_META, CHIP_LABELS and the `.chip--bb1` rule are all deliberately left
+ * complete rather than pruned as dead: PANEL_META is keyed by every canonical
+ * slug, and keeping the other two means re-advertising a league is this one
+ * filter and nothing else. Pruning them would make it a multi-file change that
+ * silently ships an unstyled chip.
  */
 const splashLeagues = ALL_LEAGUES.filter((league) => !league.bestBall);
 const advertisedNavSlugs = new Set(splashLeagues.map((league) => league.navSlug));

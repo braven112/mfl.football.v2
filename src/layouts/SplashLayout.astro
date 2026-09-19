@@ -62,9 +62,24 @@ import StagingBanner from '../components/shared/StagingBanner.astro';
 		{onSharedHost && (
 			<link rel="manifest" href="/assets/mfl-live/site.webmanifest" crossorigin="use-credentials" />
 		)}
-		<meta name="theme-color" content="#14161a" data-theme-color-light="#14161a" />
+		{/* This page FLIPS with the theme (#eeeeee light, near-black dark). MFL
+		    Live's board does not — it is #14161a in both — so its chrome metas
+		    must not be copied here wholesale, which is what shipped first:
+
+		     - ThemeScript rewrites this meta to #121212 in dark and back to
+		       `data-theme-color-light` in light, so the light value has to be
+		       the splash's OWN light ground. Handing it #14161a made the light
+		       value a dark one and painted Android's bar near-black over a
+		       light-grey page, defeating the swap the attribute exists for.
+		     - The iOS status bar takes `default` (dark glyphs on a light bar),
+		       never `black-translucent`: that style draws WHITE glyphs, which
+		       on #eeeeee is unreadable, and it assumes the `viewport-fit=cover`
+		       plus safe-area insets that MflAppLayout sets and this layout does
+		       not. TheLeagueLayout, also a theme-flipping page, uses `default`
+		       for the same reason. */}
+		<meta name="theme-color" content="#eeeeee" data-theme-color-light="#eeeeee" />
 		<meta name="mobile-web-app-capable" content="yes" />
-		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="default" />
 		<meta name="apple-mobile-web-app-title" content="MFL Live" />
 		<meta name="generator" content={Astro.generator} />
 		<Font cssVariable="--font-vend-sans" />
