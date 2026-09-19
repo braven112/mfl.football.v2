@@ -1,0 +1,192 @@
+---
+/**
+ * The live-scoring board, for every league that has one.
+ *
+ * ── WHAT STAYS IN THE ROUTE, AND WHY ──────────────────────────────────────
+ * Two things cannot move in here, each for a mechanical reason:
+ *
+ *  1. **The `Astro.redirect()` feature gate.** Returned from a COMPONENT it
+ *     only stops rendering that component — the response is still a 200, now
+ *     with a blank body. That shipped once already on `/cr`.
+ *  2. **Any cookie write.** `Astro.cookies.set()` from an imported component
+ *     runs after the headers are committed and throws `ResponseSentError`,
+ *     blanking the page. Reading is fine, which is all this does
+ *     (`readViewerClock`, never `resolveViewerClock`).
+ *
+ * The league's team config does NOT have to stay in the route: the registry
+ * already carries it (`getLeagueTeamConfigs`), so there is no static import
+ * specifier to keep at the call site and the wrappers are the thinner for it.
+ *
+ * ── THE BOARD IS ASSEMBLED IN PROCESS ─────────────────────────────────────
+ * `assembleLeagueBoard` is called here directly and NEVER through an API
+ * route. A page that fetches its own API to render itself puts our own edge in
+ * the path of its first paint, and this repo has already shipped the outage
+ * that causes: on 2026-09-09 the live-scoring page printed "Scores will appear
+ * here when games begin" over a live slate, invisible in the logs, because a
+ * request blocked at the edge never reaches the route.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import LiveBoard from './LiveBoard';
+import NflGamesStrip from '../NflGamesStrip';
+import ThrowbackPreviewBar from '../ThrowbackPreviewBar.astro';
+import { getAuthUser } from '../../../utils/auth';
+import { readViewerClock } from '../../../utils/viewer-preferences-page';
+import { getLeagueContext } from '../../../utils/league-context';
+import { getCurrentSeasonYear } from '../../../utils/league-year';
+import { getCurrentNFLWeek } from '../../../utils/current-week';
+import { getDailySlot } from '../../../utils/hero-resolver';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { fetchInitialNflGames } from '../../../utils/nfl-scoreboard-source';
+import { assembleLeagueBoard } from '../../../utils/live/league-board';
+import { strictThrowbackScopeForLeagueSlug } from '../../../utils/throwback-scope';
+import { leagueHasFeature, type CanonicalLeagueSlug } from '../../../config/leagues';
+import '../../../styles/live.css';
+import '../../../styles/nfl-games-strip.css';
+import '../../../styles/network-badge.css';
+
+interface Props {
+  /** Page <title>. */
+  title: string;
+}
+
+const { title } = Astro.props;
+
+const league = getLeagueContext(Astro.url);
+const slug = league.slug as CanonicalLeagueSlug;
+
+/**
+ * Both per-league decisions come from the REGISTRY, not from props.
+ *
+ * The poll route has to make the identical calls 25 seconds later, and a
+ * decision that lives in a page prop cannot reach it — it would resolve
+ * Throwback for the page and not for the poll, which reverts every crest on
+ * the first tick.
+ *
+ * STRICT on the throwback scope: the lenient resolver falls back to
+ * TheLeague for anything it does not recognise, which would hand a best-ball
+ * board TheLeague's era rules.
+ */
+const throwbackScope = strictThrowbackScopeForLeagueSlug(slug) ?? undefined;
+const sample = leagueHasFeature(slug, 'liveScoringSample');
+
+const now = new Date();
+const year = getCurrentSeasonYear();
+const weekParam = Astro.url.searchParams.get('week');
+const parsedWeek = weekParam ? parseInt(weekParam, 10) : NaN;
+/**
+ * NO CLAMPING TO WEEK 1 BEFORE THE SEASON STARTS.
+ *
+ * `getCurrentNFLWeek` answers `null` until the Week 1 Thursday, and `?? 1`
+ * turned that into a week-1 request against a league that has not played one —
+ * which is exactly the gap `readLeagueLive`'s `week <= 0` guard exists to
+ * catch, defeated before it could fire. `/live` has never clamped; the three
+ * league pages this replaced all did, so the unification inherited the worse
+ * of the two and left `LvEmptyState`'s `pre-season` reason unreachable.
+ *
+ * An explicit `?week=` still wins, so the week picker can look back.
+ */
+const currentWeek = getCurrentNFLWeek(now);
+const week = Number.isFinite(parsedWeek) && parsedWeek > 0 ? parsedWeek : (currentWeek ?? 0);
+/** No week at all, and none asked for: the season has not started. */
+const preSeason = week <= 0;
+
+// The homepage hero's game-day clock. A HINT only: it may raise the island's
+// cadence and may never decide whether to poll — the 2026 season opened on a
+// Wednesday, and a board gated on this never asked for a score all game.
+const isLive = getDailySlot(now).slot === 'live-scoring';
+
+const authUser = getAuthUser(Astro.request);
+
+// The country whose channels the games rail names. READ, never resolve: the
+// resolver writes preference cookies and a component cannot set one (see the
+// header), and a viewer who has chosen nothing gets the country default —
+// exactly what this rail showed before it named a channel at all.
+const viewerCountry = (await readViewerClock(Astro.cookies, authUser, slug)).prefs.country;
+
+// Started HERE, awaited below, so ESPN overlaps the MFL read instead of adding
+// its timeout to the render serially.
+const nflGamesAbort = new AbortController();
+const nflGamesPromise = fetchInitialNflGames({
+  week,
+  year,
+  params: Astro.url.searchParams,
+  signal: nflGamesAbort.signal,
+});
+
+const assembled = await assembleLeagueBoard({
+  slug,
+  leagueId: league.leagueId,
+  week,
+  year,
+  authUser,
+  searchParams: Astro.url.searchParams,
+  throwbackScope,
+  sample,
+});
+
+/**
+ * Which slate the rail and the board start from.
+ *
+ * Three cases, and the middle one is the trap. A PLAIN replay carries its own
+ * bundled slate, so the live ESPN read is worthless — drop it rather than
+ * leave a request and its 5s timer running on every offseason view.
+ * `?demo=live` is sampled fantasy against a REAL slate, so it keeps the live
+ * read and takes NO bundled games: the scoreboard hook serves `fallbackGames`
+ * until the first poll lands, and the bundle there would show last season's
+ * games as the live ones — permanently, because the store holds no data while
+ * ESPN is unreachable.
+ */
+const plainReplay = assembled.isSample && !assembled.isRosterSample;
+if (plainReplay) nflGamesAbort.abort();
+
+const nflGames = plainReplay ? assembled.sampleGames : await nflGamesPromise;
+
+// The slate rides ON the board as the island's FALLBACK: it shares the poll
+// store with the rail below and takes over from the first poll, but the store
+// is empty during SSR, so without this the server-rendered slate never reaches
+// the markup.
+const board = { ...assembled.board, games: nflGames ?? [] };
+
+const settingsPath = resolveLeaguePath(
+  `/${slug}/throwback-settings`,
+  Astro.locals.hideLeaguePrefix ?? false,
+);
+---
+
+<TheLeagueLayout title={title}>
+  <div class="lv-page">
+    {assembled.throwbackPreview && (
+      <ThrowbackPreviewBar preview={assembled.throwbackPreview} settingsPath={settingsPath} />
+    )}
+
+    <LiveBoard
+      client:load
+      board={board}
+      pollUrl={`/api/league-board?league=${slug}`}
+      isLive={isLive}
+      preSeason={preSeason}
+      demoLabel={assembled.demoLabel}
+    />
+
+    <!-- `client:idle`, NOT `client:visible`. The strip renders null when it has
+         no games, and Astro's visible directive observes the island's CHILDREN —
+         an island that server-rendered nothing has none, so it is never observed
+         and never hydrates. The server slate above normally prevents that, but an
+         ESPN outage would put it right back; idle hydrates either way, so the
+         client poll can still recover the rail.
+
+         It sits OUTSIDE the board island deliberately: opening a matchup swaps
+         the board for the detail screen, and the rail has to survive that. -->
+    <div class="lv-page__strip">
+      <NflGamesStrip
+        client:idle
+        week={board.week}
+        year={year}
+        isLive={assembled.isRosterSample ? true : (assembled.isSample ? false : isLive)}
+        demo={plainReplay}
+        initialGames={nflGames}
+        country={viewerCountry}
+      />
+    </div>
+  </div>
+</TheLeagueLayout>

@@ -120,24 +120,31 @@ describe('per-league live-scoring accent', () => {
 });
 
 /**
- * The scoreboard card's per-team "yet to play" dots.
+ * The per-team "yet to play" counts, and the colour that is the ONLY thing
+ * saying which is which.
  *
- * The header prints two counts, away then home, and the ONLY thing saying
- * which is which is the dot's color. That color has to be the card's own
- * `--ta` / `--th` — the same pair `teamColorVars` resolves for the top border
- * and the win-probability bar — because those are the values already matched
- * to each team and already contrast-adjusted against both card surfaces. A
- * generic `--content-text-muted` dot (the obvious "tidy-up") would render two
- * identical grey dots and silently turn the split back into an unlabelled
- * pair of numbers, which is worse than the single total it replaced.
+ * ── RE-POINTED, NOT RELAXED ───────────────────────────────────────────────
+ * This pinned `.ls-rem-dot.away → --ta` / `.ls-rem-dot.home → --th` on the
+ * card header of the board that has since been unified onto the shared kit.
+ * The kit states the same fact in the win-probability bar's labels instead of
+ * as two header dots — same information, same hazard, one place. So the rule
+ * is asserted where it now lives.
  *
- * This also pins the away/home ASSIGNMENT. Swapping the two would be invisible
- * on any card whose teams are evenly matched and actively wrong on every other
- * one, and `8 – 6` reads perfectly either way.
+ * The rule itself is unchanged and is worth restating. Each side's count is
+ * coloured from the card's own resolved pair (`--t0` / `--t1`), because those
+ * are the values already matched to each team and already contrast-adjusted
+ * against that surface's card ground. A generic `--content-text-muted` (the
+ * obvious "tidy-up") would render two identical grey numbers and silently turn
+ * the split back into an unlabelled pair, which is worse than the single total
+ * it replaced.
+ *
+ * And it pins the ASSIGNMENT. Swapping the two would be invisible on any
+ * matchup whose teams are evenly matched and actively wrong on every other
+ * one — `8 – 6` reads perfectly either way round.
  */
-describe('per-team yet-to-play dots', () => {
-  const BOARD = stripComments(read('src/styles/live-scoring.css'));
-  const ISLAND = read('src/components/shared/LiveScoreboard.tsx');
+describe('per-team yet-to-play counts', () => {
+  const SHEET = stripComments(read('src/styles/live.css'));
+  const BAR = read('src/components/shared/live/LvWinProbBar.tsx');
 
   /**
    * Escapes EVERY regex metacharacter, and fails loudly when the selector is
@@ -149,48 +156,44 @@ describe('per-team yet-to-play dots', () => {
    */
   const ruleBody = (selector: string) => {
     const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const m = BOARD.match(new RegExp(`${escaped}\\s*\\{([^}]*)\\}`));
-    expect(m, `live-scoring.css has no rule for ${selector}`).not.toBeNull();
+    const m = SHEET.match(new RegExp(`${escaped}\\s*\\{([^}]*)\\}`));
+    expect(m, `live.css has no rule for ${selector}`).not.toBeNull();
     return m![1];
   };
 
-  it('colors each dot from the card team-color pair, away → --ta, home → --th', () => {
-    expect(ruleBody('.ls-rem-dot.away')).toMatch(/background:\s*var\(--ta\)/);
-    expect(ruleBody('.ls-rem-dot.home')).toMatch(/background:\s*var\(--th\)/);
+  it('colours each label from the card pair, left → --t1, right → --t0', () => {
+    expect(ruleBody('.lv-wp__l')).toMatch(/color:\s*var\(--t1\)/);
+    expect(ruleBody('.lv-wp__r')).toMatch(/color:\s*var\(--t0\)/);
   });
 
-  /**
-   * The CSS assertions above pin `.away → --ta`, but the SIDE a dot is painted
-   * for is decided in the JSX, where the class is written next to the count it
-   * labels. Swapping just those two class names paints each team's count in
-   * the other team's colour with every CSS assertion still green — which is
-   * the exact silent-swap this block exists to prevent. So read the pairing
-   * from the island itself.
-   */
-  it('pairs each dot class with the matching side in the island', () => {
-    const away = ISLAND.match(/ls-rem-dot away[^]{0,80}?\{calc\.(away|home)\.yetToPlay\}/)?.[1];
-    const home = ISLAND.match(/ls-rem-dot home[^]{0,80}?\{calc\.(away|home)\.yetToPlay\}/)?.[1];
-    expect(away, 'no `ls-rem-dot away` followed by a yetToPlay count').toBe('away');
-    expect(home, 'no `ls-rem-dot home` followed by a yetToPlay count').toBe('home');
+  it('pairs each label with the matching side in the component', () => {
+    // The CSS above pins `.lv-wp__l → --t1`, but WHICH side's count goes in
+    // that label is decided in the JSX. Swapping just those two would paint
+    // each team's count in the other team's colour with every CSS assertion
+    // still green — the exact silent swap this block exists to prevent.
+    const left = BAR.match(/lv-wp__l[^]{0,200}?side(0|1)YetToPlay/)?.[1];
+    const right = BAR.match(/lv-wp__r[^]{0,200}?side(0|1)YetToPlay/)?.[1];
+    expect(left, 'no `lv-wp__l` followed by a yet-to-play count').toBe('1');
+    expect(right, 'no `lv-wp__r` followed by a yet-to-play count').toBe('0');
   });
 
-  it('renders the away side first, so the left dot is the left team', () => {
-    // The card draws away-left / home-right (see the top-border gradient and
-    // every faceoff variant), so the header must list them in that order too.
-    expect(ISLAND.indexOf('ls-rem-dot away')).toBeGreaterThan(-1);
-    expect(ISLAND.indexOf('ls-rem-dot away')).toBeLessThan(ISLAND.indexOf('ls-rem-dot home'));
+  it('draws the bar in the same order as the labels', () => {
+    // Side 1 fills from the left and side 0 from the right, so the left label
+    // has to be side 1's or the colour under a number is the other team's.
+    expect(SHEET.indexOf('.lv-wp__s1')).toBeLessThan(SHEET.indexOf('.lv-wp__s0'));
+    expect(ruleBody('.lv-wp__s1')).toMatch(/var\(--t1\)/);
+    expect(ruleBody('.lv-wp__s0')).toMatch(/var\(--t0\)/);
+    expect(BAR.indexOf('lv-wp__l')).toBeLessThan(BAR.indexOf('lv-wp__r'));
   });
 
-  it('never falls back to a shared neutral for either dot', () => {
-    for (const sel of ['.ls-rem-dot.away', '.ls-rem-dot.home']) {
+  it('never falls back to a shared neutral for either label', () => {
+    for (const sel of ['.lv-wp__l', '.lv-wp__r']) {
       expect(ruleBody(sel)).not.toMatch(/--content-text|--page-text|currentColor/);
     }
   });
 
-  it('gives the dot a size, so it cannot collapse to nothing', () => {
-    const base = ruleBody('.ls-rem-dot');
-    expect(base).toMatch(/width:\s*[\d.]+/);
-    expect(base).toMatch(/height:\s*[\d.]+/);
-    expect(base).toMatch(/border-radius:\s*50%/);
+  it('gives the bar a height, so it cannot collapse to nothing', () => {
+    const track = ruleBody('.lv-wp__track');
+    expect(track).toMatch(/height:\s*[\d.]+/);
   });
 });

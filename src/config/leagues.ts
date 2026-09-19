@@ -44,6 +44,18 @@ export interface LeagueFeatures {
   schefterTips: boolean;
   liveScoring: boolean;
   /**
+   * The live-scoring board falls back to a BUNDLED REPLAY of the last
+   * completed regular-season week when MFL's feed comes back empty-but-healthy
+   * — which it does all offseason, because MFL switches liveScoring off.
+   *
+   * Off for a league with no season to replay. A brand-new best-ball league is
+   * the live example: its honest empty state ("scores will appear when games
+   * begin") is a better answer than last season's numbers under a badge, and
+   * the flag is what keeps that decision in the registry rather than in a slug
+   * comparison inside the page AND inside the poll route.
+   */
+  liveScoringSample: boolean;
+  /**
    * The league has a practice ("taxi") squad — rookies parked off the active
    * roster. TheLeague's holds 3; the AFL has no such thing, so anything that
    * names it must gate on this rather than assume every league has one.

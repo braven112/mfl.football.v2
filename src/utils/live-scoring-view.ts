@@ -269,119 +269,21 @@ export function selectMatchupMoments(
   return out;
 }
 
-// ── lineup slots ───────────────────────────────────────────────────────────
-
-/**
- * A league's starting requirements, reduced to what the board needs: how many
- * of each position MUST start, and how many starters there are in total.
- * Everything past the required set is flex.
- */
-export interface LineupSlotRules {
-  /** Position → the minimum that must start there. */
-  required: Record<string, number>;
-  total: number;
-}
-
-/** Display order for a lineup, matching how owners read their own roster. */
-const SLOT_ORDER = ['QB', 'RB', 'WR', 'TE', 'FLEX', 'PK', 'DEF'];
-
-export const FLEX_SLOT = 'FLEX';
-
-/** One starter, paired with the slot he is filling. */
-export interface SlottedRow {
-  row: LivePlayerRow;
-  /** 'QB' | 'RB' | … | 'FLEX' — what the row is labelled with. */
-  slot: string;
-}
-
-/**
- * Work out which slot each starter is filling, and put them in reading order.
- *
- * MFL tells us WHO is starting but not WHERE — `liveScoring` marks a player
- * `starter` and stops there. So the slot has to be derived: fill each
- * position's required minimum first, and whatever is left over is flex. For
- * both our leagues that is QB/RB/WR/TE/PK/DEF plus three flex, which is
- * exactly how an owner sees his own lineup.
- *
- * Sorting matters as much as labelling here. The matchup detail pairs away[i]
- * against home[i] and prints ONE position label between them, so the two sides
- * have to be in the same order for that label to mean anything — unsorted, the
- * center column was labelling a row whose two players were often at different
- * positions.
- */
-export function assignLineupSlots(
-  rows: readonly LivePlayerRow[],
-  meta: Record<string, PlayerMeta>,
-  rules: LineupSlotRules,
-): SlottedRow[] {
-  const remaining = new Map<string, number>();
-  for (const [pos, count] of Object.entries(rules.required ?? {})) {
-    remaining.set(pos.toUpperCase(), count);
-  }
-
-  const slotted: SlottedRow[] = rows.map((row) => {
-    const pos = (meta[row.id]?.position ?? '').toUpperCase();
-    const left = remaining.get(pos) ?? 0;
-    if (left > 0) {
-      remaining.set(pos, left - 1);
-      return { row, slot: pos };
-    }
-    // Past the requirement — flex. A position we have no rule for keeps its
-    // own name rather than being mislabelled flex.
-    return { row, slot: remaining.has(pos) ? FLEX_SLOT : pos || FLEX_SLOT };
-  });
-
-  const rank = (slot: string) => {
-    const i = SLOT_ORDER.indexOf(slot);
-    return i === -1 ? SLOT_ORDER.length : i;
-  };
-  // Stable within a slot: preserve the order the feed gave us.
-  return slotted
-    .map((entry, i) => ({ entry, i }))
-    .sort((a, b) => rank(a.entry.slot) - rank(b.entry.slot) || a.i - b.i)
-    .map(({ entry }) => entry);
-}
-
-/**
- * A franchise's BENCH, in the order an owner wants to read it.
- *
- * Not the same question as `assignLineupSlots`. A bench player fills no slot —
- * there is nothing to derive and nothing to pair against the other side of the
- * matchup, so this sorts rather than labels, and the row falls back to the
- * player's own position for its chip.
- *
- * Position first, points second. Grouping by position is what makes the
- * section answerable at a glance — the question an owner opens his bench to
- * ask is "did I start the wrong RB", and that comparison is only possible when
- * the RBs sit together. Within a position the highest scorer leads, so the
- * player who would have changed the answer is the first one he reads.
- *
- * Unknown positions sort last rather than being folded into a bucket they
- * aren't in: MFL carries a handful of roster rows whose position we can't
- * resolve (an unfeed'd rookie, a player map miss), and putting one under "TE"
- * because that is where the fallback landed would be a quiet lie about a row
- * that is already the least trustworthy on the board.
- */
-export function sortBenchRows(
-  rows: readonly LivePlayerRow[],
-  meta: Record<string, PlayerMeta>,
-): LivePlayerRow[] {
-  const rank = (id: string) => {
-    const pos = (meta[id]?.position ?? '').toUpperCase();
-    const i = SLOT_ORDER.indexOf(pos);
-    return i === -1 ? SLOT_ORDER.length : i;
-  };
-  return rows
-    .map((row, i) => ({ row, i }))
-    .sort((a, b) =>
-      rank(a.row.id) - rank(b.row.id) ||
-      b.row.live - a.row.live ||
-      // Stable tail: an all-zero bench (every pre-kickoff Sunday morning)
-      // otherwise reorders itself between polls purely on sort instability.
-      a.i - b.i,
-    )
-    .map(({ row }) => row);
-}
+// ── lineup slots: DELETED ──────────────────────────────────────────────────
+//
+// `assignLineupSlots`, `FLEX_SLOT`, `SlottedRow`, `LineupSlotRules` and
+// `sortBenchRows` lived here and are gone with the board that used them.
+//
+// The FLEX label could not be trusted. MFL's `liveScoring` says WHO is
+// starting and never WHERE, so a flex chip had to be derived by filling each
+// required slot and calling the leftovers flex — and MFL returns arrays in
+// nondeterministic order, so that chip could swap between two polls of an
+// UNCHANGED lineup. The kit orders by position instead and never labels a slot
+// it cannot know (`orderLineupRows`, src/utils/mfl-live-lineup.ts).
+//
+// The bench sorter is superseded rather than dropped: `orderLineupRows` sorts
+// by position, then points descending, then the player id — the same answer,
+// with a stable tiebreak the feed index could not give.
 
 /** Total live points sitting on a bench. Never counts toward the matchup. */
 export function benchPoints(rows: readonly LivePlayerRow[]): number {

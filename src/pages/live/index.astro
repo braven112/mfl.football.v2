@@ -25,7 +25,8 @@
  * dropped and owners landed on TheLeague's homepage instead.
  */
 import MflAppLayout from '../../layouts/MflAppLayout.astro';
-import MflLiveBoard from '../../components/shared/mfl-live/MflLiveBoard';
+import LiveBoard from '../../components/shared/live/LiveBoard';
+import { fromMflLiveBoard } from '../../utils/live/from-mfl-live';
 import { getAuthUser } from '../../utils/auth';
 import { getCurrentNFLWeek } from '../../utils/current-week';
 import { getDailySlot } from '../../utils/hero-resolver';
@@ -33,6 +34,21 @@ import { assembleMflLiveBoard } from '../../utils/mfl-live-board';
 import { MFL_LIVE_LEAGUE_COOKIE, rememberMflLiveChoice } from '../../utils/mfl-live-selection';
 import type { MflLiveBoard as Board } from '../../types/mfl-live';
 import '../../styles/mfl-live.css';
+import '../../styles/live.css';
+
+/**
+ * This board renders through the SHARED kit (`components/shared/live`).
+ *
+ * `fromMflLiveBoard` converts the assembler's viewer-relative shape into the
+ * canonical model. Lossless in this direction: every matchup here has a viewer
+ * by construction, so `viewerSide` is always 0. `viewerFirst` is set because
+ * this is a board OF your own teams — a league board keeps MFL's pairing order
+ * instead, since most of its cards are nobody's.
+ *
+ * The poll stays on `/api/live-board`, which still answers the old shape, so
+ * the island converts on arrival too (`pollShape`). That prop disappears when
+ * the assembler emits the canonical model directly.
+ */
 
 // Scores must never be cached, and even the shell reads the session.
 export const prerender = false;
@@ -111,11 +127,13 @@ if (authUser && week) {
 			<a class="mfl-live-intro__cta" href="/login">Sign in again</a>
 		</section>
 	) : (
-		<MflLiveBoard
+		<LiveBoard
 			client:load
-			initialBoard={board}
-			ownerName={authUser.name}
+			board={fromMflLiveBoard(board)}
+			pollUrl="/api/live-board"
+			pollShape="mfl-live"
 			isLive={isLive}
+			viewerFirst
 		/>
 	)}
 </MflAppLayout>

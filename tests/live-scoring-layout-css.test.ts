@@ -11,10 +11,10 @@
  * (2026-08-21), both invisible on a desktop viewport:
  *
  *  - **Nothing said the page was tracking anything.** The mobile breakpoint
- *    hid `.ls-pmeta` wholesale for space — and that row is every per-player
+ *    hid `.lv-pmeta` wholesale for space — and that row is every per-player
  *    live signal there is: the real game clock, the state dot, the red-zone
  *    flag. What was left looked like a static table of names and zeroes.
- *  - **Names were not names.** `.ls-pname` ellipsised inside a ~70px column in
+ *  - **Names were not names.** `.lv-pname` ellipsised inside a ~70px column in
  *    the two-column matchup view, rendering "Jahmyr Gibbs" as "Jah…".
  *
  * A third, from the same day: the box-score line sat flush at the row's left
@@ -27,8 +27,28 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-const css = readFileSync(join(process.cwd(), 'src/styles/live-scoring.css'), 'utf-8');
-const island = readFileSync(join(process.cwd(), 'src/components/shared/LiveScoreboard.tsx'), 'utf-8');
+const css = readFileSync(join(process.cwd(), 'src/styles/live.css'), 'utf-8');
+/**
+ * The island AND its page wrapper.
+ *
+ * The board this guarded was one 1,099-line component; the kit splits the same
+ * markup across a handful of leaves. Concatenating them keeps every assertion
+ * that reads the JSX pointed at the markup it is about, rather than at
+ * whichever file happens to hold the root today.
+ */
+const island = [
+  'src/components/shared/live/LiveBoard.tsx',
+  'src/components/shared/live/LvMatchupDetail.tsx',
+  'src/components/shared/live/LvMatchupCard.tsx',
+  'src/components/shared/live/LvLineup.tsx',
+  'src/components/shared/live/LvBench.tsx',
+  'src/components/shared/live/LvPlayerRow.tsx',
+  'src/components/shared/live/LvWinProbBar.tsx',
+  'src/components/shared/live/LvFeedStatus.tsx',
+  'src/components/shared/live/LvEmptyState.tsx',
+]
+  .map((f) => readFileSync(join(process.cwd(), f), 'utf-8'))
+  .join('\n');
 
 /** Strip comments so a commented-out rule can never satisfy this test. */
 const stripped = css.replace(/\/\*[\s\S]*?\*\//g, '');
@@ -36,7 +56,7 @@ const stripped = css.replace(/\/\*[\s\S]*?\*\//g, '');
 /** Body of the phone breakpoint, by brace matching (nested rules included). */
 function mediaBlock(query: string): string {
   const at = stripped.indexOf(query);
-  expect(at, `no ${query} block in live-scoring.css`).toBeGreaterThan(-1);
+  expect(at, `no ${query} block in live.css`).toBeGreaterThan(-1);
   const open = stripped.indexOf('{', at);
   let depth = 0;
   for (let i = open; i < stripped.length; i++) {
@@ -76,7 +96,7 @@ function valueOf(block: string, selector: string, prop: string): string | undefi
   return hits.length ? hits[hits.length - 1][1] : undefined;
 }
 
-const phone = mediaBlock('@media (max-width: 760px)');
+
 
 /** A rem length (or a bare `0`) as a number. Anything else is a test bug. */
 function rem(value: string): number {
@@ -143,6 +163,60 @@ const base = (() => {
   return out;
 })();
 
+/**
+ * What actually applies at PHONE width.
+ *
+ * ── WHY THIS IS NOT ONE MEDIA BLOCK ANY MORE ──────────────────────────────
+ * The sheet this guarded had a desktop matchup layout and re-stated the whole
+ * thing inside `@media (max-width: 760px)`. The kit's sheet applies the row
+ * layout at the BASE cascade — the same grid at every width — and keeps media
+ * blocks for the handful of things that genuinely differ on a phone.
+ *
+ * So the assertions below cannot ask "is this rule inside the 760px block";
+ * they have to ask what a phone RESOLVES, which is the base cascade plus every
+ * narrow override in source order. That is strictly stronger: a rule that
+ * moved out of the media query still has to be there, and one that was only
+ * ever true on a phone still has to be true on a phone.
+ *
+ * Declared AFTER `base`, because `const` is not hoisted through the temporal
+ * dead zone — the concatenation order here IS the cascade order.
+ */
+const phone = [
+  base,
+  allMediaBlocks('@media (max-width: 760px)'),
+  allMediaBlocks('@media (max-width: 560px)'),
+].join('\n');
+
+/**
+ * EVERY block matching a query, concatenated in source order.
+ *
+ * `mediaBlock` returns the first, which silently drops the rest — and the kit's
+ * sheet has more than one narrow block, kept apart so each sits beside the
+ * rules it overrides. Returns '' when there are none, because "this breakpoint
+ * carries nothing" is a legitimate answer once the base cascade does the work.
+ */
+function allMediaBlocks(query: string): string {
+  const out: string[] = [];
+  let from = 0;
+  for (;;) {
+    const at = stripped.indexOf(query, from);
+    if (at < 0) break;
+    const open = stripped.indexOf('{', at);
+    let depth = 0;
+    let end = open;
+    for (let i = open; i < stripped.length; i++) {
+      if (stripped[i] === '{') depth++;
+      else if (stripped[i] === '}') {
+        depth--;
+        if (depth === 0) { end = i; break; }
+      }
+    }
+    out.push(stripped.slice(open + 1, end));
+    from = end + 1;
+  }
+  return out.join('\n');
+}
+
 /** The rows named by a `grid-template-areas` value, in order. */
 function gridRows(block: string, selector: string): string[][] {
   const raw = valueOf(block, selector, 'grid-template-areas') ?? '';
@@ -155,16 +229,16 @@ describe('live-scoring on a phone', () => {
     // a ~165px matchup column. Both attempts to make it are bugs we shipped:
     // ellipsising the name to "Jah…", then squeezing every fixed column until
     // the row just read as crowded (owner, 2026-08-21).
-    expect(valueOf(phone, '.ls-prow', 'display')).toBe('grid');
+    expect(valueOf(phone, '.lv-prow', 'display')).toBe('grid');
     // `display: contents` on the identity wrapper is what lets the name and
     // the meta line be placed on different rows — they are nested in the DOM
     // because the DESKTOP layout stacks them as one block.
     expect(
-      valueOf(phone, '.ls-pid', 'display'),
-      'without display:contents the grid areas below cannot reach .ls-pname / .ls-pmeta',
+      valueOf(phone, '.lv-pid', 'display'),
+      'without display:contents the grid areas below cannot reach .lv-pname / .lv-pmeta',
     ).toBe('contents');
 
-    for (const selector of ['.ls-prow', '.ls-prow.right']) {
+    for (const selector of ['.lv-prow', '.lv-prow--right']) {
       const rows = gridRows(phone, selector);
       // At least two: one line cannot hold all of this. Three now, since the
       // box-score line has its own row between the name and the score line
@@ -184,13 +258,13 @@ describe('live-scoring on a phone', () => {
     }
 
     // Mirrored, not re-ordered: the home side reuses the same markup.
-    expect(gridRows(phone, '.ls-prow')[0].join(' '))
-      .toBe([...gridRows(phone, '.ls-prow.right')[0]].reverse().join(' '));
+    expect(gridRows(phone, '.lv-prow')[0].join(' '))
+      .toBe([...gridRows(phone, '.lv-prow--right')[0]].reverse().join(' '));
   });
 
   it('keeps the per-player meta row, which is the only live signal on the row', () => {
     expect(
-      valueOf(phone, '.ls-pmeta', 'display'),
+      valueOf(phone, '.lv-pmeta', 'display'),
       'The meta row carries the game clock, state dot and red-zone flag. ' +
         'Hiding it makes the board indistinguishable from a static table. ' +
         'Shed individual pieces (the logo, down & distance) instead.',
@@ -198,8 +272,8 @@ describe('live-scoring on a phone', () => {
   });
 
   it('keeps the game clock and the red-zone flag', () => {
-    expect(valueOf(phone, '.ls-pclock', 'display')).not.toBe('none');
-    expect(valueOf(phone, '.ls-rz', 'display')).not.toBe('none');
+    expect(valueOf(phone, '.lv-pclock', 'display')).not.toBe('none');
+    expect(valueOf(phone, '.lv-rz', 'display')).not.toBe('none');
   });
 
   it('shows full player names instead of ellipsising them', () => {
@@ -208,46 +282,57 @@ describe('live-scoring on a phone', () => {
     // applies to a single non-wrapping line), and leaving `overflow: hidden`
     // in place is deliberate: it is the backstop that keeps a pathological
     // name from sliding under the score column.
-    expect(valueOf(phone, '.ls-pname', 'white-space'), 'names must wrap, not truncate').toBe('normal');
+    expect(valueOf(phone, '.lv-pname', 'white-space'), 'names must wrap, not truncate').toBe('normal');
     // `anywhere` would also shrink the column's intrinsic minimum and break a
     // name mid-word; `break-word` wraps between words and only splits one that
     // genuinely cannot fit.
-    expect(valueOf(phone, '.ls-pname', 'overflow-wrap')).toBe('break-word');
-    // And the desktop rule it is overriding must actually still be the one
-    // that truncates, or this override is guarding nothing.
-    const desktop = /\.ls-pname\s*\{([^}]*)\}/.exec(stripped)?.[1] ?? '';
-    expect(desktop).toContain('nowrap');
+    expect(valueOf(phone, '.lv-pname', 'overflow-wrap')).toBe('break-word');
+    // And the sheet must not truncate a name ANYWHERE. The board this replaces
+    // ellipsised on desktop and overrode it on a phone; the kit uses one
+    // wrapping row at every width, so the assertion becomes the stronger one —
+    // nothing in the sheet may reintroduce the truncation that rendered
+    // "Jahmyr Gibbs" as "Jah…" in a ~70px column.
+    const nameRules = [...stripped.matchAll(/\.lv-pname[^{]*\{([^}]*)\}/g)].map((m) => m[1]);
+    expect(nameRules.length, 'no .lv-pname rule at all').toBeGreaterThan(0);
+    for (const body of nameRules) {
+      expect(body, 'a player name must never be ellipsised').not.toMatch(/nowrap|text-overflow/);
+    }
   });
 
   it('keeps the feed-freshness pill and its ticking age readable', () => {
     // The games-live clause is the one droppable part; the state word and the
     // age are the evidence, and hiding either brings the original bug back.
-    expect(valueOf(phone, '.ls-status', 'display')).not.toBe('none');
-    expect(valueOf(phone, '.ls-status-lbl', 'display')).not.toBe('none');
-    expect(valueOf(phone, '.ls-status-age', 'display')).not.toBe('none');
+    expect(valueOf(phone, '.lv-status', 'display')).not.toBe('none');
+    expect(valueOf(phone, '.lv-status__lbl', 'display')).not.toBe('none');
+    expect(valueOf(phone, '.lv-status__age', 'display')).not.toBe('none');
   });
 
   it('starts the pill at the same x as the back button when the row wraps', () => {
     // The detail header is one flex row: back button, freshness pill. On a
     // phone it wraps, and a wrapped line is laid out against the CONTAINER's
-    // padding box — so an inset that lives on `.ls-back` indents the button
+    // padding box — so an inset that lives on `.lv-back` indents the button
     // only, and the pill lands a full rem left of the label above it (owner
     // screenshot, 2026-08-21). The inset therefore belongs to the row.
-    for (const [block, inset] of [[base, 1.2], [phone, 0.6]] as const) {
-      const row = boxInline(block, '.ls-detail-top', 'padding');
-      expect(row.left, 'the row itself must carry the horizontal inset').toBe(inset);
+    // The VALUE is not the rule — the row carrying it is, equally on both
+    // sides, in whichever cascade a phone resolves. The sheet this replaces
+    // narrowed it at the breakpoint; the kit uses one inset at every width,
+    // and either is fine as long as the row owns it.
+    for (const block of [base, phone] as const) {
+      const row = boxInline(block, '.lv-detail__top', 'padding');
+      const inset = row.left;
+      expect(inset, 'the row itself must carry the horizontal inset').toBeGreaterThan(0);
       expect(row.right).toBe(inset);
-      // And .ls-back must not re-indent its own label: whatever inline padding
+      // And .lv-back must not re-indent its own label: whatever inline padding
       // it keeps for the tap target has to be cancelled by an equal negative
       // margin, on BOTH sides, or the wrapped line disagrees with the label
       // above it again. Resolved from the shorthand AND the longhands, in
       // both cascades — a `padding-left` on its own is the same bug.
-      const pad = boxInline(block, '.ls-back', 'padding');
-      const mar = boxInline(block, '.ls-back', 'margin');
-      expect(pad.left + mar.left, '.ls-back padding-left must net to zero').toBe(0);
-      expect(pad.right + mar.right, '.ls-back padding-right must net to zero').toBe(0);
+      const pad = boxInline(block, '.lv-back', 'padding');
+      const mar = boxInline(block, '.lv-back', 'margin');
+      expect(pad.left + mar.left, '.lv-back padding-left must net to zero').toBe(0);
+      expect(pad.right + mar.right, '.lv-back padding-right must net to zero').toBe(0);
       // The tap target may not extend past the row's own inset, or the button
-      // overflows the card (.ls-detail is overflow: hidden).
+      // overflows the card (.lv-detail is overflow: hidden).
       expect(-mar.left).toBeLessThanOrEqual(inset);
     }
   });
@@ -255,10 +340,12 @@ describe('live-scoring on a phone', () => {
   it('the freshness pill distinguishes a failed feed from a quiet one', () => {
     // Same split the poll store keeps between `status` and `data`: "we could
     // not reach the feed" must never render the same as "nothing is happening".
-    const tone = (t: string) => new RegExp(`\\.ls-status\\.${t}[^{]*\\{[^}]*color:`).test(stripped);
+    const tone = (t: string) => new RegExp(`\\.lv-status--${t}[^{]*\\{[^}]*color:`).test(stripped);
     expect(tone('live')).toBe(true);
     expect(tone('error')).toBe(true);
-    expect(stripped).toMatch(/\.ls-dot\.err[^{]*\{[^}]*background:/);
+    // The error DOT too: the pill's text tone alone is a colour difference a
+    // colour-blind reader may not see, and the dot is the other half of it.
+    expect(stripped).toMatch(/\.lv-dot--err[^{]*\{[^}]*background:/);
   });
 });
 
@@ -273,40 +360,45 @@ describe('a matchup row keeps its two players level', () => {
     // `stretch` (not `start`) — both keep content at the top, but only
     // stretch gives the row a shared bottom edge for the score to anchor to.
     // `center` is the original sin and must never come back.
-    expect(valueOf(base, '.ls-mx-row', 'align-items')).toBe('stretch');
-    expect(valueOf(base, '.ls-mx-row', 'align-items')).not.toBe('center');
+    expect(valueOf(base, '.lv-mx-row', 'align-items')).toBe('stretch');
+    expect(valueOf(base, '.lv-mx-row', 'align-items')).not.toBe('center');
     // Same reasoning one level down: a single flex line in a stretched cell
     // would otherwise be centered in it.
-    expect(valueOf(base, '.ls-prow', 'align-content')).toBe('flex-start');
+    expect(valueOf(base, '.lv-prow', 'align-content')).toBe('flex-start');
   });
 
-  it('centers the shared slot label on the first line, not on the cell', () => {
-    // Without this the label drifts downward by half whatever the taller side
-    // gained, which is the same bug wearing the center column's clothes.
-    expect(valueOf(base, '.ls-mx-pos', 'min-height')).toBe('var(--ls-row-line1)');
-    expect(valueOf(base, '.ls-mx-pos', 'align-items')).toBe('center');
-    // …and the cell must not be STRETCHED, or those two do the opposite of
-    // what they say: a stretched cell is the whole row tall, so centring in it
-    // centres over the row rather than over its first line. `.ls-mx-row` is
-    // `align-items: stretch` for the player cells' benefit, and this label
-    // has to opt out of it. Measured 13px of drift on a row with a box-score
-    // line before this line existed.
-    expect(
-      valueOf(base, '.ls-mx-pos', 'align-self'),
-      'the slot label must opt out of the row stretch',
-    ).toBe('start');
+  it('puts the slot label on each ROW, never in a shared centre column', () => {
+    // The board this replaces carried a third column holding ONE label for the
+    // pair, centred on the row's first line so it could not drift downward by
+    // half whatever the taller side gained. The kit deletes the column
+    // outright, which retires that whole class of bug — and fixes a worse one
+    // the centre column could not avoid: a single shared label can only name
+    // ONE of the two paired positions, and mislabels the other whenever the
+    // sides run different lineup shapes. Its phone breakpoint hid the column
+    // for exactly that reason.
+    //
+    // So the assertion is the stronger one: no centre column anywhere, and a
+    // slot label on each side's own row.
+    expect(stripped, 'a shared centre slot column is back').not.toMatch(/\.lv-mx-pos\s*\{/);
+    expect(island, 'no per-row slot label in the markup').toMatch(/lv-ppos/);
+    expect(valueOf(base, '.lv-ppos', 'grid-area')).toBe('pos');
   });
 
-  it('indents the box-score line to where the player’s name starts', () => {
-    // Flush left it sat under the position chip, a whole slot column away
-    // from the player it describes.
-    expect(valueOf(base, '.ls-pstat', 'padding-left')).toBe('var(--ls-stat-indent)');
-    expect(valueOf(base, '.ls-prow.right .ls-pstat', 'padding-right')).toBe('var(--ls-stat-indent)');
-    // The indent must be DERIVED from the same values that size the columns
-    // it is clearing, or it silently drifts the next time one of them moves.
-    const indent = valueOf(base, '.ls-mx-body', '--ls-stat-indent') ?? '';
-    for (const token of ['--ls-slot-w', '--ls-face-w', '--ls-row-gap']) {
-      expect(indent, `--ls-stat-indent must be computed from ${token}`).toContain(token);
+  it('starts the box-score line where the player’s name starts', () => {
+    // Flush left it sat under the position chip, a whole slot column away from
+    // the player it describes. The board this replaces bought the indent with
+    // a derived `padding-left`; the kit spans the GRID instead, at every
+    // width, which cannot drift when a column is resized because it names the
+    // columns rather than re-deriving their widths.
+    expect(valueOf(base, '.lv-pstat', 'grid-column')).toBe('2 / -1');
+    expect(valueOf(base, '.lv-prow--right .lv-pstat', 'grid-column')).toBe('1 / -2');
+    // And NOT with a margin. A margin adds to the 100% basis and pushes the
+    // line past the row — the first attempt at this, and the reason the rule
+    // says padding-or-grid rather than "indent it somehow".
+    for (const sel of ['.lv-pstat', '.lv-prow--right .lv-pstat']) {
+      for (const prop of ['margin-left', 'margin-right', 'margin-inline']) {
+        expect(valueOf(base, sel, prop), `${sel} must not indent with ${prop}`).toBeUndefined();
+      }
     }
   });
 
@@ -320,7 +412,7 @@ describe('a matchup row keeps its two players level', () => {
     // The score line reads under the player and ABOVE his box-score detail
     // (owner direction), so it cannot simply be pushed to the bottom of the
     // row. Its offset is made constant instead, and BOTH halves are needed:
-    for (const selector of ['.ls-prow', '.ls-prow.right']) {
+    for (const selector of ['.lv-prow', '.lv-prow--right']) {
       const rows = gridRows(phone, selector);
       expect(rows.length, `${selector} needs name / score / stat rows`).toBe(3);
       expect(rows[0], `${selector}: row 1 carries the name`).toContain('name');
@@ -333,13 +425,13 @@ describe('a matchup row keeps its two players level', () => {
         `${selector}: the box-score line goes below the score, not above`,
       ).toContain('stat');
 
-      // `.ls-prow` declares grid-template-rows TWICE: a plain fallback and then
+      // `.lv-prow` declares grid-template-rows TWICE: a plain fallback and then
       // `subgrid`. Both matter, so read every declaration rather than just the
       // winning one.
       const decls = declarationsFor(phone, selector)
         .filter(([prop]) => prop === 'grid-template-rows')
         .map(([, value]) => value);
-      const all = decls.length ? decls : declarationsFor(phone, '.ls-prow')
+      const all = decls.length ? decls : declarationsFor(phone, '.lv-prow')
         .filter(([prop]) => prop === 'grid-template-rows')
         .map(([, value]) => value);
 
@@ -367,37 +459,43 @@ describe('a matchup row keeps its two players level', () => {
       ).toBe('1fr');
     }
 
-    // Subgrid only reaches `.ls-prow` if it is a real grid item of the pair's
+    // Subgrid only reaches `.lv-prow` if it is a real grid item of the pair's
     // row — the wrappers between them have to collapse.
-    expect(valueOf(phone, '.ls-mx-row > div:not(.ls-mx-pos)', 'display')).toBe('contents');
-    expect(valueOf(phone, '.ls-bench-row > div', 'display')).toBe('contents');
+    expect(valueOf(phone, '.lv-mx-row > div', 'display')).toBe('contents');
+    expect(valueOf(phone, '.lv-bench-row > div', 'display')).toBe('contents');
     // And the pair's row must define the three tracks they map onto.
-    expect(valueOf(phone, '.ls-mx-row', 'grid-template-rows')).toBe('auto auto 1fr');
-    expect(valueOf(phone, '.ls-bench-row', 'grid-template-rows')).toBe('auto auto 1fr');
+    expect(valueOf(phone, '.lv-mx-row', 'grid-template-rows')).toBe('auto auto 1fr');
+    expect(valueOf(phone, '.lv-bench-row', 'grid-template-rows')).toBe('auto auto 1fr');
 
     // (3) And row 1 is only equal on both sides because the name block is
     //     pinned to two lines. Without this a one-line name yields a 30px
     //     first row (the avatar) and a two-line name ~32px — the exact couple
     //     of pixels this whole test exists for.
-    const nameMin = valueOf(phone, '.ls-pname', 'min-height');
+    const nameMin = valueOf(phone, '.lv-pname', 'min-height');
     expect(nameMin, 'the name block must reserve two lines').toBeDefined();
     // Derived from the name's own type, not a magic number that silently
     // stops matching the moment the font-size is touched.
-    const nameH = valueOf(phone, '.ls-prow', '--ls-name-h') ?? '';
-    expect(nameMin).toBe('var(--ls-name-h)');
-    expect(nameH, '--ls-name-h must be derived from the name font-size').toContain(
-      valueOf(phone, '.ls-pname', 'font-size') ?? 'NO-FONT-SIZE',
+    // Declared on whichever ancestor owns the row metrics — `.lv-mx-body` in
+    // this sheet, the row itself in the one before it. WHERE is not the rule;
+    // being derived from the name's own type is.
+    const nameH =
+      valueOf(phone, '.lv-mx-body', '--lv-name-h')
+      ?? valueOf(phone, '.lv-prow', '--lv-name-h')
+      ?? '';
+    expect(nameMin).toBe('var(--lv-name-h)');
+    expect(nameH, '--lv-name-h must be derived from the name font-size').toContain(
+      valueOf(phone, '.lv-pname', 'font-size') ?? 'NO-FONT-SIZE',
     );
-    expect(nameH, '--ls-name-h must be derived from the name line-height').toContain(
-      valueOf(phone, '.ls-pname', 'line-height') ?? 'NO-LINE-HEIGHT',
+    expect(nameH, '--lv-name-h must be derived from the name line-height').toContain(
+      valueOf(phone, '.lv-pname', 'line-height') ?? 'NO-LINE-HEIGHT',
     );
 
     // The cells still have to fill the row, or there is no slack to place.
     expect(
-      valueOf(base, '.ls-mx-row', 'align-items'),
+      valueOf(base, '.lv-mx-row', 'align-items'),
       'cells must stretch to the row height',
     ).toBe('stretch');
-    expect(valueOf(base, '.ls-prow', 'height')).toBe('100%');
+    expect(valueOf(base, '.lv-prow', 'height')).toBe('100%');
   });
 
   it('pairs the two benches into shared grid rows rather than two columns', () => {
@@ -408,12 +506,20 @@ describe('a matchup row keeps its two players level', () => {
     // A bench pair is shaped exactly like a starter row: one two-column grid
     // holding both sides. That shared shape is what lets ONE subgrid rule
     // align both sections.
-    expect(valueOf(base, '.ls-bench-row', 'display')).toBe('grid');
-    expect(valueOf(base, '.ls-bench-row', 'grid-template-columns')).toBe('1fr 1fr');
-    // A ROW gap would put space between the paired cells that the starter rows
-    // above don't have, and it has to be kept in sync by hand. Columns only.
-    expect(valueOf(base, '.ls-bench-row', 'gap')).toBeUndefined();
-    expect(valueOf(base, '.ls-bench-row', 'column-gap')).toBeDefined();
+    expect(valueOf(base, '.lv-bench-row', 'display')).toBe('grid');
+    // Shaped EXACTLY like a starter row, asserted against the starter row
+    // rather than against a literal — anything the bench does differently is
+    // drift, and pinning the spelling instead of the equality is how the two
+    // were allowed to diverge in the first place.
+    for (const prop of ['grid-template-columns', 'grid-template-rows', 'gap', 'align-items']) {
+      expect(
+        valueOf(base, '.lv-bench-row', prop),
+        `the bench row's ${prop} must match a starter row's`,
+      ).toBe(valueOf(base, '.lv-mx-row', prop));
+    }
+    // And the columns must be able to SHRINK, or a long name overflows the row
+    // instead of wrapping inside it.
+    expect(valueOf(base, '.lv-bench-row', 'grid-template-columns')).toContain('minmax(0');
   });
 
   it('does not buy equal rows by clamping the name or the stat line', () => {
@@ -422,7 +528,7 @@ describe('a matchup row keeps its two players level', () => {
     // this stylesheet already fixed once; a clamp on the box-score line
     // silently drops the tail of a long one ("… · 1 FUM lost").
     for (const block of [base, phone]) {
-      for (const selector of ['.ls-pname', '.ls-pstat']) {
+      for (const selector of ['.lv-pname', '.lv-pstat']) {
         expect(
           valueOf(block, selector, '-webkit-line-clamp'),
           `${selector} must not be line-clamped to equalize rows`,
@@ -431,19 +537,19 @@ describe('a matchup row keeps its two players level', () => {
       // `height: 100%` is REQUIRED (it fills the stretched cell) and cannot
       // clip — it adopts whatever the row already needed. A length would clip,
       // and so would a max-height.
-      const h = valueOf(block, '.ls-prow', 'height');
+      const h = valueOf(block, '.lv-prow', 'height');
       if (h !== undefined) expect(h, 'a fixed row height would clip').toBe('100%');
-      expect(valueOf(block, '.ls-prow', 'max-height')).toBeUndefined();
+      expect(valueOf(block, '.lv-prow', 'max-height')).toBeUndefined();
     }
     // The phone rule that lets names wrap must still be the one in force.
-    expect(valueOf(phone, '.ls-pname', 'white-space')).toBe('normal');
+    expect(valueOf(phone, '.lv-pname', 'white-space')).toBe('normal');
   });
 
   it('on a phone the box-score line clears the slot chip via grid columns', () => {
     // Column 2 is the headshot, which is where the meta line above it starts —
     // the stat line lines up under the player, not under his slot label.
-    expect(valueOf(phone, '.ls-pstat', 'grid-column')).toBe('2 / -1');
-    expect(valueOf(phone, '.ls-prow.right .ls-pstat', 'grid-column')).toBe('1 / -2');
+    expect(valueOf(phone, '.lv-pstat', 'grid-column')).toBe('2 / -1');
+    expect(valueOf(phone, '.lv-prow--right .lv-pstat', 'grid-column')).toBe('1 / -2');
   });
 });
 
@@ -451,41 +557,48 @@ describe('a matchup row keeps its two players level', () => {
 describe('the no-games board fits the phone', () => {
   // Every scoring card is a <button>, and the UA stylesheet gives buttons
   // border-box. The empty state is a <div>, which gets content-box — so the
-  // SAME `.ls-card` rule (width: 100% + 1rem padding + a border) overflowed
+  // SAME `.lv-card` rule (width: 100% + 1rem padding + a border) overflowed
   // the page by 34px and put a horizontal scrollbar across the whole phone
   // viewport, but ONLY in the week with no matchups (owner, 2026-08-22).
   // Measured: root scrollWidth 404 against a 393px viewport.
   it('sizes the card shell in border-box, since only some of them are buttons', () => {
     expect(
-      valueOf(base, '.ls-card', 'box-sizing'),
-      'this repo has no global box-sizing reset; a <div>.ls-card overflows without it',
+      valueOf(base, '.lv-card', 'box-sizing'),
+      'this repo has no global box-sizing reset; a <div>.lv-card overflows without it',
     ).toBe('border-box');
     // And the declaration this is defending against must still be there, or
     // the guard is guarding nothing.
-    expect(valueOf(base, '.ls-card', 'width')).toBe('100%');
-    expect(valueOf(base, '.ls-card', 'padding')).toBeDefined();
+    expect(valueOf(base, '.lv-card', 'width')).toBe('100%');
+    expect(valueOf(base, '.lv-card', 'padding')).toBeDefined();
   });
 
   it('lets the board track floor collapse on a narrow phone', () => {
     // `minmax(300px, 1fr)` is a floor grid does NOT clamp to the container, so
     // a 320px phone scrolled 4px sideways on the board itself.
-    const cols = valueOf(base, '.ls-board', 'grid-template-columns') ?? '';
+    const cols = valueOf(base, '.lv-cards', 'grid-template-columns') ?? '';
     expect(cols).toContain('minmax(min(300px, 100%), 1fr)');
   });
 
   it('does not paint a win-probability split bar over the empty card', () => {
-    // `.ls-card::before` is the two-color top border split at the away win
-    // share. With no matchup behind it, it falls back to --wp-split 50% and
-    // renders as a grey/blue bar that reads as a scrollbar, not a border.
-    expect(valueOf(base, '.ls-card.static::before', 'content')).toBe('none');
-    // Non-interactive: it is a <div>, so the button affordances have to go too.
-    expect(valueOf(base, '.ls-card.static', 'cursor')).toBe('default');
-    expect(valueOf(base, '.ls-card.static:hover', 'border-color')).toBe('var(--card-border)');
-    // …and the markup must actually ask for that variant, or the three
-    // declarations above apply to nothing.
-    expect(island, 'the empty state must carry the .static variant').toMatch(
-      /className="ls-card static"/,
+    // The bar encodes a matchup's win share; over an empty card it falls back
+    // to a 50/50 split and renders as a grey bar that reads as a SCROLLBAR
+    // rather than a border. The board this replaces cancelled it with
+    // `content: none` on the card's ::before; the kit does not render a bar
+    // for an empty card at all, which is the stronger form of the same rule —
+    // there is nothing to cancel.
+    expect(island, 'the empty state must not mount a win-probability bar').not.toMatch(
+      /lv-card--empty[\s\S]{0,400}LvWinProbBar/,
     );
+    // Non-interactive: it is a plain <div>, never a button. The hover accent
+    // is scoped to `button.lv-card`, so a div cannot pick it up.
+    expect(island, 'the empty state must not be a button').toMatch(
+      /<div className=\{`lv-empty/,
+    );
+    expect(stripped, 'the hover accent must be button-scoped').toMatch(
+      /button\.lv-card:hover/,
+    );
+    expect(stripped, 'a bare .lv-card:hover would reach the empty state too')
+      .not.toMatch(/(^|[^.\w])\.lv-card:hover/m);
   });
   it('goes full bleed by cancelling the named gutters, never with 100vw', () => {
     // `100vw` resolves against the initial containing block, which INCLUDES a
@@ -496,75 +609,100 @@ describe('the no-games board fits the phone', () => {
     // clips it (`main`'s `container-type: inline-size` is layout containment,
     // not paint). A mobile emulator uses overlay scrollbars and never shows it,
     // which is why only a guard catches this one.
-    const bleed = declarationsFor(phone, '.ls-detail').map(([, v]) => v).join(' ');
-    expect(bleed, '.ls-detail must not size itself in vw').not.toMatch(/\d\s*vw/);
+    const bleed = declarationsFor(phone, '.lv-page .lv-detail').map(([, v]) => v).join(' ');
+    expect(bleed, '.lv-detail must not size itself in vw').not.toMatch(/\d\s*vw/);
     // It must still actually cancel BOTH ancestor gutters: the layout's `main`
-    // inline padding and `.ls-page`'s own. Either one alone leaves a visible
+    // inline padding and `.lv-page`'s own. Either one alone leaves a visible
     // asymmetric inset that reads as "nearly right".
-    const inline = valueOf(phone, '.ls-detail', 'margin-inline') ?? '';
-    expect(inline, 'must cancel main + .ls-page by token').toContain('--padding-sm');
+    const inline = valueOf(phone, '.lv-page .lv-detail', 'margin-inline') ?? '';
+    expect(inline, 'must cancel main + .lv-page by token').toContain('--padding-sm');
     expect(inline).toContain('--spacing-md');
     expect(inline, 'a cancel is negative').toMatch(/-1|\* *-|-\(/);
   });
 
+  it('never cancels a gutter it cannot name the ancestor for', () => {
+    // SHIPPED, on MFL Live. The full-bleed above cancels two gutters BY NAME,
+    // so it is only correct under an ancestor that has those two. `/live`
+    // renders the same board inside `MflAppLayout` — no `.lv-page`, clamp-based
+    // gutters of its own — and unscoped the rule pulled the card left and right
+    // by two tokens that did not match. Both edges overflowed the screen: the
+    // team names and the scores were clipped off either side on a phone.
+    //
+    // So a negative inline margin on a kit element has to be scoped to the
+    // ancestor whose padding it is cancelling. A BARE `.lv-detail` rule with
+    // one is the bug.
+    for (const block of [base, phone] as const) {
+      for (const prop of ['margin-inline', 'margin-left', 'margin-right']) {
+        const v = valueOf(block, '.lv-detail', prop);
+        expect(
+          v === undefined || !/-/.test(v),
+          `a bare .lv-detail must not carry a negative ${prop} — scope it to the ancestor whose gutter it cancels`,
+        ).toBe(true);
+      }
+    }
+  });
+
   it('does not pull the card up over the Throwback preview bar', () => {
-    // The pull-up cancels `.ls-page`'s `padding-top`, but `.ls-tb-preview` is a
-    // sibling of the island INSIDE `.ls-page` and carries a `margin-bottom` of
+    // The pull-up cancels `.lv-page`'s `padding-top`, but `.ls-tb-preview` is a
+    // sibling of the island INSIDE `.lv-page` and carries a `margin-bottom` of
     // that same token — so during Throwback Week an ungated cancel eats the gap
     // under the bar and sits the card flush against it. The gate is on the
     // bar's absence, so a browser without `:has()` drops the rule and keeps the
     // band, which is the harmless half.
-    const gated = /\.ls-page:not\(:has\(\.ls-tb-preview\)\)[^{]*\.ls-detail[^{]*\{[^}]*margin-top/;
+    const gated = /\.lv-page:not\(:has\(\.ls-tb-preview\)\)[^{]*\.lv-detail[^{]*\{[^}]*margin-top/;
     expect(phone, 'the margin-top cancel must be gated on the preview bar').toMatch(gated);
     expect(
-      valueOf(phone, '.ls-detail', 'margin-top'),
-      'an ungated .ls-detail margin-top would apply during Throwback Week',
+      valueOf(phone, '.lv-detail', 'margin-top'),
+      'an ungated .lv-detail margin-top would apply during Throwback Week',
     ).toBeUndefined();
   });
 
   it('ends the starter list on :last-of-type, not :last-child', () => {
-    // `.ls-mx-body`'s last element is the bench `<details>`, not the last
+    // `.lv-mx-body`'s last element is the bench `<details>`, not the last
     // starter row, so `:last-child` matches no row at all unless both benches
     // are empty — leaving a rule hanging under the last player, over the bench
     // disclosure. Both cascades: the base border and the phone hairline.
+    // The divider is a pseudo-element here (an inset hairline), not a border
+    // on the row — so it is CANCELLED with `content: none` rather than
+    // `border-bottom: 0`. Same rule, same selector, different mechanism.
     expect(stripped, 'base divider must end on :last-of-type')
-      .toMatch(/\.ls-mx-row:last-of-type\s*\{[^}]*border-bottom:\s*0/);
-    expect(stripped, '.ls-mx-row:last-child no longer selects the last row')
-      .not.toMatch(/\.ls-mx-row:last-child/);
-    expect(phone, 'phone hairline must end on :last-of-type')
-      .toMatch(/\.ls-mx-row:last-of-type::after/);
+      .toMatch(/\.lv-mx-row:last-of-type::after\s*\{[^}]*content:\s*none/);
+    expect(stripped, '.lv-mx-row:last-child no longer selects the last row')
+      .not.toMatch(/\.lv-mx-row:last-child/);
+    expect(phone, 'the hairline must still end on :last-of-type at phone width')
+      .toMatch(/\.lv-mx-row:last-of-type::after/);
     // The bench's own rows ARE last in their grid — that one is correct as is.
-    expect(stripped).toMatch(/\.ls-bench-row:last-child/);
+    expect(stripped).toMatch(/\.lv-bench-row:last-child/);
   });
-  it('pairs the folded yet-to-play line with the bar that duplicates it', () => {
-    // The phone hides `.ls-ytp.folded` because the counts also ride inside the
-    // win-probability labels. That is only true while the bar is RENDERED, and
-    // it is not: a final matchup draws none. So the two must be driven by the
-    // same condition — the bar on `!calc.isFinal`, the `folded` class on the
-    // same flag — or a final matchup hides its only copy of the counts and the
-    // information disappears from the screen AND the a11y tree.
-    expect(island, 'the detail bar is gated on !calc.isFinal').toMatch(
-      /!calc\.isFinal && \(?\s*\n?\s*<WinProbBar[^>]*awayYetToPlay=\{calc\.away\.yetToPlay\}/,
+  it('needs no folded-yet-to-play workaround, because its cause is gone', () => {
+    // ── THE RULE THIS REPLACES, AND WHY IT NO LONGER APPLIES ────────────────
+    // The board this guarded put `role="img"` + `aria-label` on the
+    // win-probability bar's WRAPPER, which makes the element a LEAF: the
+    // percentages, the tag and the yet-to-play counts inside it are never
+    // announced. It then had to keep a SECOND, visually-clipped copy of the
+    // counts outside the bar so assistive tech had one to read — clipped
+    // rather than `display: none`, and gated on the same `isFinal` flag as
+    // the bar, or a final matchup hid its only copy.
+    //
+    // The kit removed the CAUSE: the bar is `aria-hidden` and one
+    // `visually-hidden` sentence carries the numbers. There is exactly one
+    // announced copy at every width, so there is no second copy to clip, no
+    // flag to keep in sync, and no phone-width fudge.
+    //
+    // This asserts the cause stays gone — reintroducing `role="img"` would
+    // silently re-open the bug the workaround existed for, with no workaround
+    // left in the sheet to soften it.
+    expect(island, 'the bar must not be an a11y leaf again').not.toMatch(
+      /lv-wp[^]{0,200}role="img"/,
     );
-    expect(island, 'the folded class must come from that same flag').toMatch(
-      /className=\{`ls-ytp\$\{calc\.isFinal \? '' : ' folded'\}`\}/,
+    expect(island, 'the bar must be hidden from AT, not labelled as an image').toMatch(
+      /className="lv-wp__track"[^]{0,120}aria-hidden/,
     );
-    // And the standalone line must still carry the counts in both branches —
-    // it is the only copy the accessibility tree ever sees.
-    expect(island).toMatch(/ls-ytp[\s\S]{0,200}\{calc\.away\.yetToPlay\} to play/);
-    // The in-bar copies are decorative: `.ls-wp` is role="img", so they are
-    // never announced. That is why the folded line is CLIPPED, not removed —
-    // and the role has to still be there, or this whole precaution is moot.
-    expect(island, '.ls-wp is what makes the folded copies unannounced').toMatch(
-      /className=\{`ls-wp\$\{mini \? ' mini' : ''\}`\} role="img"/,
+    expect(island, 'one announced sentence carries the numbers').toMatch(
+      /visually-hidden[^]{0,200}Win probability/,
     );
-    expect(phone, '.ls-ytp.folded must be clipped, not removed').toMatch(
-      /\.ls-ytp\.folded\s*\{[^}]*clip:/,
-    );
-    expect(
-      valueOf(phone, '.ls-ytp.folded', 'display'),
-      '.ls-ytp.folded must not be display:none — role="img" hides the other copy from AT',
-    ).toBeUndefined();
+    // And no clipped duplicate crept back in.
+    expect(stripped, 'a clipped duplicate is back in the sheet').not.toMatch(/\.lv-ytp/);
   });
 
   /**
@@ -585,9 +723,9 @@ describe('the no-games board fits the phone', () => {
    */
   it('prints "to play", never "yet to play", on every surface', () => {
     const SURFACES: Array<[string, string]> = [
-      ['LiveScoreboard', 'src/components/shared/LiveScoreboard.tsx'],
+      ['LvMatchupCard', 'src/components/shared/live/LvMatchupCard.tsx'],
+      ['LvWinProbBar', 'src/components/shared/live/LvWinProbBar.tsx'],
       ['BroadcastScoreHeader', 'src/components/shared/live-broadcast/BroadcastScoreHeader.tsx'],
-      ['MflLiveBoard', 'src/components/shared/mfl-live/MflLiveBoard.tsx'],
       ['SundayTicketMatchups', 'src/components/shared/sunday-ticket/SundayTicketMatchups.astro'],
       // The CLIENT half of the Sunday Ticket pair. SundayTicketMatchups
       // server-renders `.st-game__ytp`; this file rewrites that same span on

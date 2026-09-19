@@ -52,6 +52,10 @@ import '../src/styles/network-badge.css';
 import '../src/styles/composite-hero.css';
 import '../src/styles/hero-franchise-backdrop.css';
 import '../src/styles/whats-new-hero-shot.css';
+// The shared live-scoring kit's sheet. Its components never import it — the
+// route does — so without this line every Live story renders correct DOM with
+// no rules, which on a stylesheet REWRITE is the worst possible false negative.
+import '../src/styles/live.css';
 
 /**
  * Theme and league are BOTH pure CSS in this codebase:
@@ -190,6 +194,10 @@ const preview = definePreview({
           { value: 'theleague', title: 'TheLeague' },
           { value: 'afl', title: 'AFL' },
           { value: 'bb1', title: 'Best Ball' },
+          // MFL Live's surface. Not a registry league — it is a theme key for
+          // the shared host, and the one surface whose card ground differs
+          // from both TheLeague's and the AFL's.
+          { value: 'mfl', title: 'MFL Live' },
         ],
         dynamicTitle: true,
       },

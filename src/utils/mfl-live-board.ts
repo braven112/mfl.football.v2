@@ -30,6 +30,7 @@ import { resolveMflLiveLeagues } from './mfl-live-selection';
 import { orderLineupRows } from './mfl-live-lineup';
 import { resolveFranchiseIdentity, identityIconAlt, type FranchiseColorClaim } from './mfl-live-identity';
 import { resolveTeamColorPair } from './team-color-contrast';
+import { groundsFor } from './live/surface';
 import { getPlayerMap } from './player-map';
 import { getLeagueTeamBrands } from './league-team-brands';
 import type { NflGame, PlayerMeta } from '../types/live-scoring';
@@ -43,15 +44,17 @@ import type {
 
 /**
  * The two grounds a colour is judged against — `--card-bg` in each theme, from
- * `tokens.css` / `tokens-dark.css` under `[data-league="mfl"]`.
+ * `tokens.css` / `tokens-dark.css` under `[data-league="mfl"]`, read through
+ * `live/surface.ts` so this board does not carry a second copy of them.
+ * `tests/live-surface-grounds.test.ts` pins that lookup against the real
+ * stylesheets, which two literals here could never be.
  *
  * Both, every time. A single resolved colour would bake in one theme's ground,
  * and this board renders in both: seven TheLeague franchises are `#181818` and
  * several NFL primaries are near-black (LV `#101820`, CHI `#0b162a`), all of
  * which are invisible on the dark card and perfectly fine on the light one.
  */
-const MFL_LIVE_LIGHT_CARD = '#ffffff';
-const MFL_LIVE_DARK_CARD = '#1e2126';
+const MFL_LIVE_CARDS = groundsFor('mfl');
 
 export interface AssembleMflLiveInput {
   user: AuthUser;
@@ -90,10 +93,10 @@ function darkClaim(claim: FranchiseColorClaim): FranchiseColorClaim {
  */
 function matchupColorVars(mine: FranchiseColorClaim, theirs: FranchiseColorClaim): Record<string, string> {
   const opts = { forceAdjust: true, homeVisibilityFallback: true } as const;
-  const light = resolveTeamColorPair(mine, theirs, { ...opts, background: MFL_LIVE_LIGHT_CARD });
+  const light = resolveTeamColorPair(mine, theirs, { ...opts, background: MFL_LIVE_CARDS.light });
   const dark = resolveTeamColorPair(darkClaim(mine), darkClaim(theirs), {
     ...opts,
-    background: MFL_LIVE_DARK_CARD,
+    background: MFL_LIVE_CARDS.dark,
   });
   return {
     '--tm-light': light.home,

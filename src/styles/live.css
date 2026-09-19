@@ -1,0 +1,1116 @@
+/**
+ * The shared live-scoring kit — `.lv-`.
+ *
+ * ONE stylesheet for the league boards (`/<league>/live-scoring`) and MFL Live
+ * (`/live`), which were two sheets rendering the same eight things.
+ *
+ * ── WHAT IS ABSTRACTED HERE, AND WHAT DELIBERATELY IS NOT ─────────────────
+ * This file reads the design tokens DIRECTLY for ink, borders and surfaces,
+ * because that layer was never the broken one: `data-league` on <html> ×
+ * `html.dark` already themes them correctly per league, and wrapping them in a
+ * second vocabulary would add an indirection whose only job is to be
+ * transparent. (An earlier draft of the plan specified fifteen `--lv-*` tokens;
+ * that was sized for a TV surface which is out of scope, and measuring the
+ * real sheets showed everything else they read — spacing, radius, font,
+ * shadow, transition — is theme-invariant and identical on every surface.)
+ *
+ * Exactly two things are abstracted, and both have a bug behind them:
+ *
+ *  1. **The franchise colour pair.** It needs a GROUND, the ground differs per
+ *     surface AND per theme, and naming one inside a component is what shipped
+ *     the AFL bug (see `live/surface.ts`). It arrives already resolved as
+ *     `--t0-light/-dark` and `--t1-light/-dark` — server-side, twice, against
+ *     the surface's own card — and is aliased to `--t0`/`--t1` per theme in
+ *     ONE place below, so no rule and no call site has to know a theme exists.
+ *  2. **The semantic tones**, defined once instead of once per sheet.
+ *
+ * `tests/live-ground-literals.test.ts` keeps `live/surface.ts` the only place
+ * a card ground is named.
+ */
+
+.lv {
+  /* Tones. One definition; the two sheets this replaces each carried their own. */
+  --lv-live: var(--color-success);
+  --lv-final: var(--content-text-muted);
+  --lv-pre: var(--color-warning);
+  --lv-boom: var(--color-success);
+  --lv-boom-bg: color-mix(in srgb, var(--color-success) 16%, transparent);
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   The franchise pair, resolved per theme ONCE.
+   Every rule below reads --t0/--t1 and nothing knows a theme exists. The
+   fallbacks are the neutral grey the identity ladder's text rung uses, NOT a
+   card colour — a franchise with no colour claim gets a neutral, never a hue
+   invented from its name.
+   ────────────────────────────────────────────────────────────────────────── */
+.lv-matchup {
+  --t0: var(--t0-light, #64748b);
+  --t1: var(--t1-light, #94a3b8);
+}
+html.dark .lv-matchup {
+  --t0: var(--t0-dark, #64748b);
+  --t1: var(--t1-dark, #94a3b8);
+}
+
+/* ── win probability ─────────────────────────────────────────────────────── */
+
+.lv-wp {
+  margin: 0.3rem 0;
+}
+
+.lv-wp__track {
+  position: relative;
+  display: flex;
+  height: 12px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--content-bg-muted);
+}
+
+.lv-wp__s1 { background: var(--t1); }
+.lv-wp__s0 { background: var(--t0); }
+
+/**
+ * The seam sits at the SPLIT, not at a fixed 50%, so the two fills still read
+ * as two when the colours land close to each other.
+ */
+.lv-wp__seam {
+  position: absolute;
+  left: var(--lv-wp-split, 50%);
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  background: var(--card-surface);
+  opacity: 0.85;
+  transform: translateX(-50%);
+}
+
+.lv-wp__labels {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.3rem;
+  font-size: 0.72rem;
+  font-weight: var(--font-weight-semibold);
+}
+
+.lv-wp__l { color: var(--t1); }
+.lv-wp__r { color: var(--t0); }
+
+.lv-wp__tag {
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  color: var(--content-text-muted);
+  font-weight: var(--font-weight-bold);
+}
+
+.lv-wp__ytp {
+  font-style: normal;
+  font-size: 0.66rem;
+  color: var(--lv-pre);
+}
+
+/* Compact variant, for a collapsed card. */
+.lv-wp--mini { margin: 0.4rem 0 0; }
+.lv-wp--mini .lv-wp__track { height: 7px; }
+
+/* ── red zone ────────────────────────────────────────────────────────────── */
+
+/**
+ * NEVER animated, at any rate.
+ *
+ * A persistent flasher for the length of a whole drive is intolerable, and
+ * anything near 3 Hz is a photosensitivity hazard. The entrance is a single
+ * 400ms fade and nothing repeats. `prefers-reduced-motion` kills even that.
+ */
+.lv-redzone {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--spacing-sm);
+  padding: 0.55rem 0.9rem;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-error) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-error) 45%, transparent);
+  color: var(--page-text);
+  font-size: var(--font-size-sm);
+  animation: lv-redzone-in 400ms ease-out;
+}
+
+.lv-redzone__tag {
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-error);
+}
+
+.lv-redzone__who { font-weight: var(--font-weight-semibold); }
+.lv-redzone__where { color: var(--content-text-muted); }
+
+@keyframes lv-redzone-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lv-redzone { animation: none; }
+}
+
+/* ── empty states ────────────────────────────────────────────────────────── */
+
+.lv-empty {
+  padding: var(--spacing-lg) var(--spacing-md);
+  border: 1px solid var(--content-border);
+  border-radius: var(--radius-md);
+  background: var(--content-bg-muted);
+  text-align: center;
+}
+
+.lv-empty__title {
+  margin: 0 0 0.35rem;
+  font-family: var(--font-display);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--page-text);
+}
+
+.lv-empty__body {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--content-text-muted);
+}
+
+/* "We could not read it" is not "there is nothing to read" — it gets the
+   error tone so the two states are never confusable at a glance. */
+.lv-empty--unavailable {
+  border-color: color-mix(in srgb, var(--color-error) 45%, transparent);
+  background: color-mix(in srgb, var(--color-error) 8%, transparent);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   THE BOARD
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.lv-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+}
+
+.lv-head h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--page-text);
+  text-wrap: balance;
+}
+
+/**
+ * The bundled-sample badge.
+ *
+ * It says the numbers on screen are a replay, and it is not decoration: an
+ * offseason board showing a real past week is indistinguishable from a live
+ * one otherwise. `--font-family-base` on purpose — the h1 is display type and
+ * a badge set in it reads as part of the title rather than as a caveat.
+ */
+.lv-sample {
+  display: inline-block;
+  margin-left: 0.6rem;
+  font-family: var(--font-family-base);
+  font-size: 0.6rem;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-warning-dark);
+  background: var(--color-warning-light);
+  border: 1px solid var(--color-warning);
+  border-radius: var(--radius-full);
+  padding: 0.15rem 0.55rem;
+  vertical-align: middle;
+}
+
+/* Week selector and the freshness pill share a line and must be allowed to
+   STACK rather than squeeze — the state word and the ticking age are not
+   droppable, so there is nothing to give back by shrinking. */
+.lv-head__right {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+/* ── the page frame ──────────────────────────────────────────────────────── */
+
+.lv-page {
+  max-width: var(--container-max-width);
+  margin: 0 auto;
+  padding: var(--spacing-lg) var(--spacing-md) var(--spacing-3xl);
+}
+
+/* The NFL games rail sits below the board and OUTSIDE the island, so opening a
+   matchup cannot take it off screen. */
+.lv-page__strip { margin-top: var(--spacing-2xl); }
+
+/* ── the card grid ───────────────────────────────────────────────────────── */
+
+/**
+ * `min(300px, 100%)`, never a bare `300px`.
+ *
+ * Grid does NOT clamp a track floor wider than its container, so a bare floor
+ * put a 4px horizontal scroll on the board itself at 320px — the page scrolling
+ * sideways off its own content.
+ */
+.lv-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
+  gap: var(--spacing-md);
+}
+
+/**
+ * The lead row: the viewer's own matchup, or the closest game promoted in its
+ * place. A wider floor so one card fills the row on a laptop and a
+ * doubleheader still pairs side by side, and it stacks on a phone like every
+ * other card — `min(…, 100%)` for the same reason the grid above uses it.
+ *
+ * `--lv-cards-lead-floor` is a variable rather than a literal so the phone
+ * breakpoint can collapse the two grids into one behaviour without repeating
+ * the track expression.
+ */
+.lv-cards--lead {
+  --lv-cards-lead-floor: 26rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(var(--lv-cards-lead-floor), 100%), 1fr));
+  margin-bottom: var(--spacing-md);
+}
+
+/* The lead card earns weight from its BORDER and its scores, never from a
+   different layout — an owner scanning the board should not have to re-learn
+   where the numbers are. */
+.lv-card--lead {
+  border-color: color-mix(in srgb, var(--t0) 45%, var(--card-border));
+}
+.lv-card--lead .lv-side__score { font-size: var(--font-size-2xl); }
+
+.lv-card {
+  /* border-box because only SOME of these are buttons, and the UA gives a
+     button border-box while a div gets content-box — which made the empty
+     state 34px wider than its container. */
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  width: 100%;
+  padding: 0.7rem 0.75rem;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  background: var(--card-surface);
+  color: var(--page-text);
+  text-align: left;
+  font: inherit;
+}
+
+/* Only a real matchup is interactive. */
+button.lv-card {
+  cursor: pointer;
+  transition: border-color var(--transition-fast), transform var(--transition-fast);
+}
+button.lv-card:hover,
+button.lv-card:focus-visible {
+  border-color: var(--t0);
+}
+
+/*
+ * NOTE there is no empty-card variant. The board this replaces rendered its
+ * empty state as the card SHELL and then had to cancel the button affordances
+ * and the win-probability bar on it — that bar encodes a matchup's win share,
+ * and over an empty card it renders as a stray grey bar reading as a scrollbar
+ * rather than a border. `.lv-empty` is a plain <div> instead, so there is
+ * nothing to cancel: the hover accent above is scoped to `button.lv-card` and
+ * cannot reach it, and no bar is mounted in the first place.
+ */
+
+.lv-card__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.66rem;
+}
+
+.lv-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.lv-badge--live { color: var(--lv-live); }
+.lv-badge--final { color: var(--lv-final); }
+
+.lv-card__yours {
+  margin-left: auto;
+  padding: 0.1rem 0.35rem;
+  border-radius: var(--radius-sm);
+  background: var(--t0);
+  color: var(--color-white);
+  font-size: 0.58rem;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.08em;
+}
+
+.lv-card__foot {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  font-size: 0.66rem;
+  color: var(--content-text-muted);
+}
+
+/* ── the two sides on a card ─────────────────────────────────────────────── */
+
+.lv-sides {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.lv-side {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.2rem 0;
+}
+
+.lv-side__crest {
+  width: 1.4rem;
+  height: 1.4rem;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+.lv-side__crest img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* The identity ladder's text rung: initials on one neutral field. Never a hue
+   derived from the name — that looks like a brand and is not one. */
+.lv-side__initials {
+  width: 1.4rem;
+  height: 1.4rem;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  background: var(--content-bg-muted);
+  color: var(--content-text-muted);
+  font-size: 0.6rem;
+  font-weight: var(--font-weight-bold);
+}
+
+.lv-side__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.86rem;
+  font-weight: var(--font-weight-semibold);
+}
+
+.lv-side--lead .lv-side__name { color: var(--page-text); }
+.lv-side:not(.lv-side--lead) .lv-side__name { color: var(--content-text-muted); }
+
+.lv-side__proj {
+  font-size: 0.68rem;
+  color: var(--content-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.lv-side__score {
+  min-width: 2.6rem;
+  text-align: right;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   THE DRILL-IN DETAIL
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.lv-detail {
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  background: var(--card-surface);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+}
+
+/**
+ * The back button and the freshness pill share the top row, so the pill is on
+ * screen before an owner scrolls — on a phone the detail header IS the first
+ * screen. The row's inline inset lives HERE, not on the button, so that when
+ * the row wraps (which it does on a phone) the pill starts at the same x as
+ * the button above it.
+ */
+.lv-detail__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: 0.6rem;
+}
+
+.lv-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--content-text-muted);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+.lv-back:hover,
+.lv-back:focus-visible { color: var(--page-text); }
+
+.lv-scorehead {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: 0 0.6rem 0.6rem;
+}
+
+.lv-scorehead__side { min-width: 0; }
+.lv-scorehead__side--right { text-align: right; }
+
+/* A shrink-wrapped name box on the flex-end side needs a cap or a long name
+   grows to content width and overlaps the score. */
+.lv-scorehead__name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.lv-scorehead__score {
+  font-family: var(--font-display);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.lv-scorehead__at {
+  color: var(--content-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.lv-mx-body {
+  /* The row metrics, declared ONCE here. Every descendant measures against
+     them — which is why the bench nests inside this element rather than beside
+     it, or it would get desktop rows on a phone. */
+  --lv-slot-w: 1.6rem;
+  --lv-face-w: 34px;
+  --lv-row-gap: 0.4rem;
+  --lv-row-pad-y: 0.5rem;
+  --lv-gutter: 0.55rem;
+  --lv-name-h: calc(0.84rem * 1.2 * 2);
+  padding: 0.5rem 0 0.8rem;
+}
+
+/* ── the matchup pair: two sides SHARING their row tracks ────────────────── */
+
+/**
+ * The pair owns the tracks; each side ADOPTS them with `subgrid`.
+ *
+ * Why not just reserve two lines for the name: that equalises a one-line name
+ * against a two-line one, but cannot help a name that genuinely needs three —
+ * "Mike Washington Jr." and "San Francisco 49ers" both do at 360px, which is a
+ * real phone. Subgrid is what makes the two sides agree whatever the names do.
+ *
+ * Equal row HEIGHTS were not enough on their own either: a one-line name and a
+ * two-line name put the score at different offsets INSIDE their equal rows, so
+ * the two sides still did not line up. The three shared tracks fix that by
+ * construction — the score is on track 2 for both sides, always.
+ */
+.lv-mx-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: auto auto 1fr;
+  gap: 0.35rem;
+  /* The divider is a pseudo-element, so the row itself carries no border. */
+  position: relative;
+  /*
+   * `stretch`, not `start`, and never `center`.
+   *
+   * A box-score line only exists for a player who has touched the ball, so one
+   * side of a row is routinely taller than the other. Centred, the quiet
+   * side's name floats half a line below its opponent's — the two players
+   * stopped lining up the moment real stats arrived (owner, 2026-08-21).
+   * `start` fixes that much but sizes each side to its own content, so the two
+   * spans no longer share a bottom edge for the score to anchor to; stretch is
+   * what makes the shared tracks below actually shared.
+   */
+  align-items: stretch;
+}
+
+.lv-mx-row > div { min-width: 0; }
+
+/**
+ * Each side's wrapper is REMOVED from the layout so the row below becomes a
+ * direct grid item of the pair — which is what lets it adopt the pair's tracks.
+ *
+ * No exception for a CENTRE position column, because this kit does not render
+ * one at any width. The board this replaces had a third column carrying the
+ * shared slot label and hid it on a phone, for the reason that makes it wrong
+ * everywhere: it can only show ONE of the two paired positions, and mislabels
+ * the other whenever the sides run different lineup shapes. The slot label
+ * lives on each row instead.
+ */
+.lv-mx-row > div { display: contents; }
+
+/**
+ * Row dividers: inset hairlines via a pseudo-element, never a full-bleed
+ * border. Edge-to-edge they became the strongest horizontal marks on the
+ * screen — louder than the scores they separate. Inset to the row's own gutter
+ * and mixed back toward the surface, they separate without competing.
+ *
+ * `:last-of-type`, not `:last-child`: the list's last ELEMENT may be something
+ * else (the bench disclosure), and `:last-child` would then fail to cancel the
+ * divider on the actual last row.
+ */
+.lv-mx-row::after {
+  content: "";
+  position: absolute;
+  left: var(--lv-gutter);
+  right: var(--lv-gutter);
+  bottom: 0;
+  border-top: 1px solid color-mix(in srgb, var(--content-border) 45%, transparent);
+}
+.lv-mx-row:last-of-type::after { content: none; }
+
+/* ── one player row ──────────────────────────────────────────────────────── */
+
+.lv-prow {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "pos face name name"
+    ".   meta meta score"
+    ".   stat stat stat";
+  grid-column: 1;
+  grid-row: 1 / -1;
+
+  /* A single flex line in a stretched cell would otherwise be centred in it. */
+  align-content: flex-start;
+  /* BOTH declarations, and `subgrid` LAST. The first is the fallback for a
+     browser without subgrid support; if the order flips, source order quietly
+     reinstates per-side tracks and the two sides drift apart again with
+     nothing visible to explain it. */
+  grid-template-rows: auto auto 1fr;
+  grid-template-rows: subgrid;
+
+  align-items: center;
+  column-gap: var(--lv-row-gap);
+  row-gap: 0.1rem;
+  padding: var(--lv-row-pad-y) var(--lv-gutter);
+  min-width: 0;
+  /* Fill the span. Without this the cell is sized to its own content, there is
+     no slack for the `1fr` stat track to take, and the score stops sitting at
+     the same offset on the two sides — which is the whole point of the shared
+     tracks above. */
+  height: 100%;
+}
+
+/* The mirrored side: same three tracks, columns reversed. */
+.lv-prow--right {
+  grid-column: 2;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-areas:
+    "name name face pos"
+    "score meta meta ."
+    "stat  stat stat .";
+}
+
+/**
+ * The identity wrapper is flattened too, which is what makes the box-score
+ * line a SIBLING of the name rather than a child of it. Nested, a real line
+ * ("18 car, 169 yds, 2 TD · 1 rec, 13 yds") wrapped to two rows on a desktop
+ * card and SIX on a 390px phone — tripling the row height and squeezing the
+ * player's name down to an ellipsis.
+ */
+.lv-pid { display: contents; }
+
+.lv-ppos {
+  grid-area: pos;
+  /* COLOURED TEXT, not a filled pill (owner direction, Aug 2026): nine filled
+     chips per side turned the lineup into a column of coloured blocks that
+     outweighed the players' own names. As text the colour still codes the
+     position and the name leads. */
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-bold);
+  font-size: 0.6rem;
+  letter-spacing: 0;
+  padding: 0.14rem 0;
+  min-width: var(--lv-slot-w);
+  color: var(--content-text-muted);
+}
+
+.lv-headshot {
+  grid-area: face;
+  align-self: start;
+  width: var(--lv-face-w);
+  height: var(--lv-face-w);
+  border-radius: 50%;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: var(--player-avatar-bg, var(--content-bg-muted));
+  border: 1px solid var(--player-avatar-border, var(--content-border));
+  flex: none;
+}
+.lv-headshot img { width: 100%; height: 100%; object-fit: cover; }
+
+/* DEF takes the same lockup as the roster and lineup pages: a bare, full-bleed
+   club logo — no circle, no team-colour chip. Inside the headshot chip it was
+   the only place on the site where a defence looked different. */
+.lv-headshot--def {
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+.lv-headshot--def img { object-fit: contain; }
+
+/**
+ * Two lines' worth of name, ALWAYS.
+ *
+ * This is what makes a one-line name and a two-line name produce the same
+ * first track, and so the same score offset. The text is centred inside the
+ * box so a one-line name sits level with the middle of its headshot rather
+ * than riding at the top of it.
+ *
+ * Full names, and they WRAP rather than clip: ellipsising inside a ~57px
+ * column turned "Jahmyr Gibbs" into "Jah…", which is not a name and not
+ * something an owner can read his lineup from.
+ */
+.lv-pname {
+  grid-area: name;
+  align-self: start;
+  min-height: var(--lv-name-h);
+  display: flex;
+  align-items: center;
+  font-size: 0.84rem;
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.2;
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+.lv-prow--right .lv-pname {
+  justify-content: flex-end;
+  text-align: right;
+}
+
+.lv-pmeta {
+  grid-area: meta;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.64rem;
+  color: var(--content-text-muted);
+}
+.lv-prow--right .lv-pmeta { justify-content: flex-end; }
+
+.lv-pclock { display: inline-flex; align-items: center; gap: 0.2rem; }
+.lv-pclock--live { color: var(--lv-live); }
+.lv-pclock--pre { color: var(--lv-pre); }
+
+.lv-rz {
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.04em;
+  color: var(--color-error);
+}
+
+.lv-pscore {
+  grid-area: score;
+  min-width: 2.2rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.lv-prow--right .lv-pscore { text-align: left; }
+
+.lv-plive {
+  font-weight: var(--font-weight-bold);
+  font-size: 0.88rem;
+  color: var(--page-text);
+}
+.lv-pscore--pre .lv-plive { color: var(--content-text-muted); }
+.lv-pscore--boom .lv-plive { color: var(--lv-boom); }
+
+.lv-pproj {
+  display: block;
+  font-size: 0.6rem;
+  color: var(--content-text-muted);
+}
+
+/**
+ * The box-score line clears the slot chip via GRID COLUMNS, and its indent is
+ * PADDING inside a 100% basis — never a margin, which would add to the basis
+ * and push the line past the row.
+ */
+.lv-pstat {
+  grid-area: stat;
+  grid-column: 2 / -1;
+  align-self: start;
+  margin-top: 0;
+  padding-left: 0;
+  font-size: 0.66rem;
+  color: var(--content-text-muted);
+}
+.lv-prow--right .lv-pstat {
+  grid-column: 1 / -2;
+  padding-right: 0;
+  text-align: right;
+}
+
+/* Two signals for one fact, deliberately: the chip names the red zone, and the
+   row tint is what an owner catches while scanning nine rows at arm's length —
+   the half that still reads at the phone's 0.6rem chip size. */
+.lv-prow--redzone {
+  background: color-mix(in srgb, var(--color-error) 7%, transparent);
+}
+
+/* ── the bench ───────────────────────────────────────────────────────────── */
+
+/**
+ * Stays TWO columns, matching the starter rows directly above it: an owner
+ * compares his bench against his lineup, and a stacked bench would put the two
+ * teams' benches in one scroll column with nothing but the caption to say
+ * which is which.
+ */
+.lv-bench { padding: 0 0 0.3rem; }
+
+.lv-bench__toggle {
+  display: block;
+  width: 100%;
+  padding: 0.4rem var(--lv-gutter);
+  border: 0;
+  background: none;
+  color: var(--content-text-muted);
+  font: inherit;
+  font-size: 0.7rem;
+  text-align: left;
+  cursor: pointer;
+}
+.lv-bench__toggle:hover { color: var(--page-text); }
+
+.lv-bench__caps {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.35rem;
+  padding: 0.2rem var(--lv-gutter) 0.1rem;
+}
+
+/* Owner direction, Aug 2026: the caption is the ONLY thing saying which bench
+   is whose, so it reads as a team header — display font at the players' own
+   size, not a small body-font label the names below it outweighed. */
+.lv-bench__cap {
+  font-family: var(--font-display);
+  font-size: 0.84rem;
+  font-weight: var(--font-weight-bold);
+  color: var(--content-text-muted);
+}
+.lv-bench__cap--right { text-align: right; }
+
+/* Same tracks and the same `stretch` as a starter row — a bench row renders
+   the identical player row, so anything it does differently is drift. */
+.lv-bench-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: auto auto 1fr;
+  gap: 0.35rem;
+  position: relative;
+  align-items: stretch;
+}
+.lv-bench-row > div { min-width: 0; }
+.lv-bench-row > div { display: contents; }
+
+.lv-bench-row::after {
+  content: "";
+  position: absolute;
+  left: var(--lv-gutter);
+  right: var(--lv-gutter);
+  bottom: 0;
+  border-top: 1px solid color-mix(in srgb, var(--content-border) 30%, transparent);
+}
+.lv-bench-row:last-child::after { content: none; }
+
+/* The bench is dimmed AS A GROUP: an unlabelled second run of rows under the
+   starters reads as more starters. */
+.lv-bench .lv-prow { opacity: 0.72; }
+
+.lv-bench__none {
+  padding: 0.3rem var(--lv-gutter);
+  font-size: 0.7rem;
+  color: var(--content-text-muted);
+}
+
+/* ── panels and the detail's win-prob row ────────────────────────────────── */
+
+.lv-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.lv-panel__name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--content-text-muted);
+}
+
+.lv-detail__wp { padding: 0 0.6rem; }
+
+.lv-foot {
+  display: flex;
+  justify-content: flex-end;
+  font-size: 0.7rem;
+  color: var(--content-text-muted);
+}
+
+.lv-dd { color: var(--content-text-muted); }
+
+/* ── the scoring-play ticker ─────────────────────────────────────────────── */
+
+.lv-moments {
+  padding: 1rem 1.2rem 1.3rem;
+  background: var(--content-bg-muted);
+  border-top: 1px solid var(--content-border);
+}
+.lv-moments h3 {
+  margin: 0 0 0.6rem;
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-weight: var(--font-weight-bold);
+  color: var(--content-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.lv-moment {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px dashed var(--content-border);
+}
+.lv-moment:last-child { border-bottom: 0; }
+
+.lv-moment__clock {
+  min-width: 4.6rem;
+  font-size: 0.7rem;
+  color: var(--content-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.lv-moment__nfl { width: 17px; height: 17px; object-fit: contain; }
+.lv-moment__txt { flex: 1; font-size: 0.86rem; color: var(--page-text); }
+
+.lv-moments__note {
+  margin: 0.3rem 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--content-text-muted);
+}
+/* "We couldn't read the feed" must not look like "nothing happened". */
+.lv-moments__note--error { color: var(--color-error); }
+
+/* ── the week selector ───────────────────────────────────────────────────── */
+
+.lv-weeksel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.lv-weeksel__lbl {
+  font-size: 0.66rem;
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--content-text-muted);
+}
+.lv-weeksel select {
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--page-text);
+  background: var(--card-surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  padding: 0.3rem 0.6rem;
+  cursor: pointer;
+}
+.lv-weeksel select:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* ── the feed-freshness pill ─────────────────────────────────────────────── */
+
+/* The tone is the FEED's state, not the game's: `live` (a real NFL game is
+   being played), `idle` (we are polling and nothing is in progress), `error`
+   (the last poll did not answer — the numbers on screen are the last we could
+   confirm) and `pending` (nothing has landed yet). Keeping error visually
+   distinct from idle is the same split the poll store keeps between `status`
+   and `data`: silence and failure must never look alike. */
+.lv-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+.lv-status--live { color: var(--lv-live); }
+.lv-status--idle,
+.lv-status--pending { color: var(--content-text-muted); }
+.lv-status--error { color: var(--color-error); }
+
+.lv-status__sub,
+.lv-status__age {
+  font-weight: var(--font-weight-normal);
+  color: var(--content-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The age ticks every second, so it is the element that proves the page is
+   still working. It gets an explicit separator rather than relying on the flex
+   gap, so the three clauses read as one sentence at any width. */
+.lv-status__sub::before,
+.lv-status__age::before {
+  content: "\00b7";
+  margin-right: 0.35rem;
+  color: var(--content-border);
+}
+
+.lv-dot--err { background: var(--color-error); }
+
+/* ── the live-state dot ──────────────────────────────────────────────────── */
+
+.lv-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  display: inline-block;
+  flex: none;
+}
+.lv-dot--live {
+  background: var(--lv-live);
+  animation: lv-pulse 1.8s infinite;
+}
+.lv-dot--final { background: var(--lv-final); }
+.lv-dot--pre {
+  background: transparent;
+  border: 1.5px solid var(--lv-pre);
+}
+
+@keyframes lv-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lv-dot--live { animation: none; }
+}
+
+/* Phone: the games clause is the first thing to go — the state word and the
+   ticking age are what carry the pill. */
+@media (max-width: 560px) {
+  .lv-status { font-size: 0.72rem; gap: 0.3rem; }
+  .lv-status__sub { display: none; }
+}
+
+/* Phone: the lead row is the same single column as the rest, so the floor
+   must not be the thing that decides. */
+@media (max-width: 560px) {
+  .lv-cards--lead { --lv-cards-lead-floor: 100%; }
+}
+
+/* ══ Phone: the detail card goes FULL BLEED ══
+   Three gutters stacked on each side before a player's name could start — the
+   layout's `main` inline padding, `.lv-page`'s own, and the card border —
+   roughly 30px a side, 16% of a 390px screen, spent on chrome the phone does
+   not need. The card still reads as a card because it has a surface and a
+   header, not because it is inset from an edge it cannot use.
+
+   Cancel the two gutters BY NAME, never with the `100vw` centring trick. That
+   trick needs no knowledge of the ancestors, which is why it is tempting — but
+   `100vw` resolves against the initial containing block, which INCLUDES a
+   classic space-consuming scrollbar, so it overflows by the scrollbar's width
+   on every desktop that has one. */
+@media (max-width: 760px) {
+  /*
+   * SCOPED TO `.lv-page`, and that is the whole rule.
+   *
+   * This cancels two gutters BY NAME — the layout's `main` inline padding and
+   * `.lv-page`'s own — so it is only correct under an ancestor that actually
+   * has those two. MFL Live (`/live`) renders the same board inside
+   * `MflAppLayout`, which has NO `.lv-page` wrapper and uses clamp-based
+   * gutters of its own; unscoped, this pulled the card left and right by two
+   * tokens that did not match, and both edges overflowed the screen — the team
+   * names and scores were clipped off either side on a phone.
+   *
+   * A negative margin that cancels a named gutter must name the ancestor it is
+   * cancelling for, or it lands on a surface with different ones.
+   */
+  .lv-page .lv-detail {
+    margin-inline: calc((var(--padding-sm) + var(--spacing-md)) * -1);
+    border-left: 0;
+    border-right: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  /* Cancels `.lv-page`'s own `padding-top: var(--spacing-lg)` — the SAME token
+     it is declared with, so the two cannot drift apart. Behind a rounded, inset
+     card that padding read as the margin around it; behind a full-bleed one only
+     its top edge survives, as a band of page background with nothing beside it
+     to explain what it is (plain in light mode, invisible in dark). It is also
+     24px of the lineup on a screen this view is trying to give back.
+
+     Gated on the Throwback preview bar's ABSENCE: `.ls-tb-preview` is a sibling
+     of the island inside `.lv-page` and carries a `margin-bottom` of this very
+     token, so during Throwback Week the pull-up would eat the gap under the bar
+     and sit the card flush against it. Written as `:not(:has(…))` so a browser
+     without `:has()` drops the rule and keeps the band — the harmless half of
+     the two outcomes. The bar keeps its own `.ls-` class because the component
+     is unchanged; renaming it here would silently un-gate this. */
+  .lv-page:not(:has(.ls-tb-preview)) .lv-detail {
+    margin-top: calc(var(--spacing-lg) * -1);
+  }
+
+  /* Stack each team vertically (name above the big score) so the three columns
+     stay narrow enough to fit a phone without overflowing. */
+  .lv-scorehead {
+    gap: 0.4rem;
+    padding: 0.55rem 0.6rem;
+    align-items: center;
+  }
+  .lv-scorehead__name { overflow-wrap: anywhere; }
+}

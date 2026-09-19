@@ -7,19 +7,20 @@
  * /api/live-scoring for the numbers that change during games and merges them
  * onto this static metadata by player id.
  *
- * League-agnostic: pass the league's id / MFL host / dataPath / config teams
- * from getLeagueContext() + the per-league config JSON, so the same helper
- * serves TheLeague and AFL.
+ * League-agnostic: pass the league's registry slug / id / MFL host / config
+ * teams from getLeagueContext() + the per-league config JSON, so the same
+ * helper serves every league.
  */
 
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { getPlayer } from './player-map';
 import { loadLiveScoringPayload } from './live-scoring-source';
+import { loadLeagueWeekProjections } from './live/projections';
+import type { CanonicalLeagueSlug } from '../config/leagues';
 import { resolveThrowbackIdentity, type ThrowbackPick } from './throwback-identity';
 import { DEFAULT_THROWBACK_SCOPE, type ThrowbackScope } from './throwback-scope';
 import type { FranchiseHistoryEntry } from './team-names';
-import type { LineupSlotRules } from './live-scoring-view';
 import type {
   LivePlayerRow,
   MatchupPairing,
@@ -131,8 +132,13 @@ export interface AssembleOpts {
   leagueId: string;
   /** Bare MFL host (e.g. www49.myfantasyleague.com). */
   host: string;
-  /** Repo-relative data dir, e.g. data/theleague. */
-  dataPath: string;
+  /**
+   * Canonical registry slug. Everything per-league is resolved FROM it —
+   * notably the projections read, which needs both of this league's clocks
+   * (its feed directory is keyed by the LEAGUE year, its live read by the
+   * SEASON year) and cannot get them from a bare data path.
+   */
+  slug: CanonicalLeagueSlug;
   configTeams: ConfigTeam[];
   userFranchiseId?: string;
 }
@@ -159,58 +165,6 @@ export function buildTeamsMap(configTeams: ConfigTeam[]): Record<string, TeamInf
   return map;
 }
 
-/**
- * Load the week's league projections as a Map<playerId, points>. The MFL
- * `projectedScores` feed is a single-week snapshot whose `playerScore` may be
- * an array, a lone object, or empty (offseason) — all handled here.
- */
-export function loadProjections(dataPath: string, year: number): Map<string, number> {
-  const proj = new Map<string, number>();
-  try {
-    const file = join(process.cwd(), dataPath, 'mfl-feeds', String(year), 'projectedScores.json');
-    const raw = JSON.parse(readFileSync(file, 'utf-8'));
-    const rows = raw?.projectedScores?.playerScore;
-    const list = Array.isArray(rows) ? rows : rows ? [rows] : [];
-    for (const r of list) {
-      if (r?.id) proj.set(String(r.id), Number(r.score) || 0);
-    }
-  } catch {
-    // Feed missing / offseason — no projections, model degrades to live-only.
-  }
-  return proj;
-}
-
-/**
- * The league's own starting requirements, read from its MFL `league.json`.
- *
- * Drives the slot labels on the board (see assignLineupSlots). MFL states them
- * as `{ name: 'RB', limit: '1-4' }` plus a total `count`, so the minimum of
- * each range is what must start and the leftover slots are flex. Falls back to
- * the shape both our leagues actually use if the feed is missing.
- */
-export function loadStarterRules(dataPath: string, year: number): LineupSlotRules {
-  const fallback: LineupSlotRules = {
-    required: { QB: 1, RB: 1, WR: 1, TE: 1, PK: 1, DEF: 1 },
-    total: 9,
-  };
-  try {
-    const file = join(process.cwd(), dataPath, 'mfl-feeds', String(year), 'league.json');
-    const starters = JSON.parse(readFileSync(file, 'utf-8'))?.league?.starters;
-    const rows = Array.isArray(starters?.position) ? starters.position : [];
-    if (rows.length === 0) return fallback;
-    const required: Record<string, number> = {};
-    for (const r of rows) {
-      const raw = String(r?.name ?? '');
-      const name = raw === 'Def' ? 'DEF' : raw.toUpperCase();
-      const min = Number(String(r?.limit ?? '').split('-')[0]) || 0;
-      if (name && min > 0) required[name] = min;
-    }
-    const total = Number(starters?.count) || fallback.total;
-    return Object.keys(required).length ? { required, total } : fallback;
-  } catch {
-    return fallback;
-  }
-}
 
 /** Resolve static identity + projection for every player id in the snapshot. */
 export function buildPlayerMeta(
@@ -261,7 +215,12 @@ async function fetchInitialSnapshot(opts: AssembleOpts) {
 /** Assemble the full page dataset. Best-effort: never throws to the page. */
 export async function assembleLiveScoringData(opts: AssembleOpts): Promise<LiveScoringData> {
   const teams = buildTeamsMap(opts.configTeams);
-  const projections = loadProjections(opts.dataPath, opts.year);
+
+  // Independent reads, so they overlap rather than queue. Projections may now
+  // reach MFL (when the committed feed is for another week), and this runs
+  // inside the page render — two sequential bounded fetches is a second of
+  // first paint for nothing.
+  const projectionsPromise = loadLeagueWeekProjections(opts.slug, opts.week, opts.year);
 
   let snapshot: any = {};
   let ok = false;
@@ -285,7 +244,7 @@ export async function assembleLiveScoringData(opts: AssembleOpts): Promise<LiveS
   for (const rows of [...Object.values(players), ...Object.values(bench)]) {
     for (const r of rows as LivePlayerRow[]) ids.add(r.id);
   }
-  const playerMeta = buildPlayerMeta(opts.year, ids, projections);
+  const playerMeta = buildPlayerMeta(opts.year, ids, await projectionsPromise);
 
   return {
     ok,

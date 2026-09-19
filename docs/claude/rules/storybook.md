@@ -266,6 +266,83 @@ args never constructed and every one of that component's stories rendered
 Symptom to recognize: a story that builds and appears in `index.json` but
 renders zero characters, while its siblings from another fixture are fine.
 
+## Trap 8 — a story over a REACT component needs two things, or it errors only in Chromatic
+
+Every story here rendered an `.astro` component until the shared live-scoring
+kit arrived. A story whose `component:` is a React `.tsx` needs BOTH of these,
+and neither is optional:
+
+1. **`parameters: { renderer: 'react' }` on the story.**
+   `@storybook-astro/renderer`'s `render()` short-circuits only on an
+   `isAstroComponentFactory` marker. A plain function component falls through
+   to the renderer named in parameters — and the framework's own preview sets
+   that to `'astro'` globally, which is never a key in the fallback registry.
+2. **`framework.options.integrations: [react()]` in `.storybook/main.ts`**,
+   imported from `@storybook-astro/framework/integrations`. The framework does
+   **NOT** read `astro.config.ts` for this. That option is the sole input to
+   `virtual:storybook-renderer-fallback`, the registry a non-Astro story
+   consults; ours was `options: {}`, so the registry was an empty module.
+
+**Why this is Chromatic-only.** The throw happens in the browser at render
+time. `storybook build` exits 0, the story is indexed, and the static output
+looks complete. Chromatic reports it as a component ERROR, not a diff — 18 of
+them on build 455, one per snapshot, which is how the arithmetic gives the
+story away (3 stories × 6 modes). The tell in the error text is the empty
+list: `Renderer 'astro' not found. Available renderers:` with nothing after
+the colon means the registry is empty, i.e. fault 2; a populated list means
+fault 1 alone.
+
+Guard: `tests/storybook-story-renderer.test.ts` checks both ends — every story
+over a non-`.astro` component names a renderer, and every renderer it names is
+registered in `main.ts` (and is one `astro.config.ts` actually runs). Fixing
+either half alone still fails, so it asserts both.
+
+**Modes widen; they never narrow.** Storybook DEEP-merges parameters, so a
+story-level `chromatic.modes` map is unioned with the component-level one
+rather than replacing it. Put the CHEAP map at component level and let
+individual stories opt UP. `Live/WinProbBar` originally did the reverse and
+`Mini`'s attempt to drop back to two modes silently still cost six.
+
+## Trap 9 — `chromatic.modes` and `chromatic.viewports` on one story kills the BUILD
+
+Not the story. The whole build, with zero snapshots taken:
+
+```
+✖ Failed to extract stories from your Storybook
+Error: Chromatic does not support viewports and modes on the same story.
+       in story 'live-matchupdetail--phone-width'
+ ELIFECYCLE  Command failed with exit code 23.
+```
+
+That was build 460, from one story declaring
+`chromatic: { modes: themeModes, viewports: [390] }`. Modes supersede the
+older `viewports` array and a mode may carry its own `viewport`, so the two
+are alternatives, not a pair.
+
+**The width goes INSIDE the mode**, which is what `phoneModes` in
+`.storybook/modes.ts` is for:
+
+```ts
+export const phoneModes = {
+  'Phone light': { theme: 'light', league: 'theleague', viewport: { width: 390, height: 1200 } },
+  'Phone dark':  { theme: 'dark',  league: 'theleague', viewport: { width: 390, height: 1200 } },
+} as const;
+```
+
+**Nothing local catches this**, which is why it is a guard and not a note.
+`storybook build` exits 0, the story indexes, it renders correctly in a
+browser, and driving all 102 stories through Chromium shows no error display —
+the same verification that DID catch Trap 8. The constraint belongs to
+Chromatic's story extractor, so only a Chromatic build says so, and it says so
+by failing everything.
+
+Guard: `tests/storybook-story-renderer.test.ts` scans each `chromatic: { … }`
+block for both keys. Proven to bite by putting the pair back.
+
+It is also expensive in a way a normal red build is not: a build that fails
+extraction takes no snapshots, so the push buys no visual signal at all and
+needs a full re-trigger (remove and re-add `visual-check`) once fixed.
+
 ## Trap 7 — a snapshot's network request can live in the CSS, not in the args
 
 **"Fixtures are offline" is checked at the wrong layer if you only check
@@ -527,13 +604,20 @@ work through on day one.
   degrades both TurboSnap and Chromatic's baseline detection without erroring.
 - An `externals` list in `chromatic.config.json` covering every untraceable
   visual input. **This one is the dangerous default — in BOTH directions.**
-  TurboSnap does not trace CSS and other externally-processed static assets
-  through the module graph, so without this flag a change to `tokens.css` or
-  `tokens-dark.css` can be treated as affecting NOTHING and skip the very
-  stories it broke. Given that this repo's most expensive recurring bug class
-  is exactly undefined/mismatched theme tokens, that failure mode would make
-  Chromatic quietly useless for the thing it was bought to catch. The flag
-  forces a full rebuild whenever any file under `src/styles/` changes.
+  Without it, a change to a visual input Chromatic cannot connect to a story
+  is treated as affecting NOTHING and skips the very stories it broke. Given
+  that this repo's most expensive recurring bug class is exactly
+  undefined/mismatched theme tokens, that failure mode would make Chromatic
+  quietly useless for the thing it was bought to catch. Any one match
+  disables TurboSnap for the whole build, so the list is derived rather than
+  hand-written — see § "TurboSnap: `--externals` was disabling it on EVERY
+  build".
+
+  **This bullet used to say "TurboSnap does not trace CSS ... through the
+  module graph". That is not true of this repo's builder** — see § "CSS IS in
+  the module graph" below. The conclusion (keep the stylesheets in
+  `externals`) survives; the reason is different, and reasoning from the old
+  one lands you somewhere wrong in both directions.
 
   `.storybook/static/**` is there for the same reason and is easy to miss: a
   `staticDirs` mount is a visual input that lives entirely OUTSIDE the module
@@ -727,6 +811,64 @@ in the other**, and gets both wrong if hand-edited:
 - too broad -> TurboSnap disabled, every story at full price (the old bug)
 - too narrow -> TurboSnap inherits a snapshot for a file it cannot trace, and
   the regression ships GREEN
+
+### CSS IS in the module graph — the reason `externals` is needed is different
+
+Measured 2026-09-18, because the bullet above used to assert the opposite and
+that assertion is load-bearing.
+
+```
+pnpm run build:storybook:stats
+# then read storybook-static/preview-stats.json
+total modules in stats: 156
+CSS modules present: 16      # every stylesheet preview.ts imports, live.css among them
+./src/styles/live.css <- imported by: ['./.storybook/preview.ts']
+```
+
+So under `@storybook/builder-vite` the stylesheets ARE traceable — the old
+claim was probably true of the webpack builder and was never re-checked here.
+`externals` is still right, for a reason that has nothing to do with tracing:
+
+**Every stylesheet's only importer is `.storybook/preview.ts`**, which is an
+ancestor of every story. Tracing one perfectly therefore reaches all 96
+stories anyway, and Chromatic independently forces a full rebuild when
+`preview.ts` changes. A stylesheet edit costs a full build by two separate
+routes; the `externals` entry is the one that reports itself in the log.
+
+The practical consequence, and the trap for anyone trying to optimise this:
+**dropping a stylesheet from `externals` saves nothing.** It changes the log
+line from `TurboSnap disabled due to matching --externals` to a full rebuild
+for a different reason, while removing the only guard that holds if the trace
+ever breaks.
+
+### Narrowing a stylesheet's blast radius — deliberately NOT done
+
+There IS a lever, recorded here so it is a decision rather than an oversight.
+Import the sheet **from the story file** instead of `preview.ts`, and it
+traces to one story file rather than all 96. For `live.css` that is ~102
+billed snapshots on a live-CSS push instead of 452.
+
+It is also *correct* for that sheet, not merely cheap — `live.css` is 148
+selector groups, every one `.lv`-anchored, both keyframes `lv-` prefixed,
+**zero `:root` blocks**, and its single `html.*` rule is `html.dark
+.lv-matchup` defining only `--t0`/`--t1`. It cannot change a non-Live story's
+pixels.
+
+Not done anyway, and these are the preconditions for revisiting it:
+
+- `externals` is GENERATED (`computeStoryStylesheets()` = every `.css`
+  reachable from a story *or* `preview.ts`), so moving the import does not
+  remove the entry. The generator would have to learn "traceable AND provably
+  scoped" as a third category, and `tests/chromatic-path-filter.test.ts` pins
+  it.
+- The failure mode is the worst one here: if the trace silently breaks (a
+  builder upgrade dropping CSS from stats), TurboSnap inherits, the CSS
+  regression ships green, and `--auto-accept-changes` on main blesses it as
+  the baseline. It would need its own guard asserting the sheet appears in
+  `preview-stats.json` with the STORY file as its importer.
+- The payoff only lands on a push touching that sheet and nothing else in
+  `externals` — a handful of pushes per CSS project. The 90% saving is already
+  banked by the `visual-check` label making every full build deliberate.
 
 ### The franchise crests are listed FILE BY FILE
 
