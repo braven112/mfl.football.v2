@@ -111,6 +111,17 @@ describe('the drawer is reachable, trappable and dismissable', () => {
     const trap = menu.slice(menu.indexOf('querySelectorAll(FOCUSABLE)'));
     expect(trap).toMatch(/getComputedStyle\(el\)\.visibility !== 'hidden'/);
   });
+
+  it('excludes roving tabindex="-1" controls from the trap', () => {
+    // The theme toggle is an ARIA radiogroup: two of its three buttons carry
+    // tabindex="-1" and are never tabbable. Counted, they make items[last] an
+    // element Tab skips, the wrap never fires, and focus leaves the drawer.
+    // A `button:not([disabled])` SELECTOR does not exclude them — the filter
+    // has to.
+    const trap = menu.slice(menu.indexOf('querySelectorAll(FOCUSABLE)'));
+    expect(trap).toMatch(/getAttribute\('tabindex'\) !== '-1'/);
+    expect(trap).toMatch(/!el\.disabled/);
+  });
 });
 
 describe('the panel stylesheet carries two fixes that look like style', () => {

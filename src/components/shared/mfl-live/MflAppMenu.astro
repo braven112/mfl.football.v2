@@ -180,7 +180,15 @@ const isCurrent = (href: string) => currentPath === href || currentPath === `${h
 			if (button.dataset.menuBound === '1') return;
 			button.dataset.menuBound = '1';
 
-			var FOCUSABLE = 'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])';
+			// `button` bare, with tabindex filtered in the predicate below rather
+			// than in the selector: `button:not([disabled])` matches a roving
+			// tabindex="-1" button too, and the theme toggle is a radiogroup built
+			// on exactly that pattern — two of its three buttons are never
+			// tabbable. Counting them makes `items[last]` an element Tab skips, so
+			// the wrap never fires and focus leaves the drawer. It survives today
+			// only because Sign out happens to sit after the toggle; reordering
+			// the footer would break the trap with nothing to show for it.
+			var FOCUSABLE = 'a[href], button, input, select, textarea, [tabindex]';
 			var lastFocused = null;
 
 			function isOpen() {
@@ -257,7 +265,9 @@ const isCurrent = (href: string) => currentPath === href || currentPath === `${h
 				var items = Array.prototype.filter.call(
 					panel.querySelectorAll(FOCUSABLE),
 					function (el) {
-						return el.getClientRects().length > 0 &&
+						return !el.disabled &&
+							el.getAttribute('tabindex') !== '-1' &&
+							el.getClientRects().length > 0 &&
 							window.getComputedStyle(el).visibility !== 'hidden';
 					}
 				);
