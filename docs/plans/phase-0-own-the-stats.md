@@ -219,6 +219,64 @@ contract, no change to how anything is scored today. Those are Phase 1+.
 
 ---
 
+## What Vercel provides (and what it does not)
+
+Checked Sept 2026 against the live project (`prj_Ab677jUnJXlKpHmVLaAYeJIbdG9E`,
+team "Brandon's projects"). Three of these change decisions above.
+
+### Use it
+
+- **Neon through the Vercel Marketplace** — `vercel install neon`. There is no
+  separate "Vercel Postgres" product any more; it folded into this integration,
+  so the marketplace route IS the Neon route and the pricing math in the
+  feasibility doc is unchanged. What it adds over signing up with Neon
+  directly: one invoice, and **connection env vars injected automatically into
+  production, preview and development**. That last part matters more here than
+  it looks — `CLAUDE.md` already documents that `.env`/`.env.local` are
+  untracked and **worktrees start without them**, which is a standing source of
+  local breakage. A marketplace-provisioned database does not have that failure
+  mode. Provision with `--plan free` first; the Phase 0 dataset outgrows it.
+- **Vercel Blob for raw provider snapshots.** Already in use here
+  (`@vercel/blob` 2.2.0, public store, `blobDomain` in the league config).
+  NFLverse CSVs are immutable, chunky and read rarely — a per-season snapshot
+  in Blob is a cheaper provenance archive than Postgres rows, and it makes
+  "re-score 2019 from exactly the bytes we ingested" possible. **Postgres holds
+  what you query; Blob holds what you keep.**
+- **A 4th Vercel cron for the Tuesday ingest** — *not* a GitHub `schedule:`.
+  `vercel.json` already carries three at `*/5`, which is only possible on Pro
+  (Hobby caps at 2/day), so there is headroom. This overrides work item #9's
+  default: `CLAUDE.md` § "GitHub's `schedule` is not a cadence" records that
+  GitHub **drops this repo's scheduled events in bulk** — a five-minute cron
+  delivered 5–8 runs a day, not 288 — which is exactly why the Vercel cron is
+  the only real trigger and bridges the three workflows. A weekly stat ingest
+  that silently does not fire is the worst possible failure for Phase 1's
+  evidence, so it goes where the trigger is reliable.
+
+### The Phase 2 payoff is a Vercel feature
+
+Reading league state from Neon at request time with ISR/revalidation, instead
+of baking it into the bundle, is what actually retires the
+sync-commit-is-a-production-build cycle — **91% of the Vercel bill**
+($22.36 of $24.70). The database is not an added cost so much as a swap of a
+build-CPU cost for a storage cost roughly an order of magnitude smaller.
+
+### Do not use it for
+
+- **The 28-season backfill.** It will not fit a serverless function's duration
+  budget. Run it from GitHub Actions or locally, writing to Neon directly.
+  Only the weekly incremental ingest belongs in a function.
+- **Edge Config** — real (sub-ms reads at the edge) but marginal here. A
+  current-week pointer or `rules_version` would fit; nothing in Phase 0 needs it.
+
+### Caveat
+
+Marketplace billing puts Neon on the Vercel invoice. Convenient, but it hides a
+new line item inside the one that is already 91% build CPU. Watch the split
+after Phase 2 lands, or the saving it is supposed to produce will be
+unmeasurable.
+
+---
+
 ## Risks
 
 | Risk | Severity | Mitigation |
