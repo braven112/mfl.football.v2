@@ -37,9 +37,9 @@
   {
     "slug": "mfl-live",
     "title": "MFL Live",
-    "summary": "Every team you own, in every MyFantasyLeague league, scoring on one page — including the leagues this site does not run.",
+    "summary": "Every team you own, in every MyFantasyLeague league, scoring on one page — then tap a league to see the whole thing: all its matchups, its standings, and the week's top scorers.",
     "icon": "scoreboard-2",
-    "updated": "2026-09-14",
+    "updated": "2026-09-20",
     "leagues": [
       "theleague",
       "afl"
@@ -57,6 +57,17 @@
           "<strong>Red zone.</strong> When one of your players' teams has the ball inside the twenty, it says so, and names who you have in the drive."
         ]
       },
+      {
+        "type": "list",
+        "heading": "Open the whole league",
+        "items": [
+          "<strong>Tap a league's name</strong> at the top of its panel. The board you have been reading shows your own matchup; this opens that league's full board — every matchup in it, not just yours.",
+          "<strong>Your game still leads.</strong> The rest follow closest-first, so the game worth watching is the one at the top. Your own matchup is the only one badged, because most of the cards are nobody's.",
+          "<strong>Scores or Standings.</strong> Two buttons under the week. Standings are MyFantasyLeague's own table, in MyFantasyLeague's own order — records there update when games go final, not with the live scores beside them, and the table says so.",
+          "<strong>Top teams and top performances.</strong> Under the scores: who is putting up the week's numbers across the whole league, and the individual games behind it. Bench players never appear — those are points nobody can score."
+        ]
+      },
+      "This works for the outside leagues too — the ones this site does not run. Their standings and scores come straight from MyFantasyLeague with your own sign-in, so a league nobody here has heard of gets the same full board as this one.",
       {
         "type": "list",
         "heading": "Crests and names",

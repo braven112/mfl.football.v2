@@ -449,7 +449,11 @@ describe('buildBoardFromSnapshot — the half the offseason sample reuses', () =
 
   const build = (over: Partial<Parameters<typeof buildBoardFromSnapshot>[0]> = {}) =>
     buildBoardFromSnapshot({
-      slug: 'theleague',
+      league: {
+        id: getLeagueBySlug('theleague')!.id,
+        name: getLeagueBySlug('theleague')!.name,
+        slug: 'theleague',
+      },
       week: WEEK,
       year: YEAR,
       ok: true,

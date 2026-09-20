@@ -28,6 +28,8 @@ import LvRedZoneBanner from './LvRedZoneBanner';
 import LvEmptyState from './LvEmptyState';
 import LvFeedStatus from './LvFeedStatus';
 import LvWeekPicker from './LvWeekPicker';
+import LvStandings from './LvStandings';
+import LvLeaders from './LvLeaders';
 import { orderPanelMatchups, pairingKey, selectMatchupMoments } from '../../../utils/live/model';
 import { buildLiveMoments } from '../../../utils/live/moments';
 import { useNflGameDetail } from '../../../hooks/useNflGameDetail';
@@ -93,6 +95,18 @@ export interface LiveBoardProps {
    * pill reports every enabled feed without the page having to assemble them.
    */
   extraFeeds?: FeedSnapshot[];
+  /**
+   * Base path a panel's league heading links to — the panel's MFL league id is
+   * appended. `/live` passes `/live/league/`, sending each league to its own
+   * full board.
+   *
+   * A STRING, not a callback, and not because a callback would be worse
+   * design: island props are JSON-serialized across the server/client
+   * boundary, so a function prop does not survive the trip at all. Omitted,
+   * the heading renders unlinked — which is what the single-league boards
+   * need, since a link there would point at the page you are already on.
+   */
+  panelHrefBase?: string;
   /** Hide the week selector. A story does; no production surface should. */
   hideWeekPicker?: boolean;
   /** Intercept the week change instead of navigating. For a story. */
@@ -146,6 +160,7 @@ export default function LiveBoard({
   pollShape = 'canonical',
   isLive = false,
   viewerFirst = false,
+  panelHrefBase,
   rail,
   preSeason = false,
   title = 'Live Scoring',
@@ -248,6 +263,37 @@ export default function LiveBoard({
   // A cross-league board names each league; a single-league board would just
   // repeat its own name over every card.
   const multiLeague = board.panels.length > 1;
+
+  /**
+   * Show the league heading — which is NOT the same question as `multiLeague`.
+   *
+   * The heading earns its place for a second reason once it is a LINK: it is
+   * the only way into that league's full board. Gated on `multiLeague` alone,
+   * an owner with exactly one league on MFL Live saw no heading and therefore
+   * had no route to the drill-down at all — the single-league case being one
+   * of the commonest, not an edge.
+   *
+   * It stays off where there is nothing to link to and one league to name,
+   * which is every league board: there the heading would repeat the page's own
+   * title over its only panel.
+   */
+  const showPanelName = multiLeague || Boolean(panelHrefBase);
+
+  /**
+   * Standings and top scorers belong to ONE league, so they ride on the single
+   * panel and are offered only when there is one.
+   *
+   * The tab is gated on `standings !== undefined` — "nobody asked" — rather
+   * than on truthiness. A failed read is `null` and still deserves the tab,
+   * which then says it could not read them; collapsing the two would hide the
+   * failure behind a missing control.
+   */
+  const soloPanel = board.panels.length === 1 ? board.panels[0] : null;
+  const hasStandings = soloPanel ? soloPanel.standings !== undefined : false;
+  const [tab, setTab] = useState<'scores' | 'standings'>('scores');
+  // Scores is the board's job; a poll that drops the standings must not strand
+  // the reader on a tab that no longer has anything behind it.
+  const activeTab = hasStandings && soloPanel ? tab : 'scores';
 
   /**
    * The NFL slate.
@@ -402,6 +448,33 @@ export default function LiveBoard({
       {rail}
       <LvRedZoneBanner alerts={board.redZone} showLeague={multiLeague} />
 
+      {/* Two toggle buttons rather than `role="tab"`. Real tab semantics owe
+          the reader a `tabpanel`, `aria-controls` and arrow-key roving, and a
+          half-implemented tablist announces a contract this does not keep —
+          `aria-pressed` states exactly what these are. Hidden while a matchup
+          is open: the detail screen replaces the board, and a Standings tab
+          there would leave the matchup with no way back. */}
+      {!open && hasStandings && (
+        <div className="lv-tabs" role="group" aria-label="Board view">
+          <button
+            type="button"
+            className={`lv-tabs__btn${activeTab === 'scores' ? ' lv-tabs__btn--on' : ''}`}
+            aria-pressed={activeTab === 'scores'}
+            onClick={() => setTab('scores')}
+          >
+            Scores
+          </button>
+          <button
+            type="button"
+            className={`lv-tabs__btn${activeTab === 'standings' ? ' lv-tabs__btn--on' : ''}`}
+            aria-pressed={activeTab === 'standings'}
+            onClick={() => setTab('standings')}
+          >
+            Standings
+          </button>
+        </div>
+      )}
+
       {open ? (
         <LvMatchupDetail
           matchup={open.matchup}
@@ -426,11 +499,29 @@ export default function LiveBoard({
           }
           onBack={() => setSelected(null)}
         />
+      ) : activeTab === 'standings' && soloPanel ? (
+        <LvStandings rows={soloPanel.standings ?? null} leagueName={soloPanel.leagueName} />
       ) : (
         <>
           {board.panels.map((panel) => (
             <section key={panel.leagueId} className="lv-panel">
-              {multiLeague && <h2 className="lv-panel__name">{panel.leagueName}</h2>}
+              {showPanelName && (
+                <h2 className="lv-panel__name">
+                  {panelHrefBase && panel.leagueId ? (
+                    // The heading IS the link — the whole line, so it is a
+                    // thumb target rather than a word.
+                    <a
+                      className="lv-panel__link"
+                      href={`${panelHrefBase}${encodeURIComponent(panel.leagueId)}`}
+                    >
+                      {panel.leagueName}
+                      <span className="lv-panel__chev" aria-hidden="true">→</span>
+                    </a>
+                  ) : (
+                    panel.leagueName
+                  )}
+                </h2>
+              )}
 
               {panel.status === 'ok' ? (
                 // Featured first, then the closest game. Ordered per PANEL, so
@@ -450,6 +541,12 @@ export default function LiveBoard({
               )}
             </section>
           ))}
+
+          {/* Under the cards, on the Scores tab. Derived from the same panel
+              those cards render, so it cannot disagree with them, and it
+              renders NOTHING for a week with no football rather than a strip
+              of zeros. */}
+          <LvLeaders leaders={soloPanel?.leaders} meta={board.playerMeta} />
         </>
       )}
     </div>

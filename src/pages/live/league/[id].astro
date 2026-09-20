@@ -1,0 +1,194 @@
+---
+/**
+ * MFL Live — one league's full board (`/live/league/<mflLeagueId>`).
+ *
+ * The drill-down from `/live`, where each panel shows only the viewer's own
+ * matchup. This shows every matchup in the league, the week's top scorers, and
+ * MFL's standings — for a league this site runs and for one it has never heard
+ * of alike, which is the whole point: the outside leagues are the ones with no
+ * full-league board anywhere else on this site.
+ *
+ * ── THE URL'S LEAGUE ID IS A CHECK, NEVER AN INPUT ────────────────────────
+ * It is looked up in the owner's OWN `discoverBoardLeagues` list and a miss is
+ * a 404. The assembly is about to send the owner's `MFL_USER_ID` to a host
+ * named in a `myleagues` payload, and the rule the rest of this app already
+ * follows — `/api/live-leagues`, `/api/cr`, the rankings scope — is that a
+ * league parameter may only ever narrow what the session can already see.
+ *
+ * ── THE BOARD IS ASSEMBLED IN PROCESS ─────────────────────────────────────
+ * `assembleMflLeagueBoard` is called here and NEVER through `/api/league-board`.
+ * A page that fetches its own API to render itself puts our own edge in the
+ * path of its first paint, and this repo has already shipped the outage that
+ * causes: on 2026-09-09 the live-scoring page printed "Scores will appear here
+ * when games begin" over a live slate, invisible in the logs, because a
+ * request blocked at the edge never reaches the route.
+ * `docs/claude/rules/live-scoring.md`.
+ */
+import MflAppLayout from '../../../layouts/MflAppLayout.astro';
+import LiveBoard from '../../../components/shared/live/LiveBoard';
+import { getAuthUser } from '../../../utils/auth';
+import { getCurrentNFLWeek } from '../../../utils/current-week';
+import { getDailySlot } from '../../../utils/hero-resolver';
+import { discoverBoardLeagues } from '../../../utils/cross-league-live';
+import { assembleMflLeagueBoard } from '../../../utils/live/mfl-league-board';
+import type { LiveBoard as Board } from '../../../types/live';
+import '../../../styles/live.css';
+
+// Scores must never be cached, and even the shell reads the session.
+export const prerender = false;
+
+const authUser = getAuthUser(Astro.request);
+const leagueId = (Astro.params.id ?? '').trim();
+
+const now = new Date();
+// The RAW resolver result, never clamped up to 1. MFL serves no live scoring
+// before the Week 1 Thursday, and clamping is what hides that gap — a week-1
+// request in the September pre-kickoff window fails against a perfectly
+// healthy league.
+const currentWeek = getCurrentNFLWeek(now);
+const weekParam = Number.parseInt(Astro.url.searchParams.get('week') ?? '', 10);
+const week = Number.isFinite(weekParam) && weekParam > 0 ? weekParam : currentWeek;
+
+// A game-day hint, and nothing more. It may RAISE the island's poll cadence
+// and may never decide whether it polls: the 2026 opener was a Wednesday night
+// game, and a board gated on a Thu/Sun/Mon schedule never asked MFL for a
+// score all game.
+const isLive = getDailySlot(now).slot === 'live-scoring';
+
+let board: Board | null = null;
+let leagueName = '';
+let assemblyFailed = false;
+let notYours = false;
+
+if (authUser && leagueId) {
+  try {
+    const leagues = await discoverBoardLeagues(authUser);
+    const league = leagues.find((l) => l.id === leagueId) ?? null;
+    if (!league) {
+      // A league this account is not in is NOT an error state on this page —
+      // it is a route that does not exist for this viewer. Rendering an empty
+      // board instead would confirm which league ids are real.
+      //
+      // A real 404 STATUS, not just 404 copy: the same idiom `[...path].astro`
+      // uses. A "not found" served as 200 is indexable, cacheable and lies to
+      // every client that reads the status rather than the prose.
+      notYours = true;
+      Astro.response.status = 404;
+    } else {
+      leagueName = league.name;
+      // Assembled only for a REAL week. `getCurrentNFLWeek` answers null until
+      // the Week 1 Thursday — MFL serves no live scoring before it — and that
+      // is its own rendered state below, not a board to build. Guarding here
+      // rather than inside the assembler is what `/live` already does, and it
+      // keeps the league lookup above (and so the 404) running either way.
+      if (week) {
+        ({ board } = await assembleMflLeagueBoard({ user: authUser, league, week }));
+      }
+    }
+  } catch {
+    // Say so, rather than rendering an empty board that reads as "no games".
+    assemblyFailed = true;
+  }
+}
+---
+
+{notYours ? (
+  <MflAppLayout title="Not found" description="This league isn’t on your MyFantasyLeague account.">
+    <section class="mfl-live-intro">
+      <h1 class="mfl-live-intro__title">We can’t find that league</h1>
+      <p class="mfl-live-intro__sub">
+        It isn’t one of the leagues your MyFantasyLeague account is in.
+      </p>
+      <a class="mfl-live-intro__cta" href="/live">Back to your board</a>
+    </section>
+  </MflAppLayout>
+) : (
+<MflAppLayout
+  title={leagueName ? `${leagueName} — live scoring` : 'League scoring — MFL Live'}
+  description="Every matchup in the league, scoring live, with standings and the week’s top scorers."
+>
+  <p class="lv-back">
+    <a href="/live">← All your teams</a>
+  </p>
+
+  {!authUser ? (
+    <section class="mfl-live-intro">
+      <h1 class="mfl-live-intro__title">Sign in to see this league</h1>
+      <p class="mfl-live-intro__sub">
+        Live scoring for every team in the league, from your own MyFantasyLeague account.
+      </p>
+      <a class="mfl-live-intro__cta" href="/login">Sign in with MyFantasyLeague</a>
+    </section>
+  ) : !week ? (
+    <section class="mfl-live-intro">
+      <h1 class="mfl-live-intro__title">The season hasn’t kicked off</h1>
+      <p class="mfl-live-intro__sub">
+        MFL doesn’t score a week until it starts. This board will fill itself in the moment
+        Week 1 does.
+      </p>
+    </section>
+  ) : assemblyFailed || !board ? (
+    <section class="mfl-live-intro">
+      <h1 class="mfl-live-intro__title">Couldn’t load this league</h1>
+      <p class="mfl-live-intro__sub">
+        Something went wrong reading MyFantasyLeague. Refreshing usually sorts it; if it
+        doesn’t, your MFL sign-in may have expired.
+      </p>
+      <a class="mfl-live-intro__cta" href="/login">Sign in again</a>
+    </section>
+  ) : (
+    <LiveBoard
+      client:load
+      board={board}
+      title={leagueName}
+      pollUrl={`/api/league-board?mfl=${encodeURIComponent(leagueId)}`}
+      isLive={isLive}
+      preSeason={!currentWeek}
+    />
+  )}
+</MflAppLayout>
+)}
+
+<style>
+  .lv-back {
+    margin: 0 0 0.75rem;
+    font-size: var(--font-size-sm);
+  }
+  .lv-back a {
+    color: var(--color-text-secondary);
+    text-decoration: none;
+  }
+  .lv-back a:hover,
+  .lv-back a:focus-visible {
+    color: var(--page-text);
+    text-decoration: underline;
+  }
+
+  .mfl-live-intro {
+    max-width: 46rem;
+    margin: 0 auto;
+  }
+  .mfl-live-intro__title {
+    margin: 0 0 0.5rem;
+    font-size: clamp(1.5rem, 5vw, 2.25rem);
+    line-height: 1.15;
+    color: var(--page-text);
+  }
+  .mfl-live-intro__sub {
+    margin: 0 0 1.5rem;
+    color: var(--color-text-secondary);
+  }
+  .mfl-live-intro__cta {
+    display: inline-block;
+    padding: 0.7rem 1.15rem;
+    border-radius: 0.5rem;
+    background: var(--league-accent);
+    color: #ffffff;
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .mfl-live-intro__cta:hover,
+  .mfl-live-intro__cta:focus-visible {
+    filter: brightness(1.08);
+  }
+</style>
