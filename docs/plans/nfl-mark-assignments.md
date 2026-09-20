@@ -136,33 +136,50 @@ It is a derivation, not the club's official reversed artwork, and will differ in
 small details from what a network airs. Fine for our surfaces; never describe it
 as the official mark.
 
-### It does NOT generalise — measured, not assumed
+### It does NOT generalise — measured, then reviewed
 
 A naive "largest painted area becomes white, darkest other tone becomes the
 keyline" was run against all 32 committed SVGs and rendered on a dark card
-(2026-09-20). Results:
+(2026-09-20). Two numbers that disagree, which is the point:
 
 - **31 of 32 pass the structural test** (no gradients, no embedded raster, two or
   more meaningful tones). CHI is the sole structural failure: one fill, 69% of
   the mark — a true silhouette with nothing to swap against.
-- **Only about a third of those render acceptably.** Good: ARI, ATL, BUF, CIN,
-  CLE, DET, HOU, LV, TB, WSH. The rest come back either unchanged (SEA, SF, NO,
-  NE, JAX, NYG, NYJ) or destroyed — GB and TEN reduce to a blank white oval and
-  a blank circle, because the swap ate the only tone carrying the mark.
+- **Only about a third render acceptably.** Seven come back visually unchanged
+  (SEA, SF, NO, NE, JAX, NYG, NYJ), and GB and TEN are destroyed outright,
+  reduced to a blank white oval and a blank circle because the swap ate the only
+  tone carrying the mark.
 
-The lesson is the one this repo keeps relearning: **the structural test narrows
-candidates, a rendered before/after decides.** Same discipline as
-`KEEP_COMMITTED` and the drift gate in `download-nfl-logos.mjs`.
+The structural test narrows candidates; a rendered before/after decides. Same
+discipline as `KEEP_COMMITTED` and the drift gate in `download-nfl-logos.mjs`.
 
-So `reversed` is a **curated per-club map**, never an automatic transform:
+### The reversals we are keeping
 
-```json
-{ "ARI": { "body": "#97233f", "keyline": "#000000", "accent": "#ffb612",
-           "to": { "body": "#ffffff", "keyline": "#97233f", "accent": "#e2571b" } } }
-```
+Reviewed on a dark render and on club colour, 2026-09-20. **Three**, not the ten
+the mechanical pass nominated:
 
-A club with no entry has no reversed mark, and an assignment naming `reversed`
-for such a club must fail the build rather than fall back silently.
+| Club | from | to | note |
+|---|---|---|---|
+| ARI | body `#97233f`, keyline `#000000`, beak `#ffb612` | `#ffffff`, `#97233f`, `#e2571b` | matches the broadcast cut |
+| DET | body `#0076b6`, keyline `#b0b7bc` | `#ffffff`, `#0076b6` | a clean white lion |
+| WSH | body `#5a1414`, keyline `#ffb612` | `#ffb612`, `#5a1414` | **gold, not white** |
+
+ATL, BUF, CLE, HOU, LV and TB rendered acceptably and were **declined on
+review** — recorded here so nobody re-derives them and assumes the omission was
+an oversight.
+
+Arizona's keyline is the club primary `#97233f`, not a brighter red. Sampling the
+outline in the broadcast photograph returned `#882830` as its cleanest red, which
+sits in the club-primary family rather than near a true red like `#c8102e` — and
+a photograph of a television carries enough colour cast that it is corroboration,
+not a match. A brighter red was rendered alongside and looked good; club red
+was chosen on review (2026-09-20), and it is one value in the map.
+
+**The reversal target is not always white.** Washington's W goes to *gold* with a
+burgundy keyline — a straight swap of the club's two colours. Treating "reversed"
+as a synonym for "knocked out to white" would have produced a white W nobody
+asked for. The rule is: the body takes the club's other colour, whichever reads
+on a dark ground.
 
 ### Where a reversed mark is NOT the answer
 
@@ -331,6 +348,6 @@ never be needed.
    keyline — the right asset for a single-colour silhouette on a dark or
    club-colour ground, where `reversed` cannot help. Not assigned to anyone yet;
    worth a pass over the 32 bands once phase 1 lands.
-3. **Arizona's keyline red.** The derivation currently uses the club primary
-   `#97233f`. A ladder up to `#d9202c` was rendered on both grounds; picking the
-   exact value is a design call still open, and it only affects the `to` map.
+3. **Whether three is the final list.** ARI, DET and WSH are decided. Six more
+   rendered acceptably and were declined; if a surface later wants one, the map
+   is the only edit.
