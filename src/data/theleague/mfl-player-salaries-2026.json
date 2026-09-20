@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-09-19T22:01:31.333Z"
+    "fetchedAt": "2026-09-20T01:01:35.496Z"
   },
   "players": [
     {
@@ -2283,7 +2283,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 2,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "TE"
         ],
@@ -2311,12 +2311,7 @@
         ]
       },
       "gamesPlayed": 1,
-      "depthChartAhead": [
-        {
-          "id": "13192",
-          "name": "Njoku, David"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "16152",
@@ -8301,8 +8296,8 @@
         "status": "Active",
         "active": true,
         "position": "K",
-        "depthChartPosition": null,
-        "depthChartOrder": null,
+        "depthChartPosition": "K",
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "K"
         ],
@@ -13232,12 +13227,12 @@
       "gamesPlayed": 1,
       "depthChartAhead": [
         {
-          "id": "13192",
-          "name": "Njoku, David"
-        },
-        {
           "id": "17099",
           "name": "Gadsden, Oronde"
+        },
+        {
+          "id": "13192",
+          "name": "Njoku, David"
         }
       ]
     },
@@ -16196,7 +16191,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 6,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "WR"
         ],
@@ -16211,10 +16206,6 @@
         {
           "id": "15293",
           "name": "Bateman, Rashod"
-        },
-        {
-          "id": "16190",
-          "name": "Flowers, Zay"
         }
       ]
     },
@@ -18061,12 +18052,12 @@
           "name": "Bateman, Rashod"
         },
         {
-          "id": "16190",
-          "name": "Flowers, Zay"
-        },
-        {
           "id": "17505",
           "name": "Sarratt, Elijah"
+        },
+        {
+          "id": "16190",
+          "name": "Flowers, Zay"
         }
       ]
     },
@@ -21004,7 +20995,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 2,
+        "depthChartOrder": 6,
         "fantasyPositions": [
           "WR"
         ],
@@ -21036,6 +21027,10 @@
         {
           "id": "15293",
           "name": "Bateman, Rashod"
+        },
+        {
+          "id": "17505",
+          "name": "Sarratt, Elijah"
         }
       ]
     },
@@ -23704,7 +23699,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 1,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "TE"
         ],
@@ -23732,7 +23727,12 @@
         ]
       },
       "gamesPlayed": 1,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "17099",
+          "name": "Gadsden, Oronde"
+        }
+      ]
     },
     {
       "id": "15252",
