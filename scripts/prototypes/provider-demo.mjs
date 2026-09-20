@@ -33,8 +33,12 @@ async function dump(provider, leagueId, week) {
   console.log(`  teams       ${teams.length}   e.g. ${teams[0]?.teamId} "${teams[0]?.name}" (${teams[0]?.ownerName})`);
   const totalPlayers = rosters.reduce((n, r) => n + r.playerIds.length, 0);
   const unmatched = rosters.flatMap((r) => r.unmatched);
-  console.log(`  rosters     ${rosters.length} teams, ${totalPlayers} players resolved to canonical ids`);
-  console.log(`  unmatched   ${unmatched.length}${unmatched.length ? `  ${unmatched.slice(0, 8).join(', ')}` : ''}`);
+  const canonical = totalPlayers - unmatched.length;
+  console.log(`  rosters     ${rosters.length} teams, ${totalPlayers} players (none dropped)`);
+  console.log(`  canonical   ${canonical}`
+    + `  (${((100 * canonical) / (totalPlayers || 1)).toFixed(1)}%) — joinable to contracts/scores`);
+  console.log(`  scoped      ${unmatched.length}`
+    + `  kept as provider-scoped ids; display-only until the crosswalk catches up`);
   const m = matchups[0];
   const eg = m ? `   e.g. ${m.sides.map((s) => `${s.teamId}:${s.points ?? '—'}`).join(' vs ')}` : '';
   console.log(`  matchups wk${week}  ${matchups.length}${eg}`);

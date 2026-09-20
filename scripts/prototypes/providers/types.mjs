@@ -66,7 +66,12 @@
  * @property {string} teamId
  * @property {string[]} playerIds   canonical ids
  * @property {string[]} starterIds  canonical ids, in lineup order
- * @property {string[]} unmatched   provider ids the crosswalk could not resolve
+ * @property {string[]} unmatched   provider ids the crosswalk could not resolve.
+ *   These are NOT dropped — they appear in `playerIds` as `sleeper:1234`, a
+ *   provider-scoped id that cannot be mistaken for a canonical one. This array
+ *   exists so the gap is monitorable: it should be near zero in a real league,
+ *   and a spike means the crosswalk has gone stale (it is a community dataset
+ *   and lags every rookie class).
  */
 
 /**

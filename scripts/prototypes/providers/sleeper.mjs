@@ -51,7 +51,31 @@ const isRealPlayer = (id) => id && id !== '0';
  */
 const isTeamDefense = (id) => typeof id === 'string' && /^[A-Z]{2,3}$/.test(id);
 
-const resolve = (id) => (isTeamDefense(id) ? `DEF:${id}` : toCanonical('sleeper', id));
+/**
+ * Resolve to a canonical id, or fall back to a PROVIDER-SCOPED id.
+ *
+ * Dropping an unresolved player is worse than keeping him. Measured on a real
+ * 16-team Sleeper league: 33 of 321 rostered players are absent from the
+ * community crosswalk, so a drop silently loses 10% of every roster — and the
+ * page would render a 12-man roster as 11 with no error anywhere.
+ *
+ * Most of those 33 are camp bodies an autodraft scraped up (`team: 'FA'`,
+ * `search_rank: 9999999`). But FIVE were real: Trey Smack (K, GB, rank 194),
+ * Peter LeBlanc (294), Jalen Jackson (363). DynastyProcess is a community
+ * dataset with a refresh lag, so every rookie season will produce a fresh
+ * batch of these.
+ *
+ * The scoped form `sleeper:1234` is deliberately UNMISTAKABLE for a canonical
+ * id — it cannot be compared against, or joined to, an MFL-keyed thing by
+ * accident, which is the failure mode docs/claude/rules/live-scoring.md
+ * exists to prevent. Such a player still renders correctly from the
+ * provider's own name/team/position; he just cannot carry a contract, a
+ * ranking, or one of our scores until the crosswalk catches up.
+ */
+const resolve = (id) => {
+  if (isTeamDefense(id)) return `DEF:${id}`;
+  return toCanonical('sleeper', id) ?? `sleeper:${id}`;
+};
 
 /** @type {import('./types.mjs').LeagueProvider} */
 export const sleeperProvider = {
@@ -97,9 +121,10 @@ export const sleeperProvider = {
       const unmatched = [];
       const map = (ids) => (ids ?? []).filter(isRealPlayer).map((id) => {
         const c = resolve(id);
-        if (!c) { unmatched.push(String(id)); return null; }
+        // Still reported, so the gap is MEASURABLE — but the player is kept.
+        if (c.startsWith('sleeper:')) unmatched.push(String(id));
         return c;
-      }).filter(Boolean);
+      });
       return {
         teamId: String(r.roster_id),
         playerIds: map(r.players),
