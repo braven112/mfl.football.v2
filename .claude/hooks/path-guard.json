@@ -327,6 +327,7 @@
         "package.json",
         "vercel.json",
         "src/pages/api/cron/*.ts",
+        "src/utils/workflow-dispatch.ts",
         "src/utils/sync-cadence.ts",
         "scripts/check-sync-freshness.mjs"
       ],
@@ -340,7 +341,9 @@
         "tests/workflow-push-triggers-ci.test.ts",
         "tests/vercel-cron-targets.test.ts",
         "tests/sync-cadence.test.ts",
-        "tests/block-comment-terminators.test.ts"
+        "tests/block-comment-terminators.test.ts",
+        "tests/cron-commit-churn.test.ts",
+        "tests/workflow-dispatch.test.ts"
       ]
     },
     {
@@ -743,7 +746,8 @@
         "tests/reminder-fallback.test.ts",
         "tests/reminder-push-first.test.ts",
         "tests/roger-afl-mapping.test.ts",
-        "tests/roger-reminder-window.test.ts"
+        "tests/roger-reminder-window.test.ts",
+        "tests/cron-commit-churn.test.ts"
       ]
     },
     {
@@ -815,7 +819,8 @@
         "tests/schefter-offer-beats.test.ts",
         "tests/speculation-seeds.test.ts",
         "tests/schefter-once-per-season-dedupe.test.ts",
-        "tests/merge-schefter-feed.test.ts"
+        "tests/merge-schefter-feed.test.ts",
+        "tests/cron-commit-churn.test.ts"
       ]
     },
     {
@@ -912,7 +917,8 @@
         "tests/milestone-emission-lane.test.ts",
         "tests/derived-chain-lane.test.ts",
         "tests/weekly-player-results-schedule.test.ts",
-        "tests/weekly-player-results-full-pool.test.ts"
+        "tests/weekly-player-results-full-pool.test.ts",
+        "tests/cron-commit-churn.test.ts"
       ]
     },
     {

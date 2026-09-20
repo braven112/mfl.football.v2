@@ -61,6 +61,16 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import { walkFiles, REPO_ROOT } from './helpers/scan-guard';
+// One implementation of "does this step push?", shared with
+// tests/vercel-cron-targets.test.ts — see that helper's header for why a second
+// copy was the wrong answer. The self-tests below still exercise it here.
+import {
+  stepPushes,
+  commandText,
+  PUSH_HELPER,
+  COMMIT_PUSH_ACTION,
+  type WorkflowStep as Step,
+} from './helpers/workflow-push';
 
 const WORKFLOWS = path.join(REPO_ROOT, '.github/workflows');
 
@@ -78,33 +88,7 @@ const DEPLOY_KEY_VALUE = /\$\{\{\s*secrets\.DEPLOY_KEY\s*\}\}/;
 // The same expression as it appears in raw workflow TEXT, for the file-level
 // assertions further down.
 const DEPLOY_KEY_TEXT = /ssh-key:\s*\$\{\{\s*secrets\.DEPLOY_KEY\s*\}\}/;
-const PUSH_HELPER = 'commit-feed-and-push';
-const COMMIT_PUSH_ACTION = './.github/actions/commit-push';
-
-type Step = { uses?: unknown; run?: unknown; with?: Record<string, unknown> };
 type PushingJob = { file: string; job: string; hasKey: boolean };
-
-/** Strip comments and the text an `echo` prints, keeping the rest of the line. */
-function commandText(run: string): string {
-  return run
-    .split('\n')
-    .map((line) => line.replace(/#.*$/, ''))
-    // Remove the echo and its argument up to a command separator, so
-    // `echo "run: git push" && git push origin main` keeps the real push and
-    // drops the quoted one.
-    .map((line) => line.replace(/\becho\b\s+(?:"[^"]*"|'[^']*'|[^;&|\n]*)/g, ''))
-    .join('\n');
-}
-
-function stepPushes(step: Step): boolean {
-  const uses = typeof step?.uses === 'string' ? step.uses.trim() : '';
-  if (uses === COMMIT_PUSH_ACTION) return true;
-  const run = typeof step?.run === 'string' ? step.run : '';
-  if (!run) return false;
-  const cmd = commandText(run);
-  if (cmd.includes(PUSH_HELPER)) return true;
-  return /(^|[;&|(]|\s)git\s+(?:-C\s+\S+\s+)?push\b/.test(cmd);
-}
 
 function stepIsCheckoutWithKey(step: Step): boolean {
   const uses = typeof step?.uses === 'string' ? step.uses : '';

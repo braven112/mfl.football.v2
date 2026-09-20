@@ -1,6 +1,6 @@
 ---
 slug: vercel-cron-roster-sync
-status: open
+status: closed
 severity: P1
 opened: 2026-09-17
 hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1146
@@ -56,7 +56,13 @@ whole chain — Vercel cron → `CRON_SECRET` gate → `GH_PAT` → dispatch —
 
 ## Deferred items
 
-- [ ] **F1 — The 15-minute cadence has no spend ceiling**
+- [x] **F1 — The 15-minute cadence has no spend ceiling** — done in #1155
+      (`92d41d9`). Not the way this item assumed: a night of real data showed
+      the flat cadence committing on ~every dispatch (43 commits from 42), so
+      "well under 96" was wrong. The cadence is tiered in
+      `src/utils/sync-cadence.ts` instead — 5 min for two hours after a waiver
+      run, 15 during a game, 60 otherwise. Measured against the real feeds:
+      35 dispatches/day in season, 24 in the offseason.
   - Source: Claude review, `/code-review` on PR #1146
   - Where: `vercel.json:5`
   - Why deferred: a spend judgement, not a defect, and a one-character dial.
@@ -73,7 +79,26 @@ whole chain — Vercel cron → `CRON_SECRET` gate → `GH_PAT` → dispatch —
     possible: Vercel accepts multiple `crons` entries on the same path, so
     tight during game windows and loose otherwise is expressible.
 
-- [ ] **F2 — `schefter-scan` and `groupme-sync` are still on the dropped schedule**
+- [x] **F2 — `schefter-scan` and `groupme-sync` are still on the dropped schedule**
+      — done. Both now ride the bridge: `/api/cron/schefter-scan` on the same
+      tiers as the roster sync (it commits, so every dispatch is a build), and
+      `/api/cron/groupme-sync` on every tick (it commits nothing, so there is
+      no spend to ration). Both workflows lost their `schedule:`; `schefter-scan`
+      also moved to `cancel-in-progress: false`, because it posts to GroupMe and
+      pushes to devices BEFORE committing the watermark that records it, so a
+      cancel in between re-sends rather than merely losing a run. One correction
+      to the note below: **`groupme-sync` does not carry the deadline reminders**
+      — `scanEventReminders` lives in `scripts/schefter-scan.mjs`, so the
+      owner-facing urgency belongs to the scan. `groupme-sync` only mirrors the
+      chat into Redis.
+      
+      A second defect surfaced while measuring it: `schefter-scan` committed on
+      EVERY run, because `resolved-events.json` (`computedAt`) and
+      `groupme-suppressions.json` (`generatedAt`) were rewritten with a plain
+      write each time. Both go through `writeJsonIfChanged` now, so a scan that
+      found nothing leaves the tree byte-identical. Guard:
+      `tests/cron-commit-churn.test.ts`. Without it, tiering the scan would have
+      rationed a cost the job paid on every tick anyway.
   - Source: deferred at implementation
   - Where: `.github/workflows/schefter-scan.yml:5` (`*/15`),
     `.github/workflows/groupme-sync.yml:5` (`*/5`)
@@ -90,7 +115,10 @@ whole chain — Vercel cron → `CRON_SECRET` gate → `GH_PAT` → dispatch —
     already generalises over the `crons` array — add the route to
     `SCHEDULED_BRIDGES` and the orphan check covers it for free.
 
-- [ ] **F3 — The "no cron step inside a block comment" rule has no guard test**
+- [x] **F3 — The "no cron step inside a block comment" rule has no guard test**
+      — done in #1155: `tests/block-comment-terminators.test.ts`. It earned its
+      place immediately; the trap bit three times in one session, twice in files
+      about cron cadence and once in the file documenting the rule.
   - Source: deferred at implementation
   - Where: `docs/claude/rules/storage-and-build.md` (the bullet added by this
     hotfix), `src/pages/api/cron/roster-sync.ts:8`

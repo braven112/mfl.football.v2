@@ -854,3 +854,60 @@ and `compute:top-players:afl` in `scripts/prebuild.mjs`,
 `.github/workflows/roster-sync.yml` (no recompute step),
 `tests/top-players-data.test.ts`, and PR #1165's comment
 `issuecomment-5736448643`.
+## 2026-09-18 - A `generatedAt`-Only Diff Still COMMITS, And A 1:1 Run-To-Commit Ratio Is Not Evidence That Every Run Had News
+
+**Context:** Bridging `schefter-scan.yml` and `groupme-sync.yml` onto the Vercel
+cron, after the roster sync proved the pattern (#1146, #1155). The scan's
+cadence had to be tiered because it commits, and tiering it meant measuring what
+a dispatch actually costs.
+
+**Insight:** The 2026-09-06 entry above establishes that a step whose only diff
+is `generatedAt` is deterministic and therefore *skippable* on preview. The
+other half of that fact is the expensive one: in a workflow that commits, a
+`generatedAt`-only diff is still a **commit to `main`**, and every commit to
+`main` is a production build — 91% of the Vercel bill. Determinism does not make
+the write free; it makes it worthless *and* billed.
+
+`schefter-scan.yml` committed on every single run for exactly this reason. Of
+the six files it commits, two are rewritten from scratch each time and carry a
+top-level run clock: `resolved-events.json` (`computedAt`, written by the
+workflow's own first step) and `groupme-suppressions.json` (`generatedAt`, an
+empty list on almost every run). A scan that found no transactions, wrote no
+post and sent nothing still produced a two-line diff and a deploy.
+
+**Why it survived months of review:** the measurement that should have caught it
+reads as healthy. Over three weeks `origin/main` carried 5–8 schefter commits a
+day, against 5–8 delivered runs a day — and 1:1 looks like *"every run had
+news"*, not *"every run commits regardless"*. The ratio was only meaningless
+because the scheduler was dropping ~90% of the runs (the 2026-08-27 cliff). A
+commits-per-run ratio is only evidence when measured against a cadence that is
+actually being delivered; under a dropped scheduler it is unfalsifiable.
+
+**The fix is the repo's existing one**, which makes the omission worse rather
+than better: `writeJsonIfChanged` with the run clock in `ignoreKeys`. It has
+existed since the Aug 2026 storage work and its own docblock says an unchanged
+payload "produces no commit". The two writers simply never adopted it.
+
+**Corollary — whether a cron bridge needs a cadence tier is decided by whether
+its workflow COMMITS, not by how urgent it feels.** `groupme-sync.yml` reads
+GroupMe and writes Redis; it commits nothing, so a dispatch costs one Actions
+run and one function invocation and no build. There is nothing to ration, so it
+dispatches on every tick while the two committing bridges share
+`sync-cadence.ts`. `tests/vercel-cron-targets.test.ts` now derives that rule
+mechanically: it reads each route's `dispatchWorkflow('<file>.yml')` call, looks
+for `commit-feed-and-push.mjs` or the `commit-push` action in that workflow, and
+requires the route to read `sync-cadence.ts` if it finds one.
+
+**Also worth knowing:** the follow-up brief and issue both stated that
+`groupme-sync` "carries Roger's deadline reminders". It does not —
+`scanEventReminders` lives in `scripts/schefter-scan.mjs`, and `groupme-sync.ts`
+only mirrors the chat into Redis. That inverted which of the two bridges was the
+owner-facing one. Check a brief's attribution against the code before sizing the
+work off it; a hand-off written at the end of a long session is exactly where
+this kind of slip lands.
+
+**Recommendation:** Before tiering a cron's cadence to save builds, first prove
+the job does not commit when it finds nothing — otherwise the tier rations a
+cost the job pays on every tick anyway. `git show --stat` over a few of its
+commits is enough: a recurring two-line diff in a file nobody reads is the
+signature. Guard: `tests/cron-commit-churn.test.ts`.

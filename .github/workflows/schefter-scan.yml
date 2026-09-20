@@ -1,13 +1,33 @@
 name: Schefter Scan
 
 on:
-  schedule:
-    - cron: "*/15 * * * *"
+  # NO `schedule:`, deliberately — same story as roster-sync.yml. The only
+  # scheduled trigger is the Vercel cron in vercel.json, which fires
+  # api/cron/schefter-scan and lets src/utils/sync-cadence.ts decide which
+  # ticks become dispatches.
+  #
+  # GitHub stopped honouring this repo's schedules on 2026-08-27 and it is not
+  # a delay you can wait out. This job's quarter-hourly schedule was delivered
+  # 5-8 times a day — measured at 01:10, 22:52, 19:59, 16:58, 12:07, 06:36.
+  # Two things here do not tolerate a five-hour gap: Roger's deadline
+  # reminders, which are push-first and fire on the first tick after 07:00 PT,
+  # and the Schefter feed itself, which is build-baked with no live overlay to
+  # hide a missed run behind.
+  #
+  # Do not add a fallback schedule back. It cannot be offset clear of the
+  # primary (GitHub delivers whenever it likes), and this job PUSHES.
   workflow_dispatch:
 
 concurrency:
   group: schefter-scan
-  cancel-in-progress: true
+  # QUEUE, never cancel. This job posts to GroupMe, sends push to real devices
+  # and only THEN commits the feed that records what it sent. A cancel between
+  # those two points cannot un-send anything — it just loses the watermark, so
+  # the next run says it all again. Same lesson roster-sync.yml learned on
+  # 2026-09-17, where a cancel landed after the push. At most one run queues
+  # behind one running (GitHub keeps a single pending run per group), so this
+  # cannot build a backlog.
+  cancel-in-progress: false
 
 permissions:
   contents: write

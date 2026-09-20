@@ -41,7 +41,9 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { parse as parseYaml } from 'yaml';
 import { TICK_MINUTES, TIER_INTERVAL_MINUTES } from '../src/utils/sync-cadence';
+import { workflowPushes } from './helpers/workflow-push';
 
 const root = resolve(__dirname, '..');
 const read = (p: string) => readFileSync(resolve(root, p), 'utf8');
@@ -62,7 +64,11 @@ const crons = vercelConfig.crons ?? [];
  * directory and the CRON_SECRET gate, but it is a POST transport called by the
  * Actions scripts themselves (scripts/lib/push-fanout.mjs), never scheduled.
  */
-const SCHEDULED_BRIDGES = ['src/pages/api/cron/roster-sync.ts'];
+const SCHEDULED_BRIDGES = [
+  'src/pages/api/cron/roster-sync.ts',
+  'src/pages/api/cron/schefter-scan.ts',
+  'src/pages/api/cron/groupme-sync.ts',
+];
 
 /**
  * Strip comments before scanning for CODE shapes.
@@ -197,40 +203,144 @@ describe('vercel.json crons ↔ API routes', () => {
   });
 });
 
-describe('roster-sync.yml has no schedule of its own', () => {
-  const workflow = read('.github/workflows/roster-sync.yml');
+/**
+ * `dispatchWorkflow('roster-sync.yml')` → `roster-sync.yml`.
+ *
+ * Read out of the route rather than listed here so the pairing cannot drift:
+ * a bridge pointed at a renamed workflow answers 404 from GitHub on a schedule
+ * nobody reads, which is the same silent failure as a dangling cron.
+ */
+function dispatchedWorkflowFor(routeFile: string): string | null {
+  const m = /dispatchWorkflow\(\s*['"]([\w.-]+\.yml)['"]/.exec(codeOnly(read(routeFile)));
+  return m ? m[1] : null;
+}
 
-  it('carries NO `schedule:` trigger at all', () => {
-    // A fallback schedule was tried for one night and removed. It cannot be
-    // offset out of the primary's way, because the premise of this whole
-    // mechanism is that GitHub delivers whenever it likes: the `7,37` chosen to
-    // interleave with the Vercel cron was delivered at :16 and collided anyway.
-    // On 2026-09-17T15:16Z it cancelled a dispatch that had already pushed and
-    // then failed its own rebase against six single-line feed JSONs git cannot
-    // merge — one sync lost, for a trigger giving two unpredictable runs a day
-    // and no freshness the primary did not already provide.
-    const cronLines = [...workflow.matchAll(/^\s*-\s*cron:\s*["']([^"']+)["']/gm)].map(
-      (m) => m[1],
-    );
-    expect(
-      cronLines,
-      'roster-sync.yml has a `schedule:` again. The Vercel cron in vercel.json ' +
-        'is the only scheduled trigger; a second one cannot be offset clear of ' +
-        'it and collides with a job that pushes. Absence is covered by ' +
-        'scripts/check-sync-freshness.mjs, not by a fallback schedule.',
-    ).toEqual([]);
+/**
+ * Does this workflow push commits?
+ *
+ * Through the SHARED detector, not a local regex. The first cut of this guard
+ * recognised only `commit-feed-and-push.mjs` and the `commit-push` action —
+ * and four workflows in this repo push with a bare `git push`, so a bridged
+ * workflow written that way would have skipped both the
+ * `cancel-in-progress: false` and the cadence-gate assertions below in
+ * silence. A guard that passes by not looking is one layer up from the bug it
+ * exists to prevent, which is the whole lesson of this file's header.
+ *
+ * It takes the PARSED workflow because that is what the shared helper needs to
+ * tell a real push from one an `echo` merely prints.
+ */
+function workflowCommits(workflowSource: string): boolean {
+  try {
+    return workflowPushes(parseYaml(workflowSource));
+  } catch {
+    // Unparseable workflows are the business of
+    // tests/workflow-install-guard.test.ts, which fails on them by name.
+    return false;
+  }
+}
+
+describe('every bridged workflow', () => {
+  const bridged = crons
+    .map((c) => ({ cron: c, route: routeFileFor(c.path) }))
+    .map((e) => ({ ...e, workflow: dispatchedWorkflowFor(e.route) }));
+
+  it('is named by the route that fires it', () => {
+    for (const { route, workflow } of bridged) {
+      expect(
+        workflow,
+        `${route} is a Vercel cron target but dispatches no workflow this test ` +
+          `can see. Keep the dispatchWorkflow('<file>.yml') call literal — a ` +
+          `workflow name built from a variable cannot be checked against disk.`,
+      ).toBeTruthy();
+    }
   });
 
-  it('queues concurrent runs instead of cancelling them', () => {
-    // `cancel-in-progress: true` killed a run AFTER its push had landed, which
-    // is not something a cancel can undo — it just left the survivor rebasing
-    // onto a main that had moved under it.
-    expect(
-      /cancel-in-progress:\s*false/.test(workflow),
-      'roster-sync.yml must set `cancel-in-progress: false`. These steps push, ' +
-        'and a cancel cannot un-push; cancelling mid-flight is what lost a sync ' +
-        'to an unmergeable feed conflict on 2026-09-17.',
-    ).toBe(true);
+  it('exists on disk', () => {
+    for (const { route, workflow } of bridged) {
+      expect(
+        existsSync(resolve(root, `.github/workflows/${workflow}`)),
+        `${route} dispatches ${workflow}, which is not in .github/workflows. ` +
+          `GitHub answers a dispatch for a missing workflow with a 404 that ` +
+          `surfaces only in this route's own logs.`,
+      ).toBe(true);
+    }
+  });
+
+  it('carries NO `schedule:` trigger at all', () => {
+    // A fallback schedule was tried for one night on roster-sync.yml and
+    // removed. It cannot be offset out of the primary's way, because the
+    // premise of this whole mechanism is that GitHub delivers whenever it
+    // likes: the `7,37` chosen to interleave with the Vercel cron was
+    // delivered at :16 and collided anyway. On 2026-09-17T15:16Z it cancelled
+    // a dispatch that had already pushed and then failed its own rebase
+    // against six single-line feed JSONs git cannot merge — one sync lost, for
+    // a trigger giving two unpredictable runs a day and no freshness the
+    // primary did not already provide.
+    for (const { workflow } of bridged) {
+      const source = read(`.github/workflows/${workflow}`);
+      const cronLines = [...source.matchAll(/^\s*-\s*cron:\s*["']([^"']+)["']/gm)].map(
+        (m) => m[1],
+      );
+      expect(
+        cronLines,
+        `${workflow} has a \`schedule:\` again. The Vercel cron in vercel.json ` +
+          `is its only scheduled trigger; a second one cannot be offset clear ` +
+          `of it, and GitHub drops this repo's scheduled events in bulk anyway.`,
+      ).toEqual([]);
+    }
+  });
+
+  it('queues concurrent runs instead of cancelling them, if it pushes', () => {
+    // `cancel-in-progress: true` killed a roster-sync run AFTER its push had
+    // landed, which is not something a cancel can undo — it just left the
+    // survivor rebasing onto a main that had moved under it. schefter-scan is
+    // worse: it posts to GroupMe and pushes to real devices BEFORE it commits
+    // the watermark recording that it did, so a cancel in between re-sends.
+    for (const { workflow } of bridged) {
+      const source = read(`.github/workflows/${workflow}`);
+      if (!workflowCommits(source)) continue;
+      expect(
+        /cancel-in-progress:\s*false/.test(source),
+        `${workflow} pushes commits but may be cancelled in flight. A cancel ` +
+          `cannot un-push, un-post or un-send.`,
+      ).toBe(true);
+    }
+  });
+
+  it('classifies the bridges it has, so the two checks below are not vacuous', () => {
+    // Both of the checks that follow are `if (!workflowCommits(...)) continue`,
+    // so a detector that answered "no" to everything would pass them by
+    // enforcing nothing — the same shape as the orphaned route this whole file
+    // exists for. Pin the real answers: the two committers are seen, and the
+    // poller is not mistaken for one (if it were, the cadence check would
+    // demand a tier this route deliberately does not have).
+    const seen = Object.fromEntries(
+      bridged.map(({ workflow }) => [
+        workflow,
+        workflowCommits(read(`.github/workflows/${workflow}`)),
+      ]),
+    );
+    expect(seen).toEqual({
+      'roster-sync.yml': true,
+      'schefter-scan.yml': true,
+      'groupme-sync.yml': false,
+    });
+  });
+
+  it('is cadence-gated when a dispatch costs a production build', () => {
+    // Every commit to `main` redeploys production, and builds are 91% of the
+    // Vercel bill. A bridge whose workflow commits must therefore decide which
+    // ticks are worth it — that decision is src/utils/sync-cadence.ts, and a
+    // route without it dispatches on every tick of the hour.
+    for (const { route, workflow } of bridged) {
+      if (!workflowCommits(read(`.github/workflows/${workflow}`))) continue;
+      expect(
+        /sync-cadence/.test(codeOnly(read(route))),
+        `${route} fires ${workflow}, which commits to main — so every ` +
+          `dispatch is a production build. Gate it on syncCadenceDecision ` +
+          `(src/utils/sync-cadence.ts) rather than dispatching on every tick.`,
+      ).toBe(true);
+    }
   });
 });
 
@@ -241,17 +351,21 @@ describe('the Vercel tick and the cadence module agree', () => {
     // waiver tier silently cannot hit its 5-minute cadence; if it fires more
     // often, every tier dispatches more than it claims to — and each extra
     // dispatch is a production build.
-    const roster = crons.find((c) => c.path === '/api/cron/roster-sync');
-    expect(roster, 'no Vercel cron for the roster sync').toBeTruthy();
-    const minutes = minuteSet(roster!.schedule);
+    // Every cron whose ROUTE consults the cadence module, found from the
+    // route's own imports rather than listed here — a new tiered bridge is
+    // covered the day it is written.
+    const tiered = crons.filter((c) => /sync-cadence/.test(codeOnly(read(routeFileFor(c.path)))));
+    expect(tiered.length, 'no Vercel cron reads sync-cadence.ts').toBeGreaterThan(0);
     const expected = new Set<number>();
     for (let m = 0; m < 60; m += TICK_MINUTES) expected.add(m);
-    expect(
-      [...minutes].sort((a, b) => a - b),
-      `vercel.json fires the roster sync on "${roster!.schedule}", which does ` +
-        `not match TICK_MINUTES=${TICK_MINUTES} in src/utils/sync-cadence.ts. ` +
-        `Change both together or the tiers stop meaning what they say.`,
-    ).toEqual([...expected].sort((a, b) => a - b));
+    for (const cron of tiered) {
+      expect(
+        [...minuteSet(cron.schedule)].sort((a, b) => a - b),
+        `vercel.json fires "${cron.path}" on "${cron.schedule}", which does ` +
+          `not match TICK_MINUTES=${TICK_MINUTES} in src/utils/sync-cadence.ts. ` +
+          `Change both together or the tiers stop meaning what they say.`,
+      ).toEqual([...expected].sort((a, b) => a - b));
+    }
   });
 
   it('keeps every tier interval a multiple of the tick', () => {

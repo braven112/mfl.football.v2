@@ -13,6 +13,7 @@ import { promises as fs, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { calendarDaysUntil } from './lib/roger-reminder-window.mjs';
+import { writeJsonIfChanged } from './lib/canonical-json.mjs';
 import {
   getNflWeekStart,
   throwbackEventId,
@@ -345,7 +346,15 @@ const output = {
   events: resolved,
 };
 
-await fs.writeFile(outputPath, JSON.stringify(output, null, 2) + '\n');
+// `writeJsonIfChanged`, not a plain write: this file is rewritten from
+// scratch on every scan and its only per-run field is `computedAt`, so a plain
+// write produced a one-line diff every time — which committed to `main`, which
+// is a production build (91% of the Vercel bill). Ignoring the timestamp during
+// the compare means a quiet scan touches nothing and costs nothing, while a
+// real change still writes the fresh stamp. Nothing reads `computedAt`.
+writeJsonIfChanged(outputPath, JSON.stringify(output, null, 2) + '\n', {
+  ignoreKeys: ['computedAt'],
+});
 console.log(`Resolved ${resolved.length} TheLeague events for ${year}:`);
 resolved.forEach(e => {
   const status = e.isPast ? '(past)' : `${e.daysUntil}d away`;
@@ -362,7 +371,10 @@ const aflOutput = {
   events: aflResolved,
 };
 await fs.mkdir(path.dirname(aflOutputPath), { recursive: true });
-await fs.writeFile(aflOutputPath, JSON.stringify(aflOutput, null, 2) + '\n');
+// Same skip-if-unchanged write as TheLeague above — see the note there.
+writeJsonIfChanged(aflOutputPath, JSON.stringify(aflOutput, null, 2) + '\n', {
+  ignoreKeys: ['computedAt'],
+});
 console.log(`\nResolved ${aflResolved.length} AFL events for ${year}:`);
 aflResolved.forEach(e => {
   const status = e.isPast ? '(past)' : `${e.daysUntil}d away`;

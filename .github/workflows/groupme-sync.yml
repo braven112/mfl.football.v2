@@ -1,13 +1,32 @@
 name: GroupMe Sync
 
 on:
-  schedule:
-    - cron: "*/5 * * * *"
+  # NO `schedule:`, deliberately — see roster-sync.yml. GitHub delivered this
+  # job's five-minute schedule 5-8 times a day from 2026-08-27, so the chat
+  # mirror the site reads ran hours behind the group. The only scheduled
+  # trigger is now the Vercel cron in vercel.json firing api/cron/groupme-sync.
+  #
+  # That bridge dispatches on EVERY tick rather than through sync-cadence.ts,
+  # because this job commits nothing: it reads GroupMe and writes Redis, so a
+  # run costs no production build and there is no spend to ration. If a commit
+  # step is ever added here, the tiered cadence comes with it.
   workflow_dispatch:
 
 concurrency:
   group: groupme-sync
-  cancel-in-progress: true
+  # QUEUE, never cancel — for a different reason than the two committing
+  # siblings. This job pushes nothing, so there is no un-doable write; what it
+  # does have is a WATERMARK. It reads GroupMe since `getLastMessageId` and
+  # advances that id only after storing what it fetched, so a run cancelled
+  # mid-flight leaves the watermark where it was. Under the old schedule that
+  # was unreachable (5-8 delivered runs a day), but the Vercel cron dispatches
+  # every tick, so a run slower than five minutes would now be killed by its
+  # successor — and if the slowness persisted, every successor too, freezing
+  # the mirror with nothing but `cancelled` runs, which no monitor looks at.
+  # Measured runtime is 24-38s, so the margin is ~8x and this is insurance
+  # rather than a fix. GitHub keeps a single pending run per group, so queueing
+  # cannot pile up either.
+  cancel-in-progress: false
 
 jobs:
   sync:

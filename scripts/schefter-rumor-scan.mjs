@@ -111,6 +111,7 @@ import {
 } from './lib/schefter-lore.mjs';
 import { incrementTipsterCounters, incrementTipsterTopicCounters } from './lib/schefter-tipster-counters.mjs';
 import { schefterKey, globalSchefterKey } from './lib/schefter-keys.mjs';
+import { writeJsonIfChanged } from './lib/canonical-json.mjs';
 import { dedupeTipsById, isUsableTip } from './lib/schefter-tip-queue.mjs';
 import {
   collectFranchiseNameTokens,
@@ -1223,9 +1224,14 @@ async function flushGroupMeSuppressions() {
       // file missing or unparseable — start fresh
     }
     const merged = [...existing, ...groupMeSuppressions];
-    await fs.writeFile(
+    // Skip-if-unchanged, ignoring `generatedAt` — same reason as the sibling
+    // write in schefter-scan.mjs: a rewrite whose only difference is the run
+    // clock still commits to `main`, and every commit to `main` is a
+    // production build.
+    writeJsonIfChanged(
       suppressionsPath,
       JSON.stringify({ generatedAt: new Date().toISOString(), suppressions: merged }, null, 2) + '\n',
+      { ignoreKeys: ['generatedAt'] },
     );
     if (groupMeSuppressions.length > 0) {
       log(`⚠️  Suppressed ${groupMeSuppressions.length} GroupMe send(s) (see ${path.relative(projectRoot, suppressionsPath)})`);
