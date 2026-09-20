@@ -66,6 +66,13 @@ function stripMountFiles(): string[] {
  * relaxed: every assertion below still runs, against the file that now does
  * the mounting.
  */
+/**
+ * A mount that is ALWAYS demo — bare `demo` or `demo={true}` — as opposed to
+ * `demo={someFlag}`, which the live board uses and which still polls whenever
+ * that flag is false.
+ */
+const STATIC_DEMO = /<NflGamesStrip[\s\S]{0,400}?\sdemo(\s*=\s*\{true\})?[\s/>]/;
+
 const STRIP_ROUTES = [
   'src/components/shared/live/LiveBoardPage.astro',
 ] as const;
@@ -169,9 +176,31 @@ describe('NFL games rail — it must survive its own empty server render', () =>
   it('every file mounting the rail hands it a server-rendered slate', () => {
     const missing = stripMountFiles().filter((f) => {
       const src = read(f);
+      // A STATICALLY demo mount is the other safe shape: `demo` disables the
+      // hook outright, so the slate it is handed is the only slate it will
+      // ever have. It must still be handed one, and it must be a literal the
+      // server always renders — never a fetch that can come back empty.
+      //
+      // Statically, not `demo={someVar}`: the live board binds it to a runtime
+      // flag and is a POLLING mount whenever that flag is false, so it needs
+      // the real server slate and the real hydration.
+      if (STATIC_DEMO.test(src)) return !/initialGames=\{\w+\}/.test(src);
       return !/fetchInitialNflGames\(/.test(src) || !/initialGames=\{nflGames\}/.test(src);
     });
     expect(missing, 'these mount the rail with no server slate').toEqual([]);
+  });
+
+  it('a statically-demo mount ships no hydration at all', () => {
+    // `demo` sets `enabled: false` on the poll, so the server render is the
+    // final render and a client directive would ship JS to do nothing — and
+    // `client:visible` specifically is the directive that cannot recover from
+    // an empty island, which is the bug this block exists for. Only a mount
+    // that is ALWAYS demo qualifies; one bound to a runtime flag still polls.
+    const offenders = stripMountFiles().filter((f) =>
+      [...read(f).matchAll(/<NflGamesStrip[\s\S]{0,400}?\/>/g)]
+        .some((m) => STATIC_DEMO.test(m[0]) && /client:/.test(m[0])),
+    );
+    expect(offenders, 'an always-demo rail needs no client directive').toEqual([]);
   });
 
   it('no file mounts the rail with client:visible', () => {

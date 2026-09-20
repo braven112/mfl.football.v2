@@ -265,9 +265,18 @@ const GROUND_COPY: Record<string, string> = {
             two panes would render two identical cards and claim a comparison
             that isn't there. Its MARKS still swap with the theme, which is why
             this surface is left in the swap rather than opted out.
+
+            NO client directive, deliberately. In `demo` the hook is disabled
+            (`enabled: !demo`) and never polls, so the server render IS the
+            final render and hydrating would ship JS to do nothing. It also
+            steps around the hazard `tests/network-badge.test.ts` records:
+            `client:visible` observes an island's CHILDREN, so an island that
+            server-rendered nothing never hydrates and the rail is invisible
+            forever. `demoGames` is a non-empty constant, so this mount cannot
+            render empty — but an unhydrated island cannot have the bug at all.
           */}
           <span class="cb__pane">
-            <NflGamesStrip week={1} year={2026} demo initialGames={demoGames} label={null} client:visible />
+            <NflGamesStrip week={1} year={2026} demo initialGames={demoGames} label={null} />
           </span>
         </li>
 
