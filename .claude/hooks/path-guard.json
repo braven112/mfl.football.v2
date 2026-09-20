@@ -1017,14 +1017,21 @@
         "src/utils/nfl-logo-dark-css.ts",
         "src/utils/live/nfl-logo-url.ts",
         "src/components/shared/sunday-ticket/SundayTicket*.astro",
-        "src/components/shared/live-broadcast/BroadcastPlayerStrip.tsx"
+        "src/components/shared/live-broadcast/BroadcastPlayerStrip.tsx",
+        "src/utils/nfl-marks.ts",
+        "src/utils/nfl-club-rosters.ts",
+        "src/components/shared/brand/*.astro",
+        "src/pages/*/brand.astro",
+        "src/pages/*/brand/*.astro"
       ],
       "tests": [
         "tests/nfl-logo-assets.test.ts",
         "tests/nfl-brand-kit-data.test.ts",
         "tests/nfl-logo-dark-css.test.ts",
-        "tests/nfl-mark-assignments.test.ts"
-      ]
+        "tests/nfl-mark-assignments.test.ts",
+        "tests/nfl-marks-page-data.test.ts"
+      ],
+      "note": "The Brand Book (/<league>/brand) publishes these assignments, so it is the same domain: a page that showed a cut the build does not ship would be worse than no page. Two rules are load-bearing there. (1) A ground's preview renders the MIRRORED file (shippedUrl \u2192 resolveNflDarkLogoUrl), never the catalog CDN url \u2014 the catalog says where a cut came from, the ground says what this site serves. (2) Both brand pages opt OUT of buildNflLogoDarkCss with `content: normal !important`: the global swap rewrites every light src under html.dark, which inside a side-by-side comparison renders the dark cut in the LIGHT pane and shows one mark twice. Same specificity as the swap rule, hence !important."
     },
     {
       "name": "throwback-week",

@@ -1,0 +1,654 @@
+---
+/**
+ * One NFL club's brand page — the "club showcase" layout.
+ *
+ * Full-bleed club colour, the mark at scale, every cut on file as a filmstrip,
+ * then what the site actually does with it: which cut each ground draws, the
+ * real components that render it, and who in this league rosters its players.
+ *
+ * ── Why the hero uses the DARK mark ───────────────────────────────────────
+ * The hero band is the club's own colour, which for almost every club is a
+ * dark ground. It is therefore neither a light nor a dark SURFACE — it is a
+ * third ground, and it resolves to whichever assignment suits that colour's
+ * luminance (`bandSlot`). Same rule `franchise-band-brand.ts` already applies
+ * to fantasy-team crests. See docs/plans/nfl-mark-assignments.md.
+ *
+ * ── Why the previews carry their own colours ──────────────────────────────
+ * Each preview below stands in for a real app surface, so it paints its OWN
+ * light or dark ground and inherits nothing from the page theme. A "light"
+ * preview that went dark for a dark-mode viewer would make the two previews
+ * identical, which is the entire comparison.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { getLeagueBySlug } from '../../../config/leagues';
+import type { CanonicalLeagueSlug } from '../../../config/leagues';
+import { clubBrand, inkOn, type ClubBrand } from '../../../utils/nfl-marks';
+import { clubRosterHolders } from '../../../utils/nfl-club-rosters';
+
+interface Props {
+  leagueSlug: CanonicalLeagueSlug;
+  code: string;
+}
+
+const { leagueSlug, code } = Astro.props;
+const league = getLeagueBySlug(leagueSlug);
+if (!league) throw new Error(`ClubBrandPage: unknown league ${leagueSlug}`);
+
+const club = clubBrand(code) as ClubBrand;
+const hide = Astro.locals.hideLeaguePrefix ?? false;
+const indexPath = resolveLeaguePath(`/${leagueSlug}/brand`, hide);
+
+const bg = club.colors[0] ?? '#111111';
+const ink = inkOn(bg);
+const band = club.grounds.find((g) => g.ground === 'band');
+const light = club.grounds.find((g) => g.ground === 'light');
+const dark = club.grounds.find((g) => g.ground === 'dark');
+
+const { year, holders } = clubRosterHolders(club.code, leagueSlug);
+const rosteredCount = holders.reduce((n, h) => n + h.players.length, 0);
+
+const GROUND_COPY: Record<string, string> = {
+  light: 'Player cells, bench rows, the games strip — anything on a white card.',
+  dark: 'The same surfaces in dark mode, swapped in by CSS.',
+  band: 'The club-colour band, dark in both themes — so it follows the ' + (band?.slot ?? 'dark') + ' assignment.',
+};
+---
+
+<TheLeagueLayout title={`${club.name} marks | NFL Brand Book | ${league.name}`}>
+  <main class="cb">
+    <nav class="cb__crumb"><a href={indexPath}>&larr; NFL Brand Book</a></nav>
+
+    <header class="cb__hero" style={`--hero-bg:${bg};--hero-ink:${ink}`}>
+      {band && <img class="cb__ghost" src={band.url} alt="" aria-hidden="true" />}
+      <div class="cb__hero-in">
+        {band && <img class="cb__mark" src={band.url} alt={`${club.name} logo`} width="120" height="120" />}
+        <div>
+          <p class="cb__city">{club.city}</p>
+          <h1 class="cb__nick">{club.nick}</h1>
+        </div>
+      </div>
+    </header>
+
+    <section class="cb__section">
+      <h2 class="cb__h2">Club colours</h2>
+      <ul class="cb__swatches">
+        {
+          club.colors.map((c) => (
+            <li>
+              <span class="cb__swatch" style={`background:${c}`} />
+              <code>{c}</code>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <section class="cb__section">
+      <h2 class="cb__h2">Marks on file</h2>
+      <p class="cb__note">
+        {club.marks.length} cuts.
+        {
+          club.nflDotComIsDark && (
+            <>
+              {' '}NFL.com publishes only a <strong>for-dark</strong> cut for this club, which is why its
+              light mark is held rather than refreshed from the league endpoint.
+            </>
+          )
+        }
+      </p>
+      <ul class="cb__film">
+        {
+          club.marks.map((m) => (
+            <li class="cb__cut">
+              <span class={`cb__cut-box ${m.forDark ? 'is-dark' : 'is-light'}`}>
+                <img src={m.url} alt={`${club.name} — ${m.label}`} loading="lazy" />
+              </span>
+              <span class="cb__cut-label">{m.label}</span>
+              <span class="cb__cut-meta">{m.format.toUpperCase()} &middot; {m.source}</span>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <section class="cb__section">
+      <h2 class="cb__h2">What each ground draws</h2>
+      <p class="cb__note">Read from the same assignment file the build reads, so this cannot drift from what ships.</p>
+      <ul class="cb__grounds">
+        {
+          club.grounds.map((g) => (
+            <li class={`cb__ground ${g.slot === 'dark' || g.ground === 'band' ? 'is-dark' : 'is-light'}`}>
+              <span class="cb__ground-head">
+                {g.ground === 'band' ? 'Club colour' : g.ground === 'light' ? 'Light surfaces' : 'Dark surfaces'}
+              </span>
+              <span
+                class="cb__ground-art"
+                style={g.ground === 'band' ? `background:${bg}` : undefined}
+              >
+                <img src={g.url} alt="" loading="lazy" />
+              </span>
+              <span class="cb__ground-mark">{g.mark.label}</span>
+              <span class="cb__ground-why">{GROUND_COPY[g.ground]}</span>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <section class="cb__section">
+      <h2 class="cb__h2">In the app</h2>
+      <p class="cb__note">
+        The surfaces that render this mark, each on its real ground and at the size it really uses.
+      </p>
+      <ul class="cb__situ">
+        <li class="cb__demo">
+          <span class="cb__demo-cap">Player cell &mdash; DEF <em>the mark IS the avatar</em></span>
+          <span class="cb__pane is-light">
+            <span class="cb__pcell">
+              <span class="cb__avatar"><img src={light?.url} alt="" loading="lazy" /></span>
+              <span>
+                <span class="cb__pname">{club.nick} D/ST</span>
+                <span class="cb__pmeta"><img src={light?.url} alt="" loading="lazy" />{club.code} &middot; DEF</span>
+              </span>
+            </span>
+          </span>
+          <span class="cb__pane is-dark">
+            <span class="cb__pcell">
+              <span class="cb__avatar"><img src={dark?.url} alt="" loading="lazy" /></span>
+              <span>
+                <span class="cb__pname">{club.nick} D/ST</span>
+                <span class="cb__pmeta"><img src={dark?.url} alt="" loading="lazy" />{club.code} &middot; DEF</span>
+              </span>
+            </span>
+          </span>
+        </li>
+
+        <li class="cb__demo">
+          <span class="cb__demo-cap">Lineup bench row <em>18px</em></span>
+          <span class="cb__pane is-light">
+            <span class="cb__bench"><span>Bench &middot; FLEX</span><span class="cb__opp"><img src={light?.url} alt="" loading="lazy" />{club.code}</span></span>
+          </span>
+          <span class="cb__pane is-dark">
+            <span class="cb__bench"><span>Bench &middot; FLEX</span><span class="cb__opp"><img src={dark?.url} alt="" loading="lazy" />{club.code}</span></span>
+          </span>
+        </li>
+
+        <li class="cb__demo">
+          <span class="cb__demo-cap">Broadcast card <em>dark in both themes</em></span>
+          <span class="cb__pane is-dark">
+            <span class="cb__bcast">
+              <img src={dark?.url} alt="" loading="lazy" />
+              <span>
+                <span class="cb__bname">{club.nick.toUpperCase()}</span>
+                <span class="cb__bmeta">4th &amp; 2 &middot; 01:58</span>
+              </span>
+            </span>
+          </span>
+        </li>
+
+        <li class="cb__demo">
+          <span class="cb__demo-cap">Club-colour band <em>franchise band</em></span>
+          <span class="cb__pane" style={`background:${bg};color:${ink}`}>
+            <span class="cb__bcast">
+              {band && <img src={band.url} alt="" loading="lazy" />}
+              <span>
+                <span class="cb__bname">{club.nick.toUpperCase()}</span>
+                <span class="cb__bmeta" style={`color:${ink};opacity:.75`}>{club.city}</span>
+              </span>
+            </span>
+          </span>
+        </li>
+      </ul>
+    </section>
+
+    <section class="cb__section">
+      <h2 class="cb__h2">Who rosters {club.nick} in {league.name}</h2>
+      {
+        holders.length === 0 ? (
+          <p class="cb__note">
+            {year
+              ? `No ${club.nick} on any roster in the ${year} league year.`
+              : 'No roster feed on this build.'}
+          </p>
+        ) : (
+          <>
+            <p class="cb__note">
+              {rosteredCount} {rosteredCount === 1 ? 'player' : 'players'} across{' '}
+              {holders.length} {holders.length === 1 ? 'franchise' : 'franchises'}
+              {year ? ` — ${year} league year.` : '.'}
+            </p>
+            <ul class="cb__holders">
+              {holders.map((h) => (
+                <li class="cb__holder">
+                  <span class="cb__holder-name">{h.franchiseName}</span>
+                  <span class="cb__holder-players">
+                    {h.players.map((p) => (
+                      <span class="cb__chip">
+                        {p.name}
+                        <em>{p.position}</em>
+                      </span>
+                    ))}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </>
+        )
+      }
+    </section>
+  </main>
+</TheLeagueLayout>
+
+<style>
+
+  /* ── The Brand Book opts OUT of the global dark swap ────────────────────
+     `buildNflLogoDarkCss` emits `html.dark img[src="<light src>"] { content:
+     url(<dark cut>) }` for every light src the site can render, so in dark
+     mode a light mark silently becomes the dark one. On every other page that
+     is the whole point; here it destroys the page. This page's job is to show
+     the cuts SIDE BY SIDE, and each pane paints its own ground rather than the
+     viewer's theme — so the light pane, the "Light surfaces" ground card and
+     the Primary/ESPN-light entries in the filmstrip would all render the DARK
+     cut for a dark-mode reader, and the comparison would show one mark twice.
+     `!important` because the swap rule's specificity matches this one's and
+     load order between the layout head and a scoped component style is not
+     something to rely on. Pinned by tests/nfl-marks-page-data.test.ts. */
+  html.dark :global(.cb img) {
+    content: normal !important;
+  }
+  /* Tokens with fallbacks only (docs/claude/rules/theming-and-assets.md). */
+  .cb {
+    max-width: var(--container-max-width, 1100px);
+    margin: 0 auto;
+    padding: var(--spacing-md, 1rem) var(--spacing-md, 1rem) var(--spacing-lg, 1.5rem);
+  }
+  .cb__crumb {
+    margin-bottom: var(--spacing-sm, 0.75rem);
+    font-size: 0.875rem;
+  }
+  .cb__crumb a {
+    color: var(--color-gray-500, #6b7280);
+    text-decoration: none;
+  }
+  .cb__crumb a:hover {
+    text-decoration: underline;
+  }
+
+  .cb__hero {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--radius-md, 8px);
+    background: var(--hero-bg);
+    color: var(--hero-ink);
+    padding: 2.2rem 1.6rem;
+    margin-bottom: var(--spacing-lg, 1.5rem);
+  }
+  .cb__ghost {
+    position: absolute;
+    right: -2.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 260px;
+    height: 260px;
+    object-fit: contain;
+    opacity: 0.17;
+    pointer-events: none;
+  }
+  .cb__hero-in {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 1.4rem;
+    flex-wrap: wrap;
+  }
+  .cb__mark {
+    width: 120px;
+    height: 120px;
+    object-fit: contain;
+    flex: none;
+  }
+  .cb__city {
+    margin: 0;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    opacity: 0.82;
+  }
+  .cb__nick {
+    /* The hero paints its own ground, so its ink is computed from the CLUB
+       COLOUR and must beat the site's themed h1 rule — which rendered the
+       nickname near-black on navy in light mode and accent blue in dark. */
+    color: inherit;
+    margin: 0;
+    font-size: clamp(2rem, 6vw, 3rem);
+    line-height: 0.98;
+    text-transform: uppercase;
+  }
+
+  .cb__section {
+    margin-bottom: var(--spacing-lg, 1.5rem);
+  }
+  .cb__h2 {
+    margin: 0 0 0.35rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-gray-500, #6b7280);
+    border-left: 3px solid var(--color-primary, #1f6feb);
+    padding-left: 0.6rem;
+  }
+  .cb__note {
+    margin: 0 0 0.9rem;
+    font-size: 0.9rem;
+    color: var(--color-gray-600, #4b5563);
+    max-width: 70ch;
+  }
+
+  /* A cut that fails to load renders its alt text; without this it sprawls
+     out of the box and pushes the filmstrip apart. */
+  .cb__cut-box,
+  .cb__ground-art {
+    overflow: hidden;
+  }
+
+  .cb__swatches {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    gap: 0.9rem;
+    flex-wrap: wrap;
+  }
+  .cb__swatches li {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  .cb__swatch {
+    display: block;
+    width: 68px;
+    height: 44px;
+    border-radius: var(--radius-sm, 4px);
+    border: 1px solid var(--color-gray-300, #d1d5db);
+  }
+  .cb__swatches code {
+    font-size: 0.7rem;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  .cb__film {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(124px, 1fr));
+    gap: var(--spacing-sm, 0.75rem);
+  }
+  .cb__cut {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  .cb__cut-box {
+    display: grid;
+    place-items: center;
+    height: 92px;
+    padding: 0.6rem;
+    border-radius: var(--radius-sm, 4px);
+    border: 1px solid var(--color-gray-300, #d1d5db);
+  }
+  /* Each box paints its own ground — never the page theme's. */
+  .cb__cut-box.is-light {
+    background: #ffffff;
+  }
+  .cb__cut-box.is-dark {
+    background: #1e1e1e;
+  }
+  .cb__cut-box img {
+    max-width: 100%;
+    max-height: 68px;
+    object-fit: contain;
+  }
+  .cb__cut-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+  .cb__cut-meta {
+    font-size: 0.68rem;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  .cb__grounds {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: var(--spacing-sm, 0.75rem);
+  }
+  .cb__ground {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    padding: 0.9rem;
+    border-radius: var(--radius-md, 8px);
+    border: 1px solid var(--color-gray-300, #d1d5db);
+  }
+  .cb__ground-head {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-gray-500, #6b7280);
+  }
+  .cb__ground-art {
+    display: grid;
+    place-items: center;
+    height: 76px;
+    border-radius: var(--radius-sm, 4px);
+  }
+  .cb__ground.is-light .cb__ground-art {
+    background: #ffffff;
+    border: 1px solid var(--color-gray-200, #e5e7eb);
+  }
+  .cb__ground.is-dark .cb__ground-art {
+    background: #1e1e1e;
+  }
+  .cb__ground-art img {
+    width: 54px;
+    height: 54px;
+    object-fit: contain;
+  }
+  .cb__ground-mark {
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+  .cb__ground-why {
+    font-size: 0.78rem;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  .cb__situ {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+    gap: var(--spacing-sm, 0.75rem);
+    align-items: start;
+  }
+  .cb__demo {
+    border: 1px solid var(--color-gray-300, #d1d5db);
+    border-radius: var(--radius-md, 8px);
+    overflow: hidden;
+  }
+  .cb__demo-cap {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.4rem 0.7rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-gray-500, #6b7280);
+    border-bottom: 1px solid var(--color-gray-200, #e5e7eb);
+  }
+  .cb__demo-cap em {
+    font-style: normal;
+    font-weight: 400;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  /* A pane stands in for a real surface, so it carries its own ground and
+     ink. Reading the page's tokens here would make the light pane go dark
+     for a dark-mode viewer and destroy the comparison. */
+  .cb__pane {
+    display: block;
+    padding: 0.8rem;
+  }
+  .cb__pane.is-light {
+    background: #ffffff;
+    color: #151a21;
+  }
+  .cb__pane.is-dark {
+    background: #1e1e1e;
+    color: #f2f2f2;
+  }
+  .cb__pane + .cb__pane {
+    border-top: 1px solid var(--color-gray-200, #e5e7eb);
+  }
+
+  .cb__pcell {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  /* DEF avatars carry no ring, no chip and no radius — player-cell.css sets
+     border:0/background:transparent for .player-cell__avatar--def. */
+  .cb__avatar {
+    width: 40px;
+    height: 40px;
+    flex: none;
+    display: grid;
+    place-items: center;
+  }
+  .cb__avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+  .cb__pname {
+    display: block;
+    font-weight: 600;
+    font-size: 0.88rem;
+  }
+  .cb__pmeta {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.72rem;
+    opacity: 0.72;
+  }
+  .cb__pmeta img {
+    width: 14px;
+    height: 14px;
+    object-fit: contain;
+  }
+
+  .cb__bench {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    font-size: 0.8rem;
+  }
+  .cb__opp {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+  .cb__opp img {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+  }
+
+  .cb__bcast {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+  }
+  .cb__bcast img {
+    width: 50px;
+    height: 50px;
+    object-fit: contain;
+  }
+  .cb__bname {
+    display: block;
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .cb__bmeta {
+    display: block;
+    font-size: 0.75rem;
+    opacity: 0.7;
+  }
+
+  .cb__holders {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.5rem;
+  }
+  .cb__holder {
+    display: flex;
+    gap: 0.75rem;
+    align-items: baseline;
+    flex-wrap: wrap;
+    padding: 0.6rem 0.75rem;
+    border-radius: var(--radius-sm, 4px);
+    border: 1px solid var(--color-gray-200, #e5e7eb);
+  }
+  .cb__holder-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    min-width: 11rem;
+  }
+  .cb__holder-players {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+  .cb__chip {
+    font-size: 0.78rem;
+    padding: 0.12rem 0.45rem;
+    border-radius: 100px;
+    background: var(--color-gray-100, #f3f4f6);
+    color: var(--color-gray-700, #374151);
+  }
+  .cb__chip em {
+    font-style: normal;
+    opacity: 0.6;
+    margin-left: 0.3rem;
+  }
+
+  @media (max-width: 520px) {
+    .cb__mark {
+      width: 84px;
+      height: 84px;
+    }
+    .cb__ghost {
+      width: 180px;
+      height: 180px;
+    }
+    .cb__holder-name {
+      min-width: 0;
+    }
+  }
+</style>

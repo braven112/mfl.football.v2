@@ -1,0 +1,15 @@
+---
+/**
+ * NFL Brand Book (afl-fantasy) — thin route wrapper.
+ *
+ * Shared implementation lives in components/shared/brand/BrandPage.
+ * The redirect (if one is ever needed) must live HERE: 
+ * Astro.redirect() only redirects from a PAGE. Per-league static data imports
+ * also belong here — a static import specifier can't be a runtime variable.
+ */
+import BrandPage from '../../components/shared/brand/BrandPage.astro';
+
+export const prerender = false;
+---
+
+<BrandPage leagueSlug="afl-fantasy" />

@@ -1,0 +1,214 @@
+---
+/**
+ * NFL Brand Book — the index: every club, on its own colour.
+ *
+ * Thin route wrappers under src/pages/<league>/brand.astro own any auth gate
+ * and per-league static import; this component owns the markup. Keep it that
+ * way: Astro.redirect() only works from a page, and a static import specifier
+ * cannot be a runtime variable.
+ *
+ * Each tile is the club's colour with the mark its BAND ground draws — which
+ * is the dark cut for almost every club, because almost every club colour is
+ * dark. That is the whole thesis of docs/plans/nfl-mark-assignments.md shown
+ * 32 times: a club-colour band is a third ground, not a light one.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { getLeagueBySlug } from '../../../config/leagues';
+import type { CanonicalLeagueSlug } from '../../../config/leagues';
+import { allClubs, inkOn } from '../../../utils/nfl-marks';
+
+interface Props {
+  leagueSlug: CanonicalLeagueSlug;
+}
+
+const { leagueSlug } = Astro.props;
+const league = getLeagueBySlug(leagueSlug);
+if (!league) throw new Error(`BrandPage: unknown league ${leagueSlug}`);
+
+const hide = Astro.locals.hideLeaguePrefix ?? false;
+const basePath = resolveLeaguePath(`/${leagueSlug}/brand`, hide);
+
+const clubs = allClubs();
+const customised = clubs.filter((c) => c.customised);
+---
+
+<TheLeagueLayout title={`NFL Brand Book | ${league.name}`}>
+  <main class="brand">
+    <header class="brand__header">
+      <p class="brand__eyebrow">Reference &middot; {clubs.length} clubs</p>
+      <h1>NFL Brand Book</h1>
+      <p class="brand__lede">
+        Every club's marks, and which cut each surface draws. A mark sits on one of
+        <strong>three grounds</strong> &mdash; a white cell, a dark card, or the club's own
+        colour &mdash; and the third is not a variant of the first two, which is why a
+        club-colour band below shows the <em>dark</em> mark even in light mode.
+      </p>
+      {
+        customised.length > 0 && (
+          <p class="brand__note">
+            {customised.map((c) => c.code).join(', ')}{' '}
+            {customised.length === 1 ? 'draws' : 'draw'} something other than the default on at
+            least one ground.
+          </p>
+        )
+      }
+    </header>
+
+    <ul class="brand__grid">
+      {
+        clubs.map((club) => {
+          const bg = club.colors[0] ?? '#111111';
+          const ink = inkOn(bg);
+          const band = club.grounds.find((g) => g.ground === 'band');
+          return (
+            <li class="brand__cell">
+              <a
+                class="brand__tile"
+                href={resolveLeaguePath(`/${leagueSlug}/brand/${club.code.toLowerCase()}`, hide)}
+                style={`--tile-bg:${bg};--tile-ink:${ink}`}
+              >
+                <span class="brand__art">
+                  {band && <img src={band.url} alt="" loading="lazy" width="72" height="72" />}
+                </span>
+                <span class="brand__name">
+                  <span class="brand__city">{club.city}</span>
+                  <span class="brand__nick">{club.nick}</span>
+                </span>
+                {club.customised && <span class="brand__flag">custom</span>}
+              </a>
+            </li>
+          );
+        })
+      }
+    </ul>
+  </main>
+</TheLeagueLayout>
+
+<style>
+
+  /* ── The Brand Book opts OUT of the global dark swap ────────────────────
+     `buildNflLogoDarkCss` emits `html.dark img[src="<light src>"] { content:
+     url(<dark cut>) }` for every light src the site can render, so in dark
+     mode a light mark silently becomes the dark one. On every other page that
+     is the whole point; here it destroys the page. This page's job is to show
+     the cuts SIDE BY SIDE, and each pane paints its own ground rather than the
+     viewer's theme — so the light pane, the "Light surfaces" ground card and
+     the Primary/ESPN-light entries in the filmstrip would all render the DARK
+     cut for a dark-mode reader, and the comparison would show one mark twice.
+     `!important` because the swap rule's specificity matches this one's and
+     load order between the layout head and a scoped component style is not
+     something to rely on. Pinned by tests/nfl-marks-page-data.test.ts. */
+  html.dark :global(.brand img) {
+    content: normal !important;
+  }
+  /* Tokens with fallbacks only — a var() with no definition renders its
+     fallback in BOTH themes (docs/claude/rules/theming-and-assets.md). */
+  .brand {
+    max-width: var(--container-max-width, 1100px);
+    margin: 0 auto;
+    padding: var(--spacing-lg, 1.5rem) var(--spacing-md, 1rem);
+  }
+  .brand__header {
+    margin-bottom: var(--spacing-lg, 1.5rem);
+  }
+  .brand__eyebrow {
+    margin: 0 0 0.35rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-gray-500, #6b7280);
+  }
+  .brand h1 {
+    margin: 0 0 0.5rem;
+    font-size: 1.85rem;
+    line-height: 1.1;
+  }
+  .brand__lede {
+    margin: 0;
+    max-width: 62ch;
+    color: var(--color-gray-600, #4b5563);
+  }
+  .brand__note {
+    margin: 0.75rem 0 0;
+    font-size: 0.875rem;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  .brand__grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: var(--spacing-sm, 0.75rem);
+  }
+  .brand__cell {
+    margin: 0;
+  }
+  .brand__tile {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 1.1rem 0.75rem 0.9rem;
+    border-radius: var(--radius-md, 8px);
+    background: var(--tile-bg);
+    color: var(--tile-ink);
+    text-decoration: none;
+    min-height: 148px;
+    justify-content: center;
+  }
+  .brand__tile:hover,
+  .brand__tile:focus-visible {
+    outline: 2px solid var(--tile-ink);
+    outline-offset: 2px;
+  }
+  .brand__art img {
+    width: 72px;
+    height: 72px;
+    object-fit: contain;
+    display: block;
+  }
+  .brand__name {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    line-height: 1.15;
+  }
+  .brand__city {
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    opacity: 0.8;
+  }
+  .brand__nick {
+    font-size: 1.05rem;
+    font-weight: 700;
+  }
+  .brand__flag {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.1rem 0.35rem;
+    border-radius: var(--radius-sm, 4px);
+    background: color-mix(in srgb, var(--tile-ink) 18%, transparent);
+  }
+
+  @media (max-width: 480px) {
+    .brand__grid {
+      grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+    }
+    .brand__art img {
+      width: 56px;
+      height: 56px;
+    }
+  }
+</style>

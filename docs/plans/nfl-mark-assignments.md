@@ -1,6 +1,7 @@
 # Per-club NFL mark assignments
 
-**Status:** **phases 1 and 2 shipped** 2026-09-20. Phase 3 planned, not started.
+**Status:** **phases 1, 2 and the Brand Book shipped** 2026-09-20. Phase 3
+planned, not started.
 Decisions made against the live artwork.
 
 Today every NFL club has exactly one light mark (`/assets/nfl-logos/{CODE}.svg`)
@@ -356,6 +357,63 @@ Jets' three overrides in the editor point at two surfaces that do not exist and
 one that the ground rule now handles. If a real surface ever wants a mark
 different from its club's ground assignment, the mechanism to build is the one
 sketched below.
+
+## The Brand Book — SHIPPED
+
+`/<league>/brand` (index) and `/<league>/brand/<code>` (32 clubs), public, both
+leagues, one shared component per route shape. It is the page this plan kept
+being explained on a whiteboard: every cut on file for a club, which one each
+GROUND draws, the real app surfaces that draw it, and who in the league rosters
+that club's players.
+
+### Why it reads the same files the build reads
+
+`src/utils/nfl-marks.ts` resolves a ground through `nfl-mark-assignments.json`
+and `nfl-brand-kit.json` — the same two files `scripts/lib/nfl-mark-sources.mjs`
+reads — rather than restating the assignments. A reference page that could
+disagree with the build is worse than no reference page.
+`tests/nfl-marks-page-data.test.ts` pins the two mark-id tables equal and the
+per-club, per-ground resolution identical, because two tables in two languages
+is exactly the shape that drifts in silence.
+
+### Two things it must do that no other page does
+
+**1. A ground previews the MIRRORED file, not the catalog URL.** The catalog
+says where a cut came FROM (ESPN's CDN, NFL.com, nflverse); a ground says what
+this site SERVES. `shippedUrl()` returns the same answer
+`resolveNflDarkLogoUrl` gives the swap CSS, extension and all, so with a
+populated mirror the previews are same-origin and with the committed empty
+manifest they degrade to the catalog URL rather than to a local path that 404s.
+
+**2. Both pages opt OUT of the global dark swap.** `buildNflLogoDarkCss` emits
+`html.dark img[src="<light src>"] { content: url(<dark cut>) }` for every light
+src the site can render. Everywhere else that is the point. Here it is fatal:
+this page's whole job is showing cuts SIDE BY SIDE, each pane painting its own
+ground rather than the viewer's theme — so for a dark-mode reader the light
+pane, the "Light surfaces" ground card, and the Primary and ESPN-light entries
+in the filmstrip would every one render the DARK cut, and the comparison would
+show one mark twice. The opt-out is `content: normal !important`; the
+`!important` is load-bearing, because the swap rule's specificity matches the
+opt-out's and load order between the layout head and a scoped component style
+is not something to rely on.
+
+### The band is still derived
+
+`bandSlot(code)` reads the club colour's luminance (> 0.42 → the light slot).
+The hero, the index tile and the band preview all go through it, so the "three
+grounds, not two" rule is demonstrated 32 times rather than asserted once — and
+a threshold nudge moves every one of them together instead of leaving a stored
+table half-updated.
+
+### League context
+
+`src/utils/nfl-club-rosters.ts` answers "who rosters Bears". Franchise names
+come from the MFL `league.json` feed, never `theleague.config.json` — a page
+that exists in both leagues cannot read one league's config file. Ownership is
+a LIST (`getOwnersByPlayer`, `activeOnly: false`): an AFL player is routinely
+rostered in both conferences, and the question here is ownership rather than
+startability, so a taxi-squad Bear counts. A feed it cannot read is an empty
+panel, never a broken page.
 
 ### Phase 3 — the reversed cut
 

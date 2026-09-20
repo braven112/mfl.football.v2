@@ -1,0 +1,25 @@
+---
+/**
+ * One NFL club's brand page (afl-fantasy) — thin route wrapper.
+ *
+ * Shared implementation lives in components/shared/brand/ClubBrandPage.
+ * The redirect lives HERE, and must: `Astro.redirect()` only redirects from a
+ * PAGE. Returned from a component's frontmatter it merely stops rendering that
+ * component and the response is still a 200 with a blank body.
+ */
+import ClubBrandPage from '../../../components/shared/brand/ClubBrandPage.astro';
+import { codeFromSlug } from '../../../utils/nfl-marks';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+
+export const prerender = false;
+
+const code = codeFromSlug(Astro.params.team ?? '');
+if (!code) {
+  return Astro.redirect(
+    resolveLeaguePath('/afl-fantasy/brand', Astro.locals.hideLeaguePrefix ?? false),
+    302
+  );
+}
+---
+
+<ClubBrandPage leagueSlug="afl-fantasy" code={code} />
