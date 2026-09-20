@@ -150,8 +150,8 @@ describe('the light MFL block re-points the primary ramp', () => {
  * `src/styles/live.css` needs this more than `mfl-live.css` did, because it is
  * being built by PORTING `live-scoring.css` — and a port is exactly where a
  * `var()` loses its declaration. The first attempt at moving the player-row
- * rules across proved it: the rules read `var(--lv-row-gap)`, `--lv-slot-w`
- * and `--lv-face-w`, but those custom properties are declared on ANCESTOR
+ * rules across proved it: the rules read `var(--lv-row-gap)`, `--lv-face-w`
+ * and `--lv-name-h`, but those custom properties are declared on ANCESTOR
  * selectors (`.ls-root`, `.ls-mx-body`) that a rule-by-rule extraction does
  * not pick up, and redeclared inside media queries that it renamed only on the
  * read side. The result compiles, ships, and renders a row with no metrics.

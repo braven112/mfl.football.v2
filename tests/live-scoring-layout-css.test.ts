@@ -367,7 +367,7 @@ describe('a matchup row keeps its two players level', () => {
     expect(valueOf(base, '.lv-prow', 'align-content')).toBe('flex-start');
   });
 
-  it('puts the slot label on each ROW, never in a shared centre column', () => {
+  it('puts the position on each ROW, never in a shared centre column', () => {
     // The board this replaces carried a third column holding ONE label for the
     // pair, centred on the row's first line so it could not drift downward by
     // half whatever the taller side gained. The kit deletes the column
@@ -377,21 +377,128 @@ describe('a matchup row keeps its two players level', () => {
     // sides run different lineup shapes. Its phone breakpoint hid the column
     // for exactly that reason.
     //
-    // So the assertion is the stronger one: no centre column anywhere, and a
-    // slot label on each side's own row.
+    // A position GROUP HEADER spanning the pair is the same bug wearing a
+    // different hat, and is ruled out for the same reason: the two sides are
+    // sorted independently, so a WR opposite an RB is an ordinary row.
     expect(stripped, 'a shared centre slot column is back').not.toMatch(/\.lv-mx-pos\s*\{/);
-    expect(island, 'no per-row slot label in the markup').toMatch(/lv-ppos/);
-    expect(valueOf(base, '.lv-ppos', 'grid-area')).toBe('pos');
+    expect(island, 'no per-row position label in the markup').toMatch(/lv-ppos/);
   });
 
-  it('starts the box-score line where the player’s name starts', () => {
-    // Flush left it sat under the position chip, a whole slot column away from
-    // the player it describes. The board this replaces bought the indent with
-    // a derived `padding-left`; the kit spans the GRID instead, at every
+  it('gives the position NO column of its own — it rides the meta line', () => {
+    // The label used to hold a `pos` grid area sized `--lv-slot-w`: a fixed
+    // 1.6rem plus the row gap, 32px on EACH side of the pair, spent on two
+    // characters. On a 390px phone that is 64px out of the two name columns,
+    // and it is what wrapped "Jahmyr Gibbs" and "Chris Olave" onto a second
+    // line (owner, 2026-09-19). Reserving the track again re-buys that bug, so
+    // this pins the ABSENCE of the reservation four independent ways — no
+    // grid area, no fixed track width, no `pos` in either side's areas, and no
+    // live `--lv-slot-w`. Each is a route the 32px column could return by.
+    //
+    // EVERY assertion runs over the PHONE cascade as well as the base one.
+    // `base` has every `@media` block stripped, so a phone-only
+    // reintroduction — `@media (max-width: 760px) { .lv-prow {
+    // grid-template-areas: "pos face name name" … } }` — would satisfy a
+    // base-only check completely, on the one viewport the bug was reported
+    // from. A guard that cannot see the breakpoint cannot guard a
+    // phone-width rule.
+    for (const [label, block] of [
+      ['base', base],
+      ['phone', phone],
+    ] as const) {
+      expect(
+        valueOf(block, '.lv-ppos', 'grid-area'),
+        `${label}: the position must not take a grid area — that is the 32px column back`,
+      ).toBeUndefined();
+      for (const prop of ['min-width', 'width', 'flex-basis']) {
+        expect(
+          valueOf(block, '.lv-ppos', prop),
+          `${label}: a fixed ${prop} on the position is the slot column by another name`,
+        ).toBeUndefined();
+      }
+      for (const selector of ['.lv-prow', '.lv-prow--right']) {
+        for (const row of gridRows(block, selector)) {
+          expect(row, `${label}: ${selector} reserves a pos track again`).not.toContain('pos');
+        }
+      }
+    }
+    // The token that sized it is gone, and must not come back — a live
+    // `--lv-slot-w` is the tell that somebody is re-reserving the track.
+    // This one reads the WHOLE sheet, media blocks included, so it needs no
+    // per-cascade loop — and it is the backstop for a reintroduction that
+    // invents a new selector the loop above does not name.
+    expect(stripped, '--lv-slot-w is back; the slot column is being rebuilt').not.toMatch(
+      /--lv-slot-w/,
+    );
+  });
+
+  it('keeps the position welded to its NFL team so the meta line cannot split them', () => {
+    // `.lv-pmeta` wraps (it has to — red zone, down & distance and a clock all
+    // land on it). Loose in that flex line, a narrow row can break `RB` off
+    // from `· DET`, or start a wrapped line with the separator. One nowrap
+    // wrapper makes the group unbreakable; the separator is decorative and is
+    // hidden from assistive tech rather than read as "middle dot".
+    expect(island, 'position + team are not wrapped together').toMatch(/lv-pwho/);
+    // Phone too, not just base — a breakpoint that relaxes the wrapper to save
+    // a few pixels would split the group on exactly the width that needs it
+    // held together.
+    for (const [label, block] of [
+      ['base', base],
+      ['phone', phone],
+    ] as const) {
+      expect(
+        valueOf(block, '.lv-pwho', 'white-space'),
+        `${label}: without nowrap the meta line can break "RB · DET" in half`,
+      ).toBe('nowrap');
+    }
+    expect(island, 'the NFL team is not on the row').toMatch(/lv-pteam/);
+    expect(island, 'the separator must be hidden from assistive tech').toMatch(
+      /lv-pdiv[^>]*aria-hidden|aria-hidden[^>]*lv-pdiv/s,
+    );
+    // A team DEFENCE gets no club code: "DEF · SEA" beside a player named
+    // "Seattle Seahawks" is the same fact three times in one row.
+    expect(island, 'a team defence must not print its own club code').toMatch(
+      /isDef\s*\?\s*''\s*:\s*team/,
+    );
+  });
+
+  it('mirrors the meta line by its AXIS, so the same item wraps on both sides', () => {
+    // The right side has to start its meta line from the OUTER edge or the
+    // position slides with the width of the clock text and the label column
+    // goes ragged on one side of the pair only.
+    //
+    // `order: 1` on `.lv-pwho` buys that on one line and breaks it on two. The
+    // line wraps — it carries a clock, RED ZONE and down-and-distance — and
+    // the LAST flex item is the one that wraps, so ordering the position last
+    // drops it to line 2 on the right during a live drive while the left keeps
+    // it on line 1. Reversing the axis pins the position AND leaves the wrap
+    // on the down-and-distance chip, which is what wraps on the left too.
+    //
+    // DOM order is untouched by either, so this is not an a11y trade — it is
+    // the difference between mirroring the line and reordering one item in it.
+    expect(
+      valueOf(base, '.lv-prow--right .lv-pmeta', 'flex-direction'),
+      'the mirrored meta line must reverse its axis, not reorder one child',
+    ).toBe('row-reverse');
+    for (const sel of ['.lv-pwho', '.lv-prow--right .lv-pwho']) {
+      expect(
+        valueOf(base, sel, 'order'),
+        `${sel}: order makes the position the item that wraps — mirror the axis instead`,
+      ).toBeUndefined();
+    }
+  });
+
+  it('starts the box-score line where the player’s headshot starts', () => {
+    // Flush left it once sat under the position chip, a whole slot column away
+    // from the player it describes. The board this replaces bought the indent
+    // with a derived `padding-left`; the kit spans the GRID instead, at every
     // width, which cannot drift when a column is resized because it names the
     // columns rather than re-deriving their widths.
-    expect(valueOf(base, '.lv-pstat', 'grid-column')).toBe('2 / -1');
-    expect(valueOf(base, '.lv-prow--right .lv-pstat', 'grid-column')).toBe('1 / -2');
+    //
+    // The span is the FULL row now that there is no slot column to clear —
+    // column 1 is the headshot, which is where the line has always rendered,
+    // and a long line gets the whole row instead of all but one track.
+    expect(valueOf(base, '.lv-pstat', 'grid-column')).toBe('1 / -1');
+    expect(valueOf(base, '.lv-prow--right .lv-pstat', 'grid-column')).toBe('1 / -1');
     // And NOT with a margin. A margin adds to the 100% basis and pushes the
     // line past the row — the first attempt at this, and the reason the rule
     // says padding-or-grid rather than "indent it somehow".
@@ -545,11 +652,14 @@ describe('a matchup row keeps its two players level', () => {
     expect(valueOf(phone, '.lv-pname', 'white-space')).toBe('normal');
   });
 
-  it('on a phone the box-score line clears the slot chip via grid columns', () => {
-    // Column 2 is the headshot, which is where the meta line above it starts —
-    // the stat line lines up under the player, not under his slot label.
-    expect(valueOf(phone, '.lv-pstat', 'grid-column')).toBe('2 / -1');
-    expect(valueOf(phone, '.lv-prow--right .lv-pstat', 'grid-column')).toBe('1 / -2');
+  it('on a phone the box-score line spans the row via grid columns', () => {
+    // Column 1 is the headshot, which is where the meta line above it starts —
+    // the stat line lines up under the player. It ran from column 2 while a
+    // slot column sat in front of the headshot; with that column gone the
+    // full span puts it in the same place and gives a long line the whole row.
+    // The breakpoint must not re-introduce an offset of its own.
+    expect(valueOf(phone, '.lv-pstat', 'grid-column')).toBe('1 / -1');
+    expect(valueOf(phone, '.lv-prow--right .lv-pstat', 'grid-column')).toBe('1 / -1');
   });
 });
 

@@ -580,7 +580,6 @@ button.lv-card:focus-visible {
   /* The row metrics, declared ONCE here. Every descendant measures against
      them — which is why the bench nests inside this element rather than beside
      it, or it would get desktop rows on a phone. */
-  --lv-slot-w: 1.6rem;
   --lv-face-w: 34px;
   --lv-row-gap: 0.4rem;
   --lv-row-pad-y: 0.5rem;
@@ -664,11 +663,21 @@ button.lv-card:focus-visible {
 
 .lv-prow {
   display: grid;
-  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  /*
+   * THREE columns — face, name, score. There is no `pos` track.
+   *
+   * There was: a fixed `--lv-slot-w` ahead of the headshot, which with the
+   * row gap cost 32px on EACH side of the pair. On a 390px phone that is 64px
+   * taken out of the two name columns to print two characters, and it is what
+   * wrapped "Jahmyr Gibbs" and "Chris Olave" onto a second line (owner,
+   * 2026-09-19). The position rides `.lv-pmeta` now — see `.lv-pwho` below
+   * and the header of `LvPlayerRow.tsx`.
+   */
+  grid-template-columns: auto minmax(0, 1fr) auto;
   grid-template-areas:
-    "pos face name name"
-    ".   meta meta score"
-    ".   stat stat stat";
+    "face name name"
+    "meta meta score"
+    "stat stat stat";
   grid-column: 1;
   grid-row: 1 / -1;
 
@@ -696,11 +705,11 @@ button.lv-card:focus-visible {
 /* The mirrored side: same three tracks, columns reversed. */
 .lv-prow--right {
   grid-column: 2;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   grid-template-areas:
-    "name name face pos"
-    "score meta meta ."
-    "stat  stat stat .";
+    "name name face"
+    "score meta meta"
+    "stat  stat stat";
 }
 
 /**
@@ -712,20 +721,44 @@ button.lv-card:focus-visible {
  */
 .lv-pid { display: contents; }
 
+/**
+ * Position and NFL team, riding the meta line: `RB · DET`.
+ *
+ * NO GRID AREA, deliberately — that is the whole point of the change. The
+ * label used to own a `pos` track of its own (see `.lv-prow`), and the two
+ * characters in it cost 32px a side. Here it is a flex item on a row that
+ * already exists, so it costs nothing but the width of its own glyphs.
+ *
+ * ONE wrapper around the pair, because `.lv-pmeta` wraps: without it a narrow
+ * row can break `RB` off from `· DET`, or start a wrapped line with the
+ * separator. `inline-flex` keeps the three together as one unwrappable unit.
+ */
+.lv-pwho {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.22rem;
+  white-space: nowrap;
+}
+
 .lv-ppos {
-  grid-area: pos;
-  /* COLOURED TEXT, not a filled pill (owner direction, Aug 2026): nine filled
+  /* PLAIN TEXT, not a filled pill (owner direction, Aug 2026): nine filled
      chips per side turned the lineup into a column of coloured blocks that
-     outweighed the players' own names. As text the colour still codes the
-     position and the name leads. */
+     outweighed the players' own names. As text, the name leads. It stays at
+     the meta line's muted colour for the same reason — this row is metadata,
+     and the only thing on it allowed to shout is the red-zone flag. */
   font-family: var(--font-display);
   font-weight: var(--font-weight-bold);
-  font-size: 0.6rem;
-  letter-spacing: 0;
-  padding: 0.14rem 0;
-  min-width: var(--lv-slot-w);
+  letter-spacing: 0.02em;
   color: var(--content-text-muted);
 }
+
+/* `.lv-pteam` carries NO rule on purpose — it inherits the meta line's size and
+   colour exactly, which is the design: the position leads by WEIGHT (the bold
+   display face above), not by being a different colour from the club beside it.
+   The class stays as a markup hook. A `color` here would be a copy of
+   `.lv-pmeta`'s own, which is how two declarations of one value start to
+   disagree. */
+.lv-pdiv { opacity: 0.55; }
 
 .lv-headshot {
   grid-area: face;
@@ -790,7 +823,33 @@ button.lv-card:focus-visible {
   font-size: 0.64rem;
   color: var(--content-text-muted);
 }
-.lv-prow--right .lv-pmeta { justify-content: flex-end; }
+/**
+ * MIRRORED BY THE AXIS — never by reordering one item inside it.
+ *
+ * Both halves of this matter, and the second is why `order` is wrong here.
+ *
+ * The line has to start from the OUTER edge, or the position slides with the
+ * width of the clock text ("Final" against "11:00 - 4th") and the column of
+ * labels an owner scans down goes ragged on one side of the pair only.
+ * Reversing the axis pins it: main-start is the right edge on this side, so
+ * the first item in source order lands against it, exactly as it does on the
+ * left.
+ *
+ * And the line WRAPS. `order: 1` on `.lv-pwho` pins it at the outer edge on
+ * ONE LINE and then hands it the worst job on the row: the last flex item is
+ * the one that wraps, so a live drive (`RB · DET` + a running clock + RED ZONE
+ * ≈ 160px in a ~130px area) dropped the position to line 2 on the right while
+ * the left kept it on line 1 — the raggedness this rule exists to prevent,
+ * turned vertical. Reversing the axis moves the wrap to the LAST item on both
+ * sides, which is the down-and-distance chip, where it belongs.
+ *
+ * DOM order is untouched either way, so assistive tech still hears "QB, DET,
+ * Final". This is presentation; the reading stays put.
+ */
+.lv-prow--right .lv-pmeta {
+  flex-direction: row-reverse;
+  justify-content: flex-start;
+}
 
 .lv-pclock { display: inline-flex; align-items: center; gap: 0.2rem; }
 .lv-pclock--live { color: var(--lv-live); }
@@ -825,13 +884,16 @@ button.lv-card:focus-visible {
 }
 
 /**
- * The box-score line clears the slot chip via GRID COLUMNS, and its indent is
- * PADDING inside a 100% basis — never a margin, which would add to the basis
- * and push the line past the row.
+ * The box-score line spans the row via GRID COLUMNS — never a margin, which
+ * would add to a 100% basis and push the line past the row's edge.
+ *
+ * It used to start at column 2 to clear the slot chip. With no slot track,
+ * column 1 IS the headshot, so the full span both lands the line in the same
+ * place it has always rendered and gives a long one the whole row to use.
  */
 .lv-pstat {
   grid-area: stat;
-  grid-column: 2 / -1;
+  grid-column: 1 / -1;
   align-self: start;
   margin-top: 0;
   padding-left: 0;
@@ -839,7 +901,7 @@ button.lv-card:focus-visible {
   color: var(--content-text-muted);
 }
 .lv-prow--right .lv-pstat {
-  grid-column: 1 / -2;
+  grid-column: 1 / -1;
   padding-right: 0;
   text-align: right;
 }

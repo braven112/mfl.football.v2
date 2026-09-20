@@ -783,3 +783,65 @@ shape does not diverge on the day you write it — it diverges on the day
 somebody extends the first one, and nothing about that day points at the
 second. A guard that lists the shape by hand cannot see the divergence either;
 derive the expectation from the thing being copied.
+
+## 2026-09-20 - A fixed track in a MIRRORED pair costs double, and the guard pinned the mechanism
+
+**Context:** An owner's phone screenshot of the matchup detail: "the position
+column takes up a lot of width and crowds the names." The 2026-09-11 entry
+above attacked the same page's width budget from the gutters and the header;
+this is the horizontal half's next chapter, and the arithmetic is what makes it
+worth its own note.
+
+**Insight — a per-side track is charged twice, and `1.6rem` hides that.**
+`.lv-ppos` held a `pos` grid area sized `--lv-slot-w: 1.6rem`, which with
+`--lv-row-gap` is ~32px. That reads as a rounding error until you remember
+`.lv-mx-row` renders TWO of these side by side: the real bill is **64px of a
+390px screen, 16%**, and every pixel of it comes out of the two name columns
+because they are the only `1fr` tracks in the row. Measured after removing it:
+the name column goes 100px → 132px and the row drops from four tracks to three.
+
+Reviewing a fixed track in this layout, double it before judging it. The same
+applies to `--lv-face-w` and anything else `.lv-mx-body` declares — those
+metrics are all per-side.
+
+**Where the label went, and the one thing that move costs.** Onto `.lv-pmeta`,
+the row that already carries the game clock (`RB · DET` ahead of the state
+dot) — free geometry, and it buys the row the NFL team it printed nowhere
+before. Two non-obvious constraints came with it:
+
+- **The meta line WRAPS** (it carries red zone and down-and-distance too), so
+  the position, separator and team need one `white-space: nowrap` wrapper or a
+  narrow row breaks `RB` off from `· DET`, or starts a wrapped line with the
+  separator.
+- **A justified-to-the-outer-edge line has exactly one x-stable item: its
+  last.** The right side justifies `flex-end`, so in source order the label
+  would slide with the width of the clock text ("Final" against "11:00 - 4th")
+  and the column of labels would go ragged on one side of the pair only.
+  `.lv-prow--right .lv-pwho { order: 1 }` pins it. Use `order`, not a second
+  markup branch — DOM order is what assistive tech announces, and "QB, DET,
+  Final" is the right sentence on both sides.
+
+**The bigger lesson: three guards pinned the DELIVERY of a rule, not the
+rule.** `tests/live-scoring-layout-css.test.ts` asserted
+`valueOf('.lv-ppos', 'grid-area') === 'pos'` and
+`valueOf('.lv-pstat', 'grid-column') === '2 / -1'`. Both are *mechanisms*. The
+invariants they were written to protect — never a shared centre slot column,
+never indent the box-score line with a margin — were untouched by this change
+and still hold. A guard written at that altitude fails on every improvement to
+the thing it guards, and the tempting fix is to delete the assertion.
+
+**The rule:** when a guard fails because the design moved rather than because
+the rule broke, rewrite it to pin the invariant and it usually gets STRONGER,
+because you now know which direction the regression comes from. Here the
+replacement pins the absence four independent ways — no `grid-area`, no fixed
+`min-width`/`width`/`flex-basis`, no `pos` in either side's
+`grid-template-areas`, and no live `--lv-slot-w` anywhere in the sheet — since
+each one is the 32px column coming back under another name. The suite went
+25 → 27 tests. Loosening it would have left the next session free to re-add the
+column by any of those four routes.
+
+**Ruled out, and the tests say so:** a shared centre column, and a position
+group header spanning the pair. Both can only name ONE of the two paired
+positions and mislabel the other whenever the sides run different lineup
+shapes. That is not an edge case — the rows are sorted per side, so a WR
+opposite an RB is an ordinary row, and the owner's own screenshot had one.
