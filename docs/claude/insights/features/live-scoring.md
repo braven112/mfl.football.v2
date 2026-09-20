@@ -14,6 +14,44 @@ Their reasoning is still why the current code looks the way it does — the CSS
 rules in particular were harvested into the rewrite — but the file and symbol
 names in them no longer exist. Read them as history, not as a map.
 
+## 2026-09-20 - Aggregating Across `matchups` Double-Counts Every Franchise in a Doubleheader Week
+
+**Context:** MFL Live's new per-league board
+(`/live/league/<mflLeagueId>`) added a top-scorers strip built by
+`buildLeaders` (`src/utils/live/leaders.ts`) from the assembled panel. It
+walked `panel.matchups`, then each matchup's two sides, collecting rows. Shipped
+green; caught in a screenshot, not by a test. Every player was listed twice —
+Josh Allen at #1 **and** #2 of the same league, same owner, same score.
+
+**Insight — a panel's `matchups` is a list of PAIRINGS, not of franchises, and
+in a doubleheader week each franchise appears in two of them.** TheLeague's own
+schedule runs doubleheaders (`docs/claude/rules/schedule-optimization.md` — the
+late doubleheader week is whichever of Week 12/13 is bye-free that year), so
+this is normal data, not a malformed feed. Anything aggregating a per-FRANCHISE
+quantity — a leaderboard, a total, a count, an average — has to gate on the
+franchise id and take the first sighting, because the second one is the same
+roster reported again rather than a second set of points.
+
+This is the third instance of one bug class in this repo. The others:
+`update-salary-averages.mjs` summed player points the doubled way for every
+season since 2007 (`docs/claude/followups/2026-09-15-salary-averages-doubleheader-double-count.md`),
+and the player modal's week-1 points had the same shape. The tell is always the
+same — iterating a schedule to answer a question about teams.
+
+**Why the unit tests could not see it.** The fixture gave every franchise
+exactly one matchup, which is what a hand-written fixture naturally looks like.
+A doubleheader is not an edge case to remember at test-writing time; it is a
+case the fixture has to CONTAIN. `tests/live-league-board-outside.test.ts` now
+has one, and it asserts both that the keys are unique and that nothing was lost
+to the de-duplication — a dedupe that quietly drops a franchise passes the
+first assertion on its own.
+
+**Not to be confused with the thing that must NOT be deduped.** The same player
+started by two DIFFERENT franchises is two owners' points and two legitimate
+rows — routine in the AFL, whose rosters duplicate players, and possible on
+both sides of one matchup. The gate is on the franchise, never on the player,
+and `LiveLeaderPlayer` is keyed by the PAIR for exactly that reason.
+
 ## 2026-07-08 - Reusable two-team color contrast system
 
 **Context:** The predictor chart (win-probability bar + dynamic top border)

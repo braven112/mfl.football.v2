@@ -133,6 +133,46 @@ hrefs to local copies, and open it in the bundled Chromium — it isolates
 
 ---
 
+## 2026-09-20 - An Island Prop Is JSON, So a Callback Never Arrives; and a Visibility Gate Doubling as an Affordance Gate Hid a Feature's Only Entry Point
+
+**Context:** MFL Live's league panels gained a link into a new per-league board
+(`/live/league/<mflLeagueId>`). Two things went wrong in the shared kit
+(`src/components/shared/live/LiveBoard.tsx`), neither of them about the feature.
+
+**Insight 1 — a hydrated island's props cross the server/client boundary as
+JSON, so a function prop does not degrade, it throws.** The link was specified,
+and written, as `panelHref?: (panel: LivePanel) => string | null` — a per-panel
+callback, which is the better API in ordinary React and unshippable here. Astro
+serializes island props, and a function has no serialization; the page renders
+an error rather than a board with a missing link, so the failure is total and
+lands only on the page that does it. It is `panelHrefBase?: string` now, a base
+path the kit appends the league id to.
+
+This is worth holding as a shape rather than a fact about one prop: **any prop
+to a `client:*` component has to survive `JSON.stringify`** — no functions, no
+class instances, no `Map`/`Set`, no `Date` that the client then calls date
+methods on. The kit already had the read-only half of this rule (a `story`'s
+`onSelectWeek` is passed from a `.tsx` parent, never from `.astro`), and
+nothing stated the general case.
+
+**Insight 2 — `board.panels.length > 1` was gating two different questions.**
+The league heading rendered only on a multi-panel board, which was right while
+its only job was saying *which* league a card belonged to. The moment the
+heading became a LINK it acquired a second job — being the only route into the
+drill-down — and the old gate silently withheld it from every owner with
+exactly one league on the board. That is a common case, not an edge, and it is
+invisible in tests and in review: the component is correct, the feature is
+correct, and the two are simply never on screen together.
+
+**Recommendation:** When an existing conditional starts guarding something new,
+re-derive the condition from the NEW question rather than reusing the flag that
+happens to be in scope. Here that is two named booleans off one fact —
+`multiLeague` still decides whether a red-zone alert names its league, and
+`showPanelName = multiLeague || Boolean(panelHrefBase)` decides whether the
+heading renders. A comment on each says which question it answers.
+
+---
+
 ## 2026-09-15 - An `auto-fill` Track Minimum Is a READABILITY Budget; and `container-type` Silently Becomes a Containing Block for `position: fixed`
 
 **Context:** The AFL keeper planner (`src/components/afl-fantasy/KeeperPlanner.astro`)
