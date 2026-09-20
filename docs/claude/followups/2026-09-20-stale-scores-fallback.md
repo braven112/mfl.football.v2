@@ -7,7 +7,7 @@ hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1178
 hotfix_sha: 2d6fede
 followup_issue: 1179
 followup_pr:
-followup_session:
+followup_session: session_018rQEzTt7pGisWE1fFA6Uuo
 ---
 
 # Follow-up: live scoring blanked to an error card over real scores
