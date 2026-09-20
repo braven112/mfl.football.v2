@@ -52,7 +52,7 @@
  * has a well-formed committed SVG).
  */
 
-import { promises as fs } from 'node:fs';
+import fsSync, { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
@@ -115,7 +115,7 @@ const svgoConfig = {
  * than > 0 ignores the near-transparent fringe antialiasing leaves behind,
  * which would otherwise report a box a pixel or two wide on every edge.
  */
-async function trimViewBox(svg, code) {
+export async function trimViewBox(svg, code) {
   const match = svg.match(/viewBox="([\d.\-\s]+)"/);
   if (!match) throw new Error('no viewBox to trim');
   const [vx, vy, vw, vh] = match[1].trim().split(/\s+/).map(Number);
@@ -206,6 +206,18 @@ async function writeIfChanged(file, content) {
   return existing === null ? 'added' : 'changed';
 }
 
+/**
+ * The full NFL.com -> committed-file transform, exported so other tooling
+ * (e.g. the source-set comparison page generator) can render a candidate set
+ * through exactly the same pipeline rather than approximating it.
+ */
+export function optimizeAndTrimSvg(raw, code) {
+  if (!/^\s*(<\?xml[^>]*\?>\s*)?<svg[\s>]/.test(raw)) {
+    throw new Error(`not an SVG (${raw.length} bytes)`);
+  }
+  return trimViewBox(optimize(raw, svgoConfig).data, code);
+}
+
 async function buildLogo(code) {
   const res = await fetch(logoUrl(code), {
     headers: { 'User-Agent': 'Mozilla/5.0 (compatible; NFLLogoDownloader/2.0)' },
@@ -213,12 +225,7 @@ async function buildLogo(code) {
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
   const raw = await res.text();
-  if (!/^\s*(<\?xml[^>]*\?>\s*)?<svg[\s>]/.test(raw)) {
-    throw new Error(`response is not an SVG (${raw.length} bytes)`);
-  }
-
-  const optimized = optimize(raw, svgoConfig).data;
-  const trimmed = await trimViewBox(optimized, code);
+  const trimmed = await optimizeAndTrimSvg(raw, code);
   return { svg: trimmed.endsWith('\n') ? trimmed : `${trimmed}\n`, rawBytes: raw.length };
 }
 
@@ -304,7 +311,26 @@ async function run() {
   console.log(dryRun ? '\nDry run complete.' : '\n✅ Logos refreshed — review the diff, then commit.');
 }
 
-run().catch((err) => {
-  console.error('✗ download-nfl-logos failed:', err);
-  process.exitCode = 1;
-});
+// Only run when invoked directly — the transform above is imported elsewhere.
+// realpath both sides: node resolves a module specifier to its real path while
+// argv[1] keeps whatever path the shell used, so a symlinked checkout would
+// otherwise compare unequal and turn this script into a silent no-op that
+// exits 0 having refreshed nothing.
+const invokedDirectly = (() => {
+  if (!process.argv[1]) return false;
+  const real = (p) => {
+    try {
+      return fsSync.realpathSync(p);
+    } catch {
+      return path.resolve(p);
+    }
+  };
+  return real(process.argv[1]) === real(fileURLToPath(import.meta.url));
+})();
+
+if (invokedDirectly) {
+  run().catch((err) => {
+    console.error('✗ download-nfl-logos failed:', err);
+    process.exitCode = 1;
+  });
+}
