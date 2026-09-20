@@ -1001,6 +1001,23 @@
       ]
     },
     {
+      "name": "nfl-logos",
+      "rules": "docs/claude/rules/theming-and-assets.md",
+      "paths": [
+        "public/assets/nfl-logos/**",
+        "scripts/download-nfl-logos.mjs",
+        "scripts/fetch-nfl-brand-kit.mjs",
+        "scripts/fetch-nfl-dark-logos.mjs",
+        "src/data/nfl-brand-kit.json",
+        "src/data/nfl-dark-logos-manifest.json"
+      ],
+      "tests": [
+        "tests/nfl-logo-assets.test.ts",
+        "tests/nfl-brand-kit-data.test.ts",
+        "tests/nfl-logo-dark-css.test.ts"
+      ]
+    },
+    {
       "name": "throwback-week",
       "rules": "docs/claude/insights/features/throwback-week.md",
       "paths": [

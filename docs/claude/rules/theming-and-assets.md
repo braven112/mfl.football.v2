@@ -393,6 +393,27 @@ hard-won facts (Aug 2026 "missing team images" saga):
   `TEAM_CODE_MAP`/`getAllNFLTeamCodes` — or any `team` value appearing in any
   committed players feed — lacks a valid SVG. Add a logo file + map entry
   together, and never gitignore this directory.
+- **The source is NFL.com, and it is neither drop-in nor uniform.**
+  `scripts/download-nfl-logos.mjs` (`pnpm download:nfl-logos`) pulls
+  `static.www.nfl.com/league/api/clubs/logos/{CODE}.svg`. It replaced
+  mflscripts, whose mirror is FROZEN — in Sep 2026 it still served the
+  pre-rebrand Titans sword and Rams mark, months after the league changed
+  both. Three things that are load-bearing in that script, each measured:
+  NFL.com insets every mark in a 500x500 box while this repo's art is
+  tight-cropped, so a raw swap shrinks marks to 0.76x–1.00x and UNEVENLY
+  (PIT/TEN/IND/LV/NYG lose ~24%, BAL/DAL/SEA barely move) — hence the
+  raster-measured `trimViewBox`; NFL.com ships unoptimized paths (JAX 151KB
+  against 25KB) on art served to every phone on every player row — hence
+  svgo, whose `removeViewBox` must stay OFF because our input is exactly the
+  case it strips; and NFL.com is not editorially uniform — for CHI it serves
+  the bear head (a secondary), for NYG an outlined `ny`, for NYJ the reversed
+  white-filled oval, none of which are the primary a light player cell wants.
+  Those three are pinned in `KEEP_COMMITTED` and keep their existing art.
+  Adopt or reject a code ONLY against a rendered before/after; "the upstream
+  changed" is the reasoning that would have shipped a white Jets oval on a
+  white cell. `src/data/nfl-brand-kit.json` (`pnpm fetch:nfl-brand-kit`) is
+  the companion catalog — ESPN's `lastUpdated` per mark is the tripwire that
+  says WHICH club to go look at.
 - **A logo 404 is cache-poisonous, not cosmetic.** Cloudflare used to stamp
   `cache-control: max-age=14400` on responses *including 404s*, so one broken
   window kept rendering broken icons on owners' phones for hours after the
