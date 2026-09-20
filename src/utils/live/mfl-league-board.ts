@@ -66,10 +66,14 @@ export async function assembleMflLeagueBoard(
   // owner's `myleagues` entry FOR THIS LEAGUE — so it needs no further gate.
   const viewerFranchiseId = league.franchiseId || null;
 
-  // MFL serves no live scoring before the Week 1 Thursday and
-  // `getCurrentNFLWeek` answers 0 until then. A falsy week is its own state,
-  // never clamped up to 1 — clamping is what turns that gap into a mystery
-  // failure against a perfectly healthy league.
+  // MFL serves no live scoring before the Week 1 Thursday. A falsy week is its
+  // own state, never clamped up to 1 — clamping is what turns that gap into a
+  // mystery failure against a perfectly healthy league.
+  //
+  // Both callers today resolve that state before reaching here (the page
+  // renders its own pre-season copy, the poll rejects a week outside 1-25), so
+  // this is the floor rather than the path: an exported server function should
+  // not depend on every future caller remembering.
   if (!Number.isFinite(week) || week <= 0) {
     return {
       board: buildBoardFromSnapshot({

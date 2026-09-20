@@ -76,7 +76,14 @@ if (authUser && leagueId) {
       Astro.response.status = 404;
     } else {
       leagueName = league.name;
-      ({ board } = await assembleMflLeagueBoard({ user: authUser, league, week }));
+      // Assembled only for a REAL week. `getCurrentNFLWeek` answers null until
+      // the Week 1 Thursday — MFL serves no live scoring before it — and that
+      // is its own rendered state below, not a board to build. Guarding here
+      // rather than inside the assembler is what `/live` already does, and it
+      // keeps the league lookup above (and so the 404) running either way.
+      if (week) {
+        ({ board } = await assembleMflLeagueBoard({ user: authUser, league, week }));
+      }
     }
   } catch {
     // Say so, rather than rendering an empty board that reads as "no games".
