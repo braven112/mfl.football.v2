@@ -92,10 +92,85 @@ already committed at `src/data/nfl-brand-kit.json`.
 | `altDark` | `teams.<CODE>.espn.secondaryOnBlack` | PNG |
 | `whiteKnockout` | `teams.<CODE>.espn.primaryWhite` | PNG |
 | `wordmark` | `teams.<CODE>.wordmark` (nflverse) | PNG |
+| `reversed` | **derived** — recolour of the committed SVG, per-club map | SVG |
 
 ESPN publishes no SVG at any path (verified: every variant 404s), so `nflcom` is
 the only vector option beyond the committed primary. That is why two clubs chose
 it for dark.
+
+## Derived marks — the reversed cut
+
+Broadcast graphics use a **reversed** mark on dark grounds: the body knocked out
+to white with the club colour carrying the keyline. Fox's score bug does this for
+every club (observed 2026-09-20 on a SEA @ ARI broadcast).
+
+**No source we can reach publishes it.** Checked and ruled out: ESPN's full
+17-treatment brand kit, NFL.com's club endpoint, Fox Sports' own web CDN
+(including every `vresize` version index, which returns byte-identical files, and
+five guessed `-dark`/`-alt`/`-reverse` filenames, all 404), nflverse, Sleeper and
+mflscripts. Every one serves the standard mark. The reversed cut lives in the
+networks' own graphics packages, which are not distributed.
+
+Note in passing that Fox's WEB set is not its BROADCAST set — its site serves the
+standard Cardinals bird, the bear head for Chicago, a flat blue `ny` with no red
+keyline for the Giants, and a Jets wordmark with no oval.
+
+### It can be derived instead
+
+Our committed SVGs carry flat, discrete fills, so a reversal is a colour swap on
+artwork we already ship — still vector, still ~8 KB, nothing to license. For
+Arizona:
+
+| role | from | to |
+|---|---|---|
+| body | `#97233f` | `#ffffff` |
+| keyline | `#000000` | `#97233f` (club primary; tunable redder) |
+| beak | `#ffb612` | `#e2571b` |
+
+This is a **third source class** alongside "fetched from upstream" and
+"committed": generated at build time from our own SVG plus a per-club map. It
+fills exactly the gap that made CHI/NYG/NYJ awkward — a for-dark mark where
+upstream publishes none.
+
+It is a derivation, not the club's official reversed artwork, and will differ in
+small details from what a network airs. Fine for our surfaces; never describe it
+as the official mark.
+
+### It does NOT generalise — measured, not assumed
+
+A naive "largest painted area becomes white, darkest other tone becomes the
+keyline" was run against all 32 committed SVGs and rendered on a dark card
+(2026-09-20). Results:
+
+- **31 of 32 pass the structural test** (no gradients, no embedded raster, two or
+  more meaningful tones). CHI is the sole structural failure: one fill, 69% of
+  the mark — a true silhouette with nothing to swap against.
+- **Only about a third of those render acceptably.** Good: ARI, ATL, BUF, CIN,
+  CLE, DET, HOU, LV, TB, WSH. The rest come back either unchanged (SEA, SF, NO,
+  NE, JAX, NYG, NYJ) or destroyed — GB and TEN reduce to a blank white oval and
+  a blank circle, because the swap ate the only tone carrying the mark.
+
+The lesson is the one this repo keeps relearning: **the structural test narrows
+candidates, a rendered before/after decides.** Same discipline as
+`KEEP_COMMITTED` and the drift gate in `download-nfl-logos.mjs`.
+
+So `reversed` is a **curated per-club map**, never an automatic transform:
+
+```json
+{ "ARI": { "body": "#97233f", "keyline": "#000000", "accent": "#ffb612",
+           "to": { "body": "#ffffff", "keyline": "#97233f", "accent": "#e2571b" } } }
+```
+
+A club with no entry has no reversed mark, and an assignment naming `reversed`
+for such a club must fail the build rather than fall back silently.
+
+### Where a reversed mark is NOT the answer
+
+A single-colour silhouette cannot be reversed — it can only be knocked out
+whole, and ESPN already publishes that as `primaryWhite` (the `whiteKnockout`
+id). Use that for silhouettes; use `reversed` for two-tone marks. Chicago is the
+worked example: it cannot be reversed, and it does not need to be, because
+NFL.com already gives it a real for-dark mark (the bear head).
 
 ## Phase 1 — club defaults
 
@@ -197,6 +272,20 @@ global swap would replace with the club default in dark mode. Two options:
 
 Take option 1 unless a surface cannot choose its own src.
 
+### Phase 3 — the reversed cut
+
+Only once phases 1 and 2 have settled, and only for clubs whose reversal was
+eyeballed on a dark render:
+
+1. `src/data/nfl-mark-reversals.json` — the curated per-club colour map above.
+2. A derivation step (prebuild or the same manual script that commits the light
+   art) writing `/assets/nfl-logos/reversed/{CODE}.svg`, and adding the code to
+   the dark manifest so `resolveNflDarkLogoUrl` can point at it. Phase 1's
+   format-aware manifest is a prerequisite: these are SVG.
+3. A guard that every club in the reversal map still has the `from` colours
+   present in its committed SVG. A logo refresh that changes a fill silently
+   turns the reversal into a no-op or a mess, and that must fail the build.
+
 **Do not build phase 2 until phase 1 has shipped and settled.** It serves one
 club and three surfaces; if the Jets' default proves fine in practice, it may
 never be needed.
@@ -239,5 +328,9 @@ never be needed.
    PNG generally is a separate decision — it is the *right* artwork for only some
    clubs, and this plan does not settle it.
 2. **The white knockout.** `espn.primaryWhite` is a clean white mark with no
-   keyline — arguably the correct asset for any club-colour band. Not assigned to
-   anyone yet; worth a pass over the 32 bands once phase 1 lands.
+   keyline — the right asset for a single-colour silhouette on a dark or
+   club-colour ground, where `reversed` cannot help. Not assigned to anyone yet;
+   worth a pass over the 32 bands once phase 1 lands.
+3. **Arizona's keyline red.** The derivation currently uses the club primary
+   `#97233f`. A ladder up to `#d9202c` was rendered on both grounds; picking the
+   exact value is a design call still open, and it only affects the `to` map.
