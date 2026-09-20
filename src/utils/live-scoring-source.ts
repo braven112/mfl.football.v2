@@ -27,6 +27,7 @@
 
 import { ALL_LEAGUES, getLeagueById, getLeagueBySlug, DEFAULT_LEAGUE_SLUG } from '../config/leagues';
 import { buildMflExportUrl } from './mfl-url';
+import { PLAYOFFS_START_WEEK } from './fantasy-bracket.mjs';
 import {
   emptyLiveSnapshot,
   parseLiveScoringPayload,
@@ -100,6 +101,68 @@ export function resolveHost(hint: string | null | undefined, leagueId: string): 
 const MFL_HEADERS = { 'User-Agent': 'Mozilla/5.0 (compatible; FantasyLeague/1.0)' };
 
 /**
+ * How long one league's week stays good in process.
+ *
+ * ── WHY THERE IS A CACHE AT ALL ───────────────────────────────────────────
+ * On 2026-09-20 an owner screenshotted `/live` with both leagues reading
+ * "Couldn't read this league" while the freshness pill said "Live · updated
+ * just now"; the production logs for that minute show every
+ * `/api/live-board` answering 200, so the failure was here — the LEAGUE reads
+ * inside a healthy board. Nothing in this file was cached, so every board
+ * poll, on every device, for every viewer, asked MFL again: at the 25s live
+ * cadence that is ~2.4 requests per league per minute per open tab, and MFL
+ * answers a client it considers noisy with an HTML page under a 200, which is
+ * exactly the shape that becomes `ok: false` below.
+ *
+ * ── WHAT IT DOES AND DOES NOT FIX ─────────────────────────────────────────
+ * It collapses CONCURRENT readers sharing a process — a phone and a laptop on
+ * one lambda, a page render and the poll that follows it, the league board and
+ * MFL Live open at once. It does NOT collapse readers on different instances,
+ * so this is a real reduction rather than a fix, and it is paired with the
+ * bracket skip below, which removes half the requests outright.
+ *
+ * Twenty seconds: under the 25s live poll, so a single viewer's own next poll
+ * still reaches MFL and the board never shows a number older than one cycle
+ * for want of asking.
+ */
+const LIVE_PAYLOAD_TTL_MS = 20_000;
+
+/**
+ * Keyed by everything that changes the ANSWER, host included.
+ *
+ * `L` and the host are one composite key and MFL validates neither against the
+ * other — a server asked for a league it does not host answers with its own
+ * league — so a key that left the host out could serve one league's scores
+ * under another's id, which is the exact failure `resolveHost` exists to
+ * prevent. It would be a poor trade to reintroduce it for a cache.
+ */
+const payloadCache = new Map<string, { at: number; payload: LiveScoringPayload }>();
+
+/** Exported for tests only — a module-level cache leaks between them otherwise. */
+export function clearLiveScoringPayloadCache(): void {
+  payloadCache.clear();
+}
+
+/**
+ * Why a read failed, named, on one line.
+ *
+ * The failures this exists for were INVISIBLE: `readCrossLeagueLive` turns
+ * every one of them into `ok: false` and the assembler turns that into a panel
+ * that says "couldn't read this league", so the only evidence a request ever
+ * failed was a screenshot from an owner. That is the same "a request that
+ * never reaches the route leaves no entry beside the page render" signature as
+ * the 2026-09-09 outage in `docs/claude/rules/live-scoring.md`, and it is why
+ * that one took hours to triage.
+ *
+ * `warn`, not `error`: a single failed league read is survivable by design
+ * (the board holds its last confirmed scores), and a level that pages someone
+ * for a recoverable blip is a level that gets muted.
+ */
+function noteFailure(where: string, url: string, reason: string): void {
+  console.warn(`[live-scoring] ${where} failed for ${url}: ${reason}`);
+}
+
+/**
  * Bounded because this now runs inside a PAGE render, not just an API route:
  * an MFL read that hangs would hang the whole first paint. Generous enough
  * that a merely slow MFL still lands.
@@ -123,11 +186,45 @@ export async function loadLiveScoringPayload(
   const year = String(opts.year);
   const week = String(opts.week);
 
+  /**
+   * A recent READ of this exact league-week, if one is in this process.
+   *
+   * Only successes are ever in here (see the write below), so a hit is always
+   * a payload we actually read. The copy is shallow and the collections under
+   * it are SHARED: every consumer of a snapshot reads it — `buildBoardFromSnapshot`
+   * copies before it writes, the broadcast source only indexes — and this
+   * keeps that contract explicit rather than handing out the same object
+   * reference to be mutated behind everyone's back.
+   */
+  const cacheKey = `${host}|${leagueId}|${year}|${week}`;
+  const hit = payloadCache.get(cacheKey);
+  if (hit && Date.now() - hit.at < LIVE_PAYLOAD_TTL_MS) return { ...hit.payload };
+
+  /**
+   * The bracket feed is a PLAYOFF-WEEK read, and it used to run every week.
+   *
+   * `mergePlayoffBrackets` only does anything for a week a bracket covers, so
+   * in Week 2 this was a second MFL request per league per poll whose entire
+   * contribution was to find no round for the week and return. That doubled
+   * our request count against a host that answers a noisy client with an HTML
+   * page under a 200 — the failure this file's `ok` flag exists to catch, and
+   * the one owners were seeing on the board.
+   *
+   * Both leagues run the same three-round shape (see `fantasy-bracket.mjs`),
+   * so one constant governs it. Asking one week EARLY is deliberate slack: a
+   * league that opens its bracket a week sooner than the shared shape still
+   * merges correctly, and the cost is one request per league in one week of
+   * the year. `tests/live-scoring-read-load.test.ts` pins both halves.
+   */
+  const wantsBrackets = Number(week) >= PLAYOFFS_START_WEEK - 1;
+
   const [liveScoreResponse, playoffBracketsResponse] = await Promise.all([
     // DETAILS=1 so each franchise carries its per-player breakdown
     // (players.player[] with id, score, gameSecondsRemaining, status).
     fetchMfl(buildMflExportUrl({ type: 'liveScoring', leagueId, year, params: { W: week, DETAILS: 1 }, host })),
-    fetchMfl(buildMflExportUrl({ type: 'playoffBrackets', leagueId, year, host })),
+    wantsBrackets
+      ? fetchMfl(buildMflExportUrl({ type: 'playoffBrackets', leagueId, year, host }))
+      : Promise.resolve(null),
   ]);
 
   // `.json()` REJECTS on a non-JSON body, and MFL answers a throttled or
@@ -145,24 +242,64 @@ export async function loadLiveScoringPayload(
   // this whole file exists to prevent.
   let ok = !!liveScoreResponse?.ok;
   let snapshot = emptyLiveSnapshot();
-  if (liveScoreResponse?.ok) {
+  const liveUrl = buildMflExportUrl({
+    type: 'liveScoring',
+    leagueId,
+    year,
+    params: { W: week, DETAILS: 1 },
+    host,
+  });
+  if (!liveScoreResponse) {
+    // `fetchMfl` already logged the network reason; this names the league, so
+    // a board with one dead panel can be told from MFL being down for everyone.
+    noteFailure('liveScoring', liveUrl, 'no response');
+  } else if (!liveScoreResponse.ok) {
+    noteFailure('liveScoring', liveUrl, `HTTP ${liveScoreResponse.status}`);
+  } else {
     const body = await liveScoreResponse.json().catch(() => null);
     // MFL also reports some failures as well-formed JSON with an `error` key
     // rather than a status — same conclusion, same reason.
-    if (body === null || body?.error) ok = false;
-    else snapshot = parseLiveScoringPayload(body);
+    if (body === null) {
+      ok = false;
+      // The throttle signature: a 200 carrying an HTML page. Named explicitly
+      // because it is the one failure whose fix is "ask MFL less", not "retry".
+      noteFailure('liveScoring', liveUrl, 'body did not parse as JSON (HTML under a 200?)');
+    } else if (body?.error) {
+      ok = false;
+      noteFailure('liveScoring', liveUrl, `MFL error: ${String(body.error).slice(0, 120)}`);
+    } else {
+      snapshot = parseLiveScoringPayload(body);
+    }
   }
 
   await mergePlayoffBrackets(snapshot, playoffBracketsResponse, { leagueId, year, week, host });
 
-  return { ok, week: Number(week), ...snapshot };
+  const payload: LiveScoringPayload = { ok, week: Number(week), ...snapshot };
+
+  /**
+   * ONLY A SUCCESSFUL READ IS REMEMBERED.
+   *
+   * Caching a failure would pin the outage in front of every reader sharing
+   * this process for the whole TTL, and turn a one-poll blip into twenty
+   * seconds of "couldn't read this league" for everybody — the identical
+   * mistake `PROJECTION_EMPTY_TTL_MS` and `/api/nfl-game-detail`'s
+   * never-memoize-a-partial-read rule are each written to avoid. A failed read
+   * must stay cheap to retry.
+   */
+  if (ok) payloadCache.set(cacheKey, { at: Date.now(), payload });
+
+  return payload;
 }
 
 /** A failed MFL read is `null`, never a throw — every caller treats it as "not ok". */
 async function fetchMfl(url: string): Promise<Response | null> {
   try {
     return await fetch(url, { headers: MFL_HEADERS, signal: AbortSignal.timeout(MFL_TIMEOUT_MS) });
-  } catch {
+  } catch (err) {
+    // The one place that knows WHY — a timeout and a refused connection are
+    // the same `null` to every caller, and they mean different things about
+    // MFL. Swallowing this is what made the failures unfalsifiable.
+    noteFailure('fetch', url, err instanceof Error ? `${err.name}: ${err.message}` : String(err));
     return null;
   }
 }

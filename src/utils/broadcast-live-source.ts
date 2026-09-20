@@ -293,6 +293,16 @@ export async function readOutsideLiveSnapshot(
     return { leagueId: league.id, ok: false, snapshot: empty };
   }
 
+  /**
+   * Named failures, for the same reason the registered path logs them: every
+   * one of these returns the identical `ok: false`, the assembler turns that
+   * into "couldn't read this league", and until 2026-09-20 the only evidence
+   * any of it had happened was an owner's screenshot. A one-line reason is the
+   * difference between triaging the next occurrence and guessing at it.
+   */
+  const note = (reason: string) =>
+    console.warn(`[live-scoring] outside league ${league.id} week ${week}: ${reason}`);
+
   try {
     const url = buildMflExportUrl({
       type: 'liveScoring',
@@ -302,11 +312,23 @@ export async function readOutsideLiveSnapshot(
       host: league.host,
     });
     const response = await mflFetch({ url, method: 'GET', mflUserCookie });
-    if (!response.ok) return { leagueId: league.id, ok: false, snapshot: empty };
+    if (!response.ok) {
+      note(`HTTP ${response.status}`);
+      return { leagueId: league.id, ok: false, snapshot: empty };
+    }
     const body = await response.json().catch(() => null);
-    if (body === null || body?.error) return { leagueId: league.id, ok: false, snapshot: empty };
+    if (body === null) {
+      // The throttle signature — an HTML page under a 200.
+      note('body did not parse as JSON (HTML under a 200?)');
+      return { leagueId: league.id, ok: false, snapshot: empty };
+    }
+    if (body?.error) {
+      note(`MFL error: ${String(body.error).slice(0, 120)}`);
+      return { leagueId: league.id, ok: false, snapshot: empty };
+    }
     return { leagueId: league.id, ok: true, snapshot: parseLiveScoringPayload(body) };
-  } catch {
+  } catch (err) {
+    note(err instanceof Error ? `${err.name}: ${err.message}` : String(err));
     return { leagueId: league.id, ok: false, snapshot: empty };
   }
 }

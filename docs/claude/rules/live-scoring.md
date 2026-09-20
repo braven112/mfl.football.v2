@@ -186,6 +186,41 @@ which is exactly why the split exists — verify parsing offline against
   parses once and sets `ok: false` when the body is not JSON or carries an
   `error` key; only a readable payload can be `ok: true`. (Caught by Copilot on
   PR #1046; it had been true since the logic lived in the route.)
+- **A failed POLL is not the failure owners see — a failed LEAGUE READ is.**
+  The island's poller has always kept the last good board when the poll itself
+  fails (`data.ok !== false`), but on 2026-09-20 an owner screenshotted `/live`
+  with BOTH leagues showing "Couldn't read this league" under a pill reading
+  "● Live · updated just now". Both were true: the production logs for that
+  minute show every `/api/live-board` answering 200, and the panels inside it
+  came back `unavailable`. A panel replaced its predecessor wholesale, so live
+  scores were wiped by an error card while the transport reported itself
+  healthy. `unavailable` now degrades the way a dropped poll does —
+  `resolvePanelViews` (`src/utils/live/stale.ts`) holds the last CONFIRMED
+  panel for five minutes, `LvStaleNotice` says how old it is, and a held panel
+  overrides the pill so it cannot claim "Live" over frozen numbers. Only
+  `unavailable` is ever held: `not-played` and `no-matchup` are answers from a
+  feed we READ, and substituting older scores for either would invent a state
+  MFL did not report. The memory is keyed `(week, league)` — the week picker
+  swaps the board without remounting, and both leagues have a franchise `0001`
+  — and it lives in the island, so a cold load whose SSR assembly failed still
+  shows the error card. Guard: `tests/live-stale-fallback.test.ts`.
+- **Every failed MFL read now says why, and one league-week is read once per
+  20s.** Before that, timeout, refused connection, HTTP error, HTML-under-a-200
+  and an MFL `error` key all collapsed into the same silent `ok: false` — the
+  only evidence the 2026-09-20 failures happened was the screenshot, which is
+  the same "no failing entry next to the page render" signature as 2026-09-09.
+  Two things also made those failures likelier: nothing was cached, and the
+  `playoffBrackets` export was fetched EVERY week, so one board poll cost two
+  MFL requests per league at a 25s cadence per tab per device — against a host
+  that answers a client it considers noisy with an HTML page under a 200. The
+  bracket read is now gated to `PLAYOFFS_START_WEEK - 1` and up (one week of
+  slack, deliberately), and `loadLiveScoringPayload` memoizes a SUCCESSFUL read
+  for 20s. Never cache a failure: that pins an outage in front of every reader
+  sharing the process, which is what `PROJECTION_EMPTY_TTL_MS` and
+  `/api/nfl-game-detail`'s never-memoize-a-partial-read rule each exist to
+  avoid. The cache is process-level, so a suite asserting on WHICH URL was
+  fetched must call `clearLiveScoringPayloadCache()` per case or it tests its
+  own ordering. Guard: `tests/live-scoring-read-load.test.ts`.
 - **A page must never fetch its OWN API to render itself.** The live-scoring
   page's SSR first paint called `https://<our domain>/api/live-scoring?…` —
   our own edge, over the public internet, from inside the render. On
