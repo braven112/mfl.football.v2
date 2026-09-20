@@ -498,6 +498,8 @@
       ],
       "tests": [
         "tests/live-scoring-host-resolution.test.ts",
+        "tests/live-stale-fallback.test.ts",
+        "tests/live-scoring-read-load.test.ts",
         "tests/marquee-live-guard.test.ts",
         "tests/network-badge.test.ts",
         "tests/nfl-live-routes.test.ts",

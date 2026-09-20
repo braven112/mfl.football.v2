@@ -34,6 +34,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { GET } from '../src/pages/api/live-scoring';
 import { GET as draftStatusGET } from '../src/pages/api/draft/status';
 import { getLeagueBySlug, DEFAULT_LEAGUE } from '../src/config/leagues';
+import { clearLiveScoringPayloadCache } from '../src/utils/live-scoring-source';
 
 const AFL = getLeagueBySlug('afl-fantasy')!;
 /** A well-formed MFL league id that is not one of ours. */
@@ -45,6 +46,14 @@ const ok = () => ({ ok: true, status: 200, json: async () => ({}) }) as unknown 
 describe('GET /api/live-scoring — MFL host resolution', () => {
   let fetchMock: ReturnType<typeof vi.fn>;
   beforeEach(() => {
+    /**
+     * This suite asserts on WHICH HOST WAS FETCHED, so a process-level cache
+     * of a league-week would answer the second case from the first case's read
+     * and leave the mock with nothing to inspect — the test would then pass or
+     * fail on test ORDER rather than on host resolution. Cleared per case for
+     * the same reason `clearProjectionCache` exists.
+     */
+    clearLiveScoringPayloadCache();
     fetchMock = vi.fn().mockResolvedValue(ok());
     vi.stubGlobal('fetch', fetchMock);
   });

@@ -27,7 +27,13 @@ import LvMatchupDetail from './LvMatchupDetail';
 import LvRedZoneBanner from './LvRedZoneBanner';
 import LvEmptyState from './LvEmptyState';
 import LvFeedStatus from './LvFeedStatus';
+import LvStaleNotice from './LvStaleNotice';
 import LvWeekPicker from './LvWeekPicker';
+import {
+  nextHoldExpiry,
+  resolvePanelViews,
+  type PanelMemory,
+} from '../../../utils/live/stale';
 import { orderPanelMatchups, pairingKey, selectMatchupMoments } from '../../../utils/live/model';
 import { buildLiveMoments } from '../../../utils/live/moments';
 import { useNflGameDetail } from '../../../hooks/useNflGameDetail';
@@ -250,6 +256,64 @@ export default function LiveBoard({
   const multiLeague = board.panels.length > 1;
 
   /**
+   * The last panel we could CONFIRM, per (week, league).
+   *
+   * This is the second half of the "a failed read never wipes a live screen"
+   * rule, and the half that was missing. The poller above keeps the last good
+   * BOARD when the poll fails — but the failure owners actually hit is a poll
+   * that SUCCEEDS carrying panels that could not be read, so that guard never
+   * fired and live scores were replaced by an error card while the pill beside
+   * them still said "Live · updated just now". `resolvePanelViews` owns the
+   * decision; see its header for what is held and what deliberately is not.
+   *
+   * A ref, not state: it is memory about renders, not an input to one, and
+   * setting state from the render that reads it is a loop. It is also why the
+   * hold is session-scoped — a first paint whose server-side assembly failed
+   * has nothing to hold, which is accepted.
+   */
+  const panelMemory = useRef<Map<string, PanelMemory>>(new Map());
+  /** Retires a held panel at its exact expiry — see `holdExpiry` below. */
+  const [, setHoldTick] = useState(0);
+  const panelViews = resolvePanelViews({
+    panels: board.panels,
+    week: board.week,
+    memory: panelMemory.current,
+    now: Date.now(),
+  });
+  /**
+   * The oldest confirmation still on screen, or 0 when nothing is held.
+   *
+   * The OLDEST rather than the newest: it is the age the board can honestly
+   * claim for everything it is showing, and it is what the pill reports.
+   */
+  const heldSince = panelViews.reduce(
+    (oldest, v) => (v.heldSince === null ? oldest : oldest === 0 ? v.heldSince : Math.min(oldest, v.heldSince)),
+    0,
+  );
+
+  /**
+   * Re-render exactly when the hold runs out.
+   *
+   * Without this the expiry is only ever evaluated by the next POLL, and the
+   * idle cadence is 90 seconds — so the five minutes this feature states out
+   * loud would in fact be up to six and a half, which is the one number it
+   * cannot afford to be wrong about. Terminates by construction: the tick
+   * re-renders, `resolvePanelViews` drops the expired panel, and `holdExpiry`
+   * goes to 0.
+   */
+  const holdExpiry = nextHoldExpiry(panelViews);
+  useEffect(() => {
+    if (!holdExpiry) return;
+    const ms = holdExpiry - Date.now();
+    if (ms <= 0) {
+      setHoldTick((n) => n + 1);
+      return;
+    }
+    const t = setTimeout(() => setHoldTick((n) => n + 1), ms);
+    return () => clearTimeout(t);
+  }, [holdExpiry]);
+
+  /**
    * The NFL slate.
    *
    * Through `useNflScoreboard` rather than off `board.games`, for three
@@ -294,6 +358,21 @@ export default function LiveBoard({
   });
 
   /**
+   * This island's own feed, as the pill should read it.
+   *
+   * A HELD PANEL OVERRIDES A SUCCESSFUL POLL. The poll genuinely succeeded —
+   * that is why `feed` says so — but what it carried was a league we could not
+   * read, and a pill reporting the transport while the panel reports the data
+   * is exactly the contradiction an owner screenshotted: "Live · updated just
+   * now" over two error cards. The scores on screen were last confirmed at
+   * `heldSince`, so that is the timestamp, and the status is `error` because
+   * we cannot currently confirm them.
+   */
+  const boardFeed: FeedSnapshot = heldSince
+    ? { status: 'error', fetchedAt: heldSince }
+    : feed;
+
+  /**
    * Only the pollers actually RUNNING for this render. In bundled-sample mode
    * there are none, so `LvFeedStatus` renders nothing rather than a pill that
    * can never age — a disabled poller neither fails nor goes stale, so
@@ -302,7 +381,7 @@ export default function LiveBoard({
   const feeds: FeedSnapshot[] = demoLabel || !pollUrl
     ? (extraFeeds ?? [])
     : [
-        feed,
+        boardFeed,
         { status: slate.status, fetchedAt: slate.fetchedAt },
         { status: detail.status, fetchedAt: detail.fetchedAt },
         ...(extraFeeds ?? []),
@@ -360,13 +439,20 @@ export default function LiveBoard({
    * `data.ok !== false`: a feed we could not read never wipes what is on
    * screen. `openRef` lags one render behind by construction (an effect
    * writes it after commit), which is exactly the previous good resolution.
+   *
+   * Resolved against the VIEWS, not the raw payload: a drill-in is the one
+   * screen where a dropped league is most obvious — the reader is watching one
+   * game — so it holds the same confirmed scores the cards behind it do, and
+   * says so with the same strip.
    */
-  const openRef = useRef<{ matchup: LiveMatchup; panel: LivePanel } | null>(null);
-  let open: { matchup: LiveMatchup; panel: LivePanel } | null = null;
+  const openRef = useRef<{ matchup: LiveMatchup; panel: LivePanel; heldSince: number | null } | null>(
+    null,
+  );
+  let open: { matchup: LiveMatchup; panel: LivePanel; heldSince: number | null } | null = null;
   if (selected) {
-    const panel = board.panels.find((p) => p.leagueId === selected.leagueId) ?? null;
-    const matchup = panel?.matchups.find((m) => pairingKey(m) === selected.pairing) ?? null;
-    open = panel && matchup ? { matchup, panel } : openRef.current;
+    const view = panelViews.find((v) => v.panel.leagueId === selected.leagueId) ?? null;
+    const matchup = view?.panel.matchups.find((m) => pairingKey(m) === selected.pairing) ?? null;
+    open = view && matchup ? { matchup, panel: view.panel, heldSince: view.heldSince } : openRef.current;
   }
   useEffect(() => {
     openRef.current = open;
@@ -403,6 +489,12 @@ export default function LiveBoard({
       <LvRedZoneBanner alerts={board.redZone} showLeague={multiLeague} />
 
       {open ? (
+        <>
+        {/* The drill-in is where a dropped league is LEAST obvious and matters
+            most — the reader is watching one game, and every number on this
+            screen is a held one. Uncaptioned, that is the worse bug in the
+            other direction, so it gets the same strip the cards get. */}
+        {open.heldSince !== null && <LvStaleNotice heldSince={open.heldSince} />}
         <LvMatchupDetail
           matchup={open.matchup}
           meta={board.playerMeta}
@@ -426,11 +518,18 @@ export default function LiveBoard({
           }
           onBack={() => setSelected(null)}
         />
+        </>
       ) : (
         <>
-          {board.panels.map((panel) => (
+          {panelViews.map(({ panel, heldSince: panelHeld }) => (
             <section key={panel.leagueId} className="lv-panel">
               {multiLeague && <h2 className="lv-panel__name">{panel.leagueName}</h2>}
+
+              {/* A held panel renders as an ordinary one, so the strip is the
+                  only thing telling the reader these numbers have stopped
+                  moving. It sits ABOVE the cards rather than replacing them —
+                  that is the whole point of holding them. */}
+              {panelHeld !== null && <LvStaleNotice heldSince={panelHeld} />}
 
               {panel.status === 'ok' ? (
                 // Featured first, then the closest game. Ordered per PANEL, so

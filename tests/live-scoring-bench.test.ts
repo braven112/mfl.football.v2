@@ -19,6 +19,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { GET } from '../src/pages/api/live-scoring';
+import { clearLiveScoringPayloadCache } from '../src/utils/live-scoring-source';
 
 const ctx = (search: string) => ({ url: new URL(`https://example.test/api/live-scoring${search}`) }) as never;
 
@@ -52,6 +53,10 @@ async function call(search = '?week=3') {
 describe('GET /api/live-scoring — starter / bench split', () => {
   let fetchMock: ReturnType<typeof vi.fn>;
   beforeEach(() => {
+    // Each case stages its own upstream payload for the SAME league-week, so
+    // the process-level read cache would answer the second one from the
+    // first's body and every assertion below would be about test order.
+    clearLiveScoringPayloadCache();
     fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
   });
