@@ -974,13 +974,29 @@
 }
 
 .lbc__face {
-  /* Of the ROW now, not the strip. 62% leaves the row's own padding clear. */
-  width: min(62cqh, 8vw);
-  height: min(62cqh, 8vw);
-  border-radius: 50%;
-  object-fit: cover;
+  /*
+   * Of the ROW now, not the strip. 62% leaves the row's own padding clear.
+   *
+   * Sizing goes through the custom property player-cell.css documents, NOT a
+   * width/height override — this chip is the shared player cell (a <span>
+   * wrapping the <img>), not the <img> this rule was originally written for.
+   * `.lbc__face` and `.player-cell__avatar` tie on specificity (0,1,0), so a
+   * raw width/height here is decided by STYLESHEET ORDER, and player-cell.css
+   * (imported from BroadcastFace.tsx) lands after live-broadcast.css
+   * (imported from LiveBroadcastPage.astro). Its `width: var(--player-avatar-size)`
+   * then has no property to resolve, computes to `auto`, and the chip grows to
+   * the ESPN cutout's intrinsic 352x256 — which the row's `overflow: hidden`
+   * crops into a full-bleed band of cropped face across every strip row.
+   * The draft board's two chips (`.dbc-idle__row-avatar`,
+   * `.dbc-panel__face-chip`) already size through the property, which is why
+   * this was the only surface that broke.
+   */
+  --player-avatar-size: min(62cqh, 8vw);
   flex: none;
-  background: rgba(255, 255, 255, 0.06);
+  /* player-cell.css sizes the chip content-box, so without this its 1px team
+     ring lands OUTSIDE the declared size and the name column shifts by 2px
+     between a ringed chip and a DEF crest (which carries no border). */
+  box-sizing: border-box;
 }
 
 .lbc__who {
