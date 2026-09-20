@@ -3,7 +3,6 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { getAllNFLTeamCodes } from '../src/utils/nfl-logo';
 import { buildNflLogoDarkCss, resolveNflDarkLogoUrl } from '../src/utils/nfl-logo-dark-css';
-// @ts-expect-error — plain .mjs script lib, no types
 import { MARK_IDS, MARK_SOURCES, assignedMark, resolveMark } from '../scripts/lib/nfl-mark-sources.mjs';
 
 /**

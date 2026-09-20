@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { getAllNFLTeamCodes } from '../src/utils/nfl-logo';
-// @ts-expect-error — plain .mjs script lib, no types
 import { KEEP_COMMITTED } from '../scripts/lib/nfl-logo-sources.mjs';
 
 /**
