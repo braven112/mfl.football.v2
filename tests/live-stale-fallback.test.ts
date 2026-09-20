@@ -151,6 +151,56 @@ describe('holding the last scores we could confirm', () => {
       expect(memory.has(panelMemoryKey(2, '13522'))).toBe(false);
     });
 
+    it('dates the scores from when they ARRIVED, not from the last render', () => {
+      /**
+       * `resolvePanelViews` runs in the island's render body, and the island
+       * re-renders for reasons unrelated to a board poll — the NFL scoreboard
+       * store pushes, the hold timer ticks, a matchup is opened, and a FAILED
+       * poll calls `setFeed` while `board` still holds the last good payload
+       * with its panels still `ok`.
+       *
+       * Re-stamping on those renders resets `at` to the present for data that
+       * arrived minutes ago: the strip then says "from just now" about
+       * four-minute-old scores, and the five-minute hold restarts from the
+       * last render instead of the last read. Both are the specific claims
+       * this feature makes, so both would be lies.
+       */
+      const memory = new Map<string, PanelMemory>();
+      const arrived = panel('ok');
+      resolvePanelViews({ panels: [arrived], week: 2, memory, now: T0 });
+
+      // Four minutes of re-renders with no new poll: the SAME panel object,
+      // because nothing replaced the board.
+      for (const t of [60_000, 120_000, 180_000, 240_000]) {
+        resolvePanelViews({ panels: [arrived], week: 2, memory, now: T0 + t });
+      }
+
+      const held = resolvePanelViews({
+        panels: [panel('unavailable')],
+        week: 2,
+        memory,
+        now: T0 + 250_000,
+      });
+      expect(held[0].heldSince).toBe(T0);
+    });
+
+    it('still expires five minutes after ARRIVAL, however often it re-rendered', () => {
+      const memory = new Map<string, PanelMemory>();
+      const arrived = panel('ok');
+      resolvePanelViews({ panels: [arrived], week: 2, memory, now: T0 });
+      resolvePanelViews({ panels: [arrived], week: 2, memory, now: T0 + 240_000 });
+
+      const pastIt = resolvePanelViews({
+        panels: [panel('unavailable')],
+        week: 2,
+        memory,
+        now: T0 + STALE_HOLD_MS + 1,
+      });
+      // A re-stamp would have left ~1 minute on the clock here.
+      expect(pastIt[0].heldSince).toBeNull();
+      expect(pastIt[0].panel.status).toBe('unavailable');
+    });
+
     it('a recovered league replaces the held panel outright', () => {
       const memory = new Map<string, PanelMemory>();
       resolvePanelViews({ panels: [panel('ok')], week: 2, memory, now: T0 });
@@ -299,6 +349,12 @@ describe('the board never holds scores silently', () => {
 
   it('reports the OLDEST held panel, which is the age it can honestly claim', () => {
     expect(board).toMatch(/Math\.min\(oldest, v\.heldSince\)/);
+  });
+
+  it('captions the DRILL-IN too, where every number on screen is a held one', () => {
+    // `open.heldSince` was computed and threaded but never rendered, so the
+    // one screen watching a single game showed frozen scores with no caption.
+    expect(board).toMatch(/open\.heldSince !== null && <LvStaleNotice heldSince=\{open\.heldSince\}/);
   });
 
   it('keeps the memory in a ref — state written during render is a loop', () => {

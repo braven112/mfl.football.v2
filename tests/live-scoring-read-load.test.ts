@@ -127,6 +127,24 @@ describe('one league-week costs as little of MFL as it can', () => {
       expect(fetchMock).toHaveBeenCalledTimes(2);
     });
 
+    it('is BOUNDED — the cache key is caller-supplied and the route is no-store', async () => {
+      /**
+       * `/api/live-scoring` takes any numeric league id, a year across a
+       * century and 25 weeks, so the key space is open to a caller. Without a
+       * cap a warm lambda grows until it OOMs, and an expired entry is only
+       * ignored by the read, never deleted by it — time alone frees nothing.
+       */
+      for (let i = 0; i < 80; i += 1) {
+        await loadLiveScoringPayload({ leagueId: LEAGUE.id, year: 2026, week: i + 1 });
+      }
+      const src = readFileSync(
+        resolve(__dirname, '../src/utils/live-scoring-source.ts'),
+        'utf8',
+      );
+      expect(src).toMatch(/payloadCache\.size > 64/);
+      expect(src).toMatch(/payloadCache\.delete\(oldest\[0\]\)/);
+    });
+
     it('hands each caller its own object — the snapshot is read-only by contract', async () => {
       const a = await loadLiveScoringPayload({ leagueId: LEAGUE.id, year: 2026, week: 2 });
       const b = await loadLiveScoringPayload({ leagueId: LEAGUE.id, year: 2026, week: 2 });

@@ -101,7 +101,25 @@ export function resolvePanelViews(input: {
     const key = panelMemoryKey(week, panel.leagueId);
 
     if (panel.status === 'ok') {
-      memory.set(key, { panel, at: now });
+      /**
+       * STAMPED ON ARRIVAL, NOT ON RENDER.
+       *
+       * This runs in the island's render body, and the island re-renders for
+       * reasons that have nothing to do with a board poll: the NFL scoreboard
+       * and play-detail stores push on their own cadence, opening a matchup
+       * sets state, the hold timer ticks — and a FAILED poll calls `setFeed`,
+       * which is the worst case, because `board` still holds the last good
+       * payload and its panels are still `ok`. Re-stamping on each of those
+       * would reset `at` to the present for data that arrived minutes ago, so
+       * the strip would say "from just now" about four-minute-old scores and
+       * the five-minute hold would restart from the last render.
+       *
+       * The panel OBJECT is the arrival signal: every poll deserializes a new
+       * board, so an identical reference is the same read we already stamped.
+       * A re-render cannot forge one, and a poll cannot reuse one.
+       */
+      const seen = memory.get(key);
+      if (!seen || seen.panel !== panel) memory.set(key, { panel, at: now });
       return { panel, heldSince: null };
     }
 

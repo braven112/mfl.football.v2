@@ -489,6 +489,12 @@ export default function LiveBoard({
       <LvRedZoneBanner alerts={board.redZone} showLeague={multiLeague} />
 
       {open ? (
+        <>
+        {/* The drill-in is where a dropped league is LEAST obvious and matters
+            most — the reader is watching one game, and every number on this
+            screen is a held one. Uncaptioned, that is the worse bug in the
+            other direction, so it gets the same strip the cards get. */}
+        {open.heldSince !== null && <LvStaleNotice heldSince={open.heldSince} />}
         <LvMatchupDetail
           matchup={open.matchup}
           meta={board.playerMeta}
@@ -512,6 +518,7 @@ export default function LiveBoard({
           }
           onBack={() => setSelected(null)}
         />
+        </>
       ) : (
         <>
           {panelViews.map(({ panel, heldSince: panelHeld }) => (

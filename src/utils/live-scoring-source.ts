@@ -286,7 +286,27 @@ export async function loadLiveScoringPayload(
    * never-memoize-a-partial-read rule are each written to avoid. A failed read
    * must stay cheap to retry.
    */
-  if (ok) payloadCache.set(cacheKey, { at: Date.now(), payload });
+  if (ok) {
+    payloadCache.set(cacheKey, { at: Date.now(), payload });
+    /**
+     * BOUNDED, because the key is caller-supplied.
+     *
+     * `/api/live-scoring` accepts any numeric league id, a year across a
+     * century and 25 weeks, so the key space is effectively open and a warm
+     * lambda would otherwise grow until it OOMs — on a `no-store` route that
+     * nothing else caps. An expired entry is ignored by the read but never
+     * deleted by it, so time alone frees nothing.
+     *
+     * Same shape and same bound as `franchiseNamesCache` in
+     * `broadcast-live-source.ts`: evict the oldest, one per write. Real usage
+     * is a handful of league-weeks, so this never binds in practice — it only
+     * has to stop the pathological case.
+     */
+    if (payloadCache.size > 64) {
+      const oldest = [...payloadCache.entries()].sort((a, b) => a[1].at - b[1].at)[0];
+      if (oldest) payloadCache.delete(oldest[0]);
+    }
+  }
 
   return payload;
 }
