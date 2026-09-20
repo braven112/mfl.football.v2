@@ -25,6 +25,9 @@ async function dump(provider, leagueId, week) {
     provider.getMatchups(leagueId, week),
   ]);
   console.log(`  league      ${league.name}  (${league.season}, ${league.teamCount} teams)`);
+  console.log(`  status      ${league.status ?? 'null (provider has no status field)'}`);
+  const sc = league.scoringSettings;
+  console.log(`  scoring     ${sc ? `${Object.keys(sc).length} settings published by the provider` : 'not on this endpoint'}`);
   console.log(`  slots       ${league.rosterPositions.slice(0, 10).join(' ')}`);
   console.log(`  salaries    ${league.usesSalaries === null ? 'null (provider cannot say)' : league.usesSalaries}`);
   console.log(`  teams       ${teams.length}   e.g. ${teams[0]?.teamId} "${teams[0]?.name}" (${teams[0]?.ownerName})`);
@@ -33,7 +36,12 @@ async function dump(provider, leagueId, week) {
   console.log(`  rosters     ${rosters.length} teams, ${totalPlayers} players resolved to canonical ids`);
   console.log(`  unmatched   ${unmatched.length}${unmatched.length ? `  ${unmatched.slice(0, 8).join(', ')}` : ''}`);
   const m = matchups[0];
-  console.log(`  matchups wk${week}  ${matchups.length}   e.g. ${m?.sides.map((s) => `${s.teamId}:${s.points ?? '—'}`).join(' vs ')}`);
+  const eg = m ? `   e.g. ${m.sides.map((s) => `${s.teamId}:${s.points ?? '—'}`).join(' vs ')}` : '';
+  console.log(`  matchups wk${week}  ${matchups.length}${eg}`);
+  if (!totalPlayers) {
+    console.log('  NOTE        league has no rostered players — normal before a draft,');
+    console.log('              and the state most leagues sit in most of the year.');
+  }
   return { league, teams, rosters, matchups };
 }
 
@@ -70,9 +78,31 @@ if (sleeperLeague) {
     ['roster', mflOut.rosters[0], out.rosters[0]],
     ['matchup', mflOut.matchups[0], out.matchups[0]],
   ]) {
+    if (!a || !b) {
+      console.log(`  ${name.padEnd(9)} SKIPPED    no sample on ${!a ? 'mfl' : 'sleeper'} side`);
+      continue;
+    }
     const same = keys(a) === keys(b);
     console.log(`  ${name.padEnd(9)} ${same ? 'IDENTICAL' : 'DIVERGENT'}  ${keys(a)}`);
     if (!same) console.log(`            sleeper: ${keys(b)}`);
+  }
+  if (out.rosters.every((r) => !r.playerIds.length)) {
+    h('SIMULATED DRAFT — resolution at realistic roster depth');
+    // The real league is pre_draft, so resolution is unproven on it. Stand in
+    // a plausible 16x15 league: Sleeper's own top-240 by search_rank, which is
+    // roughly who a 16-team league actually ends up rostering.
+    const sp = await (await fetch('https://api.sleeper.app/v1/players/nfl')).json();
+    const pool = Object.values(sp)
+      .filter((p) => p.active && p.team && ['QB','RB','WR','TE','K'].includes(p.position)
+        && p.search_rank && p.search_rank < 9999999)
+      .sort((a, b) => a.search_rank - b.search_rank)
+      .slice(0, 240);
+    const miss = pool.filter((p) => !toCanonical('sleeper', p.player_id));
+    console.log(`  simulated rostered players : ${pool.length}`);
+    console.log(`  resolve to canonical id    : ${pool.length - miss.length}`
+      + `  (${((100 * (pool.length - miss.length)) / pool.length).toFixed(1)}%)`);
+    console.log(`  unresolved                 : ${miss.length}`
+      + (miss.length ? `  ${miss.map((p) => `${p.full_name} (${p.position})`).join(', ')}` : ''));
   }
 } else {
   console.log('  (no league id given — pass --sleeper-league <id> or --sleeper-user <name>)');

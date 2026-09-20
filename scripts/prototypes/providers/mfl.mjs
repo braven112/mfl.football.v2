@@ -44,6 +44,11 @@ export function mflProvider(year) {
         teamCount: list(l.franchises?.franchise).length,
         rosterPositions: list(l.starters?.position).map((p) => p.name ?? p),
         usesSalaries: l.usesSalaries === '1',
+        // MFL has no single status field; infer coarsely rather than lie.
+        status: null,
+        // MFL's config lives at export?TYPE=rules, not in league.json. The
+        // adapter would fetch it; this prototype reads committed feeds only.
+        scoringSettings: null,
       };
     },
 

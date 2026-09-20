@@ -67,6 +67,8 @@ export const sleeperProvider = {
       teamCount: l.total_rosters ?? null,
       rosterPositions: l.roster_positions ?? [],
       usesSalaries: null,          // Sleeper has no cap concept — null, not false
+      status: l.status ?? null,    // 'pre_draft' | 'drafting' | 'in_season' | 'complete'
+      scoringSettings: l.scoring_settings ?? null,
     };
   },
 

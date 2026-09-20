@@ -38,6 +38,18 @@
  * @property {number} teamCount
  * @property {string[]} rosterPositions  starting slots, provider spelling preserved
  * @property {boolean|null} usesSalaries  null = provider cannot say
+ * @property {'pre_draft'|'drafting'|'in_season'|'complete'|null} status
+ *   Not decoration. A pre-draft league has 16 teams and ZERO players, which
+ *   every consumer must handle without treating it as an outage. Measured on
+ *   a real Sleeper league — it is the default state of any league in the
+ *   offseason, i.e. most of the year.
+ * @property {Record<string, number>|null} scoringSettings
+ *   The provider's OWN scoring config, verbatim. Sleeper publishes it on the
+ *   league object (`fgm_50_59`, `fum_lost`, `def_st_td`, …); MFL publishes it
+ *   at `export?TYPE=rules`. Both are authoritative and neither matches what a
+ *   human wrote in a doc — see docs/plans/phase-0-own-the-stats.md, where
+ *   BOTH of this repo's rules docs turned out to be wrong about team defense.
+ *   Derive scoring from this. Never transcribe it.
  */
 
 /**
