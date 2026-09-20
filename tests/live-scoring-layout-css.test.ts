@@ -390,7 +390,9 @@ describe('a matchup row keeps its two players level', () => {
     // characters. On a 390px phone that is 64px out of the two name columns,
     // and it is what wrapped "Jahmyr Gibbs" and "Chris Olave" onto a second
     // line (owner, 2026-09-19). Reserving the track again re-buys that bug, so
-    // this pins the ABSENCE of the reservation in three independent ways.
+    // this pins the ABSENCE of the reservation four independent ways — no
+    // grid area, no fixed track width, no `pos` in either side's areas, and no
+    // live `--lv-slot-w`. Each is a route the 32px column could return by.
     //
     // EVERY assertion runs over the PHONE cascade as well as the base one.
     // `base` has every `@media` block stripped, so a phone-only
