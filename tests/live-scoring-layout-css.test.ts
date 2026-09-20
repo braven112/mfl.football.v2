@@ -391,27 +391,42 @@ describe('a matchup row keeps its two players level', () => {
     // and it is what wrapped "Jahmyr Gibbs" and "Chris Olave" onto a second
     // line (owner, 2026-09-19). Reserving the track again re-buys that bug, so
     // this pins the ABSENCE of the reservation in three independent ways.
-    expect(
-      valueOf(base, '.lv-ppos', 'grid-area'),
-      'the position must not take a grid area — that is the 32px column back',
-    ).toBeUndefined();
-    for (const prop of ['min-width', 'width', 'flex-basis']) {
+    //
+    // EVERY assertion runs over the PHONE cascade as well as the base one.
+    // `base` has every `@media` block stripped, so a phone-only
+    // reintroduction — `@media (max-width: 760px) { .lv-prow {
+    // grid-template-areas: "pos face name name" … } }` — would satisfy a
+    // base-only check completely, on the one viewport the bug was reported
+    // from. A guard that cannot see the breakpoint cannot guard a
+    // phone-width rule.
+    for (const [label, block] of [
+      ['base', base],
+      ['phone', phone],
+    ] as const) {
       expect(
-        valueOf(base, '.lv-ppos', prop),
-        `a fixed ${prop} on the position is the slot column by another name`,
+        valueOf(block, '.lv-ppos', 'grid-area'),
+        `${label}: the position must not take a grid area — that is the 32px column back`,
       ).toBeUndefined();
+      for (const prop of ['min-width', 'width', 'flex-basis']) {
+        expect(
+          valueOf(block, '.lv-ppos', prop),
+          `${label}: a fixed ${prop} on the position is the slot column by another name`,
+        ).toBeUndefined();
+      }
+      for (const selector of ['.lv-prow', '.lv-prow--right']) {
+        for (const row of gridRows(block, selector)) {
+          expect(row, `${label}: ${selector} reserves a pos track again`).not.toContain('pos');
+        }
+      }
     }
     // The token that sized it is gone, and must not come back — a live
     // `--lv-slot-w` is the tell that somebody is re-reserving the track.
+    // This one reads the WHOLE sheet, media blocks included, so it needs no
+    // per-cascade loop — and it is the backstop for a reintroduction that
+    // invents a new selector the loop above does not name.
     expect(stripped, '--lv-slot-w is back; the slot column is being rebuilt').not.toMatch(
       /--lv-slot-w/,
     );
-    // And no row's areas may name a `pos` track on either side.
-    for (const selector of ['.lv-prow', '.lv-prow--right']) {
-      for (const row of gridRows(base, selector)) {
-        expect(row, `${selector} reserves a pos track again`).not.toContain('pos');
-      }
-    }
   });
 
   it('keeps the position welded to its NFL team so the meta line cannot split them', () => {
@@ -421,10 +436,18 @@ describe('a matchup row keeps its two players level', () => {
     // wrapper makes the group unbreakable; the separator is decorative and is
     // hidden from assistive tech rather than read as "middle dot".
     expect(island, 'position + team are not wrapped together').toMatch(/lv-pwho/);
-    expect(
-      valueOf(base, '.lv-pwho', 'white-space'),
-      'without nowrap the meta line can break "RB · DET" in half',
-    ).toBe('nowrap');
+    // Phone too, not just base — a breakpoint that relaxes the wrapper to save
+    // a few pixels would split the group on exactly the width that needs it
+    // held together.
+    for (const [label, block] of [
+      ['base', base],
+      ['phone', phone],
+    ] as const) {
+      expect(
+        valueOf(block, '.lv-pwho', 'white-space'),
+        `${label}: without nowrap the meta line can break "RB · DET" in half`,
+      ).toBe('nowrap');
+    }
     expect(island, 'the NFL team is not on the row').toMatch(/lv-pteam/);
     expect(island, 'the separator must be hidden from assistive tech').toMatch(
       /lv-pdiv[^>]*aria-hidden|aria-hidden[^>]*lv-pdiv/s,
@@ -434,6 +457,32 @@ describe('a matchup row keeps its two players level', () => {
     expect(island, 'a team defence must not print its own club code').toMatch(
       /isDef\s*\?\s*''\s*:\s*team/,
     );
+  });
+
+  it('mirrors the meta line by its AXIS, so the same item wraps on both sides', () => {
+    // The right side has to start its meta line from the OUTER edge or the
+    // position slides with the width of the clock text and the label column
+    // goes ragged on one side of the pair only.
+    //
+    // `order: 1` on `.lv-pwho` buys that on one line and breaks it on two. The
+    // line wraps — it carries a clock, RED ZONE and down-and-distance — and
+    // the LAST flex item is the one that wraps, so ordering the position last
+    // drops it to line 2 on the right during a live drive while the left keeps
+    // it on line 1. Reversing the axis pins the position AND leaves the wrap
+    // on the down-and-distance chip, which is what wraps on the left too.
+    //
+    // DOM order is untouched by either, so this is not an a11y trade — it is
+    // the difference between mirroring the line and reordering one item in it.
+    expect(
+      valueOf(base, '.lv-prow--right .lv-pmeta', 'flex-direction'),
+      'the mirrored meta line must reverse its axis, not reorder one child',
+    ).toBe('row-reverse');
+    for (const sel of ['.lv-pwho', '.lv-prow--right .lv-pwho']) {
+      expect(
+        valueOf(base, sel, 'order'),
+        `${sel}: order makes the position the item that wraps — mirror the axis instead`,
+      ).toBeUndefined();
+    }
   });
 
   it('starts the box-score line where the player’s headshot starts', () => {

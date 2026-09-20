@@ -752,10 +752,13 @@ button.lv-card:focus-visible {
   color: var(--content-text-muted);
 }
 
-/* One notch quieter than the position: same fact class, lower billing. The
-   position is what an owner scans for; the club is context. */
-.lv-pteam { color: var(--content-text-muted); }
-.lv-pdiv { color: var(--content-text-muted); opacity: 0.55; }
+/* `.lv-pteam` carries NO rule on purpose — it inherits the meta line's size and
+   colour exactly, which is the design: the position leads by WEIGHT (the bold
+   display face above), not by being a different colour from the club beside it.
+   The class stays as a markup hook. A `color` here would be a copy of
+   `.lv-pmeta`'s own, which is how two declarations of one value start to
+   disagree. */
+.lv-pdiv { opacity: 0.55; }
 
 .lv-headshot {
   grid-area: face;
@@ -820,22 +823,33 @@ button.lv-card:focus-visible {
   font-size: 0.64rem;
   color: var(--content-text-muted);
 }
-.lv-prow--right .lv-pmeta { justify-content: flex-end; }
-
 /**
- * MIRRORED like everything else on the row.
+ * MIRRORED BY THE AXIS — never by reordering one item inside it.
  *
- * The meta line is justified to the OUTER edge on this side, so whichever item
- * comes last is the one pinned to a fixed x — every item before it slides with
- * the width of the clock text ("Final" against "11:00 - 4th"). Left in source
- * order the position would be that sliding item, and the column of labels an
- * owner scans down would go ragged on one side of the pair only.
+ * Both halves of this matter, and the second is why `order` is wrong here.
  *
- * `order` rather than a second markup branch, because DOM order is what
- * assistive tech announces and "QB, DET, Final" is the right sentence on both
- * sides. This is presentation; the reading stays put.
+ * The line has to start from the OUTER edge, or the position slides with the
+ * width of the clock text ("Final" against "11:00 - 4th") and the column of
+ * labels an owner scans down goes ragged on one side of the pair only.
+ * Reversing the axis pins it: main-start is the right edge on this side, so
+ * the first item in source order lands against it, exactly as it does on the
+ * left.
+ *
+ * And the line WRAPS. `order: 1` on `.lv-pwho` pins it at the outer edge on
+ * ONE LINE and then hands it the worst job on the row: the last flex item is
+ * the one that wraps, so a live drive (`RB · DET` + a running clock + RED ZONE
+ * ≈ 160px in a ~130px area) dropped the position to line 2 on the right while
+ * the left kept it on line 1 — the raggedness this rule exists to prevent,
+ * turned vertical. Reversing the axis moves the wrap to the LAST item on both
+ * sides, which is the down-and-distance chip, where it belongs.
+ *
+ * DOM order is untouched either way, so assistive tech still hears "QB, DET,
+ * Final". This is presentation; the reading stays put.
  */
-.lv-prow--right .lv-pwho { order: 1; }
+.lv-prow--right .lv-pmeta {
+  flex-direction: row-reverse;
+  justify-content: flex-start;
+}
 
 .lv-pclock { display: inline-flex; align-items: center; gap: 0.2rem; }
 .lv-pclock--live { color: var(--lv-live); }
