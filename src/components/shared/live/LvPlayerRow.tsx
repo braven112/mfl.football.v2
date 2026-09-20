@@ -2,12 +2,31 @@
  * One starter (or bench) row.
  *
  * ── POSITION, NEVER A SLOT ────────────────────────────────────────────────
- * The chip names the player's POSITION. It used to name his lineup SLOT, with
+ * The label names the player's POSITION. It used to name his lineup SLOT, with
  * `FLEX` for the leftovers — and that had to be derived, because MFL's
  * `liveScoring` says WHO is starting and never WHERE. Since MFL returns arrays
  * in nondeterministic order, the derivation makes "the flex" whichever back the
- * feed happened to list second, so the chip could swap between two polls of an
+ * feed happened to list second, so the label could swap between two polls of an
  * unchanged lineup. Position comes free with `PlayerMeta` and cannot flicker.
+ *
+ * ── AND IT RIDES THE META LINE, NOT A COLUMN OF ITS OWN ───────────────────
+ * It used to hold a `pos` grid area sized `--lv-slot-w` — a fixed 1.6rem plus
+ * the row gap, 32px on EACH side of the pair, taken out of the two name
+ * columns for the sake of two characters. On a 390px phone that is 64px, and
+ * it is why "Jahmyr Gibbs" and "Chris Olave" wrapped to two lines when both
+ * fit comfortably on one (owner, 2026-09-19).
+ *
+ * The label now joins the row that already carries the clock — `RB · DET`
+ * ahead of the game state — which costs no geometry at all and buys the row
+ * the NFL team it never printed anywhere. The two live behind ONE wrapper
+ * (`.lv-pwho`) so the meta line's `flex-wrap` can never separate a position
+ * from its team, or strand the separator at the head of a wrapped line.
+ *
+ * What is deliberately NOT done: a shared centre column, or a position group
+ * header spanning the pair. Both can only name ONE of the two paired
+ * positions and mislabel the other the moment the sides run different lineup
+ * shapes — a WR opposite an RB is an ordinary row, not an edge case. See
+ * `tests/live-scoring-layout-css.test.ts`.
  *
  * ── THE STAT LINE IS A SIBLING, NOT A CHILD ───────────────────────────────
  * Everything here is flattened into the row's own grid (`.lv-pid` is
@@ -98,14 +117,19 @@ export default function LvPlayerRow({
    */
   const statLine = detailStatus === 'error' || isDef ? '' : (box?.statLine ?? '');
 
+  /**
+   * No club code beside a team defence. `DEF · SEA` sits next to a player
+   * literally named "Seattle Seahawks" — the position already says which of
+   * the 32 he is, so the code is the same fact a third time in one row.
+   */
+  const teamLabel = isDef ? '' : team;
+
   return (
     <div
       className={`lv-prow${side === 'right' ? ' lv-prow--right' : ''}${
         redZone ? ' lv-prow--redzone' : ''
       }`}
     >
-      <span className="lv-ppos">{positionLabel(position) || '—'}</span>
-
       <span
         className={`lv-headshot${isDef ? ' lv-headshot--def' : ''}`}
         style={
@@ -140,6 +164,21 @@ export default function LvPlayerRow({
       <span className="lv-pid">
         <span className="lv-pname">{meta?.name ?? `Player ${row.id}`}</span>
         <span className="lv-pmeta">
+          {/* ONE wrapper, so `flex-wrap` on the meta line can never break
+              "RB · DET" across two lines or leave the separator heading one.
+              The separator is `aria-hidden` — a screen reader reading
+              "RB middle dot DET" is worse than reading "RB DET". */}
+          <span className="lv-pwho">
+            <span className="lv-ppos">{positionLabel(position) || '—'}</span>
+            {teamLabel && (
+              <>
+                <span className="lv-pdiv" aria-hidden="true">
+                  ·
+                </span>
+                <span className="lv-pteam">{teamLabel}</span>
+              </>
+            )}
+          </span>
           <span
             className={`lv-pclock${
               state === 'in-progress'
