@@ -21,6 +21,7 @@ import {
   nextResultLine,
   resultTimingPhrase,
 } from '../../src/utils/owners-poll-copy.mjs';
+import { isBallotStale } from '../../src/utils/owners-poll-ballot.mjs';
 import {
   tallyOwnersPoll,
   consensusRankMap,
@@ -472,15 +473,33 @@ export async function readTurnout({ league }) {
     slots: window.slots,
     eligibleFranchiseIds: window.eligibleFranchiseIds,
   });
-  const voted = new Set(ballots.map((b) => b.franchiseId));
+  const byFid = new Map(ballots.map((b) => [b.franchiseId, b]));
+  const now = new Date();
+
+  // Every eligible franchise with the state of its STANDING ballot — which is
+  // what the "still good?" push needs. `nonVoters` alone no longer answers the
+  // question: under standing votes the interesting owner is not the one who
+  // never voted (a set that empties out by about Week 5) but the one whose
+  // ballot has sat untouched while the league moved.
+  const standing = window.eligibleFranchiseIds.map((fid) => {
+    const ballot = byFid.get(fid) ?? null;
+    return {
+      franchiseId: fid,
+      updatedAt: ballot?.updatedAt ?? null,
+      stale: ballot ? isBallotStale(ballot.updatedAt, now) : false,
+    };
+  });
 
   return {
     ok: true,
     week: window.week,
     year: window.year,
-    ballotsIn: voted.size,
+    ballotsIn: byFid.size,
     eligibleVoters: window.eligibleFranchiseIds.length,
-    nonVoters: window.eligibleFranchiseIds.filter((fid) => !voted.has(fid)),
+    standing,
+    // Retained for anything reporting coverage; the push builder reads
+    // `standing` instead.
+    nonVoters: window.eligibleFranchiseIds.filter((fid) => !byFid.has(fid)),
     closesAt: window.closesAt,
   };
 }

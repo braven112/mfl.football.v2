@@ -938,19 +938,26 @@ async function runNagPoll(opts, league) {
     return;
   }
 
-  // PUSH ONLY. The chat gets one poll post per day and the reveal earns it;
-  // a count-only reminder is the least newsworthy thing the poll produces.
-  // In a personal channel it can also do what it never could publicly: reach
+  // PUSH ONLY. The chat gets one poll post per day and the reveal earns it.
+  // In a personal channel this can also do what it never could publicly: reach
   // the owners who still need to act without naming them to everyone else.
-  const notifications = buildNagPushes({ league, ...turnout });
+  //
+  // Under standing votes the audience is no longer "people who have not voted"
+  // — that set empties out by about Week 5 — but owners whose ballot has sat
+  // untouched while the league moved, plus anyone with nothing on file at all.
+  const notifications = buildNagPushes({
+    week: turnout.week,
+    closesAt: turnout.closesAt,
+    standing: turnout.standing,
+  });
   if (notifications.length === 0) {
-    console.log(`  [skip] All ${turnout.eligibleVoters} ballots are already in.`);
+    console.log(`  [skip] Every ballot is current (${turnout.ballotsIn}/${turnout.eligibleVoters} on file).`);
     return;
   }
 
   if (opts.dryRun || !opts.publish) {
-    console.log('--- NAG PREVIEW (push) ---');
-    console.log(`  ${notifications.length} owners have not voted:`);
+    console.log('--- STILL GOOD? PREVIEW (push) ---');
+    console.log(`  ${notifications.length} owners have a stale ballot or none:`);
     console.log(`  "${notifications[0].title}" / "${notifications[0].body}"`);
     return;
   }

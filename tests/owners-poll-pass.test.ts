@@ -53,6 +53,7 @@ const {
   buildOpenLine,
   normalizeFranchiseIds,
 } = await import('../scripts/lib/owners-poll-pass.mjs');
+const { buildNagPushes } = await import('../scripts/lib/owners-poll-posts.mjs');
 const { ownersPollStandingKey, ownersPollCurrentKey } = await import(
   '../src/utils/owners-poll-ballot.mjs'
 );
@@ -535,5 +536,45 @@ describe('chat copy', () => {
 describe('normalizeFranchiseIds', () => {
   it('pads, dedupes and drops blanks', () => {
     expect(normalizeFranchiseIds(['1', '0001', '2', '', null])).toEqual(['0001', '0002']);
+  });
+});
+
+// ---------------------------------------------------------------------------
+
+describe('readTurnout feeds the push builder', () => {
+  it('returns standing state for EVERY eligible franchise, not just non-voters', async () => {
+    // The generator spreads this straight into buildNagPushes. When that
+    // builder moved from `nonVoters` to `standing`, the call site kept
+    // compiling and the cron silently sent nothing — it even logged "all
+    // ballots are already in". Contract change, no error, dead feature.
+    seedWindow({ closesAt: new Date(Date.now() + 86400_000).toISOString() });
+    seedBallots(3);
+    const turnout: any = await readTurnout({ league: LEAGUE });
+    expect(turnout.ok).toBe(true);
+    expect(Array.isArray(turnout.standing)).toBe(true);
+    expect(turnout.standing).toHaveLength(FIELD.length);
+    for (const row of turnout.standing) {
+      expect(row).toHaveProperty('franchiseId');
+      expect(row).toHaveProperty('updatedAt');
+      expect(row).toHaveProperty('stale');
+    }
+    // The three who voted have a record; the rest have nothing on file.
+    expect(turnout.standing.filter((r: any) => r.updatedAt !== null)).toHaveLength(0);
+    expect(turnout.ballotsIn).toBe(3);
+  });
+
+  it('its shape is what buildNagPushes actually consumes', async () => {
+    seedWindow({ closesAt: new Date(Date.now() + 86400_000).toISOString() });
+    seedBallots(2);
+    const turnout: any = await readTurnout({ league: LEAGUE });
+    const pushes = buildNagPushes({
+      week: turnout.week,
+      closesAt: turnout.closesAt,
+      standing: turnout.standing,
+    });
+    // Nobody has an updatedAt in the seeded fixtures, so everyone reads as
+    // "no ballot on file" — the point is that it produces SOMETHING rather
+    // than silently returning [].
+    expect(pushes.length).toBeGreaterThan(0);
   });
 });
