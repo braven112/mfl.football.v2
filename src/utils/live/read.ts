@@ -401,6 +401,10 @@ export function buildBoardFromSnapshot(input: BuildBoardInput): LiveBoard {
         players: starters,
         bench: snapshot.bench?.[franchiseId] ?? [],
         meta: playerMeta,
+        // The same per-league map the totals are computed from. `playerMeta`
+        // is shared across panels and deliberately carries 0, so the rows are
+        // where a projection has to land for a player row to project anything.
+        projections,
       }),
     };
   };

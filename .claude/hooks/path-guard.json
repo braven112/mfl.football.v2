@@ -495,7 +495,10 @@
         "src/pages/api/live-scoring.ts",
         "src/components/shared/mfl-live/*",
         "src/pages/api/league-board.ts",
-        "src/pages/live/**"
+        "src/pages/live/**",
+        "src/types/live.ts",
+        "src/types/live-scoring.ts",
+        "src/utils/mfl-live-board.ts"
       ],
       "tests": [
         "tests/live-scoring-host-resolution.test.ts",
@@ -522,7 +525,8 @@
         "tests/live-no-flex.test.ts",
         "tests/live-league-board-outside.test.ts",
         "tests/live-league-standings.test.ts",
-        "tests/live-league-board-guard.test.ts"
+        "tests/live-league-board-guard.test.ts",
+        "tests/live-row-projections.test.ts"
       ]
     },
     {

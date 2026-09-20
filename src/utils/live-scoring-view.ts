@@ -440,6 +440,33 @@ export function nflGameStateFromSeconds(secondsRemaining: number): NflGameState 
 }
 
 /**
+ * Stamp this league's full-game projections onto its rows.
+ *
+ * The rows are the only per-league home a projection has. `PlayerMeta` is one
+ * map shared by every panel of a cross-league board, so both board builders
+ * set its `projected` to a deliberate 0 and hand the real numbers to
+ * `computeTeamTotals` separately — correct for the team totals, but it left
+ * every PLAYER row with no projection at all, so an in-progress row's
+ * projected final was just its live score.
+ *
+ * A player the map has no number for is left UNTOUCHED rather than stamped
+ * with 0 — "we have no projection for him" and "we project him for nothing"
+ * are different claims, and only the first is true here. That is also what
+ * lets the offseason replay keep whatever its own rows carry: it is built with
+ * an empty map, because a replay's projections belong to a week that is over.
+ */
+export function attachRowProjections(
+  rows: readonly LivePlayerRow[],
+  projections?: ReadonlyMap<string, number>,
+): LivePlayerRow[] {
+  if (!projections?.size) return rows as LivePlayerRow[];
+  return rows.map((row) => {
+    const projected = projections.get(row.id);
+    return projected === undefined ? row : { ...row, projected };
+  });
+}
+
+/**
  * @param rows STARTERS only. A bench row folded in here inflates the projected
  *   final and the win-probability bar with points that cannot be scored, which
  *   is exactly why `LiveSnapshot` keeps bench rows in a map of their own.

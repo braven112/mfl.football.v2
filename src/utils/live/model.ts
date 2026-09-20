@@ -13,7 +13,7 @@
 
 import type { LivePlayerRow, PlayerMeta } from '../../types/live-scoring';
 import type { LiveMatchup, LiveMoment, LiveTeam } from '../../types/live';
-import type { TeamTotals } from '../live-scoring-view';
+import { attachRowProjections, type TeamTotals } from '../live-scoring-view';
 import { winProbability } from '../live-win-probability';
 import { orderLineupRows } from '../mfl-live-lineup';
 import {
@@ -269,6 +269,15 @@ export interface BuildLiveTeamInput {
   /** The bench, unordered. Absent is fine — a franchise may have none. */
   bench?: readonly LivePlayerRow[];
   meta: Record<string, PlayerMeta>;
+  /**
+   * THIS league's week projections, stamped onto every row.
+   *
+   * Separate from `meta` for the reason `LivePlayerRow.projected` records: the
+   * meta map is shared across a cross-league board's panels and cannot hold a
+   * per-league number. Omitted, the rows carry whatever they arrived with —
+   * which is how the offseason replay keeps its own.
+   */
+  projections?: ReadonlyMap<string, number>;
 }
 
 /**
@@ -295,8 +304,11 @@ export function buildLiveTeam(input: BuildLiveTeamInput): LiveTeam {
     projectedFinal: totals.projectedFinal,
     remainingPoints: totals.remainingPoints,
     yetToPlay: totals.yetToPlay,
-    players: orderLineupRows(input.players, meta),
-    bench: orderLineupRows(input.bench ?? [], meta),
+    // Both lists are stamped: the bench renders the same row component, so a
+    // bench row without a projection prints its live score as its projected
+    // final exactly the way a starter used to.
+    players: attachRowProjections(orderLineupRows(input.players, meta), input.projections),
+    bench: attachRowProjections(orderLineupRows(input.bench ?? [], meta), input.projections),
   };
 }
 

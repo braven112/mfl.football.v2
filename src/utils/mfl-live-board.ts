@@ -28,6 +28,7 @@ import { loadNflGameDetail } from './nfl-game-detail-source';
 import { fetchNflScoreboard } from './nfl-scoreboard-source';
 import { resolveMflLiveLeagues } from './mfl-live-selection';
 import { orderLineupRows } from './mfl-live-lineup';
+import { attachRowProjections } from './live-scoring-view';
 import { resolveFranchiseIdentity, identityIconAlt, type FranchiseColorClaim } from './mfl-live-identity';
 import { resolveMatchupColorVars } from './live/model';
 import { getPlayerMap } from './player-map';
@@ -284,11 +285,21 @@ export async function assembleMflLiveBoard(
         // Ordered HERE, server-side, so the island renders a list rather than
         // sorting one on every poll — and so both sides of a matchup are
         // ordered by the same code path.
-        players: orderLineupRows(s?.players ?? [], playerMeta),
+        // Stamped with THIS league's projections — `playerMeta` is shared
+        // across every league on this board and carries a deliberate 0, so
+        // without this a player row projects nothing and its projected final
+        // collapses to its live score mid-game.
+        players: attachRowProjections(
+          orderLineupRows(s?.players ?? [], playerMeta),
+          read.projections,
+        ),
         // Straight from the snapshot's own bench map, never from `s`:
         // `scoreLeague` deliberately carries starters alone so nothing
         // downstream can sum a bench row into the score.
-        bench: orderLineupRows(snapshot.bench[fid] ?? [], playerMeta),
+        bench: attachRowProjections(
+          orderLineupRows(snapshot.bench[fid] ?? [], playerMeta),
+          read.projections,
+        ),
       };
     };
 

@@ -96,7 +96,17 @@ export default function LvPlayerRow({
   // "not kicked off" ring beside a running clock.
   const state = resolveGameState(nflGameStateFromSeconds(row.secondsRemaining), game);
 
-  const projected = meta?.projected ?? 0;
+  /**
+   * THE ROW FIRST, then meta.
+   *
+   * A projection belongs to a player IN A LEAGUE, so the board builders stamp
+   * it onto the row and leave the shared `PlayerMeta` map's copy at 0 — see
+   * `LivePlayerRow.projected`. Reading meta alone is what made an in-progress
+   * starter's projected final equal his live score: `projectPlayerFinal` was
+   * adding 0 × the fraction of game left. `meta` stays as the fallback for the
+   * single-league island, which resolves projections into its own map.
+   */
+  const projected = row.projected ?? meta?.projected ?? 0;
   const projFinal = projectPlayerFinal({
     live: row.live,
     projected,
