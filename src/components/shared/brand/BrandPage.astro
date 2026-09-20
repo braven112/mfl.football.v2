@@ -7,33 +7,48 @@
  * way: Astro.redirect() only works from a page, and a static import specifier
  * cannot be a runtime variable.
  *
+ * `leagueSlug` is OPTIONAL, and its absence is the shared host. NFL club marks
+ * belong to no league, so `mfl.football/brand` renders the same page in
+ * MflAppLayout with no league identity — TheLeagueLayout wears one league's
+ * crest, nav and manifest, and this surface must claim none of them. The
+ * shared host is deliberately not a second front door for a league that has
+ * its own apex (`resolveSharedHostHiddenLeague`), so this is its OWN route at
+ * the root rather than a link into /theleague/brand.
+ *
  * Each tile is the club's colour with the mark its BAND ground draws — which
  * is the dark cut for almost every club, because almost every club colour is
  * dark. That is the whole thesis of docs/plans/nfl-mark-assignments.md shown
  * 32 times: a club-colour band is a third ground, not a light one.
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import MflAppLayout from '../../../layouts/MflAppLayout.astro';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { getLeagueBySlug } from '../../../config/leagues';
 import type { CanonicalLeagueSlug } from '../../../config/leagues';
 import { allClubs, inkOn } from '../../../utils/nfl-marks';
 
 interface Props {
-  leagueSlug: CanonicalLeagueSlug;
+  /** Omitted on the shared host, where this page belongs to no league. */
+  leagueSlug?: CanonicalLeagueSlug;
 }
 
 const { leagueSlug } = Astro.props;
-const league = getLeagueBySlug(leagueSlug);
-if (!league) throw new Error(`BrandPage: unknown league ${leagueSlug}`);
+const league = leagueSlug ? getLeagueBySlug(leagueSlug) : null;
+if (leagueSlug && !league) throw new Error(`BrandPage: unknown league ${leagueSlug}`);
 
+const Layout = league ? TheLeagueLayout : MflAppLayout;
 const hide = Astro.locals.hideLeaguePrefix ?? false;
-const basePath = resolveLeaguePath(`/${leagueSlug}/brand`, hide);
+const clubHref = (code: string) =>
+  leagueSlug
+    ? resolveLeaguePath(`/${leagueSlug}/brand/${code.toLowerCase()}`, hide)
+    : `/brand/${code.toLowerCase()}`;
 
 const clubs = allClubs();
 const customised = clubs.filter((c) => c.customised);
+const derived = clubs.filter((c) => c.marks.some((m) => m.derived));
 ---
 
-<TheLeagueLayout title={`NFL Brand Book | ${league.name}`}>
+<Layout title={league ? `NFL Brand Book | ${league.name}` : 'NFL Brand Book'}>
   <main class="brand">
     <header class="brand__header">
       <p class="brand__eyebrow">Reference &middot; {clubs.length} clubs</p>
@@ -53,6 +68,20 @@ const customised = clubs.filter((c) => c.customised);
           </p>
         )
       }
+      {
+        derived.length > 0 && (
+          <p class="brand__note">
+            {derived.map((c, i) => (
+              <>
+                {i > 0 && ', '}
+                <a href={clubHref(c.code)}>{c.code}</a>
+              </>
+            ))}{' '}
+            carry a <strong>reversed</strong> cut we made ourselves &mdash; no public source
+            publishes one, so it is derived from our own SVG by a hand-reviewed colour map.
+          </p>
+        )
+      }
     </header>
 
     <ul class="brand__grid">
@@ -65,7 +94,7 @@ const customised = clubs.filter((c) => c.customised);
             <li class="brand__cell">
               <a
                 class="brand__tile"
-                href={resolveLeaguePath(`/${leagueSlug}/brand/${club.code.toLowerCase()}`, hide)}
+                href={clubHref(club.code)}
                 style={`--tile-bg:${bg};--tile-ink:${ink}`}
               >
                 <span class="brand__art">
@@ -75,7 +104,11 @@ const customised = clubs.filter((c) => c.customised);
                   <span class="brand__city">{club.city}</span>
                   <span class="brand__nick">{club.nick}</span>
                 </span>
-                {club.customised && <span class="brand__flag">custom</span>}
+                {club.marks.some((m) => m.derived) ? (
+                  <span class="brand__flag">made here</span>
+                ) : (
+                  club.customised && <span class="brand__flag">custom</span>
+                )}
               </a>
             </li>
           );
@@ -83,7 +116,7 @@ const customised = clubs.filter((c) => c.customised);
       }
     </ul>
   </main>
-</TheLeagueLayout>
+</Layout>
 
 <style>
 
@@ -96,10 +129,14 @@ const customised = clubs.filter((c) => c.customised);
      viewer's theme — so the light pane, the "Light surfaces" ground card and
      the Primary/ESPN-light entries in the filmstrip would all render the DARK
      cut for a dark-mode reader, and the comparison would show one mark twice.
+     Scoped to the tiles' artwork, never the whole page: every tile already
+     declares its ground (the club's own colour) and must look the same in both
+     themes, but nothing else here should be frozen out of the swap.
+
      `!important` because the swap rule's specificity matches this one's and
      load order between the layout head and a scoped component style is not
      something to rely on. Pinned by tests/nfl-marks-page-data.test.ts. */
-  html.dark :global(.brand img) {
+  html.dark :global(.brand__art img) {
     content: normal !important;
   }
   /* Tokens with fallbacks only — a var() with no definition renders its
@@ -134,6 +171,10 @@ const customised = clubs.filter((c) => c.customised);
     margin: 0.75rem 0 0;
     font-size: 0.875rem;
     color: var(--color-gray-500, #6b7280);
+  }
+  .brand__note a {
+    color: inherit;
+    font-weight: 700;
   }
 
   .brand__grid {

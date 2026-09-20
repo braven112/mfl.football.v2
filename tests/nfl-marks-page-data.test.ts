@@ -147,13 +147,32 @@ describe('nfl-marks page data', () => {
     const css = buildNflLogoDarkCss();
     expect(css).toContain('html.dark img[src="/assets/nfl-logos/CHI.svg"]');
 
-    for (const [file, cls] of [
-      ['src/components/shared/brand/BrandPage.astro', 'brand'],
-      ['src/components/shared/brand/ClubBrandPage.astro', 'cb'],
-    ] as const) {
+    // Scoped to the surfaces that COMPARE cuts, never the whole page: the
+    // roster list is ordinary site rendering and must keep the swap, or it
+    // ships the light mark on a dark card — the bug the swap exists to fix.
+    const OPTED_OUT: Record<string, string[]> = {
+      'src/components/shared/brand/BrandPage.astro': ['.brand__art img'],
+      'src/components/shared/brand/ClubBrandPage.astro': [
+        '.cb__hero img',
+        '.cb__film img',
+        '.cb__grounds img',
+        '.cb__situ .cb__pane.is-light img',
+        '.cb__situ .cb__pane.is-dark img',
+      ],
+    };
+    for (const [file, selectors] of Object.entries(OPTED_OUT)) {
       const src = readFileSync(join(process.cwd(), file), 'utf-8');
-      expect(src, file).toMatch(
-        new RegExp(`html\\.dark\\s+:global\\(\\.${cls} img\\)\\s*\\{[^}]*content:\\s*normal\\s*!important`),
+      for (const sel of selectors) {
+        expect(src, `${file} must opt ${sel} out of the swap`).toContain(
+          `html.dark :global(${sel})`,
+        );
+      }
+      expect(src, `${file} opt-out must be !important`).toMatch(
+        /content:\s*normal\s*!important/,
+      );
+      // A whole-page opt-out would silently take the roster list with it.
+      expect(src, `${file} must not opt the whole page out`).not.toMatch(
+        /html\.dark\s+:global\(\.(brand|cb) img\)/,
       );
     }
   });

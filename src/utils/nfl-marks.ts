@@ -13,6 +13,7 @@
 
 import brandKit from '../data/nfl-brand-kit.json';
 import assignments from '../data/nfl-mark-assignments.json';
+import reversals from '../data/nfl-mark-reversals.json';
 import { getAllNFLTeamCodes } from './nfl-logo';
 import { resolveNflDarkLogoUrl } from './nfl-logo-dark-css';
 
@@ -27,6 +28,8 @@ export interface MarkOption {
   format: 'svg' | 'png';
   /** True when the cut is drawn for a dark ground and should preview on one. */
   forDark: boolean;
+  /** True when we MAKE this cut rather than fetch it. Only `reversed` today. */
+  derived: boolean;
   url: string;
 }
 
@@ -35,7 +38,10 @@ export interface MarkOption {
  * `scripts/lib/nfl-mark-sources.mjs`; these labels are the page's alone, which
  * is why they live here rather than in the shared node table.
  */
-const MARK_LABELS: Record<string, { label: string; source: string; format: 'svg' | 'png'; forDark: boolean }> = {
+const MARK_LABELS: Record<
+  string,
+  { label: string; source: string; format: 'svg' | 'png'; forDark: boolean; derived?: boolean }
+> = {
   primary: { label: 'Primary', source: 'committed SVG', format: 'svg', forDark: false },
   nflcom: { label: 'NFL.com cut', source: 'league club endpoint', format: 'svg', forDark: false },
   espn: { label: 'ESPN light', source: 'ESPN 500', format: 'png', forDark: false },
@@ -44,6 +50,15 @@ const MARK_LABELS: Record<string, { label: string; source: string; format: 'svg'
   altDark: { label: 'Alternate dark', source: 'ESPN secondary, on black', format: 'png', forDark: true },
   whiteKnockout: { label: 'White knockout', source: 'ESPN primary, white', format: 'png', forDark: true },
   wordmark: { label: 'Wordmark', source: 'nflverse lockup', format: 'png', forDark: false },
+  // The one cut we MAKE rather than fetch, and only for the three clubs in the
+  // reversal map — every public source serves the standard mark.
+  reversed: {
+    label: 'Reversed',
+    source: 'derived from our own SVG',
+    format: 'svg',
+    forDark: true,
+    derived: true,
+  },
 };
 
 export const MARK_IDS = Object.keys(MARK_LABELS);
@@ -130,6 +145,12 @@ export function markUrl(code: string, id: string): string | null {
       return team.espn?.primaryWhite?.url ?? null;
     case 'wordmark':
       return team.wordmark ?? null;
+    case 'reversed':
+      // Null for the 29 clubs with no reversal, which is what keeps the cut off
+      // their pages rather than linking a file that was never derived.
+      return (reversals as { clubs: Record<string, unknown> }).clubs?.[code]
+        ? `/assets/nfl-logos/reversed/${code}.svg`
+        : null;
     default:
       return null;
   }
@@ -157,7 +178,7 @@ export function markOptions(code: string): MarkOption[] {
   return MARK_IDS.map((id) => {
     const meta = MARK_LABELS[id];
     const url = markUrl(code, id);
-    return url ? { id, ...meta, url } : null;
+    return url ? { id, ...meta, derived: meta.derived === true, url } : null;
   }).filter((m): m is MarkOption => m !== null);
 }
 
@@ -199,6 +220,8 @@ export interface ClubBrand {
   marks: MarkOption[];
   /** NFL.com serves only a for-dark cut for this club. */
   nflDotComIsDark: boolean;
+  /** Why this club got a hand-reviewed reversed cut — null for the other 29. */
+  reversalNote: string | null;
   customised: boolean;
 }
 
@@ -225,6 +248,8 @@ export function clubBrand(code: string): ClubBrand | null {
     grounds,
     marks,
     nflDotComIsDark: team.nflDotComVariant === 'dark',
+    reversalNote:
+      (reversals as { clubs: Record<string, { note?: string }> }).clubs?.[code]?.note ?? null,
     customised: isCustomised(code),
   };
 }

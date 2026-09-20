@@ -20,24 +20,42 @@
  * identical, which is the entire comparison.
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import MflAppLayout from '../../../layouts/MflAppLayout.astro';
+import PlayerCell from '../../theleague/PlayerCell.astro';
+import NflGamesStrip from '../NflGamesStrip';
+/* The strip's own stylesheet. A React island does NOT carry it — rendered
+   without this the logos have no sizing rule and each one fills the column,
+   which is the same trap `docs/claude/rules/storybook.md` records for stories:
+   a real component, correct markup, no styles. */
+import '../../../styles/nfl-games-strip.css';
+import '../../../styles/network-badge.css';
+import type { NflGame } from '../../../types/live-scoring';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { getLeagueBySlug } from '../../../config/leagues';
 import type { CanonicalLeagueSlug } from '../../../config/leagues';
-import { clubBrand, inkOn, type ClubBrand } from '../../../utils/nfl-marks';
+import { allClubs, clubBrand, inkOn, type ClubBrand } from '../../../utils/nfl-marks';
 import { clubRosterHolders } from '../../../utils/nfl-club-rosters';
 
 interface Props {
-  leagueSlug: CanonicalLeagueSlug;
+  /**
+   * Omitted on the shared host. NFL club marks belong to no league, so
+   * `mfl.football/brand/<code>` renders this page in MflAppLayout with no
+   * league identity and no roster panel — the roster panel is the ONLY
+   * league-specific thing here, which is what makes the neutral copy possible
+   * at all rather than a fork.
+   */
+  leagueSlug?: CanonicalLeagueSlug;
   code: string;
 }
 
 const { leagueSlug, code } = Astro.props;
-const league = getLeagueBySlug(leagueSlug);
-if (!league) throw new Error(`ClubBrandPage: unknown league ${leagueSlug}`);
+const league = leagueSlug ? getLeagueBySlug(leagueSlug) : null;
+if (leagueSlug && !league) throw new Error(`ClubBrandPage: unknown league ${leagueSlug}`);
 
+const Layout = league ? TheLeagueLayout : MflAppLayout;
 const club = clubBrand(code) as ClubBrand;
 const hide = Astro.locals.hideLeaguePrefix ?? false;
-const indexPath = resolveLeaguePath(`/${leagueSlug}/brand`, hide);
+const indexPath = leagueSlug ? resolveLeaguePath(`/${leagueSlug}/brand`, hide) : '/brand';
 
 const bg = club.colors[0] ?? '#111111';
 const ink = inkOn(bg);
@@ -45,8 +63,42 @@ const band = club.grounds.find((g) => g.ground === 'band');
 const light = club.grounds.find((g) => g.ground === 'light');
 const dark = club.grounds.find((g) => g.ground === 'dark');
 
-const { year, holders } = clubRosterHolders(club.code, leagueSlug);
+const { year, holders } = leagueSlug
+  ? clubRosterHolders(club.code, leagueSlug)
+  : { year: null, holders: [] };
 const rosteredCount = holders.reduce((n, h) => n + h.players.length, 0);
+
+/**
+ * A sample slate for the games strip, so the REAL component renders here.
+ *
+ * `NflGamesStrip`'s `demo` prop exists for exactly this: it renders
+ * `initialGames` and does no network at all, so a showcase cannot be
+ * overwritten by a live poll (or make one from a page nobody is watching a
+ * game on). The opponent is deterministic — the next club alphabetically —
+ * because this card is about the ARTWORK, and an opponent chosen by some
+ * cleverer rule would still be arbitrary while looking like it meant
+ * something.
+ */
+const opponent = (() => {
+  const all = allClubs().map((c) => c.code);
+  const i = all.indexOf(club.code);
+  return all[(i + 1) % all.length];
+})();
+
+const demoGames: NflGame[] = [
+  {
+    id: `brand-${club.code}`,
+    state: 'in',
+    shortDetail: '1:58 - 4th',
+    period: 4,
+    clock: '1:58',
+    home: { code: club.code, score: 24 },
+    away: { code: opponent, score: 21 },
+    possession: club.code,
+    date: new Date().toISOString(),
+    broadcast: 'FOX',
+  },
+];
 
 const GROUND_COPY: Record<string, string> = {
   light: 'Player cells, bench rows, the games strip — anything on a white card.',
@@ -55,7 +107,13 @@ const GROUND_COPY: Record<string, string> = {
 };
 ---
 
-<TheLeagueLayout title={`${club.name} marks | NFL Brand Book | ${league.name}`}>
+<Layout
+  title={
+    league
+      ? `${club.name} marks | NFL Brand Book | ${league.name}`
+      : `${club.name} marks | NFL Brand Book`
+  }
+>
   <main class="cb">
     <nav class="cb__crumb"><a href={indexPath}>&larr; NFL Brand Book</a></nav>
 
@@ -97,12 +155,23 @@ const GROUND_COPY: Record<string, string> = {
           )
         }
       </p>
+      {
+        club.reversalNote && (
+          <p class="cb__derived">
+            <strong>The reversed cut is ours.</strong> No public source publishes one &mdash; ESPN,
+            NFL.com, Fox's web CDN, nflverse and Sleeper all serve the standard mark &mdash; so we
+            derive it from our own artwork with a hand-reviewed colour map, checked on a dark
+            render. {club.reversalNote}
+          </p>
+        )
+      }
       <ul class="cb__film">
         {
           club.marks.map((m) => (
             <li class="cb__cut">
               <span class={`cb__cut-box ${m.forDark ? 'is-dark' : 'is-light'}`}>
                 <img src={m.url} alt={`${club.name} — ${m.label}`} loading="lazy" />
+                {m.derived && <span class="cb__made">made here</span>}
               </span>
               <span class="cb__cut-label">{m.label}</span>
               <span class="cb__cut-meta">{m.format.toUpperCase()} &middot; {m.source}</span>
@@ -139,28 +208,40 @@ const GROUND_COPY: Record<string, string> = {
     <section class="cb__section">
       <h2 class="cb__h2">In the app</h2>
       <p class="cb__note">
-        The surfaces that render this mark, each on its real ground and at the size it really uses.
+        The real components, rendered here on their real grounds &mdash; not lookalikes, so they
+        cannot drift from what a roster page or a live board actually draws. The club-colour band
+        is the exception and is labelled as such: nothing in the app paints club colour behind an
+        NFL mark yet, so it stands for the third GROUND rather than for a surface.
       </p>
       <ul class="cb__situ">
         <li class="cb__demo">
           <span class="cb__demo-cap">Player cell &mdash; DEF <em>the mark IS the avatar</em></span>
+          {/*
+            The REAL PlayerCell, not a lookalike. A hand-rolled copy is a second
+            implementation of the DEF rule (the mark becomes the avatar and the
+            meta row drops the duplicate logo) and would drift from it silently
+            — which is the opposite of what this section is for.
+
+            `nflLogo` is passed explicitly because this page opts out of the
+            global dark swap: left to derive its own src, both panes would draw
+            the same cut and the comparison would collapse. The ground decides
+            the artwork here, exactly as it does everywhere else.
+          */}
           <span class="cb__pane is-light">
-            <span class="cb__pcell">
-              <span class="cb__avatar"><img src={light?.url} alt="" loading="lazy" /></span>
-              <span>
-                <span class="cb__pname">{club.nick} D/ST</span>
-                <span class="cb__pmeta"><img src={light?.url} alt="" loading="lazy" />{club.code} &middot; DEF</span>
-              </span>
-            </span>
+            <PlayerCell
+              name={`${club.nick} D/ST`}
+              position="DEF"
+              nflTeam={club.code}
+              nflLogo={light?.url}
+            />
           </span>
           <span class="cb__pane is-dark">
-            <span class="cb__pcell">
-              <span class="cb__avatar"><img src={dark?.url} alt="" loading="lazy" /></span>
-              <span>
-                <span class="cb__pname">{club.nick} D/ST</span>
-                <span class="cb__pmeta"><img src={dark?.url} alt="" loading="lazy" />{club.code} &middot; DEF</span>
-              </span>
-            </span>
+            <PlayerCell
+              name={`${club.nick} D/ST`}
+              position="DEF"
+              nflTeam={club.code}
+              nflLogo={dark?.url}
+            />
           </span>
         </li>
 
@@ -174,21 +255,24 @@ const GROUND_COPY: Record<string, string> = {
           </span>
         </li>
 
-        <li class="cb__demo">
-          <span class="cb__demo-cap">Broadcast card <em>dark in both themes</em></span>
-          <span class="cb__pane is-dark">
-            <span class="cb__bcast">
-              <img src={dark?.url} alt="" loading="lazy" />
-              <span>
-                <span class="cb__bname">{club.nick.toUpperCase()}</span>
-                <span class="cb__bmeta">4th &amp; 2 &middot; 01:58</span>
-              </span>
-            </span>
+        <li class="cb__demo cb__demo--wide">
+          <span class="cb__demo-cap">
+            Games strip <em>the real component, sample slate &mdash; follows your theme</em>
+          </span>
+          {/*
+            ONE pane, not the light/dark pair the others get. A game card paints
+            itself from the site's own tokens rather than declaring a ground, so
+            two panes would render two identical cards and claim a comparison
+            that isn't there. Its MARKS still swap with the theme, which is why
+            this surface is left in the swap rather than opted out.
+          */}
+          <span class="cb__pane">
+            <NflGamesStrip week={1} year={2026} demo initialGames={demoGames} label={null} client:visible />
           </span>
         </li>
 
         <li class="cb__demo">
-          <span class="cb__demo-cap">Club-colour band <em>franchise band</em></span>
+          <span class="cb__demo-cap">Club colour <em>the third ground</em></span>
           <span class="cb__pane" style={`background:${bg};color:${ink}`}>
             <span class="cb__bcast">
               {band && <img src={band.url} alt="" loading="lazy" />}
@@ -202,6 +286,7 @@ const GROUND_COPY: Record<string, string> = {
       </ul>
     </section>
 
+    {league && (
     <section class="cb__section">
       <h2 class="cb__h2">Who rosters {club.nick} in {league.name}</h2>
       {
@@ -224,10 +309,15 @@ const GROUND_COPY: Record<string, string> = {
                   <span class="cb__holder-name">{h.franchiseName}</span>
                   <span class="cb__holder-players">
                     {h.players.map((p) => (
-                      <span class="cb__chip">
-                        {p.name}
-                        <em>{p.position}</em>
-                      </span>
+                      <PlayerCell
+                        name={p.name}
+                        position={p.position}
+                        nflTeam={club.code}
+                        headshot={p.headshot}
+                        mflId={p.id}
+                        espnId={p.espnId ?? undefined}
+                        size="compact"
+                      />
                     ))}
                   </span>
                 </li>
@@ -237,24 +327,36 @@ const GROUND_COPY: Record<string, string> = {
         )
       }
     </section>
+    )}
   </main>
-</TheLeagueLayout>
+</Layout>
 
 <style>
 
-  /* ── The Brand Book opts OUT of the global dark swap ────────────────────
+  /* ── The COMPARISON surfaces opt out of the global dark swap ────────────
      `buildNflLogoDarkCss` emits `html.dark img[src="<light src>"] { content:
      url(<dark cut>) }` for every light src the site can render, so in dark
      mode a light mark silently becomes the dark one. On every other page that
-     is the whole point; here it destroys the page. This page's job is to show
-     the cuts SIDE BY SIDE, and each pane paints its own ground rather than the
-     viewer's theme — so the light pane, the "Light surfaces" ground card and
-     the Primary/ESPN-light entries in the filmstrip would all render the DARK
-     cut for a dark-mode reader, and the comparison would show one mark twice.
+     is the whole point; inside a side-by-side comparison it is fatal — the
+     light pane, the "Light surfaces" ground card and the Primary/ESPN-light
+     entries in the filmstrip would all render the DARK cut for a dark-mode
+     reader, and the page would show one mark twice.
+
+     Scoped to the four surfaces that COMPARE cuts, never the whole page. The
+     roster list below is not a comparison — it is the site rendering players
+     through the REAL PlayerCell the way it always does, and opting it out too
+     would have frozen it on the light mark against a dark card, the exact bug
+     the swap exists to prevent. A surface here declares its ground;
+     everything else follows the theme.
+
      `!important` because the swap rule's specificity matches this one's and
      load order between the layout head and a scoped component style is not
      something to rely on. Pinned by tests/nfl-marks-page-data.test.ts. */
-  html.dark :global(.cb img) {
+  html.dark :global(.cb__hero img),
+  html.dark :global(.cb__film img),
+  html.dark :global(.cb__grounds img),
+  html.dark :global(.cb__situ .cb__pane.is-light img),
+  html.dark :global(.cb__situ .cb__pane.is-dark img) {
     content: normal !important;
   }
   /* Tokens with fallbacks only (docs/claude/rules/theming-and-assets.md). */
@@ -345,6 +447,33 @@ const GROUND_COPY: Record<string, string> = {
     font-size: 0.9rem;
     color: var(--color-gray-600, #4b5563);
     max-width: 70ch;
+  }
+
+  .cb__derived {
+    margin: 0 0 0.9rem;
+    padding: 0.7rem 0.85rem;
+    border-left: 3px solid var(--color-accent, #2563eb);
+    border-radius: var(--radius-sm, 4px);
+    background: color-mix(in srgb, currentColor 6%, transparent);
+    font-size: 0.875rem;
+    line-height: 1.5;
+    max-width: 72ch;
+  }
+  .cb__made {
+    position: absolute;
+    left: 0.3rem;
+    bottom: 0.3rem;
+    font-size: 0.55rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    padding: 0.08rem 0.3rem;
+    border-radius: var(--radius-sm, 4px);
+    background: var(--color-accent, #2563eb);
+    color: #fff;
+  }
+  .cb__cut-box {
+    position: relative;
   }
 
   /* A cut that fails to load renders its alt text; without this it sprawls
@@ -480,6 +609,9 @@ const GROUND_COPY: Record<string, string> = {
     gap: var(--spacing-sm, 0.75rem);
     align-items: start;
   }
+  .cb__demo--wide {
+    grid-column: 1 / -1;
+  }
   .cb__demo {
     border: 1px solid var(--color-gray-300, #d1d5db);
     border-radius: var(--radius-md, 8px);
@@ -522,41 +654,19 @@ const GROUND_COPY: Record<string, string> = {
     border-top: 1px solid var(--color-gray-200, #e5e7eb);
   }
 
-  .cb__pcell {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
+  /* PlayerCell brings its own type, spacing, avatar sizing and DEF treatment
+     from player-cell.css. Nothing here restyles it: a pane sets the GROUND and
+     the real cell renders on it exactly as it does on a roster page, which is
+     the only way this section stays true as that component changes. The two
+     colour rules below are the one exception, and they are about the ground —
+     the cell's own tokens follow the page theme, which would make the light
+     pane go dark for a dark-mode reader and collapse the comparison. */
+  .cb__pane :global(.player-cell__name),
+  .cb__pane :global(.player-cell__meta) {
+    color: inherit;
   }
-  /* DEF avatars carry no ring, no chip and no radius — player-cell.css sets
-     border:0/background:transparent for .player-cell__avatar--def. */
-  .cb__avatar {
-    width: 40px;
-    height: 40px;
-    flex: none;
-    display: grid;
-    place-items: center;
-  }
-  .cb__avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-  }
-  .cb__pname {
-    display: block;
-    font-weight: 600;
-    font-size: 0.88rem;
-  }
-  .cb__pmeta {
-    display: flex;
-    align-items: center;
-    gap: 0.3rem;
-    font-size: 0.72rem;
+  .cb__pane :global(.player-cell__meta) {
     opacity: 0.72;
-  }
-  .cb__pmeta img {
-    width: 14px;
-    height: 14px;
-    object-fit: contain;
   }
 
   .cb__bench {
@@ -607,35 +717,21 @@ const GROUND_COPY: Record<string, string> = {
     gap: 0.5rem;
   }
   .cb__holder {
-    display: flex;
-    gap: 0.75rem;
-    align-items: baseline;
-    flex-wrap: wrap;
-    padding: 0.6rem 0.75rem;
+    display: block;
+    padding: 0.7rem 0.85rem;
     border-radius: var(--radius-sm, 4px);
     border: 1px solid var(--color-gray-200, #e5e7eb);
   }
   .cb__holder-name {
+    display: block;
     font-weight: 600;
     font-size: 0.9rem;
-    min-width: 11rem;
+    margin-bottom: 0.55rem;
   }
   .cb__holder-players {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.35rem;
-  }
-  .cb__chip {
-    font-size: 0.78rem;
-    padding: 0.12rem 0.45rem;
-    border-radius: 100px;
-    background: var(--color-gray-100, #f3f4f6);
-    color: var(--color-gray-700, #374151);
-  }
-  .cb__chip em {
-    font-style: normal;
-    opacity: 0.6;
-    margin-left: 0.3rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+    gap: 0.5rem 0.9rem;
   }
 
   @media (max-width: 520px) {
@@ -646,6 +742,9 @@ const GROUND_COPY: Record<string, string> = {
     .cb__ghost {
       width: 180px;
       height: 180px;
+    }
+    .cb__holder-players {
+      grid-template-columns: 1fr;
     }
     .cb__holder-name {
       min-width: 0;

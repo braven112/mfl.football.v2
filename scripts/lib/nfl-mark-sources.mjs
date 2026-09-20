@@ -37,6 +37,11 @@ export const MARK_SOURCES = {
   altDark: { source: 'espn', espnKey: 'secondaryOnBlack', format: 'png' },
   whiteKnockout: { source: 'espn', espnKey: 'primaryWhite', format: 'png' },
   wordmark: { source: 'nflverse', format: 'png' },
+  // Derived from the committed light SVG by scripts/derive-nfl-reversed-marks.mjs
+  // and committed alongside it. Only the three clubs in
+  // src/data/nfl-mark-reversals.json have one; no public source publishes a
+  // reversed cut, which is why this is the one mark we make rather than fetch.
+  reversed: { source: 'derived', format: 'svg' },
 };
 
 export const MARK_IDS = Object.keys(MARK_SOURCES);
@@ -49,6 +54,17 @@ function brandKit() {
     ).teams;
   }
   return cachedKit;
+}
+
+let cachedReversals = null;
+/** The curated reversal map, read lazily so a caller that never asks pays nothing. */
+export function reversalClubs() {
+  if (!cachedReversals) {
+    cachedReversals = JSON.parse(
+      fs.readFileSync(path.join(ROOT, 'src', 'data', 'nfl-mark-reversals.json'), 'utf-8'),
+    ).clubs;
+  }
+  return cachedReversals;
 }
 
 let cachedAssignments = null;
@@ -97,7 +113,21 @@ export function resolveMark(code, markId, kit = brandKit()) {
       return { url: team.wordmark, format: spec.format };
     case 'committed':
       // Not fetched — it is the file already in public/assets/nfl-logos.
-      return { url: null, format: spec.format, committed: true };
+      return { url: null, format: spec.format, committed: true, path: `/assets/nfl-logos/${code}.svg` };
+    case 'derived': {
+      // Also not fetched: made from the committed art and committed beside it.
+      // Only the clubs in the reversal map have one, so an unlisted club is an
+      // error rather than a path that 404s.
+      if (!reversalClubs()[code]) {
+        throw new Error(`${code}: no entry in src/data/nfl-mark-reversals.json — nothing to reverse`);
+      }
+      return {
+        url: null,
+        format: spec.format,
+        committed: true,
+        path: `/assets/nfl-logos/reversed/${code}.svg`,
+      };
+    }
     default:
       throw new Error(`mark id "${markId}" has an unhandled source "${spec.source}"`);
   }

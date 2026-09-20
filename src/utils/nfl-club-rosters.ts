@@ -19,7 +19,13 @@ import { getOwnersByPlayer } from './offseason-hero-data';
 export interface ClubRosterEntry {
   franchiseId: string;
   franchiseName: string;
-  players: { id: string; name: string; position: string }[];
+  /**
+   * `espnId` and `headshot` ride along because the roster panel renders the
+   * REAL PlayerCell, and that component's headshot fallback chain starts at
+   * the ESPN id — without it every player falls straight through to the
+   * team-coloured placeholder silhouette.
+   */
+  players: { id: string; name: string; position: string; espnId: string | null; headshot: string }[];
 }
 
 function feedsRoot(league: CanonicalLeagueSlug): string {
@@ -100,7 +106,13 @@ export function clubRosterHolders(
         };
         byFranchise.set(franchiseId, entry);
       }
-      entry.players.push({ id: mflId, name: identity.name, position: identity.position });
+      entry.players.push({
+        id: mflId,
+        name: identity.name,
+        position: identity.position,
+        espnId: identity.espnId,
+        headshot: identity.headshot,
+      });
     }
   }
 

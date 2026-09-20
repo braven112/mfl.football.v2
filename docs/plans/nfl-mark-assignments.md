@@ -1,7 +1,6 @@
 # Per-club NFL mark assignments
 
-**Status:** **phases 1, 2 and the Brand Book shipped** 2026-09-20. Phase 3
-planned, not started.
+**Status:** **phases 1, 2, 3 and the Brand Book shipped** 2026-09-20.
 Decisions made against the live artwork.
 
 Today every NFL club has exactly one light mark (`/assets/nfl-logos/{CODE}.svg`)
@@ -360,6 +359,23 @@ sketched below.
 
 ## The Brand Book — SHIPPED
 
+### It answers at the root too, for the shared host
+
+`mfl.football` is deliberately not a second front door for a league with its own
+apex — `resolveSharedHostHiddenLeague` 404s `/theleague/*` and `/afl-fantasy/*`
+there, because a league reachable at two addresses is two sets of links and two
+places to stay signed in. So the shared host cannot link into a league's brand
+page; it gets its own route at `/brand`, which is the honest path anyway since
+NFL club marks belong to no league.
+
+`leagueSlug` is therefore OPTIONAL on both components. Without it they render in
+`MflAppLayout` (TheLeagueLayout wears one league's crest, nav and manifest) and
+drop the roster panel — the only league-specific thing on the page, which is
+what makes a neutral copy possible instead of a fork. On a league apex the
+middleware rewrites `/brand` → `/<slug>/brand` before it reaches the root route,
+so `theleague.us/brand` still serves the league copy with its rosters.
+
+
 `/<league>/brand` (index) and `/<league>/brand/<code>` (32 clubs), public, both
 leagues, one shared component per route shape. It is the page this plan kept
 being explained on a whiteboard: every cut on file for a club, which one each
@@ -415,7 +431,48 @@ rostered in both conferences, and the question here is ownership rather than
 startability, so a taxi-squad Bear counts. A feed it cannot read is an empty
 panel, never a broken page.
 
-### Phase 3 — the reversed cut
+## Phase 3 — the reversed cut — SHIPPED
+
+`src/data/nfl-mark-reversals.json` (the curated map above),
+`scripts/lib/nfl-mark-reversal.mjs` (the swap) and
+`scripts/derive-nfl-reversed-marks.mjs` (`--check` for the guard) write
+`public/assets/nfl-logos/reversed/{ARI,DET,WSH}.svg`. `reversed` is a mark id
+on both sides now, and the Brand Book badges it **made here** — it is the one
+cut in this repo we draw rather than fetch.
+
+**Committed, not mirrored.** The dark cuts are fetched from a CDN, gitignored
+and tracked by a manifest; these are derived from committed art, so they belong
+in the diff where a human can look at them — the same reason the light SVGs are
+committed rather than built. That is also why the script is run by hand
+alongside `download-nfl-logos.mjs` rather than added to prebuild.
+
+Three things the implementation had to get right:
+
+- **An absent source colour throws.** A logo refresh that moves one fill would
+  otherwise make the swap a no-op, shipping the light mark under a "reversed"
+  label with nothing to notice it by. `tests/nfl-mark-reversals.test.ts` pins
+  the throw, and pins every `from` colour still present in the committed art.
+- **The swap is simultaneous.** Washington's map EXCHANGES its two colours;
+  applied in sequence the first pass paints every burgundy gold and the second
+  paints all of it — original and just-made alike — burgundy, leaving a
+  single-colour blob.
+- **Detroit needs its detail layer in the map.** The mane, face and leg lines
+  are a separate white layer OVER the blue body, so reversing the body alone
+  merged them into it and flattened the lion to a blank silhouette. The detail
+  takes Honolulu blue, exactly inverting the light mark. This was caught on the
+  render, not in review of the map — which is the argument for rendering every
+  one of these before calling it done.
+
+Shorthand hex is normalized both ways (`#000` ↔ `#000000`); ARI's keyline is
+exactly that case and a raw string compare misses it.
+
+**Not assigned to any ground.** The three cuts exist and are visible; which
+club draws one on which ground is still an edit to `nfl-mark-assignments.json`,
+and `darkItems()` will refuse a `reversed` assignment until the mirror learns to
+COPY a committed file rather than fetch a URL. Deliberate: making the art and
+changing what ships are two decisions.
+
+### Phase 3 — the original plan
 
 Only once phases 1 and 2 have settled, and only for clubs whose reversal was
 eyeballed on a dark render:
