@@ -1,0 +1,253 @@
+/**
+ * PROTOTYPE — Phase 0 proof: score a week from NFLverse and diff it against
+ * MFL's own numbers.
+ *
+ * This is not production code. It exists to substantiate one claim in
+ * docs/plans/phase-0-own-the-stats.md: that we can reproduce MFL's fantasy
+ * points exactly, from free data, for both leagues' rule sets.
+ *
+ * Result on first run (2026-09-20): 416 / 416 EXACT for TheLeague, weeks 1-2.
+ *
+ * Usage:
+ *   node scripts/prototypes/scoring-reconcile.mjs                  # theleague, 2026
+ *   node scripts/prototypes/scoring-reconcile.mjs --league afl-fantasy
+ *   node scripts/prototypes/scoring-reconcile.mjs --year 2025 --verbose
+ *
+ * Downloads are cached under .cache/nflverse/ so re-runs are offline.
+ *
+ * WHERE THINGS BELONG WHEN THIS GRADUATES
+ * ---------------------------------------
+ * - SCORING_RULES  -> per-league registry entry (src/config/leagues-data.mjs),
+ *                     NOT a constant here. Two leagues already disagree.
+ * - scorePlayerWeek -> scripts/lib/scoring-engine.mjs, pure + fixture-tested.
+ * - parseCsv        -> shared. See the warning on it below.
+ */
+import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { gunzipSync } from 'node:zlib';
+
+import { LEAGUES } from '../../src/config/leagues-data.mjs';
+
+// ── Sources ─────────────────────────────────────────────────────────────────
+const CROSSWALK_URL =
+  'https://raw.githubusercontent.com/dynastyprocess/data/master/files/db_playerids.csv';
+const statsUrl = (year) =>
+  `https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_${year}.csv`;
+
+const CACHE_DIR = '.cache/nflverse';
+
+// ── Scoring rule sets ───────────────────────────────────────────────────────
+// Transcribed from docs/claude/league-rules.md and docs/claude/afl-rules.md.
+// The ONLY difference between them today is `ppr` and `pointsAllowed`, which
+// is exactly why this must be config and never a hardcoded scorer.
+const SCORING_RULES = {
+  theleague: {
+    passYd: 0.04, passTd: 6, interception: -2, twoPt: 2,
+    rushYd: 0.1, rushTd: 6,
+    recYd: 0.1, recTd: 6,
+    ppr: { TE: 1.0, WR: 0.5, RB: 0.25 },
+    fumbleLost: -2,
+    xp: 1, fgFlatMaxYards: 30, fgFlat: 3, fgPerYard: 0.1,
+    returnYd: 0.03,
+  },
+  'afl-fantasy': {
+    passYd: 0.04, passTd: 6, interception: -2, twoPt: 2,
+    rushYd: 0.1, rushTd: 6,
+    recYd: 0.1, recTd: 6,
+    ppr: { TE: 1.5, WR: 1.0, RB: 1.0 },
+    fumbleLost: -2,
+    xp: 1, fgFlatMaxYards: 30, fgFlat: 3, fgPerYard: 0.1,
+    /**
+     * ZERO, and docs/claude/afl-rules.md says 0.03. UNRESOLVED — do not
+     * "fix" either side without a ruling.
+     *
+     * Reconciliation is unambiguous about MFL's BEHAVIOUR: 0.03 scores
+     * 348/416 (83.65%), and every one of the 68 misses is a kick/punt
+     * returner scored too HIGH by exactly their return yardage. Zero scores
+     * 416/416.
+     *
+     * So MFL is not awarding the AFL return yards. Either the constitution
+     * is wrong, or the AFL's MFL league is MISCONFIGURED and returners have
+     * been underscored for an unknown number of seasons. That is a
+     * commissioner's call, not a code change.
+     */
+    returnYd: 0,
+  },
+};
+
+// ── CSV ─────────────────────────────────────────────────────────────────────
+/**
+ * RFC4180 parser. DO NOT substitute the `parseCSV` in scripts/lib/snap-counts.mjs
+ * here: it splits on bare commas, and this feed quotes `headshot_url`, whose
+ * value contains `f_auto,q_auto`. That shifts every column after it by one and
+ * fails silently — every number downstream would be the neighbouring column.
+ */
+function parseCsv(text) {
+  const rows = [];
+  let row = [], field = '', quoted = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (quoted) {
+      if (c === '"') {
+        if (text[i + 1] === '"') { field += '"'; i++; } else quoted = false;
+      } else field += c;
+      continue;
+    }
+    if (c === '"') { quoted = true; continue; }
+    if (c === ',') { row.push(field); field = ''; continue; }
+    if (c === '\r') continue;
+    if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; continue; }
+    field += c;
+  }
+  if (field !== '' || row.length) { row.push(field); rows.push(row); }
+  const headers = rows.shift();
+  return rows
+    .filter((r) => r.length === headers.length)
+    .map((r) => Object.fromEntries(headers.map((h, i) => [h, r[i]])));
+}
+
+/** NFLverse and DynastyProcess both write the literal string `NA` for null. */
+const isBlank = (v) => {
+  const s = (v ?? '').trim();
+  return s === '' || s.toUpperCase() === 'NA';
+};
+const num = (v) => {
+  const n = Number.parseFloat(v);
+  return Number.isFinite(n) ? n : 0;
+};
+
+// ── Fetch + cache ───────────────────────────────────────────────────────────
+async function cached(url, name) {
+  const path = join(CACHE_DIR, name);
+  if (existsSync(path)) return readFileSync(path, 'utf8');
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`${res.status} fetching ${url}`);
+  const buf = Buffer.from(await res.arrayBuffer());
+  const text = name.endsWith('.gz') ? gunzipSync(buf).toString('utf8') : buf.toString('utf8');
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, text);
+  return text;
+}
+
+// ── The scorer ──────────────────────────────────────────────────────────────
+/**
+ * Three rules here were DISCOVERED by reconciliation, not read off the rules
+ * doc, and each one is a real MFL behaviour the constitution does not state:
+ *
+ *  1. `fumbles_lost_total`, not the rushing/receiving/sack components. MFL
+ *     charges -2 for a fumble lost on a RETURN too, and the component columns
+ *     are all zero for those. Cost: 2 players in week 1.
+ *  2. Return yardage is NETTED across punt + kickoff before scoring.
+ *  3. ...and then clamped at zero. A -5 yard punt return scores 0, not -0.15.
+ *     Clamping each return type separately is wrong — that was a 0.15 miss on
+ *     a player with -5 punt and +62 kickoff.
+ */
+function scorePlayerWeek(row, position, rules) {
+  let p = 0;
+  p += num(row.passing_yards) * rules.passYd;
+  p += num(row.passing_tds) * rules.passTd;
+  p += num(row.passing_interceptions) * rules.interception;
+  p += num(row.passing_2pt_conversions) * rules.twoPt;
+
+  p += num(row.rushing_yards) * rules.rushYd;
+  p += num(row.rushing_tds) * rules.rushTd;
+  p += num(row.rushing_2pt_conversions) * rules.twoPt;
+
+  p += num(row.receiving_yards) * rules.recYd;
+  p += num(row.receiving_tds) * rules.recTd;
+  p += num(row.receiving_2pt_conversions) * rules.twoPt;
+  p += num(row.receptions) * (rules.ppr[position] ?? 0);
+
+  p += num(row.fumbles_lost_total) * rules.fumbleLost;          // (1)
+  p += num(row.pat_made) * rules.xp;
+
+  // fg_made_list is SEMICOLON separated ('51;43'), not comma.
+  if (!isBlank(row.fg_made_list)) {
+    for (const part of String(row.fg_made_list).split(';')) {
+      const yards = Number.parseInt(part.trim(), 10);
+      if (!Number.isFinite(yards)) continue;
+      p += yards <= rules.fgFlatMaxYards ? rules.fgFlat : yards * rules.fgPerYard;
+    }
+  }
+
+  const returnYards = Math.max(                                  // (2) + (3)
+    0,
+    num(row.punt_return_yards) + num(row.kickoff_return_yards),
+  );
+  p += returnYards * rules.returnYd;
+
+  return Math.round(p * 100) / 100;
+}
+
+// ── Main ────────────────────────────────────────────────────────────────────
+const argOf = (flag, fallback) => {
+  const i = process.argv.indexOf(flag);
+  return i >= 0 && process.argv[i + 1] ? process.argv[i + 1] : fallback;
+};
+
+const slug = argOf('--league', 'theleague');
+const year = argOf('--year', '2026');
+const verbose = process.argv.includes('--verbose');
+
+const league = LEAGUES[slug];
+if (!league) throw new Error(`unknown league '${slug}' — not in the registry`);
+const rules = SCORING_RULES[slug];
+if (!rules) throw new Error(`no scoring rules transcribed for '${slug}'`);
+
+const feedDir = join(league.dataPath, 'mfl-feeds', year);
+
+const crosswalk = parseCsv(await cached(CROSSWALK_URL, 'db_playerids.csv'));
+const gsisToMfl = new Map();
+for (const r of crosswalk) {
+  if (!isBlank(r.gsis_id) && !isBlank(r.mfl_id)) gsisToMfl.set(r.gsis_id.trim(), r.mfl_id.trim());
+}
+
+const stats = parseCsv(await cached(statsUrl(year), `stats_player_week_${year}.csv`));
+
+const truthPath = join(feedDir, 'playerScores-by-week.json');
+if (!existsSync(truthPath)) {
+  console.error(`No MFL truth file at ${truthPath} — nothing to reconcile against.`);
+  process.exit(1);
+}
+const truth = JSON.parse(readFileSync(truthPath, 'utf8')).weeks ?? {};
+
+const positions = new Map();
+for (const pl of JSON.parse(readFileSync(join(feedDir, 'players.json'), 'utf8')).players.player) {
+  positions.set(String(pl.id), pl.position);
+}
+
+console.log(`\n${league.name} ${year} — NFLverse vs MFL\n`);
+let grandOk = 0, grandTotal = 0;
+
+for (const week of Object.keys(truth).sort((a, b) => Number(a) - Number(b))) {
+  const expected = truth[week];
+  let ok = 0;
+  const misses = [];
+  for (const row of stats) {
+    if (row.week !== week) continue;
+    const mflId = gsisToMfl.get(row.player_id);
+    if (!mflId || !(mflId in expected)) continue;
+    const ours = scorePlayerWeek(row, positions.get(mflId), rules);
+    const theirs = Math.round(Number(expected[mflId]) * 100) / 100;
+    const diff = Math.round((ours - theirs) * 100) / 100;
+    if (Math.abs(diff) < 0.01) ok++;
+    else misses.push({ name: row.player_display_name, theirs, ours, diff });
+  }
+  const total = ok + misses.length;
+  if (!total) continue;
+  grandOk += ok; grandTotal += total;
+  const pct = ((100 * ok) / total).toFixed(2);
+  console.log(`  Week ${String(week).padStart(2)}:  ${ok}/${total} exact (${pct}%)`);
+  if (verbose || misses.length) {
+    for (const m of misses.slice(0, 10)) {
+      console.log(
+        `      ${m.name.padEnd(26)} MFL=${m.theirs.toFixed(2).padStart(7)}` +
+        `  ours=${m.ours.toFixed(2).padStart(7)}  diff=${m.diff > 0 ? '+' : ''}${m.diff}`,
+      );
+    }
+  }
+}
+
+const pct = grandTotal ? ((100 * grandOk) / grandTotal).toFixed(2) : '0.00';
+console.log(`\n  TOTAL: ${grandOk}/${grandTotal} exact (${pct}%)\n`);
+process.exit(grandOk === grandTotal ? 0 : 1);

@@ -342,7 +342,23 @@ the bye-free count (ceiling **96**), not to reach zero.
 **Kicking:** XP 1 · FG 0–30 yds = 3 · FG 31+ yds = 0.1/yd (e.g. 50-yarder = 5.0)
 **Team Defense:** Sack 1 · INT 2 · Fum Rec 2 · Safety 2 · Blocked kick 2 · Def TD 6 · Def 2-pt 2
 **Points-allowed tiers:** 0–6 → 10 · 7–13 → 7 · 14–20 → 4 · 21–27 → 1 · 28–34 → −1 · 35+ → −4
-**Misc:** Fumble lost −2 · Return yards 0.03/yd
+**Misc:** Fumble lost −2 · Return yards 0.03/yd — **⚠ DISPUTED, see below**
+
+> **⚠ Return yards: this line does not match what MFL actually scores.**
+> Discovered Sept 2026 by reconciling NFLverse stats against MFL's own
+> `playerScores-by-week` feed (`scripts/prototypes/scoring-reconcile.mjs`).
+> Scoring return yards at 0.03/yd reproduces **348 of 416** player-weeks
+> (83.65%); every one of the 68 misses is a kick/punt returner we score
+> HIGHER than MFL by exactly his return yardage. Removing return yards
+> entirely reproduces **416 of 416 (100%)**.
+>
+> TheLeague, scored the same way, is 416/416 WITH return yards at 0.03/yd —
+> so this is specific to the AFL, not a parser bug.
+>
+> **MFL is not awarding the AFL return yards.** Either this line is wrong, or
+> the AFL's MFL league is misconfigured and returners have been underscored
+> for an unknown number of seasons. Unresolved — a commissioner's ruling, not
+> a code change. Do not edit either side until it is settled.
 
 ---
 
