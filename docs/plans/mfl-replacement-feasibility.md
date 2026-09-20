@@ -34,6 +34,94 @@ it sounds.
 
 ---
 
+## Archive coverage — what we actually hold (measured Sept 2026)
+
+Checked before costing anything, and it changes the argument for Phase 0.
+
+| Feed | TheLeague (20 seasons) | AFL (24 seasons) |
+|---|---|---|
+| `weekly-results.json` (franchise totals) | **20 / 20** | **24 / 24** |
+| `standings.json` | **20 / 20** | **24 / 24** |
+| `transactions.json` | **20 / 20** (36,487 rows all-in) | **24 / 24** |
+| `rosters.json` | 18 / 20 | — |
+| `players.json` | 16 / 20 | — |
+| `playerScores.json` (season totals) | **2 / 20** | **2 / 24** |
+| `playerScores-by-week.json` | **1 / 20** | — |
+
+**We have franchise-level history for all 44 league-seasons and essentially no
+player-level scoring history at all.** MFL does not retain it in exportable
+form, and we cannot go back and get it.
+
+This inverts the framing of Phase 0. It is not parity work — a scorer fed by
+NFLverse play-by-play would **reconstruct 44 league-seasons of player-level
+scoring that has never existed**, in our rule sets, for both leagues. Career
+player arcs, every franchise's best-ever week by player, draft-class hit rates
+scored under the actual league rules, "what would this trade have been worth."
+None of that is buildable today at any price, from MFL or anyone else.
+
+---
+
+## Cost — dollars vs. engineering
+
+### The sequencing insight
+
+**Phases 0–2 need no live data.** Phase 0 is historical backfill and stat
+lines. Phase 1 reconciles *settled* weeks, so Tuesday is fine. Phase 2 is
+league state, not stats. A real-time feed is only required once we drive a live
+Sunday scoreboard or officiate (Phase 3).
+
+NFLverse is free, complete back to 1999, and has everything both rule sets
+need. So the paid provider is the **last** purchase, not the first.
+
+### Recurring cost
+
+| | Data | Infra | Notes |
+|---|---|---|---|
+| Phase 0 | $0 — NFLverse | Neon ~$5–25/mo | Free tier is 0.5 GB / 100 CU-hrs; a trimmed stats DB exceeds it. Storage $0.35/GB-mo, compute $0.106/CU-hr, scale-to-zero. |
+| Phase 1 | $0 | same | Shadow scoring reconciles settled weeks |
+| Phase 2 | $0 | ~$10–30/mo | More storage; likely **net negative** — see offset below |
+| *Live add-on* | SportsDataIO Discovery Lab $99–149/mo (next-day delayed, daily caps) or quote-based for real-time | | Delayed data cannot drive Sunday |
+| Phase 3 | real-time required | | |
+
+**Phases 0–2 land under ~$30/mo, all-in.**
+
+### The offset nobody expects
+
+`CLAUDE.md` records Vercel Build CPU Minutes at **91% of the bill** ($22.36 of
+$24.70), driven by sync commits to `main` each triggering a production build —
+which is the entire reason `src/utils/sync-cadence.ts` exists. Phase 2 reads
+league state from Postgres at runtime instead of baking it into the bundle, so
+data freshness stops requiring a rebuild. That plausibly pays for Neon outright
+and retires a whole class of cadence complexity.
+
+### The cost that is actually real
+
+**12–19 weeks of engineering for phases 0–2**, and it is not greenfield:
+
+- Phase 2 touches `scripts/prebuild.mjs`, the slim-preview derivation
+  (`tests/prebuild-slim.test.ts`), `sync-cadence.ts`, and every data test in a
+  528-suite repo.
+- The player-identity crosswalk (MFL ↔ GSIS ↔ ESPN ↔ provider) is Phase 0's
+  hardest single piece, and its failure mode is silent — a bad join resolves a
+  different player rather than erroring.
+- Phase 1's validation is a **calendar** cost, not an engineering one. One
+  season of weekly reconciliation before anything is owner-facing.
+
+Dollars are not the constraint here. Time is.
+
+### Governance
+
+An owner vote was only ever a **Phase 3** gate — the point where we start
+officiating. Phases 0–2 never needed one: they add data and shadow-compute, and
+change nothing MFL decides.
+
+Separately and factually: `docs/claude/afl-rules.md` states *"Official stat
+provider: My Fantasy League (system of record)"* with a Wednesday 8:00 PM PT
+dispute window. Whenever that stops being true, that line needs editing —
+vote or no vote — or the constitution contradicts the site.
+
+---
+
 ## What replacing MFL actually decomposes into
 
 Four layers, increasing in difficulty. They can be done in order, and layers
@@ -236,8 +324,9 @@ is achievable at all — for roughly six weeks of work plus a season of watching
 
 ## Open questions for the owner
 
-1. Does an owner vote to change the official stat provider pass in either
-   league? The AFL constitution names MFL explicitly.
+1. ~~Does an owner vote pass?~~ **Answered Sept 2026: not required.** That
+   unblocks Phase 3; phases 0-2 never depended on it. The AFL constitution
+   text still needs editing whenever MFL stops being system of record.
 2. Companion product across platforms, or platform replacement? Phases 0–2 are
    identical either way, so this can be deferred until Phase 1 reports back.
 3. Keep MFL ids canonical permanently, or bear a crosswalk migration?
