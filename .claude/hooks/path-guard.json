@@ -1014,7 +1014,10 @@
         "src/data/nfl-mark-assignments.json",
         "scripts/lib/nfl-mark-sources.mjs",
         "scripts/lib/dark-logo-mirror.mjs",
-        "src/utils/nfl-logo-dark-css.ts"
+        "src/utils/nfl-logo-dark-css.ts",
+        "src/utils/live/nfl-logo-url.ts",
+        "src/components/shared/sunday-ticket/SundayTicket*.astro",
+        "src/components/shared/live-broadcast/BroadcastPlayerStrip.tsx"
       ],
       "tests": [
         "tests/nfl-logo-assets.test.ts",

@@ -297,10 +297,18 @@ export function buildNflLogoDarkCss(options: NflLogoDarkCssOptions = {}): string
   // so `/assets/nfl-logos/dark/CAR.png` must stay keyed even when Storybook
   // points its own swaps elsewhere. Identical in production (the two collapse).
   const darkBasePaths = [...new Set([DEFAULT_DARK_BASE_PATH, darkBasePath])];
-  const darkSrcs = NFL_DARK_STROKE_CODES.flatMap((code) => [
-    getNFLTeamLogo(code, 'dark'),
-    ...darkBasePaths.map((base) => `${base}/${code}.png`),
-  ]);
+  const darkSrcs = NFL_DARK_STROKE_CODES.flatMap((code) => {
+    // Extension from the manifest, for the same reason the swap reads it: a
+    // stroked club whose dark cut is assigned to an SVG source would key this
+    // ring on a `.png` that is never rendered, and the ring would silently
+    // stop reaching the surfaces that ship the dark cut as `src`. CAR is PNG
+    // today, so this is latent — which is exactly when it is cheap to fix.
+    const ext = manifestFormats[code] ?? 'png';
+    return [
+      getNFLTeamLogo(code, 'dark'),
+      ...darkBasePaths.map((base) => `${base}/${code}.${ext}`),
+    ];
+  });
   const strokeFilter = crestStrokeFilter(undefined, NFL_DARK_STROKE_WIDTH);
   const strokeRule = (srcs: string[], guard: string): string | null =>
     srcs.length

@@ -1,6 +1,6 @@
 # Per-club NFL mark assignments
 
-**Status:** **phase 1 shipped** 2026-09-20. Phases 2 and 3 planned, not started.
+**Status:** **phases 1 and 2 shipped** 2026-09-20. Phase 3 planned, not started.
 Decisions made against the live artwork.
 
 Today every NFL club has exactly one light mark (`/assets/nfl-logos/{CODE}.svg`)
@@ -284,31 +284,78 @@ Two existing behaviours to preserve deliberately:
   Re-render the three dark cuts on `#1e1e1e` at 16px before shipping; do not
   assume.
 
-## Phase 2 — per-surface, NYJ only
+## Phase 2 — SHIPPED, but not as planned
 
-Only three surfaces, and two of them need no CSS at all.
+**The premise was wrong.** This phase was specified as three per-surface
+overrides for the Jets, and two of the three surfaces do not exist:
 
-**Always-dark surfaces** (broadcast card, club-colour band) already ship the dark
-cut as `src` directly rather than relying on the theme swap — the rules doc calls
-this out for the draft broadcast and Sunday Ticket multi-view. So the override is
-just: ask a resolver for the src instead of hardcoding one.
+- **Nav club switcher** renders `team.iconUrl` — the FRANCHISE crest, not an NFL
+  club mark. `--nav-team-logo-size` named a fantasy-team logo all along.
+- **Club-colour band** has no implementation. No app surface paints club colour
+  behind an NFL mark; that band existed only in the mockup used to choose the
+  assignments.
+- **Broadcast card** exists, but renders the LIGHT src and leans on the global
+  swap, so there was no per-surface src to override.
 
-```ts
-teamMarkSrc(code, { surface: 'broadcast', ground: 'dark' })
-```
+Per-surface overrides therefore had nowhere to attach. Investigating why
+surfaced a real defect instead, and that is what shipped.
 
-**The nav override is the only CSS case.** The nav renders a light src that the
-global swap would replace with the club default in dark mode. Two options:
+### The defect: an always-dark surface cannot use a themed swap
 
-1. The nav component asks `teamMarkSrc` for its own src and opts out of the
-   global rule. Preferred — no specificity fight, and it matches how the
-   always-dark surfaces already work.
-2. A scoped rule (`html.dark .nav-club img[src="X"] { content: url(Z) }`). It
-   wins on specificity over the unscoped swap, but it adds a rule per surface
-   per club and fights the deliberately-zero-specificity `:where()` design the
-   ring rules use.
+The dark swap is emitted as `html.dark img[src="…"] { content: url(…) }`. That is
+right for a surface following the viewer's theme, and wrong for one that is dark
+in BOTH themes. Two are:
 
-Take option 1 unless a surface cannot choose its own src.
+- the live broadcast board — `live-broadcast.css`: *"This surface is dark in
+  BOTH themes … no `html.dark` override exists or is wanted."*
+- the Sunday Ticket multiview — `sunday-ticket.css`: *"near-black in both
+  themes."*
+
+For a **light-theme** viewer neither fires the swap, so both rendered the LIGHT
+mark on a near-black ground — the dissolving case the whole dark pipeline exists
+to prevent, and a bug for all 32 clubs rather than the one the phase was scoped
+to.
+
+Three surfaces were already correct: `BroadcastFace.tsx`, `MomentTakeover.tsx`
+and `draft-broadcast.ts` call `resolveNflDarkLogoUrl()` and ship the result as
+`src`. Phase 1 reached those for free — they picked up the per-club assignment
+with no change.
+
+### What shipped
+
+`nflLogoUrl(team, ground)` in `src/utils/live/nfl-logo-url.ts` — already "the one
+answer" for the live kit — now takes a ground. `'dark'` resolves the cut
+directly, theme independently, and inherits the per-club assignment because
+`resolveNflDarkLogoUrl` is where that already resolves.
+
+It falls back to the LIGHT local path, never the ESPN CDN, when a build has no
+mirror (dev, test, Storybook's empty manifest). Shipping a CDN URL as a `src` is
+the cross-origin fetch that module exists to avoid — it is what made ESPN weather
+rather than a code change fail a Chromatic build — and the light mark on a dark
+ground is only today's behaviour, so the fallback is never a regression.
+
+Applied to `BroadcastPlayerStrip.tsx` (which also loses its private copy of the
+helper), `SundayTicketBox.astro` and `SundayTicketBoard.astro`.
+
+Also fixed a latent bug of the class phase 1 removed: the white-ring rule built
+its dark keys as `${base}/${code}.png`, hardcoded. A stroked club whose dark cut
+became SVG would have keyed the ring on a file that is never rendered, and the
+ring would have silently stopped reaching exactly the surfaces it was written
+for. `CAR` is PNG today, so it was latent — which is when it is cheap.
+
+Verified against a real mirrored build: CHI and NYG resolve to
+`/assets/nfl-logos/dark/*.svg`, NYJ and ARI to `*.png`, and the light ground is
+unchanged. Guard: `tests/nfl-mark-assignments.test.ts` names the always-dark
+surfaces, so a new one is a deliberate addition rather than a silently
+theme-dependent one.
+
+### Still open
+
+Per-surface overrides remain unimplemented **because nothing needs them**. The
+Jets' three overrides in the editor point at two surfaces that do not exist and
+one that the ground rule now handles. If a real surface ever wants a mark
+different from its club's ground assignment, the mechanism to build is the one
+sketched below.
 
 ### Phase 3 — the reversed cut
 

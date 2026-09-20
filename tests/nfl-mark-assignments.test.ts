@@ -79,6 +79,44 @@ describe('nfl-mark-assignments.json', () => {
   });
 });
 
+describe('always-dark surfaces do not depend on the theme', () => {
+  /**
+   * A surface that is dark in BOTH themes cannot use the `html.dark`-guarded
+   * swap: for a light-theme viewer it never fires, and the LIGHT mark renders
+   * on a near-black ground — the dissolving case the dark pipeline exists to
+   * prevent. Those surfaces ask `nflLogoUrl(code, 'dark')` for the cut
+   * directly. Named here so a new always-dark surface is a deliberate
+   * addition rather than a silently theme-dependent one.
+   */
+  const ALWAYS_DARK = [
+    'src/components/shared/live-broadcast/BroadcastPlayerStrip.tsx',
+    'src/components/shared/sunday-ticket/SundayTicketBox.astro',
+    'src/components/shared/sunday-ticket/SundayTicketBoard.astro',
+  ];
+
+  it.each(ALWAYS_DARK)('%s asks for the dark ground, not the light src', (file) => {
+    const src = readFileSync(join(ROOT, file), 'utf-8');
+    expect(src, `${file}: should resolve through nflLogoUrl`).toContain("nflLogoUrl(");
+    expect(src, `${file}: should ask for the dark ground`).toMatch(/nflLogoUrl\([^)]*,\s*'dark'\)/);
+    // A hand-built light path here is the regression: it reintroduces the
+    // theme dependency this rule removes.
+    expect(
+      /`\/assets\/nfl-logos\/\$\{[^}]+\}\.svg`/.test(src),
+      `${file}: builds a light /assets/nfl-logos/*.svg path by hand`,
+    ).toBe(false);
+  });
+
+  it('keeps the dark resolver same-origin so a snapshot never fetches a CDN', async () => {
+    const { nflLogoUrl } = await import('../src/utils/live/nfl-logo-url');
+    // With the committed empty manifest there is no mirror, so the dark ground
+    // must fall back to the local light mark rather than to ESPN's CDN.
+    const url = nflLogoUrl('CHI', 'dark');
+    expect(url.startsWith('/'), `expected a same-origin path, got ${url}`).toBe(true);
+    expect(nflLogoUrl('CHI')).toBe('/assets/nfl-logos/CHI.svg');
+    expect(nflLogoUrl('')).toBe('');
+  });
+});
+
 describe('the shared mirror stays PNG-shaped for its other caller', () => {
   it('leaves the college manifest without a formats field', () => {
     // scripts/lib/dark-logo-mirror.mjs is shared with fetch-college-dark-logos.mjs.
