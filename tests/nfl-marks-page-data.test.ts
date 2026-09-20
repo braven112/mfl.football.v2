@@ -43,9 +43,12 @@ describe('nfl-marks page data', () => {
   });
 
   it('agrees with the node table on every mark format', () => {
+    // MARK_SOURCES comes from an .mjs, so its inferred type is a literal
+    // object rather than a keyed record — index it as one.
+    const sources = MARK_SOURCES as Record<string, { format: string }>;
     for (const code of ['CHI', 'NYG', 'NYJ', 'KC']) {
       for (const mark of markOptions(code)) {
-        expect(mark.format, `${code}/${mark.id}`).toBe(MARK_SOURCES[mark.id].format);
+        expect(mark.format, `${code}/${mark.id}`).toBe(sources[mark.id].format);
       }
     }
   });
