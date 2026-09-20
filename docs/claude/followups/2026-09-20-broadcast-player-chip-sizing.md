@@ -7,7 +7,7 @@ hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1175
 hotfix_sha: bf572d7
 followup_issue: 1176
 followup_pr:
-followup_session:
+followup_session: session_01VJ5LgYasDc1CBQz6NPhnVb
 ---
 
 # Follow-up: broadcast player cells rendered as a band of cropped face
