@@ -20,16 +20,18 @@ NFLverse data under each league's own rules and diffs the result against MFL's
 ```
 $ node scripts/prototypes/scoring-reconcile.mjs
 The League 2026 — NFLverse vs MFL
-  Week  1:  392/392 exact (100.00%)
-  Week  2:   24/24  exact (100.00%)
-  TOTAL: 416/416 exact (100.00%)
+  Week  1:       392/392 exact (100.00%)
+  Week  2:        24/24  exact (100.00%)
+  Team defense:   34/34  exact (100.00%)
+  TOTAL: 450/450 exact (100.00%)
 
 $ node scripts/prototypes/scoring-reconcile.mjs --league afl-fantasy
-  TOTAL: 416/416 exact (100.00%)
+  TOTAL: 450/450 exact (100.00%)
 ```
 
-**Both leagues, every player, to the cent, from $0 of data.** The first naive
-run was 99.2%; the remaining gap was four discovered rules, below.
+**Both leagues, every player and every team defense, to the cent, from $0 of
+data.** The first naive run was 99.2%; closing the gap surfaced seven rules no
+rules doc states — four on offense, three on defense.
 
 ### Four rules reconciliation found that no rules doc states
 
@@ -106,7 +108,7 @@ rather than 3–5.
 |---|---|---|
 | NFLverse player-week stats | `nflverse-data/releases/download/stats_player/stats_player_week_<yr>.csv` | 150 cols; every offensive scoring input |
 | NFLverse team-week stats | `.../stats_team/stats_team_week_<yr>.csv` | 138 cols; every DST input |
-| NFLverse play-by-play | `.../pbp/play_by_play_<yr>.csv.gz` | ~19 MB/season; only if a rule needs play detail |
+| NFLverse play-by-play | `.../pbp/play_by_play_<yr>.csv.gz` | ~19 MB/season. **Required** — DST attribution is impossible without it |
 | NFLverse players | `.../players/players.csv` | identity, birth dates, draft |
 | DynastyProcess ids | `dynastyprocess/data/master/files/db_playerids.csv` | the MFL crosswalk |
 
@@ -126,26 +128,29 @@ Every category in both constitutions has a column. Confirmed present:
   `def_punt_blocks`, `def_pat_blocks`, `def_fg_blocks`, `def_tds`,
   `def_2pt_made`. Points allowed comes from the game score.
 
-**No gaps in coverage — but DST does not reconcile yet: 17/34 team-weeks.**
+**No gaps — and team defense now reconciles 34/34 in both leagues.**
 
-This is the one open technical problem in Phase 0, and it is narrower than the
-number suggests. The points-allowed function is **correct** — implied OPA
-matches to the cent on every team-week where it matches at all, across PA 10 to
-59 and both branches of the rule. Every failure is a **positive residual**
-(+2.00, +4.00, +6.20, +18.20): MFL counts defensive events that NFLverse's
-`stats_team_week` does not attribute the same way, mostly fumble recoveries and
-interceptions.
+It did not at first: 17/34 from `stats_team_week`. Three more discovered rules
+closed it, and all three are attribution problems the per-game aggregate
+cannot express. **DST must be scored from play-by-play.**
 
-Two candidate causes, both cheap to test and neither yet confirmed:
-1. `def_fumbles` counts recoveries differently than MFL's `FC` event — the
-   per-play `fumble_recovery_opp` columns may be the right input instead.
-2. MFL's points-allowed may **exclude points scored against the defense by the
-   opponent's offense-independent units** (a pick-six or return TD), which
-   would shift PA itself rather than the events. The +18.20 outlier fits this.
+5. **`def_fumbles` is not MFL's `FC` event.** Recoveries belong to
+   `fumble_recovery_1_team` — **and must not be filtered on `defteam`.** On a
+   punt or kickoff nflverse makes the KICKING team `posteam`, so a muffed punt
+   recovered by the kicking team never matches a defteam filter. Exactly one
+   of those was CHI's missing 2.00.
+6. **Points allowed counts only what the opponent's OFFENSE scored.** A
+   pick-six against your own offense is not charged to your defense. Worth 6
+   points of PA — at 0.6/pt, a 3.60 error, and it hit three teams in one week.
+7. **…and the extra point after such a TD is excluded too.** That last single
+   point is the whole difference between −0.60 and exact.
 
-Resolve with play-by-play, which carries the attribution the team-week
-aggregate loses. Budget half a week. Player-level scoring is unaffected and
-remains 416/416.
+The points-allowed function itself was right from the start, because it was
+read out of the rules export rather than the docs. The prototype now parses
+the `OPA` rules straight from `TYPE=rules` and evaluates them generically —
+**one evaluator, no per-league code**, handling TheLeague's two stacking rules
+and the AFL's 36 single-point rules identically. That is work item #6's
+recommendation demonstrated rather than asserted.
 
 ---
 
@@ -241,9 +246,10 @@ CREATE TABLE score_reconciliation (
 columns between seasons, and a provider swap in Phase 3 should not be a
 migration. The scorer reads named keys; unknown keys ride along free.
 
-**Storage:** ~1.4 M player-weeks and ~1.1 M plays across 1999–2026, but Phase 0
-needs no play-by-play. Player + team week stats for 28 seasons land well under
-2 GB — roughly **$0.70/month** at Neon's $0.35/GB-month, plus scale-to-zero
+**Storage:** ~1.4 M player-weeks and ~1.1 M plays across 1999–2026. Phase 0
+**does** need play-by-play after all (DST), which is the largest table. Player
+weeks plus a scoring-relevant slice of PBP for 28 seasons land under ~4 GB —
+roughly **$1.40/month** at Neon's $0.35/GB-month, plus scale-to-zero
 compute.
 
 ---
@@ -255,8 +261,8 @@ compute.
 | 1 | Neon project, schema, `src/utils/pg-client.ts` | Mirror `redis-client.ts`: lazy dynamic import, memoized, degrade to null rather than crash |
 | 2 | `scripts/lib/nflverse-csv.mjs` | RFC4180 parser + `NA` handling, extracted from the prototype. Fixture-tested on a quoted-field row |
 | 3 | `scripts/fetch-player-ids.mjs` | Crosswalk → `player_ids`. Daily cron. Guard: 100% of rostered players resolve, matching `espn-athlete-id-coverage.test.ts` |
-| 4 | `scripts/fetch-nfl-stats.mjs` | Player + team week stats → Postgres. `--season` for backfill |
-| 5 | **`scripts/lib/scoring-engine.mjs`** | Pure, config-driven, both rule sets. Fixture-tested. The prototype is the reference implementation |
+| 4 | `scripts/fetch-nfl-stats.mjs` | Player-week stats **and play-by-play** → Postgres. PBP is not optional — DST cannot be scored without it. `--season` for backfill |
+| 5 | **`scripts/lib/scoring-engine.mjs`** | Pure, config-driven, both rule sets, players + DST. Fixture-tested. The prototype is the reference implementation and is already exact |
 | 6 | Scoring rules into the registry | `src/config/leagues-data.mjs` per CLAUDE.md. NOT a constant in the engine — two leagues already disagree |
 | 7 | `scripts/backfill-scores.mjs` | Score 1999→2026 for both leagues. **The prize: 44 league-seasons of player-level scoring that has never existed** |
 | 8 | `scripts/reconcile-scores.mjs` | Prototype, productionized. Writes `score_reconciliation`. Exits non-zero below threshold |
@@ -344,7 +350,9 @@ unmeasurable.
    the AFL does not use return yardage; only TheLeague does. The rules doc was
    wrong and has been corrected.** No league-governance issue, no misconfigured
    league, nothing owed to any owner.
-2. Backfill to 1999, or only to each league's first season (2007 / 2003)?
+2. Backfill to 1999, or only to each league's first season (2007 / 2003)? Note
+   play-by-play is ~19 MB/season, so this is now a storage question as well as
+   a scope one.
    Marginal cost either way; 1999 gives pre-league player careers.
 3. Neon or Supabase? Neon assumed here — cheaper storage, scale-to-zero. Supabase
    wins only if its auth is wanted later, which is a Phase 3 concern.

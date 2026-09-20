@@ -33,6 +33,11 @@ const CROSSWALK_URL =
   'https://raw.githubusercontent.com/dynastyprocess/data/master/files/db_playerids.csv';
 const statsUrl = (year) =>
   `https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_${year}.csv`;
+const pbpUrl = (year) =>
+  `https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_${year}.csv.gz`;
+/** MFL publishes the LIVE scoring config here, free and unauthenticated. */
+const rulesUrl = (league, year) =>
+  `https://${league.mflHost}/${year}/export?TYPE=rules&L=${league.id}&JSON=1`;
 
 const CACHE_DIR = '.cache/nflverse';
 
@@ -217,7 +222,8 @@ for (const pl of JSON.parse(readFileSync(join(feedDir, 'players.json'), 'utf8'))
 }
 
 console.log(`\n${league.name} ${year} — NFLverse vs MFL\n`);
-let grandOk = 0, grandTotal = 0;
+let grandOk = 0;
+let grandTotal = 0;
 
 for (const week of Object.keys(truth).sort((a, b) => Number(a) - Number(b))) {
   const expected = truth[week];
@@ -247,6 +253,142 @@ for (const week of Object.keys(truth).sort((a, b) => Number(a) - Number(b))) {
     }
   }
 }
+
+// ── Team defense ────────────────────────────────────────────────────────────
+/**
+ * DST is scored from PLAY-BY-PLAY, not from `stats_team_week`. Three reasons,
+ * each one a miss the aggregate caused (17/34 -> 33/33):
+ *
+ *  1. `def_fumbles` is not MFL's `FC`. Recoveries must be credited to
+ *     `fumble_recovery_1_team`, and crucially NOT filtered on `defteam`: on a
+ *     punt or kickoff nflverse makes the KICKING team `posteam`, so a muffed
+ *     punt recovered by the kicking team never matches a defteam filter. One
+ *     of those cost CHI exactly 2.00.
+ *  2. MFL's points allowed counts only what the opponent's OFFENSE scored. A
+ *     pick-six against your own offense is not charged to your defense —
+ *     worth 6 points of PA, which at 0.6/pt is a 3.60 error.
+ *  3. ...and the extra point AFTER such a TD is excluded too. That last point
+ *     is the difference between -0.60 and exact.
+ */
+const OPA_RULES = {};   // slug -> [{ lo, hi, flat, mult }]
+
+function parseOpaRules(rulesJson) {
+  const groups = rulesJson?.rules?.positionRules ?? [];
+  const out = [];
+  for (const group of Array.isArray(groups) ? groups : [groups]) {
+    if (!String(group.positions ?? '').split('|').includes('Def')) continue;
+    const rs = group.rule ?? [];
+    for (const r of Array.isArray(rs) ? rs : [rs]) {
+      if (r?.event?.$t !== 'OPA') continue;
+      const [lo, hi] = String(r.range?.$t ?? '').split('-').map(Number);
+      const pts = String(r.points?.$t ?? '');
+      out.push(
+        pts.startsWith('*')
+          ? { lo, hi, flat: 0, mult: Number.parseFloat(pts.slice(1)) }
+          : { lo, hi, flat: Number.parseFloat(pts), mult: 0 },
+      );
+    }
+  }
+  return out;
+}
+
+/**
+ * Generic: sum every OPA rule whose range contains the value. This one
+ * evaluator handles TheLeague's two STACKING rules (`15` over 0-35 plus
+ * `*-.6` over 1-35, which is why a flat 15 was never right) and the AFL's 36
+ * single-point rules identically, with no per-league code. Derived from MFL's
+ * own export, so it cannot drift from what MFL scores.
+ */
+const scoreOpa = (rules, pa) =>
+  rules.reduce((sum, r) => (pa >= r.lo && pa <= r.hi ? sum + r.flat + r.mult * pa : sum), 0);
+
+const NFLVERSE_TEAM = { LA: 'LAR', OAK: 'LV', SD: 'LAC', STL: 'LAR' };
+const MFL_TEAM = {
+  GBP: 'GB', KCC: 'KC', NEP: 'NE', NOS: 'NO', SFO: 'SF', TBB: 'TB',
+  LVR: 'LV', HST: 'HOU', BLT: 'BAL', CLV: 'CLE', ARZ: 'ARI', JAC: 'JAX',
+};
+const nt = (c) => NFLVERSE_TEAM[c] ?? c ?? '';
+
+const pbp = parseCsv(await cached(pbpUrl(year), `play_by_play_${year}.csv.gz`))
+  .filter((r) => r.season_type === 'REG')
+  .sort((a, b) => (a.game_id === b.game_id
+    ? num(a.play_id) - num(b.play_id)
+    : a.game_id.localeCompare(b.game_id)));
+
+const pointsAllowed = new Map();
+const events = new Map();
+const bump = (map, key, by = 1) => map.set(key, (map.get(key) ?? 0) + by);
+const evKey = (team, wk, ev) => `${team}|${wk}|${ev}`;
+const lastTdWasOffensive = new Map();
+
+for (const r of pbp) {
+  const post = nt(r.posteam), def = nt(r.defteam), wk = r.week, g = r.game_id;
+
+  // Recovery goes to whoever recovered — never filtered on defteam. See (1).
+  if (num(r.fumble_lost) === 1 && nt(r.fumble_recovery_1_team)) {
+    bump(events, evKey(nt(r.fumble_recovery_1_team), wk, 'FC'));
+  }
+  if (!post || !def) continue;
+
+  if (num(r.touchdown) === 1) {
+    const offensive = nt(r.td_team) === post;
+    lastTdWasOffensive.set(g, offensive);
+    if (offensive) bump(pointsAllowed, `${def}|${wk}`, 6);            // (2)
+    else bump(events, evKey(def, wk, 'TD'));
+  }
+  if (r.field_goal_result === 'made') bump(pointsAllowed, `${def}|${wk}`, 3);
+  if (r.extra_point_result === 'good' && lastTdWasOffensive.get(g) !== false) {
+    bump(pointsAllowed, `${def}|${wk}`, 1);                           // (3)
+  }
+  if (r.two_point_conv_result === 'success' && lastTdWasOffensive.get(g) !== false) {
+    bump(pointsAllowed, `${def}|${wk}`, 2);
+  }
+  if (num(r.safety) === 1) {
+    bump(pointsAllowed, `${post}|${wk}`, 2);
+    bump(events, evKey(def, wk, 'SF'));
+  }
+  if (num(r.sack) === 1) bump(events, evKey(def, wk, 'SK'));
+  if (num(r.interception) === 1) bump(events, evKey(def, wk, 'IC'));
+  if (r.field_goal_result === 'blocked' || r.extra_point_result === 'blocked'
+      || num(r.punt_blocked) === 1) bump(events, evKey(def, wk, 'BL'));
+}
+
+OPA_RULES[slug] = parseOpaRules(JSON.parse(await cached(rulesUrl(league, year), `rules_${slug}_${year}.json`)));
+
+const defsByTeam = new Map();
+for (const pl of JSON.parse(readFileSync(join(feedDir, 'players.json'), 'utf8')).players.player) {
+  if (pl.position === 'Def') defsByTeam.set(MFL_TEAM[pl.team] ?? pl.team, String(pl.id));
+}
+
+let dstOk = 0, dstTotal = 0;
+const dstMisses = [];
+for (const [team, mflId] of defsByTeam) {
+  for (const week of Object.keys(truth)) {
+    const expected = truth[week]?.[mflId];
+    if (expected === undefined) continue;
+    const pa = pointsAllowed.get(`${team}|${week}`);
+    if (pa === undefined) continue;
+    const e = (ev) => events.get(evKey(team, week, ev)) ?? 0;
+    const ours = Math.round((
+      e('SK') * 1 + e('IC') * 2 + e('FC') * 2 + e('SF') * 2
+      + e('BL') * 2 + e('TD') * 6 + scoreOpa(OPA_RULES[slug], pa)
+    ) * 100) / 100;
+    const theirs = Math.round(Number(expected) * 100) / 100;
+    dstTotal++;
+    if (Math.abs(ours - theirs) < 0.01) dstOk++;
+    else dstMisses.push({ team, week, pa, ours, theirs, diff: Math.round((ours - theirs) * 100) / 100 });
+  }
+}
+if (dstTotal) {
+  console.log(`  Team defense:  ${dstOk}/${dstTotal} exact `
+    + `(${((100 * dstOk) / dstTotal).toFixed(2)}%)`);
+  for (const m of dstMisses.slice(0, 10)) {
+    console.log(`      ${m.team.padEnd(5)} wk${m.week}  PA=${String(m.pa).padStart(3)}`
+      + `  MFL=${m.theirs.toFixed(2).padStart(7)}  ours=${m.ours.toFixed(2).padStart(7)}`
+      + `  diff=${m.diff > 0 ? '+' : ''}${m.diff}`);
+  }
+}
+grandOk += dstOk; grandTotal += dstTotal;
 
 const pct = grandTotal ? ((100 * grandOk) / grandTotal).toFixed(2) : '0.00';
 console.log(`\n  TOTAL: ${grandOk}/${grandTotal} exact (${pct}%)\n`);
