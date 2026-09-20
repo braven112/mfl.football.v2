@@ -62,6 +62,34 @@ function num(value: unknown): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+/**
+ * A franchise's record, from whichever shape the feed used.
+ *
+ * NOT just `h2hw`/`h2hl`/`h2ht`. MFL ships the record two ways — separate
+ * numeric columns and a combined `"15-3-0"` string — and not every feed ships
+ * both. `src/utils/standings.ts` carries `normalizeWLT` for exactly this, in
+ * the other direction (it prefers the combined and falls back to the
+ * separates), which is the proof that a feed with only one of them is a real
+ * shape rather than a hypothetical.
+ *
+ * Reading only the separate columns is therefore not a missing-data bug, it is
+ * a WRONG-data bug: a league that ships only the combined string renders every
+ * team as `0-0`, which looks like a season nobody has played rather than like
+ * a read that failed. Zero is a number, and a table full of them is credible.
+ *
+ * That module's helpers are not reused here because both are unexported, both
+ * return strings, and both sit inside an API built around a `LeagueConfig` —
+ * which is the one thing an outside league does not have.
+ */
+function record(row: Record<string, unknown>): { wins: number; losses: number; ties: number } {
+  const hasSeparate = row.h2hw !== undefined || row.h2hl !== undefined;
+  if (hasSeparate) {
+    return { wins: num(row.h2hw), losses: num(row.h2hl), ties: num(row.h2ht) };
+  }
+  const [w = '', l = '', t = ''] = `${row.h2hwlt ?? ''}`.split('-');
+  return { wins: num(w), losses: num(l), ties: num(t) };
+}
+
 export interface ReadLeagueStandingsInput {
   league: BoardLeague;
   /** SEASON year — standings are results-shaped. */
@@ -92,14 +120,14 @@ export async function readLeagueStandings(
 
   const key = `${league.id}:${year}`;
   const hit = cache.get(key);
-  if (hit && now() - hit.atMs < TTL_MS) return decorate(hit.rows, input);
+  if (hit && now() - hit.atMs < TTL_MS) return decorateStandings(hit.rows, input);
 
   const failedAt = failureAtMs.get(key);
   if (failedAt !== undefined && now() - failedAt < FAILURE_COOLDOWN_MS) {
     // Inside the cooldown a STALE read still beats nothing: a standing that is
     // a few minutes old is right about almost everything, and blanking the tab
     // over one bad request is the worse answer.
-    return hit ? decorate(hit.rows, input) : null;
+    return hit ? decorateStandings(hit.rows, input) : null;
   }
 
   try {
@@ -127,30 +155,36 @@ export async function readLeagueStandings(
     const feedRows = Array.isArray(raw) ? raw : raw ? [raw] : [];
     if (feedRows.length === 0) {
       failureAtMs.set(key, now());
-      return hit ? decorate(hit.rows, input) : null;
+      return hit ? decorateStandings(hit.rows, input) : null;
     }
 
     const rows: LiveStandingsRow[] = [];
-    feedRows.forEach((entry, index) => {
+    feedRows.forEach((entry) => {
       const row = (entry ?? {}) as Record<string, unknown>;
       const franchiseId = `${row.id ?? ''}`.trim().padStart(4, '0');
       if (!franchiseId || franchiseId === '0000') return;
       rows.push({
         franchiseId,
-        // The FEED's position, 1-based. Not computed from the columns, and not
-        // recomputed if this array is ever filtered — see the header.
-        rank: index + 1,
-        // Filled by `decorate`, which runs on a cache hit too so a name that
-        // arrived late is not frozen into the cached rows.
+        // The FEED's position among the rows we kept, 1-based.
+        //
+        // `rows.length + 1`, NOT the forEach index: the loop drops malformed
+        // rows (blank or `0000` franchise id, which no real franchise has), and
+        // an index-derived rank leaves a gap — a `#` column reading 1, 2, 4, 5
+        // with no missing row on screen to explain it.
+        //
+        // This is still MFL's ORDER and not a ranking of our own. Nothing here
+        // sorts, and nothing derives a position from the columns; the rows are
+        // simply numbered in the sequence MFL sent them. See the header.
+        rank: rows.length + 1,
+        // Filled by `decorateStandings`, which runs on a cache hit too so a
+        // name that arrived late is not frozen into the cached rows.
         name: `${row.fname ?? ''}`.trim(),
         nameShort: '',
         initials: '',
         icon: '',
         iconAlt: '',
         rung: 'text',
-        wins: num(row.h2hw),
-        losses: num(row.h2hl),
-        ties: num(row.h2ht),
+        ...record(row),
         pointsFor: num(row.pf),
         isViewer: false,
       });
@@ -158,7 +192,7 @@ export async function readLeagueStandings(
 
     if (rows.length === 0) {
       failureAtMs.set(key, now());
-      return hit ? decorate(hit.rows, input) : null;
+      return hit ? decorateStandings(hit.rows, input) : null;
     }
 
     failureAtMs.delete(key);
@@ -167,10 +201,10 @@ export async function readLeagueStandings(
       const oldest = [...cache.entries()].sort((a, b) => a[1].atMs - b[1].atMs)[0];
       if (oldest) cache.delete(oldest[0]);
     }
-    return decorate(rows, input);
+    return decorateStandings(rows, input);
   } catch {
     failureAtMs.set(key, now());
-    return hit ? decorate(hit.rows, input) : null;
+    return hit ? decorateStandings(hit.rows, input) : null;
   }
 }
 
@@ -182,8 +216,20 @@ export async function readLeagueStandings(
  * highlight one owner's row for the next reader. And the identity ladder's
  * inputs — the registry's brands, the names `readCrossLeagueLive` resolved —
  * can arrive after the standings did.
+ *
+ * EXPORTED for that second reason. A caller that reads the standings and the
+ * franchise names CONCURRENTLY — which is the right way to read them, since
+ * neither needs the other — does not have the names when it calls this module,
+ * so it re-applies them here once both have landed. Without that the
+ * `franchiseNames` parameter is dead on the only path that has any, and an
+ * outside league whose `leagueStandings` rows omit `fname` shows
+ * "Franchise 0001" on the Standings tab while the Scores tab above it shows
+ * the real name — the cross-tab disagreement this module exists to prevent.
+ *
+ * Safe to apply twice: a name already resolved is what a second pass falls
+ * back to, so re-running it can only ever improve a row.
  */
-function decorate(
+export function decorateStandings(
   rows: readonly LiveStandingsRow[],
   input: ReadLeagueStandingsInput,
 ): LiveStandingsRow[] {

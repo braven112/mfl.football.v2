@@ -18,6 +18,7 @@ import type { JSX } from 'react';
 import type { LiveMatchup, LiveTeam } from '../../../types/live';
 import { renderOrder, winProbabilityFor } from '../../../utils/live/model';
 import LvWinProbBar from './LvWinProbBar';
+import LvCrest from './LvCrest';
 
 const fmt = (n: number) => n.toFixed(1);
 
@@ -76,17 +77,16 @@ export default function LvMatchupCard({
   // two different "lead"s, and naming them the same shadowed the prop.
   const sideRow = (team: LiveTeam, ahead: boolean, which: 0 | 1) => (
     <div className={`lv-side${ahead ? ' lv-side--lead' : ''}`}>
-      {team.icon ? (
-        <span className="lv-side__crest">
-          <img src={team.icon} alt={team.iconAlt} loading="lazy" />
-        </span>
-      ) : (
-        // The identity ladder's text rung. Initials are a LABEL, not invented
-        // artwork — no fabricated crest and no hue derived from the name.
-        <span className="lv-side__initials" aria-hidden="true">
-          {team.initials}
-        </span>
-      )}
+      {/* The identity ladder's mark, through the kit's one renderer: a crest
+          when the ladder found one, initials when it reached the text rung.
+          Initials are a LABEL, not invented artwork — no fabricated crest and
+          no hue derived from the name. Same classes as before. */}
+      <LvCrest
+        icon={team.icon}
+        iconAlt={team.iconAlt}
+        initials={team.initials}
+        block="lv-side"
+      />
       <span className="lv-side__name">{team.nameShort || team.name}</span>
       <span className="lv-side__proj">{fmt(team.projectedFinal)}</span>
       {/* INK, not the fill pair: this is text, and `--t0`/`--t1` only clear ΔE

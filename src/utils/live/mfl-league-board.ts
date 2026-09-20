@@ -35,7 +35,7 @@ import { readCrossLeagueLive } from '../cross-league-live';
 import { emptyLiveSnapshot } from '../live-scoring-snapshot';
 import { buildBoardFromSnapshot } from './read';
 import { buildLeaders } from './leaders';
-import { readLeagueStandings } from './standings';
+import { decorateStandings, readLeagueStandings } from './standings';
 
 export interface AssembleMflLeagueBoardInput {
   user: AuthUser;
@@ -89,7 +89,7 @@ export async function assembleMflLeagueBoard(
   // SCORES: it is the secondary tab, it is on its own cache, and a league
   // whose standings export is unhappy still has a board worth rendering. Hence
   // `allSettled` semantics via a catch on the one that is allowed to fail.
-  const [reads, standings] = await Promise.all([
+  const [reads, rawStandings] = await Promise.all([
     readCrossLeagueLive({
       user,
       leagues: [league],
@@ -100,6 +100,9 @@ export async function assembleMflLeagueBoard(
       // they are the difference between "Franchise 0015" and a crest.
       withFranchiseNames: true,
     }).catch(() => []),
+    // NOTE the absent `franchiseNames`: they are the OTHER half of this
+    // `Promise.all` and do not exist yet. They are applied below, once both
+    // have landed, rather than serialising two independent MFL reads.
     readLeagueStandings({
       league,
       year,
@@ -109,6 +112,26 @@ export async function assembleMflLeagueBoard(
   ]);
 
   const read = reads[0];
+
+  /**
+   * The names, applied to the standings now that both reads are in.
+   *
+   * Without this the Standings tab resolves its identities from the feed's own
+   * `fname` alone, and an outside league whose `leagueStandings` rows omit it
+   * shows "Franchise 0001" directly below a Scores tab showing the real name —
+   * two views of one league disagreeing about who a franchise is, which is the
+   * thing both these modules are written to prevent.
+   */
+  const standings =
+    rawStandings === null
+      ? null
+      : decorateStandings(rawStandings, {
+          league,
+          year,
+          mflUserCookie: user.id,
+          viewerFranchiseId,
+          franchiseNames: read?.franchiseNames ?? {},
+        });
 
   // The read failed outright. `ok: false` with an empty snapshot is what makes
   // the panel `unavailable` rather than an empty board reading as "no games" —

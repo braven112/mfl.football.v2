@@ -19,7 +19,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const mflFetch = vi.fn();
 vi.mock('../src/utils/mfl-fetch', () => ({ mflFetch: (...a: unknown[]) => mflFetch(...a) }));
 
-import { readLeagueStandings, __resetStandingsCache } from '../src/utils/live/standings';
+import {
+  decorateStandings,
+  readLeagueStandings,
+  __resetStandingsCache,
+} from '../src/utils/live/standings';
 import type { BoardLeague } from '../src/utils/sunday-ticket-selection';
 
 const YEAR = 2026;
@@ -91,6 +95,44 @@ describe('MFL’s order is the answer', () => {
     expect(out![0]).toMatchObject({ wins: 10, losses: 2, ties: 1, pointsFor: 1998.36 });
   });
 
+  it('reads the record from the COMBINED string when the columns are absent', async () => {
+    // MFL ships the record two ways and not every feed ships both —
+    // `normalizeWLT` in src/utils/standings.ts exists for the same reason, in
+    // the other direction. Reading only the columns is not a missing-data bug:
+    // it renders every team as 0-0, which reads as a season nobody has played.
+    mflFetch.mockResolvedValue(
+      ok(standingsBody([{ id: '0001', fname: 'Team 0001', h2hwlt: '15-3-1', pf: '400.50' }])),
+    );
+    const out = await readLeagueStandings({
+      league: outsideLeague,
+      year: YEAR,
+      mflUserCookie: COOKIE,
+    });
+    expect(out![0]).toMatchObject({ wins: 15, losses: 3, ties: 1 });
+  });
+
+  it('prefers the columns when the feed ships both', async () => {
+    mflFetch.mockResolvedValue(
+      ok(standingsBody([franchise('0001', { h2hwlt: '99-99-99' })])),
+    );
+    const out = await readLeagueStandings({
+      league: outsideLeague,
+      year: YEAR,
+      mflUserCookie: COOKIE,
+    });
+    expect(out![0]).toMatchObject({ wins: 3, losses: 1, ties: 0 });
+  });
+
+  it('survives a feed carrying neither', async () => {
+    mflFetch.mockResolvedValue(ok(standingsBody([{ id: '0001', fname: 'Team', pf: '10.0' }])));
+    const out = await readLeagueStandings({
+      league: outsideLeague,
+      year: YEAR,
+      mflUserCookie: COOKIE,
+    });
+    expect(out![0]).toMatchObject({ wins: 0, losses: 0, ties: 0, pointsFor: 10 });
+  });
+
   it('collapses a lone franchise object into a list', async () => {
     // MFL collapses a one-element list to a bare object.
     mflFetch.mockResolvedValue(ok({ leagueStandings: { franchise: franchise('0001') } }));
@@ -110,6 +152,92 @@ describe('MFL’s order is the answer', () => {
       mflUserCookie: COOKIE,
     });
     expect(out![0].franchiseId).toBe('0003');
+  });
+});
+
+describe('rank numbers the rows on screen', () => {
+  it('leaves NO gap when a malformed row is dropped', async () => {
+    // The loop drops rows with a blank or `0000` id — no real franchise has
+    // one. Numbering from the feed's index instead of the kept count renders
+    // a # column reading 1, 2, 4 with no missing row to explain it.
+    mflFetch.mockResolvedValue(
+      ok(
+        standingsBody([
+          franchise('0001'),
+          franchise(''),
+          franchise('0003'),
+          { id: '0000', fname: 'Bye' },
+          franchise('0005'),
+        ]),
+      ),
+    );
+    const out = await readLeagueStandings({
+      league: outsideLeague,
+      year: YEAR,
+      mflUserCookie: COOKIE,
+    });
+    expect(out!.map((r) => r.franchiseId)).toEqual(['0001', '0003', '0005']);
+    expect(out!.map((r) => r.rank)).toEqual([1, 2, 3]);
+  });
+
+  it('still numbers in MFL’s order, not one of our own', async () => {
+    // Numbering the kept rows is not ranking them: nothing sorts, and nothing
+    // reads the columns to decide a position.
+    mflFetch.mockResolvedValue(
+      ok(
+        standingsBody([
+          franchise('0007', { h2hw: '0', pf: '1.0' }),
+          franchise('0002', { h2hw: '9', pf: '999.0' }),
+        ]),
+      ),
+    );
+    const out = await readLeagueStandings({
+      league: outsideLeague,
+      year: YEAR,
+      mflUserCookie: COOKIE,
+    });
+    expect(out!.map((r) => [r.franchiseId, r.rank])).toEqual([
+      ['0007', 1],
+      ['0002', 2],
+    ]);
+  });
+});
+
+describe('names that arrive after the standings did', () => {
+  it('can be applied afterwards, so a concurrent caller is not stuck with fname', async () => {
+    // The assembler reads the standings and the franchise names CONCURRENTLY,
+    // so it has no names to pass when it calls readLeagueStandings. Without a
+    // second pass, an outside league whose rows omit `fname` shows
+    // "Franchise 0001" under a Scores tab showing the real name.
+    mflFetch.mockResolvedValue(ok(standingsBody([franchise('0001', { fname: '' })])));
+    const base = { league: outsideLeague, year: YEAR, mflUserCookie: COOKIE };
+
+    const first = await readLeagueStandings(base);
+    expect(first![0].name).not.toBe('Brooklyn Bandits');
+
+    const named = decorateStandings(first!, {
+      ...base,
+      franchiseNames: { '0001': 'Brooklyn Bandits' },
+    });
+    expect(named[0].name).toBe('Brooklyn Bandits');
+    expect(named[0].initials).toBeTruthy();
+  });
+
+  it('is safe to apply twice — a resolved name is what the second pass falls back to', async () => {
+    mflFetch.mockResolvedValue(ok(standingsBody([franchise('0001', { fname: 'Tulsa Twisters' })])));
+    const base = { league: outsideLeague, year: YEAR, mflUserCookie: COOKIE };
+    const once = await readLeagueStandings(base);
+    const twice = decorateStandings(once!, { ...base, franchiseNames: {} });
+    expect(twice[0].name).toBe('Tulsa Twisters');
+    expect(twice.map((r) => r.rank)).toEqual(once!.map((r) => r.rank));
+  });
+
+  it('keeps the viewer flag per request across that second pass', async () => {
+    mflFetch.mockResolvedValue(ok(standingsBody([franchise('0001'), franchise('0003')])));
+    const base = { league: outsideLeague, year: YEAR, mflUserCookie: COOKIE };
+    const rows = await readLeagueStandings(base);
+    const named = decorateStandings(rows!, { ...base, viewerFranchiseId: '0003' });
+    expect(named.filter((r) => r.isViewer).map((r) => r.franchiseId)).toEqual(['0003']);
   });
 });
 
