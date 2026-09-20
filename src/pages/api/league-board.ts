@@ -3,6 +3,8 @@ import { getAuthUser } from '../../utils/auth';
 import { getCurrentSeasonYear } from '../../utils/league-year';
 import { getLeagueBySlug, leagueHasFeature, type CanonicalLeagueSlug } from '../../config/leagues';
 import { assembleLeagueBoard } from '../../utils/live/league-board';
+import { assembleMflLeagueBoard } from '../../utils/live/mfl-league-board';
+import { discoverBoardLeagues } from '../../utils/cross-league-live';
 import { strictThrowbackScopeForLeagueSlug } from '../../utils/throwback-scope';
 
 export const prerender = false;
@@ -38,6 +40,25 @@ export const prerender = false;
  * viewer per poll for data the page already has a live source for.
  */
 export const GET: APIRoute = async ({ url, request }) => {
+  // Parsed once, before the two paths diverge — they validate identically and
+  // a second copy is a second thing to keep in step.
+  const week = parseInt(url.searchParams.get('week') ?? '', 10);
+  const yearNum = parseInt(url.searchParams.get('year') ?? '', 10);
+  const year = Number.isInteger(yearNum) && yearNum >= 2000 && yearNum <= 2100
+    ? yearNum
+    : getCurrentSeasonYear();
+
+  // ── `?mfl=` — MFL Live's own league boards ──────────────────────────────
+  // Any league the SIGNED-IN account is in, including the ones this site does
+  // not run. It is a separate parameter rather than an overload of `?league=`
+  // because the two authorise differently and must not be confusable: a slug
+  // names a league this site runs and is public, while an MFL id is checked
+  // against the owner's own league list and the read carries their cookie.
+  const mflId = (url.searchParams.get('mfl') ?? '').trim();
+  if (mflId) {
+    return mflLeagueBoard({ mflId, week, year, request });
+  }
+
   const slugParam = url.searchParams.get('league') ?? '';
   const league = getLeagueBySlug(slugParam);
 
@@ -49,21 +70,15 @@ export const GET: APIRoute = async ({ url, request }) => {
   }
   const slug = league.slug as CanonicalLeagueSlug;
 
-  const weekNum = parseInt(url.searchParams.get('week') ?? '', 10);
-  if (!Number.isInteger(weekNum) || weekNum < 1 || weekNum > 25) {
+  if (!Number.isInteger(week) || week < 1 || week > 25) {
     return json({ ok: false, error: 'Valid week parameter required' }, 400);
   }
-
-  const yearNum = parseInt(url.searchParams.get('year') ?? '', 10);
-  const year = Number.isInteger(yearNum) && yearNum >= 2000 && yearNum <= 2100
-    ? yearNum
-    : getCurrentSeasonYear();
 
   try {
     const assembled = await assembleLeagueBoard({
       slug,
       leagueId: league.id,
-      week: weekNum,
+      week,
       year,
       // Only the signed session. The viewer's own franchise and their stored
       // throwback era both come from it, and nothing unsigned may name either.
@@ -83,6 +98,46 @@ export const GET: APIRoute = async ({ url, request }) => {
     return json({ ok: false }, 200);
   }
 };
+
+/**
+ * One league's board for MFL Live, polled.
+ *
+ * The page assembles its own first paint in process; this keeps it current.
+ * Same posture as the slug path: a failed read is `ok: false` under a 200 so
+ * the island holds its last good board rather than blanking a live screen.
+ */
+async function mflLeagueBoard(input: {
+  mflId: string;
+  week: number;
+  year: number;
+  request: Request;
+}): Promise<Response> {
+  const { mflId, week, year, request } = input;
+
+  // Unauthenticated is a 401, not an empty board: every read on this path uses
+  // the owner's own MFL cookie, and there is nothing to serve without one.
+  const user = getAuthUser(request);
+  if (!user) return json({ ok: false, error: 'unauthenticated' }, 401);
+
+  if (!Number.isInteger(week) || week < 1 || week > 25) {
+    return json({ ok: false, error: 'Valid week parameter required' }, 400);
+  }
+
+  try {
+    // THE CHECK, and the reason this route cannot just take the id: the league
+    // must be one this account is actually in. `discoverBoardLeagues` is keyed
+    // on the owner's own MFL cookie, so a league id from a URL can only ever
+    // narrow what the session may already see — never widen it.
+    const leagues = await discoverBoardLeagues(user);
+    const league = leagues.find((l) => l.id === mflId);
+    if (!league) return json({ ok: false, error: 'Unknown league' }, 404);
+
+    const { board } = await assembleMflLeagueBoard({ user, league, week, year });
+    return json(board, 200);
+  } catch {
+    return json({ ok: false }, 200);
+  }
+}
 
 function json(body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), {

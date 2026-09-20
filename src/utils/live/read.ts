@@ -36,7 +36,13 @@ import { getPlayerMap } from '../player-map';
 import { getLeagueTeamBrands } from '../league-team-brands';
 import { franchiseInitials, resolveFranchiseIdentity } from '../mfl-live-identity';
 import type { PlayerMeta } from '../../types/live-scoring';
-import type { LiveBoard, LiveLeagueStatus, LiveMatchup, LivePanel } from '../../types/live';
+import type {
+  LiveBoard,
+  LiveLeagueStatus,
+  LiveMatchup,
+  LivePanel,
+  LiveStandingsRow,
+} from '../../types/live';
 import { loadLeagueWeekProjections } from './projections';
 import { buildLiveMatchup, buildLiveTeam } from './model';
 import { surfaceForLeague, type LiveSurface } from './surface';
@@ -98,15 +104,15 @@ function statusFor(ok: boolean, snapshot: LiveSnapshot | null, pairCount: number
  * way to the screen.
  */
 function emptyBoard(input: {
-  league: ReturnType<typeof getLeagueBySlug>;
-  slug: CanonicalLeagueSlug;
+  league: BuildBoardLeague | null;
   week: number;
   year: number;
   viewerFranchiseId: string | null;
   status: LiveLeagueStatus;
   ok: boolean;
+  standings?: LiveStandingsRow[] | null;
 }): LiveBoard {
-  const { league, slug, week, year, viewerFranchiseId, status, ok } = input;
+  const { league, week, year, viewerFranchiseId, status, ok } = input;
   return {
     ok,
     scope: 'league',
@@ -117,11 +123,15 @@ function emptyBoard(input: {
       {
         leagueId: league?.id ?? '',
         leagueName: league?.name ?? '',
-        slug: league ? slug : null,
-        registered: Boolean(league),
+        slug: league?.slug ?? null,
+        registered: Boolean(league?.slug),
         viewerFranchiseId,
         status,
         matchups: [],
+        // Carried through even on an empty board: a league whose feed is down
+        // can still have readable standings, and the Standings tab has no
+        // reason to go dark because the Scores one did.
+        ...(input.standings !== undefined ? { standings: input.standings } : {}),
       },
     ],
     games: [],
@@ -148,7 +158,14 @@ export async function readLeagueLive(input: ReadLeagueLiveInput): Promise<LiveBo
   const league = getLeagueBySlug(slug);
 
   const empty = (status: LiveLeagueStatus, ok: boolean) =>
-    emptyBoard({ league, slug, week, year, viewerFranchiseId, status, ok });
+    emptyBoard({
+      league: league ? { id: league.id, name: league.name, slug } : null,
+      week,
+      year,
+      viewerFranchiseId,
+      status,
+      ok,
+    });
 
   if (!league) return empty('unavailable', false);
   // MFL serves no live scoring before the Week 1 Thursday, and
@@ -176,7 +193,7 @@ export async function readLeagueLive(input: ReadLeagueLiveInput): Promise<LiveBo
   }
 
   return buildBoardFromSnapshot({
-    slug,
+    league: { id: league.id, name: league.name, slug },
     week,
     year,
     ok: payload.ok,
@@ -190,8 +207,28 @@ export async function readLeagueLive(input: ReadLeagueLiveInput): Promise<LiveBo
 
 /* ── snapshot → board ────────────────────────────────────────────────────── */
 
+/**
+ * Which league a board is OF, as much as the builder needs to know.
+ *
+ * A registry slug used to be that whole answer, and it cannot be: MFL Live
+ * boards leagues this site does not run, and those have no slug, no committed
+ * brands and no surface of their own. Passing the identity in rather than
+ * looking it up is what lets ONE builder serve both — and one builder is the
+ * requirement, not a preference. Everything subtle about this function (the
+ * bench split, the four statuses, the per-theme colour grounds) would have to
+ * be got right twice otherwise, and this repo's forked-sibling history says
+ * how that ends.
+ */
+export interface BuildBoardLeague {
+  /** MFL league id. */
+  id: string;
+  name: string;
+  /** Registry slug, or null for a league this site does not run. */
+  slug: CanonicalLeagueSlug | null;
+}
+
 export interface BuildBoardInput {
-  slug: CanonicalLeagueSlug;
+  league: BuildBoardLeague;
   week: number;
   /** SEASON year — everything here is results-shaped. */
   year: number;
@@ -204,6 +241,19 @@ export interface BuildBoardInput {
   projections: Map<string, number>;
   viewerFranchiseId?: string | null;
   surface?: LiveSurface;
+  /**
+   * Franchise NAMES for a league with no committed brands.
+   *
+   * An outside league's `myleagues` entry carries at most the viewer's own
+   * franchise name and often not even that, so without these the board reads
+   * "Franchise 0015" against "Franchise 0032" — and their NFL crests never
+   * resolve either, because the matcher has no name to match. Supplied by
+   * `readCrossLeagueLive`'s `withFranchiseNames`, which caches them an hour.
+   *
+   * Ignored where the registry has brands: a real identity outranks a fetched
+   * one, and the brands carry colours and a crest that a name cannot.
+   */
+  franchiseNames?: Record<string, string>;
   identityOverrides?: Record<string, { name?: string; nameShort?: string; icon?: string }>;
   /**
    * Player identity, when the caller already has it.
@@ -228,15 +278,19 @@ export interface BuildBoardInput {
  * bench split and the four statuses.
  */
 export function buildBoardFromSnapshot(input: BuildBoardInput): LiveBoard {
-  const { slug, week, year, ok, snapshot, projections } = input;
-  const surface = input.surface ?? surfaceForLeague(slug);
+  const { league, week, year, ok, snapshot, projections } = input;
+  const slug = league.slug;
+  // An outside league has no surface of its own, and MFL Live is the only
+  // board that shows one — so its card ground is the right default. The ground
+  // belongs to the SURFACE and never to the matchup's league: a TheLeague
+  // matchup rendered on MFL Live sits on MFL Live's card. See `./surface`.
+  const surface = input.surface ?? (slug ? surfaceForLeague(slug) : 'mfl');
   const viewerFranchiseId = input.viewerFranchiseId ?? null;
-  const league = getLeagueBySlug(slug);
 
   const empty = (status: LiveLeagueStatus, okFlag: boolean): LiveBoard =>
-    emptyBoard({ league, slug, week, year, viewerFranchiseId, status, ok: okFlag });
+    emptyBoard({ league, week, year, viewerFranchiseId, status, ok: okFlag });
 
-  if (!league) return empty('unavailable', false);
+  if (!league.id) return empty('unavailable', false);
 
 
   // Only pairings with BOTH sides. A one-sided element is a bye rather than a
@@ -280,14 +334,25 @@ export function buildBoardFromSnapshot(input: BuildBoardInput): LiveBoard {
   // One lookup per league, not per franchise: `getLeagueTeamBrands` rebuilds
   // the whole Record per call, so calling it inside the loop would rebuild all
   // 24 AFL franchises to read one.
-  let names: Record<string, string> = {};
-  try {
-    names = Object.fromEntries(
-      Object.entries(getLeagueTeamBrands(slug)).map(([fid, brand]) => [fid, brand.name]),
-    );
-  } catch {
-    // A league in the registry with no wired config — named by id rather than
-    // by another league's crests.
+  //
+  // An OUTSIDE league has no brands at all, and falls back to the names the
+  // cross-league read fetched. They are merged rather than chosen between so a
+  // registered league with a half-wired config still names the rest of its
+  // franchises — but the registry wins every key it has, because a real
+  // identity outranks a fetched one.
+  let names: Record<string, string> = { ...(input.franchiseNames ?? {}) };
+  if (slug) {
+    try {
+      names = {
+        ...names,
+        ...Object.fromEntries(
+          Object.entries(getLeagueTeamBrands(slug)).map(([fid, brand]) => [fid, brand.name]),
+        ),
+      };
+    } catch {
+      // A league in the registry with no wired config — named by id rather than
+      // by another league's crests.
+    }
   }
 
   const overrides = input.identityOverrides ?? {};
@@ -297,7 +362,14 @@ export function buildBoardFromSnapshot(input: BuildBoardInput): LiveBoard {
     // Rung 1 for every registry league, unconditionally: a real identity
     // outranks an inferred one, so a franchise called "Cowboys" keeps its own
     // crest rather than picking up Dallas's.
-    const resolved = resolveFranchiseIdentity({ franchiseId, franchiseName, leagueSlug: slug });
+    const resolved = resolveFranchiseIdentity({
+      franchiseId,
+      franchiseName,
+      // `undefined` for an outside league, which drops the ladder to the NFL
+      // club match and then to text — exactly the marks MFL Live already shows
+      // for it, so the two views cannot disagree about who a franchise is.
+      leagueSlug: slug ?? undefined,
+    });
     // Throwback art, when the caller supplied any. `initials` are RE-DERIVED
     // from the era name rather than carried over — they are the text rung's
     // fallback mark, and a 1997 name showing today's initials is the same
@@ -351,7 +423,7 @@ export function buildBoardFromSnapshot(input: BuildBoardInput): LiveBoard {
     leagueId: league.id,
     leagueName: league.name,
     slug,
-    registered: true,
+    registered: slug !== null,
     viewerFranchiseId,
     status: 'ok',
     matchups,

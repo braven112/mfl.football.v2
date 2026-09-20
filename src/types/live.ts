@@ -163,6 +163,31 @@ export interface LivePanel {
   viewerFranchiseId: string | null;
   status: LiveLeagueStatus;
   matchups: LiveMatchup[];
+  /**
+   * MFL's official standings, in MFL's order — the Standings tab.
+   *
+   * OPTIONAL, and the three states are distinct on purpose:
+   *
+   *  - `undefined` — nobody asked. A cross-league board does not read
+   *    standings (one export per league, on a surface that already fans out
+   *    over all of them), so its panels simply carry nothing and the tab is
+   *    never offered.
+   *  - `null` — asked for, and we could not read it. The tab renders a
+   *    "couldn't load the standings" state rather than an empty table, for
+   *    the same reason `unavailable` is not `no-matchup`: "the feed says
+   *    nothing" and "we could not reach the feed" are different facts.
+   *  - an array — MFL's rows, untouched and unsorted.
+   */
+  standings?: LiveStandingsRow[] | null;
+  /**
+   * The week's top scorers, teams and individuals.
+   *
+   * DERIVED from `matchups`, never fetched — the snapshot already carries
+   * every franchise's starters. `undefined` where nobody asked; a league with
+   * no football played yet yields empty arrays, which the strip renders as
+   * nothing rather than as a row of zeros.
+   */
+  leaders?: LiveLeaders | null;
 }
 
 /**
@@ -202,6 +227,88 @@ export interface LiveMoment {
   text: string;
   /** Real game clock, "Q3 4:08". '' when ESPN gave us neither period nor clock. */
   clock: string;
+}
+
+/**
+ * One row of MFL's `leagueStandings` export, in MFL's OWN order.
+ *
+ * ── `rank` IS A POSITION, NOT A JUDGEMENT ────────────────────────────────
+ * It is the row's index in the feed, 1-based, and nothing here computes it.
+ * MFL returns standings in the league's official final order with that
+ * league's constitution tiebreaker chain already applied — Power Rank,
+ * Victory Points, head-to-head — and homebrew re-sorting miscredited 22 AFL
+ * and 10 TheLeague division titles before the rule existed that forbids it.
+ * `docs/claude/rules/standings-brackets-draft-order.md`.
+ *
+ * So: never sort an array of these, never derive `rank` from `wins`, and
+ * never present a row's position as anything but the position MFL gave it.
+ */
+export interface LiveStandingsRow {
+  franchiseId: string;
+  /** 1-based index in MFL's feed order. Never derived from the columns. */
+  rank: number;
+  name: string;
+  nameShort: string;
+  initials: string;
+  icon: string;
+  iconAlt: string;
+  rung: IdentityRung;
+  wins: number;
+  losses: number;
+  ties: number;
+  /** Season points for. MFL sends it as a string; this is the parsed number. */
+  pointsFor: number;
+  /** The viewer's own franchise in this league. */
+  isViewer: boolean;
+}
+
+/**
+ * One franchise on the week's top-scorers strip.
+ *
+ * STARTERS only, by construction — it is built from the same `players` array
+ * the matchup cards sum, and the bench travels in its own map precisely so
+ * nothing can fold it in by accident.
+ */
+export interface LiveLeaderTeam {
+  franchiseId: string;
+  name: string;
+  nameShort: string;
+  initials: string;
+  icon: string;
+  iconAlt: string;
+  rung: IdentityRung;
+  live: number;
+  /** Starters whose NFL game has not kicked off — "still has 4 to play". */
+  yetToPlay: number;
+}
+
+/**
+ * One individual performance on the week's top-scorers strip.
+ *
+ * Carries no player NAME: identity for every row on the board already travels
+ * once, in `LiveBoard.playerMeta`, keyed by this `playerId`. A second copy
+ * here is a second thing to keep in step, and the one that drifts is the one
+ * nobody is looking at.
+ *
+ * `franchiseId` is NOT a unique key for a performance. In the AFL a player is
+ * routinely rostered — and started — in both conferences, and both sides of
+ * one matchup can start him; each of those is a different owner's points and
+ * a legitimately separate row. The key is the PAIR.
+ */
+export interface LiveLeaderPlayer {
+  playerId: string;
+  franchiseId: string;
+  /** Who is starting him, short form — the strip has one line per row. */
+  franchiseName: string;
+  points: number;
+  /** 0 when his game is over. Drives the "final" vs "still playing" mark. */
+  secondsRemaining: number;
+}
+
+/** The week's top scorers in one league — teams and individuals. */
+export interface LiveLeaders {
+  teams: LiveLeaderTeam[];
+  players: LiveLeaderPlayer[];
 }
 
 /** One assembly of a whole board. A poll replaces this wholesale. */

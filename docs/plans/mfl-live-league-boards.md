@@ -23,7 +23,11 @@ this site today.
 | 1 | Which leagues get the link | **All of them** — registry and outside alike | "See the full league" has to be true for every row, or the link is a tease on the rows that need it most. |
 | 2 | Where it lands | **New `/live/league/<mflId>`, in the MFL Live shell** | One board for every league. Bouncing ours out to `/theleague/live-scoring` would change chrome mid-session and still leave outside leagues unserved. The per-league pages stay exactly as they are. |
 | 3 | What it shows | **Matchup cards only, tap to expand** | Identical to `/live`, just every pairing instead of yours. Reuses `LvMatchupCard` / `LvMatchupDetail` unchanged. Cheapest first paint on a phone. |
-| 4 | The affordance | **The league name in the panel header is the link** | No new chrome, a big thumb target, and it reads naturally. `/live` is the only surface that renders that header (`multiLeague`), so nothing else grows a link. |
+| 4 | The affordance | **The league name in the panel header is the link** | No new chrome, a big thumb target, and it reads naturally. Only `/live` passes the base path, so nothing else grows a link. |
+| 5 | Top scorers | **Both — top teams AND top performances** | Free: the snapshot already carries every franchise's starters, so neither strip costs a request. |
+| 6 | Standings | **MFL's official rows, as-is. No live/projected variant.** | Re-sorting is forbidden here (rule below); a projected table would have to compute its own order. Records update when games go final and the caption says so. |
+| 7 | Standings columns | **Rank, team, W-L(-T), PF** | Four columns fit a phone with no horizontal scroll. PF is the column that actually gets read on a live board. |
+| 8 | Layout | **Segmented Scores / Standings, top scorers under the scores** | Keeps the live board at the top and the page short. |
 
 ## What already exists — this is mostly wiring, not building
 
@@ -155,21 +159,90 @@ zeros, so `hasLiveSignal` is what stops it printing as a real 0-0.
 
 ## Guards
 
-- `tests/live-league-board.test.ts` — an outside league (no slug, no brands)
-  builds a board with every pairing, `viewerSide` set on the viewer's and
-  `null` on the rest; the identity ladder lands on NFL/text rungs; bench rows
-  never reach `players`.
-- Extend `tests/live-surface-grounds.test.ts`'s reach: a registry league
-  rendered on this page resolves against the **mfl** ground, not its own.
-- A route guard: `/live/league/<id>` for a league not in the session's
-  `myleagues` answers 404.
-- Wire all of it into `.claude/hooks/path-guard.json` under the live domain.
+Three suites, all wired into `.claude/hooks/path-guard.json` under
+`live-scoring` so they run on every edit in this territory:
+
+- `tests/live-league-board-outside.test.ts` — an outside league (no slug, no
+  brands) builds a board with every pairing; `viewerSide` is set on the
+  viewer's matchup and `null` on the rest; the registry still wins over a
+  fetched name for a league we run; and the leader strips keep all four rules
+  above, doubleheader included.
+- `tests/live-league-standings.test.ts` — MFL's order survives however the
+  columns read, stringy numbers parse, a lone franchise object becomes a list,
+  every failure mode answers `null` rather than `[]`, and `isViewer` is
+  resolved per request rather than baked into the shared cache.
+- `tests/live-league-board-guard.test.ts` — a scan guard: both entry points
+  resolve the id through `discoverBoardLeagues` and refuse a miss, no page
+  hands the island a function prop, and the page never fetches its own API to
+  render itself.
+
+## Standings and top scorers
+
+Added to scope on 2026-09-20, after the first cut of this plan deferred them.
+
+**Top scorers cost nothing.** `buildLeaders` (`src/utils/live/leaders.ts`) is
+pure and derives both strips from the panel the cards already render, so they
+cannot disagree with the board above them. Four rules it keeps, each a way it
+goes wrong:
+
+- **Starters only.** The bench travels in its own array precisely so nothing
+  can fold it in; a bench row on a leaderboard credits points that cannot be
+  scored.
+- **A franchise is counted once, however many matchups it is in.** A
+  DOUBLEHEADER week puts every franchise in two pairings — TheLeague's own
+  schedule does — so walking the pairings without a per-franchise gate counts
+  each roster twice. This shipped visibly in the first cut and was caught in a
+  screenshot, not by a test: Josh Allen at #1 *and* #2 of the same league's
+  top performances, same owner, same score. The unit fixture had every
+  franchise in exactly one matchup, so it could not see it.
+- **A performance is keyed by franchise AND player.** The same player started
+  by two different franchises is two owners' points and two legitimate rows —
+  routine in the AFL, whose rosters duplicate players.
+- **Zero is never a leader.** An unplayed week is a payload of zeros, and an
+  unfiltered strip invents a leaderboard for a week nobody has played.
+
+**Standings cost one export, and the rows are never re-sorted.**
+`readLeagueStandings` (`src/utils/live/standings.ts`) reads
+`TYPE=leagueStandings` with the owner's own cookie — an outside league's
+exports are not ours to read anonymously — on a 120s TTL, because a standing
+changes when a game goes FINAL and re-reading it every 25s poll charges an
+export for a number that did not move.
+
+It is deliberately NOT `live-standings.ts`: that module takes a registry
+`LeagueDefinition` and falls back to a committed feed on every failure path,
+and an outside league has neither. Its honest answer is `null`, which the UI
+renders as "couldn't read the standings" — never an empty table, the same
+distinction `unavailable` keeps from `no-matchup`.
+
+`rank` is the feed's POSITION and nothing computes it. MFL returns standings
+in the league's official order with that league's constitution tiebreaker
+chain already applied, and homebrew tiebreakers miscredited 22 AFL and 10
+TheLeague division titles before the rule existed that forbids this
+(`docs/claude/rules/standings-brackets-draft-order.md`). Division GROUPING is
+also out: it needs a second export, and the compact four-column table does
+not carry it.
+
+The identity decoration (`name`, crest, `isViewer`) is applied OUTSIDE the
+cache, because the cache is shared across requests and a cached `isViewer`
+would highlight one owner's row for the next reader.
+
+## Two things found while building
+
+- **An island prop must survive JSON.** The panel link was specified as a
+  `panelHref(panel)` callback. Astro serializes a hydrated island's props
+  across the server/client boundary, so a function prop does not arrive — it
+  throws on render. It is `panelHrefBase`, a string the kit appends the league
+  id to.
+- **`multiLeague` was the wrong gate for the heading.** It is only rendered
+  when a board has more than one panel, so an owner with exactly ONE league on
+  MFL Live — a common case, not an edge — saw no heading and therefore had no
+  route into the drill-down at all. The heading now shows whenever it links
+  (`showPanelName`); the league boards, which pass no base path, are unchanged.
 
 ## Out of scope (deliberately)
 
-Standings, a league-wide top-scorers strip, and anything that needs a second
-MFL fetch per league. Decision 3 is cards only; those are a follow-up if the
-page earns it.
+Division or conference grouping in the standings, a live/projected standings
+variant, and anything else needing a second MFL fetch per league.
 
 ## Ship
 

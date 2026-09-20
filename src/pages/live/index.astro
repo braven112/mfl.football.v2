@@ -4,6 +4,15 @@
  *
  * Lives at mfl.football/live. See docs/plans/mfl-live-app.md.
  *
+ * Each panel's league name links to `/live/league/<mflLeagueId>` — that
+ * league's FULL board, every matchup in it rather than just this owner's,
+ * plus standings and the week's top scorers. The href is passed in rather than
+ * built inside the shared kit, because the league boards render the same
+ * component and a link there would point at the page you are already on. It is
+ * a BASE PATH rather than a callback because island props cross the
+ * server/client boundary as JSON, where a function does not survive.
+ * See docs/plans/mfl-live-league-boards.md.
+ *
  * ── THE BOARD IS ASSEMBLED IN PROCESS ─────────────────────────────────────
  * `assembleMflLiveBoard` is called here directly and NEVER through
  * `/api/live-board`. A page that fetches its own API to render itself puts our
@@ -133,6 +142,7 @@ if (authUser && week) {
 			pollShape="mfl-live"
 			isLive={isLive}
 			viewerFirst
+			panelHrefBase="/live/league/"
 		/>
 	)}
 </MflAppLayout>

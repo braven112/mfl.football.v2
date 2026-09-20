@@ -1170,3 +1170,276 @@ button.lv-card:focus-visible {
   }
   .lv-scorehead__name { overflow-wrap: anywhere; }
 }
+
+/* ── The league heading as a link ─────────────────────────────────────────
+   Only MFL Live renders this heading (a single-league board would repeat its
+   own name over every card), and only there does it link — to that league's
+   own full board. The whole line is the target, not the word: this is a phone
+   surface and a thumb is not a cursor. */
+.lv-panel__link {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  /* A MINIMUM, plus padding — not a fixed height. The floor guarantees the
+     44px touch target (padding alone measured 42px at the heading's own type
+     size), and the padding is what keeps the row growing rather than clipping
+     when the text is scaled up. */
+  min-height: 2.75rem;
+  padding: 0.2rem 0;
+  color: inherit;
+  text-decoration: none;
+}
+.lv-panel__link:hover .lv-panel__chev,
+.lv-panel__link:focus-visible .lv-panel__chev {
+  transform: translateX(0.15rem);
+}
+.lv-panel__link:hover {
+  color: var(--page-text);
+}
+.lv-panel__link:focus-visible {
+  outline: 2px solid var(--league-accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+.lv-panel__chev {
+  transition: transform var(--transition-fast, 120ms) ease;
+}
+
+/* ── Scores / Standings ───────────────────────────────────────────────────
+   Toggle buttons, not a tablist — see the component for why. */
+.lv-tabs {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border: 1px solid var(--content-border);
+  border-radius: var(--radius-md);
+  background: var(--content-bg-muted);
+  align-self: flex-start;
+}
+.lv-tabs__btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  /* The 44px touch floor, stated rather than hoped for: padding alone
+     measured 36px at this type size. */
+  min-height: 2.75rem;
+  padding: 0.35rem 1.1rem;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-display);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--content-text-muted);
+  cursor: pointer;
+}
+.lv-tabs__btn:focus-visible {
+  outline: 2px solid var(--league-accent);
+  outline-offset: 1px;
+}
+/* The selected tab is not carried by colour alone — it takes the raised card
+   surface and the full-strength ink, which survives a monochrome render. */
+.lv-tabs__btn--on {
+  background: var(--card-surface);
+  color: var(--page-text);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgb(0 0 0 / 12%));
+}
+
+/* ── Standings ────────────────────────────────────────────────────────── */
+.lv-standings {
+  border: 1px solid var(--content-border);
+  border-radius: var(--radius-md);
+  background: var(--card-surface);
+  overflow: hidden;
+}
+.lv-standings__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+.lv-standings__caption {
+  caption-side: top;
+  padding: 0.7rem 0.8rem;
+  text-align: left;
+  color: var(--content-text-muted);
+  font-size: var(--font-size-xs);
+  line-height: 1.4;
+}
+.lv-standings__table th,
+.lv-standings__table td {
+  padding: 0.55rem 0.6rem;
+  border-top: 1px solid var(--content-border);
+  text-align: left;
+  font-weight: var(--font-weight-normal);
+  color: var(--page-text);
+}
+.lv-standings__table thead th {
+  border-top: 0;
+  color: var(--content-text-muted);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: var(--font-weight-bold);
+}
+.lv-standings__rank {
+  width: 2.2rem;
+  color: var(--content-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.lv-standings__num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.lv-standings__team {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+}
+.lv-standings__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lv-standings__crest {
+  width: 1.4rem;
+  height: 1.4rem;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+.lv-standings__crest img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+/* The text rung. Never a hue derived from the name. */
+.lv-standings__initials {
+  width: 1.4rem;
+  height: 1.4rem;
+  display: grid;
+  place-items: center;
+  flex: none;
+  border-radius: var(--radius-sm);
+  background: var(--content-bg-muted);
+  color: var(--content-text-muted);
+  font-size: 0.6rem;
+  font-weight: var(--font-weight-bold);
+}
+/* The viewer's own row tints AND says "You" — a tint alone reaches neither a
+   screen reader nor anyone who cannot separate it from the row above. */
+.lv-standings__row--you {
+  background: color-mix(in srgb, var(--league-accent) 10%, transparent);
+}
+.lv-standings__you {
+  flex: none;
+  padding: 0.05rem 0.3rem;
+  border-radius: var(--radius-sm);
+  background: var(--league-accent);
+  color: var(--color-white);
+  font-size: 0.6rem;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.04em;
+}
+
+/* ── Top scorers ──────────────────────────────────────────────────────── */
+.lv-leaders {
+  display: grid;
+  gap: var(--spacing-md);
+  grid-template-columns: 1fr;
+}
+@media (min-width: 40rem) {
+  .lv-leaders {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.lv-leaders__group {
+  border: 1px solid var(--content-border);
+  border-radius: var(--radius-md);
+  background: var(--card-surface);
+  padding: 0.7rem 0.8rem;
+}
+.lv-leaders__title {
+  margin: 0 0 0.45rem;
+  font-family: var(--font-display);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--content-text-muted);
+}
+.lv-leaders__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.lv-leaders__row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0;
+  border-top: 1px solid var(--content-border);
+}
+.lv-leaders__row:first-child {
+  border-top: 0;
+}
+.lv-leaders__pos {
+  width: 1.1rem;
+  flex: none;
+  color: var(--content-text-muted);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--font-size-xs);
+}
+.lv-leaders__crest {
+  width: 1.3rem;
+  height: 1.3rem;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+.lv-leaders__crest img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.lv-leaders__initials {
+  width: 1.3rem;
+  height: 1.3rem;
+  display: grid;
+  place-items: center;
+  flex: none;
+  border-radius: var(--radius-sm);
+  background: var(--content-bg-muted);
+  color: var(--content-text-muted);
+  font-size: 0.55rem;
+  font-weight: var(--font-weight-bold);
+}
+.lv-leaders__name {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--font-size-sm);
+  color: var(--page-text);
+}
+.lv-leaders__meta {
+  margin-left: 0.35rem;
+  color: var(--content-text-muted);
+  font-size: var(--font-size-xs);
+}
+.lv-leaders__sub {
+  flex: none;
+  max-width: 9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--content-text-muted);
+  font-size: var(--font-size-xs);
+}
+.lv-leaders__pts {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--font-weight-bold);
+  color: var(--page-text);
+}

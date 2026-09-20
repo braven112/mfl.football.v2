@@ -20,6 +20,7 @@
  */
 import type { AuthUser } from '../auth';
 import type { CanonicalLeagueSlug } from '../../config/leagues';
+import { getLeagueBySlug } from '../../config/leagues';
 import type { LiveBoard } from '../../types/live';
 import type { NflGame } from '../../types/live-scoring';
 import type { ThrowbackScope } from '../throwback-scope';
@@ -146,7 +147,7 @@ export async function assembleLeagueBoard(
 
   return {
     board: buildBoardFromSnapshot({
-      slug,
+      league: { id: leagueId, name: getLeagueBySlug(slug)?.name ?? '', slug },
       week: replay.week,
       year,
       ok: true,
