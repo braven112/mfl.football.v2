@@ -41,12 +41,43 @@ run was 99.2%; the remaining gap was four discovered rules, below.
    Clamping each return type separately is wrong and was a 0.15 miss on a
    player with −5 punt and +62 kickoff.
 4. **The AFL does not score return yards at all** — and
-   `docs/claude/afl-rules.md` says it does. See the warning box now in that
-   file. Either the constitution is wrong or the AFL's MFL league is
-   misconfigured and returners have been underscored for years. **A
-   commissioner's ruling, not a code change.**
+   `docs/claude/afl-rules.md` said it did. **RESOLVED: the doc was wrong.**
+   Only TheLeague uses return yards (owner's ruling, Sept 2026), and MFL's
+   `TYPE=rules` export confirms it independently.
 
-Finding #4 before shipping anything is the entire argument for this phase.
+Finding the doc drift before shipping anything is the entire argument for this
+phase.
+
+---
+
+## Stop transcribing rules. Fetch them.
+
+Chasing finding #4 to its source turned up the real lesson. MFL publishes the
+live scoring config at `export?TYPE=rules&L=<id>&JSON=1` — free, unauthenticated,
+36 rules for TheLeague and 66 for the AFL. Every behaviour reverse-engineered
+above is stated in it explicitly:
+
+| Discovered empirically | What the rules export says |
+|---|---|
+| Return yards netted across punt + kickoff | the event is literally **`UY+KY`** — one summed event, not two |
+| …then clamped at zero | its **`range` is `1-999`** — a net of 0 or less is outside the scoring range |
+| AFL scores no return yards | the AFL has **no `UY`/`KY` event at all** |
+
+**Both rules docs were also materially wrong about team defense**, which no
+amount of reading them would have revealed:
+
+- `league-rules.md` said "Points Allowed 0-35 = **15**". Two rules stack over
+  that range — `OPA 15 range 0-35` **and** `OPA *-.6 range 1-35` — so it is a
+  slide: shutout 15, PA 20 → 3.00, PA 35 → −6.00. Verified exact to the cent
+  against MFL's own scores on 14 team-weeks spanning PA 10→59.
+- `afl-rules.md` said six tiers. The AFL actually runs a **per-point scale of
+  36 rules**, 0→15 down to 35→−6. Its table understated a shutout by 5 points.
+
+**So work item #6 changes.** Do not hand-transcribe scoring rules into the
+registry. Fetch `TYPE=rules`, store it per league-year alongside the other
+feeds, and generate the scorer's config from it. A rule set that drifts from
+MFL then shows up as a reconciliation failure the same week, instead of living
+undetected in a markdown table for years — which is what just happened twice.
 
 ### The crosswalk is a solved problem
 
@@ -95,8 +126,26 @@ Every category in both constitutions has a column. Confirmed present:
   `def_punt_blocks`, `def_pat_blocks`, `def_fg_blocks`, `def_tds`,
   `def_2pt_made`. Points allowed comes from the game score.
 
-**No gaps.** DST is the only piece the prototype has not yet reconciled,
-because it joins on team code rather than the crosswalk.
+**No gaps in coverage — but DST does not reconcile yet: 17/34 team-weeks.**
+
+This is the one open technical problem in Phase 0, and it is narrower than the
+number suggests. The points-allowed function is **correct** — implied OPA
+matches to the cent on every team-week where it matches at all, across PA 10 to
+59 and both branches of the rule. Every failure is a **positive residual**
+(+2.00, +4.00, +6.20, +18.20): MFL counts defensive events that NFLverse's
+`stats_team_week` does not attribute the same way, mostly fumble recoveries and
+interceptions.
+
+Two candidate causes, both cheap to test and neither yet confirmed:
+1. `def_fumbles` counts recoveries differently than MFL's `FC` event — the
+   per-play `fumble_recovery_opp` columns may be the right input instead.
+2. MFL's points-allowed may **exclude points scored against the defense by the
+   opponent's offense-independent units** (a pick-six or return TD), which
+   would shift PA itself rather than the events. The +18.20 outlier fits this.
+
+Resolve with play-by-play, which carries the attribution the team-week
+aggregate loses. Budget half a week. Player-level scoring is unaffected and
+remains 416/416.
 
 ---
 
@@ -291,9 +340,10 @@ unmeasurable.
 
 ## Open questions
 
-1. **The AFL return-yards discrepancy needs a commissioner's ruling** before
-   Phase 1 can reconcile the AFL honestly. It is a live scoring question
-   independent of this project.
+1. ~~The AFL return-yards discrepancy needs a ruling.~~ **RESOLVED Sept 2026:
+   the AFL does not use return yardage; only TheLeague does. The rules doc was
+   wrong and has been corrected.** No league-governance issue, no misconfigured
+   league, nothing owed to any owner.
 2. Backfill to 1999, or only to each league's first season (2007 / 2003)?
    Marginal cost either way; 1999 gives pre-league player careers.
 3. Neon or Supabase? Neon assumed here — cheaper storage, scale-to-zero. Supabase

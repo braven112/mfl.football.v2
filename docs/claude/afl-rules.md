@@ -341,24 +341,26 @@ the bye-free count (ceiling **96**), not to reach zero.
 **Receiving (TE-premium PPR):** TE **1.5/rec**, WR **1.0/rec**, RB **1.0/rec** · 0.1/rec yd · Rec TD 6
 **Kicking:** XP 1 · FG 0–30 yds = 3 · FG 31+ yds = 0.1/yd (e.g. 50-yarder = 5.0)
 **Team Defense:** Sack 1 · INT 2 · Fum Rec 2 · Safety 2 · Blocked kick 2 · Def TD 6 · Def 2-pt 2
-**Points-allowed tiers:** 0–6 → 10 · 7–13 → 7 · 14–20 → 4 · 21–27 → 1 · 28–34 → −1 · 35+ → −4
-**Misc:** Fumble lost −2 · Return yards 0.03/yd — **⚠ DISPUTED, see below**
+**Points allowed:** ⚠ **NOT six tiers — this table is wrong.** MFL's
+`TYPE=rules` export shows the AFL uses a **per-point scale**: 36 separate
+rules from `0 → 15` down to `35 → −6` (0→15, 1→14.17, 2→13.33, … 6→10,
+13→6, 20→1, 28→−2, 35→−6), then `−6 − 0.01/pt` beyond 36. The tier table
+below understated a shutout by 5 points and misvalued every score between
+the tier edges. Re-derive from the rules export, never from this line.
+**Misc:** Fumble lost −2. **No return-yardage scoring** — see below.
 
-> **⚠ Return yards: this line does not match what MFL actually scores.**
-> Discovered Sept 2026 by reconciling NFLverse stats against MFL's own
-> `playerScores-by-week` feed (`scripts/prototypes/scoring-reconcile.mjs`).
-> Scoring return yards at 0.03/yd reproduces **348 of 416** player-weeks
-> (83.65%); every one of the 68 misses is a kick/punt returner we score
-> HIGHER than MFL by exactly his return yardage. Removing return yards
-> entirely reproduces **416 of 416 (100%)**.
+> **RESOLVED Sept 2026: the AFL does not score return yardage. This doc
+> previously said 0.03/yd, which was wrong.**
 >
-> TheLeague, scored the same way, is 416/416 WITH return yards at 0.03/yd —
-> so this is specific to the AFL, not a parser bug.
+> Confirmed two ways. Owner's ruling: only TheLeague uses return yards.
+> And MFL's own `export?TYPE=rules` agrees — TheLeague carries
+> `UY+KY *.03 range 1-999` for `QB|RB|WR|TE|PK`; the AFL's 66 scoring rules
+> contain **no return-yardage event at all**.
 >
-> **MFL is not awarding the AFL return yards.** Either this line is wrong, or
-> the AFL's MFL league is misconfigured and returners have been underscored
-> for an unknown number of seasons. Unresolved — a commissioner's ruling, not
-> a code change. Do not edit either side until it is settled.
+> Found by reconciling NFLverse stats against MFL's `playerScores-by-week`
+> feed (`scripts/prototypes/scoring-reconcile.mjs`): scoring return yards gave
+> 348/416 player-weeks, with every miss a returner overscored by exactly his
+> return yardage. Removing it gives 416/416.
 
 ---
 

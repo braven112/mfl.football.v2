@@ -175,8 +175,15 @@ ESCALATION_RATE = 1.10        // 10% annual salary increase
 | Blocked Kick | 2 |
 | Defensive TD | 6 |
 | Defensive 2-Point Conversion | 2 |
-| Points Allowed 0-35 | 15 |
-| Points Allowed 36+ | -6 |
+| Points Allowed 0-35 | **15 − 0.6 × PA** (not a flat 15) |
+| Points Allowed 36+ | **−6 − 0.01 × PA** |
+
+> ⚠ **Corrected Sept 2026.** This table previously read "Points Allowed 0-35
+> = 15", a flat value. MFL's `TYPE=rules` export shows two rules stacking over
+> the same range — `OPA 15 range 0-35` **and** `OPA *-.6 range 1-35` — so the
+> real value slides: a shutout is 15, 20 points allowed is 3.00, 35 is −6.00.
+> Verified against MFL's own scores on 14 team-weeks spanning PA 10→59, exact
+> to the cent in every one.
 
 ### Miscellaneous
 
