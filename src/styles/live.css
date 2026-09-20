@@ -397,7 +397,11 @@ button.lv-card:focus-visible {
   /* Tabular, so a 9 -> 10 tick does not shift the second count sideways. */
   font-variant-numeric: tabular-nums;
 }
-.lv-rem__dot {
+/* Grouped with the footer's projected dots: one geometry, two places, so the
+   two dot rows on a card cannot drift apart in size. Neither paints a colour —
+   the side's own variable is set inline. */
+.lv-rem__dot,
+.lv-foot__dot {
   width: 0.45rem;
   height: 0.45rem;
   border-radius: 50%;
@@ -428,6 +432,32 @@ button.lv-card:focus-visible {
   gap: var(--spacing-sm);
   font-size: 0.66rem;
   color: var(--content-text-muted);
+}
+
+/* ── the footer's projected pair ──────────────────────────────────────────
+   `Proj ●93.2 – ●105.1`. Same dots as the "to play" count above, keyed to the
+   same sides in the same order, so the card teaches the mapping once.
+
+   `nowrap` on each number, because a dot that breaks away from its digits
+   loses the only thing tying the number to a team; the group itself may still
+   wrap away from "Open matchup →" on a narrow card.
+
+   The digits inherit the footer's muted ink rather than taking the count's
+   `--page-text`: a projection is context, not the headline the live score is,
+   and tinting them per team would be two differently coloured numbers a
+   centimetre apart — the legibility problem the dot exists to avoid. */
+.lv-foot__proj {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.lv-foot__n {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  /* Tabular, so a projection ticking 99.8 -> 100.2 does not shift the dash. */
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 /* ── the two sides on a card ─────────────────────────────────────────────── */

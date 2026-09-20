@@ -107,7 +107,8 @@ export default function LvMatchupCard({
         `Open ${a.name} against ${b.name}` +
         (showYtp
           ? `. ${aName} ${a.yetToPlay} to play, ${bName} ${b.yetToPlay} to play`
-          : '')
+          : '') +
+        `. Projected ${aName} ${fmt(a.projectedFinal)}, ${bName} ${fmt(b.projectedFinal)}`
       }
     >
       <div className="lv-card__head">
@@ -161,8 +162,42 @@ export default function LvMatchupCard({
       )}
 
       <div className="lv-card__foot">
-        <span>
-          Proj {fmt(a.projectedFinal)} – {fmt(b.projectedFinal)}
+        {/*
+          The projected pair wears the SAME dot idiom as the head's "to play"
+          count, and for the same reason: two numbers a row apart whose only
+          tie to a team is their position. The fill pair again (`--t0`/`--t1`)
+          — a dot is a shape against the card, which is what ΔE measures, so
+          the ink pair would wash it for no reading benefit.
+
+          The dash STAYS, unlike the "to play" pair. That one is a split count
+          under one shared label; this is a score line, and `93.2 105.1` with
+          nothing between them reads as one number that wrapped.
+
+          Colour alone still does not carry it: the order matches the rows
+          above, each number carries a `title`, and both projections are
+          spelled out in the button's `aria-label` — the label a screen reader
+          is read INSTEAD of this markup, which is why adding the dots meant
+          adding the numbers there too.
+        */}
+        <span className="lv-foot__proj">
+          Proj
+          <span className="lv-foot__n" title={`${aName}: ${fmt(a.projectedFinal)} projected`}>
+            <span
+              className="lv-foot__dot"
+              style={{ background: `var(--t${first})` }}
+              aria-hidden="true"
+            />
+            {fmt(a.projectedFinal)}
+          </span>
+          <span aria-hidden="true">–</span>
+          <span className="lv-foot__n" title={`${bName}: ${fmt(b.projectedFinal)} projected`}>
+            <span
+              className="lv-foot__dot"
+              style={{ background: `var(--t${second})` }}
+              aria-hidden="true"
+            />
+            {fmt(b.projectedFinal)}
+          </span>
         </span>
         <span>Open matchup →</span>
       </div>
