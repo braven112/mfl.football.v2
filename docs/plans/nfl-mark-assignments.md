@@ -1,7 +1,7 @@
 # Per-club NFL mark assignments
 
-**Status:** planned, not started. Decisions made 2026-09-20 against the live
-artwork; nothing in `src/` has changed yet.
+**Status:** **phase 1 shipped** 2026-09-20. Phases 2 and 3 planned, not started.
+Decisions made against the live artwork.
 
 Today every NFL club has exactly one light mark (`/assets/nfl-logos/{CODE}.svg`)
 and one dark mark (ESPN's mirrored `500-dark` PNG, swapped in by CSS). This plan
@@ -189,9 +189,30 @@ id). Use that for silhouettes; use `reversed` for two-tone marks. Chicago is the
 worked example: it cannot be reversed, and it does not need to be, because
 NFL.com already gives it a real for-dark mark (the bear head).
 
-## Phase 1 — club defaults
+## Phase 1 — club defaults — SHIPPED
 
-Entirely a dark-pipeline change. Three files plus data.
+Entirely a dark-pipeline change, as predicted: no committed light SVG moved and
+`download-nfl-logos.mjs` was not touched. What landed:
+
+- `src/data/nfl-mark-assignments.json` — the three deviations, defaults
+  unchanged.
+- `scripts/lib/nfl-mark-sources.mjs` — `MARK_SOURCES`, `assignedMark`,
+  `resolveMark`. Throws on an unknown id rather than falling back.
+- `scripts/lib/dark-logo-mirror.mjs` — `isValidSvg`/`isValidAsset`, a per-item
+  `format`, and an optional `transform`. `formats` is written to the manifest
+  ONLY for non-PNG cuts, so the college mirror's manifest is byte-identical
+  (pinned by test).
+- `scripts/fetch-nfl-dark-logos.mjs` — resolves each club's assigned dark mark,
+  and runs SVG cuts through `optimizeAndTrimSvg` so a theme swap does not change
+  the mark's rendered size.
+- `src/utils/nfl-logo-dark-css.ts` — extension from the manifest, never assumed.
+- `tests/nfl-mark-assignments.test.ts`, plus the files added to the `nfl-logos`
+  path-guard domain.
+
+Verified: all 32 mirror cleanly, CHI and NYG land as trimmed SVG, and the built
+stylesheet emits `url(".../CHI.svg")` alongside `url(".../ARI.png")`.
+
+The original plan for this phase follows, for the record.
 
 ### 1. `src/data/nfl-mark-assignments.json` (new, committed)
 

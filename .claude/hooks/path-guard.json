@@ -1010,12 +1010,17 @@
         "scripts/lib/nfl-logo-sources.mjs",
         "scripts/fetch-nfl-dark-logos.mjs",
         "src/data/nfl-brand-kit.json",
-        "src/data/nfl-dark-logos-manifest.json"
+        "src/data/nfl-dark-logos-manifest.json",
+        "src/data/nfl-mark-assignments.json",
+        "scripts/lib/nfl-mark-sources.mjs",
+        "scripts/lib/dark-logo-mirror.mjs",
+        "src/utils/nfl-logo-dark-css.ts"
       ],
       "tests": [
         "tests/nfl-logo-assets.test.ts",
         "tests/nfl-brand-kit-data.test.ts",
-        "tests/nfl-logo-dark-css.test.ts"
+        "tests/nfl-logo-dark-css.test.ts",
+        "tests/nfl-mark-assignments.test.ts"
       ]
     },
     {

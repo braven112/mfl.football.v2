@@ -25,7 +25,25 @@ export function isValidPng(buf) {
   return Buffer.isBuffer(buf) && buf.length > 1024 && buf.subarray(0, 4).equals(PNG_MAGIC);
 }
 
-async function fetchPng(url) {
+/**
+ * An SVG dark cut (NFL.com is the only vector source) needs its own check: it
+ * has no magic bytes and is an order of magnitude smaller than a PNG, so the
+ * PNG floor would reject every real one. A 200-byte floor still catches the
+ * case the PNG floor exists for — a CDN error page saved under a .svg name.
+ */
+export function isValidSvg(buf) {
+  if (!Buffer.isBuffer(buf) || buf.length < 200) return false;
+  return /^\s*(<\?xml[^>]*\?>\s*)?(<!--[\s\S]*?-->\s*)*<svg[\s>]/.test(
+    buf.subarray(0, 512).toString('utf-8'),
+  );
+}
+
+/** Validate fetched bytes against the format the caller declared for them. */
+export function isValidAsset(buf, format) {
+  return format === 'svg' ? isValidSvg(buf) : isValidPng(buf);
+}
+
+async function fetchAsset(url, format) {
   return fetchWithRetry(url, {
     attempts: 3,
     baseDelayMs: 500,
@@ -35,7 +53,9 @@ async function fetchPng(url) {
     fetchOptions: { signal: AbortSignal.timeout(45000) },
     parse: async (res) => {
       const buf = Buffer.from(await res.arrayBuffer());
-      if (!isValidPng(buf)) throw new Error(`response is not a PNG (${buf.length} bytes)`);
+      if (!isValidAsset(buf, format)) {
+        throw new Error(`response is not a valid ${format.toUpperCase()} (${buf.length} bytes)`);
+      }
       return buf;
     },
   });
@@ -47,8 +67,15 @@ async function fetchPng(url) {
  *
  * @param {object} opts
  * @param {string} opts.label console prefix, e.g. 'fetch-nfl-dark-logos'
- * @param {Array<{ key: string, url: string }>} opts.items one per logo;
- *   `key` becomes the local filename (`{key}.png`) and manifest entry
+ * @param {Array<{ key: string, url: string, format?: 'png'|'svg' }>} opts.items
+ *   one per logo; `key` becomes the local filename (`{key}.{format}`) and
+ *   manifest entry. `format` defaults to 'png' — the college mirror passes
+ *   none and is unaffected.
+ * @param {(buf: Buffer, item: object) => Promise<Buffer>|Buffer} [opts.transform]
+ *   applied to the fetched bytes before they are written. The NFL mirror uses
+ *   it to run an SVG cut through the same optimise + ink-box trim its LIGHT
+ *   art goes through, so a theme swap does not change the mark's rendered
+ *   size.
  * @param {string} opts.outDir absolute path under public/
  * @param {string} opts.manifestPath absolute path of the manifest JSON
  * @param {string} opts.manifestField manifest key holding the array
@@ -62,6 +89,7 @@ export async function mirrorDarkLogos({
   manifestPath,
   manifestField,
   concurrency = 8,
+  transform,
 }) {
   fs.mkdirSync(outDir, { recursive: true });
 
@@ -71,10 +99,12 @@ export async function mirrorDarkLogos({
   const queue = [...items];
   const workers = Array.from({ length: concurrency }, async () => {
     for (let item = queue.shift(); item; item = queue.shift()) {
-      const outPath = path.join(outDir, `${item.key}.png`);
+      const format = item.format ?? 'png';
+      const outPath = path.join(outDir, `${item.key}.${format}`);
       const tmpPath = `${outPath}.tmp`;
       try {
-        const buf = await fetchPng(item.url);
+        let buf = await fetchAsset(item.url, format);
+        if (transform) buf = Buffer.from(await transform(buf, item));
         fs.writeFileSync(tmpPath, buf);
         fs.renameSync(tmpPath, outPath);
         fetched++;
@@ -97,9 +127,10 @@ export async function mirrorDarkLogos({
   // any still-valid file from a previous local run), not what we attempted.
   const present = items
     .filter((item) => {
-      const p = path.join(outDir, `${item.key}.png`);
+      const format = item.format ?? 'png';
+      const p = path.join(outDir, `${item.key}.${format}`);
       try {
-        return isValidPng(fs.readFileSync(p));
+        return isValidAsset(fs.readFileSync(p), format);
       } catch {
         return false;
       }
@@ -107,11 +138,25 @@ export async function mirrorDarkLogos({
     .map((item) => item.key)
     .sort();
 
+  // Formats are recorded ONLY when something is not a PNG, so a mirror whose
+  // cuts are all PNG (the college one) writes a byte-identical manifest to
+  // before this field existed.
+  const formats = {};
+  for (const item of items) {
+    if ((item.format ?? 'png') !== 'png' && present.includes(item.key)) {
+      formats[item.key] = item.format;
+    }
+  }
+
   // tmp+rename like the PNGs above — this tracked JSON is statically imported
   // by astro build, so a truncated half-write would break every subsequent
   // build/dev/test until manually reverted.
   const manifestTmp = `${manifestPath}.tmp`;
-  fs.writeFileSync(manifestTmp, `${JSON.stringify({ [manifestField]: present }, null, 2)}\n`);
+  const manifest = { [manifestField]: present };
+  if (Object.keys(formats).length) {
+    manifest.formats = Object.fromEntries(Object.keys(formats).sort().map((k) => [k, formats[k]]));
+  }
+  fs.writeFileSync(manifestTmp, `${JSON.stringify(manifest, null, 2)}\n`);
   fs.renameSync(manifestTmp, manifestPath);
 
   console.log(

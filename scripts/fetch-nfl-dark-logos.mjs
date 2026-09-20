@@ -31,6 +31,8 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { mirrorDarkLogos } from './lib/dark-logo-mirror.mjs';
+import { assignedMark, resolveMark } from './lib/nfl-mark-sources.mjs';
+import { optimizeAndTrimSvg } from './download-nfl-logos.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
@@ -45,17 +47,54 @@ export const NFL_TEAM_CODES = [
   'NYJ', 'PHI', 'PIT', 'SEA', 'SF', 'TB', 'TEN', 'WSH',
 ];
 
+/**
+ * Which cut each club's dark mark comes from.
+ *
+ * Was ESPN's `500-dark` for all 32. Now the per-club assignment decides
+ * (src/data/nfl-mark-assignments.json): a club with no entry still resolves to
+ * `espnDark`, so the default path is unchanged and only the clubs that chose
+ * something else move. See docs/plans/nfl-mark-assignments.md.
+ */
+function darkItems() {
+  return NFL_TEAM_CODES.map((code) => {
+    const markId = assignedMark(code, 'dark');
+    const { url, format } = resolveMark(code, markId);
+    if (!url) {
+      // `primary` is the committed file, not something to fetch. No club
+      // assigns it to dark today; if one does, it needs its own handling
+      // rather than a mirror entry pointing at nothing.
+      throw new Error(`${code}: dark mark "${markId}" is not fetchable`);
+    }
+    return { key: code, url, format, markId };
+  });
+}
+
 async function main() {
+  const items = darkItems();
+  const nonDefault = items.filter((i) => i.markId !== 'espnDark');
+  if (nonDefault.length) {
+    console.log(
+      `[fetch-nfl-dark-logos] per-club assignments: ${nonDefault
+        .map((i) => `${i.key}=${i.markId}(${i.format})`)
+        .join(', ')}`,
+    );
+  }
+
   await mirrorDarkLogos({
     label: 'fetch-nfl-dark-logos',
-    items: NFL_TEAM_CODES.map((code) => ({
-      key: code,
-      url: `https://a.espncdn.com/i/teamlogos/nfl/500-dark/${code}.png`,
-    })),
+    items,
     outDir: path.join(ROOT, 'public', 'assets', 'nfl-logos', 'dark'),
     manifestPath: path.join(ROOT, 'src', 'data', 'nfl-dark-logos-manifest.json'),
     manifestField: 'codes',
     concurrency: 6,
+    // An SVG cut goes through the same optimise + ink-box trim the LIGHT art
+    // does. Without it the dark mark keeps NFL.com's square padding while the
+    // light one is tight-cropped, and the logo visibly changes size when the
+    // theme flips.
+    transform: async (buf, item) =>
+      item.format === 'svg'
+        ? Buffer.from(await optimizeAndTrimSvg(buf.toString('utf-8'), item.key))
+        : buf,
   });
 }
 
