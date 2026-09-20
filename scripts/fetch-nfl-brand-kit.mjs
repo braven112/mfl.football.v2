@@ -40,6 +40,12 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  CANONICAL_CODES,
+  KEEP_COMMITTED,
+  NFLVERSE_CODE,
+  nflDotComLogoUrl,
+} from './lib/nfl-logo-sources.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const outPath = path.join(projectRoot, 'src', 'data', 'nfl-brand-kit.json');
@@ -48,18 +54,6 @@ const dryRun = process.argv.includes('--dry-run');
 const ESPN_TEAMS = 'https://sports.core.api.espn.com/v2/sports/football/leagues/nfl/teams?limit=40';
 const NFLVERSE_CSV =
   'https://raw.githubusercontent.com/nflverse/nflfastR-data/master/teams_colors_logos.csv';
-
-/** Canonical ESPN codes — mirrors getAllNFLTeamCodes() in src/utils/nfl-logo.ts. */
-const CANONICAL_CODES = [
-  'ARI', 'ATL', 'BAL', 'BUF', 'CAR', 'CHI', 'CIN', 'CLE',
-  'DAL', 'DEN', 'DET', 'GB', 'HOU', 'IND', 'JAX', 'KC',
-  'LAC', 'LAR', 'LV', 'MIA', 'MIN', 'NE', 'NO', 'NYG',
-  'NYJ', 'PHI', 'PIT', 'SEA', 'SF', 'TB', 'TEN', 'WSH',
-];
-
-/** Canonical code → the code each upstream uses, where they disagree. */
-const NFL_DOT_COM_CODE = { WSH: 'WAS' };
-const NFLVERSE_CODE = { WSH: 'WAS' };
 
 /**
  * ESPN's `rel` arrays, joined, → the key we publish. Anything ESPN adds that
@@ -167,9 +161,13 @@ async function run() {
     teams[code] = {
       name: e.name,
       espnId: e.espnId,
-      // The same SVG scripts/download-nfl-logos.mjs commits, recorded so a
-      // consumer can re-fetch at full fidelity without hardcoding the host.
-      primarySvg: `https://static.www.nfl.com/league/api/clubs/logos/${NFL_DOT_COM_CODE[code] ?? code}.svg`,
+      // The SVG at primarySvg. For most clubs that is the light/primary mark
+      // scripts/download-nfl-logos.mjs commits; for the KEEP_COMMITTED three
+      // NFL.com's only cut is the for-dark variant, so it is NOT what
+      // public/assets/nfl-logos holds. Flagged rather than omitted: a dark
+      // surface wanting a VECTOR cut should know these exist.
+      nflDotComVariant: KEEP_COMMITTED[code] ? 'dark' : 'light',
+      primarySvg: nflDotComLogoUrl(code),
       colors: n?.colors ?? [],
       wordmark: n?.wordmark ?? null,
       squaredLogo: n?.squaredLogo ?? null,

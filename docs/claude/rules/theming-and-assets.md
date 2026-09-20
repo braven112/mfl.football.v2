@@ -405,15 +405,31 @@ hard-won facts (Aug 2026 "missing team images" saga):
   raster-measured `trimViewBox`; NFL.com ships unoptimized paths (JAX 151KB
   against 25KB) on art served to every phone on every player row — hence
   svgo, whose `removeViewBox` must stay OFF because our input is exactly the
-  case it strips; and NFL.com is not editorially uniform — for CHI it serves
-  the bear head (a secondary), for NYG an outlined `ny`, for NYJ the reversed
-  white-filled oval, none of which are the primary a light player cell wants.
-  Those three are pinned in `KEEP_COMMITTED` and keep their existing art.
-  Adopt or reject a code ONLY against a rendered before/after; "the upstream
-  changed" is the reasoning that would have shipped a white Jets oval on a
-  white cell. `src/data/nfl-brand-kit.json` (`pnpm fetch:nfl-brand-kit`) is
-  the companion catalog — ESPN's `lastUpdated` per mark is the tripwire that
-  says WHICH club to go look at.
+  case it strips.
+- **NFL.com publishes ONE cut per club, and for three of them it is the
+  DARK variant.** Every `-light`/`-primary`/`-alt` suffix 404s and the
+  Cloudinary-transformed URLs nfl.com's own site uses return the identical
+  SVG, so there is no light cut to ask for. For CHI it serves the bear head
+  (the orange C dies on a dark card), for NYG the white-bodied `ny` with a
+  red keyline, for NYJ the white-filled oval — on a white player cell those
+  read as hollow outlines or vanish. ESPN confirms it independently: its
+  `500-dark` cut for all three is the same artwork. They are pinned in
+  `KEEP_COMMITTED` (`scripts/lib/nfl-logo-sources.mjs`, shared by both logo
+  scripts so the rule has one copy) and keep their committed light art, with
+  `nflDotComVariant: "dark"` recorded in the brand kit so a dark surface
+  wanting a VECTOR cut knows one exists. `tests/nfl-brand-kit-data.test.ts`
+  fails if the two lists drift.
+- **The refresh script will not silently adopt changed artwork.** Because the
+  committed art now comes from this same upstream, a re-run scores ~0 drift;
+  anything over 8% (mean pixel distance rendered ON WHITE, which is what makes
+  a flip to a for-dark cut score as the large change it is) is HELD BACK and
+  listed, and only lands with an explicit `--accept=CODE`. That gate exists
+  because the alternative is a human eyeballing 32 marks and, having done it
+  once, mistaking a club's dark cut for its secondary logo. Judge a held mark
+  on BOTH backgrounds: rebrand → adopt, for-dark variant → `KEEP_COMMITTED`.
+  `src/data/nfl-brand-kit.json` (`pnpm fetch:nfl-brand-kit`) is the companion
+  catalog — ESPN's `lastUpdated` per mark is the tripwire that says WHICH club
+  to go look at.
 - **A logo 404 is cache-poisonous, not cosmetic.** Cloudflare used to stamp
   `cache-control: max-age=14400` on responses *including 404s*, so one broken
   window kept rendering broken icons on owners' phones for hours after the

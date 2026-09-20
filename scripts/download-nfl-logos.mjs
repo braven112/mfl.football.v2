@@ -57,65 +57,41 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 import { optimize } from 'svgo';
+import {
+  ALIASES,
+  CANONICAL_CODES,
+  KEEP_COMMITTED,
+  nflDotComLogoUrl,
+} from './lib/nfl-logo-sources.mjs';
+
+/**
+ * How far a refreshed mark may drift from the committed one before this
+ * script refuses to write it and asks for a human look (percent mean pixel
+ * distance, rendered on white).
+ *
+ * The committed art now comes from this same upstream, so a routine re-run
+ * scores ~0 and passes silently. Anything meaningfully above that means
+ * NFL.com changed the artwork — a rebrand, or a club's cut flipping to its
+ * dark variant, which is the failure that would otherwise put a white-bodied
+ * mark on a white cell. 8% sits well above raster rounding noise and well
+ * below the smallest real change measured here (WSH's rebrand, ~20%).
+ */
+const DRIFT_THRESHOLD_PCT = 8;
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const logosDir = path.join(projectRoot, 'public', 'assets', 'nfl-logos');
 const dryRun = process.argv.includes('--dry-run');
+const acceptAll = process.argv.includes('--accept-all');
+/** Codes the operator has explicitly looked at and approved this run. */
+const accepted = new Set(
+  process.argv
+    .filter((a) => a.startsWith('--accept='))
+    .flatMap((a) => a.slice('--accept='.length).split(','))
+    .map((c) => c.trim().toUpperCase())
+    .filter(Boolean),
+);
 
-/**
- * Canonical ESPN codes — mirrors getAllNFLTeamCodes() in src/utils/nfl-logo.ts
- * (TS, not importable from a node script). tests/nfl-logo-assets.test.ts is
- * what fails if the two ever diverge.
- */
-const CANONICAL_CODES = [
-  'ARI', 'ATL', 'BAL', 'BUF', 'CAR', 'CHI', 'CIN', 'CLE',
-  'DAL', 'DEN', 'DET', 'GB', 'HOU', 'IND', 'JAX', 'KC',
-  'LAC', 'LAR', 'LV', 'MIA', 'MIN', 'NE', 'NO', 'NYG',
-  'NYJ', 'PHI', 'PIT', 'SEA', 'SF', 'TB', 'TEN', 'WSH',
-];
-
-/**
- * Canonical code → the code NFL.com's club endpoint uses. Washington is the
- * only disagreement: we canonicalize on ESPN's WSH, NFL.com serves WAS
- * (WSH 404s there).
- */
-const NFL_DOT_COM_CODE = { WSH: 'WAS' };
-
-/**
- * Alias filename → canonical code it renders as. Mirrors TEAM_CODE_MAP in
- * src/utils/nfl-logo.ts, minus the FA/UFA/FA* shield entries this script
- * does not own.
- */
-/**
- * Clubs whose NFL.com mark is NOT the right primary for a light player cell,
- * so this script leaves their committed art alone.
- *
- * NFL.com's club endpoint is not editorially uniform: for some clubs it
- * serves a reversed (light-background) cut or the club's SECONDARY mark
- * rather than the primary everything else on this site shows. Measured
- * against the art it would replace, exactly three of the 32 differ for that
- * reason rather than because the club rebranded — the other three big movers
- * (TEN 32%, LAR 20%, WSH 20%) are real 2026 rebrands and ARE adopted.
- *
- * Revisit a code here only against a rendered before/after, never on the
- * strength of the upstream having changed: "NFL.com updated it" is what put
- * a white-filled Jets oval on a white cell in the first place.
- */
-const KEEP_COMMITTED = {
-  CHI: "NFL.com serves the bear head (the Bears' secondary); the primary is the orange C",
-  NYG: "NFL.com serves an outlined 'ny'; the primary is the solid blue NY",
-  NYJ: 'NFL.com serves the reversed oval (green on white) — invisible-edged on a white cell',
-};
-
-const ALIASES = {
-  WAS: 'WSH', JAC: 'JAX', GBP: 'GB', KCC: 'KC', NEP: 'NE',
-  NOS: 'NO', SFO: 'SF', TBB: 'TB', LVR: 'LV', HST: 'HOU',
-  BLT: 'BAL', CLV: 'CLE', ARZ: 'ARI', OAK: 'LV', SDC: 'LAC',
-  SD: 'LAC', RAM: 'LAR', STL: 'LAR',
-};
-
-const logoUrl = (code) =>
-  `https://static.www.nfl.com/league/api/clubs/logos/${NFL_DOT_COM_CODE[code] ?? code}.svg`;
+const logoUrl = nflDotComLogoUrl;
 
 const svgoConfig = {
   multipass: true,
@@ -188,6 +164,36 @@ async function trimViewBox(svg, code) {
   return svg.replace(match[0], `viewBox="${trimmed}"`);
 }
 
+/**
+ * Mean per-pixel distance between two SVGs rendered on white, as a percent.
+ *
+ * Rendered ON WHITE deliberately: that is the background the player cell
+ * uses, so a cut that flips to its for-dark variant (white body, thin
+ * keyline) scores as the large change it visually is, rather than being
+ * flattened away by comparing on transparency.
+ */
+async function renderDrift(svgA, svgB) {
+  const N = 96;
+  const render = (svg) =>
+    sharp(Buffer.from(svg), { density: 200 })
+      .resize(N, N, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 1 } })
+      .flatten({ background: '#ffffff' })
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+
+  const [a, b] = await Promise.all([render(svgA), render(svgB)]);
+  let sum = 0;
+  const px = a.data.length / a.info.channels;
+  for (let i = 0; i < a.data.length; i += a.info.channels) {
+    const dr = a.data[i] - b.data[i];
+    const dg = a.data[i + 1] - b.data[i + 1];
+    const db = a.data[i + 2] - b.data[i + 2];
+    sum += Math.sqrt(dr * dr + dg * dg + db * db);
+  }
+  // 441 = the maximum possible RGB distance (sqrt(3) * 255).
+  return (sum / px / 441) * 100;
+}
+
 async function writeIfChanged(file, content) {
   let existing = null;
   try {
@@ -248,6 +254,26 @@ async function run() {
     return;
   }
 
+  // Drift gate. The committed art comes from this same upstream, so a mark
+  // that now renders differently means NFL.com changed it — a rebrand, or a
+  // cut flipping to its dark variant. Neither should land unlooked-at, so
+  // hold it back and make the operator pass --accept=CODE after seeing it.
+  const held = [];
+  for (const [code, svg] of [...built]) {
+    if (acceptAll || accepted.has(code)) continue;
+    let committed;
+    try {
+      committed = await fs.readFile(path.join(logosDir, `${code}.svg`), 'utf-8');
+    } catch {
+      continue; // No committed art to drift from — a new club.
+    }
+    const drift = await renderDrift(committed, svg);
+    if (drift > DRIFT_THRESHOLD_PCT) {
+      built.delete(code);
+      held.push({ code, drift });
+    }
+  }
+
   const counts = { added: 0, changed: 0, unchanged: 0 };
   const touched = [];
   for (const [code, svg] of built) {
@@ -261,6 +287,20 @@ async function run() {
 
   console.log(`\n📊 ${counts.changed} changed, ${counts.added} added, ${counts.unchanged} unchanged`);
   if (touched.length) console.log(`   ${touched.join(', ')}`);
+
+  if (held.length) {
+    console.log(`\n⚠️  ${held.length} mark(s) HELD BACK — NFL.com's artwork changed:`);
+    for (const { code, drift } of held) {
+      console.log(`     ${code.padEnd(4)} ${drift.toFixed(1)}% different from the committed file`);
+    }
+    console.log(
+      '\n   Render each on BOTH a white and a dark background before deciding.\n' +
+        '   A club that rebranded → adopt it. A cut that flipped to its for-dark\n' +
+        '   variant (white body, thin keyline) → add it to KEEP_COMMITTED instead.\n' +
+        `   Then re-run with --accept=${held.map((h) => h.code).join(',')}`,
+    );
+  }
+
   console.log(dryRun ? '\nDry run complete.' : '\n✅ Logos refreshed — review the diff, then commit.');
 }
 

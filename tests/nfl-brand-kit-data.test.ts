@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { getAllNFLTeamCodes } from '../src/utils/nfl-logo';
+// @ts-expect-error — plain .mjs script lib, no types
+import { KEEP_COMMITTED } from '../scripts/lib/nfl-logo-sources.mjs';
 
 /**
  * NFL brand-kit catalog guardrail (src/data/nfl-brand-kit.json, written by
@@ -46,6 +48,7 @@ interface BrandKitTeam {
   espnId: string;
   primarySvg: string;
   colors: string[];
+  nflDotComVariant: 'light' | 'dark';
   wordmark: string | null;
   squaredLogo: string | null;
   espn: Record<string, LogoCut>;
@@ -122,6 +125,24 @@ describe('nfl-brand-kit.json', () => {
   it('records no run clock (a timestamp would make every regeneration a deploy)', () => {
     expect(Object.keys(kit)).toEqual(['sources', 'teams']);
     expect(raw).not.toMatch(/"generatedAt"|"fetchedAt"|"updatedAt"/);
+  });
+
+  it('flags exactly the clubs whose NFL.com cut is the for-dark variant', () => {
+    // NFL.com publishes ONE cut per club. For these three it is the reversed,
+    // for-dark mark (NYG white-bodied `ny`, NYJ white-filled oval, CHI the
+    // bear head), which is why download-nfl-logos.mjs holds their committed
+    // light art instead. The catalog and that script must name the same
+    // clubs: if they drift, either the catalog claims a light mark we do not
+    // ship, or a surface picks a white-bodied mark for a white cell.
+    const flaggedInCatalog = Object.entries(kit.teams)
+      .filter(([, team]) => team.nflDotComVariant === 'dark')
+      .map(([code]) => code)
+      .sort();
+    expect(flaggedInCatalog).toEqual(Object.keys(KEEP_COMMITTED).sort());
+
+    for (const team of Object.values(kit.teams)) {
+      expect(['light', 'dark']).toContain(team.nflDotComVariant);
+    }
   });
 
   it('keeps team keys sorted so an unchanged upstream is a no-op diff', () => {
