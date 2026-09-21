@@ -181,3 +181,68 @@
   font-weight: 700;
   cursor: pointer;
 }
+
+/* --- Banded rows ------------------------------------------------------- *
+ * Each row wears its franchise's colour, resolved by `withTeamBands`
+ * (src/utils/team-band.ts) and carried on the team through this dialog's JSON
+ * config — so the rows Astro renders on open and the rows the script rebuilds
+ * when the live order lands are painted from one resolution of the colour.
+ *
+ * THE 19px/700 IS THE CONTRAST PREMISE, NOT A STYLE CHOICE. The band's ink is
+ * measured at WCAG's 3:1 large-text floor, which only holds while the text on
+ * the fill is ≥18.66px bold. This list used to be 13.6px; at that size eight
+ * AFL clubs would need dark ink or a darkened fill, so the row grew rather
+ * than the colour being compromised.
+ * `tests/team-band-type-contract.test.ts` fails the build if it shrinks. */
+.wpm-row--band {
+  background: var(--band-fill);
+  color: var(--band-ink);
+  font-size: 1.1875rem;
+  font-weight: 700;
+  padding: 0.45rem 0.6rem;
+  gap: 0.65rem;
+}
+html.dark .wpm-row--band {
+  background: var(--band-fill-dark);
+  color: var(--band-ink-dark);
+}
+.wpm-row--band .wpm-row__rank {
+  color: inherit;
+  width: 1.7rem;
+}
+.wpm-row--band .wpm-row__icon {
+  width: 26px;
+  height: 26px;
+}
+/* The crest was already chosen for THIS fill, which is the club's colour in
+   both themes — so the global `html.dark img[src="<light>"]` swap must not
+   have the last word on a gold or near-white band. */
+html.dark .wpm-row--band .wpm-row__icon {
+  content: normal;
+}
+/* Your own row. The inherited grey fill and accent outline cannot be read
+   against a painted row, and the accent is floored against the CARD rather
+   than against this fill — the ink is the only colour measured against what
+   is actually underneath it. */
+.wpm-row--band.wpm-row--me {
+  background: var(--band-fill);
+  outline: none;
+  box-shadow: inset 0 0 0 3px var(--band-ink);
+}
+html.dark .wpm-row--band.wpm-row--me {
+  background: var(--band-fill-dark);
+  box-shadow: inset 0 0 0 3px var(--band-ink-dark);
+}
+.wpm-row--band.wpm-row--me .wpm-row__rank {
+  color: inherit;
+}
+/* Inverted rather than league-accented, which guarantees the pill separates
+   from whatever fill it lands on. */
+.wpm-row--band .wpm-row__you {
+  background: var(--band-ink);
+  color: var(--band-fill);
+}
+html.dark .wpm-row--band .wpm-row__you {
+  background: var(--band-ink-dark);
+  color: var(--band-fill-dark);
+}

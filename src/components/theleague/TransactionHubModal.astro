@@ -789,13 +789,15 @@ const tradeBuilderHref = resolveLeaguePath(
     font-variant-numeric: tabular-nums;
   }
 
+  /* NOT a circle and NOT `cover`: a round frame is the right treatment for a
+     headshot and the wrong one for a logo — it bites the corners off any crest
+     that is not already round, and `cover` crops rather than fits. Same fix
+     the roster, mock-draft and My Team panels already took. */
   :global(.thm-worow__icon) {
     width: 24px;
     height: 24px;
     flex-shrink: 0;
-    border-radius: var(--radius-full, 9999px);
-    object-fit: cover;
-    background: var(--color-gray-100, #f3f4f6);
+    object-fit: contain;
   }
 
   :global(.thm-worow__icon--blank) {
@@ -815,6 +817,65 @@ const tradeBuilderHref = resolveLeaguePath(
   :global(.thm-worow--me .thm-worow__name) {
     font-weight: 700;
     color: var(--color-gray-900, #111827);
+  }
+
+  /* --- Banded rows ---------------------------------------------------- *
+   * The same band the waiver dialog paints, from the same resolution: the
+   * hub's config carries each club's band on the team (`withTeamBands`), and
+   * this screen's rows are rebuilt in the browser on every open.
+   *
+   * 19px/700 is the premise of the band's contrast measurement, not a style
+   * choice — the ink clears WCAG's 3:1 large-text floor only while the text on
+   * the fill is ≥18.66px bold. tests/team-band-type-contract.test.ts pins it. */
+  :global(.thm-worow--band) {
+    background: var(--band-fill);
+    color: var(--band-ink);
+    font-size: 1.1875rem;
+    font-weight: 700;
+  }
+  :global(html.dark) :global(.thm-worow--band) {
+    background: var(--band-fill-dark);
+    color: var(--band-ink-dark);
+  }
+  :global(.thm-worow--band .thm-worow__rank) {
+    color: inherit;
+    font-size: inherit;
+    width: 1.7rem;
+  }
+  :global(.thm-worow--band .thm-worow__name) {
+    color: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+  }
+  :global(.thm-worow--band .thm-worow__icon) {
+    width: 26px;
+    height: 26px;
+  }
+  /* The crest was chosen for THIS fill, which is the club's colour in both
+     themes; the global dark swap must not override that after sunset. */
+  :global(html.dark) :global(.thm-worow--band .thm-worow__icon) {
+    content: normal;
+  }
+  /* Your own row: the ink is the only colour measured against this fill, so
+     the marker is drawn in it rather than in the grey the card uses. */
+  :global(.thm-worow--band.thm-worow--me) {
+    background: var(--band-fill);
+    box-shadow: inset 0 0 0 3px var(--band-ink);
+  }
+  :global(html.dark) :global(.thm-worow--band.thm-worow--me) {
+    background: var(--band-fill-dark);
+    box-shadow: inset 0 0 0 3px var(--band-ink-dark);
+  }
+  :global(.thm-worow--band.thm-worow--me .thm-worow__name) {
+    color: inherit;
+  }
+  :global(.thm-worow--band .thm-worow__you) {
+    background: var(--band-ink);
+    color: var(--band-fill);
+  }
+  :global(html.dark) :global(.thm-worow--band .thm-worow__you) {
+    background: var(--band-ink-dark);
+    color: var(--band-fill-dark);
   }
 
   :global(.thm-worow__you) {

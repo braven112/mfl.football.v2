@@ -35,6 +35,7 @@ import {
 } from './afl-conference';
 import theLeagueConfig from '../data/theleague.config.json';
 import { leagueUsesWaiverPriority } from './waiver-system';
+import { withTeamBands } from './team-band';
 import type { WaiverPriorityRenderTeam } from './waiver-priority-render';
 import type { LeagueClock } from './viewer-preferences';
 
@@ -114,11 +115,20 @@ export function buildTransactionHubConfig(
       signedIn: true,
       franchiseId,
       conferenceName: getConferenceName(conf),
-      teams: getConferenceTeams(conf).map((t) => ({
-        franchiseId: t.franchiseId,
-        name: t.nameMedium || t.name,
-        icon: t.icon,
-      })),
+      // Bands resolve HERE, not where the rows are drawn: the hub rebuilds its
+      // order in the browser on every open, and `team-band` reads the league
+      // configs the browser has not got. The nav slug comes off the registry
+      // entry rather than being mapped by hand — franchise ids collide across
+      // leagues, so an AFL row resolved against TheLeague would come back in
+      // the Pigskins' red.
+      teams: withTeamBands(
+        getConferenceTeams(conf).map((t) => ({
+          franchiseId: t.franchiseId,
+          name: t.nameMedium || t.name,
+          icon: t.icon,
+        })),
+        league.navSlug,
+      ),
       freeAgentsPath,
       showWaiverPriority,
       officialClock,
@@ -130,11 +140,14 @@ export function buildTransactionHubConfig(
     signedIn: true,
     franchiseId,
     conferenceName: '',
-    teams: (theLeagueConfig.teams ?? []).map((t: any) => ({
-      franchiseId: t.franchiseId,
-      name: t.nameMedium || t.name,
-      icon: t.icon,
-    })),
+    teams: withTeamBands(
+      (theLeagueConfig.teams ?? []).map((t: any) => ({
+        franchiseId: t.franchiseId,
+        name: t.nameMedium || t.name,
+        icon: t.icon,
+      })),
+      league.navSlug,
+    ),
     freeAgentsPath,
     showWaiverPriority,
     officialClock,

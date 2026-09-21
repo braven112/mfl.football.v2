@@ -35,10 +35,20 @@ const LARGE_TEXT_PX = 18.66;
 const REM_PX = 16;
 
 /**
- * Every surface that paints a team band, and the selectors in it that carry
- * text ON the fill. Adding a band to a new component means adding it here.
+ * Every surface that imports the band utility.
+ *
+ * A surface that PAINTS a band declares the selectors carrying text on the
+ * fill, and where that CSS lives when it is not in the same file. A surface
+ * that only RESOLVES bands — a config builder handing them to something else —
+ * declares `paints: false`, which is a statement, not an exemption: the file
+ * still has to be listed, so nobody adds a band-painting component and has it
+ * quietly count as data plumbing.
  */
-const CONTRACTS: Record<string, { bandText: RegExp; boldRule: RegExp }> = {
+type Contract =
+  | { paints: false }
+  | { paints?: true; bandText: RegExp; boldRule: RegExp; cssFile?: string };
+
+const CONTRACTS: Record<string, Contract> = {
   'components/theleague/standings/StandingsTable.astro': {
     bandText: /st-row--band|band-name|band-crest|band-team/,
     boldRule: /tbody tr\.st-row--band td\s*\{([^}]*)\}/,
@@ -49,6 +59,22 @@ const CONTRACTS: Record<string, { bandText: RegExp; boldRule: RegExp }> = {
     bandText: /pr-card__rank-num/,
     boldRule: /\.pr-card__rank-num\s*\{([^}]*)\}/,
   },
+  'components/shared/WaiverPriorityModal.astro': {
+    bandText: /wpm-row--band/,
+    boldRule: /\.wpm-row--band\s*\{([^}]*)\}/,
+    cssFile: 'styles/waiver-priority-modal.css',
+  },
+  // Paints a band without importing the util: its rows are built by
+  // `scripts/transaction-hub.ts` from bands `transaction-hub-config.ts`
+  // resolved. Painting and importing are not the same file here, which is why
+  // the two checks below are independent.
+  'components/theleague/TransactionHubModal.astro': {
+    bandText: /thm-worow--band/,
+    boldRule: /:global\(\.thm-worow--band\)\s*\{([^}]*)\}/,
+  },
+  // Resolve-only: they attach bands to a team list that other surfaces paint.
+  'utils/transaction-hub-config.ts': { paints: false },
+  'pages/afl-fantasy/players.astro': { paints: false },
 };
 
 function walk(dir: string, out: string[] = []): string[] {
@@ -60,12 +86,25 @@ function walk(dir: string, out: string[] = []): string[] {
   return out;
 }
 
-/** Files under src/ that import the band utility, excluding the utility itself. */
+/**
+ * Files under src/ that import the band utility for its VALUES, excluding the
+ * utility itself.
+ *
+ * Type-only imports are stripped first and deliberately do not count. A file
+ * that imports `TeamBand` as a type cannot resolve a band or measure one — it
+ * is handed one already resolved, and the surface that PAINTS that band is
+ * registered on its own (the shared waiver row renderer is exactly this: its
+ * markup is styled by two stylesheets, both listed above).
+ */
 function bandImporters(): string[] {
+  const sep = require('node:path').sep;
   return walk(SRC)
-    .filter((f) => !f.endsWith(`utils${require('node:path').sep}team-band.ts`))
-    .filter((f) => /from\s+['"][^'"]*utils\/team-band['"]/.test(readFileSync(f, 'utf8')))
-    .map((f) => relative(SRC, f).split(require('node:path').sep).join('/'));
+    .filter((f) => !f.endsWith(`utils${sep}team-band.ts`))
+    .filter((f) => {
+      const values = readFileSync(f, 'utf8').replace(/import\s+type\s+[^;]*?;/g, '');
+      return /from\s+['"][^'"]*team-band['"]/.test(values);
+    })
+    .map((f) => relative(SRC, f).split(sep).join('/'));
 }
 
 /** Every `font-size` declared in a block whose selector matches `bandText`. */
@@ -100,14 +139,23 @@ describe('team band — the type keeps the contrast measurement valid', () => {
     ).toEqual([]);
   });
 
-  it('declares no contract for a surface that no longer paints a band', () => {
+  it('keeps no data-plumbing entry for a file that no longer resolves bands', () => {
+    // Only the `paints: false` entries are claims about IMPORTING. A painting
+    // entry need not import the util at all — the hub's rows are built by a
+    // script from bands its config resolved — and its own check below fails
+    // loudly if its CSS stops existing or stops matching.
     const importers = new Set(bandImporters());
-    expect(Object.keys(CONTRACTS).filter((f) => !importers.has(f))).toEqual([]);
+    const stale = Object.entries(CONTRACTS)
+      .filter(([, c]) => c.paints === false)
+      .map(([file]) => file)
+      .filter((file) => !importers.has(file));
+    expect(stale).toEqual([]);
   });
 
   for (const [file, contract] of Object.entries(CONTRACTS)) {
+    if (contract.paints === false) continue;
     describe(file, () => {
-      const css = readFileSync(resolve(SRC, file), 'utf8');
+      const css = readFileSync(resolve(SRC, contract.cssFile ?? file), 'utf8');
 
       it('declares band type at 18.66px or larger, at every breakpoint', () => {
         const sizes = bandFontSizes(css, contract.bandText);

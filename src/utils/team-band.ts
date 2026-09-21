@@ -245,6 +245,40 @@ export function teamBandStyle(band: TeamBand): string {
 }
 
 /**
+ * Attach each team's band to a list that already carries franchise ids.
+ *
+ * For a surface whose markup is built in the BROWSER — the waiver order is
+ * re-rendered from `/api/waiver-order` on every open — the band cannot be
+ * resolved where it is drawn: this module reads the league configs, which the
+ * browser does not have. Resolving it onto the team list instead means the
+ * band travels with the team it belongs to, through whatever config blob that
+ * surface already ships, and the two can never disagree about which colour
+ * goes with which franchise.
+ *
+ * Client code should import `TeamBand` as a TYPE ONLY. A value import would
+ * pull all three league configs into the browser bundle for the sake of a
+ * record that is already serialized in the page.
+ */
+export function withTeamBands<T extends { franchiseId: string; icon?: string }>(
+  teams: T[],
+  league: LeagueSlug,
+): Array<T & { band: TeamBand }> {
+  return teams.map((team) => {
+    const band = resolveTeamBand(team.franchiseId, league);
+    // An `icon` is swapped to the cut that reads on THIS fill, for the same
+    // reason `bandCrestSrc` exists at all — and here rather than at the call
+    // sites because a team prepared for a band needs both halves or neither.
+    // A near-black fill with the light crest on it is the Computer Jocks
+    // vanishing into their own row.
+    const icon =
+      typeof team.icon === 'string' && team.icon
+        ? bandCrestSrc(team.icon, league, band.ink === BAND_INK_LIGHT)
+        : team.icon;
+    return { ...team, icon, band };
+  });
+}
+
+/**
  * The crest artwork a band should render, chosen by the FILL rather than by the
  * theme — the same reasoning `franchise-band-brand.ts` records for the player
  * modal's band, arrived at from the opposite direction. There the surface is
