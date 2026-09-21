@@ -50,6 +50,26 @@ export interface LivePlayerRow {
   secondsRemaining: number;
   /** 'starter' | 'nonstarter' from the MFL liveScoring feed. */
   status: string;
+  /**
+   * This league's FULL-GAME projection for the player, stamped when a board is
+   * built. Absent on a raw feed parse — the MFL snapshot carries no
+   * projections — so read it as `row.projected ?? 0`.
+   *
+   * It lives on the ROW and not in `PlayerMeta` because a projection belongs
+   * to a player IN A LEAGUE: the same back is worth different points under two
+   * rule sets, and `PlayerMeta` is one map SHARED across every panel of a
+   * cross-league board. Putting a number in that map would hand one league's
+   * projection to the other league's rows. A row, by construction, sits inside
+   * exactly one team inside exactly one panel, so it can hold one honestly.
+   *
+   * Without it, an in-progress row's projected final collapsed to its live
+   * score: `LvPlayerRow` read `meta.projected`, which both board builders set
+   * to a deliberate 0, so a starter with 20 points at halftime printed
+   * "proj 20.0" instead of 30. The TEAM totals were always right — they take
+   * the per-league map directly (`computeTeamTotals`) — which is what made the
+   * gap invisible in the win-probability bar.
+   */
+  projected?: number;
 }
 
 /**

@@ -22,10 +22,11 @@
  * `page-fork-ratchet` exists to stop).
  */
 import { nflLogoUrl } from '../../../utils/live/nfl-logo-url';
-import type { SlateBox } from '../../../utils/sunday-ticket-slate';
-import { formatKickoffZones } from '../../../utils/sunday-ticket-slate';
+import type { ContributionPlayer, SlateBox } from '../../../utils/sunday-ticket-slate';
+import { formatKickoffZones, displayProjectionFor } from '../../../utils/sunday-ticket-slate';
 import { REDZONE_LOGO, countryTimeZones, resolveChannel, type CountryCode, type KickoffZone } from '../../../utils/broadcast-channels';
 import PlayerCell from '../../theleague/PlayerCell.astro';
+import { isClockRunning } from '../../../utils/live-win-probability';
 
 export interface Props {
   box: SlateBox;
@@ -60,6 +61,19 @@ const MAX_PLAYERS_LEAGUE_WIDE = 5;
 // `html.dark` swap never fires for a light-theme viewer here. Ask for the dark
 // ground directly instead of rendering the light mark on a near-black tile.
 const logo = (code: string) => nflLogoUrl(code, 'dark');
+
+/**
+ * The projection cell's tooltip, which has to name which number it is.
+ *
+ * Blended while the clock is running and the raw projection otherwise, so the
+ * label moves with it — "projected final" over an untouched projection is the
+ * cell and its own tooltip disagreeing. `isClockRunning` is the SAME predicate
+ * `displayProjectionFor` branches on, for exactly that reason.
+ */
+const projTitle = (p: ContributionPlayer) =>
+  p.live !== undefined && p.secondsRemaining !== undefined && isClockRunning(p.secondsRemaining)
+    ? `${displayProjectionFor(p).toFixed(1)} projected final`
+    : `${p.proj.toFixed(1)} projected`;
 // The kickoff in the viewer's own clocks — ET/PT at home, AEST/AWST in
 // Australia, where a Sunday 1pm ET game is Monday morning and says so.
 const clocks = box.kind === 'game'
@@ -167,11 +181,31 @@ const starters = (n: number) => `${n} starter${n === 1 ? '' : 's'}`;
                         data-st-live={`${group.leagueId}:${p.playerId}`}
                       >{p.live === undefined ? '' : p.live.toFixed(1)}</span>
                     ) : null}
-                    {/* No title when there is no projection: `proj` is 0 for
+                    {/* The PROJECTED FINAL, blended: a full-game projection
+                        printed beside a live score reads as points still to
+                        come, and mid-game it is not — see
+                        `displayProjectionFor`. Before kickoff and after the
+                        whistle the projection is printed untouched, so this
+                        cell never just repeats the live one beside it.
+
+                        `data-st-proj-base` carries the RAW full-game number so
+                        the poller can re-blend against the clock it just read;
+                        without it the cell would freeze at whatever the first
+                        paint computed and drift for the rest of the afternoon.
+
+                        No title when there is no projection: `proj` is 0 for
                         "the league has none", and the row deliberately shows an
                         em-dash — a "0.0 projected" tooltip over it reads as a
-                        real forecast of zero. */}
-                    <span class="st-box__proj" title={p.proj > 0 ? `${p.proj.toFixed(1)} projected` : undefined}>{p.proj > 0 ? p.proj.toFixed(1) : '—'}</span>
+                        real forecast of zero. The blend never fills that in
+                        either: with no projection there is nothing to blend,
+                        and printing the live score here would duplicate the
+                        column beside it as though it were a forecast. */}
+                    <span
+                      class="st-box__proj"
+                      data-st-proj={`${group.leagueId}:${p.playerId}`}
+                      data-st-proj-base={p.proj}
+                      title={p.proj > 0 ? projTitle(p) : undefined}
+                    >{p.proj > 0 ? displayProjectionFor(p).toFixed(1) : '—'}</span>
                   </span>
                 </li>
               ))}

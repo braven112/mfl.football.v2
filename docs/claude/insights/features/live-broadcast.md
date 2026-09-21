@@ -34,7 +34,10 @@ design spec.
   hardcoded `projected: 0` in a shared `playerMeta`, which made every
   `projectedFinal` equal the live score and pinned every win-probability bar to
   a hard 100%/0% — `winProbability` takes a `remainingPoints <= 0` branch — at
-  noon on a Sunday with the whole slate to play.
+  noon on a Sunday with the whole slate to play. **Where it DOES ride, for a
+  player row, is the row** (`LivePlayerRow.projected`): the 0 is correct for the
+  shared map and starves anything that reads only the map, which is how the
+  same bug came back one level down a fortnight later — see 2026-09-21 below.
 - **`toBroadcastPair` cannot make a colour visible.** It only ever DARKENS, so
   it makes a colour safe to write white text on and returns an already-dark one
   untouched. Seven of TheLeague's sixteen franchises are `#181818`, which is
@@ -430,3 +433,60 @@ the #1081 failure exactly, one class name later. They read `declared(cls, prop)`
 now: the last bare single-class declaration in file order, which is what the
 cascade leaves in effect at equal specificity.
 
+## 2026-09-21 — the deliberate 0 came back one level down
+
+The rule above fixed the win-probability bar in September and left a hole
+nobody looked in for a fortnight: the PLAYER rows.
+
+`LvPlayerRow` computed its projected final with `projectPlayerFinal({ live,
+projected: meta?.projected ?? 0, secondsRemaining })`. Both board builders set
+`playerMeta[id].projected = 0` on purpose — correctly, per the rule — and hand
+the real per-league map to `computeTeamTotals`. So the row multiplied 0 by the
+fraction of game left and printed its own live score back as its forecast. A
+starter projected for 20 with 20 at halftime read `proj 20.0` instead of 30,
+all afternoon, on `/live-scoring` and MFL Live alike.
+
+**What made it survive a fortnight is that the fix for the FIRST bug is what
+hid the second.** The team totals were right, the projected finals on the cards
+were right, the win-probability bars were right — every aggregate that reads
+the per-league map directly was correct. Only the leaf that read the shared map
+was wrong, and a leaf printing a plausible number next to a correct total does
+not look like anything. There was no crash, no zero, no flat bar; just two
+numbers that happened to be equal.
+
+Three things worth carrying:
+
+- **A deliberate sentinel is an input somewhere.** `projected: 0` was written
+  as "this map must not answer this question", and every reader that did not
+  know about the parallel map read it as an answer. When a value is parked at a
+  neutral-looking default to prevent misuse, the thing to check is not whether
+  the default is safe — it is who still reads it. Two builders set it; one
+  component read it; nothing connected the two.
+- **Correct aggregates are not evidence of correct leaves.** The guard tests
+  covered `computeTeamTotals` thoroughly and the model itself
+  (`projectPlayerFinal`) had its own suite with the exact halftime case in it.
+  Both passed throughout. What had no test was the wiring between them, which
+  is where the number actually came from.
+- **The row-first read needs a scan guard, because the regression renders.**
+  Reverting to `meta?.projected ?? 0` produces a number, polls happily and
+  draws a correct bar. `tests/live-row-projections.test.ts` pins the literal
+  `row.projected ?? meta?.projected ?? 0` for that reason, alongside the
+  behavioral tests.
+
+The same pass took Sunday Ticket, which had never blended at all — it printed
+the raw full-game projection beside the live score. Two notes from that half:
+
+- **Re-blend on the client or do not blend at all.** A blend is true only for
+  the instant it was computed. The live score beneath it updates every poll, so
+  a server-only blend drifts for three hours under a pill that says "Live".
+  The cell carries the RAW projection in `data-st-proj-base` and the island
+  recomputes from that — never from the rendered value, which would compound a
+  blend of a blend on every poll.
+- **Blending the box TOTAL was the wrong instinct, and a test caught it.**
+  First pass blended it too, which broke `live points never change the ranking`
+  — `projTotal` is the sort tiebreak. Worse, it could not have helped: the only
+  surface that prints a box total is the league-wide board, which has no live
+  read at all, so the blend there equals the raw sum by construction. It would
+  have changed the ordering and nothing an owner sees. The revert carries a
+  test saying so explicitly, because raw totals next to blended rows otherwise
+  read as a missed spot.
