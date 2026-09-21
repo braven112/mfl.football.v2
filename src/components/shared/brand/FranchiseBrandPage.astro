@@ -190,22 +190,29 @@ const USAGE: Array<{ term: string; detail: string }> = [
         other lines on a graph, and a surface that mistook it for brand identity opened a
         black-and-red franchise in pink.
       </p>
-      <ul class="cb__hues">
+      {/*
+        The club page's swatch grid, unchanged — a swatch over its hex. One
+        addition a franchise needs and a club does not: the ROLE. An NFL club's
+        colours are just its colours, whereas these each mean something
+        different to the site, and "Chart hue" is the one nothing may treat as
+        brand identity. The hex itself is the copy target, so the row keeps the
+        club page's shape rather than growing a button beside every swatch.
+      */}
+      <ul class="cb__swatches">
         {
           brand.colors.map((c) => (
-            <li class="cb__hue">
-              <span class="cb__hue-chip" style={`--chip:${c.hex}`} />
-              <span class="cb__hue-body">
-                <span class="cb__hue-label">{c.label}</span>
-                <span class="cb__actions">
-                  <button class="cb-copy" type="button" data-copy={c.hex} aria-label={`Copy ${c.label} hex`}>
-                    <code>{c.hex}</code>
-                    <span class="cb-copy__idle">copy</span>
-                    <span class="cb-copy__done">copied</span>
-                  </button>
-                </span>
-                <span class="cb__hue-note">{c.note}</span>
-              </span>
+            <li>
+              <span class="cb__swatch" style={`background:${c.hex}`} />
+              <button
+                class="cb-copy cb-copy--hex"
+                type="button"
+                data-copy={c.hex}
+                title={c.note}
+                aria-label={`Copy the ${c.label} hex, ${c.hex}`}
+              >
+                <code>{c.hex}</code>
+              </button>
+              <span class="cb__swatch-role">{c.label}</span>
             </li>
           ))
         }

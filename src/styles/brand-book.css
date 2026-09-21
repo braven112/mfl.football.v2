@@ -508,44 +508,47 @@
   display: inline;
 }
 
-/* ── Config swatches ────────────────────────────────────────────────────────
-   The club page's `.cb__swatches` is a bare hex strip; a franchise's hexes
-   each mean something different, so each one carries its label and its note. */
-.cb__hues {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-  gap: var(--spacing-sm, 0.75rem);
-}
-.cb__hue {
-  margin: 0;
-  border: 1px solid var(--content-border, #e2e8f0);
-  border-radius: var(--radius-md, 8px);
-  overflow: hidden;
-  background: var(--card-bg, #ffffff);
-}
-.cb__hue-chip {
-  display: block;
-  height: 56px;
-  background: var(--chip, #000);
-}
-.cb__hue-body {
-  padding: 0.5rem 0.6rem 0.65rem;
-}
-.cb__hue-label {
-  display: block;
-  font-size: 0.78rem;
+/* ── Swatch additions ──────────────────────────────────────────────────────
+   The club page's `.cb__swatches` grid is used as-is by both halves. A
+   franchise adds one line the club does not need — the ROLE, since these
+   hexes each mean something different to the site — and makes the hex itself
+   the copy target so the row keeps the club page's shape. */
+.cb__swatch-role {
+  font-size: 0.7rem;
   font-weight: 700;
   color: var(--page-text, #111827);
 }
-.cb__hue-note {
-  display: block;
-  margin-top: 0.3rem;
-  font-size: 0.71rem;
-  line-height: 1.4;
+/* Looks exactly like the club page's bare `<code>` hex, and behaves like a
+   button. No border, no fill: a control styled as a control here would break
+   the row it is supposed to match. */
+.cb-copy--hex {
+  padding: 0;
+  border: 0;
+  background: none;
+  align-self: flex-start;
+}
+.cb-copy--hex code {
+  font-size: 0.7rem;
   color: var(--color-gray-500, #6b7280);
+  background: transparent;
+  padding: 0;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+.cb-copy--hex:hover code,
+.cb-copy--hex:focus-visible code {
+  color: var(--page-text, #111827);
+}
+/* The confirmation replaces the hex in place, so nothing reflows. */
+.cb-copy--hex.is-copied code {
+  visibility: hidden;
+}
+.cb-copy--hex.is-copied::after {
+  content: 'copied';
+  margin-left: -3.2em;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--page-text, #111827);
 }
 
 /* ── Derived colours: one row per family, both themes side by side ───────── */

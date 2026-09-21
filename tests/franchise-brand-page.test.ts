@@ -35,6 +35,26 @@ describe('FranchiseBrandPage — ONE template with the club page', () => {
     expect(INDEX).toContain('class="brand__tile"');
   });
 
+  it('draws its colour swatches with the club page\'s grid', () => {
+    // The franchise half briefly had a taller card of its own — swatch, label,
+    // note and a button each. Same grid now: a swatch over its hex, with the
+    // hex itself as the copy target so the row keeps the club page's shape
+    // rather than growing a control beside every colour.
+    const CLUB = read('src/components/shared/brand/ClubBrandPage.astro');
+    for (const src of [PAGE, CLUB]) {
+      expect(src).toContain('class="cb__swatches"');
+      expect(src).toContain('class="cb__swatch"');
+    }
+    // The one line a franchise needs and a club does not: the ROLE, because
+    // these hexes each mean something different to the site and "Chart hue" is
+    // the one nothing may treat as brand identity.
+    expect(PAGE).toContain('cb__swatch-role');
+    expect(CLUB).not.toContain('cb__swatch-role');
+    // The hex stays copyable, and styled as the club page's bare <code>.
+    expect(PAGE).toContain('cb-copy--hex');
+    expect(CSS).toMatch(/\.cb-copy--hex \{[\s\S]{0,200}?border: 0;/);
+  });
+
   it('keeps the themed-heading fix in exactly one place', () => {
     // `color: inherit` is what beats the layout's global h1 rule. If it ever
     // leaves the sheet, every hero heading on both halves goes accent blue.
