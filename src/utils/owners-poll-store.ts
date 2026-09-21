@@ -13,12 +13,9 @@ import { getRedis } from './redis-client';
 import { ALL_LEAGUES, getLeagueById, type LeagueDefinition } from '../config/leagues';
 import {
   ownersPollStandingKey,
-  ownersPollCurrentKey,
   ownersPollPauseKey,
   affirmBallotRecord,
   parseStoredBallot,
-  parseStoredWindow,
-  resolveBallotWindow,
 } from './owners-poll-ballot.mjs';
 import { getLeagueTeamBrands } from './league-team-brands';
 import { getCurrentWeekForYear } from './current-week';
@@ -241,82 +238,6 @@ export async function activePollWindow(
 ): Promise<OwnersPollWindow | null> {
   if (await isPollPaused(scope)) return null;
   return resolvePollCycle(league, now);
-}
-
-/**
- * Open (or replace) a league's ballot window.
- *
- * The commissioner path. The Tuesday cron does the same write from node via
- * scripts/lib/owners-poll-redis.mjs — the two share the KEY and the record
- * shape (owners-poll-ballot.mjs) but not the client, because a script cannot
- * import TypeScript.
- *
- * Ballots are NOT touched. Re-opening the same week picks up every vote
- * already cast, which is what makes this safe to run to recover from a failed
- * cron.
- */
-export async function writeOwnersPollWindow(
-  scope: string,
-  window: OwnersPollWindow,
-): Promise<boolean> {
-  const redis = await getRedis();
-  if (!redis) return false;
-  try {
-    // Expire a week after the close, so a pointer can never outlive its ballot
-    // if the close pass never runs. An expired pointer reads as "no ballot
-    // open", which is the safe state; a stale one would keep taking votes into
-    // a week that has already published.
-    const ttl = Math.max(
-      3600,
-      Math.ceil((Date.parse(window.closesAt) - Date.now()) / 1000) + 7 * 86400,
-    );
-    await redis.set(ownersPollCurrentKey(scope), JSON.stringify(window), { ex: ttl });
-    return true;
-  } catch (err) {
-    console.error('[owners-poll] failed to open window:', err);
-    return false;
-  }
-}
-
-/**
- * Stop a ballot accepting votes.
- *
- * Removes the pointer ONLY. It never tallies and never deletes ballots, so an
- * accidental call cannot publish a consensus or destroy votes — the tally is
- * generate-pecking-order.mjs --close-poll, deliberately a separate action.
- */
-export async function clearOwnersPollWindow(scope: string): Promise<boolean> {
-  const redis = await getRedis();
-  if (!redis) return false;
-  try {
-    await redis.del(ownersPollCurrentKey(scope));
-    return true;
-  } catch (err) {
-    console.error('[owners-poll] failed to close window:', err);
-    return false;
-  }
-}
-
-/** Read the currently-open window for a league, or null if none is open. */
-export async function readOwnersPollWindow(scope: string): Promise<OwnersPollWindow | null> {
-  const redis = await getRedis();
-  if (!redis) return null;
-  try {
-    const raw = await redis.get(ownersPollCurrentKey(scope));
-    return parseStoredWindow(raw) as OwnersPollWindow | null;
-  } catch (err) {
-    console.error('[owners-poll] failed to read window:', err);
-    return null;
-  }
-}
-
-/** 'pending' | 'open' | 'closed' for a window at a given instant. */
-export function windowState(
-  window: OwnersPollWindow | null,
-  now: Date = new Date(),
-): 'none' | 'pending' | 'open' | 'closed' {
-  if (!window) return 'none';
-  return resolveBallotWindow(now, window) as 'pending' | 'open' | 'closed';
 }
 
 /** Read one franchise's ballot for a week. Null when they haven't voted. */
