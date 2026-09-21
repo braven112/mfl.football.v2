@@ -500,11 +500,30 @@ button.lv-card:focus-visible {
   display: grid;
   place-items: center;
   flex: none;
+  /* A mark that fails to load renders its ALT TEXT, at body size, inside a
+     1.4rem box — which is how a broken `/_vercel/image` request turned two
+     matchup rows into "Rhinos logo" wrapped across three lines each, on a real
+     board (2026-09-21). The alt attribute still reaches a screen reader; it
+     just may not repaint the row. An outside league's mark is a URL somebody
+     else controls, so this is a permanent condition, not a one-off. */
+  overflow: hidden;
+  font-size: 0;
+  color: transparent;
 }
 .lv-side__crest img {
   width: 100%;
   height: 100%;
   object-fit: contain;
+}
+/* The identity ladder's uploaded-mark rung, and ONLY that rung. MFL's "icon"
+   is whatever the commissioner uploaded — one league's is a 1500x636 banner
+   for every franchise — so an unknown aspect ratio is normalized by cropping
+   to the square box rather than letterboxed into a sliver. `contain` stays the
+   rule for a league crest and an NFL club mark: those are drawn to fit, and a
+   crop takes a bite out of someone's logo. */
+.lv-side__crest--crop img {
+  object-fit: cover;
+  border-radius: var(--radius-sm);
 }
 
 /* The identity ladder's text rung: initials on one neutral field. Never a hue

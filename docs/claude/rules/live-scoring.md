@@ -204,6 +204,55 @@ which is exactly why the split exists — verify parsing offline against
   swaps the board without remounting, and both leagues have a franchise `0001`
   — and it lives in the island, so a cold load whose SSR assembly failed still
   shows the error card. Guard: `tests/live-stale-fallback.test.ts`.
+- **"Icon" is MFL's word, not a size — and only the rung that EARNED a crop
+  may be cropped.** The identity ladder (`mfl-live-identity.ts`) has four rungs
+  now: a league we run, then **the mark the franchise uploaded to MFL**, then
+  the NFL name match, then initials. The uploaded mark sits above the NFL match
+  because art an owner chose outranks art we inferred from their name. Two
+  things it forced, both load-bearing: the mark goes out through
+  `optimizedRemoteImage` (`/_vercel/image`, one width). That config lives in
+  `astro.config.ts`'s `imagesConfig` and NOT in `vercel.json`, whose `images`
+  block this project never reads — the Vercel adapter writes
+  `.vercel/output/config.json` and that is what the optimizer consults. Both
+  halves can 400: a width outside `sizes`, or a host outside `remotePatterns`,
+  each takes out every mark at once. `REMOTE_MARK_HOSTS` is the single copy of
+  that host list, imported by the config AND checked before a rewrite, because
+  a franchise mark is an arbitrary URL — only about 1 in 15 in this repo's own
+  league exports is on `*.myfantasyleague.com`, and an unlisted host must be
+  served as-is rather than through an optimizer that will refuse it, because Archie's league uploaded a **1500×636 PNG of ~400 KB for
+  all 99 franchises** into a 1.4rem box; and it is the ONE rung the UI crops
+  square (`object-fit: cover`), because a league crest and an NFL club mark are
+  drawn to fit and cropping one takes a bite out of somebody's logo. That is
+  what `rung` is for on the wire — the renderer cannot tell a banner from a
+  crest by looking at a URL. `icon` is MFL's small slot and `logo` its banner
+  slot, so `icon` first and `logo` only in its absence is "the smaller of the
+  two" wherever a commissioner kept the convention, at no extra request; where
+  both hold the same upload there is nothing to choose and the optimizer is
+  what bounds the bytes. The mark rides the SAME `TYPE=league` read as the
+  names (`readLeagueFranchiseMarks`), which is the only reason a board fanning
+  out across every league an owner is in can show them at all. Guard:
+  `tests/mfl-live-uploaded-mark.test.ts`.
+- **`liveScoring` has TWO shapes and only one of them says who is playing
+  whom.** `{"liveScoring":{"matchup":[{"franchise":[…]}]}}` carries the
+  pairings; `{"liveScoring":{"franchise":[…]}}` carries the identical scores,
+  starters and bench with NO pairings at all. Both parse, every shape check
+  passes, and `hasLiveSignal` is true — so the flat shape lands on the one
+  combination of the four honest states that is a lie: `no-matchup`, a bye,
+  asserted over a viewer who is being scored. TheLeague and the AFL both serve
+  the grouped shape, which is why nothing saw this for a year; Archie's
+  Fantasy Football League (10105, 99 franchises, two games a week each) serves
+  the flat one and told all 99 of its owners they had no game on 2026-09-21
+  while MFL's own `schedule` export listed every pairing. So a league that is
+  SCORING but came back UNPAIRED now falls back to `TYPE=schedule&W=`
+  (`readLeagueSchedulePairings`), inside the shared cross-league read so
+  `/broadcast` and MFL Live cannot diverge. Three things that keep it cheap and
+  honest: it is gated on `hasLiveSignal` (an unplayed week is `not-played`
+  whatever its pairings say, so there is nothing to fix and no read to spend);
+  the WEEK in the answer is checked rather than assumed, because pasting
+  another week's pairings over a live board is the same confident wrong answer
+  the fallback exists to remove; and an empty answer is never cached, for the
+  reason every other never-cache-a-failure rule here exists. Guard:
+  `tests/live-schedule-pairings.test.ts`.
 - **Every failed MFL read now says why, and one league-week is read once per
   20s.** Before that, timeout, refused connection, HTTP error, HTML-under-a-200
   and an MFL `error` key all collapsed into the same silent `ok: false` — the

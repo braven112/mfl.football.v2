@@ -42,6 +42,11 @@ const CURATED = [
   // board shipped. Its head is the rules that still bind on this page; the
   // dated journal below them is the evidence.
   `${FEATURES}/draft-broadcast.md`,
+  // Passed 64 KB on 2026-09-21, on the entry about where Vercel's image config
+  // is actually read. Its head is grouped by failure mode — the edge lying to
+  // you, config read somewhere other than where you wrote it, the function
+  // bundle, CI, and the sandbox — because that is how you arrive at this file.
+  `${DOMAINS}/deployment.md`,
 ];
 
 /** Past this, "read this file before each task" stops being followable. */

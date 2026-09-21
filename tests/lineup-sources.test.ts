@@ -702,12 +702,57 @@ describe('scores MFL has not reported', () => {
   });
 });
 
+/** MFL collapses a one-element list to a bare object, everywhere. */
+const asList = (v: unknown): unknown[] => (Array.isArray(v) ? v : v ? [v] : []);
+
 describe('an outage on a week the disk copy carries', () => {
+  /**
+   * A week the committed feed LISTS for this franchise but carries no lineup
+   * for — the precondition the case below is about.
+   *
+   * DERIVED, NOT HARDCODED. This was `week: 4`, chosen because week 4 was
+   * unplayed when the test was written; the roster-sync bot then filled week 4
+   * in and the case failed on `main` for every PR until someone noticed. The
+   * WEEK is fixture detail — the rule is "listed, but no lineup" — so the
+   * fixture now finds a week that still satisfies it instead of asserting that
+   * the calendar has not moved. Same trap `mfl-api.md` records for
+   * `NO_DISK_FEED_YEAR`: a real year asserts against bot-synced data and fails
+   * later, on main. That escape hatch does not fit here, because this case
+   * needs the franchise to BE listed.
+   */
+  const unplayedListedWeek = (): number => {
+    const raw = JSON.parse(
+      readFileSync('data/theleague/mfl-feeds/2026/weekly-results-raw.json', 'utf8'),
+    ) as Array<{ weeklyResults?: { week?: string; matchup?: unknown } }>;
+    for (const entry of raw) {
+      const wk = Number(entry?.weeklyResults?.week);
+      if (!Number.isFinite(wk)) continue;
+      const matchups = asList(entry.weeklyResults?.matchup);
+      let listed = false;
+      let starters = 0;
+      for (const m of matchups) {
+        for (const f of asList((m as { franchise?: unknown })?.franchise)) {
+          const franchise = f as { id?: string; player?: unknown };
+          if (franchise?.id !== '0001') continue;
+          listed = true;
+          starters += asList(franchise.player).filter(
+            (pl) => (pl as { status?: string })?.status === 'starter',
+          ).length;
+        }
+      }
+      if (listed && starters === 0) return wk;
+    }
+    throw new Error(
+      'No week in the committed feed is listed-but-unplayed for 0001 — this case ' +
+        'needs one, and the season having been fully played is a real change to it.',
+    );
+  };
+
   it('reports a read failure, not "no game scheduled"', () => {
-    // Week 4 IS in the committed feed and DOES list franchise 0001, so
+    // The week IS in the committed feed and DOES list franchise 0001, so
     // claiming the owner has no game would be a lie told by a day-old file.
     const r = resolveWeekLineup({
-      week: 4, franchiseId: '0001', league: 'theleague', leagueYear: 2026,
+      week: unplayedListedWeek(), franchiseId: '0001', league: 'theleague', leagueYear: 2026,
       weekScopedPayload: null, ytdPayload: null,
     });
     expect(r.franchiseListed).toBe(true);

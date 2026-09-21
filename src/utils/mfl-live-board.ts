@@ -265,6 +265,10 @@ export async function assembleMflLiveBoard(
         // "The Boondock Saints" has nameShort "Saints", which matches NO.
         franchiseName: names[fid] ?? fallbackName,
         leagueSlug: slug,
+        // The franchise's own uploaded mark, for the leagues this site does
+        // not run. A registered league answers on rung 1 with its committed
+        // crest and never reaches this.
+        mflIcon: read.franchiseIcons?.[fid],
       });
 
     const toTeam = (fid: string, fallbackName: string): MflLiveTeam => {

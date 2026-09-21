@@ -18,6 +18,7 @@ import type { JSX } from 'react';
 import type { LiveMatchup, LiveTeam } from '../../../types/live';
 import { renderOrder, winProbabilityFor } from '../../../utils/live/model';
 import LvWinProbBar from './LvWinProbBar';
+import LvMark from './LvMark';
 
 const fmt = (n: number) => n.toFixed(1);
 
@@ -76,17 +77,22 @@ export default function LvMatchupCard({
   // two different "lead"s, and naming them the same shadowed the prop.
   const sideRow = (team: LiveTeam, ahead: boolean, which: 0 | 1) => (
     <div className={`lv-side${ahead ? ' lv-side--lead' : ''}`}>
-      {team.icon ? (
-        <span className="lv-side__crest">
-          <img src={team.icon} alt={team.iconAlt} loading="lazy" />
-        </span>
-      ) : (
-        // The identity ladder's text rung. Initials are a LABEL, not invented
-        // artwork — no fabricated crest and no hue derived from the name.
-        <span className="lv-side__initials" aria-hidden="true">
-          {team.initials}
-        </span>
-      )}
+      {/* CROPPED ONLY ON THE UPLOADED-ART RUNG. "Icon" is MFL's word, not a
+          size: one league's franchises all carry 1500x636 banners, which
+          `contain` renders as a 1.4rem-wide sliver a few pixels tall. A league
+          crest or an NFL club mark is drawn to fit its own box, so cropping one
+          cuts off somebody's logo — those keep `contain`.
+
+          `LvMark` also falls back to the ladder's TEXT rung when the mark fails
+          to load, which for an uploaded mark on somebody else's host is a
+          permanent condition rather than an edge case. */}
+      <LvMark
+        icon={team.icon}
+        alt={team.iconAlt}
+        initials={team.initials}
+        crop={team.rung === 'mfl'}
+        classes={{ wrap: 'lv-side__crest', crop: 'lv-side__crest--crop', text: 'lv-side__initials' }}
+      />
       <span className="lv-side__name">{team.nameShort || team.name}</span>
       <span className="lv-side__proj">{fmt(team.projectedFinal)}</span>
       {/* INK, not the fill pair: this is text, and `--t0`/`--t1` only clear ΔE

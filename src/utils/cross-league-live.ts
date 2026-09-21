@@ -26,10 +26,13 @@ import {
   buildBoardLeagues,
   loadLeagueProjections,
   loadLeagueSnapshot,
-  readLeagueFranchiseNames,
+  readLeagueFranchiseMarks,
   readOutsideLiveSnapshot,
+  type FranchiseMark,
 } from './broadcast-live-source';
 import { hasLiveSignal, type LiveSnapshot } from './live-scoring-snapshot';
+import { readLeagueSchedulePairings } from './mfl-schedule-pairings';
+import type { MatchupPairing } from '../types/live-scoring';
 import { mapWithConcurrency } from './fan-out';
 
 /**
@@ -87,6 +90,17 @@ export interface LeagueLiveRead {
    * match.
    */
   franchiseNames: Record<string, string>;
+  /**
+   * Every franchise's OWN uploaded mark in this league, by id — same read as
+   * the names, same emptiness for a registered league.
+   *
+   * Separate from the names because they answer different questions and one
+   * can be present without the other: a franchise that never uploaded
+   * anything still has a name. `''` for such a franchise, never a placeholder
+   * — the identity ladder falls through to its next rung on an empty string
+   * and would render a broken image on a made-up one.
+   */
+  franchiseIcons: Record<string, string>;
 }
 
 export interface ReadCrossLeagueInput {
@@ -156,7 +170,7 @@ export async function readCrossLeagueLive(
   const settled = await mapWithConcurrency(leagues, limit, async (league) => {
     // Both reads for one league share a lane, so the bound counts LEAGUES
     // rather than requests — which is the number that grows with the owner.
-    const [result, projections, franchiseNames] = await Promise.all([
+    const [result, projections, franchiseMarks] = await Promise.all([
       loadLeagueSnapshot({ league, year, week }, (l, y, w) =>
         readOutsideLiveSnapshot(l, y, w, user.id),
       ).catch(() => null),
@@ -166,24 +180,53 @@ export async function readCrossLeagueLive(
       // colours and a crest. For everyone else it is cached for an hour in
       // process, so it is not a per-poll request.
       wantNames && !league.registered
-        ? readLeagueFranchiseNames(league, year, user.id).catch(
-            (): Record<string, string> => ({}),
+        ? readLeagueFranchiseMarks(league, year, user.id).catch(
+            (): Record<string, FranchiseMark> => ({}),
           )
-        : Promise.resolve<Record<string, string>>({}),
+        : Promise.resolve<Record<string, FranchiseMark>>({}),
     ]);
 
     const snapshot = result?.snapshot ?? null;
     const ok = !!result?.ok && !!snapshot;
+    // Only a snapshot we actually read can carry signal. A failed read is
+    // never "no games yet" — conflating them is what let an outage render as
+    // an offseason.
+    const signal = ok && !!snapshot && hasLiveSignal(snapshot);
+
+    /**
+     * SCORING, BUT UNPAIRED — ask the league's own schedule who is playing.
+     *
+     * MFL serves `liveScoring` in two shapes and only the matchup-grouped one
+     * names opponents; a league in the flat shape arrives with real starters,
+     * real scores and `matchups: []`, which `statusFor` can only read as "this
+     * viewer has no game this week". Archie's Fantasy Football League (99
+     * franchises, two games a week each) told all 99 of its owners they were
+     * on a bye while they were being scored.
+     *
+     * Gated on `signal` deliberately: an unplayed week is `not-played`
+     * whatever its pairings are, so there is nothing to fix and no reason to
+     * spend the read. Cached per league-week, so this costs one request per
+     * flat league per week rather than one per poll.
+     */
+    const paired =
+      signal && snapshot && snapshot.matchups.length === 0
+        ? await readLeagueSchedulePairings(league, year, week, user.id).catch(
+            (): MatchupPairing[] => [],
+          )
+        : [];
+
     return {
       league,
       ok,
-      snapshot,
+      snapshot: paired.length && snapshot ? { ...snapshot, matchups: paired } : snapshot,
       projections,
-      franchiseNames,
-      // Only a snapshot we actually read can carry signal. A failed read is
-      // never "no games yet" — conflating them is what let an outage render
-      // as an offseason.
-      hasSignal: ok && !!snapshot && hasLiveSignal(snapshot),
+      franchiseNames: Object.fromEntries(
+        Object.entries(franchiseMarks).map(([id, m]) => [id, m.name]),
+      ),
+      franchiseIcons: Object.fromEntries(
+        Object.entries(franchiseMarks).map(([id, m]) => [id, m.icon]),
+      ),
+      hasSignal: signal,
     } satisfies LeagueLiveRead;
   });
 
@@ -196,6 +239,7 @@ export async function readCrossLeagueLive(
           snapshot: null,
           projections: new Map<string, number>(),
           franchiseNames: {},
+          franchiseIcons: {},
           hasSignal: false,
         },
   );
@@ -211,32 +255,36 @@ export async function readCrossLeagueLive(
  * leagues are skipped: `resolveFranchiseIdentity` already has their committed
  * brands.
  *
- * Cheap in practice despite the fan-out: `readLeagueFranchiseNames` caches for
+ * Cheap in practice despite the fan-out: `readLeagueFranchiseMarks` caches for
  * an hour in the same process the board uses, so a visit to settings after
  * looking at the board makes no requests at all. Bounded and fault-isolated
  * for the same reasons the live read is — a name is decoration, and one slow
  * league must not hold the page.
+ *
+ * The MARK comes back with it, from the same cached read, so this list shows
+ * the same art the board does rather than falling to initials beside it.
  */
 export async function readViewerFranchiseNames(
   user: AuthUser,
   leagues: readonly BoardLeague[],
   year: number = getCurrentSeasonYear(),
   concurrency: number = CROSS_LEAGUE_FAN_OUT_LIMIT,
-): Promise<Record<string, string>> {
+): Promise<Record<string, FranchiseMark>> {
   const targets = leagues.filter((l) => !l.registered && l.host);
   if (targets.length === 0) return {};
 
   const settled = await mapWithConcurrency(targets, concurrency, async (league) => {
-    const names = await readLeagueFranchiseNames(league, year, user.id).catch(
-      (): Record<string, string> => ({}),
+    const marks = await readLeagueFranchiseMarks(league, year, user.id).catch(
+      (): Record<string, FranchiseMark> => ({}),
     );
-    return { id: league.id, name: names[league.franchiseId] ?? '' };
+    return { id: league.id, mark: marks[league.franchiseId] };
   });
 
-  const out: Record<string, string> = {};
+  const out: Record<string, FranchiseMark> = {};
   for (const outcome of settled) {
     if (outcome.status !== 'fulfilled') continue;
-    if (outcome.value.name) out[outcome.value.id] = outcome.value.name;
+    const { id, mark } = outcome.value;
+    if (mark?.name) out[id] = mark;
   }
   return out;
 }
