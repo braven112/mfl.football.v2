@@ -903,7 +903,9 @@
         "tests/afl-bracket-kind.test.ts",
         "tests/draft-order-phase.test.ts",
         "tests/playoff-round-data.test.ts",
-        "tests/playoff-badge-seeding.test.ts"
+        "tests/playoff-badge-seeding.test.ts",
+        "tests/team-band.test.ts",
+        "tests/standings-band-type.test.ts"
       ]
     },
     {
@@ -971,6 +973,7 @@
         "src/utils/theme*",
         "src/utils/team-color*",
         "src/utils/team-icon*",
+        "src/utils/team-band.ts",
         "src/utils/franchise-band-brand.ts",
         "src/utils/crest-dark-stroke-css.ts",
         "src/utils/dark-surface-crest.ts",
@@ -1001,7 +1004,8 @@
         "tests/live-scoring-accent-theming.test.ts",
         "tests/live-ink-contrast.test.ts",
         "tests/trade-deadline-hero-shared.test.ts",
-        "tests/whats-new-hero-shot-reservation.test.ts"
+        "tests/whats-new-hero-shot-reservation.test.ts",
+        "tests/team-band.test.ts"
       ]
     },
     {

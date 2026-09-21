@@ -34,6 +34,7 @@ import {
   type StandingsTableProps,
 } from './standings-table-config';
 import { getLeagueBySlug } from '../../../config/leagues';
+import { resolveTeamBand, teamBandStyle, bandCrestSrc, BAND_INK_LIGHT, type TeamBand } from '../../../utils/team-band';
 
 const {
   teams,
@@ -48,9 +49,20 @@ const {
   rosterBaseUrl,
   franchiseBaseUrl,
   accent = 'league-blue',
+  rowSkin,
+  league = 'theleague',
   tierName = '',
   promotionCutoff,
 } = Astro.props as StandingsTableProps;
+
+// Band rows: each row wears its franchise's colour, with the ink measured for
+// that colour on each theme's card. Resolved once per render and keyed by
+// franchise id — `resolveTeamBand` reads the league config, so it must never be
+// called with an id from the other league (both have an 0001).
+const isBanded = rowSkin === 'band';
+const bands: Record<string, TeamBand> = isBanded
+  ? Object.fromEntries(teams.map((t) => [t.id, resolveTeamBand(t.id, league)]))
+  : {};
 
 // The tier variant is defined by its column set (rank circle + prize), not by
 // the team-cell mode — deriving it from the columns keeps layout/skin selection
@@ -351,7 +363,8 @@ const bannerLabelFor = (name: string) =>
 
             return (
               <tr
-                class={rowClass}
+                class:list={[rowClass, { 'st-row--band': isBanded }]}
+                style={isBanded ? teamBandStyle(bands[team.id]) : undefined}
                 data-preferred={withData && isPreferred ? 'true' : undefined}
                 data-team-id={withData ? team.id : undefined}
               >
@@ -383,6 +396,29 @@ const bannerLabelFor = (name: string) =>
                         )}
                       </div>
                     )}
+                    {col.key === 'team' && teamCell === 'crest' && (() => {
+                      // The crest is picked off the FILL, not the theme: the
+                      // band is the club's colour in both themes, so the global
+                      // `html.dark img[src=…]` swap must not fire here — the
+                      // CSS below cancels it, and this picks the right cut once.
+                      const onDarkFill = bands[team.id]?.ink === BAND_INK_LIGHT;
+                      const crest = bandCrestSrc(team.teamIcon, league, onDarkFill);
+                      const href = bannerHrefFor(team.id);
+                      const inner = (
+                        <>
+                          {crest && <img src={crest} alt="" class="band-crest" loading="lazy" decoding="async" />}
+                          <span class="band-name">{team.teamName}</span>
+                        </>
+                      );
+                      return href ? (
+                        <a href={href} class="band-team band-team--link" aria-label={bannerLabelFor(team.teamName)}>
+                          {inner}
+                        </a>
+                      ) : (
+                        <div class="band-team">{inner}</div>
+                      );
+                    })()}
+
                     {col.key === 'team' && teamCell === 'icon' &&
                       (rosterBaseUrl ? (
                         <a
@@ -1622,6 +1658,178 @@ const bannerLabelFor = (name: string) =>
     .v-tier .promo-arrow {
       font-size: 1rem;
       margin-left: 0.25rem;
+    }
+  }
+  /* --- Band rows (rowSkin="band") -------------------------------------- *
+   * Each row is painted in its franchise's own colour, with the ink
+   * `src/utils/team-band.ts` measured for that colour on THIS theme's card.
+   * Both themes ride in on custom properties because the server cannot know
+   * the resolved theme under preference 'auto' — same rule as the NFL logo
+   * swap and `--team-accent-<id>`.
+   *
+   * THE TYPE SIZE HERE IS LOAD-BEARING, not taste. The ink was measured at
+   * WCAG's 3:1 large-text floor, which is only a valid floor while every text
+   * node in the row stays at or above 18.66px bold. Shrink these and the
+   * measurement stops applying to what is on screen — eight AFL clubs would be
+   * sub-AA the moment the stat columns went back to 12px.
+   * `tests/standings-band-type.test.ts` fails the build if they do. */
+  tbody tr.st-row--band td {
+    background-color: var(--band-fill);
+    color: var(--band-ink);
+    font-size: 1.1875rem; /* 19px ≥ 18.66px bold = WCAG "large text" */
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    border-bottom: 1px solid color-mix(in srgb, currentColor 22%, transparent);
+    padding: 0.5rem 0.75rem;
+  }
+  :global(html.dark) tbody tr.st-row--band td {
+    background-color: var(--band-fill-dark);
+    color: var(--band-ink-dark);
+  }
+  /* The trim edge is the club's SECONDARY colour, and on TheLeague it is not
+   * decoration: SEVEN of its sixteen franchises wear the same #181818 primary,
+   * so their bands resolve to the same lifted grey and the edge is the only
+   * thing telling two of them apart at a glance in the same division. Wide
+   * enough to read as a colour key rather than as a rendering artifact. */
+  tbody tr.st-row--band td:first-child {
+    border-left: 6px solid var(--band-trim);
+  }
+
+  /* Give the wordmark the room it needs. Every numeric column shrinks to its
+   * content (the widths below were sized for 12px cells, and at the band's
+   * 19px they squeezed the team column until EVERY name wrapped to two lines,
+   * which also made the rows different heights). */
+  tbody tr.st-row--band td.col-overall-record,
+  tbody tr.st-row--band td.col-overall-pct,
+  tbody tr.st-row--band td.col-div-record,
+  tbody tr.st-row--band td.col-div-pct,
+  tbody tr.st-row--band td.col-gb,
+  tbody tr.st-row--band td.col-streak,
+  tbody tr.st-row--band td.col-pf,
+  tbody tr.st-row--band td.col-pa,
+  tbody tr.st-row--band td.col-pwr,
+  tbody tr.st-row--band td.col-vp {
+    width: 1%;
+    white-space: nowrap;
+    padding-inline: 0.85rem;
+  }
+  tbody tr.st-row--band td.col-team {
+    width: auto;
+  }
+  /* Your own team. The inherited `.preferred-team` background cannot show
+   * through a painted cell, so the marker is drawn ON the band in its own ink —
+   * which is the only colour guaranteed to contrast with that fill.
+   *
+   * It is NOT the left edge: that edge sits against the CARD, and the Pigskins'
+   * marker would have been white ink on a white card, i.e. nothing at all. The
+   * ink is measured against the FILL and nothing else, so the marker has to sit
+   * on the fill to inherit that guarantee. */
+  tbody tr.st-row--band.preferred-team td {
+    box-shadow:
+      inset 0 3px 0 var(--band-ink),
+      inset 0 -3px 0 var(--band-ink);
+  }
+  :global(html.dark) tbody tr.st-row--band.preferred-team td {
+    box-shadow:
+      inset 0 3px 0 var(--band-ink-dark),
+      inset 0 -3px 0 var(--band-ink-dark);
+  }
+  /* …and the ring closes at both ends of the row. */
+  tbody tr.st-row--band.preferred-team td:first-child {
+    box-shadow:
+      inset 0 3px 0 var(--band-ink),
+      inset 0 -3px 0 var(--band-ink),
+      inset 3px 0 0 var(--band-ink);
+  }
+  tbody tr.st-row--band.preferred-team td:last-child {
+    box-shadow:
+      inset 0 3px 0 var(--band-ink),
+      inset 0 -3px 0 var(--band-ink),
+      inset -3px 0 0 var(--band-ink);
+  }
+  :global(html.dark) tbody tr.st-row--band.preferred-team td:first-child {
+    box-shadow:
+      inset 0 3px 0 var(--band-ink-dark),
+      inset 0 -3px 0 var(--band-ink-dark),
+      inset 3px 0 0 var(--band-ink-dark);
+  }
+  :global(html.dark) tbody tr.st-row--band.preferred-team td:last-child {
+    box-shadow:
+      inset 0 3px 0 var(--band-ink-dark),
+      inset 0 -3px 0 var(--band-ink-dark),
+      inset -3px 0 0 var(--band-ink-dark);
+  }
+  /* Hover tints toward the row's OWN ink, so it lightens a navy band and
+   * darkens a gold one with a single rule. */
+  tbody tr.st-row--band:hover td {
+    background-color: color-mix(in srgb, currentColor 10%, var(--band-fill));
+  }
+  :global(html.dark) tbody tr.st-row--band:hover td {
+    background-color: color-mix(in srgb, currentColor 10%, var(--band-fill-dark));
+  }
+  /* A gold DIV pill on Chatmaster's gold band needs an edge; every other fill
+   * is unharmed by one. */
+  tbody tr.st-row--band :global(.badge) {
+    box-shadow: 0 0 0 1.5px var(--band-ink);
+  }
+  :global(html.dark) tbody tr.st-row--band :global(.badge) {
+    box-shadow: 0 0 0 1.5px var(--band-ink-dark);
+  }
+
+  /* --- The band's team cell -------------------------------------------- */
+  .band-team {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    min-height: 44px;
+    color: inherit;
+    text-decoration: none;
+  }
+  .band-team--link:hover .band-name {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  /* Never round a crest — a circular frame bites the corners off any mark that
+   * is not already a circle (see docs/claude/rules/theming-and-assets.md). */
+  .band-crest {
+    width: 38px;
+    height: 38px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+  /* The band is the club's colour in BOTH themes, so the crest must not follow
+   * the theme. `bandCrestSrc` already picked the cut that reads on this fill;
+   * this cancels the global `html.dark img[src="<light>"]` swap, which would
+   * otherwise put a dark-ground crest on a gold band after sunset. */
+  :global(html.dark) .band-crest {
+    content: normal;
+  }
+  .band-name {
+    font-size: 1.375rem;
+    font-weight: 800;
+    line-height: 1.08;
+    letter-spacing: -0.015em;
+    text-transform: uppercase;
+    /* Wrapping is allowed — "Suh girls, one cup" and "Dicks out for Harambe"
+     * are real team names and nowrap would push the stat columns off a phone —
+     * but a name that does wrap breaks across its words evenly instead of
+     * leaving one orphan on the second line. */
+    text-wrap: balance;
+  }
+  /* Phones drop to three columns (`hide-sm`), so the band tightens its padding
+   * and crest rather than its TYPE — 17px bold would sit under the 18.66px
+   * large-text definition and quietly invalidate every ratio measured for the
+   * ink, on the devices most likely to be read outdoors. */
+  @media (max-width: 767px) {
+    tbody tr.st-row--band td {
+      padding: 0.45rem 0.5rem;
+    }
+    .band-crest {
+      width: 32px;
+      height: 32px;
+    }
+    .band-name {
+      font-size: 1.25rem;
     }
   }
 </style>

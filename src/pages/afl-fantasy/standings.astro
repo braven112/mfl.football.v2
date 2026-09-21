@@ -384,8 +384,9 @@ function divisionHeader(name: string, confId?: '00' | '01') {
             <UnifiedStandingsTable
               teams={division.teams}
               columns={COLUMNS.division}
-              teamCell="banner"
-              teamCellFallback="name"
+              teamCell="crest"
+              rowSkin="band"
+              league="afl"
               accent={aflAccent(divisionToConf[division.name])}
               badgeSeeding={divisionBadgeSeeding(division.name)}
               year={selectedYear}
