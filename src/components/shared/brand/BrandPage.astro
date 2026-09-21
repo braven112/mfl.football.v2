@@ -1,19 +1,31 @@
 ---
 /**
- * NFL Brand Book — the index: every club, on its own colour.
+ * Brand Book — the index. Every mark this site draws, on its own colour.
+ *
+ * TWO subjects under one roof, in this order: the LEAGUE's own franchises
+ * (`FranchiseBrandPage`), then the 32 NFL clubs (`ClubBrandPage`). They share
+ * the page because they answer the same question — which cut does each ground
+ * draw — and splitting them into two destinations would put two things called
+ * "brand" in the nav a click apart.
  *
  * Thin route wrappers under src/pages/<league>/brand.astro own any auth gate
  * and per-league static import; this component owns the markup. Keep it that
  * way: Astro.redirect() only works from a page, and a static import specifier
  * cannot be a runtime variable.
  *
- * `leagueSlug` is OPTIONAL, and its absence is the shared host. NFL club marks
- * belong to no league, so `mfl.football/brand` renders the same page in
- * MflAppLayout with no league identity — TheLeagueLayout wears one league's
- * crest, nav and manifest, and this surface must claim none of them. The
- * shared host is deliberately not a second front door for a league that has
- * its own apex (`resolveSharedHostHiddenLeague`), so this is its OWN route at
- * the root rather than a link into /theleague/brand.
+ * `leagueSlug` is OPTIONAL, and its absence is the shared host — which gets
+ * the NFL half ALONE. NFL club marks belong to no league, so `mfl.football/brand`
+ * renders in MflAppLayout with no league identity; TheLeagueLayout wears one
+ * league's crest, nav and manifest, and this surface must claim none of them.
+ * The shared host is deliberately not a second front door for a league that
+ * has its own apex (`resolveSharedHostHiddenLeague`), so this is its OWN route
+ * at the root rather than a link into /theleague/brand.
+ *
+ * A FRANCHISE mark, by contrast, belongs to exactly one league, and three of
+ * them (Computer Jocks, Da Dangsters, Midwestside, the Ninjas, Vitside) field
+ * a franchise in BOTH — so their slugs collide and a league-less
+ * `/brand/<slug>` could not say which one it meant. That is why the franchise
+ * half appears only on a league's copy, rather than being a rule about tidiness.
  *
  * Each tile is the club's colour with the mark its BAND ground draws — which
  * is the dark cut for almost every club, because almost every club colour is
@@ -26,6 +38,8 @@ import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { getLeagueBySlug } from '../../../config/leagues';
 import type { CanonicalLeagueSlug } from '../../../config/leagues';
 import { allClubs, inkOn } from '../../../utils/nfl-marks';
+import { allFranchiseBrands, leagueHasBrandBook } from '../../../utils/franchise-marks';
+import '../../../styles/brand-book.css';
 
 interface Props {
   /** Omitted on the shared host, where this page belongs to no league. */
@@ -46,19 +60,41 @@ const clubHref = (code: string) =>
 const clubs = allClubs();
 const customised = clubs.filter((c) => c.customised);
 const derived = clubs.filter((c) => c.marks.some((m) => m.derived));
+
+/**
+ * The league's own franchises. Empty on the shared host and for any league the
+ * Brand Book does not cover (Best Ball is draft-only and carries no crest art),
+ * which renders the NFL half alone rather than an empty section.
+ */
+const franchises = leagueSlug && leagueHasBrandBook(leagueSlug) ? allFranchiseBrands(leagueSlug) : [];
+const franchiseHref = (slug: string) =>
+  leagueSlug ? resolveLeaguePath(`/${leagueSlug}/brand/${slug}`, hide) : `/brand/${slug}`;
+const filesHref = leagueSlug ? resolveLeaguePath(`/${leagueSlug}/brand/files`, hide) : null;
 ---
 
-<Layout title={league ? `NFL Brand Book | ${league.name}` : 'NFL Brand Book'}>
+<Layout title={league ? `Brand Book | ${league.name}` : 'NFL Brand Book'}>
   <main class="brand">
     <header class="brand__header">
-      <p class="brand__eyebrow">Reference &middot; {clubs.length} clubs</p>
-      <h1>NFL Brand Book</h1>
+      <p class="brand__eyebrow">
+        Reference &middot;
+        {franchises.length > 0 && <>{franchises.length} league clubs &middot; </>}
+        {clubs.length} NFL clubs
+      </p>
+      <h1>{league ? 'Brand Book' : 'NFL Brand Book'}</h1>
       <p class="brand__lede">
-        Every club's marks, and which cut each surface draws. A mark sits on one of
+        Every mark this site draws, and which cut each surface uses. A mark sits on one of
         <strong>three grounds</strong> &mdash; a white cell, a dark card, or the club's own
         colour &mdash; and the third is not a variant of the first two, which is why a
         club-colour band below shows the <em>dark</em> mark even in light mode.
       </p>
+      {
+        filesHref && (
+          <p class="brand__note">
+            Looking for a specific file? The <a href={filesHref}>searchable file list</a> has every
+            asset in the league, historical clubs and league art included.
+          </p>
+        )
+      }
       {
         customised.length > 0 && (
           <p class="brand__note">
@@ -83,6 +119,60 @@ const derived = clubs.filter((c) => c.marks.some((m) => m.derived));
         )
       }
     </header>
+
+    {
+      franchises.length > 0 && league && (
+        <section class="cb__section">
+          <h2 class="cb__h2">{league.name} clubs</h2>
+          <p class="cb__note">
+            Each tile is the franchise's own colour wearing the cut its BAND ground draws &mdash;
+            the dark cut for almost every one of them, because almost every franchise primary is
+            dark. Five of them wear <code>#181818</code>.
+          </p>
+          {/*
+            The SAME `brand__*` tile markup the NFL grid below uses, not a
+            parallel set. The franchise half briefly had its own classes and
+            promptly re-shipped a bug the club template had already fixed.
+          */}
+          <ul class="brand__grid">
+            {franchises.map((fr) => {
+              const tileBg = fr.bandColor;
+              const tileInk = inkOn(tileBg);
+              const tileBand = fr.grounds.find((g) => g.ground === 'band');
+              return (
+                <li class="brand__cell">
+                  <a
+                    class="brand__tile"
+                    href={franchiseHref(fr.slug)}
+                    style={`--tile-bg:${tileBg};--tile-ink:${tileInk}`}
+                  >
+                    <span class="brand__art">
+                      {tileBand && (
+                        <img
+                          src={tileBand.url}
+                          alt=""
+                          loading="lazy"
+                          width="72"
+                          height="72"
+                          style={tileBand.filter ? `filter:${tileBand.filter}` : undefined}
+                        />
+                      )}
+                    </span>
+                    <span class="brand__name">
+                      {fr.division && <span class="brand__city">{fr.division}</span>}
+                      <span class="brand__nick brand__nick--franchise">{fr.name}</span>
+                    </span>
+                    {!fr.hasDarkCut && <span class="brand__flag">light only</span>}
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )
+    }
+
+    {franchises.length > 0 && <h2 class="cb__h2 brand__nfl-h2">NFL clubs</h2>}
 
     <ul class="brand__grid">
       {
@@ -138,6 +228,27 @@ const derived = clubs.filter((c) => c.marks.some((m) => m.derived));
      something to rely on. Pinned by tests/nfl-marks-page-data.test.ts. */
   html.dark :global(.brand__art img) {
     content: normal !important;
+  }
+  /* NO `filter` reset here, unlike an earlier draft of this block. Every tile
+     on this index paints the club's or franchise's OWN colour, which is a dark
+     ground for almost all of them — so a ring belongs on it, and the inline one
+     this page sets is already correct. Resetting the filter also killed
+     `--nfl-logo-ring`, which `nfl-logo-dark-css.ts` emits once guarded by
+     `html.dark` and once UNGUARDED for the dark cuts of stroked clubs; doing
+     that inside an `html.dark` block left Carolina ringed in light mode and
+     bare in dark. The `revert-layer` that was meant to rescue the inline ring
+     could not: the style attribute is not a cascade layer, so it rolled back to
+     the UA value `none`. */
+  /* A club nickname is one word; a franchise name is up to four ("Running Down
+     The Dream"), so the franchise tiles take a smaller, balanced line rather
+     than the nickname's size. Everything else about the tile is identical. */
+  .brand__nick--franchise {
+    font-size: 0.9rem;
+    line-height: 1.2;
+    text-wrap: balance;
+  }
+  .brand__nfl-h2 {
+    margin-top: 2.5rem;
   }
   /* Tokens with fallbacks only — a var() with no definition renders its
      fallback in BOTH themes (docs/claude/rules/theming-and-assets.md). */

@@ -1,9 +1,27 @@
 ---
-import AssetsPage from '../../components/shared/assets/AssetsPage.astro';
-import leagueConfig from '../../../data/afl-fantasy/afl.config.json';
-import aggregatedAssets from '../../../data/afl-fantasy/afl.assets.json';
+/**
+ * The old Asset Library URL, now a redirect to the Brand Book.
+ *
+ * `/assets` was the team-branding destination for years, so it is linked from
+ * the footer, from owners' bookmarks and from three years of GroupMe messages.
+ * The page it pointed at has been replaced by a brand page per club (the
+ * library itself lives on at `/brand/files`), and a dead bookmark is a worse
+ * answer than a redirect.
+ *
+ * 302, not 301: a permanent redirect is cached by the browser indefinitely and
+ * cannot be taken back without a new URL, and this one is a product decision
+ * that may yet be revisited.
+ *
+ * The redirect lives in the PAGE because it has to — `Astro.redirect()`
+ * returned from a component's frontmatter only stops that component rendering
+ * and still answers 200 with a blank body.
+ */
+import { resolveLeaguePath } from '../../utils/nav-utils';
 
 export const prerender = false;
----
 
-<AssetsPage slug="afl-fantasy" leagueConfig={leagueConfig} aggregatedAssets={aggregatedAssets} />
+return Astro.redirect(
+  resolveLeaguePath('/afl-fantasy/brand', Astro.locals.hideLeaguePrefix ?? false),
+  302
+);
+---

@@ -1,0 +1,595 @@
+---
+/**
+ * One FRANCHISE's brand page — the league half of the Brand Book.
+ *
+ * THE SAME TEMPLATE as `ClubBrandPage` next door: same `cb__` classes, same
+ * shared stylesheet, same section order, one different subject. It was briefly
+ * a parallel set of markup and rules, and the parallel set re-shipped a bug
+ * the club page had already fixed — the layout's global
+ * `:global(h1),:global(h2) { color: … }` BEATS an inherited colour, so the
+ * hero heading rendered in the site's accent blue on top of a red hero.
+ * `.cb__nick { color: inherit }` is the fix, and it only exists once now.
+ *
+ * ── Why the hero uses the DARK cut ────────────────────────────────────────
+ * The hero band is the franchise's own colour, which for almost every one of
+ * them is dark (five TheLeague franchises and three AFL ones wear `#181818`).
+ * It is therefore neither a light nor a dark SURFACE — it is a third ground,
+ * resolving to whichever assignment suits that colour's luminance
+ * (`bandSlot`). Exactly the rule `franchise-band-brand.ts` already applies to
+ * crests on deep-ink surfaces.
+ *
+ * ── Why the previews carry their own colours ─────────────────────────────
+ * Each preview stands in for a real app surface, so it paints its OWN light or
+ * dark ground and inherits nothing from the page theme. A "light" preview that
+ * went dark for a dark-mode viewer would make the two previews identical,
+ * which is the entire comparison — see the `content: normal` opt-out below.
+ *
+ * Plan: docs/plans/brand-book-franchise-half.md.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import TeamIconCell from '../../TeamIconCell.astro';
+import CompositeHero from '../CompositeHero.astro';
+import { resolveHeroFranchiseBackdrop } from '../../../utils/hero-franchise-backdrop';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { getLeagueBySlug, type CanonicalLeagueSlug } from '../../../config/leagues';
+import type { LeagueSlug } from '../../../types/nav';
+import { franchiseBrand, inkOn, type FranchiseBrand } from '../../../utils/franchise-marks';
+/* The Brand Book's template AND its dark-swap opt-out, shared with the club
+   page. The opt-out lives in the sheet rather than in a scoped block here
+   because it is the same rule for both halves, and two copies of a rule whose
+   failure is invisible in light mode is exactly how they drift. */
+import '../../../styles/brand-book.css';
+
+interface Props {
+  leagueSlug: CanonicalLeagueSlug;
+  franchiseId: string;
+  /** Absolute origin for the copy-URL buttons, from the league's `assetDomain`. */
+  assetDomain?: string;
+}
+
+const { leagueSlug, franchiseId, assetDomain = '' } = Astro.props;
+const league = getLeagueBySlug(leagueSlug);
+if (!league) throw new Error(`FranchiseBrandPage: unknown league ${leagueSlug}`);
+
+const brand = franchiseBrand(leagueSlug, franchiseId) as FranchiseBrand;
+const hide = Astro.locals.hideLeaguePrefix ?? false;
+const indexPath = resolveLeaguePath(`/${leagueSlug}/brand`, hide);
+const filesPath = resolveLeaguePath(`/${leagueSlug}/brand/files`, hide);
+
+const bg = brand.bandColor;
+const ink = inkOn(bg);
+const light = brand.grounds.find((g) => g.ground === 'light');
+const dark = brand.grounds.find((g) => g.ground === 'dark');
+const band = brand.grounds.find((g) => g.ground === 'band');
+
+/**
+ * The absolute URL an owner pastes into MFL.
+ *
+ * `assetDomain` comes from the league config and is normalized by the route,
+ * so this is a join, never the origin-plus-path concatenation
+ * `docs/claude/rules/league-urls.md` forbids for LEAGUE urls — these are asset
+ * paths on a CDN the config names, not routes. Falls back to the relative path
+ * when the config names no domain, which is honest: a relative path still
+ * resolves for a reader on the site.
+ */
+const absolute = (path: string) => (assetDomain ? `${assetDomain}${path}` : path);
+
+/**
+ * The COMPOSITE HERO's headline, split so the last word takes the accent ink —
+ * the same shape the club page uses for "New Orleans **Saints**".
+ *
+ * Only that card splits the name. The page's own `<h1>` prints it whole: a
+ * split franchise name does not identify the franchise (see the header below).
+ */
+const nameWords = brand.name.trim().split(/\s+/);
+const heroCity = nameWords.length > 1 ? nameWords.slice(0, -1).join(' ') : league.name;
+const heroNick = nameWords[nameWords.length - 1];
+
+/**
+ * The homepage composite hero, rendered for real with this franchise's crest
+ * as its watermark and its own gradient behind the copy.
+ *
+ * `resolveHeroFranchiseBackdrop` is handed the config payload rather than a
+ * hand-built gradient: it reads `broadcastGradient` verbatim when the
+ * franchise has one (the single raw-CSS field in this repo), floors the
+ * derived pair for white text when it does not, resolves the crest through the
+ * dark-surface order, and clears the accent, pill and CTA inks against the
+ * gradient that is ACTUALLY rendered. A gradient assembled here would skip all
+ * four and drift from both homepages the first time any of it changed.
+ */
+const heroBackdrop = resolveHeroFranchiseBackdrop(brand.heroTeam, league.navSlug as LeagueSlug);
+
+const GROUND_COPY: Record<string, string> = {
+  light: 'Standings rows, roster headers, the nav crest — anything on a white card.',
+  dark: brand.hasDarkCut
+    ? 'The same surfaces in dark mode. This franchise ships a hand-authored dark cut, so TeamIconDarkStyles swaps to it.'
+    : brand.ringed
+      ? 'The same surfaces in dark mode. No dark cut on file, so the light art keeps a measured white ring to stay legible.'
+      : brand.measuredIllegible
+        ? 'The same surfaces in dark mode. No dark cut on file, and the light art measured illegible on ink — but this franchise has opted out of the ring, so it draws as authored.'
+        : 'The same surfaces in dark mode. No dark cut on file, and the light art measured legible on ink as-is.',
+  band: `The team-colour band — a hero, a reveal card, a player modal. Dark in both themes, so it follows the ${band?.slot ?? 'dark'} assignment.`,
+};
+
+/** Where each cut is actually drawn, so the page answers "which file do I use". */
+const USAGE: Array<{ term: string; detail: string }> = [
+  {
+    term: 'Icon — 100×100',
+    detail:
+      'The crest on every themed surface: standings rows, the nav team chip, matchup cards, roster headers. Render the LIGHT src and let TeamIconDarkStyles resolve it — never pick a theme server-side.',
+  },
+  {
+    term: 'Icon dark — 100×100',
+    detail: brand.hasDarkCut
+      ? 'Swapped in by CSS under html.dark. Never reference it directly on a themed surface: the swap keys on the light src, so hard-coding the dark cut freezes the crest for light-theme readers.'
+      : 'Not on file for this franchise. A dark card falls back to the light art, ringed when the measurement says it needs one.',
+  },
+  {
+    term: 'GroupMe crest — 400×400',
+    detail:
+      'The watermark size. Heroes and modal bands draw the crest between ~40px and ~300px, which a 100px icon cannot carry — resolveDarkSurfaceCrest reaches for this pair first for exactly that reason.',
+  },
+  {
+    term: 'Banner',
+    detail:
+      'The wide lockup: MFL’s own franchise header and the throwback era art. Not a crest — never substitute it where a square mark is expected.',
+  },
+  {
+    term: 'A colour as FOREGROUND',
+    detail: `Text, a rank numeral, a chart line, a legend swatch: read the token ${brand.accentProperty} via teamAccentVar(franchiseId), never the raw hex. See the derived colours above for what it actually resolves to.`,
+  },
+  {
+    term: 'A colour as a FILL',
+    detail:
+      'A full-bleed band with white copy on it is the other question and takes the brand pair directly — floored for white ink by the resolver, not by the caller.',
+  },
+];
+---
+
+<TheLeagueLayout title={`${brand.name} brand | Brand Book | ${league.name}`}>
+  <main class="cb">
+    <nav class="cb__crumb"><a href={indexPath}>&larr; Brand Book</a></nav>
+
+    <header class="cb__hero" style={`--hero-bg:${bg};--hero-ink:${ink}`}>
+      {
+        band && (
+          <img
+            class="cb__ghost"
+            src={band.url}
+            alt=""
+            aria-hidden="true"
+            style={band.filter ? `filter:${band.filter}` : undefined}
+          />
+        )
+      }
+      <div class="cb__hero-in">
+        {
+          band && (
+            <img
+              class="cb__mark"
+              src={band.url}
+              alt={`${brand.name} crest`}
+              width="120"
+              height="120"
+              style={band.filter ? `filter:${band.filter}` : undefined}
+            />
+          )
+        }
+        <div>
+          <p class="cb__city">
+            {[brand.division, brand.tier].filter(Boolean).join(' · ') || heroCity}
+          </p>
+          {/* `.cb__nick` carries `color: inherit`, which is what beats the
+              layout's global themed-h1 rule. Without it this renders in the
+              site's accent blue on top of the franchise's own colour. */}
+          {/*
+            The FULL name, unlike the club page's `{club.nick}`. An NFL club
+            name IS "City Nick", so splitting it leaves a heading that still
+            identifies the club; a franchise name is not, and splitting it left
+            headings reading "Chaos", "Walking", "Pain" and "Me". The division
+            already occupies the eyebrow above, so nothing is lost by printing
+            the name whole.
+          */}
+          <h1 class="cb__nick cb__nick--franchise">{brand.name}</h1>
+        </div>
+      </div>
+    </header>
+
+    <section class="cb__section">
+      <h2 class="cb__h2">Team colours</h2>
+      <p class="cb__note">
+        Straight from the league config, which is the single source of truth for all of them. The
+        <strong>chart hue</strong> is the one to watch: it is picked to stay distinct beside fifteen
+        other lines on a graph, and a surface that mistook it for brand identity opened a
+        black-and-red franchise in pink.
+      </p>
+      {/*
+        The club page's swatch grid, unchanged — a swatch over its hex. One
+        addition a franchise needs and a club does not: the ROLE. An NFL club's
+        colours are just its colours, whereas these each mean something
+        different to the site, and "Chart hue" is the one nothing may treat as
+        brand identity. The hex itself is the copy target, so the row keeps the
+        club page's shape rather than growing a button beside every swatch.
+      */}
+      <ul class="cb__swatches">
+        {
+          brand.colors.map((c) => (
+            <li>
+              <span class="cb__swatch" style={`background:${c.hex}`} />
+              <button
+                class="cb-copy cb-copy--hex"
+                type="button"
+                data-copy={c.hex}
+                title={c.note}
+                aria-label={`Copy the ${c.label} hex, ${c.hex}`}
+              >
+                <code>{c.hex}</code>
+              </button>
+              <span class="cb__swatch-role">{c.label}</span>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <section class="cb__section">
+      <h2 class="cb__h2">What the site actually paints</h2>
+      <p class="cb__note">
+        None of these are in the config &mdash; the hexes above are the <em>input</em>. Every
+        surface floors the colour against the ground it is about to sit on, so a franchise whose
+        primary is <code>#181818</code> is never painted <code>#181818</code> anywhere. Read from
+        the same resolvers the site calls, so this cannot drift from what ships.
+      </p>
+      <ul class="cb__derived-list">
+        {
+          brand.derived.map((d) => (
+            <li class="cb__drow">
+              <span class="cb__drow-head">{d.label}</span>
+              <span class="cb__drow-pair">
+                <span class="cb__dcell is-light">
+                  <span class={d.label.includes('bar') ? 'cb__dbar' : 'cb__dswatch'} style={`--chip:${d.light}`} />
+                  <span>Light <code>{d.light}</code></span>
+                </span>
+                <span class="cb__dcell is-dark">
+                  <span class={d.label.includes('bar') ? 'cb__dbar' : 'cb__dswatch'} style={`--chip:${d.dark}`} />
+                  <span>Dark <code>{d.dark}</code></span>
+                </span>
+              </span>
+              <span class="cb__drow-why">{d.note}</span>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <section class="cb__section">
+      <h2 class="cb__h2">Marks on file</h2>
+      <p class="cb__note">
+        {brand.marks.length} cuts, each on the ground it was drawn for, with the same-origin path
+        the site serves and the absolute URL to paste into MFL.
+        {
+          !brand.hasDarkCut && (
+            <>
+              {' '}This franchise ships <strong>no hand-authored dark cut</strong>, so a dark card
+              draws the light art{brand.ringed ? ' behind a measured white ring' : ''}.
+            </>
+          )
+        }
+      </p>
+      <ul class="cb__film">
+        {
+          brand.marks.map((m) => (
+            <li class="cb__cut">
+              <span class={`cb__cut-box ${m.forDark ? 'is-dark' : 'is-light'}`}>
+                <img src={m.url} alt={`${brand.name} — ${m.label}`} loading="lazy" />
+              </span>
+              <span class="cb__cut-label">{m.label}</span>
+              <span class="cb__cut-meta">{m.spec} &middot; {m.source}</span>
+              <span class="cb__actions">
+                <button class="cb-copy" type="button" data-copy={absolute(m.url)} aria-label={`Copy ${m.label} URL`}>
+                  <span class="cb-copy__idle">Copy URL</span>
+                  <span class="cb-copy__done">Copied</span>
+                </button>
+                <a class="cb__dl" href={m.url} download>Download</a>
+              </span>
+            </li>
+          ))
+        }
+      </ul>
+      {
+        brand.past.length > 0 && (
+          <>
+            <p class="cb__note cb__note--sub">
+              <strong>Retired cuts of this same mark.</strong> {brand.past.length} more, from{' '}
+              {brand.eras.filter((e) => e.sameIdentity).length} earlier{' '}
+              {brand.eras.filter((e) => e.sameIdentity).length === 1 ? 'era' : 'eras'} that wore this
+              name. They are this club's own logo before the current one &mdash; not a different
+              club, which is why they sit here rather than under a former identity.
+            </p>
+            <ul class="cb__film">
+              {brand.past.map((m) => (
+                <li class="cb__cut">
+                  <span class="cb__cut-box is-light">
+                    <img src={m.url} alt={`${brand.name} — ${m.label}`} loading="lazy" />
+                    <span class="cb__made cb__made--retired">retired</span>
+                  </span>
+                  <span class="cb__cut-label">{m.label}</span>
+                  <span class="cb__cut-meta">{m.source}</span>
+                  <span class="cb__actions">
+                    <button
+                      class="cb-copy"
+                      type="button"
+                      data-copy={absolute(m.url)}
+                      aria-label={`Copy ${m.label} URL`}
+                    >
+                      <span class="cb-copy__idle">Copy URL</span>
+                      <span class="cb-copy__done">Copied</span>
+                    </button>
+                    <a class="cb__dl" href={m.url} download>Download</a>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </>
+        )
+      }
+    </section>
+
+    <section class="cb__section">
+      <h2 class="cb__h2">What each ground draws</h2>
+      <p class="cb__note">
+        A mark sits on one of three grounds &mdash; a white cell, a dark card, or the team's own
+        colour &mdash; and the third is not a variant of the first two. That is why the band below
+        shows the <em>dark</em> cut even in light mode.
+      </p>
+      <ul class="cb__grounds">
+        {
+          brand.grounds.map((g) => (
+            <li class={`cb__ground ${g.slot === 'dark' || g.ground === 'band' ? 'is-dark' : 'is-light'}`}>
+              <span class="cb__ground-head">
+                {g.ground === 'band' ? 'Team colour' : g.ground === 'light' ? 'Light surfaces' : 'Dark surfaces'}
+              </span>
+              <span class="cb__ground-art" style={g.ground === 'band' ? `background:${bg}` : undefined}>
+                <img src={g.url} alt="" loading="lazy" style={g.filter ? `filter:${g.filter}` : undefined} />
+              </span>
+              <span class="cb__ground-mark">{g.mark.label}</span>
+              <span class="cb__ground-why">{GROUND_COPY[g.ground]}</span>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <section class="cb__section">
+      <h2 class="cb__h2">In the app</h2>
+      <p class="cb__note">
+        The real components, rendered here on their real grounds &mdash; not lookalikes, so they
+        cannot drift from what a standings card or a homepage hero actually draws.
+      </p>
+      <ul class="cb__situ">
+        <li class="cb__demo">
+          <span class="cb__demo-cap">Standings row <em>the crest is the team column</em></span>
+          {/*
+            The REAL TeamIconCell, not a copy. It resolves its own src through
+            `preferredIconSrc` and relies on the global dark swap everywhere
+            else on the site — but this page opts that swap out, so each pane
+            is handed the artwork ITS ground calls for. Same call `ClubBrandPage`
+            makes when it passes `nflLogo` explicitly: the ground decides.
+          */}
+          <span class="cb__pane is-light">
+            <span class="cb__row">
+              <span class="cb__row-rank">1</span>
+              <TeamIconCell icon={light?.url} name={brand.name} />
+              <span class="cb__row-rec">10-4</span>
+            </span>
+          </span>
+          <span class="cb__pane is-dark">
+            <span class="cb__row">
+              <span class="cb__row-rank">1</span>
+              <TeamIconCell icon={dark?.url} name={brand.name} />
+              <span class="cb__row-rec">10-4</span>
+            </span>
+          </span>
+        </li>
+
+        <li class="cb__demo">
+          <span class="cb__demo-cap">Team colour <em>the third ground</em></span>
+          {/*
+            `is-band` so this pane is inside the dark-swap opt-out with its
+            siblings. Without a ground class it matched neither opt-out
+            selector and still followed the global crest swap — and five
+            franchises (Midwestside in both leagues, Avenging Amish, Swiftie 4
+            Life, Chatmaster) have a LIGHT band slot plus an `iconDark`, so
+            their band demo silently changed cut in dark mode.
+          */}
+          <span class="cb__pane is-band" style={`background:${bg};color:${ink}`}>
+            <span class="cb__bcast">
+              {
+                band && (
+                  <img src={band.url} alt="" loading="lazy" style={band.filter ? `filter:${band.filter}` : undefined} />
+                )
+              }
+              <span>
+                <span class="cb__bname">{brand.nameShort.toUpperCase()}</span>
+                <span class="cb__bmeta" style={`color:${ink};opacity:.75`}>
+                  {brand.division || brand.tier || league.name}
+                </span>
+              </span>
+            </span>
+          </span>
+        </li>
+
+        <li class="cb__demo cb__demo--wide">
+          <span class="cb__demo-cap">
+            Composite hero <em>the crest as a watermark, ~300px, on the franchise's own gradient</em>
+          </span>
+          <CompositeHero
+            ariaLabel={`${brand.name} hero example`}
+            accent="feature"
+            franchise={heroBackdrop}
+            wordmark={brand.nameShort.toUpperCase()}
+            crest={band ? { src: band.url, ...(band.filter ? { filter: band.filter } : {}) } : null}
+            model={null}
+            eager={false}
+            pill="Brand Book"
+            title={heroCity}
+            titleAccent={heroNick}
+            summary={`The franchise's crest as a homepage hero draws it: a watermark behind the copy, on the gradient ${brand.broadcastGradient ? 'its config paints verbatim' : 'derived from its brand pair'}.`}
+            ctaLabel="Every cut on file"
+            ctaHref={indexPath}
+          />
+        </li>
+      </ul>
+    </section>
+
+    {
+      brand.formerIdentities.length > 0 && (
+        <section class="cb__section">
+          <h2 class="cb__h2">Former identities</h2>
+          <p class="cb__note">
+            Names this franchise has worn that are not the one it wears today &mdash; a different
+            club on the same slot, not an older cut of the current mark (those are up under
+            <strong> Marks on file</strong>). Read from the same <code>history[]</code> the
+            Throwback Week picker reads, so a throwback week dresses the site in exactly this art.
+          </p>
+          <ul class="cb__eras">
+            {brand.formerIdentities.map((era) => (
+              <li class="cb__era">
+                <span class="cb__era-art" style={`--era-bg:${era.colorPrimary ?? bg}`}>
+                  {era.icon ? (
+                    <img src={era.icon} alt={`${era.name} crest, ${era.years}`} loading="lazy" />
+                  ) : (
+                    <span class="cb__era-label">No crest on file</span>
+                  )}
+                </span>
+                {era.banner && (
+                  <img
+                    class="cb__era-banner"
+                    src={era.banner}
+                    alt={`${era.name} banner, ${era.years}`}
+                    loading="lazy"
+                  />
+                )}
+                <span class="cb__era-years">{era.name}</span>
+                <span class="cb__era-label">{era.years}{era.label ? ` · ${era.label}` : ''}</span>
+                {(era.colorPrimary || era.colorSecondary) && (
+                  <span class="cb__era-hues">
+                    {[era.colorPrimary, era.colorSecondary]
+                      .filter((c): c is string => Boolean(c))
+                      .map((c) => (
+                        <span class="cb__era-hue" style={`background:${c}`} title={c} />
+                      ))}
+                  </span>
+                )}
+                {era.current && <span class="cb__era-now">Worn today</span>}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )
+    }
+
+    <section class="cb__section">
+      <h2 class="cb__h2">Using these marks</h2>
+      <p class="cb__note">
+        What each file is for, and the two rules that decide which one a surface may draw.
+        Every path on this page is also in the <a href={filesPath}>searchable file list</a>.
+      </p>
+      <dl class="cb__specs">
+        {
+          USAGE.map((u) => (
+            <div class="cb__spec">
+              <dt>{u.term}</dt>
+              <dd>{u.detail}</dd>
+            </div>
+          ))
+        }
+        {
+          brand.broadcastGradient && (
+            <div class="cb__spec">
+              <dt>Broadcast gradient</dt>
+              <dd>
+                The one RAW CSS field in the league config, painted verbatim by the draft reveal,
+                the on-the-clock board and both homepage heroes. A stray <code>;</code> does not
+                look wrong and renders the card with no background at all, on a 65" screen, in
+                front of the league &mdash; so it is validated rather than trusted.
+                <span class="cb__actions">
+                  <button
+                    class="cb-copy"
+                    type="button"
+                    data-copy={brand.broadcastGradient}
+                    aria-label="Copy broadcast gradient"
+                  >
+                    <span class="cb-copy__idle">Copy CSS</span>
+                    <span class="cb-copy__done">Copied</span>
+                  </button>
+                </span>
+              </dd>
+            </div>
+          )
+        }
+      </dl>
+    </section>
+
+    {/*
+      `visually-hidden` (src/styles/utilities.css), NOT `sr-only` — this repo
+      has no such class, and a live region styled by a class that does not
+      exist renders as visible body text reading "Copied https://…".
+    */}
+    <p class="visually-hidden" id="cb-copy-status" role="status" aria-live="polite"></p>
+  </main>
+</TheLeagueLayout>
+
+
+<script is:inline>
+  (() => {
+    /**
+     * CLIENTROUTER-SAFE INIT. `document` is one of the two nodes the router
+     * does NOT replace, so a listener registered here survives every
+     * navigation — hold the registration and replace it rather than stacking a
+     * second one.
+     *
+     * The gate asks a node the swap REPLACED (`.cb` in the new document), never
+     * a `window` global — that was the Sept 2026 lineup outage. This component
+     * is SHARED between both leagues rather than forked, so there is no
+     * same-id-different-league hazard beyond that: one module, one copy,
+     * whichever league's route rendered it.
+     */
+    const copyText = async (text) => {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        return;
+      }
+      // http:// dev fallback — the clipboard API requires a secure context.
+      const scratch = document.createElement('textarea');
+      scratch.value = text;
+      scratch.style.position = 'fixed';
+      scratch.style.opacity = '0';
+      document.body.appendChild(scratch);
+      scratch.select();
+      document.execCommand('copy');
+      scratch.remove();
+    };
+
+    const onClick = async (event) => {
+      const btn = event.target.closest('.cb-copy');
+      if (!btn || !document.querySelector('.cb') || !btn.dataset.copy) return;
+      try {
+        await copyText(btn.dataset.copy);
+        btn.classList.add('is-copied');
+        clearTimeout(btn._cbTimer);
+        btn._cbTimer = setTimeout(() => btn.classList.remove('is-copied'), 1500);
+        const status = document.getElementById('cb-copy-status');
+        if (status) status.textContent = `Copied ${btn.dataset.copy}`;
+      } catch {
+        /* clipboard denied — the value stays visible and selectable by hand */
+      }
+    };
+
+    if (window.__brandBookCopy) {
+      document.removeEventListener('click', window.__brandBookCopy);
+    }
+    window.__brandBookCopy = onClick;
+    document.addEventListener('click', onClick);
+  })();
+</script>

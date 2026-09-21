@@ -1,6 +1,7 @@
 ---
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import { getLeagueBySlug, type CanonicalLeagueSlug } from '../../../config/leagues';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
 
 type AssetEntry = {
   type: string;
@@ -93,6 +94,14 @@ if (!league) throw new Error(`Unknown league slug: ${slug}`);
 
 const isAfl = slug === 'afl-fantasy';
 const title = `${league.name} Asset Library`;
+
+/**
+ * Back to the Brand Book, which is this page's parent now rather than its
+ * sibling. Resolved through `resolveLeaguePath` so it drops the league prefix
+ * on a league's own apex — hard-coding `/theleague/brand` would send an owner
+ * on theleague.us to a URL that 404s there.
+ */
+const brandPath = resolveLeaguePath(`/${slug}/brand`, Astro.locals.hideLeaguePrefix ?? false);
 
 const normalizeDomain = (domain = '') => domain.replace(/\/+$/, '');
 const assetDomain = normalizeDomain(leagueConfig.assetDomain || '');
@@ -197,7 +206,13 @@ const copyIcons = `
 <TheLeagueLayout title={title}>
   <div class={`league-gallery league-gallery--${league.navSlug}`}>
     <header class="gallery-header">
+      <p class="gallery-header__crumb"><a href={brandPath}>&larr; Brand Book</a></p>
       <h1>{title}</h1>
+      <p class="gallery-header__lede">
+        Every file in the league, searchable &mdash; historical clubs and league art included. For
+        one club's colours, its cuts and which ground each is drawn on, see its
+        {' '}<a href={brandPath}>brand page</a>.
+      </p>
       {isAfl && (
         <p>Team logos, banners, and graphics for all {leagueConfig.teams.length} teams</p>
       )}
@@ -505,6 +520,29 @@ const copyIcons = `
     flex-direction: column;
     gap: 1.5rem;
     padding-bottom: 3rem;
+  }
+
+  /* The crumb and the lede sit INSIDE a header whose ground differs per league
+     — TheLeague's is a dark banner, the AFL's a light card — so both take
+     `currentColor` rather than a token. A link colour picked here would be
+     right on one league's header and invisible on the other's. */
+  .gallery-header__crumb,
+  .gallery-header__lede {
+    font-size: 0.85rem;
+    opacity: 0.85;
+  }
+  .gallery-header__crumb {
+    margin: 0 0 0.15rem;
+    font-weight: 600;
+  }
+  .gallery-header__lede {
+    max-width: 68ch;
+  }
+  .gallery-header__crumb a,
+  .gallery-header__lede a {
+    color: currentColor;
+    text-decoration: underline;
+    text-underline-offset: 2px;
   }
 
   /* .gallery-header diverges per league: TheLeague uses a dark banner with an

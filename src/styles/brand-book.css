@@ -1,0 +1,792 @@
+/**
+ * The Brand Book's shared stylesheet — ONE template for both halves.
+ *
+ * This is `ClubBrandPage`'s style block, lifted out verbatim and made global
+ * so the FRANCHISE page renders through the same rules rather than a parallel
+ * set of its own. It started as a parallel set, and the parallel set got two
+ * things wrong that this one had already solved:
+ *
+ *  - **`.cb__nick { color: inherit }`.** The layout sets a global
+ *    `:global(h1),:global(h2) { color: var(--primary-link-default-text-color) }`
+ *    that BEATS an inherited colour, so a hero heading renders in the site's
+ *    accent blue on top of the club's own colour. The franchise copy shipped
+ *    exactly that, on a red hero, which is what sent this file back here.
+ *  - **`.cb__h2` is a small uppercase eyebrow**, not a big themed heading, so
+ *    it never has that fight in the first place.
+ *
+ * A plain `.css` file, not a scoped block, for the reason the repo already
+ * records: Astro scoped CSS never reaches an element JS created
+ * (`docs/claude/rules/theming-and-assets.md`), and the copy buttons toggle
+ * their class at runtime. Global also means the two components cannot drift.
+ *
+ * TOKENS ONLY, each with a fallback matching the token's LIGHT value — a
+ * `var(--x)` naming a property defined nowhere renders its fallback in BOTH
+ * themes, which is how a page ships perfect in light and white-on-black in
+ * dark. `tests/design-token-guard.test.ts` enforces it.
+ *
+ * Plans: docs/plans/nfl-mark-assignments.md (clubs),
+ *        docs/plans/brand-book-franchise-half.md (franchises).
+ */
+
+
+  /* ── The COMPARISON surfaces opt out of the global dark swap ────────────
+     `buildNflLogoDarkCss` emits `html.dark img[src="<light src>"] { content:
+     url(<dark cut>) }` for every light src the site can render, so in dark
+     mode a light mark silently becomes the dark one. On every other page that
+     is the whole point; inside a side-by-side comparison it is fatal — the
+     light pane, the "Light surfaces" ground card and the Primary/ESPN-light
+     entries in the filmstrip would all render the DARK cut for a dark-mode
+     reader, and the page would show one mark twice.
+
+     Scoped to the four surfaces that COMPARE cuts, never the whole page. The
+     roster list below is not a comparison — it is the site rendering players
+     through the REAL PlayerCell the way it always does, and opting it out too
+     would have frozen it on the light mark against a dark card, the exact bug
+     the swap exists to prevent. A surface here declares its ground;
+     everything else follows the theme.
+
+     `!important` because the swap rule's specificity matches this one's and
+     load order between the layout head and a scoped component style is not
+     something to rely on. Pinned by tests/nfl-marks-page-data.test.ts. */
+  html.dark .cb__hero img,
+  html.dark .cb__film img,
+  html.dark .cb__grounds img,
+  html.dark .cb__eras img,
+  html.dark .cb__situ .cb__pane.is-light img,
+  html.dark .cb__situ .cb__pane.is-dark img,
+  html.dark .cb__situ .cb__pane.is-band img {
+    content: normal !important;
+  }
+
+  /* ── The RING reset is narrower than the swap reset, deliberately ────────
+     `buildCrestDarkStrokeCss` emits an `html.dark` ring for a franchise crest
+     measured illegible on ink. On a surface that declares its own ground that
+     rule fires for the wrong one — a LIGHT pane would get a ring meant for a
+     dark card — so the light grounds neutralise it.
+
+     ONLY the light grounds. A blanket `filter: none` over every surface here
+     also killed `--nfl-logo-ring`, and that rule is emitted TWICE by
+     `nfl-logo-dark-css.ts`: once guarded by `html.dark`, and once with NO
+     guard at all (`strokeRule(darkSrcs, '')`) for the dark cuts of stroked
+     clubs. Resetting the unguarded one inside an `html.dark` block gave
+     Carolina a ring in light mode and none in dark — reintroducing the exact
+     theme dependency this opt-out exists to remove.
+
+     A dark or band ground WANTS its ring, so it is simply left alone, which
+     also means the inline ring this page applies there needs no rescuing. The
+     `filter: revert-layer` that used to do that rescuing was fiction: the
+     style attribute is not a cascade layer, so it rolled back to the UA value
+     `none` rather than to the inline filter. */
+  html.dark .cb__cut-box.is-light img,
+  html.dark .cb__ground.is-light .cb__ground-art img,
+  html.dark .cb__situ .cb__pane.is-light img {
+    filter: none !important;
+  }
+  /* Tokens with fallbacks only (docs/claude/rules/theming-and-assets.md). */
+  .cb {
+    max-width: var(--container-max-width, 1100px);
+    margin: 0 auto;
+    padding: var(--spacing-md, 1rem) var(--spacing-md, 1rem) var(--spacing-lg, 1.5rem);
+  }
+  .cb__crumb {
+    margin-bottom: var(--spacing-sm, 0.75rem);
+    font-size: 0.875rem;
+  }
+  .cb__crumb a {
+    color: var(--color-gray-500, #6b7280);
+    text-decoration: none;
+  }
+  .cb__crumb a:hover {
+    text-decoration: underline;
+  }
+
+  .cb__hero {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--radius-md, 8px);
+    background: var(--hero-bg);
+    color: var(--hero-ink);
+    padding: 2.2rem 1.6rem;
+    margin-bottom: var(--spacing-lg, 1.5rem);
+  }
+  .cb__ghost {
+    position: absolute;
+    right: -2.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 260px;
+    height: 260px;
+    object-fit: contain;
+    opacity: 0.17;
+    pointer-events: none;
+  }
+  .cb__hero-in {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 1.4rem;
+    flex-wrap: wrap;
+  }
+  .cb__mark {
+    width: 120px;
+    height: 120px;
+    object-fit: contain;
+    flex: none;
+  }
+  .cb__city {
+    margin: 0;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    opacity: 0.82;
+  }
+  .cb__nick {
+    /* The hero paints its own ground, so its ink is computed from the CLUB
+       COLOUR and must beat the site's themed h1 rule — which rendered the
+       nickname near-black on navy in light mode and accent blue in dark. */
+    color: inherit;
+    margin: 0;
+    font-size: clamp(2rem, 6vw, 3rem);
+    line-height: 0.98;
+    text-transform: uppercase;
+  }
+
+  .cb__section {
+    margin-bottom: var(--spacing-lg, 1.5rem);
+  }
+  .cb__h2 {
+    margin: 0 0 0.35rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-gray-500, #6b7280);
+    border-left: 3px solid var(--color-primary, #1f6feb);
+    padding-left: 0.6rem;
+  }
+  .cb__note {
+    margin: 0 0 0.9rem;
+    font-size: 0.9rem;
+    color: var(--color-gray-600, #4b5563);
+    max-width: 70ch;
+  }
+
+  .cb__derived {
+    margin: 0 0 0.9rem;
+    padding: 0.7rem 0.85rem;
+    border-left: 3px solid var(--color-accent, #2563eb);
+    border-radius: var(--radius-sm, 4px);
+    background: color-mix(in srgb, currentColor 6%, transparent);
+    font-size: 0.875rem;
+    line-height: 1.5;
+    max-width: 72ch;
+  }
+  .cb__made {
+    position: absolute;
+    left: 0.3rem;
+    bottom: 0.3rem;
+    font-size: 0.55rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    padding: 0.08rem 0.3rem;
+    border-radius: var(--radius-sm, 4px);
+    background: var(--color-accent, #2563eb);
+    color: #fff;
+  }
+  .cb__cut-box {
+    position: relative;
+  }
+
+  /* A cut that fails to load renders its alt text; without this it sprawls
+     out of the box and pushes the filmstrip apart. */
+  .cb__cut-box,
+  .cb__ground-art {
+    overflow: hidden;
+  }
+
+  .cb__swatches {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    gap: 0.9rem;
+    flex-wrap: wrap;
+  }
+  .cb__swatches li {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  .cb__swatch {
+    display: block;
+    width: 68px;
+    height: 44px;
+    border-radius: var(--radius-sm, 4px);
+    border: 1px solid var(--color-gray-300, #d1d5db);
+  }
+  .cb__swatches code {
+    font-size: 0.7rem;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  .cb__film {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(124px, 1fr));
+    gap: var(--spacing-sm, 0.75rem);
+  }
+  .cb__cut {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  .cb__cut-box {
+    display: grid;
+    place-items: center;
+    height: 92px;
+    padding: 0.6rem;
+    border-radius: var(--radius-sm, 4px);
+    border: 1px solid var(--color-gray-300, #d1d5db);
+  }
+  /* Each box paints its own ground — never the page theme's. */
+  .cb__cut-box.is-light {
+    background: #ffffff;
+  }
+  .cb__cut-box.is-dark {
+    background: #1e1e1e;
+  }
+  .cb__cut-box img {
+    max-width: 100%;
+    max-height: 68px;
+    object-fit: contain;
+  }
+  .cb__cut-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+  .cb__cut-meta {
+    font-size: 0.68rem;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  .cb__grounds {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: var(--spacing-sm, 0.75rem);
+  }
+  .cb__ground {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    padding: 0.9rem;
+    border-radius: var(--radius-md, 8px);
+    border: 1px solid var(--color-gray-300, #d1d5db);
+  }
+  .cb__ground-head {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-gray-500, #6b7280);
+  }
+  .cb__ground-art {
+    display: grid;
+    place-items: center;
+    height: 76px;
+    border-radius: var(--radius-sm, 4px);
+  }
+  .cb__ground.is-light .cb__ground-art {
+    background: #ffffff;
+    border: 1px solid var(--color-gray-200, #e5e7eb);
+  }
+  .cb__ground.is-dark .cb__ground-art {
+    background: #1e1e1e;
+  }
+  .cb__ground-art img {
+    width: 54px;
+    height: 54px;
+    object-fit: contain;
+  }
+  .cb__ground-mark {
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+  .cb__ground-why {
+    font-size: 0.78rem;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  .cb__situ {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+    gap: var(--spacing-sm, 0.75rem);
+    align-items: start;
+  }
+  .cb__demo--wide {
+    grid-column: 1 / -1;
+  }
+  .cb__demo {
+    border: 1px solid var(--color-gray-300, #d1d5db);
+    border-radius: var(--radius-md, 8px);
+    overflow: hidden;
+  }
+  .cb__demo-cap {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.4rem 0.7rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-gray-500, #6b7280);
+    border-bottom: 1px solid var(--color-gray-200, #e5e7eb);
+  }
+  .cb__demo-cap em {
+    font-style: normal;
+    font-weight: 400;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  /* A pane stands in for a real surface, so it carries its own ground and
+     ink. Reading the page's tokens here would make the light pane go dark
+     for a dark-mode viewer and destroy the comparison. */
+  .cb__pane {
+    display: block;
+    padding: 0.8rem;
+  }
+  .cb__pane.is-light {
+    background: #ffffff;
+    color: #151a21;
+  }
+  .cb__pane.is-dark {
+    background: #1e1e1e;
+    color: #f2f2f2;
+  }
+  .cb__pane + .cb__pane {
+    border-top: 1px solid var(--color-gray-200, #e5e7eb);
+  }
+
+  /* PlayerCell brings its own type, spacing, avatar sizing and DEF treatment
+     from player-cell.css. Nothing here restyles it: a pane sets the GROUND and
+     the real cell renders on it exactly as it does on a roster page, which is
+     the only way this section stays true as that component changes. The two
+     colour rules below are the one exception, and they are about the ground —
+     the cell's own tokens follow the page theme, which would make the light
+     pane go dark for a dark-mode reader and collapse the comparison. */
+  .cb__pane .player-cell__name,
+  .cb__pane .player-cell__meta {
+    color: inherit;
+  }
+  .cb__pane .player-cell__meta {
+    opacity: 0.72;
+  }
+
+  .cb__bench {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    font-size: 0.8rem;
+  }
+  .cb__opp {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+  .cb__opp img {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+  }
+
+  .cb__bcast {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+  }
+  .cb__bcast img {
+    width: 50px;
+    height: 50px;
+    object-fit: contain;
+  }
+  .cb__bname {
+    display: block;
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .cb__bmeta {
+    display: block;
+    font-size: 0.75rem;
+    opacity: 0.7;
+  }
+
+  .cb__holders {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.5rem;
+  }
+  .cb__holder {
+    display: block;
+    padding: 0.7rem 0.85rem;
+    border-radius: var(--radius-sm, 4px);
+    border: 1px solid var(--color-gray-200, #e5e7eb);
+  }
+  .cb__holder-name {
+    display: block;
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 0.55rem;
+  }
+  .cb__holder-players {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+    gap: 0.5rem 0.9rem;
+  }
+
+  @media (max-width: 520px) {
+    .cb__mark {
+      width: 84px;
+      height: 84px;
+    }
+    .cb__ghost {
+      width: 180px;
+      height: 180px;
+    }
+    .cb__holder-players {
+      grid-template-columns: 1fr;
+    }
+    .cb__holder-name {
+      min-width: 0;
+    }
+  }
+
+/* ══ Franchise-half additions ═══════════════════════════════════════════════
+   Everything above is the club page's template, unchanged. What follows are
+   the pieces only a FRANCHISE page has — the file actions the old Asset
+   Library existed for, the derived-colour rows, the era art and the usage
+   table — written in the same idiom so the two halves read as one page. */
+
+/* ── Copy / download, per cut and per hex ───────────────────────────────── */
+.cb__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  align-items: center;
+  margin-top: 0.15rem;
+}
+.cb-copy,
+.cb__dl {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0.3rem 0.45rem;
+  border-radius: var(--radius-sm, 4px);
+  border: 1px solid var(--content-border, #e2e8f0);
+  background: var(--content-bg-muted, #eeeeee);
+  color: var(--page-text, #111827);
+  text-decoration: none;
+  cursor: pointer;
+}
+.cb-copy:hover,
+.cb__dl:hover,
+.cb-copy:focus-visible,
+.cb__dl:focus-visible {
+  border-color: var(--color-gray-500, #6b7280);
+}
+.cb-copy code {
+  font-size: 0.95em;
+}
+.cb-copy .cb-copy__done,
+.cb-copy.is-copied .cb-copy__idle {
+  display: none;
+}
+.cb-copy.is-copied .cb-copy__done {
+  display: inline;
+}
+
+/* "Retired" borrows `.cb__made`'s geometry but not its colour. That badge is an
+   accent fill because "made here" is a claim worth noticing; a retired cut is
+   the opposite — it is context, and an accent on four of nine tiles pulls the
+   eye to the cuts that no longer ship. Neutral, and legible on the white cut
+   box it always sits on. */
+.cb__made--retired {
+  background: color-mix(in srgb, #10141a 62%, transparent);
+  color: #ffffff;
+}
+
+/* A note that introduces a SECOND list inside a section it does not own — the
+   retired cuts under "Marks on file". Sits closer to the list than a section
+   lede does, so the two filmstrips read as one section rather than two. */
+.cb__note--sub {
+  margin-top: var(--spacing-md, 1rem);
+}
+
+/* ── Swatch additions ──────────────────────────────────────────────────────
+   The club page's `.cb__swatches` grid is used as-is by both halves. A
+   franchise adds one line the club does not need — the ROLE, since these
+   hexes each mean something different to the site — and makes the hex itself
+   the copy target so the row keeps the club page's shape. */
+.cb__swatch-role {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--page-text, #111827);
+}
+/* Looks exactly like the club page's bare `<code>` hex, and behaves like a
+   button. No border, no fill: a control styled as a control here would break
+   the row it is supposed to match. */
+.cb-copy--hex {
+  padding: 0;
+  border: 0;
+  background: none;
+  align-self: flex-start;
+}
+.cb-copy--hex code {
+  font-size: 0.7rem;
+  color: var(--color-gray-500, #6b7280);
+  background: transparent;
+  padding: 0;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+.cb-copy--hex:hover code,
+.cb-copy--hex:focus-visible code {
+  color: var(--page-text, #111827);
+}
+/* The confirmation replaces the hex in place, so nothing reflows. */
+.cb-copy--hex.is-copied code {
+  visibility: hidden;
+}
+.cb-copy--hex.is-copied::after {
+  content: 'copied';
+  margin-left: -3.2em;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--page-text, #111827);
+}
+
+/* ── Derived colours: one row per family, both themes side by side ───────── */
+.cb__derived-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--spacing-sm, 0.75rem);
+}
+.cb__drow {
+  margin: 0;
+  border: 1px solid var(--content-border, #e2e8f0);
+  border-radius: var(--radius-md, 8px);
+  padding: 0.7rem;
+  background: var(--card-bg, #ffffff);
+}
+.cb__drow-head {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--page-text, #111827);
+}
+.cb__drow-pair {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.45rem 0 0.4rem;
+}
+/* Each cell paints the GROUND that value was cleared against — that is the
+   whole claim being made. Literals, never theme tokens: a "light" cell drawn
+   on `--card-bg` follows the viewer's theme and the comparison disappears. */
+.cb__dcell {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 1 1 150px;
+  padding: 0.4rem 0.5rem;
+  border-radius: var(--radius-sm, 4px);
+  font-size: 0.7rem;
+}
+.cb__dcell.is-light {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  color: #10141a;
+}
+.cb__dcell.is-dark {
+  background: #262626;
+  border: 1px solid #3a3a3a;
+  color: #f3f4f6;
+}
+.cb__dswatch {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-sm, 4px);
+  flex: none;
+  background: var(--chip, #000);
+}
+/* The bar cells show the value doing its real job rather than as a square. */
+.cb__dbar {
+  flex: none;
+  width: 54px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--chip, #000);
+}
+/* A cell that DECLARES its ground must neutralise anything that follows the
+   theme instead — the same fight `.cb__nick` has with the global h1 rule. The
+   layout ships `:global(code) { background: var(--color-gray-100) }`, and that
+   token is a DARK grey under html.dark, so the hex pill inside a light cell
+   rendered dark-on-dark and the value was unreadable. Transparent plus
+   `inherit` puts the text back on the ground the cell painted. */
+.cb__dcell code {
+  font-size: 0.95em;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+}
+.cb__drow-why {
+  font-size: 0.73rem;
+  line-height: 1.45;
+  color: var(--color-gray-500, #6b7280);
+}
+
+/* ── Era art ────────────────────────────────────────────────────────────── */
+.cb__eras {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--spacing-md, 1rem);
+}
+.cb__era {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  border: 1px solid var(--content-border, #e2e8f0);
+  border-radius: var(--radius-md, 8px);
+  padding: 0.65rem;
+  background: var(--card-bg, #ffffff);
+}
+.cb__era-art {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 112px;
+  border-radius: var(--radius-sm, 4px);
+  background: var(--era-bg, #10141a);
+}
+.cb__era-art img {
+  width: 88px;
+  height: 88px;
+  object-fit: contain;
+}
+.cb__era-banner {
+  display: block;
+  width: 100%;
+  border-radius: var(--radius-sm, 4px);
+}
+.cb__era-years {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--page-text, #111827);
+}
+.cb__era-label {
+  font-size: 0.73rem;
+  color: var(--color-gray-500, #6b7280);
+}
+.cb__era-hues {
+  display: flex;
+  gap: 0.25rem;
+}
+.cb__era-hue {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 1px solid var(--content-border, #e2e8f0);
+}
+.cb__era-now {
+  align-self: flex-start;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.1rem 0.35rem;
+  border-radius: var(--radius-sm, 4px);
+  background: var(--content-bg-muted, #eeeeee);
+  color: var(--color-gray-500, #6b7280);
+}
+
+/* ── Usage table ────────────────────────────────────────────────────────── */
+.cb__specs {
+  margin: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+.cb__spec {
+  display: grid;
+  grid-template-columns: minmax(150px, 200px) 1fr;
+  gap: 0.75rem;
+  align-items: baseline;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--content-border, #e2e8f0);
+  border-radius: var(--radius-md, 8px);
+  background: var(--card-bg, #ffffff);
+  font-size: 0.8rem;
+}
+.cb__spec dt {
+  margin: 0;
+  font-weight: 700;
+  color: var(--page-text, #111827);
+}
+.cb__spec dd {
+  margin: 0;
+  color: var(--color-gray-500, #6b7280);
+  line-height: 1.45;
+}
+
+/* ── Standings-row demo (the franchise half's "in the app" pane) ─────────── */
+/* The band pane paints the franchise's own colour inline, so it needs no
+   background here — only the ground class, so the opt-out above can see it. */
+.cb__pane.is-band {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.cb__row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.85rem;
+  --team-icon-size: 26px;
+}
+.cb__row-rank {
+  font-size: 0.72rem;
+  opacity: 0.7;
+  min-width: 1.2em;
+}
+.cb__row-rec {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.8;
+}
+
+@media (max-width: 560px) {
+  .cb__spec {
+    grid-template-columns: 1fr;
+    gap: 0.2rem;
+  }
+}
