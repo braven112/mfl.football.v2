@@ -84,7 +84,7 @@ class El {
 }
 
 /* ---------- synthetic MFL feeds: 3 divisions of 4, 12 franchises ---------- */
-function makeFeeds(opts: { withVp: boolean; vp?: number[] }) {
+function makeFeeds(opts: { withVp: boolean; vp?: number[]; pf?: number[] }) {
   const divisions = ['00', '01', '02'];
   const franchise = [];
   for (let d = 0; d < 3; d++) {
@@ -114,6 +114,8 @@ function makeFeeds(opts: { withVp: boolean; vp?: number[] }) {
       id: f.id,
       fname: f.name,
       h2hwlt: '2-0-0',
+      /* MFL publishes the AVERAGE for this league, not the total. */
+      avgpf: String(opts.pf ? opts.pf[i] : 100),
     };
     if (opts.withVp) row.vp = String(opts.vp ? opts.vp[i] : 12 - i);
     return row;
@@ -125,6 +127,7 @@ function makeFeeds(opts: { withVp: boolean; vp?: number[] }) {
 async function run(opts: {
   withVp: boolean;
   vp?: number[];
+  pf?: number[];
   config?: Record<string, number>;
   winnings?: Record<string, unknown>;
 }) {
@@ -243,7 +246,7 @@ describe('MAD POWER 99 standings widget (MFL 10105)', () => {
     expect(textOf(table, 'mp99-cut-cell')[0]).toContain('8 QUALIFY');
   });
 
-  it('flags a VP tie straddling the cut instead of breaking it silently', async () => {
+  it('names who just missed at the cut, and what separated them', async () => {
     /* Leaders take 0001/0005/0009 and runners-up 0002/0006/0010, leaving
      * 0003 and 0004 both on 8 — one wild card place between them. */
     const vp = [10, 9, 8, 8, 10, 9, 5, 5, 10, 9, 5, 4];
@@ -254,7 +257,33 @@ describe('MAD POWER 99 standings widget (MFL 10105)', () => {
     });
     const note = textOf(table, 'mp99-note-cell')[0];
     expect(note).toMatch(/also on \d+ Victory Points/);
-    expect(note).toContain('league tiebreaker');
+    /* Points For decides it now, so the note explains rather than defers. */
+    expect(note).toContain('Points For');
+    expect(note).not.toContain('league tiebreaker');
+  });
+
+  it('breaks a Victory Point tie on Points For', async () => {
+    /* All level on VP, so Points For alone decides the order. 0003 scores
+     * most, 0001 least. */
+    const vp = new Array(12).fill(5);
+    const pf = [100, 120, 140, 110, 101, 121, 141, 111, 102, 122, 142, 112];
+    const { table } = await run({
+      withVp: true, vp, pf,
+      config: { DIVISION_LEADER_SEEDS: 3, RUNNER_UP_SEEDS: 3, WILD_CARD_SEEDS: 2 },
+    });
+    /* Wild cards are drawn from whoever is left, highest Points For first:
+     * 0007 (141) then 0011 (142)... both above the rest. */
+    const wild = all(table).filter((e) => e.className.includes('wildcard-row'));
+    const names = wild.map((e) => e.textContent);
+    expect(names.some((n) => n.includes('0011'))).toBe(true);
+    expect(names.some((n) => n.includes('0007'))).toBe(true);
+  });
+
+  it('falls back to the average when MFL does not publish a Points For total', async () => {
+    /* This league's standings display carries avgpf, not pf. Every team has
+     * played the same number of games, so the two rank identically. */
+    const source = readFileSync(SOURCE, 'utf8');
+    expect(source).toContain('r.pf != null ? r.pf : r.avgpf');
   });
 
   it('marks tied teams rather than presenting an arbitrary order as fact', async () => {
@@ -290,8 +319,10 @@ describe('MAD POWER 99 standings widget (MFL 10105)', () => {
 });
 
 describe('prize money — the one hand-entered figure', () => {
+  const DASH = '\u2014';
   const prizes = (table: El) =>
-    [...textOf(table, 'mp99-prize'), ...textOf(table, 'mp99-list-prize')].filter(Boolean);
+    [...textOf(table, 'mp99-prize'), ...textOf(table, 'mp99-list-prize')]
+      .filter((t) => t && t !== DASH);
 
   it('reads the module block and formats it as currency', async () => {
     const { table } = await run({ withVp: true, winnings: { '0001': 239 } });
@@ -314,9 +345,13 @@ describe('prize money — the one hand-entered figure', () => {
     expect(textOf(table, 'mp99-list-prize').filter(Boolean)).toContain('$60.00');
   });
 
-  it('shows nothing for a team left out or set to zero', async () => {
+  it('shows a dash, not a blank, for a team left out or set to zero', async () => {
     const { table } = await run({ withVp: true, winnings: { '0001': 0 } });
     expect(prizes(table)).toEqual([]);
+    /* The field is still visible on every team: with the header hidden, an
+     * unset prize would otherwise leave no sign the column exists at all, and
+     * tiles came out different heights. */
+    expect(classCount(table, 'mp99-prize-none')).toBe(12);
   });
 
   it('survives junk without taking the table down', async () => {
@@ -329,9 +364,10 @@ describe('prize money — the one hand-entered figure', () => {
     expect(prizes(table).join(' ')).not.toContain('NaN');
   });
 
-  it('renders no winnings at all when the module defines none', async () => {
+  it('renders no amounts when the module defines none, but keeps the field', async () => {
     const { table } = await run({ withVp: true });
     expect(prizes(table)).toEqual([]);
+    expect(classCount(table, 'mp99-prize-none')).toBe(12);
   });
 });
 

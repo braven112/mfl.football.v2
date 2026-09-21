@@ -149,6 +149,14 @@
         division: m.division,
         divisionName: m.divisionName,
         vp: Number(r.vp) || 0,
+        /* Points For breaks a Victory Point tie. MFL publishes the TOTAL (pf)
+         * only when the standings display carries it; today this league shows
+         * the AVERAGE (avgpf). The two rank identically while every team has
+         * played the same number of games, which is the case here — two games
+         * a week, nobody on a bye — so prefer the total and fall back to the
+         * average. */
+        pf: Number(r.pf != null ? r.pf : r.avgpf) || 0,
+        pfIsAverage: r.pf == null,
         record: (r.h2hwlt || '').trim(),
         /* MFL's row order already applies the league's official tiebreaker
          * chain, some of which we cannot reproduce. Keep it as the stable
@@ -180,7 +188,12 @@
     var taken = {};
     leaders.concat(seconds).forEach(function (t) { taken[t.id] = true; });
 
-    var byVp = function (a, b) { return (b.vp - a.vp) || (a.feedOrder - b.feedOrder); };
+    /* Victory Points, then Points For — the league's tiebreaker. MFL's own row
+     * order is the last resort, since it already applies the constitution's
+     * chain for anything still level. */
+    var byVp = function (a, b) {
+      return (b.vp - a.vp) || (b.pf - a.pf) || (a.feedOrder - b.feedOrder);
+    };
     var rest = teams.filter(function (t) { return !taken[t.id]; }).sort(byVp);
 
     var wild = rest.slice(0, WILD_CARD_SEEDS);
@@ -200,9 +213,10 @@
 
     out.forEach(function (e, i) { e.seed = i + 1; });
 
-    /* A Victory Point tie is shown, never silently broken. Mark any team whose
-     * VP is shared inside its own tier, and flag the case that actually decides
-     * something: a tie straddling the last wild card place. */
+    /* Points For decides a Victory Point tie, so nothing is left undecided.
+     * The marker now means only "level on VP, separated on Points For", which
+     * is still worth showing: it explains why two teams on the same number sit
+     * in a particular order. */
     var counts = {};
     out.forEach(function (e) {
       var k = e.tier + ':' + e.team.vp;
@@ -210,6 +224,8 @@
     });
     out.forEach(function (e) { e.tied = counts[e.tier + ':' + e.team.vp] > 1; });
 
+    /* The note at the cut is no longer "someone must decide this" — Points For
+     * already has. It says who just missed out, and on what. */
     var lastIn = wild[wild.length - 1];
     var firstOut = field[0];
     var overflow = (lastIn && firstOut && lastIn.vp === firstOut.vp)
@@ -305,8 +321,14 @@
 
     box.appendChild(el('div', 'mp99-tile-meta', '#' + entry.seed + ' \u00b7 ' + (t.record || '0-0-0')));
 
+    /* Always rendered, even with nothing set. Otherwise there is no sign the
+     * field exists — the header is hidden, so an unset prize would leave no
+     * trace at all — and tiles with and without money came out different
+     * heights, which made the grid look ragged. */
     var won = WINNINGS[t.id];
-    if (won) box.appendChild(el('div', 'mp99-prize', money(won)));
+    var prize = el('div', won ? 'mp99-prize' : 'mp99-prize mp99-prize-none', won ? money(won) : '\u2014');
+    prize.title = won ? 'prize money' : 'no prize money recorded';
+    box.appendChild(prize);
     return box;
   }
 
@@ -320,7 +342,9 @@
     row.appendChild(el('div', 'mp99-list-rec', t.record || '0-0-0'));
 
     var won = WINNINGS[t.id];
-    row.appendChild(el('div', 'mp99-list-prize', won ? money(won) : ''));
+    row.appendChild(el('div',
+      won ? 'mp99-list-prize' : 'mp99-list-prize mp99-prize-none',
+      won ? money(won) : '\u2014'));
 
     var vp = el('div', 'mp99-list-vp');
     vpText(vp, t.vp, entry.tied);
@@ -401,7 +425,7 @@
       body.appendChild(fullRow(
         'mp99-note-cell',
         model.overflow + (model.overflow === 1 ? ' team below the line is' : ' teams below the line are') +
-        ' also on ' + model.overflowVp + ' Victory Points. The league tiebreaker decides the final place.'
+        ' also on ' + model.overflowVp + ' Victory Points \u2014 separated on Points For.'
       ));
     }
 

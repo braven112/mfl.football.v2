@@ -165,15 +165,27 @@ the league is configured for, so this is a question about intent, not data — b
 if the configured value is not what the league means by "victory points", every
 seed is wrong in a way the feed cannot reveal.
 
-### O2 — Ties are the normal state early on. Is D8 still right?
-With two games a week and a 3/2/1 bucket, a team can score only 0–7 VP per week.
-After week 1 the 99 teams held just seven distinct VP values: **26 teams tied on
-7, 25 tied on 1.** A 12-team wild card cut through a 26-way tie is not a
-footnote.
+### O2 — What breaks a Victory Point tie **(RESOLVED 2026-09-21)**
+**Decision: Points For.** Equal VP is separated by points scored, then by MFL's
+own row order for anything still level.
 
-**Ask the client:** what actually breaks a VP tie? The natural answer is to fall
-back to the league's existing chain — `PCT`, then `PTS`, then head-to-head —
-which needs no new rule and matches how MFL already orders the standings.
+This mattered from the first day it shipped. With two games a week and a 3/2/1
+bucket a team can score only 0–6 VP per week, so after two weeks **26 of the 99
+teams sat on 6 VP and another large block on 5** — the order inside each tier
+was MFL feed position, which is arbitrary to a reader. Points For separates all
+26, and at the cut it put **Invaders in over Rams by 1.1 points**, both on 5 VP.
+
+**One caveat worth knowing.** MFL publishes the Points For TOTAL (`pf`) only
+when the standings display carries it; this league currently shows the AVERAGE
+(`avgpf`). The two rank identically while every team has played the same number
+of games, which holds here — two games a week, nobody on a bye — and the widget
+prefers `pf` and falls back to `avgpf`, so adding the total to the standings
+display later changes nothing. If the league ever has teams on different game
+counts, add Points For to the display or the order will be wrong.
+
+D8 stands but means less now: a tie marker no longer says "undecided", only
+"level on VP, separated on Points For".
+
 
 ### O3 — The record column **(RESOLVED 2026-09-21)**
 **Decision: print MFL's own `W-L-T` exactly as the feed gives it** — `2-0-0`,
