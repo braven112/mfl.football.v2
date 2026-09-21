@@ -69,6 +69,9 @@ class El {
   get textContent(): string {
     return this.own + this.children.map((c) => c.textContent).join('');
   }
+  get firstChild(): El | null {
+    return this.children[0] ?? null;
+  }
   get rows() {
     return this.getElementsByTagName('tr');
   }
@@ -186,8 +189,17 @@ async function run(opts: {
   return { table, body, fetched, head };
 }
 
-const classCount = (body: El[], cls: string) =>
-  body.filter((r) => r.className.split(' ').includes(cls)).length;
+/* Tiles and list rows live inside colspan cells, so count across the tree. */
+function all(root: El): El[] {
+  const out: El[] = [];
+  const walk = (n: El) => { for (const c of n.children) { out.push(c); walk(c); } };
+  walk(root);
+  return out;
+}
+const classCount = (table: El, cls: string) =>
+  all(table).filter((e) => e.className.split(' ').includes(cls)).length;
+const textOf = (table: El, cls: string) =>
+  all(table).filter((e) => e.className.split(' ').includes(cls)).map((e) => e.textContent);
 
 describe('MAD POWER 99 standings widget (MFL 10105)', () => {
   it('reads league and year from the page URL, never a hardcoded id', async () => {
@@ -201,10 +213,13 @@ describe('MAD POWER 99 standings widget (MFL 10105)', () => {
   });
 
   it('builds the four tiers at their configured sizes', async () => {
-    const { body } = await run({ withVp: true, config: { DIVISION_LEADER_SEEDS: 3, RUNNER_UP_SEEDS: 3, WILD_CARD_SEEDS: 2 } });
-    expect(classCount(body, 'division-row')).toBe(3);
-    expect(classCount(body, 'runnerup-row')).toBe(3);
-    expect(classCount(body, 'wildcard-row')).toBe(2);
+    const { table } = await run({ withVp: true, config: { DIVISION_LEADER_SEEDS: 3, RUNNER_UP_SEEDS: 3, WILD_CARD_SEEDS: 2 } });
+    expect(classCount(table, 'division-row')).toBe(3);
+    expect(classCount(table, 'runnerup-row')).toBe(3);
+    expect(classCount(table, 'wildcard-row')).toBe(2);
+    /* Everyone below the cut is a list row, not a tile. */
+    expect(classCount(table, 'mp99-tile')).toBe(8);
+    expect(classCount(table, 'mp99-list-row')).toBe(4);
   });
 
   it('takes division leaders and runners-up from MFL feed order, not by VP', async () => {
@@ -212,97 +227,111 @@ describe('MAD POWER 99 standings widget (MFL 10105)', () => {
      * first in MFL's order — so 0001 leads and 0002 is the runner-up. Re-sorting
      * MFL's rows is the bug this pins. */
     const vp = [1, 99, 2, 3, 50, 40, 30, 20, 45, 35, 25, 15];
-    const { body } = await run({
+    const { table } = await run({
       withVp: true,
       vp,
       config: { DIVISION_LEADER_SEEDS: 3, RUNNER_UP_SEEDS: 3, WILD_CARD_SEEDS: 2 },
     });
-    const leaders = body.filter((r) => r.className.includes('division-row'));
-    const names = leaders.map((r) => r.children[1].textContent);
-    expect(names.some((n) => n.includes('0001'))).toBe(true);
-    const seconds = body.filter((r) => r.className.includes('runnerup-row'));
-    expect(seconds.map((r) => r.children[1].textContent).some((n) => n.includes('0002'))).toBe(true);
+    const leaders = all(table).filter((e) => e.className.includes('division-row'));
+    expect(leaders.map((e) => e.textContent).some((n) => n.includes('0001'))).toBe(true);
+    const seconds = all(table).filter((e) => e.className.includes('runnerup-row'));
+    expect(seconds.map((e) => e.textContent).some((n) => n.includes('0002'))).toBe(true);
   });
 
   it('draws a cut line after the last qualifier', async () => {
-    const { body } = await run({ withVp: true, config: { DIVISION_LEADER_SEEDS: 3, RUNNER_UP_SEEDS: 3, WILD_CARD_SEEDS: 2 } });
-    const cut = body.find((r) => r.children[0]?.className === 'mp99-cut-cell');
-    expect(cut?.textContent).toContain('8 QUALIFY');
+    const { table } = await run({ withVp: true, config: { DIVISION_LEADER_SEEDS: 3, RUNNER_UP_SEEDS: 3, WILD_CARD_SEEDS: 2 } });
+    expect(textOf(table, 'mp99-cut-cell')[0]).toContain('8 QUALIFY');
   });
 
   it('flags a VP tie straddling the cut instead of breaking it silently', async () => {
     /* Leaders take 0001/0005/0009 and runners-up 0002/0006/0010, leaving
      * 0003 and 0004 both on 8 — one wild card place between them. */
     const vp = [10, 9, 8, 8, 10, 9, 5, 5, 10, 9, 5, 4];
-    const { body } = await run({
+    const { table } = await run({
       withVp: true,
       vp,
       config: { DIVISION_LEADER_SEEDS: 3, RUNNER_UP_SEEDS: 3, WILD_CARD_SEEDS: 1 },
     });
-    const note = body.find((r) => r.children[0]?.className === 'mp99-note-cell');
-    expect(note?.textContent).toMatch(/also on \d+ Victory Points/);
-    expect(note?.textContent).toContain('league tiebreaker');
+    const note = textOf(table, 'mp99-note-cell')[0];
+    expect(note).toMatch(/also on \d+ Victory Points/);
+    expect(note).toContain('league tiebreaker');
   });
 
   it('marks tied teams rather than presenting an arbitrary order as fact', async () => {
     const vp = new Array(12).fill(7);
-    const { body } = await run({ withVp: true, vp, config: { DIVISION_LEADER_SEEDS: 3, RUNNER_UP_SEEDS: 3, WILD_CARD_SEEDS: 2 } });
-    const tieMarks = body.filter((r) => r.children[3]?.textContent.includes('T'));
-    expect(tieMarks.length).toBeGreaterThan(0);
+    const { table } = await run({ withVp: true, vp, config: { DIVISION_LEADER_SEEDS: 3, RUNNER_UP_SEEDS: 3, WILD_CARD_SEEDS: 2 } });
+    expect(classCount(table, 'mp99-tie')).toBeGreaterThan(0);
   });
 
   it("prints MFL's own W-L-T record, unreformatted", async () => {
-    const { body } = await run({ withVp: true });
-    expect(body[0].children[2].textContent).toBe('2-0-0');
+    const { table } = await run({ withVp: true });
+    expect(textOf(table, 'mp99-tile-meta').every((t) => t.includes('2-0-0'))).toBe(true);
+  });
+
+  it('hides the six-column header, which no longer describes the layout', async () => {
+    const { table } = await run({ withVp: true });
+    const header = table.rows.find((r) => r.getElementsByTagName('th').length > 0);
+    expect(header?.className).toContain('mp99-hide');
   });
 
   it('says so plainly when MFL does not publish Victory Points', async () => {
-    const { body } = await run({ withVp: false });
+    const { body, table } = await run({ withVp: false });
     const text = body.map((r) => r.textContent).join(' ');
     expect(text).toContain('Victory Points are not published');
     expect(text).toContain('Setup');
     /* Never a table of plausible-looking zeros. */
-    expect(classCount(body, 'division-row')).toBe(0);
+    expect(classCount(table, 'division-row')).toBe(0);
   });
 
   it('never renders a red top scorer while every score is still zero', async () => {
-    const { body } = await run({ withVp: true, vp: new Array(12).fill(0) });
-    expect(classCount(body, 'highlight-row')).toBe(0);
+    const { table } = await run({ withVp: true, vp: new Array(12).fill(0) });
+    expect(classCount(table, 'highlight-row')).toBe(0);
   });
 });
 
 describe('prize money — the one hand-entered figure', () => {
-  const winningsText = (body: El[]) => body.map((r) => r.children[4]?.textContent ?? '').join('|');
+  const prizes = (table: El) =>
+    [...textOf(table, 'mp99-prize'), ...textOf(table, 'mp99-list-prize')].filter(Boolean);
 
   it('reads the module block and formats it as currency', async () => {
-    const { body } = await run({ withVp: true, winnings: { '0001': 239 } });
-    expect(winningsText(body)).toContain('$239.00');
+    const { table } = await run({ withVp: true, winnings: { '0001': 239 } });
+    expect(prizes(table)).toContain('$239.00');
   });
 
   it('accepts an amount typed with a dollar sign', async () => {
-    const { body } = await run({ withVp: true, winnings: { '0001': '$1,250.50' } });
-    expect(winningsText(body)).toContain('$1,250.50');
+    const { table } = await run({ withVp: true, winnings: { '0001': '$1,250.50' } });
+    expect(prizes(table)).toContain('$1,250.50');
+  });
+
+  it('shows a prize on a team below the cut, not just on qualifiers', async () => {
+    /* 0004 is the lowest VP in division 00, so it falls into the field. */
+    const { table } = await run({
+      withVp: true,
+      vp: [10, 9, 8, 1, 10, 9, 8, 2, 10, 9, 8, 3],
+      config: { DIVISION_LEADER_SEEDS: 3, RUNNER_UP_SEEDS: 3, WILD_CARD_SEEDS: 2 },
+      winnings: { '0004': 60 },
+    });
+    expect(textOf(table, 'mp99-list-prize').filter(Boolean)).toContain('$60.00');
   });
 
   it('shows nothing for a team left out or set to zero', async () => {
-    const { body } = await run({ withVp: true, winnings: { '0001': 0 } });
-    expect(winningsText(body).replace(/\|/g, '')).toBe('');
+    const { table } = await run({ withVp: true, winnings: { '0001': 0 } });
+    expect(prizes(table)).toEqual([]);
   });
 
   it('survives junk without taking the table down', async () => {
-    const { body } = await run({
+    const { table } = await run({
       withVp: true,
       winnings: { '0001': 'not a number', '0002': null, '0003': 50 },
     });
-    expect(body.length).toBeGreaterThan(10);
-    const text = winningsText(body);
-    expect(text).toContain('$50.00');
-    expect(text).not.toContain('NaN');
+    expect(classCount(table, 'mp99-tile') + classCount(table, 'mp99-list-row')).toBe(12);
+    expect(prizes(table)).toContain('$50.00');
+    expect(prizes(table).join(' ')).not.toContain('NaN');
   });
 
   it('renders no winnings at all when the module defines none', async () => {
-    const { body } = await run({ withVp: true });
-    expect(winningsText(body).replace(/\|/g, '')).toBe('');
+    const { table } = await run({ withVp: true });
+    expect(prizes(table)).toEqual([]);
   });
 });
 
@@ -329,7 +358,8 @@ describe('module.html — the complete MESSAGE6 module', () => {
     const css = readFileSync(path.join(process.cwd(), 'public/mfl/10105/standings.css'), 'utf8');
     /* The league's own rules and the widget's additions both live there. */
     for (const rule of ['.division-row', '.wildcard-row', '.winnings-row', '.highlight-row',
-                        '.runnerup-row', '.mp99-cut-cell', '.mp99-tie']) {
+                        '.runnerup-row', '.mp99-cut-cell', '.mp99-tie', '.mp99-tile',
+                        '.mp99-grid', '.mp99-list-row', '.mp99-prize', '.mp99-list-prize']) {
       expect(css).toContain(`#madmen #wwwc ${rule}`);
     }
     const league = readFileSync(

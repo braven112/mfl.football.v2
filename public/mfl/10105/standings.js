@@ -235,6 +235,9 @@
     return td;
   }
 
+  /* One full-width row. The table is a shell: the layout inside it is a grid
+   * of crests for the 30 who qualify and a tight list for the rest, so almost
+   * everything is rendered into a colspan cell rather than into columns. */
   function fullRow(cls, text) {
     var tr = document.createElement('tr');
     var td = cell(cls, text);
@@ -243,101 +246,93 @@
     return tr;
   }
 
-  function stack(wrapCls, iconCls, ariaLabel, text, textCls) {
-    var wrap = document.createElement('div');
-    wrap.className = wrapCls;
-    var icon = document.createElement('i');
-    icon.className = iconCls;
-    icon.setAttribute('aria-label', ariaLabel);
-    wrap.appendChild(icon);
-    if (text) {
-      var span = document.createElement('span');
-      span.className = textCls;
-      span.textContent = text;
-      wrap.appendChild(span);
-    }
-    return wrap;
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
   }
 
   function money(n) {
     return '$' + Number(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   }
 
-  function teamRow(entry, isTopScorer) {
-    var t = entry.team;
-    var tier = TIER[entry.tier];
-    var tr = document.createElement('tr');
+  /* The banners are 1500x636 with a self-contained crest in the middle, so a
+   * square centre crop gives a clean logo with no new artwork. The browser
+   * does the cropping: a square box plus object-fit, with the focal point
+   * centred. */
+  function crest(t, cls) {
+    var img = document.createElement('img');
+    img.className = cls;
+    img.src = t.icon;
+    img.alt = t.name + ' crest';
+    img.loading = 'lazy';
+    img.decoding = 'async';
+    return img;
+  }
 
-    var classes = [];
-    if (tier.row) classes.push(tier.row);
-    if (isTopScorer) classes.push('highlight-row');
-    var won = WINNINGS[t.id];
-    if (won) classes.push('winnings-row');
-    if (classes.length) tr.className = classes.join(' ');
-
-    tr.appendChild(cell('rank', String(entry.seed)));
-
-    /* Team: banner above name, as the live page renders it. */
-    var team = cell('team');
-    var ts = document.createElement('div');
-    ts.className = 'team-stack';
-    if (t.icon) {
-      var img = document.createElement('img');
-      img.className = 'img-responsive team-banner';
-      img.src = t.icon;
-      img.alt = t.name + ' team banner';
-      img.loading = 'lazy';
-      img.decoding = 'async';
-      img.setAttribute('width', '300');
-      img.setAttribute('height', '50');
-      ts.appendChild(img);
-    }
-    var nm = document.createElement('span');
-    nm.className = 'team-name';
-    nm.textContent = t.name;
-    ts.appendChild(nm);
-    team.appendChild(ts);
-    tr.appendChild(team);
-
-    /* MFL's own W-L-T, printed as the feed gives it. */
-    tr.appendChild(cell('record', t.record || '0-0-0'));
-
-    var pts = cell('points', String(t.vp));
-    if (entry.tied) {
-      var tie = document.createElement('span');
-      tie.className = 'mp99-tie';
-      tie.textContent = 'T';
+  function vpText(parent, vp, tied) {
+    parent.appendChild(document.createTextNode(String(vp)));
+    if (tied) {
+      var tie = el('span', 'mp99-tie', 'T');
       tie.title = 'tied on Victory Points';
-      pts.appendChild(tie);
+      parent.appendChild(tie);
     }
-    tr.appendChild(pts);
+  }
 
-    var w = cell('winnings-input');
-    if (won) w.appendChild(stack('winnings-stack', 'fa-sharp fa-regular fa-money-bill-1 winnings-icon', 'winnings', money(won), 'winnings-amount'));
-    tr.appendChild(w);
+  /* A qualifier: crest, name, Victory Points, then seed and record, then the
+   * prize if the league has set one. */
+  function tile(entry) {
+    var t = entry.team;
+    var box = el('div', 'mp99-tile ' + TIER[entry.tier].row);
 
-    /* Status cell: which tier, and for the two division tiers, which division. */
-    var status;
-    if (entry.tier === 'leader') {
-      status = cell('division-leader-display');
-      status.appendChild(stack('division-leader-stack', 'fa-sharp fa-solid fa-ranking-star division-leader-icon', 'division leader', t.divisionName, 'division-leader-name'));
-    } else if (entry.tier === 'second') {
-      /* Their own cell class, not one of ours: a runner-up cell is a division
-       * placing like a leader's, so anything they style on
-       * .division-leader-display should reach it. The tier is told apart by
-       * the row background and the icon colour. */
-      status = cell('division-leader-display');
-      status.appendChild(stack('division-leader-stack', 'fa-sharp fa-solid fa-ranking-star runnerup-leader-icon', 'division runner-up', t.divisionName, 'division-leader-name'));
-    } else if (entry.tier === 'wild') {
-      /* Their "WC #1" note, which the commissioner used to type by hand —
-       * now it numbers itself from the team's place in the wild card band. */
-      status = cell('wildcard-leader-display');
-      status.appendChild(stack('wildcard-leader-stack', 'fa-sharp fa-solid fa-cards wildcard-leader-icon', 'wild card', 'WC #' + (entry.tierIndex + 1), 'wildcard-leader-note'));
-    } else {
-      status = cell('wildcard-leader-display');
-    }
-    tr.appendChild(status);
+    box.appendChild(crest(t, 'mp99-crest'));
+    box.appendChild(el('div', 'mp99-tile-name', t.name));
 
+    var vp = el('div', 'mp99-tile-vp');
+    vpText(vp, t.vp, entry.tied);
+    vp.appendChild(el('span', null, ' VP'));
+    box.appendChild(vp);
+
+    box.appendChild(el('div', 'mp99-tile-meta', '#' + entry.seed + ' \u00b7 ' + (t.record || '0-0-0')));
+
+    var won = WINNINGS[t.id];
+    if (won) box.appendChild(el('div', 'mp99-prize', money(won)));
+    return box;
+  }
+
+  /* Everyone below the cut: one line each. */
+  function listRow(entry) {
+    var t = entry.team;
+    var row = el('div', 'mp99-list-row');
+    row.appendChild(el('div', 'mp99-list-seed', String(entry.seed)));
+    row.appendChild(crest(t, 'mp99-list-crest'));
+    row.appendChild(el('div', 'mp99-list-name', t.name));
+    row.appendChild(el('div', 'mp99-list-rec', t.record || '0-0-0'));
+
+    var won = WINNINGS[t.id];
+    row.appendChild(el('div', 'mp99-list-prize', won ? money(won) : ''));
+
+    var vp = el('div', 'mp99-list-vp');
+    vpText(vp, t.vp, entry.tied);
+    row.appendChild(vp);
+    return row;
+  }
+
+  function sectionHead(label, colour, count) {
+    var tr = fullRow('mp99-section');
+    var td = tr.firstChild;
+    td.style.color = colour;
+    td.textContent = label + ' ';
+    td.appendChild(el('span', 'mp99-section-count', count));
+    return tr;
+  }
+
+  function gridOf(entries) {
+    var tr = fullRow('mp99-wrap');
+    var grid = el('div', 'mp99-grid');
+    entries.forEach(function (e) { grid.appendChild(tile(e)); });
+    tr.firstChild.appendChild(grid);
     return tr;
   }
 
@@ -357,18 +352,17 @@
     });
   }
 
-  /* The module's header row is left in place — but two of its labels stop
-   * being true once the widget takes over: the ranked column is Victory
-   * Points, not a points average, and the status column now carries three
-   * tiers. Retitle in place so a re-pasted module cannot drift from the data
-   * underneath it. Everything else in the header, and the caption and
-   * colgroup, are left exactly as the league wrote them. */
+  /* The module keeps its six-column header for the case where this script
+   * cannot run. Once it does, the layout inside the table is a grid of crests
+   * and a list, not six columns, so those labels describe nothing — hide the
+   * row rather than retitle it. The caption and colgroup stay untouched. */
   function retitleHeader(table) {
     var ths = table.getElementsByTagName('th');
     Array.prototype.forEach.call(ths, function (th) {
-      var text = (th.textContent || '').trim().toUpperCase();
-      if (text === 'POINTS AVG' || text === 'POINTS') th.textContent = 'VICTORY PTS';
-      else if (text === 'DIVISION LEADERS') th.textContent = 'PLAYOFF STATUS';
+      var tr = th.parentNode;
+      if (tr && tr.className.indexOf('mp99-hide') === -1) {
+        tr.className = (tr.className ? tr.className + ' ' : '') + 'mp99-hide';
+      }
     });
   }
 
@@ -376,26 +370,40 @@
     retitleHeader(table);
     clearBody(table);
     var body = table.tBodies[0] || table;
-    var top = null;
 
-    model.entries.forEach(function (entry, i) {
-      /* One red top scorer, and never while every score is still zero. */
-      var isTop = (i === 0 && entry.team.vp > 0);
-      if (isTop) top = entry;
-      body.appendChild(teamRow(entry, isTop));
+    var byTier = { leader: [], second: [], wild: [], field: [] };
+    model.entries.forEach(function (e) { byTier[e.tier].push(e); });
 
-      if (entry.seed === model.cutAfter) {
-        body.appendChild(fullRow('mp99-cut-cell', 'PLAYOFF CUT LINE · ' + model.cutAfter + ' QUALIFY'));
-        if (model.overflow) {
-          body.appendChild(fullRow(
-            'mp99-note-cell',
-            model.overflow + (model.overflow === 1 ? ' team below the line is' : ' teams below the line are') +
-            ' also on ' + model.overflowVp + ' Victory Points. The league tiebreaker decides the final place.'
-          ));
-        }
-      }
+    var sections = [
+      { key: 'leader', label: 'DIVISION LEADERS', colour: '#ff519f' },
+      { key: 'second', label: 'DIVISION RUNNERS-UP', colour: '#b284ff' },
+      { key: 'wild',   label: 'WILD CARDS', colour: 'rgb(89, 224, 255)' }
+    ];
+
+    sections.forEach(function (sec) {
+      var list = byTier[sec.key];
+      if (!list.length) return;
+      body.appendChild(sectionHead(sec.label, sec.colour, 'seeds ' + list[0].seed + '\u2013' + list[list.length - 1].seed));
+      body.appendChild(gridOf(list));
     });
-    return top;
+
+    body.appendChild(fullRow('mp99-cut-cell', 'PLAYOFF CUT LINE \u00b7 ' + model.cutAfter + ' QUALIFY'));
+    if (model.overflow) {
+      body.appendChild(fullRow(
+        'mp99-note-cell',
+        model.overflow + (model.overflow === 1 ? ' team below the line is' : ' teams below the line are') +
+        ' also on ' + model.overflowVp + ' Victory Points. The league tiebreaker decides the final place.'
+      ));
+    }
+
+    var field = byTier.field;
+    if (field.length) {
+      body.appendChild(sectionHead('THE FIELD', '#6b7076', 'seeds ' + field[0].seed + '\u2013' + field[field.length - 1].seed));
+      var tr = fullRow('mp99-wrap');
+      var holder = tr.firstChild;
+      field.forEach(function (e) { holder.appendChild(listRow(e)); });
+      body.appendChild(tr);
+    }
   }
 
   function fail(message, detail) {

@@ -1,25 +1,103 @@
 /* ---- added for the automatic widget ---- */
 
-/* The one new tier: division runners-up, seeds 10-18. Purple sits clear of
-   the four colours already in use — pink division, cyan wild card, green
-   winnings, red top scorer. */
+/* Tier tints. Pink and cyan are the league's own; purple is the one new
+   colour, for division runners-up, chosen clear of the four already in use. */
 #madmen #wwwc .runnerup-row { background-color: rgba(178, 132, 255, 0.12); }
-#madmen #wwwc .runnerup-leader-icon { color: #b284ff; font-size: 32px; line-height: 1; }
+
+/* The table is a shell now: the layout inside it is a grid of crests for the
+   30 who qualify and a tight list for the rest, so its six column headers no
+   longer describe anything. */
+#madmen #wwwc .mp99-hide { display: none; }
+#madmen #wwwc .mp99-wrap { padding: 0; }
+
+#madmen #wwwc .mp99-section {
+  padding: 16px 10px 8px 10px;
+  font-size: 11px; font-weight: 700; letter-spacing: .09em;
+}
+#madmen #wwwc .mp99-section-count { color: #6b7076; font-weight: 600; letter-spacing: .04em; }
+
+#madmen #wwwc .mp99-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+  padding: 0 10px 4px 10px;
+}
+
+/* One qualifier. The crest leads, Victory Points is the biggest number. */
+#madmen #wwwc .mp99-tile {
+  border-radius: 9px;
+  padding: 8px;
+  text-align: center;
+  border-top: 3px solid transparent;
+}
+#madmen #wwwc .mp99-tile.division-row { border-top-color: #ff519f; }
+#madmen #wwwc .mp99-tile.runnerup-row { border-top-color: #b284ff; }
+#madmen #wwwc .mp99-tile.wildcard-row { border-top-color: rgb(89, 224, 255); }
+
+#madmen #wwwc .mp99-crest {
+  width: 100%; height: auto; display: block;
+  border-radius: 6px; aspect-ratio: 1 / 1; object-fit: cover;
+}
+#madmen #wwwc .mp99-tile-name {
+  font-size: 12px; font-weight: 800; color: #fff;
+  margin-top: 7px; line-height: 1.2;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+#madmen #wwwc .mp99-tile-vp {
+  font-size: 23px; font-weight: 800; color: #fff; line-height: 1; margin-top: 3px;
+}
+#madmen #wwwc .mp99-tile-vp span { font-size: 9px; font-weight: 700; color: #6b7076; letter-spacing: .07em; }
+#madmen #wwwc .mp99-tile-meta { font-size: 10px; color: #9aa0a6; margin-top: 4px; }
+
+/* Prize money, on every team that has any — in the tiles and in the list. */
+#madmen #wwwc .mp99-prize {
+  display: inline-block; margin-top: 5px;
+  font-size: 11px; font-weight: 800; color: #3ddc84;
+}
+#madmen #wwwc .mp99-list-prize {
+  font-size: 11px; font-weight: 800; color: #3ddc84;
+  flex-shrink: 0; min-width: 54px; text-align: right;
+}
+
+/* Seeds 31 and below: one tight line each. */
+#madmen #wwwc .mp99-list-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 10px;
+  border-bottom: 1px solid rgba(75, 152, 228, .28);
+}
+#madmen #wwwc .mp99-list-seed {
+  width: 24px; flex-shrink: 0; text-align: right;
+  font-size: 12px; font-weight: 700; color: #6b7076;
+}
+#madmen #wwwc .mp99-list-crest {
+  width: 26px; height: 26px; flex-shrink: 0;
+  border-radius: 4px; display: block; object-fit: cover;
+}
+#madmen #wwwc .mp99-list-name {
+  flex-grow: 1; min-width: 0;
+  font-size: 12px; font-weight: 600; color: #d4d4d4;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+#madmen #wwwc .mp99-list-rec { font-size: 10px; color: #6b7076; flex-shrink: 0; }
+#madmen #wwwc .mp99-list-vp {
+  width: 26px; flex-shrink: 0; text-align: right;
+  font-size: 15px; font-weight: 800; color: #fff;
+}
 
 /* Tie marker. Must never read as part of the number — "6T" looked like a value. */
 #madmen #wwwc .mp99-tie {
-  display: inline-block; margin-left: 6px; font-size: .55em; font-weight: 700;
+  display: inline-block; margin-left: 4px; font-size: .5em; font-weight: 700;
   color: #9aa0a6; vertical-align: super; letter-spacing: .04em;
 }
 
 /* The playoff cut line, and the note when a VP tie straddles it. */
 #madmen #wwwc .mp99-cut-cell {
-  padding: 10px 8px; text-align: center; font-size: 12px; font-weight: 700;
+  padding: 12px 10px; text-align: center; font-size: 11px; font-weight: 700;
   letter-spacing: .08em; color: #e60000;
   border-top: 2px solid #e60000; border-bottom: 2px solid #e60000;
 }
 #madmen #wwwc .mp99-note-cell {
-  padding: 10px 8px; text-align: center; font-size: 12px; line-height: 1.5;
+  padding: 9px 10px; text-align: center; font-size: 11px; line-height: 1.5;
   color: #d4d4d4; background: rgba(230, 0, 0, .08);
 }
 #madmen #wwwc .mp99-error-cell {
