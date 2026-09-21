@@ -62,7 +62,9 @@ import {
   ownersPollCurrentKey,
   ownersPollPauseKey,
 } from '../src/utils/owners-poll-ballot.mjs';
-import { resolveOwnersPollCaller } from '../src/utils/owners-poll-store';
+import { resolveOwnersPollCaller,
+  resolvePollCycle,
+} from '../src/utils/owners-poll-store';
 import { resolveOwnersPollAccess } from '../src/utils/owners-poll-access';
 
 // ---------------------------------------------------------------------------
@@ -713,5 +715,26 @@ describe('the commissioner panel speaks the window route’s vocabulary', () => 
     // panel still branching on them renders a state that can never arrive.
     expect(panel).not.toMatch(/status === '(closed|pending|none)'/);
     expect(panel).toMatch(/status === 'paused'/);
+  });
+});
+
+describe('the poll closes for the offseason', () => {
+  // CLAUDE.md's named trap: `getCurrentSeasonYear` rolls at LABOR DAY, so from
+  // February until then it names last season — a year that resolves fine and
+  // whose feeds are complete by definition. Gating on "the year resolves" or
+  // "the feeds have a completed week" therefore leaves the ballot live all
+  // offseason, taking votes into a standing hash for a season already played.
+  //
+  // The homepage card gates on isSeasonWindowOpen; before this the API did not,
+  // so the two disagreed — card hidden, ballot page still accepting votes.
+
+  it('refuses a ballot in the offseason', async () => {
+    const june = new Date('2026-06-15T12:00:00Z');
+    expect(resolvePollCycle(THELEAGUE, june)).toBeNull();
+  });
+
+  it('accepts one in season', async () => {
+    const october = new Date('2026-10-15T12:00:00Z');
+    expect(resolvePollCycle(THELEAGUE, october)).not.toBeNull();
   });
 });

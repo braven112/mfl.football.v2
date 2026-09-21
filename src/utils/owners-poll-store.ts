@@ -21,6 +21,7 @@ import { getLeagueTeamBrands } from './league-team-brands';
 import { getCurrentWeekForYear } from './current-week';
 import { getCurrentSeasonYear } from './league-year';
 import { resolveOwnersPollCycle } from './owners-poll-window.mjs';
+import { isSeasonWindowOpen } from './pecking-order-season-window.mjs';
 
 export interface OwnersPollWindow {
   year: number;
@@ -147,6 +148,21 @@ export function resolvePollCycle(
   if (!poll?.enabled) return null;
 
   const seasonYear = getCurrentSeasonYear(now);
+
+  // Gate on the season actually being PLAYED, not on the year resolving.
+  // `getCurrentSeasonYear` rolls at Labor Day, so from February until then it
+  // names LAST season — a year that resolves perfectly well and whose feeds are
+  // complete by definition. Without this the ballot, affirm, turnout and badge
+  // all stay live through the entire offseason, taking votes into a standing
+  // hash keyed to a season that has already been played and that next season
+  // will never read.
+  //
+  // This is CLAUDE.md's named trap ("the feeds have a completed week" is NOT an
+  // offseason guard), and the homepage card already gates on it — so without
+  // this the two disagreed: the card hidden, the ballot page still accepting
+  // votes.
+  if (!isSeasonWindowOpen(seasonYear, now)) return null;
+
   const eligibleFranchiseIds = eligibleFranchiseIdsFor(league);
   // A field no larger than the ballot cannot produce a ranking — the same
   // refusal the open pass makes, applied where the API can see it too.
