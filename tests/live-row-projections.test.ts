@@ -42,6 +42,7 @@ vi.mock('../src/utils/player-map', async (importOriginal) => {
 });
 
 import { buildBoardFromSnapshot } from '../src/utils/live/read';
+import { getLeagueBySlug } from '../src/config/leagues';
 import { attachRowProjections, computeTeamTotals } from '../src/utils/live-scoring-view';
 import { projectPlayerFinal, NFL_GAME_SECONDS } from '../src/utils/live-win-probability';
 import type { LivePlayerRow } from '../src/types/live-scoring';
@@ -126,7 +127,13 @@ describe('buildBoardFromSnapshot stamps the per-league projections onto rows', (
 
   const board = (projections: Map<string, number>) =>
     buildBoardFromSnapshot({
-      slug: 'theleague',
+      // A league object, not a slug: MFL Live boards leagues this site does
+      // not run, and those have no slug at all (#1174).
+      league: {
+        id: getLeagueBySlug('theleague')!.id,
+        name: getLeagueBySlug('theleague')!.name,
+        slug: 'theleague',
+      },
       week: WEEK,
       year: YEAR,
       ok: true,

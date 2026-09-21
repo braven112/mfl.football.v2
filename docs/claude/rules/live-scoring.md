@@ -114,6 +114,40 @@ which is exactly why the split exists — verify parsing offline against
   subtracts his points, which is far worse than one extra row. A franchise with
   no bench is ABSENT from the map, so the island renders no disclosure control
   rather than one that opens onto nothing.
+- **A per-league projection rides on the ROW; the shared `playerMeta` keeps its
+  0.** The first half of this rule is old and right: a projection belongs to a
+  player IN A LEAGUE, and `playerMeta` is ONE map shared by every panel of a
+  cross-league board, so it cannot hold one — `buildBoardFromSnapshot` and
+  `assembleMflLiveBoard` both set `projected: 0` there deliberately and hand the
+  real numbers to `computeTeamTotals` separately. What that left unanswered is
+  where the number goes for a PLAYER row, and the answer was nowhere:
+  `LvPlayerRow` read `meta.projected`, so `projectPlayerFinal` multiplied 0 by
+  the fraction of game left and every in-progress starter printed his own live
+  score back as his projected final (20 at halftime off a 20-point projection
+  read "proj 20.0", not 30). The TEAM totals and the win-probability bar were
+  right the whole time, which is exactly what hid it for as long as it lasted.
+  A row sits inside exactly one team inside exactly one panel, so it is the one
+  per-league home a projection has: `LivePlayerRow.projected`, stamped by
+  `attachRowProjections` in both builders (starters AND bench — the bench
+  renders the same component), read row-first by `LvPlayerRow`. A player the
+  map has no number for is left UNTOUCHED rather than stamped with 0: "we have
+  no projection for him" and "we project him for nothing" are different claims,
+  and `projectPlayerFinal` reads the second as a finished game. Guard:
+  `tests/live-row-projections.test.ts`.
+- **A blend is only true for the moment it was computed, so whatever renders it
+  must re-blend on every poll.** Sunday Ticket prints a live score and a
+  projection side by side, and the raw full-game number there reads as points
+  still to come. `projectedFinalFor` (`sunday-ticket-slate.ts`) applies the same
+  model, but a server-only blend freezes at the first paint while the live score
+  under it keeps updating — a stale number under a pill reading "Live", which is
+  the failure the freshness pill exists to prevent. The cell therefore carries
+  the RAW projection in `data-st-proj-base` and the island recomputes from it,
+  never from the rendered number: re-blending a blend compounds on every poll.
+  The box and per-league TOTALS stay raw on purpose — `projTotal` is the ranking
+  tiebreak and live points never sort this board, and the only surface that
+  prints one (the league-wide board) has no live read at all, so blending there
+  would change the order and nothing anyone sees.
+
 - **`res.ok` is not "the data is good" on our OWN routes either.**
   `/api/live-scoring` answers 200 with `ok: false` and empty collections when
   the upstream MFL call fails, and `{}` is truthy — so `if (data.players)` is
