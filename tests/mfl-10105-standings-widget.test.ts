@@ -262,3 +262,48 @@ describe('MAD POWER 99 standings widget (MFL 10105)', () => {
     expect(classCount(body, 'highlight-row')).toBe(0);
   });
 });
+
+/**
+ * The module shipped once carrying the table alone. That stripped the league's
+ * page: the module also held the #madmen wrapper, the banner and a 7.7 KB
+ * stylesheet, and every CSS rule is scoped to #madmen, so losing the wrapper
+ * un-styled everything. These pin the parts that must survive a rebuild.
+ */
+describe('module.html — the complete MESSAGE6 module', () => {
+  const module = readFileSync(path.join(process.cwd(), 'public/mfl/10105/module.html'), 'utf8');
+
+  it('keeps the #madmen wrapper every CSS rule is scoped to', () => {
+    expect(module).toContain('id="madmen"');
+    /* Scoped rules are worthless without it. */
+    expect(module).toContain('#madmen #wwwc');
+  });
+
+  it('inlines the league stylesheet rather than assuming it loads from elsewhere', () => {
+    const css = readFileSync(
+      path.join(process.cwd(), 'public/mfl/10105/reference/existing-page.css'),
+      'utf8',
+    ).trim();
+    expect(module).toContain(css);
+    for (const rule of ['.division-row', '.wildcard-row', '.winnings-row', '.highlight-row']) {
+      expect(module).toContain(`#madmen #wwwc ${rule}`);
+    }
+  });
+
+  it('keeps the banner, caption and column widths', () => {
+    expect(module).toContain('Ken_99.png');
+    expect(module).toContain('<caption>MAD POWER 99</caption>');
+    for (const col of ['col-rank', 'col-team', 'col-record', 'col-points', 'col-winnings', 'col-division']) {
+      expect(module).toContain(col);
+    }
+  });
+
+  it('carries the hosted widget and no hand-written team rows', () => {
+    expect(module).toContain('https://v2.mfl.football/mfl/10105/standings.js');
+    /* One <tr> for the #madmen wrapper, one for the header. No data rows.
+     * Checked by their markup, not by class names — the stylesheet mentions
+     * .team-banner legitimately. */
+    expect((module.match(/<tr>/g) ?? []).length).toBe(2);
+    expect(module).not.toContain('<td class="team"');
+    expect(module).not.toContain('<td class="rank"');
+  });
+});
