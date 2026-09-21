@@ -22,7 +22,7 @@ none of which mean anything for a league we only publish a widget into.
 id written here is correct rather than a violation.
 
 Files under `public/` are served as-is at the site root, so
-`public/mfl/10105/standings.js` is `https://mfl.football/mfl/10105/standings.js`.
+`public/mfl/10105/standings.js` is `https://v2.mfl.football/mfl/10105/standings.js`.
 That URL is what the client's MFL page puts in its `<script src>`. There is no
 build step: an edit plus a deploy is the whole release path, which is what lets
 a fix reach the client without them re-pasting anything.
