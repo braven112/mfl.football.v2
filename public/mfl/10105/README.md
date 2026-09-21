@@ -73,7 +73,7 @@ empty, so there is nothing to derive them from.
 Add one line to the MESSAGE6 module, below the table:
 
 ```html
-<script src="https://mfl.football/mfl/10105/standings.js" defer></script>
+<script src="https://v2.mfl.football/mfl/10105/standings.js" defer></script>
 ```
 
 Nothing else in the module needs to change, and the script needs no key. It

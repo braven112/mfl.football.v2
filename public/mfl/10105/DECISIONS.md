@@ -1,8 +1,9 @@
 # Archie's FFL (10105) — playoff standings widget: tiebreaker & ordering decisions
 
-> Working document. Status as of 2026-09-21. The widget is NOT built yet; this
-> records every ordering/tiebreaker decision made so far, what is still open,
-> and which assumptions the live MFL feed has already contradicted.
+> Working document. Status as of 2026-09-21. The widget is BUILT
+> (`standings.js`, with `paste-in.html` for a hosting-free trial) and waiting on
+> one client action — see O1. This records every ordering/tiebreaker decision,
+> what is still open, and which assumptions the live MFL feed contradicted.
 >
 > League: **Archie's Fantasy Football League**, MFL id **10105**, host
 > **www48.myfantasyleague.com**. Verified live: 99 franchises, 9 divisions.
@@ -103,19 +104,25 @@ reintroduce exactly the failure mode being removed, just automated.
 **Install, once:** one line in the MESSAGE6 module, below the table.
 
 ```html
-<script src="https://mfl.football/mfl/10105/standings.js" defer></script>
+<script src="https://v2.mfl.football/mfl/10105/standings.js" defer></script>
 ```
 
 It carries no league id. Host, year and league are read from the page's own
 URL, so the same file serves any league it is dropped into.
 
-**Every page load:** read `location` → fetch `TYPE=league`,
-`TYPE=leagueStandings` and `TYPE=schedule` same-origin → group by division in
-MFL's row order → build the four tiers → rewrite the table body.
+**Every page load:** read `location` → fetch `TYPE=league` and
+`TYPE=leagueStandings` same-origin → group by division in MFL's row order →
+build the four tiers → rewrite the table body. Two calls, not three: Victory
+Points come from the standings feed once the league publishes them, so the
+schedule is not needed.
 
 **Shipping a change:** edit `standings.js`, push, Vercel deploys, live. The
 commissioner re-pastes nothing, ever. That is the reason the file is hosted
 rather than embedded in the module.
+
+**Until the branch reaches `main`,** `https://v2.mfl.football/mfl/10105/standings.js`
+404s — `v2.mfl.football` serves this app's `public/` directory, but only what is
+deployed. `paste-in.html` exists so the widget can be tried before then.
 
 **On failure:** the widget writes a visible "standings unavailable" state into
 the table rather than leaving plausible zeros. A wrong number nobody questions
