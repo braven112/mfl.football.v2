@@ -175,13 +175,20 @@ teams sat on 6 VP and another large block on 5** — the order inside each tier
 was MFL feed position, which is arbitrary to a reader. Points For separates all
 26, and at the cut it put **Invaders in over Rams by 1.1 points**, both on 5 VP.
 
-**One caveat worth knowing.** MFL publishes the Points For TOTAL (`pf`) only
-when the standings display carries it; this league currently shows the AVERAGE
-(`avgpf`). The two rank identically while every team has played the same number
-of games, which holds here — two games a week, nobody on a bye — and the widget
-prefers `pf` and falls back to `avgpf`, so adding the total to the standings
-display later changes nothing. If the league ever has teams on different game
-counts, add Points For to the display or the order will be wrong.
+**The average is the basis, and that is fine here.** MFL publishes the Points
+For TOTAL (`pf`) only when the standings display carries it; this league shows
+the AVERAGE (`avgpf`). Average and total rank identically when every team has
+played the same number of games, and this league's format guarantees that —
+**every team plays two games every week**, confirmed by the commissioner and
+verified in the schedule feed (99 matchups a week, each team in exactly two,
+nobody on a bye). So no change to the MFL standings display is needed.
+
+The widget still prefers `pf` and falls back to `avgpf`, so adding the total to
+the display later would change nothing. The one scenario that would break the
+equivalence is a team missing a week entirely — a forfeit or a withdrawal
+leaving different game counts across the league. If that ever happens, add
+Points For to the standings display and the widget picks up the total by
+itself.
 
 D8 stands but means less now: a tie marker no longer says "undecided", only
 "level on VP, separated on Points For".
