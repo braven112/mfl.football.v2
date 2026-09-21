@@ -289,9 +289,18 @@
     box.appendChild(crest(t, 'mp99-crest'));
     box.appendChild(el('div', 'mp99-tile-name', t.name));
 
+    /* "6 VP", with any tie marker AFTER the unit — placed between the two it
+     * read as "6 T VP", as though T were part of the value. Kept to a single
+     * letter: with 26 teams sharing a score early in the season the word
+     * "TIED" repeated on every tile, which is noise rather than information. */
     var vp = el('div', 'mp99-tile-vp');
-    vpText(vp, t.vp, entry.tied);
+    vp.appendChild(document.createTextNode(String(t.vp)));
     vp.appendChild(el('span', null, ' VP'));
+    if (entry.tied) {
+      var tie = el('span', 'mp99-tie', 'T');
+      tie.title = 'tied on Victory Points';
+      vp.appendChild(tie);
+    }
     box.appendChild(vp);
 
     box.appendChild(el('div', 'mp99-tile-meta', '#' + entry.seed + ' \u00b7 ' + (t.record || '0-0-0')));
