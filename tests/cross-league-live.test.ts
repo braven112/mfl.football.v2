@@ -38,6 +38,15 @@ vi.mock('../src/utils/my-leagues', () => ({
   fetchMyLeagues: (...a: unknown[]) => fetchMyLeagues(...a),
 }));
 
+/**
+ * The schedule fallback fires for any league that is SCORING but came back
+ * unpaired, which `livePayload()` below is — so without this the suite makes a
+ * real request to MFL. Its own guard is `tests/live-schedule-pairings.test.ts`.
+ */
+vi.mock('../src/utils/mfl-schedule-pairings', () => ({
+  readLeagueSchedulePairings: async () => [],
+}));
+
 const { discoverBoardLeagues, readCrossLeagueLive, CROSS_LEAGUE_FAN_OUT_LIMIT } = await import(
   '../src/utils/cross-league-live'
 );

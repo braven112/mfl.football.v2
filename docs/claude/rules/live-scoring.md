@@ -204,6 +204,27 @@ which is exactly why the split exists — verify parsing offline against
   swaps the board without remounting, and both leagues have a franchise `0001`
   — and it lives in the island, so a cold load whose SSR assembly failed still
   shows the error card. Guard: `tests/live-stale-fallback.test.ts`.
+- **`liveScoring` has TWO shapes and only one of them says who is playing
+  whom.** `{"liveScoring":{"matchup":[{"franchise":[…]}]}}` carries the
+  pairings; `{"liveScoring":{"franchise":[…]}}` carries the identical scores,
+  starters and bench with NO pairings at all. Both parse, every shape check
+  passes, and `hasLiveSignal` is true — so the flat shape lands on the one
+  combination of the four honest states that is a lie: `no-matchup`, a bye,
+  asserted over a viewer who is being scored. TheLeague and the AFL both serve
+  the grouped shape, which is why nothing saw this for a year; Archie's
+  Fantasy Football League (10105, 99 franchises, two games a week each) serves
+  the flat one and told all 99 of its owners they had no game on 2026-09-21
+  while MFL's own `schedule` export listed every pairing. So a league that is
+  SCORING but came back UNPAIRED now falls back to `TYPE=schedule&W=`
+  (`readLeagueSchedulePairings`), inside the shared cross-league read so
+  `/broadcast` and MFL Live cannot diverge. Three things that keep it cheap and
+  honest: it is gated on `hasLiveSignal` (an unplayed week is `not-played`
+  whatever its pairings say, so there is nothing to fix and no read to spend);
+  the WEEK in the answer is checked rather than assumed, because pasting
+  another week's pairings over a live board is the same confident wrong answer
+  the fallback exists to remove; and an empty answer is never cached, for the
+  reason every other never-cache-a-failure rule here exists. Guard:
+  `tests/live-schedule-pairings.test.ts`.
 - **Every failed MFL read now says why, and one league-week is read once per
   20s.** Before that, timeout, refused connection, HTTP error, HTML-under-a-200
   and an MFL `error` key all collapsed into the same silent `ok: false` — the

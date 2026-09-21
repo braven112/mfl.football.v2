@@ -30,6 +30,8 @@ import {
   readOutsideLiveSnapshot,
 } from './broadcast-live-source';
 import { hasLiveSignal, type LiveSnapshot } from './live-scoring-snapshot';
+import { readLeagueSchedulePairings } from './mfl-schedule-pairings';
+import type { MatchupPairing } from '../types/live-scoring';
 import { mapWithConcurrency } from './fan-out';
 
 /**
@@ -174,16 +176,40 @@ export async function readCrossLeagueLive(
 
     const snapshot = result?.snapshot ?? null;
     const ok = !!result?.ok && !!snapshot;
+    // Only a snapshot we actually read can carry signal. A failed read is
+    // never "no games yet" — conflating them is what let an outage render as
+    // an offseason.
+    const signal = ok && !!snapshot && hasLiveSignal(snapshot);
+
+    /**
+     * SCORING, BUT UNPAIRED — ask the league's own schedule who is playing.
+     *
+     * MFL serves `liveScoring` in two shapes and only the matchup-grouped one
+     * names opponents; a league in the flat shape arrives with real starters,
+     * real scores and `matchups: []`, which `statusFor` can only read as "this
+     * viewer has no game this week". Archie's Fantasy Football League (99
+     * franchises, two games a week each) told all 99 of its owners they were
+     * on a bye while they were being scored.
+     *
+     * Gated on `signal` deliberately: an unplayed week is `not-played`
+     * whatever its pairings are, so there is nothing to fix and no reason to
+     * spend the read. Cached per league-week, so this costs one request per
+     * flat league per week rather than one per poll.
+     */
+    const paired =
+      signal && snapshot && snapshot.matchups.length === 0
+        ? await readLeagueSchedulePairings(league, year, week, user.id).catch(
+            (): MatchupPairing[] => [],
+          )
+        : [];
+
     return {
       league,
       ok,
-      snapshot,
+      snapshot: paired.length && snapshot ? { ...snapshot, matchups: paired } : snapshot,
       projections,
       franchiseNames,
-      // Only a snapshot we actually read can carry signal. A failed read is
-      // never "no games yet" — conflating them is what let an outage render
-      // as an offseason.
-      hasSignal: ok && !!snapshot && hasLiveSignal(snapshot),
+      hasSignal: signal,
     } satisfies LeagueLiveRead;
   });
 
