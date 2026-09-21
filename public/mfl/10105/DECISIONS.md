@@ -168,10 +168,14 @@ footnote.
 back to the league's existing chain — `PCT`, then `PTS`, then head-to-head —
 which needs no new rule and matches how MFL already orders the standings.
 
-### O3 — Does the record column mean what it used to?
-The current page shows a single `0-0`. Teams play twice a week, so a week
-produces 2-0, 1-1 or 0-2. Week 1 was 34 / 31 / 34. Confirm the column should
-show the two-game record and not something else.
+### O3 — The record column **(RESOLVED 2026-09-21)**
+**Decision: print MFL's own `W-L-T` exactly as the feed gives it** — `2-0-0`,
+not a reformatted `2-0`. Shortening it was tried and rejected: the page should
+say what MFL says, so an owner comparing the two surfaces sees one number in one
+format.
+
+Worth remembering when reading the column: teams play **twice** a week, so a
+week produces 2-0-0, 1-1-0 or 0-2-0. Week 1 was 34 / 31 / 34.
 
 ### O4 — Do the tier sizes move when the league size does?
 2025: 96 teams, 8 divisions. 2026: 99 teams, 9 divisions. The 9/9/12 split
