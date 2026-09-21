@@ -162,6 +162,7 @@ function railLabel(entry: RailWeek): string {
 <style>
   .rhdr-bar {
     display: grid;
+    min-width: 0;
     grid-template-columns: 1fr 1fr minmax(232px, auto);
     gap: 1px;
     background: var(--content-border-color);
@@ -225,6 +226,7 @@ function railLabel(entry: RailWeek): string {
   /* ── the season rail ── */
   .rhdr-rail {
     display: flex;
+    min-width: 0;
     flex-direction: column;
     justify-content: center;
     gap: 0.4rem;

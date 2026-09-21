@@ -3,6 +3,10 @@
  * The roster header's team switcher: every club in the league as a crest,
  * grouped by division, always open.
  *
+ * `data-team-id` is the hook TheLeague's in-place switcher reads; the active
+ * ring is keyed off `aria-current`, which that switcher moves, so the styling
+ * and the accessible state can never disagree.
+ *
  * Replaces TheLeague's expanding accordion and the AFL's `<select>` with one
  * component, so the two leagues stop drifting. Each crest is a plain LINK, not
  * a button — switching team is a navigation, so it must be bookmarkable,
@@ -58,6 +62,7 @@ const showConferences = groups.length > 1;
                 <a
                   href={teamHref(team.franchiseId)}
                   class="rhdr-teams__crest"
+                  data-team-id={team.franchiseId}
                   data-mine={team.franchiseId === viewerFranchiseId ? 'true' : undefined}
                   aria-current={team.franchiseId === activeFranchiseId ? 'page' : undefined}
                 >
@@ -87,6 +92,9 @@ const showConferences = groups.length > 1;
   .rhdr-teams {
     display: flex;
     align-items: stretch;
+    /* Pairs with the header's own min-width:0 — without a constrained width
+       this box has nothing to scroll within and pushes the page instead. */
+    min-width: 0;
     background: var(--content-bg-muted);
     border-bottom: 1px solid var(--content-border-color);
     /* 24 clubs plus six division labels exceed a desktop column, so the strip

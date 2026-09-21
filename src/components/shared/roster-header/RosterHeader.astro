@@ -2,30 +2,25 @@
 /**
  * The roster page's header, shared by both leagues.
  *
- * Three bands: the club's own nameplate in its brand colour, the gameday bar,
- * and the team switcher. Replaces what were two forked headers — TheLeague's
- * team card with view tabs and a division accordion, the AFL's team card with
- * a `<select>` — so a fix to one is a fix to both.
+ * Three bands: the club's own nameplate in its brand colour and the gameday
+ * bar it carries (both RosterNameplate), then the team switcher. Replaces what
+ * were two forked headers — TheLeague's team card with view tabs and a
+ * division accordion, the AFL's team card with a `<select>` — so a fix to one
+ * is a fix to both.
  *
  * The view tabs are gone on purpose. Roster / Analytics / Planner were three
  * pages wearing one URL; Analytics and Planner now live on the Front Office
  * hub, and this page is a roster again.
  *
- * Colour comes from `resolveHeroFranchiseSkin`, NEVER from `colorPrimary`
- * directly: seven of TheLeague's sixteen clubs carry `#181818` as their brand
- * primary, so the naive version paints seven identical near-black rectangles.
- * The resolver also handles the other end — the AFL has a near-WHITE primary —
- * and measures the accent, wash and crest cut that make either legible.
- *
- * Ships no client script: every control is a link.
+ * Ships no client script. TheLeague's page enhances the switcher into an
+ * in-place swap using the `alternates` slot below; the AFL has always
+ * navigated on a team change, so it passes nothing and the links stand alone.
  */
-import GamedayBar from './GamedayBar.astro';
+import RosterNameplate from './RosterNameplate.astro';
 import TeamDivisionRow from './TeamDivisionRow.astro';
-import { resolveHeroFranchiseSkin } from '../../../utils/hero-crest';
 import type { CanonicalLeagueSlug } from '../../../config/leagues';
 import type { HeaderGroup, RailWeek } from '../../../utils/roster-header-data';
 import type { StandingsSummary } from '../../../utils/standings-summary';
-import '../../../styles/hero-franchise-backdrop.css';
 
 interface HeaderGame {
   week: number;
@@ -49,11 +44,7 @@ interface Props {
   label: string;
   season: number;
   standing: StandingsSummary;
-  /**
-   * League-specific stats appended after record / rank / points-for: cap space
-   * in a league with a cap, keepers set in one without. A league shows what it
-   * HAS rather than a blank slot for a feature it does not run.
-   */
+  /** League-specific stats after record / rank / points-for (cap space, …). */
   extraStats?: Array<{ value: string; label: string }>;
   lastResult: HeaderGame | null;
   nextGame: HeaderGame | null;
@@ -92,105 +83,36 @@ const {
   scheduleHref,
   nextKickoff = null,
 } = Astro.props;
-
-const skin = resolveHeroFranchiseSkin(franchiseId, leagueSlug);
-
-const ordinal = (n: number) => {
-  const rest = n % 100;
-  if (rest >= 11 && rest <= 13) return `${n}th`;
-  return `${n}${['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;
-};
-
-// Record / rank / points-for, then whatever the league adds. Each entry is
-// omitted rather than rendered blank when the feed has no number for it.
-const stats: Array<{ value: string; label: string }> = [
-  ...(standing.record ? [{ value: standing.record, label: 'Record' }] : []),
-  ...(standing.rank != null
-    ? [{
-        value: ordinal(standing.rank),
-        label: standing.groupSize ? `of ${standing.groupSize}` : 'Rank',
-      }]
-    : []),
-  ...(standing.pointsFor != null
-    ? [{ value: standing.pointsFor.toFixed(0), label: 'Points for' }]
-    : []),
-  ...extraStats,
-];
 ---
 
-<header class="rhdr">
-  <div class:list={['rhdr__plate', { 'rhdr__plate--franchise': !!skin }]} style={skin?.style}>
-    {skin?.crest && (
-      /* Resolved SERVER-SIDE as the dark cut with its measured outline inline:
-         a franchise gradient is dark in BOTH themes, while the site's
-         html.dark crest machinery fires only for a viewer whose SITE theme is
-         dark. Without this a light-theme owner gets the wrong cut. */
-      <img
-        class="hero-fb__crest"
-        src={skin.crest}
-        style={skin.crestFilter ? `filter: ${skin.crestFilter};` : undefined}
-        alt=""
-        aria-hidden="true"
-        loading="lazy"
-        decoding="async"
-      />
-    )}
-    {skin && <span class="hero-fb__wash" aria-hidden="true"></span>}
-
-    <div class="rhdr__inner">
-      <div class="rhdr__eyebrow">
-        <span class="rhdr__pill">{label}</span>
-        <span class="rhdr__meta">{season} season · {teamMeta}</span>
-      </div>
-      <div class="rhdr__identity">
-        {/* One crest source per header: with a franchise skin the small mark
-            takes the resolver's art too, rather than pairing an era crest
-            with the watermark behind it. */}
-        {(skin?.crest || teamIcon) && (
-          <img
-            class="rhdr__crest"
-            src={skin?.crest || teamIcon!}
-            style={skin?.crestFilter ? `filter: ${skin.crestFilter};` : undefined}
-            alt=""
-            width="50"
-            height="50"
-          />
-        )}
-        <div class="rhdr__names">
-          {/* `data-team-name` is the roster parity harness's identity hook
-              (scripts/roster-parity-check.mjs). It fingerprints the club name
-              on every render to prove a refactor did not silently change which
-              team is on screen — so the attribute moves with the nameplate
-              rather than retiring with the old team card. */}
-          <h1 class="rhdr__name" data-team-name>{teamName}</h1>
-          {stats.length > 0 && (
-            <div class="rhdr__stats">
-              {stats.map((stat, index) => (
-                <>
-                  {index > 0 && <span class="rhdr__sep" aria-hidden="true">/</span>}
-                  <span class="rhdr__stat">
-                    <b>{stat.value}</b> {stat.label}
-                  </span>
-                </>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+{/* `data-league` so a controller from the OTHER league's roster page — both
+    render `.roster-page`, and a cross-league navigation is a ClientRouter swap
+    rather than a fresh document — cannot mistake this header for its own. */}
+<header class="rhdr" data-league={leagueSlug}>
+  {/* `data-rhdr-team` is what TheLeague's in-place switcher replaces. It holds
+      only the per-club half, so a switch never rebuilds the crest row. */}
+  <div data-rhdr-team={franchiseId}>
+    <RosterNameplate
+      leagueSlug={leagueSlug}
+      franchiseId={franchiseId}
+      teamName={teamName}
+      teamIcon={teamIcon}
+      teamMeta={teamMeta}
+      label={label}
+      season={season}
+      standing={standing}
+      extraStats={extraStats}
+      lastResult={lastResult}
+      nextGame={nextGame}
+      rail={rail}
+      currentWeek={currentWeek}
+      nameOf={nameOf}
+      iconOf={iconOf}
+      recordOf={recordOf}
+      scheduleHref={scheduleHref}
+      nextKickoff={nextKickoff}
+    />
   </div>
-
-  <GamedayBar
-    lastResult={lastResult}
-    nextGame={nextGame}
-    rail={rail}
-    currentWeek={currentWeek}
-    nameOf={nameOf}
-    iconOf={iconOf}
-    recordOf={recordOf}
-    scheduleHref={scheduleHref}
-    nextKickoff={nextKickoff}
-  />
 
   <TeamDivisionRow
     groups={groups}
@@ -198,92 +120,27 @@ const stats: Array<{ value: string; label: string }> = [
     viewerFranchiseId={viewerFranchiseId}
     teamHref={teamHref}
   />
+
+  {/* Every other club's nameplate, inert in <template>s until the switcher
+      needs one. A page that navigates instead (the AFL) renders nothing. */}
+  <slot name="alternates" />
 </header>
 
 <style>
-  .rhdr { display: block; }
-
-  .rhdr__plate {
-    position: relative;
-    overflow: hidden;
-    color: #f2f5f8;
-    /* Literal fallback, like every sibling hero carries: an undefined custom
-       property would paint this band transparent in BOTH themes. */
-    background: #10161f;
-  }
-  .rhdr__plate--franchise { background: var(--hero-fb-gradient, #10161f); }
-
-  .rhdr__inner {
-    position: relative;
-    z-index: 2;
-    padding: clamp(1rem, 2.6vw, 1.25rem) clamp(1.1rem, 3vw, 1.5rem);
-  }
-
-  .rhdr__eyebrow {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-    margin-bottom: 0.7rem;
-  }
-  .rhdr__pill {
-    padding: 0.15rem 0.6rem;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 999px;
-    font-size: 0.6875rem;
-    font-weight: 600;
-    letter-spacing: 0.13em;
-    text-transform: uppercase;
-    background: rgba(255, 255, 255, 0.14);
-  }
-  .rhdr__plate--franchise .rhdr__pill {
-    background: var(--hero-fb-pill-bg);
-    color: var(--hero-fb-pill-ink);
-    border-color: transparent;
-  }
-  .rhdr__meta {
-    font-size: 0.78rem;
-    color: rgba(242, 245, 248, 0.72);
-  }
-
-  .rhdr__identity { display: flex; align-items: center; gap: 0.9rem; }
-  .rhdr__crest { flex: none; object-fit: contain; }
-  .rhdr__names { min-width: 0; }
-
-  .rhdr__plate .rhdr__name {
-    /* Explicit, and specific enough to beat the layout's global `h1` colour:
-       the plate is a dark franchise gradient in BOTH themes, so inheriting the
-       theme's heading ink shipped dark navy on dark red in light mode. */
-    color: var(--color-white, #fff);
-    margin: 0;
-    font-size: clamp(1.6rem, 4.4vw, 2.3rem);
-    font-weight: 700;
-    line-height: 1;
-    letter-spacing: 0.005em;
-    text-transform: uppercase;
-    text-wrap: balance;
-  }
-
-  .rhdr__stats {
-    display: flex;
-    align-items: center;
-    gap: 0.8rem;
-    flex-wrap: wrap;
-    margin-top: 0.45rem;
-    font-size: 0.8rem;
-    letter-spacing: 0.09em;
-    text-transform: uppercase;
-    color: rgba(242, 245, 248, 0.8);
-  }
-  .rhdr__stat b {
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: #fff;
-    font-variant-numeric: tabular-nums;
-  }
-  .rhdr__sep { opacity: 0.36; }
-
-  @media (max-width: 560px) {
-    .rhdr__stats { gap: 0.55rem; font-size: 0.74rem; }
+  /*
+   * `min-width: 0` is load-bearing, not tidiness.
+   *
+   * `.roster-page` is a GRID and this header is one of its items. A grid item
+   * defaults to `min-width: auto`, which refuses to shrink below its content's
+   * intrinsic minimum — and this header's content is wide by nature (a row of
+   * 16 or 24 crests, a three-column scoreboard). So the item blew the grid out
+   * to 699px on TheLeague and 1076px on the AFL inside a 390px viewport,
+   * taking the nav and breadcrumbs with it and giving the whole PAGE a
+   * horizontal scrollbar. The inner `overflow-x: auto` never got a chance:
+   * a box only scrolls once something constrains its width.
+   */
+  .rhdr {
+    display: block;
+    min-width: 0;
   }
 </style>

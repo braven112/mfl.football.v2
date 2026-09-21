@@ -2,6 +2,7 @@
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import FrontOfficeNav from '../../components/shared/front-office-nav/FrontOfficeNav.astro';
 import RosterHeader from '../../components/shared/roster-header/RosterHeader.astro';
+import RosterNameplate from '../../components/shared/roster-header/RosterNameplate.astro';
 import { buildSeasonRail, buildTeamGroups } from '../../utils/roster-header-data';
 import { summarizeStandings } from '../../utils/standings-summary';
 import {
@@ -2097,6 +2098,35 @@ const headerTeamById = new Map(teamsList.map((team: any) => [team.id, team]));
 const headerNameOf = (id: string) => headerTeamById.get(id)?.name ?? 'Franchise';
 const headerIconOf = (id: string) => headerTeamById.get(id)?.icon ?? null;
 
+/* Every club's header inputs, so the in-place switcher has a nameplate ready
+   for each. Built from the same season data the roster table already ships —
+   the page's payload already carries all 16 clubs, which is exactly why
+   switching can stay in-memory rather than costing a 4 MB navigation. */
+const headerTeamsForSwap = teamsList.map((team: any) => {
+  const teamData = initialSeasonData.teams?.[team.id];
+  const own = franchiseSchedule(headerSchedule, team.id);
+  return {
+    id: team.id,
+    name: team.name,
+    icon: team.icon ?? null,
+    meta: `${team.division ?? 'Independent'} Division`,
+    standing: headerStandings.get(team.id) ?? {
+      record: null,
+      pointsFor: null,
+      rank: null,
+      groupSize: null,
+    },
+    capSpace: initialCapLimit - (teamData?.totals?.totalSalary ?? 0),
+    lastResult: findLastResult(own, currentWeekNum),
+    nextGame: findNextGame(own, currentWeekNum),
+    rail: buildSeasonRail(
+      own,
+      headerSchedule.map((entry: { week: number }) => entry.week),
+      currentWeekNum
+    ),
+  };
+});
+
 const headerCapSpace = initialCapLimit - (initialTeamData?.totals?.totalSalary ?? 0);
 const headerMoney = (n: number) =>
   `${n < 0 ? '-' : ''}$${Math.abs(Math.round(n)).toLocaleString('en-US')}`;
@@ -2149,7 +2179,40 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       teamHref={(id: string) => r(`/theleague/rosters?franchise=${id}`)}
       scheduleHref={(week?: number) =>
         r(`/theleague/schedule${week != null ? `#week-${week}` : ''}`)}
-    />
+    >
+      {/* One inert nameplate per OTHER club. The switcher swaps one of these in
+          rather than re-rendering the markup from JavaScript, so there is still
+          a single implementation of the nameplate. ~1.5 KB each against a page
+          that already ships every club's roster. */}
+      <Fragment slot="alternates">
+        {headerTeamsForSwap
+          .filter((team) => team.id !== defaultTeamId)
+          .map((team) => (
+            <template data-rhdr-alt={team.id}>
+              <RosterNameplate
+                leagueSlug="theleague"
+                franchiseId={team.id}
+                teamName={team.name}
+                teamIcon={team.icon}
+                teamMeta={team.meta}
+                label="Roster & Cap"
+                season={defaultSeason}
+                standing={team.standing}
+                extraStats={[{ value: headerMoney(team.capSpace), label: 'Cap space' }]}
+                lastResult={team.lastResult}
+                nextGame={team.nextGame}
+                rail={team.rail}
+                currentWeek={currentWeekNum}
+                nameOf={headerNameOf}
+                iconOf={headerIconOf}
+                recordOf={(id: string) => headerStandings.get(id)?.record ?? null}
+                scheduleHref={(week?: number) =>
+                  r(`/theleague/schedule${week != null ? `#week-${week}` : ''}`)}
+              />
+            </template>
+          ))}
+      </Fragment>
+    </RosterHeader>
     <!-- Roster View -->
     <div class="view-container" data-view-content="roster">
       <div class="roster-table-card">
@@ -9800,16 +9863,84 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       updateView();
     });
 
-    /* Team switching is a NAVIGATION now, not an in-page swap: the header's
-       crest row is a row of links, and the ClientRouter soft-swaps the
-       document so it stays cheap. The client-side switcher that used to live
-       here repainted the roster table only, which would leave the SSR header —
-       nameplate, cap space, gameday bar, season rail — showing the club the
-       viewer had just navigated away from. Links also make one club's roster
-       linkable, which the old in-memory switch never was: it never touched
-       the URL. `hydrateTeamFromSession` went with it; the server already
-       resolves the viewer's own club into `defaultTeamId`, behind an explicit
-       ?franchise= or the saved cookie. */
+    /* ── Team switching, in place ──────────────────────────────────────────
+       The crest row is a row of real LINKS, so it works before this script
+       runs, with JavaScript off, on middle-click, and it makes one club's
+       roster linkable — which the old in-memory switcher never was, because
+       it never touched the URL.
+
+       But following the link costs a 4 MB navigation on this page, and every
+       club is ALREADY in the payload, so letting it navigate threw away the
+       page's one real strength. This intercepts a plain left-click and does
+       what the old switcher did — with the header now following too, from a
+       server-rendered nameplate rather than markup rebuilt in JS.
+
+       Gated on the header's own `data-league`: both leagues' roster pages
+       render `.roster-page`, and a cross-league move is a ClientRouter swap
+       rather than a fresh document. */
+    const rosterHeader = document.querySelector('.rhdr[data-league="theleague"]');
+    const headerTeamSlot = rosterHeader?.querySelector('[data-rhdr-team]');
+
+    const applyRosterHeader = (teamId) => {
+      if (!rosterHeader || !headerTeamSlot) return;
+      if (headerTeamSlot.getAttribute('data-rhdr-team') === teamId) return;
+      const tpl = rosterHeader.querySelector(`template[data-rhdr-alt="${teamId}"]`);
+      if (!tpl) return;                       // unknown club: leave the header alone
+      // Park the outgoing club back into a template so switching away and
+      // back is symmetric and nothing is lost after the first swap.
+      const outgoingId = headerTeamSlot.getAttribute('data-rhdr-team');
+      const parked = document.createElement('template');
+      parked.setAttribute('data-rhdr-alt', outgoingId);
+      while (headerTeamSlot.firstChild) parked.content.appendChild(headerTeamSlot.firstChild);
+      rosterHeader.appendChild(parked);
+
+      headerTeamSlot.appendChild(tpl.content);
+      headerTeamSlot.setAttribute('data-rhdr-team', teamId);
+      tpl.remove();
+
+      rosterHeader.querySelectorAll('.rhdr-teams__crest').forEach((a) => {
+        const isActive = a.getAttribute('data-team-id') === teamId;
+        if (isActive) a.setAttribute('aria-current', 'page');
+        else a.removeAttribute('aria-current');
+      });
+    };
+
+    rosterHeader?.addEventListener('click', (event) => {
+      // Never swallow a modifier-click or a middle-click: those mean "open
+      // this somewhere else", and the href is what serves them.
+      if (event.defaultPrevented || event.button !== 0) return;
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const link = event.target.closest('.rhdr-teams__crest');
+      if (!link) return;
+      const teamId = link.getAttribute('data-team-id');
+      if (!teamId || !seasons[currentSeason]?.teams?.[teamId]) return;  // let it navigate
+
+      event.preventDefault();
+      applyRosterHeader(teamId);
+      if (teamSelect) teamSelect.value = teamId;
+      currentTeam = teamId;
+      updateView();
+      // The URL is the record of what is on screen — the old switcher's
+      // omission is why a roster could not be linked to.
+      try {
+        window.history.pushState({ rosterTeam: teamId }, '', link.getAttribute('href'));
+      } catch { /* a blocked history write must not break the swap */ }
+    });
+
+    // Back/forward has to move the page too, or the URL and the roster diverge.
+    // The entry URL carries no ?franchise=, so "no param" means the club the
+    // SERVER chose — falling back to `defaultTeamId` rather than returning
+    // early, which left the header on the club the viewer had just left.
+    window.addEventListener('popstate', () => {
+      const param = new URL(window.location.href).searchParams.get('franchise');
+      const wanted = param || defaultTeamId;
+      if (!wanted || wanted === currentTeam) return;
+      if (!seasons[currentSeason]?.teams?.[wanted]) return;
+      applyRosterHeader(wanted);
+      if (teamSelect) teamSelect.value = wanted;
+      currentTeam = wanted;
+      updateView();
+    });
 
     applyHiddenColumns();
     const urlViewParam = new URL(window.location.href).searchParams.get('view');
