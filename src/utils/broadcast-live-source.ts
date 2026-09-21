@@ -541,7 +541,13 @@ export async function readLeagueFranchiseMarks(
 ): Promise<Record<string, FranchiseMark>> {
   if (!mflUserCookie || !league.host) return {};
 
-  const key = `${league.id}:${year}`;
+  // THE HOST IS PART OF THE KEY, not decoration. `L` and the host are one
+  // composite key that MFL validates neither half of — a server asked for a
+  // league it does not host answers with its OWN league, a 200 with the right
+  // schema and the wrong league. Keyed on the id alone, one reader whose
+  // `myleagues` named a stale host could poison this cache for every reader
+  // whose host was right.
+  const key = `${league.id}:${league.host}:${year}`;
   const cache = franchiseNamesCache();
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < FRANCHISE_NAMES_TTL_MS) return hit.marks;

@@ -20,10 +20,12 @@
  *     a crop cuts off somebody's logo.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolveFranchiseIdentity, identityIconAlt } from '../src/utils/mfl-live-identity';
 import { optimizedRemoteImage, REMOTE_MARK_HOSTS, REMOTE_MARK_WIDTH } from '../src/utils/remote-image';
+import { readLeagueFranchiseMarks } from '../src/utils/broadcast-live-source';
+import { clearSchedulePairingsCache } from '../src/utils/mfl-schedule-pairings';
 
 /** A real one, from league 10105's own export. */
 const UPLOADED = 'https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0001.png';
@@ -257,5 +259,74 @@ describe('the square crop', () => {
     expect(boardCss).toMatch(/\.lv-side__crest--crop img \{[^}]*object-fit: cover;/);
     expect(togglesCss).toMatch(/\.mls__mark img \{[^}]*object-fit: contain;/);
     expect(togglesCss).toMatch(/\.mls__mark--crop img \{[^}]*object-fit: cover;/);
+  });
+});
+
+/**
+ * The READ that supplies the rung — parsed straight, from the league export's
+ * real shape.
+ *
+ * Copilot asked for this on PR #1182 and was right to: the icon-vs-logo choice
+ * and the https filter are new rules living in one `.find()`, and nothing
+ * exercised them directly. The rest of the suite mocks this function away.
+ */
+describe('readLeagueFranchiseMarks — what it takes from the league export', () => {
+  const league = (over: Record<string, unknown> = {}) =>
+    ({ id: '10105', name: "Archie's", franchiseId: '0001', franchiseName: 'Rhinos',
+       registered: null, host: 'https://www48.myfantasyleague.com', isSession: false, ...over }) as any;
+
+  const respond = (franchise: unknown) =>
+    vi.spyOn(globalThis, 'fetch' as never).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ league: { franchises: { franchise } } }),
+    } as never);
+
+  beforeEach(() => {
+    clearSchedulePairingsCache();
+    vi.restoreAllMocks();
+  });
+
+  /** A fresh league id per case: the read caches per league-host-year in process. */
+  const read = (id: string) => readLeagueFranchiseMarks(league({ id }), 2026, 'cookie');
+
+  it('prefers icon over logo — MFL\u2019s small slot before its banner slot', async () => {
+    respond([{ id: '0001', name: 'Rhinos', icon: 'https://x/i.png', logo: 'https://x/l.png' }]);
+    expect((await read('a1'))['0001']).toEqual({ name: 'Rhinos', icon: 'https://x/i.png' });
+  });
+
+  it('falls back to logo when there is no icon', async () => {
+    respond([{ id: '0001', name: 'Rhinos', logo: 'https://x/l.png' }]);
+    expect((await read('a2'))['0001'].icon).toBe('https://x/l.png');
+  });
+
+  /**
+   * HTTPS ONLY. The URL is about to be rendered as an `img src` and handed to
+   * our own image optimizer, and real exports carry `http://` marks and at
+   * least one malformed `hhttp:` — neither is a mark, and both would render as
+   * a broken box where initials would have worked.
+   */
+  it('takes no mark at all from a non-https field', async () => {
+    respond([{ id: '0001', name: 'Rhinos', icon: 'http://x/i.png', logo: 'hhttp://x/l.png' }]);
+    expect((await read('a3'))['0001']).toEqual({ name: 'Rhinos', icon: '' });
+  });
+
+  /** A blank name is not recorded — the caller's own label is better than ''. */
+  it('skips a franchise with no name', async () => {
+    respond([{ id: '0001', name: '', icon: 'https://x/i.png' }, { id: '0002', name: 'Freeze' }]);
+    const marks = await read('a4');
+    expect(marks['0001']).toBeUndefined();
+    expect(marks['0002']).toEqual({ name: 'Freeze', icon: '' });
+  });
+
+  /** MFL collapses a one-element list to a bare object, everywhere. */
+  it('accepts a single franchise as an object, and pads its id', async () => {
+    respond({ id: '7', name: 'Solo', icon: 'https://x/i.png' });
+    expect(Object.keys(await read('a5'))).toEqual(['0007']);
+  });
+
+  it('returns nothing rather than throwing when the body is not a league export', async () => {
+    respond(undefined);
+    expect(await read('a6')).toEqual({});
   });
 });

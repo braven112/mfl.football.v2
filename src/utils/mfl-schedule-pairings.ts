@@ -156,7 +156,11 @@ export async function readLeagueSchedulePairings(
   const host = league.registered ? `https://${league.registered.mflHost}` : league.host;
   if (!mflUserCookie || !host || !week) return [];
 
-  const key = `${league.id}:${year}:${week}`;
+  // The HOST is part of the key for the same reason it is part of the request:
+  // `L` and the host are one composite key MFL validates neither half of, so a
+  // stale host returns another league's schedule under a 200. See
+  // `readLeagueFranchiseMarks`.
+  const key = `${league.id}:${host}:${year}:${week}`;
   const cache = schedulePairingsCache();
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < (hit.pairings.length > 0 ? SCHEDULE_TTL_MS : SCHEDULE_EMPTY_TTL_MS)) {
