@@ -11,6 +11,8 @@
  * `history[]` eras. So this file INDEXES the config rather than introducing a
  * second catalog — the same relationship `franchise-brand.ts` has to it.
  *
+ * Plan: docs/plans/brand-book-franchise-half.md.
+ *
  * ── Why the grounds are the same three ───────────────────────────────────
  * A mark sits on a white cell, a dark card, or the team's own colour, and the
  * third is not a variant of the first two. `bandSlot` below applies the same
