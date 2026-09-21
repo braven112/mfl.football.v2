@@ -12,6 +12,7 @@
  * never name a voter.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { createSessionToken } from '../src/utils/session';
 import { LEAGUES } from '../src/config/leagues';
 
@@ -54,9 +55,16 @@ vi.mock('../src/utils/redis-client', () => ({
 
 import { GET as ballotGET, POST as ballotPOST } from '../src/pages/api/owners-poll/ballot';
 import { GET as turnoutGET } from '../src/pages/api/owners-poll/turnout';
+import { POST as affirmPOST } from '../src/pages/api/owners-poll/affirm';
 import { POST as windowPOST, GET as windowGET } from '../src/pages/api/owners-poll/window';
-import { ownersPollBallotsKey, ownersPollCurrentKey } from '../src/utils/owners-poll-ballot.mjs';
-import { resolveOwnersPollCaller } from '../src/utils/owners-poll-store';
+import {
+  ownersPollStandingKey,
+  ownersPollCurrentKey,
+  ownersPollPauseKey,
+} from '../src/utils/owners-poll-ballot.mjs';
+import { resolveOwnersPollCaller,
+  resolvePollCycle,
+} from '../src/utils/owners-poll-store';
 import { resolveOwnersPollAccess } from '../src/utils/owners-poll-access';
 
 // ---------------------------------------------------------------------------
@@ -82,8 +90,16 @@ const OPEN_WINDOW = {
   eligibleFranchiseIds: FIELD,
 };
 
-function openTheBallot(window: object = OPEN_WINDOW) {
-  strings.set(ownersPollCurrentKey(THELEAGUE.navSlug), window);
+/**
+ * Voting is ALWAYS open now — the cycle is derived, not stored — so there is
+ * nothing to open. Kept as a no-op so the suite still reads as "given an open
+ * ballot", which is the precondition every one of these tests wants.
+ */
+function openTheBallot(_window: object = OPEN_WINDOW) {}
+
+/** The one thing that CAN stop voting: a commissioner pause. */
+function pauseTheBallot() {
+  strings.set(ownersPollPauseKey(THELEAGUE.navSlug), new Date().toISOString());
 }
 
 function sessionCookie(
@@ -217,7 +233,7 @@ describe('POST /api/owners-poll/ballot', () => {
     expect(body.ballot.ranking).toEqual(OK);
     expect(body.turnout).toEqual({ ballotsIn: 1, eligible: 16 });
 
-    const key = ownersPollBallotsKey(THELEAGUE.navSlug, 2026, 5);
+    const key = ownersPollStandingKey(THELEAGUE.navSlug, 2026);
     expect(hashes.get(key)?.has('0003')).toBe(true);
   });
 
@@ -231,7 +247,7 @@ describe('POST /api/owners-poll/ballot', () => {
         }),
       ),
     );
-    const key = ownersPollBallotsKey(THELEAGUE.navSlug, 2026, 5);
+    const key = ownersPollStandingKey(THELEAGUE.navSlug, 2026);
     expect(hashes.get(key)?.has('0003')).toBe(true);
     expect(hashes.get(key)?.has('0011')).toBe(false);
   });
@@ -250,7 +266,10 @@ describe('POST /api/owners-poll/ballot', () => {
     expect((await res.json()).error).toMatch(/exactly 7/);
   });
 
-  it('refuses a write when no ballot is open', async () => {
+  it('ACCEPTS a write at any time — voting never closes', async () => {
+    // The old model refused a ballot between Thursday's close and the next
+    // Tuesday's column. That dead period is the thing standing votes removed:
+    // a ballot cast now simply counts toward the next announce.
     const res = await ballotPOST(
       makeContext(
         authed('/api/owners-poll/ballot', sessionCookie(), {
@@ -259,12 +278,11 @@ describe('POST /api/owners-poll/ballot', () => {
         }),
       ),
     );
-    expect(res.status).toBe(409);
-    expect((await res.json()).status).toBe('none');
+    expect(res.status).toBe(200);
   });
 
-  it('refuses a write after close', async () => {
-    openTheBallot({ ...OPEN_WINDOW, closesAt: '2000-01-02T00:00:00.000Z' });
+  it('refuses a write only while the commissioner has paused voting', async () => {
+    pauseTheBallot();
     const res = await ballotPOST(
       makeContext(
         authed('/api/owners-poll/ballot', sessionCookie(), {
@@ -274,7 +292,7 @@ describe('POST /api/owners-poll/ballot', () => {
       ),
     );
     expect(res.status).toBe(409);
-    expect((await res.json()).status).toBe('closed');
+    expect((await res.json()).status).toBe('paused');
   });
 
   it('preserves submittedAt when an owner edits their ballot', async () => {
@@ -318,7 +336,7 @@ describe('POST /api/owners-poll/ballot', () => {
 describe('GET /api/owners-poll/ballot', () => {
   it('returns only the caller\'s own ballot, never anyone else\'s', async () => {
     openTheBallot();
-    const key = ownersPollBallotsKey(THELEAGUE.navSlug, 2026, 5);
+    const key = ownersPollStandingKey(THELEAGUE.navSlug, 2026);
     hashes.set(
       key,
       new Map([
@@ -344,10 +362,18 @@ describe('GET /api/owners-poll/ballot', () => {
     expect(body.ranked).toBeUndefined();
   });
 
-  it('reports no open ballot without erroring', async () => {
+  it('reports an OPEN ballot even with nothing stored — the cycle is derived', async () => {
     const res = await ballotGET(makeContext(authed('/api/owners-poll/ballot', sessionCookie())));
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ status: 'none', window: null, ballot: null });
+    const body = await res.json();
+    expect(body.status).toBe('open');
+    expect(Date.parse(body.window.closesAt)).toBeGreaterThan(Date.now());
+  });
+
+  it('reports paused when the commissioner has stopped voting', async () => {
+    pauseTheBallot();
+    const res = await ballotGET(makeContext(authed('/api/owners-poll/ballot', sessionCookie())));
+    expect(await res.json()).toEqual({ status: 'paused', window: null, ballot: null });
   });
 
   it('sets no-store so a ballot is never cached across owners', async () => {
@@ -360,7 +386,7 @@ describe('GET /api/owners-poll/ballot', () => {
 describe('GET /api/owners-poll/turnout', () => {
   it('returns counts only — never who voted', async () => {
     openTheBallot();
-    const key = ownersPollBallotsKey(THELEAGUE.navSlug, 2026, 5);
+    const key = ownersPollStandingKey(THELEAGUE.navSlug, 2026);
     hashes.set(
       key,
       new Map([
@@ -399,72 +425,85 @@ describe('GET /api/owners-poll/turnout', () => {
     expect(missing.status).toBe(404);
   });
 
-  it('reports no turnout when no ballot is open', async () => {
+  it('reports no turnout only when voting is paused', async () => {
+    pauseTheBallot();
     const res = await turnoutGET(makeContext(req(`/api/owners-poll/turnout?league=${THELEAGUE.navSlug}`)));
-    expect(await res.json()).toEqual({ status: 'none', turnout: null });
+    expect(await res.json()).toEqual({ status: 'paused', turnout: null });
   });
 });
 
-describe('prefill from last week', () => {
-  const lastWeek = ['0009', '0010', '0011', '0012', '0013', '0014', '0015'];
+describe('"Still good" — affirming a standing ballot', () => {
+  const THREE_WEEKS_AGO = new Date(Date.now() - 22 * 86400 * 1000).toISOString();
+  const YESTERDAY = new Date(Date.now() - 86400 * 1000).toISOString();
 
-  function storeLastWeeksBallot(ranking = lastWeek, franchiseId = '0003') {
+  function standing(updatedAt: string, ranking = OK, franchiseId = '0003') {
     hashes.set(
-      ownersPollBallotsKey(THELEAGUE.navSlug, 2026, 4),
-      new Map([[franchiseId, JSON.stringify({ franchiseId, ranking })]]),
+      ownersPollStandingKey(THELEAGUE.navSlug, 2026),
+      new Map([
+        [
+          franchiseId,
+          JSON.stringify({ franchiseId, ranking, submittedAt: THREE_WEEKS_AGO, updatedAt }),
+        ],
+      ]),
     );
   }
 
-  it('offers last week\'s ballot when this week has none', async () => {
+  it('flags a ballot nobody has touched in three weeks', async () => {
     openTheBallot();
-    storeLastWeeksBallot();
-    const res = await ballotGET(makeContext(authed('/api/owners-poll/ballot', sessionCookie('0003'))));
-    const body = await res.json();
-    expect(body.ballot).toBeNull();
-    expect(body.prefill).toEqual(lastWeek);
+    standing(THREE_WEEKS_AGO);
+    const body = await (
+      await ballotGET(makeContext(authed('/api/owners-poll/ballot', sessionCookie('0003'))))
+    ).json();
+    expect(body.stale).toBe(true);
+    expect(body.staleAfterWeeks).toBe(3);
   });
 
-  it('does NOT offer a prefill once this week\'s ballot exists', async () => {
-    // Shipping both would let a stale prefill overwrite a submitted ballot.
+  it('does not flag a ballot edited yesterday', async () => {
     openTheBallot();
-    storeLastWeeksBallot();
-    hashes.set(
-      ownersPollBallotsKey(THELEAGUE.navSlug, 2026, 5),
-      new Map([['0003', JSON.stringify({ franchiseId: '0003', ranking: OK })]]),
+    standing(YESTERDAY);
+    const body = await (
+      await ballotGET(makeContext(authed('/api/owners-poll/ballot', sessionCookie('0003'))))
+    ).json();
+    expect(body.stale).toBe(false);
+  });
+
+  it('bumps updatedAt without touching the ranking', async () => {
+    openTheBallot();
+    standing(THREE_WEEKS_AGO);
+    const res = await affirmPOST(
+      makeContext(authed('/api/owners-poll/affirm', sessionCookie('0003'), { method: 'POST' })),
     );
-    const body = await (
-      await ballotGET(makeContext(authed('/api/owners-poll/ballot', sessionCookie('0003'))))
-    ).json();
+    expect(res.status).toBe(200);
+    const body = await res.json();
     expect(body.ballot.ranking).toEqual(OK);
-    expect(body.prefill).toBeNull();
+    expect(Date.parse(body.ballot.updatedAt)).toBeGreaterThan(Date.parse(THREE_WEEKS_AGO));
+    // submittedAt is the owner's FIRST ballot of the season and never moves.
+    expect(body.ballot.submittedAt).toBe(THREE_WEEKS_AGO);
   });
 
-  it('offers nothing in week 1', async () => {
-    openTheBallot({ ...OPEN_WINDOW, week: 1 });
-    const body = await (
-      await ballotGET(makeContext(authed('/api/owners-poll/ballot', sessionCookie('0003'))))
-    ).json();
-    expect(body.prefill).toBeNull();
-  });
-
-  it('drops a prefill that no longer validates against this week\'s field', async () => {
-    // A franchise left the league since last week. Prefilling a ballot the
-    // owner would have to repair is worse than prefilling nothing.
+  it('never takes a ranking from the request — the stored one wins', async () => {
+    // An owner who edited on their phone and then pressed "Still good" on a
+    // stale desktop tab must not overwrite the newer ballot with the older one.
     openTheBallot();
-    storeLastWeeksBallot([...lastWeek.slice(0, 6), '0099']);
-    const body = await (
-      await ballotGET(makeContext(authed('/api/owners-poll/ballot', sessionCookie('0003'))))
-    ).json();
-    expect(body.prefill).toBeNull();
+    standing(THREE_WEEKS_AGO);
+    const ctx = makeContext(
+      authed('/api/owners-poll/affirm', sessionCookie('0003'), {
+        method: 'POST',
+        body: JSON.stringify({
+          ranking: ['0016', '0015', '0014', '0013', '0012', '0011', '0010'],
+        }),
+      }),
+    );
+    const body = await (await affirmPOST(ctx)).json();
+    expect(body.ballot.ranking).toEqual(OK);
   });
 
-  it('never offers another owner\'s ballot as a prefill', async () => {
+  it('refuses when there is no ballot on file to affirm', async () => {
     openTheBallot();
-    storeLastWeeksBallot(lastWeek, '0011');
-    const body = await (
-      await ballotGET(makeContext(authed('/api/owners-poll/ballot', sessionCookie('0003'))))
-    ).json();
-    expect(body.prefill).toBeNull();
+    const res = await affirmPOST(
+      makeContext(authed('/api/owners-poll/affirm', sessionCookie('0003'), { method: 'POST' })),
+    );
+    expect(res.status).toBe(409);
   });
 });
 
@@ -549,158 +588,153 @@ describe('resolveOwnersPollAccess (page gate)', () => {
   });
 });
 
-describe('POST /api/owners-poll/window (commissioner control)', () => {
-  it('opens a real window a commissioner can then vote in', async () => {
-    const res = await postWindow({ action: 'open', week: 3, hours: 48 }, commishCookie());
-    expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body).toMatchObject({ ok: true, status: 'open', quorum: 8, eligibleVoters: 16 });
-    expect(body.window).toMatchObject({ week: 3, slots: 7 });
-    expect(body.hours).toBeCloseTo(48, 0);
+describe('POST /api/owners-poll/window (commissioner pause switch)', () => {
 
-    // The window it wrote must be the one the OWNER-facing route now reads.
+  it('pauses voting for the whole league', async () => {
+    const res = await postWindow({ action: 'pause' }, commishCookie());
+    expect(res.status).toBe(200);
+    expect((await res.json()).status).toBe('paused');
+
     const ballot = await ballotGET(makeContext(authed('/api/owners-poll/ballot', sessionCookie())));
-    const ballotBody = await ballot.json();
-    expect(ballotBody.status).toBe('open');
-    expect(ballotBody.window.week).toBe(3);
+    expect((await ballot.json()).status).toBe('paused');
+  });
+
+  it('a pause NEVER touches standing ballots', async () => {
+    const key = ownersPollStandingKey(THELEAGUE.navSlug, 2026);
+    hashes.set(key, new Map([['0003', JSON.stringify({ franchiseId: '0003', ranking: OK })]]));
+
+    await postWindow({ action: 'pause' }, commishCookie());
+    expect(hashes.get(key)?.size).toBe(1);
+
+    await postWindow({ action: 'resume' }, commishCookie());
+    const ballot = await ballotGET(makeContext(authed('/api/owners-poll/ballot', sessionCookie('0003'))));
+    const body = await ballot.json();
+    expect(body.status).toBe('open');
+    // The vote survived the pause intact — that is the whole promise of a
+    // standing ballot, and a pause is the one thing that could have broken it.
+    expect(body.ballot.ranking).toEqual(OK);
+  });
+
+  it('resume restores voting', async () => {
+    await postWindow({ action: 'pause' }, commishCookie());
+    const res = await postWindow({ action: 'resume' }, commishCookie());
+    expect((await res.json()).status).toBe('open');
+
+    const ballot = await ballotGET(makeContext(authed('/api/owners-poll/ballot', sessionCookie())));
+    expect((await ballot.json()).status).toBe('open');
+  });
+
+  it('reports the standing ballots already on file', async () => {
+    hashes.set(
+      ownersPollStandingKey(THELEAGUE.navSlug, 2026),
+      new Map([['0003', JSON.stringify({ franchiseId: '0003', ranking: OK })]]),
+    );
+    const body = await (await postWindow({ action: 'resume' }, commishCookie())).json();
+    expect(body.ballotsIn).toBe(1);
+  });
+
+  it('rejects any action but pause/resume', async () => {
+    const res = await postWindow({ action: 'open', week: 3 }, commishCookie());
+    expect(res.status).toBe(400);
   });
 
   it('refuses a plain owner', async () => {
     // This writes league-wide state that changes what every owner sees.
-    const res = await postWindow({ action: 'open', week: 3 }, sessionCookie('0009'));
+    const res = await postWindow({ action: 'pause' }, sessionCookie('0009'));
     expect(res.status).toBe(403);
     expect(strings.size).toBe(0);
   });
 
   it('refuses an unauthenticated caller', async () => {
-    expect((await postWindow({ action: 'open', week: 3 }, null)).status).toBe(403);
-  });
-
-  it('refuses a commissioner of ANOTHER league', async () => {
-    // isCommissionerOrAdmin is league-scoped; the ?league= check is too, and
-    // it is the one doing the work here. Since Sep 2026 BOTH leagues run the
-    // poll, so an AFL commissioner is a real commissioner of a real poll —
-    // what makes this a refusal is that the request addresses TheLeague's.
-    const res = await postWindow(
-      { action: 'open', week: 3 },
-      commishCookie('0001', AFL.id),
-      THELEAGUE.navSlug,
-    );
+    const res = await postWindow({ action: 'pause' }, null);
     expect(res.status).toBe(403);
     expect(strings.size).toBe(0);
   });
 
-  it('lets an AFL commissioner open the AFL ballot, on the AFL scope', async () => {
-    // The port's end-to-end check: the AFL's own numbers come back (10 slots,
-    // quorum 12, 24 eligible voters — one league-wide ballot, not one per
-    // conference), and the window lands under the AFL key, never TheLeague's.
-    const res = await postWindow(
-      { action: 'open', week: 3, hours: 48 },
-      commishCookie('0001', AFL.id),
-      AFL.navSlug,
-    );
-    expect(res.status).toBe(200);
-    expect(await res.json()).toMatchObject({
-      ok: true,
-      status: 'open',
-      quorum: 12,
-      eligibleVoters: 24,
-      window: { week: 3, slots: 10 },
-    });
-    expect([...strings.keys()]).toEqual(['poll:afl:current']);
-  });
-
-  it('validates the week and the hours rather than writing junk', async () => {
-    for (const body of [
-      { action: 'open' },
-      { action: 'open', week: 0 },
-      { action: 'open', week: 99 },
-      { action: 'open', week: 3, hours: 0 },
-      { action: 'open', week: 3, hours: 100000 },
-      { action: 'sideways' },
-    ]) {
-      expect((await postWindow(body, commishCookie())).status).toBe(400);
-    }
-    expect(strings.size).toBe(0);
-  });
-
-  it('defaults to the real Thursday schedule when no hours are given', async () => {
-    const body = await (await postWindow({ action: 'open', week: 3 }, commishCookie())).json();
-    const closes = new Date(body.window.closesAt);
-    const weekday = new Intl.DateTimeFormat('en-US', {
-      timeZone: 'America/Los_Angeles',
-      weekday: 'short',
-    }).format(closes);
-    expect(weekday).toBe('Thu');
-  });
-
-  it('close stops voting WITHOUT touching ballots', async () => {
-    await postWindow({ action: 'open', week: 3, hours: 48 }, commishCookie());
-    hashes.set(
-      ownersPollBallotsKey(THELEAGUE.navSlug, new Date().getUTCFullYear(), 3),
-      new Map([['0003', JSON.stringify({ franchiseId: '0003', ranking: OK })]]),
-    );
-
-    const res = await postWindow({ action: 'close' }, commishCookie());
-    expect(res.status).toBe(200);
-    expect((await res.json()).status).toBe('closed');
-
-    // Voting is off...
-    const ballot = await ballotGET(makeContext(authed('/api/owners-poll/ballot', sessionCookie())));
-    expect((await ballot.json()).status).toBe('none');
-    // ...but the vote itself survives, so re-opening picks it back up.
-    const key = ownersPollBallotsKey(THELEAGUE.navSlug, new Date().getUTCFullYear(), 3);
-    expect(hashes.get(key)?.size).toBe(1);
-  });
-
-  it('reports existing ballots when re-opening a week', async () => {
-    // A commissioner recovering from a failed run should not be surprised by a
-    // non-zero count on a "fresh" open.
-    const year = new Date().getUTCFullYear();
-    hashes.set(
-      ownersPollBallotsKey(THELEAGUE.navSlug, year, 3),
-      new Map([['0003', JSON.stringify({ franchiseId: '0003', ranking: OK })]]),
-    );
-    const body = await (
-      await postWindow({ action: 'open', week: 3, year, hours: 24 }, commishCookie())
-    ).json();
-    expect(body.ballotsIn).toBe(1);
-  });
-
-  it('close on nothing is a clean no-op', async () => {
-    const res = await postWindow({ action: 'close' }, commishCookie());
-    expect(res.status).toBe(200);
-    expect((await res.json()).status).toBe('none');
-  });
-
   it('reports a storage outage instead of claiming success', async () => {
     redisAvailable = false;
-    const res = await postWindow({ action: 'open', week: 3, hours: 24 }, commishCookie());
+    const res = await postWindow({ action: 'pause' }, commishCookie());
     expect(res.status).toBe(503);
   });
 });
 
 describe('GET /api/owners-poll/window', () => {
-  it('is commissioner-only', async () => {
-    expect(
-      (await windowGET(makeContext(authed('/api/owners-poll/window', sessionCookie('0009'))))).status,
-    ).toBe(403);
-    expect(
-      (await windowGET(makeContext(authed('/api/owners-poll/window', null)))).status,
-    ).toBe(403);
+  const getWindow = (cookie: string | null) =>
+    windowGET(makeContext(authed('/api/owners-poll/window', cookie)));
+
+  it('reports the derived open cycle, then a pause', async () => {
+    const open = await (await getWindow(commishCookie())).json();
+    expect(open.status).toBe('open');
+    expect(Date.parse(open.window.closesAt)).toBeGreaterThan(Date.now());
+
+    await postWindow({ action: 'pause' }, commishCookie());
+    const paused = await (await getWindow(commishCookie())).json();
+    expect(paused.status).toBe('paused');
+    expect(paused.window).toBeNull();
+  });
+});
+
+/**
+ * The commissioner panel and the route it drives, pinned together.
+ *
+ * Removing the quorum turned this route from open/close into pause/resume and
+ * left PollWindowAdmin.tsx still POSTing `action: 'open'` and `action: 'close'`
+ * — which the route answers with a 400. Nothing failed at build time: both
+ * sides compiled, the panel rendered, and every button simply errored. A
+ * contract carried in a string literal across a fetch has no type to break, so
+ * it needs a test.
+ *
+ * Scanned from source rather than exercised, because the panel is a React
+ * island whose fetch is the only thing worth asserting: which action names it
+ * is willing to send.
+ */
+describe('the commissioner panel speaks the window route’s vocabulary', () => {
+  const read = (p: string) =>
+    readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
+
+  it('sends only actions the route accepts', () => {
+    const panel = read('src/components/shared/owners-poll/PollWindowAdmin.tsx');
+    const sent = new Set(
+      [...panel.matchAll(/act\((['"])([a-z-]+)\1\)/g)].map((m) => m[2]),
+    );
+    expect(sent.size).toBeGreaterThan(0);
+    for (const action of sent) {
+      expect(['pause', 'resume']).toContain(action);
+    }
   });
 
-  it('reports no window, then the open one', async () => {
-    const before = await (
-      await windowGET(makeContext(authed('/api/owners-poll/window', commishCookie())))
-    ).json();
-    expect(before).toMatchObject({ status: 'none', window: null, eligibleVoters: 16 });
+  it('still offers both of them, so neither half of the switch is unreachable', () => {
+    const panel = read('src/components/shared/owners-poll/PollWindowAdmin.tsx');
+    expect(panel).toMatch(/act\('pause'\)/);
+    expect(panel).toMatch(/act\('resume'\)/);
+  });
 
-    await postWindow({ action: 'open', week: 6, hours: 12 }, commishCookie());
-    const after = await (
-      await windowGET(makeContext(authed('/api/owners-poll/window', commishCookie())))
-    ).json();
-    expect(after.status).toBe('open');
-    expect(after.window.week).toBe(6);
+  it('reads the two states the route actually reports', () => {
+    const panel = read('src/components/shared/owners-poll/PollWindowAdmin.tsx');
+    // 'closed' / 'pending' / 'none' are gone from the route's vocabulary; a
+    // panel still branching on them renders a state that can never arrive.
+    expect(panel).not.toMatch(/status === '(closed|pending|none)'/);
+    expect(panel).toMatch(/status === 'paused'/);
+  });
+});
+
+describe('the poll closes for the offseason', () => {
+  // CLAUDE.md's named trap: `getCurrentSeasonYear` rolls at LABOR DAY, so from
+  // February until then it names last season — a year that resolves fine and
+  // whose feeds are complete by definition. Gating on "the year resolves" or
+  // "the feeds have a completed week" therefore leaves the ballot live all
+  // offseason, taking votes into a standing hash for a season already played.
+  //
+  // The homepage card gates on isSeasonWindowOpen; before this the API did not,
+  // so the two disagreed — card hidden, ballot page still accepting votes.
+
+  it('refuses a ballot in the offseason', async () => {
+    const june = new Date('2026-06-15T12:00:00Z');
+    expect(resolvePollCycle(THELEAGUE, june)).toBeNull();
+  });
+
+  it('accepts one in season', async () => {
+    const october = new Date('2026-10-15T12:00:00Z');
+    expect(resolvePollCycle(THELEAGUE, october)).not.toBeNull();
   });
 });

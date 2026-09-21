@@ -104,3 +104,34 @@ describe('the poll only ever posts to chat twice a week', () => {
     expect(PASS).not.toMatch(/postToGroupMe[\s\S]{0,200}buildOpenLine/);
   });
 });
+
+// ---------------------------------------------------------------------------
+
+describe('a zero-ballot week reaches nobody, through the announce QUEUE', () => {
+  // The silence rule ("there is no point of posting about no poll") is enforced
+  // in the builders: buildRevealMessage returns null and buildVoterPushes
+  // returns [] when a week closed with nothing in it. But the generator no
+  // longer SENDS — it enqueues, and schefter-announce-pending.mjs drains the
+  // queue after the commit step. So the rule only actually holds if the close
+  // pass declines to enqueue in the first place; an entry with a null
+  // groupMeText and no pushes would still be a queued announcement.
+  //
+  // This asserts the guard that makes those compose. It is the same class of
+  // seam that let the "Still good?" cron silently send nothing: two correct
+  // halves, and the bug living in the join.
+
+  it('the close pass returns before enqueueing when there is no text and no pushes', () => {
+    const close = GENERATOR.slice(GENERATOR.indexOf('async function runClosePoll'));
+    const body = close.slice(0, close.indexOf('\n}\n'));
+
+    const guardIdx = body.indexOf('if (!text && voterPushes.length === 0) return;');
+    const enqueueIdx = body.indexOf('enqueueAnnounce(');
+
+    expect(guardIdx, 'the close pass must bail on an empty week').toBeGreaterThan(-1);
+    expect(enqueueIdx, 'the close pass must enqueue its reveal').toBeGreaterThan(-1);
+    // Order matters: the bail has to come FIRST, or the queue gets an entry
+    // with nothing in it and the deploy announces a week nobody voted in.
+    expect(guardIdx).toBeLessThan(enqueueIdx);
+  });
+
+});

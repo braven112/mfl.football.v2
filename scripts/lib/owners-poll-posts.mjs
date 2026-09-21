@@ -11,6 +11,13 @@
 
 import { leagueUrl } from '../../src/config/leagues-data.mjs';
 import { pairwiseAccuracy } from '../../src/utils/owners-poll-accuracy.mjs';
+import {
+  standingVoteLine,
+  stillGoodPrompt,
+  weeksSince,
+  resultTimingPhrase,
+} from '../../src/utils/owners-poll-copy.mjs';
+import { formatResultTimePT } from './owners-poll-pass.mjs';
 
 const BALLOT_PATH = '/pecking-order/ballot';
 const COLUMN_PATH = '/pecking-order';
@@ -31,7 +38,7 @@ const COLUMN_PATH = '/pecking-order';
  */
 export function buildVoterPushes({ league, issue, teams, previousIssue = null }) {
   const poll = issue?.ownersPoll;
-  if (!poll || poll.status !== 'closed' || !poll.hasQuorum) return [];
+  if (!poll || poll.status !== 'closed' || !poll.ranked) return [];
 
   const name = (fid) => teams.get(fid)?.nameMedium ?? teams.get(fid)?.name ?? fid;
   const consensusRank = new Map((poll.ranked ?? []).map((r) => [r.franchiseId, r]));
@@ -110,10 +117,14 @@ export function buildOpenPushes({ issue, teams, eligibleFranchiseIds }) {
       ? `The computer has ${name(top.franchiseId)} #1 and ${name(bottom.franchiseId)} last.`
       : 'The column is up.';
 
+  const when = resultTimingPhrase(
+    formatResultTimePT(poll.closesAt),
+    Boolean(poll.clampedToKickoff),
+  );
   return eligibleFranchiseIds.map((franchiseId) => ({
     franchiseId,
-    title: `Owners' Poll — Week ${issue.week} is open`,
-    body: `${bait} Rank your top ${poll.slots} — about a minute.`,
+    title: `The Owners' Poll — Week ${issue.week}`,
+    body: `${bait} ${standingVoteLine(when)}`,
     url: BALLOT_PATH,
     tag: `owners-poll-open-${issue.year}-${issue.week}`,
     category: 'poll-open',
@@ -121,32 +132,51 @@ export function buildOpenPushes({ issue, teams, eligibleFranchiseIds }) {
 }
 
 /**
- * The turnout reminder, as push, to the owners who have NOT voted.
+ * The "still good?" push — the old turnout nag, repointed.
  *
- * This is the post that most deserved to leave the chat. A count-only nag is
- * the least newsworthy thing the poll produces and the most repetitive, and in
- * a personal channel it can do what it could never do publicly: address the
- * person who actually still needs to act, without naming them to anyone else.
+ * It used to tell an owner they had not voted. Under standing votes that
+ * message stops being true for almost everyone by about Week 5, and a cron
+ * whose audience shrinks to nothing is dead weight.
  *
- * The count-only rule still holds in what it SAYS — an owner is told how many
- * ballots are in, never who is missing.
+ * What replaced it is the one thing standing votes genuinely need. A ballot
+ * nobody has revisited is republished in every snapshot as though its owner
+ * re-affirmed it, so by midseason a real share of the consensus is inertia.
+ * This asks the owners whose ballot has gone stale whether it still stands —
+ * one tap either way, and standing pat becomes a choice rather than silence.
+ *
+ * Two audiences, one message shape:
+ *   - never voted        → "you have no ballot on file"
+ *   - stale ballot       → "your ballot is N weeks old"
+ *
+ * Owners whose ballot is current get nothing, which is the point: this can
+ * never become the weekly nag it replaced.
+ *
+ * @param {object} args
+ * @param {number} args.week
+ * @param {string} args.closesAt
+ * @param {Array<{ franchiseId: string, hasBallot?: boolean, updatedAt: string|null, stale?: boolean }>} [args.standing]
+ * @param {Date} [args.now]
  */
-export function buildNagPushes({ league, week, ballotsIn, eligibleVoters, closesAt, nonVoters }) {
-  if (!Array.isArray(nonVoters) || nonVoters.length === 0) return [];
-  const closes = new Date(closesAt).toLocaleString('en-US', {
-    timeZone: 'America/Los_Angeles',
-    weekday: 'long',
-    hour: 'numeric',
-    hour12: true,
-  });
-  return nonVoters.map((franchiseId) => ({
-    franchiseId,
-    title: `Owners' Poll closes ${closes} PT`,
-    body: `${ballotsIn} of ${eligibleVoters} ballots are in and yours isn't. Same deadline as your lineup.`,
-    url: BALLOT_PATH,
-    tag: `owners-poll-nag-${week}`,
-    category: 'poll-reminder',
-  }));
+export function buildNagPushes({ week, closesAt, standing = /** @type {any[]} */ ([]), now = new Date() }) {
+  const when = formatResultTimePT(closesAt);
+  return standing
+    .map(({ franchiseId, hasBallot, updatedAt, stale }) => {
+      const weeksOld = weeksSince(updatedAt, now);
+      // `hasBallot`, not a null timestamp: a stored record whose `updatedAt`
+      // did not parse reads as null, and telling an owner with a ballot on
+      // file that they have none is the one message this push must never send.
+      const never = hasBallot === undefined ? updatedAt == null : !hasBallot;
+      if (!never && !stale) return null;
+      return {
+        franchiseId,
+        title: never ? "You have no Owners' Poll ballot" : 'Is your ballot still good?',
+        body: `${stillGoodPrompt(never ? null : weeksOld)} Next result ${when}.`,
+        url: BALLOT_PATH,
+        tag: `owners-poll-still-good-${week}`,
+        category: 'poll-reminder',
+      };
+    })
+    .filter(Boolean);
 }
 
 /**
@@ -224,24 +254,11 @@ export function buildRevealFeedPost({
   const id = `sf_owners_poll_${league.slug}_${issue.year}_w${issue.week}`;
   const link = `${COLUMN_PATH}/${issue.year}/${issue.week}`;
 
-  if (!poll.hasQuorum) {
-    return {
-      id,
-      timestamp: new Date().toISOString(),
-      type: 'power-ranking',
-      category: 'articles',
-      tier: 'standard',
-      headline: `The Owners' Poll came up short in Week ${issue.week}`,
-      body:
-        `Only ${poll.ballotsIn} of ${poll.eligibleVoters} owners filed a ballot, short of the ` +
-        `${poll.quorum} the poll needs. No consensus this week — the rankings are the numbers alone.`,
-      franchiseIds: [],
-      link,
-      linkLabel: 'See the column',
-      league: league.slug,
-      authorId: 'claude',
-    };
-  }
+  // No post for a week nobody voted in. The feed is a durable record of what
+  // happened, and "nothing happened" is not a record worth keeping — it is an
+  // article on every owner's homepage announcing that the feature went unused.
+  // Silence here is the same decision buildRevealMessage makes for the chat.
+  if (!poll.ranked || poll.ballotsIn === 0) return null;
 
   const top = poll.ranked.slice(0, 3);
   const biggest = [...poll.ranked].sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))[0];
@@ -329,7 +346,7 @@ export function buildCallback({
   let best = null;
   for (const prior of priorIssues ?? []) {
     const poll = prior?.ownersPoll;
-    if (!poll || poll.status !== 'closed' || !poll.hasQuorum) continue;
+    if (!poll || poll.status !== 'closed' || !poll.ranked) continue;
     const weeksBack = issue.week - prior.week;
     if (weeksBack < minWeeksBack) continue;
 

@@ -158,8 +158,6 @@ export interface OwnersPollConfig {
    * order, which is a stated design trade.
    */
   slots: number;
-  /** Minimum ballots before a consensus publishes at all. */
-  quorum: number;
   /**
    * Day the ballot closes (0 = Sunday). Thursday, so the deadline is the one
    * owners already obey — lineups are due before the first kickoff.

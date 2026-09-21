@@ -48,8 +48,92 @@ function assertWeek(year, week) {
   }
 }
 
+function assertSeasonYear(year) {
+  if (!Number.isInteger(year) || year < 2000 || year > 2999) {
+    throw new TypeError(`owners-poll: invalid season year ${JSON.stringify(year)}`);
+  }
+  return year;
+}
+
+/**
+ * Redis HASH holding a league's STANDING ballots for one season:
+ * field = franchiseId, value = ballot record.
+ *
+ * This is the whole standing-vote model. A ballot is not a thing you file each
+ * week — it is your current opinion, and it counts in every snapshot until you
+ * change it. So there is one hash per SEASON, never one per week, and nothing
+ * clears it.
+ *
+ * **Why season-scoped rather than one permanent key.** A standing vote must
+ * not survive the offseason. Franchises change between seasons — an expansion,
+ * a rebrand, an owner leaving — and a ballot cast in Week 14 silently counting
+ * as your Week 1 vote the following September is a vote nobody cast. Keying on
+ * the season makes the reset automatic and auditable: no deletion cron to
+ * forget, no TTL to get wrong, and last season's hash is simply never read
+ * again.
+ *
+ * The year is the SEASON year (`getCurrentSeasonYear`), not the league year.
+ * The poll is results-shaped — it ranks how teams are playing — so it rolls at
+ * Labor Day with the standings, not on MFL's February league rollover.
+ *
+ * A hash rather than one key per franchise, for three reasons that all still
+ * hold: HGETALL reads the league in a single round trip (no SCAN over a
+ * keyspace, which Upstash bills per call and which can miss keys mid-write);
+ * HLEN answers "how many owners have a ballot on file?" for the public meter
+ * without transferring — or exposing — a single ballot; and per-field writes
+ * are atomic, so two owners submitting at the same instant cannot clobber each
+ * other the way a read-modify-write on one JSON blob would.
+ *
+ * **No TTL.** A standing vote that silently expires is a vote the owner thinks
+ * they still have. The season key is the only lifetime bound.
+ */
+export function ownersPollStandingKey(navSlug, seasonYear) {
+  assertScope(navSlug);
+  assertSeasonYear(seasonYear);
+  return `${OWNERS_POLL_PREFIX}:${navSlug}:standing:${seasonYear}`;
+}
+
+/**
+ * How long a ballot may sit untouched before the site asks whether it still
+ * stands.
+ *
+ * Standing votes have one failure mode, and it is not turnout: an owner who
+ * never revisits their ballot is republished every week as though they
+ * re-affirmed it, so by midseason a chunk of the consensus is inertia rather
+ * than opinion. Three weeks is long enough that standing pat reads as
+ * deliberate, short enough to catch drift before it dominates the tally.
+ */
+export const STALE_BALLOT_WEEKS = 3;
+
+/**
+ * Has this ballot gone unexamined long enough to prompt?
+ *
+ * Takes `now` explicitly — never reads the clock — so the island, the push
+ * builder and the tests all agree. A record with no usable `updatedAt` is NOT
+ * stale: an unparseable timestamp is a storage question, and prompting on it
+ * would nag every owner over a bug none of them can fix.
+ */
+/**
+ * @param {string|null|undefined} updatedAt
+ * @param {Date|number} now
+ * @param {number} [weeks]
+ * @returns {boolean}
+ */
+export function isBallotStale(updatedAt, now, weeks = STALE_BALLOT_WEEKS) {
+  const then = Date.parse(updatedAt ?? '');
+  if (!Number.isFinite(then)) return false;
+  const nowMs = now instanceof Date ? now.getTime() : Number(now);
+  if (!Number.isFinite(nowMs)) return false;
+  return nowMs - then >= weeks * 7 * 86400 * 1000;
+}
+
 /**
  * Redis HASH holding one week's ballots: field = franchiseId, value = ballot.
+ *
+ * LEGACY — the week-scoped shape the poll used before ballots became standing
+ * votes. Retained for `scripts/owners-poll-adopt-standing.mjs`, the one-shot
+ * that lifts an existing week's ballots into the standing hash. Nothing on the
+ * live path writes here any more.
  *
  * A hash rather than one key per franchise for two reasons that both matter at
  * close time: HGETALL reads the whole week in a single round trip (no SCAN
@@ -79,6 +163,24 @@ export function ownersPollBallotsKey(navSlug, year, week) {
 export function ownersPollCurrentKey(navSlug) {
   assertScope(navSlug);
   return `${OWNERS_POLL_PREFIX}:${navSlug}:current`;
+}
+
+/**
+ * Commissioner PAUSE switch — the only stored state the live path still has.
+ *
+ * Voting is always open, so there is no "current window" to point at any more.
+ * What remains is an emergency stop: a key whose mere presence suspends the
+ * poll. Absent (the normal case) means open.
+ *
+ * It is deliberately the inverse of the old pointer. The old model stored
+ * "voting is allowed until X" and failed CLOSED when the key vanished — which
+ * is how an expired TTL could have switched the feature off silently. This
+ * stores "voting is suspended" and fails OPEN, so losing the key restores the
+ * normal state rather than breaking it.
+ */
+export function ownersPollPauseKey(navSlug) {
+  assertScope(navSlug);
+  return `${OWNERS_POLL_PREFIX}:${navSlug}:paused`;
 }
 
 /**
@@ -115,6 +217,17 @@ export function resolveBallotWindow(now, window) {
  * Length is exact, not a minimum: Borda scoring assumes every ballot carries
  * the same point pool, so a short ballot is not a smaller opinion, it is a
  * differently-weighted one. Rejecting it here is what keeps the tally fair.
+ *
+ * The return is declared as a DISCRIMINATED union so a caller that checks
+ * `ok` gets `ranking` narrowed to a real array. Left undeclared, TS unions the
+ * two shapes and every caller sees `string[] | undefined` after the check it
+ * just made.
+ *
+ * @param {object} args
+ * @param {unknown} args.ranking
+ * @param {number} args.slots
+ * @param {Iterable<string>} args.eligibleFranchiseIds
+ * @returns {{ ok: true, ranking: string[] } | { ok: false, error: string }}
  */
 export function validateBallot({ ranking, slots, eligibleFranchiseIds }) {
   if (!Number.isInteger(slots) || slots < 1) {
@@ -162,15 +275,64 @@ export function validateBallot({ ranking, slots, eligibleFranchiseIds }) {
  * accountability page can tell a first-hour voter from one who was still
  * tinkering at the deadline — and so a re-submission never looks like a
  * fresh ballot.
+ *
+ * The declared parameter block below is not decoration. A destructured option
+ * in a .mjs is typed from the destructuring ALONE, so a bare name infers as
+ * REQUIRED and every honest caller omitting one becomes a ts(2345). Declaring
+ * them is the only thing that says "optional, of this type" — the same fix
+ * `redactTradeOffer`'s options needed, recorded in the typecheck baseline.
+ *
+ * (And the tag must not be NAMED in the prose above: a bare tag mid-sentence
+ * is parsed as a malformed tag and silently voids every real one after it,
+ * which is what made this block a no-op on the first attempt.)
+ *
+ * @param {object} args
+ * @param {string} args.franchiseId
+ * @param {string[]} args.ranking
+ * @param {Date|number|string} args.now
+ * @param {{ submittedAt?: string|null, seasonYear?: number|null }|null} [args.previous]
+ * @param {number|null} [args.seasonYear]
+ * @returns {{ franchiseId: string, ranking: string[], submittedAt: string, updatedAt: string, seasonYear: number|null }}
  */
-export function buildBallotRecord({ franchiseId, ranking, now, previous }) {
+export function buildBallotRecord({ franchiseId, ranking, now, previous, seasonYear }) {
   const iso = (now instanceof Date ? now : new Date(now)).toISOString();
   return {
     franchiseId: normalizeFranchiseId(franchiseId),
     ranking,
+    // The owner's FIRST ballot of the season. Under standing votes this no
+    // longer means "when they voted this week" — it means when they first had
+    // an opinion on file, and it never moves again.
     submittedAt: previous?.submittedAt ?? iso,
+    // Last edit. This is the load-bearing one now: it is what makes a ballot
+    // that has stood for five weeks visibly five weeks old rather than being
+    // republished each week as a fresh opinion.
     updatedAt: iso,
+    // Stamped so a mis-keyed read is DETECTABLE rather than silent — the same
+    // reason the hash field is treated as the authoritative franchise id.
+    seasonYear: Number.isInteger(seasonYear) ? Number(seasonYear) : (previous?.seasonYear ?? null),
   };
+}
+
+/**
+ * Re-affirm a standing ballot without changing it.
+ *
+ * Bumps `updatedAt` and nothing else. The ranking is taken from the STORED
+ * record, never from the client: an owner who edited their ballot on a phone
+ * and then pressed "Still good" on a stale desktop tab must not have the older
+ * ranking written back over the newer one. The client sends no ranking at all,
+ * so that race cannot be expressed.
+ *
+ * Returns null when there is nothing on file to affirm.
+ */
+/**
+ * @param {Record<string, any>|null|undefined} previous
+ * @param {Date|number} now
+ * @returns {Record<string, any>|null}
+ */
+export function affirmBallotRecord(previous, now) {
+  if (!previous || !Array.isArray(previous.ranking)) return null;
+  const iso = (now instanceof Date ? now : new Date(now)).toISOString();
+  return { ...previous, updatedAt: iso };
 }
 
 /**
@@ -181,7 +343,14 @@ export function buildBallotRecord({ franchiseId, ranking, now, previous }) {
  * DROPPED rather than repaired: silently padding or truncating it would put
  * an opinion nobody cast into the published consensus.
  */
-export function parseStoredBallot(value, { slots, eligibleFranchiseIds }) {
+/**
+ * @param {unknown} value
+ * @param {object} opts
+ * @param {number} opts.slots
+ * @param {Iterable<string>} opts.eligibleFranchiseIds
+ * @param {number|null} [opts.seasonYear]
+ */
+export function parseStoredBallot(value, { slots, eligibleFranchiseIds, seasonYear }) {
   let record = value;
   if (typeof record === 'string') {
     try {
@@ -202,11 +371,25 @@ export function parseStoredBallot(value, { slots, eligibleFranchiseIds }) {
     return null;
   }
 
+  // A record stamped for a DIFFERENT season is not this season's opinion, and
+  // reading one means a key was built wrong somewhere. Drop it loudly-by-
+  // absence rather than tallying last year's ballot into this year's poll.
+  // Records with no stamp at all predate standing votes and are accepted —
+  // the adopt one-shot lifts them without inventing a year.
+  if (
+    seasonYear != null &&
+    record.seasonYear != null &&
+    Number(record.seasonYear) !== Number(seasonYear)
+  ) {
+    return null;
+  }
+
   return {
     franchiseId,
     ranking: result.ranking,
     submittedAt: typeof record.submittedAt === 'string' ? record.submittedAt : null,
     updatedAt: typeof record.updatedAt === 'string' ? record.updatedAt : null,
+    seasonYear: record.seasonYear == null ? null : Number(record.seasonYear),
   };
 }
 

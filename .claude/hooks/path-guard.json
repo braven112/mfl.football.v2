@@ -646,9 +646,9 @@
         "tests/owners-poll-window.test.ts",
         "tests/owners-poll-voters.test.ts",
         "tests/owners-poll-posts.test.ts",
-        "tests/owners-poll-lineup-styles.test.ts",
         "tests/owners-poll-chat-budget.test.ts",
-        "tests/schefter-announce-pending.test.ts"
+        "tests/schefter-announce-pending.test.ts",
+        "tests/owners-poll-standing-key.test.ts"
       ],
       "note": "The poll's chat budget is TWO posts a week (the column, with the ballot invite folded in, and the reveal) and the nag is push-only. Neither is SENT here any more: generate-pecking-order.mjs queues them and scripts/schefter-announce-pending.mjs delivers after the commit step. Neither lane PROBES a URL first — /pecking-order answers 200 every week of the season, and the per-issue permalink 500s in production today (docs/claude/followups/2026-09-17-pecking-order-permalink-500.md) — so queueing alone is what keeps the announcement behind the commit."
     },

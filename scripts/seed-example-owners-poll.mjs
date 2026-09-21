@@ -183,15 +183,12 @@ async function main() {
   // this is ever run for more than one issue.
   const turnout = opts.turnout ?? Math.round(eligibleFranchiseIds.length * DEFAULT_TURNOUT_RATE);
   // `--turnout` with no value parses to NaN, and NaN fails every comparison
-  // below silently: the quorum warning does not fire, slice(0, NaN) takes
-  // nothing, and a "0 of 16, no quorum" block lands on the committed issue.
+  // below silently: slice(0, NaN) takes nothing, and a "0 ballots" block lands
+  // on the committed issue — which now renders as no poll section at all.
   if (!Number.isInteger(turnout) || turnout < 1 || turnout > eligibleFranchiseIds.length) {
     throw new Error(
       `--turnout must be a whole number from 1 to ${eligibleFranchiseIds.length}, got ${JSON.stringify(opts.turnout)}.`,
     );
-  }
-  if (turnout < poll.quorum) {
-    console.warn(`  [warn] ${turnout} ballots is under the ${poll.quorum}-ballot quorum — the example will render the no-quorum state.`);
   }
   const pickOrder = rng(`${league.navSlug}:${opts.year}:${opts.week}:voters`);
   const voters = [...eligibleFranchiseIds]
@@ -237,8 +234,16 @@ async function main() {
   // publishes. `source` is the only key this script adds.
   const { block } = buildClosedPollBlock({
     ballots,
-    window: { ...window, slots: poll.slots, eligibleFranchiseIds },
-    quorum: poll.quorum,
+    // The league's real close schedule rides along, so the seeded example's
+    // section states the same deadline a real week would rather than falling
+    // back to the component's defaults.
+    window: {
+      ...window,
+      slots: poll.slots,
+      eligibleFranchiseIds,
+      closeWeekday: poll.closeWeekday,
+      closeHourPT: poll.closeHourPT,
+    },
     compositeRankByFid,
   });
   block.source = SYNTHETIC_POLL_SOURCE;
@@ -254,8 +259,8 @@ async function main() {
   await fs.writeFile(issuePath, JSON.stringify(issue, null, 2) + '\n', 'utf8');
   const top = block.ranked?.[0];
   console.log(
-    `  ✓ Seeded ${path.relative(projectRoot, issuePath)} — ${block.ballotsIn}/${block.eligibleVoters} ballots, ` +
-      `quorum ${block.hasQuorum ? 'met' : 'NOT met'}${top ? `, poll #1 ${top.franchiseId} (Δ${top.delta >= 0 ? '+' : ''}${top.delta})` : ''}.`,
+    `  ✓ Seeded ${path.relative(projectRoot, issuePath)} — ${block.ballotsIn}/${block.eligibleVoters} ballots` +
+      `${top ? `, poll #1 ${top.franchiseId} (Δ${top.delta >= 0 ? '+' : ''}${top.delta})` : ''}.`,
   );
 }
 

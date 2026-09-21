@@ -10,6 +10,7 @@ export const prerender = false;
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import SchefterFeedCompact from '../../components/shared/SchefterFeedCompact.astro';
 import SeasonDailyHero from '../../components/theleague/SeasonDailyHero.astro';
+import OwnersPollHomeCard from '../../components/shared/owners-poll/OwnersPollHomeCard.astro';
 // TEMPORARY (2026-08-20 → 08-23): for this preseason weekend the hero IS the
 // live-scoring test drive — it REPLACES SeasonDailyHero rather than stacking
 // above it. Both halves gate on the same showTestDriveHero() call so the page
@@ -40,6 +41,8 @@ import { getThrowbackPreference } from '../../utils/throwback-store';
 import { enrichHeroState, isDraftComplete, getRosteredPlayerIds, getAdpRankedIds, getFranchiseHeadliners, getFranchiseCompositableHeadliners, getKickoffGame, getWeekGameCandidates, selectBreakingStory } from '../../utils/offseason-hero-data';
 import { getWhatsNextTimeline } from '../../utils/league-event-resolver';
 import { getCurrentLeagueYear, getCurrentSeasonYear, getLeagueYearForSlug } from '../../utils/league-year';
+import { isSeasonWindowOpen } from '../../utils/pecking-order-season-window.mjs';
+import { getLeagueTeamBrands } from '../../utils/league-team-brands';
 import { getCurrentNFLWeek as heroNflWeek } from '../../utils/current-week';
 import { isSaturdayEveningPT } from '../../utils/sunday-ticket-window';
 import { hasSubmittedLineup } from '../../utils/lineup-submitted';
@@ -141,6 +144,7 @@ const draftComplete = isDraftComplete(leagueYear);
 // Resolve hero state (the new state machine) and enrich with off-season data
 const hideLeaguePrefix = false;
 const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
+
 const timeline = getWhatsNextTimeline(effectiveDate);
 // Detect a fresh breaking-tier Schefter story (<48h) and cast its headline
 // player BEFORE resolving the hero state, so the resolver stays feed-free and
@@ -191,6 +195,46 @@ if (throwbackPromo && isEntryInHeroWindow(throwbackPromo, effectiveDate ?? new D
 // window boundary — and since the page's ternary is exclusive, a request that
 // split them would render no hero at all (review finding, #569).
 const heroReferenceDate = effectiveDate ?? new Date();
+// ---------------------------------------------------------------------------
+// The Owners' Poll card — the room's ranking, permanently on the homepage.
+//
+// Read from the COMMITTED ARCHIVE, never Redis. Redis holds ballots rather
+// than a tally, so rendering "the current ranking" from it would publish a
+// running total mid-cycle — which the ballot API refuses to do on purpose,
+// because it lets a late voter see where things stand before deciding. The
+// archive is also a build-time glob, so this costs the site's hottest route
+// zero request-time I/O.
+//
+// A literal glob: Vite cannot take a runtime variable here, which is the same
+// reason the ballot page's data import lives in its route rather than in the
+// shared component.
+const ownersPollIssues = import.meta.glob<any>(
+  '../../../data/theleague/pecking-order/*.json',
+  { eager: true, import: 'default' },
+);
+
+// Newest issue that actually published a consensus. A week nobody voted in has
+// `ranked: null` and is skipped rather than rendered as an empty card.
+const ownersPollIssue = Object.entries(ownersPollIssues)
+  .map(([file, data]) => {
+    const m = file.match(/(\d{4})-(\d{1,2})\.json$/);
+    return m ? { year: Number(m[1]), week: Number(m[2]), data } : null;
+  })
+  .filter((x): x is { year: number; week: number; data: any } => !!x)
+  // THIS season only. Without it the newest archived result wins outright, so
+  // between Labor Day and the season's first count the card publishes LAST
+  // season's ranking — today that is the seeded synthetic example — under a
+  // heading that reads as the current room's opinion.
+  .filter((x) => x.year === getCurrentSeasonYear(heroReferenceDate))
+  .filter((x) => (x.data?.ownersPoll?.ranked?.length ?? 0) > 0)
+  .sort((a, b) => b.year - a.year || b.week - a.week)[0] ?? null;
+
+// Gated on the SEASON WINDOW, never on "the archive has a file". The feeds of
+// a finished season are complete by definition, so a file-based check would
+// leave last season's ranking on the homepage all summer.
+const showOwnersPollCard =
+  THELEAGUE.ownersPoll?.enabled &&
+  isSeasonWindowOpen(getCurrentSeasonYear(heroReferenceDate), heroReferenceDate);
 
 // ── The waiver deadline the hero counts down to ─────────────────────────────
 // From MFL's own calendar, never computed here. TheLeague's `WAIVER_BBID` runs
@@ -862,6 +906,16 @@ if ((heroState.phase === 'playoffs' || heroState.phase === 'championship') && he
         waiver={tlWaiverCopy}
       />
       )}
+      {showOwnersPollCard && (
+        <OwnersPollHomeCard
+          issue={ownersPollIssue ? { year: ownersPollIssue.year, week: ownersPollIssue.week, ownersPoll: ownersPollIssue.data.ownersPoll } : null}
+          teams={getLeagueTeamBrands(THELEAGUE.slug)}
+          leagueSlug={THELEAGUE.slug}
+          ballotHref={r('/theleague/pecking-order/ballot')}
+          columnHref={r('/theleague/pecking-order')}
+        />
+      )}
+
       {showAuctionsCard && activeAuctions.length > 0 && (
         <>
           <HpAuctionsCard

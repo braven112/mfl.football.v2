@@ -1,53 +1,46 @@
 /**
- * The Owners' Poll — commissioner control for the ballot window.
+ * The Owners' Poll — commissioner EMERGENCY STOP.
  *
- *   POST /api/owners-poll/window   { action: 'open' | 'close', week?, year?, hours? }
+ *   POST /api/owners-poll/window   { action: 'pause' | 'resume', hours? }
+ *   GET  /api/owners-poll/window   → the derived cycle, or `paused`
  *
- * The normal path is automatic: the Tuesday Pecking Order pass opens the
- * ballot and the Wednesday pass tallies it. This is the manual override, for
- * the same three jobs as scripts/owners-poll-window.mjs — recovering from a
- * failed run, extending a window the league asks about, and opening one on a
- * preview deployment where no cron has ever run.
+ * There is no window to open any more. Voting is always open and the cycle is
+ * DERIVED from the clock (`resolvePollCycle`), so the only league-wide state
+ * left is a pause flag — a key whose mere presence suspends the poll, absent
+ * in the normal case, failing OPEN when it cannot be read. `hours` gives that
+ * pause a TTL so a forgotten suspension lapses on its own.
  *
  * It exists as an HTTP route and not only as a CLI because the CLI needs
  * Upstash credentials on the operator's machine, whereas the deployment
- * already has them. A commissioner with a browser can always open a ballot;
- * that should not depend on having pulled env vars.
+ * already has them.
  *
- * COMMISSIONER ONLY. This writes league-wide state that changes what every
- * owner sees, so it is gated on isCommissionerOrAdmin — which is itself
- * league-scoped, so an admin of one league cannot open the other's ballot.
+ * COMMISSIONER ONLY. This changes what every owner sees, so it is gated on
+ * isCommissionerOrAdmin — which is itself league-scoped, so an admin of one
+ * league cannot pause the other's poll.
  *
- * `close` removes the pointer and NOTHING else: it never tallies and never
- * deletes ballots. Tallying is generate-pecking-order.mjs --close-poll. Keeping
- * them apart means a mis-click here cannot publish a consensus or lose a vote,
- * and re-opening the same week picks every ballot back up.
+ * NEITHER action touches a ballot. Pausing never tallies and never deletes;
+ * resuming picks every standing ballot back up, because they were never
+ * cleared. Tallying is generate-pecking-order.mjs --close-poll, and keeping
+ * the two apart means a mis-click here cannot publish a consensus or lose a
+ * vote.
  */
-
 import type { APIRoute } from 'astro';
 import { json, JSON_HEADERS_NO_STORE } from '../../../utils/api-response';
 import { isCommissionerOrAdmin, getAuthUser } from '../../../utils/auth';
 import { checkRateLimit } from '../../../utils/rate-limit';
-import { getCurrentSeasonYear } from '../../../utils/league-year';
-import {
-  resolveOwnersPollWindow,
-  windowHours,
-  SHORT_WINDOW_HOURS,
-} from '../../../utils/owners-poll-window.mjs';
 import { getSubscriptions } from '../../../utils/push-subscriptions';
 import {
-  clearOwnersPollWindow,
   countBallots,
   eligibleFranchiseIdsFor,
-  readOwnersPollWindow,
+  activePollWindow,
+  resolvePollCycle,
+  setPollPaused,
   resolveOwnersPollCaller,
-  windowState,
-  writeOwnersPollWindow,
 } from '../../../utils/owners-poll-store';
 
 const headers = JSON_HEADERS_NO_STORE;
 
-/** Longest window a commissioner may open by hand. */
+/** Longest auto-expiring pause a commissioner may set by hand. */
 const MAX_HOURS = 24 * 14;
 
 export const POST: APIRoute = async ({ request }) => {
@@ -69,102 +62,56 @@ export const POST: APIRoute = async ({ request }) => {
     return json({ error: 'Too many requests — try again shortly' }, 429, headers);
   }
 
-  let body: { action?: string; week?: number; year?: number; hours?: number };
+  let body: { action?: string; hours?: number };
   try {
     body = await request.json();
   } catch {
     return json({ error: 'Invalid request body' }, 400, headers);
   }
 
-  if (body.action === 'close') {
-    const existing = await readOwnersPollWindow(scope);
-    if (!existing) {
-      return json({ ok: true, status: 'none', message: 'No ballot was open.' }, 200, headers);
-    }
-    const cleared = await clearOwnersPollWindow(scope);
-    if (!cleared) {
-      return json({ error: 'Storage unavailable — nothing changed' }, 503, headers);
-    }
-    return json(
-      {
-        ok: true,
-        status: 'closed',
-        message: `Week ${existing.week} is no longer accepting votes. Ballots are untouched.`,
-      },
-      200,
-      headers,
-    );
+  // Voting is always open now, so the commissioner's control is no longer
+  // "open a week" — it is an emergency stop. `pause` suspends the poll for
+  // every owner; `resume` lifts it. Ballots are never touched by either.
+  if (body.action !== 'pause' && body.action !== 'resume') {
+    return json({ error: "action must be 'pause' or 'resume'" }, 400, headers);
   }
 
-  if (body.action !== 'open') {
-    return json({ error: "action must be 'open' or 'close'" }, 400, headers);
-  }
-
-  const poll = league.ownersPoll;
-  const week = Number(body.week);
-  if (!Number.isInteger(week) || week < 1 || week > 25) {
-    return json({ error: 'week must be a week number (1-25)' }, 400, headers);
-  }
-  // getCurrentSeasonYear, not getUTCFullYear: a ballot is results-shaped, and
-  // between January and Labor Day the calendar year is one AHEAD of the season
-  // being played. A January open would store 2027 against a 2026 season, and
-  // the close pass — which matches on year — would then refuse to tally it,
-  // stranding every ballot cast.
-  const year = Number.isInteger(body.year) ? Number(body.year) : getCurrentSeasonYear();
-
-  const eligibleFranchiseIds = eligibleFranchiseIdsFor(league);
-  if (eligibleFranchiseIds.length <= poll.slots) {
-    // A top-N ballot needs a field bigger than N, or "rank your top 7" is the
-    // whole league and the unranked block is a contradiction.
-    return json(
-      {
-        error: `${league.name} has ${eligibleFranchiseIds.length} franchises but a ballot depth of ${poll.slots}.`,
-      },
-      409,
-      headers,
-    );
-  }
-
-  const now = new Date();
-  let opensAt: string;
-  let closesAt: string;
-  if (body.hours != null) {
+  const paused = body.action === 'pause';
+  if (paused && body.hours != null) {
     const hours = Number(body.hours);
     if (!Number.isFinite(hours) || hours <= 0 || hours > MAX_HOURS) {
       return json({ error: `hours must be between 0 and ${MAX_HOURS}` }, 400, headers);
     }
-    opensAt = now.toISOString();
-    closesAt = new Date(now.getTime() + hours * 3600000).toISOString();
-  } else {
-    // The real schedule: close on the next Wednesday at the league's hour.
-    ({ opensAt, closesAt } = resolveOwnersPollWindow({
-      publishedAt: now,
-      closeHourPT: poll.closeHourPT,
-      closeWeekday: poll.closeWeekday,
-    }));
   }
 
-  const window = { year, week, opensAt, closesAt, slots: poll.slots, eligibleFranchiseIds };
-  const saved = await writeOwnersPollWindow(scope, window);
-  if (!saved) {
+  const ok = await setPollPaused(scope, paused, paused ? Number(body.hours) : undefined);
+  if (!ok) {
     return json({ error: 'Storage unavailable — nothing changed' }, 503, headers);
   }
 
-  const hours = windowHours(window);
-  const ballotsIn = await countBallots(scope, window);
+  const window = paused ? null : resolvePollCycle(league);
+  const ballotsIn = window ? await countBallots(scope, window) : 0;
 
   return json(
     {
       ok: true,
-      status: 'open',
-      window: { year, week, opensAt, closesAt, slots: poll.slots },
-      hours: Math.round(hours * 10) / 10,
-      // Re-opening a week picks its existing ballots back up — say so, so a
-      // commissioner is not surprised by a non-zero count on a "fresh" open.
+      status: paused ? 'paused' : 'open',
+      window: window
+        ? {
+            year: window.year,
+            week: window.week,
+            opensAt: window.opensAt,
+            closesAt: window.closesAt,
+            slots: window.slots,
+          }
+        : null,
+      // Standing ballots are untouched by a pause, and a commissioner should
+      // not be surprised by a non-zero count on resume.
       ballotsIn,
-      eligibleVoters: eligibleFranchiseIds.length,
-      quorum: poll.quorum,
-      shortWindow: hours < SHORT_WINDOW_HOURS,
+      eligibleVoters: eligibleFranchiseIdsFor(league).length,
+      message: paused
+        ? 'Voting is suspended. Every standing ballot is untouched.'
+        : 'Voting is open. Standing ballots were never cleared.',
     },
     200,
     headers,
@@ -190,12 +137,11 @@ export const GET: APIRoute = async ({ request }) => {
   // real reach. Counts only — never which owners, and never an endpoint.
   const pushCoverage = await countPushCoverage(league.id, eligibleFranchiseIdsFor(league));
 
-  const window = await readOwnersPollWindow(scope);
-  const state = windowState(window);
+  const window = await activePollWindow(league, scope);
   if (!window) {
     return json(
       {
-        status: state,
+        status: 'paused',
         window: null,
         eligibleVoters: eligibleFranchiseIdsFor(league).length,
         pushCoverage,
@@ -207,7 +153,7 @@ export const GET: APIRoute = async ({ request }) => {
   const ballotsIn = await countBallots(scope, window);
   return json(
     {
-      status: state,
+      status: 'open',
       window: {
         year: window.year,
         week: window.week,

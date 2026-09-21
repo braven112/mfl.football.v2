@@ -24,10 +24,8 @@ function issue(over: Record<string, any> = {}) {
     rankings: FIELD.map((franchiseId, i) => ({ franchiseId, rank: i + 1 })),
     ownersPoll: {
       status: 'closed',
-      hasQuorum: true,
       ballotsIn: 3,
       eligibleVoters: 16,
-      quorum: 8,
       ranked: [
         { rank: 1, franchiseId: '0001', points: 20, firstPlaceVotes: 2, delta: 0 },
         { rank: 2, franchiseId: '0002', points: 15, firstPlaceVotes: 1, delta: 5 },
@@ -93,8 +91,10 @@ describe('buildVoterPushes', () => {
     expect(new Set(pushes.map((p: any) => p.tag))).toEqual(new Set(['owners-poll-2026-5']));
   });
 
-  it('sends nothing without a quorum, or before the poll closes', () => {
-    expect(buildVoterPushes({ league: LEAGUE, issue: issue({ hasQuorum: false }), teams })).toEqual([]);
+  it('sends nothing when nobody voted, or before the poll closes', () => {
+    expect(
+      buildVoterPushes({ league: LEAGUE, issue: issue({ ranked: null, ballotsIn: 0, ballots: [] }), teams }),
+    ).toEqual([]);
     expect(buildVoterPushes({ league: LEAGUE, issue: issue({ status: 'open' }), teams })).toEqual([]);
   });
 });
@@ -117,14 +117,22 @@ describe('buildRevealFeedPost', () => {
     expect(post.franchiseIds).toContain('0002'); // biggest split AND the homer
   });
 
-  it('reports a no-quorum week honestly rather than skipping', () => {
-    const post = buildRevealFeedPost({
-      league: LEAGUE,
-      issue: issue({ hasQuorum: false, ballotsIn: 4 }),
-      teams,
-    })!;
-    expect(post.body).toContain('4 of 16');
-    expect(post.headline).toMatch(/came up short/i);
+  it('writes NO post for a week nobody voted in', () => {
+    // The feed is a durable record. "Nobody used the feature" is not a record
+    // worth keeping on every owner's homepage — same call as the chat post.
+    expect(
+      buildRevealFeedPost({
+        league: LEAGUE,
+        issue: issue({ ranked: null, ballotsIn: 0, ballots: [] }),
+        teams,
+      }),
+    ).toBeNull();
+  });
+
+  it('still posts a light week — four ballots is a result, not a failure', () => {
+    const post = buildRevealFeedPost({ league: LEAGUE, issue: issue({ ballotsIn: 4 }), teams })!;
+    expect(post.headline).toContain('Team 1');
+    expect(post.body).not.toMatch(/quorum|came up short|no consensus/i);
   });
 
   it('returns null before the poll closes', () => {
@@ -222,10 +230,10 @@ describe('buildCallback', () => {
     ).toBeNull();
   });
 
-  it('skips weeks that never reached quorum', () => {
+  it('skips weeks with no published consensus', () => {
     // No consensus means there is no "the room" to have been wrong.
     const noQuorum = pollOf(5, FIELD.slice(0, 7), FIELD.slice(7));
-    (noQuorum.ownersPoll as any).hasQuorum = false;
+    (noQuorum.ownersPoll as any).ranked = null;
     expect(
       buildCallback({
         issue: columnOf(8, ['0016', ...FIELD.filter((f) => f !== '0016')]),
@@ -290,7 +298,7 @@ describe('buildOpenPushes', () => {
     year: 2026,
     week: 5,
     rankings: FIELD.map((franchiseId, i) => ({ franchiseId, rank: i + 1 })),
-    ownersPoll: { status: 'open', slots: 7 },
+    ownersPoll: { status: 'open', slots: 7, closesAt: '2026-09-10T23:00:00.000Z' },
   };
 
   it('goes to EVERY owner — at open there are no voters yet', () => {
@@ -299,11 +307,12 @@ describe('buildOpenPushes', () => {
     expect(pushes.map((p: any) => p.franchiseId)).toEqual(FIELD);
   });
 
-  it('leads with the disagreement bait, not the chore', () => {
+  it('leads with the disagreement bait and names the result time', () => {
     const pushes = buildOpenPushes({ issue: openIssue, teams, eligibleFranchiseIds: FIELD });
     expect(pushes[0].body).toContain('Team 1');
     expect(pushes[0].body).toContain('Team 16');
-    expect(pushes[0].body).toMatch(/rank your top 7/i);
+    expect(pushes[0].body).toMatch(/always open/i);
+    expect(pushes[0].body).toMatch(/Thursday/);
     expect(pushes[0].url).toContain('/pecking-order/ballot');
   });
 
@@ -318,36 +327,63 @@ describe('buildOpenPushes', () => {
   });
 });
 
-describe('buildNagPushes', () => {
-  const base = {
-    league: LEAGUE,
-    week: 5,
-    ballotsIn: 9,
-    eligibleVoters: 16,
-    closesAt: '2026-09-10T23:00:00.000Z',
-  };
+describe('buildNagPushes — the "still good?" prompt', () => {
+  const WEEK = 5;
+  const CLOSES = '2026-09-10T23:00:00.000Z';
+  const NOW = new Date('2026-09-09T12:00:00.000Z');
+  const daysAgo = (n: number) =>
+    new Date(NOW.getTime() - n * 86400 * 1000).toISOString();
 
-  it('goes ONLY to the owners who have not voted', () => {
-    const nonVoters = FIELD.slice(9);
-    const pushes = buildNagPushes({ ...base, nonVoters });
-    expect(pushes.map((p: any) => p.franchiseId)).toEqual(nonVoters);
+  const send = (standing: Array<{ franchiseId: string; updatedAt: string | null; stale?: boolean }>) =>
+    buildNagPushes({ week: WEEK, closesAt: CLOSES, standing, now: NOW }) as any[];
+
+  it('asks the owners whose ballot has gone stale', () => {
+    const pushes = send([
+      { franchiseId: '0001', updatedAt: daysAgo(25), stale: true },
+      { franchiseId: '0002', updatedAt: daysAgo(1), stale: false },
+    ]);
+    expect(pushes.map((p) => p.franchiseId)).toEqual(['0001']);
+    expect(pushes[0].body).toMatch(/3 weeks old/);
+    expect(pushes[0].body).toMatch(/still how you see it/i);
   });
 
-  it('tells them the count but never who else is missing', () => {
-    // Count-only survives the move to push: an owner learns how many ballots
-    // are in, never whose are absent.
-    const pushes = buildNagPushes({ ...base, nonVoters: ['0016'] });
-    expect(pushes[0].body).toContain('9 of 16');
-    for (const fid of FIELD) expect(pushes[0].body).not.toContain(fid);
+  it('also reaches an owner who has never voted', () => {
+    const pushes = send([{ franchiseId: '0007', updatedAt: null, stale: false }]);
+    expect(pushes).toHaveLength(1);
+    expect(pushes[0].body).toMatch(/no ballot on file/i);
+  });
+
+  it('does NOT ask a never-voter whether their ballot still stands', () => {
+    // It shipped conflated and read "You have no ballot on file. Still how you
+    // see it?" — a question about a ballot that does not exist. Two audiences,
+    // two asks: a ballot-holder gets the question, a never-voter an invitation.
+    const pushes = send([{ franchiseId: '0007', updatedAt: null, stale: false }]);
+    expect(pushes[0].body).not.toMatch(/still how you see it/i);
+    expect(pushes[0].body).toMatch(/rank the league/i);
+  });
+
+  it('sends NOTHING to an owner whose ballot is current', () => {
+    // The whole reason the old nag was retired: it must never become a weekly
+    // message to people who already did the thing.
+    expect(send([{ franchiseId: '0002', updatedAt: daysAgo(2), stale: false }])).toEqual([]);
+  });
+
+  it('never names another owner', () => {
+    // Count-only survives the repointing: a push is about YOUR ballot and
+    // says nothing about anyone else's.
+    const pushes = send([{ franchiseId: '0001', updatedAt: daysAgo(30), stale: true }]);
+    for (const fid of FIELD.filter((f) => f !== '0001')) {
+      expect(pushes[0].body).not.toContain(fid);
+    }
     expect(pushes[0].body).not.toMatch(/Team \d/);
   });
 
-  it('ties the ask to the deadline owners already obey', () => {
-    const pushes = buildNagPushes({ ...base, nonVoters: ['0016'] });
-    expect(pushes[0].body).toMatch(/same deadline as your lineup/i);
+  it('states when the result lands', () => {
+    const pushes = send([{ franchiseId: '0001', updatedAt: daysAgo(30), stale: true }]);
+    expect(pushes[0].body).toMatch(/Thursday/);
   });
 
-  it('sends nothing at full turnout', () => {
-    expect(buildNagPushes({ ...base, nonVoters: [] })).toEqual([]);
+  it('sends nothing when every ballot is current', () => {
+    expect(send([])).toEqual([]);
   });
 });

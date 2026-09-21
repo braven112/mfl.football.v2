@@ -11,11 +11,17 @@
 
 import { leagueUrl } from '../../src/config/leagues-data.mjs';
 import {
+  resolveOwnersPollCycle,
   resolveOwnersPollWindow,
   windowHours,
   SHORT_WINDOW_HOURS,
 } from '../../src/utils/owners-poll-window.mjs';
 import { normalizeFranchiseId } from '../../src/utils/franchise-id.mjs';
+import {
+  standingVoteLine,
+  resultTimingPhrase,
+} from '../../src/utils/owners-poll-copy.mjs';
+import { isBallotStale } from '../../src/utils/owners-poll-ballot.mjs';
 import {
   tallyOwnersPoll,
   consensusRankMap,
@@ -28,8 +34,7 @@ import {
   writeWindow,
   readWindow,
   clearWindow,
-  countBallots,
-  readAllBallots,
+  readStandingBallots,
 } from './owners-poll-redis.mjs';
 
 /**
@@ -48,6 +53,34 @@ const DEFAULT_LOG = { log: (...a) => console.log(...a), warn: (...a) => console.
 
 /** Where the ballot lives, for every message that links to it. */
 export const BALLOT_PATH = '/pecking-order/ballot';
+
+/**
+ * Format an announce instant for CHAT and PUSH.
+ *
+ * The league's own clock, unconditionally. A GroupMe post has no viewer whose
+ * preference could be read and no cookie to read it from, so this is the one
+ * place a fixed zone is correct rather than a shortcut — the web surfaces
+ * render the same sentence through `viewer-clock` instead.
+ *
+ * NO zone parameter, deliberately. The suffix it prints is the literal "PT",
+ * so a caller handing it another zone — `leagueClock(slug).zone` is right
+ * there and reads like the correct thing to pass — would get an Eastern time
+ * labelled Pacific. The name is the contract; the only way to keep it true is
+ * to make the zone unconfigurable.
+ *
+ * @param {string} iso
+ */
+export function formatResultTimePT(iso) {
+  const at = new Date(iso);
+  if (Number.isNaN(at.getTime())) return 'soon';
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Los_Angeles',
+    weekday: 'long',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  }).format(at) + ' PT';
+}
 
 /**
  * Open a ballot alongside a freshly written issue.
@@ -123,9 +156,15 @@ export async function openPoll({
     opensAt: window.opensAt,
     closesAt: window.closesAt,
     slots: poll.slots,
-    quorum: poll.quorum,
     eligibleVoters: eligibleFranchiseIds.length,
-    methodology: describeScoring(poll.slots, poll.quorum, eligibleFranchiseIds.length),
+    methodology: describeScoring(poll.slots, eligibleFranchiseIds.length),
+    clampedToKickoff: window.clampedToKickoff,
+    // Carried onto the issue so the column's poll section can STATE the
+    // schedule rather than hardcode it. The issue pages are prerendered and
+    // cannot reach the registry at render time, and a second copy of
+    // "Thursday 4pm" in a component is exactly how the two drift.
+    closeWeekday: poll.closeWeekday,
+    closeHourPT: poll.closeHourPT,
   };
 }
 
@@ -152,8 +191,8 @@ export const SYNTHETIC_POLL_SOURCE = 'synthetic';
  *
  * @param {object} args
  * @param {Array<{ franchiseId: string, ranking: string[], submittedAt: string|null, updatedAt: string|null }>} args.ballots
- * @param {{ opensAt: string, closesAt: string, slots: number, eligibleFranchiseIds: string[] }} args.window
- * @param {number} args.quorum
+ * @param {{ opensAt: string, closesAt: string, slots: number, eligibleFranchiseIds: string[],
+ *   closeWeekday?: number|null, closeHourPT?: number|null }} args.window
  * @param {Map<string, number>|Record<string, number>} args.compositeRankByFid
  * @returns {{
  *   block: {
@@ -161,11 +200,11 @@ export const SYNTHETIC_POLL_SOURCE = 'synthetic';
  *     opensAt: string,
  *     closesAt: string,
  *     slots: number,
- *     quorum: number,
  *     eligibleVoters: number,
  *     ballotsIn: number,
- *     hasQuorum: boolean,
  *     methodology: string,
+ *     closeWeekday: number|null,
+ *     closeHourPT: number|null,
  *     ranked: Array<Record<string, unknown>>|null,
  *     unranked: Array<Record<string, unknown>>|null,
  *     ballots: Array<Record<string, unknown>>,
@@ -175,12 +214,11 @@ export const SYNTHETIC_POLL_SOURCE = 'synthetic';
  *   tally: Record<string, unknown>,
  * }}
  */
-export function buildClosedPollBlock({ ballots, window, quorum, compositeRankByFid }) {
+export function buildClosedPollBlock({ ballots, window, compositeRankByFid }) {
   const tally = tallyOwnersPoll({
     ballots,
     eligibleFranchiseIds: window.eligibleFranchiseIds,
     slots: window.slots,
-    quorum,
     compositeRankByFid,
   });
 
@@ -209,11 +247,11 @@ export function buildClosedPollBlock({ ballots, window, quorum, compositeRankByF
     opensAt: window.opensAt,
     closesAt: window.closesAt,
     slots: window.slots,
-    quorum,
     eligibleVoters: window.eligibleFranchiseIds.length,
     ballotsIn: tally.ballotsIn,
-    hasQuorum: tally.hasQuorum,
-    methodology: describeScoring(window.slots, quorum, window.eligibleFranchiseIds.length),
+    methodology: describeScoring(window.slots, window.eligibleFranchiseIds.length),
+    closeWeekday: window.closeWeekday ?? null,
+    closeHourPT: window.closeHourPT ?? null,
     ranked: tally.ranked,
     unranked: tally.unranked,
     // Published in full — every ballot becomes public once its week closes.
@@ -232,7 +270,7 @@ export function buildClosedPollBlock({ ballots, window, quorum, compositeRankByF
 /**
  * Close the ballot and tally it.
  *
- * @returns {{ block, ballotsIn, dropped, hasQuorum }} the `ownersPoll` block to
+ * @returns {{ block, ballotsIn, dropped }} the `ownersPoll` block to
  *   write over the issue's open one.
  *
  * Unlike the open pass, missing Redis here IS fatal — writing an empty
@@ -246,10 +284,53 @@ export async function closePoll({ league, issue, compositeRankByFid, now = new D
   const redis = ownersPollRedis();
   if (!redis) throw new Error('Owners\' Poll close pass needs Redis credentials.');
 
-  const window = await readWindow(redis, league.navSlug);
+  // The pointer is the open pass's record of the field and depth it opened on,
+  // and it is still the best source when it exists. But it is no longer
+  // REQUIRED, and that changed when voting became always-open.
+  //
+  // Owners can now vote every day of the week without a pointer existing — the
+  // API derives its cycle and writes into the standing hash regardless. So a
+  // Tuesday run that never happened no longer means "nobody could vote"; it
+  // means a week of real ballots sitting in Redis that the close pass would
+  // have walked away from, logging "no open ballot to close" while the column
+  // published with no poll section and nobody could tell why.
+  //
+  // That is not hypothetical here: GitHub drops this repo's scheduled events
+  // in bulk (CLAUDE.md, "GitHub's `schedule` is not a cadence" — a five-minute
+  // cron delivered 5-8 runs a day, not 288). A close pass that depends on its
+  // own opener having run is a close pass that will eventually skip a week.
+  //
+  // So fall back to deriving the same facts the API derives.
+  let window = await readWindow(redis, league.navSlug);
   if (!window) {
-    log.log?.('  [poll] No open ballot to close.');
-    return null;
+    const eligibleFranchiseIds = normalizeFranchiseIds(
+      Object.keys(compositeRankByFid ?? {}),
+    );
+    if (eligibleFranchiseIds.length <= poll.slots) {
+      log.warn?.(
+        '  [poll] No open ballot, and no field to derive one from — nothing to close.',
+      );
+      return null;
+    }
+    const cycle = resolveOwnersPollCycle({
+      now,
+      closeHourPT: poll.closeHourPT,
+      closeWeekday: poll.closeWeekday,
+    });
+    window = {
+      year: issue.year,
+      week: issue.week,
+      // The cycle that just ENDED — resolveOwnersPollCycle looks forward, and
+      // a close pass is by definition running after its own deadline.
+      opensAt: cycle.opensAt,
+      closesAt: new Date(now).toISOString(),
+      slots: poll.slots,
+      eligibleFranchiseIds,
+    };
+    log.warn?.(
+      `  [poll] No window pointer — deriving one. The open pass likely did not run; ` +
+        `${eligibleFranchiseIds.length} eligible, ${poll.slots} slots.`,
+    );
   }
   if (window.year !== issue.year || window.week !== issue.week) {
     throw new Error(
@@ -263,37 +344,68 @@ export async function closePoll({ league, issue, compositeRankByFid, now = new D
     return null;
   }
 
-  const { ballots, dropped, stored } = await readAllBallots(
+  // Standing ballots for the SEASON, not the week. Nothing is cleared after
+  // this read — every ballot keeps standing into the next snapshot until its
+  // owner changes it.
+  const { ballots, dropped, stored } = await readStandingBallots(
     redis,
     league.navSlug,
-    window.year,
-    window.week,
+    issue.year,
     { slots: window.slots, eligibleFranchiseIds: window.eligibleFranchiseIds },
   );
   if (dropped > 0) {
-    // Said out loud rather than swallowed: the turnout meter counted these,
+    // Said out loud rather than swallowed: the coverage meter counted these,
     // so a silent drop makes the published poll smaller than owners were told.
     log.warn?.(`  [poll] Dropped ${dropped} of ${stored} stored ballots (no longer valid).`);
   }
 
+  // EVERY ballot on file failed validation. That is never a legitimate quiet
+  // week — it is a misconfiguration, and the overwhelmingly likely one is
+  // `slots` changing in the registry mid-season, because validateBallot's
+  // length check is exact and would reject the entire hash at once.
+  //
+  // This has to be fatal, and the reason is the silence rule: a zero-ballot
+  // week now publishes nothing at all — no chat post, no feed post, no poll
+  // section. So a config error and a week nobody voted in produce byte-for-byte
+  // identical output, and the error would hide until someone noticed the poll
+  // had quietly stopped existing. Failing the job is the only thing that
+  // distinguishes them.
+  if (stored > 0 && ballots.length === 0) {
+    throw new Error(
+      `Owners' Poll: all ${stored} stored ballots failed validation for ${league.name}. ` +
+        `Refusing to publish an empty week — check ownersPoll.slots (${window.slots}) ` +
+        `against what owners actually submitted.`,
+    );
+  }
+
   const { block, tally } = buildClosedPollBlock({
     ballots,
-    window,
-    quorum: poll.quorum,
+    // The close schedule rides in from the REGISTRY, not from the stored
+    // pointer: `writeWindow` has never persisted these two fields, so reading
+    // them off `window` yielded null every time and the column's "the count is
+    // taken every X at Y" line silently fell back to the component's hardcoded
+    // Thursday/4pm. The seeder already injects them for the same reason.
+    window: { ...window, closeWeekday: poll.closeWeekday, closeHourPT: poll.closeHourPT },
     compositeRankByFid,
   });
 
   // The pointer goes LAST, and only once the tally succeeded: clearing it
   // first would close voting on a run that then threw, leaving a week with no
   // ballot and no result.
+  //
+  // NOTE this clears the WINDOW POINTER only. The ballots themselves are never
+  // touched — they are standing votes and they carry into next week's snapshot
+  // untouched. Deleting them here would silently reset the whole league to
+  // zero every Thursday, which is the exact behaviour standing votes exist to
+  // remove.
   await clearWindow(redis, league.navSlug);
 
   log.log?.(
-    `  [poll] Closed Week ${window.week}: ${tally.ballotsIn}/${window.eligibleFranchiseIds.length} ballots, ` +
-      `quorum ${tally.hasQuorum ? 'met' : 'NOT met'}.`,
+    `  [poll] Closed Week ${window.week}: ${tally.ballotsIn}/${window.eligibleFranchiseIds.length} ballots.` +
+      (tally.ballotsIn === 0 ? ' Nobody voted — the week publishes without a poll.' : ''),
   );
 
-  return { block, ballotsIn: tally.ballotsIn, dropped, hasQuorum: tally.hasQuorum };
+  return { block, ballotsIn: tally.ballotsIn, dropped };
 }
 
 function round2(x) {
@@ -316,9 +428,16 @@ export function buildOpenLine(issue, teams, league) {
   const top = issue.rankings[0];
   const bottom = issue.rankings[issue.rankings.length - 1];
   const name = (fid) => teams.get(fid)?.nameMedium ?? fid;
+  const when = resultTimingPhrase(
+    formatResultTimePT(poll.closesAt),
+    Boolean(poll.clampedToKickoff),
+  );
   return [
-    `🗳️ THE OWNERS' POLL is open — rank your top ${poll.slots}.`,
-    `The computer has ${name(top.franchiseId)} #1 and ${name(bottom.franchiseId)} last. Argue with it ▸ ${leagueUrl(league, BALLOT_PATH)}`,
+    `🗳️ THE OWNERS' POLL — the computer has ${name(top.franchiseId)} #1 and ${name(bottom.franchiseId)} last.`,
+    // Never "go vote" any more: most of the league already has a ballot on
+    // file, and telling them to cast one reads as a chore they already did.
+    // The ask is to CHANGE it, which is the only action left.
+    `Disagree? ${standingVoteLine(when)} ▸ ${leagueUrl(league, BALLOT_PATH)}`,
   ].join('\n');
 }
 
@@ -335,13 +454,12 @@ export function buildRevealMessage({ league, issue, teams, callback = null }) {
   if (!poll || poll.status !== 'closed') return null;
   const name = (fid) => teams.get(fid)?.nameMedium ?? fid;
 
-  if (!poll.hasQuorum) {
-    return [
-      `🗳️ Owners' Poll — Week ${issue.week}: only ${poll.ballotsIn} of ${poll.eligibleVoters} ballots came in.`,
-      `That is short of the ${poll.quorum} needed, so there is no consensus this week and the column runs on the numbers alone.`,
-      `Next Tuesday ▸ ${leagueUrl(league, BALLOT_PATH)}`,
-    ].join('\n');
-  }
+  // A week nobody voted in is NOT news, and the chat's one automated post a
+  // day is too scarce to spend saying so. Returning null makes the generator
+  // post nothing at all and lets the day's GroupMe slot fall through to the
+  // next kind with something to say. There is no quorum any more, so this is
+  // the only silent case: whatever ballots came in are the result.
+  if (!poll.ranked || poll.ballotsIn === 0) return null;
 
   const lines = [`🗳️ THE OWNERS' POLL — Week ${issue.week} (${poll.ballotsIn}/${poll.eligibleVoters} ballots)`];
   poll.ranked.slice(0, 3).forEach((row) => {
@@ -372,7 +490,11 @@ export function buildRevealMessage({ league, issue, teams, callback = null }) {
   // weekly form, so it goes in the chat post, not only the feed.
   if (callback) lines.push(`📼 ${callback}`);
 
-  lines.push(`Every ballot ▸ ${leagueUrl(league, '/pecking-order')}`);
+  // The reveal is also the moment to say the poll did not just close: an owner
+  // reading this can change their vote right now and it counts next time.
+  lines.push(
+    `Ballots stand until you change them — next result in a week. Every ballot ▸ ${leagueUrl(league, '/pecking-order')}`,
+  );
   return lines.join('\n');
 }
 
@@ -404,19 +526,42 @@ export async function readTurnout({ league }) {
   // server-side in the close/nag cron and never crosses an HTTP boundary — the
   // public /api/owners-poll/turnout endpoint still uses HLEN and still cannot
   // name a voter.
-  const { ballots } = await readAllBallots(redis, league.navSlug, window.year, window.week, {
+  const { ballots } = await readStandingBallots(redis, league.navSlug, window.year, {
     slots: window.slots,
     eligibleFranchiseIds: window.eligibleFranchiseIds,
   });
-  const voted = new Set(ballots.map((b) => b.franchiseId));
+  const byFid = new Map(ballots.map((b) => [b.franchiseId, b]));
+  const now = new Date();
+
+  // Every eligible franchise with the state of its STANDING ballot — which is
+  // what the "still good?" push needs. `nonVoters` alone no longer answers the
+  // question: under standing votes the interesting owner is not the one who
+  // never voted (a set that empties out by about Week 5) but the one whose
+  // ballot has sat untouched while the league moved.
+  const standing = window.eligibleFranchiseIds.map((fid) => {
+    const ballot = byFid.get(fid) ?? null;
+    return {
+      franchiseId: fid,
+      // Stated separately from `updatedAt`, because a stored record whose
+      // timestamp did not parse comes back with `updatedAt: null` — and
+      // inferring "never voted" from a null timestamp would tell an owner who
+      // HAS a ballot on file that they have none.
+      hasBallot: !!ballot,
+      updatedAt: ballot?.updatedAt ?? null,
+      stale: ballot ? isBallotStale(ballot.updatedAt, now) : false,
+    };
+  });
 
   return {
     ok: true,
     week: window.week,
     year: window.year,
-    ballotsIn: voted.size,
+    ballotsIn: byFid.size,
     eligibleVoters: window.eligibleFranchiseIds.length,
-    nonVoters: window.eligibleFranchiseIds.filter((fid) => !voted.has(fid)),
+    standing,
+    // Retained for anything reporting coverage; the push builder reads
+    // `standing` instead.
+    nonVoters: window.eligibleFranchiseIds.filter((fid) => !byFid.has(fid)),
     closesAt: window.closesAt,
   };
 }

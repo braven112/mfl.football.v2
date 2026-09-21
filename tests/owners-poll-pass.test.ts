@@ -53,7 +53,8 @@ const {
   buildOpenLine,
   normalizeFranchiseIds,
 } = await import('../scripts/lib/owners-poll-pass.mjs');
-const { ownersPollBallotsKey, ownersPollCurrentKey } = await import(
+const { buildNagPushes } = await import('../scripts/lib/owners-poll-posts.mjs');
+const { ownersPollStandingKey, ownersPollCurrentKey } = await import(
   '../src/utils/owners-poll-ballot.mjs'
 );
 
@@ -84,7 +85,8 @@ function seedBallots(count: number, year = 2026, week = 5) {
     const ranking = Array.from({ length: SLOTS }, (_, k) => FIELD[(i + k) % FIELD.length]);
     h.set(franchiseId, JSON.stringify({ franchiseId, ranking, submittedAt: null, updatedAt: null }));
   }
-  hashes.set(ownersPollBallotsKey(LEAGUE.navSlug, year, week), h);
+  // Standing ballots live on the SEASON key now, not the week key.
+  hashes.set(ownersPollStandingKey(LEAGUE.navSlug, year), h);
   return h;
 }
 
@@ -108,7 +110,7 @@ describe('openPoll', () => {
       log: silent,
     });
 
-    expect(block).toMatchObject({ status: 'open', slots: 7, quorum: 8, eligibleVoters: 16 });
+    expect(block).toMatchObject({ status: 'open', slots: 7, eligibleVoters: 16 });
     const stored = JSON.parse(store.get(ownersPollCurrentKey(LEAGUE.navSlug)) as string);
     expect(stored).toMatchObject({ year: 2026, week: 5, slots: 7 });
     expect(stored.eligibleFranchiseIds).toHaveLength(16);
@@ -170,7 +172,6 @@ describe('closePoll', () => {
 
     expect(result!.block.status).toBe('closed');
     expect(result!.block.ballotsIn).toBe(11);
-    expect(result!.block.hasQuorum).toBe(true);
     expect(result!.block.ranked!.length).toBeGreaterThan(0);
     expect(result!.block.ballots).toHaveLength(11);
     // 16 franchises, 11 voted.
@@ -200,7 +201,7 @@ describe('closePoll', () => {
     }
   });
 
-  it('records no consensus below quorum, and still clears the pointer', async () => {
+  it('publishes a light week rather than suppressing it — no quorum', async () => {
     seedWindow();
     seedBallots(3);
     const result = await closePoll({
@@ -210,7 +211,24 @@ describe('closePoll', () => {
       now: after,
       log: silent,
     });
-    expect(result!.block.hasQuorum).toBe(false);
+    expect(result!.block.ballotsIn).toBe(3);
+    expect(result!.block.ranked).not.toBeNull();
+    expect(result!.block.ranked!.length).toBeGreaterThan(0);
+    expect(result!.block).not.toHaveProperty('hasQuorum');
+    expect(store.get(ownersPollCurrentKey(LEAGUE.navSlug))).toBeUndefined();
+  });
+
+  it('records NO consensus when nobody voted, and still clears the pointer', async () => {
+    seedWindow();
+    seedBallots(0);
+    const result = await closePoll({
+      league: LEAGUE,
+      issue: issue(),
+      compositeRankByFid: composite,
+      now: after,
+      log: silent,
+    });
+    expect(result!.block.ballotsIn).toBe(0);
     expect(result!.block.ranked).toBeNull();
     expect(result!.block.unranked).toBeNull();
     expect(store.get(ownersPollCurrentKey(LEAGUE.navSlug))).toBeUndefined();
@@ -270,7 +288,13 @@ describe('closePoll', () => {
     expect(result!.block.ballotsIn).toBe(11);
   });
 
-  it('is a clean no-op when no ballot is open', async () => {
+  it('no longer walks away when no pointer was stamped', async () => {
+    // This USED to be "a clean no-op when no ballot is open", and that was
+    // right while a ballot only existed if the Tuesday pass had opened one.
+    // Voting is always open now, so no pointer means the open run was dropped
+    // — not that nobody could vote — and walking away loses a real week of
+    // ballots. See the dedicated describe below.
+    seedBallots(2);
     const result = await closePoll({
       league: LEAGUE,
       issue: issue(),
@@ -278,7 +302,8 @@ describe('closePoll', () => {
       now: after,
       log: silent,
     });
-    expect(result).toBeNull();
+    expect(result).not.toBeNull();
+    expect(result!.block.ballotsIn).toBe(2);
   });
 });
 
@@ -287,11 +312,18 @@ describe('buildClosedPollBlock — shared with the seeded example', () => {
   // publishes through this same function. Its whole claim is that it is the
   // real pipeline over invented input, so a key added to a closed poll must
   // reach it too — which it does only while both callers share this builder.
+  // The close schedule rides in from the REGISTRY, not from the stored
+  // pointer — `writeWindow` has never persisted it — so both callers of the
+  // shared builder augment their window the same way: closePoll from
+  // `league.ownersPoll`, the seeder from `poll`. This fixture stands in for
+  // that, which is what keeps the parity test below an honest comparison.
   const window = {
     opensAt: '2026-09-08T14:00:00.000Z',
     closesAt: '2026-09-10T01:00:00.000Z',
     slots: SLOTS,
     eligibleFranchiseIds: FIELD,
+    closeWeekday: LEAGUE.ownersPoll.closeWeekday,
+    closeHourPT: LEAGUE.ownersPoll.closeHourPT,
   };
   const ballots = Array.from({ length: 10 }, (_, i) => ({
     franchiseId: FIELD[i],
@@ -304,7 +336,6 @@ describe('buildClosedPollBlock — shared with the seeded example', () => {
     const { block } = buildClosedPollBlock({
       ballots,
       window,
-      quorum: 8,
       compositeRankByFid: composite,
     });
 
@@ -312,13 +343,13 @@ describe('buildClosedPollBlock — shared with the seeded example', () => {
       [
         'ballots',
         'ballotsIn',
+        'closeHourPT',
+        'closeWeekday',
         'closesAt',
         'eligibleVoters',
-        'hasQuorum',
         'methodology',
         'nonVoterCount',
         'opensAt',
-        'quorum',
         'ranked',
         'slots',
         'status',
@@ -327,8 +358,12 @@ describe('buildClosedPollBlock — shared with the seeded example', () => {
     );
     expect(block.status).toBe('closed');
     expect(block.ballotsIn).toBe(10);
-    expect(block.hasQuorum).toBe(true);
     expect(block.nonVoterCount).toBe(FIELD.length - 10);
+    // Not merely present — carrying the league's real schedule. Null here is
+    // what made the column's "the count is taken every X at Y" line fall back
+    // to the component's hardcoded Thursday/4pm for every closed week.
+    expect(block.closeWeekday).toBe(LEAGUE.ownersPoll.closeWeekday);
+    expect(block.closeHourPT).toBe(LEAGUE.ownersPoll.closeHourPT);
   });
 
   it('is what closePoll returns, not a parallel implementation', async () => {
@@ -344,7 +379,6 @@ describe('buildClosedPollBlock — shared with the seeded example', () => {
     const { block } = buildClosedPollBlock({
       ballots,
       window,
-      quorum: LEAGUE.ownersPoll.quorum,
       compositeRankByFid: composite,
     });
 
@@ -429,10 +463,12 @@ describe('chat copy', () => {
     expect(mod.buildNagMessage).toBeUndefined();
   });
 
-  it('open line leads with the disagreement, not the chore', () => {
+  it('open line leads with the disagreement and STATES when the result lands', () => {
+    // "I don't understand when a poll starts or ends" was the complaint that
+    // started this. Every surface now names the result time.
     const text = buildOpenLine(
       {
-        ownersPoll: { status: 'open', slots: 7 },
+        ownersPoll: { status: 'open', slots: 7, closesAt: '2026-09-10T23:00:00.000Z' },
         rankings: [{ franchiseId: '0001' }, { franchiseId: '0016' }],
       },
       teams,
@@ -440,7 +476,9 @@ describe('chat copy', () => {
     )!;
     expect(text).toContain('Team 1');
     expect(text).toContain('Team 16');
-    expect(text).toMatch(/argue with it/i);
+    expect(text).toMatch(/always open/i);
+    expect(text).toMatch(/stands until you change it/i);
+    expect(text).toMatch(/Thursday/);
     expect(text).toContain('/pecking-order/ballot');
   });
 
@@ -448,18 +486,44 @@ describe('chat copy', () => {
     expect(buildOpenLine({ rankings: [{ franchiseId: '0001' }] }, teams, LEAGUE)).toBeNull();
   });
 
-  it('reveal reports a no-quorum week honestly instead of a top 3', () => {
+  it('posts NOTHING for a week nobody voted in', () => {
+    // "There is no point of posting about no poll." The chat gets one
+    // automated message a day; a null here lets that slot fall through to a
+    // kind with something to say.
+    expect(
+      buildRevealMessage({
+        league: LEAGUE,
+        issue: {
+          week: 5,
+          ownersPoll: { status: 'closed', ballotsIn: 0, eligibleVoters: 16, ranked: null },
+        },
+        teams,
+      }),
+    ).toBeNull();
+  });
+
+  it('reveals a light week normally — a poll of four is still a poll', () => {
     const text = buildRevealMessage({
       league: LEAGUE,
       issue: {
         week: 5,
-        ownersPoll: { status: 'closed', hasQuorum: false, ballotsIn: 4, eligibleVoters: 16, quorum: 8 },
+        ownersPoll: {
+          status: 'closed',
+          ballotsIn: 4,
+          eligibleVoters: 16,
+          ranked: [
+            { rank: 1, franchiseId: '0001', points: 28, firstPlaceVotes: 4, delta: 0 },
+            { rank: 2, franchiseId: '0002', points: 20, firstPlaceVotes: 0, delta: 1 },
+            { rank: 3, franchiseId: '0003', points: 12, firstPlaceVotes: 0, delta: -1 },
+          ],
+          ballots: [],
+        },
       },
       teams,
     })!;
-    expect(text).toContain('4 of 16');
-    expect(text).toMatch(/no consensus/i);
-    expect(text).not.toMatch(/^1\./m);
+    expect(text).toContain('4/16');
+    expect(text).toMatch(/^1\./m);
+    expect(text).not.toMatch(/quorum|no consensus/i);
   });
 
   it('reveal leads with the top 3 and the biggest split', () => {
@@ -469,7 +533,6 @@ describe('chat copy', () => {
         week: 5,
         ownersPoll: {
           status: 'closed',
-          hasQuorum: true,
           ballotsIn: 11,
           eligibleVoters: 16,
           ranked: [
@@ -492,5 +555,100 @@ describe('chat copy', () => {
 describe('normalizeFranchiseIds', () => {
   it('pads, dedupes and drops blanks', () => {
     expect(normalizeFranchiseIds(['1', '0001', '2', '', null])).toEqual(['0001', '0002']);
+  });
+});
+
+// ---------------------------------------------------------------------------
+
+describe('readTurnout feeds the push builder', () => {
+  it('returns standing state for EVERY eligible franchise, not just non-voters', async () => {
+    // The generator spreads this straight into buildNagPushes. When that
+    // builder moved from `nonVoters` to `standing`, the call site kept
+    // compiling and the cron silently sent nothing — it even logged "all
+    // ballots are already in". Contract change, no error, dead feature.
+    seedWindow({ closesAt: new Date(Date.now() + 86400_000).toISOString() });
+    seedBallots(3);
+    const turnout: any = await readTurnout({ league: LEAGUE });
+    expect(turnout.ok).toBe(true);
+    expect(Array.isArray(turnout.standing)).toBe(true);
+    expect(turnout.standing).toHaveLength(FIELD.length);
+    for (const row of turnout.standing) {
+      expect(row).toHaveProperty('franchiseId');
+      expect(row).toHaveProperty('updatedAt');
+      expect(row).toHaveProperty('stale');
+    }
+    // The three who voted have a record; the rest have nothing on file.
+    expect(turnout.standing.filter((r: any) => r.updatedAt !== null)).toHaveLength(0);
+    expect(turnout.ballotsIn).toBe(3);
+  });
+
+  it('its shape is what buildNagPushes actually consumes', async () => {
+    seedWindow({ closesAt: new Date(Date.now() + 86400_000).toISOString() });
+    seedBallots(2);
+    const turnout: any = await readTurnout({ league: LEAGUE });
+    const pushes = buildNagPushes({
+      week: turnout.week,
+      closesAt: turnout.closesAt,
+      standing: turnout.standing,
+    });
+    // Nobody has an updatedAt in the seeded fixtures, so everyone reads as
+    // "no ballot on file" — the point is that it produces SOMETHING rather
+    // than silently returning [].
+    expect(pushes.length).toBeGreaterThan(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+
+describe('the close pass does not depend on its own opener', () => {
+  const after = new Date('2026-09-10T02:00:00Z');
+
+  // Voting is always open, so owners can fill the standing hash all week
+  // whether or not the Tuesday pass stamped a window pointer. GitHub drops
+  // this repo's scheduled events in bulk (CLAUDE.md, "GitHub's `schedule` is
+  // not a cadence"), so "the open run did not happen" is a real Tuesday, not a
+  // hypothetical — and it used to mean the close pass walked away from a week
+  // of genuine ballots logging "no open ballot to close".
+
+  it('derives a window and still tallies when no pointer was stamped', async () => {
+    // No seedWindow() — this is the dropped-open-run case.
+    seedBallots(5);
+    const result = await closePoll({
+      league: LEAGUE,
+      issue: issue(),
+      compositeRankByFid: composite,
+      now: after,
+      log: silent,
+    });
+    expect(result, 'a dropped open run must not lose the week').not.toBeNull();
+    expect(result!.block.ballotsIn).toBe(5);
+    expect(result!.block.ranked).not.toBeNull();
+  });
+
+  it('still returns null when there is no field to derive one from', async () => {
+    const result = await closePoll({
+      league: LEAGUE,
+      issue: issue(),
+      compositeRankByFid: {},
+      now: after,
+      log: silent,
+    });
+    expect(result).toBeNull();
+  });
+
+  it('prefers the stamped pointer when it exists', async () => {
+    // The pointer records the field and depth the poll actually opened on, so
+    // it still wins — the derivation is a fallback, not a replacement.
+    seedWindow({ slots: 7 });
+    seedBallots(4);
+    const result = await closePoll({
+      league: LEAGUE,
+      issue: issue(),
+      compositeRankByFid: composite,
+      now: after,
+      log: silent,
+    });
+    expect(result!.block.slots).toBe(7);
+    expect(result!.block.ballotsIn).toBe(4);
   });
 });
