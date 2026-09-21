@@ -96,16 +96,22 @@ describe('buildFranchiseBandBrands', () => {
     //
     // The allowed collisions are DATA gaps, not code ones — these franchises
     // have no hue anywhere in their config to find. Give any of them a real
-    // accent colour and this test wants updating.
+    // accent colour and this test wants updating, DOWNWARD: the list may only
+    // shrink, so a franchise that gains a colour retightens it rather than
+    // leaving slack behind (same idiom as the typecheck and page-fork
+    // baselines).
     //
-    // - afl 0017/0019/0023 list nothing but grey and black.
+    // - afl 0017/0019/0023 were exactly that, all three flat #8b8f93, until
+    //   Sep 2026 gave each of them its own colour sampled from its own crest:
+    //   Titsburgh the light silver its art is drawn in, Badd Boys the charcoal
+    //   of its suit, The Show the black of its banner. The entry is gone
+    //   because the gap is.
     // - theleague 0008/0009 are both black-and-white brands: `colorPrimary`
     //   #181818, `colorSecondary` near-white, and even their chart hues are
     //   greys. Their CRESTS still tell the two bands apart, which is the only
     //   reason this is tolerable rather than a bug.
     const KNOWN_DATA_GAPS: Record<string, string[][]> = {
       theleague: [['0008', '0009']],
-      afl: [['0017', '0019', '0023']],
     };
 
     for (const league of ['theleague', 'afl', 'bb1'] as const) {
