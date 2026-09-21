@@ -16,6 +16,7 @@ import assignments from '../data/nfl-mark-assignments.json';
 import reversals from '../data/nfl-mark-reversals.json';
 import { getAllNFLTeamCodes } from './nfl-logo';
 import { resolveNflDarkLogoUrl } from './nfl-logo-dark-css';
+import { relativeLuminance } from './team-color-contrast';
 
 /** A surface's ground — NOT the viewer's theme. See the plan's "three grounds". */
 export type MarkGround = 'light' | 'dark' | 'band';
@@ -76,14 +77,16 @@ type BrandKitTeam = {
 
 const TEAMS = (brandKit as { teams: Record<string, BrandKitTeam> }).teams;
 
-/** Relative luminance, the same measure the dark-ground rule uses. */
-export function luminance(hex: string): number {
-  const h = hex.replace('#', '');
-  const [r, g, b] = [0, 2, 4]
-    .map((i) => parseInt(h.slice(i, i + 2), 16) / 255)
-    .map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-}
+/**
+ * Relative luminance, the same measure the dark-ground rule uses.
+ *
+ * Re-exported from `team-color-contrast.ts` rather than re-derived: that file
+ * is where this repo keeps the WCAG maths, and a second copy of the sRGB
+ * transfer curve is a thing that can drift from the one every contrast check
+ * uses. Its `parseHex` also handles shorthand, which a blind two-char slice
+ * does not.
+ */
+export const luminance = relativeLuminance;
 
 /** Ink that reads on a given ground — white on dark, near-black on light. */
 export function inkOn(hex: string): string {
