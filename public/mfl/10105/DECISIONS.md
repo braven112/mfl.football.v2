@@ -1,9 +1,10 @@
 # Archie's FFL (10105) — playoff standings widget: tiebreaker & ordering decisions
 
-> Working document. Status as of 2026-09-21. The widget is BUILT
-> (`standings.js`, with `paste-in.html` for a hosting-free trial) and waiting on
-> one client action — see O1. This records every ordering/tiebreaker decision,
-> what is still open, and which assumptions the live MFL feed contradicted.
+> Status as of 2026-09-21: **shipped and settled.** The widget is live at
+> `v2.mfl.football/mfl/10105/`, Victory Points are published by MFL, Points For
+> breaks ties, and no questions remain open. This records every ordering and
+> tiebreaker decision, and which assumptions the live MFL feed contradicted
+> along the way.
 >
 > League: **Archie's Fantasy Football League**, MFL id **10105**, host
 > **www48.myfantasyleague.com**. Verified live: 99 franchises, 9 divisions.
@@ -203,14 +204,20 @@ format.
 Worth remembering when reading the column: teams play **twice** a week, so a
 week produces 2-0-0, 1-1-0 or 0-2-0. Week 1 was 34 / 31 / 34.
 
-### O4 — Do the tier sizes move when the league size does?
-2025: 96 teams, 8 divisions. 2026: 99 teams, 9 divisions. The 9/9/12 split
-tracks the division count today. If the league goes to 10 divisions, does it
-become 10/10/12, or does the 30-team field stay fixed?
+### O4 — Tier sizes if the league size changes **(CLOSED 2026-09-21)**
+Raised because 2025 ran 96 teams in 8 divisions against 2026's 99 in 9. Closed
+without a rule: the league is set up as it should be, and 9 / 9 / 12 is correct
+for it. If the division count ever changes, the three constants at the top of
+`standings.js` are a one-line edit — that is what they are there for.
 
-### O5 — Should a division's leader ever be decided on VP?
-D3 says no. Worth an explicit confirmation, since it is the one place the page
-deliberately departs from "everything is VP".
+### O5 — Whether a division leader is ever decided on VP **(CLOSED 2026-09-21)**
+No. MFL's standings decide who leads a division; VP only orders those nine
+among themselves. Confirmed as correct by the client.
+
+## Everything is settled
+
+No open questions remain. The widget is live, reads MFL on every page load, and
+the only recurring human task is entering prize money in the module.
 
 ## Non-tiebreaker issue found in the current page
 
