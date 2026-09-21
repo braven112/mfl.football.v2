@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildTeamGroups,
   buildSeasonRail,
-  topPlayerBySalary,
+  bestValuePlayer,
   bestPlayerByPositionRank,
   positionalRanks,
   compactSalary,
@@ -195,23 +195,58 @@ describe('the featured player', () => {
   ];
 
   describe('in a salary league', () => {
-    it('is the biggest contract', () => {
-      expect(topPlayerBySalary(roster)).toMatchObject({
-        name: 'A Kicker',
-        statValue: '$9.0M',
-        statLabel: 'Top salary',
+    // Barkley is the biggest contract but poor value; Nix is the cheap pick
+    // that actually won the club something. The old "top salary" metric
+    // picked Barkley — or worse, the kicker.
+    const valueRoster = [
+      { id: '1', name: 'Saquon Barkley', position: 'RB', salary: 7200000, points: 300, headshot: '/a.png' },
+      { id: '3', name: 'Bo Nix', position: 'QB', salary: 968000, points: 252.58 },
+      { id: '4', name: 'A Kicker', position: 'PK', salary: 9000000, points: 120 },
+    ];
+
+    it('is the most points per dollar, not the biggest contract', () => {
+      // Nix 261 pts/$M vs Barkley 42 — value, not spend.
+      expect(bestValuePlayer(valueRoster)).toMatchObject({
+        name: 'Bo Nix',
+        statValue: '261 pts/$M',
+        statLabel: 'Best value',
       });
     });
 
+    it('never features a kicker or defence, however good the ratio', () => {
+      // They cost the league minimum and score steadily, so on points-per-
+      // dollar they are nearly unbeatable — unfiltered they took 5 of
+      // TheLeague's 16 cards. The kicker above is $9M so he loses anyway;
+      // this pins a CHEAP one, which is the case that actually bites.
+      const cheapKicker = [
+        { id: '4', name: 'Nick Folk', position: 'PK', salary: 420000, points: 109.8 },
+        { id: '3', name: 'Bo Nix', position: 'QB', salary: 968000, points: 252.58 },
+      ];
+      expect(bestValuePlayer(cheapKicker)!.name).toBe('Bo Nix');
+      const def = [{ id: '5', name: 'Los Angeles Rams', position: 'DEF', salary: 600000, points: 140.8 }];
+      expect(bestValuePlayer(def)).toBeNull();
+    });
+
+    it('never lets a free slot divide to infinity and win on a technicality', () => {
+      const withFreebie = [...valueRoster, { id: '9', name: 'Free Agent', position: 'WR', salary: 0, points: 40 }];
+      expect(bestValuePlayer(withFreebie)!.name).toBe('Bo Nix');
+      expect(bestValuePlayer([{ id: '9', name: 'X', position: 'WR', salary: 0, points: 40 }])).toBeNull();
+    });
+
+    it('is null before anyone has scored, rather than whoever the sort reached first', () => {
+      // Every ratio is zero in week zero; picking one would be arbitrary.
+      const preseason = valueRoster.map((p) => ({ ...p, points: 0 }));
+      expect(bestValuePlayer(preseason)).toBeNull();
+    });
+
     it('carries the headshot when there is one, and null when there is not', () => {
-      expect(topPlayerBySalary([roster[0]])!.headshot).toBe('/a.png');
-      expect(topPlayerBySalary([roster[1]])!.headshot).toBeNull();
+      expect(bestValuePlayer([valueRoster[0]])!.headshot).toBe('/a.png');
+      expect(bestValuePlayer([valueRoster[1]])!.headshot).toBeNull();
     });
 
     it('is null when nobody has a salary — which is every non-cap league', () => {
-      expect(topPlayerBySalary([{ id: '1', name: 'X', position: 'RB' }])).toBeNull();
-      expect(topPlayerBySalary([{ id: '1', name: 'X', position: 'RB', salary: 0 }])).toBeNull();
-      expect(topPlayerBySalary([])).toBeNull();
+      expect(bestValuePlayer([{ id: '1', name: 'X', position: 'RB', points: 200 }])).toBeNull();
+      expect(bestValuePlayer([])).toBeNull();
     });
   });
 

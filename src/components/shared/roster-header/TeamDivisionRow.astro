@@ -103,9 +103,16 @@ const showConferences = groups.length > 1;
     overscroll-behavior-x: contain;
   }
 
+  /* `flex: 1 0 auto` throughout, not `flex: 1`.
+     Grow to share the full row when everything fits — 16 crests left a third
+     of the row empty otherwise — but NEVER shrink below content, because the
+     AFL's 24 clubs plus six division labels do not fit and must keep their
+     natural width so the strip scrolls instead of crushing the crests.
+     `flex: 1` would set flex-basis: 0 and do exactly that crushing. */
   .rhdr-teams__conf {
     display: flex;
     align-items: stretch;
+    flex: 1 0 auto;
   }
   .rhdr-teams__conf + .rhdr-teams__conf {
     border-left: 3px solid var(--content-border-color);
@@ -141,12 +148,14 @@ const showConferences = groups.length > 1;
   .rhdr-teams__divisions {
     display: flex;
     align-items: stretch;
+    flex: 1 0 auto;
   }
 
   .rhdr-teams__division {
-    flex: none;
+    flex: 1 0 auto;
     display: flex;
     flex-direction: column;
+    justify-content: center;
     gap: 0.375rem;
     padding: 0.5rem 0.875rem;
     border-right: 1px solid var(--content-border-color);
@@ -167,6 +176,7 @@ const showConferences = groups.length > 1;
 
   .rhdr-teams__crests {
     display: flex;
+    justify-content: center;
     gap: 0.375rem;
   }
 

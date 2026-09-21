@@ -186,18 +186,24 @@ export function buildSeasonRail(
  *
  * Which player that is depends on what the league HAS, not on a preference:
  *
- *  - A salary league (TheLeague: `salaryCap: true`) shows the top earner. In a
- *    cap league the biggest contract IS the roster's defining fact.
+ *  - A salary league (TheLeague: `salaryCap: true`) shows the best VALUE —
+ *    the most fantasy points per dollar of cap, at QB / RB / WR / TE. The biggest contract is a
+ *    fact about spending, not about the roster; the best value is the pick
+ *    that actually won the club something, and it is the number a cap league
+ *    is really playing for.
  *  - A league without salaries (the AFL runs `salaryCap: false` and
- *    `contracts: false`, so there is no salary to show at all) shows the player
- *    who ranks best AT HIS OWN POSITION. A raw points leader would just be a
- *    quarterback every time, because QBs out-score every other position by
- *    construction; ranking within the position is what makes a WR2 and a QB8
- *    comparable.
+ *    `contracts: false`, so there is no salary and therefore no ratio to
+ *    compute at all) shows the player who ranks best AT HIS OWN POSITION. A
+ *    raw points leader would just be a quarterback every time, because QBs
+ *    out-score every other position by construction; ranking within the
+ *    position is what makes a WR2 and a QB8 comparable.
  *
- * Restricted to QB / RB / WR / TE in the positional mode: a kicker or defence
- * can top its own tiny position on a quiet week and is not what anyone means
- * by their best player.
+ * BOTH modes are restricted to QB / RB / WR / TE, for the same reason. A
+ * kicker or defence can top its own tiny position on a quiet week, and on
+ * points-per-dollar they are nearly unbeatable: they cost the league minimum
+ * and score steadily, so unfiltered they took 5 of TheLeague's 16 cards —
+ * "Nick Folk is our best value player" is arithmetically true and not what
+ * anyone means.
  */
 export const HEADER_PLAYER_POSITIONS = ['QB', 'RB', 'WR', 'TE'] as const;
 
@@ -218,6 +224,7 @@ interface CandidatePlayer {
   position?: string;
   headshot?: string | null;
   salary?: string | number | null;
+  points?: string | number | null;
   [key: string]: any;
 }
 
@@ -240,19 +247,44 @@ export function compactSalary(value: number): string {
   return `${sign}$${Math.round(abs)}`;
 }
 
-/** The roster's biggest contract. Null when nobody carries a salary. */
-export function topPlayerBySalary(players: CandidatePlayer[]): HeaderPlayer | null {
+/**
+ * The roster's best VALUE: most fantasy points per dollar of cap.
+ *
+ * Expressed per MILLION rather than per dollar. Points per literal dollar is
+ * 0.00026 for a good player — a number nobody can read or compare — while
+ * "261 pts/$M" sorts identically and says something at a glance.
+ *
+ * Both guards below are load-bearing:
+ *
+ *  - A salary of zero or less is SKIPPED, not treated as free. A minimum- or
+ *    zero-salary slot would divide to Infinity and win every week on a
+ *    technicality, which is the opposite of the question being asked.
+ *  - A player who has not scored is skipped too. His ratio is a true zero, so
+ *    he can never win, but on a roster where nobody has played yet EVERY
+ *    ratio is zero and the "best value" would be whoever the sort happened to
+ *    reach first. Null is the honest answer there, and the card hides.
+ *
+ * Returns null when no player on the roster carries both a salary and a
+ * score — which is every non-cap league, and any cap league before week one.
+ */
+export function bestValuePlayer(players: CandidatePlayer[]): HeaderPlayer | null {
   let best: CandidatePlayer | null = null;
-  let bestSalary = 0;
+  let bestRatio = 0;
   for (const player of players ?? []) {
+    const position = String(player?.position ?? '').toUpperCase();
+    if (!(HEADER_PLAYER_POSITIONS as readonly string[]).includes(position)) continue;
     const salary = Number.parseFloat(String(player?.salary ?? ''));
+    const points = Number.parseFloat(String(player?.points ?? ''));
     if (!Number.isFinite(salary) || salary <= 0) continue;
-    if (salary > bestSalary) {
-      bestSalary = salary;
+    if (!Number.isFinite(points) || points <= 0) continue;
+    const ratio = points / (salary / 1_000_000);
+    if (ratio > bestRatio) {
+      bestRatio = ratio;
       best = player;
     }
   }
-  return best ? toPlayer(best, compactSalary(bestSalary), 'Top salary') : null;
+  if (!best) return null;
+  return toPlayer(best, `${Math.round(bestRatio)} pts/$M`, 'Best value');
 }
 
 /**
