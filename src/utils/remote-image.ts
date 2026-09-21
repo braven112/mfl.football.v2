@@ -40,6 +40,41 @@
 export const REMOTE_MARK_WIDTH = 256;
 
 /**
+ * The hosts the optimizer will fetch a source image from — THE one copy.
+ *
+ * `astro.config.ts` imports this into the adapter's `imagesConfig`, so the
+ * list our own edge enforces and the list this helper checks against cannot
+ * drift apart. That matters in both directions: a host in the config but not
+ * here just loses an optimization, while a host here but not in the config is
+ * a 400 and a broken image.
+ *
+ * It is a security boundary, not a convenience list — `/_vercel/image?url=`
+ * makes our edge fetch whatever it is handed.
+ */
+export const REMOTE_MARK_HOSTS = [
+  { protocol: 'https' as const, hostname: '**.myfantasyleague.com' },
+];
+
+/**
+ * Does `hostname` match one of the patterns above?
+ *
+ * Vercel's `**.` matches the domain AND any subdomain of it, so
+ * `**.myfantasyleague.com` covers `www48.myfantasyleague.com` and the bare
+ * apex alike. Only the `**.` prefix is implemented, because that is the only
+ * form the list uses; anything else is treated as an exact hostname rather
+ * than silently matching more than it says.
+ */
+function hostAllowed(hostname: string): boolean {
+  const host = hostname.toLowerCase();
+  return REMOTE_MARK_HOSTS.some(({ hostname: pattern }) => {
+    const p = pattern.toLowerCase();
+    if (!p.startsWith('**.')) return host === p;
+    const bare = p.slice(3);
+    return host === bare || host.endsWith(`.${bare}`);
+  });
+}
+
+/**
  * Is `/_vercel/image` actually there to serve this?
  *
  * It exists only on a Vercel deployment. Locally (`pnpm dev`, vitest, any
@@ -55,20 +90,21 @@ function onVercel(): boolean {
  * `url`, served through the image optimizer when we are somewhere that has
  * one; `url` unchanged when we are not.
  *
- * ── WHAT CONSTRAINS WHERE OUR EDGE WILL FETCH FROM ────────────────────────
- * `/_vercel/image?url=` makes our own edge fetch what it is given, so the set
- * of hosts it will fetch from is a security boundary — and it is declared in
- * ONE place, `vercel.json`'s `images.remotePatterns`. Vercel answers a `url=`
- * outside that list with a 400 rather than fetching it, which is why this
- * helper does not keep a second allowlist that could drift out of step with
- * the one actually being enforced. The check here is structural only: HTTPS,
- * a real hostname, no credentials, no odd port — enough that we never hand the
- * edge a URL that is malformed on its face.
+ * ── A HOST THE OPTIMIZER WILL NOT SERVE KEEPS ITS ORIGINAL URL ────────────
+ * Vercel answers a `url=` outside `remotePatterns` with a 400, not with the
+ * image — so rewriting a host it does not allow does not merely lose the
+ * optimization, it replaces a working mark with a broken one. That is not
+ * hypothetical here: a franchise's `icon` is an arbitrary URL, and this repo's
+ * own committed league exports carry marks on `theleague.us`, `mfl.football`,
+ * `dynastytheleague.com`, `mfladdons.com`, `nbc.com` and `amtv.jp` — only
+ * about 1 in 15 is on `*.myfantasyleague.com`. So the allowlist is checked
+ * HERE too, against the same list the config enforces, and an unlisted host
+ * is served as-is: unoptimized, and visible.
  *
- * Non-HTTP, relative and data URLs are returned untouched. A local
- * `/assets/…` mark is same-origin and already the right size, so there is
- * nothing to optimize — and it is usually an SVG, which the optimizer does not
- * touch anyway.
+ * Non-HTTP, relative and data URLs are returned untouched for the same
+ * reason. A local `/assets/…` mark is same-origin and already the right size,
+ * so there is nothing to optimize — and it is usually an SVG, which the
+ * optimizer does not touch anyway.
  */
 export function optimizedRemoteImage(url: string, width: number = REMOTE_MARK_WIDTH): string {
   if (!url || !url.startsWith('https://') || !onVercel()) return url;
@@ -78,6 +114,9 @@ export function optimizedRemoteImage(url: string, width: number = REMOTE_MARK_WI
     if (parsed.username || parsed.password) return url;
     if (parsed.port && parsed.port !== '443') return url;
     if (!parsed.hostname.includes('.')) return url;
+    // The 400-vs-broken-image case above: serve it straight rather than
+    // through an optimizer that will refuse it.
+    if (!hostAllowed(parsed.hostname)) return url;
   } catch {
     return url;
   }

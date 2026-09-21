@@ -193,7 +193,7 @@ describe('parseSchedulePairings', () => {
 const loadLeagueSnapshot = vi.fn();
 const loadLeagueProjections = vi.fn();
 const readOutsideLiveSnapshot = vi.fn();
-const readLeagueFranchiseNames = vi.fn();
+const readLeagueFranchiseMarks = vi.fn();
 const buildBoardLeagues = vi.fn();
 const readLeagueSchedulePairings = vi.fn();
 
@@ -204,7 +204,7 @@ vi.mock('../src/utils/broadcast-live-source', async (importOriginal) => {
     loadLeagueSnapshot: (...a: unknown[]) => loadLeagueSnapshot(...a),
     loadLeagueProjections: (...a: unknown[]) => loadLeagueProjections(...a),
     readOutsideLiveSnapshot: (...a: unknown[]) => readOutsideLiveSnapshot(...a),
-    readLeagueFranchiseNames: (...a: unknown[]) => readLeagueFranchiseNames(...a),
+    readLeagueFranchiseMarks: (...a: unknown[]) => readLeagueFranchiseMarks(...a),
     buildBoardLeagues: (...a: unknown[]) => buildBoardLeagues(...a),
   };
 });
@@ -237,7 +237,7 @@ const unplayed = (): LiveSnapshot =>
 beforeEach(() => {
   vi.clearAllMocks();
   loadLeagueProjections.mockResolvedValue(new Map());
-  readLeagueFranchiseNames.mockResolvedValue({});
+  readLeagueFranchiseMarks.mockResolvedValue({});
   readLeagueSchedulePairings.mockResolvedValue([
     { home: '0001', away: '0097' },
     { home: '0054', away: '0001' },

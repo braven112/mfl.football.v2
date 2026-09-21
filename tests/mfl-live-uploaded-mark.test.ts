@@ -23,7 +23,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolveFranchiseIdentity, identityIconAlt } from '../src/utils/mfl-live-identity';
-import { optimizedRemoteImage, REMOTE_MARK_WIDTH } from '../src/utils/remote-image';
+import { optimizedRemoteImage, REMOTE_MARK_HOSTS, REMOTE_MARK_WIDTH } from '../src/utils/remote-image';
 
 /** A real one, from league 10105's own export. */
 const UPLOADED = 'https://www48.myfantasyleague.com/fflnetdynamic2026/10105_franchise_icon0001.png';
@@ -155,11 +155,52 @@ describe('optimizedRemoteImage', () => {
     const astroConfig = readFileSync('astro.config.ts', 'utf8');
     const sizes = astroConfig.match(/sizes:\s*\[([^\]]*)\]/)?.[1] ?? '';
     expect(sizes.split(',').map((n) => Number(n.trim()))).toContain(REMOTE_MARK_WIDTH);
-    expect(astroConfig).toMatch(/remotePatterns:\s*\[\{\s*protocol:\s*'https',\s*hostname:\s*'\*\*\.myfantasyleague\.com'/);
+
+    // ONE host list, imported rather than restated. A host the config allows
+    // and the helper does not is a lost optimization; a host the helper allows
+    // and the config does not is a 400 with a broken mark in its place — so
+    // the two must be the same object, not two lists that agree today.
+    expect(astroConfig).toContain('remotePatterns: REMOTE_MARK_HOSTS');
+    expect(astroConfig).toMatch(/import \{ REMOTE_MARK_HOSTS \} from '\.\/src\/utils\/remote-image'/);
+    expect(REMOTE_MARK_HOSTS).toEqual(
+      expect.arrayContaining([{ protocol: 'https', hostname: '**.myfantasyleague.com' }]),
+    );
+
     // And the dead config does not come back: a `vercel.json` images block is
     // ignored here, so leaving one would be a second source of truth that
     // cannot be right.
     expect(JSON.parse(readFileSync('vercel.json', 'utf8')).images).toBeUndefined();
+  });
+
+  /**
+   * A franchise mark is an arbitrary URL and most of them are NOT on MFL's own
+   * hosts — this repo's committed league exports carry marks on `theleague.us`,
+   * `mfl.football`, `dynastytheleague.com`, `mfladdons.com`, `nbc.com` and
+   * `amtv.jp`, with roughly 1 in 15 on `*.myfantasyleague.com`. Vercel answers
+   * a `url=` outside `remotePatterns` with a 400, so rewriting one of those
+   * does not lose an optimization, it replaces a working mark with a broken
+   * box — worse than the initials it displaced.
+   */
+  it('leaves a host the optimizer would refuse on its original URL', () => {
+    for (const url of [
+      'https://theleague.us/images/team.png',
+      'https://www.nbc.com/logo.png',
+      'https://mflfootballv2.vercel.app/assets/theleague/icons/pigskins.png',
+      'https://www.mfladdons.com/art.png',
+      'https://notmyfantasyleague.com/x.png',
+    ]) {
+      expect(optimizedRemoteImage(url)).toBe(url);
+    }
+  });
+
+  it('optimizes the MFL hosts, apex and subdomain alike', () => {
+    for (const url of [
+      'https://www48.myfantasyleague.com/a.png',
+      'https://myfantasyleague.com/b.png',
+      'https://API.MyFantasyLeague.com/c.png',
+    ]) {
+      expect(optimizedRemoteImage(url)).toContain('/_vercel/image?url=');
+    }
   });
 });
 
@@ -177,6 +218,26 @@ describe('the square crop', () => {
   it('crops only on the uploaded-mark rung', () => {
     expect(card).toContain("team.rung === 'mfl'");
     expect(card).toContain('lv-side__crest--crop');
+  });
+
+  /**
+   * A FAILED MARK FALLS THROUGH TO THE RUNG BELOW, rather than leaving an
+   * empty square. An uploaded mark lives on whatever host its commissioner
+   * used — several in this repo's own exports are long dead — so this is a
+   * permanent condition. Hiding the alt text (the CSS below) stops a broken
+   * mark from repainting the row; `onError` is what gives the franchise back
+   * the initials it had before the ladder found a mark at all. Both render
+   * sites go through the same component so neither can keep only half of it.
+   */
+  it('falls back to the initials when a mark fails to load', () => {
+    const mark = readFileSync('src/components/shared/live/LvMark.tsx', 'utf8');
+    expect(mark).toContain('onError');
+    expect(mark).toMatch(/if \(!icon \|\| failed\)/);
+    for (const site of [card, readFileSync('src/components/shared/mfl-live/LeagueToggles.tsx', 'utf8')]) {
+      expect(site).toContain('<LvMark');
+      // No hand-rolled second copy of the same markup beside it.
+      expect(site).not.toMatch(/<img\s+src=\{(team|league)\.icon\}/);
+    }
   });
 
   /**

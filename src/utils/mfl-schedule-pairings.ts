@@ -102,6 +102,23 @@ export function parseSchedulePairings(payload: unknown, week: number): MatchupPa
  */
 const SCHEDULE_TTL_MS = 60 * 60 * 1000;
 
+/**
+ * How long an EMPTY answer stays good.
+ *
+ * Short, but not zero. Never caching an empty answer sounds like the repo's
+ * never-cache-a-failure rule, and here it is the opposite: this read happens
+ * on the board's poll path (25–90s, per viewer, per device), so a league whose
+ * schedule is genuinely unpublished — or whose read was throttled — would be
+ * re-fetched from MFL every single poll, forever, with no backoff. That is how
+ * a board gets itself throttled, and a throttled MFL answers with an HTML page
+ * under a 200.
+ *
+ * A minute is long enough to collapse a poll storm and short enough that a
+ * schedule published mid-week appears almost immediately. Same value and same
+ * reasoning as `PROJECTION_EMPTY_TTL_MS` in `broadcast-live-source.ts`.
+ */
+const SCHEDULE_EMPTY_TTL_MS = 60 * 1000;
+
 const schedulePairingsCache = (): Map<string, { at: number; pairings: MatchupPairing[] }> => {
   const g = globalThis as {
     __mflSchedulePairingsCache?: Map<string, { at: number; pairings: MatchupPairing[] }>;
@@ -142,7 +159,9 @@ export async function readLeagueSchedulePairings(
   const key = `${league.id}:${year}:${week}`;
   const cache = schedulePairingsCache();
   const hit = cache.get(key);
-  if (hit && Date.now() - hit.at < SCHEDULE_TTL_MS) return hit.pairings;
+  if (hit && Date.now() - hit.at < (hit.pairings.length > 0 ? SCHEDULE_TTL_MS : SCHEDULE_EMPTY_TTL_MS)) {
+    return hit.pairings;
+  }
 
   const note = (reason: string) =>
     console.warn(`[live-scoring] schedule fallback ${league.id} week ${week}: ${reason}`);
@@ -173,13 +192,11 @@ export async function readLeagueSchedulePairings(
     }
 
     const pairings = parseSchedulePairings(body, week);
-    // An empty answer is NOT cached. It is the shape a throttle or an
-    // unpublished schedule produces, and remembering it would pin the gap in
-    // front of every reader sharing this process for an hour.
-    if (pairings.length === 0) {
-      note('schedule carried no pairings for this week');
-      return [];
-    }
+    // An empty answer is cached BRIEFLY rather than not at all — see
+    // `SCHEDULE_EMPTY_TTL_MS`. It is the shape a throttle or an unpublished
+    // schedule produces, and this runs on a poll path, so "never cache a
+    // failure" here would mean re-asking MFL every 25 seconds forever.
+    if (pairings.length === 0) note('schedule carried no pairings for this week');
 
     cache.set(key, { at: Date.now(), pairings });
     // Bounded: one entry per league-week, and an owner in 40 leagues is

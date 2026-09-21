@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { toggleMflLiveLeague } from '../../../utils/mfl-live-selection';
+import LvMark from '../live/LvMark';
 
 /**
  * The league switches on `/live/settings`.
@@ -105,14 +106,16 @@ export default function LeagueToggles({ leagues, initialEnabled }: Props) {
           const locked = on && enabled.length <= 1;
           return (
             <li className="mls__row" key={league.id}>
-              <span
-                className={`mls__mark${league.icon ? '' : ' mls__mark--text'}${
-                  league.icon && league.cropMark ? ' mls__mark--crop' : ''
-                }`}
-                aria-hidden="true"
-              >
-                {league.icon ? <img src={league.icon} alt="" loading="lazy" decoding="async" /> : league.initials}
-              </span>
+              {/* Same mark, same fallback as the board — see `LvMark`. The row
+                  already names the league beside it, so the mark is decorative. */}
+              <LvMark
+                icon={league.icon}
+                alt=""
+                initials={league.initials}
+                crop={!!league.cropMark}
+                decorative
+                classes={{ wrap: 'mls__mark', crop: 'mls__mark--crop', text: 'mls__mark--text' }}
+              />
 
               <span className="mls__id">
                 <span className="mls__name">{league.name}</span>

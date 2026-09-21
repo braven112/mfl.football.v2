@@ -210,9 +210,16 @@ which is exactly why the split exists — verify parsing offline against
   the NFL name match, then initials. The uploaded mark sits above the NFL match
   because art an owner chose outranks art we inferred from their name. Two
   things it forced, both load-bearing: the mark goes out through
-  `optimizedRemoteImage` (`/_vercel/image`, one width, `vercel.json`'s
-  `images.sizes` — a width outside that list is a 400 and takes out every mark
-  at once), because Archie's league uploaded a **1500×636 PNG of ~400 KB for
+  `optimizedRemoteImage` (`/_vercel/image`, one width). That config lives in
+  `astro.config.ts`'s `imagesConfig` and NOT in `vercel.json`, whose `images`
+  block this project never reads — the Vercel adapter writes
+  `.vercel/output/config.json` and that is what the optimizer consults. Both
+  halves can 400: a width outside `sizes`, or a host outside `remotePatterns`,
+  each takes out every mark at once. `REMOTE_MARK_HOSTS` is the single copy of
+  that host list, imported by the config AND checked before a rewrite, because
+  a franchise mark is an arbitrary URL — only about 1 in 15 in this repo's own
+  league exports is on `*.myfantasyleague.com`, and an unlisted host must be
+  served as-is rather than through an optimizer that will refuse it, because Archie's league uploaded a **1500×636 PNG of ~400 KB for
   all 99 franchises** into a 1.4rem box; and it is the ONE rung the UI crops
   square (`object-fit: cover`), because a league crest and an NFL club mark are
   drawn to fit and cropping one takes a bite out of somebody's logo. That is
