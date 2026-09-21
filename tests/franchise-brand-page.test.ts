@@ -8,7 +8,13 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { allFranchiseBrands, franchiseBrand, bandSlot, inkOn } from '../src/utils/franchise-marks';
+import {
+  allFranchiseBrands,
+  franchiseBrand,
+  bandSlot,
+  inkOn,
+  sameIdentity,
+} from '../src/utils/franchise-marks';
 
 const ROOT = join(__dirname, '..');
 const read = (p: string) => readFileSync(join(ROOT, p), 'utf8');
@@ -245,6 +251,58 @@ describe('franchise-marks — the data the page reads', () => {
     expect(b?.heroTeam.icon).toBe('/assets/theleague/icons/pigskins.png');
     expect(b?.heroTeam.groupMeDark).toBe('/assets/theleague/group-me/pigskins_dark.png');
     expect(b?.heroTeam.broadcastGradient).toMatch(/^linear-gradient/);
+  });
+
+  it('files an era by whether it wore TODAY\'s name', () => {
+    // An era that wore this name is an older cut of the SAME mark and belongs
+    // beside the current ones under "Marks on file". An era that wore a
+    // different name is a different club on the same slot and gets its own
+    // section. Pacific Pigskins is the pure case: two eras, both its own name.
+    const pigskins = franchiseBrand('theleague', '0001');
+    expect(pigskins?.formerIdentities).toEqual([]);
+    expect(pigskins?.past.length).toBe(4); // two eras × icon + banner
+    expect(pigskins?.past.every((m) => m.era)).toBe(true);
+
+    // And the mixed case: one era folded in, one kept separate.
+    const mcm = allFranchiseBrands('theleague').find((b) => b.name.includes('Music City'));
+    expect(mcm?.formerIdentities.map((e) => e.name)).toEqual(['LBer-DeCleaters']);
+    expect(mcm?.past.length).toBeGreaterThan(0);
+  });
+
+  it('does not split a franchise from its own past over case or an article', () => {
+    // The configs spell a franchise's own name inconsistently across history[].
+    // A strict === files a team's own past under "former identities", which is
+    // the exact thing the split exists to avoid.
+    expect(sameIdentity('Running Down The Dream', 'Running down the Dream')).toBe(true);
+    expect(sameIdentity('The Music City Mafia', 'Music City Mafia')).toBe(true);
+    // Conservative in the other direction: a rename that might be a real
+    // rebrand is NOT merged away, because guessing wrong there silently hides
+    // a genuinely separate identity.
+    expect(sameIdentity('Smokane', 'Smokane FC')).toBe(false);
+    expect(sameIdentity('Swifty 4 Life', 'Swiftie 4 Life')).toBe(false);
+    expect(sameIdentity('', '')).toBe(false);
+  });
+
+  it('never lists a retired cut that is still the current one', () => {
+    // An era whose icon IS today's icon has nothing retired about it, and
+    // listing it would show the same file twice in one section.
+    for (const league of ['theleague', 'afl-fantasy'] as const) {
+      for (const b of allFranchiseBrands(league)) {
+        const current = new Set(b.marks.map((m) => m.url));
+        for (const m of b.past) {
+          expect(current.has(m.url), `${b.name} ${m.label}`).toBe(false);
+        }
+      }
+    }
+  });
+
+  it('renders the retired cuts inside Marks on file, not a section of their own', () => {
+    expect(PAGE).toContain('Retired cuts of this same mark');
+    expect(PAGE).toContain('brand.past.map');
+    // The former-identities section reads the FILTERED list, never every era —
+    // otherwise a team's own past shows up twice on the page.
+    expect(PAGE).toContain('brand.formerIdentities.map');
+    expect(PAGE).not.toMatch(/brand\.eras\.map\(/);
   });
 
   it('reads eras from the same history[] the throwback picker reads', () => {

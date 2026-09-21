@@ -508,6 +508,23 @@
   display: inline;
 }
 
+/* "Retired" borrows `.cb__made`'s geometry but not its colour. That badge is an
+   accent fill because "made here" is a claim worth noticing; a retired cut is
+   the opposite — it is context, and an accent on four of nine tiles pulls the
+   eye to the cuts that no longer ship. Neutral, and legible on the white cut
+   box it always sits on. */
+.cb__made--retired {
+  background: color-mix(in srgb, #10141a 62%, transparent);
+  color: #ffffff;
+}
+
+/* A note that introduces a SECOND list inside a section it does not own — the
+   retired cuts under "Marks on file". Sits closer to the list than a section
+   lede does, so the two filmstrips read as one section rather than two. */
+.cb__note--sub {
+  margin-top: var(--spacing-md, 1rem);
+}
+
 /* ── Swatch additions ──────────────────────────────────────────────────────
    The club page's `.cb__swatches` grid is used as-is by both halves. A
    franchise adds one line the club does not need — the ROLE, since these

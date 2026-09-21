@@ -124,9 +124,19 @@ export interface FranchiseMark {
   /** Nominal authored size, so the page can say what it is rather than guess. */
   spec: string;
   url: string;
+  /** Set on a HISTORICAL cut — the era it belongs to. Absent on a current one. */
+  era?: { years: string; label: string | null };
 }
 
-export type FranchiseMarkId = 'icon' | 'iconDark' | 'groupMe' | 'groupMeDark' | 'banner';
+export type FranchiseMarkId =
+  | 'icon'
+  | 'iconDark'
+  | 'groupMe'
+  | 'groupMeDark'
+  | 'banner'
+  /** An era's crest or banner, when that era wore TODAY's name. See `pastMarks`. */
+  | 'eraIcon'
+  | 'eraBanner';
 
 /**
  * Presentation names and the authored spec for each cut.
@@ -173,7 +183,33 @@ const MARK_META: Record<FranchiseMarkId, Omit<FranchiseMark, 'id' | 'url'>> = {
     forDark: false,
     spec: 'wide PNG',
   },
+  // The two historical ids. They never come from the config's top level — they
+  // are built per era by `pastMarks`, which overwrites `label` with the era's
+  // years. Present here so the id list stays one closed set.
+  eraIcon: {
+    label: 'Icon',
+    source: 'retired',
+    format: 'png',
+    forDark: false,
+    spec: 'square PNG',
+  },
+  eraBanner: {
+    label: 'Banner',
+    source: 'retired',
+    format: 'png',
+    forDark: false,
+    spec: 'wide PNG',
+  },
 };
+
+/** The ids read off the config's top level — the cuts a franchise wears TODAY. */
+export const CURRENT_MARK_IDS: FranchiseMarkId[] = [
+  'icon',
+  'iconDark',
+  'groupMe',
+  'groupMeDark',
+  'banner',
+];
 
 export const FRANCHISE_MARK_IDS = Object.keys(MARK_META) as FranchiseMarkId[];
 
@@ -213,6 +249,25 @@ export function franchiseSlug(team: { name?: string; nameShort?: string; franchi
   return slugify(team.name || team.nameShort || team.franchiseId);
 }
 
+/**
+ * Whether two franchise names are the SAME identity.
+ *
+ * Not `===`. The configs spell a franchise's own name inconsistently across
+ * its `history[]` — "Running Down The Dream" against today's "Running down the
+ * Dream", and "The Music City Mafia" against "Music City Mafia" — and a strict
+ * compare files a team's own past under "former identities", which is exactly
+ * the thing this split exists to avoid.
+ *
+ * Deliberately conservative: case, punctuation and a leading article only. It
+ * does NOT try to match "Smokane" to "Smokane FC" or "Swifty" to "Swiftie" —
+ * those are judgement calls about whether a rename was a rebrand, and guessing
+ * wrong in that direction silently hides a genuinely separate identity.
+ */
+export function sameIdentity(a: string, b: string): boolean {
+  const norm = (v: string) => slugify(v).replace(/^the-/, '');
+  return norm(a) === norm(b) && norm(a) !== '';
+}
+
 /** One era's art, resolved for the page. */
 export interface FranchiseEra {
   /** The config's `eraLabel`. Null when it names none — the page then shows the years alone. */
@@ -227,6 +282,13 @@ export interface FranchiseEra {
   colorSecondary: string | null;
   /** True when this era is the identity the franchise wears today. */
   current: boolean;
+  /**
+   * True when the era wore TODAY's name — an old version of this team's own
+   * mark rather than a different club. Its art is folded into `pastMarks` and
+   * shown under "Marks on file"; a false one is a separate identity and gets
+   * its own section.
+   */
+  sameIdentity: boolean;
 }
 
 export interface FranchiseGround {
@@ -310,7 +372,12 @@ export interface FranchiseBrand {
   broadcastGradient: string | null;
   grounds: FranchiseGround[];
   marks: FranchiseMark[];
+  /** Retired cuts of this team's OWN mark — eras that wore today's name. */
+  past: FranchiseMark[];
+  /** Every era, current and former identities alike. */
   eras: FranchiseEra[];
+  /** Only the eras that wore a DIFFERENT name — genuinely separate identities. */
+  formerIdentities: FranchiseEra[];
   /** Pass-through payload for the hero resolvers. */
   heroTeam: FranchiseHeroTeam;
   ownerSince: number | null;
@@ -350,9 +417,9 @@ function markUrl(team: RawTeam, id: FranchiseMarkId): string | null {
   }
 }
 
-/** Every cut on file for a franchise, in the order the page shows them. */
+/** The cuts a franchise wears TODAY, in the order the page shows them. */
 export function franchiseMarks(team: RawTeam): FranchiseMark[] {
-  return FRANCHISE_MARK_IDS.map((id) => {
+  return CURRENT_MARK_IDS.map((id) => {
     const url = markUrl(team, id);
     return url ? { id, ...MARK_META[id], url } : null;
   }).filter((m): m is FranchiseMark => m !== null);
@@ -473,7 +540,56 @@ function erasOf(team: RawTeam): FranchiseEra[] {
       // still wears; the throwback picker reads the same equality
       // (`resolveEraCrest`), so the two agree on what "historical" means.
       current: Boolean(era.icon && team.icon && era.icon === team.icon),
+      sameIdentity: sameIdentity(era.name || team.name || '', team.name || ''),
     }));
+}
+
+/**
+ * The retired cuts of a franchise's OWN mark.
+ *
+ * An era that wore today's name is not a different club — it is this team's
+ * logo before the current one, so it belongs beside the current cuts under
+ * "Marks on file" rather than in a section about other identities. An era that
+ * wore a different name is the opposite and stays out of here entirely.
+ *
+ * BOTH current files are excluded, not just the crest. An era that is still
+ * the identity a franchise wears carries today's art, and listing it here
+ * would print the same file twice inside one section — Computer Jocks' 2016
+ * era banner IS their current banner, which a guard caught the moment the
+ * crest was the only thing deduped. `resolveEraCrest` applies the same
+ * equality when it decides whether a throwback week has anything to change.
+ */
+export function pastMarks(
+  eras: FranchiseEra[],
+  currentIcon: string,
+  currentBanner = ''
+): FranchiseMark[] {
+  const out: FranchiseMark[] = [];
+  for (const era of eras) {
+    if (!era.sameIdentity) continue;
+    const suffix = era.label ? `${era.years} — ${era.label}` : era.years;
+    if (era.icon && era.icon !== currentIcon) {
+      out.push({
+        ...MARK_META.eraIcon,
+        id: 'eraIcon',
+        label: `Icon · ${era.years}`,
+        source: suffix,
+        url: era.icon,
+        era: { years: era.years, label: era.label },
+      });
+    }
+    if (era.banner && era.banner !== currentBanner) {
+      out.push({
+        ...MARK_META.eraBanner,
+        id: 'eraBanner',
+        label: `Banner · ${era.years}`,
+        source: suffix,
+        url: era.banner,
+        era: { years: era.years, label: era.label },
+      });
+    }
+  }
+  return out;
 }
 
 /** One franchise's brand, or null when the league or the id is unknown. */
@@ -487,6 +603,7 @@ export function franchiseBrand(
   if (!team) return null;
 
   const marks = franchiseMarks(team);
+  const eras = erasOf(team);
   const byId = new Map(marks.map((m) => [m.id, m]));
   const colors = colorsOf(team);
   // The BRAND primary, never the chart hue — `franchise-band-brand.ts` records
@@ -546,7 +663,9 @@ export function franchiseBrand(
     broadcastGradient: team.broadcastGradient ?? null,
     grounds,
     marks,
-    eras: erasOf(team),
+    eras,
+    past: pastMarks(eras, team.icon ?? '', team.banner ?? ''),
+    formerIdentities: eras.filter((e) => !e.sameIdentity),
     heroTeam: {
       ...(team.colorPrimary ? { colorPrimary: team.colorPrimary } : {}),
       ...(team.colorSecondary ? { colorSecondary: team.colorSecondary } : {}),

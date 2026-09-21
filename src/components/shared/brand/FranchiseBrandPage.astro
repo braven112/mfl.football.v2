@@ -283,6 +283,43 @@ const USAGE: Array<{ term: string; detail: string }> = [
           ))
         }
       </ul>
+      {
+        brand.past.length > 0 && (
+          <>
+            <p class="cb__note cb__note--sub">
+              <strong>Retired cuts of this same mark.</strong> {brand.past.length} more, from{' '}
+              {brand.eras.filter((e) => e.sameIdentity).length} earlier{' '}
+              {brand.eras.filter((e) => e.sameIdentity).length === 1 ? 'era' : 'eras'} that wore this
+              name. They are this club's own logo before the current one &mdash; not a different
+              club, which is why they sit here rather than under a former identity.
+            </p>
+            <ul class="cb__film">
+              {brand.past.map((m) => (
+                <li class="cb__cut">
+                  <span class="cb__cut-box is-light">
+                    <img src={m.url} alt={`${brand.name} — ${m.label}`} loading="lazy" />
+                    <span class="cb__made cb__made--retired">retired</span>
+                  </span>
+                  <span class="cb__cut-label">{m.label}</span>
+                  <span class="cb__cut-meta">{m.source}</span>
+                  <span class="cb__actions">
+                    <button
+                      class="cb-copy"
+                      type="button"
+                      data-copy={absolute(m.url)}
+                      aria-label={`Copy ${m.label} URL`}
+                    >
+                      <span class="cb-copy__idle">Copy URL</span>
+                      <span class="cb-copy__done">Copied</span>
+                    </button>
+                    <a class="cb__dl" href={m.url} download>Download</a>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </>
+        )
+      }
     </section>
 
     <section class="cb__section">
@@ -385,16 +422,17 @@ const USAGE: Array<{ term: string; detail: string }> = [
     </section>
 
     {
-      brand.eras.length > 0 && (
+      brand.formerIdentities.length > 0 && (
         <section class="cb__section">
-          <h2 class="cb__h2">Era art</h2>
+          <h2 class="cb__h2">Former identities</h2>
           <p class="cb__note">
-            Every identity this franchise has worn, read from the same <code>history[]</code> the
-            Throwback Week picker reads &mdash; so what a throwback week dresses the site in is
-            what is shown here.
+            Names this franchise has worn that are not the one it wears today &mdash; a different
+            club on the same slot, not an older cut of the current mark (those are up under
+            <strong> Marks on file</strong>). Read from the same <code>history[]</code> the
+            Throwback Week picker reads, so a throwback week dresses the site in exactly this art.
           </p>
           <ul class="cb__eras">
-            {brand.eras.map((era) => (
+            {brand.formerIdentities.map((era) => (
               <li class="cb__era">
                 <span class="cb__era-art" style={`--era-bg:${era.colorPrimary ?? bg}`}>
                   {era.icon ? (
@@ -411,9 +449,8 @@ const USAGE: Array<{ term: string; detail: string }> = [
                     loading="lazy"
                   />
                 )}
-                <span class="cb__era-years">{era.years}</span>
-                {era.label && <span class="cb__era-label">{era.label}</span>}
-                {era.name !== brand.name && <span class="cb__era-label">as {era.name}</span>}
+                <span class="cb__era-years">{era.name}</span>
+                <span class="cb__era-label">{era.years}{era.label ? ` · ${era.label}` : ''}</span>
                 {(era.colorPrimary || era.colorSecondary) && (
                   <span class="cb__era-hues">
                     {[era.colorPrimary, era.colorSecondary]
