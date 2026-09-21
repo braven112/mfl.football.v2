@@ -94,25 +94,23 @@ describe('buildFranchiseBandBrands', () => {
     // otherwise carry the identity. Without the neutral swap, opening two
     // different AFL teams' players paints the same near-black band.
     //
-    // The allowed collisions are DATA gaps, not code ones — these franchises
-    // have no hue anywhere in their config to find. Give any of them a real
-    // accent colour and this test wants updating, DOWNWARD: the list may only
-    // shrink, so a franchise that gains a colour retightens it rather than
-    // leaving slack behind (same idiom as the typecheck and page-fork
-    // baselines).
+    // THE LIST IS EMPTY, AND MAY ONLY STAY THAT WAY. It is a ratchet, not an
+    // allowance: an entry may be deleted when a franchise gains a real colour,
+    // never added to let a new collision through (same idiom as the typecheck
+    // and page-fork baselines). A collision appearing here now is a REGRESSION
+    // in the config, and the fix is the colour, not this list.
     //
-    // - afl 0017/0019/0023 were exactly that, all three flat #8b8f93, until
-    //   Sep 2026 gave each of them its own colour sampled from its own crest:
-    //   Titsburgh the light silver its art is drawn in, Badd Boys the charcoal
-    //   of its suit, The Show the black of its banner. The entry is gone
-    //   because the gap is.
-    // - theleague 0008/0009 are both black-and-white brands: `colorPrimary`
-    //   #181818, `colorSecondary` near-white, and even their chart hues are
-    //   greys. Their CRESTS still tell the two bands apart, which is the only
-    //   reason this is tolerable rather than a bug.
-    const KNOWN_DATA_GAPS: Record<string, string[][]> = {
-      theleague: [['0008', '0009']],
-    };
+    // It held two entries until Sep 2026, and both were cleared by giving the
+    // franchises a colour off their own art rather than by relaxing anything:
+    //
+    // - afl 0017/0019/0023 were all three a flat #8b8f93 — Titsburgh took the
+    //   light silver its art is drawn in, Badd Boys the charcoal of its suit,
+    //   The Show the black of its banner.
+    // - theleague 0008/0009 were both #181818 with a near-white secondary and
+    //   grey chart hues, so there was genuinely no hue in the config to find.
+    //   They are now #000000 and #222222: still a black-and-white pair, as
+    //   both brands really are, but no longer the SAME black.
+    const KNOWN_DATA_GAPS: Record<string, string[][]> = {};
 
     for (const league of ['theleague', 'afl', 'bb1'] as const) {
       const byHue = new Map<string, string[]>();
