@@ -177,6 +177,31 @@ describe('Brand Book — routes', () => {
     });
   }
 
+  it('links every franchise page to its brand page, with a slug that resolves', () => {
+    /**
+     * `/franchises/<id>` is keyed by franchise ID and the Brand Book by slug,
+     * so the link is a DERIVATION, not a stored href — which means a rename in
+     * the league config silently changes it. This walks the same derivation
+     * the pages use and proves every id still lands on a real page.
+     */
+    for (const [league, file] of [
+      ['theleague', 'src/pages/theleague/franchises/[id].astro'],
+      ['afl-fantasy', 'src/pages/afl-fantasy/franchises/[id].astro'],
+    ] as const) {
+      const src = read(file);
+      expect(src, `${file} must link the Brand Book`).toContain(`/${league}/brand/`);
+      // Derived from the config entry, never hard-coded per team.
+      expect(src).toContain('franchiseSlug(team)');
+      // Resolved through the league-path helper, so it is correct on the
+      // league's own apex where the prefix is hidden.
+      expect(src).toMatch(/resolveLeaguePath\(`\/[a-z-]+\/brand\//);
+
+      for (const b of allFranchiseBrands(league)) {
+        expect(franchiseIdFromSlug(league, b.slug), `${b.name} link target`).toBe(b.franchiseId);
+      }
+    }
+  });
+
   it('keeps the shared host to the NFL half alone', () => {
     // A franchise mark belongs to exactly one league, and five franchises
     // field a team in BOTH — so their slugs collide and a league-less

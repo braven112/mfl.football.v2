@@ -29,6 +29,8 @@ import { segmentsForFranchiseRange as segmentsForFranchiseRangeUtil, type NameEr
 import PreviousOwners from '../../../components/shared/franchises/PreviousOwners.astro';
 import ownerTenures from '../../../../data/afl-fantasy/derived/owner-tenures.json';
 import type { OwnerTenuresFile } from '../../../types/owner-tenures';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { franchiseSlug } from '../../../utils/franchise-marks';
 
 // Badge art loaded raw so the editable year can be stamped per win (an <img>
 // can't be edited per instance). These are build-time repo assets only — safe
@@ -451,6 +453,23 @@ const hasHighlights = Boolean(
             </svg>
           </span>
           View roster
+        </a>
+        {/*
+          `resolveLeaguePath`, unlike its neighbours in this action bar. The AFL
+          has its own apex (afl-fantasy.com), where `hideLeaguePrefix` is true
+          and a hard-coded `/afl-fantasy/...` href is wrong — the other links
+          here predate that and are a separate fix.
+        */}
+        <a
+          class="franchise-action"
+          href={resolveLeaguePath(`/afl-fantasy/brand/${franchiseSlug(team)}`, Astro.locals.hideLeaguePrefix ?? false)}
+        >
+          <span class="franchise-action__icon" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path d="M12 3l7 4v5c0 4.42-3 8.44-7 9-4-.56-7-4.58-7-9V7l7-4z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </span>
+          Brand &amp; logos
         </a>
         {isOwner && (
           <>
