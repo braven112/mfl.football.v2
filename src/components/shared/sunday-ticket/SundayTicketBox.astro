@@ -22,7 +22,7 @@
  * `page-fork-ratchet` exists to stop).
  */
 import { nflLogoUrl } from '../../../utils/live/nfl-logo-url';
-import type { SlateBox } from '../../../utils/sunday-ticket-slate';
+import type { ContributionPlayer, SlateBox } from '../../../utils/sunday-ticket-slate';
 import { formatKickoffZones, displayProjectionFor } from '../../../utils/sunday-ticket-slate';
 import { REDZONE_LOGO, countryTimeZones, resolveChannel, type CountryCode, type KickoffZone } from '../../../utils/broadcast-channels';
 import PlayerCell from '../../theleague/PlayerCell.astro';
@@ -70,9 +70,9 @@ const logo = (code: string) => nflLogoUrl(code, 'dark');
  * cell and its own tooltip disagreeing. `isClockRunning` is the SAME predicate
  * `displayProjectionFor` branches on, for exactly that reason.
  */
-const projTitle = (p: { proj: number; live?: number; secondsRemaining?: number }) =>
+const projTitle = (p: ContributionPlayer) =>
   p.live !== undefined && p.secondsRemaining !== undefined && isClockRunning(p.secondsRemaining)
-    ? `${displayProjectionFor(p as never).toFixed(1)} projected final`
+    ? `${displayProjectionFor(p).toFixed(1)} projected final`
     : `${p.proj.toFixed(1)} projected`;
 // The kickoff in the viewer's own clocks — ET/PT at home, AEST/AWST in
 // Australia, where a Sunday 1pm ET game is Monday morning and says so.

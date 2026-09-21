@@ -103,7 +103,7 @@ function LeagueLive({
     // ── The PROJECTED FINAL beside each live score, re-blended against the
     // clock this poll just read.
     //
-    // The server rendered a blend too (`projectedFinalFor`), but a blend is
+    // The server rendered a blend too (`displayProjectionFor`), but a blend is
     // only true for the moment it was computed: the live score below it
     // updates every poll while this cell would keep the first paint's answer
     // and drift for the rest of the afternoon — which is the same "a number

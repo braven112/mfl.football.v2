@@ -137,9 +137,14 @@ which is exactly why the split exists — verify parsing offline against
 - **A blend is only true for the moment it was computed, so whatever renders it
   must re-blend on every poll.** Sunday Ticket prints a live score and a
   projection side by side, and the raw full-game number there reads as points
-  still to come. `projectedFinalFor` (`sunday-ticket-slate.ts`) applies the same
-  model, but a server-only blend freezes at the first paint while the live score
-  under it keeps updating — a stale number under a pill reading "Live", which is
+  still to come. `displayProjectionFor` (`sunday-ticket-slate.ts`) applies the same
+  model — and blends ONLY while the clock is running, because
+  `projectPlayerFinal` hands back what a finished player SCORED and that cell
+  sits beside his live score, so a final game would print the same number
+  twice and put the league's own projection out of reach. `isClockRunning`
+  (strict at both ends) is the one predicate both the number and its tooltip
+  branch on. A server-only blend also freezes at the first paint while the live
+  score under it keeps updating — a stale number under a pill reading "Live", which is
   the failure the freshness pill exists to prevent. The cell therefore carries
   the RAW projection in `data-st-proj-base` and the island recomputes from it,
   never from the rendered number: re-blending a blend compounds on every poll.
