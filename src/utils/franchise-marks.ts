@@ -37,6 +37,10 @@ import { getLeagueBySlug, type CanonicalLeagueSlug } from '../config/leagues';
 import type { LeagueSlug } from '../types/nav';
 import { luminance, inkOn, type MarkGround } from './nfl-marks';
 import { crestStrokeFilter, withStrokeColors } from './crest-dark-stroke-css';
+import { getTeamAccentPair } from './team-colors';
+import { teamAccentProperty } from './team-accent-css';
+import { resolveMatchupColorVars } from './live/model';
+import { surfaceForLeague } from './live/surface';
 
 export type { MarkGround };
 export { luminance, inkOn };
@@ -234,6 +238,23 @@ export interface FranchiseGround {
   filter?: string;
 }
 
+/**
+ * A colour the site DERIVES from the brand pair rather than reading from the
+ * config — and the theme it applies in.
+ *
+ * These are the values that actually paint, and none of them is in the config:
+ * a franchise's raw hex is the INPUT. Showing only the config hexes was the
+ * page's blind spot — an owner reading "Primary #181818" has no way to learn
+ * that no surface on the site ever paints that, because every one of them
+ * floors it first.
+ */
+export interface DerivedColor {
+  label: string;
+  light: string;
+  dark: string;
+  note: string;
+}
+
 export interface FranchiseColor {
   key: string;
   label: string;
@@ -279,6 +300,10 @@ export interface FranchiseBrand {
   conference: string | null;
   tier: string | null;
   colors: FranchiseColor[];
+  /** What the site derives from those hexes before it paints anything. */
+  derived: DerivedColor[];
+  /** The CSS custom property a foreground use must read, never the raw hex. */
+  accentProperty: string;
   /** The band ground's colour — the brand primary, or the chart hue if there is none. */
   bandColor: string;
   /** The raw CSS the draft broadcast paints verbatim. Null when unset. */
@@ -371,6 +396,64 @@ function colorsOf(team: RawTeam): FranchiseColor[] {
     .map(([key, label, hex, note]) => ({ key, label, hex: hex as string, note }));
 }
 
+/**
+ * A deliberately NEUTRAL opponent for the live-bar resolution.
+ *
+ * The win-probability bar's colours are resolved per MATCHUP, not per
+ * franchise: `resolveTeamColorPair` nudges the two sides apart so a matchup
+ * between two navy teams still reads as two bars. There is therefore no single
+ * "this franchise's bar colour" to print, and inventing one would be a claim
+ * the site does not honour. Resolving against a mid grey gives the value this
+ * franchise takes when nothing is pulling it, which is what the page says it
+ * is showing.
+ */
+const NEUTRAL_OPPONENT = { color: '#808080', colorPrimary: '#808080', colorSecondary: '#808080' };
+
+/**
+ * The colours the site DERIVES for one franchise, per theme.
+ *
+ * Read from the real resolvers rather than recomputed here — the whole point
+ * of the page is that it cannot drift from what ships. `getTeamAccentPair`
+ * floors the hue to 3:1 against each theme's card; `resolveMatchupColorVars`
+ * produces the live board's two pairs, which are NOT the same number: the fill
+ * clears ΔE against the card (perceptual distance, right for a block of
+ * colour) and the ink clears WCAG AA (luminance, the only metric for reading).
+ * They diverge exactly where a colour passes as a bar and fails as a score —
+ * the AFL's #314d78 is ΔE 31 from the card and 1.89:1 against it.
+ */
+function derivedColorsOf(slug: CanonicalLeagueSlug, team: RawTeam): DerivedColor[] {
+  const nav = navSlugOf(slug);
+  const accent = getTeamAccentPair(team.franchiseId, nav);
+  const claim = {
+    color: team.color || team.colorPrimary || '#64748b',
+    ...(team.colorPrimary ? { colorPrimary: team.colorPrimary } : {}),
+    ...(team.colorSecondary ? { colorSecondary: team.colorSecondary } : {}),
+    ...(team.colorPrimaryDark ? { colorPrimaryDark: team.colorPrimaryDark } : {}),
+    ...(team.colorSecondaryDark ? { colorSecondaryDark: team.colorSecondaryDark } : {}),
+  };
+  const bar = resolveMatchupColorVars(claim, NEUTRAL_OPPONENT, surfaceForLeague(slug));
+  return [
+    {
+      label: 'Accent token',
+      light: accent.light,
+      dark: accent.dark,
+      note: 'What teamAccentVar(franchiseId) resolves to. EVERY foreground use of a team colour reads this — text, a rank numeral, a chart line, a legend swatch — because it is floored to 3:1 against each theme\u2019s card. Several franchises\u2019 raw hexes land near 1:1 there.',
+    },
+    {
+      label: 'Live bar fill',
+      light: bar['--t0-light'] ?? accent.light,
+      dark: bar['--t0-dark'] ?? accent.dark,
+      note: 'The win-probability bar on Live Scoring. Cleared for ΔE against the card \u2014 perceptual distance, the right metric for a block of colour. Resolved per MATCHUP, so an opponent in the same family shifts it; this is the value against a neutral.',
+    },
+    {
+      label: 'Live bar ink',
+      light: bar['--t0-ink-light'] ?? accent.light,
+      dark: bar['--t0-ink-dark'] ?? accent.dark,
+      note: 'The SCORE beside that bar. Cleared for WCAG AA body contrast instead, because ΔE is not a reading metric \u2014 a colour can pass as a fill and be unreadable as a number, which is how coloured bars once sat beside grey scores.',
+    },
+  ];
+}
+
 function erasOf(team: RawTeam): FranchiseEra[] {
   const history = Array.isArray(team.history) ? team.history : [];
   return history
@@ -457,6 +540,8 @@ export function franchiseBrand(
     conference: team.conference ?? null,
     tier: team.tier ?? null,
     colors,
+    derived: derivedColorsOf(leagueSlug, team),
+    accentProperty: teamAccentProperty(team.franchiseId),
     bandColor,
     broadcastGradient: team.broadcastGradient ?? null,
     grounds,

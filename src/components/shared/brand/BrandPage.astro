@@ -122,26 +122,31 @@ const filesHref = leagueSlug ? resolveLeaguePath(`/${leagueSlug}/brand/files`, h
 
     {
       franchises.length > 0 && league && (
-        <section class="bb__section">
-          <h2 class="bb__h2">{league.name} clubs</h2>
-          <p class="bb__note">
+        <section class="cb__section">
+          <h2 class="cb__h2">{league.name} clubs</h2>
+          <p class="cb__note">
             Each tile is the franchise's own colour wearing the cut its BAND ground draws &mdash;
             the dark cut for almost every one of them, because almost every franchise primary is
             dark. Five of them wear <code>#181818</code>.
           </p>
-          <ul class="bb__grid">
+          {/*
+            The SAME `brand__*` tile markup the NFL grid below uses, not a
+            parallel set. The franchise half briefly had its own classes and
+            promptly re-shipped a bug the club template had already fixed.
+          */}
+          <ul class="brand__grid">
             {franchises.map((fr) => {
               const tileBg = fr.bandColor;
               const tileInk = inkOn(tileBg);
               const tileBand = fr.grounds.find((g) => g.ground === 'band');
               return (
-                <li class="bb__cell">
+                <li class="brand__cell">
                   <a
-                    class="bb__tile"
+                    class="brand__tile"
                     href={franchiseHref(fr.slug)}
                     style={`--tile-bg:${tileBg};--tile-ink:${tileInk}`}
                   >
-                    <span class="bb__art">
+                    <span class="brand__art">
                       {tileBand && (
                         <img
                           src={tileBand.url}
@@ -153,19 +158,11 @@ const filesHref = leagueSlug ? resolveLeaguePath(`/${leagueSlug}/brand/files`, h
                         />
                       )}
                     </span>
-                    <span class="bb__tile-name">
-                      {/*
-                        The FULL name, not `nameShort`. The NFL tile beside it
-                        can put the nickname alone on the big line because a
-                        nickname identifies a club; a franchise's short name
-                        often does not — "Pain", "Fire" and "Midwest" are all
-                        real ones, and a directory whose tiles need decoding is
-                        not a directory.
-                      */}
-                      {fr.division && <span class="bb__tile-sub">{fr.division}</span>}
-                      <span class="bb__tile-main">{fr.name}</span>
+                    <span class="brand__name">
+                      {fr.division && <span class="brand__city">{fr.division}</span>}
+                      <span class="brand__nick brand__nick--franchise">{fr.name}</span>
                     </span>
-                    {!fr.hasDarkCut && <span class="bb__flag">light only</span>}
+                    {!fr.hasDarkCut && <span class="brand__flag">light only</span>}
                   </a>
                 </li>
               );
@@ -175,7 +172,7 @@ const filesHref = leagueSlug ? resolveLeaguePath(`/${leagueSlug}/brand/files`, h
       )
     }
 
-    {franchises.length > 0 && <h2 class="bb__h2 brand__nfl-h2">NFL clubs</h2>}
+    {franchises.length > 0 && <h2 class="cb__h2 brand__nfl-h2">NFL clubs</h2>}
 
     <ul class="brand__grid">
       {
@@ -229,15 +226,22 @@ const filesHref = leagueSlug ? resolveLeaguePath(`/${leagueSlug}/brand/files`, h
      `!important` because the swap rule's specificity matches this one's and
      load order between the layout head and a scoped component style is not
      something to rely on. Pinned by tests/nfl-marks-page-data.test.ts. */
-  html.dark :global(.brand__art img),
-  html.dark :global(.bb__art img) {
+  html.dark :global(.brand__art img) {
     content: normal !important;
     filter: none !important;
   }
   /* …except the measured ring this page sets INLINE on the one franchise
      ground that needs it, which the blanket `filter: none` would strip. */
-  html.dark :global(.bb__art img[style*='drop-shadow']) {
+  html.dark :global(.brand__art img[style*='drop-shadow']) {
     filter: revert-layer !important;
+  }
+  /* A club nickname is one word; a franchise name is up to four ("Running Down
+     The Dream"), so the franchise tiles take a smaller, balanced line rather
+     than the nickname's size. Everything else about the tile is identical. */
+  .brand__nick--franchise {
+    font-size: 0.9rem;
+    line-height: 1.2;
+    text-wrap: balance;
   }
   .brand__nfl-h2 {
     margin-top: 2.5rem;

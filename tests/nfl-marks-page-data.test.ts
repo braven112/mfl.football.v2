@@ -150,15 +150,44 @@ describe('nfl-marks page data', () => {
     // Scoped to the surfaces that COMPARE cuts, never the whole page: the
     // roster list is ordinary site rendering and must keep the swap, or it
     // ships the light mark on a dark card — the bug the swap exists to fix.
+    // The club page's template — and this opt-out with it — moved into the
+    // SHARED stylesheet when the franchise half adopted it, so the rule is
+    // asserted at its new home. Unchanged in substance: same selectors, same
+    // `!important`, still scoped to the comparison surfaces. The index keeps
+    // its own scoped copy because its tiles are its own.
+    const sheet = readFileSync(
+      join(process.cwd(), 'src/styles/brand-book.css'),
+      'utf-8',
+    );
+    for (const sel of [
+      '.cb__hero img',
+      '.cb__film img',
+      '.cb__grounds img',
+      '.cb__eras img',
+      '.cb__situ .cb__pane.is-light img',
+      '.cb__situ .cb__pane.is-dark img',
+    ]) {
+      expect(sheet, `brand-book.css must opt ${sel} out of the swap`).toContain(
+        `html.dark ${sel}`,
+      );
+    }
+    expect(sheet).toMatch(/content: normal !important/);
+
+    // Every page that renders those surfaces must actually load the sheet —
+    // the opt-out is worthless to a page that does not import it.
+    for (const file of [
+      'src/components/shared/brand/ClubBrandPage.astro',
+      'src/components/shared/brand/FranchiseBrandPage.astro',
+      'src/components/shared/brand/BrandPage.astro',
+    ]) {
+      const src = readFileSync(join(process.cwd(), file), 'utf-8');
+      expect(src, `${file} must import the Brand Book stylesheet`).toContain(
+        'styles/brand-book.css',
+      );
+    }
+
     const OPTED_OUT: Record<string, string[]> = {
       'src/components/shared/brand/BrandPage.astro': ['.brand__art img'],
-      'src/components/shared/brand/ClubBrandPage.astro': [
-        '.cb__hero img',
-        '.cb__film img',
-        '.cb__grounds img',
-        '.cb__situ .cb__pane.is-light img',
-        '.cb__situ .cb__pane.is-dark img',
-      ],
     };
     for (const [file, selectors] of Object.entries(OPTED_OUT)) {
       const src = readFileSync(join(process.cwd(), file), 'utf-8');
