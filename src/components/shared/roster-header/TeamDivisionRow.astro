@@ -1,0 +1,255 @@
+---
+/**
+ * The roster header's team switcher: every club in the league as a crest,
+ * grouped by division, always open.
+ *
+ * Replaces TheLeague's expanding accordion and the AFL's `<select>` with one
+ * component, so the two leagues stop drifting. Each crest is a plain LINK, not
+ * a button — switching team is a navigation, so it must be bookmarkable,
+ * middle-clickable and reachable with JavaScript off. That also means this
+ * component ships no client script at all.
+ *
+ * Two marks, deliberately distinct: the club being VIEWED carries the ring
+ * (`aria-current="page"`), and the viewer's OWN club carries a dot. They are
+ * usually the same club and occasionally not, and when they differ the reader
+ * needs to find both.
+ */
+import type { HeaderGroup } from '../../../utils/roster-header-data';
+
+interface Props {
+  groups: HeaderGroup[];
+  /** The club whose roster is on screen. */
+  activeFranchiseId: string | null;
+  /** The viewer's own club, if they have one in THIS league. */
+  viewerFranchiseId: string | null;
+  /** Builds the href for one club's roster. */
+  teamHref: (franchiseId: string) => string;
+}
+
+const { groups, activeFranchiseId, viewerFranchiseId, teamHref } = Astro.props;
+
+// A conference rail is only meaningful when there is more than one to tell
+// apart; a single-table league renders the divisions with no outer label.
+const showConferences = groups.length > 1;
+---
+
+<nav class="rhdr-teams" aria-label="Switch team">
+  {groups.map((group) => (
+    <div class="rhdr-teams__conf">
+      {showConferences && group.conferenceName && (
+        <span
+          class:list={['rhdr-teams__conflabel', { 'is-mine': group.divisions.some((division) =>
+            division.teams.some((team) => team.franchiseId === viewerFranchiseId),
+          ) }]}
+          aria-label={group.conferenceName}
+          title={group.conferenceName}
+        >{group.conferenceShort ?? group.conferenceName}</span>
+      )}
+      <div class="rhdr-teams__divisions">
+        {group.divisions.map((division) => (
+          <div
+            class:list={['rhdr-teams__division', { 'has-active': division.teams.some(
+              (team) => team.franchiseId === activeFranchiseId,
+            ) }]}
+          >
+            <span class="rhdr-teams__divlabel">{division.name}</span>
+            <div class="rhdr-teams__crests">
+              {division.teams.map((team) => (
+                <a
+                  href={teamHref(team.franchiseId)}
+                  class="rhdr-teams__crest"
+                  data-mine={team.franchiseId === viewerFranchiseId ? 'true' : undefined}
+                  aria-current={team.franchiseId === activeFranchiseId ? 'page' : undefined}
+                >
+                  {team.icon ? (
+                    <img src={team.icon} alt="" width="32" height="32" loading="lazy" decoding="async" />
+                  ) : (
+                    <span class="rhdr-teams__fallback" aria-hidden="true">{team.shortName.slice(0, 2)}</span>
+                  )}
+                  {/* The accessible name, and the hover label. Never a `title`
+                      attribute: it does not surface on touch and reads late on
+                      a screen reader. */}
+                  <span class="rhdr-teams__name">
+                    {team.name}
+                    {team.franchiseId === viewerFranchiseId ? ' (your team)' : ''}
+                  </span>
+                </a>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  ))}
+</nav>
+
+<style>
+  .rhdr-teams {
+    display: flex;
+    align-items: stretch;
+    background: var(--content-bg-muted);
+    border-bottom: 1px solid var(--content-border-color);
+    /* 24 clubs plus six division labels exceed a desktop column, so the strip
+       scrolls sideways. Contained here, it never moves the page body. */
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+  }
+
+  .rhdr-teams__conf {
+    display: flex;
+    align-items: stretch;
+  }
+  .rhdr-teams__conf + .rhdr-teams__conf {
+    border-left: 3px solid var(--content-border-color);
+  }
+
+  .rhdr-teams__conflabel {
+    display: flex;
+    align-items: center;
+    flex: none;
+    padding: 0 0.6rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-white, #fff);
+    /* Neutral by default; the viewer's OWN conference takes the accent below.
+       These were the other way round at first, which read backwards — the half
+       of the row that is yours was the quiet one. */
+    background: var(--content-text-muted);
+    justify-content: center;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    /* The short code always fits the row's height; clip rather than spill if a
+       future league ever carries a longer one. */
+    overflow: hidden;
+  }
+  /* The viewer's own conference carries the accent, so the half of the row
+     that is theirs is findable without reading either label. */
+  .rhdr-teams__conflabel.is-mine {
+    background: var(--color-accent);
+  }
+
+  .rhdr-teams__divisions {
+    display: flex;
+    align-items: stretch;
+  }
+
+  .rhdr-teams__division {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    padding: 0.5rem 0.875rem;
+    border-right: 1px solid var(--content-border-color);
+  }
+  .rhdr-teams__division:last-child { border-right: 0; }
+
+  .rhdr-teams__divlabel {
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    text-align: center;
+    color: var(--content-text-muted);
+  }
+  .rhdr-teams__division.has-active .rhdr-teams__divlabel {
+    color: var(--color-accent);
+  }
+
+  .rhdr-teams__crests {
+    display: flex;
+    gap: 0.375rem;
+  }
+
+  .rhdr-teams__crest {
+    position: relative;
+    display: block;
+    line-height: 0;
+    border-radius: 50%;
+    text-decoration: none;
+    transition: transform 0.14s ease;
+  }
+  .rhdr-teams__crest img,
+  .rhdr-teams__fallback {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: contain;
+    /* Dimmed at rest so the row sits behind the scoreboard rather than
+       competing with it; full strength on hover and for the active club. */
+    opacity: 0.56;
+    transition: opacity 0.14s ease;
+  }
+  .rhdr-teams__fallback {
+    display: grid;
+    place-items: center;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    line-height: 1;
+    text-transform: uppercase;
+    color: var(--content-text-muted);
+    background: var(--color-surface-3);
+  }
+
+  .rhdr-teams__crest:hover { transform: translateY(-2px); }
+  .rhdr-teams__crest:hover img,
+  .rhdr-teams__crest:hover .rhdr-teams__fallback { opacity: 1; }
+
+  .rhdr-teams__crest[aria-current='page'] img,
+  .rhdr-teams__crest[aria-current='page'] .rhdr-teams__fallback {
+    opacity: 1;
+    box-shadow:
+      0 0 0 2px var(--content-bg-muted),
+      0 0 0 4px var(--color-accent);
+  }
+
+  .rhdr-teams__crest[data-mine='true'] img,
+  .rhdr-teams__crest[data-mine='true'] .rhdr-teams__fallback { opacity: 1; }
+  .rhdr-teams__crest[data-mine='true']::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: -5px;
+    transform: translateX(-50%);
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--color-accent);
+  }
+
+  .rhdr-teams__crest:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+  }
+
+  /* The club name is the link's accessible name and its hover label. Clipped
+     rather than `display:none` so assistive tech still reads it. */
+  .rhdr-teams__name {
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 7px);
+    transform: translateX(-50%);
+    z-index: 5;
+    padding: 0.25rem 0.5rem;
+    border-radius: 5px;
+    font-size: 0.72rem;
+    line-height: 1.3;
+    white-space: nowrap;
+    color: var(--card-surface);
+    background: var(--page-text);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.12s ease;
+  }
+  .rhdr-teams__crest:hover .rhdr-teams__name,
+  .rhdr-teams__crest:focus-visible .rhdr-teams__name { opacity: 1; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rhdr-teams__crest,
+    .rhdr-teams__crest img,
+    .rhdr-teams__fallback,
+    .rhdr-teams__name { transition: none; }
+    .rhdr-teams__crest:hover { transform: none; }
+  }
+</style>

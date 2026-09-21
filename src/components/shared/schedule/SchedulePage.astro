@@ -47,6 +47,7 @@ import {
   opponentsByWeek,
   parseWeeklySchedule,
 } from '../../../utils/schedule-data.mjs';
+import { standingsRowsOf, summarizeStandings } from '../../../utils/standings-summary';
 import { resolveHeroFranchiseSkin } from '../../../utils/hero-crest';
 import '../../../styles/hero-franchise-backdrop.css';
 
@@ -173,58 +174,29 @@ const abbrevOf = (id: string) => {
 const iconOf = (id: string) => teamById.get(id)?.icon ?? null;
 
 // MFL's standings order IS the standing — never re-sorted here.
-const standingsRows: any[] = (() => {
-  const feed: any = standingsByYear.get(year);
-  const rows = feed?.leagueStandings?.franchise;
-  return Array.isArray(rows) ? rows : rows ? [rows] : [];
-})();
-const recordOf = new Map<string, string>();
-const pointsForOf = new Map<string, number>();
-standingsRows.forEach((row: any) => {
-  const id = String(row?.id ?? '');
-  if (!id) return;
-  // MFL writes W-L-T; the tie segment is noise in a league that rarely ties,
-  // so it is shown only when there is one.
-  if (row?.h2hwlt) {
-    const [w = '0', l = '0', t = '0'] = String(row.h2hwlt).split('-');
-    recordOf.set(id, Number(t) > 0 ? `${w}-${l}-${t}` : `${w}-${l}`);
-  }
-  const pf = Number(row?.pf);
-  if (Number.isFinite(pf)) pointsForOf.set(id, pf);
-});
-
 const conferences: { name: string; code: string }[] = Array.isArray(config.conferences) ? config.conferences : [];
 const conferenceOf = (id: string) => String(teamById.get(id)?.conference ?? '');
 
 /**
- * Rank within the group this page actually shows, taken by FILTERING MFL's
- * order rather than re-sorting it — the order already carries the
- * constitution's tiebreakers.
- *
- * The AFL seeds by conference, and this page groups its grid the same way, so
- * a league-wide index is the wrong number twice over: franchise 0008 finished
- * 1st in the American League and reads 3rd of 24 against the full list, and
- * the AL block's rank column would run 3, 5, 6, 7, 9. TheLeague has one table
- * and keeps the league-wide index.
+ * Record, points for and seeded rank all come from `summarizeStandings` —
+ * the one implementation, shared with the roster header. It filters MFL's
+ * order rather than re-sorting it, and scopes rank to the conference in a
+ * league that seeds by conference. See utils/standings-summary.ts.
  */
-const rankOf = new Map<string, number>();
-const groupSizeOf = new Map<string, number>();
-if (conferences.length > 1) {
-  for (const conference of conferences) {
-    const inConference = standingsRows.filter((row: any) => conferenceOf(String(row?.id ?? '')) === conference.code);
-    inConference.forEach((row: any, index: number) => {
-      const id = String(row?.id ?? '');
-      rankOf.set(id, index + 1);
-      groupSizeOf.set(id, inConference.length);
-    });
-  }
-} else {
-  standingsRows.forEach((row: any, index: number) => {
-    const id = String(row?.id ?? '');
-    rankOf.set(id, index + 1);
-    groupSizeOf.set(id, standingsRows.length);
-  });
-}
+const standingsRows: any[] = standingsRowsOf(standingsByYear.get(year));
+const standingOf = summarizeStandings(standingsByYear.get(year), conferences, conferenceOf);
+const recordOf = new Map<string, string>(
+  [...standingOf].flatMap(([id, s]) => (s.record ? [[id, s.record] as [string, string]] : [])),
+);
+const pointsForOf = new Map<string, number>(
+  [...standingOf].flatMap(([id, s]) => (s.pointsFor != null ? [[id, s.pointsFor] as [string, number]] : [])),
+);
+const rankOf = new Map<string, number>(
+  [...standingOf].flatMap(([id, s]) => (s.rank != null ? [[id, s.rank] as [string, number]] : [])),
+);
+const groupSizeOf = new Map<string, number>(
+  [...standingOf].flatMap(([id, s]) => (s.groupSize != null ? [[id, s.groupSize] as [string, number]] : [])),
+);
 
 const viewParam = Astro.url.searchParams.get('view');
 const canSeeMine = Boolean(viewerFranchiseId);
@@ -542,7 +514,15 @@ const heroSkin =
                 </span>
               </div>
               {group.rows.map((row) => (
-                <div class:list={['sch-row', { 'is-now': !row.played && row.week === currentWeek }]}>
+                /* Deep-link target. `showWeek` is true only on the FIRST row of
+                   a week, which is what keeps `week-N` unique when a
+                   doubleheader puts two rows in the same week. Only one of the
+                   two views renders per request, so the grid's headers below
+                   can carry the same ids without colliding. */
+                <div
+                  id={row.showWeek ? `week-${row.week}` : undefined}
+                  class:list={['sch-row', { 'is-now': !row.played && row.week === currentWeek }]}
+                >
                   <div class="sch-row__week">
                     <span class="sch-row__weeknum">{row.showWeek ? row.week : ''}</span>
                     <span class="sch-row__date">{row.showWeek ? row.date.short : ''}</span>
@@ -602,6 +582,7 @@ const heroSkin =
                   <th scope="col" class="sch-grid__club">Club</th>
                   {weekNumbers.map((week) => (
                     <th
+                      id={`week-${week}`}
                       scope="col"
                       class:list={['sch-grid__wk', { 'is-now': week === currentWeek, 'is-playoff': week >= PLAYOFFS_START_WEEK }]}
                     >
@@ -1079,6 +1060,13 @@ const heroSkin =
   }
   .sch-month__rule { flex: 1; height: 1px; background: var(--table-border, #e2e8f0); }
   .sch-month__meta { font-size: 0.6875rem; color: var(--content-text-muted, #6b7280); }
+
+  /* An anchored row must not land under the site's sticky header. Both deep
+     link targets carry it; 96px clears the header at every breakpoint. */
+  .sch-row[id],
+  .sch-grid__wk[id] {
+    scroll-margin-block-start: 96px;
+  }
 
   .sch-row {
     display: flex;

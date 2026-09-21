@@ -1,0 +1,319 @@
+---
+/**
+ * The scoreboard strip under the roster nameplate: last result, next game, and
+ * the season rail — the three things a roster page cannot answer on its own.
+ *
+ * Deliberately on the site's OWN surface rather than on the club's colour: the
+ * two tiles each carry an opponent's crest, and a franchise gradient behind
+ * two foreign crests and two scores is where legibility goes. The colour stops
+ * at the nameplate above.
+ *
+ * Every element here is a link into `/schedule`. The tiles open their own
+ * week; each rail dot opens the week it represents; the section link opens the
+ * page with no anchor. Ships no client script.
+ */
+import type { RailWeek } from '../../../utils/roster-header-data';
+
+interface HeaderGame {
+  week: number;
+  opponentId: string;
+  isHome: boolean;
+  played: boolean;
+  score: number | null;
+  opponentScore: number | null;
+  outcome: 'W' | 'L' | 'T' | null;
+}
+
+interface Props {
+  lastResult: HeaderGame | null;
+  nextGame: HeaderGame | null;
+  rail: RailWeek[];
+  currentWeek: number;
+  nameOf: (franchiseId: string) => string;
+  iconOf: (franchiseId: string) => string | null;
+  recordOf: (franchiseId: string) => string | null;
+  /** Week-anchored schedule href; omit the week for the page itself. */
+  scheduleHref: (week?: number) => string;
+  /** Kickoff text for the next game, already in the viewer's clock. */
+  nextKickoff?: string | null;
+}
+
+const {
+  lastResult,
+  nextGame,
+  rail,
+  currentWeek,
+  nameOf,
+  iconOf,
+  recordOf,
+  scheduleHref,
+  nextKickoff = null,
+} = Astro.props;
+
+const firstWeek = rail.length > 0 ? rail[0].week : null;
+const lastWeek = rail.length > 0 ? rail[rail.length - 1].week : null;
+
+const marginOf = (game: HeaderGame) =>
+  game.score != null && game.opponentScore != null ? game.score - game.opponentScore : null;
+
+/** Week N · Won 128.4 to 111.2 vs Club — the dot's accessible name. */
+function railLabel(entry: RailWeek): string {
+  if (!entry.opponentId) return `Week ${entry.week}, bye week. Open on the schedule.`;
+  const who = nameOf(entry.opponentId);
+  if (entry.played) {
+    const verb = entry.outcome === 'W' ? 'Won' : entry.outcome === 'L' ? 'Lost' : 'Tied';
+    return `Week ${entry.week}, ${verb} against ${who}. Open on the schedule.`;
+  }
+  return `Week ${entry.week}, ${who}, not played. Open on the schedule.`;
+}
+---
+
+<div class="rhdr-bar">
+  {lastResult ? (
+    <a class="rhdr-tile" href={scheduleHref(lastResult.week)}>
+      {iconOf(lastResult.opponentId) && (
+        <img src={iconOf(lastResult.opponentId)!} alt="" width="38" height="38" class="rhdr-tile__crest" loading="lazy" decoding="async" />
+      )}
+      <span class="rhdr-tile__body">
+        <span class="rhdr-tile__kicker">Week {lastResult.week} · Final</span>
+        <span class="rhdr-tile__line">
+          <span class:list={['rhdr-tile__result', {
+            'is-win': lastResult.outcome === 'W',
+            'is-loss': lastResult.outcome === 'L',
+          }]}>{lastResult.outcome ?? '–'}</span>
+          <span class="rhdr-tile__score">
+            {lastResult.score?.toFixed(1)} – {lastResult.opponentScore?.toFixed(1)}
+          </span>
+        </span>
+        <span class="rhdr-tile__sub">
+          {lastResult.isHome ? 'vs' : 'at'} {nameOf(lastResult.opponentId)}
+          {marginOf(lastResult) != null && (
+            <> · {marginOf(lastResult)! > 0 ? '+' : ''}{marginOf(lastResult)!.toFixed(1)}</>
+          )}
+        </span>
+      </span>
+    </a>
+  ) : (
+    <div class="rhdr-tile rhdr-tile--empty">
+      <span class="rhdr-tile__body">
+        <span class="rhdr-tile__kicker">Last result</span>
+        <span class="rhdr-tile__sub">No games played yet this season.</span>
+      </span>
+    </div>
+  )}
+
+  {nextGame ? (
+    <a class="rhdr-tile" href={scheduleHref(nextGame.week)}>
+      {iconOf(nextGame.opponentId) && (
+        <img src={iconOf(nextGame.opponentId)!} alt="" width="38" height="38" class="rhdr-tile__crest" loading="lazy" decoding="async" />
+      )}
+      <span class="rhdr-tile__body">
+        <span class="rhdr-tile__kicker">
+          Week {nextGame.week} · {nextGame.week === currentWeek ? 'This week' : 'Up next'}
+        </span>
+        <span class="rhdr-tile__line">
+          <span class="rhdr-tile__when">{nextKickoff ?? `${nextGame.isHome ? 'vs' : 'at'} ${nameOf(nextGame.opponentId)}`}</span>
+        </span>
+        <span class="rhdr-tile__sub">
+          {nextKickoff ? <>{nextGame.isHome ? 'vs' : 'at'} {nameOf(nextGame.opponentId)}</> : nameOf(nextGame.opponentId)}
+          {recordOf(nextGame.opponentId) && <> · {recordOf(nextGame.opponentId)}</>}
+        </span>
+      </span>
+    </a>
+  ) : (
+    <div class="rhdr-tile rhdr-tile--empty">
+      <span class="rhdr-tile__body">
+        <span class="rhdr-tile__kicker">Up next</span>
+        <span class="rhdr-tile__sub">The regular season is over.</span>
+      </span>
+    </div>
+  )}
+
+  {rail.length > 0 && (
+    <div class="rhdr-rail">
+      <div class="rhdr-rail__head">
+        <span class="rhdr-rail__title">Season</span>
+        <a class="rhdr-rail__cta" href={scheduleHref()}>Full schedule &amp; scores →</a>
+      </div>
+      <div class="rhdr-rail__dots">
+        {rail.map((entry) => (
+          <a
+            class:list={['rhdr-rail__dot', {
+              'is-win': entry.played && entry.outcome === 'W',
+              'is-loss': entry.played && entry.outcome === 'L',
+              'is-tie': entry.played && entry.outcome === 'T',
+              'is-now': !entry.played && entry.isCurrent,
+              'is-future': !entry.played && !entry.isCurrent,
+            }]}
+            href={scheduleHref(entry.week)}
+            aria-label={railLabel(entry)}
+          ><span class="rhdr-rail__mark" aria-hidden="true"></span></a>
+        ))}
+      </div>
+      <div class="rhdr-rail__scale">
+        <span>Wk {firstWeek}</span>
+        <span class="rhdr-rail__now">Wk {currentWeek}</span>
+        <span>Wk {lastWeek}</span>
+      </div>
+    </div>
+  )}
+</div>
+
+<style>
+  .rhdr-bar {
+    display: grid;
+    grid-template-columns: 1fr 1fr minmax(232px, auto);
+    gap: 1px;
+    background: var(--content-border-color);
+    border-bottom: 1px solid var(--content-border-color);
+  }
+  @media (max-width: 860px) {
+    .rhdr-bar { grid-template-columns: 1fr; }
+  }
+
+  .rhdr-tile {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    min-width: 0;
+    padding: 0.75rem 1rem;
+    background: var(--card-surface);
+    color: inherit;
+    text-decoration: none;
+    transition: background 0.14s ease;
+  }
+  a.rhdr-tile:hover { background: var(--content-bg-muted); }
+  a.rhdr-tile:focus-visible {
+    outline: 2px solid var(--color-accent, #1c497c);
+    outline-offset: -2px;
+  }
+
+  .rhdr-tile__crest { flex: none; border-radius: 50%; object-fit: contain; }
+  .rhdr-tile__body { display: flex; flex-direction: column; min-width: 0; }
+
+  .rhdr-tile__kicker {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--content-text-muted);
+  }
+  .rhdr-tile__line {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin-top: 0.15rem;
+  }
+  .rhdr-tile__result {
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--content-text-muted);
+  }
+  .rhdr-tile__result.is-win { color: var(--color-success, #1c7a4c); }
+  .rhdr-tile__result.is-loss { color: var(--color-error); }
+
+  .rhdr-tile__score,
+  .rhdr-tile__when {
+    font-size: 1.05rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--page-text);
+  }
+  .rhdr-tile--empty .rhdr-tile__sub { white-space: normal; }
+
+  /* ── the season rail ── */
+  .rhdr-rail {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.4rem;
+    min-width: 0;
+    padding: 0.7rem 1rem;
+    background: var(--card-surface);
+  }
+
+  .rhdr-rail__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.6rem;
+  }
+  .rhdr-rail__title {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--content-text-muted);
+  }
+  .rhdr-rail__cta {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--color-accent, #1c497c);
+    text-decoration: none;
+  }
+  .rhdr-rail__cta:hover { text-decoration: underline; }
+
+  .rhdr-rail__dots { display: flex; gap: 3px; align-items: stretch; }
+
+  /* The LINK is 24px tall so it clears the touch-target minimum; the visible
+     bar inside it is 13px. Sizing the link to the bar would have shipped a
+     17-target row of 13px hit areas directly above a scrolling data table. */
+  .rhdr-rail__dot {
+    flex: 1;
+    min-width: 7px;
+    display: flex;
+    align-items: center;
+    height: 24px;
+    text-decoration: none;
+    border-radius: 3px;
+  }
+  .rhdr-rail__mark {
+    display: block;
+    width: 100%;
+    height: 13px;
+    border-radius: 7px;
+    background: var(--color-surface-3);
+    transition: transform 0.13s ease;
+  }
+
+  .rhdr-rail__dot.is-win .rhdr-rail__mark { background: var(--color-success, #1c7a4c); }
+  .rhdr-rail__dot.is-loss .rhdr-rail__mark { background: var(--color-error); }
+  .rhdr-rail__dot.is-tie .rhdr-rail__mark { background: var(--content-text-muted); }
+  .rhdr-rail__dot.is-now .rhdr-rail__mark {
+    background: var(--color-accent, #1c497c);
+    box-shadow: 0 0 0 2px var(--content-bg-muted);
+  }
+  /* A week not yet played is an outline, never a fill — a filled neutral
+     reads as a result whose colour simply failed to load. */
+  .rhdr-rail__dot.is-future .rhdr-rail__mark {
+    background: transparent;
+    border: 1px dashed var(--content-border-color);
+  }
+
+  .rhdr-rail__dot:hover .rhdr-rail__mark { transform: scaleY(1.32); }
+  .rhdr-rail__dot:focus-visible {
+    outline: 2px solid var(--color-accent, #1c497c);
+    outline-offset: 1px;
+  }
+
+  .rhdr-rail__scale {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.65rem;
+    font-weight: 500;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--content-text-muted);
+  }
+  .rhdr-rail__now { color: var(--color-accent, #1c497c); font-weight: 600; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rhdr-tile,
+    .rhdr-rail__mark { transition: none; }
+    .rhdr-rail__dot:hover .rhdr-rail__mark { transform: none; }
+  }
+</style>

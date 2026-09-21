@@ -1,21 +1,21 @@
 /**
- * The roster page's team-navigation chevron under the ClientRouter.
+ * The roster page's controls under the ClientRouter.
  *
- * The chevron above the roster table expands the accordion holding all 16
- * teams — it is how an owner gets from their own roster to anyone else's.
- * Its wiring lived in a module-scope IIFE inside the page's BUNDLED
- * `<script>`, and Astro evaluates such a script once per browser session:
- * ClientRouter keys `scriptsAlreadyRan` on it and swaps the DOM underneath.
- * So the click handler was bound on the first visit to the page and never
- * again — every later arrival got a fresh button with no handler, and the
- * team list would not open until the owner hard-refreshed. Nothing threw,
- * and the rest of the page kept working because `initRosterPage` IS bound
- * to `astro:page-load`.
+ * The original bug: the team-navigation chevron expanded an accordion holding
+ * all 16 teams, and its wiring lived in a module-scope IIFE inside the page's
+ * BUNDLED `<script>`. Astro evaluates such a script once per browser session —
+ * ClientRouter keys `scriptsAlreadyRan` on it and swaps the DOM underneath —
+ * so the handler bound on the first visit and never again. Every later arrival
+ * got a fresh button with no handler, and the team list would not open until
+ * the owner hard-refreshed. Nothing threw, because `initRosterPage` IS bound
+ * to `astro:page-load`; only the chevron was dead.
  *
- * Measured with a real browser against the dev server (first load, in-site
- * navigation away and back): pre-fix the second visit's click left
- * `aria-expanded="false"` and the content `collapsed`; post-fix both visits
- * expand.
+ * That chevron is now retired. The team switcher is a row of plain LINKS in a
+ * shared component (components/shared/roster-header/TeamDivisionRow.astro),
+ * which is what the first block below pins: a control that ships no client
+ * script cannot be bound once per session, so the whole bug class is gone
+ * rather than guarded. The rule itself still has teeth for the contract-action
+ * buttons, which remain in the bundled script — so those cases are unchanged.
  */
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
@@ -53,30 +53,39 @@ const expectCalledFromInit = (fn: string) => {
     .not.toMatch(new RegExp(`^ {0,2}${fn}\\(\\);$`, 'm'));
 };
 
+const TEAM_ROW = fs.readFileSync(
+  path.join(process.cwd(), 'src/components/shared/roster-header/TeamDivisionRow.astro'),
+  'utf-8',
+);
+
+describe('the team switcher needs no client script at all', () => {
+  it('ships no <script> — the bug class is removed, not guarded', () => {
+    expect(TEAM_ROW, 'a scriptless control cannot be bound once per session')
+      .not.toMatch(/<script/);
+  });
+
+  it('switches team with links, so it works before hydration and is shareable', () => {
+    // Anchors, not buttons: a team switch is a navigation. The ClientRouter
+    // soft-swaps the document, so this stays cheap while the URL — and
+    // therefore the SSR header beside it — always matches the table below.
+    expect(TEAM_ROW).toMatch(/<a\s+href=\{teamHref\(/);
+    expect(TEAM_ROW, 'a button would need JS and would not be linkable')
+      .not.toMatch(/<button[^>]*data-team-id/);
+  });
+
+  it('is gone from the roster page, accordion and all', () => {
+    for (const dead of ['initTeamNavAccordion', 'team-icon-btn', "data-accordion-toggle=\"team-nav\""]) {
+      expect(PAGE, `${dead} should have retired with the old team card`).not.toContain(dead);
+    }
+  });
+});
+
 describe('the roster page binds its controls per page load, not per session', () => {
   it('is not wired by a module-scope IIFE', () => {
     expect(
       PAGE,
       'a module-scope IIFE runs once per session, not once per page load',
-    ).not.toMatch(/\(function initTeamNavAccordion\s*\(/);
-  });
-
-  it('is called from initRosterPage(), which astro:page-load re-runs', () => {
-    const defineAt = PAGE.indexOf('const initTeamNavAccordion =');
-    expect(defineAt, 'the accordion wiring must be a callable function').toBeGreaterThan(-1);
-
-    expectCalledFromInit('initTeamNavAccordion');
-    expect(PAGE).toContain("document.addEventListener('astro:page-load', initRosterPage)");
-  });
-
-  it('assigns its handlers rather than adding them', () => {
-    // initRosterPage runs twice on the initial load ("Initial-Load
-    // Double-Init", docs/claude/insights/domains/frontend.md), so an added
-    // listener would stack and every click would toggle the accordion twice —
-    // i.e. open and immediately close it.
-    expect(PAGE).toContain('toggleButton.onclick = toggleAccordion;');
-    expect(PAGE, 'a stacked click listener toggles twice per click')
-      .not.toMatch(/toggleButton\.addEventListener\(/);
+    ).not.toMatch(/\(function init\w+\s*\(/);
   });
 
   it('wires the contract-action buttons the same way', () => {

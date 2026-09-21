@@ -129,6 +129,30 @@ export function findNextGame(schedule, fromWeek = 1) {
 }
 
 /**
+ * The most recent game that HAS been played, at or before `beforeWeek`.
+ *
+ * The mirror of `findNextGame`, and the other half of what a roster header
+ * shows: last result on one side, next opponent on the other. Returns null
+ * before a club's first game of the season — the caller decides what to show
+ * instead, exactly as with `findNextGame`.
+ *
+ * Walks weeks newest-first, and within a week takes the LAST played game
+ * rather than the first: a doubleheader week holds two games, and the later
+ * one is the more recent result. Iterating forward and keeping the final
+ * match would work too, but this stops at the first hit on a full season.
+ */
+export function findLastResult(schedule, beforeWeek = Infinity) {
+  for (let i = schedule.length - 1; i >= 0; i -= 1) {
+    const { week, games } = schedule[i];
+    if (week > beforeWeek) continue;
+    for (let j = games.length - 1; j >= 0; j -= 1) {
+      if (games[j].played) return games[j];
+    }
+  }
+  return null;
+}
+
+/**
  * Grid source: franchise id → week number → the opponents it faces that week.
  *
  * The inner value is an array for the same doubleheader reason; a grid cell

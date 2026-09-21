@@ -10,6 +10,7 @@ import {
   getAllTeams,
   sameConference,
   getTeamsGroupedByConference,
+  conferenceOrder,
   filterByConference,
 } from '../src/utils/afl-conference';
 
@@ -87,5 +88,41 @@ describe('afl-conference', () => {
 
     const itemsById = [{ id: '0001' }, { id: '0014' }];
     expect(filterByConference(itemsById, '00')).toEqual([{ id: '0001' }]);
+  });
+});
+
+/**
+ * The roster header's team switcher leads with the VIEWER's own conference.
+ * Two things are load-bearing and neither is visible from the call site:
+ * a viewer who has chosen nothing must see the historical AL-then-NL order,
+ * and the argument is the viewer's conference rather than the conference of
+ * the club being viewed — otherwise the row reshuffles on every team switch.
+ */
+describe('conference order leads with the viewer’s own', () => {
+  it('puts the National League first for an NL viewer', () => {
+    expect(conferenceOrder('01')).toEqual(['01', '00']);
+    expect(getTeamsGroupedByConference('01').map((g) => g.conferenceId)).toEqual(['01', '00']);
+  });
+
+  it('puts the American League first for an AL viewer', () => {
+    expect(conferenceOrder('00')).toEqual(['00', '01']);
+    expect(getTeamsGroupedByConference('00').map((g) => g.conferenceId)).toEqual(['00', '01']);
+  });
+
+  it('keeps the historical AL-first order for a viewer with no conference', () => {
+    // Signed out, or signed into the other league: franchiseIdForLeague
+    // returns null and the caller passes it straight through.
+    for (const none of [undefined, null]) {
+      expect(conferenceOrder(none)).toEqual(['00', '01']);
+      expect(getTeamsGroupedByConference(none).map((g) => g.conferenceId)).toEqual(['00', '01']);
+    }
+  });
+
+  it('never drops or duplicates a club, whichever order it returns', () => {
+    for (const viewer of ['00', '01', null] as const) {
+      const ids = getTeamsGroupedByConference(viewer).flatMap((g) => g.teams.map((t) => t.franchiseId));
+      expect(ids).toHaveLength(getAllTeams().length);
+      expect(new Set(ids).size).toBe(ids.length);
+    }
   });
 });

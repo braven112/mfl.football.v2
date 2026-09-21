@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
+  findLastResult,
   findNextGame,
   franchiseSchedule,
   opponentsByWeek,
@@ -299,5 +300,99 @@ describe('opponentsByWeek carries the score from the row club\'s side', () => {
       outcome: null,
     });
     expect(cell.get('0002')?.get(1)?.[0]).toMatchObject({ played: false, score: null, opponentScore: null });
+  });
+});
+
+
+/**
+ * `findLastResult` is the mirror of `findNextGame` and the other half of what
+ * the roster header shows. The cases that matter are the ones where "most
+ * recent" is ambiguous: an unplayed game must never count as a result, and a
+ * doubleheader week holds two.
+ */
+describe('findLastResult', () => {
+  const season = {
+    schedule: {
+      weeklySchedule: [
+        {
+          week: '1',
+          matchup: [
+            {
+              franchise: [
+                { id: '0001', isHome: '1', result: 'W', score: '120.5' },
+                { id: '0002', isHome: '0', result: 'L', score: '99.0' },
+              ],
+            },
+          ],
+        },
+        {
+          week: '2',
+          matchup: [
+            // A doubleheader: the LATER game is the more recent result.
+            {
+              franchise: [
+                { id: '0001', isHome: '0', result: 'L', score: '88.0' },
+                { id: '0003', isHome: '1', result: 'W', score: '101.0' },
+              ],
+            },
+            {
+              franchise: [
+                { id: '0001', isHome: '1', result: 'W', score: '140.0' },
+                { id: '0004', isHome: '0', result: 'L', score: '112.0' },
+              ],
+            },
+          ],
+        },
+        {
+          // Not kicked off — MFL stamps `result: "T"` with no score.
+          week: '3',
+          matchup: [
+            {
+              franchise: [
+                { id: '0001', isHome: '1', result: 'T' },
+                { id: '0002', isHome: '0', result: 'T' },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  };
+  const schedule = franchiseSchedule(parseWeeklySchedule(season), '0001');
+
+  it('skips the unplayed week and returns the last real result', () => {
+    expect(findLastResult(schedule)).toMatchObject({ week: 2, played: true, outcome: 'W' });
+  });
+
+  it('takes the later game of a doubleheader week', () => {
+    expect(findLastResult(schedule)).toMatchObject({ opponentId: '0004', score: 140 });
+  });
+
+  it('respects the beforeWeek bound', () => {
+    expect(findLastResult(schedule, 1)).toMatchObject({ week: 1, opponentId: '0002' });
+  });
+
+  it('is null before a club has played at all', () => {
+    const unplayedOnly = franchiseSchedule(
+      parseWeeklySchedule({
+        schedule: {
+          weeklySchedule: [
+            {
+              week: '1',
+              matchup: [
+                {
+                  franchise: [
+                    { id: '0001', isHome: '1', result: 'T' },
+                    { id: '0002', isHome: '0', result: 'T' },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      }),
+      '0001',
+    );
+    expect(findLastResult(unplayedOnly)).toBeNull();
   });
 });

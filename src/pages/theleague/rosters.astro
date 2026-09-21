@@ -1,6 +1,16 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import FrontOfficeNav from '../../components/shared/front-office-nav/FrontOfficeNav.astro';
+import RosterHeader from '../../components/shared/roster-header/RosterHeader.astro';
+import { buildSeasonRail, buildTeamGroups } from '../../utils/roster-header-data';
+import { summarizeStandings } from '../../utils/standings-summary';
+import {
+  findLastResult,
+  findNextGame,
+  franchiseSchedule,
+  parseWeeklySchedule,
+} from '../../utils/schedule-data.mjs';
+import theLeagueConfig from '../../data/theleague.config.json';
 import CollegeLogoDarkStyles from '../../components/CollegeLogoDarkStyles.astro';
 import { resolveLeaguePath } from '../../utils/nav-utils';
 import leagueAssets from '../../data/theleague.assets.json';
@@ -485,6 +495,12 @@ const leagueFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/20{2[5-9
 const standingsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/standings.json', {
   eager: true,
 });
+// The roster header's gameday bar. Keyed by the LEAGUE year, like every feed
+// directory here — it rolls in February, not at Labor Day.
+const headerScheduleFeeds = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/schedule.json',
+  { eager: true, import: 'default' }
+);
 const playersFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/players.json', {
   eager: true,
 });
@@ -2053,6 +2069,38 @@ const serializedConfig = JSON.stringify({
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
+/* ── Roster header: nameplate, gameday bar, team switcher ─────────────────
+   Assembled here, not in the component: a static import specifier cannot be a
+   runtime variable, so globbing both leagues' feeds inside the shared header
+   would ship the other league's season on every render of either route. */
+const headerSchedule = parseWeeklySchedule(
+  headerScheduleFeeds[`../../../data/theleague/mfl-feeds/${defaultSeason}/schedule.json`]
+);
+const headerStandingsFeed = getModuleData(
+  standingsFeeds[`../../../data/theleague/mfl-feeds/${defaultSeason}/standings.json`]
+);
+// TheLeague runs one table, so `conferences` is empty and rank is league-wide.
+const headerStandings = summarizeStandings(headerStandingsFeed);
+
+const headerOwnSchedule = franchiseSchedule(headerSchedule, defaultTeamId);
+const headerRail = buildSeasonRail(
+  headerOwnSchedule,
+  headerSchedule.map((entry: { week: number }) => entry.week),
+  currentWeekNum
+);
+const headerGroups = buildTeamGroups({
+  teams: theLeagueConfig.teams,
+  conferences: null,
+  divisions: theLeagueConfig.divisions,
+});
+const headerTeamById = new Map(teamsList.map((team: any) => [team.id, team]));
+const headerNameOf = (id: string) => headerTeamById.get(id)?.name ?? 'Franchise';
+const headerIconOf = (id: string) => headerTeamById.get(id)?.icon ?? null;
+
+const headerCapSpace = initialCapLimit - (initialTeamData?.totals?.totalSalary ?? 0);
+const headerMoney = (n: number) =>
+  `${n < 0 ? '-' : ''}$${Math.abs(Math.round(n)).toLocaleString('en-US')}`;
+
 // Owner activity data for "last seen" indicators
 let ownerActivityMap: Record<string, number> = {};
 try {
@@ -2074,106 +2122,34 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
   <FrontOfficeNav leagueSlug="theleague" current={frontOfficeCurrent} crumb={frontOfficeCrumb} bare />
   <CollegeLogoDarkStyles />
   <section class="roster-page">
-    <!-- Team Header Card (separate from content) -->
-      <div class="team-card" data-team-identity>
-        {teamLookup[defaultTeamId]?.icon && (
-          <img
-            src={teamLookup[defaultTeamId]?.icon}
-            alt={`${teamLookup[defaultTeamId]?.name ?? 'Team'} icon`}
-          />
-        )}
-        <div>
-          <p class="team-card__label" data-view-label>Roster & Salary Cap</p>
-          <h2 data-team-name>
-            {teamLookup[defaultTeamId]?.name ?? 'Franchise'}
-          </h2>
-          <p data-team-meta>
-            {teamLookup[defaultTeamId]?.division ?? 'Independent'}
-          </p>
-          <p
-            class="team-card__last-seen"
-            data-last-seen
-            data-level={defaultActivityLevel}
-            aria-label={`Last active: ${defaultLastSeenText}`}
-          >
-            <span class="last-seen-dot" aria-hidden="true"></span>
-            <span data-last-seen-text>{defaultLastSeenText}</span>
-          </p>
-        </div>
-        <div class="team-card__actions">
-          <div class="view-tabs">
-            <button class="view-tab" data-view="roster" data-active="true" aria-label="Roster View" title="Roster View">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
-                <use href={`${spriteUrl}#icon-banknote`}></use>
-              </svg>
-              <span class="view-tab__label">Roster</span>
-            </button>
-            <button class="view-tab" data-view="analytics" data-active="false" aria-label="Analytics View" title="Analytics View">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
-                <use href={`${spriteUrl}#icon-bar-chart`}></use>
-              </svg>
-              <span class="view-tab__label">Analytics</span>
-            </button>
-            <button class="view-tab" data-view="nextyear" data-active="false" aria-label="League Planner" title="League Planner">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
-                <use href={`${spriteUrl}#icon-chalkboard`}></use>
-              </svg>
-              <span class="view-tab__label">Planner</span>
-            </button>
-          </div>
-        </div>
-        <div class="team-card__navigation">
-          <button
-            class="team-nav-toggle"
-            data-accordion-toggle="team-nav"
-            aria-expanded="false"
-            aria-controls="team-nav-content"
-            aria-label="Toggle team navigation"
-          >
-            <div class="team-nav-toggle__chevron">
-              <svg width="32" height="32" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-              </svg>
-            </div>
-          </button>
-
-          <div
-            id="team-nav-content"
-            class="team-nav-accordion__content collapsed"
-            aria-hidden="true"
-          >
-            <div class="team-icon-nav">
-              {divisionOrder.map((division) => {
-                const divisionTeams = teamsList.filter(team => team.division === division);
-                return divisionTeams.length > 0 ? (
-                  <div class="division-group">
-                    <div class="division-label">{division}</div>
-                    <div class="division-teams">
-                      {divisionTeams.map((team) => (
-                        <button
-                          class="team-icon-btn"
-                          data-team-id={team.id}
-                          data-active={team.id === defaultTeamId}
-                          title={team.name}
-                          aria-label={`View ${team.name} roster`}
-                        >
-                          {team.icon && (
-                            <img
-                              src={team.icon}
-                              alt={`${team.name} icon`}
-                              class="team-icon-img"
-                            />
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ) : null;
-              })}
-            </div>
-          </div>
-        </div>
-    </div>
+    <RosterHeader
+      leagueSlug="theleague"
+      franchiseId={defaultTeamId}
+      teamName={teamLookup[defaultTeamId]?.name ?? 'Franchise'}
+      teamIcon={teamLookup[defaultTeamId]?.icon ?? null}
+      teamMeta={`${teamLookup[defaultTeamId]?.division ?? 'Independent'} Division`}
+      label="Roster & Cap"
+      season={defaultSeason}
+      standing={headerStandings.get(defaultTeamId) ?? {
+        record: null,
+        pointsFor: null,
+        rank: null,
+        groupSize: null,
+      }}
+      extraStats={[{ value: headerMoney(headerCapSpace), label: 'Cap space' }]}
+      lastResult={findLastResult(headerOwnSchedule, currentWeekNum)}
+      nextGame={findNextGame(headerOwnSchedule, currentWeekNum)}
+      rail={headerRail}
+      currentWeek={currentWeekNum}
+      groups={headerGroups}
+      viewerFranchiseId={userFranchiseId ?? null}
+      nameOf={headerNameOf}
+      iconOf={headerIconOf}
+      recordOf={(id: string) => headerStandings.get(id)?.record ?? null}
+      teamHref={(id: string) => r(`/theleague/rosters?franchise=${id}`)}
+      scheduleHref={(week?: number) =>
+        r(`/theleague/schedule${week != null ? `#week-${week}` : ''}`)}
+    />
     <!-- Roster View -->
     <div class="view-container" data-view-content="roster">
       <div class="roster-table-card">
@@ -2984,362 +2960,10 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     margin-bottom: .5rem;
   }
 
-
-.team-icon-nav {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--padding-sm);
-  justify-content: center;
-  align-items: center;
-  border-radius: 1rem;
-  width: 100%;
-  margin: 0 auto;
-}
-
-/* Tablet: 2x2 grid */
-@media (min-width: 768px) {
-  .team-icon-nav {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-/* Desktop: all in one row */
-@media (min-width: 1200px) {
-  .team-icon-nav {
-    grid-template-columns: repeat(4, 1fr);
-  }
-}
-
-.division-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  align-items: center;
-  padding-block: 0.25rem;
-}
-
-  .division-label {
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--color-gray-400, #9ca3af);
-    margin-bottom: 0;
-  }
-
-  .division-teams {
-    display: flex;
-    gap: var(--padding-md);
-    flex-wrap: nowrap;
-    align-items: center;
-        padding: 3px;
-  }
- @media (min-width: 1024px) {
-      .division-teams {
-        gap: var(--padding-sm);
-            padding: 3px;
-      }
-  }
-
-  .team-icon-btn {
-    max-width: var(--team-icon-xl);
-    max-height: var(--team-icon-xl);
-    width: 100%;
-    height: 100%;
-    padding: 0.25rem;
-    border: 2px solid transparent;
-    border-radius: var(--radius-md, 0.5rem);
-    background: var(--content-bg, #fff);
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .team-icon-btn:hover {
-    border-color: var(--color-gray-200, #dddedf);
-    transform: scale(1.1);
-  }
-
-  /* Mirrors .view-tab[data-active="true"] exactly — same --color-primary
-     border and 12% tint. (.mode-btn.active draws its ring with box-shadow
-     rather than a border, but off the same --color-primary, so all three
-     selected states on this card read as one blue in both themes.) */
-  .team-icon-btn[data-active="true"] {
-    background: color-mix(in srgb, var(--color-primary, #1c497c) 12%, var(--content-bg, white));
-    border-color: var(--color-primary, #1c497c);
-  }
-
-  .team-icon-img {
-    width: 100%;
-    height: 100%;
-    max-width: var(--team-icon-md);
-    max-height: var(--team-icon-md);
-    object-fit: contain;
-  }
-
-/* ========================================
-   TEAM CARD NAVIGATION (INTEGRATED)
-   ======================================== */
-
-/* Navigation Container - spans full width at bottom of team-card */
-.team-card__navigation {
-  flex-basis: 100%; /* Force full width in flex layout */
-  width: 100%;
-  position: relative;
-  order: 10; /* Ensure it appears last in flex layout */
-  container-type: inline-size; /* Enable container queries */
-  margin-top: 0;
-}
-
-/* Minimal Toggle Button - just a small arrow at bottom of card.
-   Deliberately IN FLOW: it used to be absolutely positioned with a negative
-   `top`, which pulled it up over the view tabs and let it hang past the card's
-   bottom edge at every breakpoint. In flow, the card grows to fit it. */
-.team-nav-toggle {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.25rem var(--padding-sm);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  transition: opacity 0.2s ease;
-}
-
-.team-nav-toggle:hover {
-  opacity: 0.6;
-}
-
-.team-nav-toggle:focus {
-  border-radius: 4px;
-}
-
-/* Chevron Icon - rotates to point down when collapsed */
-.team-nav-toggle__chevron {
-  transition: transform 0.3s ease;
-  color: var(--muted-text-color, #9ca3af);
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-  opacity: 0.5;
-}
-
-.team-nav-toggle:hover .team-nav-toggle__chevron {
-  opacity: 1;
-}
-
-.team-nav-toggle[aria-expanded="true"] .team-nav-toggle__chevron {
-  transform: rotate(180deg);
-}
-
-/* Accordion Content */
-.team-nav-accordion__content {
-  overflow: hidden;
-  transition: max-height 0.3s ease, opacity 0.2s ease;
-}
-
-.team-nav-accordion__content.expanded {
-  max-height: 600px;
-  opacity: 1;
-  margin-top: var(--padding-lg);
-}
-
-.team-nav-accordion__content.collapsed {
-  max-height: 0;
-  opacity: 0;
-}
-
-/* Restore original team-icon-nav styling when expanded */
-.team-card__navigation .team-icon-nav {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--padding-sm);
-  justify-content: center;
-  align-items: center;
-  /* No card treatment — the strip sits flat inside the hero card. */
-  background: transparent;
-  width: 100%;
-  margin: 0 auto;
-  box-sizing: border-box;
-}
-/* Tablet: 2x2 grid */
-@container (min-width: 600px) {
-  .team-card__navigation .team-icon-nav {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-@container (min-width: 1024px) {
-  .team-card__navigation .team-icon-nav {
-    grid-template-columns: repeat(4, 1fr);
-  }
-}
-
-
-
-/* Container query: 4 columns as default when possible */
-@container (min-width: 400px) {
-  .team-icon-nav {
-    grid-template-columns: repeat(4, auto);
-  }
-
-  .team-nav-accordion__content.expanded {
-    max-height: 400px; /* Single row */
-  }
-}
-
-/* Container query: fall back to 2x2 only when very narrow */
-@container (max-width: 399px) and (min-width: 280px) {
-  .team-icon-nav {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
 /* Hide roster-controls (now empty except hidden inputs) */
 .roster-controls {
   display: none;
 }
-
-
-
-  /* Mobile: Stack team card content */
-
-    .team-card {
-      display:grid;
-      padding-top: 1rem;
-      padding-bottom: var(--padding-md);
-      justify-items: center;
-      gap: var(--padding-sm);
-      border-radius: var(--radius-lg, 1rem);
-      background: var(--content-bg, #fff);
-      box-shadow: var(--shadow-lg);
-      position: relative;
-    }
-
-    /* Dark mode: card-gradient treatment with the system-blue highlight
-       glow (same geometry as --card-bg, primary-tinted) + raised ring. */
-    :global(html.dark) .team-card {
-      background: radial-gradient(92% 96% at 2% -6%, rgb(59 130 246 / 22%), var(--card-surface, #262626) 62%);
-      box-shadow:
-        0 0 0 1px var(--content-border, #5f6885),
-        var(--shadow-lg);
-    }
-
-
-  @media (min-width: 480px) {
-  .team-card {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    padding-inline: var(--padding-lg);
-    justify-content: center;
-    padding-block: var(--padding-md) var(--padding-sm);
-
-  }
-    }
-  .team-card.roster-card {
-    box-shadow: none;
-    border-radius: none;
-  }
-
-
-  /* View Tabs */
-  .view-tabs {
-    display: flex;
-    gap: 0.5rem;
-    /* Distance from a tab's bottom edge down to its label's bottom edge. The
-       labels are out of flow (so hover never reflows the row), which means
-       nothing reserves room for them — without this padding they collide with
-       the nav chevron and spill past the card's bottom edge. Same custom
-       property drives .view-tab__label's offset, so the two can't drift. */
-    --view-tab-label-drop: 1.75rem;
-    padding-bottom: var(--view-tab-label-drop);
-  }
-
-  /* Mobile: Stack tabs below team info */
-  @media (max-width: 767px) {
-    .view-tabs {
-      width: 100%;
-      justify-content: center;
-      margin-top: var(--padding-md);
-      order: 3; /* Place tabs at the end */
-    }
-  }
-
-  .view-tab {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.25rem;
-    padding: 0.5rem .7rem;
-    border: 2px solid transparent;
-    border-radius: var(--radius-md, 0.5rem);
-    background: var(--color-gray-50, #f9fafb);
-    cursor: pointer;
-    transition: all 0.2s ease;
-    position: relative;
-    min-width: 69px;
-  }
-  @media (min-width: 640px) {
-    .view-tab {
-    padding: 0.5rem 0.625rem;
-    }
-  }
-  .view-tab:hover {
-    background: var(--color-gray-200, #dddedf);
-    border-color: var(--color-gray-300, #d1d5db);
-  }
-
-  .view-tab[data-active="true"] {
-    background: color-mix(in srgb, var(--color-primary, #1c497c) 12%, var(--content-bg, white));
-    border-color: var(--color-primary, #1c497c);
-  }
-
-  .view-tab__icon {
-    width: var(--icon-btn-default-size, 30px);
-    height: var(--icon-btn-default-size, 30px);
-    fill: var(--icon-btn-default-text-color);
-    color: var(--icon-btn-default-text-color);
-  }
-
-  .view-tab__icon:has(use[href*="icon-banknote"]) {
-    transform: rotate(25deg);
-  }
-
-  .view-tab[data-active="true"] .view-tab__icon {
-    fill: var(--icon-btn-default-focus-color);
-    color: var(--icon-btn-default-focus-color);
-  }
-
-  .view-tab__label {
-    position: absolute;
-    bottom: calc(-1 * var(--view-tab-label-drop));
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: var(--color-gray-500, #6b7280);
-    white-space: nowrap;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.2s ease;
-  }
-
-  /* The active tab keeps its label up permanently — the row already reserves
-     the space, so there's no layout cost, and it stops the current view's name
-     from flashing in only while the tab happens to hold focus. */
-  .view-tab:hover .view-tab__label,
-  .view-tab:focus .view-tab__label,
-  .view-tab[data-active="true"] .view-tab__label {
-    opacity: 1;
-  }
-
-  .view-tab[data-active="true"] .view-tab__label {
-    color: var(--color-primary, #1c497c);
-  }
 
   /* View Container */
   .view-container {
@@ -3350,61 +2974,6 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
   .view-container[style*="display: none"] {
     display: none;
   }
-
-  .team-card img {
-    width: 72px;
-    height: 72px;
-    border-radius: 14px;
-    object-fit: cover;
-  }
-
-  .team-card__label {
-    text-transform: uppercase;
-    font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    color: var(--color-gray-400, #9ca3af);
-    margin: 0;
-  }
-
-  .team-card h2 {
-    margin: 0;
-    font-size: 1.35rem;
-    font-weight: 700;
-    line-height: 1.2;
-    color: var(--color-gray-900, #111827);
-  }
-
-  .team-card p {
-    margin: 0;
-    color: var(--color-gray-500, #6b7280);
-  }
-
-  .team-card__last-seen {
-    font-size: 0.6875rem;
-    font-weight: 400;
-    color: var(--color-gray-400, #9ca3af);
-    margin-top: 0.125rem;
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-  }
-
-  .last-seen-dot {
-    display: inline-block;
-    width: 0.375rem;
-    height: 0.375rem;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-
-  [data-level='active'] .last-seen-dot { background: #16a34a; }
-  [data-level='idle'] .last-seen-dot { background: #ca8a04; }
-  [data-level='dormant'] .last-seen-dot { background: var(--color-error, #dc2626); }
-  [data-level='unknown'] .last-seen-dot { background: var(--color-gray-500, #6b7280); }
-  :global(html.dark) [data-level='active'] .last-seen-dot { background: var(--color-success); }
-  :global(html.dark) [data-level='idle'] .last-seen-dot { background: var(--color-warning); }
-  .team-card__last-seen[data-level='unknown'] { display: none; }
 
   .roster-summary {
     display: grid;
@@ -3798,10 +3367,6 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     color: var(--color-gray-700, #c0c0c0);
   }
 
-  :global(html.dark) .division-label {
-    color: var(--color-gray-700, #c0c0c0);
-  }
-
   :global(html.dark) .roster-table thead tr {
     border-left-color: transparent;
   }
@@ -3822,7 +3387,6 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
   :global(html.dark .roster-table .player-cell__name) {
     color: #ffffff;
   }
-
 
   :global(.roster-table th[data-column='player']) {
     text-align: left !important;
@@ -4263,7 +3827,6 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
   object-fit: contain;
   }
 
-
   :global(.roster-table[data-hidden-columns~='player'] th[data-column='player']),
   :global(.roster-table[data-hidden-columns~='player'] td[data-column='player']),
   :global(.roster-table[data-hidden-columns~='years'] th[data-column='years']),
@@ -4463,15 +4026,11 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     text-align: right;
   }
 
-
   @media (max-width: 900px) {
     .roster-table {
       min-width: 720px;
     }
   }
-
-
-
 
   /* Contract Action Visual Indicators */
   :global(.roster-row--contract-action) {
@@ -4548,15 +4107,6 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     background: rgba(255, 255, 255, 0.5);
   }
 
-  /* Clear All Tags Button */
-  .team-card__actions {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-left: auto;
-    flex-wrap: wrap;
-  }
-
   .clear-all-tags-btn {
     display: inline-flex;
     align-items: center;
@@ -4614,27 +4164,12 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     height: 16px;
   }
 
-  @media (max-width: 960px) {
-    .team-card__actions {
-      gap: 0.75rem;
-    }
-  }
-
   @media (max-width: 640px) {
-    .team-card__actions {
-      flex-direction: column;
-      align-items: flex-start;
-      width: 100%;
-    }
 
     .clear-all-tags-btn {
       order: -1;
       width: 100%;
       justify-content: center;
-    }
-
-    .view-tabs {
-      width: 100%;
     }
   }
 
@@ -4699,7 +4234,6 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     font-weight: 700;
     font-size: 1rem;
   }
-
 
   :global(.team-group__players) {
     display: flex;
@@ -5726,91 +5260,11 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       selectedView.style.display = 'grid';
     }
 
-    // Update tab active states
-    document.querySelectorAll<HTMLElement>('.view-tab').forEach(tab => {
-      const isActive = tab.dataset.view === viewName;
-      tab.dataset.active = String(isActive);
-    });
-
-    // Update view label
-    const viewLabelEl = document.querySelector('[data-view-label]');
-    if (viewLabelEl && viewLabels[viewName]) {
-      viewLabelEl.textContent = viewLabels[viewName];
-    }
-
+    /* No tab buttons and no view label to sync any more — the header shows
+       the club, and `?view=` is the only way into a secondary section. */
     ensureSecondaryViewReady(viewName);
   };
 
-  /**
-   * Team Navigation Accordion
-   * Manages collapse/expand state with localStorage persistence
-   *
-   * Called from initRosterPage(), NOT at module scope. This bundled script is
-   * evaluated ONCE per browser session — ClientRouter keys `scriptsAlreadyRan`
-   * on it and swaps the DOM underneath — so as a module-scope IIFE this bound
-   * the chevron on the first rosters visit and never again: every later arrival
-   * got a fresh button with no handler and the team list would not open until
-   * the owner hard-refreshed. Handlers are ASSIGNED (onclick/onkeydown) rather
-   * than added, because initRosterPage runs twice on initial load (see
-   * "Initial-Load Double-Init" in docs/claude/insights/domains/frontend.md).
-   */
-  const initTeamNavAccordion = () => {
-    const STORAGE_KEY = 'roster-team-nav-collapsed';
-    const toggleButton = document.querySelector<HTMLElement>('[data-accordion-toggle="team-nav"]');
-    const accordionContent = document.getElementById('team-nav-content');
-
-    if (!toggleButton || !accordionContent) return;
-
-    // Set accordion state
-    const setAccordionState = (expanded) => {
-      toggleButton.setAttribute('aria-expanded', expanded.toString());
-      accordionContent.setAttribute('aria-hidden', (!expanded).toString());
-
-      if (expanded) {
-        accordionContent.classList.remove('collapsed');
-        accordionContent.classList.add('expanded');
-      } else {
-        accordionContent.classList.remove('expanded');
-        accordionContent.classList.add('collapsed');
-      }
-
-      // Save to localStorage
-      try {
-        localStorage.setItem(STORAGE_KEY, (!expanded).toString());
-      } catch (e) {
-        console.error('Failed to save accordion state:', e);
-      }
-    };
-
-    // Load initial state from localStorage
-    try {
-      const savedState = localStorage.getItem(STORAGE_KEY);
-      if (savedState !== null) {
-        // Restore saved state: 'true' = collapsed, 'false' = expanded
-        const isCollapsed = savedState === 'true';
-        setAccordionState(!isCollapsed);
-      }
-      // If no saved state, leave as HTML default (collapsed)
-    } catch (e) {
-      console.error('Failed to load accordion state:', e);
-    }
-
-    // Toggle handler
-    const toggleAccordion = () => {
-      const isExpanded = toggleButton.getAttribute('aria-expanded') === 'true';
-      setAccordionState(!isExpanded);
-    };
-
-    // Event handlers — assigned, not added, so a re-init replaces rather than
-    // stacks them.
-    toggleButton.onclick = toggleAccordion;
-    toggleButton.onkeydown = (e: KeyboardEvent) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        toggleAccordion();
-      }
-    };
-  };
 
   let selectedPlayer = null;
 
@@ -5965,10 +5419,12 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
 
   // Clear all tags / Submit tags & extensions.
   //
-  // Wired from initRosterPage for the same reason the team-nav accordion is
-  // (see initTeamNavAccordion above): this bundled script is evaluated once per
-  // SESSION, so a module-scope binding held the FIRST visit's buttons. Worse
-  // here than there — updateClearAllButton() re-queries both by id to show
+  // Wired from initRosterPage, not at module scope: this bundled script is
+  // evaluated once per SESSION — the ClientRouter keys `scriptsAlreadyRan` on
+  // it and swaps the DOM underneath — so a module-scope binding held the FIRST
+  // visit's buttons and every later arrival got dead ones. (The team-nav
+  // accordion carried the same note until its chevron was retired with the old
+  // team card.) Worse here — updateClearAllButton() re-queries both by id to show
   // them, so on a return visit Submit appeared, looked live, and did nothing:
   // a franchise-tag or veteran-extension declaration that never reached the
   // commissioner, inside a window that closes Feb 15.
@@ -6099,15 +5555,12 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     // Team navigation accordion (the chevron that reveals every team), and the
     // contract-action buttons. Wired here so they re-bind on every
     // astro:page-load, not once per session.
-    initTeamNavAccordion();
+    // The team-nav accordion is gone: the header's crest row is always open.
     initContractActionButtons();
 
-    // Initialize view tabs
-    document.querySelectorAll<HTMLElement>('.view-tab').forEach(tab => {
-      tab.addEventListener('click', () => {
-        switchView(tab.dataset.view);
-      });
-    });
+    /* The view tabs are retired: Analytics and the League Planner live on the
+       Front Office hub now. `?view=` still selects a section via switchView
+       below — those deep links are deliberate. */
 
     // Coach Mode Logic
     const modeBtns = document.querySelectorAll<HTMLElement>('.mode-btn');
@@ -10347,54 +9800,16 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       updateView();
     });
 
-    // Team icon navigation
-    const teamIconBtns = document.querySelectorAll('.team-icon-btn');
-    teamIconBtns.forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const teamId = btn.getAttribute('data-team-id');
-        if (!teamId) return;
-
-        // Update active state
-        teamIconBtns.forEach((b) => b.setAttribute('data-active', 'false'));
-        btn.setAttribute('data-active', 'true');
-
-        // Update hidden input and current team
-        if (teamSelect) teamSelect.value = teamId;
-        currentTeam = teamId;
-        updateView();
-      });
-    });
-
-    const applyTeamSelection = (teamId) => {
-      currentTeam = teamId;
-      if (teamSelect) teamSelect.value = teamId;
-      teamIconBtns.forEach((b) => {
-        const btnTeamId = b.getAttribute('data-team-id');
-        b.setAttribute('data-active', btnTeamId === teamId ? 'true' : 'false');
-      });
-      updateView();
-    };
-
-    const hydrateTeamFromSession = async () => {
-      try {
-        const res = await fetch('/api/auth/me', { credentials: 'include' });
-        if (!res.ok) return;
-        const data = await res.json();
-        let franchiseId = normalizeFranchiseId(data?.user?.franchiseId);
-        const isAuthed = !!data?.authenticated && !!franchiseId;
-        const teamExists =
-          isAuthed &&
-          !!(
-            seasons[currentSeason]?.teams?.[franchiseId] ||
-            seasons[defaultSeason]?.teams?.[franchiseId] ||
-            teams[franchiseId]
-          );
-        if (!teamExists || franchiseId === currentTeam) return;
-        applyTeamSelection(franchiseId);
-      } catch (err) {
-        console.error('Failed to set team from session', err);
-      }
-    };
+    /* Team switching is a NAVIGATION now, not an in-page swap: the header's
+       crest row is a row of links, and the ClientRouter soft-swaps the
+       document so it stays cheap. The client-side switcher that used to live
+       here repainted the roster table only, which would leave the SSR header —
+       nameplate, cap space, gameday bar, season rail — showing the club the
+       viewer had just navigated away from. Links also make one club's roster
+       linkable, which the old in-memory switch never was: it never touched
+       the URL. `hydrateTeamFromSession` went with it; the server already
+       resolves the viewer's own club into `defaultTeamId`, behind an explicit
+       ?franchise= or the saved cookie. */
 
     applyHiddenColumns();
     const urlViewParam = new URL(window.location.href).searchParams.get('view');
@@ -10409,7 +9824,6 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       switchView(currentView);
     }
     updateView();
-    hydrateTeamFromSession();
 
     // Attach delegated modal trigger after table is rendered
     const rosterTbody = document.getElementById('rosterTableBody');
