@@ -24,7 +24,7 @@ import { useEffect, useRef } from 'react';
 import { useLiveScoringFeed } from '../../../hooks/useLiveScoringFeed';
 import type { PollStatus } from '../../../utils/live-poll-store';
 import { liveStateLabel } from '../../../utils/sunday-ticket-matchups';
-import { projectPlayerFinal } from '../../../utils/live-win-probability';
+import { blendedProjection, isClockRunning } from '../../../utils/live-win-probability';
 
 export interface LiveLeague {
   leagueId: string;
@@ -119,9 +119,15 @@ function LeagueLive({
       // No projection is an em-dash and stays one. Filling it with the live
       // score would print the column beside it as though it were a forecast.
       if (!Number.isFinite(projected) || projected <= 0) return;
-      const projFinal = projectPlayerFinal({ ...row, projected });
-      setText(el, fmt(projFinal));
-      el.title = `${fmt(projFinal)} projected final`;
+      // The SAME function the server rendered with, so the two cannot drift:
+      // it blends only while the clock is running and hands back the raw
+      // projection otherwise, which is what keeps a finished game's cell from
+      // collapsing onto the live score beside it.
+      const shown = blendedProjection({ ...row, projected });
+      setText(el, fmt(shown));
+      el.title = isClockRunning(row.secondsRemaining)
+        ? `${fmt(shown)} projected final`
+        : `${fmt(shown)} projected`;
     });
 
     // ── Per-league, per-game subtotals on the box headers.

@@ -27,7 +27,7 @@
 
 import { normalizeTeamCode } from './nfl-logo';
 import { resolveZoneLabel } from './zone-label';
-import { projectPlayerFinal } from './live-win-probability';
+import { blendedProjection } from './live-win-probability';
 
 export type SundayWindow = 'early' | 'late';
 
@@ -263,18 +263,22 @@ export function buildSlateGames(matchups: unknown, broadcasts: ReadonlyArray<Bro
 // ── The slate ────────────────────────────────────────────────────────────
 
 /**
- * One player's projected FINAL in his league — the blend, for a board that
- * renders mid-game.
+ * The number this board's PROJECTION COLUMN prints for one player.
  *
  * `proj` is a full-game number and does not tick, so beside a live score it
  * reads as a forecast of points still to come when it is nothing of the kind:
  * a starter projected for 20 who has 20 at halftime is worth 10 more, not 20.
- * `projectPlayerFinal` is the same model `/live-scoring` and the broadcast
+ * `blendedProjection` is the same model `/live-scoring` and the broadcast
  * board project with — `live + proj × (secondsRemaining / 3600)` — so the two
  * boards cannot disagree about the same player in the same week.
  *
- * TWO cases keep the raw projection, and both are the "absence is not zero"
- * rule this module already applies to `live`:
+ * It blends ONLY while the clock is running. A finished game hands back the
+ * untouched projection rather than what he scored, because this column sits
+ * beside the live one and two cells reading `6.2` say nothing twice; see
+ * `blendedProjection` for why that is its own rule and not an oversight.
+ *
+ * TWO more cases keep the raw projection, and both are the "absence is not
+ * zero" rule this module already applies to `live`:
  *
  *  - **No live read** (`live === undefined`): an outside league, a league the
  *    poll has not reached, or a player the snapshot does not mention. Blending
@@ -284,14 +288,10 @@ export function buildSlateGames(matchups: unknown, broadcasts: ReadonlyArray<Bro
  *    always sets the pair together, so this cannot happen through it — but a
  *    caller assembling a contribution by hand must not get a silent 0, which
  *    `projectPlayerFinal` would read as "his game is over".
- *
- * Before kickoff the blend returns the projection unchanged (0 live, a full
- * clock) and at the whistle it returns his actual points, so nothing outside a
- * game in progress moves.
  */
-export function projectedFinalFor(p: ContributionPlayer): number {
+export function displayProjectionFor(p: ContributionPlayer): number {
   if (p.live === undefined || p.secondsRemaining === undefined) return p.proj;
-  return projectPlayerFinal({
+  return blendedProjection({
     live: p.live,
     projected: p.proj,
     secondsRemaining: p.secondsRemaining,
@@ -321,7 +321,7 @@ function boxFor(game: SlateGame, contributions: LeagueContribution[]): GameBox {
       (liveResolved
         ? (b.live ?? b.proj) - (a.live ?? a.proj)
         : b.proj - a.proj) || a.name.localeCompare(b.name));
-    // RAW projections, deliberately — `projectedFinalFor` is for the ROW, not
+    // RAW projections, deliberately — `displayProjectionFor` is for the ROW, not
     // for this. Two reasons, and they point the same way:
     //
     //  - This total is the ranking TIEBREAK, and live points never sort this

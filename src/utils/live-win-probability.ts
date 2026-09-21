@@ -47,6 +47,46 @@ export function projectPlayerFinal(p: ProjectablePlayer): number {
   return p.live + p.projected * fractionLeft;
 }
 
+/**
+ * Is this player's NFL game actually under way?
+ *
+ * Strictly BETWEEN the two ends: a full clock is a game that has not kicked
+ * off and a dead one is a game that is over, and neither is in progress.
+ * Exported because the blend below and every caller that labels the number
+ * must agree on the answer — two copies of this predicate is exactly how a
+ * cell and its own tooltip end up disagreeing.
+ */
+export function isClockRunning(secondsRemaining: number): boolean {
+  return (
+    Number.isFinite(secondsRemaining) &&
+    secondsRemaining > 0 &&
+    secondsRemaining < NFL_GAME_SECONDS
+  );
+}
+
+/**
+ * The number a PROJECTION COLUMN should print beside a live score.
+ *
+ * Blends only while the clock is running, and hands back the untouched
+ * projection otherwise — which is a different contract from
+ * `projectPlayerFinal`, deliberately, and the difference only shows on a
+ * FINISHED game.
+ *
+ * `projectPlayerFinal` answers "what will he end on", so for a final game it
+ * correctly returns what he scored. That is the right answer for a total being
+ * summed, and the wrong thing to PRINT in a column sitting next to his live
+ * score: the two cells become the same number, and the league's actual
+ * projection — the only reason to have the column at all, since what you want
+ * from it is "projected 9.0, got 6.2" — becomes unreachable from the screen.
+ * From the end of Sunday's early window onward that is most of a board.
+ *
+ * A not-started game returns the projection by both routes; this one just says
+ * so without relying on `live` being 0 to make the arithmetic come out.
+ */
+export function blendedProjection(p: ProjectablePlayer): number {
+  return isClockRunning(p.secondsRemaining) ? projectPlayerFinal(p) : p.projected;
+}
+
 /** Projected remaining points for a player (0 once his game is final). */
 export function projectPlayerRemaining(p: ProjectablePlayer): number {
   const remaining = clampSeconds(p.secondsRemaining);

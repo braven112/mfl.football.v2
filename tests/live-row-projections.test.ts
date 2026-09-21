@@ -210,6 +210,23 @@ describe('the team totals still read the map, not the rows', () => {
   });
 });
 
+describe('the row scales by the clock it is LABELLED with', () => {
+  const source = readFileSync('src/components/shared/live/LvPlayerRow.tsx', 'utf8');
+
+  it('takes both ends of the clock from the ESPN-resolved state, not MFL', () => {
+    // `state` already prefers ESPN, and MFL zeroes `gameSecondsRemaining` on
+    // its own cadence — so a game ESPN calls `post` can still carry several
+    // hundred seconds here. Scaling by the raw number prints a projected final
+    // ABOVE the live score under a row that reads "Final": the cell
+    // contradicting its own label. It could not happen before projections
+    // reached the row, because 0 × anything is 0.
+    expect(source).toMatch(/state === 'final'\s*\?\s*0/);
+    expect(source).toMatch(/state === 'not-started'\s*\?\s*NFL_GAME_SECONDS/);
+    // Only the MIDDLE comes from MFL.
+    expect(source).toContain(': row.secondsRemaining,');
+  });
+});
+
 describe('LvPlayerRow reads the ROW first', () => {
   const source = readFileSync('src/components/shared/live/LvPlayerRow.tsx', 'utf8');
 

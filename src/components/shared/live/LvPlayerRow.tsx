@@ -44,7 +44,7 @@ import {
   playerDownDistance,
   resolveGameState,
 } from '../../../utils/live-scoring-view';
-import { projectPlayerFinal } from '../../../utils/live-win-probability';
+import { NFL_GAME_SECONDS, projectPlayerFinal } from '../../../utils/live-win-probability';
 import { positionLabel } from '../../../utils/mfl-live-lineup';
 import { nflLogoUrl } from '../../../utils/live/nfl-logo-url';
 import {
@@ -107,10 +107,33 @@ export default function LvPlayerRow({
    * single-league island, which resolves projections into its own map.
    */
   const projected = row.projected ?? meta?.projected ?? 0;
+  /**
+   * The projection is scaled by the clock the ROW IS LABELLED WITH.
+   *
+   * `state` already prefers ESPN over MFL, and the two disagree for a real
+   * window: MFL zeroes `gameSecondsRemaining` on its own cadence, so a game
+   * ESPN calls `post` can still be carrying several hundred seconds here.
+   * Scaling by the raw number then prints a projected final ABOVE the live
+   * score under a row that says "Final" — the cell contradicting its own
+   * label. (Invisible until this change, because `projected` was always 0 and
+   * every state produced the same answer.)
+   *
+   * So the two ends are taken from `state` and only the middle from MFL's
+   * clock, which is the same hierarchy the dot already follows. The team
+   * totals still scale on MFL's number alone — `computeTeamTotals` has no ESPN
+   * game to consult — so this aligns the row with its own label rather than
+   * with the total; making the whole model ESPN-aware is a bigger change than
+   * this PR, and a row that contradicts itself is the part a reader sees.
+   */
   const projFinal = projectPlayerFinal({
     live: row.live,
     projected,
-    secondsRemaining: row.secondsRemaining,
+    secondsRemaining:
+      state === 'final'
+        ? 0
+        : state === 'not-started'
+          ? NFL_GAME_SECONDS
+          : row.secondsRemaining,
   });
   const boom = state !== 'not-started' && projected > 0 && row.live >= projected;
 
