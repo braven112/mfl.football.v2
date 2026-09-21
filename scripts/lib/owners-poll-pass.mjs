@@ -11,6 +11,7 @@
 
 import { leagueUrl } from '../../src/config/leagues-data.mjs';
 import {
+  resolveOwnersPollCycle,
   resolveOwnersPollWindow,
   windowHours,
   SHORT_WINDOW_HOURS,
@@ -283,10 +284,53 @@ export async function closePoll({ league, issue, compositeRankByFid, now = new D
   const redis = ownersPollRedis();
   if (!redis) throw new Error('Owners\' Poll close pass needs Redis credentials.');
 
-  const window = await readWindow(redis, league.navSlug);
+  // The pointer is the open pass's record of the field and depth it opened on,
+  // and it is still the best source when it exists. But it is no longer
+  // REQUIRED, and that changed when voting became always-open.
+  //
+  // Owners can now vote every day of the week without a pointer existing — the
+  // API derives its cycle and writes into the standing hash regardless. So a
+  // Tuesday run that never happened no longer means "nobody could vote"; it
+  // means a week of real ballots sitting in Redis that the close pass would
+  // have walked away from, logging "no open ballot to close" while the column
+  // published with no poll section and nobody could tell why.
+  //
+  // That is not hypothetical here: GitHub drops this repo's scheduled events
+  // in bulk (CLAUDE.md, "GitHub's `schedule` is not a cadence" — a five-minute
+  // cron delivered 5-8 runs a day, not 288). A close pass that depends on its
+  // own opener having run is a close pass that will eventually skip a week.
+  //
+  // So fall back to deriving the same facts the API derives.
+  let window = await readWindow(redis, league.navSlug);
   if (!window) {
-    log.log?.('  [poll] No open ballot to close.');
-    return null;
+    const eligibleFranchiseIds = normalizeFranchiseIds(
+      Object.keys(compositeRankByFid ?? {}),
+    );
+    if (eligibleFranchiseIds.length <= poll.slots) {
+      log.warn?.(
+        '  [poll] No open ballot, and no field to derive one from — nothing to close.',
+      );
+      return null;
+    }
+    const cycle = resolveOwnersPollCycle({
+      now,
+      closeHourPT: poll.closeHourPT,
+      closeWeekday: poll.closeWeekday,
+    });
+    window = {
+      year: issue.year,
+      week: issue.week,
+      // The cycle that just ENDED — resolveOwnersPollCycle looks forward, and
+      // a close pass is by definition running after its own deadline.
+      opensAt: cycle.opensAt,
+      closesAt: new Date(now).toISOString(),
+      slots: poll.slots,
+      eligibleFranchiseIds,
+    };
+    log.warn?.(
+      `  [poll] No window pointer — deriving one. The open pass likely did not run; ` +
+        `${eligibleFranchiseIds.length} eligible, ${poll.slots} slots.`,
+    );
   }
   if (window.year !== issue.year || window.week !== issue.week) {
     throw new Error(

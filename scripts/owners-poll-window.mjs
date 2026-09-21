@@ -43,7 +43,7 @@ import {
   writeWindow,
   readWindow,
   clearWindow,
-  countBallots,
+  countStandingBallots,
 } from './lib/owners-poll-redis.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
@@ -118,10 +118,20 @@ async function main() {
 async function status(redis, league) {
   const window = await readWindow(redis, league.navSlug);
   if (!window) {
-    console.log(`\n  ${league.name}: no ballot is open.\n`);
+    // Voting is always open now, so the absence of a pointer is not the
+    // absence of a poll — it just means the open pass has not stamped one.
+    // Saying "no ballot is open" here would tell a commissioner the opposite
+    // of what owners are actually seeing.
+    console.log(
+      `\n  ${league.name}: no window pointer stamped. Voting is still OPEN — ` +
+        `the live path derives its cycle, and the close pass will too.\n`,
+    );
     return;
   }
-  const ballotsIn = await countBallots(redis, league.navSlug, window.year, window.week);
+  // The STANDING hash, not the legacy week-scoped one. Counting the old key
+  // here would have reported 0 of 16 forever while owners' real ballots sat
+  // one key over.
+  const ballotsIn = await countStandingBallots(redis, league.navSlug, window.year);
   const closesIn = (Date.parse(window.closesAt) - Date.now()) / 3600000;
   console.log(`\n  ${league.name} — Week ${window.week} (${window.year})`);
   console.log(`    opens   ${window.opensAt}`);

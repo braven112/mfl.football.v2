@@ -288,7 +288,13 @@ describe('closePoll', () => {
     expect(result!.block.ballotsIn).toBe(11);
   });
 
-  it('is a clean no-op when no ballot is open', async () => {
+  it('no longer walks away when no pointer was stamped', async () => {
+    // This USED to be "a clean no-op when no ballot is open", and that was
+    // right while a ballot only existed if the Tuesday pass had opened one.
+    // Voting is always open now, so no pointer means the open run was dropped
+    // — not that nobody could vote — and walking away loses a real week of
+    // ballots. See the dedicated describe below.
+    seedBallots(2);
     const result = await closePoll({
       league: LEAGUE,
       issue: issue(),
@@ -296,7 +302,8 @@ describe('closePoll', () => {
       now: after,
       log: silent,
     });
-    expect(result).toBeNull();
+    expect(result).not.toBeNull();
+    expect(result!.block.ballotsIn).toBe(2);
   });
 });
 
@@ -588,5 +595,60 @@ describe('readTurnout feeds the push builder', () => {
     // "no ballot on file" — the point is that it produces SOMETHING rather
     // than silently returning [].
     expect(pushes.length).toBeGreaterThan(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+
+describe('the close pass does not depend on its own opener', () => {
+  const after = new Date('2026-09-10T02:00:00Z');
+
+  // Voting is always open, so owners can fill the standing hash all week
+  // whether or not the Tuesday pass stamped a window pointer. GitHub drops
+  // this repo's scheduled events in bulk (CLAUDE.md, "GitHub's `schedule` is
+  // not a cadence"), so "the open run did not happen" is a real Tuesday, not a
+  // hypothetical — and it used to mean the close pass walked away from a week
+  // of genuine ballots logging "no open ballot to close".
+
+  it('derives a window and still tallies when no pointer was stamped', async () => {
+    // No seedWindow() — this is the dropped-open-run case.
+    seedBallots(5);
+    const result = await closePoll({
+      league: LEAGUE,
+      issue: issue(),
+      compositeRankByFid: composite,
+      now: after,
+      log: silent,
+    });
+    expect(result, 'a dropped open run must not lose the week').not.toBeNull();
+    expect(result!.block.ballotsIn).toBe(5);
+    expect(result!.block.ranked).not.toBeNull();
+  });
+
+  it('still returns null when there is no field to derive one from', async () => {
+    const result = await closePoll({
+      league: LEAGUE,
+      issue: issue(),
+      compositeRankByFid: {},
+      now: after,
+      log: silent,
+    });
+    expect(result).toBeNull();
+  });
+
+  it('prefers the stamped pointer when it exists', async () => {
+    // The pointer records the field and depth the poll actually opened on, so
+    // it still wins — the derivation is a fallback, not a replacement.
+    seedWindow({ slots: 7 });
+    seedBallots(4);
+    const result = await closePoll({
+      league: LEAGUE,
+      issue: issue(),
+      compositeRankByFid: composite,
+      now: after,
+      log: silent,
+    });
+    expect(result!.block.slots).toBe(7);
+    expect(result!.block.ballotsIn).toBe(4);
   });
 });
