@@ -43,6 +43,9 @@ const out = `<!-- ============================================================
        · the header row
        · the stylesheet link — every rule is scoped to #madmen
 
+     Prize money is set in the block below — it is the only figure the
+     commissioner still enters.
+
      What is gone: the 99 hand-written rows, the module's own script, and
      the inline <style> block — that stylesheet is now served, so a style
      fix ships without anyone editing the module again.
@@ -83,6 +86,26 @@ const out = `<!-- ============================================================
     </td>
   </tr>
 </table>
+
+<!-- ============================================================
+     PRIZE MONEY — the one thing still entered by hand.
+
+     MFL's accounting ledger for this league is empty, so there is
+     nothing to read prizes from. Set them here: team id, then amount.
+     Team ids are MFL's, four digits, and they are what the franchise
+     export calls "id" — Rhinos is 0001.
+
+     Amounts can be plain numbers or written with a dollar sign. A team
+     left out, or set to 0, shows nothing in the WINNINGS column.
+     Everything else on the table updates itself.
+     ============================================================ -->
+<script>
+window.MAD_POWER_99_WINNINGS = {
+  // "0001": 239.00,
+  // "0016": 125.00,
+  // "0042": "$75"
+};
+</script>
 
 <link rel="stylesheet" href="${STYLES}">
 <script src="${SCRIPT}" defer></script>

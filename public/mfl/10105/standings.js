@@ -31,12 +31,29 @@
 
   /* Winnings, by MFL franchise id. MFL's accounting ledger for this league is
    * empty, so there is nothing to derive these from — they are the one figure
-   * still entered by hand. A franchise left out shows no winnings.
-   * Edit, push, deployed. */
-  var WINNINGS = {
-    // '0001': 239.00,
-    // '0016': 125.00,
-  };
+   * still entered by hand.
+   *
+   * The commissioner sets them in the MODULE, not here: a MAD_POWER_99_WINNINGS
+   * block above the script line. That way prize updates need no deploy and no
+   * login, and they live with the league. See module.html.
+   *
+   * Anything below is only a fallback for a module that defines nothing. */
+  var WINNINGS = {};
+
+  /* Accepts { "0001": 239 } or { "0001": "$239.00" }, ignores junk, and never
+   * lets a bad entry take the whole table down with it. */
+  function readWinnings(fallback) {
+    var raw = window.MAD_POWER_99_WINNINGS;
+    if (!raw || typeof raw !== 'object') return fallback;
+    var out = {};
+    Object.keys(raw).forEach(function (id) {
+      var n = typeof raw[id] === 'number'
+        ? raw[id]
+        : parseFloat(String(raw[id]).replace(/[^0-9.\-]/g, ''));
+      if (isFinite(n) && n !== 0) out[String(id)] = n;
+    });
+    return out;
+  }
 
   /* ================================================================== */
 
@@ -399,6 +416,8 @@
   function start() {
     var ctx = readContext();
     if (!ctx) return; /* not a league home page */
+    /* Read at start, not at load: the module's block is parsed by then. */
+    WINNINGS = readWinnings({});
     if (!findTable()) return; /* module not on this page */
 
     Promise.all([feed(ctx, 'league'), feed(ctx, 'leagueStandings')])

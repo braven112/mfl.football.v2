@@ -119,7 +119,12 @@ function makeFeeds(opts: { withVp: boolean; vp?: number[] }) {
 }
 
 /* ---------- run the real file ---------- */
-async function run(opts: { withVp: boolean; vp?: number[]; config?: Record<string, number> }) {
+async function run(opts: {
+  withVp: boolean;
+  vp?: number[];
+  config?: Record<string, number>;
+  winnings?: Record<string, unknown>;
+}) {
   let source = readFileSync(SOURCE, 'utf8');
   if (opts.config) {
     for (const [k, v] of Object.entries(opts.config)) {
@@ -159,7 +164,10 @@ async function run(opts: { withVp: boolean; vp?: number[]; config?: Record<strin
   };
 
   const ctx = createContext({
-    window: { location: { pathname: '/2026/home/10105' } },
+    window: {
+      location: { pathname: '/2026/home/10105' },
+      MAD_POWER_99_WINNINGS: opts.winnings,
+    },
     document,
     fetch: fetchStub,
     Promise,
@@ -263,6 +271,41 @@ describe('MAD POWER 99 standings widget (MFL 10105)', () => {
   });
 });
 
+describe('prize money — the one hand-entered figure', () => {
+  const winningsText = (body: El[]) => body.map((r) => r.children[4]?.textContent ?? '').join('|');
+
+  it('reads the module block and formats it as currency', async () => {
+    const { body } = await run({ withVp: true, winnings: { '0001': 239 } });
+    expect(winningsText(body)).toContain('$239.00');
+  });
+
+  it('accepts an amount typed with a dollar sign', async () => {
+    const { body } = await run({ withVp: true, winnings: { '0001': '$1,250.50' } });
+    expect(winningsText(body)).toContain('$1,250.50');
+  });
+
+  it('shows nothing for a team left out or set to zero', async () => {
+    const { body } = await run({ withVp: true, winnings: { '0001': 0 } });
+    expect(winningsText(body).replace(/\|/g, '')).toBe('');
+  });
+
+  it('survives junk without taking the table down', async () => {
+    const { body } = await run({
+      withVp: true,
+      winnings: { '0001': 'not a number', '0002': null, '0003': 50 },
+    });
+    expect(body.length).toBeGreaterThan(10);
+    const text = winningsText(body);
+    expect(text).toContain('$50.00');
+    expect(text).not.toContain('NaN');
+  });
+
+  it('renders no winnings at all when the module defines none', async () => {
+    const { body } = await run({ withVp: true });
+    expect(winningsText(body).replace(/\|/g, '')).toBe('');
+  });
+});
+
 /**
  * The module shipped once carrying the table alone. That stripped the league's
  * page: the module also held the #madmen wrapper, the banner and a 7.7 KB
@@ -301,6 +344,12 @@ describe('module.html — the complete MESSAGE6 module', () => {
     for (const col of ['col-rank', 'col-team', 'col-record', 'col-points', 'col-winnings', 'col-division']) {
       expect(module).toContain(col);
     }
+  });
+
+  it('carries the prize block the commissioner edits', () => {
+    expect(module).toContain('window.MAD_POWER_99_WINNINGS');
+    /* Commented examples only — never real amounts committed to the repo. */
+    expect(module).toMatch(/\/\/\s*"0001":/);
   });
 
   it('carries the hosted widget and no hand-written team rows', () => {
