@@ -1,15 +1,28 @@
 ---
 /**
- * One NFL club's brand page (theleague) — thin route wrapper.
+ * One club’s brand page (TheLeague) — thin route wrapper.
  *
- * Shared implementation lives in components/shared/brand/ClubBrandPage.
- * The redirect lives HERE, and must: `Astro.redirect()` only redirects from a
- * PAGE. Returned from a component's frontmatter it merely stops rendering that
- * component and the response is still a 200 with a blank body.
+ * Resolves the segment as a FRANCHISE first and an NFL club code second. The
+ * order is not arbitrary: this league's own franchises are the subject an owner
+ * came for, and the two namespaces cannot collide today
+ * (`tests/brand-book-routes.test.ts` fails the build if a franchise slug ever
+ * equals a club code), so first-match is safe as well as correct.
+ *
+ * Shared implementations live in components/shared/brand/. The redirect lives
+ * HERE, and must: `Astro.redirect()` only redirects from a PAGE — returned from
+ * a component's frontmatter it merely stops rendering that component and the
+ * response is still a 200 with a blank body.
+ *
+ * The league config is imported HERE too: a static import specifier cannot be
+ * a runtime variable, which is why the shared component takes `assetDomain`
+ * rather than reading the config itself.
  */
 import ClubBrandPage from '../../../components/shared/brand/ClubBrandPage.astro';
+import FranchiseBrandPage from '../../../components/shared/brand/FranchiseBrandPage.astro';
 import { codeFromSlug } from '../../../utils/nfl-marks';
+import { franchiseIdFromSlug } from '../../../utils/franchise-marks';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
+import leagueConfig from '../../../data/theleague.config.json';
 
 // SSR, not prerender: every one of these reads `Astro.locals.hideLeaguePrefix`,
 // which middleware derives from the HOSTNAME. The same compiled page answers
@@ -18,13 +31,20 @@ import { resolveLeaguePath } from '../../../utils/nav-utils';
 // links to whichever host it was not baked for. The mark data itself is static.
 export const prerender = false;
 
-const code = codeFromSlug(Astro.params.team ?? '');
-if (!code) {
-  return Astro.redirect(
-    resolveLeaguePath('/theleague/brand', Astro.locals.hideLeaguePrefix ?? false),
-    302
-  );
+const slug = 'theleague' as const;
+const segment = Astro.params.team ?? '';
+const franchiseId = franchiseIdFromSlug(slug, segment);
+const code = franchiseId ? null : codeFromSlug(segment);
+if (!franchiseId && !code) {
+  return Astro.redirect(resolveLeaguePath(`/${slug}/brand`, Astro.locals.hideLeaguePrefix ?? false), 302);
 }
+const assetDomain = ((leagueConfig as { assetDomain?: string }).assetDomain || '').replace(/\/+$/, '');
 ---
 
-<ClubBrandPage leagueSlug="theleague" code={code} />
+{
+  franchiseId ? (
+    <FranchiseBrandPage leagueSlug={slug} franchiseId={franchiseId} assetDomain={assetDomain} />
+  ) : (
+    <ClubBrandPage leagueSlug={slug} code={code as string} />
+  )
+}

@@ -1,0 +1,17 @@
+---
+/**
+ * Brand Book — the searchable file list (the AFL).
+ *
+ * See the TheLeague copy for why the old Asset Library survives the Brand Book
+ * rather than being replaced by it: 109 former AFL clubs and the league art
+ * have no brand page of their own, and finding one file by name is the thing
+ * this view is genuinely good at.
+ */
+import AssetsPage from '../../../components/shared/assets/AssetsPage.astro';
+import leagueConfig from '../../../../data/afl-fantasy/afl.config.json';
+import aggregatedAssets from '../../../../data/afl-fantasy/afl.assets.json';
+
+export const prerender = false;
+---
+
+<AssetsPage slug="afl-fantasy" leagueConfig={leagueConfig} aggregatedAssets={aggregatedAssets} />

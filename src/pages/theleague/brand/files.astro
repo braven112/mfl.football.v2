@@ -1,0 +1,25 @@
+---
+/**
+ * Brand Book — the searchable file list (TheLeague).
+ *
+ * The old `/assets` Asset Library, re-homed under the Brand Book rather than
+ * retired. The per-club pages replaced what that page was USED for — a club's
+ * marks, its colours and which cut a surface draws — but not what it was good
+ * AT: finding one file by name across 54 clubs, the 38 that no longer field a
+ * team included, plus the championship, league, conference and division art
+ * that belongs to no club at all. A brand page for every ACTIVE club leaves all
+ * of that with nowhere to live, so the library stays, one level down, and both
+ * halves link to each other.
+ *
+ * A STATIC segment, so it wins over `[team].astro` next to it — Astro
+ * prioritises a literal path over a dynamic one, and `franchiseIdFromSlug`
+ * returns null for "files" regardless.
+ */
+import AssetsPage from '../../../components/shared/assets/AssetsPage.astro';
+import leagueConfig from '../../../data/theleague.config.json';
+import aggregatedAssets from '../../../data/theleague.assets.json';
+
+export const prerender = false;
+---
+
+<AssetsPage slug="theleague" leagueConfig={leagueConfig} aggregatedAssets={aggregatedAssets} />

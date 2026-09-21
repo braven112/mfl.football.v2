@@ -1,0 +1,599 @@
+/**
+ * The Brand Book's shared shell — the franchise half of /brand.
+ *
+ * A plain stylesheet rather than a scoped `<style>` block for two reasons, and
+ * both are rules this repo already learned the hard way:
+ *
+ * - The index and the franchise page render the SAME furniture (section
+ *   headers, swatch rows, the filmstrip, the light/dark comparison panes). A
+ *   second copy inside each component is the component-level shape of the page
+ *   fork this repo has 57,800 lines of.
+ * - Astro scoped CSS never reaches an element JS created
+ *   (docs/claude/rules/theming-and-assets.md). The copy buttons toggle classes
+ *   at runtime and the dimension lines are written by script; a global sheet
+ *   keyed to the real class names reaches all of it.
+ *
+ * `bb-` prefixes everything so it cannot collide with the NFL club page's
+ * `cb__` rules, which stay where they are while PR #1180 is in flight.
+ *
+ * TOKENS ONLY, each with a fallback that matches the token's LIGHT value — a
+ * `var(--x)` naming a property defined nowhere renders its fallback in BOTH
+ * themes, which is how a page ships perfect in light and white-on-black in
+ * dark. `tests/design-token-guard.test.ts` enforces it.
+ */
+
+.bb {
+  max-width: var(--container-max-width, 1232px);
+  margin: 0 auto;
+  padding: var(--spacing-lg, 1.5rem) var(--spacing-md, 1rem) 4rem;
+}
+
+.bb__crumb {
+  margin-bottom: var(--spacing-md, 1rem);
+  font-size: 0.85rem;
+}
+.bb__crumb a {
+  color: var(--content-text-muted, #6b7280);
+  text-decoration: none;
+  font-weight: 600;
+}
+.bb__crumb a:hover,
+.bb__crumb a:focus-visible {
+  color: var(--page-text, #111827);
+  text-decoration: underline;
+}
+
+.bb__eyebrow {
+  margin: 0 0 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--content-text-muted, #6b7280);
+}
+.bb__lede {
+  margin: 0;
+  max-width: 62ch;
+  color: var(--color-gray-600, #4b5563);
+}
+.bb__note {
+  margin: 0 0 var(--spacing-md, 1rem);
+  max-width: 68ch;
+  font-size: 0.875rem;
+  color: var(--content-text-muted, #6b7280);
+}
+
+.bb__section {
+  margin-top: 2.5rem;
+}
+.bb__h2 {
+  margin: 0 0 0.4rem;
+  font-size: 1.15rem;
+  line-height: 1.2;
+}
+
+/* ── Hero ──────────────────────────────────────────────────────────────
+   Paints the franchise's OWN colour, so it declares its ground and takes
+   `--hero-ink` from `inkOn` rather than from the theme. */
+.bb__hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-lg, 1rem);
+  background: var(--hero-bg, #111111);
+  color: var(--hero-ink, #ffffff);
+  padding: 2rem 1.5rem;
+  min-height: 190px;
+  display: flex;
+  align-items: center;
+}
+.bb__ghost {
+  position: absolute;
+  right: -3%;
+  bottom: -28%;
+  width: 300px;
+  height: 300px;
+  object-fit: contain;
+  opacity: 0.14;
+  pointer-events: none;
+}
+.bb__hero-in {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+.bb__hero-mark {
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+  flex: none;
+}
+.bb__hero-meta {
+  margin: 0 0 0.3rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+.bb__hero-name {
+  margin: 0;
+  font-size: clamp(1.6rem, 5vw, 2.4rem);
+  line-height: 1.05;
+  font-weight: 800;
+}
+.bb__hero-sub {
+  margin: 0.45rem 0 0;
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
+/* ── Index grid ────────────────────────────────────────────────────────── */
+.bb__grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: var(--spacing-sm, 0.75rem);
+}
+.bb__cell {
+  margin: 0;
+}
+.bb__tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1.1rem 0.75rem 0.9rem;
+  border-radius: var(--radius-md, 8px);
+  background: var(--tile-bg, #111111);
+  color: var(--tile-ink, #ffffff);
+  text-decoration: none;
+  min-height: 156px;
+  justify-content: center;
+}
+.bb__tile:hover,
+.bb__tile:focus-visible {
+  outline: 2px solid var(--tile-ink, #ffffff);
+  outline-offset: 2px;
+}
+.bb__art img {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  display: block;
+}
+.bb__tile-name {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  line-height: 1.15;
+}
+.bb__tile-sub {
+  font-size: 0.66rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+.bb__tile-main {
+  /* Sized for a FULL franchise name on two lines inside a 168px tile —
+     "Running Down The Dream" is the longest and takes three. `min-height` on
+     the tile plus the grid's own row equalisation keeps the row level. */
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+.bb__flag {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.1rem 0.35rem;
+  border-radius: var(--radius-sm, 4px);
+  background: color-mix(in srgb, var(--tile-ink, #fff) 18%, transparent);
+}
+
+/* ── Colour swatches ───────────────────────────────────────────────────── */
+.bb__swatches {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--spacing-sm, 0.75rem);
+}
+.bb__swatch {
+  margin: 0;
+  border: 1px solid var(--content-border, #e2e8f0);
+  border-radius: var(--radius-md, 8px);
+  overflow: hidden;
+  background: var(--card-bg, #ffffff);
+}
+.bb__chip {
+  display: block;
+  height: 64px;
+  background: var(--chip, #000);
+}
+.bb__swatch-body {
+  padding: 0.55rem 0.6rem 0.7rem;
+}
+.bb__swatch-label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--page-text, #111827);
+}
+.bb__swatch-note {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: var(--content-text-muted, #6b7280);
+}
+
+/* ── Filmstrip: every cut on file ──────────────────────────────────────── */
+.bb__film {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: var(--spacing-md, 1rem);
+}
+.bb__cut {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  border: 1px solid var(--content-border, #e2e8f0);
+  border-radius: var(--radius-md, 8px);
+  padding: 0.6rem;
+  background: var(--card-bg, #ffffff);
+}
+.bb__cut-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 118px;
+  border-radius: var(--radius-sm, 4px);
+  padding: 0.5rem;
+}
+/* Each box paints the ground its cut is FOR, in both themes — that is the
+   comparison. Never token-driven: a light cut on a theme-following card
+   would be a light cut on near-black for half the audience. */
+.bb__cut-box.is-light {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+}
+.bb__cut-box.is-dark {
+  background: #10141a;
+  border: 1px solid #2b323c;
+}
+.bb__cut-box img {
+  max-width: 100%;
+  max-height: 104px;
+  object-fit: contain;
+}
+.bb__cut-box--wide img {
+  max-height: 72px;
+}
+.bb__cut-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--page-text, #111827);
+}
+.bb__cut-meta {
+  font-size: 0.7rem;
+  color: var(--content-text-muted, #6b7280);
+}
+
+/* ── Copy / download row ───────────────────────────────────────────────── */
+.bb__actions {
+  display: flex;
+  gap: 0.35rem;
+  margin-top: 0.15rem;
+}
+.bb-copy,
+.bb__dl {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0.35rem 0.5rem;
+  border-radius: var(--radius-sm, 4px);
+  border: 1px solid var(--content-border, #e2e8f0);
+  background: var(--content-bg-muted, #eeeeee);
+  color: var(--page-text, #111827);
+  text-decoration: none;
+  cursor: pointer;
+}
+.bb-copy:hover,
+.bb__dl:hover,
+.bb-copy:focus-visible,
+.bb__dl:focus-visible {
+  border-color: var(--content-text-muted, #6b7280);
+}
+.bb-copy .bb-copy__done,
+.bb-copy.is-copied .bb-copy__idle {
+  display: none;
+}
+.bb-copy.is-copied .bb-copy__done {
+  display: inline;
+}
+
+/* ── What each ground draws ────────────────────────────────────────────── */
+.bb__grounds {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: var(--spacing-md, 1rem);
+}
+.bb__ground {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  border-radius: var(--radius-md, 8px);
+  padding: 0.85rem;
+  border: 1px solid var(--content-border, #e2e8f0);
+  background: var(--card-bg, #ffffff);
+}
+.bb__ground-head {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--content-text-muted, #6b7280);
+}
+.bb__ground-art {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  border-radius: var(--radius-sm, 4px);
+}
+.bb__ground.is-light .bb__ground-art {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+}
+.bb__ground.is-dark .bb__ground-art {
+  background: #10141a;
+  border: 1px solid #2b323c;
+}
+.bb__ground-art img {
+  width: 88px;
+  height: 88px;
+  object-fit: contain;
+}
+.bb__ground-mark {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--page-text, #111827);
+}
+.bb__ground-why {
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--content-text-muted, #6b7280);
+}
+
+/* ── In the app ────────────────────────────────────────────────────────── */
+.bb__situ {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--spacing-md, 1rem);
+}
+.bb__demo {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  border: 1px solid var(--content-border, #e2e8f0);
+  border-radius: var(--radius-md, 8px);
+  padding: 0.85rem;
+  background: var(--card-bg, #ffffff);
+}
+.bb__demo--wide {
+  grid-column: 1 / -1;
+}
+.bb__demo-cap {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--content-text-muted, #6b7280);
+}
+.bb__demo-cap em {
+  font-style: normal;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.bb__pane {
+  display: block;
+  border-radius: var(--radius-sm, 4px);
+  padding: 0.7rem;
+}
+.bb__pane.is-light {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  color: #10141a;
+}
+.bb__pane.is-dark {
+  background: #10141a;
+  border: 1px solid #2b323c;
+  color: #f3f4f6;
+}
+.bb__row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+  --team-icon-size: 28px;
+}
+.bb__row-rank {
+  font-size: 0.75rem;
+  opacity: 0.7;
+  min-width: 1.2em;
+}
+.bb__row-rec {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.8;
+}
+.bb__band {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.85rem;
+  border-radius: var(--radius-sm, 4px);
+}
+.bb__band img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  flex: none;
+}
+.bb__band-name {
+  display: block;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+.bb__band-meta {
+  display: block;
+  font-size: 0.75rem;
+  opacity: 0.78;
+}
+
+/* ── Era art ───────────────────────────────────────────────────────────── */
+.bb__eras {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+  gap: var(--spacing-md, 1rem);
+}
+.bb__era {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  border: 1px solid var(--content-border, #e2e8f0);
+  border-radius: var(--radius-md, 8px);
+  padding: 0.7rem;
+  background: var(--card-bg, #ffffff);
+}
+.bb__era-art {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 118px;
+  border-radius: var(--radius-sm, 4px);
+  background: var(--era-bg, #10141a);
+}
+.bb__era-art img {
+  width: 92px;
+  height: 92px;
+  object-fit: contain;
+}
+.bb__era-banner {
+  display: block;
+  width: 100%;
+  border-radius: var(--radius-sm, 4px);
+}
+.bb__era-years {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--page-text, #111827);
+}
+.bb__era-label {
+  font-size: 0.75rem;
+  color: var(--content-text-muted, #6b7280);
+}
+.bb__era-hues {
+  display: flex;
+  gap: 0.25rem;
+}
+.bb__era-hue {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 1px solid var(--content-border, #e2e8f0);
+}
+.bb__era-now {
+  align-self: flex-start;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.1rem 0.35rem;
+  border-radius: var(--radius-sm, 4px);
+  background: var(--content-bg-muted, #eeeeee);
+  color: var(--content-text-muted, #6b7280);
+}
+
+/* ── Usage & specs ─────────────────────────────────────────────────────── */
+.bb__specs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+.bb__spec {
+  display: grid;
+  grid-template-columns: minmax(150px, 190px) 1fr;
+  gap: 0.75rem;
+  align-items: baseline;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--content-border, #e2e8f0);
+  border-radius: var(--radius-md, 8px);
+  background: var(--card-bg, #ffffff);
+  font-size: 0.82rem;
+}
+.bb__spec dt {
+  margin: 0;
+  font-weight: 700;
+  color: var(--page-text, #111827);
+}
+.bb__spec dd {
+  margin: 0;
+  color: var(--content-text-muted, #6b7280);
+  line-height: 1.45;
+}
+.bb__spec code {
+  font-size: 0.95em;
+}
+
+@media (max-width: 560px) {
+  .bb__spec {
+    grid-template-columns: 1fr;
+    gap: 0.2rem;
+  }
+  .bb__grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  }
+  .bb__art img {
+    width: 56px;
+    height: 56px;
+  }
+  .bb__hero-mark {
+    width: 84px;
+    height: 84px;
+  }
+}
