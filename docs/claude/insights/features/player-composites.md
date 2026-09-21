@@ -2184,3 +2184,41 @@ The byline renders in the FOOTER beside the CTA, not over the art. The flank
 belongs to the player the story is about — casting the reporter there displaces
 the subject of his own reporting, which is the same rule the feature card
 follows when it refuses to put a cutout over its screenshot.
+
+## 2026-09-21 — A hero about a TEAM takes `franchise`, not `accent` + `glowColor`
+
+Building the NFL Brand Book's per-club hero, the first pass reached for the two
+props whose names sound like "make it this colour":
+
+```astro
+<CompositeHero accent="feature" glowColor={clubPrimary} … />
+```
+
+New Orleans rendered as a **blue** card with a gold crest on it. `accent` picks
+a named PHASE palette (`feature` is blue) and paints the whole gradient;
+`glowColor` is only a faint radial tint over it (`--cmh-glow-alpha` defaults
+0.38 dark / 0.2 light). A club colour passed that way is barely visible and
+never reaches the headline accent, the pill or the CTA ink.
+
+The club belongs in **`franchise`**, resolved through
+`resolveHeroFranchiseBackdrop(team, league)`. Its own docblock says so — "for a
+hero that is about a TEAM rather than about the league" — and it does work a
+hand-built gradient silently skips:
+
+- floors the colour pair for white text (`toBroadcastPair`), because the copy
+  sits on the gradient in both themes;
+- clears the headline accent at **3:1** and the panel accent at 4.5:1 against
+  the gradient *under its wash*, **per band** — a single accent measured at
+  x=0 and published to the whole section is the bug that shipped five
+  franchises under 3:1;
+- derives pill ink, CTA ink and both theme borders from that same measurement.
+
+It takes a `HeroBackdropTeam` whose fields are all optional, so an NFL club
+drives it with nothing but `{ colorPrimary, colorSecondary }` — no fantasy
+franchise required.
+
+**Crest ground:** a hero gradient is dark in BOTH themes, so its crest takes
+the dark/band cut, resolved server-side. Same rule and same reason as
+`hero-franchise-backdrop.ts` resolving a franchise crest rather than leaving it
+to the `html.dark` swap — a light-theme viewer would otherwise get the light
+mark on ink.
