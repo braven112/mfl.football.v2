@@ -506,6 +506,16 @@ button.lv-card:focus-visible {
   height: 100%;
   object-fit: contain;
 }
+/* The identity ladder's uploaded-mark rung, and ONLY that rung. MFL's "icon"
+   is whatever the commissioner uploaded — one league's is a 1500x636 banner
+   for every franchise — so an unknown aspect ratio is normalized by cropping
+   to the square box rather than letterboxed into a sliver. `contain` stays the
+   rule for a league crest and an NFL club mark: those are drawn to fit, and a
+   crop takes a bite out of someone's logo. */
+.lv-side__crest--crop img {
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+}
 
 /* The identity ladder's text rung: initials on one neutral field. Never a hue
    derived from the name — that looks like a brand and is not one. */

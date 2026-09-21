@@ -204,6 +204,27 @@ which is exactly why the split exists — verify parsing offline against
   swaps the board without remounting, and both leagues have a franchise `0001`
   — and it lives in the island, so a cold load whose SSR assembly failed still
   shows the error card. Guard: `tests/live-stale-fallback.test.ts`.
+- **"Icon" is MFL's word, not a size — and only the rung that EARNED a crop
+  may be cropped.** The identity ladder (`mfl-live-identity.ts`) has four rungs
+  now: a league we run, then **the mark the franchise uploaded to MFL**, then
+  the NFL name match, then initials. The uploaded mark sits above the NFL match
+  because art an owner chose outranks art we inferred from their name. Two
+  things it forced, both load-bearing: the mark goes out through
+  `optimizedRemoteImage` (`/_vercel/image`, one width, `vercel.json`'s
+  `images.sizes` — a width outside that list is a 400 and takes out every mark
+  at once), because Archie's league uploaded a **1500×636 PNG of ~400 KB for
+  all 99 franchises** into a 1.4rem box; and it is the ONE rung the UI crops
+  square (`object-fit: cover`), because a league crest and an NFL club mark are
+  drawn to fit and cropping one takes a bite out of somebody's logo. That is
+  what `rung` is for on the wire — the renderer cannot tell a banner from a
+  crest by looking at a URL. `icon` is MFL's small slot and `logo` its banner
+  slot, so `icon` first and `logo` only in its absence is "the smaller of the
+  two" wherever a commissioner kept the convention, at no extra request; where
+  both hold the same upload there is nothing to choose and the optimizer is
+  what bounds the bytes. The mark rides the SAME `TYPE=league` read as the
+  names (`readLeagueFranchiseMarks`), which is the only reason a board fanning
+  out across every league an owner is in can show them at all. Guard:
+  `tests/mfl-live-uploaded-mark.test.ts`.
 - **`liveScoring` has TWO shapes and only one of them says who is playing
   whom.** `{"liveScoring":{"matchup":[{"franchise":[…]}]}}` carries the
   pairings; `{"liveScoring":{"franchise":[…]}}` carries the identical scores,

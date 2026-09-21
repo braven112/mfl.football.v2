@@ -26,6 +26,15 @@ export interface ToggleLeague {
   registered: boolean;
   icon: string;
   initials: string;
+  /**
+   * Crop this mark to the square box rather than fitting it inside.
+   *
+   * True only for the identity ladder's uploaded-art rung: MFL's "icon" is
+   * whatever the commissioner uploaded — one league's is a 1500x636 banner for
+   * every franchise — and `contain` renders that as a sliver. A league crest
+   * or NFL club mark is drawn to fit, so cropping one cuts off its logo.
+   */
+  cropMark?: boolean;
 }
 
 interface Props {
@@ -96,7 +105,12 @@ export default function LeagueToggles({ leagues, initialEnabled }: Props) {
           const locked = on && enabled.length <= 1;
           return (
             <li className="mls__row" key={league.id}>
-              <span className={`mls__mark${league.icon ? '' : ' mls__mark--text'}`} aria-hidden="true">
+              <span
+                className={`mls__mark${league.icon ? '' : ' mls__mark--text'}${
+                  league.icon && league.cropMark ? ' mls__mark--crop' : ''
+                }`}
+                aria-hidden="true"
+              >
                 {league.icon ? <img src={league.icon} alt="" loading="lazy" decoding="async" /> : league.initials}
               </span>
 

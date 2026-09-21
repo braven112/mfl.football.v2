@@ -41,8 +41,8 @@ if (authUser) rememberMflLiveChoice(Astro.url, Astro.cookies);
 
 let leagues: Awaited<ReturnType<typeof discoverBoardLeagues>> = [];
 let enabled: string[] = [];
-/** League id -> the viewer's own franchise name, for leagues myleagues left blank. */
-let viewerNames: Record<string, string> = {};
+/** League id -> the viewer's own franchise name and mark, for leagues myleagues left blank. */
+let viewerNames: Awaited<ReturnType<typeof readViewerFranchiseNames>> = {};
 let loadFailed = false;
 
 if (authUser) {
@@ -79,8 +79,11 @@ const rows = leagues.map((league) => {
     // blank for most leagues this site does not host, which is what made
     // every one of them read "Franchise 0015" here — and, on the board, what
     // stopped their NFL crests resolving at all.
-    franchiseName: viewerNames[league.id] || league.franchiseName,
+    franchiseName: viewerNames[league.id]?.name || league.franchiseName,
     leagueSlug: league.registered?.slug ?? null,
+    // From the same read as the name. A franchise's own uploaded art, so this
+    // list shows what the board shows.
+    mflIcon: viewerNames[league.id]?.icon,
   });
   return {
     id: league.id,
@@ -89,6 +92,9 @@ const rows = leagues.map((league) => {
     registered: !!league.registered,
     icon: identity.icon,
     initials: identity.initials,
+    // The renderer crops only the uploaded-mark rung square — see
+    // `mfl-live-identity.ts`. A crest or club mark is drawn to fit its box.
+    cropMark: identity.rung === 'mfl',
   };
 });
 

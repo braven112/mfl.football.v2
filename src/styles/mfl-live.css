@@ -116,6 +116,13 @@
     height: 100%;
     object-fit: contain;
   }
+  /* The uploaded-mark rung only — see `mfl-live-identity.ts`. An unknown
+     aspect ratio is normalized by cropping to the square box; a crest or club
+     mark keeps `contain`, because cropping one takes a bite out of its logo. */
+  .mls__mark--crop img {
+    object-fit: cover;
+    border-radius: 0.5rem;
+  }
   .mls__mark--text {
     border-radius: 0.5rem;
     background: var(--color-surface-3);

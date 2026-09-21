@@ -77,8 +77,13 @@ export default function LvMatchupCard({
   const sideRow = (team: LiveTeam, ahead: boolean, which: 0 | 1) => (
     <div className={`lv-side${ahead ? ' lv-side--lead' : ''}`}>
       {team.icon ? (
-        <span className="lv-side__crest">
-          <img src={team.icon} alt={team.iconAlt} loading="lazy" />
+        // CROPPED ONLY ON THE UPLOADED-ART RUNG. "Icon" is MFL's word, not a
+        // size: one league's franchises all carry 1500x636 banners, which
+        // `contain` renders as a 1.4rem-wide sliver a few pixels tall. A
+        // league crest or an NFL club mark is drawn to fit its own box, so
+        // cropping one cuts off somebody's logo — those keep `contain`.
+        <span className={`lv-side__crest${team.rung === 'mfl' ? ' lv-side__crest--crop' : ''}`}>
+          <img src={team.icon} alt={team.iconAlt} loading="lazy" decoding="async" />
         </span>
       ) : (
         // The identity ladder's text rung. Initials are a LABEL, not invented

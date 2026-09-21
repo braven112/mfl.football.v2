@@ -495,7 +495,9 @@
         "src/pages/api/live-scoring.ts",
         "src/components/shared/mfl-live/*",
         "src/pages/api/league-board.ts",
-        "src/utils/mfl-schedule-pairings.ts"
+        "src/utils/mfl-schedule-pairings.ts",
+        "src/utils/mfl-live-identity.ts",
+        "src/utils/remote-image.ts"
       ],
       "tests": [
         "tests/live-scoring-host-resolution.test.ts",
@@ -522,7 +524,8 @@
         "tests/live-scoring-accent-theming.test.ts",
         "tests/live-ink-contrast.test.ts",
         "tests/live-no-flex.test.ts",
-        "tests/live-schedule-pairings.test.ts"
+        "tests/live-schedule-pairings.test.ts",
+        "tests/mfl-live-uploaded-mark.test.ts"
       ]
     },
     {

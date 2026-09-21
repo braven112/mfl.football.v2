@@ -13,6 +13,21 @@
       "schedule": "*/5 * * * *"
     }
   ],
+  "images": {
+    "sizes": [
+      256
+    ],
+    "remotePatterns": [
+      {
+        "protocol": "https",
+        "hostname": "**.myfantasyleague.com"
+      }
+    ],
+    "formats": [
+      "image/webp"
+    ],
+    "minimumCacheTTL": 604800
+  },
   "ignoreCommand": "node scripts/vercel-ignore-build.mjs",
   "headers": [
     {
