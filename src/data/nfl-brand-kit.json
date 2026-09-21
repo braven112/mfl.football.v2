@@ -1,0 +1,3237 @@
+{
+  "sources": {
+    "primarySvg": "https://static.www.nfl.com/league/api/clubs/logos/{CODE}.svg",
+    "espn": "https://sports.core.api.espn.com/v2/sports/football/leagues/nfl/teams?limit=40",
+    "nflverse": "https://raw.githubusercontent.com/nflverse/nflfastR-data/master/teams_colors_logos.csv"
+  },
+  "teams": {
+    "ARI": {
+      "name": "Arizona Cardinals",
+      "espnId": "22",
+      "nflDotComVariant": "light",
+      "primarySvg": "https://static.www.nfl.com/league/api/clubs/logos/ARI.svg",
+      "colors": [
+        "#97233F",
+        "#000000",
+        "#ffb612",
+        "#a5acaf"
+      ],
+      "wordmark": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/wordmarks/ARI.png",
+      "squaredLogo": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/squared_logos/ARI.png",
+      "espn": {
+        "default": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/ari.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:43Z"
+        },
+        "dark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/ari.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:43Z"
+        },
+        "scoreboard": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/ari.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:44Z"
+        },
+        "scoreboardDark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/scoreboard/ari.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:43Z"
+        },
+        "grayscale": {
+          "url": "https://a.espncdn.com/guid/8fc7b962-95e1-3cb8-6a7d-b499de9ad546/logos/grayscale.png",
+          "width": 500,
+          "lastUpdated": "2026-03-31T12:54Z"
+        },
+        "primaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/8fc7b962-95e1-3cb8-6a7d-b499de9ad546/logos/primary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/8fc7b962-95e1-3cb8-6a7d-b499de9ad546/logos/primary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/8fc7b962-95e1-3cb8-6a7d-b499de9ad546/logos/primary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/8fc7b962-95e1-3cb8-6a7d-b499de9ad546/logos/primary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryBlack": {
+          "url": "https://a.espncdn.com/guid/8fc7b962-95e1-3cb8-6a7d-b499de9ad546/logos/primary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryWhite": {
+          "url": "https://a.espncdn.com/guid/8fc7b962-95e1-3cb8-6a7d-b499de9ad546/logos/primary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/8fc7b962-95e1-3cb8-6a7d-b499de9ad546/logos/secondary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/8fc7b962-95e1-3cb8-6a7d-b499de9ad546/logos/secondary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/8fc7b962-95e1-3cb8-6a7d-b499de9ad546/logos/secondary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/8fc7b962-95e1-3cb8-6a7d-b499de9ad546/logos/secondary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryBlack": {
+          "url": "https://a.espncdn.com/guid/8fc7b962-95e1-3cb8-6a7d-b499de9ad546/logos/secondary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryWhite": {
+          "url": "https://a.espncdn.com/guid/8fc7b962-95e1-3cb8-6a7d-b499de9ad546/logos/secondary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        }
+      }
+    },
+    "ATL": {
+      "name": "Atlanta Falcons",
+      "espnId": "1",
+      "nflDotComVariant": "light",
+      "primarySvg": "https://static.www.nfl.com/league/api/clubs/logos/ATL.svg",
+      "colors": [
+        "#A71930",
+        "#000000",
+        "#a5acaf",
+        "#a30d2d"
+      ],
+      "wordmark": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/wordmarks/ATL.png",
+      "squaredLogo": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/squared_logos/ATL.png",
+      "espn": {
+        "default": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/atl.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:44Z"
+        },
+        "dark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/atl.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:44Z"
+        },
+        "scoreboard": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/atl.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:44Z"
+        },
+        "scoreboardDark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/scoreboard/atl.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:44Z"
+        },
+        "grayscale": {
+          "url": "https://a.espncdn.com/guid/49fd392a-86fe-4df3-1b77-9bbfa18b2ad5/logos/grayscale.png",
+          "width": 500,
+          "lastUpdated": "2026-03-31T12:54Z"
+        },
+        "primaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/49fd392a-86fe-4df3-1b77-9bbfa18b2ad5/logos/primary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/49fd392a-86fe-4df3-1b77-9bbfa18b2ad5/logos/primary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/49fd392a-86fe-4df3-1b77-9bbfa18b2ad5/logos/primary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/49fd392a-86fe-4df3-1b77-9bbfa18b2ad5/logos/primary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryBlack": {
+          "url": "https://a.espncdn.com/guid/49fd392a-86fe-4df3-1b77-9bbfa18b2ad5/logos/primary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryWhite": {
+          "url": "https://a.espncdn.com/guid/49fd392a-86fe-4df3-1b77-9bbfa18b2ad5/logos/primary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/49fd392a-86fe-4df3-1b77-9bbfa18b2ad5/logos/secondary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/49fd392a-86fe-4df3-1b77-9bbfa18b2ad5/logos/secondary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/49fd392a-86fe-4df3-1b77-9bbfa18b2ad5/logos/secondary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/49fd392a-86fe-4df3-1b77-9bbfa18b2ad5/logos/secondary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryBlack": {
+          "url": "https://a.espncdn.com/guid/49fd392a-86fe-4df3-1b77-9bbfa18b2ad5/logos/secondary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-02-13T03:12Z"
+        },
+        "secondaryWhite": {
+          "url": "https://a.espncdn.com/guid/49fd392a-86fe-4df3-1b77-9bbfa18b2ad5/logos/secondary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        }
+      }
+    },
+    "BAL": {
+      "name": "Baltimore Ravens",
+      "espnId": "33",
+      "nflDotComVariant": "light",
+      "primarySvg": "https://static.www.nfl.com/league/api/clubs/logos/BAL.svg",
+      "colors": [
+        "#241773",
+        "#9E7C0C",
+        "#9e7c0c",
+        "#c60c30"
+      ],
+      "wordmark": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/wordmarks/BAL.png",
+      "squaredLogo": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/squared_logos/BAL.png",
+      "espn": {
+        "default": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/bal.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:44Z"
+        },
+        "dark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/bal.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:44Z"
+        },
+        "scoreboard": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/bal.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:45Z"
+        },
+        "scoreboardDark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/scoreboard/bal.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:44Z"
+        },
+        "grayscale": {
+          "url": "https://a.espncdn.com/guid/38248455-3da4-84e4-8090-98b5cc38ffdc/logos/grayscale.png",
+          "width": 500,
+          "lastUpdated": "2026-03-31T12:53Z"
+        },
+        "primaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/38248455-3da4-84e4-8090-98b5cc38ffdc/logos/primary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/38248455-3da4-84e4-8090-98b5cc38ffdc/logos/primary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/38248455-3da4-84e4-8090-98b5cc38ffdc/logos/primary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/38248455-3da4-84e4-8090-98b5cc38ffdc/logos/primary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryBlack": {
+          "url": "https://a.espncdn.com/guid/38248455-3da4-84e4-8090-98b5cc38ffdc/logos/primary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryWhite": {
+          "url": "https://a.espncdn.com/guid/38248455-3da4-84e4-8090-98b5cc38ffdc/logos/primary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/38248455-3da4-84e4-8090-98b5cc38ffdc/logos/secondary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/38248455-3da4-84e4-8090-98b5cc38ffdc/logos/secondary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/38248455-3da4-84e4-8090-98b5cc38ffdc/logos/secondary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/38248455-3da4-84e4-8090-98b5cc38ffdc/logos/secondary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryBlack": {
+          "url": "https://a.espncdn.com/guid/38248455-3da4-84e4-8090-98b5cc38ffdc/logos/secondary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryWhite": {
+          "url": "https://a.espncdn.com/guid/38248455-3da4-84e4-8090-98b5cc38ffdc/logos/secondary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        }
+      }
+    },
+    "BUF": {
+      "name": "Buffalo Bills",
+      "espnId": "2",
+      "nflDotComVariant": "light",
+      "primarySvg": "https://static.www.nfl.com/league/api/clubs/logos/BUF.svg",
+      "colors": [
+        "#00338D",
+        "#C60C30",
+        "#0c2e82",
+        "#d50a0a"
+      ],
+      "wordmark": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/wordmarks/BUF.png",
+      "squaredLogo": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/squared_logos/BUF.png",
+      "espn": {
+        "default": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/buf.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:45Z"
+        },
+        "dark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/buf.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:45Z"
+        },
+        "scoreboard": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/buf.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:45Z"
+        },
+        "scoreboardDark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/scoreboard/buf.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:45Z"
+        },
+        "grayscale": {
+          "url": "https://a.espncdn.com/guid/232afaf2-01ac-fcc2-8bd6-66550df1703a/logos/grayscale.png",
+          "width": 500,
+          "lastUpdated": "2026-03-31T12:53Z"
+        },
+        "primaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/232afaf2-01ac-fcc2-8bd6-66550df1703a/logos/primary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/232afaf2-01ac-fcc2-8bd6-66550df1703a/logos/primary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/232afaf2-01ac-fcc2-8bd6-66550df1703a/logos/primary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/232afaf2-01ac-fcc2-8bd6-66550df1703a/logos/primary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryBlack": {
+          "url": "https://a.espncdn.com/guid/232afaf2-01ac-fcc2-8bd6-66550df1703a/logos/primary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryWhite": {
+          "url": "https://a.espncdn.com/guid/232afaf2-01ac-fcc2-8bd6-66550df1703a/logos/primary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/232afaf2-01ac-fcc2-8bd6-66550df1703a/logos/secondary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/232afaf2-01ac-fcc2-8bd6-66550df1703a/logos/secondary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/232afaf2-01ac-fcc2-8bd6-66550df1703a/logos/secondary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/232afaf2-01ac-fcc2-8bd6-66550df1703a/logos/secondary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryBlack": {
+          "url": "https://a.espncdn.com/guid/232afaf2-01ac-fcc2-8bd6-66550df1703a/logos/secondary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryWhite": {
+          "url": "https://a.espncdn.com/guid/232afaf2-01ac-fcc2-8bd6-66550df1703a/logos/secondary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        }
+      }
+    },
+    "CAR": {
+      "name": "Carolina Panthers",
+      "espnId": "29",
+      "nflDotComVariant": "light",
+      "primarySvg": "https://static.www.nfl.com/league/api/clubs/logos/CAR.svg",
+      "colors": [
+        "#0085CA",
+        "#000000",
+        "#bfc0bf",
+        "#0085ca"
+      ],
+      "wordmark": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/wordmarks/CAR.png",
+      "squaredLogo": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/squared_logos/CAR.png",
+      "espn": {
+        "default": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/car.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:45Z"
+        },
+        "dark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/car.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:45Z"
+        },
+        "scoreboard": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/car.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:46Z"
+        },
+        "scoreboardDark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/scoreboard/car.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:45Z"
+        },
+        "grayscale": {
+          "url": "https://a.espncdn.com/guid/647c27bf-ab86-550e-5b83-91c29e73e4a9/logos/grayscale.png",
+          "width": 500,
+          "lastUpdated": "2026-03-31T12:54Z"
+        },
+        "primaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/647c27bf-ab86-550e-5b83-91c29e73e4a9/logos/primary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/647c27bf-ab86-550e-5b83-91c29e73e4a9/logos/primary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/647c27bf-ab86-550e-5b83-91c29e73e4a9/logos/primary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/647c27bf-ab86-550e-5b83-91c29e73e4a9/logos/primary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryBlack": {
+          "url": "https://a.espncdn.com/guid/647c27bf-ab86-550e-5b83-91c29e73e4a9/logos/primary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryWhite": {
+          "url": "https://a.espncdn.com/guid/647c27bf-ab86-550e-5b83-91c29e73e4a9/logos/primary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/647c27bf-ab86-550e-5b83-91c29e73e4a9/logos/secondary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/647c27bf-ab86-550e-5b83-91c29e73e4a9/logos/secondary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/647c27bf-ab86-550e-5b83-91c29e73e4a9/logos/secondary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/647c27bf-ab86-550e-5b83-91c29e73e4a9/logos/secondary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryBlack": {
+          "url": "https://a.espncdn.com/guid/647c27bf-ab86-550e-5b83-91c29e73e4a9/logos/secondary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryWhite": {
+          "url": "https://a.espncdn.com/guid/647c27bf-ab86-550e-5b83-91c29e73e4a9/logos/secondary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        }
+      }
+    },
+    "CHI": {
+      "name": "Chicago Bears",
+      "espnId": "3",
+      "nflDotComVariant": "dark",
+      "primarySvg": "https://static.www.nfl.com/league/api/clubs/logos/CHI.svg",
+      "colors": [
+        "#0B162A",
+        "#E64100",
+        "#0b162a",
+        "#E64100"
+      ],
+      "wordmark": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/wordmarks/CHI.png",
+      "squaredLogo": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/squared_logos/CHI.png",
+      "espn": {
+        "default": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/chi.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:46Z"
+        },
+        "dark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/chi.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:46Z"
+        },
+        "scoreboard": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/chi.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:46Z"
+        },
+        "scoreboardDark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/scoreboard/chi.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:46Z"
+        },
+        "grayscale": {
+          "url": "https://a.espncdn.com/guid/19d73366-b5a5-cca2-a176-a2c024ce0bb3/logos/grayscale.png",
+          "width": 500,
+          "lastUpdated": "2026-03-31T12:53Z"
+        },
+        "primaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/19d73366-b5a5-cca2-a176-a2c024ce0bb3/logos/primary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/19d73366-b5a5-cca2-a176-a2c024ce0bb3/logos/primary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/19d73366-b5a5-cca2-a176-a2c024ce0bb3/logos/primary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/19d73366-b5a5-cca2-a176-a2c024ce0bb3/logos/primary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryBlack": {
+          "url": "https://a.espncdn.com/guid/19d73366-b5a5-cca2-a176-a2c024ce0bb3/logos/primary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryWhite": {
+          "url": "https://a.espncdn.com/guid/19d73366-b5a5-cca2-a176-a2c024ce0bb3/logos/primary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/19d73366-b5a5-cca2-a176-a2c024ce0bb3/logos/secondary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/19d73366-b5a5-cca2-a176-a2c024ce0bb3/logos/secondary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/19d73366-b5a5-cca2-a176-a2c024ce0bb3/logos/secondary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/19d73366-b5a5-cca2-a176-a2c024ce0bb3/logos/secondary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryBlack": {
+          "url": "https://a.espncdn.com/guid/19d73366-b5a5-cca2-a176-a2c024ce0bb3/logos/secondary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryWhite": {
+          "url": "https://a.espncdn.com/guid/19d73366-b5a5-cca2-a176-a2c024ce0bb3/logos/secondary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        }
+      }
+    },
+    "CIN": {
+      "name": "Cincinnati Bengals",
+      "espnId": "4",
+      "nflDotComVariant": "light",
+      "primarySvg": "https://static.www.nfl.com/league/api/clubs/logos/CIN.svg",
+      "colors": [
+        "#FB4F14",
+        "#000000",
+        "#000000",
+        "#d32f1e"
+      ],
+      "wordmark": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/wordmarks/CIN.png",
+      "squaredLogo": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/squared_logos/CIN.png",
+      "espn": {
+        "default": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/cin.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:46Z"
+        },
+        "dark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/cin.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:46Z"
+        },
+        "scoreboard": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/cin.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:46Z"
+        },
+        "scoreboardDark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/scoreboard/cin.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:46Z"
+        },
+        "grayscale": {
+          "url": "https://a.espncdn.com/guid/75b8623b-8926-b411-0476-3d3602b78523/logos/grayscale.png",
+          "width": 500,
+          "lastUpdated": "2026-03-31T12:53Z"
+        },
+        "primaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/75b8623b-8926-b411-0476-3d3602b78523/logos/primary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/75b8623b-8926-b411-0476-3d3602b78523/logos/primary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/75b8623b-8926-b411-0476-3d3602b78523/logos/primary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/75b8623b-8926-b411-0476-3d3602b78523/logos/primary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryBlack": {
+          "url": "https://a.espncdn.com/guid/75b8623b-8926-b411-0476-3d3602b78523/logos/primary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryWhite": {
+          "url": "https://a.espncdn.com/guid/75b8623b-8926-b411-0476-3d3602b78523/logos/primary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/75b8623b-8926-b411-0476-3d3602b78523/logos/secondary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/75b8623b-8926-b411-0476-3d3602b78523/logos/secondary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/75b8623b-8926-b411-0476-3d3602b78523/logos/secondary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/75b8623b-8926-b411-0476-3d3602b78523/logos/secondary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryBlack": {
+          "url": "https://a.espncdn.com/guid/75b8623b-8926-b411-0476-3d3602b78523/logos/secondary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryWhite": {
+          "url": "https://a.espncdn.com/guid/75b8623b-8926-b411-0476-3d3602b78523/logos/secondary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        }
+      }
+    },
+    "CLE": {
+      "name": "Cleveland Browns",
+      "espnId": "5",
+      "nflDotComVariant": "light",
+      "primarySvg": "https://static.www.nfl.com/league/api/clubs/logos/CLE.svg",
+      "colors": [
+        "#FF3C00",
+        "#311D00",
+        "#a5acaf",
+        "#d32f1e"
+      ],
+      "wordmark": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/wordmarks/CLE.png",
+      "squaredLogo": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/squared_logos/CLE.png",
+      "espn": {
+        "default": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/cle.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:47Z"
+        },
+        "dark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/cle.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:47Z"
+        },
+        "scoreboard": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/cle.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:47Z"
+        },
+        "scoreboardDark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/scoreboard/cle.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:47Z"
+        },
+        "grayscale": {
+          "url": "https://a.espncdn.com/guid/539babc5-e5fb-753b-8ae1-c15032a91ef4/logos/grayscale.png",
+          "width": 500,
+          "lastUpdated": "2026-03-30T20:28Z"
+        },
+        "primaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/539babc5-e5fb-753b-8ae1-c15032a91ef4/logos/primary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/539babc5-e5fb-753b-8ae1-c15032a91ef4/logos/primary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/539babc5-e5fb-753b-8ae1-c15032a91ef4/logos/primary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/539babc5-e5fb-753b-8ae1-c15032a91ef4/logos/primary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryBlack": {
+          "url": "https://a.espncdn.com/guid/539babc5-e5fb-753b-8ae1-c15032a91ef4/logos/primary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryWhite": {
+          "url": "https://a.espncdn.com/guid/539babc5-e5fb-753b-8ae1-c15032a91ef4/logos/primary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/539babc5-e5fb-753b-8ae1-c15032a91ef4/logos/secondary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/539babc5-e5fb-753b-8ae1-c15032a91ef4/logos/secondary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/539babc5-e5fb-753b-8ae1-c15032a91ef4/logos/secondary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/539babc5-e5fb-753b-8ae1-c15032a91ef4/logos/secondary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryBlack": {
+          "url": "https://a.espncdn.com/guid/539babc5-e5fb-753b-8ae1-c15032a91ef4/logos/secondary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryWhite": {
+          "url": "https://a.espncdn.com/guid/539babc5-e5fb-753b-8ae1-c15032a91ef4/logos/secondary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        }
+      }
+    },
+    "DAL": {
+      "name": "Dallas Cowboys",
+      "espnId": "6",
+      "nflDotComVariant": "light",
+      "primarySvg": "https://static.www.nfl.com/league/api/clubs/logos/DAL.svg",
+      "colors": [
+        "#002244",
+        "#B0B7BC",
+        "#acc0c6",
+        "#a5acaf"
+      ],
+      "wordmark": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/wordmarks/DAL.png",
+      "squaredLogo": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/squared_logos/DAL.png",
+      "espn": {
+        "default": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/dal.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:47Z"
+        },
+        "dark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/dal.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:59Z"
+        },
+        "scoreboard": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/dal.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:48Z"
+        },
+        "scoreboardDark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/scoreboard/dal.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:59Z"
+        },
+        "grayscale": {
+          "url": "https://a.espncdn.com/guid/b0fc8fb7-9dbe-e574-9008-6f0ee7c6b234/logos/grayscale.png",
+          "width": 500,
+          "lastUpdated": "2026-03-31T12:54Z"
+        },
+        "primaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/b0fc8fb7-9dbe-e574-9008-6f0ee7c6b234/logos/primary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/b0fc8fb7-9dbe-e574-9008-6f0ee7c6b234/logos/primary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/b0fc8fb7-9dbe-e574-9008-6f0ee7c6b234/logos/primary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/b0fc8fb7-9dbe-e574-9008-6f0ee7c6b234/logos/primary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryBlack": {
+          "url": "https://a.espncdn.com/guid/b0fc8fb7-9dbe-e574-9008-6f0ee7c6b234/logos/primary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryWhite": {
+          "url": "https://a.espncdn.com/guid/b0fc8fb7-9dbe-e574-9008-6f0ee7c6b234/logos/primary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/b0fc8fb7-9dbe-e574-9008-6f0ee7c6b234/logos/secondary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/b0fc8fb7-9dbe-e574-9008-6f0ee7c6b234/logos/secondary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/b0fc8fb7-9dbe-e574-9008-6f0ee7c6b234/logos/secondary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/b0fc8fb7-9dbe-e574-9008-6f0ee7c6b234/logos/secondary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryBlack": {
+          "url": "https://a.espncdn.com/guid/b0fc8fb7-9dbe-e574-9008-6f0ee7c6b234/logos/secondary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryWhite": {
+          "url": "https://a.espncdn.com/guid/b0fc8fb7-9dbe-e574-9008-6f0ee7c6b234/logos/secondary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        }
+      }
+    },
+    "DEN": {
+      "name": "Denver Broncos",
+      "espnId": "7",
+      "nflDotComVariant": "light",
+      "primarySvg": "https://static.www.nfl.com/league/api/clubs/logos/DEN.svg",
+      "colors": [
+        "#002244",
+        "#FB4F14",
+        "#00234c",
+        "#ff5200"
+      ],
+      "wordmark": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/wordmarks/DEN.png",
+      "squaredLogo": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/squared_logos/DEN.png",
+      "espn": {
+        "default": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/den.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:48Z"
+        },
+        "dark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/den.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:59Z"
+        },
+        "scoreboard": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/den.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:48Z"
+        },
+        "scoreboardDark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/scoreboard/den.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:59Z"
+        },
+        "grayscale": {
+          "url": "https://a.espncdn.com/guid/51042145-e3c1-0694-ae0d-f720342ff8fc/logos/grayscale.png",
+          "width": 500,
+          "lastUpdated": "2026-03-31T12:53Z"
+        },
+        "primaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/51042145-e3c1-0694-ae0d-f720342ff8fc/logos/primary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/51042145-e3c1-0694-ae0d-f720342ff8fc/logos/primary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/51042145-e3c1-0694-ae0d-f720342ff8fc/logos/primary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/51042145-e3c1-0694-ae0d-f720342ff8fc/logos/primary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryBlack": {
+          "url": "https://a.espncdn.com/guid/51042145-e3c1-0694-ae0d-f720342ff8fc/logos/primary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryWhite": {
+          "url": "https://a.espncdn.com/guid/51042145-e3c1-0694-ae0d-f720342ff8fc/logos/primary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/51042145-e3c1-0694-ae0d-f720342ff8fc/logos/secondary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/51042145-e3c1-0694-ae0d-f720342ff8fc/logos/secondary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/51042145-e3c1-0694-ae0d-f720342ff8fc/logos/secondary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/51042145-e3c1-0694-ae0d-f720342ff8fc/logos/secondary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryBlack": {
+          "url": "https://a.espncdn.com/guid/51042145-e3c1-0694-ae0d-f720342ff8fc/logos/secondary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryWhite": {
+          "url": "https://a.espncdn.com/guid/51042145-e3c1-0694-ae0d-f720342ff8fc/logos/secondary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        }
+      }
+    },
+    "DET": {
+      "name": "Detroit Lions",
+      "espnId": "8",
+      "nflDotComVariant": "light",
+      "primarySvg": "https://static.www.nfl.com/league/api/clubs/logos/DET.svg",
+      "colors": [
+        "#0076B6",
+        "#B0B7BC",
+        "#000000",
+        "#004e89"
+      ],
+      "wordmark": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/wordmarks/DET.png",
+      "squaredLogo": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/squared_logos/DET.png",
+      "espn": {
+        "default": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/det.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:48Z"
+        },
+        "dark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/det.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:48Z"
+        },
+        "scoreboard": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/det.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:48Z"
+        },
+        "scoreboardDark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/scoreboard/det.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:48Z"
+        },
+        "grayscale": {
+          "url": "https://a.espncdn.com/guid/56caffee-178d-f6f2-a076-b277486b8c32/logos/grayscale.png",
+          "width": 500,
+          "lastUpdated": "2026-03-31T12:53Z"
+        },
+        "primaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/56caffee-178d-f6f2-a076-b277486b8c32/logos/primary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/56caffee-178d-f6f2-a076-b277486b8c32/logos/primary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/56caffee-178d-f6f2-a076-b277486b8c32/logos/primary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/56caffee-178d-f6f2-a076-b277486b8c32/logos/primary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryBlack": {
+          "url": "https://a.espncdn.com/guid/56caffee-178d-f6f2-a076-b277486b8c32/logos/primary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryWhite": {
+          "url": "https://a.espncdn.com/guid/56caffee-178d-f6f2-a076-b277486b8c32/logos/primary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/56caffee-178d-f6f2-a076-b277486b8c32/logos/secondary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/56caffee-178d-f6f2-a076-b277486b8c32/logos/secondary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/56caffee-178d-f6f2-a076-b277486b8c32/logos/secondary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/56caffee-178d-f6f2-a076-b277486b8c32/logos/secondary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryBlack": {
+          "url": "https://a.espncdn.com/guid/56caffee-178d-f6f2-a076-b277486b8c32/logos/secondary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryWhite": {
+          "url": "https://a.espncdn.com/guid/56caffee-178d-f6f2-a076-b277486b8c32/logos/secondary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        }
+      }
+    },
+    "GB": {
+      "name": "Green Bay Packers",
+      "espnId": "9",
+      "nflDotComVariant": "light",
+      "primarySvg": "https://static.www.nfl.com/league/api/clubs/logos/GB.svg",
+      "colors": [
+        "#203731",
+        "#FFB612",
+        "#1c2d25",
+        "#eead1e"
+      ],
+      "wordmark": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/wordmarks/GB.png",
+      "squaredLogo": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/squared_logos/GB.png",
+      "espn": {
+        "default": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/gb.png",
+          "width": 500,
+          "lastUpdated": "2024-10-28T18:22Z"
+        },
+        "dark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/gb.png",
+          "width": 500,
+          "lastUpdated": "2024-10-30T17:26Z"
+        },
+        "scoreboard": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/gb.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:49Z"
+        },
+        "scoreboardDark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/scoreboard/gb.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:49Z"
+        },
+        "grayscale": {
+          "url": "https://a.espncdn.com/guid/06cd3bcf-7a86-53d4-28e7-aa049dd36261/logos/grayscale.png",
+          "width": 500,
+          "lastUpdated": "2026-03-31T12:53Z"
+        },
+        "primaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/06cd3bcf-7a86-53d4-28e7-aa049dd36261/logos/primary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/06cd3bcf-7a86-53d4-28e7-aa049dd36261/logos/primary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/06cd3bcf-7a86-53d4-28e7-aa049dd36261/logos/primary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/06cd3bcf-7a86-53d4-28e7-aa049dd36261/logos/primary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryBlack": {
+          "url": "https://a.espncdn.com/guid/06cd3bcf-7a86-53d4-28e7-aa049dd36261/logos/primary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryWhite": {
+          "url": "https://a.espncdn.com/guid/06cd3bcf-7a86-53d4-28e7-aa049dd36261/logos/primary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/06cd3bcf-7a86-53d4-28e7-aa049dd36261/logos/secondary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/06cd3bcf-7a86-53d4-28e7-aa049dd36261/logos/secondary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/06cd3bcf-7a86-53d4-28e7-aa049dd36261/logos/secondary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/06cd3bcf-7a86-53d4-28e7-aa049dd36261/logos/secondary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryBlack": {
+          "url": "https://a.espncdn.com/guid/06cd3bcf-7a86-53d4-28e7-aa049dd36261/logos/secondary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryWhite": {
+          "url": "https://a.espncdn.com/guid/06cd3bcf-7a86-53d4-28e7-aa049dd36261/logos/secondary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        }
+      }
+    },
+    "HOU": {
+      "name": "Houston Texans",
+      "espnId": "34",
+      "nflDotComVariant": "light",
+      "primarySvg": "https://static.www.nfl.com/league/api/clubs/logos/HOU.svg",
+      "colors": [
+        "#03202F",
+        "#A71930",
+        "#00071c",
+        "#a30d2d"
+      ],
+      "wordmark": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/wordmarks/HOU.png",
+      "squaredLogo": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/squared_logos/HOU.png",
+      "espn": {
+        "default": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/hou.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:50Z"
+        },
+        "dark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/hou.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:49Z"
+        },
+        "scoreboard": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/hou.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:50Z"
+        },
+        "scoreboardDark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/scoreboard/hou.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:49Z"
+        },
+        "grayscale": {
+          "url": "https://a.espncdn.com/guid/595690b3-2161-4913-a7a7-814af2fd2621/logos/grayscale.png",
+          "width": 500,
+          "lastUpdated": "2026-03-31T12:54Z"
+        },
+        "primaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/595690b3-2161-4913-a7a7-814af2fd2621/logos/primary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/595690b3-2161-4913-a7a7-814af2fd2621/logos/primary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/595690b3-2161-4913-a7a7-814af2fd2621/logos/primary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/595690b3-2161-4913-a7a7-814af2fd2621/logos/primary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryBlack": {
+          "url": "https://a.espncdn.com/guid/595690b3-2161-4913-a7a7-814af2fd2621/logos/primary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryWhite": {
+          "url": "https://a.espncdn.com/guid/595690b3-2161-4913-a7a7-814af2fd2621/logos/primary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/595690b3-2161-4913-a7a7-814af2fd2621/logos/secondary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/595690b3-2161-4913-a7a7-814af2fd2621/logos/secondary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/595690b3-2161-4913-a7a7-814af2fd2621/logos/secondary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/595690b3-2161-4913-a7a7-814af2fd2621/logos/secondary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-08-11T18:09Z"
+        },
+        "secondaryBlack": {
+          "url": "https://a.espncdn.com/guid/595690b3-2161-4913-a7a7-814af2fd2621/logos/secondary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryWhite": {
+          "url": "https://a.espncdn.com/guid/595690b3-2161-4913-a7a7-814af2fd2621/logos/secondary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        }
+      }
+    },
+    "IND": {
+      "name": "Indianapolis Colts",
+      "espnId": "11",
+      "nflDotComVariant": "light",
+      "primarySvg": "https://static.www.nfl.com/league/api/clubs/logos/IND.svg",
+      "colors": [
+        "#002C5F",
+        "#a5acaf",
+        "#013369",
+        "#9ba1a2"
+      ],
+      "wordmark": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/wordmarks/IND.png",
+      "squaredLogo": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/squared_logos/IND.png",
+      "espn": {
+        "default": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/ind.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:50Z"
+        },
+        "dark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/ind.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:50Z"
+        },
+        "scoreboard": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/ind.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:50Z"
+        },
+        "scoreboardDark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/scoreboard/ind.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:50Z"
+        },
+        "grayscale": {
+          "url": "https://a.espncdn.com/guid/582d14eb-da61-e505-cc40-d972a1b60ed1/logos/grayscale.png",
+          "width": 500,
+          "lastUpdated": "2026-03-31T12:52Z"
+        },
+        "primaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/582d14eb-da61-e505-cc40-d972a1b60ed1/logos/primary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/582d14eb-da61-e505-cc40-d972a1b60ed1/logos/primary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/582d14eb-da61-e505-cc40-d972a1b60ed1/logos/primary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/582d14eb-da61-e505-cc40-d972a1b60ed1/logos/primary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryBlack": {
+          "url": "https://a.espncdn.com/guid/582d14eb-da61-e505-cc40-d972a1b60ed1/logos/primary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryWhite": {
+          "url": "https://a.espncdn.com/guid/582d14eb-da61-e505-cc40-d972a1b60ed1/logos/primary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/582d14eb-da61-e505-cc40-d972a1b60ed1/logos/secondary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/582d14eb-da61-e505-cc40-d972a1b60ed1/logos/secondary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/582d14eb-da61-e505-cc40-d972a1b60ed1/logos/secondary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/582d14eb-da61-e505-cc40-d972a1b60ed1/logos/secondary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryBlack": {
+          "url": "https://a.espncdn.com/guid/582d14eb-da61-e505-cc40-d972a1b60ed1/logos/secondary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-02-13T03:12Z"
+        },
+        "secondaryWhite": {
+          "url": "https://a.espncdn.com/guid/582d14eb-da61-e505-cc40-d972a1b60ed1/logos/secondary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        }
+      }
+    },
+    "JAX": {
+      "name": "Jacksonville Jaguars",
+      "espnId": "30",
+      "nflDotComVariant": "light",
+      "primarySvg": "https://static.www.nfl.com/league/api/clubs/logos/JAX.svg",
+      "colors": [
+        "#006778",
+        "#000000",
+        "#9f792c",
+        "#d7a22a"
+      ],
+      "wordmark": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/wordmarks/JAX.png",
+      "squaredLogo": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/squared_logos/JAX.png",
+      "espn": {
+        "default": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/jax.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:50Z"
+        },
+        "dark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/jax.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:50Z"
+        },
+        "scoreboard": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/jax.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:50Z"
+        },
+        "scoreboardDark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/scoreboard/jax.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:50Z"
+        },
+        "grayscale": {
+          "url": "https://a.espncdn.com/guid/ca6fb778-cbf6-d9a3-3e93-01230335fcab/logos/grayscale.png",
+          "width": 500,
+          "lastUpdated": "2026-03-31T12:52Z"
+        },
+        "primaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/ca6fb778-cbf6-d9a3-3e93-01230335fcab/logos/primary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/ca6fb778-cbf6-d9a3-3e93-01230335fcab/logos/primary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/ca6fb778-cbf6-d9a3-3e93-01230335fcab/logos/primary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/ca6fb778-cbf6-d9a3-3e93-01230335fcab/logos/primary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryBlack": {
+          "url": "https://a.espncdn.com/guid/ca6fb778-cbf6-d9a3-3e93-01230335fcab/logos/primary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryWhite": {
+          "url": "https://a.espncdn.com/guid/ca6fb778-cbf6-d9a3-3e93-01230335fcab/logos/primary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/ca6fb778-cbf6-d9a3-3e93-01230335fcab/logos/secondary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/ca6fb778-cbf6-d9a3-3e93-01230335fcab/logos/secondary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/ca6fb778-cbf6-d9a3-3e93-01230335fcab/logos/secondary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/ca6fb778-cbf6-d9a3-3e93-01230335fcab/logos/secondary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryBlack": {
+          "url": "https://a.espncdn.com/guid/ca6fb778-cbf6-d9a3-3e93-01230335fcab/logos/secondary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryWhite": {
+          "url": "https://a.espncdn.com/guid/ca6fb778-cbf6-d9a3-3e93-01230335fcab/logos/secondary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        }
+      }
+    },
+    "KC": {
+      "name": "Kansas City Chiefs",
+      "espnId": "12",
+      "nflDotComVariant": "light",
+      "primarySvg": "https://static.www.nfl.com/league/api/clubs/logos/KC.svg",
+      "colors": [
+        "#E31837",
+        "#FFB612",
+        "#000000",
+        "#e31837"
+      ],
+      "wordmark": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/wordmarks/KC.png",
+      "squaredLogo": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/squared_logos/KC.png",
+      "espn": {
+        "default": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/kc.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:51Z"
+        },
+        "dark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/kc.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:51Z"
+        },
+        "scoreboard": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/kc.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:51Z"
+        },
+        "scoreboardDark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/scoreboard/kc.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:51Z"
+        },
+        "grayscale": {
+          "url": "https://a.espncdn.com/guid/f68f2343-8ceb-7a02-740d-af6338be21d2/logos/grayscale.png",
+          "width": 500,
+          "lastUpdated": "2026-03-31T12:53Z"
+        },
+        "primaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/f68f2343-8ceb-7a02-740d-af6338be21d2/logos/primary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/f68f2343-8ceb-7a02-740d-af6338be21d2/logos/primary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/f68f2343-8ceb-7a02-740d-af6338be21d2/logos/primary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/f68f2343-8ceb-7a02-740d-af6338be21d2/logos/primary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryBlack": {
+          "url": "https://a.espncdn.com/guid/f68f2343-8ceb-7a02-740d-af6338be21d2/logos/primary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryWhite": {
+          "url": "https://a.espncdn.com/guid/f68f2343-8ceb-7a02-740d-af6338be21d2/logos/primary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/f68f2343-8ceb-7a02-740d-af6338be21d2/logos/secondary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/f68f2343-8ceb-7a02-740d-af6338be21d2/logos/secondary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/f68f2343-8ceb-7a02-740d-af6338be21d2/logos/secondary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/f68f2343-8ceb-7a02-740d-af6338be21d2/logos/secondary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryBlack": {
+          "url": "https://a.espncdn.com/guid/f68f2343-8ceb-7a02-740d-af6338be21d2/logos/secondary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryWhite": {
+          "url": "https://a.espncdn.com/guid/f68f2343-8ceb-7a02-740d-af6338be21d2/logos/secondary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        }
+      }
+    },
+    "LAC": {
+      "name": "Los Angeles Chargers",
+      "espnId": "24",
+      "nflDotComVariant": "light",
+      "primarySvg": "https://static.www.nfl.com/league/api/clubs/logos/LAC.svg",
+      "colors": [
+        "#007BC7",
+        "#ffc20e",
+        "#ffb612",
+        "#001532"
+      ],
+      "wordmark": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/wordmarks/LAC.png",
+      "squaredLogo": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/squared_logos/LAC.png",
+      "espn": {
+        "default": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/lac.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:52Z"
+        },
+        "dark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/lac.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:52Z"
+        },
+        "scoreboard": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/lac.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:51Z"
+        },
+        "scoreboardDark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/scoreboard/lac.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:52Z"
+        },
+        "grayscale": {
+          "url": "https://a.espncdn.com/guid/84caf62b-c753-71ea-a787-44fd224a4294/logos/grayscale.png",
+          "width": 500,
+          "lastUpdated": "2026-03-31T12:53Z"
+        },
+        "primaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/84caf62b-c753-71ea-a787-44fd224a4294/logos/primary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/84caf62b-c753-71ea-a787-44fd224a4294/logos/primary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/84caf62b-c753-71ea-a787-44fd224a4294/logos/primary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/84caf62b-c753-71ea-a787-44fd224a4294/logos/primary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryBlack": {
+          "url": "https://a.espncdn.com/guid/84caf62b-c753-71ea-a787-44fd224a4294/logos/primary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryWhite": {
+          "url": "https://a.espncdn.com/guid/84caf62b-c753-71ea-a787-44fd224a4294/logos/primary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/84caf62b-c753-71ea-a787-44fd224a4294/logos/secondary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/84caf62b-c753-71ea-a787-44fd224a4294/logos/secondary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/84caf62b-c753-71ea-a787-44fd224a4294/logos/secondary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/84caf62b-c753-71ea-a787-44fd224a4294/logos/secondary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryBlack": {
+          "url": "https://a.espncdn.com/guid/84caf62b-c753-71ea-a787-44fd224a4294/logos/secondary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryWhite": {
+          "url": "https://a.espncdn.com/guid/84caf62b-c753-71ea-a787-44fd224a4294/logos/secondary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        }
+      }
+    },
+    "LAR": {
+      "name": "Los Angeles Rams",
+      "espnId": "14",
+      "nflDotComVariant": "light",
+      "primarySvg": "https://static.www.nfl.com/league/api/clubs/logos/LAR.svg",
+      "colors": [
+        "#003594",
+        "#FFD100",
+        "#001532",
+        "#af925d"
+      ],
+      "wordmark": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/wordmarks/LAR.png",
+      "squaredLogo": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/squared_logos/LAR.png",
+      "espn": {
+        "default": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/lar.png",
+          "width": 500,
+          "lastUpdated": "2026-04-24T14:36Z"
+        },
+        "dark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/lar.png",
+          "width": 500,
+          "lastUpdated": "2026-04-24T14:27Z"
+        },
+        "scoreboard": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/lar.png",
+          "width": 500,
+          "lastUpdated": "2026-04-24T14:36Z"
+        },
+        "scoreboardDark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/scoreboard/lar.png",
+          "width": 500,
+          "lastUpdated": "2026-04-24T14:27Z"
+        },
+        "grayscale": {
+          "url": "https://a.espncdn.com/guid/2e1473b2-e269-fd7a-1137-c1edacb85986/logos/grayscale.png",
+          "width": 500,
+          "lastUpdated": "2026-03-31T12:52Z"
+        },
+        "primaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/2e1473b2-e269-fd7a-1137-c1edacb85986/logos/primary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/2e1473b2-e269-fd7a-1137-c1edacb85986/logos/primary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/2e1473b2-e269-fd7a-1137-c1edacb85986/logos/primary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/2e1473b2-e269-fd7a-1137-c1edacb85986/logos/primary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryBlack": {
+          "url": "https://a.espncdn.com/guid/2e1473b2-e269-fd7a-1137-c1edacb85986/logos/primary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryWhite": {
+          "url": "https://a.espncdn.com/guid/2e1473b2-e269-fd7a-1137-c1edacb85986/logos/primary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/2e1473b2-e269-fd7a-1137-c1edacb85986/logos/secondary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/2e1473b2-e269-fd7a-1137-c1edacb85986/logos/secondary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/2e1473b2-e269-fd7a-1137-c1edacb85986/logos/secondary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/2e1473b2-e269-fd7a-1137-c1edacb85986/logos/secondary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryBlack": {
+          "url": "https://a.espncdn.com/guid/2e1473b2-e269-fd7a-1137-c1edacb85986/logos/secondary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryWhite": {
+          "url": "https://a.espncdn.com/guid/2e1473b2-e269-fd7a-1137-c1edacb85986/logos/secondary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        }
+      }
+    },
+    "LV": {
+      "name": "Las Vegas Raiders",
+      "espnId": "13",
+      "nflDotComVariant": "light",
+      "primarySvg": "https://static.www.nfl.com/league/api/clubs/logos/LV.svg",
+      "colors": [
+        "#000000",
+        "#A5ACAF",
+        "#a6aeb0",
+        "#000000"
+      ],
+      "wordmark": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/wordmarks/LV.png",
+      "squaredLogo": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/squared_logos/LV.png",
+      "espn": {
+        "default": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/lv.png",
+          "width": 500,
+          "lastUpdated": "2024-09-22T22:51Z"
+        },
+        "dark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/lv.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:59Z"
+        },
+        "scoreboard": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/lv.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:51Z"
+        },
+        "scoreboardDark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/scoreboard/lv.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:59Z"
+        },
+        "grayscale": {
+          "url": "https://a.espncdn.com/guid/b18540eb-6f2b-534c-e7f9-9bd930518da9/logos/grayscale.png",
+          "width": 500,
+          "lastUpdated": "2026-03-31T12:53Z"
+        },
+        "primaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/b18540eb-6f2b-534c-e7f9-9bd930518da9/logos/primary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/b18540eb-6f2b-534c-e7f9-9bd930518da9/logos/primary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/b18540eb-6f2b-534c-e7f9-9bd930518da9/logos/primary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/b18540eb-6f2b-534c-e7f9-9bd930518da9/logos/primary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryBlack": {
+          "url": "https://a.espncdn.com/guid/b18540eb-6f2b-534c-e7f9-9bd930518da9/logos/primary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryWhite": {
+          "url": "https://a.espncdn.com/guid/b18540eb-6f2b-534c-e7f9-9bd930518da9/logos/primary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/b18540eb-6f2b-534c-e7f9-9bd930518da9/logos/secondary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/b18540eb-6f2b-534c-e7f9-9bd930518da9/logos/secondary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/b18540eb-6f2b-534c-e7f9-9bd930518da9/logos/secondary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/b18540eb-6f2b-534c-e7f9-9bd930518da9/logos/secondary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryBlack": {
+          "url": "https://a.espncdn.com/guid/b18540eb-6f2b-534c-e7f9-9bd930518da9/logos/secondary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryWhite": {
+          "url": "https://a.espncdn.com/guid/b18540eb-6f2b-534c-e7f9-9bd930518da9/logos/secondary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        }
+      }
+    },
+    "MIA": {
+      "name": "Miami Dolphins",
+      "espnId": "15",
+      "nflDotComVariant": "light",
+      "primarySvg": "https://static.www.nfl.com/league/api/clubs/logos/MIA.svg",
+      "colors": [
+        "#008E97",
+        "#F58220",
+        "#005778",
+        "#008e97"
+      ],
+      "wordmark": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/wordmarks/MIA.png",
+      "squaredLogo": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/squared_logos/MIA.png",
+      "espn": {
+        "default": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/mia.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:53Z"
+        },
+        "dark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/mia.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:53Z"
+        },
+        "scoreboard": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/mia.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:53Z"
+        },
+        "scoreboardDark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/scoreboard/mia.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:53Z"
+        },
+        "grayscale": {
+          "url": "https://a.espncdn.com/guid/af33088b-1e19-d27d-dbc0-354fd7151703/logos/grayscale.png",
+          "width": 500,
+          "lastUpdated": "2026-03-31T12:54Z"
+        },
+        "primaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/af33088b-1e19-d27d-dbc0-354fd7151703/logos/primary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/af33088b-1e19-d27d-dbc0-354fd7151703/logos/primary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/af33088b-1e19-d27d-dbc0-354fd7151703/logos/primary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/af33088b-1e19-d27d-dbc0-354fd7151703/logos/primary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryBlack": {
+          "url": "https://a.espncdn.com/guid/af33088b-1e19-d27d-dbc0-354fd7151703/logos/primary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryWhite": {
+          "url": "https://a.espncdn.com/guid/af33088b-1e19-d27d-dbc0-354fd7151703/logos/primary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/af33088b-1e19-d27d-dbc0-354fd7151703/logos/secondary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/af33088b-1e19-d27d-dbc0-354fd7151703/logos/secondary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/af33088b-1e19-d27d-dbc0-354fd7151703/logos/secondary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/af33088b-1e19-d27d-dbc0-354fd7151703/logos/secondary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryBlack": {
+          "url": "https://a.espncdn.com/guid/af33088b-1e19-d27d-dbc0-354fd7151703/logos/secondary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryWhite": {
+          "url": "https://a.espncdn.com/guid/af33088b-1e19-d27d-dbc0-354fd7151703/logos/secondary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        }
+      }
+    },
+    "MIN": {
+      "name": "Minnesota Vikings",
+      "espnId": "16",
+      "nflDotComVariant": "light",
+      "primarySvg": "https://static.www.nfl.com/league/api/clubs/logos/MIN.svg",
+      "colors": [
+        "#4F2683",
+        "#FFC62F",
+        "#e9bf9b",
+        "#000000"
+      ],
+      "wordmark": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/wordmarks/MIN.png",
+      "squaredLogo": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/squared_logos/MIN.png",
+      "espn": {
+        "default": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/min.png",
+          "width": 500,
+          "lastUpdated": "2023-08-24T19:26Z"
+        },
+        "dark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/min.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:53Z"
+        },
+        "scoreboard": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/min.png",
+          "width": 500,
+          "lastUpdated": "2023-08-24T19:27Z"
+        },
+        "scoreboardDark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/scoreboard/min.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:53Z"
+        },
+        "grayscale": {
+          "url": "https://a.espncdn.com/guid/3db556c9-ed76-a7a5-4ccb-a92fc6db4334/logos/grayscale.png",
+          "width": 500,
+          "lastUpdated": "2026-03-31T12:53Z"
+        },
+        "primaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/3db556c9-ed76-a7a5-4ccb-a92fc6db4334/logos/primary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/3db556c9-ed76-a7a5-4ccb-a92fc6db4334/logos/primary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/3db556c9-ed76-a7a5-4ccb-a92fc6db4334/logos/primary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/3db556c9-ed76-a7a5-4ccb-a92fc6db4334/logos/primary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryBlack": {
+          "url": "https://a.espncdn.com/guid/3db556c9-ed76-a7a5-4ccb-a92fc6db4334/logos/primary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryWhite": {
+          "url": "https://a.espncdn.com/guid/3db556c9-ed76-a7a5-4ccb-a92fc6db4334/logos/primary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/3db556c9-ed76-a7a5-4ccb-a92fc6db4334/logos/secondary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/3db556c9-ed76-a7a5-4ccb-a92fc6db4334/logos/secondary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/3db556c9-ed76-a7a5-4ccb-a92fc6db4334/logos/secondary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/3db556c9-ed76-a7a5-4ccb-a92fc6db4334/logos/secondary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryBlack": {
+          "url": "https://a.espncdn.com/guid/3db556c9-ed76-a7a5-4ccb-a92fc6db4334/logos/secondary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryWhite": {
+          "url": "https://a.espncdn.com/guid/3db556c9-ed76-a7a5-4ccb-a92fc6db4334/logos/secondary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        }
+      }
+    },
+    "NE": {
+      "name": "New England Patriots",
+      "espnId": "17",
+      "nflDotComVariant": "light",
+      "primarySvg": "https://static.www.nfl.com/league/api/clubs/logos/NE.svg",
+      "colors": [
+        "#002244",
+        "#C60C30",
+        "#b0b7bc",
+        "#001532"
+      ],
+      "wordmark": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/wordmarks/NE.png",
+      "squaredLogo": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/squared_logos/NE.png",
+      "espn": {
+        "default": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/ne.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:54Z"
+        },
+        "dark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/ne.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:54Z"
+        },
+        "scoreboard": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/ne.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:54Z"
+        },
+        "scoreboardDark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/scoreboard/ne.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:54Z"
+        },
+        "grayscale": {
+          "url": "https://a.espncdn.com/guid/0078f353-fe3e-67ed-a42c-43cca0568e21/logos/grayscale.png",
+          "width": 500,
+          "lastUpdated": "2026-03-31T12:53Z"
+        },
+        "primaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/0078f353-fe3e-67ed-a42c-43cca0568e21/logos/primary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/0078f353-fe3e-67ed-a42c-43cca0568e21/logos/primary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/0078f353-fe3e-67ed-a42c-43cca0568e21/logos/primary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/0078f353-fe3e-67ed-a42c-43cca0568e21/logos/primary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryBlack": {
+          "url": "https://a.espncdn.com/guid/0078f353-fe3e-67ed-a42c-43cca0568e21/logos/primary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryWhite": {
+          "url": "https://a.espncdn.com/guid/0078f353-fe3e-67ed-a42c-43cca0568e21/logos/primary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/0078f353-fe3e-67ed-a42c-43cca0568e21/logos/secondary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/0078f353-fe3e-67ed-a42c-43cca0568e21/logos/secondary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/0078f353-fe3e-67ed-a42c-43cca0568e21/logos/secondary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/0078f353-fe3e-67ed-a42c-43cca0568e21/logos/secondary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryBlack": {
+          "url": "https://a.espncdn.com/guid/0078f353-fe3e-67ed-a42c-43cca0568e21/logos/secondary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryWhite": {
+          "url": "https://a.espncdn.com/guid/0078f353-fe3e-67ed-a42c-43cca0568e21/logos/secondary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        }
+      }
+    },
+    "NO": {
+      "name": "New Orleans Saints",
+      "espnId": "18",
+      "nflDotComVariant": "light",
+      "primarySvg": "https://static.www.nfl.com/league/api/clubs/logos/NO.svg",
+      "colors": [
+        "#D3BC8D",
+        "#000000",
+        "#9f8958",
+        "#000000"
+      ],
+      "wordmark": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/wordmarks/NO.png",
+      "squaredLogo": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/squared_logos/NO.png",
+      "espn": {
+        "default": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/no.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:54Z"
+        },
+        "dark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/no.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:54Z"
+        },
+        "scoreboard": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/no.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:54Z"
+        },
+        "scoreboardDark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/scoreboard/no.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:54Z"
+        },
+        "grayscale": {
+          "url": "https://a.espncdn.com/guid/97d2f6c9-2f22-459c-306a-046941ccab2a/logos/grayscale.png",
+          "width": 500,
+          "lastUpdated": "2026-03-31T12:53Z"
+        },
+        "primaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/97d2f6c9-2f22-459c-306a-046941ccab2a/logos/primary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/97d2f6c9-2f22-459c-306a-046941ccab2a/logos/primary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/97d2f6c9-2f22-459c-306a-046941ccab2a/logos/primary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/97d2f6c9-2f22-459c-306a-046941ccab2a/logos/primary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryBlack": {
+          "url": "https://a.espncdn.com/guid/97d2f6c9-2f22-459c-306a-046941ccab2a/logos/primary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryWhite": {
+          "url": "https://a.espncdn.com/guid/97d2f6c9-2f22-459c-306a-046941ccab2a/logos/primary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/97d2f6c9-2f22-459c-306a-046941ccab2a/logos/secondary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/97d2f6c9-2f22-459c-306a-046941ccab2a/logos/secondary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/97d2f6c9-2f22-459c-306a-046941ccab2a/logos/secondary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/97d2f6c9-2f22-459c-306a-046941ccab2a/logos/secondary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryBlack": {
+          "url": "https://a.espncdn.com/guid/97d2f6c9-2f22-459c-306a-046941ccab2a/logos/secondary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryWhite": {
+          "url": "https://a.espncdn.com/guid/97d2f6c9-2f22-459c-306a-046941ccab2a/logos/secondary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        }
+      }
+    },
+    "NYG": {
+      "name": "New York Giants",
+      "espnId": "19",
+      "nflDotComVariant": "dark",
+      "primarySvg": "https://static.www.nfl.com/league/api/clubs/logos/NYG.svg",
+      "colors": [
+        "#0B2265",
+        "#A71930",
+        "#a5acaf",
+        "#012352"
+      ],
+      "wordmark": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/wordmarks/NYG.png",
+      "squaredLogo": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/squared_logos/NYG.png",
+      "espn": {
+        "default": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/nyg.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:55Z"
+        },
+        "dark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/nyg.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:59Z"
+        },
+        "scoreboard": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/nyg.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:55Z"
+        },
+        "scoreboardDark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/scoreboard/nyg.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:59Z"
+        },
+        "grayscale": {
+          "url": "https://a.espncdn.com/guid/378600ea-2397-8364-8399-b7c1606a49a7/logos/grayscale.png",
+          "width": 500,
+          "lastUpdated": "2026-03-31T12:52Z"
+        },
+        "primaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/378600ea-2397-8364-8399-b7c1606a49a7/logos/primary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/378600ea-2397-8364-8399-b7c1606a49a7/logos/primary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/378600ea-2397-8364-8399-b7c1606a49a7/logos/primary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/378600ea-2397-8364-8399-b7c1606a49a7/logos/primary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryBlack": {
+          "url": "https://a.espncdn.com/guid/378600ea-2397-8364-8399-b7c1606a49a7/logos/primary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryWhite": {
+          "url": "https://a.espncdn.com/guid/378600ea-2397-8364-8399-b7c1606a49a7/logos/primary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/378600ea-2397-8364-8399-b7c1606a49a7/logos/secondary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/378600ea-2397-8364-8399-b7c1606a49a7/logos/secondary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/378600ea-2397-8364-8399-b7c1606a49a7/logos/secondary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/378600ea-2397-8364-8399-b7c1606a49a7/logos/secondary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryBlack": {
+          "url": "https://a.espncdn.com/guid/378600ea-2397-8364-8399-b7c1606a49a7/logos/secondary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryWhite": {
+          "url": "https://a.espncdn.com/guid/378600ea-2397-8364-8399-b7c1606a49a7/logos/secondary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        }
+      }
+    },
+    "NYJ": {
+      "name": "New York Jets",
+      "espnId": "20",
+      "nflDotComVariant": "dark",
+      "primarySvg": "https://static.www.nfl.com/league/api/clubs/logos/NYJ.svg",
+      "colors": [
+        "#003F2D",
+        "#000000"
+      ],
+      "wordmark": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/wordmarks/NYJ.png",
+      "squaredLogo": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/squared_logos/NYJ.png",
+      "espn": {
+        "default": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/nyj.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:55Z"
+        },
+        "dark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/nyj.png",
+          "width": 500,
+          "lastUpdated": "2024-10-30T17:29Z"
+        },
+        "scoreboard": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/nyj.png",
+          "width": 500,
+          "lastUpdated": "2024-07-02T15:08Z"
+        },
+        "scoreboardDark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/scoreboard/nyj.png",
+          "width": 500,
+          "lastUpdated": "2024-07-02T15:09Z"
+        },
+        "grayscale": {
+          "url": "https://a.espncdn.com/guid/732d3caf-b350-1e34-48c6-b7cebb4a0d88/logos/grayscale.png",
+          "width": 500,
+          "lastUpdated": "2026-03-31T12:54Z"
+        },
+        "primaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/732d3caf-b350-1e34-48c6-b7cebb4a0d88/logos/primary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/732d3caf-b350-1e34-48c6-b7cebb4a0d88/logos/primary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/732d3caf-b350-1e34-48c6-b7cebb4a0d88/logos/primary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/732d3caf-b350-1e34-48c6-b7cebb4a0d88/logos/primary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryBlack": {
+          "url": "https://a.espncdn.com/guid/732d3caf-b350-1e34-48c6-b7cebb4a0d88/logos/primary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryWhite": {
+          "url": "https://a.espncdn.com/guid/732d3caf-b350-1e34-48c6-b7cebb4a0d88/logos/primary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/732d3caf-b350-1e34-48c6-b7cebb4a0d88/logos/secondary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/732d3caf-b350-1e34-48c6-b7cebb4a0d88/logos/secondary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/732d3caf-b350-1e34-48c6-b7cebb4a0d88/logos/secondary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/732d3caf-b350-1e34-48c6-b7cebb4a0d88/logos/secondary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryBlack": {
+          "url": "https://a.espncdn.com/guid/732d3caf-b350-1e34-48c6-b7cebb4a0d88/logos/secondary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryWhite": {
+          "url": "https://a.espncdn.com/guid/732d3caf-b350-1e34-48c6-b7cebb4a0d88/logos/secondary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        }
+      }
+    },
+    "PHI": {
+      "name": "Philadelphia Eagles",
+      "espnId": "21",
+      "nflDotComVariant": "light",
+      "primarySvg": "https://static.www.nfl.com/league/api/clubs/logos/PHI.svg",
+      "colors": [
+        "#004C54",
+        "#A5ACAF",
+        "#acc0c6",
+        "#000000"
+      ],
+      "wordmark": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/wordmarks/PHI.png",
+      "squaredLogo": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/squared_logos/PHI.png",
+      "espn": {
+        "default": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/phi.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:55Z"
+        },
+        "dark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/phi.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:56Z"
+        },
+        "scoreboard": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/phi.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:56Z"
+        },
+        "scoreboardDark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/scoreboard/phi.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:56Z"
+        },
+        "grayscale": {
+          "url": "https://a.espncdn.com/guid/d1a9b001-1df7-fbd7-ae4c-6ca7065286ec/logos/grayscale.png",
+          "width": 500,
+          "lastUpdated": "2026-03-31T12:53Z"
+        },
+        "primaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/d1a9b001-1df7-fbd7-ae4c-6ca7065286ec/logos/primary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/d1a9b001-1df7-fbd7-ae4c-6ca7065286ec/logos/primary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/d1a9b001-1df7-fbd7-ae4c-6ca7065286ec/logos/primary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/d1a9b001-1df7-fbd7-ae4c-6ca7065286ec/logos/primary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryBlack": {
+          "url": "https://a.espncdn.com/guid/d1a9b001-1df7-fbd7-ae4c-6ca7065286ec/logos/primary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryWhite": {
+          "url": "https://a.espncdn.com/guid/d1a9b001-1df7-fbd7-ae4c-6ca7065286ec/logos/primary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/d1a9b001-1df7-fbd7-ae4c-6ca7065286ec/logos/secondary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/d1a9b001-1df7-fbd7-ae4c-6ca7065286ec/logos/secondary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/d1a9b001-1df7-fbd7-ae4c-6ca7065286ec/logos/secondary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/d1a9b001-1df7-fbd7-ae4c-6ca7065286ec/logos/secondary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryBlack": {
+          "url": "https://a.espncdn.com/guid/d1a9b001-1df7-fbd7-ae4c-6ca7065286ec/logos/secondary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryWhite": {
+          "url": "https://a.espncdn.com/guid/d1a9b001-1df7-fbd7-ae4c-6ca7065286ec/logos/secondary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        }
+      }
+    },
+    "PIT": {
+      "name": "Pittsburgh Steelers",
+      "espnId": "23",
+      "nflDotComVariant": "light",
+      "primarySvg": "https://static.www.nfl.com/league/api/clubs/logos/PIT.svg",
+      "colors": [
+        "#000000",
+        "#FFB612",
+        "#c60c30",
+        "#00539b"
+      ],
+      "wordmark": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/wordmarks/PIT.png",
+      "squaredLogo": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/squared_logos/PIT.png",
+      "espn": {
+        "default": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/pit.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:56Z"
+        },
+        "dark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/pit.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:56Z"
+        },
+        "scoreboard": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/pit.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:56Z"
+        },
+        "scoreboardDark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/scoreboard/pit.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:56Z"
+        },
+        "grayscale": {
+          "url": "https://a.espncdn.com/guid/debcd592-8d53-71f1-fc15-5c8b8ef9df6e/logos/grayscale.png",
+          "width": 500,
+          "lastUpdated": "2026-03-31T12:53Z"
+        },
+        "primaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/debcd592-8d53-71f1-fc15-5c8b8ef9df6e/logos/primary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/debcd592-8d53-71f1-fc15-5c8b8ef9df6e/logos/primary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/debcd592-8d53-71f1-fc15-5c8b8ef9df6e/logos/primary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/debcd592-8d53-71f1-fc15-5c8b8ef9df6e/logos/primary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryBlack": {
+          "url": "https://a.espncdn.com/guid/debcd592-8d53-71f1-fc15-5c8b8ef9df6e/logos/primary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryWhite": {
+          "url": "https://a.espncdn.com/guid/debcd592-8d53-71f1-fc15-5c8b8ef9df6e/logos/primary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/debcd592-8d53-71f1-fc15-5c8b8ef9df6e/logos/secondary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/debcd592-8d53-71f1-fc15-5c8b8ef9df6e/logos/secondary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/debcd592-8d53-71f1-fc15-5c8b8ef9df6e/logos/secondary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/debcd592-8d53-71f1-fc15-5c8b8ef9df6e/logos/secondary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryBlack": {
+          "url": "https://a.espncdn.com/guid/debcd592-8d53-71f1-fc15-5c8b8ef9df6e/logos/secondary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryWhite": {
+          "url": "https://a.espncdn.com/guid/debcd592-8d53-71f1-fc15-5c8b8ef9df6e/logos/secondary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        }
+      }
+    },
+    "SEA": {
+      "name": "Seattle Seahawks",
+      "espnId": "26",
+      "nflDotComVariant": "light",
+      "primarySvg": "https://static.www.nfl.com/league/api/clubs/logos/SEA.svg",
+      "colors": [
+        "#002244",
+        "#69be28",
+        "#a5acaf",
+        "#001532"
+      ],
+      "wordmark": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/wordmarks/SEA.png",
+      "squaredLogo": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/squared_logos/SEA.png",
+      "espn": {
+        "default": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/sea.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:57Z"
+        },
+        "dark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/sea.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:57Z"
+        },
+        "scoreboard": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/sea.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:57Z"
+        },
+        "scoreboardDark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/scoreboard/sea.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:57Z"
+        },
+        "grayscale": {
+          "url": "https://a.espncdn.com/guid/3767a23c-a17d-294f-288a-9086ad1f0680/logos/grayscale.png",
+          "width": 500,
+          "lastUpdated": "2026-03-31T12:53Z"
+        },
+        "primaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/3767a23c-a17d-294f-288a-9086ad1f0680/logos/primary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/3767a23c-a17d-294f-288a-9086ad1f0680/logos/primary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/3767a23c-a17d-294f-288a-9086ad1f0680/logos/primary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/3767a23c-a17d-294f-288a-9086ad1f0680/logos/primary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryBlack": {
+          "url": "https://a.espncdn.com/guid/3767a23c-a17d-294f-288a-9086ad1f0680/logos/primary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryWhite": {
+          "url": "https://a.espncdn.com/guid/3767a23c-a17d-294f-288a-9086ad1f0680/logos/primary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/3767a23c-a17d-294f-288a-9086ad1f0680/logos/secondary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/3767a23c-a17d-294f-288a-9086ad1f0680/logos/secondary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/3767a23c-a17d-294f-288a-9086ad1f0680/logos/secondary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/3767a23c-a17d-294f-288a-9086ad1f0680/logos/secondary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryBlack": {
+          "url": "https://a.espncdn.com/guid/3767a23c-a17d-294f-288a-9086ad1f0680/logos/secondary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryWhite": {
+          "url": "https://a.espncdn.com/guid/3767a23c-a17d-294f-288a-9086ad1f0680/logos/secondary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        }
+      }
+    },
+    "SF": {
+      "name": "San Francisco 49ers",
+      "espnId": "25",
+      "nflDotComVariant": "light",
+      "primarySvg": "https://static.www.nfl.com/league/api/clubs/logos/SF.svg",
+      "colors": [
+        "#AA0000",
+        "#B3995D",
+        "#000000",
+        "#a5acaf"
+      ],
+      "wordmark": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/wordmarks/SF.png",
+      "squaredLogo": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/squared_logos/SF.png",
+      "espn": {
+        "default": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/sf.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:56Z"
+        },
+        "dark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/sf.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:56Z"
+        },
+        "scoreboard": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/sf.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:56Z"
+        },
+        "scoreboardDark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/scoreboard/sf.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:57Z"
+        },
+        "grayscale": {
+          "url": "https://a.espncdn.com/guid/985a261f-296c-c95c-32a5-addc4df75001/logos/grayscale.png",
+          "width": 500,
+          "lastUpdated": "2026-03-31T12:54Z"
+        },
+        "primaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/985a261f-296c-c95c-32a5-addc4df75001/logos/primary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/985a261f-296c-c95c-32a5-addc4df75001/logos/primary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/985a261f-296c-c95c-32a5-addc4df75001/logos/primary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/985a261f-296c-c95c-32a5-addc4df75001/logos/primary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryBlack": {
+          "url": "https://a.espncdn.com/guid/985a261f-296c-c95c-32a5-addc4df75001/logos/primary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryWhite": {
+          "url": "https://a.espncdn.com/guid/985a261f-296c-c95c-32a5-addc4df75001/logos/primary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/985a261f-296c-c95c-32a5-addc4df75001/logos/secondary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/985a261f-296c-c95c-32a5-addc4df75001/logos/secondary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/985a261f-296c-c95c-32a5-addc4df75001/logos/secondary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/985a261f-296c-c95c-32a5-addc4df75001/logos/secondary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryBlack": {
+          "url": "https://a.espncdn.com/guid/985a261f-296c-c95c-32a5-addc4df75001/logos/secondary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryWhite": {
+          "url": "https://a.espncdn.com/guid/985a261f-296c-c95c-32a5-addc4df75001/logos/secondary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        }
+      }
+    },
+    "TB": {
+      "name": "Tampa Bay Buccaneers",
+      "espnId": "27",
+      "nflDotComVariant": "light",
+      "primarySvg": "https://static.www.nfl.com/league/api/clubs/logos/TB.svg",
+      "colors": [
+        "#A71930",
+        "#322F2B",
+        "#000000",
+        "#ff7900"
+      ],
+      "wordmark": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/wordmarks/TB.png",
+      "squaredLogo": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/squared_logos/TB.png",
+      "espn": {
+        "default": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/tb.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:57Z"
+        },
+        "dark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/tb.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:57Z"
+        },
+        "scoreboard": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/tb.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:57Z"
+        },
+        "scoreboardDark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/scoreboard/tb.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:57Z"
+        },
+        "grayscale": {
+          "url": "https://a.espncdn.com/guid/13e8b157-a75a-ff24-ae91-fa3d52ddf204/logos/grayscale.png",
+          "width": 500,
+          "lastUpdated": "2026-03-31T12:53Z"
+        },
+        "primaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/13e8b157-a75a-ff24-ae91-fa3d52ddf204/logos/primary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/13e8b157-a75a-ff24-ae91-fa3d52ddf204/logos/primary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/13e8b157-a75a-ff24-ae91-fa3d52ddf204/logos/primary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/13e8b157-a75a-ff24-ae91-fa3d52ddf204/logos/primary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryBlack": {
+          "url": "https://a.espncdn.com/guid/13e8b157-a75a-ff24-ae91-fa3d52ddf204/logos/primary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryWhite": {
+          "url": "https://a.espncdn.com/guid/13e8b157-a75a-ff24-ae91-fa3d52ddf204/logos/primary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/13e8b157-a75a-ff24-ae91-fa3d52ddf204/logos/secondary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/13e8b157-a75a-ff24-ae91-fa3d52ddf204/logos/secondary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/13e8b157-a75a-ff24-ae91-fa3d52ddf204/logos/secondary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/13e8b157-a75a-ff24-ae91-fa3d52ddf204/logos/secondary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryBlack": {
+          "url": "https://a.espncdn.com/guid/13e8b157-a75a-ff24-ae91-fa3d52ddf204/logos/secondary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryWhite": {
+          "url": "https://a.espncdn.com/guid/13e8b157-a75a-ff24-ae91-fa3d52ddf204/logos/secondary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        }
+      }
+    },
+    "TEN": {
+      "name": "Tennessee Titans",
+      "espnId": "10",
+      "nflDotComVariant": "light",
+      "primarySvg": "https://static.www.nfl.com/league/api/clubs/logos/TEN.svg",
+      "colors": [
+        "#4495D2",
+        "#D50A0A"
+      ],
+      "wordmark": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/wordmarks/TEN.png",
+      "squaredLogo": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/squared_logos/TEN.png",
+      "espn": {
+        "default": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/ten.png",
+          "width": 500,
+          "lastUpdated": "2026-03-20T19:56Z"
+        },
+        "dark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/ten.png",
+          "width": 500,
+          "lastUpdated": "2026-03-20T19:56Z"
+        },
+        "scoreboard": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/ten.png",
+          "width": 500,
+          "lastUpdated": "2026-03-20T19:56Z"
+        },
+        "scoreboardDark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/scoreboard/ten.png",
+          "width": 500,
+          "lastUpdated": "2026-03-20T19:56Z"
+        },
+        "grayscale": {
+          "url": "https://a.espncdn.com/guid/0a0aea59-9a5e-01b3-57a3-0151cf4bf393/logos/grayscale.png",
+          "width": 500,
+          "lastUpdated": "2026-03-31T12:53Z"
+        },
+        "primaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/0a0aea59-9a5e-01b3-57a3-0151cf4bf393/logos/primary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/0a0aea59-9a5e-01b3-57a3-0151cf4bf393/logos/primary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/0a0aea59-9a5e-01b3-57a3-0151cf4bf393/logos/primary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/0a0aea59-9a5e-01b3-57a3-0151cf4bf393/logos/primary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryBlack": {
+          "url": "https://a.espncdn.com/guid/0a0aea59-9a5e-01b3-57a3-0151cf4bf393/logos/primary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryWhite": {
+          "url": "https://a.espncdn.com/guid/0a0aea59-9a5e-01b3-57a3-0151cf4bf393/logos/primary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/0a0aea59-9a5e-01b3-57a3-0151cf4bf393/logos/secondary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/0a0aea59-9a5e-01b3-57a3-0151cf4bf393/logos/secondary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/0a0aea59-9a5e-01b3-57a3-0151cf4bf393/logos/secondary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/0a0aea59-9a5e-01b3-57a3-0151cf4bf393/logos/secondary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryBlack": {
+          "url": "https://a.espncdn.com/guid/0a0aea59-9a5e-01b3-57a3-0151cf4bf393/logos/secondary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryWhite": {
+          "url": "https://a.espncdn.com/guid/0a0aea59-9a5e-01b3-57a3-0151cf4bf393/logos/secondary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        }
+      }
+    },
+    "WSH": {
+      "name": "Washington Commanders",
+      "espnId": "28",
+      "nflDotComVariant": "light",
+      "primarySvg": "https://static.www.nfl.com/league/api/clubs/logos/WAS.svg",
+      "colors": [
+        "#5A1414",
+        "#FFB612",
+        "#000000",
+        "#5b2b2f"
+      ],
+      "wordmark": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/wordmarks/WAS.png",
+      "squaredLogo": "https://raw.githubusercontent.com/nflverse/nflverse-pbp/master/squared_logos/WAS.png",
+      "espn": {
+        "default": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/wsh.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:58Z"
+        },
+        "dark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/wsh.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:58Z"
+        },
+        "scoreboard": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/wsh.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:58Z"
+        },
+        "scoreboardDark": {
+          "url": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/scoreboard/wsh.png",
+          "width": 500,
+          "lastUpdated": "2024-06-25T18:58Z"
+        },
+        "grayscale": {
+          "url": "https://a.espncdn.com/guid/fbeaf73e-6d6c-cca4-0809-713d9d741f90/logos/grayscale.png",
+          "width": 500,
+          "lastUpdated": "2026-03-31T12:53Z"
+        },
+        "primaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/fbeaf73e-6d6c-cca4-0809-713d9d741f90/logos/primary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/fbeaf73e-6d6c-cca4-0809-713d9d741f90/logos/primary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/fbeaf73e-6d6c-cca4-0809-713d9d741f90/logos/primary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/fbeaf73e-6d6c-cca4-0809-713d9d741f90/logos/primary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryBlack": {
+          "url": "https://a.espncdn.com/guid/fbeaf73e-6d6c-cca4-0809-713d9d741f90/logos/primary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "primaryWhite": {
+          "url": "https://a.espncdn.com/guid/fbeaf73e-6d6c-cca4-0809-713d9d741f90/logos/primary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnWhite": {
+          "url": "https://a.espncdn.com/guid/fbeaf73e-6d6c-cca4-0809-713d9d741f90/logos/secondary_logo_on_white_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnBlack": {
+          "url": "https://a.espncdn.com/guid/fbeaf73e-6d6c-cca4-0809-713d9d741f90/logos/secondary_logo_on_black_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnPrimary": {
+          "url": "https://a.espncdn.com/guid/fbeaf73e-6d6c-cca4-0809-713d9d741f90/logos/secondary_logo_on_primary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryOnSecondary": {
+          "url": "https://a.espncdn.com/guid/fbeaf73e-6d6c-cca4-0809-713d9d741f90/logos/secondary_logo_on_secondary_color.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryBlack": {
+          "url": "https://a.espncdn.com/guid/fbeaf73e-6d6c-cca4-0809-713d9d741f90/logos/secondary_logo_black.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        },
+        "secondaryWhite": {
+          "url": "https://a.espncdn.com/guid/fbeaf73e-6d6c-cca4-0809-713d9d741f90/logos/secondary_logo_white.png",
+          "width": 4096,
+          "lastUpdated": "2026-07-22T20:30Z"
+        }
+      }
+    }
+  }
+}

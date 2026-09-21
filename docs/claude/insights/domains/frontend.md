@@ -131,6 +131,33 @@ hrefs to local copies, and open it in the bundled Chromium — it isolates
 "wrong bytes" from "device failing to apply right bytes" in minutes.
 <!-- /CURATED-HEAD -->
 
+## 2026-09-21 — A React island does not carry its own stylesheet
+
+Rendering a real component outside the page it normally lives on needs its CSS
+imported explicitly. `NflGamesStrip` mounted on the NFL Brand Book rendered
+correct markup with no sizing rule, so every team logo expanded to fill its
+column — a page-wide blowout from a component that looks fine everywhere else.
+Its styles live in `src/styles/nfl-games-strip.css`, which `LiveBoardPage.astro`
+imports and the island itself does not.
+
+The fix is to import the stylesheet in the new host
+(`import '../../../styles/nfl-games-strip.css'`). Check what the component's
+EXISTING host imports beside it, not just the component file — that import list
+is the real dependency.
+
+Same family as the Storybook trap in `docs/claude/rules/storybook.md` (a
+component's own frontmatter CSS import never reaches the canvas), but it bites
+in ordinary app code too, not only in stories.
+
+Related: when mounting an island in a showcase, `demo`-style props that disable
+its data fetching usually mean it needs **no client directive at all** — the
+server render is the final render, and hydrating ships JS to do nothing.
+`client:visible` is the actively dangerous one: it observes the island's
+CHILDREN, so an island that server-rendered nothing never hydrates at all
+(`tests/network-badge.test.ts` records the rail that was invisible in
+production for its whole life because of exactly that).
+
+
 ---
 
 ## 2026-09-20 - An Island Prop Is JSON, So a Callback Never Arrives; and a Visibility Gate Doubling as an Affordance Gate Hid a Feature's Only Entry Point

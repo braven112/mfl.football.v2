@@ -1,0 +1,833 @@
+---
+/**
+ * One NFL club's brand page — the "club showcase" layout.
+ *
+ * Full-bleed club colour, the mark at scale, every cut on file as a filmstrip,
+ * then what the site actually does with it: which cut each ground draws, the
+ * real components that render it, and who in this league rosters its players.
+ *
+ * ── Why the hero uses the DARK mark ───────────────────────────────────────
+ * The hero band is the club's own colour, which for almost every club is a
+ * dark ground. It is therefore neither a light nor a dark SURFACE — it is a
+ * third ground, and it resolves to whichever assignment suits that colour's
+ * luminance (`bandSlot`). Same rule `franchise-band-brand.ts` already applies
+ * to fantasy-team crests. See docs/plans/nfl-mark-assignments.md.
+ *
+ * ── Why the previews carry their own colours ──────────────────────────────
+ * Each preview below stands in for a real app surface, so it paints its OWN
+ * light or dark ground and inherits nothing from the page theme. A "light"
+ * preview that went dark for a dark-mode viewer would make the two previews
+ * identical, which is the entire comparison.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import MflAppLayout from '../../../layouts/MflAppLayout.astro';
+import PlayerCell from '../../theleague/PlayerCell.astro';
+import CompositeHero from '../CompositeHero.astro';
+import NflGamesStrip from '../NflGamesStrip';
+/* The strip's own stylesheet. A React island does NOT carry it — rendered
+   without this the logos have no sizing rule and each one fills the column,
+   which is the same trap `docs/claude/rules/storybook.md` records for stories:
+   a real component, correct markup, no styles. */
+import '../../../styles/nfl-games-strip.css';
+import '../../../styles/network-badge.css';
+import type { NflGame } from '../../../types/live-scoring';
+import type { HeroModel } from '../../../utils/hero-casting';
+import { resolveHeroFranchiseBackdrop } from '../../../utils/hero-franchise-backdrop';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { getLeagueBySlug } from '../../../config/leagues';
+import type { CanonicalLeagueSlug } from '../../../config/leagues';
+import { allClubs, clubBrand, inkOn, type ClubBrand } from '../../../utils/nfl-marks';
+import { clubRosterHolders } from '../../../utils/nfl-club-rosters';
+
+interface Props {
+  /**
+   * Omitted on the shared host. NFL club marks belong to no league, so
+   * `mfl.football/brand/<code>` renders this page in MflAppLayout with no
+   * league identity and no roster panel — the roster panel is the ONLY
+   * league-specific thing here, which is what makes the neutral copy possible
+   * at all rather than a fork.
+   */
+  leagueSlug?: CanonicalLeagueSlug;
+  code: string;
+}
+
+const { leagueSlug, code } = Astro.props;
+const league = leagueSlug ? getLeagueBySlug(leagueSlug) : null;
+if (leagueSlug && !league) throw new Error(`ClubBrandPage: unknown league ${leagueSlug}`);
+
+const Layout = league ? TheLeagueLayout : MflAppLayout;
+const club = clubBrand(code) as ClubBrand;
+const hide = Astro.locals.hideLeaguePrefix ?? false;
+const indexPath = leagueSlug ? resolveLeaguePath(`/${leagueSlug}/brand`, hide) : '/brand';
+
+const bg = club.colors[0] ?? '#111111';
+const ink = inkOn(bg);
+const band = club.grounds.find((g) => g.ground === 'band');
+const light = club.grounds.find((g) => g.ground === 'light');
+const dark = club.grounds.find((g) => g.ground === 'dark');
+
+const { year, holders } = leagueSlug
+  ? clubRosterHolders(club.code, leagueSlug)
+  : { year: null, holders: [] };
+const rosteredCount = holders.reduce((n, h) => n + h.players.length, 0);
+
+/**
+ * A sample slate for the games strip, so the REAL component renders here.
+ *
+ * `NflGamesStrip`'s `demo` prop exists for exactly this: it renders
+ * `initialGames` and does no network at all, so a showcase cannot be
+ * overwritten by a live poll (or make one from a page nobody is watching a
+ * game on). The opponent is deterministic — the next club alphabetically —
+ * because this card is about the ARTWORK, and an opponent chosen by some
+ * cleverer rule would still be arbitrary while looking like it meant
+ * something.
+ */
+const opponent = (() => {
+  const all = allClubs().map((c) => c.code);
+  const i = all.indexOf(club.code);
+  return all[(i + 1) % all.length];
+})();
+
+const demoGames: NflGame[] = [
+  {
+    id: `brand-${club.code}`,
+    state: 'in',
+    shortDetail: '1:58 - 4th',
+    period: 4,
+    clock: '1:58',
+    home: { code: club.code, score: 24 },
+    away: { code: opponent, score: 21 },
+    possession: club.code,
+    date: new Date().toISOString(),
+    broadcast: 'FOX',
+  },
+];
+
+/**
+ * The homepage composite hero, rendered for real with this club's mark as its
+ * CREST WATERMARK and its primary as the radial glow.
+ *
+ * This is the surface that answers "where does a club mark end up biggest" —
+ * a hero paints it at ~300px behind the copy, which is where a cut that only
+ * works at 16px falls apart. `CompositeHero` is the live shell every composite
+ * on both homepages renders through, so what appears here is what a homepage
+ * would draw; `hero-showcase/ShowcasePage.astro` already proved a fixture can
+ * drive it, and records what happened the three times a gallery reproduced the
+ * treatment inline instead (the crest watermark never appeared at all).
+ *
+ * The crest takes the BAND ground's cut, not the light one: a hero's glow and
+ * gradient make it a dark surface in both themes, which is the same reason
+ * `hero-franchise-backdrop.ts` resolves a franchise crest server-side rather
+ * than leaving it to the `html.dark` swap.
+ *
+ * The cast player is a real one this league rosters when there is one — the
+ * league copies have a roster to draw from, the shared host does not, and
+ * `model: null` renders the silhouette the live shell already falls back to.
+ *
+ * The CARD takes the club's own gradient through `resolveHeroFranchiseBackdrop`
+ * rather than a phase accent. That is the prop's stated purpose — "a hero that
+ * is about a TEAM rather than about the league" — and it is the difference
+ * between a Saints hero and a blue hero with a Saints crest on it: `accent`
+ * paints the phase gradient and `glowColor` is only a faint radial over it, so
+ * a gold club came out blue. The resolver also does the work a hand-built
+ * gradient would skip: it floors the pair for white text and clears the accent,
+ * pill and CTA inks against the gradient that is ACTUALLY rendered, per band.
+ */
+const heroBackdrop = resolveHeroFranchiseBackdrop(
+  { colorPrimary: club.colors[0], colorSecondary: club.colors[1] ?? club.colors[0] },
+  league?.slug === 'afl-fantasy' ? 'afl' : 'theleague',
+);
+
+const heroCast = holders[0]?.players.find((pl) => pl.position !== 'DEF') ?? null;
+const heroModel: HeroModel | null = heroCast
+  ? {
+      mflId: heroCast.id,
+      name: heroCast.name,
+      position: heroCast.position,
+      nflTeam: club.code,
+      headshot: heroCast.headshot,
+      descriptor: club.nick,
+    }
+  : null;
+
+const GROUND_COPY: Record<string, string> = {
+  light: 'Player cells, bench rows, the games strip — anything on a white card.',
+  dark: 'The same surfaces in dark mode, swapped in by CSS.',
+  band: 'The club-colour band, dark in both themes — so it follows the ' + (band?.slot ?? 'dark') + ' assignment.',
+};
+---
+
+<Layout
+  title={
+    league
+      ? `${club.name} marks | NFL Brand Book | ${league.name}`
+      : `${club.name} marks | NFL Brand Book`
+  }
+>
+  <main class="cb">
+    <nav class="cb__crumb"><a href={indexPath}>&larr; NFL Brand Book</a></nav>
+
+    <header class="cb__hero" style={`--hero-bg:${bg};--hero-ink:${ink}`}>
+      {band && <img class="cb__ghost" src={band.url} alt="" aria-hidden="true" />}
+      <div class="cb__hero-in">
+        {band && <img class="cb__mark" src={band.url} alt={`${club.name} logo`} width="120" height="120" />}
+        <div>
+          <p class="cb__city">{club.city}</p>
+          <h1 class="cb__nick">{club.nick}</h1>
+        </div>
+      </div>
+    </header>
+
+    <section class="cb__section">
+      <h2 class="cb__h2">Club colours</h2>
+      <ul class="cb__swatches">
+        {
+          club.colors.map((c) => (
+            <li>
+              <span class="cb__swatch" style={`background:${c}`} />
+              <code>{c}</code>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <section class="cb__section">
+      <h2 class="cb__h2">Marks on file</h2>
+      <p class="cb__note">
+        {club.marks.length} cuts.
+        {
+          club.nflDotComIsDark && (
+            <>
+              {' '}NFL.com publishes only a <strong>for-dark</strong> cut for this club, which is why its
+              light mark is held rather than refreshed from the league endpoint.
+            </>
+          )
+        }
+      </p>
+      {
+        club.reversalNote && (
+          <p class="cb__derived">
+            <strong>The reversed cut is ours.</strong> No public source publishes one &mdash; ESPN,
+            NFL.com, Fox's web CDN, nflverse and Sleeper all serve the standard mark &mdash; so we
+            derive it from our own artwork with a hand-reviewed colour map, checked on a dark
+            render. {club.reversalNote}
+          </p>
+        )
+      }
+      <ul class="cb__film">
+        {
+          club.marks.map((m) => (
+            <li class="cb__cut">
+              <span class={`cb__cut-box ${m.forDark ? 'is-dark' : 'is-light'}`}>
+                <img src={m.url} alt={`${club.name} — ${m.label}`} loading="lazy" />
+                {m.derived && <span class="cb__made">made here</span>}
+              </span>
+              <span class="cb__cut-label">{m.label}</span>
+              <span class="cb__cut-meta">{m.format.toUpperCase()} &middot; {m.source}</span>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <section class="cb__section">
+      <h2 class="cb__h2">What each ground draws</h2>
+      <p class="cb__note">Read from the same assignment file the build reads, so this cannot drift from what ships.</p>
+      <ul class="cb__grounds">
+        {
+          club.grounds.map((g) => (
+            <li class={`cb__ground ${g.slot === 'dark' || g.ground === 'band' ? 'is-dark' : 'is-light'}`}>
+              <span class="cb__ground-head">
+                {g.ground === 'band' ? 'Club colour' : g.ground === 'light' ? 'Light surfaces' : 'Dark surfaces'}
+              </span>
+              <span
+                class="cb__ground-art"
+                style={g.ground === 'band' ? `background:${bg}` : undefined}
+              >
+                <img src={g.url} alt="" loading="lazy" />
+              </span>
+              <span class="cb__ground-mark">{g.mark.label}</span>
+              <span class="cb__ground-why">{GROUND_COPY[g.ground]}</span>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <section class="cb__section">
+      <h2 class="cb__h2">In the app</h2>
+      <p class="cb__note">
+        The real components, rendered here on their real grounds &mdash; not lookalikes, so they
+        cannot drift from what a roster page or a live board actually draws. The club-colour band
+        is the exception and is labelled as such: nothing in the app paints club colour behind an
+        NFL mark yet, so it stands for the third GROUND rather than for a surface.
+      </p>
+      <ul class="cb__situ">
+        <li class="cb__demo">
+          <span class="cb__demo-cap">Player cell &mdash; DEF <em>the mark IS the avatar</em></span>
+          {/*
+            The REAL PlayerCell, not a lookalike. A hand-rolled copy is a second
+            implementation of the DEF rule (the mark becomes the avatar and the
+            meta row drops the duplicate logo) and would drift from it silently
+            — which is the opposite of what this section is for.
+
+            `nflLogo` is passed explicitly because this page opts out of the
+            global dark swap: left to derive its own src, both panes would draw
+            the same cut and the comparison would collapse. The ground decides
+            the artwork here, exactly as it does everywhere else.
+          */}
+          <span class="cb__pane is-light">
+            <PlayerCell
+              name={`${club.nick} D/ST`}
+              position="DEF"
+              nflTeam={club.code}
+              nflLogo={light?.url}
+            />
+          </span>
+          <span class="cb__pane is-dark">
+            <PlayerCell
+              name={`${club.nick} D/ST`}
+              position="DEF"
+              nflTeam={club.code}
+              nflLogo={dark?.url}
+            />
+          </span>
+        </li>
+
+        <li class="cb__demo">
+          <span class="cb__demo-cap">Lineup bench row <em>18px</em></span>
+          <span class="cb__pane is-light">
+            <span class="cb__bench"><span>Bench &middot; FLEX</span><span class="cb__opp"><img src={light?.url} alt="" loading="lazy" />{club.code}</span></span>
+          </span>
+          <span class="cb__pane is-dark">
+            <span class="cb__bench"><span>Bench &middot; FLEX</span><span class="cb__opp"><img src={dark?.url} alt="" loading="lazy" />{club.code}</span></span>
+          </span>
+        </li>
+
+        <li class="cb__demo cb__demo--wide">
+          <span class="cb__demo-cap">
+            Composite hero <em>the mark as a crest watermark, ~300px</em>
+          </span>
+          <CompositeHero
+            ariaLabel={`${club.name} hero example`}
+            accent="feature"
+            franchise={heroBackdrop}
+            wordmark={club.nick.toUpperCase()}
+            crest={band ? { src: band.url } : null}
+            model={heroModel}
+            eager={false}
+            pill="NFL Brand Book"
+            title={club.city}
+            titleAccent={club.nick}
+            summary={`The club's mark as a homepage hero draws it: the crest as a watermark behind the copy, on the club's own gradient.`}
+            ctaLabel="Every cut on file"
+            ctaHref={indexPath}
+          />
+        </li>
+
+        <li class="cb__demo cb__demo--wide">
+          <span class="cb__demo-cap">
+            Games strip <em>the real component, sample slate &mdash; follows your theme</em>
+          </span>
+          {/*
+            ONE pane, not the light/dark pair the others get. A game card paints
+            itself from the site's own tokens rather than declaring a ground, so
+            two panes would render two identical cards and claim a comparison
+            that isn't there. Its MARKS still swap with the theme, which is why
+            this surface is left in the swap rather than opted out.
+
+            NO client directive, deliberately. In `demo` the hook is disabled
+            (`enabled: !demo`) and never polls, so the server render IS the
+            final render and hydrating would ship JS to do nothing. It also
+            steps around the hazard `tests/network-badge.test.ts` records:
+            `client:visible` observes an island's CHILDREN, so an island that
+            server-rendered nothing never hydrates and the rail is invisible
+            forever. `demoGames` is a non-empty constant, so this mount cannot
+            render empty — but an unhydrated island cannot have the bug at all.
+          */}
+          <span class="cb__pane">
+            <NflGamesStrip week={1} year={2026} demo initialGames={demoGames} label={null} />
+          </span>
+        </li>
+
+        <li class="cb__demo">
+          <span class="cb__demo-cap">Club colour <em>the third ground</em></span>
+          <span class="cb__pane" style={`background:${bg};color:${ink}`}>
+            <span class="cb__bcast">
+              {band && <img src={band.url} alt="" loading="lazy" />}
+              <span>
+                <span class="cb__bname">{club.nick.toUpperCase()}</span>
+                <span class="cb__bmeta" style={`color:${ink};opacity:.75`}>{club.city}</span>
+              </span>
+            </span>
+          </span>
+        </li>
+      </ul>
+    </section>
+
+    {league && (
+    <section class="cb__section">
+      <h2 class="cb__h2">Who rosters {club.nick} in {league.name}</h2>
+      {
+        holders.length === 0 ? (
+          <p class="cb__note">
+            {year
+              ? `No ${club.nick} on any roster in the ${year} league year.`
+              : 'No roster feed on this build.'}
+          </p>
+        ) : (
+          <>
+            <p class="cb__note">
+              {rosteredCount} {rosteredCount === 1 ? 'player' : 'players'} across{' '}
+              {holders.length} {holders.length === 1 ? 'franchise' : 'franchises'}
+              {year ? ` — ${year} league year.` : '.'}
+            </p>
+            <ul class="cb__holders">
+              {holders.map((h) => (
+                <li class="cb__holder">
+                  <span class="cb__holder-name">{h.franchiseName}</span>
+                  <span class="cb__holder-players">
+                    {h.players.map((p) => (
+                      <PlayerCell
+                        name={p.name}
+                        position={p.position}
+                        nflTeam={club.code}
+                        headshot={p.headshot}
+                        mflId={p.id}
+                        espnId={p.espnId ?? undefined}
+                        size="compact"
+                      />
+                    ))}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </>
+        )
+      }
+    </section>
+    )}
+  </main>
+</Layout>
+
+<style>
+
+  /* ── The COMPARISON surfaces opt out of the global dark swap ────────────
+     `buildNflLogoDarkCss` emits `html.dark img[src="<light src>"] { content:
+     url(<dark cut>) }` for every light src the site can render, so in dark
+     mode a light mark silently becomes the dark one. On every other page that
+     is the whole point; inside a side-by-side comparison it is fatal — the
+     light pane, the "Light surfaces" ground card and the Primary/ESPN-light
+     entries in the filmstrip would all render the DARK cut for a dark-mode
+     reader, and the page would show one mark twice.
+
+     Scoped to the four surfaces that COMPARE cuts, never the whole page. The
+     roster list below is not a comparison — it is the site rendering players
+     through the REAL PlayerCell the way it always does, and opting it out too
+     would have frozen it on the light mark against a dark card, the exact bug
+     the swap exists to prevent. A surface here declares its ground;
+     everything else follows the theme.
+
+     `!important` because the swap rule's specificity matches this one's and
+     load order between the layout head and a scoped component style is not
+     something to rely on. Pinned by tests/nfl-marks-page-data.test.ts. */
+  html.dark :global(.cb__hero img),
+  html.dark :global(.cb__film img),
+  html.dark :global(.cb__grounds img),
+  html.dark :global(.cb__situ .cb__pane.is-light img),
+  html.dark :global(.cb__situ .cb__pane.is-dark img) {
+    content: normal !important;
+  }
+  /* Tokens with fallbacks only (docs/claude/rules/theming-and-assets.md). */
+  .cb {
+    max-width: var(--container-max-width, 1100px);
+    margin: 0 auto;
+    padding: var(--spacing-md, 1rem) var(--spacing-md, 1rem) var(--spacing-lg, 1.5rem);
+  }
+  .cb__crumb {
+    margin-bottom: var(--spacing-sm, 0.75rem);
+    font-size: 0.875rem;
+  }
+  .cb__crumb a {
+    color: var(--color-gray-500, #6b7280);
+    text-decoration: none;
+  }
+  .cb__crumb a:hover {
+    text-decoration: underline;
+  }
+
+  .cb__hero {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--radius-md, 8px);
+    background: var(--hero-bg);
+    color: var(--hero-ink);
+    padding: 2.2rem 1.6rem;
+    margin-bottom: var(--spacing-lg, 1.5rem);
+  }
+  .cb__ghost {
+    position: absolute;
+    right: -2.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 260px;
+    height: 260px;
+    object-fit: contain;
+    opacity: 0.17;
+    pointer-events: none;
+  }
+  .cb__hero-in {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 1.4rem;
+    flex-wrap: wrap;
+  }
+  .cb__mark {
+    width: 120px;
+    height: 120px;
+    object-fit: contain;
+    flex: none;
+  }
+  .cb__city {
+    margin: 0;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    opacity: 0.82;
+  }
+  .cb__nick {
+    /* The hero paints its own ground, so its ink is computed from the CLUB
+       COLOUR and must beat the site's themed h1 rule — which rendered the
+       nickname near-black on navy in light mode and accent blue in dark. */
+    color: inherit;
+    margin: 0;
+    font-size: clamp(2rem, 6vw, 3rem);
+    line-height: 0.98;
+    text-transform: uppercase;
+  }
+
+  .cb__section {
+    margin-bottom: var(--spacing-lg, 1.5rem);
+  }
+  .cb__h2 {
+    margin: 0 0 0.35rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-gray-500, #6b7280);
+    border-left: 3px solid var(--color-primary, #1f6feb);
+    padding-left: 0.6rem;
+  }
+  .cb__note {
+    margin: 0 0 0.9rem;
+    font-size: 0.9rem;
+    color: var(--color-gray-600, #4b5563);
+    max-width: 70ch;
+  }
+
+  .cb__derived {
+    margin: 0 0 0.9rem;
+    padding: 0.7rem 0.85rem;
+    border-left: 3px solid var(--color-accent, #2563eb);
+    border-radius: var(--radius-sm, 4px);
+    background: color-mix(in srgb, currentColor 6%, transparent);
+    font-size: 0.875rem;
+    line-height: 1.5;
+    max-width: 72ch;
+  }
+  .cb__made {
+    position: absolute;
+    left: 0.3rem;
+    bottom: 0.3rem;
+    font-size: 0.55rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    padding: 0.08rem 0.3rem;
+    border-radius: var(--radius-sm, 4px);
+    background: var(--color-accent, #2563eb);
+    color: #fff;
+  }
+  .cb__cut-box {
+    position: relative;
+  }
+
+  /* A cut that fails to load renders its alt text; without this it sprawls
+     out of the box and pushes the filmstrip apart. */
+  .cb__cut-box,
+  .cb__ground-art {
+    overflow: hidden;
+  }
+
+  .cb__swatches {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    gap: 0.9rem;
+    flex-wrap: wrap;
+  }
+  .cb__swatches li {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  .cb__swatch {
+    display: block;
+    width: 68px;
+    height: 44px;
+    border-radius: var(--radius-sm, 4px);
+    border: 1px solid var(--color-gray-300, #d1d5db);
+  }
+  .cb__swatches code {
+    font-size: 0.7rem;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  .cb__film {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(124px, 1fr));
+    gap: var(--spacing-sm, 0.75rem);
+  }
+  .cb__cut {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  .cb__cut-box {
+    display: grid;
+    place-items: center;
+    height: 92px;
+    padding: 0.6rem;
+    border-radius: var(--radius-sm, 4px);
+    border: 1px solid var(--color-gray-300, #d1d5db);
+  }
+  /* Each box paints its own ground — never the page theme's. */
+  .cb__cut-box.is-light {
+    background: #ffffff;
+  }
+  .cb__cut-box.is-dark {
+    background: #1e1e1e;
+  }
+  .cb__cut-box img {
+    max-width: 100%;
+    max-height: 68px;
+    object-fit: contain;
+  }
+  .cb__cut-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+  .cb__cut-meta {
+    font-size: 0.68rem;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  .cb__grounds {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: var(--spacing-sm, 0.75rem);
+  }
+  .cb__ground {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    padding: 0.9rem;
+    border-radius: var(--radius-md, 8px);
+    border: 1px solid var(--color-gray-300, #d1d5db);
+  }
+  .cb__ground-head {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-gray-500, #6b7280);
+  }
+  .cb__ground-art {
+    display: grid;
+    place-items: center;
+    height: 76px;
+    border-radius: var(--radius-sm, 4px);
+  }
+  .cb__ground.is-light .cb__ground-art {
+    background: #ffffff;
+    border: 1px solid var(--color-gray-200, #e5e7eb);
+  }
+  .cb__ground.is-dark .cb__ground-art {
+    background: #1e1e1e;
+  }
+  .cb__ground-art img {
+    width: 54px;
+    height: 54px;
+    object-fit: contain;
+  }
+  .cb__ground-mark {
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+  .cb__ground-why {
+    font-size: 0.78rem;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  .cb__situ {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+    gap: var(--spacing-sm, 0.75rem);
+    align-items: start;
+  }
+  .cb__demo--wide {
+    grid-column: 1 / -1;
+  }
+  .cb__demo {
+    border: 1px solid var(--color-gray-300, #d1d5db);
+    border-radius: var(--radius-md, 8px);
+    overflow: hidden;
+  }
+  .cb__demo-cap {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.4rem 0.7rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-gray-500, #6b7280);
+    border-bottom: 1px solid var(--color-gray-200, #e5e7eb);
+  }
+  .cb__demo-cap em {
+    font-style: normal;
+    font-weight: 400;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  /* A pane stands in for a real surface, so it carries its own ground and
+     ink. Reading the page's tokens here would make the light pane go dark
+     for a dark-mode viewer and destroy the comparison. */
+  .cb__pane {
+    display: block;
+    padding: 0.8rem;
+  }
+  .cb__pane.is-light {
+    background: #ffffff;
+    color: #151a21;
+  }
+  .cb__pane.is-dark {
+    background: #1e1e1e;
+    color: #f2f2f2;
+  }
+  .cb__pane + .cb__pane {
+    border-top: 1px solid var(--color-gray-200, #e5e7eb);
+  }
+
+  /* PlayerCell brings its own type, spacing, avatar sizing and DEF treatment
+     from player-cell.css. Nothing here restyles it: a pane sets the GROUND and
+     the real cell renders on it exactly as it does on a roster page, which is
+     the only way this section stays true as that component changes. The two
+     colour rules below are the one exception, and they are about the ground —
+     the cell's own tokens follow the page theme, which would make the light
+     pane go dark for a dark-mode reader and collapse the comparison. */
+  .cb__pane :global(.player-cell__name),
+  .cb__pane :global(.player-cell__meta) {
+    color: inherit;
+  }
+  .cb__pane :global(.player-cell__meta) {
+    opacity: 0.72;
+  }
+
+  .cb__bench {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    font-size: 0.8rem;
+  }
+  .cb__opp {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+  .cb__opp img {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+  }
+
+  .cb__bcast {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+  }
+  .cb__bcast img {
+    width: 50px;
+    height: 50px;
+    object-fit: contain;
+  }
+  .cb__bname {
+    display: block;
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .cb__bmeta {
+    display: block;
+    font-size: 0.75rem;
+    opacity: 0.7;
+  }
+
+  .cb__holders {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.5rem;
+  }
+  .cb__holder {
+    display: block;
+    padding: 0.7rem 0.85rem;
+    border-radius: var(--radius-sm, 4px);
+    border: 1px solid var(--color-gray-200, #e5e7eb);
+  }
+  .cb__holder-name {
+    display: block;
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 0.55rem;
+  }
+  .cb__holder-players {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+    gap: 0.5rem 0.9rem;
+  }
+
+  @media (max-width: 520px) {
+    .cb__mark {
+      width: 84px;
+      height: 84px;
+    }
+    .cb__ghost {
+      width: 180px;
+      height: 180px;
+    }
+    .cb__holder-players {
+      grid-template-columns: 1fr;
+    }
+    .cb__holder-name {
+      min-width: 0;
+    }
+  }
+</style>

@@ -1,0 +1,60 @@
+{
+  "$comment": "Curated per-club colour maps for the DERIVED reversed cut, reviewed on a dark render and on club colour 2026-09-20. See docs/plans/nfl-mark-assignments.md \u00a7 'The reversals we are keeping'. THREE clubs, not the ten the mechanical pass nominated \u2014 ATL, BUF, CLE, HOU, LV and TB rendered acceptably and were declined on review, so their absence is a decision, not an oversight. Every `from` colour must still be present in the club's committed SVG or the build fails (tests/nfl-mark-reversals.test.ts): a logo refresh that moves a fill turns a reversal into a no-op or a mess.",
+  "clubs": {
+    "ARI": {
+      "note": "Matches the Fox broadcast cut. The keyline is the club primary, not a brighter red \u2014 a brighter one was rendered alongside and club red was chosen on review.",
+      "map": [
+        {
+          "part": "body",
+          "from": "#97233f",
+          "to": "#ffffff"
+        },
+        {
+          "part": "keyline",
+          "from": "#000000",
+          "to": "#97233f"
+        },
+        {
+          "part": "beak",
+          "from": "#ffb612",
+          "to": "#e2571b"
+        }
+      ]
+    },
+    "DET": {
+      "note": "A white lion that KEEPS its interior detail. The mane, face and leg lines are a separate white layer over the blue body, so reversing the body alone merged them into it and flattened the lion to a silhouette \u2014 the detail layer takes Honolulu blue so it still reads, exactly inverting the light mark.",
+      "map": [
+        {
+          "part": "body",
+          "from": "#0076b6",
+          "to": "#ffffff"
+        },
+        {
+          "part": "detail",
+          "from": "#fffffe",
+          "to": "#0076b6"
+        },
+        {
+          "part": "keyline",
+          "from": "#b0b7bc",
+          "to": "#0076b6"
+        }
+      ]
+    },
+    "WSH": {
+      "note": "GOLD, not white \u2014 a straight swap of the club's two colours. 'Reversed' is not a synonym for 'knocked out to white': the body takes the club's other colour, whichever reads on a dark ground.",
+      "map": [
+        {
+          "part": "body",
+          "from": "#5a1414",
+          "to": "#ffb612"
+        },
+        {
+          "part": "keyline",
+          "from": "#ffb612",
+          "to": "#5a1414"
+        }
+      ]
+    }
+  }
+}

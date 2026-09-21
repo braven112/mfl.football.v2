@@ -53,6 +53,15 @@ import { crestStrokeFilter } from './crest-dark-stroke-css';
 import darkLogoManifest from '../data/nfl-dark-logos-manifest.json';
 
 /**
+ * Per-code mirrored format, written by scripts/fetch-nfl-dark-logos.mjs only
+ * when a cut is NOT a PNG. Absent for every all-PNG build (and for the
+ * committed `{"codes": []}` default), so a missing entry means `png`.
+ */
+function manifestDarkFormats(): Readonly<Record<string, string>> {
+  return (darkLogoManifest as { formats?: Record<string, string> }).formats ?? {};
+}
+
+/**
  * Canonical codes whose logo needs a white ring in dark mode ON TOP of the
  * dark swap. ESPN's `500-dark` cut fixes marks with dark OUTLINES (it
  * re-inks them light), but it does nothing for a mark whose whole BODY is
@@ -128,6 +137,8 @@ const DEFAULT_DARK_BASE_PATH = '/assets/nfl-logos/dark';
 export interface NflLogoDarkCssOptions {
   /** Codes whose dark cut is self-hosted. Defaults to the prebuild manifest. */
   manifestCodes?: readonly string[];
+  /** Per-code mirrored format for non-PNG cuts. Defaults to the manifest. */
+  manifestFormats?: Readonly<Record<string, string>>;
   /** Path prefix the self-hosted cuts are served from, no trailing slash. */
   darkBasePath?: string;
   /**
@@ -156,9 +167,16 @@ export function resolveNflDarkLogoUrl(
   manifestCodes: readonly string[] = darkLogoManifest.codes,
   knownMissing: readonly string[] = [],
   darkBasePath: string = DEFAULT_DARK_BASE_PATH,
+  manifestFormats: Readonly<Record<string, string>> = manifestDarkFormats(),
 ): string | null {
   if (manifestCodes.includes(canonicalCode)) {
-    return `${darkBasePath}/${canonicalCode}.png`;
+    // Extension comes from the manifest, never assumed: a club whose dark mark
+    // is assigned to NFL.com's cut is mirrored as SVG, and a hardcoded `.png`
+    // would emit `content: url()` pointing at a file that does not exist —
+    // which renders a broken-image icon, the exact failure the manifest's
+    // safety contract exists to prevent.
+    const ext = manifestFormats[canonicalCode] ?? 'png';
+    return `${darkBasePath}/${canonicalCode}.${ext}`;
   }
   if (knownMissing.includes(canonicalCode)) return null;
   return getNFLTeamLogo(canonicalCode, 'dark');
@@ -186,6 +204,7 @@ let cachedCss: string | null = null;
 export function buildNflLogoDarkCss(options: NflLogoDarkCssOptions = {}): string {
   const {
     manifestCodes = darkLogoManifest.codes,
+    manifestFormats = manifestDarkFormats(),
     darkBasePath = DEFAULT_DARK_BASE_PATH,
     sameOriginOnly = false,
   } = options;
@@ -195,11 +214,12 @@ export function buildNflLogoDarkCss(options: NflLogoDarkCssOptions = {}): string
   const isDefaultConfig =
     manifestCodes === darkLogoManifest.codes &&
     darkBasePath === DEFAULT_DARK_BASE_PATH &&
+    Object.keys(manifestFormats).length === Object.keys(manifestDarkFormats()).length &&
     !sameOriginOnly;
   if (isDefaultConfig && cachedCss !== null) return cachedCss;
 
   const resolveDark = (canonical: string): string | null => {
-    const url = resolveNflDarkLogoUrl(canonical, manifestCodes, [], darkBasePath);
+    const url = resolveNflDarkLogoUrl(canonical, manifestCodes, [], darkBasePath, manifestFormats);
     if (url === null) return null;
     // A same-origin URL is a root-relative path; anything else is a CDN URL.
     if (sameOriginOnly && !url.startsWith('/')) return null;
@@ -277,10 +297,18 @@ export function buildNflLogoDarkCss(options: NflLogoDarkCssOptions = {}): string
   // so `/assets/nfl-logos/dark/CAR.png` must stay keyed even when Storybook
   // points its own swaps elsewhere. Identical in production (the two collapse).
   const darkBasePaths = [...new Set([DEFAULT_DARK_BASE_PATH, darkBasePath])];
-  const darkSrcs = NFL_DARK_STROKE_CODES.flatMap((code) => [
-    getNFLTeamLogo(code, 'dark'),
-    ...darkBasePaths.map((base) => `${base}/${code}.png`),
-  ]);
+  const darkSrcs = NFL_DARK_STROKE_CODES.flatMap((code) => {
+    // Extension from the manifest, for the same reason the swap reads it: a
+    // stroked club whose dark cut is assigned to an SVG source would key this
+    // ring on a `.png` that is never rendered, and the ring would silently
+    // stop reaching the surfaces that ship the dark cut as `src`. CAR is PNG
+    // today, so this is latent — which is exactly when it is cheap to fix.
+    const ext = manifestFormats[code] ?? 'png';
+    return [
+      getNFLTeamLogo(code, 'dark'),
+      ...darkBasePaths.map((base) => `${base}/${code}.${ext}`),
+    ];
+  });
   const strokeFilter = crestStrokeFilter(undefined, NFL_DARK_STROKE_WIDTH);
   const strokeRule = (srcs: string[], guard: string): string | null =>
     srcs.length

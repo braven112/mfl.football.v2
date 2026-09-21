@@ -1,0 +1,20 @@
+---
+/**
+ * NFL Brand Book (theleague) — thin route wrapper.
+ *
+ * Shared implementation lives in components/shared/brand/BrandPage.
+ * The redirect (if one is ever needed) must live HERE: 
+ * Astro.redirect() only redirects from a PAGE. Per-league static data imports
+ * also belong here — a static import specifier can't be a runtime variable.
+ */
+import BrandPage from '../../components/shared/brand/BrandPage.astro';
+
+// SSR, not prerender: every one of these reads `Astro.locals.hideLeaguePrefix`,
+// which middleware derives from the HOSTNAME. The same compiled page answers
+// both the league apex (prefix hidden) and the shared host (prefix kept) and
+// must emit different hrefs for each, so a baked file would ship wrong-host
+// links to whichever host it was not baked for. The mark data itself is static.
+export const prerender = false;
+---
+
+<BrandPage leagueSlug="theleague" />

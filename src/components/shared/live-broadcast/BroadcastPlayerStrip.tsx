@@ -8,7 +8,7 @@
 
 import { memo } from 'react';
 import { BroadcastFace } from '../draft-broadcast/BroadcastFace';
-import { normalizeTeamCode } from '../../../utils/nfl-logo';
+import { nflLogoUrl } from '../../../utils/live/nfl-logo-url';
 import { padPage, type StripPage, type StripRow } from '../../../utils/broadcast-layout';
 import { crestStrokeProps } from '../../../utils/draft-broadcast';
 
@@ -31,7 +31,10 @@ interface Props {
 
 const fmt = (n: number) => (Number.isFinite(n) ? n.toFixed(1) : '0.0');
 
-const nflLogo = (team: string) => (team ? `/assets/nfl-logos/${normalizeTeamCode(team)}.svg` : '');
+// This board is dark in BOTH themes, so it asks for the dark ground rather
+// than relying on the `html.dark` swap, which never fires for a light-theme
+// viewer here. See src/utils/live/nfl-logo-url.ts.
+const nflLogo = (team: string) => nflLogoUrl(team, 'dark');
 
 function Row({ row, dim }: { row: StripRow | null; dim: boolean }) {
   if (!row) {

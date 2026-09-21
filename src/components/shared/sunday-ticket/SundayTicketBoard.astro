@@ -12,6 +12,7 @@
  * that wraps. The trailing links ("Reset to my leagues", "Times in …") sit
  * OUTSIDE the rail so they stay on screen while the chips scroll.
  */
+import { nflLogoUrl } from '../../../utils/live/nfl-logo-url';
 import { formatKickoffZones, type SundayTicketSlate } from '../../../utils/sunday-ticket-slate';
 import {
   countryHref,
@@ -74,7 +75,10 @@ const chipFor = (l: BoardLeague) => {
 const hasWindows = slate.windows.length > 0;
 const hasAnything = hasWindows || slate.other.length > 0;
 
-const logo = (code: string) => `/assets/nfl-logos/${code}.svg`;
+// The multiview grid is near-black in BOTH themes (sunday-ticket.css), so the
+// `html.dark` swap never fires for a light-theme viewer here. Ask for the dark
+// ground directly instead of rendering the light mark on a near-black tile.
+const logo = (code: string) => nflLogoUrl(code, 'dark');
 ---
 
 <div class="st-board" data-personalized={slate.personalized ? 'true' : 'false'}>

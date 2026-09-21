@@ -57,6 +57,8 @@
     "compute:afl-awards": "node scripts/compute-afl-awards.mjs",
     "compute:afl-awards:offline": "node scripts/compute-afl-awards.mjs --offline",
     "fetch:nfl-news-digest": "node scripts/fetch-nfl-news-digest.mjs",
+    "download:nfl-logos": "node scripts/download-nfl-logos.mjs",
+    "fetch:nfl-brand-kit": "node scripts/fetch-nfl-brand-kit.mjs",
     "fetch:nfl-dark-logos": "node scripts/fetch-nfl-dark-logos.mjs",
     "fetch:college-dark-logos": "node scripts/fetch-college-dark-logos.mjs",
     "fetch:trade-bait": "MFL_LEAGUE_ID=13522 MFL_LEAGUE_SLUG=theleague node scripts/fetch-trade-bait.mjs",
