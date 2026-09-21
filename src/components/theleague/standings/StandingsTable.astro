@@ -691,8 +691,13 @@ const bannerLabelFor = (name: string) =>
     text-align: center;
     font-weight: 600;
   }
+  /* Shrink-to-fit, like the numeric columns: the badge is a seed chip now
+   * (see PlayoffBadge.astro), and a fixed 100px here was reserved on EVERY
+   * row — badge or not — out of `.col-team`, the only flexible column left
+   * once the band made the numbers `width: 1%`. */
   .v-std .col-badge {
-    width: 100px;
+    width: 1%;
+    white-space: nowrap;
     text-align: center;
     padding: 0.75rem 0.5rem;
   }
@@ -1767,7 +1772,14 @@ const bannerLabelFor = (name: string) =>
   :global(html.dark) tbody tr.st-row--band:hover td {
     background-color: color-mix(in srgb, currentColor 10%, var(--band-fill-dark));
   }
-  /* A gold DIV pill on Chatmaster's gold band needs an edge; every other fill
+  /* The band's own `padding: 0.5rem 0.75rem` outspecifies `.v-std .col-badge`,
+   * so the seed cell has to be tightened here or the column keeps ~28px of
+   * gutter around a ~36px chip. No font-size belongs in a `st-row--band`
+   * rule — see tests/team-band-type-contract.test.ts. */
+  tbody tr.st-row--band td.col-badge {
+    padding-inline: 0.5rem;
+  }
+  /* A gold seed chip on Chatmaster's gold band needs an edge; every other fill
    * is unharmed by one. */
   tbody tr.st-row--band :global(.badge) {
     box-shadow: 0 0 0 1.5px var(--band-ink);
