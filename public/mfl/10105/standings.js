@@ -207,29 +207,9 @@
    * the work. Only the new runner-up tier needs CSS of its own.
    * ------------------------------------------------------------------ */
 
-  function injectStyles() {
-    if (document.getElementById('mp99-styles')) return;
-    var css =
-      /* The only new tier. Purple sits clear of the four colours already in
-       * use: pink division, cyan wild card, green winnings, red top scorer. */
-      '#madmen #wwwc .runnerup-row{background-color:rgba(178,132,255,0.12)}' +
-      '#madmen #wwwc .runnerup-leader-icon{color:#b284ff;font-size:32px;line-height:1}' +
-      /* The tie marker must never read as part of the number — "6T" looked
-       * like a value. Smaller, lighter, raised, and spaced off the digits. */
-      '#madmen #wwwc .mp99-tie{display:inline-block;margin-left:6px;font-size:.55em;' +
-        'font-weight:700;color:#9aa0a6;vertical-align:super;letter-spacing:.04em}' +
-      '#madmen #wwwc .mp99-cut-cell{padding:10px 8px;text-align:center;font-size:12px;' +
-        'font-weight:700;letter-spacing:.08em;color:#e60000;' +
-        'border-top:2px solid #e60000;border-bottom:2px solid #e60000}' +
-      '#madmen #wwwc .mp99-note-cell{padding:10px 8px;text-align:center;font-size:12px;' +
-        'line-height:1.5;color:#d4d4d4;background:rgba(230,0,0,.08)}' +
-      '#madmen #wwwc .mp99-error-cell{padding:16px 12px;text-align:center;font-size:13px;' +
-        'line-height:1.6;color:#e60000;font-weight:600}';
-    var el = document.createElement('style');
-    el.id = 'mp99-styles';
-    el.appendChild(document.createTextNode(css));
-    document.head.appendChild(el);
-  }
+  /* Styling lives in standings.css, loaded by the module's own <link>. It is
+   * served rather than injected so the table is styled before this script
+   * runs, and stays styled if it never does. */
 
   function cell(cls, text) {
     var td = document.createElement('td');
@@ -402,7 +382,6 @@
   }
 
   function fail(message, detail) {
-    injectStyles();
     var table = findTable();
     if (!table) return;
     clearBody(table);
@@ -426,7 +405,6 @@
       .then(function (r) {
         var teams = buildTeams(r[0], r[1]);
         var model = tiers(teams);
-        injectStyles();
         render(findTable(), model);
       })
       .catch(function (err) {

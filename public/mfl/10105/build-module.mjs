@@ -24,10 +24,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const css = readFileSync(path.join(here, 'reference/existing-page.css'), 'utf8').trim();
-
 const BANNER = 'https://dagrafixdesigns.com/Images/2008/DA_2025/zKen_10105/Ken_99.png';
 const SCRIPT = 'https://v2.mfl.football/mfl/10105/standings.js';
+const STYLES = 'https://v2.mfl.football/mfl/10105/standings.css';
 
 const out = `<!-- ============================================================
      MAD POWER 99 — the complete MESSAGE6 module.
@@ -42,9 +41,12 @@ const out = `<!-- ============================================================
          so without it the page renders completely unstyled
        · the #wwwc inner table, its caption and its colgroup widths
        · the header row
-       · the stylesheet at the bottom
+       · the stylesheet link — every rule is scoped to #madmen
 
-     What is gone: the 99 hand-written rows and the module's own script.
+     What is gone: the 99 hand-written rows, the module's own script, and
+     the inline <style> block — that stylesheet is now served, so a style
+     fix ships without anyone editing the module again.
+
      Rows are built from MyFantasyLeague on every page load.
      ============================================================ -->
 
@@ -82,12 +84,9 @@ const out = `<!-- ============================================================
   </tr>
 </table>
 
+<link rel="stylesheet" href="${STYLES}">
 <script src="${SCRIPT}" defer></script>
-
-<style>
-${css}
-</style>
 `;
 
 writeFileSync(path.join(here, 'module.html'), out);
-console.log('module.html written —', out.length, 'bytes, stylesheet', css.length, 'bytes');
+console.log('module.html written —', out.length, 'bytes');

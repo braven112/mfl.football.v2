@@ -274,19 +274,25 @@ describe('module.html — the complete MESSAGE6 module', () => {
 
   it('keeps the #madmen wrapper every CSS rule is scoped to', () => {
     expect(module).toContain('id="madmen"');
-    /* Scoped rules are worthless without it. */
-    expect(module).toContain('#madmen #wwwc');
+    expect(module).toContain('id="wwwc"');
+    /* The stylesheet scopes every rule to that wrapper, so dropping it from
+     * the module un-styles the page even though the CSS still loads. */
+    const css = readFileSync(path.join(process.cwd(), 'public/mfl/10105/standings.css'), 'utf8');
+    expect(css).toContain('#madmen #wwwc');
   });
 
-  it('inlines the league stylesheet rather than assuming it loads from elsewhere', () => {
-    const css = readFileSync(
-      path.join(process.cwd(), 'public/mfl/10105/reference/existing-page.css'),
-      'utf8',
-    ).trim();
-    expect(module).toContain(css);
-    for (const rule of ['.division-row', '.wildcard-row', '.winnings-row', '.highlight-row']) {
-      expect(module).toContain(`#madmen #wwwc ${rule}`);
+  it('links the served stylesheet, which carries every scoped rule', () => {
+    expect(module).toContain('https://v2.mfl.football/mfl/10105/standings.css');
+    const css = readFileSync(path.join(process.cwd(), 'public/mfl/10105/standings.css'), 'utf8');
+    /* The league's own rules and the widget's additions both live there. */
+    for (const rule of ['.division-row', '.wildcard-row', '.winnings-row', '.highlight-row',
+                        '.runnerup-row', '.mp99-cut-cell', '.mp99-tie']) {
+      expect(css).toContain(`#madmen #wwwc ${rule}`);
     }
+    const league = readFileSync(
+      path.join(process.cwd(), 'public/mfl/10105/reference/existing-page.css'), 'utf8',
+    ).trim();
+    expect(css).toContain(league);
   });
 
   it('keeps the banner, caption and column widths', () => {
