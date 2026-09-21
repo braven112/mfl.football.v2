@@ -22,6 +22,7 @@
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import MflAppLayout from '../../../layouts/MflAppLayout.astro';
 import PlayerCell from '../../theleague/PlayerCell.astro';
+import CompositeHero from '../CompositeHero.astro';
 import NflGamesStrip from '../NflGamesStrip';
 /* The strip's own stylesheet. A React island does NOT carry it — rendered
    without this the logos have no sizing rule and each one fills the column,
@@ -30,6 +31,8 @@ import NflGamesStrip from '../NflGamesStrip';
 import '../../../styles/nfl-games-strip.css';
 import '../../../styles/network-badge.css';
 import type { NflGame } from '../../../types/live-scoring';
+import type { HeroModel } from '../../../utils/hero-casting';
+import { resolveHeroFranchiseBackdrop } from '../../../utils/hero-franchise-backdrop';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { getLeagueBySlug } from '../../../config/leagues';
 import type { CanonicalLeagueSlug } from '../../../config/leagues';
@@ -99,6 +102,53 @@ const demoGames: NflGame[] = [
     broadcast: 'FOX',
   },
 ];
+
+/**
+ * The homepage composite hero, rendered for real with this club's mark as its
+ * CREST WATERMARK and its primary as the radial glow.
+ *
+ * This is the surface that answers "where does a club mark end up biggest" —
+ * a hero paints it at ~300px behind the copy, which is where a cut that only
+ * works at 16px falls apart. `CompositeHero` is the live shell every composite
+ * on both homepages renders through, so what appears here is what a homepage
+ * would draw; `hero-showcase/ShowcasePage.astro` already proved a fixture can
+ * drive it, and records what happened the three times a gallery reproduced the
+ * treatment inline instead (the crest watermark never appeared at all).
+ *
+ * The crest takes the BAND ground's cut, not the light one: a hero's glow and
+ * gradient make it a dark surface in both themes, which is the same reason
+ * `hero-franchise-backdrop.ts` resolves a franchise crest server-side rather
+ * than leaving it to the `html.dark` swap.
+ *
+ * The cast player is a real one this league rosters when there is one — the
+ * league copies have a roster to draw from, the shared host does not, and
+ * `model: null` renders the silhouette the live shell already falls back to.
+ *
+ * The CARD takes the club's own gradient through `resolveHeroFranchiseBackdrop`
+ * rather than a phase accent. That is the prop's stated purpose — "a hero that
+ * is about a TEAM rather than about the league" — and it is the difference
+ * between a Saints hero and a blue hero with a Saints crest on it: `accent`
+ * paints the phase gradient and `glowColor` is only a faint radial over it, so
+ * a gold club came out blue. The resolver also does the work a hand-built
+ * gradient would skip: it floors the pair for white text and clears the accent,
+ * pill and CTA inks against the gradient that is ACTUALLY rendered, per band.
+ */
+const heroBackdrop = resolveHeroFranchiseBackdrop(
+  { colorPrimary: club.colors[0], colorSecondary: club.colors[1] ?? club.colors[0] },
+  league?.slug === 'afl-fantasy' ? 'afl' : 'theleague',
+);
+
+const heroCast = holders[0]?.players.find((pl) => pl.position !== 'DEF') ?? null;
+const heroModel: HeroModel | null = heroCast
+  ? {
+      mflId: heroCast.id,
+      name: heroCast.name,
+      position: heroCast.position,
+      nflTeam: club.code,
+      headshot: heroCast.headshot,
+      descriptor: club.nick,
+    }
+  : null;
 
 const GROUND_COPY: Record<string, string> = {
   light: 'Player cells, bench rows, the games strip — anything on a white card.',
@@ -253,6 +303,27 @@ const GROUND_COPY: Record<string, string> = {
           <span class="cb__pane is-dark">
             <span class="cb__bench"><span>Bench &middot; FLEX</span><span class="cb__opp"><img src={dark?.url} alt="" loading="lazy" />{club.code}</span></span>
           </span>
+        </li>
+
+        <li class="cb__demo cb__demo--wide">
+          <span class="cb__demo-cap">
+            Composite hero <em>the mark as a crest watermark, ~300px</em>
+          </span>
+          <CompositeHero
+            ariaLabel={`${club.name} hero example`}
+            accent="feature"
+            franchise={heroBackdrop}
+            wordmark={club.nick.toUpperCase()}
+            crest={band ? { src: band.url } : null}
+            model={heroModel}
+            eager={false}
+            pill="NFL Brand Book"
+            title={club.city}
+            titleAccent={club.nick}
+            summary={`The club's mark as a homepage hero draws it: the crest as a watermark behind the copy, on the club's own gradient.`}
+            ctaLabel="Every cut on file"
+            ctaHref={indexPath}
+          />
         </li>
 
         <li class="cb__demo cb__demo--wide">

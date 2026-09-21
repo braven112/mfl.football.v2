@@ -421,6 +421,30 @@ grounds, not two" rule is demonstrated 32 times rather than asserted once — an
 a threshold nudge moves every one of them together instead of leaving a stored
 table half-updated.
 
+### The hero is the real hero shell
+
+`CompositeHero` — the live shell every composite on both homepages renders
+through — takes this club's mark as its CREST WATERMARK and the club's own
+colours as the card. It is the surface that answers where a mark ends up
+BIGGEST: a hero paints it at ~300px behind the copy, which is where a cut that
+survives 16px can still fall apart.
+
+Two props, and the difference matters. `accent` paints a PHASE gradient and
+`glowColor` is only a faint radial over it, so a gold club came out blue with a
+gold crest on it. The club belongs in `franchise`, via
+`resolveHeroFranchiseBackdrop` — the prop's own docblock says it is for "a hero
+that is about a TEAM rather than about the league" — which also floors the pair
+for white text and clears the accent, pill and CTA inks against the gradient
+that is actually rendered, per band. A hand-built gradient skips all of that.
+
+The crest takes the BAND ground's cut: a hero's gradient is dark in both
+themes, the same reason `hero-franchise-backdrop.ts` resolves a franchise crest
+server-side rather than leaving it to the `html.dark` swap.
+
+`ShowcasePage.astro` had already established that a fixture can drive the live
+shell, and records what happened the three times a gallery reproduced the
+treatment inline instead — the crest watermark never appeared at all.
+
 ### League context
 
 `src/utils/nfl-club-rosters.ts` answers "who rosters Bears". Franchise names
