@@ -15,6 +15,11 @@
  */
 import BrandPage from '../components/shared/brand/BrandPage.astro';
 
+// SSR, not prerender: every one of these reads `Astro.locals.hideLeaguePrefix`,
+// which middleware derives from the HOSTNAME. The same compiled page answers
+// both the league apex (prefix hidden) and the shared host (prefix kept) and
+// must emit different hrefs for each, so a baked file would ship wrong-host
+// links to whichever host it was not baked for. The mark data itself is static.
 export const prerender = false;
 ---
 
