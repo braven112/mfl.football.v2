@@ -1691,14 +1691,15 @@ const bannerLabelFor = (name: string) =>
     background-color: var(--band-fill-dark);
     color: var(--band-ink-dark);
   }
-  /* The trim edge is the club's SECONDARY colour, and on TheLeague it is not
-   * decoration: SEVEN of its sixteen franchises wear the same #181818 primary,
-   * so their bands resolve to the same lifted grey and the edge is the only
-   * thing telling two of them apart at a glance in the same division. Wide
-   * enough to read as a colour key rather than as a rendering artifact. */
-  tbody tr.st-row--band td:first-child {
-    border-left: 6px solid var(--band-trim);
-  }
+  /* No trim edge. It was once load-bearing: SEVEN of TheLeague's sixteen
+   * franchises wore the same #181818 primary, their bands resolved to the same
+   * lifted grey, and the club's secondary colour on the leading edge was the
+   * only thing telling two of them apart in the same division. Re-colouring
+   * those ten clubs dissolved that — no two franchises share a primary now, in
+   * either league — so the edge was left doing nothing but adding a second
+   * colour to every row. The band runs to the card edge instead.
+   *
+   * `--band-trim` is still resolved by `teamBandStyle`; nothing reads it today. */
 
   /* Give the wordmark the room it needs. Every numeric column shrinks to its
    * content (the widths below were sized for 12px cells, and at the band's
@@ -1721,48 +1722,34 @@ const bannerLabelFor = (name: string) =>
   tbody tr.st-row--band td.col-team {
     width: auto;
   }
-  /* Your own team. The inherited `.preferred-team` background cannot show
-   * through a painted cell, so the marker is drawn ON the band in its own ink —
-   * which is the only colour guaranteed to contrast with that fill.
+  /* Your own team: a bar in the club's SECONDARY colour on the trailing edge.
    *
-   * It is NOT the left edge: that edge sits against the CARD, and the Pigskins'
-   * marker would have been white ink on a white card, i.e. nothing at all. The
-   * ink is measured against the FILL and nothing else, so the marker has to sit
-   * on the fill to inherit that guarantee. */
-  tbody tr.st-row--band.preferred-team td {
-    box-shadow:
-      inset 0 3px 0 var(--band-ink),
-      inset 0 -3px 0 var(--band-ink);
-  }
-  :global(html.dark) tbody tr.st-row--band.preferred-team td {
-    box-shadow:
-      inset 0 3px 0 var(--band-ink-dark),
-      inset 0 -3px 0 var(--band-ink-dark);
-  }
-  /* …and the ring closes at both ends of the row. */
-  tbody tr.st-row--band.preferred-team td:first-child {
-    box-shadow:
-      inset 0 3px 0 var(--band-ink),
-      inset 0 -3px 0 var(--band-ink),
-      inset 3px 0 0 var(--band-ink);
+   * It replaces an ink ring around the whole row, which boxed the band in and
+   * read as clutter. The secondary is the one colour that is the club's and is
+   * not already the row, so the bar says "yours" and "who" at once.
+   *
+   * Two things this inherits rather than re-derives. It goes on the TRAILING
+   * edge because the leading one is where the seed chip and crest already are.
+   * And it is NOT the row's own `.v-std tr.preferred-team` border-left, which
+   * the old trim edge used to cover — with that trim gone it was the only thing
+   * left in the left gutter, so your team alone grew a stray coloured sliver
+   * against the card. That one is suppressed here.
+   *
+   * KNOWN LIMIT, measured over all 40 franchises: `band.trim` is the club's
+   * secondary raw, and `team-band.ts` documents it "never load-bearing for
+   * legibility" because until now it was decoration. As a marker it IS
+   * load-bearing, and it reads as a deliberate bar only where it differs from
+   * BOTH neighbours — the fill on its left, the card on its right. Seven clubs
+   * carry #e9e9e9 (1.21:1 on the white card) and sixteen carry #181818 (1.17:1
+   * on the dark card), so in that one theme their bar reads as the row stopping
+   * 6px short rather than as a mark. Fixing it means solving the marker colour
+   * the way `solveBand` solves ink, which is a deliberate open decision. */
+  tbody tr.st-row--band.preferred-team,
+  :global(html.dark) tbody tr.st-row--band.preferred-team {
+    border-left: none;
   }
   tbody tr.st-row--band.preferred-team td:last-child {
-    box-shadow:
-      inset 0 3px 0 var(--band-ink),
-      inset 0 -3px 0 var(--band-ink),
-      inset -3px 0 0 var(--band-ink);
-  }
-  :global(html.dark) tbody tr.st-row--band.preferred-team td:first-child {
-    box-shadow:
-      inset 0 3px 0 var(--band-ink-dark),
-      inset 0 -3px 0 var(--band-ink-dark),
-      inset 3px 0 0 var(--band-ink-dark);
-  }
-  :global(html.dark) tbody tr.st-row--band.preferred-team td:last-child {
-    box-shadow:
-      inset 0 3px 0 var(--band-ink-dark),
-      inset 0 -3px 0 var(--band-ink-dark),
-      inset -3px 0 0 var(--band-ink-dark);
+    border-right: 6px solid var(--band-trim);
   }
   /* Hover tints toward the row's OWN ink, so it lightens a navy band and
    * darkens a gold one with a single rule. */
