@@ -8,10 +8,19 @@
    30 who qualify and a tight list for the rest, so its six column headers no
    longer describe anything. */
 #madmen #wwwc .mp99-hide { display: none; }
-#madmen #wwwc .mp99-wrap { padding: 0; }
+
+/* The league's stylesheet puts a blue rule under EVERY cell
+   (#madmen #wwwc td { border-bottom }). That is right for a table of rows and
+   wrong for these, which are full-width wrappers around a grid or a heading —
+   it drew a stray blue line above and below every section title. The field
+   list keeps its own rules, on .mp99-list-row. */
+#madmen #wwwc .mp99-wrap,
+#madmen #wwwc .mp99-section { border-bottom: 0; }
+
+#madmen #wwwc .mp99-wrap { padding: 0 0 18px 0; }
 
 #madmen #wwwc .mp99-section {
-  padding: 16px 10px 8px 10px;
+  padding: 22px 12px 10px 12px;
   font-size: 11px; font-weight: 700; letter-spacing: .09em;
 }
 #madmen #wwwc .mp99-section-count { color: #6b7076; font-weight: 600; letter-spacing: .04em; }
@@ -19,14 +28,14 @@
 #madmen #wwwc .mp99-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 9px;
-  padding: 0 10px 4px 10px;
+  gap: 14px;
+  padding: 0 12px;
 }
 
 /* One qualifier. The crest leads, Victory Points is the biggest number. */
 #madmen #wwwc .mp99-tile {
-  border-radius: 9px;
-  padding: 8px;
+  border-radius: 10px;
+  padding: 10px 8px 12px 8px;
   text-align: center;
   border-top: 3px solid transparent;
 }
@@ -65,7 +74,7 @@
 /* Seeds 31 and below: one tight line each. */
 #madmen #wwwc .mp99-list-row {
   display: flex; align-items: center; gap: 8px;
-  padding: 5px 10px;
+  padding: 6px 12px;
   border-bottom: 1px solid rgba(75, 152, 228, .28);
 }
 #madmen #wwwc .mp99-list-seed {
@@ -95,7 +104,7 @@
 
 /* The playoff cut line, and the note when a VP tie straddles it. */
 #madmen #wwwc .mp99-cut-cell {
-  padding: 12px 10px; text-align: center; font-size: 11px; font-weight: 700;
+  margin: 0; padding: 14px 10px; text-align: center; font-size: 11px; font-weight: 700;
   letter-spacing: .08em; color: #e60000;
   border-top: 2px solid #e60000; border-bottom: 2px solid #e60000;
 }
