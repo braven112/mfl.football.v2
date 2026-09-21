@@ -24,7 +24,7 @@
  *      about the TYPE, not a convenient threshold, and the stylesheet has to
  *      keep it true: every text node inside a band row renders at ≥19px/700,
  *      clearing the 18.66px-bold definition of large text. That is the contract
- *      `tests/standings-band-type.test.ts` pins, because shrinking the stat
+ *      `tests/team-band-type-contract.test.ts` pins, because shrinking the stat
  *      columns one day would silently invalidate every ratio measured here.
  *      Measured at the body floor instead, eight AFL clubs — the Micks' green
  *      among them, at 3.20:1 — would flip to dark ink, which is not what the
@@ -96,9 +96,10 @@ const normalizeHex = (c: string): string => (c.trim().startsWith('#') ? c.trim()
 export interface TeamBand {
   /** Fill on the light card. The config colour untouched wherever it clears both floors. */
   fill: string;
-  /** Ink on `fill` — `BAND_INK_DARK` or `BAND_INK_LIGHT`, whichever cost the brand colour less. */
+  /** Ink on `fill` — `BAND_INK_LIGHT` wherever it is legible, else `BAND_INK_DARK`. */
   ink: string;
-  /** Fill on the dark card. Starts from `colorPrimaryDark` when the franchise hand-tuned one. */
+  /** Fill on the dark card — the same `colorPrimary`, lifted only as far as the
+   *  darker card requires. See `resolveTeamBand` on why NOT `colorPrimaryDark`. */
   fillDark: string;
   /** Ink on `fillDark`. Resolved independently — the two themes can disagree. */
   inkDark: string;

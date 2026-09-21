@@ -83,7 +83,8 @@ Pecking Order shipped invisible rank numbers in dark mode (August 2026).
 ## Team bands — a franchise colour as the surface, ink chosen per club
 
 `resolveTeamBand` / `teamBandStyle` (`src/utils/team-band.ts`) paint a row,
-card or panel in a franchise's own colour and put legible text ON it. Reach for
+card, chip or panel in a franchise's own colour and put legible text ON it —
+the division standings' colour rows and the Pecking Order's rank chip today. Reach for
 it instead of `--team-accent-<id>` whenever the brand colour IS the surface —
 the accent token is floored for FOREGROUND use and would hand back a shifted
 colour, which is the opposite of what a fill wants.
@@ -98,9 +99,12 @@ when neither ink works — which no franchise in any league currently needs.
 - **The 3:1 floor is a claim about the TYPE.** The ink is measured at WCAG's
   large-text floor, which is only valid while every text node on the band stays
   ≥18.66px bold. At the 4.5:1 body floor, eight AFL clubs flip to dark ink.
-  `tests/standings-band-type.test.ts` reads the component's CSS and fails if a
-  band font-size drops under that, at any breakpoint — without it, a later
-  tidy-up back toward 12px cells takes the whole table sub-AA silently.
+  `tests/team-band-type-contract.test.ts` holds every band surface to that, by
+  registry rather than by scanning one file: a new importer of the util fails
+  the suite until it declares which of its selectors carry text on the fill, and
+  any declared selector whose font-size drops under the floor, at any
+  breakpoint, fails it too. Without that, a later tidy-up back toward 12px cells
+  takes a whole surface sub-AA with nothing going red.
 - **Both themes are resolved together and handed to CSS as custom properties.**
   `--band-fill` / `--band-ink` with `--band-fill-dark` / `--band-ink-dark`, and
   the stylesheet picks under `html.dark`. Same reason as everything else here:
