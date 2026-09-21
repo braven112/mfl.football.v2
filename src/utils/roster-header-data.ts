@@ -268,6 +268,10 @@ export function compactSalary(value: number): string {
  * score — which is every non-cap league, and any cap league before week one.
  */
 export function bestValuePlayer(players: CandidatePlayer[]): HeaderPlayer | null {
+  // `points` is whatever the CALLER puts there, and the caller owns choosing a
+  // current-season figure. TheLeague's roster page carries a `points` field
+  // that it rewrites with LAST season's totals during the offseason, so it
+  // maps `totalSeason` in before calling this.
   let best: CandidatePlayer | null = null;
   let bestRatio = 0;
   for (const player of players ?? []) {

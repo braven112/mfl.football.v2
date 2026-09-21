@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
 import {
   buildTeamGroups,
   buildSeasonRail,
@@ -313,5 +315,58 @@ describe('the featured player', () => {
       expect(compactSalary(-2400000)).toBe('-$2.4M');
       expect(compactSalary(Number.NaN)).toBe('—');
     });
+  });
+});
+
+/**
+ * The roster page rewrites `p.points` in place with LAST season's totals
+ * whenever the current season reads all-zero — every year between the league
+ * rollover and kickoff — so the extension and franchise-tag filters keep
+ * working. That mutation runs BEFORE the header is built, so a header that
+ * reads `points` prices a full prior season against this year's salary:
+ * Drake Maye's 304.58 points from 2025 against his 2026 cap hit, two weeks
+ * into 2026.
+ *
+ * The page maps `totalSeason` into `points` before calling `bestValuePlayer`.
+ * This pins that the mapping is still there and still wins.
+ */
+describe('the value metric reads THIS season, not last', () => {
+  const PAGE = fs.readFileSync(
+    path.join(process.cwd(), 'src/pages/theleague/rosters.astro'),
+    'utf-8',
+  );
+
+  it('maps totalSeason into points before picking the featured player', () => {
+    const call = PAGE.slice(
+      PAGE.indexOf('featuredPlayer: bestValuePlayer('),
+      PAGE.indexOf('lastResult: findLastResult('),
+    );
+    expect(call, 'the header must not read the page’s mutated `points`').toMatch(
+      /points:\s*player\??\.?\[?'?totalSeason/,
+    );
+  });
+
+  it('prefers the cheap in-season producer over last season’s star', () => {
+    // Exactly the shape the bug produced: `points` is last season, so reading
+    // it crowns Maye; `totalSeason` is this season, where Nix is the value.
+    const roster = [
+      { id: '1', name: 'Drake Maye', position: 'QB', salary: 640000, points: 304.58, totalSeason: 19.8 },
+      { id: '2', name: 'Bo Nix', position: 'QB', salary: 968000, points: 12.0, totalSeason: 60.0 },
+    ];
+    const thisSeason = roster.map((p) => ({ ...p, points: p.totalSeason }));
+    expect(bestValuePlayer(thisSeason)!.name).toBe('Bo Nix');
+    // ...and the un-mapped call is what used to be wrong.
+    expect(bestValuePlayer(roster)!.name).toBe('Drake Maye');
+  });
+
+  it('skips a player whose season total is the feed’s "-" placeholder', () => {
+    const roster = [{ id: '1', name: 'X', position: 'QB', salary: 500000, points: '-' }];
+    expect(bestValuePlayer(roster)).toBeNull();
+  });
+
+  it('skips a negative season total rather than ranking it', () => {
+    // Real: a WR can sit at -0.6 after a fumble-heavy opener.
+    const roster = [{ id: '1', name: 'X', position: 'WR', salary: 500000, points: -0.6 }];
+    expect(bestValuePlayer(roster)).toBeNull();
   });
 });

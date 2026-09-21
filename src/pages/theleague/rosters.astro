@@ -2117,15 +2117,25 @@ const headerTeamsForSwap = teamsList.map((team: any) => {
       groupSize: null,
     },
     capSpace: initialCapLimit - (teamData?.totals?.totalSalary ?? 0),
-    // TheLeague runs a cap, so the question worth answering is value, not
-    // spend: the most points per dollar. Practice squad and IR are included —
-    // a held contract is still cap, and a stashed player who scores is
-    // exactly the kind of value this is meant to surface.
-    featuredPlayer: bestValuePlayer([
-      ...(teamData?.players ?? []),
-      ...(teamData?.practiceSquad ?? []),
-      ...(teamData?.injuredReserve ?? []),
-    ]),
+    /* TheLeague runs a cap, so the question worth answering is value, not
+       spend: the most points per dollar. Practice squad and IR are included —
+       a held contract is still cap, and a stashed player who scores is exactly
+       the kind of value this is meant to surface.
+
+       `totalSeason`, NOT `points`. `points` is not this season's total on this
+       page: a few hundred lines up, when the current season reads all-zero
+       (every year between the league rollover and kickoff), the page REWRITES
+       `p.points` in place with LAST season's totals so the extension and
+       franchise-tag filters keep working. That mutation runs before this does,
+       so reading `points` here priced Drake Maye's 2025 season — 304.58 pts —
+       against his 2026 salary and called it this year's best value. */
+    featuredPlayer: bestValuePlayer(
+      [
+        ...(teamData?.players ?? []),
+        ...(teamData?.practiceSquad ?? []),
+        ...(teamData?.injuredReserve ?? []),
+      ].map((player: any) => ({ ...player, points: player?.totalSeason }))
+    ),
     lastResult: findLastResult(own, currentWeekNum),
     nextGame: findNextGame(own, currentWeekNum),
     rail: buildSeasonRail(
