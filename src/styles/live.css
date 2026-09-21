@@ -500,6 +500,15 @@ button.lv-card:focus-visible {
   display: grid;
   place-items: center;
   flex: none;
+  /* A mark that fails to load renders its ALT TEXT, at body size, inside a
+     1.4rem box — which is how a broken `/_vercel/image` request turned two
+     matchup rows into "Rhinos logo" wrapped across three lines each, on a real
+     board (2026-09-21). The alt attribute still reaches a screen reader; it
+     just may not repaint the row. An outside league's mark is a URL somebody
+     else controls, so this is a permanent condition, not a one-off. */
+  overflow: hidden;
+  font-size: 0;
+  color: transparent;
 }
 .lv-side__crest img {
   width: 100%;

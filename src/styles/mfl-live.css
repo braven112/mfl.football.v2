@@ -111,6 +111,13 @@
     align-items: center;
     justify-content: center;
   }
+  /* A mark that fails to load must not repaint the row — see the same note in
+     live.css. Scoped to the IMAGE variant so `--text` keeps its initials. */
+  .mls__mark:not(.mls__mark--text) {
+    overflow: hidden;
+    font-size: 0;
+    color: transparent;
+  }
   .mls__mark img {
     width: 100%;
     height: 100%;

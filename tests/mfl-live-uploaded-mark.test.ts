@@ -138,20 +138,28 @@ describe('optimizedRemoteImage', () => {
   });
 
   /**
-   * The width we ask for must be one the deployment will SERVE. Vercel answers
-   * a `w` outside `images.sizes` with a 400, which would take out every
-   * uploaded mark on the board at once — and the hostname list in
-   * `remotePatterns` is the real allowlist for where our own edge will fetch
-   * from, which is why the helper keeps no second copy of it.
+   * THE IMAGE CONFIG LIVES IN `astro.config.ts`, NOT `vercel.json`.
+   *
+   * The Vercel adapter writes `.vercel/output/config.json` (Build Output API)
+   * and THAT is what `/_vercel/image` reads. This shipped to a preview with
+   * the block in `vercel.json` first: it deployed, it looked configured, and
+   * every mark on the board rendered as a broken-image icon because each
+   * optimize request answered `400 INVALID_IMAGE_OPTIMIZE_REQUEST`.
+   *
+   * Both halves are checked because a request needs both: a `w` outside
+   * `sizes` is a 400, and so is a host outside `remotePatterns` — which is
+   * also the real allowlist for where our own edge will fetch a source image
+   * from, and the reason `optimizedRemoteImage` keeps no second copy of it.
    */
-  it('asks for a width vercel.json actually serves, from a host it allows', () => {
-    const vercel = JSON.parse(readFileSync('vercel.json', 'utf8'));
-    expect(vercel.images?.sizes).toContain(REMOTE_MARK_WIDTH);
-    expect(vercel.images?.remotePatterns).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ protocol: 'https', hostname: '**.myfantasyleague.com' }),
-      ]),
-    );
+  it('asks for a width the deployment serves, from a host it allows', () => {
+    const astroConfig = readFileSync('astro.config.ts', 'utf8');
+    const sizes = astroConfig.match(/sizes:\s*\[([^\]]*)\]/)?.[1] ?? '';
+    expect(sizes.split(',').map((n) => Number(n.trim()))).toContain(REMOTE_MARK_WIDTH);
+    expect(astroConfig).toMatch(/remotePatterns:\s*\[\{\s*protocol:\s*'https',\s*hostname:\s*'\*\*\.myfantasyleague\.com'/);
+    // And the dead config does not come back: a `vercel.json` images block is
+    // ignored here, so leaving one would be a second source of truth that
+    // cannot be right.
+    expect(JSON.parse(readFileSync('vercel.json', 'utf8')).images).toBeUndefined();
   });
 });
 
@@ -169,6 +177,18 @@ describe('the square crop', () => {
   it('crops only on the uploaded-mark rung', () => {
     expect(card).toContain("team.rung === 'mfl'");
     expect(card).toContain('lv-side__crest--crop');
+  });
+
+  /**
+   * A mark is a URL somebody else controls. When it 404s the browser paints
+   * its ALT TEXT at body size inside a 1.4rem box, which is how a broken
+   * optimize request turned two matchup rows into "Rhinos logo" wrapped over
+   * three lines each on a real board. The alt attribute stays for screen
+   * readers; it just may not repaint the row.
+   */
+  it('contains a mark that fails to load', () => {
+    expect(boardCss).toMatch(/\.lv-side__crest \{[^}]*overflow: hidden;[^}]*font-size: 0;/);
+    expect(togglesCss).toMatch(/\.mls__mark:not\(\.mls__mark--text\) \{[^}]*overflow: hidden;/);
   });
 
   it('crops with cover and fits everything else with contain', () => {
