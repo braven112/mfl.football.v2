@@ -253,15 +253,6 @@
     return wrap;
   }
 
-  /* MFL reports W-L-T. The page has always shown W-L, so drop a zero tie count
-   * — but keep it the moment there is a real tie to report. */
-  function shortRecord(rec) {
-    if (!rec) return '0-0';
-    var p = rec.split('-');
-    if (p.length === 3 && Number(p[2]) === 0) return p[0] + '-' + p[1];
-    return rec;
-  }
-
   function money(n) {
     return '$' + Number(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   }
@@ -302,7 +293,8 @@
     team.appendChild(ts);
     tr.appendChild(team);
 
-    tr.appendChild(cell('record', shortRecord(t.record)));
+    /* MFL's own W-L-T, printed as the feed gives it. */
+    tr.appendChild(cell('record', t.record || '0-0-0'));
 
     var pts = cell('points', String(t.vp));
     if (entry.tied) {

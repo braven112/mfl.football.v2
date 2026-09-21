@@ -243,9 +243,9 @@ describe('MAD POWER 99 standings widget (MFL 10105)', () => {
     expect(tieMarks.length).toBeGreaterThan(0);
   });
 
-  it('shows W-L, keeping the tie column only when there is a tie', async () => {
+  it("prints MFL's own W-L-T record, unreformatted", async () => {
     const { body } = await run({ withVp: true });
-    expect(body[0].children[2].textContent).toBe('2-0');
+    expect(body[0].children[2].textContent).toBe('2-0-0');
   });
 
   it('says so plainly when MFL does not publish Victory Points', async () => {
