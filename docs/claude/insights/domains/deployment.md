@@ -1,3 +1,98 @@
+# Deployment Insights
+
+<!-- CURATED-HEAD -->
+> **Read this head, then stop.** Everything below `/CURATED-HEAD` is a dated
+> archive (~64 KB, 32 entries) — do NOT read it start-to-finish. Grep it for
+> your topic: `grep -n "404" docs/claude/insights/domains/deployment.md`.
+>
+> Not repeated here because they live in CLAUDE.md or a rules doc: the preview
+> build gate (`scripts/vercel-ignore-build.mjs` — no open PR, no preview), the
+> slim preview prebuild, `docs/claude/rules/storage-and-build.md` (cron cadence,
+> canonical JSON writes), `docs/plans/staging-release-process.md` (the release
+> train), `docs/claude/rules/error-pages.md` (why a 500 renders as a 404).
+
+## The edge lies to you in four specific ways
+
+- **A Vercel HTML 502 with no runtime error is a hung `await`, not a crash.**
+  Nothing is logged because nothing threw. Look for an un-timed-out fetch.
+  (2026-07-07)
+- **The edge eats origin 5xx.** Return a handled error as `200` +
+  `{ok: false}`; a real 500 reaches the browser as Vercel's own page and your
+  message is gone. (2026-07-07)
+- **A skipped build reports as `CANCELED`, not as its own status**, and Vercel's
+  ignore step INVERTS exit codes — `0` ignores, `1` proceeds. The build log is
+  the only place the reason appears. (2026-09-06)
+- **Cloudflare fronts the apex domains and browser-caches 404s**, which is the
+  root of every "I fixed it but it didn't take". Bot Fight Mode also challenges
+  real browsers on a NEW hostname and no WAF rule can skip it — the hostname has
+  to age or be excepted. (2026-08-10, 2026-09-10)
+
+## Config that is read somewhere other than where you wrote it
+
+- **`vercel.json`'s `images` block is DEAD on this project.** `@astrojs/vercel`
+  writes `.vercel/output/config.json` and that is what `/_vercel/image` reads;
+  the config belongs in the adapter's `imagesConfig`. It deploys clean and every
+  optimize request 400s. `imagesConfig` REPLACES the default rather than
+  extending it (default `sizes` start at 640 and double as Astro's
+  `breakpoints`), so restate the list in full when adding a width. Verify with
+  `npx astro build && jq .images .vercel/output/config.json`, not a deploy.
+  (2026-09-21)
+- **The adapter's fallback route forces `status: 404` onto every clean apex
+  URL**, and a middleware `context.redirect()` is in the same blast radius as a
+  page redirect. The apex-prefix strip is a PRODUCER problem, not just a router
+  one. (2026-07-21, 2026-08-14, 2026-08-16)
+- **`cond && '' || secrets.X` does not withhold a secret** — the empty string is
+  falsy, so the `||` hands the secret over anyway. (2026-09-15)
+
+## The function bundle is bigger than you think
+
+- **An SSR page that `import.meta.glob(..., {eager: true})` bloats the 250 MB
+  function**, and the Vercel function ships `data/` TWICE — one copy being the
+  whole tree. `excludeFiles` is what keeps archived feeds out. (2026-07-07,
+  2026-08-16)
+- **Build CPU was 91% of the bill; bandwidth was 1.9%.** Optimize builds, not
+  transfer. Whether a build step is skippable is an EMPIRICAL question, and
+  `generatedAt` is the only honest diff. (2026-09-06)
+
+## CI and workflows
+
+- **An invalid workflow file presents as "0 jobs / event=push /
+  conclusion=failure"** — not as a syntax error anywhere you would look.
+  (2026-07-07)
+- **Composite actions cannot contain `actions/checkout`**, and some workflows
+  skip `pnpm install` deliberately — that skip is a claim about the whole import
+  graph, and `tests/workflow-install-guard.test.ts` is what checks it.
+  (2026-07-13, 2026-09-15)
+- **A drift audit that rewrites a timestamp can never pass**, and a
+  permanently-red alarm hides the drift it watches for. Same shape: a
+  `generatedAt`-only diff still COMMITS, so a 1:1 run-to-commit ratio is not
+  evidence that every run had news. (2026-08-20, 2026-09-18)
+- **A committed derived payload goes stale the moment its SOURCE is synced** —
+  regenerate it in the same job that syncs the source. (2026-09-18)
+- **The pre-push hook hides its own absence.** A cloud session runs the whole
+  suite in ~64s, so there is no excuse to skip it; `SKIP_PRE_PUSH_TESTS=1` is
+  the deliberate escape hatch and should be said out loud when used.
+  (2026-08-24)
+
+## The sandbox is not your laptop
+
+- **Node's `fetch` ignores `HTTPS_PROXY` in the cloud sandbox**, so the dev
+  server renders with every external feed empty — that is the environment, not
+  a bug in the page. (2026-08-22)
+- **`public/assets/nfl-logos/dark/` is prebuild OUTPUT and is empty in a fresh
+  clone.** (2026-08-22)
+- **A dead Upstash host escapes every `try/catch` through auto-pipelining**, and
+  a worktree cannot `vercel env pull` without `.vercel/`. (2026-09-05)
+- **Preview protection no longer blocks automated checking** — the Vercel MCP
+  reads protected deployments directly. (2026-08-24)
+- **A top-level `.mjs` script body runs before its `const` helpers exist, and
+  `node --check` passes anyway.** (2026-08-24)
+- **Git history was squashed on 2026-08-08**; archaeology bottoms out at
+  `d4f32d9`. (2026-08-10)
+<!-- /CURATED-HEAD -->
+
+---
+
 ## 2026-03-08 - Vercel Preview Hostnames Can Be Recovered From GitHub Check Metadata
 
 **Context:** Pushing `codex/roster-performance-refactor` and trying to benchmark the branch's Vercel preview deployment against the live site.
@@ -911,3 +1006,19 @@ the job does not commit when it finds nothing — otherwise the tier rations a
 cost the job pays on every tick anyway. `git show --stat` over a few of its
 commits is enough: a recurring two-line diff in a file nobody reads is the
 signature. Guard: `tests/cron-commit-churn.test.ts`.
+
+## 2026-09-21 - `vercel.json`'s `images` Block Is Dead Config On This Project — The Adapter Owns It
+
+**Context:** Serving MFL franchise marks through Vercel Image Optimization on MFL Live, to keep one league's 1500×636 / ~400 KB uploads from crossing the wire into a 1.4rem box.
+
+**Insight:** This project deploys through `@astrojs/vercel`, which writes `.vercel/output/config.json` (Build Output API) — and THAT file is what `/_vercel/image` reads. An `images` block in `vercel.json` is silently ignored: the deploy succeeds, the config looks present in the repo, and every optimize request still answers `400 INVALID_IMAGE_OPTIMIZE_REQUEST`. The config belongs in the adapter's `imagesConfig` option in `astro.config.ts`.
+
+Three things that follow, each of which can 400 on its own:
+
+1. **`imagesConfig` REPLACES the derived default; it does not extend it.** Without it the adapter calls `getDefaultImageConfig()`, which supplies `sizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840]` plus Astro's own `image.domains` / `image.remotePatterns`. Passing your own object drops all of that unless you restate it, so a config written to add ONE width silently removes the other eight — and every existing `<Image>` asking for one of them breaks.
+2. **The default widths start at 640.** Any `w` below that is a 400 until you add it. There is no nearest-size rounding on a hand-written `/_vercel/image?w=` URL.
+3. **`sizes` doubles as Astro's responsive `breakpoints`** (`breakpoints: config.sizes` in `getAstroImageConfig`), so the list is not purely a Vercel concern.
+
+**Evidence:** `node_modules/@astrojs/vercel/dist/image/shared.js#getDefaultImageConfig`. Verified empirically on a preview: with the block in `vercel.json`, `GET /_vercel/image?url=<mfl png>&w=256&q=75` → `400 INVALID_IMAGE_OPTIMIZE_REQUEST`; after moving it to `imagesConfig` with 256 prepended to the default list, the same URL → `200 image/webp, 10,112 bytes` from a 402,878-byte source (97.5% smaller), `cache-control: public, max-age=604800`.
+
+**Recommendation:** Configure image optimization in `astro.config.ts`'s `imagesConfig` only, and restate the adapter's default `sizes` in full when you add to it. Confirm a config change locally with `npx astro build && cat .vercel/output/config.json | jq .images` rather than on a preview — the build output is the artifact that matters, and it is two minutes faster than a deploy. `remotePatterns` is a security boundary (it decides where our own edge will fetch a source image from), so keep it as the single allowlist rather than duplicating it in app code. Guard: `tests/mfl-live-uploaded-mark.test.ts` fails if a `vercel.json` images block returns.
