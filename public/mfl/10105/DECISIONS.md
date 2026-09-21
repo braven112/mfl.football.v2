@@ -1,6 +1,6 @@
 # Archie's FFL (10105) — playoff standings widget: tiebreaker & ordering decisions
 
-> Working document. Status as of 2026-09-20. The widget is NOT built yet; this
+> Working document. Status as of 2026-09-21. The widget is NOT built yet; this
 > records every ordering/tiebreaker decision made so far, what is still open,
 > and which assumptions the live MFL feed has already contradicted.
 >
@@ -30,7 +30,8 @@ every load.
 
 ### D1 — Ranking metric is Victory Points, not Average Score
 The whole table ranks on VP. Replaces the current Avg Score basis.
-**Status: decided, but BLOCKED** — see O1. VP is not currently readable.
+**Status: decided.** Unblocked 2026-09-21 — the client enables VP in MFL so
+the figure is published and read rather than calculated. See O1.
 
 ### D2 — Division leaders take seeds 1–9, unconditionally
 All 9 division leaders are seeded above every non-leader regardless of VP. A
@@ -82,26 +83,80 @@ automatic.
 ### D10 — Tier sizes are config constants, not weekly edits
 `DIVISION_LEADER_SEEDS = 9`, `RUNNER_UP_SEEDS = 9`, `WILD_CARD_SEEDS = 12`.
 Season-level; the field size falls out of the feed's division count.
-**Status: decided.**
+**Status: decided.** Confirmed against the design 2026-09-21: 9 + 9 + 12 = 30
+qualifiers, 69 in the field, 99 total.
+
+### D11 — Every team renders at equal weight
+Seeds 31–99 keep full-size rows with banners, exactly like the qualifiers. The
+alternative — compacting or collapsing the 69 non-qualifiers to shorten the
+page — was considered and declined: the page is a full league table, not a
+playoff picture with an appendix.
+**Status: decided 2026-09-21.** Cost is a long scroll on a phone, accepted
+knowingly.
+
+## How it reaches MFL and stays current
+
+**No scheduled job exists, by design.** The widget reads MFL at page-load time,
+so the table cannot be stale — it holds no data of its own. A weekly sync would
+reintroduce exactly the failure mode being removed, just automated.
+
+**Install, once:** one line in the MESSAGE6 module, below the table.
+
+```html
+<script src="https://mfl.football/mfl/10105/standings.js" defer></script>
+```
+
+It carries no league id. Host, year and league are read from the page's own
+URL, so the same file serves any league it is dropped into.
+
+**Every page load:** read `location` → fetch `TYPE=league`,
+`TYPE=leagueStandings` and `TYPE=schedule` same-origin → group by division in
+MFL's row order → build the four tiers → rewrite the table body.
+
+**Shipping a change:** edit `standings.js`, push, Vercel deploys, live. The
+commissioner re-pastes nothing, ever. That is the reason the file is hosted
+rather than embedded in the module.
+
+**On failure:** the widget writes a visible "standings unavailable" state into
+the table rather than leaving plausible zeros. A wrong number nobody questions
+is worse than an obvious gap.
+
+**The only recurring human task is winnings**, and only while MFL's ledger for
+this league stays empty (D9).
 
 ## Open questions for the client
 
-### O1 — Victory Points are not readable. How should we get them? **(blocking)**
+### O1 — Victory Points are not readable **(RESOLVED 2026-09-21 — action on the client)**
 The league has VP fully configured, but `standingsSort` omits `VICTORY_POINTS`,
 and MFL's export returns only the columns the standings display is set to show.
-The live standings page shows no VP column either. Three ways out:
+The live standings page shows no VP column either.
 
-- **(a)** Commissioner adds Victory Points to the standings display. MFL then
-  computes and publishes it; the widget just reads it. Authoritative, no maths
-  on our side. *Recommended.*
-- **(b)** We compute VP from `TYPE=schedule` plus the league's own VP settings.
-  Works with no MFL change. Risk: our reading of `victoryPointsBuckets = 3 2 1`
-  (league split into thirds by weekly score, 3/2/1 VP) is an assumption that
-  cannot be checked against MFL's own figure, because MFL publishes none.
-- **(c)** Do (b), but turn (a) on once to confirm the two agree, then revert.
+**Decision: the commissioner enables Victory Points in MFL's own standings
+display.** MFL then computes and publishes the figure, the widget reads one
+field, and our seeding is identical to the league's by construction — no
+calculation of ours to be wrong. Build does not start until this is on.
 
-**Ask the client:** is VP meant to include the bucket bonus at all, or is it
-just 2 per win? This changes every seed.
+The page to change:
+
+```
+https://www48.myfantasyleague.com/2026/csetup?L=10105&C=STANDINGS
+```
+
+Titled "Archie's Fantasy Football League Standings Setup"; the form is behind
+the commissioner login. Add Victory Points to the standings sort/display.
+
+**Verify it worked** — this returns a `vp` field per franchise once the setting
+is live, and nothing today:
+
+```
+https://www48.myfantasyleague.com/2026/export?TYPE=leagueStandings&L=10105&JSON=1
+```
+
+**Still ask the client:** does their definition of a Victory Point include the
+3/2/1 scoring-bucket bonus, or is it just 2 per win? MFL will publish whatever
+the league is configured for, so this is a question about intent, not data — but
+if the configured value is not what the league means by "victory points", every
+seed is wrong in a way the feed cannot reveal.
 
 ### O2 — Ties are the normal state early on. Is D8 still right?
 With two games a week and a 3/2/1 bucket, a team can score only 0–7 VP per week.
