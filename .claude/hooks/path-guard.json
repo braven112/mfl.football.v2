@@ -1035,7 +1035,8 @@
         "tests/nfl-logo-dark-css.test.ts",
         "tests/nfl-mark-assignments.test.ts",
         "tests/nfl-marks-page-data.test.ts",
-        "tests/nfl-mark-reversals.test.ts"
+        "tests/nfl-mark-reversals.test.ts",
+        "tests/dark-logo-mirror-validation.test.ts"
       ],
       "note": "The Brand Book (/<league>/brand) publishes these assignments, so it is the same domain: a page that showed a cut the build does not ship would be worse than no page. Two rules are load-bearing there. (1) A ground's preview renders the MIRRORED file (shippedUrl \u2192 resolveNflDarkLogoUrl), never the catalog CDN url \u2014 the catalog says where a cut came from, the ground says what this site serves. (2) Both brand pages opt OUT of buildNflLogoDarkCss with `content: normal !important`: the global swap rewrites every light src under html.dark, which inside a side-by-side comparison renders the dark cut in the LIGHT pane and shows one mark twice. Same specificity as the swap rule, hence !important. The REVERSED cut is the one mark we make rather than fetch \u2014 no public source publishes one \u2014 so it is a colour swap on our own committed SVG, derived by scripts/derive-nfl-reversed-marks.mjs and COMMITTED beside the light art (unlike the dark mirror, which is fetched and gitignored). An absent source colour throws rather than skipping: a silent skip ships the light mark under a 'reversed' label. The swap is simultaneous because Washington's map EXCHANGES its two colours, and Detroit's detail layer is in the map because reversing the body alone merged the mane and face lines into it and flattened the lion to a silhouette. The Brand Book also answers at the ROOT (/brand) for the shared host, which resolveSharedHostHiddenLeague 404s league prefixes on \u2014 that copy takes no leagueSlug, wears MflAppLayout and drops the roster panel."
     },

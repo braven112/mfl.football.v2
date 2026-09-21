@@ -51,7 +51,15 @@ function main() {
 
   let drifted = 0;
   for (const { code, svg, outPath } of results) {
-    const existing = fs.existsSync(outPath) ? fs.readFileSync(outPath, 'utf-8') : null;
+    // Read and let a missing file BE the answer, rather than asking whether it
+    // exists and then reading it — that pair is a race, and CodeQL flags it as
+    // one. Only "not there" is absent; anything else is a real failure.
+    let existing = null;
+    try {
+      existing = fs.readFileSync(outPath, 'utf-8');
+    } catch (err) {
+      if (err.code !== 'ENOENT') throw err;
+    }
     if (existing === svg) {
       console.log(`  ${code}  unchanged`);
       continue;

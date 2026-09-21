@@ -33,9 +33,22 @@ export function isValidPng(buf) {
  */
 export function isValidSvg(buf) {
   if (!Buffer.isBuffer(buf) || buf.length < 200) return false;
-  return /^\s*(<\?xml[^>]*\?>\s*)?(<!--[\s\S]*?-->\s*)*<svg[\s>]/.test(
-    buf.subarray(0, 512).toString('utf-8'),
-  );
+  const head = buf.subarray(0, 512).toString('utf-8');
+
+  // A LINEAR scan, deliberately. The previous form nested `[\s\S]*?` inside a
+  // `(...)*` group to skip an optional prolog and any comments, and that
+  // backtracks exponentially on input shaped `<!--` plus many repetitions of
+  // `--><!--` that never reaches a `<svg`. These bytes come off a CDN, so that
+  // input is reachable rather than theoretical, and slicing to 512 does not
+  // save it — exponential on 512 characters still hangs the prebuild. CodeQL
+  // flagged it on PR #1180.
+  const root = head.indexOf('<svg');
+  if (root === -1) return false;
+
+  // Everything before the root tag may be whitespace, an XML declaration, a
+  // doctype or comments — but never another element. That is what rejects the
+  // case this function exists for: a CDN error page saved under a .svg name.
+  return !/<(?!\?xml|!--|!DOCTYPE)/i.test(head.slice(0, root));
 }
 
 /** Validate fetched bytes against the format the caller declared for them. */
