@@ -103,8 +103,6 @@ export interface TeamBand {
   fillDark: string;
   /** Ink on `fillDark`. Resolved independently — the two themes can disagree. */
   inkDark: string;
-  /** Secondary brand colour, for the row's trim edge. Never load-bearing for legibility. */
-  trim: string;
 }
 
 interface Solved {
@@ -224,7 +222,6 @@ export function resolveTeamBand(franchiseId: string, league: LeagueSlug = 'thele
     ink: light.ink,
     fillDark: dark.fill,
     inkDark: dark.ink,
-    trim: isHex(team.colorSecondary) ? normalizeHex(team.colorSecondary) : light.ink,
   };
 }
 
@@ -240,7 +237,6 @@ export function teamBandStyle(band: TeamBand): string {
     `--band-ink:${band.ink}`,
     `--band-fill-dark:${band.fillDark}`,
     `--band-ink-dark:${band.inkDark}`,
-    `--band-trim:${band.trim}`,
   ].join(';');
 }
 
