@@ -27,6 +27,7 @@
 
 import { normalizeTeamCode } from './nfl-logo';
 import { resolveZoneLabel } from './zone-label';
+import { projectPlayerFinal } from './live-win-probability';
 
 export type SundayWindow = 'early' | 'late';
 
@@ -261,6 +262,42 @@ export function buildSlateGames(matchups: unknown, broadcasts: ReadonlyArray<Bro
 
 // ── The slate ────────────────────────────────────────────────────────────
 
+/**
+ * One player's projected FINAL in his league — the blend, for a board that
+ * renders mid-game.
+ *
+ * `proj` is a full-game number and does not tick, so beside a live score it
+ * reads as a forecast of points still to come when it is nothing of the kind:
+ * a starter projected for 20 who has 20 at halftime is worth 10 more, not 20.
+ * `projectPlayerFinal` is the same model `/live-scoring` and the broadcast
+ * board project with — `live + proj × (secondsRemaining / 3600)` — so the two
+ * boards cannot disagree about the same player in the same week.
+ *
+ * TWO cases keep the raw projection, and both are the "absence is not zero"
+ * rule this module already applies to `live`:
+ *
+ *  - **No live read** (`live === undefined`): an outside league, a league the
+ *    poll has not reached, or a player the snapshot does not mention. Blending
+ *    a missing score in would print his projection scaled toward a clock we
+ *    never read.
+ *  - **No clock** (`secondsRemaining === undefined`): `applyLiveToContribution`
+ *    always sets the pair together, so this cannot happen through it — but a
+ *    caller assembling a contribution by hand must not get a silent 0, which
+ *    `projectPlayerFinal` would read as "his game is over".
+ *
+ * Before kickoff the blend returns the projection unchanged (0 live, a full
+ * clock) and at the whistle it returns his actual points, so nothing outside a
+ * game in progress moves.
+ */
+export function projectedFinalFor(p: ContributionPlayer): number {
+  if (p.live === undefined || p.secondsRemaining === undefined) return p.proj;
+  return projectPlayerFinal({
+    live: p.live,
+    projected: p.proj,
+    secondsRemaining: p.secondsRemaining,
+  });
+}
+
 function boxFor(game: SlateGame, contributions: LeagueContribution[]): GameBox {
   const away = normalizeTeamCode(game.away);
   const home = normalizeTeamCode(game.home);
@@ -284,6 +321,19 @@ function boxFor(game: SlateGame, contributions: LeagueContribution[]): GameBox {
       (liveResolved
         ? (b.live ?? b.proj) - (a.live ?? a.proj)
         : b.proj - a.proj) || a.name.localeCompare(b.name));
+    // RAW projections, deliberately — `projectedFinalFor` is for the ROW, not
+    // for this. Two reasons, and they point the same way:
+    //
+    //  - This total is the ranking TIEBREAK, and live points never sort this
+    //    board (see the header: scoring is not comparable across leagues, so
+    //    points display and never rank). Blending folds live points straight
+    //    into the sort.
+    //  - It is only ever DISPLAYED on the league-wide board, which has no live
+    //    read at all (`loadLeagueWideContribution` is `liveSupported: false`),
+    //    so a blend there is identical to the raw sum by construction.
+    //
+    // So blending here would change the ranking and nothing an owner sees.
+    // Pinned by "live points never change the ranking" below.
     const leagueProj = players.reduce((sum, p) => sum + (Number.isFinite(p.proj) ? p.proj : 0), 0);
     const leagueLive = players.reduce((sum, p) => sum + (Number.isFinite(p.live) ? (p.live as number) : 0), 0);
     byLeague.push({

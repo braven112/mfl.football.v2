@@ -24,6 +24,7 @@ import { useEffect, useRef } from 'react';
 import { useLiveScoringFeed } from '../../../hooks/useLiveScoringFeed';
 import type { PollStatus } from '../../../utils/live-poll-store';
 import { liveStateLabel } from '../../../utils/sunday-ticket-matchups';
+import { projectPlayerFinal } from '../../../utils/live-win-probability';
 
 export interface LiveLeague {
   leagueId: string;
@@ -83,18 +84,44 @@ function LeagueLive({
     // ── Player rows. STARTERS only: the route keeps bench rows in a separate
     // map and we never read it, so a bench player's points can't land in the
     // column the matchup scores from.
-    const byPlayer = new Map<string, number>();
+    const byPlayer = new Map<string, { live: number; secondsRemaining: number }>();
     for (const rows of Object.values(feed.players)) {
-      for (const row of rows) byPlayer.set(row.id, row.live);
+      for (const row of rows) {
+        byPlayer.set(row.id, { live: row.live, secondsRemaining: row.secondsRemaining });
+      }
     }
     document.querySelectorAll<HTMLElement>(`[data-st-live^="${CSS.escape(leagueId)}:"]`).forEach((el) => {
       const playerId = el.dataset.stLive?.slice(leagueId.length + 1) ?? '';
-      const live = byPlayer.get(playerId);
+      const row = byPlayer.get(playerId);
       // A player the feed does not mention keeps whatever the server rendered.
       // Absence of a live read is not zero.
-      if (live === undefined) return;
-      setText(el, fmt(live));
+      if (row === undefined) return;
+      setText(el, fmt(row.live));
       el.classList.remove('st-box__live--idle');
+    });
+
+    // ── The PROJECTED FINAL beside each live score, re-blended against the
+    // clock this poll just read.
+    //
+    // The server rendered a blend too (`projectedFinalFor`), but a blend is
+    // only true for the moment it was computed: the live score below it
+    // updates every poll while this cell would keep the first paint's answer
+    // and drift for the rest of the afternoon — which is the same "a number
+    // that looks live but is frozen" failure the freshness pill exists to
+    // prevent. `data-st-proj-base` is the RAW full-game projection, so what is
+    // recomputed here is exactly what the server computed, never a blend of a
+    // blend.
+    document.querySelectorAll<HTMLElement>(`[data-st-proj^="${CSS.escape(leagueId)}:"]`).forEach((el) => {
+      const playerId = el.dataset.stProj?.slice(leagueId.length + 1) ?? '';
+      const row = byPlayer.get(playerId);
+      if (row === undefined) return;
+      const projected = parseFloat(el.dataset.stProjBase ?? '');
+      // No projection is an em-dash and stays one. Filling it with the live
+      // score would print the column beside it as though it were a forecast.
+      if (!Number.isFinite(projected) || projected <= 0) return;
+      const projFinal = projectPlayerFinal({ ...row, projected });
+      setText(el, fmt(projFinal));
+      el.title = `${fmt(projFinal)} projected final`;
     });
 
     // ── Per-league, per-game subtotals on the box headers.

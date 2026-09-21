@@ -4,7 +4,7 @@
     {
       "date": "2026-09-20",
       "type": "bug-fix",
-      "summary": "Player rows on <a href=\"/live-scoring\">Live Scoring</a> now project a mix of the projection and what's already been scored — a starter with 20 at halftime off a 20-point projection reads 30, not 20.",
+      "summary": "Projections for games in progress now blend what’s already been scored with what’s left — 20 at halftime off a 20-point projection reads 30 on <a href=\"/live-scoring\">Live Scoring</a> and <a href=\"/sunday-ticket\">Sunday Ticket</a>.",
       "impact": "user",
       "area": "live-scoring",
       "league": "both"

@@ -12,9 +12,11 @@ import { readFileSync } from 'node:fs';
 import {
   applyLiveToContribution,
   buildSundayTicketSlate,
+  projectedFinalFor,
   type LeagueContribution,
   type SlateGame,
 } from '../src/utils/sunday-ticket-slate';
+import { NFL_GAME_SECONDS } from '../src/utils/live-win-probability';
 import { buildSundayTicketMatchupCards, liveStateLabel } from '../src/utils/sunday-ticket-matchups';
 import { parseLiveScoringPayload } from '../src/utils/live-scoring-snapshot';
 
@@ -280,6 +282,77 @@ describe('AFL duplicate players', () => {
   });
 });
 
+
+/**
+ * A projection printed beside a live score is a claim about POINTS STILL TO
+ * COME, and a full-game number is not that once the game is under way.
+ *
+ * The board carried the raw projection in that column all afternoon: a
+ * starter projected for 20 sitting on 20 at halftime read "20.0" beside his
+ * "20.0", so the two columns agreed while meaning different things — and the
+ * game's own total, which ranks the box, counted every one of those points as
+ * still to be scored. `projectedFinalFor` is the same blend `/live-scoring`
+ * uses (`live + proj × secondsRemaining / 3600`), so a player in the same week
+ * of the same league now reads the same on both boards.
+ */
+describe('in-progress projections are blended, not raw', () => {
+  const HALFTIME = NFL_GAME_SECONDS / 2;
+
+  it('projects 10 more for a 20-point projection sitting on 20 at halftime', () => {
+    expect(projectedFinalFor({ ...player('1', 'KC', 20), live: 20, secondsRemaining: HALFTIME }))
+      .toBeCloseTo(30, 6);
+  });
+
+  it('is unchanged before kickoff and at the whistle', () => {
+    // Nothing outside a game in progress may move: a full clock returns the
+    // projection, and a dead one returns what he actually scored.
+    expect(projectedFinalFor({ ...player('1', 'KC', 14), live: 0, secondsRemaining: NFL_GAME_SECONDS }))
+      .toBeCloseTo(14, 6);
+    expect(projectedFinalFor({ ...player('1', 'KC', 14), live: 22.6, secondsRemaining: 0 }))
+      .toBe(22.6);
+  });
+
+  it('keeps the RAW projection when there is no live read — absence is not zero', () => {
+    // An outside league, a poll that has not landed, or a player the snapshot
+    // does not mention. Blending a missing score would scale his projection
+    // toward a clock nobody read.
+    expect(projectedFinalFor(player('1', 'KC', 14))).toBe(14);
+    expect(projectedFinalFor({ ...player('1', 'KC', 14), live: 6 })).toBe(14);
+    expect(projectedFinalFor({ ...player('1', 'KC', 14), secondsRemaining: HALFTIME })).toBe(14);
+  });
+
+  it('is a ROW number — the box totals stay RAW, because they rank the board', () => {
+    // Deliberate, and the opposite of a missed spot. `projTotal` is the
+    // ranking tiebreak, and "live points never change the ranking" (below) is
+    // a rule this board is built on — blending folds live points into the
+    // sort. It also cannot help anyone: the only surface that PRINTS a box
+    // total is the league-wide board, which has no live read at all, so a
+    // blend there equals the raw sum by construction.
+    const games: SlateGame[] = [{ id: 'KC@BUF', kickoff: 1_758_384_000, away: 'KC', home: 'BUF' }];
+    const live = applyLiveToContribution(contribution(), {
+      players: {
+        '0001': [
+          // 14-point projection with 14 already scored at halftime → row 21.
+          { id: '1', live: 14, secondsRemaining: HALFTIME },
+          // 9-point projection, hasn't kicked off → row 9.
+          { id: '2', live: 0, secondsRemaining: NFL_GAME_SECONDS },
+        ],
+      },
+    });
+
+    const slate = buildSundayTicketSlate({ games, contributions: [live], personalized: true });
+    const box = slate.other[0] ?? slate.windows[0]?.boxes[0];
+    if (!box || box.kind !== 'game') throw new Error('expected a game box');
+
+    expect(box.projTotal).toBeCloseTo(23, 6);
+    expect(box.byLeague[0].projTotal).toBeCloseTo(23, 6);
+    // The live total is untouched too: it is what they HAVE, not what they'll get.
+    expect(box.byLeague[0].liveTotal).toBeCloseTo(14, 6);
+    // The ROWS are where the blend lands, and they are what an owner reads.
+    expect(box.byLeague[0].players.map((p) => projectedFinalFor(p))).toEqual([21, 9]);
+  });
+});
+
 /**
  * The two review findings that are SILENTLY wrong rather than visibly broken —
  * the board still renders, it just stops telling the truth. Both are pinned
@@ -357,5 +430,36 @@ describe('live-layer rendering contracts', () => {
     // between polls. Absent is "no answer", not "zero left to play".
     const island = read('../src/components/shared/sunday-ticket/SundayTicketLive.tsx');
     expect(island).toContain('if (ytp === undefined) return;');
+  });
+
+  it('renders the BLENDED projection and hands the poller the raw one', () => {
+    // Two halves of one rule, and each is silent on its own:
+    //
+    //  - The cell must render `projectedFinalFor(p)`. Printing `p.proj` beside
+    //    a live score claims a full-game number is the points still to come.
+    //  - It must carry the RAW projection in `data-st-proj-base`. Without it
+    //    the poller has nothing to re-blend from, so the cell would freeze at
+    //    the first paint and drift all afternoon under a pill saying "Live" —
+    //    and re-blending the RENDERED number would compound a blend of a blend
+    //    on every poll.
+    const box = read('../src/components/shared/sunday-ticket/SundayTicketBox.astro');
+    expect(box).toContain('projectedFinalFor(p).toFixed(1)');
+    expect(box).toMatch(/data-st-proj-base=\{p\.proj\}/);
+    // The em-dash gate stays on the RAW projection: with none there is nothing
+    // to forecast, and printing the live score here would duplicate the column
+    // beside it as though it were one.
+    expect(box).toMatch(/p\.proj > 0 \? projectedFinalFor\(p\)/);
+  });
+
+  it('re-blends the projection cell on every poll, from the base and the fresh clock', () => {
+    const island = read('../src/components/shared/sunday-ticket/SundayTicketLive.tsx');
+    expect(island).toMatch(/data-st-proj\^=/);
+    expect(island).toContain('el.dataset.stProjBase');
+    expect(island).toContain('projectPlayerFinal({ ...row, projected })');
+    // The row carries the CLOCK, not just the score — a blend needs both, and
+    // the live-score patch above shares the same map.
+    expect(island).toContain('secondsRemaining: row.secondsRemaining');
+    // A player with no projection keeps his em-dash.
+    expect(island).toContain('if (!Number.isFinite(projected) || projected <= 0) return;');
   });
 });
