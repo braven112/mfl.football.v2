@@ -153,7 +153,18 @@ export function resolvePollCycle(
   const eligibleFranchiseIds = eligibleFranchiseIdsFor(league);
   // A field no larger than the ballot cannot produce a ranking — the same
   // refusal the open pass makes, applied where the API can see it too.
-  if (eligibleFranchiseIds.length <= poll.slots) return null;
+  //
+  // Said out loud, because every caller renders a null cycle as "voting is
+  // paused". A misconfiguration and a deliberate pause are different facts and
+  // must not merge into one silent state; the log line is what tells them
+  // apart when someone asks why the ballot says paused with nothing paused.
+  if (eligibleFranchiseIds.length <= poll.slots) {
+    console.error(
+      `[owners-poll] ${league.name} has ${eligibleFranchiseIds.length} franchises but a ballot ` +
+        `depth of ${poll.slots} — no cycle can be derived.`,
+    );
+    return null;
+  }
 
   const cycle = resolveOwnersPollCycle({
     now,
@@ -164,6 +175,9 @@ export function resolvePollCycle(
   return {
     year: seasonYear,
     week: getCurrentWeekForYear(seasonYear),
+    // NOTE getCurrentWeekForYear reads the system clock rather than `now`, so
+    // a ?testDate render labels the ballot with today's week. Informational
+    // only — `week` selects no key under standing votes.
     opensAt: cycle.opensAt,
     closesAt: cycle.closesAt,
     slots: poll.slots,

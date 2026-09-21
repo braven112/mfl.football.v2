@@ -1,29 +1,29 @@
 /**
- * The Owners' Poll — commissioner control for the ballot window.
+ * The Owners' Poll — commissioner EMERGENCY STOP.
  *
- *   POST /api/owners-poll/window   { action: 'open' | 'close', week?, year?, hours? }
+ *   POST /api/owners-poll/window   { action: 'pause' | 'resume', hours? }
+ *   GET  /api/owners-poll/window   → the derived cycle, or `paused`
  *
- * The normal path is automatic: the Tuesday Pecking Order pass opens the
- * ballot and the Wednesday pass tallies it. This is the manual override, for
- * the same three jobs as scripts/owners-poll-window.mjs — recovering from a
- * failed run, extending a window the league asks about, and opening one on a
- * preview deployment where no cron has ever run.
+ * There is no window to open any more. Voting is always open and the cycle is
+ * DERIVED from the clock (`resolvePollCycle`), so the only league-wide state
+ * left is a pause flag — a key whose mere presence suspends the poll, absent
+ * in the normal case, failing OPEN when it cannot be read. `hours` gives that
+ * pause a TTL so a forgotten suspension lapses on its own.
  *
  * It exists as an HTTP route and not only as a CLI because the CLI needs
  * Upstash credentials on the operator's machine, whereas the deployment
- * already has them. A commissioner with a browser can always open a ballot;
- * that should not depend on having pulled env vars.
+ * already has them.
  *
- * COMMISSIONER ONLY. This writes league-wide state that changes what every
- * owner sees, so it is gated on isCommissionerOrAdmin — which is itself
- * league-scoped, so an admin of one league cannot open the other's ballot.
+ * COMMISSIONER ONLY. This changes what every owner sees, so it is gated on
+ * isCommissionerOrAdmin — which is itself league-scoped, so an admin of one
+ * league cannot pause the other's poll.
  *
- * `close` removes the pointer and NOTHING else: it never tallies and never
- * deletes ballots. Tallying is generate-pecking-order.mjs --close-poll. Keeping
- * them apart means a mis-click here cannot publish a consensus or lose a vote,
- * and re-opening the same week picks every ballot back up.
+ * NEITHER action touches a ballot. Pausing never tallies and never deletes;
+ * resuming picks every standing ballot back up, because they were never
+ * cleared. Tallying is generate-pecking-order.mjs --close-poll, and keeping
+ * the two apart means a mis-click here cannot publish a consensus or lose a
+ * vote.
  */
-
 import type { APIRoute } from 'astro';
 import { json, JSON_HEADERS_NO_STORE } from '../../../utils/api-response';
 import { isCommissionerOrAdmin, getAuthUser } from '../../../utils/auth';
@@ -40,7 +40,7 @@ import {
 
 const headers = JSON_HEADERS_NO_STORE;
 
-/** Longest window a commissioner may open by hand. */
+/** Longest auto-expiring pause a commissioner may set by hand. */
 const MAX_HOURS = 24 * 14;
 
 export const POST: APIRoute = async ({ request }) => {
@@ -62,7 +62,7 @@ export const POST: APIRoute = async ({ request }) => {
     return json({ error: 'Too many requests — try again shortly' }, 429, headers);
   }
 
-  let body: { action?: string; week?: number; year?: number; hours?: number };
+  let body: { action?: string; hours?: number };
   try {
     body = await request.json();
   } catch {

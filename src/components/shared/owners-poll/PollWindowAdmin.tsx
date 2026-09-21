@@ -1,15 +1,18 @@
 /**
- * The Owners' Poll — commissioner control for the ballot window.
+ * The Owners' Poll — commissioner EMERGENCY STOP.
  *
- * Rendered only for a commissioner, and only on the ballot page. It is the
- * browser twin of scripts/owners-poll-window.mjs: the CLI needs Upstash
- * credentials on the operator's machine, this needs only a session, and the
- * deployment already holds the credentials.
+ * Rendered only for a commissioner, and only on the ballot page. It needs only
+ * a session, where the CLI needs Upstash credentials on the operator's machine.
  *
- * Deliberately NOT a tally button. Closing here stops voting and nothing else;
- * publishing a consensus is the close pass that runs after Thursday's
- * deadline. Keeping them apart means a
- * mis-click cannot destroy a vote or publish a result nobody checked.
+ * Voting is always open now, so there is no window to open and none to close.
+ * What is left is a pause: `pause` suspends voting for the whole league,
+ * `resume` lifts it, and NEITHER touches a ballot. These two action names are
+ * the ones /api/owners-poll/window accepts — it 400s anything else, which is
+ * exactly what happened while this panel still sent the old 'open'/'close'.
+ *
+ * Deliberately NOT a tally button. Publishing a consensus is the close pass
+ * that runs after Thursday's deadline, so a mis-click here cannot destroy a
+ * vote or publish a result nobody checked.
  */
 
 import { useCallback, useEffect, useState } from 'react';
@@ -20,7 +23,8 @@ interface Props {
 }
 
 interface WindowState {
-  status: 'open' | 'pending' | 'closed' | 'none';
+  /** The only two states left: voting is open, or a commissioner paused it. */
+  status: 'open' | 'paused';
   window: { year: number; week: number; opensAt: string; closesAt: string; slots: number } | null;
   ballotsIn?: number;
   eligibleVoters?: number;
@@ -29,8 +33,9 @@ interface WindowState {
 
 export default function PollWindowAdmin({ leagueParam, slots }: Props) {
   const [state, setState] = useState<WindowState | null>(null);
-  const [week, setWeek] = useState('1');
-  const [hours, setHours] = useState('48');
+  // Hours are the pause's TTL, not a window length: leave it blank to suspend
+  // voting until someone resumes it by hand.
+  const [hours, setHours] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -54,18 +59,19 @@ export default function PollWindowAdmin({ leagueParam, slots }: Props) {
   }, [load]);
 
   const act = useCallback(
-    async (action: 'open' | 'close') => {
+    async (action: 'pause' | 'resume') => {
       setBusy(true);
       setError(null);
       setMessage(null);
       try {
+        const parsedHours = Number(hours);
         const res = await fetch(endpoint, {
           method: 'POST',
           credentials: 'same-origin',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(
-            action === 'open'
-              ? { action, week: Number(week), hours: Number(hours) }
+            action === 'pause' && Number.isFinite(parsedHours) && parsedHours > 0
+              ? { action, hours: parsedHours }
               : { action },
           ),
         });
@@ -74,15 +80,7 @@ export default function PollWindowAdmin({ leagueParam, slots }: Props) {
           setError(data?.error ?? `Request failed (${res.status})`);
           return;
         }
-        if (action === 'open') {
-          setMessage(
-            `Ballot open for Week ${data.window.week} — closes in ${data.hours}h. ` +
-              `${data.ballotsIn} of ${data.eligibleVoters} ballots in.` +
-              (data.shortWindow ? ' (Short window.)' : ''),
-          );
-        } else {
-          setMessage(data.message);
-        }
+        setMessage(data?.message ?? 'Done.');
         await load();
         // The ballot builder above reads its state on mount, so a change here
         // has to reload the page for it to be reflected rather than leaving
@@ -94,14 +92,14 @@ export default function PollWindowAdmin({ leagueParam, slots }: Props) {
         setBusy(false);
       }
     },
-    [endpoint, week, hours, load],
+    [endpoint, hours, load],
   );
 
   // No state means the status call failed or was refused — most likely this
   // viewer is not a commissioner, so render nothing at all.
   if (!state) return null;
 
-  const live = state.status === 'open' && state.window;
+  const paused = state.status === 'paused';
 
   return (
     <section className="op-admin">
@@ -112,56 +110,48 @@ export default function PollWindowAdmin({ leagueParam, slots }: Props) {
         aria-expanded={open}
       >
         <span className="op-admin__badge">Commissioner</span>
-        {live
-          ? `Ballot open · Week ${state.window!.week} · ${state.ballotsIn ?? 0}/${state.eligibleVoters ?? 0} in`
-          : 'No ballot open — open one'}
+        {paused
+          ? 'Voting is PAUSED — resume it'
+          : `Voting open · ${state.ballotsIn ?? 0}/${state.eligibleVoters ?? 0} ballots on file`}
         <span aria-hidden="true">{open ? ' ▾' : ' ▸'}</span>
       </button>
 
       {open && (
         <div className="op-admin__body">
           <p className="op-admin__note">
-            The Tuesday column opens the ballot automatically in season. Use this
-            to open one now — for a preview, or to recover from a failed run.
-            Closing stops voting only; it never tallies and never deletes a
-            ballot, so re-opening the same week picks them all back up.
+            Voting is always open and a ballot stands until its owner changes
+            it. This is the emergency stop only: pausing refuses new ballots for
+            the whole league and resuming lifts it. Neither tallies, and neither
+            touches a ballot already on file.
           </p>
 
           <div className="op-admin__row">
-            <label>
-              Week
-              <input
-                type="number"
-                min="1"
-                max="25"
-                value={week}
-                onChange={(e) => setWeek(e.target.value)}
-                disabled={busy}
-              />
-            </label>
-            <label>
-              Open for (hours)
-              <input
-                type="number"
-                min="1"
-                max="336"
-                value={hours}
-                onChange={(e) => setHours(e.target.value)}
-                disabled={busy}
-              />
-            </label>
-            <button type="button" onClick={() => act('open')} disabled={busy}>
-              {busy ? 'Working…' : live ? 'Replace window' : 'Open ballot'}
-            </button>
-            {live && (
-              <button
-                type="button"
-                className="op-admin__close"
-                onClick={() => act('close')}
-                disabled={busy}
-              >
-                Stop voting
+            {paused ? (
+              <button type="button" onClick={() => act('resume')} disabled={busy}>
+                {busy ? 'Working…' : 'Resume voting'}
               </button>
+            ) : (
+              <>
+                <label>
+                  Pause for (hours, blank = until resumed)
+                  <input
+                    type="number"
+                    min="1"
+                    max="336"
+                    value={hours}
+                    onChange={(e) => setHours(e.target.value)}
+                    disabled={busy}
+                  />
+                </label>
+                <button
+                  type="button"
+                  className="op-admin__close"
+                  onClick={() => act('pause')}
+                  disabled={busy}
+                >
+                  {busy ? 'Working…' : 'Pause voting'}
+                </button>
+              </>
             )}
           </div>
 
@@ -187,7 +177,9 @@ export default function PollWindowAdmin({ leagueParam, slots }: Props) {
 
           <p className="op-admin__note">
             {slots} slots
-            {live && state.window ? ` · closes ${new Date(state.window.closesAt).toLocaleString()}` : ''}
+            {!paused && state.window
+              ? ` · next result ${new Date(state.window.closesAt).toLocaleString()}`
+              : ''}
           </p>
 
           {message && <p className="op-admin__ok" role="status">{message}</p>}

@@ -18,7 +18,6 @@ import {
 import { normalizeFranchiseId } from '../../src/utils/franchise-id.mjs';
 import {
   standingVoteLine,
-  nextResultLine,
   resultTimingPhrase,
 } from '../../src/utils/owners-poll-copy.mjs';
 import { isBallotStale } from '../../src/utils/owners-poll-ballot.mjs';
@@ -34,8 +33,6 @@ import {
   writeWindow,
   readWindow,
   clearWindow,
-  countBallots,
-  readAllBallots,
   readStandingBallots,
 } from './owners-poll-redis.mjs';
 
@@ -63,12 +60,20 @@ export const BALLOT_PATH = '/pecking-order/ballot';
  * preference could be read and no cookie to read it from, so this is the one
  * place a fixed zone is correct rather than a shortcut — the web surfaces
  * render the same sentence through `viewer-clock` instead.
+ *
+ * NO zone parameter, deliberately. The suffix it prints is the literal "PT",
+ * so a caller handing it another zone — `leagueClock(slug).zone` is right
+ * there and reads like the correct thing to pass — would get an Eastern time
+ * labelled Pacific. The name is the contract; the only way to keep it true is
+ * to make the zone unconfigurable.
+ *
+ * @param {string} iso
  */
-export function formatResultTimePT(iso, zone = 'America/Los_Angeles') {
+export function formatResultTimePT(iso) {
   const at = new Date(iso);
   if (Number.isNaN(at.getTime())) return 'soon';
   return new Intl.DateTimeFormat('en-US', {
-    timeZone: zone,
+    timeZone: 'America/Los_Angeles',
     weekday: 'long',
     hour: 'numeric',
     minute: '2-digit',
@@ -185,7 +190,8 @@ export const SYNTHETIC_POLL_SOURCE = 'synthetic';
  *
  * @param {object} args
  * @param {Array<{ franchiseId: string, ranking: string[], submittedAt: string|null, updatedAt: string|null }>} args.ballots
- * @param {{ opensAt: string, closesAt: string, slots: number, eligibleFranchiseIds: string[] }} args.window
+ * @param {{ opensAt: string, closesAt: string, slots: number, eligibleFranchiseIds: string[],
+ *   closeWeekday?: number|null, closeHourPT?: number|null }} args.window
  * @param {Map<string, number>|Record<string, number>} args.compositeRankByFid
  * @returns {{
  *   block: {
@@ -196,6 +202,8 @@ export const SYNTHETIC_POLL_SOURCE = 'synthetic';
  *     eligibleVoters: number,
  *     ballotsIn: number,
  *     methodology: string,
+ *     closeWeekday: number|null,
+ *     closeHourPT: number|null,
  *     ranked: Array<Record<string, unknown>>|null,
  *     unranked: Array<Record<string, unknown>>|null,
  *     ballots: Array<Record<string, unknown>>,
@@ -328,7 +336,12 @@ export async function closePoll({ league, issue, compositeRankByFid, now = new D
 
   const { block, tally } = buildClosedPollBlock({
     ballots,
-    window,
+    // The close schedule rides in from the REGISTRY, not from the stored
+    // pointer: `writeWindow` has never persisted these two fields, so reading
+    // them off `window` yielded null every time and the column's "the count is
+    // taken every X at Y" line silently fell back to the component's hardcoded
+    // Thursday/4pm. The seeder already injects them for the same reason.
+    window: { ...window, closeWeekday: poll.closeWeekday, closeHourPT: poll.closeHourPT },
     compositeRankByFid,
   });
 
@@ -485,6 +498,11 @@ export async function readTurnout({ league }) {
     const ballot = byFid.get(fid) ?? null;
     return {
       franchiseId: fid,
+      // Stated separately from `updatedAt`, because a stored record whose
+      // timestamp did not parse comes back with `updatedAt: null` — and
+      // inferring "never voted" from a null timestamp would tell an owner who
+      // HAS a ballot on file that they have none.
+      hasBallot: !!ballot,
       updatedAt: ballot?.updatedAt ?? null,
       stale: ballot ? isBallotStale(ballot.updatedAt, now) : false,
     };

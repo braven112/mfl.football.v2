@@ -12,6 +12,7 @@
  * never name a voter.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { createSessionToken } from '../src/utils/session';
 import { LEAGUES } from '../src/config/leagues';
 
@@ -668,5 +669,49 @@ describe('GET /api/owners-poll/window', () => {
     const paused = await (await getWindow(commishCookie())).json();
     expect(paused.status).toBe('paused');
     expect(paused.window).toBeNull();
+  });
+});
+
+/**
+ * The commissioner panel and the route it drives, pinned together.
+ *
+ * Removing the quorum turned this route from open/close into pause/resume and
+ * left PollWindowAdmin.tsx still POSTing `action: 'open'` and `action: 'close'`
+ * — which the route answers with a 400. Nothing failed at build time: both
+ * sides compiled, the panel rendered, and every button simply errored. A
+ * contract carried in a string literal across a fetch has no type to break, so
+ * it needs a test.
+ *
+ * Scanned from source rather than exercised, because the panel is a React
+ * island whose fetch is the only thing worth asserting: which action names it
+ * is willing to send.
+ */
+describe('the commissioner panel speaks the window route’s vocabulary', () => {
+  const read = (p: string) =>
+    readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
+
+  it('sends only actions the route accepts', () => {
+    const panel = read('src/components/shared/owners-poll/PollWindowAdmin.tsx');
+    const sent = new Set(
+      [...panel.matchAll(/act\((['"])([a-z-]+)\1\)/g)].map((m) => m[2]),
+    );
+    expect(sent.size).toBeGreaterThan(0);
+    for (const action of sent) {
+      expect(['pause', 'resume']).toContain(action);
+    }
+  });
+
+  it('still offers both of them, so neither half of the switch is unreachable', () => {
+    const panel = read('src/components/shared/owners-poll/PollWindowAdmin.tsx');
+    expect(panel).toMatch(/act\('pause'\)/);
+    expect(panel).toMatch(/act\('resume'\)/);
+  });
+
+  it('reads the two states the route actually reports', () => {
+    const panel = read('src/components/shared/owners-poll/PollWindowAdmin.tsx');
+    // 'closed' / 'pending' / 'none' are gone from the route's vocabulary; a
+    // panel still branching on them renders a state that can never arrive.
+    expect(panel).not.toMatch(/status === '(closed|pending|none)'/);
+    expect(panel).toMatch(/status === 'paused'/);
   });
 });

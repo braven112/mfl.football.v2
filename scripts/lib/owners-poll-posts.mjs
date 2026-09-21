@@ -154,15 +154,18 @@ export function buildOpenPushes({ issue, teams, eligibleFranchiseIds }) {
  * @param {object} args
  * @param {number} args.week
  * @param {string} args.closesAt
- * @param {Array<{ franchiseId: string, updatedAt: string|null, stale?: boolean }>} [args.standing]
+ * @param {Array<{ franchiseId: string, hasBallot?: boolean, updatedAt: string|null, stale?: boolean }>} [args.standing]
  * @param {Date} [args.now]
  */
 export function buildNagPushes({ week, closesAt, standing = /** @type {any[]} */ ([]), now = new Date() }) {
   const when = formatResultTimePT(closesAt);
   return standing
-    .map(({ franchiseId, updatedAt, stale }) => {
+    .map(({ franchiseId, hasBallot, updatedAt, stale }) => {
       const weeksOld = weeksSince(updatedAt, now);
-      const never = updatedAt == null;
+      // `hasBallot`, not a null timestamp: a stored record whose `updatedAt`
+      // did not parse reads as null, and telling an owner with a ballot on
+      // file that they have none is the one message this push must never send.
+      const never = hasBallot === undefined ? updatedAt == null : !hasBallot;
       if (!never && !stale) return null;
       return {
         franchiseId,

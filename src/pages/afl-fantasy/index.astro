@@ -184,6 +184,11 @@ const ownersPollIssue = Object.entries(ownersPollIssues)
     return m ? { year: Number(m[1]), week: Number(m[2]), data } : null;
   })
   .filter((x): x is { year: number; week: number; data: any } => !!x)
+  // THIS season only. Without it the newest archived result wins outright, so
+  // between Labor Day and the season's first count the card publishes LAST
+  // season's ranking — today that is the seeded synthetic example — under a
+  // heading that reads as the current room's opinion.
+  .filter((x) => x.year === getCurrentSeasonYear(effectiveDate))
   .filter((x) => (x.data?.ownersPoll?.ranked?.length ?? 0) > 0)
   .sort((a, b) => b.year - a.year || b.week - a.week)[0] ?? null;
 

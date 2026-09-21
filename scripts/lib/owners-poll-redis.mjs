@@ -58,7 +58,11 @@ export async function clearWindow(redis, navSlug) {
 
 /** How many ballots are in. HLEN, so no ballot content is transferred. */
 export async function countStandingBallots(redis, navSlug, seasonYear) {
-  return redisCommand(redis, ['HLEN', ownersPollStandingKey(navSlug, seasonYear)]);
+  // Coerced, like the week-scoped twin below: Upstash answers HLEN with a
+  // string over REST, and handing a caller "0" — which is truthy — instead of
+  // 0 is how a "nobody has voted" check silently inverts.
+  const n = await redisCommand(redis, ['HLEN', ownersPollStandingKey(navSlug, seasonYear)]);
+  return Number(n) || 0;
 }
 
 /**

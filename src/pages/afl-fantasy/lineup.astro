@@ -18,11 +18,10 @@
 export const prerender = false;
 
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
-import { getLeagueTeamBrands } from '../../utils/league-team-brands';
 import PlayerCell from '../../components/theleague/PlayerCell.astro';
 import { getAuthUser } from '../../utils/auth';
 import { loginUrlForRequest } from '../../utils/login-redirect';
-import { getLeagueBySlug, ensureLeaguePrefix, leagueClock } from '../../config/leagues';
+import { getLeagueBySlug } from '../../config/leagues';
 import { findWeekMatchups, resolveRostersPayload, resolveLineupFillState, resolveWeekLineup, resolvePlayerName } from '../../utils/lineup-sources';
 import LineupGameStrip from '../../components/shared/LineupGameStrip.astro';
 import { buildMatchupCards } from '../../utils/lineup-matchup-cards';

@@ -192,6 +192,9 @@ async function countLineup(
   return ownerLineupNeedsAttention(warnings, franchiseId);
 }
 
+/** How close to the result a missing ballot starts badging. */
+const POLL_BADGE_LEAD_HOURS = 48;
+
 /**
  * No ballot on file at all, with an announce close enough to matter.
  *
@@ -203,9 +206,10 @@ async function countLineup(
  * So: only when they have nothing on file (not merely nothing NEW — a standing
  * ballot is already counted), and only inside the last stretch before the
  * result, when acting on it is actually urgent.
+ *
+ * (Two blocks stacked above one declaration would have thrown the prose away —
+ * TypeScript reads only the last one — which is why the const takes its own.)
  */
-const POLL_BADGE_LEAD_HOURS = 48;
-
 async function countPoll(league: LeagueDefinition, franchiseId: string): Promise<number> {
   if (!league.ownersPoll?.enabled) return 0;
   const scope = league.navSlug;

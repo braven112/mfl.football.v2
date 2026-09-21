@@ -305,11 +305,18 @@ describe('buildClosedPollBlock — shared with the seeded example', () => {
   // publishes through this same function. Its whole claim is that it is the
   // real pipeline over invented input, so a key added to a closed poll must
   // reach it too — which it does only while both callers share this builder.
+  // The close schedule rides in from the REGISTRY, not from the stored
+  // pointer — `writeWindow` has never persisted it — so both callers of the
+  // shared builder augment their window the same way: closePoll from
+  // `league.ownersPoll`, the seeder from `poll`. This fixture stands in for
+  // that, which is what keeps the parity test below an honest comparison.
   const window = {
     opensAt: '2026-09-08T14:00:00.000Z',
     closesAt: '2026-09-10T01:00:00.000Z',
     slots: SLOTS,
     eligibleFranchiseIds: FIELD,
+    closeWeekday: LEAGUE.ownersPoll.closeWeekday,
+    closeHourPT: LEAGUE.ownersPoll.closeHourPT,
   };
   const ballots = Array.from({ length: 10 }, (_, i) => ({
     franchiseId: FIELD[i],
@@ -345,6 +352,11 @@ describe('buildClosedPollBlock — shared with the seeded example', () => {
     expect(block.status).toBe('closed');
     expect(block.ballotsIn).toBe(10);
     expect(block.nonVoterCount).toBe(FIELD.length - 10);
+    // Not merely present — carrying the league's real schedule. Null here is
+    // what made the column's "the count is taken every X at Y" line fall back
+    // to the component's hardcoded Thursday/4pm for every closed week.
+    expect(block.closeWeekday).toBe(LEAGUE.ownersPoll.closeWeekday);
+    expect(block.closeHourPT).toBe(LEAGUE.ownersPoll.closeHourPT);
   });
 
   it('is what closePoll returns, not a parallel implementation', async () => {
