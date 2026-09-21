@@ -179,3 +179,134 @@ export function buildSeasonRail(
     };
   });
 }
+
+
+/**
+ * The header's one featured player.
+ *
+ * Which player that is depends on what the league HAS, not on a preference:
+ *
+ *  - A salary league (TheLeague: `salaryCap: true`) shows the top earner. In a
+ *    cap league the biggest contract IS the roster's defining fact.
+ *  - A league without salaries (the AFL runs `salaryCap: false` and
+ *    `contracts: false`, so there is no salary to show at all) shows the player
+ *    who ranks best AT HIS OWN POSITION. A raw points leader would just be a
+ *    quarterback every time, because QBs out-score every other position by
+ *    construction; ranking within the position is what makes a WR2 and a QB8
+ *    comparable.
+ *
+ * Restricted to QB / RB / WR / TE in the positional mode: a kicker or defence
+ * can top its own tiny position on a quiet week and is not what anyone means
+ * by their best player.
+ */
+export const HEADER_PLAYER_POSITIONS = ['QB', 'RB', 'WR', 'TE'] as const;
+
+export interface HeaderPlayer {
+  id: string;
+  name: string;
+  position: string;
+  headshot: string | null;
+  /** The one number the card prints — "$7.2M", or "WR3". */
+  statValue: string;
+  /** What that number is. */
+  statLabel: string;
+}
+
+interface CandidatePlayer {
+  id?: string;
+  name?: string;
+  position?: string;
+  headshot?: string | null;
+  salary?: string | number | null;
+  [key: string]: any;
+}
+
+const toPlayer = (p: CandidatePlayer, statValue: string, statLabel: string): HeaderPlayer => ({
+  id: String(p.id ?? ''),
+  name: String(p.name ?? 'Unknown'),
+  position: String(p.position ?? ''),
+  headshot: p.headshot ? String(p.headshot) : null,
+  statValue,
+  statLabel,
+});
+
+/** $7.2M, $968K, $0 — compact, because the card has one line for it. */
+export function compactSalary(value: number): string {
+  if (!Number.isFinite(value)) return '—';
+  const abs = Math.abs(value);
+  const sign = value < 0 ? '-' : '';
+  if (abs >= 1_000_000) return `${sign}$${(abs / 1_000_000).toFixed(1)}M`;
+  if (abs >= 1_000) return `${sign}$${Math.round(abs / 1_000)}K`;
+  return `${sign}$${Math.round(abs)}`;
+}
+
+/** The roster's biggest contract. Null when nobody carries a salary. */
+export function topPlayerBySalary(players: CandidatePlayer[]): HeaderPlayer | null {
+  let best: CandidatePlayer | null = null;
+  let bestSalary = 0;
+  for (const player of players ?? []) {
+    const salary = Number.parseFloat(String(player?.salary ?? ''));
+    if (!Number.isFinite(salary) || salary <= 0) continue;
+    if (salary > bestSalary) {
+      bestSalary = salary;
+      best = player;
+    }
+  }
+  return best ? toPlayer(best, compactSalary(bestSalary), 'Top salary') : null;
+}
+
+/**
+ * The roster's best player RELATIVE TO HIS POSITION.
+ *
+ * `rankOf` returns a player's 1-based rank among everyone at that position;
+ * the lowest rank wins. A player the ranking does not know is skipped rather
+ * than treated as rank 0 — an unranked player is unknown, not the best.
+ */
+export function bestPlayerByPositionRank(
+  players: CandidatePlayer[],
+  rankOf: (playerId: string, position: string) => number | null,
+): HeaderPlayer | null {
+  let best: CandidatePlayer | null = null;
+  let bestRank = Infinity;
+  for (const player of players ?? []) {
+    const position = String(player?.position ?? '').toUpperCase();
+    if (!(HEADER_PLAYER_POSITIONS as readonly string[]).includes(position)) continue;
+    const rank = rankOf(String(player?.id ?? ''), position);
+    if (rank == null || !Number.isFinite(rank) || rank < 1) continue;
+    if (rank < bestRank) {
+      bestRank = rank;
+      best = player;
+    }
+  }
+  if (!best) return null;
+  const position = String(best.position ?? '').toUpperCase();
+  return toPlayer(best, `${position}${bestRank}`, 'Best at position');
+}
+
+/**
+ * Positional ranks over a whole player pool, by a numeric score.
+ *
+ * Ranked across the POOL rather than across rostered players, deliberately:
+ * an AFL player is routinely rostered in both conferences, so ranking the
+ * rostered set would count the same player twice and shift everyone below him.
+ */
+export function positionalRanks(
+  pool: Array<{ id: string; position: string; score: number }>,
+): Map<string, number> {
+  const byPosition = new Map<string, Array<{ id: string; score: number }>>();
+  for (const entry of pool) {
+    const position = String(entry.position ?? '').toUpperCase();
+    if (!(HEADER_PLAYER_POSITIONS as readonly string[]).includes(position)) continue;
+    if (!Number.isFinite(entry.score)) continue;
+    (byPosition.get(position) ?? byPosition.set(position, []).get(position)!).push({
+      id: String(entry.id),
+      score: entry.score,
+    });
+  }
+  const ranks = new Map<string, number>();
+  for (const [, entries] of byPosition) {
+    entries.sort((a, b) => b.score - a.score);
+    entries.forEach((entry, index) => ranks.set(entry.id, index + 1));
+  }
+  return ranks;
+}

@@ -19,7 +19,7 @@
 import RosterNameplate from './RosterNameplate.astro';
 import TeamDivisionRow from './TeamDivisionRow.astro';
 import type { CanonicalLeagueSlug } from '../../../config/leagues';
-import type { HeaderGroup, RailWeek } from '../../../utils/roster-header-data';
+import type { HeaderGroup, RailWeek, HeaderPlayer } from '../../../utils/roster-header-data';
 import type { StandingsSummary } from '../../../utils/standings-summary';
 
 interface HeaderGame {
@@ -58,6 +58,8 @@ interface Props {
   teamHref: (franchiseId: string) => string;
   scheduleHref: (week?: number) => string;
   nextKickoff?: string | null;
+  /** The club's featured player; forwarded straight to the nameplate. */
+  featuredPlayer?: HeaderPlayer | null;
 }
 
 const {
@@ -82,6 +84,7 @@ const {
   teamHref,
   scheduleHref,
   nextKickoff = null,
+  featuredPlayer = null,
 } = Astro.props;
 ---
 
@@ -111,6 +114,7 @@ const {
       recordOf={recordOf}
       scheduleHref={scheduleHref}
       nextKickoff={nextKickoff}
+      featuredPlayer={featuredPlayer}
     />
   </div>
 

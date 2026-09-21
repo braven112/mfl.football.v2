@@ -3,7 +3,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import FrontOfficeNav from '../../components/shared/front-office-nav/FrontOfficeNav.astro';
 import RosterHeader from '../../components/shared/roster-header/RosterHeader.astro';
 import RosterNameplate from '../../components/shared/roster-header/RosterNameplate.astro';
-import { buildSeasonRail, buildTeamGroups } from '../../utils/roster-header-data';
+import { buildSeasonRail, buildTeamGroups, topPlayerBySalary } from '../../utils/roster-header-data';
 import { summarizeStandings } from '../../utils/standings-summary';
 import {
   findLastResult,
@@ -2117,6 +2117,13 @@ const headerTeamsForSwap = teamsList.map((team: any) => {
       groupSize: null,
     },
     capSpace: initialCapLimit - (teamData?.totals?.totalSalary ?? 0),
+    // TheLeague runs a cap, so the biggest contract is the defining fact.
+    // Practice squad and IR count: a held contract is still cap.
+    featuredPlayer: topPlayerBySalary([
+      ...(teamData?.players ?? []),
+      ...(teamData?.practiceSquad ?? []),
+      ...(teamData?.injuredReserve ?? []),
+    ]),
     lastResult: findLastResult(own, currentWeekNum),
     nextGame: findNextGame(own, currentWeekNum),
     rail: buildSeasonRail(
@@ -2167,6 +2174,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
         groupSize: null,
       }}
       extraStats={[{ value: headerMoney(headerCapSpace), label: 'Cap space' }]}
+      featuredPlayer={headerTeamsForSwap.find((t) => t.id === defaultTeamId)?.featuredPlayer ?? null}
       lastResult={findLastResult(headerOwnSchedule, currentWeekNum)}
       nextGame={findNextGame(headerOwnSchedule, currentWeekNum)}
       rail={headerRail}
@@ -2199,6 +2207,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
                 season={defaultSeason}
                 standing={team.standing}
                 extraStats={[{ value: headerMoney(team.capSpace), label: 'Cap space' }]}
+                featuredPlayer={team.featuredPlayer}
                 lastResult={team.lastResult}
                 nextGame={team.nextGame}
                 rail={team.rail}

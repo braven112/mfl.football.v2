@@ -22,6 +22,8 @@ import {
   type NflMatchup,
 } from '../../utils/nfl-matchups';
 import { normalizeTeamCode, getNFLTeamName, getNFLTeamLogo } from '../../utils/nfl-logo';
+import { getPlayerHeadshot } from '../../constants/roster-constants';
+import { formatMflName } from '../../utils/player-name-matching';
 import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD, COLLEGE_LOGO_ONERROR, COLLEGE_LOGO_ONLOAD } from '../../constants/roster-constants';
 import collegeLogos from '../../data/college-logos.json';
 import {
@@ -53,7 +55,12 @@ import { getCachedTradeBait } from '../../utils/mfl-trade-bait-cache';
 import MyRankEditor from '../../components/shared/rankings/MyRankEditor.astro';
 import { buildKeeperPlannerStats } from '../../utils/afl-keeper-planner-stats';
 import RosterHeader from '../../components/shared/roster-header/RosterHeader.astro';
-import { buildSeasonRail, buildTeamGroups } from '../../utils/roster-header-data';
+import {
+  buildSeasonRail,
+  buildTeamGroups,
+  bestPlayerByPositionRank,
+  positionalRanks,
+} from '../../utils/roster-header-data';
 import { summarizeStandings } from '../../utils/standings-summary';
 import {
   findLastResult,
@@ -522,6 +529,32 @@ for (const player of sortedTableRoster) {
   });
 }
 
+/* The AFL has no salaries at all (`salaryCap: false`, `contracts: false`), so
+   the header features whoever ranks best AT HIS OWN POSITION instead. A raw
+   points leader would be a quarterback every single time — QBs out-score the
+   other positions by construction — which says nothing about the roster.
+
+   Ranked across the whole PLAYER POOL rather than across rostered players: an
+   AFL player is routinely rostered in BOTH conferences, so ranking the rostered
+   set would count the same man twice and shift everyone below him. */
+const aflPositionRanks = positionalRanks(
+  [...aflYtdPoints.entries()].map(([id, score]) => ({
+    id,
+    position: playersMap.get(id)?.position ?? '',
+    score: Number(score) || 0,
+  }))
+);
+const headerFeaturedPlayer = bestPlayerByPositionRank(
+  roster.map((player) => ({
+    id: player.id,
+    // MFL stores "Last, First"; the header prints a name, not a sort key.
+    name: formatMflName(player.name),
+    position: player.position,
+    headshot: getPlayerHeadshot(player.id, player.espn_id, player.team),
+  })),
+  (playerId) => aflPositionRanks.get(playerId) ?? null
+);
+
 // Small format helpers so the JSX stays declarative
 const formatPoints = (v: number | null): string =>
   v == null ? '—' : v.toFixed(1);
@@ -896,6 +929,7 @@ const pageConfig = {
         rank: null,
         groupSize: null,
       }}
+      featuredPlayer={headerFeaturedPlayer}
       lastResult={findLastResult(headerOwnSchedule, headerWeek)}
       nextGame={findNextGame(headerOwnSchedule, headerWeek)}
       rail={headerRail}

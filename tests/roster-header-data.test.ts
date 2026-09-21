@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { buildTeamGroups, buildSeasonRail } from '../src/utils/roster-header-data';
+import {
+  buildTeamGroups,
+  buildSeasonRail,
+  topPlayerBySalary,
+  bestPlayerByPositionRank,
+  positionalRanks,
+  compactSalary,
+} from '../src/utils/roster-header-data';
 import { franchiseSchedule, parseWeeklySchedule } from '../src/utils/schedule-data.mjs';
 import aflConfig from '../data/afl-fantasy/afl.config.json';
 import tlConfig from '../src/data/theleague.config.json';
@@ -171,5 +178,105 @@ describe('buildSeasonRail', () => {
 
   it('carries the outcome of a played week', () => {
     expect(rail[0]).toMatchObject({ week: 1, played: true, outcome: 'W', opponentId: '0002' });
+  });
+});
+
+/**
+ * The header's featured player. Which player it is depends on what the league
+ * HAS: a cap league shows the biggest contract, a league with no salaries at
+ * all (the AFL) shows who ranks best at his own position.
+ */
+describe('the featured player', () => {
+  const roster = [
+    { id: '1', name: 'Saquon Barkley', position: 'RB', salary: 7200000, headshot: '/a.png' },
+    { id: '2', name: 'Jake Ferguson', position: 'TE', salary: 4207142.5 },
+    { id: '3', name: 'Bo Nix', position: 'QB', salary: 968000 },
+    { id: '4', name: 'A Kicker', position: 'PK', salary: 9000000 },
+  ];
+
+  describe('in a salary league', () => {
+    it('is the biggest contract', () => {
+      expect(topPlayerBySalary(roster)).toMatchObject({
+        name: 'A Kicker',
+        statValue: '$9.0M',
+        statLabel: 'Top salary',
+      });
+    });
+
+    it('carries the headshot when there is one, and null when there is not', () => {
+      expect(topPlayerBySalary([roster[0]])!.headshot).toBe('/a.png');
+      expect(topPlayerBySalary([roster[1]])!.headshot).toBeNull();
+    });
+
+    it('is null when nobody has a salary — which is every non-cap league', () => {
+      expect(topPlayerBySalary([{ id: '1', name: 'X', position: 'RB' }])).toBeNull();
+      expect(topPlayerBySalary([{ id: '1', name: 'X', position: 'RB', salary: 0 }])).toBeNull();
+      expect(topPlayerBySalary([])).toBeNull();
+    });
+  });
+
+  describe('in a league with no salaries', () => {
+    // Nix is QB8, Barkley RB2, Ferguson TE1 -> Ferguson wins on positional rank.
+    const rankOf = (id: string) => ({ '1': 2, '2': 1, '3': 8, '4': 1 }[id] ?? null);
+
+    it('is whoever ranks best at his own position', () => {
+      expect(bestPlayerByPositionRank(roster, rankOf)).toMatchObject({
+        name: 'Jake Ferguson',
+        statValue: 'TE1',
+        statLabel: 'Best at position',
+      });
+    });
+
+    it('never picks a kicker or defence, however well they rank', () => {
+      // The kicker is also rank 1 and listed after Ferguson; skipping the
+      // position entirely is what keeps him out, not tie-break luck.
+      const kickerOnly = [{ id: '4', name: 'A Kicker', position: 'PK' }];
+      expect(bestPlayerByPositionRank(kickerOnly, () => 1)).toBeNull();
+      const withDef = [{ id: '5', name: 'A Defence', position: 'DEF' }];
+      expect(bestPlayerByPositionRank(withDef, () => 1)).toBeNull();
+    });
+
+    it('skips a player the ranking does not know rather than calling him best', () => {
+      // An unranked player is unknown, not rank 0.
+      expect(bestPlayerByPositionRank([roster[0]], () => null)).toBeNull();
+    });
+
+    it('is null on an empty roster', () => {
+      expect(bestPlayerByPositionRank([], () => 1)).toBeNull();
+    });
+  });
+
+  describe('positionalRanks', () => {
+    const pool = [
+      { id: 'a', position: 'WR', score: 200 },
+      { id: 'b', position: 'WR', score: 300 },
+      { id: 'c', position: 'QB', score: 400 },
+      { id: 'd', position: 'PK', score: 999 },
+    ];
+
+    it('ranks within a position, best first', () => {
+      const r = positionalRanks(pool);
+      expect(r.get('b')).toBe(1);
+      expect(r.get('a')).toBe(2);
+      expect(r.get('c')).toBe(1);
+    });
+
+    it('leaves out positions the header never features', () => {
+      expect(positionalRanks(pool).has('d')).toBe(false);
+    });
+
+    it('ignores a player with no usable score', () => {
+      expect(positionalRanks([{ id: 'x', position: 'WR', score: NaN }]).has('x')).toBe(false);
+    });
+  });
+
+  describe('compactSalary', () => {
+    it('reads at a glance at every magnitude', () => {
+      expect(compactSalary(7200000)).toBe('$7.2M');
+      expect(compactSalary(968000)).toBe('$968K');
+      expect(compactSalary(450)).toBe('$450');
+      expect(compactSalary(-2400000)).toBe('-$2.4M');
+      expect(compactSalary(Number.NaN)).toBe('—');
+    });
   });
 });

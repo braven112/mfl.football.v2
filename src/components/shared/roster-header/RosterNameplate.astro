@@ -25,7 +25,7 @@
 import GamedayBar from './GamedayBar.astro';
 import { resolveHeroFranchiseSkin } from '../../../utils/hero-crest';
 import type { CanonicalLeagueSlug } from '../../../config/leagues';
-import type { RailWeek } from '../../../utils/roster-header-data';
+import type { RailWeek, HeaderPlayer } from '../../../utils/roster-header-data';
 import type { StandingsSummary } from '../../../utils/standings-summary';
 import '../../../styles/hero-franchise-backdrop.css';
 
@@ -66,6 +66,18 @@ interface Props {
   recordOf: (franchiseId: string) => string | null;
   scheduleHref: (week?: number) => string;
   nextKickoff?: string | null;
+  /**
+   * The club's one featured player, filling the nameplate's right side —
+   * which was otherwise dead space behind the crest watermark on desktop.
+   *
+   * WHICH player is the league's call, not this component's: a cap league
+   * sends its top earner, a league with no salaries sends whoever ranks best
+   * at his own position. See `topPlayerBySalary` / `bestPlayerByPositionRank`.
+   *
+   * Hidden below 900px. It is the least important thing in the header, and a
+   * phone's width belongs to the club's name and the scoreboard.
+   */
+  featuredPlayer?: HeaderPlayer | null;
 }
 
 const {
@@ -87,6 +99,7 @@ const {
   recordOf,
   scheduleHref,
   nextKickoff = null,
+  featuredPlayer = null,
 } = Astro.props;
 
 const skin = resolveHeroFranchiseSkin(franchiseId, leagueSlug);
@@ -133,6 +146,9 @@ const stats: Array<{ value: string; label: string }> = [
   {skin && <span class="hero-fb__wash" aria-hidden="true"></span>}
 
   <div class="rhdr__inner">
+    {/* The eyebrow and identity stack; the featured card sits beside them, so
+        they need their own column rather than being siblings of it. */}
+    <div class="rhdr__identity-col">
     <div class="rhdr__eyebrow">
       <span class="rhdr__pill">{label}</span>
       <span class="rhdr__meta">{season} season · {teamMeta}</span>
@@ -171,6 +187,35 @@ const stats: Array<{ value: string; label: string }> = [
         )}
       </div>
     </div>
+    </div>
+    {featuredPlayer && (
+      <aside class="rhdr__feature" aria-label={featuredPlayer.statLabel}>
+        <span class="rhdr__feature-kicker">{featuredPlayer.statLabel}</span>
+        <span class="rhdr__feature-body">
+          {featuredPlayer.headshot ? (
+            <img
+              class="rhdr__feature-shot"
+              src={featuredPlayer.headshot}
+              alt=""
+              width="46"
+              height="46"
+              loading="lazy"
+              decoding="async"
+            />
+          ) : (
+            <span class="rhdr__feature-shot rhdr__feature-shot--blank" aria-hidden="true">
+              {featuredPlayer.position}
+            </span>
+          )}
+          <span class="rhdr__feature-text">
+            <span class="rhdr__feature-name">{featuredPlayer.name}</span>
+            <span class="rhdr__feature-stat">
+              {featuredPlayer.position} · {featuredPlayer.statValue}
+            </span>
+          </span>
+        </span>
+      </aside>
+    )}
   </div>
 </div>
 
@@ -200,8 +245,12 @@ const stats: Array<{ value: string; label: string }> = [
   .rhdr__inner {
     position: relative;
     z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: clamp(1rem, 3vw, 2rem);
     padding: clamp(1rem, 2.6vw, 1.25rem) clamp(1.1rem, 3vw, 1.5rem);
   }
+  .rhdr__identity-col { min-width: 0; flex: 1; }
 
   .rhdr__eyebrow {
     display: flex;
@@ -266,6 +315,74 @@ const stats: Array<{ value: string; label: string }> = [
     font-variant-numeric: tabular-nums;
   }
   .rhdr__sep { opacity: 0.36; }
+
+  /* ── The featured player, desktop only ────────────────────────────────
+     Sits where the crest watermark already was, so it needs its own quiet
+     surface to stay readable over the brightest part of the gradient. */
+  .rhdr__feature {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    max-width: 16rem;
+    padding: 0.55rem 0.8rem;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.26);
+  }
+  .rhdr__feature-kicker {
+    font-size: 0.625rem;
+    font-weight: 600;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: rgba(242, 245, 248, 0.66);
+  }
+  .rhdr__feature-body { display: flex; align-items: center; gap: 0.6rem; min-width: 0; }
+  .rhdr__feature-shot {
+    flex: none;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    object-fit: cover;
+    object-position: top center;
+    background: rgba(255, 255, 255, 0.12);
+  }
+  .rhdr__feature-shot--blank {
+    display: grid;
+    place-items: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: rgba(242, 245, 248, 0.8);
+  }
+  .rhdr__feature-text { display: flex; flex-direction: column; min-width: 0; }
+  .rhdr__feature-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    line-height: 1.2;
+    color: #fff;
+    /* A long name shortens rather than widening the plate. */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .rhdr__feature-stat {
+    margin-top: 0.1rem;
+    font-size: 0.78rem;
+    font-variant-numeric: tabular-nums;
+    color: rgba(242, 245, 248, 0.78);
+  }
+  /* `accent-panel`, NOT `accent`. The resolver clears `accent` to 3:1 over the
+     COPY band; this card is a slotted panel on the gradient's far end, under
+     the thinnest wash, and its type is 0.78rem — which is the exact case
+     `accent-panel` exists for, held to 4.5:1. One accent cannot serve both
+     ends of a high-contrast gradient. */
+  .rhdr__plate--franchise .rhdr__feature-stat { color: var(--hero-fb-accent-panel); }
+
+  /* Below 900px the club's name and the scoreboard own the width. */
+  @media (max-width: 900px) {
+    .rhdr__feature { display: none; }
+  }
 
   @media (max-width: 560px) {
     .rhdr__stats { gap: 0.55rem; font-size: 0.74rem; }
