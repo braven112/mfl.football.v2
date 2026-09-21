@@ -75,8 +75,11 @@ const band = brand.grounds.find((g) => g.ground === 'band');
 const absolute = (path: string) => (assetDomain ? `${assetDomain}${path}` : path);
 
 /**
- * The hero headline, split so the last word takes the accent ink — the same
- * shape the club page uses for "New Orleans **Saints**".
+ * The COMPOSITE HERO's headline, split so the last word takes the accent ink —
+ * the same shape the club page uses for "New Orleans **Saints**".
+ *
+ * Only that card splits the name. The page's own `<h1>` prints it whole: a
+ * split franchise name does not identify the franchise (see the header below).
  */
 const nameWords = brand.name.trim().split(/\s+/);
 const heroCity = nameWords.length > 1 ? nameWords.slice(0, -1).join(' ') : league.name;
@@ -102,7 +105,9 @@ const GROUND_COPY: Record<string, string> = {
     ? 'The same surfaces in dark mode. This franchise ships a hand-authored dark cut, so TeamIconDarkStyles swaps to it.'
     : brand.ringed
       ? 'The same surfaces in dark mode. No dark cut on file, so the light art keeps a measured white ring to stay legible.'
-      : 'The same surfaces in dark mode. No dark cut on file, and the light art measured legible on ink as-is.',
+      : brand.measuredIllegible
+        ? 'The same surfaces in dark mode. No dark cut on file, and the light art measured illegible on ink — but this franchise has opted out of the ring, so it draws as authored.'
+        : 'The same surfaces in dark mode. No dark cut on file, and the light art measured legible on ink as-is.',
   band: `The team-colour band — a hero, a reveal card, a player modal. Dark in both themes, so it follows the ${band?.slot ?? 'dark'} assignment.`,
 };
 
@@ -177,7 +182,15 @@ const USAGE: Array<{ term: string; detail: string }> = [
           {/* `.cb__nick` carries `color: inherit`, which is what beats the
               layout's global themed-h1 rule. Without it this renders in the
               site's accent blue on top of the franchise's own colour. */}
-          <h1 class="cb__nick">{heroNick}</h1>
+          {/*
+            The FULL name, unlike the club page's `{club.nick}`. An NFL club
+            name IS "City Nick", so splitting it leaves a heading that still
+            identifies the club; a franchise name is not, and splitting it left
+            headings reading "Chaos", "Walking", "Pain" and "Me". The division
+            already occupies the eyebrow above, so nothing is lost by printing
+            the name whole.
+          */}
+          <h1 class="cb__nick cb__nick--franchise">{brand.name}</h1>
         </div>
       </div>
     </header>
@@ -381,7 +394,15 @@ const USAGE: Array<{ term: string; detail: string }> = [
 
         <li class="cb__demo">
           <span class="cb__demo-cap">Team colour <em>the third ground</em></span>
-          <span class="cb__pane" style={`background:${bg};color:${ink}`}>
+          {/*
+            `is-band` so this pane is inside the dark-swap opt-out with its
+            siblings. Without a ground class it matched neither opt-out
+            selector and still followed the global crest swap — and five
+            franchises (Midwestside in both leagues, Avenging Amish, Swiftie 4
+            Life, Chatmaster) have a LIGHT band slot plus an `iconDark`, so
+            their band demo silently changed cut in dark mode.
+          */}
+          <span class="cb__pane is-band" style={`background:${bg};color:${ink}`}>
             <span class="cb__bcast">
               {
                 band && (
@@ -510,7 +531,12 @@ const USAGE: Array<{ term: string; detail: string }> = [
       </dl>
     </section>
 
-    <p class="sr-only" id="cb-copy-status" role="status" aria-live="polite"></p>
+    {/*
+      `visually-hidden` (src/styles/utilities.css), NOT `sr-only` — this repo
+      has no such class, and a live region styled by a class that does not
+      exist renders as visible body text reading "Copied https://…".
+    */}
+    <p class="visually-hidden" id="cb-copy-status" role="status" aria-live="polite"></p>
   </main>
 </TheLeagueLayout>
 

@@ -53,20 +53,34 @@
   html.dark .cb__grounds img,
   html.dark .cb__eras img,
   html.dark .cb__situ .cb__pane.is-light img,
-  html.dark .cb__situ .cb__pane.is-dark img {
+  html.dark .cb__situ .cb__pane.is-dark img,
+  html.dark .cb__situ .cb__pane.is-band img {
     content: normal !important;
-    /* The FRANCHISE half needs the reset one step further:
-       `buildCrestDarkStrokeCss` emits an `html.dark` ring for the measured
-       crests with no `iconDark`, and on a surface that declares its own ground
-       that ring fires for the wrong one. `.cb__eras img` joins the list for the
-       same reason — era art is a comparison too. */
-    filter: none !important;
   }
-  /* …except where a page set the measured ring INLINE, on the one ground that
-     needs it, which the blanket reset above would strip. Inline already
-     outranks the global rule, so a crest can never wear two. */
-  html.dark .cb img[style*='drop-shadow'] {
-    filter: revert-layer !important;
+
+  /* ── The RING reset is narrower than the swap reset, deliberately ────────
+     `buildCrestDarkStrokeCss` emits an `html.dark` ring for a franchise crest
+     measured illegible on ink. On a surface that declares its own ground that
+     rule fires for the wrong one — a LIGHT pane would get a ring meant for a
+     dark card — so the light grounds neutralise it.
+
+     ONLY the light grounds. A blanket `filter: none` over every surface here
+     also killed `--nfl-logo-ring`, and that rule is emitted TWICE by
+     `nfl-logo-dark-css.ts`: once guarded by `html.dark`, and once with NO
+     guard at all (`strokeRule(darkSrcs, '')`) for the dark cuts of stroked
+     clubs. Resetting the unguarded one inside an `html.dark` block gave
+     Carolina a ring in light mode and none in dark — reintroducing the exact
+     theme dependency this opt-out exists to remove.
+
+     A dark or band ground WANTS its ring, so it is simply left alone, which
+     also means the inline ring this page applies there needs no rescuing. The
+     `filter: revert-layer` that used to do that rescuing was fiction: the
+     style attribute is not a cascade layer, so it rolled back to the UA value
+     `none` rather than to the inline filter. */
+  html.dark .cb__cut-box.is-light img,
+  html.dark .cb__ground.is-light .cb__ground-art img,
+  html.dark .cb__situ .cb__pane.is-light img {
+    filter: none !important;
   }
   /* Tokens with fallbacks only (docs/claude/rules/theming-and-assets.md). */
   .cb {
@@ -746,6 +760,12 @@
 }
 
 /* ── Standings-row demo (the franchise half's "in the app" pane) ─────────── */
+/* The band pane paints the franchise's own colour inline, so it needs no
+   background here — only the ground class, so the opt-out above can see it. */
+.cb__pane.is-band {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
 .cb__row {
   display: flex;
   align-items: center;

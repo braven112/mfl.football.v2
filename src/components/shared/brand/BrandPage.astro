@@ -228,13 +228,17 @@ const filesHref = leagueSlug ? resolveLeaguePath(`/${leagueSlug}/brand/files`, h
      something to rely on. Pinned by tests/nfl-marks-page-data.test.ts. */
   html.dark :global(.brand__art img) {
     content: normal !important;
-    filter: none !important;
   }
-  /* …except the measured ring this page sets INLINE on the one franchise
-     ground that needs it, which the blanket `filter: none` would strip. */
-  html.dark :global(.brand__art img[style*='drop-shadow']) {
-    filter: revert-layer !important;
-  }
+  /* NO `filter` reset here, unlike an earlier draft of this block. Every tile
+     on this index paints the club's or franchise's OWN colour, which is a dark
+     ground for almost all of them — so a ring belongs on it, and the inline one
+     this page sets is already correct. Resetting the filter also killed
+     `--nfl-logo-ring`, which `nfl-logo-dark-css.ts` emits once guarded by
+     `html.dark` and once UNGUARDED for the dark cuts of stroked clubs; doing
+     that inside an `html.dark` block left Carolina ringed in light mode and
+     bare in dark. The `revert-layer` that was meant to rescue the inline ring
+     could not: the style attribute is not a cascade layer, so it rolled back to
+     the UA value `none`. */
   /* A club nickname is one word; a franchise name is up to four ("Running Down
      The Dream"), so the franchise tiles take a smaller, balanced line rather
      than the nickname's size. Everything else about the tile is identical. */

@@ -37,6 +37,7 @@ import { getLeagueBySlug, type CanonicalLeagueSlug } from '../config/leagues';
 import type { LeagueSlug } from '../types/nav';
 import { luminance, inkOn, type MarkGround } from './nfl-marks';
 import { crestStrokeFilter, withStrokeColors } from './crest-dark-stroke-css';
+import strokeManifest from '../data/crest-dark-stroke-manifest.json';
 import { getTeamAccentPair } from './team-colors';
 import { teamAccentProperty } from './team-accent-css';
 import { resolveMatchupColorVars } from './live/model';
@@ -385,6 +386,18 @@ export interface FranchiseBrand {
   hasDarkCut: boolean;
   /** True when the light crest measured illegible on ink and wears a ring. */
   ringed: boolean;
+  /**
+   * True when the crest was MEASURED illegible on ink, whether or not it ends
+   * up ringed.
+   *
+   * Separate from `ringed` because `iconStrokeDark: false` is a human's
+   * opt-OUT and outranks the measurement — so a franchise can be measured
+   * illegible and still wear no ring. Dark Magicians is exactly that
+   * (`legible: 0.367`, opted out), and copy keyed on `ringed` alone told the
+   * reader their art "measured legible on ink as-is", which is the opposite of
+   * what the manifest records.
+   */
+  measuredIllegible: boolean;
 }
 
 /**
@@ -681,6 +694,10 @@ export function franchiseBrand(
     ownerSince: typeof team.currentOwnerSince === 'number' ? team.currentOwnerSince : null,
     hasDarkCut: Boolean(team.iconDark || team.groupMeDark),
     ringed: Boolean(ring && !team.iconDark),
+    measuredIllegible: strokeManifest.needsStroke.some(
+      (e: { league?: string; franchiseId?: string }) =>
+        e.league === navSlugOf(leagueSlug) && e.franchiseId === team.franchiseId
+    ),
   };
 }
 
@@ -704,11 +721,10 @@ export function franchiseIdFromSlug(
   leagueSlug: CanonicalLeagueSlug,
   segment: string
 ): string | null {
-  const want = String(segment || '')
-    .toLowerCase()
-    .replace(/['’]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+  // `slugify`, not a second copy of its body: the lookup and the slug it is
+  // matching against have to normalise identically, and two copies of the rule
+  // is how they stop doing that.
+  const want = slugify(segment);
   if (!want) return null;
   const teams = teamsOf(leagueSlug);
   const exact = teams.find((t) => franchiseSlug(t) === want);

@@ -110,16 +110,65 @@ describe('FranchiseBrandPage — the dark-swap opt-out', () => {
     expect(INDEX).toMatch(/content: normal !important/);
   });
 
-  it('keeps the inline measured ring, which the blanket filter reset would strip', () => {
-    // The ring is applied INLINE by the caller precisely so it outranks the
-    // global `html.dark` rule and a crest can never wear two. A blanket
-    // `filter: none` in the opt-out would undo that, so the exception is
-    // asserted alongside the reset, in the same file.
-    for (const src of [CSS, INDEX]) {
-      expect(src).toMatch(/filter: none !important/);
-      expect(src).toMatch(/img\[style\*='drop-shadow'\]/);
-      expect(src).toMatch(/filter: revert-layer !important/);
+  it('resets the ring on LIGHT grounds only, never across the board', () => {
+    /**
+     * A blanket `filter: none` also killed `--nfl-logo-ring`, which
+     * `nfl-logo-dark-css.ts` emits TWICE — once guarded by `html.dark`, and
+     * once with no guard at all for the dark cuts of stroked clubs. Resetting
+     * the unguarded rule inside an `html.dark` block gave Carolina a ring in
+     * light mode and none in dark, which is the exact theme dependency this
+     * opt-out exists to remove.
+     */
+    const ringReset = CSS.slice(CSS.indexOf('The RING reset'));
+    for (const sel of [
+      '.cb__cut-box.is-light img',
+      '.cb__ground.is-light .cb__ground-art img',
+      '.cb__situ .cb__pane.is-light img',
+    ]) {
+      expect(ringReset, sel).toContain(`html.dark ${sel}`);
     }
+    // A dark or band ground WANTS its ring and is left alone.
+    expect(ringReset).not.toMatch(/html\.dark \.cb__hero img[^{]*\{[^}]*filter: none/);
+    // The index resets no filter at all — every tile there is a club colour.
+    expect(INDEX).not.toMatch(/filter: none !important/);
+    // `revert-layer` cannot restore an inline style: the style attribute is
+    // not a cascade layer, so it rolls back to the UA value `none`.
+    expect(CSS).not.toMatch(/^\s*filter: revert-layer/m);
+    expect(INDEX).not.toMatch(/^\s*filter: revert-layer/m);
+  });
+
+  it('puts the band demo inside the swap opt-out', () => {
+    // Without a ground class it matched neither opt-out selector. Five
+    // franchises have a LIGHT band slot plus an `iconDark`, so their band demo
+    // silently changed cut in dark mode.
+    expect(PAGE).toContain('class="cb__pane is-band"');
+    expect(CSS).toContain('html.dark .cb__situ .cb__pane.is-band img');
+  });
+
+  it('prints the franchise name WHOLE in the page heading', () => {
+    // An NFL club name IS "City Nick", so the club page splits it and the
+    // heading still identifies the club. A franchise name is not: splitting it
+    // left headings reading "Chaos", "Walking", "Pain" and "Me".
+    expect(PAGE).toMatch(/<h1 class="cb__nick cb__nick--franchise">\{brand\.name\}<\/h1>/);
+  });
+
+  it('uses a visually-hidden class that actually exists', () => {
+    // A live region styled by a class defined nowhere renders as visible body
+    // text reading "Copied https://…".
+    expect(PAGE).toContain('class="visually-hidden" id="cb-copy-status"');
+    expect(PAGE).not.toContain('class="sr-only"');
+    const utilities = read('src/styles/utilities.css');
+    expect(utilities).toMatch(/\.visually-hidden\s*\{/);
+  });
+
+  it('never tells a measured-illegible crest that it measured legible', () => {
+    // `iconStrokeDark: false` is a human's opt-OUT and outranks the
+    // measurement, so a franchise can be measured illegible and wear no ring.
+    // Copy keyed on `ringed` alone said the opposite of the manifest.
+    const dm = franchiseBrand('theleague', '0015');
+    expect(dm?.measuredIllegible).toBe(true);
+    expect(dm?.ringed).toBe(false);
+    expect(PAGE).toContain('brand.measuredIllegible');
   });
 
   it('does not opt the whole page out', () => {
