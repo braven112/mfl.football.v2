@@ -1,0 +1,45 @@
+<!-- ============================================================
+     MAD POWER 99 — the whole MESSAGE6 module, after the change.
+
+     This REPLACES everything currently in the module: the 99 static
+     <tr> rows, the owner guide comment, and the module's own <script>
+     block (the one with parsePoints / convertWinnings /
+     convertDivisionLeader / makeSectionCaption). All of it goes.
+
+     Kept from the original, deliberately: the table and its id, the
+     caption, the colgroup column widths, and the header row. The
+     widget finds the table by id="wwwc", keeps the caption and
+     colgroup as they are, and retitles two header labels in place —
+     POINTS AVG becomes VICTORY PTS, DIVISION LEADERS becomes PLAYOFF
+     STATUS, because neither was true any more.
+
+     Rows are built from MyFantasyLeague on every page load. Nothing
+     here needs editing weekly.
+     ============================================================ -->
+
+<table width="100%" border="0" cellspacing="1" cellpadding="0" id="wwwc">
+  <caption>MAD POWER 99</caption>
+
+  <!-- column width hooks -->
+  <colgroup>
+    <col class="col-rank">
+    <col class="col-team">
+    <col class="col-record">
+    <col class="col-points">
+    <col class="col-winnings">
+    <col class="col-division">
+  </colgroup>
+
+  <!-- Header row. The widget retitles columns 4 and 6 at load; the
+       labels below are what shows if it cannot run. -->
+  <tr>
+    <th scope="col">RANKING</th>
+    <th scope="col">TEAM</th>
+    <th scope="col">RECORD</th>
+    <th scope="col">POINTS AVG</th>
+    <th scope="col">WINNINGS</th>
+    <th scope="col">DIVISION LEADERS</th>
+  </tr>
+</table>
+
+<script src="https://v2.mfl.football/mfl/10105/standings.js" defer></script>
