@@ -1,85 +1,86 @@
 {
-  "encoding": "utf-8",
   "version": "1.0",
+  "encoding": "utf-8",
   "schedule": {
     "weeklySchedule": [
       {
+        "week": "1",
         "matchup": [
           {
             "franchise": [
               {
-                "isHome": "0",
+                "result": "W",
+                "score": "120.54",
                 "id": "0002",
-                "result": "W",
-                "score": "120.54"
-              },
-              {
-                "result": "L",
-                "isHome": "1",
-                "id": "0001",
-                "score": "99.11"
-              }
-            ]
-          },
-          {
-            "franchise": [
-              {
-                "result": "W",
-                "isHome": "0",
-                "id": "0012",
-                "score": "137.56"
-              },
-              {
-                "isHome": "1",
-                "id": "0010",
-                "result": "L",
-                "score": "101.12"
-              }
-            ]
-          },
-          {
-            "franchise": [
-              {
-                "id": "0014",
-                "isHome": "0",
-                "result": "W",
-                "score": "103.16"
-              },
-              {
-                "score": "91.74",
-                "result": "L",
-                "isHome": "1",
-                "id": "0008"
-              }
-            ]
-          },
-          {
-            "franchise": [
-              {
-                "score": "61.62",
-                "result": "L",
-                "id": "0003",
                 "isHome": "0"
               },
               {
-                "score": "131.51",
-                "id": "0005",
+                "id": "0001",
                 "isHome": "1",
-                "result": "W"
+                "score": "99.11",
+                "result": "L"
               }
             ]
           },
           {
             "franchise": [
               {
+                "result": "W",
+                "score": "137.56",
+                "id": "0012",
+                "isHome": "0"
+              },
+              {
                 "result": "L",
-                "id": "0011",
-                "isHome": "0",
-                "score": "83.96"
+                "score": "101.12",
+                "isHome": "1",
+                "id": "0010"
+              }
+            ]
+          },
+          {
+            "franchise": [
+              {
+                "result": "W",
+                "score": "103.16",
+                "id": "0014",
+                "isHome": "0"
               },
               {
                 "isHome": "1",
+                "id": "0008",
+                "result": "L",
+                "score": "91.74"
+              }
+            ]
+          },
+          {
+            "franchise": [
+              {
+                "id": "0003",
+                "isHome": "0",
+                "result": "L",
+                "score": "61.62"
+              },
+              {
+                "result": "W",
+                "score": "131.51",
+                "isHome": "1",
+                "id": "0005"
+              }
+            ]
+          },
+          {
+            "franchise": [
+              {
+                "isHome": "0",
+                "id": "0011",
+                "result": "L",
+                "score": "83.96"
+              },
+              {
                 "id": "0013",
+                "isHome": "1",
                 "result": "W",
                 "score": "138.74"
               }
@@ -89,29 +90,29 @@
             "franchise": [
               {
                 "result": "L",
-                "isHome": "0",
+                "score": "61.32",
                 "id": "0006",
-                "score": "61.32"
+                "isHome": "0"
               },
               {
+                "score": "102.96",
                 "result": "W",
                 "isHome": "1",
-                "id": "0004",
-                "score": "102.96"
+                "id": "0004"
               }
             ]
           },
           {
             "franchise": [
               {
-                "result": "L",
-                "isHome": "0",
                 "id": "0015",
+                "isHome": "0",
+                "result": "L",
                 "score": "95.55"
               },
               {
-                "id": "0009",
                 "isHome": "1",
+                "id": "0009",
                 "result": "W",
                 "score": "129.45"
               }
@@ -120,15 +121,15 @@
           {
             "franchise": [
               {
-                "score": "164.35",
-                "result": "W",
+                "id": "0016",
                 "isHome": "0",
-                "id": "0016"
+                "result": "W",
+                "score": "164.35"
               },
               {
-                "result": "L",
-                "isHome": "1",
                 "id": "0007",
+                "isHome": "1",
+                "result": "L",
                 "score": "125.1"
               }
             ]
@@ -142,26 +143,26 @@
                 "score": "103.16"
               },
               {
-                "score": "120.54",
-                "result": "W",
+                "isHome": "1",
                 "id": "0002",
-                "isHome": "1"
+                "score": "120.54",
+                "result": "W"
               }
             ]
           },
           {
             "franchise": [
               {
-                "isHome": "0",
                 "id": "0008",
-                "result": "L",
-                "score": "91.74"
+                "isHome": "0",
+                "score": "91.74",
+                "result": "L"
               },
               {
                 "score": "99.11",
+                "result": "W",
                 "isHome": "1",
-                "id": "0001",
-                "result": "W"
+                "id": "0001"
               }
             ]
           },
@@ -169,15 +170,15 @@
             "franchise": [
               {
                 "score": "61.62",
+                "result": "L",
                 "isHome": "0",
-                "id": "0003",
-                "result": "L"
+                "id": "0003"
               },
               {
+                "result": "W",
                 "score": "137.56",
                 "id": "0012",
-                "isHome": "1",
-                "result": "W"
+                "isHome": "1"
               }
             ]
           },
@@ -190,25 +191,25 @@
                 "isHome": "0"
               },
               {
-                "id": "0010",
-                "isHome": "1",
+                "score": "101.12",
                 "result": "L",
-                "score": "101.12"
+                "id": "0010",
+                "isHome": "1"
               }
             ]
           },
           {
             "franchise": [
               {
+                "score": "83.96",
                 "result": "L",
-                "isHome": "0",
                 "id": "0011",
-                "score": "83.96"
+                "isHome": "0"
               },
               {
-                "score": "95.55",
-                "id": "0015",
                 "isHome": "1",
+                "id": "0015",
+                "score": "95.55",
                 "result": "W"
               }
             ]
@@ -216,14 +217,14 @@
           {
             "franchise": [
               {
-                "result": "L",
-                "isHome": "0",
                 "id": "0004",
+                "isHome": "0",
+                "result": "L",
                 "score": "102.96"
               },
               {
-                "score": "125.1",
                 "result": "W",
+                "score": "125.1",
                 "isHome": "1",
                 "id": "0007"
               }
@@ -232,10 +233,10 @@
           {
             "franchise": [
               {
-                "score": "138.74",
-                "result": "W",
                 "id": "0013",
-                "isHome": "0"
+                "isHome": "0",
+                "score": "138.74",
+                "result": "W"
               },
               {
                 "score": "129.45",
@@ -248,68 +249,68 @@
           {
             "franchise": [
               {
-                "id": "0006",
                 "isHome": "0",
-                "result": "L",
-                "score": "61.32"
+                "id": "0006",
+                "score": "61.32",
+                "result": "L"
               },
               {
-                "score": "164.35",
-                "result": "W",
+                "isHome": "1",
                 "id": "0016",
-                "isHome": "1"
+                "result": "W",
+                "score": "164.35"
               }
             ]
           }
-        ],
-        "week": "1"
+        ]
       },
       {
+        "week": "2",
         "matchup": [
           {
             "franchise": [
               {
-                "id": "0002",
-                "isHome": "0",
+                "result": "T",
                 "spread": "14.1",
-                "result": "T"
-              },
-              {
-                "result": "T",
-                "spread": "-14.1",
-                "isHome": "1",
-                "id": "0012"
-              }
-            ]
-          },
-          {
-            "franchise": [
-              {
-                "result": "T",
-                "spread": "-12.8",
-                "id": "0010",
+                "id": "0002",
                 "isHome": "0"
               },
               {
-                "spread": "12.8",
-                "result": "T",
-                "id": "0001",
-                "isHome": "1"
+                "id": "0012",
+                "isHome": "1",
+                "spread": "-14.1",
+                "result": "T"
               }
             ]
           },
           {
             "franchise": [
               {
-                "spread": "-1.9",
-                "result": "T",
+                "spread": "-12.8",
+                "id": "0010",
                 "isHome": "0",
-                "id": "0014"
+                "result": "T"
+              },
+              {
+                "spread": "12.8",
+                "isHome": "1",
+                "id": "0001",
+                "result": "T"
+              }
+            ]
+          },
+          {
+            "franchise": [
+              {
+                "id": "0014",
+                "isHome": "0",
+                "spread": "-9.6",
+                "result": "T"
               },
               {
                 "isHome": "1",
                 "id": "0003",
-                "spread": "1.9",
+                "spread": "9.6",
                 "result": "T"
               }
             ]
@@ -317,32 +318,32 @@
           {
             "franchise": [
               {
-                "isHome": "0",
-                "id": "0005",
                 "result": "T",
-                "spread": "6.8"
+                "spread": "6.8",
+                "id": "0005",
+                "isHome": "0"
               },
               {
-                "result": "T",
-                "spread": "-6.8",
                 "id": "0008",
-                "isHome": "1"
+                "isHome": "1",
+                "spread": "-6.8",
+                "result": "T"
               }
             ]
           },
           {
             "franchise": [
               {
-                "id": "0011",
-                "isHome": "0",
+                "result": "T",
                 "spread": "-2.6",
-                "result": "T"
+                "id": "0011",
+                "isHome": "0"
               },
               {
                 "spread": "2.6",
-                "result": "T",
+                "isHome": "1",
                 "id": "0004",
-                "isHome": "1"
+                "result": "T"
               }
             ]
           },
@@ -350,14 +351,14 @@
             "franchise": [
               {
                 "spread": "-22",
-                "result": "T",
+                "id": "0013",
                 "isHome": "0",
-                "id": "0013"
+                "result": "T"
               },
               {
+                "spread": "22",
                 "id": "0006",
                 "isHome": "1",
-                "spread": "22",
                 "result": "T"
               }
             ]
@@ -372,9 +373,9 @@
               },
               {
                 "spread": "-24.5",
-                "result": "T",
+                "id": "0016",
                 "isHome": "1",
-                "id": "0016"
+                "result": "T"
               }
             ]
           },
@@ -382,14 +383,14 @@
             "franchise": [
               {
                 "spread": "17.4",
-                "result": "T",
                 "id": "0007",
-                "isHome": "0"
+                "isHome": "0",
+                "result": "T"
               },
               {
+                "spread": "-17.4",
                 "isHome": "1",
                 "id": "0009",
-                "spread": "-17.4",
                 "result": "T"
               }
             ]
@@ -397,58 +398,58 @@
           {
             "franchise": [
               {
-                "spread": "-7.4",
                 "result": "T",
+                "id": "0013",
                 "isHome": "0",
-                "id": "0013"
+                "spread": "-7.4"
               },
               {
                 "result": "T",
-                "spread": "7.4",
                 "id": "0002",
-                "isHome": "1"
+                "isHome": "1",
+                "spread": "7.4"
               }
             ]
           },
           {
             "franchise": [
               {
-                "spread": "-4.2",
                 "result": "T",
                 "id": "0006",
-                "isHome": "0"
+                "isHome": "0",
+                "spread": "-4.2"
               },
               {
-                "spread": "4.2",
-                "result": "T",
                 "id": "0001",
-                "isHome": "1"
+                "isHome": "1",
+                "spread": "4.2",
+                "result": "T"
               }
             ]
           },
           {
             "franchise": [
               {
+                "result": "T",
                 "isHome": "0",
                 "id": "0011",
-                "result": "T",
                 "spread": "41.6"
               },
               {
-                "isHome": "1",
-                "id": "0012",
                 "result": "T",
-                "spread": "-41.6"
+                "spread": "-41.6",
+                "id": "0012",
+                "isHome": "1"
               }
             ]
           },
           {
             "franchise": [
               {
-                "isHome": "0",
+                "result": "T",
                 "id": "0004",
-                "spread": "24.1",
-                "result": "T"
+                "isHome": "0",
+                "spread": "24.1"
               },
               {
                 "id": "0010",
@@ -461,14 +462,14 @@
           {
             "franchise": [
               {
+                "result": "T",
                 "isHome": "0",
                 "id": "0015",
-                "spread": "-15.5",
-                "result": "T"
+                "spread": "-23.1"
               },
               {
                 "result": "T",
-                "spread": "15.5",
+                "spread": "23.1",
                 "id": "0003",
                 "isHome": "1"
               }
@@ -477,99 +478,14 @@
           {
             "franchise": [
               {
-                "result": "T",
-                "spread": "0.7",
+                "id": "0007",
                 "isHome": "0",
-                "id": "0007"
+                "spread": "0.7",
+                "result": "T"
               },
               {
                 "result": "T",
                 "spread": "-0.7",
-                "isHome": "1",
-                "id": "0005"
-              }
-            ]
-          },
-          {
-            "franchise": [
-              {
-                "spread": "-28.1",
-                "result": "T",
-                "id": "0009",
-                "isHome": "0"
-              },
-              {
-                "isHome": "1",
-                "id": "0014",
-                "spread": "28.1",
-                "result": "T"
-              }
-            ]
-          },
-          {
-            "franchise": [
-              {
-                "spread": "-19.9",
-                "result": "T",
-                "id": "0016",
-                "isHome": "0"
-              },
-              {
-                "spread": "19.9",
-                "result": "T",
-                "isHome": "1",
-                "id": "0008"
-              }
-            ]
-          }
-        ],
-        "week": "2"
-      },
-      {
-        "matchup": [
-          {
-            "franchise": [
-              {
-                "result": "T",
-                "spread": "-19.4",
-                "isHome": "0",
-                "id": "0002"
-              },
-              {
-                "spread": "19.4",
-                "result": "T",
-                "isHome": "1",
-                "id": "0010"
-              }
-            ]
-          },
-          {
-            "franchise": [
-              {
-                "spread": "45.1",
-                "result": "T",
-                "id": "0001",
-                "isHome": "0"
-              },
-              {
-                "id": "0012",
-                "isHome": "1",
-                "spread": "-45.1",
-                "result": "T"
-              }
-            ]
-          },
-          {
-            "franchise": [
-              {
-                "isHome": "0",
-                "id": "0014",
-                "spread": "28.3",
-                "result": "T"
-              },
-              {
-                "result": "T",
-                "spread": "-28.3",
                 "id": "0005",
                 "isHome": "1"
               }
@@ -578,15 +494,15 @@
           {
             "franchise": [
               {
-                "id": "0008",
-                "isHome": "0",
                 "result": "T",
-                "spread": "-30.1"
+                "isHome": "0",
+                "id": "0009",
+                "spread": "-28.1"
               },
               {
-                "id": "0003",
+                "spread": "28.1",
+                "id": "0014",
                 "isHome": "1",
-                "spread": "30.1",
                 "result": "T"
               }
             ]
@@ -594,31 +510,115 @@
           {
             "franchise": [
               {
-                "spread": "-22.6",
+                "spread": "-19.9",
+                "id": "0016",
+                "isHome": "0",
+                "result": "T"
+              },
+              {
                 "result": "T",
+                "isHome": "1",
+                "id": "0008",
+                "spread": "19.9"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "matchup": [
+          {
+            "franchise": [
+              {
+                "id": "0002",
+                "isHome": "0",
+                "spread": "-19.4",
+                "result": "T"
+              },
+              {
+                "result": "T",
+                "spread": "19.4",
+                "id": "0010",
+                "isHome": "1"
+              }
+            ]
+          },
+          {
+            "franchise": [
+              {
+                "result": "T",
+                "spread": "45.1",
+                "id": "0001",
+                "isHome": "0"
+              },
+              {
+                "result": "T",
+                "spread": "-45.1",
+                "isHome": "1",
+                "id": "0012"
+              }
+            ]
+          },
+          {
+            "franchise": [
+              {
+                "id": "0014",
+                "isHome": "0",
+                "spread": "28.3",
+                "result": "T"
+              },
+              {
+                "spread": "-28.3",
+                "isHome": "1",
+                "id": "0005",
+                "result": "T"
+              }
+            ]
+          },
+          {
+            "franchise": [
+              {
+                "result": "T",
+                "spread": "-30.1",
+                "id": "0008",
+                "isHome": "0"
+              },
+              {
+                "result": "T",
+                "isHome": "1",
+                "id": "0003",
+                "spread": "30.1"
+              }
+            ]
+          },
+          {
+            "franchise": [
+              {
+                "result": "T",
+                "spread": "-22.6",
                 "isHome": "0",
                 "id": "0011"
               },
               {
                 "id": "0006",
                 "isHome": "1",
-                "result": "T",
-                "spread": "22.6"
+                "spread": "22.6",
+                "result": "T"
               }
             ]
           },
           {
             "franchise": [
               {
-                "isHome": "0",
                 "id": "0004",
+                "isHome": "0",
                 "spread": "35.8",
                 "result": "T"
               },
               {
+                "result": "T",
                 "isHome": "1",
                 "id": "0013",
-                "result": "T",
                 "spread": "-35.8"
               }
             ]
@@ -626,10 +626,10 @@
           {
             "franchise": [
               {
-                "spread": "29.5",
-                "result": "T",
+                "id": "0015",
                 "isHome": "0",
-                "id": "0015"
+                "spread": "29.5",
+                "result": "T"
               },
               {
                 "result": "T",
@@ -642,16 +642,16 @@
           {
             "franchise": [
               {
+                "spread": "34.9",
                 "id": "0009",
                 "isHome": "0",
-                "result": "T",
-                "spread": "34.9"
+                "result": "T"
               },
               {
                 "result": "T",
-                "spread": "-34.9",
+                "id": "0016",
                 "isHome": "1",
-                "id": "0016"
+                "spread": "-34.9"
               }
             ]
           },
@@ -664,26 +664,26 @@
                 "isHome": "0"
               },
               {
-                "id": "0002",
-                "isHome": "1",
                 "result": "T",
-                "spread": "-28.8"
+                "spread": "-28.8",
+                "isHome": "1",
+                "id": "0002"
               }
             ]
           },
           {
             "franchise": [
               {
-                "spread": "30.8",
-                "result": "T",
                 "id": "0003",
-                "isHome": "0"
+                "isHome": "0",
+                "spread": "30.8",
+                "result": "T"
               },
               {
-                "spread": "-30.8",
                 "result": "T",
+                "isHome": "1",
                 "id": "0001",
-                "isHome": "1"
+                "spread": "-30.8"
               }
             ]
           },
@@ -697,9 +697,9 @@
               },
               {
                 "result": "T",
-                "spread": "-6.1",
                 "id": "0012",
-                "isHome": "1"
+                "isHome": "1",
+                "spread": "-6.1"
               }
             ]
           },
@@ -707,46 +707,62 @@
             "franchise": [
               {
                 "spread": "-2",
-                "result": "T",
+                "id": "0014",
                 "isHome": "0",
-                "id": "0014"
+                "result": "T"
               },
               {
-                "spread": "2",
                 "result": "T",
                 "id": "0010",
-                "isHome": "1"
+                "isHome": "1",
+                "spread": "2"
               }
             ]
           },
           {
             "franchise": [
               {
-                "id": "0011",
-                "isHome": "0",
                 "result": "T",
-                "spread": "41.1"
+                "spread": "41.1",
+                "id": "0011",
+                "isHome": "0"
               },
               {
                 "spread": "-41.1",
-                "result": "T",
                 "isHome": "1",
-                "id": "0007"
+                "id": "0007",
+                "result": "T"
               }
             ]
           },
           {
             "franchise": [
               {
-                "isHome": "0",
-                "id": "0004",
                 "spread": "26.5",
+                "id": "0004",
+                "isHome": "0",
                 "result": "T"
               },
               {
+                "result": "T",
                 "isHome": "1",
                 "id": "0009",
-                "spread": "-26.5",
+                "spread": "-26.5"
+              }
+            ]
+          },
+          {
+            "franchise": [
+              {
+                "id": "0013",
+                "isHome": "0",
+                "spread": "25.6",
+                "result": "T"
+              },
+              {
+                "spread": "-25.6",
+                "id": "0016",
+                "isHome": "1",
                 "result": "T"
               }
             ]
@@ -754,32 +770,16 @@
           {
             "franchise": [
               {
-                "spread": "25.6",
-                "result": "T",
                 "isHome": "0",
-                "id": "0013"
-              },
-              {
-                "result": "T",
-                "spread": "-25.6",
-                "id": "0016",
-                "isHome": "1"
-              }
-            ]
-          },
-          {
-            "franchise": [
-              {
                 "id": "0006",
-                "isHome": "0",
                 "spread": "34.2",
                 "result": "T"
               },
               {
                 "spread": "-34.2",
-                "result": "T",
+                "isHome": "1",
                 "id": "0015",
-                "isHome": "1"
+                "result": "T"
               }
             ]
           }
@@ -792,10 +792,10 @@
           {
             "franchise": [
               {
-                "id": "0005",
-                "isHome": "0",
+                "result": "T",
                 "spread": "-11",
-                "result": "T"
+                "id": "0005",
+                "isHome": "0"
               },
               {
                 "id": "0002",
@@ -808,64 +808,64 @@
           {
             "franchise": [
               {
+                "spread": "0.5",
                 "id": "0014",
                 "isHome": "0",
-                "result": "T",
-                "spread": "0.5"
-              },
-              {
-                "spread": "-0.5",
-                "result": "T",
-                "id": "0001",
-                "isHome": "1"
-              }
-            ]
-          },
-          {
-            "franchise": [
-              {
-                "result": "T",
-                "spread": "45.8",
-                "isHome": "0",
-                "id": "0008"
-              },
-              {
-                "id": "0012",
-                "isHome": "1",
-                "spread": "-45.8",
                 "result": "T"
+              },
+              {
+                "result": "T",
+                "isHome": "1",
+                "id": "0001",
+                "spread": "-0.5"
               }
             ]
           },
           {
             "franchise": [
               {
-                "spread": "39.5",
+                "id": "0008",
+                "isHome": "0",
+                "spread": "45.8",
+                "result": "T"
+              },
+              {
+                "result": "T",
+                "spread": "-45.8",
+                "isHome": "1",
+                "id": "0012"
+              }
+            ]
+          },
+          {
+            "franchise": [
+              {
                 "result": "T",
                 "id": "0003",
-                "isHome": "0"
+                "isHome": "0",
+                "spread": "39.5"
               },
               {
                 "id": "0010",
                 "isHome": "1",
-                "result": "T",
-                "spread": "-39.5"
+                "spread": "-39.5",
+                "result": "T"
               }
             ]
           },
           {
             "franchise": [
               {
-                "isHome": "0",
-                "id": "0011",
                 "spread": "80.4",
+                "id": "0011",
+                "isHome": "0",
                 "result": "T"
               },
               {
-                "spread": "-80.4",
                 "result": "T",
                 "isHome": "1",
-                "id": "0016"
+                "id": "0016",
+                "spread": "-80.4"
               }
             ]
           },
@@ -878,10 +878,10 @@
                 "isHome": "0"
               },
               {
-                "isHome": "1",
+                "spread": "7.4",
                 "id": "0015",
-                "result": "T",
-                "spread": "7.4"
+                "isHome": "1",
+                "result": "T"
               }
             ]
           },
@@ -889,13 +889,13 @@
             "franchise": [
               {
                 "result": "T",
-                "spread": "-13.6",
                 "isHome": "0",
-                "id": "0013"
+                "id": "0013",
+                "spread": "-13.6"
               },
               {
-                "spread": "13.6",
                 "result": "T",
+                "spread": "13.6",
                 "id": "0007",
                 "isHome": "1"
               }
@@ -904,16 +904,16 @@
           {
             "franchise": [
               {
+                "result": "T",
                 "id": "0006",
                 "isHome": "0",
-                "result": "T",
                 "spread": "68.1"
               },
               {
-                "id": "0009",
-                "isHome": "1",
                 "result": "T",
-                "spread": "-68.1"
+                "spread": "-68.1",
+                "isHome": "1",
+                "id": "0009"
               }
             ]
           }
@@ -926,47 +926,47 @@
             "franchise": [
               {
                 "spread": "-8.9",
-                "result": "T",
+                "id": "0009",
                 "isHome": "0",
-                "id": "0009"
+                "result": "T"
               },
               {
-                "isHome": "1",
                 "id": "0002",
-                "result": "T",
-                "spread": "8.9"
+                "isHome": "1",
+                "spread": "8.9",
+                "result": "T"
               }
             ]
           },
           {
             "franchise": [
               {
+                "result": "T",
+                "spread": "-65.2",
                 "id": "0016",
-                "isHome": "0",
-                "result": "T",
-                "spread": "-65.2"
-              },
-              {
-                "spread": "65.2",
-                "result": "T",
-                "id": "0001",
-                "isHome": "1"
-              }
-            ]
-          },
-          {
-            "franchise": [
-              {
-                "spread": "42",
-                "result": "T",
-                "id": "0015",
                 "isHome": "0"
               },
               {
-                "spread": "-42",
-                "result": "T",
+                "id": "0001",
                 "isHome": "1",
-                "id": "0012"
+                "spread": "65.2",
+                "result": "T"
+              }
+            ]
+          },
+          {
+            "franchise": [
+              {
+                "result": "T",
+                "isHome": "0",
+                "id": "0015",
+                "spread": "42"
+              },
+              {
+                "id": "0012",
+                "isHome": "1",
+                "spread": "-42",
+                "result": "T"
               }
             ]
           },
@@ -974,15 +974,15 @@
             "franchise": [
               {
                 "spread": "-24",
-                "result": "T",
+                "id": "0007",
                 "isHome": "0",
-                "id": "0007"
+                "result": "T"
               },
               {
                 "spread": "24",
-                "result": "T",
                 "id": "0010",
-                "isHome": "1"
+                "isHome": "1",
+                "result": "T"
               }
             ]
           },
@@ -995,26 +995,26 @@
                 "id": "0013"
               },
               {
-                "id": "0014",
-                "isHome": "1",
+                "result": "T",
                 "spread": "35.6",
-                "result": "T"
+                "id": "0014",
+                "isHome": "1"
               }
             ]
           },
           {
             "franchise": [
               {
-                "isHome": "0",
                 "id": "0006",
+                "isHome": "0",
                 "spread": "30.4",
                 "result": "T"
               },
               {
-                "isHome": "1",
-                "id": "0008",
+                "result": "T",
                 "spread": "-30.4",
-                "result": "T"
+                "id": "0008",
+                "isHome": "1"
               }
             ]
           },
@@ -1023,29 +1023,29 @@
               {
                 "isHome": "0",
                 "id": "0011",
-                "result": "T",
-                "spread": "-22.3"
+                "spread": "-22.3",
+                "result": "T"
               },
               {
-                "result": "T",
                 "spread": "22.3",
+                "id": "0003",
                 "isHome": "1",
-                "id": "0003"
+                "result": "T"
               }
             ]
           },
           {
             "franchise": [
               {
-                "isHome": "0",
+                "spread": "28.5",
                 "id": "0004",
-                "result": "T",
-                "spread": "28.5"
+                "isHome": "0",
+                "result": "T"
               },
               {
+                "spread": "-28.5",
                 "isHome": "1",
                 "id": "0005",
-                "spread": "-28.5",
                 "result": "T"
               }
             ]
@@ -1053,37 +1053,36 @@
         ]
       },
       {
-        "week": "6",
         "matchup": [
           {
             "franchise": [
               {
-                "isHome": "0",
                 "id": "0002",
+                "isHome": "0",
                 "spread": "-58.9",
                 "result": "T"
               },
               {
                 "id": "0003",
                 "isHome": "1",
-                "result": "T",
-                "spread": "58.9"
+                "spread": "58.9",
+                "result": "T"
               }
             ]
           },
           {
             "franchise": [
               {
-                "result": "T",
-                "spread": "36",
                 "id": "0001",
-                "isHome": "0"
+                "isHome": "0",
+                "spread": "36",
+                "result": "T"
               },
               {
-                "spread": "-36",
                 "result": "T",
+                "isHome": "1",
                 "id": "0005",
-                "isHome": "1"
+                "spread": "-36"
               }
             ]
           },
@@ -1096,9 +1095,9 @@
                 "isHome": "0"
               },
               {
+                "result": "T",
                 "isHome": "1",
                 "id": "0014",
-                "result": "T",
                 "spread": "34.4"
               }
             ]
@@ -1106,42 +1105,42 @@
           {
             "franchise": [
               {
-                "isHome": "0",
-                "id": "0010",
                 "result": "T",
+                "id": "0010",
+                "isHome": "0",
                 "spread": "-9.4"
               },
               {
-                "id": "0008",
+                "result": "T",
                 "isHome": "1",
-                "spread": "9.4",
-                "result": "T"
+                "id": "0008",
+                "spread": "9.4"
               }
             ]
           },
           {
             "franchise": [
               {
-                "id": "0011",
+                "spread": "45.5",
                 "isHome": "0",
-                "result": "T",
-                "spread": "45.5"
+                "id": "0011",
+                "result": "T"
               },
               {
-                "spread": "-45.5",
                 "result": "T",
+                "id": "0009",
                 "isHome": "1",
-                "id": "0009"
+                "spread": "-45.5"
               }
             ]
           },
           {
             "franchise": [
               {
-                "result": "T",
                 "spread": "61.4",
                 "id": "0004",
-                "isHome": "0"
+                "isHome": "0",
+                "result": "T"
               },
               {
                 "isHome": "1",
@@ -1154,15 +1153,15 @@
           {
             "franchise": [
               {
-                "spread": "-43.2",
                 "result": "T",
+                "spread": "-43.2",
                 "id": "0013",
                 "isHome": "0"
               },
               {
-                "id": "0015",
-                "isHome": "1",
                 "result": "T",
+                "isHome": "1",
+                "id": "0015",
                 "spread": "43.2"
               }
             ]
@@ -1176,10 +1175,144 @@
                 "result": "T"
               },
               {
-                "result": "T",
-                "spread": "-63.8",
+                "id": "0007",
                 "isHome": "1",
-                "id": "0007"
+                "spread": "-63.8",
+                "result": "T"
+              }
+            ]
+          }
+        ],
+        "week": "6"
+      },
+      {
+        "week": "7",
+        "matchup": [
+          {
+            "franchise": [
+              {
+                "result": "T",
+                "id": "0015",
+                "isHome": "0",
+                "spread": "25"
+              },
+              {
+                "result": "T",
+                "isHome": "1",
+                "id": "0002",
+                "spread": "-25"
+              }
+            ]
+          },
+          {
+            "franchise": [
+              {
+                "result": "T",
+                "spread": "-26",
+                "id": "0007",
+                "isHome": "0"
+              },
+              {
+                "result": "T",
+                "isHome": "1",
+                "id": "0001",
+                "spread": "26"
+              }
+            ]
+          },
+          {
+            "franchise": [
+              {
+                "result": "T",
+                "spread": "8.1",
+                "isHome": "0",
+                "id": "0009"
+              },
+              {
+                "id": "0012",
+                "isHome": "1",
+                "spread": "-8.1",
+                "result": "T"
+              }
+            ]
+          },
+          {
+            "franchise": [
+              {
+                "id": "0016",
+                "isHome": "0",
+                "spread": "-63.2",
+                "result": "T"
+              },
+              {
+                "result": "T",
+                "spread": "63.2",
+                "id": "0010",
+                "isHome": "1"
+              }
+            ]
+          },
+          {
+            "franchise": [
+              {
+                "result": "T",
+                "id": "0014",
+                "isHome": "0",
+                "spread": "-19.2"
+              },
+              {
+                "result": "T",
+                "spread": "19.2",
+                "isHome": "1",
+                "id": "0011"
+              }
+            ]
+          },
+          {
+            "franchise": [
+              {
+                "id": "0008",
+                "isHome": "0",
+                "spread": "11.2",
+                "result": "T"
+              },
+              {
+                "isHome": "1",
+                "id": "0004",
+                "spread": "-11.2",
+                "result": "T"
+              }
+            ]
+          },
+          {
+            "franchise": [
+              {
+                "spread": "77.1",
+                "id": "0003",
+                "isHome": "0",
+                "result": "T"
+              },
+              {
+                "result": "T",
+                "spread": "-77.1",
+                "id": "0013",
+                "isHome": "1"
+              }
+            ]
+          },
+          {
+            "franchise": [
+              {
+                "spread": "-70.2",
+                "isHome": "0",
+                "id": "0005",
+                "result": "T"
+              },
+              {
+                "result": "T",
+                "isHome": "1",
+                "id": "0006",
+                "spread": "70.2"
               }
             ]
           }
@@ -1190,165 +1323,32 @@
           {
             "franchise": [
               {
-                "spread": "25",
                 "result": "T",
-                "id": "0015",
-                "isHome": "0"
-              },
-              {
-                "isHome": "1",
                 "id": "0002",
-                "result": "T",
-                "spread": "-25"
-              }
-            ]
-          },
-          {
-            "franchise": [
-              {
-                "spread": "-26",
-                "result": "T",
                 "isHome": "0",
-                "id": "0007"
-              },
-              {
-                "result": "T",
-                "spread": "26",
-                "isHome": "1",
-                "id": "0001"
-              }
-            ]
-          },
-          {
-            "franchise": [
-              {
-                "spread": "8.1",
-                "result": "T",
-                "id": "0009",
-                "isHome": "0"
-              },
-              {
-                "result": "T",
-                "spread": "-8.1",
-                "isHome": "1",
-                "id": "0012"
-              }
-            ]
-          },
-          {
-            "franchise": [
-              {
-                "spread": "-63.2",
-                "result": "T",
-                "isHome": "0",
-                "id": "0016"
-              },
-              {
-                "spread": "63.2",
-                "result": "T",
-                "id": "0010",
-                "isHome": "1"
-              }
-            ]
-          },
-          {
-            "franchise": [
-              {
-                "isHome": "0",
-                "id": "0014",
-                "result": "T",
-                "spread": "-19.2"
-              },
-              {
-                "spread": "19.2",
-                "result": "T",
-                "id": "0011",
-                "isHome": "1"
-              }
-            ]
-          },
-          {
-            "franchise": [
-              {
-                "result": "T",
-                "spread": "11.2",
-                "isHome": "0",
-                "id": "0008"
-              },
-              {
-                "id": "0004",
-                "isHome": "1",
-                "spread": "-11.2",
-                "result": "T"
-              }
-            ]
-          },
-          {
-            "franchise": [
-              {
-                "spread": "77.1",
-                "result": "T",
-                "id": "0003",
-                "isHome": "0"
-              },
-              {
-                "isHome": "1",
-                "id": "0013",
-                "spread": "-77.1",
-                "result": "T"
-              }
-            ]
-          },
-          {
-            "franchise": [
-              {
-                "id": "0005",
-                "isHome": "0",
-                "result": "T",
-                "spread": "-70.2"
-              },
-              {
-                "id": "0006",
-                "isHome": "1",
-                "spread": "70.2",
-                "result": "T"
-              }
-            ]
-          }
-        ],
-        "week": "7"
-      },
-      {
-        "matchup": [
-          {
-            "franchise": [
-              {
-                "isHome": "0",
-                "id": "0002",
-                "result": "T",
                 "spread": "-59.2"
               },
               {
-                "result": "T",
                 "spread": "59.2",
+                "id": "0006",
                 "isHome": "1",
-                "id": "0006"
+                "result": "T"
               }
             ]
           },
           {
             "franchise": [
               {
-                "result": "T",
                 "spread": "-15.2",
+                "id": "0001",
                 "isHome": "0",
-                "id": "0001"
+                "result": "T"
               },
               {
-                "isHome": "1",
-                "id": "0011",
+                "result": "T",
                 "spread": "15.2",
-                "result": "T"
+                "isHome": "1",
+                "id": "0011"
               }
             ]
           },
@@ -1362,9 +1362,9 @@
               },
               {
                 "result": "T",
-                "spread": "34.6",
+                "isHome": "1",
                 "id": "0004",
-                "isHome": "1"
+                "spread": "34.6"
               }
             ]
           },
@@ -1377,9 +1377,9 @@
                 "result": "T"
               },
               {
+                "spread": "-37.6",
                 "id": "0013",
                 "isHome": "1",
-                "spread": "-37.6",
                 "result": "T"
               }
             ]
@@ -1387,31 +1387,31 @@
           {
             "franchise": [
               {
+                "spread": "36",
                 "id": "0015",
                 "isHome": "0",
-                "result": "T",
-                "spread": "36"
+                "result": "T"
               },
               {
-                "result": "T",
                 "spread": "-36",
+                "isHome": "1",
                 "id": "0005",
-                "isHome": "1"
+                "result": "T"
               }
             ]
           },
           {
             "franchise": [
               {
-                "result": "T",
                 "spread": "-21.9",
+                "id": "0007",
                 "isHome": "0",
-                "id": "0007"
+                "result": "T"
               },
               {
+                "spread": "21.9",
                 "id": "0014",
                 "isHome": "1",
-                "spread": "21.9",
                 "result": "T"
               }
             ]
@@ -1421,30 +1421,30 @@
               {
                 "result": "T",
                 "spread": "-37.7",
-                "id": "0009",
-                "isHome": "0"
+                "isHome": "0",
+                "id": "0009"
               },
               {
-                "isHome": "1",
-                "id": "0008",
+                "result": "T",
                 "spread": "37.7",
-                "result": "T"
+                "id": "0008",
+                "isHome": "1"
               }
             ]
           },
           {
             "franchise": [
               {
-                "spread": "-102.7",
                 "result": "T",
-                "isHome": "0",
-                "id": "0016"
+                "spread": "-102.7",
+                "id": "0016",
+                "isHome": "0"
               },
               {
-                "spread": "102.7",
-                "result": "T",
+                "isHome": "1",
                 "id": "0003",
-                "isHome": "1"
+                "spread": "102.7",
+                "result": "T"
               }
             ]
           }
@@ -1452,69 +1452,68 @@
         "week": "8"
       },
       {
-        "week": "9",
         "matchup": [
           {
             "franchise": [
               {
-                "id": "0002",
-                "isHome": "0",
                 "result": "T",
-                "spread": "4.6"
+                "spread": "4.6",
+                "id": "0002",
+                "isHome": "0"
               },
               {
                 "id": "0007",
                 "isHome": "1",
-                "result": "T",
-                "spread": "-4.6"
+                "spread": "-4.6",
+                "result": "T"
               }
             ]
           },
           {
             "franchise": [
               {
-                "result": "T",
-                "spread": "30.3",
                 "id": "0001",
-                "isHome": "0"
+                "isHome": "0",
+                "spread": "30.3",
+                "result": "T"
               },
               {
-                "spread": "-30.3",
-                "result": "T",
                 "id": "0009",
-                "isHome": "1"
+                "isHome": "1",
+                "spread": "-30.3",
+                "result": "T"
               }
             ]
           },
           {
             "franchise": [
               {
-                "result": "T",
                 "spread": "26.8",
                 "isHome": "0",
-                "id": "0012"
+                "id": "0012",
+                "result": "T"
               },
               {
-                "spread": "-26.8",
                 "result": "T",
                 "id": "0016",
-                "isHome": "1"
+                "isHome": "1",
+                "spread": "-26.8"
               }
             ]
           },
           {
             "franchise": [
               {
+                "spread": "-5.6",
                 "id": "0010",
                 "isHome": "0",
-                "result": "T",
-                "spread": "-5.6"
+                "result": "T"
               },
               {
-                "spread": "5.6",
                 "result": "T",
                 "id": "0015",
-                "isHome": "1"
+                "isHome": "1",
+                "spread": "5.6"
               }
             ]
           },
@@ -1522,15 +1521,15 @@
             "franchise": [
               {
                 "spread": "-0.2",
-                "result": "T",
+                "isHome": "0",
                 "id": "0014",
-                "isHome": "0"
+                "result": "T"
               },
               {
-                "result": "T",
                 "spread": "0.2",
+                "id": "0004",
                 "isHome": "1",
-                "id": "0004"
+                "result": "T"
               }
             ]
           },
@@ -1538,51 +1537,52 @@
             "franchise": [
               {
                 "spread": "47",
-                "result": "T",
+                "id": "0008",
                 "isHome": "0",
-                "id": "0008"
+                "result": "T"
               },
               {
-                "result": "T",
-                "spread": "-47",
                 "id": "0013",
-                "isHome": "1"
+                "isHome": "1",
+                "spread": "-47",
+                "result": "T"
               }
             ]
           },
           {
             "franchise": [
               {
-                "spread": "-0.3",
                 "result": "T",
                 "isHome": "0",
-                "id": "0003"
+                "id": "0003",
+                "spread": "-0.3"
               },
               {
                 "id": "0006",
                 "isHome": "1",
-                "result": "T",
-                "spread": "0.3"
+                "spread": "0.3",
+                "result": "T"
               }
             ]
           },
           {
             "franchise": [
               {
-                "isHome": "0",
+                "result": "T",
                 "id": "0005",
-                "spread": "-47.5",
-                "result": "T"
+                "isHome": "0",
+                "spread": "-47.5"
               },
               {
+                "result": "T",
                 "isHome": "1",
                 "id": "0011",
-                "result": "T",
                 "spread": "47.5"
               }
             ]
           }
-        ]
+        ],
+        "week": "9"
       },
       {
         "week": "10",
@@ -1590,15 +1590,15 @@
           {
             "franchise": [
               {
-                "isHome": "0",
                 "id": "0002",
-                "result": "T",
-                "spread": "43.8"
+                "isHome": "0",
+                "spread": "43.8",
+                "result": "T"
               },
               {
+                "spread": "-43.8",
                 "id": "0016",
                 "isHome": "1",
-                "spread": "-43.8",
                 "result": "T"
               }
             ]
@@ -1606,80 +1606,96 @@
           {
             "franchise": [
               {
-                "spread": "-3.6",
-                "result": "T",
+                "id": "0001",
                 "isHome": "0",
-                "id": "0001"
+                "spread": "-3.6",
+                "result": "T"
               },
               {
-                "id": "0015",
-                "isHome": "1",
                 "result": "T",
-                "spread": "3.6"
+                "spread": "3.6",
+                "isHome": "1",
+                "id": "0015"
               }
             ]
           },
           {
             "franchise": [
               {
-                "spread": "-12.5",
-                "result": "T",
                 "id": "0012",
-                "isHome": "0"
+                "isHome": "0",
+                "spread": "-12.5",
+                "result": "T"
               },
               {
+                "result": "T",
                 "isHome": "1",
                 "id": "0007",
-                "spread": "12.5",
-                "result": "T"
+                "spread": "12.5"
               }
             ]
           },
           {
             "franchise": [
               {
-                "spread": "28.3",
                 "result": "T",
+                "spread": "28.3",
                 "id": "0010",
                 "isHome": "0"
               },
               {
                 "result": "T",
-                "spread": "-28.3",
+                "isHome": "1",
                 "id": "0009",
-                "isHome": "1"
+                "spread": "-28.3"
               }
             ]
           },
           {
             "franchise": [
               {
-                "isHome": "0",
-                "id": "0014",
                 "result": "T",
-                "spread": "-41.8"
+                "spread": "-41.8",
+                "isHome": "0",
+                "id": "0014"
               },
               {
+                "result": "T",
                 "id": "0006",
                 "isHome": "1",
-                "spread": "41.8",
-                "result": "T"
+                "spread": "41.8"
               }
             ]
           },
           {
             "franchise": [
               {
-                "isHome": "0",
                 "id": "0008",
+                "isHome": "0",
                 "spread": "-7.8",
                 "result": "T"
               },
               {
-                "result": "T",
-                "spread": "7.8",
+                "isHome": "1",
                 "id": "0011",
-                "isHome": "1"
+                "spread": "7.8",
+                "result": "T"
+              }
+            ]
+          },
+          {
+            "franchise": [
+              {
+                "id": "0003",
+                "isHome": "0",
+                "spread": "41.3",
+                "result": "T"
+              },
+              {
+                "spread": "-41.3",
+                "isHome": "1",
+                "id": "0004",
+                "result": "T"
               }
             ]
           },
@@ -1687,31 +1703,15 @@
             "franchise": [
               {
                 "result": "T",
-                "spread": "41.3",
-                "id": "0003",
+                "spread": "7.2",
+                "id": "0005",
                 "isHome": "0"
               },
               {
-                "isHome": "1",
-                "id": "0004",
-                "spread": "-41.3",
-                "result": "T"
-              }
-            ]
-          },
-          {
-            "franchise": [
-              {
-                "isHome": "0",
-                "id": "0005",
-                "spread": "7.2",
-                "result": "T"
-              },
-              {
-                "id": "0013",
-                "isHome": "1",
+                "result": "T",
                 "spread": "-7.2",
-                "result": "T"
+                "id": "0013",
+                "isHome": "1"
               }
             ]
           }
@@ -1723,31 +1723,31 @@
           {
             "franchise": [
               {
-                "isHome": "0",
-                "id": "0002",
                 "spread": "-36.6",
+                "id": "0002",
+                "isHome": "0",
                 "result": "T"
               },
               {
                 "result": "T",
-                "spread": "36.6",
                 "isHome": "1",
-                "id": "0011"
+                "id": "0011",
+                "spread": "36.6"
               }
             ]
           },
           {
             "franchise": [
               {
-                "spread": "3.8",
-                "result": "T",
+                "id": "0001",
                 "isHome": "0",
-                "id": "0001"
+                "spread": "3.8",
+                "result": "T"
               },
               {
-                "id": "0004",
-                "isHome": "1",
                 "result": "T",
+                "isHome": "1",
+                "id": "0004",
                 "spread": "-3.8"
               }
             ]
@@ -1755,16 +1755,16 @@
           {
             "franchise": [
               {
-                "spread": "1.2",
                 "result": "T",
+                "spread": "1.2",
                 "isHome": "0",
                 "id": "0012"
               },
               {
-                "spread": "-1.2",
                 "result": "T",
+                "id": "0013",
                 "isHome": "1",
-                "id": "0013"
+                "spread": "-1.2"
               }
             ]
           },
@@ -1772,9 +1772,9 @@
             "franchise": [
               {
                 "spread": "-39.8",
-                "result": "T",
                 "id": "0010",
-                "isHome": "0"
+                "isHome": "0",
+                "result": "T"
               },
               {
                 "result": "T",
@@ -1787,48 +1787,48 @@
           {
             "franchise": [
               {
-                "isHome": "0",
                 "id": "0015",
+                "isHome": "0",
                 "spread": "7.6",
                 "result": "T"
               },
               {
-                "result": "T",
                 "spread": "-7.6",
+                "isHome": "1",
                 "id": "0014",
-                "isHome": "1"
+                "result": "T"
               }
             ]
           },
           {
             "franchise": [
               {
-                "result": "T",
                 "spread": "-33.4",
                 "id": "0007",
-                "isHome": "0"
-              },
-              {
-                "spread": "33.4",
-                "result": "T",
-                "id": "0008",
-                "isHome": "1"
-              }
-            ]
-          },
-          {
-            "franchise": [
-              {
-                "id": "0009",
                 "isHome": "0",
-                "spread": "-67.8",
                 "result": "T"
               },
               {
                 "result": "T",
-                "spread": "67.8",
+                "isHome": "1",
+                "id": "0008",
+                "spread": "33.4"
+              }
+            ]
+          },
+          {
+            "franchise": [
+              {
+                "result": "T",
+                "spread": "-67.8",
+                "id": "0009",
+                "isHome": "0"
+              },
+              {
+                "result": "T",
                 "id": "0003",
-                "isHome": "1"
+                "isHome": "1",
+                "spread": "67.8"
               }
             ]
           },
@@ -1837,8 +1837,8 @@
               {
                 "result": "T",
                 "spread": "-32.8",
-                "id": "0016",
-                "isHome": "0"
+                "isHome": "0",
+                "id": "0016"
               },
               {
                 "result": "T",
@@ -1851,68 +1851,19 @@
         ]
       },
       {
-        "week": "12",
         "matchup": [
           {
             "franchise": [
               {
                 "result": "T",
-                "spread": "21.4",
+                "id": "0001",
                 "isHome": "0",
-                "id": "0001"
+                "spread": "21.4"
               },
               {
+                "result": "T",
                 "spread": "-21.4",
-                "result": "T",
-                "isHome": "1",
-                "id": "0002"
-              }
-            ]
-          },
-          {
-            "franchise": [
-              {
-                "id": "0010",
-                "isHome": "0",
-                "result": "T",
-                "spread": "36.4"
-              },
-              {
-                "isHome": "1",
-                "id": "0012",
-                "result": "T",
-                "spread": "-36.4"
-              }
-            ]
-          },
-          {
-            "franchise": [
-              {
-                "isHome": "0",
-                "id": "0005",
-                "result": "T",
-                "spread": "-28.3"
-              },
-              {
-                "spread": "28.3",
-                "result": "T",
-                "isHome": "1",
-                "id": "0014"
-              }
-            ]
-          },
-          {
-            "franchise": [
-              {
-                "id": "0003",
-                "isHome": "0",
-                "spread": "30.1",
-                "result": "T"
-              },
-              {
-                "result": "T",
-                "spread": "-30.1",
-                "id": "0008",
+                "id": "0002",
                 "isHome": "1"
               }
             ]
@@ -1920,31 +1871,79 @@
           {
             "franchise": [
               {
-                "id": "0013",
+                "spread": "36.4",
+                "id": "0010",
                 "isHome": "0",
-                "result": "T",
-                "spread": "-54.8"
+                "result": "T"
               },
               {
-                "isHome": "1",
-                "id": "0011",
                 "result": "T",
-                "spread": "54.8"
+                "isHome": "1",
+                "id": "0012",
+                "spread": "-36.4"
               }
             ]
           },
           {
             "franchise": [
               {
-                "isHome": "0",
-                "id": "0004",
-                "spread": "-41.6",
-                "result": "T"
+                "result": "T",
+                "spread": "-28.3",
+                "id": "0005",
+                "isHome": "0"
               },
               {
+                "result": "T",
+                "isHome": "1",
+                "id": "0014",
+                "spread": "28.3"
+              }
+            ]
+          },
+          {
+            "franchise": [
+              {
+                "result": "T",
+                "id": "0003",
+                "isHome": "0",
+                "spread": "30.1"
+              },
+              {
+                "id": "0008",
+                "isHome": "1",
+                "spread": "-30.1",
+                "result": "T"
+              }
+            ]
+          },
+          {
+            "franchise": [
+              {
+                "result": "T",
+                "id": "0013",
+                "isHome": "0",
+                "spread": "-54.8"
+              },
+              {
+                "isHome": "1",
+                "id": "0011",
+                "spread": "54.8",
+                "result": "T"
+              }
+            ]
+          },
+          {
+            "franchise": [
+              {
+                "result": "T",
+                "id": "0004",
+                "isHome": "0",
+                "spread": "-41.6"
+              },
+              {
+                "result": "T",
                 "id": "0006",
                 "isHome": "1",
-                "result": "T",
                 "spread": "41.6"
               }
             ]
@@ -1952,62 +1951,62 @@
           {
             "franchise": [
               {
-                "id": "0009",
-                "isHome": "0",
+                "result": "T",
                 "spread": "-33.9",
-                "result": "T"
+                "isHome": "0",
+                "id": "0009"
               },
               {
-                "spread": "33.9",
-                "result": "T",
+                "id": "0015",
                 "isHome": "1",
-                "id": "0015"
+                "spread": "33.9",
+                "result": "T"
               }
             ]
           },
           {
             "franchise": [
               {
+                "spread": "39.2",
                 "id": "0007",
                 "isHome": "0",
-                "spread": "39.2",
                 "result": "T"
               },
               {
-                "id": "0016",
                 "isHome": "1",
-                "result": "T",
-                "spread": "-39.2"
+                "id": "0016",
+                "spread": "-39.2",
+                "result": "T"
               }
             ]
           },
           {
             "franchise": [
               {
-                "isHome": "0",
                 "id": "0010",
+                "isHome": "0",
                 "spread": "19.4",
                 "result": "T"
               },
               {
                 "result": "T",
-                "spread": "-19.4",
+                "id": "0002",
                 "isHome": "1",
-                "id": "0002"
+                "spread": "-19.4"
               }
             ]
           },
           {
             "franchise": [
               {
+                "result": "T",
                 "id": "0012",
                 "isHome": "0",
-                "result": "T",
                 "spread": "-38.5"
               },
               {
-                "isHome": "1",
                 "id": "0001",
+                "isHome": "1",
                 "spread": "38.5",
                 "result": "T"
               }
@@ -2017,14 +2016,14 @@
             "franchise": [
               {
                 "result": "T",
-                "spread": "41.5",
                 "isHome": "0",
-                "id": "0003"
+                "id": "0003",
+                "spread": "41.5"
               },
               {
+                "result": "T",
                 "id": "0014",
                 "isHome": "1",
-                "result": "T",
                 "spread": "-41.5"
               }
             ]
@@ -2032,16 +2031,16 @@
           {
             "franchise": [
               {
-                "spread": "39.8",
                 "result": "T",
-                "isHome": "0",
-                "id": "0008"
+                "spread": "39.8",
+                "id": "0008",
+                "isHome": "0"
               },
               {
-                "spread": "-39.8",
                 "result": "T",
                 "id": "0005",
-                "isHome": "1"
+                "isHome": "1",
+                "spread": "-39.8"
               }
             ]
           },
@@ -2049,24 +2048,24 @@
             "franchise": [
               {
                 "spread": "-19",
-                "result": "T",
                 "isHome": "0",
-                "id": "0004"
+                "id": "0004",
+                "result": "T"
               },
               {
-                "isHome": "1",
-                "id": "0011",
+                "result": "T",
                 "spread": "19",
-                "result": "T"
+                "id": "0011",
+                "isHome": "1"
               }
             ]
           },
           {
             "franchise": [
               {
+                "result": "T",
                 "id": "0006",
                 "isHome": "0",
-                "result": "T",
                 "spread": "77.4"
               },
               {
@@ -2080,51 +2079,52 @@
           {
             "franchise": [
               {
-                "id": "0016",
+                "result": "T",
                 "isHome": "0",
-                "spread": "-68.8",
-                "result": "T"
+                "id": "0016",
+                "spread": "-68.8"
               },
               {
-                "result": "T",
                 "spread": "68.8",
                 "id": "0015",
-                "isHome": "1"
+                "isHome": "1",
+                "result": "T"
               }
             ]
           },
           {
             "franchise": [
               {
-                "isHome": "0",
-                "id": "0009",
                 "result": "T",
+                "id": "0009",
+                "isHome": "0",
                 "spread": "-4.3"
               },
               {
-                "id": "0007",
-                "isHome": "1",
                 "result": "T",
-                "spread": "4.3"
+                "spread": "4.3",
+                "isHome": "1",
+                "id": "0007"
               }
             ]
           }
-        ]
+        ],
+        "week": "12"
       },
       {
         "matchup": [
           {
             "franchise": [
               {
+                "spread": "-17.6",
                 "id": "0002",
                 "isHome": "0",
-                "spread": "-17.6",
                 "result": "T"
               },
               {
-                "isHome": "1",
-                "id": "0004",
                 "result": "T",
+                "id": "0004",
+                "isHome": "1",
                 "spread": "17.6"
               }
             ]
@@ -2132,16 +2132,16 @@
           {
             "franchise": [
               {
-                "isHome": "0",
+                "result": "T",
                 "id": "0001",
-                "spread": "39.6",
-                "result": "T"
+                "isHome": "0",
+                "spread": "39.6"
               },
               {
                 "isHome": "1",
                 "id": "0013",
-                "result": "T",
-                "spread": "-39.6"
+                "spread": "-39.6",
+                "result": "T"
               }
             ]
           },
@@ -2154,20 +2154,20 @@
                 "result": "T"
               },
               {
-                "isHome": "1",
-                "id": "0006",
                 "result": "T",
-                "spread": "76.2"
+                "spread": "76.2",
+                "isHome": "1",
+                "id": "0006"
               }
             ]
           },
           {
             "franchise": [
               {
+                "spread": "-17.2",
                 "id": "0010",
                 "isHome": "0",
-                "result": "T",
-                "spread": "-17.2"
+                "result": "T"
               },
               {
                 "result": "T",
@@ -2186,9 +2186,9 @@
                 "result": "T"
               },
               {
-                "isHome": "1",
-                "id": "0008",
                 "result": "T",
+                "id": "0008",
+                "isHome": "1",
                 "spread": "3.8"
               }
             ]
@@ -2197,15 +2197,15 @@
             "franchise": [
               {
                 "result": "T",
-                "spread": "-63.5",
                 "id": "0007",
-                "isHome": "0"
+                "isHome": "0",
+                "spread": "-63.5"
               },
               {
                 "spread": "63.5",
-                "result": "T",
+                "isHome": "1",
                 "id": "0003",
-                "isHome": "1"
+                "result": "T"
               }
             ]
           },
@@ -2218,26 +2218,26 @@
                 "isHome": "0"
               },
               {
-                "isHome": "1",
-                "id": "0005",
+                "result": "T",
                 "spread": "-2.1",
-                "result": "T"
+                "isHome": "1",
+                "id": "0005"
               }
             ]
           },
           {
             "franchise": [
               {
+                "spread": "-61.2",
                 "id": "0016",
                 "isHome": "0",
-                "result": "T",
-                "spread": "-61.2"
+                "result": "T"
               },
               {
-                "result": "T",
-                "spread": "61.2",
+                "id": "0014",
                 "isHome": "1",
-                "id": "0014"
+                "spread": "61.2",
+                "result": "T"
               }
             ]
           }
@@ -2252,14 +2252,14 @@
               {
                 "result": "T",
                 "spread": "-17",
-                "isHome": "0",
-                "id": "0012"
+                "id": "0012",
+                "isHome": "0"
               },
               {
-                "result": "T",
                 "spread": "17",
                 "isHome": "1",
-                "id": "0002"
+                "id": "0002",
+                "result": "T"
               }
             ]
           },
@@ -2268,13 +2268,13 @@
               {
                 "id": "0001",
                 "isHome": "0",
-                "result": "T",
-                "spread": "2"
+                "spread": "2",
+                "result": "T"
               },
               {
-                "id": "0010",
-                "isHome": "1",
                 "result": "T",
+                "isHome": "1",
+                "id": "0010",
                 "spread": "-2"
               }
             ]
@@ -2282,16 +2282,16 @@
           {
             "franchise": [
               {
-                "id": "0008",
-                "isHome": "0",
                 "spread": "11.4",
+                "isHome": "0",
+                "id": "0008",
                 "result": "T"
               },
               {
                 "result": "T",
-                "spread": "-11.4",
+                "id": "0014",
                 "isHome": "1",
-                "id": "0014"
+                "spread": "-11.4"
               }
             ]
           },
@@ -2304,73 +2304,73 @@
                 "result": "T"
               },
               {
-                "spread": "69.9",
-                "result": "T",
                 "id": "0003",
-                "isHome": "1"
+                "isHome": "1",
+                "spread": "69.9",
+                "result": "T"
               }
             ]
           },
           {
             "franchise": [
               {
-                "isHome": "0",
+                "spread": "22.6",
                 "id": "0006",
-                "result": "T",
-                "spread": "22.6"
+                "isHome": "0",
+                "result": "T"
               },
               {
                 "spread": "-22.6",
-                "result": "T",
                 "isHome": "1",
-                "id": "0011"
+                "id": "0011",
+                "result": "T"
               }
             ]
           },
           {
             "franchise": [
               {
-                "result": "T",
-                "spread": "-35.8",
                 "id": "0013",
-                "isHome": "0"
+                "isHome": "0",
+                "spread": "-35.8",
+                "result": "T"
               },
               {
-                "result": "T",
-                "spread": "35.8",
+                "isHome": "1",
                 "id": "0004",
-                "isHome": "1"
+                "spread": "35.8",
+                "result": "T"
               }
             ]
           },
           {
             "franchise": [
               {
-                "isHome": "0",
+                "result": "T",
                 "id": "0007",
-                "spread": "-29.5",
-                "result": "T"
+                "isHome": "0",
+                "spread": "-29.5"
               },
               {
                 "spread": "29.5",
-                "result": "T",
                 "id": "0015",
-                "isHome": "1"
+                "isHome": "1",
+                "result": "T"
               }
             ]
           },
           {
             "franchise": [
               {
-                "id": "0016",
-                "isHome": "0",
+                "result": "T",
                 "spread": "-34.9",
-                "result": "T"
+                "isHome": "0",
+                "id": "0016"
               },
               {
+                "result": "T",
                 "isHome": "1",
                 "id": "0009",
-                "result": "T",
                 "spread": "34.9"
               }
             ]
