@@ -20,11 +20,21 @@ Rules that fell out:
 - **Never put a brightness or lightness floor on a palette sampler.** Filter on
   alpha and on *saturation* if you must, never on how light a pixel is. A dark
   crest and a light highlight are both real colours.
-- **Sample the BANNER, not the icon, for small marks.** Icons here are 100×100
-  and blend anything small into its surroundings. Chatmaster's aim red is
-  `#ee3d24` at icon resolution and `#fe3500` from the 950×158 banner — the
-  banner value is the real one. The icon is still right for *dominant* colours
-  (Balls Deep's tan is 30.6% of it, ΔE 1 from the banner's).
+- **Sample the CREST, and specifically the 400×400 `groupMe` cut.** An earlier
+  version of this file said the opposite — "sample the banner, not the icon" —
+  and it was wrong, in a way that took Brandon spotting two bad colours on the
+  page to find. **The banner is not a higher-resolution crest; it is different
+  artwork.** The Micks banner has no gold ring at all, so sampling it sent the
+  pick to the leprechaun's hat buckle, a 0.5% detail; the crest's gold ring is
+  `#fdb73c` at **7.08%**, the third-largest colour in the mark. Resolution was
+  never the real problem, composition was.
+
+  The 100×100 `icon` does blend small marks, so prefer `groupMe` where it
+  exists — but note that the icon and the crest AGREE where the banner does
+  not. Chatmaster's aim red is `#ee3d24` from the icon and `#ee3c23` from the
+  400px crest, a ΔE of under 1; the `#fe3500` this file used to recommend came
+  from the banner and is ΔE 15 from either. The old rule cited that as its
+  evidence and had it exactly backwards.
 - **Pixel counts from two differently-scaled images are not comparable.** A
   check that compared "nearest cluster" from a full-res icon against "body
   cluster" from a resized banner reported bodies *smaller* than the picks.
@@ -50,7 +60,7 @@ Measured against every cluster ≥0.3% of the source, with the repo's
 | Club | Shipped | Nearest real cluster | ΔE |
 |---|---|---|---|
 | Team Minty Fresh, tertiary | `#c1a427` | `#f7c20b` — the star | **23.4** |
-| Muck Juggling Micks, secondary | `#cc7e30` | `#f99d2a` — the beard | **20.4** |
+| Muck Juggling Micks, secondary | `#cc7e30` | `#fdb73c` — the crest's gold ring | **21.0** |
 
 Both are desaturated cousins of a real colour, sitting between two regions of
 the art rather than on either — Micks' in particular lands between the hat
@@ -69,10 +79,24 @@ a swatch list, and the difference is only obvious beside the crest.
 
 Two corollaries the pass had already half-learned:
 
-- **Sample the region, not the image.** Micks' gold is 6.5% of a 44×22 crop
-  around the hat buckle and under 0.5% of the whole banner, where it is below
-  the noise of five different oranges. Crop to the element you are naming, then
-  cluster.
+- **Sample the region, not the image** — but check you are in the right image
+  first. Micks' gold reads as 6.5% of a 44×22 crop around the banner's hat
+  buckle and under 0.5% of the whole banner. On the CREST it needs no crop at
+  all: the gold ring is 7.08% of the mark. A pick that requires you to hunt for
+  a crop is usually a pick from the wrong source.
+
+- **The sweep is mechanical, and it over-fires three times before it is
+  useful.** Comparing every configured colour to its crest's cluster census at
+  ΔE > 10 flags 23 of 40 franchises, because official palettes (the US flag,
+  UCLA, the Raiders) and the deliberate shade-of-primary fourth colours are
+  SUPPOSED to be absent from the art. The signal that actually matches what a
+  human calls "muddy" is narrower: **same hue (within ~12°), crest cluster ≥2%,
+  and the crest colour carrying ≥40 more chroma.** That returns a list you can
+  act on. Corroborating evidence that it is the right filter: it independently
+  flags Gridiron Geeks' `colorSecondary`, and `BAND_ART_DIRECTION` already
+  carries a hand-written override for that exact franchise reading "swaps the
+  muted `colorSecondary` orange for the vivid one, so the accent is visible at
+  all" — someone had already worked around the bug rather than fixing it.
 - **Look at the art.** Both of these were found by a human opening the page,
   not by any check in this repo. Reading the crop at 4× made the answer obvious
   in seconds — the buckle is plainly gold on a plainly brown strap.
