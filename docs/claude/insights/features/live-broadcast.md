@@ -554,6 +554,57 @@ minutes.
 one hook whose period depends on it. Hook *order* stays consistent across
 renders, which is all React requires; there is no early return above it.
 
-Guards: `tests/broadcast-shell-guards.test.ts` § "the board survives being left
-on all night" — seven scans, mutation-tested against a flat watchdog, a reload
-with no stage check, and a heartbeat that never slows.
+**The policy is a pure module, and that was not tidiness.** The first cut held
+all four decisions as inline ternaries in the island and guarded them with text
+scans — which pin the SPELLING and prove nothing about the numbers. Every one of
+these decisions is arithmetic between constants, and the one that actually
+matters cannot be written as a grep at all:
+
+```ts
+watchdogLimit(idle) > pollDelay({ errors: 0, idle })   // for every tier
+```
+
+That invariant is the flat-watchdog regression stated as a property rather than
+as a pattern, so it holds against numbers nobody has thought of yet — change
+`POLL_IDLE_MS` to 90s and the test still knows whether the watchdog followed.
+`src/utils/broadcast-cadence.ts` now owns `pollDelay`, `watchdogLimit`,
+`tickInterval` and `shouldReload`; the island owns the timers. Same split the
+rest of live scoring uses, and for the same reason.
+
+Guards:
+- `tests/broadcast-cadence.test.ts` — 21 behavioural tests of the policy.
+  Mutation-tested against a flat watchdog, an ordering that lets quiet outrank
+  errors, and a reload that forgets the stage check.
+- `tests/broadcast-shell-guards.test.ts` § "the board survives being left on all
+  night" — seven scans of the WIRING, which is what a scan is good for: that the
+  island still asks, and has not re-inlined a constant into a second source of
+  truth the behavioural tests cannot see. Mutation-tested against both.
+
+### The refactor's own bug, and what it exposed
+
+Extracting the cadence policy deleted `STALE_MS` and `QUIET_MS` along with it —
+they sat between two blocks that moved — leaving three bare references in the
+island. `ts(2304) Cannot find name` is a **ReferenceError at runtime**, so the
+board threw on its first render.
+
+**The full unit suite went green anyway: 12,923 tests, not one of which mounted
+this island.** It was only ever scanned as text. `astro check` caught it, and
+that is a three-minute job deliberately kept out of the default suite — so the
+window in which this could have shipped was real.
+
+Two things came out of that, and they matter more than the original fix:
+
+- `tests/broadcast-island-mount.test.ts` — `renderToString` over the island in
+  four states (live, quiet, rehearsal, dead feed). It runs no effects, so it
+  says nothing about the timers, but it executes the whole render body, which
+  is where a board is most often broken outright. It fails on the real bug with
+  the real message.
+- A `*_MS` scan in the shell guards: every duration the island NAMES, it must
+  import or declare. It names the missing constant in 75ms rather than three
+  minutes. `_MS` is a precise enough suffix to scan for without tripping over
+  `JSON` or the all-caps alternations inside a regex literal.
+
+The general lesson is about where this repo's confidence actually comes from: a
+12,000-test suite that never mounts a component cannot tell you the component
+runs. For an island, the cheapest real assertion is `renderToString` and one
+`expect(html).toContain(...)`.

@@ -452,6 +452,7 @@
         "src/utils/broadcast-crest.ts",
         "src/utils/broadcast-demo.ts",
         "src/utils/broadcast-layout.ts",
+        "src/utils/broadcast-cadence.ts",
         "src/utils/broadcast-live-source.ts",
         "src/utils/broadcast-moments.ts",
         "src/utils/broadcast-selection.ts",
@@ -460,8 +461,10 @@
         "src/utils/nfl-scoreboard-source.ts"
       ],
       "tests": [
+        "tests/broadcast-cadence.test.ts",
         "tests/broadcast-carry.test.ts",
         "tests/broadcast-demo.test.ts",
+        "tests/broadcast-island-mount.test.ts",
         "tests/broadcast-layout.test.ts",
         "tests/broadcast-live-source.test.ts",
         "tests/broadcast-moments.test.ts",
