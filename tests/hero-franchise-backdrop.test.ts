@@ -465,3 +465,70 @@ describe('greyscale franchises', () => {
     expect(relativeLuminance(grey)).toBeGreaterThan(relativeLuminance('#808080'));
   });
 });
+
+/**
+ * The accent LADDER, pinned because `/{league}/brand/{team}` now states it as a
+ * rule in prose and the four-colour pass made it load-bearing.
+ *
+ * `resolveAccent` takes the first of secondary -> tertiary -> quaternary ->
+ * primary that carries a hue and clears its floors, and the primary coming
+ * LAST is the deliberate part: the primary is usually the gradient the accent
+ * would have to sit on. Filling the two previously-empty slots for all forty
+ * franchises therefore moved the hero accent on fourteen of them — a change no
+ * diff of the config shows, which is why the order gets a test rather than a
+ * comment.
+ */
+describe('the accent ladder', () => {
+  // Four unmistakably different, well-saturated hues, so whichever one comes
+  // back names the slot it came from. Each clears the 3:1 headline floor and
+  // the distinctness bound on its own, so no candidate is skipped for being
+  // unusable rather than for being outranked.
+  const RED = '#c62828';
+  const GREEN = '#2e7d32';
+  const BLUE = '#1565c0';
+  const PURPLE = '#6a1b9a';
+
+  const cases: Array<[string, Record<string, string>, string]> = [
+    ['secondary wins when every slot is filled', { colorPrimary: RED, colorSecondary: GREEN, colorTertiary: BLUE, colorQuaternary: PURPLE }, GREEN],
+    ['tertiary wins with no secondary', { colorPrimary: RED, colorTertiary: BLUE, colorQuaternary: PURPLE }, BLUE],
+    ['quaternary wins with neither above it', { colorPrimary: RED, colorQuaternary: PURPLE }, PURPLE],
+    ['the primary is the last resort, not the first choice', { colorPrimary: RED }, RED],
+  ];
+
+  // The accent is the winning slot LIFTED to clear the backdrop, never the raw
+  // hex — #2e7d32 comes back as #58975b, the same green a shade brighter. So
+  // the assertion is which candidate it is nearest to, which is what "this slot
+  // won" actually means. An earlier version of this test compared hexes and
+  // failed on all four for that reason.
+  const nearestSlot = (accent: string, team: Record<string, string>) => {
+    const slots = [team.colorPrimary, team.colorSecondary, team.colorTertiary, team.colorQuaternary].filter(Boolean) as string[];
+    return slots.reduce((best, c) => (colorDistance(accent, c) < colorDistance(accent, best) ? c : best), slots[0]);
+  };
+
+  for (const [name, team, expected] of cases) {
+    it(name, () => {
+      const accent = resolveHeroFranchiseBackdrop(team as any, 'theleague')!.accent;
+      expect(nearestSlot(accent, team)).toBe(expected);
+    });
+  }
+
+  it('a hueless slot is skipped rather than taken', () => {
+    // Midwestside's real shape: a gold primary, a black secondary and a grey
+    // tertiary. Both neutrals fall out of the candidate list, so the ladder
+    // reaches the QUATERNARY — which is how their hero accent moved from gold
+    // to #00a9e0 when that slot was filled.
+    const out = resolveHeroFranchiseBackdrop(
+      { colorPrimary: '#ffcd00', colorSecondary: '#000000', colorTertiary: '#63666a', colorQuaternary: '#00a9e0' } as any,
+      'theleague'
+    );
+    expect(out?.accent?.toLowerCase()).toBe('#00a9e0');
+  });
+
+  it('the Brand Book states this order, so the two cannot drift apart', () => {
+    const page = readFileSync(
+      resolve(__dirname, '../src/components/shared/brand/FranchiseBrandPage.astro'),
+      'utf8'
+    );
+    expect(page).toContain('secondary → tertiary → quaternary → primary');
+  });
+});

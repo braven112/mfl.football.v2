@@ -126,6 +126,19 @@ the real utils before and after, from the two config blobs, rather than
 reasoning about any single club. That sweep is what found the fourteen; reading
 the diff found none of them.
 
+The ladder is now **stated on the Brand Book** (`/<league>/brand/<slug>`, in
+`FranchiseBrandPage.astro`) rather than living only in `resolveAccent`'s
+comment, because that page draws a real `CompositeHero` from the real resolver
+— so a reader can see Midwestside's hero come out blue with nothing on the page
+explaining which slot did it. `tests/hero-franchise-backdrop.test.ts` §"the
+accent ladder" pins the order behaviourally AND scans the page for the same
+string, so the prose and the resolver cannot drift apart. Mutation-checked:
+moving `colorPrimary` to the front of the candidate list fails four of them.
+
+Note when writing such a test that the accent is the winning slot **lifted** to
+clear the backdrop, never the raw hex — `#2e7d32` comes back `#58975b`. Assert
+which candidate it is NEAREST to, not equality.
+
 ## Guards that move with the data
 
 Filling every slot invalidated four test fixtures that were asserting the *old*

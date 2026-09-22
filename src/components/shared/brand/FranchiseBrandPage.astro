@@ -204,6 +204,24 @@ const USAGE: Array<{ term: string; detail: string }> = [
         black-and-red franchise in pink.
       </p>
       {/*
+        Added with the four-colour pass (Sep 2026). Every franchise carries all
+        four slots now, and the order is not decoration — `resolveAccent` reads
+        secondary, then tertiary, then quaternary, and only reaches the primary
+        last, because the primary is usually the gradient an accent would have
+        to sit ON. Filling the two new slots therefore MOVED the hero accent on
+        fourteen of the forty clubs. That is invisible from a swatch grid, and
+        the hero example further down this page is drawn from the real resolver
+        — so the rule belongs next to the swatches rather than in the tooltip
+        each caption already carries.
+      */}
+      <p class="cb__note">
+        <strong>Order is a rule, not a ranking.</strong> A hero accent takes the first of
+        <strong>secondary → tertiary → quaternary → primary</strong> that carries a hue and clears
+        its contrast floors — the primary comes <em>last</em>, because it is usually the gradient
+        the accent would sit on. So a colour in the third or fourth slot can lead this club's
+        homepage hero even where nothing else on the site wears it.
+      </p>
+      {/*
         The club page's swatch grid, unchanged — a swatch over its hex. One
         addition a franchise needs and a club does not: the ROLE. An NFL club's
         colours are just its colours, whereas these each mean something

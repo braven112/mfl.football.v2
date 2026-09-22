@@ -458,10 +458,10 @@ function ringFilters(slug: CanonicalLeagueSlug): Record<string, string> {
 
 function colorsOf(team: RawTeam): FranchiseColor[] {
   const rows: Array<[string, string, string | undefined, string]> = [
-    ['colorPrimary', 'Primary', team.colorPrimary, 'The brand lead — panel fills, band anchors, the gradient it starts from.'],
-    ['colorSecondary', 'Secondary', team.colorSecondary, 'The accent: glows, trim, the second gradient stop.'],
-    ['colorTertiary', 'Tertiary', team.colorTertiary, 'A third hue sampled from the artwork.'],
-    ['colorQuaternary', 'Quaternary', team.colorQuaternary, 'A fourth hue sampled from the artwork.'],
+    ['colorPrimary', 'Primary', team.colorPrimary, 'The brand lead — panel fills, band anchors, the gradient it starts from. LAST in the accent ladder, because the primary usually IS the gradient a hero accent would sit on.'],
+    ['colorSecondary', 'Secondary', team.colorSecondary, 'The accent: glows, trim, the second gradient stop. First in the accent ladder — the hero takes this one if it carries a hue and clears its floors.'],
+    ['colorTertiary', 'Tertiary', team.colorTertiary, 'A third brand hue — an official palette, the crest, or a deepened cut of the primary. Second in the accent ladder, so it OUTRANKS the primary on the homepage hero.'],
+    ['colorQuaternary', 'Quaternary', team.colorQuaternary, 'A fourth brand hue, sourced the same way. Third in the accent ladder, still ahead of the primary — a colour in this slot can lead a hero its club never wears elsewhere.'],
     ['colorPrimaryDark', 'Primary — dark theme', team.colorPrimaryDark, 'What the primary becomes on a dark card.'],
     ['colorSecondaryDark', 'Secondary — dark theme', team.colorSecondaryDark, 'What the accent becomes on a dark card.'],
     [
