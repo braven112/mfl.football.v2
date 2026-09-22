@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-09-22T00:05:20.269Z"
+    "fetchedAt": "2026-09-22T00:46:25.265Z"
   },
   "players": [
     {
@@ -883,7 +883,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 2,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "WR"
         ],
@@ -911,12 +911,7 @@
         ]
       },
       "gamesPlayed": 1,
-      "depthChartAhead": [
-        {
-          "id": "16211",
-          "name": "Nacua, Puka"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "16192",
@@ -8500,8 +8495,8 @@
         "status": "Active",
         "active": true,
         "position": "K",
-        "depthChartPosition": "K",
-        "depthChartOrder": 1,
+        "depthChartPosition": null,
+        "depthChartOrder": null,
         "fantasyPositions": [
           "K"
         ],
@@ -20640,7 +20635,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 6,
+        "depthChartOrder": 7,
         "fantasyPositions": [
           "WR"
         ],
@@ -20670,12 +20665,12 @@
       "gamesPlayed": 1,
       "depthChartAhead": [
         {
-          "id": "16211",
-          "name": "Nacua, Puka"
-        },
-        {
           "id": "11675",
           "name": "Adams, Davante"
+        },
+        {
+          "id": "16211",
+          "name": "Nacua, Puka"
         }
       ]
     },
@@ -21290,7 +21285,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 7,
+        "depthChartOrder": 9,
         "fantasyPositions": [
           "WR"
         ],
@@ -21303,12 +21298,12 @@
       "gamesPlayed": null,
       "depthChartAhead": [
         {
-          "id": "16211",
-          "name": "Nacua, Puka"
-        },
-        {
           "id": "11675",
           "name": "Adams, Davante"
+        },
+        {
+          "id": "16211",
+          "name": "Nacua, Puka"
         },
         {
           "id": "16633",
@@ -21602,7 +21597,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 1,
+        "depthChartOrder": 6,
         "fantasyPositions": [
           "WR"
         ],
@@ -21630,7 +21625,12 @@
         ]
       },
       "gamesPlayed": 1,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "11675",
+          "name": "Adams, Davante"
+        }
+      ]
     },
     {
       "id": "16616",
