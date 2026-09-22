@@ -2,6 +2,7 @@ import './src/utils/ensure-pt-timezone';
 import { defineConfig, fontProviders } from 'astro/config';
 import { loadEnv } from 'vite';
 import vercel from '@astrojs/vercel';
+import { REMOTE_MARK_HOSTS } from './src/utils/remote-image';
 import react from '@astrojs/react';
 import { archivedFeedFiles } from './scripts/lib/archived-feed-files.mjs';
 import { schefterArchiveIncludeFiles, scheduleReleaseIncludeFiles } from './scripts/lib/schefter-archive.mjs';
@@ -24,6 +25,41 @@ export default defineConfig({
   compressHTML: true,
   adapter: vercel({
     imageService: true,
+    /**
+     * Vercel's Image Optimization config — AND IT LIVES HERE, NOT IN
+     * `vercel.json`.
+     *
+     * The adapter writes `.vercel/output/config.json` (Build Output API), and
+     * that file is what `/_vercel/image` reads. A `vercel.json` `images` block
+     * is silently ignored on this project: it deploys, it looks configured,
+     * and every optimize request still answers
+     * `400 INVALID_IMAGE_OPTIMIZE_REQUEST`.
+     *
+     * TWO HALVES, BOTH REQUIRED. A request is rejected unless its `w` is in
+     * `sizes` AND its host matches `remotePatterns` — and passing
+     * `imagesConfig` REPLACES the derived default rather than extending it, so
+     * the adapter's own width list (`getDefaultImageConfig`) is restated here
+     * in full. Dropping one of those widths would break every existing
+     * `<Image>` that asks for it; `sizes` also becomes Astro's `breakpoints`.
+     *
+     * 256 is the addition: MFL franchise marks render into boxes of 1.4rem and
+     * 2.25rem, and one league's uploads are 1500x636 PNGs of ~400 KB
+     * (`src/utils/remote-image.ts`). 640 — the smallest the platform served
+     * before — is several times more pixels than those boxes can show.
+     */
+    imagesConfig: {
+      sizes: [256, 640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+      domains: [],
+      // Where our own edge is willing to fetch a source image FROM, which
+      // makes this a security boundary rather than a convenience list. Shared
+      // with `optimizedRemoteImage`, which checks the same list before
+      // rewriting a URL — a host allowed by one and not the other is either a
+      // lost optimization or a 400 with a broken image in its place.
+      remotePatterns: REMOTE_MARK_HOSTS,
+      formats: ['image/webp'],
+      // A franchise's uploaded mark changes about never.
+      minimumCacheTTL: 604800,
+    },
     webAnalytics: {
       enabled: true,
     },

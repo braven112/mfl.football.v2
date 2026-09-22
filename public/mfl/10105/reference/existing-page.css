@@ -1,0 +1,244 @@
+:root {
+  --accent-th: #181818;
+  --accent-line: #4b98e4;
+  /*! --accent-gradients-1: linear-gradient(90deg, rgba(75,152,228,0.25) 0%, rgba(75,152,228,0.9) 50%, rgba(75,152,228,0.25) 100%); */
+  --section-gap: 100px;
+}
+* { scrollbar-color: #4b98e4 #181818; scrollbar-width: auto; }
+td::-webkit-scrollbar { background: #181818; }
+::-webkit-scrollbar { width: 12px; height: 12px; background: none; border: 0; }
+::-webkit-scrollbar-track { background: #181818; border: 0; margin: 2px; border-radius: 5px; }
+::-webkit-scrollbar-thumb { background: #4b98e4; border-radius: 5px; border: 0; }
+::-webkit-scrollbar-thumb:hover,
+::-webkit-scrollbar-thumb:active { background: #4b98e4; }
+::-webkit-scrollbar-thumb:vertical,
+::-webkit-scrollbar-thumb:horizontal { border: 0; }
+::-webkit-scrollbar-button { border-style: solid; height: 12px; width: 12px; background: none; }
+::-webkit-scrollbar-button:vertical:decrement { border-width: 0 6px 10px 6px; border-color: transparent transparent #181818 transparent; }
+::-webkit-scrollbar-button:vertical:decrement:hover { border-color: transparent transparent #4b98e4 transparent; }
+::-webkit-scrollbar-button:vertical:increment { border-width: 10px 6px 0 6px; border-color: #181818 transparent transparent transparent; }
+::-webkit-scrollbar-button:vertical:increment:hover { border-color: #4b98e4 transparent transparent transparent; }
+::-webkit-scrollbar-button:horizontal:decrement { border-width: 6px 10px 6px 0; border-color: transparent #181818 transparent transparent; }
+::-webkit-scrollbar-button:horizontal:decrement:hover { border-color: transparent #4b98e4 transparent transparent; }
+::-webkit-scrollbar-button:horizontal:increment { border-width: 6px 0 6px 10px; border-color: transparent transparent transparent #181818; }
+::-webkit-scrollbar-button:horizontal:increment:hover { border-color: transparent transparent transparent #4b98e4; }
+#madmen #wwwc {
+  border-collapse: collapse;
+  border-spacing: 0;
+  table-layout: fixed;
+  width: 100%;
+  font-family: 'Oswald', sans-serif;
+}
+#madmen #wwwc th {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+  font-size: 12pt !important;
+  font-weight: 500 !important;
+  background: var(--accent-darkest, rgba(0,0,0,0.2));
+  text-align: center;
+  padding: 6px;
+  text-transform: uppercase;
+}
+#madmen #wwwc td {
+  border-bottom: 1px solid var(--accent-line, rgba(0,0,0,0.2));
+  padding: 4px;
+  text-align: center;
+  vertical-align: middle;
+  font-weight: 400;
+  font-size: 16px;
+  text-transform: uppercase;
+}
+#madmen #wwwc td.rank {
+  font-weight: 700 !important;
+  font-size: 16px !important;
+  text-transform: uppercase;
+}
+#madmen #wwwc td.team { text-align: center; }
+#madmen #wwwc td.team .team-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+}
+#madmen #wwwc td.team .team-banner {
+  width: 300px;
+  height: auto;
+  aspect-ratio: 6 / 1;
+  max-width: 100%;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto;
+}
+#madmen #wwwc td.team .team-name {
+  line-height: 1.1;
+  display: block;
+  text-align: center;
+  font-weight: 400;
+  font-size: 12pt;
+  text-transform: uppercase;
+}
+#madmen #wwwc .points,
+#madmen #wwwc .winnings-amount,
+#madmen #wwwc .division-leader-name,
+#madmen #wwwc .wildcard-leader-note {
+  font-weight: 600;
+  font-size: 16px;
+  text-transform: uppercase;
+}
+#madmen #wwwc .highlight-row {
+  background-color: rgb(48, 16, 16) !important;
+}
+#madmen #wwwc .highlight-row .points,
+#madmen #wwwc .highlight-row .rank {
+  color: #e60000 !important;
+}
+#madmen #wwwc .division-row {
+  background-color: rgba(255, 81, 159, 0.1);
+}
+#madmen #wwwc .winnings-row {
+  background-color: rgba(61, 220, 132, 0.1);
+}
+#madmen #wwwc .wildcard-row {
+  background-color: rgb(112, 217, 227, 0.15);
+}
+#madmen #wwwc .winnings-stack,
+#madmen #wwwc .division-leader-stack,
+#madmen #wwwc .wildcard-leader-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+#madmen #wwwc .winnings-icon {
+  color: #3ddc84;
+  font-size: 38px;
+  line-height: 1;
+}
+#madmen #wwwc .division-leader-icon {
+  color: #ff519f;
+  font-size: 32px;
+  line-height: 1;
+}
+#madmen #wwwc .wildcard-leader-icon {
+  color: rgb(89, 224, 255);
+  font-size: 30px;
+  line-height: 1;
+}
+#madmen #wwwc .wildcard-leader-note {
+  /*color: rgba(255, 134, 61, 0.88);*/
+}
+#madmen #wwwc .section-caption-cell {
+  padding: 14px 8px !important;
+  text-align: center !important;
+  font-size: 30px !important;
+  font-weight: 500 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #4b98e4;
+  background:var(--accent-darkest);
+  border: 0 !important;
+  position: relative;
+}
+#madmen #wwwc .section-caption-cell::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: var(--accent-gradients-1);
+  pointer-events: none;
+}
+#madmen #wwwc .section-gap-cell {
+  padding: 0 !important;
+  height: var(--section-gap);
+  border: 0 !important;
+  background: transparent !important;
+}
+.team-banner {
+  opacity: 1;
+  transition: opacity 1s ease 0s;
+}
+.team-banner:hover {
+  opacity: 0.8;
+  transition: opacity 1s ease 0s;
+}
+@media (min-width: 1200px) {
+  #madmen #wwwc col.col-rank { width: 72px; }
+  #madmen #wwwc col.col-team { width: 380px; }
+  #madmen #wwwc col.col-record { width: 120px; }
+  #madmen #wwwc col.col-points { width: 140px; }
+  #madmen #wwwc col.col-winnings { width: 140px; }
+  #madmen #wwwc col.col-division { width: 170px; }
+  #madmen #wwwc td.team .team-banner {
+    width: 300px !important;
+    height: 50px !important;
+    max-width: none !important;
+    aspect-ratio: auto;
+  }
+  #madmen #wwwc td.team .team-stack { min-width: 300px; }
+}
+@media (max-width: 1024px) {
+  #madmen #wwwc td,
+  #madmen #wwwc .points,
+  #madmen #wwwc .winnings-amount,
+  #madmen #wwwc .division-leader-name,
+  #madmen #wwwc .wildcard-leader-note,
+  #madmen #wwwc td.rank { font-size: 14px !important; }
+  #madmen #wwwc th { font-size: 14px !important; }
+  #madmen #wwwc td.team .team-name { font-size: 14px; }
+  #madmen #wwwc .winnings-icon { font-size: 24px; }
+  #madmen #wwwc .division-leader-icon { font-size: 22px; }
+  #madmen #wwwc .wildcard-leader-icon { font-size: 22px; }
+  #madmen #wwwc .section-caption-cell { font-size: 20px !important; }
+  #madmen #wwwc td.team .team-banner {
+    width: 240px !important;
+    height: auto !important;
+    max-width: 100% !important;
+    aspect-ratio: 6 / 1;
+  }
+}
+@media (max-width: 600px) {
+  #madmen #wwwc td,
+  #madmen #wwwc .points,
+  #madmen #wwwc .winnings-amount,
+  #madmen #wwwc .division-leader-name,
+  #madmen #wwwc .wildcard-leader-note,
+  #madmen #wwwc td.rank { font-size: 12px !important; }
+  #madmen #wwwc th { font-size: 12px !important; }
+  #madmen #wwwc td.team .team-name { font-size: 12px; }
+  #madmen #wwwc .winnings-icon { font-size: 18px; }
+  #madmen #wwwc .division-leader-icon { font-size: 18px; }
+  #madmen #wwwc .wildcard-leader-icon { font-size: 18px; }
+  #madmen #wwwc .section-caption-cell { font-size: 17px !important; }
+  #madmen #wwwc td.team .team-banner {
+    width: clamp(220px, 80vw, 280px) !important;
+    height: auto !important;
+    max-width: 100% !important;
+    aspect-ratio: 6 / 1;
+  }
+  #madmen #wwwc col.col-rank { width: 12%; }
+  #madmen #wwwc col.col-record { width: 16%; }
+  #madmen #wwwc col.col-points { width: 18%; }
+  #madmen #wwwc col.col-winnings { width: 18%; }
+  #madmen #wwwc col.col-division { width: 20%; }
+}
+#madmen {
+  overflow: auto;
+  height: 1200px;
+  display: block;
+}
+#madmen td { width: auto; }
+@media (max-width: 768px) {
+  #madmen {
+    max-height: 850px;
+    height: auto;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}

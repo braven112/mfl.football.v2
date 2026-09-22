@@ -19,7 +19,7 @@
 import type { JSX } from 'react';
 import type { LiveLeaders } from '../../../types/live';
 import type { PlayerMeta } from '../../../types/live-scoring';
-import LvCrest from './LvCrest';
+import LvMark from './LvMark';
 
 export interface LvLeadersProps {
   leaders: LiveLeaders | null | undefined;
@@ -46,11 +46,12 @@ export default function LvLeaders({ leaders, meta }: LvLeadersProps): JSX.Elemen
             {teams.map((team, i) => (
               <li className="lv-leaders__row" key={team.franchiseId}>
                 <span className="lv-leaders__pos">{i + 1}</span>
-                <LvCrest
+                <LvMark
                   icon={team.icon}
-                  iconAlt={team.iconAlt}
+                  alt={team.iconAlt}
                   initials={team.initials}
-                  block="lv-leaders"
+                  crop={team.rung === 'mfl'}
+                  classes={{ wrap: 'lv-leaders__crest', crop: 'lv-leaders__crest--crop', text: 'lv-leaders__initials' }}
                 />
                 <span className="lv-leaders__name">{team.nameShort || team.name}</span>
                 {team.yetToPlay > 0 && (

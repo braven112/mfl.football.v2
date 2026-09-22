@@ -106,6 +106,18 @@ export function relativeLuminance(hex: string): number {
 }
 
 /**
+ * Above this luminance a ground counts as LIGHT: it takes near-black ink and
+ * the light-slot mark. One number for every Brand Book half (NFL clubs and
+ * league franchises), so the two can never disagree about "dark enough".
+ */
+export const LIGHT_GROUND_LUMINANCE = 0.42;
+
+/** Ink that reads on a given ground — white on dark, near-black on light. */
+export function inkOn(hex: string): string {
+  return relativeLuminance(hex) > LIGHT_GROUND_LUMINANCE ? '#10141a' : '#ffffff';
+}
+
+/**
  * WCAG 2.1 contrast ratio between two colors (1 = identical, 21 = black/white).
  *
  * Use this — not `colorDistance` — when the question is "can a person read

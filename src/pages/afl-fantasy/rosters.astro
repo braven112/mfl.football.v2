@@ -4,6 +4,7 @@ import FrontOfficeNav from '../../components/shared/front-office-nav/FrontOffice
 import CollegeLogoDarkStyles from '../../components/CollegeLogoDarkStyles.astro';
 import PlayerCell from '../../components/theleague/PlayerCell.astro';
 import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.astro';
+import PlayerInjuryModal from '../../components/theleague/PlayerInjuryModal.astro';
 import { loadWeeklyPlayerResults } from '../../utils/weekly-player-results-feed';
 import AFLActionModal from '../../components/afl-fantasy/AFLActionModal.astro';
 import SignInModal from '../../components/shared/SignInModal.astro';
@@ -45,6 +46,8 @@ import {
 import { getAflLeagueYear, getTestDateFromSearchParams } from '../../utils/league-year';
 import { getCachedRosterFranchises } from '../../utils/mfl-roster-cache';
 import { getLeagueBySlug } from '../../config/leagues';
+import { loadInjuryMap, injuryBadgeLabel, injuryBadgeTitle } from '../../utils/mfl-injuries';
+import '../../styles/injury-indicator.css';
 import { loginUrlFor } from '../../utils/login-redirect';
 import { parseTradeBaitPlayerIds, parseTradeBaitByFranchise } from '../../utils/trade-bait';
 import { getCachedTradeBait } from '../../utils/mfl-trade-bait-cache';
@@ -142,6 +145,16 @@ if (!rostersData?.rosters?.franchise || !playersData?.players?.player) {
 // commit + redeploy. Historical years and Redis-unavailable environments
 // fall back to the feed.
 const aflLeague = getLeagueBySlug('afl-fantasy');
+
+// NFL injury designations (Q / D / O / IR), keyed by MFL player id. This is a
+// DIFFERENT datum from `player.status === 'INJURED_RESERVE'` below, which is
+// MFL's roster BUCKET: the bucket decides which table section a player sits
+// in, the designation decides whether he plays Sunday. Rendering only the
+// bucket is why an owner saw Charbonnet as a healthy active RB while MFL had
+// him on IR with a torn ACL. Deliberately NOT keyed to `selectedYear` — see
+// src/utils/mfl-injuries.ts; this page is pinned to FALLBACK_YEAR 2025 and the
+// injuries feed only exists for 2026, so a year-keyed lookup finds nothing.
+const aflInjuries = loadInjuryMap(getLeagueBySlug('afl-fantasy')!.slug);
 const testDate = getTestDateFromSearchParams(Astro.url.searchParams);
 if (aflLeague && selectedYear === getAflLeagueYear(testDate ?? undefined)) {
   const liveFranchises = await getCachedRosterFranchises(String(selectedYear), aflLeague.id);
@@ -967,17 +980,32 @@ const pageConfig = {
                           espnId={player.espn_id}
                           playerData={buildPlayerModalData(player)}
                         >
-                          {player.isOnTradeBait && (
-                            <a
-                              slot="after-name"
-                              class="trade-bait-link"
-                              href={`/afl-fantasy/front-office/trade-builder?from=${selectedFranchiseId}&player=${player.id}`}
-                              title="On trade block"
-                              aria-label="On trade block"
-                            >
-                              🏷️
-                            </a>
-                          )}
+                          <Fragment slot="after-name">
+                            {player.isOnTradeBait && (
+                              <a
+                                class="trade-bait-link"
+                                href={`/afl-fantasy/front-office/trade-builder?from=${selectedFranchiseId}&player=${player.id}`}
+                                title="On trade block"
+                                aria-label="On trade block"
+                              >
+                                🏷️
+                              </a>
+                            )}
+                            {aflInjuries[player.id] && (
+                              <button
+                                type="button"
+                                class="injury-indicator"
+                                data-player-id={player.id}
+                                data-player-name={player.name}
+                                data-injury-status={aflInjuries[player.id].injuryStatus}
+                                data-injury-body-part={aflInjuries[player.id].injuryBodyPart ?? ''}
+                                title={injuryBadgeTitle(aflInjuries[player.id])}
+                                aria-label={`Injury report: ${player.name} — ${injuryBadgeTitle(aflInjuries[player.id])}`}
+                              >
+                                {injuryBadgeLabel(aflInjuries[player.id].injuryStatus)}
+                              </button>
+                            )}
+                          </Fragment>
                         </PlayerCell>
                       </td>
                       {/* Every viewer gets the sheet: owners for roster
@@ -1643,6 +1671,7 @@ const pageConfig = {
   </section>
 
   <PlayerDetailsModal hideContract />
+  <PlayerInjuryModal />
   <script
     type="application/json"
     id="weekly-player-results"
@@ -1681,6 +1710,44 @@ const pageConfig = {
       const pageRoot = document.querySelector<HTMLElement>('.roster-page');
       if (!pageRoot || pageRoot.dataset.aflInit === '1') return;
       pageRoot.dataset.aflInit = '1';
+
+      // ── Injury badge → injury modal ──
+      // Delegated on pageRoot, NOT on document. The two roster siblings both
+      // render `.roster-page` and both render `.injury-indicator`, so a
+      // document-level listener would survive a cross-league ClientRouter swap
+      // and fire alongside TheLeague's own handler on TheLeague's rows —
+      // opening the modal twice. pageRoot is replaced on every swap, so this
+      // listener dies with the DOM it belongs to and cannot stack or leak.
+      pageRoot.addEventListener('click', (event) => {
+        const btn = (event.target as HTMLElement | null)?.closest<HTMLElement>('.injury-indicator');
+        if (!btn) return;
+
+        // The badge sits inside the player-cell name element, which already
+        // carries the full PlayerDetailsModal JSON — reuse it so the injury
+        // modal's composite band gets team/position/espnId rather than a bare
+        // name on a grey band.
+        let playerMeta: Record<string, any> = {};
+        const modalJson = btn.closest('[data-player-modal]')?.getAttribute('data-player-modal');
+        if (modalJson) {
+          try { playerMeta = JSON.parse(modalJson); } catch { /* leave empty */ }
+        }
+
+        const openInjuryModal = (window as any).openPlayerInjuryModal;
+        if (typeof openInjuryModal !== 'function') {
+          console.warn('openPlayerInjuryModal function not found');
+          return;
+        }
+        openInjuryModal({
+          name: btn.dataset.playerName,
+          injuryStatus: btn.dataset.injuryStatus,
+          injuryBodyPart: btn.dataset.injuryBodyPart,
+          position: playerMeta.position,
+          nflTeam: playerMeta.nflTeam,
+          espnId: playerMeta.espnId,
+          franchiseId: playerMeta.franchiseId,
+          headshot: btn.closest('.player-cell')?.querySelector<HTMLImageElement>('.player-cell__avatar img')?.src,
+        });
+      });
 
       // ── View tab switching ──
       const tabs = document.querySelectorAll<HTMLButtonElement>('.view-tab');

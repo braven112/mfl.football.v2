@@ -42,14 +42,6 @@
       "league": "theleague"
     },
     {
-      "date": "2026-09-10",
-      "type": "enhancement",
-      "summary": "<a href=\"/activity\">Owner Activity</a> is now site analytics: league traffic, per-owner engagement, page reach and app installs — and no transaction leaderboard.",
-      "impact": "user",
-      "area": "other",
-      "league": "afl"
-    },
-    {
       "date": "2026-09-12",
       "type": "new-page",
       "summary": "<a href=\"/front-office\">Front Office</a> now opens straight into your League Planner — extensions, free agent needs, cap metrics and draft assets — with every contract and trade tool one click away in the sidebar.",
@@ -882,6 +874,46 @@
       "summary": "Pecking Order cards now show each team’s logo beside its name, so the write-up gets the full card width on your phone.",
       "impact": "user",
       "area": "standings",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-20",
+      "type": "bug-fix",
+      "summary": "Live scoring holds the last scores it could confirm instead of blanking to an error — with a note saying how old they are — and only gives up after five minutes.",
+      "impact": "user",
+      "area": "other",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-21",
+      "type": "bug-fix",
+      "summary": "<a href=\"/live\">MFL Live</a> said “No matchup this week” for some outside leagues while their teams were being scored. Your real games — both of them, in a league that plays two — are on the board now.",
+      "impact": "user",
+      "area": "live-scoring",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-21",
+      "type": "enhancement",
+      "summary": "Teams from leagues this site doesn’t run now wear their own logos on <a href=\"/live\">MFL Live</a> instead of two grey letters — any shape of upload, cropped square to fit.",
+      "impact": "user",
+      "area": "live-scoring",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-22",
+      "type": "enhancement",
+      "summary": "AFL rosters now flag injured players — a red (Q), (O) or (I) beside the name, tap for the body part. Set Lineup shows it too, in both leagues.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-22",
+      "type": "bug-fix",
+      "summary": "The injury flag’s red was too dark to read on a dark background, and its detail card opened as a white box in dark mode. Both now follow your theme.",
+      "impact": "user",
+      "area": "design-system",
       "league": "both"
     }
   ]

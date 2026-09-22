@@ -35,7 +35,14 @@ import theleagueConfig from '../data/theleague.config.json';
 import aflConfig from '../../data/afl-fantasy/afl.config.json';
 import { getLeagueBySlug, type CanonicalLeagueSlug } from '../config/leagues';
 import type { LeagueSlug } from '../types/nav';
-import { luminance, inkOn, type MarkGround } from './nfl-marks';
+// From the contrast module, NOT `nfl-marks`: that one loads the NFL brand kit
+// at module scope, and this file sits on both leagues' SSR franchise pages.
+import {
+  relativeLuminance as luminance,
+  inkOn,
+  LIGHT_GROUND_LUMINANCE,
+} from './team-color-contrast';
+import type { MarkGround } from './nfl-marks';
 import { crestStrokeFilter, withStrokeColors } from './crest-dark-stroke-css';
 import strokeManifest from '../data/crest-dark-stroke-manifest.json';
 import { getTeamAccentPair } from './team-colors';
@@ -410,7 +417,7 @@ export interface FranchiseBrand {
  * two halves of one page cannot disagree about what "dark enough" means.
  */
 export function bandSlot(hex: string): 'light' | 'dark' {
-  return luminance(hex) > 0.42 ? 'light' : 'dark';
+  return luminance(hex) > LIGHT_GROUND_LUMINANCE ? 'light' : 'dark';
 }
 
 function markUrl(team: RawTeam, id: FranchiseMarkId): string | null {

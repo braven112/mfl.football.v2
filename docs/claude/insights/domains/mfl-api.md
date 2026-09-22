@@ -3396,3 +3396,34 @@ exposed that two of the 2025 copies were frozen before week 14 was scored.
 2007-2024 exactly under the old logic before rewriting them; the fixed logic
 matches MFL's per-week `playerScores` for every rostered player in 2024
 (410/410) and 2025 (405/405). Pinned in `tests/player-season-points.test.ts`.
+
+## 2026-09-21 - `TYPE=liveScoring` Has TWO Shapes, And Only One Names The Opponent
+
+**Context:** MFL Live told every owner in an outside league (Archie's Fantasy Football League, id 10105 on `www48`, 99 franchises) that they had no matchup, while the same feed was returning their live scores.
+
+**Insight:** `export?TYPE=liveScoring` answers in one of two shapes, and which one you get is a property of the LEAGUE, not of the request:
+
+```jsonc
+{"liveScoring":{"matchup":[{"franchise":[{…},{…}]}, …]}}  // grouped — pairings
+{"liveScoring":{"franchise":[{…},{…}, …]}}                // flat  — NO pairings
+```
+
+Scores, `gameSecondsRemaining`, `playersYetToPlay` and the `players.player[]` breakdown are identical in both. Only the grouping differs, so a parser reading the flat shape gets a complete, healthy, well-formed payload with zero matchups — indistinguishable by any shape check from a league where the viewer is genuinely on a bye. TheLeague (13522) and the AFL (19621) both serve the grouped shape, so this is invisible until an outside league appears on a cross-league surface.
+
+`export?TYPE=schedule&W=<week>` is the reliable pairing source for any league, and it is where the two-games-a-week case is visible at all: 10105's week 2 carries 99 matchups over 99 franchises — 198 slots, every franchise scheduled twice. Its `weeklySchedule` is a bare object when `W` is given and an array when it is not, and each `matchup.franchise[]` carries `isHome` ("0"/"1"), `result` and `spread`. A one-sided entry is how MFL writes a BYE.
+
+**Evidence:** Read live while diagnosing. `https://www48.myfantasyleague.com/2026/export?TYPE=liveScoring&L=10105&W=2&DETAILS=1&JSON=1` → `liveScoring.franchise[]`, 99 entries, franchise 0001 at `score: "114.95"` with 9 starters. Same week from 13522 on `www49` → `liveScoring.matchup[]`. `TYPE=schedule&L=10105&W=2` listed 0001 at home to 0097 AND away at 0054.
+
+**Recommendation:** Never treat "no matchups in the liveScoring payload" as "this viewer has a bye". Fall back to `TYPE=schedule&W=` when a league is scoring (real starters / non-zero scores) but came back unpaired — `readLeagueSchedulePairings` in `src/utils/mfl-schedule-pairings.ts`, wired into the shared cross-league read. Check the WEEK in the schedule answer rather than assuming it matches `W`. Guard: `tests/live-schedule-pairings.test.ts` carries both real payload shapes.
+
+## 2026-09-21 - A Franchise `icon` Is Whatever Was Uploaded — Smaller Than `logo`, Never Reliably Square
+
+**Context:** Showing outside-league franchises their own artwork on MFL Live, where the marks render into 1.4rem and 2.25rem boxes.
+
+**Insight:** `league.franchises.franchise[].icon` and `.logo` are both arbitrary uploads. The CONVENTION is `icon` = the small slot, `logo` = the banner, and TheLeague follows it exactly (`/assets/theleague/icons/*.png` against `/assets/theleague/banners/*.png`) — but neither field has an enforced size or aspect ratio, and "smaller" does not mean "square": the historical-art entry in this file records TheLeague's own `icon` values as **300×50 mini-banners**, a 6:1 ratio. League 10105 is the other extreme — all 99 franchises carry a **1500×636 PNG of ~400 KB in BOTH slots**, the commissioner having uploaded the same banner twice.
+
+So neither "prefer `icon` because it is small" nor "the subject is centered" can be assumed from the API. (Both sampled 10105 banners did center their crest and wordmark, which is what makes a center crop the right default — but that is an observation about one league's art, not a contract.)
+
+**Evidence:** `TYPE=league&L=10105` → every franchise has `icon`/`logo` under `fflnetdynamic2026/10105_franchise_{icon,logo}NNNN.png`; fetched, they are 1500×636 PNGs of 392–408 KB, `icon` and `logo` differing by a few KB. Line ~2095 of this file records the 300×50 `icon` mini-banners for TheLeague's own history.
+
+**Recommendation:** Take `icon` first and `logo` only in its absence — that is "the smaller of the two" wherever the convention holds and costs no extra request, and a byte-size probe (2 HEADs per franchise against a host that throttles noisy clients) buys nothing once the mark is served through an image optimizer. Normalize the SHAPE at render time (`object-fit: cover` into a square box), never by trusting the field name, and bound the BYTES through `/_vercel/image` — see `docs/claude/rules/live-scoring.md` and the deployment-domain entry on where that config has to live.

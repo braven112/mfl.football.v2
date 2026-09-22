@@ -19,6 +19,8 @@ export const prerender = false;
 
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import PlayerCell from '../../components/theleague/PlayerCell.astro';
+import { loadInjuryMap, injuryBadgeLabel, injuryBadgeTitle } from '../../utils/mfl-injuries';
+import '../../styles/injury-indicator.css';
 import { getAuthUser } from '../../utils/auth';
 import { loginUrlForRequest } from '../../utils/login-redirect';
 import { getLeagueBySlug } from '../../config/leagues';
@@ -56,6 +58,13 @@ const MFL_LEAGUE_ID = getLeagueBySlug('afl-fantasy')!.id;
 // lineup page from the sibling league's, which carries the same element ids.
 // See the gate in init() for why a shared id is not enough.
 const PAGE_LEAGUE_SLUG = getLeagueBySlug('afl-fantasy')!.slug;
+
+// NFL injury designations (Q / D / O / IR), keyed by MFL player id. Separate
+// from `rosterStatus` below, which is MFL's roster BUCKET: the bucket says a
+// player cannot start, the designation says he might not play. Both lineup
+// pages carried `injury: null` since they shipped, so the one screen where an
+// owner decides who to sit never showed either half of that.
+const lineupInjuries = loadInjuryMap(PAGE_LEAGUE_SLUG);
 const user = getAuthUser(Astro.request);
 if (!user?.franchiseId || user.leagueId !== MFL_LEAGUE_ID) {
   return Astro.redirect(loginUrlForRequest(Astro, getLeagueBySlug('afl-fantasy')!));
@@ -347,7 +356,7 @@ const roster: LineupPlayer[] = rosterPlayers.map((rp: any) => {
     projection: proj,
     last3Avg,
     seasonAvg,
-    injury: null,
+    injury: lineupInjuries[rp.id] ?? null,
     gameLocked,
     gameIndex: gameIdx,
     isBye,
@@ -727,7 +736,16 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
                       mflId={player.id}
                       espnId={player.espnId}
                       size="default"
-                    />
+                    >
+                      {player.injury && (
+                        <span
+                          slot="after-name"
+                          class="injury-indicator injury-indicator--static"
+                          title={injuryBadgeTitle(player.injury)}
+                          aria-label={injuryBadgeTitle(player.injury)}
+                        >{injuryBadgeLabel(player.injury.injuryStatus)}</span>
+                      )}
+                    </PlayerCell>
                   </div>
                 ) : (
                   <div class="lineup-slot__player lineup-slot__player--empty">
@@ -804,7 +822,16 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
                 position={player.position}
                 nflTeam={player.nflTeam}
                 size="compact"
-              />
+              >
+                {player.injury && (
+                  <span
+                    slot="after-name"
+                    class="injury-indicator injury-indicator--static"
+                    title={injuryBadgeTitle(player.injury)}
+                    aria-label={injuryBadgeTitle(player.injury)}
+                  >{injuryBadgeLabel(player.injury.injuryStatus)}</span>
+                )}
+              </PlayerCell>
             </div>
             {player.isBye ? (
               <span class="lineup-bench-row__bye">BYE</span>
@@ -893,6 +920,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
   <!-- Client-side lineup manager -->
   <script>
     import { buildPlayerCellHTML } from '../../utils/player-cell-html';
+    import { injuryBadgeHTML } from '../../utils/mfl-injuries';
     import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD } from '../../constants/roster-constants';
     import { resolveSubmitButtonState } from '../../utils/lineup-submit-state';
     import { selectBenchPlayers, buildBenchRowHTML } from '../../utils/lineup-bench';
@@ -1280,6 +1308,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
           mflId: player.id,
           espnId: player.espnId,
           size: 'default',
+          afterName: player.injury ? injuryBadgeHTML(player.injury) : '',
         });
 
         let gameHtml = '';
@@ -1415,6 +1444,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
             mflId: p.id,
             espnId: p.espnId,
             size: 'compact',
+            afterName: p.injury ? injuryBadgeHTML(p.injury) : '',
           });
 
           const isHome = game ? p.nflTeam === game.home : false;
@@ -1463,6 +1493,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
             mflId: currentPlayer.id,
             espnId: currentPlayer.espnId,
             size: 'compact',
+            afterName: currentPlayer.injury ? injuryBadgeHTML(currentPlayer.injury) : '',
           });
           cdmCurrent.innerHTML = `
             <h3 class="lineup-cdm__section-title section-title">Current Starter</h3>

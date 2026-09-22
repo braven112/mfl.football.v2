@@ -19,6 +19,7 @@
 
 import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD } from '../constants/roster-constants';
 import { buildPlayerCellHTML, escapeHtml as esc } from './player-cell-html';
+import { injuryBadgeHTML, type PlayerInjury } from './mfl-injuries';
 
 /** The slot fields the bench derivation cares about. */
 export interface BenchSlot {
@@ -36,6 +37,8 @@ export interface BenchPlayer {
   gameLocked: boolean;
   gameIndex: number | null;
   isBye: boolean;
+  /** NFL injury designation, when the player carries one. */
+  injury?: PlayerInjury | null;
 }
 
 /** The schedule fields a bench row reads (`GameInfo`, as both pages build it). */
@@ -83,6 +86,9 @@ export function buildBenchRowHTML(player: BenchPlayer, game: BenchGame | null): 
     position: player.position,
     nflTeam: player.nflTeam,
     size: 'compact',
+    // Parity with the `.astro` bench branch, which renders the same badge into
+    // PlayerCell's `after-name` slot. The two renders are a pair.
+    afterName: player.injury ? injuryBadgeHTML(player.injury) : '',
   });
 
   const netHtml = !ch

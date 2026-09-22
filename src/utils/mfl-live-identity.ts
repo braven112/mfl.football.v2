@@ -1,5 +1,5 @@
 /**
- * What a franchise LOOKS like on the MFL Live board — a three-rung ladder.
+ * What a franchise LOOKS like on the MFL Live board — a four-rung ladder.
  *
  * The board spans every league an MFL account is in, and most of them are
  * leagues this site has never heard of. It has artwork for some franchises,
@@ -9,12 +9,25 @@
  *      config. ALWAYS WINS. A TheLeague franchise that renames itself
  *      "Cowboys" keeps its own mark; an owner's real identity outranks a
  *      lookup every time.
- *   2. **A franchise whose name IS an NFL club** — that club's mark and brand
+ *   2. **A mark the franchise UPLOADED to MFL** — its own `icon`, read from
+ *      that league's `TYPE=league` export. Above the NFL match for the same
+ *      reason rung 1 is above everything: art an owner chose is a real
+ *      identity, and an inferred one must never displace it. A league that
+ *      called itself "Saints" AND drew its own crest gets its crest.
+ *   3. **A franchise whose name IS an NFL club** — that club's mark and brand
  *      colour stand in (`nfl-name-match.ts`). Exact whole-name match only.
- *   3. **Everything else** — initials on a neutral field. Initials are a TEXT
+ *   4. **Everything else** — initials on a neutral field. Initials are a TEXT
  *      label, not invented artwork: no fabricated crest, and no invented brand
  *      hue. The two sides of a matchup are separated by a neutral step, which
  *      is a legibility decision rather than a claim about anybody's colours.
+ *
+ * ── AN UPLOADED MARK IS ANY SHAPE AND ANY SIZE ────────────────────────────
+ * "Icon" is MFL's word, not a specification. Archie's Fantasy Football League
+ * uploaded 1500×636 banners of ~400 KB for all 99 of its franchises. So this
+ * rung ships its mark through the image optimizer (`optimizedRemoteImage`) to
+ * bound the BYTES, and is the one rung the UI is allowed to CROP to a square —
+ * rungs 1 and 3 are crests and club marks, where a crop cuts off somebody's
+ * logo. `rung` is what carries that distinction to the renderer.
  *
  * ── COLOURS ARE NOT RESOLVED HERE, ON PURPOSE ─────────────────────────────
  * This module answers "which colours does this franchise CLAIM" and stops.
@@ -28,12 +41,13 @@
  */
 
 import { getLeagueTeamConfig } from './league-team-brands';
+import { optimizedRemoteImage } from './remote-image';
 import { matchNflTeamName } from './nfl-name-match';
 import { getNflTeamColors } from './nfl-team-colors';
 import { getNFLTeamName } from './nfl-logo';
 
 /** Which rung answered. Shipped so the UI can render each honestly. */
-export type IdentityRung = 'league' | 'nfl' | 'text';
+export type IdentityRung = 'league' | 'mfl' | 'nfl' | 'text';
 
 /** The colour CLAIM, in the shape `resolveTeamColorPair` consumes. */
 export interface FranchiseColorClaim {
@@ -98,6 +112,12 @@ export interface ResolveIdentityInput {
   franchiseName: string;
   /** Registry slug when this site runs the league; '' or null when it does not. */
   leagueSlug?: string | null;
+  /**
+   * The mark this franchise uploaded to MFL, from its league's own export
+   * (`readLeagueFranchiseMarks`). Absent for a registered league, which has a
+   * committed crest that outranks it anyway.
+   */
+  mflIcon?: string | null;
 }
 
 export function resolveFranchiseIdentity(input: ResolveIdentityInput): FranchiseIdentity {
@@ -128,7 +148,30 @@ export function resolveFranchiseIdentity(input: ResolveIdentityInput): Franchise
     };
   }
 
-  // ── Rung 2: the name IS an NFL club ─────────────────────────────────────
+  // ── Rung 2: the franchise's OWN uploaded mark ───────────────────────────
+  // Above the NFL match because art an owner CHOSE outranks art we inferred
+  // from their name. Any shape and any size — see this module's header — so it
+  // goes out through the optimizer, and its rung tells the renderer it is the
+  // one mark that may be cropped square.
+  const mflIcon = (input.mflIcon ?? '').trim();
+  if (mflIcon) {
+    const name = franchiseName || `Franchise ${franchiseId}`;
+    return {
+      franchiseId,
+      name,
+      nameShort: name,
+      initials: franchiseInitials(name),
+      icon: optimizedRemoteImage(mflIcon),
+      rung: 'mfl',
+      nflCode: null,
+      // NO colour claim. An uploaded image is not a stated brand colour, and
+      // sampling one out of the pixels would be inventing a claim on an
+      // owner's behalf — the same reason the text rung stays neutral.
+      colors: { color: NEUTRAL_FIELD },
+    };
+  }
+
+  // ── Rung 3: the name IS an NFL club ─────────────────────────────────────
   const nflCode = matchNflTeamName(franchiseName);
   if (nflCode) {
     // Through the accessor, never the table: it normalizes the code and
@@ -157,7 +200,7 @@ export function resolveFranchiseIdentity(input: ResolveIdentityInput): Franchise
     };
   }
 
-  // ── Rung 3: text ────────────────────────────────────────────────────────
+  // ── Rung 4: text ────────────────────────────────────────────────────────
   const name = franchiseName || `Franchise ${franchiseId}`;
   return {
     franchiseId,
@@ -176,5 +219,6 @@ export function identityIconAlt(identity: FranchiseIdentity): string {
   if (identity.rung === 'nfl' && identity.nflCode) {
     return `${getNFLTeamName(identity.nflCode)} logo`;
   }
+  if (identity.rung === 'mfl') return `${identity.name} logo`;
   return identity.rung === 'league' ? `${identity.name} crest` : '';
 }

@@ -16,7 +16,7 @@ import assignments from '../data/nfl-mark-assignments.json';
 import reversals from '../data/nfl-mark-reversals.json';
 import { getAllNFLTeamCodes } from './nfl-logo';
 import { resolveNflDarkLogoUrl } from './nfl-logo-dark-css';
-import { relativeLuminance } from './team-color-contrast';
+import { relativeLuminance, inkOn, LIGHT_GROUND_LUMINANCE } from './team-color-contrast';
 
 /** A surface's ground — NOT the viewer's theme. See the plan's "three grounds". */
 export type MarkGround = 'light' | 'dark' | 'band';
@@ -88,10 +88,7 @@ const TEAMS = (brandKit as { teams: Record<string, BrandKitTeam> }).teams;
  */
 export const luminance = relativeLuminance;
 
-/** Ink that reads on a given ground — white on dark, near-black on light. */
-export function inkOn(hex: string): string {
-  return luminance(hex) > 0.42 ? '#10141a' : '#ffffff';
-}
+export { inkOn };
 
 /**
  * Which assignment slot a club-colour band draws from.
@@ -104,7 +101,7 @@ export function inkOn(hex: string): string {
 export function bandSlot(code: string): 'light' | 'dark' {
   const team = TEAMS[code];
   const colour = team?.colors?.[0] ?? '#000000';
-  return luminance(colour) > 0.42 ? 'light' : 'dark';
+  return luminance(colour) > LIGHT_GROUND_LUMINANCE ? 'light' : 'dark';
 }
 
 /** The mark id a club draws on one ground. */

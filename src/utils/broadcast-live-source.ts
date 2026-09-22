@@ -293,6 +293,16 @@ export async function readOutsideLiveSnapshot(
     return { leagueId: league.id, ok: false, snapshot: empty };
   }
 
+  /**
+   * Named failures, for the same reason the registered path logs them: every
+   * one of these returns the identical `ok: false`, the assembler turns that
+   * into "couldn't read this league", and until 2026-09-20 the only evidence
+   * any of it had happened was an owner's screenshot. A one-line reason is the
+   * difference between triaging the next occurrence and guessing at it.
+   */
+  const note = (reason: string) =>
+    console.warn(`[live-scoring] outside league ${league.id} week ${week}: ${reason}`);
+
   try {
     const url = buildMflExportUrl({
       type: 'liveScoring',
@@ -302,11 +312,23 @@ export async function readOutsideLiveSnapshot(
       host: league.host,
     });
     const response = await mflFetch({ url, method: 'GET', mflUserCookie });
-    if (!response.ok) return { leagueId: league.id, ok: false, snapshot: empty };
+    if (!response.ok) {
+      note(`HTTP ${response.status}`);
+      return { leagueId: league.id, ok: false, snapshot: empty };
+    }
     const body = await response.json().catch(() => null);
-    if (body === null || body?.error) return { leagueId: league.id, ok: false, snapshot: empty };
+    if (body === null) {
+      // The throttle signature — an HTML page under a 200.
+      note('body did not parse as JSON (HTML under a 200?)');
+      return { leagueId: league.id, ok: false, snapshot: empty };
+    }
+    if (body?.error) {
+      note(`MFL error: ${String(body.error).slice(0, 120)}`);
+      return { leagueId: league.id, ok: false, snapshot: empty };
+    }
     return { leagueId: league.id, ok: true, snapshot: parseLiveScoringPayload(body) };
-  } catch {
+  } catch (err) {
+    note(err instanceof Error ? `${err.name}: ${err.message}` : String(err));
     return { leagueId: league.id, ok: false, snapshot: empty };
   }
 }
@@ -464,16 +486,33 @@ export async function loadLeagueProjections(
  */
 const FRANCHISE_NAMES_TTL_MS = 60 * 60 * 1000;
 
-const franchiseNamesCache = (): Map<string, { at: number; names: Record<string, string> }> => {
+/**
+ * One franchise, as the league's own export describes it.
+ *
+ * `icon` is MFL's SMALL slot and `logo` its banner slot — the same convention
+ * TheLeague's own config follows (`/assets/theleague/icons/…` against
+ * `/assets/theleague/banners/…`). So `icon` first and `logo` only in its
+ * absence is "the smaller of the two" in any league that keeps the
+ * convention, at no extra request. Where a commissioner has uploaded the same
+ * banner to both slots — Archie's league put a 1500x636 PNG in each — there is
+ * no smaller one to pick, and the image optimizer is what bounds the bytes.
+ */
+export interface FranchiseMark {
+  name: string;
+  /** The franchise's own uploaded mark: `icon` if it has one, else `logo`. '' when neither. */
+  icon: string;
+}
+
+const franchiseNamesCache = (): Map<string, { at: number; marks: Record<string, FranchiseMark> }> => {
   const g = globalThis as {
-    __mflFranchiseNamesCache?: Map<string, { at: number; names: Record<string, string> }>;
+    __mflFranchiseNamesCache?: Map<string, { at: number; marks: Record<string, FranchiseMark> }>;
   };
   if (!g.__mflFranchiseNamesCache) g.__mflFranchiseNamesCache = new Map();
   return g.__mflFranchiseNamesCache;
 };
 
 /**
- * Every franchise's NAME in one league, keyed by franchise id.
+ * Every franchise's NAME and own uploaded MARK in one league, by franchise id.
  *
  * WHY THIS EXISTS. `myleagues` carries at most the viewer's OWN
  * `franchise_name`, and frequently not even that — so a league this site does
@@ -481,6 +520,11 @@ const franchiseNamesCache = (): Map<string, { at: number; names: Record<string, 
  * "Franchise 0032" with F0 initials on grey for entire leagues, which is also
  * why their NFL crests never appeared: `matchNflTeamName` cannot match a name
  * nobody fetched. One `TYPE=league` export fixes both at once.
+ *
+ * THE MARK RIDES THE SAME READ. `icon`/`logo` are in the payload the names
+ * already come from, so the identity ladder's uploaded-mark rung costs no
+ * request of its own — which is the only reason a board that fans out across
+ * every league an owner is in can afford to show them at all.
  *
  * REGISTERED LEAGUES DO NOT COME HERE. They have committed team brands with
  * colours and crests (`getLeagueTeamBrands`), which is strictly more than this
@@ -490,17 +534,23 @@ const franchiseNamesCache = (): Map<string, { at: number; names: Record<string, 
  * the franchise-id labels it showed before — worse than names, better than
  * nothing rendering.
  */
-export async function readLeagueFranchiseNames(
+export async function readLeagueFranchiseMarks(
   league: BoardLeague,
   year: number,
   mflUserCookie: string,
-): Promise<Record<string, string>> {
+): Promise<Record<string, FranchiseMark>> {
   if (!mflUserCookie || !league.host) return {};
 
-  const key = `${league.id}:${year}`;
+  // THE HOST IS PART OF THE KEY, not decoration. `L` and the host are one
+  // composite key that MFL validates neither half of — a server asked for a
+  // league it does not host answers with its OWN league, a 200 with the right
+  // schema and the wrong league. Keyed on the id alone, one reader whose
+  // `myleagues` named a stale host could poison this cache for every reader
+  // whose host was right.
+  const key = `${league.id}:${league.host}:${year}`;
   const cache = franchiseNamesCache();
   const hit = cache.get(key);
-  if (hit && Date.now() - hit.at < FRANCHISE_NAMES_TTL_MS) return hit.names;
+  if (hit && Date.now() - hit.at < FRANCHISE_NAMES_TTL_MS) return hit.marks;
 
   try {
     const url = buildMflExportUrl({
@@ -519,26 +569,46 @@ export async function readLeagueFranchiseNames(
       ?.league?.franchises?.franchise;
     const rows = Array.isArray(raw) ? raw : raw ? [raw] : [];
 
-    const names: Record<string, string> = {};
+    const marks: Record<string, FranchiseMark> = {};
     for (const row of rows) {
-      const f = (row ?? {}) as { id?: unknown; name?: unknown };
+      const f = (row ?? {}) as { id?: unknown; name?: unknown; icon?: unknown; logo?: unknown };
       const id = `${f.id ?? ''}`.trim();
       const name = `${f.name ?? ''}`.trim();
       // A blank name is NOT recorded. The caller falls back to its own label,
       // and an empty string would override that with nothing at all.
-      if (id && name) names[id.padStart(4, '0')] = name;
+      if (!id || !name) continue;
+      // HTTPS only. This URL is about to be rendered as an `img src` and
+      // handed to our own image optimizer, and MFL serves both schemes.
+      const mark = [f.icon, f.logo]
+        .map((u) => `${u ?? ''}`.trim())
+        .find((u) => u.startsWith('https://'));
+      marks[id.padStart(4, '0')] = { name, icon: mark ?? '' };
     }
 
-    if (Object.keys(names).length === 0) return {};
-    cache.set(key, { at: Date.now(), names });
+    if (Object.keys(marks).length === 0) return {};
+    cache.set(key, { at: Date.now(), marks });
     // Bounded: one entry per league-year, and an owner in 40 leagues is
     // already an outlier.
     if (cache.size > 64) {
       const oldest = [...cache.entries()].sort((a, b) => a[1].at - b[1].at)[0];
       if (oldest) cache.delete(oldest[0]);
     }
-    return names;
+    return marks;
   } catch {
     return {};
   }
+}
+
+/**
+ * Just the names, for the callers that only ever wanted those. One read, one
+ * cache — this is a projection of `readLeagueFranchiseMarks`, never a second
+ * request.
+ */
+export async function readLeagueFranchiseNames(
+  league: BoardLeague,
+  year: number,
+  mflUserCookie: string,
+): Promise<Record<string, string>> {
+  const marks = await readLeagueFranchiseMarks(league, year, mflUserCookie);
+  return Object.fromEntries(Object.entries(marks).map(([id, m]) => [id, m.name]));
 }

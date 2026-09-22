@@ -84,7 +84,10 @@ const { class: className } = Astro.props;
 
   .player-injury-modal__content {
     position: relative;
-    background: white;
+    /* Tokens, not literals: the light values are what this modal already
+       rendered (white / gray-900 / gray-500), so light is unchanged and dark
+       stops shipping a white card on a black (TheLeague) or navy (AFL) page. */
+    background: var(--card-surface);
     border-radius: 12px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
     width: 100%;
@@ -186,7 +189,7 @@ const { class: className } = Astro.props;
   .injury-label {
     font-size: 0.8rem;
     font-weight: 600;
-    color: #64748b;
+    color: var(--content-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.02em;
   }
@@ -194,7 +197,7 @@ const { class: className } = Astro.props;
   .injury-value {
     font-size: 1rem;
     font-weight: 500;
-    color: #1a1a1a;
+    color: var(--page-text);
   }
 
   @media (max-width: 640px) {

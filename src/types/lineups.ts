@@ -11,6 +11,8 @@
  * payload is built (MFL's soft failures, and the saved-vs-unreadable split).
  */
 
+import type { PlayerInjury } from '../utils/mfl-injuries';
+
 /** One rosterable player as the Set Lineup page presents him. */
 export interface LineupPlayer {
   id: string;
@@ -24,7 +26,13 @@ export interface LineupPlayer {
   projection: number | null;
   last3Avg: number | null;
   seasonAvg: number | null;
-  injury: string | null;
+  /**
+   * The NFL injury designation, or null when the player carries none. The
+   * whole object rather than a status string: the badge's tooltip names the
+   * body part, and a bare 'IR' cannot say 'Knee - ACL'. Distinct from
+   * `rosterStatus`, which is MFL's roster BUCKET.
+   */
+  injury: PlayerInjury | null;
   /** True once the player's NFL game has kicked off; the slot cannot change. */
   gameLocked: boolean;
   /** Index into the page's schedule payload; null when unscheduled. */

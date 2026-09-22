@@ -24,18 +24,27 @@ const loadLeagueProjections = vi.fn();
 const readOutsideLiveSnapshot = vi.fn();
 const buildBoardLeagues = vi.fn();
 const fetchMyLeagues = vi.fn();
-const readLeagueFranchiseNames = vi.fn();
+const readLeagueFranchiseMarks = vi.fn();
 
 vi.mock('../src/utils/broadcast-live-source', () => ({
   loadLeagueSnapshot: (...a: unknown[]) => loadLeagueSnapshot(...a),
   loadLeagueProjections: (...a: unknown[]) => loadLeagueProjections(...a),
   readOutsideLiveSnapshot: (...a: unknown[]) => readOutsideLiveSnapshot(...a),
-  readLeagueFranchiseNames: (...a: unknown[]) => readLeagueFranchiseNames(...a),
+  readLeagueFranchiseMarks: (...a: unknown[]) => readLeagueFranchiseMarks(...a),
   buildBoardLeagues: (...a: unknown[]) => buildBoardLeagues(...a),
 }));
 
 vi.mock('../src/utils/my-leagues', () => ({
   fetchMyLeagues: (...a: unknown[]) => fetchMyLeagues(...a),
+}));
+
+/**
+ * The schedule fallback fires for any league that is SCORING but came back
+ * unpaired, which `livePayload()` below is — so without this the suite makes a
+ * real request to MFL. Its own guard is `tests/live-schedule-pairings.test.ts`.
+ */
+vi.mock('../src/utils/mfl-schedule-pairings', () => ({
+  readLeagueSchedulePairings: async () => [],
 }));
 
 const { discoverBoardLeagues, readCrossLeagueLive, CROSS_LEAGUE_FAN_OUT_LIMIT } = await import(
@@ -73,7 +82,7 @@ function unplayedPayload(): LiveSnapshot {
 beforeEach(() => {
   vi.clearAllMocks();
   loadLeagueProjections.mockResolvedValue(new Map());
-  readLeagueFranchiseNames.mockResolvedValue({});
+  readLeagueFranchiseMarks.mockResolvedValue({});
 });
 
 /**
@@ -89,12 +98,20 @@ describe('readCrossLeagueLive — franchise names', () => {
   });
 
   it('fetches names for a league this site does not host, when ASKED', async () => {
-    readLeagueFranchiseNames.mockResolvedValue({ '0015': 'Cowboys', '0032': 'Chiefs' });
+    readLeagueFranchiseMarks.mockResolvedValue({
+      '0015': { name: 'Cowboys', icon: 'https://mfl.example/15.png' },
+      '0032': { name: 'Chiefs', icon: '' },
+    });
     const [read] = await readCrossLeagueLive({
       user, leagues: [league('999')], week: 2, year: 2026, withFranchiseNames: true,
     });
     expect(read.franchiseNames).toEqual({ '0015': 'Cowboys', '0032': 'Chiefs' });
-    expect(readLeagueFranchiseNames).toHaveBeenCalledTimes(1);
+    // The MARK rides the same read — the identity ladder's uploaded-art rung
+    // costs no request of its own. '' for a franchise that uploaded nothing,
+    // never a placeholder: the ladder falls through on empty and would render
+    // a broken image on anything invented.
+    expect(read.franchiseIcons).toEqual({ '0015': 'https://mfl.example/15.png', '0032': '' });
+    expect(readLeagueFranchiseMarks).toHaveBeenCalledTimes(1);
   });
 
   /**
@@ -104,7 +121,7 @@ describe('readCrossLeagueLive — franchise names', () => {
    */
   it('fetches nothing when the caller did not ask', async () => {
     const [read] = await readCrossLeagueLive({ user, leagues: [league('999')], week: 2, year: 2026 });
-    expect(readLeagueFranchiseNames).not.toHaveBeenCalled();
+    expect(readLeagueFranchiseMarks).not.toHaveBeenCalled();
     expect(read.franchiseNames).toEqual({});
   });
 
@@ -114,12 +131,12 @@ describe('readCrossLeagueLive — franchise names', () => {
     const [read] = await readCrossLeagueLive({
       user, leagues: [registered], week: 2, year: 2026, withFranchiseNames: true,
     });
-    expect(readLeagueFranchiseNames).not.toHaveBeenCalled();
+    expect(readLeagueFranchiseMarks).not.toHaveBeenCalled();
     expect(read.franchiseNames).toEqual({});
   });
 
   it('degrades to no names rather than failing the league', async () => {
-    readLeagueFranchiseNames.mockRejectedValue(new Error('MFL timed out'));
+    readLeagueFranchiseMarks.mockRejectedValue(new Error('MFL timed out'));
     const [read] = await readCrossLeagueLive({
       user, leagues: [league('999')], week: 2, year: 2026, withFranchiseNames: true,
     });
@@ -129,8 +146,10 @@ describe('readCrossLeagueLive — franchise names', () => {
   });
 
   it('keeps them per league, never pooled', async () => {
-    readLeagueFranchiseNames.mockImplementation(async (l: any) =>
-      l.id === 'a' ? { '0001': 'Bears' } : { '0001': 'Packers' });
+    readLeagueFranchiseMarks.mockImplementation(async (l: any) =>
+      l.id === 'a'
+        ? { '0001': { name: 'Bears', icon: '' } }
+        : { '0001': { name: 'Packers', icon: '' } });
     const reads = await readCrossLeagueLive({
       user, leagues: [league('a'), league('b')], week: 2, year: 2026, withFranchiseNames: true,
     });

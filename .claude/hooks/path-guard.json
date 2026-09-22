@@ -501,10 +501,16 @@
         "src/pages/live/**",
         "src/types/live.ts",
         "src/types/live-scoring.ts",
+        "src/utils/mfl-schedule-pairings.ts",
+        "src/utils/mfl-live-identity.ts",
+        "src/utils/remote-image.ts",
+        "src/utils/cross-league-live.ts",
         "src/utils/mfl-live-board.ts"
       ],
       "tests": [
         "tests/live-scoring-host-resolution.test.ts",
+        "tests/live-stale-fallback.test.ts",
+        "tests/live-scoring-read-load.test.ts",
         "tests/marquee-live-guard.test.ts",
         "tests/network-badge.test.ts",
         "tests/nfl-live-routes.test.ts",
@@ -529,7 +535,9 @@
         "tests/live-league-board-outside.test.ts",
         "tests/live-league-standings.test.ts",
         "tests/live-league-board-guard.test.ts",
-        "tests/live-row-projections.test.ts"
+        "tests/live-row-projections.test.ts",
+        "tests/live-schedule-pairings.test.ts",
+        "tests/mfl-live-uploaded-mark.test.ts"
       ]
     },
     {

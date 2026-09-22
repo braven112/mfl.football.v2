@@ -111,7 +111,13 @@ const fromFranchiseId =
     ? authUser!.franchiseId!
     : (queryFrom && allTeams.some((t) => t.franchiseId === queryFrom)
         ? queryFrom
-        : authUser?.franchiseId ?? '0001');
+        // The session franchise only when it is an AFL one — a TheLeague
+        // owner's session carries TheLeague's number, and both leagues have a
+        // franchise 0001. The builder renders one club, so it names its
+        // default explicitly (docs/claude/rules/preferred-team.md).
+        : isAflOwner
+          ? authUser!.franchiseId!
+          : '0001');
 
 const fromTeam: AFLTeam | undefined = getTeam(fromFranchiseId);
 const fromConference: ConferenceId | null = fromTeam?.conference ?? null;

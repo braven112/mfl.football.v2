@@ -20,7 +20,7 @@
  */
 import type { JSX } from 'react';
 import type { LiveStandingsRow } from '../../../types/live';
-import LvCrest from './LvCrest';
+import LvMark from './LvMark';
 
 export interface LvStandingsProps {
   /** MFL's rows, or null when the read failed. Never an empty array for that. */
@@ -80,11 +80,12 @@ export default function LvStandings({ rows, leagueName }: LvStandingsProps): JSX
             >
               <td className="lv-standings__rank">{row.rank}</td>
               <th scope="row" className="lv-standings__team">
-                <LvCrest
+                <LvMark
                   icon={row.icon}
-                  iconAlt={row.iconAlt}
+                  alt={row.iconAlt}
                   initials={row.initials}
-                  block="lv-standings"
+                  crop={row.rung === 'mfl'}
+                  classes={{ wrap: 'lv-standings__crest', crop: 'lv-standings__crest--crop', text: 'lv-standings__initials' }}
                 />
                 <span className="lv-standings__name">{row.nameShort || row.name}</span>
                 {/* Not colour alone: the row tints AND says so, because a tint

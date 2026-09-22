@@ -290,7 +290,18 @@ describe('the shell outlives the screen switch', () => {
     });
 
     it('re-finds it in the CURRENT board before rendering', () => {
-      expect(src).toMatch(/board\.panels\.find\(/);
+      /**
+       * `panelViews` counts, `board.panels` counts, a stored object does not.
+       *
+       * The rule is that the open matchup is resolved from THIS render's
+       * payload every render — `panelViews` is `resolvePanelViews(board.panels)`
+       * computed in the render body, so it satisfies it exactly as the raw
+       * array did, and the drill-in gets the stale-hold for free (a dropped
+       * league is most obvious on the one screen watching one game). Pinning
+       * the literal `board.panels` would have failed that improvement while
+       * the rule it guards was never broken.
+       */
+      expect(src).toMatch(/(board\.panels|panelViews)\.find\(/);
       expect(src).toMatch(/\.matchups\.find\(\(m\) => pairingKey\(m\)/);
     });
 

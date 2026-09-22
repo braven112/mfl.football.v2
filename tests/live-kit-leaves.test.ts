@@ -18,6 +18,7 @@ import LvWinProbBar from '../src/components/shared/live/LvWinProbBar';
 import LvRedZoneBanner from '../src/components/shared/live/LvRedZoneBanner';
 import LvEmptyState, { type LvEmptyReason } from '../src/components/shared/live/LvEmptyState';
 import LvFeedStatus from '../src/components/shared/live/LvFeedStatus';
+import LvMark from '../src/components/shared/live/LvMark';
 import type { FeedSnapshot } from '../src/utils/live-scoring-view';
 import type { RedZoneAlert } from '../src/utils/broadcast-moments';
 
@@ -311,5 +312,60 @@ describe('LvFeedStatus\u2019s stylesheet carries every tone it can emit', () => 
 
   it('defines the error dot, which no other component emits', () => {
     expect(css).toContain('.lv-dot--err');
+  });
+});
+
+/**
+ * The mark is the identity ladder's rendering. What it PRINTS is the part that
+ * can be wrong without any prop being wrong: an uploaded mark is decorative
+ * beside a row that already names the team, but it is the only label on a
+ * board where the name is elsewhere — and a failed load has to give the
+ * franchise its initials back rather than an empty square.
+ */
+describe('LvMark — a mark, or the rung below it', () => {
+  const CLASSES = { wrap: 'lv-side__crest', crop: 'lv-side__crest--crop', text: 'lv-side__initials' };
+  const mark = (props: Partial<Parameters<typeof LvMark>[0]> = {}) =>
+    text(
+      renderToString(
+        createElement(LvMark, {
+          icon: 'https://www48.myfantasyleague.com/x.png',
+          alt: 'Rhinos logo',
+          initials: 'RH',
+          classes: CLASSES,
+          ...props,
+        }),
+      ),
+    );
+
+  it('prints the initials, not an empty box, when there is no mark', () => {
+    const html = mark({ icon: '' });
+    expect(html).toContain('RH');
+    expect(html).toContain('lv-side__initials');
+    expect(html).not.toContain('<img');
+    // The text rung is a LABEL beside a name that is already announced.
+    expect(html).toContain('aria-hidden="true"');
+  });
+
+  it('labels a real mark, and carries the crop class only when asked', () => {
+    expect(mark()).toContain('alt="Rhinos logo"');
+    expect(mark()).not.toContain(CLASSES.crop);
+    expect(mark({ crop: true })).toContain(CLASSES.crop);
+  });
+
+  /**
+   * `decorative` is for a row that already names the league beside the mark —
+   * there the alt text would be announced twice, which is why it is empty
+   * rather than absent.
+   */
+  it('goes silent where the caller already names the team', () => {
+    const html = mark({ decorative: true });
+    expect(html).toContain('alt=""');
+    expect(html).toContain('aria-hidden="true"');
+  });
+
+  /** An onError fallback cannot be rendered server-side — it is pinned by scan in
+      `tests/mfl-live-uploaded-mark.test.ts`. What SSR must not do is pre-empt it. */
+  it('renders the image on the server rather than guessing it will fail', () => {
+    expect(mark()).toContain('<img');
   });
 });

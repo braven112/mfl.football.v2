@@ -1,0 +1,491 @@
+/*
+ * MAD POWER 99 — automatic playoff standings
+ * Archie's Fantasy Football League (MFL 10105)
+ *
+ * Loaded by the league's MFL home page module:
+ *   <script src="https://v2.mfl.football/mfl/10105/standings.js" defer></script>
+ *
+ * Reads the league's own data from MyFantasyLeague on every page load and
+ * rebuilds the standings table. There is no scheduled job and no stored copy
+ * of anything — the table cannot go stale because it holds no data of its own.
+ *
+ * IMPORTANT: remove the module's existing inline <script> when installing
+ * this. That script does its own ranking, sectioning and cell conversion; both
+ * running at once will fight over the same table.
+ *
+ * Reference for the markup and CSS this reproduces: reference/existing-page.css
+ * and reference/existing-page.js, captured from the live page 2026-09-20.
+ */
+(function () {
+  'use strict';
+
+  /* ==================================================================
+   * CONFIGURATION — edit this block, nothing below it.
+   * ================================================================== */
+
+  /* Playoff structure. Season-level, not a weekly edit.
+   * 9 + 9 + 12 = 30 qualify; the rest of the league fills out the table. */
+  var DIVISION_LEADER_SEEDS = 9;   // seeds 1-9   — one per division
+  var RUNNER_UP_SEEDS       = 9;   // seeds 10-18 — one per division
+  var WILD_CARD_SEEDS       = 12;  // seeds 19-30 — next best on Victory Points
+
+  /* Winnings, by MFL franchise id. MFL's accounting ledger for this league is
+   * empty, so there is nothing to derive these from — they are the one figure
+   * still entered by hand.
+   *
+   * The commissioner sets them in the MODULE, not here: a MAD_POWER_99_WINNINGS
+   * block above the script line. That way prize updates need no deploy and no
+   * login, and they live with the league. See module.html.
+   *
+   * Anything below is only a fallback for a module that defines nothing. */
+  var WINNINGS = {};
+
+  /* Accepts { "0001": 239 } or { "0001": "$239.00" }, ignores junk, and never
+   * lets a bad entry take the whole table down with it. */
+  function readWinnings(fallback) {
+    var raw = window.MAD_POWER_99_WINNINGS;
+    if (!raw || typeof raw !== 'object') return fallback;
+    var out = {};
+    Object.keys(raw).forEach(function (id) {
+      var n = typeof raw[id] === 'number'
+        ? raw[id]
+        : parseFloat(String(raw[id]).replace(/[^0-9.\-]/g, ''));
+      if (isFinite(n) && n !== 0) out[String(id)] = n;
+    });
+    return out;
+  }
+
+  /* ================================================================== */
+
+  var TIER = {
+    leader: { row: 'division-row',  label: 'DIVISION LEADER' },
+    second: { row: 'runnerup-row',  label: 'DIVISION 2ND' },
+    wild:   { row: 'wildcard-row',  label: 'WILD CARD' },
+    field:  { row: '',              label: '' }
+  };
+
+  /* MFL collapses a single-element array into a bare object. */
+  function arr(x) {
+    if (Array.isArray(x)) return x;
+    return x ? [x] : [];
+  }
+
+  /* MFL returns errors as HTTP 200 with an error body, so res.ok is not
+   * "the call worked". Both shapes appear in the wild. */
+  function mflError(json) {
+    if (!json || !json.error) return null;
+    return typeof json.error === 'string' ? json.error : (json.error.$t || 'unknown MFL error');
+  }
+
+  /* The page is served at /<year>/home/<leagueId>, so the host, year and
+   * league all come from the URL. Nothing here is hardcoded to one league:
+   * a root-relative fetch follows whatever host served the page, which is why
+   * this same file works on any wwwNN and in any league it is dropped into. */
+  function readContext() {
+    var m = /^\/(\d{4})\/home\/(\d+)/.exec(window.location.pathname);
+    if (!m) return null;
+    return { year: m[1], leagueId: m[2] };
+  }
+
+  function feed(ctx, type) {
+    var url = '/' + ctx.year + '/export?TYPE=' + type + '&L=' + ctx.leagueId + '&JSON=1';
+    return fetch(url, { credentials: 'same-origin' }).then(function (res) {
+      if (!res.ok) throw new Error(type + ': HTTP ' + res.status);
+      return res.json();
+    }).then(function (json) {
+      var err = mflError(json);
+      if (err) throw new Error(type + ': ' + err);
+      return json;
+    });
+  }
+
+  /* ------------------------------------------------------------------
+   * Building the table
+   * ------------------------------------------------------------------ */
+
+  function buildTeams(league, standings) {
+    var franchises = arr(league.league && league.league.franchises && league.league.franchises.franchise);
+    var divisions = arr(league.league && league.league.divisions && league.league.divisions.division);
+
+    /* The status column is 20% of the width on a phone, and every entry in it
+     * is a division — so the word "Division" is both redundant and the reason
+     * "Joe Montana Division" wrapped onto three lines. */
+    var divName = {};
+    divisions.forEach(function (d) {
+      divName[d.id] = (d.name || '').trim().replace(/\s+Division$/i, '');
+    });
+
+    var meta = {};
+    franchises.forEach(function (f) {
+      meta[f.id] = {
+        id: f.id,
+        name: (f.name || '').trim(),
+        /* Icon paths embed the year each image was uploaded, so they cannot be
+         * built from the current year — always take the feed's own url. */
+        icon: f.icon || '',
+        division: f.division,
+        divisionName: divName[f.division] || ''
+      };
+    });
+
+    var rows = arr(standings.leagueStandings && standings.leagueStandings.franchise);
+    if (!rows.length) throw new Error('standings feed returned no franchises');
+
+    /* Victory Points appear only when the league's standings display is
+     * configured to show them — MFL's export returns the configured columns
+     * and nothing else. Without them there is no seeding to compute. */
+    if (!('vp' in rows[0])) {
+      var e = new Error('no-vp');
+      e.noVp = true;
+      throw e;
+    }
+
+    return rows.map(function (r, i) {
+      var m = meta[r.id] || { id: r.id, name: (r.fname || '').trim(), icon: '', divisionName: '' };
+      return {
+        id: r.id,
+        name: m.name || (r.fname || '').trim(),
+        icon: m.icon,
+        division: m.division,
+        divisionName: m.divisionName,
+        vp: Number(r.vp) || 0,
+        /* Points For breaks a Victory Point tie. MFL publishes the TOTAL (pf)
+         * only when the standings display carries it; today this league shows
+         * the AVERAGE (avgpf). The two rank identically while every team has
+         * played the same number of games, which is the case here — two games
+         * a week, nobody on a bye — so prefer the total and fall back to the
+         * average. */
+        pf: Number(r.pf != null ? r.pf : r.avgpf) || 0,
+        pfIsAverage: r.pf == null,
+        record: (r.h2hwlt || '').trim(),
+        /* MFL's row order already applies the league's official tiebreaker
+         * chain, some of which we cannot reproduce. Keep it as the stable
+         * fallback order rather than inventing one. */
+        feedOrder: i
+      };
+    });
+  }
+
+  /* MFL's row order IS the league's official order, so the first row of a
+   * division is its leader and the second is its runner-up. Never re-sort to
+   * work that out. */
+  function tiers(teams) {
+    var byDivision = {};
+    teams.forEach(function (t) {
+      (byDivision[t.division] = byDivision[t.division] || []).push(t);
+    });
+
+    var leaders = [];
+    var seconds = [];
+    Object.keys(byDivision).sort().forEach(function (d) {
+      var g = byDivision[d];
+      if (g[0]) leaders.push(g[0]);
+      if (g[1]) seconds.push(g[1]);
+    });
+    leaders = leaders.slice(0, DIVISION_LEADER_SEEDS);
+    seconds = seconds.slice(0, RUNNER_UP_SEEDS);
+
+    var taken = {};
+    leaders.concat(seconds).forEach(function (t) { taken[t.id] = true; });
+
+    /* Victory Points, then Points For — the league's tiebreaker. MFL's own row
+     * order is the last resort, since it already applies the constitution's
+     * chain for anything still level. */
+    var byVp = function (a, b) {
+      return (b.vp - a.vp) || (b.pf - a.pf) || (a.feedOrder - b.feedOrder);
+    };
+    var rest = teams.filter(function (t) { return !taken[t.id]; }).sort(byVp);
+
+    var wild = rest.slice(0, WILD_CARD_SEEDS);
+    var field = rest.slice(WILD_CARD_SEEDS);
+
+    leaders.sort(byVp);
+    seconds.sort(byVp);
+
+    var out = [];
+    var push = function (list, tier) {
+      list.forEach(function (t, i) { out.push({ team: t, tier: tier, tierIndex: i }); });
+    };
+    push(leaders, 'leader');
+    push(seconds, 'second');
+    push(wild, 'wild');
+    push(field, 'field');
+
+    out.forEach(function (e, i) { e.seed = i + 1; });
+
+    /* Points For decides a Victory Point tie, so nothing is left undecided.
+     * The marker now means only "level on VP, separated on Points For", which
+     * is still worth showing: it explains why two teams on the same number sit
+     * in a particular order. */
+    var counts = {};
+    out.forEach(function (e) {
+      var k = e.tier + ':' + e.team.vp;
+      counts[k] = (counts[k] || 0) + 1;
+    });
+    out.forEach(function (e) { e.tied = counts[e.tier + ':' + e.team.vp] > 1; });
+
+    /* The note at the cut is no longer "someone must decide this" — Points For
+     * already has. It says who just missed out, and on what. */
+    var lastIn = wild[wild.length - 1];
+    var firstOut = field[0];
+    var overflow = (lastIn && firstOut && lastIn.vp === firstOut.vp)
+      ? field.filter(function (t) { return t.vp === lastIn.vp; }).length
+      : 0;
+
+    return { entries: out, cutAfter: leaders.length + seconds.length + wild.length, overflow: overflow, overflowVp: lastIn ? lastIn.vp : null };
+  }
+
+  /* ------------------------------------------------------------------
+   * Rendering — reuses the page's own class names so its stylesheet does
+   * the work. Only the new runner-up tier needs CSS of its own.
+   * ------------------------------------------------------------------ */
+
+  /* Styling lives in standings.css, loaded by the module's own <link>. It is
+   * served rather than injected so the table is styled before this script
+   * runs, and stays styled if it never does. */
+
+  function cell(cls, text) {
+    var td = document.createElement('td');
+    if (cls) td.className = cls;
+    if (text != null) td.textContent = text;
+    return td;
+  }
+
+  /* One full-width row. The table is a shell: the layout inside it is a grid
+   * of crests for the 30 who qualify and a tight list for the rest, so almost
+   * everything is rendered into a colspan cell rather than into columns. */
+  function fullRow(cls, text) {
+    var tr = document.createElement('tr');
+    var td = cell(cls, text);
+    td.colSpan = 6;
+    tr.appendChild(td);
+    return tr;
+  }
+
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+
+  function money(n) {
+    return '$' + Number(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  }
+
+  /* The banners are 1500x636 with a self-contained crest in the middle, so a
+   * square centre crop gives a clean logo with no new artwork. The browser
+   * does the cropping: a square box plus object-fit, with the focal point
+   * centred. */
+  function crest(t, cls) {
+    var img = document.createElement('img');
+    img.className = cls;
+    img.src = t.icon;
+    img.alt = t.name + ' crest';
+    img.loading = 'lazy';
+    img.decoding = 'async';
+    return img;
+  }
+
+  function vpText(parent, vp, tied) {
+    parent.appendChild(document.createTextNode(String(vp)));
+    if (tied) {
+      var tie = el('span', 'mp99-tie', 'T');
+      tie.title = 'tied on Victory Points';
+      parent.appendChild(tie);
+    }
+  }
+
+  /* A qualifier: crest, name, Victory Points, then seed and record, then the
+   * prize if the league has set one. */
+  function tile(entry) {
+    var t = entry.team;
+    var box = el('div', 'mp99-tile ' + TIER[entry.tier].row);
+
+    box.appendChild(crest(t, 'mp99-crest'));
+    box.appendChild(el('div', 'mp99-tile-name', t.name));
+
+    /* "6 VP", with any tie marker AFTER the unit — placed between the two it
+     * read as "6 T VP", as though T were part of the value. Kept to a single
+     * letter: with 26 teams sharing a score early in the season the word
+     * "TIED" repeated on every tile, which is noise rather than information. */
+    var vp = el('div', 'mp99-tile-vp');
+    vp.appendChild(document.createTextNode(String(t.vp)));
+    vp.appendChild(el('span', null, ' VP'));
+    if (entry.tied) {
+      var tie = el('span', 'mp99-tie', 'T');
+      tie.title = 'tied on Victory Points';
+      vp.appendChild(tie);
+    }
+    box.appendChild(vp);
+
+    box.appendChild(el('div', 'mp99-tile-meta', '#' + entry.seed + ' \u00b7 ' + (t.record || '0-0-0')));
+
+    /* Always rendered, even with nothing set. Otherwise there is no sign the
+     * field exists — the header is hidden, so an unset prize would leave no
+     * trace at all — and tiles with and without money came out different
+     * heights, which made the grid look ragged. */
+    var won = WINNINGS[t.id];
+    var prize = el('div', won ? 'mp99-prize' : 'mp99-prize mp99-prize-none', won ? money(won) : '\u2014');
+    prize.title = won ? 'prize money' : 'no prize money recorded';
+    box.appendChild(prize);
+    return box;
+  }
+
+  /* Everyone below the cut: one line each. */
+  function listRow(entry) {
+    var t = entry.team;
+    var row = el('div', 'mp99-list-row');
+    row.appendChild(el('div', 'mp99-list-seed', String(entry.seed)));
+    row.appendChild(crest(t, 'mp99-list-crest'));
+    row.appendChild(el('div', 'mp99-list-name', t.name));
+    row.appendChild(el('div', 'mp99-list-rec', t.record || '0-0-0'));
+
+    var won = WINNINGS[t.id];
+    row.appendChild(el('div',
+      won ? 'mp99-list-prize' : 'mp99-list-prize mp99-prize-none',
+      won ? money(won) : '\u2014'));
+
+    var vp = el('div', 'mp99-list-vp');
+    vpText(vp, t.vp, entry.tied);
+    row.appendChild(vp);
+    return row;
+  }
+
+  function sectionHead(label, colour, count) {
+    var tr = fullRow('mp99-section');
+    var td = tr.firstChild;
+    td.style.color = colour;
+    td.textContent = label + ' ';
+    td.appendChild(el('span', 'mp99-section-count', count));
+    return tr;
+  }
+
+  function gridOf(entries) {
+    var tr = fullRow('mp99-wrap');
+    var grid = el('div', 'mp99-grid');
+    entries.forEach(function (e) { grid.appendChild(tile(e)); });
+    tr.firstChild.appendChild(grid);
+    return tr;
+  }
+
+  function findTable() {
+    return document.getElementById('wwwc') ||
+           document.querySelector('#madmen table') ||
+           null;
+  }
+
+  /* Everything after the header row is ours; the static rows in the module are
+   * a fallback that is replaced on success. */
+  function clearBody(table) {
+    var rows = Array.prototype.slice.call(table.rows);
+    rows.forEach(function (tr) {
+      if (tr.getElementsByTagName('th').length) return;
+      tr.parentNode.removeChild(tr);
+    });
+  }
+
+  /* The module keeps its six-column header for the case where this script
+   * cannot run. Once it does, the layout inside the table is a grid of crests
+   * and a list, not six columns, so those labels describe nothing — hide the
+   * row rather than retitle it. The caption and colgroup stay untouched. */
+  function retitleHeader(table) {
+    var ths = table.getElementsByTagName('th');
+    Array.prototype.forEach.call(ths, function (th) {
+      var tr = th.parentNode;
+      if (tr && tr.className.indexOf('mp99-hide') === -1) {
+        tr.className = (tr.className ? tr.className + ' ' : '') + 'mp99-hide';
+      }
+    });
+  }
+
+  function render(table, model) {
+    retitleHeader(table);
+    clearBody(table);
+    var body = table.tBodies[0] || table;
+
+    var byTier = { leader: [], second: [], wild: [], field: [] };
+    model.entries.forEach(function (e) { byTier[e.tier].push(e); });
+
+    var sections = [
+      { key: 'leader', label: 'DIVISION LEADERS', colour: '#ff519f' },
+      { key: 'second', label: 'DIVISION RUNNERS-UP', colour: '#b284ff' },
+      { key: 'wild',   label: 'WILD CARDS', colour: 'rgb(89, 224, 255)' }
+    ];
+
+    sections.forEach(function (sec) {
+      var list = byTier[sec.key];
+      if (!list.length) return;
+      body.appendChild(sectionHead(sec.label, sec.colour, 'seeds ' + list[0].seed + '\u2013' + list[list.length - 1].seed));
+      body.appendChild(gridOf(list));
+    });
+
+    body.appendChild(fullRow('mp99-cut-cell', 'PLAYOFF CUT LINE \u00b7 ' + model.cutAfter + ' QUALIFY'));
+    if (model.overflow) {
+      body.appendChild(fullRow(
+        'mp99-note-cell',
+        model.overflow + (model.overflow === 1 ? ' team below the line is' : ' teams below the line are') +
+        ' also on ' + model.overflowVp + ' Victory Points \u2014 separated on Points For.'
+      ));
+    }
+
+    var field = byTier.field;
+    if (field.length) {
+      body.appendChild(sectionHead('THE FIELD', '#6b7076', 'seeds ' + field[0].seed + '\u2013' + field[field.length - 1].seed));
+      var tr = fullRow('mp99-wrap');
+      var holder = tr.firstChild;
+      field.forEach(function (e) { holder.appendChild(listRow(e)); });
+      body.appendChild(tr);
+    }
+  }
+
+  function fail(message, detail) {
+    var table = findTable();
+    if (!table) return;
+    clearBody(table);
+    var body = table.tBodies[0] || table;
+    var tr = fullRow('mp99-error-cell', message);
+    body.appendChild(tr);
+    if (detail) {
+      var note = fullRow('mp99-note-cell', detail);
+      body.appendChild(note);
+    }
+  }
+
+  /* ------------------------------------------------------------------ */
+
+  function start() {
+    var ctx = readContext();
+    if (!ctx) return; /* not a league home page */
+    /* Read at start, not at load: the module's block is parsed by then. */
+    WINNINGS = readWinnings({});
+    if (!findTable()) return; /* module not on this page */
+
+    Promise.all([feed(ctx, 'league'), feed(ctx, 'leagueStandings')])
+      .then(function (r) {
+        var teams = buildTeams(r[0], r[1]);
+        var model = tiers(teams);
+        render(findTable(), model);
+      })
+      .catch(function (err) {
+        if (err && err.noVp) {
+          fail(
+            'Standings unavailable — Victory Points are not published by MyFantasyLeague.',
+            'The league has Victory Points configured, but they are not part of its standings display, ' +
+            'so MFL does not return them. A commissioner can add Victory Points under Setup → Standings.'
+          );
+          return;
+        }
+        fail(
+          'Standings unavailable — MyFantasyLeague did not respond.',
+          err && err.message ? String(err.message) : ''
+        );
+      });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
