@@ -615,3 +615,44 @@ describe('every club gets a ring that is visible on the row it sits on', () => {
     expect(pigskins.ringDark.toLowerCase()).toBe('#e23b46');    // its own colorPrimaryDark
   });
 });
+
+/**
+ * The club name is a label for assistive tech, not a tooltip.
+ *
+ * It revealed on `:hover` and `:focus-visible`, which on a touch screen means
+ * it revealed on TAP: the name flashed over the row on the way to switching
+ * team, and the leftmost crest's label ran off the edge of the phone. "Get rid
+ * of the text tooltip, we know the names."
+ *
+ * It cannot simply be deleted: it is the anchor's accessible name, and the
+ * only other content is an `alt=""` image, so removing it leaves 16 or 24
+ * unlabelled links. Visually hidden, not `display: none`.
+ */
+describe('the crest row labels its links without showing a tooltip', () => {
+  const ROW = fs.readFileSync(
+    path.join(process.cwd(), 'src/components/shared/roster-header/TeamDivisionRow.astro'),
+    'utf-8',
+  );
+  const CSS = ROW.slice(ROW.indexOf('<style>')).replace(/\/\*[\s\S]*?\*\//g, '');
+
+  it('still carries the name, so no crest is an unlabelled link', () => {
+    expect(ROW).toMatch(/<span class="rhdr-teams__name">\s*\{team\.name\}/);
+    expect(ROW, 'the viewer’s own club says so in its accessible name')
+      .toContain("' (your team)'");
+    // A `title` does not surface on touch and reads late on a screen reader.
+    expect(ROW).not.toMatch(/title=\{team\./);
+  });
+
+  it('never reveals it on hover, focus or tap', () => {
+    expect(CSS, 'hover is tap on a phone')
+      .not.toMatch(/\.rhdr-teams__crest:(hover|focus-visible)\s+\.rhdr-teams__name/);
+  });
+
+  it('hides it visually without hiding it from assistive tech', () => {
+    const rule = CSS.slice(CSS.indexOf('.rhdr-teams__name {'));
+    const body = rule.slice(0, rule.indexOf('}'));
+    expect(body, 'display:none / visibility:hidden drop it from the a11y tree')
+      .not.toMatch(/display:\s*none|visibility:\s*hidden/);
+    expect(body).toMatch(/clip-path:\s*inset\(50%\)/);
+  });
+});
