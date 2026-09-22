@@ -2171,7 +2171,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       teamIcon={teamLookup[defaultTeamId]?.icon ?? null}
       teamMeta={`${teamLookup[defaultTeamId]?.division ?? 'Independent'} Division`}
       label="Roster & Cap"
-      season={defaultSeason}
+      season={Number(defaultSeason)}
       standing={headerStandings.get(defaultTeamId) ?? {
         record: null,
         pointsFor: null,
@@ -2209,7 +2209,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
                 teamIcon={team.icon}
                 teamMeta={team.meta}
                 label="Roster & Cap"
-                season={defaultSeason}
+                season={Number(defaultSeason)}
                 standing={team.standing}
                 extraStats={[{ value: headerMoney(team.capSpace), label: 'Cap space' }]}
                 featuredPlayer={team.featuredPlayer}
