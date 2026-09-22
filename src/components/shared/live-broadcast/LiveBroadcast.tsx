@@ -33,28 +33,19 @@ import MomentLowerThird from './MomentLowerThird';
 import RedZoneBanner from './RedZoneBanner';
 import { DEMO_PERIOD_MS, demoElapsed, demoLoopIndex, demoPollAt } from '../../../utils/broadcast-demo';
 import { carryLeagueScores, seedCarry, type CarriedLeagueScore } from '../../../utils/broadcast-carry';
+import {
+  POLL_TIMEOUT_MS,
+  POLL_WATCHDOG_MS,
+  QUIET_MS,
+  RELOAD_CHECK_MS,
+  STALE_MS,
+  pollDelay,
+  shouldReload,
+  tickInterval,
+  watchdogLimit,
+} from '../../../utils/broadcast-cadence';
 
-/**
- * Poll cadence. Slower than the draft board's 4s: this payload is N leagues
- * wide and a fantasy score moves more slowly than a draft pick.
- */
-const POLL_MS = 8_000;
-const POLL_BACKOFF_MS = 20_000;
-const ERRORS_BEFORE_BACKOFF = 3;
-/**
- * Two independent failsafes, neither optional on a screen that runs unattended
- * for eight hours. The loop is a SELF-CHAINING timeout, so a fetch that hangs
- * forever does not merely delay the next poll — it BREAKS the chain, and the
- * board freezes on whatever it last drew with no indication anything is wrong.
- * That exact failure froze the 2026 draft rehearsal board at pick 7.
- */
-const POLL_TIMEOUT_MS = 15_000;
-const POLL_WATCHDOG_MS = 40_000;
 
-/** Past this, the board says so from ten feet rather than looking current. */
-const STALE_MS = 5 * 60_000;
-/** All games final this long → the screensaver takes over. */
-const QUIET_MS = 10 * 60_000;
 
 const STRIP_PAGE_MS = 12_000;
 /** Must equal `--lbc-fade` in live-broadcast.css — the handoff's one duration. */
@@ -122,11 +113,34 @@ export default function LiveBroadcast({ pageData }: Props) {
   const [drift, setDrift] = useState({ x: 0, y: 0, x2: 0, y2: 0 });
 
   // ── the poll loop ────────────────────────────────────────────────────────
-  const pollRef = useRef<{ timer: number | null; lastDone: number; errors: number }>({
+  const pollRef = useRef<{
+    timer: number | null;
+    lastDone: number;
+    errors: number;
+    /** Did the LAST RESPONSE carry live football? Set in `runPoll`, not render. */
+    sawLive: boolean;
+  }>({
     timer: null,
     lastDone: Date.now(),
     errors: 0,
+    sawLive: false,
   });
+
+  /**
+   * The board's current cadence tier, for the two loops that must not depend
+   * on it.
+   *
+   * A REF, not a dependency. `isQuiet` flips as an afternoon winds down and
+   * again when the night games start; making the poll effect depend on it
+   * would tear down and rebuild the whole self-chaining loop — watchdog
+   * included — on every crossing, which is exactly the shape that froze the
+   * draft board. The next `schedule()` reads it, and that is soon enough for a
+   * tier measured in minutes.
+   */
+  const idleRef = useRef(false);
+
+  /** The last poll's health, for the reboot's "is the network up?" gate. */
+  const healthRef = useRef<{ ok: boolean; at: number }>({ ok: true, at: Date.now() });
 
   /**
    * Each league's last good numbers.
@@ -189,6 +203,14 @@ export default function LiveBroadcast({ pageData }: Props) {
       setFetchedAt(Date.parse(body.fetchedAt) || Date.now());
       setStatus('ok');
       pollRef.current.errors = 0;
+      // The tier for the NEXT poll comes from the body just fetched, never
+      // from `idleRef`. `idleRef` is written during render, and `tick`
+      // schedules the next poll in the continuation of this `await` — before
+      // React has committed the render `setPoll` just queued. Read there, the
+      // poll that FIRST SEES KICKOFF would still schedule at the idle cadence
+      // and the board would sit a minute behind the opening drive.
+      pollRef.current.sawLive =
+        body.games.some((g) => g.state === 'in') || leagues.some((l) => l.live);
     } catch {
       // A failed poll KEEPS the last good data and only changes the STATUS.
       // "The feed says nothing" and "we could not reach the feed" are
@@ -245,21 +267,37 @@ export default function LiveBroadcast({ pageData }: Props) {
       pollRef.current.timer = window.setTimeout(tick, ms);
     };
 
+    // Idle only when the render AND the last response agree there is nothing
+    // live. Either one saying otherwise keeps the fast cadence — a board that
+    // polls too often is a cost, a board that polls too slowly at kickoff is a
+    // bug the room can see.
+    const nextDelay = () =>
+      pollDelay({
+        errors: pollRef.current.errors,
+        idle: idleRef.current && !pollRef.current.sawLive,
+      });
+
     const tick = async () => {
       await runPoll();
       if (cancelled) return;
-      schedule(pollRef.current.errors >= ERRORS_BEFORE_BACKOFF ? POLL_BACKOFF_MS : POLL_MS);
+      schedule(nextDelay());
     };
 
-    schedule(POLL_MS);
+    schedule(nextDelay());
 
     // The watchdog exists because the chain above can be broken, not merely
     // delayed — a suspended machine, a throttled background tab, or a fetch
     // that never settles all leave `timer` pointing at a callback that will
     // not run. This is an independent interval that forces a poll when one
     // has not COMPLETED in too long.
+    //
+    // Its threshold TRACKS the cadence. Left at a flat 40s it would treat
+    // every idle poll as a broken chain — 60s apart is longer than 40s — and
+    // force a poll on its own 20s interval, which would quietly restore the
+    // afternoon cadence overnight and negate the throttle entirely.
     const watchdog = window.setInterval(() => {
-      if (Date.now() - pollRef.current.lastDone > POLL_WATCHDOG_MS) {
+      const idleNow = idleRef.current && !pollRef.current.sawLive;
+      if (Date.now() - pollRef.current.lastDone > watchdogLimit(idleNow)) {
         if (pollRef.current.timer) window.clearTimeout(pollRef.current.timer);
         void tick();
       }
@@ -271,12 +309,6 @@ export default function LiveBroadcast({ pageData }: Props) {
       window.clearInterval(watchdog);
     };
   }, [runPoll, data.demo]);
-
-  /** A 1s heartbeat so the freshness age counts up and the saver clock ticks. */
-  useEffect(() => {
-    const id = window.setInterval(() => setNowTick(Date.now()), 1000);
-    return () => window.clearInterval(id);
-  }, []);
 
   // ── burn-in drift ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -429,6 +461,26 @@ export default function LiveBroadcast({ pageData }: Props) {
     !anyLive &&
     (!everLive || (quietSinceRef.current > 0 && nowTick - quietSinceRef.current > QUIET_MS));
 
+  // Published on every render so the poll loop and the reload watchdog can
+  // read the board's mood without either of them depending on it.
+  idleRef.current = isQuiet;
+  healthRef.current = { ok: status === 'ok' && pollRef.current.errors === 0, at: fetchedAt };
+
+  /**
+   * The heartbeat that ages the freshness pill and drives the saver clock.
+   *
+   * Declared down HERE rather than beside the other timers, because it is the
+   * one hook whose period depends on `isQuiet`. Quiet drops it from 1 Hz to a
+   * tick every fifteen seconds: while the screensaver is up the only readers
+   * of `nowTick` are an h:mm clock and an age printed in whole minutes,
+   * neither of which can show the difference — and it is the POLL, not the
+   * tick, that ends an idle, so the board still wakes on the first live score.
+   */
+  useEffect(() => {
+    const id = window.setInterval(() => setNowTick(Date.now()), tickInterval(isQuiet));
+    return () => window.clearInterval(id);
+  }, [isQuiet]);
+
   // ── the reveal queue ─────────────────────────────────────────────────────
   const queue = useMemo(
     () => selectRevealQueue(poll.moments, { now: nowTick, shown: shownRef.current }),
@@ -439,6 +491,44 @@ export default function LiveBroadcast({ pageData }: Props) {
   );
 
   const current = queue[0] ?? null;
+
+  /**
+   * Reboot the board rather than run one renderer for a whole weekend.
+   *
+   * Gated on `isQuiet` so it cannot fire during play, and re-checked against
+   * the live stage inside the tick: `isQuiet` can be true with a moment still
+   * revealing, because a reveal outranks the screensaver and a final play can
+   * land after the last game has gone quiet. Uptime is measured from MOUNT, so
+   * a board that reloads starts a fresh six hours rather than looping.
+   */
+  const mountedAtRef = useRef(Date.now());
+  const currentRef = useRef<BroadcastMoment | null>(current);
+  currentRef.current = current;
+
+  useEffect(() => {
+    // The rehearsal is watched deliberately and runs in minutes, not hours.
+    if (data.demo || !isQuiet) return;
+    const id = window.setInterval(() => {
+      const go = shouldReload({
+        demo: data.demo,
+        idle: true,
+        // Re-read per tick: `isQuiet` gates the effect, but a reveal outranks
+        // the screensaver and can still be on screen while it holds.
+        hasStage: !!currentRef.current,
+        // Proof the network works RIGHT NOW, from the last poll rather than
+        // from the absence of games — a board that lost its connection is
+        // `isQuiet` by definition, and reloading it lands on the browser's
+        // error page with no way back.
+        healthy: healthRef.current.ok && Date.now() - healthRef.current.at < STALE_MS,
+        // Fullscreen does not survive a navigation and the television this is
+        // for has no keyboard to ask for it again.
+        fullscreen: !!document.fullscreenElement,
+        uptimeMs: Date.now() - mountedAtRef.current,
+      });
+      if (go) window.location.reload();
+    }, RELOAD_CHECK_MS);
+    return () => window.clearInterval(id);
+  }, [isQuiet, data.demo]);
 
   /**
    * Retire the active moment after its hold.

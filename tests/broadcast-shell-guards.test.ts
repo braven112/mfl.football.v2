@@ -1284,3 +1284,134 @@ describe('the reveal features the scorer, not a chip', () => {
     expect(ISLAND_CODE).toMatch(/return data\.defenseFaces\[who\?\.nflTeam \?\? ''\];/);
   });
 });
+
+/**
+ * The overnight board.
+ *
+ * A television left on the broadcast page all night ran the full Sunday
+ * cadence at a screen reading "No games live" and eventually killed Edge's
+ * renderer outright (SBOX_FATAL_MEMORY_EXCEEDED), leaving a browser error page
+ * up until somebody walked over to the set.
+ *
+ * The POLICY — how long to wait, when to reboot — is arithmetic between
+ * constants and is tested properly in `tests/broadcast-cadence.test.ts`. What
+ * a scan is good for is the WIRING: that the island still asks, and has not
+ * grown a second opinion of its own.
+ */
+describe('the board survives being left on all night', () => {
+  it('asks the cadence module rather than deciding for itself', () => {
+    expect(ISLAND_CODE).toMatch(/schedule\(nextDelay\(\)\)/);
+    expect(ISLAND_CODE).toMatch(/pollDelay\(\{/);
+    expect(ISLAND_CODE).toMatch(/lastDone > watchdogLimit\(idleNow\)/);
+    expect(ISLAND_CODE).toMatch(/setNowTick\(Date\.now\(\)\), tickInterval\(isQuiet\)\)/);
+    expect(ISLAND_CODE).toMatch(/shouldReload\(\{/);
+  });
+
+  it('keeps no cadence literals of its own', () => {
+    // A re-inlined constant is a second source of truth that the behavioural
+    // tests cannot see — they would keep passing against a module the island
+    // had quietly stopped obeying.
+    for (const gone of [
+      'const POLL_MS',
+      'const POLL_IDLE_MS',
+      'const POLL_BACKOFF_MS',
+      'const TICK_MS',
+      'const TICK_IDLE_MS',
+      'const RELOAD_AFTER_MS',
+      'const ERRORS_BEFORE_BACKOFF',
+    ]) {
+      expect(ISLAND_CODE).not.toContain(gone);
+    }
+  });
+
+  it('never pins the watchdog at the flat live threshold', () => {
+    // THE regression. `POLL_WATCHDOG_MS` (40s) is SHORTER than the idle
+    // cadence (60s), so a flat comparison marks every healthy idle poll as a
+    // broken chain and re-polls on the watchdog's own interval — restoring
+    // the afternoon cadence overnight and negating the whole fix.
+    expect(ISLAND_CODE).not.toMatch(/lastDone > POLL_WATCHDOG_MS/);
+  });
+
+  it('drives both tiers from isQuiet, the signal that raises the screensaver', () => {
+    // A second, private notion of "idle" is how one of them ends up throttled
+    // during play.
+    expect(ISLAND_CODE).toMatch(/idleRef\.current = isQuiet;/);
+  });
+
+  it('takes the poll tier from the RESPONSE, not from the render-time ref', () => {
+    // `idleRef` is written during render; `tick` schedules the next poll in
+    // the continuation of its `await`, before React has committed the render
+    // `setPoll` queued. Read alone, the poll that first sees kickoff would
+    // still schedule at the idle cadence and the board would sit a minute
+    // behind the opening drive. The watchdog must agree, or it re-introduces
+    // the flat-threshold bug from the other direction.
+    expect(ISLAND_CODE).toMatch(/pollRef\.current\.sawLive =/);
+    expect(ISLAND_CODE).toMatch(/idle: idleRef\.current && !pollRef\.current\.sawLive/);
+    expect(ISLAND_CODE).toMatch(/const idleNow = idleRef\.current && !pollRef\.current\.sawLive/);
+  });
+
+  it('gates the reboot on network health and on fullscreen', () => {
+    const effect = ISLAND_CODE.match(/useEffect\(\(\) => \{[\s\S]*?RELOAD_CHECK_MS\);/)?.[0] ?? '';
+    expect(effect).toMatch(/healthy: healthRef\.current\.ok && Date\.now\(\) - healthRef\.current\.at < STALE_MS/);
+    expect(effect).toMatch(/fullscreen: !!document\.fullscreenElement/);
+  });
+
+  it('re-reads the live stage per tick rather than at effect setup', () => {
+    // `isQuiet` gates the effect, but a reveal outranks the screensaver, so a
+    // moment can be on screen while it holds. Captured once, the board could
+    // reload mid-touchdown.
+    const effect = ISLAND_CODE.match(/useEffect\(\(\) => \{[\s\S]*?RELOAD_CHECK_MS\);/)?.[0] ?? '';
+    expect(effect).toMatch(/hasStage: !!currentRef\.current/);
+    expect(effect).toMatch(/uptimeMs: Date\.now\(\) - mountedAtRef\.current/);
+    expect(effect).toMatch(/if \(go\) window\.location\.reload\(\)/);
+  });
+
+  it('measures uptime from mount, so a reboot cannot loop', () => {
+    expect(ISLAND_CODE).toMatch(/const mountedAtRef = useRef\(Date\.now\(\)\);/);
+  });
+
+  it('keeps idleRef a ref, not a dependency of the poll loop', () => {
+    // Depending on `isQuiet` would tear down and rebuild the self-chaining
+    // loop — watchdog included — every time the board crossed the line at
+    // dusk. That is the shape that froze the draft board at pick 7.
+    const deps = ISLAND_CODE.match(/\}, \[runPoll, data\.demo\]\);/);
+    expect(deps).not.toBeNull();
+  });
+});
+
+/**
+ * Every timing constant the island NAMES, it must actually have.
+ *
+ * Extracting the cadence policy into `broadcast-cadence.ts` took `STALE_MS`
+ * and `QUIET_MS` out with it — they sat between two blocks that moved — and
+ * left three bare references behind. `ts(2304) Cannot find name` is a
+ * ReferenceError at runtime, so the board would have thrown on its first
+ * render, and the full unit suite went green anyway: 12,923 tests, none of
+ * which MOUNT this island. Only `astro check` caught it, and that is a
+ * three-minute job deliberately kept out of the default suite.
+ *
+ * `_MS` is a precise enough suffix to scan for without tripping over `JSON`
+ * or the all-caps alternations inside a regex literal.
+ */
+describe('the island declares every duration it uses', () => {
+  it('imports or declares each *_MS constant it references', () => {
+    const src = read('src/components/shared/live-broadcast/LiveBroadcast.tsx');
+    const body = code(src);
+
+    const referenced = new Set(body.match(/\b[A-Z][A-Z0-9_]*_MS\b/g) ?? []);
+    expect(referenced.size).toBeGreaterThan(5); // the scan still finds things
+
+    const importBlock = src.match(/import \{[\s\S]*?\} from '\.\.\/\.\.\/\.\.\/utils\/broadcast-cadence';/)?.[0] ?? '';
+    const available = new Set([
+      ...(importBlock.match(/\b[A-Z][A-Z0-9_]*_MS\b/g) ?? []),
+      ...(body.match(/const ([A-Z][A-Z0-9_]*_MS)\s*=/g) ?? []).map((m) =>
+        m.replace(/^const /, '').replace(/\s*=$/, ''),
+      ),
+      // Imported from elsewhere, not the cadence module.
+      ...(src.match(/import \{[^}]*\} from '[^']*broadcast-demo';/)?.[0]?.match(/\b[A-Z][A-Z0-9_]*_MS\b/g) ?? []),
+    ]);
+
+    const missing = [...referenced].filter((name) => !available.has(name));
+    expect(missing).toEqual([]);
+  });
+});

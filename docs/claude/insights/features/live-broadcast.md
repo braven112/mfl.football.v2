@@ -490,3 +490,167 @@ the raw full-game projection beside the live score. Two notes from that half:
   have changed the ordering and nothing an owner sees. The revert carries a
   test saying so explicitly, because raw totals next to blended rows otherwise
   read as a missed spot.
+
+## 2026-09-22 — the board that could not survive the night
+
+**Symptom.** A television left on `/broadcast` overnight was showing Edge's
+`SBOX_FATAL_MEMORY_EXCEEDED` error page by morning — the renderer had been
+OOM-killed, and the board stayed dead until somebody walked over to the set.
+
+**There was no leak in the island.** Worth saying plainly, because the obvious
+move is to go hunting for one and there is nothing to find: every timer is
+cleared, every listener removed, the AudioContext is reused rather than rebuilt
+per moment, `poll.moments` is bounded by `MOMENT_MAX_AGE_MS`, `carryRef` is
+keyed by league, and `BroadcastScreensaver` is already `memo`'d against the
+heartbeat. The only monotonic structure is `shownRef`, and moments only exist
+while games are live, so it barely grows overnight at all.
+
+**What was actually wrong is that nothing throttled.** `isQuiet` raised the
+screensaver and changed nothing else, so a board reading "No games live" kept
+the full Sunday-afternoon cadence all night:
+
+| | rate | per 12h |
+|---|---|---|
+| `/api/broadcast-live` | 8s | ~5,400 fetches |
+| heartbeat → full re-render | 1 Hz | ~43,200 |
+| `selectRevealQueue` re-derive | 1 Hz (`nowTick` dep) | ~43,200 |
+
+That is ~5,400 serverless invocations against MFL and ESPN every night for a
+screen with nothing on it, and enough animated-document churn to fill a
+renderer that is never allowed to restart.
+
+The fix is two tiers keyed on `isQuiet` (poll 8s → 60s, heartbeat 1 Hz → 15s)
+plus a reboot, and three things about it are load-bearing:
+
+- **The poll watchdog must scale with the cadence.** `POLL_WATCHDOG_MS` is 40s
+  and the idle cadence is 60s, so a flat threshold marks every *healthy* idle
+  poll as a broken chain and forces a re-poll on its own 20s interval —
+  silently restoring the afternoon cadence overnight and negating the entire
+  fix. `watchdogLimit()` reads the tier. This is the mutation the guard test
+  exists for.
+- **The idle poll is what DETECTS kickoff**, so it is a minute rather than the
+  five the memory argument alone would buy. Detection latency is the idle
+  interval by construction — when nothing is live, only a poll can end the
+  idle; the tick cannot. A board that takes five minutes to notice the first
+  snap is broken in a way the room can see.
+- **Errors outrank quiet.** `nextDelay()` checks the backoff first: a board
+  that is failing should retry, not doze.
+
+**The reboot is gated twice, not once.** `isQuiet` gates the effect, and the
+live stage is re-checked inside each tick — a reveal *outranks* the
+screensaver, so a moment can be on screen while `isQuiet` is true (a final play
+landing after the last game went quiet). A reload that blanks the board
+mid-touchdown would be a worse bug than the one being fixed. Uptime is measured
+from MOUNT, so a reboot starts a fresh six hours rather than looping.
+
+**`idleRef` is a ref on purpose.** Making the poll effect *depend* on `isQuiet`
+would tear down and rebuild the self-chaining loop — watchdog included — every
+time the board crossed the line at dusk and again at the night game. That is
+the exact shape that froze the 2026 draft rehearsal board at pick 7. The next
+`schedule()` reads the ref, which is soon enough for a tier measured in
+minutes.
+
+**The heartbeat effect moved down the file**, below `isQuiet`, because it is the
+one hook whose period depends on it. Hook *order* stays consistent across
+renders, which is all React requires; there is no early return above it.
+
+**The policy is a pure module, and that was not tidiness.** The first cut held
+all four decisions as inline ternaries in the island and guarded them with text
+scans — which pin the SPELLING and prove nothing about the numbers. Every one of
+these decisions is arithmetic between constants, and the one that actually
+matters cannot be written as a grep at all:
+
+```ts
+watchdogLimit(idle) > pollDelay({ errors: 0, idle })   // for every tier
+```
+
+That invariant is the flat-watchdog regression stated as a property rather than
+as a pattern, so it holds against numbers nobody has thought of yet — change
+`POLL_IDLE_MS` to 90s and the test still knows whether the watchdog followed.
+`src/utils/broadcast-cadence.ts` now owns `pollDelay`, `watchdogLimit`,
+`tickInterval` and `shouldReload`; the island owns the timers. Same split the
+rest of live scoring uses, and for the same reason.
+
+Guards:
+- `tests/broadcast-cadence.test.ts` — 21 behavioural tests of the policy.
+  Mutation-tested against a flat watchdog, an ordering that lets quiet outrank
+  errors, and a reload that forgets the stage check.
+- `tests/broadcast-shell-guards.test.ts` § "the board survives being left on all
+  night" — seven scans of the WIRING, which is what a scan is good for: that the
+  island still asks, and has not re-inlined a constant into a second source of
+  truth the behavioural tests cannot see. Mutation-tested against both.
+
+### The refactor's own bug, and what it exposed
+
+Extracting the cadence policy deleted `STALE_MS` and `QUIET_MS` along with it —
+they sat between two blocks that moved — leaving three bare references in the
+island. `ts(2304) Cannot find name` is a **ReferenceError at runtime**, so the
+board threw on its first render.
+
+**The full unit suite went green anyway: 12,923 tests, not one of which mounted
+this island.** It was only ever scanned as text. `astro check` caught it, and
+that is a three-minute job deliberately kept out of the default suite — so the
+window in which this could have shipped was real.
+
+Two things came out of that, and they matter more than the original fix:
+
+- `tests/broadcast-island-mount.test.ts` — `renderToString` over the island in
+  four states (live, quiet, rehearsal, dead feed). It runs no effects, so it
+  says nothing about the timers, but it executes the whole render body, which
+  is where a board is most often broken outright. It fails on the real bug with
+  the real message.
+- A `*_MS` scan in the shell guards: every duration the island NAMES, it must
+  import or declare. It names the missing constant in 75ms rather than three
+  minutes. `_MS` is a precise enough suffix to scan for without tripping over
+  `JSON` or the all-caps alternations inside a regex literal.
+
+The general lesson is about where this repo's confidence actually comes from: a
+12,000-test suite that never mounts a component cannot tell you the component
+runs. For an island, the cheapest real assertion is `renderToString` and one
+`expect(html).toContain(...)`.
+
+### Three bugs review found in the fix itself
+
+All three were in the *new* code, none was reachable by the suite, and two of
+them re-created the symptom the change exists to remove. Worth recording as a
+set, because they share a shape: **the reboot and the throttle each assumed a
+signal meant more than it does.**
+
+- **`isQuiet` does not mean "nothing is happening" — it means "nothing is
+  live", and a board that lost its network satisfies it by definition.**
+  Nothing can be live when nothing can be fetched. So the ungated reboot would
+  fire on a disconnected board, navigate away from a screen still showing last
+  night's scores, and land on the browser's own error page — from which
+  nothing recovers. That is precisely the failure being fixed, re-created by
+  its own fix. The gate is proof the network works *right now*
+  (`healthRef`: last poll ok, no errors, fresher than `STALE_MS`), never the
+  absence of games.
+- **A reload is a navigation, and fullscreen does not survive one.** The
+  island already knows this — it is why `F` is a keypress (transient
+  activation) rather than a link. The hardware this board is for is a
+  television with no keyboard, so a reboot that silently drops out of
+  fullscreen cannot be undone by the person watching. A fullscreen board now
+  keeps the throttle, which is the part doing the heavy lifting, and skips the
+  reboot.
+- **`idleRef` is written during RENDER, and the poll loop reads it from a
+  microtask that runs before React commits.** `tick` schedules the next poll in
+  the continuation of `await runPoll()` — after `setPoll` has been queued but
+  before the render it triggers. So the poll that FIRST SEES KICKOFF read the
+  previous render's `isQuiet` and scheduled the next one at the idle cadence,
+  leaving the board a minute behind the opening drive with only the watchdog to
+  rescue it. The tier now comes from the response just fetched
+  (`pollRef.current.sawLive`), and the watchdog reads the same combined value —
+  it has to, or it re-introduces the flat-threshold bug from the other side.
+
+The general shape: **a ref written during render is not readable from the
+continuation of an await in the same tick.** `LiveBoard.tsx` avoids it by
+deriving its tier in `finally` from the data it just received. Any poll loop
+whose cadence depends on what the poll returned must read the RESPONSE, not a
+render-time ref.
+
+Note also what is *not* duplication here: `LiveBoard` (25s/90s),
+`useNflScoreboard` (60s/300s) and this board (8s/60s) each keep their own
+cadence pair, and the numbers differ deliberately by payload cost. The
+difference is that this one's invariants are now tested rather than
+commented — `useNflScoreboard.ts:93` reasons about the same
+idle-poll-vs-stale-window relationship in prose.
