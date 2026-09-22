@@ -188,6 +188,7 @@ const GROUND_COPY: Record<string, string> = {
 
     <section class="cb__section">
       <h2 class="cb__h2">Club colours</h2>
+      <p class="cb__note">The club's official colours, in order: primary first, then secondary.</p>
       <ul class="cb__swatches">
         {
           club.colors.map((c) => (
@@ -207,8 +208,7 @@ const GROUND_COPY: Record<string, string> = {
         {
           club.nflDotComIsDark && (
             <>
-              {' '}NFL.com publishes only a <strong>for-dark</strong> cut for this club, which is why its
-              light mark is held rather than refreshed from the league endpoint.
+              {' '}NFL.com publishes only a <strong>for-dark</strong> cut for this club.
             </>
           )
         }
@@ -241,7 +241,10 @@ const GROUND_COPY: Record<string, string> = {
 
     <section class="cb__section">
       <h2 class="cb__h2">What each ground draws</h2>
-      <p class="cb__note">Read from the same assignment file the build reads, so this cannot drift from what ships.</p>
+      <p class="cb__note">
+        Use the light cut on a white cell, and the dark cut on a dark card <em>and</em> on the
+        club's own colour.
+      </p>
       <ul class="cb__grounds">
         {
           club.grounds.map((g) => (
@@ -266,10 +269,8 @@ const GROUND_COPY: Record<string, string> = {
     <section class="cb__section">
       <h2 class="cb__h2">In the app</h2>
       <p class="cb__note">
-        The real components, rendered here on their real grounds &mdash; not lookalikes, so they
-        cannot drift from what a roster page or a live board actually draws. The club-colour band
-        is the exception and is labelled as such: nothing in the app paints club colour behind an
-        NFL mark yet, so it stands for the third GROUND rather than for a surface.
+        The real components, on their real grounds. The club-colour band is a ground, not a
+        surface the app paints today.
       </p>
       <ul class="cb__situ">
         <li class="cb__demo">

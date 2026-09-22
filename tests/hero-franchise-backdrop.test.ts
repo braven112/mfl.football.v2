@@ -33,6 +33,7 @@ import {
 import {
   AA_BODY_TEXT_RATIO,
   AA_LARGE_TEXT_RATIO,
+  ensureContrastOn,
   colorDistance,
   contrastRatio,
   relativeLuminance,
@@ -442,15 +443,20 @@ describe('backdrop sampling', () => {
 
 describe('greyscale franchises', () => {
   it('gives all four the same constructed grey, bright enough to read as emphasis', () => {
-    // TITS and BADD (AFL), Bring The Pain and Wabs (TheLeague) have no hue in
-    // their palettes at all. Selecting from their stops split them two-and-two
-    // between #a3a3a3 and a #696969 that read as disabled text; the grey is
-    // constructed from white now, so they agree and they are visible.
+    // TITS and BADD (AFL) and Bring The Pain (TheLeague) have no hue in their
+    // palettes at all. Selecting from their stops split them between #a3a3a3
+    // and a #696969 that read as disabled text; the grey is constructed from
+    // white now, so they agree and they are visible.
+    //
+    // WABS was the fourth until the four-colour rebrand gave the Wabbits a
+    // carrot #ed7117 — their crest has literally no chromatic pixel in it, so
+    // the orange was chosen rather than sampled. They have a hue now and their
+    // accent is that carrot, which is the point of giving them one.
     const greyscale = [
       ...(aflConfig.teams as any[]).filter((t) => ['TITS', 'BADD'].includes(t.abbrev)),
-      ...(theleagueConfig.teams as any[]).filter((t) => ['PAIN', 'WABS'].includes(t.abbrev)),
+      ...(theleagueConfig.teams as any[]).filter((t) => ['PAIN'].includes(t.abbrev)),
     ];
-    expect(greyscale).toHaveLength(4);
+    expect(greyscale).toHaveLength(3);
     const accents = new Set(
       greyscale.map((t, i) => resolveHeroFranchiseBackdrop(t, i < 2 ? 'afl' : 'theleague')!.accent)
     );
@@ -459,4 +465,121 @@ describe('greyscale franchises', () => {
     // Lighter than mid — an accent that is DARKER than the headline recedes.
     expect(relativeLuminance(grey)).toBeGreaterThan(relativeLuminance('#808080'));
   });
+});
+
+/**
+ * The accent LADDER, pinned because `/{league}/brand/{team}` now states it as a
+ * rule in prose and the four-colour pass made it load-bearing.
+ *
+ * `resolveAccent` takes the first of secondary -> tertiary -> quaternary ->
+ * primary that carries a hue and clears its floors, and the primary coming
+ * LAST is the deliberate part: the primary is usually the gradient the accent
+ * would have to sit on. Filling the two previously-empty slots for all forty
+ * franchises therefore moved the hero accent on fourteen of them — a change no
+ * diff of the config shows, which is why the order gets a test rather than a
+ * comment.
+ */
+describe('the accent ladder', () => {
+  // Four unmistakably different, well-saturated hues, so whichever one comes
+  // back names the slot it came from. Each clears the 3:1 headline floor and
+  // the distinctness bound on its own, so no candidate is skipped for being
+  // unusable rather than for being outranked.
+  const RED = '#c62828';
+  const GREEN = '#2e7d32';
+  const BLUE = '#1565c0';
+  const PURPLE = '#6a1b9a';
+
+  const cases: Array<[string, Record<string, string>, string]> = [
+    ['secondary wins when every slot is filled', { colorPrimary: RED, colorSecondary: GREEN, colorTertiary: BLUE, colorQuaternary: PURPLE }, GREEN],
+    ['tertiary wins with no secondary', { colorPrimary: RED, colorTertiary: BLUE, colorQuaternary: PURPLE }, BLUE],
+    ['quaternary wins with neither above it', { colorPrimary: RED, colorQuaternary: PURPLE }, PURPLE],
+    ['the primary is the last resort, not the first choice', { colorPrimary: RED }, RED],
+  ];
+
+  // The accent is the winning slot LIFTED to clear the backdrop, never the raw
+  // hex — #2e7d32 comes back as #58975b, the same green a shade brighter. So
+  // the assertion is which candidate it is nearest to, which is what "this slot
+  // won" actually means. An earlier version of this test compared hexes and
+  // failed on all four for that reason.
+  const nearestSlot = (accent: string, team: Record<string, string>) => {
+    const slots = [team.colorPrimary, team.colorSecondary, team.colorTertiary, team.colorQuaternary].filter(Boolean) as string[];
+    return slots.reduce((best, c) => (colorDistance(accent, c) < colorDistance(accent, best) ? c : best), slots[0]);
+  };
+
+  for (const [name, team, expected] of cases) {
+    it(name, () => {
+      const accent = resolveHeroFranchiseBackdrop(team as any, 'theleague')!.accent;
+      expect(nearestSlot(accent, team)).toBe(expected);
+    });
+  }
+
+  it('a hueless slot is skipped rather than taken', () => {
+    // Midwestside's shape is the one that makes this matter: a gold primary, a
+    // black secondary and a grey tertiary. All three neutrals fall out of the
+    // candidate list, so whatever sits in the QUATERNARY is the only rival the
+    // gold has — and it wins, because the primary is last.
+    //
+    // They briefly shipped #00a9e0 there, which took their hero accent off the
+    // gold. Kept as a synthetic case because the BEHAVIOUR is correct and load
+    // bearing; the club's own resolution is pinned below.
+    const out = resolveHeroFranchiseBackdrop(
+      { colorPrimary: '#ffcd00', colorSecondary: '#000000', colorTertiary: '#63666a', colorQuaternary: '#00a9e0' } as any,
+      'theleague'
+    );
+    expect(out?.accent?.toLowerCase()).toBe('#00a9e0');
+  });
+
+  it('Midwestside leads with its gold in both leagues', () => {
+    // Brandon, on the review finding: "drop the blue from midwest". The fourth
+    // slot is WHITE instead, which is what he had already asked for as their
+    // dark-mode trim — and being hueless it leaves the ladder nothing to
+    // prefer over the gold, so the accent is the brand colour again.
+    //
+    // Pinned per league because Midwestside is one franchise wearing one set
+    // of colours in two configs; BAND_ART_DIRECTION makes the same call for
+    // their band ("black, with the gold as trim and glow") and the two must
+    // not disagree about which colour leads.
+    for (const [slug, cfg] of [['afl', aflConfig], ['theleague', theleagueConfig]] as const) {
+      const team = (cfg.teams as any[]).find((t) => t.abbrev === 'MIDW' || /Midwestside/.test(t.name || ''));
+      expect(team, `${slug} has no Midwestside`).toBeTruthy();
+      expect(team.colorQuaternary?.toLowerCase()).toBe('#ffffff');
+      const out = resolveHeroFranchiseBackdrop(team, slug as any);
+      expect(out?.accent?.toLowerCase(), `${slug} hero accent`).toBe('#ffcd00');
+    }
+  });
+
+  it('no franchise takes its headline accent and its panel accent from different slots', () => {
+    // The failure this pins is subtle and shipped once: `accent` (3:1, large
+    // display type) and `accentPanel` (4.5:1, small type) resolve INDEPENDENTLY
+    // down the same ladder, so a candidate that clears the headline floor and
+    // fails the panel's distinctness bound hands the panel to a different
+    // colour — one card, two identities.
+    //
+    // Attribution is EXACT, not nearest-by-distance: each candidate is pushed
+    // through the same `ensureContrastOn` the resolver uses and compared for
+    // equality. A nearest-ΔE version of this check reported ten false splits,
+    // because a lifted panel colour drifts toward white and so lands nearest a
+    // white slot that had nothing to do with it.
+    for (const [slug, cfg] of [['afl', aflConfig], ['theleague', theleagueConfig]] as const) {
+      for (const team of cfg.teams as any[]) {
+        const out = resolveHeroFranchiseBackdrop(team, slug as any);
+        if (!out) continue;
+        const pair = toBroadcastPair(team.colorPrimary || '#10161f', team.colorSecondary || '#1c497c');
+        const stops = [pair.primary, pair.secondary];
+        const slots = ['colorSecondary', 'colorTertiary', 'colorQuaternary', 'colorPrimary'].filter((k) => !!team[k]);
+        const attribute = (target: string, bg: string, floor: number) =>
+          slots.find((k) => ensureContrastOn(team[k], bg, floor).toLowerCase() === target.toLowerCase());
+        const a = attribute(out.accent, copyBackdrop(out.gradient, stops), AA_LARGE_TEXT_RATIO);
+        const p = attribute(out.accentPanel, panelBackdrop(out.gradient, stops), AA_BODY_TEXT_RATIO);
+        // A greyscale franchise resolves to a CONSTRUCTED grey that is in no
+        // slot at all; accent and panel are then equal by construction.
+        if (!a || !p) {
+          expect(out.accent, `${slug}:${team.franchiseId} unattributed but split`).toBe(out.accentPanel);
+          continue;
+        }
+        expect(a, `${slug}:${team.franchiseId} ${team.name} accent<-${a} but panel<-${p}`).toBe(p);
+      }
+    }
+  });
+
 });

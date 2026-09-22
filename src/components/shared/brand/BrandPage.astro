@@ -58,7 +58,6 @@ const clubHref = (code: string) =>
     : `/brand/${code.toLowerCase()}`;
 
 const clubs = allClubs();
-const customised = clubs.filter((c) => c.customised);
 const derived = clubs.filter((c) => c.marks.some((m) => m.derived));
 
 /**
@@ -82,25 +81,13 @@ const filesHref = leagueSlug ? resolveLeaguePath(`/${leagueSlug}/brand/files`, h
       </p>
       <h1>{league ? 'Brand Book' : 'NFL Brand Book'}</h1>
       <p class="brand__lede">
-        Every mark this site draws, and which cut each surface uses. A mark sits on one of
-        <strong>three grounds</strong> &mdash; a white cell, a dark card, or the club's own
-        colour &mdash; and the third is not a variant of the first two, which is why a
-        club-colour band below shows the <em>dark</em> mark even in light mode.
+        Official marks and colours, and which cut to use on each ground &mdash; a white cell, a
+        dark card, or the club's own colour.
       </p>
       {
         filesHref && (
           <p class="brand__note">
-            Looking for a specific file? The <a href={filesHref}>searchable file list</a> has every
-            asset in the league, historical clubs and league art included.
-          </p>
-        )
-      }
-      {
-        customised.length > 0 && (
-          <p class="brand__note">
-            {customised.map((c) => c.code).join(', ')}{' '}
-            {customised.length === 1 ? 'draws' : 'draw'} something other than the default on at
-            least one ground.
+            Every asset is in the <a href={filesHref}>searchable file list</a>.
           </p>
         )
       }
@@ -113,8 +100,7 @@ const filesHref = leagueSlug ? resolveLeaguePath(`/${leagueSlug}/brand/files`, h
                 <a href={clubHref(c.code)}>{c.code}</a>
               </>
             ))}{' '}
-            carry a <strong>reversed</strong> cut we made ourselves &mdash; no public source
-            publishes one, so it is derived from our own SVG by a hand-reviewed colour map.
+            use a reversed cut drawn in-house &mdash; no official reversed mark is published.
           </p>
         )
       }
@@ -125,9 +111,7 @@ const filesHref = leagueSlug ? resolveLeaguePath(`/${leagueSlug}/brand/files`, h
         <section class="cb__section">
           <h2 class="cb__h2">{league.name} clubs</h2>
           <p class="cb__note">
-            Each tile is the franchise's own colour wearing the cut its BAND ground draws &mdash;
-            the dark cut for almost every one of them, because almost every franchise primary is
-            dark. Five of them wear <code>#181818</code>.
+            Each tile is the club's official colour wearing the cut that ground takes.
           </p>
           {/*
             The SAME `brand__*` tile markup the NFL grid below uses, not a

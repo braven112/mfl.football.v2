@@ -358,10 +358,11 @@ function resolveAccent(team: HeroBackdropTeam, backdrop: string, floor: number):
 
   const hued = unique.filter((c) => channelSpread(c) >= GREY_SPREAD);
 
-  // A franchise with no hue anywhere in its palette — four of the forty: TITS
-  // and BADD in the AFL, Bring The Pain and Wabs in TheLeague. Grey IS their
-  // brand, so the accent stays grey, but WHICH grey has to be constructed
-  // rather than picked.
+  // A franchise with no hue anywhere in its palette — three of the forty: TITS
+  // and BADD in the AFL, Bring The Pain in TheLeague. (Wabs was the fourth
+  // until the four-colour pass gave them a carrot.) Grey IS their brand, so
+  // the accent stays grey, but WHICH grey has to be constructed rather than
+  // picked.
   //
   // Picking left them at #696969: the near-white stop fails the distinctness
   // bound (ΔE 8 from the headline it sits in), so selection fell through to the

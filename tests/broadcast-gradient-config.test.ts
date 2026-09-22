@@ -23,6 +23,7 @@ import {
 } from '../src/utils/draft-broadcast';
 import aflConfig from '../data/afl-fantasy/afl.config.json';
 import theleagueConfig from '../src/data/theleague.config.json';
+import { contrastRatio, AA_BODY_TEXT_RATIO } from '../src/utils/team-color-contrast';
 
 const LEAGUES = [
   { slug: 'afl', teams: aflConfig.teams as any[] },
@@ -173,7 +174,7 @@ describe('isSafeCssGradient', () => {
  * corner — which is where the player cutout stands on the reveal card. Both
  * hand-authored cards are built on that fact.
  */
-describe('the two hand-authored cards', () => {
+describe('the hand-authored cards', () => {
   const MIDWESTSIDE = [
     { slug: 'afl', id: '0011' },
     { slug: 'theleague', id: '0011' },
@@ -230,7 +231,32 @@ describe('the two hand-authored cards', () => {
     });
   }
 
-  it('the two cards are mirror images, not the same card twice', () => {
+  it('afl Harambe is their blue reading into the gorilla\'s dark fur', () => {
+    // Hand-authored because `toBroadcastPair` COLLAPSES on their white primary
+    // — see the block above `HAND_AUTHORED` below. This pins what was meant,
+    // so the string cannot drift back to a non-gradient unnoticed.
+    const team = teamById('afl', '0008');
+    expect(team.name).toContain('Harambe');
+    const g = team.broadcastGradient as string;
+    const stops = stopsOf(g);
+
+    expect(angleOf(g)).toBe(115);
+    expect(stops).toHaveLength(2);
+
+    // 0% is the brand blue, and it is the stop the reveal's copy sits on —
+    // `.lbc-reveal__wash` is fully transparent around 20%/30%, so this stop
+    // gets no help from the scrim and must carry white text on its own.
+    const [r, gg, b] = rgb(stops[0].hex);
+    expect(b).toBeGreaterThan(gg);
+    expect(gg).toBeGreaterThan(r);
+    expect(contrastRatio(stops[0].hex, '#ffffff')).toBeGreaterThanOrEqual(AA_BODY_TEXT_RATIO);
+
+    // 100% is the fur, not the white primary — a white stop is what collapsed
+    // the derivation in the first place.
+    expect(brightness(stops[1].hex)).toBeLessThan(30);
+  });
+
+  it('the two mirrored cards are mirror images, not the same card twice', () => {
     const mid = teamById('afl', '0011').broadcastGradient;
     const vit = teamById('afl', '0009').broadcastGradient;
     expect(mid).not.toBe(vit);
@@ -253,7 +279,22 @@ describe('the two hand-authored cards', () => {
  * nothing noticed.
  */
 describe('generated gradients still match the derived pair', () => {
-  const HAND_AUTHORED = new Set(['afl:0011', 'afl:0009', 'theleague:0011', 'theleague:0012']);
+  /**
+   * `afl:0008` (Dicks out for Harambe) joined this list with the four-colour
+   * rebrand. Their primary became WHITE — the crest's biggest area — and
+   * `toBroadcastPair` only ever DARKENS, so a white primary has nowhere to go:
+   * both stops collapse onto the secondary and it derives
+   * `#247cb9 -> #287cb7`, two blues a hair apart and no gradient at all.
+   * Hand-authored as their blue into the gorilla's dark fur, which is the
+   * reveal the derived pair was trying and failing to express.
+   */
+  const HAND_AUTHORED = new Set([
+    'afl:0011',
+    'afl:0009',
+    'afl:0008',
+    'theleague:0011',
+    'theleague:0012',
+  ]);
 
   for (const { slug, teams } of LEAGUES) {
     it(`${slug}: every generated entry equals what toBroadcastPair yields`, () => {

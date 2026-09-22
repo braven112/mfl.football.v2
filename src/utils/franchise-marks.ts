@@ -458,17 +458,17 @@ function ringFilters(slug: CanonicalLeagueSlug): Record<string, string> {
 
 function colorsOf(team: RawTeam): FranchiseColor[] {
   const rows: Array<[string, string, string | undefined, string]> = [
-    ['colorPrimary', 'Primary', team.colorPrimary, 'The brand lead — panel fills, band anchors, the gradient it starts from.'],
-    ['colorSecondary', 'Secondary', team.colorSecondary, 'The accent: glows, trim, the second gradient stop.'],
-    ['colorTertiary', 'Tertiary', team.colorTertiary, 'A third hue sampled from the artwork.'],
-    ['colorQuaternary', 'Quaternary', team.colorQuaternary, 'A fourth hue sampled from the artwork.'],
-    ['colorPrimaryDark', 'Primary — dark theme', team.colorPrimaryDark, 'What the primary becomes on a dark card.'],
-    ['colorSecondaryDark', 'Secondary — dark theme', team.colorSecondaryDark, 'What the accent becomes on a dark card.'],
+    ['colorPrimary', 'Primary', team.colorPrimary, 'The lead colour: panel fills, band anchors, the first gradient stop.'],
+    ['colorSecondary', 'Secondary', team.colorSecondary, 'The accent: trim, glows, the second gradient stop. Use it before any other accent.'],
+    ['colorTertiary', 'Tertiary', team.colorTertiary, 'Use where the primary and secondary are both taken, or where an accent must sit apart from both.'],
+    ['colorQuaternary', 'Quaternary', team.colorQuaternary, 'A fourth accent, for the same cases as the tertiary.'],
+    ['colorPrimaryDark', 'Primary — dark theme', team.colorPrimaryDark, 'Use in place of the primary on a dark surface.'],
+    ['colorSecondaryDark', 'Secondary — dark theme', team.colorSecondaryDark, 'Use in place of the secondary on a dark surface.'],
     [
       'color',
       'Chart hue',
       team.color,
-      'Chosen to stay distinct beside fifteen other lines on a graph — NOT brand identity, and never a band anchor.',
+      'Charts and graphs only. Never brand identity, and never a band anchor.',
     ],
   ];
   return rows

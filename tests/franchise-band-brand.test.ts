@@ -15,6 +15,7 @@ import aflConfig from '../data/afl-fantasy/afl.config.json';
 import strokeManifest from '../src/data/crest-dark-stroke-manifest.json';
 import { buildFranchiseBandBrands, resolveEraCrest } from '../src/utils/franchise-band-brand';
 import { contrastRatio, AA_LARGE_TEXT_RATIO } from '../src/utils/team-color-contrast';
+import { getTeamColorSecondary } from '../src/utils/team-colors';
 import { DEFAULT_THROWBACK_ERA } from '../src/data/theleague/throwback-config';
 import { getEligibleThrowbackEras } from '../src/utils/throwback-identity';
 import {
@@ -98,14 +99,17 @@ describe('buildFranchiseBandBrands', () => {
     // have no hue anywhere in their config to find. Give any of them a real
     // accent colour and this test wants updating.
     //
-    // - afl 0017/0019/0023 list nothing but grey and black.
+    // - afl 0017/0019 list nothing but grey and black. 0023 (The Show) was the
+    //   third until the four-colour rebrand made their primary #181818 and
+    //   promoted their crest's rose #cc9ca6 to secondary — they have a hue of
+    //   their own now and no longer collide. This list may only SHRINK.
     // - theleague 0008/0009 are both black-and-white brands: `colorPrimary`
     //   #181818, `colorSecondary` near-white, and even their chart hues are
     //   greys. Their CRESTS still tell the two bands apart, which is the only
     //   reason this is tolerable rather than a bug.
     const KNOWN_DATA_GAPS: Record<string, string[][]> = {
       theleague: [['0008', '0009']],
-      afl: [['0017', '0019', '0023']],
+      afl: [['0017', '0019']],
     };
 
     for (const league of ['theleague', 'afl', 'bb1'] as const) {
@@ -134,10 +138,16 @@ describe('buildFranchiseBandBrands', () => {
     expect(contrastRatio(teams['0011'].primary, '#ffffff')).toBeGreaterThan(10);
     expect(teams['0011'].secondary.toLowerCase()).toBe('#ffcd00');
 
-    // Vitside: black + red, its real brand pair — never the chart-only pink.
+    // Vitside: black + red, its real brand pair — never the CHART hue, whatever
+    // that hue currently is. It was `#f06abc`, a hot pink chosen only to stay
+    // apart from fifteen other lines on a graph, and the band opened in it;
+    // asserting against that literal stopped testing anything the day the hue
+    // changed, so this reads `color` from the config instead.
     expect(contrastRatio(teams['0012'].primary, '#ffffff')).toBeGreaterThan(10);
     expect(teams['0012'].secondary.toLowerCase()).toBe('#aa322b');
-    expect(teams['0012'].primary.toLowerCase()).not.toBe('#f06abc');
+    const vitsideChartHue = (theleagueConfig.teams as any[]).find((t) => t.franchiseId === '0012')?.color;
+    expect(vitsideChartHue, 'Vitside has no chart hue to guard against').toBeTruthy();
+    expect(teams['0012'].primary.toLowerCase()).not.toBe(String(vitsideChartHue).toLowerCase());
 
     // Gridiron Geeks: the blue leads, the orange accents. Asserted as "is a
     // blue, and no lighter than the brand blue" rather than as a literal, so
@@ -150,7 +160,17 @@ describe('buildFranchiseBandBrands', () => {
     expect(contrastRatio(geeks, '#ffffff')).toBeGreaterThanOrEqual(
       contrastRatio('#1274ba', '#ffffff')
     );
-    expect(teams['0013'].secondary.toLowerCase()).toBe('#d45500');
+    // The glow was a hand-written #d45500 while `colorSecondary` was a muted
+    // #d78a46 that could not carry one. That was a workaround for bad DATA —
+    // the crest's orange is #f68428 at 7.9% — so the override no longer
+    // restates a secondary and the derived glow comes through instead.
+    // Asserted as "is the club's own orange", not as a literal the override
+    // owns, because the config is now the single source for which orange.
+    const geeksGlow = teams['0013'].secondary.toLowerCase();
+    expect(geeksGlow).toBe(getTeamColorSecondary('0013', 'theleague').toLowerCase());
+    const [sr, sg, sb] = [1, 3, 5].map((i) => parseInt(geeksGlow.slice(i, i + 2), 16));
+    expect(sr, `${geeksGlow} is not orange`).toBeGreaterThan(sg);
+    expect(sg).toBeGreaterThan(sb);
 
     // The two near-blacks must stay distinguishable from each other and from
     // Bring The Pain, who is genuinely just black.
