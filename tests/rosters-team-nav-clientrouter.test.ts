@@ -107,3 +107,92 @@ describe('the roster page binds its controls per page load, not per session', ()
     expect(PAGE).toContain('clearAllBtn.onclick = handleClearAllTagsClick;');
   });
 });
+
+/**
+ * The OTHER half of the same lifecycle rule, and the one that actually shipped.
+ *
+ * TheLeague switches club in place: `applyRosterHeader` moves the live
+ * nameplate into a `<template>` and swaps the next club's markup in. Anything
+ * the page captured from inside that region at init is therefore DETACHED the
+ * moment the viewer changes team — and, worse, still writable.
+ *
+ * `renderTeamIdentity` held `document.querySelectorAll('[data-team-name]')`
+ * from init and wrote the selected club's name into it on every render. After
+ * one switch that list pointed at the PARKED nameplate, so the club you left
+ * came back wearing the name of the club you were on: correct crest, correct
+ * record, correct cap, wrong headline. ("It had the wrong team name once when
+ * clicking through them.")
+ *
+ * The rule: no init-time capture of anything the header swaps. The stable
+ * frame — `.rhdr`, `[data-rhdr-team]`, the crest row — is fine to hold,
+ * because the swap moves markup INTO it rather than replacing it.
+ */
+describe('the roster page never captures the header markup it swaps', () => {
+  const SWAPPED = ['RosterNameplate', 'GamedayBar'].map((name) =>
+    fs.readFileSync(
+      path.join(process.cwd(), `src/components/shared/roster-header/${name}.astro`),
+      'utf-8',
+    ),
+  );
+
+  /** Every hook rendered INSIDE the swapped region: `[data-x]` and `.rhdr…`. */
+  const swappedHooks = (() => {
+    const hooks = new Set<string>();
+    for (const src of SWAPPED) {
+      for (const [, attr] of src.matchAll(/\s(data-[a-z0-9-]+)[=>\s]/g)) hooks.add(`[${attr}]`);
+      // `rhdr` on its own is the header ROOT, which does not swap — the page
+      // is allowed to hold it, and does.
+      for (const [token] of src.matchAll(/\brhdr[_-][a-z0-9_-]*\b/g)) hooks.add(`.${token}`);
+    }
+    return [...hooks];
+  })();
+
+  it('finds the hooks it is guarding, so a rename cannot silently empty this test', () => {
+    expect(swappedHooks).toContain('[data-team-name]');
+    expect(swappedHooks).toContain('.rhdr__name');
+    expect(swappedHooks).toContain('.rhdr-rail__dot');
+  });
+
+  it('runs no document query against any of them', () => {
+    for (const hook of swappedHooks) {
+      const query = new RegExp(
+        `document\\.querySelector(?:All)?(?:<[^>]*>)?\\(\\s*(['"\`])[^'"\`]*${
+          hook.replace(/[[\]().*+?^$\\|{}]/g, '\\$&')
+        }`,
+      );
+      expect(
+        PAGE,
+        `${hook} lives in markup the header swaps — a query for it from the page ` +
+          'holds a node that goes detached on the first team switch',
+      ).not.toMatch(query);
+    }
+  });
+
+  it('has retired renderTeamIdentity and the hooks it was left writing to', () => {
+    // Shapes, not bare names: the page carries a comment explaining what was
+    // removed and why, and a `toContain` on the name alone would fail on the
+    // explanation. These match a definition or a call.
+    for (const dead of ['renderTeamIdentity', 'teamIdentityEls', 'teamMetas']) {
+      expect(PAGE, `${dead} retired with the old team card`)
+        .not.toMatch(new RegExp(`\\b${dead}\\s*[=(.]`));
+    }
+    // Their markup went with the old team card, so nothing may query for it.
+    for (const hook of ['data-team-identity', 'data-team-meta', 'data-last-seen']) {
+      expect(PAGE, `[${hook}] is no longer rendered anywhere on this page`)
+        .not.toMatch(new RegExp(`querySelector(?:All)?[^)]*${hook}`));
+    }
+  });
+
+  it('leaves data-team-name in the nameplate as a read-only parity hook', () => {
+    const nameplate = SWAPPED[0];
+    expect(nameplate, 'scripts/roster-parity-check.mjs fingerprints this attribute')
+      .toMatch(/data-team-name>\{teamName\}/);
+  });
+
+  it('re-queries the crest row from the header at swap time, not at init', () => {
+    // The crest row is NOT swapped, so holding it would be safe — but the
+    // swap has to move `aria-current` across it, and scoping the query to
+    // `rosterHeader` keeps the two leagues' identical class names apart.
+    expect(PAGE).toMatch(/rosterHeader\.querySelectorAll\('\.rhdr-teams__crest'\)/);
+  });
+});

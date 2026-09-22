@@ -39,6 +39,12 @@ interface HeaderGame {
   outcome: 'W' | 'L' | 'T' | null;
 }
 
+/** A week's worth of games — one most of the season, two in a doubleheader. */
+interface HeaderWeek {
+  week: number;
+  games: HeaderGame[];
+}
+
 interface Props {
   leagueSlug: CanonicalLeagueSlug;
   /** The club on screen. */
@@ -57,8 +63,8 @@ interface Props {
    * HAS rather than a blank slot for a feature it does not run.
    */
   extraStats?: Array<{ value: string; label: string }>;
-  lastResult: HeaderGame | null;
-  nextGame: HeaderGame | null;
+  lastPlayed: HeaderWeek | null;
+  upNext: HeaderWeek | null;
   rail: RailWeek[];
   currentWeek: number;
   nameOf: (franchiseId: string) => string;
@@ -90,8 +96,8 @@ const {
   season,
   standing,
   extraStats = [],
-  lastResult,
-  nextGame,
+  lastPlayed,
+  upNext,
   rail,
   currentWeek,
   nameOf,
@@ -220,8 +226,8 @@ const stats: Array<{ value: string; label: string }> = [
 </div>
 
 <GamedayBar
-  lastResult={lastResult}
-  nextGame={nextGame}
+  lastPlayed={lastPlayed}
+  upNext={upNext}
   rail={rail}
   currentWeek={currentWeek}
   nameOf={nameOf}

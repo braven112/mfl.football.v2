@@ -6,8 +6,8 @@ import RosterNameplate from '../../components/shared/roster-header/RosterNamepla
 import { buildSeasonRail, buildTeamGroups, bestValuePlayer } from '../../utils/roster-header-data';
 import { summarizeStandings } from '../../utils/standings-summary';
 import {
-  findLastResult,
-  findNextGame,
+  findLastPlayedWeek,
+  findNextWeek,
   franchiseSchedule,
   parseWeeklySchedule,
 } from '../../utils/schedule-data.mjs';
@@ -90,7 +90,6 @@ import {
   getFrozenSalaryAveragesYear,
 } from '../../utils/salary-calculations';
 import { getAuthUser, franchiseIdForLeague } from '../../utils/auth';
-import { getAllActivity, getActivityLevel, formatLastSeen, type ActivityLevel } from '../../utils/owner-activity';
 import fs from 'fs';
 import path from 'path';
 import { calculateDraftOrder, buildActualDraftPicks, convertActualPicksToPredictions } from '../../utils/draft-utils';
@@ -2136,8 +2135,8 @@ const headerTeamsForSwap = teamsList.map((team: any) => {
         ...(teamData?.injuredReserve ?? []),
       ].map((player: any) => ({ ...player, points: player?.totalSeason }))
     ),
-    lastResult: findLastResult(own, currentWeekNum),
-    nextGame: findNextGame(own, currentWeekNum),
+    lastPlayed: findLastPlayedWeek(own, currentWeekNum),
+    upNext: findNextWeek(own, currentWeekNum),
     rail: buildSeasonRail(
       own,
       headerSchedule.map((entry: { week: number }) => entry.week),
@@ -2150,17 +2149,11 @@ const headerCapSpace = initialCapLimit - (initialTeamData?.totals?.totalSalary ?
 const headerMoney = (n: number) =>
   `${n < 0 ? '-' : ''}$${Math.abs(Math.round(n)).toLocaleString('en-US')}`;
 
-// Owner activity data for "last seen" indicators
-let ownerActivityMap: Record<string, number> = {};
-try {
-  ownerActivityMap = await Promise.race([
-    getAllActivity(THELEAGUE_ID),
-    new Promise<Record<string, number>>((_, reject) => setTimeout(() => reject(new Error('Redis timeout')), 3000)),
-  ]);
-} catch { /* Redis unavailable or timed out */ }
-const defaultLastSeen = ownerActivityMap[defaultTeamId] ?? null;
-const defaultActivityLevel = getActivityLevel(defaultLastSeen);
-const defaultLastSeenText = formatLastSeen(defaultLastSeen);
+// The owner "last seen" chip lived on the old team card and has no home in
+// the new header, so its Redis read is gone too. That read was an `await` on
+// the render path with a 3s timeout, blocking every SSR render of this page
+// for a value nothing consumed. Putting the chip back means restoring the
+// fetch with it — do not re-add the fetch alone.
 // Marks which Front Office strip item is current — presentational only,
 // independent of the client-side view-tab switching below.
 const frontOfficeCurrent = Astro.url.searchParams.get('view') === 'planner' ? 'league-planner' : 'rosters';
@@ -2187,8 +2180,8 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       }}
       extraStats={[{ value: headerMoney(headerCapSpace), label: 'Cap space' }]}
       featuredPlayer={headerTeamsForSwap.find((t) => t.id === defaultTeamId)?.featuredPlayer ?? null}
-      lastResult={findLastResult(headerOwnSchedule, currentWeekNum)}
-      nextGame={findNextGame(headerOwnSchedule, currentWeekNum)}
+      lastPlayed={findLastPlayedWeek(headerOwnSchedule, currentWeekNum)}
+      upNext={findNextWeek(headerOwnSchedule, currentWeekNum)}
       rail={headerRail}
       currentWeek={currentWeekNum}
       groups={headerGroups}
@@ -2220,8 +2213,8 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
                 standing={team.standing}
                 extraStats={[{ value: headerMoney(team.capSpace), label: 'Cap space' }]}
                 featuredPlayer={team.featuredPlayer}
-                lastResult={team.lastResult}
-                nextGame={team.nextGame}
+                lastPlayed={team.lastPlayed}
+                upNext={team.upNext}
                 rail={team.rail}
                 currentWeek={currentWeekNum}
                 nameOf={headerNameOf}
@@ -4951,12 +4944,6 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
 
 <script
   type="application/json"
-  id="owner-activity-data"
-  set:html={JSON.stringify(ownerActivityMap)}
-></script>
-
-<script
-  type="application/json"
   id="weekly-player-results"
   set:html={JSON.stringify(weeklyPlayerResults)}
 ></script>
@@ -5963,9 +5950,20 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     const summaryOpen = document.getElementById('summaryOpen');
     const summaryPractice = document.getElementById('practiceCount');
     const summaryInjured = document.getElementById('injuredCount');
-    const teamNames = document.querySelectorAll('[data-team-name]');
-    const teamMetas = document.querySelectorAll('[data-team-meta]');
-    const teamIdentityEls = document.querySelectorAll('[data-team-identity]');
+    /* NOTHING here may capture a NodeList of the roster HEADER's markup.
+       The header switches clubs by moving the live nameplate into a
+       `<template>` and swapping the next club's in, so a list captured at
+       init holds DETACHED nodes the moment the viewer changes team. A
+       `renderTeamIdentity` did exactly that against `[data-team-name]` and
+       kept writing the SELECTED club's name into the PARKED nameplate: the
+       club you left came back wearing the name of the club you were on.
+
+       It is gone because it had nothing left to do — its other three targets
+       (`[data-team-identity]`, `[data-team-meta]`, `[data-last-seen]`) all
+       retired with the old team card, and the nameplate is server-rendered
+       per club, so its name is right by construction. `[data-team-name]` is
+       now a READ-ONLY hook for `scripts/roster-parity-check.mjs`.
+       Guard: tests/rosters-team-nav-clientrouter.test.ts. */
     const rosterTable = document.querySelector<HTMLElement>('.roster-table');
     const rosterTableBody = document.getElementById('rosterTableBody');
     const rosterMetadata = document.getElementById('rosterMetadata');
@@ -6508,64 +6506,6 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
         })
         .join('');
       deadMoneyTableBody.innerHTML = rowsHtml;
-    };
-
-    const renderTeamIdentity = (recordText = '') => {
-      const meta = teams[currentTeam];
-      teamIdentityEls.forEach((card) => {
-        let img = card.querySelector('img');
-        if (meta?.icon) {
-          if (!img) {
-            img = document.createElement('img');
-            card.prepend(img);
-          }
-          img.src = meta.icon;
-          img.alt = `${meta?.name ?? 'Franchise'} icon`;
-        } else if (img) {
-          img.remove();
-        }
-      });
-      teamNames.forEach((el) => {
-        el.textContent = meta?.name ?? 'Franchise';
-      });
-      const bits = [];
-      if (meta?.division) bits.push(meta.division);
-      if (recordText) bits.push(recordText);
-      const metaText = bits.join(' • ') || 'Independent';
-      teamMetas.forEach((el) => {
-        el.textContent = metaText;
-      });
-
-      // Update last-seen indicator
-      const activityDataEl = document.getElementById('owner-activity-data');
-      if (activityDataEl) {
-        const activityMap = JSON.parse(activityDataEl.textContent || '{}');
-        const lastSeenEls = document.querySelectorAll<HTMLElement>('[data-last-seen]');
-        const ts = activityMap[currentTeam] ? Number(activityMap[currentTeam]) : null;
-        lastSeenEls.forEach((el) => {
-          if (!ts) {
-            el.style.display = 'none';
-            el.setAttribute('data-level', 'unknown');
-            return;
-          }
-          el.style.display = '';
-          const diffMs = Date.now() - ts;
-          const minutes = Math.floor(diffMs / 60000);
-          const hours = Math.floor(diffMs / 3600000);
-          const days = Math.floor(diffMs / 86400000);
-          let timeText = 'Just now';
-          if (minutes >= 1 && minutes < 60) timeText = `${minutes}m ago`;
-          else if (hours >= 1 && hours < 24) timeText = `${hours}h ago`;
-          else if (days >= 1 && days < 30) timeText = `${days}d ago`;
-          else if (days >= 30) timeText = `${Math.floor(days / 30)}mo ago`;
-          const textEl = el.querySelector('[data-last-seen-text]');
-          if (textEl) textEl.textContent = timeText;
-          const hoursAgo = diffMs / 3600000;
-          const level = hoursAgo < 24 ? 'active' : hoursAgo < 168 ? 'idle' : 'dormant';
-          el.setAttribute('data-level', level);
-          el.setAttribute('aria-label', `Last active: ${timeText}`);
-        });
-      }
     };
 
     const normalizeFranchiseId = (id) => {
@@ -9700,6 +9640,48 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     // what is left here is the openers that call into it.
     // ----------------------------------------------------------------
 
+    /* ── Team switching, in place ──────────────────────────────────────────
+       The crest row is a row of real LINKS, so it works before this script
+       runs, with JavaScript off, on middle-click, and it makes one club's
+       roster linkable — which the old in-memory switcher never was, because
+       it never touched the URL.
+
+       But following the link costs a 4 MB navigation on this page, and every
+       club is ALREADY in the payload, so letting it navigate threw away the
+       page's one real strength. This intercepts a plain left-click and does
+       what the old switcher did — with the header now following too, from a
+       server-rendered nameplate rather than markup rebuilt in JS.
+
+       Gated on the header's own `data-league`: both leagues' roster pages
+       render `.roster-page`, and a cross-league move is a ClientRouter swap
+       rather than a fresh document. */
+    const rosterHeader = document.querySelector<HTMLElement>('.rhdr[data-league="theleague"]');
+    const headerTeamSlot = rosterHeader?.querySelector<HTMLElement>('[data-rhdr-team]');
+
+    const applyRosterHeader = (teamId: string) => {
+      if (!rosterHeader || !headerTeamSlot) return;
+      if (headerTeamSlot.getAttribute('data-rhdr-team') === teamId) return;
+      const tpl = rosterHeader.querySelector<HTMLTemplateElement>(`template[data-rhdr-alt="${teamId}"]`);
+      if (!tpl) return;                       // unknown club: leave the header alone
+      // Park the outgoing club back into a template so switching away and
+      // back is symmetric and nothing is lost after the first swap.
+      const outgoingId = headerTeamSlot.getAttribute('data-rhdr-team');
+      const parked = document.createElement('template');
+      parked.setAttribute('data-rhdr-alt', outgoingId);
+      while (headerTeamSlot.firstChild) parked.content.appendChild(headerTeamSlot.firstChild);
+      rosterHeader.appendChild(parked);
+
+      headerTeamSlot.appendChild(tpl.content);
+      headerTeamSlot.setAttribute('data-rhdr-team', teamId);
+      tpl.remove();
+
+      rosterHeader.querySelectorAll('.rhdr-teams__crest').forEach((a) => {
+        const isActive = a.getAttribute('data-team-id') === teamId;
+        if (isActive) a.setAttribute('aria-current', 'page');
+        else a.removeAttribute('aria-current');
+      });
+    };
+
     const updateView = () => {
       clearSecondaryWarmup();
       const viewVersion = ++latestViewVersion;
@@ -9767,7 +9749,14 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       );
       const bucketCapsCurrent = calculateBucketCaps(rows);
       setCapSubtotals(bucketCapsCurrent, deadMoneyCurrent, capLimitForSeason - capCharge);
-      renderTeamIdentity(teamData.record ?? '');
+      // The header follows `currentTeam` from HERE, not from the click
+      // handler, because the click is not the only thing that moves it: the
+      // hidden #rosterTeamSelect, a season change and the parity harness all
+      // set `currentTeam` and call updateView(). Wiring it to the click alone
+      // left the nameplate on the club the SERVER had picked while the table
+      // below showed someone else. It no-ops when the header is already on
+      // this club, so the click path is unchanged.
+      applyRosterHeader(currentTeam);
       lastRenderedRows = rows;
       renderTableRows(rows);
 
@@ -9883,48 +9872,6 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       currentTeam = event.target.value;
       updateView();
     });
-
-    /* ── Team switching, in place ──────────────────────────────────────────
-       The crest row is a row of real LINKS, so it works before this script
-       runs, with JavaScript off, on middle-click, and it makes one club's
-       roster linkable — which the old in-memory switcher never was, because
-       it never touched the URL.
-
-       But following the link costs a 4 MB navigation on this page, and every
-       club is ALREADY in the payload, so letting it navigate threw away the
-       page's one real strength. This intercepts a plain left-click and does
-       what the old switcher did — with the header now following too, from a
-       server-rendered nameplate rather than markup rebuilt in JS.
-
-       Gated on the header's own `data-league`: both leagues' roster pages
-       render `.roster-page`, and a cross-league move is a ClientRouter swap
-       rather than a fresh document. */
-    const rosterHeader = document.querySelector('.rhdr[data-league="theleague"]');
-    const headerTeamSlot = rosterHeader?.querySelector('[data-rhdr-team]');
-
-    const applyRosterHeader = (teamId) => {
-      if (!rosterHeader || !headerTeamSlot) return;
-      if (headerTeamSlot.getAttribute('data-rhdr-team') === teamId) return;
-      const tpl = rosterHeader.querySelector(`template[data-rhdr-alt="${teamId}"]`);
-      if (!tpl) return;                       // unknown club: leave the header alone
-      // Park the outgoing club back into a template so switching away and
-      // back is symmetric and nothing is lost after the first swap.
-      const outgoingId = headerTeamSlot.getAttribute('data-rhdr-team');
-      const parked = document.createElement('template');
-      parked.setAttribute('data-rhdr-alt', outgoingId);
-      while (headerTeamSlot.firstChild) parked.content.appendChild(headerTeamSlot.firstChild);
-      rosterHeader.appendChild(parked);
-
-      headerTeamSlot.appendChild(tpl.content);
-      headerTeamSlot.setAttribute('data-rhdr-team', teamId);
-      tpl.remove();
-
-      rosterHeader.querySelectorAll('.rhdr-teams__crest').forEach((a) => {
-        const isActive = a.getAttribute('data-team-id') === teamId;
-        if (isActive) a.setAttribute('aria-current', 'page');
-        else a.removeAttribute('aria-current');
-      });
-    };
 
     rosterHeader?.addEventListener('click', (event) => {
       // Never swallow a modifier-click or a middle-click: those mean "open

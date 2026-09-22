@@ -63,8 +63,8 @@ import {
 } from '../../utils/roster-header-data';
 import { summarizeStandings } from '../../utils/standings-summary';
 import {
-  findLastResult,
-  findNextGame,
+  findLastPlayedWeek,
+  findNextWeek,
   franchiseSchedule,
   parseWeeklySchedule,
 } from '../../utils/schedule-data.mjs';
@@ -930,8 +930,8 @@ const pageConfig = {
         groupSize: null,
       }}
       featuredPlayer={headerFeaturedPlayer}
-      lastResult={findLastResult(headerOwnSchedule, headerWeek)}
-      nextGame={findNextGame(headerOwnSchedule, headerWeek)}
+      lastPlayed={findLastPlayedWeek(headerOwnSchedule, headerWeek)}
+      upNext={findNextWeek(headerOwnSchedule, headerWeek)}
       rail={headerRail}
       currentWeek={headerWeek}
       groups={headerGroups}

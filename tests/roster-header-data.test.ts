@@ -170,16 +170,62 @@ describe('buildSeasonRail', () => {
     expect(rail.map((r) => r.week)).toEqual([1, 2, 3]);
   });
 
-  it('marks a bye week as unplayed with no opponent', () => {
-    expect(rail[1]).toMatchObject({ week: 2, played: false, outcome: null, opponentId: null });
+  it('marks a bye week as holding no games at all', () => {
+    expect(rail[1]).toMatchObject({ week: 2, games: [] });
   });
 
   it('does not treat an unplayed game as a result', () => {
-    expect(rail[2]).toMatchObject({ week: 3, played: false, outcome: null, isCurrent: true });
+    expect(rail[2]).toMatchObject({ week: 3, isCurrent: true });
+    expect(rail[2].games).toEqual([{ played: false, outcome: null, opponentId: '0003' }]);
   });
 
   it('carries the outcome of a played week', () => {
-    expect(rail[0]).toMatchObject({ week: 1, played: true, outcome: 'W', opponentId: '0002' });
+    expect(rail[0].games).toEqual([{ played: true, outcome: 'W', opponentId: '0002' }]);
+  });
+
+  /**
+   * The bug the user reported, in the smallest form that reproduces it.
+   *
+   * TheLeague opened 2026 with three DOUBLEHEADER weeks. The rail kept
+   * `games[games.length - 1]` per week and dropped the rest, so a club that
+   * split week 1 drew one green mark and read as 1-0 beside a nameplate
+   * saying 1-1: "Pigskins has 2 green but is one and one."
+   */
+  it('keeps BOTH games of a doubleheader, so the marks count the record', () => {
+    const doubleheader = parseWeeklySchedule({
+      schedule: {
+        weeklySchedule: [
+          {
+            week: '1',
+            matchup: [
+              {
+                franchise: [
+                  { id: '0001', isHome: '1', result: 'L', score: '99.11' },
+                  { id: '0002', isHome: '0', result: 'W', score: '120.54' },
+                ],
+              },
+              {
+                franchise: [
+                  { id: '0001', isHome: '1', result: 'W', score: '99.11' },
+                  { id: '0008', isHome: '0', result: 'L', score: '91.74' },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    });
+    const split = buildSeasonRail(
+      franchiseSchedule(doubleheader, '0001'),
+      [1],
+      1,
+    );
+    expect(split[0].games).toHaveLength(2);
+    expect(split[0].games.map((g) => g.outcome)).toEqual(['L', 'W']);
+    // What the reader counts: one green, one red, for a 1-1 week.
+    const wins = split.flatMap((w) => w.games).filter((g) => g.outcome === 'W');
+    const losses = split.flatMap((w) => w.games).filter((g) => g.outcome === 'L');
+    expect([wins.length, losses.length]).toEqual([1, 1]);
   });
 });
 
@@ -368,5 +414,70 @@ describe('the value metric reads THIS season, not last', () => {
     // Real: a WR can sit at -0.6 after a fumble-heavy opener.
     const roster = [{ id: '1', name: 'X', position: 'WR', salary: 500000, points: -0.6 }];
     expect(bestValuePlayer(roster)).toBeNull();
+  });
+});
+
+/**
+ * The season rail's four states have to be told apart by someone glancing at
+ * a phone, and the first version could not be.
+ *
+ * `--color-accent` is `#2e8743` in TheLeague and `#4ade80` in dark mode —
+ * green, the same family as `--color-success`. The current week was painted
+ * with it, so a 1-1 club drew a green win, a red loss and a green current
+ * week, and read as 2-1. (Reported exactly that way: "Pigskins has 2 green
+ * but is one and one.")
+ *
+ * The fix is structural rather than a new hue: a week that was PLAYED is a
+ * filled mark and is the only thing that carries colour; a week that was not
+ * is an outline. That survives greyscale and every form of colour blindness,
+ * and it cannot be undone by a token whose value changes.
+ */
+describe('the season rail distinguishes a result from the current week', () => {
+  const BAR = fs.readFileSync(
+    path.join(process.cwd(), 'src/components/shared/roster-header/GamedayBar.astro'),
+    'utf-8',
+  );
+
+  /** The declarations inside one `.rhdr-rail__dot.<state> .rhdr-rail__mark` rule. */
+  const markRule = (state: string) => {
+    const head = `.rhdr-rail__dot.${state} .rhdr-rail__mark`;
+    const at = BAR.indexOf(head);
+    expect(at, `${head} must exist`).toBeGreaterThan(-1);
+    const open = BAR.indexOf('{', at);
+    return BAR.slice(open + 1, BAR.indexOf('}', open));
+  };
+
+  it('paints the played weeks, and only the played weeks', () => {
+    expect(markRule('is-win')).toMatch(/background:\s*var\(--color-success/);
+    expect(markRule('is-loss')).toMatch(/background:\s*var\(--color-error/);
+    for (const unplayed of ['is-now', 'is-future']) {
+      expect(markRule(unplayed), `an unplayed week must not be filled (${unplayed})`)
+        .toMatch(/background:\s*transparent/);
+    }
+  });
+
+  it('never marks the current week with the accent, which is green here', () => {
+    expect(
+      markRule('is-now'),
+      '--color-accent is green in TheLeague; an accent mark reads as a win',
+    ).not.toContain('--color-accent');
+  });
+
+  it('separates the current week from a future one by weight, not hue', () => {
+    expect(markRule('is-now'), 'the current week is a solid ring').toMatch(/border:[^;]*solid/);
+    expect(markRule('is-future'), 'a future week stays faint').toMatch(/border:[^;]*dashed/);
+  });
+
+  it('keeps the bordered marks inside their column', () => {
+    // This repo has no global `border-box`, so a bordered mark would otherwise
+    // grow past `width: 100%` and shift every dot after it.
+    const at = BAR.indexOf('.rhdr-rail__mark {');
+    const base = BAR.slice(at, BAR.indexOf('}', at));
+    expect(base).toMatch(/box-sizing:\s*border-box/);
+  });
+
+  it('only calls a week current when it has NOT been played', () => {
+    // A played current week must show its result, not the "you are here" ring.
+    expect(BAR).toMatch(/'is-now':\s*!game\?\.played && entry\.isCurrent/);
   });
 });

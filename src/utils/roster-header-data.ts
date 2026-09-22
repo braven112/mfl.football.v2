@@ -145,21 +145,35 @@ export function buildTeamGroups({
   });
 }
 
-export interface RailWeek {
-  week: number;
+export interface RailGame {
   played: boolean;
   outcome: 'W' | 'L' | 'T' | null;
   opponentId: string | null;
+}
+
+export interface RailWeek {
+  week: number;
   isCurrent: boolean;
+  /** Every game the club plays that week. Empty means a bye. */
+  games: RailGame[];
 }
 
 /**
- * One dot per scheduled week, in week order, for the season rail.
+ * The season rail: one mark per GAME, grouped by week.
  *
- * Built from the WEEK LIST rather than from the club's own games, so a bye
- * still occupies a slot and the rail stays the same width for every club in
- * the league. A doubleheader week collapses to its last game, matching what
- * `findLastResult` calls the more recent result.
+ * Per game, not per week, and that is the whole point. TheLeague opens 2026
+ * with three DOUBLEHEADER weeks (and runs another in week 12); the AFL runs
+ * them in 1, 2 and 12 — which weeks move every season, so nothing may
+ * hardcode them. This function used to keep `games[games.length - 1]` and
+ * throw the other game away, which made the rail disagree with the record
+ * printed a few pixels above it: the Pigskins split week 1, the rail drew the
+ * win and dropped the loss, and a 1-1 club showed one green mark. Reported as
+ * exactly that. The rail is a record when the marks count the games, and a
+ * lie when they count the weeks.
+ *
+ * Still built from the WEEK LIST rather than from the club's own games, so a
+ * bye keeps its slot and the rail stays the same width for every club in the
+ * league.
  */
 export function buildSeasonRail(
   schedule: Array<{ week: number; games: any[] }>,
@@ -167,17 +181,15 @@ export function buildSeasonRail(
   currentWeek: number,
 ): RailWeek[] {
   const byWeek = new Map(schedule.map((entry) => [entry.week, entry.games]));
-  return weekNumbers.map((week) => {
-    const games = byWeek.get(week) ?? [];
-    const game = games.length > 0 ? games[games.length - 1] : null;
-    return {
-      week,
+  return weekNumbers.map((week) => ({
+    week,
+    isCurrent: week === currentWeek,
+    games: (byWeek.get(week) ?? []).map((game: any) => ({
       played: Boolean(game?.played),
-      outcome: (game?.outcome ?? null) as RailWeek['outcome'],
+      outcome: (game?.outcome ?? null) as RailGame['outcome'],
       opponentId: game?.opponentId != null ? String(game.opponentId) : null,
-      isCurrent: week === currentWeek,
-    };
-  });
+    })),
+  }));
 }
 
 
