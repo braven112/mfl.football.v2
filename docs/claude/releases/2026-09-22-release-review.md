@@ -231,3 +231,34 @@ with the skip for that reason.)
 
 **Verdict now: GO**, conditional on running the Owners' Poll adopt step at
 promotion, before Thursday's close.
+
+## Promotion outcome — promoted 2026-09-22 16:40 PT
+
+**Shipped:** `main` `8f45d35b67` → `25b6cb936e`, a clean fast-forward
+(`--ff-only`), no merge commit. Features: #1164, #1174, #1177, #1180, #1181,
+#1183, #1186, #1187, #1188, #1189, #1190, plus the merge-down resolution
+(`ac127eecff`), the derived-data and test fixes (`9a0f4d0c04`) and a second
+merge-down (`25b6cb936e`).
+
+**Second merge-down, at promotion.** `main`'s derived-chain lane (`8f45d35b67`,
+23:11 UTC) recomputed the same eight chain files as `9a0f4d0c04`, breaking the
+merge-down again. Resolved by taking `main`'s chain whole. That lane also
+emitted `sf_milestone_0013-century-club` (Gridiron Geeks) to the feed, so the
+milestone the no-post recompute skipped was posted after all: feed only, no
+GroupMe.
+
+**Gates at promotion:** blackout clear (Tue 16:38 PT); CI on `25b6cb936e`
+green (Tests + Type baseline); Chromatic build 480 on `staging`: 32 visual
+changes, 0 errors, accepted by Brandon before the push.
+
+**The tag: FAILED again (HTTP 403)**, the same tag-specific permission limit as
+2026-09-18. These credentials can push branches but cannot push tags or
+dispatch workflows. So `weekly-changelog-rollup.yml` did NOT fire, and the 113
+staged changes (this week's plus 09-18's, whose tag also never landed) remain
+queued. To publish, tag `25b6cb936e` as `v2026.09.22` and push the tag, or run
+Actions → Weekly Changelog Rollup on `main`. The 09-18 tag was never pushed
+either (`v2026.09.18` → `5dc25ad359`); push it BEFORE v2026.09.22 or not at
+all, since every `v*` tag push runs the rollup.
+
+**Still owed:** the Owners' Poll adopt one-shot, per league, before Thursday's
+`owners-poll-close`.
