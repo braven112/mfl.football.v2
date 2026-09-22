@@ -754,6 +754,22 @@
       "impact": "user",
       "area": "live-scoring",
       "league": "both"
+    },
+    {
+      "date": "2026-09-22",
+      "type": "enhancement",
+      "summary": "AFL rosters now flag injured players — a red (Q), (O) or (I) beside the name, tap for the body part. Set Lineup shows it too, in both leagues.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-22",
+      "type": "bug-fix",
+      "summary": "The injury flag’s red was too dark to read on a dark background, and its detail card opened as a white box in dark mode. Both now follow your theme.",
+      "impact": "user",
+      "area": "design-system",
+      "league": "both"
     }
   ]
 }

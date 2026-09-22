@@ -98,6 +98,8 @@ import { parsePlayerWeekScores } from '../../utils/player-week-scores.mjs';
 import liveOddsFallbackData from '../../data/nfl/live-odds.json';
 import { spriteUrl } from '../../utils/sprite-url';
 import { getLeagueBySlug } from '../../config/leagues';
+import { loadInjuryMap } from '../../utils/mfl-injuries';
+import '../../styles/injury-indicator.css';
 // Canonical row shaping, shared with the inline client script below.
 // src/utils/roster-utils.ts already held every one of these; this page used to
 // carry its own copy in the frontmatter AND another in the client script.
@@ -921,21 +923,13 @@ Object.entries(rostersFeeds).forEach(([path, mod]) => {
   });
 });
 
-// Load MFL injury data — sourced from data/theleague/mfl-feeds/<year>/injuries.json,
-// kept fresh by the roster-sync workflow (every 5 min year-round) which calls
-// fetch-mfl-feeds.mjs. Status values are pre-normalized ('Q'/'O'/'IR'/etc.) so
-// the badge matches what owners see on MFL itself. Falls back to per-player
-// Sleeper data if the file is somehow missing (e.g. fresh checkout before the
-// first sync run).
-let mflInjuryData = {};
-try {
-  const injuryDataModule = await import(`../../../data/theleague/mfl-feeds/${currentLeagueYearStr}/injuries.json`);
-  if (injuryDataModule.default?.injuries) {
-    mflInjuryData = injuryDataModule.default.injuries;
-  }
-} catch (error) {
-  console.warn(`MFL injury data not available for ${currentLeagueYearStr}:`, error.message);
-}
+// MFL injury designations — sourced from the committed injuries.json, kept
+// fresh by the roster-sync workflow (every 5 min year-round) via
+// fetch-mfl-feeds.mjs, so the badge matches what owners see on MFL itself.
+// `loadInjuryMap` reads the NEWEST year on disk rather than this page's league
+// year, and is shared with the AFL roster page and both lineup pages — see
+// src/utils/mfl-injuries.ts for why the year distinction is load-bearing.
+const mflInjuryData = loadInjuryMap(getLeagueBySlug('theleague')!.slug);
 
 const recordsBySeason = {};
 Object.entries(standingsFeeds).forEach(([path, mod]) => {
@@ -4319,19 +4313,6 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     display: inline-block;
     cursor: pointer;
     text-decoration: none;
-  }
-
-  :global(.injury-indicator) {
-    cursor: pointer;
-    background: none;
-    color: #ef4444;
-    border: none;
-    padding: 0;
-    font-family: inherit;
-    font-size: 0.9rem;
-    font-weight: 600;
-    margin-left: 0.25rem;
-    line-height: 1;
   }
 
   :global(.contract-years) {

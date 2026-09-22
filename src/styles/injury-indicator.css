@@ -1,0 +1,46 @@
+/**
+ * The roster/lineup injury badge — the red "(Q)" / "(I)" next to a player name.
+ *
+ * A plain stylesheet rather than a page-scoped `<style>` block for two reasons,
+ * both of which have bitten this repo before:
+ *
+ * 1. **Two leagues render it.** Once a second page needs the same rules, a
+ *    shared `.css` both pages import is the home — see
+ *    `docs/claude/rules/theming-and-assets.md`.
+ * 2. **Half of these badges are built by JS.** TheLeague's roster script emits
+ *    the badge from an `innerHTML` string, and Astro's scoped CSS compiles to
+ *    selectors that require the page's `astro-xxxx` class on the element — which
+ *    a runtime-built node never has. Scoped, the rules silently miss exactly the
+ *    rows that re-render after hydration.
+ *
+ * The colour is `--color-error`, not a literal. The badge shipped hardcoded
+ * `#ef4444`, which measures 3.44:1 on the AFL's navy row hover (#1d3349) and
+ * 3.98:1 on its resting row — under the 4.5:1 floor for 14px/600 text, so the
+ * one datum on the row that means "this player might not play" was the hardest
+ * thing on it to read in dark mode (reported 2026-09-22). `--color-error`
+ * carries #dc2626 light / #f87171 dark, which clears 4.5:1 on every surface
+ * either league puts this badge on, in both themes.
+ */
+
+.injury-indicator {
+  cursor: pointer;
+  background: none;
+  color: var(--color-error);
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-left: 0.25rem;
+  line-height: 1;
+}
+
+/**
+ * The lineup pages' variant. Same colour and weight, but it is a <span>: a
+ * lineup slot is itself a tap target that opens the player picker, so a button
+ * inside one competes for the tap. Nothing here is clickable, so nothing should
+ * look clickable.
+ */
+.injury-indicator--static {
+  cursor: default;
+}
