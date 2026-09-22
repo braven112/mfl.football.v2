@@ -16,9 +16,11 @@ import { describe, it, expect } from 'vitest';
 import theleagueConfig from '../src/data/theleague.config.json';
 import aflConfig from '../data/afl-fantasy/afl.config.json';
 import bb1Config from '../data/best-ball-1/bb1.config.json';
-import { contrastRatio } from '../src/utils/team-color-contrast';
+import { contrastRatio, colorDistance } from '../src/utils/team-color-contrast';
 import {
   resolveTeamBand,
+  resolveTeamBandForBodyText,
+  BAND_INK_BODY_MIN_RATIO,
   bandCrestSrc,
   teamBandStyle,
   BAND_INK_DARK,
@@ -79,6 +81,53 @@ describe('team band — ink is readable on every franchise fill', () => {
       }
     });
   }
+});
+
+describe('team band — the body-floor variant, for surfaces with small type', () => {
+  // `resolveTeamBandForBodyText` exists because the draft order grid paints a
+  // 101px card whose lines are 14.2px, 16.5px and 11.8px — text that cannot
+  // claim the 3:1 large-text floor the standard band is measured at. A census
+  // again, for the same reason: the cost of the higher floor is paid per
+  // franchise, and a re-colour is exactly when it would start going unpaid.
+  for (const { slug, teams } of LEAGUES) {
+    it(`${slug}: ink clears ${BAND_INK_BODY_MIN_RATIO}:1 on the fill in both themes`, () => {
+      expect(teams.length).toBeGreaterThan(0);
+      const failures: string[] = [];
+      for (const team of teams) {
+        const band = resolveTeamBandForBodyText(team.franchiseId, slug);
+        const light = contrastRatio(band.ink, band.fill);
+        const dark = contrastRatio(band.inkDark, band.fillDark);
+        if (!(light >= BAND_INK_BODY_MIN_RATIO)) {
+          failures.push(`${team.name} light ${light.toFixed(2)}:1 (${band.ink} on ${band.fill})`);
+        }
+        if (!(dark >= BAND_INK_BODY_MIN_RATIO)) {
+          failures.push(`${team.name} dark ${dark.toFixed(2)}:1 (${band.inkDark} on ${band.fillDark})`);
+        }
+      }
+      expect(failures).toEqual([]);
+    });
+  }
+
+  it('costs almost nothing in fill drift — three clubs, imperceptibly', () => {
+    // The whole reason the body floor is affordable. If a franchise ever has to
+    // move far to satisfy it, its draft card and its standings row stop being
+    // the same colour, and that is a design decision rather than a tweak.
+    const drifted: string[] = [];
+    for (const { slug, teams } of LEAGUES) {
+      for (const team of teams) {
+        const large = resolveTeamBand(team.franchiseId, slug);
+        const body = resolveTeamBandForBodyText(team.franchiseId, slug);
+        const delta = Math.max(
+          colorDistance(large.fill, body.fill),
+          colorDistance(large.fillDark, body.fillDark),
+        );
+        // 5 is comfortably inside "the same colour"; ~25 is where two colours
+        // start reading as different ones.
+        if (delta > 5) drifted.push(`${team.name} ΔE ${delta.toFixed(1)}`);
+      }
+    }
+    expect(drifted).toEqual([]);
+  });
 });
 
 describe('team band — a legible brand colour is left alone', () => {

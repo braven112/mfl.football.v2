@@ -65,6 +65,7 @@ import aflConfig from '../../data/afl-fantasy/afl.config.json';
 import bb1Config from '../../data/best-ball-1/bb1.config.json';
 import type { LeagueSlug } from '../types/nav';
 import {
+  AA_BODY_TEXT_RATIO,
   AA_LARGE_TEXT_RATIO,
   contrastRatio,
   colorDistance,
@@ -85,6 +86,9 @@ export const BAND_SURFACE_DARK = '#262626';
 
 /** Ink on fill. The large-text floor, which the band's ≥19px/700 type earns. */
 export const BAND_INK_MIN_RATIO = AA_LARGE_TEXT_RATIO;
+/** Ink on fill for a surface whose type is SMALLER than 18.66px bold, and so
+ *  cannot claim the large-text floor. See `resolveTeamBandForBodyText`. */
+export const BAND_INK_BODY_MIN_RATIO = AA_BODY_TEXT_RATIO;
 /** Fill vs card. Low on purpose: a band only has to be SEEN, not read. */
 export const BAND_SURFACE_MIN_RATIO = 1.35;
 
@@ -121,17 +125,22 @@ interface Solved {
  * both inks is possible in principle; no franchise in any league hits it today,
  * and `tests/team-band.test.ts` fails the build if one ever does).
  */
-function solveBand(fill: string, ink: string, surface: string): Solved | null {
+function solveBand(
+  fill: string,
+  ink: string,
+  surface: string,
+  minRatio: number = BAND_INK_MIN_RATIO,
+): Solved | null {
   const original = fill;
   let out = fill;
 
   // 1. Ink legibility. Dark ink wants a lighter fill and vice versa.
   const inkDir = relativeLuminance(ink) < 0.5 ? 1 : -1;
-  if (contrastRatio(ink, out) < BAND_INK_MIN_RATIO) {
+  if (contrastRatio(ink, out) < minRatio) {
     let solved = false;
     for (let step = 0.04; step <= 1.0001; step += 0.04) {
       const candidate = shiftLightness(original, inkDir * step);
-      if (contrastRatio(ink, candidate) >= BAND_INK_MIN_RATIO) {
+      if (contrastRatio(ink, candidate) >= minRatio) {
         out = candidate;
         solved = true;
         break;
@@ -148,7 +157,7 @@ function solveBand(fill: string, ink: string, surface: string): Solved | null {
     const base = out;
     for (let step = 0.03; step <= 1.0001; step += 0.03) {
       const candidate = shiftLightness(base, surfaceDir * step);
-      if (contrastRatio(ink, candidate) < BAND_INK_MIN_RATIO) break;
+      if (contrastRatio(ink, candidate) < minRatio) break;
       out = candidate;
       if (contrastRatio(out, surface) >= BAND_SURFACE_MIN_RATIO) break;
     }
@@ -167,19 +176,23 @@ function solveBand(fill: string, ink: string, surface: string): Solved | null {
  * reaches that branch today — it exists so a future re-colour degrades into a
  * nudged fill rather than into unreadable text.
  */
-export function bandFor(color: string, surface: string): { fill: string; ink: string } {
+export function bandFor(
+  color: string,
+  surface: string,
+  minRatio: number = BAND_INK_MIN_RATIO,
+): { fill: string; ink: string } {
   const fill = isHex(color) ? normalizeHex(color) : NEUTRAL_FILL;
 
   for (const ink of [BAND_INK_LIGHT, BAND_INK_DARK]) {
-    if (contrastRatio(ink, fill) >= BAND_INK_MIN_RATIO) {
-      const solved = solveBand(fill, ink, surface);
+    if (contrastRatio(ink, fill) >= minRatio) {
+      const solved = solveBand(fill, ink, surface, minRatio);
       if (solved) return { fill: solved.fill, ink: solved.ink };
     }
   }
 
   const solvedBoth = [
-    solveBand(fill, BAND_INK_LIGHT, surface),
-    solveBand(fill, BAND_INK_DARK, surface),
+    solveBand(fill, BAND_INK_LIGHT, surface, minRatio),
+    solveBand(fill, BAND_INK_DARK, surface, minRatio),
   ].filter((c): c is Solved => c !== null);
   if (solvedBoth.length === 0) {
     // Unreachable for every franchise on file; a neutral band is still readable.
@@ -211,11 +224,48 @@ function teamEntry(franchiseId: string, league: LeagueSlug): any {
  * how far that colour has to be lifted off a darker card.
  */
 export function resolveTeamBand(franchiseId: string, league: LeagueSlug = 'theleague'): TeamBand {
+  return bandAtFloor(franchiseId, league, BAND_INK_MIN_RATIO);
+}
+
+/**
+ * The same band, resolved so SMALL text is legible on it.
+ *
+ * `resolveTeamBand` measures at WCAG's 3:1 large-text floor, and that floor is
+ * only earned while the text on the fill is >=18.66px bold. A surface whose
+ * type is smaller than that — the draft order grid's pick tiles are 14.2px,
+ * 16.5px and 11.8px in a 101px-wide card — needs the 4.5:1 body floor instead,
+ * or its ink was measured against a premise it does not meet.
+ *
+ * What this costs, measured over all 52 franchises in the three leagues:
+ *
+ * - 49 keep their fill EXACTLY as `resolveTeamBand` returns it and differ only
+ *   in which of the two inks they take. Sixteen of the 104 franchise/theme
+ *   pairs flip ink. So a club's draft tile is the same colour as its standings
+ *   row; only the text on it may be the other ink.
+ * - THREE cannot, and they miss narrowly: the Mariachi Ninjas' #2f8b59 tops out
+ *   at 4.29:1, Smokane FC's #398b6a at 4.39:1, and Best Ball's Franchise 01 at
+ *   4.36:1 — three mid-greens where neither white nor near-black clears 4.5.
+ *   For those `solveBand` nudges the fill the smaller of the two distances, so
+ *   they read a shade off their own standings row rather than illegibly.
+ *
+ * That trade is the whole reason this is a SEPARATE function rather than a
+ * parameter with a default: picking the body floor means accepting a small
+ * divergence for three clubs, and that should be a decision at the call site
+ * rather than something a surface inherits by accident.
+ */
+export function resolveTeamBandForBodyText(
+  franchiseId: string,
+  league: LeagueSlug = 'theleague',
+): TeamBand {
+  return bandAtFloor(franchiseId, league, AA_BODY_TEXT_RATIO);
+}
+
+function bandAtFloor(franchiseId: string, league: LeagueSlug, minRatio: number): TeamBand {
   const team = teamEntry(franchiseId, league);
   const primary: string = isHex(team.colorPrimary) ? team.colorPrimary : NEUTRAL_FILL;
 
-  const light = bandFor(primary, BAND_SURFACE_LIGHT);
-  const dark = bandFor(primary, BAND_SURFACE_DARK);
+  const light = bandFor(primary, BAND_SURFACE_LIGHT, minRatio);
+  const dark = bandFor(primary, BAND_SURFACE_DARK, minRatio);
 
   return {
     fill: light.fill,

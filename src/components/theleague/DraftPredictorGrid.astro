@@ -7,7 +7,7 @@
 
 import type { DraftPrediction } from '../../types/standings';
 import type { LeagueSlug } from '../../types/nav';
-import { resolveTeamBand, teamBandStyle, bandCrestSrc, BAND_INK_LIGHT } from '../../utils/team-band';
+import { resolveTeamBandForBodyText, teamBandStyle, bandCrestSrc, BAND_INK_LIGHT } from '../../utils/team-band';
 
 export interface Props {
   predictions: DraftPrediction[];
@@ -38,29 +38,35 @@ const {
 } = Astro.props;
 
 /**
- * The club's colour behind the crest, and NOT behind the text.
+ * The whole card in the club's colour — crest, name, pick number and all.
  *
- * The tile's own background is how all four status marks already work
- * (`--league-winner` gold, `--toilet-bowl` red, `--champion` orange,
- * `--user-team` green), so the colour cannot take that slot without deleting
- * the thing the grid exists to show.
+ * Resolved through `resolveTeamBandForBodyText`, NOT `resolveTeamBand`, and
+ * that is the load-bearing line here. The standard band measures its ink at
+ * WCAG's 3:1 large-text floor, which is only earned while the text on the fill
+ * is >=18.66px bold. This tile's type is 14.2px (`__name`), 16.5px
+ * (`__number`) and 11.8px (`__label`) at this site's 18.9px root, in a 101px
+ * card that cannot carry "Midwestside Connection" at 19px. Painting the card
+ * at the large-text floor would have voided the measurement rather than passed
+ * it, so the ink is measured at the 4.5:1 body floor instead.
  *
- * It also must not: band ink is measured at WCAG's 3:1 LARGE-TEXT floor, which
- * is only earned at >=18.66px bold, and this tile's type is 14.2px
- * (`__name`), 16.5px (`__number`) and 11.8px (`__label`) at this site's 18.9px
- * root. A 100px-wide tile cannot carry "Midwestside Connection" at 19px, so
- * painting the whole tile would void the measurement rather than pass it.
+ * Measured over all 52 franchises: every one clears 4.5:1, and only three
+ * fills move from what the standings band returns — the Ninjas, Smokane and
+ * Best Ball's Franchise 01, all mid-greens, by ΔE 2.3-2.6. That is far below
+ * the ~25 at which two colours read as different colours, so a club's draft
+ * card and its standings row are the same colour to the eye; 22 of the 104
+ * franchise/theme pairs simply take the other ink.
  *
- * So the plate holds the crest alone and every glyph stays on the card — the
- * same split as the Pecking Order's rank chip. `tests/team-band-type-contract`
- * records that as this surface's declared contract.
+ * The four status marks keep working because they were never only backgrounds:
+ * `--user-team`, `--champion-tbd`, `--toilet-bowl` and `--league-winner` each
+ * carry a border, and the CSS below leaves every border alone and overrides
+ * only the fills and text colours.
  *
- * Returns null for a pick with no franchise (the TBD compensatory tiles, which
- * carry no crest at all) so those keep the card surface and their dashed edge.
+ * Returns null for a pick with no franchise — the TBD compensatory tiles, which
+ * have no crest and no club — so those keep the card surface and dashed edge.
  */
-function plateFor(pick: DraftPrediction) {
+function bandFor(pick: DraftPrediction) {
   if (!pick.franchiseId) return null;
-  const band = resolveTeamBand(pick.franchiseId, league);
+  const band = resolveTeamBandForBodyText(pick.franchiseId, league);
   return {
     band,
     // The crest sits on the FILL, which is the club's colour in both themes, so
@@ -125,7 +131,7 @@ const specialPicksAssigned = hasCompensatoryPicks ? {
         <h3 class="draft-round__title">{roundTitle}</h3>
         <div class="draft-round__picks">
           {roundPicks.map((pick) => {
-            const plate = plateFor(pick);
+            const plate = bandFor(pick);
             return (
             <div
               class:list={[
@@ -456,25 +462,82 @@ const specialPicksAssigned = hasCompensatoryPicks ? {
     box-shadow: 0 0 0 1px rgba(167, 139, 250, 0.2);
   }
 
-  /* --- The club's colour behind the crest ------------------------------- */
-  /* Scoped to `--band` so it reaches real pick tiles only: the TBD
-     compensatory tiles carry no crest at all, and the Legend's tiles put an
-     inline SVG swatch in this same container — neither is a franchise, and
-     neither should grow a plate. No `font-size` belongs in any of these rules;
-     the plate deliberately carries no text (see `plateFor`). */
-  .draft-pick--band .draft-pick__icon-container {
-    width: 100%;
-    height: 46px;
-    border-radius: 7px;
+  /* --- The whole card in the club's colour ------------------------------ */
+  /* Scoped to `--band` so it reaches real pick cards only: the TBD
+     compensatory tiles have no franchise, and the Legend's tiles are swatches
+     rather than clubs. Neither should be painted.
+
+     These rules come AFTER every status modifier on purpose. All of them are
+     single-class selectors, so source order decides, and the club's colour is
+     meant to win the FILL. What the modifiers keep is their BORDER — which is
+     how each of them was already readable — so `--user-team`'s 3px green,
+     `--champion-tbd`'s dash and `--toilet-bowl`'s dashed red all survive on
+     top of the colour. Nothing below touches a border.
+
+     Ink comes from the band, which for this surface was measured at the 4.5:1
+     BODY floor (`resolveTeamBandForBodyText`) precisely because this card's
+     type is 14.2px/16.5px/11.8px and cannot claim the large-text floor. */
+  .draft-pick--band {
     background-color: var(--band-fill);
+    border-color: color-mix(in srgb, var(--band-ink) 30%, transparent);
   }
-  :global(html.dark) .draft-pick--band .draft-pick__icon-container {
+  .draft-pick--band .draft-pick__name,
+  .draft-pick--band .draft-pick__number {
+    color: var(--band-ink);
+  }
+  /* The label is the quietest line on the card and stays quiet, but it is
+     tinted from the ink rather than the old fixed slate — a fixed grey is
+     unreadable on half these fills. */
+  .draft-pick--band .draft-pick__label {
+    color: color-mix(in srgb, var(--band-ink) 76%, transparent);
+  }
+  /* Hover tints toward the row's OWN ink, so it lightens a navy card and
+     darkens a gold one with one rule — and it has to be declared here, or the
+     status modifiers' own `:hover` backgrounds paint over the club colour. */
+  .draft-pick--band:hover,
+  .draft-pick--band.draft-pick--league-winner:hover,
+  .draft-pick--band.draft-pick--toilet-bowl:hover,
+  .draft-pick--band.draft-pick--user-team:hover {
+    background-color: color-mix(in srgb, var(--band-ink) 12%, var(--band-fill));
+  }
+
+  :global(html.dark) .draft-pick--band {
     background-color: var(--band-fill-dark);
+    border-color: color-mix(in srgb, var(--band-ink-dark) 30%, transparent);
   }
+  :global(html.dark) .draft-pick--band .draft-pick__name,
+  :global(html.dark) .draft-pick--band .draft-pick__number {
+    color: var(--band-ink-dark);
+  }
+  :global(html.dark) .draft-pick--band .draft-pick__label {
+    color: color-mix(in srgb, var(--band-ink-dark) 76%, transparent);
+  }
+  :global(html.dark) .draft-pick--band:hover,
+  :global(html.dark) .draft-pick--band.draft-pick--league-winner:hover,
+  :global(html.dark) .draft-pick--band.draft-pick--toilet-bowl:hover,
+  :global(html.dark) .draft-pick--band.draft-pick--user-team:hover {
+    background-color: color-mix(in srgb, var(--band-ink-dark) 12%, var(--band-fill-dark));
+  }
+
+  /* The status marks re-assert their own border over the band's tinted one.
+     Declared after the band so the border colour they rely on is not lost. */
+  .draft-pick--band.draft-pick--user-team {
+    border-color: #2e743d;
+  }
+  .draft-pick--band.draft-pick--toilet-bowl {
+    border-color: #ff6b6b;
+  }
+  .draft-pick--band.draft-pick--league-winner {
+    border-color: #fbbf24;
+  }
+  .draft-pick--band.draft-pick--champion {
+    border-color: #fb923c;
+  }
+
   /* `bandCrestSrc` already chose the cut from the FILL, which is the club's
      colour in both themes. TeamIconDarkStyles is a global
      `html.dark img[src="<light>"]` rule, so without this it would override that
-     choice after sunset and put a dark-card crest on a light plate. */
+     choice after sunset and put a dark-card crest on a light fill. */
   :global(html.dark) .draft-pick--band .draft-pick__icon {
     content: normal;
   }

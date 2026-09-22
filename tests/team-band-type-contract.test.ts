@@ -46,22 +46,23 @@ const REM_PX = 16;
  */
 type Contract =
   | { paints: false }
-  | { paints?: true; bandText: RegExp; boldRule: RegExp; cssFile?: string }
   /**
-   * A surface that paints a fill but puts NO text on it — the band is behind a
-   * crest, a swatch or an icon, and every glyph stays on the card.
-   *
-   * This is not a weaker version of the contract above, it is a DIFFERENT
-   * claim, and a checkable one: the suite asserts the band's selectors declare
-   * no `font-size` at all. That is what makes it safe to skip the 18.66px
-   * floor, because the floor only exists to justify measuring ink at 3:1 — and
-   * where there is no ink on the fill there is nothing to measure.
-   *
-   * It must not become the easy way out. A surface that wants small text on a
-   * fill does not belong here; it needs ink measured at the 4.5:1 body floor,
-   * which is a change to `team-band.ts` and re-derives eight AFL clubs' fills.
+   * The default: ink measured at the 3:1 LARGE-TEXT floor, which the surface
+   * earns by keeping every glyph on the fill at >=18.66px and bold.
    */
-  | { paints?: true; bandText: RegExp; textOnFill: false; cssFile?: string };
+  | { paints?: true; floor?: 'large'; bandText: RegExp; boldRule: RegExp; cssFile?: string }
+  /**
+   * Ink measured at the 4.5:1 BODY floor instead, for a surface whose type is
+   * smaller than large-text and cannot claim that floor — the draft order
+   * grid's 101px cards, whose lines are 14.2px, 16.5px and 11.8px.
+   *
+   * This is not the easy way out of the size requirement, because it is only
+   * true if the surface actually RESOLVES its band that way. So the check here
+   * is not about CSS at all: the file must call `resolveTeamBandForBodyText`,
+   * not `resolveTeamBand`. Declaring the body floor while resolving at the
+   * large-text floor is the exact bug this shape exists to make impossible.
+   */
+  | { paints?: true; floor: 'body'; bandText: RegExp; cssFile?: string };
 
 const CONTRACTS: Record<string, Contract> = {
   'components/theleague/standings/StandingsTable.astro': {
@@ -87,12 +88,13 @@ const CONTRACTS: Record<string, Contract> = {
     bandText: /thm-worow--band/,
     boldRule: /:global\(\.thm-worow--band\)\s*\{([^}]*)\}/,
   },
-  // The draft order grid's pick plates. Text-free by necessity, not by taste:
-  // the tile's own background is how its four status marks work, and its type
-  // is 14.2px/16.5px/11.8px in a 100px-wide tile, which cannot reach 18.66px.
+  // The draft order grid paints the WHOLE card and puts the club name, pick
+  // number and label on it, at 14.2px/16.5px/11.8px inside a 101px card. Those
+  // cannot reach 18.66px, so this surface buys its legibility with the body
+  // floor rather than with type size.
   'components/theleague/DraftPredictorGrid.astro': {
+    floor: 'body',
     bandText: /draft-pick--band/,
-    textOnFill: false,
   },
   // Resolve-only: they attach bands to a team list that other surfaces paint.
   'utils/transaction-hub-config.ts': { paints: false },
@@ -178,21 +180,23 @@ describe('team band — the type keeps the contrast measurement valid', () => {
     if (contract.paints === false) continue;
     describe(file, () => {
       const css = readFileSync(resolve(SRC, contract.cssFile ?? file), 'utf8');
-      const textFree = 'textOnFill' in contract && contract.textOnFill === false;
+      const bodyFloor = 'floor' in contract && contract.floor === 'body';
 
       it(
-        textFree
-          ? 'puts no text on the fill at all, which is why the floor does not apply'
+        bodyFloor
+          ? 'resolves its band at the body floor it claims, not the large-text one'
           : 'declares band type at 18.66px or larger, at every breakpoint',
         () => {
-          const sizes = bandFontSizes(css, contract.bandText);
-          if (textFree) {
-            // The whole basis of this entry. A `font-size` appearing in a band
-            // selector means glyphs moved onto the fill, and the ink behind
-            // them was never measured for text that small.
-            expect(sizes.map((s) => `${s.selector} → ${s.px}px`)).toEqual([]);
+          if (bodyFloor) {
+            // The claim is about the RESOLVER, not the stylesheet. A surface
+            // that declares the body floor and calls `resolveTeamBand` has ink
+            // measured at 3:1 sitting on sub-18.66px text — which is the state
+            // this whole file exists to prevent.
+            const src = readFileSync(resolve(SRC, file), 'utf8');
+            expect(src).toMatch(/resolveTeamBandForBodyText\s*\(/);
             return;
           }
+          const sizes = bandFontSizes(css, contract.bandText);
           expect(sizes.length).toBeGreaterThan(0);
           const tooSmall = sizes
             .filter((s) => s.px < LARGE_TEXT_PX)
@@ -202,7 +206,7 @@ describe('team band — the type keeps the contrast measurement valid', () => {
       );
 
       it('sets that text bold, which the large-text floor also requires', () => {
-        // Narrowed on the property rather than on `textFree`: that flag is a
+        // Narrowed on the property rather than on `bodyFloor`: that flag is a
         // runtime check TypeScript cannot use to discriminate the union, and
         // reading `contract.boldRule` behind it is two type errors.
         if (!('boldRule' in contract)) return;
@@ -220,10 +224,6 @@ describe('team band — the type keeps the contrast measurement valid', () => {
         // painting surface, text or no text.
         if (!/var\(--band-fill\)/.test(css)) return;
         expect(css).toMatch(/var\(--band-fill-dark\)/);
-        // The ink pair is only owed where ink is actually drawn. A text-free
-        // plate consumes no ink, and demanding it would push a surface into
-        // declaring a colour it never paints.
-        if (textFree) return;
         expect(css).toMatch(/var\(--band-ink-dark\)/);
       });
     });
