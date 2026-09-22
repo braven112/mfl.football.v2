@@ -116,32 +116,32 @@ const USAGE: Array<{ term: string; detail: string }> = [
   {
     term: 'Icon — 100×100',
     detail:
-      'The crest on every themed surface: standings rows, the nav team chip, matchup cards, roster headers. Render the LIGHT src and let TeamIconDarkStyles resolve it — never pick a theme server-side.',
+      'The crest for themed surfaces: standings rows, the nav team chip, matchup cards, roster headers. Render the LIGHT src and let the theme swap resolve it.',
   },
   {
     term: 'Icon dark — 100×100',
     detail: brand.hasDarkCut
-      ? 'Swapped in by CSS under html.dark. Never reference it directly on a themed surface: the swap keys on the light src, so hard-coding the dark cut freezes the crest for light-theme readers.'
-      : 'Not on file for this franchise. A dark card falls back to the light art, ringed when the measurement says it needs one.',
+      ? 'Used automatically on a dark theme. Never reference it directly on a themed surface.'
+      : 'Not on file for this franchise. A dark card uses the light art, ringed where it needs one.',
   },
   {
     term: 'GroupMe crest — 400×400',
     detail:
-      'The watermark size. Heroes and modal bands draw the crest between ~40px and ~300px, which a 100px icon cannot carry — resolveDarkSurfaceCrest reaches for this pair first for exactly that reason.',
+      'Use for any crest drawn larger than ~100px: heroes, modal bands, watermarks.',
   },
   {
     term: 'Banner',
     detail:
-      'The wide lockup: MFL’s own franchise header and the throwback era art. Not a crest — never substitute it where a square mark is expected.',
+      'The wide lockup, for MFL’s franchise header and throwback era art. Never use it where a square mark is expected.',
   },
   {
     term: 'A colour as FOREGROUND',
-    detail: `Text, a rank numeral, a chart line, a legend swatch: read the token ${brand.accentProperty} via teamAccentVar(franchiseId), never the raw hex. See the derived colours above for what it actually resolves to.`,
+    detail: `Text, a rank numeral, a chart line, a legend swatch: read the token ${brand.accentProperty} via teamAccentVar(franchiseId), never the raw hex.`,
   },
   {
     term: 'A colour as a FILL',
     detail:
-      'A full-bleed band with white copy on it is the other question and takes the brand pair directly — floored for white ink by the resolver, not by the caller.',
+      'A full-bleed band with white copy on it takes the brand pair directly; the resolver floors it for white ink.',
   },
 ];
 ---
@@ -198,37 +198,9 @@ const USAGE: Array<{ term: string; detail: string }> = [
     <section class="cb__section">
       <h2 class="cb__h2">Team colours</h2>
       <p class="cb__note">
-        Straight from the league config, which is the single source of truth for all of them. The
-        <strong>chart hue</strong> is the one to watch: it is picked to stay distinct beside fifteen
-        other lines on a graph, and a surface that mistook it for brand identity opened a
-        black-and-red franchise in pink.
+        The club's official colours, and what each one is for. The <strong>chart hue</strong> is
+        for graphs only &mdash; never brand identity.
       </p>
-      {/*
-        Added with the four-colour pass (Sep 2026). Every franchise carries all
-        four slots now, and the order is not decoration — `resolveAccent` reads
-        secondary, then tertiary, then quaternary, and only reaches the primary
-        last, because the primary is usually the gradient an accent would have
-        to sit ON. Filling the two new slots therefore MOVED the hero accent on
-        fourteen of the forty clubs. That is invisible from a swatch grid, and
-        the hero example further down this page is drawn from the real resolver
-        — so the rule belongs next to the swatches rather than in the tooltip
-        each caption already carries.
-      */}
-      <p class="cb__note">
-        <strong>Order is a rule, not a ranking.</strong> A hero accent takes the first of
-        <strong>secondary → tertiary → quaternary → primary</strong> that carries a hue and clears
-        its contrast floors — the primary comes <em>last</em>, because it is usually the gradient
-        the accent would sit on. So a colour in the third or fourth slot can lead this club's
-        homepage hero even where nothing else on the site wears it.
-      </p>
-      {/*
-        The club page's swatch grid, unchanged — a swatch over its hex. One
-        addition a franchise needs and a club does not: the ROLE. An NFL club's
-        colours are just its colours, whereas these each mean something
-        different to the site, and "Chart hue" is the one nothing may treat as
-        brand identity. The hex itself is the copy target, so the row keeps the
-        club page's shape rather than growing a button beside every swatch.
-      */}
       <ul class="cb__swatches">
         {
           brand.colors.map((c) => (
@@ -253,10 +225,8 @@ const USAGE: Array<{ term: string; detail: string }> = [
     <section class="cb__section">
       <h2 class="cb__h2">What the site actually paints</h2>
       <p class="cb__note">
-        None of these are in the config &mdash; the hexes above are the <em>input</em>. Every
-        surface floors the colour against the ground it is about to sit on, so a franchise whose
-        primary is <code>#181818</code> is never painted <code>#181818</code> anywhere. Read from
-        the same resolvers the site calls, so this cannot drift from what ships.
+        What each colour resolves to per theme. Use these for anything in the foreground, not the
+        raw hexes above.
       </p>
       <ul class="cb__derived-list">
         {
@@ -283,8 +253,8 @@ const USAGE: Array<{ term: string; detail: string }> = [
     <section class="cb__section">
       <h2 class="cb__h2">Marks on file</h2>
       <p class="cb__note">
-        {brand.marks.length} cuts, each on the ground it was drawn for, with the same-origin path
-        the site serves and the absolute URL to paste into MFL.
+        {brand.marks.length} cuts. Use the same-origin path on this site and the absolute URL in
+        MFL.
         {
           !brand.hasDarkCut && (
             <>
@@ -321,8 +291,7 @@ const USAGE: Array<{ term: string; detail: string }> = [
               <strong>Retired cuts of this same mark.</strong> {brand.past.length} more, from{' '}
               {brand.eras.filter((e) => e.sameIdentity).length} earlier{' '}
               {brand.eras.filter((e) => e.sameIdentity).length === 1 ? 'era' : 'eras'} that wore this
-              name. They are this club's own logo before the current one &mdash; not a different
-              club, which is why they sit here rather than under a former identity.
+              name.
             </p>
             <ul class="cb__film">
               {brand.past.map((m) => (
@@ -356,9 +325,8 @@ const USAGE: Array<{ term: string; detail: string }> = [
     <section class="cb__section">
       <h2 class="cb__h2">What each ground draws</h2>
       <p class="cb__note">
-        A mark sits on one of three grounds &mdash; a white cell, a dark card, or the team's own
-        colour &mdash; and the third is not a variant of the first two. That is why the band below
-        shows the <em>dark</em> cut even in light mode.
+        Use the light cut on a white cell, and the dark cut on a dark card <em>and</em> on the
+        club's own colour.
       </p>
       <ul class="cb__grounds">
         {
@@ -380,10 +348,7 @@ const USAGE: Array<{ term: string; detail: string }> = [
 
     <section class="cb__section">
       <h2 class="cb__h2">In the app</h2>
-      <p class="cb__note">
-        The real components, rendered here on their real grounds &mdash; not lookalikes, so they
-        cannot drift from what a standings card or a homepage hero actually draws.
-      </p>
+      <p class="cb__note">The real components, on their real grounds.</p>
       <ul class="cb__situ">
         <li class="cb__demo">
           <span class="cb__demo-cap">Standings row <em>the crest is the team column</em></span>
@@ -464,12 +429,7 @@ const USAGE: Array<{ term: string; detail: string }> = [
       brand.formerIdentities.length > 0 && (
         <section class="cb__section">
           <h2 class="cb__h2">Former identities</h2>
-          <p class="cb__note">
-            Names this franchise has worn that are not the one it wears today &mdash; a different
-            club on the same slot, not an older cut of the current mark (those are up under
-            <strong> Marks on file</strong>). Read from the same <code>history[]</code> the
-            Throwback Week picker reads, so a throwback week dresses the site in exactly this art.
-          </p>
+          <p class="cb__note">Names this franchise has worn before, with the art each wore.</p>
           <ul class="cb__eras">
             {brand.formerIdentities.map((era) => (
               <li class="cb__era">
@@ -510,8 +470,8 @@ const USAGE: Array<{ term: string; detail: string }> = [
     <section class="cb__section">
       <h2 class="cb__h2">Using these marks</h2>
       <p class="cb__note">
-        What each file is for, and the two rules that decide which one a surface may draw.
-        Every path on this page is also in the <a href={filesPath}>searchable file list</a>.
+        What each file is for. Every path here is also in the
+        <a href={filesPath}>searchable file list</a>.
       </p>
       <dl class="cb__specs">
         {

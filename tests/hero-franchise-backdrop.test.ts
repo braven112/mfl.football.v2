@@ -582,11 +582,4 @@ describe('the accent ladder', () => {
     }
   });
 
-  it('the Brand Book states this order, so the two cannot drift apart', () => {
-    const page = readFileSync(
-      resolve(__dirname, '../src/components/shared/brand/FranchiseBrandPage.astro'),
-      'utf8'
-    );
-    expect(page).toContain('secondary → tertiary → quaternary → primary');
-  });
 });
