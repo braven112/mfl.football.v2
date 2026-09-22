@@ -92,6 +92,18 @@ export const BAND_INK_BODY_MIN_RATIO = AA_BODY_TEXT_RATIO;
 /** Fill vs card. Low on purpose: a band only has to be SEEN, not read. */
 export const BAND_SURFACE_MIN_RATIO = 1.35;
 
+/**
+ * How far a fill may be walked to KEEP WHITE INK, in ΔE, before the
+ * white-first preference gives way to least-drift.
+ *
+ * Only a colour where neither ink clears the floor untouched consults this. 5
+ * is the same budget `tests/team-band.test.ts` allows between the two floors —
+ * comfortably inside "the same colour", where ~25 is where two colours start
+ * reading as different ones. Smokane's green needs ΔE 4.6 to hold white and so
+ * fits; a gold would need ~46 to hold it and so does not, which is the point.
+ */
+const WHITE_INK_DRIFT_BUDGET = 5;
+
 const NEUTRAL_FILL = '#6b7280';
 const isHex = (c?: string): c is string => !!c && /^#?[0-9a-f]{6}$/i.test(c.trim());
 const normalizeHex = (c: string): string => (c.trim().startsWith('#') ? c.trim() : `#${c.trim()}`);
@@ -183,13 +195,6 @@ export function bandFor(
 ): { fill: string; ink: string } {
   const fill = isHex(color) ? normalizeHex(color) : NEUTRAL_FILL;
 
-  for (const ink of [BAND_INK_LIGHT, BAND_INK_DARK]) {
-    if (contrastRatio(ink, fill) >= minRatio) {
-      const solved = solveBand(fill, ink, surface, minRatio);
-      if (solved) return { fill: solved.fill, ink: solved.ink };
-    }
-  }
-
   const solvedBoth = [
     solveBand(fill, BAND_INK_LIGHT, surface, minRatio),
     solveBand(fill, BAND_INK_DARK, surface, minRatio),
@@ -197,6 +202,29 @@ export function bandFor(
   if (solvedBoth.length === 0) {
     // Unreachable for every franchise on file; a neutral band is still readable.
     return { fill: NEUTRAL_FILL, ink: BAND_INK_LIGHT };
+  }
+
+  // ONE white-first rule, applied to both inks' solutions together.
+  //
+  // This used to be two paths: an early return that took the first ink clearing
+  // the UNTOUCHED colour, then a least-drift fallback when neither did. Both
+  // undercut the white-first preference the header states, and the body floor
+  // made it visible. "First ink that clears untouched" reads as white-first
+  // only while white happens to clear: raise the floor to 4.5 and a club whose
+  // white just misses flips to dark ink on its unchanged colour, rather than
+  // keeping white on a colour nudged a shade. Least-drift did the same thing
+  // from the other side — for the Ninjas and Smokane it chose dark ink and a
+  // LIGHTENED fill, putting near-black on a mid green at 4.60:1 and giving the
+  // same club white text on its standings row and dark text on its draft card.
+  //
+  // So: white wins whenever the fill it needs stays inside
+  // `WHITE_INK_DRIFT_BUDGET`, and least-drift decides only past that. A colour
+  // that already carries white is drift 0 and still returned byte-identical;
+  // the golds need ~46 ΔE to hold white, blow the budget, and correctly keep
+  // dark ink on their untouched colour.
+  const white = solvedBoth.find((c) => c.ink === BAND_INK_LIGHT);
+  if (white && white.drift <= WHITE_INK_DRIFT_BUDGET) {
+    return { fill: white.fill, ink: white.ink };
   }
   solvedBoth.sort((a, b) => a.drift - b.drift);
   return { fill: solvedBoth[0].fill, ink: solvedBoth[0].ink };

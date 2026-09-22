@@ -108,7 +108,37 @@ describe('team band — the body-floor variant, for surfaces with small type', (
     });
   }
 
-  it('costs almost nothing in fill drift — three clubs, imperceptibly', () => {
+  it('never both flips the ink AND moves the fill', () => {
+    // The invariant that keeps one club from reading as two.
+    //
+    // A colour can legitimately resolve differently at the two floors, but only
+    // one way at a time. Either white is nearly free to keep, so the fill
+    // nudges a shade and the ink stays (the Ninjas, Smokane, Franchise 01 —
+    // ΔE 2.6-4.6), or keeping white would repaint the club, so the fill stays
+    // EXACTLY and the ink flips instead (the Micks and seven others: white
+    // would cost ΔE 7.2-15.2, dark on their untouched colour measures
+    // 4.89-5.84). Doing both at once is how the same franchise ends up white
+    // on green in the standings and near-black on a different green in the
+    // draft grid, which shipped for a few minutes and is what this pins.
+    const both: string[] = [];
+    for (const { slug, teams } of LEAGUES) {
+      for (const team of teams) {
+        const large = resolveTeamBand(team.franchiseId, slug);
+        const body = resolveTeamBandForBodyText(team.franchiseId, slug);
+        for (const [theme, lf, li, bf, bi] of [
+          ['light', large.fill, large.ink, body.fill, body.ink],
+          ['dark', large.fillDark, large.inkDark, body.fillDark, body.inkDark],
+        ] as const) {
+          if (li !== bi && colorDistance(lf, bf) > 0.01) {
+            both.push(`${team.name} ${theme}: ${lf}/${li} -> ${bf}/${bi}`);
+          }
+        }
+      }
+    }
+    expect(both).toEqual([]);
+  });
+
+  it('costs almost nothing in fill drift where the fill does move', () => {
     // The whole reason the body floor is affordable. If a franchise ever has to
     // move far to satisfy it, its draft card and its standings row stop being
     // the same colour, and that is a design decision rather than a tweak.

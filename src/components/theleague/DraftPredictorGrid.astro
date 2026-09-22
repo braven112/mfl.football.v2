@@ -113,6 +113,29 @@ const specialPicksAssigned = hasCompensatoryPicks ? {
   '2.17': sortedPredictions.some((p) => p.round === 2 && p.pickInRound === 17),
   '2.18': sortedPredictions.some((p) => p.round === 2 && p.pickInRound === 18),
 } : {};
+
+/**
+ * The Legend's compensatory entries, resolved ONCE each.
+ *
+ * These are not swatches. When a compensatory pick has been assigned the
+ * Legend renders the real franchise that owns it — the same pick the round
+ * above already shows — so it has to be banded too, or one pick appears in two
+ * different colours on one page.
+ *
+ * Resolved here rather than inline because the markup below was calling
+ * `sortedPredictions.find(...)` six to eight times per entry, once for each
+ * field, and a band would have added two more.
+ */
+const compPick = (round: number, pickInRound: number) =>
+  hasCompensatoryPicks
+    ? sortedPredictions.find((p) => p.round === round && p.pickInRound === pickInRound)
+    : undefined;
+
+const legendComp = [
+  { key: '1.17', label: 'Toilet Bowl', pick: compPick(1, 17) },
+  { key: '2.17', label: 'Consolation', pick: compPick(2, 17) },
+  { key: '2.18', label: 'Consolation', pick: compPick(2, 18) },
+].map((entry) => ({ ...entry, band: entry.pick ? bandFor(entry.pick) : null }));
 ---
 
 <div class="draft-rounds-container">
@@ -217,7 +240,7 @@ const specialPicksAssigned = hasCompensatoryPicks ? {
     <div class="draft-round__picks">
       {/* User's team picks (if user has a preferred team) */}
       {userTeamId && (
-        <div class="draft-pick draft-pick--user-team">
+        <div class="draft-pick draft-pick--legend draft-pick--user-team">
           <div class="draft-pick__content">
             <div class="draft-pick__icon-container">
               <svg viewBox="0 0 64 64" class="draft-pick__icon" style="color: #2e743d;" aria-hidden="true">
@@ -225,16 +248,16 @@ const specialPicksAssigned = hasCompensatoryPicks ? {
                 <path d="M32 16l4 12h12l-10 8 4 12-10-8-10 8 4-12-10-8h12z" fill="currentColor"/>
               </svg>
             </div>
-            <div class="draft-pick__name">Your Team's Picks</div>
+            <div class="draft-pick__name">Your Picks</div>
             <div class="draft-pick__number">X.XX</div>
-            <div class="draft-pick__label">Highlighted</div>
+            <div class="draft-pick__label">Green border</div>
           </div>
         </div>
       )}
 
       {/* Champion placeholders - one for each round */}
       {Array.from({ length: totalRounds }, (_, i) => i + 1).map((round) => (
-        <div class="draft-pick draft-pick--champion draft-pick--champion-tbd">
+        <div class="draft-pick draft-pick--legend draft-pick--champion draft-pick--champion-tbd">
           <div class="draft-pick__content">
             <div class="draft-pick__icon-container">
               <svg viewBox="0 0 64 64" class="draft-pick__icon draft-pick__icon--crown" aria-hidden="true">
@@ -249,105 +272,46 @@ const specialPicksAssigned = hasCompensatoryPicks ? {
         </div>
       ))}
 
-      {/* Compensatory picks for theLeague only */}
-      {hasCompensatoryPicks && (
-        <>
-          {/* Pick 1.17 */}
-          {sortedPredictions.find((p) => p.round === 1 && p.pickInRound === 17) ? (
-            <div class="draft-pick draft-pick--toilet-bowl">
-              <div class="draft-pick__content">
-                <div class="draft-pick__icon-container">
-                  {sortedPredictions.find((p) => p.round === 1 && p.pickInRound === 17)?.teamIcon && (
-                    <img
-                      src={sortedPredictions.find((p) => p.round === 1 && p.pickInRound === 17)?.teamIcon}
-                      alt={sortedPredictions.find((p) => p.round === 1 && p.pickInRound === 17)?.teamName}
-                      class="draft-pick__icon"
-                    />
-                  )}
-                  {sortedPredictions.find((p) => p.round === 1 && p.pickInRound === 17)?.isTraded &&
-                    sortedPredictions.find((p) => p.round === 1 && p.pickInRound === 17)?.originalTeamIcon && (
-                    <img
-                      src={sortedPredictions.find((p) => p.round === 1 && p.pickInRound === 17)?.originalTeamIcon}
-                      alt={sortedPredictions.find((p) => p.round === 1 && p.pickInRound === 17)?.originalTeamName}
-                      class="draft-pick__icon draft-pick__icon--original"
-                      title={`Originally owned by ${sortedPredictions.find((p) => p.round === 1 && p.pickInRound === 17)?.originalTeamName}`}
-                    />
-                  )}
-                </div>
-                <div class="draft-pick__name">
-                  {formatTeamName(sortedPredictions.find((p) => p.round === 1 && p.pickInRound === 17)?.teamName || '')}
-                </div>
-                <div class="draft-pick__number">1.17</div>
-                <div class="draft-pick__label">Toilet Bowl</div>
-              </div>
-            </div>
-          ) : (
-            <div class="draft-pick draft-pick--tbd draft-pick--special">
-              <div class="draft-pick__content">
-                <div class="draft-pick__name">TBD</div>
-                <div class="draft-pick__number">1.17</div>
-                <div class="draft-pick__label">Toilet Bowl</div>
-              </div>
-            </div>
-          )}
-
-          {/* Pick 2.17 */}
-          {sortedPredictions.find((p) => p.round === 2 && p.pickInRound === 17) ? (
-            <div class="draft-pick draft-pick--toilet-bowl">
-              <div class="draft-pick__content">
-                {sortedPredictions.find((p) => p.round === 2 && p.pickInRound === 17)?.teamIcon && (
+      {/* Compensatory picks for theLeague only. An ASSIGNED one shows the real
+          franchise that owns it — the same pick the round above renders — so it
+          carries the same band. An unassigned one is a TBD placeholder and gets
+          no colour, exactly as in the rounds. */}
+      {hasCompensatoryPicks && legendComp.map((entry) => (
+        entry.pick && entry.band ? (
+          <div
+            class:list={['draft-pick', 'draft-pick--band', 'draft-pick--toilet-bowl']}
+            style={teamBandStyle(entry.band.band)}
+            title={`${entry.pick.teamName} - Pick ${entry.key}`}
+          >
+            <div class="draft-pick__content">
+              <div class="draft-pick__icon-container">
+                {entry.pick.teamIcon && (
+                  <img src={entry.band.crest} alt={entry.pick.teamName} class="draft-pick__icon" />
+                )}
+                {entry.pick.isTraded && entry.pick.originalTeamIcon && (
                   <img
-                    src={sortedPredictions.find((p) => p.round === 2 && p.pickInRound === 17)?.teamIcon}
-                    alt={sortedPredictions.find((p) => p.round === 2 && p.pickInRound === 17)?.teamName}
-                    class="draft-pick__icon"
+                    src={entry.pick.originalTeamIcon}
+                    alt={entry.pick.originalTeamName}
+                    class="draft-pick__icon draft-pick__icon--original"
+                    title={`Originally owned by ${entry.pick.originalTeamName}`}
                   />
                 )}
-                <div class="draft-pick__name">
-                  {formatTeamName(sortedPredictions.find((p) => p.round === 2 && p.pickInRound === 17)?.teamName || '')}
-                </div>
-                <div class="draft-pick__number">2.17</div>
-                <div class="draft-pick__label">Consolation</div>
               </div>
+              <div class="draft-pick__name">{formatTeamName(entry.pick.teamName)}</div>
+              <div class="draft-pick__number">{entry.key}</div>
+              <div class="draft-pick__label">{entry.label}</div>
             </div>
-          ) : (
-            <div class="draft-pick draft-pick--tbd draft-pick--special">
-              <div class="draft-pick__content">
-                <div class="draft-pick__name">TBD</div>
-                <div class="draft-pick__number">2.17</div>
-                <div class="draft-pick__label">Consolation</div>
-              </div>
+          </div>
+        ) : (
+          <div class="draft-pick draft-pick--tbd draft-pick--special">
+            <div class="draft-pick__content">
+              <div class="draft-pick__name">TBD</div>
+              <div class="draft-pick__number">{entry.key}</div>
+              <div class="draft-pick__label">{entry.label}</div>
             </div>
-          )}
-
-          {/* Pick 2.18 */}
-          {sortedPredictions.find((p) => p.round === 2 && p.pickInRound === 18) ? (
-            <div class="draft-pick draft-pick--toilet-bowl">
-              <div class="draft-pick__content">
-                {sortedPredictions.find((p) => p.round === 2 && p.pickInRound === 18)?.teamIcon && (
-                  <img
-                    src={sortedPredictions.find((p) => p.round === 2 && p.pickInRound === 18)?.teamIcon}
-                    alt={sortedPredictions.find((p) => p.round === 2 && p.pickInRound === 18)?.teamName}
-                    class="draft-pick__icon"
-                  />
-                )}
-                <div class="draft-pick__name">
-                  {formatTeamName(sortedPredictions.find((p) => p.round === 2 && p.pickInRound === 18)?.teamName || '')}
-                </div>
-                <div class="draft-pick__number">2.18</div>
-                <div class="draft-pick__label">Consolation</div>
-              </div>
-            </div>
-          ) : (
-            <div class="draft-pick draft-pick--tbd draft-pick--special">
-              <div class="draft-pick__content">
-                <div class="draft-pick__name">TBD</div>
-                <div class="draft-pick__number">2.18</div>
-                <div class="draft-pick__label">Consolation</div>
-              </div>
-            </div>
-          )}
-        </>
-      )}
+          </div>
+        )
+      ))}
     </div>
   </div>
 </div>
@@ -540,6 +504,24 @@ const specialPicksAssigned = hasCompensatoryPicks ? {
      choice after sunset and put a dark-card crest on a light fill. */
   :global(html.dark) .draft-pick--band .draft-pick__icon {
     content: normal;
+  }
+
+  /* --- Legend swatches ---------------------------------------------------
+     The two swatches that stand for a MARK rather than a club — "Your Team's
+     Picks" and the reserved champion pick — keep the plain card surface and
+     drop the status TINT, so what the reader sees is the border.
+
+     That is now the whole of the mark. A real pick wears its club's colour, so
+     `--user-team`'s green tint and `--champion`'s orange one are painted over
+     by the band and never appear in the grid; a legend still showing them
+     taught a highlight the page does not use. The border does survive the
+     band, so it is what the swatch demonstrates — and the labels say so.
+
+     Declared after the status modifiers, like the band rules above, because
+     these are all single-class selectors and source order is what decides. */
+  .draft-pick--legend,
+  .draft-pick--legend:hover {
+    background: var(--draft-pick-bg, var(--content-bg-muted, #f3f4f6));
   }
 
   /* Dark mode: section-level round containers (and the reused Legend block)
