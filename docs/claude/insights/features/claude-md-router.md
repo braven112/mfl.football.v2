@@ -232,3 +232,42 @@ a wiki page nobody trusts. Two habits that make it cheap:
   immutable history and must not be rewritten, so the head is the only place the
   correction can live — leaving both versions standing with no pointer is how the
   next reader picks the wrong one.
+
+## 2026-09-22 - A Citation Split Across String Concatenation Reads as Dangling
+
+**Context:** `tests/claude-md-references.test.ts` pairs the literal `CLAUDE.md`
+with a following quoted title and fails if that title is not in CLAUDE.md — so a
+pointer into a section that moved sends the reader nowhere. A new guard's
+failure message cited a section that very much does exist:
+
+```js
+'`franchiseIdForLeague(user, league.id)` — see CLAUDE.md, "League ' +
+  'registry — never hardcode league constants":\n'
+```
+
+It failed. `## League registry — never hardcode league constants` is right there
+in CLAUDE.md, line 102.
+
+**Insight:** The test reads *source*, not runtime strings. Its capture group is
+`"([^"]{3,120})"` — everything between two double quotes — and in that source
+the closing `"` is 40 characters further on, past `' +`, a newline and another
+`'`. So the quote it extracted was `League ' + 'registry — never hardcode
+league constants`, which is correctly reported as absent. The prose wrapping the
+regex already anticipates *comment* gutters (` * `, `// `) and strips them; it
+cannot anticipate a JS string boundary, because that is a place a quote
+legitimately ends.
+
+A citation is a single contiguous run of source text. If prettier-style wrapping
+would split one, hoist the title into its own const and interpolate it:
+
+```js
+const REGISTRY_RULE = 'CLAUDE.md, "League registry — never hardcode league constants"';
+```
+
+**Why it matters beyond the one test:** the same shape defeats any grep for a
+citation — including a human's. A title you cannot `grep -F` for is a title
+nobody will find when the section is renamed, which is the failure the guard
+exists to prevent. Keep cited headings unbroken in source even where no test
+looks.
+
+Guard: `tests/claude-md-references.test.ts`.

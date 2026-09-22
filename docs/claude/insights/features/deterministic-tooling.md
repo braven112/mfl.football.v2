@@ -120,3 +120,40 @@ every lane", asserted against the new module AND against each lane importing
 it. Inlining the code back to satisfy the guard would be the guard steering the
 architecture, which is the failure mode the "read the test before working
 around it" line in CLAUDE.md is pointing at.
+
+## 2026-09-22 - Commit Before You Mutation-Check, and Budget the Route's Comments
+
+Two costs paid while writing `tests/preferred-team-resolution-guard.test.ts`,
+neither of which the `/guard-test` procedure warns about.
+
+**The revert step in a mutation check eats uncommitted work.** Step 4 says:
+plant a violation, watch the guard go red, revert. The natural revert is
+`git checkout -- <that file>` — and that discards *every* uncommitted change in
+the file, not just the one line you planted. The resolver rewrite under test
+was itself uncommitted, so the second mutation check silently reverted it to the
+pre-fix version, and the next run reported `resolveFranchiseSelection is not a
+function` alongside four stale `'0001'` failures. Two minutes to spot, but the
+failure output looks like the guard is broken rather than like the tree is.
+
+Commit the change first, then mutation-check against the commit
+(`git checkout HEAD -- <file>`), or plant the violation in a file the change
+does not touch. Mutation checks are the one procedure that deliberately breaks
+the tree, so they are the one that must not be run on an uncommitted one.
+
+**A thin route wrapper has a comment budget, and it is smaller than it looks.**
+`tests/page-fork-ratchet.test.ts` fails a sibling route whose largest copy lands
+between 75 and 98 lines — the empty band the 80-line threshold sits in — and
+`tests/front-office-shared-analytics.test.ts` independently caps the two
+front-office routes under 75. TheLeague's `draft/room.astro` and
+`draft/mock/[sessionId].astro` start at 73 and 74. So an eight-line JSX comment
+explaining *why* a resolver call has no default — exactly the comment that feels
+responsible to leave — forks the page.
+
+That is the ratchet working, not fighting you. The reasoning belongs in the
+domain rules doc, where it is read before the file is opened; the route keeps a
+one-line pointer (`{/* No default franchise; cookie id, not the object. See
+docs/claude/rules/preferred-team.md */}`). Write the doc first and the route
+stays thin by construction. Budget: check `grep -c '' <route>` against 74 before
+committing a comment to one of these files.
+
+Guard: `tests/page-fork-ratchet.test.ts`, `tests/front-office-shared-analytics.test.ts`.
