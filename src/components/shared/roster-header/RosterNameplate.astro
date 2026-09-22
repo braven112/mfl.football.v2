@@ -66,12 +66,21 @@ interface Props {
   lastPlayed: HeaderWeek | null;
   upNext: HeaderWeek | null;
   rail: RailWeek[];
-  currentWeek: number;
+  /** The live NFL week, or NULL when this season is not the one being played. */
+  currentWeek: number | null;
   nameOf: (franchiseId: string) => string;
   iconOf: (franchiseId: string) => string | null;
   recordOf: (franchiseId: string) => string | null;
   scheduleHref: (week?: number) => string;
-  nextKickoff?: string | null;
+  /** When this week's lineups lock, in the viewer's clock; null if nothing to warn about. */
+  lineupLock?: string | null;
+  /**
+   * How recently this club's OWNER was on the site. Null, or a level of
+   * `unknown`, prints nothing — "never seen" is usually a gap in our own
+   * tracking rather than a fact about the owner, and a header is the wrong
+   * place to assert it.
+   */
+  ownerLastSeen?: { level: 'active' | 'idle' | 'dormant' | 'unknown'; text: string } | null;
   /**
    * The club's one featured player, filling the nameplate's right side —
    * which was otherwise dead space behind the crest watermark on desktop.
@@ -104,7 +113,8 @@ const {
   iconOf,
   recordOf,
   scheduleHref,
-  nextKickoff = null,
+  lineupLock = null,
+  ownerLastSeen = null,
   featuredPlayer = null,
 } = Astro.props;
 
@@ -158,6 +168,16 @@ const stats: Array<{ value: string; label: string }> = [
     <div class="rhdr__eyebrow">
       <span class="rhdr__pill">{label}</span>
       <span class="rhdr__meta">{season} season · {teamMeta}</span>
+      {/* The owner-presence chip that used to live on the old team card.
+          Per CLUB, so it rides in the swap templates and follows an in-place
+          team switch — the version before this header parked it in one place
+          and wrote into it from JavaScript, which is how it went stale. */}
+      {ownerLastSeen && ownerLastSeen.level !== 'unknown' && (
+        <span class="rhdr__seen" data-level={ownerLastSeen.level}>
+          <span class="rhdr__seen-dot" aria-hidden="true"></span>
+          <span>Owner {ownerLastSeen.text}</span>
+        </span>
+      )}
     </div>
     <div class="rhdr__identity">
       {/* One crest source per header: with a franchise skin the small mark
@@ -234,7 +254,7 @@ const stats: Array<{ value: string; label: string }> = [
   iconOf={iconOf}
   recordOf={recordOf}
   scheduleHref={scheduleHref}
-  nextKickoff={nextKickoff}
+  lineupLock={lineupLock}
 />
 
 <style>
@@ -284,6 +304,27 @@ const stats: Array<{ value: string; label: string }> = [
     font-size: 0.78rem;
     color: rgba(242, 245, 248, 0.72);
   }
+
+  /* Fixed values, not page tokens: this chip sits on the FRANCHISE GRADIENT,
+     which is dark for every club in both themes (that is what the resolver
+     guarantees), so a token tuned for a light page surface would vanish here.
+     Same reason the meta line above it is a literal rgba. */
+  .rhdr__seen {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.78rem;
+    color: rgba(242, 245, 248, 0.72);
+    white-space: nowrap;
+  }
+  .rhdr__seen-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #9aa3ad;
+  }
+  .rhdr__seen[data-level='active'] .rhdr__seen-dot { background: #34d399; }
+  .rhdr__seen[data-level='idle'] .rhdr__seen-dot { background: #fbbf24; }
 
   .rhdr__identity { display: flex; align-items: center; gap: 0.9rem; min-width: 0; }
   .rhdr__crest { flex: none; object-fit: contain; }

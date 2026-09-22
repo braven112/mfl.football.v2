@@ -46,14 +46,30 @@ interface Props {
   /** The next week holding an unplayed game, with every such game in it. */
   upNext: HeaderWeek | null;
   rail: RailWeek[];
-  currentWeek: number;
+  /**
+   * The live NFL week, or NULL when the season on screen is not the one being
+   * played. Null is not "unknown" — it is "this season is history", and it is
+   * what stops a finished 2023 from ringing a current week and printing a
+   * "This week" kicker. See `resolveHeaderSchedule`.
+   */
+  currentWeek: number | null;
   nameOf: (franchiseId: string) => string;
   iconOf: (franchiseId: string) => string | null;
   recordOf: (franchiseId: string) => string | null;
   /** Week-anchored schedule href; omit the week for the page itself. */
   scheduleHref: (week?: number) => string;
-  /** Kickoff text for the next game, already in the viewer's clock. */
-  nextKickoff?: string | null;
+  /**
+   * When the coming week's lineups LOCK, already in the viewer's clock — or
+   * null when there is nothing to warn about (the week has started, or this
+   * season is not the one being played).
+   *
+   * "Lock", not "kickoff", because the instant is the week's FIRST game, which
+   * is usually a Thursday while this club may not play until Sunday. Labelling
+   * it as their kickoff would be wrong for most clubs most weeks; labelling it
+   * as the lock is exactly what it is, and it is the actionable one — it is
+   * the deadline an owner can still do something about.
+   */
+  lineupLock?: string | null;
 }
 
 const {
@@ -65,7 +81,7 @@ const {
   iconOf,
   recordOf,
   scheduleHref,
-  nextKickoff = null,
+  lineupLock = null,
 } = Astro.props;
 
 const railFirstWeek = rail.length > 0 ? rail[0].week : null;
@@ -194,14 +210,14 @@ const railMarks = rail.flatMap((entry) =>
           )}
           <span class="rhdr-tile__body">
             <span class="rhdr-tile__kicker">
-              Week {upNext.week} · {upNext.week === currentWeek ? 'This week' : 'Up next'}
+              Week {upNext.week} · {currentWeek != null && upNext.week === currentWeek ? 'This week' : 'Up next'}
             </span>
             <span class="rhdr-tile__line">
-              <span class="rhdr-tile__when">{nextKickoff ?? `${upNext.games[0].isHome ? 'vs' : 'at'} ${nameOf(upNext.games[0].opponentId)}`}</span>
+              <span class="rhdr-tile__when">{upNext.games[0].isHome ? 'vs' : 'at'} {nameOf(upNext.games[0].opponentId)}</span>
             </span>
             <span class="rhdr-tile__sub">
-              {nextKickoff ? <>{upNext.games[0].isHome ? 'vs' : 'at'} {nameOf(upNext.games[0].opponentId)}</> : nameOf(upNext.games[0].opponentId)}
-              {recordOf(upNext.games[0].opponentId) && <> · {recordOf(upNext.games[0].opponentId)}</>}
+              {recordOf(upNext.games[0].opponentId) ?? 'No record yet'}
+              {lineupLock && <> · Lineups lock {lineupLock}</>}
             </span>
           </span>
         </Fragment>
@@ -210,11 +226,9 @@ const railMarks = rail.flatMap((entry) =>
            sets a lineup against half the week they are actually playing. */
         <span class="rhdr-tile__body">
           <span class="rhdr-tile__kicker">
-            Week {upNext.week} · {upNext.week === currentWeek ? 'This week' : 'Up next'} · Doubleheader
+            Week {upNext.week} · {currentWeek != null && upNext.week === currentWeek ? 'This week' : 'Up next'} · Doubleheader
           </span>
-          {nextKickoff && (
-            <span class="rhdr-tile__line"><span class="rhdr-tile__when">{nextKickoff}</span></span>
-          )}
+
           <span class="rhdr-tile__rows">
             {upNext.games.map((game) => (
               <span class="rhdr-tile__row">
@@ -232,6 +246,7 @@ const railMarks = rail.flatMap((entry) =>
               </span>
             ))}
           </span>
+          {lineupLock && <span class="rhdr-tile__sub">Lineups lock {lineupLock}</span>}
         </span>
       )}
     </a>
@@ -268,7 +283,10 @@ const railMarks = rail.flatMap((entry) =>
       </div>
       <div class="rhdr-rail__scale">
         <span>Wk {railFirstWeek}</span>
-        <span class="rhdr-rail__now">Wk {currentWeek}</span>
+        {/* A "you are here" marker, so a season that is not being played has
+            none. It printed "Wk 2" over a 2023 season that ended in January
+            2024. The first and last week still bound the rail either way. */}
+        {currentWeek != null && <span class="rhdr-rail__now">Wk {currentWeek}</span>}
         <span>Wk {railLastWeek}</span>
       </div>
     </div>

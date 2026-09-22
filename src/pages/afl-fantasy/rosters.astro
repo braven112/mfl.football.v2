@@ -14,6 +14,10 @@ import KeeperPlanner, {
 } from '../../components/afl-fantasy/KeeperPlanner.astro';
 import { spriteUrl } from '../../utils/sprite-url';
 import { getCurrentWeek } from '../../utils/current-week';
+import { nflWeekStartInstant } from '../../utils/nfl-week-starts.mjs';
+import { formatForViewer } from '../../utils/viewer-clock';
+import { readViewerClock } from '../../utils/viewer-preferences-page';
+import { getCurrentSeasonYear } from '../../utils/league-year';
 import {
   fetchNflMatchups,
   loadFantasyPointsAllowed,
@@ -33,6 +37,7 @@ import {
 } from '../../utils/afl-player-scoring';
 import { resolveStatsSeasonYear, parseYtdPlayerScores } from '../../utils/stats-season.mjs';
 import { getAuthUser } from '../../utils/auth';
+import { getAllActivity, getActivityLevel, formatLastSeen } from '../../utils/owner-activity';
 import {
   setAFLPreference,
   getAFLPreference,
@@ -56,15 +61,13 @@ import MyRankEditor from '../../components/shared/rankings/MyRankEditor.astro';
 import { buildKeeperPlannerStats } from '../../utils/afl-keeper-planner-stats';
 import RosterHeader from '../../components/shared/roster-header/RosterHeader.astro';
 import {
-  buildSeasonRail,
   buildTeamGroups,
   bestPlayerByPositionRank,
   positionalRanks,
+  resolveHeaderSchedule,
 } from '../../utils/roster-header-data';
 import { summarizeStandings } from '../../utils/standings-summary';
 import {
-  findLastPlayedWeek,
-  findNextWeek,
   franchiseSchedule,
   parseWeeklySchedule,
 } from '../../utils/schedule-data.mjs';
@@ -173,6 +176,7 @@ if (!rostersData?.rosters?.franchise || !playersData?.players?.player) {
 // commit + redeploy. Historical years and Redis-unavailable environments
 // fall back to the feed.
 const aflLeague = getLeagueBySlug('afl-fantasy');
+const PAGE_LEAGUE_SLUG = getLeagueBySlug('afl-fantasy')!.slug;
 
 // NFL injury designations (Q / D / O / IR), keyed by MFL player id. This is a
 // DIFFERENT datum from `player.status === 'INJURED_RESERVE'` below, which is
@@ -182,7 +186,7 @@ const aflLeague = getLeagueBySlug('afl-fantasy');
 // him on IR with a torn ACL. Deliberately NOT keyed to `selectedYear` — see
 // src/utils/mfl-injuries.ts; this page is pinned to FALLBACK_YEAR 2025 and the
 // injuries feed only exists for 2026, so a year-keyed lookup finds nothing.
-const aflInjuries = loadInjuryMap(getLeagueBySlug('afl-fantasy')!.slug);
+const aflInjuries = loadInjuryMap(PAGE_LEAGUE_SLUG);
 const testDate = getTestDateFromSearchParams(Astro.url.searchParams);
 if (aflLeague && selectedYear === getAflLeagueYear(testDate ?? undefined)) {
   const liveFranchises = await getCachedRosterFranchises(String(selectedYear), aflLeague.id);
@@ -304,13 +308,65 @@ const headerStandings = summarizeStandings(
   (id: string) => String(headerTeamById.get(id)?.conference ?? '')
 );
 
-const headerWeek = getCurrentWeek();
+/* NULL unless the year on screen is the season actually being played.
+   This page has a YEAR PICKER, so the header renders 2019 and 2023 as
+   readily as 2026 — and today's NFL week means nothing in a season that
+   finished years ago. Passing it anyway made a completed 2023 report
+   "Week 2 · Final · 0-2" as the club's last result (findLastPlayedWeek
+   BOUNDS its search), ring week 2 as current, and left 2019 with a week
+   still waiting to be played. `resolveHeaderSchedule` owns what null means.
+
+   `getCurrentSeasonYear()`, not the league year: "is this the season being
+   played" is a results question, and the two clocks disagree from Feb 14
+   to Labor Day (CLAUDE.md, "Year rollover — two independent clocks"). */
+const headerWeek = selectedYear === getCurrentSeasonYear() ? getCurrentWeek() : null;
 const headerOwnSchedule = franchiseSchedule(aflSchedule, selectedFranchiseId);
-const headerRail = buildSeasonRail(
+const headerSchedule = resolveHeaderSchedule(
   headerOwnSchedule,
   aflSchedule.map((entry: { week: number }) => entry.week),
   headerWeek
 );
+
+/* Owner presence, restored to the header — the chip that lived on the old
+   team card. One Redis read for the whole league, raced against a 3s timeout
+   so a slow store degrades to no chip rather than a hung render, and resolved
+   PER CLUB so the chip rides in the swap templates instead of being written
+   into one place from JavaScript. */
+let ownerActivityMap: Record<string, number> = {};
+try {
+  ownerActivityMap = await Promise.race([
+    getAllActivity(AFL_LEAGUE_ID),
+    new Promise<Record<string, number>>((_, reject) =>
+      setTimeout(() => reject(new Error('Redis timeout')), 3000)),
+  ]);
+} catch { /* Redis unavailable or timed out — the chip simply does not print */ }
+const ownerSeenFor = (franchiseId: string) => {
+  const at = ownerActivityMap[franchiseId] ?? null;
+  return at ? { level: getActivityLevel(at), text: formatLastSeen(at) } : null;
+};
+
+/* When this week's lineups LOCK, in the viewer's own clock.
+
+   The instant is the week's FIRST kickoff (`nflWeekStartInstant`), which is
+   what actually locks the fantasy week — not this club's own game, which is
+   usually later. So the tile says "lineups lock", never "kickoff": most clubs
+   most weeks do not play at this time, and the lock is the one an owner can
+   still act on.
+
+   Null once it has PASSED, and null outside a live season. A deadline printed
+   after it expired is worse than no deadline: it reads as time remaining.
+
+   `readViewerClock` only READS — `Astro.cookies.set` is the route-only half
+   (CLAUDE.md, viewer preferences) — and takes the PAGE's league, not the
+   viewer's, because the clock a league's deadline prints belongs to that
+   league. `formatForViewer` appends the league's PT to the viewer's chosen
+   clock and drops it for a viewer already on Pacific. */
+const headerLockAt = headerSchedule.upNext != null && headerWeek != null
+  ? nflWeekStartInstant(selectedYear, headerSchedule.upNext.week)
+  : null;
+const headerLineupLock = headerLockAt != null && headerLockAt.getTime() > Date.now()
+  ? formatForViewer(headerLockAt, await readViewerClock(Astro.cookies, authUser, 'afl-fantasy'), { weekday: true })
+  : null;
 
 /* The VIEWER's conference, never the viewed club's — an order that followed
    the club on screen would reshuffle the switcher on every team change. Null
@@ -492,9 +548,34 @@ const aflProjections = loadAflProjections(selectedYear);
 // request time (see weekly-player-results-feed.ts) rather than through an eager
 // glob, and cached per league-season — the payload covers the whole league, so
 // it must not be rebuilt for every roster view.
-const weeklyPlayerResults = aflLeague
+// Scoped to THIS page's own players, which is 16-30 of the league's ~490.
+//
+// The loader's payload covers the whole league, and shipping it whole made
+// this island 849 KB of a 1.48 MB page — 57% of the document, re-parsed by the
+// browser on every team switch, for a modal that shows ONE player. That is
+// what made an AFL team switch take ~840 ms against TheLeague's ~130 ms: not
+// the server (SSR measures 65 ms) but the client re-parsing the page.
+//
+// `roster` is the exact reachable set, not a guess: the modal opens only from
+// `[data-player-modal]`, bound to this page's root, and all three views
+// (roster, planner, analytics) render those for this franchise's roster and
+// nothing else. A player outside it degrades to a hidden Season Results
+// section rather than an error, but there is no such player here.
+//
+// NOT filtered for TheLeague's copy of this island: that page switches team in
+// place from a payload holding all sixteen rosters, so its reachable set is
+// every club's players, not the markup's.
+const weeklyPlayerResultsAll = aflLeague
   ? loadWeeklyPlayerResults(aflLeague.dataPath, selectedYear)
   : {};
+const weeklyPlayerResults: typeof weeklyPlayerResultsAll = {};
+for (const entry of roster) {
+  const weeks = weeklyPlayerResultsAll[entry.id];
+  // A copy, never a mutation: `loadWeeklyPlayerResults` caches its payload per
+  // league-season, so trimming the object it returns would trim it for every
+  // later render in the process.
+  if (weeks) weeklyPlayerResults[entry.id] = weeks;
+}
 
 interface PlayerMatchup {
   matchup: NflMatchup | null;
@@ -911,7 +992,7 @@ const pageConfig = {
 
 <TheLeagueLayout title={`AFL — ${selectedTeam.name} Roster`}>
   <CollegeLogoDarkStyles />
-  <section class="roster-page" data-initial-view={initialView}>
+  <section class="roster-page" data-league={PAGE_LEAGUE_SLUG} data-initial-view={initialView}>
     <!-- Breadcrumbs live inside the centered column so they share its left
          edge with the team card; outside it they sat at the layout's edge. -->
     <FrontOfficeNav leagueSlug="afl-fantasy" current="rosters" crumb="Rosters" bare />
@@ -930,16 +1011,19 @@ const pageConfig = {
         groupSize: null,
       }}
       featuredPlayer={headerFeaturedPlayer}
-      lastPlayed={findLastPlayedWeek(headerOwnSchedule, headerWeek)}
-      upNext={findNextWeek(headerOwnSchedule, headerWeek)}
-      rail={headerRail}
+      lastPlayed={headerSchedule.lastPlayed}
+      upNext={headerSchedule.upNext}
+      rail={headerSchedule.rail}
       currentWeek={headerWeek}
+      lineupLock={headerLineupLock}
+      ownerLastSeen={ownerSeenFor(selectedFranchiseId)}
       groups={headerGroups}
       viewerFranchiseId={viewerFranchiseIdHere}
       nameOf={headerNameOf}
       iconOf={headerIconOf}
       recordOf={(id: string) => headerStandings.get(id)?.record ?? null}
       teamHref={headerTeamHref}
+      prefetch="tap"
       scheduleHref={headerScheduleHref}
     />
 
@@ -1761,11 +1845,18 @@ const pageConfig = {
     // this, Astro evaluates the script module only once, so navigating onto
     // this page client-side would leave the tabs/planner unwired.
     function initAflRosterPage() {
-      // Idempotent per rendered DOM: the .roster-page element is replaced on
-      // every ClientRouter swap, so a fresh element re-wires, but a repeat
-      // call for the same DOM (e.g. astro:page-load + the first-load fallback
-      // both firing) short-circuits so element-scoped listeners don't stack.
-      const pageRoot = document.querySelector<HTMLElement>('.roster-page');
+      /* Only on THIS league's rosters page, and once per rendered DOM.
+         `.roster-page` alone is NOT a gate: TheLeague's rosters page renders
+         the same class, `document` survives every ClientRouter swap, and a
+         cross-league move is a swap rather than a fresh document — so this
+         controller used to run on TheLeague's page and bind a second player
+         modal trigger onto it, from the wrong league's data.
+         The `aflInit` flag is the separate, still-needed half: the element is
+         replaced on every swap, so a fresh one re-wires, but a repeat call for
+         the SAME DOM (astro:page-load plus the first-load fallback) short
+         circuits so element-scoped listeners do not stack.
+         Guard: tests/cross-league-init-gate.test.ts. */
+      const pageRoot = document.querySelector<HTMLElement>('.roster-page[data-league="afl-fantasy"]');
       if (!pageRoot || pageRoot.dataset.aflInit === '1') return;
       pageRoot.dataset.aflInit = '1';
 
@@ -1830,8 +1921,10 @@ const pageConfig = {
     }
 
     // ── Player details modal trigger (delegated) ──
-    const rosterContainer = document.querySelector('.roster-page');
-    if (rosterContainer) initPlayerModalTrigger(rosterContainer as HTMLElement);
+    // `pageRoot`, not a fresh bare-class query — the gate above already
+    // resolved THIS league's page root, and re-asking without the league is
+    // the same hazard one statement later.
+    initPlayerModalTrigger(pageRoot);
 
     // Warm the watch list so the sheet's Watch option opens in the right
     // state; the store caches per league and no-ops on repeat.

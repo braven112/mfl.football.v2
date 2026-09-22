@@ -3,11 +3,9 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import FrontOfficeNav from '../../components/shared/front-office-nav/FrontOfficeNav.astro';
 import RosterHeader from '../../components/shared/roster-header/RosterHeader.astro';
 import RosterNameplate from '../../components/shared/roster-header/RosterNameplate.astro';
-import { buildSeasonRail, buildTeamGroups, bestValuePlayer } from '../../utils/roster-header-data';
+import { buildTeamGroups, bestValuePlayer, resolveHeaderSchedule } from '../../utils/roster-header-data';
 import { summarizeStandings } from '../../utils/standings-summary';
 import {
-  findLastPlayedWeek,
-  findNextWeek,
   franchiseSchedule,
   parseWeeklySchedule,
 } from '../../utils/schedule-data.mjs';
@@ -61,6 +59,9 @@ import {
 import type { PositionNeed } from '../../utils/free-agent-needs';
 import type { ChartSlice } from '../../scripts/chart-utils';
 import { getCurrentWeek } from '../../utils/current-week';
+import { nflWeekStartInstant } from '../../utils/nfl-week-starts.mjs';
+import { formatForViewer } from '../../utils/viewer-clock';
+import { readViewerClock } from '../../utils/viewer-preferences-page';
 // Weekly-score trends read the canonical processWeeklyScores rather than a
 // fourth copy. This page carried its own inline one until 2026-09-08, when the
 // copy here — and only here — was missing the guard for a week MFL has not
@@ -90,6 +91,7 @@ import {
   getFrozenSalaryAveragesYear,
 } from '../../utils/salary-calculations';
 import { getAuthUser, franchiseIdForLeague } from '../../utils/auth';
+import { getAllActivity, getActivityLevel, formatLastSeen } from '../../utils/owner-activity';
 import fs from 'fs';
 import path from 'path';
 import { calculateDraftOrder, buildActualDraftPicks, convertActualPicksToPredictions } from '../../utils/draft-utils';
@@ -130,6 +132,7 @@ import MyRankEditor from '../../components/shared/rankings/MyRankEditor.astro';
 // MFL host/id from the league registry — never hardcode these (CLAUDE.md).
 // Used throughout this page (server frontmatter and inline client scripts)
 // for headshot fallback URLs and leagueId defaults.
+const PAGE_LEAGUE_SLUG = getLeagueBySlug('theleague')!.slug;
 const THELEAGUE_MFL_HOST = getLeagueBySlug('theleague')!.mflHost;
 const THELEAGUE_ID = getLeagueBySlug('theleague')!.id;
 
@@ -2082,11 +2085,20 @@ const headerStandingsFeed = getModuleData(
 // TheLeague runs one table, so `conferences` is empty and rank is league-wide.
 const headerStandings = summarizeStandings(headerStandingsFeed);
 
+/* NULL unless the season the header is showing is the one being PLAYED.
+   `defaultSeason` follows the LEAGUE year, which runs ahead of the season
+   year from Feb 14 to Labor Day (CLAUDE.md, "two independent clocks"), so
+   for half the calendar this page's header is on a season with no current
+   week at all. Passing today's NFL week anyway is what put "Week 2 · Final"
+   on the AFL's completed 2023 — same header, same bug, and this page is one
+   season picker away from it. `resolveHeaderSchedule` owns what null means. */
+const headerWeekNum = defaultSeason === currentSeasonYearStr ? currentWeekNum : null;
 const headerOwnSchedule = franchiseSchedule(headerSchedule, defaultTeamId);
-const headerRail = buildSeasonRail(
+const headerWeeks = headerSchedule.map((entry: { week: number }) => entry.week);
+const headerDefaultSchedule = resolveHeaderSchedule(
   headerOwnSchedule,
-  headerSchedule.map((entry: { week: number }) => entry.week),
-  currentWeekNum
+  headerWeeks,
+  headerWeekNum
 );
 const headerGroups = buildTeamGroups({
   teams: theLeagueConfig.teams,
@@ -2135,25 +2147,54 @@ const headerTeamsForSwap = teamsList.map((team: any) => {
         ...(teamData?.injuredReserve ?? []),
       ].map((player: any) => ({ ...player, points: player?.totalSeason }))
     ),
-    lastPlayed: findLastPlayedWeek(own, currentWeekNum),
-    upNext: findNextWeek(own, currentWeekNum),
-    rail: buildSeasonRail(
-      own,
-      headerSchedule.map((entry: { week: number }) => entry.week),
-      currentWeekNum
-    ),
+    ...resolveHeaderSchedule(own, headerWeeks, headerWeekNum),
   };
 });
+
+/* When this week's lineups LOCK, in the viewer's own clock.
+
+   The instant is the week's FIRST kickoff (`nflWeekStartInstant`), which is
+   what actually locks the fantasy week — not this club's own game, which is
+   usually later. So the tile says "lineups lock", never "kickoff": most clubs
+   most weeks do not play at this time, and the lock is the one an owner can
+   still act on.
+
+   Null once it has PASSED, and null outside a live season. A deadline printed
+   after it expired is worse than no deadline: it reads as time remaining.
+
+   `readViewerClock` only READS — `Astro.cookies.set` is the route-only half
+   (CLAUDE.md, viewer preferences) — and takes the PAGE's league, not the
+   viewer's, because the clock a league's deadline prints belongs to that
+   league. `formatForViewer` appends the league's PT to the viewer's chosen
+   clock and drops it for a viewer already on Pacific. */
+const headerLockAt = headerDefaultSchedule.upNext != null && headerWeekNum != null
+  ? nflWeekStartInstant(Number(defaultSeason), headerDefaultSchedule.upNext.week)
+  : null;
+const headerLineupLock = headerLockAt != null && headerLockAt.getTime() > Date.now()
+  ? formatForViewer(headerLockAt, await readViewerClock(Astro.cookies, authUser, 'theleague'), { weekday: true })
+  : null;
 
 const headerCapSpace = initialCapLimit - (initialTeamData?.totals?.totalSalary ?? 0);
 const headerMoney = (n: number) =>
   `${n < 0 ? '-' : ''}$${Math.abs(Math.round(n)).toLocaleString('en-US')}`;
 
-// The owner "last seen" chip lived on the old team card and has no home in
-// the new header, so its Redis read is gone too. That read was an `await` on
-// the render path with a 3s timeout, blocking every SSR render of this page
-// for a value nothing consumed. Putting the chip back means restoring the
-// fetch with it — do not re-add the fetch alone.
+/* Owner presence, restored to the header — the chip that lived on the old
+   team card. One Redis read for the whole league, raced against a 3s timeout
+   so a slow store degrades to no chip rather than a hung render, and resolved
+   PER CLUB so the chip rides in the swap templates instead of being written
+   into one place from JavaScript. */
+let ownerActivityMap: Record<string, number> = {};
+try {
+  ownerActivityMap = await Promise.race([
+    getAllActivity(THELEAGUE_ID),
+    new Promise<Record<string, number>>((_, reject) =>
+      setTimeout(() => reject(new Error('Redis timeout')), 3000)),
+  ]);
+} catch { /* Redis unavailable or timed out — the chip simply does not print */ }
+const ownerSeenFor = (franchiseId: string) => {
+  const at = ownerActivityMap[franchiseId] ?? null;
+  return at ? { level: getActivityLevel(at), text: formatLastSeen(at) } : null;
+};
 // Marks which Front Office strip item is current — presentational only,
 // independent of the client-side view-tab switching below.
 const frontOfficeCurrent = Astro.url.searchParams.get('view') === 'planner' ? 'league-planner' : 'rosters';
@@ -2163,7 +2204,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
 <TheLeagueLayout title="Team Rosters">
   <FrontOfficeNav leagueSlug="theleague" current={frontOfficeCurrent} crumb={frontOfficeCrumb} bare />
   <CollegeLogoDarkStyles />
-  <section class="roster-page">
+  <section class="roster-page" data-league={PAGE_LEAGUE_SLUG}>
     <RosterHeader
       leagueSlug="theleague"
       franchiseId={defaultTeamId}
@@ -2180,10 +2221,12 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       }}
       extraStats={[{ value: headerMoney(headerCapSpace), label: 'Cap space' }]}
       featuredPlayer={headerTeamsForSwap.find((t) => t.id === defaultTeamId)?.featuredPlayer ?? null}
-      lastPlayed={findLastPlayedWeek(headerOwnSchedule, currentWeekNum)}
-      upNext={findNextWeek(headerOwnSchedule, currentWeekNum)}
-      rail={headerRail}
-      currentWeek={currentWeekNum}
+      lastPlayed={headerDefaultSchedule.lastPlayed}
+      upNext={headerDefaultSchedule.upNext}
+      rail={headerDefaultSchedule.rail}
+      currentWeek={headerWeekNum}
+      lineupLock={headerLineupLock}
+      ownerLastSeen={ownerSeenFor(defaultTeamId)}
       groups={headerGroups}
       viewerFranchiseId={userFranchiseId ?? null}
       nameOf={headerNameOf}
@@ -2216,7 +2259,9 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
                 lastPlayed={team.lastPlayed}
                 upNext={team.upNext}
                 rail={team.rail}
-                currentWeek={currentWeekNum}
+                currentWeek={headerWeekNum}
+                lineupLock={headerLineupLock}
+                ownerLastSeen={ownerSeenFor(team.id)}
                 nameOf={headerNameOf}
                 iconOf={headerIconOf}
                 recordOf={(id: string) => headerStandings.get(id)?.record ?? null}
@@ -5586,7 +5631,14 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
   };
 
   const initRosterPage = () => {
-    // Guard: only run on the rosters page (skip after ViewTransitions navigates away)
+    /* Only on THIS league's rosters page.
+       `document` is one of the two nodes the ClientRouter does not replace, so
+       this listener fires on every in-site navigation for the rest of the
+       session — and both leagues render `.roster-page`, so a bare class is not
+       a gate. A cross-league move is a same-origin SWAP, not a fresh document,
+       and the nav's own league switcher is one click away.
+       Guard: tests/cross-league-init-gate.test.ts. */
+    if (!document.querySelector('.roster-page[data-league="theleague"]')) return;
     if (!document.getElementById('roster-config')) return;
     // Warm My Watch List so the action sheet opens in the right state. The
     // store caches per league and no-ops on a repeat call.

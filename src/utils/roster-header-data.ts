@@ -16,6 +16,7 @@
 import { conferenceOrder } from './afl-conference';
 import type { ConferenceId } from './afl-conference';
 import { ensureContrastOn } from './team-color-contrast';
+import { findLastPlayedWeek, findNextWeek } from './schedule-data.mjs';
 
 /**
  * The surfaces the crest row actually sits on, which is what a ring drawn
@@ -218,12 +219,12 @@ export interface RailWeek {
 export function buildSeasonRail(
   schedule: Array<{ week: number; games: any[] }>,
   weekNumbers: number[],
-  currentWeek: number,
+  currentWeek: number | null,
 ): RailWeek[] {
   const byWeek = new Map(schedule.map((entry) => [entry.week, entry.games]));
   return weekNumbers.map((week) => ({
     week,
-    isCurrent: week === currentWeek,
+    isCurrent: currentWeek != null && week === currentWeek,
     games: (byWeek.get(week) ?? []).map((game: any) => ({
       played: Boolean(game?.played),
       outcome: (game?.outcome ?? null) as RailGame['outcome'],
@@ -397,4 +398,41 @@ export function positionalRanks(
     entries.forEach((entry, index) => ranks.set(entry.id, index + 1));
   }
   return ranks;
+}
+
+
+/**
+ * The header's whole schedule block, resolved against ONE idea of "now".
+ *
+ * `currentWeek` is the live NFL week, or NULL when the season on screen is
+ * not the season being played. That distinction is the whole reason this
+ * function exists, and it is not a nicety: the AFL's year picker renders
+ * 2019 and 2023 through this header, and passing today's week (2) into a
+ * season that finished years ago produced three separate lies at once —
+ * `findLastPlayedWeek` BOUNDS its search, so a completed 2023 reported
+ * "Week 2 · Final · 0-2" as the club's last result; the rail ringed week 2
+ * as the current week; and 2019 showed a week still waiting to be played.
+ *
+ * A season that is not live has no current week, so:
+ *   - the last result is the last week actually played, unbounded;
+ *   - "up next" searches from week 1, which finds nothing in a complete
+ *     season and correctly reports the season as over;
+ *   - no rail mark is current, and the scale prints no "you are here".
+ *
+ * One home for the rule because three call sites need it — TheLeague's
+ * default club, its fifteen swap templates, and the AFL's page — and three
+ * copies of `currentWeek ?? Infinity` is how one of them ends up wrong.
+ */
+export function resolveHeaderSchedule(
+  ownSchedule: Array<{ week: number; games: any[] }>,
+  weekNumbers: number[],
+  currentWeek: number | null,
+) {
+  return {
+    // Infinity, not `currentWeek`, when nothing is live: an unbounded search
+    // is what "the last week this club played" means outside a live season.
+    lastPlayed: findLastPlayedWeek(ownSchedule, currentWeek ?? Infinity),
+    upNext: findNextWeek(ownSchedule, currentWeek ?? 1),
+    rail: buildSeasonRail(ownSchedule, weekNumbers, currentWeek),
+  };
 }

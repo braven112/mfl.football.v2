@@ -55,15 +55,21 @@ interface Props {
   lastPlayed: HeaderWeek | null;
   upNext: HeaderWeek | null;
   rail: RailWeek[];
-  currentWeek: number;
+  /** The live NFL week, or NULL when this season is not the one being played. */
+  currentWeek: number | null;
   groups: HeaderGroup[];
   viewerFranchiseId: string | null;
   nameOf: (franchiseId: string) => string;
   iconOf: (franchiseId: string) => string | null;
   recordOf: (franchiseId: string) => string | null;
   teamHref: (franchiseId: string) => string;
+  /** Prefetch strategy for the crest links; see TeamDivisionRow. */
+  prefetch?: false | 'tap' | 'hover' | 'viewport' | 'load';
   scheduleHref: (week?: number) => string;
-  nextKickoff?: string | null;
+  /** When this week's lineups lock, in the viewer's clock; null if nothing to warn about. */
+  lineupLock?: string | null;
+  /** How recently this club's owner was on the site; forwarded to the nameplate. */
+  ownerLastSeen?: { level: 'active' | 'idle' | 'dormant' | 'unknown'; text: string } | null;
   /** The club's featured player; forwarded straight to the nameplate. */
   featuredPlayer?: HeaderPlayer | null;
 }
@@ -88,8 +94,10 @@ const {
   iconOf,
   recordOf,
   teamHref,
+  prefetch = false,
   scheduleHref,
-  nextKickoff = null,
+  lineupLock = null,
+  ownerLastSeen = null,
   featuredPlayer = null,
 } = Astro.props;
 ---
@@ -119,7 +127,8 @@ const {
       iconOf={iconOf}
       recordOf={recordOf}
       scheduleHref={scheduleHref}
-      nextKickoff={nextKickoff}
+      lineupLock={lineupLock}
+      ownerLastSeen={ownerLastSeen}
       featuredPlayer={featuredPlayer}
     />
   </div>
@@ -129,6 +138,7 @@ const {
     activeFranchiseId={franchiseId}
     viewerFranchiseId={viewerFranchiseId}
     teamHref={teamHref}
+    prefetch={prefetch}
   />
 
   {/* Every other club's nameplate, inert in <template>s until the switcher

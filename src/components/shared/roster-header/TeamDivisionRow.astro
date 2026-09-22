@@ -28,9 +28,24 @@ interface Props {
   viewerFranchiseId: string | null;
   /** Builds the href for one club's roster. */
   teamHref: (franchiseId: string) => string;
+  /**
+   * Prefetch strategy for the crest links, or false to leave them alone.
+   *
+   * Opt-in per league, because the two leagues follow these links differently.
+   * TheLeague intercepts the click and switches in place, so its pages are
+   * never navigated to and prefetching them would download 4.6 MB for nothing.
+   * The AFL really does navigate, which is why its switch measured ~840 ms
+   * against TheLeague's ~130 ms, so it asks for `tap`.
+   *
+   * `tap` and not `hover`: the row holds up to 24 crests side by side, and a
+   * mouse crossing it would prefetch every page in the league. `tap` fires on
+   * `touchstart`/`mousedown` — only the link being activated, and early
+   * enough to overlap the render with the press.
+   */
+  prefetch?: false | 'tap' | 'hover' | 'viewport' | 'load';
 }
 
-const { groups, activeFranchiseId, viewerFranchiseId, teamHref } = Astro.props;
+const { groups, activeFranchiseId, viewerFranchiseId, teamHref, prefetch = false } = Astro.props;
 
 // A conference rail is only meaningful when there is more than one to tell
 // apart; a single-table league renders the divisions with no outer label.
@@ -61,6 +76,7 @@ const showConferences = groups.length > 1;
               {division.teams.map((team) => (
                 <a
                   href={teamHref(team.franchiseId)}
+                  data-astro-prefetch={prefetch || undefined}
                   class="rhdr-teams__crest"
                   style={`--rhdr-ring:${team.ringLight};--rhdr-ring-dark:${team.ringDark}`}
                   data-team-id={team.franchiseId}

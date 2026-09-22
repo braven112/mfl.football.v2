@@ -8,6 +8,7 @@ import {
   bestPlayerByPositionRank,
   positionalRanks,
   compactSalary,
+  resolveHeaderSchedule,
 } from '../src/utils/roster-header-data';
 import { franchiseSchedule, parseWeeklySchedule } from '../src/utils/schedule-data.mjs';
 import aflConfig from '../data/afl-fantasy/afl.config.json';
@@ -654,5 +655,114 @@ describe('the crest row labels its links without showing a tooltip', () => {
     expect(body, 'display:none / visibility:hidden drop it from the a11y tree')
       .not.toMatch(/display:\s*none|visibility:\s*hidden/);
     expect(body).toMatch(/clip-path:\s*inset\(50%\)/);
+  });
+});
+
+/**
+ * A season that is not being played has NO current week.
+ *
+ * The AFL's rosters page has a year picker, so this header renders 2019 and
+ * 2023 as readily as the live season. It was handed today's NFL week either
+ * way, and `findLastPlayedWeek` BOUNDS its search — so a 2023 that finished in
+ * January 2024 reported "Week 2 · Final · 0-2" as the club's last result,
+ * ringed week 2 as current, and printed "Wk 2" on the scale. 2019 showed a
+ * week still waiting to be played.
+ *
+ * `resolveHeaderSchedule` is the one home for the rule, because three call
+ * sites need it — TheLeague's default club, its fifteen swap templates, and
+ * the AFL's page.
+ */
+describe('resolveHeaderSchedule', () => {
+  const season = parseWeeklySchedule({
+    schedule: {
+      weeklySchedule: [
+        {
+          week: '1',
+          matchup: [{ franchise: [
+            { id: '0001', isHome: '1', result: 'W', score: '120.5' },
+            { id: '0002', isHome: '0', result: 'L', score: '99.0' },
+          ] }],
+        },
+        {
+          week: '2',
+          matchup: [{ franchise: [
+            { id: '0001', isHome: '0', result: 'L', score: '88.0' },
+            { id: '0003', isHome: '1', result: 'W', score: '101.0' },
+          ] }],
+        },
+        {
+          // Never played — MFL stamps `result: "T"` with no score.
+          week: '3',
+          matchup: [{ franchise: [
+            { id: '0001', isHome: '1', result: 'T' },
+            { id: '0004', isHome: '0', result: 'T' },
+          ] }],
+        },
+      ],
+    },
+  });
+  const own = franchiseSchedule(season, '0001');
+  const weeks = season.map((w) => w.week);
+
+  it('bounds the search at the live week when a season IS being played', () => {
+    const live = resolveHeaderSchedule(own, weeks, 1);
+    // Bounded: week 2 was played but is in the future relative to "now".
+    expect(live.lastPlayed!.week).toBe(1);
+    // The first UNPLAYED week at or after now — 1 and 2 both have scores.
+    expect(live.upNext!.week).toBe(3);
+    expect(live.rail.find((w) => w.isCurrent)!.week).toBe(1);
+  });
+
+  it('reports the club’s REAL last week when no season is live', () => {
+    const past = resolveHeaderSchedule(own, weeks, null);
+    // Week 2, not the bound — this is the bug, in one assertion.
+    expect(past.lastPlayed!.week).toBe(2);
+    expect(past.lastPlayed!.games[0]).toMatchObject({ outcome: 'L', opponentId: '0003' });
+  });
+
+  it('marks no week current when no season is live', () => {
+    const past = resolveHeaderSchedule(own, weeks, null);
+    expect(past.rail.some((w) => w.isCurrent)).toBe(false);
+    expect(past.rail).toHaveLength(3);
+  });
+
+  it('searches from week 1 for "up next", so a complete season reports none', () => {
+    const past = resolveHeaderSchedule(own, weeks, null);
+    expect(past.upNext!.week).toBe(3);
+
+    const complete = franchiseSchedule(
+      parseWeeklySchedule({
+        schedule: {
+          weeklySchedule: [{
+            week: '1',
+            matchup: [{ franchise: [
+              { id: '0001', isHome: '1', result: 'W', score: '120.5' },
+              { id: '0002', isHome: '0', result: 'L', score: '99.0' },
+            ] }],
+          }],
+        },
+      }),
+      '0001',
+    );
+    expect(resolveHeaderSchedule(complete, [1], null).upNext).toBeNull();
+  });
+
+  it('hides the scale’s "you are here" and the "This week" kicker for a dead season', () => {
+    const BAR = fs.readFileSync(
+      path.join(process.cwd(), 'src/components/shared/roster-header/GamedayBar.astro'),
+      'utf-8',
+    );
+    expect(BAR).toMatch(/\{currentWeek != null && <span class="rhdr-rail__now">/);
+    expect(BAR, 'a null now can never say "This week"')
+      .not.toMatch(/\{upNext\.week === currentWeek \? 'This week'/);
+  });
+
+  it('is what both roster pages call, with a null for a season off the live clock', () => {
+    for (const page of ['src/pages/theleague/rosters.astro', 'src/pages/afl-fantasy/rosters.astro']) {
+      const src = fs.readFileSync(path.join(process.cwd(), page), 'utf-8');
+      expect(src, `${page} must go through resolveHeaderSchedule`).toContain('resolveHeaderSchedule(');
+      expect(src, `${page} must null the week off a live season`)
+        .toMatch(/=== getCurrentSeasonYear\(\) \? getCurrentWeek\(\) : null|=== currentSeasonYearStr \? currentWeekNum : null/);
+    }
   });
 });

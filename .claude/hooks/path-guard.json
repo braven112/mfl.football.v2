@@ -779,8 +779,11 @@
         "scripts/roster-parity-check.mjs"
       ],
       "tests": [
+        "tests/cross-league-init-gate.test.ts",
         "tests/page-fork-ratchet.test.ts",
+        "tests/roster-header-data.test.ts",
         "tests/roster-utils-rows.test.ts",
+        "tests/roster-weekly-results-scope.test.ts",
         "tests/rosters-team-nav-clientrouter.test.ts",
         "tests/weekly-results-matchup-guard.test.ts"
       ]
