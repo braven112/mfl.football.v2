@@ -75,7 +75,7 @@ import {
   getAFLTeamData,
   resolveAFLTeamSelection,
 } from '../../utils/team-preferences';
-import { getAuthUser } from '../../utils/auth';
+import { getAuthUser, franchiseIdForLeague } from '../../utils/auth';
 import InstallAppPrompt from '../../components/shared/pwa/InstallAppPrompt.astro';
 import { spriteUrl } from '../../utils/sprite-url';
 import { getLeagueBySlug, leagueClock } from '../../config/leagues';
@@ -101,10 +101,7 @@ const AFL = getLeagueBySlug('afl-fantasy')!;
 
 const cookiePref = getAFLPreference(Astro.cookies);
 const authUser = getAuthUser(Astro.request);
-const authAflFranchiseId =
-  authUser?.leagueId === AFL.id && authUser.franchiseId
-    ? authUser.franchiseId
-    : null;
+const authAflFranchiseId = franchiseIdForLeague(authUser, AFL.id);
 // The install banner is an interruption, so it never shows to an owner who
 // already has the app — a fact only the ACCOUNT can hold. `display-mode:
 // standalone` is false in the desktop browser of someone whose phone has had
@@ -122,13 +119,17 @@ const authAflFranchiseId =
 const showInstallBanner =
   !!authAflFranchiseId && !(await readInstallState(AFL.id, authAflFranchiseId));
 
-const hasExplicitTeam = !!(myTeamParam || franchiseParam || cookiePref || authAflFranchiseId);
-const resolvedFranchiseId = resolveAFLTeamSelection({
+// The session had been smuggled through `cookiePreference` — the one slot it
+// must not use, since a param-less signed-in owner then looked like a cookie
+// choice. It has its own slot, and with no `defaultTeam` the resolver answers
+// undefined for a viewer who has named no team, so the `hasExplicitTeam`
+// guard that used to undo its hardcoded '0001' is gone.
+const userFranchiseId = resolveAFLTeamSelection({
   myTeamParam,
   franchiseParam,
-  cookiePreference: cookiePref?.franchiseId ?? authAflFranchiseId ?? undefined,
+  cookiePreference: cookiePref?.franchiseId,
+  authUserFranchise: authAflFranchiseId,
 });
-const userFranchiseId = hasExplicitTeam ? resolvedFranchiseId : undefined;
 const userTeam = userFranchiseId ? aflConfig.teams.find(t => t.franchiseId === userFranchiseId) : undefined;
 const userConferenceId = (userTeam?.conference === '00' || userTeam?.conference === '01')
   ? (userTeam.conference as '00' | '01')

@@ -78,7 +78,7 @@ import {
   calculateContractYearsMeta,
   getFrozenSalaryAveragesYear,
 } from '../../utils/salary-calculations';
-import { getAuthUser } from '../../utils/auth';
+import { getAuthUser, franchiseIdForLeague } from '../../utils/auth';
 import { getAllActivity, getActivityLevel, formatLastSeen, type ActivityLevel } from '../../utils/owner-activity';
 import fs from 'fs';
 import path from 'path';
@@ -1140,7 +1140,9 @@ const watchSignInConfig = {
   redirectUrl: `${Astro.url.pathname}${Astro.url.search}`,
   subtitle: 'Sign in with your MFL credentials to build your watch list',
 };
-const userFranchiseId = normalizeFranchiseId(authUser?.franchiseId);
+// League-gated: both leagues have a franchise 0001, so a bare
+// `authUser.franchiseId` would select an AFL owner's slot on THIS page.
+const userFranchiseId = normalizeFranchiseId(franchiseIdForLeague(authUser, THELEAGUE_ID));
 
 // Get URL parameters for team preference
 const myTeamParam = Astro.url?.searchParams?.get('myteam');
@@ -1156,14 +1158,18 @@ if (myTeamParam) {
 // Get cookie preference
 const cookiePreference = getTheLeaguePreference(Astro.cookies);
 
+// This page cannot render "no team" — it IS a team's roster — so it passes a
+// real default. A random franchise is deliberate: it shows a stranger the
+// league rather than always the same club.
+const randomTeamId = teamsList[Math.floor(Math.random() * teamsList.length)]?.id || '0001';
 // Resolve which team to display using priority order
 const defaultTeamId = resolveTeamSelection({
   myTeamParam,
   franchiseParam,
   cookiePreference: cookiePreference?.franchiseId,
   authUserFranchise: userFranchiseId,
-  defaultTeam: teamsList[Math.floor(Math.random() * teamsList.length)]?.id || '0001',
-});
+  defaultTeam: randomTeamId,
+}) ?? randomTeamId;
 
 const initialSeasonData = rostersBySeason[defaultSeason] ?? { teams: {} };
 const initialTeamData =

@@ -10,7 +10,7 @@ import DraftMockSessionPage from '../../../../components/shared/draft-mock/Draft
 import leagueConfigData from '../../../../data/theleague.config.json';
 import { getCurrentLeagueYear } from '../../../../utils/league-year';
 import { getTheLeaguePreference, resolveTeamSelection } from '../../../../utils/team-preferences';
-import { getAuthUser } from '../../../../utils/auth';
+import { getAuthUser, franchiseIdForLeague } from '../../../../utils/auth';
 import { loginUrlForRequest } from '../../../../utils/login-redirect';
 import { buildDraftPlayers } from '../../../../utils/build-draft-players';
 import { getFranchiseBrand } from '../../../../utils/franchise-brand';
@@ -27,8 +27,7 @@ if (!user) return Astro.redirect(loginUrlForRequest(Astro, getLeagueBySlug('thel
 
 const leagueYear = getCurrentLeagueYear();
 
-// Brand colors drive the pick-reveal splash — rookies rarely have an NFL team
-// at draft time, so the drafting franchise tints the moment.
+// Brand colors drive the pick-reveal splash (drafting franchise tints it).
 const teams: DraftRoomTeam[] = (leagueConfigData.teams ?? []).map((team: any) => {
   const brand = getFranchiseBrand(team.franchiseId);
   return {
@@ -64,11 +63,12 @@ const pageData: DraftRoomPageData = {
   title="Mock Draft Room | The League"
   sessionId={sessionId}
   pageData={pageData}
+  {/* The chair a mock pick is sent from: no default. docs/claude/rules/preferred-team.md */}
   userTeamId={resolveTeamSelection({
     myTeamParam: Astro.url.searchParams.get('myteam'),
-    authUserFranchise: user?.franchiseId,
-    cookiePreference: getTheLeaguePreference(Astro.cookies, 'myteam'),
-  })}
+    cookiePreference: getTheLeaguePreference(Astro.cookies)?.franchiseId,
+    authUserFranchise: franchiseIdForLeague(user, getLeagueBySlug('theleague')!.id),
+  }) ?? ''}
   basePath="/theleague/draft/mock"
   draftContext="rookie"
 />

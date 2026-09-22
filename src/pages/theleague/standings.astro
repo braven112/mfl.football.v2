@@ -11,7 +11,7 @@ import {
   getDivisionChampionDetails,
 } from '../../utils/standings';
 import leagueConfig from '../../data/theleague.config.json';
-import { getAuthUser } from '../../utils/auth';
+import { getAuthUser, franchiseIdForLeague } from '../../utils/auth';
 import {
   getTheLeaguePreference,
   setTheLeaguePreference,
@@ -123,6 +123,7 @@ const view = (Astro.url.searchParams.get('view') ||
 
 // Get authenticated user and cookie preference
 const authUser = getAuthUser(Astro.request);
+const THELEAGUE_ID = getLeagueBySlug('theleague')!.id;
 const myTeamParam = Astro.url.searchParams.get('myteam');
 const franchiseParam = Astro.url.searchParams.get('franchise');
 
@@ -134,14 +135,15 @@ if (myTeamParam) {
 // Get cookie preference
 const cookiePreference = getTheLeaguePreference(Astro.cookies);
 
-// Resolve which team to highlight (undefined if no preference)
+// Resolve which team to highlight. No `defaultTeam`: a visitor with no
+// choice and no session highlights NOBODY, and the resolver answers
+// undefined for that.
 const preferredTeamId = resolveTeamSelection({
   myTeamParam,
   franchiseParam,
   cookiePreference: cookiePreference?.franchiseId,
-  authUserFranchise: authUser?.franchiseId,
-  defaultTeam: undefined, // Don't default if no preference
-}) || undefined;
+  authUserFranchise: franchiseIdForLeague(authUser, THELEAGUE_ID),
+});
 const yearPreferredTeamId = resolvePreferredTeamIdForYear(leagueConfig, preferredTeamId, selectedYear);
 
 // Compute the DEFENDING champions — i.e. last season's division winners, not

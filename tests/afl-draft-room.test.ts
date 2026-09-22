@@ -207,19 +207,33 @@ describe('the franchise → conference lookup the room depends on', () => {
 
 describe('licensed RSP data is not handed out by a browse-as id', () => {
   /**
-   * The bug this pins: `resolveAFLTeamSelection` defaults to '0001' when there
-   * is no param, cookie or session — and '0001' is the one franchise the RSP
-   * licence covers. Feeding that browse-as selection to `buildDraftPlayers`
-   * gave every LOGGED-OUT visitor to the AFL draft room licensed scouting
-   * data. Every league has an 0001, and they are different people.
+   * The bug this pins: `resolveAFLTeamSelection` USED TO default to '0001'
+   * when there was no param, cookie or session — and '0001' is the one
+   * franchise the RSP licence covers. Feeding that browse-as selection to
+   * `buildDraftPlayers` gave every LOGGED-OUT visitor to the AFL draft room
+   * licensed scouting data. Every league has an 0001, and they are different
+   * people.
+   *
+   * That default is gone (Sep 2026): the resolver now answers `undefined` when
+   * nothing names a team, so a logged-out visitor no longer arrives carrying
+   * the licensed id at all. Both defences below still stand, because neither
+   * depended on the default — a `?myteam=0001` in the URL is a browse-as
+   * selection too, and it would still be the licensed id.
    */
   const roomSrc = readFileSync('src/utils/afl-draft-room.ts', 'utf-8');
   const poolSrc = readFileSync('src/utils/build-draft-players.ts', 'utf-8');
 
-  it('confirms the default really is the licensed franchise', () => {
-    // If this ever stops being true the finding changes shape, so assert the
-    // premise rather than trusting the comment.
-    expect(resolveAFLTeamSelection({})).toBe('0001');
+  it('no longer hands a logged-out visitor the licensed franchise id', () => {
+    // The premise, asserted rather than trusted. This was `.toBe('0001')`
+    // while the resolver had a hardcoded final fallback; if a default ever
+    // comes back, the finding above changes shape again.
+    expect(resolveAFLTeamSelection({})).toBeUndefined();
+  });
+
+  it('still refuses the licensed id when a URL asks for it by name', () => {
+    // The default is gone, the browse-as route is not: this is why the two
+    // structural defences below are the real protection.
+    expect(resolveAFLTeamSelection({ myTeamParam: '0001' })).toBe('0001');
   });
 
   it('the AFL room passes NO viewer franchise into the player pool', () => {

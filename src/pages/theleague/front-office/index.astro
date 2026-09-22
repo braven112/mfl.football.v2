@@ -5,7 +5,7 @@
  * Everything below the shell is `FrontOfficePanel`, shared with the AFL.
  * Three things stay HERE, in the route, and each for its own reason:
  *
- * - The auth read, because `isAuthorizedForLeague` decides whose franchise
+ * - The auth read, because `franchiseIdForLeague` decides whose franchise
  *   this is (both leagues have a franchise 0001).
  * - The cookie WRITE. `Astro.cookies.set()` from an imported component runs
  *   after the response headers are committed and throws, blanking the page.
@@ -17,7 +17,7 @@ import FrontOfficeHubPage from '../../../components/shared/front-office-hub/Fron
 import FrontOfficeTeamSwitcher from '../../../components/shared/front-office-hub/FrontOfficeTeamSwitcher.astro';
 import FrontOfficePanel from '../../../components/shared/front-office-hub/FrontOfficePanel.astro';
 import { buildFrontOfficePanelData } from '../../../utils/front-office-panel-data';
-import { getAuthUser, isAuthorizedForLeague } from '../../../utils/auth';
+import { getAuthUser, franchiseIdForLeague } from '../../../utils/auth';
 import { getLeagueBySlug } from '../../../config/leagues';
 import {
   getTheLeaguePreference,
@@ -29,7 +29,7 @@ export const prerender = false;
 
 const league = getLeagueBySlug('theleague')!;
 const user = getAuthUser(Astro.request);
-const myFranchiseId = user && isAuthorizedForLeague(user, league.id) ? user.franchiseId : null;
+const myFranchiseId = franchiseIdForLeague(user, league.id);
 
 // Team selection: query param > cookie > signed-in owner > first team.
 // Mirrors rosters.astro's own resolution exactly (same priority order, same
@@ -47,12 +47,15 @@ if (myTeamParam) {
 }
 const cookiePreference = getTheLeaguePreference(Astro.cookies);
 
+// This panel renders ONE team, so '0001' is a real fallback, named here
+// rather than hidden in the resolver — docs/claude/rules/preferred-team.md.
 const selectedTeamId = resolveTeamSelection({
   myTeamParam,
   franchiseParam,
   cookiePreference: cookiePreference?.franchiseId,
   authUserFranchise: myFranchiseId,
-});
+  defaultTeam: '0001',
+}) ?? '0001';
 
 const data = await buildFrontOfficePanelData({
   leagueSlug: 'theleague',

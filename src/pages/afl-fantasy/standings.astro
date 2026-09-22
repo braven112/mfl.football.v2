@@ -33,6 +33,7 @@ import {
 import { extractSeasonStructure, applySeasonStructure } from '../../utils/afl-structure';
 import ThemeImage from '../../components/ThemeImage.astro';
 import { getLeagueBySlug } from '../../config/leagues';
+import { getAuthUser, franchiseIdForLeague } from '../../utils/auth';
 import { getStandingsFeedWithLiveRefresh, type StandingsFeed } from '../../utils/live-standings';
 
 // Get league context from URL
@@ -146,12 +147,18 @@ if (myTeamParam) {
   }
 }
 
-// Resolve which team to highlight using priority order
+// Resolve which team to highlight using priority order. No `defaultTeam`:
+// a visitor with no choice and no session highlights NOBODY. It used to pass
+// '0001', which told every signed-out stranger that Smokane FC was their team.
+// The session goes in `authUserFranchise`, league-gated with
+// `franchiseIdForLeague` — both leagues have a franchise 0001, so a bare
+// `user.franchiseId` would show a TheLeague owner Smokane FC as "their" team.
+const AFL_ID = getLeagueBySlug('afl-fantasy')!.id;
 const preferredTeamId = resolveAFLTeamSelection({
   myTeamParam,
   franchiseParam,
   cookiePreference: cookiePreference?.franchiseId,
-  defaultTeam: '0001',
+  authUserFranchise: franchiseIdForLeague(getAuthUser(Astro.request), AFL_ID),
 });
 // Follow the owner across franchise slots for historical seasons (e.g. the
 // 2016→2017 conference realignment moved owners between franchise IDs).

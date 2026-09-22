@@ -18,7 +18,7 @@ import FrontOfficeHubPage from '../../../components/shared/front-office-hub/Fron
 import FrontOfficeTeamSwitcher from '../../../components/shared/front-office-hub/FrontOfficeTeamSwitcher.astro';
 import FrontOfficePanel from '../../../components/shared/front-office-hub/FrontOfficePanel.astro';
 import { buildFrontOfficePanelData } from '../../../utils/front-office-panel-data';
-import { getAuthUser, isAuthorizedForLeague } from '../../../utils/auth';
+import { getAuthUser, franchiseIdForLeague } from '../../../utils/auth';
 import { getLeagueBySlug } from '../../../config/leagues';
 import { getTeam } from '../../../utils/afl-conference';
 import {
@@ -31,7 +31,7 @@ export const prerender = false;
 
 const league = getLeagueBySlug('afl-fantasy')!;
 const user = getAuthUser(Astro.request);
-const myFranchiseId = user && isAuthorizedForLeague(user, league.id) ? user.franchiseId : null;
+const myFranchiseId = franchiseIdForLeague(user, league.id);
 
 const myTeamParam = Astro.url.searchParams.get('myteam');
 const franchiseParam =
@@ -43,15 +43,17 @@ const franchiseParam =
 rememberAflTeamChoice(Astro.cookies, myTeamParam);
 const cookiePreference = getAFLPreference(Astro.cookies);
 
-// Priority: param > cookie > the viewer's own team > first team. `defaultTeam`
-// is where the owner's franchise lands, which puts it behind an explicit
-// choice but ahead of the arbitrary fallback — the same order TheLeague uses.
+// Priority: param > cookie > the viewer's own team > first team. The owner's
+// franchise goes in `authUserFranchise`, its own slot; this panel renders ONE
+// team, so '0001' is a real fallback behind it.
+// See docs/claude/rules/preferred-team.md.
 const selectedTeamId = resolveAFLTeamSelection({
   myTeamParam,
   franchiseParam,
   cookiePreference: cookiePreference?.franchiseId,
-  defaultTeam: myFranchiseId ?? undefined,
-});
+  authUserFranchise: myFranchiseId,
+  defaultTeam: '0001',
+}) ?? '0001';
 
 const data = await buildFrontOfficePanelData({
   leagueSlug: 'afl-fantasy',

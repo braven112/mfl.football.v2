@@ -31,13 +31,15 @@ import { getPlayerHeadshot, getNflLogoUrl } from '../../../constants/roster-cons
 import { normalizeTeamCode } from '../../../utils/nfl-logo';
 import { getPlayerMap } from '../../../utils/player-map';
 import espnCollegeIds from '../../../../data/theleague/espn-college-ids.json';
-import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
+import { getAuthUser, isCommissionerOrAdmin, franchiseIdForLeague } from '../../../utils/auth';
+import { getLeagueBySlug } from '../../../config/leagues';
 import { calculateAllSurplusValues } from '../../../utils/surplus-value';
 import { buildPickValueMap } from '../../../utils/draft-pick-value';
 import type { PlayerSurplusData, DraftPickValueData } from '../../../types/trade-builder';
 
 export const prerender = false;
 
+const THELEAGUE_ID = getLeagueBySlug('theleague')!.id;
 const leagueYear = getCurrentLeagueYear();
 const leagueYearStr = String(leagueYear);
 
@@ -371,23 +373,30 @@ const teams = franchises.map((franchise: any) => {
   };
 });
 
-// Determine default team from user preferences
+const user = getAuthUser(Astro.request);
+
+// Which franchise is YOUR side of the trade. Not decoration: it seeds the
+// side the builder offers players FROM, so an arbitrary default hands a
+// stranger somebody else's roster to trade away. '' means "no side chosen",
+// which is the honest answer for a visitor with no param, no cookie and no
+// session — the resolver returns undefined for exactly that, and the old
+// `hasPreference` guard existed only to dodge its hardcoded '0001'.
+// The session goes in `authUserFranchise`, league-gated, so a signed-in owner
+// opens on their own club without a param. (The submit endpoint re-derives
+// the franchise from the session regardless — see /api/trades/submit — so
+// this value never decides what MFL is told.)
 const theLeaguePref = getTheLeaguePreference(Astro.cookies);
 const myTeamParam = Astro.url.searchParams.get('myteam');
 const cookiePref = theLeaguePref?.franchiseId;
-const hasPreference = !!(myTeamParam || cookiePref);
-const defaultTeam = hasPreference
-  ? resolveTeamSelection({
-      myTeamParam,
-      cookiePreference: cookiePref,
-      defaultTeam: '0001',
-    })
-  : '';
+const defaultTeam = resolveTeamSelection({
+  myTeamParam,
+  cookiePreference: cookiePref,
+  authUserFranchise: franchiseIdForLeague(user, THELEAGUE_ID),
+}) ?? '';
 
 // ---------------------------------------------------------------------------
 // Surplus Value (admin-only) — value analysis for trade evaluation
 // ---------------------------------------------------------------------------
-const user = getAuthUser(Astro.request);
 const showSurplusValue = !!user && isCommissionerOrAdmin(user);
 let surplusMap: Record<string, PlayerSurplusData> = {};
 

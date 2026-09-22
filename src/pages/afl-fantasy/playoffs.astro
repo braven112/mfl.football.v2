@@ -26,6 +26,7 @@ import {
 import { getCurrentSeasonYear } from '../../utils/league-year';
 import { spriteUrl } from '../../utils/sprite-url';
 import { getLeagueBySlug } from '../../config/leagues';
+import { getAuthUser, franchiseIdForLeague } from '../../utils/auth';
 
 export const prerender = false;
 
@@ -44,13 +45,22 @@ if (myTeamParam) {
 // Get cookie preference
 const cookiePreference = getAFLPreference(Astro.cookies);
 
-// Resolve which team to use for auto-selecting bracket
+// Resolve which team to use for auto-selecting bracket. No `defaultTeam` —
+// with no choice and no session there is no team to auto-select one for. The
+// `|| undefined` that used to sit here could never fire: the resolver's
+// hardcoded '0001' fallback is truthy.
+// The session goes in `authUserFranchise`, league-gated with
+// `franchiseIdForLeague` — both leagues have a franchise 0001, so a bare
+// `user.franchiseId` would show a TheLeague owner Smokane FC as "their" team.
 const preferredTeamId = resolveAFLTeamSelection({
   myTeamParam,
   franchiseParam,
   cookiePreference: cookiePreference?.franchiseId,
-  defaultTeam: undefined,
-}) || undefined;
+  authUserFranchise: franchiseIdForLeague(
+    getAuthUser(Astro.request),
+    getLeagueBySlug('afl-fantasy')!.id
+  ),
+});
 
 // BUG FIX (Phase 2): this previously used TheLeague's host/league id on an
 // AFL page — first from the PUBLIC_MFL_HOST / PUBLIC_MFL_LEAGUE_ID env vars

@@ -17,7 +17,7 @@ import {
 import { chooseTeamName, resolveConfigForYear, resolvePreferredTeamIdForYear } from '../../utils/team-names';
 import { applyHistoricalDivisions } from '../../utils/historical-divisions';
 import leagueConfigRaw from '../../data/theleague.config.json';
-import { getAuthUser } from '../../utils/auth';
+import { getAuthUser, franchiseIdForLeague } from '../../utils/auth';
 import {
   getTheLeaguePreference,
   setTheLeaguePreference,
@@ -143,14 +143,14 @@ if (myTeamParam) {
 // Get cookie preference
 const cookiePreference = getTheLeaguePreference(Astro.cookies);
 
-// Resolve which team to highlight
+// Resolve which team to highlight. No `defaultTeam` — with no choice and no
+// session there is no team to auto-select a bracket for.
 const preferredTeamId = resolveTeamSelection({
   myTeamParam,
   franchiseParam,
   cookiePreference: cookiePreference?.franchiseId,
-  authUserFranchise: authUser?.franchiseId,
-  defaultTeam: undefined,
-}) || undefined;
+  authUserFranchise: franchiseIdForLeague(authUser, THELEAGUE.id),
+});
 const yearPreferredTeamId = resolvePreferredTeamIdForYear(leagueConfigRaw, preferredTeamId, selectedYear);
 
 // Determine which bracket contains the preferred team

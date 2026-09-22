@@ -12,6 +12,8 @@ import {
 } from '../../../utils/team-preferences';
 import { getCurrentSeasonYear, getNextDraftYear, getTestDateFromSearchParams } from '../../../utils/league-year';
 import { isDraftConducted } from '../../../utils/draft-utils';
+import { getAuthUser, franchiseIdForLeague } from '../../../utils/auth';
+import { getLeagueBySlug } from '../../../config/leagues';
 import fs from 'fs';
 import path from 'path';
 
@@ -75,13 +77,21 @@ if (myTeamParam) {
   }
 }
 
-// Resolve which team to highlight using priority order
+// Resolve which team to highlight using priority order. No `defaultTeam`,
+// matching TheLeague's twin: a visitor might own no picks at all, so the
+// predictor must not invent a team to filter by. '' means nobody.
+// The session goes in `authUserFranchise`, league-gated with
+// `franchiseIdForLeague` — both leagues have a franchise 0001, so a bare
+// `user.franchiseId` would show a TheLeague owner Smokane FC as "their" team.
 const preferredTeamId = resolveAFLTeamSelection({
   myTeamParam,
   franchiseParam,
   cookiePreference: cookiePreference?.franchiseId,
-  defaultTeam: '0001',
-});
+  authUserFranchise: franchiseIdForLeague(
+    getAuthUser(Astro.request),
+    getLeagueBySlug('afl-fantasy')!.id
+  ),
+}) ?? '';
 
 // Get preferred team's conference for default view
 const preferredTeamConfig = teamConfigMap.get(preferredTeamId);
