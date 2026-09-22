@@ -259,6 +259,52 @@ Note when writing such a test that the accent is the winning slot **lifted** to
 clear the backdrop, never the raw hex — `#2e7d32` comes back `#58975b`. Assert
 which candidate it is NEAREST to, not equality.
 
+## Screenshot the Brand Book — it prints every colour a club owns, side by side
+
+Two stale values survived every check in this pass and were caught by opening
+`/<league>/brand/<slug>` on the preview and looking: Chatmaster's
+`colorQuaternary` was a 0.70 scale of the muddy gold that had just been
+replaced, and Gridiron Geeks' `colorSecondaryDark` was a lift of the muted
+orange that had just been replaced. Both are the derived-follower class this
+file already documents — and knowing about the class did not stop me walking
+past two instances of it.
+
+The page is unusually good at this because it renders the whole palette as
+adjacent swatches plus what the site DERIVES from them. A colour that no longer
+belongs is obvious there and invisible in a diff, where it is just a hex that
+did not change.
+
+The preview is public for these routes, so it screenshots without auth:
+
+```js
+// Chromium is pre-installed; the agent proxy's CA is not in Playwright's NSS
+// store, so pin the proxy CA's SPKI rather than disabling verification.
+chromium.launch({
+  executablePath: '/opt/pw-browsers/chromium',
+  args: [`--ignore-certificate-errors-spki-list=${spki}`],
+});
+// spki: openssl x509 -in /root/.ccr/agent-proxy-ca.crt -pubkey -noout \
+//         | openssl pkey -pubin -outform der | openssl dgst -sha256 -binary \
+//         | openssl enc -base64
+```
+
+## A dark-theme variant is NOT "the same colour, lighter"
+
+Worth knowing before writing a guard for one. `darkClaim` swaps
+`colorPrimaryDark` / `colorSecondaryDark` in wholesale on live-scoring
+surfaces, and several clubs deliberately **lead with a different one of their
+own four colours** there — Dead Cap Walking navy → green, Cowboy Up navy ↔ red,
+the Ninjas' green secondary becoming their red quaternary.
+
+Two guards were attempted and both over-fired, for the same reason every other
+over-firing check in this file did: **ΔE reads lightness, and a dark variant is
+supposed to differ in lightness.** Same-family (ΔE base vs dark > 50) flagged 8
+clubs, nearly all deliberate swaps. Membership (ΔE dark vs nearest own slot >
+30) flagged 5, with Fire Ready Aim scoring 34 purely for being a lift. Neither
+shipped. A workable version compares hue and chroma while ignoring lightness,
+and skips near-black bases. Five values that a human should look at are
+recorded in `docs/claude/followups/2026-09-22-dark-variant-audit.md`.
+
 ## Guards that move with the data
 
 Filling every slot invalidated four test fixtures that were asserting the *old*
