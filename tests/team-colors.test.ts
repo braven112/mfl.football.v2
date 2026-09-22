@@ -52,7 +52,10 @@ describe('team-colors', () => {
     });
 
     it('getTeamColors returns the defined palette in order', () => {
-      expect(getTeamColors('0005')).toEqual(['#181818', '#2f8b59', '#ffffff', '#de3f3f']);
+      // The Mariachi Ninjas lead with their green as of Sep 2026 — the pair was
+      // swapped, not invented, so this still reads primary, secondary, tertiary,
+      // quaternary in config order, which is what the test is for.
+      expect(getTeamColors('0005')).toEqual(['#2f8b59', '#181818', '#ffffff', '#de3f3f']);
       expect(getTeamColors('0001')).toEqual(['#bd1f2b', '#181818']);
     });
   });

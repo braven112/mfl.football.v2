@@ -8,6 +8,7 @@
  * See docs/standings-table-design.md §3 for the full rationale.
  */
 import type { TeamStanding } from '../../../types/standings';
+import type { LeagueSlug } from '../../../types/nav';
 
 /** Which prebuilt column a config references. Formatter/alignment/width are
  *  resolved inside the component from the key, not at the call site. */
@@ -53,9 +54,15 @@ export interface StandingsColumn {
 }
 
 // 'chip' (color-chip + name, hero/compact) is a planned mode for the
-// out-of-scope hero/compact follow-up; the renderer implements only the two
+// out-of-scope hero/compact follow-up; the renderer implements only the three
 // shipped modes today. Add 'chip' back alongside its renderer, not before.
-export type TeamCellMode = 'banner' | 'icon';
+//
+// 'crest' is the band's team cell: uncropped crest + the name set as a
+// wordmark, for a row whose surface is already the franchise's colour. It
+// exists because 'banner' cannot serve that row — the banner art carries its
+// OWN team-coloured ground (see any file under `public/assets/*/banners/`), so
+// on a band it reads as a colour inside a colour.
+export type TeamCellMode = 'banner' | 'icon' | 'crest';
 
 /** What the 'banner' team cell renders when the banner is missing or is the
  *  HISTORICAL placeholder:
@@ -115,6 +122,24 @@ export interface StandingsTableProps {
   /** AFL red / conference-blue card glow vs TheLeague blue. Replaces the
    *  data-league / conferenceId branches. */
   accent?: StandingsAccent;
+  /**
+   * Row surface. `'band'` paints each row in that franchise's own colour with
+   * the ink `resolveTeamBand` measured for it (`src/utils/team-band.ts`);
+   * anything else keeps the striped/tiered rows this table has always drawn.
+   *
+   * It is PRESENTATION ONLY and must stay that way: the row order is still
+   * MFL's, untouched (see docs/claude/rules/standings-brackets-draft-order.md
+   * — the first row of a division IS its winner). A band says who the row is
+   * about, never where the row places.
+   */
+  rowSkin?: 'band';
+  /**
+   * Which league's franchise colours a band reads. Required with
+   * `rowSkin: 'band'` and with `teamCell: 'crest'`, and NOT optional decoration:
+   * both leagues have a franchise `0001`, so an unscoped lookup would paint an
+   * AFL row in TheLeague's Pigskins red.
+   */
+  league?: LeagueSlug;
   /** Tier-table extras (only read when a prize/rankCircle column is present). */
   tierName?: string;
   promotionCutoff?: number;

@@ -187,6 +187,7 @@ const nlOrder = draftOrders.find(order => order.conference === 'National League'
         <div class="conference-order" data-conference="AL">
           <DraftPredictorGrid
             predictions={alOrder.picks}
+            league="afl"
             totalRounds={9}
             teamsPerConference={12}
             hasCompensatoryPicks={false}
@@ -202,6 +203,7 @@ const nlOrder = draftOrders.find(order => order.conference === 'National League'
         <div class="conference-order" data-conference="NL">
           <DraftPredictorGrid
             predictions={nlOrder.picks}
+            league="afl"
             totalRounds={9}
             teamsPerConference={12}
             hasCompensatoryPicks={false}

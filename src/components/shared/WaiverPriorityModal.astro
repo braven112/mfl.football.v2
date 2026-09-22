@@ -22,6 +22,8 @@ import '../../styles/waiver-priority-modal.css';
  * trade.
  */
 import { rankWithinConference, type WaiverOrderEntry } from '../../utils/waiver-order';
+import { teamBandStyle } from '../../utils/team-band';
+import type { TeamBand } from '../../utils/team-band';
 import type { LeagueClock } from '../../utils/viewer-preferences';
 
 export interface WaiverPriorityTeam {
@@ -29,6 +31,13 @@ export interface WaiverPriorityTeam {
   name: string;
   /** Site-relative icon path (`/assets/...`), never an MFL-hosted absolute URL. */
   icon?: string;
+  /**
+   * This club's band, from `withTeamBands` (src/utils/team-band.ts). Attached
+   * by the caller and carried in the JSON config below, so the rows this file
+   * renders server-side and the rows the script re-renders on the live read
+   * are painted from ONE resolution of the colour rather than two.
+   */
+  band?: TeamBand;
 }
 
 export interface WaiverPriorityConfig {
@@ -94,7 +103,10 @@ const clientConfig = { ...config, initialOrder: undefined, hasInitialOrder: init
             const team = teamById.get(franchiseId);
             const isMe = franchiseId === config.franchiseId;
             return (
-              <li class={`wpm-row${isMe ? ' wpm-row--me' : ''}`}>
+              <li
+                class:list={['wpm-row', { 'wpm-row--band': !!team?.band, 'wpm-row--me': isMe }]}
+                style={team?.band ? teamBandStyle(team.band) : undefined}
+              >
                 <span class="wpm-row__rank">{rank}</span>
                 {team?.icon
                   ? <img class="wpm-row__icon" src={team.icon} alt="" loading="lazy" decoding="async" />

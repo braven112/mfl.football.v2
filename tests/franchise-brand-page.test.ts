@@ -369,14 +369,19 @@ describe('franchise-marks — the colours the site actually paints', () => {
    * The config hex is the INPUT, never what lands on screen. Every surface
    * floors the colour against the ground it is about to sit on, which is why
    * the page shows both and says which is which — an owner reading
-   * "Primary #181818" otherwise has no way to learn that nothing paints it.
+   * "Primary #000000" otherwise has no way to learn that nothing paints it.
+   *
+   * Bring The Pain is the fixture because the gap is at its widest here: the
+   * config says black and the dark card paints near-white. Its primary was
+   * #181818 until Sep 2026, when the last clubs sharing that value were given
+   * colours of their own — Pain took pure black, the Wabbits #222222.
    */
   it('reads the derived values from the real resolvers', () => {
     const pain = franchiseBrand('theleague', '0008');
-    expect(pain?.colors.find((c) => c.key === 'colorPrimary')?.hex).toBe('#181818');
+    expect(pain?.colors.find((c) => c.key === 'colorPrimary')?.hex).toBe('#000000');
     const accent = pain?.derived.find((d) => d.label === 'Accent token');
     // The whole point: the dark-theme accent is nothing like the config hex.
-    expect(accent?.dark).not.toBe('#181818');
+    expect(accent?.dark).not.toBe('#000000');
     expect(accent?.dark.toLowerCase()).toBe('#e9e9e9');
   });
 

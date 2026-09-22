@@ -19,6 +19,7 @@ import theleagueConfig from '../../data/theleague.config.json';
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 import type { LeagueSlug } from '../../types/nav';
 import { teamAccentVar } from '../../utils/team-accent-css';
+import { resolveTeamBand, teamBandStyle } from '../../utils/team-band';
 import { getLeaguePrefix, resolveLeaguePath } from '../../utils/nav-utils';
 import { isRetroactivelyGenerated } from '../../utils/pecking-order-landing';
 import OwnersPollSection, {
@@ -151,16 +152,36 @@ const franchiseHref = (franchiseId: string) =>
   resolveLeaguePath(`${getLeaguePrefix(league)}/franchises/${franchiseId}`, hideLeaguePrefix);
 
 /**
- * Brand accent for a card — the site-wide franchise token, not the raw config
- * color. It paints the rank numeral (28px bold — WCAG "large text") and the
- * card's brand edge, so it has to clear 3:1 on whichever theme is rendering;
- * the token carries a value per theme (src/utils/team-accent-css.ts). Raw
- * brand colors miss that badly in one direction or the other — Bring The
- * Pain's near-black is 1.2:1 on a dark card, Midwestside's yellow 1.5:1 on a
- * white one.
+ * Brand accent for an AWARD card — the site-wide franchise token, not the raw
+ * config color. It paints that card's brand edge, a foreground mark drawn ON
+ * the card, so it has to clear 3:1 on whichever theme is rendering; the token
+ * carries a value per theme (src/utils/team-accent-css.ts). Raw brand colors
+ * miss that badly in one direction or the other — Bring The Pain's near-black
+ * is 1.2:1 on a dark card, Midwestside's yellow 1.5:1 on a white one.
+ *
+ * It no longer paints the ranking rows. Those moved to a filled chip, which is
+ * a surface rather than a mark and takes `rankChipStyle` below — the accent
+ * token would hand it a colour floored against the wrong thing.
  */
 const accentStyle = (franchiseId: string | undefined) =>
   `--pr-accent: ${teamAccentVar(franchiseId ?? '', 'var(--color-primary, #2563eb)')}`;
+
+/**
+ * The rank chip — the franchise's colour as a FILL behind the numeral, rather
+ * than as the numeral's ink.
+ *
+ * That is a different contrast question from `accentStyle` above and needs the
+ * other helper: `--team-accent-<id>` is floored against the CARD, which is
+ * right for a numeral drawn ON the card and wrong for one drawn on a block of
+ * the club's own colour. `resolveTeamBand` floors the ink against the FILL and
+ * the fill against the card, and resolves both themes so the stylesheet can
+ * pick under `html.dark` (src/utils/team-band.ts).
+ *
+ * The numeral stays 26px/800 — comfortably inside WCAG's large-text
+ * definition, which is the floor the band's ink is measured at.
+ */
+const rankChipStyle = (franchiseId: string | undefined) =>
+  teamBandStyle(resolveTeamBand(franchiseId ?? '', league));
 
 /**
  * Three awards carry a meaning-colored edge instead of the winner's brand
@@ -246,7 +267,7 @@ const methodology = issue.methodology
       {issue.rankings.map(row => {
         const team = teams.get(row.franchiseId);
         return (
-          <li class="pr-card" style={accentStyle(row.franchiseId)}>
+          <li class="pr-card" style={rankChipStyle(row.franchiseId)}>
             <div class="pr-card__rank">
               <div class="pr-card__rank-num">{row.rank}</div>
               {row.previousRank != null && (
@@ -499,7 +520,6 @@ const methodology = issue.methodology
   align-items: center;
   padding: 0.85rem;
   border: 1px solid var(--content-border, #e5e7eb);
-  border-left: 4px solid var(--pr-accent);
   border-radius: 0.5rem;
   background: var(--card-bg, #fff);
 }
@@ -509,11 +529,32 @@ const methodology = issue.methodology
   align-items: center;
   gap: 0.15rem;
 }
+/* The rank chip. The franchise's colour is the numeral's GROUND here, not its
+   ink — which is also why this card no longer carries a brand-coloured left
+   edge: the chip and the edge would have been two different floorings of one
+   colour sitting 12px apart (the edge is a foreground mark and takes the 3:1
+   accent token; the chip is a surface and takes the band fill), and the louder
+   of the two is doing the job on its own.
+
+   26px/800 is inside WCAG's large-text definition, which is the floor
+   `resolveTeamBand` measured this ink at — see the module note there, and
+   tests/team-band-type-contract.test.ts, which fails if it shrinks. */
 .pr-card__rank-num {
-  font-size: 1.75rem;
+  display: grid;
+  place-items: center;
+  width: 2.9rem;
+  height: 2.9rem;
+  border-radius: 0.55rem;
+  font-size: 1.625rem;
   font-weight: 800;
   line-height: 1;
-  color: var(--pr-accent);
+  font-variant-numeric: tabular-nums;
+  background: var(--band-fill);
+  color: var(--band-ink);
+}
+:global(html.dark) .pr-card__rank-num {
+  background: var(--band-fill-dark);
+  color: var(--band-ink-dark);
 }
 .pr-card__trend {
   display: inline-flex;

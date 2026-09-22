@@ -72,10 +72,64 @@ Pecking Order shipped invisible rank numbers in dark mode (August 2026).
 - The exception is a team color used as a BACKGROUND FILL with white text on
   top (deep-ink composite heroes, pick-reveal, dead-money) — different contrast
   question, different rule; see the player-headshot section below.
+- A fill whose ink is NOT assumed to be white is a third case again, and it has
+  its own helper: `resolveTeamBand` (`src/utils/team-band.ts`), used by the
+  division standings' colour rows. See "Team bands" below.
 - `tests/team-accent-css.test.ts` fails the build if any franchise in any league
   falls under 3:1 in either theme, or if the layout drops `TeamAccentStyles`.
 
 
+
+## Team bands — a franchise colour as the surface, ink chosen per club
+
+`resolveTeamBand` / `teamBandStyle` (`src/utils/team-band.ts`) paint a row,
+card, chip or panel in a franchise's own colour and put legible text ON it —
+the division standings' colour rows and the Pecking Order's rank chip today. Reach for
+it instead of `--team-accent-<id>` whenever the brand colour IS the surface —
+the accent token is floored for FOREGROUND use and would hand back a shifted
+colour, which is the opposite of what a fill wants.
+
+It is also NOT `toBroadcastPair` / `darkenForWhiteText` / `ensureFieldOn`: all
+three are hard-wired to WHITE ink and only ever move the fill to protect it.
+That is right for a deep-ink hero and wrong for a standings row, because three
+AFL clubs wear a near-white primary and two wear a gold that white ink fails
+outright. A band flips its INK instead, white-first, and moves the fill only
+when neither ink works — which no franchise in any league currently needs.
+
+- **The 3:1 floor is a claim about the TYPE.** The ink is measured at WCAG's
+  large-text floor, which is only valid while every text node on the band stays
+  ≥18.66px bold. At the 4.5:1 body floor, eight AFL clubs flip to dark ink.
+  `tests/team-band-type-contract.test.ts` holds every band surface to that, by
+  registry rather than by scanning one file: a new importer of the util fails
+  the suite until it declares which of its selectors carry text on the fill, and
+  any declared selector whose font-size drops under the floor, at any
+  breakpoint, fails it too. Without that, a later tidy-up back toward 12px cells
+  takes a whole surface sub-AA with nothing going red.
+- **Both themes are resolved together and handed to CSS as custom properties.**
+  `--band-fill` / `--band-ink` with `--band-fill-dark` / `--band-ink-dark`, and
+  the stylesheet picks under `html.dark`. Same reason as everything else here:
+  under theme preference 'auto' the server does not know the resolved theme.
+- **`colorPrimaryDark` is deliberately NOT the dark-theme fill.** It is a
+  foreground lift, and for several TheLeague clubs it is a different hue
+  entirely (the Ninjas' near-black primary has a green dark value) — as a fill
+  that gives one franchise two identities depending on the reader's theme. The
+  dark theme starts from the same `colorPrimary` and only lifts it far enough
+  off the darker card (≥1.35:1), which is what stops the seven `#181818`
+  franchises rendering as holes in the page.
+- **A band's crest is chosen by the FILL, not by the theme**, via
+  `bandCrestSrc`. The band is the club's colour in both themes, so the global
+  `html.dark img[src="<light>"]` swap must be cancelled on it — otherwise
+  Chatmaster's gold band gets a crest cut for a dark card after sunset. This is
+  the same conclusion `franchise-band-brand.ts` reaches from the opposite
+  direction (its surface is ink in both themes, so the dark cut always wins).
+- **A marker drawn on a band must sit ON the fill.** The ink is measured
+  against the fill and nothing else, so a "your team" edge drawn against the
+  CARD inherits no guarantee — the Pigskins' marker was white ink on a white
+  card, i.e. invisible, until it moved inside the row.
+
+`tests/team-band.test.ts` is a census: every franchise, every league, both
+themes, both floors. Re-colouring a club or adding a league is checked by the
+build rather than by whoever next opens that division page.
 
 ## `broadcastGradient` — the one franchise color that is NOT derived
 

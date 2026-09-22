@@ -50,6 +50,7 @@ import { getAflLeagueYear, getTestDateFromSearchParams } from '../../utils/leagu
 import { resolveSnapCounts } from '../../utils/snap-count-season.mjs';
 import WaiverClaimsPanel from '../../components/shared/WaiverClaimsPanel.astro';
 import WaiverPriorityModal from '../../components/shared/WaiverPriorityModal.astro';
+import { withTeamBands } from '../../utils/team-band';
 import SignInModal from '../../components/shared/SignInModal.astro';
 import WatchListBridge from '../../components/shared/WatchListBridge.astro';
 import { getConferenceName, getConferenceTeams, isValidConferenceId, getConferenceLogo, getConferenceLogoDark } from '../../utils/afl-conference';
@@ -266,12 +267,18 @@ const waiverPriorityConfig = {
   // Names and icons are SSR (and the icon paths are site-relative, which is
   // what the dark-variant stylesheet keys on); only the priority numbers are
   // fetched live, because MFL renumbers them every time a claim is awarded.
+  // `withTeamBands` attaches each club's band here, server-side, because the
+  // dialog re-renders its rows in the browser once the live order lands and
+  // `team-band` reads league configs the browser has not got.
   teams: priorityConfId
-    ? getConferenceTeams(priorityConfId).map((t) => ({
-        franchiseId: t.franchiseId,
-        name: t.nameMedium || t.name,
-        icon: t.icon,
-      }))
+    ? withTeamBands(
+        getConferenceTeams(priorityConfId).map((t) => ({
+          franchiseId: t.franchiseId,
+          name: t.nameMedium || t.name,
+          icon: t.icon,
+        })),
+        aflLeague.navSlug,
+      )
     : [],
   // No `system` here: the dialog only ever opens for a league that HAS a
   // priority order, so a flag distinguishing bid-tiebreak from rolling

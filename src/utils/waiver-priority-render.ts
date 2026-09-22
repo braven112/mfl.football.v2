@@ -17,6 +17,7 @@
 
 import { rankWithinConference } from './waiver-order';
 import type { WaiverOrderEntry } from './waiver-order';
+import type { TeamBand } from './team-band';
 import { clockZonesFromCookie, formatMomentOrDevice } from './viewer-clock';
 import type { LeagueClock } from './viewer-preferences';
 
@@ -26,6 +27,21 @@ export interface WaiverPriorityRenderTeam {
   /** Site-relative icon path (`/assets/...`), never an MFL-hosted absolute URL —
    *  the dark-variant stylesheet keys on the exact relative src. */
   icon?: string;
+  /**
+   * The franchise's band, resolved server-side by `withTeamBands`
+   * (src/utils/team-band.ts) and carried in whichever config blob this
+   * surface already ships.
+   *
+   * It rides on the TEAM rather than arriving as a second map keyed by
+   * franchise id, so the colour and the club it belongs to cannot drift apart
+   * — and so this module needs nothing from the league configs, which the
+   * browser does not have. The import above is TYPE-ONLY for that reason: a
+   * value import would pull all three configs into the client bundle.
+   *
+   * Optional because a caller that has not adopted the band yet still renders
+   * — it simply gets the pre-band row.
+   */
+  band?: TeamBand;
 }
 
 const esc = (s: unknown) =>
@@ -59,8 +75,17 @@ export function renderWaiverPriorityRows(
       const icon = team?.icon
         ? `<img class="${prefix}__icon" src="${esc(team.icon)}" alt="" loading="lazy" decoding="async" />`
         : `<span class="${prefix}__icon ${prefix}__icon--blank" aria-hidden="true"></span>`;
+      // The band's two themes both ride in as custom properties; the
+      // stylesheet picks under `html.dark`. Resolving a theme here is not an
+      // option — this runs in the browser, but it runs ONCE per open, while
+      // the theme can change under it without a re-render.
+      const band = team?.band
+        ? ` style="--band-fill:${esc(team.band.fill)};--band-ink:${esc(team.band.ink)};` +
+          `--band-fill-dark:${esc(team.band.fillDark)};--band-ink-dark:${esc(team.band.inkDark)}"`
+        : '';
+      const banded = team?.band ? ` ${prefix}--band` : '';
       return (
-        `<li class="${prefix}${isMe ? ` ${prefix}--me` : ''}">` +
+        `<li class="${prefix}${banded}${isMe ? ` ${prefix}--me` : ''}"${band}>` +
         `<span class="${prefix}__rank">${rank}</span>` +
         icon +
         `<span class="${prefix}__name">${esc(team?.name ?? franchiseId)}</span>` +

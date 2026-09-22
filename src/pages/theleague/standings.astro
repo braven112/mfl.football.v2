@@ -234,8 +234,9 @@ const divisionBadges = DIVISION_BADGES;
             <UnifiedStandingsTable
               teams={division.teams}
               columns={COLUMNS.division}
-              teamCell="banner"
-              teamCellFallback="name"
+              teamCell="crest"
+              rowSkin="band"
+              league="theleague"
               accent="league-blue"
               year={selectedYear}
               preferredTeamId={yearPreferredTeamId}

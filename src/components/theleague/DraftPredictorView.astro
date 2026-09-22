@@ -82,10 +82,10 @@ const hasActualPicks = actualPicks.length > 0;
     <>
       <DraftPredictorViewToggle client:load predictions={predictions} actualPicks={displayPredictions} />
       <div id="draft-grid-projected" class="draft-grid-view draft-grid-view--active">
-        <DraftPredictorGrid predictions={predictions} />
+        <DraftPredictorGrid predictions={predictions} league="theleague" />
       </div>
       <div id="draft-grid-actual" class="draft-grid-view">
-        <DraftPredictorGrid predictions={displayPredictions} />
+        <DraftPredictorGrid predictions={displayPredictions} league="theleague" />
       </div>
       <script>
         // Listen for toggle changes
@@ -115,7 +115,7 @@ const hasActualPicks = actualPicks.length > 0;
       <div class="draft-predictor-info-notice">
         <p>Actual draft data not yet available. Showing projected draft order based on current standings.</p>
       </div>
-      <DraftPredictorGrid predictions={predictions} />
+      <DraftPredictorGrid predictions={predictions} league="theleague" />
     </>
   )}
 </div>

@@ -5,31 +5,51 @@ export interface Props {
 }
 
 const { status, seed } = Astro.props;
+
+/**
+ * The seed carries the badge; the word is the fallback, not the default.
+ *
+ * `DIV #1` said the same thing twice — gold vs silver already separates the two
+ * ladders — and the pair cost ~45px inside a fixed 100px column on EVERY row,
+ * badge or not. In the banded division table that is paid for out of the team
+ * name, because the band made every numeric column shrink-to-fit and left
+ * `.col-team` as the only `width: auto` column left to squeeze.
+ *
+ * Colour alone would be an accessibility failure, so the word moves to the
+ * accessible name rather than vanishing: a `title` for a pointer and a
+ * visually-hidden span for a screen reader (an `aria-label` on a plain `div`
+ * has no role to attach to and is not reliably announced).
+ *
+ * Where MFL gives no seed there is nothing to print, so the word comes back as
+ * the visible text — an unlabelled coloured square says nothing at all.
+ */
+const LABELS = {
+  division_winner: { short: 'DIV', full: 'Division winner', className: 'badge-division-winner' },
+  wild_card: { short: 'WC', full: 'Wild card', className: 'badge-wild-card' },
+} as const;
+
+const meta = status ? LABELS[status] : null;
 ---
 
-{status === 'division_winner' && (
-  <div class="badge badge-division-winner" title="Division Winner">
-    <span class="badge-label">DIV</span>
-    {seed && <span class="badge-seed">#{seed}</span>}
-  </div>
-)}
-
-{status === 'wild_card' && (
-  <div class="badge badge-wild-card" title="Wild Card">
-    <span class="badge-label">WC</span>
-    {seed && <span class="badge-seed">#{seed}</span>}
+{meta && (
+  <div class:list={['badge', meta.className]} title={meta.full}>
+    <span class="badge-seed" aria-hidden="true">{seed ? `#${seed}` : meta.short}</span>
+    <span class="badge-sr">{seed ? `${meta.full}, seed ${seed}` : meta.full}</span>
   </div>
 )}
 
 <style>
   .badge {
+    position: relative; /* the absolutely-positioned .badge-sr anchors here */
     display: inline-flex;
     align-items: center;
-    gap: 0.25rem;
-    padding: 0.25rem 0.5rem;
+    justify-content: center;
+    padding: 0.2rem 0.4rem;
     border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: 600;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
     text-transform: uppercase;
   }
 
@@ -45,12 +65,19 @@ const { status, seed } = Astro.props;
     box-shadow: 0 2px 4px rgba(192, 192, 192, 0.3);
   }
 
-  .badge-label {
-    font-weight: 700;
-  }
-
-  .badge-seed {
-    font-size: 0.65rem;
-    font-weight: 500;
+  /* Local rather than the global `.visually-hidden`, so the badge carries its
+   * own accessible name into any page regardless of which stylesheets that
+   * page happens to load. */
+  .badge-sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
   }
 </style>
