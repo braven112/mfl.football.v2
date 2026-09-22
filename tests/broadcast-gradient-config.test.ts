@@ -253,7 +253,22 @@ describe('the two hand-authored cards', () => {
  * nothing noticed.
  */
 describe('generated gradients still match the derived pair', () => {
-  const HAND_AUTHORED = new Set(['afl:0011', 'afl:0009', 'theleague:0011', 'theleague:0012']);
+  /**
+   * `afl:0008` (Dicks out for Harambe) joined this list with the four-colour
+   * rebrand. Their primary became WHITE — the crest's biggest area — and
+   * `toBroadcastPair` only ever DARKENS, so a white primary has nowhere to go:
+   * both stops collapse onto the secondary and it derives
+   * `#247cb9 -> #287cb7`, two blues a hair apart and no gradient at all.
+   * Hand-authored as their blue into the gorilla's dark fur, which is the
+   * reveal the derived pair was trying and failing to express.
+   */
+  const HAND_AUTHORED = new Set([
+    'afl:0011',
+    'afl:0009',
+    'afl:0008',
+    'theleague:0011',
+    'theleague:0012',
+  ]);
 
   for (const { slug, teams } of LEAGUES) {
     it(`${slug}: every generated entry equals what toBroadcastPair yields`, () => {

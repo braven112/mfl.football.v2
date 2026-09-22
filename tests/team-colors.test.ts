@@ -40,9 +40,11 @@ describe('team-colors', () => {
     });
 
     it('returns undefined tertiary/quaternary when not defined', () => {
-      // Pigskins only have primary + secondary.
-      expect(getTeamColorTertiary('0001')).toBeUndefined();
-      expect(getTeamColorQuaternary('0001')).toBeUndefined();
+      // Best Ball is the last league still on two colours — every franchise in
+      // TheLeague and the AFL carries all four since the rebrand, so bb1 is
+      // what still exercises the "not defined" path.
+      expect(getTeamColorTertiary('0001', 'bb1')).toBeUndefined();
+      expect(getTeamColorQuaternary('0001', 'bb1')).toBeUndefined();
     });
 
     it('reads AFL brand colors with the league argument', () => {
@@ -53,7 +55,10 @@ describe('team-colors', () => {
 
     it('getTeamColors returns the defined palette in order', () => {
       expect(getTeamColors('0005')).toEqual(['#181818', '#2f8b59', '#ffffff', '#de3f3f']);
-      expect(getTeamColors('0001')).toEqual(['#bd1f2b', '#181818']);
+      // Pigskins gained white + their crest's #a1a1a1 grey in the rebrand.
+      expect(getTeamColors('0001')).toEqual(['#bd1f2b', '#181818', '#ffffff', '#a1a1a1']);
+      // A shorter palette still comes back short — bb1 defines only two.
+      expect(getTeamColors('0001', 'bb1')).toEqual(['#0e8a5f', '#d1fae5']);
     });
   });
 

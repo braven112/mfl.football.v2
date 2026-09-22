@@ -22,10 +22,12 @@ describe('franchise-brand', () => {
     const ninjas = getFranchiseBrand('0005');
     expect(ninjas.colorTertiary).toBe('#ffffff');
     expect(ninjas.colorQuaternary).toBe('#de3f3f');
-    // Pigskins only define primary + secondary.
-    const pigskins = getFranchiseBrand('0001');
-    expect(pigskins.colorTertiary).toBeUndefined();
-    expect(pigskins.colorQuaternary).toBeUndefined();
+    // Every TheLeague franchise defines all four since the rebrand, so the
+    // "not defined" half is now demonstrated by a franchise that isn't in the
+    // config at all — the fallback must not invent a tertiary.
+    const unknown = getFranchiseBrand('9999');
+    expect(unknown.colorTertiary).toBeUndefined();
+    expect(unknown.colorQuaternary).toBeUndefined();
   });
 
   it('falls back (with a defined secondary) for an unknown franchise', () => {

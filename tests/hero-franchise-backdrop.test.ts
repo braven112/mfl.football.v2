@@ -442,15 +442,20 @@ describe('backdrop sampling', () => {
 
 describe('greyscale franchises', () => {
   it('gives all four the same constructed grey, bright enough to read as emphasis', () => {
-    // TITS and BADD (AFL), Bring The Pain and Wabs (TheLeague) have no hue in
-    // their palettes at all. Selecting from their stops split them two-and-two
-    // between #a3a3a3 and a #696969 that read as disabled text; the grey is
-    // constructed from white now, so they agree and they are visible.
+    // TITS and BADD (AFL) and Bring The Pain (TheLeague) have no hue in their
+    // palettes at all. Selecting from their stops split them between #a3a3a3
+    // and a #696969 that read as disabled text; the grey is constructed from
+    // white now, so they agree and they are visible.
+    //
+    // WABS was the fourth until the four-colour rebrand gave the Wabbits a
+    // carrot #ed7117 — their crest has literally no chromatic pixel in it, so
+    // the orange was chosen rather than sampled. They have a hue now and their
+    // accent is that carrot, which is the point of giving them one.
     const greyscale = [
       ...(aflConfig.teams as any[]).filter((t) => ['TITS', 'BADD'].includes(t.abbrev)),
-      ...(theleagueConfig.teams as any[]).filter((t) => ['PAIN', 'WABS'].includes(t.abbrev)),
+      ...(theleagueConfig.teams as any[]).filter((t) => ['PAIN'].includes(t.abbrev)),
     ];
-    expect(greyscale).toHaveLength(4);
+    expect(greyscale).toHaveLength(3);
     const accents = new Set(
       greyscale.map((t, i) => resolveHeroFranchiseBackdrop(t, i < 2 ? 'afl' : 'theleague')!.accent)
     );

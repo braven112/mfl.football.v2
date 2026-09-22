@@ -98,14 +98,17 @@ describe('buildFranchiseBandBrands', () => {
     // have no hue anywhere in their config to find. Give any of them a real
     // accent colour and this test wants updating.
     //
-    // - afl 0017/0019/0023 list nothing but grey and black.
+    // - afl 0017/0019 list nothing but grey and black. 0023 (The Show) was the
+    //   third until the four-colour rebrand made their primary #181818 and
+    //   promoted their crest's rose #cc9ca6 to secondary — they have a hue of
+    //   their own now and no longer collide. This list may only SHRINK.
     // - theleague 0008/0009 are both black-and-white brands: `colorPrimary`
     //   #181818, `colorSecondary` near-white, and even their chart hues are
     //   greys. Their CRESTS still tell the two bands apart, which is the only
     //   reason this is tolerable rather than a bug.
     const KNOWN_DATA_GAPS: Record<string, string[][]> = {
       theleague: [['0008', '0009']],
-      afl: [['0017', '0019', '0023']],
+      afl: [['0017', '0019']],
     };
 
     for (const league of ['theleague', 'afl', 'bb1'] as const) {
