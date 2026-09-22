@@ -1284,3 +1284,73 @@ describe('the reveal features the scorer, not a chip', () => {
     expect(ISLAND_CODE).toMatch(/return data\.defenseFaces\[who\?\.nflTeam \?\? ''\];/);
   });
 });
+
+/**
+ * The overnight board.
+ *
+ * A television left on the broadcast page all night ran the full Sunday
+ * cadence at a screen reading "No games live" and eventually killed Edge's
+ * renderer outright (SBOX_FATAL_MEMORY_EXCEEDED), leaving a browser error page
+ * up until somebody walked over to the set. Nothing in the island grows
+ * without bound, so the fix is a quiet-hours throttle plus a self-reboot —
+ * and both of them are the kind of thing a later edit silently undoes.
+ */
+describe('the board survives being left on all night', () => {
+  it('slows the poll and the heartbeat while quiet, and only while quiet', () => {
+    // Both tiers must read the SAME signal that raises the screensaver. A
+    // second, private notion of "idle" is how one of them ends up throttled
+    // during play.
+    expect(ISLAND_CODE).toMatch(/idleRef\.current = isQuiet;/);
+    expect(ISLAND_CODE).toMatch(/idleRef\.current \? POLL_IDLE_MS : POLL_MS/);
+    expect(ISLAND_CODE).toMatch(/isQuiet \? TICK_IDLE_MS : TICK_MS/);
+  });
+
+  it('never lets an error back off INTO the idle tier', () => {
+    // A failing board should retry, not doze: the error backoff is checked
+    // first and returns before the quiet tier is consulted.
+    const fn = ISLAND_CODE.match(/const nextDelay = \(\) => \{[\s\S]*?\n {4}\};/)?.[0] ?? '';
+    expect(fn).toMatch(/errors >= ERRORS_BEFORE_BACKOFF\) return POLL_BACKOFF_MS;/);
+    expect(fn.indexOf('POLL_BACKOFF_MS')).toBeLessThan(fn.indexOf('POLL_IDLE_MS'));
+  });
+
+  it('scales the poll watchdog with the cadence instead of pinning it at 40s', () => {
+    // THE regression that negates the whole throttle. The watchdog forces a
+    // poll when one has not COMPLETED in `POLL_WATCHDOG_MS` (40s) — which is
+    // SHORTER than the idle cadence, so a flat threshold marks every healthy
+    // idle poll as a broken chain and re-polls on its own 20s interval,
+    // quietly restoring the afternoon cadence overnight.
+    expect(ISLAND_CODE).toMatch(/watchdogLimit = \(\) =>[^\n]*idleRef\.current/);
+    expect(ISLAND_CODE).toMatch(/lastDone > watchdogLimit\(\)/);
+    expect(ISLAND_CODE).not.toMatch(/lastDone > POLL_WATCHDOG_MS/);
+  });
+
+  it('keeps the idle watchdog threshold longer than the idle cadence', () => {
+    const limit = ISLAND_CODE.match(/watchdogLimit = \(\) => \(idleRef\.current \? ([^:]+) :/)?.[1] ?? '';
+    expect(limit).toMatch(/POLL_IDLE_MS \* [2-9]/);
+  });
+
+  it('reboots only while quiet, with nothing on the stage, and never in demo', () => {
+    const effect =
+      ISLAND_CODE.match(/useEffect\(\(\) => \{[^}]*?data\.demo \|\| !isQuiet[\s\S]*?\}, \[isQuiet, data\.demo\]\);/)?.[0] ??
+      '';
+    expect(effect).toMatch(/if \(data\.demo \|\| !isQuiet\) return;/);
+    // `isQuiet` gates the effect, but a reveal OUTRANKS the screensaver, so a
+    // moment can still be on screen when it goes up. Re-checked per tick.
+    expect(effect).toMatch(/if \(currentRef\.current\) return;/);
+    expect(effect).toMatch(/window\.location\.reload\(\)/);
+  });
+
+  it('measures uptime from mount, so a reboot cannot loop', () => {
+    expect(ISLAND_CODE).toMatch(/const mountedAtRef = useRef\(Date\.now\(\)\);/);
+    expect(ISLAND_CODE).toMatch(/Date\.now\(\) - mountedAtRef\.current < RELOAD_AFTER_MS\) return;/);
+  });
+
+  it('reboots on a scale of hours, and checks on a scale of a minute', () => {
+    const island = read('src/components/shared/live-broadcast/LiveBroadcast.tsx');
+    expect(island).toMatch(/const RELOAD_AFTER_MS = \d+ \* 60 \* 60_000;/);
+    expect(island).toMatch(/const RELOAD_CHECK_MS = 60_000;/);
+    // Detection latency for kickoff. Minutes here is a board that looks broken
+    // to the room for the first drive.
+    expect(island).toMatch(/const POLL_IDLE_MS = 60_000;/);
+  });
+});

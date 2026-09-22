@@ -490,3 +490,70 @@ the raw full-game projection beside the live score. Two notes from that half:
   have changed the ordering and nothing an owner sees. The revert carries a
   test saying so explicitly, because raw totals next to blended rows otherwise
   read as a missed spot.
+
+## 2026-09-22 — the board that could not survive the night
+
+**Symptom.** A television left on `/broadcast` overnight was showing Edge's
+`SBOX_FATAL_MEMORY_EXCEEDED` error page by morning — the renderer had been
+OOM-killed, and the board stayed dead until somebody walked over to the set.
+
+**There was no leak in the island.** Worth saying plainly, because the obvious
+move is to go hunting for one and there is nothing to find: every timer is
+cleared, every listener removed, the AudioContext is reused rather than rebuilt
+per moment, `poll.moments` is bounded by `MOMENT_MAX_AGE_MS`, `carryRef` is
+keyed by league, and `BroadcastScreensaver` is already `memo`'d against the
+heartbeat. The only monotonic structure is `shownRef`, and moments only exist
+while games are live, so it barely grows overnight at all.
+
+**What was actually wrong is that nothing throttled.** `isQuiet` raised the
+screensaver and changed nothing else, so a board reading "No games live" kept
+the full Sunday-afternoon cadence all night:
+
+| | rate | per 12h |
+|---|---|---|
+| `/api/broadcast-live` | 8s | ~5,400 fetches |
+| heartbeat → full re-render | 1 Hz | ~43,200 |
+| `selectRevealQueue` re-derive | 1 Hz (`nowTick` dep) | ~43,200 |
+
+That is ~5,400 serverless invocations against MFL and ESPN every night for a
+screen with nothing on it, and enough animated-document churn to fill a
+renderer that is never allowed to restart.
+
+The fix is two tiers keyed on `isQuiet` (poll 8s → 60s, heartbeat 1 Hz → 15s)
+plus a reboot, and three things about it are load-bearing:
+
+- **The poll watchdog must scale with the cadence.** `POLL_WATCHDOG_MS` is 40s
+  and the idle cadence is 60s, so a flat threshold marks every *healthy* idle
+  poll as a broken chain and forces a re-poll on its own 20s interval —
+  silently restoring the afternoon cadence overnight and negating the entire
+  fix. `watchdogLimit()` reads the tier. This is the mutation the guard test
+  exists for.
+- **The idle poll is what DETECTS kickoff**, so it is a minute rather than the
+  five the memory argument alone would buy. Detection latency is the idle
+  interval by construction — when nothing is live, only a poll can end the
+  idle; the tick cannot. A board that takes five minutes to notice the first
+  snap is broken in a way the room can see.
+- **Errors outrank quiet.** `nextDelay()` checks the backoff first: a board
+  that is failing should retry, not doze.
+
+**The reboot is gated twice, not once.** `isQuiet` gates the effect, and the
+live stage is re-checked inside each tick — a reveal *outranks* the
+screensaver, so a moment can be on screen while `isQuiet` is true (a final play
+landing after the last game went quiet). A reload that blanks the board
+mid-touchdown would be a worse bug than the one being fixed. Uptime is measured
+from MOUNT, so a reboot starts a fresh six hours rather than looping.
+
+**`idleRef` is a ref on purpose.** Making the poll effect *depend* on `isQuiet`
+would tear down and rebuild the self-chaining loop — watchdog included — every
+time the board crossed the line at dusk and again at the night game. That is
+the exact shape that froze the 2026 draft rehearsal board at pick 7. The next
+`schedule()` reads the ref, which is soon enough for a tier measured in
+minutes.
+
+**The heartbeat effect moved down the file**, below `isQuiet`, because it is the
+one hook whose period depends on it. Hook *order* stays consistent across
+renders, which is all React requires; there is no early return above it.
+
+Guards: `tests/broadcast-shell-guards.test.ts` § "the board survives being left
+on all night" — seven scans, mutation-tested against a flat watchdog, a reload
+with no stage check, and a heartbeat that never slows.

@@ -835,6 +835,14 @@
       "impact": "user",
       "area": "other",
       "league": "both"
+    },
+    {
+      "date": "2026-09-22",
+      "type": "bug-fix",
+      "summary": "The broadcast board survives being left on overnight — it idles its polling while nothing is live and quietly restarts itself, instead of crashing the TV browser by morning.",
+      "impact": "user",
+      "area": "other",
+      "league": "both"
     }
   ]
 }
