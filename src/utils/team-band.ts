@@ -41,12 +41,21 @@
  * byte-identical, which is the whole point — the band is supposed to be the
  * club's colour, not a computed approximation of it.
  *
- * Ink is WHITE-FIRST rather than best-contrast. On the fills that clear 3:1
- * both ways, white is what a football graphic wears, and picking "whichever
- * measures higher" would put dark ink on the Pigskins' red (6.19 white vs 2.94
- * dark — fine) but also on Ditkas red and Saints red the moment one of them is
- * re-sampled a shade lighter. A preference is stable under a colour tweak; a
- * comparison flips.
+ * Ink is WHITE unless dark ink is genuinely COMFORTABLE, which is a stronger
+ * test than "dark ink passes". White is what a football graphic wears, and
+ * picking "whichever measures higher" would put dark ink on the Pigskins' red
+ * (6.19 white vs 2.94 dark — fine) but also on Ditkas red and Saints red the
+ * moment one of them is re-sampled a shade lighter. A preference is stable
+ * under a colour tweak; a comparison flips.
+ *
+ * "Comfortable" means clearing `DARK_INK_COMFORT_RATIO` (AAA) on the colour as
+ * it stands, and the distinction is not academic — it is the difference
+ * between a fill that is genuinely light and one that merely satisfies a
+ * luminance quotient. Dark ink on a mid-tone can measure 5:1 and still read
+ * badly, which is what shipped to a phone before this rule existed. Because
+ * that test does not depend on the surface's floor, a club wears the SAME ink
+ * everywhere and raising the floor can only move the FILL — pinned by
+ * `tests/team-band.test.ts` § "wears the SAME ink at both floors".
  *
  * Both themes are resolved here, together, and handed to CSS as custom
  * properties — never picked in frontmatter. With theme preference 'auto' the
@@ -93,16 +102,27 @@ export const BAND_INK_BODY_MIN_RATIO = AA_BODY_TEXT_RATIO;
 export const BAND_SURFACE_MIN_RATIO = 1.35;
 
 /**
- * How far a fill may be walked to KEEP WHITE INK, in ΔE, before the
- * white-first preference gives way to least-drift.
+ * What DARK ink has to clear before it is allowed at all — WCAG AAA, not AA.
  *
- * Only a colour where neither ink clears the floor untouched consults this. 5
- * is the same budget `tests/team-band.test.ts` allows between the two floors —
- * comfortably inside "the same colour", where ~25 is where two colours start
- * reading as different ones. Smokane's green needs ΔE 4.6 to hold white and so
- * fits; a gold would need ~46 to hold it and so does not, which is the point.
+ * Near-black text is only comfortable on a fill that is genuinely LIGHT, and
+ * the AA ratio does not express that: it is a luminance quotient, so a
+ * mid-tone can satisfy 4.5:1 against near-black while still being dark enough
+ * that the eye wants light text. Brandon read a phone screen and named exactly
+ * the clubs this happens to — "the dark text is hard to read on these other
+ * than Jocks and Midwest".
+ *
+ * The AFL's 24 fills separate with a gap and nothing in it. Dark ink is
+ * comfortable from Chatmaster's gold at 8.36:1 up through Avenging Amish's
+ * near-white at 13.11; it is uncomfortable from Balls Deep at 5.84 down
+ * through Dicks out for Harambe at 4.89. 7:1 sits inside that gap and is a
+ * named standard rather than a number fitted to this data.
+ *
+ * So dark ink is not a fallback that competes on drift — it is only available
+ * where it is genuinely comfortable, and white carries everything else.
+ * Applying this at the LARGE-text floor too changes nothing: every club that
+ * takes dark ink there already clears 8.36:1.
  */
-const WHITE_INK_DRIFT_BUDGET = 5;
+export const DARK_INK_COMFORT_RATIO = 7;
 
 const NEUTRAL_FILL = '#6b7280';
 const isHex = (c?: string): c is string => !!c && /^#?[0-9a-f]{6}$/i.test(c.trim());
@@ -195,39 +215,37 @@ export function bandFor(
 ): { fill: string; ink: string } {
   const fill = isHex(color) ? normalizeHex(color) : NEUTRAL_FILL;
 
-  const solvedBoth = [
-    solveBand(fill, BAND_INK_LIGHT, surface, minRatio),
-    solveBand(fill, BAND_INK_DARK, surface, minRatio),
-  ].filter((c): c is Solved => c !== null);
-  if (solvedBoth.length === 0) {
-    // Unreachable for every franchise on file; a neutral band is still readable.
-    return { fill: NEUTRAL_FILL, ink: BAND_INK_LIGHT };
+  // Dark ink ONLY where it is genuinely comfortable, which means clearing AAA
+  // on the colour as it stands. It is not a fallback and it never competes on
+  // drift: the point of `DARK_INK_COMFORT_RATIO` is that a mid-tone satisfying
+  // AA against near-black still reads badly, so "dark ink would move the fill
+  // less" is not a reason to use it.
+  //
+  // Two earlier shapes both got this wrong, and each was invisible until the
+  // floor rose. An early return took the first ink clearing the untouched
+  // colour, which is white-first only while white happens to clear. A
+  // least-drift fallback picked dark ink with a LIGHTENED fill for two mid
+  // greens — moving the colour AND inverting the text, so one club read white
+  // in the standings and near-black in the draft grid.
+  if (contrastRatio(BAND_INK_DARK, fill) >= DARK_INK_COMFORT_RATIO) {
+    const solved = solveBand(fill, BAND_INK_DARK, surface, minRatio);
+    if (solved) return { fill: solved.fill, ink: solved.ink };
   }
 
-  // ONE white-first rule, applied to both inks' solutions together.
-  //
-  // This used to be two paths: an early return that took the first ink clearing
-  // the UNTOUCHED colour, then a least-drift fallback when neither did. Both
-  // undercut the white-first preference the header states, and the body floor
-  // made it visible. "First ink that clears untouched" reads as white-first
-  // only while white happens to clear: raise the floor to 4.5 and a club whose
-  // white just misses flips to dark ink on its unchanged colour, rather than
-  // keeping white on a colour nudged a shade. Least-drift did the same thing
-  // from the other side — for the Ninjas and Smokane it chose dark ink and a
-  // LIGHTENED fill, putting near-black on a mid green at 4.60:1 and giving the
-  // same club white text on its standings row and dark text on its draft card.
-  //
-  // So: white wins whenever the fill it needs stays inside
-  // `WHITE_INK_DRIFT_BUDGET`, and least-drift decides only past that. A colour
-  // that already carries white is drift 0 and still returned byte-identical;
-  // the golds need ~46 ΔE to hold white, blow the budget, and correctly keep
-  // dark ink on their untouched colour.
-  const white = solvedBoth.find((c) => c.ink === BAND_INK_LIGHT);
-  if (white && white.drift <= WHITE_INK_DRIFT_BUDGET) {
-    return { fill: white.fill, ink: white.ink };
-  }
-  solvedBoth.sort((a, b) => a.drift - b.drift);
-  return { fill: solvedBoth[0].fill, ink: solvedBoth[0].ink };
+  // Everything else is white, and the fill moves as far as white needs. For
+  // most clubs that is nowhere: white already clears and the brand colour is
+  // returned byte-identical.
+  const white = solveBand(fill, BAND_INK_LIGHT, surface, minRatio);
+  if (white) return { fill: white.fill, ink: white.ink };
+
+  // White cannot be satisfied at all — only reachable for a colour so light
+  // that darkening it enough would leave the hue behind. Fall back to dark ink
+  // at the surface's own floor rather than shipping unreadable text.
+  const dark = solveBand(fill, BAND_INK_DARK, surface, minRatio);
+  if (dark) return { fill: dark.fill, ink: dark.ink };
+
+  // Unreachable for every franchise on file; a neutral band is still readable.
+  return { fill: NEUTRAL_FILL, ink: BAND_INK_LIGHT };
 }
 
 function teamEntry(franchiseId: string, league: LeagueSlug): any {

@@ -21,6 +21,7 @@ import {
   resolveTeamBand,
   resolveTeamBandForBodyText,
   BAND_INK_BODY_MIN_RATIO,
+  DARK_INK_COMFORT_RATIO,
   bandCrestSrc,
   teamBandStyle,
   BAND_INK_DARK,
@@ -108,40 +109,38 @@ describe('team band — the body-floor variant, for surfaces with small type', (
     });
   }
 
-  it('never both flips the ink AND moves the fill', () => {
-    // The invariant that keeps one club from reading as two.
+  it('wears the SAME ink at both floors, for every franchise', () => {
+    // A club must not read white in the standings and near-black in the draft
+    // grid. That shipped briefly and Brandon caught it on a phone.
     //
-    // A colour can legitimately resolve differently at the two floors, but only
-    // one way at a time. Either white is nearly free to keep, so the fill
-    // nudges a shade and the ink stays (the Ninjas, Smokane, Franchise 01 —
-    // ΔE 2.6-4.6), or keeping white would repaint the club, so the fill stays
-    // EXACTLY and the ink flips instead (the Micks and seven others: white
-    // would cost ΔE 7.2-15.2, dark on their untouched colour measures
-    // 4.89-5.84). Doing both at once is how the same franchise ends up white
-    // on green in the standings and near-black on a different green in the
-    // draft grid, which shipped for a few minutes and is what this pins.
-    const both: string[] = [];
+    // It holds by construction rather than by luck: the white/dark decision is
+    // made against `DARK_INK_COMFORT_RATIO`, which does not depend on the
+    // surface's floor, so raising the floor can only move the FILL. If this
+    // ever fails, someone has made the ink choice floor-dependent again.
+    const flips: string[] = [];
     for (const { slug, teams } of LEAGUES) {
       for (const team of teams) {
         const large = resolveTeamBand(team.franchiseId, slug);
         const body = resolveTeamBandForBodyText(team.franchiseId, slug);
-        for (const [theme, lf, li, bf, bi] of [
-          ['light', large.fill, large.ink, body.fill, body.ink],
-          ['dark', large.fillDark, large.inkDark, body.fillDark, body.inkDark],
-        ] as const) {
-          if (li !== bi && colorDistance(lf, bf) > 0.01) {
-            both.push(`${team.name} ${theme}: ${lf}/${li} -> ${bf}/${bi}`);
-          }
+        if (large.ink !== body.ink) flips.push(`${team.name} light: ${large.ink} -> ${body.ink}`);
+        if (large.inkDark !== body.inkDark) {
+          flips.push(`${team.name} dark: ${large.inkDark} -> ${body.inkDark}`);
         }
       }
     }
-    expect(both).toEqual([]);
+    expect(flips).toEqual([]);
   });
 
-  it('costs almost nothing in fill drift where the fill does move', () => {
-    // The whole reason the body floor is affordable. If a franchise ever has to
-    // move far to satisfy it, its draft card and its standings row stop being
-    // the same colour, and that is a design decision rather than a tweak.
+  it('keeps a moved fill inside the same colour', () => {
+    // The body floor's real cost. Eight clubs darken to hold white ink —
+    // the Micks ΔE 15.2, Best Ball's Franchise 04 16.2 — which is a visibly
+    // deeper shade and deliberately so: near-black on their untouched
+    // mid-tone measured 4.89-5.84 and read badly on a phone.
+    //
+    // 20 is the ceiling because ~25 is where two colours stop being shades of
+    // each other. Past that a club is being repainted rather than darkened,
+    // which is a design decision and should not arrive as a side effect of a
+    // re-colour.
     const drifted: string[] = [];
     for (const { slug, teams } of LEAGUES) {
       for (const team of teams) {
@@ -151,13 +150,40 @@ describe('team band — the body-floor variant, for surfaces with small type', (
           colorDistance(large.fill, body.fill),
           colorDistance(large.fillDark, body.fillDark),
         );
-        // 5 is comfortably inside "the same colour"; ~25 is where two colours
-        // start reading as different ones.
-        if (delta > 5) drifted.push(`${team.name} ΔE ${delta.toFixed(1)}`);
+        if (delta > 20) drifted.push(`${team.name} ΔE ${delta.toFixed(1)}`);
       }
     }
     expect(drifted).toEqual([]);
   });
+});
+
+describe('team band — dark ink only where it is comfortable', () => {
+  // Brandon, reading the AFL draft grid on a phone: "the dark text is hard to
+  // read on these other than Jocks and Midwest". AA is a luminance quotient
+  // and does not express this — a mid-tone can clear 4.5:1 against near-black
+  // and still be dark enough that the eye wants light text.
+  //
+  // So dark ink has to clear AAA, and the census is what keeps that true for
+  // clubs nobody happens to look at. The AFL's fills separated with a gap and
+  // nothing in it: comfortable from 8.36:1 up, uncomfortable from 5.84 down.
+  for (const { slug, teams } of LEAGUES) {
+    it(`${slug}: every dark-ink band clears ${DARK_INK_COMFORT_RATIO}:1`, () => {
+      const failures: string[] = [];
+      for (const team of teams) {
+        for (const resolve of [resolveTeamBand, resolveTeamBandForBodyText]) {
+          const band = resolve(team.franchiseId, slug);
+          for (const [fill, ink] of [[band.fill, band.ink], [band.fillDark, band.inkDark]]) {
+            if (ink !== BAND_INK_DARK) continue;
+            const cr = contrastRatio(ink, fill);
+            if (cr < DARK_INK_COMFORT_RATIO) {
+              failures.push(`${team.name} ${cr.toFixed(2)}:1 (dark on ${fill})`);
+            }
+          }
+        }
+      }
+      expect(failures).toEqual([]);
+    });
+  }
 });
 
 describe('team band — a legible brand colour is left alone', () => {
