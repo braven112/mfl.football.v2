@@ -105,7 +105,12 @@ describe('top-players derived payload', () => {
         for (const p of players) {
           expect(p.games, `${p.name} games`).toBe(Object.keys(p.weeks).length);
           if (p.games > 0) {
-            expect(p.avg, `${p.name} avg`).toBeCloseTo(p.total / p.games, 2);
+            // `avg` is stored rounded to 2 dp, so an exact half (49.05 / 2 =
+            // 24.525 → 24.53) sits exactly 0.005 off — which `toBeCloseTo(_, 2)`
+            // rejects (it demands < 0.005). Half a cent, plus float slack.
+            expect(Math.abs(p.avg - p.total / p.games), `${p.name} avg`).toBeLessThanOrEqual(
+              0.005 + 1e-9,
+            );
             expect(p.best, `${p.name} best`).toBe(Math.max(...Object.values(p.weeks)));
           }
         }

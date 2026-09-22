@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+import fs from 'node:fs';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   getChampionshipResult,
   getTaggedPlayers,
@@ -168,17 +169,52 @@ describe('getWeekInTheBooks — the feed may never outrun the calendar', () => {
   const TUE_WEEK_3 = new Date('2026-09-22T06:00:00-07:00'); // week 3's window
   const PRESEASON = new Date('2026-08-01T06:00:00-07:00');
 
+  // The 2026 cases run against a FIXTURE feed, never the committed one: that
+  // file is the live season, and cron rolls it forward every week. Pinned to
+  // it, these assertions held for exactly one week and then went red on main
+  // (2026-09-22, when the feed reached week 2). Only 2026's playerScores is
+  // substituted — the frozen 2025 cases below still read the real archive.
+  function withFeedWeek(week: number): void {
+    const hit = (p: unknown) =>
+      typeof p === 'string' && /[\\/]mfl-feeds[\\/]2026[\\/]playerScores\.json$/.test(p);
+    const body = JSON.stringify({
+      playerScores: {
+        playerScore: week > 0 ? [{ id: '1', week: String(week), score: '1.0' }] : [],
+      },
+    });
+    const realExists = fs.existsSync;
+    const realRead = fs.readFileSync;
+    vi.spyOn(fs, 'existsSync').mockImplementation(((p: fs.PathLike) =>
+      hit(p) ? true : realExists(p)) as typeof fs.existsSync);
+    vi.spyOn(fs, 'readFileSync').mockImplementation(((p: any, ...rest: any[]) =>
+      hit(p) ? body : (realRead as any)(p, ...rest)) as typeof fs.readFileSync);
+  }
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('agrees with the feed when the feed is behind the calendar', () => {
     // The live case on the day this shipped: week 1 played, week 2 under way.
+    withFeedWeek(1);
     expect(getLatestScoredWeek(2026, 'theleague')).toBe(1);
     expect(getWeekInTheBooks(2026, 'theleague', TUE_WEEK_2)).toBe(1);
     expect(getWeekInTheBooks(2026, 'afl-fantasy', TUE_WEEK_2)).toBe(1);
   });
 
   it('does not invent a week the feed has no scores for', () => {
-    // A ceiling, not a floor. Deep into week 3's window the feed still only
-    // carries week 1, so week 1 is still the answer.
+    // A ceiling, not a floor. Deep into week 3's window a feed that still only
+    // carries week 1 answers week 1.
+    withFeedWeek(1);
     expect(getWeekInTheBooks(2026, 'theleague', TUE_WEEK_3)).toBe(1);
+  });
+
+  it('caps a current-season feed that rolled on Tuesday morning', () => {
+    // MFL moved the feed to week 2 inside week 2's own window: nothing of week
+    // 2 is played, so the answer is still week 1.
+    withFeedWeek(2);
+    expect(getLatestScoredWeek(2026, 'theleague')).toBe(2);
+    expect(getWeekInTheBooks(2026, 'theleague', TUE_WEEK_2)).toBe(1);
+    expect(getWeekInTheBooks(2026, 'theleague', TUE_WEEK_3)).toBe(2);
   });
 
   it('CAPS a feed that has rolled ahead of the games', () => {
@@ -194,8 +230,9 @@ describe('getWeekInTheBooks — the feed may never outrun the calendar', () => {
   });
 
   it('is 0 before the season has played a down', () => {
-    // The committed 2026 feed carries week 1 rows year-round, so the raw
-    // reading says 1 even in August. No week is in the books in August.
+    // The committed feed carries week 1 rows year-round, so the raw reading
+    // says 1 even in August. No week is in the books in August.
+    withFeedWeek(1);
     expect(getLatestScoredWeek(2026, 'theleague')).toBe(1);
     expect(getWeekInTheBooks(2026, 'theleague', PRESEASON)).toBe(0);
   });
