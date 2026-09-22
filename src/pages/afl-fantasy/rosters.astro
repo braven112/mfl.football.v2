@@ -38,6 +38,8 @@ import {
 import { resolveStatsSeasonYear, parseYtdPlayerScores } from '../../utils/stats-season.mjs';
 import { getAuthUser } from '../../utils/auth';
 import { getAllActivity, getActivityLevel, formatLastSeen } from '../../utils/owner-activity';
+import { resolveThrowbackRequestState } from '../../utils/throwback-request-state';
+import { resolveRosterHeaderSkin } from '../../utils/roster-header-skin';
 import {
   setAFLPreference,
   getAFLPreference,
@@ -340,6 +342,10 @@ try {
       setTimeout(() => reject(new Error('Redis timeout')), 3000)),
   ]);
 } catch { /* Redis unavailable or timed out — the chip simply does not print */ }
+/* Throwback Week, resolved once for the header. The AFL has run eras since
+   September 2026, so this is not TheLeague-only. */
+const headerThrowback = await resolveThrowbackRequestState('afl', Astro.url);
+
 const ownerSeenFor = (franchiseId: string) => {
   const at = ownerActivityMap[franchiseId] ?? null;
   return at ? { level: getActivityLevel(at), text: formatLastSeen(at) } : null;
@@ -381,10 +387,21 @@ const viewerConference =
   aflPref?.conferenceId ??
   null;
 
+/* The switcher's names and crests throw back with the nameplate above them.
+   Both are fields the era overlay replaces, and a row of modern crests under
+   a nameplate in era art is the partial overlay the era rules doc warns
+   about. Resolved per club off the same skin the plate uses, which is
+   memoised for the whole league, so this is a lookup not a rebuild. */
+const headerIdentityOf = (franchiseId: string) => {
+  const skin = resolveRosterHeaderSkin(franchiseId, 'afl-fantasy', headerThrowback);
+  return skin ? { name: skin.name, icon: skin.crestSmall } : null;
+};
+
 const headerGroups = buildTeamGroups({
   teams: allTeams,
   conferences: aflLeagueConfig.conferences as Array<{ name: string; code: string; divisions?: string[] }>,
   viewerConference,
+  identityOf: headerIdentityOf,
 });
 
 const hideLeaguePrefixHere = Astro.locals.hideLeaguePrefix ?? false;
@@ -1017,6 +1034,7 @@ const pageConfig = {
       currentWeek={headerWeek}
       lineupLock={headerLineupLock}
       ownerLastSeen={ownerSeenFor(selectedFranchiseId)}
+      throwback={headerThrowback}
       groups={headerGroups}
       viewerFranchiseId={viewerFranchiseIdHere}
       nameOf={headerNameOf}

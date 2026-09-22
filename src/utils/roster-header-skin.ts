@@ -52,7 +52,11 @@
 
 import type { CanonicalLeagueSlug } from '../config/leagues';
 import type { LeagueSlug } from '../types/nav';
-import { buildFranchiseBandBrands, type FranchiseBandBrandMap } from './franchise-band-brand';
+import {
+  buildFranchiseBandBrands,
+  type BuildFranchiseBandBrandsOptions,
+  type FranchiseBandBrandMap,
+} from './franchise-band-brand';
 import { ensureContrastOn, AA_BODY_TEXT_RATIO } from './team-color-contrast';
 
 /**
@@ -65,11 +69,32 @@ import { ensureContrastOn, AA_BODY_TEXT_RATIO } from './team-color-contrast';
 export const ROSTER_PLATE_INK = '#f2f5f8';
 
 export interface RosterHeaderSkin {
+  /**
+   * The club's DISPLAY name — its legacy one during a Throwback Week.
+   *
+   * Carried here rather than left to the page because the plate must not be
+   * a partial overlay: a header wearing era art under a modern name is the
+   * same bug as the one that left era names over a modern crest, just
+   * pointing the other way.
+   */
+  name: string;
+  /** The small crest beside the name; the era's during a Throwback Week. */
+  crestSmall: string;
   /** The solid band. Flat, and dark enough for `ROSTER_PLATE_INK` at 4.5:1. */
   fill: string;
   /** The club's second hue — for a mark that wants the brand rather than ink. */
   glow: string;
-  /** Oversized crest for the watermark; `''` when the club has no artwork. */
+  /**
+   * The crest for the watermark, at the largest cut available — 400×400 where
+   * the club has one, which the plate scales past 200% and the 100×100 icon
+   * visibly pixelated at.
+   *
+   * During a Throwback Week this is the ERA's art, which is usually only the
+   * 100px icon: exactly one of the forty-two history entries carries its own
+   * 400px cut. Softer and right beats sharp and wrong — keeping the current
+   * club's `groupMe` here is the Aug 2026 bug that left the lineup watermark
+   * modern while the name and colours around it threw back.
+   */
   crest: string;
   /** Measured white stroke, for a light crest that would vanish on the fill. */
   crestFilter?: string;
@@ -88,28 +113,54 @@ const BAND_SLUG: Partial<Record<CanonicalLeagueSlug, LeagueSlug>> = {
  * asks for sixteen clubs on one render — the default plus fifteen swap
  * templates. Without this that is sixteen full walks per request.
  */
-const cache = new Map<LeagueSlug, FranchiseBandBrandMap>();
+/**
+ * Keyed on the league AND the throwback state, because one render asks this
+ * up to twenty-four times — once per club in the switcher — and
+ * `buildFranchiseBandBrands` walks the whole league each call. Caching only
+ * the inactive case would make Throwback Week the one week it does that walk
+ * twenty-four times per request.
+ *
+ * Bounded by hand: owner picks change a handful of times a season, so the key
+ * space is tiny in practice, but it is derived from data rather than fixed, so
+ * it gets a ceiling rather than trust.
+ */
+const CACHE_CEILING = 8;
+const cache = new Map<string, FranchiseBandBrandMap>();
 
+/**
+ * `throwback` is the state `resolveThrowbackRequestState` returned for THIS
+ * request, threaded down from the page. Without it the header is the one
+ * surface left wearing modern art on the one week a year every other surface
+ * throws back — and a franchise whose era keeps its NAME would show no
+ * throwback at all, because the crest is its only tell.
+ */
 export function resolveRosterHeaderSkin(
   franchiseId: string | null | undefined,
   league: CanonicalLeagueSlug,
+  throwback: BuildFranchiseBandBrandsOptions = {},
 ): RosterHeaderSkin | null {
   if (!franchiseId) return null;
   const slug = BAND_SLUG[league];
   if (!slug) return null;
 
-  let map = cache.get(slug);
+  const key = throwback.throwbackActive
+    ? `${slug}|tb|${JSON.stringify(throwback.throwbackOverrides ?? {})}`
+    : slug;
+  let map = cache.get(key);
   if (!map) {
-    map = buildFranchiseBandBrands(slug);
-    cache.set(slug, map);
+    map = buildFranchiseBandBrands(slug, throwback);
+    if (cache.size >= CACHE_CEILING) cache.clear();
+    cache.set(key, map);
   }
   const brand = map.teams[franchiseId];
   if (!brand) return null;
 
   return {
+    name: brand.name,
+    crestSmall: brand.crest,
     fill: ensureContrastOn(brand.primary, ROSTER_PLATE_INK, AA_BODY_TEXT_RATIO),
     glow: brand.secondary,
-    crest: brand.crest,
+    crest: brand.crestLarge || brand.crest,
     crestFilter: brand.crestFilter,
   };
 }

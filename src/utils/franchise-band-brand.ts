@@ -84,6 +84,25 @@ export interface FranchiseBandBrand {
    * too).
    */
   crestLight: string;
+  /**
+   * The 400×400 cut, for a surface that draws the crest LARGE — the roster
+   * header's watermark scales it past 200%, where the 100×100 `crest` above
+   * visibly pixelates. `''` when the franchise has no artwork at all.
+   *
+   * Mapped in BOTH arms below, deliberately. `groupMe` is the exact field the
+   * Aug 2026 throwback bug was about: `getThrowbackFranchiseBrand` overlays a
+   * hand-listed set of fields, `groupMe` was not on it, and the lineup
+   * faceoff watermark therefore kept the CURRENT crest while the name and
+   * colours around it threw back — worst for a franchise whose era keeps its
+   * name, where the crest is the only tell. A field a consumer reads and the
+   * overlay does not map fails silently and plausibly.
+   *
+   * During a throwback this is the ERA's art and never the current club's
+   * 400px cut, even though only one of the forty-two history entries carries
+   * its own `groupMe` and the rest fall back to a 100px icon. Correct and
+   * soft beats sharp and wrong.
+   */
+  crestLarge: string;
   /** Gradient anchor hue, already floored to clear 3:1 against white ink. */
   primary: string;
   /** Glow / accent hue. */
@@ -272,6 +291,8 @@ export function buildFranchiseBandBrands(
 
     let name: string = team.name ?? '';
     let crest: string = team.iconDark || team.icon || '';
+    // Same dark-cut-first rule as `crest`: this plate is dark in both themes.
+    let crestLarge: string = team.groupMeDark || team.groupMe || crest;
     // The themed-surface counterpart — light art first, so the global
     // stylesheet can swap/ring it. `iconDark` is only a fallback for a
     // franchise that somehow has no light cut at all.
@@ -331,6 +352,13 @@ export function buildFranchiseBandBrands(
         // (which measures current crests only), so it renders as authored.
         crest = eraCrest;
         crestLight = eraCrest;
+        // The era's OWN 400px cut where it has one (exactly one entry does),
+        // else the era's 100px icon — never the current club's `groupMe`,
+        // which is the Aug 2026 bug in one line. Reaching this branch already
+        // means the identity is historical: `resolveEraCrest` returns '' when
+        // the era icon equals the current one, which is the only way the
+        // resolver's non-historical fall-through gets here.
+        crestLarge = identity.groupMe || eraCrest;
         crestFilter = undefined;
       }
     }
@@ -339,6 +367,7 @@ export function buildFranchiseBandBrands(
       name,
       crest: crest ? preferredIconSrc(crest) : '',
       crestLight: crestLight ? preferredIconSrc(crestLight) : '',
+      crestLarge: crestLarge ? preferredIconSrc(crestLarge) : '',
       primary: ensureContrastOn(primary, '#ffffff', AA_LARGE_TEXT_RATIO),
       secondary,
       ...(crestFilter ? { crestFilter } : {}),

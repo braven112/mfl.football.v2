@@ -30,6 +30,7 @@
  */
 import GamedayBar from './GamedayBar.astro';
 import { resolveRosterHeaderSkin, ROSTER_PLATE_INK } from '../../../utils/roster-header-skin';
+import type { BuildFranchiseBandBrandsOptions } from '../../../utils/franchise-band-brand';
 import type { CanonicalLeagueSlug } from '../../../config/leagues';
 import type { RailWeek, HeaderPlayer } from '../../../utils/roster-header-data';
 import type { StandingsSummary } from '../../../utils/standings-summary';
@@ -98,6 +99,17 @@ interface Props {
    * phone's width belongs to the club's name and the scoreboard.
    */
   featuredPlayer?: HeaderPlayer | null;
+  /**
+   * Throwback state for THIS request, straight from
+   * `resolveThrowbackRequestState`, and typed as what CONSUMES it rather than
+   * re-described here — the skin resolver passes it through to
+   * `buildFranchiseBandBrands`, so a widened option there must reach this
+   * plate rather than being silently dropped at the prop boundary.
+   *
+   * Absent (the default) is the 51 weeks of the year that are not a Throwback
+   * Week, where the skin is the club's present-day one.
+   */
+  throwback?: BuildFranchiseBandBrandsOptions;
 }
 
 const {
@@ -120,10 +132,19 @@ const {
   scheduleHref,
   lineupLock = null,
   ownerLastSeen = null,
+  throwback = {},
   featuredPlayer = null,
 } = Astro.props;
 
-const skin = resolveRosterHeaderSkin(franchiseId, leagueSlug);
+const skin = resolveRosterHeaderSkin(franchiseId, leagueSlug, throwback);
+
+/* The plate must never be a PARTIAL overlay. During a Throwback Week the skin
+   carries the era's name and crest together with its colours, so the name is
+   taken from there and only falls back to the page's when there is no skin at
+   all. Taking the page's name beside era art is the Aug 2026 bug pointing the
+   other way — and worst for a franchise whose era keeps its name, where
+   nothing on the plate would say it had thrown back. */
+const plateName = skin?.name || teamName;
 
 const ordinal = (n: number) => {
   const rest = n % 100;
@@ -196,10 +217,10 @@ const stats: Array<{ value: string; label: string }> = [
       {/* One crest source per header: with a franchise skin the small mark
           takes the resolver's art too, rather than pairing an era crest with
           the watermark behind it. */}
-      {(skin?.crest || teamIcon) && (
+      {(skin?.crestSmall || teamIcon) && (
         <img
           class="rhdr__crest"
-          src={skin?.crest || teamIcon!}
+          src={skin?.crestSmall || teamIcon!}
           style={skin?.crestFilter ? `filter: ${skin.crestFilter};` : undefined}
           alt=""
           width="50"
@@ -211,7 +232,7 @@ const stats: Array<{ value: string; label: string }> = [
             (scripts/roster-parity-check.mjs). It fingerprints the club name on
             every render to prove a refactor did not silently change which team
             is on screen, so it travels with the nameplate. */}
-        <h1 class="rhdr__name" data-team-name>{teamName}</h1>
+        <h1 class="rhdr__name" data-team-name>{plateName}</h1>
         {stats.length > 0 && (
           <div class="rhdr__stats">
             {stats.map((stat, index) => (

@@ -13,7 +13,7 @@
  * league registry is the source of truth for per-league constants.
  */
 
-import { conferenceOrder } from './afl-conference';
+import { conferenceOrder, getConferenceColor, isValidConferenceId } from './afl-conference';
 import type { ConferenceId } from './afl-conference';
 import { ensureContrastOn } from './team-color-contrast';
 import { findLastPlayedWeek, findNextWeek } from './schedule-data.mjs';
@@ -77,6 +77,13 @@ export interface HeaderGroup {
    * as the rail's accessible label.
    */
   conferenceShort: string | null;
+  /**
+   * The conference's own accent, for its rail. Null in a single-table league,
+   * which has no rail to colour. Grey read as chrome and gave the reader no
+   * way to tell which half of the row they were looking at without reading
+   * the vertical label.
+   */
+  conferenceColor: string | null;
   divisions: HeaderDivision[];
 }
 
@@ -93,13 +100,33 @@ export interface TeamGroupsInput {
    * order, so a viewer who has chosen nothing sees what they saw before.
    */
   viewerConference?: string | null;
+  /**
+   * The club's throwback identity, when a Throwback Week is running.
+   *
+   * The switcher renders a NAME and an ICON for all sixteen or twenty-four
+   * clubs, and both are fields the era overlay replaces. Left out, the row
+   * would sit under a nameplate in era art showing every club's modern crest
+   * — the same partial-overlay failure the era rules doc records, at the
+   * scale of a whole league rather than one panel. Null or absent means "not
+   * throwing back", which is every other week of the year.
+   */
+  identityOf?: (franchiseId: string) => { name?: string; icon?: string } | null;
 }
 
-const toHeaderTeam = (team: any): HeaderTeam => ({
+const toHeaderTeam = (team: any, identityOf?: TeamGroupsInput['identityOf']): HeaderTeam => {
+  const era = identityOf?.(String(team?.franchiseId ?? '')) ?? null;
+  return buildHeaderTeam(team, era);
+};
+
+const buildHeaderTeam = (team: any, era: { name?: string; icon?: string } | null): HeaderTeam => ({
   franchiseId: String(team?.franchiseId ?? ''),
-  name: String(team?.name ?? 'Franchise'),
-  shortName: String(team?.nameShort ?? team?.nameMedium ?? team?.name ?? 'Franchise'),
-  icon: team?.icon ? String(team.icon) : null,
+  name: String(era?.name ?? team?.name ?? 'Franchise'),
+  // The short name has no era counterpart, so an era that renamed the club
+  // falls back to its full era name rather than keeping the modern short one.
+  shortName: String(
+    era?.name ?? team?.nameShort ?? team?.nameMedium ?? team?.name ?? 'Franchise',
+  ),
+  icon: era?.icon ? String(era.icon) : team?.icon ? String(team.icon) : null,
   division: String(team?.division ?? ''),
   conference: team?.conference != null ? String(team.conference) : null,
   ringLight: ensureContrastOn(String(team?.colorPrimary ?? ''), CREST_ROW_LIGHT, RING_CONTRAST),
@@ -116,10 +143,14 @@ const toHeaderTeam = (team: any): HeaderTeam => ({
  * vanishes from the switcher is unreachable, which is worse than one sitting
  * under an unexpected heading.
  */
-function groupDivisions(teams: any[], declared: string[] | null | undefined): HeaderDivision[] {
+function groupDivisions(
+  teams: any[],
+  declared: string[] | null | undefined,
+  identityOf?: TeamGroupsInput['identityOf'],
+): HeaderDivision[] {
   const members = new Map<string, HeaderTeam[]>();
   for (const team of teams) {
-    const headerTeam = toHeaderTeam(team);
+    const headerTeam = toHeaderTeam(team, identityOf);
     if (!headerTeam.franchiseId) continue;
     const bucket = members.get(headerTeam.division);
     if (bucket) bucket.push(headerTeam);
@@ -139,6 +170,7 @@ export function buildTeamGroups({
   conferences,
   divisions,
   viewerConference,
+  identityOf,
 }: TeamGroupsInput): HeaderGroup[] {
   const roster = Array.isArray(teams) ? teams : [];
 
@@ -149,7 +181,8 @@ export function buildTeamGroups({
         conferenceId: null,
         conferenceName: null,
         conferenceShort: null,
-        divisions: groupDivisions(roster, divisions),
+        conferenceColor: null,
+        divisions: groupDivisions(roster, divisions, identityOf),
       },
     ];
   }
@@ -181,7 +214,8 @@ export function buildTeamGroups({
           .join('')
           .toUpperCase()
           .slice(0, 3) || null,
-      divisions: groupDivisions(inConference, conference.divisions),
+      conferenceColor: isValidConferenceId(code) ? getConferenceColor(code) : null,
+      divisions: groupDivisions(inConference, conference.divisions, identityOf),
     };
   });
 }

@@ -19,6 +19,7 @@
 import RosterNameplate from './RosterNameplate.astro';
 import TeamDivisionRow from './TeamDivisionRow.astro';
 import type { CanonicalLeagueSlug } from '../../../config/leagues';
+import type { BuildFranchiseBandBrandsOptions } from '../../../utils/franchise-band-brand';
 import type { HeaderGroup, RailWeek, HeaderPlayer } from '../../../utils/roster-header-data';
 import type { StandingsSummary } from '../../../utils/standings-summary';
 
@@ -68,6 +69,14 @@ interface Props {
   scheduleHref: (week?: number) => string;
   /** When this week's lineups lock, in the viewer's clock; null if nothing to warn about. */
   lineupLock?: string | null;
+  /**
+   * Throwback state for THIS request; forwarded to the nameplate, and typed as
+   * the options `buildFranchiseBandBrands` takes so the two cannot drift. A
+   * hand-copied shape here was `Record<string, any>` where the real one is
+   * `Record<string, ThrowbackPick | number>`, which is exactly how a partial
+   * era overlay gets through a prop boundary unnoticed.
+   */
+  throwback?: BuildFranchiseBandBrandsOptions;
   /** How recently this club's owner was on the site; forwarded to the nameplate. */
   ownerLastSeen?: { level: 'active' | 'idle' | 'dormant' | 'unknown'; text: string } | null;
   /** The club's featured player; forwarded straight to the nameplate. */
@@ -98,6 +107,7 @@ const {
   scheduleHref,
   lineupLock = null,
   ownerLastSeen = null,
+  throwback = {},
   featuredPlayer = null,
 } = Astro.props;
 ---
@@ -129,6 +139,7 @@ const {
       scheduleHref={scheduleHref}
       lineupLock={lineupLock}
       ownerLastSeen={ownerLastSeen}
+      throwback={throwback}
       featuredPlayer={featuredPlayer}
     />
   </div>
@@ -162,5 +173,18 @@ const {
   .rhdr {
     display: block;
     min-width: 0;
+    /* Matches the page's other cards — `--radius-lg` and `--shadow-lg` are
+       what `.roster-table-card` below it uses. The header was square while
+       everything under it was rounded, which read as a banner bolted on
+       rather than as part of the page.
+
+       `overflow: hidden` is what makes the radius real: the plate, the
+       scoreboard strip and the crest row are three full-bleed children, and
+       without it each one paints its own square corners straight over the
+       rounded box. It also already contains the crest row's sideways scroll,
+       which is why that row does not need its own clip. */
+    border-radius: var(--radius-lg, 1rem);
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
   }
 </style>

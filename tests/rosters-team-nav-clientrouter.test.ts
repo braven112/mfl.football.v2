@@ -185,8 +185,13 @@ describe('the roster page never captures the header markup it swaps', () => {
 
   it('leaves data-team-name in the nameplate as a read-only parity hook', () => {
     const nameplate = SWAPPED[0];
+    // `plateName`, not `teamName`: during a Throwback Week the plate wears the
+    // era's name, and the parity harness fingerprints WHAT IS ON SCREEN. It
+    // falls back to `teamName` every other week of the year (see the
+    // declaration below), so the hook is the rendered name either way.
     expect(nameplate, 'scripts/roster-parity-check.mjs fingerprints this attribute')
-      .toMatch(/data-team-name>\{teamName\}/);
+      .toMatch(/data-team-name>\{plateName\}/);
+    expect(nameplate).toMatch(/const plateName = skin\?\.name \|\| teamName;/);
   });
 
   it('re-queries the crest row from the header at swap time, not at init', () => {

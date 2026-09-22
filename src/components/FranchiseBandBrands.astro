@@ -26,18 +26,9 @@
  * take up to a minute to reach a modal band, on pages where the SCOREBOARD —
  * which is not memoized — already shows the new one.
  */
-import theleagueConfig from '../data/theleague.config.json';
-import aflConfig from '../../data/afl-fantasy/afl.config.json';
 import type { LeagueSlug } from '../types/nav';
 import { buildFranchiseBandBrands } from '../utils/franchise-band-brand';
-import {
-  isThrowbackWeekForScope,
-  strictThrowbackScopeForNavSlug,
-} from '../utils/throwback-scope';
-import { getAllThrowbackPreferences } from '../utils/throwback-store';
-import type { ThrowbackPick } from '../utils/throwback-identity';
-import { getCurrentNFLWeek } from '../utils/current-week';
-import { getTestDateFromSearchParams } from '../utils/league-year';
+import { resolveThrowbackRequestState } from '../utils/throwback-request-state';
 
 export interface Props {
   league: LeagueSlug;
@@ -45,52 +36,14 @@ export interface Props {
 
 const { league } = Astro.props;
 
-/**
- * Module-scope, so it is shared across requests on a warm instance. That is
- * safe here and would not be for most cached data: throwback preferences are
- * LEAGUE-WIDE (every franchise's pick), never scoped to the viewer, so there
- * is no per-user state to leak. A failed read caches `{}` too — deliberately.
- * If Redis is down, every render should not pay the timeout to rediscover it.
- *
- * Keyed BY SCOPE. A single shared slot would serve TheLeague's picks to an AFL
- * page and vice versa for up to a minute, and the two leagues use the same
- * franchise ids, so every id would collide rather than miss — the same reason
- * `rankings-storage.ts` caches a `Map<scope, …>` instead of one array.
- */
-const THROWBACK_CACHE_TTL_MS = 60_000;
-const throwbackCache = new Map<string, { at: number; value: Record<string, ThrowbackPick> }>();
-
-const TEAMS_BY_SCOPE: Record<string, any[]> = {
-  theleague: (theleagueConfig as any).teams ?? [],
-  afl: (aflConfig as any).teams ?? [],
-};
-
-async function cachedThrowbackOverrides(scope: string): Promise<Record<string, ThrowbackPick>> {
-  const nowMs = Date.now();
-  const hit = throwbackCache.get(scope);
-  if (hit && nowMs - hit.at < THROWBACK_CACHE_TTL_MS) return hit.value;
-
-  const value = await getAllThrowbackPreferences(
-    (TEAMS_BY_SCOPE[scope] ?? []).map((t: any) => t.franchiseId),
-    scope as Parameters<typeof getAllThrowbackPreferences>[1]
-  );
-  throwbackCache.set(scope, { at: nowMs, value });
-  return value;
-}
-
-// Season-shaped clock (which NFL week is it), matching live-scoring. `?week=`
-// and `?testDate=` are honored so a throwback week can be previewed the same
-// way it is everywhere else.
-const now = getTestDateFromSearchParams(Astro.url.searchParams) ?? new Date();
-const weekParam = parseInt(Astro.url.searchParams.get('week') ?? '', 10);
-const week =
-  Number.isFinite(weekParam) && weekParam > 0 ? weekParam : (getCurrentNFLWeek(now) ?? 0);
-
-// Null for a league that does not run Throwback Week at all (Best Ball).
-const throwbackScope = strictThrowbackScopeForNavSlug(league);
-const throwbackActive = throwbackScope !== null && isThrowbackWeekForScope(week, throwbackScope);
-const throwbackOverrides =
-  throwbackActive && throwbackScope ? await cachedThrowbackOverrides(throwbackScope) : {};
+// Week, scope and every owner's pick — including the TTL cache that keeps this
+// layout-level component from putting a Redis round trip in the <head> of
+// every page. `throwback-request-state.ts` owns all of it; the roster header
+// reads the same helper, so the two cannot disagree about what week it is.
+const { throwbackActive, throwbackOverrides } = await resolveThrowbackRequestState(
+  league,
+  Astro.url,
+);
 
 const brands = buildFranchiseBandBrands(league, { throwbackActive, throwbackOverrides });
 // `</script>` can't appear in a crest path or a hex, but escaping `<` is the

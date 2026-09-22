@@ -50,19 +50,51 @@ const { groups, activeFranchiseId, viewerFranchiseId, teamHref, prefetch = false
 // A conference rail is only meaningful when there is more than one to tell
 // apart; a single-table league renders the divisions with no outer label.
 const showConferences = groups.length > 1;
+
+/**
+ * Which conference opens. `groups` already arrives in the viewer's own order
+ * (`conferenceOrder`), so the first one IS theirs — resolved from the session,
+ * then their remembered club, then the historical AL-first default.
+ */
+const openIndex = 0;
+
+/** Unique per render, so two headers on one document cannot share a group. */
+const radioName = `rhdr-conf-${Math.random().toString(36).slice(2, 9)}`;
 ---
 
 <nav class="rhdr-teams" aria-label="Switch team">
-  {groups.map((group) => (
-    <div class="rhdr-teams__conf">
+  {/* ONE CONFERENCE AT A TIME, and no client script.
+      Twenty-four crests plus six division labels do not fit a desktop column,
+      so the row used to scroll sideways and the last division was cut off the
+      screen. A radio per conference with the rails as its labels collapses
+      the other one to its rail, which is a CSS-only accordion: this component
+      ships no JavaScript at all (tests/rosters-team-nav-clientrouter.test.ts
+      pins that), and radios are what enforce "exactly one open" without any.
+      Rendered only when there IS more than one conference, so TheLeague's
+      single table is untouched. */}
+  {showConferences && groups.map((group, index) => (
+    <input
+      type="radio"
+      name={radioName}
+      id={`${radioName}-${index}`}
+      class="rhdr-teams__radio"
+      checked={index === openIndex}
+      aria-label={`Show ${group.conferenceName}`}
+    />
+  ))}
+  {groups.map((group, index) => (
+    <div
+      class="rhdr-teams__conf"
+      style={group.conferenceColor ? `--rhdr-conf: ${group.conferenceColor};` : undefined}
+    >
       {showConferences && group.conferenceName && (
-        <span
+        <label
           class:list={['rhdr-teams__conflabel', { 'is-mine': group.divisions.some((division) =>
             division.teams.some((team) => team.franchiseId === viewerFranchiseId),
           ) }]}
-          aria-label={group.conferenceName}
-          title={group.conferenceName}
-        >{group.conferenceShort ?? group.conferenceName}</span>
+          for={`${radioName}-${index}`}
+          title={`Show ${group.conferenceName}`}
+        >{group.conferenceShort ?? group.conferenceName}</label>
       )}
       <div class="rhdr-teams__divisions">
         {/* No `has-active` class on the division: TheLeague's switcher moves
@@ -107,7 +139,30 @@ const showConferences = groups.length > 1;
 </nav>
 
 <style>
+  /* The radios live at the start of the nav so `~` can reach every conference
+     after them. Visually hidden, never `display: none` — that would drop them
+     from the tab order and make the rails unreachable by keyboard. */
+  .rhdr-teams__radio {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  /* nth-of-type counts the radios; nth-child would count the conferences too. */
+  .rhdr-teams__radio:nth-of-type(1):checked ~ .rhdr-teams__conf:nth-of-type(1) .rhdr-teams__divisions,
+  .rhdr-teams__radio:nth-of-type(2):checked ~ .rhdr-teams__conf:nth-of-type(2) .rhdr-teams__divisions {
+    display: flex;
+  }
+  .rhdr-teams__radio:focus-visible + .rhdr-teams__conf .rhdr-teams__conflabel,
+  .rhdr-teams__radio:focus-visible ~ .rhdr-teams__conf .rhdr-teams__conflabel {
+    outline: 2px solid var(--page-text);
+    outline-offset: -3px;
+  }
+
   .rhdr-teams {
+    position: relative;
     display: flex;
     align-items: stretch;
     /* Pairs with the header's own min-width:0 — without a constrained width
@@ -115,8 +170,10 @@ const showConferences = groups.length > 1;
     min-width: 0;
     background: var(--content-bg-muted);
     border-bottom: 1px solid var(--content-border-color);
-    /* 24 clubs plus six division labels exceed a desktop column, so the strip
-       scrolls sideways. Contained here, it never moves the page body. */
+    /* One conference at a time fits a desktop column — twelve crests and two
+       division labels — so this no longer scrolls there. It stays `auto` for
+       the narrow case, where even one conference can overflow; contained
+       here, it never moves the page body. */
     overflow-x: auto;
     overscroll-behavior-x: contain;
   }
@@ -140,16 +197,21 @@ const showConferences = groups.length > 1;
     display: flex;
     align-items: center;
     flex: none;
+    cursor: pointer;
     padding: 0 0.6rem;
     font-size: 0.6875rem;
     font-weight: 700;
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--color-white, #fff);
-    /* Neutral by default; the viewer's OWN conference takes the accent below.
-       These were the other way round at first, which read backwards — the half
-       of the row that is yours was the quiet one. */
-    background: var(--content-text-muted);
+    /* The CONFERENCE's own colour, sampled from its mark (`getConferenceColor`)
+       — AL red, NL blue. Grey read as chrome and left the vertical label as
+       the only way to tell which half of the row you were looking at, which is
+       a lot to ask of two rotated letters. Dimmed while collapsed so the open
+       conference is obviously the live one. */
+    background: var(--rhdr-conf, var(--content-text-muted));
+    opacity: 0.55;
+    transition: opacity 0.14s ease;
     justify-content: center;
     writing-mode: vertical-rl;
     transform: rotate(180deg);
@@ -157,18 +219,35 @@ const showConferences = groups.length > 1;
        future league ever carries a longer one. */
     overflow: hidden;
   }
-  /* The viewer's own conference reads STRONGER, not greener — full page ink
-     against the muted grey of the other half. Green here competed with the
-     scoreboard's own green above it and read as a status rather than as
-     "this half is yours". */
+  /* The OPEN conference is at full strength; the collapsed one is dimmed.
+     That, plus which side the crests are on, is what says which is which —
+     the colour says WHICH conference, the opacity says which is showing. */
+  .rhdr-teams__radio:nth-of-type(1):checked ~ .rhdr-teams__conf:nth-of-type(1) .rhdr-teams__conflabel,
+  .rhdr-teams__radio:nth-of-type(2):checked ~ .rhdr-teams__conf:nth-of-type(2) .rhdr-teams__conflabel {
+    opacity: 1;
+  }
+  .rhdr-teams__conflabel:hover { opacity: 0.85; }
+
+  /* The viewer's own conference is marked on the rail itself, since it is no
+     longer the only one wearing a colour. */
   .rhdr-teams__conflabel.is-mine {
-    background: var(--page-text);
-    color: var(--card-surface);
+    box-shadow: inset 3px 0 0 var(--page-text);
   }
 
   .rhdr-teams__divisions {
     display: flex;
     align-items: stretch;
+    flex: 1 0 auto;
+  }
+  /* Collapsed unless this conference's radio is the checked one. Scoped to a
+     row that HAS radios, so a single-table league never hides its divisions:
+     `:has()` asks the DOM rather than trusting a class the server guessed. */
+  .rhdr-teams:has(.rhdr-teams__radio) .rhdr-teams__divisions { display: none; }
+  /* A collapsed conference is its RAIL and nothing else — `flex: 1 0 auto`
+     kept its share of the row and left a dead band between the two rails. */
+  .rhdr-teams:has(.rhdr-teams__radio) .rhdr-teams__conf { flex: none; }
+  .rhdr-teams__radio:nth-of-type(1):checked ~ .rhdr-teams__conf:nth-of-type(1),
+  .rhdr-teams__radio:nth-of-type(2):checked ~ .rhdr-teams__conf:nth-of-type(2) {
     flex: 1 0 auto;
   }
 

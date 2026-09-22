@@ -92,6 +92,8 @@ import {
 } from '../../utils/salary-calculations';
 import { getAuthUser, franchiseIdForLeague } from '../../utils/auth';
 import { getAllActivity, getActivityLevel, formatLastSeen } from '../../utils/owner-activity';
+import { resolveThrowbackRequestState } from '../../utils/throwback-request-state';
+import { resolveRosterHeaderSkin } from '../../utils/roster-header-skin';
 import fs from 'fs';
 import path from 'path';
 import { calculateDraftOrder, buildActualDraftPicks, convertActualPicksToPredictions } from '../../utils/draft-utils';
@@ -2100,10 +2102,26 @@ const headerDefaultSchedule = resolveHeaderSchedule(
   headerWeeks,
   headerWeekNum
 );
+/* Throwback Week, resolved ONCE for the whole header — the default club and
+   all fifteen swap templates. Without it this header is the one surface still
+   in modern art on the week everything else throws back. */
+const headerThrowback = await resolveThrowbackRequestState('theleague', Astro.url);
+
+/* The switcher's names and crests throw back with the nameplate above them.
+   Both are fields the era overlay replaces, and a row of modern crests under
+   a nameplate in era art is the partial overlay the era rules doc warns
+   about. Resolved per club off the same skin the plate uses, which is
+   memoised for the whole league, so this is a lookup not a rebuild. */
+const headerIdentityOf = (franchiseId: string) => {
+  const skin = resolveRosterHeaderSkin(franchiseId, 'theleague', headerThrowback);
+  return skin ? { name: skin.name, icon: skin.crestSmall } : null;
+};
+
 const headerGroups = buildTeamGroups({
   teams: theLeagueConfig.teams,
   conferences: null,
   divisions: theLeagueConfig.divisions,
+  identityOf: headerIdentityOf,
 });
 const headerTeamById = new Map(teamsList.map((team: any) => [team.id, team]));
 const headerNameOf = (id: string) => headerTeamById.get(id)?.name ?? 'Franchise';
@@ -2227,6 +2245,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       currentWeek={headerWeekNum}
       lineupLock={headerLineupLock}
       ownerLastSeen={ownerSeenFor(defaultTeamId)}
+      throwback={headerThrowback}
       groups={headerGroups}
       viewerFranchiseId={userFranchiseId ?? null}
       nameOf={headerNameOf}
@@ -2262,6 +2281,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
                 currentWeek={headerWeekNum}
                 lineupLock={headerLineupLock}
                 ownerLastSeen={ownerSeenFor(team.id)}
+                throwback={headerThrowback}
                 nameOf={headerNameOf}
                 iconOf={headerIconOf}
                 recordOf={(id: string) => headerStandings.get(id)?.record ?? null}

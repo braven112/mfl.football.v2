@@ -92,6 +92,28 @@ export function getConferenceLogoDark(id: ConferenceId): string {
   return `/assets/afl/conferences/${getConferenceShort(id).toLowerCase()}-dark.svg`;
 }
 
+/**
+ * The conference's own accent, SAMPLED FROM ITS MARK rather than configured.
+ *
+ * Same contract as `getConferenceLogo` above — call sites derive it, never
+ * hardcode it — and taken from the same place the logo comes from, so the two
+ * cannot disagree: `al.svg` carries `#c41e3a` and `nl.svg` `#1d4f91` as their
+ * one distinguishing hue (both also carry the shared `#002244` navy and
+ * `#b0b7bc` silver, which is exactly why neither of those can stand for a
+ * conference).
+ *
+ * Both clear white ink comfortably — 5.9:1 and 8.6:1 — which is what the
+ * roster header's vertical rail needs.
+ */
+const CONFERENCE_COLORS: Record<ConferenceId, string> = {
+  '00': '#c41e3a',
+  '01': '#1d4f91',
+};
+
+export function getConferenceColor(id: ConferenceId): string {
+  return CONFERENCE_COLORS[id];
+}
+
 export function getConferenceIdByName(name: ConferenceName): ConferenceId {
   return NAME_TO_ID[name];
 }
