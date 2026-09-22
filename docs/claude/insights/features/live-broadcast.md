@@ -608,3 +608,49 @@ The general lesson is about where this repo's confidence actually comes from: a
 12,000-test suite that never mounts a component cannot tell you the component
 runs. For an island, the cheapest real assertion is `renderToString` and one
 `expect(html).toContain(...)`.
+
+### Three bugs review found in the fix itself
+
+All three were in the *new* code, none was reachable by the suite, and two of
+them re-created the symptom the change exists to remove. Worth recording as a
+set, because they share a shape: **the reboot and the throttle each assumed a
+signal meant more than it does.**
+
+- **`isQuiet` does not mean "nothing is happening" — it means "nothing is
+  live", and a board that lost its network satisfies it by definition.**
+  Nothing can be live when nothing can be fetched. So the ungated reboot would
+  fire on a disconnected board, navigate away from a screen still showing last
+  night's scores, and land on the browser's own error page — from which
+  nothing recovers. That is precisely the failure being fixed, re-created by
+  its own fix. The gate is proof the network works *right now*
+  (`healthRef`: last poll ok, no errors, fresher than `STALE_MS`), never the
+  absence of games.
+- **A reload is a navigation, and fullscreen does not survive one.** The
+  island already knows this — it is why `F` is a keypress (transient
+  activation) rather than a link. The hardware this board is for is a
+  television with no keyboard, so a reboot that silently drops out of
+  fullscreen cannot be undone by the person watching. A fullscreen board now
+  keeps the throttle, which is the part doing the heavy lifting, and skips the
+  reboot.
+- **`idleRef` is written during RENDER, and the poll loop reads it from a
+  microtask that runs before React commits.** `tick` schedules the next poll in
+  the continuation of `await runPoll()` — after `setPoll` has been queued but
+  before the render it triggers. So the poll that FIRST SEES KICKOFF read the
+  previous render's `isQuiet` and scheduled the next one at the idle cadence,
+  leaving the board a minute behind the opening drive with only the watchdog to
+  rescue it. The tier now comes from the response just fetched
+  (`pollRef.current.sawLive`), and the watchdog reads the same combined value —
+  it has to, or it re-introduces the flat-threshold bug from the other side.
+
+The general shape: **a ref written during render is not readable from the
+continuation of an await in the same tick.** `LiveBoard.tsx` avoids it by
+deriving its tier in `finally` from the data it just received. Any poll loop
+whose cadence depends on what the poll returned must read the RESPONSE, not a
+render-time ref.
+
+Note also what is *not* duplication here: `LiveBoard` (25s/90s),
+`useNflScoreboard` (60s/300s) and this board (8s/60s) each keep their own
+cadence pair, and the numbers differ deliberately by payload cost. The
+difference is that this one's invariants are now tested rather than
+commented — `useNflScoreboard.ts:93` reasons about the same
+idle-poll-vs-stale-window relationship in prose.

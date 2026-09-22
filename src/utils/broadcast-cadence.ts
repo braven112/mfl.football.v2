@@ -111,6 +111,19 @@ export function tickInterval(idle: boolean): number {
  *   a moment still on screen (a final play landing after the last game went
  *   quiet). A reload that blanks the board mid-touchdown would be a worse bug
  *   than the one this fixes.
+ * - `healthy` — **a reload is only safe if the network is known to work right
+ *   now.** A board that lost its connection overnight satisfies `idle` by
+ *   definition: nothing can be live when nothing can be fetched. Rebooting it
+ *   navigates away from a board still showing last night's scores and into the
+ *   browser's own error page, from which nothing recovers — which is the exact
+ *   symptom this whole change exists to remove, re-created by its own fix. The
+ *   caller proves health from the last poll, not from the absence of games.
+ * - `fullscreen` — fullscreen needs transient activation and does not survive a
+ *   navigation (see the `F` handler in the island). The hardware this board is
+ *   for is a television with no keyboard, so a reboot that drops out of
+ *   fullscreen cannot be undone by the person watching. A fullscreen board
+ *   keeps the throttle, which is the part that does the heavy lifting, and
+ *   skips the reboot.
  *
  * `uptimeMs` is measured from MOUNT, so a board that has just reloaded starts
  * a fresh six hours and cannot loop.
@@ -119,8 +132,11 @@ export function shouldReload(opts: {
   demo: boolean;
   idle: boolean;
   hasStage: boolean;
+  healthy: boolean;
+  fullscreen: boolean;
   uptimeMs: number;
 }): boolean {
   if (opts.demo || !opts.idle || opts.hasStage) return false;
+  if (!opts.healthy || opts.fullscreen) return false;
   return opts.uptimeMs >= RELOAD_AFTER_MS;
 }

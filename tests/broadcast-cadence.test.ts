@@ -110,7 +110,7 @@ describe('tickInterval', () => {
 
 describe('shouldReload', () => {
   const past = RELOAD_AFTER_MS + 1;
-  const base = { demo: false, idle: true, hasStage: false, uptimeMs: past };
+  const base = { demo: false, idle: true, hasStage: false, healthy: true, fullscreen: false, uptimeMs: past };
 
   it('reboots a quiet board that has been up too long', () => {
     expect(shouldReload(base)).toBe(true);
@@ -129,6 +129,21 @@ describe('shouldReload', () => {
 
   it('never reboots the rehearsal', () => {
     expect(shouldReload({ ...base, demo: true })).toBe(false);
+  });
+
+  it('never reboots a board that cannot reach the network', () => {
+    // The regression this gate exists for, and it is the PR's own symptom
+    // re-created by its own fix: a board that lost its connection overnight is
+    // `idle` BY DEFINITION — nothing can be live when nothing can be fetched —
+    // so an ungated reboot navigates away from a board still showing last
+    // night's scores and into the browser's error page, which never recovers.
+    expect(shouldReload({ ...base, healthy: false })).toBe(false);
+  });
+
+  it('never takes a fullscreen board off the television', () => {
+    // Fullscreen needs transient activation and does not survive a navigation,
+    // and the hardware this board is for has no keyboard to ask again.
+    expect(shouldReload({ ...base, fullscreen: true })).toBe(false);
   });
 
   it('holds until the uptime is actually reached', () => {

@@ -113,10 +113,17 @@ export default function LiveBroadcast({ pageData }: Props) {
   const [drift, setDrift] = useState({ x: 0, y: 0, x2: 0, y2: 0 });
 
   // ── the poll loop ────────────────────────────────────────────────────────
-  const pollRef = useRef<{ timer: number | null; lastDone: number; errors: number }>({
+  const pollRef = useRef<{
+    timer: number | null;
+    lastDone: number;
+    errors: number;
+    /** Did the LAST RESPONSE carry live football? Set in `runPoll`, not render. */
+    sawLive: boolean;
+  }>({
     timer: null,
     lastDone: Date.now(),
     errors: 0,
+    sawLive: false,
   });
 
   /**
@@ -131,6 +138,9 @@ export default function LiveBroadcast({ pageData }: Props) {
    * tier measured in minutes.
    */
   const idleRef = useRef(false);
+
+  /** The last poll's health, for the reboot's "is the network up?" gate. */
+  const healthRef = useRef<{ ok: boolean; at: number }>({ ok: true, at: Date.now() });
 
   /**
    * Each league's last good numbers.
@@ -193,6 +203,14 @@ export default function LiveBroadcast({ pageData }: Props) {
       setFetchedAt(Date.parse(body.fetchedAt) || Date.now());
       setStatus('ok');
       pollRef.current.errors = 0;
+      // The tier for the NEXT poll comes from the body just fetched, never
+      // from `idleRef`. `idleRef` is written during render, and `tick`
+      // schedules the next poll in the continuation of this `await` — before
+      // React has committed the render `setPoll` just queued. Read there, the
+      // poll that FIRST SEES KICKOFF would still schedule at the idle cadence
+      // and the board would sit a minute behind the opening drive.
+      pollRef.current.sawLive =
+        body.games.some((g) => g.state === 'in') || leagues.some((l) => l.live);
     } catch {
       // A failed poll KEEPS the last good data and only changes the STATUS.
       // "The feed says nothing" and "we could not reach the feed" are
@@ -249,8 +267,15 @@ export default function LiveBroadcast({ pageData }: Props) {
       pollRef.current.timer = window.setTimeout(tick, ms);
     };
 
+    // Idle only when the render AND the last response agree there is nothing
+    // live. Either one saying otherwise keeps the fast cadence — a board that
+    // polls too often is a cost, a board that polls too slowly at kickoff is a
+    // bug the room can see.
     const nextDelay = () =>
-      pollDelay({ errors: pollRef.current.errors, idle: idleRef.current });
+      pollDelay({
+        errors: pollRef.current.errors,
+        idle: idleRef.current && !pollRef.current.sawLive,
+      });
 
     const tick = async () => {
       await runPoll();
@@ -271,7 +296,8 @@ export default function LiveBroadcast({ pageData }: Props) {
     // force a poll on its own 20s interval, which would quietly restore the
     // afternoon cadence overnight and negate the throttle entirely.
     const watchdog = window.setInterval(() => {
-      if (Date.now() - pollRef.current.lastDone > watchdogLimit(idleRef.current)) {
+      const idleNow = idleRef.current && !pollRef.current.sawLive;
+      if (Date.now() - pollRef.current.lastDone > watchdogLimit(idleNow)) {
         if (pollRef.current.timer) window.clearTimeout(pollRef.current.timer);
         void tick();
       }
@@ -438,6 +464,7 @@ export default function LiveBroadcast({ pageData }: Props) {
   // Published on every render so the poll loop and the reload watchdog can
   // read the board's mood without either of them depending on it.
   idleRef.current = isQuiet;
+  healthRef.current = { ok: status === 'ok' && pollRef.current.errors === 0, at: fetchedAt };
 
   /**
    * The heartbeat that ages the freshness pill and drives the saver clock.
@@ -488,6 +515,14 @@ export default function LiveBroadcast({ pageData }: Props) {
         // Re-read per tick: `isQuiet` gates the effect, but a reveal outranks
         // the screensaver and can still be on screen while it holds.
         hasStage: !!currentRef.current,
+        // Proof the network works RIGHT NOW, from the last poll rather than
+        // from the absence of games — a board that lost its connection is
+        // `isQuiet` by definition, and reloading it lands on the browser's
+        // error page with no way back.
+        healthy: healthRef.current.ok && Date.now() - healthRef.current.at < STALE_MS,
+        // Fullscreen does not survive a navigation and the television this is
+        // for has no keyboard to ask for it again.
+        fullscreen: !!document.fullscreenElement,
         uptimeMs: Date.now() - mountedAtRef.current,
       });
       if (go) window.location.reload();

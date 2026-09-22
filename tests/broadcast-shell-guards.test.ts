@@ -1301,8 +1301,8 @@ describe('the reveal features the scorer, not a chip', () => {
 describe('the board survives being left on all night', () => {
   it('asks the cadence module rather than deciding for itself', () => {
     expect(ISLAND_CODE).toMatch(/schedule\(nextDelay\(\)\)/);
-    expect(ISLAND_CODE).toMatch(/pollDelay\(\{ errors: pollRef\.current\.errors, idle: idleRef\.current \}\)/);
-    expect(ISLAND_CODE).toMatch(/lastDone > watchdogLimit\(idleRef\.current\)/);
+    expect(ISLAND_CODE).toMatch(/pollDelay\(\{/);
+    expect(ISLAND_CODE).toMatch(/lastDone > watchdogLimit\(idleNow\)/);
     expect(ISLAND_CODE).toMatch(/setNowTick\(Date\.now\(\)\), tickInterval\(isQuiet\)\)/);
     expect(ISLAND_CODE).toMatch(/shouldReload\(\{/);
   });
@@ -1336,6 +1336,24 @@ describe('the board survives being left on all night', () => {
     // A second, private notion of "idle" is how one of them ends up throttled
     // during play.
     expect(ISLAND_CODE).toMatch(/idleRef\.current = isQuiet;/);
+  });
+
+  it('takes the poll tier from the RESPONSE, not from the render-time ref', () => {
+    // `idleRef` is written during render; `tick` schedules the next poll in
+    // the continuation of its `await`, before React has committed the render
+    // `setPoll` queued. Read alone, the poll that first sees kickoff would
+    // still schedule at the idle cadence and the board would sit a minute
+    // behind the opening drive. The watchdog must agree, or it re-introduces
+    // the flat-threshold bug from the other direction.
+    expect(ISLAND_CODE).toMatch(/pollRef\.current\.sawLive =/);
+    expect(ISLAND_CODE).toMatch(/idle: idleRef\.current && !pollRef\.current\.sawLive/);
+    expect(ISLAND_CODE).toMatch(/const idleNow = idleRef\.current && !pollRef\.current\.sawLive/);
+  });
+
+  it('gates the reboot on network health and on fullscreen', () => {
+    const effect = ISLAND_CODE.match(/useEffect\(\(\) => \{[\s\S]*?RELOAD_CHECK_MS\);/)?.[0] ?? '';
+    expect(effect).toMatch(/healthy: healthRef\.current\.ok && Date\.now\(\) - healthRef\.current\.at < STALE_MS/);
+    expect(effect).toMatch(/fullscreen: !!document\.fullscreenElement/);
   });
 
   it('re-reads the live stage per tick rather than at effect setup', () => {
