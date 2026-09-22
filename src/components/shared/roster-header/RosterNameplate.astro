@@ -16,18 +16,23 @@
  * apart from which crest carries `aria-current`, so putting it in the template
  * would mean 15 copies of a 24-crest row to move one attribute.
  *
- * Colour comes from `resolveHeroFranchiseSkin`, NEVER from `colorPrimary`
- * directly: seven of TheLeague's sixteen clubs carry `#181818` as their brand
- * primary, so the naive version paints seven identical near-black rectangles.
- * The resolver also handles the other end — the AFL has a near-WHITE primary —
- * and measures the accent, wash and crest cut that make either legible.
+ * The plate is ONE FLAT CLUB COLOUR, from `resolveRosterHeaderSkin` and never
+ * from `colorPrimary` directly: seven of TheLeague's sixteen clubs carry
+ * `#181818` there, so the naive solid paints seven identical near-black
+ * rectangles. That resolver reads the player-modal band's already-settled
+ * answer to the same question — including the per-club calls a human made in
+ * `BAND_ART_DIRECTION` — and only raises its contrast floor, because this
+ * header's type is small where the band's is a large club name.
+ *
+ * It replaced a gradient plus a wash. Everything that existed to survive a
+ * gradient's two ends went with it: the wash, the pill's measured fill, and
+ * `accentPanel`. One surface, one ink.
  */
 import GamedayBar from './GamedayBar.astro';
-import { resolveHeroFranchiseSkin } from '../../../utils/hero-crest';
+import { resolveRosterHeaderSkin, ROSTER_PLATE_INK } from '../../../utils/roster-header-skin';
 import type { CanonicalLeagueSlug } from '../../../config/leagues';
 import type { RailWeek, HeaderPlayer } from '../../../utils/roster-header-data';
 import type { StandingsSummary } from '../../../utils/standings-summary';
-import '../../../styles/hero-franchise-backdrop.css';
 
 interface HeaderGame {
   week: number;
@@ -118,7 +123,7 @@ const {
   featuredPlayer = null,
 } = Astro.props;
 
-const skin = resolveHeroFranchiseSkin(franchiseId, leagueSlug);
+const skin = resolveRosterHeaderSkin(franchiseId, leagueSlug);
 
 const ordinal = (n: number) => {
   const rest = n % 100;
@@ -143,14 +148,20 @@ const stats: Array<{ value: string; label: string }> = [
 ];
 ---
 
-<div class:list={['rhdr__plate', { 'rhdr__plate--franchise': !!skin }]} style={skin?.style}>
+{/* Both custom properties come from the module, always: the ink is the
+    reference the fill was floored against, so a second copy of it in this
+    stylesheet could drift below the contrast the fill was chosen to clear. */}
+<div
+  class:list={['rhdr__plate', { 'rhdr__plate--franchise': !!skin }]}
+  style={`--rhdr-plate-ink: ${ROSTER_PLATE_INK};${skin ? ` --rhdr-fill: ${skin.fill};` : ''}`}
+>
   {skin?.crest && (
     /* Resolved SERVER-SIDE as the dark cut with its measured outline inline:
-       a franchise gradient is dark in BOTH themes, while the site's html.dark
-       crest machinery fires only for a viewer whose SITE theme is dark.
-       Without this a light-theme owner gets the wrong cut. */
+       the plate is a dark club colour in BOTH themes, while the site's
+       html.dark crest machinery fires only for a viewer whose SITE theme is
+       dark. Without this a light-theme owner gets the wrong cut. */
     <img
-      class="hero-fb__crest"
+      class="rhdr__watermark"
       src={skin.crest}
       style={skin.crestFilter ? `filter: ${skin.crestFilter};` : undefined}
       alt=""
@@ -159,7 +170,9 @@ const stats: Array<{ value: string; label: string }> = [
       decoding="async"
     />
   )}
-  {skin && <span class="hero-fb__wash" aria-hidden="true"></span>}
+  {/* No wash. It existed to hold copy legible across a GRADIENT's light end;
+      a flat fill floored for the plate's ink has no light end, and the wash
+      would only darken the club's colour for nothing. */}
 
   <div class="rhdr__inner">
     {/* The eyebrow and identity stack; the featured card sits beside them, so
@@ -266,7 +279,26 @@ const stats: Array<{ value: string; label: string }> = [
        property would paint this band transparent in BOTH themes. */
     background: #10161f;
   }
-  .rhdr__plate--franchise { background: var(--hero-fb-gradient, #10161f); }
+  .rhdr__plate--franchise { background: var(--rhdr-fill, #10161f); }
+
+  /* The oversized crest behind the name. It carried the gradient version too,
+     and reads BETTER on a flat fill: it was competing with the gradient's own
+     shape before, and now it is the only modulation on the band. */
+  .rhdr__watermark {
+    position: absolute;
+    top: 50%;
+    right: clamp(4rem, 28%, 22rem);
+    transform: translateY(-50%);
+    height: 210%;
+    width: auto;
+    opacity: 0.13;
+    object-fit: contain;
+    pointer-events: none;
+    z-index: 1;
+  }
+  @media (max-width: 900px) {
+    .rhdr__watermark { right: 4%; height: 160%; opacity: 0.11; }
+  }
 
   .rhdr__inner {
     position: relative;
@@ -295,14 +327,24 @@ const stats: Array<{ value: string; label: string }> = [
     text-transform: uppercase;
     background: rgba(255, 255, 255, 0.14);
   }
+  /* Darkens the fill rather than lightening it. The generic pill above tints
+     with white, which RAISES the surface lightness under its own label and so
+     eats the contrast the fill was floored for; inset on a solid band, the
+     chip can only improve it. Same ink as the rest of the plate. */
   .rhdr__plate--franchise .rhdr__pill {
-    background: var(--hero-fb-pill-bg);
-    color: var(--hero-fb-pill-ink);
-    border-color: transparent;
+    background: rgba(0, 0, 0, 0.28);
+    border-color: rgba(255, 255, 255, 0.22);
   }
+  /* Full strength, and the hierarchy against the club name is carried by size
+     and weight instead. Dimming this to 0.72 alpha — which the gradient
+     version did — has to be paid for by darkening every club's fill until the
+     dimmed ink still clears 4.5:1, which costs a mean ΔE of 14.2 across the
+     forty clubs and turns the Micks' green into a murky #255b29. See
+     src/utils/roster-header-skin.ts. */
   .rhdr__meta {
     font-size: 0.78rem;
-    color: rgba(242, 245, 248, 0.72);
+    color: var(--rhdr-plate-ink, #f2f5f8);
+    letter-spacing: 0.01em;
   }
 
   /* Fixed values, not page tokens: this chip sits on the FRANCHISE GRADIENT,
@@ -417,14 +459,14 @@ const stats: Array<{ value: string; label: string }> = [
     margin-top: 0.1rem;
     font-size: 0.78rem;
     font-variant-numeric: tabular-nums;
-    color: rgba(242, 245, 248, 0.78);
+    color: var(--rhdr-plate-ink, #f2f5f8);
   }
-  /* `accent-panel`, NOT `accent`. The resolver clears `accent` to 3:1 over the
-     COPY band; this card is a slotted panel on the gradient's far end, under
-     the thinnest wash, and its type is 0.78rem — which is the exact case
-     `accent-panel` exists for, held to 4.5:1. One accent cannot serve both
-     ends of a high-contrast gradient. */
-  .rhdr__plate--franchise .rhdr__feature-stat { color: var(--hero-fb-accent-panel); }
+  /* No franchise accent here any more. `accent-panel` existed because a
+     gradient has two ends and "a colour readable on one is invisible on the
+     other by construction" — a flat fill has one, and this card sits on its
+     own `rgba(0,0,0,0.26)` panel over it, so the plate's ink already clears.
+     One surface, one ink.
+  */
 
   /* Below 900px the club's name and the scoreboard own the width. */
   @media (max-width: 900px) {
