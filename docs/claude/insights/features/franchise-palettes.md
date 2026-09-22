@@ -36,6 +36,47 @@ Rules that fell out:
   saturation of 0.94). Scope such a check to picks that actually claim to come
   from the art, and require both colours to be saturated before comparing hue.
 
+## Check a pick against the art's CENSUS — twice now, the colour was never there
+
+The brightness floor above was one failure mode. A second, found only when
+Brandon looked at two clubs and said the colour was wrong ("minty wasn't using
+the correct yellow", "micks wasn't using the gold stroke, instead it was a
+muddy yellow"), is worse: the shipped value appeared **nowhere in the artwork
+at all**.
+
+Measured against every cluster ≥0.3% of the source, with the repo's
+`colorDistance`:
+
+| Club | Shipped | Nearest real cluster | ΔE |
+|---|---|---|---|
+| Team Minty Fresh, tertiary | `#c1a427` | `#f7c20b` — the star | **23.4** |
+| Muck Juggling Micks, secondary | `#cc7e30` | `#f99d2a` — the beard | **20.4** |
+
+Both are desaturated cousins of a real colour, sitting between two regions of
+the art rather than on either — Micks' in particular lands between the hat
+strap's brown `#a67c52` and the beard orange, which is exactly what a blend
+looks like. The correct values are vivid: Minty's star is `#f7c20b` (chroma
+236) against the shipped chroma 125, and the Micks buckle's gold is `#fdbb3a`
+(chroma 195). Both new values are ΔE **0.0** from a real cluster, because they
+ARE one.
+
+**So the check is mechanical, and cheap: after picking, measure the pick
+against the cluster census it supposedly came from.** A pick more than ~10 ΔE
+from every real cluster was not sampled — it was interpolated, and it will read
+as muddy because a blend of two saturated colours is always less saturated than
+either. Do not eyeball this; `#c1a427` and `#f7c20b` both read as "a yellow" in
+a swatch list, and the difference is only obvious beside the crest.
+
+Two corollaries the pass had already half-learned:
+
+- **Sample the region, not the image.** Micks' gold is 6.5% of a 44×22 crop
+  around the hat buckle and under 0.5% of the whole banner, where it is below
+  the noise of five different oranges. Crop to the element you are naming, then
+  cluster.
+- **Look at the art.** Both of these were found by a human opening the page,
+  not by any check in this repo. Reading the crop at 4× made the answer obvious
+  in seconds — the buckle is plainly gold on a plainly brown strap.
+
 ## Use the repo's `colorDistance`, never an ad-hoc RGB metric
 
 `src/utils/team-color-contrast.ts#colorDistance` is CIE76 ΔE in Lab space and
@@ -125,6 +166,25 @@ The cheap way to see all three at once is to resolve every franchise through
 the real utils before and after, from the two config blobs, rather than
 reasoning about any single club. That sweep is what found the fourteen; reading
 the diff found none of them.
+
+Midwestside is also the club that settled it: Brandon's call was "drop the blue
+from midwest", and the fourth slot is **white** instead — which he had already
+asked for as their dark-mode trim, and which being hueless leaves the ladder
+nothing to prefer over the gold. Their accent is `#ffcd00` again in both
+leagues, agreeing with `BAND_ART_DIRECTION`'s "black, with the gold as trim and
+glow". After that, **no franchise of the forty** takes its headline accent and
+its panel accent from different slots.
+
+Attributing an accent back to its slot has its own trap, and the first two
+attempts at it both over-fired. A raw ΔE between `accent` and `accentPanel`
+flags eight clubs, because the panel is the same colour LIFTED and ΔE reads
+lightness. Nearest-candidate-by-distance flags ten, because a lifted colour
+drifts toward white and so lands nearest a white slot it never came from —
+Midwestside's own gold `#ffcd00` → `#ffeea6` attributes to its white
+quaternary under that metric. The only correct check is EXACT: push each
+candidate through the same `ensureContrastOn` the resolver uses and compare for
+equality. That reports zero, and it is pinned in
+`tests/hero-franchise-backdrop.test.ts`.
 
 The ladder is now **stated on the Brand Book** (`/<league>/brand/<slug>`, in
 `FranchiseBrandPage.astro`) rather than living only in `resolveAccent`'s
