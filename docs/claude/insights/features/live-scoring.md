@@ -14,6 +14,40 @@ Their reasoning is still why the current code looks the way it does — the CSS
 rules in particular were harvested into the rewrite — but the file and symbol
 names in them no longer exist. Read them as history, not as a map.
 
+## 2026-09-22 - `:last-of-type` Does Not Mean "Last One of This Class"
+
+**Context:** Restyling the bench disclosure into a centred pill. The pill was
+given a `border-top` on its bar to separate the bench from the starters above
+it. It rendered as a heavy edge-to-edge double rule.
+
+**Insight — `.lv-mx-row:last-of-type::after { content: none }` matches NOTHING
+once a bench follows the rows.** `:last-of-type` is scoped to the element TYPE,
+not to the class in the selector. `LvLineup` returns a FRAGMENT of
+`<div class="lv-mx-row">`, so inside `.lv-mx-body` the rows and `.lv-bench` are
+all siblings and all DIVs — the last div is `.lv-bench`, so no `.lv-mx-row` is
+ever `:last-of-type` and the last starter row keeps its divider.
+
+The comment above that rule says `:last-of-type` was chosen over `:last-child`
+precisely because "the list's last ELEMENT may be something else (the bench
+disclosure)". That reasoning does not hold: against a sibling of the same tag
+the two selectors behave identically, and both match zero. Distinguishing by
+class needs `:not(:has(~ .lv-mx-row))` or an explicit cancel on the row that
+precedes the bench.
+
+Two things follow:
+
+- **The bench bar deliberately has NO border of its own.** Its separating
+  hairline is that surviving `.lv-mx-row::after`, which is inset to the gutter.
+  A full-bleed border on the bar stacks on it at the same y (both measured at
+  the same pixel) and draws edge-to-edge — the exact mark the row-divider
+  comment forbids, because edge-to-edge rules became louder than the scores
+  they separate. If that row divider is ever correctly cancelled, the bar needs
+  its own INSET hairline back, not a border.
+- **The rule "dividers are inset pseudo-elements, never full-bleed borders" is
+  prose only.** It is stated in `src/styles/live.css` and pinned by no guard,
+  which is how this shipped into review. A scan guard over the live surfaces'
+  stylesheets would have caught it at edit time.
+
 ## 2026-09-20 - Aggregating Across `matchups` Double-Counts Every Franchise in a Doubleheader Week
 
 **Context:** MFL Live's new per-league board

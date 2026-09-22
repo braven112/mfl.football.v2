@@ -12,6 +12,14 @@
  * teams' benches in one scroll column with nothing but the caption to say
  * which is which. The caption is the only thing that does say, which is why it
  * is a team header rather than a small label (owner direction, Aug 2026).
+ *
+ * The disclosure itself is a CENTERED PILL, not a left-aligned line of muted
+ * text: the bench is the only control in a screen of read-only rows, and at
+ * 0.7rem in the body colour, flush with the gutter, it read as leftover markup
+ * rather than something to tap (owner report, Sep 2026). The chevron is a
+ * rotated CSS glyph rather than two characters swapped on state, so the open
+ * and closed labels stay the same width and the row does not shift under the
+ * thumb mid-tap.
  */
 import { useState, type JSX } from 'react';
 import type { LivePlayerRow, NflGame, PlayerBoxScore, PlayerMeta } from '../../../types/live-scoring';
@@ -47,14 +55,17 @@ export default function LvBench({
 
   return (
     <div className="lv-bench">
-      <button
-        type="button"
-        className="lv-bench__toggle"
-        aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
-      >
-        {open ? '▾' : '▸'} Bench ({total})
-      </button>
+      <div className="lv-bench__bar">
+        <button
+          type="button"
+          className="lv-bench__toggle"
+          aria-expanded={open}
+          onClick={() => setOpen((v) => !v)}
+        >
+          <span className="lv-bench__label">Bench ({total})</span>
+          <span className="lv-bench__chev" aria-hidden="true" />
+        </button>
+      </div>
 
       {open && (
         <>

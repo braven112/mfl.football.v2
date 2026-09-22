@@ -923,19 +923,78 @@ button.lv-card:focus-visible {
  */
 .lv-bench { padding: 0 0 0.3rem; }
 
-.lv-bench__toggle {
-  display: block;
-  width: 100%;
-  padding: 0.4rem var(--lv-gutter);
-  border: 0;
-  background: none;
-  color: var(--content-text-muted);
-  font: inherit;
-  font-size: 0.7rem;
-  text-align: left;
-  cursor: pointer;
+/**
+ * The disclosure is the only CONTROL in a screen of read-only rows, so it is
+ * chromed like one: a centred pill, not a left-aligned 0.7rem line in the body
+ * colour (which an owner read as leftover markup, Sep 2026).
+ *
+ * NO border-top here, deliberately. The separating hairline is the last
+ * starter row's own `.lv-mx-row::after`, which is inset to the gutter — a
+ * full-bleed border on this bar draws edge-to-edge and becomes the loudest
+ * mark on the card, which is the exact thing the row-divider comment above
+ * forbids. The first cut of this pill had one and it stacked on that row's
+ * hairline at the same y, rendering as a heavy doubled rule.
+ *
+ * That the row's hairline survives at all is worth knowing: `.lv-mx-row` and
+ * `.lv-bench` are both DIVs and siblings (LvLineup returns a fragment), so
+ * `.lv-mx-row:last-of-type::after { content: none }` matches NOTHING once a
+ * bench follows the rows — `:last-of-type` is per element TYPE, and the last
+ * div is `.lv-bench`. Cancel that divider and this bar needs its own inset
+ * hairline back.
+ */
+.lv-bench__bar {
+  display: flex;
+  justify-content: center;
+  padding: 0.55rem var(--lv-gutter);
 }
-.lv-bench__toggle:hover { color: var(--page-text); }
+
+.lv-bench__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.5rem;
+  padding: 0.45rem 1.1rem;
+  border: 1px solid color-mix(in srgb, var(--content-border) 65%, transparent);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--content-bg-muted) 65%, transparent);
+  color: var(--content-text-muted);
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+.lv-bench__toggle:hover {
+  color: var(--page-text);
+  border-color: var(--content-border);
+  background: var(--content-bg-muted);
+}
+.lv-bench__toggle:focus-visible {
+  outline: 2px solid var(--content-border);
+  outline-offset: 2px;
+}
+
+/* One glyph rotated, never two characters swapped on state: the open and
+   closed labels then measure the same, so the pill does not resize under the
+   thumb mid-tap. */
+.lv-bench__chev {
+  display: block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-0.12rem) rotate(-45deg);
+  transition: transform 0.18s ease;
+}
+.lv-bench__toggle[aria-expanded='true'] .lv-bench__chev {
+  transform: translateY(-0.15rem) rotate(45deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lv-bench__toggle,
+  .lv-bench__chev { transition: none; }
+}
 
 .lv-bench__caps {
   display: grid;
