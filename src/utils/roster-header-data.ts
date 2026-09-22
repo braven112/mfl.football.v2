@@ -15,6 +15,22 @@
 
 import { conferenceOrder } from './afl-conference';
 import type { ConferenceId } from './afl-conference';
+import { ensureContrastOn } from './team-color-contrast';
+
+/**
+ * The surfaces the crest row actually sits on, which is what a ring drawn
+ * around a crest has to be visible against.
+ *
+ * The dark value is the LIGHTEST of the dark `--content-bg-muted` values in
+ * the token files (#122132; the others are #181818 and #17191e), because a
+ * light ring gains contrast as the surface darkens — clearing the lightest
+ * one clears them all. The light value is the only light one there is.
+ */
+const CREST_ROW_LIGHT = '#eeeeee';
+const CREST_ROW_DARK = '#122132';
+
+/** Non-text contrast floor: this is a 3px ring, not type. */
+const RING_CONTRAST = 3;
 
 export interface HeaderTeam {
   franchiseId: string;
@@ -24,6 +40,24 @@ export interface HeaderTeam {
   icon: string | null;
   division: string;
   conference: string | null;
+  /**
+   * The club's own colour, held to 3:1 against the crest row in each theme.
+   *
+   * Per TEAM rather than one value for the row, because TheLeague switches
+   * club in place: the switcher moves `aria-current` across crests without
+   * re-rendering, so a colour resolved for "the active club" at render time
+   * would be the previous club's the moment anyone clicked. Each crest
+   * carries its own, and the active rule just reads it.
+   *
+   * Two values because the brand colour cannot serve both surfaces: seven of
+   * TheLeague's sixteen clubs are #181818, which is a ring you cannot see on
+   * a dark row, and Midwestside's #ffcd00 is one you cannot see on a light
+   * one. `colorPrimaryDark` is the config's own answer to the first and is
+   * preferred where it exists; `ensureContrastOn` only shifts a colour that
+   * misses the floor, so most clubs keep their exact brand value.
+   */
+  ringLight: string;
+  ringDark: string;
 }
 
 export interface HeaderDivision {
@@ -67,6 +101,12 @@ const toHeaderTeam = (team: any): HeaderTeam => ({
   icon: team?.icon ? String(team.icon) : null,
   division: String(team?.division ?? ''),
   conference: team?.conference != null ? String(team.conference) : null,
+  ringLight: ensureContrastOn(String(team?.colorPrimary ?? ''), CREST_ROW_LIGHT, RING_CONTRAST),
+  ringDark: ensureContrastOn(
+    String(team?.colorPrimaryDark ?? team?.colorPrimary ?? ''),
+    CREST_ROW_DARK,
+    RING_CONTRAST,
+  ),
 });
 
 /**

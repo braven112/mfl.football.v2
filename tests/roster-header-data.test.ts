@@ -481,3 +481,137 @@ describe('the season rail distinguishes a result from the current week', () => {
     expect(BAR).toMatch(/'is-now':\s*!game\?\.played && entry\.isCurrent/);
   });
 });
+
+/**
+ * The crest row's three presentation rules, all reported from a phone.
+ *
+ * "I don't like the faded team icons or the bright green active color. on
+ * mobile it's to tight between icons as well" — and, a minute later, "don't
+ * crop the corners of the icons either."
+ *
+ * Each has a reason it must not come back:
+ *
+ *  - A dimmed crest dims the ONE thing identifying the link. The row was
+ *    faded to 0.56 at rest to rank it below the scoreboard; it read as
+ *    sixteen switched-off clubs. Rank a row down with size and surface.
+ *  - `--color-accent` is #2e8743 in TheLeague, the same green the rail above
+ *    uses for a win, so the row marked "you are here" and "you won" alike.
+ *    The viewed club is ringed in its OWN colour now.
+ *  - A 50% radius is a circle mask, and these marks are not all circles.
+ */
+describe('the crest row shows the clubs at full strength, in their own colour', () => {
+  const ROW = fs.readFileSync(
+    path.join(process.cwd(), 'src/components/shared/roster-header/TeamDivisionRow.astro'),
+    'utf-8',
+  );
+  const STYLE = ROW.slice(ROW.indexOf('<style>'));
+  /** The stylesheet with its comments removed — they quote the rules they replaced. */
+  const CSS = STYLE.replace(/\/\*[\s\S]*?\*\//g, '');
+
+  it('never fades a crest', () => {
+    // The hover LABEL still fades in; the artwork never does.
+    const crestRules = CSS.split('}').filter((rule) => /\.rhdr-teams__(crest|fallback)\b/.test(rule));
+    for (const rule of crestRules) {
+      expect(rule, 'a dimmed crest hides the only thing identifying the link')
+        .not.toMatch(/opacity:\s*0?\.\d/);
+    }
+  });
+
+  it('never circle-crops a mark', () => {
+    // The box that HOLDS the artwork, not the "your team" dot below it, which
+    // is a circle on purpose. `::after` rules are excluded by name.
+    const boxRules = CSS.split('}')
+      .filter((rule) => /\.rhdr-teams__(crest|fallback)\b/.test(rule) && !rule.includes('::after'));
+    for (const rule of boxRules) {
+      expect(rule, 'a 50% radius eats the corners of every non-circular mark')
+        .not.toMatch(/border-radius:\s*50%/);
+    }
+    expect(STYLE, 'the mark is shown whole inside its box').toMatch(/object-fit:\s*contain/);
+  });
+
+  it('rings the viewed club in its own colour, never the accent', () => {
+    const active = CSS.slice(CSS.indexOf("[aria-current='page'] img"));
+    const rules = active.slice(0, active.indexOf('.rhdr-teams__crest[data-mine'));
+    expect(rules).toMatch(/--rhdr-ring/);
+    expect(rules, '--color-accent is green here, same as a win on the rail above')
+      .not.toContain('--color-accent');
+  });
+
+  it('carries no accent green anywhere in the row', () => {
+    expect(CSS, 'the only colour in this row is a club colour')
+      .not.toContain('var(--color-accent)');
+  });
+
+  it('gives a phone MORE room between crests, not less', () => {
+    const base = CSS.match(/\.rhdr-teams__crests\s*\{[^}]*gap:\s*([\d.]+)rem/);
+    const phone = CSS.match(/@media \(max-width: 640px\)\s*\{[^}]*\.rhdr-teams__crests\s*\{\s*gap:\s*([\d.]+)rem/);
+    expect(base, 'the crest row must set a gap').not.toBeNull();
+    expect(phone, 'a phone scrolls this row with a thumb and needs the room').not.toBeNull();
+    expect(Number(phone![1])).toBeGreaterThan(Number(base![1]));
+  });
+
+  it('asks the DOM which division is active, not a render-time class', () => {
+    // TheLeague's switcher moves `aria-current` without re-rendering, so a
+    // class computed in the component is stale after the first click.
+    // The shape, not the bare name: the component carries a comment saying
+    // why the class is gone, and that comment names it.
+    expect(ROW, 'has-active goes stale on the first in-place switch')
+      .not.toMatch(/'has-active'|"has-active"|class=[^>]*has-active/);
+    expect(CSS).toMatch(/:has\(\.rhdr-teams__crest\[aria-current='page'\]\)/);
+  });
+});
+
+/**
+ * The ring colour itself. Two values per club because no single one works:
+ * seven of TheLeague's sixteen are #181818 (invisible on the dark row) and
+ * Midwestside's #ffcd00 is invisible on the light one.
+ */
+describe('every club gets a ring that is visible on the row it sits on', () => {
+  const LIGHT = '#eeeeee';
+  const DARK = '#122132';
+
+  const luminance = (hex: string) => {
+    const h = hex.replace('#', '');
+    const [r, g, b] = [0, 2, 4]
+      .map((i) => parseInt(h.slice(i, i + 2), 16) / 255)
+      .map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const ratio = (a: string, b: string) => {
+    const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+    return (hi + 0.05) / (lo + 0.05);
+  };
+
+  for (const [label, config] of [['TheLeague', tlConfig], ['the AFL', aflConfig]] as const) {
+    it(`clears 3:1 in both themes for every club in ${label}`, () => {
+      const groups = buildTeamGroups({
+        teams: (config as any).teams,
+        conferences: (config as any).conferences ?? null,
+        divisions: (config as any).divisions ?? null,
+      });
+      const teams = groups.flatMap((g) => g.divisions.flatMap((d) => d.teams));
+      expect(teams.length).toBeGreaterThan(10);
+      for (const team of teams) {
+        expect(team.ringLight, `${team.name} light ring`).toMatch(/^#[0-9a-f]{6}$/i);
+        expect(team.ringDark, `${team.name} dark ring`).toMatch(/^#[0-9a-f]{6}$/i);
+        expect(ratio(team.ringLight, LIGHT), `${team.name} on the light row`).toBeGreaterThanOrEqual(3);
+        expect(ratio(team.ringDark, DARK), `${team.name} on the dark row`).toBeGreaterThanOrEqual(3);
+      }
+    });
+  }
+
+  it('leaves a brand colour that already clears the floor untouched', () => {
+    // `ensureContrastOn` only shifts a colour that misses — most clubs keep
+    // their exact brand value, which is the point of doing this per club.
+    const groups = buildTeamGroups({
+      teams: (tlConfig as any).teams,
+      conferences: null,
+      divisions: (tlConfig as any).divisions,
+    });
+    const pigskins = groups[0].divisions
+      .flatMap((d) => d.teams)
+      .find((t) => t.franchiseId === '0001')!;
+    expect(pigskins.ringLight.toLowerCase()).toBe('#bd1f2b');   // its own primary
+    expect(pigskins.ringDark.toLowerCase()).toBe('#e23b46');    // its own colorPrimaryDark
+  });
+});
