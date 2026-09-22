@@ -77,8 +77,9 @@ export async function resolveAflMock(input: {
    *
    * Deliberately not a browse-as selection. A mock is something you play in,
    * not something you look at, so "which team am I pretending to be" has no
-   * meaning here — and `resolveAFLTeamSelection` defaults to '0001', which
-   * would put a logged-out visitor in somebody's chair.
+   * meaning here — and a `?myteam=` would put a visitor in somebody's chair.
+   * (`resolveAFLTeamSelection` used to do that unprompted, via a hardcoded
+   * '0001' fallback; it answers undefined now, but the argument stands.)
    */
   myFranchiseId: string | undefined | null;
   /**

@@ -16,7 +16,7 @@ import DraftRoomPage from '../../../components/shared/draft-room/DraftRoomPage.a
 import aflConfigData from '../../../../data/afl-fantasy/afl.config.json';
 import { getLeagueYearForSlug } from '../../../utils/league-year';
 import { getAFLPreference, resolveAFLTeamSelection } from '../../../utils/team-preferences';
-import { getAuthUser, isAuthorizedForLeague } from '../../../utils/auth';
+import { getAuthUser, franchiseIdForLeague } from '../../../utils/auth';
 import { getLeagueBySlug } from '../../../config/leagues';
 import { buildAflRoomPageData, resolveAflRoomFor } from '../../../utils/afl-draft-room';
 
@@ -24,12 +24,17 @@ export const prerender = false;
 
 const league = getLeagueBySlug('afl-fantasy')!;
 const user = getAuthUser(Astro.request);
+// The session was correctly league-gated here but smuggled through
+// `cookiePreference`, so a signed-in owner with no cookie was indistinguishable
+// from a cookie choice. It has its own slot now. No `defaultTeam`: this value
+// is the chair the room treats as yours, and '0001' put a logged-out visitor in
+// somebody's seat — see utils/afl-draft-room.ts, which routes AROUND that
+// default rather than trusting it.
 const myFranchiseId = resolveAFLTeamSelection({
   myTeamParam: Astro.url.searchParams.get('myteam'),
   franchiseParam: Astro.url.searchParams.get('franchise'),
-  cookiePreference:
-    getAFLPreference(Astro.cookies)?.franchiseId ??
-    (user && isAuthorizedForLeague(user, league.id) ? user.franchiseId : undefined),
+  cookiePreference: getAFLPreference(Astro.cookies)?.franchiseId,
+  authUserFranchise: franchiseIdForLeague(user, league.id),
 });
 
 const room = resolveAflRoomFor(

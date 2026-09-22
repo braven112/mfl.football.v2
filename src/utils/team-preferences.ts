@@ -327,85 +327,93 @@ export function clearBestBall1Preference(cookies: AstroCookies): void {
   });
 }
 
+/** Which league's franchise list a selection is validated against. */
+export type TeamSelectionLeague = 'theleague' | 'afl' | 'bb1';
+
 /**
- * Get team selection based on priority order
- * Priority: myteam param → franchise param → cookie → auth user → default
+ * Inputs to "which franchise is this viewer's team", in priority order.
  */
-export function resolveTeamSelection(params: {
+export interface TeamSelectionParams {
+  /** `?myteam=` — an explicit, sticky choice. Highest priority. */
   myTeamParam?: string | null;
+  /** `?franchise=` (or `?team=`/`?franchiseId=`) — a one-off browse-as link. */
   franchiseParam?: string | null;
+  /**
+   * The franchise id out of this league's preference cookie — the string, not
+   * the whole preference object. `getAFLPreference(...)?.franchiseId`.
+   */
   cookiePreference?: string | null;
+  /**
+   * The viewer's franchise IN THIS LEAGUE, or null.
+   *
+   * ALWAYS derive it with `franchiseIdForLeague(user, league.id)` — never a
+   * bare `user.franchiseId`. Both leagues have a franchise 0001, so an
+   * ungated session id makes a TheLeague owner browsing the AFL look like
+   * Smokane FC's owner. This is the slot the session belongs in: behind an
+   * explicit choice, ahead of any arbitrary default. Do not smuggle it
+   * through `cookiePreference` or `defaultTeam`.
+   */
   authUserFranchise?: string | null;
-  defaultTeam?: string;
-}): string {
-  const {
-    myTeamParam,
-    franchiseParam,
-    cookiePreference,
-    authUserFranchise,
-    defaultTeam = '0001',
-  } = params;
-
-  // Priority order
-  const candidates = [
-    myTeamParam,
-    franchiseParam,
-    cookiePreference,
-    authUserFranchise,
-    defaultTeam,
-  ];
-
-  // Find first valid candidate
-  for (const candidate of candidates) {
-    if (candidate) {
-      const normalized = normalizeFranchiseId(candidate);
-      if (validateFranchiseId(normalized, 'theleague')) {
-        return normalized;
-      }
-    }
-  }
-
-  // Final fallback
-  return '0001';
+  /**
+   * Explicit fallback for a viewer with no choice and no session.
+   *
+   * There is NO implicit default. Omit it (or pass undefined) and the
+   * resolver answers `undefined`, meaning "highlight nobody" — which is what
+   * a signed-out visitor to a standings or playoffs page should see. Pass one
+   * only on a surface that cannot render without a team at all.
+   */
+  defaultTeam?: string | null;
 }
 
 /**
- * Get AFL team selection based on priority order
- * Priority: myteam param → franchise param → cookie → default
+ * Resolve which franchise is the viewer's team.
+ *
+ * Priority: myteam param → franchise param → cookie → session → explicit
+ * default. The first candidate that names a CURRENT franchise in `league`
+ * wins; everything else is skipped, so a junk `?myteam=9999` falls through
+ * rather than blanking the page.
+ *
+ * Returns `undefined` when nothing validates. It deliberately does NOT fall
+ * back to '0001': that literal used to be hardcoded as a final return, which
+ * meant the three call sites asking for "don't highlight anyone" got the
+ * league's first franchise instead — Pacific Pigskins in TheLeague, Smokane
+ * FC in the AFL — presented to a signed-out stranger as their own team. They
+ * even wrote `|| undefined` to opt out and it could not work, because '0001'
+ * is truthy.
+ *
+ * One body, two leagues. The per-league wrappers below differ ONLY in the
+ * `league` argument; they were separate copies, and the AFL's had silently
+ * drifted to having no session slot at all.
  */
-export function resolveAFLTeamSelection(params: {
-  myTeamParam?: string | null;
-  franchiseParam?: string | null;
-  cookiePreference?: string | null;
-  defaultTeam?: string;
-}): string {
-  const {
-    myTeamParam,
-    franchiseParam,
-    cookiePreference,
-    defaultTeam = '0001',
-  } = params;
-
-  // Priority order
+export function resolveFranchiseSelection(
+  league: TeamSelectionLeague,
+  params: TeamSelectionParams
+): string | undefined {
   const candidates = [
-    myTeamParam,
-    franchiseParam,
-    cookiePreference,
-    defaultTeam,
+    params.myTeamParam,
+    params.franchiseParam,
+    params.cookiePreference,
+    params.authUserFranchise,
+    params.defaultTeam,
   ];
 
-  // Find first valid candidate
   for (const candidate of candidates) {
-    if (candidate) {
-      const normalized = normalizeFranchiseId(candidate);
-      if (validateFranchiseId(normalized, 'afl')) {
-        return normalized;
-      }
-    }
+    if (!candidate) continue;
+    const normalized = normalizeFranchiseId(candidate);
+    if (validateFranchiseId(normalized, league)) return normalized;
   }
 
-  // Final fallback
-  return '0001';
+  return undefined;
+}
+
+/** `resolveFranchiseSelection` for TheLeague. */
+export function resolveTeamSelection(params: TeamSelectionParams): string | undefined {
+  return resolveFranchiseSelection('theleague', params);
+}
+
+/** `resolveFranchiseSelection` for the AFL. */
+export function resolveAFLTeamSelection(params: TeamSelectionParams): string | undefined {
+  return resolveFranchiseSelection('afl', params);
 }
 
 /**

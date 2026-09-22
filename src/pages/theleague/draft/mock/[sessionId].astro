@@ -10,7 +10,7 @@ import DraftMockSessionPage from '../../../../components/shared/draft-mock/Draft
 import leagueConfigData from '../../../../data/theleague.config.json';
 import { getCurrentLeagueYear } from '../../../../utils/league-year';
 import { getTheLeaguePreference, resolveTeamSelection } from '../../../../utils/team-preferences';
-import { getAuthUser } from '../../../../utils/auth';
+import { getAuthUser, franchiseIdForLeague } from '../../../../utils/auth';
 import { loginUrlForRequest } from '../../../../utils/login-redirect';
 import { buildDraftPlayers } from '../../../../utils/build-draft-players';
 import { getFranchiseBrand } from '../../../../utils/franchise-brand';
@@ -64,11 +64,17 @@ const pageData: DraftRoomPageData = {
   title="Mock Draft Room | The League"
   sessionId={sessionId}
   pageData={pageData}
+  {/*
+    Same two fixes as the live room: the cookie's `franchiseId`, not the whole
+    preference object, and NO default franchise. This value is the chair a
+    mock pick is sent from, so '' (nobody) is the only honest answer for a
+    viewer who has not said which team they are.
+  */}
   userTeamId={resolveTeamSelection({
     myTeamParam: Astro.url.searchParams.get('myteam'),
-    authUserFranchise: user?.franchiseId,
-    cookiePreference: getTheLeaguePreference(Astro.cookies, 'myteam'),
-  })}
+    cookiePreference: getTheLeaguePreference(Astro.cookies)?.franchiseId,
+    authUserFranchise: franchiseIdForLeague(user, getLeagueBySlug('theleague')!.id),
+  }) ?? ''}
   basePath="/theleague/draft/mock"
   draftContext="rookie"
 />

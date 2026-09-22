@@ -15,7 +15,8 @@ import { extractToiletBowlWinners, extractLeagueChampion } from '../../../utils/
 import { mergeStandingsWithFuturePicks, isValidFutureDraftPicksData } from '../../../utils/future-draft-picks-utils';
 import type { DraftPrediction, ToiletBowlResult } from '../../../types/standings';
 import { getTheLeaguePreference, setTheLeaguePreference, resolveTeamSelection } from '../../../utils/team-preferences';
-import { getAuthUser } from '../../../utils/auth';
+import { getAuthUser, franchiseIdForLeague } from '../../../utils/auth';
+import { getLeagueBySlug } from '../../../config/leagues';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { getCurrentSeasonYear, getNextDraftYear, getTestDateFromSearchParams } from '../../../utils/league-year';
 
@@ -241,14 +242,17 @@ if (myTeamParam) {
   setTheLeaguePreference(Astro.cookies, myTeamParam);
 }
 
-// Resolve which team to highlight/filter by (priority: myteam → franchise → cookie → auth → null)
+// Resolve which team to highlight/filter by (priority: myteam → franchise →
+// cookie → session → nobody). No `defaultTeam`: the draft predictor must not
+// invent a team, because a visitor might not own picks at all. The old `''`
+// looked like it said that and did not — it was falsy, so the resolver fell
+// through to its hardcoded '0001'.
 const selectedTeamId = resolveTeamSelection({
   myTeamParam,
   franchiseParam,
   cookiePreference: cookiePreference?.franchiseId,
-  authUserFranchise: authUser?.franchiseId,
-  defaultTeam: '', // No default for draft predictor - user might not have picks
-});
+  authUserFranchise: franchiseIdForLeague(authUser, getLeagueBySlug('theleague')!.id),
+}) ?? '';
 
 ---
 

@@ -13,7 +13,7 @@ import DraftRoomPage from '../../../components/shared/draft-room/DraftRoomPage.a
 import leagueConfigData from '../../../data/theleague.config.json';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
 import { getTheLeaguePreference, resolveTeamSelection } from '../../../utils/team-preferences';
-import { getAuthUser } from '../../../utils/auth';
+import { getAuthUser, franchiseIdForLeague } from '../../../utils/auth';
 import { buildDraftPlayers } from '../../../utils/build-draft-players';
 import { getFranchiseBrand } from '../../../utils/franchise-brand';
 import { getLeagueBySlug } from '../../../config/leagues';
@@ -64,10 +64,19 @@ const pageData = buildDraftRoomData({
   leagueSlug="theleague"
   title="Draft Room | The League"
   pageData={pageData}
+  {/*
+    No default franchise: '' means "nobody", which is what a signed-out
+    visitor is. The room reads this as the viewer's own team — whose pick is
+    highlighted, and whose chair a mock pick is sent from — so defaulting it
+    to the league's first franchise sat a stranger in somebody's seat.
+    `getTheLeaguePreference` returns the whole preference OBJECT; this slot
+    takes the id, and passing the object stringified to "[object Object]" and
+    silently dropped the cookie.
+  */}
   userTeamId={resolveTeamSelection({
     myTeamParam: Astro.url.searchParams.get('myteam'),
-    authUserFranchise: user?.franchiseId,
-    cookiePreference: getTheLeaguePreference(Astro.cookies, 'myteam'),
-  })}
+    cookiePreference: getTheLeaguePreference(Astro.cookies)?.franchiseId,
+    authUserFranchise: franchiseIdForLeague(user, league.id),
+  }) ?? ''}
   basePath="/theleague/draft/room"
 />
