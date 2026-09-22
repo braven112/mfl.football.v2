@@ -208,3 +208,17 @@ promotion commit will be red.
 
 Not checked: `gemini-ask` is not installed in the cloud container, so the
 duplication sweep ran through a subagent instead.
+
+## Resolution (2026-09-22, same session)
+
+Merge-down resolved and pushed: `staging` `d3c2eaf63b` → `ac127eecff`, which
+contains `main`, so the fast-forward check now passes. Carried in the same
+merge commit: *Fix before promotion* 1–4, plus a coherence fix found while
+resolving — the league board's solo panel (standings, leaders) now reads the
+panel as drawn, so a held board cannot show fresh standings under held scores.
+Typecheck baseline re-measured on the merged tree: **1422**. Unit suite: only
+the 5 pre-existing `main` data failures above; pushed with
+`SKIP_PRE_PUSH_TESTS=1` for that reason.
+
+Still open before promotion: those 5 data tests, and the Owners' Poll adopt
+step at promotion.
