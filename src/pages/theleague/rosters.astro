@@ -5944,7 +5944,11 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     // is what allows historical seasons to be fetched on demand.
 
     const seasonSelect = document.getElementById('rosterSeasonSelect');
-    const teamSelect = document.getElementById('rosterTeamSelect');
+    // A hidden <input>, not a <select> — it is the page's record of which
+    // club is on screen, read by the parity harness and written by every
+    // path that switches team. Typed, because `getElementById` returns a bare
+    // HTMLElement and `.value` is the only thing anyone wants from it.
+    const teamSelect = document.querySelector<HTMLInputElement>('#rosterTeamSelect');
     const summaryCap = document.getElementById('summaryCap');
     const summaryPlayers = document.getElementById('summaryPlayers');
     const summaryOpen = document.getElementById('summaryOpen');
@@ -9660,12 +9664,14 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
 
     const applyRosterHeader = (teamId: string) => {
       if (!rosterHeader || !headerTeamSlot) return;
-      if (headerTeamSlot.getAttribute('data-rhdr-team') === teamId) return;
+      // The slot always carries the club it is showing; without it there is no
+      // id to park the outgoing markup under, and it would be unreachable.
+      const outgoingId = headerTeamSlot.getAttribute('data-rhdr-team');
+      if (!outgoingId || outgoingId === teamId) return;
       const tpl = rosterHeader.querySelector<HTMLTemplateElement>(`template[data-rhdr-alt="${teamId}"]`);
       if (!tpl) return;                       // unknown club: leave the header alone
       // Park the outgoing club back into a template so switching away and
       // back is symmetric and nothing is lost after the first swap.
-      const outgoingId = headerTeamSlot.getAttribute('data-rhdr-team');
       const parked = document.createElement('template');
       parked.setAttribute('data-rhdr-alt', outgoingId);
       while (headerTeamSlot.firstChild) parked.content.appendChild(headerTeamSlot.firstChild);
@@ -9878,6 +9884,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       // this somewhere else", and the href is what serves them.
       if (event.defaultPrevented || event.button !== 0) return;
       if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      if (!(event.target instanceof Element)) return;
       const link = event.target.closest('.rhdr-teams__crest');
       if (!link) return;
       const teamId = link.getAttribute('data-team-id');
