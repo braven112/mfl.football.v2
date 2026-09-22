@@ -137,6 +137,59 @@ the override no longer needs a secondary at all, and dropping it means the
 club's band and its palette cannot disagree about which orange it wears. When a
 hand-authored override exists to compensate for a colour, suspect the colour.
 
+## The CHART hue is where a franchise's wrong colour hides longest
+
+`color` is the legacy per-franchise graph colour, chosen so sixteen lines stay
+apart on one chart, and `design-system.md` says in as many words never to
+repurpose it as brand identity. Vitside Mafia's was `#f06abc`, a hot pink on a
+black-and-red franchise. The band had already been fixed to stop reading it —
+`franchise-band-brand.ts` still carries the comment "the pink it was using is a
+chart hue only" — but the hue itself stayed, and it is what the owner-activity
+chart drew for years.
+
+Replacing one is genuinely constrained, which is why the pink was there. The
+club's own red `#aa322b` is **ΔE 15.1** from the Pigskins' `#cc2936`, well
+inside the repo's "≥25 clearly distinct" line, so the two lines would have been
+unreadable together. The crest's maroon `#7c221f` clears it at **30.8** while
+still being a colour the club actually wears. Measure a replacement against
+every OTHER franchise's `color`, not just against the brand — that is the
+constraint the field exists to satisfy.
+
+Related: a guard that pins the wrong value by literal stops testing anything
+the day it changes. `tests/franchise-band-brand.test.ts` asserted the band was
+`not.toBe('#f06abc')`; it now reads `color` from the config, so it keeps
+meaning "never the chart hue" whatever that hue becomes.
+
+## Hue does not decide whether a colour is "pink" — lightness does
+
+A sweep for pink on `#960129` (a deep crimson, 39% of the Gamecocks crest)
+flagged it, because its hue computes to **344°** — the same magenta-ish band as
+the actual pink `#f06abc`. They are nothing alike: `#f06abc` sits at lightness
+0.68 and `#960129` at 0.30. Deep crimsons and true pinks share a hue and differ
+in lightness, so a hue-band test alone cannot tell them apart — the same shape
+as every other over-firing check in this file.
+
+## Era colours are sampled too, and were sampled just as badly
+
+Three of Vitside's four historical eras carried desaturated mauves that appear
+nowhere in their own art — including two eras that SHARE an icon file and yet
+stored different colours, which is only possible if both were bad samples of
+the same image:
+
+| Era | Was | Its icon's real colour |
+|---|---|---|
+| 2003 "The original" | `#874d46` | `#960129` (39%) |
+| 2004 "The red oval" | `#aa7671` | `#fc3333` (12.1%) |
+| 2009 "The rooster" | `#a65468` | `#960129` — same icon as 2003 |
+
+Two eras on one icon must resolve to one colour. Worth checking whenever era
+art is shared, which it often is.
+
+One relief: era `colorPrimary` is NOT copied into any derived file, so editing
+one needs no recompute. `franchise-history.json` copies era `icon`/`banner` —
+that is the ripple `throwback-week.md` warns about, and it is a different
+field.
+
 ## Use the repo's `colorDistance`, never an ad-hoc RGB metric
 
 `src/utils/team-color-contrast.ts#colorDistance` is CIE76 ΔE in Lab space and

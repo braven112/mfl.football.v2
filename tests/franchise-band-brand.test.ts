@@ -138,10 +138,16 @@ describe('buildFranchiseBandBrands', () => {
     expect(contrastRatio(teams['0011'].primary, '#ffffff')).toBeGreaterThan(10);
     expect(teams['0011'].secondary.toLowerCase()).toBe('#ffcd00');
 
-    // Vitside: black + red, its real brand pair — never the chart-only pink.
+    // Vitside: black + red, its real brand pair — never the CHART hue, whatever
+    // that hue currently is. It was `#f06abc`, a hot pink chosen only to stay
+    // apart from fifteen other lines on a graph, and the band opened in it;
+    // asserting against that literal stopped testing anything the day the hue
+    // changed, so this reads `color` from the config instead.
     expect(contrastRatio(teams['0012'].primary, '#ffffff')).toBeGreaterThan(10);
     expect(teams['0012'].secondary.toLowerCase()).toBe('#aa322b');
-    expect(teams['0012'].primary.toLowerCase()).not.toBe('#f06abc');
+    const vitsideChartHue = (theleagueConfig.teams as any[]).find((t) => t.franchiseId === '0012')?.color;
+    expect(vitsideChartHue, 'Vitside has no chart hue to guard against').toBeTruthy();
+    expect(teams['0012'].primary.toLowerCase()).not.toBe(String(vitsideChartHue).toLowerCase());
 
     // Gridiron Geeks: the blue leads, the orange accents. Asserted as "is a
     // blue, and no lighter than the brand blue" rather than as a literal, so
