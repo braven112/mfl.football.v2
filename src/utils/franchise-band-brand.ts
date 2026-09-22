@@ -186,7 +186,9 @@ function resolveBandPair(
 const MIDWESTSIDE_BAND = { primary: mixHex('#181818', '#ffcd00', 0.1), secondary: '#ffcd00' };
 const VITSIDE_BAND = { primary: mixHex('#181818', '#aa322b', 0.1), secondary: '#aa322b' };
 
-const BAND_ART_DIRECTION: Partial<Record<LeagueSlug, Record<string, { primary: string; secondary: string }>>> = {
+// `secondary` is OPTIONAL: an entry that only needs its anchor moved leaves the
+// derived glow alone rather than restating a colour the config already owns.
+const BAND_ART_DIRECTION: Partial<Record<LeagueSlug, Record<string, { primary: string; secondary?: string }>>> = {
   // Midwestside and Vitside are the SAME franchises in both leagues, with
   // identical brand colours in both configs — so the call about which colour
   // leads has to be made in both, or the same team wears two different bands
@@ -208,7 +210,14 @@ const BAND_ART_DIRECTION: Partial<Record<LeagueSlug, Record<string, { primary: s
     // crest watermark loses its edges. Every other band in the league carries
     // its accent on a darker field; this brings the blue to the same footing
     // without changing which colour it is.
-    '0013': { primary: mixHex('#1274ba', '#0b0e13', 0.3), secondary: '#d45500' },
+    //
+    // It used to hand-write `secondary: '#d45500'` too, because `colorSecondary`
+    // was a muted #d78a46 that could not carry a glow. That was a workaround for
+    // bad DATA — the crest's orange is #f68428 at 7.9%, and the config now says
+    // so. Omitting the secondary lets the derived glow through, which is the
+    // club's real orange, so its band and its palette can no longer disagree
+    // about which orange it wears.
+    '0013': { primary: mixHex('#1274ba', '#0b0e13', 0.3) },
   },
 };
 
@@ -287,7 +296,7 @@ export function buildFranchiseBandBrands(
     const directed = BAND_ART_DIRECTION[league]?.[franchiseId];
     if (directed) {
       primary = directed.primary;
-      secondary = directed.secondary;
+      if (directed.secondary) secondary = directed.secondary;
     }
     // Only a crest rendered as its LIGHT artwork can need the stroke.
     let crestFilter = team.iconDark ? undefined : strokes[franchiseId];

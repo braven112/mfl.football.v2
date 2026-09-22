@@ -15,6 +15,7 @@ import aflConfig from '../data/afl-fantasy/afl.config.json';
 import strokeManifest from '../src/data/crest-dark-stroke-manifest.json';
 import { buildFranchiseBandBrands, resolveEraCrest } from '../src/utils/franchise-band-brand';
 import { contrastRatio, AA_LARGE_TEXT_RATIO } from '../src/utils/team-color-contrast';
+import { getTeamColorSecondary } from '../src/utils/team-colors';
 import { DEFAULT_THROWBACK_ERA } from '../src/data/theleague/throwback-config';
 import { getEligibleThrowbackEras } from '../src/utils/throwback-identity';
 import {
@@ -153,7 +154,17 @@ describe('buildFranchiseBandBrands', () => {
     expect(contrastRatio(geeks, '#ffffff')).toBeGreaterThanOrEqual(
       contrastRatio('#1274ba', '#ffffff')
     );
-    expect(teams['0013'].secondary.toLowerCase()).toBe('#d45500');
+    // The glow was a hand-written #d45500 while `colorSecondary` was a muted
+    // #d78a46 that could not carry one. That was a workaround for bad DATA —
+    // the crest's orange is #f68428 at 7.9% — so the override no longer
+    // restates a secondary and the derived glow comes through instead.
+    // Asserted as "is the club's own orange", not as a literal the override
+    // owns, because the config is now the single source for which orange.
+    const geeksGlow = teams['0013'].secondary.toLowerCase();
+    expect(geeksGlow).toBe(getTeamColorSecondary('0013', 'theleague').toLowerCase());
+    const [sr, sg, sb] = [1, 3, 5].map((i) => parseInt(geeksGlow.slice(i, i + 2), 16));
+    expect(sr, `${geeksGlow} is not orange`).toBeGreaterThan(sg);
+    expect(sg).toBeGreaterThan(sb);
 
     // The two near-blacks must stay distinguishable from each other and from
     // Bring The Pain, who is genuinely just black.

@@ -101,6 +101,42 @@ Two corollaries the pass had already half-learned:
   not by any check in this repo. Reading the crop at 4× made the answer obvious
   in seconds — the buckle is plainly gold on a plainly brown strap.
 
+## The census sweep over-fires on GRADIENTS — look before you apply
+
+Running the muddy-colour filter (same hue, crest cluster ≥2%, ≥40 more chroma)
+across all forty flagged nine clubs. **Three were wrong**, and the reason is
+worth knowing because the filter cannot see it:
+
+- **Vitside Mafia** and **Jewpacabra** are painted as GRADIENTS. Vitside's
+  dragon ramps maroon → bright red, so the crest has no single "the red" — it
+  has `#74211e`, `#7c221f`, `#8c2520`, `#932620`, `#ab2a21` and `#da3121`, each
+  3-4%. The config's `#aa322b` sits mid-ramp, which is the correct
+  representative value; the filter saw only the brightest end and called the
+  middle muddy. Jewpacabra's glowing green is the same shape.
+- **Maverick**'s flagged tertiary `#ebd0a1` is the **single largest cluster in
+  its own crest at 31.8%**. The filter fired because a more saturated tan
+  exists at 3.1%. Saturation is not correctness.
+
+So the filter finds CANDIDATES, never verdicts. Before changing a value, open
+the crest. A ramp of same-hue clusters each a few percent means a gradient, and
+a mid-ramp value is right. A flagged colour that is itself a top-three cluster
+is right. What is actually wrong looks like the Micks case: the shipped value
+matches NO cluster, and the real one is a discrete, flat region of the art.
+
+The six that were real: Chatmaster's primary (`#cfad30` chroma 159 against a
+`#ffce31` that is 15.6% of the mark), Fullybaked's secondary (`#a20002`, 20.2%)
+and tertiary, Swiftie's tertiary (`#f19c90`, 13.6%), Drunk Indians' tertiary,
+No Soup's secondary (the neckerchief `#c93803`), and Gridiron Geeks' secondary.
+
+**A workaround in code is evidence of bad data.** The Geeks case had already
+been hit once: `BAND_ART_DIRECTION` carried a hand-written
+`secondary: '#d45500'` with a comment saying it "swaps the muted
+`colorSecondary` orange for the vivid one, so the accent is visible at all".
+Nobody asked why the config's orange was muted. With `#f68428` in the config
+the override no longer needs a secondary at all, and dropping it means the
+club's band and its palette cannot disagree about which orange it wears. When a
+hand-authored override exists to compensate for a colour, suspect the colour.
+
 ## Use the repo's `colorDistance`, never an ad-hoc RGB metric
 
 `src/utils/team-color-contrast.ts#colorDistance` is CIE76 ΔE in Lab space and
