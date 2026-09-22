@@ -220,5 +220,14 @@ Typecheck baseline re-measured on the merged tree: **1422**. Unit suite: only
 the 5 pre-existing `main` data failures above; pushed with
 `SKIP_PRE_PUSH_TESTS=1` for that reason.
 
-Still open before promotion: those 5 data tests, and the Owners' Poll adopt
-step at promotion.
+Data tests fixed in `9a0f4d0c04` on `staging`: the derived chain and
+top-players recomputed (chain WITHOUT `--emit-milestone-posts`, so Gridiron
+Geeks' century-club badge enters the snapshot unposted), the 2026
+`offseason-hero-data` cases moved onto a fixture feed, and `top-players-data`'s
+avg check now allows the exact-half rounding case. Full unit suite on
+`staging`: 547/547 files green. (The pre-push hook tests the primary checkout,
+not the worktree being pushed, so it still reported main's failures; pushed
+with the skip for that reason.)
+
+**Verdict now: GO**, conditional on running the Owners' Poll adopt step at
+promotion, before Thursday's close.
