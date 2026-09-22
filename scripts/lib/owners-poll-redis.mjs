@@ -96,6 +96,54 @@ export async function countBallots(redis, navSlug, year, week) {
 }
 
 /**
+ * Lift a week's LEGACY ballots into the standing hash — the cut-over, done by
+ * the passes themselves rather than by hand.
+ *
+ * Standing votes shipped mid-week (2026-09-22, 16:40 PT). The Tuesday open pass
+ * ran on the old code and opened that week's week-scoped hash, and owners voted
+ * into it until the promotion; the new code only ever reads the standing hash.
+ * `scripts/owners-poll-adopt-standing.mjs` is the one-shot for exactly this,
+ * but it needs Upstash credentials on someone's machine and it has to run
+ * before Thursday's close — a manual step on a deadline is a step that gets
+ * missed. The close and turnout passes already run with the credentials, so
+ * they call this first.
+ *
+ * Merge rule, per franchise: the legacy ballot is written only when the owner
+ * has NO standing ballot, or the legacy one is strictly newer (`updatedAt`).
+ * Never the other way round: an owner who re-voted after the promotion has a
+ * newer standing ballot, and that is their current opinion. Idempotent — a
+ * second run finds every legacy ballot already present or older, and writes
+ * nothing — so it is safe to leave in the passes until the legacy hashes stop
+ * existing.
+ *
+ * @returns {Promise<number>} how many ballots were written
+ */
+export async function adoptLegacyWeekBallots(redis, navSlug, seasonYear, week, { slots, eligibleFranchiseIds }) {
+  const legacy = await readAllBallots(redis, navSlug, ownersPollBallotsKey(navSlug, seasonYear, week), {
+    slots,
+    eligibleFranchiseIds,
+  });
+  if (legacy.ballots.length === 0) return 0;
+  const { ballots: standing } = await readStandingBallots(redis, navSlug, seasonYear, {
+    slots,
+    eligibleFranchiseIds,
+  });
+  const byFid = new Map(standing.map((b) => [b.franchiseId, b]));
+  let adopted = 0;
+  for (const ballot of legacy.ballots) {
+    const current = byFid.get(ballot.franchiseId);
+    if (current && !(Date.parse(ballot.updatedAt ?? '') > Date.parse(current.updatedAt ?? ''))) {
+      continue;
+    }
+    // Stamped on the way across, as the one-shot does: a ballot adopted INTO
+    // this season is, by construction, this season's.
+    await writeStandingBallot(redis, navSlug, seasonYear, { ...ballot, seasonYear });
+    adopted += 1;
+  }
+  return adopted;
+}
+
+/**
  * Every ballot for a week, validated.
  *
  * Anything that no longer validates is DROPPED, not repaired — see

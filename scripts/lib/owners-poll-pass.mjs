@@ -35,6 +35,7 @@ import {
   readWindow,
   clearWindow,
   readStandingBallots,
+  adoptLegacyWeekBallots,
 } from './owners-poll-redis.mjs';
 
 /**
@@ -344,6 +345,17 @@ export async function closePoll({ league, issue, compositeRankByFid, now = new D
     return null;
   }
 
+  // Cut-over: ballots cast into the week-scoped hash before standing votes
+  // shipped are lifted into the standing hash first — see
+  // adoptLegacyWeekBallots. A no-op once no legacy hash exists for the week.
+  const adopted = await adoptLegacyWeekBallots(redis, league.navSlug, window.year, window.week, {
+    slots: window.slots,
+    eligibleFranchiseIds: window.eligibleFranchiseIds,
+  });
+  if (adopted > 0) {
+    log.log?.(`  [poll] Adopted ${adopted} week-scoped ballot(s) into the standing hash.`);
+  }
+
   // Standing ballots for the SEASON, not the week. Nothing is cleared after
   // this read — every ballot keeps standing into the next snapshot until its
   // owner changes it.
@@ -526,6 +538,18 @@ export async function readTurnout({ league }) {
   // server-side in the close/nag cron and never crosses an HTTP boundary — the
   // public /api/owners-poll/turnout endpoint still uses HLEN and still cannot
   // name a voter.
+  // Same cut-over as the close pass, and it matters MORE here: this pass
+  // decides who gets nagged, and an owner whose ballot is still in the legacy
+  // week hash would be pushed "you haven't voted" about a vote they cast.
+  try {
+    await adoptLegacyWeekBallots(redis, league.navSlug, window.year, window.week, {
+      slots: window.slots,
+      eligibleFranchiseIds: window.eligibleFranchiseIds,
+    });
+  } catch (err) {
+    return { ok: false, reason: 'read-failed', error: err.message };
+  }
+
   const { ballots } = await readStandingBallots(redis, league.navSlug, window.year, {
     slots: window.slots,
     eligibleFranchiseIds: window.eligibleFranchiseIds,
