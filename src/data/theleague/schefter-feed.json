@@ -1,7 +1,47 @@
 {
-  "lastScanTimestamp": "2026-09-22T22:04:37.659Z",
+  "lastScanTimestamp": "2026-09-22T22:57:55.966Z",
   "lastProcessedMflTimestamp": "1790088875",
   "posts": [
+    {
+      "id": "sf_speculation_1790117878848_6efabae7",
+      "timestamp": "2026-09-22T22:57:55.966Z",
+      "type": "transaction",
+      "transactionSubType": "trade_speculation",
+      "tier": "rumor",
+      "headline": "Schefter speculating…",
+      "body": "🟡 The talk-radio crowd in Dead Cap country has been kicking around a blockbuster scenario: shipping franchise QB Caleb Williams to Midwestside in exchange for a pair of young wideouts in Chris Bell and Caleb Douglas. Neither front office has acknowledged the speculation, but it's the kind of youth-for-youth swap that season-ticket holders have been wondering aloud could reset both rosters if the rebuild timelines don't align. Local beat writers have noted Williams remains on various trade-bait boards, and the fit for Midwestside's receiving corps has a few fantasy analysts nodding along on morning shows.",
+      "authorId": "claude",
+      "franchiseIds": [
+        "0004",
+        "0011"
+      ],
+      "league": "theleague",
+      "link": "/theleague/front-office/trade-builder?b=0004",
+      "linkLabel": "Open in Trade Builder →",
+      "speculation": {
+        "seller": "0004",
+        "buyer": "0011",
+        "marquee": {
+          "id": "16579",
+          "name": "Williams, Caleb",
+          "position": "QB"
+        },
+        "returnPkg": [
+          {
+            "id": "17506",
+            "name": "Bell, Chris",
+            "position": "WR"
+          },
+          {
+            "id": "17599",
+            "name": "Douglas, Caleb",
+            "position": "WR"
+          }
+        ],
+        "score": 137,
+        "capRelief": false
+      }
+    },
     {
       "id": "espn_c6ee53c0728e4",
       "timestamp": "2026-09-22T21:54:27.89Z",
