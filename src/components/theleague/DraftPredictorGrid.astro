@@ -136,6 +136,24 @@ const legendComp = [
   { key: '2.17', label: 'Consolation', pick: compPick(2, 17) },
   { key: '2.18', label: 'Consolation', pick: compPick(2, 18) },
 ].map((entry) => ({ ...entry, band: entry.pick ? bandFor(entry.pick) : null }));
+
+/**
+ * The viewer's own club, for the Legend's "Your Picks" swatch.
+ *
+ * A legend that describes a mark should look like the thing it describes, and
+ * the mark is now a border on a card wearing the club's colour. Drawing the
+ * swatch as a generic grey card with a star only half said that; drawn in the
+ * viewer's OWN colours, with their crest, it is their pick card exactly.
+ *
+ * Taken from the predictions rather than the config so it needs no second
+ * lookup, and so it is `undefined` in a grid the viewer has no picks in — an
+ * AFL owner reading the other conference's board gets the generic swatch back,
+ * which is correct: none of THESE cards are theirs.
+ */
+const userPick = userTeamId
+  ? sortedPredictions.find((p) => p.franchiseId === userTeamId)
+  : undefined;
+const userBand = userPick ? bandFor(userPick) : null;
 ---
 
 <div class="draft-rounds-container">
@@ -240,13 +258,24 @@ const legendComp = [
     <div class="draft-round__picks">
       {/* User's team picks (if user has a preferred team) */}
       {userTeamId && (
-        <div class="draft-pick draft-pick--legend draft-pick--user-team">
+        <div
+          class:list={[
+            'draft-pick',
+            'draft-pick--user-team',
+            userBand ? 'draft-pick--band' : 'draft-pick--legend',
+          ]}
+          style={userBand ? teamBandStyle(userBand.band) : undefined}
+        >
           <div class="draft-pick__content">
             <div class="draft-pick__icon-container">
-              <svg viewBox="0 0 64 64" class="draft-pick__icon" style="color: #2e743d;" aria-hidden="true">
-                <circle cx="32" cy="32" r="24" fill="currentColor" opacity="0.2"/>
-                <path d="M32 16l4 12h12l-10 8 4 12-10-8-10 8 4-12-10-8h12z" fill="currentColor"/>
-              </svg>
+              {userBand && userPick?.teamIcon ? (
+                <img src={userBand.crest} alt="" class="draft-pick__icon" aria-hidden="true" />
+              ) : (
+                <svg viewBox="0 0 64 64" class="draft-pick__icon" style="color: #2e743d;" aria-hidden="true">
+                  <circle cx="32" cy="32" r="24" fill="currentColor" opacity="0.2"/>
+                  <path d="M32 16l4 12h12l-10 8 4 12-10-8-10 8 4-12-10-8h12z" fill="currentColor"/>
+                </svg>
+              )}
             </div>
             <div class="draft-pick__name">Your Picks</div>
             <div class="draft-pick__number">X.XX</div>
@@ -729,8 +758,13 @@ const legendComp = [
       font-size: 1.1rem;
     }
 
+    /* Exactly three, not `auto-fill`. At 70px minimum a 390px phone fitted
+       four, which left each card ~80px wide — narrow enough that most club
+       names wrapped to three lines and the longer ones truncated. Three is a
+       count rather than a floor, so the cards grow with the screen instead of
+       another column appearing. */
     .draft-round__picks {
-      grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+      grid-template-columns: repeat(3, 1fr);
       gap: 0.5rem;
     }
 

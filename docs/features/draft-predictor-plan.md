@@ -1,5 +1,15 @@
 # Draft Pick Predictor Feature - Implementation Plan
 
+Status: SHIPPED, and since moved. The page lives at `/{league}/draft/order`
+now (see `docs/plans/draft-hub-and-results.md`), and `DraftPredictorGrid` is
+shared by both leagues rather than being TheLeague's alone.
+
+Two components below no longer exist: `DraftPredictorView.astro` and its
+`DraftPredictorViewToggle`. The projected/actual toggle they provided was
+superseded by the order page's own view switcher, after which nothing
+imported them — they were removed in Sept 2026. The sections describing them
+are kept as a record of what was built, not as a description of the tree.
+
 ## Overview
 Create a draft pick predictor feature with two main components:
 1. A standalone draft order page showing all 51 picks in a grid view
