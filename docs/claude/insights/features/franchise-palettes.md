@@ -93,6 +93,39 @@ free-standing literals that merely referenced colours the club still owned, and
 shipped seven stale gradients into the working tree before the guard caught it.
 The doc says so plainly. It was not read first.
 
+## Changing a colour changes THREE other things, not one
+
+`broadcastGradient` (above) was the one this pass got caught by. The review of
+the same PR turned up two more, and they share a shape: a value somewhere else
+that was derived from the colour you just replaced, and that nothing
+recomputes.
+
+- **`colorPrimaryDark` / `colorSecondaryDark`** (TheLeague only) are the
+  hand-picked dark-theme substitutes `darkClaim` swaps in on every live-scoring
+  surface (`src/utils/live/model.ts`). Change `colorSecondary` without them and
+  the club wears two different identities by theme: Running down the Dream went
+  cloud grey `#9bacb3` in light and stayed the OLD tan `#d89a5f` in dark — ΔE
+  50 apart, a different colour entirely. Check whether the new value still
+  needs a dark variant at all before writing one: `#9bacb3` clears 6.88:1 on
+  the live card unaided, so the right edit was to DELETE the field and let
+  `darkClaim` fall through, not to pick a new tan.
+- **Which colour leads the hero card.** `resolveAccent` takes the first
+  candidate that clears its floors in the order **secondary → tertiary →
+  quaternary → primary**, so filling a previously-empty tertiary or quaternary
+  slot can silently demote the primary. Filling all forty palettes moved the
+  hero accent on **fourteen** franchises. Thirteen of those moved within the
+  club's own family and were improvements; the fourteenth is the one to watch
+  for, because `accent` (3:1, large type) and `accentPanel` (4.5:1, small type)
+  resolve independently and can land on **different colours**. Midwestside
+  Connection is the case: the new `#00a9e0` wins the headline, fails the
+  distinctness bound once lifted to 4.5, and lets the gold win the panel — one
+  card, blue headline, gold data panel.
+
+The cheap way to see all three at once is to resolve every franchise through
+the real utils before and after, from the two config blobs, rather than
+reasoning about any single club. That sweep is what found the fourteen; reading
+the diff found none of them.
+
 ## Guards that move with the data
 
 Filling every slot invalidated four test fixtures that were asserting the *old*

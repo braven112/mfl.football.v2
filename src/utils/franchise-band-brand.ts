@@ -275,8 +275,8 @@ export function buildFranchiseBandBrands(
     // in its brand, because pink is what reads well next to fifteen other
     // lines on a chart.
     //
-    // `colorPrimary` alone is not enough either — five TheLeague franchises
-    // and three AFL ones wear #181818 there, and a band built off it is the
+    // `colorPrimary` alone is not enough either — seven TheLeague franchises
+    // and four AFL ones wear #181818 there, and a band built off it is the
     // same identity-less near-black for all of them. Hence `anchorHue`: the
     // primary when it carries a hue at all, the secondary when it doesn't.
     const pair = resolveBandPair(getTeamColorPrimary(franchiseId, league), secondary);
