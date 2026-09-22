@@ -299,14 +299,19 @@ candidate through the same `ensureContrastOn` the resolver uses and compare for
 equality. That reports zero, and it is pinned in
 `tests/hero-franchise-backdrop.test.ts`.
 
-The ladder is now **stated on the Brand Book** (`/<league>/brand/<slug>`, in
-`FranchiseBrandPage.astro`) rather than living only in `resolveAccent`'s
-comment, because that page draws a real `CompositeHero` from the real resolver
-— so a reader can see Midwestside's hero come out blue with nothing on the page
-explaining which slot did it. `tests/hero-franchise-backdrop.test.ts` §"the
-accent ladder" pins the order behaviourally AND scans the page for the same
-string, so the prose and the resolver cannot drift apart. Mutation-checked:
-moving `colorPrimary` to the front of the candidate list fails four of them.
+The ladder is pinned behaviourally in `tests/hero-franchise-backdrop.test.ts`
+§"the accent ladder", and mutation-checked: moving `colorPrimary` to the front
+of the candidate list fails four of its cases.
+
+It was briefly **spelled out on the Brand Book** as well, with that test also
+scanning the page for the sentence. Both are gone — Brandon's call was that the
+Brand Book carries design rules and not mechanism ("the copy should focus on
+design rules and when to use each brand mark or color"), and which slot the
+resolver reaches first is mechanism. The part a reader acts on survives in the
+per-colour captions, which say what each slot is FOR. **So do not re-add a
+scan-the-page assertion:** a guard that pins product copy makes the copy
+un-editable without a test change, and the copy is the half most likely to
+change.
 
 Note when writing such a test that the accent is the winning slot **lifted** to
 clear the backdrop, never the raw hex — `#2e7d32` comes back `#58975b`. Assert
