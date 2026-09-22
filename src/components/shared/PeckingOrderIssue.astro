@@ -258,11 +258,9 @@ const methodology = issue.methodology
                 </div>
               )}
             </div>
-            <div class="pr-card__crest">
-              {team?.icon && <img class="pr-card__icon" src={team.icon} alt="" loading="lazy" width="32" height="32" />}
-            </div>
             <div class="pr-card__body">
               <h3 class="pr-card__name">
+                {team?.icon && <img class="pr-card__icon" src={team.icon} alt="" loading="lazy" width="28" height="28" />}
                 <a href={franchiseHref(row.franchiseId)}>{team?.name ?? row.franchiseId}</a>
               </h3>
               <p class="pr-card__blurb">{row.blurb}</p>
@@ -488,13 +486,12 @@ const methodology = issue.methodology
   display: grid;
   gap: 0.6rem;
 }
-/* rank | crest | text. The crest gets its OWN fixed-width column rather than
-   sitting inline with the team name, so the name, the blurb and the metric row
-   share one left edge — and a franchise with no icon file leaves an empty cell
-   instead of sliding its card out of line with the rest of the column. */
+/* rank | text. The crest sits inline with the team name rather than in its own
+   column: on a phone a dedicated crest column cost ~3rem of every blurb line.
+   The name, blurb and metric row still share one left edge. */
 .pr-card {
   display: grid;
-  grid-template-columns: 3.5rem 2rem 1fr;
+  grid-template-columns: 3.5rem 1fr;
   column-gap: 0.75rem;
   align-items: center;
   padding: 0.85rem;
@@ -530,18 +527,17 @@ const methodology = issue.methodology
 :global(html.dark) .pr-card__trend--up { color: var(--color-success-dark, #6ee7b7); }
 :global(html.dark) .pr-card__trend--down { color: var(--color-error-dark, #fca5a5); }
 .pr-card__trend--flat { color: var(--content-text-muted, #6b7280); }
-.pr-card__crest {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
 .pr-card__icon {
+  flex: none;
   border-radius: 0.25rem;
-  width: 2rem;
-  height: 2rem;
+  width: 1.75rem;
+  height: 1.75rem;
   object-fit: contain;
 }
 .pr-card__name {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   font-size: 1.05rem;
   margin: 0 0 0.25rem;
   font-weight: 700;
