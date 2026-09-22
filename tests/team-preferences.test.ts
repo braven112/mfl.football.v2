@@ -164,6 +164,27 @@ describe('Team Preferences - resolveTeamSelection', () => {
     });
     expect(result).toBe('0001');
   });
+
+  it('should return undefined when no default is given', () => {
+    // There is no implicit default. Every case above passes `defaultTeam`
+    // explicitly, which is why they kept passing while the three call sites
+    // asking for "highlight nobody" silently got '0001' instead. The full
+    // contract — including the AFL resolver's session slot and the call sites
+    // that must not smuggle a session into another slot — is pinned in
+    // tests/preferred-team-resolution-guard.test.ts.
+    expect(
+      resolveTeamSelection({
+        myTeamParam: null,
+        franchiseParam: null,
+        cookiePreference: null,
+        authUserFranchise: null,
+      })
+    ).toBeUndefined();
+  });
+
+  it('should return undefined for an explicit defaultTeam: undefined', () => {
+    expect(resolveTeamSelection({ defaultTeam: undefined })).toBeUndefined();
+  });
 });
 
 describe('Team Preferences - Cookie Operations', () => {

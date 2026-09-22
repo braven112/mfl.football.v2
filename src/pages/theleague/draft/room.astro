@@ -64,15 +64,7 @@ const pageData = buildDraftRoomData({
   leagueSlug="theleague"
   title="Draft Room | The League"
   pageData={pageData}
-  {/*
-    No default franchise: '' means "nobody", which is what a signed-out
-    visitor is. The room reads this as the viewer's own team — whose pick is
-    highlighted, and whose chair a mock pick is sent from — so defaulting it
-    to the league's first franchise sat a stranger in somebody's seat.
-    `getTheLeaguePreference` returns the whole preference OBJECT; this slot
-    takes the id, and passing the object stringified to "[object Object]" and
-    silently dropped the cookie.
-  */}
+  {/* No default franchise; cookie id, not the object. See docs/claude/rules/preferred-team.md. */}
   userTeamId={resolveTeamSelection({
     myTeamParam: Astro.url.searchParams.get('myteam'),
     cookiePreference: getTheLeaguePreference(Astro.cookies)?.franchiseId,

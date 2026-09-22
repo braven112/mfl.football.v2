@@ -236,12 +236,16 @@ describe('no call site smuggles the session through another slot', () => {
         bad.push(`  ${site.file}:${site.line}  does not import franchiseIdForLeague`);
       }
     }
+    // Title kept as one contiguous string so tests/claude-md-references.test.ts
+    // can pair it — a `' + '` split lands inside the captured quote.
+    const REGISTRY_RULE =
+      'CLAUDE.md, "League registry — never hardcode league constants"';
     expect(
       bad,
       'Both leagues have a franchise 0001, so a bare `user.franchiseId` matches ' +
-        "a TheLeague owner to an AFL roster. Derive it with " +
-        '`franchiseIdForLeague(user, league.id)` — see CLAUDE.md, "League ' +
-        'registry — never hardcode league constants":\n' + bad.join('\n')
+        'a TheLeague owner to an AFL roster. Derive it with ' +
+        `\`franchiseIdForLeague(user, league.id)\` — see ${REGISTRY_RULE}:\n` +
+        bad.join('\n')
     ).toEqual([]);
   });
 });

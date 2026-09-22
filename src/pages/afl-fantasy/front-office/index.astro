@@ -44,11 +44,9 @@ rememberAflTeamChoice(Astro.cookies, myTeamParam);
 const cookiePreference = getAFLPreference(Astro.cookies);
 
 // Priority: param > cookie > the viewer's own team > first team. The owner's
-// franchise goes in `authUserFranchise` now, its own slot — it used to be
-// smuggled through `defaultTeam`, which worked only because nothing else
-// wanted that slot, and left the page unable to express "no default" at all.
-// The panel renders ONE team's front office, so it cannot show nobody: '0001'
-// is the explicit first-team fallback, behind the viewer's own club.
+// franchise goes in `authUserFranchise`, its own slot; this panel renders ONE
+// team, so '0001' is a real fallback behind it.
+// See docs/claude/rules/preferred-team.md.
 const selectedTeamId = resolveAFLTeamSelection({
   myTeamParam,
   franchiseParam,

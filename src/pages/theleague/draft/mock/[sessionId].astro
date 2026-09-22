@@ -27,8 +27,7 @@ if (!user) return Astro.redirect(loginUrlForRequest(Astro, getLeagueBySlug('thel
 
 const leagueYear = getCurrentLeagueYear();
 
-// Brand colors drive the pick-reveal splash — rookies rarely have an NFL team
-// at draft time, so the drafting franchise tints the moment.
+// Brand colors drive the pick-reveal splash (drafting franchise tints it).
 const teams: DraftRoomTeam[] = (leagueConfigData.teams ?? []).map((team: any) => {
   const brand = getFranchiseBrand(team.franchiseId);
   return {
@@ -64,12 +63,7 @@ const pageData: DraftRoomPageData = {
   title="Mock Draft Room | The League"
   sessionId={sessionId}
   pageData={pageData}
-  {/*
-    Same two fixes as the live room: the cookie's `franchiseId`, not the whole
-    preference object, and NO default franchise. This value is the chair a
-    mock pick is sent from, so '' (nobody) is the only honest answer for a
-    viewer who has not said which team they are.
-  */}
+  {/* The chair a mock pick is sent from: no default. docs/claude/rules/preferred-team.md */}
   userTeamId={resolveTeamSelection({
     myTeamParam: Astro.url.searchParams.get('myteam'),
     cookiePreference: getTheLeaguePreference(Astro.cookies)?.franchiseId,

@@ -34,8 +34,9 @@ describe('TheLeaguePlannerPanel mounts the player modal + watch bridge once', ()
 
   it('threads signedIn from the route, derived from the viewer\'s own franchise, not the selected team', () => {
     // The panel derives it from the viewer's own franchise, which the route
-    // resolves with isAuthorizedForLeague — both leagues have a franchise 0001.
-    expect(ROUTE_SRC).toMatch(/isAuthorizedForLeague\(user, league\.id\)/);
+    // resolves with franchiseIdForLeague — both leagues have a franchise 0001,
+    // so a bare user.franchiseId would match the wrong league's owner.
+    expect(ROUTE_SRC).toMatch(/franchiseIdForLeague\(user, league\.id\)/);
     const PANEL_DATA = readFileSync('src/utils/front-office-panel-data.ts', 'utf-8');
     expect(PANEL_DATA).toMatch(/signedIn = !!viewerFranchiseId/);
   });

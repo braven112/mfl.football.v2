@@ -47,11 +47,8 @@ if (myTeamParam) {
 }
 const cookiePreference = getTheLeaguePreference(Astro.cookies);
 
-// The panel renders one team's front office, so it cannot show "nobody" —
-// hence an explicit `defaultTeam`. It sits BEHIND the viewer's own franchise,
-// so an owner still lands on their own club. '0001' is the league's first
-// franchise, named HERE rather than hidden inside the resolver, where it used
-// to override the pages that wanted nobody highlighted.
+// This panel renders ONE team, so '0001' is a real fallback, named here
+// rather than hidden in the resolver — docs/claude/rules/preferred-team.md.
 const selectedTeamId = resolveTeamSelection({
   myTeamParam,
   franchiseParam,

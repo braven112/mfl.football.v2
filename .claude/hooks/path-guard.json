@@ -1231,6 +1231,32 @@
         "tests/brand-book-routes.test.ts",
         "tests/franchise-brand-page.test.ts"
       ]
+    },
+    {
+      "name": "preferred-team",
+      "rules": "docs/claude/rules/preferred-team.md",
+      "paths": [
+        "src/utils/team-preferences.ts",
+        "src/pages/theleague/standings.astro",
+        "src/pages/theleague/playoffs.astro",
+        "src/pages/theleague/rosters.astro",
+        "src/pages/theleague/draft/order.astro",
+        "src/pages/theleague/draft/room.astro",
+        "src/pages/theleague/draft/mock/*.astro",
+        "src/pages/theleague/front-office/index.astro",
+        "src/pages/theleague/front-office/trade-builder.astro",
+        "src/pages/afl-fantasy/index.astro",
+        "src/pages/afl-fantasy/standings.astro",
+        "src/pages/afl-fantasy/playoffs.astro",
+        "src/pages/afl-fantasy/draft/order.astro",
+        "src/pages/afl-fantasy/draft/room.astro",
+        "src/pages/afl-fantasy/front-office/index.astro"
+      ],
+      "tests": [
+        "tests/preferred-team-resolution-guard.test.ts",
+        "tests/team-preferences.test.ts"
+      ],
+      "note": "Both leagues have a franchise 0001, so a wrong preferred team is a real team, not a blank. The resolver must be able to answer \"nobody\", and the session belongs in authUserFranchise."
     }
   ]
 }

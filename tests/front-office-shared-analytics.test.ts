@@ -233,7 +233,9 @@ describe('the routes stay thin wrappers', () => {
 
   it('each route owns its own auth gate and cookie write, and nothing else', () => {
     for (const src of [TL_ROUTE, AFL_ROUTE]) {
-      expect(src).toMatch(/isAuthorizedForLeague/);
+      // `franchiseIdForLeague` is the league-gated auth read (both leagues
+      // have a franchise 0001) — see docs/claude/rules/preferred-team.md.
+      expect(src).toMatch(/franchiseIdForLeague\(/);
       expect(src).toMatch(/buildFrontOfficePanelData\(/);
     }
     // A component writing Astro.cookies runs after the headers are committed
@@ -243,9 +245,12 @@ describe('the routes stay thin wrappers', () => {
   });
 
   it('the AFL resolves its own team last, behind an explicit choice', () => {
-    // param > cookie > your team > first team. Passing the viewer's
-    // franchise as `defaultTeam` is what puts it in that slot.
-    expect(AFL_ROUTE).toMatch(/defaultTeam: myFranchiseId/);
+    // param > cookie > your team > first team. The viewer's franchise goes in
+    // `authUserFranchise` — its own priority slot — not smuggled through
+    // `defaultTeam` (which would put it BEHIND the first-team fallback). See
+    // docs/claude/rules/preferred-team.md.
+    expect(AFL_ROUTE).toMatch(/authUserFranchise: myFranchiseId/);
+    expect(AFL_ROUTE).not.toMatch(/defaultTeam: myFranchiseId/);
   });
 });
 
