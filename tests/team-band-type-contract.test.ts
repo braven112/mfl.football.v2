@@ -46,7 +46,22 @@ const REM_PX = 16;
  */
 type Contract =
   | { paints: false }
-  | { paints?: true; bandText: RegExp; boldRule: RegExp; cssFile?: string };
+  | { paints?: true; bandText: RegExp; boldRule: RegExp; cssFile?: string }
+  /**
+   * A surface that paints a fill but puts NO text on it — the band is behind a
+   * crest, a swatch or an icon, and every glyph stays on the card.
+   *
+   * This is not a weaker version of the contract above, it is a DIFFERENT
+   * claim, and a checkable one: the suite asserts the band's selectors declare
+   * no `font-size` at all. That is what makes it safe to skip the 18.66px
+   * floor, because the floor only exists to justify measuring ink at 3:1 — and
+   * where there is no ink on the fill there is nothing to measure.
+   *
+   * It must not become the easy way out. A surface that wants small text on a
+   * fill does not belong here; it needs ink measured at the 4.5:1 body floor,
+   * which is a change to `team-band.ts` and re-derives eight AFL clubs' fills.
+   */
+  | { paints?: true; bandText: RegExp; textOnFill: false; cssFile?: string };
 
 const CONTRACTS: Record<string, Contract> = {
   'components/theleague/standings/StandingsTable.astro': {
@@ -71,6 +86,13 @@ const CONTRACTS: Record<string, Contract> = {
   'components/theleague/TransactionHubModal.astro': {
     bandText: /thm-worow--band/,
     boldRule: /:global\(\.thm-worow--band\)\s*\{([^}]*)\}/,
+  },
+  // The draft order grid's pick plates. Text-free by necessity, not by taste:
+  // the tile's own background is how its four status marks work, and its type
+  // is 14.2px/16.5px/11.8px in a 100px-wide tile, which cannot reach 18.66px.
+  'components/theleague/DraftPredictorGrid.astro': {
+    bandText: /draft-pick--band/,
+    textOnFill: false,
   },
   // Resolve-only: they attach bands to a team list that other surfaces paint.
   'utils/transaction-hub-config.ts': { paints: false },
@@ -156,17 +178,34 @@ describe('team band — the type keeps the contrast measurement valid', () => {
     if (contract.paints === false) continue;
     describe(file, () => {
       const css = readFileSync(resolve(SRC, contract.cssFile ?? file), 'utf8');
+      const textFree = 'textOnFill' in contract && contract.textOnFill === false;
 
-      it('declares band type at 18.66px or larger, at every breakpoint', () => {
-        const sizes = bandFontSizes(css, contract.bandText);
-        expect(sizes.length).toBeGreaterThan(0);
-        const tooSmall = sizes
-          .filter((s) => s.px < LARGE_TEXT_PX)
-          .map((s) => `${s.selector} → ${s.px}px`);
-        expect(tooSmall).toEqual([]);
-      });
+      it(
+        textFree
+          ? 'puts no text on the fill at all, which is why the floor does not apply'
+          : 'declares band type at 18.66px or larger, at every breakpoint',
+        () => {
+          const sizes = bandFontSizes(css, contract.bandText);
+          if (textFree) {
+            // The whole basis of this entry. A `font-size` appearing in a band
+            // selector means glyphs moved onto the fill, and the ink behind
+            // them was never measured for text that small.
+            expect(sizes.map((s) => `${s.selector} → ${s.px}px`)).toEqual([]);
+            return;
+          }
+          expect(sizes.length).toBeGreaterThan(0);
+          const tooSmall = sizes
+            .filter((s) => s.px < LARGE_TEXT_PX)
+            .map((s) => `${s.selector} → ${s.px}px`);
+          expect(tooSmall).toEqual([]);
+        },
+      );
 
       it('sets that text bold, which the large-text floor also requires', () => {
+        // Narrowed on the property rather than on `textFree`: that flag is a
+        // runtime check TypeScript cannot use to discriminate the union, and
+        // reading `contract.boldRule` behind it is two type errors.
+        if (!('boldRule' in contract)) return;
         const rule = contract.boldRule.exec(css);
         expect(rule, `expected ${contract.boldRule} to match a rule in ${file}`).not.toBeNull();
         const weight = /font-weight:\s*(\d+)/.exec(rule![1]);
@@ -176,10 +215,15 @@ describe('team band — the type keeps the contrast measurement valid', () => {
 
       it('reads both themes from the band, never just one', () => {
         // A surface that sets --band-fill without its dark counterpart renders
-        // the light-theme fill on a dark card, where the ink was measured
-        // against a different colour than the one on screen.
+        // the light-theme fill on a dark card, where the fill was lifted for a
+        // different surface than the one it is sitting on. True of every
+        // painting surface, text or no text.
         if (!/var\(--band-fill\)/.test(css)) return;
         expect(css).toMatch(/var\(--band-fill-dark\)/);
+        // The ink pair is only owed where ink is actually drawn. A text-free
+        // plate consumes no ink, and demanding it would push a surface into
+        // declaring a colour it never paints.
+        if (textFree) return;
         expect(css).toMatch(/var\(--band-ink-dark\)/);
       });
     });

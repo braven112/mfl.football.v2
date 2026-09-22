@@ -6,6 +6,8 @@
  */
 
 import type { DraftPrediction } from '../../types/standings';
+import type { LeagueSlug } from '../../types/nav';
+import { resolveTeamBand, teamBandStyle, bandCrestSrc, BAND_INK_LIGHT } from '../../utils/team-band';
 
 export interface Props {
   predictions: DraftPrediction[];
@@ -15,6 +17,13 @@ export interface Props {
   championshipDetermined?: boolean; // Whether overall championship has been decided
   championLabel?: string; // Label for the reserved last pick: 'League Champion' (theLeague) or 'Conference Champion' (AFL)
   userTeamId?: string; // User's preferred team for highlighting their picks
+  /**
+   * Which league's franchise colours the pick plates read. REQUIRED, and not
+   * decoration: this one component renders both leagues' order pages, and both
+   * leagues have a franchise `0001`, so an unscoped lookup paints an AFL pick
+   * in TheLeague Pigskins' red.
+   */
+  league: LeagueSlug;
 }
 
 const {
@@ -24,8 +33,41 @@ const {
   hasCompensatoryPicks = true,
   championshipDetermined = false,
   championLabel = 'League Champion',
-  userTeamId = ''
+  userTeamId = '',
+  league
 } = Astro.props;
+
+/**
+ * The club's colour behind the crest, and NOT behind the text.
+ *
+ * The tile's own background is how all four status marks already work
+ * (`--league-winner` gold, `--toilet-bowl` red, `--champion` orange,
+ * `--user-team` green), so the colour cannot take that slot without deleting
+ * the thing the grid exists to show.
+ *
+ * It also must not: band ink is measured at WCAG's 3:1 LARGE-TEXT floor, which
+ * is only earned at >=18.66px bold, and this tile's type is 14.2px
+ * (`__name`), 16.5px (`__number`) and 11.8px (`__label`) at this site's 18.9px
+ * root. A 100px-wide tile cannot carry "Midwestside Connection" at 19px, so
+ * painting the whole tile would void the measurement rather than pass it.
+ *
+ * So the plate holds the crest alone and every glyph stays on the card — the
+ * same split as the Pecking Order's rank chip. `tests/team-band-type-contract`
+ * records that as this surface's declared contract.
+ *
+ * Returns null for a pick with no franchise (the TBD compensatory tiles, which
+ * carry no crest at all) so those keep the card surface and their dashed edge.
+ */
+function plateFor(pick: DraftPrediction) {
+  if (!pick.franchiseId) return null;
+  const band = resolveTeamBand(pick.franchiseId, league);
+  return {
+    band,
+    // The crest sits on the FILL, which is the club's colour in both themes, so
+    // the cut is chosen by that fill and never by the reader's theme.
+    crest: bandCrestSrc(pick.teamIcon, league, band.ink === BAND_INK_LIGHT),
+  };
+}
 
 // Sort predictions by overall pick number
 const sortedPredictions = [...predictions].sort(
@@ -82,11 +124,14 @@ const specialPicksAssigned = hasCompensatoryPicks ? {
       <div class="draft-round">
         <h3 class="draft-round__title">{roundTitle}</h3>
         <div class="draft-round__picks">
-          {roundPicks.map((pick) => (
+          {roundPicks.map((pick) => {
+            const plate = plateFor(pick);
+            return (
             <div
               class:list={[
                 'draft-pick',
                 {
+                  'draft-pick--band': !!plate,
                   'draft-pick--league-winner': pick.isLeagueWinner,
                   'draft-pick--toilet-bowl': pick.isToiletBowlPick,
                   'draft-pick--champion': isChampionPick(pick) && hasChampion,
@@ -94,13 +139,14 @@ const specialPicksAssigned = hasCompensatoryPicks ? {
                   'draft-pick--user-team': userTeamId && pick.franchiseId === userTeamId,
                 },
               ]}
+              style={plate ? teamBandStyle(plate.band) : undefined}
               title={`${pick.teamName} - Pick ${pick.round}.${pick.pickInRound}`}
             >
               <div class="draft-pick__content">
                 <div class="draft-pick__icon-container">
                   {pick.teamIcon && (
                     <img
-                      src={pick.teamIcon}
+                      src={plate ? plate.crest : pick.teamIcon}
                       alt={pick.teamName}
                       class="draft-pick__icon"
                     />
@@ -123,7 +169,8 @@ const specialPicksAssigned = hasCompensatoryPicks ? {
                 )}
               </div>
             </div>
-          ))}
+            );
+          })}
 
           {/* Compensatory picks for theLeague only */}
           {hasCompensatoryPicks && round === 1 && !specialPicksAssigned['1.17'] && (
@@ -407,6 +454,29 @@ const specialPicksAssigned = hasCompensatoryPicks ? {
 
   .draft-pick--special {
     box-shadow: 0 0 0 1px rgba(167, 139, 250, 0.2);
+  }
+
+  /* --- The club's colour behind the crest ------------------------------- */
+  /* Scoped to `--band` so it reaches real pick tiles only: the TBD
+     compensatory tiles carry no crest at all, and the Legend's tiles put an
+     inline SVG swatch in this same container — neither is a franchise, and
+     neither should grow a plate. No `font-size` belongs in any of these rules;
+     the plate deliberately carries no text (see `plateFor`). */
+  .draft-pick--band .draft-pick__icon-container {
+    width: 100%;
+    height: 46px;
+    border-radius: 7px;
+    background-color: var(--band-fill);
+  }
+  :global(html.dark) .draft-pick--band .draft-pick__icon-container {
+    background-color: var(--band-fill-dark);
+  }
+  /* `bandCrestSrc` already chose the cut from the FILL, which is the club's
+     colour in both themes. TeamIconDarkStyles is a global
+     `html.dark img[src="<light>"]` rule, so without this it would override that
+     choice after sunset and put a dark-card crest on a light plate. */
+  :global(html.dark) .draft-pick--band .draft-pick__icon {
+    content: normal;
   }
 
   /* Dark mode: section-level round containers (and the reused Legend block)

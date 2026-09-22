@@ -285,6 +285,7 @@ const selectedTeamId = resolveTeamSelection({
           {view === 'projected' && (
             <DraftPredictorGrid
               predictions={sortedPredictions}
+              league="theleague"
               userTeamId={selectedTeamId}
               championshipDetermined={!!leagueWinnerId}
             />
@@ -292,6 +293,7 @@ const selectedTeamId = resolveTeamSelection({
           {view === 'final' && finalPredictions.length > 0 && (
             <DraftPredictorGrid
               predictions={finalPredictions}
+              league="theleague"
               userTeamId={selectedTeamId}
               championshipDetermined={!!leagueWinnerId}
             />
