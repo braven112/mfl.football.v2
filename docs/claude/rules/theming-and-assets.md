@@ -73,8 +73,9 @@ Pecking Order shipped invisible rank numbers in dark mode (August 2026).
   top (deep-ink composite heroes, pick-reveal, dead-money) — different contrast
   question, different rule; see the player-headshot section below.
 - A fill whose ink is NOT assumed to be white is a third case again, and it has
-  its own helper: `resolveTeamBand` (`src/utils/team-band.ts`), used by the
-  division standings' colour rows. See "Team bands" below.
+  its own helpers: `resolveTeamBand` and `resolveTeamBandForBodyText`
+  (`src/utils/team-band.ts`) — the second for a surface whose type is under
+  18.66px bold. See "Team bands" below, including which floor to pick.
 - `tests/team-accent-css.test.ts` fails the build if any franchise in any league
   falls under 3:1 in either theme, or if the layout drops `TeamAccentStyles`.
 
@@ -84,27 +85,49 @@ Pecking Order shipped invisible rank numbers in dark mode (August 2026).
 
 `resolveTeamBand` / `teamBandStyle` (`src/utils/team-band.ts`) paint a row,
 card, chip or panel in a franchise's own colour and put legible text ON it —
-the division standings' colour rows and the Pecking Order's rank chip today. Reach for
-it instead of `--team-accent-<id>` whenever the brand colour IS the surface —
-the accent token is floored for FOREGROUND use and would hand back a shifted
-colour, which is the opposite of what a fill wants.
+the division standings' rows, the Pecking Order's rank chip, the waiver ladder,
+the transaction hub and the draft order grid today. Reach for it instead of
+`--team-accent-<id>` whenever the brand colour IS the surface — the accent token
+is floored for FOREGROUND use and would hand back a shifted colour, which is the
+opposite of what a fill wants.
 
 It is also NOT `toBroadcastPair` / `darkenForWhiteText` / `ensureFieldOn`: all
 three are hard-wired to WHITE ink and only ever move the fill to protect it.
 That is right for a deep-ink hero and wrong for a standings row, because three
 AFL clubs wear a near-white primary and two wear a gold that white ink fails
-outright. A band flips its INK instead, white-first, and moves the fill only
-when neither ink works — which no franchise in any league currently needs.
+outright. A band picks its INK per club instead, and moves the fill only as far
+as that ink needs.
 
-- **The 3:1 floor is a claim about the TYPE.** The ink is measured at WCAG's
-  large-text floor, which is only valid while every text node on the band stays
-  ≥18.66px bold. At the 4.5:1 body floor, eight AFL clubs flip to dark ink.
-  `tests/team-band-type-contract.test.ts` holds every band surface to that, by
-  registry rather than by scanning one file: a new importer of the util fails
-  the suite until it declares which of its selectors carry text on the fill, and
-  any declared selector whose font-size drops under the floor, at any
-  breakpoint, fails it too. Without that, a later tidy-up back toward 12px cells
-  takes a whole surface sub-AA with nothing going red.
+- **TWO floors, and picking the wrong one is silent.** `resolveTeamBand`
+  measures ink at WCAG's 3:1 LARGE-TEXT floor, which is a claim about the TYPE:
+  it is only valid while every text node on the band stays ≥18.66px bold. A
+  surface with smaller type calls `resolveTeamBandForBodyText` instead, which
+  measures at 4.5:1 — the draft order grid's 101px cards, whose lines are
+  14.2px, 16.5px and 11.8px, could never have reached 18.66px.
+  `tests/team-band-type-contract.test.ts` holds every band surface to one or the
+  other, by registry rather than by scanning one file. A new importer of the util
+  fails the suite until it declares its FLOOR: a `large` surface must keep every
+  declared selector ≥18.66px and bold at every breakpoint, and a `body` surface
+  is checked against its SOURCE — it must actually call
+  `resolveTeamBandForBodyText`, because declaring the body floor while resolving
+  at the large one is the whole bug the registry exists to prevent.
+- **Dark ink needs AAA, not AA — `DARK_INK_COMFORT_RATIO`.** AA is a luminance
+  quotient and cannot express "is this fill actually light": a mid-tone clears
+  4.5:1 against near-black while still being dark enough that the eye wants
+  light text. Seven AFL clubs sat exactly there (Dicks out for Harambe 4.89:1
+  up to Balls Deep 5.84) and read badly on a phone while passing every test.
+  The league's fills separate with a gap and nothing in it — comfortable from
+  8.36:1 up, uncomfortable from 5.84 down — so dark ink is allowed only above
+  7:1, and white carries everything else, moving the fill as far as white needs.
+  Dark ink is NOT a fallback and never competes on drift: "dark would move the
+  fill less" is not a reason to use it.
+- **That test does not depend on the floor, so a club wears the SAME ink
+  everywhere.** Raising a surface's floor can only move the FILL. This is what
+  stops one franchise reading white in the standings and near-black in the draft
+  grid, which shipped briefly and was caught on a phone rather than by a test.
+  Pinned by `tests/team-band.test.ts` § "wears the SAME ink at both floors";
+  eight clubs pay for it by darkening up to ΔE 16 at the body floor, with a
+  ceiling of 20 because ~25 is where two colours stop being shades of each other.
 - **Both themes are resolved together and handed to CSS as custom properties.**
   `--band-fill` / `--band-ink` with `--band-fill-dark` / `--band-ink-dark`, and
   the stylesheet picks under `html.dark`. Same reason as everything else here:
@@ -122,14 +145,29 @@ when neither ink works — which no franchise in any league currently needs.
   Chatmaster's gold band gets a crest cut for a dark card after sunset. This is
   the same conclusion `franchise-band-brand.ts` reaches from the opposite
   direction (its surface is ink in both themes, so the dark cut always wins).
-- **A marker drawn on a band must sit ON the fill.** The ink is measured
-  against the fill and nothing else, so a "your team" edge drawn against the
-  CARD inherits no guarantee — the Pigskins' marker was white ink on a white
-  card, i.e. invisible, until it moved inside the row.
+- **Anything drawn on a band must sit ON the fill, not against the card.** The
+  ink and the club's secondary are measured against the FILL and nothing else,
+  so an edge drawn at the row's outer boundary inherits no guarantee. Three
+  shapes of "your team" marker proved it in one evening: a white ink ring
+  invisible on the Pigskins' white card; a `border-right` in the club's
+  secondary that vanished for seven clubs on the white card (`#e9e9e9`, 1.21:1)
+  and sixteen on the dark one (`#181818`, 1.17:1); and a bar floated inside the
+  fill, which worked for all 40 and was still one line too many. The banded
+  standings row now carries NO marker at all — deliberately, and pinned by
+  `tests/team-band-preferred-marker.test.ts`, because "no marker" reads as an
+  oversight and the obvious re-add is the border that looks right on whichever
+  club you happen to be signed in as.
+- **A status mark on a banded surface has to live somewhere the band does not
+  paint.** The draft order grid's four marks survived being banded only because
+  each was already a BORDER; their background tints are painted over and appear
+  nowhere. So a legend showing those tints is describing a page that no longer
+  exists — it demonstrates the border instead, and the "your picks" swatch is
+  drawn in the viewer's own club colours so it IS their card.
 
 `tests/team-band.test.ts` is a census: every franchise, every league, both
-themes, both floors. Re-colouring a club or adding a league is checked by the
-build rather than by whoever next opens that division page.
+themes, both floors, plus the AAA check on every dark-ink band. Re-colouring a
+club or adding a league is checked by the build rather than by whoever next
+opens that division page.
 
 ## `broadcastGradient` — the one franchise color that is NOT derived
 
