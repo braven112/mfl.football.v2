@@ -1,0 +1,39 @@
+---
+/**
+ * Private proposal — /theleague/admin/proposal
+ *
+ * Thin wrapper: league-scoped admin gate + layout. The document text lives in
+ * Redis, never in this public repo (src/utils/private-doc.ts), and both
+ * leagues' admin pages read the same copy. View + editor:
+ * components/shared/PrivateDocView.astro.
+ */
+export const prerender = false;
+
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import PrivateDocView from '../../../components/shared/PrivateDocView.astro';
+import { getAuthUser, isCommissionerOrAdmin, isAuthorizedForLeague } from '../../../utils/auth';
+import { loginUrlForRequest, forbiddenPathFor } from '../../../utils/login-redirect';
+import { getLeagueBySlug } from '../../../config/leagues';
+import { handlePrivateDocRequest } from '../../../utils/private-doc';
+
+Astro.response.headers.set('Cache-Control', 'private, no-store');
+Astro.response.headers.set('X-Robots-Tag', 'noindex, nofollow');
+
+// League-scoped gate: commissioner/admin AND the session must belong to
+// TheLeague — an AFL commissioner's session must not open this league's admin page.
+const user = getAuthUser(Astro.request);
+const theLeague = getLeagueBySlug('theleague');
+if (!user) return Astro.redirect(loginUrlForRequest(Astro, getLeagueBySlug('theleague')!));
+if (!theLeague) return Astro.redirect('/theleague');
+if (!isCommissionerOrAdmin(user) || !isAuthorizedForLeague(user, theLeague.id)) {
+  return Astro.rewrite(forbiddenPathFor(theLeague, isCommissionerOrAdmin(user) ? 'league' : 'commissioner'));
+}
+
+const result = await handlePrivateDocRequest('proposal', Astro.request, Astro.url);
+if (result.kind === 'forbidden') return new Response('Cross-origin request refused.', { status: 403 });
+if (result.kind === 'redirect') return Astro.redirect(result.location, 303);
+---
+
+<TheLeagueLayout title="Proposal — Admin">
+  <PrivateDocView state={result.state} path={Astro.url.pathname} />
+</TheLeagueLayout>
