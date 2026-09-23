@@ -91,7 +91,7 @@ import {
   getFrozenSalaryAveragesYear,
 } from '../../utils/salary-calculations';
 import { getAuthUser, franchiseIdForLeague } from '../../utils/auth';
-import { getAllActivity, getActivityLevel, formatLastSeen } from '../../utils/owner-activity';
+import { resolveOwnerPresence } from '../../utils/rosters/owner-presence';
 import { resolveThrowbackRequestState } from '../../utils/throwback-request-state';
 import { resolveRosterHeaderSkin } from '../../utils/roster-header-skin';
 import fs from 'fs';
@@ -1884,18 +1884,7 @@ const headerMoney = (n: number) =>
    so a slow store degrades to no chip rather than a hung render, and resolved
    PER CLUB so the chip rides in the swap templates instead of being written
    into one place from JavaScript. */
-let ownerActivityMap: Record<string, number> = {};
-try {
-  ownerActivityMap = await Promise.race([
-    getAllActivity(THELEAGUE_ID),
-    new Promise<Record<string, number>>((_, reject) =>
-      setTimeout(() => reject(new Error('Redis timeout')), 3000)),
-  ]);
-} catch { /* Redis unavailable or timed out — the chip simply does not print */ }
-const ownerSeenFor = (franchiseId: string) => {
-  const at = ownerActivityMap[franchiseId] ?? null;
-  return at ? { level: getActivityLevel(at), text: formatLastSeen(at) } : null;
-};
+const ownerSeenFor = await resolveOwnerPresence(THELEAGUE_ID);
 // Marks which Front Office strip item is current — presentational only,
 // independent of the client-side view-tab switching below.
 const frontOfficeCurrent = Astro.url.searchParams.get('view') === 'planner' ? 'league-planner' : 'rosters';
