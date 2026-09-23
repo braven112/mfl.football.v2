@@ -1,7 +1,28 @@
 {
-  "lastScanTimestamp": "2026-09-23T06:03:59.363Z",
-  "lastProcessedMflTimestamp": "1790088875",
+  "lastScanTimestamp": "2026-09-23T07:03:44.064Z",
+  "lastProcessedMflTimestamp": "1790144999",
   "posts": [
+    {
+      "id": "sf_1790144999_lcs6",
+      "timestamp": "2026-09-23T06:29:59.000Z",
+      "type": "transaction",
+      "transactionSubType": "TRADE",
+      "tier": "breaking",
+      "headline": "Cowboy Up and Bring The Pain complete 4-asset trade",
+      "body": "BREAKING: League sources tell me Cowboy Up and Bring The Pain have agreed to a blockbuster trade! Cowboy Up acquires the Denver Broncos defense and a 2027 3rd-round pick, while Bring The Pain lands Patrick Carlson, Daniel, and Cowboy Up's 2027 2nd-round pick. Boom! This one just went down!",
+      "franchiseIds": [
+        "0014",
+        "0008"
+      ],
+      "playerIds": [
+        "0511",
+        "13718"
+      ],
+      "sourceTimestamp": "1790144999",
+      "tradeSignature": "0008:0014|0511,13718,FP_0008_2027_3,FP_0014_2027_2",
+      "league": "theleague",
+      "analysis": "This is a classic depth-for-assets move—Cowboy Up beefs up their defense while Bring The Pain gains flexibility with multiple picks and position players. Grade: B+ for both sides, though Bring The Pain slightly edges it with that 2nd-rounder haul."
+    },
     {
       "id": "wire_50009432",
       "timestamp": "2026-09-23T00:42:33Z",
@@ -5237,14 +5258,13 @@
         "17518"
       ],
       "observedBlock": [
-        "0511",
         "16187",
         "16626",
         "17076",
         "17518"
       ],
-      "firstChangeTs": null,
-      "lastChangeTs": null
+      "firstChangeTs": 1790147027817,
+      "lastChangeTs": 1790147027817
     },
     "0013": {
       "committedBlock": [],
