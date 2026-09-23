@@ -12,7 +12,7 @@ export const prerender = false;
 import TheLeagueLayout from '../../../../layouts/TheLeagueLayout.astro';
 import { getAuthUser, isCommissionerOrAdmin, isAuthorizedForLeague } from '../../../../utils/auth';
 import { loginUrlForRequest, forbiddenPathFor } from '../../../../utils/login-redirect';
-import { getLeagueBySlug, SHARED_APP_ORIGIN } from '../../../../config/leagues';
+import { buildHostToSlugMap, getLeagueBySlug, SHARED_APP_ORIGIN } from '../../../../config/leagues';
 import { getRedis } from '../../../../utils/redis-client';
 import {
   ESPN_LEAGUE_ID,
@@ -48,6 +48,12 @@ if (Astro.request.method === 'POST') {
   }
 }
 
+// The upload page lives on the MFL app host, never on a league's own domain
+// (theleague.us rewrites every path under /theleague). Anywhere else — the app
+// host itself, a preview deployment, localhost — the link stays on this origin,
+// so a preview's link opens that preview's upload page, not production's.
+const uploadOrigin = buildHostToSlugMap()[Astro.url.hostname] ? SHARED_APP_ORIGIN : Astro.url.origin;
+
 const redisAvailable = Boolean(await getRedis());
 const imports = await listEspnImports();
 const rows = await Promise.all(
@@ -55,7 +61,7 @@ const rows = await Promise.all(
     const snaps = await listSnapshots(imp.leagueId);
     return {
       ...imp,
-      link: new URL(`/history/import/${imp.token}`, SHARED_APP_ORIGIN).href,
+      link: new URL(`/history/import/${imp.token}`, uploadOrigin).href,
       snapshots: snaps.length,
       seasons: [...new Set(snaps.map((s) => s.seasonId))].sort((a, b) => b - a),
     };
