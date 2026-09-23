@@ -1,6 +1,6 @@
 /**
- * Private documents on the shared app host — owner-only pages whose TEXT
- * never enters this repository.
+ * Private admin documents — commissioner-only pages whose TEXT never enters
+ * this repository.
  *
  * WHY THE CONTENT LIVES IN REDIS AND NOT IN A FILE. This repository is public
  * on GitHub. A page gated by login still ships its source to anyone who reads
@@ -9,19 +9,13 @@
  * the page does at request time. The page is code; the document is data, kept
  * under `private-doc:<slug>` and written only through the page's own form.
  *
- * WHO CAN READ IT. `PRIVATE_DOC_OWNERS` — a comma-separated list of MFL
- * usernames, compared case-insensitively against the signed session's
- * `name`. It is an env var rather than a literal because a username is half a
- * credential, and this file is public. Unset or empty means NOBODY: the gate
- * fails closed, so a missing env renders a 404, never the document.
- *
- * Session `name` is the username the owner typed at MFL sign-in
- * (`src/pages/api/auth/login.ts`), carried in the signed JWT — it is not
- * client-controllable (see `getAuthUser`).
+ * WHO CAN READ IT. The routes decide, not this file: each league's
+ * `/<league>/admin/proposal` wrapper runs the standard league admin gate
+ * (`isCommissionerOrAdmin` + `isAuthorizedForLeague`), the same one every
+ * other `/admin/*` page uses. Both leagues read the SAME document.
  */
 
 import { getRedis } from './redis-client';
-import type { AuthUser } from './auth';
 
 /** The documents that exist. A slug outside this list is a 404, never a new key. */
 export const PRIVATE_DOC_SLUGS = ['proposal'] as const;
@@ -38,29 +32,6 @@ export interface PrivateDoc {
 
 export function isPrivateDocSlug(value: string | undefined): value is PrivateDocSlug {
   return typeof value === 'string' && (PRIVATE_DOC_SLUGS as readonly string[]).includes(value);
-}
-
-/** Parse the owner list. Empty entries are dropped so `"a,,b,"` cannot admit a blank name. */
-export function parsePrivateDocOwners(raw: string | undefined | null): string[] {
-  if (!raw) return [];
-  return raw
-    .split(',')
-    .map((name) => name.trim().toLowerCase())
-    .filter(Boolean);
-}
-
-/**
- * May this session read and edit private documents? Fails closed on a missing
- * session, a missing name, or an unset owner list.
- */
-export function isPrivateDocOwner(
-  user: AuthUser | null,
-  rawOwners: string | undefined | null = process.env.PRIVATE_DOC_OWNERS,
-): boolean {
-  if (!user) return false;
-  const name = (user.name ?? '').trim().toLowerCase();
-  if (!name) return false;
-  return parsePrivateDocOwners(rawOwners).includes(name);
 }
 
 const keyFor = (slug: PrivateDocSlug) => `private-doc:${slug}`;
@@ -85,4 +56,61 @@ export async function savePrivateDoc(slug: PrivateDocSlug, markdown: string): Pr
   const doc: PrivateDoc = { markdown, updatedAt: new Date().toISOString() };
   await redis.set(keyFor(slug), doc);
   return { ok: true, doc };
+}
+
+/** Everything the shared view needs, after an optional save. */
+export interface PrivateDocPageState {
+  doc: PrivateDoc | null;
+  redisAvailable: boolean;
+  editing: boolean;
+  justSaved: boolean;
+  draft: string | null;
+  saveError: string | null;
+}
+
+export type PrivateDocPageResult =
+  | { kind: 'redirect'; location: string }
+  | { kind: 'forbidden' }
+  | { kind: 'render'; state: PrivateDocPageState };
+
+/**
+ * Handle one request to a private document route: save on POST
+ * (Post/Redirect/Get, same-origin only), then read for render. Call ONLY after
+ * the route's own auth gate has passed — this function does no auth.
+ *
+ * The session cookie is SameSite=Lax, which already keeps it off a cross-site
+ * POST; the Origin check is belt and braces.
+ */
+export async function handlePrivateDocRequest(
+  slug: PrivateDocSlug,
+  request: Request,
+  url: URL,
+): Promise<PrivateDocPageResult> {
+  let draft: string | null = null;
+  let saveError: string | null = null;
+
+  if (request.method === 'POST') {
+    const origin = request.headers.get('origin');
+    if (origin && origin !== url.origin) return { kind: 'forbidden' };
+    const form = await request.formData();
+    const markdown = String(form.get('markdown') ?? '').replace(/\r\n?/g, '\n');
+    const result = await savePrivateDoc(slug, markdown);
+    if (result.ok) return { kind: 'redirect', location: `${url.pathname}?saved=1` };
+    saveError = result.error;
+    draft = markdown;
+  }
+
+  const redisAvailable = Boolean(await getRedis());
+  const doc = await readPrivateDoc(slug);
+  return {
+    kind: 'render',
+    state: {
+      doc,
+      redisAvailable,
+      editing: draft !== null || url.searchParams.get('edit') === '1' || !doc,
+      justSaved: url.searchParams.get('saved') === '1',
+      draft,
+      saveError,
+    },
+  };
 }

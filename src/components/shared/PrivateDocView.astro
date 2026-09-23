@@ -1,0 +1,181 @@
+---
+/**
+ * The private document view + editor, shared by every league's
+ * `/<league>/admin/proposal` route. Pure render: the routes own the auth gate,
+ * the save and the redirect (`handlePrivateDocRequest`), because
+ * `Astro.redirect()` only redirects from a page.
+ *
+ * No client script — editing is a plain form POST back to the route.
+ */
+import { PRIVATE_DOC_MAX_CHARS, type PrivateDocPageState } from '../../utils/private-doc';
+import { renderMarkdown } from '../../utils/mini-markdown';
+
+interface Props {
+  state: PrivateDocPageState;
+  /** The route's own path, for the Cancel link. */
+  path: string;
+}
+
+const { state, path } = Astro.props;
+const { doc, redisAvailable, editing, justSaved, draft, saveError } = state;
+const html = doc ? renderMarkdown(doc.markdown) : '';
+const updated = doc
+  ? new Date(doc.updatedAt).toLocaleString('en-US', {
+      timeZone: 'America/Los_Angeles',
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }) + ' PT'
+  : null;
+---
+
+<div class="private-doc">
+  <div class="private-doc__bar">
+    <span class="private-doc__badge">Private · commissioners only</span>
+    {updated && <span class="private-doc__meta">Last saved {updated}</span>}
+    {doc && !editing && <a class="private-doc__action" href="?edit=1">Edit</a>}
+    {doc && editing && <a class="private-doc__action" href={path}>Cancel</a>}
+  </div>
+
+  {justSaved && !editing && <p class="private-doc__notice" role="status">Saved.</p>}
+  {!redisAvailable && (
+    <p class="private-doc__notice private-doc__notice--warn" role="alert">
+      Storage is not configured in this environment, so nothing can be read or saved here.
+    </p>
+  )}
+  {saveError && <p class="private-doc__notice private-doc__notice--warn" role="alert">{saveError}</p>}
+
+  {editing ? (
+    <form method="post" class="private-doc__form">
+      <label for="private-doc-markdown">
+        {doc ? 'Edit the document (Markdown)' : 'Nothing saved yet — paste the document (Markdown) and save.'}
+      </label>
+      <textarea
+        id="private-doc-markdown"
+        name="markdown"
+        rows="30"
+        maxlength={PRIVATE_DOC_MAX_CHARS}
+        spellcheck="true"
+      >{draft ?? doc?.markdown ?? ''}</textarea>
+      <button type="submit" disabled={!redisAvailable}>Save</button>
+    </form>
+  ) : (
+    <article class="private-doc__body" set:html={html} />
+  )}
+</div>
+
+<style>
+  .private-doc {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 16px 16px 64px;
+    color: var(--page-text);
+  }
+  .private-doc__bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 16px;
+    margin-bottom: 16px;
+    font-size: 0.875rem;
+  }
+  .private-doc__badge {
+    font-weight: 600;
+    color: var(--league-accent);
+  }
+  .private-doc__meta {
+    color: var(--content-text-muted);
+  }
+  .private-doc__action {
+    margin-left: auto;
+    font-weight: 600;
+    color: var(--color-primary);
+  }
+  .private-doc__notice {
+    padding: 8px 12px;
+    border: 1px solid var(--color-border-subtle);
+    border-left: 4px solid var(--color-success);
+    border-radius: 6px;
+    background: var(--color-surface-3);
+  }
+  .private-doc__notice--warn {
+    border-left-color: var(--league-accent);
+  }
+  .private-doc__form {
+    display: grid;
+    gap: 12px;
+  }
+  .private-doc__form textarea {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 60vh;
+    padding: 12px;
+    font: 0.875rem/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: var(--page-text);
+    background: var(--page-bg);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: 6px;
+  }
+  .private-doc__form button {
+    justify-self: start;
+    padding: 8px 20px;
+    font-weight: 600;
+    color: var(--page-bg);
+    background: var(--page-text);
+    border: 0;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .private-doc__form button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .private-doc__body {
+    line-height: 1.6;
+  }
+  .private-doc__body :global(h1) {
+    font-size: 1.75rem;
+    margin: 0 0 12px;
+  }
+  .private-doc__body :global(h2) {
+    font-size: 1.375rem;
+    margin: 32px 0 8px;
+    padding-top: 16px;
+    border-top: 1px solid var(--color-border-subtle);
+  }
+  .private-doc__body :global(h3) {
+    font-size: 1.125rem;
+    margin: 24px 0 8px;
+  }
+  .private-doc__body :global(.table-scroll) {
+    overflow-x: auto;
+    margin: 12px 0;
+  }
+  .private-doc__body :global(table) {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9375rem;
+  }
+  .private-doc__body :global(th),
+  .private-doc__body :global(td) {
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: top;
+    border-bottom: 1px solid var(--color-border-subtle);
+  }
+  .private-doc__body :global(th) {
+    background: var(--color-surface-3);
+    font-weight: 600;
+  }
+  .private-doc__body :global(ul.tasks) {
+    list-style: none;
+    padding-left: 4px;
+  }
+  .private-doc__body :global(a) {
+    color: var(--color-primary);
+  }
+  .private-doc__body :global(code) {
+    padding: 1px 4px;
+    border-radius: 4px;
+    background: var(--color-surface-3);
+  }
+</style>

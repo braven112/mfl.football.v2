@@ -1,64 +1,28 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import {
-  isPrivateDocOwner,
-  isPrivateDocSlug,
-  parsePrivateDocOwners,
-} from '../src/utils/private-doc';
+import { isPrivateDocSlug } from '../src/utils/private-doc';
 import { renderInline, renderMarkdown } from '../src/utils/mini-markdown';
-import type { AuthUser } from '../src/utils/auth';
 
-const user = (name: string): AuthUser => ({
-  id: 'x',
-  name,
-  franchiseId: '0001',
-  leagueId: '1',
-  role: 'owner',
-});
-
-describe('private doc owner gate', () => {
-  it('fails closed when the owner list is unset or blank', () => {
-    expect(isPrivateDocOwner(user('someone'), undefined)).toBe(false);
-    expect(isPrivateDocOwner(user('someone'), '')).toBe(false);
-    expect(isPrivateDocOwner(user('someone'), ' , ,')).toBe(false);
-  });
-
-  it('refuses a missing session and a blank username even when the list has blanks', () => {
-    expect(isPrivateDocOwner(null, 'alice')).toBe(false);
-    expect(isPrivateDocOwner(user(''), 'alice,,')).toBe(false);
-    expect(isPrivateDocOwner(user('  '), 'alice')).toBe(false);
-  });
-
-  it('matches usernames case-insensitively and trims', () => {
-    expect(isPrivateDocOwner(user('Alice'), ' alice , bob')).toBe(true);
-    expect(isPrivateDocOwner(user('bob'), 'alice,BOB')).toBe(true);
-    expect(isPrivateDocOwner(user('carol'), 'alice,bob')).toBe(false);
-    expect(isPrivateDocOwner(user('ali'), 'alice')).toBe(false);
-  });
-
-  it('parses the list without empty entries', () => {
-    expect(parsePrivateDocOwners('a,,B ,')).toEqual(['a', 'b']);
-  });
-
-  it('only known slugs resolve, so the URL cannot mint Redis keys', () => {
+describe('private doc slugs', () => {
+  it('only known slugs resolve, so nothing can mint new Redis keys', () => {
     expect(isPrivateDocSlug('proposal')).toBe(true);
     expect(isPrivateDocSlug('anything-else')).toBe(false);
     expect(isPrivateDocSlug(undefined)).toBe(false);
   });
 });
 
-describe('private doc route', () => {
-  const route = readFileSync(
-    path.resolve(__dirname, '../src/pages/private/[slug].astro'),
-    'utf8',
-  );
+describe.each(['theleague', 'afl-fantasy'])('/%s/admin/proposal route', (slug) => {
+  const route = readFileSync(path.resolve(__dirname, `../src/pages/${slug}/admin/proposal.astro`), 'utf8');
 
-  it('gates in the route: owner check before any read of the document', () => {
-    const gate = route.indexOf('isPrivateDocOwner(user)');
-    const read = route.indexOf('readPrivateDoc(slug)');
+  it('runs the league admin gate before touching the document', () => {
+    const gate = route.indexOf('isAuthorizedForLeague(user,');
+    const commish = route.indexOf('isCommissionerOrAdmin(user)');
+    const doc = route.indexOf('handlePrivateDocRequest(');
     expect(gate).toBeGreaterThan(-1);
-    expect(read).toBeGreaterThan(gate);
+    expect(commish).toBeGreaterThan(-1);
+    expect(doc).toBeGreaterThan(gate);
+    expect(route).toContain(`getLeagueBySlug('${slug}')`);
   });
 
   it('is never cached or indexed', () => {
