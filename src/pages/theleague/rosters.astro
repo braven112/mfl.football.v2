@@ -1112,34 +1112,6 @@ const eligFranchises = (eligibilityYearStr === currentLeagueYearStr && cachedRos
     })()
   : staticEligFranchises;
 
-// Compute top-10 positional salary averages for team option calculations.
-// Built from live roster data (all franchises) so it's always accurate.
-const teamOptionSalaries: Record<string, number> = {};
-if (Array.isArray(eligFranchises)) {
-  const positionSalaries: Record<string, number[]> = {};
-  for (const franchise of eligFranchises) {
-    const players = (Array.isArray(franchise.player)
-      ? franchise.player
-      : [franchise.player].filter(Boolean)
-    ).filter((p: any) => p?.id);
-    for (const player of players) {
-      const info = eligPlayersMap.get(player.id);
-      const pos = info?.position?.toUpperCase() ?? '';
-      const salary = parseFloat(player.salary) || 0;
-      if (pos && salary > 0) {
-        positionSalaries[pos] ??= [];
-        positionSalaries[pos].push(salary);
-      }
-    }
-  }
-  for (const [pos, salaries] of Object.entries(positionSalaries)) {
-    const top10 = salaries.sort((a, b) => b - a).slice(0, 10);
-    teamOptionSalaries[pos] = top10.length
-      ? Math.round(top10.reduce((a, b) => a + b, 0) / top10.length)
-      : 0;
-  }
-}
-
 // Compute eligibility for all teams
 const eligibilityByTeam: Record<string, Record<string, any>> = {};
 // Use frozen salary averages (pre-week-14 freeze uses prior season) for tag/extension math
