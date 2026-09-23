@@ -137,6 +137,42 @@ numbers. For SVG ink use an alpha bounding box over rendered pixels: `getBBox()`
 excludes stroke, and the halo on every `-dark` badge *is* a stroke.
 <!-- /CURATED-HEAD -->
 
+## 2026-09-23 - A Contrast Floor Is Only Real Against The Ink You Actually Paint
+
+**Context:** The roster header's plate went from a gradient to one flat club
+colour. `ensureContrastOn(brand.primary, background, AA_BODY_TEXT_RATIO)` moves
+the colour away from the background until it clears the ratio, so the plate fill
+was floored at 4.5:1 and the copy on it declared AA. The floor was taken against
+`#ffffff`.
+
+**Insight:** The plate does not paint `#ffffff`. Its ink is `ROSTER_PLATE_INK`,
+`#f2f5f8` — a near-white that is measurably darker, and the difference is enough
+to land the result at ~4.3:1 while every check in the code says 4.5. Nothing
+fails: `ensureContrastOn` returns happily, the guard tests pass, and the surface
+reads fine to the author who picked the near-white precisely because it looked
+like white. The bug is that the floor was computed against a colour that appears
+nowhere in the rendered output.
+
+The general shape: `ensureContrastOn(colour, background, ratio)` is only a
+guarantee about the pair you hand it. Pass the token or literal that the
+surface ACTUALLY renders, and emit both halves from the same module so a later
+edit to one cannot silently invalidate the other — the header exports
+`ROSTER_PLATE_INK` next to `resolveRosterHeaderSkin` and the component reads
+`var(--rhdr-plate-ink, #f2f5f8)` from it, rather than restating a near-white in
+the stylesheet.
+
+**Evidence:** Measured on the roster nameplate, 2026-09-23. Floored against
+`#ffffff` the fill cleared 4.5:1 by construction but measured 4.30:1 against the
+ink on screen; re-floored against `#f2f5f8` it measures 4.52:1. Same class as
+the 2026-09-19 entry below — an accent and its hardcoded halo drifting — except
+here the two values never agreed in the first place.
+
+**Recommendation:** When calling any contrast helper, ask what colour the ink
+is, not what colour it resembles. If the answer is a constant, export it from
+the module that does the flooring and have the CSS read it back; if it is a
+token, resolve the token. "White-ish" is not white, and the gap is bigger than
+the margin most AA calls have to spare.
+
 ## 2026-09-19 - On A Fixed-Dark Band, A Token Accent And Its Hardcoded Halo Drift Apart
 
 **Context:** the splash's new Live Scoring band is dark in both themes (`#14161a`,

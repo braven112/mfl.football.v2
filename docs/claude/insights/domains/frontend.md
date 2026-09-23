@@ -131,6 +131,65 @@ hrefs to local copies, and open it in the bundled Chromium — it isolates
 "wrong bytes" from "device failing to apply right bytes" in minutes.
 <!-- /CURATED-HEAD -->
 
+## 2026-09-23 — One-At-A-Time Without JavaScript: Radios Plus `:has()`
+
+The roster header's team switcher ships no client script at all — that is what
+removes the ClientRouter bind-once-per-session bug class rather than guarding
+it (`tests/rosters-team-nav-clientrouter.test.ts`). Then the AFL's 24 crests
+plus six division labels stopped fitting a desktop column, and the row scrolled
+sideways with the last division off screen. "Show one conference at a time" is
+the obvious fix and sounds like a script.
+
+It is not. A radio per section, rendered BEFORE the sections so `~` can reach
+them, with each section's rail as its `<label for>`:
+
+```css
+.rhdr-teams:has(.rhdr-teams__radio) .rhdr-teams__divisions { display: none; }
+.rhdr-teams__radio:nth-of-type(1):checked ~ .rhdr-teams__conf:nth-of-type(1) .rhdr-teams__divisions,
+.rhdr-teams__radio:nth-of-type(2):checked ~ .rhdr-teams__conf:nth-of-type(2) .rhdr-teams__divisions {
+  display: flex;
+}
+```
+
+Four things that are load-bearing rather than style:
+
+- **`nth-of-type`, not `nth-child`** — the sections are siblings of the radios,
+  so `nth-child` counts both and every pairing is off by the radio count.
+- **The collapse rule is scoped through `:has()`**, so a single-section league
+  (TheLeague, one table, no radios) never hides its own content. Asking the DOM
+  beats a class the server guessed.
+- **Hide the radios with `clip-path`, never `display: none`** — the latter drops
+  them from the tab order and makes the rails unreachable by keyboard.
+- **A collapsed section needs `flex: none`.** Left at `flex: 1 0 auto` it keeps
+  its share of the row while showing nothing, leaving a dead band between the
+  two rails.
+
+Same family as the existing head rule that a control whose only job is
+switching a URL param should be an `<a href>`: reach for markup that already
+has the semantics before reaching for a listener. Radios enforce "exactly one
+open" for free, which is the actual requirement.
+
+## 2026-09-23 — A Right-Anchored Decoration And The Thing It Hides Behind Need One Breakpoint
+
+The roster plate's oversized crest watermark is offset from the right so it
+sits behind the featured-player card and clear of the club name. The featured
+card is hidden below 900px, because at that width the name and the scoreboard
+own the row. The watermark's offset was not, so every phone rendered a
+half-cropped crest jammed against the right edge with dead colour on the left —
+a layout that only makes sense in the presence of an element that is no longer
+there.
+
+The two rules are one decision and belong in the same `@media` block. When the
+element a decoration is positioned AROUND disappears at a breakpoint, the
+decoration's anchor is stale from that pixel on. `tests/roster-header-conference-row.test.ts`
+pins the pair: the mobile block must carry both, and the watermark must switch
+to `left: 50%` + `right: auto` + `translate(-50%, -50%)` — `right: auto` is
+required and not tidiness, since the desktop rule sets `right` and an element
+with both offsets plus a `width: auto` stretches instead of centring.
+
+Worth checking for whenever `display: none` appears in a media query: grep what
+else positions itself relative to that element.
+
 ## 2026-09-21 — A React island does not carry its own stylesheet
 
 Rendering a real component outside the page it normally lives on needs its CSS

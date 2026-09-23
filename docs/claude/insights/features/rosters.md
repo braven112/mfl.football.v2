@@ -1,3 +1,87 @@
+## 2026-09-23 - The Roster Header, And Four Things That Only Showed Up In A Browser
+
+**Context:** Replacing both leagues' forked roster team cards with one shared
+header (`src/components/shared/roster-header/`). Everything below was found by
+rendering the thing, not by reading the diff — the unit suite and the parity
+harness were green through all four.
+
+**Insight:**
+
+**1. A week-shaped rail drops half a doubleheader.** The season rail was one
+mark per WEEK. TheLeague opens 2026 with three doubleheader weeks and runs a
+fourth in week 12; the AFL runs two. `franchiseSchedule` returns an ARRAY per
+week, and taking `[0]` silently discards the other game — which is how a 1-1
+club showed two wins on its own header. The rail is per GAME now, and both
+tiles render a row per game with the week's record in the kicker. Any per-week
+UI on this site has to ask whether the league plays two that week; the answer is
+in the schedule, never in the week number.
+
+**2. "Now" has to be able to be absent.** `currentWeek` was `getCurrentWeek()`
+— today's NFL week — applied to whatever season was on screen. On a completed
+season that reports "Week 2 · Final" as the last result and leaves weeks 3-18
+looking unplayed, because a bounded search finds the last game BEFORE week 2.
+It is null off the live season now, and every consumer treats null as "this
+season is history". Same shape as the doubleheader bug: a value correct for the
+live season applied to one it does not describe.
+
+**3. A prop shape copied by hand hides the real type.** `RosterHeader` declared
+`throwback?: { throwbackActive?: boolean; throwbackOverrides?: Record<string, any> }`,
+hand-written to match what `buildFranchiseBandBrands` takes. The real option is
+`Record<string, ThrowbackPick | number>`, and the nameplate below it did not
+declare the prop at all — three `astro check` errors that the ratchet counted
+and nobody read. Importing `BuildFranchiseBandBrandsOptions` cleared all three.
+A prop that forwards to a function should be typed as that function's parameter,
+not described again: the description is a copy that cannot be kept honest.
+
+**4. A stale NodeList corrupts the club name on the way back.** TheLeague's
+in-place switcher parks each club's nameplate in a `<template>`. A helper that
+had captured `document.querySelectorAll('[data-team-name]')` at init wrote into
+nodes that were no longer in the document, so switching away and back rendered
+the previous club's name under the new club's crest. The fix was deleting the
+helper — the header now re-renders from the template — and the guard asserts
+the page holds no query for markup the switcher swaps.
+
+**Evidence:** All four shipped green through 13,000+ unit tests and a 12-render
+parity harness. The rail bug was reported from a screenshot ("Pigskins has 2
+green but is one and one"); the historical-season bug was found by clicking the
+AFL's year picker; the type bug surfaced only because the ratchet moved by 3
+after a rebase; the name bug needed clicking through four clubs and back.
+
+**Recommendation:** For a surface that summarizes a season, walk it at both
+ends — a live week AND a finished season — and click every control twice. The
+harnesses on this page prove the TABLE is unchanged, which is exactly why they
+were silent about a header that had not existed before.
+
+## 2026-09-23 - Comparing Against A Moving `staging` Without A Worktree
+
+**Context:** The parity harness needs a baseline from the branch's own base, and
+`staging` now moves several times an hour (roster syncs, Schefter scans). A
+baseline captured yesterday reports drift that is just new scores.
+
+**Insight:** The 2026-08-28 entry below is right that a worktree needs its own
+install — the symlinked `node_modules` trap reproduced exactly as described,
+doubled path and all. But for a BASELINE capture there is a cheaper route that
+avoids the worktree entirely: check the base out in the working tree itself
+(`git checkout --detach origin/staging`), let the running dev server reload,
+capture, then check the branch back out and capture again. One server, one
+install, no second port.
+
+Two conditions make it safe: commit or stash first (the checkout will refuse
+otherwise, which is the failure you want), and give the server a few seconds
+plus a real request before capturing — a capture fired into a reloading server
+records `ERR_CONNECTION_REFUSED` on half its pages and reads as a page error
+rather than a timing one.
+
+**Evidence:** 2026-09-23. A stale baseline reported 405 cell diffs that were
+entirely injury designations and points moving under a sync; a same-tree
+recapture of `origin/staging` at the branch's real base returned 12/12
+identical. The first attempt at the worktree route failed on the symlink trap,
+costing more time than the whole recapture.
+
+**Recommendation:** Worktree when you need both versions running AT ONCE.
+Same-tree checkout when you only need two captures in sequence, which is what a
+before/after parity comparison actually is.
+
 ## 2026-08-28 - Comparing A Branch Against Main Needs A Real Install, Not A Symlinked One
 
 **Context:** Proving the roster split was render-identical to the *current*
