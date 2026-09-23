@@ -780,7 +780,8 @@
         "src/components/shared/roster-header/*.astro",
         "src/utils/roster-header-data.ts",
         "src/utils/roster-header-skin.ts",
-        "src/utils/throwback-request-state.ts"
+        "src/utils/throwback-request-state.ts",
+        "src/utils/rosters/*.ts"
       ],
       "tests": [
         "tests/cross-league-init-gate.test.ts",
@@ -791,7 +792,8 @@
         "tests/rosters-team-nav-clientrouter.test.ts",
         "tests/weekly-results-matchup-guard.test.ts",
         "tests/roster-header-throwback.test.ts",
-        "tests/roster-header-conference-row.test.ts"
+        "tests/roster-header-conference-row.test.ts",
+        "tests/rosters-live-odds.test.ts"
       ]
     },
     {
