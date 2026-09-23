@@ -213,13 +213,14 @@ git merge --ff-only origin/staging
 git push origin main
 ```
 
-Then tag it, so the week is addressable — for a bisect, a rollback, or an
-answer to "what shipped that Tuesday?":
-
-```bash
-git tag -a "v$(date +%Y.%m.%d)" -m "Release $(date +%Y-%m-%d)"
-git push origin "v$(date +%Y.%m.%d)"
-```
+**Do not tag.** The release used to be tagged `vYYYY.MM.DD`, and the tag push
+was what published the week's article. Agent sessions cannot push tags (HTTP
+403 on 2026-09-18 and again on 2026-09-22, when branch pushes from the same
+credentials succeeded), so that step failed both times and both weeks' articles
+went unpublished. Step 8 now dispatches the rollup directly. The release stays
+addressable through its record: Step 9 writes the exact commit range into
+`docs/claude/releases/`, which answers "what shipped that Tuesday?" just as a
+tag would.
 
 Return to the branch you were on. Do not leave the checkout sitting on `main`.
 
@@ -238,12 +239,26 @@ touched any of it: Redis writes (expand/contract is what makes them
 survivable), MFL writes, notifications already sent, and data files a cron has
 since rewritten.
 
-## Step 8: Announce — automatic now, but verify it
+## Step 8: Announce — dispatch the rollup, then verify it
 
-**Step 6's tag is what publishes the article.** `weekly-changelog-rollup.yml`
-fires on `push: tags: ['v*']`, so the release's What's New article and its
-`site-update` notification go out on the back of the tag you just pushed. You do
-not dispatch anything.
+Dispatch `weekly-changelog-rollup.yml` on `main` once Step 7 has confirmed
+production is up — never before, or the article can land ahead of the code it
+describes:
+
+```bash
+gh workflow run weekly-changelog-rollup.yml --ref main
+```
+
+No `gh` in the session: use the GitHub MCP `actions_run_trigger` with
+`run_workflow`, `workflow_id: weekly-changelog-rollup.yml`, `ref: main`. A 403
+("Resource not accessible by integration") means the Claude GitHub App lacks
+**Actions: write**. Say so and ask the user to grant it; do not route around it.
+
+A dispatched run publishes exactly as a tag push would: `changelog-rollup-gate.mjs`
+gates only SCHEDULED runs, so a `workflow_dispatch` always publishes. It reads
+`main`'s staging queue, which Step 6 just brought in. (The workflow still
+accepts a `v*` tag push, so a human who tags by hand gets the same result.
+Don't do both, because the second run finds the id taken and stands down.)
 
 What to verify, because it is a cron-shaped job and nobody watches those:
 
@@ -253,7 +268,7 @@ What to verify, because it is a cron-shaped job and nobody watches those:
   article's real URL before the notification goes out and prints a `::warning::`
   if it gave up — that warning means owners may have been notified a minute
   before the page resolved, not that anything is broken.
-- If a Monday cron already published this week's article, the tag-triggered run
+- If a Monday cron already published this week's article, the dispatched run
   finds the id taken and stands down, PRESERVING the queue. That should not
   happen — `scripts/changelog-rollup-gate.mjs` makes the cron yield whenever a
   release is pending — but if it does, the release's entries roll to the next
@@ -262,7 +277,8 @@ What to verify, because it is a cron-shaped job and nobody watches those:
 ## Step 9: Report
 
 State, in this order: what shipped (the commit range and the features),
-the tag, that production is up and verified, anything the blackout or review
+that production is up and verified, the rollup run and the article it
+published, anything the blackout or review
 flagged and how it was resolved, and anything deliberately left on `staging`.
 
 Then record the release in

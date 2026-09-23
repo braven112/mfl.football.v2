@@ -1,0 +1,48 @@
+name: Weekly Changelog Push (resend)
+
+# Re-sends this week's What's New `site-update` notification WITHOUT re-running
+# the rollup.
+#
+# The rollup (weekly-changelog-rollup.yml) sends the push only on the run that
+# publishes the article: a second rollup run finds the week's id taken and
+# stands down, notify step included. So when the publish happened but the push
+# did not — 2026-09-23, when the repo secret CRON_SECRET was empty and
+# push-weekly-changelog.mjs logged "not sent (no secret)" for both leagues —
+# there was no way to send it short of a hand-run with the secret on someone's
+# machine. This is that hand-run, on the credentials Actions already has.
+#
+# Manual only: a schedule here would double-notify every week. The script reads
+# the week's article back out of whats-new.json by id, so it sends exactly what
+# the rollup would have sent, and nothing when no article was published.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Print the notifications instead of sending them'
+        type: boolean
+        default: false
+
+concurrency:
+  group: weekly-changelog-rollup
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: main
+
+      - name: Setup pnpm + Node + install
+        uses: ./.github/actions/setup
+
+      - name: Notify owners (site-update)
+        run: node ./scripts/push-weekly-changelog.mjs ${{ inputs.dry_run && '--dry-run' || '' }}
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
