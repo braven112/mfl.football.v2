@@ -9,7 +9,7 @@ import type {
   ToiletBowlResult,
 } from '../types/standings';
 
-interface TeamConfig {
+export interface TeamConfig {
   id: string;
   name: string;
   icon?: string;

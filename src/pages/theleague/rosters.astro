@@ -92,13 +92,11 @@ import {
 } from '../../utils/salary-calculations';
 import { getAuthUser, franchiseIdForLeague } from '../../utils/auth';
 import { resolveOwnerPresence } from '../../utils/rosters/owner-presence';
+import { buildDraftAssets } from '../../utils/rosters/draft-assets';
 import { resolveThrowbackRequestState } from '../../utils/throwback-request-state';
 import { resolveRosterHeaderSkin } from '../../utils/roster-header-skin';
 import fs from 'fs';
 import path from 'path';
-import { calculateDraftOrder, buildActualDraftPicks, convertActualPicksToPredictions } from '../../utils/draft-utils';
-import { extractToiletBowlWinners, extractLeagueChampion } from '../../utils/toilet-bowl-utils';
-import { convertAssetsToPredictions, isValidAssetsData, extractAssetsFromTransactions } from '../../utils/assets-utils';
 import {
   getTheLeaguePreference,
   setTheLeaguePreference,
@@ -982,12 +980,6 @@ const draftNextYear = draftSeasonYear + 1;
 // Get last fetched timestamp from meta file
 const fetchMeta = loadFeedJson(currentLeagueYear, 'fetch.meta.json');
 const lastFetched = fetchMeta?.lastFetched ? new Date(fetchMeta.lastFetched) : null;
-let draftPredictions = [];
-let actualDraftPicks = [];
-let assetsPredictions = [];
-let toiletBowlWinners = [];
-let assetTeamIds: string[] = [];
-
 // Load standings and bracket data for draft predictions (from the season that was played)
 const standingsKey = Object.keys(standingsFeeds).find(
   (path) => extractFeedSeason(path) === String(draftSeasonYear)
@@ -1002,88 +994,35 @@ const draftResultsData = loadFeedJson(draftNextYear, 'draftResults.json');
 // Load transactions from season year to extract trade information
 const transactionsData = loadFeedJson(draftSeasonYear, 'transactions.json');
 
-if (standingsData?.leagueStandings?.franchise) {
-  // Build team config map with icons and banners
-  const teamConfigMap = new Map(
-    teamsList.map((team) => [
-      team.id,
-      {
-        id: team.id,
-        name: team.name,
-        icon: team.icon,
-        banner: team.banner,
-      },
-    ])
-  );
-
-  // Extract toilet bowl winners from bracket (optional - only needed for special picks)
-  if (bracketData) {
-    toiletBowlWinners = extractToiletBowlWinners(bracketData);
-  }
-
-  // Extract league champion from playoff bracket (same as draft-predictor)
-  const leagueWinnerId = bracketData ? extractLeagueChampion(bracketData) : '';
-
-  // Calculate draft order (with champion at pick 16)
-  draftPredictions = calculateDraftOrder(
-    standingsData.leagueStandings.franchise,
-    teamConfigMap,
-    leagueWinnerId,
-    toiletBowlWinners
-  );
-
-  // Extract actual draft assets from draft results if available
-  if (draftResultsData) {
-    actualDraftPicks = buildActualDraftPicks(draftResultsData, teamConfigMap);
-  }
-
-  // Current-year draft assets: prefer actual MFL draft data (authoritative pick numbers)
-  // over transaction-based computation which can miscalculate positions
-  if (actualDraftPicks.length > 0) {
-    assetsPredictions = convertActualPicksToPredictions(actualDraftPicks, teamConfigMap);
-  } else if (transactionsData) {
-    // Fallback: compute from transactions when draft results aren't available yet
-    const assetsData = extractAssetsFromTransactions(transactionsData, standingsData, draftNextYear, draftPredictions);
-    if (isValidAssetsData(assetsData)) {
-      assetsPredictions = convertAssetsToPredictions(assetsData, teamConfigMap);
-    }
-  }
-}
-
-assetTeamIds = Array.from(new Set(assetsPredictions.map((p) => p.franchiseId))).filter(Boolean);
-if (defaultTeamId && !assetTeamIds.includes(defaultTeamId)) {
-  assetTeamIds.unshift(defaultTeamId);
-}
-
 // --- League Planner: Phase + Free Agent Needs ---
+// Resolved BEFORE the draft assets because the phase decides whether the
+// year-after card is built at all, and that is one flag on one call rather
+// than a second pass that recomputes the first year to reach the second.
 const testDateParam = Astro.url?.searchParams?.get('testDate');
 const plannerRefDate = testDateParam ? new Date(testDateParam) : undefined;
 const plannerPhase = getPlannerPhase(plannerRefDate && !isNaN(plannerRefDate.getTime()) ? plannerRefDate : undefined);
 
-// Compute 2027 draft assets when dual draft cards are shown
-let assets2027Predictions: any[] = [];
-let asset2027TeamIds: string[] = [];
-if (plannerPhase.showDualDraftCards && transactionsData && standingsData?.leagueStandings?.franchise) {
-  const teamConfigMap2027 = new Map(
-    teamsList.map((team) => [
-      team.id,
-      {
-        id: team.id,
-        name: team.name,
-        icon: team.icon,
-        banner: team.banner,
-      },
-    ])
-  );
-  const assets2027Data = extractAssetsFromTransactions(transactionsData, standingsData, draftNextYear + 1, draftPredictions);
-  if (isValidAssetsData(assets2027Data)) {
-    assets2027Predictions = convertAssetsToPredictions(assets2027Data, teamConfigMap2027);
-  }
-  asset2027TeamIds = Array.from(new Set(assets2027Predictions.map((p: any) => p.franchiseId))).filter(Boolean);
-  if (defaultTeamId && !asset2027TeamIds.includes(defaultTeamId)) {
-    asset2027TeamIds.unshift(defaultTeamId);
-  }
-}
+// Feeds stay here (import.meta.glob is relative to this file); the derivation
+// is a pure function of them — src/utils/rosters/draft-assets.ts.
+const draftAssets = buildDraftAssets({
+  teams: teamsList,
+  standingsData,
+  bracketData,
+  draftResultsData,
+  transactionsData,
+  draftNextYear,
+  defaultTeamId,
+  includeFollowingYear: plannerPhase.showDualDraftCards,
+});
+const {
+  draftPredictions,
+  actualDraftPicks,
+  assetsPredictions,
+  toiletBowlWinners,
+  assetTeamIds,
+  followingYearPredictions: assets2027Predictions,
+  followingYearTeamIds: asset2027TeamIds,
+} = draftAssets;
 
 // Free agent needs analysis for each team
 const faNeedsLeagueYear = String(currentLeagueYear);
