@@ -214,3 +214,73 @@ describe('top-players derived payload', () => {
     expect(afl.endWeek).not.toBe(tl.endWeek);
   });
 });
+
+/**
+ * The committed payload has to be recomputed BY THE JOB THAT MOVES ITS INPUTS.
+ *
+ * `compute:top-players` has always been a prebuild step, so production renders
+ * a fresh leaderboard on every build and the page itself was never wrong. The
+ * file in the REPO is what drifted: `roster-sync.yml` commits a new
+ * `rosters.json` ~35 times a day and nothing recomputed the derived file
+ * beside it, so the ownership assertions above went red on `main`, on
+ * `staging` and on every open branch from the first sync after any manual
+ * recompute. Three separate PRs "fixed" it by recomputing by hand; each went
+ * red again inside the hour, because a recompute is only ever valid against
+ * the rosters it was computed from.
+ *
+ * That file is not decoration — `pnpm dev`, every preview build (the slim
+ * prebuild skips this step and reads the committed artifact) and this suite
+ * all read it.
+ */
+describe('the roster sync recomputes what it invalidates', () => {
+  const WORKFLOW = readFileSync(
+    resolve(process.cwd(), '.github/workflows/roster-sync.yml'),
+    'utf-8',
+  );
+
+  it('runs both leagues’ Top Players computation', () => {
+    expect(WORKFLOW, 'the sync commits rosters.json; it must recompute what derives from it')
+      .toMatch(/pnpm run compute:top-players\b/);
+    expect(WORKFLOW, 'the AFL has its own leaderboard and its own week range')
+      .toMatch(/pnpm run compute:top-players:afl\b/);
+  });
+
+  it('runs it through the package scripts prebuild uses, not a second invocation', () => {
+    // One definition of how this runs. A raw `node ./scripts/compute-top-players.mjs`
+    // here would drift from prebuild's arguments the first time either changed.
+    expect(WORKFLOW).not.toMatch(/node \.\/scripts\/compute-top-players\.mjs/);
+  });
+
+  it('recomputes BEFORE the commit step, or the fresh file misses the push', () => {
+    const recompute = WORKFLOW.indexOf('pnpm run compute:top-players');
+    const commit = WORKFLOW.indexOf('uses: ./.github/actions/commit-push');
+    expect(recompute).toBeGreaterThan(-1);
+    expect(commit).toBeGreaterThan(-1);
+    expect(recompute, 'a recompute after the push lands in the NEXT run’s commit')
+      .toBeLessThan(commit);
+  });
+
+  it('commits the output it just wrote', () => {
+    // `add-paths: data/` covers data/<league>/derived/top-players.json. If that
+    // list is ever narrowed, the recompute becomes a no-op that runs 35×/day.
+    const addPaths = WORKFLOW.match(/add-paths:\s*'([^']+)'/)?.[1] ?? '';
+    expect(addPaths).toMatch(/(^|\s)data\//);
+  });
+
+  it('adds no commits to a quiet run — every commit to main is a production build', () => {
+    // The churn rule (tests/cron-commit-churn.test.ts): a run that found
+    // nothing must commit nothing. This step is safe to add at cron frequency
+    // only because the writer skips unchanged payloads and the payload carries
+    // no run clock to defeat that. Both halves are asserted, because either
+    // one alone would turn ~35 syncs a day into ~35 production builds.
+    const script = readFileSync(
+      resolve(process.cwd(), 'scripts/compute-top-players.mjs'),
+      'utf-8',
+    );
+    expect(script).toMatch(/writeJsonIfChanged\(OUTPUT_PATH, output\)/);
+    const payloadKeys = script.match(/const output = \{([\s\S]*?)\n\};/)?.[1] ?? '';
+    expect(payloadKeys, 'a generatedAt here would make every sync commit').not.toMatch(
+      /generatedAt|computedAt|updatedAt|timestamp/i,
+    );
+  });
+});
