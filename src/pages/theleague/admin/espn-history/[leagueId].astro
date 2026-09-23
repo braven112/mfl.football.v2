@@ -1,0 +1,132 @@
+---
+/**
+ * ESPN History pilot preview — /theleague/admin/espn-history/<espnLeagueId>
+ *
+ * Admin-only look at what the uploads translated into: each season's
+ * champion, standings and weekly results, plus the raw snapshots on file.
+ * The public history pages come later; this proves the translation first.
+ */
+export const prerender = false;
+
+import TheLeagueLayout from '../../../../layouts/TheLeagueLayout.astro';
+import { getAuthUser, isCommissionerOrAdmin, isAuthorizedForLeague } from '../../../../utils/auth';
+import { loginUrlForRequest, forbiddenPathFor } from '../../../../utils/login-redirect';
+import { getLeagueBySlug } from '../../../../config/leagues';
+import {
+  ESPN_LEAGUE_ID,
+  getEspnImport,
+  listSnapshots,
+  readSeasonSummaries,
+  sortStandings,
+} from '../../../../utils/espn-history';
+
+Astro.response.headers.set('Cache-Control', 'private, no-store');
+Astro.response.headers.set('X-Robots-Tag', 'noindex, nofollow');
+
+const user = getAuthUser(Astro.request);
+const theLeague = getLeagueBySlug('theleague');
+if (!user) return Astro.redirect(loginUrlForRequest(Astro, getLeagueBySlug('theleague')!));
+if (!theLeague) return Astro.redirect('/theleague');
+if (!isCommissionerOrAdmin(user) || !isAuthorizedForLeague(user, theLeague.id)) {
+  return Astro.rewrite(forbiddenPathFor(theLeague, isCommissionerOrAdmin(user) ? 'league' : 'commissioner'));
+}
+
+const leagueId = Astro.params.leagueId ?? '';
+const record = ESPN_LEAGUE_ID.test(leagueId) ? await getEspnImport(leagueId) : null;
+if (!record) return Astro.rewrite('/_not-found');
+
+const seasons = await readSeasonSummaries(leagueId);
+const snapshots = await listSnapshots(leagueId);
+const fmt = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 2 });
+---
+
+<TheLeagueLayout title={`${record.label} — ESPN History`}>
+  <div class="espn-preview">
+    <p><a href="/theleague/admin/espn-history">← All imports</a></p>
+    <h1>{seasons[0]?.leagueName ?? record.label}</h1>
+    <p class="espn-preview__muted">ESPN league {leagueId} · {seasons.length} season{seasons.length === 1 ? '' : 's'} · {snapshots.length} upload{snapshots.length === 1 ? '' : 's'}</p>
+
+    {seasons.length === 0 && <p>No seasons uploaded yet.</p>}
+
+    {seasons.map((s) => {
+      const byId = new Map(s.teams.map((t) => [t.id, t]));
+      const champion = s.championTeamId != null ? byId.get(s.championTeamId) : undefined;
+      const standings = sortStandings(s.teams);
+      const weeks = [...new Set(s.matchups.map((m) => m.week))].sort((a, b) => a - b);
+      const lastPlayed = [...weeks].reverse().find((w) => s.matchups.some((m) => m.week === w && m.winner !== 'UNDECIDED'));
+      const lastResults = lastPlayed != null ? s.matchups.filter((m) => m.week === lastPlayed) : [];
+      return (
+        <section class="espn-preview__season">
+          <h2>{s.seasonId}</h2>
+          <p>
+            {champion ? <>Champion: <strong>{champion.name}</strong>{champion.owners.length > 0 && ` (${champion.owners.join(', ')})`}</> :
+              s.isActive ? 'Season in progress' : 'No champion calculated yet'}
+            {s.currentWeek != null && s.isActive && ` · week ${s.currentWeek}`}
+          </p>
+          {standings.length > 0 ? (
+            <div class="espn-preview__scroll">
+              <table>
+                <thead><tr><th>#</th><th>Team</th><th>Owner</th><th>W-L-T</th><th>PF</th><th>PA</th></tr></thead>
+                <tbody>
+                  {standings.map((t, i) => (
+                    <tr>
+                      <td>{t.finalRank ?? i + 1}</td>
+                      <td>{t.name}{t.abbrev && <span class="espn-preview__muted"> {t.abbrev}</span>}</td>
+                      <td>{t.owners.join(', ') || '—'}</td>
+                      <td>{t.wins}-{t.losses}{t.ties ? `-${t.ties}` : ''}</td>
+                      <td>{fmt(t.pointsFor)}</td>
+                      <td>{fmt(t.pointsAgainst)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p class="espn-preview__muted">No team data yet — upload "Teams, owners and records".</p>
+          )}
+          {weeks.length > 0 ? (
+            <>
+              <p class="espn-preview__muted">{s.matchups.length} games across {weeks.length} weeks{s.matchups.some((m) => m.playoff) ? ', including playoffs' : ''}.</p>
+              {lastPlayed != null && (
+                <>
+                  <h3>Week {lastPlayed} results</h3>
+                  <ul class="espn-preview__games">
+                    {lastResults.map((m) => (
+                      <li>
+                        {byId.get(m.homeTeamId)?.name ?? `Team ${m.homeTeamId}`} {fmt(m.homePoints)}
+                        {m.awayTeamId != null ? <> – {fmt(m.awayPoints ?? 0)} {byId.get(m.awayTeamId)?.name ?? `Team ${m.awayTeamId}`}</> : ' (bye)'}
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </>
+          ) : (
+            <p class="espn-preview__muted">No weekly scores yet — upload "Weekly scores".</p>
+          )}
+        </section>
+      );
+    })}
+
+    <h2>Uploads on file</h2>
+    {snapshots.length === 0 ? <p class="espn-preview__muted">None.</p> : (
+      <ul class="espn-preview__muted">
+        {snapshots.map((s) => <li>{s.seasonId} · {s.views.join(', ') || 'no recognized data'} · {(s.bytes / 1024).toFixed(0)} KB · {new Date(s.uploadedAt).toLocaleString('en-US', { timeZone: 'America/Los_Angeles' })} PT</li>)}
+      </ul>
+    )}
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .espn-preview { max-width: 960px; margin: 0 auto; padding: 16px 16px 64px; color: var(--page-text); line-height: 1.5; }
+  .espn-preview h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  .espn-preview h2 { font-size: 1.25rem; margin: 28px 0 6px; padding-top: 12px; border-top: 1px solid var(--color-border-subtle); }
+  .espn-preview h3 { font-size: 1rem; margin: 12px 0 4px; }
+  .espn-preview a { color: var(--color-primary); font-weight: 600; }
+  .espn-preview__muted { color: var(--content-text-muted); }
+  .espn-preview__scroll { overflow-x: auto; }
+  .espn-preview table { width: 100%; border-collapse: collapse; font-size: 0.9375rem; }
+  .espn-preview th, .espn-preview td { padding: 6px 10px; text-align: left; border-bottom: 1px solid var(--color-border-subtle); }
+  .espn-preview th { background: var(--color-surface-3); }
+  .espn-preview__games { padding-left: 18px; }
+</style>
