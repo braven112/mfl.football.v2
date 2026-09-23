@@ -317,8 +317,22 @@ const stats: Array<{ value: string; label: string }> = [
     pointer-events: none;
     z-index: 1;
   }
+  /* CENTRED below 900px, not pushed to the right edge.
+     The right-hand anchor exists so the mark sits behind the FEATURED PLAYER
+     card and clear of the name; that card is hidden at this width (see the
+     `.rhdr__feature` rule below), so the same offset just parked a half-
+     cropped crest against the right edge with dead colour on the left. With
+     nothing to sit behind, the band's own centre is where it belongs.
+     `right: auto` is required, not tidiness — the desktop rule sets `right`,
+     and both offsets together would stretch nothing and place nothing. */
   @media (max-width: 900px) {
-    .rhdr__watermark { right: 4%; height: 160%; opacity: 0.11; }
+    .rhdr__watermark {
+      left: 50%;
+      right: auto;
+      transform: translate(-50%, -50%);
+      height: 160%;
+      opacity: 0.11;
+    }
   }
 
   .rhdr__inner {

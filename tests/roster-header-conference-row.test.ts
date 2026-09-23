@@ -177,3 +177,37 @@ describe('one conference at a time, with no client script', () => {
     expect(TEAM_ROW).toMatch(/const radioName = `rhdr-conf-\$\{Math\.random\(\)/);
   });
 });
+
+describe('the plate says what the page IS, per league', () => {
+  const AFL_PAGE = read('src/pages/afl-fantasy/rosters.astro');
+  const TL_PAGE = read('src/pages/theleague/rosters.astro');
+  const NAMEPLATE = read('src/components/shared/roster-header/RosterNameplate.astro');
+
+  it('does not advertise keepers on the AFL roster page', () => {
+    // The AFL's keepers have their OWN page (/afl-fantasy/keepers, plus the
+    // Keeper Report Card), so a pill reading "Roster & Keepers" pointed at a
+    // page that does not hold them. TheLeague's "Roster & Cap" is the shape
+    // to copy: name the second thing only where this page IS it.
+    const label = AFL_PAGE.match(/^\s*label="([^"]+)"/m)?.[1];
+    expect(label, 'the AFL header needs a label').toBeTruthy();
+    expect(label, 'keepers live on /afl-fantasy/keepers, not here').not.toMatch(/keeper/i);
+    expect(TL_PAGE).toMatch(/^\s*label="Roster & Cap"/m);
+  });
+
+  it('centres the background crest where the featured card is gone', () => {
+    // The right-hand anchor exists to sit the mark behind the featured player
+    // card. That card is hidden below 900px, so the same offset parked a
+    // half-cropped crest on the right edge; both rules move together or the
+    // band is lopsided at the width most owners read it on.
+    const style = NAMEPLATE.slice(NAMEPLATE.indexOf('<style>')).replace(/\/\*[\s\S]*?\*\//g, '');
+    const mobile = style.match(/@media \(max-width: 900px\) \{[\s\S]*?\n  \}/g) ?? [];
+    const watermark = mobile.find((block) => block.includes('.rhdr__watermark'));
+    expect(watermark, 'the watermark needs a rule at the width the card disappears').toBeTruthy();
+    expect(watermark).toMatch(/left:\s*50%/);
+    expect(watermark, 'the desktop rule sets `right`; leaving it stretches the mark')
+      .toMatch(/right:\s*auto/);
+    expect(watermark).toMatch(/transform:\s*translate\(-50%,\s*-50%\)/);
+    expect(mobile.some((block) => block.includes('.rhdr__feature')), 'the featured card hides at this same width')
+      .toBe(true);
+  });
+});
