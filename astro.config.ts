@@ -19,6 +19,17 @@ for (const [key, value] of Object.entries(fileEnv)) {
 
 export default defineConfig({
   output: 'server',
+  /* Opt-IN prefetching, never `prefetchAll`.
+     One caller today: the AFL roster header's crest row, whose links are real
+     navigations (TheLeague's are intercepted and switched in place, so
+     prefetching its 4.6 MB page would be pure waste). Those links ask for the
+     `tap` strategy specifically — `touchstart` + `mousedown`, i.e. only the
+     link actually being activated. `hover` would be wrong there: 24 crests sit
+     in one row, and a mouse sweeping across them would pull 24 whole pages. */
+  prefetch: {
+    prefetchAll: false,
+    defaultStrategy: 'tap',
+  },
   // Astro 7 changed the default to 'jsx', which strips whitespace between
   // inline elements the way React does. Keep the HTML-preserving v6 behavior
   // rather than visually auditing every page for lost spaces.

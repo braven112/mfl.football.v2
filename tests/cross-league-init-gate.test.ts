@@ -110,16 +110,34 @@ const PAIRS: Record<string, GuardedPage[]> = {
       markerBinding: `const aflLeague = getLeagueBySlug('afl-fantasy')!;`,
     },
   ],
+  Rosters: [
+    {
+      label: 'TheLeague',
+      file: 'src/pages/theleague/rosters.astro',
+      slug: 'theleague',
+      gate: `if (!document.querySelector('.roster-page[data-league="theleague"]')) return;`,
+      // This direction was already safe by accident — the old gate asked for
+      // `#roster-config`, which only this page renders. Accident, because the
+      // id says nothing about a league; the sibling was one rename away from
+      // colliding with it.
+      marker: '<section class="roster-page" data-league={PAGE_LEAGUE_SLUG}>',
+      markerBinding: `const PAGE_LEAGUE_SLUG = getLeagueBySlug('theleague')!.slug;`,
+    },
+    {
+      label: 'the AFL',
+      file: 'src/pages/afl-fantasy/rosters.astro',
+      slug: 'afl-fantasy',
+      gate: `const pageRoot = document.querySelector<HTMLElement>('.roster-page[data-league="afl-fantasy"]');`,
+      // The direction that was really broken: this controller ran on
+      // TheLeague's rosters page after an AFL -> TheLeague swap and bound a
+      // second player-modal trigger onto it, reading the wrong league's data.
+      forbidden: `const pageRoot = document.querySelector<HTMLElement>('.roster-page');`,
+      marker: '<section class="roster-page" data-league={PAGE_LEAGUE_SLUG} data-initial-view={initialView}>',
+      markerBinding: `const PAGE_LEAGUE_SLUG = getLeagueBySlug('afl-fantasy')!.slug;`,
+    },
+  ],
 };
 
-// NOT here yet, deliberately: the ROSTERS pair. `afl-fantasy/rosters.astro`
-// gates on a bare `.roster-page`, which TheLeague's rosters page also renders,
-// so an AFL -> TheLeague swap carries the AFL controller onto that page (its
-// `switchView` relabels the header "AFL Roster" and force-sets `display: grid`).
-// The reverse direction is already safe — TheLeague's init gates on
-// `#roster-config`, which only its own page renders. Left out of this PR
-// because any `rosters.astro` edit owes a `scripts/roster-parity-check.mjs`
-// run that needs a dev server. Tracked as its own follow-up.
 
 const REGISTRY_SLUGS = new Set(ALL_LEAGUES.map((l: { slug: string }) => l.slug));
 

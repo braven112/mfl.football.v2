@@ -1,0 +1,539 @@
+---
+/**
+ * The scoreboard strip under the roster nameplate: last result, next game, and
+ * the season rail — the three things a roster page cannot answer on its own.
+ *
+ * Deliberately on the site's OWN surface rather than on the club's colour: the
+ * two tiles each carry an opponent's crest, and a franchise gradient behind
+ * two foreign crests and two scores is where legibility goes. The colour stops
+ * at the nameplate above.
+ *
+ * Every element here is a link into `/schedule`. The tiles open their own
+ * week; each rail mark opens the week it represents; the section link opens
+ * the page with no anchor. Ships no client script.
+ *
+ * ## Everything here is per WEEK, and a week can hold two games
+ *
+ * Both leagues run DOUBLEHEADERS — TheLeague in 2026 weeks 1, 2, 3 and 12,
+ * the AFL in 1, 2 and 12, and which weeks those are moves every season. The
+ * first version of this strip took one game per week at all three places and
+ * quietly dropped the other, so a club that SPLIT a doubleheader was described
+ * as having won it: the Pigskins went 1-1 in week 1 and the rail drew a single
+ * green mark beside a nameplate reading 1-1. Nothing in this file may reduce a
+ * week to one game.
+ */
+import type { RailWeek, RailGame } from '../../../utils/roster-header-data';
+
+interface HeaderGame {
+  week: number;
+  opponentId: string;
+  isHome: boolean;
+  played: boolean;
+  score: number | null;
+  opponentScore: number | null;
+  outcome: 'W' | 'L' | 'T' | null;
+}
+
+/** A week's worth of games — one most of the season, two in a doubleheader. */
+interface HeaderWeek {
+  week: number;
+  games: HeaderGame[];
+}
+
+interface Props {
+  /** The most recent week the club played, with every game it played in it. */
+  lastPlayed: HeaderWeek | null;
+  /** The next week holding an unplayed game, with every such game in it. */
+  upNext: HeaderWeek | null;
+  rail: RailWeek[];
+  /**
+   * The live NFL week, or NULL when the season on screen is not the one being
+   * played. Null is not "unknown" — it is "this season is history", and it is
+   * what stops a finished 2023 from ringing a current week and printing a
+   * "This week" kicker. See `resolveHeaderSchedule`.
+   */
+  currentWeek: number | null;
+  nameOf: (franchiseId: string) => string;
+  iconOf: (franchiseId: string) => string | null;
+  recordOf: (franchiseId: string) => string | null;
+  /** Week-anchored schedule href; omit the week for the page itself. */
+  scheduleHref: (week?: number) => string;
+  /**
+   * When the coming week's lineups LOCK, already in the viewer's clock — or
+   * null when there is nothing to warn about (the week has started, or this
+   * season is not the one being played).
+   *
+   * "Lock", not "kickoff", because the instant is the week's FIRST game, which
+   * is usually a Thursday while this club may not play until Sunday. Labelling
+   * it as their kickoff would be wrong for most clubs most weeks; labelling it
+   * as the lock is exactly what it is, and it is the actionable one — it is
+   * the deadline an owner can still do something about.
+   */
+  lineupLock?: string | null;
+}
+
+const {
+  lastPlayed,
+  upNext,
+  rail,
+  currentWeek,
+  nameOf,
+  iconOf,
+  recordOf,
+  scheduleHref,
+  lineupLock = null,
+} = Astro.props;
+
+const railFirstWeek = rail.length > 0 ? rail[0].week : null;
+const railLastWeek = rail.length > 0 ? rail[rail.length - 1].week : null;
+
+const marginOf = (game: HeaderGame) =>
+  game.score != null && game.opponentScore != null ? game.score - game.opponentScore : null;
+
+const signed = (n: number) => `${n > 0 ? '+' : ''}${n.toFixed(1)}`;
+
+/**
+ * "2-0", "1-1" — how a multi-game week actually finished.
+ *
+ * The one number that makes a doubleheader honest at a glance, and the number
+ * whose absence produced the bug: a split week headlined by its second game
+ * reads as a win.
+ */
+function weekRecord(games: HeaderGame[]): string {
+  const w = games.filter((g) => g.outcome === 'W').length;
+  const l = games.filter((g) => g.outcome === 'L').length;
+  const t = games.filter((g) => g.outcome === 'T').length;
+  return t > 0 ? `${w}-${l}-${t}` : `${w}-${l}`;
+}
+
+/** Week N · Won 128.4 to 111.2 vs Club — one rail mark's accessible name. */
+function railLabel(entry: RailWeek, game: RailGame | null): string {
+  if (!game || !game.opponentId) return `Week ${entry.week}, bye week. Open on the schedule.`;
+  const who = nameOf(game.opponentId);
+  if (game.played) {
+    const verb = game.outcome === 'W' ? 'Won' : game.outcome === 'L' ? 'Lost' : 'Tied';
+    return `Week ${entry.week}, ${verb} against ${who}. Open on the schedule.`;
+  }
+  return `Week ${entry.week}, ${who}, not played. Open on the schedule.`;
+}
+
+/**
+ * The rail as a flat run of marks — one per GAME, so counting the green ones
+ * gives the club's record. `weekStart` is what re-groups them visually: the
+ * first mark of each week takes the wider gap, so a doubleheader reads as one
+ * week holding two results rather than as two weeks.
+ */
+const railMarks = rail.flatMap((entry) =>
+  (entry.games.length > 0 ? entry.games : [null]).map((game, index) => ({
+    entry,
+    game,
+    weekStart: index === 0,
+  })),
+);
+---
+
+<div class="rhdr-bar">
+  {lastPlayed ? (
+    <a class:list={['rhdr-tile', { 'rhdr-tile--multi': lastPlayed.games.length > 1 }]} href={scheduleHref(lastPlayed.week)}>
+      {lastPlayed.games.length === 1 ? (
+        <Fragment>
+          {iconOf(lastPlayed.games[0].opponentId) && (
+            <img src={iconOf(lastPlayed.games[0].opponentId)!} alt="" width="38" height="38" class="rhdr-tile__crest" loading="lazy" decoding="async" />
+          )}
+          <span class="rhdr-tile__body">
+            <span class="rhdr-tile__kicker">Week {lastPlayed.week} · Final</span>
+            <span class="rhdr-tile__line">
+              <span class:list={['rhdr-tile__result', {
+                'is-win': lastPlayed.games[0].outcome === 'W',
+                'is-loss': lastPlayed.games[0].outcome === 'L',
+              }]}>{lastPlayed.games[0].outcome ?? '–'}</span>
+              <span class="rhdr-tile__score">
+                {lastPlayed.games[0].score?.toFixed(1)} – {lastPlayed.games[0].opponentScore?.toFixed(1)}
+              </span>
+            </span>
+            <span class="rhdr-tile__sub">
+              {lastPlayed.games[0].isHome ? 'vs' : 'at'} {nameOf(lastPlayed.games[0].opponentId)}
+              {marginOf(lastPlayed.games[0]) != null && (
+                <> · {signed(marginOf(lastPlayed.games[0])!)}</>
+              )}
+            </span>
+          </span>
+        </Fragment>
+      ) : (
+        /* A doubleheader gets one row per game and the week's own record in
+           the kicker. Both games share a lineup, so the club's score is the
+           same in each; the row prints the OPPONENT's score, which is the
+           only number that differs. */
+        <span class="rhdr-tile__body">
+          <span class="rhdr-tile__kicker">
+            Week {lastPlayed.week} · Final · {weekRecord(lastPlayed.games)}
+          </span>
+          <span class="rhdr-tile__rows">
+            {lastPlayed.games.map((game) => (
+              <span class="rhdr-tile__row">
+                {iconOf(game.opponentId) ? (
+                  <img src={iconOf(game.opponentId)!} alt="" width="20" height="20" class="rhdr-tile__rowcrest" loading="lazy" decoding="async" />
+                ) : (
+                  <span class="rhdr-tile__rowcrest" aria-hidden="true"></span>
+                )}
+                <span class:list={['rhdr-tile__result', {
+                  'is-win': game.outcome === 'W',
+                  'is-loss': game.outcome === 'L',
+                }]}>{game.outcome ?? '–'}</span>
+                <span class="rhdr-tile__rowscore">
+                  {game.score?.toFixed(1)} – {game.opponentScore?.toFixed(1)}
+                </span>
+                <span class="rhdr-tile__rowwho">
+                  {game.isHome ? 'vs' : 'at'} {nameOf(game.opponentId)}
+                </span>
+              </span>
+            ))}
+          </span>
+        </span>
+      )}
+    </a>
+  ) : (
+    <div class="rhdr-tile rhdr-tile--empty">
+      <span class="rhdr-tile__body">
+        <span class="rhdr-tile__kicker">Last result</span>
+        <span class="rhdr-tile__sub">No games played yet this season.</span>
+      </span>
+    </div>
+  )}
+
+  {upNext ? (
+    <a class:list={['rhdr-tile', { 'rhdr-tile--multi': upNext.games.length > 1 }]} href={scheduleHref(upNext.week)}>
+      {upNext.games.length === 1 ? (
+        <Fragment>
+          {iconOf(upNext.games[0].opponentId) && (
+            <img src={iconOf(upNext.games[0].opponentId)!} alt="" width="38" height="38" class="rhdr-tile__crest" loading="lazy" decoding="async" />
+          )}
+          <span class="rhdr-tile__body">
+            <span class="rhdr-tile__kicker">
+              Week {upNext.week} · {currentWeek != null && upNext.week === currentWeek ? 'This week' : 'Up next'}
+            </span>
+            <span class="rhdr-tile__line">
+              <span class="rhdr-tile__when">{upNext.games[0].isHome ? 'vs' : 'at'} {nameOf(upNext.games[0].opponentId)}</span>
+            </span>
+            <span class="rhdr-tile__sub">
+              {recordOf(upNext.games[0].opponentId) ?? 'No record yet'}
+              {lineupLock && <> · Lineups lock {lineupLock}</>}
+            </span>
+          </span>
+        </Fragment>
+      ) : (
+        /* Two opponents off one lineup. Naming only the first is how an owner
+           sets a lineup against half the week they are actually playing. */
+        <span class="rhdr-tile__body">
+          <span class="rhdr-tile__kicker">
+            Week {upNext.week} · {currentWeek != null && upNext.week === currentWeek ? 'This week' : 'Up next'} · Doubleheader
+          </span>
+
+          <span class="rhdr-tile__rows">
+            {upNext.games.map((game) => (
+              <span class="rhdr-tile__row">
+                {iconOf(game.opponentId) ? (
+                  <img src={iconOf(game.opponentId)!} alt="" width="20" height="20" class="rhdr-tile__rowcrest" loading="lazy" decoding="async" />
+                ) : (
+                  <span class="rhdr-tile__rowcrest" aria-hidden="true"></span>
+                )}
+                <span class="rhdr-tile__rowwho">
+                  {game.isHome ? 'vs' : 'at'} {nameOf(game.opponentId)}
+                </span>
+                {recordOf(game.opponentId) && (
+                  <span class="rhdr-tile__rowrec">{recordOf(game.opponentId)}</span>
+                )}
+              </span>
+            ))}
+          </span>
+          {lineupLock && <span class="rhdr-tile__sub">Lineups lock {lineupLock}</span>}
+        </span>
+      )}
+    </a>
+  ) : (
+    <div class="rhdr-tile rhdr-tile--empty">
+      <span class="rhdr-tile__body">
+        <span class="rhdr-tile__kicker">Up next</span>
+        <span class="rhdr-tile__sub">The regular season is over.</span>
+      </span>
+    </div>
+  )}
+
+  {railMarks.length > 0 && (
+    <div class="rhdr-rail">
+      <div class="rhdr-rail__head">
+        <span class="rhdr-rail__title">Season</span>
+        <a class="rhdr-rail__cta" href={scheduleHref()}>Full schedule &amp; scores →</a>
+      </div>
+      <div class="rhdr-rail__dots">
+        {railMarks.map(({ entry, game, weekStart }) => (
+          <a
+            class:list={['rhdr-rail__dot', {
+              'is-weekstart': weekStart,
+              'is-win': game?.played && game.outcome === 'W',
+              'is-loss': game?.played && game.outcome === 'L',
+              'is-tie': game?.played && game.outcome === 'T',
+              'is-now': !game?.played && entry.isCurrent,
+              'is-future': !game?.played && !entry.isCurrent,
+            }]}
+            href={scheduleHref(entry.week)}
+            aria-label={railLabel(entry, game)}
+          ><span class="rhdr-rail__mark" aria-hidden="true"></span></a>
+        ))}
+      </div>
+      <div class="rhdr-rail__scale">
+        <span>Wk {railFirstWeek}</span>
+        {/* A "you are here" marker, so a season that is not being played has
+            none. It printed "Wk 2" over a 2023 season that ended in January
+            2024. The first and last week still bound the rail either way. */}
+        {currentWeek != null && <span class="rhdr-rail__now">Wk {currentWeek}</span>}
+        <span>Wk {railLastWeek}</span>
+      </div>
+    </div>
+  )}
+</div>
+
+<style>
+  .rhdr-bar {
+    display: grid;
+    min-width: 0;
+    grid-template-columns: 1fr 1fr minmax(232px, auto);
+    gap: 1px;
+    background: var(--content-border-color);
+    border-bottom: 1px solid var(--content-border-color);
+  }
+  @media (max-width: 860px) {
+    .rhdr-bar { grid-template-columns: 1fr; }
+  }
+
+  .rhdr-tile {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    min-width: 0;
+    padding: 0.75rem 1rem;
+    background: var(--card-surface);
+    color: inherit;
+    text-decoration: none;
+    transition: background 0.14s ease;
+  }
+  a.rhdr-tile:hover { background: var(--content-bg-muted); }
+  a.rhdr-tile:focus-visible {
+    outline: 2px solid var(--color-accent, #1c497c);
+    outline-offset: -2px;
+  }
+
+  .rhdr-tile__crest { flex: none; border-radius: 50%; object-fit: contain; }
+  .rhdr-tile__body { display: flex; flex-direction: column; min-width: 0; }
+
+  .rhdr-tile__kicker {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--content-text-muted);
+  }
+  .rhdr-tile__line {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin-top: 0.15rem;
+  }
+  .rhdr-tile__result {
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--content-text-muted);
+  }
+  .rhdr-tile__result.is-win { color: var(--color-success, #1c7a4c); }
+  .rhdr-tile__result.is-loss { color: var(--color-error); }
+
+  .rhdr-tile__score,
+  .rhdr-tile__when {
+    font-size: 1.05rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--page-text);
+  }
+  .rhdr-tile__sub {
+    font-size: 0.8rem;
+    color: var(--content-text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .rhdr-tile--empty .rhdr-tile__sub { white-space: normal; }
+
+  /* ── the doubleheader variant ──
+     A week holding two games gets one ROW per game instead of one big score:
+     the club's own score is identical in both (one lineup), so the thing worth
+     six lines of type is which opponent, and how each one went. The week's
+     record rides in the kicker, because that is the number the nameplate above
+     is already showing and the two must agree. */
+  .rhdr-tile--multi { align-items: stretch; }
+  .rhdr-tile__rows {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    margin-top: 0.25rem;
+    min-width: 0;
+  }
+  .rhdr-tile__row {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 0;
+    font-size: 0.8rem;
+    line-height: 1.2;
+  }
+  .rhdr-tile__rowcrest {
+    flex: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    object-fit: contain;
+  }
+  .rhdr-tile__row .rhdr-tile__result {
+    flex: none;
+    width: 0.8rem;
+    font-size: 0.8rem;
+  }
+  .rhdr-tile__rowscore {
+    flex: none;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--page-text);
+  }
+  .rhdr-tile__rowwho {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--content-text-muted);
+  }
+  .rhdr-tile__rowrec {
+    flex: none;
+    font-variant-numeric: tabular-nums;
+    color: var(--content-text-muted);
+  }
+
+  /* ── the season rail ── */
+  .rhdr-rail {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.4rem;
+    min-width: 0;
+    padding: 0.7rem 1rem;
+    background: var(--card-surface);
+  }
+
+  .rhdr-rail__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.6rem;
+  }
+  .rhdr-rail__title {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--content-text-muted);
+  }
+  .rhdr-rail__cta {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--color-accent, #1c497c);
+    text-decoration: none;
+  }
+  .rhdr-rail__cta:hover { text-decoration: underline; }
+
+  /* One mark per GAME, all the same width, so the green ones can be counted
+     against the record. The week grouping is carried by the GAP alone: a 1px
+     step inside a week, 3px between weeks, which is what stops a doubleheader
+     from reading as two separate weeks. */
+  .rhdr-rail__dots { display: flex; gap: 1px; align-items: stretch; }
+  .rhdr-rail__dot.is-weekstart { margin-left: 2px; }
+  .rhdr-rail__dot:first-child { margin-left: 0; }
+
+  /* The LINK is 24px tall so it clears the touch-target minimum; the visible
+     bar inside it is 13px. Sizing the link to the bar would have shipped a
+     17-target row of 13px hit areas directly above a scrolling data table. */
+  .rhdr-rail__dot {
+    flex: 1;
+    min-width: 7px;
+    display: flex;
+    align-items: center;
+    height: 24px;
+    text-decoration: none;
+    border-radius: 3px;
+  }
+  .rhdr-rail__mark {
+    display: block;
+    width: 100%;
+    height: 13px;
+    /* Not inherited: this repo has no global `border-box`. Two of the four
+       states below draw a border, and without this each one would grow the
+       mark past its column and nudge the whole rail out of alignment. */
+    box-sizing: border-box;
+    border-radius: 7px;
+    background: var(--color-surface-3);
+    transition: transform 0.13s ease;
+  }
+
+  /* PLAYED weeks are the only FILLED marks, and the only coloured ones. An
+     unplayed week is an outline. That split is what makes the rail readable
+     at a glance, and it is not cosmetic — the current week shipped filled
+     with `--color-accent`, which is #2e8743 in TheLeague: green, from the
+     same family as `--color-success`. A 1-1 club therefore drew two green
+     marks and one red, and read as 2-1. Nothing here may use the accent as a
+     mark colour for that reason; the accent is green in this league and can
+     only ever be confused with a win. */
+  .rhdr-rail__dot.is-win .rhdr-rail__mark { background: var(--color-success, #1c7a4c); }
+  .rhdr-rail__dot.is-loss .rhdr-rail__mark { background: var(--color-error); }
+  .rhdr-rail__dot.is-tie .rhdr-rail__mark { background: var(--content-text-muted); }
+
+  /* The current week is an OPEN ring in the page's own ink: unplayed, so not
+     filled; solid and full-contrast, so it is obviously not one of the faint
+     future weeks behind it. The distinction from a result survives a
+     greyscale print and every form of colour blindness, because it is a
+     difference in fill rather than in hue. */
+  .rhdr-rail__dot.is-now .rhdr-rail__mark {
+    background: transparent;
+    border: 2px solid var(--page-text);
+  }
+  /* A week not yet played is an outline, never a fill — a filled neutral
+     reads as a result whose colour simply failed to load. */
+  .rhdr-rail__dot.is-future .rhdr-rail__mark {
+    background: transparent;
+    border: 1px dashed var(--content-border-color);
+  }
+
+  .rhdr-rail__dot:hover .rhdr-rail__mark { transform: scaleY(1.32); }
+  .rhdr-rail__dot:focus-visible {
+    outline: 2px solid var(--color-accent, #1c497c);
+    outline-offset: 1px;
+  }
+
+  .rhdr-rail__scale {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.65rem;
+    font-weight: 500;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--content-text-muted);
+  }
+  .rhdr-rail__now { color: var(--color-accent, #1c497c); font-weight: 600; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rhdr-tile,
+    .rhdr-rail__mark { transition: none; }
+    .rhdr-rail__dot:hover .rhdr-rail__mark { transform: none; }
+  }
+</style>

@@ -14,6 +14,10 @@ import KeeperPlanner, {
 } from '../../components/afl-fantasy/KeeperPlanner.astro';
 import { spriteUrl } from '../../utils/sprite-url';
 import { getCurrentWeek } from '../../utils/current-week';
+import { nflWeekStartInstant } from '../../utils/nfl-week-starts.mjs';
+import { formatForViewer } from '../../utils/viewer-clock';
+import { readViewerClock } from '../../utils/viewer-preferences-page';
+import { getCurrentSeasonYear } from '../../utils/league-year';
 import {
   fetchNflMatchups,
   loadFantasyPointsAllowed,
@@ -22,6 +26,8 @@ import {
   type NflMatchup,
 } from '../../utils/nfl-matchups';
 import { normalizeTeamCode, getNFLTeamName, getNFLTeamLogo } from '../../utils/nfl-logo';
+import { getPlayerHeadshot } from '../../constants/roster-constants';
+import { formatMflName } from '../../utils/player-name-matching';
 import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD, COLLEGE_LOGO_ONERROR, COLLEGE_LOGO_ONLOAD } from '../../constants/roster-constants';
 import collegeLogos from '../../data/college-logos.json';
 import {
@@ -31,6 +37,9 @@ import {
 } from '../../utils/afl-player-scoring';
 import { resolveStatsSeasonYear, parseYtdPlayerScores } from '../../utils/stats-season.mjs';
 import { getAuthUser } from '../../utils/auth';
+import { getAllActivity, getActivityLevel, formatLastSeen } from '../../utils/owner-activity';
+import { resolveThrowbackRequestState } from '../../utils/throwback-request-state';
+import { resolveRosterHeaderSkin } from '../../utils/roster-header-skin';
 import {
   setAFLPreference,
   getAFLPreference,
@@ -38,7 +47,6 @@ import {
 } from '../../utils/team-preferences';
 import {
   getAllTeams,
-  getTeamsGroupedByConference,
   getConferenceName,
   getTeam,
   type AFLTeam,
@@ -53,6 +61,20 @@ import { parseTradeBaitPlayerIds, parseTradeBaitByFranchise } from '../../utils/
 import { getCachedTradeBait } from '../../utils/mfl-trade-bait-cache';
 import MyRankEditor from '../../components/shared/rankings/MyRankEditor.astro';
 import { buildKeeperPlannerStats } from '../../utils/afl-keeper-planner-stats';
+import RosterHeader from '../../components/shared/roster-header/RosterHeader.astro';
+import {
+  buildTeamGroups,
+  bestPlayerByPositionRank,
+  positionalRanks,
+  resolveHeaderSchedule,
+} from '../../utils/roster-header-data';
+import { summarizeStandings } from '../../utils/standings-summary';
+import {
+  franchiseSchedule,
+  parseWeeklySchedule,
+} from '../../utils/schedule-data.mjs';
+import aflLeagueConfig from '../../../data/afl-fantasy/afl.config.json';
+import { resolveLeaguePath } from '../../utils/nav-utils';
 
 export const prerender = false;
 
@@ -93,6 +115,17 @@ const tradeBaitByFranchiseFeeds = import.meta.glob(
 );
 const futurePicksFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/futureDraftPicks.json', {
   eager: true,
+});
+// The roster header's gameday bar. Keyed by the LEAGUE year like every other
+// feed directory here, so it follows `selectedYear` rather than the season
+// clock — the two disagree between the league rollover and Labor Day.
+const scheduleFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/schedule.json', {
+  eager: true,
+  import: 'default',
+});
+const standingsFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/standings.json', {
+  eager: true,
+  import: 'default',
 });
 
 const getModuleData = (mod: any) =>
@@ -145,6 +178,7 @@ if (!rostersData?.rosters?.franchise || !playersData?.players?.player) {
 // commit + redeploy. Historical years and Redis-unavailable environments
 // fall back to the feed.
 const aflLeague = getLeagueBySlug('afl-fantasy');
+const PAGE_LEAGUE_SLUG = getLeagueBySlug('afl-fantasy')!.slug;
 
 // NFL injury designations (Q / D / O / IR), keyed by MFL player id. This is a
 // DIFFERENT datum from `player.status === 'INJURED_RESERVE'` below, which is
@@ -154,7 +188,7 @@ const aflLeague = getLeagueBySlug('afl-fantasy');
 // him on IR with a torn ACL. Deliberately NOT keyed to `selectedYear` — see
 // src/utils/mfl-injuries.ts; this page is pinned to FALLBACK_YEAR 2025 and the
 // injuries feed only exists for 2026, so a year-keyed lookup finds nothing.
-const aflInjuries = loadInjuryMap(getLeagueBySlug('afl-fantasy')!.slug);
+const aflInjuries = loadInjuryMap(PAGE_LEAGUE_SLUG);
 const testDate = getTestDateFromSearchParams(Astro.url.searchParams);
 if (aflLeague && selectedYear === getAflLeagueYear(testDate ?? undefined)) {
   const liveFranchises = await getCachedRosterFranchises(String(selectedYear), aflLeague.id);
@@ -223,7 +257,6 @@ const aflPref = getAFLPreference(Astro.cookies);
 const AFL_LEAGUE_ID = getLeagueBySlug('afl-fantasy')!.id;
 
 const allTeams = getAllTeams();
-const teamsByConference = getTeamsGroupedByConference();
 const fallbackTeamId = allTeams[0]?.franchiseId ?? '0001';
 
 const queryFranchiseId = Astro.url.searchParams.get('franchise');
@@ -255,6 +288,130 @@ const plannerLoginHref = loginUrlFor({
 
 const selectedTeam: AFLTeam = getTeam(selectedFranchiseId) ?? allTeams[0]!;
 const conferenceName = getConferenceName(selectedTeam.conference);
+
+/* ── Roster header: nameplate, gameday bar, team switcher ─────────────────
+   Assembled here rather than in the component because a static import
+   specifier cannot be a runtime variable — globbing both leagues' feeds
+   inside the shared component would ship the other league's season on every
+   render of either route. */
+const aflSchedule = parseWeeklySchedule(
+  scheduleFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/schedule.json`]
+);
+const aflStandingsFeed =
+  standingsFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/standings.json`];
+
+const headerTeamById = new Map(allTeams.map((t) => [t.franchiseId, t]));
+const headerNameOf = (id: string) => headerTeamById.get(id)?.name ?? 'Franchise';
+const headerIconOf = (id: string) => headerTeamById.get(id)?.icon ?? null;
+
+const headerStandings = summarizeStandings(
+  aflStandingsFeed,
+  aflLeagueConfig.conferences as Array<{ name: string; code: string }>,
+  (id: string) => String(headerTeamById.get(id)?.conference ?? '')
+);
+
+/* NULL unless the year on screen is the season actually being played.
+   This page has a YEAR PICKER, so the header renders 2019 and 2023 as
+   readily as 2026 — and today's NFL week means nothing in a season that
+   finished years ago. Passing it anyway made a completed 2023 report
+   "Week 2 · Final · 0-2" as the club's last result (findLastPlayedWeek
+   BOUNDS its search), ring week 2 as current, and left 2019 with a week
+   still waiting to be played. `resolveHeaderSchedule` owns what null means.
+
+   `getCurrentSeasonYear()`, not the league year: "is this the season being
+   played" is a results question, and the two clocks disagree from Feb 14
+   to Labor Day (CLAUDE.md, "Year rollover — two independent clocks"). */
+const headerWeek = selectedYear === getCurrentSeasonYear() ? getCurrentWeek() : null;
+const headerOwnSchedule = franchiseSchedule(aflSchedule, selectedFranchiseId);
+const headerSchedule = resolveHeaderSchedule(
+  headerOwnSchedule,
+  aflSchedule.map((entry: { week: number }) => entry.week),
+  headerWeek
+);
+
+/* Owner presence, restored to the header — the chip that lived on the old
+   team card. One Redis read for the whole league, raced against a 3s timeout
+   so a slow store degrades to no chip rather than a hung render, and resolved
+   PER CLUB so the chip rides in the swap templates instead of being written
+   into one place from JavaScript. */
+let ownerActivityMap: Record<string, number> = {};
+try {
+  ownerActivityMap = await Promise.race([
+    getAllActivity(AFL_LEAGUE_ID),
+    new Promise<Record<string, number>>((_, reject) =>
+      setTimeout(() => reject(new Error('Redis timeout')), 3000)),
+  ]);
+} catch { /* Redis unavailable or timed out — the chip simply does not print */ }
+/* Throwback Week, resolved once for the header. The AFL has run eras since
+   September 2026, so this is not TheLeague-only. */
+const headerThrowback = await resolveThrowbackRequestState('afl', Astro.url);
+
+const ownerSeenFor = (franchiseId: string) => {
+  const at = ownerActivityMap[franchiseId] ?? null;
+  return at ? { level: getActivityLevel(at), text: formatLastSeen(at) } : null;
+};
+
+/* When this week's lineups LOCK, in the viewer's own clock.
+
+   The instant is the week's FIRST kickoff (`nflWeekStartInstant`), which is
+   what actually locks the fantasy week — not this club's own game, which is
+   usually later. So the tile says "lineups lock", never "kickoff": most clubs
+   most weeks do not play at this time, and the lock is the one an owner can
+   still act on.
+
+   Null once it has PASSED, and null outside a live season. A deadline printed
+   after it expired is worse than no deadline: it reads as time remaining.
+
+   `readViewerClock` only READS — `Astro.cookies.set` is the route-only half
+   (CLAUDE.md, viewer preferences) — and takes the PAGE's league, not the
+   viewer's, because the clock a league's deadline prints belongs to that
+   league. `formatForViewer` appends the league's PT to the viewer's chosen
+   clock and drops it for a viewer already on Pacific. */
+const headerLockAt = headerSchedule.upNext != null && headerWeek != null
+  ? nflWeekStartInstant(selectedYear, headerSchedule.upNext.week)
+  : null;
+const headerLineupLock = headerLockAt != null && headerLockAt.getTime() > Date.now()
+  ? formatForViewer(headerLockAt, await readViewerClock(Astro.cookies, authUser, 'afl-fantasy'), { weekday: true })
+  : null;
+
+/* The VIEWER's conference, never the viewed club's — an order that followed
+   the club on screen would reshuffle the switcher on every team change. Null
+   for a signed-out visitor and for a TheLeague owner browsing here, both of
+   which correctly keep the historical AL-first order. The remembered club's
+   conference is the middle case: reading a cookie is side-effect free, so it
+   is safe here; only WRITING one has to stay in the route's own frontmatter. */
+const viewerFranchiseIdHere =
+  authUser?.leagueId === AFL_LEAGUE_ID && authUser.franchiseId ? authUser.franchiseId : null;
+const viewerConference =
+  (viewerFranchiseIdHere ? headerTeamById.get(viewerFranchiseIdHere)?.conference : null) ??
+  aflPref?.conferenceId ??
+  null;
+
+/* The switcher's names and crests throw back with the nameplate above them.
+   Both are fields the era overlay replaces, and a row of modern crests under
+   a nameplate in era art is the partial overlay the era rules doc warns
+   about. Resolved per club off the same skin the plate uses, which is
+   memoised for the whole league, so this is a lookup not a rebuild. */
+const headerIdentityOf = (franchiseId: string) => {
+  const skin = resolveRosterHeaderSkin(franchiseId, 'afl-fantasy', headerThrowback);
+  return skin ? { name: skin.name, icon: skin.crestSmall } : null;
+};
+
+const headerGroups = buildTeamGroups({
+  teams: allTeams,
+  conferences: aflLeagueConfig.conferences as Array<{ name: string; code: string; divisions?: string[] }>,
+  viewerConference,
+  identityOf: headerIdentityOf,
+});
+
+const hideLeaguePrefixHere = Astro.locals.hideLeaguePrefix ?? false;
+const headerTeamHref = (id: string) =>
+  resolveLeaguePath(`/afl-fantasy/rosters?franchise=${id}&year=${selectedYear}`, hideLeaguePrefixHere);
+const headerScheduleHref = (week?: number) =>
+  resolveLeaguePath(
+    `/afl-fantasy/schedule?year=${selectedYear}${week != null ? `#week-${week}` : ''}`,
+    hideLeaguePrefixHere
+  );
 
 // Owner detection: only AFL users on their own team see write actions
 const isOwner =
@@ -408,9 +565,34 @@ const aflProjections = loadAflProjections(selectedYear);
 // request time (see weekly-player-results-feed.ts) rather than through an eager
 // glob, and cached per league-season — the payload covers the whole league, so
 // it must not be rebuilt for every roster view.
-const weeklyPlayerResults = aflLeague
+// Scoped to THIS page's own players, which is 16-30 of the league's ~490.
+//
+// The loader's payload covers the whole league, and shipping it whole made
+// this island 849 KB of a 1.48 MB page — 57% of the document, re-parsed by the
+// browser on every team switch, for a modal that shows ONE player. That is
+// what made an AFL team switch take ~840 ms against TheLeague's ~130 ms: not
+// the server (SSR measures 65 ms) but the client re-parsing the page.
+//
+// `roster` is the exact reachable set, not a guess: the modal opens only from
+// `[data-player-modal]`, bound to this page's root, and all three views
+// (roster, planner, analytics) render those for this franchise's roster and
+// nothing else. A player outside it degrades to a hidden Season Results
+// section rather than an error, but there is no such player here.
+//
+// NOT filtered for TheLeague's copy of this island: that page switches team in
+// place from a payload holding all sixteen rosters, so its reachable set is
+// every club's players, not the markup's.
+const weeklyPlayerResultsAll = aflLeague
   ? loadWeeklyPlayerResults(aflLeague.dataPath, selectedYear)
   : {};
+const weeklyPlayerResults: typeof weeklyPlayerResultsAll = {};
+for (const entry of roster) {
+  const weeks = weeklyPlayerResultsAll[entry.id];
+  // A copy, never a mutation: `loadWeeklyPlayerResults` caches its payload per
+  // league-season, so trimming the object it returns would trim it for every
+  // later render in the process.
+  if (weeks) weeklyPlayerResults[entry.id] = weeks;
+}
 
 interface PlayerMatchup {
   matchup: NflMatchup | null;
@@ -444,6 +626,32 @@ for (const player of sortedTableRoster) {
     scoreAverage: season.average,
   });
 }
+
+/* The AFL has no salaries at all (`salaryCap: false`, `contracts: false`), so
+   the header features whoever ranks best AT HIS OWN POSITION instead. A raw
+   points leader would be a quarterback every single time — QBs out-score the
+   other positions by construction — which says nothing about the roster.
+
+   Ranked across the whole PLAYER POOL rather than across rostered players: an
+   AFL player is routinely rostered in BOTH conferences, so ranking the rostered
+   set would count the same man twice and shift everyone below him. */
+const aflPositionRanks = positionalRanks(
+  [...aflYtdPoints.entries()].map(([id, score]) => ({
+    id,
+    position: playersMap.get(id)?.position ?? '',
+    score: Number(score) || 0,
+  }))
+);
+const headerFeaturedPlayer = bestPlayerByPositionRank(
+  roster.map((player) => ({
+    id: player.id,
+    // MFL stores "Last, First"; the header prints a name, not a sort key.
+    name: formatMflName(player.name),
+    position: player.position,
+    headshot: getPlayerHeadshot(player.id, player.espn_id, player.team),
+  })),
+  (playerId) => aflPositionRanks.get(playerId) ?? null
+);
 
 // Small format helpers so the JSX stays declarative
 const formatPoints = (v: number | null): string =>
@@ -801,93 +1009,45 @@ const pageConfig = {
 
 <TheLeagueLayout title={`AFL — ${selectedTeam.name} Roster`}>
   <CollegeLogoDarkStyles />
-  <section class="roster-page" data-initial-view={initialView}>
+  <section class="roster-page" data-league={PAGE_LEAGUE_SLUG} data-initial-view={initialView}>
     <!-- Breadcrumbs live inside the centered column so they share its left
          edge with the team card; outside it they sat at the layout's edge. -->
     <FrontOfficeNav leagueSlug="afl-fantasy" current="rosters" crumb="Rosters" bare />
-    <!-- Team Header Card -->
-    <div class="team-card" data-team-identity>
-      {selectedTeam.icon && (
-        <img src={selectedTeam.icon} alt={`${selectedTeam.name} icon`} />
-      )}
-      <div class="team-card__identity">
-        <p class="team-card__label" data-view-label>AFL Roster</p>
-        <h2 class="team-card__name">{selectedTeam.name}</h2>
-        <p class="team-card__meta">
-          {conferenceName} · {selectedTeam.division}
-        </p>
-        {isOwner && (
-          <p class="team-card__last-seen" data-level="active">
-            <span class="last-seen-dot" aria-hidden="true"></span>
-            <span>Your team</span>
-          </p>
-        )}
-      </div>
+    <RosterHeader
+      leagueSlug="afl-fantasy"
+      franchiseId={selectedFranchiseId}
+      teamName={selectedTeam.name}
+      teamIcon={selectedTeam.icon}
+      teamMeta={`${conferenceName} · ${selectedTeam.division}`}
+      label="Roster"
+      season={selectedYear}
+      standing={headerStandings.get(selectedFranchiseId) ?? {
+        record: null,
+        pointsFor: null,
+        rank: null,
+        groupSize: null,
+      }}
+      featuredPlayer={headerFeaturedPlayer}
+      lastPlayed={headerSchedule.lastPlayed}
+      upNext={headerSchedule.upNext}
+      rail={headerSchedule.rail}
+      currentWeek={headerWeek}
+      lineupLock={headerLineupLock}
+      ownerLastSeen={ownerSeenFor(selectedFranchiseId)}
+      throwback={headerThrowback}
+      groups={headerGroups}
+      viewerFranchiseId={viewerFranchiseIdHere}
+      nameOf={headerNameOf}
+      iconOf={headerIconOf}
+      recordOf={(id: string) => headerStandings.get(id)?.record ?? null}
+      teamHref={headerTeamHref}
+      prefetch="tap"
+      scheduleHref={headerScheduleHref}
+    />
 
-      <div class="team-card__actions">
-        <div class="view-tabs">
-          <button
-            type="button"
-            class="view-tab"
-            data-view="roster"
-            data-active={initialView === 'roster' ? 'true' : 'false'}
-            aria-label="Roster View"
-            title="Roster View"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
-              <use href={`${spriteUrl}#icon-users`}></use>
-            </svg>
-            <span class="view-tab__label">Roster</span>
-          </button>
-          <button
-            type="button"
-            class="view-tab"
-            data-view="analytics"
-            data-active={initialView === 'analytics' ? 'true' : 'false'}
-            aria-label="Analytics View"
-            title="Analytics View"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
-              <use href={`${spriteUrl}#icon-bar-chart`}></use>
-            </svg>
-            <span class="view-tab__label">Analytics</span>
-          </button>
-          <button
-            type="button"
-            class="view-tab"
-            data-view="planner"
-            data-active={initialView === 'planner' ? 'true' : 'false'}
-            aria-label="Keeper Planner"
-            title="Keeper Planner"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
-              <use href={`${spriteUrl}#icon-chalkboard`}></use>
-            </svg>
-            <span class="view-tab__label">Planner</span>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Compact controls: team + year switcher -->
+    <!-- Compact controls. The team switcher moved into the header's crest
+         row above, which is why only the year remains here. -->
     <div class="roster-controls-bar">
-      <div class="roster-controls-bar__group">
-        <label for="franchise-select">Team</label>
-        <select id="franchise-select" data-current-franchise={selectedFranchiseId}>
-          {teamsByConference.map((group) => (
-            <optgroup label={group.conferenceName}>
-              {group.teams
-                .slice()
-                .sort((a, b) => a.name.localeCompare(b.name))
-                .map((t) => (
-                  <option value={t.franchiseId} selected={t.franchiseId === selectedFranchiseId}>
-                    {t.name}
-                  </option>
-                ))}
-            </optgroup>
-          ))}
-        </select>
-      </div>
       <div class="roster-controls-bar__group">
         <label for="year-select">Year</label>
         <select id="year-select" data-current-year={selectedYear}>
@@ -1703,11 +1863,18 @@ const pageConfig = {
     // this, Astro evaluates the script module only once, so navigating onto
     // this page client-side would leave the tabs/planner unwired.
     function initAflRosterPage() {
-      // Idempotent per rendered DOM: the .roster-page element is replaced on
-      // every ClientRouter swap, so a fresh element re-wires, but a repeat
-      // call for the same DOM (e.g. astro:page-load + the first-load fallback
-      // both firing) short-circuits so element-scoped listeners don't stack.
-      const pageRoot = document.querySelector<HTMLElement>('.roster-page');
+      /* Only on THIS league's rosters page, and once per rendered DOM.
+         `.roster-page` alone is NOT a gate: TheLeague's rosters page renders
+         the same class, `document` survives every ClientRouter swap, and a
+         cross-league move is a swap rather than a fresh document — so this
+         controller used to run on TheLeague's page and bind a second player
+         modal trigger onto it, from the wrong league's data.
+         The `aflInit` flag is the separate, still-needed half: the element is
+         replaced on every swap, so a fresh one re-wires, but a repeat call for
+         the SAME DOM (astro:page-load plus the first-load fallback) short
+         circuits so element-scoped listeners do not stack.
+         Guard: tests/cross-league-init-gate.test.ts. */
+      const pageRoot = document.querySelector<HTMLElement>('.roster-page[data-league="afl-fantasy"]');
       if (!pageRoot || pageRoot.dataset.aflInit === '1') return;
       pageRoot.dataset.aflInit = '1';
 
@@ -1749,47 +1916,11 @@ const pageConfig = {
         });
       });
 
-      // ── View tab switching ──
-      const tabs = document.querySelectorAll<HTMLButtonElement>('.view-tab');
-    const containers = document.querySelectorAll<HTMLElement>('[data-view-content]');
-
-    const VIEW_LABELS: Record<string, string> = {
-      roster: 'AFL Roster',
-      analytics: 'Advanced Analytics',
-      planner: 'Keeper Planner',
-    };
-    const labelEl = document.querySelector<HTMLElement>('[data-view-label]');
-
-    function switchView(viewName: string) {
-      Array.from(tabs).forEach((tab) => {
-        const isActive = tab.dataset.view === viewName;
-        tab.setAttribute('data-active', String(isActive));
-      });
-      Array.from(containers).forEach((container) => {
-        const isActive = container.dataset.viewContent === viewName;
-        // Use inline style + drop the SSR-set [hidden] attribute. Belt and
-        // suspenders so the toggle is robust against any [hidden] vs class
-        // specificity weirdness in scoped Astro styles.
-        container.style.display = isActive ? 'grid' : 'none';
-        if (isActive) container.removeAttribute('hidden');
-        else container.setAttribute('hidden', '');
-      });
-      if (labelEl && VIEW_LABELS[viewName]) {
-        labelEl.textContent = VIEW_LABELS[viewName];
-      }
-      const url = new URL(window.location.href);
-      if (viewName === 'roster') url.searchParams.delete('view');
-      else url.searchParams.set('view', viewName);
-      window.history.replaceState({}, '', url.toString());
-    }
-
-    Array.from(tabs).forEach((tab) => {
-      tab.addEventListener('click', (e) => {
-        e.preventDefault();
-        const viewName = tab.dataset.view;
-        if (viewName) switchView(viewName);
-      });
-    });
+      /* The view tabs are retired: Analytics and the Keeper Planner live on the
+         Front Office hub now. `?view=analytics` / `?view=planner` still render
+         their section server-side — those deep links are deliberate — so the
+         SSR `hidden` attribute is the whole mechanism and no client switcher
+         is needed. */
 
     // ── Team / year selectors ──
     const buildUrl = (params: Record<string, string>) => {
@@ -1800,13 +1931,6 @@ const pageConfig = {
       return url.toString();
     };
 
-    const franchiseSelect = document.getElementById('franchise-select') as HTMLSelectElement | null;
-    if (franchiseSelect) {
-      franchiseSelect.addEventListener('change', () => {
-        window.location.href = buildUrl({ franchise: franchiseSelect.value });
-      });
-    }
-
     const yearSelect = document.getElementById('year-select') as HTMLSelectElement | null;
     if (yearSelect) {
       yearSelect.addEventListener('change', () => {
@@ -1815,8 +1939,10 @@ const pageConfig = {
     }
 
     // ── Player details modal trigger (delegated) ──
-    const rosterContainer = document.querySelector('.roster-page');
-    if (rosterContainer) initPlayerModalTrigger(rosterContainer as HTMLElement);
+    // `pageRoot`, not a fresh bare-class query — the gate above already
+    // resolved THIS league's page root, and re-asking without the league is
+    // the same hazard one statement later.
+    initPlayerModalTrigger(pageRoot);
 
     // Warm the watch list so the sheet's Watch option opens in the right
     // state; the store caches per league and no-ops on repeat.
@@ -1961,173 +2087,8 @@ const pageConfig = {
       gap: var(--padding-md, 1rem);
     }
 
-    /* ── Team-card hero ──
-       Symmetric top/bottom padding so future content (activity strip, etc.)
-       slots in beneath this card without needing extra spacing tweaks. */
-    .team-card {
-      display: grid;
-      padding: var(--padding-md, 1rem);
-      justify-items: center;
-      gap: var(--padding-sm, 0.5rem);
-      border-radius: var(--radius-lg, 1rem);
-      background: var(--content-bg, #fff);
-      box-shadow: var(--shadow-lg);
-      position: relative;
-      text-align: center;
-    }
-
     /* Dark mode: raised-card treatment — shadow alone can't separate this
-       section from the navy page floor; add the border ring. */
-    :global(html.dark) .team-card {
-      box-shadow:
-        0 0 0 1px var(--content-border, #555555),
-        var(--shadow-lg);
-    }
-
-    @media (min-width: 480px) {
-      .team-card {
-        display: flex;
-        align-items: center;
-        flex-wrap: wrap;
-        padding-inline: var(--padding-lg, 1.5rem);
-        justify-content: center;
-        padding-block: var(--padding-md, 1rem);
-        text-align: left;
-      }
-    }
-
-    .team-card img {
-      width: 72px;
-      height: 72px;
-      border-radius: 14px;
-      object-fit: cover;
-    }
-
-    .team-card__identity {
-      min-width: 0;
-    }
-
-    .team-card__label {
-      text-transform: uppercase;
-      font-size: 0.75rem;
-      font-weight: 600;
-      letter-spacing: 0.06em;
-      color: var(--color-gray-400, #9ca3af);
-      margin: 0;
-    }
-
-    .team-card__name {
-      margin: 0;
-      font-size: 1.35rem;
-      font-weight: 700;
-      line-height: 1.2;
-      color: var(--color-gray-900, #111827);
-    }
-
-    .team-card__meta {
-      margin: 0;
-      color: var(--color-gray-500, #6b7280);
-      font-size: 0.875rem;
-    }
-
-    .team-card__last-seen {
-      font-size: 0.6875rem;
-      font-weight: 500;
-      color: var(--color-gray-500, #6b7280);
-      margin: 0.125rem 0 0;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.3rem;
-    }
-
-    .last-seen-dot {
-      display: inline-block;
-      width: 0.4rem;
-      height: 0.4rem;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-
-    [data-level='active'] .last-seen-dot { background: #16a34a; }
-    :global(html.dark) [data-level='active'] .last-seen-dot { background: var(--color-success, #34d399); }
-
-    /* View tabs (SVG icon tiles) — copied structurally from TheLeague */
-    .team-card__actions {
-      width: 100%;
-    }
-
-    @media (min-width: 480px) {
-      .team-card__actions {
-        width: auto;
-        margin-left: auto;
-      }
-    }
-
-    .view-tabs {
-      display: flex;
-      gap: 0.5rem;
-      justify-content: center;
-    }
-
-    @media (min-width: 480px) {
-      .view-tabs {
-        position: absolute;
-        right: var(--padding-lg, 1.5rem);
-        top: var(--padding-lg, 1.5rem);
-      }
-    }
-
-    .view-tab {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 0.25rem;
-      padding: 0.5rem 0.7rem;
-      border: 2px solid transparent;
-      border-radius: var(--radius-md, 0.5rem);
-      background: var(--color-gray-50, #f9fafb);
-      cursor: pointer;
-      transition: all 0.2s ease;
-      position: relative;
-      min-width: 69px;
-    }
-
-    .view-tab:hover {
-      background: var(--color-gray-200, #dddedf);
-      border-color: var(--color-gray-300, #d1d5db);
-    }
-
-    .view-tab[data-active="true"] {
-      /* Mix with --content-bg (not hardcoded white) so the active tile tints
-         the card surface — a near-white pill reads as out-of-place on the
-         navy dark card. Mirrors TheLeague's roster view-tabs. */
-      background: color-mix(in srgb, var(--color-primary, #1c497c) 12%, var(--content-bg, white));
-      border-color: var(--color-primary, #1c497c);
-    }
-
-    .view-tab__icon {
-      width: 28px;
-      height: 28px;
-      fill: var(--color-gray-500, #6b7280);
-      color: var(--color-gray-500, #6b7280);
-    }
-
-    .view-tab[data-active="true"] .view-tab__icon {
-      fill: var(--color-primary, #1c497c);
-      color: var(--color-primary, #1c497c);
-    }
-
-    .view-tab__label {
-      font-size: 0.7rem;
-      font-weight: 500;
-      color: var(--color-gray-500, #6b7280);
-      white-space: nowrap;
-    }
-
-    .view-tab[data-active="true"] .view-tab__label {
-      color: var(--color-primary, #1c497c);
-    }
+       section from the navy page floor;
 
     /* ── Inline controls bar (team + year switcher) ── */
     .roster-controls-bar {

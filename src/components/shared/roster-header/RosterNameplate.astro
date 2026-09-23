@@ -1,0 +1,514 @@
+---
+/**
+ * The per-team half of the roster header: the club's nameplate, and the
+ * gameday bar beneath it.
+ *
+ * Split out of RosterHeader for one reason — TheLeague switches teams IN
+ * PLACE, with every club already in the page's payload, and the header has to
+ * follow without a page load. So TheLeague's page renders this component once
+ * per club into a `<template>` and the switcher swaps the markup in.
+ *
+ * That keeps ONE implementation of this markup. The alternative was
+ * re-rendering the nameplate from JavaScript, which is how a server copy and
+ * a client copy of the same layout drift apart.
+ *
+ * The team switcher is deliberately NOT here: it is identical for every club
+ * apart from which crest carries `aria-current`, so putting it in the template
+ * would mean 15 copies of a 24-crest row to move one attribute.
+ *
+ * The plate is ONE FLAT CLUB COLOUR, from `resolveRosterHeaderSkin` and never
+ * from `colorPrimary` directly: seven of TheLeague's sixteen clubs carry
+ * `#181818` there, so the naive solid paints seven identical near-black
+ * rectangles. That resolver reads the player-modal band's already-settled
+ * answer to the same question — including the per-club calls a human made in
+ * `BAND_ART_DIRECTION` — and only raises its contrast floor, because this
+ * header's type is small where the band's is a large club name.
+ *
+ * It replaced a gradient plus a wash. Everything that existed to survive a
+ * gradient's two ends went with it: the wash, the pill's measured fill, and
+ * `accentPanel`. One surface, one ink.
+ */
+import GamedayBar from './GamedayBar.astro';
+import { resolveRosterHeaderSkin, ROSTER_PLATE_INK } from '../../../utils/roster-header-skin';
+import type { BuildFranchiseBandBrandsOptions } from '../../../utils/franchise-band-brand';
+import type { CanonicalLeagueSlug } from '../../../config/leagues';
+import type { RailWeek, HeaderPlayer } from '../../../utils/roster-header-data';
+import type { StandingsSummary } from '../../../utils/standings-summary';
+
+interface HeaderGame {
+  week: number;
+  opponentId: string;
+  isHome: boolean;
+  played: boolean;
+  score: number | null;
+  opponentScore: number | null;
+  outcome: 'W' | 'L' | 'T' | null;
+}
+
+/** A week's worth of games — one most of the season, two in a doubleheader. */
+interface HeaderWeek {
+  week: number;
+  games: HeaderGame[];
+}
+
+interface Props {
+  leagueSlug: CanonicalLeagueSlug;
+  /** The club on screen. */
+  franchiseId: string;
+  teamName: string;
+  teamIcon: string | null;
+  /** "Northwest Division", or "American League · North" where there are two. */
+  teamMeta: string;
+  /** Eyebrow pill — what this page IS for this league. */
+  label: string;
+  season: number;
+  standing: StandingsSummary;
+  /**
+   * League-specific stats appended after record / rank / points-for: cap space
+   * in a league with a cap, keepers set in one without. A league shows what it
+   * HAS rather than a blank slot for a feature it does not run.
+   */
+  extraStats?: Array<{ value: string; label: string }>;
+  lastPlayed: HeaderWeek | null;
+  upNext: HeaderWeek | null;
+  rail: RailWeek[];
+  /** The live NFL week, or NULL when this season is not the one being played. */
+  currentWeek: number | null;
+  nameOf: (franchiseId: string) => string;
+  iconOf: (franchiseId: string) => string | null;
+  recordOf: (franchiseId: string) => string | null;
+  scheduleHref: (week?: number) => string;
+  /** When this week's lineups lock, in the viewer's clock; null if nothing to warn about. */
+  lineupLock?: string | null;
+  /**
+   * How recently this club's OWNER was on the site. Null, or a level of
+   * `unknown`, prints nothing — "never seen" is usually a gap in our own
+   * tracking rather than a fact about the owner, and a header is the wrong
+   * place to assert it.
+   */
+  ownerLastSeen?: { level: 'active' | 'idle' | 'dormant' | 'unknown'; text: string } | null;
+  /**
+   * The club's one featured player, filling the nameplate's right side —
+   * which was otherwise dead space behind the crest watermark on desktop.
+   *
+   * WHICH player is the league's call, not this component's: a cap league
+   * sends its top earner, a league with no salaries sends whoever ranks best
+   * at his own position. See `topPlayerBySalary` / `bestPlayerByPositionRank`.
+   *
+   * Hidden below 900px. It is the least important thing in the header, and a
+   * phone's width belongs to the club's name and the scoreboard.
+   */
+  featuredPlayer?: HeaderPlayer | null;
+  /**
+   * Throwback state for THIS request, straight from
+   * `resolveThrowbackRequestState`, and typed as what CONSUMES it rather than
+   * re-described here — the skin resolver passes it through to
+   * `buildFranchiseBandBrands`, so a widened option there must reach this
+   * plate rather than being silently dropped at the prop boundary.
+   *
+   * Absent (the default) is the 51 weeks of the year that are not a Throwback
+   * Week, where the skin is the club's present-day one.
+   */
+  throwback?: BuildFranchiseBandBrandsOptions;
+}
+
+const {
+  leagueSlug,
+  franchiseId,
+  teamName,
+  teamIcon,
+  teamMeta,
+  label,
+  season,
+  standing,
+  extraStats = [],
+  lastPlayed,
+  upNext,
+  rail,
+  currentWeek,
+  nameOf,
+  iconOf,
+  recordOf,
+  scheduleHref,
+  lineupLock = null,
+  ownerLastSeen = null,
+  throwback = {},
+  featuredPlayer = null,
+} = Astro.props;
+
+const skin = resolveRosterHeaderSkin(franchiseId, leagueSlug, throwback);
+
+/* The plate must never be a PARTIAL overlay. During a Throwback Week the skin
+   carries the era's name and crest together with its colours, so the name is
+   taken from there and only falls back to the page's when there is no skin at
+   all. Taking the page's name beside era art is the Aug 2026 bug pointing the
+   other way — and worst for a franchise whose era keeps its name, where
+   nothing on the plate would say it had thrown back. */
+const plateName = skin?.name || teamName;
+
+const ordinal = (n: number) => {
+  const rest = n % 100;
+  if (rest >= 11 && rest <= 13) return `${n}th`;
+  return `${n}${['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;
+};
+
+// Record / rank / points-for, then whatever the league adds. Each entry is
+// omitted rather than rendered blank when the feed has no number for it.
+const stats: Array<{ value: string; label: string }> = [
+  ...(standing.record ? [{ value: standing.record, label: 'Record' }] : []),
+  ...(standing.rank != null
+    ? [{
+        value: ordinal(standing.rank),
+        label: standing.groupSize ? `of ${standing.groupSize}` : 'Rank',
+      }]
+    : []),
+  ...(standing.pointsFor != null
+    ? [{ value: standing.pointsFor.toFixed(0), label: 'Points for' }]
+    : []),
+  ...extraStats,
+];
+---
+
+{/* Both custom properties come from the module, always: the ink is the
+    reference the fill was floored against, so a second copy of it in this
+    stylesheet could drift below the contrast the fill was chosen to clear. */}
+<div
+  class:list={['rhdr__plate', { 'rhdr__plate--franchise': !!skin }]}
+  style={`--rhdr-plate-ink: ${ROSTER_PLATE_INK};${skin ? ` --rhdr-fill: ${skin.fill};` : ''}`}
+>
+  {skin?.crest && (
+    /* Resolved SERVER-SIDE as the dark cut with its measured outline inline:
+       the plate is a dark club colour in BOTH themes, while the site's
+       html.dark crest machinery fires only for a viewer whose SITE theme is
+       dark. Without this a light-theme owner gets the wrong cut. */
+    <img
+      class="rhdr__watermark"
+      src={skin.crest}
+      style={skin.crestFilter ? `filter: ${skin.crestFilter};` : undefined}
+      alt=""
+      aria-hidden="true"
+      loading="lazy"
+      decoding="async"
+    />
+  )}
+  {/* No wash. It existed to hold copy legible across a GRADIENT's light end;
+      a flat fill floored for the plate's ink has no light end, and the wash
+      would only darken the club's colour for nothing. */}
+
+  <div class="rhdr__inner">
+    {/* The eyebrow and identity stack; the featured card sits beside them, so
+        they need their own column rather than being siblings of it. */}
+    <div class="rhdr__identity-col">
+    <div class="rhdr__eyebrow">
+      <span class="rhdr__pill">{label}</span>
+      <span class="rhdr__meta">{season} season · {teamMeta}</span>
+      {/* The owner-presence chip that used to live on the old team card.
+          Per CLUB, so it rides in the swap templates and follows an in-place
+          team switch — the version before this header parked it in one place
+          and wrote into it from JavaScript, which is how it went stale. */}
+      {ownerLastSeen && ownerLastSeen.level !== 'unknown' && (
+        <span class="rhdr__seen" data-level={ownerLastSeen.level}>
+          <span class="rhdr__seen-dot" aria-hidden="true"></span>
+          <span>Owner {ownerLastSeen.text}</span>
+        </span>
+      )}
+    </div>
+    <div class="rhdr__identity">
+      {/* One crest source per header: with a franchise skin the small mark
+          takes the resolver's art too, rather than pairing an era crest with
+          the watermark behind it. */}
+      {(skin?.crestSmall || teamIcon) && (
+        <img
+          class="rhdr__crest"
+          src={skin?.crestSmall || teamIcon!}
+          style={skin?.crestFilter ? `filter: ${skin.crestFilter};` : undefined}
+          alt=""
+          width="50"
+          height="50"
+        />
+      )}
+      <div class="rhdr__names">
+        {/* `data-team-name` is the roster parity harness's identity hook
+            (scripts/roster-parity-check.mjs). It fingerprints the club name on
+            every render to prove a refactor did not silently change which team
+            is on screen, so it travels with the nameplate. */}
+        <h1 class="rhdr__name" data-team-name>{plateName}</h1>
+        {stats.length > 0 && (
+          <div class="rhdr__stats">
+            {stats.map((stat, index) => (
+              <>
+                {index > 0 && <span class="rhdr__sep" aria-hidden="true">/</span>}
+                <span class="rhdr__stat">
+                  <b>{stat.value}</b> {stat.label}
+                </span>
+              </>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+    </div>
+    {featuredPlayer && (
+      <aside class="rhdr__feature" aria-label={featuredPlayer.statLabel}>
+        <span class="rhdr__feature-kicker">{featuredPlayer.statLabel}</span>
+        <span class="rhdr__feature-body">
+          {featuredPlayer.headshot ? (
+            <img
+              class="rhdr__feature-shot"
+              src={featuredPlayer.headshot}
+              alt=""
+              width="46"
+              height="46"
+              loading="lazy"
+              decoding="async"
+            />
+          ) : (
+            <span class="rhdr__feature-shot rhdr__feature-shot--blank" aria-hidden="true">
+              {featuredPlayer.position}
+            </span>
+          )}
+          <span class="rhdr__feature-text">
+            <span class="rhdr__feature-name">{featuredPlayer.name}</span>
+            <span class="rhdr__feature-stat">
+              {featuredPlayer.position} · {featuredPlayer.statValue}
+            </span>
+          </span>
+        </span>
+      </aside>
+    )}
+  </div>
+</div>
+
+<GamedayBar
+  lastPlayed={lastPlayed}
+  upNext={upNext}
+  rail={rail}
+  currentWeek={currentWeek}
+  nameOf={nameOf}
+  iconOf={iconOf}
+  recordOf={recordOf}
+  scheduleHref={scheduleHref}
+  lineupLock={lineupLock}
+/>
+
+<style>
+  .rhdr__plate {
+    position: relative;
+    overflow: hidden;
+    color: #f2f5f8;
+    /* Literal fallback, like every sibling hero carries: an undefined custom
+       property would paint this band transparent in BOTH themes. */
+    background: #10161f;
+  }
+  .rhdr__plate--franchise { background: var(--rhdr-fill, #10161f); }
+
+  /* The oversized crest behind the name. It carried the gradient version too,
+     and reads BETTER on a flat fill: it was competing with the gradient's own
+     shape before, and now it is the only modulation on the band. */
+  .rhdr__watermark {
+    position: absolute;
+    top: 50%;
+    right: clamp(4rem, 28%, 22rem);
+    transform: translateY(-50%);
+    height: 210%;
+    width: auto;
+    opacity: 0.13;
+    object-fit: contain;
+    pointer-events: none;
+    z-index: 1;
+  }
+  /* CENTRED below 900px, not pushed to the right edge.
+     The right-hand anchor exists so the mark sits behind the FEATURED PLAYER
+     card and clear of the name; that card is hidden at this width (see the
+     `.rhdr__feature` rule below), so the same offset just parked a half-
+     cropped crest against the right edge with dead colour on the left. With
+     nothing to sit behind, the band's own centre is where it belongs.
+     `right: auto` is required, not tidiness — the desktop rule sets `right`,
+     and both offsets together would stretch nothing and place nothing. */
+  @media (max-width: 900px) {
+    .rhdr__watermark {
+      left: 50%;
+      right: auto;
+      transform: translate(-50%, -50%);
+      height: 160%;
+      opacity: 0.11;
+    }
+  }
+
+  .rhdr__inner {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: clamp(1rem, 3vw, 2rem);
+    padding: clamp(1rem, 2.6vw, 1.25rem) clamp(1.1rem, 3vw, 1.5rem);
+  }
+  .rhdr__identity-col { min-width: 0; flex: 1; }
+
+  .rhdr__eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.7rem;
+  }
+  .rhdr__pill {
+    padding: 0.15rem 0.6rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 999px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    background: rgba(255, 255, 255, 0.14);
+  }
+  /* Darkens the fill rather than lightening it. The generic pill above tints
+     with white, which RAISES the surface lightness under its own label and so
+     eats the contrast the fill was floored for; inset on a solid band, the
+     chip can only improve it. Same ink as the rest of the plate. */
+  .rhdr__plate--franchise .rhdr__pill {
+    background: rgba(0, 0, 0, 0.28);
+    border-color: rgba(255, 255, 255, 0.22);
+  }
+  /* Full strength, and the hierarchy against the club name is carried by size
+     and weight instead. Dimming this to 0.72 alpha — which the gradient
+     version did — has to be paid for by darkening every club's fill until the
+     dimmed ink still clears 4.5:1, which costs a mean ΔE of 14.2 across the
+     forty clubs and turns the Micks' green into a murky #255b29. See
+     src/utils/roster-header-skin.ts. */
+  .rhdr__meta {
+    font-size: 0.78rem;
+    color: var(--rhdr-plate-ink, #f2f5f8);
+    letter-spacing: 0.01em;
+  }
+
+  /* Fixed values, not page tokens: this chip sits on the FRANCHISE GRADIENT,
+     which is dark for every club in both themes (that is what the resolver
+     guarantees), so a token tuned for a light page surface would vanish here.
+     Same reason the meta line above it is a literal rgba. */
+  .rhdr__seen {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.78rem;
+    color: rgba(242, 245, 248, 0.72);
+    white-space: nowrap;
+  }
+  .rhdr__seen-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #9aa3ad;
+  }
+  .rhdr__seen[data-level='active'] .rhdr__seen-dot { background: #34d399; }
+  .rhdr__seen[data-level='idle'] .rhdr__seen-dot { background: #fbbf24; }
+
+  .rhdr__identity { display: flex; align-items: center; gap: 0.9rem; min-width: 0; }
+  .rhdr__crest { flex: none; object-fit: contain; }
+  .rhdr__names { min-width: 0; flex: 1; }
+
+  .rhdr__plate .rhdr__name {
+    /* Explicit, and specific enough to beat the layout's global `h1` colour:
+       the plate is a dark franchise gradient in BOTH themes, so inheriting the
+       theme's heading ink shipped dark navy on dark red in light mode. */
+    color: var(--color-white, #fff);
+    margin: 0;
+    font-size: clamp(1.6rem, 4.4vw, 2.3rem);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.005em;
+    text-transform: uppercase;
+    text-wrap: balance;
+  }
+
+  .rhdr__stats {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+    margin-top: 0.45rem;
+    font-size: 0.8rem;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: rgba(242, 245, 248, 0.8);
+  }
+  .rhdr__stat b {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+  }
+  .rhdr__sep { opacity: 0.36; }
+
+  /* ── The featured player, desktop only ────────────────────────────────
+     Sits where the crest watermark already was, so it needs its own quiet
+     surface to stay readable over the brightest part of the gradient. */
+  .rhdr__feature {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    max-width: 16rem;
+    padding: 0.55rem 0.8rem;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.26);
+  }
+  .rhdr__feature-kicker {
+    font-size: 0.625rem;
+    font-weight: 600;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: rgba(242, 245, 248, 0.66);
+  }
+  .rhdr__feature-body { display: flex; align-items: center; gap: 0.6rem; min-width: 0; }
+  .rhdr__feature-shot {
+    flex: none;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    object-fit: cover;
+    object-position: top center;
+    background: rgba(255, 255, 255, 0.12);
+  }
+  .rhdr__feature-shot--blank {
+    display: grid;
+    place-items: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: rgba(242, 245, 248, 0.8);
+  }
+  .rhdr__feature-text { display: flex; flex-direction: column; min-width: 0; }
+  .rhdr__feature-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    line-height: 1.2;
+    color: #fff;
+    /* A long name shortens rather than widening the plate. */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .rhdr__feature-stat {
+    margin-top: 0.1rem;
+    font-size: 0.78rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--rhdr-plate-ink, #f2f5f8);
+  }
+  /* No franchise accent here any more. `accent-panel` existed because a
+     gradient has two ends and "a colour readable on one is invisible on the
+     other by construction" — a flat fill has one, and this card sits on its
+     own `rgba(0,0,0,0.26)` panel over it, so the plate's ink already clears.
+     One surface, one ink.
+  */
+
+  /* Below 900px the club's name and the scoreboard own the width. */
+  @media (max-width: 900px) {
+    .rhdr__feature { display: none; }
+  }
+
+  @media (max-width: 560px) {
+    .rhdr__stats { gap: 0.55rem; font-size: 0.74rem; }
+  }
+</style>

@@ -92,6 +92,28 @@ export function getConferenceLogoDark(id: ConferenceId): string {
   return `/assets/afl/conferences/${getConferenceShort(id).toLowerCase()}-dark.svg`;
 }
 
+/**
+ * The conference's own accent, SAMPLED FROM ITS MARK rather than configured.
+ *
+ * Same contract as `getConferenceLogo` above — call sites derive it, never
+ * hardcode it — and taken from the same place the logo comes from, so the two
+ * cannot disagree: `al.svg` carries `#c41e3a` and `nl.svg` `#1d4f91` as their
+ * one distinguishing hue (both also carry the shared `#002244` navy and
+ * `#b0b7bc` silver, which is exactly why neither of those can stand for a
+ * conference).
+ *
+ * Both clear white ink comfortably — 5.9:1 and 8.6:1 — which is what the
+ * roster header's vertical rail needs.
+ */
+const CONFERENCE_COLORS: Record<ConferenceId, string> = {
+  '00': '#c41e3a',
+  '01': '#1d4f91',
+};
+
+export function getConferenceColor(id: ConferenceId): string {
+  return CONFERENCE_COLORS[id];
+}
+
 export function getConferenceIdByName(name: ConferenceName): ConferenceId {
   return NAME_TO_ID[name];
 }
@@ -135,15 +157,39 @@ export function sameConference(a: string, b: string): boolean {
 }
 
 /**
- * Group teams by conference for UI dropdowns / lists.
- * Returns AL first, then NL.
+ * The order the two conferences are presented in.
+ *
+ * A viewer's OWN conference leads; everyone else keeps AL-then-NL. The
+ * argument is the viewer's conference, never the conference of whatever club
+ * is being looked at — an NL owner clicking into an AL club keeps NL first,
+ * because an order that followed the VIEWED club would reshuffle the team
+ * switcher under the cursor on every click, sending the crest just clicked to
+ * the far end of the row.
+ *
+ * Null (signed out, or signed into the other league) keeps the historical
+ * order, so a viewer who has chosen nothing sees exactly what they saw before.
  */
-export function getTeamsGroupedByConference(): Array<{
+export function conferenceOrder(
+  viewerConferenceId?: ConferenceId | null
+): ConferenceId[] {
+  return viewerConferenceId === '01' ? ['01', '00'] : ['00', '01'];
+}
+
+/**
+ * Group teams by conference for UI dropdowns / lists.
+ *
+ * Defaults to AL first, then NL. Pass the VIEWER's conference to lead with
+ * their own — see `conferenceOrder` for why it is the viewer's and not the
+ * viewed club's.
+ */
+export function getTeamsGroupedByConference(
+  viewerConferenceId?: ConferenceId | null
+): Array<{
   conferenceId: ConferenceId;
   conferenceName: ConferenceName;
   teams: AFLTeam[];
 }> {
-  return (['00', '01'] as ConferenceId[]).map((id) => ({
+  return conferenceOrder(viewerConferenceId).map((id) => ({
     conferenceId: id,
     conferenceName: CONFERENCE_NAMES[id],
     teams: getConferenceTeams(id),

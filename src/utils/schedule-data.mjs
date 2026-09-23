@@ -21,6 +21,26 @@
  *    collapsing it to one silently drops half a week's scoring.
  */
 
+/**
+ * One game from ONE franchise's point of view — the shape every per-franchise
+ * accessor below returns, and the shape the roster header's props declare.
+ *
+ * Named rather than repeated inline because four functions return it: a bare
+ * `object[]` in a @returns silently makes every field an error at the .astro
+ * call site, which is how the header's props went red the moment the
+ * week-level accessors were added.
+ *
+ * @typedef {{
+ *   week: number,
+ *   opponentId: string,
+ *   isHome: boolean,
+ *   played: boolean,
+ *   score: number|null,
+ *   opponentScore: number|null,
+ *   outcome: 'W'|'L'|'T'|null
+ * }} FranchiseGame
+ */
+
 /** MFL returns a single-element list as a bare object. */
 function toArray(value) {
   if (Array.isArray(value)) return value;
@@ -71,7 +91,7 @@ export function parseWeeklySchedule(feed) {
  * the franchise does not appear in is omitted rather than returned empty, so
  * callers iterate real games only.
  *
- * @returns {{week: number, games: {week: number, opponentId: string, isHome: boolean, played: boolean, score: number|null, opponentScore: number|null, outcome: 'W'|'L'|'T'|null}[]}[]}
+ * @returns {{week: number, games: FranchiseGame[]}[]}
  */
 export function franchiseSchedule(weeks, franchiseId) {
   const id = String(franchiseId);
@@ -118,12 +138,93 @@ function resolveOutcome(side, opponent) {
 /**
  * The next game that has not been played, at or after `fromWeek`. Returns null
  * once the season is over — the caller decides what to show instead.
+ *
+ * @param {{week: number, games: FranchiseGame[]}[]} schedule
+ * @param {number} [fromWeek]
+ * @returns {FranchiseGame|null}
  */
 export function findNextGame(schedule, fromWeek = 1) {
   for (const { week, games } of schedule) {
     if (week < fromWeek) continue;
     const pending = games.find((game) => !game.played);
     if (pending) return pending;
+  }
+  return null;
+}
+
+/**
+ * The most recent game that HAS been played, at or before `beforeWeek`.
+ *
+ * The mirror of `findNextGame`, and the other half of what a roster header
+ * shows: last result on one side, next opponent on the other. Returns null
+ * before a club's first game of the season — the caller decides what to show
+ * instead, exactly as with `findNextGame`.
+ *
+ * Walks weeks newest-first, and within a week takes the LAST played game
+ * rather than the first: a doubleheader week holds two games, and the later
+ * one is the more recent result. Iterating forward and keeping the final
+ * match would work too, but this stops at the first hit on a full season.
+ *
+ * @param {{week: number, games: FranchiseGame[]}[]} schedule
+ * @param {number} [beforeWeek]
+ * @returns {FranchiseGame|null}
+ */
+export function findLastResult(schedule, beforeWeek = Infinity) {
+  for (let i = schedule.length - 1; i >= 0; i -= 1) {
+    const { week, games } = schedule[i];
+    if (week > beforeWeek) continue;
+    for (let j = games.length - 1; j >= 0; j -= 1) {
+      if (games[j].played) return games[j];
+    }
+  }
+  return null;
+}
+
+/**
+ * The most recent week a club actually PLAYED, with every game it played that
+ * week — the week-level form of `findLastResult`.
+ *
+ * A roster header needs this rather than one game. TheLeague opens 2026 with
+ * three doubleheader weeks, so "the last result" is routinely two results,
+ * and the club can have SPLIT them: the Pigskins lost week 1 by 21 and won it
+ * by 7, and a header that printed the second game announced a win for a week
+ * they finished 1-1. `findLastResult` is still the right answer where one
+ * opponent is the question ("who did we just play"); this is the right answer
+ * where the WEEK is ("how did week 1 go").
+ *
+ * Unplayed games in that week are dropped: a doubleheader can be half
+ * scored, and a game with no score is not a result.
+ *
+ * @param {{week: number, games: FranchiseGame[]}[]} schedule
+ * @param {number} [beforeWeek]
+ * @returns {{week: number, games: FranchiseGame[]}|null}
+ */
+export function findLastPlayedWeek(schedule, beforeWeek = Infinity) {
+  for (let i = schedule.length - 1; i >= 0; i -= 1) {
+    const { week, games } = schedule[i];
+    if (week > beforeWeek) continue;
+    const played = games.filter((game) => game.played);
+    if (played.length > 0) return { week, games: played };
+  }
+  return null;
+}
+
+/**
+ * The next week holding an unplayed game, with every unplayed game in it —
+ * the week-level form of `findNextGame`, and the mirror of the above.
+ *
+ * Games in that week that HAVE been played are dropped, so a half-scored
+ * doubleheader reports only what is still to come.
+ *
+ * @param {{week: number, games: FranchiseGame[]}[]} schedule
+ * @param {number} [fromWeek]
+ * @returns {{week: number, games: FranchiseGame[]}|null}
+ */
+export function findNextWeek(schedule, fromWeek = 1) {
+  for (const { week, games } of schedule) {
+    if (week < fromWeek) continue;
+    const pending = games.filter((game) => !game.played);
+    if (pending.length > 0) return { week, games: pending };
   }
   return null;
 }

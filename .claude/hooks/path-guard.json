@@ -776,13 +776,22 @@
       "note": "Run `node scripts/roster-parity-check.mjs` before AND after editing — it is the only test of this 12k-line page's hydrated output.",
       "paths": [
         "src/pages/*/rosters.astro",
-        "scripts/roster-parity-check.mjs"
+        "scripts/roster-parity-check.mjs",
+        "src/components/shared/roster-header/*.astro",
+        "src/utils/roster-header-data.ts",
+        "src/utils/roster-header-skin.ts",
+        "src/utils/throwback-request-state.ts"
       ],
       "tests": [
+        "tests/cross-league-init-gate.test.ts",
         "tests/page-fork-ratchet.test.ts",
+        "tests/roster-header-data.test.ts",
         "tests/roster-utils-rows.test.ts",
+        "tests/roster-weekly-results-scope.test.ts",
         "tests/rosters-team-nav-clientrouter.test.ts",
-        "tests/weekly-results-matchup-guard.test.ts"
+        "tests/weekly-results-matchup-guard.test.ts",
+        "tests/roster-header-throwback.test.ts",
+        "tests/roster-header-conference-row.test.ts"
       ]
     },
     {
