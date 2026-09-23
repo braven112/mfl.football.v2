@@ -1,0 +1,259 @@
+---
+/**
+ * ESPN history import — the commissioner's upload page, on the MFL app host.
+ *
+ * The secret link IS the credential (src/utils/espn-history.ts): an ESPN
+ * commissioner has no session here. An unknown or malformed token is a plain
+ * 404, so the URL space reveals nothing.
+ *
+ * Flow, phone-first: log in at espn.com in this browser → open a link below →
+ * select all, copy → paste here (or pick saved files) → Save. Post/Redirect/Get
+ * so a refresh never re-submits. No client script.
+ */
+import MflAppLayout from '../../../layouts/MflAppLayout.astro';
+import { buildHostToSlugMap } from '../../../config/leagues';
+import { checkRateLimit } from '../../../utils/rate-limit';
+import {
+  ESPN_VIEWS,
+  currentEspnSeason,
+  espnSeasonUrl,
+  listSnapshots,
+  resolveImportToken,
+  storeEspnUpload,
+} from '../../../utils/espn-history';
+
+export const prerender = false;
+
+Astro.response.headers.set('Cache-Control', 'private, no-store');
+Astro.response.headers.set('X-Robots-Tag', 'noindex, nofollow');
+Astro.response.headers.set('Referrer-Policy', 'no-referrer');
+
+const NOT_FOUND = '/_not-found';
+if (buildHostToSlugMap()[Astro.url.hostname]) return Astro.rewrite(NOT_FOUND);
+
+const token = Astro.params.token ?? '';
+const record = await resolveImportToken(token);
+if (!record) return Astro.rewrite(NOT_FOUND);
+
+let errors: string[] = [];
+
+if (Astro.request.method === 'POST') {
+  const origin = Astro.request.headers.get('origin');
+  if (origin && origin !== Astro.url.origin) return new Response('Cross-origin request refused.', { status: 403 });
+
+  const limit = await checkRateLimit('espn-history-upload', record.leagueId, 60, 3600);
+  if (!limit.allowed) {
+    errors = ['Too many uploads in the last hour. Try again later.'];
+  } else {
+    const form = await Astro.request.formData();
+    const texts: string[] = [];
+    const pasted = String(form.get('paste') ?? '');
+    if (pasted.trim()) texts.push(pasted);
+    for (const entry of form.getAll('files')) {
+      if (entry instanceof File && entry.size > 0) texts.push(await entry.text());
+    }
+    if (!texts.length) errors = ['Paste the text ESPN showed you, or choose a saved file.'];
+
+    const saved: string[] = [];
+    for (const text of texts) {
+      const result = await storeEspnUpload(record.leagueId, text);
+      if (!result.ok) errors.push(result.error);
+      else for (const s of result.stored) saved.push(`${s.seasonId}:${s.duplicate ? 'dup' : 'new'}`);
+    }
+    if (!errors.length) {
+      return Astro.redirect(`${Astro.url.pathname}?saved=${encodeURIComponent(saved.join(','))}`, 303);
+    }
+  }
+}
+
+const thisSeason = currentEspnSeason();
+const requested = Number(Astro.url.searchParams.get('season'));
+const season = Number.isInteger(requested) && requested >= 2004 && requested <= thisSeason ? requested : thisSeason;
+const pastSeasons = Array.from({ length: thisSeason - 2004 }, (_, i) => thisSeason - 1 - i);
+
+const snapshots = await listSnapshots(record.leagueId);
+const received = new Map<number, Set<string>>();
+for (const s of snapshots) {
+  const views = received.get(s.seasonId) ?? new Set<string>();
+  s.views.forEach((v) => views.add(v));
+  received.set(s.seasonId, views);
+}
+const receivedSeasons = [...received.entries()].sort((a, b) => b[0] - a[0]);
+
+const savedParam = Astro.url.searchParams.get('saved');
+const savedNotes = savedParam
+  ? savedParam.split(',').filter(Boolean).map((part) => {
+      const [year, kind] = part.split(':');
+      return kind === 'dup' ? `${year}: already had this one` : `${year}: saved`;
+    })
+  : [];
+---
+
+<MflAppLayout title="Import league history">
+  <div class="espn-import">
+    <h1>Import {record.label}</h1>
+    <p class="espn-import__lead">
+      Copy your league's data from ESPN and paste it here. We keep a permanent copy of every season. You never share your
+      ESPN password.
+    </p>
+
+    {savedNotes.length > 0 && (
+      <div class="espn-import__notice" role="status">
+        <strong>Got it.</strong> {savedNotes.join(' · ')}
+      </div>
+    )}
+    {errors.length > 0 && (
+      <div class="espn-import__notice espn-import__notice--warn" role="alert">
+        {errors.map((e) => <p>{e}</p>)}
+      </div>
+    )}
+
+    <ol class="espn-import__steps">
+      <li>
+        <strong>Log in at <a href="https://www.espn.com/fantasy/football/" target="_blank" rel="noopener noreferrer">espn.com</a></strong>
+        in this browser (not the ESPN app).
+      </li>
+      <li>
+        <strong>Open each link for {season}</strong>, one at a time. Each shows a page of text.
+        <ul class="espn-import__links">
+          {ESPN_VIEWS.map((v) => (
+            <li>
+              <a href={espnSeasonUrl(record.leagueId, season, v.view)} target="_blank" rel="noopener noreferrer">{v.label}</a>
+              {received.get(season)?.has(v.view) && <span class="espn-import__got"> ✓ received</span>}
+            </li>
+          ))}
+        </ul>
+      </li>
+      <li><strong>Select all of the text, copy it, and paste it below.</strong> Then tap Save. Repeat for each link.</li>
+    </ol>
+
+    <form method="post" enctype="multipart/form-data" class="espn-import__form">
+      <label for="espn-paste">Paste ESPN's text here</label>
+      <textarea id="espn-paste" name="paste" rows="8" placeholder='It starts with {"draftDetail"… or {"gameId"…'></textarea>
+      <label for="espn-files">Or choose saved files</label>
+      <input id="espn-files" type="file" name="files" accept=".json,.txt,application/json,text/plain" multiple />
+      <button type="submit">Save</button>
+    </form>
+
+    <details class="espn-import__past">
+      <summary>Earlier seasons</summary>
+      <p>Pick a year to get its links. ESPN may not have every year; if a link says "Not Found", that season isn't there.</p>
+      <div class="espn-import__years">
+        <a href={`?season=${thisSeason}`}>{thisSeason}</a>
+        {pastSeasons.map((y) => <a href={`?season=${y}`} aria-current={y === season ? 'true' : undefined}>{y}</a>)}
+      </div>
+    </details>
+
+    <h2>Received so far</h2>
+    {receivedSeasons.length === 0 ? (
+      <p class="espn-import__muted">Nothing yet.</p>
+    ) : (
+      <ul class="espn-import__received">
+        {receivedSeasons.map(([year, views]) => (
+          <li>
+            <strong>{year}</strong>: {ESPN_VIEWS.map((v) => `${v.label} ${views.has(v.view) ? '✓' : '—'}`).join(' · ')}
+          </li>
+        ))}
+      </ul>
+    )}
+  </div>
+</MflAppLayout>
+
+<style>
+  .espn-import {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 16px 16px 64px;
+    color: var(--page-text);
+    line-height: 1.55;
+  }
+  .espn-import h1 {
+    font-size: 1.5rem;
+    margin: 0 0 8px;
+  }
+  .espn-import h2 {
+    font-size: 1.125rem;
+    margin: 28px 0 8px;
+  }
+  .espn-import__lead,
+  .espn-import__muted {
+    color: var(--content-text-muted);
+  }
+  .espn-import__notice {
+    margin: 12px 0;
+    padding: 10px 12px;
+    border: 1px solid var(--color-border-subtle);
+    border-left: 4px solid var(--color-success);
+    border-radius: 6px;
+    background: var(--color-surface-3);
+  }
+  .espn-import__notice p {
+    margin: 0;
+  }
+  .espn-import__notice--warn {
+    border-left-color: var(--league-accent);
+  }
+  .espn-import__steps {
+    padding-left: 20px;
+  }
+  .espn-import__steps > li {
+    margin-bottom: 12px;
+  }
+  .espn-import__links {
+    margin: 6px 0 0;
+    padding-left: 18px;
+  }
+  .espn-import__links a,
+  .espn-import__steps a {
+    color: var(--color-primary);
+    font-weight: 600;
+  }
+  .espn-import__got {
+    color: var(--color-success);
+    font-weight: 600;
+  }
+  .espn-import__form {
+    display: grid;
+    gap: 8px;
+    margin: 16px 0;
+  }
+  .espn-import__form textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px;
+    font: 0.8125rem/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: var(--page-text);
+    background: var(--page-bg);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: 6px;
+  }
+  .espn-import__form button {
+    justify-self: start;
+    padding: 10px 24px;
+    font-weight: 600;
+    color: var(--page-bg);
+    background: var(--page-text);
+    border: 0;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .espn-import__years {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .espn-import__years a {
+    padding: 4px 10px;
+    border: 1px solid var(--color-border-subtle);
+    border-radius: 999px;
+    color: var(--page-text);
+    text-decoration: none;
+  }
+  .espn-import__years a[aria-current='true'] {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+  .espn-import__received {
+    padding-left: 18px;
+  }
+</style>
