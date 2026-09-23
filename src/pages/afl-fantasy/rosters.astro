@@ -37,7 +37,7 @@ import {
 } from '../../utils/afl-player-scoring';
 import { resolveStatsSeasonYear, parseYtdPlayerScores } from '../../utils/stats-season.mjs';
 import { getAuthUser } from '../../utils/auth';
-import { getAllActivity, getActivityLevel, formatLastSeen } from '../../utils/owner-activity';
+import { resolveOwnerPresence } from '../../utils/rosters/owner-presence';
 import { resolveThrowbackRequestState } from '../../utils/throwback-request-state';
 import { resolveRosterHeaderSkin } from '../../utils/roster-header-skin';
 import {
@@ -334,22 +334,11 @@ const headerSchedule = resolveHeaderSchedule(
    so a slow store degrades to no chip rather than a hung render, and resolved
    PER CLUB so the chip rides in the swap templates instead of being written
    into one place from JavaScript. */
-let ownerActivityMap: Record<string, number> = {};
-try {
-  ownerActivityMap = await Promise.race([
-    getAllActivity(AFL_LEAGUE_ID),
-    new Promise<Record<string, number>>((_, reject) =>
-      setTimeout(() => reject(new Error('Redis timeout')), 3000)),
-  ]);
-} catch { /* Redis unavailable or timed out — the chip simply does not print */ }
 /* Throwback Week, resolved once for the header. The AFL has run eras since
    September 2026, so this is not TheLeague-only. */
 const headerThrowback = await resolveThrowbackRequestState('afl', Astro.url);
 
-const ownerSeenFor = (franchiseId: string) => {
-  const at = ownerActivityMap[franchiseId] ?? null;
-  return at ? { level: getActivityLevel(at), text: formatLastSeen(at) } : null;
-};
+const ownerSeenFor = await resolveOwnerPresence(AFL_LEAGUE_ID);
 
 /* When this week's lineups LOCK, in the viewer's own clock.
 
