@@ -26,6 +26,11 @@ vi.mock('../scripts/lib/redis.mjs', () => ({
       case 'DEL':
         store.delete(key);
         return 1;
+      case 'HSET': {
+        if (!hashes.has(key)) hashes.set(key, new Map());
+        hashes.get(key)!.set(rest[0], rest[1]);
+        return 1;
+      }
       case 'HLEN':
         return hashes.get(key)?.size ?? 0;
       case 'HGETALL': {
@@ -54,7 +59,7 @@ const {
   normalizeFranchiseIds,
 } = await import('../scripts/lib/owners-poll-pass.mjs');
 const { buildNagPushes } = await import('../scripts/lib/owners-poll-posts.mjs');
-const { ownersPollStandingKey, ownersPollCurrentKey } = await import(
+const { ownersPollStandingKey, ownersPollCurrentKey, ownersPollBallotsKey } = await import(
   '../src/utils/owners-poll-ballot.mjs'
 );
 
@@ -650,5 +655,74 @@ describe('the close pass does not depend on its own opener', () => {
     });
     expect(result!.block.slots).toBe(7);
     expect(result!.block.ballotsIn).toBe(4);
+  });
+});
+
+describe('the standing-vote cut-over runs inside the passes', () => {
+  // Standing votes shipped mid-week: the Tuesday pass had already opened the
+  // week-scoped hash on the old code, and owners voted into it until the
+  // promotion. The passes adopt those ballots themselves, so the cut-over does
+  // not hinge on someone running the one-shot with credentials before Thursday.
+  const after = new Date('2026-09-10T02:00:00Z');
+  const ballot = (fid: string, offset: number, updatedAt: string | null) =>
+    JSON.stringify({
+      franchiseId: fid,
+      ranking: Array.from({ length: SLOTS }, (_, k) => FIELD[(offset + k) % FIELD.length]),
+      submittedAt: updatedAt,
+      updatedAt,
+    });
+  function seedLegacy(entries: Array<[string, string]>, week = 5) {
+    hashes.set(ownersPollBallotsKey(LEAGUE.navSlug, 2026, week), new Map(entries));
+  }
+
+  it('tallies ballots that were cast into the legacy week hash', async () => {
+    seedWindow();
+    seedLegacy([
+      [FIELD[0], ballot(FIELD[0], 0, '2026-09-08T15:00:00.000Z')],
+      [FIELD[1], ballot(FIELD[1], 1, '2026-09-08T16:00:00.000Z')],
+    ]);
+    const result = await closePoll({
+      league: LEAGUE,
+      issue: issue(),
+      compositeRankByFid: composite,
+      now: after,
+      log: silent,
+    });
+    expect(result!.block.ballotsIn).toBe(2);
+    expect(hashes.get(ownersPollStandingKey(LEAGUE.navSlug, 2026))?.size).toBe(2);
+  });
+
+  it('never overwrites a NEWER standing ballot with the legacy one', async () => {
+    seedWindow();
+    const newer = ballot(FIELD[0], 3, '2026-09-09T12:00:00.000Z');
+    hashes.set(ownersPollStandingKey(LEAGUE.navSlug, 2026), new Map([[FIELD[0], newer]]));
+    seedLegacy([[FIELD[0], ballot(FIELD[0], 0, '2026-09-08T15:00:00.000Z')]]);
+    await closePoll({ league: LEAGUE, issue: issue(), compositeRankByFid: composite, now: after, log: silent });
+    const kept = JSON.parse(hashes.get(ownersPollStandingKey(LEAGUE.navSlug, 2026))!.get(FIELD[0])!);
+    expect(kept.updatedAt).toBe('2026-09-09T12:00:00.000Z');
+    expect(kept.ranking[0]).toBe(FIELD[3]);
+  });
+
+  it('replaces an OLDER standing ballot, and is idempotent on a second run', async () => {
+    seedWindow({ closesAt: '2099-01-01T00:00:00.000Z' });
+    hashes.set(
+      ownersPollStandingKey(LEAGUE.navSlug, 2026),
+      new Map([[FIELD[0], ballot(FIELD[0], 3, '2026-09-01T00:00:00.000Z')]]),
+    );
+    seedLegacy([[FIELD[0], ballot(FIELD[0], 0, '2026-09-08T15:00:00.000Z')]]);
+    await readTurnout({ league: LEAGUE });
+    const first = hashes.get(ownersPollStandingKey(LEAGUE.navSlug, 2026))!.get(FIELD[0]);
+    await readTurnout({ league: LEAGUE });
+    const second = hashes.get(ownersPollStandingKey(LEAGUE.navSlug, 2026))!.get(FIELD[0]);
+    expect(JSON.parse(first!).updatedAt).toBe('2026-09-08T15:00:00.000Z');
+    expect(second).toBe(first);
+  });
+
+  it('does not nag an owner whose vote is still in the legacy hash', async () => {
+    seedWindow({ closesAt: '2099-01-01T00:00:00.000Z' });
+    seedLegacy([[FIELD[2], ballot(FIELD[2], 2, '2026-09-08T15:00:00.000Z')]]);
+    const turnout = await readTurnout({ league: LEAGUE });
+    expect(turnout).toMatchObject({ ok: true, ballotsIn: 1 });
+    expect(turnout.nonVoters).not.toContain(FIELD[2]);
   });
 });
