@@ -49,6 +49,51 @@
     "heroRotationDays": 14
   },
   {
+    "id": "waiver-claim-manager",
+    "date": "2026-09-02",
+    "category": "new-feature",
+    "icon": "clipboard",
+    "leagues": [
+      "theleague",
+      "afl"
+    ],
+    "title": "Your Waiver Claims, On Your Own Site",
+    "heroHeadline": "Claims you can",
+    "heroAccentWord": "See.",
+    "link": "/players",
+    "linkLabel": "See your claims",
+    "summary": "File a claim and it used to vanish into MyFantasyLeague until Monday night told you how it went. Now the claims you have pending sit at the top of Free Agents in the order they'll be awarded, and you can change who you're dropping or scrap one entirely without leaving.",
+    "description": [
+      "Filing was only ever half of it. You'd pick a player on <a href=\"/players\">Free Agents</a>, hit submit, and then the claim disappeared into MyFantasyLeague — no way to see what you had pending, no way to change the guy you'd promised to drop, no way to back out of a claim you'd thought better of at 11pm. The only honest answer was to open MFL in another tab and do it there, which rather defeats the point of building any of this.",
+      "So the claims you've filed now sit right above the player list, numbered in the order MyFantasyLeague will actually award them. Each one tells you who you're adding, who you're dropping, and which round it's in. <strong>Change drop</strong> swaps the casualty without touching the claim. <strong>Delete</strong> takes the whole thing back. Both go straight to MFL and are read back out again before we'll tell you they worked — if we can't confirm it, we say so rather than showing you a checkmark and hoping.",
+      "One thing it deliberately won't do: reorder. MyFantasyLeague has no reorder control — we went looking, and the only way to shuffle a round is to delete every claim and re-file them in a new sequence, which leaves a gap where you own nothing at all. That's a lousy trade during a live waiver window, so the priority you see is the order you filed in. Get the order right on the way in, and fix the drops from here. If you'd rather see it all on MFL, the link at the corner of the panel goes straight there."
+    ],
+    "image": "waiver-claim-manager.webp",
+    "imageAlt": "The Your Waiver Claims panel above the Free Agents table, listing three pending claims numbered by priority with Change drop and Delete buttons on each"
+  },
+  {
+    "id": "hero-wears-your-colors",
+    "date": "2026-09-02",
+    "category": "enhancement",
+    "icon": "football",
+    "title": "The Hero Wears Your Colors",
+    "summary": "Sign in and the big card at the top of the homepage stops being league furniture and starts being yours — your franchise's gradient behind it, your crest sitting dead center, the headline and the player still riding over the top. It's the draft broadcast's reveal treatment, brought home.",
+    "description": [
+      "For two years the top of the homepage has opened the same way for all forty of us. A deep navy card in the AFL, a deep blue one in The League, a red corner glow, a headline, a player cut out and floating on the right. Handsome. Also completely anonymous — the single biggest thing on the page you look at most, and it had nothing to say about who was looking at it.",
+      "Sign in now and that card is your franchise's. The background is your team's own gradient — the exact string the <a href=\"/draft/broadcast\">draft broadcast</a> paints on the TV when your pick lands, not a second, slightly-different version of it — and your crest sits in the middle of the card at watermark strength, the copy crossing its left edge and the player crossing its right. Smokane opens green under the shield. The Pigskins open red under the pig. Midwestside opens damn near black with a gold ring floating in it, which is exactly right.",
+      "Everything on the card moved with it. The accent word, the countdown number, the pill and the border are all your team now, and the button went neutral white with your color as the type — no league gold, no league red, nothing borrowed. The border is the part that took the most fiddling: it runs a lighter cut of your color in dark mode and a deeper one in light, so the card lifts off the page either way instead of dissolving into it on one of them.",
+      "None of that is hand-picked, and it can't be — there are forty franchises and two themes, so somebody's headline was always going to end up unreadable if these were eyeballed. Every color is measured before it ships: the accent has to clear the contrast floor against the exact gradient it lands on, AND stay far enough from white that it still reads as an accent instead of melting into the headline around it. The pill's label is small type, so it's held to the stricter bar. A few teams needed a nudge lighter or deeper to get there and got one. Four franchises — Bring The Pain, Wabs, and the AFL's two — have no color in their palette at all, just black and white, so they get a bright silver, which is the honest answer rather than a hue nobody chose.",
+      "Two deliberate holdouts. Signed out, you get the league chrome exactly as it was — there is no team to wear, and a generic gradient pretending to be one is worse than honest navy. Picking a team on the AFL with the team switcher doesn't do it either: that sets which team the page is ABOUT, and a card in your colors is saying the site is yours, which should take an actual login. And the heroes that are ABOUT somebody else keep their own colors: the playoff bracket, the champion card, <a href=\"/live-scoring\">the live scoreboard</a> and the weekly matchup already wear whoever is in them, and painting your red over a card announcing another owner's title would be a strange way to congratulate him."
+    ],
+    "image": "hero-team-colors.webp",
+    "imageAlt": "The AFL homepage hero for a signed-in Smokane FC owner. The whole card is in Smokane's green: a green gradient background with Smokane's gas-mask shield crest watermarked large across the middle, a lighter green border, a green star chip and a green AFL pill. The headline reads “TWO CONFERENCES. ONE.” with ONE in the same mint green rather than the AFL's gold, above a two-line summary and a neutral-white VIEW STANDINGS button whose label is a deep green. Joe Burrow's cutout headshot floats on the right above a frosted caption reading Joe Burrow, HEADLINER · QB · CIN.",
+    "excludeFromHero": true,
+    "leagues": [
+      "theleague",
+      "afl"
+    ]
+  },
+  {
     "id": "owner-activity-mfl-blend",
     "date": "2026-09-01",
     "category": "enhancement",
