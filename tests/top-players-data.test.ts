@@ -239,10 +239,15 @@ describe('the roster sync recomputes what it invalidates', () => {
   );
 
   it('runs both leagues’ Top Players computation', () => {
+    // Anchored to the END of the line, not `\b`. A word boundary matches
+    // between `players` and the `:` in `compute:top-players:afl`, so the AFL
+    // command alone satisfied a `\b` form of the first assertion — delete
+    // TheLeague's line and the guard stays green while the workflow only
+    // recomputes one of the two leagues. Caught in review on this PR.
     expect(WORKFLOW, 'the sync commits rosters.json; it must recompute what derives from it')
-      .toMatch(/pnpm run compute:top-players\b/);
+      .toMatch(/^\s*pnpm run compute:top-players$/m);
     expect(WORKFLOW, 'the AFL has its own leaderboard and its own week range')
-      .toMatch(/pnpm run compute:top-players:afl\b/);
+      .toMatch(/^\s*pnpm run compute:top-players:afl$/m);
   });
 
   it('runs it through the package scripts prebuild uses, not a second invocation', () => {
