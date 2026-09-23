@@ -125,6 +125,34 @@ jobs:
             fi
           done
 
+      # The Top Players leaderboard is DERIVED from the feeds fetched above —
+      # player-scores-weekly.json for the points, rosters.json for who owns
+      # whom — and it is recomputed here so the committed copy cannot disagree
+      # with the rosters committed in the same commit.
+      #
+      # It was already a prebuild step (previewSkip: true), so production
+      # always renders a fresh one; what drifted was the file IN THE REPO, on
+      # which `pnpm dev`, every preview build and tests/top-players-data.test.ts
+      # all depend. Nothing recomputed it when this job committed new rosters,
+      # so the two disagreed from the first sync after any manual recompute and
+      # that test was red on main, on staging and on every open branch —
+      # three separate PRs "fixed" it by recomputing by hand and each one went
+      # red again within the hour.
+      #
+      # This costs no extra commits. compute-top-players.mjs writes through
+      # `writeJsonIfChanged` and its payload carries no run clock, so a sync
+      # where no roster moved rewrites nothing and the commit step below still
+      # reports "No roster changes to commit" — which matters, because every
+      # commit to main is a production build (see tests/cron-commit-churn.test.ts).
+      # `add-paths: data/` on the commit step already covers the output.
+      #
+      # Through the package scripts, not a raw node invocation, so there is one
+      # definition of how this runs and prebuild cannot drift from the cron.
+      - name: Recompute Top Players leaderboards
+        run: |
+          pnpm run compute:top-players
+          pnpm run compute:top-players:afl
+
       # Note: draft-pick contract sync runs in its own workflow
       # (sync-draft-pick-contracts.yml), May-only cron, since the rookie
       # draft is the only window that needs it.
