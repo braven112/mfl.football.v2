@@ -7,10 +7,10 @@
  */
 
 import type { APIRoute } from 'astro';
-import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
+import { getAuthUser, isCommissionerOrAdminForLeague } from '../../../utils/auth';
 import { getMFLCookiesFromRequest } from '../../../utils/session';
 import { getDeclarationById, updateDeclaration } from '../../../utils/contract-storage';
-import { writeContractToMFL } from '../../../utils/mfl-contract-writer';
+import { writeContractToMFL, CONTRACT_LEAGUE_ID } from '../../../utils/mfl-contract-writer';
 import { invalidateRosterCache } from '../../../utils/mfl-roster-cache';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
 import { JSON_HEADERS } from '../../../utils/api-response';
@@ -30,7 +30,9 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    if (!isCommissionerOrAdmin(user)) {
+    // Scoped to the league the writer targets: an AFL commissioner session
+    // must not approve (and so write) TheLeague's contracts.
+    if (!isCommissionerOrAdminForLeague(user, CONTRACT_LEAGUE_ID)) {
       return new Response(
         JSON.stringify({ error: 'Commissioner access required' }),
         { status: 403, headers: JSON_HEADERS },

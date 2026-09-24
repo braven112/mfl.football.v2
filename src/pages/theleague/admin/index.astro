@@ -8,7 +8,7 @@
  * back to /theleague or hide admin-only controls.
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
-import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
+import { getAuthUser, isCommissionerOrAdmin, isAuthorizedForLeague } from '../../../utils/auth';
 import { loginUrlForRequest, forbiddenPathFor } from '../../../utils/login-redirect';
 import { getLeagueBySlug } from '../../../config/leagues';
 
@@ -16,7 +16,10 @@ export const prerender = false;
 
 const user = getAuthUser(Astro.request);
 if (!user) return Astro.redirect(loginUrlForRequest(Astro, getLeagueBySlug('theleague')!));
-if (!isCommissionerOrAdmin(user)) return Astro.rewrite(forbiddenPathFor(getLeagueBySlug('theleague')!));
+// League-scoped: an AFL commissioner session is not a TheLeague admin.
+if (!isCommissionerOrAdmin(user) || !isAuthorizedForLeague(user, getLeagueBySlug('theleague')!.id)) {
+  return Astro.rewrite(forbiddenPathFor(getLeagueBySlug('theleague')!, isCommissionerOrAdmin(user) ? 'league' : 'commissioner'));
+}
 
 type AdminLink = {
   href: string;

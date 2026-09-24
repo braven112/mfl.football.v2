@@ -31,6 +31,10 @@ vi.stubGlobal('fetch', mockFetch);
 // Mock env vars
 const originalEnv = process.env;
 
+// A request-driven write carries the CALLER's MFL cookies. Distinct from the
+// env values so a test can tell which one reached MFL.
+const CREDS = { mflUserId: 'session_cookie', mflIsCommish: 'session_commish' };
+
 describe('mfl-contract-writer', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -68,7 +72,7 @@ describe('mfl-contract-writer', () => {
         salary: '500000',
         contractYear: '3',
         contractInfo: '',
-      });
+      }, CREDS);
 
       expect(result.success).toBe(true);
       expect(result.attempts).toBe(1);
@@ -90,7 +94,7 @@ describe('mfl-contract-writer', () => {
         salary: '500000',
         contractYear: '3',
         contractInfo: '',
-      });
+      }, CREDS);
 
       // mflFetch receives an options object with url
       // calls[0] is the pre-write backup read; the write is calls[1].
@@ -114,7 +118,7 @@ describe('mfl-contract-writer', () => {
         salary: '500000',
         contractYear: '3',
         contractInfo: 'RC',
-      });
+      }, CREDS);
 
       // calls[0] is the pre-write backup read; the write is calls[1].
       const writeCall = mockMflFetch.mock.calls[1][0];
@@ -125,7 +129,7 @@ describe('mfl-contract-writer', () => {
       expect(bodyStr).toContain('contractInfo%3D%22RC%22');
     });
 
-    it('uses MFL_USER_ID for auth via mflFetch', async () => {
+    it("writes with the caller's credentials, not the server's env", async () => {
       mockMflFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({ salaries: { leagueUnit: { player: [] } } }),
@@ -141,25 +145,24 @@ describe('mfl-contract-writer', () => {
         salary: '500000',
         contractYear: '3',
         contractInfo: '',
-      });
+      }, CREDS);
 
       // calls[0] is the pre-write backup read; the write is calls[1].
       const writeCall = mockMflFetch.mock.calls[1][0];
-      expect(writeCall.mflUserCookie).toBe('test_cookie_value');
-      expect(writeCall.mflCommishCookie).toBe('test_commish_value');
+      expect(writeCall.mflUserCookie).toBe('session_cookie');
+      expect(writeCall.mflCommishCookie).toBe('session_commish');
     });
 
-    it('fails when MFL_USER_ID is not set', async () => {
-      process.env.MFL_USER_ID = '';
-      process.env.MFL_IS_COMMISH = '';
-
+    it('refuses a write with no caller credentials even when the env has some', async () => {
+      // The env fallback let a commissioner-role session drop its own
+      // mfl_user_id cookie and write TheLeague's salaries as the server.
       const { writeContractToMFL } = await import('../src/utils/mfl-contract-writer');
       const result = await writeContractToMFL({
         playerId: '14056',
         salary: '500000',
         contractYear: '3',
         contractInfo: '',
-      });
+      }, undefined);
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('No MFL credentials');
@@ -183,7 +186,7 @@ describe('mfl-contract-writer', () => {
         salary: '500000',
         contractYear: '3',
         contractInfo: '',
-      });
+      }, CREDS);
 
       expect(result.success).toBe(false);
       expect(result.attempts).toBe(3);
@@ -215,7 +218,7 @@ describe('mfl-contract-writer', () => {
         salary: '500000',
         contractYear: '3',
         contractInfo: '',
-      });
+      }, CREDS);
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('MFL returned error');
@@ -237,7 +240,7 @@ describe('mfl-contract-writer', () => {
       const result = await writeMultipleContractsToMFL([
         { playerId: '14056', salary: '500000', contractYear: '3', contractInfo: '' },
         { playerId: '15000', salary: '1000000', contractYear: '4', contractInfo: 'RC' },
-      ]);
+      ], CREDS);
 
       expect(result.success).toBe(true);
 
@@ -251,7 +254,7 @@ describe('mfl-contract-writer', () => {
 
     it('returns success for empty array', async () => {
       const { writeMultipleContractsToMFL } = await import('../src/utils/mfl-contract-writer');
-      const result = await writeMultipleContractsToMFL([]);
+      const result = await writeMultipleContractsToMFL([], CREDS);
       expect(result.success).toBe(true);
       expect(result.attempts).toBe(0);
     });
@@ -289,6 +292,8 @@ describe('mfl-contract-writer', () => {
       const result = await restoreFromBackup('/path/to/backup.json');
 
       expect(result.success).toBe(true);
+      // The operator tool is the one writer that uses the env credentials.
+      expect(mockMflFetch.mock.calls[1][0].mflUserCookie).toBe('test_cookie_value');
     });
 
     it('fails gracefully with empty backup', async () => {

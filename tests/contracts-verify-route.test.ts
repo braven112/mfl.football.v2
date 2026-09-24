@@ -21,6 +21,7 @@ const mockIsCommish = vi.fn();
 vi.mock('../src/utils/auth', () => ({
   getAuthUser: (...args: unknown[]) => mockGetAuthUser(...args),
   isCommissionerOrAdmin: (...args: unknown[]) => mockIsCommish(...args),
+  isCommissionerOrAdminForLeague: (...args: unknown[]) => mockIsCommish(...args),
 }));
 
 // Any bare fetch here is the bug this route was fixed for.

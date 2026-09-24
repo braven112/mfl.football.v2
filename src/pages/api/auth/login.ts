@@ -3,7 +3,7 @@ import { authenticateWithMFL } from '../../../utils/mfl-login';
 import { createSessionToken, createSessionCookie, createMFLCookies } from '../../../utils/session';
 import { setTheLeaguePreference, setAFLPreference, setBestBall1Preference, getAFLTeamData } from '../../../utils/team-preferences';
 import { json } from '../../../utils/api-response';
-import { getLeagueBySlug } from '../../../config/leagues';
+import { getLeagueById, getLeagueBySlug } from '../../../config/leagues';
 import { captureCredential } from '../../../utils/autocut-storage';
 import { checkRateLimit } from '../../../utils/rate-limit';
 import { getClientIdentity } from '../../../utils/client-ip';
@@ -47,6 +47,18 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     // Validate inputs
     if (!username || !password) {
       return json({ success: false, message: 'Username and password are required' }, 400);
+    }
+
+    // Sessions exist only for leagues this site runs. Without this, a direct
+    // POST naming any MFL league (or none — the resolver then takes the
+    // account's first league) minted a valid session for a stranger's league,
+    // and every endpoint keyed on franchiseId alone could not tell their 0001
+    // from ours. Every sign-in form sends its own registry league, so this
+    // only ever refuses a hand-built request. Checked BEFORE the MFL call so a
+    // refused league never relays a credential guess.
+    const league = typeof leagueId === 'string' ? getLeagueById(leagueId) : null;
+    if (!league) {
+      return json({ success: false, message: 'Sign in from one of the league sites.' }, 400);
     }
 
     // Throttle BEFORE the MFL call, not after. The point is to stop an
@@ -98,7 +110,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     // Authenticate with MFL — year override lets AFL pass 2025 because
     // the AFL 2026 league hasn't been created on MFL yet.
     const seasonYear = Number.isInteger(Number(year)) ? Number(year) : undefined;
-    const mflResponse = await authenticateWithMFL(username, password, leagueId, seasonYear);
+    const mflResponse = await authenticateWithMFL(username, password, league.id, seasonYear);
 
     if (!mflResponse.success) {
       return json(
@@ -130,7 +142,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       userId: mflResponse.userId || username,
       username,
       franchiseId: mflResponse.franchiseId,
-      leagueId: mflResponse.leagueId || leagueId || '',
+      leagueId: league.id,
       role: (mflResponse.role as 'owner' | 'commissioner' | 'admin') || 'owner',
     });
 
@@ -139,7 +151,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const sessionCookie = createSessionCookie(sessionToken, isDev);
 
     // Set team preference cookie for the league the user logged into
-    const resolvedLeagueId = mflResponse.leagueId || leagueId || '';
+    const resolvedLeagueId = league.id;
     if (resolvedLeagueId === AFL_LEAGUE_ID) {
       const teamData = getAFLTeamData(mflResponse.franchiseId);
       if (teamData) {
@@ -186,7 +198,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
           userId: mflResponse.userId || username,
           username,
           franchiseId: mflResponse.franchiseId,
-          leagueId: mflResponse.leagueId || leagueId || '',
+          leagueId: league.id,
           role: mflResponse.role || 'owner',
         },
       }),

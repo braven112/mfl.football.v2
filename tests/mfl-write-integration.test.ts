@@ -138,7 +138,12 @@ async function writePlayer(params: {
   contractYear: string;
   contractInfo: string;
 }): Promise<void> {
-  const result = await writeContractToMFL(params);
+  // The writer no longer falls back to env credentials; this operator script
+  // is the caller, so it hands over the env cookie explicitly.
+  const result = await writeContractToMFL(params, {
+    mflUserId: MFL_USER_ID ?? '',
+    mflIsCommish: process.env.MFL_IS_COMMISH || undefined,
+  });
   if (!result.success) {
     throw new Error(`Write failed: ${result.error}`);
   }

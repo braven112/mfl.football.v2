@@ -42,7 +42,8 @@ export const POST: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);
   if (!user?.franchiseId) return json({ error: 'Authentication required' }, 401);
 
-  const limit = await checkRateLimit('groupme-rewrite', user.franchiseId, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW);
+  // Keyed by league AND franchise: both leagues have a franchise 0001.
+  const limit = await checkRateLimit('groupme-rewrite', `${user.leagueId}:${user.franchiseId}`, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW);
   if (!limit.allowed) {
     return json({ error: 'Slow down — too many rewrites this hour. Try again later.' }, 429);
   }

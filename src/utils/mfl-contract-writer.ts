@@ -18,6 +18,12 @@ import { buildMflExportUrl } from './mfl-url';
 const MFL_READ_HOST = process.env.MFL_HOST || 'https://api.myfantasyleague.com';
 const MFL_WRITE_HOST = defaultMflWriteHost();
 const MFL_LEAGUE_ID = process.env.MFL_LEAGUE_ID || LEAGUES[DEFAULT_LEAGUE_SLUG].id;
+/**
+ * The one league every contract write in this module targets. Endpoints that
+ * gate a contract action must gate on THIS id (isCommissionerOrAdminForLeague),
+ * so the league they authorize is the league that gets written.
+ */
+export const CONTRACT_LEAGUE_ID = MFL_LEAGUE_ID;
 // Cookie names match the actual MFL cookie names for clarity
 const MFL_USER_ID = process.env.MFL_USER_ID || '';
 const MFL_IS_COMMISH = process.env.MFL_IS_COMMISH || '';
@@ -207,11 +213,15 @@ function buildSalaryXML(params: ContractWriteParams): string {
  */
 export async function writeContractToMFL(
   params: ContractWriteParams,
-  credentials?: MFLCredentials,
+  credentials: MFLCredentials | undefined,
 ): Promise<ContractWriteResult> {
-  // Use provided credentials (from user's session cookies) or fall back to env vars
-  const userId = credentials?.mflUserId || MFL_USER_ID;
-  const commish = credentials?.mflIsCommish || MFL_IS_COMMISH;
+  // The caller's OWN MFL credentials, never the server's. An env fallback
+  // here let any commissioner-role session omit its mfl_user_id cookie and
+  // write TheLeague's salaries as the server's account. A write with no
+  // credentials is refused; an operator restoring a backup passes the env
+  // credentials explicitly (restoreFromBackup).
+  const userId = credentials?.mflUserId || '';
+  const commish = credentials?.mflIsCommish || '';
 
   if (!userId) {
     return {
@@ -300,11 +310,15 @@ export async function writeContractToMFL(
  */
 export async function writeMultipleContractsToMFL(
   players: ContractWriteParams[],
-  credentials?: MFLCredentials,
+  credentials: MFLCredentials | undefined,
 ): Promise<ContractWriteResult> {
-  // Use provided credentials (from user's session cookies) or fall back to env vars
-  const userId = credentials?.mflUserId || MFL_USER_ID;
-  const commish = credentials?.mflIsCommish || MFL_IS_COMMISH;
+  // The caller's OWN MFL credentials, never the server's. An env fallback
+  // here let any commissioner-role session omit its mfl_user_id cookie and
+  // write TheLeague's salaries as the server's account. A write with no
+  // credentials is refused; an operator restoring a backup passes the env
+  // credentials explicitly (restoreFromBackup).
+  const userId = credentials?.mflUserId || '';
+  const commish = credentials?.mflIsCommish || '';
 
   if (!userId) {
     return {
@@ -395,8 +409,17 @@ export async function writeMultipleContractsToMFL(
 /**
  * Restore salary data from a backup file.
  * Reads the backup and writes each player's data back to MFL.
+ *
+ * An operator tool, not a request path: it is the one writer allowed to use
+ * the server's env credentials, and it names them explicitly rather than
+ * inheriting a fallback the request-driven writers no longer have.
  */
-export async function restoreFromBackup(backupFilePath: string): Promise<ContractWriteResult> {
+export async function restoreFromBackup(
+  backupFilePath: string,
+  credentials: MFLCredentials | undefined = MFL_USER_ID
+    ? { mflUserId: MFL_USER_ID, mflIsCommish: MFL_IS_COMMISH || undefined }
+    : undefined,
+): Promise<ContractWriteResult> {
   try {
     const data = JSON.parse(readFileSync(backupFilePath, 'utf-8')) as MFLSalaryExport;
     const players = data.salaries?.leagueUnit?.player;
@@ -412,7 +435,7 @@ export async function restoreFromBackup(backupFilePath: string): Promise<Contrac
       contractInfo: p.contractInfo,
     }));
 
-    return writeMultipleContractsToMFL(params);
+    return writeMultipleContractsToMFL(params, credentials);
   } catch (error) {
     return {
       success: false,

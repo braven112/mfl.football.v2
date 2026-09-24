@@ -177,10 +177,12 @@ describe('resolveOwnersPollCaller', () => {
 
   it('fails CLOSED on a league it cannot attribute', () => {
     // Defaulting here would address another league's franchise 0001.
+    // getAuthUser now voids a token naming a non-registry league outright,
+    // so it fails closed one step earlier than the league lookup.
     const result = resolveOwnersPollCaller(
       authed('/api/owners-poll/ballot', sessionCookie('0003', 'not-a-league')),
     );
-    expect(result).toEqual({ ok: false, reason: 'unknown-league' });
+    expect(result).toEqual({ ok: false, reason: 'unauthenticated' });
   });
 
   it('treats ?league= as a CHECK against the session, never an input', () => {

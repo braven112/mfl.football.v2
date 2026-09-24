@@ -83,7 +83,8 @@ export const POST: APIRoute = async ({ params, request }) => {
   const user = getAuthUser(request);
   if (!user?.franchiseId) return json({ error: 'Authentication required' }, 401);
 
-  const limit = await checkRateLimit('ai-reply', user.franchiseId, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW);
+  // Keyed by league AND franchise: both leagues have a franchise 0001.
+  const limit = await checkRateLimit('ai-reply', `${user.leagueId}:${user.franchiseId}`, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW);
   if (!limit.allowed) {
     return json({ error: 'Too many AI replies this hour — give Schefter a breather.' }, 429);
   }

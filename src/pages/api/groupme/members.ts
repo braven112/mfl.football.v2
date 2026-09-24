@@ -9,9 +9,13 @@
  */
 
 import type { APIRoute } from 'astro';
-import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
+import { getAuthUser, isCommissionerOrAdminForLeague } from '../../../utils/auth';
+import { getLeagueBySlug } from '../../../config/leagues';
 import { fetchGroupMembers } from '../../../utils/groupme-client';
 import { getAllLinkedUserIds, linkFranchise, loadTeamConfig } from '../../../utils/groupme-storage';
+
+// The GroupMe group is TheLeague's (same id groupme/sync.ts gates on).
+const GROUPME_LEAGUE_ID = getLeagueBySlug('theleague')!.id;
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -22,7 +26,7 @@ function json(data: unknown, status = 200): Response {
 
 export const GET: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);
-  if (!user || !isCommissionerOrAdmin(user)) {
+  if (!user || !isCommissionerOrAdminForLeague(user, GROUPME_LEAGUE_ID)) {
     return json({ error: 'Admin access required' }, 403);
   }
 
@@ -54,7 +58,7 @@ export const GET: APIRoute = async ({ request }) => {
 
 export const POST: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);
-  if (!user || !isCommissionerOrAdmin(user)) {
+  if (!user || !isCommissionerOrAdminForLeague(user, GROUPME_LEAGUE_ID)) {
     return json({ error: 'Admin access required' }, 403);
   }
 
