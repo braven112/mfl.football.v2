@@ -99,6 +99,19 @@
     -webkit-transition: 0.25s;
     transition: 0.25s;
   }
+  // No-JS fallback. MFL ships a bare `<label><span></span></label>`; the four
+  // bun spans above are injected by mflPageEnhancements.js, which only the
+  // TheLeague/AFL bundles load. A skin used without that bundle (Archie's,
+  // MFL 10105) got an invisible toggle, so the empty span draws the three
+  // lines itself. `:empty` stops matching once the script fills it.
+  .myfantasyleague_menu > label > span:empty {
+    display: block;
+    width: 25px;
+    height: 3px;
+    position: absolute;
+    right: 15px;
+    top: 11px;
+  }
   .myfantasyleague_menu input:checked ~ label .top-bun {
     width: 0%;
     top: 30px;
@@ -345,6 +358,11 @@
   .myfantasyleague_menu > label .double-burger,
   .myfantasyleague_menu > label .bottom-bun {
     background-color: $menu-text-color;
+  }
+
+  .myfantasyleague_menu > label > span:empty {
+    background-color: $menu-text-color;
+    box-shadow: 0 9px 0 $menu-text-color, 0 18px 0 $menu-text-color;
   }
 
   .myfantasyleague_menu ul li label span {
