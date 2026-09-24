@@ -463,7 +463,15 @@ describe('module.html — the complete MESSAGE6 module', () => {
      * the hand-edited source the generated one is built from. */
     const widget = readFileSync(path.join(process.cwd(), 'public/mfl/10105/widget.css'), 'utf8')
       .replace(/\/\*[\s\S]*?\*\//g, '');   // the comments quote the league's own @media rules
-    expect(widget).not.toContain('@media');
+
+    /* Specifically a DIMENSION query. `@media (prefers-reduced-motion)` and
+     * friends are user-preference queries, not viewport ones — they say
+     * nothing about how much room the widget has, so they are fine and the
+     * reduced-motion rule for the team links depends on one. */
+    const viewportQueries = [...widget.matchAll(/@media[^{]*/g)]
+      .map((m) => m[0])
+      .filter((q) => /\b(min|max)?-?(width|height|aspect-ratio)\s*:/.test(q));
+    expect(viewportQueries).toEqual([]);
     expect(widget).toContain('@container mp99');
   });
 
@@ -488,6 +496,24 @@ describe('module.html — the complete MESSAGE6 module', () => {
      * gets a scrollbar inside a scrollbar again. */
     expect(css.lastIndexOf('overflow: auto')).toBeLessThan(css.indexOf('overflow-x: clip'));
     expect(css.indexOf('max-height: none')).toBeGreaterThan(css.lastIndexOf('max-height: 850px'));
+  });
+
+  it('links every team to its franchise page, root-relative', async () => {
+    const { table } = await run({ withVp: true, config: { DIVISION_LEADER_SEEDS: 3, RUNNER_UP_SEEDS: 3, WILD_CARD_SEEDS: 2 } });
+    const links = all(table).filter((e) => e.tagName === 'A');
+    /* Every qualifier tile and every field row, and nothing else. */
+    expect(links.length).toBe(classCount(table, 'mp99-tile') + classCount(table, 'mp99-list-row'));
+
+    /* MFL option 07 is Franchise Info. Root-relative for the same reason the
+     * feeds are: it follows whichever wwwNN served the page and carries no
+     * league id of its own, so this file still works in any league. */
+    for (const a of links) {
+      const href = a.getAttribute('href')!;
+      expect(href.startsWith('/')).toBe(true);
+      expect(href).toMatch(/^\/2026\/options\?L=10105&O=07&F=\d{4}$/);
+    }
+    /* Each team links to ITSELF, not to a shared or off-by-one id. */
+    expect(new Set(links.map((a) => a.getAttribute('href'))).size).toBe(links.length);
   });
 
   it('caps the banner, which sits outside #madmen and is 1548px wide', () => {

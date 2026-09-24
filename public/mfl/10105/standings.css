@@ -380,8 +380,44 @@ img[src*="/mfl/10105/"] {
   padding: 0 12px;
 }
 
+/* Every team is a LINK to its franchise page, so both the tile and the field
+   row are anchors. MFL's stylesheet colours and underlines links, and a
+   coloured, underlined team name inside a tile looked like a mistake — these
+   inherit instead, and earn their affordance from the hover state below. */
+#madmen #wwwc a.mp99-tile,
+#madmen #wwwc a.mp99-list-row {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color .12s ease, transform .12s ease;
+}
+#madmen #wwwc a.mp99-tile:hover,
+#madmen #wwwc a.mp99-tile:focus-visible {
+  background-color: rgba(255, 255, 255, .06);
+  transform: translateY(-2px);
+}
+#madmen #wwwc a.mp99-list-row:hover,
+#madmen #wwwc a.mp99-list-row:focus-visible {
+  background-color: rgba(255, 255, 255, .05);
+}
+/* Keyboard users get a real ring; 99 of these are in the tab order. */
+#madmen #wwwc a.mp99-tile:focus-visible,
+#madmen #wwwc a.mp99-list-row:focus-visible {
+  outline: 2px solid #4b98e4;
+  outline-offset: -2px;
+}
+/* The lift is decoration, not information — anyone who asked for less
+   motion keeps the colour change and loses the movement. */
+@media (prefers-reduced-motion: reduce) {
+  #madmen #wwwc a.mp99-tile,
+  #madmen #wwwc a.mp99-list-row { transition: none; }
+  #madmen #wwwc a.mp99-tile:hover,
+  #madmen #wwwc a.mp99-tile:focus-visible { transform: none; }
+}
+
 /* One qualifier. The crest leads, Victory Points is the biggest number. */
 #madmen #wwwc .mp99-tile {
+  display: block;
   border-radius: 10px;
   padding: 10px 8px 12px 8px;
   text-align: center;

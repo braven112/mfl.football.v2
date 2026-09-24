@@ -40,6 +40,12 @@
    * Anything below is only a fallback for a module that defines nothing. */
   var WINNINGS = {};
 
+  /* Year + league id, read from the page URL in start(). Held here because
+   * the tile and row builders need it to link each team to its franchise
+   * page, and threading it through four call sites bought nothing. Set on
+   * every run, never at load, for the same reason WINNINGS is. */
+  var CTX = null;
+
   /* Accepts { "0001": 239 } or { "0001": "$239.00" }, ignores junk, and never
    * lets a bad entry take the whole table down with it. */
   function readWinnings(fallback) {
@@ -85,6 +91,30 @@
     var m = /^\/(\d{4})\/home\/(\d+)/.exec(window.location.pathname);
     if (!m) return null;
     return { year: m[1], leagueId: m[2] };
+  }
+
+  /* A team's franchise page — "Franchise Info", MFL option 07:
+   *
+   *   /2026/options?L=10105&O=07&F=0004
+   *
+   * Root-relative for the same reason the feeds are: it follows whichever
+   * wwwNN served the page, and carries no league id of its own, so the file
+   * keeps working in any league it is dropped into. */
+  function franchiseUrl(id) {
+    if (!CTX) return null;
+    return '/' + CTX.year + '/options?L=' + CTX.leagueId + '&O=07&F=' + id;
+  }
+
+  /* Wraps a team's tile or row in a link to its franchise page. Falls back to
+   * the plain element if the context could not be read, so a URL this script
+   * does not recognise loses the link and nothing else. */
+  function teamBox(tag, cls, t) {
+    var href = franchiseUrl(t.id);
+    if (!href) return el('div', cls);
+    var a = el('a', cls);
+    a.setAttribute('href', href);
+    a.title = t.name + ' \u2014 franchise page';
+    return a;
   }
 
   function feed(ctx, type) {
@@ -292,7 +322,7 @@
    * prize if the league has set one. */
   function tile(entry) {
     var t = entry.team;
-    var box = el('div', 'mp99-tile ' + TIER[entry.tier].row);
+    var box = teamBox('a', 'mp99-tile ' + TIER[entry.tier].row, t);
 
     box.appendChild(crest(t, 'mp99-crest'));
     box.appendChild(el('div', 'mp99-tile-name', t.name));
@@ -323,7 +353,7 @@
   /* Everyone below the cut: one line each. */
   function listRow(entry) {
     var t = entry.team;
-    var row = el('div', 'mp99-list-row');
+    var row = teamBox('a', 'mp99-list-row', t);
     row.appendChild(el('div', 'mp99-list-seed', String(entry.seed)));
     row.appendChild(crest(t, 'mp99-list-crest'));
     /* A stack, not a line: the name with the division under it. The
@@ -451,6 +481,7 @@
   function start() {
     var ctx = readContext();
     if (!ctx) return; /* not a league home page */
+    CTX = ctx;
     /* Read at start, not at load: the module's block is parsed by then. */
     WINNINGS = readWinnings({});
     if (!findTable()) return; /* module not on this page */
