@@ -24,7 +24,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const BANNER = 'https://dagrafixdesigns.com/Images/2008/DA_2025/zKen_10105/Ken_99.png';
+// Served from here rather than the league's old host, so a banner swap ships
+// with the widget instead of waiting on someone else's image server.
+const BANNER = 'https://v2.mfl.football/mfl/10105/banner.png';
 const SCRIPT = 'https://v2.mfl.football/mfl/10105/standings.js';
 const STYLES = 'https://v2.mfl.football/mfl/10105/standings.css';
 
@@ -53,7 +55,7 @@ const out = `<!-- ============================================================
      Rows are built from MyFantasyLeague on every page load.
      ============================================================ -->
 
-<img class="img-responsive" src="${BANNER}" alt="POWER 99" title="POWER 99" />
+<img class="img-responsive" src="${BANNER}" alt="MAD POWER 99: featuring 99 teams who think they're smarter than Alfred E. Neuman!" title="MAD POWER 99" />
 
 <table width="100%" border="0" cellspacing="4" cellpadding="0" id="madmen">
   <tr>

@@ -405,7 +405,7 @@ describe('module.html — the complete MESSAGE6 module', () => {
   });
 
   it('keeps the banner, caption and column widths', () => {
-    expect(module).toContain('Ken_99.png');
+    expect(module).toContain('https://v2.mfl.football/mfl/10105/banner.png');
     expect(module).toContain('<caption>MAD POWER 99</caption>');
     for (const col of ['col-rank', 'col-team', 'col-record', 'col-points', 'col-winnings', 'col-division']) {
       expect(module).toContain(col);
