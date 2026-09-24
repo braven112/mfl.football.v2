@@ -35,6 +35,7 @@ import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
 import leagueConfig from '../../data/theleague.config.json';
 import { getLeagueBySlug, leagueClock } from '../../config/leagues';
 import { getCachedRosters } from '../../utils/mfl-roster-cache';
+import { fetchLockedPlayers } from '../../utils/mfl-locked-players';
 import { resolveAuctionWindow } from '../../utils/auction-window';
 import { NO_HEADSHOT_SILHOUETTE, getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark, getPlayerAvatarStyleMaps } from '../../utils/nfl-team-colors';
 import { isDraftComplete } from '../../utils/draft-utils';
@@ -334,7 +335,13 @@ if (projectedScoresData?.projectedScores?.playerScore) {
 // and the precise failure the fallback exists to prevent. A live league always
 // has rostered players, so an empty map means "no usable answer", never
 // "nobody is rostered".
-const cachedRosterPlayers = await getCachedRosters(String(currentYear), mflLeagueId);
+// MFL's lock list (recently dropped players) rides along — see
+// src/utils/mfl-locked-players.ts. Null (MFL unreachable) just means no lock
+// icons; the claim route re-checks before it writes.
+const [cachedRosterPlayers, lockedPlayers] = await Promise.all([
+  getCachedRosters(String(currentYear), mflLeagueId),
+  fetchLockedPlayers(mflLeagueId, currentYear),
+]);
 
 const rosteredPlayers = new Map<string, { salary: number | null; contractYrs: number | null; franchiseId: string }>();
 if (cachedRosterPlayers && Object.keys(cachedRosterPlayers).length > 0) {
@@ -768,7 +775,14 @@ for (const p of playerList) {
 }
 const nflTeamsList = [...nflTeamsSet].sort();
 
-const playerDataJson = JSON.stringify(playerList);
+// `locked` only on the few locked free agents, so the rest ship nothing extra.
+// Single-pool league: MFL's one LEAGUE unit is keyed ''.
+const lockedIds = lockedPlayers?.[''];
+const playerDataJson = JSON.stringify(
+  lockedIds && lockedIds.size > 0
+    ? playerList.map((p) => (!p.rostered && lockedIds.has(p.id) ? { ...p, locked: true } : p))
+    : playerList
+);
 const nflTeamsJson = JSON.stringify(nflTeamsList);
 const defSpotlightJson = JSON.stringify(DEF_SPOTLIGHT_PLAYERS);
 
@@ -2284,6 +2298,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       const rosteredDot = p.rostered
         ? `<span class="rostered-dot" title="${escapeAttr(rosteredTeam ? 'Rostered by ' + rosteredTeam : 'Rostered')}"></span>`
         : '';
+      // MFL has him LOCKED (recently dropped) — its own page marks this `*`.
+      const lockMark = p.locked
+        ? `<span class="locked-mark" title="Locked — recently dropped. MFL won't allow adding him until the lock lifts."><svg aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-lock"></use></svg><span class="visually-hidden">Locked — recently dropped</span></span>`
+        : '';
       const watched = isWatchedId(p.id);
       const watchMark = watched
         ? `<span class="pa-watch-mark" title="On your watch list"><svg aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-eye"></use></svg></span>`
@@ -2297,7 +2315,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       // and for a visitor we can offer neither an in-place bid nor a sign-in.
       // Its presence is what tells the sheet to prefer the deep link over the
       // in-place form, which is how auction season keeps behaving as it did.
-      const acqOffered = !p.rostered && !(isAuctionSeason && p.auctionStatus === 'won');
+      // A locked player is not claimable (the claim route refuses him too); the
+      // offseason auction keeps its own flow untouched.
+      const acqOffered = !p.rostered && !(isAuctionSeason && p.auctionStatus === 'won') && !(p.locked && !isAuctionSeason);
       const acqExternal = acqOffered && !canClaim && !promptSignIn;
       const acqUrl = !acqExternal
         ? ''
@@ -2305,7 +2325,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           ? `https://${mflHost}/${mflActionYear}/options?L=${mflLeagueId}&O=43&P=${encodeURIComponent(p.id)}`
           : `https://${mflHost}/${mflActionYear}/add_drop?L=${mflLeagueId}`;
       const acqLabel = isAuctionSeason ? 'Bid' : 'Add';
-      const kebabCell = `<td class="col-player-actions"><button type="button" class="pa-kebab${watched ? ' is-watched' : ''}" data-pa-open data-pa-claimable="${acqOffered ? 'true' : 'false'}"${acqUrl ? ` data-pa-acq-url="${escapeAttr(acqUrl)}" data-pa-acq-label="${escapeAttr(acqLabel)}"` : ''} data-pa-id="${escapeAttr(p.id)}" data-pa-name="${escapeAttr(p.name)}" data-pa-pos="${escapeAttr(p.position || '')}" data-pa-team="${escapeAttr(p.team || '')}" data-pa-espn="${escapeAttr(p.espnId || '')}" data-pa-headshot="${isDef ? '' : escapeAttr(headshot)}" data-pa-franchise="${escapeAttr(p.franchiseId || '')}" data-pa-sub="${escapeAttr(rosteredTeam ? 'Rostered by ' + rosteredTeam : (p.rostered ? 'Rostered' : 'Free agent'))}" aria-label="Actions for ${escapeAttr(p.name)}" title="Player actions"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button></td>`;
+      const kebabCell = `<td class="col-player-actions"><button type="button" class="pa-kebab${watched ? ' is-watched' : ''}" data-pa-open data-pa-claimable="${acqOffered ? 'true' : 'false'}"${acqUrl ? ` data-pa-acq-url="${escapeAttr(acqUrl)}" data-pa-acq-label="${escapeAttr(acqLabel)}"` : ''} data-pa-id="${escapeAttr(p.id)}" data-pa-name="${escapeAttr(p.name)}" data-pa-pos="${escapeAttr(p.position || '')}" data-pa-team="${escapeAttr(p.team || '')}" data-pa-espn="${escapeAttr(p.espnId || '')}" data-pa-headshot="${isDef ? '' : escapeAttr(headshot)}" data-pa-franchise="${escapeAttr(p.franchiseId || '')}" data-pa-sub="${escapeAttr(rosteredTeam ? 'Rostered by ' + rosteredTeam : (p.rostered ? 'Rostered' : p.locked ? 'Free agent · Locked (recently dropped)' : 'Free agent'))}" aria-label="Actions for ${escapeAttr(p.name)}" title="Player actions"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button></td>`;
 
 
       html += `<tr class="${rosteredClass}" data-pos="${p.position.toLowerCase()}" data-player-id="${p.id}">
@@ -2317,7 +2337,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
                 onerror="${isDef ? escapeAttr(logoOnerror) : escapeAttr(buildOnerror(p.id, p.espnId))}" />
             </div>
             <div class="player-cell__info">
-              <strong class="player-cell__name player-cell__name--clickable" data-player-modal="${modalJson}">${p.name}${rosteredDot}${watchMark}</strong>
+              <strong class="player-cell__name player-cell__name--clickable" data-player-modal="${modalJson}">${p.name}${lockMark}${rosteredDot}${watchMark}</strong>
               <div class="player-meta">
                 ${isDef ? '' : `<img src="${escapeAttr(logo)}" alt="${escapeAttr(p.team)}" class="player-meta__logo" onerror="${escapeAttr(logoOnerror)}" />`}<span class="player-meta__pos">${posLabel}</span>
               </div>
@@ -4233,6 +4253,19 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   }
 
   /* Rostered indicator dot */
+  /* MFL's `*` for a locked (recently dropped) free agent, drawn as a lock. */
+  :global(.locked-mark) {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 0.3rem;
+    color: var(--content-text-muted);
+    vertical-align: middle;
+  }
+  :global(.locked-mark svg) {
+    width: 12px;
+    height: 12px;
+    fill: currentColor;
+  }
   :global(.rostered-dot) {
     display: inline-block;
     width: 6px;
