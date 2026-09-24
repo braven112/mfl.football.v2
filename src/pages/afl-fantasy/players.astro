@@ -1325,7 +1325,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         : '';
       const lockedForView = !rosteredForView && isLockedForView(p);
       const lockMark = lockedForView
-        ? `<span class="locked-mark" title="Locked — recently dropped. MFL won't allow adding him until the lock lifts." aria-label="Locked"><svg aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-lock"></use></svg></span>`
+        ? `<span class="locked-mark" title="Locked — recently dropped. MFL won't allow adding him until the lock lifts."><svg aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-lock"></use></svg><span class="visually-hidden">Locked — recently dropped</span></span>`
         : '';
       const watched = isWatchedId(p.id);
       const watchMark = watched

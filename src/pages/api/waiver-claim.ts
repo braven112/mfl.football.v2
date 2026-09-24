@@ -228,10 +228,14 @@ export const POST: APIRoute = async ({ request }) => {
     // first and say so plainly. A failed read is "unknown", not "locked": fall
     // through and let MFL decide, exactly as before this check existed.
     const locked = await fetchLockedPlayers(leagueId, year, { fresh: true });
-    const lockedAdds = requestedAdds.filter((id) => isPlayerLocked(locked, id, myConference));
+    // FCFS writes only the FIRST claim (see `writes` below), so only that one is
+    // checked there — a locked alternative further down a board must not stop
+    // an available first pick.
+    const writtenAdds = immediate ? requestedAdds.slice(0, 1) : requestedAdds;
+    const lockedAdds = writtenAdds.filter((id) => isPlayerLocked(locked, id, myConference));
     if (lockedAdds.length > 0) {
       return fail(
-        lockedAdds.length === 1 && requestedAdds.length === 1
+        lockedAdds.length === 1 && writtenAdds.length === 1
           ? 'This player is locked on MFL — he was recently dropped and cannot be added until the lock lifts. No claim was submitted.'
           : 'One or more of these players is locked on MFL (recently dropped) and cannot be added until the lock lifts. No claim was submitted.',
         409,
