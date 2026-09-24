@@ -68,11 +68,21 @@ export function withoutSimRemoved<T extends SimRow>(rows: readonly T[], actions:
   });
 }
 
-/** Dead money with every simulated cut's penalty added: 50% now, the rest next year. */
-export function addSimDeadMoney(dead: readonly number[], actions: SimActions): number[] {
+/**
+ * Dead money with every simulated cut's penalty added: 50% now, the rest next
+ * year. `onRoster` limits it to the viewed club's players: `contractActions`
+ * is page-wide and survives a team switch, so an unscoped sum charged one
+ * club's simulated cut to whichever club was viewed next (hotfix #1201).
+ */
+export function addSimDeadMoney(
+  dead: readonly number[],
+  actions: SimActions,
+  onRoster?: ReadonlySet<string>,
+): number[] {
   const out = [...dead];
-  Object.values(actions).forEach((action) => {
+  Object.entries(actions).forEach(([id, action]) => {
     if (action.type !== 'cut') return;
+    if (onRoster && !onRoster.has(String(id))) return;
     out[0] = (out[0] || 0) + (Number(action.currentPenalty) || 0);
     out[1] = (out[1] || 0) + (Number(action.futurePenalty) || 0);
   });
@@ -151,7 +161,7 @@ export function summarizeSimMoves(input: {
     const one: SimActions = { [id]: action };
     const rows = applySimActionsToRows(input.baseRows, one);
     const charges = input.chargesFor(rows, one);
-    const dead = addSimDeadMoney(input.baseDead, one);
+    const dead = addSimDeadMoney(input.baseDead, one, onRosterIds);
     const effects = input.years.map((_, i) => baseTotal[i] - ((charges[i] ?? 0) + (dead[i] ?? 0)));
     const nonZero = effects.findIndex((v) => Math.round(v) !== 0);
     const at = nonZero < 0 ? 0 : nonZero;

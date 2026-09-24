@@ -65,6 +65,14 @@ describe('addSimDeadMoney', () => {
     addSimDeadMoney(base, { a: { type: 'cut', currentPenalty: 5 } });
     expect(base).toEqual([0, 0]);
   });
+
+  it("charges only the viewed club's cuts when given its roster ids", () => {
+    // contractActions survives a team switch; another club's cut is not ours.
+    expect(addSimDeadMoney([0, 0], {
+      mine: { type: 'cut', currentPenalty: 10, futurePenalty: 4 },
+      theirs: { type: 'cut', currentPenalty: 99, futurePenalty: 99 },
+    }, new Set(['mine']))).toEqual([10, 4]);
+  });
 });
 
 describe('buildCapByYear', () => {

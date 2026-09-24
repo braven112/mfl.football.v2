@@ -9598,7 +9598,10 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       // next year.
       let rows = applySimActionsToRows(buildDisplayRows(teamData), contractActions);
 
-      let deadMoney = addSimDeadMoney(aggregateDeadMoney(seasonData, currentTeam), contractActions);
+      // Only this club's players: `contractActions` is page-wide and survives
+      // a team switch (hotfix #1201).
+      const rowIds = new Set(rows.map((p: any) => String(p.id)));
+      let deadMoney = addSimDeadMoney(aggregateDeadMoney(seasonData, currentTeam), contractActions, rowIds);
       updateYearTotals(rows, deadMoney);
       const capCharges = calculateCapCharges(rows);
       const capChargesWithDead = capCharges.map((val, idx) => val + (deadMoney[idx] ?? 0));

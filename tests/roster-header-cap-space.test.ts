@@ -64,8 +64,10 @@ describe('simulated cut dead money', () => {
   it("is scoped to the viewed club's roster, never summed page-wide", () => {
     const view = page.slice(page.indexOf('const updateView = () => {'));
     const block = view.slice(0, view.indexOf('updateYearTotals(rows, deadMoney)'));
+    // Either inline, or through rosters/sim-summary.ts's addSimDeadMoney with
+    // the row ids as its `onRoster` scope (the phone layout's shared rule).
     expect(block, 'cut penalties must be filtered to players in `rows`').toMatch(
-      /action\.type === 'cut' && rowIds\.has\(/,
+      /action\.type === 'cut' && rowIds\.has\(|addSimDeadMoney\([^;]*contractActions,\s*rowIds\)/,
     );
     expect(block).not.toMatch(/Object\.values\(contractActions\)\.forEach/);
   });
