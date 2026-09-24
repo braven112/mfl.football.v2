@@ -9413,9 +9413,13 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
 
       let deadMoney = aggregateDeadMoney(seasonData, currentTeam);
 
-      // Add dead money from contract actions (cuts)
-      Object.values(contractActions).forEach(action => {
-        if (action.type === 'cut') {
+      // Add dead money from contract actions (cuts) — only for players on
+      // THIS club's roster. `contractActions` is page-wide and survives a team
+      // switch, so an unscoped sum charged a Pigskins cut to whichever club
+      // was viewed next, in the table and the header alike.
+      const rowIds = new Set(rows.map((p) => String(p.id)));
+      Object.entries(contractActions).forEach(([playerId, action]) => {
+        if (action.type === 'cut' && rowIds.has(String(playerId))) {
           deadMoney[0] = (deadMoney[0] || 0) + (action.currentPenalty || 0);
           deadMoney[1] = (deadMoney[1] || 0) + (action.futurePenalty || 0);
         }

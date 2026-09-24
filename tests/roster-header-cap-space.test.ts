@@ -59,3 +59,14 @@ describe('roster header cap space', () => {
     );
   });
 });
+
+describe('simulated cut dead money', () => {
+  it("is scoped to the viewed club's roster, never summed page-wide", () => {
+    const view = page.slice(page.indexOf('const updateView = () => {'));
+    const block = view.slice(0, view.indexOf('updateYearTotals(rows, deadMoney)'));
+    expect(block, 'cut penalties must be filtered to players in `rows`').toMatch(
+      /action\.type === 'cut' && rowIds\.has\(/,
+    );
+    expect(block).not.toMatch(/Object\.values\(contractActions\)\.forEach/);
+  });
+});
