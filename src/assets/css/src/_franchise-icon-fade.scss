@@ -1,0 +1,9 @@
+// Hide franchise icons until the league's own script has swapped in its
+// artwork and faded them back in (src/scripts/main.js, src/scripts/afl.js).
+// Only the leagues that run that script may load this: on any other site
+// nothing ever sets the icons back to opacity 1, so they stay invisible.
+
+img.franchiseicon {
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+}

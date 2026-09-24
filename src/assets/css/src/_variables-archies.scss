@@ -1,0 +1,398 @@
+/**
+ * Archie's — black / blue dark skin, matched to the league's old DAGrafix
+ * skin: #4b98e4 blue on #121212 / #181818 / #222222 blacks, #363636 greys.
+ * (copied from _variables-dark.scss)
+ *
+ * Same SCSS var() wrappers as _variables.scss.
+ * The :root block below overrides ALL color values for the dark theme.
+ */
+
+//////////////////////Dark :root overrides//////////////////////////
+:root {
+  --primary-color: #eeeeee;
+  --secondary-color: #eeeeee;
+  --accent-color: #4b98e4;
+  --dark-accent-color: #2870b7;
+  --primary-text-color: #eeeeee;
+  --secondary-text-color: #cccccc;
+
+  --link-color: #eeeeee;
+  --link-color-hover: #4b98e4;
+
+  --add-color: #4ade80;
+  --drop-color: #f87171;
+
+  //////////////////////Alerts//////////////////////////
+  --alert-danger-text: #fca5a5;
+  --alert-danger-bg: rgba(220, 38, 38, 0.15);
+  --alert-danger-border: rgba(220, 38, 38, 0.25);
+
+  --alert-warning-text: #fcd34d;
+  --alert-warning-bg: rgb(57, 36, 1);
+  --alert-warning-border: rgb(216, 155, 49);
+
+  --alert-success-text: #6ee7b7;
+  --alert-success-bg: rgba(16, 185, 129, 0.12);
+  --alert-success-border: rgba(16, 185, 129, 0.25);
+
+  --alert-info-text: #93bbfd;
+  --alert-info-bg: rgba(59, 130, 246, 0.12);
+  --alert-info-border: rgba(59, 130, 246, 0.25);
+
+  //////////////////////Neutrals//////////////////////////
+  --gray1: #d8d8d8;
+  --gray2: #888888;
+  --gray3: #666666;
+
+  --offwhite: #222222;
+  --offwhite2: #121212;
+
+  --lightgray: #222222;
+  --lightgray2: #292929;
+  --lightgray3: #363636;
+
+  --white: #222222;
+
+  --codebg-color: #121212;
+
+  //////////////////////Tables//////////////////////////
+  --oddtablerow: #222222;
+  --eventablerow: #292929;
+  --newposition-border-color: #363636;
+  --table-header-color: #eeeeee;
+
+  //////////////////////Page Backgrounds//////////////////////////
+  --primary-bg-color: #222222;
+  --pagebody-bg: #121212;
+  --report-bg: #222222;
+  --header-bg: #181818;
+
+  //////////////////////Footer//////////////////////////
+  --footer-bg-color: #181818;
+  --footer-text-color: #eeeeee;
+  --footer-header-text-color: #ffffff;
+
+  //////////////////////Borders//////////////////////////
+  --border-color: #363636;
+
+  //////////////////////MFL Menu//////////////////////////
+  --menu-bg-color: #1f1f1f;
+  --menu-bg-hover-color: #4b98e4;
+  --menu-border-color: #111111;
+  --menu-text-color: #ffffff;
+
+  //////////////////////Report Navigation//////////////////////////
+  --secondary-menu-border-color: #4b98e4;
+  --secondary-menu-bg-color: var(--accent-color);
+  --secondary-menu-text-color: #ffffff;
+  --secondary-menu-link-color: #ffffff;
+  --secondary-menu-icon-color: #ffffff;
+  --secondary-menu-icon-hover-color: #ffffff;
+  --secondary-menu-font-weight: normal;
+
+  //////////////////////Buttons//////////////////////////
+  --button-bg-color: #4b98e4;
+  --button-bg-color-hover: #3fa0ff;
+  --button-link-color: #ffffff;
+
+  //////////////////////Tabs//////////////////////////
+  --tab-hover-color: #fff;
+
+  //////////////////////Scrollbar//////////////////////////
+  --scrollbar-bg-color: #292929;
+  --scrollbar-bg-hover-color: #363636;
+
+  //////////////////////Captions and Headlines//////////////////////////
+  --caption-color: #4b98e4;
+  --headline-font-color: #4b98e4;
+  --h1-color: #4b98e4;
+  --h2-color: #4b98e4;
+  --h3-color: #4b98e4;
+  --h4-color: #4b98e4;
+  --h5-color: #4b98e4;
+  --h6-color: #4b98e4;
+
+  //////////////////////Icons//////////////////////////
+  --icon-color: #eeeeee;
+  --icon-color-hover: #4b98e4;
+  --icon-text-color: #eeeeee;
+
+  //////////////////////Calendar//////////////////////////
+  --calendar-bg-color: #292929;
+  --calendar-eventablerow:#222222;
+  --calendar-border-color: #363636;
+  --calendar-text-color: #eeeeee;
+  --today-bg-color: #4b98e4;
+  --today-border-color: #2870b7;
+  --today-text-color: #ffffff;
+
+  //////////////////////Logo//////////////////////////
+  --logo-main-color: #4b98e4;
+  --logo-secondary-color: #121212;
+  --logo-3rd-color: #222222;
+  --logo-4th-color: #4b98e4;
+  --logo-text-color: #4b98e4;
+  --logo-secondary-text-color: #121212;
+
+  //////////////////////Roster Page//////////////////////////
+  --color-bg-base: #222222;
+  --color-bg-subtle: #292929;
+  --color-bg-practice: rgba(75, 152, 228, 0.1);
+  --color-bg-practice-alt: rgba(75, 152, 228, 0.15);
+  --color-bg-injured: rgba(220, 38, 38, 0.1);
+  --color-bg-injured-alt: rgba(220, 38, 38, 0.15);
+  --color-border-practice: rgba(75, 152, 228, 0.4);
+  --color-border-injured: rgba(220, 38, 38, 0.3);
+
+  //////////////////////Header Icon Buttons//////////////////////////
+  --header-icon-color: #eeeeee;
+  --header-icon-text-color: #eeeeee;
+  --header-icon-hover-color: #4b98e4;
+
+  //////////////////////Logo Name//////////////////////////
+  --logo-name-primary-color: #ffffff;
+  --logo-name-secondary-color: #888888;
+
+  //////////////////////Division Headings//////////////////////////
+  --division-heading-color: #eeeeee;
+  --division-subheading-color: #4b98e4;
+  --division-border-color: #363636;
+
+  //////////////////////Typography//////////////////////////
+  --headline-font: "Oswald", sans-serif;
+  --headline-font-weight: 400;
+  --body-font: "Roboto", sans-serif;
+  --body-font-weight: 400;
+  --svg-text-font-size: 11px;
+
+  //////////////////////Font Size Scaling (Oswald)//////////////////////////
+  // League name — base (mobile)
+  --fs-leaguename: 32px;
+  --fs-leaguename-dotus: 18px;
+  // League name — 767px+
+  --fs-leaguename-md: 56px;
+  // League name — 992px+
+  --fs-leaguename-lg: 46px;
+
+  // League name 2-line secondary — base (mobile)
+  --fs-leaguename-secondary: 13px;
+  // League name 2-line secondary — 767px+, 992px+
+  --fs-leaguename-secondary-md: 14px;
+
+  // MFL menu
+  --fs-menu: 13px;
+  --fs-menu-mobile-label: 16px;
+  --fs-menu-mobile-link: 14px;
+
+  //////////////////////Border Radius//////////////////////////
+  --border-radius-sm: 0;
+  --border-radius-default: 0;
+  --border-radius-lg: 0;
+  --border-radius-xl: 0;
+
+  //////////////////////Homepage Messages//////////////////////////
+  --hpm-header-bg: var(--alert-warning-bg);
+  --hpm-header-border: var(--alert-warning-border);
+  --hpm-header-color: var(--alert-warning-text);
+  --hpm-body-bg: var(--alert-warning-bg);
+  --hpm-body-border: var(--alert-warning-border);
+  --hpm-body-color: var(--alert-warning-text);
+
+  //////////////////////Live Scoring//////////////////////////
+  --live-scoring-highlight: var(--accent-color);
+  --live-scoring-border: var(--dark-accent-color);
+
+  //////////////////////Container Header//////////////////////////
+  --container-header-bg: var(--header-bg);
+
+  //////////////////////Tabs//////////////////////////
+  --tab-text-color: #888888;
+  --tab-active-text-color: #ffffff;
+  --tab-active-indicator-color: var(--accent-color);
+  --tab-separator-color: var(--border-color);
+  --tab-hover-color: #fff;
+}
+
+//////////////////////Colors//////////////////////////
+$primary-color: var(--primary-color);
+$secondary-color: var(--secondary-color);
+$accent-color: var(--accent-color);
+$dark-accent-color: var(--dark-accent-color);
+$today-bg-color: var(--today-bg-color);
+$today-border-color: var(--today-border-color);
+$button-bg-color: var(--button-bg-color);
+$secondary-menu-border-color: var(--secondary-menu-border-color);
+$secondary-menu-bg-color: var(--secondary-menu-bg-color);
+$logo-secondary-color: var(--logo-secondary-color);
+$logo-secondary-text-color: var(--logo-secondary-text-color);
+$primary-text-color: var(--primary-text-color);
+$secondary-text-color: var(--secondary-text-color);
+
+$link-color: var(--link-color);
+$link-color-hover: var(--link-color-hover);
+
+$add-color: var(--add-color);
+$drop-color: var(--drop-color);
+
+//////////////////////Alerts//////////////////////////
+$alert-danger-text: var(--alert-danger-text);
+$alert-danger-bg: var(--alert-danger-bg);
+$alert-danger-border: var(--alert-danger-border);
+
+$alert-warning-text: var(--alert-warning-text);
+$alert-warning-bg: var(--alert-warning-bg);
+$alert-warning-border: var(--alert-warning-border);
+
+$alert-success-text: var(--alert-success-text);
+$alert-success-bg: var(--alert-success-bg);
+$alert-success-border: var(--alert-success-border);
+
+$alert-info-text: var(--alert-info-text);
+$alert-info-bg: var(--alert-info-bg);
+$alert-info-border: var(--alert-info-border);
+
+//////////////////////Neutrals//////////////////////////
+$codebg-color: var(--codebg-color);
+
+$gray1: var(--gray1);
+$gray2: var(--gray2);
+$gray3: var(--gray3);
+
+$oddtablerow: var(--oddtablerow);
+$eventablerow: var(--eventablerow);
+
+$offwhite: var(--offwhite);
+$offwhite2: var(--offwhite2);
+
+$lightgray: var(--lightgray);
+$lightgray2: var(--lightgray2);
+$lightgray3: var(--lightgray3);
+
+$white: var(--white);
+
+//////////////////////Page Backgrounds//////////////////////////
+$primary-bg-color: var(--primary-bg-color);
+$pagebody-bg: var(--pagebody-bg);
+$report-bg: var(--report-bg);
+$header-bg: var(--header-bg);
+
+//////////////////////Footer//////////////////////////
+$footer-bg-color: var(--footer-bg-color);
+$footer-text-color: var(--footer-text-color);
+$footer-header-text-color: var(--footer-header-text-color);
+
+//////////////////////Borders//////////////////////////
+$border-color: var(--border-color);
+
+//////////////////////MFL Menu//////////////////////////
+$menu-bg-color: var(--menu-bg-color);
+$menu-bg-hover-color: var(--menu-bg-hover-color);
+$menu-border-color: var(--menu-border-color);
+$menu-text-color: var(--menu-text-color);
+
+//////////////////////Report Navigation//////////////////////////
+$secondary-menu-text-color: var(--secondary-menu-text-color);
+$secondary-menu-link-color: var(--secondary-menu-link-color);
+$secondary-menu-icon-color: var(--secondary-menu-icon-color);
+$secondary-menu-icon-hover-color: var(--secondary-menu-icon-hover-color);
+$secondary-menu-font-weight: var(--secondary-menu-font-weight);
+
+//////////////////////Buttons//////////////////////////
+$button-bg-color-hover: var(--button-bg-color-hover);
+$button-link-color: var(--button-link-color);
+
+//////////////////////Scrollbar//////////////////////////
+$scrollbar-bg-color: var(--scrollbar-bg-color);
+$scrollbar-bg-hover-color: var(--scrollbar-bg-hover-color);
+
+//////////////////////Captions and Headlines//////////////////////////
+$caption-color: var(--caption-color);
+$headline-font-color: var(--headline-font-color);
+$h1-color: var(--h1-color);
+$h2-color: var(--h2-color);
+$h3-color: var(--h3-color);
+$h4-color: var(--h4-color);
+$h5-color: var(--h5-color);
+$h6-color: var(--h6-color);
+
+//////////////////////Icons//////////////////////////
+$icon-color: var(--icon-color);
+$icon-color-hover: var(--icon-color-hover);
+$icon-text-color: var(--icon-text-color);
+
+//////////////////////Calendar//////////////////////////
+$calendar-bg-color: var(--calendar-bg-color);
+$calendar-eventablerow: var(--calendar-eventablerow);
+$calendar-border-color: var(--calendar-border-color);
+$calendar-text-color: var(--calendar-text-color);
+$today-text-color: var(--today-text-color);
+
+//////////////////////Tables//////////////////////////
+$newposition-border-color: var(--newposition-border-color);
+$table-header-color: var(--table-header-color);
+
+//////////////////////Logo//////////////////////////
+$logo-main-color: var(--logo-main-color);
+$logo-3rd-color: var(--logo-3rd-color);
+$logo-4th-color: var(--logo-4th-color);
+$logo-text-color: var(--logo-text-color);
+
+//////////////////////Typography//////////////////////////
+$headline-font: var(--headline-font);
+$headline-font-weight: var(--headline-font-weight);
+$body-font: var(--body-font);
+$body-font-weight: var(--body-font-weight);
+$svg-text-font-size: var(--svg-text-font-size);
+
+//////////////////////Font Size Scaling (Oswald)//////////////////////////
+$fs-leaguename: var(--fs-leaguename);
+$fs-leaguename-dotus: var(--fs-leaguename-dotus);
+$fs-leaguename-md: var(--fs-leaguename-md);
+$fs-leaguename-lg: var(--fs-leaguename-lg);
+$fs-leaguename-secondary: var(--fs-leaguename-secondary);
+$fs-leaguename-secondary-md: var(--fs-leaguename-secondary-md);
+$fs-menu: var(--fs-menu);
+$fs-menu-mobile-label: var(--fs-menu-mobile-label);
+$fs-menu-mobile-link: var(--fs-menu-mobile-link);
+
+//////////////////////Header Icon Buttons//////////////////////////
+$header-icon-color: var(--header-icon-color);
+$header-icon-text-color: var(--header-icon-text-color);
+$header-icon-hover-color: var(--header-icon-hover-color);
+
+//////////////////////Logo Name//////////////////////////
+$logo-name-primary-color: var(--logo-name-primary-color);
+$logo-name-secondary-color: var(--logo-name-secondary-color);
+
+//////////////////////Division Headings//////////////////////////
+$division-heading-color: var(--division-heading-color);
+$division-subheading-color: var(--division-subheading-color);
+$division-border-color: var(--division-border-color);
+
+//////////////////////Border Radius//////////////////////////
+$border-radius-sm: var(--border-radius-sm);
+$border-radius-default: var(--border-radius-default);
+$border-radius-lg: var(--border-radius-lg);
+$border-radius-xl: var(--border-radius-xl);
+
+//////////////////////Homepage Messages//////////////////////////
+$hpm-header-bg: var(--hpm-header-bg);
+$hpm-header-border: var(--hpm-header-border);
+$hpm-header-color: var(--hpm-header-color);
+$hpm-body-bg: var(--hpm-body-bg);
+$hpm-body-border: var(--hpm-body-border);
+$hpm-body-color: var(--hpm-body-color);
+
+//////////////////////Live Scoring//////////////////////////
+$live-scoring-highlight: var(--live-scoring-highlight);
+$live-scoring-border: var(--live-scoring-border);
+
+//////////////////////Container Header//////////////////////////
+$container-header-bg: var(--container-header-bg);
+
+//////////////////////Tabs//////////////////////////
+$tab-text-color: var(--tab-text-color);
+$tab-active-text-color: var(--tab-active-text-color);
+$tab-active-indicator-color: var(--tab-active-indicator-color);
+$tab-separator-color: var(--tab-separator-color);
+$tab-hover-color: var(--tab-hover-color);

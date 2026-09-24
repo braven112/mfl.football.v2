@@ -1,11 +1,10 @@
-@use "./fonts-afl";
+@use "./fonts-archies";
 @use "./reset";
 
 //// Design Tokens (load before components)
 @use "./nav-tokens";
 
 //// Alphabetical
-@use "./afl";
 @use "./add-drop";
 @use "./alerts";
 @use "./auctions";
@@ -19,7 +18,6 @@
 @use "./draft-grid";
 @use "./footer";
 @use "./franchise-icons";
-@use "./franchise-icon-fade";
 @use "./grid";
 @use "./header";
 //@use "./history";
@@ -50,8 +48,7 @@
 @use "./theleague";
 @use "./top-players";
 @use "./transactions";
+@use "./font-scaling";
 
-// AFL-specific font size adjustment
-body {
-  font-size: 14.25px; // Slightly larger than default 14px
-}
+//// Archie's signature touches (header/footer rules, Oswald caps, league name)
+@use "./archies";

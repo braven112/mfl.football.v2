@@ -1,0 +1,69 @@
+@use "./globals" as *;
+
+/**
+ * Archie's — the signature touches of the league's old DAGrafix skin that
+ * are not colors: the fading grey rule under the header and over the
+ * footer, uppercase Oswald on headings/captions/links/menus, square
+ * corners, and the New Rocker league name. Colors live in
+ * _variables-archies.scss.
+ */
+
+$archies-rule: linear-gradient(to right, rgba(36, 36, 36, 0) 0%, #242424 20%, #363636 50%, #242424 80%, rgba(36, 36, 36, 0) 100%);
+
+.container-header {
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+  border-top: 0;
+  border-bottom: 0.6rem solid transparent;
+  border-image: $archies-rule 1;
+}
+
+.container-footer {
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+  border-top: 0.6rem solid transparent;
+  border-image: $archies-rule 1;
+
+  a:hover {
+    color: $accent-color;
+    text-decoration: underline;
+  }
+}
+
+.leaguename {
+  font-family: "New Rocker", serif;
+  font-weight: 400;
+  text-shadow: 0 1px 10px #262626;
+}
+
+h1, h2, h3, h4, h5, h6,
+caption, caption a,
+th, th a,
+td a,
+input[type="button"],
+input[type="submit"],
+.myfantasyleague_menu,
+.myfantasyleague_tabmenu,
+.welcome, .welcome a {
+  font-family: $headline-font;
+  font-weight: 400;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+// The old skin printed every module caption in the accent blue.
+caption,
+caption span,
+caption a {
+  color: $caption-color;
+}
+
+.nav_buttons a:hover .svg-text {
+  color: $accent-color;
+}
+
+.franchiseicon {
+  transition: opacity 1s ease;
+
+  &:hover {
+    opacity: 0.8;
+  }
+}
