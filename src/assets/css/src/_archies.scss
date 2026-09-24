@@ -85,3 +85,48 @@ caption a {
     margin-right: 0;
   }
 }
+
+// _theleague.scss (loaded by every skin) hides nearly every standings column
+// on the home and standings pages, because TheLeague draws its standings its
+// own way. Archie's league uses MFL's own columns — team + icon, VP, W-L,
+// average points — so show them again. MFL only prints the columns the
+// commissioner turned on, so revealing the whole list shows exactly those.
+#body_home #standings,
+#body_standings #standings {
+  .\#a,
+  .\#w,
+  .acct,
+  .altpwr,
+  .bbidbalance,
+  .bbidspent,
+  .divl,
+  .divpct,
+  .divpf,
+  .divt,
+  .divw,
+  .dp,
+  .eff,
+  .ficonname,
+  .fname,
+  .h2ht,
+  .h2hwlt,
+  .maxpa,
+  .maxpf,
+  .minpa,
+  .minpf,
+  .nondivl,
+  .nondivpct,
+  .nondivt,
+  .nondivw,
+  .nondivwlt,
+  .op,
+  .pa,
+  .pb,
+  .pf,
+  .pp,
+  .pwr,
+  .vp,
+  .ww {
+    display: table-cell;
+  }
+}
