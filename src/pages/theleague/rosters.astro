@@ -33,13 +33,12 @@ import collegeLogos from '../../data/college-logos.json';
 import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
 import { getPlannerPhase } from '../../utils/planner-phase';
 import { analyzeFreeAgentNeeds } from '../../utils/free-agent-needs';
-import { getTeamEligibility, getAugustCutdownDate, parseTransactions } from '../../utils/contract-eligibility';
-import { getCachedRecentTransactions, mergeTransactionRows } from '../../utils/mfl-transactions-cache';
+import { getAugustCutdownDate, parseTransactions } from '../../utils/contract-eligibility';
+import { getCachedRecentTransactions } from '../../utils/mfl-transactions-cache';
 import { buildRookiePriorityFromFeeds } from '../../utils/august-cut-selection-core.mjs';
 import { getDeclarations } from '../../utils/contract-storage';
 import { getCutList, getCredentialCapturedAt } from '../../utils/autocut-storage';
 import CutdownPlanPanel from '../../components/theleague/CutdownPlanPanel.astro';
-import type { RosterPlayer, MFLPlayerInfo } from '../../types/contract-eligibility';
 import {
   NFL_LOGO_ONERROR,
   NFL_LOGO_ONLOAD,
@@ -93,6 +92,7 @@ import {
 import { getAuthUser, franchiseIdForLeague } from '../../utils/auth';
 import { resolveOwnerPresence } from '../../utils/rosters/owner-presence';
 import { buildDraftAssets } from '../../utils/rosters/draft-assets';
+import { resolveEligibility } from '../../utils/rosters/eligibility';
 import { resolveThrowbackRequestState } from '../../utils/throwback-request-state';
 import { resolveRosterHeaderSkin } from '../../utils/roster-header-skin';
 import fs from 'fs';
@@ -1054,8 +1054,17 @@ for (const needs of Object.values(freeAgentNeedsByTeam)) {
 // --- Contract eligibility data ---
 // Load transactions for the current league year via import.meta.glob (bundled at build time)
 // so the data is always available in the Vercel serverless function.
+// --- Contract declaration eligibility, for every team ---------------------
+// The feeds are loaded here (import.meta.glob is relative to this file) and
+// the wiring lives in src/utils/rosters/eligibility.ts. Read the
+// contracts-eligibility rules before touching either: the live overlay and
+// the Redis roster preference are both load-bearing, and both fail SILENTLY —
+// the page renders contract years as plain text with no action, rather than
+// erroring.
 const eligibilityYear = getCurrentLeagueYear();
 const eligibilityYearStr = String(eligibilityYear);
+const eligIsCurrentLeagueYear = eligibilityYearStr === currentLeagueYearStr;
+
 const eligTxFeed = transactionsFeeds[Object.keys(transactionsFeeds).find(
   (path) => extractFeedSeason(path) === eligibilityYearStr
 ) ?? ''];
@@ -1066,126 +1075,32 @@ const eligStaticTransactions = eligTxData?.transactions?.transaction
       : [eligTxData.transactions.transaction])
   : [];
 
-// The bundled feed is written by the roster-sync cron and baked in at BUILD
-// time, so a waiver claim processed an hour ago is not in it — and a
-// declaration window is only 24 hours in season. Layer the last few days of
-// live transactions over it (Redis, 2-min TTL) the way the roster data above
-// already does; on no Redis this returns null and the static feed stands.
-const eligLiveTransactions = eligibilityYearStr === currentLeagueYearStr
-  ? await getCachedRecentTransactions(eligibilityYearStr, THELEAGUE_ID)
-  : null;
-const eligRawTransactions = mergeTransactionRows(eligStaticTransactions, eligLiveTransactions);
-
-// Build players map for eligibility engine
-const eligPlayersMap = new Map<string, MFLPlayerInfo>();
-const eligPlayersFeed = playersFeedBySeason[eligibilityYearStr] ?? {};
-for (const [id, player] of Object.entries(eligPlayersFeed)) {
-  eligPlayersMap.set(id, player as MFLPlayerInfo);
-}
-
-// Get rosters data for eligibility — prefer the Redis-cached snapshot used by
-// the display so contract changes on MFL flow into eligibility within ~2 min.
-// The static feed lags (it's synced by a cron job and can be ~20 min behind),
-// which means a freshly-acquired rookie still flagged with empty contractInfo
-// in the static file would never light up the rookie-override chip.
-// Fall back to the static feed when Redis is unavailable.
 const eligRostersFeed = rostersFeeds[Object.keys(rostersFeeds).find(
   (path) => extractFeedSeason(path) === eligibilityYearStr
 ) ?? ''];
 const eligRostersData = eligRostersFeed ? getModuleData(eligRostersFeed) : null;
-const staticEligFranchises = eligRostersData?.rosters?.franchise ?? [];
 
-const eligFranchises = (eligibilityYearStr === currentLeagueYearStr && cachedRosterPlayers)
-  ? (() => {
-      const byFranchise: Record<string, any[]> = {};
-      for (const [id, p] of Object.entries(cachedRosterPlayers)) {
-        if (!p?.franchiseId) continue;
-        (byFranchise[p.franchiseId] ??= []).push({
-          id,
-          salary: p.salary,
-          contractYear: p.contractYear,
-          contractInfo: p.contractInfo ?? '',
-          status: p.status,
-        });
-      }
-      return Object.entries(byFranchise).map(([id, player]) => ({ id, player }));
-    })()
-  : staticEligFranchises;
-
-// Compute top-10 positional salary averages for team option calculations.
-// Built from live roster data (all franchises) so it's always accurate.
-const teamOptionSalaries: Record<string, number> = {};
-if (Array.isArray(eligFranchises)) {
-  const positionSalaries: Record<string, number[]> = {};
-  for (const franchise of eligFranchises) {
-    const players = (Array.isArray(franchise.player)
-      ? franchise.player
-      : [franchise.player].filter(Boolean)
-    ).filter((p: any) => p?.id);
-    for (const player of players) {
-      const info = eligPlayersMap.get(player.id);
-      const pos = info?.position?.toUpperCase() ?? '';
-      const salary = parseFloat(player.salary) || 0;
-      if (pos && salary > 0) {
-        positionSalaries[pos] ??= [];
-        positionSalaries[pos].push(salary);
-      }
-    }
-  }
-  for (const [pos, salaries] of Object.entries(positionSalaries)) {
-    const top10 = salaries.sort((a, b) => b - a).slice(0, 10);
-    teamOptionSalaries[pos] = top10.length
-      ? Math.round(top10.reduce((a, b) => a + b, 0) / top10.length)
-      : 0;
-  }
-}
-
-// Compute eligibility for all teams
-const eligibilityByTeam: Record<string, Record<string, any>> = {};
-// Use frozen salary averages (pre-week-14 freeze uses prior season) for tag/extension math
+// Use frozen salary averages (pre-week-14 freeze uses prior season) for
+// tag/extension math. Kept in the page because the template and the test-mode
+// block below both read it.
 const frozenSalaryAverages = salaryAveragesBySeason[extensionSeason] as {
   franchiseSalaries?: Record<string, number>;
   extensionSalaries?: Record<string, number>;
   teamOptionSalaries?: Record<string, number>;
 } | undefined;
-if (Array.isArray(eligFranchises)) {
-  for (const franchise of eligFranchises) {
-    const franchiseId = franchise.id;
-    if (!franchiseId) continue;
-    const players: RosterPlayer[] = (Array.isArray(franchise.player)
-      ? franchise.player
-      : [franchise.player].filter(Boolean)
-    ).filter((p: any) => p?.id);
 
-    const teamResult = getTeamEligibility(
-      franchiseId, players, eligRawTransactions, eligPlayersMap, eligibilityYear,
-      new Date(), frozenSalaryAverages,
-    );
-    const playerMap: Record<string, any> = {};
-    for (const p of teamResult.players) {
-      if (!p.eligible) continue;
-      const entry: Record<string, any> = {
-        type: p.declarationType,
-        yearOptions: p.yearOptions,
-        deadlineTimestamp: p.deadlineTimestamp,
-        isExpired: p.isExpired,
-        currentYears: p.currentYears,
-        currentSalary: p.currentSalary,
-        contractInfo: p.contractInfo,
-        isRookieContract: p.isRookieContract,
-      };
-      if (p.tagSalary !== undefined) entry.tagSalary = p.tagSalary;
-      if (p.tagBasis !== undefined) entry.tagBasis = p.tagBasis;
-      if (p.extensionSalary !== undefined) entry.extensionSalary = p.extensionSalary;
-      if (p.extensionYears !== undefined) entry.extensionYears = p.extensionYears;
-      if (p.teamOptionSalary !== undefined) entry.teamOptionSalary = p.teamOptionSalary;
-      playerMap[p.playerId] = entry;
-    }
-    if (Object.keys(playerMap).length > 0) {
-      eligibilityByTeam[franchiseId] = playerMap;
-    }
-  }
-}
+const { eligibilityByTeam } = resolveEligibility({
+  eligibilityYear,
+  isCurrentLeagueYear: eligIsCurrentLeagueYear,
+  staticTransactions: eligStaticTransactions,
+  liveTransactions: eligIsCurrentLeagueYear
+    ? await getCachedRecentTransactions(eligibilityYearStr, THELEAGUE_ID)
+    : null,
+  playersFeed: playersFeedBySeason[eligibilityYearStr] ?? {},
+  staticFranchises: eligRostersData?.rosters?.franchise ?? [],
+  cachedRosterPlayers: cachedRosterPlayers ?? null,
+  frozenSalaryAverages,
+});
 
 // Test mode: inject mock eligibility data for visual testing.
 // Uses the currently-viewed team (logged-in user's team, ?franchise= param, or cookie).
