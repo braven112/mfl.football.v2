@@ -44,6 +44,7 @@ import { bustRosterCaches } from '../../utils/mfl-roster-cache';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../utils/api-response';
 import { resolveWaiverWindow } from '../../utils/waiver-window';
 import { summarizeMflPage } from '../../utils/mfl-page-summary';
+import { fetchLockedPlayers, isPlayerLocked } from '../../utils/mfl-locked-players';
 import {
   readBidRules,
   readPendingWaiverPlayerIds,
@@ -218,6 +219,25 @@ export const POST: APIRoute = async ({ request }) => {
       rosterLimit,
     });
     if (errors.length > 0) return fail(errors[0], 400, { errors });
+
+    // ── Locked players ──────────────────────────────────────────────────────
+    // A recently dropped player is LOCKED on MFL (its own add/drop page marks
+    // him with a `*`) and MFL refuses the add. Left to the write, that refusal
+    // reached the owner as a bare "Claim failed (HTTP 502)", which says nothing
+    // about why. MFL publishes the lock list itself, per conference, so ask it
+    // first and say so plainly. A failed read is "unknown", not "locked": fall
+    // through and let MFL decide, exactly as before this check existed.
+    const locked = await fetchLockedPlayers(leagueId, year, { fresh: true });
+    const lockedAdds = requestedAdds.filter((id) => isPlayerLocked(locked, id, myConference));
+    if (lockedAdds.length > 0) {
+      return fail(
+        lockedAdds.length === 1 && requestedAdds.length === 1
+          ? 'This player is locked on MFL — he was recently dropped and cannot be added until the lock lifts. No claim was submitted.'
+          : 'One or more of these players is locked on MFL (recently dropped) and cannot be added until the lock lifts. No claim was submitted.',
+        409,
+        { locked: lockedAdds }
+      );
+    }
 
     // ── Write, owner mode ───────────────────────────────────────────────────
     // FCFS is still a different REQUEST — a single immediate add/drop, no round,

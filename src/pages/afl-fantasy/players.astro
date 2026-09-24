@@ -40,6 +40,7 @@ import '../../styles/snap-columns.css';
 // this page imports only the finished ~400KB result. See the SSR note below.
 import freeAgentsData from '../../../data/afl-fantasy/derived/free-agents.json';
 import { fetchLiveAflRosters, applyLiveRosters, conferenceScopedView, resolveConferenceSelection, type FaSnapshot } from '../../utils/afl-free-agents-live';
+import { fetchLockedPlayers } from '../../utils/mfl-locked-players';
 import { getAuthUser, franchiseIdForLeague } from '../../utils/auth';
 import { readBidRules } from '../../utils/waiver-claim';
 import { claimVerb as claimVerbFor } from '../../utils/claim-context';
@@ -124,8 +125,25 @@ const snapSeasonLabel = snapCounts.seasonLabel;
 const snapScopeTitle = snapCounts.scopeTitle;
 
 const snapshot = freeAgentsData as unknown as FaSnapshot;
-const liveView = applyLiveRosters(snapshot, await fetchLiveAflRosters(snapshot.generatedForYear, snapshot));
-const players = liveView.players;
+// MFL's own lock list (recently dropped players) is read alongside the live
+// rosters, per conference — see src/utils/mfl-locked-players.ts. Null (MFL
+// unreachable) just means no lock icons; the claim route re-checks anyway.
+const [liveRosters, lockedPlayers] = await Promise.all([
+  fetchLiveAflRosters(snapshot.generatedForYear, snapshot),
+  fetchLockedPlayers(aflLeague.id, snapshot.generatedForYear),
+]);
+const liveView = applyLiveRosters(snapshot, liveRosters);
+// `lockedConfs` lists the conferences in which MFL has this player locked. It
+// is per conference because availability is: locked in the AL can mean held
+// in the NL. Only set when non-empty, so ~800 unlocked rows ship nothing extra.
+const players = lockedPlayers
+  ? liveView.players.map((p) => {
+      const lockedConfs = Object.entries(lockedPlayers)
+        .filter(([, ids]) => ids.has(p.id))
+        .map(([conf]) => conf);
+      return lockedConfs.length ? { ...p, lockedConfs } : p;
+    })
+  : liveView.players;
 const nflTeamsList = freeAgentsData.nflTeamsList as string[];
 const hasProjected = freeAgentsData.hasProjected;
 const hasSeasonPts = freeAgentsData.hasSeasonPts;
@@ -829,6 +847,14 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     return p.rostered;
   }
 
+  // MFL has him LOCKED in the viewed conference — recently dropped, so he
+  // cannot be added until the lock lifts (MFL's own page marks this with a
+  // `*`). Same per-conference boundary as `isRosteredForView`; single-pool
+  // leagues key their one list under ''.
+  function isLockedForView(p) {
+    return Array.isArray(p.lockedConfs) && p.lockedConfs.includes(activeConf || '');
+  }
+
   // The franchise holding him IN THE VIEWED CONFERENCE, on the same boundary
   // isRosteredForView draws: an AL viewer is told about the AL owner, and a
   // player only the NL holds is a free agent here with nobody to name.
@@ -1297,6 +1323,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       const rosteredDot = rosteredForView
         ? `<span class="rostered-dot" title="${activeConf ? `Rostered in the ${escapeAttr(confName(activeConf))}` : 'Rostered'}"></span>`
         : '';
+      const lockedForView = !rosteredForView && isLockedForView(p);
+      const lockMark = lockedForView
+        ? `<span class="locked-mark" title="Locked — recently dropped. MFL won't allow adding him until the lock lifts." aria-label="Locked"><svg aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-lock"></use></svg></span>`
+        : '';
       const watched = isWatchedId(p.id);
       const watchMark = watched
         ? `<span class="pa-watch-mark" title="On your watch list"><svg aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-eye"></use></svg></span>`
@@ -1307,7 +1337,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       // league. The ⋮ sheet still checks the viewer's own claim context on top
       // of it — this says "he is a free agent in this view", not "you may have
       // him".
-      const kebabCell = `<td class="col-player-actions"><button type="button" class="pa-kebab${watched ? ' is-watched' : ''}" data-pa-open data-pa-claimable="${rosteredForView ? 'false' : 'true'}" data-pa-id="${escapeAttr(p.id)}" data-pa-name="${escapeAttr(p.name)}" data-pa-pos="${escapeAttr(p.position || '')}" data-pa-team="${escapeAttr(p.team || '')}" data-pa-espn="${escapeAttr(p.espnId || '')}" data-pa-headshot="${isDef ? '' : escapeAttr(headshot)}" data-pa-franchise="${escapeAttr(ownerForView(p) || '')}" data-pa-sub="${escapeAttr(rosteredForView ? (activeConf ? 'Rostered in the ' + confName(activeConf) : 'Rostered') : 'Free agent')}" aria-label="Actions for ${escapeAttr(p.name)}" title="Player actions"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button></td>`;
+      const kebabCell = `<td class="col-player-actions"><button type="button" class="pa-kebab${watched ? ' is-watched' : ''}" data-pa-open data-pa-claimable="${rosteredForView || lockedForView ? 'false' : 'true'}" data-pa-id="${escapeAttr(p.id)}" data-pa-name="${escapeAttr(p.name)}" data-pa-pos="${escapeAttr(p.position || '')}" data-pa-team="${escapeAttr(p.team || '')}" data-pa-espn="${escapeAttr(p.espnId || '')}" data-pa-headshot="${isDef ? '' : escapeAttr(headshot)}" data-pa-franchise="${escapeAttr(ownerForView(p) || '')}" data-pa-sub="${escapeAttr(rosteredForView ? (activeConf ? 'Rostered in the ' + confName(activeConf) : 'Rostered') : lockedForView ? 'Free agent · Locked (recently dropped)' : 'Free agent')}" aria-label="Actions for ${escapeAttr(p.name)}" title="Player actions"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button></td>`;
       const confTag = buildConfTag(p);
 
       const htDisplay = p.height ? Math.floor(p.height / 12) + "'" + (p.height % 12) + '"' : '-';
@@ -1321,7 +1351,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
               <img src="${headshot}" alt="" loading="lazy" decoding="async" onerror="${isDef ? escapeAttr(logoOnerror) : escapeAttr(buildOnerror(p.id, p.espnId))}" />
             </div>
             <div class="player-cell__info">
-              <strong class="player-cell__name player-cell__name--clickable" data-player-modal="${modalJson}">${escapeAttr(p.name)}${rosteredDot}${watchMark}</strong>
+              <strong class="player-cell__name player-cell__name--clickable" data-player-modal="${modalJson}">${escapeAttr(p.name)}${lockMark}${rosteredDot}${watchMark}</strong>
               <div class="player-meta">
                 ${isDef ? '' : `<img src="${escapeAttr(logo)}" alt="${escapeAttr(p.team)}" class="player-meta__logo" onerror="${escapeAttr(logoOnerror)}" />`}<span class="player-meta__pos">${posLabel}</span>${confTag}
               </div>
@@ -2622,6 +2652,19 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   /* Rostered row */
   :global(.row--rostered) { opacity: 0.5; }
   :global(.row--rostered:hover) { opacity: 0.8; }
+  /* MFL's `*` for a locked (recently dropped) free agent, drawn as a lock. */
+  :global(.locked-mark) {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 0.3rem;
+    color: var(--content-text-muted);
+    vertical-align: middle;
+  }
+  :global(.locked-mark svg) {
+    width: 12px;
+    height: 12px;
+    fill: currentColor;
+  }
   :global(.rostered-dot) {
     display: inline-block;
     width: 6px;
