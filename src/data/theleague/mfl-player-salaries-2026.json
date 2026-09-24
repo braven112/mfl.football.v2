@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-09-24T00:04:53.259Z"
+    "fetchedAt": "2026-09-24T01:01:32.731Z"
   },
   "players": [
     {
@@ -2180,7 +2180,7 @@
         "active": true,
         "position": "QB",
         "depthChartPosition": "QB",
-        "depthChartOrder": 2,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "QB"
         ],
@@ -2249,7 +2249,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 3,
+        "depthChartOrder": 6,
         "fantasyPositions": [
           "WR"
         ],
@@ -2903,7 +2903,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 5,
+        "depthChartOrder": 6,
         "fantasyPositions": [
           "RB"
         ],
@@ -2962,7 +2962,7 @@
         "active": true,
         "position": "QB",
         "depthChartPosition": "QB",
-        "depthChartOrder": 2,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "QB"
         ],
@@ -3155,7 +3155,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 3,
+        "depthChartOrder": 9,
         "fantasyPositions": [
           "WR"
         ],
@@ -3192,6 +3192,14 @@
         {
           "id": "11222",
           "name": "Allen, Keenan"
+        },
+        {
+          "id": "14122",
+          "name": "Slayton, Darius"
+        },
+        {
+          "id": "17510",
+          "name": "Burks, Deion"
         }
       ]
     },
@@ -4499,7 +4507,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 6,
+        "depthChartOrder": 11,
         "fantasyPositions": [
           "WR"
         ],
@@ -5669,10 +5677,6 @@
         {
           "id": "11222",
           "name": "Allen, Keenan"
-        },
-        {
-          "id": "15768",
-          "name": "Pierce, Alec"
         }
       ]
     },
@@ -7127,7 +7131,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 1,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "TE"
         ],
@@ -7156,7 +7160,12 @@
         ]
       },
       "gamesPlayed": 2,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "11247",
+          "name": "Ertz, Zach"
+        }
+      ]
     },
     {
       "id": "13303",
@@ -7876,7 +7885,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 3,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "WR"
         ],
@@ -10678,7 +10687,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 7,
+        "depthChartOrder": 6,
         "fantasyPositions": [
           "WR"
         ],
@@ -10715,10 +10724,6 @@
         {
           "id": "11222",
           "name": "Allen, Keenan"
-        },
-        {
-          "id": "15768",
-          "name": "Pierce, Alec"
         },
         {
           "id": "14122",
@@ -13680,7 +13685,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 3,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "TE"
         ],
@@ -16240,7 +16245,7 @@
         "id": "12511",
         "fullName": "Will Howard",
         "team": "PIT",
-        "age": 24,
+        "age": 25,
         "height": "76",
         "weight": "235",
         "number": 18,
@@ -17026,7 +17031,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 7,
+        "depthChartOrder": 6,
         "fantasyPositions": [
           "TE"
         ],
@@ -17039,12 +17044,12 @@
       "gamesPlayed": null,
       "depthChartAhead": [
         {
-          "id": "13674",
-          "name": "Goedert, Dallas"
-        },
-        {
           "id": "11247",
           "name": "Ertz, Zach"
+        },
+        {
+          "id": "13674",
+          "name": "Goedert, Dallas"
         }
       ]
     },
@@ -17839,7 +17844,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 2,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "TE"
         ],
@@ -17850,12 +17855,7 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": [
-        {
-          "id": "13674",
-          "name": "Goedert, Dallas"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "13589",
@@ -22297,7 +22297,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 2,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "TE"
         ],
@@ -24288,7 +24288,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 2,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "TE"
         ],
@@ -24664,7 +24664,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 4,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "TE"
         ],
@@ -24715,7 +24715,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 5,
+        "depthChartOrder": 6,
         "fantasyPositions": [
           "RB"
         ],
