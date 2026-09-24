@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-09-23T23:01:33.717Z"
+    "fetchedAt": "2026-09-24T00:04:53.259Z"
   },
   "players": [
     {
@@ -2575,8 +2575,8 @@
           "RB"
         ],
         "experience": 2,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Questionable",
+        "injuryBodyPart": "Knee",
         "gsisId": null
       },
       "nflverse": {
@@ -5626,20 +5626,55 @@
       "status": "ROSTER",
       "contractYear": "2",
       "points": 0,
-      "team": "FA",
+      "team": "IND",
       "draftYear": 2019,
       "draftTeam": "NYG",
       "birthdate": 853045200,
       "headshot": "https://www49.myfantasyleague.com/player_photos_2014/14122_thumb.jpg",
       "externalIds": {
         "mfl": "14122",
-        "sleeper": null,
-        "gsis": null
+        "sleeper": "6149",
+        "gsis": " 00-0035535"
       },
-      "sleeper": null,
+      "sleeper": {
+        "id": "6149",
+        "fullName": "Darius Slayton",
+        "team": "IND",
+        "age": 29,
+        "height": "73",
+        "weight": "198",
+        "number": 11,
+        "college": "Auburn",
+        "birthDate": "1997-01-12",
+        "status": "Active",
+        "active": true,
+        "position": "WR",
+        "depthChartPosition": "RWR",
+        "depthChartOrder": 5,
+        "fantasyPositions": [
+          "WR"
+        ],
+        "experience": 7,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": " 00-0035535"
+      },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "16187",
+          "name": "Downs, Josh"
+        },
+        {
+          "id": "11222",
+          "name": "Allen, Keenan"
+        },
+        {
+          "id": "15768",
+          "name": "Pierce, Alec"
+        }
+      ]
     },
     {
       "id": "15241",
@@ -10684,6 +10719,10 @@
         {
           "id": "15768",
           "name": "Pierce, Alec"
+        },
+        {
+          "id": "14122",
+          "name": "Slayton, Darius"
         }
       ]
     },
@@ -17002,6 +17041,10 @@
         {
           "id": "13674",
           "name": "Goedert, Dallas"
+        },
+        {
+          "id": "11247",
+          "name": "Ertz, Zach"
         }
       ]
     },
@@ -17772,20 +17815,47 @@
       "status": "ROSTER",
       "contractYear": "1",
       "points": 0,
-      "team": "FA",
+      "team": "PHI",
       "draftYear": 2013,
       "draftTeam": "PHI",
       "birthdate": 658213200,
       "headshot": "https://www49.myfantasyleague.com/player_photos_2014/11247_thumb.jpg",
       "externalIds": {
         "mfl": "11247",
-        "sleeper": null,
-        "gsis": null
+        "sleeper": "1339",
+        "gsis": "00-0030061"
       },
-      "sleeper": null,
+      "sleeper": {
+        "id": "1339",
+        "fullName": "Zach Ertz",
+        "team": "PHI",
+        "age": 35,
+        "height": "77",
+        "weight": "250",
+        "number": 86,
+        "college": "Stanford",
+        "birthDate": "1990-11-10",
+        "status": "Active",
+        "active": true,
+        "position": "TE",
+        "depthChartPosition": "TE",
+        "depthChartOrder": 2,
+        "fantasyPositions": [
+          "TE"
+        ],
+        "experience": 13,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": "00-0030061"
+      },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "13674",
+          "name": "Goedert, Dallas"
+        }
+      ]
     },
     {
       "id": "13589",
@@ -19946,8 +20016,8 @@
           "RB"
         ],
         "experience": 0,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Questionable",
+        "injuryBodyPart": "Hip",
         "gsisId": null
       },
       "nflverse": {
@@ -20371,8 +20441,8 @@
           "WR"
         ],
         "experience": 9,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Questionable",
+        "injuryBodyPart": "Back",
         "gsisId": "00-0033908"
       },
       "nflverse": {
@@ -23969,8 +24039,8 @@
           "WR"
         ],
         "experience": 1,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Questionable",
+        "injuryBodyPart": "Groin",
         "gsisId": null
       },
       "nflverse": {
