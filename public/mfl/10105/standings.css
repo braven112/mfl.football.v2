@@ -329,8 +329,8 @@ td::-webkit-scrollbar { background: #181818; }
 
 /* Seeds 31 and below: one tight line each. */
 #madmen #wwwc .mp99-list-row {
-  display: flex; align-items: center; gap: 8px;
-  padding: 6px 12px;
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 12px;
   border-bottom: 1px solid rgba(75, 152, 228, .28);
 }
 #madmen #wwwc .mp99-list-seed {
@@ -338,12 +338,17 @@ td::-webkit-scrollbar { background: #181818; }
   font-size: 12px; font-weight: 700; color: #6b7076;
 }
 #madmen #wwwc .mp99-list-crest {
-  width: 26px; height: 26px; flex-shrink: 0;
-  border-radius: 4px; display: block; object-fit: cover;
+  width: 40px; height: 40px; flex-shrink: 0;
+  border-radius: 5px; display: block; object-fit: cover;
 }
+/* Left-aligned EXPLICITLY: the league's stylesheet centres every cell
+   (#madmen #wwwc td { text-align: center }) and that cascades in here, so the
+   names sat centred over a ragged left edge. The extra padding is the gap
+   between the crest and the name the row's own gap cannot give on its own. */
 #madmen #wwwc .mp99-list-name {
   flex-grow: 1; min-width: 0;
-  font-size: 12px; font-weight: 600; color: #d4d4d4;
+  text-align: left; padding-left: 4px;
+  font-size: 13px; font-weight: 600; color: #d4d4d4;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 #madmen #wwwc .mp99-list-rec { font-size: 10px; color: #6b7076; flex-shrink: 0; }
