@@ -13,6 +13,14 @@
       "lede": "The roster page leads with your club now — its colour, its crest, your record, rank and points — then last week's result, this week's game and every week of the season as a row you can click straight into the schedule. One header, both leagues.",
       "image": "roster-header.webp",
       "imageAlt": "TheLeague's roster page with the new header: the club nameplate in its own colour, last result and next game, the season rail, and every club's crest in a row below"
+    },
+    {
+      "date": "2026-09-24",
+      "type": "bug-fix",
+      "summary": "The <a href=\"/rosters\">roster</a> header's cap space now includes dead money and updates as you simulate cuts, trades and extensions.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "theleague"
     }
   ]
 }

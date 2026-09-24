@@ -67,8 +67,12 @@ interface Props {
    * League-specific stats appended after record / rank / points-for: cap space
    * in a league with a cap, keepers set in one without. A league shows what it
    * HAS rather than a blank slot for a feature it does not run.
+   *
+   * `key` lands on the value as `data-rhdr-stat`, so a page can keep a stat
+   * live after hydration (the rosters page rewrites cap space as an owner
+   * simulates moves) without rebuilding the plate.
    */
-  extraStats?: Array<{ value: string; label: string }>;
+  extraStats?: Array<{ value: string; label: string; key?: string }>;
   lastPlayed: HeaderWeek | null;
   upNext: HeaderWeek | null;
   rail: RailWeek[];
@@ -154,7 +158,7 @@ const ordinal = (n: number) => {
 
 // Record / rank / points-for, then whatever the league adds. Each entry is
 // omitted rather than rendered blank when the feed has no number for it.
-const stats: Array<{ value: string; label: string }> = [
+const stats: Array<{ value: string; label: string; key?: string }> = [
   ...(standing.record ? [{ value: standing.record, label: 'Record' }] : []),
   ...(standing.rank != null
     ? [{
@@ -239,7 +243,7 @@ const stats: Array<{ value: string; label: string }> = [
               <>
                 {index > 0 && <span class="rhdr__sep" aria-hidden="true">/</span>}
                 <span class="rhdr__stat">
-                  <b>{stat.value}</b> {stat.label}
+                  <b data-rhdr-stat={stat.key}>{stat.value}</b> {stat.label}
                 </span>
               </>
             ))}

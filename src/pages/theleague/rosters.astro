@@ -1749,6 +1749,16 @@ const headerTeamById = new Map(teamsList.map((team: any) => [team.id, team]));
 const headerNameOf = (id: string) => headerTeamById.get(id)?.name ?? 'Franchise';
 const headerIconOf = (id: string) => headerTeamById.get(id)?.icon ?? null;
 
+/* Cap space as the table's own Cap Space row computes it: cap limit minus
+   this year's cap charges (practice squad at its partial rate) PLUS dead
+   money. `totals.totalSalary` carries no dead money, so the header used to
+   overstate every club's room by its drop penalties — the Pigskins by ~$2.2M. */
+const headerCapSpaceFor = (franchiseId: string) => {
+  const teamData = initialSeasonData.teams?.[franchiseId];
+  const charge = calculateCapCharges(teamData ? buildDisplayRows(teamData) : [])[0] ?? 0;
+  const dead = aggregateDeadMoneyFromSeasonData(initialSeasonData, franchiseId)[0] ?? 0;
+  return initialCapLimit - (charge + dead);
+};
 /* Every club's header inputs, so the in-place switcher has a nameplate ready
    for each. Built from the same season data the roster table already ships —
    the page's payload already carries all 16 clubs, which is exactly why
@@ -1767,7 +1777,7 @@ const headerTeamsForSwap = teamsList.map((team: any) => {
       rank: null,
       groupSize: null,
     },
-    capSpace: initialCapLimit - (teamData?.totals?.totalSalary ?? 0),
+    capSpace: headerCapSpaceFor(team.id),
     /* TheLeague runs a cap, so the question worth answering is value, not
        spend: the most points per dollar. Practice squad and IR are included —
        a held contract is still cap, and a stashed player who scores is exactly
@@ -1814,7 +1824,7 @@ const headerLineupLock = headerLockAt != null && headerLockAt.getTime() > Date.n
   ? formatForViewer(headerLockAt, await readViewerClock(Astro.cookies, authUser, 'theleague'), { weekday: true })
   : null;
 
-const headerCapSpace = initialCapLimit - (initialTeamData?.totals?.totalSalary ?? 0);
+const headerCapSpace = headerCapSpaceFor(defaultTeamId);
 const headerMoney = (n: number) =>
   `${n < 0 ? '-' : ''}$${Math.abs(Math.round(n)).toLocaleString('en-US')}`;
 
@@ -1848,7 +1858,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
         rank: null,
         groupSize: null,
       }}
-      extraStats={[{ value: headerMoney(headerCapSpace), label: 'Cap space' }]}
+      extraStats={[{ value: headerMoney(headerCapSpace), label: 'Cap space', key: 'cap-space' }]}
       featuredPlayer={headerTeamsForSwap.find((t) => t.id === defaultTeamId)?.featuredPlayer ?? null}
       lastPlayed={headerDefaultSchedule.lastPlayed}
       upNext={headerDefaultSchedule.upNext}
@@ -1884,7 +1894,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
                 label="Roster & Cap"
                 season={Number(defaultSeason)}
                 standing={team.standing}
-                extraStats={[{ value: headerMoney(team.capSpace), label: 'Cap space' }]}
+                extraStats={[{ value: headerMoney(team.capSpace), label: 'Cap space', key: 'cap-space' }]}
                 featuredPlayer={team.featuredPlayer}
                 lastPlayed={team.lastPlayed}
                 upNext={team.upNext}
@@ -9446,6 +9456,14 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       // below showed someone else. It no-ops when the header is already on
       // this club, so the click path is unchanged.
       applyRosterHeader(currentTeam);
+      // The header's cap space is the table's Cap Space cell, recomputed with
+      // every simulated cut / extension / tag, so the two can never disagree.
+      // Only for the season the header is about — a historical season in the
+      // table must not overwrite this year's number on the plate.
+      if (currentSeason === defaultSeason) {
+        const headerCapCell = headerTeamSlot?.querySelector<HTMLElement>('[data-rhdr-stat="cap-space"]');
+        if (headerCapCell) headerCapCell.textContent = _capSpaceFmt.format(capLimitForSeason - capCharge);
+      }
       lastRenderedRows = rows;
       renderTableRows(rows);
 
