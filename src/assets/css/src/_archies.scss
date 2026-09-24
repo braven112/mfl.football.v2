@@ -130,3 +130,19 @@ caption a {
     display: table-cell;
   }
 }
+
+// MFL's player / news popup draws only its inner report with a background,
+// so its outer frame is transparent and the page art shows through behind
+// the header. The old DAGrafix skin painted it; give it the page black, the
+// blue accent rule and a shadow so it reads as one dark card.
+#MFLPlayerPopupContainer,
+#popup-weather-container {
+  background-color: $pagebody-bg;
+  border-top: 4px solid $accent-color;
+  box-shadow: 0 0 25px rgba(0, 0, 0, 0.9);
+}
+
+// The overlay behind the popup is displayed but transparent; dim the page.
+#MFLPlayerPopupOverlay {
+  background-color: rgba(0, 0, 0, 0.7);
+}
