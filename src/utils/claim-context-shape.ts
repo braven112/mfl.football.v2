@@ -57,6 +57,12 @@ export interface ClaimContext {
   windowMode: WaiverMode;
   windowLabel: string;
   /**
+   * MFL's own add/drop page for this league and year, built from the registry.
+   * The claim modal offers it when a failure reply cannot be read at all — the
+   * server's `confirmUrl` rides in that reply's body, so it is lost with it.
+   */
+  addDropUrl: string;
+  /**
    * Player ids that are NOT claimable by this viewer. Everything absent from
    * this list is offered — see claim-context.ts for why the set ships this way
    * round rather than as its complement.

@@ -42,6 +42,8 @@ export interface WaiverClaimConfig {
   windowMode: 'waiver' | 'fcfs' | 'unknown';
   /** One-line description of the window, shown in the modal and on the page. */
   windowLabel: string;
+  /** MFL's add/drop page (registry-derived) — the fallback when a failure reply is unreadable. */
+  addDropUrl?: string;
 }
 
 interface Props {
@@ -467,8 +469,20 @@ const windowLabel = config?.windowLabel ?? '';
           // (it clears the previous attempt's state), so calling these the
           // intuitive way round renders the link and then immediately hides it
           // again — the whole addition, silently inert.
-          showError(data.message || `Claim failed (HTTP ${res.status}).`);
-          return showConfirmLink(data.confirmUrl);
+          //
+          // No message means the reply itself was unreadable (the route sends
+          // every handled failure as readable JSON, so this is the edge or the
+          // network). We cannot know whether MFL took the claim, so say what to
+          // check and hand over MFL's page from the config — the reply's own
+          // `confirmUrl` was lost along with its body.
+          if (data.message) {
+            showError(data.message);
+            return showConfirmLink(data.confirmUrl);
+          }
+          showError(
+            `We couldn't read MFL's answer (HTTP ${res.status}), so we can't tell whether the claim went through. Check your ${immediate ? 'roster' : 'pending waivers'} on MyFantasyLeague before trying again.`,
+          );
+          return showConfirmLink(data.confirmUrl || cfg.addDropUrl);
         }
         // `success` only means MFL acknowledged the write; `verified` means the
         // server read the claim back out of MFL afterwards. A checkmark on an

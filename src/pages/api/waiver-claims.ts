@@ -29,13 +29,16 @@ import { getAuthUser } from '../../utils/auth';
 import { getCurrentLeagueYear, getRolloverLeagueYear } from '../../utils/league-year';
 import { mflFetch, describeMflFailure } from '../../utils/mfl-fetch';
 import { getLeagueById, getLeagueBySlug, DEFAULT_LEAGUE_ID, DEFAULT_LEAGUE_SLUG } from '../../config/leagues';
-import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../utils/api-response';
+import { JSON_HEADERS_NO_STORE as JSON_HEADERS, handledFailure } from '../../utils/api-response';
 import { checkRateLimit } from '../../utils/rate-limit';
 import { getPlayerMap } from '../../utils/player-map';
 import { readFiledWaiverClaims, type FiledWaiverClaim } from '../../utils/waiver-claim';
 
+// Every failure goes through `handledFailure`, which sends a 5xx as 200: the
+// edge replaces a 5xx body, and the message is the whole point of the reply.
+// Guard: tests/claim-route-handled-failure-guard.test.ts.
 const fail = (message: string, status: number, extra: Record<string, unknown> = {}) =>
-  new Response(JSON.stringify({ success: false, message, ...extra }), { status, headers: JSON_HEADERS });
+  handledFailure(message, status, extra, JSON_HEADERS);
 
 interface ClaimsContext {
   user: { id: string; franchiseId: string };

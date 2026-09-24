@@ -190,6 +190,7 @@ export async function resolveClaimContext(user: AuthUser, clock: ViewerClock = D
     year,
     windowMode: window.mode,
     windowLabel: describeWaiverWindow(window, clock),
+    addDropUrl: `https://${league.mflHost}/${year}/add_drop?L=${leagueId}`,
     rosteredIds: [],
     tradeTargets: {},
     franchiseNames: {},

@@ -41,7 +41,7 @@ import { mflFetch, describeMflFailure } from '../../utils/mfl-fetch';
 import { createMFLApiClient } from '../../utils/mfl-matchup-api';
 import { getLeagueById, getLeagueBySlug, leagueClock, DEFAULT_LEAGUE_ID, DEFAULT_LEAGUE_SLUG } from '../../config/leagues';
 import { bustRosterCaches } from '../../utils/mfl-roster-cache';
-import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../utils/api-response';
+import { JSON_HEADERS_NO_STORE as JSON_HEADERS, handledFailure } from '../../utils/api-response';
 import { resolveWaiverWindow } from '../../utils/waiver-window';
 import { summarizeMflPage } from '../../utils/mfl-page-summary';
 import { fetchLockedPlayers, isPlayerLocked } from '../../utils/mfl-locked-players';
@@ -56,8 +56,11 @@ import {
   type WaiverClaim,
 } from '../../utils/waiver-claim';
 
+// Every failure goes through `handledFailure`, which sends a 5xx as 200: the
+// edge replaces a 5xx body, and the message is the whole point of the reply.
+// Guard: tests/claim-route-handled-failure-guard.test.ts.
 const fail = (message: string, status: number, extra: Record<string, unknown> = {}) =>
-  new Response(JSON.stringify({ success: false, message, ...extra }), { status, headers: JSON_HEADERS });
+  handledFailure(message, status, extra, JSON_HEADERS);
 
 /**
  * The franchise's currently-pending waiver claims, as player ids — read once
