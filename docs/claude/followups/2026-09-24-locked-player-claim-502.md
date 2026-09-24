@@ -6,7 +6,7 @@ opened: 2026-09-24
 hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1209
 hotfix_sha: 9b01c6d
 followup_issue: 1210
-followup_pr:
+followup_pr: https://github.com/braven112/mfl.football.v2/pull/1211
 followup_session: session_01WVp1Z5rfi476eZ9Rjd3JsN
 worked: 2026-09-24
 ---
