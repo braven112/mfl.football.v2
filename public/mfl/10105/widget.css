@@ -1,5 +1,34 @@
 /* ---- added for the automatic widget ---- */
 
+/* ------------------------------------------------------------
+   THE SECOND SCROLLBAR
+
+   The league's own stylesheet turns the outer table into a fixed-height
+   scroll box:
+
+       #madmen { overflow: auto; height: 1200px; display: block; }
+       @media (max-width: 768px) { #madmen { max-height: 850px; } }
+
+   That made sense for 99 hand-written table rows — it kept the module
+   from swallowing the home page. It is wrong for this widget: the page
+   already scrolls, so the reader gets a window inside a window, two
+   scrollbars side by side, and a table that stops dead 1200px in while
+   the page around it keeps going.
+
+   The widget is the module's whole content now, so it flows with the
+   page instead. Nothing else in the league's stylesheet depends on the
+   box — `display: block` is kept only because removing it would restore
+   table layout to an element the rest of the sheet styles as a block.
+
+   To put the scroll box back, delete this rule; the original is still
+   in reference/existing-page.css.
+   ------------------------------------------------------------ */
+#madmen {
+  height: auto;
+  max-height: none;
+  overflow: visible;
+}
+
 /* Tier tints. Pink and cyan are the league's own; purple is the one new
    colour, for division runners-up, chosen clear of the four already in use. */
 #madmen #wwwc .runnerup-row { background-color: rgba(178, 132, 255, 0.12); }
@@ -120,4 +149,63 @@
 #madmen #wwwc .mp99-error-cell {
   padding: 16px 12px; text-align: center; font-size: 13px; line-height: 1.6;
   color: #e60000; font-weight: 600;
+}
+
+/* ============================================================
+   DESKTOP
+
+   The layout above was designed and verified at phone width, where a
+   third of the viewport is a sensible crest. On a ~1250px MFL content
+   column that same "third of the width" makes each qualifier crest
+   ~380px tall — three enormous squares per row — while the 69 field
+   rows below stay at their phone size, 40px crests and 13px names
+   marooned in acres of space, with the record and VP flung to the far
+   right of a 1200px line.
+
+   Both halves are fixed by the same thing: a READING COLUMN. The
+   qualifier grid and the field rows are each capped and centred at the
+   same width, so the tiles stop growing with the viewport and the rows
+   stop stretching. The two halves then line up with each other, which
+   full-width rows under a full-width grid never did.
+
+   The grid stays THREE across at every width — a deliberate choice for
+   this league, not a consequence of the breakpoint. Capping the column
+   rather than the crest is what keeps it so: the tiles shrink, the
+   count does not change.
+   ============================================================ */
+@media (min-width: 700px) {
+  #madmen #wwwc .mp99-grid {
+    max-width: 820px; margin: 0 auto;
+    gap: 18px; padding: 0 16px;
+  }
+  /* The field rows sit directly in the colspan cell, so each one is
+     capped itself — same number, so the two halves share an edge. */
+  #madmen #wwwc .mp99-list-row { max-width: 820px; margin-left: auto; margin-right: auto; }
+
+  #madmen #wwwc .mp99-tile { padding: 12px 12px 14px 12px; }
+  #madmen #wwwc .mp99-tile-name { font-size: 14px; margin-top: 9px; }
+  #madmen #wwwc .mp99-tile-vp   { font-size: 27px; }
+  #madmen #wwwc .mp99-tile-vp span { font-size: 10px; }
+  #madmen #wwwc .mp99-tile-meta { font-size: 11px; }
+  #madmen #wwwc .mp99-prize { font-size: 12px; }
+
+  /* The field. Same rows, sized for the screen they are on. */
+  #madmen #wwwc .mp99-list-row  { padding: 10px 16px; gap: 14px; }
+  #madmen #wwwc .mp99-list-seed { width: 30px; font-size: 14px; }
+  #madmen #wwwc .mp99-list-crest { width: 58px; height: 58px; border-radius: 6px; }
+  #madmen #wwwc .mp99-list-name { font-size: 16px; padding-left: 6px; }
+  #madmen #wwwc .mp99-list-rec  { font-size: 12px; }
+  #madmen #wwwc .mp99-list-vp   { width: 34px; font-size: 19px; }
+  #madmen #wwwc .mp99-list-prize { font-size: 12px; min-width: 64px; }
+
+  /* The section headings are table CELLS, so max-width + auto margins do
+     not centre them the way they centre the rows and the grid — a td is
+     laid out by the table, not by its own box. They are pushed to the
+     column's left edge instead: half the table, back off half the column,
+     then the column's own 16px padding. The max() is the floor for a
+     viewport narrower than the column, where the sum goes negative. */
+  #madmen #wwwc .mp99-section {
+    font-size: 12px; text-align: left;
+    padding: 26px 16px 12px max(16px, calc(50% - 410px));
+  }
 }
