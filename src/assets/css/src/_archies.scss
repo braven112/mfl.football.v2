@@ -67,3 +67,21 @@ caption a {
     opacity: 0.8;
   }
 }
+
+// The home page's utility bar ends in a sign-in button whose label is left
+// empty on this league (no script fills it). An empty inline-block sits on
+// a different baseline from its labelled neighbours, so the icon dropped
+// below the row. Centre every button and hide the empty label.
+.utility-nav {
+  .utility-nav--button {
+    vertical-align: middle;
+  }
+
+  .svg-text:empty {
+    display: none;
+  }
+
+  .loginbutton svg {
+    margin-right: 0;
+  }
+}
