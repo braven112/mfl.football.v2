@@ -1,4 +1,4 @@
-@use "./fonts-dark";
+@use "./fonts-archies";
 @use "./reset";
 
 //// Design Tokens (load before components)
@@ -49,3 +49,6 @@
 @use "./top-players";
 @use "./transactions";
 @use "./font-scaling";
+
+//// Archie's signature touches (header/footer rules, Oswald caps, league name)
+@use "./archies";

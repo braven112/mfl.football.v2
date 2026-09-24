@@ -1,5 +1,7 @@
 /**
- * Archie's — black / blue / teal dark skin (copied from _variables-dark.scss)
+ * Archie's — black / blue dark skin, matched to the league's old DAGrafix
+ * skin: #4b98e4 blue on #121212 / #181818 / #222222 blacks, #363636 greys.
+ * (copied from _variables-dark.scss)
  *
  * Same SCSS var() wrappers as _variables.scss.
  * The :root block below overrides ALL color values for the dark theme.
@@ -7,15 +9,15 @@
 
 //////////////////////Dark :root overrides//////////////////////////
 :root {
-  --primary-color: #f7f7f7;
-  --secondary-color: #f7f7f7;
-  --accent-color: #3b8eea;
-  --dark-accent-color: #2a74c8;
-  --primary-text-color: #f7f7f7;
-  --secondary-text-color: #d0d0d0;
+  --primary-color: #eeeeee;
+  --secondary-color: #eeeeee;
+  --accent-color: #4b98e4;
+  --dark-accent-color: #2870b7;
+  --primary-text-color: #eeeeee;
+  --secondary-text-color: #cccccc;
 
-  --link-color: #d0d0d0;
-  --link-color-hover: #2cc9c3;
+  --link-color: #eeeeee;
+  --link-color-hover: #4b98e4;
 
   --add-color: #4ade80;
   --drop-color: #f87171;
@@ -39,154 +41,154 @@
 
   //////////////////////Neutrals//////////////////////////
   --gray1: #d8d8d8;
-  --gray2: #8a8a8a;
-  --gray3: #6b6b6b;
+  --gray2: #888888;
+  --gray3: #666666;
 
-  --offwhite: #1f2023;
-  --offwhite2: #0e0f10;
+  --offwhite: #222222;
+  --offwhite2: #121212;
 
-  --lightgray: #1f2023;
-  --lightgray2: #2a2c30;
-  --lightgray3: #3a3d42;
+  --lightgray: #222222;
+  --lightgray2: #292929;
+  --lightgray3: #363636;
 
-  --white: #1f2023;
+  --white: #222222;
 
-  --codebg-color: #0e0f10;
+  --codebg-color: #121212;
 
   //////////////////////Tables//////////////////////////
-  --oddtablerow: #1f2023;
-  --eventablerow: #2a2c30;
-  --newposition-border-color: #2a2c30;
-  --table-header-color: #9a9a9a;
+  --oddtablerow: #222222;
+  --eventablerow: #292929;
+  --newposition-border-color: #363636;
+  --table-header-color: #eeeeee;
 
   //////////////////////Page Backgrounds//////////////////////////
-  --primary-bg-color: #1f2023;
-  --pagebody-bg: #0e0f10;
-  --report-bg: #1f2023;
-  --header-bg: #08090a;
+  --primary-bg-color: #222222;
+  --pagebody-bg: #121212;
+  --report-bg: #222222;
+  --header-bg: #181818;
 
   //////////////////////Footer//////////////////////////
-  --footer-bg-color: #08090a;
-  --footer-text-color: #f7f7f7;
-  --footer-header-text-color: #f7f7f7;
+  --footer-bg-color: #181818;
+  --footer-text-color: #eeeeee;
+  --footer-header-text-color: #ffffff;
 
   //////////////////////Borders//////////////////////////
-  --border-color: #25272a;
+  --border-color: #363636;
 
   //////////////////////MFL Menu//////////////////////////
-  --menu-bg-color: #08090a;
-  --menu-bg-hover-color: #1c1d20;
-  --menu-border-color: #1c1d20;
-  --menu-text-color: #f7f7f7;
+  --menu-bg-color: #1f1f1f;
+  --menu-bg-hover-color: #4b98e4;
+  --menu-border-color: #111111;
+  --menu-text-color: #ffffff;
 
   //////////////////////Report Navigation//////////////////////////
-  --secondary-menu-border-color: #3b8eea;
+  --secondary-menu-border-color: #4b98e4;
   --secondary-menu-bg-color: var(--accent-color);
-  --secondary-menu-text-color: #f7f7f7;
-  --secondary-menu-link-color: #f7f7f7;
-  --secondary-menu-icon-color: #f7f7f7;
+  --secondary-menu-text-color: #ffffff;
+  --secondary-menu-link-color: #ffffff;
+  --secondary-menu-icon-color: #ffffff;
   --secondary-menu-icon-hover-color: #ffffff;
   --secondary-menu-font-weight: normal;
 
   //////////////////////Buttons//////////////////////////
-  --button-bg-color: #3b8eea;
-  --button-bg-color-hover: #2a74c8;
+  --button-bg-color: #4b98e4;
+  --button-bg-color-hover: #3fa0ff;
   --button-link-color: #ffffff;
 
   //////////////////////Tabs//////////////////////////
   --tab-hover-color: #fff;
 
   //////////////////////Scrollbar//////////////////////////
-  --scrollbar-bg-color: #2a2c30;
-  --scrollbar-bg-hover-color: #3a3d42;
+  --scrollbar-bg-color: #292929;
+  --scrollbar-bg-hover-color: #363636;
 
   //////////////////////Captions and Headlines//////////////////////////
-  --caption-color: #3b8eea;
-  --headline-font-color: #3b8eea;
-  --h1-color: #3b8eea;
-  --h2-color: #3b8eea;
-  --h3-color: #3b8eea;
-  --h4-color: #3b8eea;
-  --h5-color: #3b8eea;
-  --h6-color: #3b8eea;
+  --caption-color: #4b98e4;
+  --headline-font-color: #4b98e4;
+  --h1-color: #4b98e4;
+  --h2-color: #4b98e4;
+  --h3-color: #4b98e4;
+  --h4-color: #4b98e4;
+  --h5-color: #4b98e4;
+  --h6-color: #4b98e4;
 
   //////////////////////Icons//////////////////////////
-  --icon-color: #3b8eea;
-  --icon-color-hover: #2cc9c3;
-  --icon-text-color: #3b8eea;
+  --icon-color: #eeeeee;
+  --icon-color-hover: #4b98e4;
+  --icon-text-color: #eeeeee;
 
   //////////////////////Calendar//////////////////////////
-  --calendar-bg-color: #25272a;
-  --calendar-eventablerow:#1f2023;
-  --calendar-border-color: #2a2c30;
-  --calendar-text-color: #f7f7f7;
-  --today-bg-color: #3b8eea;
-  --today-border-color: #2a74c8;
+  --calendar-bg-color: #292929;
+  --calendar-eventablerow:#222222;
+  --calendar-border-color: #363636;
+  --calendar-text-color: #eeeeee;
+  --today-bg-color: #4b98e4;
+  --today-border-color: #2870b7;
   --today-text-color: #ffffff;
 
   //////////////////////Logo//////////////////////////
-  --logo-main-color: #3b8eea;
-  --logo-secondary-color: #0e0f10;
-  --logo-3rd-color: #1f2023;
-  --logo-4th-color: #3b8eea;
-  --logo-text-color: #3b8eea;
-  --logo-secondary-text-color: #0e0f10;
+  --logo-main-color: #4b98e4;
+  --logo-secondary-color: #121212;
+  --logo-3rd-color: #222222;
+  --logo-4th-color: #4b98e4;
+  --logo-text-color: #4b98e4;
+  --logo-secondary-text-color: #121212;
 
   //////////////////////Roster Page//////////////////////////
-  --color-bg-base: #1f2023;
-  --color-bg-subtle: #25272a;
-  --color-bg-practice: rgba(59, 130, 246, 0.1);
-  --color-bg-practice-alt: rgba(59, 130, 246, 0.15);
+  --color-bg-base: #222222;
+  --color-bg-subtle: #292929;
+  --color-bg-practice: rgba(75, 152, 228, 0.1);
+  --color-bg-practice-alt: rgba(75, 152, 228, 0.15);
   --color-bg-injured: rgba(220, 38, 38, 0.1);
   --color-bg-injured-alt: rgba(220, 38, 38, 0.15);
-  --color-border-practice: rgba(59, 130, 246, 0.3);
+  --color-border-practice: rgba(75, 152, 228, 0.4);
   --color-border-injured: rgba(220, 38, 38, 0.3);
 
   //////////////////////Header Icon Buttons//////////////////////////
-  --header-icon-color: #666666;
+  --header-icon-color: #eeeeee;
   --header-icon-text-color: #eeeeee;
-  --header-icon-hover-color: #dddddd;
+  --header-icon-hover-color: #4b98e4;
 
   //////////////////////Logo Name//////////////////////////
-  --logo-name-primary-color: #3b8eea;
-  --logo-name-secondary-color: #f7f7f7;
+  --logo-name-primary-color: #ffffff;
+  --logo-name-secondary-color: #888888;
 
   //////////////////////Division Headings//////////////////////////
-  --division-heading-color: #f7f7f7;
-  --division-subheading-color: #2cc9c3;
-  --division-border-color: #666666;
+  --division-heading-color: #eeeeee;
+  --division-subheading-color: #4b98e4;
+  --division-border-color: #363636;
 
   //////////////////////Typography//////////////////////////
-  --headline-font: "UFC Sans", sans-serif;
-  --headline-font-weight: 500;
-  --body-font: "UFC Sans", sans-serif;
+  --headline-font: "Oswald", sans-serif;
+  --headline-font-weight: 400;
+  --body-font: "Roboto", sans-serif;
   --body-font-weight: 400;
   --svg-text-font-size: 11px;
 
-  //////////////////////Font Size Scaling (UFC Sans)//////////////////////////
+  //////////////////////Font Size Scaling (Oswald)//////////////////////////
   // League name — base (mobile)
-  --fs-leaguename: 29px;            // base: 32px × 0.91
-  --fs-leaguename-dotus: 16px;      // base: 18px × 0.91
+  --fs-leaguename: 32px;
+  --fs-leaguename-dotus: 18px;
   // League name — 767px+
-  --fs-leaguename-md: 55px;         // base: 60px × 0.91
+  --fs-leaguename-md: 56px;
   // League name — 992px+
-  --fs-leaguename-lg: 42px;         // base: 46px × 0.91
+  --fs-leaguename-lg: 46px;
 
   // League name 2-line secondary — base (mobile)
-  --fs-leaguename-secondary: 12px;  // base: 13px × 0.91
+  --fs-leaguename-secondary: 13px;
   // League name 2-line secondary — 767px+, 992px+
-  --fs-leaguename-secondary-md: 13px; // base: 14px × 0.91
+  --fs-leaguename-secondary-md: 14px;
 
   // MFL menu
-  --fs-menu: 11px;                  // base: 12px × 0.91
-  --fs-menu-mobile-label: 15px;     // base: 16px × 0.91
-  --fs-menu-mobile-link: 13px;      // base: 14px × 0.91
+  --fs-menu: 13px;
+  --fs-menu-mobile-label: 16px;
+  --fs-menu-mobile-link: 14px;
 
   //////////////////////Border Radius//////////////////////////
-  --border-radius-sm: .25rem;
-  --border-radius-default: .5rem;
-  --border-radius-lg: 1rem;
-  --border-radius-xl: 8rem;
+  --border-radius-sm: 0;
+  --border-radius-default: 0;
+  --border-radius-lg: 0;
+  --border-radius-xl: 0;
 
   //////////////////////Homepage Messages//////////////////////////
   --hpm-header-bg: var(--alert-warning-bg);
@@ -204,8 +206,8 @@
   --container-header-bg: var(--header-bg);
 
   //////////////////////Tabs//////////////////////////
-  --tab-text-color: #8a8a8a;
-  --tab-active-text-color: #f7f7f7;
+  --tab-text-color: #888888;
+  --tab-active-text-color: #ffffff;
   --tab-active-indicator-color: var(--accent-color);
   --tab-separator-color: var(--border-color);
   --tab-hover-color: #fff;
@@ -342,7 +344,7 @@ $body-font: var(--body-font);
 $body-font-weight: var(--body-font-weight);
 $svg-text-font-size: var(--svg-text-font-size);
 
-//////////////////////Font Size Scaling (UFC Sans)//////////////////////////
+//////////////////////Font Size Scaling (Oswald)//////////////////////////
 $fs-leaguename: var(--fs-leaguename);
 $fs-leaguename-dotus: var(--fs-leaguename-dotus);
 $fs-leaguename-md: var(--fs-leaguename-md);
