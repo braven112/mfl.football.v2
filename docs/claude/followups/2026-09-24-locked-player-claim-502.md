@@ -7,7 +7,7 @@ hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1209
 hotfix_sha: 9b01c6d
 followup_issue: 1210
 followup_pr:
-followup_session:
+followup_session: session_01SSVCWRYssUywm63qCE5tBv
 ---
 
 # Follow-up: claiming a locked (recently dropped) player failed as a bare HTTP 502
