@@ -1,6 +1,29 @@
 /* ---- added for the automatic widget ---- */
 
 /* ------------------------------------------------------------
+   THE BANNER
+
+   The MAD POWER 99 banner is 1548px wide and sits OUTSIDE #madmen —
+   it is the module's first element, above the table — so every other
+   rule in this file is scoped away from it by design. Its
+   `img-responsive` class looks like it should cap the width, but
+   nothing defines that class: not MFL's MFLBaseCSS, not the league
+   skin. So on a ~1232px content column the banner simply ran 316px
+   past the page.
+
+   Matched by URL rather than by that class, because `img-responsive`
+   is a name MFL pages may use for their own images and this file now
+   loads on the home page, not just inside the module. Keying on the
+   league's own artwork folder means the rule cannot reach anything
+   but the images we host — banner, crest, wordmark — whatever they
+   are renamed to later.
+   ------------------------------------------------------------ */
+img[src*="/mfl/10105/"] {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ------------------------------------------------------------
    THE SECOND SCROLLBAR
 
    The league's own stylesheet turns the outer table into a fixed-height

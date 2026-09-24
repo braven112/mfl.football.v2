@@ -490,6 +490,25 @@ describe('module.html — the complete MESSAGE6 module', () => {
     expect(css.indexOf('max-height: none')).toBeGreaterThan(css.lastIndexOf('max-height: 850px'));
   });
 
+  it('caps the banner, which sits outside #madmen and is 1548px wide', () => {
+    const css = readFileSync(path.join(process.cwd(), 'public/mfl/10105/standings.css'), 'utf8');
+
+    /* The banner is the module's first element, ABOVE the table, so every
+     * other rule in the file is scoped away from it. Its `img-responsive`
+     * class reads like a width cap but is defined nowhere — not in MFL's
+     * MFLBaseCSS, not in the league skin — so on a 1232px column a 1548px
+     * image simply ran off the page. Keyed on the artwork folder rather
+     * than that class: this stylesheet loads on the home page now, and
+     * `img-responsive` is a name MFL's own pages may use. */
+    expect(css).toMatch(/img\[src\*=["']\/mfl\/10105\/["']\]/);
+    expect(css).toContain('max-width: 100%');
+    expect(css).not.toMatch(/^\s*\.img-responsive\s*\{/m);
+
+    /* The cap only works if the banner is served from that folder. */
+    const module = readFileSync(path.join(process.cwd(), 'public/mfl/10105/module.html'), 'utf8');
+    expect(module).toMatch(/<img[^>]+src="https:\/\/v2\.mfl\.football\/mfl\/10105\/[^"]+"/);
+  });
+
   it('carries the hosted widget and no hand-written team rows', () => {
     expect(module).toContain('https://v2.mfl.football/mfl/10105/standings.js');
     /* One <tr> for the #madmen wrapper, one for the header. No data rows.
