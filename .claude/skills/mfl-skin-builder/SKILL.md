@@ -14,7 +14,9 @@ Every skin has two files in `src/assets/css/src/`:
 1. **`_variables-{name}.scss`** — A `:root` block with CSS custom properties (colors, fonts, etc.) + SCSS `$variable` wrappers. This is the only file where skin-specific values live.
 2. **`{name}_main.scss`** — Entry file that imports fonts, reset, nav-tokens, all component partials, and the variables file. The component list is identical across all skins.
 
-The build script (`scripts/build-themes.js`) compiles entry files to `public/assets/css/dist/{name}_main.css`.
+The build script is `scripts/build-styles.mjs` (`pnpm build:styles`). It compiles each skin listed in its `leagues` array to `public/assets/css/dist/{name}_main.css`, first copying that skin's variables file over `_variables.scss` and restoring the original afterwards, so every partial that loads `_variables.scss` compiles with the skin's values.
+
+**Do not use `scripts/build-themes.js`.** It deletes the whole `dist/` directory first, writes uncompressed output, and never swaps the variables file, so every skin compiles with TheLeague's colors. Running it rewrites every committed skin.
 
 **Why it works:** All component partials internally load `_variables.scss` (TheLeague defaults). The skin's variables file is imported last in the main entry, so its `:root` block appears at the end of the compiled CSS and wins via cascade.
 
@@ -142,13 +144,15 @@ Save as `src/assets/css/src/_fonts-{name}.scss`. For Google Fonts:
 
 For self-hosted fonts (like the dark theme's UFC Sans), use `@font-face` declarations instead. Check `_fonts-dark.scss` for an example.
 
-## Step 5: Build & Provide URL
+## Step 5: Register, Build & Provide URL
+
+Add the skin to the `leagues` array in `scripts/build-styles.mjs` (`sassFile`, `variablesFile`, `outputFile`), then:
 
 ```bash
-node scripts/build-themes.js
+pnpm build:styles
 ```
 
-Verify `public/assets/css/dist/{name}_main.css` exists, then give the commissioner their URL:
+Verify `public/assets/css/dist/{name}_main.css` exists and that `git status` shows no changes to the OTHER skins' compiled CSS (a change there means you touched a shared partial), then give the commissioner their URL:
 
 ```
 https://mflfootballv2.vercel.app/assets/css/dist/{name}_main.css
