@@ -79,3 +79,22 @@ Add one line to the MESSAGE6 module, below the table:
 Nothing else in the module needs to change, and the script needs no key. It
 reads league 10105 from the page's own URL, so it carries no league id of its
 own.
+
+## Hosted artwork
+
+Two of the league's marks are served from this folder, so a module can point at
+a stable URL instead of a third-party host:
+
+| File | Size | URL |
+|---|---|---|
+| `archie-head.png` | 400 × 662 | `https://v2.mfl.football/mfl/10105/archie-head.png` |
+| `archies-wordmark.png` | 450 × 200 | `https://v2.mfl.football/mfl/10105/archies-wordmark.png` |
+
+Both are transparent PNGs, stored at the size they were supplied. Nothing in
+the widget references them yet — they are here to be linked from MFL's own
+modules, the way `module.html` currently links the POWER 99 image off
+`dagrafixdesigns.com`.
+
+`public/` is served as-is with no build step, so replacing either file and
+deploying is the whole update path; the URL does not change. Keep the names
+stable for that reason — a rename breaks every module already pointing at it.
