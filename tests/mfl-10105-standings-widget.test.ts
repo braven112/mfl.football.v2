@@ -286,10 +286,24 @@ describe('MAD POWER 99 standings widget (MFL 10105)', () => {
     expect(source).toContain('r.pf != null ? r.pf : r.avgpf');
   });
 
-  it('marks tied teams rather than presenting an arbitrary order as fact', async () => {
+  it('never marks a team as tied — Points For has already decided the order', async () => {
+    /* Every team on the same score: the worst case for a per-team marker. */
     const vp = new Array(12).fill(7);
     const { table } = await run({ withVp: true, vp, config: { DIVISION_LEADER_SEEDS: 3, RUNNER_UP_SEEDS: 3, WILD_CARD_SEEDS: 2 } });
-    expect(classCount(table, 'mp99-tie')).toBeGreaterThan(0);
+    expect(classCount(table, 'mp99-tie')).toBe(0);
+    /* Nothing printed next to the number either — the seed order IS the
+     * answer, so "level on VP" answers a question the reader did not ask,
+     * on a quarter of the league at once. */
+    expect(textOf(table, 'mp99-tile-vp').every((t) => /^\d+ VP$/.test(String(t)))).toBe(true);
+    expect(textOf(table, 'mp99-list-vp').every((t) => /^\d+$/.test(String(t)))).toBe(true);
+  });
+
+  it('still says so where a tie actually changes an outcome — the cut', async () => {
+    const vp = new Array(12).fill(7);
+    const { table } = await run({ withVp: true, vp, config: { DIVISION_LEADER_SEEDS: 3, RUNNER_UP_SEEDS: 3, WILD_CARD_SEEDS: 2 } });
+    /* The playoff line is the one place being level matters, and that note is
+     * computed from the teams either side of it, not from the dropped flag. */
+    expect(textOf(table, 'mp99-note-cell')[0]).toContain('Points For');
   });
 
   it('names the division on every team, in both the tiles and the field', async () => {
@@ -408,7 +422,7 @@ describe('module.html — the complete MESSAGE6 module', () => {
     const css = readFileSync(path.join(process.cwd(), 'public/mfl/10105/standings.css'), 'utf8');
     /* The league's own rules and the widget's additions both live there. */
     for (const rule of ['.division-row', '.wildcard-row', '.winnings-row', '.highlight-row',
-                        '.runnerup-row', '.mp99-cut-cell', '.mp99-tie', '.mp99-tile',
+                        '.runnerup-row', '.mp99-cut-cell', '.mp99-tile-div', '.mp99-tile',
                         '.mp99-grid', '.mp99-list-row', '.mp99-prize', '.mp99-list-prize']) {
       expect(css).toContain(`#madmen #wwwc ${rule}`);
     }

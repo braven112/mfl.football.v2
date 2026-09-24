@@ -187,12 +187,6 @@
   font-size: 15px; font-weight: 800; color: #fff;
 }
 
-/* Tie marker. Must never read as part of the number — "6T" looked like a value. */
-#madmen #wwwc .mp99-tie {
-  display: inline-block; margin-left: 4px; font-size: .5em; font-weight: 700;
-  color: #9aa0a6; vertical-align: super; letter-spacing: .04em;
-}
-
 /* The playoff cut line, and the note when a VP tie straddles it. */
 #madmen #wwwc .mp99-cut-cell {
   margin: 0; padding: 14px 10px; text-align: center; font-size: 11px; font-weight: 700;

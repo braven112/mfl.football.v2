@@ -213,16 +213,13 @@
 
     out.forEach(function (e, i) { e.seed = i + 1; });
 
-    /* Points For decides a Victory Point tie, so nothing is left undecided.
-     * The marker now means only "level on VP, separated on Points For", which
-     * is still worth showing: it explains why two teams on the same number sit
-     * in a particular order. */
-    var counts = {};
-    out.forEach(function (e) {
-      var k = e.tier + ':' + e.team.vp;
-      counts[k] = (counts[k] || 0) + 1;
-    });
-    out.forEach(function (e) { e.tied = counts[e.tier + ':' + e.team.vp] > 1; });
+    /* There is deliberately NO per-team tie marker. Points For decides a
+     * Victory Point tie, so the order printed is the final order and nothing
+     * on the page is undecided — a marker saying "level on VP" answers a
+     * question the reader did not ask, on a quarter of the league at once
+     * (26 of 99 teams shared a score in week 2). The one place a tie changes
+     * an outcome is the playoff cut, and that is what the note below is for.
+     */
 
     /* The note at the cut is no longer "someone must decide this" — Points For
      * already has. It says who just missed out, and on what. */
@@ -287,13 +284,8 @@
     return img;
   }
 
-  function vpText(parent, vp, tied) {
+  function vpText(parent, vp) {
     parent.appendChild(document.createTextNode(String(vp)));
-    if (tied) {
-      var tie = el('span', 'mp99-tie', 'T');
-      tie.title = 'tied on Victory Points';
-      parent.appendChild(tie);
-    }
   }
 
   /* A qualifier: crest, name, Victory Points, then seed and record, then the
@@ -310,18 +302,9 @@
      * division a leader leads — the tier says only that it leads one. */
     if (t.divisionName) box.appendChild(el('div', 'mp99-tile-div', t.divisionName));
 
-    /* "6 VP", with any tie marker AFTER the unit — placed between the two it
-     * read as "6 T VP", as though T were part of the value. Kept to a single
-     * letter: with 26 teams sharing a score early in the season the word
-     * "TIED" repeated on every tile, which is noise rather than information. */
     var vp = el('div', 'mp99-tile-vp');
     vp.appendChild(document.createTextNode(String(t.vp)));
     vp.appendChild(el('span', null, ' VP'));
-    if (entry.tied) {
-      var tie = el('span', 'mp99-tie', 'T');
-      tie.title = 'tied on Victory Points';
-      vp.appendChild(tie);
-    }
     box.appendChild(vp);
 
     box.appendChild(el('div', 'mp99-tile-meta', '#' + entry.seed + ' \u00b7 ' + (t.record || '0-0-0')));
@@ -358,7 +341,7 @@
       won ? money(won) : '\u2014'));
 
     var vp = el('div', 'mp99-list-vp');
-    vpText(vp, t.vp, entry.tied);
+    vpText(vp, t.vp);
     row.appendChild(vp);
     return row;
   }

@@ -70,11 +70,24 @@ Leaders ordered 1–9 by VP among themselves; runners-up 10–18 by VP among
 themselves; wild cards and the field likewise.
 **Status: decided.**
 
-### D8 — A VP tie is shown, never silently broken
-Tied teams render at the same rank with a marker. At the wild card cut this
-means the band can show more than 12 teams, with an overflow note saying the
-league tiebreaker decides the final spot.
-**Status: decided — but see O2; this is far more common than anyone assumed.**
+### D8 — A VP tie is marked only where it changes an outcome
+**Status: REVERSED 2026-09-24.** The per-team marker is gone; the note at the
+playoff cut stays.
+
+Originally: tied teams rendered at the same rank with a small "T", so the page
+never presented an arbitrary order as fact. Two things undid it. Points For
+became the tiebreaker (O2), so the printed order IS the final order and nothing
+is undecided. And the tie turned out to be the normal case rather than the
+exception — with two games a week and a 3/2/1 bucket a team scores 0–6 VP a
+week, so 26 of the 99 teams sat on the same number in week 2. A marker on a
+quarter of the league answers a question no reader asked.
+
+What survives is the note at the wild card cut ("4 teams below the line are
+also on 10 Victory Points — separated on Points For"). That is the one place
+being level changes who plays in January, and it is computed from the teams
+either side of the line rather than from the dropped per-team flag.
+Guards: `never marks a team as tied` and `still says so where a tie actually
+changes an outcome`.
 
 ### D9 — Winnings stay manual
 MFL's accounting ledger for this league is empty, so winnings cannot be derived.
@@ -191,8 +204,9 @@ leaving different game counts across the league. If that ever happens, add
 Points For to the standings display and the widget picks up the total by
 itself.
 
-D8 stands but means less now: a tie marker no longer says "undecided", only
-"level on VP, separated on Points For".
+This is what eventually removed the per-team tie marker altogether — see D8.
+Once Points For decides every tie, a marker can only say "level on VP", which
+is true of a quarter of the league and useful to nobody.
 
 
 ### O3 — The record column **(RESOLVED 2026-09-21)**
