@@ -305,6 +305,11 @@
     box.appendChild(crest(t, 'mp99-crest'));
     box.appendChild(el('div', 'mp99-tile-name', t.name));
 
+    /* The division, under the name and deliberately quiet. Seeds 1-18 are
+     * one team per division, so without it there is no way to tell WHICH
+     * division a leader leads — the tier says only that it leads one. */
+    if (t.divisionName) box.appendChild(el('div', 'mp99-tile-div', t.divisionName));
+
     /* "6 VP", with any tie marker AFTER the unit — placed between the two it
      * read as "6 T VP", as though T were part of the value. Kept to a single
      * letter: with 26 teams sharing a score early in the season the word
@@ -338,7 +343,13 @@
     var row = el('div', 'mp99-list-row');
     row.appendChild(el('div', 'mp99-list-seed', String(entry.seed)));
     row.appendChild(crest(t, 'mp99-list-crest'));
-    row.appendChild(el('div', 'mp99-list-name', t.name));
+    /* A stack, not a line: the name with the division under it. The
+     * wrapper keeps the class the row layout already flexes on, so the
+     * two lines share one column and one ellipsis boundary. */
+    var who = el('div', 'mp99-list-name');
+    who.appendChild(el('div', 'mp99-list-team', t.name));
+    if (t.divisionName) who.appendChild(el('div', 'mp99-list-div', t.divisionName));
+    row.appendChild(who);
     row.appendChild(el('div', 'mp99-list-rec', t.record || '0-0-0'));
 
     var won = WINNINGS[t.id];

@@ -292,6 +292,20 @@ describe('MAD POWER 99 standings widget (MFL 10105)', () => {
     expect(classCount(table, 'mp99-tie')).toBeGreaterThan(0);
   });
 
+  it('names the division on every team, in both the tiles and the field', async () => {
+    const { table } = await run({ withVp: true, config: { DIVISION_LEADER_SEEDS: 3, RUNNER_UP_SEEDS: 3, WILD_CARD_SEEDS: 2 } });
+    /* Seeds 1-18 are one team per division, so the tier alone says a team
+     * leads A division, never WHICH — the name is the only thing that does. */
+    expect(classCount(table, 'mp99-tile-div')).toBe(classCount(table, 'mp99-tile'));
+    expect(classCount(table, 'mp99-list-div')).toBe(classCount(table, 'mp99-list-row'));
+    /* It is MFL's own division name, not a re-derived label. */
+    expect(new Set(textOf(table, 'mp99-tile-div')))
+      .toEqual(new Set(['Division 0', 'Division 1', 'Division 2']));
+    /* A trailing "Division" is stripped: it sits under a heading that already
+     * says so, and "Joe Montana Division" wrapped onto three lines. */
+    expect(readFileSync(SOURCE, 'utf8')).toContain("replace(/\\s+Division$/i, '')");
+  });
+
   it("prints MFL's own W-L-T record, unreformatted", async () => {
     const { table } = await run({ withVp: true });
     expect(textOf(table, 'mp99-tile-meta').every((t) => t.includes('2-0-0'))).toBe(true);
@@ -416,6 +430,50 @@ describe('module.html — the complete MESSAGE6 module', () => {
     expect(module).toContain('window.MAD_POWER_99_WINNINGS');
     /* Commented examples only — never real amounts committed to the repo. */
     expect(module).toMatch(/\/\/\s*"0001":/);
+  });
+
+  it('sizes itself from its own container, never from the viewport', () => {
+    const css = readFileSync(path.join(process.cwd(), 'public/mfl/10105/standings.css'), 'utf8');
+
+    /* The widget has to be correct in a full-width module AND on the home
+     * page, where it sits in a column beside a sidebar. At 1337px a viewport
+     * query calls both "desktop", which is how the full-width sizing ended up
+     * inside a ~750px column with the tiles over the Pending Trades panel. */
+    expect(css).toContain('container-type: inline-size');
+    expect(css).toContain('container-name: mp99');
+    expect(css).toMatch(/@container mp99 \(min-width: \d+px\)/);
+
+    /* No widget rule may sit inside a VIEWPORT query. The league's captured
+     * stylesheet still has its own @media blocks and those are left alone,
+     * so the check runs against the widget's half of the file — which is
+     * the hand-edited source the generated one is built from. */
+    const widget = readFileSync(path.join(process.cwd(), 'public/mfl/10105/widget.css'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '');   // the comments quote the league's own @media rules
+    expect(widget).not.toContain('@media');
+    expect(widget).toContain('@container mp99');
+  });
+
+  it('cannot push past whatever column it is dropped into', () => {
+    const css = readFileSync(path.join(process.cwd(), 'public/mfl/10105/standings.css'), 'utf8');
+
+    /* The league's colgroup gives the six columns fixed pixel widths summing
+     * to 1022px. Under fixed layout those are authoritative, so the table came
+     * out 1022px wide however little room it had — the actual cause of the
+     * overlap. Every cell the widget renders spans all six, so they describe
+     * nothing and are released. */
+    expect(css).toContain('#madmen #wwwc col { width: auto !important; }');
+    expect(css).toContain('table-layout: fixed');
+
+    /* `clip` is the one overflow value allowed beside `visible`, so the
+     * sideways guard does not bring back the nested vertical scrollbar. */
+    expect(css).toContain('overflow-x: clip');
+
+    /* The league's `#madmen { overflow: auto; height: 1200px }` is still in
+     * the captured half of the file — it is their stylesheet, kept whole.
+     * What matters is that the widget's override lands AFTER it, or the page
+     * gets a scrollbar inside a scrollbar again. */
+    expect(css.lastIndexOf('overflow: auto')).toBeLessThan(css.indexOf('overflow-x: clip'));
+    expect(css.indexOf('max-height: none')).toBeGreaterThan(css.lastIndexOf('max-height: 850px'));
   });
 
   it('carries the hosted widget and no hand-written team rows', () => {

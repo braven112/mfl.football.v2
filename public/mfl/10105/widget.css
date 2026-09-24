@@ -27,7 +27,47 @@
   height: auto;
   max-height: none;
   overflow: visible;
+
+  /* Horizontal only. `clip` is the one overflow value allowed to sit
+     next to `visible` on the other axis, so this stops the widget
+     spilling sideways over whatever is beside it WITHOUT bringing the
+     vertical scrollbar back. */
+  overflow-x: clip;
+
+  /* THE CONTAINER. Every size decision below is a query against this
+     element's own width, so the widget lays itself out from the space
+     it has been given rather than from the size of the window. See the
+     block above the @container rules for why that matters. */
+  container-type: inline-size;
+  container-name: mp99;
+
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
+#madmen *, #madmen *::before, #madmen *::after { box-sizing: border-box; }
+
+/* A table sizes itself to its contents by default, so one long team name
+   or one wide note could push the whole module past its column and into
+   the sidebar. Fixed layout makes the table exactly as wide as it is
+   told to be; every cell the widget renders spans all six columns, so
+   there is nothing for the column widths to get wrong. */
+#madmen #wwwc {
+  table-layout: fixed;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* The league's stylesheet gives the six columns FIXED PIXEL widths
+   (380 + 170 + 140 + 120 + …), which sum to 1022px. Under fixed layout
+   those widths are authoritative, so the table came out 1022px wide no
+   matter how much room it had — which is what pushed the module over
+   the home page's sidebar. They were right for the old six-column
+   table; the widget colspans all six on every row it renders, so the
+   per-column widths describe nothing and are released back to the
+   table. `!important` because the originals carry viewport media
+   queries of their own. */
+#madmen #wwwc col { width: auto !important; }
 
 /* Tier tints. Pink and cyan are the league's own; purple is the one new
    colour, for division runners-up, chosen clear of the four already in use. */
@@ -81,6 +121,14 @@
   margin-top: 7px; line-height: 1.2;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+/* The division. Quiet on purpose: it answers "which one" for a reader
+   already looking at the tier heading, so it must not compete with the
+   team name above it or the Victory Points below. */
+#madmen #wwwc .mp99-tile-div {
+  font-size: 9px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  color: #7f858c; margin-top: 2px; line-height: 1.2;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 #madmen #wwwc .mp99-tile-vp {
   font-size: 23px; font-weight: 800; color: #fff; line-height: 1; margin-top: 3px;
 }
@@ -121,7 +169,16 @@
 #madmen #wwwc .mp99-list-name {
   flex-grow: 1; min-width: 0;
   text-align: left; padding-left: 4px;
-  font-size: 13px; font-weight: 600; color: #d4d4d4;
+}
+/* The ellipsis moved down to the two lines: it belongs to whichever
+   string is too long, not to the box that holds both of them. */
+#madmen #wwwc .mp99-list-team {
+  font-size: 13px; font-weight: 600; color: #d4d4d4; line-height: 1.25;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+#madmen #wwwc .mp99-list-div {
+  font-size: 9px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+  color: #6b7076; line-height: 1.3;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 #madmen #wwwc .mp99-list-rec { font-size: 10px; color: #6b7076; flex-shrink: 0; }
@@ -152,28 +209,38 @@
 }
 
 /* ============================================================
-   DESKTOP
+   SIZING — CONTAINER QUERIES, NOT THE VIEWPORT
 
-   The layout above was designed and verified at phone width, where a
-   third of the viewport is a sensible crest. On a ~1250px MFL content
-   column that same "third of the width" makes each qualifier crest
-   ~380px tall — three enormous squares per row — while the 69 field
-   rows below stay at their phone size, 40px crests and 13px names
-   marooned in acres of space, with the record and VP flung to the far
-   right of a 1200px line.
+   The layout above is the small one: three crests across a narrow
+   column. Everything below grows it, and it grows against the width of
+   #madmen — the widget's own box — never the width of the window.
 
-   Both halves are fixed by the same thing: a READING COLUMN. The
-   qualifier grid and the field rows are each capped and centred at the
-   same width, so the tiles stop growing with the viewport and the rows
-   stop stretching. The two halves then line up with each other, which
-   full-width rows under a full-width grid never did.
+   That distinction is the whole point. The widget has to work in a
+   full-width module AND on the home page, where it sits in a content
+   column beside a sidebar. A viewport media query cannot tell those
+   apart: at 1337px both say "desktop", so the home page got the
+   full-width sizing inside a ~750px column and the tiles ran out over
+   the Pending Trades panel. A container query asks the only question
+   that actually decides the layout — how much room is there right
+   here — so the same file is correct in a wide module, in a narrow
+   column, and anywhere else it is dropped later, with no per-placement
+   tuning.
+
+   Browsers without container query support (pre-2023) simply keep the
+   small layout everywhere. That degrades to compact, never to broken.
 
    The grid stays THREE across at every width — a deliberate choice for
-   this league, not a consequence of the breakpoint. Capping the column
-   rather than the crest is what keeps it so: the tiles shrink, the
-   count does not change.
+   this league, not a consequence of the breakpoint. Capping the reading
+   column rather than the crest is what keeps it so: the tiles shrink,
+   the count does not change.
+
+   The `!important` on the cell font sizes is not emphasis. The league's
+   own stylesheet carries `#madmen #wwwc td { font-size: 14px !important }`
+   under a VIEWPORT media query, which would otherwise reach in and
+   resize the section headings and the cut line by window width — the
+   exact coupling these rules exist to remove.
    ============================================================ */
-@media (min-width: 700px) {
+@container mp99 (min-width: 700px) {
   #madmen #wwwc .mp99-grid {
     max-width: 820px; margin: 0 auto;
     gap: 18px; padding: 0 16px;
@@ -189,11 +256,14 @@
   #madmen #wwwc .mp99-tile-meta { font-size: 11px; }
   #madmen #wwwc .mp99-prize { font-size: 12px; }
 
-  /* The field. Same rows, sized for the screen they are on. */
+  /* The field. Same rows, sized for the space they are in. */
   #madmen #wwwc .mp99-list-row  { padding: 10px 16px; gap: 14px; }
   #madmen #wwwc .mp99-list-seed { width: 30px; font-size: 14px; }
   #madmen #wwwc .mp99-list-crest { width: 58px; height: 58px; border-radius: 6px; }
-  #madmen #wwwc .mp99-list-name { font-size: 16px; padding-left: 6px; }
+  #madmen #wwwc .mp99-list-name { padding-left: 6px; }
+  #madmen #wwwc .mp99-list-team { font-size: 16px; }
+  #madmen #wwwc .mp99-list-div  { font-size: 10px; }
+  #madmen #wwwc .mp99-tile-div  { font-size: 10px; }
   #madmen #wwwc .mp99-list-rec  { font-size: 12px; }
   #madmen #wwwc .mp99-list-vp   { width: 34px; font-size: 19px; }
   #madmen #wwwc .mp99-list-prize { font-size: 12px; min-width: 64px; }
@@ -203,9 +273,19 @@
      laid out by the table, not by its own box. They are pushed to the
      column's left edge instead: half the table, back off half the column,
      then the column's own 16px padding. The max() is the floor for a
-     viewport narrower than the column, where the sum goes negative. */
+     container narrower than the column, where the sum goes negative. */
   #madmen #wwwc .mp99-section {
-    font-size: 12px; text-align: left;
+    font-size: 12px !important; text-align: left;
     padding: 26px 16px 12px max(16px, calc(50% - 410px));
   }
+  #madmen #wwwc .mp99-cut-cell  { font-size: 12px !important; }
+  #madmen #wwwc .mp99-note-cell { font-size: 12px !important; }
+}
+
+/* Roomier still — a full-width module on a desktop. Only the field list
+   keeps growing; the crest ceiling is the reading column and it holds. */
+@container mp99 (min-width: 1100px) {
+  #madmen #wwwc .mp99-list-crest { width: 64px; height: 64px; }
+  #madmen #wwwc .mp99-list-team { font-size: 17px; }
+  #madmen #wwwc .mp99-list-row { padding: 11px 18px; }
 }
