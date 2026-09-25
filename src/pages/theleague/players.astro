@@ -230,36 +230,12 @@ const adpRdfMap = buildAdpMap(adpRedraftModules);
 // function the snap-count columns beside it use, so the two can never disagree.
 const statsSeasonYear = resolveStatsSeasonYear(nowRef);
 const seasonWeeklyData = findForYear(seasonWeeklyModules, statsSeasonYear);
-// The YTD feed is the ONLY source for the points column, and the weekly sum
-// below is deliberately not a fallback for it: it cannot see an unrostered
-// player at all, and where it can see one it over-counts him — a franchise
-// appears in two matchups in a doubleheader week, which billed every one of
-// TheLeague's 260 scored 2026 players at exactly 2x his real total. The weekly
-// maps stay for the rostered-weeks rate below, where that double cancels out.
+// The YTD feed is the ONLY source for the points column. The league's weekly
+// results are deliberately not a fallback for it: they cannot see an
+// unrostered player at all, and where they can see one they over-count him — a
+// franchise appears in two matchups in a doubleheader week, which billed every
+// one of TheLeague's 260 scored 2026 players at exactly 2x his real total.
 const ytdPtsMap = parseYtdPlayerScores(findForYear(seasonYtdModules, statsSeasonYear));
-const weeklyPtsMap = new Map<string, number>();
-const weeklyGamesMap = new Map<string, number>();
-if (Array.isArray(seasonWeeklyData)) {
-  for (const weekPayload of seasonWeeklyData) {
-    const matchups = weekPayload?.weeklyResults?.matchup;
-    if (!matchups) continue;
-    const matchupArr = Array.isArray(matchups) ? matchups : [matchups];
-    for (const m of matchupArr) {
-      const franchises = m?.franchise ? (Array.isArray(m.franchise) ? m.franchise : [m.franchise]) : [];
-      for (const f of franchises) {
-        const players = f?.player ? (Array.isArray(f.player) ? f.player : [f.player]) : [];
-        for (const p of players) {
-          if (!p?.id || !p?.score) continue;
-          const score = parseFloat(p.score);
-          if (!isNaN(score) && score > 0) {
-            weeklyPtsMap.set(p.id, (weeklyPtsMap.get(p.id) || 0) + score);
-            weeklyGamesMap.set(p.id, (weeklyGamesMap.get(p.id) || 0) + 1);
-          }
-        }
-      }
-    }
-  }
-}
 
 // Build weekly player results for the modal's Season Results table
 const nflScheduleData =
@@ -675,13 +651,19 @@ if (Array.isArray(allPlayers)) {
       salary: rosterInfo?.salary ?? null,
       contractYrs: rosterInfo?.contractYrs ?? null,
       franchiseId: rosterInfo?.franchiseId ?? null,
-      // Rostered-weeks rate, on the weekly pair rather than the YTD total: that
-      // payload carries no games-played field, so pairing it with this
-      // denominator would price a one-week rental's whole season as one game.
+      // Per NFL game played, from the every-player weekly feed — NOT the
+      // league's weeklyResults, which only sees a player in the weeks he sat on
+      // a fantasy roster and so left almost every free agent without a rate.
+      // Numerator and denominator come from the same feed, and a "game" is any
+      // week he has a score (zeros included): exactly the player sheet's own
+      // Per Game, so the column and the card cannot disagree.
       ppg: (() => {
-        const pts = weeklyPtsMap.get(p.id);
-        const gp = weeklyGamesMap.get(p.id);
-        return (pts && gp && gp > 0) ? Math.round((pts / gp) * 10) / 10 : null;
+        const weeks = playerWeekScores.get(p.id);
+        if (!weeks) return null;
+        const scores = Object.values(weeks);
+        if (scores.length === 0) return null;
+        const pts = scores.reduce((a, b) => a + b, 0);
+        return Math.round((pts / scores.length) * 10) / 10;
       })(),
       salaryYear1: historicalSalaryByYearMap.get(p.id)?.[salaryYear1] ?? null,
       salaryYear2: historicalSalaryByYearMap.get(p.id)?.[salaryYear2] ?? null,
@@ -707,11 +689,10 @@ playerList.sort((a, b) => {
 
 const hasProjected = projectedMap.size > 0;
 const hasSeasonPts = ytdPtsMap.size > 0;
-// PPG is gated on its OWN source, not on the points column's. The two used to
-// share a map; now that points come from the YTD feed and the rate still comes
-// from the weekly sum, a season with no YTD feed would otherwise hide a PPG
-// column that has everything it needs.
-const hasPpg = weeklyPtsMap.size > 0;
+// PPG is gated on its OWN source (the every-player weekly feed), not on the
+// points column's YTD feed: a season with no YTD feed would otherwise hide a
+// PPG column that has everything it needs.
+const hasPpg = playerWeekScores.size > 0;
 
 // Count free agents by position for category tabs. Mirrors the client's
 // initial filter state: rookies only count once the draft is complete, so
