@@ -7,7 +7,7 @@ hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1213
 hotfix_sha: 42d8b90
 followup_issue: 1214
 followup_pr:
-followup_session:
+followup_session: session_01SBdXjHD3wShcfyvPQAVgT6
 ---
 
 # Follow-up: the win-probability bar was mirrored against the score header
