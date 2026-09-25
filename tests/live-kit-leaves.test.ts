@@ -81,7 +81,26 @@ describe('LvWinProbBar — the bar is decoration, the sentence is the data', () 
 
   it('rides the seam on the split, not a fixed 50%', () => {
     // Otherwise two neighbouring brand colours read as one fill.
-    expect(bar({ p0: 0.62 })).toContain('--lv-wp-split:38%');
+    expect(bar({ p0: 0.62 })).toContain('--lv-wp-split:62%');
+  });
+
+  it('draws side 0 on the LEFT, in the order the caller renders its header', () => {
+    // It once drew side 1 on the left, so every detail view put the left
+    // team's score over the right team's share of the bar.
+    const html = bar({ p0: 0.58, side0YetToPlay: 8, side1YetToPlay: 3 });
+    const fills = [...html.matchAll(/lv-wp__fill(\d)" style="width:(\d+)%/g)].map((m) => [m[1], m[2]]);
+    expect(fills).toEqual([['0', '58'], ['1', '42']]);
+    expect(html).toMatch(/lv-wp__l lv-wp__ink0">58(<!-- -->)?%/);
+    expect(html).toMatch(/lv-wp__r lv-wp__ink1">[^]*3(<!-- -->)? to play[^]*42(<!-- -->)?%/);
+  });
+
+  it('keeps each team in its own colour when the caller reorders the pair', () => {
+    // MFL Live renders the viewer's side first even when it is matchup side 1.
+    const html = bar({ p0: 0.7, side0Tone: 1 });
+    const fills = [...html.matchAll(/lv-wp__fill(\d)" style="width:(\d+)%/g)].map((m) => [m[1], m[2]]);
+    expect(fills).toEqual([['1', '70'], ['0', '30']]);
+    expect(html).toMatch(/lv-wp__l lv-wp__ink1">70(<!-- -->)?%/);
+    expect(html).toMatch(/lv-wp__r lv-wp__ink0">30(<!-- -->)?%/);
   });
 
   it('mini drops the labels but keeps the announced sentence', () => {

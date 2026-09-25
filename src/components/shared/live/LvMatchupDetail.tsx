@@ -97,6 +97,7 @@ export default function LvMatchupDetail({
         <div className="lv-detail__wp">
           <LvWinProbBar
             p0={pFirst}
+            side0Tone={first}
             side0Name={a.name}
             side1Name={b.name}
             side0YetToPlay={a.yetToPlay}

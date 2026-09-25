@@ -164,45 +164,42 @@ describe('per-team yet-to-play counts', () => {
   /**
    * The INK pair, because these are text.
    *
-   * The left → side 1 / right → side 0 mapping is what this pins, and it has
-   * not changed. The VARIABLE did: `--t0`/`--t1` clear ΔE against the card,
-   * which is right for the bar segments below and wrong for a 0.72rem label —
-   * the AFL's #314d78 sat at 1.89:1 and was unreadable. `--t0-ink`/`--t1-ink`
-   * are the same colours run through `ensureContrastOn` at AA body.
+   * `--t0`/`--t1` clear ΔE against the card, which is right for the bar
+   * segments below and wrong for a 0.72rem label — the AFL's #314d78 sat at
+   * 1.89:1 and was unreadable. `--t0-ink`/`--t1-ink` are the same colours run
+   * through `ensureContrastOn` at AA body.
    *
    * Asserted as the exact ink names rather than a loose `--t[01]` so a revert
    * to the fill pair still fails here, not just in live-ink-contrast.
    */
-  it('colours each label from the card INK pair, left → --t1-ink, right → --t0-ink', () => {
-    expect(ruleBody('.lv-wp__l')).toMatch(/color:\s*var\(--t1-ink\)/);
-    expect(ruleBody('.lv-wp__r')).toMatch(/color:\s*var\(--t0-ink\)/);
+  it('colours each label from the card INK pair, keyed to the matchup side', () => {
+    expect(ruleBody('.lv-wp__ink0')).toMatch(/color:\s*var\(--t0-ink\)/);
+    expect(ruleBody('.lv-wp__ink1')).toMatch(/color:\s*var\(--t1-ink\)/);
     // And never the fill pair, which is the regression this replaced.
-    expect(ruleBody('.lv-wp__l')).not.toMatch(/color:\s*var\(--t1\)/);
-    expect(ruleBody('.lv-wp__r')).not.toMatch(/color:\s*var\(--t0\)/);
+    expect(ruleBody('.lv-wp__ink0')).not.toMatch(/color:\s*var\(--t0\)/);
+    expect(ruleBody('.lv-wp__ink1')).not.toMatch(/color:\s*var\(--t1\)/);
   });
 
   it('pairs each label with the matching side in the component', () => {
-    // The CSS above pins `.lv-wp__l → --t1`, but WHICH side's count goes in
-    // that label is decided in the JSX. Swapping just those two would paint
-    // each team's count in the other team's colour with every CSS assertion
-    // still green — the exact silent swap this block exists to prevent.
+    // The LEFT label carries side 0's count, the right side 1's — the same
+    // order the caller renders the score header in. Swapping just those two
+    // would paint each team's count under the other team's number.
     const left = BAR.match(/lv-wp__l[^]{0,200}?side(0|1)YetToPlay/)?.[1];
     const right = BAR.match(/lv-wp__r[^]{0,200}?side(0|1)YetToPlay/)?.[1];
-    expect(left, 'no `lv-wp__l` followed by a yet-to-play count').toBe('1');
-    expect(right, 'no `lv-wp__r` followed by a yet-to-play count').toBe('0');
+    expect(left, 'no `lv-wp__l` followed by a yet-to-play count').toBe('0');
+    expect(right, 'no `lv-wp__r` followed by a yet-to-play count').toBe('1');
   });
 
-  it('draws the bar in the same order as the labels', () => {
-    // Side 1 fills from the left and side 0 from the right, so the left label
-    // has to be side 1's or the colour under a number is the other team's.
-    expect(SHEET.indexOf('.lv-wp__s1')).toBeLessThan(SHEET.indexOf('.lv-wp__s0'));
-    expect(ruleBody('.lv-wp__s1')).toMatch(/var\(--t1\)/);
-    expect(ruleBody('.lv-wp__s0')).toMatch(/var\(--t0\)/);
+  it('keys the fills to the matchup colour, never to a position', () => {
+    expect(ruleBody('.lv-wp__fill0')).toMatch(/var\(--t0\)/);
+    expect(ruleBody('.lv-wp__fill1')).toMatch(/var\(--t1\)/);
     expect(BAR.indexOf('lv-wp__l')).toBeLessThan(BAR.indexOf('lv-wp__r'));
+    // Positional colour rules are how the bar drifted from the header.
+    expect(SHEET).not.toMatch(/\.lv-wp__[lr]\s*\{[^}]*color/);
   });
 
   it('never falls back to a shared neutral for either label', () => {
-    for (const sel of ['.lv-wp__l', '.lv-wp__r']) {
+    for (const sel of ['.lv-wp__ink0', '.lv-wp__ink1']) {
       expect(ruleBody(sel)).not.toMatch(/--content-text|--page-text|currentColor/);
     }
   });

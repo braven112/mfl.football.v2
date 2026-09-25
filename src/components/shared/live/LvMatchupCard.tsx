@@ -161,6 +161,7 @@ export default function LvMatchupCard({
         <LvWinProbBar
           mini
           p0={pFirst}
+          side0Tone={first}
           side0Name={a.name}
           side1Name={b.name}
         />
