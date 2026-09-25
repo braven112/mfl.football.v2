@@ -1,0 +1,73 @@
+/*
+ * Free Agents — the phone layout, shared by both leagues' /players pages.
+ *
+ * Below 768px the table stops being a 20-column sheet that scrolls sideways
+ * and becomes a list: rank, the player, and his numbers — Pts / PPG and Proj
+ * in the Stats-shaped views, or the active view's own columns (Rankings,
+ * Value, Auction) otherwise. Everything else is still on the page; it is one
+ * tap away in the player sheet, which the whole row now opens
+ * (initPlayerModalTrigger's `rowTapMedia`, same breakpoint as here).
+ *
+ * The ⋮ column goes too: its claim / bid / watch actions are all in the sheet,
+ * including MFL's own Bid/Add link, which the trigger lifts off the hidden ⋮
+ * into the modal payload.
+ *
+ * `!important` is load-bearing: the page's view toggles write inline
+ * `display` on every cell, and a phone rule has to outrank them in both
+ * directions — hiding columns a view shows, and showing Proj, which
+ * TheLeague's desktop table keeps hidden.
+ */
+@media (max-width: 767px) {
+  .players-table .m-hide,
+  .players-table .col-player-actions,
+  .players-table .col-age,
+  .players-table .cell-age {
+    display: none !important;
+  }
+
+  .players-table[data-stats-view='true'] .col-projected {
+    display: table-cell !important;
+  }
+
+  /* The player column takes what the dropped columns gave back, and the
+     name wraps rather than forcing the table wider than the screen. */
+  .players-table .col-player {
+    min-width: 0 !important;
+    width: 100%;
+  }
+  .players-table .player-cell {
+    --player-avatar-size: 36px;
+    gap: 0.5rem;
+  }
+  .players-table tbody td,
+  .players-table thead th {
+    padding-left: 0.3rem;
+    padding-right: 0.3rem;
+  }
+  .players-table tbody td:first-child,
+  .players-table thead th:first-child {
+    padding-left: 0.5rem;
+  }
+  .players-table td.col-projected,
+  .players-table th.col-projected {
+    padding-right: 0.75rem;
+  }
+  .players-table .player-cell__name {
+    white-space: normal;
+  }
+
+  /* The row is the tap target now. */
+  .players-table tbody tr:has([data-player-modal]) {
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .players-table tbody tr:has([data-player-modal]):active {
+    background: var(--color-gray-100, #f3f4f6);
+  }
+
+  /* Numbers read as the row's second line of weight, not table noise. */
+  .players-table td.cell-num {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+}

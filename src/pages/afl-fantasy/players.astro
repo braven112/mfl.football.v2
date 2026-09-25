@@ -35,6 +35,7 @@ import { NO_HEADSHOT_SILHOUETTE, getPlayerAvatarBackground, getPlayerAvatarBorde
 import '../../styles/player-cell.css';
 import '../../styles/ranking-columns.css';
 import '../../styles/snap-columns.css';
+import '../../styles/free-agents-mobile.css';
 // Build-time-derived free-agent snapshot. All the heavy multi-year feed reads +
 // row assembly live in scripts/compute-afl-free-agents.mjs (wired into prebuild);
 // this page imports only the finished ~400KB result. See the SSR note below.
@@ -648,28 +649,28 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
                 league's verb as its header rather than staying nameless. */}
             <th class="col-player-actions" aria-label={`${claimVerb} or watch this player`}><div class="th-content">{claimVerb}</div></th>
             <th class="sortable col-age" data-sort="age"><div class="th-content">Age</div></th>
-            <th class="sortable col-sm" data-sort="exp"><div class="th-content">Exp</div></th>
-            <th class="sortable col-sm" data-sort="draftRd"><div class="th-content">Draft</div></th>
-            <th class="sortable col-text col-group--stats col-college" data-sort="college" title="College" aria-label="College"><div class="th-content">C</div></th>
-            <th class="sortable col-sm" data-sort="height"><div class="th-content">Ht</div></th>
-            <th class="sortable col-sm" data-sort="weight"><div class="th-content">Wt</div></th>
+            <th class="m-hide sortable col-sm" data-sort="exp"><div class="th-content">Exp</div></th>
+            <th class="m-hide sortable col-sm" data-sort="draftRd"><div class="th-content">Draft</div></th>
+            <th class="m-hide sortable col-text col-group--stats col-college" data-sort="college" title="College" aria-label="College"><div class="th-content">C</div></th>
+            <th class="m-hide sortable col-sm" data-sort="height"><div class="th-content">Ht</div></th>
+            <th class="m-hide sortable col-sm" data-sort="weight"><div class="th-content">Wt</div></th>
             {hasSnapCounts && (
-              <th class="sortable col-sm col-group--stats" data-sort="snapGames" title={`Games with an offensive snap \u2014 ${snapScopeTitle}`}>
+              <th class="m-hide sortable col-sm col-group--stats" data-sort="snapGames" title={`Games with an offensive snap \u2014 ${snapScopeTitle}`}>
                 <div class="th-content"><span class="th-label">GP<small class="th-season">{snapSeasonLabel}</small></span></div>
               </th>
             )}
             {hasSnapCounts && (
-              <th class="sortable col-sm col-group--stats" data-sort="snaps" title={`Offensive snaps \u2014 ${snapScopeTitle}`}>
+              <th class="m-hide sortable col-sm col-group--stats" data-sort="snaps" title={`Offensive snaps \u2014 ${snapScopeTitle}`}>
                 <div class="th-content"><span class="th-label">Snaps<small class="th-season">{snapSeasonLabel}</small></span></div>
               </th>
             )}
             {hasSnapCounts && (
-              <th class="sortable col-num col-group--stats" data-sort="snapPct" title={`Share of his team's offensive plays in the games he played \u2014 ${snapScopeTitle}`}>
+              <th class="m-hide sortable col-num col-group--stats" data-sort="snapPct" title={`Share of his team's offensive plays in the games he played \u2014 ${snapScopeTitle}`}>
                 <div class="th-content"><span class="th-label">Snap%<small class="th-season">{snapSeasonLabel}</small></span></div>
               </th>
             )}
             {hasAdp && (
-              <th class="sortable col-num col-group--stats" data-sort="adpDyn"><div class="th-content">ADP</div></th>
+              <th class="m-hide sortable col-num col-group--stats" data-sort="adpDyn"><div class="th-content">ADP</div></th>
             )}
             {hasSeasonPts && (
               <th
@@ -1037,6 +1038,12 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
     // Watch list is a FILTER wearing the Stats columns, not a column group.
     const showStats = activeView === 'stats' || activeView === 'watchlist';
+    // Phones key their compact row off this (the max-width: 767px block):
+    // Proj is one of the two stats a phone row keeps, but only in the
+    // Stats-shaped views.
+    document.querySelectorAll('.players-table').forEach(t => {
+      t.setAttribute('data-stats-view', String(showStats));
+    });
 
     document.querySelectorAll('.col-group--stats').forEach(el => {
       el.style.display = showStats ? '' : 'none';
@@ -1330,11 +1337,11 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         </td>
         ${kebabCell}
         <td class="cell-age">${p.age ?? '-'}</td>
-        <td class="cell-sm">${p.exp != null ? p.exp : '-'}</td>
-        <td class="cell-sm">${p.draftRd != null ? 'Rd ' + p.draftRd : '<span class="na">-</span>'}</td>
-        <td class="cell-college col-group--stats">${p.collegeLogo ? `<img src="${escapeAttr(p.collegeLogo)}" alt="${escapeAttr(p.college || '')}" title="${escapeAttr(p.college || '')}" class="college-logo" loading="lazy" decoding="async" onerror="${escapeAttr(collegeLogoOnerror)}" onload="${escapeAttr(collegeLogoOnload)}" />` : (p.college ? `<span class="na" title="${escapeAttr(p.college)}">-</span>` : '<span class="na">-</span>')}</td>
-        <td class="cell-sm">${htDisplay}</td>
-        <td class="cell-sm">${wtDisplay}</td>`;
+        <td class="m-hide cell-sm">${p.exp != null ? p.exp : '-'}</td>
+        <td class="m-hide cell-sm">${p.draftRd != null ? 'Rd ' + p.draftRd : '<span class="na">-</span>'}</td>
+        <td class="m-hide cell-college col-group--stats">${p.collegeLogo ? `<img src="${escapeAttr(p.collegeLogo)}" alt="${escapeAttr(p.college || '')}" title="${escapeAttr(p.college || '')}" class="college-logo" loading="lazy" decoding="async" onerror="${escapeAttr(collegeLogoOnerror)}" onload="${escapeAttr(collegeLogoOnload)}" />` : (p.college ? `<span class="na" title="${escapeAttr(p.college)}">-</span>` : '<span class="na">-</span>')}</td>
+        <td class="m-hide cell-sm">${htDisplay}</td>
+        <td class="m-hide cell-sm">${wtDisplay}</td>`;
 
       // Ranking cells sit right after Wt, matching where the module script
       // injects their headers. Class list mirrors rankingCellClasses() in
@@ -1348,13 +1355,13 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       }
 
       if (hasSnapCounts) {
-        html += `<td class="cell-sm col-group--stats">${p.snapGames != null ? p.snapGames : '<span class="na">-</span>'}</td>`;
-        html += `<td class="cell-sm col-group--stats">${p.snaps != null ? p.snaps : '<span class="na">-</span>'}</td>`;
-        html += `<td class="cell-num col-group--stats">${p.snapPct != null ? p.snapPct.toFixed(1) + '%' : '<span class="na">-</span>'}</td>`;
+        html += `<td class="m-hide cell-sm col-group--stats">${p.snapGames != null ? p.snapGames : '<span class="na">-</span>'}</td>`;
+        html += `<td class="m-hide cell-sm col-group--stats">${p.snaps != null ? p.snaps : '<span class="na">-</span>'}</td>`;
+        html += `<td class="m-hide cell-num col-group--stats">${p.snapPct != null ? p.snapPct.toFixed(1) + '%' : '<span class="na">-</span>'}</td>`;
       }
 
       if (hasAdp) {
-        html += `<td class="cell-num col-group--stats">${p.adpDyn != null ? p.adpDyn.toFixed(1) : '<span class="na">-</span>'}</td>`;
+        html += `<td class="m-hide cell-num col-group--stats">${p.adpDyn != null ? p.adpDyn.toFixed(1) : '<span class="na">-</span>'}</td>`;
       }
       if (hasSeasonPts) {
         html += `<td class="cell-num col-group--stats">${p.seasonPts != null ? p.seasonPts.toFixed(1) : '<span class="na">-</span>'}</td>`;
@@ -1757,7 +1764,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     const tbody = document.getElementById('player-table-body');
     if (tbody && !tbody.dataset.modalInit) {
       tbody.dataset.modalInit = 'true';
-      initPlayerModalTrigger(tbody);
+      initPlayerModalTrigger(tbody, { rowTapMedia: '(max-width: 767px)' });
     }
   }
   if (document.readyState === 'loading') {

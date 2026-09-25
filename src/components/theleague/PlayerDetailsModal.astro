@@ -180,6 +180,22 @@ const t = (value?: string) => value ?? '\u2014';
             <span class="pdm-claim__desc" id="pdm-trade-desc">Build a trade</span>
           </span>
         </a>
+
+        <!-- MFL's own acquisition page, when the opening page says that is the
+             path (the offseason auction's Place Bid, or a viewer who cannot
+             claim in place). Only the free-agent tables send one, lifted from
+             the row's ⋮ by player-modal-trigger — on a phone that column is
+             hidden and this is the only way to it. When present it replaces
+             the in-place Claim, the same precedence the ⋮ sheet gives it. -->
+        <a class="pdm-claim pdm-acq" id="pdm-acq" href="#" target="_blank" rel="noopener" hidden>
+          <span class="pdm-claim__icon" aria-hidden="true">
+            <svg aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-gavel" /></svg>
+          </span>
+          <span class="pdm-claim__text">
+            <span class="pdm-claim__label" id="pdm-acq-label">Bid on MyFantasyLeague</span>
+            <span class="pdm-claim__desc">Opens MFL in a new tab</span>
+          </span>
+        </a>
       </div>
 
       <!-- Key Metrics -->
@@ -682,7 +698,8 @@ const t = (value?: string) => value ?? '\u2014';
      anchor needs on top of it, plus a size bump: the handshake's symbol is a
      wide 124x76 viewBox, so at the gavel's 15px it renders visibly shorter
      than the icon it sits beside. */
-  .pdm-trade { text-decoration: none; }
+  .pdm-trade,
+  .pdm-acq { text-decoration: none; }
   .pdm-trade .pdm-claim__icon svg { width: 19px; height: 19px; }
 
   /* ================================================================
@@ -1263,10 +1280,24 @@ const t = (value?: string) => value ?? '\u2014';
     // read all land on the same quiet outcome — Watch alone.
     const claimBtn = document.getElementById('pdm-claim') as HTMLButtonElement | null;
     const tradeLink = document.getElementById('pdm-trade') as HTMLAnchorElement | null;
+    const acqLink = document.getElementById('pdm-acq') as HTMLAnchorElement | null;
     const actionsRow = document.getElementById('pdm-actions') as HTMLElement | null;
     let claimPlayer: any = null;
     const paintClaim = () => {
-      const offer = claimPlayer?.id ? offerFor(claimPlayer.id) : null;
+      // The page's off-site link outranks the in-place form (see #pdm-acq):
+      // one acquisition per player, never both.
+      const acqUrl = typeof claimPlayer?.acqUrl === 'string' && /^https:\/\//.test(claimPlayer.acqUrl)
+        ? claimPlayer.acqUrl
+        : null;
+      if (acqLink) {
+        acqLink.hidden = !acqUrl;
+        if (acqUrl) {
+          acqLink.href = acqUrl;
+          const label = document.getElementById('pdm-acq-label');
+          if (label) label.textContent = `${claimPlayer.acqLabel || 'Bid'} on MyFantasyLeague`;
+        }
+      }
+      const offer = !acqUrl && claimPlayer?.id ? offerFor(claimPlayer.id) : null;
       if (claimBtn) {
         claimBtn.hidden = !offer;
         if (offer) {
@@ -1331,7 +1362,8 @@ const t = (value?: string) => value ?? '\u2014';
         actionsRow.hidden =
           (watchBtn?.hidden ?? true) &&
           (claimBtn?.hidden ?? true) &&
-          (tradeLink?.hidden ?? true);
+          (tradeLink?.hidden ?? true) &&
+          (acqLink?.hidden ?? true);
       }
     };
     if (claimBtn && !claimBtn.dataset.pdmClaimWired) {

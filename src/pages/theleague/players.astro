@@ -30,6 +30,7 @@ import '../../styles/player-cell.css';
 import '../../styles/ranking-columns.css';
 import '../../styles/fa-claim-button.css';
 import '../../styles/snap-columns.css';
+import '../../styles/free-agents-mobile.css';
 import collegeLogos from '../../data/college-logos.json';
 import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
 import leagueConfig from '../../data/theleague.config.json';
@@ -1186,33 +1187,33 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             <th class="sortable col-age" data-sort="age">
               <div class="th-content">Age</div>
             </th>
-            <th class="sortable col-sm col-always-profile" data-sort="exp">
+            <th class="m-hide sortable col-sm col-always-profile" data-sort="exp">
               <div class="th-content">Exp</div>
             </th>
-            <th class="sortable col-sm col-always-profile" data-sort="draftRd">
+            <th class="m-hide sortable col-sm col-always-profile" data-sort="draftRd">
               <div class="th-content">Draft</div>
             </th>
-            <th class="sortable col-text col-group--stats col-college" data-sort="college" title="College" aria-label="College">
+            <th class="m-hide sortable col-text col-group--stats col-college" data-sort="college" title="College" aria-label="College">
               <div class="th-content">C</div>
             </th>
-            <th class="sortable col-sm col-always-profile" data-sort="height">
+            <th class="m-hide sortable col-sm col-always-profile" data-sort="height">
               <div class="th-content">Ht</div>
             </th>
-            <th class="sortable col-sm col-always-profile" data-sort="weight">
+            <th class="m-hide sortable col-sm col-always-profile" data-sort="weight">
               <div class="th-content">Wt</div>
             </th>
             {hasSnapCounts && (
-              <th class="sortable col-sm col-group--stats" data-sort="snapGames" title={`Games with an offensive snap \u2014 ${snapScopeTitle}`}>
+              <th class="m-hide sortable col-sm col-group--stats" data-sort="snapGames" title={`Games with an offensive snap \u2014 ${snapScopeTitle}`}>
                 <div class="th-content"><span class="th-label">GP<small class="th-season">{snapSeasonLabel}</small></span></div>
               </th>
             )}
             {hasSnapCounts && (
-              <th class="sortable col-sm col-group--stats" data-sort="snaps" title={`Offensive snaps \u2014 ${snapScopeTitle}`}>
+              <th class="m-hide sortable col-sm col-group--stats" data-sort="snaps" title={`Offensive snaps \u2014 ${snapScopeTitle}`}>
                 <div class="th-content"><span class="th-label">Snaps<small class="th-season">{snapSeasonLabel}</small></span></div>
               </th>
             )}
             {hasSnapCounts && (
-              <th class="sortable col-num col-group--stats" data-sort="snapPct" title={`Share of his team's offensive plays in the games he played \u2014 ${snapScopeTitle}`}>
+              <th class="m-hide sortable col-num col-group--stats" data-sort="snapPct" title={`Share of his team's offensive plays in the games he played \u2014 ${snapScopeTitle}`}>
                 <div class="th-content"><span class="th-label">Snap%<small class="th-season">{snapSeasonLabel}</small></span></div>
               </th>
             )}
@@ -1278,10 +1279,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             <th class="col-group--auction col-auction-placebid" style="display: none;" aria-label="Place a bid on this player">
               <div class="th-content"></div>
             </th>
-            <th class="sortable col-sm col-contract col-contract-yrs" data-sort="contractYrs" style="display: none;">
+            <th class="m-hide sortable col-sm col-contract col-contract-yrs" data-sort="contractYrs" style="display: none;">
               <div class="th-content">Yrs</div>
             </th>
-            <th class="sortable col-num col-contract" data-sort="salary" style="display: none;">
+            <th class="m-hide sortable col-num col-contract" data-sort="salary" style="display: none;">
               <div class="th-content">Sal/Bid</div>
             </th>
           </tr>
@@ -1431,6 +1432,12 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
     // Watch list is a FILTER wearing the Stats columns, not a column group.
     const showStats = activeView === 'stats' || activeView === 'watchlist';
+    // Phones key their compact row off this (the max-width: 767px block):
+    // Proj is one of the two stats a phone row keeps, but only in the
+    // Stats-shaped views.
+    document.querySelectorAll('.players-table').forEach(t => {
+      t.setAttribute('data-stats-view', String(showStats));
+    });
     const showRankings = activeView === 'rankings' && canShowRankingsView;
     const showValue = activeView === 'value' && canShowValueView;
     const showAuctionView = activeView === 'auction' && canShowAuctionView;
@@ -2326,14 +2333,14 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         </td>
         ${kebabCell}
         <td class="cell-age">${p.age ?? '-'}</td>
-        <td class="cell-sm col-always-profile">${p.exp != null ? p.exp : '-'}</td>`;
+        <td class="m-hide cell-sm col-always-profile">${p.exp != null ? p.exp : '-'}</td>`;
 
       const htDisplay = p.height ? Math.floor(p.height / 12) + "'" + (p.height % 12) + '"' : '-';
       const wtDisplay = p.weight ? p.weight + '' : '-';
-      html += `<td class="cell-sm col-always-profile">${p.draftRd != null ? 'Rd ' + p.draftRd : '<span class="na">-</span>'}</td>
-        <td class="cell-college col-group--stats">${p.collegeLogo ? `<img src="${escapeAttr(p.collegeLogo)}" alt="${escapeAttr(p.college || '')}" title="${escapeAttr(p.college || '')}" class="college-logo" loading="lazy" decoding="async" onerror="${escapeAttr(collegeLogoOnerror)}" onload="${escapeAttr(collegeLogoOnload)}" />` : (p.college ? `<span class="na" title="${escapeAttr(p.college)}">-</span>` : '<span class="na">-</span>')}</td>
-        <td class="cell-sm col-always-profile">${htDisplay}</td>
-        <td class="cell-sm col-always-profile">${wtDisplay}</td>`;
+      html += `<td class="m-hide cell-sm col-always-profile">${p.draftRd != null ? 'Rd ' + p.draftRd : '<span class="na">-</span>'}</td>
+        <td class="m-hide cell-college col-group--stats">${p.collegeLogo ? `<img src="${escapeAttr(p.collegeLogo)}" alt="${escapeAttr(p.college || '')}" title="${escapeAttr(p.college || '')}" class="college-logo" loading="lazy" decoding="async" onerror="${escapeAttr(collegeLogoOnerror)}" onload="${escapeAttr(collegeLogoOnload)}" />` : (p.college ? `<span class="na" title="${escapeAttr(p.college)}">-</span>` : '<span class="na">-</span>')}</td>
+        <td class="m-hide cell-sm col-always-profile">${htDisplay}</td>
+        <td class="m-hide cell-sm col-always-profile">${wtDisplay}</td>`;
 
       // Dynamic ranking columns
       for (const col of rankingLookup.columns) {
@@ -2346,9 +2353,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       }
 
       if (hasSnapCounts) {
-        html += `<td class="cell-sm col-group--stats">${p.snapGames != null ? p.snapGames : '<span class="na">-</span>'}</td>`;
-        html += `<td class="cell-sm col-group--stats">${p.snaps != null ? p.snaps : '<span class="na">-</span>'}</td>`;
-        html += `<td class="cell-num col-group--stats">${p.snapPct != null ? p.snapPct.toFixed(1) + '%' : '<span class="na">-</span>'}</td>`;
+        html += `<td class="m-hide cell-sm col-group--stats">${p.snapGames != null ? p.snapGames : '<span class="na">-</span>'}</td>`;
+        html += `<td class="m-hide cell-sm col-group--stats">${p.snaps != null ? p.snaps : '<span class="na">-</span>'}</td>`;
+        html += `<td class="m-hide cell-num col-group--stats">${p.snapPct != null ? p.snapPct.toFixed(1) + '%' : '<span class="na">-</span>'}</td>`;
       }
 
       if (hasSeasonPts) {
@@ -2503,10 +2510,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         }
       }
 
-      html += `<td class="cell-sm col-contract col-contract-yrs">${p.contractYrs != null ? p.contractYrs : (p.rostered ? '<span class="na">-</span>' : '<span class="fa-tag">FA</span>')}</td>`;
+      html += `<td class="m-hide cell-sm col-contract col-contract-yrs">${p.contractYrs != null ? p.contractYrs : (p.rostered ? '<span class="na">-</span>' : '<span class="fa-tag">FA</span>')}</td>`;
       // Salary cell — show auction bid for free agents without a salary
       if (p.salary != null && p.salary > 0) {
-        html += `<td class="cell-num col-contract">$${p.salary >= 1000000 ? (p.salary / 1000000).toFixed(2) + 'M' : (p.salary / 1000).toFixed(0) + 'K'}</td>`;
+        html += `<td class="m-hide cell-num col-contract">$${p.salary >= 1000000 ? (p.salary / 1000000).toFixed(2) + 'M' : (p.salary / 1000).toFixed(0) + 'K'}</td>`;
       } else if (p.auctionBid != null && p.auctionBid > 0) {
         const tierCls = getBidTierClass(p.auctionStatus, p.auctionBidTime);
         const changedCls = changedPlayerIds.has(p.id) ? ' col-value-bid--changed' : '';
@@ -2514,9 +2521,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           ? '$' + (p.auctionBid / 1000000).toFixed(1) + 'M'
           : '$' + (p.auctionBid / 1000).toFixed(0) + 'K';
         const titleText = getBidTitleText(p.auctionStatus, p.auctionBidTime);
-        html += `<td class="cell-num col-contract col-value-bid ${tierCls}${changedCls}" title="${titleText}">${bidFmt}</td>`;
+        html += `<td class="m-hide cell-num col-contract col-value-bid ${tierCls}${changedCls}" title="${titleText}">${bidFmt}</td>`;
       } else {
-        html += `<td class="cell-num col-contract"><span class="na">-</span></td>`;
+        html += `<td class="m-hide cell-num col-contract"><span class="na">-</span></td>`;
       }
 
       html += `</tr>`;
@@ -3255,7 +3262,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
   function initModalTrigger() {
     const tbody = document.getElementById('player-table-body');
-    if (tbody) initPlayerModalTrigger(tbody);
+    if (tbody) initPlayerModalTrigger(tbody, { rowTapMedia: '(max-width: 767px)' });
   }
 
   if (document.readyState === 'loading') {
