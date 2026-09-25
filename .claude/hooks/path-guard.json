@@ -810,7 +810,9 @@
         "tests/rosters-owner-presence.test.ts",
         "tests/rosters-draft-assets.test.ts",
         "tests/rosters-eligibility.test.ts",
-        "tests/roster-header-cap-space.test.ts"
+        "tests/roster-header-cap-space.test.ts",
+        "tests/rosters-phone-row.test.ts",
+        "tests/rosters-sim-summary.test.ts"
       ]
     },
     {
@@ -1027,6 +1029,7 @@
       "tests": [
         "tests/design-token-guard.test.ts",
         "tests/dialog-closed-display.test.ts",
+        "tests/position-pill-tokens.test.ts",
         "tests/team-color-backdrop-guard.test.ts",
         "tests/afl-brand-green-guard.test.ts",
         "tests/service-worker-cache.test.ts",

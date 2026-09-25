@@ -1,0 +1,1138 @@
+/*
+ * Rosters on a phone — TheLeague (docs/plans/rosters-mobile-layout.md § 2, 3, 6).
+ *
+ * Imported from the page's FRONTMATTER, never `@import`ed inside a scoped
+ * <style>: the roster rows are `innerHTML`, so a scoped selector would never
+ * reach them (docs/claude/rules/theming-and-assets.md).
+ *
+ * DESKTOP DOES NOT CHANGE. Everything that restyles the table lives under
+ * `@media (max-width: 767px)`; outside it this file only hides the phone-only
+ * pieces. `scripts/roster-parity-check.mjs` at 1440px must report 0 diffs.
+ *
+ * THE CARD. Below 768px the table, tbody and cells stop being a table and
+ * each roster <tr> becomes a wrapping flex card: the avatar pinned on the left,
+ *   line 1  name + every after-name badge ............ current-year salary | Proj
+ *   line 2  [pill] years chip, thru 'YY, RC/TO, injury .............. rank | avg
+ *   line 3  (Coach) spread · O/U · last-3 trend
+ * built from the row's EXISTING cells. `display: contents` on the player cell
+ * (and the player-cell wrappers inside it) makes the name, the meta row and
+ * the badges direct flex items of the <tr>, so `order` can put a cell on the
+ * line it belongs to. The few values no cell carries ride on empty
+ * `.rr-ph` spans (src/utils/rosters/phone-row.ts) and print from `data-t`.
+ *
+ * This is a deliberate exit from table layout, which is why it does not break
+ * the "never display:flex on a <td>" rule — that rule is about a cell inside a
+ * live table grid, and there is no table grid left here.
+ *
+ * `!important` IS LOAD-BEARING on every cell `display`: setMode() and
+ * updateView() write inline `style.display = 'table-cell' | 'none'` on every
+ * `.coach-col` / `.gm-col`, and the rankings script does the same to
+ * `.ranking-col`. Mode scoping uses the classes setMode already puts on
+ * `.roster-page` (`.coach-mode`); GM is "not coach", so the first paint before
+ * setMode runs is the GM card.
+ *
+ * In-row secondary text is --color-gray-600, not --content-text-muted: the
+ * practice-squad and IR rows carry a tinted background, and the muted gray
+ * falls to ~3.8:1 on the practice tint (4.5 is the floor for 12px text).
+ *
+ * Scoped to TheLeague's page. The AFL's phone rows are PR C of the plan; it
+ * widens this scope rather than copying the rules.
+ */
+
+/* ── Phone-only pieces, hidden on desktop ─────────────────────────────── */
+.rcap,
+.rsim-bar,
+.rr-sort,
+.rr-ph {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  /* ── The table stops being a table ──────────────────────────────────── */
+  .roster-page[data-league='theleague'] .roster-table-wrapper {
+    overflow: visible;
+    background: transparent;
+  }
+
+  /* A column, so the totals (a <tfoot>, which comes FIRST in the markup) can
+     sit under the rows they total. */
+  .roster-page[data-league='theleague'] .roster-table {
+    display: flex;
+    flex-direction: column;
+    min-width: 0 !important;
+    width: 100%;
+  }
+
+  .roster-page[data-league='theleague'] .roster-table tfoot {
+    order: 2;
+  }
+
+  /* The sort control above the rows replaces the headers; with the cells no
+     longer in a grid, a header row would only read as noise. */
+  .roster-page[data-league='theleague'] .roster-table thead {
+    display: none;
+  }
+
+  .roster-page[data-league='theleague'] .roster-table tbody,
+  .roster-page[data-league='theleague'] .roster-table tfoot {
+    display: block;
+  }
+
+  /* Every roster cell starts hidden; each mode opts its cells back in. */
+  .roster-page[data-league='theleague'] #rosterTableBody td {
+    display: none !important;
+    padding: 0 !important;
+    border: 0 !important;
+    width: auto !important;
+    text-align: left !important;
+  }
+
+  .roster-page[data-league='theleague'] #rosterTableBody td.roster-empty {
+    display: block !important;
+    padding: 1rem !important;
+    text-align: center !important;
+  }
+
+  /* ── The card ─────────────────────────────────────────────────────────── */
+  .roster-page[data-league='theleague'] #rosterTableBody > tr.roster-row {
+    --rr-avatar: 40px;
+    --rr-right: 6.25rem;
+    position: relative;
+    display: flex !important;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: 0.375rem;
+    row-gap: 0.25rem;
+    min-height: calc(var(--rr-avatar) + 1.25rem);
+    padding: 0.625rem 0.75rem 0.625rem calc(var(--rr-avatar) + 1.25rem);
+    border-left-width: 3px;
+    border-left-style: solid;
+    border-bottom: 1px solid var(--content-border, #e2e8f0);
+    font-size: 0.8125rem;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .roster-page[data-league='theleague'] #rosterTableBody > tr.roster-row:active {
+    background: var(--table-row-bg-hover, #f3f4f6);
+  }
+
+  /* Group headers take the place of the tier divider rows: the first active
+     row, and the first row of the practice squad and IR. Generated content is
+     announced, so a screen reader hears the group change too. */
+  .roster-page[data-league='theleague'] #rosterTableBody > tr.roster-row--active:first-child::before,
+  .roster-page[data-league='theleague'] #rosterTableBody > tr.roster-row--tier-divider::before {
+    order: -1;
+    flex: 0 0 calc(100% + var(--rr-avatar) + 2rem);
+    margin: -0.625rem -0.75rem 0.375rem calc(-1 * (var(--rr-avatar) + 1.25rem));
+    padding: 0.375rem 0.75rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-gray-700, #374151);
+    background: var(--content-bg-muted, #f3f4f6);
+    border-bottom: 1px solid var(--content-border, #e2e8f0);
+  }
+
+  .roster-page[data-league='theleague'] #rosterTableBody > tr.roster-row--active:first-child::before {
+    content: 'Active roster';
+  }
+
+  .roster-page[data-league='theleague'] #rosterTableBody > tr.roster-row--practice.roster-row--tier-divider::before {
+    content: 'Practice squad';
+  }
+
+  .roster-page[data-league='theleague'] #rosterTableBody > tr.roster-row--injured.roster-row--tier-divider::before {
+    content: 'Injured reserve';
+  }
+
+  /* The player cell dissolves so its pieces can take their own lines. */
+  .roster-page[data-league='theleague'] #rosterTableBody td[data-column='player'],
+  .roster-page[data-league='theleague'] #rosterTableBody td[data-column='player'] .player-cell,
+  .roster-page[data-league='theleague'] #rosterTableBody td[data-column='player'] .player-cell__info {
+    display: contents !important;
+  }
+
+  .roster-page[data-league='theleague'] #rosterTableBody .player-cell__avatar {
+    position: absolute;
+    top: 0.625rem;
+    left: 0.625rem;
+    width: var(--rr-avatar);
+    height: var(--rr-avatar);
+  }
+
+  .roster-page[data-league='theleague'] #rosterTableBody > tr.roster-row--tier-divider .player-cell__avatar,
+  .roster-page[data-league='theleague'] #rosterTableBody > tr.roster-row--active:first-child .player-cell__avatar {
+    top: calc(0.625rem + 1.75rem);
+  }
+
+  /* Line 1: the name and every after-name badge, wrapping rather than
+     truncating — an ellipsis hides data. Its basis plus the right-hand value's
+     fills the line, which is what pushes line 2 onto its own line. */
+  .roster-page[data-league='theleague'] #rosterTableBody .player-cell__name {
+    order: 10;
+    flex: 1 1 calc(100% - var(--rr-right) - 0.375rem);
+    min-width: 0;
+    white-space: normal;
+    overflow: visible;
+    overflow-wrap: anywhere;
+    font-size: 0.9375rem;
+    line-height: 1.3;
+  }
+
+  /* Line 1, right: this year's salary (GM) or the projection (Coach). */
+  .roster-page[data-league='theleague'] #rosterTableBody td[data-column='year1'],
+  .roster-page[data-league='theleague'] #rosterTableBody td[data-column='projected'] {
+    order: 11;
+    flex: 0 0 var(--rr-right);
+    position: relative;
+    text-align: right !important;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .roster-page[data-league='theleague']:not(.coach-mode) #rosterTableBody td[data-column='year1'],
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody td[data-column='projected'] {
+    display: block !important;
+  }
+
+  /* The headers are gone, so the two right-hand numbers say what they are to
+     a screen reader. Visually hidden, positioned against the cell. */
+  .roster-page[data-league='theleague'] #rosterTableBody td[data-column='year1']::before,
+  .roster-page[data-league='theleague'] #rosterTableBody td[data-column='projected']::before,
+  .roster-page[data-league='theleague'] #rosterTableBody td[data-column='rank']::before {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .roster-page[data-league='theleague'] #rosterTableBody td[data-column='year1']::before {
+    content: attr(data-label) ' salary ';
+  }
+
+  .roster-page[data-league='theleague'] #rosterTableBody td[data-column='projected']::before {
+    content: 'Projected ';
+  }
+
+  .roster-page[data-league='theleague'] #rosterTableBody td[data-column='rank']::before {
+    content: 'My Rank ';
+  }
+
+  /* Line 2 starts with the position pill: PlayerCell's own meta row, with its
+     "QB · RC" text turned into a coloured pill. The designation moves to its
+     own chip further along the line; the original text stays in the
+     accessibility tree (font-size 0 hides glyphs, not text), so the pill's
+     generated label is marked alt-empty to avoid reading it twice. */
+  .roster-page[data-league='theleague'] #rosterTableBody .player-meta {
+    order: 21;
+    display: inline-flex;
+    gap: 0;
+  }
+
+  .roster-page[data-league='theleague'] #rosterTableBody :is(tr[data-pos='QB'], tr[data-pos='RB'], tr[data-pos='WR'], tr[data-pos='TE'], tr[data-pos='PK'], tr[data-pos='DEF']) .player-meta__pos {
+    font-size: 0;
+    letter-spacing: 0;
+  }
+
+  .roster-page[data-league='theleague'] #rosterTableBody :is(tr[data-pos='QB'], tr[data-pos='RB'], tr[data-pos='WR'], tr[data-pos='TE'], tr[data-pos='PK'], tr[data-pos='DEF']) .player-meta__pos::before {
+    display: inline-block;
+    min-width: 2.25em;
+    padding: 0.1875rem 0.375rem;
+    border-radius: 0.375rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: 0.03em;
+    text-align: center;
+    color: var(--pos-other-ink);
+    background: var(--pos-other-bg);
+  }
+
+  .roster-page[data-league='theleague'] #rosterTableBody tr[data-pos='QB'] .player-meta__pos::before {
+    content: 'QB';
+    content: 'QB' / '';
+    color: var(--pos-qb-ink);
+    background: var(--pos-qb-bg);
+  }
+
+  .roster-page[data-league='theleague'] #rosterTableBody tr[data-pos='RB'] .player-meta__pos::before {
+    content: 'RB';
+    content: 'RB' / '';
+    color: var(--pos-rb-ink);
+    background: var(--pos-rb-bg);
+  }
+
+  .roster-page[data-league='theleague'] #rosterTableBody tr[data-pos='WR'] .player-meta__pos::before {
+    content: 'WR';
+    content: 'WR' / '';
+    color: var(--pos-wr-ink);
+    background: var(--pos-wr-bg);
+  }
+
+  .roster-page[data-league='theleague'] #rosterTableBody tr[data-pos='TE'] .player-meta__pos::before {
+    content: 'TE';
+    content: 'TE' / '';
+    color: var(--pos-te-ink);
+    background: var(--pos-te-bg);
+  }
+
+  .roster-page[data-league='theleague'] #rosterTableBody tr[data-pos='PK'] .player-meta__pos::before {
+    content: 'PK';
+    content: 'PK' / '';
+  }
+
+  .roster-page[data-league='theleague'] #rosterTableBody tr[data-pos='DEF'] .player-meta__pos::before {
+    content: 'DEF';
+    content: 'DEF' / '';
+  }
+
+  /* A position the pill has no colour for (no data-pos match) keeps its
+     plain "XX · RC" text. */
+
+  /* The NFL crest badges the avatar's corner (Sleeper's team badge). It is
+     PlayerCell's own meta logo, moved — not a second image. */
+  .roster-page[data-league='theleague'] #rosterTableBody .player-meta__logo {
+    position: absolute;
+    top: calc(0.625rem + var(--rr-avatar) - 16px);
+    left: calc(0.625rem + var(--rr-avatar) - 14px);
+    width: 18px;
+    height: 18px;
+    padding: 1px;
+    border-radius: 50%;
+    background: var(--card-surface, #ffffff);
+    box-shadow: 0 0 0 1px var(--content-border, #e2e8f0);
+  }
+
+  .roster-page[data-league='theleague'] #rosterTableBody > tr.roster-row--tier-divider .player-meta__logo,
+  .roster-page[data-league='theleague'] #rosterTableBody > tr.roster-row--active:first-child .player-meta__logo {
+    top: calc(0.625rem + 1.75rem + var(--rr-avatar) - 16px);
+  }
+
+  /* The generated line-2 values (phone-row.ts). */
+  .roster-page[data-league='theleague'] #rosterTableBody .rr-ph {
+    display: inline;
+    color: var(--color-gray-600, #4b5563);
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
+
+  .roster-page[data-league='theleague'] #rosterTableBody .rr-ph::before {
+    content: attr(data-t);
+  }
+
+  .roster-page[data-league='theleague'] #rosterTableBody .rr-ph--desig::before {
+    content: attr(data-t);
+    content: attr(data-t) / '';
+  }
+
+  .roster-page[data-league='theleague'] #rosterTableBody .rr-ph--desig {
+    padding: 0.0625rem 0.3125rem;
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: 0.25rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+  }
+
+  /* --color-error-dark, not --color-error: #dc2626 is ~3.3:1 on the
+     practice-squad row tint; #b91c1c (light) / #fca5a5 (dark) clear 4.5. */
+  .roster-page[data-league='theleague'] #rosterTableBody .rr-ph--inj {
+    color: var(--color-error-dark, #b91c1c);
+    font-weight: 600;
+  }
+
+  /* ── GM line 2 ───────────────────────────────────────────────────────── */
+  .roster-page[data-league='theleague']:not(.coach-mode) #rosterTableBody td[data-column='years'] {
+    display: inline-flex !important;
+    order: 22;
+    align-items: center;
+  }
+
+  .roster-page[data-league='theleague'] #rosterTableBody td[data-column='years']::before {
+    content: 'Yrs';
+    content: 'Yrs' / 'Years left';
+    margin-right: 0.25rem;
+    color: var(--color-gray-600, #4b5563);
+    font-size: 0.6875rem;
+  }
+
+  .roster-page[data-league='theleague'] #rosterTableBody .rr-ph--thru { order: 23; }
+  .roster-page[data-league='theleague'] #rosterTableBody .rr-ph--desig { order: 24; }
+  .roster-page[data-league='theleague'] #rosterTableBody .rr-ph--inj { order: 25; }
+  .roster-page[data-league='theleague'] #rosterTableBody .contract-action-badge {
+    order: 26;
+    margin-left: 0;
+  }
+
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody .rr-ph--thru,
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody .rr-ph--desig,
+  .roster-page[data-league='theleague']:not(.coach-mode) #rosterTableBody .rr-ph--kick,
+  .roster-page[data-league='theleague']:not(.coach-mode) #rosterTableBody .rr-ph--opp {
+    display: none;
+  }
+
+  /* Line 2, right: My Rank when a board is loaded (the rankings script hides
+     the column with an inline `display: none` when there is none). */
+  .roster-page[data-league='theleague']:not(.coach-mode) #rosterTableBody td[data-column='rank']:not(:empty):not([style*='none']) {
+    display: block !important;
+    order: 29;
+    position: relative;
+    margin-left: auto;
+    font-size: 0.75rem;
+    color: var(--color-gray-600, #4b5563);
+    text-align: right !important;
+  }
+
+  /* ── Coach line 2 ────────────────────────────────────────────────────── */
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody td[data-column='opponent'],
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody td[data-column='opponent'] .opponent-cell,
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody td[data-column='opponent'] .opponent-info {
+    display: contents !important;
+  }
+
+  .roster-page[data-league='theleague'] #rosterTableBody .rr-ph--kick { order: 22; }
+  .roster-page[data-league='theleague'] #rosterTableBody .vs-at,
+  .roster-page[data-league='theleague'] #rosterTableBody .opponent-bye {
+    order: 23;
+    font-size: 0.75rem;
+  }
+  .roster-page[data-league='theleague'] #rosterTableBody .opponent-bye {
+    font-weight: 700;
+  }
+  .roster-page[data-league='theleague'] #rosterTableBody .rr-ph--opp {
+    order: 24;
+    color: inherit;
+    font-weight: 600;
+  }
+  .roster-page[data-league='theleague'] #rosterTableBody td[data-column='opponent'] .opponent-logo {
+    order: 25;
+    width: 16px !important;
+    height: 16px !important;
+  }
+
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody td[data-column='oppRank'] {
+    display: inline-block !important;
+    order: 26;
+  }
+
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody td[data-column='oppRank'] .rank-badge {
+    padding: 0.0625rem 0.375rem;
+    font-size: 0.6875rem;
+  }
+
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody td[data-column='weather'] {
+    display: inline-block !important;
+    order: 27;
+    font-size: 0.75rem;
+  }
+
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody td[data-column='weather'] .weather-cell {
+    display: inline-flex;
+    gap: 0.125rem;
+    align-items: center;
+  }
+
+  /* The desktop cells paint these with light-theme literals (#334155,
+     #015a73, #64748b) that sink into a dark card; on the card they take the
+     row's secondary ink, which follows the theme. */
+  .roster-page[data-league='theleague'] #rosterTableBody .weather-cell,
+  .roster-page[data-league='theleague'] #rosterTableBody .weather-temp,
+  .roster-page[data-league='theleague'] #rosterTableBody .odds-total {
+    color: var(--color-gray-600, #4b5563);
+  }
+
+  /* No rank, no forecast, no line yet (a bye, or odds not posted): the
+     desktop cell's placeholder dash says nothing on a card, so it goes. */
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody td[data-column='oppRank']:not(:has(.rank-badge)),
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody td[data-column='weather']:has(.weather-empty),
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody td[data-column='ou']:has(.odds-empty) {
+    display: none !important;
+  }
+
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody .rr-ph--inj { order: 28; }
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody .contract-action-badge { order: 29; }
+
+  /* Line 2, right: the season average the projection is judged against. */
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody td[data-column='avgSeason'] {
+    display: block !important;
+    order: 39;
+    margin-left: auto;
+    font-size: 0.75rem;
+    color: var(--color-gray-600, #4b5563);
+    text-align: right !important;
+  }
+
+  .roster-page[data-league='theleague'] #rosterTableBody td[data-column='avgSeason']::before {
+    content: 'avg ';
+    content: 'avg ' / 'Season average ';
+  }
+
+  /* ── Coach line 3: the muted secondary matchup numbers ──────────────── */
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody > tr.roster-row::after {
+    content: '';
+    order: 40;
+    flex-basis: 100%;
+    height: 0;
+  }
+
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody .spread-badge {
+    order: 41;
+    font-size: 0.6875rem;
+  }
+
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody td[data-column='ou'],
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody td[data-column='avgRecent'] {
+    display: inline-flex !important;
+    align-items: center;
+    font-size: 0.75rem;
+    color: var(--color-gray-600, #4b5563);
+  }
+
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody td[data-column='ou'] { order: 42; }
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody td[data-column='avgRecent'] { order: 43; }
+
+  .roster-page[data-league='theleague'] #rosterTableBody td[data-column='ou']::before {
+    content: 'O/U\00a0';
+    margin-left: 0.25rem;
+  }
+
+  .roster-page[data-league='theleague'] #rosterTableBody td[data-column='avgRecent']::before {
+    content: '· L3\00a0';
+    content: '· L3\00a0' / 'Last three games average ';
+    margin-left: 0.25rem;
+  }
+
+  .roster-page[data-league='theleague'] #rosterTableBody td[data-column='avgRecent'] .trend-value {
+    display: inline-flex;
+    gap: 0.125rem;
+  }
+
+  /* ── 44px hit areas on the small controls a row keeps ────────────────── */
+  .roster-page[data-league='theleague'] #rosterTableBody .injury-indicator,
+  .roster-page[data-league='theleague'] #rosterTableBody .trade-bait-link,
+  .roster-page[data-league='theleague'] #rosterTableBody .contract-action-remove,
+  .roster-page[data-league='theleague'] #rosterTableBody .yrs-chip,
+  .roster-page[data-league='theleague'] #rosterTableBody .salary-cell--team-option-eligible {
+    position: relative;
+  }
+
+  .roster-page[data-league='theleague'] #rosterTableBody .injury-indicator::after,
+  .roster-page[data-league='theleague'] #rosterTableBody .trade-bait-link::after,
+  .roster-page[data-league='theleague'] #rosterTableBody .contract-action-remove::after,
+  .roster-page[data-league='theleague'] #rosterTableBody button.yrs-chip::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 44px;
+    height: 44px;
+    transform: translate(-50%, -50%);
+  }
+
+  /* ── Totals: the current year as label / value lines ────────────────── */
+  .roster-page[data-league='theleague']:not(.coach-mode) .roster-table tfoot tr.roster-totals {
+    display: flex !important;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 0.5rem 0.75rem;
+    border-top: 1px solid var(--content-border, #e2e8f0);
+  }
+
+  .roster-page[data-league='theleague'].coach-mode .roster-table tfoot tr.roster-totals {
+    display: none !important;
+  }
+
+  .roster-page[data-league='theleague'] .roster-table tfoot td {
+    display: none !important;
+    padding: 0 !important;
+    border: 0 !important;
+  }
+
+  .roster-page[data-league='theleague'] .roster-table tfoot td[data-column='player'],
+  .roster-page[data-league='theleague'] .roster-table tfoot td[data-column='dm1'],
+  .roster-page[data-league='theleague'] .roster-table tfoot td[data-column='year1'],
+  .roster-page[data-league='theleague'] .roster-table tfoot td[data-column='cap1'],
+  .roster-page[data-league='theleague'] .roster-table tfoot td[data-column='space1'] {
+    display: block !important;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Cap Hits / Dead Money: the same card treatment ─────────────────── */
+  .roster-page[data-league='theleague'] #deadMoneyTableBody > tr {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: 0.625rem;
+    row-gap: 0.25rem;
+    padding: 0.625rem 0.75rem;
+    border-bottom: 1px solid var(--content-border, #e2e8f0);
+  }
+
+  .roster-page[data-league='theleague'] #deadMoneyTableBody td {
+    display: block;
+    padding: 0 !important;
+    border: 0 !important;
+    font-size: 0.75rem;
+    text-align: left !important;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .roster-page[data-league='theleague'] #deadMoneyTableBody td[data-column='player'] {
+    flex: 1 1 calc(100% - 6.25rem - 0.625rem);
+    min-width: 0;
+  }
+
+  .roster-page[data-league='theleague'] #deadMoneyTableBody .player-cell__name {
+    white-space: normal;
+  }
+
+  .roster-page[data-league='theleague'] #deadMoneyTableBody td[data-column='dm-year1'] {
+    flex: 0 0 6.25rem;
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-align: right !important;
+  }
+
+  .roster-page[data-league='theleague'] #deadMoneyTableBody td[data-column]:not([data-column='player']):not([data-column='dm-year1']):empty {
+    display: none;
+  }
+
+  .roster-page[data-league='theleague'] #deadMoneyTableBody td[data-column]:not([data-column='player']):not([data-column='dm-year1'])::before {
+    content: attr(data-label) '\00a0';
+    color: var(--color-gray-600, #4b5563);
+  }
+
+  .roster-page[data-league='theleague'] #deadMoneyTableBody td[data-column='dm-year1']::before {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    content: attr(data-label) ' ';
+  }
+
+  .roster-page[data-league='theleague'] #deadMoneyTableBody td[data-column='dm-year1'] {
+    position: relative;
+  }
+
+  .roster-page[data-league='theleague'] #deadMoneyTableBody td.roster-empty {
+    flex-basis: 100%;
+    text-align: center !important;
+    padding: 0.75rem !important;
+  }
+
+  /* ── Above the rows: the originals move into the review sheet ───────── */
+  .roster-page[data-league='theleague'] #clearAllTagsBtn,
+  .roster-page[data-league='theleague'] #submitFranchiseTagsBtn {
+    display: none !important;
+  }
+
+  /* ── Sort control (every hidden sort header, in one select) ────────── */
+  .roster-page[data-league='theleague'] .rr-sort {
+    order: 4;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  .rr-sort__label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--content-text-muted, #64748b);
+  }
+
+  .rr-sort__select {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 44px;
+    padding: 0 0.625rem;
+    font: inherit;
+    font-size: 0.875rem;
+    color: var(--input-text, #111827);
+    background: var(--input-bg, #ffffff);
+    border: 1px solid var(--input-border, #d1d5db);
+    border-radius: var(--radius-md, 0.5rem);
+  }
+
+  .rr-sort__dir {
+    flex: none;
+    width: 44px;
+    height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font: inherit;
+    font-size: 1.125rem;
+    color: var(--input-text, #111827);
+    background: var(--input-bg, #ffffff);
+    border: 1px solid var(--input-border, #d1d5db);
+    border-radius: var(--radius-md, 0.5rem);
+    cursor: pointer;
+  }
+
+  .rr-sort__dir:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+
+  /* ── The cap card ─────────────────────────────────────────────────────── */
+  .roster-page[data-league='theleague'] .rcap {
+    display: block;
+    margin: 0 0 0.75rem;
+    padding: 0.875rem 1rem;
+    background: var(--card-surface, #ffffff);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-lg, 0.75rem);
+  }
+
+  .rcap__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .rcap__title {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--content-text-muted, #64748b);
+  }
+
+  .rcap__space {
+    font-size: 1.25rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: var(--page-text, #111827);
+  }
+
+  .rcap__space.is-negative,
+  .rsim-years__space.is-negative {
+    color: var(--color-error);
+  }
+
+  .rcap__bar {
+    --rcap-active: #57b881;
+    --rcap-practice: #487ae7;
+    --rcap-injured: #e56263;
+    --rcap-dead: #8b5cf6;
+    display: flex;
+    width: 100%;
+    height: 14px;
+    margin: 0.625rem 0 0.375rem;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: 999px;
+    background: var(--content-bg-muted, #f3f4f6);
+    cursor: pointer;
+  }
+
+  /* A 14px bar is a small target; the hit area reaches 44px without moving
+     the chips below it. */
+  .rcap__bar {
+    position: relative;
+  }
+
+  .rcap__bar::after {
+    content: '';
+    position: absolute;
+    inset: -15px 0;
+  }
+
+  .rcap__seg {
+    display: block;
+    height: 100%;
+    width: 0;
+  }
+
+  .rcap__seg--active,
+  .rcap__dot--active { background: var(--rcap-active, #57b881); }
+  .rcap__seg--practice,
+  .rcap__dot--practice { background: var(--rcap-practice, #487ae7); }
+  .rcap__seg--injured,
+  .rcap__dot--injured { background: var(--rcap-injured, #e56263); }
+  .rcap__seg--dead,
+  .rcap__dot--dead { background: var(--rcap-dead, #8b5cf6); }
+  .rcap__seg--sim,
+  .rcap__dot--sim {
+    background: repeating-linear-gradient(135deg, #f59e0b 0 3px, transparent 3px 6px);
+  }
+  .rcap__seg--space { background: transparent; }
+
+  .rcap__dot {
+    --rcap-active: #57b881;
+    --rcap-practice: #487ae7;
+    --rcap-injured: #e56263;
+    --rcap-dead: #8b5cf6;
+    display: inline-block;
+    width: 0.5rem;
+    height: 0.5rem;
+    margin-right: 0.25rem;
+    border-radius: 999px;
+  }
+
+  .rcap__key {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.75rem;
+    margin: 0 0 0.625rem;
+    padding: 0;
+    list-style: none;
+    font-size: 0.6875rem;
+    color: var(--content-text-muted, #64748b);
+  }
+
+  .rcap__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .rcap__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-height: 44px;
+    padding: 0 0.875rem;
+    font: inherit;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--page-text, #111827);
+    text-decoration: none;
+    background: var(--content-bg-muted, #f3f4f6);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: 999px;
+    cursor: pointer;
+  }
+
+  .rcap__chip--accent {
+    border-color: var(--color-warning, #f59e0b);
+  }
+
+  .rcap__count {
+    min-width: 1.25rem;
+    padding: 0 0.3125rem;
+    border-radius: 999px;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-align: center;
+    color: var(--badge-warning-text);
+    background: var(--badge-warning-bg);
+  }
+
+  .rcap [hidden] {
+    display: none !important;
+  }
+
+  /* ── The sim bar ───────────────────────────────────────────────────────── */
+  .roster-page[data-league='theleague'] .rsim-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: var(--z-sticky, 200);
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.625rem 1rem;
+    padding-bottom: max(0.625rem, env(safe-area-inset-bottom));
+    background: var(--card-bg, #ffffff);
+    border-top: 1px solid var(--content-border, #e2e8f0);
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
+  }
+
+  /* `hidden` must win over the display above. */
+  .roster-page[data-league='theleague'] .rsim-bar[hidden] {
+    display: none;
+  }
+
+  /* It sits under the player sheet, the contract modal and the injury modal,
+     and gets out of their way while one is open. */
+  body:has(.player-details-modal.active) .rsim-bar,
+  body:has(.contract-declaration-modal.active) .rsim-bar,
+  body:has(.rsim-sheet[open]) .rsim-bar {
+    display: none !important;
+  }
+
+  /* The last row never hides under the bar. */
+  .roster-page[data-league='theleague']:has(.rsim-bar:not([hidden])) {
+    padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .rsim-bar__count {
+    flex: none;
+    padding: 0.25rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--badge-warning-text);
+    background: var(--badge-warning-bg);
+    white-space: nowrap;
+  }
+
+  .rsim-bar__figure {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+  }
+
+  .rsim-bar__label {
+    font-size: 0.6875rem;
+    color: var(--content-text-muted, #64748b);
+  }
+
+  .rsim-bar__values {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: 0.375rem;
+  }
+
+  .rsim-bar__space {
+    font-size: 0.9375rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--page-text, #111827);
+  }
+
+  .rsim-bar__change,
+  .rsim-move__effect,
+  .rsim-years__change {
+    font-size: 0.75rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--content-text-muted, #64748b);
+  }
+
+  .rsim-bar__change.is-up,
+  .rsim-move__effect.is-up,
+  .rsim-years__change.is-up {
+    color: var(--badge-success-text);
+  }
+
+  .rsim-bar__change.is-down,
+  .rsim-move__effect.is-down,
+  .rsim-years__change.is-down {
+    color: var(--color-error);
+  }
+
+  .rsim-bar__review {
+    flex: none;
+    min-height: 44px;
+    padding: 0 1rem;
+    font: inherit;
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--btn-primary-text, #ffffff);
+    background: var(--btn-primary-bg, #1c497c);
+    border: 0;
+    border-radius: var(--radius-md, 0.5rem);
+    cursor: pointer;
+  }
+}
+
+/* ── The review sheet ─────────────────────────────────────────────────────
+   A native modal <dialog>: the platform supplies focus containment, Esc,
+   the top layer (above the bar and the page) and an inert page behind it.
+   Outside the phone query only because a dialog is inert until opened, and
+   only phone surfaces open it. */
+.rsim-sheet {
+  width: 100%;
+  max-width: 34rem;
+  max-height: 88vh;
+  max-height: 88dvh;
+  margin: auto auto 0;
+  padding: 0;
+  color: var(--page-text, #111827);
+  background: var(--card-surface, #ffffff);
+  border: 1px solid var(--content-border, #e2e8f0);
+  border-radius: var(--radius-lg, 0.75rem) var(--radius-lg, 0.75rem) 0 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.rsim-sheet::backdrop {
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.rsim-sheet__panel {
+  padding: 0 1rem max(1rem, env(safe-area-inset-bottom));
+}
+
+.rsim-sheet__head {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 0 0.5rem;
+  background: var(--card-surface, #ffffff);
+}
+
+.rsim-sheet__title {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 800;
+  color: var(--page-text, #111827);
+}
+
+.rsim-sheet__close {
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--page-text, #111827);
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.rsim-sheet__section {
+  margin-top: 0.75rem;
+}
+
+.rsim-sheet__subtitle {
+  margin: 0 0 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--content-text-muted, #64748b);
+}
+
+.rsim-sheet__empty {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--content-text-muted, #64748b);
+}
+
+.rsim-sheet__empty[hidden] {
+  display: none;
+}
+
+.rsim-moves {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rsim-move {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--content-border, #e2e8f0);
+}
+
+.rsim-move__who {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.rsim-move__name {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.rsim-move__pos,
+.rsim-move__what {
+  font-size: 0.75rem;
+  color: var(--content-text-muted, #64748b);
+}
+
+.rsim-move__undo {
+  flex: none;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 0.75rem;
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--color-primary, #1c497c);
+  background: transparent;
+  border: 1px solid var(--content-border, #e2e8f0);
+  border-radius: var(--radius-md, 0.5rem);
+  cursor: pointer;
+}
+
+.rsim-years {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.rsim-years th,
+.rsim-years td {
+  padding: 0.4375rem 0.25rem;
+  text-align: right;
+  border-bottom: 1px solid var(--content-border, #e2e8f0);
+}
+
+.rsim-years th:first-child {
+  text-align: left;
+}
+
+.rsim-years thead th {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--content-text-muted, #64748b);
+}
+
+.rsim-years__change {
+  display: block;
+}
+
+.rsim-sheet__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.rsim-sheet__btn {
+  min-height: 44px;
+  padding: 0 1rem;
+  align-items: center;
+  justify-content: center;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 700;
+  border-radius: var(--radius-md, 0.5rem);
+  cursor: pointer;
+}
+
+.rsim-sheet__btn--ghost {
+  color: var(--page-text, #111827);
+  background: transparent;
+  border: 1px solid var(--content-border, #e2e8f0);
+}
+
+.rsim-sheet__btn--primary {
+  color: var(--btn-primary-text, #ffffff);
+  background: var(--btn-primary-bg, #1c497c);
+  border: 1px solid var(--btn-primary-bg, #1c497c);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rsim-sheet,
+  .rsim-bar {
+    transition: none;
+    animation: none;
+  }
+}

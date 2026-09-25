@@ -505,6 +505,21 @@
   --badge-info-bg: var(--color-info-light);
   --badge-info-text: var(--color-info-dark);
 
+  /* Position pills (the phone roster card, docs/plans/rosters-mobile-layout.md).
+     Sleeper-like hues: QB pink, RB green, WR blue, TE orange, PK/DEF neutral.
+     Every ink clears 4.5:1 on its fill in BOTH themes — a 0.6875rem/700 label
+     is not large text. tests/position-pill-tokens.test.ts measures them. */
+  --pos-qb-bg: #f9a8d4;
+  --pos-qb-ink: #500724;
+  --pos-rb-bg: #6ee7b7;
+  --pos-rb-ink: #022c22;
+  --pos-wr-bg: #93c5fd;
+  --pos-wr-ink: #172554;
+  --pos-te-bg: #fdba74;
+  --pos-te-ink: #431407;
+  --pos-other-bg: #d1d5db;
+  --pos-other-ink: #1f2937;
+
   /* Legacy status colors */
   --error-color: var(--color-error);
   --warning-color: var(--color-warning);

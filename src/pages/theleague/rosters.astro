@@ -59,7 +59,7 @@ import type { PositionNeed } from '../../utils/free-agent-needs';
 import type { ChartSlice } from '../../scripts/chart-utils';
 import { getCurrentWeek } from '../../utils/current-week';
 import { nflWeekStartInstant } from '../../utils/nfl-week-starts.mjs';
-import { formatForViewer } from '../../utils/viewer-clock';
+import { formatForViewer, viewerClockZone } from '../../utils/viewer-clock';
 import { readViewerClock } from '../../utils/viewer-preferences-page';
 // Weekly-score trends read the canonical processWeeklyScores rather than a
 // fourth copy. This page carried its own inline one until 2026-09-08, when the
@@ -116,6 +116,12 @@ import { spriteUrl } from '../../utils/sprite-url';
 import { getLeagueBySlug } from '../../config/leagues';
 import { loadInjuryMap } from '../../utils/mfl-injuries';
 import '../../styles/injury-indicator.css';
+// The phone layout (docs/plans/rosters-mobile-layout.md). Imported here, in
+// the frontmatter, so it ships unscoped: the rows are innerHTML.
+import '../../styles/rosters-mobile.css';
+import RosterCapStrip from '../../components/theleague/RosterCapStrip.astro';
+import RosterSimTray from '../../components/theleague/RosterSimTray.astro';
+import { buildPhoneLineSpans, phonePosKey } from '../../utils/rosters/phone-row';
 // Canonical row shaping, shared with the inline client script below.
 // src/utils/roster-utils.ts already held every one of these; this page used to
 // carry its own copy in the frontmatter AND another in the client script.
@@ -1559,6 +1565,16 @@ const inlineSeasons = Object.fromEntries(
   Object.entries(rostersBySeason).filter(([season]) => liveSeasonKeys.has(season))
 );
 
+/* The phone row prints each player's kickoff (docs/plans/rosters-mobile-layout.md,
+   Q2) in ONE clock: the viewer's own, with the league's as the floor
+   (`viewerClockZone`, the compact-surface form). Resolved here, by the route,
+   and only when there are games to print; the header's lineup-lock line below
+   reuses the same read rather than making a second one. */
+const pageViewerClock = Object.keys(liveOddsData ?? {}).length > 0
+  ? await readViewerClock(Astro.cookies, authUser, 'theleague')
+  : null;
+const rowKickoffClock = pageViewerClock ? viewerClockZone(pageViewerClock) : null;
+
 const serializedConfig = JSON.stringify({
   seasons: inlineSeasons,
   // Endpoint template for the on-demand seasons. Built from the registry slug,
@@ -1598,6 +1614,7 @@ const serializedConfig = JSON.stringify({
       ? { franchiseId: defaultTeamId, leagueId: THELEAGUE_ID, username: '' }
       : null,
   autocut: autocutConfig,
+  kickoffClock: rowKickoffClock,
   trendWeeks,
   hideLeaguePrefix: Astro.locals.hideLeaguePrefix ?? false,
   eligibilityByTeam,
@@ -1736,7 +1753,7 @@ const headerLockAt = headerDefaultSchedule.upNext != null && headerWeekNum != nu
   ? nflWeekStartInstant(Number(defaultSeason), headerDefaultSchedule.upNext.week)
   : null;
 const headerLineupLock = headerLockAt != null && headerLockAt.getTime() > Date.now()
-  ? formatForViewer(headerLockAt, await readViewerClock(Astro.cookies, authUser, 'theleague'), { weekday: true })
+  ? formatForViewer(headerLockAt, pageViewerClock ?? await readViewerClock(Astro.cookies, authUser, 'theleague'), { weekday: true })
   : null;
 
 const headerCapSpace = headerCapSpaceFor(defaultTeamId);
@@ -1830,19 +1847,27 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     </RosterHeader>
     <!-- Roster View -->
     <div class="view-container" data-view-content="roster">
+      {/* Phone only: this year's cap, the cap bar and the Sims · Trade ·
+          Dead $ · Tags chips (docs/plans/rosters-mobile-layout.md § 6). */}
+      <RosterCapStrip
+        year={SALARY_YEARS[0]}
+        capSpace={headerMoney(headerCapSpace)}
+        tradeHref={r('/theleague/front-office/trade-builder')}
+        plannerHref={r('/theleague/rosters?view=planner')}
+      />
       <div class="roster-table-card">
         <div class="roster-controls">
           <input type="hidden" id="rosterSeasonSelect" value={defaultSeason} />
           <input type="hidden" id="rosterTeamSelect" value={defaultTeamId} />
 
-          <button class="clear-all-tags-btn" id="clearAllTagsBtn" style="display: none;" title="Clear all contract actions">
+          <button class="clear-all-tags-btn" id="clearAllTagsBtn" data-sim-clear style="display: none;" title="Clear all contract actions">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M18 6L6 18M6 6l12 12"/>
             </svg>
             Clear All Tags
           </button>
 
-          <button class="submit-franchise-tags-btn loading-btn loading-btn--on-accent" id="submitFranchiseTagsBtn" style="display: none;" title="Submit franchise tag and veteran extension declarations for commissioner approval">
+          <button class="submit-franchise-tags-btn loading-btn loading-btn--on-accent" id="submitFranchiseTagsBtn" data-sim-submit style="display: none;" title="Submit franchise tag and veteran extension declarations for commissioner approval">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
             </svg>
@@ -1862,6 +1887,36 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
               top margin so it can ride up beside the team card, which means it
               covers anything stacked above it in this column. */}
           <MyRankEditor league="theleague" />
+
+          {/* Phone only. The sort headers are hidden below 768px, so every
+              `data-sort-key` in the thead is an option here, and it drives the
+              same sort the header click does. tests/rosters-phone-row.test.ts
+              fails if a header key has no option. */}
+          <div class="rr-sort" data-rr-sort>
+            <label class="rr-sort__label" for="rrSortSelect">Sort</label>
+            <select class="rr-sort__select" id="rrSortSelect" data-rr-sort-select>
+              <option value="position">Position (default)</option>
+              <optgroup label="Contract" data-rr-sort-mode="gm">
+                <option value="topRanking">My Rank</option>
+                <option value="contractYears">Years left</option>
+                {SALARY_YEARS.map((year, index) => (
+                  <option value={`salary_${index}`}>{year} salary</option>
+                ))}
+              </optgroup>
+              <optgroup label="Matchup" data-rr-sort-mode="coach">
+                <option value="projectedPoints">Projected</option>
+                <option value="oppRank">Opponent rank</option>
+                <option value="spreadAmount">Spread</option>
+                <option value="overUnder">O/U</option>
+                <option value="temperature">Weather</option>
+                <option value="avgRecent">Last 3 avg</option>
+                <option value="totalSeason">{statsSeasonYear} points</option>
+                <option value="avgSeason">Season avg</option>
+                <option value="oppAvg">Opp avg allowed</option>
+              </optgroup>
+            </select>
+            <button type="button" class="rr-sort__dir" data-rr-sort-dir aria-label="Sort ascending" disabled>↑</button>
+          </div>
         </div>
       <div class="roster-table-wrapper">
         <table class="roster-table" data-hidden-columns="">
@@ -1958,6 +2013,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
               <tr
                 data-player-id={player.id}
                 data-birthdate={player.birthdate ?? ''}
+                data-pos={phonePosKey(player.position)}
                 class={`roster-row roster-row--${player.displayTag ?? 'active'}${player.positionDivider ? ' roster-row--position-divider' : ''}${player.positionDividerEnd ? ' roster-row--position-divider-end' : ''}${player.tierDivider ? ' roster-row--tier-divider' : ''}${player.activeStripe ? ' roster-row--active-alt' : ''}${(player as any).isMock ? ' roster-row--mock' : ''}`}
               >
                 <td data-label="Player" data-column="player">
@@ -2035,6 +2091,16 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
                       )}
                     </Fragment>
                   </PlayerCell>
+                  <Fragment set:html={buildPhoneLineSpans({
+                    contractYears: player.contractYears,
+                    firstYear: SALARY_YEARS[0],
+                    contractInfo: (player as any).contractInfo,
+                    injuryStatus: player.injuryStatus,
+                    kickoffIso: player.opponent !== 'BYE' ? player.gameOdds?.date : null,
+                    kickoffZone: rowKickoffClock?.zone,
+                    kickoffLabel: rowKickoffClock?.label,
+                    opponent: player.opponent !== 'BYE' ? player.gameOdds?.opponent : null,
+                  })} />
                 </td>
 
                 {/* Coach Mode Cells */}
@@ -2292,7 +2358,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       </div>
 
       <!-- Dead Money Table (moved to roster view) -->
-      <div class="roster-table-card roster-table-card--sub">
+      <div class="roster-table-card roster-table-card--sub" id="rosterDeadMoney">
         <div class="roster-table-card__header">
           <div>
             <h3>Cap Hits / Dead Money</h3>
@@ -2319,6 +2385,10 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
           </table>
         </div>
       </div>
+      {/* Phone only: the sticky sim bar and the Cap by year sheet. Inside the
+          roster view, so it goes wherever the view goes (and away with a
+          ClientRouter swap). */}
+      <RosterSimTray years={SALARY_YEARS} />
     </div>
     <!-- End Roster View -->
 
@@ -4567,6 +4637,18 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     liftMyRank,
   } from '../../utils/rosters/phone-sheet';
   import type { PlayerModalData } from '../../utils/player-modal-trigger';
+  // The phone layout (docs/plans/rosters-mobile-layout.md): the row's extra
+  // line data, shared with the SSR loop above, and the sim surfaces.
+  import { buildPhoneLineSpans, phonePosKey } from '../../utils/rosters/phone-row';
+  import {
+    applySimActionsToRows,
+    addSimDeadMoney,
+    buildCapByYear,
+    summarizeSimMoves,
+    renderSimSurfaces,
+    withoutSimRemoved,
+  } from '../../utils/rosters/sim-summary';
+  import type { SimActions, SimRow } from '../../utils/rosters/sim-summary';
   import { createCdmWizard } from '../../utils/cdm-wizard';
   import { toggleWatch, loadWatchList } from '../../utils/watch-list-client';
   import { requestSignIn } from '../../utils/player-actions';
@@ -5085,15 +5167,24 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     return (m === 10 && d >= 14) || m === 11 || m === 0 || (m === 1 && d <= 15);
   };
 
-  // Update clear all / submit tags/extensions button visibility
+  // Update clear all / submit tags/extensions button visibility.
+  //
+  // Every copy, not one id: the desktop buttons above the table and the phone
+  // Cap by year sheet's (RosterSimTray) both carry `data-sim-clear` /
+  // `data-sim-submit`, so visibility, loading state, aria-busy, the error
+  // flash and the Nov 14 – Feb 15 window stay in step across them. The
+  // originals keep their ids; the sheet's copies have none.
+  const simClearButtons = () => Array.from(document.querySelectorAll<HTMLButtonElement>('[data-sim-clear]'));
+  const simSubmitButtons = () => Array.from(document.querySelectorAll<HTMLButtonElement>('[data-sim-submit]'));
+
   const updateClearAllButton = () => {
-    const clearAllBtn = document.getElementById('clearAllTagsBtn');
-    const submitBtn = document.getElementById('submitFranchiseTagsBtn');
     const hasActions = Object.keys(contractActions).length > 0;
     const hasFranchiseTags = Object.values(contractActions).some(a => a.type === 'franchise');
     const hasVeteranExtensions = Object.values(contractActions).some(a => a.type === 'extension');
-    if (clearAllBtn) clearAllBtn.style.display = hasActions ? 'inline-flex' : 'none';
-    if (submitBtn) submitBtn.style.display = (hasFranchiseTags || hasVeteranExtensions) && isInSubmitWindow() ? 'inline-flex' : 'none';
+    simClearButtons().forEach((btn) => { btn.style.display = hasActions ? 'inline-flex' : 'none'; });
+    simSubmitButtons().forEach((btn) => {
+      btn.style.display = (hasFranchiseTags || hasVeteranExtensions) && isInSubmitWindow() ? 'inline-flex' : 'none';
+    });
   };
 
   // Clear all tags / Submit tags & extensions.
@@ -5103,7 +5194,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
   // it and swaps the DOM underneath — so a module-scope binding held the FIRST
   // visit's buttons and every later arrival got dead ones. (The team-nav
   // accordion carried the same note until its chevron was retired with the old
-  // team card.) Worse here — updateClearAllButton() re-queries both by id to show
+  // team card.) Worse here — updateClearAllButton() re-queries the buttons to show
   // them, so on a return visit Submit appeared, looked live, and did nothing:
   // a franchise-tag or veteran-extension declaration that never reached the
   // commissioner, inside a window that closes Feb 15.
@@ -5112,8 +5203,11 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
   };
 
   const handleSubmitFranchiseTagsClick = async () => {
-    const submitFranchiseTagsBtn = document.getElementById('submitFranchiseTagsBtn');
-    if (!submitFranchiseTagsBtn) return;
+    const submitButtons = simSubmitButtons();
+    if (!submitButtons.length) return;
+    // Every copy disables together, so a tap on one while another is in
+    // flight cannot POST the declarations twice.
+    if (submitButtons.some((btn) => btn.disabled)) return;
     const actionsToSubmit = Object.values(contractActions).filter(
       a => a.type === 'franchise' || a.type === 'extension'
     );
@@ -5123,17 +5217,29 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     const franchiseName = config.teams?.[franchiseId]?.name ?? franchiseId;
     const leagueId = config.authUser?.leagueId ?? config.defaultLeagueId;
 
-    submitFranchiseTagsBtn.disabled = true;
     // Update only the label span — replacing the button's textContent would
     // wipe the SVG icon permanently.
-    const tagsBtnLabel = submitFranchiseTagsBtn.querySelector('.submit-franchise-tags-btn__label');
+    const tagsBtnLabels = submitButtons.map((btn) => btn.querySelector('.submit-franchise-tags-btn__label'));
+    const origTexts = tagsBtnLabels.map((label) => (label?.textContent ?? '').trim());
     const setTagsBtnLabel = (text) => {
-      if (tagsBtnLabel) tagsBtnLabel.textContent = text;
+      tagsBtnLabels.forEach((label) => { if (label) label.textContent = text; });
     };
-    const origText = (tagsBtnLabel?.textContent ?? '').trim();
-    submitFranchiseTagsBtn.classList.add('is-loading');
-    submitFranchiseTagsBtn.setAttribute('aria-busy', 'true');
-    submitFranchiseTagsBtn.setAttribute('aria-label', 'Submitting declarations');
+    const restoreTagsBtnLabels = () => {
+      tagsBtnLabels.forEach((label, i) => { if (label) label.textContent = origTexts[i]; });
+    };
+    const endTagsBtnLoading = () => {
+      submitButtons.forEach((btn) => {
+        btn.classList.remove('is-loading');
+        btn.removeAttribute('aria-busy');
+        btn.removeAttribute('aria-label');
+      });
+    };
+    submitButtons.forEach((btn) => {
+      btn.disabled = true;
+      btn.classList.add('is-loading');
+      btn.setAttribute('aria-busy', 'true');
+      btn.setAttribute('aria-label', 'Submitting declarations');
+    });
 
     try {
       // Sequential, one at a time, stopping at the first failure — the API
@@ -5159,38 +5265,70 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
 
       recalculateRoster();
       updateClearAllButton();
-      submitFranchiseTagsBtn.classList.remove('is-loading');
-      submitFranchiseTagsBtn.removeAttribute('aria-busy');
-      submitFranchiseTagsBtn.removeAttribute('aria-label');
+      endTagsBtnLoading();
       setTagsBtnLabel('Submitted!');
       setTimeout(() => {
-        setTagsBtnLabel(origText);
-        submitFranchiseTagsBtn.disabled = false;
+        restoreTagsBtnLabels();
+        submitButtons.forEach((btn) => { btn.disabled = false; });
       }, 2000);
     } catch (err) {
       console.error('Tags/extensions submission failed:', err);
-      submitFranchiseTagsBtn.classList.remove('is-loading');
-      submitFranchiseTagsBtn.removeAttribute('aria-busy');
-      submitFranchiseTagsBtn.removeAttribute('aria-label');
+      endTagsBtnLoading();
       setTagsBtnLabel(err.message || 'Error — try again');
-      submitFranchiseTagsBtn.style.background = '#dc2626';
-      submitFranchiseTagsBtn.style.borderColor = '#dc2626';
+      submitButtons.forEach((btn) => {
+        btn.style.background = '#dc2626';
+        btn.style.borderColor = '#dc2626';
+      });
       setTimeout(() => {
-        setTagsBtnLabel(origText);
-        submitFranchiseTagsBtn.disabled = false;
-        submitFranchiseTagsBtn.style.background = '';
-        submitFranchiseTagsBtn.style.borderColor = '';
+        restoreTagsBtnLabels();
+        submitButtons.forEach((btn) => {
+          btn.disabled = false;
+          btn.style.background = '';
+          btn.style.borderColor = '';
+        });
       }, 3000);
     }
   };
 
+  // The phone Cap by year sheet (RosterSimTray) and its openers: the cap
+  // card's bar and Sims / Tags chips, and the sim bar's Review. Bound per
+  // arrival, by assignment, for the same two reasons as the buttons above:
+  // the elements are replaced on every ClientRouter swap, and initRosterPage
+  // runs twice on the first load. The sheet is a native modal <dialog>, so
+  // Esc, focus containment and focus return come from the platform.
+  const initSimSurfaces = () => {
+    const page = document.querySelector('.roster-page[data-league="theleague"]');
+    const sheet = page?.querySelector<HTMLDialogElement>('[data-rsim-sheet]');
+    if (!page || !sheet) return;
+    page.querySelectorAll<HTMLElement>('[data-rsim-open]').forEach((btn) => {
+      btn.onclick = () => {
+        if (!sheet.open) sheet.showModal();
+      };
+    });
+    const close = sheet.querySelector<HTMLElement>('[data-rsim-close]');
+    if (close) close.onclick = () => sheet.close();
+    sheet.onclick = (event) => {
+      // A tap on the backdrop lands on the <dialog> itself.
+      if (event.target === sheet) {
+        sheet.close();
+        return;
+      }
+      const undo = (event.target as HTMLElement | null)?.closest<HTMLElement>('[data-sim-undo]');
+      if (undo?.dataset.simUndo) {
+        removeContractAction(undo.dataset.simUndo);
+        // The list re-rendered without that row; keep focus inside the sheet.
+        (sheet.querySelector<HTMLElement>('[data-sim-undo]') ?? sheet.querySelector<HTMLElement>('[data-rsim-close]'))?.focus();
+      }
+    };
+  };
+
   const initContractActionButtons = () => {
-    const clearAllBtn = document.getElementById('clearAllTagsBtn');
-    const submitBtn = document.getElementById('submitFranchiseTagsBtn');
     // Assigned, not added: initRosterPage runs twice on the initial load, and a
     // stacked submit handler would POST every declaration twice.
-    if (clearAllBtn) clearAllBtn.onclick = handleClearAllTagsClick;
-    if (submitBtn) submitBtn.onclick = handleSubmitFranchiseTagsClick;
+    // Every copy (the desktop buttons and the phone review sheet's).
+    simClearButtons().forEach((clearAllBtn) => { clearAllBtn.onclick = handleClearAllTagsClick; });
+    simSubmitButtons().forEach((submitBtn) => { submitBtn.onclick = handleSubmitFranchiseTagsClick; });
+    initSimSurfaces();
   };
 
   const initRosterPage = () => {
@@ -5297,6 +5435,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
 
       // Handle trend weeks visibility separately
       updateTrendWeeksVisibility(mode);
+      syncPhoneSortModeGroups(mode);
 
       // Save preference
       localStorage.setItem('rosterViewMode', mode);
@@ -5464,7 +5603,30 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
           activeTh.classList.add('sort-active', `sort-${direction}`);
         }
       }
+      syncPhoneSortControl(activeKey, direction);
     };
+
+    /* The phone Sort <select> (rosters-mobile.css hides the header row below
+       768px). It mirrors whatever the headers last did, and drives the same
+       applySort() a header click does, so the two can never disagree. */
+    function syncPhoneSortControl(activeKey: string, direction: string) {
+      const select = document.querySelector<HTMLSelectElement>('.roster-page[data-league="theleague"] [data-rr-sort-select]');
+      const dirBtn = document.querySelector<HTMLButtonElement>('.roster-page[data-league="theleague"] [data-rr-sort-dir]');
+      if (select && Array.from(select.options).some((o) => o.value === activeKey)) select.value = activeKey;
+      if (dirBtn) {
+        const isDefault = activeKey === 'position';
+        dirBtn.disabled = isDefault;
+        dirBtn.textContent = direction === 'desc' ? '↓' : '↑';
+        dirBtn.setAttribute('aria-label', direction === 'desc' ? 'Sorted descending. Sort ascending' : 'Sorted ascending. Sort descending');
+      }
+    }
+
+    /** Offer the sorts that belong to the mode on screen; the others disable. */
+    function syncPhoneSortModeGroups(mode: string) {
+      document
+        .querySelectorAll<HTMLOptGroupElement>('.roster-page[data-league="theleague"] [data-rr-sort-mode]')
+        .forEach((group) => { group.disabled = group.dataset.rrSortMode !== mode; });
+    }
 
     const reapplyModeVisibility = () => {
       const currentMode = localStorage.getItem('rosterViewMode') || 'gm';
@@ -5524,6 +5686,34 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
         applySort();
       });
     });
+
+    // The phone Sort control: the same state and the same applySort() as the
+    // header clicks above. Assigned, not added — initRosterPage runs twice on
+    // the first load, and the elements are replaced on every ClientRouter swap.
+    const phoneSortSelect = document.querySelector<HTMLSelectElement>('.roster-page[data-league="theleague"] [data-rr-sort-select]');
+    const phoneSortDir = document.querySelector<HTMLButtonElement>('.roster-page[data-league="theleague"] [data-rr-sort-dir]');
+    if (phoneSortSelect) {
+      phoneSortSelect.onchange = () => {
+        const sortKey = phoneSortSelect.value;
+        if (sortKey === 'position') {
+          resetSort();
+        } else {
+          currentSortKey = sortKey;
+          // Same defaults as a first header click: rank ascending, the rest descending.
+          currentSortDir = sortKey === 'topRanking' ? 'asc' : 'desc';
+          updateSortIndicators(currentSortKey, currentSortDir);
+        }
+        applySort();
+      };
+    }
+    if (phoneSortDir) {
+      phoneSortDir.onclick = () => {
+        if (currentSortKey === 'position') return;
+        currentSortDir = currentSortDir === 'desc' ? 'asc' : 'desc';
+        updateSortIndicators(currentSortKey, currentSortDir);
+        applySort();
+      };
+    }
 
     const _capSpaceFmt = new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -6092,8 +6282,10 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
               if (yearIdx === adj.baseOffset) value = adj.currentPenalty;
               if (yearIdx === adj.baseOffset + 1 && adj.futurePenalty > 0)
                 value = adj.futurePenalty;
-              if (!value) return `<td data-column="dm-year${yearIdx + 1}" style="text-align:right"></td>`;
-              return `<td data-column="dm-year${yearIdx + 1}" class="deadmoney-row__amount">${_capSpaceFmt.format(
+              // data-label carries the year for the phone card's second line
+              // (rosters-mobile.css), where the header row is hidden.
+              if (!value) return `<td data-column="dm-year${yearIdx + 1}" data-label="${salaryYears[yearIdx]}" style="text-align:right"></td>`;
+              return `<td data-column="dm-year${yearIdx + 1}" data-label="${salaryYears[yearIdx]}" class="deadmoney-row__amount">${_capSpaceFmt.format(
                 value
               )}</td>`;
             })
@@ -6571,9 +6763,25 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
             afterName: injuryBadge + tradeBaitBadge + autocutBadge,
           });
 
-          return `<tr data-player-id="${player.id}" data-birthdate="${player.birthdate ?? ''}" class="${rowClasses.join(' ')}">
+          // The phone card's extra line data — the same builder the SSR loop
+          // calls, so the first client render cannot change the layout.
+          // `as any` for the same reason as totalSeasonCell above: `player`
+          // infers as `never` here, so each bare property read is a ts(2339).
+          const phoneRow = player as any;
+          const phoneLineSpans = buildPhoneLineSpans({
+            contractYears: effectiveYears,
+            firstYear: salaryYears[0],
+            contractInfo: phoneRow.contractInfo,
+            injuryStatus: phoneRow.injuryStatus,
+            kickoffIso: phoneRow.opponent !== 'BYE' ? phoneRow.gameOdds?.date : null,
+            kickoffZone: config.kickoffClock?.zone,
+            kickoffLabel: config.kickoffClock?.label,
+            opponent: phoneRow.opponent !== 'BYE' ? phoneRow.gameOdds?.opponent : null,
+          });
+
+          return `<tr data-player-id="${player.id}" data-birthdate="${player.birthdate ?? ''}" data-pos="${phonePosKey(phoneRow.position)}" class="${rowClasses.join(' ')}">
             <td data-label="Player" data-column="player">
-              ${playerCellHtml}${actionBadge}
+              ${playerCellHtml}${actionBadge}${phoneLineSpans}
             </td>
             ${/* Coach Mode Cells */ ''}
             ${oppRankCell}
@@ -9353,44 +9561,15 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       const viewVersion = ++latestViewVersion;
       resetSort();
       const { seasonData, teamData } = getTeamData();
-      let rows = buildDisplayRows(teamData);
-      // Apply contract actions to rows
-      rows = rows.map(player => {
-        const action = contractActions[player.id];
-        if (!action) return player;
-        // Keep cut/traded players in the list (they'll be shown at 50% opacity)
-        // but don't modify their data
-        if (action.type === 'cut' || action.type === 'trade') {
-          return player;
-        }
+      // Simulated moves apply through the same two rules the phone surfaces
+      // use for their baseline and per-move effects (rosters/sim-summary.ts):
+      // cut/traded players stay (greyed), franchise tags and team options leave
+      // the row alone (they price a future year), an extension rewrites salary
+      // and years; every simulated cut adds its dead money, 50% now + the rest
+      // next year.
+      let rows = applySimActionsToRows(buildDisplayRows(teamData), contractActions);
 
-        // Apply salary/years changes (but not for franchise tags or team options - those are shown in specific year columns)
-        if (action.type === 'franchise' || action.type === 'team-option') {
-          // Don't modify player salary data — these render at ufaYearIndex instead
-          return player;
-        }
-
-        // For extensions, update salary and years
-        return {
-          ...player,
-          salary: action.newSalary ?? player.salary,
-          contractYears: action.newYears ?? player.contractYears
-        };
-      });
-
-      let deadMoney = aggregateDeadMoney(seasonData, currentTeam);
-
-      // Add dead money from contract actions (cuts) — only for players on
-      // THIS club's roster. `contractActions` is page-wide and survives a team
-      // switch, so an unscoped sum charged a Pigskins cut to whichever club
-      // was viewed next, in the table and the header alike.
-      const rowIds = new Set(rows.map((p: any) => String(p.id)));
-      Object.entries(contractActions as Record<string, any>).forEach(([playerId, action]) => {
-        if (action.type === 'cut' && rowIds.has(String(playerId))) {
-          deadMoney[0] = (deadMoney[0] || 0) + (action.currentPenalty || 0);
-          deadMoney[1] = (deadMoney[1] || 0) + (action.futurePenalty || 0);
-        }
-      });
+      let deadMoney = addSimDeadMoney(aggregateDeadMoney(seasonData, currentTeam), contractActions);
       updateYearTotals(rows, deadMoney);
       const capCharges = calculateCapCharges(rows);
       const capChargesWithDead = capCharges.map((val, idx) => val + (deadMoney[idx] ?? 0));
@@ -9437,6 +9616,44 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       }
       lastRenderedRows = rows;
       renderTableRows(rows);
+
+      // The phone cap card, sim bar and Cap by year sheet (hidden on desktop).
+      // Painted from THIS pass's numbers plus an unsimulated baseline computed
+      // here too — never read back from a DOM cell — so they cannot disagree
+      // with the footer above them.
+      const simBaseRows = buildDisplayRows(teamData);
+      const simBaseDead = aggregateDeadMoney(seasonData, currentTeam);
+      const simChargesFor = (r: SimRow[], acts: SimActions) =>
+        calculateCapChargesWithActions(r, {
+          salaryYears,
+          capInclusion,
+          contractActions: acts,
+          localDeclarations,
+          declarationsByPlayer,
+        });
+      renderSimSurfaces({
+        root: document.querySelector('.roster-page[data-league="theleague"]') ?? document,
+        actions: contractActions,
+        moves: summarizeSimMoves({
+          actions: contractActions,
+          baseRows: simBaseRows,
+          baseDead: simBaseDead,
+          years: salaryYears,
+          chargesFor: simChargesFor,
+        }),
+        capByYear: buildCapByYear({
+          years: salaryYears,
+          capLimit: capLimitForSeason,
+          charges: capCharges,
+          dead: deadMoney,
+          baseCharges: simChargesFor(simBaseRows, {}),
+          baseDead: simBaseDead,
+        }),
+        // A simulated cut or trade leaves the roster, so its salary leaves the bar.
+        buckets: calculateBucketCaps(withoutSimRemoved(rows, contractActions)),
+        teamId: String(currentTeam ?? ''),
+        viewerTeamId: config.authUser?.franchiseId ?? null,
+      });
 
       // Cutdown Plan panel tracks every view change (team switch, roster
       // move, demo enter/exit) — it hides itself off the owner's own team.
@@ -9718,7 +9935,10 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     // Attach delegated modal trigger after table is rendered. `enrich` runs
     // at click time with the row the tap landed in.
     const rosterTbody = document.getElementById('rosterTableBody');
+    // On a phone the whole row opens the player (the ⋮ column is hidden there,
+    // rosters-mobile.css) — #1217's option; controls in the row keep their own click.
     if (rosterTbody) initPlayerModalTrigger(rosterTbody, {
+      rowTapMedia: '(max-width: 767px)',
       enrich: (data, { row }) => buildRosterSheetPayload(data, row),
     });
 

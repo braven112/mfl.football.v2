@@ -287,6 +287,20 @@ html.dark {
   --badge-info-bg: rgba(59, 130, 246, 0.15);
   --badge-info-text: #93bbfd;
 
+  /* Position pills — dark pair. Brighter fills with near-black ink, so the
+     pill still reads as its hue on a near-black card. Measured by
+     tests/position-pill-tokens.test.ts. */
+  --pos-qb-bg: #f472b6;
+  --pos-qb-ink: #1f0a14;
+  --pos-rb-bg: #34d399;
+  --pos-rb-ink: #022c22;
+  --pos-wr-bg: #60a5fa;
+  --pos-wr-ink: #0b1733;
+  --pos-te-bg: #fb923c;
+  --pos-te-ink: #2a1004;
+  --pos-other-bg: #4b5563;
+  --pos-other-ink: #f9fafb;
+
   /* Legacy status colors */
   --error-color: #f87171;
   --warning-color: #fbbf24;
