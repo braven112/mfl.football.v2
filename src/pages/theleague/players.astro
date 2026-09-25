@@ -33,6 +33,8 @@ import '../../styles/snap-columns.css';
 import '../../styles/free-agents-mobile.css';
 import collegeLogos from '../../data/college-logos.json';
 import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
+import nflByeWeeksFile from '../../../data/nfl/bye-weeks.json';
+import { byeWeeksByTeam } from '../../utils/nfl-bye-lookup';
 import leagueConfig from '../../data/theleague.config.json';
 import { getLeagueBySlug, leagueClock } from '../../config/leagues';
 import { getCachedRosters } from '../../utils/mfl-roster-cache';
@@ -752,6 +754,9 @@ const nflTeamsList = [...nflTeamsSet].sort();
 
 const playerDataJson = JSON.stringify(playerList);
 const nflTeamsJson = JSON.stringify(nflTeamsList);
+// Team -> bye week for the player sheet's Details (both code dialects; see
+// nfl-bye-lookup.ts). 32 teams, not a field on every row.
+const byeWeeksJson = JSON.stringify(byeWeeksByTeam(nflByeWeeksFile, nowRef));
 const defSpotlightJson = JSON.stringify(DEF_SPOTLIGHT_PLAYERS);
 
 // NFL-team gradient backdrops for player avatars (same treatment as the modal
@@ -1300,12 +1305,13 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 {!claimFranchiseId && <SignInModal config={signInConfig} />}
 <WatchListBridge signedIn={watchSignedIn} claimVerb={claimVerb} promptSignIn={promptSignIn} />
 
-<script define:vars={{ snapSeasonLabel, canClaim, promptSignIn, playerDataJson, hasProjected, hasSeasonPts, hasPpg, hasSnapCounts, nflTeamsJson, hasSurplusData, hasAuctionData, isAuctionSeason, auctionEndMs, isAdmin, currentYear, mflHost, mflLeagueId, mflActionYear, franchiseNamesJson, franchiseBannersJson, defSpotlightJson, nflAvatarBgJson, nflAvatarBgFallback, nflAvatarBorderJson, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, noHeadshot, logoOnerror: NFL_LOGO_ONERROR, collegeLogoOnerror: COLLEGE_LOGO_ONERROR, collegeLogoOnload: COLLEGE_LOGO_ONLOAD, rookieDraftComplete }}>
+<script define:vars={{ snapSeasonLabel, byeWeeksJson, canClaim, promptSignIn, playerDataJson, hasProjected, hasSeasonPts, hasPpg, hasSnapCounts, nflTeamsJson, hasSurplusData, hasAuctionData, isAuctionSeason, auctionEndMs, isAdmin, currentYear, mflHost, mflLeagueId, mflActionYear, franchiseNamesJson, franchiseBannersJson, defSpotlightJson, nflAvatarBgJson, nflAvatarBgFallback, nflAvatarBorderJson, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, noHeadshot, logoOnerror: NFL_LOGO_ONERROR, collegeLogoOnerror: COLLEGE_LOGO_ONERROR, collegeLogoOnload: COLLEGE_LOGO_ONLOAD, rookieDraftComplete }}>
   // define:vars creates const — copy to let so polling can update at runtime
   let _hasAuctionData = hasAuctionData;
   const players = JSON.parse(playerDataJson);
   // team code → marquee defender { name, espnId } for the DEF hero spotlight
   const DEF_SPOTLIGHT = JSON.parse(defSpotlightJson);
+  const BYE_WEEKS = JSON.parse(byeWeeksJson);
   const franchiseNameMap = new Map(JSON.parse(franchiseNamesJson));
   const franchiseBannerMap = new Map(JSON.parse(franchiseBannersJson));
 
@@ -2265,6 +2271,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         snapGames: p.snapGames != null ? p.snapGames : null,
         snapPct: p.snapPct != null ? p.snapPct : null,
         snapSeason: snapSeasonLabel || null,
+        byeWeek: BYE_WEEKS[String(p.team || '').toUpperCase()] ?? null,
         // Rostered players carry their owner, so the modal band wears the
         // FANTASY team and names it — without this every player on this page
         // opened as a free agent, including the ones that aren't.
