@@ -176,3 +176,127 @@ caption a {
 #MFLPlayerPopupOverlay {
   background-color: rgba(0, 0, 0, 0.7);
 }
+
+// Live scoring (ajax_ls). _livescoring.scss paints the value cells #eee for
+// TheLeague's light skin, but this skin's text is #eee too, so the marquee
+// counts and each side's Total Points vanished into blank light boxes. Use
+// the dark row colour instead.
+#body_ajax_ls td.ls_marquee_value {
+  background-color: var(--eventablerow);
+  border-color: var(--border-color);
+  color: var(--primary-text-color);
+}
+#body_ajax_ls tr#ls_row_playing_away td.ls_marquee_value,
+#body_ajax_ls tr#ls_row_playing_home td.ls_marquee_value {
+  border-top-color: var(--border-color);
+}
+
+// On a phone the two sides of the matchup sat side by side in a ~500px table,
+// pushing the opponent off-screen behind a sideways scroll. Stack them, and
+// lay each marquee out as a grid: the 300px team icon on its own row, then
+// name + score, then one row per stat, label left and value right.
+@media only screen and (max-width: 640px) {
+  #body_ajax_ls td.mobile-view {
+    display: block;
+    width: 100% !important;
+    box-sizing: border-box;
+  }
+  #body_ajax_ls table:has(> tbody > tr > td.mobile-view) {
+    width: 100%;
+  }
+  #body_ajax_ls table#marquee_away > tbody,
+  #body_ajax_ls table#marquee_home > tbody {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-auto-flow: row dense;
+    align-items: center;
+    column-gap: 0.75rem;
+  }
+  #body_ajax_ls table#marquee_away > tbody > tr,
+  #body_ajax_ls table#marquee_home > tbody > tr {
+    display: contents;
+  }
+  #body_ajax_ls table#marquee_away td,
+  #body_ajax_ls table#marquee_home td {
+    display: block;
+  }
+  // The home marquee is written mirrored (score, name, icon; value before
+  // label), so every cell is pinned to its column rather than left to flow.
+  #body_ajax_ls table#marquee_away td[rowspan],
+  #body_ajax_ls table#marquee_home td[rowspan] {
+    grid-row: 1;
+    grid-column: 1 / -1;
+    text-align: left;
+    padding-bottom: 0.5rem;
+  }
+  #body_ajax_ls div#ficon_away,
+  #body_ajax_ls div#ficon_home {
+    text-align: left;
+  }
+  #body_ajax_ls .franchiseicon {
+    max-width: 100%;
+    height: auto;
+  }
+  #body_ajax_ls table#marquee_away td.ls_marquee_label,
+  #body_ajax_ls table#marquee_home td.ls_marquee_label,
+  #body_ajax_ls div.ls_team_name {
+    text-align: left;
+  }
+  #body_ajax_ls div.ls_team_name {
+    min-width: 0;
+    max-width: none;
+    min-height: 0;
+  }
+  #body_ajax_ls table#marquee_away td:has(> .ls_team_name),
+  #body_ajax_ls table#marquee_home td:has(> .ls_team_name),
+  #body_ajax_ls table#marquee_away td.ls_marquee_label,
+  #body_ajax_ls table#marquee_home td.ls_marquee_label {
+    grid-column: 1;
+  }
+  #body_ajax_ls table#marquee_away td:has(> .ls_team_points),
+  #body_ajax_ls table#marquee_home td:has(> .ls_team_points),
+  #body_ajax_ls table#marquee_away td.ls_marquee_value,
+  #body_ajax_ls table#marquee_home td.ls_marquee_value {
+    grid-column: 2;
+    text-align: right;
+  }
+  #body_ajax_ls td.mobile-view {
+    padding: 0;
+  }
+
+  // The strip of other matchups (#other_games) is a nowrap row of tiles; left
+  // in the table it set the table's minimum width. Let it scroll sideways in
+  // its own cell.
+  #body_ajax_ls td:has(> table#other_games) {
+    display: block;
+    box-sizing: border-box;
+    max-width: calc(100vw - 30px);
+    overflow-x: auto;
+  }
+
+  // Player names are joined with &nbsp; and the table has five columns, so at
+  // 15px it could not shrink below ~500px. Tighten it and let names and game
+  // info wrap so Proj and Points stay on screen.
+  #body_ajax_ls table#roster_away,
+  #body_ajax_ls table#roster_home {
+    width: 100%;
+    margin-right: 0;
+  }
+  #body_ajax_ls table#roster_away :is(th, td),
+  #body_ajax_ls table#roster_home :is(th, td) {
+    font-size: 0.8rem;
+    padding: 4px 5px;
+  }
+  // Only the text columns may break mid-word; headers and scores never do.
+  #body_ajax_ls table#roster_away td:is(:first-child, .ls_game_info, .ls_player_stats),
+  #body_ajax_ls table#roster_home td:is(:first-child, .ls_game_info, .ls_player_stats) {
+    overflow-wrap: anywhere;
+  }
+  #body_ajax_ls table#roster_away .reallysmall,
+  #body_ajax_ls table#roster_home .reallysmall {
+    font-size: inherit;
+  }
+  #body_ajax_ls td.ls_player_stats {
+    height: auto;
+  }
+}
