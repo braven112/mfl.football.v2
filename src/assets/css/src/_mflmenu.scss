@@ -103,11 +103,13 @@
   // bun spans above are injected by mflPageEnhancements.js, which only the
   // TheLeague/AFL bundles load. A skin used without that bundle (Archie's,
   // MFL 10105) got an invisible toggle, so the empty span draws the three
-  // lines itself. `:empty` stops matching once the script fills it.
+  // lines itself. `:empty` stops matching once the script fills it. The
+  // lines are one symmetric 21px box, because the open state rotates every
+  // label span 180deg — lines hung below a 3px span flipped up off the bar.
   .myfantasyleague_menu > label > span:empty {
     display: block;
     width: 25px;
-    height: 3px;
+    height: 21px;
     position: absolute;
     right: 15px;
     top: 11px;
@@ -361,8 +363,14 @@
   }
 
   .myfantasyleague_menu > label > span:empty {
-    background-color: $menu-text-color;
-    box-shadow: 0 9px 0 $menu-text-color, 0 18px 0 $menu-text-color;
+    background: linear-gradient(
+      to bottom,
+      $menu-text-color 0 3px,
+      transparent 3px 9px,
+      $menu-text-color 9px 12px,
+      transparent 12px 18px,
+      $menu-text-color 18px 21px
+    );
   }
 
   .myfantasyleague_menu ul li label span {
