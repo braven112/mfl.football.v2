@@ -3853,3 +3853,54 @@ all have this shape.
 
 **Evidence:** `tests/live-scoring-layout-css.test.ts` — "prints 'to play', never
 'yet to play', on every surface".
+
+## 2026-09-25 - Extending a sheet 18 files share: opt-in fields, pure renderers, and prove "unchanged" with pixels
+
+**Context:** PR A of the Rosters phone layout (`docs/plans/rosters-mobile-layout.md`,
+phases 1-3) added tabs, a Salary tab and action slots to `PlayerDetailsModal`,
+which ~18 files open.
+
+**What worked:**
+
+- **Every new part is driven by an OPTIONAL payload field and ships `hidden`.**
+  `resolveSheetTabs(data)` (`src/utils/player-sheet.ts`) is the one rule: no
+  `salarySheet` and no `tabbed` → no tabs, and the panels are plain wrappers
+  with no role. Wrapping existing sections in `<div>`s with no padding/border
+  changes nothing visually (margins collapse through them) — but check
+  `:last-child` rules before you wrap.
+- **Prove "unchanged" by fingerprint, not by eye.** Open the sheet from five
+  openers at 390 and 1280 on the pristine tree (`git stash -u`) and on the
+  branch, hash the sheet's screenshot and its `innerText`, and diff. Ten of ten
+  identical is a claim a reviewer can trust; "looked the same" is not.
+- **One renderer for runtime AND stories.** The markup builders are pure
+  string functions; the client script calls them on open and the component's
+  `preview.sheet` prop calls them at SSR, so a Storybook state of the Salary tab
+  is production's markup, not a fixture's.
+- **A JSON attribute cannot carry a callback — add an `enrich(data, { row })`
+  hook to the trigger** and let the JS opener attach `onAction` at click time.
+  Never a `window` global (it outlives a ClientRouter swap).
+- **Re-render keeps focus in place:** after `innerHTML` replaces the pressed
+  button, refocus the same `data-sheet-action` in the same group, else whatever
+  now holds its index (Simulate → Undo), else the group's first — otherwise a
+  keyboard user lands on `<body>` behind the sheet.
+
+**Traps hit:**
+
+- **Do not edit files while a Playwright harness runs against `pnpm dev`.**
+  Vite's HMR full-reloads the page mid-walk and `cdm-parity-check` dies with
+  "Execution context was destroyed". Stash, or draft in the scratchpad.
+- **`cdm-parity-check --probe` flakes when chained right after another
+  harness run** ("navigation interrupted by another navigation" — the cut
+  success path's `location.reload()` racing `goto`). Alone it passes; rerun it
+  alone before believing a failure.
+- **An Astro attribute spread needs a typed helper**
+  (`(): HTMLAttributes<'button'>`): an untyped `{ 'aria-selected': string }`
+  spread is a ts(2322) per element and moved the ratchet +6.
+- **A `let x = null` read from a new closure is a new ts(7005).** Declaring the
+  shape the code already assigns cleared that read and five older ones.
+- **The payload's `totalRemaining` is `salary × years`**
+  (`scripts/lib/roster-season-payload.mjs`), which drops the league's 10%
+  escalation. A tile next to a year table must total the table instead.
+
+**Evidence:** `tests/player-sheet.test.ts`, `tests/cdm-action-descriptors.test.ts`,
+`tests/rosters-phone-sheet.test.ts`.
