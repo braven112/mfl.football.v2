@@ -672,9 +672,17 @@ gotcha in `rosters-page-split.md`.
 - **Q1:** GM and Coach stay separate. GM rows get no matchup line.
 - **Q6:** Yes. The sim bar shows on every viewed team, not only your own.
 - **Pill placement (new):** inline at the start of line 2, under the name, in
-  both modes. It is not a leading column. The mockup PNGs predate this.
+  both modes. It is not a leading column.
+- **Q2:** Add the kickoff time to the Coach row, before the opponent.
+- **Q3:** Reset to the mode's default tab every time the sheet opens (Salary from GM, Summary from Coach).
+- **Q4:** The AFL gets Summary / Game log tabs, with no Salary tab.
+- **Q5:** After a simulation the sheet stays open and shows "Simulated · Undo".
+- **Q7:** The hero on another owner's player shows Trade for him and Watch.
+- **Q8:** Sleeper-like pill colours as new tokens, checked in both themes.
+- **Q9:** The cap card chips are Sims · Trade · Dead $ · Tags.
+- **Q10:** Decide `heroWorthy` when the changelog entry is staged.
 
-Still open:
+Original questions (kept for the record):
 
 1. **GM line 3.** Should GM rows also carry a muted matchup line (both lines
    in one view, as Sleeper does), or stay strictly per mode as proposed?
