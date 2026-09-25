@@ -180,6 +180,22 @@ const t = (value?: string) => value ?? '\u2014';
             <span class="pdm-claim__desc" id="pdm-trade-desc">Build a trade</span>
           </span>
         </a>
+
+        <!-- MFL's own acquisition page, when the opening page says that is the
+             path (the offseason auction's Place Bid, or a viewer who cannot
+             claim in place). Only the free-agent tables send one, lifted from
+             the row's ⋮ by player-modal-trigger — on a phone that column is
+             hidden and this is the only way to it. When present it replaces
+             the in-place Claim, the same precedence the ⋮ sheet gives it. -->
+        <a class="pdm-claim pdm-acq" id="pdm-acq" href="#" target="_blank" rel="noopener" hidden>
+          <span class="pdm-claim__icon" aria-hidden="true">
+            <svg aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-gavel" /></svg>
+          </span>
+          <span class="pdm-claim__text">
+            <span class="pdm-claim__label" id="pdm-acq-label">Bid on MyFantasyLeague</span>
+            <span class="pdm-claim__desc" id="pdm-acq-desc">Opens MFL in a new tab</span>
+          </span>
+        </a>
       </div>
 
       <!-- Key Metrics -->
@@ -198,6 +214,59 @@ const t = (value?: string) => value ?? '\u2014';
             <span class="pdm-metric__label" id="metric-contract-label">{preview?.contractLabel ?? 'Contract'}</span>
           </div>
         )}
+      </div>
+
+      <!-- Supporting Details — directly under the metric tiles, ABOVE news and
+           the 17-row Season Results table. It used to sit last, which on a
+           phone put a player's build, usage and draft pedigree a long scroll
+           below the fold; the free-agent tables now hide those columns on a
+           phone and rely on this section to carry them. -->
+      <div class="pdm-section pdm-details" id="section-details">
+        <h4 class="pdm-section__title">Details</h4>
+        <div class="pdm-details__grid">
+          <div class="pdm-detail" id="detail-row-physical">
+            <span class="pdm-detail__label">Build</span>
+            <span class="pdm-detail__value" id="detail-physical-value">{t(preview?.build)}</span>
+          </div>
+          <!-- Usage and ADP are sent only by the free-agent tables; every
+               other opener leaves them hidden rather than showing a dash. -->
+          <div class="pdm-detail" id="detail-row-usage" style="display: none;">
+            <span class="pdm-detail__label" id="detail-usage-label">Snaps</span>
+            <span class="pdm-detail__value" id="detail-usage-value"></span>
+          </div>
+          <div class="pdm-detail" id="detail-row-adp" style="display: none;">
+            <span class="pdm-detail__label">ADP</span>
+            <span class="pdm-detail__value" id="detail-adp-value"></span>
+          </div>
+          <div class="pdm-detail" id="detail-row-status">
+            <span class="pdm-detail__label">Status</span>
+            <span class="pdm-detail__value" id="detail-status-value">{t(preview?.status)}</span>
+          </div>
+          <div class="pdm-detail" id="detail-row-draft">
+            <span class="pdm-detail__label">Draft</span>
+            <span class="pdm-detail__value pdm-detail__value--with-logo" id="detail-draft-value">
+              <img class="pdm-detail__logo" id="detail-draft-team-logo" src="" alt="" onerror={NFL_LOGO_ONERROR} onload={NFL_LOGO_ONLOAD} />
+              <span id="detail-draft-text">{t(preview?.draft)}</span>
+            </span>
+          </div>
+          <div class="pdm-detail" id="detail-row-college">
+            <span class="pdm-detail__label">College</span>
+            <span class="pdm-detail__value pdm-detail__value--with-logo" id="detail-college-value">
+              <img class="pdm-detail__logo pdm-detail__logo--college" id="detail-college-logo" src="" alt="" onerror={COLLEGE_LOGO_ONERROR} onload={COLLEGE_LOGO_ONLOAD} />
+              <span id="detail-college">{t(preview?.college)}</span>
+            </span>
+          </div>
+          {!hideContract && (
+            <div class="pdm-detail" id="detail-row-contract">
+              <span class="pdm-detail__label">Contract</span>
+              <span class="pdm-detail__value" id="detail-contract-detail">{t(preview?.contractDetail)}</span>
+            </div>
+          )}
+          <div class="pdm-detail" id="detail-row-bye">
+            <span class="pdm-detail__label">Bye</span>
+            <span class="pdm-detail__value" id="detail-bye-value">{t(preview?.bye)}</span>
+          </div>
+        </div>
       </div>
 
       <!-- Latest News — ESPN athlete-scoped, fetched on open. Sits above the
@@ -244,44 +313,6 @@ const t = (value?: string) => value ?? '\u2014';
         </div>
       </div>
 
-      <!-- Supporting Details -->
-      <div class="pdm-section pdm-details" id="section-details">
-        <h4 class="pdm-section__title">Details</h4>
-        <div class="pdm-details__grid">
-          <div class="pdm-detail" id="detail-row-physical">
-            <span class="pdm-detail__label">Build</span>
-            <span class="pdm-detail__value" id="detail-physical-value">{t(preview?.build)}</span>
-          </div>
-          <div class="pdm-detail" id="detail-row-status">
-            <span class="pdm-detail__label">Status</span>
-            <span class="pdm-detail__value" id="detail-status-value">{t(preview?.status)}</span>
-          </div>
-          <div class="pdm-detail" id="detail-row-draft">
-            <span class="pdm-detail__label">Draft</span>
-            <span class="pdm-detail__value pdm-detail__value--with-logo" id="detail-draft-value">
-              <img class="pdm-detail__logo" id="detail-draft-team-logo" src="" alt="" onerror={NFL_LOGO_ONERROR} onload={NFL_LOGO_ONLOAD} />
-              <span id="detail-draft-text">{t(preview?.draft)}</span>
-            </span>
-          </div>
-          <div class="pdm-detail" id="detail-row-college">
-            <span class="pdm-detail__label">College</span>
-            <span class="pdm-detail__value pdm-detail__value--with-logo" id="detail-college-value">
-              <img class="pdm-detail__logo pdm-detail__logo--college" id="detail-college-logo" src="" alt="" onerror={COLLEGE_LOGO_ONERROR} onload={COLLEGE_LOGO_ONLOAD} />
-              <span id="detail-college">{t(preview?.college)}</span>
-            </span>
-          </div>
-          {!hideContract && (
-            <div class="pdm-detail" id="detail-row-contract">
-              <span class="pdm-detail__label">Contract</span>
-              <span class="pdm-detail__value" id="detail-contract-detail">{t(preview?.contractDetail)}</span>
-            </div>
-          )}
-          <div class="pdm-detail" id="detail-row-bye">
-            <span class="pdm-detail__label">Bye</span>
-            <span class="pdm-detail__value" id="detail-bye-value">{t(preview?.bye)}</span>
-          </div>
-        </div>
-      </div>
     </div>
   </div>
 </div>
@@ -682,7 +713,8 @@ const t = (value?: string) => value ?? '\u2014';
      anchor needs on top of it, plus a size bump: the handshake's symbol is a
      wide 124x76 viewBox, so at the gavel's 15px it renders visibly shorter
      than the icon it sits beside. */
-  .pdm-trade { text-decoration: none; }
+  .pdm-trade,
+  .pdm-acq { text-decoration: none; }
   .pdm-trade .pdm-claim__icon svg { width: 19px; height: 19px; }
 
   /* ================================================================
@@ -1080,6 +1112,7 @@ const t = (value?: string) => value ?? '\u2014';
   import { escapeHtml } from '../../utils/player-cell-html';
   import { isWatched, loadWatchList, toggleWatch, getWatchListAuth, onWatchListChange } from '../../utils/watch-list-client';
   import { requestSignIn } from '../../utils/player-actions';
+  import { rememberPendingClaim } from '../../utils/claim-resume';
   // No per-navigation reset: player-claim-client keys its state by league and
   // re-reads the page's league on every call, so a ClientRouter hop already
   // reads the right bucket. A blanket reset on `astro:page-load` fired on the
@@ -1263,10 +1296,43 @@ const t = (value?: string) => value ?? '\u2014';
     // read all land on the same quiet outcome — Watch alone.
     const claimBtn = document.getElementById('pdm-claim') as HTMLButtonElement | null;
     const tradeLink = document.getElementById('pdm-trade') as HTMLAnchorElement | null;
+    const acqLink = document.getElementById('pdm-acq') as HTMLAnchorElement | null;
     const actionsRow = document.getElementById('pdm-actions') as HTMLElement | null;
     let claimPlayer: any = null;
     const paintClaim = () => {
-      const offer = claimPlayer?.id ? offerFor(claimPlayer.id) : null;
+      // The page's off-site link outranks the in-place form (see #pdm-acq):
+      // one acquisition per player, never both.
+      const acqUrl = typeof claimPlayer?.acqUrl === 'string' && /^https:\/\//.test(claimPlayer.acqUrl)
+        ? claimPlayer.acqUrl
+        : null;
+      // Signed-out visitor on a page that prompts sign-in (the bridge says
+      // so), for a player the row itself calls claimable: the ⋮ sheet's
+      // "Sign in to claim", which is the only acquisition such a visitor has.
+      const bridge = document.getElementById('watch-list-bridge');
+      const signInToAcquire = !acqUrl
+        && claimPlayer?.claimable === true
+        && bridge?.dataset.signedIn !== 'true'
+        && bridge?.dataset.promptSignin === 'true';
+      if (acqLink) {
+        acqLink.hidden = !acqUrl && !signInToAcquire;
+        const label = document.getElementById('pdm-acq-label');
+        const desc = document.getElementById('pdm-acq-desc');
+        if (acqUrl) {
+          acqLink.href = acqUrl;
+          acqLink.target = '_blank';
+          acqLink.dataset.signIn = '';
+          if (label) label.textContent = `${claimPlayer.acqLabel || 'Bid'} on MyFantasyLeague`;
+          if (desc) desc.textContent = 'Opens MFL in a new tab';
+        } else if (signInToAcquire) {
+          const verb = bridge?.dataset.claimVerb === 'Bid' ? 'bid' : 'claim';
+          acqLink.href = '#';
+          acqLink.removeAttribute('target');
+          acqLink.dataset.signIn = '1';
+          if (label) label.textContent = `Sign in to ${verb}`;
+          if (desc) desc.textContent = 'Sign in with MFL and we will bring you back here';
+        }
+      }
+      const offer = !acqUrl && !signInToAcquire && claimPlayer?.id ? offerFor(claimPlayer.id) : null;
       if (claimBtn) {
         claimBtn.hidden = !offer;
         if (offer) {
@@ -1331,9 +1397,28 @@ const t = (value?: string) => value ?? '\u2014';
         actionsRow.hidden =
           (watchBtn?.hidden ?? true) &&
           (claimBtn?.hidden ?? true) &&
-          (tradeLink?.hidden ?? true);
+          (tradeLink?.hidden ?? true) &&
+          (acqLink?.hidden ?? true);
       }
     };
+    if (acqLink && !acqLink.dataset.pdmAcqWired) {
+      acqLink.dataset.pdmAcqWired = '1';
+      acqLink.addEventListener('click', (e) => {
+        if (acqLink.dataset.signIn !== '1' || !claimPlayer?.id) return;
+        e.preventDefault();
+        // Park the player so the post-sign-in reload lands on his claim form,
+        // exactly as the ⋮ sheet's sign-in action does.
+        rememberPendingClaim({
+          id: String(claimPlayer.id),
+          name: claimPlayer.name,
+          position: claimPlayer.position,
+          nflTeam: claimPlayer.nflTeam,
+          espnId: claimPlayer.espnId,
+        });
+        closeModal();
+        requestSignIn();
+      });
+    }
     if (claimBtn && !claimBtn.dataset.pdmClaimWired) {
       claimBtn.dataset.pdmClaimWired = '1';
       claimBtn.addEventListener('click', () => {
@@ -1728,6 +1813,25 @@ const t = (value?: string) => value ?? '\u2014';
       var ht = formatHeight(playerData.height);
       var wt = playerData.weight ? playerData.weight + ' lbs' : null;
       setText('detail-physical-value', [ht, wt].filter(Boolean).join(' \u00B7 ') || '\u2014');
+
+      // ── Details: Usage + ADP (free-agent tables only) ──
+
+      var usageRow = document.getElementById('detail-row-usage');
+      if (usageRow) {
+        var uParts = [];
+        if (playerData.offenseSnaps != null) uParts.push(playerData.offenseSnaps + ' snaps');
+        if (playerData.snapPct != null) uParts.push(Number(playerData.snapPct).toFixed(1) + '%');
+        if (playerData.snapGames != null) uParts.push(playerData.snapGames + (playerData.snapGames === 1 ? ' game' : ' games'));
+        usageRow.style.display = !isDefense && uParts.length > 0 ? '' : 'none';
+        setText('detail-usage-value', uParts.join(' \u00B7 '));
+        var usageLabel = document.getElementById('detail-usage-label');
+        if (usageLabel) usageLabel.textContent = playerData.snapSeason ? 'Snaps ' + playerData.snapSeason : 'Snaps';
+      }
+      var adpRow = document.getElementById('detail-row-adp');
+      if (adpRow) {
+        adpRow.style.display = playerData.adp != null ? '' : 'none';
+        if (playerData.adp != null) setText('detail-adp-value', Number(playerData.adp).toFixed(1));
+      }
 
       // ── Details: Status ──
 

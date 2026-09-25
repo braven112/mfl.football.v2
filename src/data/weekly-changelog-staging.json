@@ -13,6 +13,30 @@
       "lede": "The roster page leads with your club now — its colour, its crest, your record, rank and points — then last week's result, this week's game and every week of the season as a row you can click straight into the schedule. One header, both leagues.",
       "image": "roster-header.webp",
       "imageAlt": "TheLeague's roster page with the new header: the club nameplate in its own colour, last result and next game, the season rail, and every club's crest in a row below"
+    },
+    {
+      "date": "2026-09-25",
+      "type": "enhancement",
+      "summary": "Free Agents on your phone is now a clean list — player, points and projection — and tapping anywhere on a row opens his full card, with Claim/Bid and Watch inside.",
+      "impact": "user",
+      "area": "free-agents",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-25",
+      "type": "bug-fix",
+      "summary": "TheLeague's Free Agents PPG column is now points per NFL game played, so free agents finally show a rate — and it matches the Per Game on his player card.",
+      "impact": "user",
+      "area": "free-agents",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-09-25",
+      "type": "bug-fix",
+      "summary": "Set Lineup and Rosters now mark the right NFL bye weeks — they were reading last season's calendar, and Washington and Jacksonville byes never showed at all.",
+      "impact": "user",
+      "area": "lineups",
+      "league": "both"
     }
   ]
 }

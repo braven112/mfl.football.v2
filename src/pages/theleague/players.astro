@@ -30,8 +30,11 @@ import '../../styles/player-cell.css';
 import '../../styles/ranking-columns.css';
 import '../../styles/fa-claim-button.css';
 import '../../styles/snap-columns.css';
+import '../../styles/free-agents-mobile.css';
 import collegeLogos from '../../data/college-logos.json';
 import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
+import nflByeWeeksFile from '../../../data/nfl/bye-weeks.json';
+import { byeWeeksByTeam } from '../../utils/nfl-bye-lookup';
 import leagueConfig from '../../data/theleague.config.json';
 import { getLeagueBySlug, leagueClock } from '../../config/leagues';
 import { getCachedRosters } from '../../utils/mfl-roster-cache';
@@ -229,38 +232,16 @@ const adpRdfMap = buildAdpMap(adpRedraftModules);
 // function the snap-count columns beside it use, so the two can never disagree.
 const statsSeasonYear = resolveStatsSeasonYear(nowRef);
 const seasonWeeklyData = findForYear(seasonWeeklyModules, statsSeasonYear);
-// The YTD feed is the ONLY source for the points column, and the weekly sum
-// below is deliberately not a fallback for it: it cannot see an unrostered
-// player at all, and where it can see one it over-counts him — a franchise
-// appears in two matchups in a doubleheader week, which billed every one of
-// TheLeague's 260 scored 2026 players at exactly 2x his real total. The weekly
-// maps stay for the rostered-weeks rate below, where that double cancels out.
+// The YTD feed is the ONLY source for the points column. The league's weekly
+// results are deliberately not a fallback for it: they cannot see an
+// unrostered player at all, and where they can see one they over-count him — a
+// franchise appears in two matchups in a doubleheader week, which billed every
+// one of TheLeague's 260 scored 2026 players at exactly 2x his real total.
 const ytdPtsMap = parseYtdPlayerScores(findForYear(seasonYtdModules, statsSeasonYear));
-const weeklyPtsMap = new Map<string, number>();
-const weeklyGamesMap = new Map<string, number>();
-if (Array.isArray(seasonWeeklyData)) {
-  for (const weekPayload of seasonWeeklyData) {
-    const matchups = weekPayload?.weeklyResults?.matchup;
-    if (!matchups) continue;
-    const matchupArr = Array.isArray(matchups) ? matchups : [matchups];
-    for (const m of matchupArr) {
-      const franchises = m?.franchise ? (Array.isArray(m.franchise) ? m.franchise : [m.franchise]) : [];
-      for (const f of franchises) {
-        const players = f?.player ? (Array.isArray(f.player) ? f.player : [f.player]) : [];
-        for (const p of players) {
-          if (!p?.id || !p?.score) continue;
-          const score = parseFloat(p.score);
-          if (!isNaN(score) && score > 0) {
-            weeklyPtsMap.set(p.id, (weeklyPtsMap.get(p.id) || 0) + score);
-            weeklyGamesMap.set(p.id, (weeklyGamesMap.get(p.id) || 0) + 1);
-          }
-        }
-      }
-    }
-  }
-}
 
 // Build weekly player results for the modal's Season Results table
+// Weeks the sheet's table (and so the PPG column) counts: the fantasy season.
+const SEASON_RESULT_WEEKS = 17;
 const nflScheduleData =
   findForYear(nflScheduleFullModules, statsSeasonYear) ??
   findForYear(nflScheduleModules, statsSeasonYear);
@@ -271,7 +252,7 @@ const playerWeekScores = parsePlayerWeekScores(
   findForYear(playerWeekScoreModules, statsSeasonYear)
 );
 const weeklyPlayerResults = (nflScheduleData && Array.isArray(seasonWeeklyData))
-  ? buildWeeklyPlayerResults(seasonWeeklyData, nflScheduleData, fpaData, playersDataForSeason, leagueData, 17, playerWeekScores)
+  ? buildWeeklyPlayerResults(seasonWeeklyData, nflScheduleData, fpaData, playersDataForSeason, leagueData, SEASON_RESULT_WEEKS, playerWeekScores)
   : {};
 
 // Snap counts (GP / Snaps / Snap%).
@@ -674,13 +655,23 @@ if (Array.isArray(allPlayers)) {
       salary: rosterInfo?.salary ?? null,
       contractYrs: rosterInfo?.contractYrs ?? null,
       franchiseId: rosterInfo?.franchiseId ?? null,
-      // Rostered-weeks rate, on the weekly pair rather than the YTD total: that
-      // payload carries no games-played field, so pairing it with this
-      // denominator would price a one-week rental's whole season as one game.
+      // Per NFL game played, from the every-player weekly feed — NOT the
+      // league's weeklyResults, which only sees a player in the weeks he sat on
+      // a fantasy roster and so left almost every free agent without a rate.
+      // Numerator and denominator come from the same feed, and a "game" is any
+      // week he has a score (zeros included): exactly the player sheet's own
+      // Per Game, so the column and the card cannot disagree.
       ppg: (() => {
-        const pts = weeklyPtsMap.get(p.id);
-        const gp = weeklyGamesMap.get(p.id);
-        return (pts && gp && gp > 0) ? Math.round((pts / gp) * 10) / 10 : null;
+        const weeks = playerWeekScores.get(p.id);
+        if (!weeks) return null;
+        // The same weeks the sheet's Season Results table counts, so the two
+        // agree once week 18 scores exist.
+        const scores = Object.entries(weeks)
+          .filter(([w]) => Number(w) <= SEASON_RESULT_WEEKS)
+          .map(([, v]) => v);
+        if (scores.length === 0) return null;
+        const pts = scores.reduce((a, b) => a + b, 0);
+        return Math.round((pts / scores.length) * 10) / 10;
       })(),
       salaryYear1: historicalSalaryByYearMap.get(p.id)?.[salaryYear1] ?? null,
       salaryYear2: historicalSalaryByYearMap.get(p.id)?.[salaryYear2] ?? null,
@@ -706,11 +697,10 @@ playerList.sort((a, b) => {
 
 const hasProjected = projectedMap.size > 0;
 const hasSeasonPts = ytdPtsMap.size > 0;
-// PPG is gated on its OWN source, not on the points column's. The two used to
-// share a map; now that points come from the YTD feed and the rate still comes
-// from the weekly sum, a season with no YTD feed would otherwise hide a PPG
-// column that has everything it needs.
-const hasPpg = weeklyPtsMap.size > 0;
+// PPG is gated on its OWN source (the every-player weekly feed), not on the
+// points column's YTD feed: a season with no YTD feed would otherwise hide a
+// PPG column that has everything it needs.
+const hasPpg = playerWeekScores.size > 0;
 
 // Count free agents by position for category tabs. Mirrors the client's
 // initial filter state: rookies only count once the draft is complete, so
@@ -770,6 +760,9 @@ const nflTeamsList = [...nflTeamsSet].sort();
 
 const playerDataJson = JSON.stringify(playerList);
 const nflTeamsJson = JSON.stringify(nflTeamsList);
+// Team -> bye week for the player sheet's Details (both code dialects; see
+// nfl-bye-lookup.ts). 32 teams, not a field on every row.
+const byeWeeksJson = JSON.stringify(byeWeeksByTeam(nflByeWeeksFile, nowRef));
 const defSpotlightJson = JSON.stringify(DEF_SPOTLIGHT_PLAYERS);
 
 // NFL-team gradient backdrops for player avatars (same treatment as the modal
@@ -1186,33 +1179,33 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             <th class="sortable col-age" data-sort="age">
               <div class="th-content">Age</div>
             </th>
-            <th class="sortable col-sm col-always-profile" data-sort="exp">
+            <th class="m-hide sortable col-sm col-always-profile" data-sort="exp">
               <div class="th-content">Exp</div>
             </th>
-            <th class="sortable col-sm col-always-profile" data-sort="draftRd">
+            <th class="m-hide sortable col-sm col-always-profile" data-sort="draftRd">
               <div class="th-content">Draft</div>
             </th>
-            <th class="sortable col-text col-group--stats col-college" data-sort="college" title="College" aria-label="College">
+            <th class="m-hide sortable col-text col-group--stats col-college" data-sort="college" title="College" aria-label="College">
               <div class="th-content">C</div>
             </th>
-            <th class="sortable col-sm col-always-profile" data-sort="height">
+            <th class="m-hide sortable col-sm col-always-profile" data-sort="height">
               <div class="th-content">Ht</div>
             </th>
-            <th class="sortable col-sm col-always-profile" data-sort="weight">
+            <th class="m-hide sortable col-sm col-always-profile" data-sort="weight">
               <div class="th-content">Wt</div>
             </th>
             {hasSnapCounts && (
-              <th class="sortable col-sm col-group--stats" data-sort="snapGames" title={`Games with an offensive snap \u2014 ${snapScopeTitle}`}>
+              <th class="m-hide sortable col-sm col-group--stats" data-sort="snapGames" title={`Games with an offensive snap \u2014 ${snapScopeTitle}`}>
                 <div class="th-content"><span class="th-label">GP<small class="th-season">{snapSeasonLabel}</small></span></div>
               </th>
             )}
             {hasSnapCounts && (
-              <th class="sortable col-sm col-group--stats" data-sort="snaps" title={`Offensive snaps \u2014 ${snapScopeTitle}`}>
+              <th class="m-hide sortable col-sm col-group--stats" data-sort="snaps" title={`Offensive snaps \u2014 ${snapScopeTitle}`}>
                 <div class="th-content"><span class="th-label">Snaps<small class="th-season">{snapSeasonLabel}</small></span></div>
               </th>
             )}
             {hasSnapCounts && (
-              <th class="sortable col-num col-group--stats" data-sort="snapPct" title={`Share of his team's offensive plays in the games he played \u2014 ${snapScopeTitle}`}>
+              <th class="m-hide sortable col-num col-group--stats" data-sort="snapPct" title={`Share of his team's offensive plays in the games he played \u2014 ${snapScopeTitle}`}>
                 <div class="th-content"><span class="th-label">Snap%<small class="th-season">{snapSeasonLabel}</small></span></div>
               </th>
             )}
@@ -1225,7 +1218,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
                 <div class="th-content">{statsSeasonYear} Pts</div>
               </th>
             )}
-            {hasPpg && hasSnapCounts && (
+            {hasPpg && (
               <th class="sortable col-num col-group--stats col-value-ppg" data-sort="ppg">
                 <div class="th-content">PPG</div>
               </th>
@@ -1278,10 +1271,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             <th class="col-group--auction col-auction-placebid" style="display: none;" aria-label="Place a bid on this player">
               <div class="th-content"></div>
             </th>
-            <th class="sortable col-sm col-contract col-contract-yrs" data-sort="contractYrs" style="display: none;">
+            <th class="m-hide sortable col-sm col-contract col-contract-yrs" data-sort="contractYrs" style="display: none;">
               <div class="th-content">Yrs</div>
             </th>
-            <th class="sortable col-num col-contract" data-sort="salary" style="display: none;">
+            <th class="m-hide sortable col-num col-contract" data-sort="salary" style="display: none;">
               <div class="th-content">Sal/Bid</div>
             </th>
           </tr>
@@ -1318,12 +1311,13 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 {!claimFranchiseId && <SignInModal config={signInConfig} />}
 <WatchListBridge signedIn={watchSignedIn} claimVerb={claimVerb} promptSignIn={promptSignIn} />
 
-<script define:vars={{ canClaim, promptSignIn, playerDataJson, hasProjected, hasSeasonPts, hasPpg, hasSnapCounts, nflTeamsJson, hasSurplusData, hasAuctionData, isAuctionSeason, auctionEndMs, isAdmin, currentYear, mflHost, mflLeagueId, mflActionYear, franchiseNamesJson, franchiseBannersJson, defSpotlightJson, nflAvatarBgJson, nflAvatarBgFallback, nflAvatarBorderJson, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, noHeadshot, logoOnerror: NFL_LOGO_ONERROR, collegeLogoOnerror: COLLEGE_LOGO_ONERROR, collegeLogoOnload: COLLEGE_LOGO_ONLOAD, rookieDraftComplete }}>
+<script define:vars={{ snapSeasonLabel, byeWeeksJson, canClaim, promptSignIn, playerDataJson, hasProjected, hasSeasonPts, hasPpg, hasSnapCounts, nflTeamsJson, hasSurplusData, hasAuctionData, isAuctionSeason, auctionEndMs, isAdmin, currentYear, mflHost, mflLeagueId, mflActionYear, franchiseNamesJson, franchiseBannersJson, defSpotlightJson, nflAvatarBgJson, nflAvatarBgFallback, nflAvatarBorderJson, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, noHeadshot, logoOnerror: NFL_LOGO_ONERROR, collegeLogoOnerror: COLLEGE_LOGO_ONERROR, collegeLogoOnload: COLLEGE_LOGO_ONLOAD, rookieDraftComplete }}>
   // define:vars creates const — copy to let so polling can update at runtime
   let _hasAuctionData = hasAuctionData;
   const players = JSON.parse(playerDataJson);
   // team code → marquee defender { name, espnId } for the DEF hero spotlight
   const DEF_SPOTLIGHT = JSON.parse(defSpotlightJson);
+  const BYE_WEEKS = JSON.parse(byeWeeksJson);
   const franchiseNameMap = new Map(JSON.parse(franchiseNamesJson));
   const franchiseBannerMap = new Map(JSON.parse(franchiseBannersJson));
 
@@ -1431,6 +1425,12 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
     // Watch list is a FILTER wearing the Stats columns, not a column group.
     const showStats = activeView === 'stats' || activeView === 'watchlist';
+    // Phones key their compact row off this (the max-width: 767px block):
+    // Proj is one of the two stats a phone row keeps, but only in the
+    // Stats-shaped views.
+    document.querySelectorAll('.players-table').forEach(t => {
+      t.setAttribute('data-stats-view', String(showStats));
+    });
     const showRankings = activeView === 'rankings' && canShowRankingsView;
     const showValue = activeView === 'value' && canShowValueView;
     const showAuctionView = activeView === 'auction' && canShowAuctionView;
@@ -2273,6 +2273,11 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         draftRound: p.draftRd || null, draftPick: p.draftPick || null,
         points: p.projected != null ? p.projected : null,
         offenseSnaps: p.snaps != null ? p.snaps : null,
+        // The snap columns a phone row hides — the sheet's Details carries them.
+        snapGames: p.snapGames != null ? p.snapGames : null,
+        snapPct: p.snapPct != null ? p.snapPct : null,
+        snapSeason: snapSeasonLabel || null,
+        byeWeek: BYE_WEEKS[String(p.team || '').toUpperCase()] ?? null,
         // Rostered players carry their owner, so the modal band wears the
         // FANTASY team and names it — without this every player on this page
         // opened as a free agent, including the ones that aren't.
@@ -2326,14 +2331,14 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         </td>
         ${kebabCell}
         <td class="cell-age">${p.age ?? '-'}</td>
-        <td class="cell-sm col-always-profile">${p.exp != null ? p.exp : '-'}</td>`;
+        <td class="m-hide cell-sm col-always-profile">${p.exp != null ? p.exp : '-'}</td>`;
 
       const htDisplay = p.height ? Math.floor(p.height / 12) + "'" + (p.height % 12) + '"' : '-';
       const wtDisplay = p.weight ? p.weight + '' : '-';
-      html += `<td class="cell-sm col-always-profile">${p.draftRd != null ? 'Rd ' + p.draftRd : '<span class="na">-</span>'}</td>
-        <td class="cell-college col-group--stats">${p.collegeLogo ? `<img src="${escapeAttr(p.collegeLogo)}" alt="${escapeAttr(p.college || '')}" title="${escapeAttr(p.college || '')}" class="college-logo" loading="lazy" decoding="async" onerror="${escapeAttr(collegeLogoOnerror)}" onload="${escapeAttr(collegeLogoOnload)}" />` : (p.college ? `<span class="na" title="${escapeAttr(p.college)}">-</span>` : '<span class="na">-</span>')}</td>
-        <td class="cell-sm col-always-profile">${htDisplay}</td>
-        <td class="cell-sm col-always-profile">${wtDisplay}</td>`;
+      html += `<td class="m-hide cell-sm col-always-profile">${p.draftRd != null ? 'Rd ' + p.draftRd : '<span class="na">-</span>'}</td>
+        <td class="m-hide cell-college col-group--stats">${p.collegeLogo ? `<img src="${escapeAttr(p.collegeLogo)}" alt="${escapeAttr(p.college || '')}" title="${escapeAttr(p.college || '')}" class="college-logo" loading="lazy" decoding="async" onerror="${escapeAttr(collegeLogoOnerror)}" onload="${escapeAttr(collegeLogoOnload)}" />` : (p.college ? `<span class="na" title="${escapeAttr(p.college)}">-</span>` : '<span class="na">-</span>')}</td>
+        <td class="m-hide cell-sm col-always-profile">${htDisplay}</td>
+        <td class="m-hide cell-sm col-always-profile">${wtDisplay}</td>`;
 
       // Dynamic ranking columns
       for (const col of rankingLookup.columns) {
@@ -2346,16 +2351,16 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       }
 
       if (hasSnapCounts) {
-        html += `<td class="cell-sm col-group--stats">${p.snapGames != null ? p.snapGames : '<span class="na">-</span>'}</td>`;
-        html += `<td class="cell-sm col-group--stats">${p.snaps != null ? p.snaps : '<span class="na">-</span>'}</td>`;
-        html += `<td class="cell-num col-group--stats">${p.snapPct != null ? p.snapPct.toFixed(1) + '%' : '<span class="na">-</span>'}</td>`;
+        html += `<td class="m-hide cell-sm col-group--stats">${p.snapGames != null ? p.snapGames : '<span class="na">-</span>'}</td>`;
+        html += `<td class="m-hide cell-sm col-group--stats">${p.snaps != null ? p.snaps : '<span class="na">-</span>'}</td>`;
+        html += `<td class="m-hide cell-num col-group--stats">${p.snapPct != null ? p.snapPct.toFixed(1) + '%' : '<span class="na">-</span>'}</td>`;
       }
 
       if (hasSeasonPts) {
         html += `<td class="cell-num col-group--stats">${p.seasonPts != null ? p.seasonPts.toFixed(1) : '<span class="na">-</span>'}</td>`;
       }
 
-      if (hasPpg && hasSnapCounts) {
+      if (hasPpg) {
         html += `<td class="cell-num col-group--stats col-value-ppg">${p.ppg != null ? p.ppg.toFixed(1) : '<span class="na">-</span>'}</td>`;
       }
 
@@ -2503,10 +2508,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         }
       }
 
-      html += `<td class="cell-sm col-contract col-contract-yrs">${p.contractYrs != null ? p.contractYrs : (p.rostered ? '<span class="na">-</span>' : '<span class="fa-tag">FA</span>')}</td>`;
+      html += `<td class="m-hide cell-sm col-contract col-contract-yrs">${p.contractYrs != null ? p.contractYrs : (p.rostered ? '<span class="na">-</span>' : '<span class="fa-tag">FA</span>')}</td>`;
       // Salary cell — show auction bid for free agents without a salary
       if (p.salary != null && p.salary > 0) {
-        html += `<td class="cell-num col-contract">$${p.salary >= 1000000 ? (p.salary / 1000000).toFixed(2) + 'M' : (p.salary / 1000).toFixed(0) + 'K'}</td>`;
+        html += `<td class="m-hide cell-num col-contract">$${p.salary >= 1000000 ? (p.salary / 1000000).toFixed(2) + 'M' : (p.salary / 1000).toFixed(0) + 'K'}</td>`;
       } else if (p.auctionBid != null && p.auctionBid > 0) {
         const tierCls = getBidTierClass(p.auctionStatus, p.auctionBidTime);
         const changedCls = changedPlayerIds.has(p.id) ? ' col-value-bid--changed' : '';
@@ -2514,9 +2519,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           ? '$' + (p.auctionBid / 1000000).toFixed(1) + 'M'
           : '$' + (p.auctionBid / 1000).toFixed(0) + 'K';
         const titleText = getBidTitleText(p.auctionStatus, p.auctionBidTime);
-        html += `<td class="cell-num col-contract col-value-bid ${tierCls}${changedCls}" title="${titleText}">${bidFmt}</td>`;
+        html += `<td class="m-hide cell-num col-contract col-value-bid ${tierCls}${changedCls}" title="${titleText}">${bidFmt}</td>`;
       } else {
-        html += `<td class="cell-num col-contract"><span class="na">-</span></td>`;
+        html += `<td class="m-hide cell-num col-contract"><span class="na">-</span></td>`;
       }
 
       html += `</tr>`;
@@ -3249,13 +3254,21 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   });
 </script>
 
-<!-- Player modal trigger (delegated, works across re-renders) -->
+<!-- Player modal trigger (delegated, works across re-renders).
+     Bundled scripts run once per session under the ClientRouter, so this must
+     re-bind on astro:page-load — arriving here by in-site navigation swaps in a
+     fresh #player-table-body that a DOMContentLoaded-only init never sees, and
+     every row and name tap on it was dead. The dataset flag stops the initial
+     load's page-load event from binding a second listener. -->
 <script>
   import { initPlayerModalTrigger } from '../../utils/player-modal-trigger';
 
   function initModalTrigger() {
     const tbody = document.getElementById('player-table-body');
-    if (tbody) initPlayerModalTrigger(tbody);
+    if (tbody && !tbody.dataset.modalInit) {
+      tbody.dataset.modalInit = 'true';
+      initPlayerModalTrigger(tbody, { rowTapMedia: '(max-width: 767px)' });
+    }
   }
 
   if (document.readyState === 'loading') {
@@ -3263,6 +3276,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   } else {
     initModalTrigger();
   }
+  document.addEventListener('astro:page-load', initModalTrigger);
 </script>
 
 <style>

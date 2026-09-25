@@ -67,6 +67,37 @@ export interface PlayerModalData {
   offenseSnaps?: number | null;
   defenseSnaps?: number | null;
   stSnaps?: number | null;
+  /** Free-agent tables only: the snap columns a phone row hides. */
+  snapGames?: number | null;
+  snapPct?: number | null;
+  /** Which season the snap figures cover, as the table labels it (e.g. "'26"). */
+  snapSeason?: string | null;
+  /** Dynasty ADP (the AFL table's ADP column). */
+  adp?: number | null;
+  /**
+   * Off-site acquisition link (MFL's own bid/add page) for a viewer who cannot
+   * claim in place. The free-agent tables carry it on the row's ⋮ button; on a
+   * phone that column is hidden and the row itself opens the modal, so the
+   * trigger lifts it from the row into the payload rather than losing it.
+   */
+  acqUrl?: string | null;
+  acqLabel?: string | null;
+  /**
+   * The row's own free-agent verdict (the ⋮ button's `data-pa-claimable`).
+   * Lets the sheet offer a signed-out visitor "Sign in to claim", the ⋮
+   * sheet's other acquisition path, which a phone would otherwise lose.
+   */
+  claimable?: boolean;
+}
+
+export interface PlayerModalTriggerOptions {
+  /**
+   * Media query under which a tap ANYWHERE in the row opens that row's
+   * player, not just a tap on the name. The free-agent tables pass their
+   * phone breakpoint: there the name is a small target in a compact row, and
+   * the row's other controls live in the modal.
+   */
+  rowTapMedia?: string;
 }
 
 /**
@@ -75,10 +106,21 @@ export interface PlayerModalData {
  *
  * @param container - The parent element to listen on (e.g. a table body)
  */
-export function initPlayerModalTrigger(container: HTMLElement): void {
+export function initPlayerModalTrigger(
+  container: HTMLElement,
+  options: PlayerModalTriggerOptions = {},
+): void {
   container.addEventListener('click', (e) => {
     const clicked = e.target as HTMLElement;
-    const modalTrigger = clicked.closest<HTMLElement>('[data-player-modal]');
+    let modalTrigger = clicked.closest<HTMLElement>('[data-player-modal]');
+    if (!modalTrigger && options.rowTapMedia && window.matchMedia(options.rowTapMedia).matches) {
+      // A control elsewhere in the row keeps its own click.
+      if (clicked.closest('a, button, input, select, textarea, label')) return;
+      const row = clicked.closest('tr');
+      if (row && container.contains(row)) {
+        modalTrigger = row.querySelector<HTMLElement>('[data-player-modal]');
+      }
+    }
     if (!modalTrigger) return;
 
     // Don't open the modal when user clicks a nested interactive element
@@ -93,6 +135,16 @@ export function initPlayerModalTrigger(container: HTMLElement): void {
 
     try {
       const playerData: PlayerModalData = JSON.parse(raw);
+      const row = modalTrigger.closest('tr');
+      const acq = row?.querySelector<HTMLElement>('[data-pa-acq-url]');
+      if (acq && !playerData.acqUrl) {
+        playerData.acqUrl = acq.dataset.paAcqUrl || null;
+        playerData.acqLabel = acq.dataset.paAcqLabel || null;
+      }
+      const verdict = row?.querySelector<HTMLElement>('[data-pa-claimable]');
+      if (verdict && playerData.claimable === undefined) {
+        playerData.claimable = verdict.dataset.paClaimable === 'true';
+      }
       if (typeof (window as any).openPlayerDetailsModal === 'function') {
         (window as any).openPlayerDetailsModal(playerData);
       }
