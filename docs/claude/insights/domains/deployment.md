@@ -18,7 +18,11 @@
   (2026-07-07)
 - **The edge eats origin 5xx.** Return a handled error as `200` +
   `{ok: false}`; a real 500 reaches the browser as Vercel's own page and your
-  message is gone. (2026-07-07)
+  message is gone. `handledFailure` (`src/utils/api-response.ts`) does this
+  for you; the claim routes use it (guard:
+  `tests/claim-route-handled-failure-guard.test.ts`) after a locked-player
+  refusal shipped as a bare "HTTP 502". ~66 other API routes still return a
+  5xx somewhere. (2026-07-07, 2026-09-24)
 - **A skipped build reports as `CANCELED`, not as its own status**, and Vercel's
   ignore step INVERTS exit codes — `0` ignores, `1` proceeds. The build log is
   the only place the reason appears. (2026-09-06)

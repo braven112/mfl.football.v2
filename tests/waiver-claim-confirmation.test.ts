@@ -392,7 +392,9 @@ describe('readPendingWaiverPlayerIds — "could not verify" is not "nothing ther
       modal.indexOf('if (!res.ok || !data.success)'),
       modal.indexOf('waiver-claims:changed')
     );
-    expect(branch).toContain('showConfirmLink(data.confirmUrl)');
+    // The server's link first; the claim context's registry-derived add/drop
+    // page when the reply carries none (the locked 409, the catch-all).
+    expect(branch).toContain('showConfirmLink(data.confirmUrl || cfg.addDropUrl)');
     expect(
       branch.indexOf('showError('),
       'showError must run BEFORE showConfirmLink on the failure path'
