@@ -216,6 +216,59 @@ const t = (value?: string) => value ?? '\u2014';
         )}
       </div>
 
+      <!-- Supporting Details — directly under the metric tiles, ABOVE news and
+           the 17-row Season Results table. It used to sit last, which on a
+           phone put a player's build, usage and draft pedigree a long scroll
+           below the fold; the free-agent tables now hide those columns on a
+           phone and rely on this section to carry them. -->
+      <div class="pdm-section pdm-details" id="section-details">
+        <h4 class="pdm-section__title">Details</h4>
+        <div class="pdm-details__grid">
+          <div class="pdm-detail" id="detail-row-physical">
+            <span class="pdm-detail__label">Build</span>
+            <span class="pdm-detail__value" id="detail-physical-value">{t(preview?.build)}</span>
+          </div>
+          <!-- Usage and ADP are sent only by the free-agent tables; every
+               other opener leaves them hidden rather than showing a dash. -->
+          <div class="pdm-detail" id="detail-row-usage" style="display: none;">
+            <span class="pdm-detail__label" id="detail-usage-label">Snaps</span>
+            <span class="pdm-detail__value" id="detail-usage-value"></span>
+          </div>
+          <div class="pdm-detail" id="detail-row-adp" style="display: none;">
+            <span class="pdm-detail__label">ADP</span>
+            <span class="pdm-detail__value" id="detail-adp-value"></span>
+          </div>
+          <div class="pdm-detail" id="detail-row-status">
+            <span class="pdm-detail__label">Status</span>
+            <span class="pdm-detail__value" id="detail-status-value">{t(preview?.status)}</span>
+          </div>
+          <div class="pdm-detail" id="detail-row-draft">
+            <span class="pdm-detail__label">Draft</span>
+            <span class="pdm-detail__value pdm-detail__value--with-logo" id="detail-draft-value">
+              <img class="pdm-detail__logo" id="detail-draft-team-logo" src="" alt="" onerror={NFL_LOGO_ONERROR} onload={NFL_LOGO_ONLOAD} />
+              <span id="detail-draft-text">{t(preview?.draft)}</span>
+            </span>
+          </div>
+          <div class="pdm-detail" id="detail-row-college">
+            <span class="pdm-detail__label">College</span>
+            <span class="pdm-detail__value pdm-detail__value--with-logo" id="detail-college-value">
+              <img class="pdm-detail__logo pdm-detail__logo--college" id="detail-college-logo" src="" alt="" onerror={COLLEGE_LOGO_ONERROR} onload={COLLEGE_LOGO_ONLOAD} />
+              <span id="detail-college">{t(preview?.college)}</span>
+            </span>
+          </div>
+          {!hideContract && (
+            <div class="pdm-detail" id="detail-row-contract">
+              <span class="pdm-detail__label">Contract</span>
+              <span class="pdm-detail__value" id="detail-contract-detail">{t(preview?.contractDetail)}</span>
+            </div>
+          )}
+          <div class="pdm-detail" id="detail-row-bye">
+            <span class="pdm-detail__label">Bye</span>
+            <span class="pdm-detail__value" id="detail-bye-value">{t(preview?.bye)}</span>
+          </div>
+        </div>
+      </div>
+
       <!-- Latest News — ESPN athlete-scoped, fetched on open. Sits above the
            static content, so .pn-status/.pn-list reserve height in
            player-news.css; without that the whole modal jumps when the fetch
@@ -260,44 +313,6 @@ const t = (value?: string) => value ?? '\u2014';
         </div>
       </div>
 
-      <!-- Supporting Details -->
-      <div class="pdm-section pdm-details" id="section-details">
-        <h4 class="pdm-section__title">Details</h4>
-        <div class="pdm-details__grid">
-          <div class="pdm-detail" id="detail-row-physical">
-            <span class="pdm-detail__label">Build</span>
-            <span class="pdm-detail__value" id="detail-physical-value">{t(preview?.build)}</span>
-          </div>
-          <div class="pdm-detail" id="detail-row-status">
-            <span class="pdm-detail__label">Status</span>
-            <span class="pdm-detail__value" id="detail-status-value">{t(preview?.status)}</span>
-          </div>
-          <div class="pdm-detail" id="detail-row-draft">
-            <span class="pdm-detail__label">Draft</span>
-            <span class="pdm-detail__value pdm-detail__value--with-logo" id="detail-draft-value">
-              <img class="pdm-detail__logo" id="detail-draft-team-logo" src="" alt="" onerror={NFL_LOGO_ONERROR} onload={NFL_LOGO_ONLOAD} />
-              <span id="detail-draft-text">{t(preview?.draft)}</span>
-            </span>
-          </div>
-          <div class="pdm-detail" id="detail-row-college">
-            <span class="pdm-detail__label">College</span>
-            <span class="pdm-detail__value pdm-detail__value--with-logo" id="detail-college-value">
-              <img class="pdm-detail__logo pdm-detail__logo--college" id="detail-college-logo" src="" alt="" onerror={COLLEGE_LOGO_ONERROR} onload={COLLEGE_LOGO_ONLOAD} />
-              <span id="detail-college">{t(preview?.college)}</span>
-            </span>
-          </div>
-          {!hideContract && (
-            <div class="pdm-detail" id="detail-row-contract">
-              <span class="pdm-detail__label">Contract</span>
-              <span class="pdm-detail__value" id="detail-contract-detail">{t(preview?.contractDetail)}</span>
-            </div>
-          )}
-          <div class="pdm-detail" id="detail-row-bye">
-            <span class="pdm-detail__label">Bye</span>
-            <span class="pdm-detail__value" id="detail-bye-value">{t(preview?.bye)}</span>
-          </div>
-        </div>
-      </div>
     </div>
   </div>
 </div>
@@ -1760,6 +1775,25 @@ const t = (value?: string) => value ?? '\u2014';
       var ht = formatHeight(playerData.height);
       var wt = playerData.weight ? playerData.weight + ' lbs' : null;
       setText('detail-physical-value', [ht, wt].filter(Boolean).join(' \u00B7 ') || '\u2014');
+
+      // ── Details: Usage + ADP (free-agent tables only) ──
+
+      var usageRow = document.getElementById('detail-row-usage');
+      if (usageRow) {
+        var uParts = [];
+        if (playerData.offenseSnaps != null) uParts.push(playerData.offenseSnaps + ' snaps');
+        if (playerData.snapPct != null) uParts.push(Number(playerData.snapPct).toFixed(1) + '%');
+        if (playerData.snapGames != null) uParts.push(playerData.snapGames + (playerData.snapGames === 1 ? ' game' : ' games'));
+        usageRow.style.display = !isDefense && uParts.length > 0 ? '' : 'none';
+        setText('detail-usage-value', uParts.join(' \u00B7 '));
+        var usageLabel = document.getElementById('detail-usage-label');
+        if (usageLabel) usageLabel.textContent = playerData.snapSeason ? 'Snaps ' + playerData.snapSeason : 'Snaps';
+      }
+      var adpRow = document.getElementById('detail-row-adp');
+      if (adpRow) {
+        adpRow.style.display = playerData.adp != null ? '' : 'none';
+        if (playerData.adp != null) setText('detail-adp-value', Number(playerData.adp).toFixed(1));
+      }
 
       // ── Details: Status ──
 

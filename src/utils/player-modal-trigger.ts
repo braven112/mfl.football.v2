@@ -67,6 +67,13 @@ export interface PlayerModalData {
   offenseSnaps?: number | null;
   defenseSnaps?: number | null;
   stSnaps?: number | null;
+  /** Free-agent tables only: the snap columns a phone row hides. */
+  snapGames?: number | null;
+  snapPct?: number | null;
+  /** Which season the snap figures cover, as the table labels it (e.g. "'26"). */
+  snapSeason?: string | null;
+  /** Dynasty ADP (the AFL table's ADP column). */
+  adp?: number | null;
   /**
    * Off-site acquisition link (MFL's own bid/add page) for a viewer who cannot
    * claim in place. The free-agent tables carry it on the row's ⋮ button; on a

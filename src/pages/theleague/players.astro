@@ -1300,7 +1300,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 {!claimFranchiseId && <SignInModal config={signInConfig} />}
 <WatchListBridge signedIn={watchSignedIn} claimVerb={claimVerb} promptSignIn={promptSignIn} />
 
-<script define:vars={{ canClaim, promptSignIn, playerDataJson, hasProjected, hasSeasonPts, hasPpg, hasSnapCounts, nflTeamsJson, hasSurplusData, hasAuctionData, isAuctionSeason, auctionEndMs, isAdmin, currentYear, mflHost, mflLeagueId, mflActionYear, franchiseNamesJson, franchiseBannersJson, defSpotlightJson, nflAvatarBgJson, nflAvatarBgFallback, nflAvatarBorderJson, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, noHeadshot, logoOnerror: NFL_LOGO_ONERROR, collegeLogoOnerror: COLLEGE_LOGO_ONERROR, collegeLogoOnload: COLLEGE_LOGO_ONLOAD, rookieDraftComplete }}>
+<script define:vars={{ snapSeasonLabel, canClaim, promptSignIn, playerDataJson, hasProjected, hasSeasonPts, hasPpg, hasSnapCounts, nflTeamsJson, hasSurplusData, hasAuctionData, isAuctionSeason, auctionEndMs, isAdmin, currentYear, mflHost, mflLeagueId, mflActionYear, franchiseNamesJson, franchiseBannersJson, defSpotlightJson, nflAvatarBgJson, nflAvatarBgFallback, nflAvatarBorderJson, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, noHeadshot, logoOnerror: NFL_LOGO_ONERROR, collegeLogoOnerror: COLLEGE_LOGO_ONERROR, collegeLogoOnload: COLLEGE_LOGO_ONLOAD, rookieDraftComplete }}>
   // define:vars creates const — copy to let so polling can update at runtime
   let _hasAuctionData = hasAuctionData;
   const players = JSON.parse(playerDataJson);
@@ -2261,6 +2261,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         draftRound: p.draftRd || null, draftPick: p.draftPick || null,
         points: p.projected != null ? p.projected : null,
         offenseSnaps: p.snaps != null ? p.snaps : null,
+        // The snap columns a phone row hides — the sheet's Details carries them.
+        snapGames: p.snapGames != null ? p.snapGames : null,
+        snapPct: p.snapPct != null ? p.snapPct : null,
+        snapSeason: snapSeasonLabel || null,
         // Rostered players carry their owner, so the modal band wears the
         // FANTASY team and names it — without this every player on this page
         // opened as a free agent, including the ones that aren't.
