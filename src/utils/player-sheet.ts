@@ -94,10 +94,13 @@ export function renderQuickActions(actions: SheetAction[] | null | undefined): s
         'pdm-quick__btn',
         a.state === 'on' ? 'pdm-quick__btn--on' : '',
         a.tone === 'danger' ? 'pdm-quick__btn--danger' : '',
+        // `more` is the overflow: it always sits last, after the built-in
+        // Watch / Trade cards, as an icon.
+        a.id === 'more' ? 'pdm-quick__btn--more' : '',
       ].filter(Boolean).join(' ');
       const pressed = a.state === 'on' ? ' aria-pressed="true"' : '';
       const disabled = a.disabled ? ' disabled' : '';
-      const title = a.desc ? ` title="${escapeHtml(a.desc)}"` : '';
+      const title = ` title="${escapeHtml(a.desc || a.label)}"`;
       return `<button type="button" class="${cls}" data-sheet-action="${escapeHtml(a.id)}"${pressed}${disabled}${title}>`
         + icon(a.icon, 'pdm-quick__icon')
         + `<span class="pdm-quick__label">${escapeHtml(a.label)}</span>`

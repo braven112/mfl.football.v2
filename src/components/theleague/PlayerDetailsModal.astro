@@ -1187,6 +1187,36 @@ const tabAttrs = (id: SheetTab): HTMLAttributes<'button'> => {
   }
   .pdm-quick :global(.pdm-quick__icon svg) { width: 15px; height: 15px; fill: currentColor; }
 
+  /* The hero row, Sleeper-style: the first quick action (the primary —
+     Simulate cut, or Undo) keeps its label; the rest, and the built-in
+     Watch, are 44px icon circles whose label stays in the accessibility
+     tree (clipped, not display:none). More is the overflow and sits last. */
+  .pdm-quick :global(.pdm-quick__btn:not(:first-child)),
+  .pdm-quick :global(.pdm-quick__btn--more),
+  .pdm-actions--hero .pdm-watch {
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+    padding: 0;
+    justify-content: center;
+    flex: 0 0 auto;
+    position: relative;
+  }
+  .pdm-quick :global(.pdm-quick__btn:not(:first-child) .pdm-quick__icon),
+  .pdm-quick :global(.pdm-quick__btn--more .pdm-quick__icon) { background: transparent; }
+  .pdm-quick :global(.pdm-quick__btn:not(:first-child) .pdm-quick__label),
+  .pdm-quick :global(.pdm-quick__btn--more .pdm-quick__label),
+  .pdm-actions--hero .pdm-watch__text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .pdm-actions--hero .pdm-watch__icon { background: transparent; }
+  .pdm-quick :global(.pdm-quick__btn--more) { order: 1; }
+
   /* Tabs — underline, not a filled accent chip: white ink on
      --league-accent fails AA in dark (design-system.md). Sticky to the top
      of the scrolling body so Salary is one tap away from anywhere. */
@@ -1310,6 +1340,8 @@ const tabAttrs = (id: SheetTab): HTMLAttributes<'button'> => {
     background: transparent;
     border-style: dashed;
   }
+  .pdm-more :global(.pdm-more__btn:disabled .pdm-more__label),
+  .pdm-salary :global(.pdm-salopt:disabled .pdm-salopt__label) { color: var(--color-gray-600, #4b5563); }
   .pdm-more :global(.pdm-more__btn--danger) {
     color: var(--color-error, #dc2626);
     border-color: color-mix(in srgb, var(--color-error, #dc2626) 40%, transparent);
@@ -1366,7 +1398,7 @@ const tabAttrs = (id: SheetTab): HTMLAttributes<'button'> => {
   }
   .pdm-salary :global(.pdm-saltiles) {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(7.5rem, 100%), 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 0.5rem;
     margin: 0 0 1.25rem;
   }
@@ -1494,6 +1526,8 @@ const tabAttrs = (id: SheetTab): HTMLAttributes<'button'> => {
     .pdm-body {
       padding: 1.25rem;
     }
+
+    .pdm-salary :global(.pdm-saltiles) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
     .pdm-tabs {
       top: -1.25rem;
@@ -1658,6 +1692,12 @@ const tabAttrs = (id: SheetTab): HTMLAttributes<'button'> => {
   // re-bind (and leak) a listener per page.
   let repaintWatch: () => void = () => {};
   let watchChangeBound = false;
+  /**
+   * Re-pointed per init, like repaintWatch: the once-bound Escape handler
+   * below must hand focus back through THIS page's sheet. A no-op unless a
+   * tabbed sheet moved focus in (see restoreFocus in init).
+   */
+  let restoreSheetFocus: () => void = () => {};
 
   function initPlayerDetailsModal() {
     const modal = document.querySelector('.player-details-modal');
@@ -1690,6 +1730,7 @@ const tabAttrs = (id: SheetTab): HTMLAttributes<'button'> => {
 
     const closeModal = () => {
       if (modal) modal.classList.remove('active');
+      restoreSheetFocus();
       // Invalidate any pending render so a late response can't repaint a modal
       // the user already dismissed.
       cancelPlayerNews();
@@ -1936,6 +1977,7 @@ const tabAttrs = (id: SheetTab): HTMLAttributes<'button'> => {
         const activeModal = document.querySelector('.player-details-modal');
         if (e.key === 'Escape' && activeModal?.classList.contains('active')) {
           activeModal.classList.remove('active');
+          restoreSheetFocus();
           cancelPlayerNews();
         }
       });
@@ -2045,6 +2087,16 @@ const tabAttrs = (id: SheetTab): HTMLAttributes<'button'> => {
       if (el) el.textContent = value;
     };
 
+    // A tabbed sheet takes focus when it opens (its selected tab) and gives it
+    // back to whatever opened it when it closes. Untabbed openers are left
+    // exactly as they were — this sheet has never managed their focus.
+    let sheetOpener: HTMLElement | null = null;
+    restoreSheetFocus = () => {
+      const opener = sheetOpener;
+      sheetOpener = null;
+      if (opener && opener.isConnected) opener.focus();
+    };
+
     /** The payload on screen — `onAction` is read from here at click time. */
     let sheetData: PlayerModalData | null = null;
     let sheetTabs: SheetTabId[] = [];
@@ -2123,16 +2175,25 @@ const tabAttrs = (id: SheetTab): HTMLAttributes<'button'> => {
 
     const sheetApi: SheetActionApi = {
       rerender: (next) => {
-        // Innerhtml replaces the button the viewer pressed; put focus back on
-        // its successor so a keyboard user is not dropped to <body>.
-        const focusedId = (document.activeElement as HTMLElement | null)?.closest<HTMLElement>('[data-sheet-action]')?.dataset.sheetAction;
+        // innerHTML replaces the button the viewer pressed. Put focus back on
+        // its successor — the same action in the same group if it survived
+        // (a toggle), else whatever now holds its place (Simulate → Undo) —
+        // so a keyboard user is not dropped to <body> behind the sheet.
+        const pressed = (document.activeElement as HTMLElement | null)?.closest<HTMLElement>('[data-sheet-action]');
+        const group = pressed?.closest<HTMLElement>('#pdm-quick, #pdm-salary-body, #pdm-more-body') ?? null;
+        const groupId = group?.id ?? null;
+        const pressedId = pressed?.dataset.sheetAction ?? null;
+        const pressedAt = group && pressed ? Array.from(group.querySelectorAll('[data-sheet-action]')).indexOf(pressed) : -1;
         renderSheetParts(next, true);
         repaintClaim();
         paintGamelogEmpty();
-        if (focusedId && contentEl) {
-          const again = contentEl.querySelector<HTMLElement>(`[data-sheet-action="${CSS.escape(focusedId)}"]:not([disabled])`);
-          again?.focus();
-        }
+        if (!pressedId || !groupId) return;
+        const fresh = document.getElementById(groupId);
+        const candidates = Array.from(fresh?.querySelectorAll<HTMLElement>('[data-sheet-action]:not([disabled])') ?? []);
+        const same = candidates.find((el) => el.dataset.sheetAction === pressedId);
+        const all = Array.from(fresh?.querySelectorAll<HTMLElement>('[data-sheet-action]') ?? []);
+        const inPlace = pressedAt >= 0 ? all[Math.min(pressedAt, all.length - 1)] : undefined;
+        (same ?? (inPlace && !(inPlace as HTMLButtonElement).disabled ? inPlace : candidates[0]))?.focus();
       },
       close: () => closeModal(),
       announce: (message) => announce(message),
@@ -2710,6 +2771,12 @@ const tabAttrs = (id: SheetTab): HTMLAttributes<'button'> => {
       // ── Open ──
 
       if (modal) modal.classList.add('active');
+
+      if (sheetTabs.length) {
+        const opener = document.activeElement as HTMLElement | null;
+        if (opener && !modal?.contains(opener)) sheetOpener = opener;
+        tabButtons.find((btn) => btn.getAttribute('aria-selected') === 'true')?.focus();
+      }
     };
   }
 

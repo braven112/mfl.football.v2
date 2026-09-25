@@ -144,6 +144,12 @@ describe('the modal wiring', () => {
     expect(modal).not.toMatch(/window\.\w*onAction/);
   });
 
+  it('moves focus only for a tabbed sheet, and hands it back on close', () => {
+    // Untabbed openers keep the focus behaviour they have always had.
+    expect(modal).toMatch(/if \(sheetTabs\.length\) \{\s*const opener = document\.activeElement/);
+    expect(modal).toContain('restoreSheetFocus();');
+  });
+
   it('tabs are real WAI-ARIA tabs', () => {
     expect(modal).toContain('role="tablist"');
     expect(modal).toMatch(/role="tab"[^>]*aria-controls="pdm-panel-salary"/);
