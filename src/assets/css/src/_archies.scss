@@ -270,3 +270,47 @@ caption a {
     height: auto;
   }
 }
+
+// Phone-width safety net. Archie's does not load the TheLeague/AFL script
+// bundle, which wraps every .report in a scrolling .report-wrapper. Without
+// it, two things pushed page after page wider than the screen: _misc.scss
+// switches off the scroll on MFL's own .mobile-wrap (expecting that
+// wrapper), and some pages put their .report straight into #withmenus with
+// no wrapper at all. Either way the whole page scrolled sideways. Let a wide
+// table scroll inside its own box instead, and keep long links, selects and
+// images inside the screen.
+@media only screen and (max-width: 767px) {
+  body .mobile-wrap {
+    overflow-x: auto !important;
+    max-width: 100%;
+  }
+  body:not(#body_ajax_ls) #withmenus > table.report {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+  #withmenus p,
+  #withmenus li {
+    overflow-wrap: anywhere;
+  }
+  #withmenus select {
+    max-width: 100%;
+  }
+  #withmenus img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  // Submit Lineup: _submit-lineup.scss makes every cell and the week picker
+  // nowrap, so the lineup table and the "Submit Lineup For Week: 1 | 2 | 3"
+  // line ran off the right edge. Let them wrap.
+  #body_lineup .report td,
+  #body_lineup .report a {
+    white-space: normal;
+  }
+  #body_lineup span.reportnavigation {
+    display: block;
+    white-space: normal;
+    overflow-x: visible;
+  }
+}
