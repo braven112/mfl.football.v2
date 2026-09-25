@@ -3237,13 +3237,21 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   });
 </script>
 
-<!-- Player modal trigger (delegated, works across re-renders) -->
+<!-- Player modal trigger (delegated, works across re-renders).
+     Bundled scripts run once per session under the ClientRouter, so this must
+     re-bind on astro:page-load — arriving here by in-site navigation swaps in a
+     fresh #player-table-body that a DOMContentLoaded-only init never sees, and
+     every row and name tap on it was dead. The dataset flag stops the initial
+     load's page-load event from binding a second listener. -->
 <script>
   import { initPlayerModalTrigger } from '../../utils/player-modal-trigger';
 
   function initModalTrigger() {
     const tbody = document.getElementById('player-table-body');
-    if (tbody) initPlayerModalTrigger(tbody, { rowTapMedia: '(max-width: 767px)' });
+    if (tbody && !tbody.dataset.modalInit) {
+      tbody.dataset.modalInit = 'true';
+      initPlayerModalTrigger(tbody, { rowTapMedia: '(max-width: 767px)' });
+    }
   }
 
   if (document.readyState === 'loading') {
@@ -3251,6 +3259,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   } else {
     initModalTrigger();
   }
+  document.addEventListener('astro:page-load', initModalTrigger);
 </script>
 
 <style>
