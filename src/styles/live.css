@@ -86,8 +86,10 @@ html.dark .lv-matchup {
   background: var(--content-bg-muted);
 }
 
-.lv-wp__s1 { background: var(--t1); }
-.lv-wp__s0 { background: var(--t0); }
+/* Fills and labels are keyed to the matchup's colour, not to left/right: the
+   component places them, so a reordered pair keeps each team in its own. */
+.lv-wp__fill0 { background: var(--t0); }
+.lv-wp__fill1 { background: var(--t1); }
 
 /**
  * The seam sits at the SPLIT, not at a fixed 50%, so the two fills still read
@@ -113,8 +115,8 @@ html.dark .lv-matchup {
   font-weight: var(--font-weight-semibold);
 }
 
-.lv-wp__l { color: var(--t1-ink); }
-.lv-wp__r { color: var(--t0-ink); }
+.lv-wp__ink0 { color: var(--t0-ink); }
+.lv-wp__ink1 { color: var(--t1-ink); }
 
 .lv-wp__tag {
   font-size: 0.6rem;

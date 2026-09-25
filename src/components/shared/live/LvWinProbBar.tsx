@@ -20,11 +20,16 @@
  * `TheLeagueLayout` and `MflAppLayout` import — so it resolves on every
  * surface this kit renders on.
  *
- * ── SIDES, NOT TEAMS ──────────────────────────────────────────────────────
- * `p0` is the probability that SIDE 0 wins, because that is what the canonical
- * model states (see `src/types/live.ts`). The bar draws side 1 on the left and
- * side 0 on the right, matching how the cards lay a pairing out; the caller
- * does not do the arithmetic and cannot get the complement backwards.
+ * ── LEFT TO RIGHT, IN THE CALLER'S ORDER ──────────────────────────────────
+ * `side0` is whichever team the caller renders on the LEFT, and it is drawn on
+ * the left — so the bar reads in the same order as the score header above it.
+ * It used to draw side 1 on the left, which mirrored every detail view: the
+ * left team's score sat over the right team's share (Sep 2026).
+ *
+ * The COLOUR is a separate question, because a caller may reorder the pair
+ * (`renderOrder` puts the viewer first on MFL Live) while `--t0`/`--t1` stay
+ * keyed to the matchup's own sides. `side0Tone` names which of the two the
+ * left team wears; it defaults to 0, and the right team always wears the other.
  */
 import type { JSX } from 'react';
 
@@ -43,6 +48,8 @@ export interface LvWinProbBarProps {
    */
   side0YetToPlay?: number;
   side1YetToPlay?: number;
+  /** Which matchup colour (`--t0` / `--t1`) side 0 wears. Defaults to 0. */
+  side0Tone?: 0 | 1;
 }
 
 export default function LvWinProbBar({
@@ -52,11 +59,14 @@ export default function LvWinProbBar({
   mini,
   side0YetToPlay,
   side1YetToPlay,
+  side0Tone = 0,
 }: LvWinProbBarProps): JSX.Element {
   // Rounded ONCE and the complement derived from it, so the two never sum to
   // 101%: rounding each side independently does that for any x.5 split.
   const pct0 = Math.round(Math.min(Math.max(p0, 0), 1) * 100);
   const pct1 = 100 - pct0;
+  const tone0 = side0Tone;
+  const tone1 = side0Tone === 0 ? 1 : 0;
 
   return (
     <div className={`lv-wp${mini ? ' lv-wp--mini' : ''}`}>
@@ -69,27 +79,27 @@ export default function LvWinProbBar({
         className="lv-wp__track"
         aria-hidden="true"
         // The seam rides the split rather than sitting at 50%.
-        style={{ ['--lv-wp-split' as string]: `${pct1}%` }}
+        style={{ ['--lv-wp-split' as string]: `${pct0}%` }}
       >
-        <div className="lv-wp__s1" style={{ width: `${pct1}%` }} />
-        <div className="lv-wp__s0" style={{ width: `${pct0}%` }} />
+        <div className={`lv-wp__fill${tone0}`} style={{ width: `${pct0}%` }} />
+        <div className={`lv-wp__fill${tone1}`} style={{ width: `${pct1}%` }} />
         <span className="lv-wp__seam" />
       </div>
 
       {!mini && (
         <div className="lv-wp__labels" aria-hidden="true">
-          <span className="lv-wp__l">
-            {pct1}%
-            {side1YetToPlay !== undefined && (
-              <em className="lv-wp__ytp"> · {side1YetToPlay} to play</em>
+          <span className={`lv-wp__l lv-wp__ink${tone0}`}>
+            {pct0}%
+            {side0YetToPlay !== undefined && (
+              <em className="lv-wp__ytp"> · {side0YetToPlay} to play</em>
             )}
           </span>
           <span className="lv-wp__tag">WIN PROBABILITY</span>
-          <span className="lv-wp__r">
-            {side0YetToPlay !== undefined && (
-              <em className="lv-wp__ytp">{side0YetToPlay} to play · </em>
+          <span className={`lv-wp__r lv-wp__ink${tone1}`}>
+            {side1YetToPlay !== undefined && (
+              <em className="lv-wp__ytp">{side1YetToPlay} to play · </em>
             )}
-            {pct0}%
+            {pct1}%
           </span>
         </div>
       )}
