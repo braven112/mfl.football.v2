@@ -133,9 +133,13 @@ A three-line card for each roster row, built by CSS from the row's existing
 cells.
 
 ```
-[POS] (photo+NFL)  Name  🏷️ (Q) ✂autocut          $5,000,000   ← GM: 2026 salary
-      pill   badge  [3] yrs | thru '28 | RC/TO/FT     QB 3        ← My Rank, if a board exists
+(photo+NFL)  Name (7)  🏷️ (Q) ✂autocut                 $5,000,000   ← GM: 2026 salary
+     badge   [QB] [3] yrs | thru '28 | RC/TO/FT           QB 3         ← My Rank, if a board exists
 ```
+
+**Decided (user, 2026-09-25):** the position pill is NOT its own column. It sits
+inline at the start of line 2, directly under the player name, so the avatar is
+the card's left edge and the name gets the width a pill column would have taken.
 
 ### GM mode
 
@@ -143,10 +147,10 @@ cells.
 
 | Part | Content | Source cell |
 |---|---|---|
-| Left edge | Position pill (QB / RB / WR / TE / PK / DEF colours) with the **roster-status stripe** kept on the card's left edge (active / practice / IR) | new `data-pos` on `<tr>`; existing row status classes |
+| Left edge | **Roster-status stripe** kept on the card's left edge (active / practice / IR). No pill column | existing row status classes |
 | Avatar | Headshot, NFL team logo badged on its corner | `PlayerCell` avatar + `nflTeam` |
 | Line 1 | Name + **every existing after-name badge**: trade-block 🏷️ link, injury `(Q)` button, autocut badge, contract-action badge with its × | `[data-column=player]`, unchanged |
-| Line 2 | Years chip (**stays interactive**: eligible / pending declaration, deadline countdown), `thru '28`, contract designation when not Standard, injury word | `[data-column=years]` + a new line-2 span |
+| Line 2 | Inline position pill (QB / RB / WR / TE / PK / DEF colours) first, then the years chip (**stays interactive**: eligible / pending declaration, deadline countdown), `thru '28`, contract designation when not Standard, injury word | `[data-column=years]` + a new line-2 span |
 | Right, big | Current-year salary, including simulated / declared styling | `[data-column=year1]` |
 | Right, small | My Rank (e.g. `QB 3`), only when a board is loaded | `[data-column=rank]` |
 
@@ -663,6 +667,14 @@ gotcha in `rosters-page-split.md`.
 ---
 
 ## 11. Open questions for the user
+
+**Answered (user, 2026-09-25):**
+- **Q1:** GM and Coach stay separate. GM rows get no matchup line.
+- **Q6:** Yes. The sim bar shows on every viewed team, not only your own.
+- **Pill placement (new):** inline at the start of line 2, under the name, in
+  both modes. It is not a leading column. The mockup PNGs predate this.
+
+Still open:
 
 1. **GM line 3.** Should GM rows also carry a muted matchup line (both lines
    in one view, as Sleeper does), or stay strictly per mode as proposed?
