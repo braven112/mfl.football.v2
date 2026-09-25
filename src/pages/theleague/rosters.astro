@@ -7218,6 +7218,75 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     // ----------------------------------------------------------------
 
     // ----------------------------------------------------------------
+    // toggleTradeBlock — add a player to, or take him off, the viewer's trade
+    // block, and bring the page up to date: the season data (so the next
+    // re-render keeps it), the open CDM's copy, the ⋮ button's dataset (read
+    // on the next CDM open) and the row's 🏷️ badge. Shared by the CDM's
+    // Trade › Trade Block option and the player sheet's hero toggle, so there
+    // is one write and one set of side effects. Throws on failure; resolves to
+    // whether he is on the block now.
+    // ----------------------------------------------------------------
+    const toggleTradeBlock = async (playerId: string, isOnBlock: boolean, franchiseId: string): Promise<boolean> => {
+      const tradeBlockAction = isOnBlock ? 'remove' : 'add';
+      const res = await fetch('/api/trade-bait', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerId, action: tradeBlockAction }),
+      });
+
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Failed to update trade block');
+
+      // Success — update local state
+      const newTradeBait = tradeBlockAction === 'add';
+
+      // Update the player data in the current season data
+      const { teamData } = getTeamData();
+      const allPlayerArrays = [
+        teamData.players ?? [],
+        teamData.practiceSquad ?? [],
+        teamData.injuredReserve ?? [],
+      ];
+      for (const arr of allPlayerArrays) {
+        const p = arr.find(pl => String(pl.id) === String(playerId));
+        if (p) { p.tradeBait = newTradeBait; break; }
+      }
+
+      // Update the CDM player data for future toggles — only when the modal
+      // holds THIS player (the sheet can toggle while it holds another).
+      const cdmPlayerId = cdmState.playerData?._rawPlayer?.id || cdmState.playerData?.id || '';
+      if (String(cdmPlayerId) === String(playerId)) {
+        if (cdmState.playerData) cdmState.playerData.tradeBait = newTradeBait;
+        if (cdmState.playerData?._rawPlayer) cdmState.playerData._rawPlayer.tradeBait = newTradeBait;
+      }
+
+      // Update the ufa-action-btn data attribute for future CDM opens
+      const ufaBtn = document.querySelector<HTMLElement>(`.ufa-action-btn[data-player-id="${playerId}"]`);
+      if (ufaBtn) ufaBtn.dataset.playerTradeBait = String(newTradeBait);
+
+      // Update the trade bait badge in the roster table
+      // Badge goes INSIDE .player-cell__name (matching the server-side after-name slot)
+      const playerRow = document.querySelector(`tr[data-player-id="${playerId}"]`);
+      if (playerRow) {
+        const existingBadge = playerRow.querySelector('.trade-bait-link');
+        if (newTradeBait && !existingBadge) {
+          const nameEl = playerRow.querySelector('.player-cell__name');
+          if (nameEl) {
+            const badge = document.createElement('a');
+            badge.href = resolveLeaguePath('/theleague/front-office/trade-builder?b=' + (franchiseId || ''));
+            badge.className = 'trade-bait-link';
+            badge.title = 'On Trade Block \u2014 Open in Trade Builder';
+            badge.textContent = '\uD83C\uDFF7\uFE0F';
+            nameEl.appendChild(badge);
+          }
+        } else if (!newTradeBait && existingBadge) {
+          existingBadge.remove();
+        }
+      }
+      return newTradeBait;
+    };
+
+    // ----------------------------------------------------------------
     // showTradeSubOptions — shows 3 trade actions within step 1
     // ----------------------------------------------------------------
     const showTradeSubOptions = () => {
@@ -7287,57 +7356,11 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
           if (tbDesc) tbDesc.textContent = 'Updating trade block on MFL...';
 
           try {
-            const res = await fetch('/api/trade-bait', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ playerId, action: tradeBlockAction }),
-            });
-
-            const result = await res.json();
-            if (!res.ok) throw new Error(result.error || 'Failed to update trade block');
-
-            // Success — update local state
-            const newTradeBait = tradeBlockAction === 'add';
-
-            // Update the player data in the current season data
-            const { teamData } = getTeamData();
-            const allPlayerArrays = [
-              teamData.players ?? [],
-              teamData.practiceSquad ?? [],
-              teamData.injuredReserve ?? [],
-            ];
-            for (const arr of allPlayerArrays) {
-              const p = arr.find(pl => String(pl.id) === String(playerId));
-              if (p) { p.tradeBait = newTradeBait; break; }
-            }
-
-            // Update the CDM player data for future toggles
-            if (cdmState.playerData) cdmState.playerData.tradeBait = newTradeBait;
-            if (cdmState.playerData?._rawPlayer) cdmState.playerData._rawPlayer.tradeBait = newTradeBait;
-
-            // Update the ufa-action-btn data attribute for future CDM opens
-            const ufaBtn = document.querySelector<HTMLElement>(`.ufa-action-btn[data-player-id="${playerId}"]`);
-            if (ufaBtn) ufaBtn.dataset.playerTradeBait = String(newTradeBait);
-
-            // Update the trade bait badge in the roster table
-            // Badge goes INSIDE .player-cell__name (matching the server-side after-name slot)
-            const playerRow = document.querySelector(`tr[data-player-id="${playerId}"]`);
-            if (playerRow) {
-              const existingBadge = playerRow.querySelector('.trade-bait-link');
-              if (newTradeBait && !existingBadge) {
-                const nameEl = playerRow.querySelector('.player-cell__name');
-                if (nameEl) {
-                  const badge = document.createElement('a');
-                  badge.href = resolveLeaguePath('/theleague/front-office/trade-builder?b=' + (cdmState.playerData?.franchiseId || cdmState.playerData?._rawPlayer?.franchiseId || ''));
-                  badge.className = 'trade-bait-link';
-                  badge.title = 'On Trade Block \u2014 Open in Trade Builder';
-                  badge.textContent = '\uD83C\uDFF7\uFE0F';
-                  nameEl.appendChild(badge);
-                }
-              } else if (!newTradeBait && existingBadge) {
-                existingBadge.remove();
-              }
-            }
+            await toggleTradeBlock(
+              playerId,
+              tradeBlockAction === 'remove',
+              cdmState.playerData?.franchiseId || cdmState.playerData?._rawPlayer?.franchiseId || '',
+            );
 
             // Show success feedback
             if (tbLabel) tbLabel.textContent = tradeBlockAction === 'add' ? 'Added to Trade Block' : 'Removed from Trade Block';
