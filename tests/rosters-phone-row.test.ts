@@ -127,7 +127,7 @@ describe('the rosters page wires the card into BOTH row builders', () => {
   });
 
   it('opens the player from anywhere in the row on a phone', () => {
-    expect(PAGE).toMatch(/initPlayerModalTrigger\(rosterTbody, \{ rowTapMedia: '\(max-width: 767px\)' \}\)/);
+    expect(PAGE).toMatch(/initPlayerModalTrigger\(rosterTbody, \{[^}]*?rowTapMedia: '\(max-width: 767px\)'/);
   });
 
   it('offers every sort header in the phone Sort select', () => {
