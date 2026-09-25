@@ -9237,6 +9237,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     const {
       openDeclarationModal,
       closeDeclarationModal,
+      setCdmReturnFocus,
       populateCdmActionOptions,
       describeCdmActions,
       makeCdmActionBtn,
@@ -9634,6 +9635,8 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       const { btn } = findRosterRow(playerId);
       if (!btn) return;
       btn.click();
+      // The sheet that asked is closed, so focus returns to the row's ⋮.
+      setCdmReturnFocus(btn);
       for (const id of path) {
         const option = document.querySelector<HTMLButtonElement>(`#cdm-action-options .cdm-action-option--${id}`);
         if (!option || option.disabled) return;

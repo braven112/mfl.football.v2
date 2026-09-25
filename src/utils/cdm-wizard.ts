@@ -189,8 +189,18 @@ export function createCdmWizard(deps: CdmWizardContext) {
    */
   let cdmDeadlineInterval: ReturnType<typeof setInterval> | null = null;
 
+  /**
+   * Where focus goes when the modal closes: the control that opened it. The
+   * player sheet routes a write action here after closing itself, so focus
+   * was on nothing; that opener names the row's control via setCdmReturnFocus.
+   */
+  let cdmReturnFocus: HTMLElement | null = null;
+  const setCdmReturnFocus = (el: HTMLElement | null) => { cdmReturnFocus = el; };
+
   const openDeclarationModal = (data: any, preSelectedYears: number | null = null) => {
     if (!cdmModal) return;
+    const active = document.activeElement;
+    cdmReturnFocus = active instanceof HTMLElement && active !== document.body ? active : null;
     cdmState.playerData = data;
     cdmState.selectedYears = null;
     cdmState.selectedSalary = null;
@@ -534,6 +544,10 @@ export function createCdmWizard(deps: CdmWizardContext) {
     document.body.style.overflow = '';
     if (cdmDeadlineInterval) clearInterval(cdmDeadlineInterval);
     cdmState.playerData = null;
+    const target = cdmReturnFocus;
+    cdmReturnFocus = null;
+    // A re-rendered table or a control hidden at this width has no box to focus.
+    if (target?.isConnected && target.getClientRects().length > 0) target.focus();
   };
 
   const updateProjectionTable = (
@@ -1659,6 +1673,7 @@ export function createCdmWizard(deps: CdmWizardContext) {
   return {
     openDeclarationModal,
     closeDeclarationModal,
+    setCdmReturnFocus,
     populateCdmActionOptions,
     describeCdmActions,
     makeCdmActionBtn,
