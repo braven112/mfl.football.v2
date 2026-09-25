@@ -126,6 +126,7 @@ on:
       - 'src/utils/mfl-live-lineup.ts'
       - 'src/utils/mfl-url.ts'
       - 'src/utils/nav-utils.ts'
+      - 'src/utils/nfl-bye-lookup.ts'
       - 'src/utils/nfl-logo-dark-css.ts'
       - 'src/utils/nfl-logo.ts'
       - 'src/utils/nfl-name-match.ts'
@@ -221,6 +222,7 @@ on:
       - 'data/afl-fantasy/afl.config.json'
       - 'data/afl-fantasy/tier-history.json'
       - 'data/best-ball-1/bb1.config.json'
+      - 'data/nfl/bye-weeks.json'
       # Asset trees a story renders. Same set as chromatic.config.json's
       # externals, and for the same reason: these are runtime URL strings, so
       # nothing links them into the module graph. whats-new/ screenshots and
@@ -398,6 +400,7 @@ on:
       - 'src/utils/mfl-live-lineup.ts'
       - 'src/utils/mfl-url.ts'
       - 'src/utils/nav-utils.ts'
+      - 'src/utils/nfl-bye-lookup.ts'
       - 'src/utils/nfl-logo-dark-css.ts'
       - 'src/utils/nfl-logo.ts'
       - 'src/utils/nfl-name-match.ts'
@@ -493,6 +496,7 @@ on:
       - 'data/afl-fantasy/afl.config.json'
       - 'data/afl-fantasy/tier-history.json'
       - 'data/best-ball-1/bb1.config.json'
+      - 'data/nfl/bye-weeks.json'
       # Asset trees a story renders. Same set as chromatic.config.json's
       # externals, and for the same reason: these are runtime URL strings, so
       # nothing links them into the module graph. whats-new/ screenshots and

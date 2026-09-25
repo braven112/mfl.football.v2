@@ -4,6 +4,8 @@
  */
 
 import { normalizeTeamCode } from '../utils/nfl-logo';
+import { byeWeeksByTeam } from '../utils/nfl-bye-lookup';
+import nflByeWeeksFile from '../../data/nfl/bye-weeks.json';
 import { buildNoHeadshotPlaceholder, NO_HEADSHOT_PLACEHOLDER } from '../utils/nfl-team-colors';
 import { getLeagueBySlug, DEFAULT_LEAGUE_SLUG } from '../config/leagues';
 
@@ -278,40 +280,17 @@ export function nflLogoRefCallback(img: HTMLImageElement | null): void {
 }
 
 /**
- * NFL team bye weeks (updated each season)
- * null = not yet determined
+ * NFL team bye weeks for the calendar year's season, from the synced schedule
+ * (`data/nfl/bye-weeks.json`, refreshed by the schedule-release workflow).
+ *
+ * This was a hand-typed table "updated each season" — and it wasn't: in 2026
+ * it carried the wrong week for most of the league (ARI 8 vs a real 14), and
+ * keyed only MFL's spellings (WAS, JAC), so the lineup pages — which look up
+ * ESPN's normalized codes (WSH, JAX) — never marked those teams' byes at all.
+ * `byeWeeksByTeam` keys every week under both dialects. A team with no entry
+ * (a season not yet published) reads as undefined, never as last year's week.
+ *
+ * PURE-annotated so a client bundle that imports this module for something
+ * else tree-shakes the call and the JSON away.
  */
-export const nflByeWeeks: Record<string, number | null> = {
-  ARI: 8,
-  ATL: 5,
-  BAL: 7,
-  BUF: 7,
-  CAR: 14,
-  CHI: 5,
-  CIN: 10,
-  CLE: 9,
-  DAL: 10,
-  DEN: 12,
-  DET: 8,
-  GB: 5,
-  HOU: 6,
-  IND: 11,
-  JAC: 8,
-  KC: 10,
-  LAC: 12,
-  LAR: 8,
-  LV: 8,
-  MIA: 12,
-  MIN: 6,
-  NE: 14,
-  NO: 11,
-  NYG: 14,
-  NYJ: 9,
-  PHI: 9,
-  PIT: 5,
-  SEA: 8,
-  SF: 14,
-  TB: 9,
-  TEN: 10,
-  WAS: 12,
-};
+export const nflByeWeeks: Record<string, number> = /* @__PURE__ */ byeWeeksByTeam(nflByeWeeksFile, new Date());
