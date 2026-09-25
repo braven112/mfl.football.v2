@@ -39,6 +39,14 @@ export function getAuthUser(request: Request): AuthUser | null {
   const sessionData = validateSessionToken(sessionToken);
   if (!sessionData) return null;
 
+  // A session belongs to one of OUR leagues or it is no session at all.
+  // Login now refuses any league outside the registry, but tokens minted
+  // before that (90-day lifetime) could carry any MFL league — and the site
+  // has endpoints that key on franchiseId alone, where a foreign league's
+  // franchise 0001 is indistinguishable from ours. Rejecting here voids those
+  // tokens immediately instead of letting them age out.
+  if (!sessionData.leagueId || !getLeagueById(sessionData.leagueId)) return null;
+
   return {
     id: sessionData.userId,
     name: sessionData.username,
@@ -89,6 +97,20 @@ export function isCommissionerOrAdmin(user: AuthUser): boolean {
  */
 export function isAuthorizedForLeague(user: AuthUser, leagueId: string): boolean {
   return user.leagueId === leagueId;
+}
+
+/**
+ * Commissioner/admin of THIS league — the gate for anything that acts on a
+ * specific league rather than on the session's own.
+ *
+ * `isCommissionerOrAdmin` answers "is this session an admin of the league it
+ * signed in to?", and the role it trusts carries no league: an AFL
+ * commissioner session passes it on an endpoint that writes TheLeague's
+ * contracts. Any endpoint whose target league is fixed (contracts, autocut,
+ * TheLeague's GroupMe) must ask this instead.
+ */
+export function isCommissionerOrAdminForLeague(user: AuthUser, leagueId: string): boolean {
+  return isAuthorizedForLeague(user, leagueId) && isCommissionerOrAdmin(user);
 }
 
 /**

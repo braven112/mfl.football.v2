@@ -24,7 +24,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import PlayerCell from '../../../components/theleague/PlayerCell.astro';
-import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
+import { getAuthUser, isCommissionerOrAdmin, isAuthorizedForLeague } from '../../../utils/auth';
 import { loginUrlForRequest, forbiddenPathFor } from '../../../utils/login-redirect';
 import { getRedis } from '../../../utils/redis-client';
 import { getCutList, type AutocutList } from '../../../utils/autocut-storage';
@@ -49,7 +49,10 @@ export const prerender = false;
 
 const user = getAuthUser(Astro.request);
 if (!user) return Astro.redirect(loginUrlForRequest(Astro, getLeagueBySlug('theleague')!));
-if (!isCommissionerOrAdmin(user)) return Astro.rewrite(forbiddenPathFor(getLeagueBySlug('theleague')!));
+// League-scoped: an AFL commissioner session is not a TheLeague admin.
+if (!isCommissionerOrAdmin(user) || !isAuthorizedForLeague(user, getLeagueBySlug('theleague')!.id)) {
+  return Astro.rewrite(forbiddenPathFor(getLeagueBySlug('theleague')!, isCommissionerOrAdmin(user) ? 'league' : 'commissioner'));
+}
 
 const year = getCurrentLeagueYear();
 const deadline = getAugustCutdownDate(year);

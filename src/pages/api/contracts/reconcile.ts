@@ -10,14 +10,14 @@
  */
 
 import type { APIRoute } from 'astro';
-import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
+import { getAuthUser, isCommissionerOrAdminForLeague } from '../../../utils/auth';
 import { getPendingDeclarations, updateDeclaration } from '../../../utils/contract-storage';
-import { fetchMFLSalaries } from '../../../utils/mfl-contract-writer';
+import { fetchMFLSalaries, CONTRACT_LEAGUE_ID } from '../../../utils/mfl-contract-writer';
 import { JSON_HEADERS } from '../../../utils/api-response';
 
 export const POST: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);
-  if (!user || !isCommissionerOrAdmin(user)) {
+  if (!user || !isCommissionerOrAdminForLeague(user, CONTRACT_LEAGUE_ID)) {
     return new Response(
       JSON.stringify({ error: 'Commissioner access required' }),
       { status: 403, headers: JSON_HEADERS },

@@ -6,7 +6,8 @@
  */
 
 import type { APIRoute } from 'astro';
-import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
+import { getAuthUser, isCommissionerOrAdminForLeague } from '../../../utils/auth';
+import { CONTRACT_LEAGUE_ID } from '../../../utils/mfl-contract-writer';
 import { getPendingDeclarations } from '../../../utils/contract-storage';
 import { JSON_HEADERS } from '../../../utils/api-response';
 
@@ -20,7 +21,7 @@ export const GET: APIRoute = async ({ request }) => {
       );
     }
 
-    if (!isCommissionerOrAdmin(user)) {
+    if (!isCommissionerOrAdminForLeague(user, CONTRACT_LEAGUE_ID)) {
       return new Response(
         JSON.stringify({ error: 'Commissioner access required' }),
         { status: 403, headers: JSON_HEADERS },

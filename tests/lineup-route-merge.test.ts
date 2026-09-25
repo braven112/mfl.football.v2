@@ -170,13 +170,14 @@ describe('lineup routes — league pinned per route path', () => {
     expect(String(call.body)).toContain(`L=${AFL.id}`);
   });
 
-  it('a session with an unrecognized leagueId still reaches the path\'s pinned league (pre-merge behavior)', async () => {
+  it('a session with an unrecognized leagueId is no session at all', async () => {
+    // getAuthUser voids any token naming a league outside the registry
+    // (tests/auth-league-scope.test.ts), so it never reaches a pinned league.
     const cookie = sessionCookieFor('not-a-real-league-id');
     const res = await lineupGET(
       makeContext(new Request('http://test.invalid/api/lineup?week=3', { headers: { cookie } }))
     );
-    expect(res.status).toBe(200);
-    const calledUrl = String(mflFetchMock.mock.calls[0][0].url);
-    expect(calledUrl).toContain(`L=${THELEAGUE.id}`);
+    expect(res.status).toBe(401);
+    expect(mflFetchMock).not.toHaveBeenCalled();
   });
 });

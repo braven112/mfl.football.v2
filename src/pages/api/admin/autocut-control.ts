@@ -19,7 +19,7 @@
  * (scripts/apply-august-cuts.mjs) treats ANY value as "halt everything",
  * so storing { by, at } JSON is backward-compatible with that contract.
  *
- * Auth: session JWT only; requires isCommissionerOrAdmin (401 no session,
+ * Auth: session JWT only; requires isCommissionerOrAdminForLeague(TheLeague) (401 no session,
  * 403 non-admin). Storage unconfigured → 503 (mirrors api/autocut-list.ts).
  *
  * SECURITY INVARIANT (plan custody rules — DO NOT WEAKEN): this route never
@@ -28,13 +28,17 @@
  */
 
 import type { APIRoute } from 'astro';
-import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
+import { getAuthUser, isCommissionerOrAdminForLeague } from '../../../utils/auth';
+import { getLeagueBySlug } from '../../../config/leagues';
 import { json as jsonResponse } from '../../../utils/api-response';
 import { getRedis } from '../../../utils/redis-client';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
 // Shared normalization (matches auth.ts / autocut-storage.ts): '1' and '0001'
 // address the same records.
 import { normalizeFranchiseId } from '../../../utils/franchise-id.mjs';
+
+// The August cut automation is TheLeague's; only its commissioners may pause it.
+const AUTOCUT_LEAGUE_ID = getLeagueBySlug('theleague')!.id;
 
 const PLAYER_ID_RE = /^\d{1,8}$/;
 
@@ -76,7 +80,7 @@ export function parsePausedValue(value: unknown): PausedState {
 function gate(request: Request): { user: NonNullable<ReturnType<typeof getAuthUser>> } | Response {
   const user = getAuthUser(request);
   if (!user) return jsonResponse({ error: 'Unauthorized' }, 401);
-  if (!isCommissionerOrAdmin(user)) return jsonResponse({ error: 'Commissioner access required' }, 403);
+  if (!isCommissionerOrAdminForLeague(user, AUTOCUT_LEAGUE_ID)) return jsonResponse({ error: 'Commissioner access required' }, 403);
   return { user };
 }
 

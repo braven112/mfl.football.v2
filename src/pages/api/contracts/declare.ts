@@ -6,7 +6,8 @@
  */
 
 import type { APIRoute } from 'astro';
-import { getAuthUser, isFranchiseOwner } from '../../../utils/auth';
+import { getAuthUser, isAuthorizedForLeague, isFranchiseOwner } from '../../../utils/auth';
+import { CONTRACT_LEAGUE_ID } from '../../../utils/mfl-contract-writer';
 import { validateContractSubmission } from '../../../utils/contract-validation';
 import {
   generateDeclarationId,
@@ -68,8 +69,10 @@ export const POST: APIRoute = async ({ request }) => {
       acquisitionTimestamp,
     } = body;
 
-    // 3. Verify franchise ownership
-    if (!isFranchiseOwner(user, franchiseId)) {
+    // 3. Verify franchise ownership — IN the contract league. Both leagues
+    // have a franchise 0001, and declarations live in one unscoped store, so
+    // a bare franchiseId match let an AFL owner declare on a TheLeague roster.
+    if (!isAuthorizedForLeague(user, CONTRACT_LEAGUE_ID) || !isFranchiseOwner(user, franchiseId)) {
       return new Response(
         JSON.stringify({ error: 'You can only submit declarations for your own team' }),
         { status: 403, headers: JSON_HEADERS },
