@@ -1,4 +1,5 @@
 import './src/utils/ensure-pt-timezone';
+import './src/utils/ensure-demo-isolation';
 import { defineConfig, fontProviders } from 'astro/config';
 import { loadEnv } from 'vite';
 import vercel from '@astrojs/vercel';
