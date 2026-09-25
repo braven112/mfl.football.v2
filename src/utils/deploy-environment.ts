@@ -109,6 +109,7 @@ function vercelEnv(): string | undefined {
 
 /** Human-readable label for messages and the banner. */
 export function deployEnvLabel(): string {
+  if (isDemoDeploy()) return 'demo';
   return vercelEnv() ?? 'local';
 }
 
@@ -121,6 +122,29 @@ export function deployEnvLabel(): string {
 export function isProductionDeploy(): boolean {
   const env = vercelEnv();
   return env === undefined || env === 'production';
+}
+
+/**
+ * The branch the custom-site demo (`*.demo.mfl.football`) is pinned to, the way
+ * the staging sites are pinned to `staging`. See docs/plans/custom-site-demo.md.
+ * `scripts/vercel-ignore-build.mjs` carries the same literal and a test pins
+ * the two together.
+ */
+export const DEMO_BRANCH = 'demo';
+
+/**
+ * Is this the custom-site demo — a deployment prospects use, holding only
+ * fictional league data, that must never touch a real league?
+ *
+ * Two independent signals, either sufficient: the `DEMO_PROFILE` variable, or
+ * the deployment being built from the `demo` branch. The branch check is what
+ * makes a forgotten dashboard variable fail CLOSED — the demo branch is a demo
+ * whether or not anyone remembered to say so.
+ *
+ * Read at call time, like `vercelEnv()`.
+ */
+export function isDemoDeploy(): boolean {
+  return Boolean(process.env.DEMO_PROFILE) || process.env.VERCEL_GIT_COMMIT_REF === DEMO_BRANCH;
 }
 
 /**
@@ -143,7 +167,10 @@ export function isNonProductionDeploy(): boolean {
  * @throws {OutboundBlockedError}
  */
 export function assertOutboundAllowed(action: OutboundAction): void {
-  if (isProductionDeploy()) return;
+  // The demo is checked independently of VERCEL_ENV: it is a preview today, but
+  // "the demo cannot write" must not hang on which environment it happens to be
+  // served from.
+  if (isProductionDeploy() && !isDemoDeploy()) return;
   const error = new OutboundBlockedError(action);
   console.warn(`[deploy-guard] ${error.message}`);
   throw error;
@@ -154,7 +181,7 @@ export function assertOutboundAllowed(action: OutboundAction): void {
  * a fan-out that should skip one recipient, say, instead of aborting.
  */
 export function outboundAllowed(): boolean {
-  return isProductionDeploy();
+  return isProductionDeploy() && !isDemoDeploy();
 }
 
 /**
@@ -177,5 +204,5 @@ export function isStagingRequest(url: URL | { hostname: string }): boolean {
  * content on staging.theleague.us is a genuine SEO problem for theleague.us.
  */
 export function shouldBlockIndexing(url: URL | { hostname: string }): boolean {
-  return isNonProductionDeploy() || isStagingRequest(url);
+  return isNonProductionDeploy() || isDemoDeploy() || isStagingRequest(url);
 }

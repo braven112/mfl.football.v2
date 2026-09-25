@@ -15,7 +15,7 @@ import { execFileSync } from 'child_process';
 import { mkdtempSync, copyFileSync, rmSync, realpathSync, symlinkSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { decide, BUILD, SKIP, STAGING_BRANCH } from '../scripts/vercel-ignore-build.mjs';
+import { decide, BUILD, SKIP, STAGING_BRANCH, DEMO_BRANCH } from '../scripts/vercel-ignore-build.mjs';
 
 /** Minimal preview env with everything the PR lookup needs. */
 const previewEnv = (overrides: Record<string, string> = {}) => ({
@@ -123,6 +123,25 @@ describe('the actual policy', () => {
         stubFetch([]),
       );
       expect(code, `${ref} must not inherit the staging exemption`).toBe(SKIP);
+    }
+  });
+
+  it('builds the demo branch with no PR, without asking GitHub — the demo sites alias it', async () => {
+    // *.demo.mfl.football is pinned to this branch the way the staging sites
+    // are pinned to staging (docs/plans/custom-site-demo.md).
+    let called = false;
+    const spy: typeof fetch = async () => {
+      called = true;
+      return stubFetch([])();
+    };
+    const { code, reason } = await decide(previewEnv({ VERCEL_GIT_COMMIT_REF: DEMO_BRANCH }), spy);
+    expect(code).toBe(BUILD);
+    expect(reason).toContain(DEMO_BRANCH);
+    expect(called).toBe(false);
+
+    for (const ref of [`${DEMO_BRANCH}-2`, `claude/${DEMO_BRANCH}`, 'demos']) {
+      const lookalike = await decide(previewEnv({ VERCEL_GIT_COMMIT_REF: ref }), stubFetch([]));
+      expect(lookalike.code, `${ref} must not inherit the demo exemption`).toBe(SKIP);
     }
   });
 

@@ -30,55 +30,82 @@ extras. A purchased site gets features specific to how *your* league works,
 negotiated up front — not unlimited, but anything halfway reasonable can be
 built — and existing components and patterns are adjusted to fit your league.
 
-## Architecture — a separate demo deployment, same code, different data
+## Architecture — a `demo` branch deployment, same code, different data
 
-Rejected alternatives (evidence gathered 2026-09-25):
+Alternatives considered (evidence gathered 2026-09-25):
 
-- **New registry slugs per demo type** — 20 sibling routes are still forked
+- **New registry slugs per demo type** (rejected) — 20 sibling routes are still forked
   (`tests/fixtures/page-fork-baseline.json`), including `rosters.astro` and
   `lineup.astro`, and they hardcode their league (`rosters.astro` reads
   `data/theleague/mfl-feeds/${year}` via `fs`). A new slug means copying forks
   (the fork ratchet fails) or unforking 20 pages first.
-- **Per-request data override on the real site** — 86 files statically import
+- **Per-request data override on the real site** (rejected) — 86 files statically import
   league JSON; 99 `import.meta.glob` calls in `src/pages/theleague`. Not
   cheaply variable per request, and it would share production's secrets/Redis.
-- **Pointing the registry `mflHost` at a mock** — reads don't use it:
+- **Pointing the registry `mflHost` at a mock** (rejected) — reads don't use it:
   `buildMflExportUrl` defaults to `api.myfantasyleague.com`
   (`src/utils/mfl-url.ts`), the literal appears ~96 times in ~53 files.
 
-**Chosen: a second Vercel project on the same repo** with `DEMO_PROFILE` set:
+**Chosen: a `demo` branch in the SAME Vercel project** — exactly how
+`staging.mfl.football` is pinned to `staging` — with `DEMO_PROFILE` set as a
+branch-scoped Preview variable. (A separate project was the first draft; the
+branch wins because the deployment is a preview, so the existing outbound guard
+and "crons only run on production" already apply, and there is one project to
+manage. Decided 2026-09-25.)
 
-1. **Build-time data swap.** `scripts/demo/build-demo-data.mjs` replaces the
-   network prebuild. It **deletes** `data/theleague`, `data/afl-fantasy`,
-   `data/best-ball-1`, `src/data/theleague*` and league icon dirs, then writes
-   synthetic MFL-shaped feeds to the same paths. Existing imports/globs/`fs`
-   reads resolve to fiction with no page edits; a file the generator misses
-   breaks the build instead of rendering real data. Nothing is committed.
-2. **Registry profile overlay** (`src/config/demo-profiles.mjs`, merged when
-   `DEMO_PROFILE` is set): fictional names, **distinct league ids** (so no Redis
-   key can alias a real one), demo domains as canonical (slug hidden from
-   URLs), Schefter/Roger/GroupMe/rules-chat features off.
-3. **Fetch-layer MFL mock.** Installed from `src/middleware.ts` in demo mode:
-   any `*.myfantasyleague.com` request is answered from the synthetic base
-   export + the prospect's overlay. Writes (`/import`, `/add_drop`, `/csetup`)
-   return `<status>OK</status>` and are recorded. Unknown TYPE → MFL-style
-   `<error>`. Never touches the network. `mflFetch` short-circuits writes as a
-   second layer.
-4. **Per-prospect state.** Demo token carried in `AsyncLocalStorage`; the
-   Upstash client is namespaced at its choke point (`src/utils/redis-client.ts`)
-   so every key is `demo:{token}:…` with TTL = link expiry. That isolates the
-   MFL overlay AND app-side Redis features (contract declarations, watch list,
-   rankings), and makes MFL-derived caches per-prospect.
-5. **Secrets isolation is the primary control.** The demo project has its own
-   Upstash DB and `JWT_SECRET`, and **no** MFL credentials, GroupMe, VAPID
-   (except via the lead relay below), GitHub token or `CRON_SECRET`.
+The cost of the same project is that a branch INHERITS every Preview variable —
+production's MFL, GroupMe, VAPID and GitHub secrets and production's Redis.
+Inheritance fails open (next year's new secret silently reaches the demo), so
+the demo does not rely on the dashboard being right:
 
-### Fail-closed guard
+1. **Environment scrub at boot** (`src/utils/ensure-demo-isolation.ts`, imported
+   first by `src/middleware.ts` and `astro.config.ts`, like
+   `ensure-pt-timezone`). In demo mode it DELETES every variable matching a
+   denylist of credential families (MFL, GroupMe, VAPID, GitHub, Redis, cron,
+   Blob, Anthropic, the JWT secret), then maps the demo's own
+   `DEMO_REDIS_REST_URL`/`TOKEN` and `DEMO_JWT_SECRET` into the names the code
+   reads. Missing demo values fail closed: no Redis (degraded storage), and
+   `session.ts` refuses to mint sessions on Vercel without a secret.
+2. **Fetch guard.** Every server-side MFL call goes through `globalThis.fetch`
+   (including `mflFetch`), so demo mode wraps it: any `*.myfantasyleague.com`
+   request is answered by the demo MFL stand-in and never reaches the network;
+   GroupMe, GitHub, push-service and Anthropic hosts are refused outright.
+3. **Outbound guard.** `assertOutboundAllowed` throws whenever `isDemoDeploy()`
+   — even if the demo were ever served from a production deployment.
+4. **No elevated roles.** `isCommissionerOrAdmin` is false on a demo deploy.
 
-`isDemoDeploy()` in `src/utils/deploy-environment.ts`; `assertOutboundAllowed`
-throws whenever it is true — **including `VERCEL_ENV=production`**, which is
-the demo project's own production. Cron handlers in `vercel.json` return early
-in demo mode.
+Demo mode = `DEMO_PROFILE` set OR the deployment's branch is `demo`, so the
+branch is protected even if the variable is forgotten.
+
+Later phases build on those rails:
+
+- **Build-time data swap.** `scripts/demo/build-demo-data.mjs` replaces the
+  prebuild. It **deletes** `data/theleague`, `data/afl-fantasy`,
+  `data/best-ball-1`, `src/data/theleague*` and league icon dirs, then writes
+  synthetic MFL-shaped feeds to the same paths. Existing imports/globs/`fs`
+  reads resolve to fiction with no page edits; a file the generator misses
+  breaks the build instead of rendering real data. Nothing is committed.
+- **Registry profile overlay** (`src/config/demo-profiles.mjs`): fictional
+  names, **distinct league ids** (no Redis key can alias a real one), demo
+  domains as canonical, Schefter/Roger/GroupMe/rules-chat off.
+- **MFL stand-in.** The fetch guard's MFL branch answers `/export` from the
+  synthetic base export + the prospect's overlay; writes return
+  `<status>OK</status>` and are recorded.
+- **Per-prospect state.** Demo token in `AsyncLocalStorage`; Redis keys
+  namespaced `demo:{token}:…` with TTL = link expiry, so prospects never see
+  each other's moves.
+- **A separate Upstash database** for the demo (free tier expected), set only on
+  the `demo` branch as `DEMO_REDIS_REST_URL`/`DEMO_REDIS_REST_TOKEN`.
+
+### Vercel / DNS setup (owner, when phase 2 is ready)
+
+- Create the `demo` branch; add branch-scoped Preview variables:
+  `DEMO_PROFILE`, `DEMO_JWT_SECRET`, `DEMO_REDIS_REST_URL`,
+  `DEMO_REDIS_REST_TOKEN`. No need to blank inherited secrets — the scrub does.
+- Assign `demo.mfl.football`, `dynasty.`, `keeper.`, `conference.`,
+  `bestball.demo.mfl.football` to the `demo` branch; CNAME each in Cloudflare.
+- `scripts/vercel-ignore-build.mjs` exempts `demo` from the no-PR gate, as it
+  does `staging`.
 
 ### Demo session
 
@@ -110,29 +137,27 @@ Overlay reducers per MFL import type, applied by the mock on read: `lineup`,
 Questionnaire + pitch pages live on the demo deployment. Leads stored in demo
 Redis (no TTL), rate-limited (`src/utils/rate-limit.ts`) + honeypot. Matching:
 50+ teams or conferences → conference demo; best ball/redraft → bb; keepers →
-keeper; else → dynasty. Owner alert: HMAC-signed POST from the demo project to
-a production `/api/demo-leads` endpoint that calls `sendPushToFranchise` for
-the owner (the demo project itself holds no push keys). Lead detail on an admin
+keeper; else → dynasty. Owner alert: HMAC-signed POST from the demo deployment
+to a production `/api/demo-leads` endpoint that calls `sendPushToFranchise` for
+the owner (the demo deployment's push keys are scrubbed). Lead detail on an admin
 page.
 
 ## Phases
 
-- **P0 — rails, no UI.** `isDemoDeploy`, guard change, fetch-mock skeleton
-  (fail-closed), Redis namespace wrapper, cron early-returns. Guards: demo
-  profile + `VERCEL_ENV=production` still blocks; no real MFL fetch when the
-  profile is set; every Redis key prefixed; `isCommissionerOrAdmin` false for
-  demo.
-- **P1 — salary-cap dynasty demo (TheLeague slot).** Generator,
+- **P1 — rails, no UI.** `isDemoDeploy`, environment scrub, fetch guard with
+  a fail-closed MFL stand-in skeleton, outbound-guard change, no elevated
+  roles, `demo` branch build exemption. Guards for each.
+- **P2 — salary-cap dynasty demo (TheLeague slot).** Generator,
   wipe-and-generate build, profile overlay, `/start`, CLI
   `scripts/demo/mint-link.mjs`, demo banner (modelled on `StagingBanner.astro`),
   simulated lineup + add/drop + contracts. **Leak guard:** build a denylist from
   the real configs (franchise, owner, GroupMe names, franchise history) before
   the wipe; after `astro build`, scan the output and fail on any hit.
   Generator determinism test.
-- **P2 — sales funnel.** Questionnaire, pitch page, lead store + push relay,
+- **P3 — sales funnel.** Questionnaire, pitch page, lead store + push relay,
   auto-issued links, admin lead page; trade/waiver/IR/taxi reducers;
   `<CustomForLeague feature=…>` tags driven by a profile list.
-- **P3 — remaining types.** Best ball (bb1 slot; draft-only, cheap); keeper
+- **P4 — remaining types.** Best ball (bb1 slot; draft-only, cheap); keeper
   (second profile); **large conference at 50+ teams** — requires reworking the
   AFL code's two-12-team-conference assumptions (layouts, draft math, standings)
   first. Spike this before quoting a date.
@@ -148,8 +173,10 @@ page.
   https/undici-style helpers — verify or mock each).
 - Cross-prospect bleed via module-level in-memory caches in a warm lambda —
   add a scan guard.
-- A second Vercel project roughly doubles build minutes unless gated to a
-  `demo` branch.
+- Build minutes: the `demo` branch builds on each push to it — push only when
+  refreshing the demo (e.g. with the weekly promote).
+- Inherited Preview secrets — covered by the boot scrub, which is denylist-by-
+  family; a credential with a brand-new name prefix would slip through.
 - Demo drifts behind main unless promoted with the weekly release.
 
 ## Open

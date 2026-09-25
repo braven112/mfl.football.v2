@@ -26,6 +26,7 @@
  */
 
 import './utils/ensure-pt-timezone';
+import './utils/ensure-demo-isolation';
 import { defineMiddleware } from 'astro:middleware';
 import { HOST_TO_SLUG, resolveLeagueRewrite } from './utils/league-host-map';
 import { resolveSharedHostHiddenLeague } from './config/leagues';
