@@ -1,5 +1,9 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import { SHARED_APP_ORIGIN } from '../../config/leagues';
+
+// The install guide lives on the shared host (it belongs to no league).
+const instructionsUrl = new URL('/instructions', SHARED_APP_ORIGIN).href;
 
 // Read the variables file at build time so the copy-to-clipboard prompt stays in sync
 import fs from 'fs';
@@ -296,7 +300,7 @@ for (const group of groups) {
       </p>
       <div class="cta-row">
         <a class="cta-link" href="/theleague/icons">Browse Icons</a>
-        <a class="cta-link secondary" href="/theleague/instructions">Installation Guide</a>
+        <a class="cta-link secondary" href={instructionsUrl}>Installation Guide</a>
       </div>
     </section>
 
