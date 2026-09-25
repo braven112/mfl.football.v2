@@ -206,7 +206,7 @@ const iconIds = [...fs.readFileSync(spritePath, 'utf-8').matchAll(/<symbol id="(
 		const ok = await copyText(text);
 		if (!btn.classList.contains('tpl__copy')) return;
 		const original = btn.textContent;
-		btn.textContent = ok ? 'Copied' : 'Press Ctrl+C';
+		btn.textContent = ok ? 'Copied' : 'Copy failed';
 		setTimeout(() => {
 			btn.textContent = original;
 		}, 1500);

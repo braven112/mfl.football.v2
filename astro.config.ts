@@ -89,6 +89,9 @@ export default defineConfig({
       // NFL bye calendar — read with fs by /api/schedule-plan. Small, and the
       // tracer cannot follow a process.cwd() join on its own.
       'data/nfl/bye-weeks.json',
+      // Icon sprite — read with fs by the SSR /instructions page to list the
+      // icon gallery. public/ is served statically, not bundled with functions.
+      'public/assets/icons/sprite.svg',
       // Season archives the OG renderer falls back to for posts older than
       // the active window. Enumerated (NOT globbed — includeFiles realpaths
       // each entry, so a literal '*.json' fails the whole build).
