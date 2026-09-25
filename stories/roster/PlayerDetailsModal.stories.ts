@@ -172,3 +172,136 @@ export const LongName = {
     },
   },
 };
+
+// ── The tabbed sheet (roster pages only) ────────────────────────────────────
+// docs/plans/rosters-mobile-layout.md § 4. These go through `preview.sheet`,
+// which the component renders with the SAME pure functions the client script
+// calls on open (src/utils/player-sheet.ts) — so unlike the strings above,
+// the Salary tab's markup here IS production's.
+
+const rosteredQb = {
+  name: 'Lamar Jackson',
+  agePill: '29 yrs',
+  metaText: 'Baltimore · QB · #8',
+  subText: 'Louisville · 8 yrs · 2018 Round 1, Pick 32',
+  ownerName: 'Pacific Pigskins',
+  points: '284.6',
+  ppg: '20.3',
+  contract: '$5.0M',
+  contractLabel: '3 yrs',
+  build: '6\'2" · 205 lbs',
+  status: 'Healthy · Starter',
+  draft: '2018 Round 1, Pick 32',
+  college: 'Louisville',
+  contractDetail: '$5,000,000 · 3 yrs · $16,550,000 remaining',
+  bye: 'Week 7',
+};
+
+const heroActions = [
+  { id: 'cut-simulate', label: 'Simulate cut', icon: 'icon-bar-chart' },
+  { id: 'trade-block', label: 'Trade block', icon: 'icon-bookmark' },
+  { id: 'more', label: 'More', icon: 'icon-menu' },
+];
+
+const salarySheet = {
+  tiles: [
+    { label: '2026 salary', value: '$5,000,000' },
+    { label: 'Thru 2028', value: '3 yrs' },
+    { label: 'Designation', value: 'Standard' },
+    { label: 'Remaining', value: '$16.55M' },
+  ],
+  years: [
+    { year: '2026', text: '$5,000,000', kind: 'salary', ifCut: '$2,500,000' },
+    { year: '2027', text: '$5,500,000', kind: 'salary', escalated: true, ifCut: '$1,250,000' },
+    { year: '2028', text: '$6,050,000', kind: 'salary', escalated: true },
+    { year: '2029', text: 'UFA', kind: 'ufa' },
+    { year: '2030', text: '—', kind: 'future-ufa' },
+  ],
+  ifCutLabel: 'If cut',
+  options: [
+    { id: 'franchise', label: 'Franchise Tag', icon: 'icon-franchise-tag', disabled: true, detail: 'Opens in his final year (2028)' },
+    { id: 'team-option', label: 'Team Option', icon: 'icon-franchise-tag', disabled: true, detail: 'Only on team-option (TO) rookie contracts' },
+    { id: 'extension', label: 'Veteran Extension', icon: 'icon-coin', cost: '+1 yr $8,420,000 · +2 yrs $10,160,000', detail: 'New 2026 salary, then +10% a year' },
+    { id: 'rookie-extension', label: 'Rookie Extension', icon: 'icon-coin-r', disabled: true, detail: 'Only on rookie (RC / TO) contracts' },
+  ],
+  simulations: [
+    { id: 'cut-simulate', label: 'Simulate Cut', icon: 'icon-bar-chart', detail: '2026 space $1.98M → $4.48M · +$2,500,000' },
+    { id: 'trade-simulate', label: 'Simulate Trade', icon: 'icon-bar-chart', detail: '2026 space $1.98M → $6.98M · +$5,000,000' },
+  ],
+};
+
+/** TheLeague Rosters in GM mode: the sheet opens on Salary (Q3). */
+export const RosterSalaryTab = {
+  args: {
+    previewOpen: true,
+    preview: {
+      ...rosteredQb,
+      sheet: { salarySheet, sheetTab: 'salary', quickActions: heroActions, myRank: 'QB 3' },
+    },
+  },
+};
+
+/** After Simulate cut: the sheet stays open and offers Undo (Q5). */
+export const RosterSalaryTabSimulated = {
+  args: {
+    previewOpen: true,
+    preview: {
+      ...rosteredQb,
+      sheet: {
+        salarySheet: {
+          ...salarySheet,
+          simulated: 'Simulated cut',
+          simulations: [{ id: 'undo-simulation', label: 'Undo', icon: 'icon-arrow-left', state: 'on', detail: 'Remove the simulated cut' }],
+        },
+        sheetTab: 'salary',
+        quickActions: [
+          { id: 'undo-simulation', label: 'Simulated · Undo', icon: 'icon-bar-chart', state: 'on' },
+          ...heroActions.slice(1),
+        ],
+      },
+    },
+  },
+};
+
+/** Coach mode opens on Summary: This week, My Rank and More actions. */
+export const RosterSummaryTab = {
+  args: {
+    previewOpen: true,
+    preview: {
+      ...rosteredQb,
+      sheet: {
+        salarySheet,
+        sheetTab: 'summary',
+        quickActions: heroActions,
+        myRank: 'QB 3',
+        thisWeek: {
+          rows: [
+            { label: 'Opponent', value: 'vs CLE' },
+            { label: 'Spread', value: '+3.5' },
+            { label: 'Opp rank vs pos', value: '#27' },
+            { label: 'O/U', value: '44.5' },
+            { label: 'Weather', value: '61° · Clear' },
+            { label: 'Projected', value: '22.4' },
+          ],
+        },
+        moreActions: [
+          { id: 'move-to-ir', label: 'Move to IR', desc: 'Pause participation — cap charge unchanged', icon: 'icon-ambulance' },
+          { id: 'trade-builder', label: 'Add to Trade Builder', desc: 'Open the Trade Builder with him pre-loaded', icon: 'icon-transactions-2' },
+          { id: 'release', label: 'Release…', desc: 'Cut him for real — review the cap hit first', icon: 'icon-user-times', tone: 'danger' },
+        ],
+      },
+    },
+  },
+};
+
+/** The AFL shape (Q4): Summary / Game log tabs, no Salary, no contract. */
+export const AflTabbedNoSalary = {
+  args: {
+    previewOpen: true,
+    hideContract: true,
+    preview: {
+      ...rosteredQb,
+      sheet: { tabbed: true, sheetTab: 'summary' },
+    },
+  },
+};
