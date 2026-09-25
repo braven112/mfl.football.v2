@@ -95,3 +95,14 @@ Also: **MFL answers `W=YTD` for a season with no games with a single BLANK ROW**
 (`{ id: '', score: '' }`), not an empty list. A guard that counts rows accepts
 it — which is exactly how an empty placeholder sat committed in both leagues'
 2026 feed for a month. Require a row with a real id and a real score.
+
+## 2026-09-25 - PPG had the same blind spot as the old points column
+
+TheLeague's PPG divided `weeklyResults` points by `weeklyResults` weeks. That
+is the rostered-weeks rate, so almost every free agent showed a dash: the same
+blind spot as §2 above, in the column beside it. It now reads
+`playerScores-by-week.json` (every player, every week) for BOTH the points and
+the game count. A "game" is any week with a score, zeros included, which is the
+player sheet's own Per Game rule, so the column and the card cannot disagree.
+Don't mix the YTD total with a week count from a different feed; that pairing is
+how the old code priced a one-week rental's whole season as one game.
