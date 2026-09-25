@@ -107,6 +107,8 @@
   // `:empty` stops matching once the script fills it. Everything pivots on
   // the middle line's centre, so the open state's 180deg spin (applied to
   // every label span) and the X both stay in the hamburger's own frame.
+  // The open-state selectors are anchored with `> input` so they never
+  // reach the submenu toggles, whose empty spans draw their own chevrons.
   .myfantasyleague_menu > label > span:empty {
     display: block;
     width: 25px;
@@ -131,14 +133,14 @@
   .myfantasyleague_menu > label > span:empty::after {
     top: 9px;
   }
-  .myfantasyleague_menu input:checked ~ label > span:empty {
+  .myfantasyleague_menu > input:checked ~ label > span:empty {
     background: transparent;
   }
-  .myfantasyleague_menu input:checked ~ label > span:empty::before {
+  .myfantasyleague_menu > input:checked ~ label > span:empty::before {
     top: 0;
     transform: rotate(45deg);
   }
-  .myfantasyleague_menu input:checked ~ label > span:empty::after {
+  .myfantasyleague_menu > input:checked ~ label > span:empty::after {
     top: 0;
     transform: rotate(-45deg);
   }
