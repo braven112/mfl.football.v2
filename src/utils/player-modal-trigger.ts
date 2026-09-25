@@ -82,6 +82,12 @@ export interface PlayerModalData {
    */
   acqUrl?: string | null;
   acqLabel?: string | null;
+  /**
+   * The row's own free-agent verdict (the ⋮ button's `data-pa-claimable`).
+   * Lets the sheet offer a signed-out visitor "Sign in to claim", the ⋮
+   * sheet's other acquisition path, which a phone would otherwise lose.
+   */
+  claimable?: boolean;
 }
 
 export interface PlayerModalTriggerOptions {
@@ -129,10 +135,15 @@ export function initPlayerModalTrigger(
 
     try {
       const playerData: PlayerModalData = JSON.parse(raw);
-      const acq = modalTrigger.closest('tr')?.querySelector<HTMLElement>('[data-pa-acq-url]');
+      const row = modalTrigger.closest('tr');
+      const acq = row?.querySelector<HTMLElement>('[data-pa-acq-url]');
       if (acq && !playerData.acqUrl) {
         playerData.acqUrl = acq.dataset.paAcqUrl || null;
         playerData.acqLabel = acq.dataset.paAcqLabel || null;
+      }
+      const verdict = row?.querySelector<HTMLElement>('[data-pa-claimable]');
+      if (verdict && playerData.claimable === undefined) {
+        playerData.claimable = verdict.dataset.paClaimable === 'true';
       }
       if (typeof (window as any).openPlayerDetailsModal === 'function') {
         (window as any).openPlayerDetailsModal(playerData);

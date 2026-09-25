@@ -240,6 +240,8 @@ const seasonWeeklyData = findForYear(seasonWeeklyModules, statsSeasonYear);
 const ytdPtsMap = parseYtdPlayerScores(findForYear(seasonYtdModules, statsSeasonYear));
 
 // Build weekly player results for the modal's Season Results table
+// Weeks the sheet's table (and so the PPG column) counts: the fantasy season.
+const SEASON_RESULT_WEEKS = 17;
 const nflScheduleData =
   findForYear(nflScheduleFullModules, statsSeasonYear) ??
   findForYear(nflScheduleModules, statsSeasonYear);
@@ -250,7 +252,7 @@ const playerWeekScores = parsePlayerWeekScores(
   findForYear(playerWeekScoreModules, statsSeasonYear)
 );
 const weeklyPlayerResults = (nflScheduleData && Array.isArray(seasonWeeklyData))
-  ? buildWeeklyPlayerResults(seasonWeeklyData, nflScheduleData, fpaData, playersDataForSeason, leagueData, 17, playerWeekScores)
+  ? buildWeeklyPlayerResults(seasonWeeklyData, nflScheduleData, fpaData, playersDataForSeason, leagueData, SEASON_RESULT_WEEKS, playerWeekScores)
   : {};
 
 // Snap counts (GP / Snaps / Snap%).
@@ -662,7 +664,11 @@ if (Array.isArray(allPlayers)) {
       ppg: (() => {
         const weeks = playerWeekScores.get(p.id);
         if (!weeks) return null;
-        const scores = Object.values(weeks);
+        // The same weeks the sheet's Season Results table counts, so the two
+        // agree once week 18 scores exist.
+        const scores = Object.entries(weeks)
+          .filter(([w]) => Number(w) <= SEASON_RESULT_WEEKS)
+          .map(([, v]) => v);
         if (scores.length === 0) return null;
         const pts = scores.reduce((a, b) => a + b, 0);
         return Math.round((pts / scores.length) * 10) / 10;
@@ -1212,7 +1218,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
                 <div class="th-content">{statsSeasonYear} Pts</div>
               </th>
             )}
-            {hasPpg && hasSnapCounts && (
+            {hasPpg && (
               <th class="sortable col-num col-group--stats col-value-ppg" data-sort="ppg">
                 <div class="th-content">PPG</div>
               </th>
@@ -2354,7 +2360,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         html += `<td class="cell-num col-group--stats">${p.seasonPts != null ? p.seasonPts.toFixed(1) : '<span class="na">-</span>'}</td>`;
       }
 
-      if (hasPpg && hasSnapCounts) {
+      if (hasPpg) {
         html += `<td class="cell-num col-group--stats col-value-ppg">${p.ppg != null ? p.ppg.toFixed(1) : '<span class="na">-</span>'}</td>`;
       }
 

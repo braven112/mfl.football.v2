@@ -193,7 +193,7 @@ const t = (value?: string) => value ?? '\u2014';
           </span>
           <span class="pdm-claim__text">
             <span class="pdm-claim__label" id="pdm-acq-label">Bid on MyFantasyLeague</span>
-            <span class="pdm-claim__desc">Opens MFL in a new tab</span>
+            <span class="pdm-claim__desc" id="pdm-acq-desc">Opens MFL in a new tab</span>
           </span>
         </a>
       </div>
@@ -1112,6 +1112,7 @@ const t = (value?: string) => value ?? '\u2014';
   import { escapeHtml } from '../../utils/player-cell-html';
   import { isWatched, loadWatchList, toggleWatch, getWatchListAuth, onWatchListChange } from '../../utils/watch-list-client';
   import { requestSignIn } from '../../utils/player-actions';
+  import { rememberPendingClaim } from '../../utils/claim-resume';
   // No per-navigation reset: player-claim-client keys its state by league and
   // re-reads the page's league on every call, so a ClientRouter hop already
   // reads the right bucket. A blanket reset on `astro:page-load` fired on the
@@ -1304,15 +1305,34 @@ const t = (value?: string) => value ?? '\u2014';
       const acqUrl = typeof claimPlayer?.acqUrl === 'string' && /^https:\/\//.test(claimPlayer.acqUrl)
         ? claimPlayer.acqUrl
         : null;
+      // Signed-out visitor on a page that prompts sign-in (the bridge says
+      // so), for a player the row itself calls claimable: the ⋮ sheet's
+      // "Sign in to claim", which is the only acquisition such a visitor has.
+      const bridge = document.getElementById('watch-list-bridge');
+      const signInToAcquire = !acqUrl
+        && claimPlayer?.claimable === true
+        && bridge?.dataset.signedIn !== 'true'
+        && bridge?.dataset.promptSignin === 'true';
       if (acqLink) {
-        acqLink.hidden = !acqUrl;
+        acqLink.hidden = !acqUrl && !signInToAcquire;
+        const label = document.getElementById('pdm-acq-label');
+        const desc = document.getElementById('pdm-acq-desc');
         if (acqUrl) {
           acqLink.href = acqUrl;
-          const label = document.getElementById('pdm-acq-label');
+          acqLink.target = '_blank';
+          acqLink.dataset.signIn = '';
           if (label) label.textContent = `${claimPlayer.acqLabel || 'Bid'} on MyFantasyLeague`;
+          if (desc) desc.textContent = 'Opens MFL in a new tab';
+        } else if (signInToAcquire) {
+          const verb = bridge?.dataset.claimVerb === 'Bid' ? 'bid' : 'claim';
+          acqLink.href = '#';
+          acqLink.removeAttribute('target');
+          acqLink.dataset.signIn = '1';
+          if (label) label.textContent = `Sign in to ${verb}`;
+          if (desc) desc.textContent = 'Sign in with MFL and we will bring you back here';
         }
       }
-      const offer = !acqUrl && claimPlayer?.id ? offerFor(claimPlayer.id) : null;
+      const offer = !acqUrl && !signInToAcquire && claimPlayer?.id ? offerFor(claimPlayer.id) : null;
       if (claimBtn) {
         claimBtn.hidden = !offer;
         if (offer) {
@@ -1381,6 +1401,24 @@ const t = (value?: string) => value ?? '\u2014';
           (acqLink?.hidden ?? true);
       }
     };
+    if (acqLink && !acqLink.dataset.pdmAcqWired) {
+      acqLink.dataset.pdmAcqWired = '1';
+      acqLink.addEventListener('click', (e) => {
+        if (acqLink.dataset.signIn !== '1' || !claimPlayer?.id) return;
+        e.preventDefault();
+        // Park the player so the post-sign-in reload lands on his claim form,
+        // exactly as the ⋮ sheet's sign-in action does.
+        rememberPendingClaim({
+          id: String(claimPlayer.id),
+          name: claimPlayer.name,
+          position: claimPlayer.position,
+          nflTeam: claimPlayer.nflTeam,
+          espnId: claimPlayer.espnId,
+        });
+        closeModal();
+        requestSignIn();
+      });
+    }
     if (claimBtn && !claimBtn.dataset.pdmClaimWired) {
       claimBtn.dataset.pdmClaimWired = '1';
       claimBtn.addEventListener('click', () => {
