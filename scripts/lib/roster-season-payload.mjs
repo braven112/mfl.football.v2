@@ -628,7 +628,11 @@ export const buildSeasonPayload = (context, season, rawData, tradeBaitPlayerIds 
         spreadAmount,
         weather: gameOdds.weather,
         opponent: gameOdds.opponent,
-        isHome: gameOdds.isHome
+        isHome: gameOdds.isHome,
+        // The kickoff instant (ISO) — the phone roster card prints it before
+        // the opponent (docs/plans/rosters-mobile-layout.md, Q2). Only live
+        // seasons carry odds, so the frozen derived payloads are unaffected.
+        date: gameOdds.date ?? null,
       } : null,
       draftYear,
       draftTeam,
