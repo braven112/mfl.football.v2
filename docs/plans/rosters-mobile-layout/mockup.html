@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Rosters Phone Mockup</title>
+<!--
+  Static design mockup for docs/plans/rosters-mobile-layout.md. NOT app code;
+  nothing imports it. Structure borrowed from the Sleeper screenshots the user
+  shared (three-line card rows, a team card with action chips, hero quick
+  actions, a tabbed player sheet), drawn in this site's own light theme.
+  Roster rows and contracts are the 2026-09-25 dev render of Pacific Pigskins
+  (0001). Values tagged "illustrative" are placeholders: the dev server had no
+  odds feed, and extension cost needs the live position averages.
+  Asset paths are relative to this file so it renders straight from the repo.
+-->
+<style>
+  :root {
+    --primary: #1c497c; --ink: #111827; --muted: #6b7280; --faint: #9ca3af;
+    --line: #e5e7eb; --card: #fff; --page: #e5e7eb;
+    --good: #15803d; --bad: #b91c1c; --warn: #b45309; --warn-bg: #fef3c7; --sim: #f59e0b;
+    --qb: #db2777; --rb: #059669; --wr: #2563eb; --te: #ea580c; --pk: #7c3aed; --def: #475569;
+    --band: linear-gradient(120deg, #7f1d1d, #b91c1c 60%, #991b1b);
+    --font: "Roboto", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --display: "Oswald", "Roboto Condensed", "Arial Narrow", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #cbd5e1; font-family: var(--font); color: var(--ink); }
+  .board { display: flex; flex-wrap: wrap; gap: 32px; padding: 32px; align-items: flex-start; }
+  .frame { width: 390px; }
+  .frame__label { font: 600 13px/1.35 var(--font); color: #334155; margin: 0 0 8px; min-height: 54px; }
+  .phone { width: 390px; height: 844px; overflow: hidden; position: relative; background: var(--page); }
+  .illus { font: 600 10px var(--font); color: #a16207; background: #fef9c3; padding: 2px 6px; border-radius: 4px; }
+
+  /* ---- team card (Sleeper's header card) ---- */
+  .team { margin: 10px; background: var(--card); border-radius: 14px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+  .team__top { background: var(--band); color: #fff; padding: 12px 14px; display: flex; gap: 12px; align-items: center; }
+  .team__top img { width: 46px; height: 46px; }
+  .team__name { font: 700 18px/1.1 var(--display); text-transform: uppercase; letter-spacing: .02em; }
+  .team__meta { font-size: 12px; opacity: .9; margin-top: 3px; }
+  .cap { padding: 10px 14px 4px; }
+  .cap__row { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; color: var(--muted); }
+  .cap__row b { font-size: 16px; color: var(--good); font-variant-numeric: tabular-nums; }
+  .cap__bar { height: 8px; border-radius: 4px; background: #e5e7eb; margin: 6px 0 2px; display: flex; overflow: hidden; }
+  .cap__bar i { display: block; height: 100%; }
+  .chips { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--line); margin-top: 8px; }
+  .chip { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 2px; min-height: 48px; font: 600 11px var(--font); color: var(--primary); border-right: 1px solid var(--line); }
+  .chip:last-child { border-right: 0; }
+  .chip svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; }
+  .chip em { font-style: normal; background: var(--sim); color: #111; border-radius: 999px; padding: 0 5px; font-size: 10px; margin-left: 2px; }
+
+  .controls { display: flex; justify-content: space-between; align-items: center; padding: 2px 10px 8px; gap: 8px; }
+  .seg { display: inline-flex; background: #d1d5db; border-radius: 8px; padding: 3px; }
+  .seg button { border: 0; background: transparent; font: 600 13px var(--font); padding: 0 14px; min-height: 36px; border-radius: 6px; color: #374151; }
+  .seg button.on { background: #fff; color: var(--primary); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+  .sort { font: 500 13px var(--font); border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 8px; min-height: 40px; background: #fff; max-width: 150px; }
+  .pill-btn { border: 1px solid #cbd5e1; background: #fff; border-radius: 999px; font: 600 13px var(--font); padding: 0 12px; min-height: 40px; color: var(--primary); }
+
+  /* ---- card rows ---- */
+  .group { margin: 0 10px 4px; font: 700 11px var(--font); letter-spacing: .08em; text-transform: uppercase; color: #475569; display: flex; justify-content: space-between; }
+  .rows { margin: 0 10px 10px; background: var(--card); border-radius: 12px; overflow: hidden; }
+  .row { display: grid; grid-template-columns: 38px 42px 1fr auto; gap: 0 10px; align-items: center; padding: 9px 10px; border-bottom: 1px solid #f1f5f9; min-height: 64px; }
+  .row:last-child { border-bottom: 0; }
+  .pos { width: 38px; height: 26px; border-radius: 7px; display: grid; place-items: center; font: 700 11px var(--font); color: #fff; }
+  .pos--QB { background: var(--qb); } .pos--RB { background: var(--rb); } .pos--WR { background: var(--wr); } .pos--TE { background: var(--te); }
+  .row--ps .pos { box-shadow: inset 0 0 0 2px #fff, 0 0 0 2px #3b6fe0; }
+  .av { width: 42px; height: 42px; border-radius: 50%; background: #e2e8f0; border: 2px solid #cbd5e1; position: relative; display: grid; place-items: center; font: 700 12px var(--font); color: #475569; }
+  .av img { position: absolute; right: -6px; bottom: -4px; width: 20px; height: 20px; background: #fff; border-radius: 50%; padding: 1px; box-shadow: 0 0 0 1px #e5e7eb; }
+  .txt { min-width: 0; }
+  .l1 { font-size: 15px; font-weight: 600; line-height: 1.2; }
+  .l1 small { font-weight: 500; color: var(--muted); font-size: 12px; }
+  .l2, .l3 { font-size: 12px; color: #4b5563; line-height: 1.35; margin-top: 2px; }
+  .l2 b { color: var(--ink); }
+  .sep { color: #cbd5e1; margin: 0 4px; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .num b { display: block; font-size: 15px; }
+  .num span { font-size: 11px; color: var(--faint); }
+  .easy { color: var(--good); font-weight: 600; } .mid { color: #a16207; font-weight: 600; } .hard { color: var(--bad); font-weight: 600; }
+  .q { color: #ca8a04; font-weight: 700; } .d { color: #dc2626; font-weight: 700; }
+  .yrs { display: inline-grid; place-items: center; min-width: 22px; height: 18px; border-radius: 5px; background: #e2e8f0; font: 700 11px var(--font); color: var(--ink); padding: 0 4px; }
+  .yrs--elig { background: #dbeafe; color: var(--primary); box-shadow: inset 0 0 0 1px #93c5fd; }
+  .dl { background: #dc2626; color: #fff; border-radius: 4px; font: 700 9px var(--font); padding: 1px 4px; margin-left: 3px; }
+  .ufa { color: #dc2626; font-weight: 700; }
+  .row--sim { background: color-mix(in srgb, var(--sim) 14%, #fff); box-shadow: inset 3px 0 0 var(--sim); }
+  .row--sim .l1, .row--sim .num b { opacity: .55; }
+  .sb { display: inline-flex; align-items: center; gap: 3px; font: 700 10px var(--font); text-transform: uppercase; color: #fff; border-radius: 4px; padding: 1px 5px; margin-left: 4px; vertical-align: 1px; }
+  .sb--cut { background: #dc2626; } .sb--trade { background: #7c3aed; }
+  .foot { display: grid; grid-template-columns: 1fr auto; padding: 8px 12px; font-size: 12px; color: #475569; border-top: 1px solid var(--line); background: #f8fafc; }
+  .foot b { font-variant-numeric: tabular-nums; color: var(--ink); text-align: right; }
+
+  /* ---- sim bar ---- */
+  .simbar { position: absolute; left: 0; right: 0; bottom: 0; background: #0f2744; color: #fff; padding: 10px 12px 30px; display: flex; align-items: center; gap: 10px; box-shadow: 0 -4px 14px rgba(0,0,0,.2); z-index: 5; }
+  .simbar__n { background: var(--sim); color: #111; font: 700 12px/1 var(--font); border-radius: 999px; padding: 6px 9px; }
+  .simbar__t { flex: 1; font-size: 12px; line-height: 1.3; }
+  .simbar__t b { font-size: 15px; font-variant-numeric: tabular-nums; }
+  .up { color: #86efac; font-weight: 700; }
+  .simbar button { border: 0; background: #fff; color: #0f2744; font: 700 13px var(--font); border-radius: 8px; padding: 0 14px; min-height: 44px; }
+
+  /* ---- sheet ---- */
+  .scrim { position: absolute; inset: 0; background: rgba(15,23,42,.45); z-index: 6; }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; top: 40px; background: #fff; border-radius: 16px 16px 0 0; z-index: 7; overflow: hidden; }
+  .hero { background: var(--band); color: #fff; padding: 16px 14px 12px; position: relative; display: grid; grid-template-columns: 92px 1fr; gap: 12px; }
+  .hero__photo { width: 92px; height: 92px; border-radius: 12px; background: rgba(255,255,255,.14); display: grid; place-items: center; position: relative; font: 700 24px var(--display); }
+  .hero__photo img { position: absolute; right: -6px; bottom: -6px; width: 34px; height: 34px; background: #fff; border-radius: 50%; padding: 3px; }
+  .hero__owner { font-size: 11px; opacity: .85; display: flex; align-items: center; gap: 4px; }
+  .hero__owner img { width: 16px; height: 16px; }
+  .hero__name { font: 700 21px/1.05 var(--display); text-transform: uppercase; letter-spacing: .02em; margin-top: 2px; }
+  .hero__meta { font-size: 12px; opacity: .9; margin-top: 2px; }
+  .facts { display: flex; gap: 12px; margin-top: 6px; }
+  .facts div { font: 700 14px var(--font); } .facts span { display: block; font: 600 9px var(--font); opacity: .75; letter-spacing: .06em; text-transform: uppercase; }
+  .qa { grid-column: 1 / -1; display: flex; gap: 8px; margin-top: 4px; }
+  .qa button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; border-radius: 999px; border: 0; font: 700 13px var(--font); background: rgba(255,255,255,.18); color: #fff; padding: 0 14px; }
+  .qa button.main { flex: 1; background: #fff; color: #991b1b; }
+  .qa button.icon { width: 44px; padding: 0; }
+  .qa svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; }
+  .qa button.on { background: #fff; color: #991b1b; }
+  .x { position: absolute; top: 10px; right: 10px; width: 36px; height: 36px; border-radius: 50%; background: rgba(0,0,0,.28); display: grid; place-items: center; font-size: 18px; }
+  .tabs { display: flex; border-bottom: 1px solid var(--line); padding: 0 8px; }
+  .tab { flex: 1; text-align: center; font: 700 12px var(--font); letter-spacing: .06em; text-transform: uppercase; color: var(--faint); padding: 13px 0 11px; border-bottom: 3px solid transparent; }
+  .tab.on { color: var(--ink); border-color: var(--primary); }
+  .body { padding: 12px 14px; }
+  .sec { margin-top: 14px; }
+  .sec:first-child { margin-top: 2px; }
+  .sec__t { font: 700 11px/1 var(--font); letter-spacing: .08em; text-transform: uppercase; color: #64748b; border-left: 2px solid var(--primary); padding-left: 8px; margin: 0 0 8px; display: flex; justify-content: space-between; }
+  .sec__t a { color: var(--primary); text-transform: none; letter-spacing: 0; font-weight: 600; }
+  .stat3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+  .stat3 div { border: 1px solid var(--line); border-radius: 10px; text-align: center; padding: 7px 4px; font: 700 16px var(--font); font-variant-numeric: tabular-nums; }
+  .stat3 span { display: block; font: 600 9px var(--font); color: var(--faint); letter-spacing: .06em; text-transform: uppercase; margin-top: 2px; }
+  table.t { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+  .t th { font: 600 9px var(--font); letter-spacing: .06em; text-transform: uppercase; color: var(--faint); text-align: right; padding: 0 4px 5px; }
+  .t th:first-child, .t td:first-child { text-align: left; }
+  .t td { padding: 6px 4px; border-top: 1px solid #f1f5f9; text-align: right; }
+  .t tr.cur td { font-weight: 700; }
+  .t .esc { color: var(--faint); font-size: 11px; margin-left: 4px; }
+  .t .neg { color: var(--bad); } .t .pos { color: var(--good); font-weight: 600; }
+  .elig { display: grid; gap: 6px; }
+  .opt { display: flex; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; background: #f9fafb; min-height: 52px; }
+  .opt__t { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; line-height: 1.25; }
+  .opt__t small { display: block; font-weight: 400; font-size: 12px; color: var(--muted); }
+  .opt button { min-height: 40px; border-radius: 8px; font: 700 12px var(--font); padding: 0 12px; border: 1px solid var(--primary); background: #fff; color: var(--primary); }
+  .opt button.fill { background: var(--primary); color: #fff; }
+  .opt--off { opacity: .6; }
+  .sims { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .simbtn { border: 1px solid #d1d5db; border-radius: 10px; padding: 8px 10px; min-height: 64px; background: #fff; }
+  .simbtn b { display: block; font-size: 13px; }
+  .simbtn span { font-size: 11px; color: var(--muted); line-height: 1.3; display: block; }
+  .simbtn .up2 { color: var(--good); font-weight: 700; font-size: 12px; }
+  .kv { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; font-size: 13px; }
+  .kv span { display: block; font: 600 9px var(--font); color: var(--faint); text-transform: uppercase; letter-spacing: .06em; }
+  .acts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .act { border: 1px solid var(--line); border-radius: 10px; background: #f9fafb; padding: 0 10px; min-height: 44px; display: flex; align-items: center; font: 600 13px var(--font); gap: 6px; }
+  .fade { position: absolute; left: 0; right: 0; bottom: 0; height: 36px; background: linear-gradient(transparent, #fff); }
+
+  /* review sheet */
+  .rv { position: absolute; left: 0; right: 0; bottom: 0; top: 190px; background: #fff; border-radius: 16px 16px 0 0; z-index: 7; padding: 16px 14px 28px; }
+  .rv h2 { margin: 0; font: 700 18px var(--display); text-transform: uppercase; letter-spacing: .03em; }
+  .rv p.sub { margin: 2px 0 10px; font-size: 12px; color: var(--muted); }
+  .mv { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid #f1f5f9; }
+  .mv__t { flex: 1; font-size: 14px; font-weight: 600; } .mv__t small { display: block; font-weight: 400; font-size: 12px; color: var(--muted); }
+  .mv__a { font-weight: 700; color: var(--good); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .mv button { min-height: 36px; border: 1px solid #d1d5db; background: #fff; border-radius: 8px; font: 600 12px var(--font); padding: 0 10px; }
+  .btns { display: grid; grid-template-columns: 1fr 1.4fr; gap: 8px; margin-top: 12px; }
+  .btns button { min-height: 46px; border-radius: 10px; font: 700 14px var(--font); }
+  .ghost { border: 1px solid #6f6f6f; background: #fff; } .primary { border: 0; background: var(--primary); color: #fff; } .primary[disabled] { opacity: .5; }
+  .note { font-size: 11px; color: var(--muted); text-align: right; margin-top: 5px; }
+
+  .afl { --primary: #c41e3a; --band: linear-gradient(120deg, #0b2545, #13315c 60%, #0b2545); }
+  .afl .qa button.main { color: #0b2545; }
+</style>
+</head>
+<body>
+<div class="board">
+
+<!-- ===== 1. GM card rows ===== -->
+<section class="frame" id="f-gm">
+  <p class="frame__label">1 · TheLeague GM. Team card with cap bar and action chips. Rows: position pill, headshot with NFL badge, name / contract / status. Right: 2026 salary. Two moves simulated.</p>
+  <div class="phone">
+    <div class="team">
+      <div class="team__top"><img src="../../../public/assets/theleague/icons/pigskins.png" alt="" /><div><div class="team__name">Pacific Pigskins</div><div class="team__meta">3-1 · 5th of 16 · 190 PF · Northwest</div></div></div>
+      <div class="cap">
+        <div class="cap__row"><span>2026 cap space</span><b>$2,825,075</b></div>
+        <div class="cap__bar" aria-hidden="true"><i style="width:84%;background:#3fb068"></i><i style="width:3%;background:#3b6fe0"></i><i style="width:5%;background:#475569"></i><i style="width:2%;background:var(--sim)"></i></div>
+        <div class="cap__row"><span>Active · Practice · Dead · <span style="color:var(--warn)">sim</span></span><span>of $45,000,000</span></div>
+      </div>
+      <div class="chips">
+        <span class="chip"><svg viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>Sims<em>2</em></span>
+        <span class="chip"><svg viewBox="0 0 24 24"><path d="M3 12l4-4 5 3 5-3 4 4-9 7z"/></svg>Trade</span>
+        <span class="chip"><svg viewBox="0 0 24 24"><path d="M4 7h16M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>Dead $</span>
+        <span class="chip"><svg viewBox="0 0 24 24"><path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.5 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/></svg>Tags</span>
+      </div>
+    </div>
+    <div class="controls">
+      <div class="seg"><button class="on">GM</button><button>Coach</button></div>
+      <select class="sort" aria-label="Sort roster"><option>Sort: Position</option></select>
+      <button class="pill-btn">My Rank</button>
+    </div>
+    <div class="group"><span>Active · 22</span><span>2026</span></div>
+    <div class="rows">
+      <div class="row"><span class="pos pos--QB">QB</span><span class="av">LJ<img src="../../../public/assets/nfl-logos/BAL.svg" alt="" /></span><span class="txt"><div class="l1">Lamar Jackson 🏷️ <small>QB · BAL (7)</small></div><div class="l2"><span class="yrs">3</span> yrs<span class="sep">|</span>thru '28</div></span><span class="num"><b>$5,000,000</b><span>QB 3</span></span></div>
+      <div class="row"><span class="pos pos--QB">QB</span><span class="av">JG<img src="../../../public/assets/nfl-logos/DET.svg" alt="" /></span><span class="txt"><div class="l1">Jared Goff 🏷️ <small>QB · DET (8)</small></div><div class="l2"><span class="yrs">3</span> yrs<span class="sep">|</span>thru '28</div></span><span class="num"><b>$3,400,000</b><span>QB 14</span></span></div>
+      <div class="row"><span class="pos pos--RB">RB</span><span class="av">RD<img src="../../../public/assets/nfl-logos/PIT.svg" alt="" /></span><span class="txt"><div class="l1">Rico Dowdle <small>RB · PIT (5)</small></div><div class="l2"><span class="yrs">3</span> yrs<span class="sep">|</span>thru '28<span class="sep">|</span><span class="q">QUES</span></div></span><span class="num"><b>$2,125,000</b><span>RB 22</span></span></div>
+      <div class="row row--sim"><span class="pos pos--RB">RB</span><span class="av">JW<img src="../../../public/assets/nfl-logos/MIA.svg" alt="" /></span><span class="txt"><div class="l1">Jaylen Wright <small>RB · MIA</small></div><div class="l2"><span class="sb sb--trade">trade ×</span> saves $574,750<span class="sep">|</span><span class="q">QUES</span></div></span><span class="num"><b>$574,750</b><span>RB 51</span></span></div>
+      <div class="row row--sim"><span class="pos pos--RB">RB</span><span class="av">JD<img src="../../../public/assets/nfl-logos/DEN.svg" alt="" /></span><span class="txt"><div class="l1">J.K. Dobbins <small>RB · DEN</small></div><div class="l2"><span class="sb sb--cut">cut ×</span> $272,250 dead<span class="sep">|</span>1 yr</div></span><span class="num"><b>$544,500</b><span>RB 40</span></span></div>
+      <div class="row"><span class="pos pos--RB">RB</span><span class="av">EW<img src="../../../public/assets/nfl-logos/SEA.svg" alt="" /></span><span class="txt"><div class="l1">Emanuel Wilson <small>RB · SEA (8)</small></div><div class="l2"><span class="yrs yrs--elig">4</span><span class="dl">17h</span> declare<span class="sep">|</span>Rookie</div></span><span class="num"><b>$467,500</b><span>RB 58</span></span></div>
+      <div class="row"><span class="pos pos--WR">WR</span><span class="av">JW<img src="../../../public/assets/nfl-logos/DEN.svg" alt="" /></span><span class="txt"><div class="l1">Jaylen Waddle <small>WR · DEN (12)</small></div><div class="l2"><span class="yrs">2</span> yrs<span class="sep">|</span>thru '27</div></span><span class="num"><b>$5,575,000</b><span>WR 9</span></span></div>
+      <div class="foot"><span>Total salary 2026 (incl. dead)</span><b>$42,174,925</b></div>
+    </div>
+    <div class="simbar" role="region" aria-label="Simulated cap moves"><span class="simbar__n">2 sims</span><span class="simbar__t">2026 cap space<br /><b>$2,825,075</b> <span class="up">+$847,000</span></span><button>Review</button></div>
+  </div>
+</section>
+
+<!-- ===== 2. Coach card rows ===== -->
+<section class="frame" id="f-coach">
+  <p class="frame__label">2 · TheLeague Coach. Line 2: kickoff, opponent, rank against the position (colored by difficulty), weather. Line 3: spread · O/U · last-3 trend. Right: projection. <span class="illus">matchups illustrative</span></p>
+  <div class="phone">
+    <div class="controls" style="padding-top:12px">
+      <div class="seg"><button>GM</button><button class="on">Coach</button></div>
+      <select class="sort" aria-label="Sort roster"><option>Sort: Projected</option></select>
+      <button class="pill-btn">My Rank</button>
+    </div>
+    <div class="group"><span>Week 4 · lineups lock Thu 5:15 PM</span><span>Proj</span></div>
+    <div class="rows">
+      <div class="row"><span class="pos pos--QB">QB</span><span class="av">LJ<img src="../../../public/assets/nfl-logos/BAL.svg" alt="" /></span><span class="txt"><div class="l1">Lamar Jackson <small>QB · BAL</small></div><div class="l2">Sun 10:00 AM <span class="easy">vs CLE (27th)</span> ☀️</div><div class="l3">-7.5<span class="sep">|</span>O/U 44.5<span class="sep">|</span>L3 22.4 ↑</div></span><span class="num"><b>24.1</b><span>21.9 avg</span></span></div>
+      <div class="row"><span class="pos pos--QB">QB</span><span class="av">JG<img src="../../../public/assets/nfl-logos/DET.svg" alt="" /></span><span class="txt"><div class="l1">Jared Goff <small>QB · DET</small></div><div class="l2">Sun 1:25 PM <span class="hard">@ GB (4th)</span> ⛅</div><div class="l3">+2.5<span class="sep">|</span>O/U 47<span class="sep">|</span>L3 17.0 ↓</div></span><span class="num"><b>18.6</b><span>18.2 avg</span></span></div>
+      <div class="row"><span class="pos pos--QB">QB</span><span class="av">SD<img src="../../../public/assets/nfl-logos/SEA.svg" alt="" /></span><span class="txt"><div class="l1">Sam Darnold <small>QB · SEA</small></div><div class="l2" style="color:var(--faint);font-style:italic">BYE week</div></span><span class="num"><b>—</b><span>16.4 avg</span></span></div>
+      <div class="row"><span class="pos pos--RB">RB</span><span class="av">RD<img src="../../../public/assets/nfl-logos/PIT.svg" alt="" /></span><span class="txt"><div class="l1">Rico Dowdle <small>RB · PIT</small></div><div class="l2">Sun 10:00 AM <span class="mid">vs NE (15th)</span> 🌧️ <span class="q">QUES</span></div><div class="l3">-3<span class="sep">|</span>O/U 41<span class="sep">|</span>L3 9.9 ↑</div></span><span class="num"><b>11.2</b><span>8.7 avg</span></span></div>
+      <div class="row"><span class="pos pos--RB">RB</span><span class="av">JW<img src="../../../public/assets/nfl-logos/MIA.svg" alt="" /></span><span class="txt"><div class="l1">Jaylen Wright <small>RB · MIA</small></div><div class="l2">Sun 10:00 AM <span class="hard">@ BUF (2nd)</span> 💨 <span class="q">QUES</span></div><div class="l3">+6<span class="sep">|</span>O/U 45.5<span class="sep">|</span>L3 4.1 ↓</div></span><span class="num"><b>5.4</b><span>5.0 avg</span></span></div>
+      <div class="row"><span class="pos pos--RB">RB</span><span class="av">JD<img src="../../../public/assets/nfl-logos/DEN.svg" alt="" /></span><span class="txt"><div class="l1">J.K. Dobbins <small>RB · DEN</small></div><div class="l2">Mon 5:15 PM <span class="easy">vs KC (24th)</span> ☀️</div><div class="l3">+1<span class="sep">|</span>O/U 44.5<span class="sep">|</span>L3 13.1 ↑</div></span><span class="num"><b>12.9</b><span>12.7 avg</span></span></div>
+      <div class="row"><span class="pos pos--WR">WR</span><span class="av">JW<img src="../../../public/assets/nfl-logos/DEN.svg" alt="" /></span><span class="txt"><div class="l1">Jaylen Waddle <small>WR · DEN</small></div><div class="l2">Mon 5:15 PM <span class="mid">vs KC (12th)</span> ☀️</div><div class="l3">+1<span class="sep">|</span>O/U 44.5<span class="sep">|</span>L3 15.0 ↑</div></span><span class="num"><b>14.3</b><span>13.1 avg</span></span></div>
+      <div class="row"><span class="pos pos--WR">WR</span><span class="av">DM<img src="../../../public/assets/nfl-logos/BUF.svg" alt="" /></span><span class="txt"><div class="l1">D.J. Moore <small>WR · BUF</small></div><div class="l2">Sun 10:00 AM <span class="easy">vs MIA (22nd)</span> 💨 <span class="d">DOUB</span></div><div class="l3">-6<span class="sep">|</span>O/U 45.5<span class="sep">|</span>L3 7.2 ↓</div></span><span class="num"><b>11.8</b><span>10.4 avg</span></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 3. Sheet, Salary tab ===== -->
+<section class="frame" id="f-salary">
+  <p class="frame__label">3 · Row tap opens the shared sheet. Hero quick actions: Simulate cut, trade block, watch. The Salary tab is the default when the sheet is opened from a GM-mode roster.</p>
+  <div class="phone">
+    <div class="scrim"></div>
+    <div class="sheet" role="dialog" aria-label="Lamar Jackson">
+      <div class="hero">
+        <div class="hero__photo">LJ<img src="../../../public/assets/nfl-logos/BAL.svg" alt="" /></div>
+        <div>
+          <div class="hero__owner"><img src="../../../public/assets/theleague/icons/pigskins.png" alt="" />Pacific Pigskins</div>
+          <div class="hero__name">Lamar Jackson</div>
+          <div class="hero__meta">QB · BAL · #8 · Louisville</div>
+          <div class="facts"><div><span>Age</span>29</div><div><span>Ht</span>6'2"</div><div><span>Wt</span>205</div><div><span>Exp</span>8</div></div>
+        </div>
+        <div class="qa">
+          <button class="main"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-6 7-6M16 15l5 5M21 15l-5 5"/></svg>Simulate cut</button>
+          <button class="icon on" aria-label="On trade block. Remove"><svg viewBox="0 0 24 24"><path d="M4 4h10l6 6-10 10-6-6z"/><circle cx="9" cy="9" r="1.5"/></svg></button>
+          <button class="icon" aria-label="Watch player"><svg viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
+          <button class="icon" aria-label="More actions"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></button>
+        </div>
+        <span class="x" aria-label="Close">×</span>
+      </div>
+      <div class="tabs" role="tablist"><span class="tab" role="tab">Summary</span><span class="tab on" role="tab" aria-selected="true">Salary</span><span class="tab" role="tab">Game log</span></div>
+      <div class="body">
+        <div class="sec">
+          <div class="stat3"><div>$5.0M<span>2026</span></div><div>3 yrs<span>thru '28</span></div><div>Standard<span>contract</span></div></div>
+        </div>
+        <div class="sec">
+          <p class="sec__t">Salary by year <span style="text-transform:none;letter-spacing:0;font-weight:500">+10% a year</span></p>
+          <table class="t">
+            <thead><tr><th>Year</th><th>Salary</th><th>If cut</th></tr></thead>
+            <tbody>
+              <tr class="cur"><td>2026</td><td>$5,000,000</td><td class="neg">$2,500,000</td></tr>
+              <tr><td>2027</td><td>$5,500,000<span class="esc">+10%</span></td><td class="neg">$1,250,000</td></tr>
+              <tr><td>2028</td><td>$6,050,000<span class="esc">+10%</span></td><td>—</td></tr>
+              <tr><td>2029</td><td><span class="ufa">UFA</span></td><td></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="sec">
+          <p class="sec__t">Extend or tag</p>
+          <div class="elig">
+            <div class="opt"><span class="opt__t">Veteran extension · eligible<small>+1 yr ≈ $6.1M in 2026 <span class="illus">illustrative</span></small></span><button class="fill">Extend…</button></div>
+            <div class="opt opt--off"><span class="opt__t">Franchise tag<small>Opens in his final year (2028)</small></span></div>
+          </div>
+        </div>
+        <div class="sec">
+          <p class="sec__t">Simulate</p>
+          <div class="sims">
+            <div class="simbtn"><b>Simulate cut</b><span>2026 space $1.98M → $4.48M</span><span class="up2">+$2,500,000</span></div>
+            <div class="simbtn"><b>Simulate trade</b><span>2026 space $1.98M → $6.98M</span><span class="up2">+$5,000,000</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="fade"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 4. Sheet, Summary tab (simulated player) ===== -->
+<section class="frame" id="f-summary">
+  <p class="frame__label">4 · Summary tab (default from Coach mode and from every other page): this week's matchup (the Coach columns a phone hides), Details, then the rest of the ⋮ actions. A simulated move shows with Undo. <span class="illus">matchup illustrative</span></p>
+  <div class="phone">
+    <div class="scrim"></div>
+    <div class="sheet" role="dialog" aria-label="J.K. Dobbins">
+      <div class="hero">
+        <div class="hero__photo">JD<img src="../../../public/assets/nfl-logos/DEN.svg" alt="" /></div>
+        <div>
+          <div class="hero__owner"><img src="../../../public/assets/theleague/icons/pigskins.png" alt="" />Pacific Pigskins</div>
+          <div class="hero__name">J.K. Dobbins</div>
+          <div class="hero__meta">RB · DEN · #27 · Ohio State</div>
+          <div class="facts"><div><span>Age</span>27</div><div><span>Ht</span>5'10"</div><div><span>Wt</span>212</div><div><span>Exp</span>6</div></div>
+        </div>
+        <div class="qa">
+          <button class="main" style="background:var(--warn-bg);color:#78350f">Simulated cut · Undo</button>
+          <button class="icon" aria-label="Add to trade block"><svg viewBox="0 0 24 24"><path d="M4 4h10l6 6-10 10-6-6z"/><circle cx="9" cy="9" r="1.5"/></svg></button>
+          <button class="icon" aria-label="Watch player"><svg viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
+          <button class="icon" aria-label="More actions"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></button>
+        </div>
+        <span class="x" aria-label="Close">×</span>
+      </div>
+      <div class="tabs" role="tablist"><span class="tab on" role="tab" aria-selected="true">Summary</span><span class="tab" role="tab">Salary</span><span class="tab" role="tab">Game log</span></div>
+      <div class="body">
+        <div class="sec"><div class="stat3"><div>38.2<span>3 games</span></div><div>12.7<span>per game</span></div><div>RB 40<span>my rank</span></div></div></div>
+        <div class="sec">
+          <p class="sec__t">This week <a>Week 4</a></p>
+          <div class="kv">
+            <div><span>Opponent</span>vs KC · Mon 5:15 PM</div>
+            <div><span>KC vs RB</span><b class="easy">24th</b> · allows 21.4</div>
+            <div><span>Spread · O/U</span>+1 · 44.5</div>
+            <div><span>Weather</span>61° clear</div>
+            <div><span>Last 3</span>13.1 ↑ (W1 11.4, W2 14.0, W3 13.9)</div>
+            <div><span>Projected</span><b>12.9</b></div>
+          </div>
+        </div>
+        <div class="sec">
+          <p class="sec__t">Details</p>
+          <div class="kv"><div><span>Status</span>Active roster</div><div><span>Bye</span>Week 12</div><div><span>Draft</span>2020 R2 P23 · BAL</div><div><span>Snaps</span>58%</div></div>
+        </div>
+        <div class="sec">
+          <p class="sec__t">More actions</p>
+          <div class="acts"><span class="act">Move to IR</span><span class="act">Trade builder</span><span class="act">Franchise tag…</span><span class="act" style="color:var(--bad)">Release (real)…</span></div>
+        </div>
+      </div>
+      <div class="fade"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 5. Review sheet ===== -->
+<section class="frame" id="f-review">
+  <p class="frame__label">5 · "Review" on the sim bar (or the Sims chip): each move with its own Undo, the five-year cap table the hidden future columns carried, and Clear all / Submit. <span class="illus">2027+ illustrative</span></p>
+  <div class="phone">
+    <div class="team"><div class="team__top"><img src="../../../public/assets/theleague/icons/pigskins.png" alt="" /><div><div class="team__name">Pacific Pigskins</div><div class="team__meta">3-1 · 5th of 16</div></div></div></div>
+    <div class="scrim"></div>
+    <div class="rv" role="dialog" aria-label="Simulated moves">
+      <h2>Simulated moves</h2>
+      <p class="sub">Only on this device. Nothing is sent to MFL until you submit.</p>
+      <div class="mv"><span class="mv__t">J.K. Dobbins · Cut<small>$272,250 dead money in 2026</small></span><span class="mv__a">+$272,250</span><button>Undo</button></div>
+      <div class="mv"><span class="mv__t">Jaylen Wright · Trade<small>Off the roster</small></span><span class="mv__a">+$574,750</span><button>Undo</button></div>
+      <div class="sec" style="margin-top:12px">
+        <p class="sec__t">Cap by year</p>
+        <table class="t">
+          <thead><tr><th>Year</th><th>Salary</th><th>Dead</th><th>Space</th></tr></thead>
+          <tbody>
+            <tr class="cur"><td>2026</td><td>$39,741,425</td><td>$2,433,250</td><td class="pos">$2,825,075</td></tr>
+            <tr><td>2027</td><td>$38,910,000</td><td>$640,000</td><td class="pos">$5,450,000</td></tr>
+            <tr><td>2028</td><td>$27,380,000</td><td>$0</td><td class="pos">$17,620,000</td></tr>
+            <tr><td>2029</td><td>$9,815,000</td><td>$0</td><td class="pos">$35,185,000</td></tr>
+            <tr><td>2030</td><td>$2,070,000</td><td>$0</td><td class="pos">$42,930,000</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="btns"><button class="ghost">Clear all</button><button class="primary" disabled>Submit tags / extensions</button></div>
+      <p class="note">Submit shows only for a tag or extension, Nov 14 – Feb 15.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 6. AFL ===== -->
+<section class="frame afl" id="f-afl">
+  <p class="frame__label">6 · AFL: one mode, so it takes the Coach card row. With no salary data there is no Salary tab. The hero carries the AFL action sheet's quick actions. <span class="illus">kickoffs illustrative</span></p>
+  <div class="phone">
+    <div class="group" style="margin-top:12px"><span>Active roster · 16</span><span>Proj</span></div>
+    <div class="rows">
+      <div class="row"><span class="pos pos--QB">QB</span><span class="av">JB<img src="../../../public/assets/nfl-logos/CIN.svg" alt="" /></span><span class="txt"><div class="l1">Burrow, Joe <small>QB · CIN</small></div><div class="l2">Sun 1:05 PM <span class="hard">@ DEN (1st)</span> ☀️</div></span><span class="num"><b>19.4</b><span>20.4 avg</span></span></div>
+      <div class="row"><span class="pos pos--RB">RB</span><span class="av">BA<img src="../../../public/assets/nfl-logos/NYJ.svg" alt="" /></span><span class="txt"><div class="l1">Allen, Braelon <small>RB · NYJ</small></div><div class="l2">Sun 10:00 AM <span class="easy">@ MIA (21st)</span> 💨</div></span><span class="num"><b>6.1</b><span>5.2 avg</span></span></div>
+    </div>
+    <div class="scrim"></div>
+    <div class="sheet" style="top:120px" role="dialog" aria-label="Joe Burrow">
+      <div class="hero">
+        <div class="hero__photo">JB<img src="../../../public/assets/nfl-logos/CIN.svg" alt="" /></div>
+        <div>
+          <div class="hero__name">Burrow, Joe</div>
+          <div class="hero__meta">QB · CIN · LSU · 2020 R1 P1</div>
+          <div class="facts"><div><span>Age</span>29</div><div><span>Ht</span>6'4"</div><div><span>Wt</span>215</div><div><span>Exp</span>7</div></div>
+        </div>
+        <div class="qa">
+          <button class="main"><svg viewBox="0 0 24 24"><path d="M4 4h10l6 6-10 10-6-6z"/><circle cx="9" cy="9" r="1.5"/></svg>Trade block</button>
+          <button class="icon" aria-label="Watch player"><svg viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
+          <button class="icon" aria-label="More actions"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></button>
+        </div>
+        <span class="x" aria-label="Close">×</span>
+      </div>
+      <div class="body">
+        <div class="sec">
+          <p class="sec__t">This week</p>
+          <div class="kv"><div><span>Opponent</span>@ DEN</div><div><span>DEN vs QB</span><b class="hard">1st</b> · allows 13.9</div><div><span>O/U · Weather</span>47.5 · 58°</div><div><span>Total · avg</span>61.2 · 20.4</div></div>
+        </div>
+        <div class="sec">
+          <p class="sec__t">More actions</p>
+          <div class="acts"><span class="act">Move to IR</span><span class="act">Trade player</span><span class="act" style="color:var(--bad)">Cut player…</span></div>
+        </div>
+      </div>
+      <div class="fade"></div>
+    </div>
+  </div>
+</section>
+
+</div>
+</body>
+</html>
