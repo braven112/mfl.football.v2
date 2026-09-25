@@ -8,7 +8,8 @@
  */
 
 import { afterEach, describe, expect, it } from 'vitest';
-import { globSync, readFileSync } from 'fs';
+import { readdirSync, readFileSync } from 'fs';
+import { join } from 'path';
 import {
   applyDemoIsolation,
   createDemoFetch,
@@ -107,7 +108,10 @@ describe('environment scrub', () => {
       'GIPHY_API_KEY', // read-only public GIF search
     ]);
     const names = new Set<string>();
-    for (const file of globSync('src/**/*.{ts,mjs,js,astro}')) {
+    const files = (readdirSync('src', { recursive: true }) as string[])
+      .filter((f) => /\.(ts|mjs|js|astro)$/.test(f))
+      .map((f) => join('src', f));
+    for (const file of files) {
       for (const m of readFileSync(file, 'utf8').matchAll(/process\.env\.([A-Z][A-Z0-9_]+)/g)) {
         names.add(m[1]);
       }
