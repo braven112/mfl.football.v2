@@ -661,6 +661,57 @@ gotcha in `rosters-page-split.md`.
 | 6 | **AFL.** Coach rows (already covered by Phase 4 CSS), `thisWeek`, quick / more actions → `AFLActionModal` | `afl-fantasy/rosters.astro`, `AFLActionModal.astro` | AFL screenshots; cross-league gate test |
 | 7 | **Lock it in.** Guard `tests/rosters-phone-inventory.test.ts`: parse every `<th data-column>` in both pages (and the SSR row badge slots) and fail when one has no entry in a declared `PHONE_HOMES` map in `src/utils/rosters/phone-inventory.ts`. Wire it into path-guard's `rosters-page` domain. Insights entry; stage a changelog line (ask about `heroWorthy`) | tests, `.claude/hooks/path-guard.json`, `docs/claude/insights/features/`, `weekly-changelog-staging.json` | `pnpm test:unit`, `pnpm test:types` |
 
+### Phases 4-5 as built (PR B, TheLeague)
+
+Screenshots, 390x844: `pr-b-{gm,coach,cap-card,review}-{light,dark}.png`, all
+with two simulated moves (a cut and a trade) active. The Coach captures use
+`?demo=true`, the only way to get odds out of the sandboxed dev server.
+
+Where the build differs from sections 2, 3 and 6, and why:
+
+- **The line spans carry no text.** Section 3 said the new spans are "hidden
+  on desktop". Hidden is not enough: `roster-parity-check.mjs` fingerprints
+  every cell's `textContent` (hidden text included) and every `<img src>`.
+  So `buildPhoneLineSpans` (`src/utils/rosters/phone-row.ts`, called by BOTH
+  row builders) emits EMPTY spans, and `rosters-mobile.css` prints each value
+  from `data-t` with `::before`. The pill is PlayerCell's own
+  `.player-meta__pos` restyled (its "QB - RC" text goes `font-size: 0` and the
+  pill label is generated, alt-empty), and the avatar badge is PlayerCell's own
+  `.player-meta__logo` moved onto the avatar. No new `<img>`, no new text.
+- **The row is a wrapping flex line, not a grid.** Line 2 holds pieces of
+  several cells (the pill from the player cell, the years chip, the
+  opponent's parts). `display: contents` on the player cell, the player-cell
+  wrappers and the opponent cell makes those pieces direct flex items of the
+  `<tr>`, and `order` puts each on its line. A grid gives each cell its own
+  track, which cannot put three cells' pieces on one line.
+- **The thead is `display: none`, not visually hidden.** With the cells out of
+  a table grid a header row reads as noise to a screen reader, and the Sort
+  `<select>` carries every sort key. The two right-hand values get
+  visually-hidden generated prefixes ("2026 salary", "Projected", "My Rank").
+- **Kickoff needed a payload field.** `scripts/lib/roster-season-payload.mjs`
+  dropped `gameOdds.date`; it now carries it (live seasons only, so the frozen
+  derived payloads do not move). It prints in ONE clock, `viewerClockZone` —
+  the compact-surface form — resolved by the route and shipped in the config
+  as `kickoffClock`.
+- **The totals come after the rows.** The `<tfoot>` precedes the `<tbody>` in
+  the markup; the phone table is a flex column and the tfoot takes `order: 2`.
+- **Tags chip.** Q9 left where it goes open. It links to the League Planner
+  (the franchise-tag options) and, while a tag or extension is staged, turns
+  into "Tags · Submit", which opens the review sheet rather than submitting
+  from a chip.
+- **Group headers** ("Active roster", "Practice squad", "Injured reserve") are
+  generated content on the first row of each tier.
+- **Review sheet** is a native modal `<dialog>` (Esc, focus containment, the
+  top layer and an inert page come from the platform). Undo moves focus to the
+  next Undo, or to Close when none is left.
+- **Contrast.** In-row secondary text is `--color-gray-600`, not
+  `--content-text-muted` (3.8:1 on the practice-squad tint), and the injury
+  word is `--color-error-dark` (`--color-error` is 3.3:1 there).
+  `tests/position-pill-tokens.test.ts` measures the pill pairs in both themes.
+
+Not in PR B: the contract-demo overlay's "tap ⋮" copy (section 7), the
+Cutdown Plan check at 390px inside the June-August window, and the AFL.
+
 ---
 
 ## 10. Risks

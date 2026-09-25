@@ -3966,3 +3966,40 @@ slow.
 
 **Evidence:** `tests/player-sheet.test.ts` ("the kebab menu stays on screen").
 
+---
+
+## 2026-09-25 - A phone card over a table the parity harness fingerprints: text in attributes, cells flattened with `display: contents`
+
+**Context:** Rosters phone layout, PR B (docs/plans/rosters-mobile-layout.md,
+"Phases 4-5 as built"). Below 768px each roster `<tr>` becomes a three-line
+card, while `scripts/roster-parity-check.mjs` at desktop width must stay at 0
+diffs.
+
+**Insight 1 — "hidden on desktop" is not invisible to the harness.** It
+fingerprints every cell's `textContent` (which includes `display: none` text)
+and every `<img src>`. A phone-only span holding "thru '28" diffs every row.
+Carry phone-only values in an attribute on an EMPTY span and print them with
+`::before { content: attr(data-t) }`; restyle the elements a cell already has
+(PlayerCell's `.player-meta__pos` became the pill, its `.player-meta__logo` the
+avatar badge) instead of adding new ones. `tests/rosters-phone-row.test.ts`
+pins "strip the tags and nothing is left".
+
+**Insight 2 — to put pieces of several cells on one line, flatten the cells.**
+A grid gives each `<td>` its own track. `display: contents` on the cell (and on
+wrappers inside it) makes its children direct flex items of the `<tr>`, and
+`order` places each on its line; a flex item whose basis plus the right-hand
+value's fills the line forces the next line. Pseudo-elements of a
+`display: contents` element are still generated and still take `order`.
+
+**Insight 3 — source order still rules a flattened table.** `<tfoot>` sits
+before `<tbody>` in the markup, so a `display: block` table prints the totals
+ABOVE the rows. Make the table a flex column and give the tfoot `order: 2`.
+
+**Insight 4 — `!important` on every phone `display`.** setMode and the rankings
+script write inline `display` on cells; a phone rule must outrank them both
+ways (the Free Agents insight, again). `:has()` and `[style*='none']` let the
+stylesheet respect what the page decided (`td.ranking-cell:not(:empty):not([style*='none'])`).
+
+**Evidence:** `src/styles/rosters-mobile.css`, `src/utils/rosters/phone-row.ts`,
+`tests/rosters-phone-row.test.ts`; parity 10/10 renders identical before and
+after.
