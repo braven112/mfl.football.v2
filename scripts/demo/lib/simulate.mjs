@@ -157,9 +157,14 @@ export function simulateLeague({ years, facts, currentYear, currentWeek, franchi
     }
 
     // Fill any team still short (injuries, a thin pool) with minimum deals.
-    fillRosters(rosters, value, f, srng, (fid, pid) => {
-      tx.push({ type: 'FREE_AGENT', franchise: fid, transaction: `${pid},|`, timestamp: String(ts(1, -10)) });
-    });
+    fillRosters(
+      rosters,
+      value,
+      f,
+      srng,
+      (fid, pid) => tx.push({ type: 'FREE_AGENT', franchise: fid, transaction: `${pid},|`, timestamp: String(ts(1, -10)) }),
+      (fid, pid) => tx.push({ type: 'FREE_AGENT', franchise: fid, transaction: `|${pid},`, timestamp: String(ts(1, -10)) }),
+    );
 
     // --- Season ---------------------------------------------------------
     const schedule = buildSchedule(ids, srng);
@@ -246,7 +251,7 @@ function needsPosition(roster, position, f) {
   return n < POSITION_CAP[position];
 }
 
-function fillRosters(rosters, value, f, rng, onAdd) {
+function fillRosters(rosters, value, f, rng, onAdd, onDrop) {
   const taken = new Set([...rosters.values()].flatMap((r) => [...r.keys()]));
   const pool = [...value.entries()].filter(([pid]) => !taken.has(pid)).sort((a, b) => b[1] - a[1]);
   for (const [fid, roster] of rosters) {
@@ -256,10 +261,24 @@ function fillRosters(rosters, value, f, rng, onAdd) {
       const idx = pool.findIndex(([pid]) => f.players.get(pid).position === pos);
       if (idx < 0) continue;
       const [pid] = pool.splice(idx, 1)[0];
+      // A full roster makes room first: cut the least valuable player at a
+      // position the team is deep at, never one it has only one of.
+      const active = () => [...roster.entries()].filter(([, c]) => c.status !== 'TAXI_SQUAD');
+      if (active().length >= LEAGUE_RULES.rosterSize) {
+        const count = (p) => active().filter(([id]) => f.players.get(id)?.position === p).length;
+        const cut = active()
+          .filter(([id]) => count(f.players.get(id)?.position) > 1)
+          .sort((a, b) => (value.get(a[0]) ?? 0) - (value.get(b[0]) ?? 0))[0];
+        if (cut) {
+          roster.delete(cut[0]);
+          onDrop(fid, cut[0]);
+        }
+      }
       roster.set(pid, { salary: LEAGUE_RULES.minSalary, contractYear: 1, status: 'ROSTER', acquired: 'fa' });
       onAdd(fid, pid);
     }
-    while (roster.size < LEAGUE_RULES.rosterSize && pool.length) {
+    const activeCount = () => [...roster.values()].filter((c) => c.status !== 'TAXI_SQUAD').length;
+    while (activeCount() < LEAGUE_RULES.rosterSize && pool.length) {
       const idx = pool.findIndex(([pid]) => needsPosition(roster, f.players.get(pid).position, f));
       if (idx < 0) break;
       const [pid] = pool.splice(idx, 1)[0];
