@@ -712,7 +712,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             + '<img src="' + escapeAttr(avatarSrc) + '" alt="' + escapeAttr(p.name) + '" loading="lazy" decoding="async" onerror="' + (isDef ? escapeAttr(logoOnerror) : escapeAttr(buildOnerror(p.id, p.espnId))) + '" />'
           + '</div>'
           + '<div class="player-cell__info">'
-            + '<strong class="player-cell__name player-cell__name--clickable" data-player-modal="' + modalData + '" title="View player details">' + escapeAttr(p.name) + '</strong>'
+            + '<strong class="player-cell__name player-cell__name--clickable" data-player-modal="' + modalData + '" title="View player details" tabindex="0" role="button">' + escapeAttr(p.name) + '</strong>'
             + '<div class="player-meta">' + metaLogoHtml + '<span class="player-meta__pos">' + escapeAttr(p.position) + '</span></div>'
           + '</div>'
         + '</div>'
@@ -887,6 +887,14 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           var data = JSON.parse(target.dataset.playerModal);
           if (window.openPlayerDetailsModal) window.openPlayerDetailsModal(data);
         } catch (_) {}
+      });
+      // The name is a focusable button (tabindex + role): Enter / Space open it.
+      tbody.addEventListener('keydown', function(e) {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        var target = e.target.closest('[data-player-modal]');
+        if (!target || target !== e.target) return;
+        e.preventDefault();
+        target.click();
       });
     }
 

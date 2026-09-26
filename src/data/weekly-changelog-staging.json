@@ -133,6 +133,30 @@
       "impact": "user",
       "area": "rosters",
       "league": "afl"
+    },
+    {
+      "date": "2026-09-26",
+      "type": "enhancement",
+      "summary": "Simulate a cut, trade, tag or extension on any team's player from their player card, not just your own; Submit still files only your own team's tags and extensions.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-09-26",
+      "type": "bug-fix",
+      "summary": "A contract's total remaining now includes each year's 10% raise, matching the salary table, instead of this year's salary times the years left.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-09-26",
+      "type": "bug-fix",
+      "summary": "Player cards open from the keyboard (Tab to a name, press Enter), keep focus inside while open, and return you to the player's name when closed.",
+      "impact": "user",
+      "area": "design-system",
+      "league": "both"
     }
   ]
 }

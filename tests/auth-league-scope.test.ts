@@ -164,6 +164,15 @@ describe('fixed-league admin endpoints gate on their own league', () => {
       /isAuthorizedForLeague\(user, CONTRACT_LEAGUE_ID\)/,
     );
   });
+
+  it('a declaration must name a player on the declaring franchise’s roster', () => {
+    // The Rosters page simulates tags and extensions on ANY club's player and
+    // submits them under the viewer's own franchise; owning the franchise is
+    // not proof the player is on it.
+    const src = read('src/pages/api/contracts/declare.ts');
+    expect(src).toMatch(/getCachedRosters\(/);
+    expect(src).toMatch(/onRoster && onRoster\.franchiseId !== franchiseId/);
+  });
 });
 
 describe('AI endpoints key their rate limit by league AND franchise', () => {

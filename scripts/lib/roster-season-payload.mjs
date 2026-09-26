@@ -43,6 +43,22 @@ export const parseNumber = (value) => {
 /** Copies of src/utils/salary-calculations.ts constants. */
 export const SALARY_CAP = 45_000_000;
 export const ROSTER_LIMIT = 25;
+/** Copy of src/utils/salary-calculations.ts#ANNUAL_ESCALATION: +10% a year. */
+export const ANNUAL_ESCALATION = 1.1;
+
+/**
+ * What the rest of a contract pays: this year's salary, then +10% a year for
+ * each year after it — the same figures the salary table prints in its year
+ * columns (salary-calculations.ts#calculateCapCharges). It used to be
+ * salary x years, which left out every raise.
+ */
+export function contractRemaining(salary, years) {
+  const n = Math.max(Number(years) || 1, 1);
+  const base = Number(salary) || 0;
+  let total = 0;
+  for (let i = 0; i < n; i += 1) total += base * ANNUAL_ESCALATION ** i;
+  return Math.round(total);
+}
 export const CAP_INCLUSION = {
   ACTIVE: { current: 1, future: 1 },
   PRACTICE: { current: 0.5, future: 1 },
@@ -492,7 +508,7 @@ export const buildSeasonPayload = (context, season, rawData, tradeBaitPlayerIds 
     // Use live roster data for current franchise assignment
     // If player not in live rosters, they may have been dropped - show as FA
     const franchiseId = liveData?.franchiseId ?? 'FA';
-    const totalRemaining = salary * Math.max(contractYears || 1, 1);
+    const totalRemaining = contractRemaining(salary, contractYears);
     const seasonYear = Number.parseInt(season, 10) || context.currentLeagueYear;
     // Use live status if available
     const status = liveData?.status ?? player.status ?? 'ROSTER';

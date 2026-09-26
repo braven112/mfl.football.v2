@@ -261,9 +261,13 @@ describe('the modal wiring', () => {
     expect(modal).not.toMatch(/window\.\w*onAction/);
   });
 
-  it('moves focus only for a tabbed sheet, and hands it back on close', () => {
-    // Untabbed openers keep the focus behaviour they have always had.
-    expect(modal).toMatch(/if \(sheetTabs\.length\) \{\s*const opener = document\.activeElement/);
+  it('is a named modal dialog that takes focus, keeps Tab inside, and hands focus back', () => {
+    // Every opener, tabbed or not (user, 2026-09-26): a screen reader hears a
+    // dialog named for the player, and Tab cannot walk into the page behind.
+    expect(modal).toMatch(/class="player-details-modal__content" role="dialog" aria-modal="true" aria-labelledby="detail-name" tabindex="-1"/);
+    expect(modal).toContain("const opener = document.activeElement as HTMLElement | null;");
+    expect(modal).toContain("?.focus({ preventScroll: true })");
+    expect(modal).toMatch(/e\.key === 'Tab' && activeModal\?\.classList\.contains\('active'\)/);
     expect(modal).toContain('restoreSheetFocus();');
   });
 

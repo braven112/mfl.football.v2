@@ -354,9 +354,9 @@ export function buildSalarySheet(facts: RosterSheetFacts, pricing: RosterSheetPr
   const info = facts.player.contractInfo || '';
   tiles.push({ label: 'Designation', value: DESIGNATIONS[info] ?? info });
   // Remaining = the year table's own total, so the tile cannot contradict
-  // the rows under it. The payload's `totalRemaining` is salary x years
-  // (scripts/lib/roster-season-payload.mjs), which drops the league's +10%
-  // escalation; it is only the fallback when a cell does not parse.
+  // the rows under it (a simulated extension included). The payload's
+  // `totalRemaining` (roster-season-payload.mjs#contractRemaining: this year
+  // plus each later year's +10%) is the fallback when a cell does not parse.
   const remaining = sumContractedYears(contracted) ?? facts.totalRemaining;
   if (remaining != null && remaining > 0) {
     tiles.push({ label: 'Remaining', value: pricing.formatCompact(remaining) });
@@ -402,17 +402,19 @@ const MORE_ACTION_IDS: ReadonlyArray<CdmActionId> = [
 
 export function buildQuickActions(facts: RosterSheetFacts): SheetAction[] {
   const out: SheetAction[] = [];
+  // Simulations are for every club's players (user, 2026-09-26): they only
+  // move this page's numbers, and Submit files the viewer's own alone.
+  const active = facts.activeActionType;
+  out.push(active
+    ? {
+        id: 'undo-simulation',
+        label: active === 'cut' ? 'Simulated · Undo' : `Simulated ${ACTION_TYPE_LABELS[active] ?? active} · Undo`,
+        icon: 'icon-bar-chart',
+        state: 'on',
+        desc: 'Remove this simulation',
+      }
+    : { id: 'cut-simulate', label: 'Simulate cut', icon: 'icon-bar-chart', desc: 'Track the cap impact locally — no roster change' });
   if (facts.viewer.isOwnTeam) {
-    const active = facts.activeActionType;
-    out.push(active
-      ? {
-          id: 'undo-simulation',
-          label: active === 'cut' ? 'Simulated · Undo' : `Simulated ${ACTION_TYPE_LABELS[active] ?? active} · Undo`,
-          icon: 'icon-bar-chart',
-          state: 'on',
-          desc: 'Remove this simulation',
-        }
-      : { id: 'cut-simulate', label: 'Simulate cut', icon: 'icon-bar-chart', desc: 'Track the cap impact locally — no roster change' });
     out.push({
       id: 'trade-block',
       label: facts.player.tradeBait ? 'On trade block' : 'Trade block',
