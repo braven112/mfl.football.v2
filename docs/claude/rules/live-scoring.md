@@ -394,3 +394,16 @@ which is exactly why the split exists — verify parsing offline against
   side 1. `tests/live-win-prob-caller-order.test.ts` renders both callers in all
   four viewer/order cases against the header they sit under;
   `tests/live-kit-leaves.test.ts` pins the bar on its own.
+
+## Game odds and weather — one system for every league
+
+A week's spread, over/under, kickoff and stadium weather come from ONE place:
+`loadLiveOdds` in `src/utils/coach-data.ts` (ESPN's scoreboard, with
+Open-Meteo filling weather ESPN leaves out). Both roster pages reach it through
+`src/utils/rosters/live-odds.ts`, and both lineup pages call it directly. A new
+league's pages call the same functions; do not fetch the scoreboard's odds or
+Open-Meteo anywhere else. Until Sept 2026 there were four copies and the AFL's
+never backfilled weather, so the same NFL game showed weather in TheLeague and
+none in the AFL. Match a player's club to the map with `oddsForTeam` (it
+settles MFL's WAS / JAC against the map's own spelling), not a bare index.
+Guard: `tests/nfl-odds-weather-guard.test.ts`.

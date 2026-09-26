@@ -2,11 +2,21 @@
  * Coach Data Utilities
  *
  * Extracts live odds, weather, FPA (Fantasy Points Allowed), and game info
- * from ESPN + Open-Meteo APIs. Shared by the rosters page (coach mode)
- * and the lineup page.
+ * from ESPN + Open-Meteo APIs.
+ *
+ * THE ONE SYSTEM FOR GAME ODDS AND WEATHER. Every league's pages — both
+ * roster pages, both lineup pages, and any league added later — read a week's
+ * spread, over/under, kickoff and stadium weather through `loadLiveOdds`
+ * here, so one game reads the same wherever the site shows it. Before
+ * Sept 2026 there were four copies (this file, `rosters/live-odds.ts`,
+ * `live-odds.ts` + `weather.ts`, and the AFL's `fetchNflMatchups`), and the
+ * AFL's showed no weather at all because its copy never backfilled it.
+ * `tests/nfl-odds-weather-guard.test.ts` fails on a fifth: no other file may
+ * fetch ESPN's odds or Open-Meteo.
  */
 
 import { getCurrentLeagueYear, getCurrentSeasonYear } from './league-year';
+import { normalizeTeamCode } from './nfl-logo';
 import { parseBroadcast } from './espn-game-detail';
 
 // ---------------------------------------------------------------------------
@@ -145,9 +155,21 @@ export async function fetchLiveWeather(teamCode: string): Promise<WeatherInfo | 
 // ESPN odds helpers
 // ---------------------------------------------------------------------------
 
-function normalizeEspnTeamCode(espnAbbrev: string): string {
+/** ESPN's club code → the key `buildOddsMap` stores it under (WSH → WAS, JAC → JAX). */
+export function normalizeEspnTeamCode(espnAbbrev: string): string {
   const map: Record<string, string> = { WSH: 'WAS', JAC: 'JAX' };
   return map[espnAbbrev] || espnAbbrev;
+}
+
+/**
+ * A club's game in a `loadLiveOdds` map, from ANY team-code dialect: MFL's
+ * (JAC, WAS, OAK…), ESPN's, or the logo set's. `normalizeTeamCode` settles
+ * the dialect (it writes WSH), then the odds map's own spelling applies.
+ */
+export function oddsForTeam<T>(odds: Record<string, T>, team: string | null | undefined): T | null {
+  if (!team) return null;
+  const code = normalizeEspnTeamCode(normalizeTeamCode(team));
+  return odds[code] ?? null;
 }
 
 /** Parse ESPN scoreboard response into a map of team code → game odds */

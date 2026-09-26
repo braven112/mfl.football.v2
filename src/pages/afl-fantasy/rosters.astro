@@ -19,12 +19,17 @@ import { formatForViewer } from '../../utils/viewer-clock';
 import { readViewerClock } from '../../utils/viewer-preferences-page';
 import { getCurrentSeasonYear } from '../../utils/league-year';
 import {
-  fetchNflMatchups,
   loadFantasyPointsAllowed,
   getOpponentFpa,
   fpaTier,
-  type NflMatchup,
 } from '../../utils/nfl-matchups';
+// Odds and weather: the ONE system every league reads (coach-data.ts), through
+// the same door TheLeague's roster page uses.
+import {
+  loadLiveOddsData,
+  oddsForTeam,
+  type GameOdds,
+} from '../../utils/rosters/live-odds';
 import { normalizeTeamCode, getNFLTeamName, getNFLTeamLogo } from '../../utils/nfl-logo';
 import { getPlayerHeadshot } from '../../constants/roster-constants';
 import { formatMflName } from '../../utils/player-name-matching';
@@ -519,7 +524,7 @@ const sortedTableRoster: RosterEntry[] = [...activeRosterPlayers, ...irRosterPla
 const nflWeek = getCurrentWeek();
 const nflYear = resolveStatsSeasonYear(testDate ?? undefined);
 const fpaData = loadFantasyPointsAllowed(nflYear) ?? loadFantasyPointsAllowed(nflYear - 1);
-const oddsMap = await fetchNflMatchups(nflWeek, { year: nflYear });
+const oddsMap = await loadLiveOddsData(nflWeek);
 
 // AFL per-player season scoring + this week's projection, all keyed on
 // selectedYear so the year picker's archive seasons show THEIR numbers. Every
@@ -584,7 +589,7 @@ for (const entry of roster) {
 }
 
 interface PlayerMatchup {
-  matchup: NflMatchup | null;
+  matchup: GameOdds | null;
   oppRank: number | null;
   oppAvg: number | null;
   oppCode: string | null;
@@ -599,8 +604,7 @@ interface PlayerMatchup {
 }
 const matchupByPlayerId = new Map<string, PlayerMatchup>();
 for (const player of sortedTableRoster) {
-  const teamCode = player.team ? normalizeTeamCode(player.team) : '';
-  const matchup = teamCode ? oddsMap[teamCode] ?? null : null;
+  const matchup = oddsForTeam(oddsMap, player.team);
   const oppCode = matchup ? normalizeTeamCode(matchup.opponent) : null;
   const fpa = oppCode ? getOpponentFpa(fpaData, oppCode, player.position) : null;
   const season = summarizeSeasonScores(aflSeasonScores, player.id);
@@ -645,15 +649,15 @@ const headerFeaturedPlayer = bestPlayerByPositionRank(
 // Small format helpers so the JSX stays declarative
 const formatPoints = (v: number | null): string =>
   v == null ? '—' : v.toFixed(1);
-const formatWeather = (m: NflMatchup | null): string => {
+const formatWeather = (m: GameOdds | null): string => {
   if (!m?.weather) return '—';
   const t = m.weather.temperature;
   if (typeof t === 'number') return `${Math.round(t)}°`;
   return m.weather.displayValue ?? '—';
 };
-const formatOverUnder = (m: NflMatchup | null): string => {
-  if (!m?.overUnder) return '—';
-  const trimmed = m.overUnder.trim();
+const formatOverUnder = (m: GameOdds | null): string => {
+  // ESPN hands a number through as-is; 'N/A' when the game is not priced.
+  const trimmed = String(m?.overUnder ?? '').trim();
   return trimmed && trimmed !== 'N/A' ? trimmed : '—';
 };
 
