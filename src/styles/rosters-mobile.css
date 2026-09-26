@@ -168,7 +168,11 @@
     display: contents !important;
   }
 
+  /* border-box: player-cell.css gives the chip a 1-2px ring OUTSIDE its
+     width, which put its true centre 1-2px right of the pill's
+     `left: … + var(--rr-avatar) / 2`. The pill below centres on that value. */
   .roster-page[data-league='theleague'] #rosterTableBody .player-cell__avatar {
+    box-sizing: border-box;
     position: absolute;
     top: 0.625rem;
     left: 0.625rem;

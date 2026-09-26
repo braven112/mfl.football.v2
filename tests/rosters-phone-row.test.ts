@@ -351,3 +351,37 @@ describe('the cap card is one button into Cap by year', () => {
     expect(CSS).toMatch(/\.rcap:focus-visible\s*\{[^}]*outline:\s*2px solid/);
   });
 });
+
+describe('the pill centres on the headshot', () => {
+  it('sizes the phone avatar border-box, so --rr-avatar / 2 is its true centre', () => {
+    const CSS = fs.readFileSync(path.join(process.cwd(), 'src/styles/rosters-mobile.css'), 'utf8');
+    const rule = CSS.match(/#rosterTableBody \.player-cell__avatar \{[^}]*\}/)?.[0] ?? '';
+    expect(rule).toMatch(/box-sizing:\s*border-box/);
+    expect(rule).toMatch(/width:\s*var\(--rr-avatar\)/);
+  });
+});
+
+describe('the roster header week tiles on a phone', () => {
+  const BAR = fs.readFileSync(
+    path.join(process.cwd(), 'src/components/shared/roster-header/GamedayBar.astro'),
+    'utf8',
+  );
+
+  it('start collapsed behind a toggle beside the Full schedule link', () => {
+    expect(BAR).toMatch(/data-weeks=\{railMarks\.length > 0 \? 'collapsed' : undefined\}/);
+    expect(BAR).toMatch(/<button type="button" class="rhdr-rail__weeks" data-rhdr-weeks-toggle aria-expanded="false">/);
+  });
+
+  it('collapse only below 768px; wider screens always show both tiles', () => {
+    const phone = BAR.match(/@media \(max-width: 767px\) \{[\s\S]*?\n  \}/)?.[0] ?? '';
+    expect(phone).toMatch(/\.rhdr-bar\[data-weeks='collapsed'\] > \.rhdr-tile \{ display: none; \}/);
+    expect(BAR).toMatch(/\.rhdr-rail__weeks \{ display: none; \}/);
+    const outside = BAR.replace(phone, '');
+    expect(outside).not.toMatch(/data-weeks='collapsed'\][^{]*\{[^}]*display:\s*none/);
+  });
+
+  it('toggles through one delegated listener that keeps aria-expanded in step', () => {
+    expect(BAR).toMatch(/closest\?\.\('\[data-rhdr-weeks-toggle\]'\)/);
+    expect(BAR).toMatch(/toggle\.setAttribute\('aria-expanded', String\(expand\)\)/);
+  });
+});
