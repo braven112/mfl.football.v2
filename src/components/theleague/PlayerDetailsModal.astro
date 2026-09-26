@@ -124,7 +124,10 @@ const tabAttrs = (id: SheetTab): HTMLAttributes<'button'> => {
 
 <div class:list={['player-details-modal', previewOpen && 'active', className]}>
   <div class="player-details-modal__overlay"></div>
-  <div class="player-details-modal__content">
+  <!-- A modal dialog, named by the player's name: focus moves in on open,
+       Tab stays inside while it is open, and focus goes back to whatever
+       opened it on close (see initPlayerDetailsModal). -->
+  <div class="player-details-modal__content" role="dialog" aria-modal="true" aria-labelledby="detail-name" tabindex="-1">
     <button class="pdm-close" aria-label="Close" title="Close (ESC)">
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
         <path d="M14 4L4 14M4 4l10 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
@@ -469,6 +472,12 @@ const tabAttrs = (id: SheetTab): HTMLAttributes<'button'> => {
   /* Border is dark-only (added via box-shadow spread so it costs no layout
      box — panel stays pixel-identical in light). Paired with --shadow-xl it
      lifts the panel off the #121212 page as the top elevation layer. */
+  /* The dialog takes focus on open (so its name is announced); a ring around
+     the whole sheet would only be noise — its controls keep their own. */
+  .player-details-modal__content:focus {
+    outline: none;
+  }
+
   :global(html.dark) .player-details-modal__content {
     box-shadow:
       var(--shadow-xl),
@@ -2061,6 +2070,32 @@ const tabAttrs = (id: SheetTab): HTMLAttributes<'button'> => {
       documentListenersBound = true;
       document.addEventListener('keydown', (e) => {
         const activeModal = document.querySelector('.player-details-modal');
+        // Keep Tab inside the open dialog (aria-modal promises it): wrap at
+        // either end, and pull focus back if it has escaped to the page.
+        if (e.key === 'Tab' && activeModal?.classList.contains('active')) {
+          const dialog = activeModal.querySelector<HTMLElement>('.player-details-modal__content');
+          if (dialog) {
+            const focusable = Array.from(dialog.querySelectorAll<HTMLElement>(
+              'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+            )).filter((el) => el.getClientRects().length > 0 && !el.closest('[hidden]'));
+            const first = focusable[0];
+            const last = focusable[focusable.length - 1];
+            const current = document.activeElement as HTMLElement | null;
+            if (!first) {
+              e.preventDefault();
+              dialog.focus();
+            } else if (!current || !dialog.contains(current)) {
+              e.preventDefault();
+              (e.shiftKey ? last : first).focus();
+            } else if (e.shiftKey && (current === first || current === dialog)) {
+              e.preventDefault();
+              last.focus();
+            } else if (!e.shiftKey && current === last) {
+              e.preventDefault();
+              first.focus();
+            }
+          }
+        }
         if (e.key === 'Escape' && activeModal?.classList.contains('active')) {
           activeModal.classList.remove('active');
           restoreSheetFocus();
@@ -2173,9 +2208,9 @@ const tabAttrs = (id: SheetTab): HTMLAttributes<'button'> => {
       if (el) el.textContent = value;
     };
 
-    // A tabbed sheet takes focus when it opens (its selected tab) and gives it
-    // back to whatever opened it when it closes. Untabbed openers are left
-    // exactly as they were — this sheet has never managed their focus.
+    // The sheet takes focus when it opens — its selected tab when tabbed,
+    // otherwise the dialog itself, which announces the player's name — and
+    // gives it back to whatever opened it when it closes.
     let sheetOpener: HTMLElement | null = null;
     restoreSheetFocus = () => {
       const opener = sheetOpener;
@@ -2965,11 +3000,13 @@ const tabAttrs = (id: SheetTab): HTMLAttributes<'button'> => {
 
       if (modal) modal.classList.add('active');
 
-      if (sheetTabs.length) {
-        const opener = document.activeElement as HTMLElement | null;
-        if (opener && !modal?.contains(opener)) sheetOpener = opener;
-        tabButtons.find((btn) => btn.getAttribute('aria-selected') === 'true')?.focus();
-      }
+      const opener = document.activeElement as HTMLElement | null;
+      if (opener && opener !== document.body && !modal?.contains(opener)) sheetOpener = opener;
+      const selectedTab = sheetTabs.length
+        ? tabButtons.find((btn) => btn.getAttribute('aria-selected') === 'true')
+        : undefined;
+      if (selectedTab) selectedTab.focus();
+      else modal?.querySelector<HTMLElement>('.player-details-modal__content')?.focus({ preventScroll: true });
     };
   }
 

@@ -176,6 +176,8 @@ const avatarStyle = avatarBg
         class="player-cell__name player-cell__name--clickable"
         data-player-modal={JSON.stringify(playerData)}
         title="Click to view player details"
+        tabindex="0"
+        role="button"
       >
         {name}<slot name="after-name" />
       </strong>

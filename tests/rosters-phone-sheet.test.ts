@@ -178,8 +178,9 @@ describe('hero quick actions (Q7)', () => {
     const tb = buildQuickActions(facts({ player: { tradeBait: true } as never })).find((a) => a.id === 'trade-block');
     expect(tb).toMatchObject({ state: 'on', label: 'On trade block' });
   });
-  it('another owner’s player: only the kebab — Trade for him and Watch are the sheet’s built-ins', () => {
-    expect(buildQuickActions(facts({ viewer: { signedIn: true, isOwnTeam: false } })).map((a) => a.id)).toEqual(['contract-menu']);
+  it('another owner’s player: Simulate cut + the kebab — simulations are for every club; trade block, IR and Release stay the owner’s', () => {
+    // User, 2026-09-26. Trade for him and Watch are the sheet's built-ins.
+    expect(buildQuickActions(facts({ viewer: { signedIn: true, isOwnTeam: false } })).map((a) => a.id)).toEqual(['cut-simulate', 'contract-menu']);
   });
 });
 
