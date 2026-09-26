@@ -1,0 +1,26 @@
+---
+/**
+ * The keeper demo's front door: demo.mfl.football/keeper/demo-start?t=<token>
+ * (docs/plans/custom-site-demo.md, phase 4). 404 off the demo.
+ */
+import DemoStartPage from '../../components/shared/demo-start/DemoStartPage.astro';
+import { handleDemoStart } from '../../utils/demo-start';
+import { keeperConfig, keeperLeague } from '../../utils/keeper-slot';
+
+export const prerender = false;
+
+const league = keeperLeague();
+if (!league) return Astro.rewrite('/_not-found');
+const teams = keeperConfig().teams;
+// No preference cookie in this slot: the session is the team.
+const start = await handleDemoStart(Astro, league, teams.map((t: { franchiseId: string }) => t.franchiseId), () => {});
+if (start.redirect) return start.redirect;
+---
+
+<DemoStartPage
+  leagueName={league.name}
+  blurb="This is a fictional 12-team keeper league: no salary cap and no contracts. Every offseason each team keeps its best seven and re-drafts the rest. Pick a team to plan your keepers, set a lineup, work the waiver wire and propose trades — it all saves, and none of it reaches MyFantasyLeague."
+  teams={teams}
+  link={start.link}
+  token={start.token}
+/>

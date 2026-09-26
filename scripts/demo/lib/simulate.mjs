@@ -40,8 +40,10 @@ const salaryGrain = (n) => Math.max(LEAGUE_RULES.minSalary, Math.round(n / 25_00
  * @param {object[]} args.franchises    DEMO_FRANCHISES
  * @param {object} args.rng             createRng()
  * @param {(year:number, week:number) => number} args.weekStart  unix seconds of that NFL week's start
+ * @param {'dynasty' | 'keeper'} [args.mode]  'keeper': no cap or contracts — each
+ *   offseason every team keeps its best KEEPERS and re-drafts the rest
  */
-export function simulateLeague({ years, facts, currentYear, currentWeek, franchises, rng, weekStart }) {
+export function simulateLeague({ years, facts, currentYear, currentWeek, franchises, rng, weekStart, mode = 'dynasty' }) {
   const ids = franchises.map((f) => f.id);
   /** fid → Map<pid, {salary, contractYear, status, acquired}> */
   const rosters = new Map(ids.map((id) => [id, new Map()]));
@@ -67,7 +69,10 @@ export function simulateLeague({ years, facts, currentYear, currentWeek, franchi
     const salaryAdjustments = [];
 
     const isStartup = year === years[0];
-    if (!isStartup) {
+    if (mode === 'keeper') {
+      keeperOffseason({ year, isStartup, ids, rosters, value, f, srng, tx, draftPicks, previousOrder, weekStart, known });
+    }
+    if (mode !== 'keeper' && !isStartup) {
       for (const [fid, roster] of rosters) {
         for (const [pid, c] of roster) {
           c.contractYear -= 1;
@@ -93,6 +98,7 @@ export function simulateLeague({ years, facts, currentYear, currentWeek, franchi
     const rostered = () => new Set([...rosters.values()].flatMap((r) => [...r.keys()]));
     const capUsed = (fid) => [...rosters.get(fid).values()].reduce((s, c) => s + c.salary, 0);
 
+    if (mode !== 'keeper') {
     // Auction (March): every free agent worth rostering, best first, to a team
     // with room — the richest bidder most often, but not always.
     const rookieSlots = isStartup ? 0 : LEAGUE_RULES.rookieRounds;
@@ -144,6 +150,7 @@ export function simulateLeague({ years, facts, currentYear, currentWeek, franchi
         });
       }
     }
+    } // mode !== 'keeper'
 
     // Trim to the roster limit (taxi squad doesn't count): cheapest, least
     // valuable first, the way an owner makes cut-down day.
@@ -206,7 +213,7 @@ export function simulateLeague({ years, facts, currentYear, currentWeek, franchi
       weekly,
       standings,
       playoffs,
-      rosters: snapshotRosters(rosters),
+      rosters: mode === 'keeper' ? withoutSalaries(snapshotRosters(rosters)) : snapshotRosters(rosters),
       auctionResults,
       draftPicks,
       salaryAdjustments,
@@ -216,6 +223,52 @@ export function simulateLeague({ years, facts, currentYear, currentWeek, franchi
     });
   }
   return seasons;
+}
+
+/** A keeper league keeps this many players each offseason (the AFL's rule; KEEPER_LIMIT). */
+export const KEEPERS = 7;
+
+/**
+ * A keeper league's offseason: every team keeps its KEEPERS most valuable
+ * players and releases the rest, then a straight (not snake) draft — worst
+ * finisher first — refills the rosters. The startup season drafts every
+ * roster from scratch, in a random order.
+ */
+function keeperOffseason({ year, isStartup, ids, rosters, value, f, srng, tx, draftPicks, previousOrder, weekStart, known }) {
+  const cutTime = weekStart(year, 1) - 40 * 86_400;
+  if (!isStartup) {
+    for (const [fid, roster] of rosters) {
+      const ranked = [...roster.keys()].filter(known).sort((a, b) => (value.get(b) ?? 0) - (value.get(a) ?? 0));
+      const keep = new Set(ranked.slice(0, KEEPERS));
+      for (const pid of [...roster.keys()]) {
+        if (keep.has(pid)) continue;
+        roster.delete(pid);
+        tx.push({ type: 'FREE_AGENT', franchise: fid, transaction: `|${pid},`, timestamp: String(cutTime + srng.int(0, 86_400)) });
+      }
+    }
+  }
+  const order = !isStartup && previousOrder ? previousOrder : srng.shuffle(ids);
+  const taken = new Set([...rosters.values()].flatMap((r) => [...r.keys()]));
+  const pool = [...value.entries()].filter(([pid]) => !taken.has(pid)).sort((a, b) => b[1] - a[1]).map(([pid]) => pid);
+  const rounds = LEAGUE_RULES.rosterSize - (isStartup ? 0 : KEEPERS);
+  let dt = weekStart(year, 1) - 14 * 86_400;
+  for (let round = 1; round <= rounds; round++) {
+    order.forEach((fid, i) => {
+      const roster = rosters.get(fid);
+      // Best available that the roster still has room for at his position.
+      const at = pool.findIndex((pid) => needsPosition(roster, f.players.get(pid).position, f));
+      if (at < 0) return;
+      const [pid] = pool.splice(at, 1);
+      roster.set(pid, { salary: 0, contractYear: 1, status: 'ROSTER', acquired: 'draft' });
+      dt += srng.int(60, 600);
+      draftPicks.push({ round: String(round).padStart(2, '0'), pick: String(i + 1).padStart(2, '0'), franchise: fid, player: pid, timestamp: String(dt), comments: '' });
+    });
+  }
+}
+
+/** A keeper league carries no salaries — the roster feed says 0, as MFL's does. */
+function withoutSalaries(snapshot) {
+  return new Map([...snapshot].map(([fid, r]) => [fid, new Map([...r].map(([pid, c]) => [pid, { ...c, salary: 0, contractYear: 0 }]))]));
 }
 
 /**
@@ -305,7 +358,12 @@ function buildSchedule(ids, rng) {
     rounds.push(games);
     rot.unshift(rot.pop());
   }
-  return rng.shuffle(rounds).slice(0, LEAGUE_RULES.regularSeasonWeeks);
+  // A league of fewer than regularSeasonWeeks + 1 teams (the 12-team keeper
+  // demo) plays the round robin again for the remaining weeks.
+  const shuffled = rng.shuffle(rounds);
+  const season = [];
+  while (season.length < LEAGUE_RULES.regularSeasonWeeks) season.push(...shuffled);
+  return season.slice(0, LEAGUE_RULES.regularSeasonWeeks);
 }
 
 /**
@@ -487,7 +545,9 @@ function playPlayoffs({ standings, lastWeek, rosters, f, scoresSoFar, value, srn
   const wildCards = standings
     .filter((r) => !winners.includes(r))
     .sort((a, b) => pct(b) - pct(a) || allPlay(b) - allPlay(a) || b.pf - a.pf)
-    .slice(0, 3);
+    // Wild cards fill the seven-team field: three behind four division
+    // champions, five behind a two-division league's two.
+    .slice(0, 7 - winners.length);
   const field = [...winners, ...wildCards];
   const seeds = field.map((s, i) => ({ id: s.id, seed: i + 1 }));
   const inField = new Set(field.map((r) => r.id));
@@ -504,6 +564,8 @@ function playPlayoffs({ standings, lastWeek, rosters, f, scoresSoFar, value, srn
   const bracket = (entrants, key) => {
     const s = (n) => entrants[n - 1].id;
     const out = { key, rounds: [] };
+    // A seven-team bracket; a smaller league leaves too few for a toilet bowl.
+    if (entrants.length < 7) return out;
     if (!play(15, [])) return out;
     const r1 = [game(15, s(2), s(7)), game(15, s(3), s(6)), game(15, s(4), s(5))];
     out.rounds.push({ week: 15, games: r1.map((g, i) => ({ ...g, gameId: i + 1, seeds: [[2, 7], [3, 6], [4, 5]][i] })) });

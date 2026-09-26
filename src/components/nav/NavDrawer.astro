@@ -88,6 +88,8 @@ const shouldOpenOnDesktop = navOpenCookie?.value === 'true';
 // Determine logo URL based on league
 const logoUrl = league === 'afl'
   ? '/assets/logos/afl-logo.svg'
+  : league === 'keeper'
+    ? '/assets/logos/keeper-logo.svg'
   : league === 'bb1'
     ? '/assets/logos/bestball-logo.svg'
     : '/assets/logos/theleague-logo.svg';

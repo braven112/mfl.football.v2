@@ -1,0 +1,27 @@
+---
+/**
+ * Free Agents (the custom-site demo's keeper league) — thin route wrapper
+ * around the AFL-family players page. One shared pool: the keeper league has
+ * no duplicate-player conferences, so its snapshot carries none and the page
+ * shows no switcher. Off the demo this slot does not exist (middleware 404).
+ */
+import PlayersPage from '../../components/afl-family/PlayersPage.astro';
+import { keeperLeague } from '../../utils/keeper-slot';
+
+const league = keeperLeague();
+if (!league) return Astro.rewrite('/_not-found');
+const snapshot = Object.values(
+  import.meta.glob('../../../data/keeper/derived/free-agents.json', { eager: true, import: 'default' }),
+)[0];
+if (!snapshot) return Astro.rewrite('/_not-found');
+const leagueFeedModules = import.meta.glob('../../../data/keeper/mfl-feeds/20{2[5-9],[3-9][0-9]}/league.json', { eager: true });
+const calendarModules = import.meta.glob('../../../data/keeper/mfl-feeds/20{2[5-9],[3-9][0-9]}/calendar.json', { eager: true });
+---
+
+<PlayersPage
+  league={league}
+  freeAgentsData={snapshot}
+  leagueFeedModules={leagueFeedModules}
+  calendarModules={calendarModules}
+  logoSrc="/assets/logos/keeper-logo.svg"
+/>

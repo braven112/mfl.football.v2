@@ -74,6 +74,36 @@ with `astro build` and driven in Chromium against `scripts/demo/mock-upstash.mjs
 - The banner's pitch line names the demo's own extras (draft tools for best
   ball, salary-cap tools elsewhere).
 
+### Phase 4 — `/keeper`, the fourth league slot (built)
+
+- A demo-only registry entry, `keeper` (`leagues-data.mjs`, inside the
+  `isDemoEnv()` block): production's crons, push senders and sync scripts
+  enumerate the registry, so a slot they could see is one they would poll MFL
+  for. Off the demo the middleware 404s `/keeper/*` and `/api/keeper/*`
+  (`isDemoOnlyPath`), and every route re-checks `keeperLeague()`.
+- Its pages are the AFL's, SHARED rather than copied: the lineup, standings,
+  players, rosters (keeper planner included), keepers hub and trade builder
+  moved into `src/components/afl-family/*Page.astro`, and `/afl-fantasy/*` is
+  now a thin route wrapper around each — AFL HTML parity checked before and
+  after every move (only the new `data-controller="afl-family"` marker
+  differs). The Front Office hub was already shared. The keeper home is its own
+  small component (`components/keeper/KeeperHomePage.astro`): the AFL's home is
+  built around AFL-only machinery (hero calendar, tiers, conference drafts).
+- League-aware helpers take the league with an AFL default, so no existing
+  caller changed: `afl-conference` (`AflFamilySlug`), the AFL scoring/planner
+  loaders (a `dataPath`), the Front Office keeper loader, the live free-agent
+  roster cache (keyed by league), `compute-afl-free-agents.mjs --league`.
+- Nav: its own `navSlug` (`keeper`), an allowlist of the nav links it has
+  (`navLinks`), and `isAflFamily()` for AFL-tagged links. The demo's league
+  switcher lists only slots with a `demoPath`.
+- Data: `scripts/demo/lib/keeper.mjs` + `simulateLeague({ mode: 'keeper' })` —
+  twelve teams, one conference, two divisions; every offseason each team keeps
+  its best seven and a straight draft (worst first) refills the roster; no
+  salaries. The MFL stand-in answers each league id from its own feeds and
+  state (`standinLeague`, an AsyncLocalStorage scope per call).
+- `/api/afl-keepers` serves any AFL-family league, storing a plan under the
+  SESSION's league — so it is no longer refused on the demo.
+
 ### Known gaps (next)
 
 - The AFL DATA files stay in the demo bundle (54 shared modules
@@ -85,8 +115,11 @@ with `astro build` and driven in Chromium against `scripts/demo/mock-upstash.mjs
 - Trades move players, not draft picks; What's New, the Pecking Order and the
   owners' poll are empty; the league's rules pages keep their prose with
   names swapped.
-- P4: the keeper demo (needs a fourth league slot, unforking pages) and
-  `/bigleague` (96 teams, 8 conferences × 12, in the AFL slot).
+- P4: `/bigleague` (96 teams, 8 conferences × 12, in the AFL slot) — the
+  AFL-family components are the base; `afl-conference` still types a
+  conference id as `'00' | '01'`.
+- The keeper slot has no Schefter feed, rules, calendar, playoffs or live
+  scoring pages; its nav and header offer only what it has.
 
 ## Goal
 

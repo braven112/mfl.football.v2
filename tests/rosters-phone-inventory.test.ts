@@ -11,7 +11,7 @@ import { PHONE_HOMES, phoneHomeKey, type PhoneInventoryLeague } from '../src/uti
 
 const PAGES: Record<PhoneInventoryLeague, string> = {
   theleague: 'src/pages/theleague/rosters.astro',
-  'afl-fantasy': 'src/pages/afl-fantasy/rosters.astro',
+  'afl-fantasy': 'src/components/afl-family/RostersPage.astro',
 };
 
 /**

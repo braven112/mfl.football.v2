@@ -24,23 +24,44 @@
 
 import { getRedis } from './redis-client';
 import { currentDemoContext } from './demo-request-context';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { LEAGUES } from '../config/leagues-data.mjs';
 
 type Json = any; // MFL exports are loosely shaped; the readers own the typing.
 
 // ── Base data: the generated league, loaded lazily per file ─────────────────
 
-const FEED_LOADERS = import.meta.glob<Json>(
-  '../../data/theleague/mfl-feeds/*/{league,rosters,players,standings,schedule,weekly-results-raw,transactions,draftResults,auctionResults,futureDraftPicks,salaryAdjustments,calendar,projectedScores,injuries,nflSchedule,fantasyPointsAllowed}.json',
-  { import: 'default' },
-);
+// One glob per league the demo serves an MFL for: the dynasty league in
+// TheLeague's slot, and the keeper league in its demo-only slot. Literal
+// specifiers — a glob cannot take a variable — keyed by the slot's slug.
+const FEED_LOADERS: Record<'theleague' | 'keeper', Record<string, () => Promise<Json>>> = {
+  theleague: import.meta.glob<Json>(
+    '../../data/theleague/mfl-feeds/*/{league,rosters,players,standings,schedule,weekly-results-raw,transactions,draftResults,auctionResults,futureDraftPicks,salaryAdjustments,calendar,projectedScores,injuries,nflSchedule,fantasyPointsAllowed}.json',
+    { import: 'default' },
+  ),
+  keeper: import.meta.glob<Json>(
+    '../../data/keeper/mfl-feeds/*/{league,rosters,players,standings,schedule,weekly-results-raw,transactions,draftResults,auctionResults,futureDraftPicks,salaryAdjustments,calendar,projectedScores,injuries,nflSchedule,fantasyPointsAllowed}.json',
+    { import: 'default' },
+  ),
+};
+type StandinSlug = keyof typeof FEED_LOADERS;
+
+/**
+ * Which league this call is answering for — set once per call from its `L=`
+ * parameter, and read by every feed load and state read beneath it. Scoped
+ * rather than passed, because it reaches helpers several calls deep, and
+ * scoped rather than module-level, because calls interleave at every await.
+ */
+const standinLeague = new AsyncLocalStorage<StandinSlug>();
+const activeSlug = (): StandinSlug => standinLeague.getStore() ?? 'theleague';
 
 const baseCache = new Map<string, Promise<Json | null>>();
 
 function loadFeed(year: string, name: string): Promise<Json | null> {
-  const key = `../../data/theleague/mfl-feeds/${year}/${name}.json`;
+  const slug = activeSlug();
+  const key = `../../data/${slug}/mfl-feeds/${year}/${name}.json`;
   if (!baseCache.has(key)) {
-    const loader = FEED_LOADERS[key];
+    const loader = FEED_LOADERS[slug][key];
     baseCache.set(key, loader ? loader().then((v) => structuredClone(v)).catch(() => null) : Promise.resolve(null));
   }
   // Every caller gets its own copy: overlays mutate what they are handed.
@@ -69,6 +90,8 @@ interface DemoMflState {
 }
 
 const STATE_KEY = 'mfl-standin-state';
+/** Per league: the dynasty league keeps the original key; the keeper league its own. */
+const stateKey = () => (activeSlug() === 'theleague' ? STATE_KEY : `${STATE_KEY}:${activeSlug()}`);
 /** Matches the link's life closely enough; the link record is the real limit. */
 const STATE_TTL_SECONDS = 15 * 86_400;
 
@@ -84,7 +107,7 @@ const emptyState = (): DemoMflState => ({
 async function loadState(): Promise<DemoMflState> {
   const redis = await getRedis();
   if (!redis) return emptyState();
-  const raw = await redis.get<DemoMflState | string>(STATE_KEY);
+  const raw = await redis.get<DemoMflState | string>(stateKey());
   if (!raw) return emptyState();
   return { ...emptyState(), ...(typeof raw === 'string' ? JSON.parse(raw) : raw) };
 }
@@ -92,7 +115,7 @@ async function loadState(): Promise<DemoMflState> {
 async function saveState(state: DemoMflState): Promise<void> {
   const redis = await getRedis();
   if (!redis) return;
-  await redis.set(STATE_KEY, JSON.stringify(state), { ex: STATE_TTL_SECONDS });
+  await redis.set(stateKey(), JSON.stringify(state), { ex: STATE_TTL_SECONDS });
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -501,7 +524,14 @@ function isWrite(url: URL, method: string): boolean {
  * id gets MFL's own "no such league" answer rather than the dynasty league's
  * data under another league's name.
  */
-const STANDIN_LEAGUE_ID = LEAGUES.theleague.id;
+/** MFL league id → the slot the stand-in answers it from. */
+const STANDIN_LEAGUES = new Map<string, StandinSlug>(
+  [
+    [LEAGUES.theleague.id, 'theleague'] as const,
+    // Registered only on a demo deployment (leagues-data.mjs).
+    [(LEAGUES as Record<string, { id: string } | undefined>).keeper?.id, 'keeper'] as const,
+  ].filter((entry): entry is readonly [string, StandinSlug] => !!entry[0]),
+);
 
 export async function answerDemoMfl(url: URL, method: string, body: string | undefined): Promise<Response> {
   const wantsJson = url.searchParams.get('JSON') === '1';
@@ -509,9 +539,12 @@ export async function answerDemoMfl(url: URL, method: string, body: string | und
     return xml('<error>The demo league has no MyFantasyLeague sign-in — use your demo link.</error>');
   }
   const leagueParam = url.searchParams.get('L') ?? new URLSearchParams(body ?? '').get('L');
-  if (leagueParam && leagueParam !== STANDIN_LEAGUE_ID) {
-    return mflError('Invalid league ID.', wantsJson);
-  }
+  const slug = leagueParam ? STANDIN_LEAGUES.get(leagueParam) : 'theleague';
+  if (!slug) return mflError('Invalid league ID.', wantsJson);
+  return standinLeague.run(slug, () => answerForLeague(url, method, body, wantsJson));
+}
+
+async function answerForLeague(url: URL, method: string, body: string | undefined, wantsJson: boolean): Promise<Response> {
   const state = await loadState();
   if (isWrite(url, method)) {
     const response = await writeResponse(url, method, body, state);

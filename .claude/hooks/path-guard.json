@@ -131,7 +131,11 @@
       "paths": [
         "src/pages/**/*.astro",
         "src/components/**/*.astro",
-        "src/scripts/*"
+        "src/scripts/*",
+        "src/components/afl-family/LineupPage.astro",
+        "src/components/afl-family/PlayersPage.astro",
+        "src/components/afl-family/StandingsPage.astro",
+        "src/components/afl-family/RostersPage.astro"
       ],
       "note": "Bundled <script> blocks run ONCE per session under the ClientRouter: init on astro:page-load (never DOMContentLoaded), re-read elements inside init(), replace document/window listeners rather than stacking them. See docs/claude/insights/domains/frontend.md \"Astro and ClientRouter\".",
       "tests": [
@@ -290,7 +294,8 @@
         "src/components/shared/WaiverClaimsPanel.astro",
         "src/pages/api/waiver-claims.ts",
         "src/scripts/transaction-hub.ts",
-        "src/components/theleague/TransactionHubModal.astro"
+        "src/components/theleague/TransactionHubModal.astro",
+        "src/components/afl-family/PlayersPage.astro"
       ],
       "note": "The ⋮ menu sits right after the Player column (it was nine columns off-screen on a phone, #974) and its header carries the league's own verb; the acquisition itself lives in PlayerDetailsModal, so it reaches every page the modal does — which means WaiverClaimModal is mounted by that modal and by no page, the offer is a SESSION verdict from /api/claim-context (both leagues have a franchise 0001), and the form must survive landing before or after the context does. The waiver priority dialog opens on the synced order and time-boxes the live read; the page's signed-in verdict is computed ONCE (franchiseIdForLeague) and read back off #watch-list-bridge[data-signed-in], never a second copy. The Auction view is a LIVE board (Place Bid deep links, a 60s poll, a 36h clock), so it belongs to resolveAuctionWindow and not to `hasAuctionData` — the auction RESULTS feed keeps its rows all year, which left the board on the page in September. See docs/claude/insights/features/waiver-claims.md and watch-list.md.",
       "tests": [
@@ -438,7 +443,8 @@
         "src/pages/*/lineup.astro",
         "src/pages/api/*/lineup*",
         "src/pages/api/lineup*",
-        "src/utils/lineup*"
+        "src/utils/lineup*",
+        "src/components/afl-family/LineupPage.astro"
       ],
       "tests": [
         "tests/lineup-bench-sync.test.ts",
@@ -662,7 +668,8 @@
         "scripts/generate-pecking-order.mjs",
         "src/pages/*/pecking-order/ballot.astro",
         "src/pages/*/pecking-order/voters.astro",
-        "src/pages/*/lineup.astro"
+        "src/pages/*/lineup.astro",
+        "src/components/afl-family/LineupPage.astro"
       ],
       "tests": [
         "tests/owners-poll-ballot.test.ts",
@@ -796,7 +803,8 @@
         "src/utils/roster-header-data.ts",
         "src/utils/roster-header-skin.ts",
         "src/utils/throwback-request-state.ts",
-        "src/utils/rosters/*.ts"
+        "src/utils/rosters/*.ts",
+        "src/components/afl-family/RostersPage.astro"
       ],
       "tests": [
         "tests/cross-league-init-gate.test.ts",
@@ -946,7 +954,8 @@
         "scripts/*standings*",
         "src/components/theleague/standings/*",
         "src/components/theleague/PlayoffBadge.astro",
-        "src/pages/*/standings.astro"
+        "src/pages/*/standings.astro",
+        "src/components/afl-family/StandingsPage.astro"
       ],
       "tests": [
         "tests/standings-all-play.test.ts",
@@ -1160,7 +1169,11 @@
         "src/components/**/*.tsx",
         "src/components/**/*.astro",
         "src/pages/**/*.astro",
-        "src/layouts/*.astro"
+        "src/layouts/*.astro",
+        "src/components/afl-family/LineupPage.astro",
+        "src/components/afl-family/PlayersPage.astro",
+        "src/components/afl-family/StandingsPage.astro",
+        "src/components/afl-family/RostersPage.astro"
       ],
       "tests": [
         "tests/origin-check-content-type.test.ts"
@@ -1298,7 +1311,8 @@
         "src/pages/afl-fantasy/playoffs.astro",
         "src/pages/afl-fantasy/draft/order.astro",
         "src/pages/afl-fantasy/draft/room.astro",
-        "src/pages/afl-fantasy/front-office/index.astro"
+        "src/pages/afl-fantasy/front-office/index.astro",
+        "src/components/afl-family/StandingsPage.astro"
       ],
       "tests": [
         "tests/preferred-team-resolution-guard.test.ts",

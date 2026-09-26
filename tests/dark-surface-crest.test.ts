@@ -367,7 +367,7 @@ describe('the call sites', () => {
     'src/utils/hero-crest.ts',
     'src/components/theleague/season-heroes/RecapCompositeHero.astro',
     'src/pages/theleague/lineup.astro',
-    'src/pages/afl-fantasy/lineup.astro',
+    'src/components/afl-family/LineupPage.astro',
     'src/pages/theleague/draft/broadcast.astro',
     'src/pages/afl-fantasy/draft/broadcast.astro',
   ];

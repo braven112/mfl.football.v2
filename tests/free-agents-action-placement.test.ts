@@ -26,7 +26,7 @@ import { join } from 'node:path';
 const root = join(__dirname, '..');
 const read = (p: string) => readFileSync(join(root, p), 'utf8');
 
-const PAGES = ['src/pages/theleague/players.astro', 'src/pages/afl-fantasy/players.astro'];
+const PAGES = ['src/pages/theleague/players.astro', 'src/components/afl-family/PlayersPage.astro'];
 
 describe('free-agent action controls sit beside the player column', () => {
   for (const page of PAGES) {

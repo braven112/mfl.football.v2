@@ -35,7 +35,7 @@ import {
   resolvePunctuationRedirect,
 } from './utils/link-punctuation.mjs';
 import { isDemoDeploy, shouldBlockIndexing } from './utils/deploy-environment';
-import { isDemoRefusedPath, resolveDemoPath, rewriteDemoHtml } from './utils/demo-isolation-core.mjs';
+import { isDemoOnlyPath, isDemoRefusedPath, resolveDemoPath, rewriteDemoHtml } from './utils/demo-isolation-core.mjs';
 import { demoLeaguePaths } from './config/leagues-data.mjs';
 import { DEMO_START_PATH } from './utils/demo-access-core.mjs';
 import type { MiddlewareHandler } from 'astro';
@@ -112,6 +112,10 @@ const handle: MiddlewareHandler = async (context, next) => {
   // reaches them at request time (never during prerender — no such page is
   // built there, and a rewrite at build time has no route to land on).
   if (isDemoDeploy() && !context.isPrerendered && isDemoRefusedPath(context.url.pathname)) {
+    return stamp(await context.rewrite(new URL('/_not-found', context.url)));
+  }
+  // …and the other way round: a demo-only slot's routes do not exist anywhere else.
+  if (!isDemoDeploy() && !context.isPrerendered && isDemoOnlyPath(context.url.pathname)) {
     return stamp(await context.rewrite(new URL('/_not-found', context.url)));
   }
   // `originPathname` differs from the current path only when this run is the

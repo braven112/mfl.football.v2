@@ -115,7 +115,7 @@ export function isDemoRefusedHost(hostname) {
  * commissioner-only official-draft API. Matched on the REQUESTED path,
  * before any league-host rewrite, so no host can reach them.
  */
-const DEMO_REFUSED_PATH = /^\/(?:api\/)?(?:afl-fantasy|afl-keepers|afl-rules-qa|best-ball-draft)(?:[/.?]|$)/;
+const DEMO_REFUSED_PATH = /^\/(?:api\/)?(?:afl-fantasy|afl-rules-qa|best-ball-draft)(?:[/.?]|$)/;
 
 export function isDemoRefusedPath(pathname) {
   return DEMO_REFUSED_PATH.test(String(pathname));
@@ -146,11 +146,22 @@ export function isDemoFetch(candidate) {
  * @param {Record<string, string>} demoPaths  demoPath → route slug
  * @returns {{ rewrite: string } | { redirect: string } | null}
  */
+/**
+ * Routes of a slot that exists only on a demo deployment (the keeper league,
+ * registered in leagues-data.mjs under `isDemoEnv`). Everywhere else they are
+ * a 404: their league is not in the registry, so they have nothing to render.
+ */
+export function isDemoOnlyPath(pathname) {
+  return /^\/(?:api\/)?keeper(?:[/.?]|$)/.test(pathname);
+}
+
 export function resolveDemoPath(pathname, demoPaths) {
   const entries = Object.entries(demoPaths);
   if (!entries.length) return null;
   if (pathname === '/' || pathname === '') return { redirect: `/${entries[0][0]}/` };
   for (const [demoPath, slug] of entries) {
+    // A slot whose demo path IS its slug (keeper) is served as-is.
+    if (demoPath === slug) continue;
     const shown = `/${demoPath}`;
     const real = `/${slug}`;
     if (pathname === shown || pathname.startsWith(`${shown}/`)) {
@@ -171,6 +182,7 @@ export function resolveDemoPath(pathname, demoPaths) {
 export function rewriteDemoHtml(html, demoPaths) {
   let out = html;
   for (const [demoPath, slug] of Object.entries(demoPaths)) {
+    if (demoPath === slug) continue;
     out = out.replace(new RegExp(`(["'(=])/${slug}(?=[/"'?#)])`, 'g'), `$1/${demoPath}`);
   }
   return out;

@@ -19,6 +19,8 @@ import * as feeds from '../scripts/demo/lib/mfl-feeds.mjs';
 import { applyRenames, renamePairs } from '../scripts/demo/lib/identity-files.mjs';
 import { nflWeekStartInstant } from '../src/utils/nfl-week-starts.mjs';
 import { bestBallDraft, BESTBALL_FRANCHISES, BESTBALL_ROUNDS } from '../scripts/demo/lib/bestball.mjs';
+import { KEEPER_FRANCHISES } from '../scripts/demo/lib/keeper.mjs';
+import { KEEPERS } from '../scripts/demo/lib/simulate.mjs';
 import { seasonTotals } from '../scripts/demo/lib/nfl-facts.mjs';
 
 const FEEDS = 'data/theleague/mfl-feeds';
@@ -90,14 +92,17 @@ describe('demo identities', () => {
 
   it('shares no franchise or owner name with any real league', () => {
     const realNames = new Set<string>();
-    for (const t of real.teams) {
+    const afl = JSON.parse(readFileSync('data/afl-fantasy/afl.config.json', 'utf8'));
+    for (const t of [...real.teams, ...afl.teams]) {
       for (const era of [t, ...(t.history ?? [])]) {
         for (const n of [era.name, era.nameMedium, era.nameShort, era.abbrev]) if (n) realNames.add(n.toLowerCase());
       }
     }
     for (const p of registry.people) realNames.add(String(p.displayName).toLowerCase());
-    for (const f of DEMO_FRANCHISES) {
-      for (const n of [f.name, f.nameShort, f.abbrev, f.owner]) {
+    // Every demo league's clubs — the dynasty, redraft and keeper demos.
+    for (const f of [...DEMO_FRANCHISES, ...BESTBALL_FRANCHISES, ...KEEPER_FRANCHISES]) {
+      for (const n of [f.name, f.nameShort, f.abbrev, (f as { owner?: string }).owner]) {
+        if (!n) continue;
         expect(realNames.has(String(n).toLowerCase()), `${n} is a real name`).toBe(false);
       }
     }
@@ -177,5 +182,40 @@ describe('the /redraft demo draft', () => {
 
   it('is deterministic for a seed', () => {
     expect(JSON.stringify(draft())).toBe(JSON.stringify(draft()));
+  });
+});
+
+describe('the /keeper demo league', () => {
+  const seasons = simulateLeague({
+    years: YEARS,
+    facts: new Map([2022, ...YEARS].map((y) => [y, loadSeasonFacts(FEEDS, y)])),
+    currentYear: 2025,
+    currentWeek: LEAGUE_RULES.endWeek,
+    franchises: KEEPER_FRANCHISES,
+    rng: createRng('test/keeper'),
+    weekStart,
+    mode: 'keeper',
+  });
+
+  it('carries no salaries and full rosters every season', () => {
+    for (const season of seasons) {
+      for (const roster of season.rosters.values()) {
+        expect(roster.size).toBe(LEAGUE_RULES.rosterSize);
+        for (const c of roster.values()) expect(c.salary).toBe(0);
+      }
+    }
+  });
+
+  it('keeps KEEPERS a team and re-drafts the rest: a full startup draft, then the remainder', () => {
+    const [startup, ...later] = seasons;
+    expect(startup.draftPicks).toHaveLength(KEEPER_FRANCHISES.length * LEAGUE_RULES.rosterSize);
+    for (const s of later) {
+      expect(s.draftPicks).toHaveLength(KEEPER_FRANCHISES.length * (LEAGUE_RULES.rosterSize - KEEPERS));
+    }
+  });
+
+  it('seeds a seven-team field from two divisions', () => {
+    const final = seasons[seasons.length - 1];
+    expect(final.playoffs).not.toBeNull();
   });
 });

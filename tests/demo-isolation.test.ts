@@ -221,11 +221,13 @@ describe('fetch guard', () => {
 describe('demo route block', () => {
   it('refuses every other league and its API, and nothing of the demo league', async () => {
     const { isDemoRefusedPath } = await import('../src/utils/demo-isolation-core.mjs');
-    for (const p of ['/afl-fantasy', '/afl-fantasy/rosters', '/api/afl-fantasy/lineup', '/api/afl-keepers', '/api/afl-rules-qa', '/api/best-ball-draft/x']) {
+    for (const p of ['/afl-fantasy', '/afl-fantasy/rosters', '/api/afl-fantasy/lineup', '/api/afl-rules-qa', '/api/best-ball-draft/x']) {
       expect(isDemoRefusedPath(p), p).toBe(true);
     }
-    // The best-ball slot serves the /redraft demo, so it is NOT refused.
-    for (const p of ['/', '/theleague/rosters', '/rosters', '/api/lineup', '/afl-fantasyx', '/best-ball-1/draft-board']) {
+    // The best-ball slot serves the /redraft demo, so it is NOT refused; nor is
+    // the keeper-plan API, which the /keeper demo's planner saves through (a
+    // plan is stored under the session's league, so it never reaches the AFL's).
+    for (const p of ['/', '/theleague/rosters', '/rosters', '/api/lineup', '/afl-fantasyx', '/best-ball-1/draft-board', '/api/afl-keepers']) {
       expect(isDemoRefusedPath(p), p).toBe(false);
     }
   });
@@ -245,6 +247,13 @@ describe('demo route block', () => {
     expect(resolveDemoPath('/theleaguex', paths)).toBeNull();
     expect(resolveDemoPath('/redraft/draft-board', paths)).toEqual({ rewrite: '/best-ball-1/draft-board' });
     expect(resolveDemoPath('/best-ball-1/rosters', paths)).toEqual({ redirect: '/redraft/rosters' });
+    const { isDemoOnlyPath } = await import('../src/utils/demo-isolation-core.mjs');
+    for (const p of ['/keeper', '/keeper/', '/keeper/lineup', '/api/keeper/lineup']) expect(isDemoOnlyPath(p)).toBe(true);
+    for (const p of ['/keepers', '/afl-fantasy/keepers', '/theleague/keeper-analysis']) expect(isDemoOnlyPath(p)).toBe(false);
+    // A slot whose demo path is its own slug (keeper) is served as-is, never rewritten onto itself.
+    const withKeeper = { ...paths, keeper: 'keeper' };
+    expect(resolveDemoPath('/keeper/lineup', withKeeper)).toBeNull();
+    expect(rewriteDemoHtml('<a href="/keeper/lineup">', withKeeper)).toBe('<a href="/keeper/lineup">');
     expect(rewriteDemoHtml('<a href="/theleague/rosters"> <img src="/assets/theleague/icons/x.svg">', paths)).toBe(
       '<a href="/dynasty/rosters"> <img src="/assets/theleague/icons/x.svg">',
     );

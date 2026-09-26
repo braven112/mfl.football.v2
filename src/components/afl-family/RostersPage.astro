@@ -1,0 +1,2928 @@
+---
+/**
+ * Rosters page body for the AFL-family leagues — /afl-fantasy/rosters and the
+ * custom-site demo's /keeper/rosters. The route owns everything a component
+ * cannot do: the feed globs (a specifier cannot be a runtime variable), the
+ * season redirect, and the team-preference cookie. This renders, with the
+ * season's feeds handed in keyed by year.
+ */
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import FrontOfficeNav from '../../components/shared/front-office-nav/FrontOfficeNav.astro';
+import CollegeLogoDarkStyles from '../../components/CollegeLogoDarkStyles.astro';
+import PlayerCell from '../../components/theleague/PlayerCell.astro';
+import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.astro';
+import PlayerInjuryModal from '../../components/theleague/PlayerInjuryModal.astro';
+import { loadWeeklyPlayerResults } from '../../utils/weekly-player-results-feed';
+import AFLActionModal from '../../components/afl-fantasy/AFLActionModal.astro';
+import SignInModal from '../../components/shared/SignInModal.astro';
+import KeeperPlanner, {
+  type KeeperPlannerPlayer,
+  type KeeperPlannerDraftPick,
+} from '../../components/afl-fantasy/KeeperPlanner.astro';
+import { spriteUrl } from '../../utils/sprite-url';
+import { getCurrentWeek } from '../../utils/current-week';
+import { nflWeekStartInstant } from '../../utils/nfl-week-starts.mjs';
+import { formatForViewer, viewerClockZone } from '../../utils/viewer-clock';
+import { readViewerClock } from '../../utils/viewer-preferences-page';
+import { getCurrentSeasonYear } from '../../utils/league-year';
+import {
+  loadFantasyPointsAllowed,
+  getOpponentFpa,
+  fpaTier,
+} from '../../utils/nfl-matchups';
+// Odds and weather: the ONE system every league reads (coach-data.ts), through
+// the same door TheLeague's roster page uses.
+import {
+  loadLiveOddsData,
+  oddsForTeam,
+  getWeatherIcon,
+  type GameOdds,
+} from '../../utils/rosters/live-odds';
+import { normalizeTeamCode, getNFLTeamName, getNFLTeamLogo } from '../../utils/nfl-logo';
+import { getPlayerHeadshot } from '../../constants/roster-constants';
+import { formatMflName } from '../../utils/player-name-matching';
+import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD, COLLEGE_LOGO_ONERROR, COLLEGE_LOGO_ONLOAD } from '../../constants/roster-constants';
+import collegeLogos from '../../data/college-logos.json';
+import {
+  loadAflSeasonScores,
+  loadAflProjections,
+  summarizeSeasonScores,
+  recentScoreAverage,
+} from '../../utils/afl-player-scoring';
+import { buildPhoneLineSpans, phonePosKey, teamSpread } from '../../utils/rosters/phone-row';
+// The phone layout, shared with TheLeague (docs/plans/rosters-mobile-layout.md
+// § 8). Imported here, in the frontmatter: the rules reach rows a scoped
+// <style> would not.
+import '../../styles/rosters-mobile.css';
+import { resolveStatsSeasonYear, parseYtdPlayerScores } from '../../utils/stats-season.mjs';
+import { getAuthUser } from '../../utils/auth';
+import { resolveOwnerPresence } from '../../utils/rosters/owner-presence';
+import { resolveThrowbackRequestState } from '../../utils/throwback-request-state';
+import { resolveRosterHeaderSkin } from '../../utils/roster-header-skin';
+import { getAFLPreference } from '../../utils/team-preferences';
+import {
+  getAllTeams,
+  getConferenceName,
+  getTeam,
+  type AFLTeam,
+  type AflFamilySlug,
+} from '../../utils/afl-conference';
+import { getLeagueYearForSlug, getTestDateFromSearchParams } from '../../utils/league-year';
+import { getCachedRosterFranchises } from '../../utils/mfl-roster-cache';
+import type { LeagueDefinition } from '../../config/leagues';
+import { loadInjuryMap, injuryBadgeLabel, injuryBadgeTitle } from '../../utils/mfl-injuries';
+import '../../styles/injury-indicator.css';
+import { loginUrlFor } from '../../utils/login-redirect';
+import { parseTradeBaitPlayerIds, parseTradeBaitByFranchise } from '../../utils/trade-bait';
+import { getCachedTradeBait } from '../../utils/mfl-trade-bait-cache';
+import MyRankEditor from '../../components/shared/rankings/MyRankEditor.astro';
+import { buildKeeperPlannerStats } from '../../utils/afl-keeper-planner-stats';
+import RosterHeader from '../../components/shared/roster-header/RosterHeader.astro';
+import {
+  buildTeamGroups,
+  bestPlayerByPositionRank,
+  positionalRanks,
+  resolveHeaderSchedule,
+} from '../../utils/roster-header-data';
+import { summarizeStandings } from '../../utils/standings-summary';
+import {
+  franchiseSchedule,
+  parseWeeklySchedule,
+} from '../../utils/schedule-data.mjs';
+import { resolveLeaguePath } from '../../utils/nav-utils';
+
+
+/** A season's feeds, keyed by year (`feedsByYear` in the route). */
+type YearFeeds = Map<number, any>;
+interface Props {
+  league: LeagueDefinition;
+  /** The league's config file (teams, conferences, divisions). */
+  config: any;
+  selectedYear: number;
+  availableYears: number[];
+  feeds: {
+    rosters: YearFeeds;
+    players: YearFeeds;
+    ytdScores: YearFeeds;
+    tradeBait: YearFeeds;
+    tradeBaitByFranchise: YearFeeds;
+    futurePicks: YearFeeds;
+    schedule: YearFeeds;
+    standings: YearFeeds;
+  };
+  /** Throwback Week scope, or null for a league that has none. */
+  throwbackScope: 'afl' | null;
+  /** The league's mark, for the sign-in dialog. */
+  logoSrc: string;
+}
+const { league: aflLeague, config: aflLeagueConfig, selectedYear, availableYears, feeds, throwbackScope, logoSrc } = Astro.props;
+const leagueSlug = aflLeague.slug as AflFamilySlug;
+const leaguePrefix = `/${aflLeague.slug}`;
+
+const getModuleData = (mod: any) =>
+  mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
+
+let rostersData = getModuleData(feeds.rosters.get(selectedYear)) as any;
+const playersData = getModuleData(feeds.players.get(selectedYear)) as any;
+const tradeBaitData = getModuleData(feeds.tradeBait.get(selectedYear)) as any;
+const tradeBaitByFranchiseData = getModuleData(feeds.tradeBaitByFranchise.get(selectedYear)) as any;
+const futurePicksData = getModuleData(feeds.futurePicks.get(selectedYear)) as any;
+
+// For the current league year, prefer the live Redis roster cache
+// (re-fetched from MFL when older than 2 min, busted by /api/cut-player)
+// over the git-committed feed snapshot — otherwise keeper cuts and
+// add/drops keep showing the old roster until the hourly Roster Sync
+// commit + redeploy. Historical years and Redis-unavailable environments
+// fall back to the feed.
+const PAGE_LEAGUE_SLUG = aflLeague.slug;
+
+// NFL injury designations (Q / D / O / IR), keyed by MFL player id. This is a
+// DIFFERENT datum from `player.status === 'INJURED_RESERVE'` below, which is
+// MFL's roster BUCKET: the bucket decides which table section a player sits
+// in, the designation decides whether he plays Sunday. Rendering only the
+// bucket is why an owner saw Charbonnet as a healthy active RB while MFL had
+// him on IR with a torn ACL. Deliberately NOT keyed to `selectedYear` — see
+// src/utils/mfl-injuries.ts; this page is pinned to FALLBACK_YEAR 2025 and the
+// injuries feed only exists for 2026, so a year-keyed lookup finds nothing.
+const aflInjuries = loadInjuryMap(PAGE_LEAGUE_SLUG);
+const testDate = getTestDateFromSearchParams(Astro.url.searchParams);
+if (aflLeague && selectedYear === getLeagueYearForSlug(aflLeague.slug, testDate ?? undefined)) {
+  const liveFranchises = await getCachedRosterFranchises(String(selectedYear), aflLeague.id);
+  if (liveFranchises && liveFranchises.length > 0) {
+    rostersData = { ...rostersData, rosters: { franchise: liveFranchises } };
+  }
+}
+
+// Build players lookup
+type PlayerInfo = {
+  id: string;
+  name: string;
+  position: string;
+  team: string;
+  age: string;
+  college: string;
+  birthdate?: string;
+  height?: string;
+  weight?: string;
+  draft_year?: string;
+  draft_round?: string;
+  draft_pick?: string;
+  draft_team?: string;
+  espn_id?: string;
+  jersey?: string;
+};
+const playersMap = new Map<string, PlayerInfo>();
+for (const p of playersData.players.player as any[]) {
+  playersMap.set(p.id, {
+    id: p.id,
+    name: p.name || `Player ${p.id}`,
+    position: p.position || 'N/A',
+    team: p.team || 'FA',
+    age: p.age || 'N/A',
+    college: p.college || 'N/A',
+    birthdate: p.birthdate,
+    height: p.height,
+    weight: p.weight,
+    draft_year: p.draft_year,
+    draft_round: p.draft_round,
+    draft_pick: p.draft_pick,
+    draft_team: p.draft_team,
+    espn_id: p.espn_id,
+    jersey: p.jersey,
+  });
+}
+
+// Trade bait for badges. Prefer the franchise-attributed shape — the flat
+// list can't say WHO flagged a player, and both AFL conferences roster the
+// same NFL player pool, so a bare id matches two teams' rosters. For the
+// current league year, the live Redis cache wins (same freshness model as
+// the roster cache above; updated in place by /api/trade-bait so a flag
+// added through this page survives reload). Then the committed
+// tradeBait-by-franchise.json, then the flat tradeBait.json via the shared
+// parser (which handles both the flat-array cache shape and the raw MFL
+// export shape; the inline raw-only parse this replaces silently dropped
+// badges on reload once the flat cache was written). Resolved into a
+// per-team set below, once selectedFranchiseId is known. The live fetch
+// happens after auth resolution — AFL's tradeBait export is owner-gated
+// and the viewer's own MFL cookie is the auth source.
+const flatTradeBaitIds = parseTradeBaitPlayerIds(tradeBaitData);
+
+// Auth + selected franchise resolution: query param > cookie > authUser > first AL team
+const authUser = getAuthUser(Astro.request);
+// The AFL's team-preference cookie; another AFL-family league keeps none.
+const aflPref = leagueSlug === 'afl-fantasy' ? getAFLPreference(Astro.cookies) : null;
+const AFL_LEAGUE_ID = aflLeague.id;
+
+const allTeams = getAllTeams(leagueSlug);
+const fallbackTeamId = allTeams[0]?.franchiseId ?? '0001';
+
+const queryFranchiseId = Astro.url.searchParams.get('franchise');
+const isValidFranchiseId = (id: string | null | undefined): boolean =>
+  !!id && allTeams.some((t) => t.franchiseId === id);
+
+let selectedFranchiseId: string;
+if (isValidFranchiseId(queryFranchiseId)) {
+  selectedFranchiseId = queryFranchiseId!;
+} else if (aflPref?.franchiseId && isValidFranchiseId(aflPref.franchiseId)) {
+  selectedFranchiseId = aflPref.franchiseId;
+} else if (
+  authUser?.leagueId === AFL_LEAGUE_ID &&
+  authUser.franchiseId &&
+  isValidFranchiseId(authUser.franchiseId)
+) {
+  selectedFranchiseId = authUser.franchiseId;
+} else {
+  selectedFranchiseId = fallbackTeamId;
+}
+
+// The planner is a DEEP link — it carries the franchise and the view — so the
+// sign-in return path is that URL, not merely "this page".
+const plannerLoginHref = loginUrlFor({
+  league: aflLeague,
+  returnTo: `${leaguePrefix}/rosters?franchise=${selectedFranchiseId}&view=planner`,
+  hideLeaguePrefix: Astro.locals.hideLeaguePrefix ?? false,
+});
+
+const selectedTeam: AFLTeam = getTeam(selectedFranchiseId, leagueSlug) ?? allTeams[0]!;
+const conferenceName = getConferenceName(selectedTeam.conference, leagueSlug);
+
+/* ── Roster header: nameplate, gameday bar, team switcher ─────────────────
+   Assembled here rather than in the component because a static import
+   specifier cannot be a runtime variable — globbing both leagues' feeds
+   inside the shared component would ship the other league's season on every
+   render of either route. */
+const aflSchedule = parseWeeklySchedule(feeds.schedule.get(selectedYear));
+const aflStandingsFeed = feeds.standings.get(selectedYear);
+
+const headerTeamById = new Map(allTeams.map((t) => [t.franchiseId, t]));
+const headerNameOf = (id: string) => headerTeamById.get(id)?.name ?? 'Franchise';
+const headerIconOf = (id: string) => headerTeamById.get(id)?.icon ?? null;
+
+const headerStandings = summarizeStandings(
+  aflStandingsFeed,
+  aflLeagueConfig.conferences as Array<{ name: string; code: string }>,
+  (id: string) => String(headerTeamById.get(id)?.conference ?? '')
+);
+
+/* NULL unless the year on screen is the season actually being played.
+   This page has a YEAR PICKER, so the header renders 2019 and 2023 as
+   readily as 2026 — and today's NFL week means nothing in a season that
+   finished years ago. Passing it anyway made a completed 2023 report
+   "Week 2 · Final · 0-2" as the club's last result (findLastPlayedWeek
+   BOUNDS its search), ring week 2 as current, and left 2019 with a week
+   still waiting to be played. `resolveHeaderSchedule` owns what null means.
+
+   `getCurrentSeasonYear()`, not the league year: "is this the season being
+   played" is a results question, and the two clocks disagree from Feb 14
+   to Labor Day (CLAUDE.md, "Year rollover — two independent clocks"). */
+const headerWeek = selectedYear === getCurrentSeasonYear() ? getCurrentWeek() : null;
+const headerOwnSchedule = franchiseSchedule(aflSchedule, selectedFranchiseId);
+const headerSchedule = resolveHeaderSchedule(
+  headerOwnSchedule,
+  aflSchedule.map((entry: { week: number }) => entry.week),
+  headerWeek
+);
+
+/* Owner presence, restored to the header — the chip that lived on the old
+   team card. One Redis read for the whole league, raced against a 3s timeout
+   so a slow store degrades to no chip rather than a hung render, and resolved
+   PER CLUB so the chip rides in the swap templates instead of being written
+   into one place from JavaScript. */
+/* Throwback Week, resolved once for the header. The AFL has run eras since
+   September 2026, so this is not TheLeague-only. */
+const headerThrowback = throwbackScope ? await resolveThrowbackRequestState(throwbackScope, Astro.url) : { throwbackActive: false, throwbackOverrides: {} };
+
+const ownerSeenFor = await resolveOwnerPresence(AFL_LEAGUE_ID);
+
+/* When this week's lineups LOCK, in the viewer's own clock.
+
+   The instant is the week's FIRST kickoff (`nflWeekStartInstant`), which is
+   what actually locks the fantasy week — not this club's own game, which is
+   usually later. So the tile says "lineups lock", never "kickoff": most clubs
+   most weeks do not play at this time, and the lock is the one an owner can
+   still act on.
+
+   Null once it has PASSED, and null outside a live season. A deadline printed
+   after it expired is worse than no deadline: it reads as time remaining.
+
+   `readViewerClock` only READS — `Astro.cookies.set` is the route-only half
+   (CLAUDE.md, viewer preferences) — and takes the PAGE's league, not the
+   viewer's, because the clock a league's deadline prints belongs to that
+   league. `formatForViewer` appends the league's PT to the viewer's chosen
+   clock and drops it for a viewer already on Pacific. */
+const headerLockAt = headerSchedule.upNext != null && headerWeek != null
+  ? nflWeekStartInstant(selectedYear, headerSchedule.upNext.week)
+  : null;
+/* One read serves the lineup-lock line and the phone rows' kickoff times,
+   which print in ONE clock (`viewerClockZone`, the compact-surface form). */
+const pageViewerClock = await readViewerClock(Astro.cookies, authUser, aflLeague.slug);
+const rowKickoffClock = viewerClockZone(pageViewerClock);
+const headerLineupLock = headerLockAt != null && headerLockAt.getTime() > Date.now()
+  ? formatForViewer(headerLockAt, pageViewerClock, { weekday: true })
+  : null;
+
+/* The VIEWER's conference, never the viewed club's — an order that followed
+   the club on screen would reshuffle the switcher on every team change. Null
+   for a signed-out visitor and for a TheLeague owner browsing here, both of
+   which correctly keep the historical AL-first order. The remembered club's
+   conference is the middle case: reading a cookie is side-effect free, so it
+   is safe here; only WRITING one has to stay in the route's own frontmatter. */
+const viewerFranchiseIdHere =
+  authUser?.leagueId === AFL_LEAGUE_ID && authUser.franchiseId ? authUser.franchiseId : null;
+const viewerConference =
+  (viewerFranchiseIdHere ? headerTeamById.get(viewerFranchiseIdHere)?.conference : null) ??
+  aflPref?.conferenceId ??
+  null;
+
+/* The switcher's names and crests throw back with the nameplate above them.
+   Both are fields the era overlay replaces, and a row of modern crests under
+   a nameplate in era art is the partial overlay the era rules doc warns
+   about. Resolved per club off the same skin the plate uses, which is
+   memoised for the whole league, so this is a lookup not a rebuild. */
+const headerIdentityOf = (franchiseId: string) => {
+  const skin = resolveRosterHeaderSkin(franchiseId, aflLeague.slug, headerThrowback);
+  return skin ? { name: skin.name, icon: skin.crestSmall } : null;
+};
+
+const headerGroups = buildTeamGroups({
+  teams: allTeams,
+  conferences: aflLeagueConfig.conferences as Array<{ name: string; code: string; divisions?: string[] }>,
+  viewerConference,
+  identityOf: headerIdentityOf,
+});
+
+const hideLeaguePrefixHere = Astro.locals.hideLeaguePrefix ?? false;
+const headerTeamHref = (id: string) =>
+  resolveLeaguePath(`${leaguePrefix}/rosters?franchise=${id}&year=${selectedYear}`, hideLeaguePrefixHere);
+const headerScheduleHref = (week?: number) =>
+  resolveLeaguePath(
+    `${leaguePrefix}/schedule?year=${selectedYear}${week != null ? `#week-${week}` : ''}`,
+    hideLeaguePrefixHere
+  );
+
+// Owner detection: only AFL users on their own team see write actions
+const isOwner =
+  !!authUser &&
+  authUser.leagueId === AFL_LEAGUE_ID &&
+  authUser.franchiseId === selectedTeam.franchiseId;
+
+// An AFL session of any franchise: the action sheet's Watch option runs for
+// them; everyone else is offered the in-place sign-in (My Watch List lives on
+// MFL under the viewer's own cookie, so a TheLeague-only session cannot use it
+// here either).
+const signedIn = !!authUser && authUser.leagueId === AFL_LEAGUE_ID && !!authUser.franchiseId;
+const signInConfig = {
+  leagueId: AFL_LEAGUE_ID,
+  seasonYear: selectedYear,
+  redirectUrl: `${Astro.url.pathname}${Astro.url.search}`,
+  logoSrc,
+  logoAlt: `${aflLeague.name} logo`,
+  subtitle: 'Sign in with your MFL credentials to build your watch list',
+};
+
+// Trade bait badges for the selected team (per-franchise cache wins)
+const liveTradeBait =
+  aflLeague && selectedYear === getLeagueYearForSlug(aflLeague.slug, testDate ?? undefined)
+    ? await getCachedTradeBait(
+        String(selectedYear),
+        aflLeague.id,
+        authUser?.leagueId === AFL_LEAGUE_ID && authUser.id ? authUser.id : undefined
+      )
+    : null;
+const tradeBaitByFranchise = liveTradeBait
+  ? parseTradeBaitByFranchise({ franchises: liveTradeBait })
+  : parseTradeBaitByFranchise(tradeBaitByFranchiseData);
+const tradeBaitSet = tradeBaitByFranchise
+  ? (tradeBaitByFranchise.get(selectedFranchiseId) ?? new Set<string>())
+  : flatTradeBaitIds;
+
+// Build roster
+type RosterEntry = PlayerInfo & {
+  status: string;
+  isOnTradeBait: boolean;
+};
+const franchiseRoster = (rostersData.rosters.franchise as any[]).find(
+  (f: any) => f.id === selectedFranchiseId
+);
+const rosterPlayers = (franchiseRoster?.player ?? []) as Array<{ id: string; status: string }>;
+const roster: RosterEntry[] = rosterPlayers.map((p) => {
+  const info = playersMap.get(p.id);
+  return {
+    id: p.id,
+    status: p.status || 'ROSTER',
+    name: info?.name || `Player ${p.id}`,
+    position: info?.position || 'N/A',
+    team: info?.team || 'FA',
+    // MFL's players feed has no `age` field at all, only `birthdate` (Unix
+    // seconds) — `info?.age` was always undefined here, silently shipping
+    // 'N/A' everywhere this field is read. calculateAgeFromBirthdate is
+    // defined below (hoisted; already this file's own convention for the
+    // Analytics view's age buckets).
+    age: String(calculateAgeFromBirthdate(info?.birthdate) ?? 'N/A'),
+    college: info?.college || 'N/A',
+    birthdate: info?.birthdate,
+    height: info?.height,
+    weight: info?.weight,
+    draft_year: info?.draft_year,
+    draft_round: info?.draft_round,
+    draft_pick: info?.draft_pick,
+    draft_team: info?.draft_team,
+    espn_id: info?.espn_id,
+    jersey: info?.jersey,
+    isOnTradeBait: tradeBaitSet.has(p.id),
+  };
+});
+
+// Group + sort by position; defenses last
+const POSITION_ORDER = ['QB', 'RB', 'WR', 'TE', 'PK', 'Def', 'DEF', 'Coach'];
+const positionRank = (pos: string) => {
+  const idx = POSITION_ORDER.indexOf(pos);
+  return idx === -1 ? POSITION_ORDER.length : idx;
+};
+// Table sort: active roster first (by position then name), then IR at the
+// bottom. Mirrors TheLeague's roster page — the green left-border stripe
+// on active rows + the red stripe on IR rows makes the split obvious
+// without a dedicated Status column.
+const byPositionThenName = (a: RosterEntry, b: RosterEntry) => {
+  const r = positionRank(a.position) - positionRank(b.position);
+  return r !== 0 ? r : a.name.localeCompare(b.name);
+};
+const activeRosterPlayers: RosterEntry[] = roster
+  .filter((p) => p.status === 'ROSTER')
+  .sort(byPositionThenName);
+const irRosterPlayers: RosterEntry[] = roster
+  .filter((p) => p.status === 'INJURED_RESERVE')
+  .sort(byPositionThenName);
+const sortedTableRoster: RosterEntry[] = [...activeRosterPlayers, ...irRosterPlayers];
+
+// ── Coach-mode matchup data (matches TheLeague's roster Coach tab) ──
+//
+// For every player on the roster, look up their NFL team's matchup for the
+// current NFL week + the opponent's defensive rank against the player's
+// position. Both sources gracefully no-op outside the regular season.
+//
+// We use TheLeague's fantasyPointsAllowed.json file — it's NFL-wide data
+// (not league-specific) so the same snapshot serves both league sites. It is
+// rebuilt every Tuesday morning from the season's completed weeks, so Opp Avg
+// is a CURRENT-season number, not a career or prior-year one.
+//
+// The season year is `resolveStatsSeasonYear`, NOT `new Date().getFullYear()`
+// and NOT `getCurrentSeasonYear()`. The calendar year is already the NEXT
+// season's from January to Labor Day, and it only rendered correctly because
+// the `?? year - 1` fallback caught the missing file. The Labor Day clock is
+// the bug the Free Agents points column shipped (see
+// src/utils/stats-season.mjs): it names a season with no games played until
+// kickoff, so a per-player stat that follows it empties for waiver week. Both
+// columns here are season stats, so both turn over on the league's start day.
+const nflWeek = getCurrentWeek();
+const nflYear = resolveStatsSeasonYear(testDate ?? undefined);
+const fpaData = loadFantasyPointsAllowed(nflYear) ?? loadFantasyPointsAllowed(nflYear - 1);
+const oddsMap = await loadLiveOddsData(nflWeek);
+
+// AFL per-player season scoring + this week's projection, all keyed on
+// selectedYear so the year picker's archive seasons show THEIR numbers. Every
+// reader returns empty when its snapshot is absent, so the page still renders
+// during the offseason / before MFL produces the feed.
+//
+// TWO SOURCES ON PURPOSE, and they are not interchangeable:
+//
+//   Total ← `playerScores-ytd.json`, MFL's own season total for the WHOLE
+//     pool. The weekly feed is not a degraded version of this one, it is a
+//     wrong one for a total: it cannot see a week nobody rostered the player,
+//     and summing its rows bills a doubleheader twice (every one of
+//     TheLeague's 260 scored 2026 players came out at exactly 2x — see
+//     docs/claude/insights/features/free-agent-season-points.md). Absent → "—",
+//     never a weekly fallback.
+//   Avg ← the weekly map, because a RATE over it survives: any double lands in
+//     both numerator and denominator and cancels. It also has the games-played
+//     count the YTD payload does not carry at all — dividing a YTD total by a
+//     weekly game count is the mistake that prices a one-week rental's whole
+//     season as a single game.
+const aflSeasonScores = loadAflSeasonScores(selectedYear, aflLeague.dataPath);
+const aflYtdPoints = parseYtdPlayerScores(
+  getModuleData(feeds.ytdScores.get(selectedYear))
+);
+const aflProjections = loadAflProjections(selectedYear, aflLeague.dataPath);
+
+// ── Season Results for the player modal ──
+// Same season as the Pts / Avg columns above, so the table and the row that
+// opened it can never name different years. Read off the committed feeds at
+// request time (see weekly-player-results-feed.ts) rather than through an eager
+// glob, and cached per league-season — the payload covers the whole league, so
+// it must not be rebuilt for every roster view.
+// Scoped to THIS page's own players, which is 16-30 of the league's ~490.
+//
+// The loader's payload covers the whole league, and shipping it whole made
+// this island 849 KB of a 1.48 MB page — 57% of the document, re-parsed by the
+// browser on every team switch, for a modal that shows ONE player. That is
+// what made an AFL team switch take ~840 ms against TheLeague's ~130 ms: not
+// the server (SSR measures 65 ms) but the client re-parsing the page.
+//
+// `roster` is the exact reachable set, not a guess: the modal opens only from
+// `[data-player-modal]`, bound to this page's root, and all three views
+// (roster, planner, analytics) render those for this franchise's roster and
+// nothing else. A player outside it degrades to a hidden Season Results
+// section rather than an error, but there is no such player here.
+//
+// NOT filtered for TheLeague's copy of this island: that page switches team in
+// place from a payload holding all sixteen rosters, so its reachable set is
+// every club's players, not the markup's.
+const weeklyPlayerResultsAll = aflLeague
+  ? loadWeeklyPlayerResults(aflLeague.dataPath, selectedYear)
+  : {};
+const weeklyPlayerResults: typeof weeklyPlayerResultsAll = {};
+for (const entry of roster) {
+  const weeks = weeklyPlayerResultsAll[entry.id];
+  // A copy, never a mutation: `loadWeeklyPlayerResults` caches its payload per
+  // league-season, so trimming the object it returns would trim it for every
+  // later render in the process.
+  if (weeks) weeklyPlayerResults[entry.id] = weeks;
+}
+
+interface PlayerMatchup {
+  matchup: GameOdds | null;
+  oppRank: number | null;
+  oppAvg: number | null;
+  oppCode: string | null;
+  /** Projected points for the week — from projectedScores.json. */
+  projected: number | null;
+  /** MFL's own season total (YTD feed); null when the feed has no row. */
+  scoreTotal: number | null;
+  /** Weeks with a recorded score — the Avg column's denominator. */
+  scoreGames: number;
+  /** Points per game played, over the weeks a roster held him. */
+  scoreAverage: number | null;
+  /** The last three scored weeks' average — the phone card's L3. */
+  recentAverage: number | null;
+}
+const matchupByPlayerId = new Map<string, PlayerMatchup>();
+for (const player of sortedTableRoster) {
+  const matchup = oddsForTeam(oddsMap, player.team);
+  const oppCode = matchup ? normalizeTeamCode(matchup.opponent) : null;
+  const fpa = oppCode ? getOpponentFpa(fpaData, oppCode, player.position) : null;
+  const season = summarizeSeasonScores(aflSeasonScores, player.id);
+  matchupByPlayerId.set(player.id, {
+    matchup,
+    oppRank: fpa?.rank ?? null,
+    oppAvg: fpa?.avg ?? null,
+    oppCode,
+    projected: aflProjections.get(player.id) ?? null,
+    scoreTotal: aflYtdPoints.get(player.id) ?? null,
+    scoreGames: season.games,
+    scoreAverage: season.average,
+    recentAverage: recentScoreAverage(aflSeasonScores, player.id),
+  });
+}
+
+/* The AFL has no salaries at all (`salaryCap: false`, `contracts: false`), so
+   the header features whoever ranks best AT HIS OWN POSITION instead. A raw
+   points leader would be a quarterback every single time — QBs out-score the
+   other positions by construction — which says nothing about the roster.
+
+   Ranked across the whole PLAYER POOL rather than across rostered players: an
+   AFL player is routinely rostered in BOTH conferences, so ranking the rostered
+   set would count the same man twice and shift everyone below him. */
+const aflPositionRanks = positionalRanks(
+  [...aflYtdPoints.entries()].map(([id, score]) => ({
+    id,
+    position: playersMap.get(id)?.position ?? '',
+    score: Number(score) || 0,
+  }))
+);
+const headerFeaturedPlayer = bestPlayerByPositionRank(
+  roster.map((player) => ({
+    id: player.id,
+    // MFL stores "Last, First"; the header prints a name, not a sort key.
+    name: formatMflName(player.name),
+    position: player.position,
+    headshot: getPlayerHeadshot(player.id, player.espn_id, player.team),
+  })),
+  (playerId) => aflPositionRanks.get(playerId) ?? null
+);
+
+// Small format helpers so the JSX stays declarative
+const formatPoints = (v: number | null): string =>
+  v == null ? '—' : v.toFixed(1);
+const formatWeather = (m: GameOdds | null): string => {
+  if (!m?.weather) return '—';
+  const t = m.weather.temperature;
+  if (typeof t === 'number') return `${Math.round(t)}°`;
+  return m.weather.displayValue ?? '—';
+};
+/* The phone card's weather: TheLeague's Coach card shows the temperature
+   and a sky icon; the desktop cell here keeps its bare temperature. */
+const phoneWeather = (m: GameOdds | null): string | null => {
+  if (!m?.weather) return null;
+  const t = m.weather.temperature;
+  const temp = typeof t === 'number' ? `${Math.round(t)}°` : '';
+  const icon = m.weather.displayValue ? getWeatherIcon(m.weather.displayValue) : '';
+  return [temp, icon].filter(Boolean).join(' ') || null;
+};
+const formatOverUnder = (m: GameOdds | null): string => {
+  // ESPN hands a number through as-is; 'N/A' when the game is not priced.
+  const trimmed = String(m?.overUnder ?? '').trim();
+  return trimmed && trimmed !== 'N/A' ? trimmed : '—';
+};
+
+// Roster summary
+const totalPlayers = roster.length;
+const activeRoster = roster.filter((p) => p.status === 'ROSTER').length;
+const injuredReserve = roster.filter((p) => p.status === 'INJURED_RESERVE').length;
+const ROSTER_SIZE = 16;
+
+// Build the KeeperPlanner inputs (only really used when isOwner is true)
+const plannerStatsById = buildKeeperPlannerStats(selectedYear, aflLeague.dataPath);
+const plannerRoster: KeeperPlannerPlayer[] = roster.map((p) => {
+  const stats = plannerStatsById.get(p.id);
+  return {
+    id: p.id,
+    name: p.name,
+    position: p.position,
+    team: p.team,
+    age: p.age,
+    espnId: p.espn_id,
+    status: p.status,
+    ppg: stats?.ppg ?? null,
+    gamesPlayed: stats?.gamesPlayed,
+    positionalFinish: stats?.positionalFinish ?? null,
+    dynastyAdpRank: stats?.dynastyAdpRank ?? null,
+    redraftAdpRank: stats?.redraftAdpRank ?? null,
+  };
+});
+
+const teamNameLookup = new Map<string, string>(
+  allTeams.map((t) => [t.franchiseId, t.nameShort || t.name])
+);
+const plannerDraftPicks: KeeperPlannerDraftPick[] = (() => {
+  const franchise = (futurePicksData?.futureDraftPicks?.franchise as any[] | undefined)?.find(
+    (f) => f?.id === selectedFranchiseId
+  );
+  const picks = franchise?.futureDraftPick;
+  if (!picks) return [];
+  const arr = Array.isArray(picks) ? picks : [picks];
+  return arr
+    .filter((p: any) => p?.year && p?.round && p?.originalPickFor)
+    .map((p: any) => ({
+      year: String(p.year),
+      round: String(p.round),
+      originalPickFor: String(p.originalPickFor),
+      originalPickForName: teamNameLookup.get(String(p.originalPickFor)),
+      isTraded: String(p.originalPickFor) !== selectedFranchiseId,
+    }))
+    .sort((a, b) => {
+      if (a.year !== b.year) return a.year.localeCompare(b.year);
+      return parseInt(a.round, 10) - parseInt(b.round, 10);
+    });
+})();
+
+// ── Analytics: simple descriptive stats for the Analytics view ──
+type AnalyticsBucket = { label: string; count: number; pct: number };
+
+function bucketize(items: string[], topN?: number): AnalyticsBucket[] {
+  const counts = new Map<string, number>();
+  for (const v of items) {
+    if (!v || v === 'N/A' || v === 'FA') continue;
+    counts.set(v, (counts.get(v) ?? 0) + 1);
+  }
+  const total = items.length;
+  let buckets = Array.from(counts.entries())
+    .map(([label, count]) => ({ label, count, pct: total ? (count / total) * 100 : 0 }))
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+  if (topN) buckets = buckets.slice(0, topN);
+  return buckets;
+}
+
+const positionDistribution: AnalyticsBucket[] = (() => {
+  const PRIMARY_POSITIONS = ['QB', 'RB', 'WR', 'TE', 'PK'];
+  const counts = new Map<string, number>();
+  for (const p of roster) {
+    const pos = p.position;
+    const key = PRIMARY_POSITIONS.includes(pos)
+      ? pos
+      : pos === 'DEF' || pos === 'Def'
+        ? 'DEF'
+        : 'Other';
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  const ordered = [...PRIMARY_POSITIONS, 'DEF', 'Other'];
+  return ordered
+    .map((label) => ({
+      label,
+      count: counts.get(label) ?? 0,
+      pct: roster.length ? ((counts.get(label) ?? 0) / roster.length) * 100 : 0,
+    }))
+    .filter((b) => b.count > 0);
+})();
+
+// MFL ships only `birthdate` (Unix seconds) — there's no `age` field on the
+// feed. Compute age client-of-server-side so the analytics view actually has
+// numbers to render.
+function calculateAgeFromBirthdate(birthdate?: string | number | null): number | null {
+  if (!birthdate) return null;
+  const seconds = typeof birthdate === 'number' ? birthdate : Number(birthdate);
+  if (!Number.isFinite(seconds) || seconds <= 0) return null;
+  const birthDate = new Date(seconds * 1000);
+  if (Number.isNaN(birthDate.getTime())) return null;
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age > 0 ? age : null;
+}
+
+const ageBuckets: AnalyticsBucket[] = (() => {
+  const ranges: Array<{ label: string; min: number; max: number }> = [
+    { label: '≤23', min: 0, max: 23 },
+    { label: '24–26', min: 24, max: 26 },
+    { label: '27–29', min: 27, max: 29 },
+    { label: '30+', min: 30, max: 99 },
+  ];
+  const ages = roster
+    .map((p) => calculateAgeFromBirthdate(p.birthdate))
+    .filter((n): n is number => n !== null);
+  return ranges.map((r) => {
+    const count = ages.filter((a) => a >= r.min && a <= r.max).length;
+    return {
+      label: r.label,
+      count,
+      pct: ages.length ? (count / ages.length) * 100 : 0,
+    };
+  }).filter((b) => b.count > 0);
+})();
+
+const ageStats: { avg: number | null; oldest: { name: string; age: number } | null; youngest: { name: string; age: number } | null } =
+  (() => {
+    const withAge = roster
+      .map((p) => ({ name: p.name, age: calculateAgeFromBirthdate(p.birthdate) }))
+      .filter((p): p is { name: string; age: number } => p.age !== null);
+    if (!withAge.length) return { avg: null, oldest: null, youngest: null };
+    const sum = withAge.reduce((acc, p) => acc + p.age, 0);
+    const sortedByAge = [...withAge].sort((a, b) => a.age - b.age);
+    return {
+      avg: sum / withAge.length,
+      youngest: sortedByAge[0]!,
+      oldest: sortedByAge[sortedByAge.length - 1]!,
+    };
+  })();
+
+// Group roster by NFL team — mirrors TheLeague's analytics layout, where each
+// team that shares ≥2 players gets its own chart-card with the full lineup.
+// Coaches and free agents are excluded so the card list stays focused on
+// actual NFL roster overlap.
+type RosterGroup = { key: string; players: RosterEntry[] };
+
+const playersByNflTeam: RosterGroup[] = (() => {
+  const groups = new Map<string, RosterEntry[]>();
+  for (const p of roster) {
+    const team = (p.team || '').trim();
+    if (!team || team === 'FA' || team === 'N/A') continue;
+    const pos = (p.position || '').toUpperCase();
+    if (pos === 'COACH') continue;
+    const normalized = normalizeTeamCode(team) || team;
+    if (!groups.has(normalized)) groups.set(normalized, []);
+    groups.get(normalized)!.push(p);
+  }
+  return [...groups.entries()]
+    .filter(([, players]) => players.length > 1)
+    .map(([key, players]) => ({ key, players: [...players].sort((a, b) => a.name.localeCompare(b.name)) }))
+    .sort((a, b) => a.key.localeCompare(b.key));
+})();
+
+const collegeLogosNormalized: Record<string, { logo?: string; logoDark?: string }> = Object.fromEntries(
+  Object.entries(collegeLogos ?? {}).map(([name, data]: any) => [name.toLowerCase(), data])
+);
+const getCollegeAssets = (collegeName?: string | null) => {
+  if (!collegeName) return null;
+  return collegeLogosNormalized[collegeName.toLowerCase()] ?? null;
+};
+
+const playersByCollege: RosterGroup[] = (() => {
+  const groups = new Map<string, RosterEntry[]>();
+  for (const p of roster) {
+    const college = (p.college || '').trim();
+    if (!college || college === 'N/A' || college.toLowerCase() === 'unknown') continue;
+    const pos = (p.position || '').toUpperCase();
+    if (pos === 'DEF') continue;
+    if (!groups.has(college)) groups.set(college, []);
+    groups.get(college)!.push(p);
+  }
+  return [...groups.entries()]
+    .filter(([, players]) => players.length > 1)
+    .map(([key, players]) => ({ key, players: [...players].sort((a, b) => a.name.localeCompare(b.name)) }))
+    .sort((a, b) => a.key.localeCompare(b.key));
+})();
+
+// Color palette for position donut chart (consistent everywhere)
+const POSITION_COLORS: Record<string, string> = {
+  QB: '#c41e3a',
+  RB: '#2563eb',
+  WR: '#16a34a',
+  TE: '#9333ea',
+  PK: '#ea580c',
+  DEF: '#0891b2',
+  Other: '#64748b',
+};
+
+// Build the SVG path string for donut chart segments
+function makeDonutSegments(buckets: AnalyticsBucket[]) {
+  const total = buckets.reduce((s, b) => s + b.count, 0);
+  if (total === 0) return [];
+  let cumulative = 0;
+  return buckets.map((b) => {
+    const startPct = cumulative / total;
+    cumulative += b.count;
+    const endPct = cumulative / total;
+    // Map to circumference; using r=42 so circumference ≈ 263.89
+    const circumference = 2 * Math.PI * 42;
+    const dashLength = (endPct - startPct) * circumference;
+    const dashOffset = -startPct * circumference;
+    return {
+      label: b.label,
+      count: b.count,
+      pct: b.pct,
+      color: POSITION_COLORS[b.label] ?? '#64748b',
+      dashArray: `${dashLength} ${circumference - dashLength}`,
+      dashOffset,
+    };
+  });
+}
+
+const donutSegments = makeDonutSegments(positionDistribution);
+
+// ── Age × position strip plot ──
+// Each player becomes a dot at (age, position-lane). Lanes are fixed so the
+// chart layout stays consistent across rosters; identical (age, position)
+// pairs stack vertically inside their lane so overlapping dots stay legible.
+const POSITION_LANES = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'] as const;
+type PositionLane = (typeof POSITION_LANES)[number];
+
+type AgePositionDot = {
+  position: PositionLane;
+  age: number;
+  name: string;
+  stackIndex: number;
+};
+
+const ageByPositionDots: AgePositionDot[] = (() => {
+  const points: { position: PositionLane; age: number; name: string }[] = [];
+  for (const p of roster) {
+    const age = calculateAgeFromBirthdate(p.birthdate);
+    if (age === null) continue;
+    const rawPos = (p.position || '').toUpperCase();
+    const lane: PositionLane | null =
+      rawPos === 'DEF' ? 'DEF'
+      : (POSITION_LANES as readonly string[]).includes(rawPos) ? (rawPos as PositionLane)
+      : null;
+    if (!lane) continue;
+    points.push({ position: lane, age, name: p.name });
+  }
+  // Stack same-age dots within their lane so overlapping players stay readable.
+  const seen = new Map<string, number>();
+  return points.map((pt) => {
+    const key = `${pt.position}:${pt.age}`;
+    const stackIndex = seen.get(key) ?? 0;
+    seen.set(key, stackIndex + 1);
+    return { ...pt, stackIndex };
+  });
+})();
+
+// X-axis range padded to a clean multiple of 2 on each side so labels align.
+const ageStripRange = (() => {
+  const ages = ageByPositionDots.map((d) => d.age);
+  const lo = ages.length ? Math.min(...ages) : 22;
+  const hi = ages.length ? Math.max(...ages) : 36;
+  const min = Math.max(18, Math.floor((lo - 1) / 2) * 2);
+  const max = Math.ceil((hi + 1) / 2) * 2;
+  const ticks: number[] = [];
+  for (let t = min; t <= max; t += 2) ticks.push(t);
+  return { min, max, ticks };
+})();
+
+// SVG geometry — keep the viewBox numbers + helpers together so the markup
+// below stays declarative.
+const STRIP_W = 400;
+const STRIP_H = 220;
+const STRIP_PAD_L = 36;
+const STRIP_PAD_R = 14;
+const STRIP_PAD_T = 12;
+const STRIP_PAD_B = 28;
+const STRIP_PLOT_W = STRIP_W - STRIP_PAD_L - STRIP_PAD_R;
+const STRIP_PLOT_H = STRIP_H - STRIP_PAD_T - STRIP_PAD_B;
+const STRIP_LANE_H = STRIP_PLOT_H / POSITION_LANES.length;
+const STRIP_STACK_STEP = 8; // px between stacked dots in the same lane
+
+const stripMapX = (age: number) => {
+  const span = ageStripRange.max - ageStripRange.min || 1;
+  return STRIP_PAD_L + ((age - ageStripRange.min) / span) * STRIP_PLOT_W;
+};
+const stripLaneCenter = (lane: PositionLane) =>
+  STRIP_PAD_T + (POSITION_LANES.indexOf(lane) + 0.5) * STRIP_LANE_H;
+const stripMapY = (lane: PositionLane, stackIndex: number) => {
+  // First dot lands on the lane center; stack grows upward so the base of
+  // the column always rides the same horizontal line.
+  return stripLaneCenter(lane) - stackIndex * STRIP_STACK_STEP;
+};
+
+// Initial view from query param
+const requestedView = Astro.url.searchParams.get('view');
+const initialView = ['roster', 'analytics', 'planner'].includes(requestedView ?? '')
+  ? requestedView!
+  : 'roster';
+
+// Player modal payload builder — keeps the SSR data shape consistent with
+// PlayerDetailsModal expectations (no salary fields; modal hides contract).
+const buildPlayerModalData = (p: RosterEntry) => ({
+  id: p.id,
+  espnId: p.espn_id,
+  name: p.name,
+  position: p.position,
+  nflTeam: p.team,
+  status: p.status,
+  college: p.college,
+  height: p.height ? Number(p.height) : null,
+  weight: p.weight ? Number(p.weight) : null,
+  number: p.jersey ? Number(p.jersey) : null,
+  draftYear: p.draft_year ? Number(p.draft_year) : null,
+  draftRound: p.draft_round ? Number(p.draft_round) : null,
+  draftPick: p.draft_pick ? Number(p.draft_pick) : null,
+  draftTeam: p.draft_team ?? null,
+  birthdate: p.birthdate ? Number(p.birthdate) : null,
+  franchiseId: selectedFranchiseId,
+});
+
+// Page-level config exposed to client JS
+const pageConfig = {
+  selectedYear,
+  selectedFranchiseId,
+  isOwner,
+  signedIn,
+  leagueId: AFL_LEAGUE_ID,
+  initialView,
+};
+---
+
+<TheLeagueLayout title={`AFL — ${selectedTeam.name} Roster`}>
+  <CollegeLogoDarkStyles />
+  <section class="roster-page" data-league={PAGE_LEAGUE_SLUG} data-controller="afl-family" data-initial-view={initialView}>
+    <!-- Breadcrumbs live inside the centered column so they share its left
+         edge with the team card; outside it they sat at the layout's edge. -->
+    <FrontOfficeNav leagueSlug={leagueSlug} current="rosters" crumb="Rosters" bare />
+    <RosterHeader
+      leagueSlug={leagueSlug}
+      franchiseId={selectedFranchiseId}
+      teamName={selectedTeam.name}
+      teamIcon={selectedTeam.icon}
+      teamMeta={`${conferenceName} · ${selectedTeam.division}`}
+      label="Roster"
+      season={selectedYear}
+      standing={headerStandings.get(selectedFranchiseId) ?? {
+        record: null,
+        pointsFor: null,
+        rank: null,
+        groupSize: null,
+      }}
+      featuredPlayer={headerFeaturedPlayer}
+      lastPlayed={headerSchedule.lastPlayed}
+      upNext={headerSchedule.upNext}
+      rail={headerSchedule.rail}
+      currentWeek={headerWeek}
+      lineupLock={headerLineupLock}
+      ownerLastSeen={ownerSeenFor(selectedFranchiseId)}
+      throwback={headerThrowback}
+      groups={headerGroups}
+      viewerFranchiseId={viewerFranchiseIdHere}
+      nameOf={headerNameOf}
+      iconOf={headerIconOf}
+      recordOf={(id: string) => headerStandings.get(id)?.record ?? null}
+      teamHref={headerTeamHref}
+      prefetch="tap"
+      scheduleHref={headerScheduleHref}
+    />
+
+    <!-- Compact controls. The team switcher moved into the header's crest
+         row above, which is why only the year remains here. -->
+    <div class="roster-controls-bar">
+      <div class="roster-controls-bar__group">
+        <label for="year-select">Year</label>
+        <select id="year-select" data-current-year={selectedYear}>
+          {availableYears.map((year) => (
+            <option value={year} selected={year === selectedYear}>{year}</option>
+          ))}
+        </select>
+      </div>
+      {leagueSlug === 'afl-fantasy' && <MyRankEditor league="afl" />}
+      {leagueSlug === 'afl-fantasy' && (
+        <a class="roster-controls-bar__profile" href={`${leaguePrefix}/franchises/${selectedTeam.franchiseId}`}>
+          Franchise history →
+        </a>
+      )}
+    </div>
+
+    <!-- Roster View -->
+    <section class="view-container" data-view-content="roster" hidden={initialView !== 'roster'}>
+      {roster.length === 0 ? (
+        <div class="empty-state">
+          <p>No roster data for this team in {selectedYear}.</p>
+        </div>
+      ) : (
+        <Fragment>
+        {[
+          {
+            title: 'Active Roster',
+            players: activeRosterPlayers,
+            statusClass: 'active',
+            alwaysShow: true,
+          },
+          {
+            title: 'Injured Reserve',
+            players: irRosterPlayers,
+            statusClass: 'ir',
+            alwaysShow: false,
+          },
+        ]
+          .filter((group) => group.alwaysShow || group.players.length > 0)
+          .map((group) => (
+            <div class="roster-section" data-roster-section={group.statusClass}>
+              {group.statusClass !== 'active' && (
+                <h3 class="roster-section__title">{group.title}</h3>
+              )}
+              <div class="roster-table-card">
+                <div class="roster-table-wrapper">
+                  <table class="roster-table roster-table--afl">
+                    <thead>
+                      <tr>
+                        <th data-column="player">Player</th>
+                        <th data-column="actions" aria-label="Actions"></th>
+                        {/* Rankings column — starts hidden and is revealed by the
+                            rankings script only when the owner has a board loaded,
+                            so an owner without one never sees an empty column. */}
+                        <th data-column="rank" class="ranking-col" id="aflRankColHeader" style="display:none">Rank</th>
+                        <th data-column="oppRank">Opp #</th>
+                        <th data-column="opponent">Opponent</th>
+                        <th data-column="ou">O/U</th>
+                        <th data-column="weather">Weather</th>
+                        <th data-column="oppAvg" title={`Fantasy points the opponent allows to this position per game, ${nflYear} season`}>Opp Avg</th>
+                        <th data-column="total" title={`Total fantasy points scored in ${selectedYear}`}>Total</th>
+                        <th data-column="avg" title={`${selectedYear} points per game played`}>Avg</th>
+                        <th data-column="projected">Proj</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {group.players.map((player) => {
+                  const m = matchupByPlayerId.get(player.id);
+                  const matchup = m?.matchup ?? null;
+                  const oppCode = m?.oppCode ?? null;
+                  const oppRank = m?.oppRank ?? null;
+                  const oppAvg = m?.oppAvg ?? null;
+                  const total = m?.scoreTotal ?? null;
+                  const games = m?.scoreGames ?? 0;
+                  const avg = m?.scoreAverage ?? null;
+                  const projected = m?.projected ?? null;
+                  const tier = oppRank != null ? fpaTier(oppRank) : null;
+                  const recent = m?.recentAverage ?? null;
+                  return (
+                    <tr
+                      class="roster-row"
+                      data-pos={phonePosKey(player.position) || undefined}
+                      data-player-id={player.id}
+                      data-player-status={player.status}
+                      data-player-name={player.name}
+                      data-on-trade-bait={player.isOnTradeBait ? 'true' : 'false'}
+                      data-row-status={player.status === 'INJURED_RESERVE' ? 'ir' : 'active'}
+                    >
+                      <td data-column="player">
+                        <PlayerCell
+                          name={player.name}
+                          position={player.position}
+                          nflTeam={player.team}
+                          mflId={player.id}
+                          espnId={player.espn_id}
+                          playerData={buildPlayerModalData(player)}
+                        >
+                          <Fragment slot="after-name">
+                            {player.isOnTradeBait && (
+                              <a
+                                class="trade-bait-link"
+                                href={`${leaguePrefix}/front-office/trade-builder?from=${selectedFranchiseId}&player=${player.id}`}
+                                title="On trade block"
+                                aria-label="On trade block"
+                              >
+                                🏷️
+                              </a>
+                            )}
+                            {aflInjuries[player.id] && (
+                              <button
+                                type="button"
+                                class="injury-indicator"
+                                data-player-id={player.id}
+                                data-player-name={player.name}
+                                data-injury-status={aflInjuries[player.id].injuryStatus}
+                                data-injury-body-part={aflInjuries[player.id].injuryBodyPart ?? ''}
+                                title={injuryBadgeTitle(aflInjuries[player.id])}
+                                aria-label={`Injury report: ${player.name} — ${injuryBadgeTitle(aflInjuries[player.id])}`}
+                              >
+                                {injuryBadgeLabel(aflInjuries[player.id].injuryStatus)}
+                              </button>
+                            )}
+                          </Fragment>
+                        </PlayerCell>
+                        {/* The phone card's extra line data (phone-row.ts):
+                            EMPTY spans printed from data-t, so the desktop
+                            table's text is unchanged. */}
+                        <Fragment set:html={buildPhoneLineSpans({
+                          kickoffIso: matchup?.date ?? null,
+                          kickoffZone: rowKickoffClock.zone,
+                          kickoffLabel: rowKickoffClock.label,
+                          opponent: oppCode,
+                          spread: matchup ? teamSpread(matchup.spread, player.team, normalizeTeamCode) : null,
+                          lastThree: recent != null ? recent.toFixed(1) : null,
+                          weather: phoneWeather(matchup),
+                          overUnder: formatOverUnder(matchup) === '—' ? null : formatOverUnder(matchup),
+                        })} />
+                      </td>
+                      {/* Every viewer gets the sheet: owners for roster
+                          writes, everyone for Watch (My Watch List). */}
+                      <td data-column="actions">
+                        <button
+                          type="button"
+                          class="ufa-action-btn"
+                          data-action-trigger
+                          data-player-id={player.id}
+                          aria-label={isOwner ? `Manage ${player.name}` : `Actions for ${player.name}`}
+                          title={isOwner ? 'Manage player' : 'Player actions'}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <circle cx="12" cy="5" r="2"/>
+                            <circle cx="12" cy="12" r="2"/>
+                            <circle cx="12" cy="19" r="2"/>
+                          </svg>
+                        </button>
+                      </td>
+                      <td data-column="rank" class="ranking-col ranking-cell" style="display:none"></td>
+                      <td data-column="oppRank">
+                        {oppRank != null ? (
+                          <span class={`rank-badge rank-tier-${tier}`}>#{oppRank}</span>
+                        ) : (
+                          <span class="opp-empty">—</span>
+                        )}
+                      </td>
+                      <td data-column="opponent">
+                        {matchup && oppCode ? (
+                          <span class="opponent-cell">
+                            <span class="vs-at">{matchup.isHome ? 'vs' : '@'}</span>
+                            <img
+                              src={`/assets/nfl-logos/${oppCode}.svg`}
+                              alt={oppCode}
+                              class="opponent-logo"
+                              loading="lazy"
+                              onerror={NFL_LOGO_ONERROR}
+                              onload={NFL_LOGO_ONLOAD}
+                            />
+                          </span>
+                        ) : (
+                          <span class="opponent-bye">BYE</span>
+                        )}
+                      </td>
+                      <td data-column="ou">
+                        <span class="num-cell">{formatOverUnder(matchup)}</span>
+                      </td>
+                      <td data-column="weather">
+                        <span class="num-cell">{formatWeather(matchup)}</span>
+                      </td>
+                      <td data-column="oppAvg">
+                        <span class="num-cell">{formatPoints(oppAvg)}</span>
+                      </td>
+                      <td data-column="total">
+                        <span class="num-cell num-cell--total">{formatPoints(total)}</span>
+                      </td>
+                      <td
+                        data-column="avg"
+                        title={games > 0 ? `${games} ${games === 1 ? 'game' : 'games'} played` : undefined}
+                      >
+                        <span class="num-cell">{formatPoints(avg)}</span>
+                      </td>
+                      <td data-column="projected">
+                        <span class="num-cell num-cell--strong">{formatPoints(projected)}</span>
+                      </td>
+                    </tr>
+                  );
+                })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          ))}
+
+          <!-- Roster summary cards -->
+          <div class="roster-summary">
+            <article>
+              <p>Active roster</p>
+              <strong>{activeRoster}<span class="roster-summary__denom">/{ROSTER_SIZE}</span></strong>
+            </article>
+            <article>
+              <p>Injured reserve</p>
+              <strong>{injuredReserve}</strong>
+            </article>
+            <article>
+              <p>Total players</p>
+              <strong>{totalPlayers}</strong>
+            </article>
+            <article>
+              <p>Open active slots</p>
+              <strong>{Math.max(0, ROSTER_SIZE - activeRoster)}</strong>
+            </article>
+          </div>
+        </Fragment>
+      )}
+    </section>
+
+    <!-- Analytics View -->
+    <section class="view-container" data-view-content="analytics" hidden={initialView !== 'analytics'}>
+      {roster.length === 0 ? (
+        <div class="empty-state">
+          <p>No roster data to analyze in {selectedYear}.</p>
+        </div>
+      ) : (
+        <div class="analytics-grid">
+          <!-- Position composition donut (paired with Age-by-position strip plot) -->
+          <article class="chart-card">
+            <header class="chart-card__header">
+              <h3 class="chart-card__title">Position composition</h3>
+              <p class="chart-card__subtitle">{roster.length} players on roster</p>
+            </header>
+            <div class="donut-row">
+              <svg
+                class="donut-chart"
+                viewBox="0 0 100 100"
+                role="img"
+                aria-label="Position composition donut chart"
+              >
+                <circle cx="50" cy="50" r="42" fill="transparent" stroke="var(--content-bg-muted, #f3f4f6)" stroke-width="14" />
+                {donutSegments.map((seg) => (
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="42"
+                    fill="transparent"
+                    stroke={seg.color}
+                    stroke-width="14"
+                    stroke-dasharray={seg.dashArray}
+                    stroke-dashoffset={seg.dashOffset}
+                    transform="rotate(-90 50 50)"
+                  >
+                    <title>{seg.label}: {seg.count} ({seg.pct.toFixed(0)}%)</title>
+                  </circle>
+                ))}
+                <text x="50" y="48" text-anchor="middle" class="donut-chart__num">{roster.length}</text>
+                <text x="50" y="60" text-anchor="middle" class="donut-chart__label">PLAYERS</text>
+              </svg>
+              <ul class="donut-legend">
+                {positionDistribution.map((b) => (
+                  <li>
+                    <span
+                      class="donut-legend__swatch"
+                      style={`background:${POSITION_COLORS[b.label] ?? '#64748b'}`}
+                    ></span>
+                    <span class="donut-legend__label">{b.label}</span>
+                    <span class="donut-legend__count">{b.count}</span>
+                    <span class="donut-legend__pct">{b.pct.toFixed(0)}%</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </article>
+
+          {/* Age by position — strip plot: position lane on Y, age on X.
+              Each dot is one player; same-(age,position) dots stack upward so
+              overlapping players stay legible. */}
+          <article class="chart-card">
+            <header class="chart-card__header">
+              <h3 class="chart-card__title">Age by position</h3>
+              <p class="chart-card__subtitle">Each dot is a player</p>
+            </header>
+            {ageByPositionDots.length === 0 ? (
+              <p class="chart-card__empty">No age data yet.</p>
+            ) : (
+              <svg
+                class="strip-plot"
+                viewBox={`0 0 ${STRIP_W} ${STRIP_H}`}
+                role="img"
+                aria-label="Roster age plotted against position"
+              >
+                {/* Vertical gridlines at each x-axis tick */}
+                {ageStripRange.ticks.map((t) => (
+                  <line
+                    x1={stripMapX(t)}
+                    x2={stripMapX(t)}
+                    y1={STRIP_PAD_T}
+                    y2={STRIP_H - STRIP_PAD_B}
+                    stroke="var(--content-bg-muted, #f3f4f6)"
+                    stroke-width="1"
+                  />
+                ))}
+                {/* Horizontal lane lines + Y-axis position labels */}
+                {POSITION_LANES.map((lane) => {
+                  const cy = stripLaneCenter(lane);
+                  return (
+                    <Fragment>
+                      <line
+                        x1={STRIP_PAD_L}
+                        x2={STRIP_W - STRIP_PAD_R}
+                        y1={cy}
+                        y2={cy}
+                        stroke="var(--content-border, #e5e7eb)"
+                        stroke-width="1"
+                        stroke-dasharray="2 3"
+                      />
+                      <text
+                        x={STRIP_PAD_L - 8}
+                        y={cy + 3}
+                        text-anchor="end"
+                        class="strip-plot__lane-label"
+                      >
+                        {lane}
+                      </text>
+                    </Fragment>
+                  );
+                })}
+                {/* X-axis tick labels */}
+                {ageStripRange.ticks.map((t) => (
+                  <text
+                    x={stripMapX(t)}
+                    y={STRIP_H - STRIP_PAD_B + 14}
+                    text-anchor="middle"
+                    class="strip-plot__x-label"
+                  >
+                    {t}
+                  </text>
+                ))}
+                {/* Player dots */}
+                {ageByPositionDots.map((dot) => (
+                  <circle
+                    cx={stripMapX(dot.age)}
+                    cy={stripMapY(dot.position, dot.stackIndex)}
+                    r="4"
+                    fill={POSITION_COLORS[dot.position] ?? '#64748b'}
+                    fill-opacity="0.85"
+                    stroke="var(--content-bg, #fff)"
+                    stroke-width="1"
+                  >
+                    <title>{dot.name} — {dot.position}, age {dot.age}</title>
+                  </circle>
+                ))}
+              </svg>
+            )}
+          </article>
+
+          <!-- Age stats card -->
+          <article class="chart-card">
+            <header class="chart-card__header">
+              <h3 class="chart-card__title">Age</h3>
+              <p class="chart-card__subtitle">Average / range</p>
+            </header>
+            <div class="age-stats">
+              <div class="age-stats__big">
+                <span class="age-stats__value">{ageStats.avg ? ageStats.avg.toFixed(1) : '—'}</span>
+                <span class="age-stats__label">Avg age</span>
+              </div>
+              <div class="age-stats__minmax">
+                <div class="age-stats__row">
+                  <span class="age-stats__row-label">Youngest</span>
+                  <span class="age-stats__row-name">{ageStats.youngest?.name ?? '—'}</span>
+                  <span class="age-stats__row-age">{ageStats.youngest?.age ?? '—'}</span>
+                </div>
+                <div class="age-stats__row">
+                  <span class="age-stats__row-label">Oldest</span>
+                  <span class="age-stats__row-name">{ageStats.oldest?.name ?? '—'}</span>
+                  <span class="age-stats__row-age">{ageStats.oldest?.age ?? '—'}</span>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <!-- Age distribution bars (paired with Age card on the same row) -->
+          <article class="chart-card">
+            <header class="chart-card__header">
+              <h3 class="chart-card__title">Age distribution</h3>
+              <p class="chart-card__subtitle">How your roster splits by age</p>
+            </header>
+            <ul class="bar-list">
+              {ageBuckets.map((b) => (
+                <li class="bar-row">
+                  <span class="bar-row__label">{b.label}</span>
+                  <span class="bar-row__track">
+                    <span class="bar-row__fill" style={`width:${b.pct}%`}></span>
+                  </span>
+                  <span class="bar-row__count">{b.count}</span>
+                </li>
+              ))}
+            </ul>
+          </article>
+
+        </div>
+      )}
+
+      {/* NFL Analysis — mirrors TheLeague's analytics page: each NFL team
+          with ≥2 of this franchise's players gets a card with the players
+          listed using the standard PlayerCell lockup. */}
+      {playersByNflTeam.length > 0 && (
+        <div class="analytics-section">
+          <div class="section-header">
+            <h3 class="section-header__title">NFL Analysis</h3>
+            <p class="section-header__sub">Players on the same NFL team</p>
+          </div>
+          <div class="nfl-teams-grid">
+            {playersByNflTeam.map((group) => (
+              <article class="chart-card">
+                <header class="chart-card__header chart-card__header--group">
+                  <img src={getNFLTeamLogo(group.key)} alt={group.key} class="team-group__logo" />
+                  <span class="team-group__name">{getNFLTeamName(group.key)}</span>
+                </header>
+                <div class="team-group__players">
+                  {group.players.map((player) => (
+                    <div class="players-team__player">
+                      <PlayerCell
+                        name={player.name}
+                        position={player.position}
+                        nflTeam={player.team}
+                        playerData={buildPlayerModalData(player)}
+                        mflId={player.id}
+                        espnId={player.espn_id}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* College Analysis — same chart-card grid keyed by school. */}
+      {playersByCollege.length > 0 && (
+        <div class="analytics-section">
+          <div class="section-header">
+            <h3 class="section-header__title">College Analysis</h3>
+            <p class="section-header__sub">Players who played for the same college</p>
+          </div>
+          <div class="nfl-teams-grid">
+            {playersByCollege.map((group) => {
+              const assets = getCollegeAssets(group.key);
+              return (
+                <article class="chart-card">
+                  <header class="chart-card__header chart-card__header--group">
+                    {assets?.logo ? (
+                      <img src={assets.logo} alt={group.key} class="team-group__logo" onerror={COLLEGE_LOGO_ONERROR} onload={COLLEGE_LOGO_ONLOAD} />
+                    ) : (
+                      <div class="team-group__logo team-group__logo--fallback">
+                        {group.key[0] ?? '?'}
+                      </div>
+                    )}
+                    <span class="team-group__name">{group.key}</span>
+                  </header>
+                  <div class="team-group__players">
+                    {group.players.map((player) => (
+                      <div class="players-team__player">
+                        <PlayerCell
+                          name={player.name}
+                          position={player.position}
+                          nflTeam={player.team}
+                          playerData={buildPlayerModalData(player)}
+                          mflId={player.id}
+                          espnId={player.espn_id}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </section>
+
+    <!-- Planner View -->
+    <section class="view-container" data-view-content="planner" hidden={initialView !== 'planner'}>
+      {isOwner ? (
+        <Fragment>
+          <KeeperPlanner
+            franchiseId={selectedFranchiseId}
+            year={selectedYear}
+            roster={plannerRoster}
+            draftPicks={plannerDraftPicks}
+            dataPath={aflLeague.dataPath}
+          />
+
+          {/* Roster analytics, combined in here below the player list so a
+              keeper decision can lean on the same age/position picture
+              without leaving the tab. Same cards as the Analytics view —
+              this page's move toward the Planner view being the one home
+              for everything here, ahead of the Roster/Analytics tabs going
+              away. */}
+          {roster.length > 0 && (
+            <div class="planner-analytics">
+              <div class="section-header">
+                <h3 class="section-header__title">Roster at a glance</h3>
+                <p class="section-header__sub">Same breakdown as the Analytics tab, for reference while you plan.</p>
+              </div>
+              <div class="analytics-grid">
+                <!-- Position composition donut (paired with Age-by-position strip plot) -->
+                <article class="chart-card">
+                  <header class="chart-card__header">
+                    <h3 class="chart-card__title">Position composition</h3>
+                    <p class="chart-card__subtitle">{roster.length} players on roster</p>
+                  </header>
+                  <div class="donut-row">
+                    <svg
+                      class="donut-chart"
+                      viewBox="0 0 100 100"
+                      role="img"
+                      aria-label="Position composition donut chart"
+                    >
+                      <circle cx="50" cy="50" r="42" fill="transparent" stroke="var(--content-bg-muted, #f3f4f6)" stroke-width="14" />
+                      {donutSegments.map((seg) => (
+                        <circle
+                          cx="50"
+                          cy="50"
+                          r="42"
+                          fill="transparent"
+                          stroke={seg.color}
+                          stroke-width="14"
+                          stroke-dasharray={seg.dashArray}
+                          stroke-dashoffset={seg.dashOffset}
+                          transform="rotate(-90 50 50)"
+                        >
+                          <title>{seg.label}: {seg.count} ({seg.pct.toFixed(0)}%)</title>
+                        </circle>
+                      ))}
+                      <text x="50" y="48" text-anchor="middle" class="donut-chart__num">{roster.length}</text>
+                      <text x="50" y="60" text-anchor="middle" class="donut-chart__label">PLAYERS</text>
+                    </svg>
+                    <ul class="donut-legend">
+                      {positionDistribution.map((b) => (
+                        <li>
+                          <span
+                            class="donut-legend__swatch"
+                            style={`background:${POSITION_COLORS[b.label] ?? '#64748b'}`}
+                          ></span>
+                          <span class="donut-legend__label">{b.label}</span>
+                          <span class="donut-legend__count">{b.count}</span>
+                          <span class="donut-legend__pct">{b.pct.toFixed(0)}%</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </article>
+
+                {/* Age by position — strip plot: position lane on Y, age on X.
+                    Each dot is one player; same-(age,position) dots stack upward so
+                    overlapping players stay legible. */}
+                <article class="chart-card">
+                  <header class="chart-card__header">
+                    <h3 class="chart-card__title">Age by position</h3>
+                    <p class="chart-card__subtitle">Each dot is a player</p>
+                  </header>
+                  {ageByPositionDots.length === 0 ? (
+                    <p class="chart-card__empty">No age data yet.</p>
+                  ) : (
+                    <svg
+                      class="strip-plot"
+                      viewBox={`0 0 ${STRIP_W} ${STRIP_H}`}
+                      role="img"
+                      aria-label="Roster age plotted against position"
+                    >
+                      {/* Vertical gridlines at each x-axis tick */}
+                      {ageStripRange.ticks.map((t) => (
+                        <line
+                          x1={stripMapX(t)}
+                          x2={stripMapX(t)}
+                          y1={STRIP_PAD_T}
+                          y2={STRIP_H - STRIP_PAD_B}
+                          stroke="var(--content-bg-muted, #f3f4f6)"
+                          stroke-width="1"
+                        />
+                      ))}
+                      {/* Horizontal lane lines + Y-axis position labels */}
+                      {POSITION_LANES.map((lane) => {
+                        const cy = stripLaneCenter(lane);
+                        return (
+                          <Fragment>
+                            <line
+                              x1={STRIP_PAD_L}
+                              x2={STRIP_W - STRIP_PAD_R}
+                              y1={cy}
+                              y2={cy}
+                              stroke="var(--content-border, #e5e7eb)"
+                              stroke-width="1"
+                              stroke-dasharray="2 3"
+                            />
+                            <text
+                              x={STRIP_PAD_L - 8}
+                              y={cy + 3}
+                              text-anchor="end"
+                              class="strip-plot__lane-label"
+                            >
+                              {lane}
+                            </text>
+                          </Fragment>
+                        );
+                      })}
+                      {/* X-axis tick labels */}
+                      {ageStripRange.ticks.map((t) => (
+                        <text
+                          x={stripMapX(t)}
+                          y={STRIP_H - STRIP_PAD_B + 14}
+                          text-anchor="middle"
+                          class="strip-plot__x-label"
+                        >
+                          {t}
+                        </text>
+                      ))}
+                      {/* Player dots */}
+                      {ageByPositionDots.map((dot) => (
+                        <circle
+                          cx={stripMapX(dot.age)}
+                          cy={stripMapY(dot.position, dot.stackIndex)}
+                          r="4"
+                          fill={POSITION_COLORS[dot.position] ?? '#64748b'}
+                          fill-opacity="0.85"
+                          stroke="var(--content-bg, #fff)"
+                          stroke-width="1"
+                        >
+                          <title>{dot.name} — {dot.position}, age {dot.age}</title>
+                        </circle>
+                      ))}
+                    </svg>
+                  )}
+                </article>
+
+                <!-- Age stats card -->
+                <article class="chart-card">
+                  <header class="chart-card__header">
+                    <h3 class="chart-card__title">Age</h3>
+                    <p class="chart-card__subtitle">Average / range</p>
+                  </header>
+                  <div class="age-stats">
+                    <div class="age-stats__big">
+                      <span class="age-stats__value">{ageStats.avg ? ageStats.avg.toFixed(1) : '—'}</span>
+                      <span class="age-stats__label">Avg age</span>
+                    </div>
+                    <div class="age-stats__minmax">
+                      <div class="age-stats__row">
+                        <span class="age-stats__row-label">Youngest</span>
+                        <span class="age-stats__row-name">{ageStats.youngest?.name ?? '—'}</span>
+                        <span class="age-stats__row-age">{ageStats.youngest?.age ?? '—'}</span>
+                      </div>
+                      <div class="age-stats__row">
+                        <span class="age-stats__row-label">Oldest</span>
+                        <span class="age-stats__row-name">{ageStats.oldest?.name ?? '—'}</span>
+                        <span class="age-stats__row-age">{ageStats.oldest?.age ?? '—'}</span>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+
+                <!-- Age distribution bars (paired with Age card on the same row) -->
+                <article class="chart-card">
+                  <header class="chart-card__header">
+                    <h3 class="chart-card__title">Age distribution</h3>
+                    <p class="chart-card__subtitle">How your roster splits by age</p>
+                  </header>
+                  <ul class="bar-list">
+                    {ageBuckets.map((b) => (
+                      <li class="bar-row">
+                        <span class="bar-row__label">{b.label}</span>
+                        <span class="bar-row__track">
+                          <span class="bar-row__fill" style={`width:${b.pct}%`}></span>
+                        </span>
+                        <span class="bar-row__count">{b.count}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </article>
+              </div>
+
+              {(playersByNflTeam.length > 0 || playersByCollege.length > 0) && (
+                <details class="planner-analytics__extra">
+                  <summary>NFL &amp; college overlap (for fun)</summary>
+
+                  {playersByNflTeam.length > 0 && (
+                    <div class="analytics-section">
+                      <div class="section-header">
+                        <h3 class="section-header__title">NFL Analysis</h3>
+                        <p class="section-header__sub">Players on the same NFL team</p>
+                      </div>
+                      <div class="nfl-teams-grid">
+                        {playersByNflTeam.map((group) => (
+                          <article class="chart-card">
+                            <header class="chart-card__header chart-card__header--group">
+                              <img src={getNFLTeamLogo(group.key)} alt={group.key} class="team-group__logo" />
+                              <span class="team-group__name">{getNFLTeamName(group.key)}</span>
+                            </header>
+                            <div class="team-group__players">
+                              {group.players.map((player) => (
+                                <div class="players-team__player">
+                                  <PlayerCell
+                                    name={player.name}
+                                    position={player.position}
+                                    nflTeam={player.team}
+                                    playerData={buildPlayerModalData(player)}
+                                    mflId={player.id}
+                                    espnId={player.espn_id}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </article>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {playersByCollege.length > 0 && (
+                    <div class="analytics-section">
+                      <div class="section-header">
+                        <h3 class="section-header__title">College Analysis</h3>
+                        <p class="section-header__sub">Players who played for the same college</p>
+                      </div>
+                      <div class="nfl-teams-grid">
+                        {playersByCollege.map((group) => {
+                          const assets = getCollegeAssets(group.key);
+                          return (
+                            <article class="chart-card">
+                              <header class="chart-card__header chart-card__header--group">
+                                {assets?.logo ? (
+                                  <img src={assets.logo} alt={group.key} class="team-group__logo" onerror={COLLEGE_LOGO_ONERROR} onload={COLLEGE_LOGO_ONLOAD} />
+                                ) : (
+                                  <div class="team-group__logo team-group__logo--fallback">
+                                    {group.key[0] ?? '?'}
+                                  </div>
+                                )}
+                                <span class="team-group__name">{group.key}</span>
+                              </header>
+                              <div class="team-group__players">
+                                {group.players.map((player) => (
+                                  <div class="players-team__player">
+                                    <PlayerCell
+                                      name={player.name}
+                                      position={player.position}
+                                      nflTeam={player.team}
+                                      playerData={buildPlayerModalData(player)}
+                                      mflId={player.id}
+                                      espnId={player.espn_id}
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            </article>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </details>
+              )}
+            </div>
+          )}
+        </Fragment>
+      ) : (
+        <div class="coming-soon">
+          <h2>Planner</h2>
+          <p>The keeper planner is private to each team owner.</p>
+          {!authUser && (
+            <p>
+              <a class="coming-soon__cta" href={plannerLoginHref}>
+                Sign in to AFL →
+              </a>
+            </p>
+          )}
+        </div>
+      )}
+    </section>
+  </section>
+
+  <PlayerDetailsModal hideContract />
+  <PlayerInjuryModal />
+  <script
+    type="application/json"
+    id="weekly-player-results"
+    set:html={JSON.stringify(weeklyPlayerResults)}
+  ></script>
+  <AFLActionModal />
+  {!signedIn && <SignInModal config={signInConfig} />}
+
+  <script id="afl-roster-config" type="application/json" set:html={JSON.stringify(pageConfig)}></script>
+
+  <script>
+    import { initPlayerModalTrigger } from '../../utils/player-modal-trigger';
+    import {
+      buildAflSheetFields,
+      createAflSheetActionHandler,
+      type AflSheetActionId,
+    } from '../../utils/rosters/afl-phone-sheet';
+  import { loadWatchList } from '../../utils/watch-list-client';
+
+    // Re-read the page config from the DOM on demand — values like
+    // selectedFranchiseId change between client-side (ClientRouter)
+    // navigations, so we must not capture a stale snapshot.
+    const readConfig = (): Record<string, any> => {
+      const el = document.getElementById('afl-roster-config');
+      return el ? JSON.parse(el.textContent || '{}') : {};
+    };
+
+    // The action-trigger delegation lives at the document level, so it must
+    // be bound exactly once — not per navigation — or stacked handlers would
+    // double-open the modal. Module-scoped so it survives across page loads.
+    let actionDelegationBound = false;
+
+    /* Opens AFLActionModal for one row: from the row's ⋮ button, or from the
+       player sheet with `action` (the sheet's hero / ⋮ menu / More actions),
+       which takes the modal straight to that action's confirm step. */
+    function openActionModalFor(row: HTMLTableRowElement, action?: AflSheetActionId) {
+      const config = readConfig();
+      const opener = (window as any).openAFLActionModal as
+        | ((p: {
+            /** Open straight on this action's confirm step (the player sheet). */
+            action?: AflSheetActionId;
+            playerId: string;
+            playerName: string;
+            status?: string;
+            isOnTradeBait?: boolean;
+            franchiseId?: string;
+            headshot?: string;
+            position?: string;
+            nflTeam?: string;
+            birthdate?: number | null;
+            college?: string | null;
+            draftYear?: number | null;
+            draftRound?: number | null;
+            draftPick?: number | null;
+            draftTeam?: string | null;
+            isOwner?: boolean;
+            signedIn?: boolean;
+          }) => void)
+        | undefined;
+      if (typeof opener !== 'function') {
+        console.warn('[afl-rosters] AFLActionModal not loaded; ignoring action.');
+        return;
+      }
+
+      // Pull the player lockup details off the PlayerCell already rendered in
+      // the row. This avoids duplicating the same data into row dataset
+      // attributes server-side, and keeps the modal hero in sync with whatever
+      // PlayerCell ended up resolving (NFL-photo / college-photo / default).
+      const playerCell = row.querySelector('[data-column="player"] .player-cell');
+      const headshotImg = playerCell?.querySelector('.player-cell__avatar img') as HTMLImageElement | null;
+      const logoImg = playerCell?.querySelector('.player-meta__logo') as HTMLImageElement | null;
+      const posEl = playerCell?.querySelector('.player-meta__pos');
+      // Position label can include contract tags ("QB - RC"); strip them.
+      const positionRaw = posEl?.textContent?.trim().split('-')[0]?.trim() ?? '';
+      // Logo URL ends in `/{TEAM}.svg`; pull the code off the end.
+      const logoSrc = logoImg?.getAttribute('src') ?? '';
+      const teamCodeMatch = logoSrc.match(/\/nfl-logos\/([^/.]+)\.svg$/);
+      const teamCode = teamCodeMatch ? teamCodeMatch[1] : '';
+
+      // The PlayerCell also serializes the full player payload onto the name
+      // element via data-player-modal — same JSON PlayerDetailsModal uses. Re-
+      // parse it so the action modal hero can show age / college / draft pick
+      // without duplicating those fields into separate data attributes.
+      const nameEl = playerCell?.querySelector('.player-cell__name[data-player-modal]');
+      const rawJson = nameEl?.getAttribute('data-player-modal') ?? '';
+      let extra: {
+        birthdate?: number | null;
+        college?: string | null;
+        draftYear?: number | null;
+        draftRound?: number | null;
+        draftPick?: number | null;
+        draftTeam?: string | null;
+      } = {};
+      if (rawJson) {
+        try {
+          const parsed = JSON.parse(rawJson) as Record<string, unknown>;
+          extra = {
+            birthdate: typeof parsed.birthdate === 'number' ? parsed.birthdate : null,
+            college: typeof parsed.college === 'string' ? parsed.college : null,
+            draftYear: typeof parsed.draftYear === 'number' ? parsed.draftYear : null,
+            draftRound: typeof parsed.draftRound === 'number' ? parsed.draftRound : null,
+            draftPick: typeof parsed.draftPick === 'number' ? parsed.draftPick : null,
+            draftTeam: typeof parsed.draftTeam === 'string' ? parsed.draftTeam : null,
+          };
+        } catch {
+          // Malformed JSON — leave extra empty; modal will fall back gracefully.
+        }
+      }
+
+      opener({
+        action,
+        playerId: row.dataset.playerId ?? '',
+        playerName: row.dataset.playerName ?? 'Player',
+        status: row.dataset.playerStatus,
+        isOnTradeBait: row.dataset.onTradeBait === 'true',
+        franchiseId: config.selectedFranchiseId,
+        isOwner: config.isOwner === true,
+        signedIn: config.signedIn === true,
+        headshot: headshotImg?.getAttribute('src') ?? undefined,
+        position: positionRaw || undefined,
+        nflTeam: teamCode || undefined,
+        ...extra,
+      });
+    }
+
+    // Runs on initial load AND after every ClientRouter navigation. Without
+    // this, Astro evaluates the script module only once, so navigating onto
+    // this page client-side would leave the tabs/planner unwired.
+    function initAflRosterPage() {
+      /* Only on THIS league's rosters page, and once per rendered DOM.
+         `.roster-page` alone is NOT a gate: TheLeague's rosters page renders
+         the same class, `document` survives every ClientRouter swap, and a
+         cross-league move is a swap rather than a fresh document — so this
+         controller used to run on TheLeague's page and bind a second player
+         modal trigger onto it, from the wrong league's data.
+         The `aflInit` flag is the separate, still-needed half: the element is
+         replaced on every swap, so a fresh one re-wires, but a repeat call for
+         the SAME DOM (astro:page-load plus the first-load fallback) short
+         circuits so element-scoped listeners do not stack.
+         Guard: tests/cross-league-init-gate.test.ts. */
+      // One controller for every AFL-family league: it asks for its own marker.
+      const pageRoot = document.querySelector<HTMLElement>('.roster-page[data-controller="afl-family"]');
+      if (!pageRoot || pageRoot.dataset.aflInit === '1') return;
+      pageRoot.dataset.aflInit = '1';
+
+      // ── Injury badge → injury modal ──
+      // Delegated on pageRoot, NOT on document. The two roster siblings both
+      // render `.roster-page` and both render `.injury-indicator`, so a
+      // document-level listener would survive a cross-league ClientRouter swap
+      // and fire alongside TheLeague's own handler on TheLeague's rows —
+      // opening the modal twice. pageRoot is replaced on every swap, so this
+      // listener dies with the DOM it belongs to and cannot stack or leak.
+      pageRoot.addEventListener('click', (event) => {
+        const btn = (event.target as HTMLElement | null)?.closest<HTMLElement>('.injury-indicator');
+        if (!btn) return;
+
+        // The badge sits inside the player-cell name element, which already
+        // carries the full PlayerDetailsModal JSON — reuse it so the injury
+        // modal's composite band gets team/position/espnId rather than a bare
+        // name on a grey band.
+        let playerMeta: Record<string, any> = {};
+        const modalJson = btn.closest('[data-player-modal]')?.getAttribute('data-player-modal');
+        if (modalJson) {
+          try { playerMeta = JSON.parse(modalJson); } catch { /* leave empty */ }
+        }
+
+        const openInjuryModal = (window as any).openPlayerInjuryModal;
+        if (typeof openInjuryModal !== 'function') {
+          console.warn('openPlayerInjuryModal function not found');
+          return;
+        }
+        openInjuryModal({
+          name: btn.dataset.playerName,
+          injuryStatus: btn.dataset.injuryStatus,
+          injuryBodyPart: btn.dataset.injuryBodyPart,
+          position: playerMeta.position,
+          nflTeam: playerMeta.nflTeam,
+          espnId: playerMeta.espnId,
+          franchiseId: playerMeta.franchiseId,
+          headshot: btn.closest('.player-cell')?.querySelector<HTMLImageElement>('.player-cell__avatar img')?.src,
+        });
+      });
+
+      /* The view tabs are retired: Analytics and the Keeper Planner live on the
+         Front Office hub now. `?view=analytics` / `?view=planner` still render
+         their section server-side — those deep links are deliberate — so the
+         SSR `hidden` attribute is the whole mechanism and no client switcher
+         is needed. */
+
+    // ── Team / year selectors ──
+    const buildUrl = (params: Record<string, string>) => {
+      const url = new URL(window.location.href);
+      for (const [k, v] of Object.entries(params)) {
+        url.searchParams.set(k, v);
+      }
+      return url.toString();
+    };
+
+    const yearSelect = document.getElementById('year-select') as HTMLSelectElement | null;
+    if (yearSelect) {
+      yearSelect.addEventListener('change', () => {
+        window.location.href = buildUrl({ year: yearSelect.value });
+      });
+    }
+
+    // ── Player details modal trigger (delegated) ──
+    // `pageRoot`, not a fresh bare-class query — the gate above already
+    // resolved THIS league's page root, and re-asking without the league is
+    // the same hazard one statement later.
+    // On a phone the whole row opens the sheet (the ⋮ column is hidden
+    // there), and `enrich` adds the tabs, This week and the owner's actions
+    // (docs/plans/rosters-mobile-layout.md § 8). A row outside the roster
+    // tables — the planner's cards — keeps the plain sheet.
+    initPlayerModalTrigger(pageRoot, {
+      rowTapMedia: '(max-width: 767px)',
+      enrich: (data, { row }) => {
+        if (!row || !row.closest('.roster-table--afl')) return data;
+        const config = readConfig();
+        return {
+          ...data,
+          ...buildAflSheetFields(row, {
+            isOwner: config.isOwner === true,
+            status: row.dataset.playerStatus ?? '',
+            onTradeBait: row.dataset.onTradeBait === 'true',
+          }),
+          onAction: createAflSheetActionHandler((action) => openActionModalFor(row, action)),
+        };
+      },
+    });
+
+    // Warm the watch list so the sheet's Watch option opens in the right
+    // state; the store caches per league and no-ops on repeat.
+    if (readConfig().signedIn === true) void loadWatchList();
+
+    // ── Player action button → AFLActionModal (every viewer; see the modal) ──
+    // Bind the document-level delegation once; re-running init must not stack.
+    if (actionDelegationBound) return;
+    actionDelegationBound = true;
+    document.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      const trigger = target.closest('[data-action-trigger]') as HTMLButtonElement | null;
+      if (!trigger) return;
+      e.stopPropagation();
+      const row = trigger.closest('tr') as HTMLTableRowElement | null;
+      if (!row) return;
+      openActionModalFor(row);
+    });
+    }
+
+    // Fires on first load and after every ClientRouter navigation. The
+    // readyState/DOMContentLoaded fallback covers pages served without View
+    // Transitions (mirrors src/components/nav/NavLinks.astro); the per-DOM
+    // guard above keeps the double-trigger on first load from double-binding.
+    document.addEventListener('astro:page-load', initAflRosterPage);
+    if (document.readyState !== 'loading') initAflRosterPage();
+    else document.addEventListener('DOMContentLoaded', initAflRosterPage);
+  </script>
+
+  <!-- Rankings integration: fills the Rank column from the owner's top board -->
+  <script>
+    import { initRosterRankColumn } from '../../utils/rankings-roster-column';
+
+    initRosterRankColumn({
+      // One tbody per roster section (Active Roster, Injured Reserve).
+      rowsSelector: '.roster-table--afl tbody',
+      columnSelector: '.roster-table--afl .ranking-col',
+      cellSelector: '.ranking-cell',
+      // Label the column with the board it's showing ("My Rank", "MFL", …) —
+      // a bare "Rank" doesn't say whose opinion it is.
+      headerSelector: '#aflRankColHeader',
+      visibleDisplay: 'table-cell',
+    });
+  </script>
+
+  <style>
+    /* ────────────────────────────────────────────────────────────────
+       AFL roster page — matches TheLeague's roster page visual language
+       (team-card hero, icon-tile view-tabs, roster-summary, roster-table).
+       Variables come from TheLeagueLayout's global stylesheet so the look
+       stays in lockstep with the rest of the site.
+       ──────────────────────────────────────────────────────────────── */
+
+    .roster-page {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: var(--padding-md, 1rem) var(--padding-md, 1rem) var(--spacing-2xl, 3rem);
+      display: grid;
+      gap: var(--padding-md, 1rem);
+    }
+
+    /* Dark mode: raised-card treatment — shadow alone can't separate this
+       section from the navy page floor;
+
+    /* ── Inline controls bar (team + year switcher) ── */
+    .roster-controls-bar {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+      flex-wrap: wrap;
+      background: var(--content-bg, #fff);
+      border-radius: var(--radius-md, 0.5rem);
+      padding: 0.625rem 1rem;
+      box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
+    }
+
+    .roster-controls-bar__group {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .roster-controls-bar__group label {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--color-gray-500, #6b7280);
+    }
+
+    .roster-controls-bar__group select {
+      padding: 0.35rem 0.5rem;
+      border: 1px solid var(--input-border, #e5e7eb);
+      border-radius: var(--radius-sm, 0.25rem);
+      background: var(--input-bg, #fff);
+      font-size: 0.85rem;
+      color: var(--input-text, #111827);
+      cursor: pointer;
+    }
+
+    .roster-controls-bar__profile {
+      margin-left: auto;
+      font-size: 0.8125rem;
+      color: var(--color-primary, #1c497c);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .roster-controls-bar__profile:hover { text-decoration: underline; }
+
+    /* ── Roster section header ── */
+    .roster-section {
+      display: grid;
+      gap: var(--padding-md, 1rem);
+    }
+
+    .roster-section__title {
+      margin: 0;
+      padding-bottom: 0.25rem;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--color-gray-900, #111827);
+      line-height: 1.2;
+    }
+
+    /* IR section: slightly de-emphasized table card to make it visually
+       obvious these players are NOT on the active roster. */
+    .roster-section[data-roster-section='ir'] .roster-table-card {
+      background: var(--color-gray-50, #f9fafb);
+    }
+
+    /* ── Roster summary cards (matches TheLeague's .roster-summary) ── */
+    .roster-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: var(--padding-md, 1rem);
+    }
+
+    .roster-summary article {
+      background: var(--content-bg, #fff);
+      border-radius: var(--radius-lg, 1rem);
+      padding: var(--padding-md, 1rem);
+      box-shadow: var(--shadow-md);
+    }
+
+    :global(html.dark) .roster-summary article {
+      box-shadow:
+        0 0 0 1px var(--content-border, #555555),
+        var(--shadow-md);
+    }
+
+    .roster-summary p {
+      margin: 0;
+      color: var(--color-gray-500, #6b7280);
+      font-size: 0.8rem;
+    }
+
+    .roster-summary strong {
+      display: block;
+      margin-top: 0.35rem;
+      font-size: clamp(1.1rem, 4vw, 1.6rem);
+      line-height: 1.2;
+      font-variant-numeric: tabular-nums;
+      color: var(--color-gray-900, #111827);
+    }
+
+    .roster-summary__denom {
+      color: var(--color-gray-400, #9ca3af);
+      font-size: 0.75em;
+      font-weight: 500;
+    }
+
+    /* ── View containers ── */
+    .view-container {
+      display: grid;
+      gap: var(--padding-lg, 1.5rem);
+    }
+
+    .view-container[hidden] {
+      display: none;
+    }
+
+    /* ── Roster table card ── */
+    .roster-table-card {
+      background: var(--content-bg, #fff);
+      border-radius: var(--radius-lg, 1rem);
+      padding: var(--padding-md, 1rem);
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+    }
+
+    :global(html.dark) .roster-table-card {
+      box-shadow:
+        0 0 0 1px var(--content-border, #555555),
+        var(--shadow-lg);
+    }
+
+    .roster-table-wrapper {
+      overflow-x: auto;
+      border-radius: var(--radius-md, 0.5rem);
+      background: var(--content-bg, #fff);
+    }
+
+    .roster-table {
+      width: 100%;
+      min-width: 740px; /* keeps the 8 Coach columns readable; horizontal scrolls on phones */
+      border-collapse: collapse;
+    }
+
+    .roster-table thead {
+      background: var(--color-gray-50, #f9fafb);
+      border-bottom: 1px solid var(--content-border, #e2e8f0);
+    }
+
+    .roster-table th {
+      font-size: 0.625rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--color-gray-400, #9ca3af);
+      padding: 0.55rem 0.5rem;
+      text-align: right;
+      background: var(--color-gray-50, #f9fafb);
+      white-space: nowrap;
+    }
+
+    .roster-table th[data-column="player"] {
+      text-align: left;
+      padding-left: 0.75rem;
+    }
+
+    .roster-table th[data-column="oppRank"],
+    .roster-table th[data-column="opponent"] {
+      text-align: left;
+      font-weight: 600;
+    }
+
+    .roster-table th[data-column="rank"] { width: 68px; text-align: right; }
+    .roster-table td[data-column="rank"] {
+      text-align: right;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+      color: var(--color-gray-500, #6b7280);
+    }
+    .roster-table th[data-column="oppRank"] { width: 64px; }
+    .roster-table th[data-column="opponent"] { width: 96px; }
+    .roster-table th[data-column="ou"] { width: 56px; text-align: right; }
+    .roster-table th[data-column="weather"] { width: 64px; text-align: right; }
+    .roster-table th[data-column="oppAvg"] { width: 64px; text-align: right; }
+    .roster-table th[data-column="total"] { width: 60px; text-align: right; }
+    .roster-table th[data-column="avg"] { width: 56px; text-align: right; }
+    .roster-table th[data-column="projected"] { width: 56px; text-align: right; }
+    .roster-table th[data-column="actions"] { width: 48px; }
+
+    .roster-table td {
+      padding: 0.65rem 0.5rem;
+      border-bottom: 1px solid var(--color-gray-50, #f9fafb);
+      vertical-align: middle;
+      font-size: 0.85rem;
+      color: var(--color-gray-700, #374151);
+    }
+
+    .roster-table td[data-column="player"] {
+      text-align: left;
+      padding-left: 0.75rem;
+    }
+
+    .roster-table td[data-column="oppRank"],
+    .roster-table td[data-column="opponent"] {
+      text-align: left;
+    }
+
+    .roster-table td[data-column="ou"],
+    .roster-table td[data-column="weather"],
+    .roster-table td[data-column="oppAvg"],
+    .roster-table td[data-column="total"],
+    .roster-table td[data-column="avg"],
+    .roster-table td[data-column="projected"] {
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .num-cell {
+      font-variant-numeric: tabular-nums;
+      font-size: 0.85rem;
+      color: var(--color-gray-700, #374151);
+    }
+
+    .num-cell--strong {
+      font-weight: 700;
+      color: var(--color-gray-900, #111827);
+    }
+
+    /* Season total — the row's headline season number, but a notch below the
+       week's projection so the two right-hand columns don't compete. */
+    .num-cell--total {
+      font-weight: 600;
+      color: var(--color-gray-900, #111827);
+    }
+
+    /* Actions column now sits immediately after the player name; align the
+       button to the left so it reads as part of the row's identity block
+       rather than a right-edge afterthought. */
+    .roster-table td[data-column="actions"] {
+      text-align: left;
+      padding-left: 0.25rem;
+      padding-right: 0.25rem;
+    }
+
+    /* OPP # rank badge — color-tiered by FPA rank
+       (1-8 = red / tough; 25-32 = green / good matchup) */
+    .rank-badge {
+      display: inline-block;
+      padding: 0.12rem 0.55rem;
+      border-radius: 0.5rem;
+      font-weight: 700;
+      font-size: 0.75rem;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.4;
+    }
+
+    .rank-tier-4 { background: #d1fae5; color: #047857; border: 1px solid #a7f3d0; }
+    .rank-tier-3 { background: #ecfdf5; color: #047857; border: 1px solid #d1fae5; }
+    .rank-tier-2 { background: #fef2f2; color: #b91c1c; border: 1px solid #fee2e2; }
+    .rank-tier-1 { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+
+    /* Dark mode: the light pastel pills glare against the navy table. Swap to
+       translucent semantic washes + badge text tokens, matching TheLeague's
+       roster Opp # column so both leagues read identically in dark. */
+    :global(html.dark) .rank-tier-4 { background: var(--badge-success-bg, rgba(16, 185, 129, 0.15)); color: var(--badge-success-text, #6ee7b7); border-color: rgba(16, 185, 129, 0.35); }
+    :global(html.dark) .rank-tier-3 { background: rgba(16, 185, 129, 0.09); color: var(--badge-success-text, #6ee7b7); border-color: rgba(16, 185, 129, 0.25); }
+    :global(html.dark) .rank-tier-2 { background: rgba(220, 38, 38, 0.10); color: var(--badge-error-text, #fca5a5); border-color: rgba(220, 38, 38, 0.25); }
+    :global(html.dark) .rank-tier-1 { background: var(--badge-error-bg, rgba(220, 38, 38, 0.15)); color: var(--badge-error-text, #fca5a5); border-color: rgba(220, 38, 38, 0.4); }
+
+    .opp-empty {
+      color: var(--color-gray-400, #9ca3af);
+    }
+
+    /* Opponent cell — vs/@ + NFL logo, matches TheLeague's Coach tab */
+    .opponent-cell {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .vs-at {
+      font-size: 0.75rem;
+      color: var(--color-gray-500, #64748b);
+      font-weight: 500;
+      width: 1.25rem;
+      text-align: center;
+    }
+
+    .opponent-logo {
+      width: 22px;
+      height: 22px;
+      object-fit: contain;
+    }
+
+    .opponent-bye {
+      color: var(--color-gray-400, #9ca3af);
+      font-style: italic;
+      font-size: 0.8rem;
+    }
+
+    .roster-table tbody tr {
+      border-left: 3px solid transparent;
+    }
+
+    .roster-table tbody tr[data-row-status="active"] {
+      border-left-color: #16a34a;
+    }
+
+    :global(html.dark) .roster-table tbody tr[data-row-status="active"] {
+      border-left-color: var(--color-success, #34d399);
+    }
+
+    .roster-table tbody tr[data-row-status="ir"] {
+      border-left-color: var(--color-error, #dc2626);
+    }
+
+    .roster-table tbody tr:hover {
+      background: var(--color-gray-50, #f9fafb);
+    }
+
+    /* 3-dot action button — same look TheLeague uses */
+    .ufa-action-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      padding: 0;
+      border: 1px solid var(--color-gray-200, #d1d5db);
+      background: var(--content-bg, #fff);
+      color: var(--color-gray-500, #6b7280);
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+
+    .ufa-action-btn:hover {
+      background: var(--color-gray-50, #f3f4f6);
+      color: var(--color-gray-700, #374151);
+      border-color: var(--color-gray-300, #9ca3af);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+
+    .ufa-action-btn:focus-visible {
+      outline: 2px solid var(--color-primary, #1c497c);
+      outline-offset: 1px;
+    }
+
+    .trade-bait-link {
+      margin-left: 0.25rem;
+      font-size: 0.9rem;
+      display: inline-block;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    /* ── Analytics view ── */
+    .analytics-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+    }
+
+    /* Same analytics cards, duplicated below the Planner's player list — see
+       the Planner view's own comment for why. */
+    .planner-analytics {
+      margin-top: 1.5rem;
+    }
+
+    .planner-analytics__extra {
+      margin-top: 1rem;
+    }
+
+    .planner-analytics__extra summary {
+      cursor: pointer;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--content-text-muted, #6b7280);
+      padding: 0.25rem 0;
+    }
+
+    .planner-analytics__extra[open] summary {
+      margin-bottom: 0.75rem;
+    }
+
+    .chart-card {
+      background: var(--content-bg, #fff);
+      border-radius: 0.75rem;
+      padding: 1.25rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    }
+
+    :global(html.dark) .chart-card {
+      box-shadow:
+        0 0 0 1px var(--content-border, #555555),
+        0 4px 12px rgba(0, 0, 0, 0.06);
+    }
+
+    .chart-card--span-2 {
+      grid-column: span 2;
+    }
+
+    .chart-card__header {
+      margin-bottom: 1rem;
+    }
+
+    .chart-card__title {
+      margin: 0;
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: var(--color-gray-900, #0f172a);
+    }
+
+    .chart-card__subtitle {
+      margin: 0.125rem 0 0;
+      font-size: 0.75rem;
+      color: var(--content-text-muted, #6b7280);
+    }
+
+    .chart-card__empty {
+      margin: 0;
+      font-size: 0.8125rem;
+      color: var(--color-gray-400, #9ca3af);
+      text-align: center;
+      padding: 1rem 0;
+    }
+
+    .donut-row {
+      display: flex;
+      align-items: center;
+      gap: 4.5rem;
+      flex-wrap: wrap;
+    }
+
+    @media (max-width: 1100px) {
+      .donut-row {
+        gap: 2.5rem;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .donut-row {
+        gap: 1.5rem;
+      }
+    }
+
+    /* Age × position strip plot — mirrors the donut card scale so the
+       two cards sit side by side without one dominating the other. */
+    .strip-plot {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .strip-plot__lane-label {
+      font-size: 10px;
+      font-weight: 700;
+      fill: var(--content-text-muted, #6b7280);
+      letter-spacing: 0.04em;
+    }
+
+    .strip-plot__x-label {
+      font-size: 9px;
+      fill: var(--color-gray-400, #9ca3af);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Sized to roughly match the strip-plot card's rendered height
+       (viewBox 400×220 → ~55% of the chart-card width) so the two
+       analytics cards on the top row read as a balanced pair. */
+    .donut-chart {
+      width: 240px;
+      height: 240px;
+      flex-shrink: 0;
+    }
+
+    @media (max-width: 1100px) {
+      .donut-chart {
+        width: 200px;
+        height: 200px;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .donut-chart {
+        width: 180px;
+        height: 180px;
+      }
+    }
+
+    .donut-chart__num {
+      font-size: 14px;
+      font-weight: 800;
+      fill: var(--color-gray-900, #0f172a);
+    }
+
+    .donut-chart__label {
+      font-size: 4px;
+      letter-spacing: 0.5px;
+      fill: var(--content-text-muted, #6b7280);
+      font-weight: 700;
+    }
+
+    .donut-legend {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      /* Take just enough room for the legend contents — don't stretch to the
+         right edge of the card. Combined with .donut-row's larger gap, this
+         keeps the legend visually centered between the donut and the card
+         border instead of jammed against the edge. */
+      flex: 0 1 auto;
+      min-width: 160px;
+      max-width: 220px;
+      display: grid;
+      gap: 0.375rem;
+    }
+
+    .donut-legend li {
+      display: grid;
+      grid-template-columns: 12px 1fr auto auto;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.8125rem;
+    }
+
+    .donut-legend__swatch {
+      display: block;
+      width: 12px;
+      height: 12px;
+      border-radius: 2px;
+    }
+
+    .donut-legend__label {
+      color: var(--color-gray-900, #0f172a);
+      font-weight: 600;
+    }
+
+    .donut-legend__count {
+      color: var(--color-gray-700, #374151);
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .donut-legend__pct {
+      color: var(--content-text-muted, #6b7280);
+      font-size: 0.75rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .age-stats {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .age-stats__big {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0.75rem;
+      background: #154e87;
+      border-radius: 0.5rem;
+      color: #fff;
+    }
+
+    .age-stats__value {
+      font-size: 2.25rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .age-stats__label {
+      margin-top: 0.25rem;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .age-stats__minmax {
+      display: grid;
+      gap: 0.5rem;
+    }
+
+    .age-stats__row {
+      display: grid;
+      grid-template-columns: 70px 1fr auto;
+      gap: 0.5rem;
+      align-items: center;
+      padding: 0.375rem 0.625rem;
+      background: var(--content-bg-muted, #f9fafb);
+      border-radius: 0.375rem;
+      font-size: 0.8125rem;
+    }
+
+    .age-stats__row-label {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--content-text-muted, #6b7280);
+    }
+
+    .age-stats__row-name {
+      color: var(--color-gray-900, #0f172a);
+      font-weight: 600;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .age-stats__row-age {
+      font-weight: 700;
+      color: var(--color-gray-900, #0f172a);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .bar-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 0.5rem;
+    }
+
+    .bar-list--compact {
+      gap: 0.375rem;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: 84px 1fr 36px;
+      align-items: center;
+      gap: 0.625rem;
+      font-size: 0.8125rem;
+    }
+
+    .bar-row__label {
+      color: var(--color-gray-700, #374151);
+      font-weight: 600;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .bar-row__label--code {
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      font-size: 0.75rem;
+    }
+
+    .bar-row__track {
+      position: relative;
+      height: 12px;
+      background: var(--content-bg-muted, #f3f4f6);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .bar-row__fill {
+      position: absolute;
+      inset: 0;
+      background: #c41e3a;
+      border-radius: 6px;
+      transition: width 200ms ease;
+    }
+
+    .bar-row__fill--blue {
+      background: #2563eb;
+    }
+
+    .bar-row__fill--green {
+      background: #16a34a;
+    }
+
+    .bar-row__count {
+      color: var(--color-gray-700, #374151);
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+    }
+
+    @media (max-width: 720px) {
+      .analytics-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .chart-card--span-2 {
+        grid-column: span 1;
+      }
+    }
+
+    /* ── NFL / College analysis sections — mirror TheLeague's layout ── */
+    .view-container[data-view-content="analytics"] {
+      row-gap: 2rem;
+    }
+
+    .analytics-section {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    .section-header {
+      padding-left: 0.625rem;
+      border-left: 2px solid var(--color-primary, #1c497c);
+    }
+
+    .section-header__title {
+      margin: 0;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--color-gray-900, #111827);
+      line-height: 1;
+    }
+
+    .section-header__sub {
+      margin: 0.25rem 0 0;
+      font-size: 0.8125rem;
+      color: var(--color-gray-400, #9ca3af);
+      line-height: 1.3;
+    }
+
+    .nfl-teams-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+    }
+
+    @media (max-width: 1024px) {
+      .nfl-teams-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 640px) {
+      .nfl-teams-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .chart-card__header--group {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .team-group__logo {
+      width: 2rem;
+      height: 2rem;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+
+    .team-group__logo--fallback {
+      width: 2rem;
+      height: 2rem;
+      border-radius: 0.5rem;
+      background: var(--color-gray-100, #e2e8f0);
+      color: var(--color-gray-900, #0f172a);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 1rem;
+    }
+
+    .team-group__name {
+      font-size: 0.9375rem;
+      font-weight: 700;
+      color: var(--color-gray-900, #0f172a);
+      letter-spacing: 0.02em;
+    }
+
+    .team-group__players {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .players-team__player {
+      padding: 0.5rem 0.625rem;
+      background: var(--content-bg-muted, #f9fafb);
+      border-radius: 0.375rem;
+    }
+
+    /* ── Empty / coming-soon states ── */
+    .empty-state,
+    .coming-soon {
+      background: var(--content-bg, #fff);
+      border-radius: 0.75rem;
+      padding: 3rem 1.5rem;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+      color: var(--content-text-muted, #6b7280);
+    }
+
+    :global(html.dark) .empty-state,
+    :global(html.dark) .coming-soon {
+      box-shadow:
+        0 0 0 1px var(--content-border, #555555),
+        0 4px 12px rgba(0, 0, 0, 0.06);
+    }
+
+    .coming-soon h2 {
+      margin: 0 0 0.5rem;
+      color: var(--color-gray-900, #111827);
+      font-size: 1.25rem;
+    }
+
+    /* Mobile: tighter table cells */
+    @media (max-width: 720px) {
+      .roster-page {
+        padding: 0.5rem 0.5rem 3rem;
+      }
+
+      .roster-table th,
+      .roster-table td {
+        padding: 0.5rem 0.4rem;
+        font-size: 0.8rem;
+      }
+    }
+  </style>
+</TheLeagueLayout>

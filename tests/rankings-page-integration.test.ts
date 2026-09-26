@@ -23,15 +23,15 @@ const read = (p: string) => readFileSync(p, 'utf8');
 
 const FREE_AGENT_PAGES = [
   'src/pages/theleague/players.astro',
-  'src/pages/afl-fantasy/players.astro',
+  'src/components/afl-family/PlayersPage.astro',
 ];
 
 const ROSTER_PAGES = [
   'src/pages/theleague/rosters.astro',
-  'src/pages/afl-fantasy/rosters.astro',
+  'src/components/afl-family/RostersPage.astro',
 ];
 
-const LINEUP_PAGES = ['src/pages/theleague/lineup.astro', 'src/pages/afl-fantasy/lineup.astro'];
+const LINEUP_PAGES = ['src/pages/theleague/lineup.astro', 'src/components/afl-family/LineupPage.astro'];
 
 describe('rankings reach every decision page', () => {
   describe('Free Agents', () => {

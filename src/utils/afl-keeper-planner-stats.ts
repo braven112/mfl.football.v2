@@ -14,10 +14,11 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { getLeagueBySlug } from '../config/leagues';
 import { computeSeasonPoints, type MflPlayersFeed, type WeeklyResultsRaw } from './afl-keeper-analysis';
 
-const loadFeedJson = (year: number, filename: string): any => {
-  const feedPath = path.resolve(process.cwd(), `data/afl-fantasy/mfl-feeds/${year}/${filename}`);
+const loadFeedJson = (year: number, filename: string, dataPath = getLeagueBySlug('afl-fantasy')!.dataPath): any => {
+  const feedPath = path.resolve(process.cwd(), `${dataPath}/mfl-feeds/${year}/${filename}`);
   try {
     if (fs.existsSync(feedPath)) return JSON.parse(fs.readFileSync(feedPath, 'utf8'));
   } catch {
@@ -36,8 +37,8 @@ export interface KeeperPlannerPlayerStats {
   redraftAdpRank: number | null;
 }
 
-const loadAdpRanks = (year: number, filename: string): Map<string, number> => {
-  const data = loadFeedJson(year, filename);
+const loadAdpRanks = (year: number, filename: string, dataPath?: string): Map<string, number> => {
+  const data = loadFeedJson(year, filename, dataPath);
   const map = new Map<string, number>();
   for (const p of (data?.adp?.player ?? []) as Array<{ id?: string; rank?: string }>) {
     const rank = parseInt(p?.rank ?? '', 10);
@@ -53,14 +54,18 @@ const loadAdpRanks = (year: number, filename: string): Map<string, number> => {
  * rather than throwing — weekly results exist for every AFL year, ADP only
  * from 2025 on.
  */
-export function buildKeeperPlannerStats(year: number): Map<string, KeeperPlannerPlayerStats> {
-  const playersData = loadFeedJson(year, 'players.json') as MflPlayersFeed | null;
+export function buildKeeperPlannerStats(
+  year: number,
+  /** The league's registry dataPath — the AFL's by default (the demo's keeper slot passes its own). */
+  dataPath = getLeagueBySlug('afl-fantasy')!.dataPath,
+): Map<string, KeeperPlannerPlayerStats> {
+  const playersData = loadFeedJson(year, 'players.json', dataPath) as MflPlayersFeed | null;
   const positionById = new Map<string, string>();
   for (const p of playersData?.players?.player ?? []) {
     if (p?.id) positionById.set(p.id, p.position || '?');
   }
 
-  const weeklyRaw = (loadFeedJson(year, 'weekly-results-raw.json') ?? []) as WeeklyResultsRaw;
+  const weeklyRaw = (loadFeedJson(year, 'weekly-results-raw.json', dataPath) ?? []) as WeeklyResultsRaw;
   const { points, games } = computeSeasonPoints(weeklyRaw);
 
   // Positional finish: rank 1 = most points at that position, leaguewide,
@@ -78,8 +83,8 @@ export function buildKeeperPlannerStats(year: number): Map<string, KeeperPlanner
     pids.forEach((pid, i) => finishByPid.set(pid, i + 1));
   }
 
-  const dynastyRanks = loadAdpRanks(year, 'adp-dynasty.json');
-  const redraftRanks = loadAdpRanks(year, 'adp-redraft.json');
+  const dynastyRanks = loadAdpRanks(year, 'adp-dynasty.json', dataPath);
+  const redraftRanks = loadAdpRanks(year, 'adp-redraft.json', dataPath);
 
   const stats = new Map<string, KeeperPlannerPlayerStats>();
   const allIds = new Set([...points.keys(), ...dynastyRanks.keys(), ...redraftRanks.keys()]);
