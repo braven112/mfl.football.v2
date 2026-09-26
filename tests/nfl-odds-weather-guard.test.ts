@@ -33,12 +33,15 @@ function walk(dir: string, out: string[] = []): string[] {
 }
 
 const files = walk('src').map((path) => ({ path, text: readFileSync(path, 'utf8') }));
-const offenders = (pattern: RegExp) =>
-  files.filter((f) => f.path !== CANONICAL && pattern.test(f.text)).map((f) => f.path);
+const offenders = (pattern: RegExp | string) =>
+  files
+    .filter((f) => f.path !== CANONICAL && (typeof pattern === 'string' ? f.text.includes(pattern) : pattern.test(f.text)))
+    .map((f) => f.path);
 
 describe('game odds and weather come from ONE system', () => {
   it('only the canonical module fetches stadium weather', () => {
-    expect(offenders(/api\.open-meteo\.com/)).toEqual([]);
+    // A plain substring scan of source text, not a URL check.
+    expect(offenders('open-meteo.com')).toEqual([]);
   });
 
   it('only the canonical module parses ESPN odds', () => {
