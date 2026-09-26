@@ -99,8 +99,8 @@ export function isBotSubmission(input) {
 
 /**
  * Which demo best fits the league they described. `wanted` is the one we
- * would build for them; `path` is the one that exists today (only the dynasty
- * demo is built — the others fall back to it until they ship).
+ * would build for them; `path` is the one that exists today (`available`, the
+ * registry's demo paths — an unbuilt demo falls back to the first).
  */
 export function matchDemo(lead, available = ['dynasty']) {
   let wanted = 'dynasty';

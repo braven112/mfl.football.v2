@@ -126,8 +126,13 @@ const handle: MiddlewareHandler = async (context, next) => {
   if (isDemoDeploy() && !context.isPrerendered && !isRewriteReentry) {
     // A prospect signs in with their private link, never MFL credentials — the
     // demo has no MFL behind it. Send the sign-in page to the demo's front door.
-    if (/^\/(?:(?:theleague|dynasty)\/)?login\/?$/.test(context.url.pathname)) {
-      return stamp(context.redirect(`/${firstDemoPath()}${DEMO_START_PATH}`, 302));
+    const login = context.url.pathname.match(/^(?:\/([\w-]+))?\/login\/?$/);
+    if (login) {
+      // Each demo league's sign-in goes to that league's own picker.
+      const paths = demoLeaguePaths();
+      const slot = login[1];
+      const demoPath = slot && (paths[slot] ? slot : Object.keys(paths).find((p) => paths[p] === slot));
+      return stamp(context.redirect(`/${demoPath || firstDemoPath()}${DEMO_START_PATH}`, 302));
     }
     // The demo host's front door is the pitch and questionnaire.
     if (context.url.pathname === '/') {

@@ -25,6 +25,8 @@ const { answerDemoMfl } = await import('../src/utils/demo-mfl-standin');
 const { demoRequestContext } = await import('../src/utils/demo-request-context');
 const { readFiledWaiverClaims } = await import('../src/utils/waiver-claim');
 
+const { LEAGUES } = await import('../src/config/leagues-data.mjs');
+const LID = LEAGUES.theleague.id;
 const YEAR = '2025';
 const HOST = 'https://www49.myfantasyleague.com';
 const as = <T>(franchiseId: string, fn: () => Promise<T>, token = 'prospect-token-aaaaaaa') =>
@@ -32,7 +34,7 @@ const as = <T>(franchiseId: string, fn: () => Promise<T>, token = 'prospect-toke
   demoRequestContext.run({ token, franchiseId }, fn);
 
 async function exportJson(type: string, extra = '') {
-  const res = await answerDemoMfl(new URL(`${HOST}/${YEAR}/export?TYPE=${type}&L=1&JSON=1${extra}`), 'GET', undefined);
+  const res = await answerDemoMfl(new URL(`${HOST}/${YEAR}/export?TYPE=${type}&L=${LID}&JSON=1${extra}`), 'GET', undefined);
   return res.json();
 }
 
@@ -72,7 +74,7 @@ describe('demo MFL stand-in', () => {
     await as('0001', async () => {
       const roster = rosterOf(await exportJson('rosters'), '0001');
       const starters = roster.slice(0, 9);
-      const res = await post('import', { TYPE: 'lineup', L: '1', W: '3', STARTERS: starters.join(',') });
+      const res = await post('import', { TYPE: 'lineup', L: LID, W: '3', STARTERS: starters.join(',') });
       expect(await res.text()).toContain('<status>OK</status>');
       const wr = await exportJson('weeklyResults', '&W=3');
       const mine = wr.weeklyResults.matchup.flatMap((m: any) => m.franchise).find((f: any) => f.id === '0001');
@@ -85,7 +87,7 @@ describe('demo MFL stand-in', () => {
       await post('add_drop', { add_pid: '99999', drop_pid: '', FORCE_WAIVER: 'on', BBID_AMT: '500000', ROUND: '1', SUBMIT: 'Submit Request' });
       const filed = readFiledWaiverClaims(await exportJson('pendingWaivers'));
       expect(filed?.map((c) => c.addPlayerId ?? (c as any).add)).toContain('99999');
-      await answerDemoMfl(new URL(`${HOST}/${YEAR}/add_drop?L=1&F=0001&DELETE=1_99999_0000`), 'GET', undefined);
+      await answerDemoMfl(new URL(`${HOST}/${YEAR}/add_drop?L=${LID}&F=0001&DELETE=1_99999_0000`), 'GET', undefined);
       expect(readFiledWaiverClaims(await exportJson('pendingWaivers'))).toEqual([]);
     });
   });
@@ -95,7 +97,7 @@ describe('demo MFL stand-in', () => {
       const rosters = await exportJson('rosters');
       const mine = rosterOf(rosters, '0001')[0];
       const theirs = rosterOf(rosters, '0002')[0];
-      const res = await post('import', { TYPE: 'tradeProposal', L: '1', OFFEREDTO: '0002', WILL_GIVE_UP: mine, WILL_RECEIVE: theirs });
+      const res = await post('import', { TYPE: 'tradeProposal', L: LID, OFFEREDTO: '0002', WILL_GIVE_UP: mine, WILL_RECEIVE: theirs });
       expect(await res.text()).not.toMatch(/error/i);
       const after = await exportJson('rosters');
       expect(rosterOf(after, '0001')).toContain(theirs);
@@ -106,9 +108,16 @@ describe('demo MFL stand-in', () => {
   it('IR and taxi moves change the player’s status', async () => {
     await as('0001', async () => {
       const pid = rosterOf(await exportJson('rosters'), '0001')[1];
-      await post('import', { TYPE: 'ir', L: '1', DEACTIVATE: pid });
+      await post('import', { TYPE: 'ir', L: LID, DEACTIVATE: pid });
       const status = (await exportJson('rosters')).rosters.franchise.find((f: any) => f.id === '0001').player.find((p: any) => p.id === pid).status;
       expect(status).toBe('INJURED_RESERVE');
+    });
+  });
+
+  it('answers only for the league it has data for', async () => {
+    await as('0001', async () => {
+      const other = await answerDemoMfl(new URL(`${HOST}/${YEAR}/export?TYPE=rosters&L=37610&JSON=1`), 'GET', undefined);
+      expect((await other.json()).error).toBeDefined();
     });
   });
 

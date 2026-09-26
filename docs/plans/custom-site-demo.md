@@ -18,7 +18,7 @@ with `astro build` and driven in Chromium against `scripts/demo/mock-upstash.mjs
   names in the output (static pages, client and server bundles).
 - A minted link → team picker → owner session; home, standings, rosters,
   lineup and transactions render the fictional league; the header reads
-  "Demo League"; AFL and best-ball routes 404.
+  "Demo League"; AFL routes 404.
 - Through the site's real API routes: lineup submit ("Lineup Saved" on
   reload), cut, waiver claim (verified by the route's own read-back), trade
   (auto-accepted, players swapped) — each visible on the next page load, and
@@ -37,7 +37,8 @@ with `astro build` and driven in Chromium against `scripts/demo/mock-upstash.mjs
    branch and Production — it signs leads to production and link actions back.
 5. Links issue themselves from the questionnaire at demo.mfl.football; issue
    one by hand from /theleague/admin/demo-leads, or
-   `DEMO_REDIS_REST_URL=… DEMO_REDIS_REST_TOKEN=… node scripts/demo/mint-link.mjs --label "Acme League"`.
+   `DEMO_REDIS_REST_URL=… DEMO_REDIS_REST_TOKEN=… node scripts/demo/mint-link.mjs --label "Acme League" [--path redraft]`.
+   A token opens every demo; the path only picks where the link lands.
 
 ### Phase 3 (built)
 
@@ -56,9 +57,26 @@ with `astro build` and driven in Chromium against `scripts/demo/mock-upstash.mjs
 - "Custom for this league" tags on the Front Office hub and pages, and
   Franchise Tags.
 
+### Phase 4 — `/redraft` (built)
+
+- The Best Ball slot carries a fictional 12-team best-ball league
+  (`scripts/demo/lib/bestball.mjs`): config, assets, and a completed 25-round
+  (300-pick) snake draft by MFL redraft ADP with noise, padded past ADP's end
+  by last season's points. `demo.mfl.football/redraft` → `/best-ball-1`.
+- The official draft lives in PartyKit, a live service the demo must not
+  touch: on the demo the session id is prefixed `demo-` and
+  `fetchOfficialDraftSession` serves the generated file instead;
+  `/draft-room` sends prospects to mock drafts (bots, run in their browser).
+- Each demo has its own picker (`/<path>/demo-start`, one shared
+  `DemoStartPage` component); `/<path>/login` goes to that demo's picker.
+- The MFL stand-in answers only for the dynasty league's id — any other `L=`
+  gets MFL's own "Invalid league ID." error.
+- The banner's pitch line names the demo's own extras (draft tools for best
+  ball, salary-cap tools elsewhere).
+
 ### Known gaps (next)
 
-- The AFL and best-ball DATA files stay in the demo bundle (54 shared modules
+- The AFL DATA files stay in the demo bundle (54 shared modules
   import them) — scrubbed of every name and never routed, but a fictional
   conference league (P4) should replace them.
 - Two modules build their own Redis clients (`schefter-news-loaders.ts`,
@@ -67,7 +85,8 @@ with `astro build` and driven in Chromium against `scripts/demo/mock-upstash.mjs
 - Trades move players, not draft picks; What's New, the Pecking Order and the
   owners' poll are empty; the league's rules pages keep their prose with
   names swapped.
-- P4: the keeper, `/bigleague` and `/redraft` demos.
+- P4: the keeper demo (needs a fourth league slot, unforking pages) and
+  `/bigleague` (96 teams, 8 conferences × 12, in the AFL slot).
 
 ## Goal
 

@@ -28,13 +28,14 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-import { loadSeasonFacts } from './lib/nfl-facts.mjs';
+import { loadSeasonFacts, seasonTotals } from './lib/nfl-facts.mjs';
 import { simulateLeague } from './lib/simulate.mjs';
 import { DEMO_DIVISIONS, DEMO_FRANCHISES, DEMO_LEAGUE_NAME } from './lib/franchises.mjs';
 import { createRng } from './lib/rng.mjs';
 import * as feeds from './lib/mfl-feeds.mjs';
 import * as identity from './lib/identity-files.mjs';
 import { collectDenylist } from './lib/denylist.mjs';
+import { bestBallAssets, bestBallConfig, bestBallDraft } from './lib/bestball.mjs';
 import { scrubIdentity } from './lib/scrub.mjs';
 import { nflWeekStartInstant } from '../../src/utils/nfl-week-starts.mjs';
 import { LEAGUES } from '../../src/config/leagues-data.mjs';
@@ -158,10 +159,12 @@ function wipeRealLeague() {
     if (!/-avatar\./.test(f)) rm(path.join(PUBLIC, 'assets/schefter', f));
   }
   rm(path.join(ROOT, 'data', 'schefter', LEAGUE));
-  // The other leagues' ROUTES: the demo carries one league. Their data stays
+  // The other leagues' ROUTES the demo does not serve. Their data stays
   // (shared modules import it) and is scrubbed of names at the end; their
   // pages are removed so they are neither prerendered nor served.
-  for (const route of ['afl-fantasy', 'best-ball-1', 'api/afl-fantasy', 'api/afl-keepers.ts', 'api/afl-rules-qa.ts', 'api/best-ball-draft']) {
+  // Best Ball's slot now serves the /redraft demo (phase 4), so its pages
+  // stay; only its commissioner-only official-draft API goes.
+  for (const route of ['afl-fantasy', 'api/afl-fantasy', 'api/afl-keepers.ts', 'api/afl-rules-qa.ts', 'api/best-ball-draft']) {
     rm(path.join(ROOT, 'src/pages', route));
   }
 }
@@ -260,6 +263,39 @@ function writeSalaryFiles(season, generatedAt) {
   }
 }
 
+/**
+ * The /redraft demo in the Best Ball slot: fictional teams and a completed
+ * startup draft (scripts/demo/lib/bestball.mjs). Reads the NFL-fact files the
+ * dynasty step has already restored.
+ */
+function writeBestBall({ currentYear, generatedAt }) {
+  const league = LEAGUES['best-ball-1'];
+  const dir = path.join(ROOT, league.dataPath);
+  const realConfig = readJson(path.join(ROOT, league.configPath));
+  const facts = loadSeasonFacts(FEEDS, currentYear);
+  const lastSeason = seasonTotals(loadSeasonFacts(FEEDS, currentYear - 1));
+  const depth = new Map([...lastSeason].map(([id, t]) => [id, t.points]));
+  const adpFile = path.join(FEEDS, String(currentYear), 'adp-redraft.json');
+  const adp = fs.existsSync(adpFile) ? readJson(adpFile)?.adp?.player ?? [] : [];
+  rm(dir);
+  writeJson(path.join(ROOT, league.configPath), bestBallConfig({ leagueId: league.id, loaderLines: realConfig.loaderLines ?? [] }));
+  writeJson(path.join(dir, 'bb1.assets.json'), bestBallAssets(generatedAt));
+  writeJson(path.join(dir, 'schefter-feed.json'), { posts: [] });
+  writeJson(
+    path.join(dir, 'demo-official-draft.json'),
+    bestBallDraft({
+      players: facts.players,
+      adp,
+      depth,
+      leagueId: league.id,
+      leagueYear: currentYear,
+      seed: `${SEED}/bestball`,
+      draftStart: weekStart(currentYear, 1) - 20 * 86_400,
+    }),
+  );
+  log(`best ball: fictional league and completed ${adp.length ? 'ADP' : 'fallback'} draft written`);
+}
+
 /** Run one of the site's own npm scripts under the offline preload. Fatal on failure. */
 function runStep(npmScript, args = []) {
   const started = Date.now();
@@ -355,6 +391,8 @@ export async function buildDemoData() {
     league: LEAGUE,
   }));
   writeJson(path.join(DATA, 'championship-history.json'), identity.championshipHistory(seasons, DEMO_FRANCHISES));
+
+  writeBestBall({ currentYear, generatedAt });
 
   const { writeContentReplacements } = await import('./lib/content.mjs');
   writeContentReplacements({ root: ROOT, seasons, franchises: DEMO_FRANCHISES, renames, currentYear, generatedAt, writeJson, writeText });
