@@ -125,7 +125,7 @@ export function buildPlayerCellHTML(opts: PlayerCellOptions): string {
   let nameHtml: string;
   if (playerData) {
     const json = esc(JSON.stringify(playerData));
-    nameHtml = `<strong class="player-cell__name player-cell__name--clickable" data-player-modal="${json}" title="Click to view player details">${esc(name)}${afterName}</strong>`;
+    nameHtml = `<strong class="player-cell__name player-cell__name--clickable" data-player-modal="${json}" title="Click to view player details" tabindex="0" role="button">${esc(name)}${afterName}</strong>`;
   } else {
     nameHtml = `<strong class="player-cell__name">${esc(name)}${afterName}</strong>`;
   }

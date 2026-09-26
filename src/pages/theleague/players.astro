@@ -2342,7 +2342,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
                 onerror="${isDef ? escapeAttr(logoOnerror) : escapeAttr(buildOnerror(p.id, p.espnId))}" />
             </div>
             <div class="player-cell__info">
-              <strong class="player-cell__name player-cell__name--clickable" data-player-modal="${modalJson}">${p.name}${lockMark}${rosteredDot}${watchMark}</strong>
+              <strong class="player-cell__name player-cell__name--clickable" data-player-modal="${modalJson}" tabindex="0" role="button">${p.name}${lockMark}${rosteredDot}${watchMark}</strong>
               <div class="player-meta">
                 ${isDef ? '' : `<img src="${escapeAttr(logo)}" alt="${escapeAttr(p.team)}" class="player-meta__logo" onerror="${escapeAttr(logoOnerror)}" />`}<span class="player-meta__pos">${posLabel}</span>
               </div>

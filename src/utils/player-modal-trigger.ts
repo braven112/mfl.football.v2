@@ -256,6 +256,18 @@ export function initPlayerModalTrigger(
   container: HTMLElement,
   options: PlayerModalTriggerOptions = {},
 ): void {
+  // Every `[data-player-modal]` name renders as a focusable button (tabindex
+  // + role="button"), so the keyboard gets the same door as a click: Enter or
+  // Space on the name opens its sheet. Only when the name itself has focus —
+  // a nested badge button keeps its own keys.
+  container.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const target = e.target as HTMLElement | null;
+    if (!target?.matches?.('[data-player-modal]')) return;
+    e.preventDefault();
+    target.click();
+  });
+
   container.addEventListener('click', (e) => {
     const clicked = e.target as HTMLElement;
     let modalTrigger = clicked.closest<HTMLElement>('[data-player-modal]');

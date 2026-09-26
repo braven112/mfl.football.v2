@@ -4776,8 +4776,23 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
 
   // Contract Actions State Management
   const contractActions = {}; // { playerId: { type, newSalary, newYears, originalSalary, originalYears, ufaYear } }
-  const franchiseTagsByYear = {}; // Track franchise tags by year: { yearIndex: playerId }
-  let currentVeteranExtension = null; // Track which player has veteran extension
+  // The one-per-team limits, kept PER TEAM: any viewer can simulate on any
+  // club's player, so a page-wide slot let a simulated extension on a rival's
+  // player silently drop the viewer's own. Keys are `${franchiseId}:${yearIndex}`
+  // for tags and the franchise id for extensions.
+  const franchiseTagsByYear: Record<string, string> = {}; // { `${franchiseId}:${yearIndex}`: playerId }
+  const veteranExtensionByTeam: Record<string, string> = {}; // { franchiseId: playerId }
+  /** The club being viewed — the hidden input every team switch writes. */
+  const viewedTeamId = () =>
+    (document.getElementById('rosterTeamSelect') as HTMLInputElement | null)?.value ?? '';
+  /** The viewer's own simulated tags and extensions: the only ones Submit may file. */
+  const ownDeclarableActions = () => {
+    const own = config.authUser?.franchiseId;
+    if (!own) return [];
+    return Object.values(contractActions as Record<string, any>).filter(
+      (a) => (a.type === 'franchise' || a.type === 'extension') && a.franchiseId === own
+    );
+  };
   let currentSeason = config.defaultSeason; // Track current season for salary averages
 
   // --- Contract Declaration State ---
@@ -5022,14 +5037,16 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     if (!selectedPlayer) return;
 
     const { id, name, position, salary, years } = selectedPlayer;
+    const teamId = viewedTeamId();
+    const tagKey = (yearIndex) => `${teamId}:${yearIndex}`;
 
     // Calculate which year the franchise tag applies (0-indexed)
     // If player has 3 years, they're signed through index 2 (2027), so franchise tag is at index 3 (2028)
     const franchiseYearIndex = years; // The year after their current contract
 
     // If this player previously had an extension and we're applying a different action, clear the extension tracker
-    if (currentVeteranExtension === id && actionType !== 'extension') {
-      currentVeteranExtension = null;
+    if (veteranExtensionByTeam[teamId] === id && actionType !== 'extension') {
+      delete veteranExtensionByTeam[teamId];
     }
 
     let result = null;
@@ -5037,18 +5054,18 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     // Check for conflicts with existing tags
     if (actionType === 'franchise') {
       // Only 1 franchise tag per team per year — replace if switching players
-      if (franchiseTagsByYear[franchiseYearIndex] && franchiseTagsByYear[franchiseYearIndex] !== id) {
-        const previousPlayerId = franchiseTagsByYear[franchiseYearIndex];
-        delete contractActions[previousPlayerId];
+      const key = tagKey(franchiseYearIndex);
+      if (franchiseTagsByYear[key] && franchiseTagsByYear[key] !== id) {
+        delete contractActions[franchiseTagsByYear[key]];
       }
       result = calculateFranchiseTag(salary, position, config.extensionSeason);
       result.ufaYearIndex = franchiseYearIndex;
-      franchiseTagsByYear[franchiseYearIndex] = id;
+      franchiseTagsByYear[key] = id;
     } else if (actionType === 'extension') {
-      // Clear any existing extension (same or different player) before applying
-      if (currentVeteranExtension) {
-        delete contractActions[currentVeteranExtension];
-        currentVeteranExtension = null;
+      // Clear this team's existing extension (same or different player) first
+      if (veteranExtensionByTeam[teamId]) {
+        delete contractActions[veteranExtensionByTeam[teamId]];
+        delete veteranExtensionByTeam[teamId];
       }
       result = calculateVeteranExtension(
         years,
@@ -5057,20 +5074,20 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
         extensionYears,
         salary
       );
-      currentVeteranExtension = id;
+      veteranExtensionByTeam[teamId] = id;
     } else if (actionType === 'team-option') {
       // Team option is separate from franchise tag — a team can exercise both
       result = calculateTeamOption(salary, position, config.extensionSeason);
       result.ufaYearIndex = years; // Year after current contract
       result.newYears = years + 1; // Total years: current contract + 1 option year
     } else if (actionType === 'rookie-extension') {
-      // Rookie extension shares the extension slot with veteran extension
-      if (currentVeteranExtension) {
-        delete contractActions[currentVeteranExtension];
-        currentVeteranExtension = null;
+      // Rookie extension shares the team's extension slot with veteran extension
+      if (veteranExtensionByTeam[teamId]) {
+        delete contractActions[veteranExtensionByTeam[teamId]];
+        delete veteranExtensionByTeam[teamId];
       }
       result = calculateVeteranExtension(years, position, config.extensionSeason, 2, salary);
-      currentVeteranExtension = id;
+      veteranExtensionByTeam[teamId] = id;
     } else if (actionType === 'cut') {
       const penalty = calculateCutPenalty(salary, years);
       result = {
@@ -5094,6 +5111,8 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
         playerPosition: position,
         originalSalary: salary,
         originalYears: years,
+        // Whose player: Submit files only the viewer's own (ownDeclarableActions).
+        franchiseId: teamId,
         ...result
       };
 
@@ -5125,9 +5144,10 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
 
       // Clear tag tracking
       if (action.type === 'franchise' && action.ufaYearIndex !== undefined) {
-        delete franchiseTagsByYear[action.ufaYearIndex];
-      } else if (action.type === 'extension' && currentVeteranExtension === playerId) {
-        currentVeteranExtension = null;
+        delete franchiseTagsByYear[`${action.franchiseId}:${action.ufaYearIndex}`];
+      } else if ((action.type === 'extension' || action.type === 'rookie-extension')
+        && veteranExtensionByTeam[action.franchiseId] === playerId) {
+        delete veteranExtensionByTeam[action.franchiseId];
       }
 
       delete contractActions[playerId];
@@ -5140,7 +5160,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
   const clearAllContractActions = () => {
     Object.keys(contractActions).forEach(key => delete contractActions[key]);
     Object.keys(franchiseTagsByYear).forEach(key => delete franchiseTagsByYear[key]);
-    currentVeteranExtension = null;
+    Object.keys(veteranExtensionByTeam).forEach(key => delete veteranExtensionByTeam[key]);
     recalculateRoster();
     updateClearAllButton();
   };
@@ -5167,11 +5187,12 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
 
   const updateClearAllButton = () => {
     const hasActions = Object.keys(contractActions).length > 0;
-    const hasFranchiseTags = Object.values(contractActions).some(a => a.type === 'franchise');
-    const hasVeteranExtensions = Object.values(contractActions).some(a => a.type === 'extension');
+    // Submit is for the viewer's OWN tags and extensions; a simulation on
+    // another club's player stays a simulation.
+    const hasOwnDeclarations = ownDeclarableActions().length > 0;
     simClearButtons().forEach((btn) => { btn.style.display = hasActions ? 'inline-flex' : 'none'; });
     simSubmitButtons().forEach((btn) => {
-      btn.style.display = (hasFranchiseTags || hasVeteranExtensions) && isInSubmitWindow() ? 'inline-flex' : 'none';
+      btn.style.display = hasOwnDeclarations && isInSubmitWindow() ? 'inline-flex' : 'none';
     });
   };
 
@@ -5196,9 +5217,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     // Every copy disables together, so a tap on one while another is in
     // flight cannot POST the declarations twice.
     if (submitButtons.some((btn) => btn.disabled)) return;
-    const actionsToSubmit = Object.values(contractActions).filter(
-      a => a.type === 'franchise' || a.type === 'extension'
-    );
+    const actionsToSubmit = ownDeclarableActions();
     if (!actionsToSubmit.length) return;
 
     const franchiseId = config.authUser?.franchiseId ?? currentTeam;
@@ -5236,7 +5255,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       // per-action callback keeps whatever already landed if a later one
       // throws. Shared with the homepage card and the Front Office hub; see
       // contract-actions-client.ts.
-      await submitStagedActions(actionsToSubmit, { leagueId, franchiseId, franchiseName }, (action) => {
+      await submitStagedActions(actionsToSubmit, { leagueId, franchiseId, franchiseName }, (action: any) => {
         const isFranchise = action.type === 'franchise';
         // Optimistic update
         localDeclarations[action.playerId] = {
@@ -5245,9 +5264,9 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
         };
         delete contractActions[action.playerId];
         if (isFranchise && action.ufaYearIndex !== undefined) {
-          delete franchiseTagsByYear[action.ufaYearIndex];
+          delete franchiseTagsByYear[`${action.franchiseId}:${action.ufaYearIndex}`];
         } else if (!isFranchise) {
-          currentVeteranExtension = null;
+          delete veteranExtensionByTeam[action.franchiseId];
         }
       });
 

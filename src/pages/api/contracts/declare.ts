@@ -21,6 +21,8 @@ import {
 import type { ContractDeclaration } from '../../../types/contracts';
 import type { DeclarationType } from '../../../types/contract-eligibility';
 import { JSON_HEADERS } from '../../../utils/api-response';
+import { getCachedRosters } from '../../../utils/mfl-roster-cache';
+import { getCurrentLeagueYear } from '../../../utils/league-year';
 
 interface DeclareRequestBody {
   leagueId: string;
@@ -75,6 +77,23 @@ export const POST: APIRoute = async ({ request }) => {
     if (!isAuthorizedForLeague(user, CONTRACT_LEAGUE_ID) || !isFranchiseOwner(user, franchiseId)) {
       return new Response(
         JSON.stringify({ error: 'You can only submit declarations for your own team' }),
+        { status: 403, headers: JSON_HEADERS },
+      );
+    }
+
+    // 3, continued. The player must be on THAT roster. Owning `franchiseId` is not
+    // enough: the Rosters page lets any viewer SIMULATE a tag or extension on
+    // another club's player, and its Submit posts every simulated declaration
+    // under the viewer's own franchise — so without this, one owner could file
+    // a declaration on a rival's player. Checked against the live roster (the
+    // 2-minute Redis cache); when that is unavailable the check is skipped
+    // rather than blocking every declaration, and the commissioner's review
+    // still stands behind it.
+    const rosters = await getCachedRosters(String(getCurrentLeagueYear()), CONTRACT_LEAGUE_ID);
+    const onRoster = rosters?.[String(playerId)];
+    if (onRoster && onRoster.franchiseId !== franchiseId) {
+      return new Response(
+        JSON.stringify({ error: 'That player is not on your roster' }),
         { status: 403, headers: JSON_HEADERS },
       );
     }
