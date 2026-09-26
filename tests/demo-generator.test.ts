@@ -21,7 +21,7 @@ import { nflWeekStartInstant } from '../src/utils/nfl-week-starts.mjs';
 import { bestBallDraft, BESTBALL_FRANCHISES, BESTBALL_ROUNDS } from '../scripts/demo/lib/bestball.mjs';
 import { KEEPER_FRANCHISES } from '../scripts/demo/lib/keeper.mjs';
 import { KEEPERS } from '../scripts/demo/lib/simulate.mjs';
-import { seasonTotals } from '../scripts/demo/lib/nfl-facts.mjs';
+import { seasonTotals, lastCompletedWeek } from '../scripts/demo/lib/nfl-facts.mjs';
 
 const FEEDS = 'data/theleague/mfl-feeds';
 const YEARS = [2023, 2024, 2025];
@@ -217,5 +217,25 @@ describe('the /keeper demo league', () => {
   it('seeds a seven-team field from two divisions', () => {
     const final = seasons[seasons.length - 1];
     expect(final.playoffs).not.toBeNull();
+  });
+});
+
+describe('the current week is the last one fully played', () => {
+  const week = (active: number, zeros = 0) =>
+    new Map([
+      ...Array.from({ length: active }, (_, i) => [`a${i}`, 10] as [string, number]),
+      ...Array.from({ length: zeros }, (_, i) => [`z${i}`, 0] as [string, number]),
+    ]);
+
+  it('drops a week with only Thursday played', () => {
+    // A 0-0 pairing in a simulated week reads as a tie in standings but as
+    // unplayed in the derived chain, which fails the demo build.
+    expect(lastCompletedWeek(new Map([[1, week(300)], [2, week(260)], [3, week(20, 280)]]))).toBe(2);
+  });
+
+  it('keeps bye weeks and counts only an unbroken run from week 1', () => {
+    expect(lastCompletedWeek(new Map([[1, week(300)], [2, week(240)], [3, week(290)]]))).toBe(3);
+    expect(lastCompletedWeek(new Map([[1, week(300)], [3, week(300)]]))).toBe(1);
+    expect(lastCompletedWeek(new Map())).toBe(0);
   });
 });
