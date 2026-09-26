@@ -126,6 +126,7 @@ Like the marks above, nothing in the widget references these yet.
 | File | Size | URL |
 |---|---|---|
 | `banners/pennants-21-25.png` | 1600 × 1000 | `https://v2.mfl.football/mfl/10105/banners/pennants-21-25.png` |
+| `banners/archies-corner.png` | 1548 × 250 | `https://v2.mfl.football/mfl/10105/banners/archies-corner.png` |
 
 A rafter of hanging pennants numbered 21–25 (Eagles, Mavericks, Mavericks,
 Stingers, Dragons), transparent below the rafter.
