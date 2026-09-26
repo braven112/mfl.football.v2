@@ -97,7 +97,7 @@ modules, the way `module.html` currently links the POWER 99 image off
 
 ### Header art (`headers/`)
 
-Twelve 598 × 210 transparent header panels (blue chevron frame), stored at the
+Sixteen 598 × 210 transparent header panels (blue chevron frame), stored at the
 size they were supplied:
 
 | File | Subject | URL |
@@ -114,6 +114,10 @@ size they were supplied:
 | `headers/colts-quarterback.png` | Colts quarterback | `https://v2.mfl.football/mfl/10105/headers/colts-quarterback.png` |
 | `headers/packers-92.png` | Packers #92 | `https://v2.mfl.football/mfl/10105/headers/packers-92.png` |
 | `headers/dolphins-quarterback.png` | Dolphins quarterback | `https://v2.mfl.football/mfl/10105/headers/dolphins-quarterback.png` |
+| `headers/dolphins-quarterback-throwing.png` | Dolphins quarterback, throwing | `https://v2.mfl.football/mfl/10105/headers/dolphins-quarterback-throwing.png` |
+| `headers/patriots-12.png` | Patriots #12 | `https://v2.mfl.football/mfl/10105/headers/patriots-12.png` |
+| `headers/lions-running-back.png` | Lions running back | `https://v2.mfl.football/mfl/10105/headers/lions-running-back.png` |
+| `headers/patriots-white-jersey.png` | Patriots, white jersey | `https://v2.mfl.football/mfl/10105/headers/patriots-white-jersey.png` |
 
 Like the marks above, nothing in the widget references these yet.
 
