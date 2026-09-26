@@ -46,7 +46,8 @@ describe('the AFL line-3 spans', () => {
       weather: '72° ☀️',
       overUnder: '47.5',
     });
-    expect(html.replace(/<[^>]+>/g, '')).toBe('');
+    // Nothing but empty spans: every value lives in a data-t attribute.
+    expect(html).toMatch(/^(?:<span [^>]*><\/span>)+$/);
     expect(html).toContain('class="rr-ph rr-ph--spread rr-ph--fav" data-t="+3.5"');
     expect(html).toContain('rr-ph--l3" data-t="14.2"');
     expect(html).toContain('rr-ph--wx" data-t="72° ☀️"');
