@@ -1,6 +1,53 @@
 # Custom-site demo — plan
 
-Status: **planned, nothing built.** Owner decisions recorded 2026-09-25.
+Status: **P1 (rails) and P2 (dynasty demo) built** on
+`claude/custom-site-demo-page-5z2r0h`, verified end to end locally (2026-09-26).
+Nothing deployed yet — needs the owner setup below. Owner decisions recorded
+2026-09-25.
+
+## Where it stands
+
+Verified in a throwaway checkout (`DEMO_BUILD_DISPOSABLE_CHECKOUT=1`), built
+with `astro build` and driven in Chromium against `scripts/demo/mock-upstash.mjs`:
+
+- The demo prebuild wipes every real league file, simulates six seasons of a
+  fictional 16-team salary-cap dynasty league (real NFL players and weekly
+  points only), and runs the site's own derivation chain over it — every
+  consistency check in that chain passes.
+- The post-build leak scan finds none of the ~330 real franchise and owner
+  names in the output (static pages, client and server bundles).
+- A minted link → team picker → owner session; home, standings, rosters,
+  lineup and transactions render the fictional league; the header reads
+  "Demo League"; AFL and best-ball routes 404.
+- Through the site's real API routes: lineup submit ("Lineup Saved" on
+  reload), cut, waiver claim (verified by the route's own read-back), trade
+  (auto-accepted, players swapped) — each visible on the next page load, and
+  invisible to a second prospect on the same franchise.
+
+### Owner setup to go live
+
+1. Create an Upstash database for the demo (free tier).
+2. In Vercel (same project), create branch `demo` from this work, and add
+   branch-scoped Preview variables: `DEMO_PROFILE=dynasty`,
+   `DEMO_JWT_SECRET` (any long random string), `DEMO_REDIS_REST_URL`,
+   `DEMO_REDIS_REST_TOKEN`.
+3. Assign `dynasty.demo.mfl.football` to the `demo` branch; CNAME it in
+   Cloudflare.
+4. Issue a link:
+   `DEMO_REDIS_REST_URL=… DEMO_REDIS_REST_TOKEN=… node scripts/demo/mint-link.mjs --label "Acme League"`.
+
+### Known gaps (next)
+
+- The AFL and best-ball DATA files stay in the demo bundle (54 shared modules
+  import them) — scrubbed of every name and never routed, but a fictional
+  conference league (P4) should replace them.
+- Two modules build their own Redis clients (`schefter-news-loaders.ts`,
+  `mfl-trade-bait-cache.ts`) and so bypass the per-prospect namespace; both
+  are read caches, shared between prospects.
+- Trades move players, not draft picks; What's New, the Pecking Order and the
+  owners' poll are empty; the league's rules pages keep their prose with
+  names swapped.
+- P3: questionnaire, pitch page, lead alerts, "Custom for this league" tags.
 
 ## Goal
 
@@ -144,10 +191,10 @@ page.
 
 ## Phases
 
-- **P1 — rails, no UI.** `isDemoDeploy`, environment scrub, fetch guard with
+- **P1 — rails, no UI.** ✅ built. `isDemoDeploy`, environment scrub, fetch guard with
   a fail-closed MFL stand-in skeleton, outbound-guard change, no elevated
   roles, `demo` branch build exemption. Guards for each.
-- **P2 — salary-cap dynasty demo (TheLeague slot).** Generator,
+- **P2 — salary-cap dynasty demo (TheLeague slot).** ✅ built (see Where it stands). Generator,
   wipe-and-generate build, profile overlay, `/start`, CLI
   `scripts/demo/mint-link.mjs`, demo banner (modelled on `StagingBanner.astro`),
   simulated lineup + add/drop + contracts. **Leak guard:** build a denylist from

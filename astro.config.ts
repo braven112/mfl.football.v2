@@ -7,15 +7,22 @@ import { REMOTE_MARK_HOSTS } from './src/utils/remote-image';
 import react from '@astrojs/react';
 import { archivedFeedFiles } from './scripts/lib/archived-feed-files.mjs';
 import { schefterArchiveIncludeFiles, scheduleReleaseIncludeFiles } from './scripts/lib/schefter-archive.mjs';
+import { isDemoEnv } from './src/utils/demo-isolation-core.mjs';
 
 // Local dev: hydrate process.env from .env / .env.local (`pnpm vercel env pull`).
 // Vite only exposes those files to import.meta.env, but the server utils
 // (auth/session, every Upstash-backed storage module) read process.env — without
 // this, local dev gets a random JWT secret per restart and KV writes 503.
 // Real environment variables always win; on Vercel the files don't exist, no-op.
-const fileEnv = loadEnv(process.env.NODE_ENV ?? 'development', process.cwd(), '');
-for (const [key, value] of Object.entries(fileEnv)) {
-  process.env[key] ??= value;
+//
+// Never on the custom-site demo: ensure-demo-isolation has just scrubbed the
+// production credentials, and a local .env.local would hand them straight back.
+const DEMO_BUILD = isDemoEnv(process.env);
+if (!DEMO_BUILD) {
+  const fileEnv = loadEnv(process.env.NODE_ENV ?? 'development', process.cwd(), '');
+  for (const [key, value] of Object.entries(fileEnv)) {
+    process.env[key] ??= value;
+  }
 }
 
 export default defineConfig({
@@ -106,6 +113,16 @@ export default defineConfig({
     excludeFiles: archivedFeedFiles(),
   }),
   integrations: [react()],
+  vite: {
+    define: {
+      // Compile-time flag for the custom-site demo: code behind it (the MFL
+      // stand-in and its generated-league loaders) is dropped from every other
+      // build instead of shipping unused. A bare identifier, not
+      // `import.meta.env.*` — Astro owns import.meta.env and does not apply a
+      // define there. See src/middleware.ts.
+      __DEMO_BUILD__: JSON.stringify(DEMO_BUILD),
+    },
+  },
   fonts: [
     {
       provider: fontProviders.google(),

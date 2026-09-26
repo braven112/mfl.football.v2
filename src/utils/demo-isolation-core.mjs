@@ -20,7 +20,11 @@ export const DEMO_BRANCH = 'demo';
  * signals, either sufficient, so a forgotten `DEMO_PROFILE` still fails CLOSED
  * on the demo branch.
  */
-export function isDemoEnv(env = process.env) {
+export function isDemoEnv(env = typeof process === 'undefined' ? undefined : process.env) {
+  // This module also reaches the browser (via the league registry), where
+  // there is no process: the client learns demo mode from the build flag.
+  // eslint-disable-next-line no-undef -- a Vite compile-time constant
+  if (!env) return typeof __DEMO_BUILD__ !== 'undefined' && __DEMO_BUILD__ === true;
   return Boolean(env.DEMO_PROFILE) || env.VERCEL_GIT_COMMIT_REF === DEMO_BRANCH;
 }
 
@@ -114,4 +118,11 @@ const DEMO_REFUSED_PATH = /^\/(?:api\/)?(?:afl-fantasy|afl-keepers|afl-rules-qa|
 
 export function isDemoRefusedPath(pathname) {
   return DEMO_REFUSED_PATH.test(String(pathname));
+}
+
+/** Marks the demo's fetch guard, so code can confirm it is actually installed. */
+export const DEMO_FETCH_MARK = Symbol.for('mfl.football.demoFetch');
+
+export function isDemoFetch(candidate) {
+  return typeof candidate === 'function' && DEMO_FETCH_MARK in candidate;
 }

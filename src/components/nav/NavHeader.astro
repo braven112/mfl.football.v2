@@ -23,6 +23,7 @@
  */
 
 import type { LeagueSlug, NavHeaderProps } from '../../types/nav';
+import { isDemoDeploy } from '../../utils/deploy-environment';
 import { getLeagueByNavSlug } from '../../config/leagues';
 import { resolveLeaguePath, getLeagueSwitchTargets } from '../../utils/nav-utils';
 
@@ -106,7 +107,7 @@ const directTarget = switchTargets[0];
           <span class="nav-header__league-name--league">Best Ball</span>
         ) : (
           <>
-            <span class="nav-header__league-name--the">The</span>
+            <span class="nav-header__league-name--the">{isDemoDeploy() ? 'Demo' : 'The'}</span>
             <span class="nav-header__league-name--league">League</span>
           </>
         )}

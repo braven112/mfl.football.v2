@@ -248,3 +248,52 @@ describe('boot order', () => {
     });
   }
 });
+
+describe('demo Redis namespace', () => {
+  it('gives every prospect their own keys, and leaves demo link records shared', async () => {
+    const { namespaceForDemo } = await import('../src/utils/redis-client');
+    const { demoRequestContext } = await import('../src/utils/demo-request-context');
+    const seen: unknown[][] = [];
+    const record = (name: string) => async (...args: unknown[]) => {
+      seen.push([name, ...args]);
+      return name === 'scan' ? ['0', ['demo:tok-aaaaaaaaaaaaaaaa:watch:1']] : null;
+    };
+    const pipelineCalls: unknown[][] = [];
+    const fake = {
+      get: record('get'),
+      set: record('set'),
+      mget: record('mget'),
+      del: record('del'),
+      eval: record('eval'),
+      scan: record('scan'),
+      pipeline: () => ({ hgetall: (k: string) => pipelineCalls.push(['hgetall', k]), exec: async () => [] }),
+    };
+    const redis = namespaceForDemo(fake as never);
+
+    await demoRequestContext.run({ token: 'tok-aaaaaaaaaaaaaaaa', franchiseId: '0001' }, async () => {
+      await redis.get('watch:1');
+      await redis.set('demo:tokens:abc', '1');
+      await redis.mget('a', 'b');
+      await redis.eval('return 1', ['k1'], [1]);
+      const [, keys] = await redis.scan(0, { match: 'watch:*' });
+      expect(keys).toEqual(['watch:1']);
+      redis.pipeline().hgetall('h');
+    });
+    await redis.get('watch:1');
+
+    expect(seen).toEqual([
+      ['get', 'demo:tok-aaaaaaaaaaaaaaaa:watch:1'],
+      ['set', 'demo:tokens:abc', '1'],
+      ['mget', 'demo:tok-aaaaaaaaaaaaaaaa:a', 'demo:tok-aaaaaaaaaaaaaaaa:b'],
+      ['eval', 'return 1', ['demo:tok-aaaaaaaaaaaaaaaa:k1'], [1]],
+      ['scan', 0, { match: 'demo:tok-aaaaaaaaaaaaaaaa:watch:*' }],
+      ['get', 'demo:anon:watch:1'],
+    ]);
+    expect(pipelineCalls).toEqual([['hgetall', 'demo:tok-aaaaaaaaaaaaaaaa:h']]);
+  });
+
+  it('lets MFL writes through to the stand-in only while the demo fetch guard is installed', async () => {
+    const src = readFileSync('src/utils/mfl-fetch.ts', 'utf8');
+    expect(src).toMatch(/isMflWrite\(method, url\) && !\(isDemoDeploy\(\) && isDemoFetch\(globalThis\.fetch\)\)/);
+  });
+});

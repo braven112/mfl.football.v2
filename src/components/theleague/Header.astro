@@ -16,6 +16,7 @@ import { getLeagueBySlug, leagueHasFeature, type CanonicalLeagueSlug } from '../
 import { getLeagueYearForSlug } from '../../utils/league-year';
 import { getSearchPath, resolveDirectoryHref, resolveLeaguePath } from '../../utils/nav-utils';
 import { spriteUrl } from '../../utils/sprite-url';
+import { isDemoDeploy } from '../../utils/deploy-environment';
 import NavToggleButton from '../nav/NavToggleButton.astro';
 
 interface Props {
@@ -76,16 +77,22 @@ const searchHref = searchPath
       hideLeaguePrefix
     )
   : null;
+
+// The custom-site demo renders a fictional league in this slot (docs/plans/custom-site-demo.md).
+const isDemo = isDemoDeploy();
 ---
 
 <div class="breadcrumb-bar">
   <div class="breadcrumb-container">
     <nav aria-label="Breadcrumb">
       <ul class="breadcrumb-list">
-        <li>
-          <a href={leagueHome} class="breadcrumb-link" target="_blank" rel="noopener noreferrer"
-            ><span class="breadcrumb-arrow">←</span> Back to MFL</a>
-        </li>
+        {/* The custom-site demo has no MFL league to go back to. */}
+        {!isDemo && (
+          <li>
+            <a href={leagueHome} class="breadcrumb-link" target="_blank" rel="noopener noreferrer"
+              ><span class="breadcrumb-arrow">←</span> Back to MFL</a>
+          </li>
+        )}
       </ul>
     </nav>
     <div class="breadcrumb-actions">
@@ -163,9 +170,9 @@ const searchHref = searchPath
               </>
             ) : (
               <>
-                <span class="leaguename--the">The</span><span
+                <span class="leaguename--the">{isDemo ? 'Demo' : 'The'}</span><span
                   class="leaguename--league">League</span
-                ><span class="leaguename--dotus">.us</span>
+                >{!isDemo && <span class="leaguename--dotus">.us</span>}
               </>
             )}
           </div>

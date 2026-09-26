@@ -10,7 +10,8 @@
  * the Location URL, and re-sends the request with the Cookie header intact.
  */
 
-import { assertOutboundAllowed, OutboundBlockedError } from './deploy-environment';
+import { assertOutboundAllowed, isDemoDeploy, OutboundBlockedError } from './deploy-environment';
+import { isDemoFetch } from './demo-isolation-core.mjs';
 
 /**
  * MFL endpoints that mutate the league, whatever HTTP method reaches them.
@@ -139,7 +140,13 @@ export async function mflFetch(opts: MflFetchOptions): Promise<Response | MflFet
   // are already in the habit of reading a body to decide whether a write
   // worked — a fake 403 Response would be read as "MFL said no" instead of
   // "we never asked".
-  if (isMflWrite(method, url)) {
+  //
+  // The custom-site demo is the one exception, and only while its fetch guard
+  // is actually installed: there every MFL request is answered in-process by
+  // the demo stand-in (src/utils/demo-mfl-standin.ts) and cannot reach the
+  // network, so a write is a simulated success rather than a refusal. Without
+  // the guard in place the demo refuses like any other preview.
+  if (isMflWrite(method, url) && !(isDemoDeploy() && isDemoFetch(globalThis.fetch))) {
     assertOutboundAllowed('MFL write');
   }
 
