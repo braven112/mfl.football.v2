@@ -278,6 +278,7 @@ rows show only when the opener sends them).
 | `quickActions: SheetAction[]` | the hero's action row | both roster pages |
 | `moreActions: SheetAction[]` | Summary › More actions | both roster pages |
 | `myRank: string` | a metric tile / Details row | both roster pages |
+| `hideOwnerStrip: true` | hides the "Rostered by <team>" strip under the hero | TheLeague rosters only |
 | `onAction(id)` | the callback the page supplies for all of the above | both roster pages |
 
 `SheetAction` = `{ id, label, desc?, icon, tone?: 'danger', disabled?, state?: 'on' }`.
@@ -391,6 +392,26 @@ menu **without closing the sheet** and returns focus to the ⋮; Tab closes it.
 An item that keeps the sheet open (simulate, undo, trade block) leaves focus on
 the ⋮; one that hands off to the CDM closes the sheet. Screenshots:
 `pr-a-kebab-{gm,coach}-{light,dark}.png`.
+
+**The menu stays on screen (user, 2026-09-26).** It was right-aligned to the
+⋮, and for another owner's player the hero row is only Watch · Trade for him ·
+⋮, so the ⋮ sits left of centre and the menu ran off the phone's left edge.
+It now opens from the ⋮'s LEFT edge and extends right; the script measures it
+on open (`placeSheetMenu`, `src/utils/player-sheet.ts`) and clamps it into the
+sheet ∩ the viewport with a 12px gutter, right-aligning to the ⋮ when extending
+right would overflow and shrinking when neither fits. Watch and Trade for him
+repaint when their server context lands, which moves the ⋮ under an open menu,
+so both painters re-measure. Verified in Chromium at 320 / 360 / 390 / 767 /
+1280 / 1440 for an own-team and another team's player: menu inside both
+bounds, no horizontal scroll on the document or the sheet. Screenshots:
+`pr-a-menu-fix-{light,dark}.png`.
+
+**No "Rostered by" strip on the roster page (user, 2026-09-26).** The roster
+page's header already names the team and the hero band wears that franchise's
+art and crest, so the strip only repeated it. The roster opener sends
+`hideOwnerStrip: true`; every other opener sends nothing and paints the strip
+as before (sheet fingerprints: 6 of 8 opener × width renders identical, the
+two TheLeague Rosters ones differ by exactly the strip's text).
 
 ### Tabs: accessibility
 

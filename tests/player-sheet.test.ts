@@ -13,6 +13,8 @@ import {
   resolveInitialTab,
   nextTabIndex,
   nextMenuIndex,
+  placeSheetMenu,
+  SHEET_MENU_GUTTER,
   renderQuickActions,
   renderMoreActions,
   renderThisWeek,
@@ -110,6 +112,75 @@ describe('the kebab (a quick action with a menu)', () => {
 
   it('escapes the subject', () => {
     expect(renderQuickActions([kebab], '<i>x</i>')).not.toContain('<i>x</i>');
+  });
+});
+
+describe('the kebab menu stays on screen (placeSheetMenu)', () => {
+  // The ⋮ sat near the START of the hero row and the menu was right-aligned
+  // to it, so on a phone it ran off the left edge (user, 2026-09-26).
+  // The sheet on a phone is full-bleed with ~16px padding; the ⋮ is the
+  // second 44px circle in the row.
+  const MENU = 256; // 16rem, the menu's min-width
+  const phone = (vw: number, anchorLeft: number, menuWidth = MENU) => {
+    const p = placeSheetMenu({
+      anchorLeft, anchorRight: anchorLeft + 44, menuWidth, boundsLeft: 0, boundsRight: vw,
+    });
+    return { ...p, x: anchorLeft + p.left, right: anchorLeft + p.left + p.width };
+  };
+
+  for (const vw of [320, 360, 390, 767]) {
+    it(`never leaves a ${vw}px viewport, wherever the ⋮ sits`, () => {
+      for (let a = 16; a <= vw - 60; a += 7) {
+        const m = phone(vw, a);
+        expect(m.x).toBeGreaterThanOrEqual(SHEET_MENU_GUTTER);
+        expect(m.right).toBeLessThanOrEqual(vw - SHEET_MENU_GUTTER);
+        expect(m.width).toBeGreaterThan(0);
+      }
+    });
+  }
+
+  it('opens from the ⋮’s left edge, extending right, when it fits', () => {
+    expect(phone(390, 76)).toMatchObject({ left: 0, width: MENU });
+  });
+
+  it('right-aligns to the ⋮ when extending right would overflow', () => {
+    const m = phone(390, 330);
+    expect(m.right).toBe(374);
+    expect(m.width).toBe(MENU);
+  });
+
+  it('shrinks a menu wider than the room it has', () => {
+    const m = phone(320, 60, 400);
+    expect(m).toMatchObject({ x: SHEET_MENU_GUTTER, width: 320 - 2 * SHEET_MENU_GUTTER });
+  });
+
+  it('stays inside a centred desktop sheet, not just the viewport', () => {
+    const p = placeSheetMenu({ anchorLeft: 900, anchorRight: 944, menuWidth: 320, boundsLeft: 400, boundsRight: 960 });
+    expect(900 + p.left).toBeGreaterThanOrEqual(412);
+    expect(900 + p.left + p.width).toBeLessThanOrEqual(948);
+  });
+
+  it('the modal measures on open, and the CSS fallback opens rightwards', () => {
+    const modal = readFileSync('src/components/theleague/PlayerDetailsModal.astro', 'utf8');
+    const open = modal.slice(modal.indexOf('const openSheetMenu'), modal.indexOf('const closeSheetMenu'));
+    expect(open).toMatch(/list\.hidden = false;\s*positionSheetMenu\(btn, list\);/);
+    const rule = modal.slice(modal.indexOf('.pdm-quick :global(.pdm-kebab__menu) {'));
+    const body = rule.slice(0, rule.indexOf('}'));
+    expect(body).toMatch(/left: 0;/);
+    expect(body).not.toMatch(/(^|[^-])right: 0;/m);
+    expect(body).toMatch(/max-width: min\([^;]*100vw/);
+  });
+
+  it('re-measures when the hero row reflows under an open menu', () => {
+    // Watch and "Trade for him" repaint when their server context lands, after
+    // the menu may already be open — it once sat where the ⋮ used to be.
+    const modal = readFileSync('src/components/theleague/PlayerDetailsModal.astro', 'utf8');
+    const paintBody = (name: string) => {
+      const from = modal.indexOf(`const ${name} = () => {`);
+      return modal.slice(from, modal.indexOf('\n    };', from));
+    };
+    expect(paintBody('paintWatch')).toContain('repositionOpenSheetMenu();');
+    expect(paintBody('paintClaim')).toContain('repositionOpenSheetMenu();');
   });
 });
 

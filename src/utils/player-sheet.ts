@@ -94,6 +94,43 @@ export function nextMenuIndex(key: string, index: number, count: number): number
   }
 }
 
+/** The gap the kebab's menu keeps from the sheet's and the viewport's edges. */
+export const SHEET_MENU_GUTTER = 12;
+
+export interface MenuPlacementInput {
+  /** The ⋮ button's left / right edge, viewport px. */
+  anchorLeft: number;
+  anchorRight: number;
+  /** The menu's natural (unclamped) width. */
+  menuWidth: number;
+  /** The box the menu must stay inside: the sheet ∩ the viewport, viewport px. */
+  boundsLeft: number;
+  boundsRight: number;
+  gutter?: number;
+}
+
+/**
+ * Where the kebab's menu goes, horizontally. It opens from the ⋮'s LEFT edge
+ * and extends right (the ⋮ sits near the start of the hero row, so a
+ * right-aligned menu ran off the left of a phone — user, 2026-09-26); when
+ * that would pass the right bound it right-aligns to the ⋮ instead, and
+ * either way it is clamped to keep `gutter` px inside both bounds. A menu
+ * wider than the room it has shrinks to fit.
+ *
+ * Returns `left` relative to the ⋮'s left edge (what the absolutely
+ * positioned menu takes) and the `width` it should be capped at.
+ */
+export function placeSheetMenu(input: MenuPlacementInput): { left: number; width: number } {
+  const gutter = input.gutter ?? SHEET_MENU_GUTTER;
+  const minX = input.boundsLeft + gutter;
+  const maxX = input.boundsRight - gutter;
+  const width = Math.max(0, Math.min(input.menuWidth, maxX - minX));
+  let x = input.anchorLeft;
+  if (x + width > maxX) x = input.anchorRight - width;
+  x = Math.min(Math.max(x, minX), maxX - width);
+  return { left: Math.round(x - input.anchorLeft), width: Math.floor(width) };
+}
+
 function icon(id: string, cls: string): string {
   return `<span class="${cls}" aria-hidden="true"><svg aria-hidden="true"><use href="${SPRITE}#${escapeHtml(id)}"></use></svg></span>`;
 }

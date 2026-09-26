@@ -1219,9 +1219,13 @@ const tabAttrs = (id: SheetTab): HTMLAttributes<'button'> => {
     border-color: var(--league-accent, var(--color-primary, #1c497c));
   }
 
-  /* The kebab's menu: anchored under the ⋮, right-aligned so it opens into
-     the sheet rather than off its edge. Themed surface tokens, so both
-     themes follow. */
+  /* The kebab's menu: under the ⋮, opening from its LEFT edge and extending
+     right. It used to be right-aligned, and since the ⋮ sits near the start
+     of the hero row it ran off the left of a phone (user, 2026-09-26). The
+     script then measures and clamps it into the sheet ∩ the viewport with a
+     12px gutter (`placeSheetMenu`); this CSS is the unmeasured fallback, and
+     its max-width alone keeps it on a 320px screen. Themed surface tokens,
+     so both themes follow. */
   .pdm-quick :global(.pdm-kebab) {
     position: relative;
     order: 1;
@@ -1230,10 +1234,12 @@ const tabAttrs = (id: SheetTab): HTMLAttributes<'button'> => {
   .pdm-quick :global(.pdm-kebab__menu) {
     position: absolute;
     top: calc(100% + 0.375rem);
-    right: 0;
+    left: 0;
+    right: auto;
     z-index: 5;
-    min-width: 16rem;
-    max-width: min(20rem, calc(100vw - 2rem));
+    min-width: min(16rem, calc(100vw - 1.5rem));
+    max-width: min(20rem, calc(100vw - 1.5rem));
+    box-sizing: border-box;
     margin: 0;
     padding: 0.375rem;
     list-style: none;
@@ -1691,6 +1697,7 @@ const tabAttrs = (id: SheetTab): HTMLAttributes<'button'> => {
     resolveInitialTab,
     nextTabIndex,
     nextMenuIndex,
+    placeSheetMenu,
     renderQuickActions,
     renderMoreActions,
     renderThisWeek,
@@ -1813,6 +1820,11 @@ const tabAttrs = (id: SheetTab): HTMLAttributes<'button'> => {
     // sign-in dialog rather than a hidden control. The store is the single
     // truth, so a toggle here and a toggle on the row behind the modal agree.
     const watchBtn = document.getElementById('pdm-watch') as HTMLButtonElement | null;
+    // The hero row reflows AFTER the sheet opens — Watch and "Trade for him"
+    // are painted again when their server context lands — so an open ⋮ menu
+    // measured against the old layout would sit where the ⋮ used to be. Both
+    // painters call this; it is a no-op until the menu block below assigns it.
+    let repositionOpenSheetMenu: () => void = () => {};
     let watchPlayerId: string | null = null;
     let watchBusy = false;
     const paintWatch = () => {
@@ -1834,6 +1846,7 @@ const tabAttrs = (id: SheetTab): HTMLAttributes<'button'> => {
             ? 'On your watch list — tap to remove'
             : 'His news lights up in the Schefter Report';
       }
+      repositionOpenSheetMenu();
     };
     if (watchBtn && !watchBtn.dataset.pdmWatchWired) {
       watchBtn.dataset.pdmWatchWired = '1';
@@ -1983,6 +1996,7 @@ const tabAttrs = (id: SheetTab): HTMLAttributes<'button'> => {
           (acqLink?.hidden ?? true) &&
           (quickRow?.hidden ?? true);
       }
+      repositionOpenSheetMenu();
     };
     if (acqLink && !acqLink.dataset.pdmAcqWired) {
       acqLink.dataset.pdmAcqWired = '1';
@@ -2184,11 +2198,38 @@ const tabAttrs = (id: SheetTab): HTMLAttributes<'button'> => {
     const sheetMenuList = () => quickRow?.querySelector<HTMLElement>('[role="menu"]') ?? null;
     const sheetMenuItems = () => Array.from(sheetMenuList()?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not([disabled])') ?? []);
     const sheetMenuOpen = () => !!sheetMenuList() && !sheetMenuList()!.hidden;
+    // Measured, not just CSS: the ⋮ can sit anywhere in a wrapping hero row,
+    // and a menu anchored to one fixed side ran off the phone's left edge.
+    // `placeSheetMenu` keeps it inside the sheet ∩ the viewport, with a gutter.
+    const positionSheetMenu = (btn: HTMLElement, list: HTMLElement) => {
+      list.style.left = '';
+      list.style.maxWidth = '';
+      list.style.width = '';
+      const anchor = btn.getBoundingClientRect();
+      const sheet = contentEl?.getBoundingClientRect();
+      const vw = document.documentElement.clientWidth || window.innerWidth;
+      const { left, width } = placeSheetMenu({
+        anchorLeft: anchor.left,
+        anchorRight: anchor.right,
+        menuWidth: list.getBoundingClientRect().width,
+        boundsLeft: Math.max(0, sheet?.left ?? 0),
+        boundsRight: Math.min(vw, sheet?.right ?? vw),
+      });
+      list.style.left = `${left}px`;
+      list.style.width = `${width}px`;
+      list.style.maxWidth = 'none';
+    };
+    repositionOpenSheetMenu = () => {
+      const btn = sheetMenuButton();
+      const list = sheetMenuList();
+      if (btn && list && !list.hidden) positionSheetMenu(btn, list);
+    };
     const openSheetMenu = (focusAt: 'first' | 'last') => {
       const btn = sheetMenuButton();
       const list = sheetMenuList();
       if (!btn || !list) return;
       list.hidden = false;
+      positionSheetMenu(btn, list);
       btn.setAttribute('aria-expanded', 'true');
       const items = sheetMenuItems();
       (focusAt === 'last' ? items[items.length - 1] : items[0])?.focus();
@@ -2485,12 +2526,14 @@ const tabAttrs = (id: SheetTab): HTMLAttributes<'button'> => {
       // The band already wears this franchise's hues and crest; the strip
       // names it, so "the background changed" is never the only signal. No
       // franchiseId (a true free agent) or no brand map on the page → hidden,
-      // and the modal reads exactly as it did before.
+      // and the modal reads exactly as it did before. `hideOwnerStrip` → hidden.
       var ownerBrand = getFranchiseBandBrand(playerData.franchiseId);
       var ownerRow = document.getElementById('pdm-owner');
       if (ownerRow) {
         var ownerCrest = document.getElementById('pdm-owner-crest') as HTMLImageElement | null;
-        if (ownerBrand) {
+        // An opener whose page already names the team (TheLeague Rosters)
+        // opts out; every other opener never sends the flag.
+        if (ownerBrand && !playerData.hideOwnerStrip) {
           setText('pdm-owner-name', ownerBrand.name);
           ownerRow.style.setProperty('--pdm-owner-hue', franchiseTintHue(ownerBrand));
           if (ownerCrest) {

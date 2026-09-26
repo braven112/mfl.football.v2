@@ -514,7 +514,7 @@ export function buildMoreActions(facts: RosterSheetFacts): SheetAction[] {
 export function buildRosterSheetFields(
   facts: RosterSheetFacts,
   pricing: RosterSheetPricing,
-): Pick<PlayerModalData, 'salarySheet' | 'sheetTab' | 'thisWeek' | 'quickActions' | 'moreActions' | 'myRank'> {
+): Pick<PlayerModalData, 'salarySheet' | 'sheetTab' | 'thisWeek' | 'quickActions' | 'moreActions' | 'myRank' | 'hideOwnerStrip'> {
   return {
     salarySheet: buildSalarySheet(facts, pricing),
     // Q3: reset on every open, by mode — GM owners are in cap mode.
@@ -523,6 +523,9 @@ export function buildRosterSheetFields(
     quickActions: buildQuickActions(facts),
     moreActions: buildMoreActions(facts),
     myRank: facts.myRank,
+    // The roster page's header already names the team, and the hero band
+    // wears its art and crest (user, 2026-09-26) — the strip only repeated it.
+    hideOwnerStrip: true,
   };
 }
 

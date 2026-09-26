@@ -3934,3 +3934,35 @@ floating surface wants a solid token (`--content-bg`).
 
 **Evidence:** `tests/player-sheet.test.ts` ("the kebab"),
 `tests/rosters-phone-sheet.test.ts` ("contract-options kebab").
+
+## 2026-09-26 - A popover anchored to one side of its button is only right for one place in the row
+
+**Context:** The Rosters player sheet's ⋮ contract menu
+(`src/components/theleague/PlayerDetailsModal.astro`) was `right: 0` under the
+⋮. Built and screenshotted on an OWN-team player, where the hero row is four
+buttons and the ⋮ is last, at the right. On another owner's player the row is
+Watch · Trade for him · ⋮, the ⋮ sits left of centre, and the user's phone
+showed the menu running off the left edge.
+
+**What worked:**
+
+- **A pure placement function, tested across the whole row.**
+  `placeSheetMenu` (`src/utils/player-sheet.ts`) takes the anchor's edges, the
+  menu's natural width and the bounds (the sheet ∩ the viewport) and returns
+  a left offset and a width: open rightwards from the anchor's left edge,
+  else right-align to the anchor, then clamp with a gutter and shrink if it
+  still does not fit. The unit test sweeps the anchor across 320 / 360 / 390 /
+  767 px rather than checking the one position the screenshot happened to use.
+- **The CSS stays a sane fallback** (`left: 0`, `max-width` in `vw`), so the
+  menu is on screen even before the script measures it.
+
+**Trap hit:** the hero row REFLOWS after the menu can already be open — Watch
+and "Trade for him" repaint when their server context lands. The first
+measured build passed at 320, 360, 767 and failed at 390 on a race: the ⋮
+moved 105px after the menu was placed. Both painters now call
+`repositionOpenSheetMenu()`. Any measured popover over content that paints
+asynchronously needs the same hook, or it is right only when the network is
+slow.
+
+**Evidence:** `tests/player-sheet.test.ts` ("the kebab menu stays on screen").
+

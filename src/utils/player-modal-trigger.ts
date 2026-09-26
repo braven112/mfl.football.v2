@@ -118,6 +118,13 @@ export interface PlayerModalData {
   /** The viewer's own ranking for this player ("QB 3"), as a metric tile. */
   myRank?: string | null;
   /**
+   * Hide the "Rostered by <team>" strip. Only for an opener whose page already
+   * names the team AND whose hero band wears that franchise's art and crest —
+   * TheLeague Rosters, where every row belongs to the team in the page header.
+   * Absent (every other opener), the strip paints exactly as it always has.
+   */
+  hideOwnerStrip?: boolean;
+  /**
    * Called with a SheetAction id (or a Salary-tab option / year-pill id) when
    * the viewer picks one. Travels IN THE PAYLOAD — never a window global, which
    * outlives a ClientRouter swap (the Sept 2026 lineup outage). JSON cannot

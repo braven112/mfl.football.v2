@@ -8,6 +8,7 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { execSync } from 'node:child_process';
 import {
   buildRosterSheetFields,
   buildSalarySheet,
@@ -249,6 +250,24 @@ describe('default tab (Q3)', () => {
   it('GM opens Salary, Coach opens Summary', () => {
     expect(buildRosterSheetFields(facts({ mode: 'gm' }), pricing).sheetTab).toBe('salary');
     expect(buildRosterSheetFields(facts({ mode: 'coach' }), pricing).sheetTab).toBe('summary');
+  });
+});
+
+describe('the "Rostered by" strip (user, 2026-09-26)', () => {
+  it('the roster page opts out — its header and the hero band already name the team', () => {
+    expect(buildRosterSheetFields(facts(), pricing).hideOwnerStrip).toBe(true);
+  });
+  it('the modal hides the strip only when an opener sends the flag', () => {
+    const modal = readFileSync('src/components/theleague/PlayerDetailsModal.astro', 'utf8');
+    expect(modal).toContain('if (ownerBrand && !playerData.hideOwnerStrip) {');
+  });
+  it('no other opener sends it', () => {
+    const hits = execSync("git grep -l hideOwnerStrip -- src", { encoding: 'utf8' }).trim().split('\n').sort();
+    expect(hits).toEqual([
+      'src/components/theleague/PlayerDetailsModal.astro',
+      'src/utils/player-modal-trigger.ts',
+      'src/utils/rosters/phone-sheet.ts',
+    ]);
   });
 });
 
