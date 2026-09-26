@@ -88,6 +88,144 @@ export interface PlayerModalData {
    * sheet's other acquisition path, which a phone would otherwise lose.
    */
   claimable?: boolean;
+
+  // ── Tabbed sheet (opt-in) ────────────────────────────────────────────────
+  // Everything below is OPTIONAL and sent only by the roster pages. An opener
+  // that sends none of it gets the sheet exactly as it has always rendered:
+  // no tablist, the same stacked sections in the same order. See
+  // docs/plans/rosters-mobile-layout.md § 4, and `resolveSheetTabs` in
+  // src/utils/player-sheet.ts for the one rule that decides the tab set.
+  //
+  // `salarySheet`, not the plan's `salary`: `salary` above is already the
+  // current-year number every opener sends and the Contract tile reads.
+
+  /**
+   * Opt into tabs with no salary data: Summary + Game log. The AFL's roster
+   * sheet is the intended user (it has no contracts, so no Salary tab).
+   * `salarySheet` implies it.
+   */
+  tabbed?: boolean;
+  /** The Salary tab. Present → the sheet is tabbed and offers Salary. */
+  salarySheet?: SalarySheetData | null;
+  /** Which tab opens. Chosen per open by the opener; never remembered. */
+  sheetTab?: SheetTabId;
+  /** Summary › This week — the matchup columns a phone row hides. */
+  thisWeek?: ThisWeekData | null;
+  /** The action row at the top of the sheet (with the built-in Watch / Trade). */
+  quickActions?: SheetAction[] | null;
+  /** Summary › More actions. */
+  moreActions?: SheetAction[] | null;
+  /** The viewer's own ranking for this player ("QB 3"), as a metric tile. */
+  myRank?: string | null;
+  /**
+   * Hide the "Rostered by <team>" strip. Only for an opener whose page already
+   * names the team AND whose hero band wears that franchise's art and crest —
+   * TheLeague Rosters, where every row belongs to the team in the page header.
+   * Absent (every other opener), the strip paints exactly as it always has.
+   */
+  hideOwnerStrip?: boolean;
+  /**
+   * Called with a SheetAction id (or a Salary-tab option / year-pill id) when
+   * the viewer picks one. Travels IN THE PAYLOAD — never a window global, which
+   * outlives a ClientRouter swap (the Sept 2026 lineup outage). JSON cannot
+   * carry a function, so only a JS opener (`enrich`, below) can supply it.
+   */
+  onAction?: (id: string, sheet: SheetActionApi) => void | Promise<void>;
+}
+
+/** The sheet's tabs, in display order. */
+export type SheetTabId = 'summary' | 'salary' | 'gamelog';
+
+/**
+ * One action the sheet can offer. `icon` is a sprite symbol id
+ * (`/assets/icons/sprite.svg#<icon>`).
+ */
+export interface SheetAction {
+  id: string;
+  label: string;
+  desc?: string;
+  icon: string;
+  tone?: 'danger';
+  disabled?: boolean;
+  /** A toggle that is currently ON (trade block, an active simulation). */
+  state?: 'on';
+  /**
+   * A quick action that OPENS A MENU instead of acting: the hero's kebab (⋮).
+   * Rendered as a `menu` button whose items are these actions; each item
+   * routes through `onAction` exactly like any other `data-sheet-action`.
+   */
+  menu?: SheetAction[];
+}
+
+/** What `onAction` may ask the open sheet to do. */
+export interface SheetActionApi {
+  /**
+   * Repaint the sheet's opener-driven parts (quick actions, Salary, This week,
+   * More actions) from a fresh payload, keeping the open tab. Used after a
+   * local simulation, so the sheet stays open and says "Simulated · Undo".
+   */
+  rerender: (next: PlayerModalData) => void;
+  /** Close the sheet, e.g. before handing off to another dialog. */
+  close: () => void;
+  /** Put a message in the sheet's polite live region. */
+  announce: (message: string) => void;
+}
+
+/** One label/value pair — a Salary tile or a This-week row. */
+export interface SheetFact {
+  label: string;
+  value: string;
+}
+
+/**
+ * One contract year in the Salary tab. Lifted from the roster row's own
+ * `year1`-`year5` cell (text and state class), so the sheet cannot disagree
+ * with the row, simulation included.
+ */
+export interface SalarySheetYear {
+  year: string;
+  /** Exactly what the row's cell shows ("$5,000,000", "UFA", "—", "TO"). */
+  text: string;
+  kind: 'salary' | 'ufa' | 'future-ufa' | 'to-eligible' | 'to-expired';
+  declared?: boolean;
+  simulated?: boolean;
+  /** Carries the league's +10% escalation over the year before. */
+  escalated?: boolean;
+  /** Cap charge that year if he were cut now; null when nothing is owed. */
+  ifCut?: string | null;
+}
+
+/** One Salary-tab button: an extend/tag option or a simulation. */
+export interface SalarySheetOption {
+  id: string;
+  label: string;
+  /** The price, already formatted ("$6,240,000 for 2029"). */
+  cost?: string;
+  /** Secondary line: the basis, the preview, or why it is unavailable. */
+  detail?: string;
+  icon: string;
+  disabled?: boolean;
+  /** A simulation that is active for this player (renders as Undo). */
+  state?: 'on';
+}
+
+export interface SalarySheetData {
+  tiles: SheetFact[];
+  years: SalarySheetYear[];
+  /** Label for the If-cut column; omitted → the column is not drawn. */
+  ifCutLabel?: string | null;
+  /** Extend or tag. */
+  options: SalarySheetOption[];
+  /** Simulate. */
+  simulations: SalarySheetOption[];
+  /** "Simulated cut" — set while a simulation is active for this player. */
+  simulated?: string | null;
+}
+
+export interface ThisWeekData {
+  rows: SheetFact[];
+  /** Shown instead of rows when there is nothing this week (a bye). */
+  empty?: string | null;
 }
 
 export interface PlayerModalTriggerOptions {
@@ -98,6 +236,14 @@ export interface PlayerModalTriggerOptions {
    * the row's other controls live in the modal.
    */
   rowTapMedia?: string;
+  /**
+   * Last word on the payload before the sheet opens: the roster pages add the
+   * opt-in sheet fields here (Salary tab, quick actions, `onAction`), which a
+   * JSON attribute cannot carry. Called at CLICK time with the row the
+   * trigger sits in, so it reads the row as it is now — the roster tbody is
+   * re-rendered after every simulation, and a node captured earlier is gone.
+   */
+  enrich?: (data: PlayerModalData, context: { row: HTMLTableRowElement | null }) => PlayerModalData;
 }
 
 /**
@@ -145,11 +291,29 @@ export function initPlayerModalTrigger(
       if (verdict && playerData.claimable === undefined) {
         playerData.claimable = verdict.dataset.paClaimable === 'true';
       }
+      const payload = options.enrich ? enrichSafely(options.enrich, playerData, row ?? null) : playerData;
       if (typeof (window as any).openPlayerDetailsModal === 'function') {
-        (window as any).openPlayerDetailsModal(playerData);
+        (window as any).openPlayerDetailsModal(payload);
       }
     } catch {
       // Silently ignore malformed JSON
     }
   });
+}
+
+/**
+ * A throwing `enrich` must not cost the viewer the sheet itself: fall back to
+ * the plain payload every other page opens with.
+ */
+function enrichSafely(
+  enrich: NonNullable<PlayerModalTriggerOptions['enrich']>,
+  data: PlayerModalData,
+  row: HTMLTableRowElement | null,
+): PlayerModalData {
+  try {
+    return enrich({ ...data }, { row }) ?? data;
+  } catch (err) {
+    console.error('[player-modal-trigger] enrich failed; opening the plain sheet', err);
+    return data;
+  }
 }

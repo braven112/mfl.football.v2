@@ -14,6 +14,16 @@ import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD, COLLEGE_LOGO_ONERROR, COLLEGE_LOGO_O
 import '../../styles/player-modal-band.css';
 import '../../styles/player-news.css';
 import WaiverClaimModal from '../shared/WaiverClaimModal.astro';
+import {
+  resolveSheetTabs,
+  resolveInitialTab,
+  renderQuickActions,
+  renderMoreActions,
+  renderThisWeek,
+  renderSalarySheet,
+} from '../../utils/player-sheet';
+import type { PlayerModalData } from '../../utils/player-modal-trigger';
+import type { HTMLAttributes } from 'astro/types';
 
 export interface Props {
   class?: string;
@@ -73,12 +83,43 @@ export interface PlayerDetailsPreview {
   college?: string;
   contractDetail?: string;
   bye?: string;
+  /**
+   * The opt-in sheet parts, server-rendered through the SAME pure renderers
+   * the client script uses (src/utils/player-sheet.ts), so a story of the
+   * Salary tab cannot drift from what production paints. `onAction` has no
+   * meaning here; the buttons are inert in a story.
+   */
+  sheet?: Pick<PlayerModalData, 'tabbed' | 'salarySheet' | 'sheetTab' | 'thisWeek' | 'quickActions' | 'moreActions' | 'myRank'>;
 }
 
 const { class: className, hideContract = false, preview, previewOpen = false } = Astro.props;
 
 /** Falls back to the em dash this skeleton has always shipped. */
 const t = (value?: string) => value ?? '\u2014';
+
+// Stories only: which tab the preview shows. Production passes no preview, so
+// `previewTabs` is empty and every element below keeps its shipped default.
+const previewSheet = preview?.sheet;
+const previewTabs = previewSheet ? resolveSheetTabs(previewSheet) : [];
+const previewTab = resolveInitialTab(previewTabs, previewSheet?.sheetTab);
+const previewQuick = previewSheet ? renderQuickActions(previewSheet.quickActions, preview?.name ?? '') : '';
+const previewWeek = previewSheet ? renderThisWeek(previewSheet.thisWeek) : '';
+const previewMore = previewSheet ? renderMoreActions(previewSheet.moreActions) : '';
+const previewSalary = previewSheet ? renderSalarySheet(previewSheet.salarySheet) : '';
+const previewRank = previewSheet?.myRank ?? '';
+/** Tabbed preview → the panel's tab attributes; untabbed → none (as shipped). */
+type SheetTab = 'summary' | 'salary' | 'gamelog';
+const panelAttrs = (id: SheetTab): HTMLAttributes<'div'> => previewTabs.length
+  ? { role: 'tabpanel', 'aria-labelledby': `pdm-tab-${id}`, tabindex: 0, hidden: previewTab !== id }
+  : { hidden: id === 'salary' };
+const tabAttrs = (id: SheetTab): HTMLAttributes<'button'> => {
+  const selected = previewTabs.length ? previewTab === id : id === 'summary';
+  return {
+    'aria-selected': selected ? 'true' : 'false',
+    tabindex: selected ? 0 : -1,
+    hidden: previewTabs.length ? !previewTabs.includes(id) : false,
+  };
+};
 ---
 
 <div class:list={['player-details-modal', previewOpen && 'active', className]}>
@@ -136,7 +177,13 @@ const t = (value?: string) => value ?? '\u2014';
            metrics rather than on the page that opened the modal. Each hides
            itself independently (see the script), and the row hides when both
            do — a bare 1rem gap is otherwise all that is left. -->
-      <div class="pdm-actions" id="pdm-actions" hidden>
+      <div class:list={['pdm-actions', previewQuick && 'pdm-actions--hero']} id="pdm-actions" hidden={!previewQuick}>
+        <!-- The opener's quick actions (roster pages only: Simulate cut, trade
+             block, and the ⋮ contract-options menu). `display: contents` when shown, so they sit in THIS
+             row beside the built-in Watch / Trade cards — the row becomes the
+             sheet's hero actions rather than a second row, and Watch is never
+             offered twice. Empty and hidden for every other opener. -->
+        <div class="pdm-quick" id="pdm-quick" hidden={!previewQuick} set:html={previewQuick}></div>
         <!-- My Watch List — one toggle, every page that opens this modal.
              State comes from src/utils/watch-list-client.ts, so a change here
              shows up on any row/modal on the same page that also reads it. -->
@@ -198,8 +245,20 @@ const t = (value?: string) => value ?? '\u2014';
         </a>
       </div>
 
+      <!-- Tabs — rendered only when the opener sends `salarySheet` or
+           `tabbed` (resolveSheetTabs in src/utils/player-sheet.ts). Every other
+           opener leaves this hidden and the panels below stack exactly as they
+           always have. WAI-ARIA tabs with a roving tabindex; the panels are
+           plain wrappers until the script gives them their roles. -->
+      <div class="pdm-tabs" id="pdm-tabs" role="tablist" aria-label="Player sheet sections" hidden={previewTabs.length === 0}>
+        <button type="button" class="pdm-tab" id="pdm-tab-summary" role="tab" data-tab="summary" aria-controls="pdm-panel-summary" {...tabAttrs('summary')}>Summary</button>
+        <button type="button" class="pdm-tab" id="pdm-tab-salary" role="tab" data-tab="salary" aria-controls="pdm-panel-salary" {...tabAttrs('salary')}>Salary</button>
+        <button type="button" class="pdm-tab" id="pdm-tab-gamelog" role="tab" data-tab="gamelog" aria-controls="pdm-panel-gamelog" {...tabAttrs('gamelog')}>Game log</button>
+      </div>
+
+      <div class="pdm-panel" id="pdm-panel-summary" data-panel="summary" {...panelAttrs('summary')}>
       <!-- Key Metrics -->
-      <div class="pdm-metrics" id="pdm-metrics">
+      <div class:list={['pdm-metrics', previewRank && !hideContract && 'pdm-metrics--4']} id="pdm-metrics">
         <div class="pdm-metric" id="metric-card-points">
           <span class="pdm-metric__value" id="metric-points-value">{t(preview?.points)}</span>
           <span class="pdm-metric__label" id="metric-points-label">{preview?.pointsLabel ?? 'Points'}</span>
@@ -214,6 +273,18 @@ const t = (value?: string) => value ?? '\u2014';
             <span class="pdm-metric__label" id="metric-contract-label">{preview?.contractLabel ?? 'Contract'}</span>
           </div>
         )}
+        <!-- My Rank — only when the opener sends `myRank`. -->
+        <div class="pdm-metric" id="metric-card-rank" hidden={!previewRank}>
+          <span class="pdm-metric__value" id="metric-rank-value">{previewRank}</span>
+          <span class="pdm-metric__label">My Rank</span>
+        </div>
+      </div>
+
+      <!-- This week — the matchup the roster's Coach columns carry, for an
+           opener that sends `thisWeek`. -->
+      <div class="pdm-section pdm-week" id="section-this-week" hidden={!previewWeek}>
+        <h4 class="pdm-section__title">This week</h4>
+        <div id="pdm-week-body" set:html={previewWeek}></div>
       </div>
 
       <!-- Supporting Details — directly under the metric tiles, ABOVE news and
@@ -284,8 +355,25 @@ const t = (value?: string) => value ?? '\u2014';
            for players with no ESPN subject, and a live region that gets hidden
            and re-shown is unreliable. Uses the global .visually-hidden from
            styles/utilities.css. -->
+      <!-- More actions — every roster action the quick row does not carry, for
+           an opener that sends `moreActions`. -->
+      <div class="pdm-section pdm-more" id="section-more-actions" hidden={!previewMore}>
+        <h4 class="pdm-section__title">More actions</h4>
+        <div id="pdm-more-body" set:html={previewMore}></div>
+      </div>
+      </div>
+
       <p class="visually-hidden" role="status" aria-live="polite" id="pdm-news-live"></p>
 
+      <!-- Salary — only for an opener that sends `salarySheet`. Its content is
+           the opener's (lifted from the roster row), rendered by
+           renderSalarySheet. -->
+      <div class="pdm-panel pdm-salary" id="pdm-panel-salary" data-panel="salary" {...panelAttrs('salary')}>
+        <div id="pdm-salary-body" set:html={previewSalary}></div>
+      </div>
+
+      <div class="pdm-panel" id="pdm-panel-gamelog" data-panel="gamelog" {...panelAttrs('gamelog')}>
+      <p class="pdm-gamelog-empty" id="pdm-gamelog-empty" hidden>No games logged for him this season.</p>
       <!-- Weekly Results (promoted position) -->
       <div class="pdm-section" id="section-weekly-results" style="display: none;">
         <h4 class="pdm-section__title" id="weekly-results-title">Season Results</h4>
@@ -311,6 +399,7 @@ const t = (value?: string) => value ?? '\u2014';
             </tfoot>
           </table>
         </div>
+      </div>
       </div>
 
     </div>
@@ -1026,6 +1115,478 @@ const t = (value?: string) => value ?? '\u2014';
   }
 
   /* ================================================================
+     Opt-in sheet parts (tabs, quick actions, This week, More actions,
+     Salary). Nothing here matches unless the opener sends the fields —
+     every element below ships `hidden`. Children of the innerHTML-built
+     containers carry no scope hash, hence :global() under a scoped parent.
+     ================================================================ */
+
+  /* Quick actions join the built-in Watch / Trade cards in ONE row. */
+  .pdm-quick { display: contents; }
+  .pdm-quick[hidden] { display: none; }
+
+  .pdm-actions--hero {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  /* In the hero row the built-in cards shrink to the same chip as the quick
+     actions; their descriptions go, the label says it. */
+  .pdm-actions--hero .pdm-watch,
+  .pdm-actions--hero .pdm-claim {
+    flex: 0 1 auto;
+    min-height: 44px;
+    padding: 0.25rem 0.75rem 0.25rem 0.375rem;
+    border-radius: var(--radius-full, 9999px);
+  }
+  .pdm-actions--hero .pdm-watch__desc,
+  .pdm-actions--hero .pdm-claim__desc { display: none; }
+  .pdm-actions--hero .pdm-watch__icon,
+  .pdm-actions--hero .pdm-claim__icon { border-radius: var(--radius-full, 9999px); }
+  @media (max-width: 420px) {
+    .pdm-actions--hero { flex-direction: row; }
+  }
+
+  .pdm-quick :global(.pdm-quick__btn) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 44px;
+    padding: 0.25rem 0.875rem 0.25rem 0.375rem;
+    border-radius: var(--radius-full, 9999px);
+    background: var(--content-bg-muted, #f3f4f6);
+    border: 1px solid var(--content-border, #e5e7eb);
+    color: var(--color-gray-900, #111827);
+    font: inherit;
+    font-size: 0.875rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+  }
+  .pdm-quick :global(.pdm-quick__btn:hover) {
+    border-color: var(--league-accent, var(--color-primary, #1c497c));
+  }
+  .pdm-quick :global(.pdm-quick__btn:focus-visible) {
+    outline: 2px solid var(--league-accent, var(--color-primary, #1c497c));
+    outline-offset: 1px;
+  }
+  .pdm-quick :global(.pdm-quick__btn--on) {
+    background: color-mix(in srgb, var(--league-accent, var(--color-primary, #1c497c)) 12%, transparent);
+    border-color: var(--league-accent, var(--color-primary, #1c497c));
+  }
+  .pdm-quick :global(.pdm-quick__btn:disabled) { opacity: 0.6; cursor: progress; }
+  .pdm-quick :global(.pdm-quick__icon) {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-full, 9999px);
+    background: var(--card-bg, #fff);
+    color: var(--league-accent, var(--color-primary, #1c497c));
+  }
+  .pdm-quick :global(.pdm-quick__icon svg) { width: 15px; height: 15px; fill: currentColor; }
+
+  /* The hero row, Sleeper-style: the first quick action (the primary —
+     Simulate cut, or Undo) keeps its label; the rest, and the built-in
+     Watch, are 44px icon circles whose label stays in the accessibility
+     tree (clipped, not display:none). The kebab (⋮) is the overflow and
+     sits last. */
+  .pdm-quick :global(.pdm-quick__btn:not(:first-child)),
+  .pdm-quick :global(.pdm-quick__btn--kebab),
+  .pdm-actions--hero .pdm-watch {
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+    padding: 0;
+    justify-content: center;
+    flex: 0 0 auto;
+    position: relative;
+  }
+  .pdm-quick :global(.pdm-quick__btn:not(:first-child) .pdm-quick__icon),
+  .pdm-quick :global(.pdm-quick__btn--kebab .pdm-quick__icon) { background: transparent; }
+  .pdm-quick :global(.pdm-quick__btn:not(:first-child) .pdm-quick__label),
+  .pdm-actions--hero .pdm-watch__text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .pdm-actions--hero .pdm-watch__icon { background: transparent; }
+  .pdm-quick :global(.pdm-quick__btn--kebab[aria-expanded='true']) {
+    border-color: var(--league-accent, var(--color-primary, #1c497c));
+  }
+
+  /* The kebab's menu: under the ⋮, opening from its LEFT edge and extending
+     right. It used to be right-aligned, and since the ⋮ sits near the start
+     of the hero row it ran off the left of a phone (user, 2026-09-26). The
+     script then measures and clamps it into the sheet ∩ the viewport with a
+     12px gutter (`placeSheetMenu`); this CSS is the unmeasured fallback, and
+     its max-width alone keeps it on a 320px screen. Themed surface tokens,
+     so both themes follow. */
+  .pdm-quick :global(.pdm-kebab) {
+    position: relative;
+    order: 1;
+    display: inline-flex;
+  }
+  .pdm-quick :global(.pdm-kebab__menu) {
+    position: absolute;
+    top: calc(100% + 0.375rem);
+    left: 0;
+    right: auto;
+    z-index: 5;
+    min-width: min(16rem, calc(100vw - 1.5rem));
+    max-width: min(20rem, calc(100vw - 1.5rem));
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0.375rem;
+    list-style: none;
+    /* --content-bg, not --card-bg: in dark --card-bg is a radial gradient
+       with a 50%-alpha stop, and the Salary tab showed through the menu. */
+    background: var(--content-bg, #fff);
+    border: 1px solid var(--content-border, #e5e7eb);
+    border-radius: var(--radius-lg, 12px);
+    box-shadow: var(--shadow-lg, 0 10px 25px rgba(0, 0, 0, 0.18));
+  }
+  .pdm-quick :global(.pdm-kebab__menu[hidden]) { display: none; }
+  .pdm-quick :global(.pdm-kebab__item) {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    width: 100%;
+    min-height: 44px;
+    padding: 0.375rem 0.5rem;
+    border: 0;
+    border-radius: var(--radius-md, 8px);
+    background: transparent;
+    color: var(--color-gray-900, #111827);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .pdm-quick :global(.pdm-kebab__item:hover),
+  .pdm-quick :global(.pdm-kebab__item:focus-visible) {
+    background: var(--content-bg-muted, #f3f4f6);
+  }
+  .pdm-quick :global(.pdm-kebab__item:focus-visible) {
+    outline: 2px solid var(--league-accent, var(--color-primary, #1c497c));
+    outline-offset: -2px;
+  }
+  .pdm-quick :global(.pdm-kebab__item:disabled) { opacity: 0.55; cursor: not-allowed; }
+  .pdm-quick :global(.pdm-kebab__icon) {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--league-accent, var(--color-primary, #1c497c));
+  }
+  .pdm-quick :global(.pdm-kebab__icon svg) { width: 16px; height: 16px; fill: currentColor; }
+  .pdm-quick :global(.pdm-kebab__item--danger),
+  .pdm-quick :global(.pdm-kebab__item--danger .pdm-kebab__icon) { color: var(--color-error-dark, #b91c1c); }
+  .pdm-quick :global(.pdm-kebab__text) { display: flex; flex-direction: column; min-width: 0; }
+  .pdm-quick :global(.pdm-kebab__label) { font-size: 0.875rem; font-weight: 700; }
+  .pdm-quick :global(.pdm-kebab__desc) {
+    font-size: 0.75rem;
+    color: var(--color-gray-600, #4b5563);
+  }
+
+  /* Tabs — underline, not a filled accent chip: white ink on
+     --league-accent fails AA in dark (design-system.md). Sticky to the top
+     of the scrolling body so Salary is one tap away from anywhere. */
+  .pdm-tabs {
+    display: flex;
+    gap: 0.25rem;
+    position: sticky;
+    top: -1.75rem;
+    z-index: 2;
+    margin: 0 -1.75rem 1.25rem;
+    padding: 0 1.75rem;
+    background: var(--card-bg, #fff);
+    border-bottom: 1px solid var(--content-border, #e5e7eb);
+  }
+  .pdm-tabs[hidden] { display: none; }
+  .pdm-tab {
+    flex: 1 1 0;
+    min-height: 44px;
+    padding: 0.5rem 0.5rem;
+    background: none;
+    border: 0;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -1px;
+    color: var(--color-gray-600, #4b5563);
+    font: inherit;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .pdm-tab[hidden] { display: none; }
+  .pdm-tab:hover { color: var(--color-gray-900, #111827); }
+  .pdm-tab[aria-selected='true'] {
+    color: var(--color-gray-900, #111827);
+    font-weight: 700;
+    border-bottom-color: var(--league-accent, var(--color-primary, #1c497c));
+  }
+  .pdm-tab:focus-visible {
+    outline: 2px solid var(--league-accent, var(--color-primary, #1c497c));
+    outline-offset: -2px;
+  }
+  .pdm-panel[hidden] { display: none; }
+  .pdm-panel[role='tabpanel']:focus-visible {
+    outline: 2px solid var(--league-accent, var(--color-primary, #1c497c));
+    outline-offset: 2px;
+  }
+
+  .pdm-metrics--4 { grid-template-columns: repeat(4, 1fr); }
+
+  .pdm-gamelog-empty {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--color-gray-600, #4b5563);
+  }
+
+  /* This week */
+  #pdm-week-body :global(.pdm-week__grid) {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(9rem, 100%), 1fr));
+    gap: 0.5rem 1rem;
+    margin: 0;
+  }
+  #pdm-week-body :global(.pdm-week__item) { min-width: 0; }
+  #pdm-week-body :global(dt) {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-gray-500, #6b7280);
+  }
+  #pdm-week-body :global(dd) {
+    margin: 0.125rem 0 0;
+    font-size: 0.875rem;
+    color: var(--color-gray-900, #111827);
+    font-variant-numeric: tabular-nums;
+  }
+  #pdm-week-body :global(.pdm-week__empty) {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--color-gray-600, #4b5563);
+  }
+
+  /* More actions + Salary options share one list-row button. */
+  .pdm-more :global(.pdm-more__list),
+  .pdm-salary :global(.pdm-salopts) {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.5rem;
+  }
+  .pdm-more :global(.pdm-more__btn),
+  .pdm-salary :global(.pdm-salopt) {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    min-height: 44px;
+    box-sizing: border-box;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-md, 0.5rem);
+    background: var(--content-bg-muted, #f3f4f6);
+    border: 1px solid var(--content-border, #e5e7eb);
+    color: var(--color-gray-900, #111827);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .pdm-more :global(.pdm-more__btn:hover:not(:disabled)),
+  .pdm-salary :global(.pdm-salopt:hover:not(:disabled)) {
+    border-color: var(--league-accent, var(--color-primary, #1c497c));
+  }
+  .pdm-more :global(.pdm-more__btn:focus-visible),
+  .pdm-salary :global(.pdm-salopt:focus-visible),
+  .pdm-salary :global(.pdm-salyears__to:focus-visible) {
+    outline: 2px solid var(--league-accent, var(--color-primary, #1c497c));
+    outline-offset: 1px;
+  }
+  .pdm-more :global(.pdm-more__btn:disabled),
+  .pdm-salary :global(.pdm-salopt:disabled) {
+    cursor: not-allowed;
+    background: transparent;
+    border-style: dashed;
+  }
+  .pdm-more :global(.pdm-more__btn:disabled .pdm-more__label),
+  .pdm-salary :global(.pdm-salopt:disabled .pdm-salopt__label) { color: var(--color-gray-600, #4b5563); }
+  .pdm-more :global(.pdm-more__btn--danger) {
+    color: var(--color-error, #dc2626);
+    border-color: color-mix(in srgb, var(--color-error, #dc2626) 40%, transparent);
+  }
+  .pdm-salary :global(.pdm-salopt--on) {
+    background: color-mix(in srgb, var(--league-accent, var(--color-primary, #1c497c)) 12%, transparent);
+    border-color: var(--league-accent, var(--color-primary, #1c497c));
+  }
+  .pdm-more :global(.pdm-more__icon),
+  .pdm-salary :global(.pdm-salopt__icon) {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm, 0.25rem);
+    background: var(--card-bg, #fff);
+    color: var(--league-accent, var(--color-primary, #1c497c));
+  }
+  .pdm-more :global(.pdm-more__btn--danger .pdm-more__icon) { color: var(--color-error, #dc2626); }
+  .pdm-more :global(.pdm-more__icon svg),
+  .pdm-salary :global(.pdm-salopt__icon svg) { width: 15px; height: 15px; fill: currentColor; }
+  .pdm-more :global(.pdm-more__text),
+  .pdm-salary :global(.pdm-salopt__text) { display: grid; gap: 0.1rem; min-width: 0; }
+  .pdm-more :global(.pdm-more__label),
+  .pdm-salary :global(.pdm-salopt__label) { font-size: 0.875rem; font-weight: 700; line-height: 1.3; }
+  .pdm-salary :global(.pdm-salopt__cost) {
+    font-size: 0.875rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .pdm-more :global(.pdm-more__desc),
+  .pdm-salary :global(.pdm-salopt__detail) {
+    font-size: 0.75rem;
+    color: var(--color-gray-600, #4b5563);
+    line-height: 1.35;
+  }
+
+  /* Salary tab */
+  .pdm-salary :global(.pdm-subhead) {
+    margin: 1.5rem 0 0.625rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-600, #4b5563);
+  }
+  .pdm-salary :global(.pdm-salsim-state) {
+    margin: 0 0 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--color-gray-900, #111827);
+  }
+  .pdm-salary :global(.pdm-saltiles) {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin: 0 0 1.25rem;
+  }
+  .pdm-salary :global(.pdm-saltile) {
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    padding: 0.625rem 0.5rem;
+    text-align: center;
+    min-width: 0;
+  }
+  .pdm-salary :global(.pdm-saltile__value) {
+    margin: 0;
+    font-size: 1.0625rem;
+    font-weight: 700;
+    color: var(--color-gray-900, #111827);
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+  }
+  .pdm-salary :global(.pdm-saltile__label) {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-gray-500, #6b7280);
+  }
+  /* dl order is label-then-value; show the value first like the metrics. */
+  .pdm-salary :global(.pdm-saltile) { display: flex; flex-direction: column-reverse; gap: 0.2rem; }
+
+  .pdm-salary :global(.pdm-salyears__wrap) {
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    overflow: hidden;
+  }
+  .pdm-salary :global(.pdm-salyears) {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+  }
+  .pdm-salary :global(.pdm-salyears th),
+  .pdm-salary :global(.pdm-salyears td) {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--content-border, #e2e8f0);
+    text-align: left;
+    font-variant-numeric: tabular-nums;
+  }
+  .pdm-salary :global(.pdm-salyears tbody tr:last-child th),
+  .pdm-salary :global(.pdm-salyears tbody tr:last-child td) { border-bottom: 0; }
+  .pdm-salary :global(.pdm-salyears thead th) {
+    background: var(--color-gray-50, #f9fafb);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-gray-600, #4b5563);
+  }
+  .pdm-salary :global(.pdm-salyears__year) {
+    font-weight: 600;
+    color: var(--color-gray-700, #374151);
+    width: 3.5rem;
+  }
+  .pdm-salary :global(.pdm-salyears__amt) { color: var(--color-gray-900, #111827); font-weight: 600; }
+  .pdm-salary :global(.pdm-salyears__amt--ufa),
+  .pdm-salary :global(.pdm-salyears__amt--future-ufa) { color: var(--color-gray-600, #4b5563); font-weight: 500; }
+  .pdm-salary :global(.pdm-salyears__amt--to-expired) {
+    color: var(--color-gray-600, #4b5563);
+    text-decoration: line-through;
+    font-weight: 500;
+  }
+  .pdm-salary :global(.pdm-salyears__amt--simulated),
+  .pdm-salary :global(.pdm-salyears__amt--declared) { font-style: italic; }
+  .pdm-salary :global(.pdm-salyears__amt--declared) { color: var(--league-accent, var(--color-primary, #1c497c)); }
+  .pdm-salary :global(.pdm-salyears__note) {
+    display: inline-block;
+    margin-left: 0.25rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    font-style: normal;
+    text-decoration: none;
+    color: var(--color-gray-600, #4b5563);
+  }
+  .pdm-salary :global(.pdm-salyears__note--sim) { color: var(--color-gray-700, #374151); }
+  .pdm-salary :global(.pdm-salyears__cut) { color: var(--color-gray-700, #374151); }
+  /* The Team Option pill: tappable, as the row's TO cell is. 44px tall hit
+     area inside a compact visual. */
+  .pdm-salary :global(.pdm-salyears__to) {
+    position: relative;
+    min-width: 44px;
+    min-height: 32px;
+    padding: 0.125rem 0.75rem;
+    border-radius: var(--radius-full, 9999px);
+    border: 1px solid var(--league-accent, var(--color-primary, #1c497c));
+    background: color-mix(in srgb, var(--league-accent, var(--color-primary, #1c497c)) 10%, transparent);
+    color: var(--league-accent, var(--color-primary, #1c497c));
+    font: inherit;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+  }
+  .pdm-salary :global(.pdm-salyears__to::after) {
+    content: '';
+    position: absolute;
+    inset: -6px 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pdm-quick :global(.pdm-quick__btn) { transition: none; }
+  }
+
+  /* ================================================================
      Mobile
      ================================================================ */
   @media (max-width: 640px) {
@@ -1041,6 +1602,14 @@ const t = (value?: string) => value ?? '\u2014';
 
     .pdm-body {
       padding: 1.25rem;
+    }
+
+    .pdm-salary :global(.pdm-saltiles) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+    .pdm-tabs {
+      top: -1.25rem;
+      margin: 0 -1.25rem 1rem;
+      padding: 0 1.25rem;
     }
 
     .pdm-hero {
@@ -1124,6 +1693,18 @@ const t = (value?: string) => value ?? '\u2014';
   import { resolveLeaguePath, pathHasLeaguePrefix } from '../../utils/nav-utils';
   import { getDefSpotlightPlayer } from '../../data/theleague/def-spotlight-players';
   import {
+    resolveSheetTabs,
+    resolveInitialTab,
+    nextTabIndex,
+    nextMenuIndex,
+    placeSheetMenu,
+    renderQuickActions,
+    renderMoreActions,
+    renderThisWeek,
+    renderSalarySheet,
+  } from '../../utils/player-sheet';
+  import type { PlayerModalData, SheetActionApi, SheetTabId } from '../../utils/player-modal-trigger';
+  import {
     loadPlayerNews,
     cancelPlayerNews,
     renderPlayerNewsList,
@@ -1190,6 +1771,12 @@ const t = (value?: string) => value ?? '\u2014';
   // re-bind (and leak) a listener per page.
   let repaintWatch: () => void = () => {};
   let watchChangeBound = false;
+  /**
+   * Re-pointed per init, like repaintWatch: the once-bound Escape handler
+   * below must hand focus back through THIS page's sheet. A no-op unless a
+   * tabbed sheet moved focus in (see restoreFocus in init).
+   */
+  let restoreSheetFocus: () => void = () => {};
 
   function initPlayerDetailsModal() {
     const modal = document.querySelector('.player-details-modal');
@@ -1222,6 +1809,7 @@ const t = (value?: string) => value ?? '\u2014';
 
     const closeModal = () => {
       if (modal) modal.classList.remove('active');
+      restoreSheetFocus();
       // Invalidate any pending render so a late response can't repaint a modal
       // the user already dismissed.
       cancelPlayerNews();
@@ -1232,6 +1820,11 @@ const t = (value?: string) => value ?? '\u2014';
     // sign-in dialog rather than a hidden control. The store is the single
     // truth, so a toggle here and a toggle on the row behind the modal agree.
     const watchBtn = document.getElementById('pdm-watch') as HTMLButtonElement | null;
+    // The hero row reflows AFTER the sheet opens — Watch and "Trade for him"
+    // are painted again when their server context lands — so an open ⋮ menu
+    // measured against the old layout would sit where the ⋮ used to be. Both
+    // painters call this; it is a no-op until the menu block below assigns it.
+    let repositionOpenSheetMenu: () => void = () => {};
     let watchPlayerId: string | null = null;
     let watchBusy = false;
     const paintWatch = () => {
@@ -1253,6 +1846,7 @@ const t = (value?: string) => value ?? '\u2014';
             ? 'On your watch list — tap to remove'
             : 'His news lights up in the Schefter Report';
       }
+      repositionOpenSheetMenu();
     };
     if (watchBtn && !watchBtn.dataset.pdmWatchWired) {
       watchBtn.dataset.pdmWatchWired = '1';
@@ -1298,6 +1892,7 @@ const t = (value?: string) => value ?? '\u2014';
     const tradeLink = document.getElementById('pdm-trade') as HTMLAnchorElement | null;
     const acqLink = document.getElementById('pdm-acq') as HTMLAnchorElement | null;
     const actionsRow = document.getElementById('pdm-actions') as HTMLElement | null;
+    const quickRow = document.getElementById('pdm-quick') as HTMLElement | null;
     let claimPlayer: any = null;
     const paintClaim = () => {
       // The page's off-site link outranks the in-place form (see #pdm-acq):
@@ -1398,8 +1993,10 @@ const t = (value?: string) => value ?? '\u2014';
           (watchBtn?.hidden ?? true) &&
           (claimBtn?.hidden ?? true) &&
           (tradeLink?.hidden ?? true) &&
-          (acqLink?.hidden ?? true);
+          (acqLink?.hidden ?? true) &&
+          (quickRow?.hidden ?? true);
       }
+      repositionOpenSheetMenu();
     };
     if (acqLink && !acqLink.dataset.pdmAcqWired) {
       acqLink.dataset.pdmAcqWired = '1';
@@ -1466,6 +2063,7 @@ const t = (value?: string) => value ?? '\u2014';
         const activeModal = document.querySelector('.player-details-modal');
         if (e.key === 'Escape' && activeModal?.classList.contains('active')) {
           activeModal.classList.remove('active');
+          restoreSheetFocus();
           cancelPlayerNews();
         }
       });
@@ -1551,6 +2149,271 @@ const t = (value?: string) => value ?? '\u2014';
       // ejected to <body> behind the scrim.
       if (hadFocus) retry.focus();
     };
+
+    // ── Opt-in sheet: tabs, quick / more actions, This week, Salary ──
+    // Driven ONLY by optional payload fields (src/utils/player-sheet.ts). An
+    // opener that sends none of them gets the untabbed sheet, unchanged. All
+    // listeners here are on nodes inside this modal, which the ClientRouter
+    // replaces per page — bound per init, never on document or window.
+    const tabList = document.getElementById('pdm-tabs');
+    const tabButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.player-details-modal .pdm-tab'));
+    const panels = Array.from(document.querySelectorAll<HTMLElement>('.player-details-modal .pdm-panel'));
+    const weekSection = document.getElementById('section-this-week');
+    const weekBody = document.getElementById('pdm-week-body');
+    const moreSection = document.getElementById('section-more-actions');
+    const moreBody = document.getElementById('pdm-more-body');
+    const salaryBody = document.getElementById('pdm-salary-body');
+    const rankCard = document.getElementById('metric-card-rank');
+    const metricsGrid = document.getElementById('pdm-metrics');
+    const gamelogEmpty = document.getElementById('pdm-gamelog-empty');
+    const contentEl = document.querySelector<HTMLElement>('.player-details-modal__content');
+
+    const setTextById = (id: string, value: string) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = value;
+    };
+
+    // A tabbed sheet takes focus when it opens (its selected tab) and gives it
+    // back to whatever opened it when it closes. Untabbed openers are left
+    // exactly as they were — this sheet has never managed their focus.
+    let sheetOpener: HTMLElement | null = null;
+    restoreSheetFocus = () => {
+      const opener = sheetOpener;
+      sheetOpener = null;
+      if (opener && opener.isConnected) opener.focus();
+    };
+
+    /** The payload on screen — `onAction` is read from here at click time. */
+    let sheetData: PlayerModalData | null = null;
+    let sheetTabs: SheetTabId[] = [];
+    let activeTab: SheetTabId | null = null;
+
+    // ── The hero kebab (⋮): a WAI-ARIA menu button ──
+    // Its items are ordinary `data-sheet-action`s, so they route through the
+    // delegated click below like every other sheet action. This block only
+    // opens, closes and moves focus. Esc closes the MENU and returns focus to
+    // the kebab; it must not also close the sheet, hence stopPropagation
+    // before the document-level Escape handler sees it.
+    const sheetMenuButton = () => quickRow?.querySelector<HTMLButtonElement>('[data-sheet-menu]') ?? null;
+    const sheetMenuList = () => quickRow?.querySelector<HTMLElement>('[role="menu"]') ?? null;
+    const sheetMenuItems = () => Array.from(sheetMenuList()?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not([disabled])') ?? []);
+    const sheetMenuOpen = () => !!sheetMenuList() && !sheetMenuList()!.hidden;
+    // Measured, not just CSS: the ⋮ can sit anywhere in a wrapping hero row,
+    // and a menu anchored to one fixed side ran off the phone's left edge.
+    // `placeSheetMenu` keeps it inside the sheet ∩ the viewport, with a gutter.
+    const positionSheetMenu = (btn: HTMLElement, list: HTMLElement) => {
+      list.style.left = '';
+      list.style.maxWidth = '';
+      list.style.width = '';
+      const anchor = btn.getBoundingClientRect();
+      const sheet = contentEl?.getBoundingClientRect();
+      const vw = document.documentElement.clientWidth || window.innerWidth;
+      const { left, width } = placeSheetMenu({
+        anchorLeft: anchor.left,
+        anchorRight: anchor.right,
+        menuWidth: list.getBoundingClientRect().width,
+        boundsLeft: Math.max(0, sheet?.left ?? 0),
+        boundsRight: Math.min(vw, sheet?.right ?? vw),
+      });
+      list.style.left = `${left}px`;
+      list.style.width = `${width}px`;
+      list.style.maxWidth = 'none';
+    };
+    repositionOpenSheetMenu = () => {
+      const btn = sheetMenuButton();
+      const list = sheetMenuList();
+      if (btn && list && !list.hidden) positionSheetMenu(btn, list);
+    };
+    const openSheetMenu = (focusAt: 'first' | 'last') => {
+      const btn = sheetMenuButton();
+      const list = sheetMenuList();
+      if (!btn || !list) return;
+      list.hidden = false;
+      positionSheetMenu(btn, list);
+      btn.setAttribute('aria-expanded', 'true');
+      const items = sheetMenuItems();
+      (focusAt === 'last' ? items[items.length - 1] : items[0])?.focus();
+    };
+    const closeSheetMenu = (returnFocus: boolean) => {
+      const btn = sheetMenuButton();
+      const list = sheetMenuList();
+      if (list) list.hidden = true;
+      if (btn) {
+        btn.setAttribute('aria-expanded', 'false');
+        if (returnFocus) btn.focus();
+      }
+    };
+
+    const selectTab = (tab: SheetTabId | null, focus = false) => {
+      activeTab = tab;
+      const tabbed = sheetTabs.length > 0;
+      for (const btn of tabButtons) {
+        const selected = tabbed && btn.dataset.tab === tab;
+        btn.setAttribute('aria-selected', selected ? 'true' : 'false');
+        btn.tabIndex = selected ? 0 : -1;
+        if (selected && focus) btn.focus();
+      }
+      for (const panel of panels) {
+        const id = panel.dataset.panel as SheetTabId;
+        if (tabbed) {
+          panel.setAttribute('role', 'tabpanel');
+          panel.setAttribute('aria-labelledby', `pdm-tab-${id}`);
+          panel.tabIndex = 0;
+          panel.hidden = id !== tab;
+        } else {
+          // Untabbed: the sheet every other page has always had. Summary and
+          // Game log stack; Salary does not exist.
+          panel.removeAttribute('role');
+          panel.removeAttribute('aria-labelledby');
+          panel.removeAttribute('tabindex');
+          panel.hidden = id === 'salary';
+        }
+      }
+    };
+
+    /**
+     * Paint the opener-driven parts. `keepTab` is the re-render after an
+     * action (the viewer stays on the tab they acted in); an open resets to
+     * the opener's `sheetTab`.
+     */
+    const renderSheetParts = (data: PlayerModalData, keepTab: boolean) => {
+      sheetData = data;
+      // An action with nothing to call would be a dead button — drop them.
+      const actionable = typeof data.onAction === 'function';
+      sheetTabs = resolveSheetTabs(data);
+      if (tabList) tabList.hidden = sheetTabs.length === 0;
+      for (const btn of tabButtons) btn.hidden = !sheetTabs.includes(btn.dataset.tab as SheetTabId);
+      selectTab(resolveInitialTab(sheetTabs, data.sheetTab, keepTab ? activeTab : null));
+
+      closeSheetMenu(false);
+      const quickHtml = actionable ? renderQuickActions(data.quickActions, data.name ?? '') : '';
+      if (quickRow) {
+        quickRow.innerHTML = quickHtml;
+        quickRow.hidden = !quickHtml;
+      }
+      if (actionsRow) actionsRow.classList.toggle('pdm-actions--hero', !!quickHtml);
+
+      const weekHtml = renderThisWeek(data.thisWeek);
+      if (weekBody) weekBody.innerHTML = weekHtml;
+      if (weekSection) weekSection.hidden = !weekHtml;
+
+      const moreHtml = actionable ? renderMoreActions(data.moreActions) : '';
+      if (moreBody) moreBody.innerHTML = moreHtml;
+      if (moreSection) moreSection.hidden = !moreHtml;
+
+      if (salaryBody) salaryBody.innerHTML = renderSalarySheet(data.salarySheet);
+
+      const rank = typeof data.myRank === 'string' ? data.myRank.trim() : '';
+      if (rankCard) rankCard.hidden = !rank;
+      if (metricsGrid) metricsGrid.classList.toggle('pdm-metrics--4', !!rank && !!document.getElementById('metric-card-contract'));
+      setTextById('metric-rank-value', rank);
+    };
+
+    /** Game log with no games: say so, rather than an empty tab. */
+    const paintGamelogEmpty = () => {
+      if (!gamelogEmpty) return;
+      const weekly = document.getElementById('section-weekly-results');
+      gamelogEmpty.hidden = !(sheetTabs.includes('gamelog') && (!weekly || weekly.style.display === 'none'));
+    };
+
+    const sheetApi: SheetActionApi = {
+      rerender: (next) => {
+        // innerHTML replaces the button the viewer pressed. Put focus back on
+        // its successor — the same action in the same group if it survived
+        // (a toggle), else whatever now holds its place (Simulate → Undo) —
+        // so a keyboard user is not dropped to <body> behind the sheet.
+        // A menu item hands focus to the kebab before it acts (the menu closes
+        // first), so the kebab is what must survive the repaint.
+        const onKebab = !!(document.activeElement as HTMLElement | null)?.matches?.('[data-sheet-menu]');
+        const pressed = (document.activeElement as HTMLElement | null)?.closest<HTMLElement>('[data-sheet-action]');
+        const group = pressed?.closest<HTMLElement>('#pdm-quick, #pdm-salary-body, #pdm-more-body') ?? null;
+        const groupId = group?.id ?? null;
+        const pressedId = pressed?.dataset.sheetAction ?? null;
+        const pressedAt = group && pressed ? Array.from(group.querySelectorAll('[data-sheet-action]')).indexOf(pressed) : -1;
+        renderSheetParts(next, true);
+        repaintClaim();
+        paintGamelogEmpty();
+        if (onKebab) { sheetMenuButton()?.focus(); return; }
+        if (!pressedId || !groupId) return;
+        const fresh = document.getElementById(groupId);
+        const candidates = Array.from(fresh?.querySelectorAll<HTMLElement>('[data-sheet-action]:not([disabled])') ?? []);
+        const same = candidates.find((el) => el.dataset.sheetAction === pressedId);
+        const all = Array.from(fresh?.querySelectorAll<HTMLElement>('[data-sheet-action]') ?? []);
+        const inPlace = pressedAt >= 0 ? all[Math.min(pressedAt, all.length - 1)] : undefined;
+        (same ?? (inPlace && !(inPlace as HTMLButtonElement).disabled ? inPlace : candidates[0]))?.focus();
+      },
+      close: () => closeModal(),
+      announce: (message) => announce(message),
+    };
+
+    tabButtons.forEach((btn, i) => {
+      btn.addEventListener('click', () => selectTab(btn.dataset.tab as SheetTabId));
+      btn.addEventListener('keydown', (e) => {
+        const visible = tabButtons.filter((b) => !b.hidden);
+        const at = visible.indexOf(btn);
+        const next = nextTabIndex(e.key, at < 0 ? i : at, visible.length);
+        if (next === null) return;
+        e.preventDefault();
+        selectTab(visible[next].dataset.tab as SheetTabId, true);
+      });
+    });
+
+    contentEl?.addEventListener('click', (e) => {
+      const el = e.target as HTMLElement | null;
+      const menuBtn = el?.closest<HTMLButtonElement>('[data-sheet-menu]');
+      if (menuBtn) {
+        if (sheetMenuOpen()) closeSheetMenu(false);
+        else openSheetMenu('first');
+        return;
+      }
+      // A tap anywhere else in the sheet dismisses an open menu.
+      if (sheetMenuOpen() && !el?.closest('.pdm-kebab__menu')) closeSheetMenu(false);
+      const target = el?.closest<HTMLButtonElement>('[data-sheet-action]');
+      if (!target || target.disabled || !sheetData?.onAction) return;
+      const id = target.dataset.sheetAction;
+      if (!id) return;
+      // From the menu: close it and park focus on the kebab BEFORE acting, so
+      // a sheet that stays open (simulate, undo, trade block) keeps focus on
+      // the control the viewer used, and one that closes (a CDM hand-off)
+      // returns it from there.
+      if (target.closest('.pdm-kebab__menu')) closeSheetMenu(true);
+      void Promise.resolve()
+        .then(() => sheetData?.onAction?.(id, sheetApi))
+        .catch((err) => {
+          console.error('[player-sheet] action failed', id, err);
+          announce('That did not work. Try again.');
+        });
+    });
+
+    contentEl?.addEventListener('keydown', (e) => {
+      const el = e.target as HTMLElement | null;
+      const onButton = !!el?.matches?.('[data-sheet-menu]');
+      const inMenu = !!el?.closest?.('.pdm-kebab__menu');
+      if (!onButton && !inMenu) return;
+      if (e.key === 'Escape' && sheetMenuOpen()) {
+        e.preventDefault();
+        e.stopPropagation();
+        closeSheetMenu(true);
+        return;
+      }
+      if (onButton) {
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          openSheetMenu(e.key === 'ArrowUp' ? 'last' : 'first');
+        }
+        return;
+      }
+      if (e.key === 'Tab') {
+        // Leaving the menu closes it; focus moves on as the browser decides.
+        closeSheetMenu(false);
+        return;
+      }
+      const items = sheetMenuItems();
+      const next = nextMenuIndex(e.key, items.indexOf(el as HTMLButtonElement), items.length);
+      if (next === null) return;
+      e.preventDefault();
+      items[next]?.focus();
+    });
 
     window.openPlayerDetailsModal = function(playerData) {
       // ── Helpers ──
@@ -1663,12 +2526,14 @@ const t = (value?: string) => value ?? '\u2014';
       // The band already wears this franchise's hues and crest; the strip
       // names it, so "the background changed" is never the only signal. No
       // franchiseId (a true free agent) or no brand map on the page → hidden,
-      // and the modal reads exactly as it did before.
+      // and the modal reads exactly as it did before. `hideOwnerStrip` → hidden.
       var ownerBrand = getFranchiseBandBrand(playerData.franchiseId);
       var ownerRow = document.getElementById('pdm-owner');
       if (ownerRow) {
         var ownerCrest = document.getElementById('pdm-owner-crest') as HTMLImageElement | null;
-        if (ownerBrand) {
+        // An opener whose page already names the team (TheLeague Rosters)
+        // opts out; every other opener never sends the flag.
+        if (ownerBrand && !playerData.hideOwnerStrip) {
           setText('pdm-owner-name', ownerBrand.name);
           ownerRow.style.setProperty('--pdm-owner-hue', franchiseTintHue(ownerBrand));
           if (ownerCrest) {
@@ -1694,6 +2559,10 @@ const t = (value?: string) => value ?? '\u2014';
           if (ownerCrest) ownerCrest.removeAttribute('src');
         }
       }
+
+      // ── Opt-in sheet parts (before the strips: the action row's
+      //    visibility counts the quick actions) ──
+      renderSheetParts(playerData, false);
 
       // ── Watch list + claim strip ──
       renderWatchStrip(playerData.id);
@@ -2090,9 +2959,17 @@ const t = (value?: string) => value ?? '\u2014';
         }
       }
 
+      paintGamelogEmpty();
+
       // ── Open ──
 
       if (modal) modal.classList.add('active');
+
+      if (sheetTabs.length) {
+        const opener = document.activeElement as HTMLElement | null;
+        if (opener && !modal?.contains(opener)) sheetOpener = opener;
+        tabButtons.find((btn) => btn.getAttribute('aria-selected') === 'true')?.focus();
+      }
     };
   }
 

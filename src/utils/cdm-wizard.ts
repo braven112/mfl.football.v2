@@ -39,6 +39,12 @@ import { submitDeclaration } from './contract-actions-client';
 import { applyPlayerModalBand } from './player-modal-band';
 import { NFL_TEAM_CITIES, normalizeTeamCode } from './nfl';
 import { isWatched, getWatchListAuth } from './watch-list-client';
+import {
+  getCdmActionDescriptors,
+  type CdmActionContext,
+  type CdmActionDescriptor,
+  type CdmActionId,
+} from './cdm-action-descriptors';
 
 /** Everything the step functions reach for that lives outside this module. */
 export interface CdmWizardContext {
@@ -183,8 +189,18 @@ export function createCdmWizard(deps: CdmWizardContext) {
    */
   let cdmDeadlineInterval: ReturnType<typeof setInterval> | null = null;
 
+  /**
+   * Where focus goes when the modal closes: the control that opened it. The
+   * player sheet routes a write action here after closing itself, so focus
+   * was on nothing; that opener names the row's control via setCdmReturnFocus.
+   */
+  let cdmReturnFocus: HTMLElement | null = null;
+  const setCdmReturnFocus = (el: HTMLElement | null) => { cdmReturnFocus = el; };
+
   const openDeclarationModal = (data: any, preSelectedYears: number | null = null) => {
     if (!cdmModal) return;
+    const active = document.activeElement;
+    cdmReturnFocus = active instanceof HTMLElement && active !== document.body ? active : null;
     cdmState.playerData = data;
     cdmState.selectedYears = null;
     cdmState.selectedSalary = null;
@@ -528,6 +544,10 @@ export function createCdmWizard(deps: CdmWizardContext) {
     document.body.style.overflow = '';
     if (cdmDeadlineInterval) clearInterval(cdmDeadlineInterval);
     cdmState.playerData = null;
+    const target = cdmReturnFocus;
+    cdmReturnFocus = null;
+    // A re-rendered table or a control hidden at this width has no box to focus.
+    if (target?.isConnected && target.getClientRects().length > 0) target.focus();
   };
 
   const updateProjectionTable = (
@@ -763,6 +783,62 @@ export function createCdmWizard(deps: CdmWizardContext) {
     createActionOption({ id, label, desc, onClick, disabled, iconId });
 
   // ----------------------------------------------------------------
+  // describeCdmActions — which step-1 actions this player has, as data.
+  //
+  // The decision table lives in getCdmActionDescriptors
+  // (src/utils/cdm-action-descriptors.ts); this supplies the page facts it
+  // needs. The roster's player sheet calls it too, so the ⋮ menu and the
+  // sheet list the same actions from one implementation.
+  //
+  // `autocutPlayerId` defaults to the player the modal holds, which is what
+  // the auto-cut option always keyed on; the sheet passes its own player.
+  // ----------------------------------------------------------------
+  const describeCdmActions = (elig: any, autocutPlayerId?: string): CdmActionDescriptor[] => {
+    const autocutPid = autocutPlayerId
+      ?? String(cdmState.playerData?._rawPlayer?.id || cdmState.playerData?.id || '');
+    // Watch — per-VIEWER, not per-roster; a signed-out visitor is handed to
+    // sign-in (same trigger as PlayerDetailsModal).
+    const watchSignedOut = !config.authUser?.franchiseId || getWatchListAuth() === 'signed-out';
+    const context: CdmActionContext = {
+      isOwnTeam: !!config.authUser?.franchiseId && config.authUser.franchiseId === getCurrentTeam(),
+      // isOwnTeam above trusts config.authUser, which demo mode spoofs — so
+      // the auto-cut option is gated on isAutocutOwnView() (real fid + not
+      // demo), never isAutocutEnabled(), and never for a DEMO_ id.
+      autocut: () => {
+        if (!(isAutocutOwnView() && autocutPid && !autocutPid.startsWith('DEMO_'))) return null;
+        const priority = getMarkedOnRoster().indexOf(autocutPid) + 1;
+        return {
+          priority,
+          // Badge-honesty mirror: a mark below the current cut line won't
+          // execute at today's roster count — don't imply it will.
+          belowLine: priority > 0 && priority > computeAutocutSlate().cuts.length,
+          targetActiveCount: config.targetActiveCount ?? 22,
+        };
+      },
+      watch: {
+        signedOut: watchSignedOut,
+        watched: !watchSignedOut && isWatched(String(elig.playerId || '')),
+      },
+    };
+    return getCdmActionDescriptors(elig, context);
+  };
+
+  // ----------------------------------------------------------------
+  // renderCdmActionOptions — descriptors → step-1 option buttons.
+  // `handlers` maps a descriptor id to its click; the buttons themselves are
+  // the same `cdm-action-option--<id>` nodes they have always been.
+  // ----------------------------------------------------------------
+  const renderCdmActionOptions = (
+    container: HTMLElement,
+    descriptors: CdmActionDescriptor[],
+    handlers: Partial<Record<CdmActionId, () => void>>,
+  ) => {
+    for (const d of descriptors) {
+      container.appendChild(makeCdmActionBtn(d.id, d.label, d.desc, handlers[d.id], d.disabled ?? false, d.icon));
+    }
+  };
+
+  // ----------------------------------------------------------------
   // populateCdmActionOptions — fills step-1 action buttons in CDM
   // ----------------------------------------------------------------
   const populateCdmActionOptions = (elig: any) => {
@@ -770,178 +846,29 @@ export function createCdmWizard(deps: CdmWizardContext) {
     if (!actionOptions) return;
     actionOptions.replaceChildren();
 
-    const contractYears = elig.currentYears || 0;
-    const contractInfo = elig.contractInfo ?? '';
-    const isTO = contractInfo === 'TO';
-    const isRC = elig.isRookieContract;
+    const descriptors = describeCdmActions(elig);
+    const autocutPid = String(cdmState.playerData?._rawPlayer?.id || cdmState.playerData?.id || '');
+    const isOn = (id: CdmActionId) => descriptors.some((d) => d.id === id && d.state === 'on');
+    const watchId = String(elig.playerId || '');
+    const watchSignedOut = !config.authUser?.franchiseId || getWatchListAuth() === 'signed-out';
 
-    // Declare Contract — fresh acquisition (auction/BBID/free-agent) or rookie override window
-    if (elig.declareType === 'new-acquisition' || elig.declareType === 'rookie-override') {
-      const opts = Array.isArray(elig.declareYearOptions) && elig.declareYearOptions.length
-        ? elig.declareYearOptions
-        : (elig.declareType === 'rookie-override' ? [1, 2, 3, 4] : [1, 2, 3, 4, 5]);
-      const min = opts[0];
-      const max = opts[opts.length - 1];
-      const range = min === max ? `${min} year${min === 1 ? '' : 's'}` : `${min}–${max} years`;
-      const desc = elig.declareType === 'rookie-override'
-        ? `Set rookie contract length (${range})`
-        : `Set initial contract length (${range})`;
-      actionOptions.appendChild(makeCdmActionBtn(
-        'declare-contract', 'Declare Contract', desc,
-        () => goToDeclareContractStep(),
-        false, 'icon-coin'
-      ));
-    }
-
-    // Tag-like actions (1 year remaining)
-    if (contractYears === 1 && !isTO) {
-      // Franchise Tag — non-TO players only
-      actionOptions.appendChild(makeCdmActionBtn(
-        'franchise', 'Franchise Tag', '1 year at higher of 120% or position average',
-        () => goToFranchiseTagStep2(),
-        false, 'icon-franchise-tag'
-      ));
-    }
-    if (contractYears >= 2 && isTO) {
-      // Team Option — TO players only (option window is years 1–3 of contract)
-      actionOptions.appendChild(makeCdmActionBtn(
-        'team-option', 'Team Option', '5th-year option at top 10 position average',
-        () => goToTeamOptionStep2(),
-        false, 'icon-franchise-tag'
-      ));
-    }
-
-    // Extension actions (2+ years remaining)
-    if (contractYears >= 2 && !isRC && !isTO) {
-      // Veteran Extension — standard contracts only
-      actionOptions.appendChild(makeCdmActionBtn(
-        'extension', 'Veteran Extension', 'Extend contract 1\u20132 years',
-        () => goToVetExtYearStep(),
-        false, 'icon-coin'
-      ));
-    }
-    if (contractYears >= 2 && (isRC || isTO)) {
-      // Rookie Extension — RC or TO contracts only (+2 years, fixed)
-      actionOptions.appendChild(makeCdmActionBtn(
-        'rookie-extension', 'Rookie Extension', 'Extend rookie contract 2 years',
-        () => goToRookieExtReview(),
-        false, 'icon-coin-r'
-      ));
-    }
-
-    // Roster moves (IR / Practice Squad) — owner-only, on the user's own team.
-    // Rookie gate uses contractInfo (RC | TO) — TheLeague's auto-stamp script
-    // writes one of these on every drafted rookie, so it's a reliable proxy
-    // for MFL's own status === 'R' classification (which the server-side
-    // /api/move-to-practice route enforces as the authoritative gate).
-    // Practice-squad rookies retain the IR option so a practice player who
-    // gets injured can still be moved to IR without leaving this menu.
-    const isOwnTeam = !!config.authUser?.franchiseId && config.authUser.franchiseId === getCurrentTeam();
-    if (isOwnTeam) {
-      const tag = (elig.displayTag || 'active').toString();
-      const isRookie = elig.contractInfo === 'RC' || elig.contractInfo === 'TO';
-
-      if (tag === 'active') {
-        actionOptions.appendChild(makeCdmActionBtn(
-          'move-to-ir', 'Move to IR', 'Pause participation — cap charge unchanged',
-          () => goToRosterMoveStep('ir', 'to'),
-          false, 'icon-ambulance'
-        ));
-        if (isRookie) {
-          actionOptions.appendChild(makeCdmActionBtn(
-            'move-to-practice', 'Move to Practice Squad', 'Stash a rookie — reduced cap charge',
-            () => goToRosterMoveStep('practice', 'to'),
-            false, 'icon-bookmark'
-          ));
-        }
-      } else if (tag === 'injured') {
-        actionOptions.appendChild(makeCdmActionBtn(
-          'activate-from-ir', 'Activate from IR', 'Restore to active roster',
-          () => goToRosterMoveStep('ir', 'from'),
-          false, 'icon-ambulance'
-        ));
-      } else if (tag === 'practice') {
-        if (isRookie) {
-          actionOptions.appendChild(makeCdmActionBtn(
-            'promote-from-practice', 'Promote from Practice', 'Move rookie to active roster',
-            () => goToRosterMoveStep('practice', 'from'),
-            false, 'icon-bookmark'
-          ));
-        }
-        actionOptions.appendChild(makeCdmActionBtn(
-          'move-to-ir', 'Move to IR', 'Pause participation — cap charge unchanged',
-          () => goToRosterMoveStep('ir', 'to'),
-          false, 'icon-ambulance'
-        ));
-      }
-
-      // August auto-cut toggle — cut window only, active-roster players
-      // only (taxi/IR are automation-exempt, so they simply never get the
-      // option). Sits between the roster moves and Cut Player: reversible
-      // marking reads as lighter than the irreversible cut. One click is
-      // an IMMEDIATE save of the full list (append-to-end priority) through
-      // the same step-up-auth path as the panel's Save button — mirrors the
-      // trade-block toggle, not the two-step roster-move confirm.
-      // isOwnTeam above trusts config.authUser, which demo mode spoofs — so
-      // gate the auto-cut option on isAutocutOwnView() (real fid + not demo),
-      // never isAutocutEnabled(). Keeps the option absent in demo and on any
-      // team that isn't the authenticated owner's own.
-      const autocutPid = String(cdmState.playerData?._rawPlayer?.id || cdmState.playerData?.id || '');
-      if (
-        tag === 'active' &&
-        isAutocutOwnView() &&
-        autocutPid &&
-        !autocutPid.startsWith('DEMO_')
-      ) {
-        const autocutPriority = getMarkedOnRoster().indexOf(autocutPid) + 1;
-        const isAutocutMarked = autocutPriority > 0;
-        // Badge-honesty mirror: a mark below the current cut line won't
-        // execute at today's roster count — don't imply it will.
-        const autocutBelowLine =
-          isAutocutMarked && autocutPriority > computeAutocutSlate().cuts.length;
-        actionOptions.appendChild(makeCdmActionBtn(
-          'autocut-toggle',
-          isAutocutMarked ? 'Unmark auto-cut' : 'Mark for August auto-cut',
-          isAutocutMarked
-            ? `Priority #${autocutPriority} in your cut order${autocutBelowLine ? ' — below the cut line, safe unless your roster grows' : ''} — click to remove`
-            : `Cut automatically at the deadline if you're over ${config.targetActiveCount ?? 22}`,
-          () => toggleAutocutMark(autocutPid, isAutocutMarked),
-          false, 'icon-clipboard'
-        ));
-      }
-    }
-
-    // Watch — per-VIEWER, not per-roster, so it sits outside the isOwnTeam
-    // block: you can watch anyone on any roster. A signed-out visitor sees
-    // the option too and is handed to sign-in (same trigger as PlayerDetailsModal).
-    {
-      const watchId = String(elig.playerId || '');
-      const watchSignedOut = !config.authUser?.franchiseId || getWatchListAuth() === 'signed-out';
-      const watched = !watchSignedOut && isWatched(watchId);
-      actionOptions.appendChild(makeCdmActionBtn(
-        'watch',
-        watched ? 'Stop watching' : 'Watch player',
-        watchSignedOut
-          ? 'Sign in to build your watch list'
-          : (watched ? 'Remove him from your watch list' : 'His news lights up in the Schefter Report'),
-        () => toggleCdmWatch(watchId, watched, watchSignedOut, elig),
-        false, watched ? 'icon-eye-slash' : 'icon-eye'
-      ));
-    }
-
-    actionOptions.appendChild(makeCdmActionBtn(
-      'cut', 'Cut Player', '50% cap hit + future penalties',
-      () => goToCutStep2(),
-      false, 'icon-user-times'
-    ));
-
-    actionOptions.appendChild(makeCdmActionBtn(
-      // Handshake, not the swap arrows: trades and waivers wear the mark the
-      // Trade Builder does. Twin of the AFL modal's trade action.
-      'trade', 'Trade Player', 'Simulate, add to trade block, or open trade builder',
-      () => showTradeSubOptions(),
-      false, 'icon-transactions-2'
-    ));
+    renderCdmActionOptions(actionOptions, descriptors, {
+      'declare-contract': () => goToDeclareContractStep(),
+      franchise: () => goToFranchiseTagStep2(),
+      'team-option': () => goToTeamOptionStep2(),
+      extension: () => goToVetExtYearStep(),
+      'rookie-extension': () => goToRookieExtReview(),
+      'move-to-ir': () => goToRosterMoveStep('ir', 'to'),
+      'move-to-practice': () => goToRosterMoveStep('practice', 'to'),
+      'activate-from-ir': () => goToRosterMoveStep('ir', 'from'),
+      'promote-from-practice': () => goToRosterMoveStep('practice', 'from'),
+      // One click is an IMMEDIATE save of the full list (append-to-end
+      // priority) through the same step-up-auth path as the panel's Save.
+      'autocut-toggle': () => toggleAutocutMark(autocutPid, isOn('autocut-toggle')),
+      watch: () => toggleCdmWatch(watchId, isOn('watch'), watchSignedOut, elig),
+      cut: () => goToCutStep2(),
+      trade: () => showTradeSubOptions(),
+    });
   };
 
   // ----------------------------------------------------------------
@@ -1746,7 +1673,9 @@ export function createCdmWizard(deps: CdmWizardContext) {
   return {
     openDeclarationModal,
     closeDeclarationModal,
+    setCdmReturnFocus,
     populateCdmActionOptions,
+    describeCdmActions,
     makeCdmActionBtn,
     goToActionSelectStep,
     goToDeclareContractStep,

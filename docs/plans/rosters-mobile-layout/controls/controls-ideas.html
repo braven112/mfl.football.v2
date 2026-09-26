@@ -1,0 +1,61 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Roster controls ideas</title>
+<style>
+:root{--bg:#121212;--card:#1d1f24;--card2:#26282e;--line:#3a3f4b;--ink:#f2f3f5;--mute:#9aa1ad;--accent:#4c8dff;--accentbg:#1b2b47;--font:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+*{box-sizing:border-box}body{margin:0;background:#0b0b0c;font-family:var(--font);color:var(--ink);display:flex;gap:28px;padding:24px;align-items:flex-start}
+.col{width:390px}.lbl{font:700 15px var(--font);margin:0 0 4px}.sub{font:13px/1.4 var(--font);color:var(--mute);margin:0 0 12px;min-height:54px}
+.phone{background:var(--bg);border-radius:18px;padding:14px 12px;border:1px solid #222}
+.panel{background:linear-gradient(90deg,#1a2438,#23252a 55%);border:1px solid var(--line);border-radius:16px;padding:12px 10px 0}
+.row{display:flex;align-items:center;gap:8px}
+.seg{display:flex;background:#101113;border-radius:10px;padding:3px}
+.seg b{font:600 14px var(--font);padding:8px 14px;border-radius:8px;color:var(--mute)}
+.seg b.on{background:var(--accentbg);color:#8fb6ff;box-shadow:inset 0 0 0 1.5px var(--accent)}
+.ib{width:40px;height:40px;border-radius:10px;border:1px solid var(--line);display:grid;place-items:center;color:#8fb6ff;font:600 16px var(--font);background:#17181b}
+.pill{height:36px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:#17181b;display:inline-flex;align-items:center;gap:6px;font:600 13px var(--font);color:var(--mute);white-space:nowrap}
+.pill.on{color:#fff;background:var(--accentbg);border-color:var(--accent)}
+.sp{flex:1}
+.hdr{display:flex;align-items:center;justify-content:space-between;margin:12px -10px 0;padding:10px 14px;background:#141518;border-top:1px solid var(--line);border-left:4px solid #3cb371;font:700 12px var(--font);letter-spacing:.08em;color:#c9ccd3}
+.hdr .s{letter-spacing:0;font:600 13px var(--font);color:#8fb6ff}
+.card{display:flex;gap:10px;padding:12px 4px;border-bottom:1px solid #2b2e35;background:#1d1f24;margin:0 -10px;padding-left:14px;padding-right:14px}
+.av{width:44px;height:44px;border-radius:50%;background:#3b4658}.nm{font:600 15px var(--font)}.l2{font:13px var(--font);color:var(--mute);margin-top:4px}.amt{margin-left:auto;font:700 15px var(--font)}
+.chips{display:flex;gap:6px;overflow:hidden;margin:10px -10px 0;padding:0 10px}
+.sheet{margin-top:12px;background:#1f2126;border:1px solid var(--line);border-radius:16px 16px 0 0;padding:12px 14px}
+.sheet h4{margin:0 0 8px;font:700 13px var(--font);color:var(--mute);letter-spacing:.06em}
+.opt{display:flex;justify-content:space-between;padding:10px 2px;border-bottom:1px solid #2b2e35;font:15px var(--font)}.opt.on{color:#8fb6ff;font-weight:600}
+.note{font:12px var(--font);color:var(--mute);margin-top:8px}
+</style></head><body>
+
+<div class="col" id="a"><p class="lbl">A · One toolbar row + sort sheet</p>
+<p class="sub">GM | Coach on the left; one Sort button showing the current sort, and a My Rank icon on the right. Sort opens a bottom sheet listing only this tab's sorts.</p>
+<div class="phone"><div class="panel">
+ <div class="row"><div class="seg"><b class="on">GM</b><b>Coach</b></div><span class="sp"></span><span class="pill on">⇅ Salary ↓</span><span class="ib" title="My Rank">⚙</span></div>
+ <div class="hdr">ACTIVE ROSTER · 22</div>
+ <div class="card"><div class="av"></div><div><div class="nm">Lamar Jackson 🏷️</div><div class="l2">Yrs 3 · thru '28</div></div><div class="amt">$5,000,000</div></div>
+</div>
+<div class="sheet"><h4>SORT GM BY</h4>
+ <div class="opt">Position</div><div class="opt on">Salary <span>↓ ✓</span></div><div class="opt">Contract years</div><div class="opt">My Rank <span style="color:#8fb6ff;font-size:13px">Edit sources ›</span></div>
+ <div class="note">Coach tab lists: Projection · Opponent rank · Season avg · Kickoff</div></div>
+</div></div>
+
+<div class="col" id="b"><p class="lbl">B · Tabs row + sort chips</p>
+<p class="sub">GM | Coach on the left with the My Rank icon on the right, then one scrolling row of this tab's sort chips. Tap a chip to sort; tap it again to flip direction.</p>
+<div class="phone"><div class="panel">
+ <div class="row"><div class="seg"><b class="on">GM</b><b>Coach</b></div><span class="sp"></span><span class="ib" title="My Rank">⚙</span></div>
+ <div class="chips"><span class="pill">Pos</span><span class="pill on">Salary ↓</span><span class="pill">Years</span><span class="pill">My Rank</span><span class="pill">Name</span></div>
+ <div class="hdr">ACTIVE ROSTER · 22</div>
+ <div class="card"><div class="av"></div><div><div class="nm">Lamar Jackson 🏷️</div><div class="l2">Yrs 3 · thru '28</div></div><div class="amt">$5,000,000</div></div>
+</div>
+<div class="phone" style="margin-top:12px"><div class="panel">
+ <div class="row"><div class="seg"><b>GM</b><b class="on">Coach</b></div><span class="sp"></span><span class="ib">⚙</span></div>
+ <div class="chips"><span class="pill on">Proj ↓</span><span class="pill">Opp rank</span><span class="pill">Avg</span><span class="pill">Kickoff</span><span class="pill">Pos</span></div>
+ <div class="hdr">ACTIVE ROSTER · 22</div></div></div>
+</div>
+
+<div class="col" id="c"><p class="lbl">C · Sort lives in the section header</p>
+<p class="sub">Only GM | Coach and the My Rank icon sit up top. The current sort sits on the right of each section header, the way a table column header would, and tapping it opens the same per-tab sort sheet as A.</p>
+<div class="phone"><div class="panel">
+ <div class="row"><div class="seg" style="flex:1"><b class="on" style="flex:1;text-align:center">GM</b><b style="flex:1;text-align:center">Coach</b></div><span class="ib">⚙</span></div>
+ <div class="hdr">ACTIVE ROSTER · 22 <span class="s">Salary ↓ ▾</span></div>
+ <div class="card"><div class="av"></div><div><div class="nm">Lamar Jackson 🏷️</div><div class="l2">Yrs 3 · thru '28</div></div><div class="amt">$5,000,000</div></div>
+ <div class="hdr" style="border-left-color:#4c8dff;margin-top:0">PRACTICE SQUAD · 4 <span class="s">Salary ↓ ▾</span></div>
+</div></div></div>
+</body></html>

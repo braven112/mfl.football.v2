@@ -4559,6 +4559,13 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
   } from '../../constants/roster-constants';
   import { buildNoHeadshotPlaceholder } from '../../utils/nfl-team-colors';
   import { initPlayerModalTrigger } from '../../utils/player-modal-trigger';
+  import {
+    buildRosterSheetFields,
+    createRosterSheetActionHandler,
+    liftYearCells,
+    liftThisWeek,
+    liftMyRank,
+  } from '../../utils/rosters/phone-sheet';
   import type { PlayerModalData } from '../../utils/player-modal-trigger';
   import { createCdmWizard } from '../../utils/cdm-wizard';
   import { toggleWatch, loadWatchList } from '../../utils/watch-list-client';
@@ -5622,7 +5629,17 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
 
 
     let latestViewVersion = 0;
-    let lastViewContext = null;
+    /** What the last updateView() render settled on (assigned at its end). */
+    let lastViewContext: {
+      version: number;
+      seasonKey: unknown;
+      teamId: unknown;
+      seasonData: unknown;
+      rows: unknown[];
+      deadMoney: number[];
+      capChargesWithDead: number[];
+      capLimitForSeason: number;
+    } | null = null;
     let secondaryWarmHandle = null;
     const secondaryViewVersions = {
       analytics: 0,
@@ -6127,6 +6144,87 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       return /^\d+$/.test(trimmed) ? trimmed.padStart(4, '0') : trimmed;
     };
 
+    /**
+     * The CDM action-select payload for one row, read from its ⋮ button (and
+     * the row's serialized PlayerCell JSON) at call time. The ⋮ click and the
+     * player sheet both build from this, so the sheet's action list is the
+     * one the ⋮ menu would show for the same player.
+     */
+    const readActionSelectPayload = (btn: HTMLElement) => {
+      const playerId = btn.dataset.playerId;
+      const playerName = btn.dataset.playerName;
+      const playerPosition = btn.dataset.playerPosition;
+      const playerSalary = parseFloat(btn.dataset.playerSalary || '0');
+      const playerYears = parseInt(btn.dataset.playerYears || '1', 10);
+      const actionRow = btn.closest('tr');
+      const birthdateRaw = actionRow?.dataset?.birthdate;
+
+      // PlayerCell on the row already serializes the full payload onto
+      // data-player-modal. Re-parse it so the action-select hero can
+      // render college / draft / age without piping each field through
+      // its own data attribute.
+      const actionPlayerCell = actionRow?.querySelector('[data-column="player"]');
+      const actionModalJson = actionPlayerCell?.querySelector('.player-cell__name[data-player-modal]')?.getAttribute('data-player-modal');
+      let actionModalData: PlayerModalData = {};
+      if (actionModalJson) {
+        try { actionModalData = JSON.parse(actionModalJson); } catch { /* leave empty */ }
+      }
+
+      const rawPlayer = {
+        id: playerId,
+        name: playerName,
+        position: playerPosition,
+        nflTeam: btn.dataset.playerNflTeam || actionModalData.nflTeam || '',
+        espnId: actionModalData.espnId ?? null,
+        nflLogo: btn.dataset.playerNflLogo || '',
+        headshot: btn.dataset.playerHeadshot || '',
+        injuryStatus: btn.dataset.playerInjuryStatus || '',
+        salary: playerSalary,
+        years: playerYears,
+        birthdate: birthdateRaw ? Number(birthdateRaw) : (actionModalData.birthdate ?? null),
+        franchiseId: btn.dataset.playerFranchiseId || '',
+        tradeBait: btn.dataset.playerTradeBait === 'true',
+        displayTag: btn.dataset.playerDisplayTag || 'active',
+        college: actionModalData.college ?? null,
+        draftYear: actionModalData.draftYear ?? null,
+        draftRound: actionModalData.draftRound ?? null,
+        draftPick: actionModalData.draftPick ?? null,
+        draftTeam: actionModalData.draftTeam ?? null,
+      };
+      // Look up real eligibility to get contractInfo/isRookieContract for action filtering
+      // Fall back to currentTeam since playerFranchiseId may not be set on the button
+      const playerElig = getPlayerEligibility(playerId, btn.dataset.playerFranchiseId || currentTeam);
+      const contractInfo = btn.dataset.playerContractInfo
+        || playerElig?.contractInfo
+        || '';
+      const isRookieContract = playerElig?.isRookieContract ?? false;
+      // Forward the underlying declaration type / year options so the action
+      // sheet can offer "Declare Contract" for fresh acquisitions and rookies.
+      const isOwnTeam = !!config.authUser?.franchiseId
+        && config.authUser.franchiseId === (btn.dataset.playerFranchiseId || currentTeam);
+      const allowDeclare = isOwnTeam && playerElig && !playerElig.isExpired
+        && (playerElig.type === 'new-acquisition' || playerElig.type === 'rookie-override');
+      return {
+        ...rawPlayer,
+        eligibility: {
+          type: 'action-select',
+          // The Watch option needs the id without touching the untyped
+          // modal state; every other option here reads `elig` too.
+          playerId: rawPlayer.id,
+          currentSalary: playerSalary,
+          currentYears: playerYears,
+          contractInfo,
+          isRookieContract,
+          displayTag: rawPlayer.displayTag,
+          declareType: allowDeclare ? playerElig.type : null,
+          declareYearOptions: allowDeclare ? (playerElig.yearOptions || null) : null,
+          deadlineTimestamp: allowDeclare ? playerElig.deadlineTimestamp : undefined,
+          acquisitionTimestamp: allowDeclare ? playerElig.acquisitionTimestamp : undefined,
+        },
+        _rawPlayer: rawPlayer,
+      };
+    };
+
     const renderTableRows = (rows = []) => {
       if (!rosterTableBody) return;
       if (!rows.length) {
@@ -6504,78 +6602,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
         document.querySelectorAll<HTMLElement>('.ufa-action-btn').forEach(btn => {
           btn.addEventListener('click', (e) => {
             e.stopPropagation();
-            const playerId = btn.dataset.playerId;
-            const playerName = btn.dataset.playerName;
-            const playerPosition = btn.dataset.playerPosition;
-            const playerSalary = parseFloat(btn.dataset.playerSalary || '0');
-            const playerYears = parseInt(btn.dataset.playerYears || '1', 10);
-            const actionRow = btn.closest('tr');
-            const birthdateRaw = actionRow?.dataset?.birthdate;
-
-            // PlayerCell on the row already serializes the full payload onto
-            // data-player-modal. Re-parse it so the action-select hero can
-            // render college / draft / age without piping each field through
-            // its own data attribute.
-            const actionPlayerCell = actionRow?.querySelector('[data-column="player"]');
-            const actionModalJson = actionPlayerCell?.querySelector('.player-cell__name[data-player-modal]')?.getAttribute('data-player-modal');
-            let actionModalData: PlayerModalData = {};
-            if (actionModalJson) {
-              try { actionModalData = JSON.parse(actionModalJson); } catch { /* leave empty */ }
-            }
-
-            const rawPlayer = {
-              id: playerId,
-              name: playerName,
-              position: playerPosition,
-              nflTeam: btn.dataset.playerNflTeam || actionModalData.nflTeam || '',
-              espnId: actionModalData.espnId ?? null,
-              nflLogo: btn.dataset.playerNflLogo || '',
-              headshot: btn.dataset.playerHeadshot || '',
-              injuryStatus: btn.dataset.playerInjuryStatus || '',
-              salary: playerSalary,
-              years: playerYears,
-              birthdate: birthdateRaw ? Number(birthdateRaw) : (actionModalData.birthdate ?? null),
-              franchiseId: btn.dataset.playerFranchiseId || '',
-              tradeBait: btn.dataset.playerTradeBait === 'true',
-              displayTag: btn.dataset.playerDisplayTag || 'active',
-              college: actionModalData.college ?? null,
-              draftYear: actionModalData.draftYear ?? null,
-              draftRound: actionModalData.draftRound ?? null,
-              draftPick: actionModalData.draftPick ?? null,
-              draftTeam: actionModalData.draftTeam ?? null,
-            };
-            // Look up real eligibility to get contractInfo/isRookieContract for action filtering
-            // Fall back to currentTeam since playerFranchiseId may not be set on the button
-            const playerElig = getPlayerEligibility(playerId, btn.dataset.playerFranchiseId || currentTeam);
-            const contractInfo = btn.dataset.playerContractInfo
-              || playerElig?.contractInfo
-              || '';
-            const isRookieContract = playerElig?.isRookieContract ?? false;
-            // Forward the underlying declaration type / year options so the action
-            // sheet can offer "Declare Contract" for fresh acquisitions and rookies.
-            const isOwnTeam = !!config.authUser?.franchiseId
-              && config.authUser.franchiseId === (btn.dataset.playerFranchiseId || currentTeam);
-            const allowDeclare = isOwnTeam && playerElig && !playerElig.isExpired
-              && (playerElig.type === 'new-acquisition' || playerElig.type === 'rookie-override');
-            openDeclarationModal({
-              ...rawPlayer,
-              eligibility: {
-                type: 'action-select',
-                // The Watch option needs the id without touching the untyped
-                // modal state; every other option here reads `elig` too.
-                playerId: rawPlayer.id,
-                currentSalary: playerSalary,
-                currentYears: playerYears,
-                contractInfo,
-                isRookieContract,
-                displayTag: rawPlayer.displayTag,
-                declareType: allowDeclare ? playerElig.type : null,
-                declareYearOptions: allowDeclare ? (playerElig.yearOptions || null) : null,
-                deadlineTimestamp: allowDeclare ? playerElig.deadlineTimestamp : undefined,
-                acquisitionTimestamp: allowDeclare ? playerElig.acquisitionTimestamp : undefined,
-              },
-              _rawPlayer: rawPlayer,
-            });
+            openDeclarationModal(readActionSelectPayload(btn));
           });
         });
 
@@ -7218,6 +7245,75 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     // ----------------------------------------------------------------
 
     // ----------------------------------------------------------------
+    // toggleTradeBlock — add a player to, or take him off, the viewer's trade
+    // block, and bring the page up to date: the season data (so the next
+    // re-render keeps it), the open CDM's copy, the ⋮ button's dataset (read
+    // on the next CDM open) and the row's 🏷️ badge. Shared by the CDM's
+    // Trade › Trade Block option and the player sheet's hero toggle, so there
+    // is one write and one set of side effects. Throws on failure; resolves to
+    // whether he is on the block now.
+    // ----------------------------------------------------------------
+    const toggleTradeBlock = async (playerId: string, isOnBlock: boolean, franchiseId: string): Promise<boolean> => {
+      const tradeBlockAction = isOnBlock ? 'remove' : 'add';
+      const res = await fetch('/api/trade-bait', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerId, action: tradeBlockAction }),
+      });
+
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Failed to update trade block');
+
+      // Success — update local state
+      const newTradeBait = tradeBlockAction === 'add';
+
+      // Update the player data in the current season data
+      const { teamData } = getTeamData();
+      const allPlayerArrays = [
+        teamData.players ?? [],
+        teamData.practiceSquad ?? [],
+        teamData.injuredReserve ?? [],
+      ];
+      for (const arr of allPlayerArrays) {
+        const p = arr.find(pl => String(pl.id) === String(playerId));
+        if (p) { p.tradeBait = newTradeBait; break; }
+      }
+
+      // Update the CDM player data for future toggles — only when the modal
+      // holds THIS player (the sheet can toggle while it holds another).
+      const cdmPlayerId = cdmState.playerData?._rawPlayer?.id || cdmState.playerData?.id || '';
+      if (String(cdmPlayerId) === String(playerId)) {
+        if (cdmState.playerData) cdmState.playerData.tradeBait = newTradeBait;
+        if (cdmState.playerData?._rawPlayer) cdmState.playerData._rawPlayer.tradeBait = newTradeBait;
+      }
+
+      // Update the ufa-action-btn data attribute for future CDM opens
+      const ufaBtn = document.querySelector<HTMLElement>(`.ufa-action-btn[data-player-id="${playerId}"]`);
+      if (ufaBtn) ufaBtn.dataset.playerTradeBait = String(newTradeBait);
+
+      // Update the trade bait badge in the roster table
+      // Badge goes INSIDE .player-cell__name (matching the server-side after-name slot)
+      const playerRow = document.querySelector(`tr[data-player-id="${playerId}"]`);
+      if (playerRow) {
+        const existingBadge = playerRow.querySelector('.trade-bait-link');
+        if (newTradeBait && !existingBadge) {
+          const nameEl = playerRow.querySelector('.player-cell__name');
+          if (nameEl) {
+            const badge = document.createElement('a');
+            badge.href = resolveLeaguePath('/theleague/front-office/trade-builder?b=' + (franchiseId || ''));
+            badge.className = 'trade-bait-link';
+            badge.title = 'On Trade Block \u2014 Open in Trade Builder';
+            badge.textContent = '\uD83C\uDFF7\uFE0F';
+            nameEl.appendChild(badge);
+          }
+        } else if (!newTradeBait && existingBadge) {
+          existingBadge.remove();
+        }
+      }
+      return newTradeBait;
+    };
+
+    // ----------------------------------------------------------------
     // showTradeSubOptions — shows 3 trade actions within step 1
     // ----------------------------------------------------------------
     const showTradeSubOptions = () => {
@@ -7287,57 +7383,11 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
           if (tbDesc) tbDesc.textContent = 'Updating trade block on MFL...';
 
           try {
-            const res = await fetch('/api/trade-bait', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ playerId, action: tradeBlockAction }),
-            });
-
-            const result = await res.json();
-            if (!res.ok) throw new Error(result.error || 'Failed to update trade block');
-
-            // Success — update local state
-            const newTradeBait = tradeBlockAction === 'add';
-
-            // Update the player data in the current season data
-            const { teamData } = getTeamData();
-            const allPlayerArrays = [
-              teamData.players ?? [],
-              teamData.practiceSquad ?? [],
-              teamData.injuredReserve ?? [],
-            ];
-            for (const arr of allPlayerArrays) {
-              const p = arr.find(pl => String(pl.id) === String(playerId));
-              if (p) { p.tradeBait = newTradeBait; break; }
-            }
-
-            // Update the CDM player data for future toggles
-            if (cdmState.playerData) cdmState.playerData.tradeBait = newTradeBait;
-            if (cdmState.playerData?._rawPlayer) cdmState.playerData._rawPlayer.tradeBait = newTradeBait;
-
-            // Update the ufa-action-btn data attribute for future CDM opens
-            const ufaBtn = document.querySelector<HTMLElement>(`.ufa-action-btn[data-player-id="${playerId}"]`);
-            if (ufaBtn) ufaBtn.dataset.playerTradeBait = String(newTradeBait);
-
-            // Update the trade bait badge in the roster table
-            // Badge goes INSIDE .player-cell__name (matching the server-side after-name slot)
-            const playerRow = document.querySelector(`tr[data-player-id="${playerId}"]`);
-            if (playerRow) {
-              const existingBadge = playerRow.querySelector('.trade-bait-link');
-              if (newTradeBait && !existingBadge) {
-                const nameEl = playerRow.querySelector('.player-cell__name');
-                if (nameEl) {
-                  const badge = document.createElement('a');
-                  badge.href = resolveLeaguePath('/theleague/front-office/trade-builder?b=' + (cdmState.playerData?.franchiseId || cdmState.playerData?._rawPlayer?.franchiseId || ''));
-                  badge.className = 'trade-bait-link';
-                  badge.title = 'On Trade Block \u2014 Open in Trade Builder';
-                  badge.textContent = '\uD83C\uDFF7\uFE0F';
-                  nameEl.appendChild(badge);
-                }
-              } else if (!newTradeBait && existingBadge) {
-                existingBadge.remove();
-              }
-            }
+            await toggleTradeBlock(
+              playerId,
+              tradeBlockAction === 'remove',
+              cdmState.playerData?.franchiseId || cdmState.playerData?._rawPlayer?.franchiseId || '',
+            );
 
             // Show success feedback
             if (tbLabel) tbLabel.textContent = tradeBlockAction === 'add' ? 'Added to Trade Block' : 'Removed from Trade Block';
@@ -9187,7 +9237,9 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     const {
       openDeclarationModal,
       closeDeclarationModal,
+      setCdmReturnFocus,
       populateCdmActionOptions,
+      describeCdmActions,
       makeCdmActionBtn,
       goToActionSelectStep,
       goToDeclareContractStep,
@@ -9551,9 +9603,124 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     }
     updateView();
 
-    // Attach delegated modal trigger after table is rendered
+    // ----------------------------------------------------------------
+    // Player sheet — the Salary tab, hero quick actions and More actions
+    // (docs/plans/rosters-mobile-layout.md § 4-5). The row is the source:
+    // src/utils/rosters/phone-sheet.ts lifts its cells and prices options
+    // through the wrappers below; every action routes to the implementation
+    // the ⋮ menu already uses.
+    // ----------------------------------------------------------------
+    const sheetPricing = {
+      cutPenalty: (salary: number, years: number) => calculateCutPenalty(salary, years),
+      franchiseTag: (salary: number, position: string) => calculateFranchiseTag(salary, position, config.extensionSeason),
+      teamOption: (salary: number, position: string) => calculateTeamOption(salary, position, config.extensionSeason),
+      extension: (years: number, position: string, extensionYears: number, salary: number) =>
+        calculateVeteranExtension(years, position, config.extensionSeason, extensionYears, salary),
+      formatCurrency: (value: number) => formatCurrency(value),
+      formatCompact: (value: number) => formatSalaryCompact(value),
+    };
+
+    const rosterViewMode = () => {
+      try { return localStorage.getItem('rosterViewMode') === 'coach' ? 'coach' : 'gm'; } catch { return 'gm'; }
+    };
+
+    /** The row and ⋮ button for a player, looked up NOW — the tbody re-renders. */
+    const findRosterRow = (playerId: string) => {
+      const row = rosterTableBody?.querySelector<HTMLTableRowElement>(`tr[data-player-id="${CSS.escape(playerId)}"]`) ?? null;
+      return { row, btn: row?.querySelector<HTMLElement>('.ufa-action-btn') ?? null };
+    };
+
+    /** Open the CDM from the row's ⋮ and press `path`'s options in order. */
+    const openCdmFromRow = (playerId: string, path: readonly string[]) => {
+      const { btn } = findRosterRow(playerId);
+      if (!btn) return;
+      btn.click();
+      // The sheet that asked is closed, so focus returns to the row's ⋮.
+      setCdmReturnFocus(btn);
+      for (const id of path) {
+        const option = document.querySelector<HTMLButtonElement>(`#cdm-action-options .cdm-action-option--${id}`);
+        if (!option || option.disabled) return;
+        option.click();
+      }
+    };
+
+    const buildRosterSheetPayload = (data: PlayerModalData, row: HTMLTableRowElement | null): PlayerModalData => {
+      const btn = row?.querySelector<HTMLElement>('.ufa-action-btn');
+      const playerId = String(btn?.dataset.playerId ?? '');
+      if (!row || !btn || !playerId) return data;
+      const payload = readActionSelectPayload(btn);
+      const elig = payload.eligibility;
+      // The figures the tfoot's current-year Cap Space was painted from.
+      const view = lastViewContext;
+      const capSpaceNow = view && Array.isArray(view.capChargesWithDead)
+        ? Number(view.capLimitForSeason) - Number(view.capChargesWithDead[0] ?? 0)
+        : NaN;
+      const fields = buildRosterSheetFields({
+        player: {
+          id: playerId,
+          position: payload.position || data.position || '',
+          salary: Number(payload.salary) || 0,
+          years: Number(payload.years) || 0,
+          contractInfo: elig.contractInfo || '',
+          tradeBait: !!payload.tradeBait,
+          displayTag: payload.displayTag || 'active',
+        },
+        salaryYears,
+        yearCells: liftYearCells(row, salaryYears.length),
+        totalRemaining: data.totalRemaining ?? null,
+        thisWeek: liftThisWeek(row),
+        myRank: liftMyRank(row),
+        mode: rosterViewMode(),
+        viewer: {
+          signedIn: !!config.authUser?.franchiseId,
+          isOwnTeam: !!config.authUser?.franchiseId && config.authUser.franchiseId === currentTeam,
+        },
+        activeActionType: (contractActions as Record<string, { type?: string }>)[playerId]?.type ?? null,
+        capSpaceNow: Number.isFinite(capSpaceNow) ? capSpaceNow : null,
+        descriptors: describeCdmActions(elig, playerId),
+        eligibility: elig,
+        now: Date.now(),
+      }, sheetPricing);
+      return { ...data, ...fields, onAction: rosterSheetAction(playerId) };
+    };
+
+    const rosterSheetAction = (playerId: string) => createRosterSheetActionHandler({
+      simulate: (type) => {
+        const { btn } = findRosterRow(playerId);
+        if (!btn) return;
+        // Exactly what the CDM's Simulate Cut / Simulate Trade do.
+        selectedPlayer = { ...readActionSelectPayload(btn)._rawPlayer };
+        applyContractAction(type);
+      },
+      undo: () => removeContractAction(playerId),
+      toggleTradeBlock: async () => {
+        const { btn } = findRosterRow(playerId);
+        try {
+          const onBlock = await toggleTradeBlock(
+            playerId,
+            btn?.dataset.playerTradeBait === 'true',
+            btn?.dataset.playerFranchiseId || currentTeam,
+          );
+          return { ok: true, onBlock };
+        } catch (err) {
+          return { ok: false, error: (err as Error)?.message };
+        }
+      },
+      openCdm: (path) => openCdmFromRow(playerId, path),
+      rebuild: () => {
+        const { row } = findRosterRow(playerId);
+        const raw = row?.querySelector('.player-cell__name[data-player-modal]')?.getAttribute('data-player-modal');
+        if (!row || !raw) return null;
+        try { return buildRosterSheetPayload(JSON.parse(raw), row); } catch { return null; }
+      },
+    });
+
+    // Attach delegated modal trigger after table is rendered. `enrich` runs
+    // at click time with the row the tap landed in.
     const rosterTbody = document.getElementById('rosterTableBody');
-    if (rosterTbody) initPlayerModalTrigger(rosterTbody);
+    if (rosterTbody) initPlayerModalTrigger(rosterTbody, {
+      enrich: (data, { row }) => buildRosterSheetPayload(data, row),
+    });
 
     // ================================================================
     //  Contract Demo — guided walkthrough with mock data injection
