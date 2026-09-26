@@ -4003,3 +4003,40 @@ stylesheet respect what the page decided (`td.ranking-cell:not(:empty):not([styl
 **Evidence:** `src/styles/rosters-mobile.css`, `src/utils/rosters/phone-row.ts`,
 `tests/rosters-phone-row.test.ts`; parity 10/10 renders identical before and
 after.
+
+## 2026-09-26 - Flex-card rows: break lines with an item, not a basis; and a `<tr>` is content-box
+
+**Context:** Decluttering the Rosters phone card (PR B of
+`docs/plans/rosters-mobile-layout.md`): position pill under the headshot, NFL
+logo back in PlayerCell's meta line, no injury word, the cap card as one button.
+
+**What worked:**
+
+- **End line 1 with an empty full-width item** (`.rr-ph--br`: `order: 12;
+  flex: 0 0 100%; height: 0`, emitted by `buildPhoneLineSpans`, so the parity
+  harness still sees no text). The name can then be `flex: 1 1 0` and take
+  every pixel the right-hand value leaves. The old way — a name basis of
+  "100% minus a reserved right column" — reserved the widest salary's width on
+  every row, which is what pushed the trade-block tag onto its own line under
+  "Sam Darnold (Q)" on a phone with larger text.
+- **`display: contents` on PlayerCell's `.player-meta`** lets its two children
+  part ways — the logo stays an in-flow flex item (first on line 2), the
+  position span is absolutely positioned under the avatar — without touching
+  PlayerCell's markup.
+- **A whole card as one `<button>`**: spans only (a button takes phrasing
+  content, so no heading or list), named with `aria-labelledby` pointing at its
+  own visible year/amount spans plus a hint span. The name follows every
+  repaint of the amount with nothing to keep in step.
+
+**Traps hit:**
+
+- **`min-height` on a `display: flex` `<tr>` is content-box** — the padding
+  was added a second time and every card grew ~20px; `align-content` then
+  spread the two lines apart to fill it. `box-sizing: border-box` +
+  `align-content: center`.
+- **Two adjacent 44px centred hit areas overlap.** Once the (Q) button and the
+  🏷️ link sat 4px apart, the link's `::after` (later in the DOM) swallowed the
+  centre of (Q). Split them at the gap with `:has(+ .trade-bait-link)`.
+
+**Evidence:** `tests/rosters-phone-row.test.ts` ("the phone card layout",
+"the cap card is one button into Cap by year").

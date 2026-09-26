@@ -1847,13 +1847,11 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     </RosterHeader>
     <!-- Roster View -->
     <div class="view-container" data-view-content="roster">
-      {/* Phone only: this year's cap, the cap bar and the Sims · Trade ·
-          Dead $ · Tags chips (docs/plans/rosters-mobile-layout.md § 6). */}
+      {/* Phone only: this year's cap and the cap bar, the whole card one
+          button into Cap by year (docs/plans/rosters-mobile-layout.md § 6). */}
       <RosterCapStrip
         year={SALARY_YEARS[0]}
         capSpace={headerMoney(headerCapSpace)}
-        tradeHref={r('/theleague/front-office/trade-builder')}
-        plannerHref={r('/theleague/rosters?view=planner')}
       />
       <div class="roster-table-card">
         <div class="roster-controls">
@@ -2095,7 +2093,6 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
                     contractYears: player.contractYears,
                     firstYear: SALARY_YEARS[0],
                     contractInfo: (player as any).contractInfo,
-                    injuryStatus: player.injuryStatus,
                     kickoffIso: player.opponent !== 'BYE' ? player.gameOdds?.date : null,
                     kickoffZone: rowKickoffClock?.zone,
                     kickoffLabel: rowKickoffClock?.label,
@@ -6772,7 +6769,6 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
             contractYears: effectiveYears,
             firstYear: salaryYears[0],
             contractInfo: phoneRow.contractInfo,
-            injuryStatus: phoneRow.injuryStatus,
             kickoffIso: phoneRow.opponent !== 'BYE' ? phoneRow.gameOdds?.date : null,
             kickoffZone: config.kickoffClock?.zone,
             kickoffLabel: config.kickoffClock?.label,
@@ -9651,8 +9647,6 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
         }),
         // A simulated cut or trade leaves the roster, so its salary leaves the bar.
         buckets: calculateBucketCaps(withoutSimRemoved(rows, contractActions)),
-        teamId: String(currentTeam ?? ''),
-        viewerTeamId: config.authUser?.franchiseId ?? null,
       });
 
       // Cutdown Plan panel tracks every view change (team switch, roster

@@ -10,10 +10,15 @@
  * pieces. `scripts/roster-parity-check.mjs` at 1440px must report 0 diffs.
  *
  * THE CARD. Below 768px the table, tbody and cells stop being a table and
- * each roster <tr> becomes a wrapping flex card: the avatar pinned on the left,
+ * each roster <tr> becomes a wrapping flex card: the avatar pinned on the left
+ * with the position pill under it,
  *   line 1  name + every after-name badge ............ current-year salary | Proj
- *   line 2  [pill] years chip, thru 'YY, RC/TO, injury .............. rank | avg
+ *   line 2  NFL logo, years chip, thru 'YY, RC/TO ...................  rank | avg
+ *           (Coach: NFL logo, kickoff, vs/@ opponent, rank, weather)
  *   line 3  (Coach) spread · O/U · last-3 trend
+ * The NFL logo stays in PlayerCell's meta line, where the position used to
+ * be; the pill moved under the headshot (user, 2026-09-26). There is no
+ * spelled-out injury word: the (Q) / (D) button after the name carries it.
  * built from the row's EXISTING cells. `display: contents` on the player cell
  * (and the player-cell wrappers inside it) makes the name, the meta row and
  * the badges direct flex items of the <tr>, so `order` can put a cell on the
@@ -96,14 +101,23 @@
   /* ── The card ─────────────────────────────────────────────────────────── */
   .roster-page[data-league='theleague'] #rosterTableBody > tr.roster-row {
     --rr-avatar: 40px;
-    --rr-right: 6.25rem;
+    /* The pill's height under the avatar: 11px label + 2 x 3px padding. */
+    --rr-pill: 19px;
     position: relative;
     display: flex !important;
     flex-wrap: wrap;
     align-items: center;
+    /* The left column (avatar + pill) can be taller than two text lines;
+       the lines sit centred against it rather than stretching apart. */
+    align-content: center;
     column-gap: 0.375rem;
     row-gap: 0.25rem;
-    min-height: calc(var(--rr-avatar) + 1.25rem);
+    /* The left column is the avatar with the position pill tucked under it
+       (4px of overlap), so a two-line card must still clear the pill.
+       border-box, so the figure is the card's whole height: a table row is
+       content-box, which silently added the padding a second time. */
+    box-sizing: border-box;
+    min-height: calc(var(--rr-avatar) + var(--rr-pill) - 4px + 1.25rem);
     padding: 0.625rem 0.75rem 0.625rem calc(var(--rr-avatar) + 1.25rem);
     border-left-width: 3px;
     border-left-style: solid;
@@ -168,11 +182,13 @@
   }
 
   /* Line 1: the name and every after-name badge, wrapping rather than
-     truncating — an ellipsis hides data. Its basis plus the right-hand value's
-     fills the line, which is what pushes line 2 onto its own line. */
+     truncating — an ellipsis hides data. It takes EVERY pixel the right-hand
+     value leaves (basis 0, grow 1): nothing is reserved for a salary wider
+     than this row's, so a trade-block tag stays on the name line whenever it
+     fits. Line 2 starts at the explicit break below, not at a basis. */
   .roster-page[data-league='theleague'] #rosterTableBody .player-cell__name {
     order: 10;
-    flex: 1 1 calc(100% - var(--rr-right) - 0.375rem);
+    flex: 1 1 0;
     min-width: 0;
     white-space: normal;
     overflow: visible;
@@ -185,7 +201,7 @@
   .roster-page[data-league='theleague'] #rosterTableBody td[data-column='year1'],
   .roster-page[data-league='theleague'] #rosterTableBody td[data-column='projected'] {
     order: 11;
-    flex: 0 0 var(--rr-right);
+    flex: 0 0 auto;
     position: relative;
     text-align: right !important;
     font-size: 0.9375rem;
@@ -224,15 +240,48 @@
     content: 'My Rank ';
   }
 
-  /* Line 2 starts with the position pill: PlayerCell's own meta row, with its
-     "QB · RC" text turned into a coloured pill. The designation moves to its
-     own chip further along the line; the original text stays in the
-     accessibility tree (font-size 0 hides glyphs, not text), so the pill's
-     generated label is marked alt-empty to avoid reading it twice. */
+  /* The end of line 1 (phone-row.ts emits it, empty). A full-width,
+     zero-height item: everything ordered after it starts line 2. The
+     negative margin gives back the row-gap the empty line would add. */
+  .roster-page[data-league='theleague'] #rosterTableBody .rr-ph.rr-ph--br {
+    display: block;
+    order: 12;
+    flex: 0 0 100%;
+    height: 0;
+    margin-top: -0.25rem;
+  }
+
+  /* PlayerCell's meta row dissolves too: its NFL logo stays where it is in
+     PlayerCell — first on line 2, where the position used to sit — and its
+     position becomes the pill under the headshot. The logo's own markup and
+     size are PlayerCell's, untouched. */
   .roster-page[data-league='theleague'] #rosterTableBody .player-meta {
+    display: contents;
+  }
+
+  .roster-page[data-league='theleague'] #rosterTableBody .player-meta__logo {
     order: 21;
-    display: inline-flex;
-    gap: 0;
+  }
+
+  /* The position pill, under the headshot and centred on it: PlayerCell's
+     own "QB · RC" span, restyled. The designation moves to its own chip on
+     line 2; the original text stays in the accessibility tree (font-size 0
+     hides glyphs, not text), so the pill's generated label is marked
+     alt-empty to avoid reading it twice. */
+  .roster-page[data-league='theleague'] #rosterTableBody .player-meta__pos {
+    position: absolute;
+    top: calc(0.625rem + var(--rr-avatar) - 4px);
+    left: calc(0.625rem + var(--rr-avatar) / 2);
+    transform: translateX(-50%);
+    z-index: 1;
+    white-space: nowrap;
+    font-size: 0.625rem;
+    line-height: 1;
+  }
+
+  .roster-page[data-league='theleague'] #rosterTableBody > tr.roster-row--tier-divider .player-meta__pos,
+  .roster-page[data-league='theleague'] #rosterTableBody > tr.roster-row--active:first-child .player-meta__pos {
+    top: calc(0.625rem + 1.75rem + var(--rr-avatar) - 4px);
   }
 
   .roster-page[data-league='theleague'] #rosterTableBody :is(tr[data-pos='QB'], tr[data-pos='RB'], tr[data-pos='WR'], tr[data-pos='TE'], tr[data-pos='PK'], tr[data-pos='DEF']) .player-meta__pos {
@@ -295,25 +344,6 @@
   /* A position the pill has no colour for (no data-pos match) keeps its
      plain "XX · RC" text. */
 
-  /* The NFL crest badges the avatar's corner (Sleeper's team badge). It is
-     PlayerCell's own meta logo, moved — not a second image. */
-  .roster-page[data-league='theleague'] #rosterTableBody .player-meta__logo {
-    position: absolute;
-    top: calc(0.625rem + var(--rr-avatar) - 16px);
-    left: calc(0.625rem + var(--rr-avatar) - 14px);
-    width: 18px;
-    height: 18px;
-    padding: 1px;
-    border-radius: 50%;
-    background: var(--card-surface, #ffffff);
-    box-shadow: 0 0 0 1px var(--content-border, #e2e8f0);
-  }
-
-  .roster-page[data-league='theleague'] #rosterTableBody > tr.roster-row--tier-divider .player-meta__logo,
-  .roster-page[data-league='theleague'] #rosterTableBody > tr.roster-row--active:first-child .player-meta__logo {
-    top: calc(0.625rem + 1.75rem + var(--rr-avatar) - 16px);
-  }
-
   /* The generated line-2 values (phone-row.ts). */
   .roster-page[data-league='theleague'] #rosterTableBody .rr-ph {
     display: inline;
@@ -339,13 +369,6 @@
     font-weight: 700;
   }
 
-  /* --color-error-dark, not --color-error: #dc2626 is ~3.3:1 on the
-     practice-squad row tint; #b91c1c (light) / #fca5a5 (dark) clear 4.5. */
-  .roster-page[data-league='theleague'] #rosterTableBody .rr-ph--inj {
-    color: var(--color-error-dark, #b91c1c);
-    font-weight: 600;
-  }
-
   /* ── GM line 2 ───────────────────────────────────────────────────────── */
   .roster-page[data-league='theleague']:not(.coach-mode) #rosterTableBody td[data-column='years'] {
     display: inline-flex !important;
@@ -363,7 +386,6 @@
 
   .roster-page[data-league='theleague'] #rosterTableBody .rr-ph--thru { order: 23; }
   .roster-page[data-league='theleague'] #rosterTableBody .rr-ph--desig { order: 24; }
-  .roster-page[data-league='theleague'] #rosterTableBody .rr-ph--inj { order: 25; }
   .roster-page[data-league='theleague'] #rosterTableBody .contract-action-badge {
     order: 26;
     margin-left: 0;
@@ -454,7 +476,6 @@
     display: none !important;
   }
 
-  .roster-page[data-league='theleague'].coach-mode #rosterTableBody .rr-ph--inj { order: 28; }
   .roster-page[data-league='theleague'].coach-mode #rosterTableBody .contract-action-badge { order: 29; }
 
   /* Line 2, right: the season average the projection is judged against. */
@@ -532,6 +553,21 @@
     width: 44px;
     height: 44px;
     transform: translate(-50%, -50%);
+  }
+
+  /* The (Q) button and the trade-block tag now share the name line, 4px
+     apart, so two centred 44px areas would overlap and the tag's (later in
+     the DOM) would swallow taps meant for (Q). Split them at the gap: (Q)'s
+     area grows leftwards from the middle of the gap, the tag's rightwards. */
+  .roster-page[data-league='theleague'] #rosterTableBody .injury-indicator:has(+ .trade-bait-link)::after {
+    left: auto;
+    right: -2px;
+    transform: translateY(-50%);
+  }
+
+  .roster-page[data-league='theleague'] #rosterTableBody .injury-indicator + .trade-bait-link::after {
+    left: -2px;
+    transform: translateY(-50%);
   }
 
   /* ── Totals: the current year as label / value lines ────────────────── */
@@ -682,13 +718,35 @@
   }
 
   /* ── The cap card ─────────────────────────────────────────────────────── */
+  /* ONE button: the whole card opens Cap by year (RosterCapStrip.astro). It
+     keeps the card's look, so the button reset below undoes only what a
+     <button> brings (centred text, UA font and colour). */
   .roster-page[data-league='theleague'] .rcap {
     display: block;
+    width: 100%;
     margin: 0 0 0.75rem;
     padding: 0.875rem 1rem;
+    font: inherit;
+    text-align: left;
+    color: inherit;
     background: var(--card-surface, #ffffff);
     border: 1px solid var(--content-border, #e2e8f0);
     border-radius: var(--radius-lg, 0.75rem);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .roster-page[data-league='theleague'] .rcap:hover {
+    border-color: var(--league-accent, var(--color-primary, #1c497c));
+  }
+
+  .roster-page[data-league='theleague'] .rcap:active {
+    background: var(--content-bg-muted, #f3f4f6);
+  }
+
+  .roster-page[data-league='theleague'] .rcap:focus-visible {
+    outline: 2px solid var(--league-accent, var(--color-primary, #1c497c));
+    outline-offset: 2px;
   }
 
   .rcap__head {
@@ -699,7 +757,6 @@
   }
 
   .rcap__title {
-    margin: 0;
     font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 0.04em;
@@ -728,24 +785,10 @@
     width: 100%;
     height: 14px;
     margin: 0.625rem 0 0.375rem;
-    padding: 0;
     overflow: hidden;
     border: 1px solid var(--content-border, #e2e8f0);
     border-radius: 999px;
     background: var(--content-bg-muted, #f3f4f6);
-    cursor: pointer;
-  }
-
-  /* A 14px bar is a small target; the hit area reaches 44px without moving
-     the chips below it. */
-  .rcap__bar {
-    position: relative;
-  }
-
-  .rcap__bar::after {
-    content: '';
-    position: absolute;
-    inset: -15px 0;
   }
 
   .rcap__seg {
@@ -780,57 +823,26 @@
     border-radius: 999px;
   }
 
+  /* The legend, with a chevron at its end: the one visual cue that the card
+     opens something. */
   .rcap__key {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     gap: 0.25rem 0.75rem;
-    margin: 0 0 0.625rem;
-    padding: 0;
-    list-style: none;
     font-size: 0.6875rem;
     color: var(--content-text-muted, #64748b);
   }
 
-  .rcap__chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-
-  .rcap__chip {
+  .rcap__keyitem {
     display: inline-flex;
     align-items: center;
-    gap: 0.375rem;
-    min-height: 44px;
-    padding: 0 0.875rem;
-    font: inherit;
-    font-size: 0.8125rem;
-    font-weight: 600;
-    color: var(--page-text, #111827);
-    text-decoration: none;
-    background: var(--content-bg-muted, #f3f4f6);
-    border: 1px solid var(--content-border, #e2e8f0);
-    border-radius: 999px;
-    cursor: pointer;
   }
 
-  .rcap__chip--accent {
-    border-color: var(--color-warning, #f59e0b);
-  }
-
-  .rcap__count {
-    min-width: 1.25rem;
-    padding: 0 0.3125rem;
-    border-radius: 999px;
-    font-size: 0.6875rem;
-    font-weight: 700;
-    text-align: center;
-    color: var(--badge-warning-text);
-    background: var(--badge-warning-bg);
-  }
-
-  .rcap [hidden] {
-    display: none !important;
+  .rcap__chev {
+    display: inline-flex;
+    margin-left: auto;
+    color: var(--content-text-muted, #64748b);
   }
 
   /* ── The sim bar ───────────────────────────────────────────────────────── */

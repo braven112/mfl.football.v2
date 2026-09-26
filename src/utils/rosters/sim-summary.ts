@@ -201,10 +201,6 @@ export interface SimSurfaceState {
   moves: SimMove[];
   capByYear: CapYear[];
   buckets: CapBuckets;
-  /** The team being viewed, for the Trade chip's link. */
-  teamId: string;
-  /** The signed-in owner's franchise, or null. */
-  viewerTeamId: string | null;
 }
 
 const pct = (part: number, whole: number) => (whole > 0 ? Math.max(0, Math.min(100, (part / whole) * 100)) : 0);
@@ -219,8 +215,6 @@ function renderCapCard(state: SimSurfaceState, current: CapYear | undefined, cou
   set('[data-rcap-year]', current.year);
   set('[data-rcap-space]', formatMoney(current.space));
   card.querySelector('[data-rcap-space]')?.classList.toggle('is-negative', current.space < 0);
-  set('[data-rcap-sims]', String(count));
-
   // The bar: what the cap is spent on, then the room left. A simulation that
   // freed room shows that slice hatched inside the space.
   const used = current.salary + current.dead;
@@ -238,27 +232,14 @@ function renderCapCard(state: SimSurfaceState, current: CapYear | undefined, cou
     const seg = card.querySelector<HTMLElement>(`[data-rcap-seg="${key}"]`);
     if (seg) seg.style.width = `${pct(value, whole)}%`;
   });
-  const bar = card.querySelector<HTMLElement>('[data-rcap-bar]');
-  if (bar) {
-    bar.setAttribute(
-      'aria-label',
-      `${current.year} cap: ${formatMoney(used)} used, ${formatMoney(current.space)} space. Open cap by year`,
-    );
+  // The card is one button named by its own visible text (the year, the
+  // space) plus this hint, so only the hint needs painting: it carries what
+  // the card no longer shows as a chip — how many moves are simulated.
+  const hint = card.querySelector<HTMLElement>('[data-rcap-hint]');
+  if (hint) {
+    const sims = count > 0 ? ` ${count} simulated ${count === 1 ? 'move' : 'moves'}.` : '';
+    hint.textContent = `, ${formatMoney(used)} used.${sims} Open cap by year`;
   }
-
-  const trade = card.querySelector<HTMLAnchorElement>('[data-rcap-trade]');
-  if (trade) {
-    const base = trade.dataset.base ?? trade.getAttribute('href') ?? '';
-    if (!trade.dataset.base) trade.dataset.base = base;
-    const other = state.teamId && state.teamId !== state.viewerTeamId;
-    trade.href = other ? `${base}${base.includes('?') ? '&' : '?'}b=${encodeURIComponent(state.teamId)}` : base;
-  }
-
-  const pendingTags = Object.values(state.actions).some((a) => a.type === 'franchise' || a.type === 'extension');
-  const tagsLink = card.querySelector<HTMLElement>('[data-rcap-tags-link]');
-  const tagsReview = card.querySelector<HTMLElement>('[data-rcap-tags-review]');
-  if (tagsLink) tagsLink.hidden = pendingTags;
-  if (tagsReview) tagsReview.hidden = !pendingTags;
 }
 
 function renderSimBar(state: SimSurfaceState, current: CapYear | undefined, count: number): void {

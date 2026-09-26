@@ -82,7 +82,6 @@ describe('buildPhoneLineSpans', () => {
     contractYears: 3,
     firstYear: 2026,
     contractInfo: 'RC',
-    injuryStatus: 'Questionable',
     kickoffIso: '2026-09-27T17:00:00Z',
     kickoffZone: 'America/Los_Angeles',
     kickoffLabel: 'PT',
@@ -98,17 +97,23 @@ describe('buildPhoneLineSpans', () => {
   it('carries each value in its own kind of span', () => {
     expect(html).toContain(`class="rr-ph rr-ph--thru" data-t="thru '28"`);
     expect(html).toContain('class="rr-ph rr-ph--desig" data-t="RC"');
-    expect(html).toContain('class="rr-ph rr-ph--inj" data-t="Questionable"');
     expect(html).toContain('class="rr-ph rr-ph--kick" data-t="Sun 10:00 AM PT"');
     expect(html).toContain('class="rr-ph rr-ph--opp" data-t="CLE"');
   });
 
-  it('emits nothing for a value that is empty', () => {
-    expect(buildPhoneLineSpans({})).toBe('');
+  it('emits only the line-1 break for a row with no values', () => {
+    expect(buildPhoneLineSpans({})).toBe('<span class="rr-ph rr-ph--br" aria-hidden="true"></span>');
+  });
+
+  it('never spells out the injury status — the (Q) / (D) button after the name carries it', () => {
+    // The input has no injury field at all; an extra property is ignored.
+    const withInjury = buildPhoneLineSpans({ injuryStatus: 'Questionable' } as never);
+    expect(withInjury).not.toContain('Questionable');
+    expect(withInjury).not.toContain('rr-ph--inj');
   });
 
   it('escapes what it interpolates into an attribute', () => {
-    expect(buildPhoneLineSpans({ injuryStatus: 'Out"><script>' })).not.toContain('"><script>');
+    expect(buildPhoneLineSpans({ opponent: 'x"><script>' })).not.toContain('"><script>');
   });
 });
 
@@ -141,5 +146,85 @@ describe('the rosters page wires the card into BOTH row builders', () => {
     // The salary years are generated in both places from SALARY_YEARS.
     expect(thead).toContain('data-sort-key={`salary_${index}`}');
     expect(select).toContain('value={`salary_${index}`}');
+  });
+});
+
+/**
+ * The card's layout decisions (user, 2026-09-26), pinned on the stylesheet
+ * itself — the parity harness only sees desktop, and these are phone-only.
+ */
+describe('the phone card layout (rosters-mobile.css)', () => {
+  const CSS = fs.readFileSync(path.join(process.cwd(), 'src/styles/rosters-mobile.css'), 'utf8');
+  /**
+   * The declarations of every rule with a selector that ENDS in `needle`
+   * (so `.player-meta` does not also collect `.player-meta__logo`).
+   */
+  const rulesFor = (needle: string) =>
+    [...CSS.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+      .filter((m) => m[1].split(',').some((sel) => sel.trim().endsWith(needle)))
+      .map((m) => m[2])
+      .join('\n');
+
+  it('leaves the NFL logo in PlayerCell’s meta line, first on line 2 — never moved onto the avatar', () => {
+    const logo = rulesFor('#rosterTableBody .player-meta__logo');
+    expect(logo).toMatch(/order:\s*21;/);
+    expect(logo).not.toMatch(/position:\s*absolute/);
+    expect(logo).not.toMatch(/\b(top|left):/);
+    // The meta row dissolves so the logo and the pill can part ways.
+    expect(rulesFor('#rosterTableBody .player-meta')).toMatch(/display:\s*contents/);
+  });
+
+  it('puts the position pill under the headshot, centred on it', () => {
+    const pos = rulesFor('#rosterTableBody .player-meta__pos');
+    expect(pos).toMatch(/position:\s*absolute/);
+    expect(pos).toMatch(/top:\s*calc\(0\.625rem \+ var\(--rr-avatar\)/);
+    expect(pos).toMatch(/left:\s*calc\(0\.625rem \+ var\(--rr-avatar\) \/ 2\)/);
+    // The card is tall enough for the avatar plus the pill.
+    expect(rulesFor('#rosterTableBody > tr.roster-row')).toMatch(/min-height:\s*calc\(var\(--rr-avatar\) \+ var\(--rr-pill\)/);
+  });
+
+  it('has no rule for a spelled-out injury word', () => {
+    expect(CSS).not.toContain('rr-ph--inj');
+  });
+
+  it('reserves no fixed right column on line 1, so a trade-block tag stays beside a name that fits', () => {
+    expect(CSS).not.toContain('--rr-right');
+    expect(rulesFor('#rosterTableBody .player-cell__name')).toMatch(/flex:\s*1 1 0;/);
+    const br = rulesFor('.rr-ph.rr-ph--br');
+    expect(br).toMatch(/order:\s*12;/);
+    expect(br).toMatch(/flex:\s*0 0 100%/);
+  });
+
+  it('splits the (Q) and trade-block hit areas where they sit side by side', () => {
+    expect(rulesFor('.injury-indicator:has(+ .trade-bait-link)::after')).toMatch(/right:\s*-2px/);
+    expect(rulesFor('.injury-indicator + .trade-bait-link::after')).toMatch(/left:\s*-2px/);
+  });
+});
+
+describe('the cap card is one button into Cap by year', () => {
+  const CARD = fs.readFileSync(path.join(process.cwd(), 'src/components/theleague/RosterCapStrip.astro'), 'utf8');
+  const markup = CARD.slice(CARD.lastIndexOf('---') + 3);
+
+  it('is a single <button> that opens the review sheet, named by its own visible text', () => {
+    expect(markup.match(/<button\b/g)).toHaveLength(1);
+    expect(markup).toMatch(/<button\s+type="button"\s+class="rcap"[^>]*data-rsim-open/);
+    expect(markup).toContain('aria-labelledby="rcapTitle rcapSpace rcapHint"');
+    for (const id of ['rcapTitle', 'rcapSpace', 'rcapHint']) expect(markup).toContain(`id="${id}"`);
+  });
+
+  it('holds only phrasing content (no heading, list or link inside a button)', () => {
+    expect(markup).not.toMatch(/<(h[1-6]|ul|ol|li|a|div|section)\b/);
+  });
+
+  it('keeps the cap space, the bar and the legend; the chips are gone', () => {
+    expect(markup).toContain('data-rcap-space');
+    expect(markup).toContain('data-rcap-bar');
+    for (const key of ['Active', 'Practice', 'IR', 'Dead', 'Sims']) expect(markup).toContain(`>${key}</span>`);
+    expect(markup).not.toMatch(/rcap__chip|data-rcap-trade|data-rcap-tags|Dead \$/);
+  });
+
+  it('has a visible focus ring and a real target size', () => {
+    const CSS = fs.readFileSync(path.join(process.cwd(), 'src/styles/rosters-mobile.css'), 'utf8');
+    expect(CSS).toMatch(/\.rcap:focus-visible\s*\{[^}]*outline:\s*2px solid/);
   });
 });

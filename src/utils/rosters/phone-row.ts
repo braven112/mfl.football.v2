@@ -5,7 +5,7 @@
  * Below 768px `src/styles/rosters-mobile.css` turns each roster `<tr>` into a
  * three-line card built from the row's EXISTING cells. The few things a card
  * shows that no cell carries — "thru '28", the contract designation, the
- * injury word, the kickoff time and the opponent's abbreviation — ride on
+ * kickoff time and the opponent's abbreviation — ride on
  * EMPTY spans emitted here, and the stylesheet prints them from a data
  * attribute with `::before`.
  *
@@ -106,7 +106,6 @@ export interface PhoneLineInput {
   /** The first salary year column (the league year). */
   firstYear?: number | string | null;
   contractInfo?: string | null;
-  injuryStatus?: string | null;
   /** ISO kickoff instant from the row's `gameOdds.date`. */
   kickoffIso?: string | null;
   kickoffZone?: string | null;
@@ -119,15 +118,29 @@ const span = (kind: string, text: string): string =>
   text ? `<span class="rr-ph rr-ph--${kind}" data-t="${escapeHtml(text)}"></span>` : '';
 
 /**
+ * The line break after line 1. With it, line 1 is the name and the
+ * right-hand value with NOTHING reserved: the name takes every pixel the value
+ * does not, so a trade-block tag stays beside a long name instead of wrapping
+ * under it whenever the two fit. (Without a break, the name needed a fixed
+ * basis — width minus a reserved right column — to push line 2 down, and the
+ * reserve was sized for the widest salary on every row.) Empty, like the rest.
+ */
+const LINE_BREAK = '<span class="rr-ph rr-ph--br" aria-hidden="true"></span>';
+
+/**
  * The empty carrier spans for one roster row. Order in the markup does not
  * matter (the phone stylesheet places each one with `order`), and a value that
  * is empty emits nothing at all.
+ *
+ * No injury word: the `(Q)` / `(D)` button after the name already says it
+ * (user, 2026-09-26), and the button still opens the injury detail. The
+ * status is also in the player sheet.
  */
 export function buildPhoneLineSpans(input: PhoneLineInput): string {
   return [
+    LINE_BREAK,
     span('thru', contractThruLabel(input.contractYears, input.firstYear)),
     span('desig', designationLabel(input.contractInfo)),
-    span('inj', String(input.injuryStatus ?? '').trim()),
     span('kick', formatKickoffCompact(input.kickoffIso, input.kickoffZone, input.kickoffLabel)),
     span('opp', String(input.opponent ?? '').trim().toUpperCase()),
   ].join('');
