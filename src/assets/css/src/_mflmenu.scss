@@ -99,6 +99,51 @@
     -webkit-transition: 0.25s;
     transition: 0.25s;
   }
+  // No-JS fallback. MFL ships a bare `<label><span></span></label>`; the four
+  // bun spans above are injected by mflPageEnhancements.js, which only the
+  // TheLeague/AFL bundles load. A skin used without that bundle (Archie's,
+  // MFL 10105) got an invisible toggle, so the empty span draws the icon
+  // itself: the span is the middle line, ::before/::after the outer two.
+  // `:empty` stops matching once the script fills it. Everything pivots on
+  // the middle line's centre, so the open state's 180deg spin (applied to
+  // every label span) and the X both stay in the hamburger's own frame.
+  // The open-state selectors are anchored with `> input` so they never
+  // reach the submenu toggles, whose empty spans draw their own chevrons.
+  .myfantasyleague_menu > label > span:empty {
+    display: block;
+    width: 25px;
+    height: 3px;
+    position: absolute;
+    right: 15px;
+    top: 20px;
+    transition: 0.25s;
+  }
+  .myfantasyleague_menu > label > span:empty::before,
+  .myfantasyleague_menu > label > span:empty::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    transition: 0.25s;
+  }
+  .myfantasyleague_menu > label > span:empty::before {
+    top: -9px;
+  }
+  .myfantasyleague_menu > label > span:empty::after {
+    top: 9px;
+  }
+  .myfantasyleague_menu > input:checked ~ label > span:empty {
+    background: transparent;
+  }
+  .myfantasyleague_menu > input:checked ~ label > span:empty::before {
+    top: 0;
+    transform: rotate(45deg);
+  }
+  .myfantasyleague_menu > input:checked ~ label > span:empty::after {
+    top: 0;
+    transform: rotate(-45deg);
+  }
   .myfantasyleague_menu input:checked ~ label .top-bun {
     width: 0%;
     top: 30px;
@@ -344,6 +389,12 @@
   .myfantasyleague_menu > label .burger,
   .myfantasyleague_menu > label .double-burger,
   .myfantasyleague_menu > label .bottom-bun {
+    background-color: $menu-text-color;
+  }
+
+  .myfantasyleague_menu > label > span:empty,
+  .myfantasyleague_menu > label > span:empty::before,
+  .myfantasyleague_menu > label > span:empty::after {
     background-color: $menu-text-color;
   }
 

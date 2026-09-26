@@ -23,6 +23,15 @@
           "value": "public, max-age=3600, s-maxage=31536000, stale-while-revalidate=604800"
         }
       ]
+    },
+    {
+      "source": "/assets/css/dist/archies_main.css",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
     }
   ],
   "redirects": [
