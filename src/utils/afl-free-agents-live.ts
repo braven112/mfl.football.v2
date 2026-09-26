@@ -238,16 +238,23 @@ export function resolveConferenceSelection(
 // and concurrent cold-cache callers share one in-flight fetch.
 const LIVE_TTL_MS = 60_000;
 const ERROR_TTL_MS = 20_000;
+// Keyed by league as well as year: the AFL-family page serves more than one
+// league (the custom-site demo's keeper slot), and one league's rosters must
+// never answer for another's.
 let rostersCache: { at: number; ok: boolean; year: string; data: unknown } | null = null;
 let inflight: { year: string; promise: Promise<unknown | null> } | null = null;
 
 /** Snapshot fields the fetch layer uses to validate a payload before caching it. */
 export type FaFetchValidation = Pick<FaSnapshot, 'conferences' | 'rosterFranchiseCount'>;
 
-async function doFetchRosters(year: string, validation?: FaFetchValidation): Promise<unknown | null> {
+async function doFetchRosters(
+  year: string,
+  validation: FaFetchValidation | undefined,
+  leagueId: string,
+): Promise<unknown | null> {
   const prior = rostersCache;
-  const afl = getLeagueBySlug('afl-fantasy')!;
-  const url = buildMflExportUrl({ type: 'rosters', leagueId: afl.id, year });
+  const cacheKey = `${leagueId}:${year}`;
+  const url = buildMflExportUrl({ type: 'rosters', leagueId, year });
   try {
     const res = await fetchWithTimeout(url, { timeoutMs: 5000 });
     if (!res.ok) throw new Error(`MFL rosters HTTP ${res.status}`);
@@ -260,7 +267,7 @@ async function doFetchRosters(year: string, validation?: FaFetchValidation): Pro
     if (!rosterSetsFor(data, validation?.conferences ?? null, validation?.rosterFranchiseCount)) {
       throw new Error('MFL rosters payload failed plausibility validation');
     }
-    rostersCache = { at: Date.now(), ok: true, year, data };
+    rostersCache = { at: Date.now(), ok: true, year: cacheKey, data };
     return data;
   } catch (err) {
     // Loud enough to spot in Vercel logs if MFL persistently rejects the
@@ -272,8 +279,8 @@ async function doFetchRosters(year: string, validation?: FaFetchValidation): Pro
     // the shorter error TTL retries soon. Chained off prior.data — not
     // prior.ok — so the payload survives consecutive failures across error
     // windows for the whole outage.
-    const lastGood = prior && prior.year === year && prior.data != null ? prior.data : null;
-    rostersCache = { at: Date.now(), ok: false, year, data: lastGood };
+    const lastGood = prior && prior.year === cacheKey && prior.data != null ? prior.data : null;
+    rostersCache = { at: Date.now(), ok: false, year: cacheKey, data: lastGood };
     return lastGood;
   }
 }
@@ -289,8 +296,10 @@ async function doFetchRosters(year: string, validation?: FaFetchValidation): Pro
 export async function fetchLiveAflRosters(
   year: number | string,
   validation?: FaFetchValidation,
+  leagueId: string = getLeagueBySlug('afl-fantasy')!.id,
 ): Promise<unknown | null> {
-  const yearKey = String(year);
+  // The cache key carries the league (see rostersCache).
+  const yearKey = `${leagueId}:${year}`;
   const now = Date.now();
   if (
     rostersCache &&
@@ -300,7 +309,7 @@ export async function fetchLiveAflRosters(
     return rostersCache.data;
   }
   if (inflight && inflight.year === yearKey) return inflight.promise;
-  const promise = doFetchRosters(yearKey, validation).finally(() => {
+  const promise = doFetchRosters(String(year), validation, leagueId).finally(() => {
     if (inflight?.promise === promise) inflight = null;
   });
   inflight = { year: yearKey, promise };

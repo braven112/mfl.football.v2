@@ -21,7 +21,7 @@
  */
 
 import type { NavLinksProps, NavSection, NavLink, LeagueSlug, LeaguePhase, NavSectionDefaultOpen } from '../../types/nav';
-import { NAV_COOKIES } from '../../types/nav';
+import { NAV_COOKIES, isAflFamily } from '../../types/nav';
 import { getAFLPreference, getAFLTeamData } from '../../utils/team-preferences';
 import { isNewSince, navLinkSpotlightId, spotlightNow } from '../../utils/feature-spotlight';
 import '../../styles/feature-spotlight.css';
@@ -116,7 +116,7 @@ function isLinkNew(link: NavLink): boolean {
 }
 
 function getLabel(link: NavLink, lg: LeagueSlug): string {
-  if (lg === 'afl' && link.labelAFL) return link.labelAFL;
+  if (isAflFamily(lg) && link.labelAFL) return link.labelAFL;
   return link.label;
 }
 
@@ -131,7 +131,7 @@ function getAflCompetitionOverride(
 }
 
 function getIcon(link: NavLink, lg: LeagueSlug): string {
-  if (lg === 'afl' && link.iconAFL) return link.iconAFL;
+  if (isAflFamily(lg) && link.iconAFL) return link.iconAFL;
   return link.icon;
 }
 
@@ -291,7 +291,7 @@ const sectionRenderInfo = visibleSections.map((section) => {
               aria-controls={regionId}
               data-section-toggle
             >
-              <span class="nav-links__section-label">{league === 'afl' && section.labelAFL ? section.labelAFL : section.label}</span>
+              <span class="nav-links__section-label">{isAflFamily(league) && section.labelAFL ? section.labelAFL : section.label}</span>
               <svg class="nav-links__section-chevron" viewBox="0 0 24 24" aria-hidden="true">
                 <use href={`${spriteUrl}#icon-chevron-right`} />
               </svg>

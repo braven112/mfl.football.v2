@@ -9,6 +9,14 @@
  */
 
 import aflConfig from '../../data/afl-fantasy/afl.config.json';
+import { keeperLeagueConfig } from './keeper-config';
+
+/**
+ * Which AFL-family league a call is about. The AFL is the default, so every
+ * existing caller is unchanged; the custom-site demo's keeper slot (built from
+ * the AFL's pages) passes 'keeper' and reads its own teams and conferences.
+ */
+export type AflFamilySlug = 'afl-fantasy' | 'keeper';
 
 export type ConferenceId = '00' | '01';
 export type ConferenceName = 'American League' | 'National League';
@@ -65,11 +73,32 @@ const FRANCHISE_INDEX = new Map<string, AFLTeam>(
   ALL_TEAMS.map((t) => [t.franchiseId, t])
 );
 
-export function getConferenceName(id: ConferenceId): ConferenceName {
+const KEEPER_TEAMS: AFLTeam[] = (keeperLeagueConfig.teams as AFLTeam[]).slice();
+const KEEPER_INDEX = new Map<string, AFLTeam>(KEEPER_TEAMS.map((t) => [t.franchiseId, t]));
+/** The keeper league's own conference names, from its config ({ code, name, short }). */
+const KEEPER_CONFERENCES = new Map<string, { name: string; short: string }>(
+  ((keeperLeagueConfig.conferences ?? []) as Array<{ code: string; name: string; short?: string }>).map((c) => [
+    c.code,
+    { name: c.name, short: c.short ?? c.name },
+  ]),
+);
+
+const teamsOf = (league: AflFamilySlug) => (league === 'keeper' ? KEEPER_TEAMS : ALL_TEAMS);
+const indexOf = (league: AflFamilySlug) => (league === 'keeper' ? KEEPER_INDEX : FRANCHISE_INDEX);
+
+/** The conference ids a league actually has, in presentation order. */
+export function leagueConferenceIds(league: AflFamilySlug = 'afl-fantasy'): ConferenceId[] {
+  if (league !== 'keeper') return ['00', '01'];
+  return (['00', '01'] as ConferenceId[]).filter((id) => KEEPER_TEAMS.some((t) => t.conference === id));
+}
+
+export function getConferenceName(id: ConferenceId, league: AflFamilySlug = 'afl-fantasy'): ConferenceName {
+  if (league === 'keeper') return (KEEPER_CONFERENCES.get(id)?.name ?? CONFERENCE_NAMES[id]) as ConferenceName;
   return CONFERENCE_NAMES[id];
 }
 
-export function getConferenceShort(id: ConferenceId): ConferenceShort {
+export function getConferenceShort(id: ConferenceId, league: AflFamilySlug = 'afl-fantasy'): ConferenceShort {
+  if (league === 'keeper') return (KEEPER_CONFERENCES.get(id)?.short ?? CONFERENCE_SHORT[id]) as ConferenceShort;
   return CONFERENCE_SHORT[id];
 }
 
@@ -77,7 +106,8 @@ export function getConferenceShort(id: ConferenceId): ConferenceShort {
  * Resolve the branded conference logo path (served from public/).
  * Single source of truth — call sites derive the path, never hardcode it.
  */
-export function getConferenceLogo(id: ConferenceId): string {
+export function getConferenceLogo(id: ConferenceId, league: AflFamilySlug = 'afl-fantasy'): string {
+  if (league === 'keeper') return '/assets/logos/keeper-logo.svg';
   return `/assets/afl/conferences/${getConferenceShort(id).toLowerCase()}.svg`;
 }
 
@@ -88,7 +118,8 @@ export function getConferenceLogo(id: ConferenceId): string {
  * SSR can never know the resolved theme, so both variants must render and
  * the swap happens client-side via html.dark.
  */
-export function getConferenceLogoDark(id: ConferenceId): string {
+export function getConferenceLogoDark(id: ConferenceId, league: AflFamilySlug = 'afl-fantasy'): string {
+  if (league === 'keeper') return '/assets/logos/keeper-logo-dark.svg';
   return `/assets/afl/conferences/${getConferenceShort(id).toLowerCase()}-dark.svg`;
 }
 
@@ -122,12 +153,12 @@ export function isValidConferenceId(value: string): value is ConferenceId {
   return value === '00' || value === '01';
 }
 
-export function getTeam(franchiseId: string): AFLTeam | undefined {
-  return FRANCHISE_INDEX.get(franchiseId);
+export function getTeam(franchiseId: string, league: AflFamilySlug = 'afl-fantasy'): AFLTeam | undefined {
+  return indexOf(league).get(franchiseId);
 }
 
-export function getFranchiseConference(franchiseId: string): ConferenceId | null {
-  return FRANCHISE_INDEX.get(franchiseId)?.conference ?? null;
+export function getFranchiseConference(franchiseId: string, league: AflFamilySlug = 'afl-fantasy'): ConferenceId | null {
+  return indexOf(league).get(franchiseId)?.conference ?? null;
 }
 
 /** Whether this conference drafts live in MFL's applet or by slow email. */
@@ -142,17 +173,17 @@ export function getConferenceDraftKind(id: ConferenceId): ConferenceDraftKind {
   return declared === 'live' ? 'live' : 'email';
 }
 
-export function getConferenceTeams(id: ConferenceId): AFLTeam[] {
-  return ALL_TEAMS.filter((t) => t.conference === id);
+export function getConferenceTeams(id: ConferenceId, league: AflFamilySlug = 'afl-fantasy'): AFLTeam[] {
+  return teamsOf(league).filter((t) => t.conference === id);
 }
 
-export function getAllTeams(): AFLTeam[] {
-  return ALL_TEAMS.slice();
+export function getAllTeams(league: AflFamilySlug = 'afl-fantasy'): AFLTeam[] {
+  return teamsOf(league).slice();
 }
 
-export function sameConference(a: string, b: string): boolean {
-  const ca = getFranchiseConference(a);
-  const cb = getFranchiseConference(b);
+export function sameConference(a: string, b: string, league: AflFamilySlug = 'afl-fantasy'): boolean {
+  const ca = getFranchiseConference(a, league);
+  const cb = getFranchiseConference(b, league);
   return ca !== null && cb !== null && ca === cb;
 }
 
@@ -170,9 +201,12 @@ export function sameConference(a: string, b: string): boolean {
  * order, so a viewer who has chosen nothing sees exactly what they saw before.
  */
 export function conferenceOrder(
-  viewerConferenceId?: ConferenceId | null
+  viewerConferenceId?: ConferenceId | null,
+  league: AflFamilySlug = 'afl-fantasy'
 ): ConferenceId[] {
-  return viewerConferenceId === '01' ? ['01', '00'] : ['00', '01'];
+  const order: ConferenceId[] = viewerConferenceId === '01' ? ['01', '00'] : ['00', '01'];
+  const present = leagueConferenceIds(league);
+  return order.filter((id) => present.includes(id));
 }
 
 /**
@@ -183,16 +217,17 @@ export function conferenceOrder(
  * viewed club's.
  */
 export function getTeamsGroupedByConference(
-  viewerConferenceId?: ConferenceId | null
+  viewerConferenceId?: ConferenceId | null,
+  league: AflFamilySlug = 'afl-fantasy'
 ): Array<{
   conferenceId: ConferenceId;
   conferenceName: ConferenceName;
   teams: AFLTeam[];
 }> {
-  return conferenceOrder(viewerConferenceId).map((id) => ({
+  return conferenceOrder(viewerConferenceId, league).map((id) => ({
     conferenceId: id,
-    conferenceName: CONFERENCE_NAMES[id],
-    teams: getConferenceTeams(id),
+    conferenceName: getConferenceName(id, league),
+    teams: getConferenceTeams(id, league),
   }));
 }
 
@@ -203,10 +238,11 @@ export function getTeamsGroupedByConference(
  */
 export function filterByConference<T extends { franchiseId?: string; id?: string }>(
   items: T[],
-  conferenceId: ConferenceId
+  conferenceId: ConferenceId,
+  league: AflFamilySlug = 'afl-fantasy'
 ): T[] {
   return items.filter((item) => {
     const fid = item.franchiseId ?? item.id;
-    return fid != null && getFranchiseConference(fid) === conferenceId;
+    return fid != null && getFranchiseConference(fid, league) === conferenceId;
   });
 }

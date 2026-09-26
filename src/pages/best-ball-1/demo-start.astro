@@ -1,0 +1,28 @@
+---
+/**
+ * The redraft (best-ball) demo's front door:
+ * demo.mfl.football/redraft/demo-start?t=<token>
+ * (docs/plans/custom-site-demo.md, phase 4). 404 off the demo.
+ */
+import DemoStartPage from '../../components/shared/demo-start/DemoStartPage.astro';
+import bb1Config from '../../../data/best-ball-1/bb1.config.json';
+import { isDemoDeploy } from '../../utils/deploy-environment';
+import { handleDemoStart } from '../../utils/demo-start';
+import { setBestBall1Preference } from '../../utils/team-preferences';
+import { getLeagueBySlug } from '../../config/leagues';
+
+if (!isDemoDeploy()) return Astro.rewrite('/_not-found');
+
+const LEAGUE = getLeagueBySlug('best-ball-1')!;
+const teams = bb1Config.teams;
+const start = await handleDemoStart(Astro, LEAGUE, teams.map((t) => t.franchiseId), (id) => setBestBall1Preference(Astro.cookies, id));
+if (start.redirect) return start.redirect;
+---
+
+<DemoStartPage
+  leagueName={LEAGUE.name}
+  blurb="This is a fictional 12-team best-ball league whose startup draft has already been run. Pick any team to see its roster and the full draft board, then run your own mock draft against the other eleven — best ball means no lineups to set, just draft well."
+  teams={teams}
+  link={start.link}
+  token={start.token}
+/>

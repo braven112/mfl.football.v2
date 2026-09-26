@@ -302,6 +302,16 @@ export const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
     live: true,
   },
   {
+    id: 'ops-demo-lead',
+    group: 'ops',
+    label: 'Custom-site demo leads',
+    description: 'Someone filled the questionnaire on demo.mfl.football and got a demo link.',
+    cadence: 'When a lead arrives',
+    defaultOn: true,
+    adminOnly: true,
+    live: true,
+  },
+  {
     id: 'ops-league-setup',
     group: 'ops',
     label: 'League setup drift',

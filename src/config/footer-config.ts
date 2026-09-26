@@ -258,10 +258,28 @@ const BEST_BALL_COLUMNS: ColumnMap = {
   ],
 };
 
+/**
+ * The custom-site demo's keeper slot: only the pages it has, by explicit path —
+ * the page directory's entries all carry another league's prefix.
+ */
+const KEEPER_COLUMNS: ColumnMap = {
+  'My Team': [
+    { label: 'Set Lineup', path: '/keeper/lineup' },
+    { label: 'Rosters', path: '/keeper/rosters' },
+    { label: 'Keepers', path: '/keeper/keepers' },
+    { label: 'Front Office', path: '/keeper/front-office' },
+  ],
+  'This Week': [
+    { label: 'Standings', path: '/keeper/standings' },
+    { label: 'Players', path: '/keeper/players' },
+  ],
+};
+
 const BY_LEAGUE: Record<CanonicalLeagueSlug, ColumnMap> = {
   theleague: THELEAGUE_COLUMNS,
   'afl-fantasy': AFL_COLUMNS,
   'best-ball-1': BEST_BALL_COLUMNS,
+  keeper: KEEPER_COLUMNS,
 };
 
 export interface DirectoryEntry {

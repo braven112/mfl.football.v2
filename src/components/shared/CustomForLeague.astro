@@ -1,0 +1,59 @@
+---
+/**
+ * "Custom for this league" — the custom-site demo's inline pitch
+ * (docs/plans/custom-site-demo.md, phase 3). Marks a feature that exists
+ * because of how THIS league runs (salary cap, contracts, franchise tags), so a
+ * prospect reads it as an example of what gets built for them, not as a
+ * feature every league must adopt. Renders nothing outside a demo deployment.
+ *
+ * Fixed colours, like DemoBanner: it has to read the same on every page and in
+ * both themes.
+ */
+import { isDemoDeploy } from '../../utils/deploy-environment';
+
+interface Props {
+  /** What this league's rule is, in a few words — e.g. "salary-cap rules". */
+  feature?: string;
+}
+const { feature = 'this league’s rules' } = Astro.props;
+const show = isDemoDeploy();
+---
+
+{
+  show && (
+    <a class="custom-for-league" href="/" title={`Built for ${feature}. A custom site gets tools built around how your league works.`}>
+      <span class="custom-for-league__dot" aria-hidden="true" />
+      Custom for this league
+    </a>
+  )
+}
+
+<style>
+  .custom-for-league {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.15rem 0.55rem;
+    border-radius: 999px;
+    background: #fca311;
+    color: #14213d;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1.4;
+    letter-spacing: 0.01em;
+    text-decoration: none;
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+  .custom-for-league:hover,
+  .custom-for-league:focus-visible {
+    background: #ffb703;
+    outline: none;
+  }
+  .custom-for-league__dot {
+    width: 0.4rem;
+    height: 0.4rem;
+    border-radius: 50%;
+    background: #14213d;
+  }
+</style>

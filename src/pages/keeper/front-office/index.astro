@@ -1,0 +1,44 @@
+---
+/**
+ * Front Office (the custom-site demo's keeper league) — the shared Front
+ * Office hub, with the AFL-family keeper data. No preference cookie: the
+ * signed-in team, then ?franchise=, then the first club. Off the demo this
+ * slot does not exist (middleware 404).
+ */
+import FrontOfficeHubPage from '../../../components/shared/front-office-hub/FrontOfficeHubPage.astro';
+import FrontOfficeTeamSwitcher from '../../../components/shared/front-office-hub/FrontOfficeTeamSwitcher.astro';
+import FrontOfficePanel from '../../../components/shared/front-office-hub/FrontOfficePanel.astro';
+import { buildFrontOfficePanelData } from '../../../utils/front-office-panel-data';
+import { getAuthUser, franchiseIdForLeague } from '../../../utils/auth';
+import { getAllTeams, getTeam } from '../../../utils/afl-conference';
+import { keeperLeague } from '../../../utils/keeper-slot';
+
+export const prerender = false;
+
+const league = keeperLeague();
+if (!league) return Astro.rewrite('/_not-found');
+const user = getAuthUser(Astro.request);
+const myFranchiseId = franchiseIdForLeague(user, league.id);
+const requested = Astro.url.searchParams.get('franchise') ?? Astro.url.searchParams.get('team');
+const teams = getAllTeams('keeper');
+const selectedTeamId =
+  (requested && teams.some((t) => t.franchiseId === requested) ? requested : null) ??
+  myFranchiseId ??
+  teams[0]?.franchiseId ??
+  '0001';
+
+const data = await buildFrontOfficePanelData({
+  leagueSlug: 'keeper',
+  selectedTeamId,
+  viewerFranchiseId: myFranchiseId,
+  viewerMflCookie: user?.id,
+});
+
+const myTeamInfo = myFranchiseId ? getTeam(myFranchiseId, 'keeper') : undefined;
+const myTeam = myTeamInfo ? { id: myTeamInfo.franchiseId, name: myTeamInfo.name, icon: myTeamInfo.icon } : null;
+---
+
+<FrontOfficeHubPage leagueSlug="keeper" myTeam={myTeam} leagueYear={data.leagueYear}>
+  <FrontOfficeTeamSwitcher slot="switcher" teams={data.teamsList} selectedTeamId={selectedTeamId} />
+  <FrontOfficePanel {...data} />
+</FrontOfficeHubPage>

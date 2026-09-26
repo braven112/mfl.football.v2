@@ -27,7 +27,7 @@ const BADGE_SURFACES = [
   'src/components/shared/NetworkBadge.astro',
   'src/components/shared/NflGamesStrip.tsx',
   'src/pages/theleague/lineup.astro',
-  'src/pages/afl-fantasy/lineup.astro',
+  'src/components/afl-family/LineupPage.astro',
 ] as const;
 
 /**
@@ -79,7 +79,7 @@ const STRIP_ROUTES = [
 
 const LINEUP_PAGES = [
   'src/pages/theleague/lineup.astro',
-  'src/pages/afl-fantasy/lineup.astro',
+  'src/components/afl-family/LineupPage.astro',
 ] as const;
 
 describe('network badge — one resolver', () => {

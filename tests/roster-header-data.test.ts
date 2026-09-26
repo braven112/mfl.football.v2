@@ -758,7 +758,7 @@ describe('resolveHeaderSchedule', () => {
   });
 
   it('is what both roster pages call, with a null for a season off the live clock', () => {
-    for (const page of ['src/pages/theleague/rosters.astro', 'src/pages/afl-fantasy/rosters.astro']) {
+    for (const page of ['src/pages/theleague/rosters.astro', 'src/components/afl-family/RostersPage.astro']) {
       const src = fs.readFileSync(path.join(process.cwd(), page), 'utf-8');
       expect(src, `${page} must go through resolveHeaderSchedule`).toContain('resolveHeaderSchedule(');
       expect(src, `${page} must null the week off a live season`)

@@ -1,0 +1,22 @@
+---
+/**
+ * Set Lineup (the custom-site demo's keeper league) — thin route wrapper
+ * around the AFL-family lineup page. Off the demo this slot does not exist:
+ * the middleware answers 404 before this runs.
+ */
+import LineupPage from '../../components/afl-family/LineupPage.astro';
+import { getAuthUser } from '../../utils/auth';
+import { loginUrlForRequest } from '../../utils/login-redirect';
+import { keeperConfig, keeperLeague } from '../../utils/keeper-slot';
+
+export const prerender = false;
+
+const league = keeperLeague();
+if (!league) return Astro.rewrite('/_not-found');
+const user = getAuthUser(Astro.request);
+if (!user?.franchiseId || user.leagueId !== league.id) {
+  return Astro.redirect(loginUrlForRequest(Astro, league));
+}
+---
+
+<LineupPage league={league} config={keeperConfig()} user={{ ...user, franchiseId: user.franchiseId }} throwbackScope={null} />

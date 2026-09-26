@@ -21,6 +21,7 @@
     "build:apps": "astro build",
     "build:bookmarklets": "node scripts/build-bookmarklets.mjs",
     "prebuild": "node scripts/prebuild.mjs",
+    "postbuild": "node scripts/demo/postbuild.mjs",
     "fetch:adp": "node scripts/fetch-adp.mjs",
     "fetch:ranking-sources": "node scripts/fetch-ranking-sources.mjs",
     "fetch:adp:sleeper": "node scripts/fetch-sleeper-rookie-adp.mjs",

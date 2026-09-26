@@ -38,7 +38,7 @@ const FORM = 'src/components/shared/WaiverClaimModal.astro';
 const CLIENT = 'src/utils/player-claim-client.ts';
 const SERVER = 'src/utils/claim-context.ts';
 const ENDPOINT = 'src/pages/api/claim-context.ts';
-const PAGES = ['src/pages/theleague/players.astro', 'src/pages/afl-fantasy/players.astro'];
+const PAGES = ['src/pages/theleague/players.astro', 'src/components/afl-family/PlayersPage.astro'];
 
 describe('the claim form travels with the player modal', () => {
   it('PlayerDetailsModal mounts it', () => {

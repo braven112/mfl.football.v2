@@ -242,7 +242,7 @@ describe('resolveLineupFillState', () => {
 });
 
 describe('lineup pages use the readable export', () => {
-  const pages = ['src/pages/theleague/lineup.astro', 'src/pages/afl-fantasy/lineup.astro'];
+  const pages = ['src/pages/theleague/lineup.astro', 'src/components/afl-family/LineupPage.astro'];
 
   it('never requests myStarters as an export type', () => {
     for (const page of pages) {
@@ -554,7 +554,7 @@ describe('Set Optimal respects starter eligibility', () => {
   it('excludes taxi-squad and IR players client-side too', () => {
     // The server fill filters them; the button rebuilding the lineup in the
     // browser has to agree, or one tap seats an ineligible player.
-    for (const page of ['src/pages/theleague/lineup.astro', 'src/pages/afl-fantasy/lineup.astro']) {
+    for (const page of ['src/pages/theleague/lineup.astro', 'src/components/afl-family/LineupPage.astro']) {
       const src = readFileSync(join(process.cwd(), page), 'utf8');
       expect(src.includes("p.rosterStatus === 'ROSTER')"), `${page} Set Optimal filter`).toBe(true);
     }
@@ -765,7 +765,7 @@ describe('an outage on a week the disk copy carries', () => {
 });
 
 describe('drafts do not travel between read states', () => {
-  const pages = ['src/pages/theleague/lineup.astro', 'src/pages/afl-fantasy/lineup.astro'];
+  const pages = ['src/pages/theleague/lineup.astro', 'src/components/afl-family/LineupPage.astro'];
 
   it('refuses to persist edits made on a base that cannot be submitted', () => {
     // One swap during a read-failed visit used to persist all nine slots —
@@ -850,7 +850,7 @@ describe('the Set Lineup game strip', () => {
   // drift — TheLeague's did exactly that for the whole faceoff panel.
   const lineupPages = [
     'src/pages/theleague/lineup.astro',
-    'src/pages/afl-fantasy/lineup.astro',
+    'src/components/afl-family/LineupPage.astro',
   ];
   const STRIP = 'src/components/shared/LineupGameStrip.astro';
 

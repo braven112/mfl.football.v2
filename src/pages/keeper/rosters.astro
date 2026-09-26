@@ -1,0 +1,40 @@
+---
+/**
+ * Rosters (the custom-site demo's keeper league) — thin route wrapper around
+ * the AFL-family rosters page, keeper planner included. No preference cookie
+ * and no Throwback Week here. Off the demo this slot does not exist: the
+ * middleware answers 404 before this runs.
+ */
+import RostersPage from '../../components/afl-family/RostersPage.astro';
+import { feedsByYear } from '../../utils/afl-family-standings';
+import { resolveRostersRoute } from '../../utils/afl-family-rosters';
+import { keeperConfig, keeperLeague } from '../../utils/keeper-slot';
+import { getLeagueYearForSlug } from '../../utils/league-year';
+
+const league = keeperLeague();
+if (!league) return Astro.rewrite('/_not-found');
+const feeds = {
+  // Current era only (the season picker offers what these match): a bare year
+  // glob bakes every season's players.json into the server chunk.
+  rosters: feedsByYear(import.meta.glob('../../../data/keeper/mfl-feeds/20{2[5-9],[3-9][0-9]}/rosters.json', { eager: true })),
+  players: feedsByYear(import.meta.glob('../../../data/keeper/mfl-feeds/20{2[5-9],[3-9][0-9]}/players.json', { eager: true })),
+  ytdScores: feedsByYear(import.meta.glob('../../../data/keeper/mfl-feeds/*/playerScores-ytd.json', { eager: true })),
+  tradeBait: feedsByYear(import.meta.glob('../../../data/keeper/mfl-feeds/*/tradeBait.json', { eager: true })),
+  tradeBaitByFranchise: feedsByYear(import.meta.glob('../../../data/keeper/mfl-feeds/*/tradeBait-by-franchise.json', { eager: true })),
+  futurePicks: feedsByYear(import.meta.glob('../../../data/keeper/mfl-feeds/*/futureDraftPicks.json', { eager: true })),
+  schedule: feedsByYear(import.meta.glob('../../../data/keeper/mfl-feeds/*/schedule.json', { eager: true, import: 'default' })),
+  standings: feedsByYear(import.meta.glob('../../../data/keeper/mfl-feeds/*/standings.json', { eager: true, import: 'default' })),
+};
+const route = resolveRostersRoute(Astro.url, '/keeper', feeds.rosters, feeds.players, getLeagueYearForSlug('keeper'));
+if ('redirect' in route) return Astro.redirect(route.redirect);
+---
+
+<RostersPage
+  league={league}
+  config={keeperConfig()}
+  selectedYear={route.selectedYear}
+  availableYears={route.availableYears}
+  feeds={feeds}
+  throwbackScope={null}
+  logoSrc="/assets/logos/keeper-logo.svg"
+/>

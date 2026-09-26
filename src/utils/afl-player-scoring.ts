@@ -44,6 +44,7 @@
  * the same behaviour the old playerScores reader had.
  */
 
+import { getLeagueBySlug } from '../config/leagues';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { asArray as ensureArray } from './mfl-normalize';
@@ -99,14 +100,16 @@ function readJson<T>(path: string): T | null {
  * Returns an empty map when the feed is absent (offseason, archive seasons
  * excluded from the serverless bundle) so callers can render an em dash.
  */
-export function loadAflSeasonScores(year: number): SeasonScores {
-  const cacheKey = String(year);
+export function loadAflSeasonScores(year: number, dataPath = getLeagueBySlug('afl-fantasy')!.dataPath): SeasonScores {
+  // `dataPath` is the league's registry dataPath — the AFL's by default; the
+  // custom-site demo's keeper slot reads its own.
+  const cacheKey = `${dataPath}:${year}`;
   const hit = seasonScoresCache.get(cacheKey);
   if (hit) return hit;
 
   const path = resolve(
     process.cwd(),
-    `data/afl-fantasy/mfl-feeds/${year}/weekly-results-raw.json`
+    `${dataPath}/mfl-feeds/${year}/weekly-results-raw.json`
   );
   const file = readJson<unknown>(path);
   // The second argument is the current week, which the canonical
@@ -120,14 +123,14 @@ export function loadAflSeasonScores(year: number): SeasonScores {
  * Load the projectedScores.json snapshot for the given AFL season as a
  * {playerId → projected points} map. Cached per year.
  */
-export function loadAflProjections(year: number): Map<string, number> {
-  const cacheKey = String(year);
+export function loadAflProjections(year: number, dataPath = getLeagueBySlug('afl-fantasy')!.dataPath): Map<string, number> {
+  const cacheKey = `${dataPath}:${year}`;
   const hit = projectionsCache.get(cacheKey);
   if (hit) return hit;
 
   const path = resolve(
     process.cwd(),
-    `data/afl-fantasy/mfl-feeds/${year}/projectedScores.json`
+    `${dataPath}/mfl-feeds/${year}/projectedScores.json`
   );
   const file = readJson<ProjectedScoresFile>(path);
   const entries = ensureArray(file?.projectedScores?.playerScore);

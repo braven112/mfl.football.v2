@@ -17,6 +17,7 @@
  */
 import Breadcrumbs from '../../theleague/Breadcrumbs.astro';
 import { FRONT_OFFICE_HUB_PATH, type FrontOfficeLeagueSlug } from './front-office-pages';
+import CustomForLeague from '../CustomForLeague.astro';
 
 interface Props {
   leagueSlug: FrontOfficeLeagueSlug;
@@ -45,6 +46,7 @@ const trail = [
 
 <div class:list={['fonav-chrome', { 'fonav-chrome--bare': bare }]}>
   <Breadcrumbs items={trail} />
+  <CustomForLeague feature="salary-cap and contract rules" />
 </div>
 
 <style>

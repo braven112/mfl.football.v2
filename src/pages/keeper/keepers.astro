@@ -1,0 +1,16 @@
+---
+/**
+ * Keepers (the custom-site demo's keeper league) — thin route wrapper around
+ * the AFL-family keepers hub. Off the demo this slot does not exist
+ * (middleware 404).
+ */
+import KeepersPage from '../../components/afl-family/KeepersPage.astro';
+import { keeperConfig, keeperLeague } from '../../utils/keeper-slot';
+
+export const prerender = false;
+
+const league = keeperLeague();
+if (!league) return Astro.rewrite('/_not-found');
+---
+
+<KeepersPage league={league} config={keeperConfig()} hasRulePages={false} />

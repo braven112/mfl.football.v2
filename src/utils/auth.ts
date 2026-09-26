@@ -11,6 +11,7 @@
 import { getSessionTokenFromCookie, validateSessionToken } from './session';
 import { isAdminFranchise } from '../config/nav-config';
 import { getLeagueById } from '../config/leagues';
+import { isDemoDeploy } from './deploy-environment';
 
 export interface AuthUser {
   id: string;
@@ -76,6 +77,10 @@ export function isFranchiseOwner(user: AuthUser, franchiseId: string): boolean {
  * so commissioners are recognized even if MFL didn't set the commish cookie at login.
  */
 export function isCommissionerOrAdmin(user: AuthUser): boolean {
+  // Nobody is a commissioner on the custom-site demo: its visitors are
+  // prospects, and every admin surface assumes a real league behind it.
+  if (isDemoDeploy()) return false;
+
   if (user.role === 'commissioner' || user.role === 'admin') return true;
 
   // Fallback: check admin franchise IDs from nav config (handles cases where

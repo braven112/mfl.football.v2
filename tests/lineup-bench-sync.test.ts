@@ -23,7 +23,7 @@ import { selectBenchPlayers, buildBenchRowHTML } from '../src/utils/lineup-bench
 
 const PAGES = [
   ['TheLeague', 'src/pages/theleague/lineup.astro'],
-  ['the AFL', 'src/pages/afl-fantasy/lineup.astro'],
+  ['the AFL', 'src/components/afl-family/LineupPage.astro'],
 ] as const;
 
 function pageSource(file: string): string {

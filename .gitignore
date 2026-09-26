@@ -84,3 +84,6 @@ roster-parity.json
 # generator and the post-deploy announce pass (scripts/lib/announce-queue.mjs).
 # CI keeps it in RUNNER_TEMP; this covers a local run.
 .schefter-announce-queue.json
+
+# Custom-site demo build scratch (scripts/demo/build-demo-data.mjs)
+.demo-build/

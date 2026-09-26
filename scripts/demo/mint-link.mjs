@@ -1,0 +1,47 @@
+#!/usr/bin/env node
+/**
+ * Issue a private custom-site demo link (docs/plans/custom-site-demo.md).
+ *
+ *   node scripts/demo/mint-link.mjs --label "Acme Dynasty League" [--days 14] [--path redraft]
+ *
+ * The token opens every demo; `--path` only picks which one the link lands on.
+ *
+ * Writes the link to the DEMO deployment's Redis — set DEMO_REDIS_REST_URL and
+ * DEMO_REDIS_REST_TOKEN (the values on the demo branch in Vercel) — and prints
+ * the URL to send. Never production's Redis: the demo reads its own.
+ */
+import { Redis } from '@upstash/redis';
+import { buildDemoLink, DEMO_START_PATH, DEMO_TOKEN_PREFIX } from '../../src/utils/demo-access-core.mjs';
+// Load the registry as a demo deployment sees it, so the demo-only slots
+// (keeper) are there to link to. The flag is set before the dynamic import
+// because the registry registers those slots once, at module load.
+process.env.DEMO_PROFILE ??= 'dynasty';
+const { DEMO_HOST, demoLeaguePaths } = await import('../../src/config/leagues-data.mjs');
+
+const args = process.argv.slice(2);
+const opt = (name, fallback) => {
+  const i = args.indexOf(`--${name}`);
+  return i >= 0 ? args[i + 1] : fallback;
+};
+
+const label = opt('label');
+const days = Number(opt('days', 14));
+const paths = Object.keys(demoLeaguePaths());
+const path = opt('path', paths[0]);
+if (!label || !Number.isFinite(days) || days <= 0 || !paths.includes(path)) {
+  console.error(`Usage: node scripts/demo/mint-link.mjs --label "<who it is for>" [--days 14] [--path ${paths.join('|')}]`);
+  process.exit(2);
+}
+const url = process.env.DEMO_REDIS_REST_URL;
+const token = process.env.DEMO_REDIS_REST_TOKEN;
+if (!url || !token) {
+  console.error('Set DEMO_REDIS_REST_URL and DEMO_REDIS_REST_TOKEN (the demo branch values in Vercel).');
+  process.exit(2);
+}
+
+const link = buildDemoLink({ label, days });
+await new Redis({ url, token }).set(`${DEMO_TOKEN_PREFIX}${link.token}`, JSON.stringify(link), {
+  ex: link.expiresAt - link.createdAt,
+});
+console.log(`Demo link for ${label} (expires ${new Date(link.expiresAt * 1000).toDateString()}):`);
+console.log(`https://${DEMO_HOST}/${path}${DEMO_START_PATH}?t=${link.token}`);

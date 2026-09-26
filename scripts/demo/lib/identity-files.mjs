@@ -1,0 +1,229 @@
+/**
+ * The demo league's identity files — the fictional replacements for
+ * `src/data/theleague.config.json` (read by 63 modules: every franchise name,
+ * colour and crest on the site comes from it), `src/data/theleague.assets.json`,
+ * the crest/banner art under `public/assets/theleague/`, and the owner and
+ * championship records the franchise-history chain reads.
+ */
+
+import { bannerSvg, crestSvg, leagueMarkSvg } from './crests.mjs';
+
+const ASSET_ROOT = '/assets/theleague';
+
+export function franchiseAssetPaths(f) {
+  return {
+    icon: `${ASSET_ROOT}/icons/${f.slug}.svg`,
+    iconDark: `${ASSET_ROOT}/icons/${f.slug}_dark.svg`,
+    banner: `${ASSET_ROOT}/banners/${f.slug}.svg`,
+    groupMe: `${ASSET_ROOT}/group-me/${f.slug}.svg`,
+    groupMeDark: `${ASSET_ROOT}/group-me/${f.slug}_dark.svg`,
+  };
+}
+
+/** Every public file to write: path under public/ → contents. */
+export function artFiles(franchises, leagueName, divisions) {
+  const files = new Map();
+  const strip = (p) => p.replace(/^\//, '');
+  for (const f of franchises) {
+    const p = franchiseAssetPaths(f);
+    files.set(strip(p.icon), crestSvg(f));
+    files.set(strip(p.iconDark), crestSvg(f, { dark: true }));
+    files.set(strip(p.banner), bannerSvg(f));
+    files.set(strip(p.groupMe), crestSvg(f));
+    files.set(strip(p.groupMeDark), crestSvg(f, { dark: true }));
+  }
+  files.set('assets/logos/theleague-logo.svg', leagueMarkSvg(leagueName));
+  files.set('assets/logos/theleague-logo-dark.svg', leagueMarkSvg(leagueName));
+  for (const d of divisions) {
+    files.set(`assets/theleague/division-badges/${d.toLowerCase()}.svg`, divisionBadgeSvg(d));
+  }
+  return files;
+}
+
+function divisionBadgeSvg(name) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 40" width="120" height="40" role="img" aria-label="${name}"><rect width="120" height="40" rx="8" fill="#14213d"/><text x="60" y="26" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-weight="700" font-size="16" fill="#fca311">${name.toUpperCase()}</text></svg>\n`;
+}
+
+const QUIPS = [
+  'Checking the waiver wire one more time…',
+  'Pretending the bench scored…',
+  'Recalculating playoff odds…',
+  'Filing a strongly worded trade offer…',
+];
+
+/** `src/data/theleague.config.json`, fictional. */
+export function leagueConfig({ franchises, divisions, assetDomain }) {
+  return {
+    assetDomain,
+    blobDomain: assetDomain,
+    divisions,
+    divisionAliases: { _comment: 'Demo league: no historical division renames.' },
+    loaderLines: [
+      'Reconciling the salary cap…',
+      'Counting the dead money…',
+      'Grading last week’s trades…',
+      'Sorting the waiver priority…',
+      'Checking contract years…',
+      'Warming up the draft board…',
+      'Polishing the trophy…',
+    ],
+    teams: franchises.map((f, i) => ({
+      franchiseId: f.id,
+      colorPrimary: f.colorPrimary,
+      colorSecondary: f.colorSecondary,
+      colorTertiary: '#ffffff',
+      colorQuaternary: '#a1a1a1',
+      broadcastGradient: `linear-gradient(115deg, ${f.colorPrimary} 0%, ${f.colorSecondary} 100%)`,
+      colorPrimaryDark: f.colorPrimaryDark,
+      colorSecondaryDark: f.colorSecondaryDark,
+      name: f.name,
+      loaderQuips: [QUIPS[i % QUIPS.length], QUIPS[(i + 1) % QUIPS.length]],
+      nameMedium: f.nameShort,
+      nameShort: f.nameShort,
+      abbrev: f.abbrev,
+      aliases: [f.nameShort, f.abbrev],
+      division: f.division,
+      color: f.colorPrimary,
+      ...franchiseAssetPaths(f),
+      history: [],
+    })),
+  };
+}
+
+/** `src/data/theleague.assets.json`, fictional — the shape sync-theleague-assets.mjs writes. */
+export function leagueAssets({ franchises, divisions, firstYear, generatedAt }) {
+  const entry = (type, relativePath) => ({
+    type,
+    filename: relativePath.split('/').pop(),
+    relativePath,
+    extension: '.svg',
+  });
+  return {
+    generatedAt,
+    teams: franchises.map((f) => {
+      const p = franchiseAssetPaths(f);
+      const key = f.slug.replace(/-/g, '_');
+      return {
+        key,
+        slug: key,
+        id: f.id,
+        name: f.name,
+        category: 'active',
+        division: f.division,
+        aliases: [f.nameShort, f.abbrev],
+        assets: {
+          banners: [entry('banners', p.banner)],
+          'group-me': [entry('group-me', p.groupMe)],
+          icons: [entry('icons', p.icon)],
+        },
+        eras: [{ yearStart: firstYear, yearEnd: 9999, franchiseId: f.id }],
+      };
+    }),
+    extras: {
+      championship: [],
+      league: [entry('league', '/assets/logos/theleague-logo.svg')],
+      conference: [],
+      division: divisions.map((d) => entry('division', `/assets/theleague/division-badges/${d.toLowerCase()}.svg`)),
+    },
+  };
+}
+
+/**
+ * `src/data/owners-registry.json` with TheLeague's people replaced by the demo
+ * owners (one owner per franchise for the demo's whole history). Other
+ * leagues' entries are kept untouched — the file is shared, and their derived
+ * files are not regenerated by the demo build.
+ */
+export function ownersRegistry(realRegistry, { franchises, firstYear, league }) {
+  const others = (realRegistry.people ?? []).filter((p) => !(p.claims ?? []).some((c) => c.league === league));
+  const demo = franchises.map((f, i) => ({
+    id: `demo-${String(i + 1).padStart(4, '0')}`,
+    slug: f.owner.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+    previousSlugs: [],
+    displayName: f.owner,
+    claims: [{ league, franchiseId: f.id, yearStart: firstYear, yearEnd: 9999 }],
+    seededFrom: 'demo-generator',
+    notes: null,
+  }));
+  return { ...realRegistry, people: [...demo, ...others] };
+}
+
+/** `data/theleague/championship-history.json` from the simulated playoffs. */
+export function championshipHistory(seasons, franchises) {
+  const name = new Map(franchises.map((f) => [f.id, f.name]));
+  return {
+    $comment: 'Demo league championship history, generated by scripts/demo. Fictional.',
+    championships: seasons
+      .filter((s) => s.playoffs?.championship?.champion)
+      .map((s) => ({
+        year: s.year,
+        champion: s.playoffs.championship.champion,
+        runnerUp: s.playoffs.championship.runnerUp,
+        championName: name.get(s.playoffs.championship.champion),
+        runnerUpName: name.get(s.playoffs.championship.runnerUp),
+      })),
+  };
+}
+
+/**
+ * Real-name → fictional-name replacements, keyed through the franchise id, for
+ * hand-written content modules that mention franchises by name (the showcase
+ * page, throwback config). Longest first so "Pacific Pigskins" is replaced
+ * before "Pigskins" could be. The leak scan is the backstop for anything a
+ * rename cannot express.
+ */
+export function renamePairs(realConfig, franchises) {
+  const byId = new Map(franchises.map((f) => [f.id, f]));
+  const pairs = [];
+  for (const team of realConfig.teams ?? []) {
+    const f = byId.get(team.franchiseId);
+    if (!f) continue;
+    const eras = [team, ...(team.history ?? [])];
+    for (const era of eras) {
+      for (const [real, fake] of [
+        [era.name, f.name],
+        [era.nameMedium, f.nameShort],
+        [era.nameShort, f.nameShort],
+      ]) {
+        if (real && (real.length >= 6 || real.includes(' ')) && real !== fake) pairs.push([real, fake]);
+      }
+    }
+    for (const alias of team.aliases ?? []) {
+      if (alias && (alias.length >= 6 || alias.includes(' '))) pairs.push([alias, f.nameShort]);
+    }
+  }
+  const seen = new Set();
+  return pairs
+    .filter(([real]) => (seen.has(real) ? false : seen.add(real)))
+    .sort((a, b) => b[0].length - a[0].length);
+}
+
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const IDENT = /[A-Za-z0-9_$]/;
+
+/**
+ * Replace every occurrence of each term — including inside identifiers,
+ * asset slugs and plurals (`isPigskins`, `booyakasha_icon.png`,
+ * `Chatmasters`), because the leak scan reads the output that way too. Where
+ * a match touches identifier characters, the replacement is squeezed to
+ * identifier-safe characters so code stays valid: "Redwood Rangers" becomes
+ * "RedwoodRangers" inside `isPacificPigskins`. Consistent across every
+ * scrubbed file, so a renamed identifier still matches its definition.
+ *
+ * Terms must be distinctive (6+ characters or several words) — a short one
+ * like "Fire" once rewrote `shouldFireReminder`.
+ */
+export function replaceTerms(text, map, onReplace) {
+  if (!map.size) return text;
+  const pattern = new RegExp([...map.keys()].sort((a, b) => b.length - a.length).map(escapeRe).join('|'), 'g');
+  return text.replace(pattern, (m, offset, whole) => {
+    const replacement = map.get(m) ?? m;
+    onReplace?.(m);
+    const touchesIdent = IDENT.test(whole[offset - 1] ?? '') || IDENT.test(whole[offset + m.length] ?? '');
+    return touchesIdent ? replacement.replace(/[^A-Za-z0-9_$]/g, '') : replacement;
+  });
+}
+
+export function applyRenames(text, pairs) {
+  return replaceTerms(text, new Map(pairs));
+}

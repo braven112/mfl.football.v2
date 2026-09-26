@@ -14,3 +14,6 @@ interface ImportMetaEnv {
 interface ImportMeta {
 	readonly env: ImportMetaEnv;
 }
+
+/** Compile-time: true only in a custom-site demo build (astro.config.ts `vite.define`). */
+declare const __DEMO_BUILD__: boolean;

@@ -29,7 +29,11 @@
  * the same way nav-config.json's are and draft-pages.ts's are.
  */
 
-export type FrontOfficeLeagueSlug = 'theleague' | 'afl-fantasy';
+/**
+ * `keeper` is the custom-site demo's keeper slot (registered only on a demo
+ * deployment): the AFL's pages, so it takes the AFL's entries it has.
+ */
+export type FrontOfficeLeagueSlug = 'theleague' | 'afl-fantasy' | 'keeper';
 export type FrontOfficeGroupKey = 'team' | 'planning' | 'reports';
 
 export interface FrontOfficePage {
@@ -63,6 +67,8 @@ export interface FrontOfficePage {
 const TL: FrontOfficeLeagueSlug[] = ['theleague'];
 const AFL: FrontOfficeLeagueSlug[] = ['afl-fantasy'];
 const BOTH: FrontOfficeLeagueSlug[] = ['theleague', 'afl-fantasy'];
+/** Both leagues, plus the demo's keeper slot (which has only these two). */
+const WITH_KEEPER: FrontOfficeLeagueSlug[] = [...BOTH, 'keeper'];
 
 export const FRONT_OFFICE_HUB_PATH = '/front-office';
 
@@ -78,9 +84,10 @@ export const FRONT_OFFICE_PAGES: FrontOfficePage[] = [
     icon: 'icon-banknote',
     blurb: 'Every team’s roster and salary cap details.',
     group: 'team',
-    leagues: BOTH,
+    leagues: WITH_KEEPER,
     overrides: {
       'afl-fantasy': { label: 'Rosters', shortLabel: 'Rosters', icon: 'icon-helmet' },
+      keeper: { label: 'Rosters', shortLabel: 'Rosters', icon: 'icon-helmet' },
     },
   },
   {
@@ -101,7 +108,7 @@ export const FRONT_OFFICE_PAGES: FrontOfficePage[] = [
     icon: 'icon-transactions-2',
     blurb: 'Simulate trades and see cap impact.',
     group: 'team',
-    leagues: BOTH,
+    leagues: WITH_KEEPER,
   },
   {
     key: 'league-comparison',

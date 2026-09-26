@@ -16,6 +16,7 @@ import { getLeagueBySlug, leagueHasFeature, type CanonicalLeagueSlug } from '../
 import { getLeagueYearForSlug } from '../../utils/league-year';
 import { getSearchPath, resolveDirectoryHref, resolveLeaguePath } from '../../utils/nav-utils';
 import { spriteUrl } from '../../utils/sprite-url';
+import { isDemoDeploy } from '../../utils/deploy-environment';
 import NavToggleButton from '../nav/NavToggleButton.astro';
 
 interface Props {
@@ -44,6 +45,9 @@ const envYear = getLeagueYearForSlug(getLeagueContext(Astro.url).slug).toString(
 const league = getLeagueContext(Astro.url);
 const isAFL = league.slug === 'afl-fantasy';
 const isBB1 = league.slug === 'best-ball-1';
+// The custom-site demo's keeper slot runs the AFL's pages under its own prefix.
+const isKeeper = league.slug === 'keeper';
+const aflFamilyPrefix = isKeeper ? '/keeper' : '/afl-fantasy';
 
 // Use the year passed from the page, or fall back to the environment variable/current year.
 const year = (Astro.props.year || envYear).toString();
@@ -51,19 +55,19 @@ const year = (Astro.props.year || envYear).toString();
 // Construct the MFL homepage URL using the context-aware league object.
 // This ensures the correct host and leagueId are always used.
 const leagueHome = `https://${league.host}/${year}/home/${league.leagueId}`;
-const submitLineupUrl = isAFL ? '/afl-fantasy/lineup' : '/theleague/lineup';
+const submitLineupUrl = isAFL || isKeeper ? `${aflFamilyPrefix}/lineup` : '/theleague/lineup';
 // Free Agents: both leagues now have an internal browse-and-research page, so
 // the header links there instead of MFL's external add_drop screen. AFL's page
 // (/afl-fantasy/players) is a leaner, cap-free sibling of /theleague/players.
 const freeAgentsUrl = resolveLeaguePath(
-  isAFL ? "/afl-fantasy/players" : "/theleague/players",
+  isAFL || isKeeper ? `${aflFamilyPrefix}/players` : "/theleague/players",
   hideLeaguePrefix
 );
 // Self-hosted live scoring when the league has it enabled; otherwise fall back
 // to the MFL-hosted "live scoring summary" page (the surface we're replacing).
 const hasLiveScoring = leagueHasFeature(league.slug, 'liveScoring');
 const liveScoringUrl = hasLiveScoring
-  ? resolveLeaguePath(isAFL ? '/afl-fantasy/live-scoring' : '/theleague/live-scoring', hideLeaguePrefix)
+  ? resolveLeaguePath(isAFL || isKeeper ? `${aflFamilyPrefix}/live-scoring` : '/theleague/live-scoring', hideLeaguePrefix)
   : `https://${league.host}/${year}/home/${league.leagueId}?MODULE=MESSAGE6`;
 // Site search — every league that HAS a search page gets the magnifying glass.
 // It was hardcoded to /theleague/search behind a `!isAFL` gate, which is how
@@ -76,16 +80,22 @@ const searchHref = searchPath
       hideLeaguePrefix
     )
   : null;
+
+// The custom-site demo renders a fictional league in this slot (docs/plans/custom-site-demo.md).
+const isDemo = isDemoDeploy();
 ---
 
 <div class="breadcrumb-bar">
   <div class="breadcrumb-container">
     <nav aria-label="Breadcrumb">
       <ul class="breadcrumb-list">
-        <li>
-          <a href={leagueHome} class="breadcrumb-link" target="_blank" rel="noopener noreferrer"
-            ><span class="breadcrumb-arrow">←</span> Back to MFL</a>
-        </li>
+        {/* The custom-site demo has no MFL league to go back to. */}
+        {!isDemo && (
+          <li>
+            <a href={leagueHome} class="breadcrumb-link" target="_blank" rel="noopener noreferrer"
+              ><span class="breadcrumb-arrow">←</span> Back to MFL</a>
+          </li>
+        )}
       </ul>
     </nav>
     <div class="breadcrumb-actions">
@@ -119,13 +129,18 @@ const searchHref = searchPath
   <div class="container">
     <div class="row">
       <div class="col left">
-        <a class="league-link" href={resolveLeaguePath(isAFL ? "/afl-fantasy" : isBB1 ? "/best-ball-1" : "/theleague", hideLeaguePrefix)}>
+        <a class="league-link" href={resolveLeaguePath(isAFL ? "/afl-fantasy" : isKeeper ? "/keeper" : isBB1 ? "/best-ball-1" : "/theleague", hideLeaguePrefix)}>
           <div class="league_logo" id="league_logo">
             {isAFL ? (
               <>
                 <!-- AFL Logo — dual variant, CSS-swapped on html.dark -->
                 <img src="/assets/logos/afl-logo.svg" alt="AFL Logo" class="header-logo-img header-logo-img--light" />
                 <img src="/assets/logos/afl-logo-dark.svg" alt="AFL Logo" class="header-logo-img header-logo-img--dark" />
+              </>
+            ) : isKeeper ? (
+              <>
+                <img src="/assets/logos/keeper-logo.svg" alt="Keeper League Logo" class="header-logo-img header-logo-img--light" />
+                <img src="/assets/logos/keeper-logo-dark.svg" alt="Keeper League Logo" class="header-logo-img header-logo-img--dark" />
               </>
             ) : isBB1 ? (
               <>
@@ -157,15 +172,19 @@ const searchHref = searchPath
               <>
                 <span class="leaguename--afl-name">AFL</span>
               </>
+            ) : isKeeper ? (
+              <>
+                <span class="leaguename--bb-name">Keeper</span><span class="leaguename--bb-num"> League</span>
+              </>
             ) : isBB1 ? (
               <>
-                <span class="leaguename--bb-name">Best Ball</span><span class="leaguename--bb-num">#1</span>
+                <span class="leaguename--bb-name">Best Ball</span><span class="leaguename--bb-num">{isDemo ? ' Demo' : '#1'}</span>
               </>
             ) : (
               <>
-                <span class="leaguename--the">The</span><span
+                <span class="leaguename--the">{isDemo ? 'Demo' : 'The'}</span><span
                   class="leaguename--league">League</span
-                ><span class="leaguename--dotus">.us</span>
+                >{!isDemo && <span class="leaguename--dotus">.us</span>}
               </>
             )}
           </div>
@@ -206,7 +225,7 @@ const searchHref = searchPath
             </>
           ) : (
           <>
-          {!isAFL && (
+          {!isAFL && !isKeeper && (
             <a href="/theleague/schefter/tip" class="nav-icon-link" title="Tip Schefter">
               <svg class="nav-icon" aria-hidden="true">
                 <use href={`${spriteUrl}#icon-news`}></use>
@@ -214,11 +233,11 @@ const searchHref = searchPath
               <span class="nav-label">Tip Schefter</span>
             </a>
           )}
-          <a href={resolveLeaguePath(isAFL ? "/afl-fantasy/rosters" : "/theleague/rosters", hideLeaguePrefix)} class="nav-icon-link" title={isAFL ? "Rosters" : "Roster/Salary"}>
+          <a href={resolveLeaguePath(isAFL || isKeeper ? `${aflFamilyPrefix}/rosters` : "/theleague/rosters", hideLeaguePrefix)} class="nav-icon-link" title={isAFL || isKeeper ? "Rosters" : "Roster/Salary"}>
             <svg class="nav-icon" aria-hidden="true">
-              <use href={`${spriteUrl}#icon-${isAFL ? "helmet" : "banknote"}`}></use>
+              <use href={`${spriteUrl}#icon-${isAFL || isKeeper ? "helmet" : "banknote"}`}></use>
             </svg>
-            <span class="nav-label">{isAFL ? "Rosters" : "Roster/Salary"}</span>
+            <span class="nav-label">{isAFL || isKeeper ? "Rosters" : "Roster/Salary"}</span>
           </a>
           <a href={submitLineupUrl} class="nav-icon-link" title="Set Lineup">
             <svg class="nav-icon" aria-hidden="true">
@@ -232,24 +251,36 @@ const searchHref = searchPath
             </svg>
             <span class="nav-label">Free Agents</span>
           </a>
-          <a href={resolveLeaguePath(isAFL ? "/afl-fantasy/standings" : "/theleague/standings", hideLeaguePrefix)} class="nav-icon-link" title="Standings">
+          <a href={resolveLeaguePath(isAFL || isKeeper ? `${aflFamilyPrefix}/standings` : "/theleague/standings", hideLeaguePrefix)} class="nav-icon-link" title="Standings">
             <svg class="nav-icon" aria-hidden="true">
               <use href={`${spriteUrl}#icon-shield`}></use>
             </svg>
             <span class="nav-label">Standings</span>
           </a>
-          <a href={liveScoringUrl} class="nav-icon-link" title="Live scoring" target={hasLiveScoring ? undefined : "_blank"} rel={hasLiveScoring ? undefined : "noopener noreferrer"}>
-            <svg class="nav-icon" aria-hidden="true">
-              <use href={`${spriteUrl}#icon-goals`}></use>
-            </svg>
-            <span class="nav-label">Live scoring</span>
-          </a>
-          <a href={resolveLeaguePath(isAFL ? "/afl-fantasy/playoffs" : "/theleague/playoffs", hideLeaguePrefix)} class="nav-icon-link" title="Playoffs">
-            <svg class="nav-icon" aria-hidden="true">
-              <use href={`${spriteUrl}#icon-champ`}></use>
-            </svg>
-            <span class="nav-label">Playoffs</span>
-          </a>
+          {isKeeper ? (
+            /* The demo's keeper slot has neither page below; it has the planner hub. */
+            <a href={resolveLeaguePath("/keeper/keepers", hideLeaguePrefix)} class="nav-icon-link" title="Keepers">
+              <svg class="nav-icon" aria-hidden="true">
+                <use href={`${spriteUrl}#icon-history`}></use>
+              </svg>
+              <span class="nav-label">Keepers</span>
+            </a>
+          ) : (
+            <>
+              <a href={liveScoringUrl} class="nav-icon-link" title="Live scoring" target={hasLiveScoring ? undefined : "_blank"} rel={hasLiveScoring ? undefined : "noopener noreferrer"}>
+                <svg class="nav-icon" aria-hidden="true">
+                  <use href={`${spriteUrl}#icon-goals`}></use>
+                </svg>
+                <span class="nav-label">Live scoring</span>
+              </a>
+              <a href={resolveLeaguePath(isAFL ? "/afl-fantasy/playoffs" : "/theleague/playoffs", hideLeaguePrefix)} class="nav-icon-link" title="Playoffs">
+                <svg class="nav-icon" aria-hidden="true">
+                  <use href={`${spriteUrl}#icon-champ`}></use>
+                </svg>
+                <span class="nav-label">Playoffs</span>
+              </a>
+            </>
+          )}
           </>
           )}
         </nav>

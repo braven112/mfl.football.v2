@@ -25,7 +25,7 @@ import { franchiseIdForLeague, type AuthUser } from '../src/utils/auth';
 const root = join(__dirname, '..');
 const read = (p: string) => readFileSync(join(root, p), 'utf8');
 
-const PAGES = ['src/pages/theleague/players.astro', 'src/pages/afl-fantasy/players.astro'];
+const PAGES = ['src/pages/theleague/players.astro', 'src/components/afl-family/PlayersPage.astro'];
 const BRIDGE = 'src/components/shared/WatchListBridge.astro';
 
 const owner = (over: Partial<AuthUser> = {}): AuthUser => ({
