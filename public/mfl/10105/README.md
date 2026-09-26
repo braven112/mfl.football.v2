@@ -121,6 +121,15 @@ size they were supplied:
 
 Like the marks above, nothing in the widget references these yet.
 
+### Pennant banners (`banners/`)
+
+| File | Size | URL |
+|---|---|---|
+| `banners/pennants-21-25.png` | 1600 × 1000 | `https://v2.mfl.football/mfl/10105/banners/pennants-21-25.png` |
+
+A rafter of hanging pennants numbered 21–25 (Eagles, Mavericks, Mavericks,
+Stingers, Dragons), transparent below the rafter.
+
 `public/` is served as-is with no build step, so replacing any file and
 deploying is the whole update path; the URL does not change. Keep the names
 stable for that reason — a rename breaks every module already pointing at it.
