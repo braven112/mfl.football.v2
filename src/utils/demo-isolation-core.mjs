@@ -126,3 +126,51 @@ export const DEMO_FETCH_MARK = Symbol.for('mfl.football.demoFetch');
 export function isDemoFetch(candidate) {
   return typeof candidate === 'function' && DEMO_FETCH_MARK in candidate;
 }
+
+/**
+ * The demo's league paths: demo.mfl.football/<demoPath>/… serves the route
+ * slot of the league whose registry entry names that path (dynasty →
+ * theleague). Passed in rather than imported, because the registry imports
+ * this module.
+ *
+ * Three outcomes for a requested path:
+ *   - `/dynasty/x`   → rewrite to `/theleague/x` (the route that renders it)
+ *   - `/theleague/x` → redirect to `/dynasty/x` (a link the HTML pass missed,
+ *                       or one built in client script), so the slot's real
+ *                       name never sits in a prospect's address bar
+ *   - `/`            → redirect to the first demo league
+ * Anything else (api, assets) is left alone.
+ *
+ * @param {string} pathname
+ * @param {Record<string, string>} demoPaths  demoPath → route slug
+ * @returns {{ rewrite: string } | { redirect: string } | null}
+ */
+export function resolveDemoPath(pathname, demoPaths) {
+  const entries = Object.entries(demoPaths);
+  if (!entries.length) return null;
+  if (pathname === '/' || pathname === '') return { redirect: `/${entries[0][0]}/` };
+  for (const [demoPath, slug] of entries) {
+    const shown = `/${demoPath}`;
+    const real = `/${slug}`;
+    if (pathname === shown || pathname.startsWith(`${shown}/`)) {
+      return { rewrite: real + pathname.slice(shown.length) };
+    }
+    if (pathname === real || pathname.startsWith(`${real}/`)) {
+      return { redirect: shown + pathname.slice(real.length) };
+    }
+  }
+  return null;
+}
+
+/**
+ * Rewrite the route-slot prefix in a page's HTML links to the demo path
+ * (`href="/theleague/rosters"` → `href="/dynasty/rosters"`), so navigation
+ * never takes the redirect hop. Only quoted, root-relative URLs are touched.
+ */
+export function rewriteDemoHtml(html, demoPaths) {
+  let out = html;
+  for (const [demoPath, slug] of Object.entries(demoPaths)) {
+    out = out.replace(new RegExp(`(["'(=])/${slug}(?=[/"'?#)])`, 'g'), `$1/${demoPath}`);
+  }
+  return out;
+}

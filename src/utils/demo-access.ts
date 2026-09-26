@@ -2,7 +2,7 @@
  * Access to the custom-site demo (docs/plans/custom-site-demo.md): a private,
  * expiring link per prospect, no password.
  *
- *   https://dynasty.demo.mfl.football/demo-start?t=<token>
+ *   https://demo.mfl.football/dynasty/demo-start?t=<token>
  *
  * The token lives in the demo deployment's OWN Redis (production's is scrubbed
  * from a demo process — demo-isolation-core.mjs) as `demo:tokens:<token>`, with

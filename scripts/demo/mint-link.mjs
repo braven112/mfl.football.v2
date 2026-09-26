@@ -10,7 +10,7 @@
  */
 import { Redis } from '@upstash/redis';
 import { buildDemoLink, DEMO_START_PATH, DEMO_TOKEN_PREFIX } from '../../src/utils/demo-access-core.mjs';
-import { LEAGUES } from '../../src/config/leagues-data.mjs';
+import { DEMO_HOST, LEAGUES } from '../../src/config/leagues-data.mjs';
 
 const args = process.argv.slice(2);
 const opt = (name, fallback) => {
@@ -35,6 +35,5 @@ const link = buildDemoLink({ label, days });
 await new Redis({ url, token }).set(`${DEMO_TOKEN_PREFIX}${link.token}`, JSON.stringify(link), {
   ex: link.expiresAt - link.createdAt,
 });
-const host = LEAGUES.theleague.demoDomains[0];
 console.log(`Demo link for ${label} (expires ${new Date(link.expiresAt * 1000).toDateString()}):`);
-console.log(`https://${host}${DEMO_START_PATH}?t=${link.token}`);
+console.log(`https://${DEMO_HOST}/${LEAGUES.theleague.demoPath}${DEMO_START_PATH}?t=${link.token}`);

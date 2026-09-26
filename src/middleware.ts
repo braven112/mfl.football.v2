@@ -35,7 +35,9 @@ import {
   resolvePunctuationRedirect,
 } from './utils/link-punctuation.mjs';
 import { isDemoDeploy, shouldBlockIndexing } from './utils/deploy-environment';
-import { isDemoRefusedPath } from './utils/demo-isolation-core.mjs';
+import { isDemoRefusedPath, resolveDemoPath, rewriteDemoHtml } from './utils/demo-isolation-core.mjs';
+import { demoLeaguePaths } from './config/leagues-data.mjs';
+import { DEMO_START_PATH } from './utils/demo-access-core.mjs';
 import type { MiddlewareHandler } from 'astro';
 import { getAuthUser } from './utils/auth';
 import { demoTokenFromUserId } from './utils/demo-access';
@@ -112,10 +114,30 @@ const handle: MiddlewareHandler = async (context, next) => {
   if (isDemoDeploy() && !context.isPrerendered && isDemoRefusedPath(context.url.pathname)) {
     return stamp(await context.rewrite(new URL('/_not-found', context.url)));
   }
-  // A prospect signs in with their private link, never MFL credentials — the
-  // demo has no MFL behind it. Send the sign-in page to the demo's front door.
-  if (isDemoDeploy() && !context.isPrerendered && /^\/(?:theleague\/)?login\/?$/.test(context.url.pathname)) {
-    return stamp(context.redirect('/demo-start', 302));
+  // `originPathname` differs from the current path only when this run is the
+  // re-entry after a rewrite — Astro runs middleware again for the rewritten
+  // path, and routing it a second time would bounce /theleague/x back to
+  // /dynasty/x forever.
+  // Astro normalizes the stored origin (a trailing slash may be added), so
+  // compare without one.
+  const bare = (p: string) => p.replace(/\/+$/, '') || '/';
+  const isRewriteReentry =
+    context.originPathname !== undefined && bare(context.originPathname) !== bare(context.url.pathname);
+  if (isDemoDeploy() && !context.isPrerendered && !isRewriteReentry) {
+    // A prospect signs in with their private link, never MFL credentials — the
+    // demo has no MFL behind it. Send the sign-in page to the demo's front door.
+    if (/^\/(?:(?:theleague|dynasty)\/)?login\/?$/.test(context.url.pathname)) {
+      return stamp(context.redirect(`/${firstDemoPath()}${DEMO_START_PATH}`, 302));
+    }
+    // demo.mfl.football/dynasty/… serves TheLeague's route slot; the slot's
+    // own name redirects to the demo path, so it never shows in a URL.
+    const demo = resolveDemoPath(context.url.pathname, demoLeaguePaths());
+    if (demo && 'redirect' in demo) {
+      return stamp(context.redirect(demo.redirect + context.url.search, 302));
+    }
+    if (demo && 'rewrite' in demo) {
+      return stamp(await context.rewrite(new URL(demo.rewrite + context.url.search, context.url)));
+    }
   }
 
   const hostname = context.url.hostname;
@@ -161,6 +183,20 @@ export const onRequest = defineMiddleware((context, next) => {
   const user = context.isPrerendered ? null : getAuthUser(context.request);
   return demoRequestContext.run(
     { token: demoTokenFromUserId(user?.id), franchiseId: user?.franchiseId || null },
-    () => handle(context, next),
+    async () => withDemoLinks(await handle(context, next)),
   );
 });
+
+const firstDemoPath = () => Object.keys(demoLeaguePaths())[0];
+
+/**
+ * Point a demo page's links at the demo path (`/theleague/x` → `/dynasty/x`)
+ * so navigation skips the redirect hop. HTML only; everything else untouched.
+ */
+async function withDemoLinks(response: Response): Promise<Response> {
+  if (!(response.headers.get('content-type') ?? '').includes('text/html')) return response;
+  const html = rewriteDemoHtml(await response.text(), demoLeaguePaths());
+  const headers = new Headers(response.headers);
+  headers.delete('content-length');
+  return new Response(html, { status: response.status, statusText: response.statusText, headers });
+}

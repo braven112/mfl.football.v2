@@ -40,12 +40,11 @@ export const LEAGUES = {
      */
     stagingDomains: ['staging.theleague.us'],
     /**
-     * Hostnames of the custom-site demo that renders a FICTIONAL league in
-     * this league's slot (docs/plans/custom-site-demo.md). Served only by the
-     * `demo`-branch deployment, whose build replaces this league's data; kept
-     * apart from `domains` for the same reason staging hosts are.
+     * The path the custom-site demo serves this league's slot under —
+     * demo.mfl.football/dynasty — where the demo build has replaced its data
+     * with a fictional salary-cap dynasty league (docs/plans/custom-site-demo.md).
      */
-    demoDomains: ['dynasty.demo.mfl.football'],
+    demoPath: 'dynasty',
     /**
      * Repo-relative league config + Schefter feed locations. TheLeague's
      * live under src/data (build-time imports); AFL's under its dataPath.
@@ -448,6 +447,21 @@ export const LEAGUES = {
 };
 
 /**
+ * The custom-site demo's one host. Each demo league lives under its registry
+ * `demoPath` on it (demo.mfl.football/dynasty), never on a subdomain of its own.
+ */
+export const DEMO_HOST = 'demo.mfl.football';
+
+/**
+ * demoPath → route slug for every league the demo serves (dynasty →
+ * theleague). Later demo types add a `demoPath` to their slot's entry —
+ * `bigleague` for the conference league, `redraft` for best ball.
+ */
+export function demoLeaguePaths() {
+  return Object.fromEntries(ALL_LEAGUES.filter((l) => l.demoPath).map((l) => [l.demoPath, l.slug]));
+}
+
+/**
  * The custom-site demo (docs/plans/custom-site-demo.md) renders a fictional
  * league in TheLeague's slot; its build replaced this league's data, so its
  * name goes too. Applied once at module load: the demo is a whole deployment,
@@ -752,7 +766,7 @@ export function buildHostToSlugMap() {
   /** @type {Record<string, string>} */
   const map = {};
   for (const league of ALL_LEAGUES) {
-    for (const domain of [...league.domains, ...(league.stagingDomains ?? []), ...(league.demoDomains ?? [])]) {
+    for (const domain of [...league.domains, ...(league.stagingDomains ?? [])]) {
       map[domain] = league.slug;
     }
   }
