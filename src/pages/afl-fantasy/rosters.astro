@@ -15,7 +15,7 @@ import KeeperPlanner, {
 import { spriteUrl } from '../../utils/sprite-url';
 import { getCurrentWeek } from '../../utils/current-week';
 import { nflWeekStartInstant } from '../../utils/nfl-week-starts.mjs';
-import { formatForViewer } from '../../utils/viewer-clock';
+import { formatForViewer, viewerClockZone } from '../../utils/viewer-clock';
 import { readViewerClock } from '../../utils/viewer-preferences-page';
 import { getCurrentSeasonYear } from '../../utils/league-year';
 import {
@@ -28,6 +28,7 @@ import {
 import {
   loadLiveOddsData,
   oddsForTeam,
+  getWeatherIcon,
   type GameOdds,
 } from '../../utils/rosters/live-odds';
 import { normalizeTeamCode, getNFLTeamName, getNFLTeamLogo } from '../../utils/nfl-logo';
@@ -39,7 +40,13 @@ import {
   loadAflSeasonScores,
   loadAflProjections,
   summarizeSeasonScores,
+  recentScoreAverage,
 } from '../../utils/afl-player-scoring';
+import { buildPhoneLineSpans, phonePosKey, teamSpread } from '../../utils/rosters/phone-row';
+// The phone layout, shared with TheLeague (docs/plans/rosters-mobile-layout.md
+// § 8). Imported here, in the frontmatter: the rules reach rows a scoped
+// <style> would not.
+import '../../styles/rosters-mobile.css';
 import { resolveStatsSeasonYear, parseYtdPlayerScores } from '../../utils/stats-season.mjs';
 import { getAuthUser } from '../../utils/auth';
 import { resolveOwnerPresence } from '../../utils/rosters/owner-presence';
@@ -364,8 +371,12 @@ const ownerSeenFor = await resolveOwnerPresence(AFL_LEAGUE_ID);
 const headerLockAt = headerSchedule.upNext != null && headerWeek != null
   ? nflWeekStartInstant(selectedYear, headerSchedule.upNext.week)
   : null;
+/* One read serves the lineup-lock line and the phone rows' kickoff times,
+   which print in ONE clock (`viewerClockZone`, the compact-surface form). */
+const pageViewerClock = await readViewerClock(Astro.cookies, authUser, 'afl-fantasy');
+const rowKickoffClock = viewerClockZone(pageViewerClock);
 const headerLineupLock = headerLockAt != null && headerLockAt.getTime() > Date.now()
-  ? formatForViewer(headerLockAt, await readViewerClock(Astro.cookies, authUser, 'afl-fantasy'), { weekday: true })
+  ? formatForViewer(headerLockAt, pageViewerClock, { weekday: true })
   : null;
 
 /* The VIEWER's conference, never the viewed club's — an order that followed
@@ -601,6 +612,8 @@ interface PlayerMatchup {
   scoreGames: number;
   /** Points per game played, over the weeks a roster held him. */
   scoreAverage: number | null;
+  /** The last three scored weeks' average — the phone card's L3. */
+  recentAverage: number | null;
 }
 const matchupByPlayerId = new Map<string, PlayerMatchup>();
 for (const player of sortedTableRoster) {
@@ -617,6 +630,7 @@ for (const player of sortedTableRoster) {
     scoreTotal: aflYtdPoints.get(player.id) ?? null,
     scoreGames: season.games,
     scoreAverage: season.average,
+    recentAverage: recentScoreAverage(aflSeasonScores, player.id),
   });
 }
 
@@ -654,6 +668,15 @@ const formatWeather = (m: GameOdds | null): string => {
   const t = m.weather.temperature;
   if (typeof t === 'number') return `${Math.round(t)}°`;
   return m.weather.displayValue ?? '—';
+};
+/* The phone card's weather: TheLeague's Coach card shows the temperature
+   and a sky icon; the desktop cell here keeps its bare temperature. */
+const phoneWeather = (m: GameOdds | null): string | null => {
+  if (!m?.weather) return null;
+  const t = m.weather.temperature;
+  const temp = typeof t === 'number' ? `${Math.round(t)}°` : '';
+  const icon = m.weather.displayValue ? getWeatherIcon(m.weather.displayValue) : '';
+  return [temp, icon].filter(Boolean).join(' ') || null;
 };
 const formatOverUnder = (m: GameOdds | null): string => {
   // ESPN hands a number through as-is; 'N/A' when the game is not priced.
@@ -1116,8 +1139,11 @@ const pageConfig = {
                   const avg = m?.scoreAverage ?? null;
                   const projected = m?.projected ?? null;
                   const tier = oppRank != null ? fpaTier(oppRank) : null;
+                  const recent = m?.recentAverage ?? null;
                   return (
                     <tr
+                      class="roster-row"
+                      data-pos={phonePosKey(player.position) || undefined}
                       data-player-id={player.id}
                       data-player-status={player.status}
                       data-player-name={player.name}
@@ -1160,6 +1186,19 @@ const pageConfig = {
                             )}
                           </Fragment>
                         </PlayerCell>
+                        {/* The phone card's extra line data (phone-row.ts):
+                            EMPTY spans printed from data-t, so the desktop
+                            table's text is unchanged. */}
+                        <Fragment set:html={buildPhoneLineSpans({
+                          kickoffIso: matchup?.date ?? null,
+                          kickoffZone: rowKickoffClock.zone,
+                          kickoffLabel: rowKickoffClock.label,
+                          opponent: oppCode,
+                          spread: matchup ? teamSpread(matchup.spread, player.team, normalizeTeamCode) : null,
+                          lastThree: recent != null ? recent.toFixed(1) : null,
+                          weather: phoneWeather(matchup),
+                          overUnder: formatOverUnder(matchup) === '—' ? null : formatOverUnder(matchup),
+                        })} />
                       </td>
                       {/* Every viewer gets the sheet: owners for roster
                           writes, everyone for Watch (My Watch List). */}
@@ -1837,6 +1876,11 @@ const pageConfig = {
 
   <script>
     import { initPlayerModalTrigger } from '../../utils/player-modal-trigger';
+    import {
+      buildAflSheetFields,
+      createAflSheetActionHandler,
+      type AflSheetActionId,
+    } from '../../utils/rosters/afl-phone-sheet';
   import { loadWatchList } from '../../utils/watch-list-client';
 
     // Re-read the page config from the DOM on demand — values like
@@ -1851,6 +1895,99 @@ const pageConfig = {
     // be bound exactly once — not per navigation — or stacked handlers would
     // double-open the modal. Module-scoped so it survives across page loads.
     let actionDelegationBound = false;
+
+    /* Opens AFLActionModal for one row: from the row's ⋮ button, or from the
+       player sheet with `action` (the sheet's hero / ⋮ menu / More actions),
+       which takes the modal straight to that action's confirm step. */
+    function openActionModalFor(row: HTMLTableRowElement, action?: AflSheetActionId) {
+      const config = readConfig();
+      const opener = (window as any).openAFLActionModal as
+        | ((p: {
+            /** Open straight on this action's confirm step (the player sheet). */
+            action?: AflSheetActionId;
+            playerId: string;
+            playerName: string;
+            status?: string;
+            isOnTradeBait?: boolean;
+            franchiseId?: string;
+            headshot?: string;
+            position?: string;
+            nflTeam?: string;
+            birthdate?: number | null;
+            college?: string | null;
+            draftYear?: number | null;
+            draftRound?: number | null;
+            draftPick?: number | null;
+            draftTeam?: string | null;
+            isOwner?: boolean;
+            signedIn?: boolean;
+          }) => void)
+        | undefined;
+      if (typeof opener !== 'function') {
+        console.warn('[afl-rosters] AFLActionModal not loaded; ignoring action.');
+        return;
+      }
+
+      // Pull the player lockup details off the PlayerCell already rendered in
+      // the row. This avoids duplicating the same data into row dataset
+      // attributes server-side, and keeps the modal hero in sync with whatever
+      // PlayerCell ended up resolving (NFL-photo / college-photo / default).
+      const playerCell = row.querySelector('[data-column="player"] .player-cell');
+      const headshotImg = playerCell?.querySelector('.player-cell__avatar img') as HTMLImageElement | null;
+      const logoImg = playerCell?.querySelector('.player-meta__logo') as HTMLImageElement | null;
+      const posEl = playerCell?.querySelector('.player-meta__pos');
+      // Position label can include contract tags ("QB - RC"); strip them.
+      const positionRaw = posEl?.textContent?.trim().split('-')[0]?.trim() ?? '';
+      // Logo URL ends in `/{TEAM}.svg`; pull the code off the end.
+      const logoSrc = logoImg?.getAttribute('src') ?? '';
+      const teamCodeMatch = logoSrc.match(/\/nfl-logos\/([^/.]+)\.svg$/);
+      const teamCode = teamCodeMatch ? teamCodeMatch[1] : '';
+
+      // The PlayerCell also serializes the full player payload onto the name
+      // element via data-player-modal — same JSON PlayerDetailsModal uses. Re-
+      // parse it so the action modal hero can show age / college / draft pick
+      // without duplicating those fields into separate data attributes.
+      const nameEl = playerCell?.querySelector('.player-cell__name[data-player-modal]');
+      const rawJson = nameEl?.getAttribute('data-player-modal') ?? '';
+      let extra: {
+        birthdate?: number | null;
+        college?: string | null;
+        draftYear?: number | null;
+        draftRound?: number | null;
+        draftPick?: number | null;
+        draftTeam?: string | null;
+      } = {};
+      if (rawJson) {
+        try {
+          const parsed = JSON.parse(rawJson) as Record<string, unknown>;
+          extra = {
+            birthdate: typeof parsed.birthdate === 'number' ? parsed.birthdate : null,
+            college: typeof parsed.college === 'string' ? parsed.college : null,
+            draftYear: typeof parsed.draftYear === 'number' ? parsed.draftYear : null,
+            draftRound: typeof parsed.draftRound === 'number' ? parsed.draftRound : null,
+            draftPick: typeof parsed.draftPick === 'number' ? parsed.draftPick : null,
+            draftTeam: typeof parsed.draftTeam === 'string' ? parsed.draftTeam : null,
+          };
+        } catch {
+          // Malformed JSON — leave extra empty; modal will fall back gracefully.
+        }
+      }
+
+      opener({
+        action,
+        playerId: row.dataset.playerId ?? '',
+        playerName: row.dataset.playerName ?? 'Player',
+        status: row.dataset.playerStatus,
+        isOnTradeBait: row.dataset.onTradeBait === 'true',
+        franchiseId: config.selectedFranchiseId,
+        isOwner: config.isOwner === true,
+        signedIn: config.signedIn === true,
+        headshot: headshotImg?.getAttribute('src') ?? undefined,
+        position: positionRaw || undefined,
+        nflTeam: teamCode || undefined,
+        ...extra,
+      });
+    }
 
     // Runs on initial load AND after every ClientRouter navigation. Without
     // this, Astro evaluates the script module only once, so navigating onto
@@ -1935,7 +2072,26 @@ const pageConfig = {
     // `pageRoot`, not a fresh bare-class query — the gate above already
     // resolved THIS league's page root, and re-asking without the league is
     // the same hazard one statement later.
-    initPlayerModalTrigger(pageRoot);
+    // On a phone the whole row opens the sheet (the ⋮ column is hidden
+    // there), and `enrich` adds the tabs, This week and the owner's actions
+    // (docs/plans/rosters-mobile-layout.md § 8). A row outside the roster
+    // tables — the planner's cards — keeps the plain sheet.
+    initPlayerModalTrigger(pageRoot, {
+      rowTapMedia: '(max-width: 767px)',
+      enrich: (data, { row }) => {
+        if (!row || !row.closest('.roster-table--afl')) return data;
+        const config = readConfig();
+        return {
+          ...data,
+          ...buildAflSheetFields(row, {
+            isOwner: config.isOwner === true,
+            status: row.dataset.playerStatus ?? '',
+            onTradeBait: row.dataset.onTradeBait === 'true',
+          }),
+          onAction: createAflSheetActionHandler((action) => openActionModalFor(row, action)),
+        };
+      },
+    });
 
     // Warm the watch list so the sheet's Watch option opens in the right
     // state; the store caches per league and no-ops on repeat.
@@ -1950,92 +2106,9 @@ const pageConfig = {
       const trigger = target.closest('[data-action-trigger]') as HTMLButtonElement | null;
       if (!trigger) return;
       e.stopPropagation();
-      const config = readConfig();
       const row = trigger.closest('tr') as HTMLTableRowElement | null;
       if (!row) return;
-      const opener = (window as any).openAFLActionModal as
-        | ((p: {
-            playerId: string;
-            playerName: string;
-            status?: string;
-            isOnTradeBait?: boolean;
-            franchiseId?: string;
-            headshot?: string;
-            position?: string;
-            nflTeam?: string;
-            birthdate?: number | null;
-            college?: string | null;
-            draftYear?: number | null;
-            draftRound?: number | null;
-            draftPick?: number | null;
-            draftTeam?: string | null;
-            isOwner?: boolean;
-            signedIn?: boolean;
-          }) => void)
-        | undefined;
-      if (typeof opener !== 'function') {
-        console.warn('[afl-rosters] AFLActionModal not loaded; ignoring action.');
-        return;
-      }
-
-      // Pull the player lockup details off the PlayerCell already rendered in
-      // the row. This avoids duplicating the same data into row dataset
-      // attributes server-side, and keeps the modal hero in sync with whatever
-      // PlayerCell ended up resolving (NFL-photo / college-photo / default).
-      const playerCell = row.querySelector('[data-column="player"] .player-cell');
-      const headshotImg = playerCell?.querySelector('.player-cell__avatar img') as HTMLImageElement | null;
-      const logoImg = playerCell?.querySelector('.player-meta__logo') as HTMLImageElement | null;
-      const posEl = playerCell?.querySelector('.player-meta__pos');
-      // Position label can include contract tags ("QB - RC"); strip them.
-      const positionRaw = posEl?.textContent?.trim().split('-')[0]?.trim() ?? '';
-      // Logo URL ends in `/{TEAM}.svg`; pull the code off the end.
-      const logoSrc = logoImg?.getAttribute('src') ?? '';
-      const teamCodeMatch = logoSrc.match(/\/nfl-logos\/([^/.]+)\.svg$/);
-      const teamCode = teamCodeMatch ? teamCodeMatch[1] : '';
-
-      // The PlayerCell also serializes the full player payload onto the name
-      // element via data-player-modal — same JSON PlayerDetailsModal uses. Re-
-      // parse it so the action modal hero can show age / college / draft pick
-      // without duplicating those fields into separate data attributes.
-      const nameEl = playerCell?.querySelector('.player-cell__name[data-player-modal]');
-      const rawJson = nameEl?.getAttribute('data-player-modal') ?? '';
-      let extra: {
-        birthdate?: number | null;
-        college?: string | null;
-        draftYear?: number | null;
-        draftRound?: number | null;
-        draftPick?: number | null;
-        draftTeam?: string | null;
-      } = {};
-      if (rawJson) {
-        try {
-          const parsed = JSON.parse(rawJson) as Record<string, unknown>;
-          extra = {
-            birthdate: typeof parsed.birthdate === 'number' ? parsed.birthdate : null,
-            college: typeof parsed.college === 'string' ? parsed.college : null,
-            draftYear: typeof parsed.draftYear === 'number' ? parsed.draftYear : null,
-            draftRound: typeof parsed.draftRound === 'number' ? parsed.draftRound : null,
-            draftPick: typeof parsed.draftPick === 'number' ? parsed.draftPick : null,
-            draftTeam: typeof parsed.draftTeam === 'string' ? parsed.draftTeam : null,
-          };
-        } catch {
-          // Malformed JSON — leave extra empty; modal will fall back gracefully.
-        }
-      }
-
-      opener({
-        playerId: row.dataset.playerId ?? '',
-        playerName: row.dataset.playerName ?? 'Player',
-        status: row.dataset.playerStatus,
-        isOnTradeBait: row.dataset.onTradeBait === 'true',
-        franchiseId: config.selectedFranchiseId,
-        isOwner: config.isOwner === true,
-        signedIn: config.signedIn === true,
-        headshot: headshotImg?.getAttribute('src') ?? undefined,
-        position: positionRaw || undefined,
-        nflTeam: teamCode || undefined,
-        ...extra,
-      });
+      openActionModalFor(row);
     });
     }
 

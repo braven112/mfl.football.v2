@@ -178,6 +178,13 @@
   const OWNER_ACTIONS: ModalAction[] = ['ir-to', 'ir-from', 'cut', 'trade-bait-add', 'trade-bait-remove', 'trade'];
 
   interface ActionPayload {
+    /**
+     * Open straight on this action's confirm step: the roster page's player
+     * sheet hands its picks here (docs/plans/rosters-mobile-layout.md § 8), so
+     * this modal keeps the confirmation and the write. Honoured only for an
+     * action the viewer is shown — a hidden (non-owner) write is never reached.
+     */
+    action?: ModalAction;
     playerId: string;
     playerName: string;
     /** ROSTER | INJURED_RESERVE — drives which IR action is shown */
@@ -373,6 +380,11 @@
       modal.hidden = false;
       modal.classList.add('is-open');
       document.body.style.overflow = 'hidden';
+
+      const direct = payload.action;
+      if (direct && direct !== 'watch' && actionButtons[direct] && !actionButtons[direct].hidden) {
+        pickAction(direct);
+      }
     }
 
     function closeModal() {
