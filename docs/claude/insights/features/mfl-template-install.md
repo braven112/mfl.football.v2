@@ -58,3 +58,37 @@ In the sandbox, `pgrep -f "astro dev" | xargs kill` matched the Bash tool's own
 command line (which contains the string) and killed it — exit 144, nothing after
 it ran, including a `git commit`. Stop a dev server by PID captured at start,
 or match a pattern that can't appear in the command itself.
+
+## 2026-09-26 — Cloudflare holds the sprite for a year; version the fetch URL
+
+After `icon-newsletter-book` merged to main (#1226) and deployed, the bare
+`https://v2.mfl.football/assets/icons/sprite.svg` still served the old sprite:
+Cloudflare sits in front of Vercel and the file ships with
+`s-maxage=31536000`, and its cached copy was ~25h old. Any other URL form
+(`?v=2`, `?x=1`) was a fresh cache key and served the new symbol at once.
+
+**Rule:** a header HPM fetches the sprite with a `?v=` query, and the number
+is bumped whenever the sprite gains a symbol that header uses. Archie's header
+does (`?v=2`). The shared `src/data/mfl-template/header.html` still fetches
+the bare URL, so a new symbol never reaches a league on that template until
+the Cloudflare copy is purged or the template is versioned too.
+
+## 2026-09-26 — Archie's skin CSS is loaded from a preview build, not production
+
+Archie's MFL appearance settings point at
+`mflfootballv2-git-claude-upbe-…vercel.app/assets/css/dist/archies_main.css` —
+a branch preview — because the skin had never reached main
+(`v2.mfl.football/assets/css/dist/archies_main.css` was a 404). A skin change
+merged anywhere else never reaches that URL. Once `archies_main.css` is on
+main, repoint the league at the production URL so skin fixes ship with normal
+deploys.
+
+## 2026-09-26 — Sprite symbols for a one-league icon: draw, don't trace
+
+The client's nav icons arrived as 60x120 PNG strips (rest over hover). Too
+small to trace: the Archie's Corner book was redrawn by hand as a 64-unit
+solid symbol, and the rest/hover look is CSS on the sprite glyphs
+(`_archies.scss`: accent fill at rest; on hover black fill with stacked
+`drop-shadow`s — two 1px for an edge, 6px + 18px for the glow). Stroke-based
+outlines are not an option on sprite glyphs: each symbol has its own viewBox,
+so one `stroke-width` renders a different weight on every icon.
