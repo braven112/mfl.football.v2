@@ -12,6 +12,10 @@
  */
 import http from 'node:http';
 
+
+/** An error this mock raises on purpose; its message is safe to return. */
+class MockError extends Error {}
+
 const port = Number(process.argv[2] ?? 8079);
 const db = new Map(); // key -> { value, type, expiresAt }
 
@@ -70,30 +74,32 @@ function run([rawCmd, ...args]) {
       return entry.expiresAt ? Math.ceil((entry.expiresAt - Date.now()) / 1000) : -1;
     }
     case 'hset': {
-      const entry = alive(key) ?? { value: {}, expiresAt: null };
+      const entry = alive(key) ?? { value: new Map(), expiresAt: null };
       let added = 0;
       for (let i = 1; i < args.length; i += 2) {
-        if (!(args[i] in entry.value)) added += 1;
-        entry.value[args[i]] = String(args[i + 1]);
+        if (!entry.value.has(String(args[i]))) added += 1;
+        entry.value.set(String(args[i]), String(args[i + 1]));
       }
       db.set(key, entry);
       return added;
     }
     case 'hget':
-      return alive(key)?.value?.[args[1]] ?? null;
+      return alive(key)?.value?.get(String(args[1])) ?? null;
     case 'hgetall': {
-      const obj = alive(key)?.value;
-      return obj ? Object.entries(obj).flat() : [];
+      const map = alive(key)?.value;
+      return map ? [...map.entries()].flat() : [];
     }
     case 'hdel': {
-      const obj = alive(key)?.value ?? {};
-      return args.slice(1).reduce((n, f) => (f in obj ? (delete obj[f], n + 1) : n), 0);
+      const map = alive(key)?.value ?? new Map();
+      return args.slice(1).reduce((n, f) => (map.delete(String(f)) ? n + 1 : n), 0);
     }
     case 'hincrby': {
-      const entry = alive(key) ?? { value: {}, expiresAt: null };
-      entry.value[args[1]] = String(Number(entry.value[args[1]] ?? 0) + Number(args[2]));
+      const entry = alive(key) ?? { value: new Map(), expiresAt: null };
+      const field = String(args[1]);
+      const next = Number(entry.value.get(field) ?? 0) + Number(args[2]);
+      entry.value.set(field, String(next));
       db.set(key, entry);
-      return Number(entry.value[args[1]]);
+      return next;
     }
     case 'sadd': {
       const entry = alive(key) ?? { value: new Set(), expiresAt: null };
@@ -127,7 +133,7 @@ function run([rawCmd, ...args]) {
       return ['0', [...db.keys()].filter((k) => alive(k) && re.test(k))];
     }
     case 'hlen':
-      return Object.keys(alive(key)?.value ?? {}).length;
+      return alive(key)?.value?.size ?? 0;
     case 'scard':
     case 'llen':
       return (alive(key)?.value ?? { size: 0, length: 0 }).size ?? alive(key)?.value?.length ?? 0;
@@ -155,9 +161,9 @@ function run([rawCmd, ...args]) {
     case 'eval':
     case 'evalsha':
       // Scripts are not emulated; callers in this repo fall back when EVAL fails.
-      throw new Error('NOSCRIPT mock-upstash does not run Lua');
+      throw new MockError('NOSCRIPT mock-upstash does not run Lua');
     default:
-      throw new Error(`mock-upstash: unsupported command ${cmd}`);
+      throw new MockError(`mock-upstash: unsupported command ${cmd}`);
   }
 }
 
@@ -165,7 +171,8 @@ const reply = (fn) => {
   try {
     return { result: fn() };
   } catch (err) {
-    return { error: String(err.message ?? err) };
+    // Only this file's own messages go back to the caller, never a stack.
+    return { error: err instanceof MockError ? err.message : 'ERR mock-upstash internal error' };
   }
 };
 
