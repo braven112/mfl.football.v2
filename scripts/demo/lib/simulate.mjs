@@ -183,8 +183,12 @@ export function simulateLeague({ years, facts, currentYear, currentWeek, franchi
     const regWeeksPlayed = Math.min(lastWeek, LEAGUE_RULES.regularSeasonWeeks);
     const standings = computeStandings(ids, weekly, franchises);
     const playoffs = regWeeksPlayed === LEAGUE_RULES.regularSeasonWeeks
-      ? playPlayoffs({ standings, lastWeek, rosters, f, scoresSoFar, value, srng, weekly })
+      ? playPlayoffs({ standings, lastWeek, rosters, f, scoresSoFar, value, srng, weekly, franchises })
       : null;
+
+    // MFL publishes all-play over EVERY scored week, playoffs included
+    // (compute-playoff-performance.mjs verifies it that way).
+    recomputeAllPlay(standings, weekly);
 
     // Next season's rookie draft order: worst first.
     previousOrder = [...standings].reverse().map((s) => s.id);
@@ -446,9 +450,29 @@ function computeStandings(ids, weekly, franchises) {
  * 3rd-place game, and a toilet bowl for the bottom seven — the three brackets
  * the site's playoff pages read.
  */
-function playPlayoffs({ standings, lastWeek, rosters, f, scoresSoFar, value, srng, weekly }) {
-  const seeds = standings.slice(0, 7).map((s, i) => ({ id: s.id, seed: i + 1 }));
-  const bottom = standings.slice(-7).map((s, i) => ({ id: s.id, seed: i + 1 }));
+function playPlayoffs({ standings, lastWeek, rosters, f, scoresSoFar, value, srng, weekly, franchises }) {
+  // The constitution's seeding: division champions are seeds 1-4 (in standings
+  // order), three wild cards 5-7 by record, then All Play, then points.
+  const divisionOf = new Map(franchises.map((fr) => [fr.id, fr.divisionIndex]));
+  const winners = [];
+  const seen = new Set();
+  for (const row of standings) {
+    const d = divisionOf.get(row.id);
+    if (!seen.has(d)) {
+      seen.add(d);
+      winners.push(row);
+    }
+  }
+  const pct = (r) => (r.w + r.t / 2) / Math.max(1, r.w + r.l + r.t);
+  const allPlay = (r) => r.allW / Math.max(1, r.allW + r.allL);
+  const wildCards = standings
+    .filter((r) => !winners.includes(r))
+    .sort((a, b) => pct(b) - pct(a) || allPlay(b) - allPlay(a) || b.pf - a.pf)
+    .slice(0, 3);
+  const field = [...winners, ...wildCards];
+  const seeds = field.map((s, i) => ({ id: s.id, seed: i + 1 }));
+  const inField = new Set(field.map((r) => r.id));
+  const bottom = standings.filter((r) => !inField.has(r.id)).slice(-7).map((s, i) => ({ id: s.id, seed: i + 1 }));
   const game = (week, homeId, awayId) => {
     const weekScores = f.scores.get(week) ?? new Map();
     const h = setLineup(rosters.get(homeId), f, weekScores, scoresSoFar, value, srng);
@@ -501,6 +525,38 @@ function playPlayoffs({ standings, lastWeek, rosters, f, scoresSoFar, value, srn
     weekly.push({ week, regularSeason: false, games: games.map((g) => [g.home.lineup, g.away.lineup, g.home.id, g.away.id]) });
   }
   return { seeds, bottom, championship, toiletBowl, thirdPlace };
+}
+
+function recomputeAllPlay(standings, weekly) {
+  const byWeek = new Map();
+  for (const w of weekly) {
+    const scores = byWeek.get(w.week) ?? new Map();
+    for (const [home, away, hid, aid] of w.games) {
+      scores.set(hid, home.score);
+      scores.set(aid, away.score);
+    }
+    byWeek.set(w.week, scores);
+  }
+  const acc = new Map(standings.map((r) => [r.id, { w: 0, l: 0, t: 0 }]));
+  for (const scores of byWeek.values()) {
+    for (const [id, s] of scores) {
+      const a = acc.get(id);
+      for (const [other, o] of scores) {
+        if (other === id) continue;
+        if (s > o) a.w++;
+        else if (s < o) a.l++;
+        else a.t++;
+      }
+    }
+  }
+  for (const r of standings) {
+    const a = acc.get(r.id);
+    const n = a.w + a.l + a.t;
+    r.allW = a.w;
+    r.allL = a.l;
+    r.allT = a.t;
+    r.allPlayPct = n ? ((a.w + a.t / 2) / n).toFixed(3).replace(/^0/, '') : '.000';
+  }
 }
 
 function snapshotRosters(rosters) {
