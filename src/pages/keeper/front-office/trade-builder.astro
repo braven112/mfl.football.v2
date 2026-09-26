@@ -1,0 +1,27 @@
+---
+/**
+ * Trade Builder (the custom-site demo's keeper league) — thin route wrapper
+ * around the AFL-family trade builder. Off the demo this slot does not exist
+ * (middleware 404).
+ */
+import TradeBuilderPage from '../../../components/afl-family/TradeBuilderPage.astro';
+import { feedsByYear } from '../../../utils/afl-family-standings';
+import { keeperLeague } from '../../../utils/keeper-slot';
+import { getLeagueYearForSlug } from '../../../utils/league-year';
+
+export const prerender = false;
+
+const league = keeperLeague();
+if (!league) return Astro.rewrite('/_not-found');
+const feeds = {
+  rosters: feedsByYear(import.meta.glob('../../../../data/keeper/mfl-feeds/*/rosters.json', { eager: true })),
+  players: feedsByYear(import.meta.glob('../../../../data/keeper/mfl-feeds/*/players.json', { eager: true })),
+  adp: feedsByYear(import.meta.glob('../../../../data/keeper/mfl-feeds/*/adp-dynasty.json', { eager: true })),
+  picks: feedsByYear(import.meta.glob('../../../../data/keeper/mfl-feeds/*/futureDraftPicks.json', { eager: true })),
+  tradeBait: feedsByYear(import.meta.glob('../../../../data/keeper/mfl-feeds/*/tradeBait.json', { eager: true })),
+  tradeBaitByFranchise: feedsByYear(import.meta.glob('../../../../data/keeper/mfl-feeds/*/tradeBait-by-franchise.json', { eager: true })),
+};
+const selectedYear = Math.max(...feeds.rosters.keys(), 0) || getLeagueYearForSlug('keeper');
+---
+
+<TradeBuilderPage league={league} selectedYear={selectedYear} feeds={feeds} />

@@ -1,0 +1,1133 @@
+---
+/**
+ * Standings page body for the AFL-family leagues — /afl-fantasy/standings and
+ * the custom-site demo's /keeper/standings. The route resolves the season and
+ * its feeds (resolveStandingsRoute: redirects must come from a page, globs
+ * cannot take a variable) and the viewer's team (it may write the preference
+ * cookie, which a component cannot); this renders.
+ *
+ * `competitions` is the AFL's own side competitions — the Premier League /
+ * D-League tiers, the AFL Cup, the NIT and promotion/relegation. A league
+ * without them (the keeper demo) passes false and gets division and playoff
+ * views only.
+ */
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import UnifiedStandingsTable from '../../components/theleague/standings/StandingsTable.astro';
+import { COLUMNS, TIERING } from '../../components/theleague/standings/standings-table-config';
+import { getTierLogo, getTierLogoDark, PREMIER_LEAGUE, D_LEAGUE } from '../../utils/afl-tier-logo';
+import { getConferenceLogo, getConferenceLogoDark } from '../../utils/afl-conference';
+import StandingsViewSelector from '../../components/theleague/StandingsViewSelector.astro';
+import YearSelector from '../../components/theleague/YearSelector.astro';
+import {
+  getDivisionStandings,
+  getConferenceStandings,
+  getTierAllPlayStandings,
+  getAllPlayStandings,
+  calculateAllPlayFromWeekly,
+  type WeeklyResultsData,
+} from '../../utils/standings';
+import { getTierMembership, TIER_COMPETITION_FIRST_SEASON, AFL_CUP } from '../../utils/afl-tier';
+import { resolveTierCutoffWeek } from '../../utils/all-play.mjs';
+import {
+  resolveConfigForYear,
+  resolvePreferredTeamIdForYear,
+  type TeamConfig,
+} from '../../utils/team-names';
+import { extractSeasonStructure, applySeasonStructure } from '../../utils/afl-structure';
+import ThemeImage from '../../components/ThemeImage.astro';
+import type { LeagueDefinition } from '../../config/leagues';
+import type { StandingsFeed } from '../../utils/live-standings';
+import type { AflFamilySlug, ConferenceId } from '../../utils/afl-conference';
+import { leagueConferenceIds } from '../../utils/afl-conference';
+
+interface Props {
+  league: LeagueDefinition;
+  /** The league's config file (teams, divisions, conferences, tier rules). */
+  config: any;
+  selectedYear: number;
+  availableYears: number[];
+  selectedFeed: StandingsFeed;
+  lastFetched: Date | null;
+  /** The selected season's league.json feed (its division/conference structure). */
+  seasonLeagueFeed: unknown;
+  weeklyResultsFeed: WeeklyResultsData | undefined;
+  /** The viewer's team, already resolved by the route (never a default). */
+  preferredTeamId: string | null | undefined;
+  /** The AFL's side competitions (tiers, AFL Cup, NIT, promotion/relegation). */
+  competitions: boolean;
+}
+const {
+  league: leagueDef,
+  config: aflConfig,
+  selectedYear,
+  availableYears,
+  selectedFeed,
+  lastFetched,
+  seasonLeagueFeed,
+  weeklyResultsFeed,
+  preferredTeamId,
+  competitions,
+} = Astro.props;
+const leagueSlug = leagueDef.slug as AflFamilySlug;
+const baseUrl = `/${leagueDef.slug}`;
+
+const franchises = selectedFeed.leagueStandings!.franchise;
+
+// Resolve team identities (name/icon/banner) for the selected year so
+// historical seasons show the era-correct branding from config history
+// (e.g. "The Dude that Abides" in 2013, not today's "Get off my Ditka").
+const yearResolvedConfig = resolveConfigForYear(
+  aflConfig as unknown as typeof aflConfig & { teams: TeamConfig[] },
+  selectedYear
+);
+
+// Overlay the SELECTED season's division/conference structure from its league
+// feed (2003-2012 ran six divisions with different memberships), so grouping,
+// division winners, and seeds reflect that season — not today's four-division
+// layout. Falls back to the current structure if the feed is missing.
+const seasonStructure = extractSeasonStructure(seasonLeagueFeed as any);
+const seasonConfig = applySeasonStructure(yearResolvedConfig, seasonStructure);
+
+// Follow the owner across franchise slots for historical seasons (e.g. the
+// 2016→2017 conference realignment moved owners between franchise IDs).
+const yearPreferredTeamId = resolvePreferredTeamIdForYear(
+  yearResolvedConfig,
+  preferredTeamId,
+  selectedYear
+);
+
+
+// Premier League all-play uses the league's tierCompetition cutoff week
+// (configured in afl.config.json) so we use consistent data from weekly results
+// rather than MFL's cumulative all-play data. The cutoff is per-season and
+// recorded, not derived — week 16 for the 2017 AFL Cup, 17 everywhere else.
+// See resolveTierCutoffWeek before adding a year.
+const tierCutoffWeek = resolveTierCutoffWeek(
+  (aflConfig as { tierCompetition?: { cutoffWeek?: number; cutoffWeekByYear?: Record<string, number> } })
+    .tierCompetition,
+  selectedYear
+);
+const calculatedAllPlay = weeklyResultsFeed
+  ? calculateAllPlayFromWeekly(weeklyResultsFeed, tierCutoffWeek)
+  : undefined;
+
+// Calculate standings for all views. MFL's leagueStandings feed order is the
+// AFL's official final order (the league's own tiebreakers already applied) —
+// preserve it instead of re-sorting locally.
+const divisionStandings = getDivisionStandings(franchises, seasonConfig, { preserveFeedOrder: true });
+// One ladder per conference the league actually has — the AFL's AL and NL, in
+// that order; the keeper demo's single conference.
+const conferenceLadders = leagueConferenceIds(leagueSlug).map((id) => ({
+  id,
+  standings: getConferenceStandings(franchises, seasonConfig, id, { preserveFeedOrder: true }),
+}));
+// All-play side competition, era-aware:
+// - pre-2017 (the knockout AFL Cup era and before): no all-play competition —
+//   view hidden.
+// - 2017: the league kept the "AFL Cup" name through a format change — the
+//   Cup ran that season as ONE combined 24-team all-play table rather than a
+//   knockout, and it is the competition the Premier League grew out of. No
+//   Premier League branding yet, but its top 12 really were headed for
+//   promotion (confirmed to exactly match the 2018 Premier League roster), so
+//   the table still carries the relegation/promotion cutoff line after rank
+//   12. It ends at week 16 — see resolveTierCutoffWeek.
+// - 2018+: grouped by THAT season's makeup from tier-history.json, recovered
+//   from the league skin's premierleague-YYYY.js grouping scripts (the source
+//   of truth for who was in which league). Any season missing a record falls
+//   back to the plain combined table rather than inventing a split.
+const tierMembership = competitions ? getTierMembership(selectedYear) : null;
+const allPlayEra = competitions && selectedYear >= TIER_COMPETITION_FIRST_SEASON;
+const hasTierRecord = tierMembership !== null;
+const tierAllPlayStandings = hasTierRecord
+  ? getTierAllPlayStandings(franchises, seasonConfig, calculatedAllPlay, tierMembership, { preserveFeedOrder: true })
+  : [];
+const combinedAllPlayStandings =
+  allPlayEra && !hasTierRecord
+    ? getAllPlayStandings(franchises, seasonConfig, calculatedAllPlay, { preserveFeedOrder: true })
+    : [];
+// 2017 is branded "AFL Cup" — the league's own name for it that season, and
+// the competition that became the Premier League / D-League split the
+// following year (see TIER_COMPETITION_FIRST_SEASON in afl-tier.ts).
+const isInauguralAllPlaySeason = competitions && selectedYear === TIER_COMPETITION_FIRST_SEASON;
+const nitTeams = !competitions ? [] : conferenceLadders
+  .flatMap(({ standings }) =>
+    standings.allTeams.filter(team => (team.conferenceSeed || 0) >= 5 && (team.conferenceSeed || 0) <= 12)
+  )
+  .sort((a, b) => parseFloat(b.pwr || '0') - parseFloat(a.pwr || '0'))
+  .map((team, idx) => ({ ...team, nitRank: idx + 1 }));
+
+// Get view from query parameter (default to 'division').
+// Validate against known views so an unrecognized value (e.g. a stale
+// ?view=conference link) falls back to division instead of a blank page.
+// all_play is only a valid view for seasons the competition existed.
+const validViews = allPlayEra ? ['division', 'league', 'all_play'] : ['division', 'league'];
+const requestedView = Astro.url.searchParams.get('view');
+const view = (validViews.includes(requestedView ?? '')
+  ? requestedView
+  : 'division') as 'division' | 'league' | 'all_play';
+
+// Division Champions by Year (defending champions from previous season)
+const championsByYear: Record<number, Record<string, string>> = {
+  2024: {
+    'North': 'Fullybaked',
+    'South': 'Avenging Amish',
+    'East': 'Balls Deep',
+    'West': 'The Boondock Saints',
+  },
+};
+
+// Get previous year's champions (defending champs for selected year)
+const previousYear = selectedYear - 1;
+const defendingChampions = (competitions && championsByYear[previousYear]) || {};
+
+// Get promotion/relegation playoff teams (Premier League 9-10 + D-League 3-4)
+const premierLeague = tierAllPlayStandings.find(t => t.tier === 'Premier League');
+const dLeague = tierAllPlayStandings.find(t => t.tier === 'D-League');
+const promoRegTeams = [
+  ...(premierLeague?.teams.slice(8, 10) || []), // Premier League ranks 9-10
+  ...(dLeague?.teams.slice(2, 4) || []), // D-League ranks 3-4
+].sort((a, b) => {
+  // Sort by all-play percentage (descending)
+  const aPct = parseFloat(a.all_play_pct || '0');
+  const bPct = parseFloat(b.all_play_pct || '0');
+  return bPct - aPct;
+});
+
+// Tier-table header config. Only the branded Premier League / D-League tiers
+// carry a logo; the combined "AFL Cup" / "All-Play" tables do not.
+function tierHeader(name: string) {
+  const hasLogo = name === PREMIER_LEAGUE || name === D_LEAGUE;
+  return {
+    kind: 'tier' as const,
+    title: name,
+    logoSrc: hasLogo ? getTierLogo(name) : undefined,
+    logoDarkSrc: hasLogo ? getTierLogoDark(name) : undefined,
+  };
+}
+const combinedTierName = isInauguralAllPlaySeason ? AFL_CUP : 'All-Play';
+
+// Conference-view presentation: AL glows league red, NL glows conference blue.
+// Title hue matches each conference logo (raw brand hex + a brightened dark
+// variant). Replaces the old data-league / conferenceId :global selectors.
+function conferenceHeader(confId: ConferenceId, name: string) {
+  const isNL = confId === '01';
+  return {
+    kind: 'conference' as const,
+    title: name,
+    logoSrc: getConferenceLogo(confId, leagueSlug),
+    logoDarkSrc: getConferenceLogoDark(confId, leagueSlug),
+    accentColor: isNL ? '#1d4f91' : '#c41e3a',
+    accentColorDark: isNL ? '#5b9bd5' : '#f47a8f',
+  };
+}
+
+// The AFL's playoff field is per CONFERENCE — each side seeds its division
+// winners first, then wild cards out to 4 — so the DIV / WC pills in the
+// division view have to be cut on the CONFERENCE ladder. On the league-wide
+// ladder the two conferences share one 1..7 scale, which badged the AL's #6 as
+// its only wild card and left the AL's actual 4th seed with no pill at all.
+// Same shape the league (conference) view bands its rows with, so the two views
+// cannot disagree about who is in.
+const conferenceStandings = conferenceLadders.map(({ standings }) => standings);
+// Resolve the division's conference off the SAME list getConferenceStandings
+// filtered on, rather than the divisionToConference map, so the lookup cannot
+// disagree with the standings it is labelling. Division winners are counted
+// from the groups that actually have teams, not from the declared division
+// list — an era whose conference declares a division with no franchises would
+// otherwise band a wild card as a winner. An unresolvable division gets NO
+// badges: falling through to the league-wide ladder is the bug this fixes.
+function divisionBadgeSeeding(divisionName: string) {
+  const conference = conferenceStandings.find(c => c.conference.divisions.includes(divisionName));
+  return conference ? TIERING.conferenceSeed(conference.divisionWinners.length) : TIERING.none;
+}
+
+// Division view: NL divisions glow conference blue, everything else league red.
+// The conference logo heads each division card; the defending champion (name
+// only for AFL) reads as a text line.
+const divisionToConf = seasonConfig.divisionToConference as Record<string, '00' | '01'>;
+function aflAccent(confId?: '00' | '01') {
+  return confId === '01' ? ('conference-blue' as const) : ('afl-red' as const);
+}
+function divisionHeader(name: string, confId?: '00' | '01') {
+  return {
+    kind: 'division' as const,
+    title: name,
+    logoSrc: confId ? getConferenceLogo(confId, leagueSlug) : undefined,
+    logoDarkSrc: confId ? getConferenceLogoDark(confId, leagueSlug) : undefined,
+    defendingChampion: defendingChampions[name]
+      ? { name: defendingChampions[name], year: previousYear }
+      : undefined,
+  };
+}
+---
+
+<TheLeagueLayout title={`${leagueDef.name} Standings`} year={selectedYear}>
+  <div class="standings-page">
+    <header class="standings-hero">
+      <div class="standings-hero__text">
+        {view === 'division' && (
+          <>
+            <h1 class="section-title">Division Standings</h1>
+            <p class="subtitle">Standings by division within the league</p>
+          </>
+        )}
+        {view === 'league' && (
+          <>
+            <h1 class="section-title">Playoff Standings</h1>
+            <p class="subtitle">Division winners seed first — top 4 in each conference make the playoff bracket</p>
+          </>
+        )}
+        {view === 'all_play' && hasTierRecord && (
+          <>
+            <h1 class="section-title">Premier League Standings</h1>
+            <p class="subtitle">All-play side competition • Bottom 2 of bubble drop to D-League next year</p>
+          </>
+        )}
+        {view === 'all_play' && !hasTierRecord && isInauguralAllPlaySeason && (
+          <>
+            <h1 class="section-title">{AFL_CUP}</h1>
+            <p class="subtitle">The last AFL Cup, run as one all-play table through week {tierCutoffWeek}. The top 12 went on to form the {selectedYear + 1} Premier League.</p>
+          </>
+        )}
+        {view === 'all_play' && !hasTierRecord && !isInauguralAllPlaySeason && (
+          <>
+            <h1 class="section-title">All-Play Standings</h1>
+            <p class="subtitle">League-wide all-play — every team plays every other team, every week</p>
+          </>
+        )}
+      </div>
+      <div class="standings-hero__actions">
+        <StandingsViewSelector activeView={view} showAllPlay={allPlayEra} />
+      </div>
+    </header>
+
+    <div class="standings-filters">
+      <div class="filter-item">
+        <span class="filter-label">Season:</span>
+        <YearSelector currentYear={selectedYear} availableYears={availableYears} />
+      </div>
+    </div>
+
+    <div class="standings-content">
+      {view === 'division' && (
+        <div class="division-view">
+          {divisionStandings.map(division => (
+            <UnifiedStandingsTable
+              teams={division.teams}
+              columns={COLUMNS.division}
+              teamCell="banner"
+              teamCellFallback="name"
+              accent={aflAccent(divisionToConf[division.name])}
+              badgeSeeding={divisionBadgeSeeding(division.name)}
+              year={selectedYear}
+              preferredTeamId={yearPreferredTeamId}
+              rosterBaseUrl={`${baseUrl}/rosters`}
+              header={divisionHeader(division.name, divisionToConf[division.name])}
+            />
+          ))}
+        </div>
+      )}
+
+      {view === 'league' && (
+        <div class="league-view">
+          {conferenceLadders.map(({ id, standings }) => (
+            <UnifiedStandingsTable
+              teams={standings.allTeams}
+              columns={COLUMNS.conferenceSeeded}
+              teamCell="banner"
+              teamCellFallback="blank"
+              tiering={TIERING.conferenceSeed(standings.divisionWinners.length)}
+              accent={aflAccent(id)}
+              header={conferenceHeader(id, standings.conference.name)}
+              year={selectedYear}
+              preferredTeamId={yearPreferredTeamId}
+              rosterBaseUrl={`${baseUrl}/rosters`}
+            />
+          ))}
+
+          {nitTeams.length > 0 && (
+            <div class="nit-section">
+              <div class="nit-header">
+                <div class="nit-title-block">
+                  <p class="nit-label">Secondary Playoffs</p>
+                  <h2 class="nit-title">NIT Standings</h2>
+                  <p class="nit-subtitle">
+                    Teams outside the top 4 seeds, ranked by Power Rank
+                  </p>
+                </div>
+              </div>
+
+              <div class="nit-table-wrapper">
+                <table class="nit-table">
+                  <thead>
+                    <tr>
+                      <th class="col-rank">NIT Rank</th>
+                      <th class="col-team">Team</th>
+                      <th class="col-seed">Seed</th>
+                      <th class="col-record">Record</th>
+                      <th class="col-pwr">Power Rank</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {nitTeams.map(team => {
+                      const [wins = '0', losses = '0'] = (team.h2hwlt || '0-0').split('-');
+                      return (
+                        <tr>
+                          <td class="col-rank">
+                            <span class="rank-badge">{team.nitRank}</span>
+                          </td>
+                          <td class="col-team">
+                            <a
+                              href={`${baseUrl}/rosters?franchise=${team.id}`}
+                              class="team-info team-info-link"
+                              aria-label={`View ${team.teamName} roster`}
+                            >
+                              {team.teamIcon && (
+                                <img
+                                  src={team.teamIcon}
+                                  alt={team.teamName}
+                                  class="team-icon"
+                                  loading="lazy"
+                                />
+                              )}
+                              <div class="team-meta">
+                                <span class="team-name">{team.teamName}</span>
+                                <span class="team-division">Seed {team.seed || '—'} • Div {team.division}</span>
+                              </div>
+                            </a>
+                          </td>
+                          <td class="col-seed">{team.seed ?? '—'}</td>
+                          <td class="col-record">{wins}-{losses}</td>
+                          <td class="col-pwr">{team.pwr || '0'}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {view === 'all_play' && hasTierRecord && (
+        <div class="all-play-view tier-grid">
+          {tierAllPlayStandings.map(tierGroup => (
+            <UnifiedStandingsTable
+              teams={tierGroup.teams}
+              columns={COLUMNS.tierAllPlay}
+              teamCell="icon"
+              accent="afl-red"
+              tierName={tierGroup.tier}
+              header={tierHeader(tierGroup.tier)}
+              year={selectedYear}
+              rosterBaseUrl={`${baseUrl}/rosters`}
+            />
+          ))}
+        </div>
+      )}
+
+      {view === 'all_play' && !hasTierRecord && (
+        <div class="all-play-view">
+          <UnifiedStandingsTable
+            teams={combinedAllPlayStandings}
+            columns={COLUMNS.tierAllPlay}
+            teamCell="icon"
+            accent="afl-red"
+            tierName={combinedTierName}
+            header={tierHeader(combinedTierName)}
+            promotionCutoff={isInauguralAllPlaySeason ? 12 : undefined}
+            year={selectedYear}
+            rosterBaseUrl={`${baseUrl}/rosters`}
+          />
+        </div>
+      )}
+
+      {view === 'all_play' && promoRegTeams.length === 4 && (
+        <div class="promo-reg-section">
+          <div class="promo-reg-header">
+            <ThemeImage src="/assets/afl/premier.svg" darkSrc="/assets/afl/premier-dark.svg" alt="Premier League Logo" class="promo-reg-logo" />
+            <div class="promo-reg-text">
+              <h2 class="promo-reg-title">Promotion/Relegation cutoff</h2>
+              <p class="promo-reg-subtitle">Final all-play standings cut — top 2 are in Premier League next season, bottom 2 in D-League.</p>
+            </div>
+          </div>
+
+          <div class="promo-reg-table-wrapper">
+            <table class="promo-reg-table">
+              <thead>
+                <tr>
+                  <th class="col-rank">Rank</th>
+                  <th class="col-team">Team</th>
+                  <th class="col-record">W</th>
+                  <th class="col-record">L</th>
+                  <th class="col-prize">Prize</th>
+                </tr>
+              </thead>
+              <tbody>
+                {promoRegTeams.map((team, index) => (
+                  <tr class={index + 1 <= 2 ? 'promoted' : 'relegated'}>
+                    <td class="col-rank">
+                      <span class="rank-badge">{index + 1}</span>
+                    </td>
+                    <td class="col-team">
+                      <a
+                        href={`${baseUrl}/rosters?franchise=${team.id}`}
+                        class="team-info team-info-link"
+                        aria-label={`View ${team.teamName} roster`}
+                      >
+                        {team.teamIcon && (
+                          <img
+                            src={team.teamIcon}
+                            alt={team.teamName}
+                            class="team-icon"
+                            loading="lazy"
+                          />
+                        )}
+                        <span class="team-name">{team.teamName}</span>
+                      </a>
+                    </td>
+                    <td class="col-record">{team.all_play_wlt?.split('-')[0] || '0'}</td>
+                    <td class="col-record">{team.all_play_wlt?.split('-')[1] || '0'}</td>
+                    <td class="col-prize">
+                      <span class="prize-icon">{index + 1 <= 2 ? '⬆' : '⬇'}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {lastFetched && (
+        <p class="data-disclaimer">
+          Data as of {lastFetched.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
+        </p>
+      )}
+    </div>
+
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .standings-page {
+    display: grid;
+    gap: var(--padding-lg);
+  }
+
+  .standings-hero {
+    display: grid;
+    justify-content: center;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 2rem;
+    background: var(--card-bg, #fff);
+    border-radius: 1rem;
+    box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+  }
+
+  /* Dark mode: raised-card treatment — shadow alone can't separate the
+     section from the navy page floor; add the border ring. */
+  :global(html.dark) .standings-hero {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      var(--box-shadow-lg);
+  }
+@media screen and (min-width: 600px) {
+  .standings-hero {
+    grid-template-columns: 1fr auto;
+  }
+}
+  .standings-hero__text h1 {
+    margin: 0;
+  }
+
+  .standings-hero__actions {
+    display: flex;
+    justify-content: center;
+  }
+
+  /* On narrow screens the hero is a single column (the two-column rule is
+     min-width: 600px). Make that column full-width so the view selector can
+     lay its tabs out across the row without wrapping the last one below. */
+  @media (max-width: 599px) {
+    .standings-hero {
+      grid-template-columns: 1fr;
+    }
+
+    .standings-hero__actions {
+      width: 100%;
+    }
+  }
+
+  .standings-filters {
+    background: var(--card-bg, #fff);
+    border-radius: 1rem;
+    box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+    padding: 1rem 1.5rem;
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+  }
+
+  :global(html.dark) .standings-filters {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      var(--box-shadow-lg);
+  }
+
+  .filter-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 700;
+    color: var(--page-text, #111827);
+  }
+
+  .card {
+    display: flex;
+    align-items: center;
+    gap: var(--padding-md);
+    padding: var(--padding-lg);
+    border-radius: 1rem;
+    background: var(--card-bg, #fff);
+    box-shadow: var(--box-shadow-lg);
+    position: relative;
+}
+
+  :global(html.dark) .card {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      var(--box-shadow-lg);
+  }
+
+  .standings-header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--page-text, #1a1a1a);
+    margin: 0 0 0.5rem 0;
+  }
+
+  .subtitle {
+    font-size: 1rem;
+    color: var(--content-text-muted, #64748b);
+    margin: 0;
+  }
+
+  .standings-header-bar {
+    display: grid;
+
+    gap: 2rem;
+    margin-bottom: 2rem;
+    padding: 2rem;
+    background: var(--card-bg, #fff);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  :global(html.dark) .standings-header-bar {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+   @media (min-width: 550px) {
+     .standings-header-bar {
+    grid-template-columns: 1fr auto;
+        align-items: start;
+     }
+   }
+
+  .standings-header-content {
+    /* content naturally flows on the left */
+  }
+
+  .standings-controls {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    justify-content: flex-end;
+  }
+
+  .standings-content {
+    margin-bottom: 3rem;
+    /* Grid item of the `.standings-page` grid. Without this, its min-content
+       floor is the widest table (the AFL Premier League tier table), which
+       stretched the whole page and forced horizontal scroll on phones. Letting
+       it shrink lets each table's own `overflow-x` wrapper contain the width. */
+    min-width: 0;
+  }
+
+  .data-disclaimer {
+    margin: 1rem 0 0;
+    color: var(--content-text-muted, #64748b);
+    font-size: 0.95rem;
+  }
+
+  .section-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--page-text, #1a1a1a);
+    margin: 0;
+  }
+
+  .section-subtitle {
+    color: var(--content-text-muted, #666);
+    margin: 0;
+    font-size: 0.95rem;
+  }
+
+  /* Division View */
+  .division-view {
+    display: grid;
+    gap: 2rem;
+  }
+
+  /* League View */
+  .league-view {
+    display: grid;
+    gap: 2rem;
+  }
+
+  .playoff-section {
+    margin-bottom: 2rem;
+  }
+
+  /* All-Play View */
+  .all-play-view {
+    display: grid;
+    gap: 2rem;
+  }
+
+  /* Tier Grid - Side by Side */
+  .tier-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem;
+  }
+
+  @media (max-width: 1024px) {
+    .tier-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Info Section */
+  .standings-info {
+    margin-top: 3rem;
+    padding: 2rem;
+    background-color: var(--content-bg-muted, #f5f5f5);
+    border-radius: 8px;
+  }
+
+  .standings-info h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--page-text, #1a1a1a);
+    margin: 0 0 1.5rem 0;
+  }
+
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2rem;
+  }
+
+  .info-card {
+    background: var(--card-bg, #fff);
+    padding: 1.5rem;
+    border-radius: 6px;
+    border-left: 4px solid var(--color-primary, #2c3e50);
+  }
+
+  .info-card h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--page-text, #1a1a1a);
+    margin: 0 0 1rem 0;
+  }
+
+  .info-card ul,
+  .info-card ol {
+    margin: 0;
+    padding-left: 1.5rem;
+    color: var(--content-text-muted, #555);
+  }
+
+  .info-card li {
+    margin-bottom: 0.5rem;
+  }
+
+  .info-card p {
+    margin: 0 0 0.5rem 0;
+    color: var(--content-text-muted, #555);
+  }
+
+  .tiebreaker-type {
+    font-weight: 600;
+    color: var(--page-text, #1a1a1a);
+    margin-bottom: 0.75rem !important;
+  }
+
+  /* Promotion/Relegation Section */
+  .promo-reg-section {
+    margin-top: 2rem;
+    background: var(--card-bg, #fff);
+    border-radius: 1rem;
+    box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+    overflow: hidden;
+  }
+
+  :global(html.dark) .promo-reg-section {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      var(--box-shadow-lg);
+  }
+
+  .promo-reg-header {
+    padding: 1.5rem 2rem;
+    background: #c41e3a;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  :global(.promo-reg-logo) {
+    height: 50px;
+    width: auto;
+    object-fit: contain;
+  }
+
+  .promo-reg-text {
+    flex: 1;
+  }
+
+  .promo-reg-title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .promo-reg-subtitle {
+    margin: 0.5rem 0 0;
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  .promo-reg-table-wrapper {
+    overflow-x: auto;
+  }
+
+  .promo-reg-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+
+  .promo-reg-table thead {
+    background: var(--table-header-bg, #f8f9fa);
+    border-bottom: 2px solid var(--table-border, #dee2e6);
+  }
+
+  .promo-reg-table th {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    font-weight: 700;
+    color: var(--table-header-text, #111827);
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+  }
+
+  .promo-reg-table .col-rank {
+    width: 80px;
+    text-align: center;
+  }
+
+  .promo-reg-table .col-team {
+    min-width: 200px;
+  }
+
+  .promo-reg-table .col-record {
+    width: 80px;
+    text-align: center;
+  }
+
+  .promo-reg-table .col-prize {
+    width: 100px;
+    text-align: center;
+  }
+
+  .promo-reg-table tbody tr {
+    border-bottom: 1px solid var(--table-border, #e5e7eb);
+    transition: background-color 0.15s ease;
+  }
+
+  .promo-reg-table tbody tr:last-child {
+    border-bottom: none;
+  }
+
+  .promo-reg-table tbody tr.promoted {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(34, 197, 94, 0.1) 100%);
+  }
+
+  .promo-reg-table tbody tr.relegated {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(239, 68, 68, 0.1) 100%);
+  }
+
+  .promo-reg-table td {
+    padding: 1rem;
+  }
+
+  .promo-reg-table .rank-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 0.875rem;
+  }
+
+  .promo-reg-table tr.promoted .rank-badge {
+    background: #22c55e;
+    color: #fff;
+  }
+
+  .promo-reg-table tr.relegated .rank-badge {
+    background: #ef4444;
+    color: #fff;
+  }
+
+  .promo-reg-table .team-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  a.team-info-link {
+    color: inherit;
+    text-decoration: none;
+    border-radius: 4px;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+  }
+
+  a.team-info-link:hover,
+  a.team-info-link:focus-visible {
+    opacity: 0.85;
+    transform: translateY(-1px);
+  }
+
+  a.team-info-link:focus-visible {
+    outline: 2px solid var(--color-primary-light, #2563eb);
+    outline-offset: 2px;
+  }
+
+  .promo-reg-table .team-icon {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+
+  .promo-reg-table .team-name {
+    font-weight: 600;
+    color: var(--page-text, #111827);
+  }
+
+  .promo-reg-table .col-record td {
+    font-weight: 600;
+    font-family: var(--font-family-mono);
+  }
+
+  .promo-reg-table .prize-icon {
+    font-size: 1.5rem;
+  }
+
+  .promo-reg-table tr.promoted .prize-icon {
+    color: #22c55e;
+  }
+
+  .promo-reg-table tr.relegated .prize-icon {
+    color: #ef4444;
+  }
+
+  /* NIT Section */
+  .nit-section {
+    margin-top: 2rem;
+    background: var(--card-bg, #fff);
+    border-radius: 1rem;
+    box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+    overflow: hidden;
+  }
+
+  :global(html.dark) .nit-section {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      var(--box-shadow-lg);
+  }
+
+  .nit-header {
+    padding: 1.5rem 2rem;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    color: #fff;
+  }
+
+  .nit-label {
+    margin: 0 0 0.25rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.8rem;
+    opacity: 0.85;
+    color: #fff;
+  }
+
+  .nit-title {
+    margin: 0;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  .nit-subtitle {
+    margin: 0.25rem 0 0;
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  .nit-table-wrapper {
+    overflow-x: auto;
+  }
+
+  .nit-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+  }
+
+  .nit-table thead {
+    background: var(--table-header-bg, #f8f9fa);
+    border-bottom: 2px solid var(--table-border, #e5e7eb);
+  }
+
+  .nit-table th {
+    padding: 0.85rem 1rem;
+    text-align: left;
+    font-weight: 700;
+    color: var(--table-header-text, #111827);
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+  }
+
+  .nit-table td {
+    padding: 0.9rem 1rem;
+    border-bottom: 1px solid var(--table-border, #e5e7eb);
+  }
+
+  .nit-table .col-rank {
+    width: 90px;
+    text-align: center;
+  }
+
+  .nit-table .col-team {
+    min-width: 240px;
+  }
+
+  .nit-table .col-seed,
+  .nit-table .col-record,
+  .nit-table .col-pwr {
+    width: 120px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .nit-table .team-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .nit-table .team-icon {
+    width: 55px;
+    height: 55px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+
+  .nit-table .team-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .nit-table .team-name {
+    font-weight: 700;
+    color: var(--page-text, #111827);
+  }
+
+  .nit-table .team-division {
+    color: var(--content-text-muted, #6b7280);
+    font-size: 0.9rem;
+  }
+
+  .nit-table .rank-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 9999px;
+    background: #0f172a;
+    color: #fff;
+    font-weight: 700;
+  }
+
+  .nit-table tbody tr:hover {
+    background: var(--table-row-bg-hover, rgba(15, 23, 42, 0.04));
+  }
+
+  /* Responsive */
+  @media (max-width: 767px) {
+    .standings-page {
+      padding: 1rem 0.5rem;
+    }
+
+    .standings-header h1 {
+      font-size: 1.875rem;
+    }
+
+    .info-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .standings-info {
+      padding: 1rem;
+    }
+
+    .promo-reg-table .team-icon {
+      width: 32px;
+      height: 32px;
+    }
+
+    .promo-reg-table .rank-badge {
+      width: 28px;
+      height: 28px;
+      font-size: 0.75rem;
+    }
+
+    .nit-table .team-icon {
+      width: 32px;
+      height: 32px;
+    }
+
+    .nit-table .rank-badge {
+      width: 30px;
+      height: 30px;
+      font-size: 0.8rem;
+    }
+  }
+</style>

@@ -179,7 +179,7 @@ describe('one conference at a time, with no client script', () => {
 });
 
 describe('the plate says what the page IS, per league', () => {
-  const AFL_PAGE = read('src/pages/afl-fantasy/rosters.astro');
+  const AFL_PAGE = read('src/components/afl-family/RostersPage.astro');
   const TL_PAGE = read('src/pages/theleague/rosters.astro');
   const NAMEPLATE = read('src/components/shared/roster-header/RosterNameplate.astro');
 

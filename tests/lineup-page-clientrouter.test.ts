@@ -18,9 +18,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { stripComments } from './helpers/js-source';
 
+/**
+ * [label, file, the init's own-page gate]. TheLeague's names its league; the
+ * AFL's is the AFL-FAMILY page component (shared with the custom-site demo's
+ * keeper slot), whose one controller finds its own marker first and bails on
+ * that — see tests/cross-league-init-gate.test.ts for why both are safe.
+ */
 const PAGES = [
-  ['TheLeague', 'src/pages/theleague/lineup.astro', 'theleague'],
-  ['the AFL', 'src/pages/afl-fantasy/lineup.astro', 'afl-fantasy'],
+  ['TheLeague', 'src/pages/theleague/lineup.astro', `if (!document.querySelector('.lineup-page[data-league="theleague"]')) return;`],
+  ['the AFL', 'src/components/afl-family/LineupPage.astro', `if (!pageRoot) return;`],
 ] as const;
 
 /** The whole page file, markup and styles included. */
@@ -50,7 +56,7 @@ function controllerScript(file: string): string {
   return stripComments(src.slice(start, end));
 }
 
-describe.each(PAGES)('%s lineup page survives an in-site navigation', (_league, file, slug) => {
+describe.each(PAGES)('%s lineup page survives an in-site navigation', (_league, file, gateStatement) => {
   const SCRIPT = controllerScript(file);
 
   it('wires everything inside an init() registered on astro:page-load', () => {
@@ -122,7 +128,7 @@ describe.each(PAGES)('%s lineup page survives an in-site navigation', (_league, 
     // visit. init then ran its body on /rosters, `lineup-submit` answered null,
     // and `submitBtn.querySelector(...)` threw an uncaught TypeError that took
     // the whole page down. The gate has to ask the DOM, not the window.
-    const gate = SCRIPT.indexOf(`if (!document.querySelector('.lineup-page[data-league="${slug}"]')) return;`);
+    const gate = SCRIPT.indexOf(gateStatement);
     expect(gate, "init must bail when this league's lineup DOM is gone").toBeGreaterThan(-1);
 
     // The slots list is still checked too: the controller's first ref read is a
@@ -164,9 +170,11 @@ describe('the two lineup pages stay siblings', () => {
       s
         .split('\n')
         .filter((l) =>
-          /init\(\)|astro:page-load|onDeviceMotion|onMotionPermissionClick|stopRankingsWatch|data-league="[^"]+"\]'\)\) return|getElementById\('lineup-slots'\)\) return/.test(l),
+          /init\(\)|astro:page-load|onDeviceMotion|onMotionPermissionClick|stopRankingsWatch|data-league="[^"]+"\]'\)\) return|if \(!pageRoot\) return;|getElementById\('lineup-slots'\)\) return/.test(l),
         )
-        .map((l) => l.replace(/data-league="[^"]+"/g, 'data-league="<slug>"'));
+        // The own-page gate is SUPPOSED to differ in form (see PAGES); it is
+        // compared by position, not by text.
+        .map((l) => (PAGES.some(([, , g]) => l.includes(g)) ? '<own-page gate>' : l));
     const [a, b] = PAGES.map(([, file]) => controllerScript(file));
     expect(shapeOf(a)).toEqual(shapeOf(b));
   });

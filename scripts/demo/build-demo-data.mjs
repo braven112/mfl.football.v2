@@ -36,6 +36,7 @@ import * as feeds from './lib/mfl-feeds.mjs';
 import * as identity from './lib/identity-files.mjs';
 import { collectDenylist } from './lib/denylist.mjs';
 import { bestBallAssets, bestBallConfig, bestBallDraft } from './lib/bestball.mjs';
+import { KEEPER_DIVISIONS, KEEPER_FRANCHISES, KEEPER_LEAGUE_NAME, keeperArtFiles, keeperConfig, keeperLeagueFeed } from './lib/keeper.mjs';
 import { scrubIdentity } from './lib/scrub.mjs';
 import { nflWeekStartInstant } from '../../src/utils/nfl-week-starts.mjs';
 import { LEAGUES } from '../../src/config/leagues-data.mjs';
@@ -164,7 +165,9 @@ function wipeRealLeague() {
   // pages are removed so they are neither prerendered nor served.
   // Best Ball's slot now serves the /redraft demo (phase 4), so its pages
   // stay; only its commissioner-only official-draft API goes.
-  for (const route of ['afl-fantasy', 'api/afl-fantasy', 'api/afl-keepers.ts', 'api/afl-rules-qa.ts', 'api/best-ball-draft']) {
+  // `api/afl-keepers.ts` stays: the /keeper demo's planner saves through it
+  // (a plan is stored under the session's league).
+  for (const route of ['afl-fantasy', 'api/afl-fantasy', 'api/afl-rules-qa.ts', 'api/best-ball-draft']) {
     rm(path.join(ROOT, 'src/pages', route));
   }
 }
@@ -172,22 +175,34 @@ function wipeRealLeague() {
 /** Seconds since epoch at the start of an NFL week. */
 const weekStart = (year, week) => Math.floor(new Date(nflWeekStartInstant(year, week)).getTime() / 1000);
 
-function writeSeasonFeeds(season, years, generatedAt) {
-  const dir = path.join(FEEDS, String(season.year));
-  const baseUrl = `https://${LEAGUES[LEAGUE].mflHost}/${season.year}`;
-  writeJson(path.join(dir, 'league.json'), feeds.leagueFeed({
+/** The dynasty league's slot; the keeper league passes its own. */
+const DYNASTY_FEEDS = {
+  feedsDir: () => FEEDS,
+  leagueId: DEMO_MFL_ID,
+  leagueName: DEMO_LEAGUE_NAME,
+  franchises: DEMO_FRANCHISES,
+  divisions: DEMO_DIVISIONS,
+  assetBase: '/assets/theleague',
+  mflHost: () => LEAGUES[LEAGUE].mflHost,
+  shapeLeague: (feed) => feed,
+};
+
+function writeSeasonFeeds(season, years, generatedAt, slot = DYNASTY_FEEDS) {
+  const dir = path.join(slot.feedsDir(), String(season.year));
+  const baseUrl = `https://${slot.mflHost()}/${season.year}`;
+  writeJson(path.join(dir, 'league.json'), slot.shapeLeague(feeds.leagueFeed({
     season,
-    leagueId: DEMO_MFL_ID,
-    leagueName: DEMO_LEAGUE_NAME,
-    franchises: DEMO_FRANCHISES,
-    divisions: DEMO_DIVISIONS,
-    assetBase: '/assets/theleague',
+    leagueId: slot.leagueId,
+    leagueName: slot.leagueName,
+    franchises: slot.franchises,
+    divisions: slot.divisions,
+    assetBase: slot.assetBase,
     years: years.filter((y) => y <= season.year),
     baseUrl,
-  }));
+  })));
   writeJson(path.join(dir, 'rosters.json'), feeds.rostersFeed(season));
   writeJson(path.join(dir, 'standings.json'), feeds.standingsFeed(season));
-  writeJson(path.join(dir, 'schedule.json'), feeds.scheduleFeed(season, DEMO_FRANCHISES));
+  writeJson(path.join(dir, 'schedule.json'), feeds.scheduleFeed(season, slot.franchises));
   writeJson(path.join(dir, 'weekly-results-raw.json'), feeds.weeklyResultsRawFeed(season));
   writeJson(path.join(dir, 'weekly-results.json'), feeds.weeklyResultsFeed(season));
   writeJson(path.join(dir, 'transactions.json'), feeds.transactionsFeed(season));
@@ -195,10 +210,55 @@ function writeSeasonFeeds(season, years, generatedAt) {
   writeJson(path.join(dir, 'auctionResults.json'), feeds.auctionResultsFeed(season));
   writeJson(path.join(dir, 'futureDraftPicks.json'), feeds.futureDraftPicksFeed(season));
   writeJson(path.join(dir, 'salaryAdjustments.json'), feeds.salaryAdjustmentsFeed(season));
-  writeJson(path.join(dir, 'playoff-brackets.json'), feeds.playoffBracketsFeed(season, DEMO_LEAGUE_NAME));
+  writeJson(path.join(dir, 'playoff-brackets.json'), feeds.playoffBracketsFeed(season, slot.leagueName));
   writeJson(path.join(dir, 'calendar.json'), feeds.calendarFeed(season, weekStart));
   writeJson(path.join(dir, 'tradeBait.json'), []);
-  writeJson(path.join(dir, 'fetch.meta.json'), feeds.fetchMetaFeed(season, DEMO_MFL_ID, generatedAt));
+  writeJson(path.join(dir, 'fetch.meta.json'), feeds.fetchMetaFeed(season, slot.leagueId, generatedAt));
+}
+
+/**
+ * The /keeper demo (phase 4): a fictional 12-team keeper league in the
+ * demo-only `keeper` slot — simulated in keeper mode (seven keepers, a straight
+ * redraft, no salaries) over the same NFL seasons, written as the same MFL
+ * feeds, plus the free-agent snapshot its players page reads.
+ */
+function writeKeeper({ years, facts, currentYear, currentWeek, nflFacts, generatedAt }) {
+  const league = LEAGUES.keeper;
+  if (!league) throw new Error('writeKeeper: the keeper slot is not registered — is DEMO_PROFILE set?');
+  const dir = path.join(ROOT, league.dataPath);
+  rm(dir);
+  const slot = {
+    feedsDir: () => path.join(dir, 'mfl-feeds'),
+    leagueId: league.id,
+    leagueName: KEEPER_LEAGUE_NAME,
+    franchises: KEEPER_FRANCHISES,
+    divisions: KEEPER_DIVISIONS,
+    assetBase: '/assets/keeper',
+    mflHost: () => league.mflHost,
+    shapeLeague: keeperLeagueFeed,
+  };
+  const seasons = simulateLeague({
+    years,
+    facts,
+    currentYear,
+    currentWeek,
+    franchises: KEEPER_FRANCHISES,
+    rng: createRng(`${SEED}/keeper`),
+    weekStart,
+    mode: 'keeper',
+  });
+  for (const season of seasons) {
+    season.weekStart = (week) => weekStart(season.year, week);
+    writeSeasonFeeds(season, years, generatedAt, slot);
+    for (const [name, bytes] of nflFacts.perYear.get(season.year) ?? []) {
+      fs.writeFileSync(path.join(slot.feedsDir(), String(season.year), name), bytes);
+    }
+  }
+  writeJson(path.join(ROOT, league.configPath), keeperConfig({ leagueId: league.id }));
+  writeJson(path.join(ROOT, league.schefterFeedPath), { posts: [] });
+  for (const [rel, contents] of keeperArtFiles()) writeText(path.join(PUBLIC, rel), contents);
+  runNode('scripts/compute-afl-free-agents.mjs', ['--league', 'keeper']);
+  log(`keeper league: ${seasons.length} seasons, ${KEEPER_FRANCHISES.length} teams written`);
 }
 
 /**
@@ -294,6 +354,13 @@ function writeBestBall({ currentYear, generatedAt }) {
     }),
   );
   log(`best ball: fictional league and completed ${adp.length ? 'ADP' : 'fallback'} draft written`);
+}
+
+/** Run one of the site's own node scripts under the offline preload. Fatal on failure. */
+function runNode(script, args = []) {
+  const started = Date.now();
+  execFileSync('node', ['--import', PRELOAD, script, ...args], { cwd: ROOT, env: process.env, stdio: 'inherit' });
+  log(`✓ ${script} ${args.join(' ')} (${Date.now() - started}ms)`);
 }
 
 /** Run one of the site's own npm scripts under the offline preload. Fatal on failure. */
@@ -393,6 +460,7 @@ export async function buildDemoData() {
   writeJson(path.join(DATA, 'championship-history.json'), identity.championshipHistory(seasons, DEMO_FRANCHISES));
 
   writeBestBall({ currentYear, generatedAt });
+  writeKeeper({ years, facts, currentYear, currentWeek, nflFacts, generatedAt });
 
   const { writeContentReplacements } = await import('./lib/content.mjs');
   writeContentReplacements({ root: ROOT, seasons, franchises: DEMO_FRANCHISES, renames, currentYear, generatedAt, writeJson, writeText });

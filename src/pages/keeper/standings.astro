@@ -1,0 +1,38 @@
+---
+/**
+ * Standings (the custom-site demo's keeper league) — thin route wrapper around
+ * the AFL-family standings page, without the AFL's side competitions. Off the
+ * demo this slot does not exist: the middleware answers 404 before this runs.
+ */
+import StandingsPage from '../../components/afl-family/StandingsPage.astro';
+import { feedsByYear, resolveStandingsRoute } from '../../utils/afl-family-standings';
+import { keeperConfig, keeperLeague } from '../../utils/keeper-slot';
+import { getAuthUser, franchiseIdForLeague } from '../../utils/auth';
+
+const league = keeperLeague();
+if (!league) return Astro.rewrite('/_not-found');
+const feeds = {
+  standings: feedsByYear(import.meta.glob('../../../data/keeper/mfl-feeds/*/standings.json', { eager: true })),
+  fetchMeta: feedsByYear(import.meta.glob('../../../data/keeper/mfl-feeds/*/fetch.meta.json', { eager: true })),
+  weeklyResults: feedsByYear(import.meta.glob('../../../data/keeper/mfl-feeds/*/weekly-results.json', { eager: true })),
+  league: feedsByYear(import.meta.glob('../../../data/keeper/mfl-feeds/*/league.json', { eager: true })),
+};
+const route = await resolveStandingsRoute(Astro.url, league, '/keeper', feeds);
+if ('redirect' in route) return Astro.redirect(route.redirect);
+// The keeper slot keeps no preference cookie: the signed-in team, or nobody.
+const preferredTeamId =
+  Astro.url.searchParams.get('myteam') ?? franchiseIdForLeague(getAuthUser(Astro.request), league.id);
+---
+
+<StandingsPage
+  league={league}
+  config={keeperConfig()}
+  selectedYear={route.selectedYear}
+  availableYears={route.availableYears}
+  selectedFeed={route.feed}
+  lastFetched={route.lastFetched}
+  seasonLeagueFeed={feeds.league.get(route.selectedYear)}
+  weeklyResultsFeed={feeds.weeklyResults.get(route.selectedYear)}
+  preferredTeamId={preferredTeamId}
+  competitions={false}
+/>

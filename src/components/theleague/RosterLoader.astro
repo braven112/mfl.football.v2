@@ -17,18 +17,22 @@ import bb1Config from '../../../data/best-ball-1/bb1.config.json';
 
 interface Props {
   /** Current league — picks which logo + lore the loader shows. */
-  league?: 'theleague' | 'afl' | 'bb1';
+  league?: 'theleague' | 'afl' | 'bb1' | 'keeper';
 }
 
 const { league = 'theleague' } = Astro.props;
 const logoUrl =
-  league === 'afl'
+  league === 'keeper'
+    ? '/assets/logos/keeper-logo.svg'
+    : league === 'afl'
     ? '/assets/logos/afl-logo.svg'
     : league === 'bb1'
       ? '/assets/logos/bestball-logo.svg'
       : '/assets/logos/theleague-logo.svg';
 const logoDarkUrl =
-  league === 'afl'
+  league === 'keeper'
+    ? '/assets/logos/keeper-logo-dark.svg'
+    : league === 'afl'
     ? '/assets/logos/afl-logo-dark.svg'
     : league === 'bb1'
       ? '/assets/logos/bestball-logo-dark.svg'
@@ -37,7 +41,10 @@ const logoDarkUrl =
 // Narration comes from the OFFICIAL per-league team data file: general league
 // flavor (`loaderLines`) + one or more quips per team (`loaderQuips`). Baked at
 // SSR for the current league; the leagues are fully independent.
-const cfg: any = league === 'afl' ? aflConfig : league === 'bb1' ? bb1Config : theleagueConfig;
+// The keeper slot's config exists only in a demo build's checkout — a glob, not an import.
+const keeperConfig = Object.values(import.meta.glob('../../../data/keeper/keeper.config.json', { eager: true, import: 'default' }))[0];
+const cfg: any =
+  league === 'keeper' ? keeperConfig ?? { teams: [] } : league === 'afl' ? aflConfig : league === 'bb1' ? bb1Config : theleagueConfig;
 const loaderLines: string[] = [
   ...(cfg.loaderLines ?? []),
   ...cfg.teams.flatMap((t: any) => t.loaderQuips ?? []),

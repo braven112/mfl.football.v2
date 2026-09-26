@@ -488,8 +488,13 @@ describe('AFL pages overlay the season structure', () => {
     // seeded 12 conference-seasons differently than /afl-fantasy/standings did
     // for the same year. A source check is the only thing that catches a page
     // silently dropping the call.
+    // The standings page body is the AFL-family component (shared with the demo's keeper slot).
+    const files: Record<string, string> = {
+      standings: 'src/components/afl-family/StandingsPage.astro',
+      playoffs: 'src/pages/afl-fantasy/playoffs.astro',
+    };
     for (const page of ['standings', 'playoffs']) {
-      const src = readFileSync(path.join(ROOT, 'src/pages/afl-fantasy', `${page}.astro`), 'utf8');
+      const src = readFileSync(path.join(ROOT, files[page]), 'utf8');
       expect(src, `${page}.astro must import the overlay`).toContain('extractSeasonStructure');
       expect(src, `${page}.astro must apply the overlay`).toContain('applySeasonStructure');
       // ...and must not hand the un-overlaid config to a grouping function.

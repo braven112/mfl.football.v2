@@ -544,7 +544,10 @@
       const action = pendingAction;
 
       if (action === 'trade') {
-        const target = `/afl-fantasy/front-office/trade-builder?from=${encodeURIComponent(franchiseId ?? '')}&player=${encodeURIComponent(playerId)}`;
+        // The AFL-family league this page belongs to (the layout stamps its nav
+        // slug on <html>): the AFL, or the custom-site demo's keeper slot.
+        const leaguePrefix = document.documentElement.dataset.league === 'keeper' ? '/keeper' : '/afl-fantasy';
+        const target = `${leaguePrefix}/front-office/trade-builder?from=${encodeURIComponent(franchiseId ?? '')}&player=${encodeURIComponent(playerId)}`;
         window.location.href = target;
         return;
       }

@@ -26,7 +26,14 @@ import {
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../utils/api-response';
 import { getLeagueBySlug } from '../../config/leagues';
 
-const AFL_LEAGUE_ID = getLeagueBySlug('afl-fantasy')!.id;
+/**
+ * The AFL-family leagues a keeper plan can belong to: the AFL, and the
+ * custom-site demo's keeper slot where it is registered (a demo deployment).
+ * A plan is stored under the SESSION's league, so neither can read the other's.
+ */
+const KEEPER_PLAN_LEAGUE_IDS = new Set(
+  [getLeagueBySlug('afl-fantasy')?.id, getLeagueBySlug('keeper')?.id].filter((id): id is string => !!id),
+);
 
 function unauthorized(message: string) {
   return new Response(JSON.stringify({ success: false, message }), {
@@ -64,15 +71,15 @@ export const GET: APIRoute = async ({ request, url }) => {
   }
 
   // Owners only see their own plan.
-  if (user.leagueId !== AFL_LEAGUE_ID || user.franchiseId !== franchiseId) {
+  if (!KEEPER_PLAN_LEAGUE_IDS.has(user.leagueId) || user.franchiseId !== franchiseId) {
     return forbidden('You can only view your own keeper plan.');
   }
 
-  const plan = await getKeeperPlan(AFL_LEAGUE_ID, year, franchiseId);
+  const plan = await getKeeperPlan(user.leagueId, year, franchiseId);
   return new Response(
     JSON.stringify({
       success: true,
-      plan: plan ?? { leagueId: AFL_LEAGUE_ID, year, franchiseId, keepers: [], lastUpdated: null, version: 1 },
+      plan: plan ?? { leagueId: user.leagueId, year, franchiseId, keepers: [], lastUpdated: null, version: 1 },
       limit: KEEPER_LIMIT,
     }),
     { status: 200, headers: JSON_HEADERS }
@@ -100,12 +107,12 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   // Owners only save their own plan.
-  if (user.leagueId !== AFL_LEAGUE_ID || user.franchiseId !== franchiseId) {
+  if (!KEEPER_PLAN_LEAGUE_IDS.has(user.leagueId) || user.franchiseId !== franchiseId) {
     return forbidden('You can only save your own keeper plan.');
   }
 
   const keepers = sanitizeKeeperIds(body?.keepers);
-  const plan = await saveKeeperPlan(AFL_LEAGUE_ID, year, franchiseId, keepers);
+  const plan = await saveKeeperPlan(user.leagueId, year, franchiseId, keepers);
 
   return new Response(JSON.stringify({ success: true, plan, limit: KEEPER_LIMIT }), {
     status: 200,
@@ -127,11 +134,11 @@ export const DELETE: APIRoute = async ({ request, url }) => {
     return badRequest('Missing or invalid year.');
   }
 
-  if (user.leagueId !== AFL_LEAGUE_ID || user.franchiseId !== franchiseId) {
+  if (!KEEPER_PLAN_LEAGUE_IDS.has(user.leagueId) || user.franchiseId !== franchiseId) {
     return forbidden('You can only reset your own keeper plan.');
   }
 
-  await deleteKeeperPlan(AFL_LEAGUE_ID, year, franchiseId);
+  await deleteKeeperPlan(user.leagueId, year, franchiseId);
   return new Response(JSON.stringify({ success: true }), {
     status: 200,
     headers: JSON_HEADERS,

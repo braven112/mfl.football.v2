@@ -457,6 +457,9 @@ export const LEAGUES = {
  */
 export const DEMO_HOST = 'demo.mfl.football';
 
+/** Nav link ids the demo's keeper slot renders (see its `navLinks`). */
+const KEEPER_NAV_LINKS = ['submit-lineup', 'standings', 'afl-players', 'rosters', 'afl-keepers', 'front-office'];
+
 /**
  * demoPath → route slug for every league the demo serves (dynasty →
  * theleague). Later demo types add a `demoPath` to their slot's entry —
@@ -474,6 +477,42 @@ export function demoLeaguePaths() {
  */
 if (isDemoEnv()) {
   LEAGUES.theleague.name = 'The Demo League';
+  // The fourth slot (docs/plans/custom-site-demo.md, phase 4): a fictional
+  // keeper league — no salary cap, no contracts — at demo.mfl.football/keeper.
+  // It exists ONLY on a demo deployment. Production's crons, push senders and
+  // sync scripts enumerate this registry; a league they could see here is one
+  // they would poll MFL for. Its pages are the AFL's, shared as components.
+  LEAGUES.keeper = {
+    id: '99002',
+    slug: 'keeper',
+    navSlug: 'keeper',
+    /**
+     * Only these nav links render here — the keeper slot has the AFL's core
+     * pages, not all of them, and an untagged link to one it lacks is a 404.
+     */
+    navLinks: KEEPER_NAV_LINKS,
+    name: 'The Keeper League',
+    mflHost: LEAGUES['afl-fantasy'].mflHost,
+    dataPath: 'data/keeper',
+    demoPath: 'keeper',
+    domains: [],
+    stagingDomains: [],
+    configPath: 'data/keeper/keeper.config.json',
+    schefterFeedPath: 'data/keeper/schefter-feed.json',
+    leagueYearRollover: LEAGUES['afl-fantasy'].leagueYearRollover,
+    ownersPoll: { enabled: false, slots: 0, closeWeekday: 4, closeHourPT: 16 },
+    officialClock: LEAGUES['afl-fantasy'].officialClock,
+    tradeDeadline: LEAGUES['afl-fantasy'].tradeDeadline,
+    features: {
+      ...LEAGUES['afl-fantasy'].features,
+      schefterFeed: false,
+      schefterTips: false,
+      liveScoringSample: false,
+      accounting: false,
+      pushNotifications: false,
+    },
+    defaultRankingSources: LEAGUES['afl-fantasy'].defaultRankingSources,
+  };
 }
 
 export const DEFAULT_LEAGUE_SLUG = 'theleague';

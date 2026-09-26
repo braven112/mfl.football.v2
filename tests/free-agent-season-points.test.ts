@@ -22,7 +22,7 @@ import { kickedOffSeason, snapCountSeason } from '../src/utils/snap-count-season
  */
 const POINTS_COLUMN_PAGES = [
   'src/pages/theleague/players.astro',
-  'src/pages/afl-fantasy/players.astro',
+  'src/components/afl-family/PlayersPage.astro',
   'src/pages/theleague/front-office/projected-free-agents.astro',
 ];
 

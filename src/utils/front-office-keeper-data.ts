@@ -23,7 +23,8 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { getAllTeams } from './afl-conference';
+import { getAllTeams, type AflFamilySlug } from './afl-conference';
+import { getLeagueBySlug } from '../config/leagues';
 import { getLeagueYearForSlug } from './league-year';
 import { EMPTY_ANALYTICS, type FrontOfficeTeamSummary, type FrontOfficeTeamView } from './front-office-panel-data';
 import type { FrontOfficeDraftChipGroup } from './front-office-planner-data';
@@ -42,8 +43,8 @@ import {
 } from './roster-analytics';
 import type { KeeperPlannerPlayer, KeeperPlannerDraftPick } from '../components/afl-fantasy/KeeperPlanner.astro';
 
-const loadFeedJson = (leagueYearStr: string, filename: string): any => {
-  const feedPath = path.resolve(process.cwd(), `data/afl-fantasy/mfl-feeds/${leagueYearStr}/${filename}`);
+const loadFeedJson = (leagueYearStr: string, filename: string, dataPath: string): any => {
+  const feedPath = path.resolve(process.cwd(), `${dataPath}/mfl-feeds/${leagueYearStr}/${filename}`);
   try {
     if (fs.existsSync(feedPath)) return JSON.parse(fs.readFileSync(feedPath, 'utf8'));
   } catch {
@@ -78,13 +79,19 @@ export async function buildAflFrontOfficeData(args: {
   viewerFranchiseId: string | null;
   viewerMflCookie?: string;
   leagueId: string;
+  /** Which AFL-family league: the AFL by default, or the demo's keeper slot. */
+  leagueSlug?: AflFamilySlug;
+  /** That league's registry dataPath. */
+  dataPath?: string;
 }): Promise<AflFrontOfficeData> {
   const { selectedTeamId, viewerFranchiseId, viewerMflCookie, leagueId } = args;
-  const leagueYear = getLeagueYearForSlug('afl-fantasy');
+  const leagueSlug = args.leagueSlug ?? 'afl-fantasy';
+  const dataPath = args.dataPath ?? getLeagueBySlug('afl-fantasy')!.dataPath;
+  const leagueYear = getLeagueYearForSlug(leagueSlug);
   const leagueYearStr = String(leagueYear);
   const isOwnTeam = !!viewerFranchiseId && viewerFranchiseId === selectedTeamId;
 
-  const allTeams = getAllTeams();
+  const allTeams = getAllTeams(leagueSlug);
   const teamsList: FrontOfficeTeamSummary[] = allTeams.map((t) => ({
     id: t.franchiseId,
     name: t.nameShort || t.name,
@@ -94,9 +101,9 @@ export async function buildAflFrontOfficeData(args: {
   }));
   const teamNameLookup = new Map<string, string>(allTeams.map((t) => [t.franchiseId, t.nameShort || t.name]));
 
-  const playersMap = loadPlayersMap(leagueYearStr);
+  const playersMap = loadPlayersMap(leagueYearStr, dataPath);
 
-  let rostersData = loadFeedJson(leagueYearStr, 'rosters.json');
+  let rostersData = loadFeedJson(leagueYearStr, 'rosters.json', dataPath);
   const liveFranchises = await getCachedRosterFranchises(leagueYearStr, leagueId);
   if (liveFranchises && liveFranchises.length > 0) {
     rostersData = { ...rostersData, rosters: { franchise: liveFranchises } };
@@ -106,7 +113,7 @@ export async function buildAflFrontOfficeData(args: {
     franchises.map((f: any) => [String(f?.id), (f?.player ?? []) as Array<{ id: string; status: string }>]),
   );
 
-  const futurePicksData = loadFeedJson(leagueYearStr, 'futureDraftPicks.json');
+  const futurePicksData = loadFeedJson(leagueYearStr, 'futureDraftPicks.json', dataPath);
   const picksByTeam = new Map<string, KeeperPlannerDraftPick[]>();
   for (const f of (futurePicksData?.futureDraftPicks?.franchise as any[] | undefined) ?? []) {
     picksByTeam.set(String(f?.id), toDraftPicks(f?.futureDraftPick, String(f?.id), teamNameLookup));
@@ -134,7 +141,7 @@ export async function buildAflFrontOfficeData(args: {
   let keepers: AflFrontOfficeData['keepers'] = null;
   if (isOwnTeam) {
     const rows = rosterByTeam.get(selectedTeamId) ?? [];
-    const statsById = buildKeeperPlannerStats(leagueYear);
+    const statsById = buildKeeperPlannerStats(leagueYear, dataPath);
     // MFL's tradeBait export is owner-gated for a private league like the
     // AFL and this deployment holds no server-level MFL credentials, so
     // without the viewer's cookie the trade-block state is simply unknown —
@@ -202,8 +209,8 @@ type PlayerInfo = {
   draft_team?: string;
 };
 
-function loadPlayersMap(leagueYearStr: string): Map<string, PlayerInfo> {
-  const playersData = loadFeedJson(leagueYearStr, 'players.json');
+function loadPlayersMap(leagueYearStr: string, dataPath: string): Map<string, PlayerInfo> {
+  const playersData = loadFeedJson(leagueYearStr, 'players.json', dataPath);
   const map = new Map<string, PlayerInfo>();
   for (const p of (playersData?.players?.player ?? []) as any[]) {
     map.set(p.id, {

@@ -27,7 +27,14 @@ import {
 } from './leagues-data.mjs';
 
 /** Canonical slug: the path segment under src/pages/ */
-export type CanonicalLeagueSlug = 'theleague' | 'afl-fantasy' | 'best-ball-1';
+export type CanonicalLeagueSlug = 'theleague' | 'afl-fantasy' | 'best-ball-1' | 'keeper';
+
+/**
+ * Slots registered only on a custom-site demo deployment (see the `isDemoEnv`
+ * block in leagues-data.mjs) — absent from `LEAGUES` everywhere else, so a
+ * lookup of one must go through `getLeagueBySlug` and handle null.
+ */
+export type DemoOnlyLeagueSlug = 'keeper';
 
 export interface LeagueFeatures {
   contracts: boolean;
@@ -206,6 +213,10 @@ export interface LeagueDefinition {
   domains: string[];
   /** Canonical host for absolute URLs to this league — see leagueOrigin(). */
   canonicalDomain?: string;
+  /** The custom-site demo's path for this slot (demo.mfl.football/<demoPath>). */
+  demoPath?: string;
+  /** When set, the only nav link ids this league renders. */
+  navLinks?: string[];
   /**
    * Stable staging hostnames (e.g. staging.theleague.us). Feed buildHostToSlugMap
    * ONLY — never leagueOrigin/leagueUrl, which must stay on production hosts.
@@ -260,11 +271,12 @@ export interface LeagueDefinition {
   features: LeagueFeatures;
 }
 
-export const LEAGUES = RAW_LEAGUES as Record<CanonicalLeagueSlug, LeagueDefinition>;
-export const DEFAULT_LEAGUE_SLUG = RAW_DEFAULT as CanonicalLeagueSlug;
+export const LEAGUES = RAW_LEAGUES as Record<Exclude<CanonicalLeagueSlug, DemoOnlyLeagueSlug>, LeagueDefinition> &
+  Partial<Record<DemoOnlyLeagueSlug, LeagueDefinition>>;
+export const DEFAULT_LEAGUE_SLUG = RAW_DEFAULT as Exclude<CanonicalLeagueSlug, DemoOnlyLeagueSlug>;
 /** MFL numeric id of the default league. Use instead of hardcoding '13522'. */
 export const DEFAULT_LEAGUE_ID = RAW_DEFAULT_ID as string;
-export const ALL_LEAGUES: LeagueDefinition[] = Object.values(LEAGUES);
+export const ALL_LEAGUES: LeagueDefinition[] = Object.values(RAW_LEAGUES) as LeagueDefinition[];
 /**
  * The default league's full registry entry — for TheLeague-only components
  * (auction/draft heroes, demo/prototype components) that need a

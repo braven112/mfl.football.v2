@@ -15,7 +15,7 @@ import {
 } from '../src/utils/rosters/afl-phone-sheet';
 import type { SheetActionApi } from '../src/utils/player-modal-trigger';
 
-const page = readFileSync('src/pages/afl-fantasy/rosters.astro', 'utf8');
+const page = readFileSync('src/components/afl-family/RostersPage.astro', 'utf8');
 const css = readFileSync('src/styles/rosters-mobile.css', 'utf8');
 const modal = readFileSync('src/components/afl-fantasy/AFLActionModal.astro', 'utf8');
 

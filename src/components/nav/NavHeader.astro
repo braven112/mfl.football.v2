@@ -94,7 +94,7 @@ const directTarget = switchTargets[0];
         height="48"
       />
       <img
-        src={league === 'afl' ? '/assets/logos/afl-logo-dark.svg' : league === 'bb1' ? '/assets/logos/bestball-logo-dark.svg' : '/assets/logos/theleague-logo-dark.svg'}
+        src={league === 'afl' ? '/assets/logos/afl-logo-dark.svg' : league === 'keeper' ? '/assets/logos/keeper-logo-dark.svg' : league === 'bb1' ? '/assets/logos/bestball-logo-dark.svg' : '/assets/logos/theleague-logo-dark.svg'}
         alt={logoAlt}
         class="nav-header__logo nav-header__logo--dark"
         width="48"
@@ -103,6 +103,8 @@ const directTarget = switchTargets[0];
       <span class="nav-header__league-name">
         {league === 'afl' ? (
           <span class="nav-header__league-name--afl">AFL</span>
+        ) : league === 'keeper' ? (
+          <span class="nav-header__league-name--league">Keeper League</span>
         ) : league === 'bb1' ? (
           <span class="nav-header__league-name--league">Best Ball</span>
         ) : (

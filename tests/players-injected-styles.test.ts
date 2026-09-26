@@ -39,7 +39,7 @@ const read = (rel: string) => fs.readFileSync(path.join(process.cwd(), rel), 'ut
 
 const STYLESHEET = 'src/styles/fa-claim-button.css';
 /** Every page that injects rows carrying the pill classes. */
-const PAGES = ['src/pages/theleague/players.astro', 'src/pages/afl-fantasy/players.astro'];
+const PAGES = ['src/pages/theleague/players.astro', 'src/components/afl-family/PlayersPage.astro'];
 
 /** The <style> block is everything from the first <style to the last </style>. */
 const styleBlockOf = (source: string) =>
@@ -318,7 +318,7 @@ describe('WaiverPriorityModal — injected-row styles', () => {
     // `.wpm-trigger` is rendered by afl-fantasy/players.astro, not by the
     // component — a scoped rule could never have reached it either.
     expect(css).toContain('.wpm-trigger');
-    expect(read('src/pages/afl-fantasy/players.astro')).toContain('wpm-trigger');
+    expect(read('src/components/afl-family/PlayersPage.astro')).toContain('wpm-trigger');
   });
 });
 
@@ -341,7 +341,7 @@ describe('WaiverPriorityModal — injected-row styles', () => {
 describe('waiver claims panel placement', () => {
   const PLAYERS_PAGES = [
     'src/pages/theleague/players.astro',
-    'src/pages/afl-fantasy/players.astro',
+    'src/components/afl-family/PlayersPage.astro',
   ];
 
   for (const page of PLAYERS_PAGES) {

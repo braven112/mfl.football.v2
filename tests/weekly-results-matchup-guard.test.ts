@@ -45,7 +45,7 @@ const CANONICAL_IMPLEMENTATION = 'src/utils/coach-data.ts';
 const CONSUMERS = [
   'src/pages/theleague/rosters.astro',
   'src/pages/theleague/lineup.astro',
-  'src/pages/afl-fantasy/lineup.astro',
+  'src/components/afl-family/LineupPage.astro',
   // The AFL roster page reads its Total/Avg columns through this util rather
   // than importing the function itself — same rule, one level up.
   'src/utils/afl-player-scoring.ts',

@@ -24,7 +24,9 @@ const slug = demoLeaguePaths()[segment] ?? segment;
 const bestBall = Boolean(getLeagueBySlug(slug)?.bestBall);
 const pitch = bestBall
 	? 'The draft room, board and mock drafts here were built for this league; your site is built around how yours works.'
-	: 'The salary-cap tools here were built for this league; your site is built around how yours works.';
+	: slug === 'keeper'
+		? 'The keeper planner and every tool here were built for this league; your site is built around how yours works.'
+		: 'The salary-cap tools here were built for this league; your site is built around how yours works.';
 ---
 
 {

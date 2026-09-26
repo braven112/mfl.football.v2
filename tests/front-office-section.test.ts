@@ -87,6 +87,8 @@ describe('the Front Office page registry', () => {
       'trade-builder',
       'keeper-analysis',
     ]);
+    // The custom-site demo's keeper slot: the AFL-family pages it actually has.
+    expect(frontOfficePagesFor('keeper').map((p) => p.key)).toEqual(['rosters', 'trade-builder']);
   });
 
   it('never re-lists league-planner or keepers — their content IS the hub now', () => {
@@ -187,10 +189,10 @@ describe('the hub is a real page now, not a links-only landing page', () => {
     expect(readFileSync('src/pages/theleague/rosters.astro', 'utf-8')).toMatch(
       /data-view-content="nextyear"/,
     );
-    expect(readFileSync('src/pages/afl-fantasy/rosters.astro', 'utf-8')).toMatch(
+    expect(readFileSync('src/components/afl-family/RostersPage.astro', 'utf-8')).toMatch(
       /data-view-content="planner"[\s\S]*?<KeeperPlanner/,
     );
-    expect(readFileSync('src/pages/afl-fantasy/keepers.astro', 'utf-8')).toMatch(
+    expect(readFileSync('src/components/afl-family/KeepersPage.astro', 'utf-8')).toMatch(
       /PLANNER_VIEW = 'view=planner'/,
     );
   });
@@ -241,11 +243,13 @@ describe('every Front Office page has a way back', () => {
       'src/pages/theleague/rosters.astro',
     ],
     'afl-fantasy': [
-      'src/pages/afl-fantasy/front-office/trade-builder.astro',
-      'src/pages/afl-fantasy/rosters.astro',
-      'src/pages/afl-fantasy/keepers.astro',
+      'src/components/afl-family/TradeBuilderPage.astro',
+      'src/components/afl-family/RostersPage.astro',
+      'src/components/afl-family/KeepersPage.astro',
       'src/pages/afl-fantasy/keeper-analysis.astro',
     ],
+    // The custom-site demo's keeper slot renders the AFL-family page bodies.
+    keeper: ['src/components/afl-family/TradeBuilderPage.astro', 'src/components/afl-family/RostersPage.astro'],
   };
   const ALL_ROUTES = [...ROUTES.theleague, ...ROUTES['afl-fantasy']];
 

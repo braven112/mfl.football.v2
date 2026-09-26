@@ -121,7 +121,7 @@ const aflMflId = getLeagueBySlug('afl-fantasy')?.id;
 const theLeagueMflId = getLeagueBySlug('theleague')?.id;
 const bb1MflId = getLeagueBySlug('best-ball-1')?.id;
 const currentLeagueMflId =
-	league === 'afl' ? aflMflId : league === 'bb1' ? bb1MflId : theLeagueMflId;
+	league === 'afl' ? aflMflId : league === 'bb1' ? bb1MflId : league === 'keeper' ? getLeagueBySlug('keeper')?.id : theLeagueMflId;
 
 // Get team preference based on current league context
 let myteam: string | null = null;
@@ -154,6 +154,20 @@ if (league === 'afl') {
 		// Dynamic import AFL config only when needed
 		const aflConfigData = await import('../../data/afl-fantasy/afl.config.json');
 		teamInfo = buildNavTeamInfo(navTeamId, aflConfigData.teams, 'afl' as LeagueSlug);
+	}
+} else if (league === 'keeper') {
+	// The custom-site demo's keeper slot (registered only on a demo deployment).
+	// Session only — it has no preference cookie of its own.
+	const keeperJwtFranchiseId =
+		layoutAuthUser && layoutAuthUser.leagueId === currentLeagueMflId ? layoutAuthUser.franchiseId : null;
+	myteam = myteamParam || keeperJwtFranchiseId || null;
+	sessionFranchiseId = keeperJwtFranchiseId || null;
+	// A glob, not an import: the file exists only in a demo build's checkout.
+	const keeperConfig = Object.values(
+		import.meta.glob<{ teams: any[] }>('../../data/keeper/keeper.config.json', { eager: true, import: 'default' }),
+	)[0];
+	if (sessionFranchiseId && keeperConfig) {
+		teamInfo = buildNavTeamInfo(sessionFranchiseId, keeperConfig.teams, 'keeper' as LeagueSlug);
 	}
 } else if (league === 'bb1') {
 	// Best Ball League #1: same simple shape as TheLeague (no conference/tier)
@@ -207,7 +221,7 @@ const transactionHubConfig = buildTransactionHubConfig(
 	leagueContext.slug,
 	layoutAuthUser,
 	resolveLeaguePath(
-		leagueContext.slug === 'afl-fantasy' ? '/afl-fantasy/players' : '/theleague/players',
+		leagueContext.slug === 'afl-fantasy' || leagueContext.slug === 'keeper' ? `/${leagueContext.slug}/players` : '/theleague/players',
 		hideLeaguePrefix,
 	),
 	// Roster-management clock: waivers are a roster action, so the waiver
@@ -317,6 +331,12 @@ import DemoBanner from '../components/shared/DemoBanner.astro';
 				<meta name="mobile-web-app-capable" content="yes" />
 				<meta name="apple-mobile-web-app-status-bar-style" content="default" />
 				<meta name="apple-mobile-web-app-title" content="AFL" />
+			</>
+		) : league === 'keeper' ? (
+			<>
+				<link rel="icon" type="image/svg+xml" href="/assets/logos/keeper-logo.svg" />
+				<meta name="theme-color" content="#1f3a5f" data-theme-color-light="#1f3a5f" />
+				<meta name="apple-mobile-web-app-title" content="Keeper League" />
 			</>
 		) : league === 'bb1' ? (
 			<>
