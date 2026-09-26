@@ -186,3 +186,27 @@ export function summarizeSeasonScores(
     lastWeek,
   };
 }
+
+/**
+ * The average of a player's three most recent scored weeks — the AFL phone
+ * card's "L3", the same figure TheLeague's Avg (L3) column shows (the last
+ * three weeks that carry a score, zeros included, as in `summarizeSeasonScores`).
+ * Null when he has no scored week.
+ */
+export function recentScoreAverage(
+  scoresByPlayer: SeasonScores,
+  playerId: string,
+  count = 3
+): number | null {
+  const byWeek = scoresByPlayer.get(playerId);
+  if (!byWeek) return null;
+  const weeks = Object.keys(byWeek)
+    .map((w) => Number(w))
+    .filter((w) => Number.isFinite(w))
+    .sort((a, b) => a - b)
+    .slice(-count);
+  if (weeks.length === 0) return null;
+  let points = 0;
+  for (const week of weeks) points += byWeek[week];
+  return points / weeks.length;
+}

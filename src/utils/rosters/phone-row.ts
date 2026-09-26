@@ -112,10 +112,57 @@ export interface PhoneLineInput {
   kickoffLabel?: string | null;
   /** The opponent's team code from `gameOdds.opponent`. */
   opponent?: string | null;
+  /**
+   * The AFL's line-3 values, which TheLeague's rows carry in real cells (the
+   * Opponent cell's spread badge, the Avg (L3) column, the Weather and O/U
+   * cells). The AFL table has no spread or L3 column, and its Weather / O/U
+   * cells print a bare temperature and a dash placeholder; changing them
+   * would change its desktop table, so these ride here like the kickoff.
+   * TheLeague never sends them.
+   */
+  spread?: TeamSpread | null;
+  /** Last-three average, already formatted ("14.2"). */
+  lastThree?: string | null;
+  /** Game-day weather, already formatted ("72° ☀️"). */
+  weather?: string | null;
+  /** The game's over/under ("47.5"). */
+  overUnder?: string | null;
 }
 
-const span = (kind: string, text: string): string =>
-  text ? `<span class="rr-ph rr-ph--${kind}" data-t="${escapeHtml(text)}"></span>` : '';
+/**
+ * A game's spread from ONE team's side, signed the way TheLeague's Coach
+ * spread badge signs it: "+3.5" (green) when this team is favoured, "-3.5"
+ * (red) when the opponent is. That is the reverse of betting notation, and
+ * it is kept deliberately so a card reads the same in both leagues.
+ */
+export interface TeamSpread {
+  text: string;
+  tone: 'fav' | 'dog';
+}
+
+/**
+ * ESPN's "KC -3.5" as seen by `team` (see `TeamSpread` for the sign). Null for
+ * a pick'em, an unpriced game, or a string that is not a spread.
+ */
+export function teamSpread(
+  spread: string | null | undefined,
+  team: string | null | undefined,
+  /** Both codes go through it: ESPN and MFL spell WAS/WSH and JAX/JAC differently. */
+  normalize: (code: string) => string = (code) => code,
+): TeamSpread | null {
+  const parts = String(spread ?? '').trim().split(/\s+/);
+  if (parts.length < 2) return null;
+  const favoured = normalize(parts[0].toUpperCase());
+  const amount = Number.parseFloat(parts[1].replace(/[^0-9.]/g, ''));
+  if (!Number.isFinite(amount) || amount === 0) return null;
+  const own = normalize(String(team ?? '').trim().toUpperCase());
+  if (!own) return null;
+  const isFav = favoured === own;
+  return { text: `${isFav ? '+' : '-'}${amount}`, tone: isFav ? 'fav' : 'dog' };
+}
+
+const span = (kind: string, text: string, extra = ''): string =>
+  text ? `<span class="rr-ph rr-ph--${kind}${extra ? ` ${extra}` : ''}" data-t="${escapeHtml(text)}"></span>` : '';
 
 /**
  * The line break after line 1. With it, line 1 is the name and the
@@ -143,5 +190,9 @@ export function buildPhoneLineSpans(input: PhoneLineInput): string {
     span('desig', designationLabel(input.contractInfo)),
     span('kick', formatKickoffCompact(input.kickoffIso, input.kickoffZone, input.kickoffLabel)),
     span('opp', String(input.opponent ?? '').trim().toUpperCase()),
+    input.spread ? span('spread', input.spread.text, `rr-ph--${input.spread.tone}`) : '',
+    span('wx', String(input.weather ?? '').trim()),
+    span('ou', String(input.overUnder ?? '').trim()),
+    span('l3', String(input.lastThree ?? '').trim()),
   ].join('');
 }

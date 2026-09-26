@@ -40,8 +40,11 @@
  * practice-squad and IR rows carry a tinted background, and the muted gray
  * falls to ~3.8:1 on the practice tint (4.5 is the floor for 12px text).
  *
- * Scoped to TheLeague's page. The AFL's phone rows are PR C of the plan; it
- * widens this scope rather than copying the rules.
+ * Scoped by league. The AFL's roster table (one mode: the Coach card) is
+ * named beside TheLeague's in every card and Coach rule rather than copied,
+ * with its AFL-only differences in their own section below. GM, the cap
+ * card, the sim bar, the sort chips and the dead-money table are TheLeague's
+ * alone.
  */
 
 /* ── Phone-only pieces, hidden on desktop ─────────────────────────────── */
@@ -54,6 +57,7 @@
 
 @media (max-width: 767px) {
   /* ── The table stops being a table ──────────────────────────────────── */
+  .roster-page[data-league='afl-fantasy'] .roster-table-wrapper,
   .roster-page[data-league='theleague'] .roster-table-wrapper {
     overflow: visible;
     background: transparent;
@@ -73,10 +77,12 @@
      does the same thing one level down, so both get minmax(0, 1fr), which
      pins the column to the screen and lets the chip row scroll inside it as
      intended. `clip` stays as a backstop. */
+  .roster-page[data-league='afl-fantasy'],
   .roster-page[data-league='theleague'] {
     grid-template-columns: minmax(0, 1fr);
     overflow-x: clip;
   }
+  .roster-page[data-league='afl-fantasy'] .view-container,
   .roster-page[data-league='theleague'] .view-container {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -87,12 +93,14 @@
      reaches 8px into the card's right padding, and that alone let the whole
      GM / Coach list pan sideways. Clip instead: the band still runs to the
      card's edge, and the sort-chip row keeps its own scroller. */
+  .roster-page[data-league='afl-fantasy'] .roster-table-card,
   .roster-page[data-league='theleague'] .roster-table-card {
     overflow-x: clip;
   }
 
   /* A column, so the totals (a <tfoot>, which comes FIRST in the markup) can
      sit under the rows they total. */
+  .roster-page[data-league='afl-fantasy'] .roster-table,
   .roster-page[data-league='theleague'] .roster-table {
     display: flex;
     flex-direction: column;
@@ -106,16 +114,19 @@
 
   /* The sort control above the rows replaces the headers; with the cells no
      longer in a grid, a header row would only read as noise. */
+  .roster-page[data-league='afl-fantasy'] .roster-table thead,
   .roster-page[data-league='theleague'] .roster-table thead {
     display: none;
   }
 
+  .roster-page[data-league='afl-fantasy'] .roster-table tbody,
   .roster-page[data-league='theleague'] .roster-table tbody,
   .roster-page[data-league='theleague'] .roster-table tfoot {
     display: block;
   }
 
   /* Every roster cell starts hidden; each mode opts its cells back in. */
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody td,
   .roster-page[data-league='theleague'] #rosterTableBody td {
     display: none !important;
     padding: 0 !important;
@@ -124,6 +135,7 @@
     text-align: left !important;
   }
 
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody td.roster-empty,
   .roster-page[data-league='theleague'] #rosterTableBody td.roster-empty {
     display: block !important;
     padding: 1rem !important;
@@ -131,6 +143,7 @@
   }
 
   /* ── The card ─────────────────────────────────────────────────────────── */
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody > tr.roster-row,
   .roster-page[data-league='theleague'] #rosterTableBody > tr.roster-row {
     --rr-avatar: 40px;
     position: relative;
@@ -156,6 +169,7 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody > tr.roster-row:active,
   .roster-page[data-league='theleague'] #rosterTableBody > tr.roster-row:active {
     background: var(--table-row-bg-hover, #f3f4f6);
   }
@@ -191,6 +205,9 @@
   }
 
   /* The player cell dissolves so its pieces can take their own lines. */
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody td[data-column='player'],
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody td[data-column='player'] .player-cell,
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody td[data-column='player'] .player-cell__info,
   .roster-page[data-league='theleague'] #rosterTableBody td[data-column='player'],
   .roster-page[data-league='theleague'] #rosterTableBody td[data-column='player'] .player-cell,
   .roster-page[data-league='theleague'] #rosterTableBody td[data-column='player'] .player-cell__info {
@@ -200,6 +217,7 @@
   /* border-box: player-cell.css gives the chip a 1-2px ring OUTSIDE its
      width, which put its true centre 1-2px right of the pill's
      `left: … + var(--rr-avatar) / 2`. The pill below centres on that value. */
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody .player-cell__avatar,
   .roster-page[data-league='theleague'] #rosterTableBody .player-cell__avatar {
     box-sizing: border-box;
     position: absolute;
@@ -219,6 +237,7 @@
      value leaves (basis 0, grow 1): nothing is reserved for a salary wider
      than this row's, so a trade-block tag stays on the name line whenever it
      fits. Line 2 starts at the explicit break below, not at a basis. */
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody .player-cell__name,
   .roster-page[data-league='theleague'] #rosterTableBody .player-cell__name {
     order: 10;
     flex: 1 1 0;
@@ -231,6 +250,7 @@
   }
 
   /* Line 1, right: this year's salary (GM) or the projection (Coach). */
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody td[data-column='projected'],
   .roster-page[data-league='theleague'] #rosterTableBody td[data-column='year1'],
   .roster-page[data-league='theleague'] #rosterTableBody td[data-column='projected'] {
     order: 11;
@@ -243,6 +263,7 @@
     white-space: nowrap;
   }
 
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody td[data-column='projected'],
   .roster-page[data-league='theleague']:not(.coach-mode) #rosterTableBody td[data-column='year1'],
   .roster-page[data-league='theleague'].coach-mode #rosterTableBody td[data-column='projected'] {
     display: block !important;
@@ -250,6 +271,7 @@
 
   /* The headers are gone, so the two right-hand numbers say what they are to
      a screen reader. Visually hidden, positioned against the cell. */
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody td[data-column='projected']::before,
   .roster-page[data-league='theleague'] #rosterTableBody td[data-column='year1']::before,
   .roster-page[data-league='theleague'] #rosterTableBody td[data-column='projected']::before,
   .roster-page[data-league='theleague'] #rosterTableBody td[data-column='rank']::before {
@@ -265,6 +287,7 @@
     content: attr(data-label) ' salary ';
   }
 
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody td[data-column='projected']::before,
   .roster-page[data-league='theleague'] #rosterTableBody td[data-column='projected']::before {
     content: 'Projected ';
   }
@@ -276,6 +299,7 @@
   /* The end of line 1 (phone-row.ts emits it, empty). A full-width,
      zero-height item: everything ordered after it starts line 2. The
      negative margin gives back the row-gap the empty line would add. */
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody .rr-ph.rr-ph--br,
   .roster-page[data-league='theleague'] #rosterTableBody .rr-ph.rr-ph--br {
     display: block;
     order: 12;
@@ -288,15 +312,19 @@
      PlayerCell, first on line 2, with the position right after it in plain
      text, the way the Free Agents phone rows show it. The logo's own markup
      and size are PlayerCell's, untouched. */
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody .player-meta,
   .roster-page[data-league='theleague'] #rosterTableBody .player-meta {
     display: contents;
   }
 
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody .player-meta__logo,
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody .player-meta__pos,
   .roster-page[data-league='theleague'] #rosterTableBody .player-meta__logo,
   .roster-page[data-league='theleague'] #rosterTableBody .player-meta__pos {
     order: 21;
   }
 
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody .player-meta__pos,
   .roster-page[data-league='theleague'] #rosterTableBody .player-meta__pos {
     font-size: 0.75rem;
     font-weight: 600;
@@ -309,6 +337,7 @@
      alt-empty: the span's text stays in the accessibility tree). The span is
      clipped to that label's width, so hidden text a browser's minimum font
      size (Android) refuses to shrink to 0 cannot open a gap after it. */
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody :is(tr[data-pos='QB'], tr[data-pos='RB'], tr[data-pos='WR'], tr[data-pos='TE'], tr[data-pos='PK'], tr[data-pos='DEF']) .player-meta__pos,
   .roster-page[data-league='theleague'] #rosterTableBody :is(tr[data-pos='QB'], tr[data-pos='RB'], tr[data-pos='WR'], tr[data-pos='TE'], tr[data-pos='PK'], tr[data-pos='DEF']) .player-meta__pos {
     display: inline-block;
     max-width: 2rem;
@@ -318,6 +347,7 @@
     vertical-align: middle;
   }
 
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody :is(tr[data-pos='QB'], tr[data-pos='RB'], tr[data-pos='WR'], tr[data-pos='TE'], tr[data-pos='PK'], tr[data-pos='DEF']) .player-meta__pos::before,
   .roster-page[data-league='theleague'] #rosterTableBody :is(tr[data-pos='QB'], tr[data-pos='RB'], tr[data-pos='WR'], tr[data-pos='TE'], tr[data-pos='PK'], tr[data-pos='DEF']) .player-meta__pos::before {
     font-size: 0.75rem;
     font-weight: 600;
@@ -325,16 +355,23 @@
     color: var(--color-gray-600, #4b5563);
   }
 
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody tr[data-pos='QB'] .player-meta__pos::before,
   .roster-page[data-league='theleague'] #rosterTableBody tr[data-pos='QB'] .player-meta__pos::before { content: 'QB'; content: 'QB' / ''; }
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody tr[data-pos='RB'] .player-meta__pos::before,
   .roster-page[data-league='theleague'] #rosterTableBody tr[data-pos='RB'] .player-meta__pos::before { content: 'RB'; content: 'RB' / ''; }
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody tr[data-pos='WR'] .player-meta__pos::before,
   .roster-page[data-league='theleague'] #rosterTableBody tr[data-pos='WR'] .player-meta__pos::before { content: 'WR'; content: 'WR' / ''; }
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody tr[data-pos='TE'] .player-meta__pos::before,
   .roster-page[data-league='theleague'] #rosterTableBody tr[data-pos='TE'] .player-meta__pos::before { content: 'TE'; content: 'TE' / ''; }
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody tr[data-pos='PK'] .player-meta__pos::before,
   .roster-page[data-league='theleague'] #rosterTableBody tr[data-pos='PK'] .player-meta__pos::before { content: 'PK'; content: 'PK' / ''; }
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody tr[data-pos='DEF'] .player-meta__pos::before,
   .roster-page[data-league='theleague'] #rosterTableBody tr[data-pos='DEF'] .player-meta__pos::before { content: 'DEF'; content: 'DEF' / ''; }
 
   /* A position with no data-pos match keeps its plain "XX - RC" text. */
 
   /* The generated line-2 values (phone-row.ts). */
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody .rr-ph,
   .roster-page[data-league='theleague'] #rosterTableBody .rr-ph {
     display: inline;
     color: var(--color-gray-600, #4b5563);
@@ -342,6 +379,7 @@
     white-space: nowrap;
   }
 
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody .rr-ph::before,
   .roster-page[data-league='theleague'] #rosterTableBody .rr-ph::before {
     content: attr(data-t);
   }
@@ -401,38 +439,49 @@
   }
 
   /* ── Coach line 2 ────────────────────────────────────────────────────── */
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody td[data-column='opponent'],
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody td[data-column='opponent'] .opponent-cell,
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody td[data-column='opponent'] .opponent-info,
   .roster-page[data-league='theleague'].coach-mode #rosterTableBody td[data-column='opponent'],
   .roster-page[data-league='theleague'].coach-mode #rosterTableBody td[data-column='opponent'] .opponent-cell,
   .roster-page[data-league='theleague'].coach-mode #rosterTableBody td[data-column='opponent'] .opponent-info {
     display: contents !important;
   }
 
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody .rr-ph--kick,
   .roster-page[data-league='theleague'] #rosterTableBody .rr-ph--kick { order: 22; }
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody .vs-at,
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody .opponent-bye,
   .roster-page[data-league='theleague'] #rosterTableBody .vs-at,
   .roster-page[data-league='theleague'] #rosterTableBody .opponent-bye {
     order: 23;
     font-size: 0.75rem;
   }
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody .opponent-bye,
   .roster-page[data-league='theleague'] #rosterTableBody .opponent-bye {
     font-weight: 700;
   }
   /* The opponent is its logo alone (the <img> keeps the team as its alt
      text); the three-letter code beside it pushed the defense rank onto a
      line of its own. The label stays in the DOM for the parity harness. */
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody .rr-ph--opp,
   .roster-page[data-league='theleague'] #rosterTableBody .rr-ph--opp {
     display: none;
   }
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody td[data-column='opponent'] .opponent-logo,
   .roster-page[data-league='theleague'] #rosterTableBody td[data-column='opponent'] .opponent-logo {
     order: 25;
     width: 20px !important;
     height: 20px !important;
   }
 
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody td[data-column='oppRank'],
   .roster-page[data-league='theleague'].coach-mode #rosterTableBody td[data-column='oppRank'] {
     display: inline-block !important;
     order: 26;
   }
 
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody td[data-column='oppRank'] .rank-badge,
   .roster-page[data-league='theleague'].coach-mode #rosterTableBody td[data-column='oppRank'] .rank-badge {
     padding: 0.0625rem 0.375rem;
     font-size: 0.6875rem;
@@ -463,6 +512,7 @@
 
   /* No rank, no forecast, no line yet (a bye, or odds not posted): the
      desktop cell's placeholder dash says nothing on a card, so it goes. */
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody td[data-column='oppRank']:not(:has(.rank-badge)),
   .roster-page[data-league='theleague'].coach-mode #rosterTableBody td[data-column='oppRank']:not(:has(.rank-badge)),
   .roster-page[data-league='theleague'].coach-mode #rosterTableBody td[data-column='weather']:has(.weather-empty),
   .roster-page[data-league='theleague'].coach-mode #rosterTableBody td[data-column='ou']:has(.odds-empty) {
@@ -490,6 +540,7 @@
   /* The break sits right after line 2's matchup (orders 22-29), so line 3
      is weather · spread · O/U · L3 with the average pushed right: three
      lines, not four. */
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody > tr.roster-row::after,
   .roster-page[data-league='theleague'].coach-mode #rosterTableBody > tr.roster-row::after {
     content: '';
     order: 30;
@@ -537,6 +588,8 @@
   }
 
   /* ── 44px hit areas on the small controls a row keeps ────────────────── */
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody .injury-indicator,
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody .trade-bait-link,
   .roster-page[data-league='theleague'] #rosterTableBody .injury-indicator,
   .roster-page[data-league='theleague'] #rosterTableBody .trade-bait-link,
   .roster-page[data-league='theleague'] #rosterTableBody .contract-action-remove,
@@ -545,6 +598,8 @@
     position: relative;
   }
 
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody .injury-indicator::after,
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody .trade-bait-link::after,
   .roster-page[data-league='theleague'] #rosterTableBody .injury-indicator::after,
   .roster-page[data-league='theleague'] #rosterTableBody .trade-bait-link::after,
   .roster-page[data-league='theleague'] #rosterTableBody .contract-action-remove::after,
@@ -562,12 +617,14 @@
      apart, so two centred 44px areas would overlap and the tag's (later in
      the DOM) would swallow taps meant for (Q). Split them at the gap: (Q)'s
      area grows leftwards from the middle of the gap, the tag's rightwards. */
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody .injury-indicator:has(+ .trade-bait-link)::after,
   .roster-page[data-league='theleague'] #rosterTableBody .injury-indicator:has(+ .trade-bait-link)::after {
     left: auto;
     right: -2px;
     transform: translateY(-50%);
   }
 
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody .injury-indicator + .trade-bait-link::after,
   .roster-page[data-league='theleague'] #rosterTableBody .injury-indicator + .trade-bait-link::after {
     left: -2px;
     transform: translateY(-50%);
@@ -599,6 +656,74 @@
   .roster-page[data-league='theleague'] .roster-table tfoot td[data-column='space1'] {
     display: block !important;
     font-variant-numeric: tabular-nums;
+  }
+
+  /* ── The AFL's card (docs/plans/rosters-mobile-layout.md § 8) ─────────── */
+  /* The AFL has one mode, and it is TheLeague's Coach card: the rules above
+     name its table beside TheLeague's. What differs lives here. Its rows
+     carry weather, spread, O/U and L3 as phone spans (phone-row.ts), because
+     its table has no spread or L3 cell and its Weather / O/U cells print a
+     bare temperature and a dash; and its season average is the `avg` column.
+     Its row colours are the AFL page's own (green active, red IR). */
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody .rr-ph--wx { order: 31; }
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody .rr-ph--spread { order: 41; }
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody .rr-ph--ou { order: 42; }
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody .rr-ph--l3 { order: 43; }
+
+  /* The spread badge, as TheLeague's Coach card draws it. */
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody .rr-ph--spread {
+    padding: 0.0625rem 0.3125rem;
+    border-radius: 4px;
+    font-size: 0.6875rem;
+    font-weight: 700;
+  }
+
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody .rr-ph--fav {
+    color: #047857;
+    background: #d1fae5;
+  }
+
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody .rr-ph--dog {
+    color: #b91c1c;
+    background: #fee2e2;
+  }
+
+  html.dark .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody .rr-ph--fav {
+    color: var(--badge-success-text, #6ee7b7);
+    background: var(--badge-success-bg, rgba(16, 185, 129, 0.15));
+  }
+
+  html.dark .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody .rr-ph--dog {
+    color: var(--badge-error-text, #fca5a5);
+    background: var(--badge-error-bg, rgba(220, 38, 38, 0.15));
+  }
+
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody .rr-ph--ou::before {
+    content: 'O/U\00a0' attr(data-t);
+  }
+
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody .rr-ph--l3::before {
+    content: '· L3\00a0' attr(data-t);
+  }
+
+  /* Line 3, right: the season average, TheLeague's `avgSeason`. */
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody td[data-column='avg'] {
+    display: block !important;
+    order: 49;
+    margin-left: auto;
+    font-size: 0.75rem;
+    color: var(--color-gray-600, #4b5563);
+    text-align: right !important;
+  }
+
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody td[data-column='avg'] * {
+    font-size: inherit !important;
+    font-weight: 500 !important;
+  }
+
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody td[data-column='avg']::before {
+    content: 'avg ';
+    content: 'avg ' / 'Season average ';
   }
 
   /* ── Cap Hits / Dead Money: the same card treatment ─────────────────── */

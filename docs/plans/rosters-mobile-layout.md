@@ -774,6 +774,38 @@ Cutdown Plan check at 390px inside the June-August window, and the AFL.
 
 ---
 
+### Phases 6-7 as built (PR C, the AFL)
+
+The AFL card is TheLeague's Coach card, and nothing in it is a copy:
+
+- **CSS:** every card and Coach rule in `rosters-mobile.css` names the AFL
+  table (`.roster-table--afl > tbody`) beside TheLeague's `#rosterTableBody`.
+  GM, the cap card, the sim bar, the sort chips and the dead-money table stay
+  TheLeague's. The AFL's own section is short: line-3 spans, the spread badge,
+  and `avg` as the right-hand average.
+- **Line 3 as spans:** the AFL table has no spread or L3 cell, and its Weather
+  and O/U cells print a bare temperature and a dash, so weather, spread, O/U
+  and L3 ride on `phone-row.ts` spans. The desktop table is unchanged. The
+  spread is signed the way TheLeague's badge signs it ("+3.5" green when his
+  team is favoured), which is the reverse of betting notation, kept so a card
+  reads the same in both leagues.
+- **Sheet:** `afl-phone-sheet.ts` sends `tabbed: true` (Summary and Game log,
+  no Salary tab), This week (`liftThisWeek` reads the AFL's spans and its
+  `total` / `avg` columns as fallbacks), and for the owner a Trade block toggle
+  plus a ⋮ **Player options** menu (IR, Trade, Cut). Each action closes the
+  sheet and opens `AFLActionModal` on that action's confirm step
+  (`payload.action`), so the modal keeps the confirmation and the write. It
+  honours only an action the viewer is shown.
+- **Odds and weather: one system (user, 2026-09-26),** landed separately in
+  #1234, which this PR stacks on. The AFL used to fetch its own ESPN scoreboard
+  (`fetchNflMatchups`), which never backfilled stadium weather, so its cards
+  would have had no weather to print. `loadLiveOdds` in `coach-data.ts` is now
+  the only implementation; both roster pages call it through
+  `rosters/live-odds.ts`.
+- **Inventory guard:** `src/utils/rosters/phone-inventory.ts` gives every
+  `<th data-column>` on both pages a phone home, and
+  `tests/rosters-phone-inventory.test.ts` fails on a column with none.
+
 ## 10. Risks
 
 - **ClientRouter lifecycle.**

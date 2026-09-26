@@ -65,9 +65,18 @@ function cellText(row: ParentNode, column: string): string {
   return text === '-' || text === '—' ? '' : text;
 }
 
+/** A phone carrier span's value (phone-row.ts), or '' when the row has none. */
+function phoneSpan(row: ParentNode, kind: string): string {
+  return row.querySelector<HTMLElement>(`.rr-ph--${kind}`)?.dataset.t?.trim() ?? '';
+}
+
 /**
  * The Coach columns the row carries, as label/value pairs. Only what has a
  * value is returned; a bye (the Opponent cell says BYE) is its own state.
+ *
+ * Reads TheLeague's Coach cells first, then the AFL's equivalents: the AFL
+ * table has no spread or L3 cell and a bare-temperature Weather cell, so those
+ * come from its phone spans, and its season columns are `total` / `avg`.
  */
 export function liftThisWeek(row: ParentNode): ThisWeekData | null {
   const opponentCell = row.querySelector<HTMLElement>('[data-column="opponent"]');
@@ -81,7 +90,8 @@ export function liftThisWeek(row: ParentNode): ThisWeekData | null {
   const vsAt = opponentCell.querySelector('.vs-at')?.textContent?.trim() ?? '';
   const opp = opponentCell.querySelector<HTMLImageElement>('.opponent-logo')?.getAttribute('alt')?.trim() ?? '';
   push('Opponent', [vsAt, opp].filter(Boolean).join(' '));
-  const spread = opponentCell.querySelector('.spread-badge')?.textContent?.replace(/\s+/g, '').trim() ?? '';
+  const spread = opponentCell.querySelector('.spread-badge')?.textContent?.replace(/\s+/g, '').trim()
+    || phoneSpan(row, 'spread');
   push('Spread', spread === '-' ? '' : spread);
   push('Opp rank vs pos', cellText(row, 'oppRank'));
   push('Opp avg allowed', cellText(row, 'oppAvg'));
@@ -90,13 +100,13 @@ export function liftThisWeek(row: ParentNode): ThisWeekData | null {
   const weatherCell = row.querySelector<HTMLElement>('[data-column="weather"]');
   const temp = weatherCell?.querySelector('.weather-temp')?.textContent?.trim() ?? '';
   const sky = weatherCell?.querySelector<HTMLElement>('.weather-icon')?.getAttribute('title')?.trim() ?? '';
-  push('Weather', [temp, sky].filter(Boolean).join(' · '));
+  push('Weather', [temp, sky].filter(Boolean).join(' · ') || phoneSpan(row, 'wx'));
 
   const recentCell = row.querySelector<HTMLElement>('[data-column="avgRecent"]');
   const recent = recentCell?.querySelector('.avg-points')?.textContent?.trim() ?? '';
   const trend = recentCell?.querySelector('.trend-arrow--up') ? ' (trending up)'
     : recentCell?.querySelector('.trend-arrow--down') ? ' (trending down)' : '';
-  push('Last 3 avg', recent && recent !== '-' ? recent + trend : '');
+  push('Last 3 avg', recent && recent !== '-' ? recent + trend : phoneSpan(row, 'l3'));
 
   const weeks = Array.from(row.querySelectorAll<HTMLElement>('[data-column^="trend-"]'))
     .map((td) => {
@@ -106,8 +116,8 @@ export function liftThisWeek(row: ParentNode): ThisWeekData | null {
     })
     .filter(Boolean);
   push('Recent weeks', weeks.join(' · '));
-  push('Season points', cellText(row, 'totalSeason'));
-  push('Season avg', cellText(row, 'avgSeason'));
+  push('Season points', cellText(row, 'totalSeason') || cellText(row, 'total'));
+  push('Season avg', cellText(row, 'avgSeason') || cellText(row, 'avg'));
   push('Projected', cellText(row, 'projected'));
 
   return facts.length ? { rows: facts } : null;

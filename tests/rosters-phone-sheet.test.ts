@@ -261,11 +261,14 @@ describe('the "Rostered by" strip (user, 2026-09-26)', () => {
     const modal = readFileSync('src/components/theleague/PlayerDetailsModal.astro', 'utf8');
     expect(modal).toContain('if (ownerBrand && !playerData.hideOwnerStrip) {');
   });
-  it('no other opener sends it', () => {
+  it('no opener but the two roster pages sends it', () => {
+    // The AFL's roster sheet (afl-phone-sheet.ts) opts out for the same
+    // reason: its header names the club and wears its crest (PR C).
     const hits = execSync("git grep -l hideOwnerStrip -- src", { encoding: 'utf8' }).trim().split('\n').sort();
     expect(hits).toEqual([
       'src/components/theleague/PlayerDetailsModal.astro',
       'src/utils/player-modal-trigger.ts',
+      'src/utils/rosters/afl-phone-sheet.ts',
       'src/utils/rosters/phone-sheet.ts',
     ]);
   });
