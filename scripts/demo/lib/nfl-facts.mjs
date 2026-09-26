@@ -76,13 +76,38 @@ export function loadSeasonFacts(feedsDir, year) {
     }
   }
 
-  const weeksScored = [...scores.keys()].sort((a, b) => a - b);
   return {
     year,
     players,
     scores,
-    lastScoredWeek: weeksScored.length ? weeksScored[weeksScored.length - 1] : 0,
+    lastScoredWeek: lastCompletedWeek(scores),
   };
+}
+
+/**
+ * The last week whose games are all played. A week in progress already has
+ * scores (Thursday's game, say), and a simulated week built on it pairs
+ * teams at 0-0 — which the derived chain rightly reads as unplayed while the
+ * standings count it as a tie. A week counts once its players scoring
+ * anything reach 60% of the busiest week's (byes cost ~20% at most; a
+ * Thursday-only week is under 10%).
+ */
+export function lastCompletedWeek(scores) {
+  const active = new Map();
+  for (const [week, table] of scores) {
+    let n = 0;
+    for (const s of table.values()) if (s !== 0) n += 1;
+    active.set(week, n);
+  }
+  const busiest = Math.max(0, ...active.values());
+  const complete = [...active.keys()].filter((w) => active.get(w) >= busiest * 0.6).sort((a, b) => a - b);
+  // Only a prefix counts: weeks after the first incomplete one are not done.
+  let last = 0;
+  for (const w of complete) {
+    if (w !== last + 1) break;
+    last = w;
+  }
+  return last;
 }
 
 /** Season total and games played per player, for valuing him. */
