@@ -95,6 +95,32 @@ the widget references them yet — they are here to be linked from MFL's own
 modules, the way `module.html` currently links the POWER 99 image off
 `dagrafixdesigns.com`.
 
-`public/` is served as-is with no build step, so replacing either file and
+### Header art (`headers/`)
+
+Sixteen 598 × 210 transparent header panels (blue chevron frame), stored at the
+size they were supplied:
+
+| File | Subject | URL |
+|---|---|---|
+| `headers/49ers-receiver.png` | 49ers receiver | `https://v2.mfl.football/mfl/10105/headers/49ers-receiver.png` |
+| `headers/49ers-quarterback.png` | 49ers quarterback | `https://v2.mfl.football/mfl/10105/headers/49ers-quarterback.png` |
+| `headers/steelers-92.png` | Steelers #92 | `https://v2.mfl.football/mfl/10105/headers/steelers-92.png` |
+| `headers/helmet-sketch.png` | Faded helmet sketch | `https://v2.mfl.football/mfl/10105/headers/helmet-sketch.png` |
+| `headers/silhouette-pointing.png` | Silhouette, finger raised | `https://v2.mfl.football/mfl/10105/headers/silhouette-pointing.png` |
+| `headers/silhouette-phone.png` | Silhouette, on the phone | `https://v2.mfl.football/mfl/10105/headers/silhouette-phone.png` |
+| `headers/bears-34.png` | Bears #34 | `https://v2.mfl.football/mfl/10105/headers/bears-34.png` |
+| `headers/chiefs-tight-end.png` | Chiefs tight end | `https://v2.mfl.football/mfl/10105/headers/chiefs-tight-end.png` |
+| `headers/vikings-84.png` | Vikings #84 | `https://v2.mfl.football/mfl/10105/headers/vikings-84.png` |
+| `headers/colts-quarterback.png` | Colts quarterback | `https://v2.mfl.football/mfl/10105/headers/colts-quarterback.png` |
+| `headers/packers-92.png` | Packers #92 | `https://v2.mfl.football/mfl/10105/headers/packers-92.png` |
+| `headers/dolphins-quarterback.png` | Dolphins quarterback | `https://v2.mfl.football/mfl/10105/headers/dolphins-quarterback.png` |
+| `headers/dolphins-quarterback-throwing.png` | Dolphins quarterback, throwing | `https://v2.mfl.football/mfl/10105/headers/dolphins-quarterback-throwing.png` |
+| `headers/patriots-12.png` | Patriots #12 | `https://v2.mfl.football/mfl/10105/headers/patriots-12.png` |
+| `headers/lions-running-back.png` | Lions running back | `https://v2.mfl.football/mfl/10105/headers/lions-running-back.png` |
+| `headers/patriots-white-jersey.png` | Patriots, white jersey | `https://v2.mfl.football/mfl/10105/headers/patriots-white-jersey.png` |
+
+Like the marks above, nothing in the widget references these yet.
+
+`public/` is served as-is with no build step, so replacing any file and
 deploying is the whole update path; the URL does not change. Keep the names
 stable for that reason — a rename breaks every module already pointing at it.
