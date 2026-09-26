@@ -3904,3 +3904,33 @@ which ~18 files open.
 
 **Evidence:** `tests/player-sheet.test.ts`, `tests/cdm-action-descriptors.test.ts`,
 `tests/rosters-phone-sheet.test.ts`.
+
+## 2026-09-26 - A menu button inside a sheet: Esc belongs to the innermost layer, and focus must be parked BEFORE the repaint
+
+**Context:** The Rosters player sheet's hero "More" button (which reopened the
+CDM on top of the sheet) became a ⋮ menu button listing the table's ⋮ actions
+(`buildContractMenu`, `src/utils/rosters/phone-sheet.ts`; rendered by
+`renderQuickActions` in `src/utils/player-sheet.ts`).
+
+**What worked:**
+
+- **The menu's items are plain `data-sheet-action`s.** The ⋮ itself carries
+  `data-sheet-menu` instead, so the sheet's one delegated click handler routes
+  items exactly like every other action and the button only toggles. No second
+  routing path to drift.
+- **Esc: the menu's keydown runs on the sheet's content node and calls
+  `stopPropagation()`** — the sheet's own Escape handler is a once-bound
+  `document` listener, so the bubble order makes the innermost layer win for
+  free. Without it one Esc closed the menu AND the sheet.
+- **Park focus on the ⋮ before acting.** `sheet.rerender()` repaints the hero
+  row with `innerHTML`, which destroys the focused menu item; hidden, it drops
+  focus to `<body>` behind the scrim. Closing the menu with `focus()` on the ⋮
+  first, and teaching `rerender` to re-find `[data-sheet-menu]` when that is
+  what held focus, keeps a keyboard user on the control they used.
+
+**Trap hit:** `--card-bg` is a radial gradient with a 50%-alpha stop in dark,
+so a popover painted with it lets the content underneath show through. A
+floating surface wants a solid token (`--content-bg`).
+
+**Evidence:** `tests/player-sheet.test.ts` ("the kebab"),
+`tests/rosters-phone-sheet.test.ts` ("contract-options kebab").

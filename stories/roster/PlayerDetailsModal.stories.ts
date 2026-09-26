@@ -200,7 +200,18 @@ const rosteredQb = {
 const heroActions = [
   { id: 'cut-simulate', label: 'Simulate cut', icon: 'icon-bar-chart' },
   { id: 'trade-block', label: 'Trade block', icon: 'icon-bookmark' },
-  { id: 'more', label: 'More', icon: 'icon-menu' },
+  {
+    id: 'contract-menu', label: 'Contract options', icon: 'icon-menu',
+    menu: [
+      { id: 'extension', label: 'Veteran Extension', desc: 'Extend contract 1–2 years', icon: 'icon-coin' },
+      { id: 'move-to-ir', label: 'Move to IR', desc: 'Pause participation — cap charge unchanged', icon: 'icon-ambulance' },
+      { id: 'cut-simulate', label: 'Simulate cut', desc: 'Track the cap impact locally — no roster change', icon: 'icon-bar-chart' },
+      { id: 'release', label: 'Release…', desc: 'Cut him for real — review the cap hit first', icon: 'icon-user-times', tone: 'danger' as const },
+      { id: 'trade-simulate', label: 'Simulate trade', desc: 'Track the cap impact locally — no roster change', icon: 'icon-bar-chart' },
+      { id: 'trade-block', label: 'Add to trade block', desc: 'Tell other owners he is available', icon: 'icon-bookmark' },
+      { id: 'trade-builder', label: 'Add to Trade Builder', desc: 'Open the Trade Builder with him pre-loaded', icon: 'icon-transactions-2' },
+    ],
+  },
 ];
 
 const salarySheet = {

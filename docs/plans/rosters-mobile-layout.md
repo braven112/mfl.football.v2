@@ -252,7 +252,7 @@ Sims chip.
 ```
 HERO   photo + NFL logo · owner crest · name · pos/team/#/college
        Age · Ht · Wt · Exp
-       [ Simulate cut ] [🏷 trade block] [👁 watch] [⋮ more]   ← quick actions (new, opt-in)
+       [ Simulate cut ] [🏷 trade block] [👁 watch] [⋮]        ← quick actions; ⋮ = contract options menu
 TABS   Summary | Salary | Game log                          ← only when opener sends `salary`
 ─────────────────────────────────────────────────────────
 Summary   metrics tiles · This week (new) · Details · Latest news · More actions (new)
@@ -356,14 +356,41 @@ math.
 
 | Viewer | Quick actions |
 |---|---|
-| Owner, own team (TheLeague) | Simulate cut (becomes "Simulated cut · Undo" when active) · Trade block toggle · Watch · ⋮ more |
-| Owner, own team (AFL) | Trade block toggle · Watch · ⋮ more |
-| Signed in, another team | the existing **Trade for him** (`#pdm-trade`) · Watch · ⋮ more (Simulate trade lives in the TheLeague Salary tab) |
-| Signed out | Watch (hands to sign-in, as it does today) · ⋮ more |
+| Owner, own team (TheLeague) | Simulate cut (becomes "Simulated cut · Undo" when active) · Trade block toggle · Watch · ⋮ contract options |
+| Owner, own team (AFL) | Trade block toggle · Watch · ⋮ contract options |
+| Signed in, another team | the existing **Trade for him** (`#pdm-trade`) · Watch · ⋮ contract options (Simulate trade lives in the TheLeague Salary tab) |
+| Signed out | Watch (hands to sign-in, as it does today) · ⋮ contract options |
 
 The existing `#pdm-actions` row (Watch / Claim / Trade for him / MFL bid)
 **becomes** the hero row when `quickActions` is present. It is not duplicated,
 so Watch is never offered twice.
+
+**The ⋮ is a menu, not a "More" button (user, 2026-09-26).** The first build
+put a "More" button last in the hero that reopened the CDM on top of the
+sheet. It is now a kebab icon button (a WAI-ARIA menu button:
+`aria-haspopup="menu"`, `aria-expanded`, named "Contract options for
+<player>") whose menu is **the table's ⋮ list**, read from
+`getCdmActionDescriptors` (`buildContractMenu`,
+`src/utils/rosters/phone-sheet.ts`), in the CDM's order:
+
+- the contract actions the player is eligible for (Declare / Franchise Tag /
+  Team Option / Veteran or Rookie Extension), then IR / practice-squad moves
+  and the auto-cut toggle (own team);
+- the CDM's two sub-steps flattened into their entries, so one tap does the
+  thing: **Cut Player** → Simulate cut · Release… (own team; the CDM's cut
+  review), **Trade Player** → Simulate trade · Add/Remove trade block (own
+  team) · Add to Trade Builder. While a simulation is active, ONE "Undo
+  simulated …" takes both Simulate slots;
+- **not Watch**: the hero already carries the sheet's built-in Watch.
+
+Every item is a `data-sheet-action` and routes through `onAction` exactly as
+the Salary tab and More actions do (CDM_ROUTES for writes, the local handlers
+for simulate / undo / trade block). Keys: Enter / Space / Down open on the
+first item, Up on the last; Up / Down wrap, Home / End jump; Esc closes the
+menu **without closing the sheet** and returns focus to the ⋮; Tab closes it.
+An item that keeps the sheet open (simulate, undo, trade block) leaves focus on
+the ⋮; one that hands off to the CDM closes the sheet. Screenshots:
+`pr-a-kebab-{gm,coach}-{light,dark}.png`.
 
 ### Tabs: accessibility
 

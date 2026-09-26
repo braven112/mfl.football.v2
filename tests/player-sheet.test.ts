@@ -12,6 +12,7 @@ import {
   resolveSheetTabs,
   resolveInitialTab,
   nextTabIndex,
+  nextMenuIndex,
   renderQuickActions,
   renderMoreActions,
   renderThisWeek,
@@ -64,6 +65,51 @@ describe('tablist keys', () => {
     expect(nextTabIndex('Home', 2, 3)).toBe(0);
     expect(nextTabIndex('End', 0, 3)).toBe(2);
     expect(nextTabIndex('Enter', 0, 3)).toBeNull();
+  });
+});
+
+describe('kebab menu keys', () => {
+  it('Down / Up wrap, Home / End jump, and nothing focused starts at an end', () => {
+    expect(nextMenuIndex('ArrowDown', -1, 4)).toBe(0);
+    expect(nextMenuIndex('ArrowUp', -1, 4)).toBe(3);
+    expect(nextMenuIndex('ArrowDown', 3, 4)).toBe(0);
+    expect(nextMenuIndex('ArrowUp', 0, 4)).toBe(3);
+    expect(nextMenuIndex('Home', 2, 4)).toBe(0);
+    expect(nextMenuIndex('End', 0, 4)).toBe(3);
+    expect(nextMenuIndex('ArrowRight', 0, 4)).toBeNull();
+    expect(nextMenuIndex('ArrowDown', 0, 0)).toBeNull();
+  });
+});
+
+describe('the kebab (a quick action with a menu)', () => {
+  const kebab = {
+    id: 'contract-menu', label: 'Contract options', icon: 'icon-menu',
+    menu: [
+      { id: 'extension', label: 'Veteran Extension', desc: 'Extend contract 1–2 years', icon: 'icon-coin' },
+      { id: 'autocut-toggle', label: 'Mark for August auto-cut', icon: 'icon-clipboard', disabled: true },
+      { id: 'release', label: 'Release…', icon: 'icon-user-times', tone: 'danger' as const },
+    ],
+  };
+  const html = renderQuickActions([kebab], 'Lamar Jackson');
+
+  it('is a menu button named for the player, collapsed, pointing at its menu', () => {
+    expect(html).toMatch(/<button[^>]*data-sheet-menu="contract-menu"[^>]*aria-haspopup="menu" aria-expanded="false" aria-controls="pdm-kebab-menu"[^>]*aria-label="Contract options for Lamar Jackson"/);
+    expect(html).toMatch(/<ul[^>]*id="pdm-kebab-menu" role="menu"[^>]*hidden>/);
+  });
+
+  it('the button does not act — only its items carry data-sheet-action', () => {
+    const button = html.slice(0, html.indexOf('</button>'));
+    expect(button).not.toContain('data-sheet-action');
+    expect(html).toContain('role="menuitem" tabindex="-1" class="pdm-kebab__item" data-sheet-action="extension"');
+  });
+
+  it('disabled and danger items keep their state', () => {
+    expect(html).toMatch(/data-sheet-action="autocut-toggle" disabled/);
+    expect(html).toContain('pdm-kebab__item--danger');
+  });
+
+  it('escapes the subject', () => {
+    expect(renderQuickActions([kebab], '<i>x</i>')).not.toContain('<i>x</i>');
   });
 });
 
@@ -148,6 +194,13 @@ describe('the modal wiring', () => {
     // Untabbed openers keep the focus behaviour they have always had.
     expect(modal).toMatch(/if \(sheetTabs\.length\) \{\s*const opener = document\.activeElement/);
     expect(modal).toContain('restoreSheetFocus();');
+  });
+
+  it('the kebab closes on Esc WITHOUT closing the sheet, and gives focus back', () => {
+    const init = modal.slice(modal.indexOf('function initPlayerDetailsModal()'));
+    expect(init).toContain("contentEl?.addEventListener('keydown'");
+    expect(init).toMatch(/e\.key === 'Escape' && sheetMenuOpen\(\)\) \{\s*e\.preventDefault\(\);\s*e\.stopPropagation\(\);\s*closeSheetMenu\(true\);/);
+    expect(init).toContain("btn.setAttribute('aria-expanded', 'true')");
   });
 
   it('tabs are real WAI-ARIA tabs', () => {

@@ -13,6 +13,7 @@ import {
   buildSalarySheet,
   buildQuickActions,
   buildMoreActions,
+  buildContractMenu,
   createRosterSheetActionHandler,
   simulatedCapDelta,
   formatDeadline,
@@ -160,8 +161,13 @@ describe('cap delta', () => {
 });
 
 describe('hero quick actions (Q7)', () => {
-  it('own team: Simulate cut, trade block, More', () => {
-    expect(buildQuickActions(facts()).map((a) => a.id)).toEqual(['cut-simulate', 'trade-block', 'more']);
+  it('own team: Simulate cut, trade block, then the contract-options kebab', () => {
+    expect(buildQuickActions(facts()).map((a) => a.id)).toEqual(['cut-simulate', 'trade-block', 'contract-menu']);
+  });
+  it('the kebab is the ONLY overflow entry point — no separate More button', () => {
+    const ids = buildQuickActions(facts()).map((a) => a.id);
+    expect(ids).not.toContain('more');
+    expect(buildQuickActions(facts()).filter((a) => a.menu?.length)).toHaveLength(1);
   });
   it('after a simulated cut: "Simulated · Undo" (Q5)', () => {
     const [first] = buildQuickActions(facts({ activeActionType: 'cut' }));
@@ -171,8 +177,60 @@ describe('hero quick actions (Q7)', () => {
     const tb = buildQuickActions(facts({ player: { tradeBait: true } as never })).find((a) => a.id === 'trade-block');
     expect(tb).toMatchObject({ state: 'on', label: 'On trade block' });
   });
-  it('another owner’s player: only More — Trade for him and Watch are the sheet’s built-ins', () => {
-    expect(buildQuickActions(facts({ viewer: { signedIn: true, isOwnTeam: false } })).map((a) => a.id)).toEqual(['more']);
+  it('another owner’s player: only the kebab — Trade for him and Watch are the sheet’s built-ins', () => {
+    expect(buildQuickActions(facts({ viewer: { signedIn: true, isOwnTeam: false } })).map((a) => a.id)).toEqual(['contract-menu']);
+  });
+});
+
+describe('contract-options kebab (the table’s ⋮, as a menu)', () => {
+  const ids = (f: RosterSheetFacts) => buildContractMenu(f).map((a) => a.id);
+
+  it('own team, standard 3-year deal: the CDM list in its order, cut / trade flattened, no Watch', () => {
+    expect(ids(facts())).toEqual([
+      'extension', 'move-to-ir',
+      'cut-simulate', 'release',
+      'trade-simulate', 'trade-block', 'trade-builder',
+    ]);
+  });
+
+  it('carries every CDM step-1 action but Watch (the hero has the built-in one)', () => {
+    const f = facts();
+    const menu = new Set(ids(f));
+    for (const d of f.descriptors) {
+      if (d.id === 'watch') expect(menu.has('watch')).toBe(false);
+      else if (d.id === 'cut') expect(menu.has('cut-simulate')).toBe(true);
+      else if (d.id === 'trade') expect(menu.has('trade-simulate')).toBe(true);
+      else expect(menu.has(d.id), d.id).toBe(true);
+    }
+  });
+
+  it('final year: Franchise Tag leads, as it does in the CDM', () => {
+    expect(ids(facts({ player: { years: 1 } as never }))[0]).toBe('franchise');
+  });
+
+  it('another team: no roster moves, no Release, no trade block', () => {
+    expect(ids(facts({ viewer: { signedIn: true, isOwnTeam: false } }))).toEqual([
+      'extension', 'cut-simulate', 'trade-simulate', 'trade-builder',
+    ]);
+  });
+
+  it('an active simulation offers ONE Undo in place of both Simulate entries', () => {
+    const menu = ids(facts({ activeActionType: 'trade' }));
+    expect(menu.filter((id) => id === 'undo-simulation')).toHaveLength(1);
+    expect(menu).not.toContain('cut-simulate');
+    expect(menu).not.toContain('trade-simulate');
+  });
+
+  it('Release is the danger entry and goes to the CDM cut review', () => {
+    expect(buildContractMenu(facts()).find((a) => a.id === 'release')).toMatchObject({ tone: 'danger' });
+  });
+
+  it('every entry routes: to the CDM, or to a local simulate / undo / trade-block handler', () => {
+    const local = new Set(['cut-simulate', 'trade-simulate', 'undo-simulation', 'trade-block']);
+    const f = facts({ player: { years: 1 } as never });
+    for (const id of [...ids(f), ...ids(facts({ activeActionType: 'cut' }))]) {
+      expect(local.has(id) || CDM_ROUTES[id] !== undefined, id).toBe(true);
+    }
   });
 });
 
@@ -241,7 +299,9 @@ describe('routing — one implementation per action', () => {
     const shown = [
       ...buildMoreActions(f).map((a) => a.id),
       ...buildSalarySheet(f, pricing).options.map((o) => o.id),
-      'team-option', 'declare-contract', 'more',
+      ...buildContractMenu(f).map((a) => a.id)
+        .filter((id) => !['cut-simulate', 'trade-simulate', 'undo-simulation', 'trade-block'].includes(id)),
+      'team-option', 'declare-contract',
     ];
     for (const id of shown) expect(CDM_ROUTES[id], id).toBeDefined();
   });

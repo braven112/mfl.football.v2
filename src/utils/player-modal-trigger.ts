@@ -142,6 +142,12 @@ export interface SheetAction {
   disabled?: boolean;
   /** A toggle that is currently ON (trade block, an active simulation). */
   state?: 'on';
+  /**
+   * A quick action that OPENS A MENU instead of acting: the hero's kebab (⋮).
+   * Rendered as a `menu` button whose items are these actions; each item
+   * routes through `onAction` exactly like any other `data-sheet-action`.
+   */
+  menu?: SheetAction[];
 }
 
 /** What `onAction` may ask the open sheet to do. */

@@ -77,26 +77,83 @@ export function nextTabIndex(key: string, index: number, count: number): number 
   }
 }
 
+/**
+ * Arrow-key arithmetic for the kebab's menu (vertical, so Up/Down): wraps at
+ * both ends, Home/End jump. `index` -1 means nothing is focused yet. Returns
+ * null for keys the menu does not handle. The caller passes only ENABLED
+ * items, so a disabled one is never a stop.
+ */
+export function nextMenuIndex(key: string, index: number, count: number): number | null {
+  if (count <= 0) return null;
+  switch (key) {
+    case 'ArrowDown': return index < 0 ? 0 : (index + 1) % count;
+    case 'ArrowUp': return index < 0 ? count - 1 : (index - 1 + count) % count;
+    case 'Home': return 0;
+    case 'End': return count - 1;
+    default: return null;
+  }
+}
+
 function icon(id: string, cls: string): string {
   return `<span class="${cls}" aria-hidden="true"><svg aria-hidden="true"><use href="${SPRITE}#${escapeHtml(id)}"></use></svg></span>`;
+}
+
+/** The ⋮ glyph — the same three dots the roster table's action column draws. */
+const KEBAB_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">'
+  + '<circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
+
+/** The id of the kebab's menu — one sheet, one menu, so a fixed id is safe. */
+export const SHEET_MENU_ID = 'pdm-kebab-menu';
+
+/**
+ * A quick action that carries `menu`: an icon button that opens a list of
+ * actions (WAI-ARIA menu button). The button itself has no
+ * `data-sheet-action`, so pressing it only opens the menu; each item is an
+ * ordinary `data-sheet-action` and routes through `onAction` like every other
+ * action in the sheet. The modal's script owns open / close / arrow keys.
+ */
+function renderMenuAction(a: SheetAction, subject: string): string {
+  const name = subject ? `${a.label} for ${subject}` : a.label;
+  const items = (a.menu ?? [])
+    .map((m) => {
+      const cls = [
+        'pdm-kebab__item',
+        m.tone === 'danger' ? 'pdm-kebab__item--danger' : '',
+        m.state === 'on' ? 'pdm-kebab__item--on' : '',
+      ].filter(Boolean).join(' ');
+      return `<li role="none"><button type="button" role="menuitem" tabindex="-1" class="${cls}" data-sheet-action="${escapeHtml(m.id)}"${m.disabled ? ' disabled' : ''}>`
+        + icon(m.icon, 'pdm-kebab__icon')
+        + '<span class="pdm-kebab__text">'
+        + `<span class="pdm-kebab__label">${escapeHtml(m.label)}</span>`
+        + (m.desc ? `<span class="pdm-kebab__desc">${escapeHtml(m.desc)}</span>` : '')
+        + '</span></button></li>';
+    })
+    .join('');
+  return '<span class="pdm-kebab">'
+    + `<button type="button" class="pdm-quick__btn pdm-quick__btn--kebab" data-sheet-menu="${escapeHtml(a.id)}"`
+    + ` aria-haspopup="menu" aria-expanded="false" aria-controls="${SHEET_MENU_ID}"`
+    + ` aria-label="${escapeHtml(name)}" title="${escapeHtml(a.label)}">`
+    + `<span class="pdm-quick__icon" aria-hidden="true">${KEBAB_SVG}</span>`
+    + '</button>'
+    + `<ul class="pdm-kebab__menu" id="${SHEET_MENU_ID}" role="menu" aria-label="${escapeHtml(name)}" hidden>${items}</ul>`
+    + '</span>';
 }
 
 /**
  * The quick-action buttons. Rendered into the modal's existing action row
  * beside the built-in Watch / Trade-for-him cards, so Watch is never offered
- * twice (the opener does not send one).
+ * twice (the opener does not send one). `subject` is the player's name, for
+ * the accessible name of a menu button ("Contract options for Lamar Jackson").
  */
-export function renderQuickActions(actions: SheetAction[] | null | undefined): string {
+export function renderQuickActions(actions: SheetAction[] | null | undefined, subject = ''): string {
   if (!actions?.length) return '';
   return actions
     .map((a) => {
+      if (a.menu?.length) return renderMenuAction(a, subject);
       const cls = [
         'pdm-quick__btn',
         a.state === 'on' ? 'pdm-quick__btn--on' : '',
         a.tone === 'danger' ? 'pdm-quick__btn--danger' : '',
-        // `more` is the overflow: it always sits last, after the built-in
-        // Watch / Trade cards, as an icon.
-        a.id === 'more' ? 'pdm-quick__btn--more' : '',
       ].filter(Boolean).join(' ');
       const pressed = a.state === 'on' ? ' aria-pressed="true"' : '';
       const disabled = a.disabled ? ' disabled' : '';
