@@ -8,12 +8,12 @@ export type DraftPosition = 'QB' | 'RB' | 'WR' | 'TE' | 'PK' | 'DEF';
 
 /** Position → CSS color token map, shared by BoardCell and DraftBoardPanel */
 export const POSITION_COLORS: Record<string, string> = {
-  QB: 'var(--dr-pos-qb, #dc2626)',
-  RB: 'var(--dr-pos-rb, #16a34a)',
-  WR: 'var(--dr-pos-wr, #2563eb)',
-  TE: 'var(--dr-pos-te, #7c3aed)',
-  PK: 'var(--dr-pos-pk, #d97706)',
-  DEF: 'var(--dr-pos-def, #6b7280)',
+  QB: 'var(--dr-pos-qb, #c41e3a)',
+  RB: 'var(--dr-pos-rb, #2563eb)',
+  WR: 'var(--dr-pos-wr, #16a34a)',
+  TE: 'var(--dr-pos-te, #9333ea)',
+  PK: 'var(--dr-pos-pk, #ea580c)',
+  DEF: 'var(--dr-pos-def, #0891b2)',
 };
 
 /** Draft mode derived from league.json draft_kind */

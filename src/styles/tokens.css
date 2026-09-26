@@ -505,6 +505,12 @@
   --badge-info-bg: var(--color-info-light);
   --badge-info-text: var(--color-info-dark);
 
+  /* Position colours — the ONE site palette: QB red #c41e3a, RB blue
+     #2563eb, WR green #16a34a, TE purple #9333ea, PK orange #ea580c, DEF
+     cyan #0891b2. Charts read POSITION_COLORS (roster-constants.ts /
+     roster-analytics.ts); the draft room's --dr-pos-* take the same values.
+     tests/position-pill-tokens.test.ts pins every copy. */
+
   /* Legacy status colors */
   --error-color: var(--color-error);
   --warning-color: var(--color-warning);

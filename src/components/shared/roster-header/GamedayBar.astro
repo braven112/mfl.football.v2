@@ -132,7 +132,10 @@ const railMarks = rail.flatMap((entry) =>
 );
 ---
 
-<div class="rhdr-bar">
+{/* On a phone the two week tiles start collapsed behind the rail's "Last &
+    next game" toggle, since the Full schedule link sits right beside it. Only
+    when the rail (and so the toggle) renders; desktop always shows both. */}
+<div class="rhdr-bar" data-weeks={railMarks.length > 0 ? 'collapsed' : undefined}>
   {lastPlayed ? (
     <a class:list={['rhdr-tile', { 'rhdr-tile--multi': lastPlayed.games.length > 1 }]} href={scheduleHref(lastPlayed.week)}>
       {lastPlayed.games.length === 1 ? (
@@ -263,7 +266,12 @@ const railMarks = rail.flatMap((entry) =>
     <div class="rhdr-rail">
       <div class="rhdr-rail__head">
         <span class="rhdr-rail__title">Season</span>
-        <a class="rhdr-rail__cta" href={scheduleHref()}>Full schedule &amp; scores →</a>
+        <span class="rhdr-rail__actions">
+          <button type="button" class="rhdr-rail__weeks" data-rhdr-weeks-toggle aria-expanded="false">
+            Last &amp; next game <span class="rhdr-rail__chev" aria-hidden="true">▾</span>
+          </button>
+          <a class="rhdr-rail__cta" href={scheduleHref()}>Full schedule &amp; scores →</a>
+        </span>
       </div>
       <div class="rhdr-rail__dots">
         {railMarks.map(({ entry, game, weekStart }) => (
@@ -453,6 +461,50 @@ const railMarks = rail.flatMap((entry) =>
   }
   .rhdr-rail__cta:hover { text-decoration: underline; }
 
+  /* The phone-only week toggle. Hidden on wider screens, where both tiles
+     always show. */
+  .rhdr-rail__actions { display: inline-flex; align-items: baseline; gap: 0.75rem; }
+  .rhdr-rail__weeks { display: none; }
+
+  @media (max-width: 767px) {
+    .rhdr-bar[data-weeks] .rhdr-rail { order: -1; }
+    .rhdr-bar[data-weeks='collapsed'] > .rhdr-tile { display: none; }
+    /* One row, aligned to the dots below it: the toggle flush left, the
+       schedule link flush right. The "Season" label goes, since the dots and
+       their week scale already say what this is; with it the head wrapped
+       to two lines and the toggle sat indented past the dots. */
+    .rhdr-bar[data-weeks] .rhdr-rail__title { display: none; }
+    .rhdr-bar[data-weeks] .rhdr-rail__actions {
+      flex: 1 1 100%;
+      justify-content: space-between;
+    }
+    .rhdr-rail__weeks {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      min-height: 44px;
+      margin: -0.75rem 0;
+      padding: 0;
+      border: 0;
+      background: none;
+      font: inherit;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      color: var(--content-text-muted);
+      cursor: pointer;
+    }
+    .rhdr-rail__weeks:focus-visible {
+      outline: 2px solid var(--color-accent, #1c497c);
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+    .rhdr-rail__chev { display: inline-block; transition: transform 0.15s ease; }
+    .rhdr-rail__weeks[aria-expanded='true'] .rhdr-rail__chev { transform: rotate(180deg); }
+  }
+
   /* One mark per GAME, all the same width, so the green ones can be counted
      against the record. The week grouping is carried by the GAP alone: a 1px
      step inside a week, 3px between weeks, which is what stops a doubleheader
@@ -532,8 +584,25 @@ const railMarks = rail.flatMap((entry) =>
   .rhdr-rail__now { color: var(--color-accent, #1c497c); font-weight: 600; }
 
   @media (prefers-reduced-motion: reduce) {
+    .rhdr-rail__chev { transition: none; }
     .rhdr-tile,
     .rhdr-rail__mark { transition: none; }
     .rhdr-rail__dot:hover .rhdr-rail__mark { transform: none; }
   }
 </style>
+
+<script>
+  // One delegated listener for the phone week toggle. A module script runs
+  // once per document, and `document` survives ClientRouter swaps, so this
+  // never stacks and needs no per-page init; each swapped-in header arrives
+  // collapsed from the server.
+  document.addEventListener('click', (event) => {
+    const toggle = (event.target as Element | null)?.closest?.('[data-rhdr-weeks-toggle]');
+    if (!(toggle instanceof HTMLButtonElement)) return;
+    const bar = toggle.closest<HTMLElement>('.rhdr-bar[data-weeks]');
+    if (!bar) return;
+    const expand = bar.dataset.weeks === 'collapsed';
+    bar.dataset.weeks = expand ? 'expanded' : 'collapsed';
+    toggle.setAttribute('aria-expanded', String(expand));
+  });
+</script>

@@ -15,16 +15,19 @@ import { getLeagueBySlug, DEFAULT_LEAGUE_SLUG } from '../config/leagues';
 export const positionOrder = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'] as const;
 
 /**
- * Position color palette for charts and visualizations
+ * Position color palette for charts and visualizations — the ONE site
+ * palette (tokens.css § Position colours; the same hexes as
+ * roster-analytics' POSITION_COLORS and the draft room's --dr-pos-*).
+ * tests/position-pill-tokens.test.ts pins every copy to it.
  */
 export const POSITION_COLORS: Record<string, string> = {
-  QB: '#6366f1', // indigo
-  RB: '#f97316', // orange
-  WR: '#22c55e', // green
-  TE: '#14b8a6', // teal
-  PK: '#0ea5e9', // light blue
-  K: '#0ea5e9',  // light blue (alias for PK)
-  DEF: '#475569', // slate
+  QB: '#c41e3a', // red
+  RB: '#2563eb', // blue
+  WR: '#16a34a', // green
+  TE: '#9333ea', // purple
+  PK: '#ea580c', // orange
+  K: '#ea580c',  // orange (alias for PK)
+  DEF: '#0891b2', // cyan
 };
 
 /**

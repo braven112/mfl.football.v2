@@ -3966,3 +3966,111 @@ slow.
 
 **Evidence:** `tests/player-sheet.test.ts` ("the kebab menu stays on screen").
 
+---
+
+## 2026-09-25 - A phone card over a table the parity harness fingerprints: text in attributes, cells flattened with `display: contents`
+
+**Context:** Rosters phone layout, PR B (docs/plans/rosters-mobile-layout.md,
+"Phases 4-5 as built"). Below 768px each roster `<tr>` becomes a three-line
+card, while `scripts/roster-parity-check.mjs` at desktop width must stay at 0
+diffs.
+
+**Insight 1 — "hidden on desktop" is not invisible to the harness.** It
+fingerprints every cell's `textContent` (which includes `display: none` text)
+and every `<img src>`. A phone-only span holding "thru '28" diffs every row.
+Carry phone-only values in an attribute on an EMPTY span and print them with
+`::before { content: attr(data-t) }`; restyle the elements a cell already has
+(PlayerCell's `.player-meta__pos` became the pill, its `.player-meta__logo` the
+avatar badge) instead of adding new ones. `tests/rosters-phone-row.test.ts`
+pins "strip the tags and nothing is left".
+
+**Insight 2 — to put pieces of several cells on one line, flatten the cells.**
+A grid gives each `<td>` its own track. `display: contents` on the cell (and on
+wrappers inside it) makes its children direct flex items of the `<tr>`, and
+`order` places each on its line; a flex item whose basis plus the right-hand
+value's fills the line forces the next line. Pseudo-elements of a
+`display: contents` element are still generated and still take `order`.
+
+**Insight 3 — source order still rules a flattened table.** `<tfoot>` sits
+before `<tbody>` in the markup, so a `display: block` table prints the totals
+ABOVE the rows. Make the table a flex column and give the tfoot `order: 2`.
+
+**Insight 4 — `!important` on every phone `display`.** setMode and the rankings
+script write inline `display` on cells; a phone rule must outrank them both
+ways (the Free Agents insight, again). `:has()` and `[style*='none']` let the
+stylesheet respect what the page decided (`td.ranking-cell:not(:empty):not([style*='none'])`).
+
+**Evidence:** `src/styles/rosters-mobile.css`, `src/utils/rosters/phone-row.ts`,
+`tests/rosters-phone-row.test.ts`; parity 10/10 renders identical before and
+after.
+
+## 2026-09-26 - Flex-card rows: break lines with an item, not a basis; and a `<tr>` is content-box
+
+**Context:** Decluttering the Rosters phone card (PR B of
+`docs/plans/rosters-mobile-layout.md`): position pill under the headshot, NFL
+logo back in PlayerCell's meta line, no injury word, the cap card as one button.
+
+**What worked:**
+
+- **End line 1 with an empty full-width item** (`.rr-ph--br`: `order: 12;
+  flex: 0 0 100%; height: 0`, emitted by `buildPhoneLineSpans`, so the parity
+  harness still sees no text). The name can then be `flex: 1 1 0` and take
+  every pixel the right-hand value leaves. The old way — a name basis of
+  "100% minus a reserved right column" — reserved the widest salary's width on
+  every row, which is what pushed the trade-block tag onto its own line under
+  "Sam Darnold (Q)" on a phone with larger text.
+- **`display: contents` on PlayerCell's `.player-meta`** lets its two children
+  part ways — the logo stays an in-flow flex item (first on line 2), the
+  position span is absolutely positioned under the avatar — without touching
+  PlayerCell's markup.
+- **A whole card as one `<button>`**: spans only (a button takes phrasing
+  content, so no heading or list), named with `aria-labelledby` pointing at its
+  own visible year/amount spans plus a hint span. The name follows every
+  repaint of the amount with nothing to keep in step.
+
+**Traps hit:**
+
+- **`min-height` on a `display: flex` `<tr>` is content-box** — the padding
+  was added a second time and every card grew ~20px; `align-content` then
+  spread the two lines apart to fill it. `box-sizing: border-box` +
+  `align-content: center`.
+- **Two adjacent 44px centred hit areas overlap.** Once the (Q) button and the
+  🏷️ link sat 4px apart, the link's `::after` (later in the DOM) swallowed the
+  centre of (Q). Split them at the gap with `:has(+ .trade-bait-link)`.
+
+**Evidence:** `tests/rosters-phone-row.test.ts` ("the phone card layout",
+"the cap card is one button into Cap by year").
+
+## 2026-09-26 - A second control for one sort: click the first control, don't copy its state
+
+**Context:** The Rosters phone controls, idea B (`docs/plans/rosters-mobile-layout.md`,
+"Controls above the rows"): sort chips replace the phone's Sort `<select>` and
+must drive the same sort as the (hidden) table headers.
+
+**What worked:**
+
+- **Derive the chip set from the headers.** `buildSortChips`
+  (`src/utils/rosters/phone-sort.ts`) takes every `th[data-sort-key]` with the
+  mode its classes already say (`gm-col` / `coach-col`), so the chips cannot
+  drift from the table. The guard parses the real thead and asserts each
+  header has a chip in its own mode and only there.
+- **A chip tap clicks the header.** `th.click()` on a `display: none` header
+  still dispatches, and every header listener runs exactly as for a desktop
+  click. The shared `nextSort` rule is then used once, by the header.
+
+**Trap hit:** `initRosterPage` runs TWICE on first load, and each run is a
+closure with its own `currentSortKey`. The first build set that state directly
+from the chip handler, which updated one instance only. The other instance
+(bound to the rankings refresh event) repainted the chips from its stale
+"position" a moment later, so the right rows showed under the wrong pressed
+chip. Any control that shares state with a page's existing controls should
+reach it through the DOM those controls own (click the header; read
+`th.sort-active` back), never through one closure's variables.
+
+**Also found (not fixed here):** `.mre-trigger { display: inline-flex }`
+outranks the UA `[hidden]` rule, so MyRankEditor's "hidden until the owner has
+a board" never hides the trigger on any of the four pages that mount it. An
+author `display` on anything toggled with `hidden` needs a matching
+`[hidden] { display: none }`.
+
+**Evidence:** `tests/rosters-phone-row.test.ts` ("the phone sort chips").

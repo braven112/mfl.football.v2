@@ -1,0 +1,72 @@
+---
+/**
+ * The Rosters cap card — TheLeague, phone only (docs/plans/rosters-mobile-layout.md § 6).
+ *
+ * Sits under the roster header: this year's cap space, a cap bar split by
+ * what the cap is spent on, and its legend. THE WHOLE CARD IS ONE BUTTON that
+ * opens the Cap by year sheet (`RosterSimTray`) — the same dialog the sticky
+ * sim bar's Review opens, which is where the simulated numbers live. It used
+ * to carry a row of chips (Sims · Trade · Dead $ · Tags); the user cut them
+ * (2026-09-26) and every one of them still has a home — see the inventory in
+ * the plan: Dead $ is the dead-money section further down this page, the tag /
+ * extension options are in the player sheet's ⋮ contract options, staged tags
+ * are submitted from the Cap by year sheet, and the Trade Builder is in the
+ * sheet's ⋮ too.
+ *
+ * A <button> may hold only phrasing content, so the card is spans, not a
+ * heading and a list. Its accessible name is its own visible text by id
+ * (`aria-labelledby`), so it follows the painted cap space without a second
+ * string to keep in step; `renderSimSurfaces` adds the sims count to the
+ * hint when there are any.
+ *
+ * Its own component rather than a slot in the shared `RosterHeader`, which the
+ * AFL renders too and which has no cap. Every number here is painted by
+ * `renderSimSurfaces` (src/utils/rosters/sim-summary.ts) from `updateView`'s
+ * own pass; the server renders the frame and the season's cap space so the
+ * card is not blank before hydration.
+ *
+ * Hidden at 768px and up by `src/styles/rosters-mobile.css`; the desktop page
+ * already shows every one of these numbers.
+ */
+interface Props {
+  /** The first salary year, e.g. "2026". */
+  year: string | number;
+  /** Server-rendered cap space for the default team (replaced after hydration). */
+  capSpace: string;
+}
+
+const { year, capSpace } = Astro.props;
+---
+
+<button
+  type="button"
+  class="rcap"
+  data-rcap
+  data-rsim-open
+  aria-haspopup="dialog"
+  aria-labelledby="rcapTitle rcapSpace rcapHint"
+>
+  <span class="rcap__head">
+    <span class="rcap__title" id="rcapTitle"><span data-rcap-year>{year}</span> cap space</span>
+    <strong class="rcap__space" id="rcapSpace" data-rcap-space>{capSpace}</strong>
+  </span>
+  <span class="rcap__bar" data-rcap-bar aria-hidden="true">
+    <span class="rcap__seg rcap__seg--active" data-rcap-seg="active"></span>
+    <span class="rcap__seg rcap__seg--practice" data-rcap-seg="practice"></span>
+    <span class="rcap__seg rcap__seg--injured" data-rcap-seg="injured"></span>
+    <span class="rcap__seg rcap__seg--dead" data-rcap-seg="dead"></span>
+    <span class="rcap__seg rcap__seg--sim" data-rcap-seg="sim"></span>
+    <span class="rcap__seg rcap__seg--space" data-rcap-seg="space"></span>
+  </span>
+  <span class="rcap__key" aria-hidden="true">
+    <span class="rcap__keyitem"><span class="rcap__dot rcap__dot--active"></span>Active</span>
+    <span class="rcap__keyitem"><span class="rcap__dot rcap__dot--practice"></span>Practice</span>
+    <span class="rcap__keyitem"><span class="rcap__dot rcap__dot--injured"></span>IR</span>
+    <span class="rcap__keyitem"><span class="rcap__dot rcap__dot--dead"></span>Dead</span>
+    <span class="rcap__keyitem"><span class="rcap__dot rcap__dot--sim"></span>Sims</span>
+    <span class="rcap__chev" aria-hidden="true">
+      <svg viewBox="0 0 16 16" width="14" height="14" focusable="false"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </span>
+  </span>
+  <span class="visually-hidden" id="rcapHint" data-rcap-hint>Open cap by year</span>
+</button>

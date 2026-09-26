@@ -1,0 +1,93 @@
+---
+/**
+ * The Rosters sim bar and its Cap by year sheet — TheLeague, phone only
+ * (docs/plans/rosters-mobile-layout.md § 6).
+ *
+ * THE BAR is fixed to the bottom of the viewport while any move is simulated,
+ * on ANY viewed team (simulations apply to whichever team is open): the move
+ * count, this year's cap space and its change against the unsimulated
+ * baseline, and Review. It lives inside the page's own markup, never appended
+ * to <body>, so a ClientRouter swap takes it away with the page.
+ *
+ * THE SHEET (a native modal <dialog>, so focus containment, Esc and the inert
+ * page behind it come from the platform) lists each move with its cap effect
+ * and an Undo, every salary year's Salary / Dead / Space, and Clear all /
+ * Submit. Those two are NOT new implementations: they carry the same
+ * `data-sim-clear` / `data-sim-submit` hooks as the buttons above the desktop
+ * table, and the page's handlers act on every match, so loading state,
+ * aria-busy, the error flash and the Nov 14 – Feb 15 window stay in step. No
+ * id is duplicated — the originals keep theirs; these have none.
+ *
+ * Every number is painted by `renderSimSurfaces`
+ * (src/utils/rosters/sim-summary.ts). Styles: src/styles/rosters-mobile.css.
+ */
+interface Props {
+  /** The salary years, first = this year. */
+  years: readonly (string | number)[];
+}
+
+const { years } = Astro.props;
+---
+
+<div class="rsim-bar" data-rsim-bar role="region" aria-label="Simulated moves" hidden>
+  <span class="rsim-bar__count" data-rsim-count>0 sims</span>
+  <span class="rsim-bar__figure">
+    <span class="rsim-bar__label"><span data-rsim-year>{years[0]}</span> cap space</span>
+    <span class="rsim-bar__values">
+      <strong class="rsim-bar__space" data-rsim-space></strong>
+      <span class="rsim-bar__change" data-rsim-change></span>
+    </span>
+  </span>
+  <button type="button" class="rsim-bar__review" data-rsim-open>Review</button>
+  <p class="visually-hidden" role="status" aria-live="polite" aria-atomic="true" data-rsim-live></p>
+</div>
+
+<dialog class="rsim-sheet" data-rsim-sheet aria-labelledby="rsimSheetTitle">
+  <div class="rsim-sheet__panel">
+    <header class="rsim-sheet__head">
+      <h2 class="rsim-sheet__title" id="rsimSheetTitle">Cap by year</h2>
+      <button type="button" class="rsim-sheet__close" data-rsim-close aria-label="Close cap by year">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+          <path d="M14 4L4 14M4 4l10 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+        </svg>
+      </button>
+    </header>
+
+    <section class="rsim-sheet__section" aria-labelledby="rsimMovesTitle">
+      <h3 class="rsim-sheet__subtitle" id="rsimMovesTitle">Simulated moves</h3>
+      <ul class="rsim-moves" data-rsim-moves></ul>
+      <p class="rsim-sheet__empty" data-rsim-empty>
+        No simulated moves. Tap a player, then Cut or Trade, to try one.
+      </p>
+    </section>
+
+    <section class="rsim-sheet__section" aria-labelledby="rsimYearsTitle">
+      <h3 class="rsim-sheet__subtitle" id="rsimYearsTitle">Totals by year</h3>
+      <table class="rsim-years">
+        <thead>
+          <tr>
+            <th scope="col">Year</th>
+            <th scope="col">Salary</th>
+            <th scope="col">Dead</th>
+            <th scope="col">Space</th>
+          </tr>
+        </thead>
+        <tbody data-rsim-years></tbody>
+      </table>
+    </section>
+
+    <footer class="rsim-sheet__actions">
+      <button type="button" class="rsim-sheet__btn rsim-sheet__btn--ghost" data-sim-clear style="display: none;">
+        Clear all
+      </button>
+      <button
+        type="button"
+        class="rsim-sheet__btn rsim-sheet__btn--primary loading-btn loading-btn--on-accent"
+        data-sim-submit
+        style="display: none;"
+      >
+        <span class="submit-franchise-tags-btn__label">Submit tags/extensions</span>
+      </button>
+    </footer>
+  </div>
+</dialog>

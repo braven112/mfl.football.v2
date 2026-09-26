@@ -21,9 +21,15 @@ interface Props {
   league: LeagueSlug;
   /** Button label. Defaults to the column's own name. */
   label?: string;
+  /**
+   * The button's accessible name, when a page shows it as an icon alone (the
+   * phone Rosters control row). Must CONTAIN the visible label (WCAG 2.5.3).
+   * Absent → the visible label is the name, as it always was.
+   */
+  accessibleName?: string;
 }
 
-const { league, label = 'My Rank' } = Astro.props;
+const { league, label = 'My Rank', accessibleName } = Astro.props;
 
 // Registry-derived, never hardcoded — and stripped to the clean URL when the
 // page is served from a league apex host.
@@ -34,13 +40,13 @@ const importPath = resolveLeaguePath(
 ---
 
 <span class="mre-trigger-wrap">
-  <button type="button" class="mre-trigger" data-mre-trigger hidden aria-haspopup="dialog">
+  <button type="button" class="mre-trigger" data-mre-trigger hidden aria-haspopup="dialog" aria-label={accessibleName}>
   <svg class="mre-trigger__icon" width="13" height="13" viewBox="0 0 24 24" fill="none"
        stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
     <line x1="4" y1="8" x2="20" y2="8" /><circle cx="10" cy="8" r="2.4" fill="currentColor" stroke="none" />
     <line x1="4" y1="16" x2="20" y2="16" /><circle cx="16" cy="16" r="2.4" fill="currentColor" stroke="none" />
   </svg>
-    {label}
+    <span class="mre-trigger__label">{label}</span>
   </button>
 </span>
 

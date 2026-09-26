@@ -117,9 +117,9 @@ what this design takes from them and what it leaves.
 
 | Sleeper does | We take | Why / how |
 |---|---|---|
-| No table. Each row is a card: position pill, headshot with the NFL logo on its corner, then three dense lines | **Yes.** Pill, headshot + team badge, three lines, value on the right | It fits a phone far better than any column subset. Built with CSS on the **existing** `<tr>`/`<td>`s (section 3), so neither row builder forks |
+| No table. Each row is a card: position pill, headshot with the NFL logo on its corner, then three dense lines | **Yes.** Pill, headshot + team badge, three lines, value on the right (2026-09-26: the pill moved under the headshot and the logo stayed in its meta line; § 2) | It fits a phone far better than any column subset. Built with CSS on the **existing** `<tr>`/`<td>`s (section 3), so neither row builder forks |
 | Line 2 = % rostered / % start, line 3 = kickoff, opponent (defense rank coloured by difficulty), weather, injury, news | Line 2 = **contract** in GM (years chip, "thru '28", status). Line 2-3 = **matchup** in Coach | These are our equivalents of "what do I need to know at a glance" |
-| Team card: logo, record, win-probability bar, quick-action chips (sched / trade / trans / news) | **Yes, as a cap card**: a cap-room bar split Active / Practice / Dead / sim, and chips for **Sims · Trade · Dead $ · Tags** | TheLeague only. The AFL has no cap |
+| Team card: logo, record, win-probability bar, quick-action chips (sched / trade / trans / news) | **Yes, as a cap card**: a cap-room bar split Active / Practice / Dead / sim, and chips for **Sims · Trade · Dead $ · Tags** (2026-09-26: chips removed, the card is one button into Cap by year; § 6) | TheLeague only. The AFL has no cap |
 | Sheet hero: headshot over the team logo, age / height / weight / exp, primary buttons in the hero (DROP, trade block, favourite) | **Yes.** Facts row, and hero quick actions: **Simulate cut · Trade block · Watch · ⋮ more** | Puts the most-used cap move one tap from the row |
 | Tabs: Summary / Game Log / Team / History | **Summary · Salary · Game log**, opt-in per opener | Salary is the user's requirement. Game log is the existing Season Results table. Team / History have no content here yet |
 | Dark theme | **No** | This site's light and dark tokens apply; the mockups use light |
@@ -133,13 +133,27 @@ A three-line card for each roster row, built by CSS from the row's existing
 cells.
 
 ```
-(photo+NFL)  Name (7)  🏷️ (Q) ✂autocut                 $5,000,000   ← GM: 2026 salary
-     badge   [QB] [3] yrs | thru '28 | RC/TO/FT           QB 3         ← My Rank, if a board exists
+ (photo)   Name (Q) 🏷️ ✂autocut                          $5,000,000   ← GM: 2026 salary
+  [QB]     🏈 [3] yrs | thru '28 | RC/TO/FT               QB 3         ← My Rank, if a board exists
 ```
 
-**Decided (user, 2026-09-25):** the position pill is NOT its own column. It sits
-inline at the start of line 2, directly under the player name, so the avatar is
-the card's left edge and the name gets the width a pill column would have taken.
+**Decided (user, 2026-09-25):** the position pill is NOT its own column.
+
+**Revised (user, 2026-09-26), decluttering:**
+
+- The **position pill sits under the headshot**, centred on it, in the
+  card's left column.
+- The **NFL logo stays where PlayerCell puts it**: its `.player-meta__logo`,
+  in the meta line where the position used to be. It is no longer moved onto
+  the avatar's corner, and PlayerCell's logo markup is untouched. So line 2
+  starts with the NFL logo, then Yrs / thru 'YY (GM) or the matchup (Coach).
+- **No spelled-out injury word** ("Questionable", "Doubtful"…) on the card.
+  The `(Q)` / `(D)` button after the name already says it, still opens the
+  injury detail, and the sheet carries the status too.
+- **Nothing is reserved on line 1 for the salary.** The name takes every
+  pixel the right-hand value leaves, so the trade-block 🏷️ stays on the name
+  line whenever it fits (it wrapped under "Sam Darnold (Q)" and "Jaylen
+  Wright (Q)" before). It still wraps, never truncates, when it does not fit.
 
 ### GM mode
 
@@ -148,9 +162,9 @@ the card's left edge and the name gets the width a pill column would have taken.
 | Part | Content | Source cell |
 |---|---|---|
 | Left edge | **Roster-status stripe** kept on the card's left edge (active / practice / IR). No pill column | existing row status classes |
-| Avatar | Headshot, NFL team logo badged on its corner | `PlayerCell` avatar + `nflTeam` |
+| Left column | Headshot, with the position pill (QB / RB / WR / TE / PK / DEF colours) under it | `PlayerCell` avatar + its `.player-meta__pos` |
 | Line 1 | Name + **every existing after-name badge**: trade-block 🏷️ link, injury `(Q)` button, autocut badge, contract-action badge with its × | `[data-column=player]`, unchanged |
-| Line 2 | Inline position pill (QB / RB / WR / TE / PK / DEF colours) first, then the years chip (**stays interactive**: eligible / pending declaration, deadline countdown), `thru '28`, contract designation when not Standard, injury word | `[data-column=years]` + a new line-2 span |
+| Line 2 | PlayerCell's NFL logo first (its meta place), then the years chip (**stays interactive**: eligible / pending declaration, deadline countdown), `thru '28`, contract designation when not Standard. No injury word | `.player-meta__logo`, `[data-column=years]` + the line-2 spans |
 | Right, big | Current-year salary, including simulated / declared styling | `[data-column=year1]` |
 | Right, small | My Rank (e.g. `QB 3`), only when a board is loaded | `[data-column=rank]` |
 
@@ -175,7 +189,8 @@ is asking one question: start him or sit him? That needs:
 
 The rest (spread, O/U, last-3 trend) is useful but secondary, so it goes on a
 muted line 3, and everything else moves to the sheet. Line 2 = kickoff,
-`vs CLE (27th)`, weather icon, injury word. Line 3 = spread · O/U · L3 trend
+`vs CLE (27th)`, weather icon (after the NFL logo; no injury word since
+2026-09-26). Line 3 = spread · O/U · L3 trend
 arrow.
 
 The **kickoff time is not a column today.** It is the one piece of new data
@@ -184,14 +199,48 @@ opponent.
 
 ### Controls above the rows (phone)
 
-- The GM / Coach toggle and My Rank stay where they are.
-- **New: a Sort `<select>`** carrying every `data-sort-key` in the thead
-  (position, oppRank, spreadAmount, overUnder, temperature, avgRecent,
-  totalSeason, avgSeason, oppAvg, projectedPoints, topRanking, contractYears,
-  salary_0 through salary_4). It calls the same sort the header click does, so
-  sorting by a hidden column is not lost.
+**Idea B, chosen by the user (2026-09-26).** The first build stacked three rows
+(the GM | Coach tab, the My Rank pill, then a Sort `<select>` plus a direction
+button), which the user called "undesigned". Mockups:
+`rosters-mobile-layout/controls/idea-{a,b,c}.png`, source
+`controls/controls-ideas.html`. Below 768px there are now two rows:
+
+![GM chips](rosters-mobile-layout/pr-b-sort-chips-gm-dark.png)
+
+- **Row 1:** the GM | Coach segmented control on the left (44px buttons), and
+  My Rank as a 44px sliders icon on the right, named **"My Rank sources"** (it
+  opens the same editor the desktop pill does; `MyRankEditor` takes an
+  optional `accessibleName`, and the visible label stays in the tree).
+- **Row 2:** ONE horizontally scrolling row of sort chips for the mode on
+  screen. It scrolls within itself (`overflow-x: auto`, `min-width: 0` up the
+  chain), so it never scrolls the page, at 320 / 360 / 390 / 767 px.
+  - **Derived from the thead, not hand-kept.** The page reads every
+    `th[data-sort-key]`, takes its mode from the classes `setMode()` already
+    toggles (`gm-col` / `coach-col` / neither = both), and
+    `buildSortChips` (`src/utils/rosters/phone-sort.ts`) orders them. A new
+    sortable column gets a chip with no other change.
+  - **GM:** Pos · Salary · Years · My Rank · 2027 salary … 2030 salary. My
+    Rank only while the owner has a board (the rankings script marks the
+    header `data-rank-board`).
+  - **Coach:** Proj · Opp rank · Avg · Spread · O/U · Weather · Last 3 ·
+    <season> Pts · Opp avg · Pos. The mockup's **Kickoff is not a chip**:
+    kickoff is phone-only row text, not a sortable column, and the chips are
+    exactly what the headers support. A Kickoff sort would need a `th`.
+  - **A tap is a header click.** The chip clicks the (hidden) header with its
+    key, so every listener a desktop click runs, runs, and `nextSort` is the
+    one rule both use: Pos resets to the default; the active chip flips
+    direction; any other key starts descending, My Rank ascending. The active
+    chip shows ↑/↓ and its name says it ("Salary, sorted descending").
+    Toggle buttons with `aria-pressed` in a `role="group"` named "Sort the
+    roster by"; focus stays on the chip across the re-render.
+  - **A mode switch swaps the set.** A sort by the other mode's column cannot
+    be seen or re-tapped on a phone, so it falls back to Pos
+    (`keepValidSort`). Desktop keeps its behaviour, since all its headers are
+    reachable after a switch back.
 - Group headers ("Active · 22", "Practice squad · 3", "Injured reserve") take
   the place of the divider rows and the legend's swatch meaning.
+
+Screenshots, 390x844: `pr-b-sort-chips-{gm,coach}-{light,dark}.png`.
 
 ### The footer (tfoot)
 
@@ -496,15 +545,24 @@ hero; IR, Trade and Cut go in More actions.
 It sits under `RosterHeader`, borrowed from Sleeper's team card:
 
 - A 2026 cap-space figure.
-- A cap bar split Active / Practice / Dead / simulated. It is built from the
-  same numbers as the Cap Subtotals card and is a button that opens Cap by
-  year.
-- Four chips:
-  - **Sims** (count badge): opens the review;
-  - **Trade**: the Trade Builder;
-  - **Dead $**: scrolls to the dead-money card;
-  - **Tags**: franchise-tag options in the League Planner view, or Submit when
-    one is pending (open question 9).
+- A cap bar split Active / Practice / Dead / simulated, and its legend. It is
+  built from the same numbers as the Cap Subtotals card.
+- ~~Four chips: Sims · Trade · Dead $ · Tags.~~ **Removed (user,
+  2026-09-26).** Instead **the whole card is one `<button>`** that opens the
+  Cap by year review sheet — the same dialog the sim bar's Review opens, so
+  the simulated numbers are one tap away without a chip. Its accessible name
+  is its own visible text by id plus a hint ("2026 cap space $1,978,075,
+  $43,021,925 used. 2 simulated moves. Open cap by year"); a chevron at the
+  end of the legend is its visual cue; 2px focus ring; the card is ~108px
+  tall. What each chip gave access to, and where it is now:
+
+  | Removed chip | Now reached from |
+  |---|---|
+  | Sims (count) | The card itself, and the sim bar (count + Review) while any move is simulated |
+  | Trade | The player sheet's ⋮ contract options › Add to Trade Builder; the site nav |
+  | Dead $ | The dead-money section further down the same page (unchanged) |
+  | Tags (League Planner) | Per player: the sheet's ⋮ contract options (Franchise Tag / Extension / Team Option, when eligible) and the Salary tab's Extend or tag. The League Planner view itself: the Front Office hub nav |
+  | Tags · Submit (while a tag is staged) | The card → Cap by year sheet's Submit, and the sim bar's Review |
 
 Put it in a small `RosterCapStrip` component rather than inside the shared
 `RosterHeader`, which the AFL also renders.
@@ -533,7 +591,7 @@ Fixed to the bottom and shown only while `contractActions` is non-empty:
 
 ### Review / Cap by year sheet
 
-One component with two entry points (sim bar Review, cap bar / Sims chip):
+One component with two entry points (sim bar Review, the cap card):
 
 - **Moves:** each simulated move with its cap effect and an **Undo**. The
   row's contract-action badge × is also 16px today; on a phone it gets a
@@ -567,7 +625,7 @@ Every element of the desktop roster, and where it lives below 768px.
 
 | Element | League / mode | Phone home |
 |---|---|---|
-| Player (name, headshot, position, NFL team) | both | Row line 1 + pill + avatar badge |
+| Player (name, headshot, position, NFL team) | both | Row line 1 (name); headshot with the position pill under it; NFL logo first on line 2 (PlayerCell's own meta logo) |
 | ⋮ Actions column | both | **Hidden**; every action enumerated in section 5 |
 | Rank (My Rank) | both | Row, right, small line; Summary metric tile |
 | Yrs | TL GM | Row line 2 (chip, still interactive) |
@@ -591,7 +649,7 @@ Every element of the desktop roster, and where it lives below 768px.
 | Element | Phone home |
 |---|---|
 | Trade-block 🏷️ link (→ Trade Builder) | Row line 1, still a link; Hero toggle state |
-| Injury `(Q)` button (→ injury modal) | Row line 1, still a button, 44px hit area |
+| Injury `(Q)` button (→ injury modal) | Row line 1, still a button, 44px hit area (split from the 🏷️'s where the two sit side by side). **The only injury mark on the card**: the spelled-out word is gone (user, 2026-09-26); the status stays reachable through this button's injury detail and the player sheet |
 | Autocut badge (taxi / cut priority) | Row line 1; More actions carries the toggle |
 | Contract-action badge (Franchise Tag / Extension / cut / trade) + × remove | Row line 2 with ×; Hero shows "Simulated · Undo"; Review sheet Undo |
 | Row states: simulated (amber), cut/traded (50% opacity), mock/demo, eligible avatar ring | Row, same classes |
@@ -601,7 +659,7 @@ Every element of the desktop roster, and where it lives below 768px.
 | TO expired (greyed forfeited salary) | Salary › year table |
 | Declared / simulated salary styling | Salary › year table (lifted from the row cells) |
 | UFA / future `—` markers | Salary › year table |
-| Sortable headers + sort arrows | Sort `<select>` above the rows |
+| Sortable headers + sort arrows | Sort chips above the rows: this mode's headers, derived from the thead; ↑/↓ on the active chip |
 | Header cap space (follows sims) | Unchanged in `RosterHeader`; also on the cap card and the sim bar |
 
 ### Page-level
@@ -609,10 +667,10 @@ Every element of the desktop roster, and where it lives below 768px.
 | Element | League | Phone home |
 |---|---|---|
 | tfoot Dead Money / Total Salary / Salary Cap / Cap Space, current year | TL | Row-list footer, label/value lines |
-| tfoot, future years | TL | Cap by year sheet (cap bar / Sims chip / Review) |
+| tfoot, future years | TL | Cap by year sheet (the cap card / sim bar Review) |
 | Clear All Tags button | TL | Review sheet (`data-sim-clear`); original hidden on phone |
 | Submit Tags/Extensions button (Nov 14 – Feb 15) | TL | Review sheet (`data-sim-submit`); original hidden on phone |
-| GM / Coach toggle, My Rank editor | TL / both | Controls row, unchanged |
+| GM / Coach toggle, My Rank editor | TL / both | Row 1: segmented GM \| Coach, My Rank as a sliders icon ("My Rank sources") |
 | Legend (Active / Practice / IR / Trade Block) | TL | Unchanged below the rows; the group headers restate it |
 | Cutdown Plan panel (Aug auto-cut) | TL | Unchanged position. **Must be checked at 390px under `?testDate=` inside the June–August window**; the window is closed now, so this capture could not include it |
 | Cap Subtotals card | TL | Unchanged (already fits, see `current-theleague-panels.png`); summarised by the cap bar |
@@ -656,10 +714,63 @@ gotcha in `rosters-page-split.md`.
 | 1 | **The sheet learns the new fields, with every opener unchanged.** `salary`, `sheetTab`, `thisWeek`, `quickActions`, `moreActions`, `myRank`, `onAction`; tablist + Salary / Game log panels rendered only when `salary` is present; ARIA tabs; bind in the modal's existing page-load re-init path | `src/utils/player-modal-trigger.ts` (`PlayerModalData`), `src/components/theleague/PlayerDetailsModal.astro` | Free Agents and every other opener look identical (screenshots); a Storybook story per state (`docs/claude/rules/storybook.md`); unit tests for pure formatters |
 | 2 | **One action list.** Extract `getCdmActionDescriptors` and the renderer from `populateCdmActionOptions`; extract `toggleTradeBlock`; AFL `aflActionsFor(payload)` | `src/utils/cdm-wizard.ts`, `rosters.astro` (`showTradeSubOptions`), `AFLActionModal.astro` | **cdm-parity 0 diffs** (4,409 values + probe); unit-test the descriptor function per contract state |
 | 3 | **TheLeague opener builds the payload.** Salary rows lifted from `year1`-`year5` cells; cut / tag / extension / option costs via the page's config-bound wrappers over `salary-calculations`; `thisWeek` lifted from coach cells; `onAction` routes local vs CDM (section 5). Put it in a module, `src/utils/rosters/phone-sheet.ts`, not in the inline script | new module + a small call in `initRosterPage` | Unit tests on the builder; strict typecheck on the module |
-| 4 | **Phone rows.** `rosters-mobile.css`; `data-pos` + line spans in the SSR loop **and** `renderTableRows`; hide ⋮; `rowTapMedia`; Sort `<select>`; footer; dead-money card rows; 44px hit areas; position-pill tokens in both themes | both roster pages, new stylesheet, token files | Desktop parity 0 diffs; phone screenshots both leagues, both modes, light + dark; `documentElement.scrollWidth == clientWidth` at 360 / 390 / 767 |
+| 4 | **Phone rows.** `rosters-mobile.css`; `data-pos` + line spans in the SSR loop **and** `renderTableRows`; hide ⋮; `rowTapMedia`; sort chips (idea B); footer; dead-money card rows; 44px hit areas; position-pill tokens in both themes | both roster pages, new stylesheet, token files | Desktop parity 0 diffs; phone screenshots both leagues, both modes, light + dark; `documentElement.scrollWidth == clientWidth` at 360 / 390 / 767 |
 | 5 | **Sim bar + Cap by year + cap card.** Baseline computation in `updateView`; `[data-sim-clear]` / `[data-sim-submit]` hooks; `RosterCapStrip` | `rosters.astro`, new component | Parity; manual: simulate / undo / clear / submit (probe mode for submit) at 390px |
 | 6 | **AFL.** Coach rows (already covered by Phase 4 CSS), `thisWeek`, quick / more actions → `AFLActionModal` | `afl-fantasy/rosters.astro`, `AFLActionModal.astro` | AFL screenshots; cross-league gate test |
 | 7 | **Lock it in.** Guard `tests/rosters-phone-inventory.test.ts`: parse every `<th data-column>` in both pages (and the SSR row badge slots) and fail when one has no entry in a declared `PHONE_HOMES` map in `src/utils/rosters/phone-inventory.ts`. Wire it into path-guard's `rosters-page` domain. Insights entry; stage a changelog line (ask about `heroWorthy`) | tests, `.claude/hooks/path-guard.json`, `docs/claude/insights/features/`, `weekly-changelog-staging.json` | `pnpm test:unit`, `pnpm test:types` |
+
+### Phases 4-5 as built (PR B, TheLeague)
+
+Screenshots, 390x844: `pr-b-{gm,coach,cap-card,review}-{light,dark}.png`, all
+with two simulated moves (a cut and a trade) active. The Coach captures use
+`?demo=true`, the only way to get odds out of the sandboxed dev server.
+
+Where the build differs from sections 2, 3 and 6, and why:
+
+- **The line spans carry no text.** Section 3 said the new spans are "hidden
+  on desktop". Hidden is not enough: `roster-parity-check.mjs` fingerprints
+  every cell's `textContent` (hidden text included) and every `<img src>`.
+  So `buildPhoneLineSpans` (`src/utils/rosters/phone-row.ts`, called by BOTH
+  row builders) emits EMPTY spans, and `rosters-mobile.css` prints each value
+  from `data-t` with `::before`. The pill is PlayerCell's own
+  `.player-meta__pos` restyled (its "QB - RC" text goes `font-size: 0` and the
+  pill label is generated, alt-empty) and positioned under the headshot, and
+  the NFL logo is PlayerCell's own `.player-meta__logo`, left in its meta
+  place at the start of line 2 (it sat on the avatar's corner until the
+  2026-09-26 declutter). No new `<img>`, no new text.
+- **The row is a wrapping flex line, not a grid.** Line 2 holds pieces of
+  several cells (the pill from the player cell, the years chip, the
+  opponent's parts). `display: contents` on the player cell, the player-cell
+  wrappers and the opponent cell makes those pieces direct flex items of the
+  `<tr>`, and `order` puts each on its line. A grid gives each cell its own
+  track, which cannot put three cells' pieces on one line.
+- **The thead is `display: none`, not visually hidden.** With the cells out of
+  a table grid a header row reads as noise to a screen reader, and the sort
+  chips carry every sort key (the Sort `<select>` that did until 2026-09-26
+  was replaced by idea B; see "Controls above the rows"). The two right-hand values get
+  visually-hidden generated prefixes ("2026 salary", "Projected", "My Rank").
+- **Kickoff needed a payload field.** `scripts/lib/roster-season-payload.mjs`
+  dropped `gameOdds.date`; it now carries it (live seasons only, so the frozen
+  derived payloads do not move). It prints in ONE clock, `viewerClockZone` —
+  the compact-surface form — resolved by the route and shipped in the config
+  as `kickoffClock`.
+- **The totals come after the rows.** The `<tfoot>` precedes the `<tbody>` in
+  the markup; the phone table is a flex column and the tfoot takes `order: 2`.
+- **Tags chip** (removed 2026-09-26 with the other three; see the cap card
+  above). It linked to the League Planner and, while a tag was staged,
+  turned into "Tags · Submit".
+- **Group headers** ("Active roster", "Practice squad", "Injured reserve") are
+  generated content on the first row of each tier.
+- **Review sheet** is a native modal `<dialog>` (Esc, focus containment, the
+  top layer and an inert page come from the platform). Undo moves focus to the
+  next Undo, or to Close when none is left.
+- **Contrast.** In-row secondary text is `--color-gray-600`, not
+  `--content-text-muted` (3.8:1 on the practice-squad tint), and the injury
+  word is `--color-error-dark` (`--color-error` is 3.3:1 there).
+  `tests/position-pill-tokens.test.ts` measures the pill pairs in both themes.
+
+Not in PR B: the contract-demo overlay's "tap ⋮" copy (section 7), the
+Cutdown Plan check at 390px inside the June-August window, and the AFL.
 
 ---
 
