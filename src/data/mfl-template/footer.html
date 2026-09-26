@@ -1,0 +1,72 @@
+  </div><!-- /.page-wrapper -->
+</div><!-- /.mobile-scroll-wrapper -->
+<div class="container-footer">
+  <div class="container">
+    <div class="row">
+      <div class="col-sm-4">
+        <div class="defending-champ">Defending League Champions
+          <!-- Replace with your champion's franchise link and icon, or delete this block. -->
+          <a href="YOUR-CHAMPION-FRANCHISE-URL"><img style="vertical-align:middle" src="YOUR-CHAMPION-ICON-URL" alt="CHAMPION TEAM NAME" width="300" height="50" class="franchiseicon"></a>
+        </div>
+      </div>
+      <div class="col-sm-8">
+        <div class="row">
+          <div class="col-sm-3">
+            <ul>
+              <li>Rules</li>
+              <li><a href="YOUR-CONSTITUTION-URL">Constitution</a></li>
+              <li><a href="https://%HOST%/%YEAR%/options?L=%LEAGUEID%&O=09">League Scoring</a></li>
+            </ul>
+          </div>
+          <div class="col-sm-3">
+            <ul>
+              <li>Team Management</li>
+              <li><a href="https://%HOST%/%YEAR%/options?L=%LEAGUEID%&O=02">Submit lineup</a></li>
+              <li><a href="https://%HOST%/%YEAR%/add_drop?L=%LEAGUEID%">Add/drop</a></li>
+              <li><a href="https://%HOST%/%YEAR%/options?L=%LEAGUEID%&O=98">Practice squad</a></li>
+              <li><a href="https://%HOST%/%YEAR%/options?L=%LEAGUEID%&O=18">Injured reserve</a></li>
+            </ul>
+          </div>
+          <div class="col-sm-3">
+            <ul>
+              <li>League</li>
+              <li><a href="https://%HOST%/%YEAR%/options?L=%LEAGUEID%&O=07">Rosters</a></li>
+              <li><a href="https://%HOST%/%YEAR%/standings?L=%LEAGUEID%">Standings</a></li>
+              <li><a href="https://%HOST%/%YEAR%/options?L=%LEAGUEID%&O=101">Rankings</a></li>
+              <li><a href="https://%HOST%/%YEAR%/options?L=%LEAGUEID%&O=15">Schedule</a></li>
+            </ul>
+          </div>
+          <div class="col-sm-3">
+            <ul>
+              <li>News</li>
+              <li><a href="https://%HOST%/%YEAR%/news_articles?MYNEWS=1&L=%LEAGUEID%">My Player News</a></li>
+              <li><a href="https://%HOST%/%YEAR%/top?L=%LEAGUEID%&SEARCHTYPE=ADVANCED&COUNT=30&CATEGORY=freeagent&POSITION=*&DISPLAY=points&TEAM=*">Free Agents</a></li>
+              <li><a href="https://%HOST%/%YEAR%/options?L=%LEAGUEID%&O=17">%YEAR% Draft</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  function init() {
+    // make submit lineup simpler
+    document.querySelectorAll('#body_options_02 .reportnavigation').forEach(function (el) {
+      if (el.textContent.indexOf('Looking for lineup advice?') !== -1) el.remove();
+    });
+    // highlight ending auctions
+    document.querySelectorAll('#body_options_43 td .warning').forEach(function (el) {
+      var row = el.parentElement && el.parentElement.parentElement;
+      if (row) row.classList.add('auction-warning');
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>

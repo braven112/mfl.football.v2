@@ -1,0 +1,52 @@
+<div class="row">
+  <div class="col-md-4 col-md-push-8">
+    <div class="utility-nav">
+      <div class="utility-nav--button">
+        <a href="//%HOST%/%YEAR%/options?L=%LEAGUEID%&O=133">
+          <svg class="icon-exchange" aria-hidden="true" focusable="false"><use xlink:href="#icon-exchange"></use></svg>
+          <div class="svg-text">Trade Block</div>
+        </a>
+      </div>
+      <div class="utility-nav--button">
+        <a href="//%HOST%/%YEAR%/options?L=%LEAGUEID%&O=09">
+          <svg class="icon-file-text" aria-hidden="true" focusable="false"><use xlink:href="#icon-file-text"></use></svg>
+          <div class="svg-text">Rules</div>
+        </a>
+      </div>
+      <div id="loginlink" class="utility-nav--button loginbutton">
+        <svg class="icon-sign-in" aria-hidden="true" focusable="false"><use xlink:href="#icon-sign-in"></use></svg>
+        <div class="svg-text"></div>
+      </div>
+    </div>
+    <module name="TRADES" />
+    <module name="LEAGUE_CHAT" COUNT="20" />
+    <div class="hidden-xs hidden-sm">
+      <module name="OWNER_ACTIVITY" />
+      <module name="MY_NEWS" COUNT="10" />
+      <module name="NEXT_WEEKS_FANTASY_SCHEDULE" />
+    </div>
+  </div>
+  <div class="col-md-8 col-md-pull-4">
+    <div class="mobile-standings-wrapper hidden-xs">
+      <module name="STANDINGS" UNIT="DIVISION00" />
+      <module name="STANDINGS" UNIT="DIVISION01" />
+    </div>
+    <div class="visible-xs visible-sm">
+      <module name="BRIEF_STANDINGS" />
+    </div>
+    <module name="MESSAGE_BOARD_SUMMARY" COUNT="10" />
+    <module name="POWER_RANK" DISPLAY="LEAGUE" />
+    <div class="hidden-calendar">
+      <module name="MONTHLY_CALENDAR" />
+    </div>
+    <div class="visible-xs visible-sm">
+      <module name="MY_NEWS" COUNT="10" />
+    </div>
+    <module name="TOP_PERFORMERS" />
+    <div class="visible-xs visible-sm">
+      <module name="NEXT_WEEKS_FANTASY_SCHEDULE" />
+      <module name="OWNER_ACTIVITY" />
+    </div>
+  </div>
+</div>
+<script src="https://mfl.football/assets/js/homepage.js"></script>

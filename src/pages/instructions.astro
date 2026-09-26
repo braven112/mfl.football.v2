@@ -1,0 +1,367 @@
+---
+/**
+ * MFL template install guide — the shared host's copy, at the ROOT.
+ *
+ * The successor to the 2017 "Project hawk" guide at mfl.football/instructions.html:
+ * the same install steps (skin, CSS, homepage/header/footer messages, tabs),
+ * rebuilt around the current header and footer. It belongs to no league, so it
+ * lives at the root of the shared host like /brand, in the MFL app shell.
+ *
+ * The snippets are stored as files under src/data/mfl-template/ and imported
+ * raw, so the code a commissioner copies here is the one saved copy — edit the
+ * file, not this page.
+ */
+import fs from 'node:fs';
+import path from 'node:path';
+import MflAppLayout from '../layouts/MflAppLayout.astro';
+import { SHARED_APP_ORIGIN } from '../config/leagues';
+import headerSnippet from '../data/mfl-template/header.html?raw';
+import footerSnippet from '../data/mfl-template/footer.html?raw';
+import homepageSnippet from '../data/mfl-template/homepage.html?raw';
+import archiesHeader from '../data/mfl-template/examples/archies-header.html?raw';
+import archiesFooter from '../data/mfl-template/examples/archies-footer.html?raw';
+
+// SSR: the layout reads the theme cookie and the session.
+export const prerender = false;
+
+const cssFiles = [
+	{ label: 'Dark', file: 'dark_main.css' },
+	{ label: 'Dark (DIN headings)', file: 'dark_din_main.css' },
+	{ label: 'Light — blue and green', file: 'roboto-blue-green.css' },
+].map((c) => ({ ...c, url: new URL(`/assets/css/dist/${c.file}`, SHARED_APP_ORIGIN).href }));
+
+// Icon ids are read from the same sprite the header loads, so the gallery can
+// never list an icon the header cannot draw.
+const spritePath = path.join(process.cwd(), 'public/assets/icons/sprite.svg');
+const iconIds = [...fs.readFileSync(spritePath, 'utf-8').matchAll(/<symbol id="(icon-[^"]+)"/g)].map((m) => m[1]);
+---
+
+<MflAppLayout title="Template instructions — MFL" description="Install the mfl.football template on your MyFantasyLeague site: skin, CSS, homepage, header and footer.">
+	<article class="tpl">
+		<h1 class="tpl__title">Template instructions</h1>
+		<p class="tpl__lede">
+			A responsive template for your MyFantasyLeague site. It uses Home Page Messages (HPMs) for the
+			header, footer and homepage, so every page stays fast on a phone.
+		</p>
+
+		<nav class="tpl__toc" aria-label="Steps">
+			<ol>
+				<li><a href="#before">Before you start</a></li>
+				<li><a href="#skin">Skin</a></li>
+				<li><a href="#css">CSS</a></li>
+				<li><a href="#homepage">Homepage</a></li>
+				<li><a href="#header">Header</a></li>
+				<li><a href="#footer">Footer</a></li>
+				<li><a href="#tabs">Tabs and modules</a></li>
+				<li><a href="#icons">Icons</a></li>
+			</ol>
+		</nav>
+
+		<section id="before" class="tpl__step">
+			<h2>1. Before you start</h2>
+			<p>
+				Save any code you want to keep from your existing Home Page Messages, then delete them. Make
+				sure none of them is already set as a header or footer — that interferes with the install.
+			</p>
+			<p>
+				Log in as commissioner and open the <strong>Commissioner Setup</strong> page. On a fresh site the
+				HPMs are numbered: header is #1, footer #2, homepage #3.
+			</p>
+		</section>
+
+		<section id="skin" class="tpl__step">
+			<h2>2. Skin</h2>
+			<p>On the <strong>Select a skin</strong> page, choose <strong>None</strong>.</p>
+		</section>
+
+		<section id="css" class="tpl__step">
+			<h2>3. CSS</h2>
+			<p>
+				Go to <strong>Images and Other URLs</strong> and paste one of these into the CSS URL field.
+			</p>
+			<ul class="tpl__css">
+				{cssFiles.map((c) => (
+					<li class="tpl__css-row">
+						<span class="tpl__css-label">{c.label}</span>
+						<code class="tpl__css-url">{c.url}</code>
+						<button type="button" class="tpl__copy" data-copy={c.url}>Copy</button>
+					</li>
+				))}
+			</ul>
+		</section>
+
+		<section id="homepage" class="tpl__step">
+			<h2>4. Homepage</h2>
+			<p>
+				Paste this into an HPM and label it <strong>homepage</strong>. It lays out the homepage and loads
+				the script that shows the log-in button — without it, owners can&rsquo;t log in.
+			</p>
+			<div class="tpl__code">
+				<button type="button" class="tpl__copy" data-copy-target="snippet-homepage">Copy</button>
+				<pre><code id="snippet-homepage">{homepageSnippet}</code></pre>
+			</div>
+		</section>
+
+		<section id="header" class="tpl__step">
+			<h2>5. Header</h2>
+			<p>
+				Paste this into an HPM, label it <strong>header</strong>, and set it to show in the header of all
+				league pages.
+			</p>
+			<p>
+				Replace <code>YOUR-LOGO-URL</code>, <code>YOUR-WORDMARK-URL</code> and
+				<code>YOUR LEAGUE NAME</code> with your own. Everything written as <code>%HOST%</code>,
+				<code>%YEAR%</code> or <code>%LEAGUEID%</code> is filled in by MFL, so the links follow your
+				league from year to year — leave those as they are.
+			</p>
+			<p class="tpl__note">
+				Keep the jQuery line. MFL&rsquo;s own page scripts rely on it to hide the left menu, open popups
+				and build homepage tabs, and MFL doesn&rsquo;t load it for you.
+			</p>
+			<div class="tpl__code">
+				<button type="button" class="tpl__copy" data-copy-target="snippet-header">Copy</button>
+				<pre><code id="snippet-header">{headerSnippet}</code></pre>
+			</div>
+		</section>
+
+		<section id="footer" class="tpl__step">
+			<h2>6. Footer</h2>
+			<p>
+				Paste this into an HPM, label it <strong>footer</strong>, and check <strong>footer of all league
+				pages</strong>. Its first two lines close the wrappers the header opens, so use the two together.
+			</p>
+			<p>
+				Replace the champion link and icon and <code>YOUR-CONSTITUTION-URL</code>, or delete the lines
+				you don&rsquo;t need.
+			</p>
+			<div class="tpl__code">
+				<button type="button" class="tpl__copy" data-copy-target="snippet-footer">Copy</button>
+				<pre><code id="snippet-footer">{footerSnippet}</code></pre>
+			</div>
+		</section>
+
+		<section id="tabs" class="tpl__step">
+			<h2>7. Tabs and modules</h2>
+			<p>
+				On the <strong>Homepage Modules and Tabs</strong> setup page, remove every module and tab. Only the
+				main tab remains.
+			</p>
+			<p>
+				On that same page, add one column at 100% and place the <strong>homepage</strong> HPM in it. Don&rsquo;t
+				add other modules there — add them inside the homepage HPM instead, with a line like
+				<code>&lt;module name="LEAGUE_CHAT" /&gt;</code>.
+			</p>
+		</section>
+
+		<section id="icons" class="tpl__step">
+			<h2>8. Icons</h2>
+			<p>
+				To swap a nav icon, change the name in <code>xlink:href="#icon-…"</code> (and the matching
+				<code>class</code>) to any of these.
+			</p>
+			<ul class="tpl__icons">
+				{iconIds.map((id) => (
+					<li class="tpl__icon">
+						<svg aria-hidden="true" focusable="false"><use href={`/assets/icons/sprite.svg#${id}`} /></svg>
+						<button type="button" class="tpl__icon-name" data-copy={id} title="Copy icon name">{id}</button>
+					</li>
+				))}
+			</ul>
+		</section>
+
+		<details class="tpl__example">
+			<summary>Worked example: Archie&rsquo;s header and footer</summary>
+			<p>The finished code from a live league, with its logos and champion filled in.</p>
+			<div class="tpl__code">
+				<button type="button" class="tpl__copy" data-copy-target="snippet-archies-header">Copy</button>
+				<pre><code id="snippet-archies-header">{archiesHeader}</code></pre>
+			</div>
+			<div class="tpl__code">
+				<button type="button" class="tpl__copy" data-copy-target="snippet-archies-footer">Copy</button>
+				<pre><code id="snippet-archies-footer">{archiesFooter}</code></pre>
+			</div>
+		</details>
+	</article>
+</MflAppLayout>
+
+<script>
+	// One delegated listener, registered once when this module first runs.
+	// `document` survives every ClientRouter swap, and the handler only reacts
+	// to this page's own buttons, so nothing needs re-binding per navigation.
+	async function copyText(text: string): Promise<boolean> {
+		try {
+			await navigator.clipboard.writeText(text);
+			return true;
+		} catch {
+			return false;
+		}
+	}
+
+	document.addEventListener('click', async (event) => {
+		const btn = (event.target as Element | null)?.closest<HTMLButtonElement>('.tpl__copy, .tpl__icon-name');
+		if (!btn) return;
+		const targetId = btn.dataset.copyTarget;
+		const text = targetId ? document.getElementById(targetId)?.textContent ?? '' : btn.dataset.copy ?? '';
+		if (!text) return;
+		const ok = await copyText(text);
+		if (!btn.classList.contains('tpl__copy')) return;
+		const original = btn.textContent;
+		btn.textContent = ok ? 'Copied' : 'Copy failed';
+		setTimeout(() => {
+			btn.textContent = original;
+		}, 1500);
+	});
+</script>
+
+<style>
+	.tpl {
+		max-width: 52rem;
+		margin: 0 auto;
+		color: var(--page-text);
+	}
+	.tpl__title {
+		margin: 0 0 0.35rem;
+		font-size: clamp(1.6rem, 5vw, 2.2rem);
+	}
+	.tpl__lede {
+		margin: 0 0 1.25rem;
+		color: var(--color-text-secondary);
+	}
+	.tpl__toc ol {
+		columns: 2;
+		column-gap: 2rem;
+		margin: 0 0 1.5rem;
+		padding-left: 1.25rem;
+		font-size: 0.9rem;
+	}
+	.tpl__toc li {
+		padding: 0.15rem 0;
+	}
+	.tpl__toc a,
+	.tpl__step a {
+		color: var(--league-accent);
+	}
+	.tpl__step {
+		padding: 1.25rem 0;
+		border-top: 1px solid var(--color-border-subtle);
+		scroll-margin-top: 4rem;
+	}
+	.tpl__step h2 {
+		margin: 0 0 0.6rem;
+		font-size: 1.25rem;
+	}
+	.tpl__step p {
+		margin: 0 0 0.75rem;
+		line-height: 1.55;
+	}
+	.tpl__note {
+		padding: 0.6rem 0.8rem;
+		border-left: 3px solid var(--league-accent);
+		background: var(--card-bg);
+	}
+	code {
+		font-family: var(--font-family-mono);
+		font-size: 0.85em;
+	}
+	.tpl__css {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+	}
+	.tpl__css-row {
+		display: grid;
+		grid-template-columns: 11rem 1fr auto;
+		align-items: center;
+		gap: 0.75rem;
+		padding: 0.5rem 0;
+		border-bottom: 1px solid var(--color-border-subtle);
+	}
+	.tpl__css-label {
+		font-weight: 600;
+	}
+	.tpl__css-url {
+		overflow-wrap: anywhere;
+	}
+	.tpl__code {
+		position: relative;
+		margin-top: 0.75rem;
+	}
+	.tpl__code pre {
+		max-height: 24rem;
+		overflow: auto;
+		margin: 0;
+		padding: 2.75rem 1rem 1rem;
+		border: 1px solid var(--color-border-subtle);
+		border-radius: 0.5rem;
+		background: var(--card-bg);
+		font-size: 0.8rem;
+		line-height: 1.45;
+	}
+	.tpl__copy {
+		min-width: 4.5rem;
+		min-height: 2.25rem;
+		padding: 0.35rem 0.8rem;
+		border: 0;
+		border-radius: 0.4rem;
+		background: var(--league-accent);
+		color: #ffffff;
+		font-weight: 600;
+		cursor: pointer;
+	}
+	.tpl__code .tpl__copy {
+		position: absolute;
+		top: 0.5rem;
+		right: 0.5rem;
+	}
+	.tpl__icons {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr));
+		gap: 0.5rem;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+	.tpl__icon {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.4rem;
+		padding: 0.6rem 0.25rem;
+		border: 1px solid var(--color-border-subtle);
+		border-radius: 0.5rem;
+	}
+	.tpl__icon svg {
+		width: 2rem;
+		height: 2rem;
+		fill: currentColor;
+	}
+	.tpl__icon-name {
+		border: 0;
+		background: none;
+		color: var(--color-text-secondary);
+		font-family: var(--font-family-mono);
+		font-size: 0.72rem;
+		overflow-wrap: anywhere;
+		cursor: pointer;
+	}
+	.tpl__example {
+		padding: 1.25rem 0;
+		border-top: 1px solid var(--color-border-subtle);
+	}
+	.tpl__example summary {
+		font-weight: 600;
+		cursor: pointer;
+	}
+	@media (max-width: 40rem) {
+		.tpl__css-row {
+			grid-template-columns: 1fr auto;
+		}
+		.tpl__icons {
+			grid-template-columns: repeat(3, 1fr);
+		}
+		.tpl__css-url {
+			grid-column: 1 / -1;
+			grid-row: 2;
+		}
+	}
+</style>

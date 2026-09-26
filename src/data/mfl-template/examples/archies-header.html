@@ -1,0 +1,92 @@
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- jQuery must stay: MFL's own page scripts use $ to hide the left menu, run popups and build homepage tabs. -->
+<script src="https://code.jquery.com/jquery-1.12.4.js" integrity="sha256-Qw82+bXyGq6MydymqBxNPYTaUXXq7c8v3CwiYwLLNXU=" crossorigin="anonymous"></script>
+
+<div id="archies-sprite" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden;"></div>
+<script>
+fetch('https://v2.mfl.football/assets/icons/sprite.svg')
+  .then(function (r) { return r.ok ? r.text() : ''; })
+  .then(function (svg) {
+    document.getElementById('archies-sprite').innerHTML = svg.replace('style="display: none;"', '');
+  })
+  .catch(function () {});
+</script>
+
+<script src="//use.fontawesome.com/6ccd97559b.js"></script>
+
+<script>
+var lu_addOptionalStarters = false;
+</script>
+
+<div class="container-header">
+  <div class="container">
+    <div class="row">
+      <div class="col-md-6 col-lg-5 league_logo-wrapper">
+        <a href="%STATICHOST%/%YEAR%/home/%LEAGUEID%">
+          <div class="league_logo" id="league_logo">
+            <img src="https://v2.mfl.football/mfl/10105/archie-head.png" alt="Archie's" />
+          </div>
+          <div class="leaguename">
+            <img src="https://v2.mfl.football/mfl/10105/archies-wordmark.png" width="200" alt="Archie's" />
+          </div>
+        </a>
+        <div class="clearfix visible-xs-block visible-sm-block visible-md-block"></div>
+      </div>
+      <!-- column -->
+      <div class="col-md-6 col-lg-7">
+        <div class="nav_wrapper">
+          <div class="nav_buttons" id="nav_buttons">
+            <div class="nav_button--button">
+              <a href="//%HOST%/%YEAR%/options?L=%LEAGUEID%&O=07">
+                <svg class="icon-helmet-2" aria-hidden="true" focusable="false"><use xlink:href="#icon-helmet-2"></use></svg>
+                <div class="svg-text">Roster</div>
+              </a>
+            </div>
+            <div class="nav_button--button">
+              <a href="//%HOST%/%YEAR%/options?L=%LEAGUEID%&O=02">
+                <svg class="icon-lineup" aria-hidden="true" focusable="false"><use xlink:href="#icon-lineup"></use></svg>
+                <div class="svg-text">Submit lineup</div>
+              </a>
+            </div>
+            <div class="nav_button--button">
+              <a href="//%HOST%/%YEAR%/add_drop?L=%LEAGUEID%">
+                <svg class="icon-plus" aria-hidden="true" focusable="false"><use xlink:href="#icon-plus"></use></svg>
+                <div class="svg-text">Free Agents</div>
+              </a>
+            </div>
+            <div class="nav_button--button">
+              <a href="//%HOST%/%YEAR%/standings?L=%LEAGUEID%">
+                <svg class="icon-shield" aria-hidden="true" focusable="false"><use xlink:href="#icon-shield"></use></svg>
+                <div class="svg-text">Standings</div>
+              </a>
+            </div>
+            <div class="nav_button--button">
+              <a href="//%HOST%/%YEAR%/ajax_ls?L=%LEAGUEID%">
+                <svg class="icon-goals" aria-hidden="true" focusable="false"><use xlink:href="#icon-goals"></use></svg>
+                <div class="svg-text">Live scoring</div>
+              </a>
+            </div>
+            <div class="nav_button--button hidden-md playoffs">
+              <a href="//%HOST%/%YEAR%/options?L=%LEAGUEID%&O=79">
+                <svg class="icon-trophy" aria-hidden="true" focusable="false"><use xlink:href="#icon-trophy"></use></svg>
+                <div class="svg-text">Playoffs</div>
+              </a>
+            </div>
+            <div class="nav_button--button hidden-md prePlayoffs">
+              <a href="//%HOST%/%YEAR%/standings?L=%LEAGUEID%">
+                <svg class="icon-champ" aria-hidden="true" focusable="false"><use xlink:href="#icon-champ"></use></svg>
+                <div class="svg-text">Playoffs</div>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- column -->
+    </div>
+    <!-- row -->
+  </div>
+  <!-- container -->
+</div>
+<!-- container-header -->
+<div class="mobile-scroll-wrapper">
+  <div class="container page-wrapper" id="contentframe">
