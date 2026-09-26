@@ -130,6 +130,16 @@ Like the marks above, nothing in the widget references these yet.
 A rafter of hanging pennants numbered 21–25 (Eagles, Mavericks, Mavericks,
 Stingers, Dragons), transparent below the rafter.
 
+### League documents (`docs/`)
+
+| File | URL |
+|---|---|
+| `docs/2025-bylaws-affl.pdf` | `https://v2.mfl.football/mfl/10105/docs/2025-bylaws-affl.pdf` |
+| `docs/abl-2026.pdf` | `https://v2.mfl.football/mfl/10105/docs/abl-2026.pdf` |
+
+Stored as supplied. To publish a new year's bylaws, add a new file rather than
+overwriting, so links to the old year keep working.
+
 `public/` is served as-is with no build step, so replacing any file and
 deploying is the whole update path; the URL does not change. Keep the names
 stable for that reason — a rename breaks every module already pointing at it.
