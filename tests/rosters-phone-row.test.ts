@@ -421,3 +421,13 @@ describe('the phone season head is one row', () => {
     expect(BAR).toMatch(/\.rhdr-rail__weeks \{[^}]*padding:\s*0;/);
   });
 });
+
+describe('the Coach opponent is its logo alone, and the page cannot pan sideways', () => {
+  const CSS = fs.readFileSync(path.join(process.cwd(), 'src/styles/rosters-mobile.css'), 'utf8');
+  it('hides the three-letter opponent label on the card', () => {
+    expect(CSS).toMatch(/#rosterTableBody \.rr-ph--opp \{\s*display:\s*none;/);
+  });
+  it('clips the roster page horizontally on phones', () => {
+    expect(CSS).toMatch(/\.roster-page\[data-league='theleague'\] \{\s*overflow-x:\s*clip;/);
+  });
+});

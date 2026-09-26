@@ -59,6 +59,15 @@
     background: transparent;
   }
 
+  /* Nothing on the roster page may widen the phone viewport. `body` hides
+     sideways overflow, but some mobile browsers still let a finger pan into
+     what body clips; `clip` on the page itself leaves nothing to pan to
+     (and, unlike `hidden`, makes no scroll container, so the chip row's own
+     scroller and position: sticky keep working). */
+  .roster-page[data-league='theleague'] {
+    overflow-x: clip;
+  }
+
   /* A column, so the totals (a <tfoot>, which comes FIRST in the markup) can
      sit under the rows they total. */
   .roster-page[data-league='theleague'] .roster-table {
@@ -384,15 +393,16 @@
   .roster-page[data-league='theleague'] #rosterTableBody .opponent-bye {
     font-weight: 700;
   }
+  /* The opponent is its logo alone (the <img> keeps the team as its alt
+     text); the three-letter code beside it pushed the defense rank onto a
+     line of its own. The label stays in the DOM for the parity harness. */
   .roster-page[data-league='theleague'] #rosterTableBody .rr-ph--opp {
-    order: 24;
-    color: inherit;
-    font-weight: 600;
+    display: none;
   }
   .roster-page[data-league='theleague'] #rosterTableBody td[data-column='opponent'] .opponent-logo {
     order: 25;
-    width: 16px !important;
-    height: 16px !important;
+    width: 20px !important;
+    height: 20px !important;
   }
 
   .roster-page[data-league='theleague'].coach-mode #rosterTableBody td[data-column='oppRank'] {
