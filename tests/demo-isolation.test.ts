@@ -79,7 +79,7 @@ describe('outbound guard on the demo', () => {
   it('keeps the demo out of search indexes on any host', () => {
     process.env.VERCEL_ENV = 'production';
     process.env.DEMO_PROFILE = 'dynasty';
-    expect(shouldBlockIndexing({ hostname: 'dynasty.demo.mfl.football' })).toBe(true);
+    expect(shouldBlockIndexing({ hostname: 'demo.mfl.football' })).toBe(true);
   });
 
   it('grants no commissioner or admin role on the demo', () => {
@@ -229,9 +229,22 @@ describe('demo route block', () => {
     }
   });
 
-  it('maps the demo hostname to the fictional league’s slot, and names it', async () => {
+  it('serves the dynasty demo at demo.mfl.football/dynasty, hiding the slot’s own name', async () => {
     const reg = await import('../src/config/leagues-data.mjs');
-    expect(reg.buildHostToSlugMap()['dynasty.demo.mfl.football']).toBe('theleague');
+    const { resolveDemoPath, rewriteDemoHtml } = await import('../src/utils/demo-isolation-core.mjs');
+    const paths = reg.demoLeaguePaths();
+    expect(reg.DEMO_HOST).toBe('demo.mfl.football');
+    expect(paths).toEqual({ dynasty: 'theleague' });
+    // One host, a path per demo — no subdomain maps to a league.
+    expect(reg.buildHostToSlugMap()[reg.DEMO_HOST]).toBeUndefined();
+    expect(resolveDemoPath('/', paths)).toEqual({ redirect: '/dynasty/' });
+    expect(resolveDemoPath('/dynasty/rosters', paths)).toEqual({ rewrite: '/theleague/rosters' });
+    expect(resolveDemoPath('/theleague/lineup', paths)).toEqual({ redirect: '/dynasty/lineup' });
+    expect(resolveDemoPath('/api/lineup', paths)).toBeNull();
+    expect(resolveDemoPath('/theleaguex', paths)).toBeNull();
+    expect(rewriteDemoHtml('<a href="/theleague/rosters"> <img src="/assets/theleague/icons/x.svg">', paths)).toBe(
+      '<a href="/dynasty/rosters"> <img src="/assets/theleague/icons/x.svg">',
+    );
   });
 });
 

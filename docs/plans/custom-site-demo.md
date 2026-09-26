@@ -31,8 +31,8 @@ with `astro build` and driven in Chromium against `scripts/demo/mock-upstash.mjs
    branch-scoped Preview variables: `DEMO_PROFILE=dynasty`,
    `DEMO_JWT_SECRET` (any long random string), `DEMO_REDIS_REST_URL`,
    `DEMO_REDIS_REST_TOKEN`.
-3. Assign `dynasty.demo.mfl.football` to the `demo` branch; CNAME it in
-   Cloudflare.
+3. Assign `demo.mfl.football` to the `demo` branch; CNAME it in Cloudflare.
+   One host, no nested subdomains: each demo league is a PATH on it.
 4. Issue a link:
    `DEMO_REDIS_REST_URL=… DEMO_REDIS_REST_TOKEN=… node scripts/demo/mint-link.mjs --label "Acme League"`.
 
@@ -68,7 +68,7 @@ real league data and without anything ever reaching MyFantasyLeague.
 | Trades | Other team **auto-accepts** after a moment. |
 | Lead alert | **Web push** to the owner's franchise; lead detail on an admin page. |
 | Pitch | Demo banner + "What you get" page + inline "Custom for this league" tags. |
-| Domain | `demo.mfl.football` (one subdomain per type, e.g. `dynasty.demo.mfl.football`). |
+| Domain | `demo.mfl.football`, one host, a **path** per demo type: `/dynasty` now; `/bigleague` (conference) and `/redraft` (best ball) later. No double subdomains (owner, 2026-09-26). |
 
 ### Pitch copy to carry (owner's words, paraphrased)
 
@@ -149,8 +149,13 @@ Later phases build on those rails:
 - Create the `demo` branch; add branch-scoped Preview variables:
   `DEMO_PROFILE`, `DEMO_JWT_SECRET`, `DEMO_REDIS_REST_URL`,
   `DEMO_REDIS_REST_TOKEN`. No need to blank inherited secrets — the scrub does.
-- Assign `demo.mfl.football`, `dynasty.`, `keeper.`, `conference.`,
-  `bestball.demo.mfl.football` to the `demo` branch; CNAME each in Cloudflare.
+- Assign `demo.mfl.football` to the `demo` branch; CNAME it in Cloudflare.
+  Each demo league is a path: the registry's `demoPath` on a league slot
+  (`theleague` → `dynasty`) makes the demo serve that slot at
+  `/<demoPath>/…`, redirect the slot's own `/<slug>/…` there, and rewrite
+  page links to match (`resolveDemoPath` / `rewriteDemoHtml` in
+  `src/utils/demo-isolation-core.mjs`). A new demo type is a `demoPath` on
+  its slot plus its fictional data.
 - `scripts/vercel-ignore-build.mjs` exempts `demo` from the no-PR gate, as it
   does `staging`.
 
