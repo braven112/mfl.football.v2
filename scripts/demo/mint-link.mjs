@@ -15,7 +15,7 @@ import { buildDemoLink, DEMO_START_PATH, DEMO_TOKEN_PREFIX } from '../../src/uti
 // Load the registry as a demo deployment sees it, so the demo-only slots
 // (keeper) are there to link to. The flag is set before the dynamic import
 // because the registry registers those slots once, at module load.
-process.env.DEMO_PROFILE ??= 'dynasty';
+process.env.DEMO_PROFILE ??= '1';
 const { DEMO_HOST, demoLeaguePaths } = await import('../../src/config/leagues-data.mjs');
 
 const args = process.argv.slice(2);

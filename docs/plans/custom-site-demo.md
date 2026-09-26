@@ -28,9 +28,10 @@ with `astro build` and driven in Chromium against `scripts/demo/mock-upstash.mjs
 
 1. Create an Upstash database for the demo (free tier).
 2. In Vercel (same project), create branch `demo` from this work, and add
-   branch-scoped Preview variables: `DEMO_PROFILE=dynasty`,
-   `DEMO_JWT_SECRET` (any long random string), `DEMO_REDIS_REST_URL`,
-   `DEMO_REDIS_REST_TOKEN`.
+   branch-scoped Preview variables: `DEMO_JWT_SECRET` (any long random
+   string), `DEMO_REDIS_REST_URL`, `DEMO_REDIS_REST_TOKEN`. No `DEMO_PROFILE`:
+   the `demo` branch alone turns demo mode on, and one deployment serves
+   every demo type by path, so nothing here changes when a demo is added.
 3. Assign `demo.mfl.football` to the `demo` branch; CNAME it in Cloudflare.
    One host, no nested subdomains: each demo league is a PATH on it.
 4. Set `DEMO_LEAD_RELAY_SECRET` (one long random string) on BOTH the `demo`
@@ -166,8 +167,9 @@ Alternatives considered (evidence gathered 2026-09-25):
   (`src/utils/mfl-url.ts`), the literal appears ~96 times in ~53 files.
 
 **Chosen: a `demo` branch in the SAME Vercel project** — exactly how
-`staging.mfl.football` is pinned to `staging` — with `DEMO_PROFILE` set as a
-branch-scoped Preview variable. (A separate project was the first draft; the
+`staging.mfl.football` is pinned to `staging`; the branch name alone switches
+the build into demo mode (baked in at build time from `VERCEL_GIT_COMMIT_REF`,
+which Vercel always sets while building). (A separate project was the first draft; the
 branch wins because the deployment is a preview, so the existing outbound guard
 and "crons only run on production" already apply, and there is one project to
 manage. Decided 2026-09-25.)
@@ -193,8 +195,9 @@ the demo does not rely on the dashboard being right:
    — even if the demo were ever served from a production deployment.
 4. **No elevated roles.** `isCommissionerOrAdmin` is false on a demo deploy.
 
-Demo mode = `DEMO_PROFILE` set OR the deployment's branch is `demo`, so the
-branch is protected even if the variable is forgotten.
+Demo mode = the deployment's branch is `demo`, OR `DEMO_PROFILE` is set (any
+value — it is only a presence switch, for local demo builds and scripts). The
+deployed demo needs no such variable; the branch is enough.
 
 Later phases build on those rails:
 
@@ -219,8 +222,7 @@ Later phases build on those rails:
 ### Vercel / DNS setup (owner, when phase 2 is ready)
 
 - Create the `demo` branch; add branch-scoped Preview variables:
-  `DEMO_PROFILE`, `DEMO_JWT_SECRET`, `DEMO_REDIS_REST_URL`,
-  `DEMO_REDIS_REST_TOKEN`. No need to blank inherited secrets — the scrub does.
+  `DEMO_JWT_SECRET`, `DEMO_REDIS_REST_URL`, `DEMO_REDIS_REST_TOKEN`. No need to blank inherited secrets — the scrub does.
 - Assign `demo.mfl.football` to the `demo` branch; CNAME it in Cloudflare.
   Each demo league is a path: the registry's `demoPath` on a league slot
   (`theleague` → `dynasty`) makes the demo serve that slot at
