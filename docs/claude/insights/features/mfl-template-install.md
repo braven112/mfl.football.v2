@@ -8,7 +8,7 @@ header and footer Home Page Messages first cleaned up for Archie's (MFL 10105).
 |---|---|
 | Page | `src/pages/instructions.astro` (MflAppLayout, SSR) |
 | Snippets | `src/data/mfl-template/{header,footer,homepage}.html`, imported `?raw` |
-| Worked example | `src/data/mfl-template/examples/archies-{header,footer}.html` |
+| Archie's copy (not shown on the page) | `src/data/mfl-template/examples/archies-{header,footer}.html` |
 | Icon source | `public/assets/icons/sprite.svg` (also what the header fetches at runtime) |
 
 Edit the snippet files, never the page — the page renders whatever they hold.
