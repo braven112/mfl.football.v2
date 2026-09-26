@@ -185,11 +185,11 @@ export function renamePairs(realConfig, franchises) {
         [era.nameMedium, f.nameShort],
         [era.nameShort, f.nameShort],
       ]) {
-        if (real && real.length >= 4 && real !== fake) pairs.push([real, fake]);
+        if (real && (real.length >= 6 || real.includes(' ')) && real !== fake) pairs.push([real, fake]);
       }
     }
     for (const alias of team.aliases ?? []) {
-      if (alias && alias.length >= 5) pairs.push([alias, f.nameShort]);
+      if (alias && (alias.length >= 6 || alias.includes(' '))) pairs.push([alias, f.nameShort]);
     }
   }
   const seen = new Set();
@@ -198,8 +198,32 @@ export function renamePairs(realConfig, franchises) {
     .sort((a, b) => b[0].length - a[0].length);
 }
 
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const IDENT = /[A-Za-z0-9_$]/;
+
+/**
+ * Replace every occurrence of each term — including inside identifiers,
+ * asset slugs and plurals (`isPigskins`, `booyakasha_icon.png`,
+ * `Chatmasters`), because the leak scan reads the output that way too. Where
+ * a match touches identifier characters, the replacement is squeezed to
+ * identifier-safe characters so code stays valid: "Redwood Rangers" becomes
+ * "RedwoodRangers" inside `isPacificPigskins`. Consistent across every
+ * scrubbed file, so a renamed identifier still matches its definition.
+ *
+ * Terms must be distinctive (6+ characters or several words) — a short one
+ * like "Fire" once rewrote `shouldFireReminder`.
+ */
+export function replaceTerms(text, map, onReplace) {
+  if (!map.size) return text;
+  const pattern = new RegExp([...map.keys()].sort((a, b) => b.length - a.length).map(escapeRe).join('|'), 'g');
+  return text.replace(pattern, (m, offset, whole) => {
+    const replacement = map.get(m) ?? m;
+    onReplace?.(m);
+    const touchesIdent = IDENT.test(whole[offset - 1] ?? '') || IDENT.test(whole[offset + m.length] ?? '');
+    return touchesIdent ? replacement.replace(/[^A-Za-z0-9_$]/g, '') : replacement;
+  });
+}
+
 export function applyRenames(text, pairs) {
-  let out = text;
-  for (const [real, fake] of pairs) out = out.split(real).join(fake);
-  return out;
+  return replaceTerms(text, new Map(pairs));
 }

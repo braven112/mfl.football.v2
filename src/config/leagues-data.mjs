@@ -8,6 +8,8 @@
  * Vercel domain attachment for its apex domains).
  */
 
+import { isDemoEnv } from '../utils/demo-isolation-core.mjs';
+
 export const LEAGUES = {
   theleague: {
     /** MFL numeric league id */
@@ -37,6 +39,13 @@ export const LEAGUES = {
      * `domains` — see the stagingDomains note above buildHostToSlugMap().
      */
     stagingDomains: ['staging.theleague.us'],
+    /**
+     * Hostnames of the custom-site demo that renders a FICTIONAL league in
+     * this league's slot (docs/plans/custom-site-demo.md). Served only by the
+     * `demo`-branch deployment, whose build replaces this league's data; kept
+     * apart from `domains` for the same reason staging hosts are.
+     */
+    demoDomains: ['dynasty.demo.mfl.football'],
     /**
      * Repo-relative league config + Schefter feed locations. TheLeague's
      * live under src/data (build-time imports); AFL's under its dataPath.
@@ -438,6 +447,16 @@ export const LEAGUES = {
   },
 };
 
+/**
+ * The custom-site demo (docs/plans/custom-site-demo.md) renders a fictional
+ * league in TheLeague's slot; its build replaced this league's data, so its
+ * name goes too. Applied once at module load: the demo is a whole deployment,
+ * so this never varies within a process.
+ */
+if (isDemoEnv()) {
+  LEAGUES.theleague.name = 'The Demo League';
+}
+
 export const DEFAULT_LEAGUE_SLUG = 'theleague';
 
 export const ALL_LEAGUES = Object.values(LEAGUES);
@@ -733,7 +752,7 @@ export function buildHostToSlugMap() {
   /** @type {Record<string, string>} */
   const map = {};
   for (const league of ALL_LEAGUES) {
-    for (const domain of [...league.domains, ...(league.stagingDomains ?? [])]) {
+    for (const domain of [...league.domains, ...(league.stagingDomains ?? []), ...(league.demoDomains ?? [])]) {
       map[domain] = league.slug;
     }
   }

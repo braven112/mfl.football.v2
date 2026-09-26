@@ -19,7 +19,7 @@
  * definition renders its fallback in both themes, so light looks perfect and
  * dark ships unreadable.
  */
-import { isStagingRequest, isNonProductionDeploy, deployEnvLabel } from '../../utils/deploy-environment';
+import { isStagingRequest, isNonProductionDeploy, deployEnvLabel, isDemoDeploy } from '../../utils/deploy-environment';
 
 // Two questions, both of which mean "not production":
 //   - the HOST is a staging site (staging.theleague.us, …)
@@ -27,7 +27,9 @@ import { isStagingRequest, isNonProductionDeploy, deployEnvLabel } from '../../u
 //     *.vercel.app URL, which is no staging host but shares the same risk)
 const onStagingHost = isStagingRequest(Astro.url);
 const nonProduction = isNonProductionDeploy();
-const show = onStagingHost || nonProduction;
+// The custom-site demo is a preview deployment too, but "real data" would be
+// false there — it carries DemoBanner instead.
+const show = (onStagingHost || nonProduction) && !isDemoDeploy();
 
 // Name the environment precisely. "Staging" and "Preview" behave identically
 // for safety purposes but mean different things to whoever is reading: one is

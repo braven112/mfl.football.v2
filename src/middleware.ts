@@ -34,7 +34,8 @@ import {
   PUNCTUATION_REDIRECT_STATUS,
   resolvePunctuationRedirect,
 } from './utils/link-punctuation.mjs';
-import { shouldBlockIndexing } from './utils/deploy-environment';
+import { isDemoDeploy, shouldBlockIndexing } from './utils/deploy-environment';
+import { isDemoRefusedPath } from './utils/demo-isolation-core.mjs';
 
 export const onRequest = defineMiddleware(async (context, next) => {
   // Keep staging and preview deployments out of search indexes.
@@ -87,6 +88,20 @@ export const onRequest = defineMiddleware(async (context, next) => {
         headers: { Location: punctuationRedirect, 'Cache-Control': 'no-store' },
       }),
     );
+  }
+
+  // The custom-site demo carries only one league — a fictional one in
+  // TheLeague's slot (docs/plans/custom-site-demo.md). The other leagues'
+  // routes are deleted by the demo build; this refuses anything that still
+  // reaches them at request time (never during prerender — no such page is
+  // built there, and a rewrite at build time has no route to land on).
+  if (isDemoDeploy() && !context.isPrerendered && isDemoRefusedPath(context.url.pathname)) {
+    return stamp(await context.rewrite(new URL('/_not-found', context.url)));
+  }
+  // A prospect signs in with their private link, never MFL credentials — the
+  // demo has no MFL behind it. Send the sign-in page to the demo's front door.
+  if (isDemoDeploy() && !context.isPrerendered && /^\/(?:theleague\/)?login\/?$/.test(context.url.pathname)) {
+    return stamp(context.redirect('/demo-start', 302));
   }
 
   const hostname = context.url.hostname;

@@ -218,6 +218,23 @@ describe('fetch guard', () => {
   });
 });
 
+describe('demo route block', () => {
+  it('refuses every other league and its API, and nothing of the demo league', async () => {
+    const { isDemoRefusedPath } = await import('../src/utils/demo-isolation-core.mjs');
+    for (const p of ['/afl-fantasy', '/afl-fantasy/rosters', '/api/afl-fantasy/lineup', '/api/afl-keepers', '/api/afl-rules-qa', '/best-ball-1/draft', '/api/best-ball-draft/x']) {
+      expect(isDemoRefusedPath(p), p).toBe(true);
+    }
+    for (const p of ['/', '/theleague/rosters', '/rosters', '/api/lineup', '/afl-fantasyx']) {
+      expect(isDemoRefusedPath(p), p).toBe(false);
+    }
+  });
+
+  it('maps the demo hostname to the fictional league’s slot, and names it', async () => {
+    const reg = await import('../src/config/leagues-data.mjs');
+    expect(reg.buildHostToSlugMap()['dynasty.demo.mfl.football']).toBe('theleague');
+  });
+});
+
 describe('boot order', () => {
   // Side-effect imports run in source order. The isolation must run before any
   // module can read a credential, so it sits directly under the timezone pin.

@@ -1,0 +1,64 @@
+---
+/**
+ * The custom-site demo's standing notice (docs/plans/custom-site-demo.md):
+ * shown on every page of a demo deployment, nowhere else.
+ *
+ * Two jobs. It tells a prospect nothing they do is real — the moment a lineup
+ * "saves", someone will wonder whether it went anywhere. And it carries the
+ * pitch: the salary-cap extras they are looking at were built for this kind of
+ * league, and a purchased site is built around theirs.
+ *
+ * Hard-coded colours for the same reason as StagingBanner: a notice that
+ * restyles itself into the page's palette stops being noticed, and a token
+ * with no dark value ships unreadable in one theme.
+ */
+import { isDemoDeploy } from '../../utils/deploy-environment';
+
+const show = isDemoDeploy();
+---
+
+{
+	show && (
+		<div class="demo-banner" role="note">
+			<span class="demo-banner__label">Demo</span>
+			<span class="demo-banner__detail">
+				A fictional league — nothing is sent to MyFantasyLeague. The salary-cap tools here were built for this
+				league; your site is built around how yours works.
+			</span>
+		</div>
+	)
+}
+
+<style>
+	.demo-banner {
+		position: sticky;
+		top: 0;
+		z-index: 9999;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+		padding: 0.4rem 1rem;
+		background: #14213d;
+		color: #f8fafc;
+		font-size: 0.8125rem;
+		line-height: 1.35;
+		text-align: center;
+		box-shadow: 0 1px 0 rgba(0, 0, 0, 0.25);
+	}
+
+	.demo-banner__label {
+		font-weight: 800;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		padding: 0.05rem 0.45rem;
+		border-radius: 0.25rem;
+		background: #fca311;
+		color: #14213d;
+	}
+
+	.demo-banner__detail {
+		max-width: 60rem;
+	}
+</style>

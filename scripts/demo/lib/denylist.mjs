@@ -19,6 +19,8 @@ const GENERIC = new Set(
     'Maverick', 'Mavericks', 'The Dream', 'Cowboy Up', 'Bring The Pain', 'Pain', 'Thunder', 'Lightning',
     'Outlaws', 'Rangers', 'Falcons', 'Raptors', 'Vipers', 'Keepers', 'Herons', 'Millers', 'Anvils',
     'Coyotes', 'Barracudas', 'Tritons', 'Scorpions', 'Bison', 'Chaos', 'Mafia', 'Connection',
+    // NFL club names and places a real alias happens to share.
+    'Cowboy', 'Cowboys', 'Midwest', 'Music City', 'Under Siege', 'Magician', 'Magicians', 'Franchise',
   ].map((s) => s.toLowerCase()),
 );
 
@@ -32,7 +34,7 @@ function readJsonSafe(file) {
   }
 }
 
-export function collectDenylist({ root, league, realConfig, realRegistry }) {
+export function collectDenylist({ root, league, realConfig, realRegistry, otherConfigs = [] }) {
   const raw = new Set();
   const add = (s) => {
     if (typeof s === 'string' && s.trim()) raw.add(s.trim());
@@ -53,8 +55,26 @@ export function collectDenylist({ root, league, realConfig, realRegistry }) {
     for (const alias of t.aliases ?? []) add(alias);
   }
 
+  // Every person in the registry, whichever league they own in: several own
+  // in both leagues, and the demo ships none of either.
+  // By FULL name only: a lone first name ("Trevor") is someone else's too —
+  // it matched an NFL player's social handle in the players feed.
   for (const person of realRegistry.people ?? []) {
-    if ((person.claims ?? []).some((c) => c.league === league)) add(person.displayName);
+    if (String(person.displayName ?? '').trim().includes(' ')) add(person.displayName);
+  }
+
+  // The other leagues' franchises too. The demo build keeps their data files
+  // only because shared modules import them (their routes are refused), and
+  // the identity scrub renames what those files say.
+  for (const other of otherConfigs) {
+    for (const team of other.teams ?? []) {
+      for (const era of [team, ...(team.history ?? [])]) {
+        add(era.name);
+        add(era.nameMedium);
+        add(era.nameShort);
+      }
+      for (const alias of team.aliases ?? []) add(alias);
+    }
   }
 
   const champs = readJsonSafe(path.join(root, 'data', league, 'championship-history.json'));

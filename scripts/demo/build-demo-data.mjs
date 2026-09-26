@@ -35,6 +35,7 @@ import { createRng } from './lib/rng.mjs';
 import * as feeds from './lib/mfl-feeds.mjs';
 import * as identity from './lib/identity-files.mjs';
 import { collectDenylist } from './lib/denylist.mjs';
+import { scrubIdentity } from './lib/scrub.mjs';
 import { nflWeekStartInstant } from '../../src/utils/nfl-week-starts.mjs';
 import { LEAGUES } from '../../src/config/leagues-data.mjs';
 
@@ -150,7 +151,19 @@ function wipeRealLeague() {
   rm(path.join(SRC_DATA, 'whats-new-archive'));
   rm(path.join(PUBLIC, 'assets', LEAGUE));
   rm(path.join(PUBLIC, 'assets', 'whats-new'));
+  // The other leagues' art (their routes are refused on the demo) and the
+  // article images generated from real league events.
+  rm(path.join(PUBLIC, 'assets', 'afl'));
+  for (const f of fs.existsSync(path.join(PUBLIC, 'assets/schefter')) ? fs.readdirSync(path.join(PUBLIC, 'assets/schefter')) : []) {
+    if (!/-avatar\./.test(f)) rm(path.join(PUBLIC, 'assets/schefter', f));
+  }
   rm(path.join(ROOT, 'data', 'schefter', LEAGUE));
+  // The other leagues' ROUTES: the demo carries one league. Their data stays
+  // (shared modules import it) and is scrubbed of names at the end; their
+  // pages are removed so they are neither prerendered nor served.
+  for (const route of ['afl-fantasy', 'best-ball-1', 'api/afl-fantasy', 'api/afl-keepers.ts', 'api/afl-rules-qa.ts', 'api/best-ball-draft']) {
+    rm(path.join(ROOT, 'src/pages', route));
+  }
 }
 
 /** Seconds since epoch at the start of an NFL week. */
@@ -264,8 +277,6 @@ function runStep(npmScript, args = []) {
 
 /** The derivation steps, in scripts/prebuild.mjs order, TheLeague only. */
 const DERIVED_STEPS = [
-  ['build:styles'],
-  ['build:bookmarklets'],
   ['compute:franchise-history'],
   ['compute:player-identity-union'],
   ['compute:roster-payloads'],
@@ -292,7 +303,10 @@ export async function buildDemoData() {
   // 2. What the leak scan must never find.
   const realConfig = readJson(path.join(SRC_DATA, `${LEAGUE}.config.json`));
   const realRegistry = readJson(path.join(SRC_DATA, 'owners-registry.json'));
-  const denylist = collectDenylist({ root: ROOT, league: LEAGUE, realConfig, realRegistry });
+  const otherConfigs = Object.values(LEAGUES)
+    .filter((l) => l.slug !== LEAGUE && l.configPath && fs.existsSync(path.join(ROOT, l.configPath)))
+    .map((l) => readJson(path.join(ROOT, l.configPath)));
+  const denylist = collectDenylist({ root: ROOT, league: LEAGUE, realConfig, realRegistry, otherConfigs });
   writeJson(path.join(DEMO_WORK_DIR, 'denylist.json'), denylist);
   const renames = identity.renamePairs(realConfig, DEMO_FRANCHISES);
   log(`denylist: ${denylist.terms.length} real names recorded`);
@@ -348,6 +362,24 @@ export async function buildDemoData() {
 
   // 5. The site's own derivations, over the fiction.
   for (const [step, ...args] of DERIVED_STEPS) runStep(step, args);
+
+  // 6. Neutralize every real name left in anything the build can bundle —
+  //    code comments, the other leagues' data (whose routes the demo refuses),
+  //    the shared owner registry. Last, because the derivations above needed
+  //    the other leagues' records intact.
+  const people = new Set((realRegistry.people ?? []).map((p) => p.displayName));
+  const { files, replacements } = scrubIdentity({
+    dirs: [path.join(ROOT, 'src'), path.join(ROOT, 'data'), PUBLIC],
+    terms: denylist.terms,
+    renames,
+    people,
+  });
+  log(`identity scrub: ${replacements} replacement(s) across ${files} file(s)`);
+
+  // 7. Compiled assets last, from the scrubbed sources — the league
+  //    stylesheets carry names in CSS `content:` strings.
+  runStep('build:styles');
+  runStep('build:bookmarklets');
   log('done');
 }
 
