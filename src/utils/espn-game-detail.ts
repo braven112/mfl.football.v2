@@ -28,7 +28,7 @@
  */
 
 import { normalizeTeamCode } from './nfl-logo';
-import { normalizeEspnTeamCode } from './live-odds';
+import { normalizeEspnTeamCode } from './coach-data';
 import { isValidEspnId } from './player-news';
 
 /** Cap on the plays page we request — a full NFL game is ~180 plays. */
