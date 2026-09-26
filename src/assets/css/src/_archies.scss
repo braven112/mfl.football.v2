@@ -80,6 +80,15 @@ caption a {
     drop-shadow(0 0 18px $accent-color);
 }
 
+// Below 768px _header.scss makes .nav_wrapper a horizontal scroll box, and a
+// scroll box clips on both axes, so the glow was cut off above the icon.
+// Padding inside the box gives the 18px glow room to render.
+@media (max-width: 767px) {
+  .nav_wrapper .nav_buttons {
+    padding: 20px 20px 12px;
+  }
+}
+
 .franchiseicon {
   transition: opacity 1s ease;
 
