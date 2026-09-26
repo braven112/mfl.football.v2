@@ -14,8 +14,8 @@
  * with the position pill under it,
  *   line 1  name + every after-name badge ............ current-year salary | Proj
  *   line 2  NFL logo, years chip, thru 'YY, RC/TO ...................  rank | avg
- *           (Coach: NFL logo, kickoff, vs/@ opponent, rank, weather)
- *   line 3  (Coach) spread · O/U · last-3 trend
+ *           (Coach: NFL logo, kickoff, vs/@ opponent, rank)
+ *   line 3  (Coach) spread · O/U · last-3 trend · weather, season avg right
  * The NFL logo stays in PlayerCell's meta line, where the position used to
  * be; the pill moved under the headshot (user, 2026-09-26). There is no
  * spelled-out injury word: the (Q) / (D) button after the name carries it.
@@ -451,9 +451,11 @@
     font-size: 0.6875rem;
   }
 
+  /* Weather rides line 3 with the other matchup numbers; on line 2 it
+     wrapped onto a row of its own beside the average. */
   .roster-page[data-league='theleague'].coach-mode #rosterTableBody td[data-column='weather'] {
     display: inline-block !important;
-    order: 27;
+    order: 44;
     font-size: 0.75rem;
   }
 
@@ -482,10 +484,10 @@
 
   .roster-page[data-league='theleague'].coach-mode #rosterTableBody .contract-action-badge { order: 29; }
 
-  /* Line 2, right: the season average the projection is judged against. */
+  /* Line 3, right: the season average the projection is judged against. */
   .roster-page[data-league='theleague'].coach-mode #rosterTableBody td[data-column='avgSeason'] {
     display: block !important;
-    order: 39;
+    order: 49;
     margin-left: auto;
     font-size: 0.75rem;
     color: var(--color-gray-600, #4b5563);
@@ -498,9 +500,12 @@
   }
 
   /* ── Coach line 3: the muted secondary matchup numbers ──────────────── */
+  /* The break sits right after line 2's matchup (orders 22-29), so line 3
+     is spread · O/U · L3 · weather with the average pushed right: three
+     lines, not four. */
   .roster-page[data-league='theleague'].coach-mode #rosterTableBody > tr.roster-row::after {
     content: '';
-    order: 40;
+    order: 30;
     flex-basis: 100%;
     height: 0;
   }
@@ -516,6 +521,13 @@
     align-items: center;
     font-size: 0.75rem;
     color: var(--color-gray-600, #4b5563);
+  }
+
+  /* One quiet size and weight across line 3: the desktop cells' own bold,
+     larger L3 value and temperature made the line read busy on a card. */
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody :is(td[data-column='ou'], td[data-column='avgRecent'], td[data-column='weather'], td[data-column='avgSeason']) * {
+    font-size: inherit !important;
+    font-weight: 500 !important;
   }
 
   .roster-page[data-league='theleague'].coach-mode #rosterTableBody td[data-column='ou'] { order: 42; }

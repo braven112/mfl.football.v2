@@ -385,3 +385,19 @@ describe('the roster header week tiles on a phone', () => {
     expect(BAR).toMatch(/toggle\.setAttribute\('aria-expanded', String\(expand\)\)/);
   });
 });
+
+describe('the Coach card is three lines', () => {
+  const CSS = fs.readFileSync(path.join(process.cwd(), 'src/styles/rosters-mobile.css'), 'utf8');
+  const orderOf = (selector: string) => {
+    const m = CSS.match(new RegExp(`${selector}[^{]*\\{[^}]*?order:\\s*(\\d+)`));
+    return m ? Number(m[1]) : NaN;
+  };
+
+  it('breaks after the matchup, so weather and the average share the odds line', () => {
+    const brk = orderOf("\\.coach-mode #rosterTableBody > tr\\.roster-row::after");
+    expect(brk).toBeGreaterThan(orderOf("\\.coach-mode #rosterTableBody td\\[data-column='oppRank'\\]"));
+    expect(orderOf("\\.coach-mode #rosterTableBody td\\[data-column='weather'\\]")).toBeGreaterThan(brk);
+    expect(orderOf("\\.coach-mode #rosterTableBody td\\[data-column='avgSeason'\\]")).toBeGreaterThan(brk);
+    expect(orderOf("\\.coach-mode #rosterTableBody \\.spread-badge")).toBeGreaterThan(brk);
+  });
+});
