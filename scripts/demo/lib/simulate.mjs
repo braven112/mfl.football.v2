@@ -67,6 +67,8 @@ export function simulateLeague({ years, facts, currentYear, currentWeek, franchi
     const auctionResults = [];
     const draftPicks = [];
     const salaryAdjustments = [];
+    /** fid → this season's dead money, which counts against the cap like salary. */
+    const deadMoney = new Map();
 
     const isStartup = year === years[0];
     if (mode === 'keeper') {
@@ -87,6 +89,7 @@ export function simulateLeague({ years, facts, currentYear, currentWeek, franchi
                 description: `${year} Dead money`,
                 timestamp: String(ts(1, -150)),
               });
+              deadMoney.set(fid, (deadMoney.get(fid) ?? 0) + dead);
             }
           } else if (c.status === 'TAXI_SQUAD' && c.contractYear <= 1) {
             c.status = 'ROSTER';
@@ -96,7 +99,9 @@ export function simulateLeague({ years, facts, currentYear, currentWeek, franchi
     }
 
     const rostered = () => new Set([...rosters.values()].flatMap((r) => [...r.keys()]));
-    const capUsed = (fid) => [...rosters.get(fid).values()].reduce((s, c) => s + c.salary, 0);
+    // Every salary, taxi squad included, plus dead money: what the site's cap
+    // space subtracts from the cap. The demo keeps every team under it.
+    const capUsed = (fid) => [...rosters.get(fid).values()].reduce((s, c) => s + c.salary, 0) + (deadMoney.get(fid) ?? 0);
 
     if (mode !== 'keeper') {
     // Auction (March): every free agent worth rostering, best first, to a team
@@ -172,6 +177,7 @@ export function simulateLeague({ years, facts, currentYear, currentWeek, franchi
       (fid, pid) => tx.push({ type: 'FREE_AGENT', franchise: fid, transaction: `${pid},|`, timestamp: String(ts(1, -10)) }),
       (fid, pid) => tx.push({ type: 'FREE_AGENT', franchise: fid, transaction: `|${pid},`, timestamp: String(ts(1, -10)) }),
     );
+    if (mode !== 'keeper') underCap({ rosters, capUsed, value, f, onSwap: (fid, add, drop) => tx.push({ type: 'FREE_AGENT', franchise: fid, transaction: `${add},|${drop},`, timestamp: String(ts(1, -9)) }) });
 
     // --- Season ---------------------------------------------------------
     const schedule = buildSchedule(ids, srng);
@@ -179,7 +185,8 @@ export function simulateLeague({ years, facts, currentYear, currentWeek, franchi
     const scoresSoFar = new Map(); // pid → {points, games} this season, for lineup decisions
 
     for (let week = 1; week <= Math.min(lastWeek, LEAGUE_RULES.regularSeasonWeeks); week++) {
-      inSeasonMoves({ week, rosters, value, f, srng, tx, ts, scoresSoFar });
+      inSeasonMoves({ week, rosters, value, f, srng, tx, ts, scoresSoFar, capUsed: mode === 'keeper' ? () => 0 : capUsed });
+      if (mode !== 'keeper') underCap({ rosters, capUsed, value, f, onSwap: (fid, add, drop) => tx.push({ type: 'FREE_AGENT', franchise: fid, transaction: `${add},|${drop},`, timestamp: String(ts(week, 2, 9)) }) });
       const games = schedule[week - 1];
       const weekScores = f.scores.get(week) ?? new Map();
       const lineups = new Map(ids.map((fid) => [fid, setLineup(rosters.get(fid), f, weekScores, scoresSoFar, value, srng)]));
@@ -191,6 +198,8 @@ export function simulateLeague({ years, facts, currentYear, currentWeek, franchi
         scoresSoFar.set(pid, acc);
       }
     }
+
+    const inProgress = year === currentYear ? liveWeek({ week: lastWeek + 1, schedule, rosters, f, scoresSoFar, value, srng }) : null;
 
     const regWeeksPlayed = Math.min(lastWeek, LEAGUE_RULES.regularSeasonWeeks);
     const standings = computeStandings(ids, weekly, franchises);
@@ -211,6 +220,7 @@ export function simulateLeague({ years, facts, currentYear, currentWeek, franchi
       lastWeek,
       schedule,
       weekly,
+      inProgress,
       standings,
       playoffs,
       rosters: mode === 'keeper' ? withoutSalaries(snapshotRosters(rosters)) : snapshotRosters(rosters),
@@ -302,6 +312,34 @@ function needsPosition(roster, position, f) {
   let n = 0;
   for (const pid of roster.keys()) if (f.players.get(pid)?.position === position) n++;
   return n < POSITION_CAP[position];
+}
+
+/**
+ * The demo keeps every team under the cap — a prospect should never open a
+ * roster in the red. Whatever the auction, dead money and waiver churn left
+ * over, a team still over swaps its worst-value contract for the best free
+ * agent at the same position on a minimum deal, until it fits.
+ */
+function underCap({ rosters, capUsed, value, f, onSwap }) {
+  const taken = new Set([...rosters.values()].flatMap((r) => [...r.keys()]));
+  for (const [fid, roster] of rosters) {
+    while (capUsed(fid) > LEAGUE_RULES.salaryCap) {
+      const worst = [...roster.entries()]
+        .filter(([, c]) => c.status === 'ROSTER' && c.salary > LEAGUE_RULES.minSalary)
+        .sort((a, b) => (value.get(a[0]) ?? 0) / a[1].salary - (value.get(b[0]) ?? 0) / b[1].salary)[0];
+      if (!worst) break;
+      const [drop] = worst;
+      const pos = f.players.get(drop)?.position;
+      const add = [...value.entries()]
+        .filter(([pid]) => !taken.has(pid) && f.players.get(pid)?.position === pos)
+        .sort((a, b) => b[1] - a[1])[0]?.[0];
+      if (!add) break;
+      roster.delete(drop);
+      roster.set(add, { salary: LEAGUE_RULES.minSalary, contractYear: 1, status: 'ROSTER', acquired: 'fa' });
+      taken.add(add);
+      onSwap(fid, add, drop);
+    }
+  }
 }
 
 function fillRosters(rosters, value, f, rng, onAdd, onDrop) {
@@ -413,11 +451,36 @@ function setLineup(roster, f, weekScores, soFar, value, rng) {
 }
 
 /**
+ * The week being played right now, when the NFL has started it: every team's
+ * lineup, with a real score for each player whose NFL team has played and 0
+ * — game still to come — for the rest. It is never part of `weekly`, so
+ * standings and results only ever count finished weeks; the MFL stand-in
+ * serves it as the live week. Null between weeks and after the regular season.
+ */
+function liveWeek({ week, schedule, rosters, f, scoresSoFar, value, srng }) {
+  if (week > LEAGUE_RULES.regularSeasonWeeks) return null;
+  const partial = f.scores.get(week);
+  if (!partial) return null;
+  const teamOf = (pid) => f.players.get(pid)?.team;
+  const teamsPlayed = new Set([...partial].filter(([, s]) => s !== 0).map(([pid]) => teamOf(pid)).filter(Boolean));
+  if (!teamsPlayed.size) return null;
+  const played = (pid) => teamsPlayed.has(teamOf(pid));
+  const live = new Map([...partial].filter(([pid]) => played(pid)));
+  // Its own stream, so adding the live week leaves every other draw as it was.
+  const rng = srng.fork(`live-${week}`);
+  const lineups = new Map([...rosters.keys()].map((fid) => [fid, setLineup(rosters.get(fid), f, live, scoresSoFar, value, rng)]));
+  for (const lineup of lineups.values()) {
+    for (const p of lineup.players) p.gameSecondsRemaining = played(p.id) ? '0' : '3600';
+  }
+  return { week, games: schedule[week - 1].map(([home, away]) => [lineups.get(home), lineups.get(away), home, away]) };
+}
+
+/**
  * A little in-season churn so the transaction log reads like a real league: a
  * waiver claim or free-agent swap most weeks, a trade every few weeks, an IR
  * move when a starter stops scoring.
  */
-function inSeasonMoves({ week, rosters, value, f, srng, tx, ts, scoresSoFar }) {
+function inSeasonMoves({ week, rosters, value, f, srng, tx, ts, scoresSoFar, capUsed }) {
   const ids = [...rosters.keys()];
   const taken = () => new Set([...rosters.values()].flatMap((r) => [...r.keys()]));
   const recent = (pid) => {
@@ -437,8 +500,14 @@ function inSeasonMoves({ week, rosters, value, f, srng, tx, ts, scoresSoFar }) {
       const have = taken();
       const add = [...value.keys()].filter((pid) => !have.has(pid) && f.players.get(pid)?.position === pos).sort((a, b) => recent(b) - recent(a))[0];
       if (!add || recent(add) <= recent(drop)) continue;
+      const dropped = roster.get(drop);
       roster.delete(drop);
-      const room = LEAGUE_RULES.salaryCap - [...roster.values()].reduce((sum, c) => sum + c.salary, 0);
+      const room = LEAGUE_RULES.salaryCap - capUsed(fid);
+      if (room < LEAGUE_RULES.minSalary) {
+        // Not even a minimum deal fits under the cap: no move this time.
+        roster.set(drop, dropped);
+        continue;
+      }
       const wanted = Math.round((recent(add) * 40_000) / 25_000) * 25_000;
       const waiver = srng.chance(0.5) && room > 425_000;
       const bid = waiver ? String(Math.max(425_000, Math.min(wanted, Math.floor(room / 2 / 25_000) * 25_000))) : null;
@@ -461,6 +530,9 @@ function inSeasonMoves({ week, rosters, value, f, srng, tx, ts, scoresSoFar }) {
       const pb = srng.pick(candidates);
       const ca = ra.get(pa);
       const cb = rb.get(pb);
+      // A trade must leave both teams under the cap.
+      const fits = (fid, out, inn) => capUsed(fid) - (out.salary ?? 0) + (inn.salary ?? 0) <= LEAGUE_RULES.salaryCap;
+      if (!fits(a, ca, cb) || !fits(b, cb, ca)) return;
       ra.delete(pa);
       rb.delete(pb);
       ra.set(pb, cb);

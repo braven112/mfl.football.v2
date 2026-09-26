@@ -205,6 +205,8 @@ function writeSeasonFeeds(season, years, generatedAt, slot = DYNASTY_FEEDS) {
   writeJson(path.join(dir, 'schedule.json'), feeds.scheduleFeed(season, slot.franchises));
   writeJson(path.join(dir, 'weekly-results-raw.json'), feeds.weeklyResultsRawFeed(season));
   writeJson(path.join(dir, 'weekly-results.json'), feeds.weeklyResultsFeed(season));
+  const live = feeds.liveWeekFeed(season);
+  if (live) writeJson(path.join(dir, 'live-week.json'), live);
   writeJson(path.join(dir, 'transactions.json'), feeds.transactionsFeed(season));
   writeJson(path.join(dir, 'draftResults.json'), feeds.draftResultsFeed(season));
   writeJson(path.join(dir, 'auctionResults.json'), feeds.auctionResultsFeed(season));

@@ -93,8 +93,11 @@ export function leagueFeed({ season, leagueId, leagueName, franchises, divisions
   });
 }
 
+/** Salaries plus this season's dead money — what counts against the cap. */
 function capUsed(season, fid) {
-  return [...(season.rosters.get(fid)?.values() ?? [])].reduce((s, c) => s + c.salary, 0);
+  const salaries = [...(season.rosters.get(fid)?.values() ?? [])].reduce((s, c) => s + c.salary, 0);
+  const dead = (season.salaryAdjustments ?? []).filter((a) => a.franchise_id === fid).reduce((s, a) => s + Number(a.amount), 0);
+  return salaries + dead;
 }
 
 export function rostersFeed(season) {
@@ -238,6 +241,30 @@ function lineupSide(id, lineup, other, isHome) {
     optimal: lineup.optimal.map((p) => `${p},`).join(''),
     player: lineup.players,
   };
+}
+
+/**
+ * `live-week.json`: the week being played right now (season.inProgress), in
+ * weeklyResults' shape with partial scores and no result — each player carries
+ * `gameSecondsRemaining` (0 once his NFL team has played). The MFL stand-in
+ * answers `weeklyResults` and `liveScoring` for that week from it.
+ */
+export function liveWeekFeed(season) {
+  const live = season.inProgress;
+  if (!live) return null;
+  const side = (id, lineup, other, isHome) => {
+    const { result, ...rest } = lineupSide(id, lineup, other, isHome);
+    return rest;
+  };
+  return envelope({
+    weeklyResults: {
+      week: String(live.week),
+      matchup: live.games.map(([home, away, hid, aid]) => ({
+        regularSeason: '1',
+        franchise: [side(aid, away, home, false), side(hid, home, away, true)],
+      })),
+    },
+  });
 }
 
 /** `weekly-results.json`: the compact per-week franchise score table. */

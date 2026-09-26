@@ -36,11 +36,11 @@ type Json = any; // MFL exports are loosely shaped; the readers own the typing.
 // specifiers — a glob cannot take a variable — keyed by the slot's slug.
 const FEED_LOADERS: Record<'theleague' | 'keeper', Record<string, () => Promise<Json>>> = {
   theleague: import.meta.glob<Json>(
-    '../../data/theleague/mfl-feeds/*/{league,rosters,players,standings,schedule,weekly-results-raw,transactions,draftResults,auctionResults,futureDraftPicks,salaryAdjustments,calendar,projectedScores,injuries,nflSchedule,fantasyPointsAllowed}.json',
+    '../../data/theleague/mfl-feeds/*/{league,rosters,players,standings,schedule,weekly-results-raw,live-week,transactions,draftResults,auctionResults,futureDraftPicks,salaryAdjustments,calendar,projectedScores,injuries,nflSchedule,fantasyPointsAllowed}.json',
     { import: 'default' },
   ),
   keeper: import.meta.glob<Json>(
-    '../../data/keeper/mfl-feeds/*/{league,rosters,players,standings,schedule,weekly-results-raw,transactions,draftResults,auctionResults,futureDraftPicks,salaryAdjustments,calendar,projectedScores,injuries,nflSchedule,fantasyPointsAllowed}.json',
+    '../../data/keeper/mfl-feeds/*/{league,rosters,players,standings,schedule,weekly-results-raw,live-week,transactions,draftResults,auctionResults,futureDraftPicks,salaryAdjustments,calendar,projectedScores,injuries,nflSchedule,fantasyPointsAllowed}.json',
     { import: 'default' },
   ),
 };
@@ -167,9 +167,13 @@ const mflError = (message: string, wantsJson: boolean) =>
 async function weeklyResults(year: string, week: string, state: DemoMflState): Promise<Json> {
   const raw = asArray(await loadFeed(year, 'weekly-results-raw'));
   const played = raw.find((w: Json) => String(w?.weeklyResults?.week) === week);
+  // The week being played right now: partial scores, games still to come.
+  const live = await loadFeed(year, 'live-week');
   let body: Json;
   if (played) {
     body = structuredClone(played);
+  } else if (live && String(live.weeklyResults?.week) === week) {
+    body = live;
   } else {
     // A week not yet played: the schedule's pairings with each roster, no scores.
     const schedule = await loadFeed(year, 'schedule');
@@ -205,6 +209,11 @@ async function weeklyResults(year: string, week: string, state: DemoMflState): P
         if (side.id !== fid) continue;
         side.starters = starters.map((id) => `${id},`).join('');
         for (const p of asArray(side.player)) p.status = starters.includes(p.id) ? 'starter' : 'nonstarter';
+        // The team score is its starters' — in the live week, points already on the board.
+        const total = asArray(side.player)
+          .filter((p: Json) => p.status === 'starter')
+          .reduce((s: number, p: Json) => s + (Number(p.score) || 0), 0);
+        side.score = total.toFixed(2);
       }
     }
   }
@@ -264,14 +273,18 @@ async function exportResponse(url: URL, state: DemoMflState): Promise<Response> 
         liveScoring: {
           week: wr.weeklyResults.week,
           matchup: asArray(wr.weeklyResults.matchup).map((m: Json) => ({
-            franchise: asArray(m.franchise).map((f: Json) => ({
-              id: f.id,
-              score: f.score ?? '0',
-              gameSecondsRemaining: '0',
-              playersYetToPlay: '0',
-              playersCurrentlyPlaying: '0',
-              player: asArray(f.player).map((p: Json) => ({ id: p.id, score: p.score, status: p.status, gameSecondsRemaining: '0' })),
-            })),
+            franchise: asArray(m.franchise).map((f: Json) => {
+              // Only the live week has games still to come; a played week is all zeros.
+              const toPlay = asArray(f.player).filter((p: Json) => p.status === 'starter' && Number(p.gameSecondsRemaining ?? 0) > 0);
+              return {
+                id: f.id,
+                score: f.score ?? '0',
+                gameSecondsRemaining: String(toPlay.reduce((s: number, p: Json) => s + Number(p.gameSecondsRemaining), 0)),
+                playersYetToPlay: String(toPlay.length),
+                playersCurrentlyPlaying: '0',
+                player: asArray(f.player).map((p: Json) => ({ id: p.id, score: p.score, status: p.status, gameSecondsRemaining: p.gameSecondsRemaining ?? '0' })),
+              };
+            }),
           })),
         },
       });
@@ -285,7 +298,16 @@ async function exportResponse(url: URL, state: DemoMflState): Promise<Response> 
     case 'auctionResults':
     case 'futureDraftPicks':
     case 'salaryAdjustments':
-    case 'projectedScores':
+    case 'projectedScores': {
+      // The committed snapshot is whichever week MFL called current when it
+      // synced (usually the NEXT one mid-week). The live board asks for the
+      // live week by number and rightly refuses another week's numbers, which
+      // would leave every unplayed starter projecting 0. The demo answers the
+      // week asked for with the snapshot's per-player projections.
+      const data = await loadFeed(year, type);
+      if (data?.projectedScores && week) data.projectedScores.week = week;
+      return json(data ?? { [type]: {} });
+    }
     case 'injuries':
     case 'nflSchedule':
     case 'fantasyPointsAllowed': {
