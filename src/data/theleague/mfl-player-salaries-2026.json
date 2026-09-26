@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-09-26T19:01:24.389Z"
+    "fetchedAt": "2026-09-26T20:01:31.421Z"
   },
   "players": [
     {
@@ -3203,6 +3203,10 @@
         {
           "id": "17510",
           "name": "Burks, Deion"
+        },
+        {
+          "id": "15109",
+          "name": "Westbrook-Ikhine, Nick"
         }
       ]
     },
@@ -4620,7 +4624,7 @@
           "QB"
         ],
         "experience": 2,
-        "injuryStatus": "Doubtful",
+        "injuryStatus": "Out",
         "injuryBodyPart": "Hamstring",
         "gsisId": null
       },
@@ -7139,7 +7143,7 @@
           "TE"
         ],
         "experience": 8,
-        "injuryStatus": "Doubtful",
+        "injuryStatus": "Out",
         "injuryBodyPart": "Knee - MCL",
         "gsisId": "00-0034351"
       },
@@ -8181,7 +8185,7 @@
           "WR"
         ],
         "experience": 7,
-        "injuryStatus": "Questionable",
+        "injuryStatus": "Out",
         "injuryBodyPart": "Ankle",
         "gsisId": " 00-0035662"
       },
@@ -8632,8 +8636,8 @@
         "status": "Active",
         "active": true,
         "position": "K",
-        "depthChartPosition": null,
-        "depthChartOrder": null,
+        "depthChartPosition": "K",
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "K"
         ],
@@ -9411,8 +9415,8 @@
         "status": "Active",
         "active": true,
         "position": "WR",
-        "depthChartPosition": null,
-        "depthChartOrder": null,
+        "depthChartPosition": "LWR",
+        "depthChartOrder": 8,
         "fantasyPositions": [
           "WR"
         ],
@@ -9423,7 +9427,24 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "16187",
+          "name": "Downs, Josh"
+        },
+        {
+          "id": "11222",
+          "name": "Allen, Keenan"
+        },
+        {
+          "id": "14122",
+          "name": "Slayton, Darius"
+        },
+        {
+          "id": "17510",
+          "name": "Burks, Deion"
+        }
+      ]
     },
     {
       "id": "16680",
