@@ -64,6 +64,7 @@
  */
 
 import { isStagingHost, stagingHosts } from '../config/leagues-data.mjs';
+import { isDemoEnv } from './demo-isolation-core.mjs';
 
 export { isStagingHost, stagingHosts };
 
@@ -124,27 +125,16 @@ export function isProductionDeploy(): boolean {
   return env === undefined || env === 'production';
 }
 
-/**
- * The branch the custom-site demo (`*.demo.mfl.football`) is pinned to, the way
- * the staging sites are pinned to `staging`. See docs/plans/custom-site-demo.md.
- * `scripts/vercel-ignore-build.mjs` carries the same literal and a test pins
- * the two together.
- */
-export const DEMO_BRANCH = 'demo';
+export { DEMO_BRANCH } from './demo-isolation-core.mjs';
 
 /**
  * Is this the custom-site demo — a deployment prospects use, holding only
- * fictional league data, that must never touch a real league?
- *
- * Two independent signals, either sufficient: the `DEMO_PROFILE` variable, or
- * the deployment being built from the `demo` branch. The branch check is what
- * makes a forgotten dashboard variable fail CLOSED — the demo branch is a demo
- * whether or not anyone remembered to say so.
- *
- * Read at call time, like `vercelEnv()`.
+ * fictional league data, that must never touch a real league? `DEMO_PROFILE`
+ * set, or built from the `demo` branch (see demo-isolation-core.mjs). Read at
+ * call time, like `vercelEnv()`.
  */
 export function isDemoDeploy(): boolean {
-  return Boolean(process.env.DEMO_PROFILE) || process.env.VERCEL_GIT_COMMIT_REF === DEMO_BRANCH;
+  return isDemoEnv(process.env);
 }
 
 /**

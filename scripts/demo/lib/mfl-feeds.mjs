@@ -145,7 +145,7 @@ export function standingsFeed(season) {
           nondivt: String(r.t - r.divt),
           all_play_w: String(r.allW),
           all_play_l: String(r.allL),
-          all_play_t: '0',
+          all_play_t: String(r.allT ?? 0),
           all_play_pct: r.allPlayPct,
           salary: money(cap),
           bbidspent: money(LEAGUE_RULES.salaryCap),
@@ -160,9 +160,24 @@ export function standingsFeed(season) {
 export function scheduleFeed(season, franchises) {
   // Future weeks carry the pairing with no score, as MFL's schedule does.
   const played = new Map(season.weekly.filter((w) => w.regularSeason).map((w) => [w.week, w]));
+  // Playoff weeks list the bracket games actually played, as MFL's does.
+  const playoffWeeks = [...new Set(season.weekly.filter((w) => !w.regularSeason).map((w) => w.week))].sort((a, b) => a - b);
+  const playoffSchedule = playoffWeeks.map((week) => {
+    const games = season.weekly.filter((w) => w.week === week).flatMap((w) => w.games);
+    const side = (id, isHome, lineup, other) => ({
+      id,
+      isHome: isHome ? '1' : '0',
+      score: two(lineup.score),
+      result: lineup.score === other.score ? 'T' : lineup.score > other.score ? 'W' : 'L',
+    });
+    return {
+      week: String(week),
+      matchup: games.map(([home, away, hid, aid]) => ({ franchise: [side(aid, false, away, home), side(hid, true, home, away)] })),
+    };
+  });
   return envelope({
     schedule: {
-      weeklySchedule: season.schedule.map((games, i) => {
+      weeklySchedule: [...season.schedule.map((games, i) => {
         const week = i + 1;
         const result = played.get(week);
         return {
@@ -179,7 +194,7 @@ export function scheduleFeed(season, franchises) {
             return { franchise: [side(away, false, r?.[1], r?.[0]), side(home, true, r?.[0], r?.[1])] };
           }),
         };
-      }),
+      }), ...playoffSchedule],
     },
   });
 }

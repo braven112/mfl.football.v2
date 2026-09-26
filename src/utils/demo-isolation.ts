@@ -8,95 +8,22 @@
  * reaches the demo silently. So the demo removes them itself, at boot, and
  * refuses the outbound hosts they would be used against.
  *
- * Pure functions here; `ensure-demo-isolation.ts` is the side-effect import
- * that applies them to the live process.
+ * The rules themselves live in `demo-isolation-core.mjs`, shared with the demo
+ * build's preload. This file adds the server half — the MFL stand-in and the
+ * fetch wrapper; `ensure-demo-isolation.ts` applies it to the live process.
  */
 
 import { isMflWrite } from './mfl-fetch';
+import { isDemoRefusedHost, isMflHost, scrubDemoEnvironment } from './demo-isolation-core.mjs';
 
-/**
- * Credential families a demo process must never hold, matched by prefix (or
- * exact name where the family is one variable). By FAMILY rather than an
- * exact list so a new `MFL_*` or `GROUPME_*` secret is covered the day it is
- * added; a credential with an entirely new prefix is the known gap, and adding
- * its prefix here is the fix.
- */
-export const DEMO_FORBIDDEN_ENV_PATTERNS: readonly RegExp[] = [
-  /^MFL_/, // owner/commissioner cookies, API keys, host overrides
-  /^GROUPME_/,
-  /^VAPID_PRIVATE_KEY$/, // the public key is public; the private key signs pushes
-  /^GITHUB_/,
-  /^GH_/,
-  /^UPSTASH_/, // production Redis — replaced by DEMO_REDIS_* below
-  /^KV_/,
-  /^STORAGE_/,
-  /^CRON_SECRET$/,
-  /^AUTOCUT_/,
-  /^BLOB_/,
-  /^SCHEFTER_/,
-  /^ANTHROPIC_/, // LLM spend on the real account; the demo ships Roger/Schefter off
-  /^JWT_SECRET$/, // production's session key — replaced by DEMO_JWT_SECRET below
-];
-
-/**
- * The demo's OWN values, mapped onto the names the rest of the code reads.
- * Applied after the scrub, so a missing demo value leaves the real name unset
- * rather than falling back to production's: no Redis (degraded storage), and
- * `session.ts` refuses to mint sessions on Vercel without a secret.
- */
-export const DEMO_ENV_MAPPINGS: Readonly<Record<string, string>> = {
-  DEMO_REDIS_REST_URL: 'UPSTASH_REDIS_REST_URL',
-  DEMO_REDIS_REST_TOKEN: 'UPSTASH_REDIS_REST_TOKEN',
-  DEMO_JWT_SECRET: 'JWT_SECRET',
-};
-
-export function isForbiddenDemoEnvName(name: string): boolean {
-  return DEMO_FORBIDDEN_ENV_PATTERNS.some((pattern) => pattern.test(name));
-}
-
-/**
- * Delete every forbidden credential from `env`, then install the demo's own
- * replacements. Mutates and returns the names removed (for one boot log line —
- * names only, never values).
- */
-export function scrubDemoEnvironment(env: NodeJS.ProcessEnv): string[] {
-  const removed = Object.keys(env).filter(isForbiddenDemoEnvName).sort();
-  for (const name of removed) delete env[name];
-  for (const [from, to] of Object.entries(DEMO_ENV_MAPPINGS)) {
-    const value = env[from];
-    if (value) env[to] = value;
-  }
-  return removed;
-}
-
-/**
- * Hosts a demo process may never call, beyond MFL (which gets the stand-in).
- * The scrub already removed the credentials these would need; refusing the
- * host too means a credential that slipped the denylist still goes nowhere.
- */
-const DEMO_REFUSED_HOST_SUFFIXES = [
-  'groupme.com',
-  'api.github.com',
-  'api.anthropic.com',
-  // Web-push services (Chrome/Android, Firefox, Safari, Edge).
-  'fcm.googleapis.com',
-  'push.services.mozilla.com',
-  'push.apple.com',
-  'notify.windows.com',
-];
-
-function hostMatches(hostname: string, suffix: string): boolean {
-  return hostname === suffix || hostname.endsWith(`.${suffix}`);
-}
-
-export function isMflHost(hostname: string): boolean {
-  return hostMatches(hostname.toLowerCase(), 'myfantasyleague.com');
-}
-
-export function isDemoRefusedHost(hostname: string): boolean {
-  const host = hostname.toLowerCase();
-  return DEMO_REFUSED_HOST_SUFFIXES.some((suffix) => hostMatches(host, suffix));
-}
+export {
+  DEMO_ENV_MAPPINGS,
+  DEMO_FORBIDDEN_ENV_PATTERNS,
+  isDemoRefusedHost,
+  isForbiddenDemoEnvName,
+  isMflHost,
+  scrubDemoEnvironment,
+} from './demo-isolation-core.mjs';
 
 /** Thrown by the demo fetch guard for a host the demo may never reach. */
 export class DemoOutboundRefusedError extends Error {
