@@ -15,7 +15,9 @@ const league = keeperLeague();
 if (!league) return Astro.rewrite('/_not-found');
 const feeds = {
   rosters: feedsByYear(import.meta.glob('../../../../data/keeper/mfl-feeds/*/rosters.json', { eager: true })),
-  players: feedsByYear(import.meta.glob('../../../../data/keeper/mfl-feeds/*/players.json', { eager: true })),
+  // Current era only: the builder shows the newest season, and a bare year glob
+  // bakes every season's players.json into the server chunk.
+  players: feedsByYear(import.meta.glob('../../../../data/keeper/mfl-feeds/20{2[5-9],[3-9][0-9]}/players.json', { eager: true })),
   adp: feedsByYear(import.meta.glob('../../../../data/keeper/mfl-feeds/*/adp-dynasty.json', { eager: true })),
   picks: feedsByYear(import.meta.glob('../../../../data/keeper/mfl-feeds/*/futureDraftPicks.json', { eager: true })),
   tradeBait: feedsByYear(import.meta.glob('../../../../data/keeper/mfl-feeds/*/tradeBait.json', { eager: true })),

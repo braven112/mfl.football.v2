@@ -29,7 +29,9 @@ export interface ClubRosterEntry {
 }
 
 function feedsRoot(league: CanonicalLeagueSlug): string {
+  // A demo-only slot (keeper) is absent from LEAGUES everywhere but a demo deployment.
   const entry = LEAGUES[league];
+  if (!entry) throw new Error(`nfl-club-rosters: league ${league} is not registered here`);
   return join(process.cwd(), entry.dataPath, 'mfl-feeds');
 }
 
