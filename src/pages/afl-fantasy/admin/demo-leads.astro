@@ -1,0 +1,11 @@
+---
+/**
+ * Custom-site demo leads live on TheLeague's admin page — leads belong to the
+ * owner, not to a league. This route exists so the lead push notification's
+ * league-relative url (`/admin/demo-leads`) resolves on either league's site
+ * (tests/push-notification-urls.test.ts); it forwards there.
+ */
+import { getLeagueBySlug, leagueUrl } from '../../../config/leagues';
+
+return Astro.redirect(leagueUrl(getLeagueBySlug('theleague')!, '/theleague/admin/demo-leads'), 302);
+---

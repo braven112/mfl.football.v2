@@ -69,3 +69,25 @@ export async function lookupDemoLink(token: unknown, now = Math.floor(Date.now()
   const link = (typeof raw === 'string' ? JSON.parse(raw) : raw) as DemoLink;
   return link.expiresAt > now ? link : null;
 }
+
+/** Push a link's expiry out by `days` from now (or from its current end, whichever is later). */
+export async function extendDemoLink(token: string, days: number, now = Math.floor(Date.now() / 1000)): Promise<DemoLink | null> {
+  if (!isWellFormedDemoToken(token)) return null;
+  const redis = await getRedis();
+  if (!redis) return null;
+  const raw = await redis.get(`${DEMO_TOKEN_PREFIX}${token}`);
+  if (!raw) return null;
+  const link = (typeof raw === 'string' ? JSON.parse(raw) : raw) as DemoLink;
+  link.expiresAt = Math.max(link.expiresAt, now) + Math.round(days * 86_400);
+  await redis.set(`${DEMO_TOKEN_PREFIX}${token}`, JSON.stringify(link), { ex: link.expiresAt - now });
+  return link;
+}
+
+/** End a link now. Its sessions stop working on their next request (middleware checks the link). */
+export async function revokeDemoLink(token: string): Promise<boolean> {
+  if (!isWellFormedDemoToken(token)) return false;
+  const redis = await getRedis();
+  if (!redis) return false;
+  await redis.del(`${DEMO_TOKEN_PREFIX}${token}`);
+  return true;
+}
