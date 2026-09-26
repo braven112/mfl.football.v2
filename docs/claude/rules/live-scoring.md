@@ -380,3 +380,17 @@ which is exactly why the split exists — verify parsing offline against
   read the RAW resolver result rather than a clamped week. (The pre-kickoff
   health check that first hit this was removed in Sep 2026 — it posted its
   failures to the league GroupMe.)
+- **A split bar takes its props in the caller's RENDER order, and its colour
+  from the matchup SIDE, never from its position.** `LvWinProbBar` once drew
+  side 1 on the left while both callers passed their LEFT team as side 0, so
+  every matchup detail put the left team's score over the right team's share
+  (hotfix #1213, Sep 2026). It also coloured by position, which is wrong the
+  moment `renderOrder` swaps the pair (MFL Live puts the viewer first when they
+  are matchup side 1): each team wore the other's colour. `--t0`/`--t1` belong
+  to `matchup.sides[0]`/`[1]` for good, so anything drawn after a reorder must
+  be TOLD which one it wears — `side0Tone={first}` on the bar, `var(--t${first})`
+  on the rows. The prop defaults to 0, so a caller that drops it still renders
+  a plausible bar; only the swapped case is wrong, and only for a viewer on
+  side 1. `tests/live-win-prob-caller-order.test.ts` renders both callers in all
+  four viewer/order cases against the header they sit under;
+  `tests/live-kit-leaves.test.ts` pins the bar on its own.
