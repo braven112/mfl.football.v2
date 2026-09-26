@@ -1,54 +1,15 @@
 /**
- * The phone roster card's position pills (docs/plans/rosters-mobile-layout.md,
- * Q8): the site position palette as tokens, defined in BOTH themes, every
- * ink clearing 4.5:1 on its own fill. The second half pins every other copy
- * of the palette (charts, draft room, Best Ball) to the same six hexes.
- *
- * 4.5 and not 3: the pill label is 0.6875rem / 700, well under the
- * 18.66px-bold threshold where large-text contrast would apply
- * (design-system.md, "--league-accent is LIGHT in dark mode").
- *
- * The design-token guard only proves a token is defined SOMEWHERE; a token
- * defined in one theme only renders its other-theme value from the wrong
- * palette, which is the failure this file can see and that one cannot.
+ * ONE site position palette (QB red, RB blue, WR green, TE purple, PK
+ * orange, DEF cyan). Four copies had drifted apart, so a QB was indigo on
+ * one page and red on the next; this pins every copy to the same hexes.
+ * (The phone roster card shows the position as plain text, so there are no
+ * pill tokens any more.)
  */
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
-import { AA_BODY_TEXT_RATIO, contrastRatio } from '../src/utils/team-color-contrast';
 
 const read = (rel: string) => fs.readFileSync(path.join(process.cwd(), rel), 'utf8');
-const LIGHT = read('src/styles/tokens.css');
-const DARK = read('src/styles/tokens-dark.css');
-const SHEET = read('src/styles/rosters-mobile.css');
-
-const POSITIONS = ['qb', 'rb', 'wr', 'te', 'pk', 'def', 'other'] as const;
-
-const tokenValue = (css: string, name: string): string | null => {
-  const m = css.match(new RegExp(`--${name}:\\s*(#[0-9a-fA-F]{6})\\s*;`));
-  return m ? m[1] : null;
-};
-
-describe.each([
-  ['light', LIGHT],
-  ['dark', DARK],
-])('position pill tokens — %s theme', (_theme, css) => {
-  it.each(POSITIONS)('--pos-%s-ink clears 4.5:1 on --pos-%s-bg', (pos) => {
-    const bg = tokenValue(css, `pos-${pos}-bg`);
-    const ink = tokenValue(css, `pos-${pos}-ink`);
-    expect(bg, `--pos-${pos}-bg must be a literal hex in this theme's token file`).not.toBeNull();
-    expect(ink, `--pos-${pos}-ink must be a literal hex in this theme's token file`).not.toBeNull();
-    expect(contrastRatio(ink!, bg!)).toBeGreaterThanOrEqual(AA_BODY_TEXT_RATIO);
-  });
-});
-
-describe('the phone stylesheet paints the pills from the tokens', () => {
-  it.each(POSITIONS)('reads --pos-%s-bg and --pos-%s-ink', (pos) => {
-    expect(SHEET).toContain(`var(--pos-${pos}-bg)`);
-    expect(SHEET).toContain(`var(--pos-${pos}-ink)`);
-  });
-});
-
 /**
  * ONE position palette. Four copies drifted apart (the roster charts, the
  * analytics donut, the draft room and Best Ball each had their own), so a QB

@@ -297,13 +297,12 @@ describe('the phone card layout (rosters-mobile.css)', () => {
     expect(rulesFor('#rosterTableBody .player-meta')).toMatch(/display:\s*contents/);
   });
 
-  it('puts the position pill under the headshot, centred on it', () => {
+  it('puts the position in line 2 after the NFL logo, not in a pill under the headshot', () => {
     const pos = rulesFor('#rosterTableBody .player-meta__pos');
-    expect(pos).toMatch(/position:\s*absolute/);
-    expect(pos).toMatch(/top:\s*calc\(0\.625rem \+ var\(--rr-avatar\)/);
-    expect(pos).toMatch(/left:\s*calc\(0\.625rem \+ var\(--rr-avatar\) \/ 2\)/);
-    // The card is tall enough for the avatar plus the pill.
-    expect(rulesFor('#rosterTableBody > tr.roster-row')).toMatch(/min-height:\s*calc\(var\(--rr-avatar\) \+ var\(--rr-pill\)/);
+    expect(pos).not.toMatch(/position:\s*absolute/);
+    expect(pos).toMatch(/order:\s*21/);
+    // The card only has to clear the avatar now.
+    expect(rulesFor('#rosterTableBody > tr.roster-row')).toMatch(/min-height:\s*calc\(var\(--rr-avatar\) \+ 1\.25rem\)/);
   });
 
   it('has no rule for a spelled-out injury word', () => {
@@ -402,22 +401,15 @@ describe('the Coach card is three lines', () => {
   });
 });
 
-describe('the pill centres itself, not its span', () => {
+describe('the position is plain text after the NFL logo', () => {
   const CSS = fs.readFileSync(path.join(process.cwd(), 'src/styles/rosters-mobile.css'), 'utf8');
-  const known = ":is(tr[data-pos='QB'], tr[data-pos='RB'], tr[data-pos='WR'], tr[data-pos='TE'], tr[data-pos='PK'], tr[data-pos='DEF']) .player-meta__pos";
-
-  it('makes the span a zero-width anchor, so its hidden label text cannot shift the pill', () => {
-    const i = CSS.indexOf(`${known} {`);
-    const rule = CSS.slice(i, CSS.indexOf('}', i));
-    expect(rule).toMatch(/width:\s*0;/);
-    expect(rule).toMatch(/color:\s*transparent;/);
+  it('sits in flow beside the logo, uncoloured, with no pill', () => {
+    expect(CSS).toMatch(/\.player-meta__logo,\s*\.roster-page\[data-league='theleague'\] #rosterTableBody \.player-meta__pos \{\s*order: 21;/);
+    expect(CSS).not.toMatch(/--pos-[a-z]+-(bg|ink)/);
+    expect(CSS).not.toMatch(/\.player-meta__pos[^{]*\{[^}]*position:\s*absolute/);
   });
-
-  it('centres the ::before pill on that anchor', () => {
-    const i = CSS.indexOf(`${known}::before {`);
-    const rule = CSS.slice(i, CSS.indexOf('}', i));
-    expect(rule).toMatch(/position:\s*absolute;/);
-    expect(rule).toMatch(/transform:\s*translateX\(-50%\);/);
+  it('clips the span to its label so hidden text cannot open a gap', () => {
+    expect(CSS).toMatch(/\.player-meta__pos \{[^}]*max-width:\s*2rem;[^}]*overflow:\s*hidden;/);
   });
 });
 

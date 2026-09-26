@@ -505,27 +505,11 @@
   --badge-info-bg: var(--color-info-light);
   --badge-info-text: var(--color-info-dark);
 
-  /* Position colours — the ONE site palette (QB red, RB blue, WR green,
-     TE purple, PK orange, DEF cyan). The chart hexes live in
-     POSITION_COLORS (src/utils/roster-analytics.ts); the draft room's
-     --dr-pos-* take the same values. Pills follow the site badge pattern:
-     a light tint of the hue with deep ink. Every ink clears 4.5:1 on its
-     fill in BOTH themes — a 0.6875rem/700 label is not large text.
-     tests/position-pill-tokens.test.ts measures them and pins the palette. */
-  --pos-qb-bg: #fee2e2;
-  --pos-qb-ink: #991b1b;
-  --pos-rb-bg: #dbeafe;
-  --pos-rb-ink: #1e40af;
-  --pos-wr-bg: #dcfce7;
-  --pos-wr-ink: #166534;
-  --pos-te-bg: #f3e8ff;
-  --pos-te-ink: #6b21a8;
-  --pos-pk-bg: #ffedd5;
-  --pos-pk-ink: #9a3412;
-  --pos-def-bg: #cffafe;
-  --pos-def-ink: #155e75;
-  --pos-other-bg: #e5e7eb;
-  --pos-other-ink: #1f2937;
+  /* Position colours — the ONE site palette: QB red #c41e3a, RB blue
+     #2563eb, WR green #16a34a, TE purple #9333ea, PK orange #ea580c, DEF
+     cyan #0891b2. Charts read POSITION_COLORS (roster-constants.ts /
+     roster-analytics.ts); the draft room's --dr-pos-* take the same values.
+     tests/position-pill-tokens.test.ts pins every copy. */
 
   /* Legacy status colors */
   --error-color: var(--color-error);

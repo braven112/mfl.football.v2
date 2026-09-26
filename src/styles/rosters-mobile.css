@@ -101,23 +101,20 @@
   /* ── The card ─────────────────────────────────────────────────────────── */
   .roster-page[data-league='theleague'] #rosterTableBody > tr.roster-row {
     --rr-avatar: 40px;
-    /* The pill's height under the avatar: 11px label + 2 x 3px padding. */
-    --rr-pill: 19px;
     position: relative;
     display: flex !important;
     flex-wrap: wrap;
     align-items: center;
-    /* The left column (avatar + pill) can be taller than two text lines;
-       the lines sit centred against it rather than stretching apart. */
+    /* The avatar can be taller than two text lines; the lines sit centred
+       against it rather than stretching apart. */
     align-content: center;
     column-gap: 0.375rem;
     row-gap: 0.25rem;
-    /* The left column is the avatar with the position pill tucked under it
-       (4px of overlap), so a two-line card must still clear the pill.
-       border-box, so the figure is the card's whole height: a table row is
-       content-box, which silently added the padding a second time. */
+    /* The card must clear the avatar. border-box, so the figure is the
+       card's whole height: a table row is content-box, which silently added
+       the padding a second time. */
     box-sizing: border-box;
-    min-height: calc(var(--rr-avatar) + var(--rr-pill) - 4px + 1.25rem);
+    min-height: calc(var(--rr-avatar) + 1.25rem);
     padding: 0.625rem 0.75rem 0.625rem calc(var(--rr-avatar) + 1.25rem);
     border-left-width: 3px;
     border-left-style: solid;
@@ -256,115 +253,54 @@
   }
 
   /* PlayerCell's meta row dissolves too: its NFL logo stays where it is in
-     PlayerCell — first on line 2, where the position used to sit — and its
-     position becomes the pill under the headshot. The logo's own markup and
-     size are PlayerCell's, untouched. */
+     PlayerCell, first on line 2, with the position right after it in plain
+     text, the way the Free Agents phone rows show it. The logo's own markup
+     and size are PlayerCell's, untouched. */
   .roster-page[data-league='theleague'] #rosterTableBody .player-meta {
     display: contents;
   }
 
-  .roster-page[data-league='theleague'] #rosterTableBody .player-meta__logo {
+  .roster-page[data-league='theleague'] #rosterTableBody .player-meta__logo,
+  .roster-page[data-league='theleague'] #rosterTableBody .player-meta__pos {
     order: 21;
   }
 
-  /* The position pill, under the headshot and centred on it: PlayerCell's
-     own "QB · RC" span, restyled. The designation moves to its own chip on
-     line 2; the original text stays in the accessibility tree (font-size 0
-     hides glyphs, not text), so the pill's generated label is marked
-     alt-empty to avoid reading it twice. */
   .roster-page[data-league='theleague'] #rosterTableBody .player-meta__pos {
-    position: absolute;
-    top: calc(0.625rem + var(--rr-avatar) - 4px);
-    left: calc(0.625rem + var(--rr-avatar) / 2);
-    transform: translateX(-50%);
-    z-index: 1;
+    font-size: 0.75rem;
+    font-weight: 600;
     white-space: nowrap;
-    font-size: 0.625rem;
-    line-height: 1;
+    color: var(--color-gray-600, #4b5563);
   }
 
-  .roster-page[data-league='theleague'] #rosterTableBody > tr.roster-row--tier-divider .player-meta__pos,
-  .roster-page[data-league='theleague'] #rosterTableBody > tr.roster-row--active:first-child .player-meta__pos {
-    top: calc(0.625rem + 1.75rem + var(--rr-avatar) - 4px);
-  }
-
-  /* The span is a zero-width anchor at the avatar's centre and the pill (its
-     ::before) centres on it by itself. Centring the SPAN put the pill 8px
-     left: the span also holds the hidden "QB · RC" text, and a browser with
-     a minimum font size (Android) widens that text past font-size 0, so the
-     offset grew per device. The text is transparent, not removed, so it
-     stays in the accessibility tree. */
+  /* The span reads "QB - RC"; the designation already has its own chip on
+     line 2, so a known position prints just its label (generated content,
+     alt-empty: the span's text stays in the accessibility tree). The span is
+     clipped to that label's width, so hidden text a browser's minimum font
+     size (Android) refuses to shrink to 0 cannot open a gap after it. */
   .roster-page[data-league='theleague'] #rosterTableBody :is(tr[data-pos='QB'], tr[data-pos='RB'], tr[data-pos='WR'], tr[data-pos='TE'], tr[data-pos='PK'], tr[data-pos='DEF']) .player-meta__pos {
-    width: 0;
-    transform: none;
+    display: inline-block;
+    max-width: 2rem;
+    overflow: hidden;
     font-size: 0;
-    letter-spacing: 0;
     color: transparent;
-    pointer-events: none;
+    vertical-align: middle;
   }
 
   .roster-page[data-league='theleague'] #rosterTableBody :is(tr[data-pos='QB'], tr[data-pos='RB'], tr[data-pos='WR'], tr[data-pos='TE'], tr[data-pos='PK'], tr[data-pos='DEF']) .player-meta__pos::before {
-    position: absolute;
-    top: 0;
-    left: 0;
-    transform: translateX(-50%);
-    display: inline-block;
-    min-width: 2.25em;
-    padding: 0.1875rem 0.375rem;
-    border-radius: 0.375rem;
-    font-size: 0.6875rem;
-    font-weight: 700;
-    line-height: 1.2;
-    letter-spacing: 0.03em;
-    text-align: center;
-    color: var(--pos-other-ink);
-    background: var(--pos-other-bg);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--color-gray-600, #4b5563);
   }
 
-  .roster-page[data-league='theleague'] #rosterTableBody tr[data-pos='QB'] .player-meta__pos::before {
-    content: 'QB';
-    content: 'QB' / '';
-    color: var(--pos-qb-ink);
-    background: var(--pos-qb-bg);
-  }
+  .roster-page[data-league='theleague'] #rosterTableBody tr[data-pos='QB'] .player-meta__pos::before { content: 'QB'; content: 'QB' / ''; }
+  .roster-page[data-league='theleague'] #rosterTableBody tr[data-pos='RB'] .player-meta__pos::before { content: 'RB'; content: 'RB' / ''; }
+  .roster-page[data-league='theleague'] #rosterTableBody tr[data-pos='WR'] .player-meta__pos::before { content: 'WR'; content: 'WR' / ''; }
+  .roster-page[data-league='theleague'] #rosterTableBody tr[data-pos='TE'] .player-meta__pos::before { content: 'TE'; content: 'TE' / ''; }
+  .roster-page[data-league='theleague'] #rosterTableBody tr[data-pos='PK'] .player-meta__pos::before { content: 'PK'; content: 'PK' / ''; }
+  .roster-page[data-league='theleague'] #rosterTableBody tr[data-pos='DEF'] .player-meta__pos::before { content: 'DEF'; content: 'DEF' / ''; }
 
-  .roster-page[data-league='theleague'] #rosterTableBody tr[data-pos='RB'] .player-meta__pos::before {
-    content: 'RB';
-    content: 'RB' / '';
-    color: var(--pos-rb-ink);
-    background: var(--pos-rb-bg);
-  }
-
-  .roster-page[data-league='theleague'] #rosterTableBody tr[data-pos='WR'] .player-meta__pos::before {
-    content: 'WR';
-    content: 'WR' / '';
-    color: var(--pos-wr-ink);
-    background: var(--pos-wr-bg);
-  }
-
-  .roster-page[data-league='theleague'] #rosterTableBody tr[data-pos='TE'] .player-meta__pos::before {
-    content: 'TE';
-    content: 'TE' / '';
-    color: var(--pos-te-ink);
-    background: var(--pos-te-bg);
-  }
-
-  .roster-page[data-league='theleague'] #rosterTableBody tr[data-pos='PK'] .player-meta__pos::before {
-    content: 'PK';
-    content: 'PK' / '';
-    color: var(--pos-pk-ink);
-    background: var(--pos-pk-bg);
-  }
-
-  .roster-page[data-league='theleague'] #rosterTableBody tr[data-pos='DEF'] .player-meta__pos::before {
-    content: 'DEF';
-    content: 'DEF' / '';
-    color: var(--pos-def-ink);
-    background: var(--pos-def-bg);
-  }
-
-  /* A position the pill has no colour for (no data-pos match) keeps its
-     plain "XX · RC" text. */
+  /* A position with no data-pos match keeps its plain "XX - RC" text. */
 
   /* The generated line-2 values (phone-row.ts). */
   .roster-page[data-league='theleague'] #rosterTableBody .rr-ph {
