@@ -1884,36 +1884,18 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
           {/* Below the mode toggle, not above it: .mode-toggle has a negative
               top margin so it can ride up beside the team card, which means it
               covers anything stacked above it in this column. */}
-          <MyRankEditor league="theleague" />
+          {/* On a phone the trigger is an icon (sliders) at the end of the
+              GM | Coach row, so its name says what it opens. */}
+          <MyRankEditor league="theleague" accessibleName="My Rank sources" />
 
-          {/* Phone only. The sort headers are hidden below 768px, so every
-              `data-sort-key` in the thead is an option here, and it drives the
-              same sort the header click does. tests/rosters-phone-row.test.ts
-              fails if a header key has no option. */}
-          <div class="rr-sort" data-rr-sort>
-            <label class="rr-sort__label" for="rrSortSelect">Sort</label>
-            <select class="rr-sort__select" id="rrSortSelect" data-rr-sort-select>
-              <option value="position">Position (default)</option>
-              <optgroup label="Contract" data-rr-sort-mode="gm">
-                <option value="topRanking">My Rank</option>
-                <option value="contractYears">Years left</option>
-                {SALARY_YEARS.map((year, index) => (
-                  <option value={`salary_${index}`}>{year} salary</option>
-                ))}
-              </optgroup>
-              <optgroup label="Matchup" data-rr-sort-mode="coach">
-                <option value="projectedPoints">Projected</option>
-                <option value="oppRank">Opponent rank</option>
-                <option value="spreadAmount">Spread</option>
-                <option value="overUnder">O/U</option>
-                <option value="temperature">Weather</option>
-                <option value="avgRecent">Last 3 avg</option>
-                <option value="totalSeason">{statsSeasonYear} points</option>
-                <option value="avgSeason">Season avg</option>
-                <option value="oppAvg">Opp avg allowed</option>
-              </optgroup>
-            </select>
-            <button type="button" class="rr-sort__dir" data-rr-sort-dir aria-label="Sort ascending" disabled>↑</button>
+          {/* Phone only (idea B, user 2026-09-26): one scrolling row of sort
+              chips for the mode on screen. Empty here — the page script builds
+              the chips from the thead's own `data-sort-key` headers
+              (buildSortChips, src/utils/rosters/phone-sort.ts), so a sortable
+              column always has a chip, and they drive the same sort state and
+              applySort() as a header click. */}
+          <div class="rr-chips" data-rr-sort>
+            <div class="rr-chips__row" role="group" aria-label="Sort the roster by" data-rr-chips></div>
           </div>
         </div>
       <div class="roster-table-wrapper">
@@ -4638,6 +4620,15 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
   // line data, shared with the SSR loop above, and the sim surfaces.
   import { buildPhoneLineSpans, phonePosKey } from '../../utils/rosters/phone-row';
   import {
+    buildSortChips,
+    headerMode,
+    keepValidSort,
+    nextSort,
+    renderSortChips,
+    type RosterViewMode,
+    type SortHeader,
+  } from '../../utils/rosters/phone-sort';
+  import {
     applySimActionsToRows,
     addSimDeadMoney,
     buildCapByYear,
@@ -5432,7 +5423,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
 
       // Handle trend weeks visibility separately
       updateTrendWeeksVisibility(mode);
-      syncPhoneSortModeGroups(mode);
+      syncPhoneSortChipsForMode(mode);
 
       // Save preference
       localStorage.setItem('rosterViewMode', mode);
@@ -5603,26 +5594,66 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       syncPhoneSortControl(activeKey, direction);
     };
 
-    /* The phone Sort <select> (rosters-mobile.css hides the header row below
-       768px). It mirrors whatever the headers last did, and drives the same
-       applySort() a header click does, so the two can never disagree. */
+    /* The phone sort chips (rosters-mobile.css hides the header row below
+       768px). They are rebuilt from the thead on every sort and mode change,
+       mirror whatever the headers last did, and a tap runs the same
+       nextSort() + applySort() a header click does, so the two can never
+       disagree. */
+    const phoneChipsRow = () =>
+      document.querySelector<HTMLElement>('.roster-page[data-league="theleague"] [data-rr-chips]');
+
+    /** Every sortable header, with the mode setMode() gives its column. */
+    function readSortHeaders(): SortHeader[] {
+      return Array.from(
+        document.querySelectorAll<HTMLElement>('.roster-page[data-league="theleague"] .roster-table thead th[data-sort-key]'),
+      ).map((th) => ({
+        key: th.dataset.sortKey ?? '',
+        mode: headerMode(th.classList),
+        text: (th.textContent ?? '').trim(),
+        // The rankings script hides My Rank outright when the owner has no
+        // board (rankBoard "0"); a chip that sorts by an empty column is noise.
+        available: th.dataset.rankBoard !== '0',
+      })).filter((h) => h.key);
+    }
+
+    function phoneSortMode(): RosterViewMode {
+      return document.querySelector('.roster-page[data-league="theleague"]')?.classList.contains('coach-mode') ? 'coach' : 'gm';
+    }
+
     function syncPhoneSortControl(activeKey: string, direction: string) {
-      const select = document.querySelector<HTMLSelectElement>('.roster-page[data-league="theleague"] [data-rr-sort-select]');
-      const dirBtn = document.querySelector<HTMLButtonElement>('.roster-page[data-league="theleague"] [data-rr-sort-dir]');
-      if (select && Array.from(select.options).some((o) => o.value === activeKey)) select.value = activeKey;
-      if (dirBtn) {
-        const isDefault = activeKey === 'position';
-        dirBtn.disabled = isDefault;
-        dirBtn.textContent = direction === 'desc' ? '↓' : '↑';
-        dirBtn.setAttribute('aria-label', direction === 'desc' ? 'Sorted descending. Sort ascending' : 'Sorted ascending. Sort descending');
+      const row = phoneChipsRow();
+      if (!row) return;
+      const hadFocus = row.contains(document.activeElement) ? (document.activeElement as HTMLElement).dataset.rrChip : null;
+      const chips = buildSortChips(readSortHeaders(), phoneSortMode());
+      row.innerHTML = renderSortChips(chips, { key: activeKey, dir: direction === 'desc' ? 'desc' : 'asc' });
+      // innerHTML replaced the chip a keyboard user pressed — put focus back.
+      if (hadFocus) row.querySelector<HTMLElement>(`[data-rr-chip="${CSS.escape(hadFocus)}"]`)?.focus();
+      // Keep the active chip in view inside the row, without scrolling the page.
+      const on = row.querySelector<HTMLElement>('.rr-chip--on');
+      if (on && row.clientWidth) {
+        const start = on.offsetLeft - row.offsetLeft;
+        if (start < row.scrollLeft || start + on.offsetWidth > row.scrollLeft + row.clientWidth) {
+          row.scrollLeft = Math.max(0, start - 12);
+        }
       }
     }
 
-    /** Offer the sorts that belong to the mode on screen; the others disable. */
-    function syncPhoneSortModeGroups(mode: string) {
-      document
-        .querySelectorAll<HTMLOptGroupElement>('.roster-page[data-league="theleague"] [data-rr-sort-mode]')
-        .forEach((group) => { group.disabled = group.dataset.rrSortMode !== mode; });
+    /**
+     * A mode switch swaps the chip set. On a phone a sort by the other mode's
+     * column cannot be seen or re-tapped, so it falls back to the default;
+     * desktop keeps today's behaviour (its headers are all still reachable
+     * after a switch back).
+     */
+    function syncPhoneSortChipsForMode(mode: string) {
+      const chips = buildSortChips(readSortHeaders(), mode === 'coach' ? 'coach' : 'gm');
+      const onPhone = window.matchMedia('(max-width: 767px)').matches;
+      const kept = keepValidSort({ key: currentSortKey, dir: currentSortDir === 'desc' ? 'desc' : 'asc' }, chips);
+      if (onPhone && kept.key !== currentSortKey) {
+        resetSort();
+        applySort();
+        return;
+      }
+      syncPhoneSortControl(currentSortKey, currentSortDir);
     }
 
     const reapplyModeVisibility = () => {
@@ -5663,53 +5694,55 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
         const sortKey = th.dataset.sortKey;
         if (!sortKey) return;
 
-        if (sortKey === 'position') {
-          // Player column always resets to default
-          resetSort();
-          applySort();
-          return;
-        }
-
-        if (currentSortKey === sortKey) {
-          // Toggle: desc <-> asc
-          currentSortDir = currentSortDir === 'desc' ? 'asc' : 'desc';
-        } else {
-          currentSortKey = sortKey;
-          // Rank defaults to ascending (1 = best at top), everything else descending
-          currentSortDir = sortKey === 'topRanking' ? 'asc' : 'desc';
-        }
-
-        updateSortIndicators(currentSortKey, currentSortDir);
-        applySort();
+        sortByKey(sortKey);
       });
     });
 
-    // The phone Sort control: the same state and the same applySort() as the
-    // header clicks above. Assigned, not added — initRosterPage runs twice on
-    // the first load, and the elements are replaced on every ClientRouter swap.
-    const phoneSortSelect = document.querySelector<HTMLSelectElement>('.roster-page[data-league="theleague"] [data-rr-sort-select]');
-    const phoneSortDir = document.querySelector<HTMLButtonElement>('.roster-page[data-league="theleague"] [data-rr-sort-dir]');
-    if (phoneSortSelect) {
-      phoneSortSelect.onchange = () => {
-        const sortKey = phoneSortSelect.value;
-        if (sortKey === 'position') {
-          resetSort();
-        } else {
-          currentSortKey = sortKey;
-          // Same defaults as a first header click: rank ascending, the rest descending.
-          currentSortDir = sortKey === 'topRanking' ? 'asc' : 'desc';
-          updateSortIndicators(currentSortKey, currentSortDir);
-        }
-        applySort();
-      };
-    }
-    if (phoneSortDir) {
-      phoneSortDir.onclick = () => {
-        if (currentSortKey === 'position') return;
-        currentSortDir = currentSortDir === 'desc' ? 'asc' : 'desc';
+    /**
+     * One tap on a sort key, from a header or a phone chip: nextSort() is the
+     * rule (the Player column resets; the active key flips; rank starts
+     * ascending, the rest descending).
+     */
+    function sortByKey(sortKey: string) {
+      const next = nextSort(sortKey, { key: currentSortKey, dir: currentSortDir === 'desc' ? 'desc' : 'asc' });
+      if (next.key === 'position') {
+        resetSort();
+      } else {
+        currentSortKey = next.key;
+        currentSortDir = next.dir;
         updateSortIndicators(currentSortKey, currentSortDir);
-        applySort();
+      }
+      applySort();
+    }
+
+    // The phone sort chips. A chip tap IS a header click: it clicks the
+    // (hidden) header with its key, so every listener a desktop click runs,
+    // runs — initRosterPage runs twice on the first load, and each instance
+    // keeps its own sort state, so driving one instance's state directly
+    // would leave the other stale. Assigned, not added: the element is
+    // replaced on every ClientRouter swap.
+    const phoneChips = phoneChipsRow();
+    if (phoneChips) {
+      phoneChips.onclick = (e) => {
+        const chip = (e.target as HTMLElement | null)?.closest<HTMLElement>('[data-rr-chip]');
+        const key = chip?.dataset.rrChip;
+        if (!chip || !key) return;
+        chip.focus();
+        document
+          .querySelector<HTMLElement>(`.roster-page[data-league="theleague"] .roster-table thead th[data-sortable][data-sort-key="${CSS.escape(key)}"]`)
+          ?.click();
       };
+      // The rankings script says when My Rank gains or loses its board. The
+      // thead is the one copy of the sort state every instance shares, so the
+      // rebuild reads it from there rather than from this closure.
+      if (!phoneChips.dataset.rrBound) {
+        phoneChips.dataset.rrBound = '1';
+        phoneChips.addEventListener('rr:sort-headers-changed', () => {
+          const th = document.querySelector<HTMLElement>('.roster-page[data-league="theleague"] .roster-table thead th.sort-active');
+          syncPhoneSortControl(th?.dataset.sortKey ?? 'position', th?.classList.contains('sort-desc') ? 'desc' : 'asc');
+        });
+      }
+      syncPhoneSortControl(currentSortKey, currentSortDir);
     }
 
     const _capSpaceFmt = new Intl.NumberFormat('en-US', {
@@ -10461,6 +10494,12 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       // The sort comparator reads the lookup off window (it lives in the page's
       // own big inline script, which can't import).
       (window as any).__rosterRankingLookup = lookup;
+      // The phone sort chips offer My Rank only while there is a board.
+      const rankHeader = document.getElementById('rankColHeader');
+      if (rankHeader) rankHeader.dataset.rankBoard = hasColumn ? '1' : '0';
+      document
+        .querySelector('.roster-page[data-league="theleague"] [data-rr-chips]')
+        ?.dispatchEvent(new CustomEvent('rr:sort-headers-changed'));
       // Rank is a GM-mode column — never let it reappear in Coach mode.
       if (!hasColumn) return;
       const mode = localStorage.getItem('rosterViewMode') || 'gm';

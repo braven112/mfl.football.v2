@@ -4,9 +4,11 @@
  * text, so the desktop parity harness (which fingerprints `td.textContent`)
  * cannot see it.
  *
- * Plus the one piece of the card that lives in the page markup: every sort
- * header the phone hides must still be reachable from the Sort <select>
- * (docs/plans/rosters-mobile-layout.md § 2, "Controls above the rows").
+ * Plus the controls above the rows (idea B, user 2026-09-26): every sort
+ * header the phone hides is reachable from a chip of its OWN mode, the chip set
+ * is derived from the thead rather than kept by hand, and the chip row never
+ * widens the page (docs/plans/rosters-mobile-layout.md § 2, "Controls above
+ * the rows").
  */
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
@@ -18,6 +20,14 @@ import {
   formatKickoffCompact,
   phonePosKey,
 } from '../src/utils/rosters/phone-row';
+import {
+  buildSortChips,
+  headerMode,
+  keepValidSort,
+  nextSort,
+  renderSortChips,
+  type SortHeader,
+} from '../src/utils/rosters/phone-sort';
 
 describe('phonePosKey', () => {
   it('maps every roster position to its pill colour key', () => {
@@ -135,17 +145,130 @@ describe('the rosters page wires the card into BOTH row builders', () => {
     expect(PAGE).toMatch(/initPlayerModalTrigger\(rosterTbody, \{[^}]*?rowTapMedia: '\(max-width: 767px\)'/);
   });
 
-  it('offers every sort header in the phone Sort select', () => {
-    const thead = PAGE.slice(PAGE.indexOf('<thead>'), PAGE.indexOf('</thead>'));
-    const select = PAGE.slice(PAGE.indexOf('data-rr-sort-select'), PAGE.indexOf('</select>'));
-    const headerKeys = [...thead.matchAll(/data-sort-key="([^"]+)"/g)].map((m) => m[1]);
-    expect(headerKeys.length).toBeGreaterThan(8);
-    for (const key of headerKeys) {
-      expect(select, `sort key "${key}" has no option in the phone Sort select`).toContain(`value="${key}"`);
+});
+
+/**
+ * The thead, read the way the page script reads it: every `th` with a
+ * `data-sort-key`, its mode from the classes setMode() toggles, its text. The
+ * salary columns are one templated `th` over SALARY_YEARS, expanded here.
+ */
+function theadSortHeaders(page: string): SortHeader[] {
+  const thead = page.slice(page.indexOf('<thead>'), page.indexOf('</thead>'));
+  const out: SortHeader[] = [];
+  for (const m of thead.matchAll(/<th\b([^>]*)>([\s\S]*?)<\/th>/g)) {
+    const attrs = m[1];
+    const cls = /class="([^"]*)"/.exec(attrs)?.[1] ?? '';
+    const classList = { contains: (c: string) => cls.split(/\s+/).includes(c) };
+    const text = m[2].replace(/<[^>]+>/g, '').replace(/\{[^}]*\}/g, '').trim();
+    const literal = /data-sort-key="([^"]+)"/.exec(attrs)?.[1];
+    if (literal) out.push({ key: literal, mode: headerMode(classList), text });
+    if (attrs.includes('data-sort-key={`salary_${index}`}')) {
+      for (let i = 0; i < 5; i++) out.push({ key: `salary_${i}`, mode: headerMode(classList), text: String(2026 + i) });
     }
-    // The salary years are generated in both places from SALARY_YEARS.
-    expect(thead).toContain('data-sort-key={`salary_${index}`}');
-    expect(select).toContain('value={`salary_${index}`}');
+  }
+  return out;
+}
+
+describe('the phone sort chips (idea B)', () => {
+  const PAGE = fs.readFileSync(path.join(process.cwd(), 'src/pages/theleague/rosters.astro'), 'utf8');
+  const CSS = fs.readFileSync(path.join(process.cwd(), 'src/styles/rosters-mobile.css'), 'utf8');
+  const headers = theadSortHeaders(PAGE);
+  const gm = buildSortChips(headers, 'gm').map((c) => c.key);
+  const coach = buildSortChips(headers, 'coach').map((c) => c.key);
+
+  it('reads a real thead', () => {
+    expect(headers.length).toBeGreaterThan(12);
+    expect(headers.find((h) => h.key === 'salary_0')?.mode).toBe('gm');
+    expect(headers.find((h) => h.key === 'projectedPoints')?.mode).toBe('coach');
+    expect(headers.find((h) => h.key === 'position')?.mode).toBe('both');
+  });
+
+  it('every sortable header has a chip in its own mode, and only there', () => {
+    for (const h of headers) {
+      if (h.mode !== 'coach') expect(gm, `${h.key} missing from the GM chips`).toContain(h.key);
+      if (h.mode !== 'gm') expect(coach, `${h.key} missing from the Coach chips`).toContain(h.key);
+      if (h.mode === 'gm') expect(coach).not.toContain(h.key);
+      if (h.mode === 'coach') expect(gm).not.toContain(h.key);
+    }
+  });
+
+  it('leads with the mockup’s order: GM Pos · Salary · Years · My Rank; Coach Proj · Opp rank · Avg … Pos', () => {
+    expect(gm.slice(0, 4)).toEqual(['position', 'salary_0', 'contractYears', 'topRanking']);
+    expect(coach.slice(0, 3)).toEqual(['projectedPoints', 'oppRank', 'avgSeason']);
+    expect(coach[coach.length - 1]).toBe('position');
+    const labels = buildSortChips(headers, 'gm').map((c) => c.label);
+    expect(labels.slice(0, 4)).toEqual(['Pos', 'Salary', 'Years', 'My Rank']);
+    expect(labels).toContain('2027 salary');
+  });
+
+  it('drops My Rank while the owner has no board', () => {
+    const noBoard = headers.map((h) => (h.key === 'topRanking' ? { ...h, available: false } : h));
+    expect(buildSortChips(noBoard, 'gm').map((c) => c.key)).not.toContain('topRanking');
+  });
+
+  it('a header added to the thead gets a chip with no other change', () => {
+    const more = [...headers, { key: 'byeWeek', mode: 'coach' as const, text: 'Bye' }];
+    expect(buildSortChips(more, 'coach')).toContainEqual({ key: 'byeWeek', label: 'Bye' });
+  });
+
+  it('the page derives the chips from the thead — no hand-kept list, no <select>', () => {
+    expect(PAGE).toContain("thead th[data-sort-key]");
+    expect(PAGE).toContain('buildSortChips(readSortHeaders(), phoneSortMode())');
+    expect(PAGE).not.toContain('data-rr-sort-select');
+    expect(PAGE).not.toContain('data-rr-sort-dir');
+    // The markup ships an empty group; only the renderer writes chips.
+    expect(PAGE).toMatch(/<div class="rr-chips" data-rr-sort>\s*<div class="rr-chips__row" role="group" aria-label="Sort the roster by" data-rr-chips><\/div>/);
+  });
+
+  it('a chip tap IS a header click, and the header uses the shared nextSort rule', () => {
+    expect(PAGE).toMatch(/th\[data-sortable\]\[data-sort-key="\$\{CSS\.escape\(key\)\}"\]`\)\s*\?\.click\(\)/);
+    expect(PAGE).toContain('const next = nextSort(sortKey,');
+    // A mode switch swaps the set.
+    expect(PAGE).toMatch(/setMode\(mode\) \{[\s\S]*?syncPhoneSortChipsForMode\(mode\);/);
+  });
+
+  it('nextSort: Pos resets, the active key flips, My Rank starts ascending', () => {
+    expect(nextSort('position', { key: 'salary_0', dir: 'desc' })).toEqual({ key: 'position', dir: 'asc' });
+    expect(nextSort('salary_0', { key: 'position', dir: 'asc' })).toEqual({ key: 'salary_0', dir: 'desc' });
+    expect(nextSort('salary_0', { key: 'salary_0', dir: 'desc' })).toEqual({ key: 'salary_0', dir: 'asc' });
+    expect(nextSort('topRanking', { key: 'position', dir: 'asc' })).toEqual({ key: 'topRanking', dir: 'asc' });
+  });
+
+  it('a mode switch keeps a sort only if its chip is still offered', () => {
+    const coachChips = buildSortChips(headers, 'coach');
+    expect(keepValidSort({ key: 'salary_0', dir: 'desc' }, coachChips)).toEqual({ key: 'position', dir: 'asc' });
+    expect(keepValidSort({ key: 'projectedPoints', dir: 'asc' }, coachChips)).toEqual({ key: 'projectedPoints', dir: 'asc' });
+  });
+
+  it('chips are toggle buttons; the active one shows and SAYS its direction', () => {
+    const html = renderSortChips(buildSortChips(headers, 'gm'), { key: 'salary_0', dir: 'desc' });
+    expect(html).toContain('data-rr-chip="salary_0" aria-pressed="true"><span class="rr-chip__label">Salary</span><span class="rr-chip__dir" aria-hidden="true">↓</span><span class="rr-chip__sr">, sorted descending</span>');
+    expect(html).toContain('data-rr-chip="position" aria-pressed="false"');
+    // The default sort has no direction to flip.
+    expect(renderSortChips([{ key: 'position', label: 'Pos' }], { key: 'position', dir: 'asc' })).not.toContain('rr-chip__dir');
+    expect(renderSortChips([{ key: 'x"><b>', label: '<i>' }], { key: 'position', dir: 'asc' })).not.toMatch(/<b>|<i>/);
+  });
+
+  it('the chip row scrolls within itself and cannot widen the page', () => {
+    const rule = (sel: string) => {
+      const at = CSS.indexOf(`${sel} {`);
+      expect(at, `${sel} has no rule`).toBeGreaterThan(-1);
+      return CSS.slice(at, CSS.indexOf('}', at));
+    };
+    expect(rule('.rr-chips__row')).toMatch(/overflow-x:\s*auto;/);
+    expect(rule(".roster-page[data-league='theleague'] .rr-chips")).toMatch(/min-width:\s*0;/);
+    expect(rule(".roster-page[data-league='theleague'] .rr-chips")).toMatch(/flex:\s*1 1 100%;/);
+    expect(rule('.rr-chip')).toMatch(/flex:\s*0 0 auto;/);
+    expect(rule('.rr-chip')).toMatch(/min-height:\s*44px;/);
+    // Hidden on desktop: the headers are the control there.
+    expect(CSS).toMatch(/^\.rsim-bar,\s*\.rr-chips,\s*\.rr-ph \{\s*display: none;/m);
+  });
+
+  it('My Rank is an icon on a phone, named for what it opens', () => {
+    expect(PAGE).toContain('<MyRankEditor league="theleague" accessibleName="My Rank sources" />');
+    const editor = fs.readFileSync(path.join(process.cwd(), 'src/components/shared/rankings/MyRankEditor.astro'), 'utf8');
+    expect(editor).toContain('aria-label={accessibleName}');
+    expect(editor).toContain('<span class="mre-trigger__label">{label}</span>');
   });
 });
 

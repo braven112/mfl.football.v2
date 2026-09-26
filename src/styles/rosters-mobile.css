@@ -47,7 +47,7 @@
 /* ── Phone-only pieces, hidden on desktop ─────────────────────────────── */
 .rcap,
 .rsim-bar,
-.rr-sort,
+.rr-chips,
 .rr-ph {
   display: none;
 }
@@ -668,53 +668,130 @@
     display: none !important;
   }
 
-  /* ── Sort control (every hidden sort header, in one select) ────────── */
-  .roster-page[data-league='theleague'] .rr-sort {
-    order: 4;
-    display: flex;
+  /* ── Controls above the rows (idea B, user 2026-09-26) ─────────────── */
+  /* Row 1: GM | Coach on the left, My Rank as an icon on the right.
+     Row 2: one horizontally scrolling row of THIS mode's sort chips. The
+     page's own rules make .roster-controls a padded row above 640px and a
+     stretched column below it; on a phone it is one wrapping row either way. */
+  .roster-page[data-league='theleague'] .roster-controls {
+    flex-direction: row;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 0.5rem;
-    width: 100%;
-  }
-
-  .rr-sort__label {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--content-text-muted, #64748b);
-  }
-
-  .rr-sort__select {
-    flex: 1 1 auto;
+    justify-content: flex-start;
+    gap: 0.625rem 0.5rem;
+    padding: 0;
     min-width: 0;
-    min-height: 44px;
-    padding: 0 0.625rem;
-    font: inherit;
-    font-size: 0.875rem;
-    color: var(--input-text, #111827);
-    background: var(--input-bg, #ffffff);
-    border: 1px solid var(--input-border, #d1d5db);
+  }
+
+  /* A segmented control, not the desktop's tab hanging off the card's top. */
+  .roster-page[data-league='theleague'] .mode-toggle {
+    order: 1;
+    margin: 0;
+    padding: 3px;
     border-radius: var(--radius-md, 0.5rem);
   }
 
-  .rr-sort__dir {
-    flex: none;
+  .roster-page[data-league='theleague'] .mode-btn {
+    min-height: 44px;
+    padding: 0 0.875rem;
+  }
+
+  html.dark .roster-page[data-league='theleague'] .mode-btn.active {
+    border-radius: calc(var(--radius-md, 0.5rem) - 2px);
+  }
+
+  .roster-page[data-league='theleague'] .roster-controls .mre-trigger-wrap {
+    order: 2;
+    margin: 0 0 0 auto;
+  }
+
+  /* The label stays in the tree (the name is "My Rank sources"); only the
+     sliders icon shows. `:not([hidden])` — the trigger is hidden until the
+     owner has a board, and a display here would outrank the attribute. */
+  .roster-page[data-league='theleague'] .mre-trigger:not([hidden]) {
     width: 44px;
     height: 44px;
+    padding: 0;
+    justify-content: center;
+    border-radius: var(--radius-md, 0.5rem);
+  }
+
+  .roster-page[data-league='theleague'] .mre-trigger .mre-trigger__icon {
+    width: 18px;
+    height: 18px;
+  }
+
+  .roster-page[data-league='theleague'] .mre-trigger__label,
+  .roster-page[data-league='theleague'] .rr-chip__sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .roster-page[data-league='theleague'] .rr-chips {
+    display: block;
+    order: 3;
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  /* Scrolls within itself — `min-width: 0` up the chain and `overflow-x`
+     here are what keep a long chip set from widening the page. The 3px
+     padding keeps the focus ring inside the scroll box, which clips. */
+  .rr-chips__row {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    padding: 3px;
+    margin: -3px;
+  }
+
+  .rr-chips__row::-webkit-scrollbar {
+    display: none;
+  }
+
+  .rr-chip {
+    flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
-    justify-content: center;
+    gap: 0.25rem;
+    min-height: 44px;
+    padding: 0 0.875rem;
     font: inherit;
-    font-size: 1.125rem;
-    color: var(--input-text, #111827);
-    background: var(--input-bg, #ffffff);
-    border: 1px solid var(--input-border, #d1d5db);
-    border-radius: var(--radius-md, 0.5rem);
+    font-size: 0.875rem;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--color-gray-700, #374151);
+    background: var(--content-bg, #ffffff);
+    border: 1px solid var(--content-border, #d1d5db);
+    border-radius: var(--radius-full, 9999px);
     cursor: pointer;
   }
 
-  .rr-sort__dir:disabled {
-    opacity: 0.45;
-    cursor: default;
+  .rr-chip--on {
+    color: var(--color-primary, #1c497c);
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 12%, var(--content-bg, #ffffff));
+    border-color: var(--color-primary, #1c497c);
+  }
+
+  /* Dark: the same lifted accent the active GM | Coach button uses. */
+  html.dark .rr-chip--on {
+    color: var(--color-primary-light, #60a5fa);
+  }
+
+  .rr-chip:focus-visible {
+    outline: 2px solid var(--color-primary, #1c497c);
+    outline-offset: 1px;
+  }
+
+  .rr-chip__dir {
+    font-size: 1rem;
+    line-height: 1;
   }
 
   /* ── The cap card ─────────────────────────────────────────────────────── */

@@ -199,14 +199,48 @@ opponent.
 
 ### Controls above the rows (phone)
 
-- The GM / Coach toggle and My Rank stay where they are.
-- **New: a Sort `<select>`** carrying every `data-sort-key` in the thead
-  (position, oppRank, spreadAmount, overUnder, temperature, avgRecent,
-  totalSeason, avgSeason, oppAvg, projectedPoints, topRanking, contractYears,
-  salary_0 through salary_4). It calls the same sort the header click does, so
-  sorting by a hidden column is not lost.
+**Idea B, chosen by the user (2026-09-26).** The first build stacked three rows
+(the GM | Coach tab, the My Rank pill, then a Sort `<select>` plus a direction
+button), which the user called "undesigned". Mockups:
+`rosters-mobile-layout/controls/idea-{a,b,c}.png`, source
+`controls/controls-ideas.html`. Below 768px there are now two rows:
+
+![GM chips](rosters-mobile-layout/pr-b-sort-chips-gm-dark.png)
+
+- **Row 1:** the GM | Coach segmented control on the left (44px buttons), and
+  My Rank as a 44px sliders icon on the right, named **"My Rank sources"** (it
+  opens the same editor the desktop pill does; `MyRankEditor` takes an
+  optional `accessibleName`, and the visible label stays in the tree).
+- **Row 2:** ONE horizontally scrolling row of sort chips for the mode on
+  screen. It scrolls within itself (`overflow-x: auto`, `min-width: 0` up the
+  chain), so it never scrolls the page, at 320 / 360 / 390 / 767 px.
+  - **Derived from the thead, not hand-kept.** The page reads every
+    `th[data-sort-key]`, takes its mode from the classes `setMode()` already
+    toggles (`gm-col` / `coach-col` / neither = both), and
+    `buildSortChips` (`src/utils/rosters/phone-sort.ts`) orders them. A new
+    sortable column gets a chip with no other change.
+  - **GM:** Pos · Salary · Years · My Rank · 2027 salary … 2030 salary. My
+    Rank only while the owner has a board (the rankings script marks the
+    header `data-rank-board`).
+  - **Coach:** Proj · Opp rank · Avg · Spread · O/U · Weather · Last 3 ·
+    <season> Pts · Opp avg · Pos. The mockup's **Kickoff is not a chip**:
+    kickoff is phone-only row text, not a sortable column, and the chips are
+    exactly what the headers support. A Kickoff sort would need a `th`.
+  - **A tap is a header click.** The chip clicks the (hidden) header with its
+    key, so every listener a desktop click runs, runs, and `nextSort` is the
+    one rule both use: Pos resets to the default; the active chip flips
+    direction; any other key starts descending, My Rank ascending. The active
+    chip shows ↑/↓ and its name says it ("Salary, sorted descending").
+    Toggle buttons with `aria-pressed` in a `role="group"` named "Sort the
+    roster by"; focus stays on the chip across the re-render.
+  - **A mode switch swaps the set.** A sort by the other mode's column cannot
+    be seen or re-tapped on a phone, so it falls back to Pos
+    (`keepValidSort`). Desktop keeps its behaviour, since all its headers are
+    reachable after a switch back.
 - Group headers ("Active · 22", "Practice squad · 3", "Injured reserve") take
   the place of the divider rows and the legend's swatch meaning.
+
+Screenshots, 390x844: `pr-b-sort-chips-{gm,coach}-{light,dark}.png`.
 
 ### The footer (tfoot)
 
@@ -625,7 +659,7 @@ Every element of the desktop roster, and where it lives below 768px.
 | TO expired (greyed forfeited salary) | Salary › year table |
 | Declared / simulated salary styling | Salary › year table (lifted from the row cells) |
 | UFA / future `—` markers | Salary › year table |
-| Sortable headers + sort arrows | Sort `<select>` above the rows |
+| Sortable headers + sort arrows | Sort chips above the rows: this mode's headers, derived from the thead; ↑/↓ on the active chip |
 | Header cap space (follows sims) | Unchanged in `RosterHeader`; also on the cap card and the sim bar |
 
 ### Page-level
@@ -636,7 +670,7 @@ Every element of the desktop roster, and where it lives below 768px.
 | tfoot, future years | TL | Cap by year sheet (the cap card / sim bar Review) |
 | Clear All Tags button | TL | Review sheet (`data-sim-clear`); original hidden on phone |
 | Submit Tags/Extensions button (Nov 14 – Feb 15) | TL | Review sheet (`data-sim-submit`); original hidden on phone |
-| GM / Coach toggle, My Rank editor | TL / both | Controls row, unchanged |
+| GM / Coach toggle, My Rank editor | TL / both | Row 1: segmented GM \| Coach, My Rank as a sliders icon ("My Rank sources") |
 | Legend (Active / Practice / IR / Trade Block) | TL | Unchanged below the rows; the group headers restate it |
 | Cutdown Plan panel (Aug auto-cut) | TL | Unchanged position. **Must be checked at 390px under `?testDate=` inside the June–August window**; the window is closed now, so this capture could not include it |
 | Cap Subtotals card | TL | Unchanged (already fits, see `current-theleague-panels.png`); summarised by the cap bar |
@@ -680,7 +714,7 @@ gotcha in `rosters-page-split.md`.
 | 1 | **The sheet learns the new fields, with every opener unchanged.** `salary`, `sheetTab`, `thisWeek`, `quickActions`, `moreActions`, `myRank`, `onAction`; tablist + Salary / Game log panels rendered only when `salary` is present; ARIA tabs; bind in the modal's existing page-load re-init path | `src/utils/player-modal-trigger.ts` (`PlayerModalData`), `src/components/theleague/PlayerDetailsModal.astro` | Free Agents and every other opener look identical (screenshots); a Storybook story per state (`docs/claude/rules/storybook.md`); unit tests for pure formatters |
 | 2 | **One action list.** Extract `getCdmActionDescriptors` and the renderer from `populateCdmActionOptions`; extract `toggleTradeBlock`; AFL `aflActionsFor(payload)` | `src/utils/cdm-wizard.ts`, `rosters.astro` (`showTradeSubOptions`), `AFLActionModal.astro` | **cdm-parity 0 diffs** (4,409 values + probe); unit-test the descriptor function per contract state |
 | 3 | **TheLeague opener builds the payload.** Salary rows lifted from `year1`-`year5` cells; cut / tag / extension / option costs via the page's config-bound wrappers over `salary-calculations`; `thisWeek` lifted from coach cells; `onAction` routes local vs CDM (section 5). Put it in a module, `src/utils/rosters/phone-sheet.ts`, not in the inline script | new module + a small call in `initRosterPage` | Unit tests on the builder; strict typecheck on the module |
-| 4 | **Phone rows.** `rosters-mobile.css`; `data-pos` + line spans in the SSR loop **and** `renderTableRows`; hide ⋮; `rowTapMedia`; Sort `<select>`; footer; dead-money card rows; 44px hit areas; position-pill tokens in both themes | both roster pages, new stylesheet, token files | Desktop parity 0 diffs; phone screenshots both leagues, both modes, light + dark; `documentElement.scrollWidth == clientWidth` at 360 / 390 / 767 |
+| 4 | **Phone rows.** `rosters-mobile.css`; `data-pos` + line spans in the SSR loop **and** `renderTableRows`; hide ⋮; `rowTapMedia`; sort chips (idea B); footer; dead-money card rows; 44px hit areas; position-pill tokens in both themes | both roster pages, new stylesheet, token files | Desktop parity 0 diffs; phone screenshots both leagues, both modes, light + dark; `documentElement.scrollWidth == clientWidth` at 360 / 390 / 767 |
 | 5 | **Sim bar + Cap by year + cap card.** Baseline computation in `updateView`; `[data-sim-clear]` / `[data-sim-submit]` hooks; `RosterCapStrip` | `rosters.astro`, new component | Parity; manual: simulate / undo / clear / submit (probe mode for submit) at 390px |
 | 6 | **AFL.** Coach rows (already covered by Phase 4 CSS), `thisWeek`, quick / more actions → `AFLActionModal` | `afl-fantasy/rosters.astro`, `AFLActionModal.astro` | AFL screenshots; cross-league gate test |
 | 7 | **Lock it in.** Guard `tests/rosters-phone-inventory.test.ts`: parse every `<th data-column>` in both pages (and the SSR row badge slots) and fail when one has no entry in a declared `PHONE_HOMES` map in `src/utils/rosters/phone-inventory.ts`. Wire it into path-guard's `rosters-page` domain. Insights entry; stage a changelog line (ask about `heroWorthy`) | tests, `.claude/hooks/path-guard.json`, `docs/claude/insights/features/`, `weekly-changelog-staging.json` | `pnpm test:unit`, `pnpm test:types` |
@@ -711,8 +745,9 @@ Where the build differs from sections 2, 3 and 6, and why:
   `<tr>`, and `order` puts each on its line. A grid gives each cell its own
   track, which cannot put three cells' pieces on one line.
 - **The thead is `display: none`, not visually hidden.** With the cells out of
-  a table grid a header row reads as noise to a screen reader, and the Sort
-  `<select>` carries every sort key. The two right-hand values get
+  a table grid a header row reads as noise to a screen reader, and the sort
+  chips carry every sort key (the Sort `<select>` that did until 2026-09-26
+  was replaced by idea B; see "Controls above the rows"). The two right-hand values get
   visually-hidden generated prefixes ("2026 salary", "Projected", "My Rank").
 - **Kickoff needed a payload field.** `scripts/lib/roster-season-payload.mjs`
   dropped `gameOdds.date`; it now carries it (live seasons only, so the frozen
