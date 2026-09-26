@@ -295,6 +295,7 @@ const pwaGate = {
 // pre-paint inline script (ThemeScript) resolves it against prefers-color-scheme.
 const themePref = getThemePreference(Astro.cookies);
 import StagingBanner from '../components/shared/StagingBanner.astro';
+import DemoBanner from '../components/shared/DemoBanner.astro';
 ---
 
 <!DOCTYPE html>
@@ -373,6 +374,7 @@ import StagingBanner from '../components/shared/StagingBanner.astro';
 	</head>
 	<body>
 		<StagingBanner />
+		<DemoBanner />
 		<!-- Navigation progress bar — shows instantly on internal link clicks -->
 		<div id="nav-progress" aria-hidden="true"></div>
 

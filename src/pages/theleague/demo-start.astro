@@ -1,0 +1,175 @@
+---
+/**
+ * The custom-site demo's front door (docs/plans/custom-site-demo.md):
+ * `/demo-start?t=<token>` on a demo host. A prospect opens their private link,
+ * picks any franchise in the fictional league, and is signed in as its owner
+ * until the link expires. Exists only on a demo deployment — everywhere else it
+ * renders the site's 404.
+ *
+ * A PAGE, not a component: it redirects and sets cookies, which only a route's
+ * own frontmatter may do (CLAUDE.md, "Astro.redirect() only redirects from a
+ * PAGE").
+ */
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import leagueConfig from '../../data/theleague.config.json';
+import { isDemoDeploy } from '../../utils/deploy-environment';
+import { DEMO_USER_PREFIX, lookupDemoLink } from '../../utils/demo-access';
+import { createSessionCookie, createSessionToken } from '../../utils/session';
+import { setTheLeaguePreference } from '../../utils/team-preferences';
+import { getLeagueBySlug } from '../../config/leagues';
+
+if (!isDemoDeploy()) {
+  return Astro.rewrite('/_not-found');
+}
+
+const LEAGUE = getLeagueBySlug('theleague')!;
+const teams = leagueConfig.teams;
+
+// A GET form, not a POST: the link's token is the credential, and Astro's
+// origin check can refuse a form POST from a browser that omits Origin
+// (docs/claude/insights/features/visit-surface-tracking.md).
+const token = Astro.url.searchParams.get('t');
+const chosen = Astro.url.searchParams.get('franchise');
+
+const link = await lookupDemoLink(token);
+
+if (link && chosen && teams.some((t) => t.franchiseId === chosen)) {
+  const sessionToken = createSessionToken(
+    {
+      userId: `${DEMO_USER_PREFIX}${link.token}`,
+      username: 'Demo guest',
+      franchiseId: chosen,
+      leagueId: LEAGUE.id,
+      role: 'owner',
+    },
+    { expiresAt: link.expiresAt },
+  );
+  Astro.response.headers.append('Set-Cookie', createSessionCookie(sessionToken, import.meta.env.DEV, link.expiresAt));
+  setTheLeaguePreference(Astro.cookies, chosen);
+  return Astro.redirect('/');
+}
+
+const expiresOn = link
+  ? new Date(link.expiresAt * 1000).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+  : null;
+---
+
+<TheLeagueLayout title={`Welcome — ${LEAGUE.name}`}>
+  <main class="demo-start">
+    {
+      link ? (
+        <>
+          <header class="demo-start__intro">
+            <p class="demo-start__kicker">Your private demo</p>
+            <h1>Pick a team to run</h1>
+            <p>
+              This is a fictional salary-cap dynasty league with six seasons of history. Choose any
+              franchise and you'll be signed in as its owner: set a lineup, pick up free agents, file
+              waiver claims, propose trades and manage contracts. Nothing is sent to MyFantasyLeague,
+              and only you see your moves.
+            </p>
+            <p class="demo-start__expiry">Your link works until {expiresOn}.</p>
+          </header>
+          <form method="get" class="demo-start__grid">
+            <input type="hidden" name="t" value={link.token} />
+            {teams.map((team) => (
+              <button type="submit" name="franchise" value={team.franchiseId} class="demo-start__team">
+                <img src={team.icon} alt="" width="64" height="64" loading="lazy" />
+                <span class="demo-start__name">{team.name}</span>
+                <span class="demo-start__division">{team.division}</span>
+              </button>
+            ))}
+          </form>
+        </>
+      ) : (
+        <header class="demo-start__intro">
+          <p class="demo-start__kicker">Demo link</p>
+          {token ? (
+            <>
+              <h1>This link has expired or isn't valid</h1>
+              <p>Demo links are private and last two weeks. Reach out and we'll send you a fresh one.</p>
+            </>
+          ) : (
+            <>
+              <h1>Sign in with your demo link</h1>
+              <p>This demo has no passwords — open the private link you were sent to pick a team and start.</p>
+            </>
+          )}
+        </header>
+      )
+    }
+  </main>
+</TheLeagueLayout>
+
+<style>
+  .demo-start {
+    max-width: 64rem;
+    margin: 0 auto;
+    padding: 3rem 1rem 4rem;
+  }
+
+  .demo-start__intro {
+    max-width: 42rem;
+    margin-bottom: 2rem;
+  }
+
+  .demo-start__kicker {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--color-text-secondary);
+    margin: 0 0 0.5rem;
+  }
+
+  .demo-start__intro h1 {
+    margin: 0 0 1rem;
+  }
+
+  .demo-start__intro p {
+    color: var(--color-text-secondary);
+    line-height: 1.55;
+  }
+
+  .demo-start__expiry {
+    font-size: 0.875rem;
+  }
+
+  .demo-start__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+    gap: 0.75rem;
+  }
+
+  .demo-start__team {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0.75rem;
+    background: var(--color-surface);
+    color: var(--color-text-primary);
+    font: inherit;
+    cursor: pointer;
+    text-align: center;
+  }
+
+  .demo-start__team:hover,
+  .demo-start__team:focus-visible {
+    border-color: var(--color-primary);
+    outline: none;
+    box-shadow: 0 0 0 2px var(--color-primary);
+  }
+
+  .demo-start__name {
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  .demo-start__division {
+    font-size: 0.8125rem;
+    color: var(--color-text-secondary);
+  }
+</style>
