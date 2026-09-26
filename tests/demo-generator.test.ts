@@ -70,6 +70,17 @@ describe('demo league generator', () => {
     }
   });
 
+  it('keeps every team under the cap, dead money included, every season', () => {
+    // A prospect must never open a roster showing negative cap space.
+    for (const s of seasons) {
+      for (const [fid, roster] of s.rosters) {
+        const salaries = [...roster.values()].reduce((sum, c) => sum + c.salary, 0);
+        const dead = s.salaryAdjustments.filter((a) => a.franchise_id === fid).reduce((sum, a) => sum + Number(a.amount), 0);
+        expect(salaries + dead, `${s.year} ${fid}`).toBeLessThanOrEqual(LEAGUE_RULES.salaryCap);
+      }
+    }
+  });
+
   it('seeds the playoff field by the constitution: four division winners, then three wild cards', () => {
     for (const s of seasons) {
       const division = new Map(DEMO_FRANCHISES.map((f) => [f.id, f.divisionIndex]));
@@ -237,5 +248,33 @@ describe('the current week is the last one fully played', () => {
     expect(lastCompletedWeek(new Map([[1, week(300)], [2, week(240)], [3, week(290)]]))).toBe(3);
     expect(lastCompletedWeek(new Map([[1, week(300)], [3, week(300)]]))).toBe(1);
     expect(lastCompletedWeek(new Map())).toBe(0);
+  });
+});
+
+describe('the week being played right now', () => {
+  // 2026's feeds carry week 3 with only Thursday's game scored.
+  const facts = new Map([2025, 2026].map((y) => [y, loadSeasonFacts(FEEDS, y)]));
+  const currentWeek = lastCompletedWeek(facts.get(2026)!.scores);
+  const [, season] = simulateLeague({
+    years: [2025, 2026],
+    facts,
+    currentYear: 2026,
+    currentWeek,
+    franchises: DEMO_FRANCHISES,
+    rng: createRng('live-week'),
+    weekStart,
+  });
+
+  it('is simulated as in progress: some players scored, the rest still to play', () => {
+    expect(season.inProgress?.week).toBe(currentWeek + 1);
+    const players = season.inProgress!.games.flatMap(([h, a]) => [...h.players, ...a.players]);
+    expect(players.some((p) => p.gameSecondsRemaining === '0' && Number(p.score) !== 0)).toBe(true);
+    expect(players.some((p) => p.gameSecondsRemaining === '3600' && Number(p.score) === 0)).toBe(true);
+  });
+
+  it('never counts toward standings or results', () => {
+    expect(season.weekly.every((w) => w.week <= currentWeek)).toBe(true);
+    for (const r of season.standings) expect(r.w + r.l + r.t).toBe(currentWeek);
+    expect(feeds.liveWeekFeed(season)!.weeklyResults.matchup[0].franchise[0]).not.toHaveProperty('result');
   });
 });

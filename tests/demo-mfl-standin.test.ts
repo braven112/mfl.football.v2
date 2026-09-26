@@ -114,6 +114,13 @@ describe('demo MFL stand-in', () => {
     });
   });
 
+  it('answers projections for the week asked for, so the live board can use them', async () => {
+    // The live board refuses another week's projections; without this every
+    // unplayed starter in the live week projects 0.
+    const data = await exportJson('projectedScores', '&W=3');
+    expect(data.projectedScores.week).toBe('3');
+  });
+
   it('answers only for the league it has data for', async () => {
     await as('0001', async () => {
       const other = await answerDemoMfl(new URL(`${HOST}/${YEAR}/export?TYPE=rosters&L=37610&JSON=1`), 'GET', undefined);
