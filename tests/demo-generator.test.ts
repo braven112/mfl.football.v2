@@ -267,7 +267,10 @@ describe('the week being played right now', () => {
 
   it('is simulated as in progress: some players scored, the rest still to play', () => {
     expect(season.inProgress?.week).toBe(currentWeek + 1);
-    const players = season.inProgress!.games.flatMap(([h, a]) => [...h.players, ...a.players]);
+    type LivePlayer = { score: string; gameSecondsRemaining?: string };
+    type LiveGame = [{ players: LivePlayer[] }, { players: LivePlayer[] }, string, string];
+    const games = season.inProgress!.games as LiveGame[];
+    const players = games.flatMap(([h, a]) => [...h.players, ...a.players]);
     expect(players.some((p) => p.gameSecondsRemaining === '0' && Number(p.score) !== 0)).toBe(true);
     expect(players.some((p) => p.gameSecondsRemaining === '3600' && Number(p.score) === 0)).toBe(true);
   });
