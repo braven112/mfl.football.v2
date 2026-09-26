@@ -1,0 +1,255 @@
+---
+/**
+ * The custom-site demo leads list (docs/plans/custom-site-demo.md, phase 3):
+ * what each prospect told us about their league, the demo we would build for
+ * them against the one they were shown, and their link — extend, revoke, or
+ * issue one by hand (via /api/demo-leads/admin).
+ *
+ * The route owns the admin gate (src/pages/theleague/admin/demo-leads.astro);
+ * this renders.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import type { DemoLead } from '../../../utils/demo-leads-store';
+
+interface Props {
+  leads: DemoLead[];
+  leagueSlug: string;
+}
+const { leads, leagueSlug } = Astro.props;
+const league = { slug: leagueSlug };
+const now = Math.floor(Date.now() / 1000);
+const status = (l: DemoLead) => (l.revokedAt ? 'Revoked' : l.expiresAt <= now ? 'Expired' : 'Live');
+const date = (s: number) =>
+  new Date(s * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'America/Los_Angeles' });
+const DEMO_NAMES: Record<string, string> = {
+  dynasty: 'Dynasty (salary cap)',
+  keeper: 'Keeper',
+  bigleague: 'Big league (conferences)',
+  redraft: 'Redraft / best ball',
+};
+const league_ = (l: DemoLead) =>
+  [
+    l.teams ? `${l.teams} teams` : null,
+    l.format,
+    l.draftType,
+    l.salaryCap ? 'salary cap' : null,
+    l.contracts ? 'contracts' : null,
+    l.conferences ? 'conferences' : null,
+    l.platform ? `on ${l.platform}` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+---
+
+<TheLeagueLayout title="Demo Leads - Admin">
+  <main class="leads" data-league={league.slug} id="demo-leads">
+    <header class="leads__header">
+      <h1>Custom-site demo leads</h1>
+      <p>
+        Everyone who filled the questionnaire on demo.mfl.football, newest first. A new lead also
+        pushes to your phone under "Custom-site demo leads".
+      </p>
+    </header>
+
+    <details class="leads__create">
+      <summary>Issue a link by hand</summary>
+      <form id="demo-leads-create" class="leads__create-form">
+        <label>Name<input name="name" required maxlength="80" /></label>
+        <label>Email<input name="email" type="email" maxlength="120" /></label>
+        <label>League<input name="leagueName" required maxlength="120" /></label>
+        <label>Days<input name="days" type="number" min="1" max="90" value="14" /></label>
+        <button type="submit">Create link</button>
+      </form>
+    </details>
+
+    <p class="leads__status" id="demo-leads-status" role="status" aria-live="polite"></p>
+
+    {
+      leads.length === 0 ? (
+        <p class="leads__empty">No leads yet.</p>
+      ) : (
+        <ul class="leads__list">
+          {leads.map((l) => (
+            <li class="leads__item" data-lead={l.id}>
+              <div class="leads__who">
+                <strong>{l.name}</strong>
+                {l.email && <a href={`mailto:${l.email}`}>{l.email}</a>}
+                <span class="leads__meta">
+                  {date(l.createdAt)}
+                  {l.source === 'manual' ? ' · issued by hand' : ''}
+                </span>
+              </div>
+              <div class="leads__league">
+                <strong>{l.leagueName}</strong>
+                {l.leagueId && <span class="leads__meta">MFL {l.leagueId}</span>}
+                <span>{league_(l)}</span>
+                {l.scoring && <span class="leads__meta">Scoring: {l.scoring}</span>}
+                {l.wishlist && <p class="leads__wishlist">{l.wishlist}</p>}
+                {l.heardFrom && <span class="leads__meta">Heard via: {l.heardFrom}</span>}
+              </div>
+              <div class="leads__demo">
+                <span>
+                  Wants: {DEMO_NAMES[l.wanted] ?? l.wanted}
+                  {l.wanted !== l.path && <em> (shown {DEMO_NAMES[l.path] ?? l.path})</em>}
+                </span>
+                <span class:list={['leads__badge', `leads__badge--${status(l).toLowerCase()}`]}>{status(l)}</span>
+                <span class="leads__meta">Until {date(l.expiresAt)}</span>
+                <a href={l.link} target="_blank" rel="noopener">Open their demo</a>
+                <div class="leads__actions">
+                  <button type="button" data-action="extend" data-lead={l.id}>+14 days</button>
+                  {!l.revokedAt && (
+                    <button type="button" data-action="revoke" data-lead={l.id}>
+                      Revoke
+                    </button>
+                  )}
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )
+    }
+  </main>
+</TheLeagueLayout>
+
+<script>
+  // ClientRouter: init on every astro:page-load, gated on THIS page's element
+  // (with its league), and the listeners are replaced, never stacked.
+  let controller: AbortController | null = null;
+  function init() {
+    const root = document.querySelector<HTMLElement>('#demo-leads[data-league="theleague"]');
+    controller?.abort();
+    if (!root) return;
+    controller = new AbortController();
+    const { signal } = controller;
+    const status = root.querySelector<HTMLElement>('#demo-leads-status')!;
+
+    const send = async (payload: Record<string, unknown>) => {
+      status.textContent = 'Working…';
+      const res = await fetch('/api/demo-leads/admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      }).catch(() => null);
+      const body = res ? await res.json().catch(() => ({})) : {};
+      if (!res?.ok) {
+        status.textContent = body.message ?? 'That did not work.';
+        return null;
+      }
+      return body;
+    };
+
+    root.addEventListener(
+      'click',
+      async (event) => {
+        const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button[data-action]');
+        if (!button) return;
+        if (button.dataset.action === 'revoke' && !confirm('Revoke this demo link? The prospect is signed out.')) return;
+        button.disabled = true;
+        const done = await send({ action: button.dataset.action, leadId: button.dataset.lead, days: 14 });
+        if (done) location.reload();
+        else button.disabled = false;
+      },
+      { signal },
+    );
+
+    root.querySelector<HTMLFormElement>('#demo-leads-create')?.addEventListener(
+      'submit',
+      async (event) => {
+        event.preventDefault();
+        const data: Record<string, string> = {};
+        new FormData(event.target as HTMLFormElement).forEach((value, key) => {
+          data[key] = String(value);
+        });
+        const done = await send({ action: 'create', ...data, days: Number(data.days) || 14 });
+        if (done?.lead?.link) {
+          await navigator.clipboard?.writeText(done.lead.link).catch(() => undefined);
+          status.textContent = `Link created and copied: ${done.lead.link}`;
+          setTimeout(() => location.reload(), 1500);
+        }
+      },
+      { signal },
+    );
+  }
+  document.addEventListener('astro:page-load', init);
+</script>
+
+<style>
+  .leads {
+    max-width: 72rem;
+    margin: 0 auto;
+    padding: 2rem 1rem 4rem;
+  }
+  .leads__header p,
+  .leads__meta,
+  .leads__empty {
+    color: var(--color-text-secondary);
+  }
+  .leads__create {
+    margin: 1rem 0;
+  }
+  .leads__create-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: end;
+    margin-top: 0.75rem;
+  }
+  .leads__create-form label {
+    display: grid;
+    gap: 0.25rem;
+    font-size: 0.875rem;
+  }
+  .leads__list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 0.75rem;
+  }
+  .leads__item {
+    display: grid;
+    grid-template-columns: minmax(12rem, 1fr) minmax(16rem, 2fr) minmax(12rem, 1fr);
+    gap: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--color-border-default);
+    border-radius: 0.75rem;
+    background: var(--card-bg-color);
+  }
+  @media (max-width: 800px) {
+    .leads__item {
+      grid-template-columns: 1fr;
+    }
+  }
+  .leads__who,
+  .leads__league,
+  .leads__demo {
+    display: grid;
+    gap: 0.3rem;
+    align-content: start;
+    font-size: 0.9375rem;
+  }
+  .leads__wishlist {
+    margin: 0.25rem 0 0;
+    white-space: pre-wrap;
+  }
+  .leads__badge {
+    justify-self: start;
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    border: 1px solid currentColor;
+  }
+  .leads__badge--live {
+    color: var(--color-success);
+  }
+  .leads__badge--expired,
+  .leads__badge--revoked {
+    color: var(--color-error);
+  }
+  .leads__actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+</style>

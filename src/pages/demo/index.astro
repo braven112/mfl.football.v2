@@ -1,0 +1,373 @@
+---
+/**
+ * demo.mfl.football — the custom-site pitch and the questionnaire that issues
+ * a prospect's private demo link (docs/plans/custom-site-demo.md, phase 3).
+ *
+ * Served at the demo host's root (middleware rewrites `/` here); on every
+ * other deployment it renders the site's 404, which is also why it has no
+ * page-directory entry. The form posts to /api/demo/lead, which issues the
+ * link on the spot and relays the lead to the owner.
+ */
+import SplashLayout from '../../layouts/SplashLayout.astro';
+import { isDemoDeploy } from '../../utils/deploy-environment';
+import { DRAFT_TYPES, HONEYPOT_FIELD, LEAGUE_FORMATS, PLATFORMS } from '../../utils/demo-leads-core.mjs';
+
+if (!isDemoDeploy()) {
+  return Astro.rewrite('/_not-found');
+}
+
+const FORMAT_LABELS: Record<string, string> = {
+  dynasty: 'Dynasty',
+  keeper: 'Keeper',
+  redraft: 'Redraft',
+  bestball: 'Best ball',
+};
+const DRAFT_LABELS: Record<string, string> = { auction: 'Auction', snake: 'Snake draft', both: 'Both' };
+const PLATFORM_LABELS: Record<string, string> = {
+  mfl: 'MyFantasyLeague',
+  sleeper: 'Sleeper',
+  espn: 'ESPN',
+  yahoo: 'Yahoo',
+  fleaflicker: 'Fleaflicker',
+  other: 'Something else',
+};
+
+const FEATURES = [
+  {
+    title: 'Built around your rules',
+    body: 'Salary caps, contracts, extensions, franchise tags, keepers, conferences, taxi squads — whatever your constitution says, the site enforces and explains it.',
+  },
+  {
+    title: 'Every owner tool in one place',
+    body: 'Set lineups, work the waiver wire, file blind bids, build trades with live cap impact, and track every transaction — without fighting a generic host.',
+  },
+  {
+    title: 'A league that talks back',
+    body: 'An AI beat reporter covers your trades and weekly results in your league’s own voice, and a rules assistant answers owners’ questions from your constitution.',
+  },
+  {
+    title: 'Game day, live',
+    body: 'Live scoring, projections, matchups and a broadcast board — on phones, installable as an app, with push notifications owners choose.',
+  },
+  {
+    title: 'History that sticks',
+    body: 'Franchise pages, owner records, rivalries, playoff history and a record book, built from every season you have played.',
+  },
+  {
+    title: 'Your league’s look',
+    body: 'Your franchises’ colors and logos everywhere, in light and dark mode, with your league’s name on the door.',
+  },
+];
+---
+
+<SplashLayout title="Custom league sites — Live demo">
+  <div class="pitch">
+    <header class="pitch__hero">
+      <p class="pitch__kicker">Custom fantasy league websites</p>
+      <h1>A site built for your league, not for every league</h1>
+      <p class="pitch__lede">
+        Your league has its own rules, its own history and its own trash talk. We build a site
+        around all of it — and you can try one right now, on a fictional league, with nothing
+        sent anywhere.
+      </p>
+      <p class="pitch__price">Custom sites from <strong>$10,000</strong></p>
+      <a class="pitch__cta" href="#start">Get your demo link</a>
+    </header>
+
+    <section class="pitch__section" aria-labelledby="what-you-get">
+      <h2 id="what-you-get">What you get</h2>
+      <ul class="pitch__features">
+        {FEATURES.map((f) => (
+          <li class="pitch__feature">
+            <h3>{f.title}</h3>
+            <p>{f.body}</p>
+          </li>
+        ))}
+      </ul>
+    </section>
+
+    <section class="pitch__section" aria-labelledby="how-it-works">
+      <h2 id="how-it-works">Made for how your league works</h2>
+      <p>
+        The demo league is an example: it's a salary-cap dynasty league, so it comes with
+        salary-cap tools. Yours gets features specific to how <em>your</em> league runs. We agree the
+        scope up front — it isn't an endless list, but anything halfway reasonable, we'll build. And
+        the components that already exist get adjusted so they fit your league, rather than your
+        league bending to fit them.
+      </p>
+    </section>
+
+    <section class="pitch__section pitch__form-section" id="start" aria-labelledby="start-heading">
+      <h2 id="start-heading">Tell us about your league</h2>
+      <p>We'll match you to the closest demo league and send you straight in. Your link lasts two weeks.</p>
+
+      <form class="pitch__form" id="demo-lead-form" novalidate>
+        <div class="pitch__row">
+          <label>Your name<input name="name" autocomplete="name" required maxlength="80" /></label>
+          <label>Email<input name="email" type="email" autocomplete="email" required maxlength="120" /></label>
+        </div>
+        <div class="pitch__row">
+          <label>League name<input name="leagueName" required maxlength="120" /></label>
+          <label>Hosted on
+            <select name="platform" required>
+              {PLATFORMS.map((p) => <option value={p}>{PLATFORM_LABELS[p]}</option>)}
+            </select>
+          </label>
+        </div>
+        <div class="pitch__row">
+          <label>Format
+            <select name="format" required>
+              {LEAGUE_FORMATS.map((f) => <option value={f}>{FORMAT_LABELS[f]}</option>)}
+            </select>
+          </label>
+          <label>How players are acquired
+            <select name="draftType" required>
+              {DRAFT_TYPES.map((d) => <option value={d}>{DRAFT_LABELS[d]}</option>)}
+            </select>
+          </label>
+          <label>Number of teams<input name="teams" type="number" min="4" max="256" required /></label>
+        </div>
+        <fieldset class="pitch__checks">
+          <legend>Your league uses</legend>
+          <label><input type="checkbox" name="salaryCap" /> A salary cap</label>
+          <label><input type="checkbox" name="contracts" /> Player contracts</label>
+          <label><input type="checkbox" name="conferences" /> Conferences or tiers</label>
+        </fieldset>
+        <div class="pitch__row">
+          <label>MFL league ID <span class="pitch__optional">(optional)</span><input name="leagueId" inputmode="numeric" maxlength="20" /></label>
+          <label>How did you hear about us? <span class="pitch__optional">(optional)</span><input name="heardFrom" maxlength="200" /></label>
+        </div>
+        <label>Scoring, briefly <span class="pitch__optional">(optional)</span><textarea name="scoring" rows="2" maxlength="400"></textarea></label>
+        <label>What would you most want your site to do? <span class="pitch__optional">(optional)</span><textarea name="wishlist" rows="4" maxlength="1500"></textarea></label>
+        <label class="pitch__hp" aria-hidden="true">Website<input name={HONEYPOT_FIELD} tabindex="-1" autocomplete="off" /></label>
+
+        <button type="submit" class="pitch__submit">Get my demo link</button>
+        <p class="pitch__status" id="demo-lead-status" role="status" aria-live="polite"></p>
+      </form>
+
+      <div class="pitch__done" id="demo-lead-done" hidden>
+        <h3>Your demo is ready</h3>
+        <p id="demo-lead-done-note"></p>
+        <a class="pitch__cta" id="demo-lead-link" href="#">Open your demo</a>
+        <p class="pitch__small">Save this link — it's private to you and works for two weeks.</p>
+      </div>
+    </section>
+  </div>
+</SplashLayout>
+
+<script>
+  // Runs once per page view; the splash layout has no ClientRouter, and the
+  // dataset flag keeps a re-run from binding twice.
+  function init() {
+    const form = document.getElementById('demo-lead-form') as HTMLFormElement | null;
+    if (!form || form.dataset.bound) return;
+    form.dataset.bound = '1';
+    const status = document.getElementById('demo-lead-status')!;
+    const done = document.getElementById('demo-lead-done')!;
+    const link = document.getElementById('demo-lead-link') as HTMLAnchorElement;
+    const note = document.getElementById('demo-lead-done-note')!;
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const data = new FormData(form);
+      const payload: Record<string, unknown> = {};
+      data.forEach((value, key) => {
+        payload[key] = value;
+      });
+      for (const box of ['salaryCap', 'contracts', 'conferences']) payload[box] = data.get(box) === 'on';
+      const button = form.querySelector('button[type="submit"]') as HTMLButtonElement;
+      button.disabled = true;
+      status.textContent = 'Setting up your demo…';
+      try {
+        const res = await fetch('/api/demo/lead', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok || !body.link) {
+          const fieldErrors = body.errors ? Object.values(body.errors).join(' ') : '';
+          status.textContent = fieldErrors || body.message || 'Something went wrong — please try again.';
+          button.disabled = false;
+          return;
+        }
+        link.href = body.link;
+        note.textContent = body.note ?? '';
+        form.hidden = true;
+        done.hidden = false;
+        done.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } catch {
+        status.textContent = 'Could not reach the server — please try again.';
+        button.disabled = false;
+      }
+    });
+  }
+  init();
+  document.addEventListener('astro:page-load', init);
+</script>
+
+<style>
+  .pitch {
+    max-width: 60rem;
+    margin: 0 auto;
+    padding: 3rem 1rem 5rem;
+    color: var(--color-text-primary);
+  }
+  .pitch__hero {
+    max-width: 44rem;
+    margin-bottom: 3rem;
+  }
+  .pitch__kicker {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--color-text-secondary);
+    margin: 0 0 0.75rem;
+  }
+  .pitch h1 {
+    font-size: clamp(2rem, 4vw, 3rem);
+    line-height: 1.1;
+    margin: 0 0 1rem;
+  }
+  .pitch__lede,
+  .pitch__section > p {
+    color: var(--color-text-secondary);
+    line-height: 1.6;
+    font-size: 1.0625rem;
+  }
+  .pitch__price {
+    font-size: 1.125rem;
+    margin: 1.25rem 0;
+  }
+  .pitch__cta {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    background: var(--color-primary);
+    color: #ffffff;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .pitch__section {
+    margin-top: 3rem;
+  }
+  .pitch__section h2 {
+    margin: 0 0 1rem;
+  }
+  .pitch__features {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+    gap: 1rem;
+  }
+  .pitch__feature {
+    padding: 1.25rem;
+    border: 1px solid var(--color-border-default);
+    border-radius: 0.75rem;
+    background: var(--card-bg-color);
+  }
+  .pitch__feature h3 {
+    margin: 0 0 0.5rem;
+    font-size: 1.0625rem;
+  }
+  .pitch__feature p {
+    margin: 0;
+    color: var(--color-text-secondary);
+    line-height: 1.5;
+  }
+  .pitch__form {
+    display: grid;
+    gap: 1rem;
+    padding: 1.5rem;
+    border: 1px solid var(--color-border-default);
+    border-radius: 0.75rem;
+    background: var(--card-bg-color);
+  }
+  .pitch__row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: 1rem;
+  }
+  .pitch__form label {
+    display: grid;
+    gap: 0.35rem;
+    font-weight: 600;
+    font-size: 0.9375rem;
+  }
+  .pitch__form input,
+  .pitch__form select,
+  .pitch__form textarea {
+    font: inherit;
+    font-weight: 400;
+    padding: 0.55rem 0.7rem;
+    /* Derived from the text colour, so the field reads in both themes whatever
+       the layout's own form resets do. */
+    border: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+    border-radius: 0.4rem;
+    background: color-mix(in srgb, currentColor 4%, transparent);
+    color: inherit;
+  }
+  .pitch__checks {
+    border: 0;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+  }
+  .pitch__checks legend {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+  .pitch__checks label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-weight: 400;
+  }
+  .pitch__optional {
+    font-weight: 400;
+    color: var(--color-text-secondary);
+  }
+  .pitch__hp {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+  }
+  .pitch__submit {
+    justify-self: start;
+    padding: 0.75rem 1.5rem;
+    border: 0;
+    border-radius: 0.5rem;
+    background: var(--color-primary);
+    color: #ffffff;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .pitch__submit:disabled {
+    opacity: 0.6;
+    cursor: progress;
+  }
+  .pitch__status {
+    margin: 0;
+    color: var(--color-text-secondary);
+  }
+  .pitch__done {
+    padding: 1.5rem;
+    border: 2px solid var(--color-primary);
+    border-radius: 0.75rem;
+  }
+  .pitch__done h3 {
+    margin: 0 0 0.5rem;
+  }
+  .pitch__small {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+  }
+</style>

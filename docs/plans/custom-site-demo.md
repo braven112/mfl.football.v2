@@ -1,6 +1,6 @@
 # Custom-site demo — plan
 
-Status: **P1 (rails) and P2 (dynasty demo) built** on
+Status: **P1 (rails), P2 (dynasty demo) and P3 (sales funnel) built** on
 `claude/custom-site-demo-page-5z2r0h`, verified end to end locally (2026-09-26).
 Nothing deployed yet — needs the owner setup below. Owner decisions recorded
 2026-09-25.
@@ -33,8 +33,28 @@ with `astro build` and driven in Chromium against `scripts/demo/mock-upstash.mjs
    `DEMO_REDIS_REST_TOKEN`.
 3. Assign `demo.mfl.football` to the `demo` branch; CNAME it in Cloudflare.
    One host, no nested subdomains: each demo league is a PATH on it.
-4. Issue a link:
+4. Set `DEMO_LEAD_RELAY_SECRET` (one long random string) on BOTH the `demo`
+   branch and Production — it signs leads to production and link actions back.
+5. Links issue themselves from the questionnaire at demo.mfl.football; issue
+   one by hand from /theleague/admin/demo-leads, or
    `DEMO_REDIS_REST_URL=… DEMO_REDIS_REST_TOKEN=… node scripts/demo/mint-link.mjs --label "Acme League"`.
+
+### Phase 3 (built)
+
+- demo.mfl.football/ is the pitch ("Custom sites from $10,000") and the
+  questionnaire (`src/pages/demo/index.astro`). Submitting it
+  (`/api/demo/lead`) issues the link on the spot, matches the league to the
+  closest demo (`matchDemo`: 30+ teams or conferences → bigleague,
+  redraft/best ball → redraft, cap-less keeper → keeper, else dynasty; an
+  unbuilt demo falls back to dynasty and says so), keeps a copy in the demo
+  Redis, and relays the lead signed to production.
+- Production `/api/demo-leads` stores it and pushes TheLeague 0001
+  (`ops-demo-lead`, admin-only, on by default). `/theleague/admin/demo-leads`
+  lists leads with extend / revoke / issue-by-hand, each a signed call to the
+  demo's `/api/demo/links` — production never holds the demo's database keys.
+- Revoking or expiring a link ends its sessions on the next request.
+- "Custom for this league" tags on the Front Office hub and pages, and
+  Franchise Tags.
 
 ### Known gaps (next)
 
@@ -47,7 +67,7 @@ with `astro build` and driven in Chromium against `scripts/demo/mock-upstash.mjs
 - Trades move players, not draft picks; What's New, the Pecking Order and the
   owners' poll are empty; the league's rules pages keep their prose with
   names swapped.
-- P3: questionnaire, pitch page, lead alerts, "Custom for this league" tags.
+- P4: the keeper, `/bigleague` and `/redraft` demos.
 
 ## Goal
 
@@ -206,7 +226,7 @@ page.
   the real configs (franchise, owner, GroupMe names, franchise history) before
   the wipe; after `astro build`, scan the output and fail on any hit.
   Generator determinism test.
-- **P3 — sales funnel.** Questionnaire, pitch page, lead store + push relay,
+- **P3 — sales funnel.** ✅ built (see Phase 3). Questionnaire, pitch page, lead store + push relay,
   auto-issued links, admin lead page; trade/waiver/IR/taxi reducers;
   `<CustomForLeague feature=…>` tags driven by a profile list.
 - **P4 — remaining types.** Best ball (bb1 slot; draft-only, cheap); keeper

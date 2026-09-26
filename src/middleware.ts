@@ -40,7 +40,7 @@ import { demoLeaguePaths } from './config/leagues-data.mjs';
 import { DEMO_START_PATH } from './utils/demo-access-core.mjs';
 import type { MiddlewareHandler } from 'astro';
 import { getAuthUser } from './utils/auth';
-import { demoTokenFromUserId } from './utils/demo-access';
+import { demoTokenFromUserId, lookupDemoLink } from './utils/demo-access';
 import { demoRequestContext } from './utils/demo-request-context';
 import { setDemoMflAnswer } from './utils/demo-isolation';
 
@@ -129,6 +129,10 @@ const handle: MiddlewareHandler = async (context, next) => {
     if (/^\/(?:(?:theleague|dynasty)\/)?login\/?$/.test(context.url.pathname)) {
       return stamp(context.redirect(`/${firstDemoPath()}${DEMO_START_PATH}`, 302));
     }
+    // The demo host's front door is the pitch and questionnaire.
+    if (context.url.pathname === '/') {
+      return stamp(await context.rewrite(new URL('/demo' + context.url.search, context.url)));
+    }
     // demo.mfl.football/dynasty/… serves TheLeague's route slot; the slot's
     // own name redirects to the demo path, so it never shows in a URL.
     const demo = resolveDemoPath(context.url.pathname, demoLeaguePaths());
@@ -178,14 +182,34 @@ const handle: MiddlewareHandler = async (context, next) => {
  * read by the MFL stand-in and the Redis key namespace, so each prospect's
  * simulated league is theirs alone (docs/plans/custom-site-demo.md).
  */
-export const onRequest = defineMiddleware((context, next) => {
-  if (!isDemoDeploy()) return handle(context, next);
+export const onRequest = defineMiddleware(async (context, next) => {
+  if (!isDemoDeploy()) return (await handle(context, next)) as Response;
   const user = context.isPrerendered ? null : getAuthUser(context.request);
+  const token = demoTokenFromUserId(user?.id);
+  // A session lives only as long as its link: revoked or expired, the next
+  // request signs the prospect out instead of waiting out the cookie.
+  if (token && !(await demoLinkIsLive(token))) {
+    const ended = context.url.pathname.startsWith('/api/')
+      ? new Response(JSON.stringify({ message: 'This demo link has ended.' }), { status: 401 })
+      : new Response(null, { status: 302, headers: { Location: `/${firstDemoPath()}${DEMO_START_PATH}?ended=1` } });
+    ended.headers.append('Set-Cookie', 'session_token=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax');
+    return ended;
+  }
   return demoRequestContext.run(
-    { token: demoTokenFromUserId(user?.id), franchiseId: user?.franchiseId || null },
-    async () => withDemoLinks(await handle(context, next)),
+    { token, franchiseId: user?.franchiseId || null },
+    async () => withDemoLinks((await handle(context, next)) as Response),
   );
 });
+
+/** Link liveness, cached a minute per process so a page load isn't a Redis read per asset. */
+const linkLiveCache = new Map<string, { live: boolean; at: number }>();
+async function demoLinkIsLive(token: string): Promise<boolean> {
+  const hit = linkLiveCache.get(token);
+  if (hit && Date.now() - hit.at < 60_000) return hit.live;
+  const live = Boolean(await lookupDemoLink(token).catch(() => null));
+  linkLiveCache.set(token, { live, at: Date.now() });
+  return live;
+}
 
 const firstDemoPath = () => Object.keys(demoLeaguePaths())[0];
 

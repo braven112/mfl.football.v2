@@ -31,6 +31,7 @@ import Breadcrumbs from '../../theleague/Breadcrumbs.astro';
 import FrontOfficeToolRail from './FrontOfficeToolRail.astro';
 import { getLeagueBySlug } from '../../../config/leagues';
 import type { FrontOfficeLeagueSlug } from '../front-office-nav/front-office-pages';
+import CustomForLeague from '../CustomForLeague.astro';
 
 interface Props {
   leagueSlug: FrontOfficeLeagueSlug;
@@ -55,6 +56,7 @@ const subtitle =
     <slot name="switcher" />
 
     <header class="fo__head">
+      <CustomForLeague feature="salary-cap and contract rules" />
       <h1 class="fo__title">
         Front Office
         {myTeam && (

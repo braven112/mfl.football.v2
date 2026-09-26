@@ -16,6 +16,7 @@ import { DEMO_USER_PREFIX, lookupDemoLink } from '../../utils/demo-access';
 import { createSessionToken } from '../../utils/session';
 import { setTheLeaguePreference } from '../../utils/team-preferences';
 import { getLeagueBySlug } from '../../config/leagues';
+import { demoLeaguePaths } from '../../config/leagues-data.mjs';
 
 if (!isDemoDeploy()) {
   return Astro.rewrite('/_not-found');
@@ -54,7 +55,9 @@ if (link && chosen && teams.some((t) => t.franchiseId === chosen)) {
     expires: new Date(link.expiresAt * 1000),
   });
   setTheLeaguePreference(Astro.cookies, chosen);
-  return Astro.redirect('/');
+  // Straight into the league: the demo host's root is the pitch page.
+  const demoPath = Object.entries(demoLeaguePaths()).find(([, slug]) => slug === LEAGUE.slug)?.[0];
+  return Astro.redirect(demoPath ? `/${demoPath}/` : '/');
 }
 
 const expiresOn = link
@@ -157,7 +160,7 @@ const expiresOn = link
     padding: 1rem 0.75rem;
     border: 1px solid var(--color-border-default);
     border-radius: 0.75rem;
-    background: var(--color-surface-1);
+    background: var(--card-bg-color);
     color: var(--color-text-primary);
     font: inherit;
     cursor: pointer;
