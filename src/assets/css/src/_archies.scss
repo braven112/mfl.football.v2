@@ -82,10 +82,11 @@ caption a {
 
 // Below 768px _header.scss makes .nav_wrapper a horizontal scroll box, and a
 // scroll box clips on both axes, so the glow was cut off above the icon.
-// Padding inside the box gives the 18px glow room to render.
+// Padding inside the box gives the glow room: an 18px drop-shadow fades out
+// over ~27px, so 20px still showed a hard edge on a real device.
 @media (max-width: 767px) {
   .nav_wrapper .nav_buttons {
-    padding: 20px 20px 12px;
+    padding: 32px 32px 12px;
   }
 }
 
