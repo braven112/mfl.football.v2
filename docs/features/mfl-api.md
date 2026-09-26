@@ -360,7 +360,9 @@ https://api.myfantasyleague.com/2025/export?TYPE=rosters&L=13522&W=15&JSON=1
 **Parameters:**
 - Required: `L` (league ID)
 - Optional: `POSITION` (filter by position)
-- Auth: Owner
+- Auth: None — answers without an `MFL_USER_ID` cookie, including from a Vercel preview (verified 2026-09-24, both leagues)
+
+**Shape:** one `leagueUnit` per availability pool — `LEAGUE` for a single-pool league, `CONFERENCE00` / `CONFERENCE01` for the AFL — each with its own `player[]`. A row tagged `status: "locked"` is a recently dropped player MFL will not let anyone add yet (its own add/drop page marks him `*`). Locks are per unit: the same player can be locked in one conference and rostered in the other. Reader: `src/utils/mfl-locked-players.ts`.
 
 **Example:**
 ```

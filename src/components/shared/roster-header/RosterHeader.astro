@@ -52,7 +52,7 @@ interface Props {
   season: number;
   standing: StandingsSummary;
   /** League-specific stats after record / rank / points-for (cap space, …). */
-  extraStats?: Array<{ value: string; label: string }>;
+  extraStats?: Array<{ value: string; label: string; key?: string }>;
   lastPlayed: HeaderWeek | null;
   upNext: HeaderWeek | null;
   rail: RailWeek[];

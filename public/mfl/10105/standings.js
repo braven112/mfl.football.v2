@@ -40,6 +40,12 @@
    * Anything below is only a fallback for a module that defines nothing. */
   var WINNINGS = {};
 
+  /* Year + league id, read from the page URL in start(). Held here because
+   * the tile and row builders need it to link each team to its franchise
+   * page, and threading it through four call sites bought nothing. Set on
+   * every run, never at load, for the same reason WINNINGS is. */
+  var CTX = null;
+
   /* Accepts { "0001": 239 } or { "0001": "$239.00" }, ignores junk, and never
    * lets a bad entry take the whole table down with it. */
   function readWinnings(fallback) {
@@ -85,6 +91,30 @@
     var m = /^\/(\d{4})\/home\/(\d+)/.exec(window.location.pathname);
     if (!m) return null;
     return { year: m[1], leagueId: m[2] };
+  }
+
+  /* A team's franchise page — "Franchise Info", MFL option 07:
+   *
+   *   /2026/options?L=10105&O=07&F=0004
+   *
+   * Root-relative for the same reason the feeds are: it follows whichever
+   * wwwNN served the page, and carries no league id of its own, so the file
+   * keeps working in any league it is dropped into. */
+  function franchiseUrl(id) {
+    if (!CTX) return null;
+    return '/' + CTX.year + '/options?L=' + CTX.leagueId + '&O=07&F=' + id;
+  }
+
+  /* Wraps a team's tile or row in a link to its franchise page. Falls back to
+   * the plain element if the context could not be read, so a URL this script
+   * does not recognise loses the link and nothing else. */
+  function teamBox(tag, cls, t) {
+    var href = franchiseUrl(t.id);
+    if (!href) return el('div', cls);
+    var a = el('a', cls);
+    a.setAttribute('href', href);
+    a.title = t.name + ' \u2014 franchise page';
+    return a;
   }
 
   function feed(ctx, type) {
@@ -213,16 +243,13 @@
 
     out.forEach(function (e, i) { e.seed = i + 1; });
 
-    /* Points For decides a Victory Point tie, so nothing is left undecided.
-     * The marker now means only "level on VP, separated on Points For", which
-     * is still worth showing: it explains why two teams on the same number sit
-     * in a particular order. */
-    var counts = {};
-    out.forEach(function (e) {
-      var k = e.tier + ':' + e.team.vp;
-      counts[k] = (counts[k] || 0) + 1;
-    });
-    out.forEach(function (e) { e.tied = counts[e.tier + ':' + e.team.vp] > 1; });
+    /* There is deliberately NO per-team tie marker. Points For decides a
+     * Victory Point tie, so the order printed is the final order and nothing
+     * on the page is undecided — a marker saying "level on VP" answers a
+     * question the reader did not ask, on a quarter of the league at once
+     * (26 of 99 teams shared a score in week 2). The one place a tie changes
+     * an outcome is the playoff cut, and that is what the note below is for.
+     */
 
     /* The note at the cut is no longer "someone must decide this" — Points For
      * already has. It says who just missed out, and on what. */
@@ -287,36 +314,27 @@
     return img;
   }
 
-  function vpText(parent, vp, tied) {
+  function vpText(parent, vp) {
     parent.appendChild(document.createTextNode(String(vp)));
-    if (tied) {
-      var tie = el('span', 'mp99-tie', 'T');
-      tie.title = 'tied on Victory Points';
-      parent.appendChild(tie);
-    }
   }
 
   /* A qualifier: crest, name, Victory Points, then seed and record, then the
    * prize if the league has set one. */
   function tile(entry) {
     var t = entry.team;
-    var box = el('div', 'mp99-tile ' + TIER[entry.tier].row);
+    var box = teamBox('a', 'mp99-tile ' + TIER[entry.tier].row, t);
 
     box.appendChild(crest(t, 'mp99-crest'));
     box.appendChild(el('div', 'mp99-tile-name', t.name));
 
-    /* "6 VP", with any tie marker AFTER the unit — placed between the two it
-     * read as "6 T VP", as though T were part of the value. Kept to a single
-     * letter: with 26 teams sharing a score early in the season the word
-     * "TIED" repeated on every tile, which is noise rather than information. */
+    /* The division, under the name and deliberately quiet. Seeds 1-18 are
+     * one team per division, so without it there is no way to tell WHICH
+     * division a leader leads — the tier says only that it leads one. */
+    if (t.divisionName) box.appendChild(el('div', 'mp99-tile-div', t.divisionName));
+
     var vp = el('div', 'mp99-tile-vp');
     vp.appendChild(document.createTextNode(String(t.vp)));
     vp.appendChild(el('span', null, ' VP'));
-    if (entry.tied) {
-      var tie = el('span', 'mp99-tie', 'T');
-      tie.title = 'tied on Victory Points';
-      vp.appendChild(tie);
-    }
     box.appendChild(vp);
 
     box.appendChild(el('div', 'mp99-tile-meta', '#' + entry.seed + ' \u00b7 ' + (t.record || '0-0-0')));
@@ -335,10 +353,16 @@
   /* Everyone below the cut: one line each. */
   function listRow(entry) {
     var t = entry.team;
-    var row = el('div', 'mp99-list-row');
+    var row = teamBox('a', 'mp99-list-row', t);
     row.appendChild(el('div', 'mp99-list-seed', String(entry.seed)));
     row.appendChild(crest(t, 'mp99-list-crest'));
-    row.appendChild(el('div', 'mp99-list-name', t.name));
+    /* A stack, not a line: the name with the division under it. The
+     * wrapper keeps the class the row layout already flexes on, so the
+     * two lines share one column and one ellipsis boundary. */
+    var who = el('div', 'mp99-list-name');
+    who.appendChild(el('div', 'mp99-list-team', t.name));
+    if (t.divisionName) who.appendChild(el('div', 'mp99-list-div', t.divisionName));
+    row.appendChild(who);
     row.appendChild(el('div', 'mp99-list-rec', t.record || '0-0-0'));
 
     var won = WINNINGS[t.id];
@@ -347,7 +371,7 @@
       won ? money(won) : '\u2014'));
 
     var vp = el('div', 'mp99-list-vp');
-    vpText(vp, t.vp, entry.tied);
+    vpText(vp, t.vp);
     row.appendChild(vp);
     return row;
   }
@@ -457,6 +481,7 @@
   function start() {
     var ctx = readContext();
     if (!ctx) return; /* not a league home page */
+    CTX = ctx;
     /* Read at start, not at load: the module's block is parsed by then. */
     WINNINGS = readWinnings({});
     if (!findTable()) return; /* module not on this page */

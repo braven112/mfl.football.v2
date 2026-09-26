@@ -15,6 +15,30 @@
       "imageAlt": "TheLeague's roster page with the new header: the club nameplate in its own colour, last result and next game, the season rail, and every club's crest in a row below"
     },
     {
+      "date": "2026-09-24",
+      "type": "bug-fix",
+      "summary": "The <a href=\"/rosters\">roster</a> header's cap space now includes dead money and updates as you simulate cuts, trades and extensions.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-09-24",
+      "type": "enhancement",
+      "summary": "<a href=\"/players\">Free Agents</a> now shows a lock next to recently dropped players MFL won't let you add yet, and claiming one explains why instead of failing with HTTP 502.",
+      "impact": "user",
+      "area": "free-agents",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-24",
+      "type": "bug-fix",
+      "summary": "When a waiver claim or first-come add fails, the claim window now shows MFL's reason and a link to its add/drop page instead of a bare HTTP error.",
+      "impact": "user",
+      "area": "free-agents",
+      "league": "both"
+    },
+    {
       "date": "2026-09-25",
       "type": "enhancement",
       "summary": "Free Agents on your phone is now a clean list — player, points and projection — and tapping anywhere on a row opens his full card, with Claim/Bid and Watch inside.",
@@ -45,6 +69,14 @@
       "impact": "admin",
       "area": "design-system",
       "league": "theleague"
+    },
+    {
+      "date": "2026-09-25",
+      "type": "bug-fix",
+      "summary": "Live Scoring's win-probability bar now reads in the same order as the scoreboard: the team on the left gets the left share of the bar, in its own colour.",
+      "impact": "user",
+      "area": "live-scoring",
+      "league": "both"
     }
   ]
 }

@@ -37,6 +37,7 @@
         "src/pages/api/waiver-order.ts",
         "src/scripts/transaction-hub.ts",
         "src/pages/api/waiver-claim.ts",
+        "src/pages/api/waiver-claims.ts",
         "src/utils/*waiver*",
         "src/utils/mfl-matchup-api.ts",
         "src/utils/waiver-system.ts"
@@ -44,6 +45,7 @@
       "tests": [
         "tests/afl-waiver-order.test.ts",
         "tests/waiver-claim.test.ts",
+        "tests/claim-route-handled-failure-guard.test.ts",
         "tests/waiver-order-display.test.ts",
         "tests/waiver-priority-league-gate.test.ts",
         "tests/waiver-window.test.ts",
@@ -806,7 +808,8 @@
         "tests/rosters-live-odds.test.ts",
         "tests/rosters-owner-presence.test.ts",
         "tests/rosters-draft-assets.test.ts",
-        "tests/rosters-eligibility.test.ts"
+        "tests/rosters-eligibility.test.ts",
+        "tests/roster-header-cap-space.test.ts"
       ]
     },
     {

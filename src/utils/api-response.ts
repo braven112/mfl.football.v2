@@ -70,3 +70,30 @@ export async function requireAuth(request: Request): Promise<AuthUser | Response
   if (!user) return unauthorized();
   return user;
 }
+
+/**
+ * A HANDLED failure the browser must be able to read: `{ success: false,
+ * message, ...extra }`.
+ *
+ * The edge replaces the body of any origin 5xx with its own page
+ * (docs/claude/insights/domains/deployment.md, 2026-07-07), so a JSON 502
+ * carrying "MFL refused this — here is why" reaches the client as an
+ * unreadable HTML page and the owner sees a bare "HTTP 502". That is how a
+ * locked-player claim failed silently on 2026-09-24. So a 5xx status is sent
+ * as 200 — every caller already branches on `!res.ok || !data.success` — and
+ * the intended status rides in the body as `status` for diagnostics. 4xx
+ * passes the edge intact and is sent as given.
+ */
+export function handledFailure(
+  message: string,
+  status: number,
+  extra: Record<string, unknown> = {},
+  headers: Record<string, string> = JSON_HEADERS_NO_STORE,
+): Response {
+  const eaten = status >= 500;
+  return json(
+    { success: false, message, ...extra, ...(eaten ? { status } : {}) },
+    eaten ? 200 : status,
+    headers,
+  );
+}

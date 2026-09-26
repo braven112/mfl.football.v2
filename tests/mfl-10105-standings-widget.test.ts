@@ -286,10 +286,38 @@ describe('MAD POWER 99 standings widget (MFL 10105)', () => {
     expect(source).toContain('r.pf != null ? r.pf : r.avgpf');
   });
 
-  it('marks tied teams rather than presenting an arbitrary order as fact', async () => {
+  it('never marks a team as tied — Points For has already decided the order', async () => {
+    /* Every team on the same score: the worst case for a per-team marker. */
     const vp = new Array(12).fill(7);
     const { table } = await run({ withVp: true, vp, config: { DIVISION_LEADER_SEEDS: 3, RUNNER_UP_SEEDS: 3, WILD_CARD_SEEDS: 2 } });
-    expect(classCount(table, 'mp99-tie')).toBeGreaterThan(0);
+    expect(classCount(table, 'mp99-tie')).toBe(0);
+    /* Nothing printed next to the number either — the seed order IS the
+     * answer, so "level on VP" answers a question the reader did not ask,
+     * on a quarter of the league at once. */
+    expect(textOf(table, 'mp99-tile-vp').every((t) => /^\d+ VP$/.test(String(t)))).toBe(true);
+    expect(textOf(table, 'mp99-list-vp').every((t) => /^\d+$/.test(String(t)))).toBe(true);
+  });
+
+  it('still says so where a tie actually changes an outcome — the cut', async () => {
+    const vp = new Array(12).fill(7);
+    const { table } = await run({ withVp: true, vp, config: { DIVISION_LEADER_SEEDS: 3, RUNNER_UP_SEEDS: 3, WILD_CARD_SEEDS: 2 } });
+    /* The playoff line is the one place being level matters, and that note is
+     * computed from the teams either side of it, not from the dropped flag. */
+    expect(textOf(table, 'mp99-note-cell')[0]).toContain('Points For');
+  });
+
+  it('names the division on every team, in both the tiles and the field', async () => {
+    const { table } = await run({ withVp: true, config: { DIVISION_LEADER_SEEDS: 3, RUNNER_UP_SEEDS: 3, WILD_CARD_SEEDS: 2 } });
+    /* Seeds 1-18 are one team per division, so the tier alone says a team
+     * leads A division, never WHICH — the name is the only thing that does. */
+    expect(classCount(table, 'mp99-tile-div')).toBe(classCount(table, 'mp99-tile'));
+    expect(classCount(table, 'mp99-list-div')).toBe(classCount(table, 'mp99-list-row'));
+    /* It is MFL's own division name, not a re-derived label. */
+    expect(new Set(textOf(table, 'mp99-tile-div')))
+      .toEqual(new Set(['Division 0', 'Division 1', 'Division 2']));
+    /* A trailing "Division" is stripped: it sits under a heading that already
+     * says so, and "Joe Montana Division" wrapped onto three lines. */
+    expect(readFileSync(SOURCE, 'utf8')).toContain("replace(/\\s+Division$/i, '')");
   });
 
   it("prints MFL's own W-L-T record, unreformatted", async () => {
@@ -394,7 +422,7 @@ describe('module.html — the complete MESSAGE6 module', () => {
     const css = readFileSync(path.join(process.cwd(), 'public/mfl/10105/standings.css'), 'utf8');
     /* The league's own rules and the widget's additions both live there. */
     for (const rule of ['.division-row', '.wildcard-row', '.winnings-row', '.highlight-row',
-                        '.runnerup-row', '.mp99-cut-cell', '.mp99-tie', '.mp99-tile',
+                        '.runnerup-row', '.mp99-cut-cell', '.mp99-tile-div', '.mp99-tile',
                         '.mp99-grid', '.mp99-list-row', '.mp99-prize', '.mp99-list-prize']) {
       expect(css).toContain(`#madmen #wwwc ${rule}`);
     }
@@ -405,7 +433,7 @@ describe('module.html — the complete MESSAGE6 module', () => {
   });
 
   it('keeps the banner, caption and column widths', () => {
-    expect(module).toContain('Ken_99.png');
+    expect(module).toContain('https://v2.mfl.football/mfl/10105/banner.png');
     expect(module).toContain('<caption>MAD POWER 99</caption>');
     for (const col of ['col-rank', 'col-team', 'col-record', 'col-points', 'col-winnings', 'col-division']) {
       expect(module).toContain(col);
@@ -416,6 +444,95 @@ describe('module.html — the complete MESSAGE6 module', () => {
     expect(module).toContain('window.MAD_POWER_99_WINNINGS');
     /* Commented examples only — never real amounts committed to the repo. */
     expect(module).toMatch(/\/\/\s*"0001":/);
+  });
+
+  it('sizes itself from its own container, never from the viewport', () => {
+    const css = readFileSync(path.join(process.cwd(), 'public/mfl/10105/standings.css'), 'utf8');
+
+    /* The widget has to be correct in a full-width module AND on the home
+     * page, where it sits in a column beside a sidebar. At 1337px a viewport
+     * query calls both "desktop", which is how the full-width sizing ended up
+     * inside a ~750px column with the tiles over the Pending Trades panel. */
+    expect(css).toContain('container-type: inline-size');
+    expect(css).toContain('container-name: mp99');
+    expect(css).toMatch(/@container mp99 \(min-width: \d+px\)/);
+
+    /* No widget rule may sit inside a VIEWPORT query. The league's captured
+     * stylesheet still has its own @media blocks and those are left alone,
+     * so the check runs against the widget's half of the file — which is
+     * the hand-edited source the generated one is built from. */
+    const widget = readFileSync(path.join(process.cwd(), 'public/mfl/10105/widget.css'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '');   // the comments quote the league's own @media rules
+
+    /* Specifically a DIMENSION query. `@media (prefers-reduced-motion)` and
+     * friends are user-preference queries, not viewport ones — they say
+     * nothing about how much room the widget has, so they are fine and the
+     * reduced-motion rule for the team links depends on one. */
+    const viewportQueries = [...widget.matchAll(/@media[^{]*/g)]
+      .map((m) => m[0])
+      .filter((q) => /\b(min|max)?-?(width|height|aspect-ratio)\s*:/.test(q));
+    expect(viewportQueries).toEqual([]);
+    expect(widget).toContain('@container mp99');
+  });
+
+  it('cannot push past whatever column it is dropped into', () => {
+    const css = readFileSync(path.join(process.cwd(), 'public/mfl/10105/standings.css'), 'utf8');
+
+    /* The league's colgroup gives the six columns fixed pixel widths summing
+     * to 1022px. Under fixed layout those are authoritative, so the table came
+     * out 1022px wide however little room it had — the actual cause of the
+     * overlap. Every cell the widget renders spans all six, so they describe
+     * nothing and are released. */
+    expect(css).toContain('#madmen #wwwc col { width: auto !important; }');
+    expect(css).toContain('table-layout: fixed');
+
+    /* `clip` is the one overflow value allowed beside `visible`, so the
+     * sideways guard does not bring back the nested vertical scrollbar. */
+    expect(css).toContain('overflow-x: clip');
+
+    /* The league's `#madmen { overflow: auto; height: 1200px }` is still in
+     * the captured half of the file — it is their stylesheet, kept whole.
+     * What matters is that the widget's override lands AFTER it, or the page
+     * gets a scrollbar inside a scrollbar again. */
+    expect(css.lastIndexOf('overflow: auto')).toBeLessThan(css.indexOf('overflow-x: clip'));
+    expect(css.indexOf('max-height: none')).toBeGreaterThan(css.lastIndexOf('max-height: 850px'));
+  });
+
+  it('links every team to its franchise page, root-relative', async () => {
+    const { table } = await run({ withVp: true, config: { DIVISION_LEADER_SEEDS: 3, RUNNER_UP_SEEDS: 3, WILD_CARD_SEEDS: 2 } });
+    const links = all(table).filter((e) => e.tagName === 'A');
+    /* Every qualifier tile and every field row, and nothing else. */
+    expect(links.length).toBe(classCount(table, 'mp99-tile') + classCount(table, 'mp99-list-row'));
+
+    /* MFL option 07 is Franchise Info. Root-relative for the same reason the
+     * feeds are: it follows whichever wwwNN served the page and carries no
+     * league id of its own, so this file still works in any league. */
+    for (const a of links) {
+      const href = a.getAttribute('href')!;
+      expect(href.startsWith('/')).toBe(true);
+      expect(href).toMatch(/^\/2026\/options\?L=10105&O=07&F=\d{4}$/);
+    }
+    /* Each team links to ITSELF, not to a shared or off-by-one id. */
+    expect(new Set(links.map((a) => a.getAttribute('href'))).size).toBe(links.length);
+  });
+
+  it('caps the banner, which sits outside #madmen and is 1548px wide', () => {
+    const css = readFileSync(path.join(process.cwd(), 'public/mfl/10105/standings.css'), 'utf8');
+
+    /* The banner is the module's first element, ABOVE the table, so every
+     * other rule in the file is scoped away from it. Its `img-responsive`
+     * class reads like a width cap but is defined nowhere — not in MFL's
+     * MFLBaseCSS, not in the league skin — so on a 1232px column a 1548px
+     * image simply ran off the page. Keyed on the artwork folder rather
+     * than that class: this stylesheet loads on the home page now, and
+     * `img-responsive` is a name MFL's own pages may use. */
+    expect(css).toMatch(/img\[src\*=["']\/mfl\/10105\/["']\]/);
+    expect(css).toContain('max-width: 100%');
+    expect(css).not.toMatch(/^\s*\.img-responsive\s*\{/m);
+
+    /* The cap only works if the banner is served from that folder. */
+    const module = readFileSync(path.join(process.cwd(), 'public/mfl/10105/module.html'), 'utf8');
+    expect(module).toMatch(/<img[^>]+src="https:\/\/v2\.mfl\.football\/mfl\/10105\/[^"]+"/);
   });
 
   it('carries the hosted widget and no hand-written team rows', () => {

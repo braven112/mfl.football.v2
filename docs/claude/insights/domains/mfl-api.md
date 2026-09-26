@@ -923,6 +923,8 @@ https://api.myfantasyleague.com/2025/export?TYPE=freeAgents&L=13522&JSON=1
 
 **Insight:** Players dropped during the offseason appear in the `freeAgents` endpoint with `status: "locked"`. This likely indicates they cannot be picked up until the new league year begins or waivers open.
 
+> **Superseded 2026-09-24** — the lock is not offseason-only and does not lift "when waivers open". It is MFL's recently-dropped lock, in season too; see the 2026-09-24 entry on the recently-dropped lock, below.
+
 **Evidence:**
 ```json
 {
@@ -3427,3 +3429,17 @@ So neither "prefer `icon` because it is small" nor "the subject is centered" can
 **Evidence:** `TYPE=league&L=10105` → every franchise has `icon`/`logo` under `fflnetdynamic2026/10105_franchise_{icon,logo}NNNN.png`; fetched, they are 1500×636 PNGs of 392–408 KB, `icon` and `logo` differing by a few KB. Line ~2095 of this file records the 300×50 `icon` mini-banners for TheLeague's own history.
 
 **Recommendation:** Take `icon` first and `logo` only in its absence — that is "the smaller of the two" wherever the convention holds and costs no extra request, and a byte-size probe (2 HEADs per franchise against a host that throttles noisy clients) buys nothing once the mark is served through an image optimizer. Normalize the SHAPE at render time (`object-fit: cover` into a square box), never by trusting the field name, and bound the BYTES through `/_vercel/image` — see `docs/claude/rules/live-scoring.md` and the deployment-domain entry on where that config has to live.
+
+## 2026-09-24 - `status: "locked"` Is The Recently-Dropped Lock, Per Unit, And Needs No Auth
+
+**Context:** During the AFL's first-come window an owner claiming the 49ers DEF (`0530`, dropped in the AL earlier that week) saw only "Claim failed (HTTP 502)". MFL had refused the add; `/api/waiver-claim` relayed that as a JSON 502, and the edge replaced the body (deployment domain, "The edge eats origin 5xx"). Hotfix #1209, follow-up #1210.
+
+**Insight:** `export?TYPE=freeAgents` tags every player MFL will not currently let anyone add with `status: "locked"` — the rows its own add/drop page marks `*`. Three things the 2026-02-13 entry above got wrong or did not know:
+
+1. **It is not an offseason state.** In season it is the recently-dropped lock both constitutions describe: the AFL locks a dropped player until the next Sunday kickoff, TheLeague until Sunday 10:15 AM PT. The claim window and the lock window do not overlap, so a locked player is never legitimately claimable — not by FCFS and not by a queued waiver claim.
+2. **It is per unit.** The AFL answers `CONFERENCE00` and `CONFERENCE01` separately, and `0530` was locked in the AL while rostered in the NL. TheLeague answers one `LEAGUE` unit.
+3. **It needs no owner cookie.** `docs/features/mfl-api.md` listed this export as owner-authenticated; an unauthenticated read (the `api.` host, following its redirect, no `MFL_USER_ID`) returned `{ '00': 10, '01': 7 }` locked players for the AFL, `0530` among the AL's, and TheLeague's `LEAGUE` unit too.
+
+**Evidence:** Live reads on 2026-09-24 while diagnosing, from the sandbox and from a Vercel preview of #1209. No runtime errors were logged for the incident: the error was handled, then its body was discarded at the edge.
+
+**Recommendation:** Ask MFL for the lock list rather than deriving it from a calendar — `fetchLockedPlayers` / `isPlayerLocked` in `src/utils/mfl-locked-players.ts`, keyed by unit, failing open (a failed read is "unknown", never "locked"). And return every handled failure from a route whose message the owner must read as `200` + `{ success: false }` — `handledFailure` in `src/utils/api-response.ts`; guard `tests/claim-route-handled-failure-guard.test.ts`. Still open: whether a locked player takes a bid in TheLeague's offseason auction (Feb–Mar) — the Free Agents page leaves the auction flow ungated until that is observed.
