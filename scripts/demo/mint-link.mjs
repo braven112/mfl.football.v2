@@ -2,7 +2,9 @@
 /**
  * Issue a private custom-site demo link (docs/plans/custom-site-demo.md).
  *
- *   node scripts/demo/mint-link.mjs --label "Acme Dynasty League" [--days 14]
+ *   node scripts/demo/mint-link.mjs --label "Acme Dynasty League" [--days 14] [--path redraft]
+ *
+ * The token opens every demo; `--path` only picks which one the link lands on.
  *
  * Writes the link to the DEMO deployment's Redis — set DEMO_REDIS_REST_URL and
  * DEMO_REDIS_REST_TOKEN (the values on the demo branch in Vercel) — and prints
@@ -10,7 +12,7 @@
  */
 import { Redis } from '@upstash/redis';
 import { buildDemoLink, DEMO_START_PATH, DEMO_TOKEN_PREFIX } from '../../src/utils/demo-access-core.mjs';
-import { DEMO_HOST, LEAGUES } from '../../src/config/leagues-data.mjs';
+import { DEMO_HOST, demoLeaguePaths } from '../../src/config/leagues-data.mjs';
 
 const args = process.argv.slice(2);
 const opt = (name, fallback) => {
@@ -20,8 +22,10 @@ const opt = (name, fallback) => {
 
 const label = opt('label');
 const days = Number(opt('days', 14));
-if (!label || !Number.isFinite(days) || days <= 0) {
-  console.error('Usage: node scripts/demo/mint-link.mjs --label "<who it is for>" [--days 14]');
+const paths = Object.keys(demoLeaguePaths());
+const path = opt('path', paths[0]);
+if (!label || !Number.isFinite(days) || days <= 0 || !paths.includes(path)) {
+  console.error(`Usage: node scripts/demo/mint-link.mjs --label "<who it is for>" [--days 14] [--path ${paths.join('|')}]`);
   process.exit(2);
 }
 const url = process.env.DEMO_REDIS_REST_URL;
@@ -36,4 +40,4 @@ await new Redis({ url, token }).set(`${DEMO_TOKEN_PREFIX}${link.token}`, JSON.st
   ex: link.expiresAt - link.createdAt,
 });
 console.log(`Demo link for ${label} (expires ${new Date(link.expiresAt * 1000).toDateString()}):`);
-console.log(`https://${DEMO_HOST}/${LEAGUES.theleague.demoPath}${DEMO_START_PATH}?t=${link.token}`);
+console.log(`https://${DEMO_HOST}/${path}${DEMO_START_PATH}?t=${link.token}`);

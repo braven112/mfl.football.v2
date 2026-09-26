@@ -221,10 +221,11 @@ describe('fetch guard', () => {
 describe('demo route block', () => {
   it('refuses every other league and its API, and nothing of the demo league', async () => {
     const { isDemoRefusedPath } = await import('../src/utils/demo-isolation-core.mjs');
-    for (const p of ['/afl-fantasy', '/afl-fantasy/rosters', '/api/afl-fantasy/lineup', '/api/afl-keepers', '/api/afl-rules-qa', '/best-ball-1/draft', '/api/best-ball-draft/x']) {
+    for (const p of ['/afl-fantasy', '/afl-fantasy/rosters', '/api/afl-fantasy/lineup', '/api/afl-keepers', '/api/afl-rules-qa', '/api/best-ball-draft/x']) {
       expect(isDemoRefusedPath(p), p).toBe(true);
     }
-    for (const p of ['/', '/theleague/rosters', '/rosters', '/api/lineup', '/afl-fantasyx']) {
+    // The best-ball slot serves the /redraft demo, so it is NOT refused.
+    for (const p of ['/', '/theleague/rosters', '/rosters', '/api/lineup', '/afl-fantasyx', '/best-ball-1/draft-board']) {
       expect(isDemoRefusedPath(p), p).toBe(false);
     }
   });
@@ -234,7 +235,7 @@ describe('demo route block', () => {
     const { resolveDemoPath, rewriteDemoHtml } = await import('../src/utils/demo-isolation-core.mjs');
     const paths = reg.demoLeaguePaths();
     expect(reg.DEMO_HOST).toBe('demo.mfl.football');
-    expect(paths).toEqual({ dynasty: 'theleague' });
+    expect(paths).toEqual({ dynasty: 'theleague', redraft: 'best-ball-1' });
     // One host, a path per demo — no subdomain maps to a league.
     expect(reg.buildHostToSlugMap()[reg.DEMO_HOST]).toBeUndefined();
     expect(resolveDemoPath('/', paths)).toEqual({ redirect: '/dynasty/' });
@@ -242,6 +243,8 @@ describe('demo route block', () => {
     expect(resolveDemoPath('/theleague/lineup', paths)).toEqual({ redirect: '/dynasty/lineup' });
     expect(resolveDemoPath('/api/lineup', paths)).toBeNull();
     expect(resolveDemoPath('/theleaguex', paths)).toBeNull();
+    expect(resolveDemoPath('/redraft/draft-board', paths)).toEqual({ rewrite: '/best-ball-1/draft-board' });
+    expect(resolveDemoPath('/best-ball-1/rosters', paths)).toEqual({ redirect: '/redraft/rosters' });
     expect(rewriteDemoHtml('<a href="/theleague/rosters"> <img src="/assets/theleague/icons/x.svg">', paths)).toBe(
       '<a href="/dynasty/rosters"> <img src="/assets/theleague/icons/x.svg">',
     );

@@ -13,8 +13,18 @@
  * with no dark value ships unreadable in one theme.
  */
 import { isDemoDeploy } from '../../utils/deploy-environment';
+import { demoLeaguePaths } from '../../config/leagues-data.mjs';
+import { getLeagueBySlug } from '../../config/leagues';
 
 const show = isDemoDeploy();
+// Which demo this page belongs to: the first path segment is a demo path
+// (`/redraft/...`) or, after the middleware's rewrite, the slot's own slug.
+const segment = Astro.url.pathname.split('/')[1] ?? '';
+const slug = demoLeaguePaths()[segment] ?? segment;
+const bestBall = Boolean(getLeagueBySlug(slug)?.bestBall);
+const pitch = bestBall
+	? 'The draft room, board and mock drafts here were built for this league; your site is built around how yours works.'
+	: 'The salary-cap tools here were built for this league; your site is built around how yours works.';
 ---
 
 {
@@ -22,8 +32,7 @@ const show = isDemoDeploy();
 		<div class="demo-banner" role="note">
 			<span class="demo-banner__label">Demo</span>
 			<span class="demo-banner__detail">
-				A fictional league — nothing is sent to MyFantasyLeague. The salary-cap tools here were built for this
-				league; your site is built around how yours works.
+				A fictional league — nothing is sent to MyFantasyLeague. {pitch}
 			</span>
 		</div>
 	)

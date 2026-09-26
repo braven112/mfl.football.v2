@@ -24,6 +24,7 @@
 
 import { getRedis } from './redis-client';
 import { currentDemoContext } from './demo-request-context';
+import { LEAGUES } from '../config/leagues-data.mjs';
 
 type Json = any; // MFL exports are loosely shaped; the readers own the typing.
 
@@ -494,10 +495,22 @@ function isWrite(url: URL, method: string): boolean {
   return method.toUpperCase() === 'POST' || /\/(import|add_drop|csetup|options)$/.test(url.pathname) || url.searchParams.has('DELETE');
 }
 
+/**
+ * The league whose generated MFL feeds the stand-in serves. The best-ball
+ * demo is draft-only and reads no MFL export for its league; any other league
+ * id gets MFL's own "no such league" answer rather than the dynasty league's
+ * data under another league's name.
+ */
+const STANDIN_LEAGUE_ID = LEAGUES.theleague.id;
+
 export async function answerDemoMfl(url: URL, method: string, body: string | undefined): Promise<Response> {
   const wantsJson = url.searchParams.get('JSON') === '1';
   if (url.pathname.endsWith('/login')) {
     return xml('<error>The demo league has no MyFantasyLeague sign-in — use your demo link.</error>');
+  }
+  const leagueParam = url.searchParams.get('L') ?? new URLSearchParams(body ?? '').get('L');
+  if (leagueParam && leagueParam !== STANDIN_LEAGUE_ID) {
+    return mflError('Invalid league ID.', wantsJson);
   }
   const state = await loadState();
   if (isWrite(url, method)) {

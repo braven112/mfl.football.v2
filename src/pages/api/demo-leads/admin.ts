@@ -4,7 +4,7 @@
  *
  *   { action: 'extend', leadId, days }
  *   { action: 'revoke', leadId }
- *   { action: 'create', name, email, leagueName, days? }  — a link issued by hand
+ *   { action: 'create', name, email, leagueName, days?, path? }  — a link issued by hand
  *
  * Commissioner/admin sessions only. The demo's links live in the DEMO's
  * database, which production never holds credentials for, so each action is a
@@ -17,7 +17,7 @@ import { isDemoDeploy } from '../../../utils/deploy-environment';
 import { newLeadId, RELAY_SECRET_ENV, SIGNATURE_HEADER, signRelayBody } from '../../../utils/demo-leads-core.mjs';
 import { getDemoLead, saveDemoLead, type DemoLead } from '../../../utils/demo-leads-store';
 import { getLeagueBySlug } from '../../../config/leagues';
-import { DEMO_HOST } from '../../../config/leagues-data.mjs';
+import { DEMO_HOST, demoLeaguePaths } from '../../../config/leagues-data.mjs';
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
@@ -49,7 +49,7 @@ export const POST: APIRoute = async ({ request }) => {
   if (!user || !isAuthorizedForLeague(user, league.id) || !isCommissionerOrAdmin(user)) {
     return json({ message: 'Admins only.' }, 403);
   }
-  let cmd: { action?: string; leadId?: string; days?: number; name?: string; email?: string; leagueName?: string };
+  let cmd: { action?: string; leadId?: string; days?: number; name?: string; email?: string; leagueName?: string; path?: string };
   try {
     cmd = await request.json();
   } catch {
@@ -61,8 +61,10 @@ export const POST: APIRoute = async ({ request }) => {
     const name = String(cmd.name ?? '').trim().slice(0, 80);
     const leagueName = String(cmd.leagueName ?? '').trim().slice(0, 120);
     if (!name || !leagueName) return json({ message: 'Name and league name are required.' }, 400);
+    const paths = Object.keys(demoLeaguePaths());
+    const path = cmd.path && paths.includes(cmd.path) ? cmd.path : paths[0];
     const leadId = newLeadId();
-    const res = await callDemo({ action: 'create', label: `${name} — ${leagueName}`, days, leadId });
+    const res = await callDemo({ action: 'create', label: `${name} — ${leagueName}`, days, leadId, path });
     if (!res.ok) return json(res.data, 502);
     const lead: DemoLead = {
       id: leadId,
@@ -70,8 +72,8 @@ export const POST: APIRoute = async ({ request }) => {
       expiresAt: res.data.expiresAt,
       token: res.data.token,
       link: res.data.link,
-      wanted: 'dynasty',
-      path: 'dynasty',
+      wanted: path,
+      path,
       name,
       email: String(cmd.email ?? '').trim().slice(0, 120),
       leagueName,

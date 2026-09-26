@@ -27,6 +27,7 @@ import { isAdminFranchise } from '../../config/nav-config';
 import { getBestBall1Preference } from '../../utils/team-preferences';
 import { buildDraftPlayers } from '../../utils/build-draft-players';
 import { fetchOfficialDraftSession, officialDraftSessionId } from '../../utils/best-ball-draft';
+import { isDemoDeploy } from '../../utils/deploy-environment';
 import type { DraftRoomPageData, DraftRoomTeam } from '../../types/draft-room';
 
 export const prerender = false;
@@ -48,6 +49,12 @@ const userTeamId = (isBb1User ? user.franchiseId : null) || cookiePref?.franchis
 // ── Official session ──
 const session = await fetchOfficialDraftSession(BB1, leagueYear);
 const sessionId = officialDraftSessionId(BB1, leagueYear);
+
+// The custom-site demo's official draft is already complete and exists only
+// in the build — there is no live room to join. Prospects draft in a mock.
+if (isDemoDeploy() && session) {
+  return Astro.redirect('/best-ball-1/mock-draft');
+}
 
 // ── Page data (only needed when the room renders) ──
 let pageData: DraftRoomPageData | null = null;

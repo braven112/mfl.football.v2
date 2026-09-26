@@ -110,11 +110,12 @@ export function isDemoRefusedHost(hostname) {
 }
 
 /**
- * Paths the demo never serves: every league except the fictional one in
- * TheLeague's slot, and their API routes. Matched on the REQUESTED path,
+ * Paths the demo never serves: the leagues it has no fictional version of
+ * (today, the AFL's slot), their API routes, and the best-ball league's
+ * commissioner-only official-draft API. Matched on the REQUESTED path,
  * before any league-host rewrite, so no host can reach them.
  */
-const DEMO_REFUSED_PATH = /^\/(?:api\/)?(?:afl-fantasy|afl-keepers|afl-rules-qa|best-ball-1|best-ball-draft)(?:[/.?]|$)/;
+const DEMO_REFUSED_PATH = /^\/(?:api\/)?(?:afl-fantasy|afl-keepers|afl-rules-qa|best-ball-draft)(?:[/.?]|$)/;
 
 export function isDemoRefusedPath(pathname) {
   return DEMO_REFUSED_PATH.test(String(pathname));

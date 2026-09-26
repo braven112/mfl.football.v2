@@ -1,0 +1,161 @@
+---
+/**
+ * The custom-site demo's team picker (docs/plans/custom-site-demo.md): shared
+ * by each demo league's `/demo-start` route, which owns the sign-in, cookies
+ * and redirect (src/utils/demo-start.ts). This only renders.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+
+export interface DemoStartTeam {
+  franchiseId: string;
+  name: string;
+  abbrev?: string;
+  icon?: string;
+  division?: string;
+  colorPrimary?: string;
+  colorSecondary?: string;
+}
+
+interface Props {
+  leagueName: string;
+  /** What this demo league is and what the prospect can do in it. */
+  blurb: string;
+  teams: DemoStartTeam[];
+  link: { token: string; expiresAt: number } | null;
+  /** The token in the URL, if any — distinguishes "expired" from "none". */
+  token: string | null;
+}
+const { leagueName, blurb, teams, link, token } = Astro.props;
+const expiresOn = link
+  ? new Date(link.expiresAt * 1000).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+  : null;
+---
+
+<TheLeagueLayout title={`Welcome — ${leagueName}`}>
+  <main class="demo-start">
+    {
+      link ? (
+        <>
+          <header class="demo-start__intro">
+            <p class="demo-start__kicker">Your private demo</p>
+            <h1>Pick a team to run</h1>
+            <p>{blurb}</p>
+            <p class="demo-start__expiry">Your link works until {expiresOn}.</p>
+          </header>
+          <form method="get" class="demo-start__grid">
+            <input type="hidden" name="t" value={link.token} />
+            {teams.map((team) => (
+              <button type="submit" name="franchise" value={team.franchiseId} class="demo-start__team">
+                {team.icon ? (
+                  <img src={team.icon} alt="" width="64" height="64" loading="lazy" />
+                ) : (
+                  <span class="demo-start__swatch" style={`background:${team.colorPrimary};color:${team.colorSecondary}`}>{team.abbrev}</span>
+                )}
+                <span class="demo-start__name">{team.name}</span>
+                {team.division && <span class="demo-start__division">{team.division}</span>}
+              </button>
+            ))}
+          </form>
+        </>
+      ) : (
+        <header class="demo-start__intro">
+          <p class="demo-start__kicker">Demo link</p>
+          {token ? (
+            <>
+              <h1>This link has expired or isn't valid</h1>
+              <p>Demo links are private and last two weeks. Reach out and we'll send you a fresh one.</p>
+            </>
+          ) : (
+            <>
+              <h1>Sign in with your demo link</h1>
+              <p>This demo has no passwords — open the private link you were sent to pick a team and start.</p>
+            </>
+          )}
+        </header>
+      )
+    }
+  </main>
+</TheLeagueLayout>
+
+<style>
+  .demo-start {
+    max-width: 64rem;
+    margin: 0 auto;
+    padding: 3rem 1rem 4rem;
+  }
+
+  .demo-start__intro {
+    max-width: 42rem;
+    margin-bottom: 2rem;
+  }
+
+  .demo-start__kicker {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--color-text-secondary);
+    margin: 0 0 0.5rem;
+  }
+
+  .demo-start__intro h1 {
+    margin: 0 0 1rem;
+  }
+
+  .demo-start__intro p {
+    color: var(--color-text-secondary);
+    line-height: 1.55;
+  }
+
+  .demo-start__expiry {
+    font-size: 0.875rem;
+  }
+
+  .demo-start__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+    gap: 0.75rem;
+  }
+
+  .demo-start__team {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem 0.75rem;
+    border: 1px solid var(--color-border-default);
+    border-radius: 0.75rem;
+    background: var(--card-bg-color);
+    color: var(--color-text-primary);
+    font: inherit;
+    cursor: pointer;
+    text-align: center;
+  }
+
+  .demo-start__team:hover,
+  .demo-start__team:focus-visible {
+    border-color: var(--color-primary);
+    outline: none;
+    box-shadow: 0 0 0 2px var(--color-primary);
+  }
+
+  .demo-start__name {
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  .demo-start__swatch {
+    display: grid;
+    place-items: center;
+    width: 4rem;
+    height: 4rem;
+    border-radius: 50%;
+    font-weight: 800;
+    font-size: 0.875rem;
+  }
+
+  .demo-start__division {
+    font-size: 0.8125rem;
+    color: var(--color-text-secondary);
+  }
+</style>

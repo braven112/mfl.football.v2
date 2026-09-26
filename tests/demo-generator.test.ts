@@ -18,6 +18,8 @@ import { createRng } from '../scripts/demo/lib/rng.mjs';
 import * as feeds from '../scripts/demo/lib/mfl-feeds.mjs';
 import { applyRenames, renamePairs } from '../scripts/demo/lib/identity-files.mjs';
 import { nflWeekStartInstant } from '../src/utils/nfl-week-starts.mjs';
+import { bestBallDraft, BESTBALL_FRANCHISES, BESTBALL_ROUNDS } from '../scripts/demo/lib/bestball.mjs';
+import { seasonTotals } from '../scripts/demo/lib/nfl-facts.mjs';
 
 const FEEDS = 'data/theleague/mfl-feeds';
 const YEARS = [2023, 2024, 2025];
@@ -150,5 +152,30 @@ describe('demo build isolation', () => {
       failed = String((err as { stderr?: string }).stderr);
     }
     expect(failed).toContain('DELETES the real league data');
+  });
+});
+
+describe('the /redraft demo draft', () => {
+  const draft = () =>
+    bestBallDraft({
+      players: loadSeasonFacts(FEEDS, 2025).players,
+      adp: JSON.parse(readFileSync(`${FEEDS}/2025/adp-redraft.json`, 'utf8')).adp.player,
+      depth: new Map([...seasonTotals(loadSeasonFacts(FEEDS, 2024))].map(([id, t]) => [id, t.points])),
+      leagueId: 'x',
+      leagueYear: 2025,
+      seed: 'test/bestball',
+      draftStart: 0,
+    });
+
+  it('is a full snake draft: every team fills every round, no player twice', () => {
+    const d = draft();
+    expect(d.picks).toHaveLength(BESTBALL_FRANCHISES.length * BESTBALL_ROUNDS);
+    expect(new Set(d.picks.map((p: { playerId: string }) => p.playerId)).size).toBe(d.picks.length);
+    const n = BESTBALL_FRANCHISES.length;
+    expect(d.draftOrder.slice(n, 2 * n)).toEqual([...d.draftOrder.slice(0, n)].reverse());
+  });
+
+  it('is deterministic for a seed', () => {
+    expect(JSON.stringify(draft())).toBe(JSON.stringify(draft()));
   });
 });

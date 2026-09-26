@@ -10,6 +10,7 @@
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import type { DemoLead } from '../../../utils/demo-leads-store';
+import { demoLeaguePaths } from '../../../config/leagues-data.mjs';
 
 interface Props {
   leads: DemoLead[];
@@ -57,6 +58,11 @@ const league_ = (l: DemoLead) =>
         <label>Name<input name="name" required maxlength="80" /></label>
         <label>Email<input name="email" type="email" maxlength="120" /></label>
         <label>League<input name="leagueName" required maxlength="120" /></label>
+        <label
+          >Demo<select name="path">
+            {Object.keys(demoLeaguePaths()).map((p) => <option value={p}>{DEMO_NAMES[p] ?? p}</option>)}
+          </select></label
+        >
         <label>Days<input name="days" type="number" min="1" max="90" value="14" /></label>
         <button type="submit">Create link</button>
       </form>

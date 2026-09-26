@@ -342,6 +342,11 @@ export const LEAGUES = {
     mflHost: 'www45.myfantasyleague.com',
     dataPath: 'data/best-ball-1',
     /**
+     * The custom-site demo serves a fictional best-ball league in this slot at
+     * demo.mfl.football/redraft (docs/plans/custom-site-demo.md, phase 4).
+     */
+    demoPath: 'redraft',
+    /**
      * Path-only league: served at /best-ball-1 on the site's own domains
      * (mfl.football), no dedicated apex. Best-ball sister leagues
      * (#2, #3, …) will follow the same pattern.
