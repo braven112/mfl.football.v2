@@ -57,7 +57,7 @@ describe('demo league generator', () => {
   it('plays full seasons with legal rosters under the cap', () => {
     for (const s of seasons) {
       expect(s.standings).toHaveLength(16);
-      expect(s.playoffs?.championship.champion).toBeTruthy();
+      expect((s.playoffs?.championship as { champion?: string } | undefined)?.champion).toBeTruthy();
       for (const roster of s.rosters.values()) {
         const active = [...roster.values()].filter((c) => c.status !== 'TAXI_SQUAD');
         expect(active.length).toBeLessThanOrEqual(LEAGUE_RULES.rosterSize);
@@ -96,7 +96,7 @@ describe('demo identities', () => {
     for (const p of registry.people) realNames.add(String(p.displayName).toLowerCase());
     for (const f of DEMO_FRANCHISES) {
       for (const n of [f.name, f.nameShort, f.abbrev, f.owner]) {
-        expect(realNames.has(n.toLowerCase()), `${n} is a real name`).toBe(false);
+        expect(realNames.has(String(n).toLowerCase()), `${n} is a real name`).toBe(false);
       }
     }
   });

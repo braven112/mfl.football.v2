@@ -14,7 +14,9 @@
  */
 
 import { isMflWrite } from './mfl-fetch';
-import { isDemoRefusedHost, isMflHost, scrubDemoEnvironment } from './demo-isolation-core.mjs';
+import { DEMO_FETCH_MARK, isDemoFetch, isDemoRefusedHost, isMflHost, scrubDemoEnvironment } from './demo-isolation-core.mjs';
+
+export { isDemoFetch };
 
 export {
   DEMO_ENV_MAPPINGS,
@@ -84,17 +86,55 @@ function requestMethod(input: RequestInfo | URL, init?: RequestInit): string {
   return 'GET';
 }
 
-const DEMO_FETCH_MARK = Symbol.for('mfl.football.demoFetch');
 
 /**
  * Wrap a fetch so MFL goes to the stand-in and refused hosts throw. Everything
  * else (the demo's own Redis, ESPN, ranking sources) passes through.
  */
-export function createDemoFetch(realFetch: typeof fetch): typeof fetch {
+/** Answers an MFL request on the demo. Defaults to a plain "no MFL here" reply. */
+export type DemoMflAnswer = (url: URL, method: string, body: string | undefined) => Promise<Response> | Response;
+
+async function requestBody(input: RequestInfo | URL, init?: RequestInit): Promise<string | undefined> {
+  if (typeof init?.body === 'string') return init.body;
+  if (init?.body instanceof URLSearchParams) return init.body.toString();
+  if (typeof input === 'object' && 'text' in input && typeof input.text === 'function') {
+    try {
+      return await input.clone().text();
+    } catch {
+      return undefined;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Who answers MFL requests on this demo process. Starts as the plain "no MFL
+ * here" reply — fail closed — and is upgraded to the stand-in by
+ * src/middleware.ts on a demo BUILD (behind a compile-time flag, so no other
+ * build carries the stand-in or its generated-league loaders).
+ */
+//
+// Kept on globalThis, beside the fetch guard it configures, because this module
+// is instantiated more than once in one process — astro.config.ts loads it
+// outside Vite, the server loads it inside — and the guard installed by the
+// first instance must see the answer set through the second.
+const ANSWER_KEY = Symbol.for('mfl.football.demoMflAnswer');
+type AnswerHolder = { [ANSWER_KEY]?: DemoMflAnswer };
+const fallbackAnswer: DemoMflAnswer = (url, method) => demoMflResponse(url, method);
+const installedAnswer: DemoMflAnswer = (url, method, body) =>
+  ((globalThis as AnswerHolder)[ANSWER_KEY] ?? fallbackAnswer)(url, method, body);
+
+export function setDemoMflAnswer(answer: DemoMflAnswer): void {
+  (globalThis as AnswerHolder)[ANSWER_KEY] = answer;
+}
+
+export function createDemoFetch(realFetch: typeof fetch, answerMfl?: DemoMflAnswer): typeof fetch {
   const demoFetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const url = requestUrl(input);
     if (url) {
-      if (isMflHost(url.hostname)) return demoMflResponse(url, requestMethod(input, init));
+      if (isMflHost(url.hostname)) {
+        return (answerMfl ?? installedAnswer)(url, requestMethod(input, init), await requestBody(input, init));
+      }
       if (isDemoRefusedHost(url.hostname)) throw new DemoOutboundRefusedError(url.hostname);
     }
     return realFetch(input, init);
@@ -102,9 +142,6 @@ export function createDemoFetch(realFetch: typeof fetch): typeof fetch {
   return Object.assign(demoFetch, { [DEMO_FETCH_MARK]: true }) as typeof fetch;
 }
 
-export function isDemoFetch(candidate: unknown): boolean {
-  return typeof candidate === 'function' && DEMO_FETCH_MARK in candidate;
-}
 
 /**
  * Apply demo isolation to a process: scrub, then guard fetch. Idempotent — the
@@ -114,8 +151,9 @@ export function isDemoFetch(candidate: unknown): boolean {
 export function applyDemoIsolation(
   env: NodeJS.ProcessEnv,
   target: { fetch: typeof fetch },
+  answerMfl?: DemoMflAnswer,
 ): { removed: string[] } {
   const removed = scrubDemoEnvironment(env);
-  if (!isDemoFetch(target.fetch)) target.fetch = createDemoFetch(target.fetch.bind(target));
+  if (!isDemoFetch(target.fetch)) target.fetch = createDemoFetch(target.fetch.bind(target), answerMfl);
   return { removed };
 }

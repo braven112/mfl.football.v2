@@ -36,8 +36,22 @@ import {
 } from './utils/link-punctuation.mjs';
 import { isDemoDeploy, shouldBlockIndexing } from './utils/deploy-environment';
 import { isDemoRefusedPath } from './utils/demo-isolation-core.mjs';
+import type { MiddlewareHandler } from 'astro';
+import { getAuthUser } from './utils/auth';
+import { demoTokenFromUserId } from './utils/demo-access';
+import { demoRequestContext } from './utils/demo-request-context';
+import { setDemoMflAnswer } from './utils/demo-isolation';
 
-export const onRequest = defineMiddleware(async (context, next) => {
+// The custom-site demo's MFL stand-in. `__DEMO_BUILD__` is a compile-time
+// constant (astro.config.ts `vite.define`), so every other build sees
+// `if (false)` and drops the stand-in and its loaders entirely.
+if (typeof __DEMO_BUILD__ !== 'undefined' && __DEMO_BUILD__) {
+  setDemoMflAnswer(async (url, method, body) =>
+    (await import('./utils/demo-mfl-standin')).answerDemoMfl(url, method, body),
+  );
+}
+
+const handle: MiddlewareHandler = async (context, next) => {
   // Keep staging and preview deployments out of search indexes.
   //
   // A HEADER rather than a <meta> tag, and set here rather than in the layouts,
@@ -135,4 +149,18 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   const newUrl = new URL(rewrite.newPath + context.url.search, context.url);
   return stamp(await context.rewrite(newUrl));
+};
+
+/**
+ * On the custom-site demo, every request runs inside the prospect's context —
+ * read by the MFL stand-in and the Redis key namespace, so each prospect's
+ * simulated league is theirs alone (docs/plans/custom-site-demo.md).
+ */
+export const onRequest = defineMiddleware((context, next) => {
+  if (!isDemoDeploy()) return handle(context, next);
+  const user = context.isPrerendered ? null : getAuthUser(context.request);
+  return demoRequestContext.run(
+    { token: demoTokenFromUserId(user?.id), franchiseId: user?.franchiseId || null },
+    () => handle(context, next),
+  );
 });

@@ -13,7 +13,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import leagueConfig from '../../data/theleague.config.json';
 import { isDemoDeploy } from '../../utils/deploy-environment';
 import { DEMO_USER_PREFIX, lookupDemoLink } from '../../utils/demo-access';
-import { createSessionCookie, createSessionToken } from '../../utils/session';
+import { createSessionToken } from '../../utils/session';
 import { setTheLeaguePreference } from '../../utils/team-preferences';
 import { getLeagueBySlug } from '../../config/leagues';
 
@@ -43,7 +43,16 @@ if (link && chosen && teams.some((t) => t.franchiseId === chosen)) {
     },
     { expiresAt: link.expiresAt },
   );
-  Astro.response.headers.append('Set-Cookie', createSessionCookie(sessionToken, import.meta.env.DEV, link.expiresAt));
+  // Through Astro.cookies, not a raw Set-Cookie header: Astro.redirect() builds
+  // a fresh Response, and only cookies set this way are carried onto it.
+  // Same attributes as createSessionCookie (src/utils/session.ts).
+  Astro.cookies.set('session_token', sessionToken, {
+    path: '/',
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: !import.meta.env.DEV,
+    expires: new Date(link.expiresAt * 1000),
+  });
   setTheLeaguePreference(Astro.cookies, chosen);
   return Astro.redirect('/');
 }
