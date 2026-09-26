@@ -469,14 +469,22 @@ const railMarks = rail.flatMap((entry) =>
   @media (max-width: 767px) {
     .rhdr-bar[data-weeks] .rhdr-rail { order: -1; }
     .rhdr-bar[data-weeks='collapsed'] > .rhdr-tile { display: none; }
-    .rhdr-rail__head { flex-wrap: wrap; row-gap: 0.25rem; }
+    /* One row, aligned to the dots below it: the toggle flush left, the
+       schedule link flush right. The "Season" label goes, since the dots and
+       their week scale already say what this is; with it the head wrapped
+       to two lines and the toggle sat indented past the dots. */
+    .rhdr-bar[data-weeks] .rhdr-rail__title { display: none; }
+    .rhdr-bar[data-weeks] .rhdr-rail__actions {
+      flex: 1 1 100%;
+      justify-content: space-between;
+    }
     .rhdr-rail__weeks {
       display: inline-flex;
       align-items: center;
       gap: 0.25rem;
       min-height: 44px;
       margin: -0.75rem 0;
-      padding: 0 0.25rem;
+      padding: 0;
       border: 0;
       background: none;
       font: inherit;

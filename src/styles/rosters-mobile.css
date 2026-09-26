@@ -288,12 +288,26 @@
     top: calc(0.625rem + 1.75rem + var(--rr-avatar) - 4px);
   }
 
+  /* The span is a zero-width anchor at the avatar's centre and the pill (its
+     ::before) centres on it by itself. Centring the SPAN put the pill 8px
+     left: the span also holds the hidden "QB · RC" text, and a browser with
+     a minimum font size (Android) widens that text past font-size 0, so the
+     offset grew per device. The text is transparent, not removed, so it
+     stays in the accessibility tree. */
   .roster-page[data-league='theleague'] #rosterTableBody :is(tr[data-pos='QB'], tr[data-pos='RB'], tr[data-pos='WR'], tr[data-pos='TE'], tr[data-pos='PK'], tr[data-pos='DEF']) .player-meta__pos {
+    width: 0;
+    transform: none;
     font-size: 0;
     letter-spacing: 0;
+    color: transparent;
+    pointer-events: none;
   }
 
   .roster-page[data-league='theleague'] #rosterTableBody :is(tr[data-pos='QB'], tr[data-pos='RB'], tr[data-pos='WR'], tr[data-pos='TE'], tr[data-pos='PK'], tr[data-pos='DEF']) .player-meta__pos::before {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform: translateX(-50%);
     display: inline-block;
     min-width: 2.25em;
     padding: 0.1875rem 0.375rem;

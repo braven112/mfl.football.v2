@@ -401,3 +401,31 @@ describe('the Coach card is three lines', () => {
     expect(orderOf("\\.coach-mode #rosterTableBody \\.spread-badge")).toBeGreaterThan(brk);
   });
 });
+
+describe('the pill centres itself, not its span', () => {
+  const CSS = fs.readFileSync(path.join(process.cwd(), 'src/styles/rosters-mobile.css'), 'utf8');
+  const known = ":is(tr[data-pos='QB'], tr[data-pos='RB'], tr[data-pos='WR'], tr[data-pos='TE'], tr[data-pos='PK'], tr[data-pos='DEF']) .player-meta__pos";
+
+  it('makes the span a zero-width anchor, so its hidden label text cannot shift the pill', () => {
+    const i = CSS.indexOf(`${known} {`);
+    const rule = CSS.slice(i, CSS.indexOf('}', i));
+    expect(rule).toMatch(/width:\s*0;/);
+    expect(rule).toMatch(/color:\s*transparent;/);
+  });
+
+  it('centres the ::before pill on that anchor', () => {
+    const i = CSS.indexOf(`${known}::before {`);
+    const rule = CSS.slice(i, CSS.indexOf('}', i));
+    expect(rule).toMatch(/position:\s*absolute;/);
+    expect(rule).toMatch(/transform:\s*translateX\(-50%\);/);
+  });
+});
+
+describe('the phone season head is one row', () => {
+  const BAR = fs.readFileSync(path.join(process.cwd(), 'src/components/shared/roster-header/GamedayBar.astro'), 'utf8');
+  it('drops the Season label and pins the toggle and link to the rail edges', () => {
+    expect(BAR).toMatch(/\.rhdr-bar\[data-weeks\] \.rhdr-rail__title \{ display: none; \}/);
+    expect(BAR).toMatch(/\.rhdr-bar\[data-weeks\] \.rhdr-rail__actions \{[^}]*justify-content:\s*space-between/);
+    expect(BAR).toMatch(/\.rhdr-rail__weeks \{[^}]*padding:\s*0;/);
+  });
+});
