@@ -428,6 +428,29 @@ describe('the Coach opponent is its logo alone, and the page cannot pan sideways
     expect(CSS).toMatch(/#rosterTableBody \.rr-ph--opp \{\s*display:\s*none;/);
   });
   it('clips the roster page horizontally on phones', () => {
-    expect(CSS).toMatch(/\.roster-page\[data-league='theleague'\] \{\s*overflow-x:\s*clip;/);
+    expect(CSS).toMatch(/\.roster-page\[data-league='theleague'\] \{[^}]*overflow-x:\s*clip;/);
+  });
+});
+
+describe('nothing on the phone roster card pans sideways, and weather leads line 3', () => {
+  const CSS = fs.readFileSync(path.join(process.cwd(), 'src/styles/rosters-mobile.css'), 'utf8');
+  it('clips the table card instead of letting it scroll', () => {
+    expect(CSS).toMatch(/\.roster-page\[data-league='theleague'\] \.roster-table-card \{\s*overflow-x:\s*clip;/);
+  });
+  it('orders the weather before the spread on the Coach third line', () => {
+    const order = (sel: string) => Number(CSS.match(new RegExp(`${sel}[^{]*\\{[^}]*?order:\\s*(\\d+)`))?.[1]);
+    const weather = order("\\.coach-mode #rosterTableBody td\\[data-column='weather'\\]");
+    expect(weather).toBeLessThan(order("\\.coach-mode #rosterTableBody \\.spread-badge"));
+    expect(weather).toBeGreaterThan(order("\\.coach-mode #rosterTableBody > tr\\.roster-row::after"));
+  });
+});
+
+describe('the phone page column is pinned to the screen', () => {
+  const CSS = fs.readFileSync(path.join(process.cwd(), 'src/styles/rosters-mobile.css'), 'utf8');
+  it('sizes the roster-page grid column minmax(0, 1fr), so the unwrapped chip row cannot widen it', () => {
+    expect(CSS).toMatch(/\.roster-page\[data-league='theleague'\] \{\s*grid-template-columns:\s*minmax\(0,\s*1fr\);/);
+  });
+  it('pins the nested .view-container grid too, which holds the cards and had the same auto track', () => {
+    expect(CSS).toMatch(/\.roster-page\[data-league='theleague'\] \.view-container \{\s*grid-template-columns:\s*minmax\(0,\s*1fr\);/);
   });
 });

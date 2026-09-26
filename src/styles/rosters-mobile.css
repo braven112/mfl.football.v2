@@ -15,7 +15,7 @@
  *   line 1  name + every after-name badge ............ current-year salary | Proj
  *   line 2  NFL logo, years chip, thru 'YY, RC/TO ...................  rank | avg
  *           (Coach: NFL logo, kickoff, vs/@ opponent, rank)
- *   line 3  (Coach) spread · O/U · last-3 trend · weather, season avg right
+ *   line 3  (Coach) weather · spread · O/U · last-3 trend, season avg right
  * The NFL logo stays in PlayerCell's meta line, where the position used to
  * be; the pill moved under the headshot (user, 2026-09-26). There is no
  * spelled-out injury word: the (Q) / (D) button after the name carries it.
@@ -64,7 +64,30 @@
      what body clips; `clip` on the page itself leaves nothing to pan to
      (and, unlike `hidden`, makes no scroll container, so the chip row's own
      scroller and position: sticky keep working). */
+  /* The page is a one-column grid, and an `auto` track sizes to its widest
+     child's min-content: the sort-chip row, which never wraps (660px of GM
+     chips, 774px of Coach), stretched the column to ~690px on a 384px
+     phone, and every block in it (the header, the cards) with it. A mobile
+     browser then widens the layout viewport to fit, which is the sideways
+     pan. The cards sit in a second grid, .view-container, whose auto track
+     does the same thing one level down, so both get minmax(0, 1fr), which
+     pins the column to the screen and lets the chip row scroll inside it as
+     intended. `clip` stays as a backstop. */
   .roster-page[data-league='theleague'] {
+    grid-template-columns: minmax(0, 1fr);
+    overflow-x: clip;
+  }
+  .roster-page[data-league='theleague'] .view-container {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* The card is a sideways scroller for the desktop table (overflow-x:
+     auto). On a phone the rows are cards and nothing needs to scroll, but
+     the full-bleed section band (the first row's ::before, "ACTIVE ROSTER")
+     reaches 8px into the card's right padding, and that alone let the whole
+     GM / Coach list pan sideways. Clip instead: the band still runs to the
+     card's edge, and the sort-chip row keeps its own scroller. */
+  .roster-page[data-league='theleague'] .roster-table-card {
     overflow-x: clip;
   }
 
@@ -415,11 +438,11 @@
     font-size: 0.6875rem;
   }
 
-  /* Weather rides line 3 with the other matchup numbers; on line 2 it
-     wrapped onto a row of its own beside the average. */
+  /* Weather leads line 3, ahead of the spread / O/U / L3 numbers; on line
+     2 it wrapped onto a row of its own beside the average. */
   .roster-page[data-league='theleague'].coach-mode #rosterTableBody td[data-column='weather'] {
     display: inline-block !important;
-    order: 44;
+    order: 31;
     font-size: 0.75rem;
   }
 
@@ -465,7 +488,7 @@
 
   /* ── Coach line 3: the muted secondary matchup numbers ──────────────── */
   /* The break sits right after line 2's matchup (orders 22-29), so line 3
-     is spread · O/U · L3 · weather with the average pushed right: three
+     is weather · spread · O/U · L3 with the average pushed right: three
      lines, not four. */
   .roster-page[data-league='theleague'].coach-mode #rosterTableBody > tr.roster-row::after {
     content: '';
