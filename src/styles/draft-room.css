@@ -60,12 +60,13 @@
   --dr-pick-flash-duration: 1.2s;
 
   /* ── Position Colors ── */
-  --dr-pos-qb: #dc2626;
-  --dr-pos-rb: #16a34a;
-  --dr-pos-wr: #2563eb;
-  --dr-pos-te: #7c3aed;
-  --dr-pos-pk: #d97706;
-  --dr-pos-def: #6b7280;
+  /* The site position palette (tokens.css § Position colours). */
+  --dr-pos-qb: #c41e3a;
+  --dr-pos-rb: #2563eb;
+  --dr-pos-wr: #16a34a;
+  --dr-pos-te: #9333ea;
+  --dr-pos-pk: #ea580c;
+  --dr-pos-def: #0891b2;
 
   /* ── On-the-Clock ── */
   --dr-otc-bg: var(--color-warning-light, #fef3c7);
@@ -162,12 +163,12 @@ html.dark .draft-room {
   --dr-chat-pick-bg: color-mix(in srgb, var(--color-primary, #3b82f6) 10%, var(--content-bg, #1e1e1e));
   --dr-chat-reaction-active-bg: color-mix(in srgb, var(--color-primary, #3b82f6) 18%, var(--content-bg, #1e1e1e));
 
-  --dr-pos-qb: #f87171;
-  --dr-pos-rb: #34d399;
-  --dr-pos-wr: #60a5fa;
-  --dr-pos-te: #a78bfa;
-  --dr-pos-pk: #fbbf24;
-  --dr-pos-def: #9ca3af;
+  --dr-pos-qb: #fca5a5;
+  --dr-pos-rb: #93c5fd;
+  --dr-pos-wr: #86efac;
+  --dr-pos-te: #d8b4fe;
+  --dr-pos-pk: #fdba74;
+  --dr-pos-def: #67e8f9;
 
   --dr-tier-a-soft: color-mix(in srgb, var(--dr-tier-a, #7c3aed) 18%, var(--content-bg, #1e1e1e));
   --dr-tier-b-soft: color-mix(in srgb, var(--dr-tier-b, #1c497c) 22%, var(--content-bg, #1e1e1e));

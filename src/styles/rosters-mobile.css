@@ -352,11 +352,15 @@
   .roster-page[data-league='theleague'] #rosterTableBody tr[data-pos='PK'] .player-meta__pos::before {
     content: 'PK';
     content: 'PK' / '';
+    color: var(--pos-pk-ink);
+    background: var(--pos-pk-bg);
   }
 
   .roster-page[data-league='theleague'] #rosterTableBody tr[data-pos='DEF'] .player-meta__pos::before {
     content: 'DEF';
     content: 'DEF' / '';
+    color: var(--pos-def-ink);
+    background: var(--pos-def-bg);
   }
 
   /* A position the pill has no colour for (no data-pos match) keeps its

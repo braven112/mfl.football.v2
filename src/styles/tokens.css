@@ -505,19 +505,26 @@
   --badge-info-bg: var(--color-info-light);
   --badge-info-text: var(--color-info-dark);
 
-  /* Position pills (the phone roster card, docs/plans/rosters-mobile-layout.md).
-     Sleeper-like hues: QB pink, RB green, WR blue, TE orange, PK/DEF neutral.
-     Every ink clears 4.5:1 on its fill in BOTH themes — a 0.6875rem/700 label
-     is not large text. tests/position-pill-tokens.test.ts measures them. */
-  --pos-qb-bg: #f9a8d4;
-  --pos-qb-ink: #500724;
-  --pos-rb-bg: #6ee7b7;
-  --pos-rb-ink: #022c22;
-  --pos-wr-bg: #93c5fd;
-  --pos-wr-ink: #172554;
-  --pos-te-bg: #fdba74;
-  --pos-te-ink: #431407;
-  --pos-other-bg: #d1d5db;
+  /* Position colours — the ONE site palette (QB red, RB blue, WR green,
+     TE purple, PK orange, DEF cyan). The chart hexes live in
+     POSITION_COLORS (src/utils/roster-analytics.ts); the draft room's
+     --dr-pos-* take the same values. Pills follow the site badge pattern:
+     a light tint of the hue with deep ink. Every ink clears 4.5:1 on its
+     fill in BOTH themes — a 0.6875rem/700 label is not large text.
+     tests/position-pill-tokens.test.ts measures them and pins the palette. */
+  --pos-qb-bg: #fee2e2;
+  --pos-qb-ink: #991b1b;
+  --pos-rb-bg: #dbeafe;
+  --pos-rb-ink: #1e40af;
+  --pos-wr-bg: #dcfce7;
+  --pos-wr-ink: #166534;
+  --pos-te-bg: #f3e8ff;
+  --pos-te-ink: #6b21a8;
+  --pos-pk-bg: #ffedd5;
+  --pos-pk-ink: #9a3412;
+  --pos-def-bg: #cffafe;
+  --pos-def-ink: #155e75;
+  --pos-other-bg: #e5e7eb;
   --pos-other-ink: #1f2937;
 
   /* Legacy status colors */
