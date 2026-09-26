@@ -12,7 +12,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import UnifiedStandingsTable from '../theleague/standings/StandingsTable.astro';
 import { COLUMNS, TIERING } from '../theleague/standings/standings-table-config';
 import { getDivisionStandings } from '../../utils/standings';
-import { resolveConfigForYear, type TeamConfig } from '../../utils/team-names';
+import { resolveConfigForYear } from '../../utils/team-names';
 import { extractSeasonStructure, applySeasonStructure } from '../../utils/afl-structure';
 import { KEEPER_LIMIT } from '../../utils/afl-keeper-constants';
 import type { LeagueDefinition } from '../../config/leagues';
@@ -30,8 +30,10 @@ const { league, config, year, standingsFeed, leagueFeed, franchiseId } = Astro.p
 const prefix = `/${league.slug}`;
 
 const franchises = standingsFeed?.leagueStandings?.franchise ?? [];
-const seasonConfig = applySeasonStructure(
-  resolveConfigForYear(config as { teams: TeamConfig[] }, year),
+// The config is loosely typed on purpose: it is the demo generator's file,
+// read through a glob. The standings helpers take the structured shape.
+const seasonConfig: any = applySeasonStructure(
+  resolveConfigForYear(config as any, year) as any,
   extractSeasonStructure(leagueFeed as any),
 );
 const divisions = franchises.length ? getDivisionStandings(franchises, seasonConfig, { preserveFeedOrder: true }) : [];
