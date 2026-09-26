@@ -4,7 +4,8 @@
 
 <div id="archies-sprite" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden;"></div>
 <script>
-fetch('https://v2.mfl.football/assets/icons/sprite.svg')
+// ?v= busts Cloudflare's copy (s-maxage is a year); bump it when the sprite gains a symbol this header uses.
+fetch('https://v2.mfl.football/assets/icons/sprite.svg?v=2')
   .then(function (r) { return r.ok ? r.text() : ''; })
   .then(function (svg) {
     document.getElementById('archies-sprite').innerHTML = svg.replace('style="display: none;"', '');
@@ -37,45 +38,33 @@ var lu_addOptionalStarters = false;
         <div class="nav_wrapper">
           <div class="nav_buttons" id="nav_buttons">
             <div class="nav_button--button">
-              <a href="//%HOST%/%YEAR%/options?L=%LEAGUEID%&O=07">
-                <svg class="icon-helmet-2" aria-hidden="true" focusable="false"><use xlink:href="#icon-helmet-2"></use></svg>
-                <div class="svg-text">Roster</div>
-              </a>
-            </div>
-            <div class="nav_button--button">
-              <a href="//%HOST%/%YEAR%/options?L=%LEAGUEID%&O=02">
-                <svg class="icon-lineup" aria-hidden="true" focusable="false"><use xlink:href="#icon-lineup"></use></svg>
-                <div class="svg-text">Submit lineup</div>
-              </a>
-            </div>
-            <div class="nav_button--button">
-              <a href="//%HOST%/%YEAR%/add_drop?L=%LEAGUEID%">
-                <svg class="icon-plus" aria-hidden="true" focusable="false"><use xlink:href="#icon-plus"></use></svg>
-                <div class="svg-text">Free Agents</div>
-              </a>
-            </div>
-            <div class="nav_button--button">
               <a href="//%HOST%/%YEAR%/standings?L=%LEAGUEID%">
-                <svg class="icon-shield" aria-hidden="true" focusable="false"><use xlink:href="#icon-shield"></use></svg>
+                <svg class="icon-bar-chart" aria-hidden="true" focusable="false"><use xlink:href="#icon-bar-chart"></use></svg>
                 <div class="svg-text">Standings</div>
               </a>
             </div>
             <div class="nav_button--button">
-              <a href="//%HOST%/%YEAR%/ajax_ls?L=%LEAGUEID%">
-                <svg class="icon-goals" aria-hidden="true" focusable="false"><use xlink:href="#icon-goals"></use></svg>
-                <div class="svg-text">Live scoring</div>
+              <a href="//%HOST%/%YEAR%/options?L=%LEAGUEID%&O=17">
+                <svg class="icon-draft-podium" aria-hidden="true" focusable="false"><use xlink:href="#icon-draft-podium"></use></svg>
+                <div class="svg-text">Draft</div>
               </a>
             </div>
-            <div class="nav_button--button hidden-md playoffs">
-              <a href="//%HOST%/%YEAR%/options?L=%LEAGUEID%&O=79">
+            <div class="nav_button--button">
+              <a href="//%HOST%/%YEAR%/options?L=%LEAGUEID%&O=73">
+                <svg class="icon-newsletter-book" aria-hidden="true" focusable="false"><use xlink:href="#icon-newsletter-book"></use></svg>
+                <div class="svg-text">Archie's Corner</div>
+              </a>
+            </div>
+            <div class="nav_button--button">
+              <a href="//%HOST%/%YEAR%/home/%LEAGUEID%?MODULE=MESSAGE17">
+                <svg class="icon-numberone" aria-hidden="true" focusable="false"><use xlink:href="#icon-numberone"></use></svg>
+                <div class="svg-text">Records</div>
+              </a>
+            </div>
+            <div class="nav_button--button">
+              <a href="//%HOST%/%YEAR%/home/%LEAGUEID%?MODULE=MESSAGE5">
                 <svg class="icon-trophy" aria-hidden="true" focusable="false"><use xlink:href="#icon-trophy"></use></svg>
-                <div class="svg-text">Playoffs</div>
-              </a>
-            </div>
-            <div class="nav_button--button hidden-md prePlayoffs">
-              <a href="//%HOST%/%YEAR%/standings?L=%LEAGUEID%">
-                <svg class="icon-champ" aria-hidden="true" focusable="false"><use xlink:href="#icon-champ"></use></svg>
-                <div class="svg-text">Playoffs</div>
+                <div class="svg-text">Banners</div>
               </a>
             </div>
           </div>

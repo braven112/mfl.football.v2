@@ -60,6 +60,26 @@ caption a {
   color: $accent-color;
 }
 
+// Header nav icons, after the league's own icon art: accent blue at rest; on
+// hover the glyph goes black inside a large accent glow. The two 1px shadows
+// draw a crisp blue edge so a black glyph still reads on the black header;
+// the 6px and 18px ones stack into the large glow. Scoped to the nav —
+// [class^="icon"] everywhere else keeps the skin's white-to-blue hover.
+.nav_buttons [class^="icon"] {
+  fill: $accent-color;
+  transition: fill 0.15s ease, filter 0.15s ease;
+}
+
+.nav_buttons a:hover [class^="icon"],
+.nav_buttons a:focus-visible [class^="icon"] {
+  fill: #000;
+  filter:
+    drop-shadow(0 0 1px $accent-color)
+    drop-shadow(0 0 1px $accent-color)
+    drop-shadow(0 0 6px $accent-color)
+    drop-shadow(0 0 18px $accent-color);
+}
+
 .franchiseicon {
   transition: opacity 1s ease;
 
