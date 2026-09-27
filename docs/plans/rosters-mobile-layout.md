@@ -427,10 +427,13 @@ sheet. It is now a kebab icon button (a WAI-ARIA menu button:
   Team Option / Veteran or Rookie Extension), then IR / practice-squad moves
   and the auto-cut toggle (own team);
 - the CDM's two sub-steps flattened into their entries, so one tap does the
-  thing: **Cut Player** → Simulate cut · Release… (own team; the CDM's cut
-  review), **Trade Player** → Simulate trade · Add/Remove trade block (own
-  team) · Add to Trade Builder. While a simulation is active, ONE "Undo
-  simulated …" takes both Simulate slots;
+  thing: **Cut Player** → Release… (own team; the CDM's cut review),
+  **Trade Player** → Simulate trade · Add to Trade Builder. Simulate trade is
+  hidden while any simulation is active;
+- **nothing the hero already shows as a button** (user, 2026-09-27: the
+  common action sits outside the kebab and is never repeated inside it).
+  Simulate cut / its Undo and the trade-block toggle are hero buttons, so the
+  menu leaves them out;
 - **not Watch**: the hero already carries the sheet's built-in Watch.
 
 Every item is a `data-sheet-action` and routes through `onAction` exactly as
