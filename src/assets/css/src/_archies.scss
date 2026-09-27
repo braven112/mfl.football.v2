@@ -388,9 +388,14 @@ caption a {
         content: "#";
       }
     }
-    td:has(> a > .franchiseicon) {
+    // Cells by column, not by content: a franchise with no uploaded icon is
+    // a text link, and would otherwise land in the players' area.
+    // A trade row carries both banners here ("A / B (C)"), so centre the
+    // separators with them.
+    td:nth-child(2) {
       grid-area: banner;
       justify-self: center;
+      text-align: center;
       padding-bottom: 0.5rem;
     }
     .franchiseicon {
@@ -413,7 +418,7 @@ caption a {
       font-size: 0.75rem;
       opacity: 0.7;
     }
-    td:not(.rank, .transactiontype, .timestamp):not(:has(> a > .franchiseicon)) {
+    td:nth-child(4) {
       grid-area: tx;
       padding-top: 0.5rem;
     }
