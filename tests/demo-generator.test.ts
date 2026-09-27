@@ -22,6 +22,7 @@ import { bestBallDraft, BESTBALL_FRANCHISES, BESTBALL_ROUNDS } from '../scripts/
 import { KEEPER_FRANCHISES } from '../scripts/demo/lib/keeper.mjs';
 import { BIGLEAGUE_FRANCHISES } from '../scripts/demo/lib/bigleague.mjs';
 import { KEEPERS } from '../scripts/demo/lib/simulate.mjs';
+import { APPROVED_REAL_NAMES, NFL_NICKNAMES } from '../scripts/demo/lib/art-mix.mjs';
 import { seasonTotals, lastCompletedWeek } from '../scripts/demo/lib/nfl-facts.mjs';
 
 const FEEDS = 'data/theleague/mfl-feeds';
@@ -111,6 +112,8 @@ describe('demo identities', () => {
       }
     }
     for (const p of registry.people) realNames.add(String(p.displayName).toLowerCase());
+    // The owner's explicit exceptions, and NFL nicknames an NFL-art club wears.
+    for (const n of [...APPROVED_REAL_NAMES, ...NFL_NICKNAMES]) realNames.delete(n.toLowerCase());
     // Every demo league's clubs — the dynasty, redraft, keeper and big-league demos.
     for (const f of [...DEMO_FRANCHISES, ...BESTBALL_FRANCHISES, ...KEEPER_FRANCHISES, ...BIGLEAGUE_FRANCHISES]) {
       for (const n of [f.name, f.nameShort, f.abbrev, (f as { owner?: string }).owner]) {
@@ -130,6 +133,9 @@ describe('demo identities', () => {
       for (const era of [t, ...(t.history ?? [])]) {
         for (const n of [era.name, era.nameMedium, era.nameShort]) if (n && !/\s/.test(n) && n.length >= 4) words.add(n.toLowerCase());
       }
+    }
+    for (const n of [...APPROVED_REAL_NAMES, ...NFL_NICKNAMES]) {
+      for (const w of n.toLowerCase().split(/\s+/)) words.delete(w);
     }
     for (const f of BIGLEAGUE_FRANCHISES) {
       for (const w of `${f.name} ${f.owner}`.toLowerCase().split(/\s+/)) {

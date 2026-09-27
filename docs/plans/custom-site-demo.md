@@ -143,6 +143,20 @@ recoloured per slot from its theme tokens — disc and outlines in the league's
 deep colour, helmet in its accent — with a dark cut (brightened helmet, light
 rim) for the `html.dark` swap. Palettes: `WAR_PAINT_PALETTES`.
 
+### Real art mixed in
+
+To show that a custom site carries custom graphics, some clubs in every demo
+wear real art (`scripts/demo/lib/art-mix.mjs`, owner-picked 2026-09-27): 26
+crests from the site's own leagues (nothing NSFW; nothing naming a real team or
+person in the art), NFL club logos under a riff on the club's name ("Windy City
+Bears"), the white Cardinals bird from the Brand Book (one team per demo), and
+the Browns' dog mark as its own club. League-art clubs get a NEW name fitted to
+the art; the one exception is `APPROVED_REAL_NAMES` (the owner asked for
+"Alcohol Tobacco and Firearms"), which the scrub, leak scan and tests honour.
+The art is embedded in the crest SVGs the demo already writes, so no asset path
+changed. The redraft demo now has crests at all (the real best-ball league has
+none yet). Guard: `tests/demo-art-mix.test.ts`.
+
 ### Known gaps (next)
 
 - Two modules build their own Redis clients (`schefter-news-loaders.ts`,
