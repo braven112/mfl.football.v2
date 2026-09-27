@@ -22,6 +22,7 @@
 import { simulateLeague } from './simulate.mjs';
 import { lighten } from './franchises.mjs';
 import { bannerSvg, crestSvg } from './crests.mjs';
+import { withArt } from './art-mix.mjs';
 import { WAR_PAINT_PALETTES, warPaintFiles } from './war-paint.mjs';
 
 export const BIGLEAGUE_NAME = 'The Big League';
@@ -64,15 +65,15 @@ const PLACES = [
 
 /** 96 invented team nicknames — one per team. */
 const NICKNAMES = [
-  'Badgers', 'Beacons', 'Bison', 'Blizzards', 'Bobcats', 'Bombers', 'Boulders', 'Buccaneers',
+  'Badgers', 'Beacons', 'Bison', 'Blizzards', 'Bobcats', 'Bombers', 'Boulders', 'Privateers',
   'Caribou', 'Chargers', 'Comets', 'Condors', 'Cougars', 'Coyotes', 'Cyclones', 'Dragons',
-  'Drifters', 'Eagles', 'Engineers', 'Express', 'Falcons', 'Ferrets', 'Firebirds', 'Foxes',
+  'Drifters', 'Kestrels', 'Engineers', 'Express', 'Falcons', 'Ferrets', 'Firebirds', 'Foxes',
   'Gators', 'Geysers', 'Gladiators', 'Grizzlies', 'Hammers', 'Harriers', 'Hawks', 'Herons',
-  'Hornets', 'Huskies', 'Ibex', 'Jackals', 'Jaguars', 'Javelins', 'Kodiaks', 'Lancers',
+  'Hornets', 'Huskies', 'Ibex', 'Jackals', 'Ocelots', 'Javelins', 'Kodiaks', 'Lancers',
   'Lynx', 'Mammoths', 'Mariners', 'Marlins', 'Muskies', 'Meteors', 'Monarchs', 'Mustangs',
-  'Navigators', 'Nighthawks', 'Oilers', 'Orcas', 'Ospreys', 'Otters', 'Owls', 'Panthers',
-  'Pelicans', 'Pilots', 'Pioneers', 'Prowlers', 'Pumas', 'Quakes', 'Rams', 'Rangers',
-  'Rattlers', 'Ravens', 'Riptide', 'Rockets', 'Sabres', 'Scorpions', 'Sentinels', 'Sharks',
+  'Navigators', 'Nighthawks', 'Oilers', 'Orcas', 'Ospreys', 'Otters', 'Owls', 'Leopards',
+  'Pelicans', 'Pilots', 'Pioneers', 'Prowlers', 'Pumas', 'Quakes', 'Rockslides', 'Rangers',
+  'Rattlers', 'Crows', 'Riptide', 'Rockets', 'Sabres', 'Scorpions', 'Sentinels', 'Sharks',
   'Skippers', 'Sparrows', 'Stallions', 'Stingrays', 'Storm', 'Summit', 'Tempest', 'Thunder',
   'Timberwolves', 'Titans', 'Tornadoes', 'Trailblazers', 'Tritons', 'Vanguard', 'Vipers', 'Voyagers',
   'Walruses', 'Warhawks', 'Wildcats', 'Wolverines', 'Wranglers', 'Yetis', 'Gusts', 'Stags',
@@ -98,7 +99,7 @@ const abbrevOf = (place, nick) => {
 };
 
 /** The 96 franchises: ids 0001-0096, conference c holds 12 consecutive ids. */
-export const BIGLEAGUE_FRANCHISES = Array.from({ length: 96 }, (_, i) => {
+export const BIGLEAGUE_FRANCHISES = withArt('bigleague', Array.from({ length: 96 }, (_, i) => {
   const conference = CONFERENCES[Math.floor(i / 12)];
   const local = i % 12;
   const divisionLocal = local < 6 ? 0 : 1;
@@ -123,7 +124,7 @@ export const BIGLEAGUE_FRANCHISES = Array.from({ length: 96 }, (_, i) => {
     colorPrimaryDark: lighten(colorPrimary, 0.25),
     colorSecondaryDark: lighten(colorSecondary, 0.6),
   };
-});
+}), { slugOf });
 
 export const BIGLEAGUE_DIVISIONS = CONFERENCES.flatMap((c) => c.divisions);
 

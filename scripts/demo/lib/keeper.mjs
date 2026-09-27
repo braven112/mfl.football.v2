@@ -14,6 +14,7 @@
 
 import { lighten } from './franchises.mjs';
 import { bannerSvg, crestSvg } from './crests.mjs';
+import { withArt } from './art-mix.mjs';
 import { WAR_PAINT_PALETTES, warPaintFiles } from './war-paint.mjs';
 
 export const KEEPER_LEAGUE_NAME = 'The Keeper League';
@@ -38,7 +39,7 @@ const RAW = [
 
 const ASSET_ROOT = '/assets/keeper';
 
-export const KEEPER_FRANCHISES = RAW.map(([id, name, nameShort, abbrev, owner, divisionIndex, colorPrimary, colorSecondary]) => {
+export const KEEPER_FRANCHISES = withArt('keeper', RAW.map(([id, name, nameShort, abbrev, owner, divisionIndex, colorPrimary, colorSecondary]) => {
   const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
   return {
     id,
@@ -55,7 +56,7 @@ export const KEEPER_FRANCHISES = RAW.map(([id, name, nameShort, abbrev, owner, d
     colorPrimaryDark: lighten(colorPrimary, 0.25),
     colorSecondaryDark: lighten(colorSecondary, 0.6),
   };
-});
+}), { slugOf: (name) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') });
 
 function assetPaths(f) {
   return {

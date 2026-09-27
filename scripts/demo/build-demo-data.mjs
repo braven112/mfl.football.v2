@@ -35,7 +35,7 @@ import { createRng } from './lib/rng.mjs';
 import * as feeds from './lib/mfl-feeds.mjs';
 import * as identity from './lib/identity-files.mjs';
 import { collectDenylist } from './lib/denylist.mjs';
-import { bestBallAssets, bestBallConfig, bestBallDraft } from './lib/bestball.mjs';
+import { bestBallArtFiles, bestBallAssets, bestBallConfig, bestBallDraft } from './lib/bestball.mjs';
 import { WAR_PAINT_PALETTES, warPaintFiles } from './lib/war-paint.mjs';
 import { KEEPER_DIVISIONS, KEEPER_FRANCHISES, KEEPER_LEAGUE_NAME, keeperArtFiles, keeperConfig, keeperLeagueFeed } from './lib/keeper.mjs';
 import { scrubIdentity } from './lib/scrub.mjs';
@@ -452,6 +452,7 @@ function writeBestBall({ currentYear, generatedAt }) {
   writeJson(path.join(ROOT, league.configPath), bestBallConfig({ leagueId: league.id, loaderLines: realConfig.loaderLines ?? [] }));
   writeJson(path.join(dir, 'bb1.assets.json'), bestBallAssets(generatedAt));
   writeJson(path.join(dir, 'schefter-feed.json'), { posts: [] });
+  for (const [rel, svg] of bestBallArtFiles()) writeText(path.join(PUBLIC, rel), svg);
   for (const [rel, svg] of warPaintFiles('bestball-logo', WAR_PAINT_PALETTES.bestball, league.name)) {
     writeText(path.join(PUBLIC, rel), svg);
   }

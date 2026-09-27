@@ -12,13 +12,8 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { APPROVED_REAL_NAMES, NFL_NICKNAMES } from './art-mix.mjs';
 
-const NFL_NICKNAMES = [
-  'Cardinals', 'Falcons', 'Ravens', 'Bills', 'Panthers', 'Bears', 'Bengals', 'Browns', 'Cowboys', 'Broncos',
-  'Lions', 'Packers', 'Texans', 'Colts', 'Jaguars', 'Chiefs', 'Raiders', 'Chargers', 'Rams', 'Dolphins',
-  'Vikings', 'Patriots', 'Saints', 'Giants', 'Jets', 'Eagles', 'Steelers', '49ers', 'Seahawks', 'Buccaneers',
-  'Titans', 'Commanders',
-];
 
 /** Real names that are also ordinary words or phrases, too common to scan for. */
 const GENERIC = new Set(
@@ -34,6 +29,9 @@ const GENERIC = new Set(
     ...NFL_NICKNAMES,
   ].map((s) => s.toLowerCase()),
 );
+
+/** Real names the owner approved for the demo (art-mix.mjs). */
+const APPROVED = new Set(APPROVED_REAL_NAMES.map((s) => s.toLowerCase()));
 
 const MIN_LENGTH = 6;
 
@@ -107,7 +105,7 @@ export function collectDenylist({ root, league, realConfig, realRegistry, otherC
   walk(tenures);
 
   const terms = [...raw]
-    .filter((t) => t.length >= MIN_LENGTH && !GENERIC.has(t.toLowerCase()))
+    .filter((t) => t.length >= MIN_LENGTH && !GENERIC.has(t.toLowerCase()) && !APPROVED.has(t.toLowerCase()))
     .sort((a, b) => b.length - a.length);
   return { league, collectedAt: new Date().toISOString(), terms };
 }

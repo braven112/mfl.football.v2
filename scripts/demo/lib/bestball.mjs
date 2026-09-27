@@ -14,6 +14,8 @@
 
 import { createRng } from './rng.mjs';
 import { lighten } from './franchises.mjs';
+import { withArt } from './art-mix.mjs';
+import { crestSvg } from './crests.mjs';
 
 const RAW = [
   ['0001', 'Stack City Sharks', 'Sharks', 'SCS', '#0b6e99', '#ffd166'],
@@ -30,7 +32,7 @@ const RAW = [
   ['0012', 'Playoff Stackers', 'Stackers', 'PLS', '#1d4ed8', '#e0e7ff'],
 ];
 
-export const BESTBALL_FRANCHISES = RAW.map(([id, name, nameShort, abbrev, colorPrimary, colorSecondary]) => ({
+export const BESTBALL_FRANCHISES = withArt('redraft', RAW.map(([id, name, nameShort, abbrev, colorPrimary, colorSecondary]) => ({
   id,
   name,
   nameShort,
@@ -38,7 +40,7 @@ export const BESTBALL_FRANCHISES = RAW.map(([id, name, nameShort, abbrev, colorP
   colorPrimary,
   colorSecondary,
   colorPrimaryDark: lighten(colorPrimary, 0.25),
-}));
+})));
 
 export const BESTBALL_LEAGUE_NAME = 'The Demo Best Ball League';
 /** The real slot drafts 25 rounds (`BEST_BALL_TOTAL_ROUNDS`), and its pages say so. */
@@ -66,15 +68,33 @@ export function bestBallConfig({ leagueId, loaderLines }) {
   };
 }
 
+const bestBallKey = (f) => f.name.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+const bestBallIcon = (f, dark = false) => `/assets/bestball/icons/${bestBallKey(f)}${dark ? '_dark' : ''}.svg`;
+
 export function bestBallAssets(generatedAt) {
+  const entry = (relativePath) => ({ type: 'icons', filename: relativePath.split('/').pop(), relativePath, extension: '.svg' });
   return {
     $comment: 'Demo best-ball league asset registry (fictional).',
     generatedAt,
     teams: BESTBALL_FRANCHISES.map((f) => {
-      const key = f.name.toLowerCase().replace(/[^a-z0-9]+/g, '_');
-      return { key, slug: key, id: f.id, name: f.name, category: 'active', aliases: [], assets: {} };
+      const key = bestBallKey(f);
+      return { key, slug: key, id: f.id, name: f.name, category: 'active', aliases: [], assets: { icons: [entry(bestBallIcon(f))] } };
     }),
   };
+}
+
+/**
+ * The redraft demo's crests (public/ path → SVG): the real best-ball league
+ * has no art yet, so the demo shows what a league with it looks like — real
+ * art on the art-mix teams, a generated shield on the rest.
+ */
+export function bestBallArtFiles() {
+  const files = new Map();
+  for (const f of BESTBALL_FRANCHISES) {
+    files.set(bestBallIcon(f).slice(1), crestSvg(f));
+    files.set(bestBallIcon(f, true).slice(1), crestSvg(f, { dark: true }));
+  }
+  return files;
 }
 
 /**

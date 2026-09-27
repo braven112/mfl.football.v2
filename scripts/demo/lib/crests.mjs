@@ -4,6 +4,8 @@
  * prospect's own league would get its real marks.
  */
 
+import { ART_BACKDROP, artDataUri, hasDarkCut } from './art-mix.mjs';
+
 const escapeXml = (s) =>
   String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[c]);
 
@@ -21,6 +23,7 @@ const SHIELD = 'M128 12 L232 44 V124 C232 186 188 226 128 246 C68 226 24 186 24 
  * dark card, the way the real site's `_dark` icon cuts do.
  */
 export function crestSvg(franchise, { dark = false } = {}) {
+  if (franchise.art) return artCrestSvg(franchise, { dark });
   const rim = dark ? '#f5f5f5' : franchise.colorSecondary;
   const text = monogram(franchise);
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="${escapeXml(franchise.name)}">
@@ -42,6 +45,28 @@ export function bannerSvg(franchise) {
 <g transform="translate(60 60) scale(1.09)">${crest}</g>
 <text x="380" y="215" font-family="Arial Black, Helvetica, Arial, sans-serif" font-weight="900" font-size="84" fill="#ffffff">${escapeXml(franchise.name.toUpperCase())}</text>
 <text x="380" y="285" font-family="Helvetica, Arial, sans-serif" font-size="40" fill="#ffffff" fill-opacity="0.8">${escapeXml(franchise.division)} Division</text>
+</svg>
+`;
+}
+
+/**
+ * A crest carrying real art (art-mix.mjs), embedded so the demo's existing
+ * asset paths serve it unchanged. An NFL mark with no reversed cut sits on a
+ * light disc in the dark cut: several clubs' only mark is dark, and it would
+ * vanish on a dark card.
+ */
+function artCrestSvg(franchise, { dark }) {
+  const nfl = franchise.art.startsWith('nfl:');
+  const uri = artDataUri(franchise.art, { dark });
+  const backdrop = ART_BACKDROP[franchise.art];
+  const disc = backdrop
+    ? `<circle cx="128" cy="128" r="124" fill="${backdrop}"/>`
+    : dark && nfl && !hasDarkCut(franchise.art)
+      ? '<circle cx="128" cy="128" r="124" fill="#f5f5f5"/>'
+      : '';
+  const inset = disc ? 28 : 0;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="${escapeXml(franchise.name)}">
+${disc}<image href="${uri}" x="${inset}" y="${inset}" width="${256 - inset * 2}" height="${256 - inset * 2}" preserveAspectRatio="xMidYMid meet"/>
 </svg>
 `;
 }

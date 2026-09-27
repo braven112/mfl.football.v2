@@ -11,6 +11,8 @@
  * their own pairs from `colorPrimary`/`colorSecondary`.
  */
 
+import { withArt } from './art-mix.mjs';
+
 export const DEMO_DIVISIONS = ['Summit', 'Harbor', 'Prairie', 'Canyon'];
 
 /**
@@ -46,7 +48,8 @@ export function lighten(hex, amount) {
   return `#${[16, 8, 0].map((s) => ch(s).toString(16).padStart(2, '0')).join('')}`;
 }
 
-export const DEMO_FRANCHISES = RAW.map(
+// Some teams wear real art (art-mix.mjs), under a name fitted to it.
+export const DEMO_FRANCHISES = withArt('dynasty', RAW.map(
   ([id, name, nameShort, abbrev, owner, divisionIndex, colorPrimary, colorSecondary]) => {
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     return {
@@ -65,7 +68,7 @@ export const DEMO_FRANCHISES = RAW.map(
       colorSecondaryDark: lighten(colorSecondary, 0.6),
     };
   },
-);
+), { slugOf: (name) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') });
 
 /** The demo league's own name — used wherever the real site prints its league name. */
 export const DEMO_LEAGUE_NAME = 'The Demo League';
