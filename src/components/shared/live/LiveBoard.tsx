@@ -30,6 +30,7 @@ import LvFeedStatus from './LvFeedStatus';
 import LvStaleNotice from './LvStaleNotice';
 import LvWeekPicker from './LvWeekPicker';
 import LvStandings from './LvStandings';
+import { isMatchupFinal } from '../../../utils/live/standings-projection';
 import LvLeaders from './LvLeaders';
 import {
   nextHoldExpiry,
@@ -117,18 +118,6 @@ export interface LiveBoardProps {
   hideWeekPicker?: boolean;
   /** Intercept the week change instead of navigating. For a story. */
   onSelectWeek?: (week: number) => void;
-}
-
-/**
- * Every starter on both sides has no game-time left.
- *
- * Derived from the ROWS rather than from a flag, so it cannot disagree with
- * the numbers beside it — and `yetToPlay` alone is not enough, since a player
- * whose game is in progress has already started but has not finished.
- */
-function isMatchupFinal(matchup: LiveMatchup): boolean {
-  const rows = [...matchup.sides[0].players, ...matchup.sides[1].players];
-  return rows.length > 0 && rows.every((r) => r.secondsRemaining <= 0);
 }
 
 /**
@@ -591,7 +580,11 @@ export default function LiveBoard({
         />
         </>
       ) : activeTab === 'standings' && soloPanel ? (
-        <LvStandings rows={soloPanel.standings ?? null} leagueName={soloPanel.leagueName} />
+        <LvStandings
+          rows={soloPanel.standings ?? null}
+          leagueName={soloPanel.leagueName}
+          matchups={soloPanel.matchups}
+        />
       ) : (
         <>
           {panelViews.map(({ panel, heldSince: panelHeld }) => (
