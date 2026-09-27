@@ -35,7 +35,7 @@ import { createRng } from './lib/rng.mjs';
 import * as feeds from './lib/mfl-feeds.mjs';
 import * as identity from './lib/identity-files.mjs';
 import { collectDenylist } from './lib/denylist.mjs';
-import { bestBallArtFiles, bestBallAssets, bestBallConfig, bestBallDraft } from './lib/bestball.mjs';
+import { bestBallArtFiles, bestBallAssets, bestBallConfig, bestBallDraft, bestBallSeason, BESTBALL_FRANCHISES } from './lib/bestball.mjs';
 import { WAR_PAINT_PALETTES, warPaintFiles } from './lib/war-paint.mjs';
 import { primeArt } from './lib/art-mix.mjs';
 import { KEEPER_DIVISIONS, KEEPER_FRANCHISES, KEEPER_LEAGUE_NAME, keeperArtFiles, keeperConfig, keeperLeagueFeed } from './lib/keeper.mjs';
@@ -445,7 +445,7 @@ function writeSalaryFiles(season, generatedAt) {
  * startup draft (scripts/demo/lib/bestball.mjs). Reads the NFL-fact files the
  * dynasty step has already restored.
  */
-function writeBestBall({ currentYear, generatedAt }) {
+function writeBestBall({ currentYear, currentWeek, nflFacts, generatedAt }) {
   const league = LEAGUES['best-ball-1'];
   const dir = path.join(ROOT, league.dataPath);
   const realConfig = readJson(path.join(ROOT, league.configPath));
@@ -462,9 +462,7 @@ function writeBestBall({ currentYear, generatedAt }) {
   for (const [rel, svg] of warPaintFiles('bestball-logo', WAR_PAINT_PALETTES.bestball, league.name)) {
     writeText(path.join(PUBLIC, rel), svg);
   }
-  writeJson(
-    path.join(dir, 'demo-official-draft.json'),
-    bestBallDraft({
+  const draft = bestBallDraft({
       players: facts.players,
       adp,
       depth,
@@ -472,8 +470,44 @@ function writeBestBall({ currentYear, generatedAt }) {
       leagueYear: currentYear,
       seed: `${SEED}/bestball`,
       draftStart: weekStart(currentYear, 1) - 20 * 86_400,
-    }),
-  );
+  });
+  writeJson(path.join(dir, 'demo-official-draft.json'), draft);
+
+  // The season so far, scored as best ball scores it, so the live board and
+  // the MFL stand-in have weeks to show (scripts/demo/lib/bestball.mjs).
+  const season = bestBallSeason({ draft, facts, currentWeek });
+  const feedsDir = path.join(dir, 'mfl-feeds', String(currentYear));
+  writeJson(path.join(feedsDir, 'league.json'), {
+    version: '1.0',
+    encoding: 'utf-8',
+    league: {
+      id: league.id,
+      name: league.name,
+      lastRegularSeasonWeek: '14',
+      starters: {
+        count: '8',
+        position: [
+          { name: 'QB', limit: '1' },
+          { name: 'RB', limit: '2-3' },
+          { name: 'WR', limit: '3-4' },
+          { name: 'TE', limit: '1-2' },
+        ],
+      },
+      franchises: {
+        count: String(BESTBALL_FRANCHISES.length),
+        franchise: BESTBALL_FRANCHISES.map((f) => ({ id: f.id, name: f.name, abbrev: f.abbrev })),
+      },
+    },
+  });
+  writeJson(path.join(feedsDir, 'rosters.json'), feeds.rostersFeed(season));
+  writeJson(path.join(feedsDir, 'schedule.json'), feeds.scheduleFeed(season, BESTBALL_FRANCHISES));
+  writeJson(path.join(feedsDir, 'weekly-results-raw.json'), feeds.weeklyResultsRawFeed(season));
+  writeJson(path.join(feedsDir, 'weekly-results.json'), feeds.weeklyResultsFeed(season));
+  const live = feeds.liveWeekFeed(season);
+  if (live) writeJson(path.join(feedsDir, 'live-week.json'), live);
+  for (const [name, bytes] of nflFacts.perYear.get(currentYear) ?? []) {
+    fs.writeFileSync(path.join(feedsDir, name), bytes);
+  }
   log(`best ball: fictional league and completed ${adp.length ? 'ADP' : 'fallback'} draft written`);
 }
 
@@ -582,7 +616,7 @@ export async function buildDemoData() {
   }));
   writeJson(path.join(DATA, 'championship-history.json'), identity.championshipHistory(seasons, DEMO_FRANCHISES));
 
-  writeBestBall({ currentYear, generatedAt });
+  writeBestBall({ currentYear, currentWeek, nflFacts, generatedAt });
   writeKeeper({ years, facts, currentYear, currentWeek, nflFacts, generatedAt });
   writeBigLeague({ years, facts, currentYear, currentWeek, nflFacts, generatedAt });
 

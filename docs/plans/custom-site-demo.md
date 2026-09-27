@@ -169,6 +169,17 @@ as ordinary demo-only routes, and the best-ball slot as demo-only templates
 (`scripts/demo/pages/best-ball-1/*.astro.tpl`) the build copies in, since the
 real best-ball league has neither page.
 
+### Redraft live scoring
+
+The best-ball demo simulates its season so far (`bestBallSeason` in
+`scripts/demo/lib/bestball.mjs`): rosters from the demo's own draft, a
+round-robin schedule, every played week scored as best ball scores it (each
+team's optimal QB / 2 RB / 3 WR / TE / flex from the real NFL scores) and the
+current week live. `writeBestBall` writes those as MFL feeds under
+`data/best-ball-1/mfl-feeds/`, and the MFL stand-in answers the best-ball
+league id from them, so `/redraft/live-scoring` has a board. Guard:
+`tests/demo-bestball-season.test.ts`.
+
 ### Known gaps (next)
 
 - Two modules build their own Redis clients (`schefter-news-loaders.ts`,
