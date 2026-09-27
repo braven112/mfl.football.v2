@@ -31,7 +31,12 @@ import type { LiveStandingsRow } from '../../types/live';
 import type { BoardLeague } from '../sunday-ticket-selection';
 import { buildMflExportUrl } from '../mfl-url';
 import { mflFetch } from '../mfl-fetch';
-import { franchiseInitials, identityIconAlt, resolveFranchiseIdentity } from '../mfl-live-identity';
+import {
+  franchiseInitials,
+  identityIconAlt,
+  leagueHasUploadedMarks,
+  resolveFranchiseIdentity,
+} from '../mfl-live-identity';
 
 /**
  * Serve a cached read for this long.
@@ -105,6 +110,9 @@ export interface ReadLeagueStandingsInput {
    * would override a good one with nothing.
    */
   franchiseNames?: Record<string, string>;
+  /** Uploaded marks from the same read as `franchiseNames`, so the Standings
+   *  tab wears the crests the Scores tab does. */
+  franchiseIcons?: Record<string, string>;
   now?: () => number;
 }
 
@@ -233,8 +241,9 @@ export function decorateStandings(
   rows: readonly LiveStandingsRow[],
   input: ReadLeagueStandingsInput,
 ): LiveStandingsRow[] {
-  const { league, viewerFranchiseId = null, franchiseNames = {} } = input;
+  const { league, viewerFranchiseId = null, franchiseNames = {}, franchiseIcons = {} } = input;
   const slug = league.registered?.slug ?? undefined;
+  const leagueHasMarks = leagueHasUploadedMarks(franchiseIcons);
 
   return rows.map((row) => {
     // The resolved name first, the feed's own `fname` second. Neither may be
@@ -248,6 +257,8 @@ export function decorateStandings(
       // which is the point: two views of one league must not disagree about
       // who a franchise is.
       leagueSlug: slug,
+      mflIcon: franchiseIcons[row.franchiseId],
+      leagueHasMarks,
     });
     return {
       ...row,

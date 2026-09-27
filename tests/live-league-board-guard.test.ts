@@ -91,3 +91,13 @@ describe('the board is assembled in process, never through our own API', () => {
     expect(src).not.toMatch(/(await\s+)?fetch\(\s*['"`][^'"`]*\/api\//);
   });
 });
+
+describe("an outside league's uploaded marks reach both tabs", () => {
+  it('mfl-league-board forwards franchiseIcons to the cards AND the standings', () => {
+    // It forwarded only the NAMES, and on 2026-09-27 Archie's league (10105)
+    // showed a Chicago Bears logo and initials in place of 99 uploaded crests.
+    const src = read('src/utils/live/mfl-league-board.ts');
+    expect(src).toMatch(/franchiseIcons:\s*read\.franchiseIcons/);
+    expect(src).toMatch(/franchiseIcons:\s*read\?\.franchiseIcons/);
+  });
+});
