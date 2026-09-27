@@ -11,6 +11,7 @@
  * without them (the keeper demo) passes false and gets division and playoff
  * views only.
  */
+import DemoSideCompetition from '../shared/DemoSideCompetition.astro';
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import UnifiedStandingsTable from '../../components/theleague/standings/StandingsTable.astro';
 import { COLUMNS, TIERING } from '../../components/theleague/standings/standings-table-config';
@@ -444,6 +445,11 @@ function divisionHeader(name: string, confId?: string) {
         </div>
       )}
 
+      {view === 'all_play' && hasTierRecord && declaredMovement && (
+        <DemoSideCompetition
+          summary={`The tiers are this league's own side competition: every week each team plays all ${tierAllPlayStandings.reduce((n, t) => n + t.teams.length, 0) - 1} others (all-play), and each season the top ${declaredMovement.promote} of a tier move up and the bottom ${declaredMovement.relegate} move down.`}
+        />
+      )}
       {view === 'all_play' && hasTierRecord && (
         <div class:list={['all-play-view', 'tier-grid', { 'tier-grid--wide-last': tierAllPlayStandings.length > 2 }]}>
           {tierAllPlayStandings.map(tierGroup => (
