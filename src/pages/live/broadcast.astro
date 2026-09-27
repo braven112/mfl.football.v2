@@ -1,0 +1,36 @@
+---
+/**
+ * MFL Live — the Live Scoring Broadcast board, on the shared host.
+ *
+ * The board is CROSS-LEAGUE already (it watches every league the signed-in
+ * MFL account is in), but its only routes were `/theleague/broadcast` and
+ * `/afl-fantasy/broadcast` — and the shared host deliberately does not serve a
+ * league that has its own domain, so neither is reachable from mfl.football.
+ * This is the third thin wrapper around the same `LiveBroadcastPage`, wearing
+ * the league-neutral MFL Live shell instead of a league's.
+ *
+ * The auth gate and the cookie write both live HERE, and must:
+ * `Astro.redirect()` only redirects from a PAGE (from a component it merely
+ * stops rendering and ships a blank 200), and `Astro.cookies.set()` from a
+ * component runs after the headers are committed and throws.
+ *
+ * Sign-in goes to the app's OWN `/login` (`mflLoginUrl`), which returns here —
+ * never a league's login, whose return path is validated against that
+ * league's prefix and would drop the trip back.
+ */
+import LiveBroadcastPage from '../../components/shared/live-broadcast/LiveBroadcastPage.astro';
+import { mflLoginUrl } from '../../utils/mfl-login-redirect';
+import { getAuthUser } from '../../utils/auth';
+import { rememberBroadcastChoices } from '../../utils/broadcast-cookies';
+
+export const prerender = false;
+
+rememberBroadcastChoices(Astro.url, Astro.cookies);
+
+const user = getAuthUser(Astro.request);
+if (!user) {
+  return Astro.redirect(mflLoginUrl(`${Astro.url.pathname}${Astro.url.search}`), 302);
+}
+---
+
+<LiveBroadcastPage user={user} shell="mfl-live" />

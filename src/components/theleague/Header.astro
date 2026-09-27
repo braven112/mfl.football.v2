@@ -823,6 +823,16 @@ const searchHref = searchPath
     }
   }
 
+  /* The Live Broadcast toolbar owns the band between this header and the
+     board and centres itself in it (styles/live-broadcast.css), so the header
+     gives up its own bottom margin there — at every width, which is why this
+     outranks the mobile rule above. Astro does not scope inside `:has()`, so
+     the selectors in it are written bare — a `:global()` there is emitted
+     literally and voids the rule. */
+  .theleague-header:has(+ main > .lbc-bar) {
+    margin-bottom: 0;
+  }
+
   @media (max-width: 360px) {
     .league_logo svg,
     .league_logo .header-logo-img {

@@ -251,3 +251,19 @@ describe('the panel stylesheet carries two fixes that look like style', () => {
     expect(block).toMatch(/html\.mfl-menu-open\) \.mfl-menu__backdrop/);
   });
 });
+
+describe('the broadcast board is one tap from the menu', () => {
+  const menu = read(MENU);
+
+  it('links the shared-host broadcast route, signed-in only', () => {
+    // `/theleague/broadcast` and `/afl-fantasy/broadcast` are not served on
+    // the shared host, so MFL Live reaches the board through its own route.
+    expect(menu).toMatch(
+      /\{ href: '\/live\/broadcast', label: 'Live broadcast', icon: 'tv', requiresAuth: true \}/,
+    );
+  });
+
+  it('the route it links exists', () => {
+    expect(() => read('src/pages/live/broadcast.astro')).not.toThrow();
+  });
+});

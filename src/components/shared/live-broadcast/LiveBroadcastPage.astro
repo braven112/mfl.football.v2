@@ -16,6 +16,7 @@
  * slate.
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import MflAppLayout from '../../../layouts/MflAppLayout.astro';
 import LiveBroadcast from './LiveBroadcast';
 import BroadcastControls from './BroadcastControls.astro';
 import { assembleBroadcastBoard, toPageData } from '../../../utils/broadcast-board';
@@ -37,9 +38,16 @@ import '../../../styles/utilities.css';
 
 interface Props {
   user: AuthUser;
+  /**
+   * Which document shell wraps the board. The league routes wear their own
+   * league's layout; MFL Live (`/live/broadcast` on the shared host) wears the
+   * league-neutral app shell, because the league routes are deliberately not
+   * served there and the board itself belongs to no league.
+   */
+  shell?: 'league' | 'mfl-live';
 }
 
-const { user } = Astro.props;
+const { user, shell = 'league' } = Astro.props;
 
 // `?testDate=YYYY-MM-DD` shifts the reference date server-side so the board can
 // be rendered at the Labor Day boundary, where its season year turns. Without
@@ -135,9 +143,14 @@ const chips = board.leagues.map((league) => ({
 }));
 
 const title = `Live Broadcast — Week ${week}`;
+
+const Layout = shell === 'mfl-live' ? MflAppLayout : TheLeagueLayout;
+const layoutProps = shell === 'mfl-live'
+  ? { title, description: 'A TV board for every league your MyFantasyLeague account is in.' }
+  : { title, hideMobileNavIcons: true };
 ---
 
-<TheLeagueLayout title={title} hideMobileNavIcons>
+<Layout {...layoutProps}>
 {
   wantsPicker ? (
     <main class="lbc" aria-label="Live scoring broadcast">
@@ -168,4 +181,4 @@ const title = `Live Broadcast — Week ${week}`;
     </Fragment>
   )
 }
-</TheLeagueLayout>
+</Layout>

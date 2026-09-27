@@ -50,6 +50,13 @@ const ROUTES = [
   'src/pages/theleague/broadcast.astro',
   'src/pages/afl-fantasy/broadcast.astro',
 ].map((p) => [p, code(read(p))] as const);
+/**
+ * MFL Live's copy on the shared host — the third thin wrapper. Kept OUT of
+ * `ROUTES` because that list is destructured as [theleague, afl] and checked
+ * for LEAGUE sign-in; this one belongs to no league and signs in through the
+ * app's own `/login` (`mflLoginUrl`).
+ */
+const MFL_LIVE_ROUTE = ['src/pages/live/broadcast.astro', code(read('src/pages/live/broadcast.astro'))] as const;
 
 /**
  * The stylesheet with the `.lbc-bar*` rules removed.
@@ -322,7 +329,34 @@ describe('the fixes that a scan is the only thing holding', () => {
     // `tabular-nums`, so every score would jitter its column width on a tick —
     // with no lang and no title.
     expect(PAGE_CODE).toMatch(/TheLeagueLayout/);
+    expect(PAGE_CODE).toMatch(/MflAppLayout/);
     expect(CSS).toMatch(/font-family:/);
+  });
+});
+
+describe('the toolbar sits centred between the header and the board', () => {
+  // It used to take whatever the layout's <main> padding was above (38px on
+  // MFL Live, 28px of league-header margin, 0 on a phone) against a fixed 8px
+  // below, so the buttons sat jammed against the board, differently on every
+  // page. The strip now owns the band: equal padding above and below, with
+  // the space above it cancelled on every shell that renders the board.
+  it('pads itself equally above and below, with no margin of its own', () => {
+    expect(declared('lbc-bar', 'padding-block')).toMatch(/\S/);
+    expect(declared('lbc-bar', 'margin')).toBe('0');
+  });
+
+  it('cancels the top padding of both shells\' <main>', () => {
+    // MFL Live's is Astro-scoped (0,2,0), so the bare selector alone loses.
+    expect(CSS_CODE).toMatch(/main:has\(> \.lbc-bar\)/);
+    expect(CSS_CODE).toMatch(/main\.mfl-main:has\(> \.lbc-bar\)/);
+  });
+
+  it('drops the league header\'s bottom margin, written bare inside :has()', () => {
+    // Astro does not scope inside :has(), so a :global() there ships literally
+    // and voids the rule — which is exactly how the first cut of this failed.
+    const header = code(read('src/components/theleague/Header.astro'));
+    expect(header).toMatch(/\.theleague-header:has\(\+ main > \.lbc-bar\)\s*\{\s*margin-bottom:\s*0/);
+    expect(header).not.toMatch(/:has\([^)]*:global/);
   });
 });
 
@@ -529,7 +563,7 @@ describe('the routes own the gate and the cookie', () => {
   it('redirects from the PAGE, never from the shared component', () => {
     // `Astro.redirect()` from a component's frontmatter merely stops rendering
     // it — the response is still a 200 with a blank body.
-    for (const [path, src] of ROUTES) {
+    for (const [path, src] of [...ROUTES, MFL_LIVE_ROUTE]) {
       expect(src, `${path} must gate`).toMatch(/getAuthUser/);
       expect(src, `${path} must redirect`).toMatch(/Astro\.redirect/);
     }
@@ -552,6 +586,16 @@ describe('the routes own the gate and the cookie', () => {
     expect(afl).not.toMatch(/getLeagueBySlug\('theleague'\)/);
   });
 
+  it('sends the MFL Live visitor to the app’s own login, not a league’s', () => {
+    // A league login validates its return path against that league's prefix,
+    // so `/live/broadcast` would be dropped and the owner landed on a league
+    // homepage instead — the bug `/live` itself once shipped.
+    const [, src] = MFL_LIVE_ROUTE;
+    expect(src).toMatch(/mflLoginUrl\(/);
+    expect(src).not.toMatch(/loginUrlForRequest|getLeagueBySlug/);
+    expect(src).toMatch(/shell="mfl-live"/);
+  });
+
   it('builds the sign-in URL through the shared builder, never by hand', () => {
     // A hand-built `/<slug>/login?next=…` drops back into the three-way split
     // this repo just unified: TheLeague emitted ?redirect=, the AFL ?next=,
@@ -565,7 +609,7 @@ describe('the routes own the gate and the cookie', () => {
   it('writes cookies only from the route', () => {
     // `Astro.cookies.set()` from an imported component runs after the headers
     // are committed and throws, blanking the page.
-    for (const [path, src] of ROUTES) {
+    for (const [path, src] of [...ROUTES, MFL_LIVE_ROUTE]) {
       expect(src, `${path} must remember choices`).toMatch(/rememberBroadcastChoices/);
     }
     expect(PAGE_CODE).not.toMatch(/cookies\.set/);
