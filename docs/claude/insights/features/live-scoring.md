@@ -83,8 +83,10 @@ first assertion on its own.
 **Not to be confused with the thing that must NOT be deduped.** The same player
 started by two DIFFERENT franchises is two owners' points and two legitimate
 rows — routine in the AFL, whose rosters duplicate players, and possible on
-both sides of one matchup. The gate is on the franchise, never on the player,
-and `LiveLeaderPlayer` is keyed by the PAIR for exactly that reason.
+both sides of one matchup. The gate is on the franchise, never on the player.
+(Since 2026-09-27 those owners share ONE row — `LiveLeaderPlayer.owners` lists
+every franchise starting him — because two rows of the same name read as a
+duplicate bug. Merging is fine; dropping any owner from the list is not.)
 
 ## 2026-07-08 - Reusable two-team color contrast system
 

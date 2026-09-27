@@ -193,7 +193,8 @@ describe('the top-scorers strips', () => {
 
   it('ranks individual performances across the whole league', () => {
     const { players } = buildLeaders(panelOf());
-    expect(players[0]).toMatchObject({ playerId: 'p5', franchiseId: '0004', points: 120 });
+    expect(players[0]).toMatchObject({ playerId: 'p5', points: 120 });
+    expect(players[0].owners.map((o) => o.franchiseId)).toEqual(['0004']);
     expect(players.map((p) => p.playerId)).toEqual(['p5', 'p3', 'p4', 'p1', 'p2']);
   });
 
@@ -226,23 +227,39 @@ describe('the top-scorers strips', () => {
     expect(leaders.players).toEqual([]);
   });
 
-  it('keeps the SAME player started by two owners as two rows', () => {
+  it('lists the SAME player started by two owners ONCE, naming both owners', () => {
     // In the AFL a player is routinely rostered in both conferences, and both
-    // sides of one matchup can start him. Those are different owners' points;
-    // collapsing them drops the credit from every roster but one.
+    // sides of one matchup can start him. One row per owner put the same name
+    // on the strip twice; one row with one owner would drop the other's credit.
     const shared = panelOf({
       snapshot: snapshot({
         players: {
-          '0001': [row('star', 50)],
           '0002': [row('star', 50)],
+          '0001': [row('star', 50)],
           '0003': [row('p4', 10)],
           '0004': [row('p5', 10)],
         },
       }) as never,
     });
     const rows = buildLeaders(shared).players.filter((p) => p.playerId === 'star');
-    expect(rows).toHaveLength(2);
-    expect(new Set(rows.map((r) => r.franchiseId))).toEqual(new Set(['0001', '0002']));
+    expect(rows).toHaveLength(1);
+    expect(rows[0].points).toBe(50);
+    expect(rows[0].owners.map((o) => o.franchiseId)).toEqual(['0001', '0002']);
+  });
+
+  it('caps the strip by PLAYERS, not by starts', () => {
+    const shared = panelOf({
+      snapshot: snapshot({
+        players: {
+          '0001': [row('star', 50), row('p1', 40)],
+          '0002': [row('star', 50), row('p3', 30)],
+          '0003': [row('p4', 20)],
+          '0004': [row('p5', 10)],
+        },
+      }) as never,
+    });
+    const { players } = buildLeaders(shared, { playerLimit: 3 });
+    expect(players.map((p) => p.playerId)).toEqual(['star', 'p1', 'p3']);
   });
 
   it('does not reshuffle a tie between two polls', () => {
@@ -277,8 +294,13 @@ describe('the top-scorers strips', () => {
     const { teams, players } = buildLeaders(doubleheader);
 
     expect(teams.map((t) => t.franchiseId)).toEqual([...new Set(teams.map((t) => t.franchiseId))]);
-    const keys = players.map((p) => `${p.franchiseId}:${p.playerId}`);
+    const keys = players.map((p) => p.playerId);
     expect(keys).toEqual([...new Set(keys)]);
+    // Nor is a franchise named twice as the owner of one player.
+    for (const p of players) {
+      const ids = p.owners.map((o) => o.franchiseId);
+      expect(ids).toEqual([...new Set(ids)]);
+    }
     // And nothing was lost to the de-duplication: every franchise still ranks.
     expect(teams).toHaveLength(4);
     expect(players).toHaveLength(5);

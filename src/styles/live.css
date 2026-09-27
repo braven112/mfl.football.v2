@@ -1619,6 +1619,22 @@ button.lv-card:focus-visible {
   font-size: var(--font-size-sm);
   color: var(--page-text);
 }
+/* Player rows stack name over owners, so the owner list gets the full width
+   and wraps rather than truncating — every owner is someone's credit. */
+.lv-leaders__who {
+  min-width: 0;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+.lv-leaders__who .lv-leaders__name {
+  flex: none;
+}
+.lv-leaders__owners {
+  color: var(--content-text-muted);
+  font-size: var(--font-size-xs);
+  overflow-wrap: anywhere;
+}
 .lv-leaders__meta {
   margin-left: 0.35rem;
   color: var(--content-text-muted);

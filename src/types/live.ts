@@ -282,6 +282,13 @@ export interface LiveLeaderTeam {
   yetToPlay: number;
 }
 
+/** One franchise starting a player on the top-scorers strip. */
+export interface LiveLeaderOwner {
+  franchiseId: string;
+  /** Short form — the strip lists every owner on one line. */
+  franchiseName: string;
+}
+
 /**
  * One individual performance on the week's top-scorers strip.
  *
@@ -290,16 +297,17 @@ export interface LiveLeaderTeam {
  * here is a second thing to keep in step, and the one that drifts is the one
  * nobody is looking at.
  *
- * `franchiseId` is NOT a unique key for a performance. In the AFL a player is
- * routinely rostered — and started — in both conferences, and both sides of
- * one matchup can start him; each of those is a different owner's points and
- * a legitimately separate row. The key is the PAIR.
+ * ONE row per player, carrying EVERY franchise that started him. In the AFL a
+ * player is routinely rostered — and started — in both conferences, and both
+ * sides of one matchup can start him. Listing him once per owner filled the
+ * strip with the same name twice; listing him once with one owner would drop
+ * the credit from every other roster. So the row is the player and `owners`
+ * is the full list — never empty, never truncated.
  */
 export interface LiveLeaderPlayer {
   playerId: string;
-  franchiseId: string;
-  /** Who is starting him, short form — the strip has one line per row. */
-  franchiseName: string;
+  /** Every franchise starting him, ordered by franchise id. */
+  owners: LiveLeaderOwner[];
   points: number;
   /** 0 when his game is over. Drives the "final" vs "still playing" mark. */
   secondsRemaining: number;
