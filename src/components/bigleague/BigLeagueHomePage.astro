@@ -68,7 +68,7 @@ const tools = [
   { href: `${prefix}/players`, title: 'Free Agents', blurb: 'Your conference’s pool, and a waiver claim in two taps.' },
   { href: `${prefix}/front-office/trade-builder`, title: 'Trade Builder', blurb: 'Build an offer with anyone in your conference.' },
   { href: `${prefix}/standings?view=league`, title: 'Conference Standings', blurb: `All ${conferenceIds.length} conferences, seeded.` },
-  { href: `${prefix}/standings?view=all_play`, title: 'Tier Standings', blurb: `${tiers.join(', ')} — promotion and relegation.` },
+  { href: `${prefix}/standings?view=all_play`, title: 'Tier Standings', blurb: `A side competition built for this league: ${tiers.join(', ')}, with promotion and relegation.` },
   { href: `${prefix}/playoffs`, title: 'Playoffs', blurb: 'Conference brackets, then the champions’ bracket.' },
   { href: `${prefix}/live-scoring`, title: 'Live Scoring', blurb: 'Every game in the league, as it happens.' },
   { href: `${prefix}/rosters`, title: 'Rosters', blurb: 'Any team, any conference.' },
@@ -142,7 +142,7 @@ const tools = [
 
       <aside class="blh__side">
         <section class="blh__card" aria-label="Tier leaders">
-          <h2 class="blh__h2">Tier leaders</h2>
+          <h2 class="blh__h2">Tier leaders <span class="blh__side-comp">Side competition</span></h2>
           {tierLeaders.map((t, i) => (
             <div class="blh__tier-block">
               <p class="blh__tier-name">
@@ -166,7 +166,7 @@ const tools = [
             <li><strong>Redraft.</strong> Every conference holds its own snake draft each season, from its own player pool.</li>
             <li><strong>Conferences.</strong> Weeks 1–12 inside your conference; the top four (two division winners, two wild cards) play off in weeks 13–14.</li>
             <li><strong>Champions’ bracket.</strong> The {conferenceIds.length} conference champions play weeks 15–17 for the league title.</li>
-            <li><strong>Tiers.</strong> An all-play side competition: four teams move up and four move down between tiers every year.</li>
+            <li><strong>Tiers.</strong> A custom side competition, run alongside the real standings: every team plays every team each week (all-play), and four move up and four move down between tiers every year. Any league can have its own, built around its rules.</li>
           </ul>
         </section>
       </aside>
@@ -321,5 +321,17 @@ const tools = [
     .blh__columns {
       grid-template-columns: 1fr;
     }
+  }
+  .blh__side-comp {
+    margin-left: 0.4rem;
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    background: #fca311;
+    color: #14213d;
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    vertical-align: middle;
   }
 </style>

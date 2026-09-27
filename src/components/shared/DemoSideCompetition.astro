@@ -1,0 +1,76 @@
+---
+/**
+ * The custom-site demo's note on a SIDE COMPETITION (docs/plans/custom-site-demo.md):
+ * a table that exists because of one league's own rules — the big league's
+ * promotion/relegation tiers — and that a prospect should read as an example
+ * of what gets built for THEIR league, not as a feature every league has.
+ * Renders nothing outside a demo deployment.
+ *
+ * Fixed accent colour, like DemoBanner and CustomForLeague: it has to read as
+ * the demo's own voice in both themes.
+ */
+import { isDemoDeploy } from '../../utils/deploy-environment';
+
+interface Props {
+  /** What this league's side competition is, one sentence. */
+  summary: string;
+  compact?: boolean;
+}
+
+const { summary, compact = false } = Astro.props;
+const show = isDemoDeploy();
+---
+
+{
+  show && (
+    <aside class:list={['demo-side-comp', { 'demo-side-comp--compact': compact }]} aria-label="About this side competition">
+      <span class="demo-side-comp__badge">Custom side competition</span>
+      <p class="demo-side-comp__text">
+        {summary} It runs alongside the real standings and changes nothing in them.
+      </p>
+      {!compact && (
+        <p class="demo-side-comp__pitch">
+          Your league can have its own, built around your rules: a survivor pool, a season-long points race, a
+          rivalry cup, a second-chance bracket for the teams that miss the playoffs, anything with a scoring rule.
+        </p>
+      )}
+    </aside>
+  )
+}
+
+<style>
+  .demo-side-comp {
+    display: grid;
+    gap: 0.4rem;
+    margin: 0 0 1.25rem;
+    padding: 0.9rem 1.1rem;
+    border-radius: var(--radius-md, 10px);
+    background: var(--card-surface);
+    border: 1px solid var(--content-border);
+    border-left: 4px solid #fca311;
+  }
+  .demo-side-comp--compact {
+    margin: 0;
+    padding: 0.7rem 0.9rem;
+  }
+  .demo-side-comp__badge {
+    justify-self: start;
+    padding: 0.1rem 0.55rem;
+    border-radius: 999px;
+    background: #fca311;
+    color: #14213d;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .demo-side-comp__text,
+  .demo-side-comp__pitch {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.45;
+  }
+  .demo-side-comp__pitch {
+    color: var(--content-text-muted);
+  }
+</style>
