@@ -23,6 +23,12 @@ export interface Props {
   /** League ID override (defaults to the registry's DEFAULT_LEAGUE_ID) */
   leagueId?: string;
   /**
+   * Sign in to an APP rather than one league. `'mfl-live'` (the shared host's
+   * /login) sends no leagueId: the server accepts an owner of any registered
+   * league or invited pilot league and picks the session's league itself.
+   */
+  scope?: 'mfl-live';
+  /**
    * Season year override forwarded to MFL. AFL passes 2025 because its
    * 2026 league hasn't been created on MFL yet; calling /2026/myleagues
    * for the AFL leagueId returns nothing, so franchise resolution fails.
@@ -54,6 +60,7 @@ const {
   showLogo = compact,
   redirectUrl,
   leagueId = DEFAULT_LEAGUE_ID,
+  scope,
   seasonYear,
   logoSrc = '/assets/logos/theleague-logo.svg',
   logoAlt = 'The League logo',
@@ -106,6 +113,7 @@ const allLeaguePrefixes = ALL_LEAGUES.map((l) => `/${l.slug}`).join(' ');
   data-league-prefix={`/${formLeague.slug}`}
   data-league-prefixes={allLeaguePrefixes}
   data-league-id={leagueId}
+  data-login-scope={scope}
   data-season-year={seasonYear != null ? String(seasonYear) : ''}
 >
   <!-- Branded Header -->
@@ -243,6 +251,7 @@ const allLeaguePrefixes = ALL_LEAGUES.map((l) => `/${l.slug}`).join(' ');
     const leaguePrefix = formWrapper.dataset.leaguePrefix || '';
     const allPrefixes = (formWrapper.dataset.leaguePrefixes || '').split(' ').filter(Boolean);
     const leagueId = formWrapper.dataset.leagueId || DEFAULT_LEAGUE_ID;
+    const loginScope = formWrapper.dataset.loginScope || '';
 
     /**
      * Same-origin AND same-league, or the league home. Mirrors
@@ -313,7 +322,8 @@ const allLeaguePrefixes = ALL_LEAGUES.map((l) => `/${l.slug}`).join(' ');
           body: JSON.stringify({
             username: usernameInput.value,
             password: passwordInput.value,
-            leagueId,
+            // An app-scoped sign-in names no league; the server decides.
+            ...(loginScope ? { scope: loginScope } : { leagueId }),
             ...(seasonYear != null ? { year: seasonYear } : {}),
           }),
         });

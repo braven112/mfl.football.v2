@@ -208,12 +208,22 @@ export async function fetchCommissionerSession(
   return null;
 }
 
+/**
+ * `leagueId` is either ONE league the account must belong to (a league's own
+ * sign-in page), or an ordered list of acceptable leagues (MFL Live on the
+ * shared host — see `mflLiveSignInLeagueIds`). With a list, the session is
+ * scoped to the FIRST listed league the account is in, and an account in none
+ * of them is refused.
+ */
 export async function authenticateWithMFL(
   username: string,
   password: string,
-  leagueId?: string,
+  leagueIdOrIds?: string | readonly string[],
   year?: number,
 ): Promise<MFLLoginResponse> {
+  const candidates = Array.isArray(leagueIdOrIds) ? leagueIdOrIds : null;
+  // The single-league id. A list has none until myleagues says which one.
+  const leagueId = candidates ? undefined : (leagueIdOrIds as string | undefined);
   try {
     const seasonYear = year ?? new Date().getFullYear();
 
@@ -429,13 +439,47 @@ export async function authenticateWithMFL(
 
     console.log('[mfl-login] Found', leagueList.length, 'leagues');
 
+    const isLeague = (l: any, id: string) =>
+      `${l.id ?? l.league_id ?? l.leagueId ?? ''}` === `${id}` ||
+      `${l.league ?? ''}` === `${id}`;
+
+    // A candidate list is walked in ITS order, never myleagues' order — MFL
+    // returns that array in nondeterministic order, so "first in myleagues"
+    // would scope the same owner's session to a different league per sign-in.
+    if (candidates) {
+      for (const id of candidates) {
+        const match = leagueList.find((l) => isLeague(l, id));
+        if (match) {
+          const franchiseId = normalizeFranchise(
+            match.franchise_id ?? match.franchiseId ?? match.FranchiseId ??
+            match.team_id ?? match.teamId ?? match.team ?? ''
+          );
+          console.log('[mfl-login] Resolved franchiseId:', franchiseId, 'leagueId:', id);
+          return {
+            success: true,
+            userId: mflCookie,
+            username,
+            franchiseId,
+            leagueId: id,
+            role: commishCookie ? 'commissioner' : 'owner',
+            commishCookie,
+          };
+        }
+      }
+      return {
+        success: true,
+        userId: mflCookie,
+        username,
+        franchiseId: '',
+        leagueId: '',
+        role: 'owner',
+        error: 'MFL Live is invite-only for now, and none of your MyFantasyLeague leagues are part of it yet.',
+      };
+    }
+
     // Find the target league (match by ID, or fall back to first league)
     const targetLeague = leagueId
-      ? leagueList.find(
-          (l) =>
-            `${l.id ?? l.league_id ?? l.leagueId ?? ''}` === `${leagueId}` ||
-            `${l.league ?? ''}` === `${leagueId}`
-        ) || null
+      ? leagueList.find((l) => isLeague(l, leagueId)) || null
       : leagueList[0];
 
     if (!targetLeague && leagueId) {

@@ -24,6 +24,8 @@ import {
   isSharedAppHost,
   leagueHasOwnFrontDoor,
   resolveSharedHostHiddenLeague as rawResolveSharedHostHiddenLeague,
+  MFL_LIVE_PILOT_LEAGUE_IDS,
+  mflLiveSignInLeagueIds,
 } from './leagues-data.mjs';
 
 /** Canonical slug: the path segment under src/pages/ */
@@ -360,7 +362,15 @@ export function ensureLeaguePrefix(league: LeagueDefinition, path: string): stri
   return rawEnsureLeaguePrefix(league, path) as string;
 }
 
-export { buildHostToSlugMap, defaultMflWriteHost, SHARED_APP_ORIGIN, isSharedAppHost, leagueHasOwnFrontDoor };
+export {
+  buildHostToSlugMap,
+  defaultMflWriteHost,
+  SHARED_APP_ORIGIN,
+  isSharedAppHost,
+  leagueHasOwnFrontDoor,
+  MFL_LIVE_PILOT_LEAGUE_IDS,
+  mflLiveSignInLeagueIds,
+};
 
 /**
  * An href for a league-prefixed path that actually WORKS from this hostname.

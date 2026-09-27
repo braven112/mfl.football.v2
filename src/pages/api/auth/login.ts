@@ -3,7 +3,7 @@ import { authenticateWithMFL } from '../../../utils/mfl-login';
 import { createSessionToken, createSessionCookie, createMFLCookies } from '../../../utils/session';
 import { setTheLeaguePreference, setAFLPreference, setBestBall1Preference, getAFLTeamData } from '../../../utils/team-preferences';
 import { json } from '../../../utils/api-response';
-import { getLeagueBySlug } from '../../../config/leagues';
+import { getLeagueById, getLeagueBySlug, mflLiveSignInLeagueIds } from '../../../config/leagues';
 import { captureCredential } from '../../../utils/autocut-storage';
 import { checkRateLimit } from '../../../utils/rate-limit';
 import { getClientIdentity } from '../../../utils/client-ip';
@@ -42,11 +42,21 @@ const USERNAME_KEY_MAX = 64;
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
     const body = await request.json();
-    const { username, password, leagueId, year } = body;
+    const { username, password, leagueId, year, scope } = body;
 
     // Validate inputs
     if (!username || !password) {
       return json({ success: false, message: 'Username and password are required' }, 400);
+    }
+
+    // Sign-in is invite-only: the league a session is scoped to must be a
+    // registered league, or (via the mfl-live scope only) a pilot league.
+    // Without this, a direct POST naming any MFL league id, or naming none so
+    // that the resolver takes MFL's first league, got a valid session for an
+    // uninvited league, which `/live` would then serve. Every form on the site
+    // sends a registry id, so this refuses nothing that a page submits.
+    if (scope !== 'mfl-live' && !getLeagueById(String(leagueId ?? ''))) {
+      return json({ success: false, message: 'Unknown league.' }, 400);
     }
 
     // Throttle BEFORE the MFL call, not after. The point is to stop an
@@ -98,7 +108,12 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     // Authenticate with MFL — year override lets AFL pass 2025 because
     // the AFL 2026 league hasn't been created on MFL yet.
     const seasonYear = Number.isInteger(Number(year)) ? Number(year) : undefined;
-    const mflResponse = await authenticateWithMFL(username, password, leagueId, seasonYear);
+    // MFL Live (the shared host's /login) accepts an owner of ANY registered
+    // league, or of an invited pilot league, rather than one named league. The
+    // list comes from the registry here, never from the request body: a
+    // client-supplied list would let anyone name their own league in.
+    const leagueTarget = scope === 'mfl-live' ? mflLiveSignInLeagueIds() : leagueId;
+    const mflResponse = await authenticateWithMFL(username, password, leagueTarget, seasonYear);
 
     if (!mflResponse.success) {
       return json(
@@ -147,9 +162,12 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       }
     } else if (resolvedLeagueId === BB1_LEAGUE_ID) {
       setBestBall1Preference(cookies, mflResponse.franchiseId);
-    } else {
+    } else if (resolvedLeagueId === THELEAGUE_ID) {
       setTheLeaguePreference(cookies, mflResponse.franchiseId);
     }
+    // Any other league (an MFL Live pilot league) has no team-preference
+    // cookie. It used to fall through to TheLeague's, which would have
+    // highlighted a stranger's franchise id as "your team" on TheLeague.
 
     // Build all Set-Cookie headers: session + MFL credentials
     const setCookieHeaders = [sessionCookie];

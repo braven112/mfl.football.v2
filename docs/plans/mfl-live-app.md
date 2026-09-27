@@ -36,7 +36,7 @@ of your pocket at 10:40 on a Sunday. Same data, opposite interaction model.
 | # | Question | Decision | Why / consequence |
 |---|---|---|---|
 | 1 | Relationship to existing boards | New page, reuse the `/live-scoring` visual system | `/broadcast` and `/sunday-ticket` are untouched. New chrome, borrowed data layer. |
-| 2 | Who can sign in | Existing site owners; sign in via **TheLeague** by default | Works today on `staging.mfl.football`. The MFL cookie is account-wide, so the league chosen at login does not limit what the board reads. A league-less login is a later drop-in. |
+| 2 | Who can sign in | Owners in any **registered** league, plus invited **pilot** leagues (`MFL_LIVE_PILOT_LEAGUE_IDS`: 10105 for the 2026 season) | The shared `/login` sends `scope: 'mfl-live'`; the server walks `mflLiveSignInLeagueIds()` in order and scopes the session to the first league the account is in. Anyone else is refused as invite-only. The MFL cookie is account-wide, so the session's league does not limit what the board reads. Opening it to every MFL owner is a later step. |
 | 3 | Board content | Scores only; tap to expand | Compact row = both totals, yet-to-play, projected final, win probability. Expanded = starter rows. Cheapest first paint, best on a phone. |
 | 4 | Default league set | **All** leagues on; toggle off in settings | Deliberately NOT the other boards' default (home on, outside off). The promise is "all your leagues", so it has to be true on first load. Cost is real — see **Fan-out**. |
 | 5 | Features in v1 | Core scores + starters, NFL games strip, scoring ticker, red-zone alerts | All four. The last two carry the per-NFL-game ESPN fan-out. |
@@ -118,19 +118,21 @@ the name in this plan's title — it is not something a branch can fix.
 
 Small, and none of it blocks development:
 
-1. **The form always sends a leagueId.** `LoginForm.astro` defaults
-   `leagueId = DEFAULT_LEAGUE_ID` and the client reads
-   `dataset.leagueId || DEFAULT_LEAGUE_ID`, so the league-less branch never runs
-   from the UI. A stranger gets `Your account is not a member of league 13522`
-   → 401. Irrelevant while v1 is owners-only.
-2. **`leagueList[0]` is an arbitrary pick.** `loginToMFL` already supports a
+1. ~~**The form always sends a leagueId.**~~ DONE (Sep 2026): the shared
+   `/login` passes `scope="mfl-live"` and sends no league. The server accepts
+   `mflLiveSignInLeagueIds()`, which is every registered league plus the pilot
+   list, and refuses anyone else as invite-only. Guard:
+   `tests/mfl-live-sign-in-scope.test.ts`.
+2. **`leagueList[0]` is an arbitrary pick.** (Still true for a call with NO
+   league at all. The mfl-live list is walked in the list's own order, never
+   myleagues' order, so it avoids this. Only a fully open login needs the fix.) `loginToMFL` already supports a
    league-less call (`const targetLeague = leagueId ? find(…) : leagueList[0]`),
    but MFL array order is nondeterministic. Opening up means replacing that with
    a deliberate choice — prefer a registry league in registry order, else the
    first from `myleagues`.
-3. **`/api/auth/login`'s preference fallback is `else setTheLeaguePreference(…)`**
-   — anyone not in AFL/BB1 gets TheLeague's cookie, including someone with no
-   TheLeague team.
+3. ~~**`/api/auth/login`'s preference fallback is `else setTheLeaguePreference(…)`**~~
+   DONE: only a TheLeague session sets TheLeague's cookie. A pilot-league
+   session sets no team preference at all.
 4. **Cosmetic:** the login wears `TheLeagueLayout` and redirects to
    `/theleague`. Phase 1 gives it MFL Live chrome and a `/live` return path.
 
