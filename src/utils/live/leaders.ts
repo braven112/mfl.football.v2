@@ -14,11 +14,12 @@
  *    fold it in. A bench row here would credit an owner points that cannot be
  *    scored — the same defect that inflates a projection, moved to a
  *    leaderboard where it is harder to spot. `docs/claude/rules/live-scoring.md`.
- *  - **A performance is keyed by FRANCHISE AND PLAYER, never by player.** In
- *    the AFL a player is routinely started in both conferences, and both sides
- *    of one matchup can start him. Those are different owners' points and
- *    belong on separate rows; collapsing them drops the credit from every
- *    roster but one.
+ *  - **One row per PLAYER, listing EVERY owner.** In the AFL a player is
+ *    routinely started in both conferences, and both sides of one matchup can
+ *    start him. One row per owner filled the strip with the same name twice;
+ *    one row with one owner would drop the credit from every roster but that
+ *    one. So the row carries the whole `owners` list, and the cap counts
+ *    players, not starts.
  *  - **Zero is never a leader.** An unplayed week is a well-formed payload of
  *    zeros, so a strip that does not filter renders ten rows of "0.0" as this
  *    week's best performances. Only positive scores rank.
@@ -57,7 +58,8 @@ export function buildLeaders(panel: LivePanel, options: BuildLeadersOptions = {}
   const playerLimit = options.playerLimit ?? LEADER_PLAYER_LIMIT;
 
   const teams: LiveLeaderTeam[] = [];
-  const players: LiveLeaderPlayer[] = [];
+  /** Keyed by player id — one row per player, owners accumulated onto it. */
+  const players = new Map<string, LiveLeaderPlayer>();
   /**
    * A FRANCHISE is counted once, however many matchups it appears in.
    *
@@ -70,9 +72,9 @@ export function buildLeaders(panel: LivePanel, options: BuildLeadersOptions = {}
    *
    * The gate is on the franchise, not on the row, because both strips are
    * per-roster: the same roster in two matchups is one team and one set of
-   * starters. It does NOT collapse the same PLAYER started by two different
-   * franchises — those are different ids, different owners, and two
-   * legitimate rows.
+   * starters. The same PLAYER started by two different franchises is a
+   * different thing — two owners' credit — and is merged into one row that
+   * names both, below.
    */
   const seen = new Set<string>();
 
@@ -98,13 +100,18 @@ export function buildLeaders(panel: LivePanel, options: BuildLeadersOptions = {}
       // STARTERS. `side.bench` is deliberately not read here — see the header.
       for (const row of side.players) {
         if (!(row.live > 0)) continue;
-        players.push({
-          playerId: row.id,
-          franchiseId: side.franchiseId,
-          franchiseName: side.nameShort,
-          points: row.live,
-          secondsRemaining: row.secondsRemaining,
-        });
+        const owner = { franchiseId: side.franchiseId, franchiseName: side.nameShort };
+        const existing = players.get(row.id);
+        if (existing) {
+          existing.owners.push(owner);
+        } else {
+          players.set(row.id, {
+            playerId: row.id,
+            owners: [owner],
+            points: row.live,
+            secondsRemaining: row.secondsRemaining,
+          });
+        }
       }
     }
   }
@@ -114,14 +121,14 @@ export function buildLeaders(panel: LivePanel, options: BuildLeadersOptions = {}
     return diff !== 0 ? diff : a.franchiseId.localeCompare(b.franchiseId);
   });
 
-  players.sort((a, b) => {
+  const ranked = [...players.values()];
+  // Owner order is the walk order of the matchups, which MFL does not fix —
+  // sort it so the list does not reshuffle between polls.
+  for (const p of ranked) p.owners.sort((a, b) => a.franchiseId.localeCompare(b.franchiseId));
+  ranked.sort((a, b) => {
     const diff = rank(b.points) - rank(a.points);
-    if (diff !== 0) return diff;
-    // Franchise before player: two owners tied on the same player read better
-    // grouped by owner than interleaved, and the pair is unique either way.
-    const byFranchise = a.franchiseId.localeCompare(b.franchiseId);
-    return byFranchise !== 0 ? byFranchise : a.playerId.localeCompare(b.playerId);
+    return diff !== 0 ? diff : a.playerId.localeCompare(b.playerId);
   });
 
-  return { teams: teams.slice(0, teamLimit), players: players.slice(0, playerLimit) };
+  return { teams: teams.slice(0, teamLimit), players: ranked.slice(0, playerLimit) };
 }
