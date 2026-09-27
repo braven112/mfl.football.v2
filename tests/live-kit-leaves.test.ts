@@ -256,10 +256,10 @@ const feed = (over: Partial<FeedSnapshot> = {}): FeedSnapshot => ({
   ...over,
 });
 
-const pill = (feeds: FeedSnapshot[], anyLive = false, gamesLive = 0, compact = false) =>
+const pill = (feeds: FeedSnapshot[], anyLive = false, gamesLive = 0) =>
   text(
     renderToString(
-      createElement(LvFeedStatus, { feeds, anyLive, gamesLive, compact }),
+      createElement(LvFeedStatus, { feeds, anyLive, gamesLive }),
     ),
   );
 
@@ -298,8 +298,21 @@ describe('LvFeedStatus — a heartbeat, or nothing at all', () => {
     expect(pill([feed()], true, 4)).toContain('4 games live');
   });
 
-  it('drops the games clause in compact (detail-header) mode', () => {
-    expect(pill([feed()], true, 4, true)).not.toContain('games live');
+  it('renders once per screen — the matchup drill-in carries no second copy', () => {
+    // The board header (Week picker + this pill) stays on screen while a
+    // matchup is open, so a pill in the drill-in's back-button row printed the
+    // same "Tracking · updated 17s ago" twice, one line apart (owner
+    // screenshot, 2026-09-27).
+    const detail = readFileSync(
+      resolve(process.cwd(), 'src/components/shared/live/LvMatchupDetail.tsx'),
+      'utf-8',
+    );
+    expect(detail).not.toMatch(/LvFeedStatus|\bstatus\?:\s*ReactNode/);
+    const board = readFileSync(
+      resolve(process.cwd(), 'src/components/shared/live/LiveBoard.tsx'),
+      'utf-8',
+    );
+    expect(board.match(/<LvFeedStatus\b/g) ?? []).toHaveLength(1);
   });
 
   it('hides the games clause entirely when none is being played', () => {

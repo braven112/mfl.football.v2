@@ -582,11 +582,11 @@ button.lv-card:focus-visible {
 }
 
 /**
- * The back button and the freshness pill share the top row, so the pill is on
- * screen before an owner scrolls — on a phone the detail header IS the first
- * screen. The row's inline inset lives HERE, not on the button, so that when
- * the row wraps (which it does on a phone) the pill starts at the same x as
- * the button above it.
+ * The back button's row. It carries NO freshness pill: the board header above
+ * (Week picker + pill) stays on screen while a matchup is open, and a second
+ * copy here printed "Tracking · updated 17s ago" twice, one line apart. The
+ * row's inline inset lives HERE, not on the button, so anything added to the
+ * row and wrapped on a phone starts at the same x as the button above it.
  */
 .lv-detail__top {
   display: flex;

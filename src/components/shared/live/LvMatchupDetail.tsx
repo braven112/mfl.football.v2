@@ -13,7 +13,7 @@
  * row's inline inset lives on the ROW, not on the button, so that when it wraps
  * the pill starts at the same x as the button above it.
  */
-import type { JSX, ReactNode } from 'react';
+import type { JSX } from 'react';
 import type { LiveMatchup, LiveMoment, LiveTeam } from '../../../types/live';
 import type { NflGame, PlayerBoxScore, PlayerMeta } from '../../../types/live-scoring';
 import { renderOrder, winProbabilityFor } from '../../../utils/live/model';
@@ -41,8 +41,6 @@ export interface LvMatchupDetailProps {
   momentPartial?: boolean;
   viewerFirst?: boolean;
   isFinal?: boolean;
-  /** The freshness pill, rendered by the board so it keeps its own ticker. */
-  status?: ReactNode;
   onBack: () => void;
 }
 
@@ -57,7 +55,6 @@ export default function LvMatchupDetail({
   momentPartial,
   viewerFirst = false,
   isFinal = false,
-  status,
   onBack,
 }: LvMatchupDetailProps): JSX.Element {
   const [first, second] = renderOrder(matchup, viewerFirst);
@@ -71,7 +68,6 @@ export default function LvMatchupDetail({
         <button type="button" className="lv-back" onClick={onBack}>
           ← All matchups
         </button>
-        {status}
       </div>
 
       {/* The scores take the INK pair, not the fill pair: `--t0`/`--t1` only

@@ -35,15 +35,12 @@ export interface LvFeedStatusProps {
   anyLive: boolean;
   /** How many NFL games are being played right now. 0 hides the clause. */
   gamesLive: number;
-  /** Detail view: drop the games clause, that header is already tight. */
-  compact?: boolean;
 }
 
 export default function LvFeedStatus({
   feeds,
   anyLive,
   gamesLive,
-  compact,
 }: LvFeedStatusProps): JSX.Element | null {
   const [now, setNow] = useState(0);
   const newest = feeds.reduce((max, f) => Math.max(max, f.fetchedAt), 0);
@@ -59,7 +56,7 @@ export default function LvFeedStatus({
 
   const fresh = describeFeedFreshness(feeds, anyLive, now || newest);
   const games =
-    !compact && gamesLive > 0 ? `${gamesLive} game${gamesLive === 1 ? '' : 's'} live` : '';
+    gamesLive > 0 ? `${gamesLive} game${gamesLive === 1 ? '' : 's'} live` : '';
 
   return (
     <span
