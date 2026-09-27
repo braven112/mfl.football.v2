@@ -1333,23 +1333,11 @@ button.lv-card:focus-visible {
     box-shadow: none;
   }
 
-  /* Cancels `.lv-page`'s own `padding-top: var(--spacing-lg)` — the SAME token
-     it is declared with, so the two cannot drift apart. Behind a rounded, inset
-     card that padding read as the margin around it; behind a full-bleed one only
-     its top edge survives, as a band of page background with nothing beside it
-     to explain what it is (plain in light mode, invisible in dark). It is also
-     24px of the lineup on a screen this view is trying to give back.
-
-     Gated on the Throwback preview bar's ABSENCE: `.ls-tb-preview` is a sibling
-     of the island inside `.lv-page` and carries a `margin-bottom` of this very
-     token, so during Throwback Week the pull-up would eat the gap under the bar
-     and sit the card flush against it. Written as `:not(:has(…))` so a browser
-     without `:has()` drops the rule and keeps the band — the harmless half of
-     the two outcomes. The bar keeps its own `.ls-` class because the component
-     is unchanged; renaming it here would silently un-gate this. */
-  .lv-page:not(:has(.ls-tb-preview)) .lv-detail {
-    margin-top: calc(var(--spacing-lg) * -1);
-  }
+  /* NO pull-up here. The card is not the first thing in `.lv-page` — the
+     board's own header (title, Week picker, freshness pill) renders above it
+     in BOTH states — so a negative `margin-top` does not cancel the page's
+     padding, it cancels `.lv`'s flex `gap` and seats the card's top border
+     flush under the Week dropdown. */
 
   /* Stack each team vertically (name above the big score) so the three columns
      stay narrow enough to fit a phone without overflowing. */
