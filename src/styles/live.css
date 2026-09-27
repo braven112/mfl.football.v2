@@ -1434,6 +1434,25 @@ button.lv-card:focus-visible {
 }
 
 /* ── Standings ────────────────────────────────────────────────────────── */
+.lv-standings-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.lv-standings__move {
+  display: block;
+  font-size: 0.6rem;
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
+  white-space: nowrap;
+}
+/* Arrow AND colour, so the direction survives a monochrome render. */
+.lv-standings__move--up {
+  color: var(--color-success);
+}
+.lv-standings__move--down {
+  color: var(--color-error);
+}
 .lv-standings {
   border: 1px solid var(--content-border);
   border-radius: var(--radius-md);
