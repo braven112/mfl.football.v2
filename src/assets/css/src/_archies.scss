@@ -465,6 +465,30 @@ caption a {
       }
     }
   }
+  // A trade side is one run of text: "[banner] gave up A; B; C; $100.00
+  // blind bidding dollars". As a flex row every bare text node became its
+  // own item, so each ";" floated off to the right of its player. Flow it as
+  // a sentence instead — banner on its own line, players inline with the ";"
+  // hugging each name — and quiet the connecting text so the names lead.
+  // The text can't be hidden: dollars and draft picks are bare text too.
+  // #withmenus: mflscripts injects `#options_03 li a[data-pimg-processed]
+  // { display: block }`, which a class-only selector cannot outrank.
+  #withmenus table.report:has(th.transaction) li:has(> a > .franchiseicon) {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--secondary-text-color);
+    > a:first-child {
+      display: block;
+      margin-bottom: 0.25rem;
+    }
+    > a:not(:first-child) {
+      display: inline-block;
+      vertical-align: middle;
+      margin: 0.125rem 0;
+      font-size: 1rem;
+      color: var(--primary-text-color);
+    }
+  }
   // The phone safety net's `#withmenus li { overflow-wrap: anywhere }`
   // outranks the block above and split "Deactivated" mid-word at 320px.
   #withmenus table.report:has(th.transaction) li {

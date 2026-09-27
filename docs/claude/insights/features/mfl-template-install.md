@@ -118,3 +118,12 @@ Two things that looked like layout bugs were specificity/markup:
 sandbox proxy's CA, so route every request through `curl` and fulfil
 `archies_main.css` from the local build — that renders the real page, headshots
 included, with the branch's CSS.
+
+**Follow-up — trade lines.** A trade side is one run of bare text (`[banner]
+gave up A; B; C; $100.00 blind bidding dollars`); dollars and draft picks are
+bare text too, so the `;` can't be hidden by CSS without hiding them. Trade
+`li`s flow as a sentence instead (players `inline-block`, connecting text
+dimmed). mflscripts also injects `#options_03 li a[data-pimg-processed]
+{ display: block }`, so any rule changing a player link's display there needs
+an id in its selector (`#withmenus …`). Owner chose CSS-only over a header
+script that would rebuild the lines.
