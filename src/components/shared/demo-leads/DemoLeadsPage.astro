@@ -25,7 +25,7 @@ const date = (s: number) =>
 const DEMO_NAMES: Record<string, string> = {
   dynasty: 'Dynasty (salary cap)',
   keeper: 'Keeper',
-  bigleague: 'Big league (conferences)',
+  bigleague: 'Big league (multiple player pools)',
   redraft: 'Redraft / best ball',
 };
 const league_ = (l: DemoLead) =>
@@ -35,7 +35,9 @@ const league_ = (l: DemoLead) =>
     l.draftType,
     l.salaryCap ? 'salary cap' : null,
     l.contracts ? 'contracts' : null,
-    l.conferences ? 'conferences' : null,
+    l.playerPools ? 'multiple player pools' : null,
+    l.sideCompetitions ? 'side competitions' : null,
+    l.conferences ? 'conferences or tiers' : null,
     l.platform ? `on ${l.platform}` : null,
   ]
     .filter(Boolean)

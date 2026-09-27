@@ -42,7 +42,7 @@ const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,190}\.[A-Za-z]{2,}$/;
  *   name: string, email: string, leagueName: string, leagueId: string,
  *   scoring: string, wishlist: string, heardFrom: string,
  *   platform: string, format: string, draftType: string, teams: number | null,
- *   salaryCap: boolean, contracts: boolean, conferences: boolean,
+ *   salaryCap: boolean, contracts: boolean, playerPools: boolean, sideCompetitions: boolean,
  * }} QuestionnaireLead
  */
 
@@ -83,7 +83,11 @@ export function validateQuestionnaire(input) {
   const yes = (field) => src[field] === true || src[field] === 'yes' || src[field] === 'on';
   lead.salaryCap = yes('salaryCap');
   lead.contracts = yes('contracts');
-  lead.conferences = yes('conferences');
+  // Multiple player pools (an MFL "Deluxe" league: each conference drafts from
+  // its own copy of every player) is what makes a league the big-league kind.
+  // Conferences or tiers alone do not.
+  lead.playerPools = yes('playerPools');
+  lead.sideCompetitions = yes('sideCompetitions');
 
   return Object.keys(errors).length ? { errors } : { lead: /** @type {QuestionnaireLead} */ (lead) };
 }
@@ -104,7 +108,7 @@ export function isBotSubmission(input) {
  */
 export function matchDemo(lead, available = ['dynasty']) {
   let wanted = 'dynasty';
-  if (lead.teams >= 30 || lead.conferences) wanted = 'bigleague';
+  if (lead.playerPools) wanted = 'bigleague';
   else if (lead.format === 'redraft' || lead.format === 'bestball') wanted = 'redraft';
   else if (lead.format === 'keeper' && !lead.salaryCap && !lead.contracts) wanted = 'keeper';
   const path = available.includes(wanted) ? wanted : available[0];
