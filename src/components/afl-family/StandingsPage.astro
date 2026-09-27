@@ -15,7 +15,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import UnifiedStandingsTable from '../../components/theleague/standings/StandingsTable.astro';
 import { COLUMNS, TIERING } from '../../components/theleague/standings/standings-table-config';
 import { getTierLogo, getTierLogoDark, PREMIER_LEAGUE, D_LEAGUE } from '../../utils/afl-tier-logo';
-import { getConferenceLogo, getConferenceLogoDark } from '../../utils/afl-conference';
+import { getConferenceColor, getConferenceLogo, getConferenceLogoDark } from '../../utils/afl-conference';
 import StandingsViewSelector from '../../components/theleague/StandingsViewSelector.astro';
 import YearSelector from '../../components/theleague/YearSelector.astro';
 import {
@@ -107,6 +107,28 @@ const tierCutoffWeek = resolveTierCutoffWeek(
     .tierCompetition,
   selectedYear
 );
+// A league may declare its own tiers and how many teams move between
+// neighbours each season (tierCompetition.tiers / .movement — the custom-site
+// demo's three-tier big league). The AFL declares no movement, so its two
+// tiers keep their fixed bands and the promotion/relegation playoff below.
+const tierCompetitionConfig = (aflConfig as {
+  tierCompetition?: { tiers?: string[]; movement?: { promote?: number; relegate?: number } };
+}).tierCompetition;
+const declaredTiers = tierCompetitionConfig?.tiers ?? [PREMIER_LEAGUE, D_LEAGUE];
+const declaredMovement = tierCompetitionConfig?.movement;
+function tierMovementFor(tier: string) {
+  if (!declaredMovement) return undefined;
+  const index = declaredTiers.indexOf(tier);
+  if (index < 0) return undefined;
+  return {
+    promote: index === 0 ? 0 : declaredMovement.promote ?? 0,
+    relegate: index === declaredTiers.length - 1 ? 0 : declaredMovement.relegate ?? 0,
+  };
+}
+// The NIT (the AFL's consolation tournament for seeds 5-12) is the AFL's own
+// competition; a league whose config says `nit: false` has none.
+const hasNit = (aflConfig as { nit?: boolean }).nit !== false;
+
 const calculatedAllPlay = weeklyResultsFeed
   ? calculateAllPlayFromWeekly(weeklyResultsFeed, tierCutoffWeek)
   : undefined;
@@ -149,7 +171,7 @@ const combinedAllPlayStandings =
 // the competition that became the Premier League / D-League split the
 // following year (see TIER_COMPETITION_FIRST_SEASON in afl-tier.ts).
 const isInauguralAllPlaySeason = competitions && selectedYear === TIER_COMPETITION_FIRST_SEASON;
-const nitTeams = !competitions ? [] : conferenceLadders
+const nitTeams = !competitions || !hasNit ? [] : conferenceLadders
   .flatMap(({ standings }) =>
     standings.allTeams.filter(team => (team.conferenceSeed || 0) >= 5 && (team.conferenceSeed || 0) <= 12)
   )
@@ -183,7 +205,7 @@ const defendingChampions = (competitions && championsByYear[previousYear]) || {}
 // Get promotion/relegation playoff teams (Premier League 9-10 + D-League 3-4)
 const premierLeague = tierAllPlayStandings.find(t => t.tier === 'Premier League');
 const dLeague = tierAllPlayStandings.find(t => t.tier === 'D-League');
-const promoRegTeams = [
+const promoRegTeams = declaredMovement ? [] : [
   ...(premierLeague?.teams.slice(8, 10) || []), // Premier League ranks 9-10
   ...(dLeague?.teams.slice(2, 4) || []), // D-League ranks 3-4
 ].sort((a, b) => {
@@ -196,7 +218,7 @@ const promoRegTeams = [
 // Tier-table header config. Only the branded Premier League / D-League tiers
 // carry a logo; the combined "AFL Cup" / "All-Play" tables do not.
 function tierHeader(name: string) {
-  const hasLogo = name === PREMIER_LEAGUE || name === D_LEAGUE;
+  const hasLogo = declaredTiers.includes(name);
   return {
     kind: 'tier' as const,
     title: name,
@@ -211,13 +233,17 @@ const combinedTierName = isInauguralAllPlaySeason ? AFL_CUP : 'All-Play';
 // variant). Replaces the old data-league / conferenceId :global selectors.
 function conferenceHeader(confId: ConferenceId, name: string) {
   const isNL = confId === '01';
+  // The AFL's two keep their tuned pairs; any further conference (the demo's
+  // big league) uses the colour its config declares, in both themes.
+  const isAflPair = confId === '00' || confId === '01';
+  const declaredColor = getConferenceColor(confId, leagueSlug);
   return {
     kind: 'conference' as const,
     title: name,
     logoSrc: getConferenceLogo(confId, leagueSlug),
     logoDarkSrc: getConferenceLogoDark(confId, leagueSlug),
-    accentColor: isNL ? '#1d4f91' : '#c41e3a',
-    accentColorDark: isNL ? '#5b9bd5' : '#f47a8f',
+    accentColor: isAflPair ? (isNL ? '#1d4f91' : '#c41e3a') : declaredColor,
+    accentColorDark: isAflPair ? (isNL ? '#5b9bd5' : '#f47a8f') : declaredColor,
   };
 }
 
@@ -245,10 +271,10 @@ function divisionBadgeSeeding(divisionName: string) {
 // The conference logo heads each division card; the defending champion (name
 // only for AFL) reads as a text line.
 const divisionToConf = seasonConfig.divisionToConference as Record<string, '00' | '01'>;
-function aflAccent(confId?: '00' | '01') {
+function aflAccent(confId?: string) {
   return confId === '01' ? ('conference-blue' as const) : ('afl-red' as const);
 }
-function divisionHeader(name: string, confId?: '00' | '01') {
+function divisionHeader(name: string, confId?: string) {
   return {
     kind: 'division' as const,
     title: name,
@@ -277,10 +303,18 @@ function divisionHeader(name: string, confId?: '00' | '01') {
             <p class="subtitle">Division winners seed first — top 4 in each conference make the playoff bracket</p>
           </>
         )}
-        {view === 'all_play' && hasTierRecord && (
+        {view === 'all_play' && hasTierRecord && !declaredMovement && (
           <>
             <h1 class="section-title">Premier League Standings</h1>
             <p class="subtitle">All-play side competition • Bottom 2 of bubble drop to D-League next year</p>
+          </>
+        )}
+        {view === 'all_play' && hasTierRecord && declaredMovement && (
+          <>
+            <h1 class="section-title">Tier Standings</h1>
+            <p class="subtitle">
+              All-play side competition across {declaredTiers.join(', ')} • Top {declaredMovement.promote} move up and bottom {declaredMovement.relegate} move down each season
+            </p>
           </>
         )}
         {view === 'all_play' && !hasTierRecord && isInauguralAllPlaySeason && (
@@ -411,7 +445,7 @@ function divisionHeader(name: string, confId?: '00' | '01') {
       )}
 
       {view === 'all_play' && hasTierRecord && (
-        <div class="all-play-view tier-grid">
+        <div class:list={['all-play-view', 'tier-grid', { 'tier-grid--wide-last': tierAllPlayStandings.length > 2 }]}>
           {tierAllPlayStandings.map(tierGroup => (
             <UnifiedStandingsTable
               teams={tierGroup.teams}
@@ -419,6 +453,7 @@ function divisionHeader(name: string, confId?: '00' | '01') {
               teamCell="icon"
               accent="afl-red"
               tierName={tierGroup.tier}
+              tierMovement={tierMovementFor(tierGroup.tier)}
               header={tierHeader(tierGroup.tier)}
               year={selectedYear}
               rosterBaseUrl={`${baseUrl}/rosters`}
@@ -704,6 +739,11 @@ function divisionHeader(name: string, confId?: '00' | '01') {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 2rem;
+  }
+
+  /* Three or more tiers: two side by side, the last (largest) full width. */
+  .tier-grid--wide-last > :global(:last-child) {
+    grid-column: 1 / -1;
   }
 
   @media (max-width: 1024px) {

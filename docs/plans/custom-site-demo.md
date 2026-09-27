@@ -105,20 +105,54 @@ with `astro build` and driven in Chromium against `scripts/demo/mock-upstash.mjs
 - `/api/afl-keepers` serves any AFL-family league, storing a plan under the
   SESSION's league — so it is no longer refused on the demo.
 
+### Phase 4 — `/bigleague`, the AFL slot (built)
+
+- The fictional **Big League**: 96 teams, 8 conferences × 12 (two divisions
+  each), a **redraft** (`simulateLeague({ mode: 'redraft' })` per conference —
+  every roster clears and a snake draft refills it each year, no salaries or
+  future picks). Each conference drafts from its own copy of the player pool.
+- Season: weeks 1–12 regular season, 13–14 a four-team playoff per
+  conference, 15–17 an eight-team bracket of the conference champions for the
+  overall title (`postseason` in its config; bracket 1 is the overall, 2–9 are
+  the conferences, each tagged with its `conference`).
+- Tiers across all 96: **Premier League 20, A League 20, D-League 56**, ranked
+  on all-play through week 12, four up and four down between each pair
+  (`tierCompetition.{tiers,sizes,movement,cutoffWeek}`, `nit: false`).
+- Everything conference- and tier-shaped now reads the league config instead
+  of the AFL's two constants: `afl-conference` (ids, names, shorts, logos,
+  colours, order), the tier logo helpers (`/assets/afl/tiers/<slug>.svg` for a
+  tier the AFL has no mark for), `getTierAllPlayStandings`, and the standings
+  tier tables (`tierMovement` drives the promotion/relegation bands). The real
+  AFL's standings, rosters, players, trade builder, home, playoffs and live
+  scoring render byte-identical before and after, bar the tightened
+  `theme-image.css` selectors (which fix both logo variants showing when a
+  later `display:block` rule loads).
+- Routes: only `DEMO_AFL_ROUTES` survive the demo build; the rest of the AFL's
+  pages (keepers, its AL/NL draft, rules, admin) are deleted and refused. Home
+  and playoffs are swapped for demo-only thin routes
+  (`scripts/demo/pages/afl-fantasy/`) around `components/bigleague/*`, because
+  the AFL's own are built on AL/NL machinery.
+- Data: `scripts/demo/lib/bigleague.mjs`, written by `writeBigLeague()` in
+  `build-demo-data.mjs` over the AFL slot's data path (league id `99003`).
+  Header wordmark, footer, banner pitch and page titles name the Big League.
+
+### Demo league mark
+
+Every demo slot wears the owner's war-paint pig (`scripts/demo/lib/war-paint.mjs`),
+recoloured per slot from its theme tokens — disc and outlines in the league's
+deep colour, helmet in its accent — with a dark cut (brightened helmet, light
+rim) for the `html.dark` swap. Palettes: `WAR_PAINT_PALETTES`.
+
 ### Known gaps (next)
 
-- The AFL DATA files stay in the demo bundle (54 shared modules
-  import them) — scrubbed of every name and never routed, but a fictional
-  conference league (P4) should replace them.
 - Two modules build their own Redis clients (`schefter-news-loaders.ts`,
   `mfl-trade-bait-cache.ts`) and so bypass the per-prospect namespace; both
   are read caches, shared between prospects.
 - Trades move players, not draft picks; What's New, the Pecking Order and the
   owners' poll are empty; the league's rules pages keep their prose with
   names swapped.
-- P4: `/bigleague` (96 teams, 8 conferences × 12, in the AFL slot) — the
-  AFL-family components are the base; `afl-conference` still types a
-  conference id as `'00' | '01'`.
+- The Big League has no Schefter feed, rules, draft room or keeper pages;
+  its nav offers only what it has.
 - The keeper slot has no Schefter feed, rules, calendar, playoffs or live
   scoring pages; its nav and header offer only what it has.
 

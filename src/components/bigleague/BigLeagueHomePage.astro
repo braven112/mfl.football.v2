@@ -1,0 +1,325 @@
+---
+/**
+ * Home for a many-conference league (the custom-site demo's big league,
+ * docs/plans/custom-site-demo.md): the signed-in team, the tools, the
+ * viewer's conference ladder and the tier leaders.
+ *
+ * The AFL's own homepage is built around its two conferences (the AL/NL
+ * draft heroes, conference playoff previews), so this one is composed from
+ * the shared standings pieces instead. The route hands in the season's feeds
+ * (a glob cannot take a variable).
+ */
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import ThemeImage from '../ThemeImage.astro';
+import UnifiedStandingsTable from '../theleague/standings/StandingsTable.astro';
+import { COLUMNS, TIERING } from '../theleague/standings/standings-table-config';
+import { getConferenceStandings } from '../../utils/standings';
+import { resolveConfigForYear } from '../../utils/team-names';
+import { extractSeasonStructure, applySeasonStructure } from '../../utils/afl-structure';
+import { getConferenceLogo, getConferenceLogoDark, getConferenceName, leagueConferenceIds, type AflFamilySlug } from '../../utils/afl-conference';
+import { getTierLogo, getTierLogoDark } from '../../utils/afl-tier-logo';
+import type { LeagueDefinition } from '../../config/leagues';
+
+interface Props {
+  league: LeagueDefinition;
+  config: any;
+  year: number;
+  standingsFeed: any;
+  leagueFeed: unknown;
+  /** This season's tier makeup ({ franchiseId: tier }), or null. */
+  tierMembership: Record<string, string> | null;
+  /** The signed-in owner's franchise in this league, or null. */
+  franchiseId: string | null;
+}
+const { league, config, year, standingsFeed, leagueFeed, tierMembership, franchiseId } = Astro.props;
+const slug = league.slug as AflFamilySlug;
+const prefix = `/${league.slug}`;
+
+const franchises: any[] = standingsFeed?.leagueStandings?.franchise ?? [];
+const seasonConfig: any = applySeasonStructure(resolveConfigForYear(config as any, year) as any, extractSeasonStructure(leagueFeed as any));
+
+const teams: any[] = config.teams ?? [];
+const team = franchiseId ? teams.find((t) => t.franchiseId === franchiseId) : null;
+const conferenceIds = leagueConferenceIds(slug);
+const myConference = team?.conference ?? conferenceIds[0];
+const ladder = getConferenceStandings(franchises, seasonConfig, myConference, { preserveFeedOrder: true });
+const myRow = team ? ladder.allTeams.find((t) => t.id === team.franchiseId) : null;
+
+const tiers: string[] = config.tierCompetition?.tiers ?? [];
+const tierSizes: number[] = config.tierCompetition?.sizes ?? [];
+const myTier = team ? tierMembership?.[team.franchiseId] ?? team.tier : null;
+// Tier leaders by league-wide all-play (MFL's standings field) — the tier
+// tables proper are on the standings page.
+const allPlayPct = (f: any) => {
+  const w = Number(f.all_play_w ?? 0);
+  const l = Number(f.all_play_l ?? 0);
+  const t = Number(f.all_play_t ?? 0);
+  return w + l + t ? (w + t / 2) / (w + l + t) : 0;
+};
+const teamById = new Map(teams.map((t) => [t.franchiseId, t]));
+const tierLeaders = tiers.map((tier) => {
+  const members = franchises.filter((f) => (tierMembership?.[f.id] ?? teamById.get(f.id)?.tier) === tier);
+  const ranked = [...members].sort((a, b) => allPlayPct(b) - allPlayPct(a));
+  return { tier, leaders: ranked.slice(0, 3), myRank: team ? ranked.findIndex((f) => f.id === team.franchiseId) + 1 : 0, size: members.length };
+});
+
+const tools = [
+  { href: `${prefix}/lineup`, title: 'Set Lineup', blurb: 'Tap a slot, choose a starter, submit.' },
+  { href: `${prefix}/players`, title: 'Free Agents', blurb: 'Your conference’s pool, and a waiver claim in two taps.' },
+  { href: `${prefix}/front-office/trade-builder`, title: 'Trade Builder', blurb: 'Build an offer with anyone in your conference.' },
+  { href: `${prefix}/standings?view=league`, title: 'Conference Standings', blurb: `All ${conferenceIds.length} conferences, seeded.` },
+  { href: `${prefix}/standings?view=all_play`, title: 'Tier Standings', blurb: `${tiers.join(', ')} — promotion and relegation.` },
+  { href: `${prefix}/playoffs`, title: 'Playoffs', blurb: 'Conference brackets, then the champions’ bracket.' },
+  { href: `${prefix}/live-scoring`, title: 'Live Scoring', blurb: 'Every game in the league, as it happens.' },
+  { href: `${prefix}/rosters`, title: 'Rosters', blurb: 'Any team, any conference.' },
+];
+---
+
+<TheLeagueLayout title={league.name}>
+  <div class="blh">
+    <header class="blh__hero">
+      <img class="blh__mark" src="/assets/logos/bigleague-logo.svg" alt="" width="72" height="72" />
+      <div>
+        <h1 class="blh__title">{league.name}</h1>
+        <p class="blh__sub">
+          {teams.length} teams in {conferenceIds.length} conferences of {Math.round(teams.length / Math.max(1, conferenceIds.length))}, three tiers, and a
+          redraft every season. Each conference crowns a champion; the champions play for the title.
+        </p>
+      </div>
+    </header>
+
+    {team && (
+      <section class="blh__team" aria-label="Your team">
+        <img class="blh__crest" src={team.icon} alt="" width="56" height="56" />
+        <div class="blh__team-text">
+          <h2 class="blh__team-name">{team.name}</h2>
+          <p class="blh__team-line">
+            {getConferenceName(team.conference, slug)} · {team.division}
+            {myRow && <> · {myRow.h2hwlt} · #{myRow.conferenceSeed} in the conference</>}
+          </p>
+        </div>
+        {myTier && (
+          <div class="blh__tier">
+            <ThemeImage src={getTierLogo(myTier)} darkSrc={getTierLogoDark(myTier)} alt="" class="blh__tier-logo" />
+            <span>{myTier}</span>
+          </div>
+        )}
+        <a class="blh__team-cta" href={`${prefix}/rosters?franchise=${team.franchiseId}`}>Your roster →</a>
+      </section>
+    )}
+
+    <section class="blh__tools" aria-label="League tools">
+      {tools.map((t) => (
+        <a class="blh__tool" href={t.href}>
+          <span class="blh__tool-title">{t.title}</span>
+          <span class="blh__tool-blurb">{t.blurb}</span>
+        </a>
+      ))}
+    </section>
+
+    <div class="blh__columns">
+      <section class="blh__ladder" aria-label="Conference standings">
+        <UnifiedStandingsTable
+          teams={ladder.allTeams}
+          columns={COLUMNS.conferenceSeeded}
+          teamCell="banner"
+          teamCellFallback="blank"
+          tiering={TIERING.conferenceSeed(ladder.divisionWinners.length)}
+          accent="afl-red"
+          header={{
+            kind: 'conference',
+            title: `${year} ${getConferenceName(myConference, slug)}`,
+            logoSrc: getConferenceLogo(myConference, slug),
+            logoDarkSrc: getConferenceLogoDark(myConference, slug),
+            accentColor: '#c41e3a',
+            accentColorDark: '#f47a8f',
+          }}
+          year={year}
+          preferredTeamId={franchiseId ?? undefined}
+          rosterBaseUrl={`${prefix}/rosters`}
+        />
+      </section>
+
+      <aside class="blh__side">
+        <section class="blh__card" aria-label="Tier leaders">
+          <h2 class="blh__h2">Tier leaders</h2>
+          {tierLeaders.map((t, i) => (
+            <div class="blh__tier-block">
+              <p class="blh__tier-name">
+                <ThemeImage src={getTierLogo(t.tier)} darkSrc={getTierLogoDark(t.tier)} alt="" class="blh__tier-logo" />
+                {t.tier} <span>{tierSizes[i] ?? t.size} teams</span>
+              </p>
+              <ol class="blh__leaders">
+                {t.leaders.map((f: any) => (
+                  <li class:list={{ 'blh__mine': f.id === franchiseId }}>{teamById.get(f.id)?.name ?? f.id}</li>
+                ))}
+              </ol>
+              {t.myRank > 3 && <p class="blh__mine-rank">You: #{t.myRank} of {t.size}</p>}
+            </div>
+          ))}
+          <a class="blh__more" href={`${prefix}/standings?view=all_play`}>Full tier tables →</a>
+        </section>
+
+        <section class="blh__card" aria-label="How the league works">
+          <h2 class="blh__h2">How it works</h2>
+          <ul class="blh__rules">
+            <li><strong>Redraft.</strong> Every conference holds its own snake draft each season, from its own player pool.</li>
+            <li><strong>Conferences.</strong> Weeks 1–12 inside your conference; the top four (two division winners, two wild cards) play off in weeks 13–14.</li>
+            <li><strong>Champions’ bracket.</strong> The {conferenceIds.length} conference champions play weeks 15–17 for the league title.</li>
+            <li><strong>Tiers.</strong> An all-play side competition: four teams move up and four move down between tiers every year.</li>
+          </ul>
+        </section>
+      </aside>
+    </div>
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .blh {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1.5rem 1rem 3rem;
+    display: grid;
+    gap: 1.5rem;
+  }
+  .blh__hero {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+  }
+  .blh__mark {
+    flex: none;
+  }
+  .blh__title {
+    margin: 0;
+    font-size: 1.75rem;
+  }
+  .blh__sub {
+    margin: 0.25rem 0 0;
+    color: var(--content-text-muted);
+    max-width: 70ch;
+  }
+  .blh__team {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+    padding: 1rem;
+    background: var(--card-surface);
+    border: 1px solid var(--content-border);
+    border-left: 4px solid var(--league-accent);
+    border-radius: var(--radius-lg);
+  }
+  .blh__team-text {
+    flex: 1;
+    min-width: 12rem;
+  }
+  .blh__team-name {
+    margin: 0;
+    font-size: 1.25rem;
+  }
+  .blh__team-line {
+    margin: 0.25rem 0 0;
+    color: var(--content-text-muted);
+  }
+  .blh__tier {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+    font-weight: 700;
+  }
+  .blh__tier :global(.blh__tier-logo),
+  .blh__tier-name :global(.blh__tier-logo) {
+    width: 28px;
+    height: 28px;
+  }
+  .blh__team-cta {
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .blh__tools {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.75rem;
+  }
+  .blh__tool {
+    display: grid;
+    gap: 0.25rem;
+    padding: 0.875rem 1rem;
+    background: var(--card-surface);
+    border: 1px solid var(--content-border);
+    border-radius: var(--radius-lg);
+    color: inherit;
+    text-decoration: none;
+  }
+  .blh__tool:hover {
+    border-color: var(--league-accent);
+  }
+  .blh__tool-title {
+    font-weight: 700;
+  }
+  .blh__tool-blurb {
+    font-size: 0.875rem;
+    color: var(--content-text-muted);
+  }
+  .blh__columns {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
+    gap: 1.5rem;
+    align-items: start;
+  }
+  .blh__side {
+    display: grid;
+    gap: 1rem;
+  }
+  .blh__card {
+    display: grid;
+    gap: 0.6rem;
+    padding: 1rem;
+    background: var(--card-surface);
+    border: 1px solid var(--content-border);
+    border-radius: var(--radius-lg);
+  }
+  .blh__h2 {
+    margin: 0;
+    font-size: 1.1rem;
+  }
+  .blh__tier-name {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    margin: 0;
+    font-weight: 700;
+  }
+  .blh__tier-name span {
+    font-weight: 400;
+    color: var(--content-text-muted);
+    font-size: 0.85rem;
+  }
+  .blh__leaders {
+    margin: 0.25rem 0 0;
+    padding-left: 1.4rem;
+    font-size: 0.9rem;
+  }
+  .blh__mine {
+    font-weight: 700;
+    color: var(--league-accent);
+  }
+  .blh__mine-rank,
+  .blh__more {
+    margin: 0;
+    font-size: 0.85rem;
+  }
+  .blh__rules {
+    margin: 0;
+    padding-left: 1.1rem;
+    display: grid;
+    gap: 0.4rem;
+    font-size: 0.9rem;
+  }
+  @media (max-width: 900px) {
+    .blh__columns {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

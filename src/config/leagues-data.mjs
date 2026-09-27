@@ -461,6 +461,12 @@ export const DEMO_HOST = 'demo.mfl.football';
 const KEEPER_NAV_LINKS = ['submit-lineup', 'standings', 'afl-players', 'rosters', 'afl-keepers', 'front-office'];
 
 /**
+ * Nav link ids the demo's big league renders — the AFL slot's core pages for a
+ * redraft league (no keepers, no AL/NL draft order, no constitution).
+ */
+const BIGLEAGUE_NAV_LINKS = ['submit-lineup', 'standings', 'afl-players', 'rosters', 'playoffs', 'live-scoring', 'front-office'];
+
+/**
  * demoPath → route slug for every league the demo serves (dynasty →
  * theleague). Later demo types add a `demoPath` to their slot's entry —
  * `bigleague` for the conference league, `redraft` for best ball.
@@ -513,6 +519,23 @@ if (isDemoEnv()) {
     },
     defaultRankingSources: LEAGUES['afl-fantasy'].defaultRankingSources,
   };
+  // The AFL's slot serves the fictional 96-team big league at
+  // demo.mfl.football/bigleague: eight conferences, three tiers, redraft. Set
+  // after the keeper slot above, which copies the AFL's own features.
+  const afl = LEAGUES['afl-fantasy'];
+  afl.name = 'The Big League';
+  afl.demoPath = 'bigleague';
+  afl.navLinks = BIGLEAGUE_NAV_LINKS;
+  afl.features = {
+    ...afl.features,
+    keepers: false,
+    schefterFeed: false,
+    schefterTips: false,
+    liveScoringSample: false,
+    accounting: false,
+    pushNotifications: false,
+  };
+  afl.ownersPoll = { ...afl.ownersPoll, enabled: false };
 }
 
 export const DEFAULT_LEAGUE_SLUG = 'theleague';

@@ -10,7 +10,7 @@
  * a directory entry (which CLAUDE.md already requires), then list its id here.
  */
 
-import type { CanonicalLeagueSlug } from './leagues';
+import { getLeagueBySlug, type CanonicalLeagueSlug } from './leagues';
 import pageDirectory from '../data/page-directory.json';
 import { getCurrentTierMembership, D_LEAGUE, PREMIER_LEAGUE } from '../utils/afl-tier';
 import { getSearchPath } from '../utils/nav-utils';
@@ -275,6 +275,32 @@ const KEEPER_COLUMNS: ColumnMap = {
   ],
 };
 
+/**
+ * The custom-site demo's big league, in the AFL's slot: only the pages the
+ * demo keeps (DEMO_AFL_ROUTES), by path — the demo rewrites the prefix.
+ */
+const BIGLEAGUE_COLUMNS: ColumnMap = {
+  'My Team': [
+    { label: 'Set Lineup', path: '/afl-fantasy/lineup' },
+    { label: 'Rosters', path: '/afl-fantasy/rosters' },
+    { label: 'Trade Builder', path: '/afl-fantasy/front-office/trade-builder' },
+    { label: 'Front Office', path: '/afl-fantasy/front-office' },
+  ],
+  'This Week': [
+    { label: 'Standings', path: '/afl-fantasy/standings' },
+    { label: 'Tier Standings', path: '/afl-fantasy/standings?view=all_play' },
+    { label: 'Playoffs', path: '/afl-fantasy/playoffs' },
+    { label: 'Free Agents', path: '/afl-fantasy/players' },
+    { label: 'Live Scoring', path: '/afl-fantasy/live-scoring' },
+    { label: 'Transactions', path: '/afl-fantasy/transactions' },
+  ],
+};
+
+/** True when the AFL's slot is serving the custom-site demo's big league. */
+export function isDemoBigLeague(slug: CanonicalLeagueSlug): boolean {
+  return slug === 'afl-fantasy' && Boolean(getLeagueBySlug('afl-fantasy')?.demoPath);
+}
+
 const BY_LEAGUE: Record<CanonicalLeagueSlug, ColumnMap> = {
   theleague: THELEAGUE_COLUMNS,
   'afl-fantasy': AFL_COLUMNS,
@@ -318,7 +344,7 @@ export function getFooterColumns(
   slug: CanonicalLeagueSlug,
   franchiseId: string | null = null
 ): FooterColumn[] {
-  const map = BY_LEAGUE[slug] ?? {};
+  const map = (isDemoBigLeague(slug) ? BIGLEAGUE_COLUMNS : BY_LEAGUE[slug]) ?? {};
   const declared = Object.keys(map);
 
   // Canonical order first, then anything a league declares that isn't one of
@@ -364,6 +390,8 @@ export function getDeepCuts(
   columns: FooterColumn[],
   limit = 6
 ): ResolvedFooterLink[] {
+  // The demo's big league keeps only a handful of the AFL's pages.
+  if (isDemoBigLeague(slug)) return [];
   const linked = new Set(columns.map((c) => c.links.map((l) => l.path)).flat());
   // Search already sits in the utility bar; repeating it here reads as a bug.
   // Ask getSearchPath which path THIS league's search lives at — the literal

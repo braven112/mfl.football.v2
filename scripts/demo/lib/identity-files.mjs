@@ -6,7 +6,8 @@
  * championship records the franchise-history chain reads.
  */
 
-import { bannerSvg, crestSvg, leagueMarkSvg } from './crests.mjs';
+import { bannerSvg, crestSvg } from './crests.mjs';
+import { WAR_PAINT_PALETTES, warPaintFiles } from './war-paint.mjs';
 
 const ASSET_ROOT = '/assets/theleague';
 
@@ -32,8 +33,7 @@ export function artFiles(franchises, leagueName, divisions) {
     files.set(strip(p.groupMe), crestSvg(f));
     files.set(strip(p.groupMeDark), crestSvg(f, { dark: true }));
   }
-  files.set('assets/logos/theleague-logo.svg', leagueMarkSvg(leagueName));
-  files.set('assets/logos/theleague-logo-dark.svg', leagueMarkSvg(leagueName));
+  for (const [rel, svg] of warPaintFiles('theleague-logo', WAR_PAINT_PALETTES.theleague, leagueName)) files.set(rel, svg);
   for (const d of divisions) {
     files.set(`assets/theleague/division-badges/${d.toLowerCase()}.svg`, divisionBadgeSvg(d));
   }

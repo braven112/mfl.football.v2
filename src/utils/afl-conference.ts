@@ -1,11 +1,17 @@
 /**
  * AFL Conference helpers.
  *
- * MFL stores conferences as numeric IDs ('00', '01'); the league names them
+ * MFL stores conferences as numeric IDs ('00', '01', …); the AFL names its two
  * "American League" and "National League". Keep the IDs at the API boundary
  * and use the user-facing names everywhere in UI.
  *
- * Cross-conference (AL <-> NL) trades are not allowed.
+ * The conference LIST comes from the league config (`conferences`: code, name,
+ * and optionally short, logo, logoDark, color), so a league with more than two
+ * conferences — the custom-site demo's 8-conference big league — is served by
+ * the same helpers. The AL/NL values below are the fallbacks the real AFL's
+ * config has always relied on, so its output is unchanged.
+ *
+ * Cross-conference trades are not allowed.
  */
 
 import aflConfig from '../../data/afl-fantasy/afl.config.json';
@@ -18,9 +24,10 @@ import { keeperLeagueConfig } from './keeper-config';
  */
 export type AflFamilySlug = 'afl-fantasy' | 'keeper';
 
-export type ConferenceId = '00' | '01';
-export type ConferenceName = 'American League' | 'National League';
-export type ConferenceShort = 'AL' | 'NL';
+/** An MFL conference id: '00', '01', … (two in the AFL, eight in the demo's big league). */
+export type ConferenceId = string;
+export type ConferenceName = string;
+export type ConferenceShort = string;
 
 /**
  * How a conference actually drafts.
@@ -52,20 +59,34 @@ export interface AFLTeam {
   banner: string;
 }
 
-const CONFERENCE_NAMES: Record<ConferenceId, ConferenceName> = {
+/** The AFL's own two conferences — the fallback for a config that names no more. */
+const CONFERENCE_NAMES: Record<string, string> = {
   '00': 'American League',
   '01': 'National League',
 };
 
-const CONFERENCE_SHORT: Record<ConferenceId, ConferenceShort> = {
+const CONFERENCE_SHORT: Record<string, string> = {
   '00': 'AL',
   '01': 'NL',
 };
 
-const NAME_TO_ID: Record<ConferenceName, ConferenceId> = {
-  'American League': '00',
-  'National League': '01',
-};
+interface ConferenceConfig {
+  code: string;
+  name: string;
+  short?: string;
+  logo?: string;
+  logoDark?: string;
+  color?: string;
+}
+
+const readConferences = (list: unknown): ConferenceConfig[] =>
+  ((list ?? []) as ConferenceConfig[]).filter((c) => c && typeof c.code === 'string');
+
+/** The AFL slot's conferences, in config order ('00', '01' for the real AFL). */
+const AFL_CONFERENCES: ConferenceConfig[] = (() => {
+  const declared = readConferences((aflConfig as { conferences?: unknown }).conferences);
+  return declared.length ? declared : Object.entries(CONFERENCE_NAMES).map(([code, name]) => ({ code, name }));
+})();
 
 const ALL_TEAMS: AFLTeam[] = (aflConfig.teams as AFLTeam[]).slice();
 
@@ -75,31 +96,40 @@ const FRANCHISE_INDEX = new Map<string, AFLTeam>(
 
 const KEEPER_TEAMS: AFLTeam[] = (keeperLeagueConfig.teams as AFLTeam[]).slice();
 const KEEPER_INDEX = new Map<string, AFLTeam>(KEEPER_TEAMS.map((t) => [t.franchiseId, t]));
-/** The keeper league's own conference names, from its config ({ code, name, short }). */
-const KEEPER_CONFERENCES = new Map<string, { name: string; short: string }>(
-  ((keeperLeagueConfig.conferences ?? []) as Array<{ code: string; name: string; short?: string }>).map((c) => [
-    c.code,
-    { name: c.name, short: c.short ?? c.name },
-  ]),
-);
+/** The keeper league's own conferences, from its config ({ code, name, short }). */
+const KEEPER_CONFERENCES: ConferenceConfig[] = readConferences(keeperLeagueConfig.conferences);
 
 const teamsOf = (league: AflFamilySlug) => (league === 'keeper' ? KEEPER_TEAMS : ALL_TEAMS);
 const indexOf = (league: AflFamilySlug) => (league === 'keeper' ? KEEPER_INDEX : FRANCHISE_INDEX);
+const conferencesOf = (league: AflFamilySlug) => (league === 'keeper' ? KEEPER_CONFERENCES : AFL_CONFERENCES);
+const conferenceConfig = (id: ConferenceId, league: AflFamilySlug) =>
+  conferencesOf(league).find((c) => c.code === id);
 
-/** The conference ids a league actually has, in presentation order. */
+/** "Coastal Conference" → "CC": a short label for a conference that declares none. */
+const initials = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter((w) => /^[A-Za-z]/.test(w))
+    .map((w) => w[0].toUpperCase())
+    .join('') || name;
+
+/** The conference ids a league actually has, in presentation (config) order. */
 export function leagueConferenceIds(league: AflFamilySlug = 'afl-fantasy'): ConferenceId[] {
-  if (league !== 'keeper') return ['00', '01'];
-  return (['00', '01'] as ConferenceId[]).filter((id) => KEEPER_TEAMS.some((t) => t.conference === id));
+  const teams = teamsOf(league);
+  return conferencesOf(league)
+    .map((c) => c.code)
+    .filter((id) => teams.some((t) => t.conference === id));
 }
 
 export function getConferenceName(id: ConferenceId, league: AflFamilySlug = 'afl-fantasy'): ConferenceName {
-  if (league === 'keeper') return (KEEPER_CONFERENCES.get(id)?.name ?? CONFERENCE_NAMES[id]) as ConferenceName;
-  return CONFERENCE_NAMES[id];
+  return conferenceConfig(id, league)?.name ?? CONFERENCE_NAMES[id] ?? `Conference ${Number(id) + 1}`;
 }
 
 export function getConferenceShort(id: ConferenceId, league: AflFamilySlug = 'afl-fantasy'): ConferenceShort {
-  if (league === 'keeper') return (KEEPER_CONFERENCES.get(id)?.short ?? CONFERENCE_SHORT[id]) as ConferenceShort;
-  return CONFERENCE_SHORT[id];
+  const declared = conferenceConfig(id, league);
+  if (declared?.short) return declared.short;
+  if (CONFERENCE_SHORT[id] && (!declared || declared.name === CONFERENCE_NAMES[id])) return CONFERENCE_SHORT[id];
+  return initials(getConferenceName(id, league));
 }
 
 /**
@@ -107,6 +137,8 @@ export function getConferenceShort(id: ConferenceId, league: AflFamilySlug = 'af
  * Single source of truth — call sites derive the path, never hardcode it.
  */
 export function getConferenceLogo(id: ConferenceId, league: AflFamilySlug = 'afl-fantasy'): string {
+  const declared = conferenceConfig(id, league)?.logo;
+  if (declared) return declared;
   if (league === 'keeper') return '/assets/logos/keeper-logo.svg';
   return `/assets/afl/conferences/${getConferenceShort(id).toLowerCase()}.svg`;
 }
@@ -119,6 +151,9 @@ export function getConferenceLogo(id: ConferenceId, league: AflFamilySlug = 'afl
  * the swap happens client-side via html.dark.
  */
 export function getConferenceLogoDark(id: ConferenceId, league: AflFamilySlug = 'afl-fantasy'): string {
+  const declared = conferenceConfig(id, league);
+  if (declared?.logoDark) return declared.logoDark;
+  if (declared?.logo) return declared.logo;
   if (league === 'keeper') return '/assets/logos/keeper-logo-dark.svg';
   return `/assets/afl/conferences/${getConferenceShort(id).toLowerCase()}-dark.svg`;
 }
@@ -136,21 +171,22 @@ export function getConferenceLogoDark(id: ConferenceId, league: AflFamilySlug = 
  * Both clear white ink comfortably — 5.9:1 and 8.6:1 — which is what the
  * roster header's vertical rail needs.
  */
-const CONFERENCE_COLORS: Record<ConferenceId, string> = {
+const CONFERENCE_COLORS: Record<string, string> = {
   '00': '#c41e3a',
   '01': '#1d4f91',
 };
 
-export function getConferenceColor(id: ConferenceId): string {
-  return CONFERENCE_COLORS[id];
+export function getConferenceColor(id: ConferenceId, league: AflFamilySlug = 'afl-fantasy'): string {
+  return conferenceConfig(id, league)?.color ?? CONFERENCE_COLORS[id] ?? '#002244';
 }
 
-export function getConferenceIdByName(name: ConferenceName): ConferenceId {
-  return NAME_TO_ID[name];
+export function getConferenceIdByName(name: ConferenceName, league: AflFamilySlug = 'afl-fantasy'): ConferenceId | undefined {
+  return conferencesOf(league).find((c) => c.name === name)?.code;
 }
 
-export function isValidConferenceId(value: string): value is ConferenceId {
-  return value === '00' || value === '01';
+/** Whether `value` is one of the league's conference ids. */
+export function isValidConferenceId(value: string, league: AflFamilySlug = 'afl-fantasy'): value is ConferenceId {
+  return typeof value === 'string' && conferencesOf(league).some((c) => c.code === value);
 }
 
 export function getTeam(franchiseId: string, league: AflFamilySlug = 'afl-fantasy'): AFLTeam | undefined {
@@ -188,9 +224,10 @@ export function sameConference(a: string, b: string, league: AflFamilySlug = 'af
 }
 
 /**
- * The order the two conferences are presented in.
+ * The order the conferences are presented in.
  *
- * A viewer's OWN conference leads; everyone else keeps AL-then-NL. The
+ * A viewer's OWN conference leads, then the rest in config order (AL-then-NL
+ * for the AFL). The
  * argument is the viewer's conference, never the conference of whatever club
  * is being looked at — an NL owner clicking into an AL club keeps NL first,
  * because an order that followed the VIEWED club would reshuffle the team
@@ -204,9 +241,9 @@ export function conferenceOrder(
   viewerConferenceId?: ConferenceId | null,
   league: AflFamilySlug = 'afl-fantasy'
 ): ConferenceId[] {
-  const order: ConferenceId[] = viewerConferenceId === '01' ? ['01', '00'] : ['00', '01'];
   const present = leagueConferenceIds(league);
-  return order.filter((id) => present.includes(id));
+  if (!viewerConferenceId || !present.includes(viewerConferenceId)) return present;
+  return [viewerConferenceId, ...present.filter((id) => id !== viewerConferenceId)];
 }
 
 /**

@@ -168,7 +168,11 @@ const isDemo = isDemoDeploy();
             )}
           </div>
           <div class="leaguename">
-            {isAFL ? (
+            {isAFL && isDemo ? (
+              <>
+                <span class="leaguename--bb-name">Big</span><span class="leaguename--bb-num"> League</span>
+              </>
+            ) : isAFL ? (
               <>
                 <span class="leaguename--afl-name">AFL</span>
               </>

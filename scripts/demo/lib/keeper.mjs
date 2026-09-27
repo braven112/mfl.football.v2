@@ -13,7 +13,8 @@
  */
 
 import { lighten } from './franchises.mjs';
-import { bannerSvg, crestSvg, leagueMarkSvg } from './crests.mjs';
+import { bannerSvg, crestSvg } from './crests.mjs';
+import { WAR_PAINT_PALETTES, warPaintFiles } from './war-paint.mjs';
 
 export const KEEPER_LEAGUE_NAME = 'The Keeper League';
 export const KEEPER_DIVISIONS = ['Lakes', 'Ridge'];
@@ -113,8 +114,8 @@ export function keeperArtFiles() {
     files.set(strip(p.iconDark), crestSvg(f, { dark: true }));
     files.set(strip(p.banner), bannerSvg(f));
   }
-  files.set('assets/logos/keeper-logo.svg', leagueMarkSvg(KEEPER_LEAGUE_NAME));
-  files.set('assets/logos/keeper-logo-dark.svg', leagueMarkSvg(KEEPER_LEAGUE_NAME));
+  // The keeper slot wears the AFL-family theme (tokens.css), so the AFL palette.
+  for (const [rel, svg] of warPaintFiles('keeper-logo', WAR_PAINT_PALETTES.afl, KEEPER_LEAGUE_NAME)) files.set(rel, svg);
   return files;
 }
 

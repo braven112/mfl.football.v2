@@ -219,10 +219,14 @@ describe('fetch guard', () => {
 });
 
 describe('demo route block', () => {
-  it('refuses every other league and its API, and nothing of the demo league', async () => {
+  it('refuses the AFL slot’s pages the big league does not use, and the other refused APIs', async () => {
     const { isDemoRefusedPath } = await import('../src/utils/demo-isolation-core.mjs');
-    for (const p of ['/afl-fantasy', '/afl-fantasy/rosters', '/api/afl-fantasy/lineup', '/api/afl-rules-qa', '/api/best-ball-draft/x']) {
+    // The AFL slot serves the fictional big league, but only its core pages.
+    for (const p of ['/afl-fantasy/keepers', '/afl-fantasy/draft/order', '/afl-fantasy/rules', '/afl-fantasy/admin/accounting', '/api/afl-fantasy/other', '/api/afl-rules-qa', '/api/best-ball-draft/x']) {
       expect(isDemoRefusedPath(p), p).toBe(true);
+    }
+    for (const p of ['/afl-fantasy', '/afl-fantasy/', '/afl-fantasy/rosters', '/afl-fantasy/front-office/trade-builder', '/api/afl-fantasy/lineup', '/afl-fantasy/demo-start']) {
+      expect(isDemoRefusedPath(p), p).toBe(false);
     }
     // The best-ball slot serves the /redraft demo, so it is NOT refused; nor is
     // the keeper-plan API, which the /keeper demo's planner saves through (a

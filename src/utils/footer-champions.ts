@@ -261,5 +261,7 @@ export function getFooterDraftStatus(slug: CanonicalLeagueSlug): DraftSpotlight 
 /** Whether this league shows a champions band at all. */
 export function leagueHasChampionBand(slug: CanonicalLeagueSlug): boolean {
   const league = getLeagueBySlug(slug);
+  // The demo's big league (the AFL's slot) keeps no AFL trophy case.
+  if (slug === 'afl-fantasy' && league?.demoPath) return false;
   return Boolean(league) && !league?.bestBall;
 }
