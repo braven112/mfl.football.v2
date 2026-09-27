@@ -42,7 +42,7 @@ Slack traps, pinned in `tests/league-chat-slack.test.ts`:
 2. The registry's `persona` default.
 3. Claude Schefter.
 
-The commissioner edits it on `/<league>/admin/schefter` (`PersonaEditor.astro`,
+The commissioner edits it on `/<league>/admin/news` (News Ops; the old `/admin/schefter` URL 301s there via vercel.json) (`PersonaEditor.astro`,
 `/api/admin/persona`). The API always takes the league from the session, never
 from a parameter.
 

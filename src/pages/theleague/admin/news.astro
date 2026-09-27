@@ -1,6 +1,6 @@
 ---
 /**
- * Schefter Ops — /theleague/admin/schefter
+ * News Ops — /theleague/admin/news (was /admin/schefter; vercel.json redirects the old URL)
  *
  * Thin wrapper: league-scoped admin gate + layout. The dashboard lives in
  * the shared components/schefter/AdminDashboard.astro; the stats API it
@@ -27,7 +27,7 @@ if (!isCommissionerOrAdmin(user) || !isAuthorizedForLeague(user, theLeague.id)) 
 }
 ---
 
-<TheLeagueLayout title="Schefter Ops — Admin">
+<TheLeagueLayout title="News Ops — Admin">
   <AdminDashboard base="/theleague" navSlug="theleague">
     <PersonaEditor slot="settings" navSlug="theleague" />
   </AdminDashboard>
