@@ -64,6 +64,9 @@ export function bestBallConfig({ leagueId, loaderLines }) {
       abbrev: f.abbrev,
       colorPrimary: f.colorPrimary,
       colorSecondary: f.colorSecondary,
+      // The draft room, board and rosters draw this crest (its `_dark` cut
+      // sits beside it); the real league has none, so those pages skip it.
+      icon: bestBallIcon(f),
     })),
   };
 }

@@ -1,0 +1,41 @@
+---
+/**
+ * A best-ball club's crest, light and dark cut, from its config `icon` (the
+ * `_dark` cut sits beside it, the site's usual convention). Renders nothing
+ * when the club has no icon — the real best-ball league has none yet, so its
+ * pages are unchanged; the custom-site demo's clubs carry one.
+ */
+import ThemeImage from '../ThemeImage.astro';
+
+interface Props {
+  icon?: string | null;
+  size?: number;
+  class?: string;
+}
+
+const { icon, size = 24, class: className } = Astro.props;
+const darkIcon = icon ? icon.replace(/(\.[a-z0-9]+)$/i, '_dark$1') : '';
+---
+
+{
+  icon && (
+    <span class:list={['bb-crest', className]} style={`--bb-crest: ${size}px`}>
+      <ThemeImage src={icon} darkSrc={darkIcon} alt="" width={size} height={size} loading="lazy" decoding="async" class="bb-crest__img" />
+    </span>
+  )
+}
+
+<style>
+  .bb-crest {
+    display: inline-flex;
+    flex: none;
+    width: var(--bb-crest);
+    height: var(--bb-crest);
+    vertical-align: middle;
+  }
+  .bb-crest :global(.bb-crest__img) {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+</style>
