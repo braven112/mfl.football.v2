@@ -278,3 +278,25 @@ export function __resetStandingsCache(): void {
   cache.clear();
   failureAtMs.clear();
 }
+
+/**
+ * Stamp each row with whether MFL has already counted the board's week.
+ *
+ * `priorGames` is each franchise's scheduled game count BEFORE that week
+ * (`readLeaguePriorGameCounts`); a row whose record holds more games than that
+ * has had the week folded in. `null` — the schedule could not be read — stamps
+ * `null`, and the projection falls back to the one inference that needs no
+ * schedule. See `./standings-projection`.
+ */
+export function markWeekCounted(
+  rows: readonly LiveStandingsRow[],
+  priorGames: Record<string, number> | null,
+): LiveStandingsRow[] {
+  return rows.map((row) => ({
+    ...row,
+    weekCounted:
+      priorGames === null
+        ? null
+        : row.wins + row.losses + row.ties > (priorGames[row.franchiseId] ?? 0),
+  }));
+}

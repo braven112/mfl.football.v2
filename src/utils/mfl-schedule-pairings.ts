@@ -215,3 +215,93 @@ export async function readLeagueSchedulePairings(
     return [];
   }
 }
+
+/**
+ * How many games each franchise is scheduled to have played BEFORE `week`,
+ * from a full-season `schedule` export (no `W`).
+ *
+ * This is what tells the Standings tab whether MFL has already folded the
+ * board's week into a record: a row showing more games than this has counted
+ * it, a row showing exactly this has not. Counted per franchise and per
+ * matchup, so a doubleheader week (the AFL plays them) adds two, and a bye —
+ * MFL writes one as a one-sided entry — adds none.
+ *
+ * Returns `null` when the export has no weeks at all, which is a read that
+ * failed rather than a season with no games — `{}` would let every row read
+ * as "nothing played yet" and double-count the week.
+ */
+export function parsePriorGameCounts(payload: unknown, week: number): Record<string, number> | null {
+  const weeks = asArray<any>((payload as any)?.schedule?.weeklySchedule);
+  if (weeks.length === 0) return null;
+
+  const counts: Record<string, number> = {};
+  for (const w of weeks) {
+    const n = Number(w?.week);
+    if (!Number.isFinite(n) || n >= week) continue;
+    for (const matchup of asArray<any>(w?.matchup)) {
+      const ids = asArray<ScheduleFranchise>(matchup?.franchise)
+        .map((f) => franchiseId(f?.id))
+        .filter(Boolean);
+      if (ids.length < 2) continue;
+      for (const id of ids) counts[id] = (counts[id] ?? 0) + 1;
+    }
+  }
+  return counts;
+}
+
+const priorGamesCache = (): Map<string, { at: number; counts: Record<string, number> }> => {
+  const g = globalThis as {
+    __mflPriorGamesCache?: Map<string, { at: number; counts: Record<string, number> }>;
+  };
+  if (!g.__mflPriorGamesCache) g.__mflPriorGamesCache = new Map();
+  return g.__mflPriorGamesCache;
+};
+
+/** Drop every cached league-week. Test seam. */
+export function clearPriorGamesCache(): void {
+  priorGamesCache().clear();
+}
+
+/**
+ * `parsePriorGameCounts` for one league, read with the owner's own MFL cookie.
+ * Same host rule as `readLeagueSchedulePairings` above, same hour-long cache
+ * (a published schedule does not move while a week is played).
+ *
+ * Never throws: every failure is `null`, and a failure is not cached.
+ */
+export async function readLeaguePriorGameCounts(
+  league: BoardLeague,
+  year: number,
+  week: number,
+  mflUserCookie: string,
+): Promise<Record<string, number> | null> {
+  const host = league.registered ? `https://${league.registered.mflHost}` : league.host;
+  if (!mflUserCookie || !host || !week) return null;
+
+  const key = `${league.id}:${host}:${year}:${week}`;
+  const cache = priorGamesCache();
+  const hit = cache.get(key);
+  if (hit && Date.now() - hit.at < SCHEDULE_TTL_MS) return hit.counts;
+
+  try {
+    const url = buildMflExportUrl({ type: 'schedule', leagueId: league.id, year, host });
+    const response = await mflFetch({ url, method: 'GET', mflUserCookie });
+    if (!response.ok) return null;
+    // A 200 is not "the data is good" — MFL errors and throttle pages both
+    // arrive under one. The parser returns null for anything without weeks.
+    const body = await response.json().catch(() => null);
+    if (body === null || (body as { error?: unknown })?.error) return null;
+
+    const counts = parsePriorGameCounts(body, week);
+    if (counts === null) return null;
+
+    cache.set(key, { at: Date.now(), counts });
+    if (cache.size > 64) {
+      const oldest = [...cache.entries()].sort((a, b) => a[1].at - b[1].at)[0];
+      if (oldest) cache.delete(oldest[0]);
+    }
+    return counts;
+  } catch {
+    return null;
+  }
+}

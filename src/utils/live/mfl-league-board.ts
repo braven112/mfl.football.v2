@@ -35,7 +35,8 @@ import { readCrossLeagueLive } from '../cross-league-live';
 import { emptyLiveSnapshot } from '../live-scoring-snapshot';
 import { buildBoardFromSnapshot } from './read';
 import { buildLeaders } from './leaders';
-import { decorateStandings, readLeagueStandings } from './standings';
+import { decorateStandings, markWeekCounted, readLeagueStandings } from './standings';
+import { readLeaguePriorGameCounts } from '../mfl-schedule-pairings';
 
 export interface AssembleMflLeagueBoardInput {
   user: AuthUser;
@@ -93,7 +94,7 @@ export async function assembleMflLeagueBoard(
   // SCORES: it is the secondary tab, it is on its own cache, and a league
   // whose standings export is unhappy still has a board worth rendering. Hence
   // `allSettled` semantics via a catch on the one that is allowed to fail.
-  const [reads, rawStandings] = await Promise.all([
+  const [reads, rawStandings, priorGames] = await Promise.all([
     readCrossLeagueLive({
       user,
       leagues: [league],
@@ -113,6 +114,10 @@ export async function assembleMflLeagueBoard(
       mflUserCookie: user.id,
       viewerFranchiseId,
     }).catch((): LiveStandingsRow[] | null => null),
+    // What lets the Live and Projected standings views add this week without
+    // ever adding it twice — see `markWeekCounted`. Same failure posture as
+    // the standings: it may not cost the scores.
+    readLeaguePriorGameCounts(league, year, week, user.id).catch(() => null),
   ]);
 
   const read = reads[0];
@@ -129,7 +134,7 @@ export async function assembleMflLeagueBoard(
   const standings =
     rawStandings === null
       ? null
-      : decorateStandings(rawStandings, {
+      : decorateStandings(markWeekCounted(rawStandings, priorGames), {
           league,
           year,
           mflUserCookie: user.id,

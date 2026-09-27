@@ -260,6 +260,14 @@ export interface LiveStandingsRow {
   pointsFor: number;
   /** The viewer's own franchise in this league. */
   isViewer: boolean;
+  /**
+   * Whether MFL has already folded the board's week into this record — true
+   * when the row has played more games than the schedule holds before that
+   * week. `null` when the schedule could not be read. The Live and Projected
+   * views add the week's scores only to a row that has not counted it, so a
+   * finished week is never added twice. See `utils/live/standings-projection`.
+   */
+  weekCounted?: boolean | null;
 }
 
 /**

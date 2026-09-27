@@ -30,6 +30,22 @@ teams with identical 4-2-0 division records, where MFL credited the team with
 LOWER all-play and LOWER points because it swept the season series.
 `divisionTiebreaker` in standings.ts now has no production callers.
 
+**1a. The one sanctioned re-rank: MFL Live's Live / Projected standings.**
+The Standings tab on `/live/league/<id>` defaults to **Live** (this week's
+scores added to each record) and offers **Projected** (projected finals added)
+and **Final** (MFL's rows, untouched). Live and Projected re-rank by win %,
+then PF, then MFL's position — the owner's explicit call (Sep 2026). That is
+allowed ONLY because the view is captioned as a what-if and every moved row
+shows its official rank; it must never feed a division title, seed, award or
+draft slot. If a what-if has nothing to add (no game started, week already
+counted) it returns MFL's order rather than re-ranking unchanged records.
+The trap is double-counting: the board sits on a week until the next kickoff,
+and MFL folds the finished week into its standings in between. Each row is
+stamped `weekCounted` by comparing its games played with the schedule's games
+BEFORE that week (`readLeaguePriorGameCounts`, doubleheaders and byes
+included); when the schedule read fails, only an unfinished matchup is added.
+`src/utils/live/standings-projection.ts`; `tests/live-standings-projection.test.ts`.
+
 **2. "Most Points Allowed" benefits the team — in BOTH directions.** The team
 that gave up more points wins that tiebreaker step, meaning it gets both the
 better standing and the better (earlier) draft pick. Those are opposite ends of
