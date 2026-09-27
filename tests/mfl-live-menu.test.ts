@@ -7,7 +7,8 @@ import { join } from 'node:path';
 // common" with a `{ bestBall?: boolean }` annotation, which is a weak-type
 // error rather than the assertion anyone meant. This is also the exact module
 // the layout reads, so the test sees what it sees.
-import { ALL_LEAGUES } from '../src/config/leagues';
+import { ALL_LEAGUES, leagueUrl } from '../src/config/leagues';
+import { buildMflLiveLeagueLinks } from '../src/utils/mfl-live-league-links';
 
 const ROOT = join(__dirname, '..');
 const read = (rel: string) => readFileSync(join(ROOT, rel), 'utf8');
@@ -183,28 +184,66 @@ describe('the shell is shared by three pages, not just the board', () => {
   });
 });
 
-describe('the league links skip draft-only leagues', () => {
+describe("the league links are the signed-in owner's own MFL leagues", () => {
   const layout = read(LAYOUT);
-
-  it('filters on the registry flag, never on a slug literal', () => {
-    // Same derivation as BOTH_LEAGUES in weekly-changelog-format.mjs, so a
-    // new best-ball league drops out of this menu without anyone editing it.
-    expect(layout).toMatch(/ALL_LEAGUES\.filter\(\(league\) => !league\.bestBall\)/);
-    // Comments stripped: the rule is cited by name in the prose above the
-    // filter, and a doc reference is not a hardcoded league constant.
-    const code = layout
-      .replace(/\/\*[\s\S]*?\*\//g, '')
-      .replace(/^\s*\/\/.*$/gm, '');
-    expect(code).not.toMatch(/best-ball-\d/);
+  const code = layout.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  const [first, second] = ALL_LEAGUES;
+  const bestBall = ALL_LEAGUES.find((l) => l.bestBall);
+  const row = (id: string, name: string, host: string | null = 'https://www44.myfantasyleague.com') => ({
+    id,
+    name,
+    franchiseId: '0001',
+    franchiseName: '',
+    host,
   });
 
-  it('leaves at least one league to link, and no best-ball one', () => {
-    // Guards both directions: a filter that matched everything would empty
-    // the menu silently, and the whole point is that draft-only leagues go.
-    const linked = ALL_LEAGUES.filter((l) => !l.bestBall);
-    expect(linked.length).toBeGreaterThan(0);
-    expect(linked.some((l) => l.bestBall)).toBe(false);
-    expect(ALL_LEAGUES.length).toBeGreaterThan(linked.length);
+  it('builds them from myleagues, never from the registry list', () => {
+    expect(code).toMatch(/buildMflLiveLeagueLinks\(/);
+    expect(code).toMatch(/fetchMyLeagues\(authUser\.id/);
+    expect(code).not.toMatch(/ALL_LEAGUES/);
+  });
+
+  it('shows no league links when signed out', () => {
+    expect(code).toMatch(/const leagueLinks = authUser\?\.id\s*\?/);
+    expect(code).toMatch(/:\s*\[\];/);
+  });
+
+  it('never lets a myleagues failure break the page', () => {
+    expect(code).toMatch(/fetchMyLeagues\([^)]*\)\.catch\(/);
+  });
+
+  it('sends a registered league to our site and any other to its MFL home page', () => {
+    const links = buildMflLiveLeagueLinks([row('55555', 'Zebra League'), row(first.id, 'MFL name')], 2026);
+    expect(links).toEqual([
+      { name: first.name, href: leagueUrl(first, '/') },
+      { name: 'Zebra League', href: 'https://www44.myfantasyleague.com/2026/home/55555' },
+    ]);
+  });
+
+  it('includes Best Ball, to our Best Ball site', () => {
+    expect(bestBall).toBeDefined();
+    const links = buildMflLiveLeagueLinks([row(bestBall!.id, 'BB')], 2026);
+    expect(links).toEqual([{ name: bestBall!.name, href: leagueUrl(bestBall!, '/') }]);
+  });
+
+  it('orders registered leagues by the registry, then the rest by name, whatever MFL returned', () => {
+    const links = buildMflLiveLeagueLinks(
+      [row('2', 'beta'), row(second.id, 'x'), row('1', 'Alpha'), row(first.id, 'y')],
+      2026,
+    );
+    expect(links.map((l) => l.name)).toEqual([first.name, second.name, 'Alpha', 'beta']);
+  });
+
+  it("falls back to MFL's www host, dedupes, and adds the session's league when myleagues missed it", () => {
+    const links = buildMflLiveLeagueLinks([row('777', 'Solo', null), row('777', 'Solo', null)], 2026, first.id);
+    expect(links).toEqual([
+      { name: first.name, href: leagueUrl(first, '/') },
+      { name: 'Solo', href: 'https://www.myfantasyleague.com/2026/home/777' },
+    ]);
+  });
+
+  it("does not add a session league that isn't registered", () => {
+    expect(buildMflLiveLeagueLinks([], 2026, '99999')).toEqual([]);
   });
 });
 
