@@ -40,10 +40,28 @@ const salaryGrain = (n) => Math.max(LEAGUE_RULES.minSalary, Math.round(n / 25_00
  * @param {object[]} args.franchises    DEMO_FRANCHISES
  * @param {object} args.rng             createRng()
  * @param {(year:number, week:number) => number} args.weekStart  unix seconds of that NFL week's start
- * @param {'dynasty' | 'keeper'} [args.mode]  'keeper': no cap or contracts — each
+ * @param {number} [args.regularSeasonWeeks]  weeks before the postseason (14 by default)
+ * @param {boolean} [args.postseason]  false: stop after the regular season — the
+ *   caller plays its own playoffs through each season's `lineupFor` (the big
+ *   league's conference and overall brackets)
+ * @param {'dynasty' | 'keeper' | 'redraft'} [args.mode]  'redraft': no cap,
+ *   contracts or keepers — every roster is re-drafted, snake order, each
+ *   season. 'keeper': no cap or contracts — each
  *   offseason every team keeps its best KEEPERS and re-drafts the rest
  */
-export function simulateLeague({ years, facts, currentYear, currentWeek, franchises, rng, weekStart, mode = 'dynasty' }) {
+export function simulateLeague({
+  years,
+  facts,
+  currentYear,
+  currentWeek,
+  franchises,
+  rng,
+  weekStart,
+  mode = 'dynasty',
+  regularSeasonWeeks = LEAGUE_RULES.regularSeasonWeeks,
+  postseason = true,
+}) {
+  const capped = mode === 'dynasty';
   const ids = franchises.map((f) => f.id);
   /** fid → Map<pid, {salary, contractYear, status, acquired}> */
   const rosters = new Map(ids.map((id) => [id, new Map()]));
@@ -71,10 +89,24 @@ export function simulateLeague({ years, facts, currentYear, currentWeek, franchi
     const deadMoney = new Map();
 
     const isStartup = year === years[0];
-    if (mode === 'keeper') {
-      keeperOffseason({ year, isStartup, ids, rosters, value, f, srng, tx, draftPicks, previousOrder, weekStart, known });
+    if (mode === 'keeper' || mode === 'redraft') {
+      keeperOffseason({
+        year,
+        isStartup: isStartup || mode === 'redraft',
+        ids,
+        rosters,
+        value,
+        f,
+        srng,
+        tx,
+        draftPicks,
+        previousOrder,
+        weekStart,
+        known,
+        redraft: mode === 'redraft',
+      });
     }
-    if (mode !== 'keeper' && !isStartup) {
+    if (capped && !isStartup) {
       for (const [fid, roster] of rosters) {
         for (const [pid, c] of roster) {
           c.contractYear -= 1;
@@ -103,7 +135,7 @@ export function simulateLeague({ years, facts, currentYear, currentWeek, franchi
     // space subtracts from the cap. The demo keeps every team under it.
     const capUsed = (fid) => [...rosters.get(fid).values()].reduce((s, c) => s + c.salary, 0) + (deadMoney.get(fid) ?? 0);
 
-    if (mode !== 'keeper') {
+    if (capped) {
     // Auction (March): every free agent worth rostering, best first, to a team
     // with room — the richest bidder most often, but not always.
     const rookieSlots = isStartup ? 0 : LEAGUE_RULES.rookieRounds;
@@ -155,7 +187,7 @@ export function simulateLeague({ years, facts, currentYear, currentWeek, franchi
         });
       }
     }
-    } // mode !== 'keeper'
+    } // capped
 
     // Trim to the roster limit (taxi squad doesn't count): cheapest, least
     // valuable first, the way an owner makes cut-down day.
@@ -177,16 +209,16 @@ export function simulateLeague({ years, facts, currentYear, currentWeek, franchi
       (fid, pid) => tx.push({ type: 'FREE_AGENT', franchise: fid, transaction: `${pid},|`, timestamp: String(ts(1, -10)) }),
       (fid, pid) => tx.push({ type: 'FREE_AGENT', franchise: fid, transaction: `|${pid},`, timestamp: String(ts(1, -10)) }),
     );
-    if (mode !== 'keeper') underCap({ rosters, capUsed, value, f, onSwap: (fid, add, drop) => tx.push({ type: 'FREE_AGENT', franchise: fid, transaction: `${add},|${drop},`, timestamp: String(ts(1, -9)) }) });
+    if (capped) underCap({ rosters, capUsed, value, f, onSwap: (fid, add, drop) => tx.push({ type: 'FREE_AGENT', franchise: fid, transaction: `${add},|${drop},`, timestamp: String(ts(1, -9)) }) });
 
     // --- Season ---------------------------------------------------------
-    const schedule = buildSchedule(ids, srng);
+    const schedule = buildSchedule(ids, srng, regularSeasonWeeks);
     const weekly = [];
     const scoresSoFar = new Map(); // pid → {points, games} this season, for lineup decisions
 
-    for (let week = 1; week <= Math.min(lastWeek, LEAGUE_RULES.regularSeasonWeeks); week++) {
-      inSeasonMoves({ week, rosters, value, f, srng, tx, ts, scoresSoFar, capUsed: mode === 'keeper' ? () => 0 : capUsed });
-      if (mode !== 'keeper') underCap({ rosters, capUsed, value, f, onSwap: (fid, add, drop) => tx.push({ type: 'FREE_AGENT', franchise: fid, transaction: `${add},|${drop},`, timestamp: String(ts(week, 2, 9)) }) });
+    for (let week = 1; week <= Math.min(lastWeek, regularSeasonWeeks); week++) {
+      inSeasonMoves({ week, rosters, value, f, srng, tx, ts, scoresSoFar, capUsed: capped ? capUsed : () => 0 });
+      if (capped) underCap({ rosters, capUsed, value, f, onSwap: (fid, add, drop) => tx.push({ type: 'FREE_AGENT', franchise: fid, transaction: `${add},|${drop},`, timestamp: String(ts(week, 2, 9)) }) });
       const games = schedule[week - 1];
       const weekScores = f.scores.get(week) ?? new Map();
       const lineups = new Map(ids.map((fid) => [fid, setLineup(rosters.get(fid), f, weekScores, scoresSoFar, value, srng)]));
@@ -199,11 +231,19 @@ export function simulateLeague({ years, facts, currentYear, currentWeek, franchi
       }
     }
 
-    const inProgress = year === currentYear ? liveWeek({ week: lastWeek + 1, schedule, rosters, f, scoresSoFar, value, srng }) : null;
+    const inProgress =
+      year === currentYear ? liveWeek({ week: lastWeek + 1, schedule, rosters, f, scoresSoFar, value, srng, regularSeasonWeeks }) : null;
 
-    const regWeeksPlayed = Math.min(lastWeek, LEAGUE_RULES.regularSeasonWeeks);
+    const regWeeksPlayed = Math.min(lastWeek, regularSeasonWeeks);
     const standings = computeStandings(ids, weekly, franchises);
-    const playoffs = regWeeksPlayed === LEAGUE_RULES.regularSeasonWeeks
+    // Rosters are final once the regular season ends, so a caller running its
+    // own postseason sets lineups from this snapshot.
+    const finalRosters = snapshotRosters(rosters);
+    const finalSoFar = new Map([...scoresSoFar].map(([pid, v]) => [pid, { ...v }]));
+    const postRng = srng.fork('postseason');
+    const lineupFor = (week, fid) =>
+      setLineup(finalRosters.get(fid), f, f.scores.get(week) ?? new Map(), finalSoFar, value, postRng);
+    const playoffs = postseason && regWeeksPlayed === regularSeasonWeeks
       ? playPlayoffs({ standings, lastWeek, rosters, f, scoresSoFar, value, srng, weekly, franchises })
       : null;
 
@@ -214,7 +254,8 @@ export function simulateLeague({ years, facts, currentYear, currentWeek, franchi
     // Next season's rookie draft order: worst first.
     previousOrder = [...standings].reverse().map((s) => s.id);
 
-    const picks = futurePicks(ids, year, srng, tx);
+    // A redraft league trades no future picks: there are none to own.
+    const picks = mode === 'redraft' ? [] : futurePicks(ids, year, srng, tx);
     seasons.push({
       year,
       lastWeek,
@@ -223,7 +264,9 @@ export function simulateLeague({ years, facts, currentYear, currentWeek, franchi
       inProgress,
       standings,
       playoffs,
-      rosters: mode === 'keeper' ? withoutSalaries(snapshotRosters(rosters)) : snapshotRosters(rosters),
+      rosters: capped ? snapshotRosters(rosters) : withoutSalaries(snapshotRosters(rosters)),
+      lineupFor,
+      regularSeasonWeeks,
       auctionResults,
       draftPicks,
       salaryAdjustments,
@@ -244,8 +287,12 @@ export const KEEPERS = 7;
  * finisher first — refills the rosters. The startup season drafts every
  * roster from scratch, in a random order.
  */
-function keeperOffseason({ year, isStartup, ids, rosters, value, f, srng, tx, draftPicks, previousOrder, weekStart, known }) {
+function keeperOffseason({ year, isStartup, ids, rosters, value, f, srng, tx, draftPicks, previousOrder, weekStart, known, redraft = false }) {
   const cutTime = weekStart(year, 1) - 40 * 86_400;
+  // A redraft league releases every roster before its draft.
+  if (redraft) {
+    for (const roster of rosters.values()) roster.clear();
+  }
   if (!isStartup) {
     for (const [fid, roster] of rosters) {
       const ranked = [...roster.keys()].filter(known).sort((a, b) => (value.get(b) ?? 0) - (value.get(a) ?? 0));
@@ -257,13 +304,17 @@ function keeperOffseason({ year, isStartup, ids, rosters, value, f, srng, tx, dr
       }
     }
   }
-  const order = !isStartup && previousOrder ? previousOrder : srng.shuffle(ids);
+  // A redraft league's snake runs worst-to-first off last season (random the
+  // first year); a keeper league's straight draft does the same without the
+  // snake.
+  const order = (redraft || !isStartup) && previousOrder ? previousOrder : srng.shuffle(ids);
   const taken = new Set([...rosters.values()].flatMap((r) => [...r.keys()]));
   const pool = [...value.entries()].filter(([pid]) => !taken.has(pid)).sort((a, b) => b[1] - a[1]).map(([pid]) => pid);
   const rounds = LEAGUE_RULES.rosterSize - (isStartup ? 0 : KEEPERS);
   let dt = weekStart(year, 1) - 14 * 86_400;
   for (let round = 1; round <= rounds; round++) {
-    order.forEach((fid, i) => {
+    const roundOrder = redraft && round % 2 === 0 ? [...order].reverse() : order;
+    roundOrder.forEach((fid, i) => {
       const roster = rosters.get(fid);
       // Best available that the roster still has room for at his position.
       const at = pool.findIndex((pid) => needsPosition(roster, f.players.get(pid).position, f));
@@ -380,7 +431,7 @@ function fillRosters(rosters, value, f, rng, onAdd, onDrop) {
 }
 
 /** Circle-method round robin, shuffled per season; one game per team per week. */
-function buildSchedule(ids, rng) {
+function buildSchedule(ids, rng, weeks = LEAGUE_RULES.regularSeasonWeeks) {
   const teams = rng.shuffle(ids);
   const n = teams.length;
   const rounds = [];
@@ -400,8 +451,8 @@ function buildSchedule(ids, rng) {
   // demo) plays the round robin again for the remaining weeks.
   const shuffled = rng.shuffle(rounds);
   const season = [];
-  while (season.length < LEAGUE_RULES.regularSeasonWeeks) season.push(...shuffled);
-  return season.slice(0, LEAGUE_RULES.regularSeasonWeeks);
+  while (season.length < weeks) season.push(...shuffled);
+  return season.slice(0, weeks);
 }
 
 /**
@@ -457,8 +508,8 @@ function setLineup(roster, f, weekScores, soFar, value, rng) {
  * standings and results only ever count finished weeks; the MFL stand-in
  * serves it as the live week. Null between weeks and after the regular season.
  */
-function liveWeek({ week, schedule, rosters, f, scoresSoFar, value, srng }) {
-  if (week > LEAGUE_RULES.regularSeasonWeeks) return null;
+function liveWeek({ week, schedule, rosters, f, scoresSoFar, value, srng, regularSeasonWeeks = LEAGUE_RULES.regularSeasonWeeks }) {
+  if (week > regularSeasonWeeks) return null;
   const partial = f.scores.get(week);
   if (!partial) return null;
   const teamOf = (pid) => f.players.get(pid)?.team;

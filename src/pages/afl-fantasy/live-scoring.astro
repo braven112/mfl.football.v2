@@ -20,16 +20,20 @@
  */
 import LiveBoardPage from '../../components/shared/live/LiveBoardPage.astro';
 import { getLeagueContext } from '../../utils/league-context';
-import { leagueHasFeature } from '../../config/leagues';
+import { getLeagueBySlug, leagueHasFeature } from '../../config/leagues';
 
 // Live-fetch on every request — scores must never be cached.
 export const prerender = false;
 
 const league = getLeagueContext(Astro.url);
+// "AFL Fantasy" for the AFL; the league's own name where its slot serves
+// another (the custom-site demo's big league).
+const registryName = getLeagueBySlug('afl-fantasy')?.name ?? 'AFL';
+const leagueName = registryName === 'AFL' ? 'AFL Fantasy' : registryName;
 
 if (!leagueHasFeature(league.slug, 'liveScoring')) {
   return Astro.redirect('/afl');
 }
 ---
 
-<LiveBoardPage title="Live Scoring | AFL Fantasy" />
+<LiveBoardPage title={`Live Scoring | ${leagueName}`} />

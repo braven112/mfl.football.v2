@@ -12,14 +12,14 @@
  * call sites (e.g. `.tier-logo`, `.conference-logo`) without needing !important.
  */
 
-.theme-img--dark {
+.theme-img.theme-img--dark {
   display: none;
 }
 
-html.dark .theme-img--light {
+html.dark .theme-img.theme-img--light {
   display: none;
 }
 
-html.dark .theme-img--dark {
+html.dark .theme-img.theme-img--dark {
   display: block;
 }

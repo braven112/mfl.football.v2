@@ -36,8 +36,25 @@ import * as feeds from './lib/mfl-feeds.mjs';
 import * as identity from './lib/identity-files.mjs';
 import { collectDenylist } from './lib/denylist.mjs';
 import { bestBallAssets, bestBallConfig, bestBallDraft } from './lib/bestball.mjs';
+import { WAR_PAINT_PALETTES, warPaintFiles } from './lib/war-paint.mjs';
 import { KEEPER_DIVISIONS, KEEPER_FRANCHISES, KEEPER_LEAGUE_NAME, keeperArtFiles, keeperConfig, keeperLeagueFeed } from './lib/keeper.mjs';
 import { scrubIdentity } from './lib/scrub.mjs';
+import {
+  BIGLEAGUE_DIVISIONS,
+  BIGLEAGUE_FRANCHISES,
+  BIGLEAGUE_NAME,
+  bigLeagueArtFiles,
+  bigLeagueAwards,
+  bigLeagueAssets,
+  bigLeagueBracketsFeed,
+  bigLeagueChampionships,
+  bigLeagueConfig,
+  bigLeagueDraftResults,
+  bigLeagueFeed,
+  bigLeagueTierHistory,
+  simulateBigLeague,
+} from './lib/bigleague.mjs';
+import { DEMO_AFL_ROUTES } from '../../src/utils/demo-isolation-core.mjs';
 import { nflWeekStartInstant } from '../../src/utils/nfl-week-starts.mjs';
 import { LEAGUES } from '../../src/config/leagues-data.mjs';
 
@@ -167,9 +184,47 @@ function wipeRealLeague() {
   // stay; only its commissioner-only official-draft API goes.
   // `api/afl-keepers.ts` stays: the /keeper demo's planner saves through it
   // (a plan is stored under the session's league).
-  for (const route of ['afl-fantasy', 'api/afl-fantasy', 'api/afl-rules-qa.ts', 'api/best-ball-draft']) {
+  for (const route of ['api/afl-rules-qa.ts', 'api/best-ball-draft']) {
     rm(path.join(ROOT, 'src/pages', route));
   }
+  // The AFL's slot serves the fictional big league (/bigleague), with only
+  // the core pages of a redraft league; the rest are the real AFL's own.
+  keepOnly(path.join(ROOT, 'src/pages/afl-fantasy'), DEMO_AFL_ROUTES.map((r) => (r === '' ? 'index' : r)));
+  keepOnly(path.join(ROOT, 'src/pages/api/afl-fantasy'), ['lineup']);
+  // Two of those pages are the AFL's own, built around its two conferences;
+  // the big league gets its own versions (scripts/demo/pages). They are
+  // `.astro.tpl` there: their imports resolve only once copied into
+  // src/pages, so the type check must not read them where they sit.
+  for (const route of ['index.astro', 'playoffs.astro']) {
+    fs.copyFileSync(path.join(ROOT, 'scripts/demo/pages/afl-fantasy', `${route}.tpl`), path.join(ROOT, 'src/pages/afl-fantasy', route));
+  }
+}
+
+/**
+ * Delete every route file under `dir` except the given routes ('rosters' →
+ * rosters.astro, 'front-office' → front-office/index.astro).
+ */
+function keepOnly(dir, routes) {
+  if (!fs.existsSync(dir)) return;
+  const keep = new Set();
+  for (const r of routes) {
+    for (const ext of ['.astro', '.ts']) {
+      keep.add(path.join(dir, `${r}${ext}`));
+      keep.add(path.join(dir, r, `index${ext}`));
+    }
+  }
+  const walk = (d) => {
+    for (const name of fs.readdirSync(d)) {
+      const full = path.join(d, name);
+      if (fs.statSync(full).isDirectory()) {
+        walk(full);
+        if (!fs.readdirSync(full).length) fs.rmdirSync(full);
+      } else if (!keep.has(full)) {
+        fs.rmSync(full);
+      }
+    }
+  };
+  walk(dir);
 }
 
 /** Seconds since epoch at the start of an NFL week. */
@@ -264,6 +319,60 @@ function writeKeeper({ years, facts, currentYear, currentWeek, nflFacts, generat
 }
 
 /**
+ * The /bigleague demo in the AFL's slot: a fictional 96-team redraft league —
+ * eight conferences of twelve, three tiers, conference playoffs and an overall
+ * bracket (scripts/demo/lib/bigleague.mjs). Replaces the real AFL's feeds,
+ * config, tiers, art and derived files; the AFL's other data files are
+ * scrubbed of names with the rest of the build.
+ */
+function writeBigLeague({ years, facts, currentYear, currentWeek, nflFacts, generatedAt }) {
+  const league = LEAGUES['afl-fantasy'];
+  const dir = path.join(ROOT, league.dataPath);
+  rm(path.join(dir, 'mfl-feeds'));
+  rm(path.join(dir, 'derived'));
+  for (const f of fs.readdirSync(dir)) {
+    if (/^mfl-(player-salaries|salary-averages)-\d{4}\.json$/.test(f)) rm(path.join(dir, f));
+  }
+  const slot = {
+    feedsDir: () => path.join(dir, 'mfl-feeds'),
+    leagueId: '99003',
+    leagueName: BIGLEAGUE_NAME,
+    franchises: BIGLEAGUE_FRANCHISES,
+    divisions: BIGLEAGUE_DIVISIONS,
+    assetBase: '/assets/afl',
+    mflHost: () => league.mflHost,
+    shapeLeague: bigLeagueFeed,
+  };
+  const { seasons, tierHistory, currentTiers } = simulateBigLeague({
+    years,
+    facts,
+    currentYear,
+    currentWeek,
+    rng: createRng(`${SEED}/bigleague`),
+    weekStart,
+  });
+  for (const season of seasons) {
+    season.weekStart = (week) => weekStart(season.year, week);
+    writeSeasonFeeds(season, years, generatedAt, slot);
+    const seasonDir = path.join(slot.feedsDir(), String(season.year));
+    writeJson(path.join(seasonDir, 'draftResults.json'), bigLeagueDraftResults(season));
+    writeJson(path.join(seasonDir, 'playoff-brackets.json'), bigLeagueBracketsFeed(season));
+    for (const [name, bytes] of nflFacts.perYear.get(season.year) ?? []) {
+      fs.writeFileSync(path.join(seasonDir, name), bytes);
+    }
+  }
+  writeJson(path.join(ROOT, league.configPath), bigLeagueConfig({ leagueId: slot.leagueId, currentTiers }));
+  writeJson(path.join(dir, 'afl.assets.json'), bigLeagueAssets({ firstYear: years[0], generatedAt }));
+  writeJson(path.join(dir, 'tier-history.json'), bigLeagueTierHistory(tierHistory));
+  writeJson(path.join(dir, 'championship-history.json'), bigLeagueChampionships(seasons));
+  writeJson(path.join(dir, 'awards-history.json'), bigLeagueAwards(seasons, tierHistory));
+  writeJson(path.join(ROOT, league.schefterFeedPath), { posts: [] });
+  for (const [rel, contents] of bigLeagueArtFiles()) writeText(path.join(PUBLIC, rel), contents);
+  runNode('scripts/compute-afl-free-agents.mjs', []);
+  log(`big league: ${seasons.length} seasons, ${BIGLEAGUE_FRANCHISES.length} teams written`);
+}
+
+/**
  * The salary snapshot files (`mfl-player-salaries-<yr>.json` and
  * `mfl-salary-averages-<yr>.json`) — the shapes update-salary-averages.mjs
  * writes, computed from the simulated rosters instead of a live fetch.
@@ -343,6 +452,9 @@ function writeBestBall({ currentYear, generatedAt }) {
   writeJson(path.join(ROOT, league.configPath), bestBallConfig({ leagueId: league.id, loaderLines: realConfig.loaderLines ?? [] }));
   writeJson(path.join(dir, 'bb1.assets.json'), bestBallAssets(generatedAt));
   writeJson(path.join(dir, 'schefter-feed.json'), { posts: [] });
+  for (const [rel, svg] of warPaintFiles('bestball-logo', WAR_PAINT_PALETTES.bestball, league.name)) {
+    writeText(path.join(PUBLIC, rel), svg);
+  }
   writeJson(
     path.join(dir, 'demo-official-draft.json'),
     bestBallDraft({
@@ -463,6 +575,7 @@ export async function buildDemoData() {
 
   writeBestBall({ currentYear, generatedAt });
   writeKeeper({ years, facts, currentYear, currentWeek, nflFacts, generatedAt });
+  writeBigLeague({ years, facts, currentYear, currentWeek, nflFacts, generatedAt });
 
   const { writeContentReplacements } = await import('./lib/content.mjs');
   writeContentReplacements({ root: ROOT, seasons, franchises: DEMO_FRANCHISES, renames, currentYear, generatedAt, writeJson, writeText });

@@ -92,6 +92,8 @@ export const TIER_SPLIT_FIRST_SEASON = 2018;
 export interface TierChampions {
   'premier-league'?: string;
   'dleague-champion'?: string;
+  /** Any further tier a league declares, keyed by its own award slug. */
+  [slug: string]: string | undefined;
 }
 
 interface TierSeason {
@@ -117,7 +119,7 @@ export function getTierMembership(year: number | string): Record<string, AflTier
 /** The tier a franchise competed in for a given season, or null if unknown. */
 export function getTierForYear(franchiseId: string, year: number | string): AflTier | null {
   const tier = getTierMembership(year)?.[franchiseId];
-  return tier === PREMIER_LEAGUE || tier === D_LEAGUE ? tier : null;
+  return typeof tier === 'string' && tier ? tier : null;
 }
 
 /** A season's recorded tier champions ({ premier-league, dleague-champion }). */

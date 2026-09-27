@@ -110,15 +110,45 @@ export function isDemoRefusedHost(hostname) {
 }
 
 /**
- * Paths the demo never serves: the leagues it has no fictional version of
- * (today, the AFL's slot), their API routes, and the best-ball league's
- * commissioner-only official-draft API. Matched on the REQUESTED path,
- * before any league-host rewrite, so no host can reach them.
+ * Paths the demo never serves: the AFL's Roger rules chat and the best-ball
+ * league's commissioner-only official-draft API. Matched on the REQUESTED
+ * path, before any league-host rewrite, so no host can reach them.
  */
-const DEMO_REFUSED_PATH = /^\/(?:api\/)?(?:afl-fantasy|afl-rules-qa|best-ball-draft)(?:[/.?]|$)/;
+const DEMO_REFUSED_PATH = /^\/(?:api\/)?(?:afl-rules-qa|best-ball-draft)(?:[/.?]|$)/;
+
+/**
+ * The AFL slot serves the fictional big league (demo.mfl.football/bigleague),
+ * but only these of its pages — the core of a redraft league. The rest are
+ * the real AFL's own (keepers, its AL/NL draft order, its constitution, admin)
+ * and the demo build deletes them; this refuses anything that still reaches
+ * one. Keep in step with DEMO_AFL_PAGES in scripts/demo/build-demo-data.mjs.
+ */
+export const DEMO_AFL_ROUTES = [
+  '',
+  'demo-start',
+  'login',
+  'standings',
+  'playoffs',
+  'rosters',
+  'lineup',
+  'players',
+  'live-scoring',
+  'transactions',
+  'front-office',
+  'front-office/trade-builder',
+];
+const DEMO_AFL_API = ['lineup'];
+
+function isRefusedAflPath(pathname) {
+  const m = /^\/(api\/)?afl-fantasy(?:\/(.*?))?\/?$/.exec(pathname.split('?')[0]);
+  if (!m) return false;
+  const rest = m[2] ?? '';
+  return m[1] ? !DEMO_AFL_API.includes(rest) : !DEMO_AFL_ROUTES.includes(rest);
+}
 
 export function isDemoRefusedPath(pathname) {
-  return DEMO_REFUSED_PATH.test(String(pathname));
+  const p = String(pathname);
+  return DEMO_REFUSED_PATH.test(p) || isRefusedAflPath(p);
 }
 
 /** Marks the demo's fetch guard, so code can confirm it is actually installed. */

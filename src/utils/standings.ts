@@ -452,6 +452,11 @@ export function getTierAllPlayStandings(
   tierMembership?: Record<string, string> | null,
   opts: StandingsSortOptions = {}
 ): { tier: string; teams: TeamStanding[] }[] {
+  // The league's tiers, top first: the config's tierCompetition.tiers
+  // (Premier League, D-League for the AFL).
+  const declaredTiers = (config as { tierCompetition?: { tiers?: string[] } }).tierCompetition?.tiers;
+  const tierOrder: string[] = declaredTiers?.length ? declaredTiers : ['Premier League', 'D-League'];
+
   // First get league standings to get seed information
   const leagueStandings = getLeagueStandings(franchises, config, opts);
   const seedMap = new Map(leagueStandings.map(t => [t.id, t.seed]));
@@ -481,10 +486,7 @@ export function getTierAllPlayStandings(
     // would group the team under a stray key and then get silently dropped by
     // the `tierOrder` filter below — fall back to config.tier instead.
     const overrideTier = tierMembership?.[team.id];
-    const validOverride =
-      overrideTier === 'Premier League' || overrideTier === 'D-League'
-        ? overrideTier
-        : undefined;
+    const validOverride = overrideTier && tierOrder.includes(overrideTier) ? overrideTier : undefined;
     const tier = validOverride || teamConfig?.tier || 'Unknown';
     if (!tiers[tier]) {
       tiers[tier] = [];
@@ -522,8 +524,8 @@ export function getTierAllPlayStandings(
     });
   };
 
-  // Return tiers in order: Premier League first, then D-League
-  const tierOrder = ['Premier League', 'D-League'];
+  // Return tiers in the config's order (Premier League first, then D-League
+  // for the AFL).
   return tierOrder
     .filter(tier => tiers[tier])
     .map(tier => ({

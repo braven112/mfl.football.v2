@@ -118,6 +118,12 @@ export interface StandingsTableProps {
   /** Tier-table extras (only read when a prize/rankCircle column is present). */
   tierName?: string;
   promotionCutoff?: number;
+  /**
+   * How many of this tier's teams move up (top) and down (bottom) at season's
+   * end, for a league that declares its own movement
+   * (`tierCompetition.movement`). Absent, the AFL's fixed two-tier bands apply.
+   */
+  tierMovement?: { promote: number; relegate: number };
 }
 
 // ---------------------------------------------------------------------------

@@ -34,13 +34,20 @@ type Json = any; // MFL exports are loosely shaped; the readers own the typing.
 // One glob per league the demo serves an MFL for: the dynasty league in
 // TheLeague's slot, and the keeper league in its demo-only slot. Literal
 // specifiers — a glob cannot take a variable — keyed by the slot's slug.
-const FEED_LOADERS: Record<'theleague' | 'keeper', Record<string, () => Promise<Json>>> = {
+const FEED_LOADERS: Record<'theleague' | 'keeper' | 'afl-fantasy', Record<string, () => Promise<Json>>> = {
   theleague: import.meta.glob<Json>(
     '../../data/theleague/mfl-feeds/*/{league,rosters,players,standings,schedule,weekly-results-raw,live-week,transactions,draftResults,auctionResults,futureDraftPicks,salaryAdjustments,calendar,projectedScores,injuries,nflSchedule,fantasyPointsAllowed}.json',
     { import: 'default' },
   ),
   keeper: import.meta.glob<Json>(
     '../../data/keeper/mfl-feeds/*/{league,rosters,players,standings,schedule,weekly-results-raw,live-week,transactions,draftResults,auctionResults,futureDraftPicks,salaryAdjustments,calendar,projectedScores,injuries,nflSchedule,fantasyPointsAllowed}.json',
+    { import: 'default' },
+  ),
+  // The big league in the AFL's slot. Current-era years only: the real AFL's
+  // feeds reach back to 2003, and on a production build this glob would
+  // otherwise chunk every one of them into the server bundle.
+  'afl-fantasy': import.meta.glob<Json>(
+    '../../data/afl-fantasy/mfl-feeds/20{2[5-9],[3-9][0-9]}/{league,rosters,players,standings,schedule,weekly-results-raw,live-week,transactions,draftResults,calendar,projectedScores,injuries,nflSchedule,fantasyPointsAllowed}.json',
     { import: 'default' },
   ),
 };
@@ -552,6 +559,9 @@ const STANDIN_LEAGUES = new Map<string, StandinSlug>(
     [LEAGUES.theleague.id, 'theleague'] as const,
     // Registered only on a demo deployment (leagues-data.mjs).
     [(LEAGUES as Record<string, { id: string } | undefined>).keeper?.id, 'keeper'] as const,
+    // The AFL's slot answers only on a demo deployment, where it holds the
+    // fictional big league — the stand-in itself only ever runs there.
+    [LEAGUES['afl-fantasy'].id, 'afl-fantasy'] as const,
   ].filter((entry): entry is readonly [string, StandinSlug] => !!entry[0]),
 );
 

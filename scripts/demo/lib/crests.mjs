@@ -45,12 +45,3 @@ export function bannerSvg(franchise) {
 </svg>
 `;
 }
-
-/** League mark — for the league logo slots the real site fills with its own crest. */
-export function leagueMarkSvg(leagueName) {
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="${escapeXml(leagueName)}">
-<circle cx="128" cy="128" r="116" fill="#14213d" stroke="#fca311" stroke-width="12"/>
-<text x="128" y="150" text-anchor="middle" font-family="Arial Black, Helvetica, Arial, sans-serif" font-weight="900" font-size="72" fill="#fca311">DEMO</text>
-</svg>
-`;
-}

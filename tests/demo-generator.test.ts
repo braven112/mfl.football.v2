@@ -20,6 +20,7 @@ import { applyRenames, renamePairs } from '../scripts/demo/lib/identity-files.mj
 import { nflWeekStartInstant } from '../src/utils/nfl-week-starts.mjs';
 import { bestBallDraft, BESTBALL_FRANCHISES, BESTBALL_ROUNDS } from '../scripts/demo/lib/bestball.mjs';
 import { KEEPER_FRANCHISES } from '../scripts/demo/lib/keeper.mjs';
+import { BIGLEAGUE_FRANCHISES } from '../scripts/demo/lib/bigleague.mjs';
 import { KEEPERS } from '../scripts/demo/lib/simulate.mjs';
 import { seasonTotals, lastCompletedWeek } from '../scripts/demo/lib/nfl-facts.mjs';
 
@@ -110,11 +111,29 @@ describe('demo identities', () => {
       }
     }
     for (const p of registry.people) realNames.add(String(p.displayName).toLowerCase());
-    // Every demo league's clubs — the dynasty, redraft and keeper demos.
-    for (const f of [...DEMO_FRANCHISES, ...BESTBALL_FRANCHISES, ...KEEPER_FRANCHISES]) {
+    // Every demo league's clubs — the dynasty, redraft, keeper and big-league demos.
+    for (const f of [...DEMO_FRANCHISES, ...BESTBALL_FRANCHISES, ...KEEPER_FRANCHISES, ...BIGLEAGUE_FRANCHISES]) {
       for (const n of [f.name, f.nameShort, f.abbrev, (f as { owner?: string }).owner]) {
         if (!n) continue;
         expect(realNames.has(String(n).toLowerCase()), `${n} is a real name`).toBe(false);
+      }
+    }
+  });
+
+  it('uses no real name even as one word of a big-league club or owner', () => {
+    // The build's scrub replaces real names word by word, so a club named
+    // after a real one's WORD ships mangled ("Zephyr Point Stags" came out
+    // "Guest Club 231 Point Stags").
+    const words = new Set<string>();
+    const afl = JSON.parse(readFileSync('data/afl-fantasy/afl.config.json', 'utf8'));
+    for (const t of [...real.teams, ...afl.teams]) {
+      for (const era of [t, ...(t.history ?? [])]) {
+        for (const n of [era.name, era.nameMedium, era.nameShort]) if (n && !/\s/.test(n) && n.length >= 4) words.add(n.toLowerCase());
+      }
+    }
+    for (const f of BIGLEAGUE_FRANCHISES) {
+      for (const w of `${f.name} ${f.owner}`.toLowerCase().split(/\s+/)) {
+        expect(words.has(w.replace(/s$/, '')) || words.has(w), `${f.name} / ${f.owner}: "${w}" is a real name`).toBe(false);
       }
     }
   });
