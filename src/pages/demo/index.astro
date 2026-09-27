@@ -38,6 +38,10 @@ const FEATURES = [
     body: 'Salary caps, contracts, extensions, franchise tags, keepers, conferences, taxi squads — whatever your constitution says, the site enforces and explains it.',
   },
   {
+    title: 'Side competitions that run themselves',
+    body: 'Tiers with promotion and relegation, a skins competition, a survivor pool, a season-long points race, a rivalry cup: scored, ranked and settled automatically every week. No spreadsheets, no commissioner math. Your commissioner gets to play fantasy football instead of running a fantasy football league.',
+  },
+  {
     title: 'Every owner tool in one place',
     body: 'Set lineups, work the waiver wire, file blind bids, build trades with live cap impact, and track every transaction — without fighting a generic host.',
   },
@@ -131,7 +135,8 @@ const FEATURES = [
           <legend>Your league uses</legend>
           <label><input type="checkbox" name="salaryCap" /> A salary cap</label>
           <label><input type="checkbox" name="contracts" /> Player contracts</label>
-          <label><input type="checkbox" name="conferences" /> Conferences or tiers</label>
+          <label><input type="checkbox" name="playerPools" /> Multiple player pools <span class="pitch__optional">(a Deluxe league: each conference drafts from its own copy of every player)</span></label>
+          <label><input type="checkbox" name="sideCompetitions" /> Custom side competitions <span class="pitch__optional">(tiers, skins, a survivor pool, a points race, a rivalry cup…)</span></label>
         </fieldset>
         <div class="pitch__row">
           <label>MFL league ID <span class="pitch__optional">(optional)</span><input name="leagueId" inputmode="numeric" maxlength="20" /></label>
@@ -174,7 +179,7 @@ const FEATURES = [
       data.forEach((value, key) => {
         payload[key] = value;
       });
-      for (const box of ['salaryCap', 'contracts', 'conferences']) payload[box] = data.get(box) === 'on';
+      for (const box of ['salaryCap', 'contracts', 'playerPools', 'sideCompetitions']) payload[box] = data.get(box) === 'on';
       const button = form.querySelector('button[type="submit"]') as HTMLButtonElement;
       button.disabled = true;
       status.textContent = 'Setting up your demo…';

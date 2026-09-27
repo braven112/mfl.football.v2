@@ -39,7 +39,8 @@ const GOOD = {
   teams: '14',
   salaryCap: true,
   contracts: true,
-  conferences: false,
+  playerPools: false,
+  sideCompetitions: false,
   wishlist: 'Contract tools and a draft room.',
 };
 
@@ -61,7 +62,7 @@ afterEach(() => {
 describe('questionnaire', () => {
   it('accepts a complete answer and coerces its types', () => {
     const r = core.validateQuestionnaire(GOOD);
-    expect((r as { lead: object }).lead).toMatchObject({ teams: 14, salaryCap: true, conferences: false, platform: 'mfl' });
+    expect((r as { lead: object }).lead).toMatchObject({ teams: 14, salaryCap: true, playerPools: false, platform: 'mfl' });
   });
 
   it('reports each problem by field, and never throws on junk', () => {
@@ -79,10 +80,13 @@ describe('questionnaire', () => {
   it('matches a league to the demo that fits, falling back to one that exists', () => {
     const lead = (over: object) => ({ ...(core.validateQuestionnaire(GOOD) as any).lead, ...over });
     expect(core.matchDemo(lead({}))).toEqual({ wanted: 'dynasty', path: 'dynasty' });
-    expect(core.matchDemo(lead({ teams: 60 }))).toEqual({ wanted: 'bigleague', path: 'dynasty' });
+    // Multiple player pools is the qualifier; size, conferences or tiers alone are not.
+    expect(core.matchDemo(lead({ playerPools: true }))).toEqual({ wanted: 'bigleague', path: 'dynasty' });
+    expect(core.matchDemo(lead({ teams: 60 }))).toMatchObject({ wanted: 'dynasty' });
+    expect(core.matchDemo(lead({ sideCompetitions: true }))).toMatchObject({ wanted: 'dynasty' });
     expect(core.matchDemo(lead({ format: 'bestball' }))).toEqual({ wanted: 'redraft', path: 'dynasty' });
     expect(core.matchDemo(lead({ format: 'keeper', salaryCap: false, contracts: false }))).toMatchObject({ wanted: 'keeper' });
-    expect(core.matchDemo(lead({ teams: 60 }), ['dynasty', 'bigleague'])).toEqual({ wanted: 'bigleague', path: 'bigleague' });
+    expect(core.matchDemo(lead({ playerPools: true }), ['dynasty', 'bigleague'])).toEqual({ wanted: 'bigleague', path: 'bigleague' });
   });
 });
 

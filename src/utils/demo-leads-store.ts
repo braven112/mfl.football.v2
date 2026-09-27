@@ -27,7 +27,12 @@ export interface DemoLead {
   teams: number | null;
   salaryCap: boolean;
   contracts: boolean;
-  conferences: boolean;
+  /** Multiple player pools (an MFL Deluxe league). */
+  playerPools: boolean;
+  /** Runs custom side competitions (tiers, survivor pool, points race, …). */
+  sideCompetitions: boolean;
+  /** Leads filed before 2026-09-27 asked "conferences or tiers" instead. */
+  conferences?: boolean;
   scoring: string;
   wishlist: string;
   heardFrom: string;
