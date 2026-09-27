@@ -310,6 +310,7 @@ const pwaGate = {
 const themePref = getThemePreference(Astro.cookies);
 import StagingBanner from '../components/shared/StagingBanner.astro';
 import DemoBanner from '../components/shared/DemoBanner.astro';
+import DemoTour from '../components/shared/DemoTour.astro';
 ---
 
 <!DOCTYPE html>
@@ -415,6 +416,7 @@ import DemoBanner from '../components/shared/DemoBanner.astro';
 				hideMobileNavIcons={hideMobileNavIcons}
 			/>
 			<main>
+				<DemoTour base={`/${leagueContext.slug}`} />
 				<slot />
 			</main>
 			<TheLeagueFooter hideLeaguePrefix={hideLeaguePrefix} franchiseId={sessionFranchiseId} />

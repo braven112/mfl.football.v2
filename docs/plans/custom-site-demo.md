@@ -157,6 +157,18 @@ The art is embedded in the crest SVGs the demo already writes, so no asset path
 changed. The redraft demo now has crests at all (the real best-ball league has
 none yet). Guard: `tests/demo-art-mix.test.ts`.
 
+### "Try these" tour card
+
+Each demo's HOME carries a closable card (`components/shared/DemoTour.astro`,
+mounted in TheLeagueLayout, demo-only) pointing at three things a prospect
+would never find by clicking around: a live Light/Auto/Dark switch (the site's
+own ThemeToggle), Preferences (country and clocks: US, Canada, Mexico, UK,
+Australia) and Sunday Ticket, whose channels follow the country. Both pages now
+exist in all four demos: the Big League via `DEMO_AFL_ROUTES`, the keeper slot
+as ordinary demo-only routes, and the best-ball slot as demo-only templates
+(`scripts/demo/pages/best-ball-1/*.astro.tpl`) the build copies in, since the
+real best-ball league has neither page.
+
 ### Known gaps (next)
 
 - Two modules build their own Redis clients (`schefter-news-loaders.ts`,

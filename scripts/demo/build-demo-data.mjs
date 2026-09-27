@@ -199,6 +199,11 @@ function wipeRealLeague() {
   for (const route of ['index.astro', 'playoffs.astro']) {
     fs.copyFileSync(path.join(ROOT, 'scripts/demo/pages/afl-fantasy', `${route}.tpl`), path.join(ROOT, 'src/pages/afl-fantasy', route));
   }
+  // The best-ball league has no Preferences or Sunday Ticket route of its own;
+  // the demo tour card points every demo at both.
+  for (const route of ['preferences.astro', 'sunday-ticket.astro']) {
+    fs.copyFileSync(path.join(ROOT, 'scripts/demo/pages/best-ball-1', `${route}.tpl`), path.join(ROOT, 'src/pages/best-ball-1', route));
+  }
 }
 
 /**

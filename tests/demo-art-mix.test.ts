@@ -5,7 +5,7 @@ import { KEEPER_FRANCHISES } from '../scripts/demo/lib/keeper.mjs';
 import { BIGLEAGUE_FRANCHISES } from '../scripts/demo/lib/bigleague.mjs';
 import { BESTBALL_FRANCHISES } from '../scripts/demo/lib/bestball.mjs';
 
-const LISTS: Record<string, Array<{ id: string; name: string; art?: string }>> = {
+const LISTS: Record<string, ReadonlyArray<{ id: string | number; name: string | number; art?: string }>> = {
   dynasty: DEMO_FRANCHISES,
   keeper: KEEPER_FRANCHISES,
   bigleague: BIGLEAGUE_FRANCHISES,
