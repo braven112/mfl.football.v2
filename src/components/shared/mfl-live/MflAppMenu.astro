@@ -40,7 +40,7 @@
 import ThemeToggle from '../../ThemeToggle.astro';
 
 export interface Props {
-	/** The league sites this project runs. Absolute URLs, built by `leagueUrl`. */
+	/** The signed-in owner's MFL leagues (`buildMflLiveLeagueLinks`). Absolute URLs; empty when signed out. */
 	leagueLinks: { name: string; href: string }[];
 	/** Signed-in owner's display name, for the account block. */
 	ownerName?: string | null;
@@ -142,8 +142,9 @@ const showSignIn = !signedIn && !isCurrent(signInHref.split('?')[0]);
 				<ul class="mfl-menu__list" aria-labelledby="mfl-menu-leagues">
 					{leagueLinks.map((league) => (
 						<li>
-							{/* Absolute, and off this host — each league apex carries its own
-							    host-only session cookie, so these leave the app. */}
+							{/* Absolute: the owner's leagues, each to our site for it when the
+							    league is registered, else to its MFL home page. Most leave this
+							    host, and a league apex carries its own host-only session cookie. */}
 							<a class="mfl-menu__link" href={league.href}>
 								<svg class="mfl-menu__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 									<path d="M7 17L17 7" />

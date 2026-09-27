@@ -68,7 +68,10 @@ import NflLogoDarkStyles from '../components/NflLogoDarkStyles.astro';
 import TeamIconDarkStyles from '../components/TeamIconDarkStyles.astro';
 import { getThemePreference } from '../utils/theme-preference';
 import { getAuthUser } from '../utils/auth';
-import { ALL_LEAGUES, leagueUrl, isSharedAppHost } from '../config/leagues';
+import { DEFAULT_LEAGUE_SLUG, isSharedAppHost } from '../config/leagues';
+import { getLeagueYearForSlug } from '../utils/league-year';
+import { fetchMyLeagues } from '../utils/my-leagues';
+import { buildMflLiveLeagueLinks } from '../utils/mfl-live-league-links';
 // Global utility classes (.visually-hidden, …) — a frontmatter import so the
 // CSS ships unscoped; an @import inside the <style> block would get scoped.
 import '../styles/utilities.css';
@@ -90,24 +93,24 @@ const onSharedHost = isSharedAppHost(Astro.url.hostname);
 
 const authUser = getAuthUser(Astro.request);
 
-// Links out to the league sites this project runs. Absolute, via leagueUrl —
-// never an origin concatenated with a path (docs/claude/rules/league-urls.md),
-// and never a bare path, because these leave the shared host for a league's
-// own apex where the session cookie is a different one.
+// "League sites": the signed-in owner's OWN MFL leagues. A registered league
+// links to our site for it (absolute, via leagueUrl inside the helper: never
+// an origin joined to a path, docs/claude/rules/league-urls.md), and every
+// other league links to its MFL home page. Signed out, the list is empty and
+// the menu drops the section.
 //
-// Draft-only leagues are FILTERED OUT, from the registry's own `bestBall`
-// flag rather than a slug literal (same derivation as `BOTH_LEAGUES` in
-// scripts/lib/weekly-changelog-format.mjs, so a new best-ball league drops
-// out here automatically). This app is a live-scoring board, and
-// docs/claude/rules/best-ball.md is explicit that a best-ball league has
-// "no live MFL syncing by design" and that its nav is OPT-IN — an untagged
-// link into it is management UI the league does not have. Listing one here
-// sends an owner to a site that cannot answer the only question this app
-// exists to answer.
-const leagueLinks = ALL_LEAGUES.filter((league) => !league.bestBall).map((league) => ({
-	name: league.name,
-	href: leagueUrl(league, '/'),
-}));
+// `fetchMyLeagues` is keyed on the MFL cookie the session carries as
+// `authUser.id`, and is Redis-cached for an hour under the same key the board
+// warms, so this is normally a cache read. It must never break the page, so
+// any failure just means no league links.
+const leagueYear = getLeagueYearForSlug(DEFAULT_LEAGUE_SLUG);
+const leagueLinks = authUser?.id
+	? buildMflLiveLeagueLinks(
+			(await fetchMyLeagues(authUser.id, leagueYear).catch(() => null))?.leagues ?? [],
+			leagueYear,
+			authUser.leagueId,
+		)
+	: [];
 ---
 
 <!DOCTYPE html>
