@@ -752,19 +752,14 @@ describe('the no-games board fits the phone', () => {
     }
   });
 
-  it('does not pull the card up over the Throwback preview bar', () => {
-    // The pull-up cancels `.lv-page`'s `padding-top`, but `.ls-tb-preview` is a
-    // sibling of the island INSIDE `.lv-page` and carries a `margin-bottom` of
-    // that same token — so during Throwback Week an ungated cancel eats the gap
-    // under the bar and sits the card flush against it. The gate is on the
-    // bar's absence, so a browser without `:has()` drops the rule and keeps the
-    // band, which is the harmless half.
-    const gated = /\.lv-page:not\(:has\(\.ls-tb-preview\)\)[^{]*\.lv-detail[^{]*\{[^}]*margin-top/;
-    expect(phone, 'the margin-top cancel must be gated on the preview bar').toMatch(gated);
-    expect(
-      valueOf(phone, '.lv-detail', 'margin-top'),
-      'an ungated .lv-detail margin-top would apply during Throwback Week',
-    ).toBeUndefined();
+  it('does not pull the drill-in card up into the gap under the Week picker', () => {
+    // The board header (title, Week dropdown, freshness pill) renders above
+    // `.lv-detail` inside `.lv`, whose flex `gap` is the only space between
+    // them. A negative margin-top on the card — once added to "cancel
+    // `.lv-page`'s padding-top" — eats that gap instead and sits the card's
+    // top border flush under the dropdown on a phone.
+    expect(phone).not.toMatch(/\.lv-detail[^{]*\{[^}]*margin-top:[^;}]*\*\s*-1/);
+    expect(css).not.toMatch(/\.lv-detail[^{]*\{[^}]*margin-top:\s*-/);
   });
 
   it('ends the starter list on :last-of-type, not :last-child', () => {
