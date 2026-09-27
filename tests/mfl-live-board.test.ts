@@ -23,6 +23,19 @@ vi.mock('../src/utils/cross-league-live', () => ({
   CROSS_LEAGUE_FAN_OUT_LIMIT: 8,
 }));
 
+// The board also reads the NFL slate and game detail from ESPN. Unmocked, those
+// were live network calls inside a unit test, bounded only by the ESPN timeout:
+// fast here, and past vitest's 5s on a slow CI runner, which timed out the first
+// three tests below on PR #1195. Both are stubbed to the "unavailable" values
+// `assembleMflLiveBoard` already falls back to on failure — no test here is
+// about the slate, so they assert against exactly the board they always got.
+vi.mock('../src/utils/nfl-scoreboard-source', () => ({
+  fetchNflScoreboard: async ({ week }: { week: number }) => ({ ok: false, week, games: [] }),
+}));
+vi.mock('../src/utils/nfl-game-detail-source', () => ({
+  loadNflGameDetail: async () => null,
+}));
+
 const { assembleMflLiveBoard } = await import('../src/utils/mfl-live-board');
 const { fromMflLiveBoard } = await import('../src/utils/live/from-mfl-live');
 const { resolveMatchupColorVars } = await import('../src/utils/live/model');
