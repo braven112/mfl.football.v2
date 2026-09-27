@@ -188,6 +188,19 @@ function artFiles(art) {
   return files;
 }
 
+/**
+ * Read every piece of art now. The demo build calls this BEFORE it wipes
+ * public/assets/{afl,theleague}: a Vercel build has no .git to fall back on.
+ */
+export function primeArt() {
+  const keys = [
+    ...Object.keys(LEAGUE_ART),
+    ...Object.values(ART_ASSIGNMENTS).flatMap((a) => Object.values(a).map(([art]) => art)),
+  ];
+  for (const art of new Set(keys)) for (const rel of artFiles(art)) if (rel) readPublic(rel);
+  return cache.size;
+}
+
 /** Whether the art has its own cut for a dark ground. */
 export function hasDarkCut(art) {
   return Boolean(artFiles(art)[1]);

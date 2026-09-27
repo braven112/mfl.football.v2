@@ -37,6 +37,7 @@ import * as identity from './lib/identity-files.mjs';
 import { collectDenylist } from './lib/denylist.mjs';
 import { bestBallArtFiles, bestBallAssets, bestBallConfig, bestBallDraft } from './lib/bestball.mjs';
 import { WAR_PAINT_PALETTES, warPaintFiles } from './lib/war-paint.mjs';
+import { primeArt } from './lib/art-mix.mjs';
 import { KEEPER_DIVISIONS, KEEPER_FRANCHISES, KEEPER_LEAGUE_NAME, keeperArtFiles, keeperConfig, keeperLeagueFeed } from './lib/keeper.mjs';
 import { scrubIdentity } from './lib/scrub.mjs';
 import {
@@ -529,7 +530,9 @@ export async function buildDemoData() {
   const renames = identity.renamePairs(realConfig, DEMO_FRANCHISES);
   log(`denylist: ${denylist.terms.length} real names recorded`);
 
-  // 3. Wipe.
+  // 3. Wipe — after reading the real art some demo clubs wear (art-mix.mjs),
+  // which lives in the directories this deletes.
+  log(`art: ${primeArt()} file(s) read before the wipe`);
   wipeRealLeague();
   log('real league data removed');
 
