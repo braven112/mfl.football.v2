@@ -344,3 +344,113 @@ caption a {
     overflow-x: visible;
   }
 }
+
+// Transactions report (options O=03). Five columns on a phone left the
+// Transaction column ~95px wide, so the player names (upper-cased, beside
+// mflscripts' 48px headshot) broke letter by letter: "DO / BBI / NS". Stack
+// each row as a card instead — the franchise banner centred on top,
+// then #, type and date on one line, then the players across the whole
+// width — so nothing is squeezed and nothing scrolls sideways.
+@media only screen and (max-width: 640px) {
+  table.report:has(th.transaction) {
+    display: block;
+    width: 100%;
+
+    > tbody {
+      display: block;
+    }
+    tr:has(> th) {
+      display: none;
+    }
+    tr {
+      display: grid;
+      grid-template-columns: auto auto 1fr;
+      grid-template-areas:
+        "banner banner banner"
+        "rank   type   date"
+        "tx     tx     tx";
+      align-items: center;
+      column-gap: 0.5rem;
+      padding: 0.75rem;
+      margin-bottom: 2px;
+    }
+    td {
+      display: block;
+      padding: 0;
+      border: 0;
+      width: auto !important;
+    }
+    td.rank {
+      display: block;
+      grid-area: rank;
+      opacity: 0.6;
+      &::before {
+        content: "#";
+      }
+    }
+    td:has(> a > .franchiseicon) {
+      grid-area: banner;
+      justify-self: center;
+      padding-bottom: 0.5rem;
+    }
+    .franchiseicon {
+      display: block;
+      width: 240px;
+      max-width: 100%;
+      height: auto;
+      margin: 0 auto;
+    }
+    td.transactiontype {
+      grid-area: type;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    td.timestamp {
+      display: block;
+      grid-area: date;
+      justify-self: end;
+      text-align: right;
+      font-size: 0.75rem;
+      opacity: 0.7;
+    }
+    td:not(.rank, .transactiontype, .timestamp):not(:has(> a > .franchiseicon)) {
+      grid-area: tx;
+      padding-top: 0.5rem;
+    }
+    ul {
+      margin: 0;
+      padding: 0;
+    }
+    li {
+      list-style: none;
+      margin: 0 0 0.25rem;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    // mflscripts' position badge gives its text a ~10px box, so "QB"
+    // stacked into a clipped column beside the headshot. Centre it unwrapped.
+    .teamPositionCircleTxt {
+      top: 50%;
+      left: 50%;
+      width: auto;
+      height: auto;
+      transform: translate(-50%, -50%);
+      white-space: nowrap;
+    }
+    // Player name blocks from mflscripts: keep each name on one line.
+    .playerNames,
+    .playerLastName,
+    .playerFirstName {
+      word-break: normal;
+      overflow-wrap: normal;
+      white-space: nowrap;
+    }
+  }
+  // The phone safety net's `#withmenus li { overflow-wrap: anywhere }`
+  // outranks the block above and split "Deactivated" mid-word at 320px.
+  #withmenus table.report:has(th.transaction) li {
+    overflow-wrap: normal;
+  }
+}
