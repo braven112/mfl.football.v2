@@ -6,7 +6,7 @@ opened: 2026-09-27
 hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1245
 hotfix_sha: e09a50f
 followup_issue: https://github.com/braven112/mfl.football.v2/issues/1246
-followup_pr:
+followup_pr: https://github.com/braven112/mfl.football.v2/pull/1248   # 2026-09-27, F1 + F2
 ---
 
 # Follow-up: archies-league-logo-fallback
