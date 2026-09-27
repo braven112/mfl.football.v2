@@ -86,7 +86,10 @@ rows — routine in the AFL, whose rosters duplicate players, and possible on
 both sides of one matchup. The gate is on the franchise, never on the player.
 (Since 2026-09-27 those owners share ONE row — `LiveLeaderPlayer.owners` lists
 every franchise starting him — because two rows of the same name read as a
-duplicate bug. Merging is fine; dropping any owner from the list is not.)
+duplicate bug. Merging is fine; dropping any owner from the list is not.
+The builder tests alone do not hold that: a component rendering `owners[0]`
+passes every one of them. `tests/live-leaders-render.test.ts` renders
+`LvLeaders` and asserts one `<li>` per player with every owner named.)
 
 ## 2026-07-08 - Reusable two-team color contrast system
 

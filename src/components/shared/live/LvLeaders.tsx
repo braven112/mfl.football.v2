@@ -77,7 +77,12 @@ export default function LvLeaders({ leaders, meta }: LvLeadersProps): JSX.Elemen
               const name = who?.name || `Player ${row.playerId}`;
               const position = who?.position ?? '';
               const nflTeam = who?.nflTeam ?? '';
-              const owners = row.owners.map((o) => o.franchiseName).join(', ');
+              // `?? []`: leaders are rebuilt per request, but a board built by the
+              // server before the one-row-per-player change (a response cached or
+              // in flight across a deploy) carries rows with no `owners`. Render
+              // the performance ownerless rather than throw and blank the strip.
+              const owners = (row.owners ?? []).map((o) => o.franchiseName).join(', ');
+              const status = row.secondsRemaining <= 0 ? '' : 'playing';
               return (
                 // One row per player: in the AFL he is routinely started by
                 // several owners, and every one of them is named on line two.
@@ -93,8 +98,7 @@ export default function LvLeaders({ leaders, meta }: LvLeadersProps): JSX.Elemen
                       )}
                     </span>
                     <span className="lv-leaders__owners">
-                      {owners}
-                      {row.secondsRemaining <= 0 ? '' : ' · playing'}
+                      {[owners, status].filter(Boolean).join(' · ')}
                     </span>
                   </span>
                   <span className="lv-leaders__pts">{fmt(row.points)}</span>
