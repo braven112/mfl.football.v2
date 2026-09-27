@@ -445,6 +445,35 @@ export const ALL_LEAGUES = Object.values(LEAGUES);
 /** MFL numeric id of the default league. Use instead of hardcoding '13522'. */
 export const DEFAULT_LEAGUE_ID = LEAGUES[DEFAULT_LEAGUE_SLUG].id;
 
+/**
+ * MFL leagues that are NOT registered here but whose owners may still sign in
+ * to MFL Live on the shared host, as invited testers.
+ *
+ * Deliberately NOT registry entries. They have no pages, no data directory and
+ * no feature flags. The only thing being added is permission to sign in to
+ * `/live`, and a registry entry would give a league the whole site.
+ *
+ * 10105 is testing the board through the 2026 season (added Sep 2026). Remove
+ * it here to revoke that access.
+ */
+export const MFL_LIVE_PILOT_LEAGUE_IDS = ['10105'];
+
+/**
+ * Every MFL league id whose owners may sign in to MFL Live, in PREFERENCE
+ * order: the registry's leagues in registry order, then the pilot leagues.
+ *
+ * The order matters. An account in several of these gets a session scoped to
+ * the FIRST one it belongs to, so an owner of TheLeague keeps the TheLeague
+ * session they had before this list existed, and a pilot league is only ever
+ * the session's league for someone in no registered league. The board reads
+ * every league from `myleagues` whichever league the session names.
+ *
+ * @returns {string[]}
+ */
+export function mflLiveSignInLeagueIds() {
+  return [...ALL_LEAGUES.map((l) => l.id), ...MFL_LIVE_PILOT_LEAGUE_IDS];
+}
+
 /** @param {string} slug Canonical slug ('theleague' | 'afl-fantasy') */
 export function getLeagueBySlug(slug) {
   return LEAGUES[slug] ?? null;
