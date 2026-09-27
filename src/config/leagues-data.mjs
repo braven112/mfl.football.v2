@@ -121,6 +121,15 @@ export const LEAGUES = {
      * `tests/schefter-rumor-cadence.test.ts` pins the registry against
      * hero-resolver's copy so the two cannot silently disagree.
      */
+    /**
+     * The league chat the news persona posts into — see `chatConfigFor` in
+     * scripts/lib/chat.mjs. Only env var NAMES live here, never a token.
+     *   groupme: { provider, botEnv }                 bot id per league
+     *   slack:   { provider, tokenEnv, channelEnv }   bot token + channel id
+     * A league with no `chat` has no chat: its columns publish to the site and
+     * push, and nothing is posted anywhere else.
+     */
+    chat: { provider: 'groupme', botEnv: 'GROUPME_SCHEFTER_BOT_ID' },
     tradeDeadline: { kind: 'fixed', month: 11, day: 13 },
     features: {
       contracts: true,
@@ -264,6 +273,8 @@ export const LEAGUES = {
      * `src/data/afl-fantasy/league-events.json`, and
      * `tests/schefter-rumor-cadence.test.ts` pins the two against each other.
      */
+    /** League chat — see TheLeague's entry for the shape. */
+    chat: { provider: 'groupme', botEnv: 'GROUPME_AFL_SCHEFTER_BOT_ID' },
     tradeDeadline: { kind: 'computed', rule: 'wednesday-between-week-10-and-11' },
     features: {
       contracts: false,

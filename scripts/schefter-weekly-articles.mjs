@@ -31,6 +31,7 @@ import { getSeasonYear, getCurrentNFLWeek, getCompletedWeek } from './article-ut
 import { callAnthropic } from './article-utils/ai-client.mjs';
 import { isDuplicate, appendToFeed } from './article-utils/feed-writer.mjs';
 import { enqueueAnnounce } from './lib/announce-queue.mjs';
+import { loadLeaguePersona } from './lib/persona-store.mjs';
 import { withLinkDirective, applyArticleLinks } from './article-utils/article-links.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
@@ -242,8 +243,11 @@ async function main() {
   const links = mod.relatedLinks(enrichment, { league }) ?? [];
   console.log(`  Links: ${links.map((l) => l.href).join(', ') || 'none'}`);
 
-  console.log('  Generating Schefter article...');
-  const systemPrompt = mod.getSystemPrompt({ league });
+  // The commissioner may have renamed the writer (src/utils/persona.mjs).
+  // An unset or unreadable setting resolves to Schefter, byte-for-byte.
+  const persona = await loadLeaguePersona(league);
+  console.log(`  Generating article as ${persona.name} (${persona.source})...`);
+  const systemPrompt = mod.getSystemPrompt({ league, persona });
   const userPrompt = mod.getUserPrompt(withLinkDirective(factSheet, links));
   const aiOutput = await callAnthropic(systemPrompt, userPrompt, mod.config.maxTokens);
   console.log(`  Headline: ${aiOutput.headline}`);

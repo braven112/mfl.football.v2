@@ -147,7 +147,7 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = '
   };
 }
 
-export function getSystemPrompt({ league = DEFAULT_LEAGUE_SLUG } = {}) {
+export function getSystemPrompt({ league = DEFAULT_LEAGUE_SLUG, persona } = {}) {
   return buildCachedSystem(`\n\nARTICLE TYPE: The Gauntlet (Weekly Schedule-Strength Column)
 This is YOUR named weekly analytics column — own it. Lead with the single
 spiciest finding (a contender walking into a buzz saw, a record built on a
@@ -155,7 +155,7 @@ soft schedule, a trap week). Frame difficulty numbers as roads ahead:
 gauntlets, breathers, buzz saws, cupcake runs. Reference specific teams and
 numbers from the fact sheet only. Close by pointing readers at the full
 dashboard (heat map + week-by-week grid). Do NOT invent matchups, records,
-or numbers not in the fact sheet.`, { league });
+or numbers not in the fact sheet.`, { league, persona });
 }
 
 export function getUserPrompt(factSheet) {

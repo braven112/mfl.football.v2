@@ -26,6 +26,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { LEAGUES } from '../src/config/leagues-data.mjs';
 import { postToGroupMeCapped } from './lib/groupme-capped.mjs';
+import { chatConfigFor, slackSenderFor } from './lib/chat.mjs';
+import { loadLeaguePersona } from './lib/persona-store.mjs';
 import { sendPushFanout, broadcast } from './lib/push-fanout.mjs';
 import { sendVoterPushes } from './lib/owners-poll-posts.mjs';
 import { awaitPublished } from './lib/await-published.mjs';
@@ -83,7 +85,31 @@ export async function announceOne(entry, {
     : { live: true, attempts: 0 };
   let posted = false;
 
-  if (entry.groupMeText && isDry) {
+  // A Slack league posts the same copy to its channel, as its persona, under
+  // the same daily cap. `groupMeText` keeps its name in the queue format: it is
+  // the chat copy, whichever chat the league uses.
+  // GroupMe leagues never reach the persona read.
+  const slackSend = entry.groupMeText && chatConfigFor(league)?.provider === 'slack'
+    ? slackSenderFor(league, { persona: await loadLeaguePersona(entry.league, { log }) })
+    : null;
+
+  if (entry.groupMeText && isDry && slackSend) {
+    log.log?.(`  [dry-run] Would post to Slack as ${entry.kind}:\n${entry.groupMeText}`);
+  } else if (entry.groupMeText && slackSend) {
+    const result = await postToGroupMeCapped({
+      league,
+      kind: entry.kind,
+      botId: undefined,
+      text: entry.groupMeText,
+      send: slackSend,
+      onMissingBotId: () => log.log?.('  [slack] token or channel not set — skipping promo.'),
+      onPosted: () => log.log?.('  [slack] promo posted.'),
+      onHttpError: (why) => log.warn?.(`  [slack] promo failed: ${why}`),
+      onFetchError: (err) => log.warn?.(`  [slack] promo failed: ${err.message}`),
+    });
+    posted = result.posted === true;
+    if (!result.posted && !result.refused) log.log?.('  [slack] promo not delivered (see above).');
+  } else if (entry.groupMeText && isDry) {
     // A rehearsal must NOT go through the cap. `postToGroupMeCapped` claims
     // the league's one slot for the day (Redis SET NX) BEFORE it reaches the
     // dry-run bail, and it only gives the slot back when a LIVE send failed —

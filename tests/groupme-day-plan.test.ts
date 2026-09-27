@@ -149,6 +149,7 @@ const RAW_POST_ALLOWLIST: Record<string, string> = {
   'roger-improvement-notify.mjs': 'developer notification, not the league chat',
   'apply-august-cuts.mjs': 'announces roster cuts that already happened — an owner must know',
   'schefter-announce.mjs': 'a human composed the announcement',
+  'lib/chat.mjs': 'the Slack sender — never posts to GroupMe; its caller hands it to postToGroupMeCapped as `send`, so the cap still applies',
 };
 
 function scriptsThatPost(): string[] {

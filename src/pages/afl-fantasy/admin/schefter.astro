@@ -10,6 +10,7 @@ export const prerender = false;
 
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import AdminDashboard from '../../../components/schefter/AdminDashboard.astro';
+import PersonaEditor from '../../../components/schefter/PersonaEditor.astro';
 import { getAuthUser, isCommissionerOrAdmin, isAuthorizedForLeague } from '../../../utils/auth';
 import { loginUrlForRequest, forbiddenPathFor } from '../../../utils/login-redirect';
 import { getLeagueBySlug } from '../../../config/leagues';
@@ -27,5 +28,7 @@ if (!isCommissionerOrAdmin(user) || !isAuthorizedForLeague(user, afl.id)) {
 ---
 
 <TheLeagueLayout title="Schefter Ops — Admin">
-  <AdminDashboard base="/afl-fantasy" navSlug="afl" />
+  <AdminDashboard base="/afl-fantasy" navSlug="afl">
+    <PersonaEditor slot="settings" navSlug="afl" />
+  </AdminDashboard>
 </TheLeagueLayout>
