@@ -79,6 +79,9 @@ const { base, navSlug } = Astro.props;
       </div>
     </header>
 
+    <!-- League settings the route passes in (the persona editor). -->
+    <slot name="settings" />
+
     <section class="ann" aria-labelledby="ann-title">
       <header class="ann__head">
         <h2 id="ann-title" class="ops-card__title">Broadcast an announcement</h2>

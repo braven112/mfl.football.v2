@@ -385,7 +385,7 @@ export function buildGroupMePromo(post, enrichment, { league = 'theleague' } = {
   );
 }
 
-export function getSystemPrompt({ league = DEFAULT_LEAGUE_SLUG } = {}) {
+export function getSystemPrompt({ league = DEFAULT_LEAGUE_SLUG, persona } = {}) {
   return buildCachedSystem(`\n\nARTICLE TYPE: Schedule Release
 The schedule for the coming season just dropped. This is a release-day column:
 energy first, analysis second. Lead with the games people will circle, not with
@@ -409,7 +409,7 @@ playing whom and what happened the last dozen times. The fact sheet ranks the
 pairings this schedule renews, with all-time records — use them. A game between
 two teams that have split twenty meetings is worth more words than a
 construction fact. Cite the record when you name a rivalry; never estimate one,
-and never say a team leads a series unless the fact sheet says so.`, { league });
+and never say a team leads a series unless the fact sheet says so.`, { league, persona });
 }
 
 export function getUserPrompt(factSheet) {

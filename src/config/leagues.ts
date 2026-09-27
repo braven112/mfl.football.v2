@@ -197,6 +197,10 @@ export interface LeagueClock {
   equivalents?: readonly string[];
 }
 
+export type LeagueChatConfig =
+  | { provider: 'groupme'; botEnv: string }
+  | { provider: 'slack'; tokenEnv: string; channelEnv: string };
+
 export interface LeagueDefinition {
   id: string;
   slug: CanonicalLeagueSlug;
@@ -259,6 +263,16 @@ export interface LeagueDefinition {
    * when you have a slug in hand.
    */
   officialClock: LeagueClock;
+  /**
+   * The chat the league's news persona posts into (scripts/lib/chat.mjs).
+   * Env var NAMES only. Absent → the league has no chat.
+   */
+  chat?: LeagueChatConfig;
+  /**
+   * The league's default news persona, used until the commissioner saves one
+   * (src/utils/persona.mjs). Absent → Claude Schefter.
+   */
+  persona?: { name?: string; avatarUrl?: string; voice?: string };
   features: LeagueFeatures;
 }
 
