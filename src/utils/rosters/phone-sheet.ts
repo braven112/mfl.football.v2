@@ -434,60 +434,34 @@ export function buildQuickActions(facts: RosterSheetFacts): SheetAction[] {
 
 /**
  * The hero kebab's menu: the table's ⋮ list, in the CDM's order, from
- * `getCdmActionDescriptors`. The CDM's two sub-steps are flattened into the
- * entries they lead to, so one tap does the thing:
+ * `getCdmActionDescriptors`, minus anything the hero already shows as a button
+ * (user, 2026-09-27: the common action sits OUTSIDE the kebab and is not
+ * repeated inside it). The CDM's two sub-steps are flattened into the entries
+ * they lead to, so one tap does the thing:
  *
- *   - Cut Player   → Simulate cut (or Undo while one is active) · Release…
- *                    (own team; the CDM's cut REVIEW, never the bare button)
- *   - Trade Player → Simulate trade (or Undo) · Trade block (own team) ·
- *                    Add to Trade Builder
+ *   - Cut Player   → Release… (own team; the CDM's cut REVIEW, never the bare
+ *                    button). Simulate cut / Undo is the hero's button.
+ *   - Trade Player → Simulate trade (hidden while any simulation is active —
+ *                    the hero's Undo owns that state) · Add to Trade Builder.
+ *                    Trade block is the hero's button.
  *
- * Watch is left out: the hero already carries the sheet's built-in Watch, and
- * one control per action is the rule the hero was built on. Every entry routes
- * through `onAction` — CDM_ROUTES or the local simulate / undo / trade-block
- * handlers — exactly as the Salary tab and More actions do.
+ * Watch is left out too: the hero carries the sheet's built-in Watch. Every
+ * entry routes through `onAction` — CDM_ROUTES or the local simulate handler —
+ * exactly as the Salary tab and More actions do.
  */
 export function buildContractMenu(facts: RosterSheetFacts): SheetAction[] {
   const out: SheetAction[] = [];
-  const active = facts.activeActionType;
-  let undoOffered = false;
-  const simulateOrUndo = (type: 'cut' | 'trade') => {
-    if (active) {
-      if (undoOffered) return;
-      undoOffered = true;
-      out.push({
-        id: 'undo-simulation',
-        label: `Undo simulated ${ACTION_TYPE_LABELS[active] ?? active}`,
-        desc: 'Remove this simulation',
-        icon: 'icon-arrow-left',
-        state: 'on',
-      });
-      return;
-    }
-    out.push(type === 'cut'
-      ? { id: 'cut-simulate', label: 'Simulate cut', desc: 'Track the cap impact locally — no roster change', icon: 'icon-bar-chart' }
-      : { id: 'trade-simulate', label: 'Simulate trade', desc: 'Track the cap impact locally — no roster change', icon: 'icon-bar-chart' });
-  };
-
   for (const d of facts.descriptors) {
     if (d.id === 'watch') continue;
     if (d.id === 'cut') {
-      simulateOrUndo('cut');
       if (facts.viewer.isOwnTeam) {
         out.push({ id: 'release', label: 'Release…', desc: 'Cut him for real — review the cap hit first', icon: 'icon-user-times', tone: 'danger' });
       }
       continue;
     }
     if (d.id === 'trade') {
-      simulateOrUndo('trade');
-      if (facts.viewer.isOwnTeam) {
-        out.push({
-          id: 'trade-block',
-          label: facts.player.tradeBait ? 'Remove from trade block' : 'Add to trade block',
-          desc: facts.player.tradeBait ? 'Take him off your trade block' : 'Tell other owners he is available',
-          icon: 'icon-bookmark',
-          state: facts.player.tradeBait ? 'on' : undefined,
-        });
+      if (!facts.activeActionType) {
+        out.push({ id: 'trade-simulate', label: 'Simulate trade', desc: 'Track the cap impact locally — no roster change', icon: 'icon-bar-chart' });
       }
       out.push({ id: 'trade-builder', label: 'Add to Trade Builder', desc: 'Open the Trade Builder with him pre-loaded', icon: 'icon-transactions-2' });
       continue;
