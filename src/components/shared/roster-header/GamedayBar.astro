@@ -592,17 +592,27 @@ const railMarks = rail.flatMap((entry) =>
 </style>
 
 <script>
-  // One delegated listener for the phone week toggle. A module script runs
-  // once per document, and `document` survives ClientRouter swaps, so this
-  // never stacks and needs no per-page init; each swapped-in header arrives
-  // collapsed from the server.
-  document.addEventListener('click', (event) => {
-    const toggle = (event.target as Element | null)?.closest?.('[data-rhdr-weeks-toggle]');
-    if (!(toggle instanceof HTMLButtonElement)) return;
-    const bar = toggle.closest<HTMLElement>('.rhdr-bar[data-weeks]');
-    if (!bar) return;
-    const expand = bar.dataset.weeks === 'collapsed';
-    bar.dataset.weeks = expand ? 'expanded' : 'collapsed';
-    toggle.setAttribute('aria-expanded', String(expand));
-  });
+  // One delegated listener for the phone week toggle. `document` survives
+  // ClientRouter swaps, so it needs no per-page init; each swapped-in header
+  // arrives collapsed from the server.
+  //
+  // It must bind ONCE, and the flag is what guarantees it: this script is
+  // small enough that the build INLINES it, once per rendered header — and
+  // the rosters page renders one header per team (16 in TheLeague). Sixteen
+  // listeners flipped the toggle sixteen times per tap, back to where it
+  // started, so the button did nothing in production while dev (which loads
+  // one deduped module) worked.
+  const w = window as Window & { __rhdrWeeksBound?: boolean };
+  if (!w.__rhdrWeeksBound) {
+    w.__rhdrWeeksBound = true;
+    document.addEventListener('click', (event) => {
+      const toggle = (event.target as Element | null)?.closest?.('[data-rhdr-weeks-toggle]');
+      if (!(toggle instanceof HTMLButtonElement)) return;
+      const bar = toggle.closest<HTMLElement>('.rhdr-bar[data-weeks]');
+      if (!bar) return;
+      const expand = bar.dataset.weeks === 'collapsed';
+      bar.dataset.weeks = expand ? 'expanded' : 'collapsed';
+      toggle.setAttribute('aria-expanded', String(expand));
+    });
+  }
 </script>
