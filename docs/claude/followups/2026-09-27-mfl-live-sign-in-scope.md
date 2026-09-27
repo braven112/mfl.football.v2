@@ -62,6 +62,6 @@ league, which `/live` would then serve.
 ## Context to start cold
 - Nothing here is urgent this season. F1 has a hard date (Feb 14, 2027). F2 and
   F3 are Brandon's calls, not engineering work to start on your own.
-- Verified on the PR preview: `/login` renders `data-login-scope="mfl-live"`. Production verification is recorded on PR #1241.
+- Verified on production (0ae1e3d, 2026-09-27): `/login` renders `data-login-scope="mfl-live"`; an unregistered `leagueId` and the pilot id without the scope both get 400; the scope with bad credentials gets a clean 401.
 - The session's league only decides who gets in and which franchise is "yours".
   The board itself reads every league from the MFL cookie's `myleagues`.
