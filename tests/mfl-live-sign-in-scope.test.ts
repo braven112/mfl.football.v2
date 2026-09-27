@@ -112,3 +112,23 @@ describe('wiring', () => {
     expect(src).toMatch(/resolvedLeagueId === THELEAGUE_ID\) \{\s*setTheLeaguePreference/);
   });
 });
+
+describe('the endpoint refuses uninvited leagues', () => {
+  it('rejects a scalar leagueId that is not in the registry, before calling MFL', async () => {
+    const calls = stubFetch([{ league_id: '99999', franchise_id: '0001' }]);
+    const { POST } = await import('../src/pages/api/auth/login');
+    for (const leagueId of ['99999', pilot, undefined, '']) {
+      const res = await POST({
+        request: new Request('https://v2.mfl.football/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: 'u', password: 'p', leagueId }),
+        }),
+        cookies: { set() {} },
+      } as never);
+      expect(res.status, `leagueId=${leagueId}`).toBe(400);
+    }
+    // Refused up front: no credential was relayed to MFL.
+    expect(calls).toEqual([]);
+  });
+});

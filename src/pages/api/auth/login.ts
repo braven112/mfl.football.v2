@@ -3,7 +3,7 @@ import { authenticateWithMFL } from '../../../utils/mfl-login';
 import { createSessionToken, createSessionCookie, createMFLCookies } from '../../../utils/session';
 import { setTheLeaguePreference, setAFLPreference, setBestBall1Preference, getAFLTeamData } from '../../../utils/team-preferences';
 import { json } from '../../../utils/api-response';
-import { getLeagueBySlug, mflLiveSignInLeagueIds } from '../../../config/leagues';
+import { getLeagueById, getLeagueBySlug, mflLiveSignInLeagueIds } from '../../../config/leagues';
 import { captureCredential } from '../../../utils/autocut-storage';
 import { checkRateLimit } from '../../../utils/rate-limit';
 import { getClientIdentity } from '../../../utils/client-ip';
@@ -47,6 +47,16 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     // Validate inputs
     if (!username || !password) {
       return json({ success: false, message: 'Username and password are required' }, 400);
+    }
+
+    // Sign-in is invite-only: the league a session is scoped to must be a
+    // registered league, or (via the mfl-live scope only) a pilot league.
+    // Without this, a direct POST naming any MFL league id, or naming none so
+    // that the resolver takes MFL's first league, got a valid session for an
+    // uninvited league, which `/live` would then serve. Every form on the site
+    // sends a registry id, so this refuses nothing that a page submits.
+    if (scope !== 'mfl-live' && !getLeagueById(String(leagueId ?? ''))) {
+      return json({ success: false, message: 'Unknown league.' }, 400);
     }
 
     // Throttle BEFORE the MFL call, not after. The point is to stop an
