@@ -1,0 +1,438 @@
+---
+/**
+ * Playoffs for a many-conference league (the custom-site demo's big league,
+ * docs/plans/custom-site-demo.md): a four-team playoff in every conference,
+ * then the conference champions' bracket for the overall title.
+ *
+ * The AFL's own playoffs page is built around exactly two conferences and its
+ * NIT; this page reads the same MFL feeds (playoff-brackets.json, standings,
+ * league) for any number of conferences. Before a season's playoffs start it
+ * shows the playoff picture: each conference's current top four.
+ *
+ * The route hands in the season's feeds (a glob cannot take a variable).
+ */
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import ThemeImage from '../ThemeImage.astro';
+import { getConferenceStandings } from '../../utils/standings';
+import { resolveConfigForYear } from '../../utils/team-names';
+import { extractSeasonStructure, applySeasonStructure } from '../../utils/afl-structure';
+import {
+  getConferenceLogo,
+  getConferenceLogoDark,
+  getConferenceName,
+  leagueConferenceIds,
+  type AflFamilySlug,
+} from '../../utils/afl-conference';
+import type { LeagueDefinition } from '../../config/leagues';
+
+interface Props {
+  league: LeagueDefinition;
+  config: any;
+  year: number;
+  years: number[];
+  bracketsFeed: any;
+  standingsFeed: any;
+  leagueFeed: unknown;
+  /** The signed-in owner's franchise in this league, or null. */
+  franchiseId: string | null;
+}
+const { league, config, year, years, bracketsFeed, standingsFeed, leagueFeed, franchiseId } = Astro.props;
+const slug = league.slug as AflFamilySlug;
+const prefix = `/${league.slug}`;
+
+const teams: Array<{ franchiseId: string; name: string; icon?: string; conference: string }> = config.teams ?? [];
+const teamById = new Map(teams.map((t) => [t.franchiseId, t]));
+const nameOf = (id?: string) => (id ? teamById.get(id)?.name ?? `Team ${id}` : 'TBD');
+const iconOf = (id?: string) => (id ? teamById.get(id)?.icon : undefined);
+
+const postseason = config.postseason ?? {};
+const conferenceWeeks: number[] = postseason.conferencePlayoffWeeks ?? [13, 14];
+const overallWeeks: number[] = postseason.overallPlayoffWeeks ?? [15, 16, 17];
+
+// --- Brackets ---------------------------------------------------------------
+const asArray = <T,>(x: T | T[] | undefined | null): T[] => (x == null ? [] : Array.isArray(x) ? x : [x]);
+interface Side { id?: string; points?: string; seed?: string }
+interface Game { week: number; home: Side; away: Side }
+const metas: Array<{ id: string; name: string; conference?: string }> = asArray(bracketsFeed?.playoffBrackets?.playoffBracket);
+const details: Record<string, any> = bracketsFeed?.brackets ?? {};
+function gamesOf(bracketId: string): Game[] {
+  const rounds = asArray(details[bracketId]?.playoffBracket?.playoffRound);
+  return rounds.flatMap((round: any) =>
+    asArray(round.playoffGame).map((g: any) => ({
+      week: Number(round.week),
+      home: { id: g.home?.franchise_id, points: g.home?.points, seed: g.home?.seed },
+      away: { id: g.away?.franchise_id, points: g.away?.points, seed: g.away?.seed },
+    })),
+  );
+}
+const winnerOf = (g: Game) =>
+  g.home.points != null && g.away.points != null
+    ? Number(g.home.points) >= Number(g.away.points)
+      ? g.home.id
+      : g.away.id
+    : undefined;
+const overallMeta = metas.find((m) => m.id === '1');
+const overallGames = gamesOf('1');
+const roundName = (week: number) =>
+  ['Quarterfinals', 'Semifinals', 'Championship'][overallWeeks.indexOf(week)] ?? `Week ${week}`;
+const overallRounds = overallWeeks
+  .map((week) => ({ week, name: roundName(week), games: overallGames.filter((g) => g.week === week) }))
+  .filter((r) => r.games.length);
+const finalGame = overallGames.find((g) => g.week === overallWeeks[overallWeeks.length - 1]);
+const overallChampion = finalGame ? winnerOf(finalGame) : undefined;
+
+const conferenceIds = leagueConferenceIds(slug);
+const conferenceBrackets = conferenceIds.map((code) => {
+  const meta = metas.find((m) => m.conference === code) ?? metas.find((m) => m.name?.startsWith(getConferenceName(code, slug)));
+  const games = meta ? gamesOf(meta.id) : [];
+  const final = games.find((g) => g.week === conferenceWeeks[conferenceWeeks.length - 1]);
+  return { code, name: getConferenceName(code, slug), games, champion: final ? winnerOf(final) : undefined };
+});
+const hasBrackets = overallGames.length > 0 || conferenceBrackets.some((b) => b.games.length);
+
+// --- Playoff picture (before the brackets exist) ---------------------------
+const franchises = standingsFeed?.leagueStandings?.franchise ?? [];
+const seasonConfig: any = applySeasonStructure(resolveConfigForYear(config as any, year) as any, extractSeasonStructure(leagueFeed as any));
+const picture = hasBrackets
+  ? []
+  : conferenceIds.map((code) => {
+      const s = getConferenceStandings(franchises, seasonConfig, code, { preserveFeedOrder: true });
+      return { code, name: getConferenceName(code, slug), seeds: s.allTeams.slice(0, 4), chasing: s.allTeams.slice(4, 6) };
+    });
+const mine = (id?: string) => !!franchiseId && id === franchiseId;
+---
+
+<TheLeagueLayout title={`${league.name} Playoffs`} year={year}>
+  <div class="blp">
+    <header class="blp__hero">
+      <div>
+        <h1 class="blp__title">Playoffs</h1>
+        <p class="blp__sub">
+          Every conference sends four teams — its two division winners and two wild cards — to a playoff in weeks {conferenceWeeks.join('–')}.
+          The {conferenceIds.length} conference champions then play for the overall title in weeks {overallWeeks[0]}–{overallWeeks[overallWeeks.length - 1]}.
+        </p>
+      </div>
+      <nav class="blp__years" aria-label="Season">
+        {years.map((y) => (
+          <a href={`${prefix}/playoffs?year=${y}`} class:list={['blp__year', { 'blp__year--on': y === year }]} aria-current={y === year ? 'page' : undefined}>
+            {y}
+          </a>
+        ))}
+      </nav>
+    </header>
+
+    {overallChampion && (
+      <section class="blp__champion" aria-label="Champion">
+        {iconOf(overallChampion) && <img src={iconOf(overallChampion)} alt="" width="64" height="64" />}
+        <div>
+          <p class="blp__kicker">{year} {league.name} Champion</p>
+          <p class="blp__champion-name">{nameOf(overallChampion)}</p>
+        </div>
+      </section>
+    )}
+
+    {overallRounds.length > 0 && (
+      <section class="blp__section" aria-label={overallMeta?.name ?? 'Championship bracket'}>
+        <h2 class="blp__h2">{overallMeta?.name ?? 'Championship bracket'}</h2>
+        <div class="blp__rounds">
+          {overallRounds.map((round) => (
+            <div class="blp__round">
+              <h3 class="blp__round-name">{round.name} <span>Week {round.week}</span></h3>
+              {round.games.map((g) => {
+                const w = winnerOf(g);
+                return (
+                  <div class="blp__game">
+                    {[g.home, g.away].map((s) => (
+                      <div class:list={['blp__side', { 'blp__side--won': w === s.id, 'blp__side--mine': mine(s.id) }]}>
+                        <span class="blp__seed">{s.seed ?? ''}</span>
+                        {iconOf(s.id) ? <img src={iconOf(s.id)} alt="" width="24" height="24" loading="lazy" /> : <span class="blp__icon-gap" />}
+                        <span class="blp__name">{nameOf(s.id)}</span>
+                        <span class="blp__pts">{s.points ?? ''}</span>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </section>
+    )}
+
+    {hasBrackets && (
+      <section class="blp__section" aria-label="Conference playoffs">
+        <h2 class="blp__h2">Conference playoffs</h2>
+        <div class="blp__conf-grid">
+          {conferenceBrackets.map((b) => (
+            <article class="blp__conf">
+              <header class="blp__conf-head">
+                <ThemeImage src={getConferenceLogo(b.code, slug)} darkSrc={getConferenceLogoDark(b.code, slug)} alt="" class="blp__conf-logo" />
+                <h3>{b.name}</h3>
+              </header>
+              {b.games.length === 0 && <p class="blp__empty">Not started.</p>}
+              {conferenceWeeks.map((week, i) => {
+                const games = b.games.filter((g) => g.week === week);
+                return games.length > 0 && (
+                  <div class="blp__conf-round">
+                    <p class="blp__conf-round-name">{i === conferenceWeeks.length - 1 ? 'Final' : 'Semifinals'} · Week {week}</p>
+                    {games.map((g) => {
+                      const w = winnerOf(g);
+                      return (
+                        <div class="blp__game blp__game--compact">
+                          {[g.home, g.away].map((s) => (
+                            <div class:list={['blp__side', { 'blp__side--won': w === s.id, 'blp__side--mine': mine(s.id) }]}>
+                              <span class="blp__seed">{s.seed ?? ''}</span>
+                              <span class="blp__name">{nameOf(s.id)}</span>
+                              <span class="blp__pts">{s.points ?? ''}</span>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+              {b.champion && <p class="blp__conf-champ">Champion: <strong>{nameOf(b.champion)}</strong></p>}
+            </article>
+          ))}
+        </div>
+      </section>
+    )}
+
+    {!hasBrackets && (
+      <section class="blp__section" aria-label="Playoff picture">
+        <h2 class="blp__h2">Playoff picture</h2>
+        <p class="blp__note">If the season ended today. Seeds 1–2 are division leaders; 3–4 are wild cards.</p>
+        <div class="blp__conf-grid">
+          {picture.map((c) => (
+            <article class="blp__conf">
+              <header class="blp__conf-head">
+                <ThemeImage src={getConferenceLogo(c.code, slug)} darkSrc={getConferenceLogoDark(c.code, slug)} alt="" class="blp__conf-logo" />
+                <h3>{c.name}</h3>
+              </header>
+              <ol class="blp__seeds">
+                {c.seeds.map((t: any) => (
+                  <li class:list={['blp__seed-row', { 'blp__side--mine': mine(t.id) }]}>
+                    <span class="blp__seed">{t.conferenceSeed}</span>
+                    {t.teamIcon ? <img src={t.teamIcon} alt="" width="22" height="22" loading="lazy" /> : <span class="blp__icon-gap" />}
+                    <a class="blp__name" href={`${prefix}/rosters?franchise=${t.id}`}>{t.teamName}</a>
+                    <span class="blp__pts">{t.h2hwlt}</span>
+                  </li>
+                ))}
+              </ol>
+              {c.chasing.length > 0 && (
+                <p class="blp__chasing">In the hunt: {c.chasing.map((t: any) => `${t.teamName} (${t.h2hwlt})`).join(', ')}</p>
+              )}
+            </article>
+          ))}
+        </div>
+      </section>
+    )}
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .blp {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1.5rem 1rem 3rem;
+    display: grid;
+    gap: 1.5rem;
+  }
+  .blp__hero {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding: 1.5rem;
+    background: var(--card-surface);
+    border: 1px solid var(--content-border);
+    border-radius: var(--radius-lg);
+  }
+  .blp__title {
+    margin: 0;
+    font-size: 1.75rem;
+  }
+  .blp__sub,
+  .blp__note {
+    margin: 0.35rem 0 0;
+    color: var(--content-text-muted);
+    max-width: 60ch;
+  }
+  .blp__years {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+  .blp__year {
+    padding: 0.3rem 0.7rem;
+    border: 1px solid var(--content-border);
+    border-radius: 999px;
+    color: inherit;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.875rem;
+  }
+  .blp__year--on {
+    background: var(--league-accent);
+    border-color: var(--league-accent);
+    color: #fff;
+  }
+  .blp__champion {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    background: var(--card-surface);
+    border: 1px solid var(--content-border);
+    border-left: 4px solid var(--league-accent);
+    border-radius: var(--radius-lg);
+  }
+  .blp__kicker {
+    margin: 0;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--content-text-muted);
+  }
+  .blp__champion-name {
+    margin: 0.15rem 0 0;
+    font-size: 1.5rem;
+    font-weight: 800;
+  }
+  .blp__section {
+    display: grid;
+    gap: 0.75rem;
+  }
+  .blp__h2 {
+    margin: 0;
+    font-size: 1.25rem;
+  }
+  .blp__rounds {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1rem;
+    align-items: center;
+  }
+  .blp__round {
+    display: grid;
+    gap: 0.75rem;
+  }
+  .blp__round-name {
+    margin: 0;
+    font-size: 0.95rem;
+  }
+  .blp__round-name span {
+    color: var(--content-text-muted);
+    font-weight: 500;
+  }
+  .blp__game {
+    background: var(--card-surface);
+    border: 1px solid var(--content-border);
+    border-radius: var(--radius-md, 10px);
+    overflow: hidden;
+  }
+  .blp__side {
+    display: grid;
+    grid-template-columns: 1.5rem 24px 1fr auto;
+    gap: 0.5rem;
+    align-items: center;
+    padding: 0.45rem 0.65rem;
+    font-size: 0.9rem;
+  }
+  .blp__game--compact .blp__side {
+    grid-template-columns: 1.25rem 1fr auto;
+    padding: 0.35rem 0.6rem;
+    font-size: 0.85rem;
+  }
+  .blp__side + .blp__side {
+    border-top: 1px solid var(--content-border);
+  }
+  .blp__side--won {
+    font-weight: 700;
+  }
+  .blp__side--mine {
+    background: color-mix(in srgb, var(--league-accent) 12%, transparent);
+  }
+  .blp__seed {
+    color: var(--content-text-muted);
+    font-size: 0.8rem;
+    text-align: right;
+  }
+  .blp__icon-gap {
+    width: 24px;
+  }
+  .blp__name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: inherit;
+  }
+  .blp__pts {
+    font-variant-numeric: tabular-nums;
+  }
+  .blp__conf-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+    gap: 1rem;
+  }
+  .blp__conf {
+    display: grid;
+    gap: 0.6rem;
+    align-content: start;
+    padding: 1rem;
+    background: var(--card-surface);
+    border: 1px solid var(--content-border);
+    border-radius: var(--radius-lg);
+  }
+  .blp__conf-head {
+    display: flex;
+    gap: 0.6rem;
+    align-items: center;
+  }
+  .blp__conf-head h3 {
+    margin: 0;
+    font-size: 1rem;
+  }
+  .blp__conf-head :global(.blp__conf-logo) {
+    width: 32px;
+    height: 32px;
+  }
+  .blp__conf-round {
+    display: grid;
+    gap: 0.4rem;
+  }
+  .blp__conf-round-name,
+  .blp__empty,
+  .blp__chasing {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--content-text-muted);
+  }
+  .blp__conf-champ {
+    margin: 0;
+    font-size: 0.875rem;
+  }
+  .blp__seeds {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.15rem;
+  }
+  .blp__seed-row {
+    display: grid;
+    grid-template-columns: 1.25rem 22px 1fr auto;
+    gap: 0.5rem;
+    align-items: center;
+    padding: 0.3rem 0.4rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+  }
+  .blp__seed-row a {
+    text-decoration: none;
+  }
+</style>

@@ -699,7 +699,7 @@
    intentionally left untouched so links, headings, nav active states, and
    table headers keep their blue.
    ======================================== */
-html[data-league="afl"] {
+html:is([data-league="afl"], [data-league="keeper"]) {
   --afl-navy: #0f1e2e;                         /* design-system deep navy (EventHeroShell palette) */
   --afl-gold: #d97706;                         /* AFL amber accent (championship hero tint/border). NOT the badge gold — use --afl-trophy-gold to match award art. */
   --afl-trophy-gold: #c9a44c;                  /* metallic badge gold — matches the award SVG art (#c9a44c) */

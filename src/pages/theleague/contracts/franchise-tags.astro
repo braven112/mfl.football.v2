@@ -6,6 +6,7 @@ import { getCurrentLeagueYear } from '../../../utils/league-year';
 import { getAuthUser, isCommissionerOrAdmin, isAuthorizedForLeague } from '../../../utils/auth';
 import { loginUrlForRequest, forbiddenPathFor } from '../../../utils/login-redirect';
 import { getLeagueBySlug } from '../../../config/leagues';
+import CustomForLeague from '../../../components/shared/CustomForLeague.astro';
 
 // Auth gate: admin only (same auth as nav sidebar)
 const user = getAuthUser(Astro.request);
@@ -55,6 +56,7 @@ function formatDate(iso: string): string {
             { label: 'Manage Contracts', href: '/theleague/front-office/contracts' },
             { label: 'Franchise Tags' },
           ]} />
+          <CustomForLeague feature="franchise-tag rules" />
           <h1 class="ft-header__title">Franchise Tags</h1>
           <p class="ft-header__sub">{leagueYear} Offseason &mdash; {sorted.length} tag{sorted.length !== 1 ? 's' : ''} declared</p>
         </div>

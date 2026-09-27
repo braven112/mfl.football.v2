@@ -57,7 +57,11 @@ const ROOT = path.resolve(__dirname, '..');
 const fileEnv = loadEnv(process.env.NODE_ENV ?? 'development', ROOT, '');
 for (const [k, v] of Object.entries(fileEnv)) process.env[k] ??= v;
 
-const aflLeague = getLeagueBySlug('afl-fantasy');
+// `--league <slug>` computes another AFL-family league's snapshot (the
+// custom-site demo's keeper slot); the AFL is the default.
+const leagueArg = process.argv.indexOf('--league');
+const aflLeague = getLeagueBySlug(leagueArg >= 0 ? process.argv[leagueArg + 1] : 'afl-fantasy');
+if (!aflLeague) throw new Error(`compute-afl-free-agents: unknown league ${process.argv[leagueArg + 1]}`);
 const FEEDS_DIR = path.join(ROOT, aflLeague.dataPath, 'mfl-feeds');
 const OUTPUT_DIR = path.join(ROOT, aflLeague.dataPath, 'derived');
 const OUTPUT_PATH = path.join(OUTPUT_DIR, 'free-agents.json');

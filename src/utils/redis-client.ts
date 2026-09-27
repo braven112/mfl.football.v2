@@ -18,6 +18,9 @@
  * whole surface.
  */
 
+import { isDemoDeploy } from './deploy-environment';
+import { demoKeyPrefix } from './demo-request-context';
+
 export type RedisPipelineClient = {
   hgetall: (key: string) => void;
   exec: <T>() => Promise<T>;
@@ -105,6 +108,65 @@ export type RedisClient = {
 };
 
 let _redis: RedisClient | null | undefined;
+
+/** Methods whose FIRST argument is a key. */
+const KEY_FIRST = new Set([
+  'get', 'set', 'incr', 'decr', 'expire', 'ttl', 'hget', 'hgetall', 'hset', 'hdel', 'hincrby', 'hlen',
+  'zadd', 'zincrby', 'zremrangebyscore', 'zremrangebyrank', 'zcard', 'zcount', 'zrange', 'zrangebyscore',
+  'zrevrangebyscore', 'zrem', 'sadd', 'srem', 'smembers', 'scard', 'lpush', 'llen', 'lrange', 'lrem',
+]);
+/** Methods whose EVERY string argument is a key. */
+const ALL_KEYS = new Set(['mget', 'del', 'exists', 'unlink']);
+
+/**
+ * The custom-site demo's key namespace (docs/plans/custom-site-demo.md).
+ *
+ * On a demo deployment every key is rewritten to `demo:<token>:<key>` for the
+ * prospect the request belongs to (`demo:anon:` before sign-in), so each
+ * prospect's simulated league — MFL overlay, contract declarations, watch
+ * list, every cache — is private to them. Applied at this one choke point so
+ * no feature has to remember it. Demo LINK records (`demo:tokens:*`) are the
+ * one deliberate exception: they are looked up before anyone is signed in.
+ *
+ * The prefix is read per call, never captured: this client is memoized for
+ * the process and serves every prospect.
+ */
+export function namespaceForDemo(client: RedisClient): RedisClient {
+  const scoped = (key: unknown) =>
+    typeof key === 'string' && !key.startsWith('demo:tokens:') ? `${demoKeyPrefix()}${key}` : key;
+  const wrap = <T extends object>(target: T): T =>
+    new Proxy(target, {
+      get(obj, prop, receiver) {
+        const value = Reflect.get(obj, prop, receiver);
+        if (typeof value !== 'function' || typeof prop !== 'string') return value;
+        if (prop === 'pipeline' || prop === 'multi') {
+          return (...args: unknown[]) => wrap(value.apply(obj, args));
+        }
+        if (KEY_FIRST.has(prop)) {
+          return (key: unknown, ...rest: unknown[]) => value.call(obj, scoped(key), ...rest);
+        }
+        if (ALL_KEYS.has(prop)) {
+          return (...keys: unknown[]) => value.apply(obj, keys.flat().map(scoped));
+        }
+        if (prop === 'eval' || prop === 'evalsha') {
+          return (script: unknown, keys: unknown[] = [], args: unknown[] = []) =>
+            value.call(obj, script, keys.map(scoped), args);
+        }
+        if (prop === 'scan') {
+          return async (cursor: unknown, opts: { match?: string; count?: number } = {}) => {
+            const prefix = demoKeyPrefix();
+            const [next, keys] = (await value.call(obj, cursor, { ...opts, match: `${prefix}${opts.match ?? '*'}` })) as [
+              string,
+              string[],
+            ];
+            return [next, keys.map((k) => (k.startsWith(prefix) ? k.slice(prefix.length) : k))];
+          };
+        }
+        return value.bind(obj);
+      },
+    });
+  return wrap(client);
+}
 let _warnedImportFailure = false;
 
 /**
@@ -141,7 +203,8 @@ export async function getRedis(): Promise<RedisClient | null> {
 
   try {
     const { Redis } = await import('@upstash/redis');
-    _redis = new Redis({ url, token }) as unknown as RedisClient;
+    const client = new Redis({ url, token }) as unknown as RedisClient;
+    _redis = isDemoDeploy() ? namespaceForDemo(client) : client;
     return _redis;
   } catch (err) {
     if (!_warnedImportFailure) {

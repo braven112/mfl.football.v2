@@ -53,6 +53,7 @@
 import theleagueConfig from '../data/theleague.config.json';
 import aflConfig from '../../data/afl-fantasy/afl.config.json';
 import bb1Config from '../../data/best-ball-1/bb1.config.json';
+import { keeperLeagueConfig } from './keeper-config';
 import type { LeagueSlug } from '../types/nav';
 import { getTeamColorPrimary, getTeamColorSecondary } from './team-colors';
 import { mixHex } from './nfl-team-colors';
@@ -129,6 +130,7 @@ const LEAGUE_TEAMS: Record<LeagueSlug, any[]> = {
   theleague: (theleagueConfig as any).teams ?? [],
   afl: (aflConfig as any).teams ?? [],
   bb1: (bb1Config as any).teams ?? [],
+  keeper: keeperLeagueConfig.teams,
 };
 
 /**

@@ -37,7 +37,7 @@ const throwback = ownsAFranchise
 
 <PreferencesPage
   prefs={prefs}
-  title="Preferences | AFL Fantasy"
+  title={`Preferences | ${getLeagueBySlug('afl-fantasy')?.name === 'AFL' ? 'AFL Fantasy' : getLeagueBySlug('afl-fantasy')?.name}`}
   pathname={pathname}
   sundayTicketPath={sundayTicketPath}
   justSaved={hasPreferenceParams(Astro.url)}

@@ -37,6 +37,7 @@
 import { exec, execSync } from 'child_process';
 import { readFileSync } from 'fs';
 import { pathToFileURL } from 'url';
+import { isDemoEnv } from '../src/utils/demo-isolation-core.mjs';
 
 const SEQUENTIAL = [
   { name: 'build:styles', cmd: 'pnpm run build:styles' },
@@ -225,6 +226,17 @@ const run = (label, cmd) => {
 
 async function main() {
 const totalStart = Date.now();
+
+// The custom-site demo (docs/plans/custom-site-demo.md) must never run these
+// steps: update:salary:all live-fetches the REAL league's rosters on every
+// build, and a full run adds trade-bait and lineups. The demo pipeline replaces
+// the whole prebuild — and unlike these steps, its failures are fatal, because
+// a half-run demo build is one that may still be carrying real data.
+if (isDemoEnv(process.env)) {
+  console.log('[prebuild] DEMO: replacing the prebuild with scripts/demo/build-demo-data.mjs');
+  execSync('node --import ./scripts/demo/lib/guard-preload.mjs scripts/demo/build-demo-data.mjs', { stdio: 'inherit' });
+  return;
+}
 
 const slimReason = resolveSlimReason();
 /** Drop the steps this build does not need to run. */

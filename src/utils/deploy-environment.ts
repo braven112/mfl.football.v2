@@ -64,6 +64,7 @@
  */
 
 import { isStagingHost, stagingHosts } from '../config/leagues-data.mjs';
+import { isDemoEnv } from './demo-isolation-core.mjs';
 
 export { isStagingHost, stagingHosts };
 
@@ -109,6 +110,7 @@ function vercelEnv(): string | undefined {
 
 /** Human-readable label for messages and the banner. */
 export function deployEnvLabel(): string {
+  if (isDemoDeploy()) return 'demo';
   return vercelEnv() ?? 'local';
 }
 
@@ -121,6 +123,18 @@ export function deployEnvLabel(): string {
 export function isProductionDeploy(): boolean {
   const env = vercelEnv();
   return env === undefined || env === 'production';
+}
+
+export { DEMO_BRANCH } from './demo-isolation-core.mjs';
+
+/**
+ * Is this the custom-site demo — a deployment prospects use, holding only
+ * fictional league data, that must never touch a real league? `DEMO_PROFILE`
+ * set, or built from the `demo` branch (see demo-isolation-core.mjs). Read at
+ * call time, like `vercelEnv()`.
+ */
+export function isDemoDeploy(): boolean {
+  return isDemoEnv(process.env);
 }
 
 /**
@@ -143,7 +157,10 @@ export function isNonProductionDeploy(): boolean {
  * @throws {OutboundBlockedError}
  */
 export function assertOutboundAllowed(action: OutboundAction): void {
-  if (isProductionDeploy()) return;
+  // The demo is checked independently of VERCEL_ENV: it is a preview today, but
+  // "the demo cannot write" must not hang on which environment it happens to be
+  // served from.
+  if (isProductionDeploy() && !isDemoDeploy()) return;
   const error = new OutboundBlockedError(action);
   console.warn(`[deploy-guard] ${error.message}`);
   throw error;
@@ -154,7 +171,7 @@ export function assertOutboundAllowed(action: OutboundAction): void {
  * a fan-out that should skip one recipient, say, instead of aborting.
  */
 export function outboundAllowed(): boolean {
-  return isProductionDeploy();
+  return isProductionDeploy() && !isDemoDeploy();
 }
 
 /**
@@ -177,5 +194,5 @@ export function isStagingRequest(url: URL | { hostname: string }): boolean {
  * content on staging.theleague.us is a genuine SEO problem for theleague.us.
  */
 export function shouldBlockIndexing(url: URL | { hostname: string }): boolean {
-  return isNonProductionDeploy() || isStagingRequest(url);
+  return isNonProductionDeploy() || isDemoDeploy() || isStagingRequest(url);
 }

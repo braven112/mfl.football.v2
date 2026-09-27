@@ -8,19 +8,28 @@
  * getConferenceLogo in afl-conference.ts.
  */
 
-export type AflTier = 'Premier League' | 'D-League';
+/**
+ * A tier name. The AFL has two (Premier League, D-League); the tier list is
+ * the league config's `tierCompetition.tiers`, so a league with more — the
+ * custom-site demo's big league adds an "A League" — names its own.
+ */
+export type AflTier = string;
 
 export const PREMIER_LEAGUE: AflTier = 'Premier League';
 export const D_LEAGUE: AflTier = 'D-League';
 
+/** "A League" → "a-league": the file name of a tier the AFL has no mark for. */
+const tierSlug = (tierName: string) => tierName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
 /**
- * Resolve the tier logo path (served from public/). Anything that isn't
- * "Premier League" falls back to the D-League mark.
+ * Resolve the tier logo path (served from public/). The AFL's two tiers keep
+ * their marks; any other tier reads /assets/afl/tiers/<slug>.svg, which the
+ * league that declares it supplies.
  */
 export function getTierLogo(tierName: string): string {
-  return tierName === PREMIER_LEAGUE
-    ? '/assets/afl/premier.svg'
-    : '/assets/afl/dleague.svg';
+  if (tierName === PREMIER_LEAGUE) return '/assets/afl/premier.svg';
+  if (tierName === D_LEAGUE || !tierName) return '/assets/afl/dleague.svg';
+  return `/assets/afl/tiers/${tierSlug(tierName)}.svg`;
 }
 
 /**
@@ -31,7 +40,7 @@ export function getTierLogo(tierName: string): string {
  * the swap happens client-side via html.dark.
  */
 export function getTierLogoDark(tierName: string): string {
-  return tierName === PREMIER_LEAGUE
-    ? '/assets/afl/premier-dark.svg'
-    : '/assets/afl/dleague-dark.svg';
+  if (tierName === PREMIER_LEAGUE) return '/assets/afl/premier-dark.svg';
+  if (tierName === D_LEAGUE || !tierName) return '/assets/afl/dleague-dark.svg';
+  return `/assets/afl/tiers/${tierSlug(tierName)}-dark.svg`;
 }

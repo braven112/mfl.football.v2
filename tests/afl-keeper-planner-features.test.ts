@@ -10,7 +10,7 @@ import { readFileSync } from 'node:fs';
 import { buildKeeperPlannerStats } from '../src/utils/afl-keeper-planner-stats';
 
 const SRC = readFileSync('src/components/afl-fantasy/KeeperPlanner.astro', 'utf-8');
-const ROSTERS_SRC = readFileSync('src/pages/afl-fantasy/rosters.astro', 'utf-8');
+const ROSTERS_SRC = readFileSync('src/components/afl-family/RostersPage.astro', 'utf-8');
 const FRONT_OFFICE_DATA_SRC = readFileSync('src/utils/front-office-keeper-data.ts', 'utf-8');
 
 describe('the age slider has real ages to filter on', () => {

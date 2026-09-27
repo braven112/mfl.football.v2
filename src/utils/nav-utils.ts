@@ -17,7 +17,8 @@
  */
 
 import type { NavLink, NavSection, LeagueSlug, NavTeamInfo } from '../types/nav';
-import { NAV_COOKIES } from '../types/nav';
+import { NAV_COOKIES, isAflFamily } from '../types/nav';
+import { isDemoEnv } from './demo-isolation-core.mjs';
 import { navConfig, getRouteEquivalence } from '../config/nav-config';
 import {
   ALL_LEAGUES,
@@ -45,8 +46,15 @@ const BEST_BALL_NAV_SLUGS = new Set<LeagueSlug>(
  * tagged for them.
  */
 function linkMatchesLeague(link: NavLink, league: LeagueSlug): boolean {
-  if (link.leagueOnly) return link.leagueOnly === league;
+  const allowlist = ALL_LEAGUES.find((l) => l.navSlug === league)?.navLinks;
+  if (allowlist) return allowlist.includes(link.id);
+  if (link.leagueOnly) return leagueOnlyMatches(link.leagueOnly, league);
   return !BEST_BALL_NAV_SLUGS.has(league);
+}
+
+/** An AFL-tagged link or section also belongs to an AFL-family league. */
+function leagueOnlyMatches(leagueOnly: LeagueSlug, league: LeagueSlug): boolean {
+  return leagueOnly === league || (leagueOnly === 'afl' && isAflFamily(league));
 }
 
 // ============================================================================
@@ -298,7 +306,7 @@ export function getLinkHref(
  * @returns Appropriate label for the league
  */
 export function getLinkLabel(link: NavLink, league: LeagueSlug): string {
-  if (league === 'afl' && link.labelAFL) {
+  if (isAflFamily(league) && link.labelAFL) {
     return link.labelAFL;
   }
   return link.label;
@@ -312,7 +320,7 @@ export function getLinkLabel(link: NavLink, league: LeagueSlug): string {
  * @returns Appropriate icon ID for the league
  */
 export function getLinkIcon(link: NavLink, league: LeagueSlug): string {
-  if (league === 'afl' && link.iconAFL) {
+  if (isAflFamily(league) && link.iconAFL) {
     return link.iconAFL;
   }
   return link.icon;
@@ -381,7 +389,7 @@ export function isSectionVisible(
   adminFranchiseIds: string[] = navConfig.adminFranchiseIds[league] ?? []
 ): boolean {
   // Check league restriction
-  if (section.leagueOnly && section.leagueOnly !== league) {
+  if (section.leagueOnly && !leagueOnlyMatches(section.leagueOnly, league)) {
     return false;
   }
 
@@ -632,7 +640,10 @@ export function getLeagueSwitchTargets(
   hideLeaguePrefix: boolean,
   hostname: string
 ): LeagueSwitchTarget[] {
-  return ALL_LEAGUES.filter((l) => l.navSlug !== currentLeague).map((l) => ({
+  // A custom-site demo deployment serves only the slots with a demo path —
+  // switching to any other league would land on a refused route.
+  const demo = isDemoEnv();
+  return ALL_LEAGUES.filter((l) => l.navSlug !== currentLeague && (!demo || !!l.demoPath)).map((l) => ({
     navSlug: l.navSlug,
     name: l.name,
     href: buildSwitchUrl(currentPath, l, hideLeaguePrefix, hostname),
@@ -781,7 +792,7 @@ export function clearMyTeamCookie(): void {
  */
 export function getMyTeamLeagueCookie(): LeagueSlug | null {
   const value = getCookie(NAV_COOKIES.MY_TEAM_LEAGUE);
-  if (value === 'theleague' || value === 'afl' || value === 'bb1') {
+  if (value === 'theleague' || value === 'afl' || value === 'bb1' || value === 'keeper') {
     return value;
   }
   return null;
@@ -824,7 +835,7 @@ export function parseMyTeamFromUrl(url: URL): string | null {
  */
 export function getLastViewedLeague(): LeagueSlug | null {
   const value = getCookie(NAV_COOKIES.NAV_LEAGUE);
-  if (value === 'theleague' || value === 'afl' || value === 'bb1') {
+  if (value === 'theleague' || value === 'afl' || value === 'bb1' || value === 'keeper') {
     return value;
   }
   return null;

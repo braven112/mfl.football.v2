@@ -25,6 +25,7 @@
  */
 import theleagueConfig from '../data/theleague.config.json';
 import aflConfig from '../../data/afl-fantasy/afl.config.json';
+import { keeperLeagueConfig } from './keeper-config';
 import { buildTeamIconDarkCss } from './team-icon-dark-css';
 import { buildCrestDarkStrokeCss, withStrokeColors } from './crest-dark-stroke-css';
 import {
@@ -57,6 +58,8 @@ export function buildAllTeamIconDarkCss(): string {
   return [
     buildTeamIconDarkCss(theleagueConfig.teams, { franchiseIconDir: THELEAGUE_ICON_DIR }),
     buildTeamIconDarkCss(aflConfig.teams, { franchiseIconDir: AFL_ICON_DIR }),
+    // The custom-site demo's keeper league — empty (so no CSS) outside a demo build.
+    buildTeamIconDarkCss(keeperLeagueConfig.teams, { franchiseIconDir: '/assets/keeper/icons' }),
     buildCrestDarkStrokeCss(withStrokeColors('theleague', theleagueConfig.teams), {
       franchiseIconDir: THELEAGUE_ICON_DIR,
     }),

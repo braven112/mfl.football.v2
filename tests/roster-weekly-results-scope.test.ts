@@ -24,7 +24,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const read = (p: string) => fs.readFileSync(path.join(process.cwd(), p), 'utf-8');
-const AFL = read('src/pages/afl-fantasy/rosters.astro');
+const AFL = read('src/components/afl-family/RostersPage.astro');
 const TL = read('src/pages/theleague/rosters.astro');
 
 describe('the AFL rosters page ships only its own players’ weekly results', () => {

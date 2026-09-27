@@ -1,0 +1,27 @@
+---
+/**
+ * The dynasty demo's front door: demo.mfl.football/dynasty/demo-start?t=<token>
+ * (docs/plans/custom-site-demo.md). 404 off the demo.
+ */
+import DemoStartPage from '../../components/shared/demo-start/DemoStartPage.astro';
+import leagueConfig from '../../data/theleague.config.json';
+import { isDemoDeploy } from '../../utils/deploy-environment';
+import { handleDemoStart } from '../../utils/demo-start';
+import { setTheLeaguePreference } from '../../utils/team-preferences';
+import { getLeagueBySlug } from '../../config/leagues';
+
+if (!isDemoDeploy()) return Astro.rewrite('/_not-found');
+
+const LEAGUE = getLeagueBySlug('theleague')!;
+const teams = leagueConfig.teams;
+const start = await handleDemoStart(Astro, LEAGUE, teams.map((t) => t.franchiseId), (id) => setTheLeaguePreference(Astro.cookies, id));
+if (start.redirect) return start.redirect;
+---
+
+<DemoStartPage
+  leagueName={LEAGUE.name}
+  blurb="This is a fictional salary-cap dynasty league with six seasons of history. Choose any franchise and you'll be signed in as its owner: set a lineup, pick up free agents, file waiver claims, propose trades and manage contracts. Nothing is sent to MyFantasyLeague, and only you see your moves."
+  teams={teams}
+  link={start.link}
+  token={start.token}
+/>

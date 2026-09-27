@@ -56,9 +56,14 @@ function getJWTSecret(): string {
  * Create a JWT token for session
  * Token expires in 90 days
  */
-export function createSessionToken(sessionData: Omit<SessionData, 'issuedAt' | 'expiresAt'>): string {
+export function createSessionToken(
+  sessionData: Omit<SessionData, 'issuedAt' | 'expiresAt'>,
+  options: { expiresAt?: number } = {},
+): string {
   const now = Math.floor(Date.now() / 1000);
-  const expiresIn = 90 * 24 * 60 * 60; // 90 days in seconds
+  // 90 days, unless the caller pins an earlier end — a custom-site demo
+  // session must die with its link (src/utils/demo-access.ts).
+  const expiresIn = options.expiresAt ? Math.max(0, options.expiresAt - now) : 90 * 24 * 60 * 60;
 
   const payload: JWTPayload = {
     ...sessionData,
@@ -154,8 +159,8 @@ export function getSessionTokenFromCookie(cookieHeader: string | null): string |
  * Secure: only sent over HTTPS
  * SameSite: prevents CSRF attacks
  */
-export function createSessionCookie(token: string, isDev: boolean = false): string {
-  const expiresDate = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toUTCString();
+export function createSessionCookie(token: string, isDev: boolean = false, expiresAt?: number): string {
+  const expiresDate = new Date(expiresAt ? expiresAt * 1000 : Date.now() + 90 * 24 * 60 * 60 * 1000).toUTCString();
 
   let cookie = `session_token=${token}; Path=/; Expires=${expiresDate}; HttpOnly; SameSite=Lax`;
 

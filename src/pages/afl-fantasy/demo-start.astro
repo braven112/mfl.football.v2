@@ -1,0 +1,28 @@
+---
+/**
+ * The big-league demo's front door: demo.mfl.football/bigleague/demo-start?t=<token>
+ * (docs/plans/custom-site-demo.md). The demo serves a fictional 96-team league
+ * in the AFL's slot. 404 off the demo.
+ */
+import DemoStartPage from '../../components/shared/demo-start/DemoStartPage.astro';
+import aflConfig from '../../../data/afl-fantasy/afl.config.json';
+import { isDemoDeploy } from '../../utils/deploy-environment';
+import { handleDemoStart } from '../../utils/demo-start';
+import { getLeagueBySlug } from '../../config/leagues';
+
+if (!isDemoDeploy()) return Astro.rewrite('/_not-found');
+
+const LEAGUE = getLeagueBySlug('afl-fantasy')!;
+const teams = aflConfig.teams as Array<{ franchiseId: string; name: string; icon?: string }>;
+// No preference cookie: the session is the team.
+const start = await handleDemoStart(Astro, LEAGUE, teams.map((t) => t.franchiseId), () => {});
+if (start.redirect) return start.redirect;
+---
+
+<DemoStartPage
+  leagueName={LEAGUE.name}
+  blurb="This is a fictional 96-team league: eight conferences of twelve, three tiers, and a redraft every season. Each conference crowns a champion, then the eight champions play for the overall title. Pick any team to set a lineup, work the waiver wire and propose trades — it all saves, and none of it reaches MyFantasyLeague."
+  teams={teams}
+  link={start.link}
+  token={start.token}
+/>

@@ -1,0 +1,201 @@
+---
+/**
+ * The custom-site demo's keeper league home (/keeper/, docs/plans/custom-site-
+ * demo.md, phase 4). The AFL's homepage is built around AFL-only machinery —
+ * its hero calendar, tiers, conference drafts — so this home is composed
+ * instead: the signed-in team, the tools a keeper league runs on, and the
+ * division standings through the same table every standings page uses.
+ *
+ * The route hands in the season's feeds (a glob cannot take a variable).
+ */
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import UnifiedStandingsTable from '../theleague/standings/StandingsTable.astro';
+import { COLUMNS, TIERING } from '../theleague/standings/standings-table-config';
+import { getDivisionStandings } from '../../utils/standings';
+import { resolveConfigForYear } from '../../utils/team-names';
+import { extractSeasonStructure, applySeasonStructure } from '../../utils/afl-structure';
+import { KEEPER_LIMIT } from '../../utils/afl-keeper-constants';
+import type { LeagueDefinition } from '../../config/leagues';
+
+interface Props {
+  league: LeagueDefinition;
+  config: any;
+  year: number;
+  standingsFeed: any;
+  leagueFeed: unknown;
+  /** The signed-in owner's franchise in this league, or null. */
+  franchiseId: string | null;
+}
+const { league, config, year, standingsFeed, leagueFeed, franchiseId } = Astro.props;
+const prefix = `/${league.slug}`;
+
+const franchises = standingsFeed?.leagueStandings?.franchise ?? [];
+// The config is loosely typed on purpose: it is the demo generator's file,
+// read through a glob. The standings helpers take the structured shape.
+const seasonConfig: any = applySeasonStructure(
+  resolveConfigForYear(config as any, year) as any,
+  extractSeasonStructure(leagueFeed as any),
+);
+const divisions = franchises.length ? getDivisionStandings(franchises, seasonConfig, { preserveFeedOrder: true }) : [];
+
+const team = franchiseId ? config.teams.find((t: any) => t.franchiseId === franchiseId) : null;
+const row = franchiseId ? franchises.find((f: any) => f.id === franchiseId) : null;
+const rank = row ? franchises.indexOf(row) + 1 : null;
+
+const tools = [
+  { href: `${prefix}/rosters?view=planner`, title: 'Keeper Planner', blurb: `Pick the ${KEEPER_LIMIT} you keep; the rest go back to the draft pool.` },
+  { href: `${prefix}/lineup`, title: 'Set Lineup', blurb: 'Tap a slot, choose a starter, submit.' },
+  { href: `${prefix}/players`, title: 'Free Agents', blurb: 'Research the pool and file a waiver claim.' },
+  { href: `${prefix}/front-office/trade-builder`, title: 'Trade Builder', blurb: 'Build an offer and send it.' },
+  { href: `${prefix}/front-office`, title: 'Front Office', blurb: 'Your roster at a glance: ages, positions, picks.' },
+  { href: `${prefix}/standings`, title: 'Standings', blurb: 'Divisions, playoff seeding, every past season.' },
+];
+---
+
+<TheLeagueLayout title={league.name}>
+  <div class="kh">
+    <header class="kh__hero">
+      <img class="kh__mark" src="/assets/logos/keeper-logo.svg" alt="" width="72" height="72" />
+      <div>
+        <h1 class="kh__title">{league.name}</h1>
+        <p class="kh__sub">
+          Twelve teams, no salary cap, no contracts. Each offseason every team keeps {KEEPER_LIMIT} and re-drafts the rest.
+        </p>
+      </div>
+    </header>
+
+    {team && (
+      <section class="kh__team" aria-label="Your team">
+        <img class="kh__crest" src={team.icon} alt="" width="56" height="56" />
+        <div class="kh__team-text">
+          <h2 class="kh__team-name">{team.name}</h2>
+          {row && (
+            <p class="kh__team-line">
+              {row.h2hw}-{row.h2hl}{Number(row.h2ht) > 0 ? `-${row.h2ht}` : ''} · {rank ? `#${rank} in the league` : ''} · {row.pf} points for
+            </p>
+          )}
+        </div>
+        <a class="kh__team-cta" href={`${prefix}/rosters?franchise=${team.franchiseId}`}>Your roster →</a>
+      </section>
+    )}
+
+    <section class="kh__tools" aria-label="League tools">
+      {tools.map((t) => (
+        <a class="kh__tool" href={t.href}>
+          <span class="kh__tool-title">{t.title}</span>
+          <span class="kh__tool-blurb">{t.blurb}</span>
+        </a>
+      ))}
+    </section>
+
+    {divisions.length > 0 && (
+      <section class="kh__standings" aria-label="Standings">
+        <h2 class="kh__section-title">{year} standings</h2>
+        {divisions.map((division) => (
+          <UnifiedStandingsTable
+            teams={division.teams}
+            columns={COLUMNS.division}
+            teamCell="banner"
+            teamCellFallback="name"
+            accent="afl-red"
+            badgeSeeding={TIERING.none}
+            year={year}
+            preferredTeamId={franchiseId ?? undefined}
+            rosterBaseUrl={`${prefix}/rosters`}
+            header={{ kind: 'division', title: division.name }}
+          />
+        ))}
+      </section>
+    )}
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .kh {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 1.5rem 1rem 3rem;
+    display: grid;
+    gap: 1.5rem;
+  }
+  .kh__hero {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+  }
+  .kh__mark {
+    flex: none;
+  }
+  .kh__title {
+    margin: 0;
+    font-size: 1.75rem;
+  }
+  .kh__sub {
+    margin: 0.25rem 0 0;
+    color: var(--content-text-muted);
+  }
+  .kh__team {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    padding: 1rem;
+    background: var(--card-surface);
+    border: 1px solid var(--content-border);
+    border-left: 4px solid var(--league-accent);
+    border-radius: var(--radius-lg);
+  }
+  .kh__team-text {
+    flex: 1;
+    min-width: 0;
+  }
+  .kh__team-name {
+    margin: 0;
+    font-size: 1.25rem;
+  }
+  .kh__team-line {
+    margin: 0.25rem 0 0;
+    color: var(--content-text-muted);
+  }
+  .kh__team-cta {
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .kh__tools {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.75rem;
+  }
+  .kh__tool {
+    display: grid;
+    gap: 0.25rem;
+    padding: 0.875rem 1rem;
+    background: var(--card-surface);
+    border: 1px solid var(--content-border);
+    border-radius: var(--radius-lg);
+    color: inherit;
+    text-decoration: none;
+  }
+  .kh__tool:hover {
+    border-color: var(--league-accent);
+  }
+  .kh__tool-title {
+    font-weight: 700;
+  }
+  .kh__tool-blurb {
+    font-size: 0.875rem;
+    color: var(--content-text-muted);
+  }
+  .kh__section-title {
+    margin: 0 0 0.75rem;
+    font-size: 1.25rem;
+  }
+  .kh__standings {
+    display: grid;
+    gap: 1rem;
+  }
+  @media (max-width: 600px) {
+    .kh__team {
+      flex-wrap: wrap;
+    }
+  }
+</style>

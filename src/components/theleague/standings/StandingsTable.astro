@@ -50,7 +50,15 @@ const {
   accent = 'league-blue',
   tierName = '',
   promotionCutoff,
+  tierMovement,
 } = Astro.props as StandingsTableProps;
+const teamCount = teams.length;
+// A league that declares its own promotion/relegation counts (the custom-site
+// demo's three-tier big league) gets bands computed from them; the AFL's own
+// two tiers keep the fixed bands below.
+const movedUp = (rank: number) => !!tierMovement && tierMovement.promote > 0 && rank <= tierMovement.promote;
+const movedDown = (rank: number) =>
+  !!tierMovement && tierMovement.relegate > 0 && rank > teamCount - tierMovement.relegate;
 
 // The tier variant is defined by its column set (rank circle + prize), not by
 // the team-cell mode — deriving it from the columns keeps layout/skin selection
@@ -188,6 +196,12 @@ const TIER_PRIZES: Record<string, string[]> = (() => {
   return table;
 })();
 function tierRowClass(rank: number): string {
+  if (tierMovement) {
+    if (tierMovement.promote === 0 && rank <= 3) return ['gold-tier', 'silver-tier', 'bronze-tier'][rank - 1];
+    if (movedUp(rank)) return rank === 1 ? 'gold-tier' : 'second-place';
+    if (movedDown(rank)) return 'relegated';
+    return '';
+  }
   if (tierName === 'Premier League') {
     if (rank === 1) return 'gold-tier';
     if (rank === 2) return 'silver-tier';
@@ -204,6 +218,11 @@ function tierRowClass(rank: number): string {
   return '';
 }
 function tierBorderClass(rank: number): string {
+  if (tierMovement) {
+    if (tierMovement.promote > 0 && rank === tierMovement.promote) return 'border-below-green';
+    if (tierMovement.relegate > 0 && rank === teamCount - tierMovement.relegate) return 'border-below-relegation';
+    return '';
+  }
   if (tierName === 'Premier League') {
     if (rank === 8) return 'border-below';
     if (rank === 10) return 'border-below-relegation';
@@ -400,7 +419,13 @@ const bannerLabelFor = (name: string) =>
                         </div>
                       ))}
 
-                    {col.key === 'prize' && (
+                    {col.key === 'prize' && tierMovement && (
+                      <>
+                        {movedUp(rank) && <span class="promo-arrow cutoff-promoted">⬆</span>}
+                        {movedDown(rank) && <span class="promo-arrow pl-rank-12">⬇</span>}
+                      </>
+                    )}
+                    {col.key === 'prize' && !tierMovement && (
                       <>
                         {TIER_PRIZES[tierName]?.[index] && <span class="prize-amount">{TIER_PRIZES[tierName][index]}</span>}
                         {tierName === 'D-League' && rank === 2 && <span class="promo-arrow rank-2">⬆</span>}

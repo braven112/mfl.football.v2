@@ -22,6 +22,7 @@
  * gates inclusion on isOwner, so unauthorized owners never see this UI.
  */
 
+import { getLeagueBySlug } from '../../config/leagues';
 import fs from 'node:fs';
 import path from 'node:path';
 import PlayerCell from '../theleague/PlayerCell.astro';
@@ -87,9 +88,11 @@ export interface Props {
    * <AFLActionModal />; without it the kebab is inert rather than broken.
    */
   showActions?: boolean;
+  /** The league's registry dataPath — the AFL's by default (the demo's keeper slot passes its own). */
+  dataPath?: string;
 }
 
-const { franchiseId, year, roster, draftPicks = [], showActions = false } = Astro.props;
+const { franchiseId, year, roster, draftPicks = [], showActions = false, dataPath = getLeagueBySlug('afl-fantasy')!.dataPath } = Astro.props;
 
 // Position group order for the cut pool sort
 const POSITION_ORDER = ['QB', 'RB', 'WR', 'TE', 'PK', 'Def', 'DEF'];
@@ -168,7 +171,7 @@ const beforeFinalizeWindow = !!finalizeWindowStart && now < finalizeWindowStart;
 // dwelling on a deadline that's now old news. isDraftConducted flips true at
 // the first made pick (src/utils/draft-utils.ts), same signal the draft
 // pages already use to tell "upcoming order" from "history".
-const draftResultsPath = path.resolve(process.cwd(), `data/afl-fantasy/mfl-feeds/${year}/draftResults.json`);
+const draftResultsPath = path.resolve(process.cwd(), `${dataPath}/mfl-feeds/${year}/draftResults.json`);
 let draftConducted = false;
 try {
   if (fs.existsSync(draftResultsPath)) {

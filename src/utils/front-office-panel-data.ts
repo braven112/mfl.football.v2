@@ -157,6 +157,8 @@ export async function buildFrontOfficePanelData(args: {
     viewerFranchiseId,
     viewerMflCookie,
     leagueId: league.id,
+    leagueSlug: leagueSlug === 'keeper' ? 'keeper' : 'afl-fantasy',
+    dataPath: league.dataPath,
   });
   return {
     leagueSlug,

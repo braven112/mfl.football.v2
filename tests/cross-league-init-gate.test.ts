@@ -82,12 +82,17 @@ const PAIRS: Record<string, GuardedPage[]> = {
       markerBinding: `const PAGE_LEAGUE_SLUG = getLeagueBySlug('theleague')!.slug;`,
     },
     {
+      // The AFL's lineup is the AFL-FAMILY page component, shared with the
+      // custom-site demo's keeper slot: one controller for both, so its gate
+      // names the family marker and it reads its league off the page it found
+      // (the route binds `league` to getLeagueBySlug('afl-fantasy')). It still
+      // must never match TheLeague's page, which is what this pair pins.
       label: 'the AFL',
-      file: 'src/pages/afl-fantasy/lineup.astro',
+      file: 'src/components/afl-family/LineupPage.astro',
       slug: 'afl-fantasy',
-      gate: `if (!document.querySelector('.lineup-page[data-league="afl-fantasy"]')) return;`,
-      marker: '<div class="lineup-page" data-league={PAGE_LEAGUE_SLUG}>',
-      markerBinding: `const PAGE_LEAGUE_SLUG = getLeagueBySlug('afl-fantasy')!.slug;`,
+      gate: `const pageRoot = document.querySelector<HTMLElement>('.lineup-page[data-controller="afl-family"]');`,
+      marker: '<div class="lineup-page" data-league={PAGE_LEAGUE_SLUG} data-controller="afl-family">',
+      markerBinding: `const PAGE_LEAGUE_SLUG = league.slug;`,
     },
   ],
   Players: [
@@ -101,13 +106,15 @@ const PAIRS: Record<string, GuardedPage[]> = {
       markerBinding: `const theLeagueDef = getLeagueBySlug('theleague');`,
     },
     {
+      // The AFL-family players page, shared with the demo's keeper slot — see
+      // the lineup entry above for why its gate names the family marker.
       label: 'the AFL',
-      file: 'src/pages/afl-fantasy/players.astro',
+      file: 'src/components/afl-family/PlayersPage.astro',
       slug: 'afl-fantasy',
-      gate: `const table = document.querySelector('#players-table[data-league="afl-fantasy"]');`,
+      gate: `const table = document.querySelector('#players-table[data-controller="afl-family"]');`,
       forbidden: `const table = document.getElementById('players-table');`,
-      marker: '<table class="players-table" id="players-table" data-league={aflLeague.slug}>',
-      markerBinding: `const aflLeague = getLeagueBySlug('afl-fantasy')!;`,
+      marker: '<table class="players-table" id="players-table" data-league={aflLeague.slug} data-controller="afl-family">',
+      markerBinding: `const { league: aflLeague, freeAgentsData, leagueFeedModules, calendarModules, logoSrc } = Astro.props;`,
     },
   ],
   Rosters: [
@@ -124,16 +131,18 @@ const PAIRS: Record<string, GuardedPage[]> = {
       markerBinding: `const PAGE_LEAGUE_SLUG = getLeagueBySlug('theleague')!.slug;`,
     },
     {
+      // The AFL-family rosters page, shared with the demo's keeper slot — see
+      // the lineup entry above for why its gate names the family marker.
       label: 'the AFL',
-      file: 'src/pages/afl-fantasy/rosters.astro',
+      file: 'src/components/afl-family/RostersPage.astro',
       slug: 'afl-fantasy',
-      gate: `const pageRoot = document.querySelector<HTMLElement>('.roster-page[data-league="afl-fantasy"]');`,
+      gate: `const pageRoot = document.querySelector<HTMLElement>('.roster-page[data-controller="afl-family"]');`,
       // The direction that was really broken: this controller ran on
       // TheLeague's rosters page after an AFL -> TheLeague swap and bound a
       // second player-modal trigger onto it, reading the wrong league's data.
       forbidden: `const pageRoot = document.querySelector<HTMLElement>('.roster-page');`,
-      marker: '<section class="roster-page" data-league={PAGE_LEAGUE_SLUG} data-initial-view={initialView}>',
-      markerBinding: `const PAGE_LEAGUE_SLUG = getLeagueBySlug('afl-fantasy')!.slug;`,
+      marker: '<section class="roster-page" data-league={PAGE_LEAGUE_SLUG} data-controller="afl-family" data-initial-view={initialView}>',
+      markerBinding: `const PAGE_LEAGUE_SLUG = aflLeague.slug;`,
     },
   ],
 };

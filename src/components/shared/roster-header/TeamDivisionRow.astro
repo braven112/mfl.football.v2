@@ -50,6 +50,13 @@ const { groups, activeFranchiseId, viewerFranchiseId, teamHref, prefetch = false
 // A conference rail is only meaningful when there is more than one to tell
 // apart; a single-table league renders the divisions with no outer label.
 const showConferences = groups.length > 1;
+/**
+ * More than two conferences (the demo's big league has eight) cannot all be
+ * side rails: eight rails eat a phone's row and the opened conference lands
+ * off-screen. They become a wrapping row of chips instead, with the open
+ * conference's crests on their own line below.
+ */
+const manyConferences = groups.length > 2;
 
 /**
  * Which conference opens. `groups` already arrives in the viewer's own order
@@ -62,7 +69,7 @@ const openIndex = 0;
 const radioName = `rhdr-conf-${Math.random().toString(36).slice(2, 9)}`;
 ---
 
-<nav class="rhdr-teams" aria-label="Switch team">
+<nav class:list={['rhdr-teams', { 'rhdr-teams--many': manyConferences }]} aria-label="Switch team">
   {/* ONE CONFERENCE AT A TIME, and no client script.
       Twenty-four crests plus six division labels do not fit a desktop column,
       so the row used to scroll sideways and the last division was cut off the
@@ -72,21 +79,25 @@ const radioName = `rhdr-conf-${Math.random().toString(36).slice(2, 9)}`;
       pins that), and radios are what enforce "exactly one open" without any.
       Rendered only when there IS more than one conference, so TheLeague's
       single table is untouched. */}
-  {showConferences && groups.map((group, index) => (
-    <input
-      type="radio"
-      name={radioName}
-      id={`${radioName}-${index}`}
-      class="rhdr-teams__radio"
-      checked={index === openIndex}
-      aria-label={`Show ${group.conferenceName}`}
-    />
-  ))}
   {groups.map((group, index) => (
     <div
       class="rhdr-teams__conf"
       style={group.conferenceColor ? `--rhdr-conf: ${group.conferenceColor};` : undefined}
     >
+      {/* The radio for this conference, sharing one name with the others,
+          with the rail below as its label. It sits INSIDE its conference so `:has()` pairs the two for any number of
+          conferences — the AFL has two, the demo's big league eight, and a
+          selector list written out per position stopped at two. */}
+      {showConferences && (
+        <input
+          type="radio"
+          name={radioName}
+          id={`${radioName}-${index}`}
+          class="rhdr-teams__radio"
+          checked={index === openIndex}
+          aria-label={`Show ${group.conferenceName}`}
+        />
+      )}
       {showConferences && group.conferenceName && (
         <label
           class:list={['rhdr-teams__conflabel', { 'is-mine': group.divisions.some((division) =>
@@ -138,9 +149,9 @@ const radioName = `rhdr-conf-${Math.random().toString(36).slice(2, 9)}`;
 </nav>
 
 <style>
-  /* The radios live at the start of the nav so `~` can reach every conference
-     after them. Visually hidden, never `display: none` — that would drop them
-     from the tab order and make the rails unreachable by keyboard. */
+  /* Each radio lives inside its own conference. Visually hidden, never
+     `display: none` — that would drop them from the tab order and make the
+     rails unreachable by keyboard. */
   .rhdr-teams__radio {
     position: absolute;
     width: 1px;
@@ -149,13 +160,10 @@ const radioName = `rhdr-conf-${Math.random().toString(36).slice(2, 9)}`;
     overflow: hidden;
     clip-path: inset(50%);
   }
-  /* nth-of-type counts the radios; nth-child would count the conferences too. */
-  .rhdr-teams__radio:nth-of-type(1):checked ~ .rhdr-teams__conf:nth-of-type(1) .rhdr-teams__divisions,
-  .rhdr-teams__radio:nth-of-type(2):checked ~ .rhdr-teams__conf:nth-of-type(2) .rhdr-teams__divisions {
+  .rhdr-teams__conf:has(> .rhdr-teams__radio:checked) .rhdr-teams__divisions {
     display: flex;
   }
-  .rhdr-teams__radio:focus-visible + .rhdr-teams__conf .rhdr-teams__conflabel,
-  .rhdr-teams__radio:focus-visible ~ .rhdr-teams__conf .rhdr-teams__conflabel {
+  .rhdr-teams__radio:focus-visible + .rhdr-teams__conflabel {
     outline: 2px solid var(--page-text);
     outline-offset: -3px;
   }
@@ -221,8 +229,7 @@ const radioName = `rhdr-conf-${Math.random().toString(36).slice(2, 9)}`;
   /* The OPEN conference is at full strength; the collapsed one is dimmed.
      That, plus which side the crests are on, is what says which is which —
      the colour says WHICH conference, the opacity says which is showing. */
-  .rhdr-teams__radio:nth-of-type(1):checked ~ .rhdr-teams__conf:nth-of-type(1) .rhdr-teams__conflabel,
-  .rhdr-teams__radio:nth-of-type(2):checked ~ .rhdr-teams__conf:nth-of-type(2) .rhdr-teams__conflabel {
+  .rhdr-teams__radio:checked + .rhdr-teams__conflabel {
     opacity: 1;
   }
   .rhdr-teams__conflabel:hover { opacity: 0.85; }
@@ -245,8 +252,7 @@ const radioName = `rhdr-conf-${Math.random().toString(36).slice(2, 9)}`;
   /* A collapsed conference is its RAIL and nothing else — `flex: 1 0 auto`
      kept its share of the row and left a dead band between the two rails. */
   .rhdr-teams:has(.rhdr-teams__radio) .rhdr-teams__conf { flex: none; }
-  .rhdr-teams__radio:nth-of-type(1):checked ~ .rhdr-teams__conf:nth-of-type(1),
-  .rhdr-teams__radio:nth-of-type(2):checked ~ .rhdr-teams__conf:nth-of-type(2) {
+  .rhdr-teams:has(.rhdr-teams__radio) .rhdr-teams__conf:has(> .rhdr-teams__radio:checked) {
     flex: 1 0 auto;
   }
 
@@ -378,6 +384,39 @@ const radioName = `rhdr-conf-${Math.random().toString(36).slice(2, 9)}`;
   @media (max-width: 640px) {
     .rhdr-teams__crests { gap: 1.35rem; }
     .rhdr-teams__division { padding: 0.6rem 0.95rem; }
+  }
+
+  /* Many conferences: chips on top, the open conference's crests below.
+     `display: contents` lifts each conference's label and divisions into the
+     nav's own wrapping flex row; `order` puts every chip before the one open
+     set of divisions, which takes a full line and scrolls on its own. */
+  .rhdr-teams--many {
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    padding: 0.5rem 0.5rem 0;
+    overflow-x: visible;
+  }
+  .rhdr-teams--many .rhdr-teams__conf { display: contents; }
+  .rhdr-teams--many .rhdr-teams__conf + .rhdr-teams__conf { border-left: 0; }
+  .rhdr-teams--many .rhdr-teams__conflabel {
+    order: 0;
+    writing-mode: horizontal-tb;
+    transform: none;
+    padding: 0.3rem 0.6rem;
+    border-radius: 999px;
+    letter-spacing: 0.1em;
+  }
+  .rhdr-teams--many .rhdr-teams__conflabel.is-mine {
+    box-shadow: inset 0 -3px 0 var(--page-text);
+  }
+  .rhdr-teams--many .rhdr-teams__divisions {
+    order: 1;
+    flex: 1 0 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    margin: 0 -0.5rem;
+    border-top: 1px solid var(--content-border-color);
   }
 
   @media (prefers-reduced-motion: reduce) {

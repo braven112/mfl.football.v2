@@ -13,7 +13,17 @@
 /**
  * Supported league identifiers
  */
-export type LeagueSlug = 'theleague' | 'afl' | 'bb1';
+export type LeagueSlug = 'theleague' | 'afl' | 'bb1' | 'keeper';
+
+/**
+ * The custom-site demo's keeper league (`keeper`, registered only on a demo
+ * deployment) is built from the AFL's pages, so AFL-tagged nav links, labels
+ * and icons apply to it too. Use this, not `=== 'afl'`, where a branch means
+ * "an AFL-shaped league" rather than "the AFL itself".
+ */
+export function isAflFamily(league: LeagueSlug | null | undefined): boolean {
+  return league === 'afl' || league === 'keeper';
+}
 
 /**
  * Link visibility modes

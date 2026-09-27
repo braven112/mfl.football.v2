@@ -31,7 +31,7 @@ const root = resolve(__dirname, '..');
 const read = (p: string) => readFileSync(resolve(root, p), 'utf8');
 
 const THELEAGUE = 'src/pages/theleague/players.astro';
-const AFL = 'src/pages/afl-fantasy/players.astro';
+const AFL = 'src/components/afl-family/PlayersPage.astro';
 
 describe('free agents are derived from a LIVE roster read', () => {
   it("TheLeague's players page reads the live roster cache", () => {

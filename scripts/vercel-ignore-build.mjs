@@ -56,6 +56,15 @@ export const SKIP = 0;
  */
 export const STAGING_BRANCH = 'staging';
 
+/**
+ * The branch the custom-site demo (`*.demo.mfl.football`) is aliased to — the
+ * same situation as STAGING_BRANCH, a pinned site that must not go stale, and
+ * the only other exemption. Must equal `DEMO_BRANCH` in
+ * src/utils/deploy-environment.ts (pinned by tests/demo-isolation.test.ts).
+ * See docs/plans/custom-site-demo.md.
+ */
+export const DEMO_BRANCH = 'demo';
+
 const GITHUB_API = 'https://api.github.com';
 
 /**
@@ -91,6 +100,9 @@ export async function decide(env = process.env, fetchImpl = globalThis.fetch) {
   // call so a GitHub outage can never stop a test-site deploy.
   if (ref === STAGING_BRANCH) {
     return build(`branch is ${STAGING_BRANCH} (test-site alias target)`);
+  }
+  if (ref === DEMO_BRANCH) {
+    return build(`branch is ${DEMO_BRANCH} (demo-site alias target)`);
   }
 
   const base = env.GITHUB_API_BASE || GITHUB_API;

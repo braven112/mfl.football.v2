@@ -104,6 +104,8 @@ export interface RosterHeaderSkin {
 const BAND_SLUG: Partial<Record<CanonicalLeagueSlug, LeagueSlug>> = {
   theleague: 'theleague',
   'afl-fantasy': 'afl',
+  // The custom-site demo's keeper slot — its franchises, from its own config.
+  keeper: 'keeper',
 };
 
 /**

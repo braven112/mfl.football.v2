@@ -1,0 +1,23 @@
+---
+/**
+ * Custom-site demo leads — admin route (docs/plans/custom-site-demo.md).
+ * Commissioner/admin only; the demo deployment has no such page. The page
+ * itself is src/components/shared/demo-leads/DemoLeadsPage.astro.
+ */
+import DemoLeadsPage from '../../../components/shared/demo-leads/DemoLeadsPage.astro';
+import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
+import { loginUrlForRequest, forbiddenPathFor } from '../../../utils/login-redirect';
+import { getLeagueBySlug } from '../../../config/leagues';
+import { isDemoDeploy } from '../../../utils/deploy-environment';
+import { listDemoLeads } from '../../../utils/demo-leads-store';
+
+const league = getLeagueBySlug('theleague')!;
+if (isDemoDeploy()) return Astro.rewrite('/_not-found');
+const user = getAuthUser(Astro.request);
+if (!user) return Astro.redirect(loginUrlForRequest(Astro, league));
+if (!isCommissionerOrAdmin(user)) return Astro.rewrite(forbiddenPathFor(league));
+
+const leads = await listDemoLeads();
+---
+
+<DemoLeadsPage leads={leads} leagueSlug={league.slug} />

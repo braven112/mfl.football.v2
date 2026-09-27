@@ -1,0 +1,29 @@
+---
+/**
+ * The custom-site demo's keeper league home — thin route wrapper around
+ * components/keeper/KeeperHomePage. Off the demo this slot does not exist
+ * (middleware 404).
+ */
+import KeeperHomePage from '../../components/keeper/KeeperHomePage.astro';
+import { feedsByYear } from '../../utils/afl-family-standings';
+import { keeperConfig, keeperLeague } from '../../utils/keeper-slot';
+import { getAuthUser, franchiseIdForLeague } from '../../utils/auth';
+
+export const prerender = false;
+
+const league = keeperLeague();
+if (!league) return Astro.rewrite('/_not-found');
+const standings = feedsByYear(import.meta.glob('../../../data/keeper/mfl-feeds/*/standings.json', { eager: true }));
+const leagueFeeds = feedsByYear(import.meta.glob('../../../data/keeper/mfl-feeds/*/league.json', { eager: true }));
+// The newest season the league has standings for.
+const year = Math.max(...standings.keys(), 0);
+---
+
+<KeeperHomePage
+  league={league}
+  config={keeperConfig()}
+  year={year}
+  standingsFeed={standings.get(year)}
+  leagueFeed={leagueFeeds.get(year)}
+  franchiseId={franchiseIdForLeague(getAuthUser(Astro.request), league.id)}
+/>

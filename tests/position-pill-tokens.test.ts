@@ -32,7 +32,7 @@ describe('every position palette is the site palette', () => {
     'src/constants/roster-constants.ts',
     'src/utils/roster-analytics.ts',
     'src/types/draft-room.ts',
-    'src/pages/afl-fantasy/rosters.astro',
+    'src/components/afl-family/RostersPage.astro',
   ])('%s', (file) => {
     const src = read(file);
     for (const [pos, hex] of Object.entries(SITE_PALETTE)) {
