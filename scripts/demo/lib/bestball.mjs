@@ -179,3 +179,107 @@ export function bestBallDraft({ players, adp, depth = new Map(), leagueId, leagu
     official: true,
   };
 }
+
+/** Best ball's lineup: the league sets it, every week, from the roster's best scores. */
+const BEST_BALL_LINEUP = { QB: 1, RB: 2, WR: 3, TE: 1, FLEX: 1 };
+const FLEX = ['RB', 'WR', 'TE'];
+const REGULAR_SEASON_WEEKS = 14;
+
+/** The optimal lineup for one team-week: the players the league would start. */
+function bestLineup(roster, weekScores, positionOf) {
+  const byScore = [...roster].sort((a, b) => (weekScores.get(b) ?? 0) - (weekScores.get(a) ?? 0));
+  const starters = [];
+  const counts = {};
+  for (const pid of byScore) {
+    const pos = positionOf(pid);
+    if ((counts[pos] ?? 0) < (BEST_BALL_LINEUP[pos] ?? 0)) {
+      counts[pos] = (counts[pos] ?? 0) + 1;
+      starters.push(pid);
+    }
+  }
+  for (const pid of byScore) {
+    if (starters.filter((p) => FLEX.includes(positionOf(p))).length >= BEST_BALL_LINEUP.RB + BEST_BALL_LINEUP.WR + BEST_BALL_LINEUP.TE + BEST_BALL_LINEUP.FLEX) break;
+    if (!starters.includes(pid) && FLEX.includes(positionOf(pid))) starters.push(pid);
+  }
+  const score = starters.reduce((s, pid) => s + (weekScores.get(pid) ?? 0), 0);
+  const two = (n) => (Math.round(n * 100) / 100).toFixed(2);
+  return {
+    score: Math.round(score * 100) / 100,
+    optPts: Math.round(score * 100) / 100,
+    starters,
+    nonstarters: roster.filter((pid) => !starters.includes(pid)),
+    optimal: starters,
+    players: roster.map((pid) => ({ id: pid, score: two(weekScores.get(pid) ?? 0), status: starters.includes(pid) ? 'starter' : 'nonstarter' })),
+  };
+}
+
+/** A 12-team round robin (circle method), repeated to fill the regular season. */
+function roundRobin(ids, weeks) {
+  const rest = ids.slice(1);
+  const rounds = [];
+  for (let r = 0; r < ids.length - 1; r++) {
+    const ring = [ids[0], ...rest];
+    const games = [];
+    for (let i = 0; i < ids.length / 2; i++) {
+      const a = ring[i];
+      const b = ring[ring.length - 1 - i];
+      games.push(r % 2 ? [a, b] : [b, a]);
+    }
+    rounds.push(games);
+    rest.unshift(rest.pop());
+  }
+  return Array.from({ length: weeks }, (_, w) => rounds[w % rounds.length]);
+}
+
+/**
+ * The redraft demo's season so far, in the shape the shared MFL feed writers
+ * take (mfl-feeds.mjs): rosters from the demo's own draft, a round-robin
+ * schedule, every played week scored as best ball does (each team's optimal
+ * lineup from the real NFL scores), and the week in progress — so the live
+ * scoring board has something to show.
+ *
+ * @param {{ draft: { picks: Array<{ franchiseId: string, playerId: string }> }, facts: any, currentWeek: number }} args
+ */
+export function bestBallSeason({ draft, facts, currentWeek }) {
+  const ids = BESTBALL_FRANCHISES.map((f) => f.id);
+  const rosterIds = new Map(ids.map((fid) => [fid, []]));
+  for (const p of draft.picks) rosterIds.get(p.franchiseId)?.push(p.playerId);
+  const positionOf = (pid) => facts.players.get(pid)?.position;
+  const schedule = roundRobin(ids, REGULAR_SEASON_WEEKS);
+  const lastWeek = Math.min(currentWeek, REGULAR_SEASON_WEEKS);
+
+  const weekly = [];
+  for (let week = 1; week <= lastWeek; week++) {
+    const scores = facts.scores.get(week) ?? new Map();
+    const lineups = new Map(ids.map((fid) => [fid, bestLineup(rosterIds.get(fid), scores, positionOf)]));
+    weekly.push({
+      week,
+      regularSeason: true,
+      games: schedule[week - 1].map(([home, away]) => [lineups.get(home), lineups.get(away), home, away]),
+    });
+  }
+
+  // The week being played: the teams whose NFL game is done have points; the
+  // rest are still to play (the same test simulate.mjs's liveWeek uses).
+  let inProgress = null;
+  const liveWeek = lastWeek + 1;
+  const partial = facts.scores.get(liveWeek);
+  if (liveWeek <= REGULAR_SEASON_WEEKS && partial) {
+    const teamOf = (pid) => facts.players.get(pid)?.team;
+    const teamsPlayed = new Set([...partial].filter(([, s]) => s !== 0).map(([pid]) => teamOf(pid)).filter(Boolean));
+    if (teamsPlayed.size) {
+      const played = (pid) => teamsPlayed.has(teamOf(pid));
+      const live = new Map([...partial].filter(([pid]) => played(pid)));
+      const lineups = new Map(ids.map((fid) => [fid, bestLineup(rosterIds.get(fid), live, positionOf)]));
+      for (const lineup of lineups.values()) {
+        for (const p of lineup.players) p.gameSecondsRemaining = played(p.id) ? '0' : '3600';
+      }
+      inProgress = { week: liveWeek, games: schedule[liveWeek - 1].map(([home, away]) => [lineups.get(home), lineups.get(away), home, away]) };
+    }
+  }
+
+  const rosters = new Map(
+    ids.map((fid) => [fid, new Map(rosterIds.get(fid).map((pid) => [pid, { status: 'ROSTER', salary: 0, contractYear: 1 }]))]),
+  );
+  return { rosters, schedule, weekly, inProgress, lastWeek };
+}

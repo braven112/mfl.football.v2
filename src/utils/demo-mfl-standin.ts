@@ -34,7 +34,7 @@ type Json = any; // MFL exports are loosely shaped; the readers own the typing.
 // One glob per league the demo serves an MFL for: the dynasty league in
 // TheLeague's slot, and the keeper league in its demo-only slot. Literal
 // specifiers — a glob cannot take a variable — keyed by the slot's slug.
-const FEED_LOADERS: Record<'theleague' | 'keeper' | 'afl-fantasy', Record<string, () => Promise<Json>>> = {
+const FEED_LOADERS: Record<'theleague' | 'keeper' | 'afl-fantasy' | 'best-ball-1', Record<string, () => Promise<Json>>> = {
   theleague: import.meta.glob<Json>(
     '../../data/theleague/mfl-feeds/*/{league,rosters,players,standings,schedule,weekly-results-raw,live-week,transactions,draftResults,auctionResults,futureDraftPicks,salaryAdjustments,calendar,projectedScores,injuries,nflSchedule,fantasyPointsAllowed}.json',
     { import: 'default' },
@@ -48,6 +48,12 @@ const FEED_LOADERS: Record<'theleague' | 'keeper' | 'afl-fantasy', Record<string
   // otherwise chunk every one of them into the server bundle.
   'afl-fantasy': import.meta.glob<Json>(
     '../../data/afl-fantasy/mfl-feeds/20{2[5-9],[3-9][0-9]}/{league,rosters,players,standings,schedule,weekly-results-raw,live-week,transactions,draftResults,calendar,projectedScores,injuries,nflSchedule,fantasyPointsAllowed}.json',
+    { import: 'default' },
+  ),
+  // The redraft demo's best-ball league: a draft and its season so far, for
+  // the live scoring board (the real best-ball league commits no feeds here).
+  'best-ball-1': import.meta.glob<Json>(
+    '../../data/best-ball-1/mfl-feeds/*/{league,rosters,players,schedule,weekly-results-raw,live-week,projectedScores,injuries,nflSchedule,fantasyPointsAllowed}.json',
     { import: 'default' },
   ),
 };
@@ -548,8 +554,7 @@ function isWrite(url: URL, method: string): boolean {
 }
 
 /**
- * The league whose generated MFL feeds the stand-in serves. The best-ball
- * demo is draft-only and reads no MFL export for its league; any other league
+ * The leagues whose generated MFL feeds the stand-in serves. Any other league
  * id gets MFL's own "no such league" answer rather than the dynasty league's
  * data under another league's name.
  */
@@ -562,6 +567,8 @@ const STANDIN_LEAGUES = new Map<string, StandinSlug>(
     // The AFL's slot answers only on a demo deployment, where it holds the
     // fictional big league — the stand-in itself only ever runs there.
     [LEAGUES['afl-fantasy'].id, 'afl-fantasy'] as const,
+    // The redraft demo's best-ball league: its season so far, for live scoring.
+    [LEAGUES['best-ball-1'].id, 'best-ball-1'] as const,
   ].filter((entry): entry is readonly [string, StandinSlug] => !!entry[0]),
 );
 

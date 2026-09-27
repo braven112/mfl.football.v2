@@ -123,7 +123,8 @@ describe('demo MFL stand-in', () => {
 
   it('answers only for the league it has data for', async () => {
     await as('0001', async () => {
-      const other = await answerDemoMfl(new URL(`${HOST}/${YEAR}/export?TYPE=rosters&L=37610&JSON=1`), 'GET', undefined);
+      // A league id no demo slot holds.
+      const other = await answerDemoMfl(new URL(`${HOST}/${YEAR}/export?TYPE=rosters&L=12345&JSON=1`), 'GET', undefined);
       expect((await other.json()).error).toBeDefined();
     });
   });
