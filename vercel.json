@@ -36,6 +36,21 @@
   ],
   "redirects": [
     {
+      "source": "/admin/schefter",
+      "destination": "/admin/news",
+      "statusCode": 301
+    },
+    {
+      "source": "/theleague/admin/schefter",
+      "destination": "/theleague/admin/news",
+      "statusCode": 301
+    },
+    {
+      "source": "/afl-fantasy/admin/schefter",
+      "destination": "/afl-fantasy/admin/news",
+      "statusCode": 301
+    },
+    {
       "source": "/draft-predictor",
       "destination": "/draft/order",
       "statusCode": 301
