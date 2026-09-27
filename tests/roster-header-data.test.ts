@@ -532,7 +532,7 @@ describe('the crest row shows the clubs at full strength, in their own colour', 
 
   it('rings the viewed club in its own colour, never the accent', () => {
     const active = CSS.slice(CSS.indexOf("[aria-current='page'] img"));
-    const rules = active.slice(0, active.indexOf('.rhdr-teams__crest[data-mine'));
+    const rules = active.slice(0, active.indexOf('.rhdr-teams__crest:focus-visible'));
     expect(rules).toMatch(/--rhdr-ring/);
     expect(rules, '--color-accent is green here, same as a win on the rail above')
       .not.toContain('--color-accent');
