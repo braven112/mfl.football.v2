@@ -197,6 +197,26 @@ export default function LiveBoard({
    */
   const [selected, setSelected] = useState<{ leagueId: string; pairing: string } | null>(null);
   /**
+   * Opening a matchup swaps the board for its detail IN PLACE, so the page
+   * kept the board's scroll position: from low on a long board (the demo's
+   * big league has 48 matchups) the far shorter detail opened above the
+   * viewport and the reader landed at the bottom of the page. Opening now
+   * brings the detail's top into view, and Back returns to where they were.
+   */
+  const rootRef = useRef<HTMLDivElement>(null);
+  const boardScrollY = useRef<number | null>(null);
+  const selectedKey = selected ? `${selected.leagueId}|${selected.pairing}` : '';
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (selectedKey) {
+      const top = rootRef.current?.getBoundingClientRect().top;
+      if (top !== undefined && top < 0) window.scrollTo({ top: window.scrollY + top - 16 });
+    } else if (boardScrollY.current !== null) {
+      window.scrollTo({ top: boardScrollY.current });
+      boardScrollY.current = null;
+    }
+  }, [selectedKey]);
+  /**
    * This island's own poll, as the pill reads it. `fetchedAt` stays 0 until a
    * poll SUCCEEDS — treating 0 as a timestamp prints "56 years ago" — and a
    * failure raises the status without clearing the last good time, which is
@@ -517,14 +537,15 @@ export default function LiveBoard({
       viewerFirst={viewerFirst}
       isFinal={isMatchupFinal(matchup)}
       lead={lead}
-      onOpen={() =>
-        setSelected({ leagueId: panel.leagueId, pairing: pairingKey(matchup) })
-      }
+      onOpen={() => {
+        boardScrollY.current = window.scrollY;
+        setSelected({ leagueId: panel.leagueId, pairing: pairingKey(matchup) });
+      }}
     />
   );
 
   return (
-    <div className="lv">
+    <div className="lv" ref={rootRef}>
       <div className="lv-head">
         <h1>
           {title}
