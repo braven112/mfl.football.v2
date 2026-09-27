@@ -34,6 +34,7 @@ import { hasLiveSignal, type LiveSnapshot } from './live-scoring-snapshot';
 import { readLeagueSchedulePairings } from './mfl-schedule-pairings';
 import type { MatchupPairing } from '../types/live-scoring';
 import { mapWithConcurrency } from './fan-out';
+import { leagueHasUploadedMarks } from './mfl-live-identity';
 
 /**
  * How many leagues are read at once.
@@ -288,7 +289,9 @@ export async function readViewerFranchiseNames(
     return {
       id: league.id,
       mark: marks[league.franchiseId],
-      leagueHasMarks: Object.values(marks).some((m) => !!m.icon),
+      leagueHasMarks: leagueHasUploadedMarks(
+        Object.fromEntries(Object.entries(marks).map(([fid, m]) => [fid, m.icon])),
+      ),
     };
   });
 
