@@ -249,6 +249,9 @@ export function parsePriorGameCounts(payload: unknown, week: number): Record<str
   return counts;
 }
 
+/** Same budget as the standings read (`utils/live/standings.ts`). */
+const PRIOR_GAMES_TIMEOUT_MS = 6_000;
+
 const priorGamesCache = (): Map<string, { at: number; counts: Record<string, number> }> => {
   const g = globalThis as {
     __mflPriorGamesCache?: Map<string, { at: number; counts: Record<string, number> }>;
@@ -285,7 +288,14 @@ export async function readLeaguePriorGameCounts(
 
   try {
     const url = buildMflExportUrl({ type: 'schedule', leagueId: league.id, year, host });
-    const response = await mflFetch({ url, method: 'GET', mflUserCookie });
+    // Bounded, like the standings read beside it: the board awaits this before
+    // it returns, and the scores do not depend on it.
+    const response = await mflFetch({
+      url,
+      method: 'GET',
+      mflUserCookie,
+      timeoutMs: PRIOR_GAMES_TIMEOUT_MS,
+    });
     if (!response.ok) return null;
     // A 200 is not "the data is good" — MFL errors and throttle pages both
     // arrive under one. The parser returns null for anything without weeks.

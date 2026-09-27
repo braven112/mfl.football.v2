@@ -20,7 +20,7 @@ const row = (
   wins: number,
   losses: number,
   pointsFor: number,
-  weekCounted: boolean | null = false,
+  weekGamesCounted: number | null = 0,
 ): LiveStandingsRow => ({
   franchiseId,
   rank,
@@ -35,7 +35,7 @@ const row = (
   ties: 0,
   pointsFor,
   isViewer: false,
-  weekCounted,
+  weekGamesCounted,
 });
 
 const side = (
@@ -129,14 +129,14 @@ describe('views', () => {
 
 describe('never counts a week twice', () => {
   it('leaves a row MFL has already counted alone', () => {
-    const counted = rows.map((r) => ({ ...r, weekCounted: true }));
+    const counted = rows.map((r) => ({ ...r, weekGamesCounted: 1 }));
     const out = projectStandings(counted, week, 'live');
     expect(out.map((r) => r.franchiseId)).toEqual(['A', 'B', 'C', 'D']);
     expect(out.every((r) => !r.includesWeek)).toBe(true);
   });
 
   it('unknown count: adds an unfinished matchup, never a finished one', () => {
-    const unknown = rows.map((r) => ({ ...r, weekCounted: null }));
+    const unknown = rows.map((r) => ({ ...r, weekGamesCounted: null }));
     const inProgress = projectStandings(unknown, week, 'live');
     expect(inProgress.find((r) => r.franchiseId === 'C')!.wins).toBe(4);
 
@@ -148,12 +148,37 @@ describe('never counts a week twice', () => {
     expect(out.every((r) => !r.includesWeek)).toBe(true);
   });
 
-  it('markWeekCounted compares games played with the schedule before the week', () => {
-    const marked = markWeekCounted([row('A', 1, 4, 0, 0), row('B', 2, 3, 0, 0)], { A: 3, B: 3 });
-    expect(marked.map((r) => r.weekCounted)).toEqual([true, false]);
-    expect(markWeekCounted([row('A', 1, 0, 0, 0)], null)[0].weekCounted).toBeNull();
+  it('half-counted doubleheader: adds only the game MFL does not hold yet', () => {
+    // A played C (final, counted by MFL) and is playing D (live).
+    const dh = [
+      matchup(side('A', 90, 90, 0), side('C', 60, 60, 0)),
+      matchup(side('A', 50, 90), side('D', 70, 70), 1),
+    ];
+    const half = rows.map((r) => ({ ...r, weekGamesCounted: r.franchiseId === 'A' ? 1 : 0 }));
+    const a = projectStandings(half, dh, 'live').find((r) => r.franchiseId === 'A')!;
+    // Only the live loss to D is added; the counted win over C is not repeated.
+    expect(a).toMatchObject({ wins: 4, losses: 1, pointsFor: 450 });
+  });
+
+  it('unknown count with a doubleheader: the finished half is never added', () => {
+    const dh = [
+      matchup(side('A', 90, 90, 0), side('C', 60, 60, 0)),
+      matchup(side('A', 50, 90), side('D', 70, 70), 1),
+    ];
+    const unknown = rows.map((r) => ({ ...r, weekGamesCounted: null }));
+    const a = projectStandings(unknown, dh, 'live').find((r) => r.franchiseId === 'A')!;
+    expect(a).toMatchObject({ wins: 4, losses: 1, pointsFor: 450 });
+  });
+
+  it('markWeekCounted counts the games held beyond the schedule before the week', () => {
+    const marked = markWeekCounted(
+      [row('A', 1, 4, 0, 0), row('B', 2, 3, 0, 0), row('C', 3, 5, 0, 0)],
+      { A: 3, B: 3, C: 3 },
+    );
+    expect(marked.map((r) => r.weekGamesCounted)).toEqual([1, 0, 2]);
+    expect(markWeekCounted([row('A', 1, 0, 0, 0)], null)[0].weekGamesCounted).toBeNull();
     // Week 1: no prior games in the map at all, nothing played yet.
-    expect(markWeekCounted([row('A', 1, 0, 0, 0)], {})[0].weekCounted).toBe(false);
+    expect(markWeekCounted([row('A', 1, 0, 0, 0)], {})[0].weekGamesCounted).toBe(0);
   });
 });
 

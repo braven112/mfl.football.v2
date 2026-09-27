@@ -21,11 +21,13 @@
  * The board stays on a week from its kickoff until the next one, and MFL folds
  * a finished week into its standings somewhere in between. Adding the board's
  * scores to a record that already contains them would double the week, so the
- * overlay reads `weekCounted` per row (set server-side from the league's
- * schedule, see `./schedule-prior`). When that read failed (`null`), the only
- * safe inference left is the one that needs no schedule: a franchise with a
- * matchup still being played cannot have had it counted yet. A franchise whose
- * games are all final and whose count is unknown is left as MFL has it.
+ * overlay reads `weekGamesCounted` per row — how many of the week's games
+ * MFL already holds, set server-side from the league's schedule
+ * (`readLeaguePriorGameCounts`) — and adds only the rest, per MATCHUP, so a
+ * half-counted doubleheader is half-added. When that read failed (`null`), the
+ * only safe inference left is the one that needs no schedule: a matchup still
+ * being played cannot have been counted yet, so only unfinished matchups are
+ * added and every finished one is left as MFL has it.
  */
 
 import type { LiveMatchup, LiveStandingsRow } from '../../types/live';
@@ -84,12 +86,10 @@ export function projectStandings(
 ): ProjectedStandingsRow[] {
   if (mode === 'final') return asFinal(rows);
 
-  // This week's results per franchise. A franchise can appear in more than one
-  // matchup — the AFL plays doubleheaders — so this accumulates.
-  const week = new Map<
-    string,
-    { wins: number; losses: number; ties: number; points: number; unfinished: boolean }
-  >();
+  // This week's games per franchise, one entry per MATCHUP. A franchise can
+  // appear in more than one — the AFL plays doubleheaders — and MFL may have
+  // counted some of them already, so they are kept apart rather than summed.
+  const week = new Map<string, { result: 'W' | 'L' | 'T'; points: number; final: boolean }[]>();
   for (const matchup of matchups) {
     const final = isMatchupFinal(matchup);
     // A live result needs a game that has started; a projected one does not —
@@ -101,28 +101,33 @@ export function projectStandings(
       const me = score(i);
       const them = score(i === 0 ? 1 : 0);
       const id = matchup.sides[i].franchiseId;
-      const acc = week.get(id) ?? { wins: 0, losses: 0, ties: 0, points: 0, unfinished: false };
-      if (me > them) acc.wins += 1;
-      else if (me < them) acc.losses += 1;
-      else acc.ties += 1;
-      acc.points += me;
-      acc.unfinished ||= !final;
-      week.set(id, acc);
+      const games = week.get(id) ?? [];
+      games.push({ result: me > them ? 'W' : me < them ? 'L' : 'T', points: me, final });
+      week.set(id, games);
     });
   }
 
   const adjusted = rows.map((row) => {
-    const add = week.get(row.franchiseId);
-    const counted = row.weekCounted ?? (add ? !add.unfinished : true);
-    if (!add || counted) {
+    const games = week.get(row.franchiseId) ?? [];
+    const counted = row.weekGamesCounted;
+    // Which of this week's games are NOT yet in MFL's record:
+    //  - count unknown → only unfinished ones (MFL cannot have counted those);
+    //  - count known   → drop that many, finished games first, since only a
+    //    finished game can have been counted.
+    const toAdd =
+      counted === null || counted === undefined
+        ? games.filter((g) => !g.final)
+        : [...games].sort((x, y) => Number(y.final) - Number(x.final)).slice(counted);
+    if (toAdd.length === 0) {
       return { ...row, officialRank: row.rank, move: 0, includesWeek: false };
     }
+    const tally = (r: 'W' | 'L' | 'T') => toAdd.filter((g) => g.result === r).length;
     return {
       ...row,
-      wins: row.wins + add.wins,
-      losses: row.losses + add.losses,
-      ties: row.ties + add.ties,
-      pointsFor: row.pointsFor + add.points,
+      wins: row.wins + tally('W'),
+      losses: row.losses + tally('L'),
+      ties: row.ties + tally('T'),
+      pointsFor: row.pointsFor + toAdd.reduce((sum, g) => sum + g.points, 0),
       officialRank: row.rank,
       move: 0,
       includesWeek: true,

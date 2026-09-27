@@ -38,6 +38,18 @@ import { buildLeaders } from './leaders';
 import { decorateStandings, markWeekCounted, readLeagueStandings } from './standings';
 import { readLeaguePriorGameCounts } from '../mfl-schedule-pairings';
 
+/** The schedule read may never hold the board longer than this. */
+const PRIOR_GAMES_DEADLINE_MS = 6_000;
+
+/** Resolve `null` if `promise` has not settled in `ms`, or if it rejects. */
+function withDeadline<T>(promise: Promise<T | null>, ms: number): Promise<T | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<null>((resolve) => {
+    timer = setTimeout(() => resolve(null), ms);
+  });
+  return Promise.race([promise.catch(() => null), deadline]).finally(() => clearTimeout(timer));
+}
+
 export interface AssembleMflLeagueBoardInput {
   user: AuthUser;
   /** Already checked against the owner's own league list. See the header. */
@@ -117,7 +129,10 @@ export async function assembleMflLeagueBoard(
     // What lets the Live and Projected standings views add this week without
     // ever adding it twice — see `markWeekCounted`. Same failure posture as
     // the standings: it may not cost the scores.
-    readLeaguePriorGameCounts(league, year, week, user.id).catch(() => null),
+    // Raced against a hard cap too: `mflFetch`'s timeout is per redirect HOP,
+    // so a stalled endpoint could otherwise hold the scores for several of
+    // them. Losing the race is the same as a failed read — `null`.
+    withDeadline(readLeaguePriorGameCounts(league, year, week, user.id), PRIOR_GAMES_DEADLINE_MS),
   ]);
 
   const read = reads[0];

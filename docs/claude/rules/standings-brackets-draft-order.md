@@ -41,9 +41,10 @@ draft slot. If a what-if has nothing to add (no game started, week already
 counted) it returns MFL's order rather than re-ranking unchanged records.
 The trap is double-counting: the board sits on a week until the next kickoff,
 and MFL folds the finished week into its standings in between. Each row is
-stamped `weekCounted` by comparing its games played with the schedule's games
-BEFORE that week (`readLeaguePriorGameCounts`, doubleheaders and byes
-included); when the schedule read fails, only an unfinished matchup is added.
+stamped `weekGamesCounted` — its games played minus the schedule's games BEFORE
+that week (`readLeaguePriorGameCounts`, doubleheaders and byes included) — and
+only the rest are added, per matchup, so a half-counted doubleheader is
+half-added. When the schedule read fails, only unfinished matchups are added.
 `src/utils/live/standings-projection.ts`; `tests/live-standings-projection.test.ts`.
 
 **2. "Most Points Allowed" benefits the team — in BOTH directions.** The team
