@@ -11,7 +11,9 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 
 const source = readFileSync('src/components/shared/roster-header/GamedayBar.astro', 'utf8');
-const script = /<script>([\s\S]*?)<\/script>/.exec(source)?.[1] ?? '';
+// The component's one client script, between its opening and closing tags.
+const scriptStart = source.indexOf('<script>') + '<script>'.length;
+const script = source.slice(scriptStart, source.indexOf('</script>', scriptStart));
 
 describe('GamedayBar week toggle', () => {
   it('binds its document listener behind a once-per-window flag', () => {
