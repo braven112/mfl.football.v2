@@ -7,7 +7,7 @@ hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1245
 hotfix_sha: e09a50f
 followup_issue: 1246
 followup_pr:
-followup_session:
+followup_session: session_018c6mH1X3mQkabkFHos8RAu
 ---
 
 # Follow-up: an outside league's live board lost its uploaded crests
