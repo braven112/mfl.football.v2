@@ -10,6 +10,7 @@
  */
 
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import BestBallCrest from '../../components/best-ball/BestBallCrest.astro';
 import bb1Config from '../../../data/best-ball-1/bb1.config.json';
 import { getLeagueBySlug } from '../../config/leagues';
 import { getLeagueYearForSlug, getCurrentLeagueYear } from '../../utils/league-year';
@@ -22,10 +23,10 @@ const BB1 = getLeagueBySlug('best-ball-1')!;
 const leagueYear = getLeagueYearForSlug(BB1.slug);
 const session = await fetchOfficialDraftSession(BB1, leagueYear);
 
-const teamsById = new Map<string, { name: string; abbrev: string; colorPrimary?: string }>(
+const teamsById = new Map<string, { name: string; abbrev: string; colorPrimary?: string; icon?: string }>(
   (bb1Config.teams ?? []).map((t: any) => [
     t.franchiseId,
-    { name: t.name, abbrev: t.abbrev || '', colorPrimary: t.colorPrimary },
+    { name: t.name, abbrev: t.abbrev || '', colorPrimary: t.colorPrimary, icon: t.icon || undefined },
   ]),
 );
 
@@ -44,6 +45,7 @@ interface BoardRound {
     pickInRound: number;
     overall: number;
     teamName: string;
+    teamIcon?: string;
     playerName: string;
     position: string;
     nflTeam: string;
@@ -63,6 +65,7 @@ if (session) {
           pickInRound: p.pickInRound,
           overall: p.overallPickNumber,
           teamName: teamsById.get(p.franchiseId)?.name ?? `Team ${p.franchiseId}`,
+          teamIcon: teamsById.get(p.franchiseId)?.icon,
           playerName: player?.name ?? (p.playerId ? `Player ${p.playerId}` : ''),
           position: player?.position ?? '',
           nflTeam: player?.nflTeam ?? '',
@@ -123,7 +126,12 @@ const statusLabel = !session
                       <td class="bb-board__num">
                         {round.round}.{String(pick.pickInRound).padStart(2, '0')}
                       </td>
-                      <td>{pick.teamName}</td>
+                      <td>
+                        <span class="bb-board__team">
+                          <BestBallCrest icon={pick.teamIcon} size={22} />
+                          {pick.teamName}
+                        </span>
+                      </td>
                       <td>
                         {pick.playerName || <span class="bb-board__tbd">—</span>}
                         {pick.isAutoPick && <span class="bb-board__auto" title="Auto-pick">A</span>}
@@ -233,5 +241,10 @@ const statusLabel = !session
     border: 1px solid currentColor;
     border-radius: 3px;
     padding: 0 0.25rem;
+  }
+  .bb-board__team {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
   }
 </style>
