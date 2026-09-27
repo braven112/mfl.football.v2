@@ -1,0 +1,36 @@
+---
+/**
+ * /keeper/preferences (the custom-site demo's keeper league) — thin route over
+ * the shared PreferencesPage. Off the demo this slot does not exist. See
+ * src/pages/theleague/preferences.astro for why the cookie write and account
+ * mirror live in the ROUTE. No Throwback picker: the keeper league has no
+ * franchise eras.
+ */
+import PreferencesPage from '../../components/shared/preferences/PreferencesPage.astro';
+import { loginUrlForRequest } from '../../utils/login-redirect';
+import { getAuthUser } from '../../utils/auth';
+import { resolveViewerPreferences, hasPreferenceParams } from '../../utils/viewer-preferences-page';
+import { leagueClock } from '../../config/leagues';
+import { keeperLeague } from '../../utils/keeper-slot';
+
+export const prerender = false;
+
+const league = keeperLeague();
+if (!league) return Astro.rewrite('/_not-found');
+
+const user = getAuthUser(Astro.request);
+const { prefs, savedToAccount } = await resolveViewerPreferences(Astro.url, Astro.cookies, user);
+---
+
+<PreferencesPage
+  prefs={prefs}
+  title={`Preferences | ${league.name}`}
+  pathname="/keeper/preferences"
+  sundayTicketPath="/keeper/sunday-ticket"
+  justSaved={hasPreferenceParams(Astro.url)}
+  syncedToAccount={savedToAccount}
+  loginPath={user ? null : loginUrlForRequest(Astro, league)}
+  officialClock={leagueClock('keeper')}
+  throwback={null}
+  scoreboardPath="/keeper/"
+/>

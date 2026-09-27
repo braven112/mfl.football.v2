@@ -136,6 +136,9 @@ export const DEMO_AFL_ROUTES = [
   'transactions',
   'front-office',
   'front-office/trade-builder',
+  // Site-wide viewer settings the demo tour card points at.
+  'preferences',
+  'sunday-ticket',
 ];
 const DEMO_AFL_API = ['lineup'];
 

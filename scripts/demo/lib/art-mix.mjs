@@ -220,6 +220,13 @@ export function artDataUri(art, { dark = false } = {}) {
  * the art, a name fitted to it, and its colours. Everything else about the
  * franchise (id, owner, division) is untouched.
  */
+/**
+ * @template T
+ * @param {string} demo
+ * @param {T[]} franchises
+ * @param {{ slugOf?: (name: string) => string }} [options]
+ * @returns {T[]}
+ */
 export function withArt(demo, franchises, { slugOf } = {}) {
   const assignments = ART_ASSIGNMENTS[demo] ?? {};
   return franchises.map((f) => {

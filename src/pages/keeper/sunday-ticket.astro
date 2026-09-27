@@ -1,0 +1,21 @@
+---
+/**
+ * /keeper/sunday-ticket (the custom-site demo's keeper league) — thin route
+ * over the shared SundayTicketPage. See src/pages/theleague/sunday-ticket.astro.
+ */
+import SundayTicketPage from '../../components/shared/sunday-ticket/SundayTicketPage.astro';
+import { rememberSundayTicketChoices } from '../../utils/sunday-ticket-selection';
+import { getAuthUser } from '../../utils/auth';
+import { resolveViewerPreferences } from '../../utils/viewer-preferences-page';
+import { keeperLeague } from '../../utils/keeper-slot';
+
+export const prerender = false;
+
+if (!keeperLeague()) return Astro.rewrite('/_not-found');
+
+// Cookie writes belong to the route (see rememberSundayTicketChoices).
+rememberSundayTicketChoices(Astro.url, Astro.cookies);
+const { prefs } = await resolveViewerPreferences(Astro.url, Astro.cookies, getAuthUser(Astro.request));
+---
+
+<SundayTicketPage prefs={prefs} />
