@@ -8,10 +8,11 @@
  * and a live drive must not vanish because somebody opened a matchup.
  *
  * ── THE TOP ROW ───────────────────────────────────────────────────────────
- * The back control and the freshness pill share it, so the pill is on screen
- * before an owner scrolls: on a phone this header IS the first screen. The
- * row's inline inset lives on the ROW, not on the button, so that when it wraps
- * the pill starts at the same x as the button above it.
+ * The back control only. There is NO freshness pill here: the board header
+ * (Week picker + pill) stays on screen while a matchup is open, and a second
+ * copy in this row printed "Tracking · updated Ns ago" twice, one line apart.
+ * The row's inline inset lives on the ROW, not on the button, so anything
+ * added to it and wrapped on a phone starts at the same x as the button.
  */
 import type { JSX } from 'react';
 import type { LiveMatchup, LiveMoment, LiveTeam } from '../../../types/live';
