@@ -11,6 +11,10 @@
  * Hard-coded colours for the same reason as StagingBanner: a notice that
  * restyles itself into the page's palette stops being noticed, and a token
  * with no dark value ships unreadable in one theme.
+ *
+ * It scrolls away with the page rather than pinning to the top, and a prospect
+ * can close it for the rest of the visit (sessionStorage). Pinned at z-index
+ * 9999 it sat over every modal's close button.
  */
 import { isDemoDeploy } from '../../utils/deploy-environment';
 import { demoLeaguePaths } from '../../config/leagues-data.mjs';
@@ -33,26 +37,27 @@ const pitch = bestBall
 
 {
 	show && (
-		<div class="demo-banner" role="note">
+		<div class="demo-banner" role="note" data-demo-banner>
 			<span class="demo-banner__label">Demo</span>
 			<span class="demo-banner__detail">
 				A fictional league — nothing is sent to MyFantasyLeague. {pitch}
 			</span>
+			<button type="button" class="demo-banner__close" data-demo-banner-close aria-label="Dismiss the demo notice">
+				<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
+			</button>
 		</div>
 	)
 }
 
 <style>
 	.demo-banner {
-		position: sticky;
-		top: 0;
-		z-index: 9999;
+		position: relative;
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		gap: 0.5rem;
 		flex-wrap: wrap;
-		padding: 0.4rem 1rem;
+		padding: 0.4rem 2.75rem;
 		background: #14213d;
 		color: #f8fafc;
 		font-size: 0.8125rem;
@@ -74,4 +79,61 @@ const pitch = bestBall
 	.demo-banner__detail {
 		max-width: 60rem;
 	}
+
+	.demo-banner__close {
+		position: absolute;
+		top: 50%;
+		right: 0.5rem;
+		transform: translateY(-50%);
+		display: grid;
+		place-items: center;
+		width: 2rem;
+		height: 2rem;
+		padding: 0;
+		border: 0;
+		border-radius: 999px;
+		background: transparent;
+		color: inherit;
+		cursor: pointer;
+	}
+
+	.demo-banner__close:hover,
+	.demo-banner__close:focus-visible {
+		background: rgba(255, 255, 255, 0.15);
+	}
+
+	.demo-banner__close:focus-visible {
+		outline: 2px solid #fca311;
+		outline-offset: 1px;
+	}
+
+	:global(html.demo-banner-dismissed) .demo-banner {
+		display: none;
+	}
 </style>
+
+<script>
+	// Hide on every page once closed this visit. Re-read per page load: the
+	// ClientRouter swaps the banner in fresh on each navigation, but <html>
+	// (and its class) survives, so the class is re-asserted from storage.
+	const KEY = 'demoBannerDismissed';
+	function readDismissed() {
+		try { return sessionStorage.getItem(KEY) === '1'; } catch { return false; }
+	}
+	function init() {
+		if (readDismissed()) document.documentElement.classList.add('demo-banner-dismissed');
+		const close = document.querySelector<HTMLButtonElement>('[data-demo-banner-close]');
+		if (!close || close.dataset.bound) return;
+		close.dataset.bound = '1';
+		close.addEventListener('click', () => {
+			document.documentElement.classList.add('demo-banner-dismissed');
+			try { sessionStorage.setItem(KEY, '1'); } catch {}
+		});
+	}
+	document.addEventListener('astro:page-load', init);
+	// The router copies the new page's <html> attributes over, dropping the
+	// class; put it back before paint rather than waiting for page-load.
+	document.addEventListener('astro:after-swap', () => {
+		if (readDismissed()) document.documentElement.classList.add('demo-banner-dismissed');
+	});
+</script>
