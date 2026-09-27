@@ -13,6 +13,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+const NFL_NICKNAMES = [
+  'Cardinals', 'Falcons', 'Ravens', 'Bills', 'Panthers', 'Bears', 'Bengals', 'Browns', 'Cowboys', 'Broncos',
+  'Lions', 'Packers', 'Texans', 'Colts', 'Jaguars', 'Chiefs', 'Raiders', 'Chargers', 'Rams', 'Dolphins',
+  'Vikings', 'Patriots', 'Saints', 'Giants', 'Jets', 'Eagles', 'Steelers', '49ers', 'Seahawks', 'Buccaneers',
+  'Titans', 'Commanders',
+];
+
 /** Real names that are also ordinary words or phrases, too common to scan for. */
 const GENERIC = new Set(
   [
@@ -21,6 +28,10 @@ const GENERIC = new Set(
     'Coyotes', 'Barracudas', 'Tritons', 'Scorpions', 'Bison', 'Chaos', 'Mafia', 'Connection',
     // NFL club names and places a real alias happens to share.
     'Cowboy', 'Cowboys', 'Midwest', 'Music City', 'Under Siege', 'Magician', 'Magicians', 'Franchise',
+    // Every NFL nickname. A real franchise sharing one ("The Boondock Saints")
+    // is still caught by its full name; the bare word scrubbed "New Orleans
+    // Saints" into "New Orleans Guest Club 233" on every defense row.
+    ...NFL_NICKNAMES,
   ].map((s) => s.toLowerCase()),
 );
 

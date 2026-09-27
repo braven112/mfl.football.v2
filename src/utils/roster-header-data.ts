@@ -90,7 +90,7 @@ export interface HeaderGroup {
 export interface TeamGroupsInput {
   teams: any[];
   /** `config.conferences`, absent in a single-table league. */
-  conferences?: Array<{ name: string; code: string; divisions?: string[] }> | null;
+  conferences?: Array<{ name: string; code: string; short?: string; divisions?: string[] }> | null;
   /** `config.divisions` — the league-wide order, for a single-table league. */
   divisions?: string[] | null;
   /**
@@ -204,9 +204,11 @@ export function buildTeamGroups({
     return {
       conferenceId: code,
       conferenceName: conference.name,
-      // "American League" -> "AL". Falls back to the first two letters for a
-      // conference whose name is a single word.
+      // The config's own short code when it declares one (the demo's big
+      // league: "ATL", "PAC" — initials would make Pacific and Prairie both
+      // "PC"); else "American League" -> "AL".
       conferenceShort:
+        conference.short ||
         conference.name
           .split(/\s+/)
           .filter(Boolean)
