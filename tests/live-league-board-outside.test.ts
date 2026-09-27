@@ -23,6 +23,7 @@ import { describe, it, expect } from 'vitest';
 
 import { buildBoardFromSnapshot } from '../src/utils/live/read';
 import { buildLeaders } from '../src/utils/live/leaders';
+import { decorateStandings } from '../src/utils/live/standings';
 import { getLeagueBySlug } from '../src/config/leagues';
 import type { LivePanel } from '../src/types/live';
 
@@ -111,6 +112,58 @@ describe('an OUTSIDE league gets a real board', () => {
     }).panels[0];
     const side = panel.matchups[0].sides.find((s) => s.franchiseId === '0001');
     expect(side?.name).not.toBe('NOT THE REAL NAME');
+  });
+});
+
+describe("an OUTSIDE league wears its OWN uploaded marks (Archie's regression)", () => {
+  // The drill-down board once took the fetched names but not the icons, so
+  // every franchise skipped the uploaded-mark rung: "Bears" wore Chicago's
+  // logo and the rest fell to initials, in a league with a crest for all 99.
+  const icons = {
+    '0001': 'https://example.com/a.png',
+    '0002': 'https://example.com/b.png',
+    '0003': 'https://example.com/c.png',
+  };
+  const board = () =>
+    build({
+      franchiseNames: { '0001': 'Rhinos', '0002': 'Waves', '0003': 'Yetis', '0004': 'Bears' },
+      franchiseIcons: icons,
+    }).panels[0];
+  const side = (fid: string) =>
+    board().matchups.flatMap((m) => m.sides).find((s) => s.franchiseId === fid)!;
+
+  it('renders an uploaded mark on the croppable rung', () => {
+    expect(side('0001').rung).toBe('mfl');
+    expect(side('0001').icon).toContain('example.com');
+  });
+
+  it('never lends an NFL logo in a league that uploaded marks', () => {
+    expect(side('0004').rung).toBe('text');
+    expect(side('0004').icon).toBe('');
+  });
+
+  it('still lends one in a league with no marks at all', () => {
+    const panel = build({ franchiseNames: { '0004': 'Bears' } }).panels[0];
+    const bears = panel.matchups.flatMap((m) => m.sides).find((s) => s.franchiseId === '0004')!;
+    expect(bears.rung).toBe('nfl');
+  });
+});
+
+describe('the Standings tab wears the same uploaded marks', () => {
+  const base = { rank: 1, name: '', nameShort: '', initials: '', icon: '', iconAlt: '', rung: 'text' as const, wins: 0, losses: 0, ties: 0, pointsFor: 0, isViewer: false };
+  const rows = [
+    { ...base, franchiseId: '0001', name: 'Rhinos' },
+    { ...base, franchiseId: '0004', name: 'Bears' },
+  ];
+  it('uses the icons and keeps NFL logos out of a league with its own art', () => {
+    const out = decorateStandings(rows, {
+      league: { id: '99999', name: 'x', registered: null, host: 'www45.myfantasyleague.com', franchiseId: '0001' } as never,
+      year: YEAR,
+      mflUserCookie: 'c',
+      franchiseIcons: { '0001': 'https://example.com/a.png' },
+    });
+    expect(out[0].rung).toBe('mfl');
+    expect(out[1].rung).toBe('text');
   });
 });
 

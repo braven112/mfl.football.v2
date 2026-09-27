@@ -13,6 +13,7 @@ import {
   resolveFranchiseIdentity,
   franchiseInitials,
   identityIconAlt,
+  leagueHasUploadedMarks,
 } from '../src/utils/mfl-live-identity';
 import { NFL_TEAM_COLORS } from '../src/utils/nfl-team-colors';
 import { getLeagueBySlug } from '../src/config/leagues';
@@ -154,5 +155,33 @@ describe('franchiseInitials', () => {
     for (const n of ['A Bruin Pegs Me', 'Dark Magicians of Chaos', 'x', 'Muck Juggling Micks']) {
       expect(franchiseInitials(n).length).toBeLessThanOrEqual(2);
     }
+  });
+});
+
+describe('the NFL rung is only for a league with no art of its own', () => {
+  it('drops a club-named franchise to text when its league uploaded marks', () => {
+    const id = resolveFranchiseIdentity({
+      franchiseId: '0004',
+      franchiseName: 'Bears',
+      leagueHasMarks: true,
+    });
+    expect(id.rung).toBe('text');
+    expect(id.icon).toBe('');
+  });
+
+  it('keeps a franchise\'s own mark regardless', () => {
+    const id = resolveFranchiseIdentity({
+      franchiseId: '0004',
+      franchiseName: 'Bears',
+      mflIcon: 'https://example.com/bears.png',
+      leagueHasMarks: true,
+    });
+    expect(id.rung).toBe('mfl');
+  });
+
+  it('leagueHasUploadedMarks ignores blanks', () => {
+    expect(leagueHasUploadedMarks({ '0001': '', '0002': '  ' })).toBe(false);
+    expect(leagueHasUploadedMarks({ '0001': '', '0002': 'https://x/y.png' })).toBe(true);
+    expect(leagueHasUploadedMarks(undefined)).toBe(false);
   });
 });
