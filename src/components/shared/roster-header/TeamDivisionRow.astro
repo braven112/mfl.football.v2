@@ -112,7 +112,6 @@ const radioName = `rhdr-conf-${Math.random().toString(36).slice(2, 9)}`;
                   class="rhdr-teams__crest"
                   style={`--rhdr-ring:${team.ringLight};--rhdr-ring-dark:${team.ringDark}`}
                   data-team-id={team.franchiseId}
-                  data-mine={team.franchiseId === viewerFranchiseId ? 'true' : undefined}
                   aria-current={team.franchiseId === activeFranchiseId ? 'page' : undefined}
                 >
                   {team.icon ? (
@@ -344,21 +343,6 @@ const radioName = `rhdr-conf-${Math.random().toString(36).slice(2, 9)}`;
     box-shadow:
       0 0 0 2px var(--content-bg-muted),
       0 0 0 5px var(--rhdr-ring-dark, var(--page-text));
-  }
-
-  /* The viewer's OWN club, which is usually but not always the one on screen.
-     Ink rather than a colour: it has to stay distinguishable from the ring
-     above it, and shape already does that work. */
-  .rhdr-teams__crest[data-mine='true']::after {
-    content: '';
-    position: absolute;
-    left: 50%;
-    bottom: -6px;
-    transform: translateX(-50%);
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: var(--page-text);
   }
 
   .rhdr-teams__crest:focus-visible {
