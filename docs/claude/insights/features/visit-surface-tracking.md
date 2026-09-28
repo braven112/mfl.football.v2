@@ -180,5 +180,11 @@ are now counted (in insights only — they never touch the per-league
 - **Push attribution**: `sw.js` adds `?src=push` to a notification click's
   target; the beacon reports it and strips it from the address bar. The
   GroupMe mobile app sends no referrer, so its links land as `direct`.
+  A click whose target an open tab already shows is only FOCUSED by the
+  worker, never navigated, so it sends no beacon and is not counted as push.
+- **Cost**: two EVALs per beacon (the `/activity` counters + insights), and
+  the per-path debounce sends more beacons than the old per-tab one. Measured
+  against a ~70-owner site this is thousands of Upstash commands a day, not
+  hundreds — the price of accurate page rankings, chosen deliberately.
 - Daily keys (`insights:d:<date>:*`) expire after 90 days; dates and hours are
   on the default league's official clock.
