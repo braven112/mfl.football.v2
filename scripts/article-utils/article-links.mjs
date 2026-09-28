@@ -83,7 +83,7 @@ export const DESTINATIONS = {
   'live-scoring': { path: '/live-scoring', label: 'the live scoreboard', leagues: BOTH },
   'sunday-ticket': { path: '/sunday-ticket', label: 'the Sunday Ticket board', leagues: BOTH },
   lineup: { path: '/lineup', label: 'your lineup', leagues: BOTH },
-  'pecking-order': { path: '/pecking-order', label: 'the pecking order', leagues: BOTH },
+  'pecking-order': { path: '/pecking-order', label: 'the pecking order', leagues: BOTH_AND_ARCHIES },
   rivalries: { path: '/rivalries', label: 'the rivalry pages', leagues: BOTH },
   franchises: { path: '/franchises', label: 'the franchise histories', leagues: BOTH },
   'draft-predictor': { path: '/draft/order', label: 'the draft order', leagues: BOTH },

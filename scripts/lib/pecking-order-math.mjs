@@ -57,6 +57,11 @@ function gamesPlayed(s) {
 
 /** Season average scoring margin (pf - pa per game) from a standings row. Null when no games. */
 export function avgMargin(s) {
+  // A derived per-game margin wins (enrichStandingsFromResults): with
+  // doubleheaders MFL's `pf` counts each WEEK's score once while games count
+  // twice, so pf - pa over games is not a margin there.
+  const derived = num(s?.avg_margin, NaN);
+  if (Number.isFinite(derived)) return derived;
   const games = gamesPlayed(s);
   if (games === 0) return null;
   return (num(s?.pf, 0) - num(s?.pa, 0)) / games;
@@ -136,4 +141,106 @@ export function attachTrend(rankings, previous) {
     }
     return { ...r, previousRank: prev, trend };
   });
+}
+
+/**
+ * Fill the standings fields the column reads but a league's MFL export may
+ * not carry — `all_play_pct`, `all_play_wlt`, `strk`, `pa` — from the weekly
+ * scores and pairings. Archie's standings export has none of them, and
+ * without all-play the composite collapses to form alone (minMax01 puts every
+ * team at the midpoint), with no Heater/Cooler and no margin.
+ *
+ * Only MISSING fields are filled: a league whose export has them (TheLeague,
+ * the AFL) keeps MFL's own values untouched. Returns a new Map; the input is
+ * not mutated.
+ *
+ * All-play is per WEEK, one score each: a doubleheader team's week score is
+ * the same in both games (archies plays two a week), so counting it once is
+ * what "your score against everyone's" means. PA is per week too (the mean
+ * opponent that week), on the same basis as MFL's `pf`; the streak and the
+ * derived `avg_margin` are per GAME.
+ *
+ * @param {Map<string, object>} standingsByFid
+ * @param {object} weeklyResults — weekly-results.json shape.
+ * @param {Map<number, Array<Array<{id: string}>>>} pairings — week → games.
+ * @param {number} throughWeek
+ */
+export function enrichStandingsFromResults(standingsByFid, weeklyResults, pairings, throughWeek) {
+  const weeks = (Array.isArray(weeklyResults?.weeks) ? weeklyResults.weeks : [])
+    .map((w) => ({ week: int(w?.week, 0), scores: w?.scores || {} }))
+    .filter((w) => w.week >= 1 && w.week <= throughWeek)
+    .sort((a, b) => a.week - b.week);
+
+  const ap = new Map();
+  const pa = new Map(); // per-WEEK basis, like MFL's pf: the mean opponent each week
+  const margin = new Map(); // fid → { sum, games }: per-GAME
+  const results = new Map(); // fid → ['W'|'L'|'T', …] in game order
+  for (const { week, scores } of weeks) {
+    const played = Object.entries(scores)
+      .map(([fid, v]) => [fid, num(v, NaN)])
+      .filter(([, v]) => Number.isFinite(v) && v > 0);
+    for (const [fid, mine] of played) {
+      const rec = ap.get(fid) ?? { w: 0, l: 0, t: 0 };
+      for (const [other, theirs] of played) {
+        if (other === fid) continue;
+        if (mine > theirs) rec.w++;
+        else if (mine < theirs) rec.l++;
+        else rec.t++;
+      }
+      ap.set(fid, rec);
+    }
+    const byFid = new Map(played);
+    const oppsThisWeek = new Map();
+    for (const game of pairings.get(week) ?? []) {
+      if (!Array.isArray(game) || game.length !== 2) continue;
+      const [a, b] = game;
+      const sa = byFid.get(a.id);
+      const sb = byFid.get(b.id);
+      if (sa == null || sb == null) continue;
+      for (const [me, mine, theirs] of [[a.id, sa, sb], [b.id, sb, sa]]) {
+        const opps = oppsThisWeek.get(me) ?? [];
+        opps.push(theirs);
+        oppsThisWeek.set(me, opps);
+        const m = margin.get(me) ?? { sum: 0, games: 0 };
+        m.sum += mine - theirs;
+        m.games += 1;
+        margin.set(me, m);
+        const list = results.get(me) ?? [];
+        list.push(mine > theirs ? 'W' : mine < theirs ? 'L' : 'T');
+        results.set(me, list);
+      }
+    }
+    for (const [me, opps] of oppsThisWeek) {
+      pa.set(me, (pa.get(me) ?? 0) + opps.reduce((x, y) => x + y, 0) / opps.length);
+    }
+  }
+
+  const streakOf = (list) => {
+    if (!list?.length) return '';
+    const last = list[list.length - 1];
+    if (last === 'T') return '';
+    let n = 0;
+    for (let i = list.length - 1; i >= 0 && list[i] === last; i--) n++;
+    return `${last}${n}`;
+  };
+  const blank = (v) => v == null || v === '';
+
+  const out = new Map();
+  for (const [fid, row] of standingsByFid.entries()) {
+    const next = { ...row };
+    const rec = ap.get(fid);
+    if (rec && blank(row.all_play_pct)) {
+      const games = rec.w + rec.l + rec.t;
+      next.all_play_pct = games ? ((rec.w + rec.t / 2) / games).toFixed(3) : '';
+    }
+    if (rec && blank(row.all_play_wlt)) next.all_play_wlt = `${rec.w}-${rec.l}-${rec.t}`;
+    if (blank(row.strk)) next.strk = streakOf(results.get(fid));
+    if (blank(row.pa) && pa.has(fid)) {
+      next.pa = pa.get(fid).toFixed(2);
+      const m = margin.get(fid);
+      if (m?.games) next.avg_margin = m.sum / m.games;
+    }
+    out.set(fid, next);
+  }
+  return out;
 }

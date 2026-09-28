@@ -171,6 +171,9 @@ jobs:
             # a failure on one must not cost the other its issue.
             node scripts/generate-pecking-order.mjs --league theleague --publish $WEEK_ARG
             node scripts/generate-pecking-order.mjs --league afl-fantasy --publish $WEEK_ARG || echo "AFL pecking order failed (non-fatal)"
+            # Archie's: top 25 written up, every team ranked (registry
+            # peckingOrder.topN); announced in Slack by the drainer below.
+            node scripts/generate-pecking-order.mjs --league archies --publish $WEEK_ARG || echo "Archie's pecking order failed (non-fatal)"
           elif [ "$ARTICLE_TYPE" = "owners-poll-nag" ]; then
             # Count-only turnout reminder. NO @-mentions and no names — that is
             # a product decision (docs/plans/owners-poll.md), not chat styling.
@@ -246,7 +249,7 @@ jobs:
           elif [ "$ARTICLE_TYPE" = "schedule-release" ]; then
             FILES="$FILES,data/afl-fantasy/schefter-feed.json"
           elif [ "$ARTICLE_TYPE" = "pecking-order" ]; then
-            FILES="data/theleague/pecking-order,data/afl-fantasy/pecking-order"
+            FILES="data/theleague/pecking-order,data/afl-fantasy/pecking-order,data/archies/pecking-order"
           elif [ "$ARTICLE_TYPE" = "owners-poll-close" ]; then
             # The close pass amends the issue AND writes the reveal into each
             # league's Schefter feed, so both have to be committed.
