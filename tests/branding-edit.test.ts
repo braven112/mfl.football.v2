@@ -30,6 +30,13 @@ const ctx = { leagueSlug: 'archies', current };
 const BLOB = 'https://abc123.public.blob.vercel-storage.com/branding/archies/0005/icon-1.png';
 
 describe('validateBrandingEdit', () => {
+  it('refuses markup in any name or alias', () => {
+    expect(validateBrandingEdit({ name: '</script><script>alert(1)</script>' }, ctx).ok).toBe(false);
+    expect(validateBrandingEdit({ nameMedium: '<b>x' }, ctx).ok).toBe(false);
+    expect(validateBrandingEdit({ nameShort: 'a>b' }, ctx).ok).toBe(false);
+    expect(validateBrandingEdit({ aliases: ['ok', '<img>'] }, ctx).ok).toBe(false);
+  });
+
   it('accepts and normalises a real edit', () => {
     const r = validateBrandingEdit(
       { name: '  Detroit   Roar ', nameShort: 'Roar', abbrev: 'roar', colorPrimary: '#FF0000', aliases: ['Roar', ' Roar ', 'Cats'] },
