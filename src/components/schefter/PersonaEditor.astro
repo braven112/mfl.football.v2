@@ -1,23 +1,29 @@
 ---
 /**
  * News persona editor — the commissioner renames the league's columnist and
- * rewrites his voice. Talks only to /api/admin/persona, which takes the league
- * from the session, so this component needs no league prop to be safe; it
- * takes `navSlug` only to tag its root for the page-load gate.
+ * rewrites his voice. Talks only to /api/admin/persona, naming the page's
+ * league in `?league=`. The API decides whether the session may edit it: a
+ * commissioner only their own, a platform admin any
+ * (src/utils/league-admin.ts). `navSlug` also tags the root for the page-load gate.
  *
  * Rendered by the league's /admin/news route, which owns the
  * commissioner gate (a component cannot redirect — see CLAUDE.md).
  */
 import { PERSONA_LIMITS } from '../../utils/persona.mjs';
+import { getLeagueByNavSlug } from '../../config/leagues';
+import type { LeagueSlug } from '../../types/nav';
 
 interface Props {
   /** The league's nav slug — tags the root so a cross-league swap re-inits. */
-  navSlug: string;
+  navSlug: LeagueSlug;
 }
 const { navSlug } = Astro.props;
+// The API is told which league this page edits. A commissioner can only ever
+// name their own (the API refuses another); a platform admin can edit any.
+const leagueSlug = getLeagueByNavSlug(navSlug)?.slug ?? '';
 ---
 
-<section class="persona" id="persona-editor" data-league={navSlug} aria-labelledby="persona-title">
+<section class="persona" id="persona-editor" data-league={navSlug} data-league-slug={leagueSlug} aria-labelledby="persona-title">
   <header class="persona__head">
     <h2 id="persona-title">News persona</h2>
     <p class="persona__lede">
@@ -107,7 +113,9 @@ const { navSlug } = Astro.props;
       // Astro's checkOrigin 403s a write with no content type when the
       // browser omits Origin.
       const write = method !== 'GET';
-      const res = await fetch(ENDPOINT, {
+      const league = root!.dataset.leagueSlug || '';
+      const url = league ? `${ENDPOINT}?league=${encodeURIComponent(league)}` : ENDPOINT;
+      const res = await fetch(url, {
         method,
         credentials: 'same-origin',
         headers: write ? { 'Content-Type': 'application/json' } : undefined,

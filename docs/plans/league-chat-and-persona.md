@@ -182,6 +182,23 @@ Decisions (2026-09-28):
   only the CURRENT identity. Era rewrites have their own recompute chain
   (`docs/claude/insights/features/throwback-week.md`).
 
+### Platform super admin (done)
+
+The site owner edits every league's settings, as that league's commissioner
+would. `src/utils/league-admin.ts`:
+- `isPlatformAdmin` matches the MFL account name in the signed session,
+  case-insensitively, against `PLATFORM_ADMIN_USERNAMES`. Only the login route
+  writes that name, and only after MFL accepts the password.
+- `canAdministerLeague` gates the News Ops pages.
+- `resolveAdministeredLeague` gates the settings APIs (`/api/admin/persona`,
+  `/api/admin/schefter-stats`). A commissioner is held to their own session
+  league, and a `?league=` that names another league is refused. A platform
+  admin may name any league.
+
+Scope is league settings only. MFL-write routes (lineups, contracts,
+accounting) act AS a franchise and stay session-scoped. The branding editor
+will use the same gate.
+
 ## Phase 3 — later
 
 - Pecking Order at 99-team scale.
