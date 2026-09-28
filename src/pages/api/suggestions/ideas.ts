@@ -7,6 +7,7 @@
 
 import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../../utils/auth';
+import { recordInsightAction } from '../../../utils/site-insights';
 import type { Idea, CreateIdeaRequest, IdeaCategory } from '../../../types/suggestions';
 import {
   getAllIdeas,
@@ -122,5 +123,6 @@ export const POST: APIRoute = async ({ request }) => {
   const ok = await saveIdea(boardScope(user), idea);
   if (!ok) return json({ error: 'Failed to save idea' }, 500);
 
+  await recordInsightAction(user, 'suggestion_post');
   return json({ idea }, 201);
 };

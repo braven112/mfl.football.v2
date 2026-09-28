@@ -17,6 +17,7 @@
 
 import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../../utils/auth';
+import { recordInsightAction } from '../../../utils/site-insights';
 import { getLeagueYearForMflId } from '../../../utils/league-year';
 import { LEAGUES } from '../../../config/leagues';
 import { mflFetch, describeMflFailure } from '../../../utils/mfl-fetch';
@@ -174,6 +175,8 @@ export const POST: APIRoute = async ({ request }) => {
         // swallow — notification is best-effort
       }
     })();
+
+    await recordInsightAction(user, 'trade_offer');
 
     return new Response(
       JSON.stringify({ success: true, message: 'Trade proposal submitted' }),

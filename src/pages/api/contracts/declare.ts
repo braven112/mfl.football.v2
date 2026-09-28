@@ -8,6 +8,7 @@
 import type { APIRoute } from 'astro';
 import { getAuthUser, isAuthorizedForLeague, isFranchiseOwner } from '../../../utils/auth';
 import { CONTRACT_LEAGUE_ID } from '../../../utils/mfl-contract-writer';
+import { recordInsightAction } from '../../../utils/site-insights';
 import { validateContractSubmission } from '../../../utils/contract-validation';
 import {
   generateDeclarationId,
@@ -228,6 +229,7 @@ export const POST: APIRoute = async ({ request }) => {
     };
 
     await addDeclaration(declaration);
+    await recordInsightAction(user, 'contract_declare');
 
     return new Response(
       JSON.stringify({

@@ -18,6 +18,7 @@ import type { APIRoute } from 'astro';
 import { json, JSON_HEADERS_NO_STORE } from '../../../utils/api-response';
 import { checkRateLimit } from '../../../utils/rate-limit';
 import { invalidateAppBadge } from '../../../utils/app-badge-cache';
+import { recordInsightAction } from '../../../utils/site-insights';
 import {
   buildBallotRecord,
   validateBallot,
@@ -147,6 +148,7 @@ export const POST: APIRoute = async ({ request }) => {
   // icon; it isn't any more. Fire-and-forget — a stale badge must never fail a
   // ballot that has already been written.
   void invalidateAppBadge(resolved.caller.league.id, franchiseId);
+  await recordInsightAction({ leagueId: resolved.caller.league.id, franchiseId }, 'poll_vote');
 
   const ballotsIn = await countBallots(scope, window);
   return json(
