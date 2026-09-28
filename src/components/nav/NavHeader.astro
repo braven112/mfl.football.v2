@@ -70,7 +70,10 @@ const chevronSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" 
 // With exactly one other league the chevron is a direct switch link (one
 // tap). With two or more (a 3+-league registry) it opens a dropdown listing
 // every league, current one marked.
-const switchTargets = getLeagueSwitchTargets(league, currentPath, hideLeaguePrefix, Astro.url.hostname);
+// A package league (a client's private site) has no switcher: its owners have
+// no reason to jump into another client's league, and nothing links out.
+const pkg = currentLeagueDef.optInNav && currentLeagueDef.logo ? currentLeagueDef : null;
+const switchTargets = pkg ? [] : getLeagueSwitchTargets(league, currentPath, hideLeaguePrefix, Astro.url.hostname);
 const useDropdown = switchTargets.length > 1;
 const directTarget = switchTargets[0];
 ---
@@ -93,14 +96,18 @@ const directTarget = switchTargets[0];
         height="48"
       />
       <img
-        src={league === 'afl' ? '/assets/logos/afl-logo-dark.svg' : league === 'bb1' ? '/assets/logos/bestball-logo-dark.svg' : '/assets/logos/theleague-logo-dark.svg'}
+        src={pkg ? pkg.logo!.dark : league === 'afl' ? '/assets/logos/afl-logo-dark.svg' : league === 'bb1' ? '/assets/logos/bestball-logo-dark.svg' : '/assets/logos/theleague-logo-dark.svg'}
         alt={logoAlt}
         class="nav-header__logo nav-header__logo--dark"
         width="48"
         height="48"
       />
       <span class="nav-header__league-name">
-        {league === 'afl' ? (
+        {pkg ? (
+          pkg.wordmark
+            ? <img src={pkg.wordmark} alt={pkg.shortName ?? pkg.name} class="nav-header__wordmark" height="32" />
+            : <span class="nav-header__league-name--league">{pkg.shortName ?? pkg.name}</span>
+        ) : league === 'afl' ? (
           <span class="nav-header__league-name--afl">AFL</span>
         ) : league === 'bb1' ? (
           <span class="nav-header__league-name--league">Best Ball</span>
@@ -243,6 +250,12 @@ const directTarget = switchTargets[0];
   .nav-header__logo-link:focus-visible {
     outline: none;
     box-shadow: var(--nav-focus-ring, 0 0 0 2px #1c497c);
+  }
+
+  .nav-header__wordmark {
+    height: 28px;
+    width: auto;
+    display: block;
   }
 
   .nav-header__logo {

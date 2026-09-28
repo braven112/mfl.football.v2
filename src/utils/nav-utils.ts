@@ -633,7 +633,9 @@ export function getLeagueSwitchTargets(
   hideLeaguePrefix: boolean,
   hostname: string
 ): LeagueSwitchTarget[] {
-  return ALL_LEAGUES.filter((l) => l.navSlug !== currentLeague).map((l) => ({
+  // A package league (a client's private site, `advertiseOnSharedHost: false`)
+  // is never offered from another league's switcher.
+  return ALL_LEAGUES.filter((l) => l.navSlug !== currentLeague && l.advertiseOnSharedHost !== false).map((l) => ({
     navSlug: l.navSlug,
     name: l.name,
     href: buildSwitchUrl(currentPath, l, hideLeaguePrefix, hostname),
