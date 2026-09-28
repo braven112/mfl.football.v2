@@ -644,7 +644,9 @@ export function getLeagueSwitchTargets(
   // A custom-site demo deployment serves only the slots with a demo path —
   // switching to any other league would land on a refused route.
   const demo = isDemoEnv();
-  return ALL_LEAGUES.filter((l) => l.navSlug !== currentLeague && (!demo || !!l.demoPath)).map((l) => ({
+  // A package league (a client's private site, `advertiseOnSharedHost: false`)
+  // is never offered from another league's switcher.
+  return ALL_LEAGUES.filter((l) => l.navSlug !== currentLeague && (!demo || !!l.demoPath) && l.advertiseOnSharedHost !== false).map((l) => ({
     navSlug: l.navSlug,
     name: l.name,
     href: buildSwitchUrl(currentPath, l, hideLeaguePrefix, hostname),
