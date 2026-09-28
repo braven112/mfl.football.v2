@@ -318,6 +318,8 @@ const ARCHIES_COLUMNS: ColumnMap = {
   News: [
     { id: 'archies-news', label: 'League News' },
     { id: 'archies-gauntlet', label: 'The Gauntlet' },
+    { id: 'archies-pecking-order', label: 'The Pecking Order' },
+    { id: 'archies-calendar', label: 'Calendar' },
     { id: 'archies-brand', label: 'Team Brands' },
   ],
 };

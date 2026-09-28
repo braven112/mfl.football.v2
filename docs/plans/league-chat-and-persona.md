@@ -326,7 +326,7 @@ Follow-ups noticed (not in scope):
   June 1. `getAflWhatsNextTimeline` / `getAllResolvedAflEvents` in
   `src/utils/league-event-resolver.ts`.
 
-## Phase 4 — the Pecking Order for Archie's (in progress)
+## Phase 4 — the Pecking Order for Archie's (built; first issue the Tuesday after a completed week)
 
 Decided 2026-09-28:
 - **Scope:** the column ranks and writes up the league's TOP 25 overall, plus a
@@ -336,6 +336,27 @@ Decided 2026-09-28:
   Gauntlet.
 - **Day:** Tuesday, the TheLeague/AFL slot (after Monday night is final, a
   day before The Gauntlet).
+
+What landed:
+- **Generator** (`scripts/generate-pecking-order.mjs`): archies joins
+  `VALID_LEAGUES`; the registry's `peckingOrder.topN` (25) cuts the write-up —
+  all 99 ranked, blurbs only for 1..25; `{id, name}` divisions read.
+- **Derived standings** (`enrichStandingsFromResults`,
+  `scripts/lib/pecking-order-math.mjs`): archies' MFL export has no all-play,
+  streak or PA, so they are computed from the weekly scores — only where
+  missing, so TheLeague's and the AFL's issues are byte-identical (checked).
+  Doubleheaders: all-play and PA are per week (MFL's `pf` basis), the margin
+  and streak per game.
+- **Voice**: the column is written by the league's persona (`loadLeaguePersona`
+  → `buildCachedSystem`); a renamed writer loses the Schefter lines; the fact
+  sheet says redraft, carries only the top 25 plus award teams.
+- **Pages**: `/archies/pecking-order` (+ permalinks) on the shared landing /
+  issue components: top-25 cards, then every division's teams in pecking order
+  with their league-wide rank (replacing the 99-row standings and all-play
+  tables). Team links go to the brand book (archies has no franchise pages).
+- **Delivery**: Tuesday in `schefter-articles.yml`; the queued announcement has
+  no GroupMe bot, so the drainer posts it to Slack as the persona.
+- Nav, page directory, footer and article-link destinations list it.
 
 ## Later
 

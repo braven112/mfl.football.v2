@@ -270,6 +270,12 @@ export interface LeagueDefinition {
    */
   ownersPoll: OwnersPollConfig;
   /**
+   * Pecking Order options for a big league. `topN`: write up only the top N
+   * teams (the rest are ranked and shown in their division lists). Absent →
+   * every team gets a blurb, as TheLeague and the AFL always have.
+   */
+  peckingOrder?: { topN?: number };
+  /**
    * The zone this league keeps its own time in — see `officialClock` in
    * leagues-data.mjs. Always present; read it with `leagueClock(slug)` rather
    * than reaching into the entry, and never fall back to a hardcoded Pacific
