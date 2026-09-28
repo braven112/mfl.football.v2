@@ -1,0 +1,41 @@
+---
+/**
+ * One news article (archies) — thin route: finds the post (active feed, then
+ * the per-year archives) and redirects to the news index when it is missing.
+ * The body is the shared SchefterArticlePage. The lookup and redirect stay
+ * here: `Astro.redirect()` only works from a page, and these imports are
+ * static specifiers.
+ */
+import SchefterArticlePage from '../../../components/shared/SchefterArticlePage.astro';
+import feedData from '../../../../data/archies/schefter-feed.json';
+import config from '../../../../data/archies/archies.config.json';
+import type { SchefterFeed, SchefterPost } from '../../../types/schefter';
+import type { GauntletDerived } from '../../../utils/schedule-strength';
+
+export const prerender = false;
+
+const gauntletFiles = import.meta.glob<GauntletDerived>('../../../../data/archies/derived/schedule-strength-*.json', {
+  import: 'default',
+});
+const archiveFiles = import.meta.glob<{ posts?: SchefterPost[] } | SchefterPost[]>(
+  '../../../../data/archies/schefter-archive/*.json',
+  { import: 'default' },
+);
+
+const { id } = Astro.params;
+const isArticle = (p: SchefterPost) => p.type === 'article' && p.id === id && !!p.content;
+let post = ((feedData as unknown as SchefterFeed).posts ?? []).find(isArticle);
+if (!post) {
+  for (const key of Object.keys(archiveFiles).sort().reverse()) {
+    const data = await archiveFiles[key]();
+    const hit = ((Array.isArray(data) ? data : (data?.posts ?? [])) as SchefterPost[]).find(isArticle);
+    if (hit) {
+      post = hit;
+      break;
+    }
+  }
+}
+if (!post) return Astro.redirect('/archies/news');
+---
+
+<SchefterArticlePage leagueSlug="archies" post={post} gauntletFiles={gauntletFiles} teams={config.teams} />

@@ -204,6 +204,9 @@ jobs:
             node scripts/compute-schedule-strength.mjs $COMPUTE_WEEK_ARG
             node scripts/schefter-weekly-articles.mjs --type "$ARTICLE_TYPE" --league theleague $WEEK_ARG
             node scripts/schefter-weekly-articles.mjs --type "$ARTICLE_TYPE" --league afl-fantasy $WEEK_ARG || echo "AFL generation failed (non-fatal)"
+            # Archie's (a package league) gets The Gauntlet and nothing else;
+            # its chat is Slack, and the announce step routes it there.
+            node scripts/schefter-weekly-articles.mjs --type "$ARTICLE_TYPE" --league archies $WEEK_ARG || echo "Archie's generation failed (non-fatal)"
           elif [ "$ARTICLE_TYPE" = "schedule-release" ]; then
             # Release-day column, one per league per season. The article type
             # self-skips until BOTH the reveal is locked and the commissioner's
@@ -239,7 +242,7 @@ jobs:
           git config user.email "actions@users.noreply.github.com"
           FILES="src/data/theleague/schefter-feed.json"
           if [ "$ARTICLE_TYPE" = "schedule-strength" ]; then
-            FILES="$FILES,data/afl-fantasy/schefter-feed.json,data/theleague/derived,data/afl-fantasy/derived"
+            FILES="$FILES,data/afl-fantasy/schefter-feed.json,data/theleague/derived,data/afl-fantasy/derived,data/archies/schefter-feed.json,data/archies/derived"
           elif [ "$ARTICLE_TYPE" = "schedule-release" ]; then
             FILES="$FILES,data/afl-fantasy/schefter-feed.json"
           elif [ "$ARTICLE_TYPE" = "pecking-order" ]; then
@@ -275,6 +278,10 @@ jobs:
           SCHEFTER_ANNOUNCE_QUEUE: ${{ runner.temp }}/schefter-announce-queue.json
           GROUPME_SCHEFTER_BOT_ID: ${{ secrets.GROUPME_SCHEFTER_BOT_ID }}
           GROUPME_AFL_SCHEFTER_BOT_ID: ${{ secrets.GROUPME_AFL_SCHEFTER_BOT_ID }}
+          # Archie's chat is Slack (registry `chat` block). Unset secrets make
+          # the Slack sender skip cleanly, the same as a missing GroupMe bot.
+          SLACK_ARCHIES_BOT_TOKEN: ${{ secrets.SLACK_ARCHIES_BOT_TOKEN }}
+          SLACK_ARCHIES_CHANNEL_ID: ${{ secrets.SLACK_ARCHIES_CHANNEL_ID }}
           # The day-cap claim (Redis) and the push fan-out (which POSTs back to
           # the site) both moved here with the senders.
           UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}

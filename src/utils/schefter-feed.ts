@@ -180,7 +180,7 @@ export function schefterPostOgText(
 export function buildSchefterPostOg(
   post: SchefterPost,
   pageUrl: URL,
-  league: 'theleague' | 'afl-fantasy' = 'theleague'
+  league: 'theleague' | 'afl-fantasy' | 'archies' = 'theleague'
 ): { title: string; description?: string; image: string; url: string } {
   const { title, description } = schefterPostOgText(post);
   const leagueQuery = league === 'theleague' ? '' : `?league=${league}`;

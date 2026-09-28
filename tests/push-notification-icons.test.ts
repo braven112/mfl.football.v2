@@ -33,8 +33,14 @@ import { HOST_TO_SLUG } from '../src/utils/league-host-map';
 const ROOT = path.resolve(__dirname, '..');
 const PUBLIC = path.join(ROOT, 'public');
 
-/** navSlugs that ship a PWA manifest + push art. Best-ball is draft-only. */
-const PUSH_LEAGUES = ALL_LEAGUES.filter((l) => !l.bestBall).map((l) => l.navSlug);
+/**
+ * navSlugs that ship a PWA manifest + push art: the leagues with push turned
+ * on. Best-ball is draft-only, and a package league (archies) launches with
+ * push off — both are keyed on the registry flag rather than a league list.
+ */
+const PUSH_LEAGUES = ALL_LEAGUES.filter((l) => !l.bestBall && l.features.pushNotifications).map(
+  (l) => l.navSlug,
+);
 
 function findManifests(dir: string, out: string[] = []): string[] {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {

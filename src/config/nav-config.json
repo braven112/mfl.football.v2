@@ -86,6 +86,72 @@
       ]
     },
     {
+      "id": "archies",
+      "label": "League",
+      "leagueOnly": "archies",
+      "phaseOrder": {
+        "inSeason": 1,
+        "offSeason": 1
+      },
+      "defaultOpen": "always",
+      "links": [
+        {
+          "id": "archies-standings",
+          "label": "Standings",
+          "icon": "standings",
+          "path": "/standings",
+          "external": false,
+          "leagueOnly": "archies",
+          "description": "Division standings, victory points first"
+        },
+        {
+          "id": "archies-rosters",
+          "label": "Rosters",
+          "icon": "users",
+          "path": "/rosters",
+          "external": false,
+          "leagueOnly": "archies",
+          "description": "Every team's roster, one team at a time"
+        },
+        {
+          "id": "archies-transactions",
+          "label": "Transactions",
+          "icon": "activity",
+          "path": "/transactions",
+          "external": false,
+          "leagueOnly": "archies",
+          "description": "Every add, drop and trade this season"
+        },
+        {
+          "id": "archies-news",
+          "label": "League News",
+          "icon": "news",
+          "path": "/news",
+          "external": false,
+          "leagueOnly": "archies",
+          "description": "The league's news feed"
+        },
+        {
+          "id": "archies-gauntlet",
+          "label": "The Gauntlet",
+          "icon": "rank",
+          "path": "/schedule-strength",
+          "external": false,
+          "leagueOnly": "archies",
+          "description": "Strength of schedule, updated every Wednesday"
+        },
+        {
+          "id": "archies-brand",
+          "label": "Team Brands",
+          "icon": "star",
+          "path": "/brand",
+          "external": false,
+          "leagueOnly": "archies",
+          "description": "Every team's name, colours and marks"
+        }
+      ]
+    },
+    {
       "id": "news-updates",
       "label": "News & Updates",
       "phaseOrder": {
@@ -528,7 +594,8 @@
       "0001",
       "0000"
     ],
-    "keeper": []
+    "keeper": [],
+    "archies": []
   },
   "footerLinks": [
     {
@@ -587,6 +654,7 @@
     "theleague": "https://{host}/{year}/home/{leagueId}?MODULE=MESSAGE20",
     "afl": "https://{host}/{year}/home/{leagueId}?MODULE=MESSAGE20",
     "bb1": "https://{host}/{year}/home/{leagueId}?MODULE=MESSAGE20",
-    "keeper": "https://{host}/{year}/home/{leagueId}?MODULE=MESSAGE20"
+    "keeper": "https://{host}/{year}/home/{leagueId}?MODULE=MESSAGE20",
+    "archies": "https://{host}/{year}/home/{leagueId}?MODULE=MESSAGE20"
   }
 }

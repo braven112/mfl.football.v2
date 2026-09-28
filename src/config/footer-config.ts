@@ -10,7 +10,7 @@
  * a directory entry (which CLAUDE.md already requires), then list its id here.
  */
 
-import { getLeagueBySlug, type CanonicalLeagueSlug } from './leagues';
+import { ALL_LEAGUES, DEFAULT_LEAGUE_SLUG, getLeagueBySlug, type CanonicalLeagueSlug } from './leagues';
 import pageDirectory from '../data/page-directory.json';
 import { getCurrentTierMembership, D_LEAGUE, PREMIER_LEAGUE } from '../utils/afl-tier';
 import { getSearchPath } from '../utils/nav-utils';
@@ -80,9 +80,13 @@ export function pathBelongsToLeague(
   path: string,
   slug: CanonicalLeagueSlug
 ): boolean {
-  if (path.startsWith('/afl-fantasy')) return slug === 'afl-fantasy';
-  if (path.startsWith('/best-ball-1')) return slug === 'best-ball-1';
-  return slug === 'theleague';
+  // Every non-default league's entries carry its own prefix; derived from the
+  // registry so a new league is recognised without editing this function.
+  for (const league of ALL_LEAGUES) {
+    if (league.slug === DEFAULT_LEAGUE_SLUG) continue;
+    if (path === `/${league.slug}` || path.startsWith(`/${league.slug}/`)) return slug === league.slug;
+  }
+  return slug === DEFAULT_LEAGUE_SLUG;
 }
 
 /**
@@ -301,11 +305,29 @@ export function isDemoBigLeague(slug: CanonicalLeagueSlug): boolean {
   return slug === 'afl-fantasy' && Boolean(getLeagueBySlug('afl-fantasy')?.demoPath);
 }
 
+/**
+ * Archie's (a package league) — only the launch surfaces. An id with no
+ * page-directory entry would render nothing, so add the entry first.
+ */
+const ARCHIES_COLUMNS: ColumnMap = {
+  League: [
+    { id: 'archies-standings', label: 'Standings' },
+    { id: 'archies-rosters', label: 'Rosters' },
+    { id: 'archies-transactions', label: 'Transactions' },
+  ],
+  News: [
+    { id: 'archies-news', label: 'League News' },
+    { id: 'archies-gauntlet', label: 'The Gauntlet' },
+    { id: 'archies-brand', label: 'Team Brands' },
+  ],
+};
+
 const BY_LEAGUE: Record<CanonicalLeagueSlug, ColumnMap> = {
   theleague: THELEAGUE_COLUMNS,
   'afl-fantasy': AFL_COLUMNS,
   'best-ball-1': BEST_BALL_COLUMNS,
   keeper: KEEPER_COLUMNS,
+  archies: ARCHIES_COLUMNS,
 };
 
 export interface DirectoryEntry {

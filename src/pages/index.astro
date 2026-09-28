@@ -38,12 +38,19 @@ const PANEL_META: Record<CanonicalLeagueSlug, PanelMeta> = {
     estYear: 2020,
     stats: '12 Teams · Keepers · No Salary Cap',
   },
+  archies: {
+    logo: '/assets/logos/archies-logo.svg',
+    logoDark: '/assets/logos/archies-logo-dark.svg',
+    estYear: 2021,
+    stats: '99 Teams · 9 Divisions · Redraft',
+  },
 };
 
 const CHIP_LABELS: Record<string, string> = {
   theleague: 'The League',
   afl: 'AFL',
   bb1: 'Best Ball #1',
+  archies: "Archie's",
 };
 
 /**
@@ -73,7 +80,13 @@ const CHIP_LABELS: Record<string, string> = {
  * filter and nothing else. Pruning them would make it a multi-file change that
  * silently ships an unstyled chip.
  */
-const splashLeagues = ALL_LEAGUES.filter((league) => !league.bestBall);
+// A package league (archies) is listed only once its owner says so — a client
+// league is not automatically an advertisement for the site. The registry's
+// `advertiseOnSharedHost: false` keeps it off the splash; it is still served
+// at its own path.
+const splashLeagues = ALL_LEAGUES.filter(
+  (league) => !league.bestBall && league.advertiseOnSharedHost !== false,
+);
 const advertisedNavSlugs = new Set(splashLeagues.map((league) => league.navSlug));
 
 const leagueCount = splashLeagues.length;
@@ -467,6 +480,9 @@ const hrefFromHere = (path: string) => crossHostLeagueHref(Astro.url.hostname, p
 
   .chip--bb1 {
     background: #0e8a5f;
+  }
+  .chip--archies {
+    background: #1d3a6e;
   }
 
   .wn-card h3 {

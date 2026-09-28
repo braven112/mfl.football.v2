@@ -21,6 +21,7 @@ import theleagueConfig from '../data/theleague.config.json';
 import aflConfig from '../../data/afl-fantasy/afl.config.json';
 import bb1Config from '../../data/best-ball-1/bb1.config.json';
 import { keeperLeagueConfig } from './keeper-config';
+import archiesConfig from '../../data/archies/archies.config.json';
 import type { LeagueSlug } from '../types/nav';
 import { ensureContrastOn, AA_LARGE_TEXT_RATIO } from './team-color-contrast';
 
@@ -61,6 +62,7 @@ const MAPS: Record<LeagueSlug, Record<string, TeamColors>> = {
   afl: buildMap(aflConfig.teams),
   bb1: buildMap(bb1Config.teams),
   keeper: buildMap(keeperLeagueConfig.teams),
+  archies: buildMap(archiesConfig.teams),
 };
 
 function entry(franchiseId: string, league: LeagueSlug): TeamColors {
@@ -129,6 +131,7 @@ const DARK_CARD_SURFACE: Record<LeagueSlug, string> = {
   theleague: '#262626',
   afl: '#16283c',
   bb1: '#262626',
+  archies: '#262626',
 };
 /** Light `--card-bg` is white for every league (tokens.css). */
 const LIGHT_CARD_SURFACE = '#ffffff';

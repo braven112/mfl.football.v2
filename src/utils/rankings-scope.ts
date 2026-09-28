@@ -24,7 +24,7 @@
 import { getLeagueBySlug, getLeagueById } from '../config/leagues';
 
 /** The buckets rankings can live in. Add one per league that needs its own. */
-export type RankingsScope = 'theleague' | 'afl' | 'bb1';
+export type RankingsScope = 'theleague' | 'afl' | 'bb1' | 'archies';
 
 export const DEFAULT_RANKINGS_SCOPE: RankingsScope = 'theleague';
 
@@ -42,6 +42,7 @@ const SCOPE_BY_NAV_SLUG: Record<string, RankingsScope> = {
   theleague: 'theleague',
   bb1: 'bb1',
   afl: 'afl',
+  archies: 'archies',
 };
 
 /** Resolve a league's nav slug to its rankings scope. Unknown → TheLeague. */
