@@ -153,10 +153,15 @@ describe('labels', () => {
 });
 
 describe('surface detection in the layout beacon', () => {
-	const layout = readFileSync(
-		path.join(process.cwd(), 'src/layouts/TheLeagueLayout.astro'),
-		'utf8',
-	);
+	// The beacon moved out of TheLeagueLayout into one script every layout loads.
+	const layout = readFileSync(path.join(process.cwd(), 'src/scripts/visit-beacon.ts'), 'utf8');
+
+	it('every layout that renders a page loads the shared beacon', () => {
+		for (const file of ['TheLeagueLayout', 'MflAppLayout', 'SplashLayout']) {
+			const src = readFileSync(path.join(process.cwd(), `src/layouts/${file}.astro`), 'utf8');
+			expect(src, file).toContain('<script src="../scripts/visit-beacon.ts"></script>');
+		}
+	});
 
 	it('treats standalone and minimal-ui as installed', () => {
 		expect(layout).toContain("['standalone', 'minimal-ui']");

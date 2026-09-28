@@ -68,6 +68,7 @@ import NflLogoDarkStyles from '../components/NflLogoDarkStyles.astro';
 import TeamIconDarkStyles from '../components/TeamIconDarkStyles.astro';
 import { getThemePreference } from '../utils/theme-preference';
 import { getAuthUser } from '../utils/auth';
+import { canViewSiteInsights } from '../utils/site-insights';
 import { ALL_LEAGUES, leagueUrl, isSharedAppHost } from '../config/leagues';
 // Global utility classes (.visually-hidden, …) — a frontmatter import so the
 // CSS ships unscoped; an @import inside the <style> block would get scoped.
@@ -171,6 +172,7 @@ const leagueLinks = ALL_LEAGUES.filter((league) => !league.bestBall).map((league
 					signedIn={Boolean(authUser)}
 					signInHref={mflLoginUrl(Astro.url.pathname + Astro.url.search)}
 					currentPath={Astro.url.pathname}
+					showAnalytics={canViewSiteInsights(authUser)}
 				/>
 			</div>
 		</header>
@@ -203,6 +205,9 @@ const leagueLinks = ALL_LEAGUES.filter((league) => !league.bestBall).map((league
 				document.addEventListener('astro:page-load', initSignOut);
 			})();
 		</script>
+
+		{/* Visit beacon — the same one the league sites send; feeds /live/analytics. */}
+		<script src="../scripts/visit-beacon.ts"></script>
 
 		<main id="mfl-main" class="mfl-main">
 			<slot />

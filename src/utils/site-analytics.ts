@@ -342,6 +342,25 @@ export function isDirectoryPath(path: string, league: CanonicalLeagueSlug): bool
 
 const KNOWN_PATHS = new Map<CanonicalLeagueSlug, Set<string>>();
 
+/**
+ * The page directory's title for a recorded path in this league, or null when
+ * the directory has no entry for it. Cached per league, like `isDirectoryPath`.
+ */
+export function directoryTitle(path: string, league: CanonicalLeagueSlug): string | null {
+	let titles = TITLES.get(league);
+	if (!titles) {
+		titles = new Map();
+		for (const entry of directoryFor(league)) {
+			const key = canonicalPath(entry.path, league);
+			if (!titles.has(key)) titles.set(key, entry.title);
+		}
+		TITLES.set(league, titles);
+	}
+	return titles.get(canonicalPath(path, league)) ?? null;
+}
+
+const TITLES = new Map<CanonicalLeagueSlug, Map<string, string>>();
+
 function titleFromPath(path: string): string {
 	const last = path.split('/').filter(Boolean).pop();
 	if (!last) return 'Homepage';

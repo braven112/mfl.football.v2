@@ -7,6 +7,7 @@ import { getLeagueById, getLeagueBySlug } from '../../../config/leagues';
 import { captureCredential } from '../../../utils/autocut-storage';
 import { checkRateLimit } from '../../../utils/rate-limit';
 import { getClientIdentity } from '../../../utils/client-ip';
+import { recordInsightLogin } from '../../../utils/site-insights';
 
 const AFL_LEAGUE_ID = getLeagueBySlug('afl-fantasy')!.id;
 const THELEAGUE_ID = getLeagueBySlug('theleague')!.id;
@@ -190,6 +191,14 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         /* never block login on credential capture */
       }
     }
+
+    // Site insights (/live/analytics): who signed in, and when. Awaited for
+    // the same freeze reason as above; recordInsightLogin never throws.
+    await recordInsightLogin({
+      leagueId: resolvedLeagueId,
+      franchiseId: mflResponse.franchiseId,
+      username: String(username),
+    });
 
     return new Response(
       JSON.stringify({

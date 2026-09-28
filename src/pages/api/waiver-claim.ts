@@ -36,6 +36,7 @@
 
 import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../utils/auth';
+import { recordInsightAction } from '../../utils/site-insights';
 import { getCurrentLeagueYear, getRolloverLeagueYear } from '../../utils/league-year';
 import { mflFetch, describeMflFailure } from '../../utils/mfl-fetch';
 import { createMFLApiClient } from '../../utils/mfl-matchup-api';
@@ -589,6 +590,7 @@ export const POST: APIRoute = async ({ request }) => {
           { confirmUrl }
         );
       }
+      await recordInsightAction(user, 'waiver_claim');
       return new Response(
         JSON.stringify({
           success: true,
@@ -650,6 +652,7 @@ export const POST: APIRoute = async ({ request }) => {
         { round, submitted: requestedAdds, confirmed: newlyPending, confirmUrl }
       );
     }
+    await recordInsightAction(user, 'waiver_claim');
     return new Response(
       JSON.stringify({
         success: true,

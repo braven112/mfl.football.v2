@@ -19,6 +19,7 @@
 
 import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../../utils/auth';
+import { recordInsightAction } from '../../../utils/site-insights';
 import { hashTipsterId } from '../../../utils/schefter-tipster-hash';
 import { detectAttackOnSchefter } from '../../../utils/schefter-attack-detection';
 import { assignCodename } from '../../../utils/schefter-codenames';
@@ -401,6 +402,8 @@ export const POST: APIRoute = async ({ request }) => {
       console.warn('[schefter/tip] codename assign (reveal) failed:', err);
     }
   }
+
+  await recordInsightAction(user, 'schefter_tip');
 
   return new Response(
     JSON.stringify({

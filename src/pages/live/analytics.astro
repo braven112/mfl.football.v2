@@ -1,0 +1,722 @@
+---
+/**
+ * MFL Live — site analytics. ONE viewer: TheLeague's franchise 0001 with the
+ * commissioner/admin role (`canViewSiteInsights`). Everyone else, signed in or
+ * not, is sent to the board — the page does not admit to existing.
+ *
+ * Site-wide on purpose: TheLeague, the AFL, Best Ball, MFL Live and the shared
+ * host's own pages in one report, filterable by section. The per-league,
+ * owner-visible `/activity` page is separate and unchanged.
+ *
+ * Every number is derived by `buildInsightsReport` (pure, tested); this page
+ * only reads and renders. Not in the page directory: search would show it to
+ * other admins, and it is useless to them.
+ *
+ * `?mock` renders deterministic sample data (still gated), for design work
+ * before the counters have filled.
+ */
+import MflAppLayout from '../../layouts/MflAppLayout.astro';
+import { getAuthUser } from '../../utils/auth';
+import { mflLoginUrl } from '../../utils/mfl-login-redirect';
+import {
+	canViewSiteInsights,
+	readInsightDays,
+	readInsightPeople,
+} from '../../utils/site-insights';
+import {
+	INSIGHTS_RANGES,
+	INSIGHTS_TTL_DAYS,
+	buildInsightsReport,
+	insightClock,
+	insightDates,
+	insightSections,
+	mockInsights,
+	parseInsightsRange,
+	sectionLabel,
+	visitorKey,
+} from '../../utils/site-insights-model';
+import { directoryTitle } from '../../utils/site-analytics';
+import { formatLastSeen } from '../../utils/owner-activity';
+import { getLeagueTeamConfig, getLeagueTeamConfigs } from '../../utils/league-team-brands';
+import {
+	ALL_LEAGUES,
+	getLeagueById,
+	getLeagueBySlug,
+	leagueClock,
+	DEFAULT_LEAGUE_SLUG,
+	type CanonicalLeagueSlug,
+} from '../../config/leagues';
+import '../../styles/mfl-live.css';
+
+export const prerender = false;
+
+const authUser = getAuthUser(Astro.request);
+if (!authUser) return Astro.redirect(mflLoginUrl('/live/analytics'));
+if (!canViewSiteInsights(authUser)) return Astro.redirect('/live');
+
+const range = parseInsightsRange(Astro.url.searchParams.get('days'));
+const sectionParam = Astro.url.searchParams.get('section');
+const sections = insightSections();
+const section = sectionParam && sections.includes(sectionParam) ? sectionParam : null;
+const useMock = Astro.url.searchParams.has('mock');
+
+let unavailable = false;
+let raw: Awaited<ReturnType<typeof readInsightDays>> = [];
+let people: Awaited<ReturnType<typeof readInsightPeople>> = [];
+
+if (useMock) {
+	const clock = leagueClock(DEFAULT_LEAGUE_SLUG).zone;
+	const dates = insightDates(insightClock(new Date(), clock).date, range);
+	const owners = ALL_LEAGUES.flatMap((l) =>
+		getLeagueTeamConfigs(l.slug).map((t: any) => ({ key: visitorKey(l.id, t.franchiseId), section: l.slug })),
+	);
+	({ days: raw, people } = mockInsights(dates, owners));
+} else {
+	try {
+		[raw, people] = await Promise.all([readInsightDays(range), readInsightPeople()]);
+		if (raw === null) unavailable = true;
+	} catch (err) {
+		console.warn('[live/analytics] read failed:', err);
+		unavailable = true;
+	}
+}
+
+const report = buildInsightsReport({ days: raw ?? [], people, section });
+
+// ── Display helpers ─────────────────────────────────────────────────────────
+
+const fmt = new Intl.NumberFormat('en-US');
+const n = (v: number) => fmt.format(v);
+
+function ownerLabel(leagueId: string, franchiseId: string): { team: string; league: string } {
+	const league = getLeagueById(leagueId);
+	const config = league ? getLeagueTeamConfig(league.slug, franchiseId) : undefined;
+	return {
+		team: (config?.name as string) || `Franchise ${franchiseId}`,
+		league: league?.name ?? `League ${leagueId}`,
+	};
+}
+
+function pageLabel(s: string, page: string): string {
+	const league = getLeagueBySlug(s);
+	if (league) return directoryTitle(page, league.slug as CanonicalLeagueSlug) ?? page;
+	if (page === '/live') return 'Live board';
+	if (page === '/live/league/:id') return 'Live — one league';
+	if (page === '/live/settings') return 'Leagues & settings';
+	if (page === '/live/analytics') return 'Site analytics';
+	if (page === '/login') return 'Sign in';
+	if (page === '/') return 'Splash';
+	return page;
+}
+
+function dateLabel(date: string): string {
+	const [y, m, d] = date.split('-').map(Number);
+	return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString('en-US', {
+		month: 'short',
+		day: 'numeric',
+		weekday: 'short',
+		timeZone: 'UTC',
+	});
+}
+
+const clockLabel = leagueClock(DEFAULT_LEAGUE_SLUG).label;
+const maxDayViews = Math.max(1, ...report.days.map((d) => d.views));
+const maxDayOwners = Math.max(1, ...report.days.map((d) => d.activeOwners));
+const maxHeat = Math.max(1, ...report.heatmap.flat());
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const hourLabel = (h: number) => (h === 0 ? '12a' : h < 12 ? `${h}a` : h === 12 ? '12p' : `${h - 12}p`);
+
+const topPages = report.pages.slice(0, 25);
+const maxPage = Math.max(1, ...topPages.map((p) => p.views));
+const deviceTotal = report.devices.reduce((s, r) => s + r.count, 0);
+const sourceTotal = report.sources.reduce((s, r) => s + r.count, 0);
+const pct = (v: number, total: number) => (total ? Math.round((v / total) * 100) : 0);
+
+const STALE_MS = 7 * 86_400_000;
+const nowMs = Date.now();
+const activeCount = report.people.filter((p) => p.lastSeen && nowMs - p.lastSeen < STALE_MS).length;
+
+const href = (params: { days?: number; section?: string | null }) => {
+	const q = new URLSearchParams();
+	const days = params.days ?? range;
+	const sec = params.section === undefined ? section : params.section;
+	if (days !== 30) q.set('days', String(days));
+	if (sec) q.set('section', sec);
+	if (useMock) q.set('mock', '');
+	const s = q.toString();
+	return `/live/analytics${s ? `?${s}` : ''}`;
+};
+
+const sectionChips = [
+	{ key: null as string | null, label: 'Whole site' },
+	...sections.map((s) => ({ key: s as string | null, label: sectionLabel(s) })),
+];
+---
+
+<MflAppLayout title="Site analytics — MFL Live" description="Admin-only site analytics">
+	<section class="ins">
+		<a class="ins__back" href="/live">&larr; Board</a>
+		<header class="ins__head">
+			<h1 class="ins__title">Site analytics</h1>
+			<p class="ins__lede">
+				Who's using the site, and what they open. Visible only to you.
+				{useMock && <strong> Showing sample data.</strong>}
+			</p>
+		</header>
+
+		<nav class="ins__filters" aria-label="Filters">
+			<div class="ins__chips" role="group" aria-label="Date range">
+				{INSIGHTS_RANGES.map((d) => (
+					<a class="ins__chip" href={href({ days: d })} aria-current={d === range ? 'true' : undefined}>
+						{d} days
+					</a>
+				))}
+			</div>
+			<div class="ins__chips" role="group" aria-label="Section">
+				{sectionChips.map((c) => (
+					<a
+						class="ins__chip"
+						href={href({ section: c.key })}
+						aria-current={c.key === section ? 'true' : undefined}
+					>
+						{c.label}
+					</a>
+				))}
+			</div>
+		</nav>
+
+		{unavailable ? (
+			<p class="ins__empty">Analytics storage is unavailable right now, so there's nothing to show. Try again shortly.</p>
+		) : (
+			<Fragment>
+				<div class="ins__tiles">
+					<div class="ins__tile">
+						<span class="ins__tile-value">{n(report.totals.views)}</span>
+						<span class="ins__tile-label">Page views</span>
+					</div>
+					<div class="ins__tile">
+						<span class="ins__tile-value">{n(report.totals.owners)}</span>
+						<span class="ins__tile-label">Owners who visited</span>
+					</div>
+					<div class="ins__tile">
+						<span class="ins__tile-value">{n(report.totals.weeklyOwners)}</span>
+						<span class="ins__tile-label">Active in last 7 days</span>
+					</div>
+					<div class="ins__tile">
+						<span class="ins__tile-value">{report.totals.avgDailyOwners}</span>
+						<span class="ins__tile-label">Avg owners / day</span>
+					</div>
+					{section === null && (
+						<div class="ins__tile">
+							<span class="ins__tile-value">{n(report.totals.logins)}</span>
+							<span class="ins__tile-label">Sign-ins</span>
+						</div>
+					)}
+					<div class="ins__tile">
+						<span class="ins__tile-value">{n(report.totals.actions)}</span>
+						<span class="ins__tile-label">Actions taken</span>
+					</div>
+					<div class="ins__tile">
+						<span class="ins__tile-value">{pct(report.totals.anonymousViews, report.totals.views)}%</span>
+						<span class="ins__tile-label">Views while signed out</span>
+					</div>
+				</div>
+
+				{report.totals.views === 0 && (
+					<p class="ins__empty">
+						No visits recorded in this window yet. Tracking fills in from the day this page shipped,
+						and each day is kept for {INSIGHTS_TTL_DAYS} days.
+					</p>
+				)}
+
+				<section class="ins__card" aria-labelledby="ins-daily">
+					<h2 class="ins__h2" id="ins-daily">Page views per day</h2>
+					<div class="ins__bars" role="img" aria-label={`Daily page views over the last ${range} days`}>
+						{report.days.map((d) => (
+							<div class="ins__bar-slot" title={`${dateLabel(d.date)}: ${n(d.views)} views (${n(d.anonymousViews)} signed out)`}>
+								<div class="ins__bar" style={`height:${(d.views / maxDayViews) * 100}%`}></div>
+							</div>
+						))}
+					</div>
+					<h2 class="ins__h2 ins__h2--sub" id="ins-owners">Owners active per day</h2>
+					<div class="ins__bars ins__bars--short" role="img" aria-label={`Distinct owners active each day over the last ${range} days`}>
+						{report.days.map((d) => (
+							<div class="ins__bar-slot" title={`${dateLabel(d.date)}: ${d.activeOwners} owners${d.logins ? `, ${d.logins} sign-ins` : ''}`}>
+								<div class="ins__bar" style={`height:${(d.activeOwners / maxDayOwners) * 100}%`}></div>
+							</div>
+						))}
+					</div>
+					<div class="ins__axis">
+						<span>{report.days[0] && dateLabel(report.days[0].date)}</span>
+						<span>{report.days.at(-1) && dateLabel(report.days.at(-1)!.date)}</span>
+					</div>
+					<details class="ins__table-toggle">
+						<summary>Show as table</summary>
+						<table class="ins__table">
+							<thead><tr><th>Day</th><th class="num">Views</th><th class="num">Signed out</th><th class="num">Owners</th><th class="num">Sign-ins</th></tr></thead>
+							<tbody>
+								{[...report.days].reverse().map((d) => (
+									<tr><td>{dateLabel(d.date)}</td><td class="num">{n(d.views)}</td><td class="num">{n(d.anonymousViews)}</td><td class="num">{d.activeOwners}</td><td class="num">{d.logins}</td></tr>
+								))}
+							</tbody>
+						</table>
+					</details>
+				</section>
+
+				<section class="ins__card" aria-labelledby="ins-people">
+					<h2 class="ins__h2" id="ins-people">Owners</h2>
+					<p class="ins__note">
+						{activeCount} of {report.people.length} seen in the last week. Sorted by last seen;
+						tap a row for that owner's top pages.
+					</p>
+					<div class="ins__scroll">
+						<table class="ins__table ins__table--people">
+							<thead>
+								<tr>
+									<th>Owner</th>
+									<th>Last seen</th>
+									<th>Last sign-in</th>
+									<th class="num">Views</th>
+									<th class="num">Days</th>
+									<th class="num">Sign-ins</th>
+									<th class="num">Actions</th>
+								</tr>
+							</thead>
+							<tbody>
+								{report.people.map((p) => {
+									const who = ownerLabel(p.leagueId, p.franchiseId);
+									const stale = !p.lastSeen || nowMs - p.lastSeen > STALE_MS;
+									return (
+										<tr class:list={['ins__person', { 'is-stale': stale }]}>
+											<td>
+												<details class="ins__person-detail">
+													<summary>
+														<span class="ins__person-team">{who.team}</span>
+														<span class="ins__person-sub">
+															{who.league}{p.username && ` · ${p.username}`}
+														</span>
+													</summary>
+													{p.topPages.length ? (
+														<ol class="ins__person-pages">
+															{p.topPages.map((tp) => (
+																<li>{pageLabel(tp.section, tp.page)} <span class="ins__muted">({sectionLabel(tp.section)}) · {tp.views}</span></li>
+															))}
+														</ol>
+													) : (
+														<p class="ins__muted">No page views in this window.</p>
+													)}
+												</details>
+											</td>
+											<td>{formatLastSeen(p.lastSeen)}</td>
+											<td>{p.lastLogin ? formatLastSeen(p.lastLogin) : '—'}</td>
+											<td class="num">{n(p.views)}</td>
+											<td class="num">{p.activeDays}</td>
+											<td class="num">{p.logins}</td>
+											<td class="num">{p.actions}</td>
+										</tr>
+									);
+								})}
+							</tbody>
+						</table>
+					</div>
+				</section>
+
+				<section class="ins__card" aria-labelledby="ins-pages">
+					<h2 class="ins__h2" id="ins-pages">Most popular pages</h2>
+					<p class="ins__note">Views include signed-out visitors; owners counts distinct signed-in owners.</p>
+					{topPages.length === 0 ? (
+						<p class="ins__muted">No pages recorded yet.</p>
+					) : (
+						<div class="ins__scroll">
+							<table class="ins__table">
+								<thead><tr><th>Page</th><th>Section</th><th class="num">Views</th><th class="num">Owners</th></tr></thead>
+								<tbody>
+									{topPages.map((p) => (
+										<tr>
+											<td>
+												<span class="ins__page-name">{pageLabel(p.section, p.page)}</span>
+												<span class="ins__meter" aria-hidden="true"><span style={`width:${(p.views / maxPage) * 100}%`}></span></span>
+											</td>
+											<td class="ins__muted">{sectionLabel(p.section)}</td>
+											<td class="num">{n(p.views)}</td>
+											<td class="num">{p.visitors}</td>
+										</tr>
+									))}
+								</tbody>
+							</table>
+						</div>
+					)}
+				</section>
+
+				<section class="ins__card" aria-labelledby="ins-heat">
+					<h2 class="ins__h2" id="ins-heat">When people visit</h2>
+					<p class="ins__note">Page views by day of week and hour ({clockLabel}). Darker is busier.</p>
+					<div class="ins__scroll">
+						<table class="ins__heat">
+							<thead>
+								<tr>
+									<th scope="col"><span class="visually-hidden">Day</span></th>
+									{Array.from({ length: 24 }, (_, h) => (
+										<th scope="col">{h % 3 === 0 ? hourLabel(h) : ''}<span class="visually-hidden">{h % 3 === 0 ? '' : hourLabel(h)}</span></th>
+									))}
+								</tr>
+							</thead>
+							<tbody>
+								{report.heatmap.map((row, dow) => (
+									<tr>
+										<th scope="row">{WEEKDAYS[dow]}</th>
+										{row.map((v, h) => (
+											<td
+												style={`--heat:${v ? Math.max(8, Math.round((v / maxHeat) * 100)) : 0}%`}
+												title={`${WEEKDAYS[dow]} ${hourLabel(h)}: ${n(v)} views`}
+											>
+												<span class="visually-hidden">{n(v)}</span>
+											</td>
+										))}
+									</tr>
+								))}
+							</tbody>
+						</table>
+					</div>
+				</section>
+
+				<div class="ins__split">
+					<section class="ins__card" aria-labelledby="ins-devices">
+						<h2 class="ins__h2" id="ins-devices">Devices</h2>
+						{report.devices.length === 0 ? <p class="ins__muted">Nothing yet.</p> : (
+							<ul class="ins__list">
+								{report.devices.map((r) => (
+									<li>
+										<span>{r.label}</span>
+										<span class="ins__meter" aria-hidden="true"><span style={`width:${pct(r.count, deviceTotal)}%`}></span></span>
+										<span class="num">{pct(r.count, deviceTotal)}%</span>
+									</li>
+								))}
+							</ul>
+						)}
+					</section>
+					<section class="ins__card" aria-labelledby="ins-sources">
+						<h2 class="ins__h2" id="ins-sources">How people arrive</h2>
+						{report.sources.length === 0 ? <p class="ins__muted">Nothing yet.</p> : (
+							<ul class="ins__list">
+								{report.sources.map((r) => (
+									<li>
+										<span>{r.label}</span>
+										<span class="ins__meter" aria-hidden="true"><span style={`width:${pct(r.count, sourceTotal)}%`}></span></span>
+										<span class="num">{pct(r.count, sourceTotal)}%</span>
+									</li>
+								))}
+							</ul>
+						)}
+						<p class="ins__note">
+							Counted once per visit, at the first page. Links opened from the GroupMe app send no
+							referrer, so they show as Direct.
+						</p>
+					</section>
+				</div>
+
+				{section === null && report.sections.length > 1 && (
+					<section class="ins__card" aria-labelledby="ins-sections">
+						<h2 class="ins__h2" id="ins-sections">By section</h2>
+						<ul class="ins__list">
+							{report.sections.map((r) => (
+								<li>
+									<a href={href({ section: r.key })}>{r.label}</a>
+									<span class="ins__meter" aria-hidden="true"><span style={`width:${pct(r.count, report.totals.views)}%`}></span></span>
+									<span class="num">{n(r.count)}</span>
+								</li>
+							))}
+						</ul>
+					</section>
+				)}
+
+				<section class="ins__card" aria-labelledby="ins-actions">
+					<h2 class="ins__h2" id="ins-actions">Actions</h2>
+					<p class="ins__note">Counted only when the action succeeded. Schefter tips are anonymous, so no owner count.</p>
+					<table class="ins__table">
+						<thead><tr><th>Action</th><th class="num">Times</th><th class="num">Owners</th></tr></thead>
+						<tbody>
+							{report.actions.map((a) => (
+								<tr>
+									<td>{a.label}</td>
+									<td class="num">{n(a.count)}</td>
+									<td class="num">{a.owners === null ? '—' : a.owners}</td>
+								</tr>
+							))}
+						</tbody>
+					</table>
+				</section>
+			</Fragment>
+		)}
+	</section>
+</MflAppLayout>
+
+<style>
+	.ins {
+		max-width: 64rem;
+		margin: 0 auto;
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+		color: var(--color-text-primary);
+	}
+	.ins__back {
+		font-size: 0.85rem;
+		font-weight: 600;
+		color: var(--color-text-secondary);
+		text-decoration: none;
+	}
+	.ins__title {
+		margin: 0;
+		font-size: 1.6rem;
+	}
+	.ins__lede,
+	.ins__note,
+	.ins__muted {
+		color: var(--color-text-secondary);
+		font-size: 0.85rem;
+		margin: 0;
+	}
+	.ins__lede {
+		margin-top: 0.25rem;
+		font-size: 0.95rem;
+	}
+	.ins__empty {
+		padding: 1rem;
+		border: 1px dashed var(--color-border-subtle);
+		border-radius: 0.5rem;
+		color: var(--color-text-secondary);
+	}
+
+	.ins__filters {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+	.ins__chips {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.375rem;
+	}
+	.ins__chip {
+		padding: 0.3rem 0.75rem;
+		border: 1px solid var(--color-border-subtle);
+		border-radius: 999px;
+		font-size: 0.8rem;
+		font-weight: 600;
+		color: var(--color-text-secondary);
+		text-decoration: none;
+	}
+	.ins__chip[aria-current='true'] {
+		background: var(--color-primary);
+		border-color: var(--color-primary);
+		color: #fff;
+	}
+
+	.ins__tiles {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+		gap: 0.5rem;
+	}
+	.ins__tile,
+	.ins__card {
+		background: var(--color-surface-3);
+		border: 1px solid var(--color-border-subtle);
+		border-radius: 0.625rem;
+	}
+	.ins__tile {
+		padding: 0.75rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.15rem;
+	}
+	.ins__tile-value {
+		font-size: 1.5rem;
+		font-weight: 700;
+		font-variant-numeric: tabular-nums;
+	}
+	.ins__tile-label {
+		font-size: 0.75rem;
+		color: var(--color-text-secondary);
+	}
+
+	.ins__card {
+		padding: 1rem;
+		min-width: 0;
+	}
+	.ins__h2 {
+		margin: 0 0 0.5rem;
+		font-size: 1rem;
+	}
+	.ins__h2--sub {
+		margin-top: 1rem;
+		font-size: 0.85rem;
+		color: var(--color-text-secondary);
+	}
+	.ins__split {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+		gap: 1rem;
+	}
+
+	/* Daily bars — one series each, so no legend; the heading names it. */
+	.ins__bars {
+		display: flex;
+		align-items: flex-end;
+		gap: 2px;
+		height: 8rem;
+		border-bottom: 1px solid var(--color-border-subtle);
+	}
+	.ins__bars--short {
+		height: 4rem;
+	}
+	.ins__bar-slot {
+		flex: 1;
+		height: 100%;
+		display: flex;
+		align-items: flex-end;
+		min-width: 2px;
+	}
+	.ins__bar {
+		width: 100%;
+		background: var(--color-primary);
+		border-radius: 3px 3px 0 0;
+		min-height: 0;
+	}
+	.ins__bar-slot:hover .ins__bar {
+		opacity: 0.7;
+	}
+	.ins__axis {
+		display: flex;
+		justify-content: space-between;
+		font-size: 0.7rem;
+		color: var(--color-text-secondary);
+		margin-top: 0.25rem;
+	}
+	.ins__table-toggle {
+		margin-top: 0.75rem;
+		font-size: 0.8rem;
+	}
+	.ins__table-toggle summary {
+		cursor: pointer;
+		color: var(--color-text-secondary);
+	}
+
+	.ins__scroll {
+		overflow-x: auto;
+		/* Contains the heatmap's absolutely-positioned visually-hidden labels,
+		   which otherwise escape the scroller and widen the page on a phone. */
+		position: relative;
+	}
+	.ins__table {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: 0.85rem;
+	}
+	.ins__table th,
+	.ins__table td {
+		text-align: left;
+		padding: 0.45rem 0.5rem;
+		border-bottom: 1px solid var(--color-border-subtle);
+		vertical-align: top;
+	}
+	.ins__table th {
+		font-size: 0.72rem;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		color: var(--color-text-secondary);
+	}
+	.num {
+		text-align: right !important;
+		font-variant-numeric: tabular-nums;
+		white-space: nowrap;
+	}
+
+	.ins__person.is-stale td {
+		color: var(--color-text-secondary);
+	}
+	.ins__person-detail summary {
+		cursor: pointer;
+		list-style: none;
+		display: flex;
+		flex-direction: column;
+	}
+	.ins__person-detail summary::-webkit-details-marker {
+		display: none;
+	}
+	.ins__person-team {
+		font-weight: 600;
+	}
+	.ins__person-sub {
+		font-size: 0.75rem;
+		color: var(--color-text-secondary);
+	}
+	.ins__person-pages {
+		margin: 0.4rem 0 0;
+		padding-left: 1.2rem;
+		font-size: 0.8rem;
+	}
+
+	.ins__page-name {
+		display: block;
+	}
+	.ins__meter {
+		display: block;
+		height: 4px;
+		border-radius: 2px;
+		background: var(--color-border-subtle);
+		overflow: hidden;
+		margin-top: 0.25rem;
+		min-width: 3rem;
+	}
+	.ins__meter > span {
+		display: block;
+		height: 100%;
+		background: var(--color-primary);
+		border-radius: 2px;
+	}
+
+	.ins__list {
+		list-style: none;
+		margin: 0 0 0.5rem;
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		font-size: 0.85rem;
+	}
+	.ins__list li {
+		display: grid;
+		grid-template-columns: 9rem 1fr 3.5rem;
+		align-items: center;
+		gap: 0.5rem;
+	}
+	.ins__list .ins__meter {
+		margin-top: 0;
+		height: 8px;
+	}
+	.ins__list a {
+		color: inherit;
+	}
+
+	/* Heatmap — sequential: one hue, transparency carries magnitude. */
+	.ins__heat {
+		border-collapse: separate;
+		border-spacing: 2px;
+		font-size: 0.65rem;
+		color: var(--color-text-secondary);
+	}
+	.ins__heat th {
+		font-weight: 500;
+		text-align: left;
+		padding-right: 0.25rem;
+		white-space: nowrap;
+	}
+	.ins__heat td {
+		width: 1.4rem;
+		min-width: 1.1rem;
+		height: 1.4rem;
+		border-radius: 3px;
+		background: color-mix(in srgb, var(--color-primary) var(--heat), var(--color-border-subtle));
+	}
+</style>
