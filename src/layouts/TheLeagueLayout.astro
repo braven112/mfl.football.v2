@@ -336,7 +336,7 @@ import StagingBanner from '../components/shared/StagingBanner.astro';
 			</>
 		) : packageLeague ? (
 			<>
-				<link rel="icon" type="image/svg+xml" href={packageLeague.logo!.light} />
+				<link rel="icon" type={packageLeague.logo!.light.endsWith('.svg') ? 'image/svg+xml' : packageLeague.logo!.light.endsWith('.webp') ? 'image/webp' : 'image/png'} href={packageLeague.logo!.light} />
 				<meta name="theme-color" content={packageLeague.themeColor ?? '#1c497c'} data-theme-color-light={packageLeague.themeColor ?? '#1c497c'} />
 				<meta name="mobile-web-app-capable" content="yes" />
 				<meta name="apple-mobile-web-app-status-bar-style" content="default" />
