@@ -45,7 +45,7 @@ const groups = [
     </p>
   </header>
 
-  <script type="application/json" id="branding-editor-data" set:html={JSON.stringify({ teams: editable, limits: BRANDING_LIMITS })} />
+  <script type="application/json" id="branding-editor-data" set:html={JSON.stringify({ teams: editable, limits: BRANDING_LIMITS }).replace(/</g, '\\u003c')} />
 
   <div class="brand-ed__layout">
     <nav class="brand-ed__list" aria-label="Teams">

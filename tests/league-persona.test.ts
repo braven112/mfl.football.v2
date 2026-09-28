@@ -25,6 +25,11 @@ import { LEAGUES } from '../src/config/leagues-data.mjs';
 const ARCHIE = { name: 'Archie Bunker', avatarUrl: 'https://example.com/a.png', voice: 'Grumpy. Hates the Jets.' };
 
 describe('validatePersona', () => {
+  it('refuses markup in the name — client renderers print it into innerHTML', () => {
+    expect(validatePersona({ name: '<svg/onload=alert(1)>', voice: 'x' }).ok).toBe(false);
+    expect(validatePersona({ name: 'Archie > Bunker', voice: 'x' }).ok).toBe(false);
+  });
+
   it('accepts and trims a complete persona', () => {
     const r = validatePersona({ name: '  Archie   Bunker ', avatarUrl: ' https://example.com/a.png ', voice: '  Grumpy.  ' });
     expect(r).toEqual({ ok: true, persona: { name: 'Archie Bunker', avatarUrl: 'https://example.com/a.png', voice: 'Grumpy.' } });
