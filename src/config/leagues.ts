@@ -290,6 +290,8 @@ export interface LeagueDefinition {
   shortName?: string;
   /** The league's mark for the shared header and layout, per theme. */
   logo?: { light: string; dark: string };
+  /** Optional wordmark shown beside `logo` instead of the text short name. */
+  wordmark?: string;
   /** Browser chrome `theme-color` for a package league. */
   themeColor?: string;
   /**

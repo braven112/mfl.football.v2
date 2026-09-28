@@ -189,7 +189,9 @@ const labels = await getPersonaLabels(league.slug);
           </div>
           <div class="leaguename">
             {pkg ? (
-              <span class="leaguename--pkg">{pkg.shortName ?? pkg.name}</span>
+              pkg.wordmark
+                ? <img src={pkg.wordmark} alt={pkg.shortName ?? pkg.name} class="leaguename--pkg-wordmark" />
+                : <span class="leaguename--pkg">{pkg.shortName ?? pkg.name}</span>
             ) : isAFL && isDemo ? (
               <>
                 <span class="leaguename--bb-name">Big</span><span class="leaguename--bb-num"> League</span>
@@ -603,6 +605,12 @@ const labels = await getPersonaLabels(league.slug);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+  }
+
+  .leaguename--pkg-wordmark {
+    height: 38px;
+    width: auto;
+    display: block;
   }
 
   .leaguename--pkg {
