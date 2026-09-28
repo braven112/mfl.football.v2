@@ -1710,7 +1710,7 @@ const preselectTeam = (() => {
       return `<p class="tip-rail-receipt tip-rail-receipt--published">✅ Your last tip made the wire.${link}${suffix}</p>`;
     }
     if (receipt.status === 'spiked') {
-      return `<p class="tip-rail-receipt tip-rail-receipt--spiked">🗞️ Your last tip didn't make the wire — ${personaSurname()} couldn't find an angle he could print. Tips with a name, a number, or a deadline in them clear the bar far more often.${suffix}</p>`;
+      return `<p class="tip-rail-receipt tip-rail-receipt--spiked">🗞️ Your last tip didn't make the wire — ${escapeHtml(personaSurname())} couldn't find an angle he could print. Tips with a name, a number, or a deadline in them clear the bar far more often.${suffix}</p>`;
     }
     return `<p class="tip-rail-receipt tip-rail-receipt--expired">🕰️ Your last tip aged out before it found a slot. Nothing wrong with it — the wire was just quiet.${suffix}</p>`;
   }
@@ -1867,7 +1867,7 @@ const preselectTeam = (() => {
       if (dailyCapHit) {
         cookerRoot.setAttribute('data-state', 'capped');
         if (cookerSub) cookerSub.textContent = 'Daily cap reached';
-        cookerBody.innerHTML = `${personaSurname()}'s filed ${postsToday} of ${dailyCap} today. Next batch drops tomorrow — keep tipping.`;
+        cookerBody.innerHTML = `${escapeHtml(personaSurname())}'s filed ${postsToday} of ${dailyCap} today. Next batch drops tomorrow — keep tipping.`;
         return;
       }
 
@@ -1883,11 +1883,11 @@ const preselectTeam = (() => {
       const countdownMs = nextEarliestPostAt !== null ? nextEarliestPostAt - Date.now() : null;
       const tipWord = queueDepth === 1 ? 'tip' : 'tips';
       if (countdownMs === null) {
-        cookerBody.innerHTML = `${personaSurname()} is marinating <strong>${queueDepth}</strong> ${tipWord}.`;
+        cookerBody.innerHTML = `${escapeHtml(personaSurname())} is marinating <strong>${queueDepth}</strong> ${tipWord}.`;
       } else if (countdownMs <= 0) {
-        cookerBody.innerHTML = `${personaSurname()} is marinating <strong>${queueDepth}</strong> ${tipWord}. <span class="tip-rail-cooker__countdown">Any minute now</span>`;
+        cookerBody.innerHTML = `${escapeHtml(personaSurname())} is marinating <strong>${queueDepth}</strong> ${tipWord}. <span class="tip-rail-cooker__countdown">Any minute now</span>`;
       } else {
-        cookerBody.innerHTML = `${personaSurname()} is marinating <strong>${queueDepth}</strong> ${tipWord}. Next rumor drops in <span class="tip-rail-cooker__countdown">${formatCountdown(countdownMs)}</span>`;
+        cookerBody.innerHTML = `${escapeHtml(personaSurname())} is marinating <strong>${queueDepth}</strong> ${tipWord}. Next rumor drops in <span class="tip-rail-cooker__countdown">${formatCountdown(countdownMs)}</span>`;
       }
     } catch {
       cookerRoot.setAttribute('data-state', 'empty');

@@ -78,6 +78,15 @@ export function validateBrandingEdit(input, { leagueSlug, current }) {
   for (const key of Object.keys(input)) {
     if (!EDITABLE_FIELDS.includes(key)) errors.push(`"${key}" is not an editable field.`);
   }
+  // Team names were developer-committed until this editor existed, and some
+  // surfaces still build HTML from them on the client. Refusing angle brackets
+  // keeps a commissioner-typed name from ever becoming markup there.
+  for (const key of ['name', 'nameMedium', 'nameShort']) {
+    if (key in input && /[<>]/.test(String(input[key] ?? ''))) errors.push(`${key} cannot contain < or >.`);
+  }
+  if (Array.isArray(input.aliases) && input.aliases.some((a) => /[<>]/.test(String(a ?? '')))) {
+    errors.push('Aliases cannot contain < or >.');
+  }
 
   if ('name' in input) {
     const v = clean(input.name);

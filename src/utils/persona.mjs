@@ -87,6 +87,10 @@ export function validatePersona(input) {
     .trim();
 
   if (!name) errors.push('Name is required.');
+  // Angle brackets are refused outright: the name is printed on every league
+  // page, and one client-side renderer that forgets to escape it would make a
+  // commissioner's typo a stored XSS against every owner (and platform admin).
+  else if (/[<>]/.test(name)) errors.push('Name cannot contain < or >.');
   else if (name.length > PERSONA_LIMITS.name) errors.push(`Name must be ${PERSONA_LIMITS.name} characters or fewer.`);
 
   if (!voice) errors.push('Voice is required.');
