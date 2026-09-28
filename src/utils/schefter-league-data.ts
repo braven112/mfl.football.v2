@@ -19,6 +19,8 @@ import theLeagueConfig from '../data/theleague.config.json';
 import aflConfig from '../../data/afl-fantasy/afl.config.json';
 import theLeagueFeed from '../data/theleague/schefter-feed.json';
 import aflFeed from '../../data/afl-fantasy/schefter-feed.json';
+import archiesConfig from '../../data/archies/archies.config.json';
+import archiesFeed from '../../data/archies/schefter-feed.json';
 import type { SchefterFeed } from '../types/schefter';
 
 export interface LeagueTeamConfig {
@@ -39,11 +41,13 @@ export interface SchefterLeagueConfig {
 const FEEDS: Record<string, SchefterFeed> = {
   theleague: theLeagueFeed as unknown as SchefterFeed,
   'afl-fantasy': aflFeed as unknown as SchefterFeed,
+  archies: archiesFeed as unknown as SchefterFeed,
 };
 
 const CONFIGS: Record<string, SchefterLeagueConfig> = {
   theleague: theLeagueConfig as unknown as SchefterLeagueConfig,
   'afl-fantasy': aflConfig as unknown as SchefterLeagueConfig,
+  archies: archiesConfig as unknown as SchefterLeagueConfig,
 };
 
 /** The league's Schefter feed. Throws on a league this module doesn't know. */

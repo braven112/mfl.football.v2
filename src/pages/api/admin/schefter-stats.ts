@@ -11,7 +11,8 @@
  */
 
 import type { APIRoute } from 'astro';
-import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
+import { getAuthUser } from '../../../utils/auth';
+import { resolveAdministeredLeague } from '../../../utils/league-admin';
 import { schefterSeasonYear } from '../../../utils/schefter-league';
 import { getSchefterFeed, getSchefterLeagueConfig, type SchefterLeagueConfig } from '../../../utils/schefter-league-data';
 import type { LeagueDefinition } from '../../../config/leagues';
@@ -19,7 +20,6 @@ import { parseAssets } from '../../../utils/trade-asset-parsing';
 import { getPlayerMap } from '../../../utils/player-map';
 import { getRedis, type RedisClient } from '../../../utils/redis-client';
 import { checkServiceTokenHealth } from '../../../utils/groupme-client';
-import { getLeagueById } from '../../../config/leagues';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../../utils/api-response';
 
 export const prerender = false;
@@ -990,22 +990,16 @@ async function readGitHubStats() {
   };
 }
 
-export const GET: APIRoute = async ({ request }) => {
-  const user = getAuthUser(request);
-  if (!user || !isCommissionerOrAdmin(user)) {
-    return json({ error: 'forbidden' }, 403);
+export const GET: APIRoute = async ({ request, url }) => {
+  // League scoping: a commissioner gets their SESSION's league and nothing
+  // else — a `?league=` naming another is refused, not honoured. Only a
+  // platform admin (src/utils/league-admin.ts) may name any league, which is
+  // what lets the site owner open a client league's News Ops.
+  const resolved = resolveAdministeredLeague(getAuthUser(request), url.searchParams.get('league'));
+  if (!resolved.ok) {
+    return json({ error: resolved.status === 401 ? 'forbidden' : resolved.error }, 403);
   }
-
-  // League scoping: the session JWT's league wins (a TheLeague commissioner
-  // gets TheLeague stats, an AFL commissioner gets AFL stats), then the
-  // ?league= param, then the TheLeague default.
-  // Admin is league-scoped end to end: the league comes ONLY from the
-  // session JWT. No ?league= fallback here — a token without a leagueId
-  // must not be able to select another league's ops payload.
-  const league = user.leagueId ? getLeagueById(user.leagueId) : null;
-  if (!league) {
-    return json({ error: 'unknown league' }, 403);
-  }
+  const league = resolved.league;
 
   const feed = getSchefterFeed(league) as unknown as FeedShape;
   const teamLookup = buildTeamLookup(getSchefterLeagueConfig(league));

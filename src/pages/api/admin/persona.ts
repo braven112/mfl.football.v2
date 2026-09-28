@@ -6,14 +6,15 @@
  * from; PUT validates and saves an override; DELETE clears it, returning the
  * league to its default.
  *
- * The league is ALWAYS the session's (`user.leagueId`), never a parameter:
- * the key is league-wide state, and a commissioner of one league must not be
- * able to rename another league's writer by passing its slug.
+ * A commissioner acts on their SESSION's league only — a `?league=` naming
+ * another is refused, so one league's commissioner cannot rename another
+ * league's writer. A platform admin (src/utils/league-admin.ts) may name any.
  */
 
 import type { APIRoute } from 'astro';
-import { getAuthUser, isCommissionerOrAdmin, type AuthUser } from '../../../utils/auth';
-import { getLeagueById, type LeagueDefinition } from '../../../config/leagues';
+import { getAuthUser } from '../../../utils/auth';
+import { resolveAdministeredLeague } from '../../../utils/league-admin';
+import type { LeagueDefinition } from '../../../config/leagues';
 import { getRedis } from '../../../utils/redis-client';
 import { json, JSON_HEADERS_NO_STORE } from '../../../utils/api-response';
 import {
@@ -26,17 +27,20 @@ import {
 
 export const prerender = false;
 
-type Gate = { ok: true; user: AuthUser; league: LeagueDefinition } | { ok: false; response: Response };
+type Gate = { ok: true; league: LeagueDefinition } | { ok: false; response: Response };
 
-function gate(request: Request): Gate {
-  const user = getAuthUser(request);
-  if (!user) return { ok: false, response: json({ error: 'Sign in required.' }, 401, JSON_HEADERS_NO_STORE) };
-  if (!isCommissionerOrAdmin(user)) {
-    return { ok: false, response: json({ error: 'Commissioner only.' }, 403, JSON_HEADERS_NO_STORE) };
+/**
+ * The league this call acts on: the session's own for a commissioner, any
+ * registered league for a platform admin (src/utils/league-admin.ts). The
+ * editor always sends `?league=`; a commissioner naming another league is
+ * refused rather than silently redirected to their own.
+ */
+function gate(request: Request, url: URL): Gate {
+  const resolved = resolveAdministeredLeague(getAuthUser(request), url.searchParams.get('league'));
+  if (!resolved.ok) {
+    return { ok: false, response: json({ ok: false, error: resolved.error, errors: [resolved.error] }, resolved.status, JSON_HEADERS_NO_STORE) };
   }
-  const league = getLeagueById(user.leagueId);
-  if (!league) return { ok: false, response: json({ error: 'Unknown league.' }, 403, JSON_HEADERS_NO_STORE) };
-  return { ok: true, user, league };
+  return { ok: true, league: resolved.league };
 }
 
 function view(league: LeagueDefinition, stored: unknown) {
@@ -49,16 +53,16 @@ function view(league: LeagueDefinition, stored: unknown) {
   };
 }
 
-export const GET: APIRoute = async ({ request }) => {
-  const g = gate(request);
+export const GET: APIRoute = async ({ request, url }) => {
+  const g = gate(request, url);
   if (!g.ok) return g.response;
   const redis = await getRedis();
   const stored = redis ? await redis.get(personaKey(g.league.slug)).catch(() => null) : null;
   return json({ ok: true, ...view(g.league, stored), storage: Boolean(redis) }, 200, JSON_HEADERS_NO_STORE);
 };
 
-export const PUT: APIRoute = async ({ request }) => {
-  const g = gate(request);
+export const PUT: APIRoute = async ({ request, url }) => {
+  const g = gate(request, url);
   if (!g.ok) return g.response;
 
   let body: unknown;
@@ -80,8 +84,8 @@ export const PUT: APIRoute = async ({ request }) => {
   return json({ ok: true, ...view(g.league, checked.persona) }, 200, JSON_HEADERS_NO_STORE);
 };
 
-export const DELETE: APIRoute = async ({ request }) => {
-  const g = gate(request);
+export const DELETE: APIRoute = async ({ request, url }) => {
+  const g = gate(request, url);
   if (!g.ok) return g.response;
   const redis = await getRedis();
   if (!redis) return json({ ok: false, errors: ['Settings storage is unavailable.'] }, 503, JSON_HEADERS_NO_STORE);

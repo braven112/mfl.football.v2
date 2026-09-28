@@ -556,7 +556,14 @@ const personaName = resolvePersona(personaLeague ?? null, personaStored).name;
 
 <script>
   const PAGE_BASE = document.querySelector('[data-page-base]')?.getAttribute('data-page-base') ?? '/theleague';
-  const endpoint = '/api/admin/schefter-stats';
+  // Name the page's league: a commissioner can only name their own (the API
+  // refuses another); a platform admin may open any league's ops.
+  // Read per request, never at load: under the ClientRouter this module
+  // outlives a navigation from one league's ops page to another's.
+  const statsEndpoint = () => {
+    const slug = document.querySelector('[data-page-base]')?.getAttribute('data-page-base')?.replace(/^\//, '') ?? '';
+    return slug ? `/api/admin/schefter-stats?league=${encodeURIComponent(slug)}` : '/api/admin/schefter-stats';
+  };
   // The league's news persona, rendered by the server. Read at use, not at
   // load, so it is always the page on screen.
   const personaName = () =>
@@ -1248,7 +1255,7 @@ const personaName = resolvePersona(personaLeague ?? null, personaStored).name;
 
   async function load() {
     try {
-      const res = await fetch(endpoint, { credentials: 'same-origin' });
+      const res = await fetch(statsEndpoint(), { credentials: 'same-origin' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       render(data);

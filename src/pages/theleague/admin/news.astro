@@ -11,7 +11,8 @@ export const prerender = false;
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import AdminDashboard from '../../../components/schefter/AdminDashboard.astro';
 import PersonaEditor from '../../../components/schefter/PersonaEditor.astro';
-import { getAuthUser, isCommissionerOrAdmin, isAuthorizedForLeague } from '../../../utils/auth';
+import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
+import { canAdministerLeague } from '../../../utils/league-admin';
 import { loginUrlForRequest, forbiddenPathFor } from '../../../utils/login-redirect';
 import { getLeagueBySlug } from '../../../config/leagues';
 
@@ -22,7 +23,8 @@ const user = getAuthUser(Astro.request);
 const theLeague = getLeagueBySlug('theleague');
 if (!user) return Astro.redirect(loginUrlForRequest(Astro, getLeagueBySlug('theleague')!));
 if (!theLeague) return Astro.redirect('/theleague');
-if (!isCommissionerOrAdmin(user) || !isAuthorizedForLeague(user, theLeague.id)) {
+// A platform admin (src/utils/league-admin.ts) administers every league.
+if (!canAdministerLeague(user, theLeague)) {
   return Astro.rewrite(forbiddenPathFor(theLeague, isCommissionerOrAdmin(user) ? 'league' : 'commissioner'));
 }
 ---
