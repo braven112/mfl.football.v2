@@ -91,7 +91,10 @@ function landingParams(): Record<string, string> | null {
 		} catch (_) {}
 	}
 	// A notification click is a landing even in a tab that is already open —
-	// the service worker navigates an existing tab rather than opening one.
+	// the service worker may navigate an existing tab rather than open one.
+	// NOT counted: a click whose target a tab is ALREADY showing. The worker
+	// only focuses that tab (no navigation, so no beacon), which undercounts
+	// push arrivals slightly rather than reloading the page under the owner.
 	let landed = false;
 	try {
 		landed = Boolean(sessionStorage.getItem(LANDED_KEY));

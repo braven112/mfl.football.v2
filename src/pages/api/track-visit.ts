@@ -128,7 +128,7 @@ export const POST: APIRoute = async ({ request, url }) => {
 	// the per-league `/activity` counters below; they are counted only in the
 	// site-wide insights (see src/utils/site-insights.ts).
 	const league = resolveAnonymousLeague(url.searchParams.get('league'));
-	const insight = describeInsightVisit(url, league, rawPage, visit?.surface ?? null);
+	const surface = visit?.surface ?? null;
 
 	const user = getAuthUser(request);
 	if (!user?.franchiseId || !user?.leagueId) {
@@ -153,10 +153,15 @@ export const POST: APIRoute = async ({ request, url }) => {
 			const { limited } = await recordAnonymousVisit(league.id, { visit, page }, limit);
 			if (limited) return new Response(null, { status: 429 });
 			// Already rate-limited by the script above, so no second limit here.
-			await recordInsightVisit({ ...insight, page: known ? insight.page : null, user: null });
+			// `page` is already canonical, or null for a path it may not name.
+			await recordInsightVisit({ ...describeInsightVisit(url, league, page, surface), user: null });
 			return new Response(null, { status: 204 });
 		}
 
+		// No league: MFL Live or the shared host's own pages. The path is only
+		// normalized (a bounded regex pass, no directory walk) before the
+		// allowlist decides whether it may be named.
+		const insight = describeInsightVisit(url, null, rawPage || '/', surface);
 		const { limited } = await recordInsightVisit({
 			...insight,
 			page: insight.page && isKnownAppPath(insight.page) ? insight.page : null,
@@ -167,8 +172,9 @@ export const POST: APIRoute = async ({ request, url }) => {
 	}
 
 	if (league) await recordVisit(user.leagueId, user.franchiseId, rawPage || '/', visit);
+	const signedInPage = league && rawPage ? canonicalPath(rawPage, league.slug) : rawPage || '/';
 	await recordInsightVisit({
-		...insight,
+		...describeInsightVisit(url, league, signedInPage, surface),
 		user: { leagueId: user.leagueId, franchiseId: user.franchiseId, username: user.name ?? '' },
 	});
 	return new Response(null, { status: 204 });
@@ -182,12 +188,11 @@ export const POST: APIRoute = async ({ request, url }) => {
 function describeInsightVisit(
 	url: URL,
 	league: LeagueDefinition | null,
-	rawPage: string | null,
+	/** Already canonical for a league page; null when the page may not be named. */
+	canonicalPage: string | null,
 	surface: string | null,
 ): Omit<InsightVisit, 'user'> {
-	const page = normalizeInsightPath(
-		league && rawPage ? canonicalPath(rawPage, league.slug) : rawPage || '/',
-	);
+	const page = normalizeInsightPath(canonicalPage);
 	const landing = url.searchParams.get('landing') === '1';
 	return {
 		section: resolveSection(league?.slug ?? null, page ?? ''),

@@ -182,6 +182,9 @@ const MAX_PATH_LENGTH = 100;
  */
 export function normalizeInsightPath(raw: string | null | undefined): string | null {
 	if (!raw) return null;
+	// Reject an oversized value before doing any work on it: this runs on an
+	// unauthenticated endpoint ahead of its rate limit.
+	if (String(raw).length > MAX_PATH_LENGTH * 4) return null;
 	let path = String(raw).split(/[?#]/)[0].trim();
 	if (!path.startsWith('/')) return null;
 	if (path.length > 1) path = path.replace(/\/+$/, '');
