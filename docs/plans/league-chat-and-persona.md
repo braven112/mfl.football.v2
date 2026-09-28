@@ -1,6 +1,6 @@
 # League chat providers + commissioner-editable news persona
 
-Status: Phase 1 done. Phase 2 piece 1 (onboard 10105 as `archies`) done on `claude/slack-integration-groupme-ttsw77`; the persona-everywhere and branding-editor pieces are next.
+Status: Phases 1 and 2 done (PR #1255, `claude/slack-integration-groupme-ttsw77`): Slack, the persona everywhere, onboarding 10105 as `archies`, the platform super admin, the branding editor and the league's own logo. Phase 3 (Archie's look and homepage) is next.
 
 ## Why
 
@@ -241,7 +241,57 @@ commissioner or a platform admin.
   - the static page-directory search titles
   - `afl-hero-resolver.ts`'s desk byline (a synchronous, pure resolver)
 
-## Phase 3 — later
+## Phase 3 — Archie's look and homepage (next)
+
+Added 2026-09-28 at the owner's request. Archie's launched on a deliberately
+small homepage (`PackageLeagueHome`) and TheLeague's navy chrome. This phase
+gives it its own look and the same homepage experience TheLeague and the AFL
+have.
+
+1. **A colour scheme of Archie's own.** A palette built from the league's art
+   (the blue of the wordmark and Archie's shirt), applied to the header, nav,
+   links, buttons and cards in both light and dark. Today only `themeColor`
+   and the logo are per-league; the rest is TheLeague's tokens.
+   - Define it as tokens (`docs/claude/rules/theming-and-assets.md`: every
+     `var(--x)` needs a definition in BOTH themes, or dark ships the fallback).
+   - Scope it to the league (a league class on the layout), driven by a
+     registry field, so the next package league gets a scheme by adding an
+     entry rather than editing the layout.
+2. **The TheLeague/AFL homepage layout on Archie's.** Replace
+   `PackageLeagueHome` with the same homepage structure the two full leagues
+   use: the season hero, the news rail, the team snapshot, compact standings,
+   quick links, and the rest.
+   - Build it as a SHARED component the leagues use, not a third fork of a
+     ~1,000-line page (`tests/page-fork-ratchet.test.ts` fails on a new forked
+     sibling; see "Second league's copy of a page" in CLAUDE.md).
+   - Sections that depend on features Archie's does not run (contracts,
+     auctions, unsigned free agents, keepers) are gated with
+     `leagueHasFeature`, not deleted from the shared layout.
+3. **The homepage's key features, for Archie's.** Every feature the
+   TheLeague/AFL homepage carries that makes sense for a 99-team redraft
+   league.
+   - **The calendar (What's Next)** must be FILLED OUT for Archie's: its
+     deadlines, waiver runs, trade deadline, playoffs and draft, from the
+     league's real MFL calendar. It is empty without them. It depends on the
+     time zone and trade deadline, which are still TODO in the registry.
+   - Anything scoped to rosters or free agents inherits the per-division
+     player-pool risk (Phase 2, "Still open").
+4. **What's New at the bottom, as today.** A dedicated What's New section at
+   the bottom of Archie's homepage, the same row TheLeague and the AFL show,
+   so Archie's owners see new platform features as they ship.
+   - The weekly changelog rollup expands `both` to the FULL-MANAGEMENT leagues
+     only (`BOTH_LEAGUES` in `scripts/lib/weekly-changelog-format.mjs`).
+     Whether a platform-wide change reaches Archie's automatically, or needs
+     `archies` tagged explicitly, is a decision this phase has to make.
+
+Open questions before building:
+- The scheme: start from the art's blues, or does the client have brand
+  colours?
+- Which homepage sections Archie's gets at launch, and which wait on the
+  division-pool work.
+- What's New: every platform change, or only changes that apply to Archie's.
+
+## Phase 4 — later
 
 - Pecking Order at 99-team scale.
 - Two-way Slack (mentions → tips) through the Events API, if a client wants it.
