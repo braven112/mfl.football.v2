@@ -33,6 +33,7 @@
 
 import theleagueConfig from '../data/theleague.config.json';
 import aflConfig from '../../data/afl-fantasy/afl.config.json';
+import archiesConfig from '../../data/archies/archies.config.json';
 import { getLeagueBySlug, type CanonicalLeagueSlug } from '../config/leagues';
 import type { LeagueSlug } from '../types/nav';
 // From the contrast module, NOT `nfl-marks`: that one loads the NFL brand kit
@@ -66,10 +67,11 @@ export { luminance, inkOn };
 const LEAGUE_TEAMS: Partial<Record<CanonicalLeagueSlug, RawTeam[]>> = {
   theleague: ((theleagueConfig as unknown as { teams?: RawTeam[] }).teams ?? []),
   'afl-fantasy': ((aflConfig as unknown as { teams?: RawTeam[] }).teams ?? []),
+  archies: ((archiesConfig as unknown as { teams?: RawTeam[] }).teams ?? []),
 };
 
 /** The Brand Book covers exactly these. */
-export const BRAND_BOOK_LEAGUES: CanonicalLeagueSlug[] = ['theleague', 'afl-fantasy'];
+export const BRAND_BOOK_LEAGUES: CanonicalLeagueSlug[] = ['theleague', 'afl-fantasy', 'archies'];
 
 export function leagueHasBrandBook(slug: string): slug is CanonicalLeagueSlug {
   return (BRAND_BOOK_LEAGUES as string[]).includes(slug);

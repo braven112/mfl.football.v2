@@ -29,7 +29,7 @@ const ROOT = process.cwd();
  * refactor fixed (wrong host fallback, id-based ternaries) was one of these
  * four literals, so they stay strict.
  */
-const ID_HOST_LITERALS = ['13522', '19621', '37610', 'www49.myfantasyleague', 'www44.myfantasyleague', 'www45.myfantasyleague'];
+const ID_HOST_LITERALS = ['13522', '19621', '37610', '10105', 'www49.myfantasyleague', 'www44.myfantasyleague', 'www45.myfantasyleague', 'www48.myfantasyleague'];
 
 /**
  * League data-directory literals. Checked only in src/ + scripts/ (not
@@ -73,9 +73,9 @@ const REGISTRY_FILE = 'src/config/leagues-data.mjs';
 const ALLOWLIST: Array<{ file: string; literals: string[]; reason: string }> = [
   {
     file: '.github/workflows/roster-sync.yml',
-    literals: ['13522', '19621'],
+    literals: ['13522', '19621', '10105'],
     reason:
-      "fetch-mfl-feeds.mjs requires a non-empty MFL_LEAGUE_ID with no registry fallback (unlike apply-pending-contracts.mjs / sync-draft-pick-contracts.mjs, which do fall back to DEFAULT_LEAGUE_ID). Workflow YAML can't import src/config/leagues-data.mjs, so literal ids are the one documented exception here — theleague's ('13522') via vars.MFL_LEAGUE_ID override, AFL's ('19621') bare in the per-league bash array — kept in sync with LEAGUES.*.id by convention (see inline workflow comment).",
+      "fetch-mfl-feeds.mjs requires a non-empty MFL_LEAGUE_ID with no registry fallback (unlike apply-pending-contracts.mjs / sync-draft-pick-contracts.mjs, which do fall back to DEFAULT_LEAGUE_ID). Workflow YAML can't import src/config/leagues-data.mjs, so literal ids are the one documented exception here — theleague's ('13522') via vars.MFL_LEAGUE_ID override, AFL's ('19621') and Archie's ('10105') bare in the per-league bash array — kept in sync with LEAGUES.*.id by convention (see inline workflow comment).",
   },
   {
     file: '.github/workflows/schefter-trade-speculation.yml',

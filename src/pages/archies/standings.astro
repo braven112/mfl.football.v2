@@ -1,0 +1,14 @@
+---
+/**
+ * Standings (archies) — thin route wrapper over the shared package-league page.
+ * The glob lives here: a static import specifier cannot be a runtime variable.
+ */
+import PackageStandingsPage from '../../components/shared/package-league/PackageStandingsPage.astro';
+import config from '../../../data/archies/archies.config.json';
+
+export const prerender = false;
+
+const standingsFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/standings.json');
+---
+
+<PackageStandingsPage leagueSlug="archies" standingsFeeds={standingsFeeds} config={config} />

@@ -340,6 +340,7 @@ const LEAGUE_TEXT_PATTERNS: Record<string, RegExp> = {
   afl: /\bafl\b|afl-fantasy/i,
   theleague: /\bThe ?League\b|\btheleague\b/,
   bb1: /\bbest[- ]ball\b|best-ball-1|\bbb1\b/i,
+  archies: /\barchie['’]?s\b|\barchies\b/i,
 };
 
 /** JSON-cast data may be malformed — coerce so tests fail with assertions, not TypeErrors. */

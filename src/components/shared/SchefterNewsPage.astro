@@ -30,7 +30,11 @@ interface Props {
   schefterArticles?: SchefterPost[];
   /** Fallback permalink base for a rail article with no explicit link. */
   articleBasePath: string;
-  tipHref: string;
+  /**
+   * The tip form. Omitted for a league with no tips lane (`schefterTips`
+   * off), which drops the "Got a tip?" promo rather than linking a 404.
+   */
+  tipHref?: string;
 }
 
 const {
@@ -118,23 +122,25 @@ const pollGroupMe = isGroupMeTab && isAuthenticated;
   </div>
 
   <aside class="sf-news-rail" aria-label="Tip the beat reporter">
-    <a href={tipHref} class="sf-rail-promo">
-      <img
-        src="/assets/claude-schefter-avatar.webp"
-        alt=""
-        class="sf-rail-promo__avatar"
-        width="40"
-        height="40"
-        loading="lazy"
-      />
-      <div class="sf-rail-promo__body">
-        <div class="sf-rail-promo__title">Got a tip?</div>
-        <p class="sf-rail-promo__text">Drop anonymous intel to Claude Schefter. Rumors, roster gripes, bold predictions — he'll fold it in without naming names.</p>
-      </div>
-      <svg class="sf-rail-promo__arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <path d="M9 18l6-6-6-6"/>
-      </svg>
-    </a>
+    {tipHref && (
+      <a href={tipHref} class="sf-rail-promo">
+        <img
+          src="/assets/claude-schefter-avatar.webp"
+          alt=""
+          class="sf-rail-promo__avatar"
+          width="40"
+          height="40"
+          loading="lazy"
+        />
+        <div class="sf-rail-promo__body">
+          <div class="sf-rail-promo__title">Got a tip?</div>
+          <p class="sf-rail-promo__text">Drop anonymous intel to Claude Schefter. Rumors, roster gripes, bold predictions — he'll fold it in without naming names.</p>
+        </div>
+        <svg class="sf-rail-promo__arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M9 18l6-6-6-6"/>
+        </svg>
+      </a>
+    )}
 
     <slot name="rail" />
 

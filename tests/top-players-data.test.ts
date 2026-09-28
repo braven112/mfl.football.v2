@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { resolve } from 'path';
 import { LEAGUES } from '../src/config/leagues-data.mjs';
 
@@ -60,11 +60,12 @@ interface TopPlayersPayload {
 const ROOT = resolve(__dirname, '..');
 const readJson = (p: string) => JSON.parse(readFileSync(resolve(ROOT, p), 'utf-8'));
 
-// Every league that runs full management gets the page. Best Ball is
-// draft-only with no live MFL syncing, so it has no scoring data behind a
-// leaderboard (docs/claude/rules/best-ball.md).
+// Every league that SHIPS the page gets the payload. Best Ball is draft-only
+// with no live MFL syncing, so it has no scoring data behind a leaderboard
+// (docs/claude/rules/best-ball.md); a package league (archies) launches
+// without the page and gets the payload when it turns the page on.
 const SCORING_LEAGUES = Object.values(LEAGUES as Record<string, { slug: string; dataPath: string; bestBall?: boolean }>)
-  .filter((l) => !l.bestBall)
+  .filter((l) => !l.bestBall && existsSync(resolve(ROOT, 'src/pages', l.slug, 'top-players.astro')))
   .map((l) => ({ slug: l.slug, dataPath: l.dataPath }));
 
 describe('top-players derived payload', () => {

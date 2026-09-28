@@ -32,9 +32,9 @@ import { isEspnCdnUrl } from './espn-cdn';
 export const OG_WIDTH = 1200;
 export const OG_HEIGHT = 630;
 
-export type OgLeague = 'theleague' | 'afl-fantasy';
+export type OgLeague = 'theleague' | 'afl-fantasy' | 'archies';
 
-export const OG_LEAGUES: readonly OgLeague[] = ['theleague', 'afl-fantasy'];
+export const OG_LEAGUES: readonly OgLeague[] = ['theleague', 'afl-fantasy', 'archies'];
 
 /** @see isValidSchefterPostId — re-exported for the endpoint. */
 export const isValidPostId = isValidSchefterPostId;
@@ -44,6 +44,7 @@ export const isValidPostId = isValidSchefterPostId;
 const FEED_PATHS: Record<OgLeague, string> = {
   theleague: 'src/data/theleague/schefter-feed.json',
   'afl-fantasy': 'data/afl-fantasy/schefter-feed.json',
+  archies: 'data/archies/schefter-feed.json',
 };
 
 interface FeedCacheEntry {
@@ -178,13 +179,16 @@ function loadFonts() {
 
 const logoCache = new Map<OgLeague, string | null>();
 
+const LEAGUE_LOGO_DARK: Record<OgLeague, string> = {
+  theleague: 'public/assets/logos/theleague-logo-dark.svg',
+  'afl-fantasy': 'public/assets/logos/afl-logo-dark.svg',
+  archies: 'public/assets/logos/archies-logo-dark.svg',
+};
+
 /** League logo (dark-theme variant — the card is always dark) as a data URI. */
 function loadLeagueLogo(league: OgLeague): string | null {
   if (logoCache.has(league)) return logoCache.get(league)!;
-  const file =
-    league === 'afl-fantasy'
-      ? 'public/assets/logos/afl-logo-dark.svg'
-      : 'public/assets/logos/theleague-logo-dark.svg';
+  const file = LEAGUE_LOGO_DARK[league] ?? LEAGUE_LOGO_DARK.theleague;
   let uri: string | null = null;
   try {
     const svg = readFileSync(join(process.cwd(), file));
@@ -255,6 +259,7 @@ function tierBadge(post: SchefterPost): TierBadge {
 const LEAGUE_BRAND: Record<OgLeague, { name: string; domain: string; primary: string }> = {
   theleague: { name: 'The League', domain: 'theleague.us', primary: '#1c497c' },
   'afl-fantasy': { name: 'AFL Fantasy', domain: 'afl-fantasy.com', primary: '#002244' },
+  archies: { name: "Archie's FFL", domain: 'mfl.football/archies', primary: '#1d3a6e' },
 };
 
 // ── Satori node helpers (object form — no JSX in .ts) ────────────────────

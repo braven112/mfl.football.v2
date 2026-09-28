@@ -97,6 +97,7 @@ jobs:
           LEAGUES=(
             "theleague:${THELEAGUE_MFL_LEAGUE_ID}:true"
             "afl:19621:false"
+            "archies:10105:false"
           )
           for entry in "${LEAGUES[@]}"; do
             IFS=':' read -r SLUG ID HAS_SALARY_SYNC <<< "$entry"

@@ -99,7 +99,7 @@
       "type": "AUTO_PROCESS_WAIVERS",
       "shape": "",
       "example": "",
-      "occurrences": 313,
+      "occurrences": 314,
       "leagues": [
         "afl-fantasy"
       ],
@@ -109,17 +109,38 @@
       "type": "BBID_AUTO_PROCESS_WAIVERS",
       "shape": "",
       "example": "",
-      "occurrences": 319,
+      "occurrences": 325,
       "leagues": [
+        "archies",
         "theleague"
       ],
       "seasons": "2007-2026"
     },
     {
       "type": "BBID_WAIVER",
+      "shape": "N,|D|",
+      "example": "16809,|15.01|",
+      "occurrences": 7,
+      "leagues": [
+        "archies"
+      ],
+      "seasons": "2026"
+    },
+    {
+      "type": "BBID_WAIVER",
+      "shape": "N,|D|N,",
+      "example": "14073,|100.00|17482,",
+      "occurrences": 120,
+      "leagues": [
+        "archies"
+      ],
+      "seasons": "2026"
+    },
+    {
+      "type": "BBID_WAIVER",
       "shape": "N,|N|",
       "example": "10313,|1250000|",
-      "occurrences": 281,
+      "occurrences": 285,
       "leagues": [
         "theleague"
       ],
@@ -129,7 +150,7 @@
       "type": "BBID_WAIVER",
       "shape": "N,|N|N,",
       "example": "10271,|1500000|14108,",
-      "occurrences": 288,
+      "occurrences": 289,
       "leagues": [
         "theleague"
       ],
@@ -179,9 +200,10 @@
       "type": "FREE_AGENT",
       "shape": "|N,",
       "example": "|10077,",
-      "occurrences": 3315,
+      "occurrences": 3325,
       "leagues": [
         "afl-fantasy",
+        "archies",
         "theleague"
       ],
       "seasons": "2016-2026"
@@ -201,9 +223,10 @@
       "type": "FREE_AGENT",
       "shape": "N,|",
       "example": "10077,|",
-      "occurrences": 1086,
+      "occurrences": 1121,
       "leagues": [
         "afl-fantasy",
+        "archies",
         "theleague"
       ],
       "seasons": "2016-2026"
@@ -212,9 +235,10 @@
       "type": "FREE_AGENT",
       "shape": "N,|N,",
       "example": "10077,|10409,",
-      "occurrences": 2782,
+      "occurrences": 2931,
       "leagues": [
         "afl-fantasy",
+        "archies",
         "theleague"
       ],
       "seasons": "2016-2026"
@@ -233,9 +257,10 @@
       "type": "IR",
       "shape": "",
       "example": "",
-      "occurrences": 3849,
+      "occurrences": 3910,
       "leagues": [
         "afl-fantasy",
+        "archies",
         "theleague"
       ],
       "seasons": "2007-2026"
@@ -328,9 +353,10 @@
       "type": "LOCK_ALL_PLAYERS",
       "shape": "",
       "example": "",
-      "occurrences": 351,
+      "occurrences": 369,
       "leagues": [
         "afl-fantasy",
+        "archies",
         "theleague"
       ],
       "seasons": "2017-2026"
@@ -349,7 +375,7 @@
       "type": "TAXI",
       "shape": "",
       "example": "",
-      "occurrences": 2143,
+      "occurrences": 2144,
       "leagues": [
         "theleague"
       ],
@@ -359,9 +385,10 @@
       "type": "TRADE",
       "shape": "",
       "example": "",
-      "occurrences": 716,
+      "occurrences": 718,
       "leagues": [
         "afl-fantasy",
+        "archies",
         "theleague"
       ],
       "seasons": "2007-2026"
@@ -370,18 +397,19 @@
       "type": "UNLOCK_ALL_PLAYERS",
       "shape": "",
       "example": "",
-      "occurrences": 3,
+      "occurrences": 4,
       "leagues": [
         "afl-fantasy",
+        "archies",
         "theleague"
       ],
-      "seasons": "2021-2023"
+      "seasons": "2021-2026"
     },
     {
       "type": "WAIVER",
       "shape": "",
       "example": "",
-      "occurrences": 8571,
+      "occurrences": 8583,
       "leagues": [
         "afl-fantasy",
         "theleague"

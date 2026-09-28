@@ -346,8 +346,12 @@ describe('the committed archive', () => {
     expect(new Set(seasons.map((s) => s.slug)).size).toBeGreaterThan(1);
   });
 
+  /** Leagues whose bids are FAAB dollars, with the season budget (MFL `bbidSeasonLimit`). */
+  const FAAB_BUDGET: Record<string, number> = { archies: 100 };
+
+  // A FAAB league's first-come pickups are free, not priced at a salary minimum.
   const rowsFor = (s: (typeof seasons)[number]) =>
-    normalizeTransactions(s.feed, { freeAgentPrice: 425000 });
+    normalizeTransactions(s.feed, { freeAgentPrice: FAAB_BUDGET[s.slug] ? null : 425000 });
 
   it('normalizes every season without throwing, and produces rows', () => {
     let total = 0;
@@ -369,7 +373,14 @@ describe('the committed archive', () => {
         // priced move in either league is at or above the league minimum, and
         // the smallest minimum the archive has ever carried is 100k — so a
         // three-figure price is a parse failure, not a bargain.
-        if (row.amount !== null && (!Number.isFinite(row.amount) || row.amount < 1000)) problems.push(`${where}: implausible amount ${row.amount}`);
+        // A FAAB league (archies: a $100 blind-bid budget, cent increments)
+        // prices moves in plain dollars, so its plausible range is 0..budget
+        // rather than "at or above a six-figure league minimum".
+        if (row.amount !== null) {
+          const faab = FAAB_BUDGET[season.slug];
+          const bad = !Number.isFinite(row.amount) || (faab ? row.amount < 0 || row.amount > faab : row.amount < 1000);
+          if (bad) problems.push(`${where}: implausible amount ${row.amount}`);
+        }
         if (playerIdsInRow(row).includes('0000')) problems.push(`${where}: 0000 sentinel leaked as a player id`);
         if (row.kind === 'trade' && row.trade === null) problems.push(`${where}: trade row with no trade detail`);
         if (row.kind !== 'trade' && row.trade !== null) problems.push(`${where}: non-trade row carrying trade detail`);

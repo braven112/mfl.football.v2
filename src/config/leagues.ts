@@ -29,7 +29,7 @@ import {
 } from './leagues-data.mjs';
 
 /** Canonical slug: the path segment under src/pages/ */
-export type CanonicalLeagueSlug = 'theleague' | 'afl-fantasy' | 'best-ball-1';
+export type CanonicalLeagueSlug = 'theleague' | 'afl-fantasy' | 'best-ball-1' | 'archies';
 
 export interface LeagueFeatures {
   contracts: boolean;
@@ -263,6 +263,22 @@ export interface LeagueDefinition {
    * when you have a slug in hand.
    */
   officialClock: LeagueClock;
+  /**
+   * `false` keeps the league off the mfl.football front door (src/pages/index.astro)
+   * while it stays served at its own path. Absent → listed.
+   */
+  advertiseOnSharedHost?: boolean;
+  /**
+   * Nav renders only links tagged `leagueOnly: <navSlug>` (src/utils/nav-utils.ts),
+   * as it always has for best-ball. Absent → the default link set.
+   */
+  optInNav?: boolean;
+  /** Short display name for tight spaces (the site header). */
+  shortName?: string;
+  /** The league's mark for the shared header and layout, per theme. */
+  logo?: { light: string; dark: string };
+  /** Browser chrome `theme-color` for a package league. */
+  themeColor?: string;
   /**
    * The chat the league's news persona posts into (scripts/lib/chat.mjs).
    * Env var NAMES only. Absent → the league has no chat.

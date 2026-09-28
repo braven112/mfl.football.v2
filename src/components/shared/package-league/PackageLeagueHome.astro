@@ -1,0 +1,216 @@
+---
+/**
+ * Homepage for a package league (the first is archies).
+ *
+ * Deliberately small: the league's name and mark, links to the launch pages,
+ * the latest news (where The Gauntlet lands), the most recent transactions,
+ * and each division's top three. Every section reads data the route hands
+ * in, so a new package league is a thin route file and a registry entry.
+ *
+ * No client script: nothing here needs to re-init under the ClientRouter.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import SchefterWidget from '../../shared/SchefterWidget.astro';
+import DivisionStandings from './DivisionStandings.astro';
+import { getLeagueBySlug, type CanonicalLeagueSlug } from '../../../config/leagues';
+import { getAuthUser, franchiseIdForLeague } from '../../../utils/auth';
+import { groupStandingsByDivision, type PackageDivision, type PackageTeam } from '../../../utils/package-league';
+import { loadSeasonFeed, resolveSeason, seasonsFromGlob, type LazyFeedGlob } from '../../../utils/mfl-feed-glob';
+import { getCurrentSeasonYear, getLeagueYearForSlug } from '../../../utils/league-year';
+import { loadTransactionsSeason } from '../../../utils/transactions-feeds';
+import { getGlobalPlayerMap } from '../../../utils/player-map';
+import { franchiseSlug } from '../../../utils/franchise-marks';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import type { SchefterPost } from '../../../types/schefter';
+
+interface Props {
+  leagueSlug: CanonicalLeagueSlug;
+  config: { teams: PackageTeam[]; divisions?: PackageDivision[] };
+  standingsFeeds: LazyFeedGlob;
+  transactionFeeds: LazyFeedGlob;
+  leagueFeeds: LazyFeedGlob;
+  posts: SchefterPost[];
+  logo: { light: string; dark: string };
+}
+
+const { leagueSlug, config, standingsFeeds, transactionFeeds, leagueFeeds, posts, logo } = Astro.props;
+const league = getLeagueBySlug(leagueSlug)!;
+const hide = Astro.locals.hideLeaguePrefix ?? false;
+const r = (p: string) => resolveLeaguePath(p, hide);
+const base = `/${league.slug}`;
+
+const authUser = getAuthUser(Astro.request);
+const mine = franchiseIdForLeague(authUser, league.id);
+const teamsById = new Map(config.teams.map((t) => [t.franchiseId, t]));
+
+// Standings: results-shaped, so the SEASON year.
+const standingYears = seasonsFromGlob(standingsFeeds);
+const standingYear = resolveSeason(null, standingYears, getCurrentSeasonYear());
+const standingsFeed = standingYear ? await loadSeasonFeed(standingsFeeds, standingYear) : null;
+const groups = groupStandingsByDivision(standingsFeed, config.teams, config.divisions ?? []);
+const teamSlugs = Object.fromEntries(config.teams.map((t) => [t.franchiseId, franchiseSlug(t)]));
+
+// Transactions: management-shaped, so the LEAGUE year.
+const txYears = seasonsFromGlob(transactionFeeds);
+const txYear = resolveSeason(null, txYears, getLeagueYearForSlug(league.slug));
+const leagueYear = getLeagueYearForSlug(league.slug);
+const txRows = txYear
+  ? (
+      await loadTransactionsSeason({
+        transactionFeeds,
+        leagueFeeds,
+        year: txYear,
+        hasSalaryCap: false,
+        leagueId: league.id,
+        isCurrentSeason: txYear === leagueYear,
+      }).catch(() => [])
+    ).slice(0, 8)
+  : [];
+const players = getGlobalPlayerMap(leagueSlug);
+const fallbackPlayers = getGlobalPlayerMap('theleague');
+const playerName = (id: string) => (players.get(id) ?? fallbackPlayers.get(id))?.name ?? `Player ${id}`;
+const KIND_LABEL: Record<string, string> = {
+  trade: 'Trade',
+  waiver: 'Waiver',
+  'blind-bid': 'Blind bid',
+  'free-agent': 'Free agent',
+  auction: 'Auction',
+};
+const whenFmt = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone: 'America/Los_Angeles' });
+
+const links = [
+  { href: `${base}/standings`, label: 'Standings' },
+  { href: `${base}/rosters`, label: 'Rosters' },
+  { href: `${base}/transactions`, label: 'Transactions' },
+  { href: `${base}/news`, label: 'News' },
+  { href: `${base}/schedule-strength`, label: 'The Gauntlet' },
+  { href: `${base}/brand`, label: 'Team brands' },
+];
+---
+
+<TheLeagueLayout title={league.name}>
+  <div class="pkg-home">
+    <header class="pkg-home__hero">
+      <img class="pkg-home__logo pkg-home__logo--light" src={logo.light} alt="" width="72" height="72" />
+      <img class="pkg-home__logo pkg-home__logo--dark" src={logo.dark} alt="" width="72" height="72" />
+      <div>
+        <h1>{league.name}</h1>
+        <p>{config.teams.length} teams · {(config.divisions ?? []).length} divisions{standingYear ? ` · ${standingYear} season` : ''}</p>
+      </div>
+    </header>
+
+    <nav class="pkg-home__links" aria-label="League pages">
+      {links.map((l) => <a href={r(l.href)}>{l.label}</a>)}
+    </nav>
+
+    <div class="pkg-home__grid">
+      <section class="pkg-home__card" aria-labelledby="pkg-home-news">
+        <h2 id="pkg-home-news">Latest news</h2>
+        {posts.length > 0 ? (
+          <SchefterWidget posts={posts.slice(0, 4)} league={league.navSlug} allNewsLink={r(`${base}/news`)} />
+        ) : (
+          <p class="pkg-home__empty">
+            Nothing yet. The Gauntlet, the weekly strength-of-schedule column, lands here every Wednesday.
+          </p>
+        )}
+      </section>
+
+      <section class="pkg-home__card" aria-labelledby="pkg-home-tx">
+        <h2 id="pkg-home-tx">Recent transactions</h2>
+        {txRows.length > 0 ? (
+          <ul class="pkg-home__tx">
+            {txRows.map((t) => {
+              const team = teamsById.get(t.franchiseId);
+              return (
+                <li>
+                  <span class="pkg-home__tx-when">{whenFmt.format(new Date(t.at))}</span>
+                  <span class="pkg-home__tx-body">
+                    <strong>{team?.name ?? `Team ${t.franchiseId}`}</strong>
+                    {' '}
+                    <span class="pkg-home__tx-kind">{KIND_LABEL[t.kind] ?? t.rawType}</span>
+                    {t.added.length > 0 && <span> · added {t.added.map(playerName).join(', ')}</span>}
+                    {t.dropped.length > 0 && <span> · dropped {t.dropped.map(playerName).join(', ')}</span>}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p class="pkg-home__empty">No transactions yet this season.</p>
+        )}
+        <a class="pkg-home__more" href={r(`${base}/transactions`)}>All transactions →</a>
+      </section>
+    </div>
+
+    <section class="pkg-home__standings" aria-labelledby="pkg-home-standings">
+      <div class="pkg-home__section-head">
+        <h2 id="pkg-home-standings">Division leaders</h2>
+        <a class="pkg-home__more" href={r(`${base}/standings`)}>Full standings →</a>
+      </div>
+      {groups.length > 0 ? (
+        <DivisionStandings
+          groups={groups}
+          compact={3}
+          teamHrefBase={r(`${base}/brand`)}
+          teamSlugs={teamSlugs}
+          highlightFranchiseId={mine}
+        />
+      ) : (
+        <p class="pkg-home__empty">Standings appear once the first week is scored.</p>
+      )}
+    </section>
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .pkg-home { max-width: 1200px; margin: 0 auto; padding: 1.25rem 1rem 3rem; color: var(--page-text); }
+  .pkg-home__hero { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+  .pkg-home__hero h1 { margin: 0; font-size: clamp(1.4rem, 4vw, 2rem); }
+  .pkg-home__hero p { margin: 0.2rem 0 0; color: var(--content-text-muted); }
+  .pkg-home__logo { flex: none; }
+  .pkg-home__logo--dark { display: none; }
+  :global(html.dark) .pkg-home__logo--light { display: none; }
+  :global(html.dark) .pkg-home__logo--dark { display: block; }
+  .pkg-home__links { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.25rem; }
+  .pkg-home__links a {
+    padding: 0.4rem 0.8rem;
+    border-radius: 999px;
+    border: 1px solid var(--content-border);
+    background: var(--card-bg);
+    color: var(--page-text);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+  .pkg-home__links a:hover { background: var(--content-bg-muted); }
+  .pkg-home__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .pkg-home__card {
+    background: var(--card-bg);
+    border: 1px solid var(--content-border);
+    border-radius: 12px;
+    padding: 1rem;
+    min-width: 0;
+  }
+  .pkg-home__card h2,
+  .pkg-home__section-head h2 { margin: 0 0 0.75rem; font-size: 1.05rem; }
+  .pkg-home__section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
+  .pkg-home__empty { color: var(--content-text-muted); margin: 0; }
+  .pkg-home__tx { list-style: none; margin: 0 0 0.75rem; padding: 0; }
+  .pkg-home__tx li {
+    display: flex;
+    gap: 0.6rem;
+    padding: 0.45rem 0;
+    border-bottom: 1px solid var(--content-border);
+    font-size: 0.9rem;
+  }
+  .pkg-home__tx li:last-child { border-bottom: none; }
+  .pkg-home__tx-when { flex: none; width: 3.5rem; color: var(--content-text-muted); font-variant-numeric: tabular-nums; }
+  .pkg-home__tx-body { min-width: 0; overflow-wrap: anywhere; }
+  .pkg-home__tx-kind { color: var(--content-text-muted); }
+  .pkg-home__more { font-size: 0.85rem; font-weight: 600; color: var(--page-text); }
+</style>

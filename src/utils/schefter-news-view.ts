@@ -327,7 +327,7 @@ export async function resolveSchefterNewsView(
     // Cast: buildSchefterPostOg only names the two leagues that HAVE a feed.
     // best-ball-1 carries `schefterFeed: false`, so it never renders this page.
     og: ogPost
-      ? buildSchefterPostOg(ogPost, url, league.slug as 'theleague' | 'afl-fantasy')
+      ? buildSchefterPostOg(ogPost, url, league.slug as 'theleague' | 'afl-fantasy' | 'archies')
       : undefined,
   };
 }

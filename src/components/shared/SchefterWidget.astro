@@ -9,11 +9,13 @@ import { getAuthor, getAuthorAvatar } from '../../types/schefter';
 import { formatRelativeTime } from '../../utils/schefter-feed';
 import '../../styles/schefter-feed.css';
 
+import type { LeagueSlug } from '../../types/nav';
+
 interface Props {
   posts: SchefterPost[];
-  /** bb1 is accepted for type soundness (its feed is empty, so callers
-      never actually render the widget there today). */
-  league: 'theleague' | 'afl' | 'bb1';
+  /** Any league's nav slug. bb1's feed is empty, so callers never render
+      the widget there today; archies' feed carries The Gauntlet. */
+  league: LeagueSlug;
   allNewsLink: string;
 }
 

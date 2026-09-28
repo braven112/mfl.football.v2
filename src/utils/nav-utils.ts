@@ -30,13 +30,14 @@ import {
 import type { LeagueDefinition } from '../config/leagues';
 
 /**
- * navSlugs of draft-only best-ball leagues. Their nav is OPT-IN: only links
- * explicitly tagged `leagueOnly: <navSlug>` render, because the untagged
- * default link set (rosters, lineups, trades, …) is management UI those
- * leagues deliberately don't have — every untagged link would be a 404.
+ * navSlugs whose nav is OPT-IN: only links explicitly tagged
+ * `leagueOnly: <navSlug>` render, because the untagged default link set
+ * (rosters, lineups, trades, …) is UI those leagues don't have — every
+ * untagged link would be a 404. Draft-only best-ball leagues, and package
+ * leagues (`optInNav` in the registry) that launch with a chosen page set.
  */
 const BEST_BALL_NAV_SLUGS = new Set<LeagueSlug>(
-  ALL_LEAGUES.filter((l) => l.bestBall).map((l) => l.navSlug),
+  ALL_LEAGUES.filter((l) => l.bestBall || l.optInNav).map((l) => l.navSlug),
 );
 
 /**
