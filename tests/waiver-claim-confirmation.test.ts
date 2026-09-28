@@ -25,7 +25,7 @@ import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { readMflImportResult } from '../src/utils/mfl-import-result';
-import { readPendingWaiverPlayerIds } from '../src/utils/waiver-claim';
+import { readPendingWaiverPlayerIds, formatBidAmount } from '../src/utils/waiver-claim';
 
 const ROUTE = fs.readFileSync(
   path.join(process.cwd(), 'src/pages/api/waiver-claim.ts'),
@@ -293,10 +293,14 @@ describe('readPendingWaiverPlayerIds — "could not verify" is not "nothing ther
     expect(ROUTE_CODE).toMatch(/rules\.blindBid\s*\?\s*\{\s*BBID_AMT:/);
     // The claim's own bid, not the league minimum: an owner who bids above the
     // floor must not have it silently rewritten down to it.
-    expect(ROUTE_CODE).toMatch(/BBID_AMT:\s*String\(c\.bid\)/);
-    // Bare integer dollars. MFL parses this field itself and says so — "must
-    // not include letters or symbols" — so any formatting sent here is a
-    // rejection.
+    expect(ROUTE_CODE).toMatch(/BBID_AMT:\s*formatBidAmount\(Number\(c\.bid\),\s*rules\.increment\)/);
+    // Bare integer dollars in a whole-dollar league (proven against
+    // TheLeague); two decimals only where the league's own increment is cents
+    // (archies, $0.01). formatBidAmount is pinned in tests/waiver-claim.test.ts.
+    expect(formatBidAmount(425000, 25000)).toBe('425000');
+    expect(formatBidAmount(12.5, 0.01)).toBe('12.50');
+    // MFL parses this field itself and says so — "must not include letters or
+    // symbols" — so currency formatting sent here is a rejection.
     expect(ROUTE_CODE, 'the bid must not be currency-formatted').not.toMatch(
       /BBID_AMT:[^,\n]*(toLocaleString|toFixed|\$\{'\$'\}|'\$')/
     );

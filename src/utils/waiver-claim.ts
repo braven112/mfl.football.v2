@@ -165,6 +165,38 @@ export function readBidRules(league: Record<string, any> = {}): WaiverBidRules {
 }
 
 /**
+ * Whether `bid` is a whole number of `increment`s. Not `bid % increment`: with
+ * a cents increment (archies: $0.01) floating point makes 1 % 0.01 ≈ 0.0099
+ * and every bid but $0.01 failed. Counting increments and rounding is exact to
+ * well below a cent.
+ */
+export function isBidMultiple(bid: number, increment: number): boolean {
+  if (!(increment > 0)) return true;
+  const steps = bid / increment;
+  return Math.abs(steps - Math.round(steps)) < 1e-6;
+}
+
+/**
+ * A blind-bid balance as MFL reports it, kept to the cent. Flooring to whole
+ * dollars told an archies owner with $99.45 left that they had $99 and
+ * refused bids they could afford.
+ */
+export function bidBalance(raw: unknown): number {
+  const n = Number(raw);
+  return Number.isFinite(n) ? Math.round(n * 100) / 100 : 0;
+}
+
+/**
+ * The bid as MFL's add_drop form field. Whole-dollar leagues send the bare
+ * integer they always have (TheLeague, proven); a cents league sends two
+ * decimals ("12.50") — its own bbidIncrement says MFL takes cents there.
+ */
+export function formatBidAmount(bid: number, increment: number): string {
+  if (Number.isInteger(increment) && Number.isInteger(bid)) return String(bid);
+  return bid.toFixed(2);
+}
+
+/**
  * Validate a full round of claims. Returns every problem rather than the first,
  * so an owner fixes one board instead of resubmitting four times.
  */
@@ -199,13 +231,15 @@ export function validateClaims(claims: WaiverClaim[], ctx: ClaimValidationContex
     const bid = typeof c.bid === 'number' && Number.isFinite(c.bid) ? c.bid : null;
     if (rules.system !== 'bbid') {
       // Priority waivers have no bid — position in the order decides.
-    } else if (bid === null || bid <= 0) {
+    } else if (bid === null || bid < 0 || (bid === 0 && rules.minimum > 0)) {
+      // $0 is a real bid only in a league with no minimum (archies: MFL sets
+      // no bbidMinimum, and the commissioner allows $0); MFL has the last word.
       errors.push(`${label}: enter a bid amount.`);
     } else {
       if (bid < rules.minimum) {
         errors.push(`${label}: bid is below the $${rules.minimum.toLocaleString()} minimum.`);
       }
-      if (bid % rules.increment !== 0) {
+      if (!isBidMultiple(bid, rules.increment)) {
         errors.push(`${label}: bid must be a multiple of $${rules.increment.toLocaleString()}.`);
       }
       if (bid > ctx.availableBalance) {

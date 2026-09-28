@@ -10,7 +10,7 @@ export const prerender = false;
 
 const leagueFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/league.json');
 const rosterFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/rosters.json');
-const playerFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/players.json');
+const playerFeeds = import.meta.glob('../../../data/archies/mfl-feeds/20{2[5-9],[3-9][0-9]}/players.json');
 const ytdFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/playerScores-ytd.json');
 const projectionFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/projectedScores.json');
 const adpFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/adp-redraft.json');
