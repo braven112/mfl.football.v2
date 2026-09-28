@@ -30,11 +30,11 @@ interface Props {
   transactionFeeds: LazyFeedGlob;
   leagueFeeds: LazyFeedGlob;
   posts: SchefterPost[];
-  logo: { light: string; dark: string };
 }
 
-const { leagueSlug, config, standingsFeeds, transactionFeeds, leagueFeeds, posts, logo } = Astro.props;
+const { leagueSlug, config, standingsFeeds, transactionFeeds, leagueFeeds, posts } = Astro.props;
 const league = getLeagueBySlug(leagueSlug)!;
+const logo = league.logo!;
 const hide = Astro.locals.hideLeaguePrefix ?? false;
 const r = (p: string) => resolveLeaguePath(p, hide);
 const base = `/${league.slug}`;
@@ -91,8 +91,9 @@ const links = [
 <TheLeagueLayout title={league.name}>
   <div class="pkg-home">
     <header class="pkg-home__hero">
-      <img class="pkg-home__logo pkg-home__logo--light" src={logo.light} alt="" width="72" height="72" />
-      <img class="pkg-home__logo pkg-home__logo--dark" src={logo.dark} alt="" width="72" height="72" />
+      <img class="pkg-home__logo pkg-home__logo--light" src={logo.light} alt="" height="96" />
+      <img class="pkg-home__logo pkg-home__logo--dark" src={logo.dark} alt="" height="96" />
+      {league.wordmark && <img class="pkg-home__wordmark" src={league.wordmark} alt="" height="72" />}
       <div>
         <h1>{league.name}</h1>
         <p>{config.teams.length} teams · {(config.divisions ?? []).length} divisions{standingYear ? ` · ${standingYear} season` : ''}</p>
@@ -167,7 +168,13 @@ const links = [
   .pkg-home__hero { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
   .pkg-home__hero h1 { margin: 0; font-size: clamp(1.4rem, 4vw, 2rem); }
   .pkg-home__hero p { margin: 0.2rem 0 0; color: var(--content-text-muted); }
-  .pkg-home__logo { flex: none; }
+  .pkg-home__logo { flex: none; height: 96px; width: auto; }
+  .pkg-home__wordmark { flex: none; height: 72px; width: auto; }
+  @media (max-width: 600px) {
+    .pkg-home__hero { flex-wrap: wrap; }
+    .pkg-home__logo { height: 72px; }
+    .pkg-home__wordmark { height: 52px; }
+  }
   .pkg-home__logo--dark { display: none; }
   :global(html.dark) .pkg-home__logo--light { display: none; }
   :global(html.dark) .pkg-home__logo--dark { display: block; }

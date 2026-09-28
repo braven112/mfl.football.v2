@@ -488,11 +488,16 @@ export const LEAGUES = {
     /** Short display name for the site header (the full name is too long there). */
     shortName: "Archie's",
     /**
-     * The league's mark, read by the shared header and layout. A suggested
-     * placeholder (the site football glyph in league navy) until the league
-     * supplies its own art.
+     * The league's mark (Archie's head), read by the shared header and layout.
+     * The art is outlined, so one file serves both themes. Resized from the
+     * league's own MFL skin art in public/mfl/10105/.
      */
-    logo: { light: '/assets/logos/archies-logo.svg', dark: '/assets/logos/archies-logo-dark.svg' },
+    logo: { light: '/assets/logos/archies-head.webp', dark: '/assets/logos/archies-head.webp' },
+    /**
+     * Wordmark shown beside the mark in the header and homepage hero, in place
+     * of the text short name.
+     */
+    wordmark: '/assets/logos/archies-wordmark.webp',
     /** Browser chrome colour (the mark's navy). */
     themeColor: '#1d3a6e',
     /** Empty for the same reason as Best Ball #1's — see that entry. */
