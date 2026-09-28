@@ -182,7 +182,7 @@ const logoCache = new Map<OgLeague, string | null>();
 const LEAGUE_LOGO_DARK: Record<OgLeague, string> = {
   theleague: 'public/assets/logos/theleague-logo-dark.svg',
   'afl-fantasy': 'public/assets/logos/afl-logo-dark.svg',
-  archies: 'public/assets/logos/archies-logo-dark.svg',
+  archies: 'public/assets/logos/archies-head.png',
 };
 
 /** League logo (dark-theme variant — the card is always dark) as a data URI. */
@@ -191,8 +191,9 @@ function loadLeagueLogo(league: OgLeague): string | null {
   const file = LEAGUE_LOGO_DARK[league] ?? LEAGUE_LOGO_DARK.theleague;
   let uri: string | null = null;
   try {
-    const svg = readFileSync(join(process.cwd(), file));
-    uri = `data:image/svg+xml;base64,${svg.toString('base64')}`;
+    const bytes = readFileSync(join(process.cwd(), file));
+    const mime = file.endsWith('.png') ? 'image/png' : 'image/svg+xml';
+    uri = `data:${mime};base64,${bytes.toString('base64')}`;
   } catch {
     uri = null;
   }

@@ -37,7 +37,7 @@ if (authUser?.leagueId === LEAGUE.id) {
       leagueId={LEAGUE.id}
       seasonYear={LOGIN_YEAR}
       redirectUrl={safeNext}
-      logoSrc="/assets/logos/archies-logo.svg"
+      logoSrc={LEAGUE.logo!.light}
       logoAlt="Archie's Fantasy Football League logo"
       subtitle={`Sign in with your MFL credentials for ${LEAGUE.name}`}
     />
