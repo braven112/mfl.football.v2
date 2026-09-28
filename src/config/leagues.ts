@@ -100,6 +100,8 @@ export interface LeagueFeatures {
    * Same reason: the account menu links it only where the page exists.
    */
   pushNotifications: boolean;
+  /** Commissioner branding editor (names, colours, uploaded marks). */
+  brandingEditor: boolean;
 }
 
 /**

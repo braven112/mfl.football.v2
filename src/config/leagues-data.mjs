@@ -147,6 +147,8 @@ export const LEAGUES = {
       accounting: true,
       viewerPreferences: true,
       pushNotifications: true,
+      /** Branding is hand-curated here; the editor stays off until chosen. */
+      brandingEditor: false,
     },
     /**
      * Prize table for the commissioner's accounting page, straight from the
@@ -292,6 +294,8 @@ export const LEAGUES = {
       accounting: true,
       viewerPreferences: true,
       pushNotifications: true,
+      /** Branding is hand-curated here; the editor stays off until chosen. */
+      brandingEditor: false,
     },
     /**
      * AFL prize table (constitution PAYOUTS). The AFL pays for WINNING, and
@@ -455,6 +459,8 @@ export const LEAGUES = {
       accounting: false,
       viewerPreferences: false,
       pushNotifications: false,
+      /** Branding is hand-curated here; the editor stays off until chosen. */
+      brandingEditor: false,
     },
     // Redraft best-ball: one season, no keepers, no contracts — straight
     // redraft ADP is exactly the right opening board.
@@ -551,6 +557,11 @@ export const LEAGUES = {
       accounting: false,
       viewerPreferences: false,
       pushNotifications: false,
+      /**
+       * Commissioner branding editor (/archies/admin/branding): names, colours
+       * and uploaded marks, published through .github/workflows/branding-edit.yml.
+       */
+      brandingEditor: true,
     },
     defaultRankingSources: ['mfl-adp', 'espn', 'sharks'],
   },

@@ -1,0 +1,31 @@
+---
+/**
+ * Team branding editor (archies) — thin route: the gate and the config import
+ * live here (a component cannot redirect; a static import specifier cannot be
+ * a runtime variable). The editor is components/shared/branding/BrandingEditor.
+ *
+ * Commissioner of this league, or a platform admin (src/utils/league-admin.ts),
+ * and only while the league has `features.brandingEditor` on.
+ */
+export const prerender = false;
+
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import BrandingEditor from '../../../components/shared/branding/BrandingEditor.astro';
+import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
+import { canAdministerLeague } from '../../../utils/league-admin';
+import { loginUrlForRequest, forbiddenPathFor } from '../../../utils/login-redirect';
+import { getLeagueBySlug } from '../../../config/leagues';
+import config from '../../../../data/archies/archies.config.json';
+
+const league = getLeagueBySlug('archies')!;
+const user = getAuthUser(Astro.request);
+if (!user) return Astro.redirect(loginUrlForRequest(Astro, league));
+if (!league.features.brandingEditor) return Astro.redirect('/archies');
+if (!canAdministerLeague(user, league)) {
+  return Astro.rewrite(forbiddenPathFor(league, isCommissionerOrAdmin(user) ? 'league' : 'commissioner'));
+}
+---
+
+<TheLeagueLayout title="Team Branding — Admin">
+  <BrandingEditor leagueSlug="archies" teams={config.teams} divisions={config.divisions} />
+</TheLeagueLayout>

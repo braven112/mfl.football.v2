@@ -1,0 +1,75 @@
+name: Branding Edit
+
+# Publishes one commissioner branding edit: validates it again, writes the
+# league's config file, commits. The deploy that follows carries it to every
+# page, because branding is read at build time (the committed file is the one
+# source of truth). Dispatched by /api/admin/branding; can also be run by hand,
+# which is why the script re-validates instead of trusting its input.
+on:
+  workflow_dispatch:
+    inputs:
+      league:
+        description: "Registry slug, e.g. archies"
+        required: true
+        type: string
+      franchise:
+        description: "Four-digit MFL franchise id"
+        required: true
+        type: string
+      patch:
+        description: "JSON object of changed fields"
+        required: true
+        type: string
+      requested_by:
+        description: "Who asked (for the commit message)"
+        required: false
+        type: string
+      dry_run:
+        description: "Validate and print only"
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  # QUEUE, never cancel: two edits saved a minute apart are two commits, and
+  # cancelling the first would silently drop it.
+  group: branding-edit
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+          fetch-depth: 1
+
+      - name: Setup pnpm + Node + install
+        uses: ./.github/actions/setup
+
+      - name: Apply the edit
+        env:
+          # Inputs travel as env vars, never interpolated into the script, so
+          # nothing a commissioner typed can become shell.
+          BRANDING_LEAGUE: ${{ inputs.league }}
+          BRANDING_FRANCHISE: ${{ inputs.franchise }}
+          BRANDING_PATCH: ${{ inputs.patch }}
+          BRANDING_DRY_RUN: ${{ inputs.dry_run }}
+        run: node scripts/apply-branding-edit.mjs
+
+      - name: Commit and push
+        if: ${{ inputs.dry_run == false }}
+        uses: ./.github/actions/commit-push
+        with:
+          # Every league's config lives under one of these (TheLeague's is in
+          # src/data/); the script writes exactly one file.
+          check-paths: data src/data
+          add-paths: data src/data
+          commit-message: "chore: branding edit — ${{ inputs.league }} ${{ inputs.franchise }}"
+          no-changes-message: "Branding already matched — nothing to commit."
+          pull-rebase: 'true'
