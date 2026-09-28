@@ -39,13 +39,6 @@ export const STANDINGS_MODES: readonly StandingsMode[] = ['projected', 'live', '
 
 export const DEFAULT_STANDINGS_MODE: StandingsMode = 'live';
 
-/** The label each view wears — on a table's own toggle and on `/live/standings`' shared one. */
-export const STANDINGS_MODE_LABEL: Record<StandingsMode, string> = {
-  projected: 'Projected',
-  live: 'Live',
-  final: 'Final',
-};
-
 export interface ProjectedStandingsRow extends LiveStandingsRow {
   /** MFL's own position — `rank` becomes the position in THIS view. */
   officialRank: number;
