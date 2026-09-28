@@ -47,6 +47,10 @@ jobs:
         uses: actions/checkout@v6
         with:
           ssh-key: ${{ secrets.DEPLOY_KEY }}
+          # The branch TIP when this run starts, not the SHA it was dispatched
+          # at: runs queue, so a second edit saved before the first committed
+          # would otherwise be applied to the pre-first config and lost.
+          ref: ${{ github.ref_name }}
           fetch-depth: 1
 
       - name: Setup pnpm + Node + install
