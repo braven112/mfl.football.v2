@@ -377,10 +377,20 @@ What landed:
     opens on the viewer's division, `?division=` / `?pos=` links, live rosters
     (Redis franchise cache) with the synced feed as fallback, MFL locks shown,
     "held in N/9 divisions" per player.
-- **Phase 6 — make the free agents page FUNCTIONAL** (requested 2026-09-28,
-  after the view-only phase): claims and add/drop from the site, scoped to
-  the owner's division. The claim API and claim context are already
-  pool-aware (above); what remains is the UI (the claim board / modal the
-  TheLeague and AFL players pages use) wired into the package page, plus
-  Archie's waiver rules (BBID_FCFS, $0.01 increments, $100 season limit).
+- **Phase 6 — the free agents page is FUNCTIONAL** (built 2026-09-28): the
+  row ⋮ opens the shared action sheet (WatchListBridge) → the shared claim
+  form (WaiverClaimModal inside PlayerDetailsModal) → /api/waiver-claim, which
+  files into the owner's OWN division; rows are claimable only in that
+  division. Filed claims via WaiverClaimsPanel; signed-out visitors get
+  SignInModal and the claim resumes after sign-in.
+  - Decided with the owner: **cent bids on** (`BBID_AMT` sent as "12.50" in a
+    cents league via `formatBidAmount`; whole-dollar leagues still send bare
+    integers — UNPROVEN against a live archies claim, so watch the first
+    real one) and **$0 bids allowed** where the league has no minimum.
+  - Fixed on the way: `bid % increment` refused almost every cents bid
+    (`isBidMultiple`, server and form); balances were floored to whole dollars
+    (`bidBalance`); /api/waiver-claim had no rate limit (30/min per user).
+  - Not verified live: the first real claim (the environment has no owner
+    session); the waiver window reads "unknown" until the MFL calendar syncs
+    (co-commissioner access), which files a queued claim — the safe default.
 - Two-way Slack (mentions → tips) through the Events API, if a client wants it.

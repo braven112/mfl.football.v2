@@ -9,6 +9,9 @@ import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
+  bidBalance,
+  isBidMultiple,
+  formatBidAmount,
   readBidRules,
   validateClaims,
   validateRound,
@@ -413,5 +416,41 @@ describe('validateRound', () => {
 
   it('ignores the round when the league does not bid conditionally', () => {
     expect(validateRound(undefined, { ...RULES, conditional: false })).toBeNull();
+  });
+});
+
+describe('cents leagues (archies: bbidIncrement 0.01, no minimum)', () => {
+  const rules = { system: 'bbid' as const, blindBid: true, minimum: 0, increment: 0.01, conditional: false, maxRounds: 4 };
+  const ctx = (bid: number, balance = 99.45) => ({
+    rules,
+    availableBalance: balance,
+    rosterPlayerIds: new Set<string>(),
+    freeAgentIds: new Set(['1234']),
+  });
+  const errs = (bid: number, balance?: number) => validateClaims([{ addPlayerId: '1234', bid }], ctx(bid, balance) as any);
+
+  it('accepts every whole-cent bid (float % refused all but $0.01)', () => {
+    for (const bid of [0.07, 1, 1.5, 12.34, 50, 99.45]) expect(errs(bid), String(bid)).toEqual([]);
+  });
+
+  it('refuses a fraction of a cent and a bid over the cents balance', () => {
+    expect(errs(1.234).join()).toMatch(/multiple/);
+    expect(errs(99.46).join()).toMatch(/exceeds/);
+  });
+
+  it('allows $0 only where the league has no minimum', () => {
+    expect(errs(0)).toEqual([]);
+    expect(validateClaims([{ addPlayerId: '1234', bid: 0 }], { ...ctx(0), rules: { ...rules, minimum: 1 } } as any).join()).toMatch(
+      /enter a bid/,
+    );
+  });
+
+  it('keeps balances and the MFL field to the cent, whole dollars unchanged', () => {
+    expect(bidBalance('99.45')).toBe(99.45);
+    expect(bidBalance('425000')).toBe(425000);
+    expect(isBidMultiple(425000, 25000)).toBe(true);
+    expect(isBidMultiple(430000, 25000)).toBe(false);
+    expect(formatBidAmount(425000, 25000)).toBe('425000');
+    expect(formatBidAmount(7, 0.01)).toBe('7.00');
   });
 });
