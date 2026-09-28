@@ -738,3 +738,52 @@ html.dark[data-league="bb1"] {
   --header-nav-label-color: var(--league-accent);
   --header-nav-label-hover-color: var(--league-accent);
 }
+
+/* ========================================
+   Archie's — dark-mode per-league overrides
+   Same two layers as the light block in tokens.css: the palette holds the
+   only colour values, every semantic token is a var() of it. Keeps the
+   neutral dark surface ramp (like Best Ball).
+   Every semantic token is RE-ASSERTED here even where the light block sets
+   the same var(): the generic html.dark block loads after the light
+   per-league block and pins TheLeague's dark blues, so anything not repeated
+   here renders TheLeague on an Archie's page.
+   Contrast the palette must keep (checked on the dark card #1f1f1f):
+     --league-palette-brand-text >= 4.5:1  (8.3)
+     --league-palette-brand      >= 4.5:1  (6.5)
+     --league-palette-button     under white text >= 4.5:1  (5.7)
+   ======================================== */
+html.dark[data-league="archies"] {
+  /* ── 1. Palette ── */
+  --league-palette-brand: #48a8f8;
+  --league-palette-brand-strong: #1868b8;
+  --league-palette-brand-text: #68c0fa;
+  --league-palette-brand-soft: #9bd5fb;        /* hover step for text on dark */
+  --league-palette-button: #1868b8;            /* fills under white text */
+  --league-palette-button-strong: #0f4f91;
+  --league-palette-chrome: #0a2442;
+
+  /* ── 2. Semantic tokens → palette ── */
+  --color-primary: var(--league-palette-brand);
+  --color-primary-dark: var(--league-palette-brand-strong);
+  --color-primary-light: var(--league-palette-brand-text);
+  --color-secondary: var(--league-palette-brand-text);
+  --color-secondary-dark: var(--league-palette-brand);
+  --color-secondary-light: var(--league-palette-brand-soft);
+  --color-accent: var(--league-palette-brand);
+  --league-accent: var(--league-palette-brand);
+  --btn-primary-bg: var(--league-palette-button);
+  --btn-primary-bg-hover: var(--league-palette-button-strong);
+  --breadcrumb-bar-bg: var(--league-palette-chrome);
+  --breadcrumb-bar-border: var(--league-palette-brand);
+  --inverse-bg: var(--league-palette-chrome);
+  --link-color-accent: var(--league-palette-brand-text);
+  --link-color-accent-hover: var(--league-palette-brand-soft);
+  --nav-active-bg: color-mix(in srgb, var(--league-palette-brand) 15%, transparent);
+  --nav-active-text: var(--league-palette-brand-text);
+  --nav-active-border-left: var(--league-palette-brand);
+  --header-nav-icon-color: #ffffff;            /* resting nav icons: white on the dark header, not a brand colour */
+  --header-nav-icon-hover-color: var(--league-palette-brand-text);
+  --header-nav-label-color: var(--league-palette-brand-text);
+  --header-nav-label-hover-color: var(--league-palette-brand-soft);
+}
