@@ -107,7 +107,7 @@ describe('the shared host does not serve a league that has its own domain', () =
   });
 
   it('leaves the app’s own surfaces alone', () => {
-    for (const p of ['/', '/live', '/live/settings', '/login', '/api/live-board', '/404']) {
+    for (const p of ['/', '/live', '/live/settings', '/live/standings', '/login', '/api/live-board', '/404']) {
       expect(resolveSharedHostHiddenLeague('v2.mfl.football', p), p).toBeNull();
     }
   });

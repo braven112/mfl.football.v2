@@ -1,0 +1,142 @@
+---
+/**
+ * MFL Live — standings for every league you watch (`/live/standings`).
+ *
+ * The Standings tab of each league board, for ALL the leagues switched on in
+ * `/live/settings`, stacked on one page under a single Live / Projected /
+ * Final switch. Each table is assembled by the same `assembleMflLeagueBoard`
+ * its own league board uses — see `utils/live/mfl-live-standings.ts`.
+ *
+ * ── ASSEMBLED IN PROCESS ──────────────────────────────────────────────────
+ * The first paint calls `assembleMflLiveStandings` directly and NEVER
+ * `/api/live-standings`: a page that fetches its own API to render itself puts
+ * our own edge in the path of its first paint (the 2026-09-09 outage).
+ * Only the island's POLL goes through the route.
+ * `docs/claude/rules/live-scoring.md`.
+ *
+ * ── SIGNED OUT GETS THE SHELL, NOT A BOUNCE ───────────────────────────────
+ * Same as `/live`: there is a real page to show, and the sign-in goes to the
+ * app's own `/login`, carrying this page as the way back.
+ */
+import MflAppLayout from '../../layouts/MflAppLayout.astro';
+import LiveStandingsBoard from '../../components/shared/live/LiveStandingsBoard';
+import { getAuthUser } from '../../utils/auth';
+import { getCurrentNFLWeek } from '../../utils/current-week';
+import { getDailySlot } from '../../utils/hero-resolver';
+import { assembleMflLiveStandings, type MflLiveStandings } from '../../utils/live/mfl-live-standings';
+import { MFL_LIVE_LEAGUE_COOKIE, rememberMflLiveChoice } from '../../utils/mfl-live-selection';
+import { mflLoginUrl } from '../../utils/mfl-login-redirect';
+import '../../styles/live.css';
+
+// Scores must never be cached, and even the shell reads the session.
+export const prerender = false;
+
+const authUser = getAuthUser(Astro.request);
+
+// Route-only write, before anything reads the cookie back.
+if (authUser) rememberMflLiveChoice(Astro.url, Astro.cookies);
+
+const now = new Date();
+// The RAW resolver result, never clamped up to 1 — MFL serves no live scoring
+// before the Week 1 Thursday.
+const currentWeek = getCurrentNFLWeek(now);
+// Validated exactly as `/api/live-standings` validates it — whole digits,
+// 1-25 — or the first paint would render a week every poll then refuses.
+const weekRaw = (Astro.url.searchParams.get('week') ?? '').trim();
+const weekParam = /^\d+$/.test(weekRaw) ? Number(weekRaw) : NaN;
+const week = weekParam >= 1 && weekParam <= 25 ? weekParam : currentWeek;
+
+// A cadence hint only; the island polls regardless.
+const isLive = getDailySlot(now).slot === 'live-scoring';
+
+let standings: MflLiveStandings | null = null;
+let assemblyFailed = false;
+
+if (authUser && week) {
+  try {
+    standings = await assembleMflLiveStandings({
+      user: authUser,
+      week,
+      // A CHECK against what the session may see, never an input.
+      leaguesParam: Astro.url.searchParams.get('leagues'),
+      leaguesCookie: Astro.cookies.get(MFL_LIVE_LEAGUE_COOKIE)?.value ?? null,
+    });
+  } catch {
+    assemblyFailed = true;
+  }
+}
+---
+
+<MflAppLayout
+	title="Live standings — MFL Live"
+	description="Live, projected and final standings for every one of your MyFantasyLeague leagues, on one page."
+>
+	{!authUser ? (
+		<section class="mfl-live-intro">
+			<h1 class="mfl-live-intro__title">Every league&rsquo;s standings, one page</h1>
+			<p class="mfl-live-intro__sub">
+				Live, projected and final standings for every league your MyFantasyLeague account
+				is in, updating as the games play out.
+			</p>
+			<a class="mfl-live-intro__cta" href={mflLoginUrl('/live/standings')}>Sign in with MyFantasyLeague</a>
+		</section>
+	) : !week ? (
+		<section class="mfl-live-intro">
+			<h1 class="mfl-live-intro__title">The season hasn&rsquo;t kicked off</h1>
+			<p class="mfl-live-intro__sub">
+				MFL doesn&rsquo;t score a week until it starts. These standings will fill in the
+				moment Week 1 does.
+			</p>
+		</section>
+	) : assemblyFailed || !standings ? (
+		<section class="mfl-live-intro">
+			<h1 class="mfl-live-intro__title">Couldn&rsquo;t load your leagues</h1>
+			<p class="mfl-live-intro__sub">
+				Something went wrong reading MyFantasyLeague. Refreshing usually sorts it; if it
+				doesn&rsquo;t, your MFL sign-in may have expired.
+			</p>
+			<a class="mfl-live-intro__cta" href={mflLoginUrl('/live/standings')}>Sign in again</a>
+		</section>
+	) : (
+		<LiveStandingsBoard
+			client:load
+			initial={standings}
+			pollUrl="/api/live-standings"
+			isLive={isLive}
+			panelHrefBase="/live/league/"
+		/>
+	)}
+</MflAppLayout>
+
+<style>
+	.mfl-live-intro {
+		max-width: 46rem;
+		margin: 0 auto;
+	}
+
+	.mfl-live-intro__title {
+		margin: 0 0 0.5rem;
+		font-size: clamp(1.5rem, 5vw, 2.25rem);
+		line-height: 1.15;
+		color: var(--page-text);
+	}
+
+	.mfl-live-intro__sub {
+		margin: 0 0 1.5rem;
+		color: var(--color-text-secondary);
+	}
+
+	.mfl-live-intro__cta {
+		display: inline-block;
+		padding: 0.7rem 1.15rem;
+		border-radius: 0.5rem;
+		background: var(--league-accent);
+		color: #ffffff;
+		font-weight: 600;
+		text-decoration: none;
+	}
+	.mfl-live-intro__cta:hover,
+	.mfl-live-intro__cta:focus-visible {
+		filter: brightness(1.08);
+	}
+</style>

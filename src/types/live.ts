@@ -260,6 +260,15 @@ export interface LiveStandingsRow {
   pointsFor: number;
   /** The viewer's own franchise in this league. */
   isViewer: boolean;
+  /**
+   * How many of the board's week's games MFL has already folded into this
+   * record: games played minus the schedule's games BEFORE that week, floored
+   * at 0. A NUMBER, not a flag, because an AFL doubleheader can be half
+   * counted. `null` when the schedule could not be read. The Live and
+   * Projected views add only the games not yet counted, so a finished game is
+   * never added twice. See `utils/live/standings-projection`.
+   */
+  weekGamesCounted?: number | null;
 }
 
 /**

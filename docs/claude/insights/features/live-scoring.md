@@ -879,3 +879,38 @@ group header spanning the pair. Both can only name ONE of the two paired
 positions and mislabel the other whenever the sides run different lineup
 shapes. That is not an edge case — the rows are sorted per side, so a WR
 opposite an RB is an ordinary row, and the owner's own screenshot had one.
+
+## 2026-09-28 — `/live/standings`: every watched league's table under ONE switch
+
+**Shape.** `/live/standings` stacks the Standings tab of every league switched
+on in `/live/settings`. It adds no standings logic of its own:
+`assembleMflLiveStandings` (`src/utils/live/mfl-live-standings.ts`) fans out
+`assembleMflLeagueBoard` (the function each `/live/league/<id>` board already
+uses) through `mapWithConcurrency`, so a table here and that league's own tab
+cannot disagree. `LvStandings` gained a CONTROLLED `mode` prop. When it is set
+the table draws no toggle, because two switches on one page would let the
+tables show different modes, and the page's whole point is scanning every
+league in the same mode. Boards that don't pass `mode` behave exactly as
+before.
+
+**The per-league "hold the last good read" rule applies to standings too.**
+`holdLastGood` in `LiveStandingsBoard.tsx` keeps a league's last readable table
+(keyed `week:leagueId`) when a poll SUCCEEDS but that league came back `null`.
+This is the same failure `resolvePanelViews` exists for on the scores board: a
+healthy transport carrying one unreadable league. A new multi-league island
+needs this rule. A per-poll `ok` check alone doesn't cover it.
+
+**A page's `?week=` must pass the same check as its poll route.** Copilot
+caught the first cut accepting `?week=30` / `4xyz`. The server render used it,
+every poll 400'd, and the page sat frozen on data it could never refresh. The
+page now takes whole digits in 1–25, exactly what `/api/live-standings` takes.
+`/live` and `/live/league/[id]` still use the looser
+`parseInt(...) > 0`. Worth tightening together if that bites.
+
+**Release-train trap met on the way.** #1252 (the Live/Projected/Final views
+this page is built on) merged to `main` and never reached `staging`, so a
+branch cut from `main` could not be retargeted at `staging` without dragging
+~60 main-only commits along. It shipped by cherry-picking #1252 plus this
+feature onto `staging`. Before a feature that builds on a recent change,
+check the base branch actually carries that change:
+`git cat-file -e origin/staging:<path>`.
