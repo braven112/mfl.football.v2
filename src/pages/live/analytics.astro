@@ -433,6 +433,7 @@ const sectionChips = [
 				<section class="ins__card" aria-labelledby="ins-actions">
 					<h2 class="ins__h2" id="ins-actions">Actions</h2>
 					<p class="ins__note">Counted only when the action succeeded. Schefter tips are anonymous, so no owner count.</p>
+					<div class="ins__scroll">
 					<table class="ins__table">
 						<thead><tr><th>Action</th><th class="num">Times</th><th class="num">Owners</th></tr></thead>
 						<tbody>
@@ -445,6 +446,7 @@ const sectionChips = [
 							))}
 						</tbody>
 					</table>
+					</div>
 				</section>
 			</Fragment>
 		)}
@@ -515,7 +517,9 @@ const sectionChips = [
 
 	.ins__tiles {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+		/* min(…, 100%) so a phone with Android's larger-text setting (rem grows)
+		   gets one column instead of a track wider than the screen. */
+		grid-template-columns: repeat(auto-fit, minmax(min(8.5rem, 100%), 1fr));
 		gap: 0.5rem;
 	}
 	.ins__tile,
@@ -555,7 +559,7 @@ const sectionChips = [
 	}
 	.ins__split {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+		grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr));
 		gap: 1rem;
 	}
 
@@ -563,7 +567,10 @@ const sectionChips = [
 	.ins__bars {
 		display: flex;
 		align-items: flex-end;
-		gap: 2px;
+		/* 1px, and slots may shrink to nothing: 90 bars with a 2px floor and
+		   2px gaps need 358px, wider than a 360px phone's card. */
+		gap: 1px;
+		overflow: hidden;
 		height: 8rem;
 		border-bottom: 1px solid var(--color-border-subtle);
 	}
@@ -575,7 +582,7 @@ const sectionChips = [
 		height: 100%;
 		display: flex;
 		align-items: flex-end;
-		min-width: 2px;
+		min-width: 0;
 	}
 	.ins__bar {
 		width: 100%;
@@ -687,13 +694,19 @@ const sectionChips = [
 	}
 	.ins__list li {
 		display: grid;
-		grid-template-columns: 9rem 1fr 3.5rem;
+		grid-template-columns: minmax(0, 9rem) minmax(0, 1fr) auto;
 		align-items: center;
 		gap: 0.5rem;
 	}
 	.ins__list .ins__meter {
 		margin-top: 0;
 		height: 8px;
+		min-width: 0;
+	}
+	.ins__list li > :first-child,
+	.ins__person-sub,
+	.ins__page-name {
+		overflow-wrap: anywhere;
 	}
 	.ins__list a {
 		color: inherit;
