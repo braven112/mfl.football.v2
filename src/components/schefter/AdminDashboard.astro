@@ -81,7 +81,12 @@ const personaName = resolvePersona(personaLeague ?? null, personaStored).name;
   <div class="ops-page" data-page-base={base} data-persona-name={personaName}>
     <header class="ops-header">
       <div>
-        <p class="ops-eyebrow"><a href={`${base}/admin`}>Admin</a> / News Ops</p>
+        <p class="ops-eyebrow">
+          <a href={`${base}/admin`}>Admin</a> / News Ops
+          {personaLeague?.features.brandingEditor && (
+            <> · <a href={`${base}/admin/branding`}>Team branding →</a></>
+          )}
+        </p>
         <h1 class="ops-title">News Ops</h1>
         <p class="ops-sub">
           Validates the rumor mill is actually consuming tips, GroupMe mentions, and trade proposals —

@@ -13,6 +13,7 @@
  * The widget is the visible engine of that loop — see who's hot, go take
  * a shot.
  */
+import { getPersonaLabels } from '../../utils/persona-server';
 import theLeagueConfig from '../../data/theleague.config.json';
 import { chooseTeamName } from '../../utils/team-names';
 
@@ -68,6 +69,8 @@ const rows = desks
   .slice(0, 5);
 
 const isEmpty = rows.length === 0;
+// Owner-facing copy follows the league's persona (src/utils/persona.mjs).
+const labels = await getPersonaLabels('theleague');
 ---
 
 <section
@@ -82,7 +85,7 @@ const isEmpty = rows.length === 0;
     <p class="sf-rail-hottest__empty">
       Quiet week. Be the first to whisper.
       <a class="sf-rail-hottest__empty-link" href="/theleague/schefter/tip">
-        Tip Schefter <span aria-hidden="true">→</span>
+        {labels.tip} <span aria-hidden="true">→</span>
       </a>
     </p>
   ) : (
@@ -116,7 +119,7 @@ const isEmpty = rows.length === 0;
           <a
             class="sf-rail-hottest__cta"
             href={`/theleague/schefter/tip?target=${row.franchiseId}`}
-            aria-label={`Tip Schefter about the ${row.shortName}`}
+            aria-label={`${labels.tip} about the ${row.shortName}`}
           >
             tip about them <span aria-hidden="true">→</span>
           </a>

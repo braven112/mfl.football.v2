@@ -14,6 +14,8 @@ import GauntletArticleSection from './schedule-strength/GauntletArticleSection.a
 import { resolveLeaguePath } from '../../utils/nav-utils';
 import { getLeagueBySlug, type CanonicalLeagueSlug } from '../../config/leagues';
 import type { SchefterPost } from '../../types/schefter';
+import { getAuthor, getAuthorAvatar } from '../../types/schefter';
+import { postByline } from '../../utils/persona-server';
 import type { GauntletDerived } from '../../utils/schedule-strength';
 import '../../styles/schefter-feed.css';
 
@@ -22,11 +24,12 @@ interface Props {
   post: SchefterPost;
   gauntletFiles: Record<string, () => Promise<GauntletDerived>>;
   teams: Array<{ franchiseId: string; name: string; [k: string]: unknown }>;
-  /** Byline. Defaults to Schefter until the persona reaches owner surfaces. */
-  authorName?: string;
 }
 
-const { leagueSlug, post, gauntletFiles, teams, authorName = 'Claude Schefter' } = Astro.props;
+const { leagueSlug, post, gauntletFiles, teams } = Astro.props;
+// The byline is the league's persona when it wrote the piece (src/utils/persona.mjs).
+const baseAuthor = getAuthor(post.authorId);
+const byline = await postByline({ league: getLeagueBySlug(leagueSlug)?.navSlug }, baseAuthor, getAuthorAvatar(baseAuthor));
 const league = getLeagueBySlug(leagueSlug)!;
 const base = `/${league.slug}`;
 const r = (path: string) => resolveLeaguePath(path, Astro.locals.hideLeaguePrefix ?? false);
@@ -59,9 +62,9 @@ const formattedDate = new Date(post.timestamp).toLocaleDateString('en-US', {
         </div>
         <h1 class="sf-article__title">{post.headline}</h1>
         <div class="sf-article__author">
-          <img class="sf-article__author-avatar" src="/assets/claude-schefter-avatar.webp" alt="" aria-hidden="true" width="32" height="32" />
+          <img class="sf-article__author-avatar" src={byline.avatar} alt="" aria-hidden="true" width="32" height="32" />
           <div>
-            <span class="sf-article__author-name">{authorName}</span>
+            <span class="sf-article__author-name">{byline.name}</span>
           </div>
         </div>
       </div>

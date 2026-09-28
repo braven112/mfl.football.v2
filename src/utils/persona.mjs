@@ -163,3 +163,56 @@ export function isDefaultPersona(persona) {
   if (!persona) return true;
   return persona.name === DEFAULT_PERSONA.name && persona.voice === DEFAULT_PERSONA.voice;
 }
+
+/**
+ * Every owner-facing label derived from a persona, so pages never spell
+ * "Schefter" themselves. For the default persona each one reproduces the
+ * site's existing wording exactly ("The Schefter Report", "Tip Schefter").
+ * `surname` is the last word of the name — what a masthead or a nav label
+ * uses ("Schefter", "Bunker").
+ *
+ * @param {{ name: string, avatarUrl?: string } | null | undefined} persona
+ */
+export function personaLabels(persona) {
+  const name = persona?.name || DEFAULT_PERSONA.name;
+  const words = name.trim().split(/\s+/);
+  const surname = words[words.length - 1] || name;
+  return {
+    name,
+    surname,
+    report: `The ${surname} Report`,
+    reportShort: `${surname} Report`,
+    tip: `Tip ${surname}`,
+    column: `${/^[aeiou]/i.test(name) ? 'An' : 'A'} ${name} weekly column`,
+    avatar: persona?.avatarUrl || DEFAULT_AVATAR,
+  };
+}
+
+/** Schefter's avatar, used by any persona that has not set its own. */
+export const DEFAULT_AVATAR = '/assets/claude-schefter-avatar.webp';
+
+/** The feed author id the league's persona writes as. */
+export const PERSONA_AUTHOR_ID = 'claude';
+
+/**
+ * A post's byline with the league's persona applied. Only the persona's own
+ * author id is renamed — ESPN wire items, Roger and guest writers keep theirs.
+ * The default persona leaves the byline exactly as the feed author table has it.
+ *
+ * @param {{ id: string, name: string, handle?: string }} author  Resolved feed author.
+ * @param {string} avatar  That author's resolved avatar path.
+ * @param {{ name: string, voice?: string, avatarUrl?: string } | null | undefined} persona
+ * @returns {{ name: string, avatar: string, handle: string }}
+ */
+export function personaByline(author, avatar, persona) {
+  const base = { name: author?.name ?? '', avatar, handle: author?.handle ?? '' };
+  if (!persona || author?.id !== PERSONA_AUTHOR_ID || isDefaultPersona(persona)) {
+    return persona?.avatarUrl && author?.id === PERSONA_AUTHOR_ID ? { ...base, avatar: persona.avatarUrl } : base;
+  }
+  const { surname } = personaLabels(persona);
+  return {
+    name: persona.name,
+    avatar: persona.avatarUrl || avatar,
+    handle: `@${surname.toLowerCase().replace(/[^a-z0-9]/g, '')}`,
+  };
+}

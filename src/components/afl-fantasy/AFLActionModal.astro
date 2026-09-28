@@ -20,6 +20,9 @@
  * Open via window.openAFLActionModal({ playerId, playerName, status,
  * isOnTradeBait }). Close via the X button, overlay click, or ESC.
  */
+// Owner-facing copy follows the league's persona (src/utils/persona.mjs).
+import { getPersonaLabels } from '../../utils/persona-server';
+const labels = await getPersonaLabels('afl-fantasy');
 ---
 
 <div class="afl-action-modal" id="afl-action-modal" role="dialog" aria-modal="true" aria-labelledby="aam-player-name" hidden>
@@ -77,7 +80,7 @@
                 </span>
                 <span class="aam-action__body">
                   <span class="aam-action__label" id="aam-watch-label">Watch player</span>
-                  <span class="aam-action__desc" id="aam-watch-desc">His news lights up in the Schefter Report</span>
+                  <span class="aam-action__desc" id="aam-watch-desc" data-idle={`His news lights up in the ${labels.reportShort}`}>His news lights up in the {labels.reportShort}</span>
                 </span>
               </button>
             </li>
@@ -169,7 +172,7 @@
 </div>
 
 <script>
-  import { NFL_TEAM_CITIES, normalizeTeamCode } from '../../utils/nfl';
+import { NFL_TEAM_CITIES, normalizeTeamCode } from '../../utils/nfl';
   import { buildNoHeadshotPlaceholder } from '../../utils/nfl-team-colors';
   import { isWatched, toggleWatch, getWatchListAuth } from '../../utils/watch-list-client';
   import { requestSignIn } from '../../utils/player-actions';
@@ -419,7 +422,7 @@
           ? 'Sign in to build your watch list'
           : watched
             ? 'Remove him from your watch list'
-            : 'His news lights up in the Schefter Report';
+            : desc.dataset.idle || 'His news lights up in the Schefter Report';
       }
     }
     async function runWatch() {

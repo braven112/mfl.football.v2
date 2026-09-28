@@ -7,6 +7,7 @@
  */
 export const prerender = false;
 
+import { getPersonaLabels } from '../../utils/persona-server';
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import SchefterFeedCompact from '../../components/shared/SchefterFeedCompact.astro';
 import SeasonDailyHero from '../../components/theleague/SeasonDailyHero.astro';
@@ -872,6 +873,8 @@ if ((heroState.phase === 'playoffs' || heroState.phase === 'championship') && he
     }
   } catch { /* bracket data is best-effort */ }
 }
+// Owner-facing copy follows the league's persona (src/utils/persona.mjs).
+const labels = await getPersonaLabels('theleague');
 ---
 
 <TheLeagueLayout title="Home">
@@ -978,7 +981,7 @@ if ((heroState.phase === 'playoffs' || heroState.phase === 'championship') && he
       )}
     </section>
 
-    <aside class="hp2__sidebar" aria-label="Schefter Report feed" tabindex="0">
+    <aside class="hp2__sidebar" aria-label={`${labels.reportShort} feed`} tabindex="0">
       <SchefterFeedCompact
         posts={rail.posts}
         isAuthenticated={isAuthenticated}

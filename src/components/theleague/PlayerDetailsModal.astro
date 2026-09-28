@@ -1,4 +1,5 @@
 ---
+import { getPersonaLabels } from '../../utils/persona-server';
 import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD, COLLEGE_LOGO_ONERROR, COLLEGE_LOGO_ONLOAD } from '../../constants/roster-constants';
 /**
  * PlayerDetailsModal — Refined editorial player profile
@@ -120,6 +121,8 @@ const tabAttrs = (id: SheetTab): HTMLAttributes<'button'> => {
     hidden: previewTabs.length ? !previewTabs.includes(id) : false,
   };
 };
+// Owner-facing copy follows the league's persona (src/utils/persona.mjs).
+const labels = await getPersonaLabels('theleague');
 ---
 
 <div class:list={['player-details-modal', previewOpen && 'active', className]}>
@@ -196,7 +199,7 @@ const tabAttrs = (id: SheetTab): HTMLAttributes<'button'> => {
           </span>
           <span class="pdm-watch__text">
             <span class="pdm-watch__label" id="pdm-watch-label">Watch player</span>
-            <span class="pdm-watch__desc" id="pdm-watch-desc">His news lights up in the Schefter Report</span>
+            <span class="pdm-watch__desc" id="pdm-watch-desc" data-idle={`His news lights up in the ${labels.reportShort}`}>His news lights up in the {labels.reportShort}</span>
           </span>
         </button>
 
@@ -1853,7 +1856,7 @@ const tabAttrs = (id: SheetTab): HTMLAttributes<'button'> => {
           ? 'Sign in to build your watch list'
           : watched
             ? 'On your watch list — tap to remove'
-            : 'His news lights up in the Schefter Report';
+            : desc.dataset.idle || 'His news lights up in the Schefter Report';
       }
       repositionOpenSheetMenu();
     };

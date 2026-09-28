@@ -8,6 +8,7 @@
  */
 export const prerender = false;
 
+import { getPersonaLabels } from '../../../../utils/persona-server';
 import TheLeagueLayout from '../../../../layouts/TheLeagueLayout.astro';
 import RumorThread from '../../../../components/schefter/RumorThread.astro';
 import { getLeagueBySlug } from '../../../../config/leagues';
@@ -17,9 +18,11 @@ const { id } = Astro.params;
 if (!id) return Astro.redirect('/theleague/news');
 
 const feed = getSchefterFeed(getLeagueBySlug('theleague')!);
+// Title follows the league's persona (src/utils/persona.mjs).
+const labels = await getPersonaLabels('theleague');
 ---
 
-<TheLeagueLayout title="Rumor thread — The Schefter Report">
+<TheLeagueLayout title={`Rumor thread — ${labels.report}`}>
   <RumorThread
     navSlug="theleague"
     base="/theleague"

@@ -19,6 +19,7 @@
  * verdict. Preseason is when owners are ON the site, so the page has to teach
  * the format before there is any real data to show.
  */
+import { getPersonaLabels } from '../../utils/persona-server';
 import PeckingOrderIssue, { type PeckingOrderData } from './PeckingOrderIssue.astro';
 import type { LeagueSlug } from '../../types/nav';
 import { resolvePeckingOrderLanding, type LandingIssue } from '../../utils/pecking-order-landing';
@@ -80,6 +81,8 @@ const HOW_IT_WORKS = [
     body: `Divisions and the full all-play table sit at the bottom of every issue, so the rankings and the receipts live together.`,
   },
 ];
+// Owner-facing copy follows the league's persona (src/utils/persona.mjs).
+const labels = await getPersonaLabels(league);
 ---
 
 {isPreview && (
@@ -98,7 +101,7 @@ const HOW_IT_WORKS = [
     </p>
     <h1 class="po-intro__title" id="po-intro-title">The Pecking Order</h1>
     <p class="po-intro__lede">
-      Every Tuesday morning of the season, Claude Schefter ranks
+      Every Tuesday morning of the season, {labels.name} ranks
       {teamCount ? ` all ${teamCount} teams, 1 through ${teamCount},` : ' the whole league,'}
       and says out loud what he thinks of your football team. It lands here and in the group chat
       before you've finished your coffee.

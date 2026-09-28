@@ -27,6 +27,8 @@ import type { AuthUser } from './auth';
 import { franchiseIdForLeague } from './auth';
 import type { SchefterPost, SchefterFeed as FeedType, SchefterAuthor } from '../types/schefter';
 import { getAuthor, getAuthorAvatar } from '../types/schefter';
+import { getLeaguePersona } from './persona-server';
+import { personaByline, personaLabels, isDefaultPersona } from './persona.mjs';
 import { getLeagueYearForSlug, getTestDateFromSearchParams } from './league-year';
 import { resolveWatchingSets, matchPosts, postIsForViewer, isPostVisibleTo } from './schefter-watching';
 import { buildSchefterPostOg, isValidSchefterPostId } from './schefter-feed';
@@ -99,6 +101,8 @@ export interface SchefterNewsView {
   emptyText?: string;
   profileAuthor: SchefterAuthor;
   profileAvatar: string;
+  /** Owner-facing labels from the league's persona ("The Schefter Report", …). */
+  labels: ReturnType<typeof personaLabels>;
   isGroupMeTab: boolean;
   isWatchingTab: boolean;
   canWatch: boolean;
@@ -257,7 +261,15 @@ export async function resolveSchefterNewsView(
 
   const profileAuthorId =
     activeSource && activeSource !== 'groupme' ? (SOURCE_AUTHOR_MAP[activeSource] ?? 'claude') : 'claude';
-  const profileAuthor = getAuthor(profileAuthorId);
+  // The league's persona renames its own profile header; other sources
+  // (ESPN, Vegas Vic …) keep theirs (src/utils/persona.mjs).
+  const persona = await getLeaguePersona(league.slug);
+  const baseAuthor = getAuthor(profileAuthorId);
+  const profileByline = personaByline(baseAuthor, getAuthorAvatar(baseAuthor), persona);
+  const profileAuthor: SchefterAuthor =
+    baseAuthor.id === 'claude' && !isDefaultPersona(persona)
+      ? { ...baseAuthor, name: profileByline.name, handle: profileByline.handle, bio: `${league.name}'s league insider.` }
+      : baseAuthor;
 
   // Per-post OG meta: deep links carry ?post=<id> so unfurlers (which strip
   // the #post-<id> anchor) still resolve a per-post title + composite image.
@@ -319,7 +331,8 @@ export async function resolveSchefterNewsView(
     featuredArticles,
     emptyText: isWatchingTab ? forYouEmptyText(watchingSets.all.size, feedMode) : undefined,
     profileAuthor,
-    profileAvatar: getAuthorAvatar(profileAuthor),
+    profileAvatar: profileByline.avatar,
+    labels: personaLabels(persona),
     isGroupMeTab,
     isWatchingTab,
     canWatch,
