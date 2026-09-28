@@ -51,8 +51,8 @@ import {
   validateClaims,
   validateRound,
   activeRosterIdsOf,
-  conferenceOfFranchise,
   freeAgencyIsLeagueWide,
+  poolOfFranchise,
   type WaiverClaim,
 } from '../../utils/waiver-claim';
 
@@ -199,9 +199,9 @@ export const POST: APIRoute = async ({ request }) => {
     // conference's roster says nothing about your availability, and treating it
     // as "taken" would reject legal claims.
     const leagueWide = freeAgencyIsLeagueWide(leaguePayload);
-    const myConference = leagueWide ? null : conferenceOfFranchise(leaguePayload, user.franchiseId);
+    const myConference = leagueWide ? null : poolOfFranchise(leaguePayload, user.franchiseId);
     const countsAgainstMe = (fid: string) =>
-      leagueWide || conferenceOfFranchise(leaguePayload, fid) === myConference;
+      leagueWide || poolOfFranchise(leaguePayload, fid) === myConference;
     const rosteredEverywhere = new Set<string>(
       Object.entries(rosters)
         .filter(([fid]) => countsAgainstMe(fid))

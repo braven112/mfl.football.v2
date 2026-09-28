@@ -362,8 +362,25 @@ What landed:
 
 - ~~Pecking Order at 99-team scale~~ — done (Phase 4).
 - **Per-division player pools** (the main risk, see Phase 2 "Still open"):
-  IN PROGRESS as Phase 5. Decided 2026-09-28: the first page it powers is a
-  **free agents page scoped to the viewer's division** (who is available to
-  YOU, plus who rosters a player in each other division), **view only** —
-  moves link out to MFL; add/drop and claims are a later follow-up.
+  Phase 5, view-only part DONE. Decided 2026-09-28: the first page it powers
+  is a **free agents page scoped to the viewer's division**, **view only** —
+  moves link out to MFL.
+  - Pools: `buildPoolStructure` (src/utils/afl-conference-rosters.mjs) reads
+    MFL `playerLimitUnit` — LEAGUE → one pool, CONFERENCE → the AFL's, DIVISION
+    → one per division. `poolOfFranchise` / `freeAgencyIsLeagueWide`
+    (waiver-claim.ts), `lockedUnitKey` (DIVISIONnn) and draft availability
+    now honour DIVISION; before this, all of them read archies as ONE pool
+    (190 of its 213 rostered players are on several rosters, never twice in
+    one division). Registry: archies `duplicatePlayers: true`.
+    Guard: `tests/player-pools.test.ts`.
+  - Page: `/archies/free-agents` (PackageFreeAgentsPage + package-free-agents.ts):
+    opens on the viewer's division, `?division=` / `?pos=` links, live rosters
+    (Redis franchise cache) with the synced feed as fallback, MFL locks shown,
+    "held in N/9 divisions" per player.
+- **Phase 6 — make the free agents page FUNCTIONAL** (requested 2026-09-28,
+  after the view-only phase): claims and add/drop from the site, scoped to
+  the owner's division. The claim API and claim context are already
+  pool-aware (above); what remains is the UI (the claim board / modal the
+  TheLeague and AFL players pages use) wired into the package page, plus
+  Archie's waiver rules (BBID_FCFS, $0.01 increments, $100 season limit).
 - Two-way Slack (mentions → tips) through the Events API, if a client wants it.

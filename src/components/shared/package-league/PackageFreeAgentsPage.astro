@@ -1,0 +1,270 @@
+---
+/**
+ * Free agents for a package league, ONE player pool at a time.
+ *
+ * Archie's pools players by DIVISION (nine pools): "free" means "not rostered
+ * in this division", and the same player is often held in several others.
+ * The page opens on the viewer's own division; `?division=` looks at another.
+ * Every row also says how many divisions hold the player right now.
+ *
+ * VIEW ONLY: moves are made on MFL (the add/drop link at the foot). Wiring
+ * claims is a follow-up (docs/plans/league-chat-and-persona.md, Phase 5).
+ *
+ * Rosters are read live (the Redis franchise cache, ~2 min) and fall back to
+ * the committed feed. Server-rendered with plain links for every filter, so
+ * there is no client script to re-init under the ClientRouter.
+ * Semantic tokens only.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../../theleague/Breadcrumbs.astro';
+import { getLeagueBySlug, type CanonicalLeagueSlug } from '../../../config/leagues';
+import { getAuthUser, franchiseIdForLeague } from '../../../utils/auth';
+import { loadSeasonFeed, resolveSeason, seasonsFromGlob, type LazyFeedGlob } from '../../../utils/mfl-feed-glob';
+import { getLeagueYearForSlug } from '../../../utils/league-year';
+import { getCachedRosterFranchises } from '../../../utils/mfl-roster-cache';
+import { fetchLockedPlayers } from '../../../utils/mfl-locked-players';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { loginUrlForRequest } from '../../../utils/login-redirect';
+import {
+  poolStructure,
+  startingPositions,
+  resolvePool,
+  heldByPool,
+  buildFreeAgents,
+} from '../../../utils/package-free-agents';
+
+interface Props {
+  leagueSlug: CanonicalLeagueSlug;
+  leagueFeeds: LazyFeedGlob;
+  rosterFeeds: LazyFeedGlob;
+  playerFeeds: LazyFeedGlob;
+  ytdFeeds: LazyFeedGlob;
+  projectionFeeds: LazyFeedGlob;
+  adpFeeds: LazyFeedGlob;
+  injuryFeeds: LazyFeedGlob;
+}
+
+const { leagueSlug, leagueFeeds, rosterFeeds, playerFeeds, ytdFeeds, projectionFeeds, adpFeeds, injuryFeeds } = Astro.props;
+const league = getLeagueBySlug(leagueSlug)!;
+const hide = Astro.locals.hideLeaguePrefix ?? false;
+const r = (p: string) => resolveLeaguePath(p, hide);
+const base = `/${league.slug}`;
+
+// Free agency is management-shaped: the LEAGUE year.
+const year = resolveSeason(null, seasonsFromGlob(leagueFeeds), getLeagueYearForSlug(league.slug)) ?? null;
+const load = (g: LazyFeedGlob) => (year ? loadSeasonFeed(g, year) : Promise.resolve(null));
+const [leagueJson, rosterFeed, playersFeed, ytdFeed, projFeed, adpFeed, injuryFeed] = await Promise.all([
+  load(leagueFeeds),
+  load(rosterFeeds),
+  load(playerFeeds),
+  load(ytdFeeds),
+  load(projectionFeeds),
+  load(adpFeeds),
+  load(injuryFeeds),
+]);
+
+const structure = poolStructure(leagueJson);
+const positions = startingPositions(leagueJson);
+
+const authUser = getAuthUser(Astro.request);
+const mine = franchiseIdForLeague(authUser, league.id);
+const pool = structure ? resolvePool(structure, Astro.url.searchParams.get('division'), mine) : null;
+const myPool = structure && mine ? structure.franchiseConferences[mine] ?? null : null;
+
+// Live rosters where Redis has them (franchise-shaped, so no copy of a player
+// is lost), else the committed feed.
+const live = year ? await getCachedRosterFranchises(String(year), league.id).catch(() => null) : null;
+const rosters = live ?? ((rosterFeed as any)?.rosters?.franchise ?? []);
+const rosterSource = live ? 'live' : 'synced';
+
+const posParam = Astro.url.searchParams.get('pos');
+const pos = posParam && positions.includes(posParam) ? posParam : null;
+const limitParam = Number(Astro.url.searchParams.get('limit'));
+const limit = Number.isFinite(limitParam) && limitParam > 0 ? Math.min(limitParam, 1000) : 100;
+
+let rows: ReturnType<typeof buildFreeAgents> = [];
+if (structure && pool) {
+  const locked = year ? await fetchLockedPlayers(league.id, year).catch(() => null) : null;
+  rows = buildFreeAgents({
+    players: (playersFeed as any)?.players?.player ?? [],
+    positions: pos ? [pos] : positions,
+    pool,
+    held: heldByPool(rosters, structure),
+    ytd: ytdFeed,
+    projections: projFeed,
+    adp: adpFeed,
+    injuries: (injuryFeed as any)?.injuries ?? null,
+    lockedIds: locked?.[pool] ?? null,
+  });
+}
+const shown = rows.slice(0, limit);
+const poolCount = structure?.ids.length ?? 0;
+
+const href = (params: Record<string, string | null>) => {
+  const q = new URLSearchParams();
+  const next = { division: pool, pos, ...params };
+  for (const [k, v] of Object.entries(next)) if (v) q.set(k, v);
+  const s = q.toString();
+  return r(`${base}/free-agents${s ? `?${s}` : ''}`);
+};
+const addDropUrl = year ? `https://${league.mflHost}/${year}/add_drop?L=${league.id}` : null;
+const fmt = (n: number | null, d = 1) => (n == null ? '—' : n.toFixed(d));
+const poolName = pool && structure ? structure.names[pool]?.name ?? pool : '';
+---
+
+<TheLeagueLayout title={`Free Agents | ${league.name}`}>
+  <div class="pkg-fa">
+    <Breadcrumbs items={[{ label: league.shortName ?? league.name, href: r(base) }, { label: 'Free Agents' }]} />
+    <header class="pkg-fa__head">
+      <h1>Free Agents</h1>
+      {structure && pool ? (
+        <p>
+          Available in the <strong>{poolName}</strong>{pool === myPool ? ' — your division' : ''}. Each division has its
+          own player pool, so a player can be free here and rostered elsewhere.
+          {!mine && <> <a href={loginUrlForRequest(Astro, league)}>Sign in</a> to open on your division.</>}
+        </p>
+      ) : (
+        <p>Free agents appear once the league's rosters have synced.</p>
+      )}
+    </header>
+
+    {structure && pool && (
+      <>
+        <nav class="pkg-fa__pills" aria-label="Division">
+          {structure.ids.map((id) => (
+            <a
+              href={href({ division: id, limit: null })}
+              class:list={['pkg-fa__pill', { 'pkg-fa__pill--on': id === pool }]}
+              aria-current={id === pool ? 'page' : undefined}
+            >
+              {structure.names[id]?.abbrev ?? id}
+              {id === myPool && <span class="pkg-fa__yours">yours</span>}
+            </a>
+          ))}
+        </nav>
+
+        <nav class="pkg-fa__pills pkg-fa__pills--pos" aria-label="Position">
+          <a href={href({ pos: null, limit: null })} class:list={['pkg-fa__pill', { 'pkg-fa__pill--on': !pos }]}>All</a>
+          {positions.map((p) => (
+            <a href={href({ pos: p, limit: null })} class:list={['pkg-fa__pill', { 'pkg-fa__pill--on': pos === p }]}>{p}</a>
+          ))}
+        </nav>
+
+        <div class="pkg-fa__table-wrap">
+          <table class="pkg-fa__table">
+            <thead>
+              <tr>
+                <th class="pkg-fa__num">#</th>
+                <th class="pkg-fa__player">Player</th>
+                <th>Pts</th>
+                <th>Proj</th>
+                <th>ADP</th>
+                <th title={`Divisions that roster this player, of ${poolCount}`}>Held in</th>
+              </tr>
+            </thead>
+            <tbody>
+              {shown.map((row, i) => (
+                <tr>
+                  <td class="pkg-fa__num">{i + 1}</td>
+                  <td class="pkg-fa__player">
+                    <span class="pkg-fa__name">{row.name}</span>
+                    <span class="pkg-fa__meta">
+                      {row.position}{row.team ? ` · ${row.team}` : ''}
+                      {row.injury && <span class="pkg-fa__tag pkg-fa__tag--injury">{row.injury}</span>}
+                      {row.locked && <span class="pkg-fa__tag" title="Recently dropped: MFL locks him until the lock lifts">Locked</span>}
+                    </span>
+                  </td>
+                  <td>{fmt(row.ytd)}</td>
+                  <td>{fmt(row.projected)}</td>
+                  <td>{row.adpRank ?? '—'}</td>
+                  <td>{row.heldIn}/{poolCount}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {rows.length === 0 && <p class="pkg-fa__empty">No free agents at this position.</p>}
+        {rows.length > shown.length && (
+          <a class="pkg-fa__more" href={href({ limit: String(limit + 100) })}>
+            Show {Math.min(100, rows.length - shown.length)} more of {rows.length}
+          </a>
+        )}
+
+        <p class="pkg-fa__foot">
+          {rosterSource === 'live' ? 'Rosters are live from MFL (refreshed every couple of minutes).' : 'Rosters as of the last sync.'}
+          {' '}View only —
+          {addDropUrl ? <a href={addDropUrl} target="_blank" rel="noopener"> make moves on MFL ↗</a> : ' make moves on MFL.'}
+        </p>
+      </>
+    )}
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .pkg-fa { max-width: 1100px; margin: 0 auto; padding: 1.25rem 1rem 3rem; color: var(--page-text); }
+  .pkg-fa__head h1 { margin: 0.5rem 0 0.35rem; }
+  .pkg-fa__head p { margin: 0 0 1rem; color: var(--content-text-muted); }
+  .pkg-fa__head strong { color: var(--page-text); }
+  .pkg-fa__head a { color: var(--color-primary-light); font-weight: 600; }
+  .pkg-fa__pills { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.6rem; }
+  .pkg-fa__pills--pos { margin-bottom: 1rem; }
+  .pkg-fa__pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: var(--radius-full);
+    border: 1px solid var(--content-border);
+    background: var(--card-bg);
+    color: var(--page-text);
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-decoration: none;
+  }
+  .pkg-fa__pill:hover { border-color: var(--color-primary); }
+  .pkg-fa__pill--on { background: var(--btn-primary-bg); border-color: var(--btn-primary-bg); color: var(--btn-primary-text); }
+  .pkg-fa__yours {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    opacity: 0.8;
+  }
+  .pkg-fa__table-wrap {
+    overflow-x: auto;
+    background: var(--card-bg);
+    border: 1px solid var(--content-border);
+    border-radius: var(--radius-lg);
+  }
+  .pkg-fa__table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  .pkg-fa__table th {
+    text-align: right;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--content-text-muted);
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid var(--content-border);
+    white-space: nowrap;
+  }
+  .pkg-fa__table td { text-align: right; padding: 0.55rem 0.75rem; border-bottom: 1px solid var(--content-border); }
+  .pkg-fa__table tr:last-child td { border-bottom: none; }
+  .pkg-fa__table .pkg-fa__player { text-align: left; }
+  .pkg-fa__table .pkg-fa__num { text-align: center; color: var(--content-text-muted); width: 2.5rem; }
+  .pkg-fa__name { display: block; font-weight: 700; }
+  .pkg-fa__meta { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; font-size: 0.8rem; color: var(--content-text-muted); }
+  .pkg-fa__tag {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 0.05rem 0.4rem;
+    border-radius: var(--radius-sm);
+    background: var(--nav-active-bg);
+    color: var(--page-text);
+  }
+  .pkg-fa__tag--injury { background: var(--color-error-light); color: var(--color-error-dark); }
+  .pkg-fa__empty { color: var(--content-text-muted); }
+  .pkg-fa__more { display: inline-block; margin-top: 0.75rem; font-weight: 600; color: var(--color-primary-light); }
+  .pkg-fa__foot { margin-top: 1rem; font-size: 0.85rem; color: var(--content-text-muted); }
+  .pkg-fa__foot a { color: var(--color-primary-light); font-weight: 600; }
+</style>

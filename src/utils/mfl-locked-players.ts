@@ -22,9 +22,13 @@ import { fetchWithTimeout } from './fetch-with-timeout';
 /** `{ [unitKey]: Set<playerId> }` — '' for a single-pool league, else the conference id. */
 export type LockedPlayersByUnit = Record<string, Set<string>>;
 
-/** Unit key for a `leagueUnit.unit` label: `CONFERENCE00` → '00', `LEAGUE` → ''. */
+/**
+ * Unit key for a `leagueUnit.unit` label: `CONFERENCE00` → '00',
+ * `DIVISION03` → '03' (a DIVISION-pooled league, archies), `LEAGUE` → ''.
+ * The key is the same pool id poolOfFranchise returns.
+ */
 export function lockedUnitKey(unit: unknown): string {
-  const m = /^CONFERENCE(\w+)$/i.exec(String(unit ?? ''));
+  const m = /^(?:CONFERENCE|DIVISION)(\w+)$/i.exec(String(unit ?? ''));
   return m ? m[1] : '';
 }
 

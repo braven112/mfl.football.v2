@@ -515,6 +515,14 @@ export const LEAGUES = {
      */
     peckingOrder: { topN: 25 },
     /**
+     * MFL `playerLimitUnit: DIVISION`: each of the nine divisions is its own
+     * player pool, so the same player is routinely on up to nine rosters at
+     * once. "On another roster" proves nothing here (cut-player's preflight),
+     * and pool-aware code keys by division (buildPoolStructure,
+     * poolOfFranchise).
+     */
+    duplicatePlayers: true,
+    /**
      * TODO(commissioner): the league's own time zone is not confirmed yet.
      * Pacific is the site default and changes nothing for a viewer who has
      * picked their own clock.
