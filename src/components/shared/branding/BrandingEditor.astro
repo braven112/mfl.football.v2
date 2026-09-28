@@ -1,0 +1,442 @@
+---
+/**
+ * Commissioner branding editor — every team's names, colours and marks.
+ *
+ * Teams arrive from the route as the PUBLISHED config; the script asks
+ * /api/admin/branding which edits are still on their way to the site and
+ * marks those teams "Publishing". Saving sends only the fields that changed;
+ * the API validates, dispatches the publish workflow, and the edit is live on
+ * every page after the next deploy (~2-3 minutes).
+ *
+ * The route owns the gate (a component cannot redirect — CLAUDE.md).
+ */
+import { getLeagueBySlug, type CanonicalLeagueSlug } from '../../../config/leagues';
+import { BRANDING_LIMITS, EDITABLE_FIELDS } from '../../../utils/branding-edit.mjs';
+
+interface Props {
+  leagueSlug: CanonicalLeagueSlug;
+  teams: Array<Record<string, unknown> & { franchiseId: string; name: string }>;
+  divisions?: Array<{ id: string; name: string }>;
+}
+
+const { leagueSlug, teams, divisions = [] } = Astro.props;
+const league = getLeagueBySlug(leagueSlug)!;
+
+const editable = teams
+  .map((t) => {
+    const out: Record<string, unknown> = { franchiseId: t.franchiseId, division: t.division ?? '', divisionId: t.divisionId ?? '' };
+    for (const f of EDITABLE_FIELDS) if (t[f] !== undefined) out[f] = t[f];
+    return out;
+  })
+  .sort((a, b) => String(a.name).localeCompare(String(b.name)));
+
+const groups = [
+  ...divisions.map((d) => ({ label: d.name, teams: editable.filter((t) => t.divisionId === d.id) })),
+  { label: 'Other', teams: editable.filter((t) => !divisions.some((d) => d.id === t.divisionId)) },
+].filter((g) => g.teams.length > 0);
+---
+
+<section class="brand-ed" id="branding-editor" data-league={league.navSlug} data-league-slug={league.slug}>
+  <header class="brand-ed__head">
+    <h1>Team branding</h1>
+    <p>
+      Every team's names, colours and marks. These started as suggestions from MFL; change anything.
+      A saved team is live across the site in about 2–3 minutes.
+    </p>
+  </header>
+
+  <script type="application/json" id="branding-editor-data" set:html={JSON.stringify({ teams: editable, limits: BRANDING_LIMITS })} />
+
+  <div class="brand-ed__layout">
+    <nav class="brand-ed__list" aria-label="Teams">
+      <label class="brand-ed__search">
+        <span class="visually-hidden">Find a team</span>
+        <input type="search" id="brand-ed-search" placeholder="Find a team…" autocomplete="off" />
+      </label>
+      {groups.map((g) => (
+        <div class="brand-ed__group">
+          <h2>{g.label}</h2>
+          <ul>
+            {g.teams.map((t) => (
+              <li>
+                <button type="button" class="brand-ed__team" data-fid={String(t.franchiseId)} data-name={String(t.name).toLowerCase()}>
+                  {t.icon ? <img src={String(t.icon)} alt="" width="28" height="28" loading="lazy" /> : <span class="brand-ed__noicon" />}
+                  <span class="brand-ed__team-name">{String(t.name)}</span>
+                  <span class="brand-ed__badge" hidden>Publishing</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </nav>
+
+    <form class="brand-ed__form" id="brand-ed-form" autocomplete="off" hidden>
+      <div class="brand-ed__preview" id="brand-ed-preview">
+        <img id="brand-ed-preview-icon" alt="" width="64" height="64" />
+        <div>
+          <div class="brand-ed__preview-name" id="brand-ed-preview-name"></div>
+          <div class="brand-ed__preview-sub" id="brand-ed-preview-sub"></div>
+        </div>
+      </div>
+
+      <fieldset>
+        <legend>Names</legend>
+        <label>Team name <small>Up to {BRANDING_LIMITS.name}</small><input name="name" maxlength={BRANDING_LIMITS.name} required /></label>
+        <label>Medium name <small>Brackets and cards, up to {BRANDING_LIMITS.nameMedium}</small><input name="nameMedium" maxlength={BRANDING_LIMITS.nameMedium} required /></label>
+        <label>Short name <small>Phones and tight tables, up to {BRANDING_LIMITS.nameShort}</small><input name="nameShort" maxlength={BRANDING_LIMITS.nameShort} required /></label>
+        <label>Abbreviation <small>{BRANDING_LIMITS.abbrevMin}–{BRANDING_LIMITS.abbrevMax} letters</small><input name="abbrev" maxlength={BRANDING_LIMITS.abbrevMax} required /></label>
+        <label>Other names <small>Nicknames people use, comma-separated. A renamed team keeps its old name here automatically.</small><input name="aliases" /></label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Colours</legend>
+        {[
+          ['colorPrimary', 'Primary', true],
+          ['colorSecondary', 'Secondary', true],
+          ['colorTertiary', 'Third (optional)', false],
+          ['colorQuaternary', 'Fourth (optional)', false],
+        ].map(([key, label, required]) => (
+          <label class="brand-ed__color">
+            {label}
+            <span>
+              <input type="color" data-color-for={String(key)} aria-label={`${label} picker`} />
+              <input name={String(key)} placeholder="#1d3a6e" pattern="#[0-9a-fA-F]{6}" required={Boolean(required)} />
+            </span>
+          </label>
+        ))}
+      </fieldset>
+
+      <fieldset>
+        <legend>Marks</legend>
+        {[
+          ['icon', 'Icon', 'Square, at least 128px. Shown everywhere a team appears.'],
+          ['iconDark', 'Icon for dark mode (optional)', 'Only if the icon disappears on dark backgrounds.'],
+          ['banner', 'Banner', 'Wide artwork for team pages.'],
+        ].map(([key, label, hint]) => (
+          <div class="brand-ed__mark" data-mark={String(key)}>
+            <img class="brand-ed__mark-img" alt="" />
+            <div>
+              <strong>{label}</strong>
+              <small>{hint}</small>
+              <input type="hidden" name={String(key)} />
+              <input type="file" accept="image/png,image/jpeg,image/webp" data-upload-for={String(key)} aria-label={`Upload ${label}`} />
+            </div>
+          </div>
+        ))}
+      </fieldset>
+
+      <div class="brand-ed__actions">
+        <button type="submit" class="brand-ed__save" id="brand-ed-save">Save team</button>
+        <button type="button" class="brand-ed__revert" id="brand-ed-revert">Undo changes</button>
+        <span class="brand-ed__status" id="brand-ed-status" role="status" aria-live="polite"></span>
+      </div>
+    </form>
+
+    <p class="brand-ed__empty" id="brand-ed-empty">Pick a team to edit it.</p>
+  </div>
+</section>
+
+<script>
+  type Team = Record<string, unknown> & { franchiseId: string; name: string };
+
+  const TEXT_FIELDS = ['name', 'nameMedium', 'nameShort', 'abbrev'];
+  const COLOR_FIELDS = ['colorPrimary', 'colorSecondary', 'colorTertiary', 'colorQuaternary'];
+  const IMAGE_FIELDS = ['icon', 'iconDark', 'banner'];
+
+  function initBrandingEditor() {
+    const root = document.getElementById('branding-editor');
+    if (!root || root.dataset.bound === '1') return;
+    root.dataset.bound = '1';
+
+    const leagueSlug = root.dataset.leagueSlug || '';
+    const q = `?league=${encodeURIComponent(leagueSlug)}`;
+    const data = JSON.parse(root.querySelector('#branding-editor-data')?.textContent || '{"teams":[]}') as { teams: Team[] };
+    const byId = new Map(data.teams.map((t) => [t.franchiseId, t]));
+    const pending = new Map<string, Record<string, unknown>>();
+
+    const form = root.querySelector<HTMLFormElement>('#brand-ed-form')!;
+    const empty = root.querySelector<HTMLElement>('#brand-ed-empty')!;
+    const status = root.querySelector<HTMLElement>('#brand-ed-status')!;
+    const saveBtn = root.querySelector<HTMLButtonElement>('#brand-ed-save')!;
+    const field = (name: string) => form.querySelector<HTMLInputElement>(`[name="${name}"]`)!;
+    let current: Team | null = null;
+
+    const setStatus = (msg: string, kind: 'ok' | 'bad' | 'muted' = 'muted') => {
+      status.textContent = msg;
+      status.dataset.kind = kind;
+    };
+
+    /** What the form should show: published values with any in-flight edit on top. */
+    const effective = (t: Team): Team => ({ ...t, ...(pending.get(t.franchiseId) ?? {}) }) as Team;
+
+    function paintPreview() {
+      const icon = field('icon').value;
+      const img = root!.querySelector<HTMLImageElement>('#brand-ed-preview-icon')!;
+      img.src = icon || '';
+      img.hidden = !icon;
+      root!.querySelector('#brand-ed-preview-name')!.textContent = field('name').value;
+      root!.querySelector('#brand-ed-preview-sub')!.textContent = `${field('nameShort').value} · ${field('abbrev').value}`;
+      const preview = root!.querySelector<HTMLElement>('#brand-ed-preview')!;
+      const primary = field('colorPrimary').value;
+      const secondary = field('colorSecondary').value;
+      if (/^#[0-9a-fA-F]{6}$/.test(primary)) preview.style.setProperty('--pv-primary', primary);
+      if (/^#[0-9a-fA-F]{6}$/.test(secondary)) preview.style.setProperty('--pv-secondary', secondary);
+      for (const key of IMAGE_FIELDS) {
+        const box = root!.querySelector<HTMLElement>(`[data-mark="${key}"] .brand-ed__mark-img`) as HTMLImageElement | null;
+        if (box) {
+          box.src = field(key).value || '';
+          box.hidden = !field(key).value;
+        }
+      }
+    }
+
+    function fill(t: Team) {
+      const v = effective(t);
+      for (const k of TEXT_FIELDS) field(k).value = String(v[k] ?? '');
+      field('aliases').value = Array.isArray(v.aliases) ? (v.aliases as string[]).join(', ') : '';
+      for (const k of COLOR_FIELDS) {
+        field(k).value = String(v[k] ?? '');
+        const picker = form.querySelector<HTMLInputElement>(`[data-color-for="${k}"]`)!;
+        picker.value = /^#[0-9a-fA-F]{6}$/.test(String(v[k] ?? '')) ? String(v[k]) : '#000000';
+      }
+      for (const k of IMAGE_FIELDS) field(k).value = String(v[k] ?? '');
+      paintPreview();
+      setStatus(pending.has(t.franchiseId) ? 'Saved — publishing now. It will be live in a few minutes.' : '');
+    }
+
+    function select(fid: string) {
+      const t = byId.get(fid);
+      if (!t) return;
+      current = t;
+      root!.querySelectorAll('.brand-ed__team').forEach((b) =>
+        b.setAttribute('aria-current', (b as HTMLElement).dataset.fid === fid ? 'true' : 'false'),
+      );
+      form.hidden = false;
+      empty.hidden = true;
+      fill(t);
+    }
+
+    /** Only the fields that differ from what the site shows right now. */
+    function changes(t: Team): Record<string, unknown> {
+      const v = effective(t);
+      const out: Record<string, unknown> = {};
+      for (const k of TEXT_FIELDS) if (field(k).value.trim() !== String(v[k] ?? '')) out[k] = field(k).value;
+      const aliases = field('aliases').value.split(',').map((s) => s.trim()).filter(Boolean);
+      if (JSON.stringify(aliases) !== JSON.stringify(v.aliases ?? [])) out.aliases = aliases;
+      for (const k of COLOR_FIELDS) if (field(k).value.trim().toLowerCase() !== String(v[k] ?? '').toLowerCase()) out[k] = field(k).value;
+      for (const k of IMAGE_FIELDS) if (field(k).value !== String(v[k] ?? '')) out[k] = field(k).value;
+      return out;
+    }
+
+    function markPending() {
+      root!.querySelectorAll<HTMLElement>('.brand-ed__team').forEach((b) => {
+        const badge = b.querySelector<HTMLElement>('.brand-ed__badge');
+        if (badge) badge.hidden = !pending.has(b.dataset.fid || '');
+      });
+    }
+
+    root.querySelectorAll<HTMLButtonElement>('.brand-ed__team').forEach((b) =>
+      b.addEventListener('click', () => select(b.dataset.fid || '')),
+    );
+
+    root.querySelector<HTMLInputElement>('#brand-ed-search')!.addEventListener('input', (e) => {
+      const needle = (e.target as HTMLInputElement).value.trim().toLowerCase();
+      root!.querySelectorAll<HTMLElement>('.brand-ed__team').forEach((b) => {
+        (b.closest('li') as HTMLElement).hidden = !!needle && !(b.dataset.name || '').includes(needle);
+      });
+    });
+
+    form.addEventListener('input', paintPreview);
+    form.querySelectorAll<HTMLInputElement>('[data-color-for]').forEach((picker) =>
+      picker.addEventListener('input', () => {
+        field(picker.dataset.colorFor || '').value = picker.value;
+        paintPreview();
+      }),
+    );
+
+    form.querySelectorAll<HTMLInputElement>('[data-upload-for]').forEach((input) =>
+      input.addEventListener('change', async () => {
+        const file = input.files?.[0];
+        if (!file || !current) return;
+        const kind = input.dataset.uploadFor || '';
+        setStatus('Uploading…');
+        try {
+          // JSON, not multipart: Astro's origin check 403s a form-typed POST
+          // from a browser that omits Origin. 2 MB of base64 fits one request.
+          const data = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result).replace(/^data:[^,]*,/, ''));
+            reader.onerror = () => reject(reader.error);
+            reader.readAsDataURL(file);
+          });
+          const res = await fetch(`/api/admin/branding-upload${q}`, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ franchiseId: current.franchiseId, kind, contentType: file.type, data }),
+          });
+          const out = await res.json().catch(() => ({}));
+          if (!res.ok || !out.url) return setStatus(out.error || `Upload failed (HTTP ${res.status}).`, 'bad');
+          field(kind).value = out.url;
+          paintPreview();
+          setStatus('Uploaded. Save the team to publish it.', 'ok');
+        } catch {
+          setStatus('Upload failed — check your connection.', 'bad');
+        } finally {
+          input.value = '';
+        }
+      }),
+    );
+
+    root.querySelector('#brand-ed-revert')!.addEventListener('click', () => current && fill(current));
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!current) return;
+      const edit = changes(current);
+      if (Object.keys(edit).length === 0) return setStatus('Nothing changed.');
+      saveBtn.disabled = true;
+      setStatus('Saving…');
+      try {
+        const res = await fetch(`/api/admin/branding${q}`, {
+          method: 'PUT',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ franchiseId: current.franchiseId, edit }),
+        });
+        const out = await res.json().catch(() => ({}));
+        if (!res.ok || !out.ok) return setStatus((out.errors || []).join(' ') || `Save failed (HTTP ${res.status}).`, 'bad');
+        pending.set(current.franchiseId, { ...(pending.get(current.franchiseId) ?? {}), ...(out.pending?.edit ?? edit) });
+        markPending();
+        setStatus('Saved — publishing now. It will be live across the site in about 2–3 minutes.', 'ok');
+      } catch {
+        setStatus('Could not save — check your connection.', 'bad');
+      } finally {
+        saveBtn.disabled = false;
+      }
+    });
+
+    (async () => {
+      try {
+        const res = await fetch(`/api/admin/branding${q}`, { credentials: 'same-origin' });
+        const out = await res.json().catch(() => ({}));
+        if (!res.ok || !out.ok) return;
+        for (const [fid, p] of Object.entries(out.pending || {})) pending.set(fid, (p as { edit: Record<string, unknown> }).edit);
+        markPending();
+        if (current) fill(current);
+      } catch {
+        /* The list still works; it just cannot show what is mid-publish. */
+      }
+    })();
+  }
+
+  document.addEventListener('astro:page-load', initBrandingEditor);
+</script>
+
+<style>
+  .brand-ed { max-width: 1200px; margin: 0 auto; padding: 1rem 1rem 3rem; color: var(--page-text); }
+  .brand-ed__head h1 { margin: 0.5rem 0 0.25rem; }
+  .brand-ed__head p { margin: 0 0 1.25rem; color: var(--content-text-muted); max-width: 60ch; }
+  .brand-ed__layout { display: grid; grid-template-columns: minmax(220px, 300px) 1fr; gap: 1.25rem; align-items: start; }
+  @media (max-width: 760px) { .brand-ed__layout { grid-template-columns: 1fr; } }
+  .brand-ed__list {
+    background: var(--card-bg);
+    border: 1px solid var(--content-border);
+    border-radius: 12px;
+    padding: 0.75rem;
+    max-height: 75vh;
+    overflow-y: auto;
+  }
+  .brand-ed__search input,
+  .brand-ed__form input:not([type='color']):not([type='file']) {
+    font: inherit;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.45rem 0.6rem;
+    border-radius: 8px;
+    border: 1px solid var(--content-border);
+    background: var(--content-bg);
+    color: var(--page-text);
+  }
+  .brand-ed__group h2 {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--content-text-muted);
+    margin: 0.9rem 0 0.35rem;
+  }
+  .brand-ed__group ul { list-style: none; margin: 0; padding: 0; }
+  .brand-ed__team {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.35rem 0.4rem;
+    border: none;
+    border-radius: 8px;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .brand-ed__team:hover,
+  .brand-ed__team[aria-current='true'] { background: var(--content-bg-muted); }
+  .brand-ed__team img { border-radius: 6px; flex: none; }
+  .brand-ed__noicon { width: 28px; height: 28px; border-radius: 6px; background: var(--content-bg-muted); flex: none; }
+  .brand-ed__team-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .brand-ed__badge { font-size: 0.65rem; font-weight: 700; color: var(--color-success-dark); }
+  .brand-ed__form { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+  .brand-ed__form fieldset {
+    background: var(--card-bg);
+    border: 1px solid var(--content-border);
+    border-radius: 12px;
+    padding: 0.75rem 1rem 1rem;
+    margin: 0;
+    display: grid;
+    gap: 0.75rem;
+  }
+  .brand-ed__form legend { font-weight: 700; padding: 0 0.3rem; }
+  .brand-ed__form label { display: grid; gap: 0.25rem; font-weight: 600; font-size: 0.9rem; }
+  .brand-ed__form small { display: block; font-weight: 400; font-size: 0.75rem; color: var(--content-text-muted); }
+  .brand-ed__color span { display: flex; gap: 0.5rem; align-items: center; }
+  .brand-ed__color input[type='color'] { width: 2.5rem; height: 2.2rem; padding: 0; border: 1px solid var(--content-border); border-radius: 8px; background: none; flex: none; }
+  .brand-ed__preview {
+    --pv-primary: #1d3a6e;
+    --pv-secondary: #e5e7eb;
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 1rem;
+    border-radius: 12px;
+    background: linear-gradient(115deg, var(--pv-primary) 0%, var(--pv-primary) 70%, var(--pv-secondary) 100%);
+    color: #fff;
+  }
+  .brand-ed__preview img { border-radius: 12px; background: rgba(255, 255, 255, 0.1); flex: none; }
+  .brand-ed__preview-name { font-size: 1.3rem; font-weight: 800; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4); }
+  .brand-ed__preview-sub { opacity: 0.9; font-size: 0.85rem; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4); }
+  .brand-ed__mark { display: flex; gap: 0.75rem; align-items: center; }
+  .brand-ed__mark-img { width: 72px; height: 72px; object-fit: contain; border-radius: 8px; background: var(--content-bg-muted); flex: none; }
+  .brand-ed__mark[data-mark='banner'] .brand-ed__mark-img { width: 170px; }
+  .brand-ed__mark strong { display: block; }
+  .brand-ed__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; }
+  .brand-ed__save,
+  .brand-ed__revert {
+    font: inherit;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    border: 1px solid var(--content-border);
+    background: var(--content-bg);
+    color: var(--page-text);
+    cursor: pointer;
+  }
+  .brand-ed__save { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
+  .brand-ed__save:disabled { opacity: 0.6; cursor: progress; }
+  .brand-ed__status { font-size: 0.85rem; color: var(--content-text-muted); }
+  .brand-ed__status[data-kind='ok'] { color: var(--color-success-dark); }
+  .brand-ed__status[data-kind='bad'] { color: var(--color-error-dark); }
+  .brand-ed__empty { color: var(--content-text-muted); }
+  .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+</style>
