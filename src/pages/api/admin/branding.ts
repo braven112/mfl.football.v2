@@ -60,12 +60,22 @@ function parsePending(raw: unknown): Pending | null {
   return v && typeof v === 'object' && (v as Pending).edit ? (v as Pending) : null;
 }
 
-/** An edit has landed once every field it set reads back from the published config. */
+/**
+ * An edit has landed once every field it set reads back from the published
+ * config. Aliases are a SUBSET check: a rename in the same save appends the
+ * old name to them on publish (applyBrandingEdit), so the published list is
+ * the edit's list plus one.
+ */
 function landed(edit: Record<string, unknown>, team: Record<string, unknown> | undefined): boolean {
   if (!team) return false;
-  return Object.entries(edit).every(([k, v]) =>
-    v === null ? team[k] === undefined : JSON.stringify(team[k]) === JSON.stringify(v),
-  );
+  return Object.entries(edit).every(([k, v]) => {
+    if (v === null) return team[k] === undefined;
+    if (k === 'aliases' && Array.isArray(v)) {
+      const published = Array.isArray(team[k]) ? (team[k] as unknown[]) : [];
+      return v.every((a) => published.includes(a));
+    }
+    return JSON.stringify(team[k]) === JSON.stringify(v);
+  });
 }
 
 export const GET: APIRoute = async ({ request, url }) => {
