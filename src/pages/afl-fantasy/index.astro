@@ -16,6 +16,7 @@
  */
 export const prerender = false;
 
+import { getPersonaLabels, postByline } from '../../utils/persona-server';
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import SchefterFeedCompact from '../../components/shared/SchefterFeedCompact.astro';
 import AflHero from '../../components/afl/AflHero.astro';
@@ -317,13 +318,14 @@ const aflLatestPost = pickLatestArticle((feedData as FeedType).posts, {
 });
 // The byline is the POST's own author — the feeds carry external reporters,
 // and the house face on someone else's story misattributes it.
+// …and when that author is the league's own desk, it wears the persona.
+const aflLatestByline = aflLatestPost
+  ? await postByline({ league: 'afl-fantasy' }, getAuthor(aflLatestPost.authorId), getAuthorAvatar(getAuthor(aflLatestPost.authorId)))
+  : null;
 const aflLatestArticle = aflLatestPost
   ? {
       post: aflLatestPost,
-      byline: {
-        name: getAuthor(aflLatestPost.authorId).name,
-        avatar: getAuthorAvatar(getAuthor(aflLatestPost.authorId)),
-      },
+      byline: { name: aflLatestByline!.name, avatar: aflLatestByline!.avatar },
     }
   : undefined;
 
@@ -542,6 +544,8 @@ if (heroState.kind === 'regular-season' && heroState.slot === 'live-scoring' && 
   });
 }
 
+// Owner-facing copy follows the league's persona (src/utils/persona.mjs).
+const labels = await getPersonaLabels('afl-fantasy');
 ---
 
 <TheLeagueLayout title="AFL — American Football League">
@@ -632,7 +636,7 @@ if (heroState.kind === 'regular-season' && heroState.slot === 'live-scoring' && 
       )}
     </section>
 
-    <aside class="afl-hp__sidebar" aria-label="Schefter Report feed" tabindex="0">
+    <aside class="afl-hp__sidebar" aria-label={`${labels.reportShort} feed`} tabindex="0">
       <SchefterFeedCompact
         posts={rail.posts}
         isAuthenticated={!!authUser}

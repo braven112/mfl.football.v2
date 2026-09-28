@@ -11,6 +11,7 @@
  * The inline nav-menu has been moved to the NavDrawer component.
  */
 
+import { getPersonaLabels } from '../../utils/persona-server';
 import { getLeagueContext } from '../../utils/league-context';
 import { getLeagueBySlug, leagueHasFeature, type CanonicalLeagueSlug } from '../../config/leagues';
 import { getLeagueYearForSlug } from '../../utils/league-year';
@@ -88,6 +89,8 @@ const searchHref = searchPath
       hideLeaguePrefix
     )
   : null;
+// Owner-facing copy follows the league's persona (src/utils/persona.mjs).
+const labels = await getPersonaLabels(league.slug);
 ---
 
 <div class="breadcrumb-bar">
@@ -238,11 +241,11 @@ const searchHref = searchPath
           ) : (
           <>
           {!isAFL && (
-            <a href="/theleague/schefter/tip" class="nav-icon-link" title="Tip Schefter">
+            <a href="/theleague/schefter/tip" class="nav-icon-link" title={labels.tip}>
               <svg class="nav-icon" aria-hidden="true">
                 <use href={`${spriteUrl}#icon-news`}></use>
               </svg>
-              <span class="nav-label">Tip Schefter</span>
+              <span class="nav-label">{labels.tip}</span>
             </a>
           )}
           <a href={resolveLeaguePath(isAFL ? "/afl-fantasy/rosters" : "/theleague/rosters", hideLeaguePrefix)} class="nav-icon-link" title={isAFL ? "Rosters" : "Roster/Salary"}>

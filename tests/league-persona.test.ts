@@ -153,3 +153,47 @@ describe('loadLeaguePersona', () => {
     expect((await loadLeaguePersona('theleague', { redis: null })).source).toBe('default');
   });
 });
+
+describe('personaLabels and personaByline — the persona on owner-facing surfaces', () => {
+  it('reproduces the site’s original wording for the default persona', async () => {
+    const { personaLabels } = await import('../src/utils/persona.mjs');
+    expect(personaLabels(null)).toMatchObject({
+      name: 'Claude Schefter',
+      surname: 'Schefter',
+      report: 'The Schefter Report',
+      reportShort: 'Schefter Report',
+      tip: 'Tip Schefter',
+      column: 'A Claude Schefter weekly column',
+      avatar: '/assets/claude-schefter-avatar.webp',
+    });
+  });
+
+  it('derives every label from a custom persona', async () => {
+    const { personaLabels } = await import('../src/utils/persona.mjs');
+    expect(personaLabels({ name: 'Archie Bunker', avatarUrl: 'https://x.test/a.png' })).toMatchObject({
+      surname: 'Bunker',
+      report: 'The Bunker Report',
+      tip: 'Tip Bunker',
+      column: 'An Archie Bunker weekly column',
+      avatar: 'https://x.test/a.png',
+    });
+  });
+
+  it('renames only the persona’s own byline', async () => {
+    const { personaByline } = await import('../src/utils/persona.mjs');
+    const claude = { id: 'claude', name: 'Claude Schefter', handle: '@schefter' };
+    const wire = { id: 'nfl-wire', name: 'NFL Wire', handle: '@wire' };
+    expect(personaByline(claude, '/assets/c.webp', ARCHIE)).toEqual({
+      name: 'Archie Bunker',
+      avatar: 'https://example.com/a.png',
+      handle: '@bunker',
+    });
+    expect(personaByline(wire, '/assets/w.webp', ARCHIE)).toEqual({ name: 'NFL Wire', avatar: '/assets/w.webp', handle: '@wire' });
+    // Default persona: the feed author table, untouched.
+    expect(personaByline(claude, '/assets/c.webp', DEFAULT_PERSONA)).toEqual({
+      name: 'Claude Schefter',
+      avatar: '/assets/c.webp',
+      handle: '@schefter',
+    });
+  });
+});

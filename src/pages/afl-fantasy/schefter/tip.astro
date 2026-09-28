@@ -11,6 +11,7 @@
  */
 export const prerender = false;
 
+import { getPersonaLabels } from '../../../utils/persona-server';
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import TipPage from '../../../components/schefter/TipPage.astro';
 import { getAuthUser, isAuthorizedForLeague } from '../../../utils/auth';
@@ -44,9 +45,11 @@ const teams = getSchefterLeagueConfig(league).teams.map((t) => ({
       ? `${getConferenceShort(t.conference)} ${t.division}`
       : t.division,
 }));
+// Title follows the league's persona (src/utils/persona.mjs).
+const labels = await getPersonaLabels('afl-fantasy');
 ---
 
-<TheLeagueLayout title="Tip Schefter">
+<TheLeagueLayout title={labels.tip}>
   <TipPage
     navSlug="afl"
     base="/afl-fantasy"

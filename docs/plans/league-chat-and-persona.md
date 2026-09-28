@@ -199,6 +199,48 @@ Scope is league settings only. MFL-write routes (lineups, contracts,
 accounting) act AS a franchise and stay session-scoped. The branding editor
 will use the same gate.
 
+### Branding editor (done)
+
+`/<league>/admin/branding` is live for archies behind `features.brandingEditor`,
+and off for TheLeague and the AFL. It is gated by `canAdministerLeague`: the
+commissioner or a platform admin.
+- **Validation:** `src/utils/branding-edit.mjs` validates and applies. Names
+  must fit the site limits, colours are hex, and images must be a Vercel Blob
+  upload, the current value, or the league's own `/assets/<league>/` path. A
+  rename keeps the old name as an alias.
+- **Publishing:** `PUT /api/admin/branding` dispatches
+  `.github/workflows/branding-edit.yml`. That workflow runs
+  `scripts/apply-branding-edit.mjs`, which validates AGAIN (the workflow can be
+  run by hand), writes the config and commits. The change is live after the
+  deploy, about 2–3 minutes later.
+- **Pending state:** edits still in flight sit in Redis
+  (`branding:pending:<slug>`) so the editor can show them as "Publishing". Each
+  is cleared once the published config matches.
+- **Uploads:** `POST /api/admin/branding-upload` takes JSON with base64 image
+  data. It is not multipart, because Astro's origin check rejects a form-typed
+  POST from a browser that omits Origin. Needs `BLOB_READ_WRITE_TOKEN`.
+- **Secrets:** needs `GH_PAT` (the existing dispatch token) and `DEPLOY_KEY`
+  (existing).
+
+### Persona on owner surfaces (done)
+
+- **Label helpers:** `personaLabels` (src/utils/persona.mjs) derives every
+  owner-facing label ("The Schefter Report", "Tip Schefter", the column byline)
+  from the persona. `getPersonaLabels` / `postByline`
+  (src/utils/persona-server.ts) read it server-side, cached for a minute.
+- **Default persona:** the original wording, so a league that never renamed
+  its writer sees no change.
+- **Bylines:** posts carry their `league`, so each card resolves its own
+  persona. Only the persona's author id (`claude`) is renamed; ESPN wire items,
+  Roger and guest writers keep theirs.
+- **Guard:** `tests/persona-literal-guard.test.ts` fails if a page hardcodes
+  "The Schefter Report" / "Tip Schefter" again.
+- **Deliberately unchanged:**
+  - the site-level 404/500 pages and the What's New writer, which belong to no
+    league
+  - the static page-directory search titles
+  - `afl-hero-resolver.ts`'s desk byline (a synchronous, pure resolver)
+
 ## Phase 3 — later
 
 - Pecking Order at 99-team scale.
