@@ -9,13 +9,15 @@
 import { useState, useRef } from 'react';
 
 interface Props {
+  /** The league persona's surname ("Schefter"), for the copy. */
+  personaSurname?: string;
   teamName: string;
   teamIcon: string;
 }
 
 type Phase = 'compose' | 'rewriting' | 'preview' | 'sending';
 
-export default function GroupMeChatPanel({ teamName, teamIcon }: Props) {
+export default function GroupMeChatPanel({ teamName, teamIcon, personaSurname = 'Schefter' }: Props) {
   const [message, setMessage] = useState('');
   const [rewritten, setRewritten] = useState('');
   const [phase, setPhase] = useState<Phase>('compose');
@@ -66,7 +68,7 @@ export default function GroupMeChatPanel({ teamName, teamIcon }: Props) {
       setMessage('');
       setRewritten('');
       setPhase('compose');
-      setFeedback({ type: 'success', text: 'Schefter has reported your take to GroupMe!' });
+      setFeedback({ type: 'success', text: `${personaSurname} has reported your take to GroupMe!` });
       setTimeout(() => setFeedback(null), 4000);
     } catch {
       setFeedback({ type: 'error', text: 'Failed to send message' });
@@ -99,7 +101,7 @@ export default function GroupMeChatPanel({ teamName, teamIcon }: Props) {
 
       {phase === 'preview' ? (
         <div className="gmc-preview">
-          <div className="gmc-preview__label">Schefter's version:</div>
+          <div className="gmc-preview__label">{personaSurname}'s version:</div>
           <div className="gmc-preview__text">{rewritten}</div>
           <div className="gmc-preview__actions">
             <button
@@ -129,7 +131,7 @@ export default function GroupMeChatPanel({ teamName, teamIcon }: Props) {
               <img src={teamIcon} alt="" width="20" height="20" className="gmc-compose__avatar" />
             )}
             <span className="gmc-compose__label">
-              Post as <strong>{teamName}</strong> <span className="gmc-compose__via">via Schefter</span>
+              Post as <strong>{teamName}</strong> <span className="gmc-compose__via">via {personaSurname}</span>
             </span>
           </div>
           <div className="gmc-compose__input-row">
@@ -139,7 +141,7 @@ export default function GroupMeChatPanel({ teamName, teamIcon }: Props) {
               value={message}
               onChange={e => setMessage(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="What's your take? Schefter will report it..."
+              placeholder={`What's your take? ${personaSurname} will report it...`}
               maxLength={600}
               rows={2}
               disabled={isWorking}
@@ -148,14 +150,14 @@ export default function GroupMeChatPanel({ teamName, teamIcon }: Props) {
               className="gmc-compose__send"
               onClick={handleRewrite}
               disabled={!message.trim() || isWorking}
-              aria-label="Preview Schefter rewrite"
+              aria-label={`Preview ${personaSurname} rewrite`}
             >
               {phase === 'rewriting' ? '...' : '→'}
             </button>
           </div>
           <div className="gmc-compose__meta">
             <span className="gmc-compose__charcount">{message.length}/600</span>
-            <span className="gmc-compose__hint">Enter to preview, Schefter rewrites before posting</span>
+            <span className="gmc-compose__hint">Enter to preview, {personaSurname} rewrites before posting</span>
           </div>
         </div>
       )}

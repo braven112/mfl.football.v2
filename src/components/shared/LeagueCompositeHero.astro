@@ -21,6 +21,7 @@
  * `AflEventHero` exactly as before. A missing feed degrades to the card that
  * always worked rather than to an empty flank.
  */
+import { getPersonaLabels } from '../../utils/persona-server';
 import type { EventHeroView } from '../../utils/afl-hero-resolver';
 import { LEAGUES } from '../../config/leagues';
 import { getNflTeamColors } from '../../utils/nfl-team-colors';
@@ -112,6 +113,8 @@ const LOGO = league === 'theleague' ? '/assets/logos/theleague-logo-dark.svg' : 
 
 // `crest` is passed only in model mode: behind a browser-framed screenshot a
 // watermark reads as smudge rather than as a mark.
+// Owner-facing copy follows the league's persona (src/utils/persona.mjs).
+const labels = await getPersonaLabels(league);
 ---
 
 <CompositeHero
@@ -141,7 +144,7 @@ const LOGO = league === 'theleague' ? '/assets/logos/theleague-logo-dark.svg' : 
           <img class="lch__byline-avatar" src={byline.avatar} alt="" width="30" height="30" loading="lazy" decoding="async" />
           <span class="lch__byline-text">
             <span class="lch__byline-name">{byline.name}</span>
-            <span class="lch__byline-role">Schefter Report</span>
+            <span class="lch__byline-role">{labels.reportShort}</span>
           </span>
         </span>
         <span class="cmh__divider" aria-hidden="true"></span>

@@ -26,6 +26,8 @@ export interface YearOption {
 
 export interface Props {
   columnName: string;
+  /** "A <persona> weekly column" — from the league's persona (src/utils/persona.mjs). */
+  byline?: string;
   week: number;
   year: number;
   runIn: StrengthRow[];
@@ -40,14 +42,14 @@ export interface Props {
 }
 
 const {
-  columnName, week, year, runIn, played, scheduleLuck,
+  columnName, byline = 'A Claude Schefter Weekly Column', week, year, runIn, played, scheduleLuck,
   heatMapFranchises, heatMapWeeks, trapWeeks, yearOptions, seasonComplete,
 } = Astro.props;
 ---
 
 <div class="gauntlet gauntlet-theme">
   <header class="gauntlet__hero">
-    <span class="gauntlet__eyebrow">A Claude Schefter Weekly Column</span>
+    <span class="gauntlet__eyebrow">{byline}</span>
     <h1 class="gauntlet__title">
       {columnName}
       <span class="gauntlet__meta">· {seasonComplete ? `Final · ${year}` : `Week ${week} · ${year}`}</span>

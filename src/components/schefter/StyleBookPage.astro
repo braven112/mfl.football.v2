@@ -12,6 +12,7 @@
  * showing counts doesn't widen the de-anonymization surface.
  */
 
+import { getPersonaLabels } from '../../utils/persona-server';
 import Breadcrumbs from '../theleague/Breadcrumbs.astro';
 import { getAuthor, getAuthorAvatar } from '../../types/schefter';
 import { publicLeagueQs } from '../../utils/schefter-league';
@@ -29,13 +30,14 @@ interface Props {
   leagueName: string;
 }
 const { navSlug, base, leagueName } = Astro.props;
+const labels = await getPersonaLabels(navSlug);
 const publicQs = publicLeagueQs(navSlug);
 ---
   <div class="style-book-page" data-public-qs={publicQs}>
     <header class="style-book-hero">
       <Breadcrumbs items={[
         { label: leagueName, href: base },
-        { label: 'The Schefter Report', href: `${base}/news` },
+        { label: labels.report, href: `${base}/news` },
         { label: 'The Style Book' },
       ]} />
       <p class="style-book-hero__eyebrow">The Beat Desk Dossier</p>
@@ -52,7 +54,7 @@ const publicQs = publicLeagueQs(navSlug);
           />
           <div>
             <h1 class="sf-page-header__name">The Style Book</h1>
-            <div class="sf-page-header__handle">by Claude Schefter · updated in real time</div>
+            <div class="sf-page-header__handle">by {labels.name} · updated in real time</div>
           </div>
         </div>
         <p class="sf-page-header__bio">
@@ -110,7 +112,7 @@ const publicQs = publicLeagueQs(navSlug);
         <li class="style-book-rule">
           <span class="style-book-rule__label">Trigger</span>
           <p class="style-book-rule__text">
-            A message that calls out Schefter / Claude / Schefty / "the bot" AND contains a pejorative
+            A message that calls out {labels.surname} / Claude / "the bot" AND contains a pejorative
             (sucks, hack, trash, fraud, wrong, clown, etc.) gets logged. "The Roger bot" / "ask Roger"
             doesn't count — that's Roger's beat.
           </p>
@@ -125,7 +127,7 @@ const publicQs = publicLeagueQs(navSlug);
         <li class="style-book-rule">
           <span class="style-book-rule__label">Escalation</span>
           <p class="style-book-rule__text">
-            Schefter's tone scales with the file — first entry gets a "noted", third entry gets a
+            {labels.surname}'s tone scales with the file — first entry gets a "noted", third entry gets a
             "getting thick", fourth and up gets "power user". Still affectionate.
           </p>
         </li>

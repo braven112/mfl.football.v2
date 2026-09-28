@@ -19,6 +19,8 @@ const whisperDraftKey = (postId: string) => `signin.whisperDraft.${postId}`;
 
 interface Props {
   postId: string;
+  /** The league persona's surname ("Schefter"), for the copy. */
+  personaSurname?: string;
   /**
    * Server-built sign-in URL carrying the return path. Built by
    * loginUrlForRequest in the rendering .astro component — this island can
@@ -32,7 +34,7 @@ interface Props {
 
 const MAX_CHARS = 500;
 
-export default function SchefterWhisperBack({ postId, isAuthenticated, loginHref }: Props) {
+export default function SchefterWhisperBack({ postId, isAuthenticated, loginHref, personaSurname = 'Schefter' }: Props) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
   const [topic, setTopic] = useState<'trade' | 'roster' | 'prediction' | 'commish' | 'other'>('other');
@@ -87,7 +89,7 @@ export default function SchefterWhisperBack({ postId, isAuthenticated, loginHref
       }
       const data = await res.json().catch(() => ({}));
       if (res.ok && data?.ok) {
-        setStatus({ kind: 'success', message: 'Schefter will fold it into the next report.' });
+        setStatus({ kind: 'success', message: `${personaSurname} will fold it into the next report.` });
         setText('');
       } else {
         const fallback =
@@ -127,7 +129,7 @@ export default function SchefterWhisperBack({ postId, isAuthenticated, loginHref
         value={text}
         onChange={(e) => setText(e.target.value.slice(0, MAX_CHARS))}
         maxLength={MAX_CHARS}
-        placeholder="Add what you're hearing… Schefter will keep you anonymous."
+        placeholder={`Add what you're hearing… ${personaSurname} will keep you anonymous.`}
         rows={3}
         disabled={loading}
         aria-label="Your whisper-back tip"

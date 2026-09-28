@@ -7,6 +7,7 @@
  * resolved from the league's feed JSON (fast path); the Redis registry
  * powers cross-scan lookups when posts don't have `threadId` stamped yet.
  */
+import { getPersonaLabels } from '../../utils/persona-server';
 import Breadcrumbs from '../theleague/Breadcrumbs.astro';
 import type { SchefterFeed, SchefterPost } from '../../types/schefter';
 import '../../styles/schefter-feed.css';
@@ -23,6 +24,7 @@ interface Props {
 }
 
 const { navSlug, base, leagueName, feed, threadId } = Astro.props;
+const labels = await getPersonaLabels(navSlug);
 
 const threadPosts: SchefterPost[] = feed.posts
   .filter((p) => p.threadId === threadId && p.transactionSubType === 'rumor_mill')
@@ -36,7 +38,7 @@ const threadPosts: SchefterPost[] = feed.posts
 <div class="sf-thread">
   <Breadcrumbs items={[
     { label: leagueName, href: base },
-    { label: 'The Schefter Report', href: `${base}/news?source=${navSlug}` },
+    { label: labels.report, href: `${base}/news?source=${navSlug}` },
     { label: 'Rumor Thread' },
   ]} />
 
@@ -70,7 +72,7 @@ const threadPosts: SchefterPost[] = feed.posts
 
   <div class="sf-thread__footer">
     <a href={`${base}/schefter/tip`} class="sf-thread__tip-link">
-      Got something to add? Tip Schefter →
+      Got something to add? {labels.tip} →
     </a>
   </div>
 </div>

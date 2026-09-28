@@ -3,7 +3,10 @@
  * Stub: Article Hero
  * Placeholder for Schefter articles (waiver pickups, weekend preview) — replaced in Phase D.
  */
+import { getPersonaLabels } from '../../../utils/persona-server';
 import '../../../styles/hero-stub.css';
+// Owner-facing copy follows the league's persona (src/utils/persona.mjs).
+const labels = await getPersonaLabels('theleague');
 ---
 
 <div class="hero-stub">
@@ -12,7 +15,7 @@ import '../../../styles/hero-stub.css';
     <svg class="hero-stub__icon" viewBox="0 0 24 24" aria-hidden="true">
       <polygon points="12,2 15,9 22,9 16,14 18,21 12,17 6,21 8,14 2,9 9,9" fill="currentColor" opacity="0.6"/>
     </svg>
-    <p class="hero-stub__label">Schefter Report</p>
-    <p class="hero-stub__desc">Featured analysis and league coverage from the Schefter Report.</p>
+    <p class="hero-stub__label">{labels.reportShort}</p>
+    <p class="hero-stub__desc">Featured analysis and league coverage from the {labels.reportShort}.</p>
   </div>
 </div>

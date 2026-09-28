@@ -23,6 +23,7 @@
  * Still falls back to ArticleHeroStub when the feed carries no article at all —
  * a card with no story is not a story.
  */
+import { getPersonaLabels, postByline } from '../../../utils/persona-server';
 import type { HeroState } from '../../../types/hero-state';
 import type { SchefterFeed } from '../../../types/schefter';
 import { getAuthor, getAuthorAvatar } from '../../../types/schefter';
@@ -61,6 +62,7 @@ const KICKERS: Record<string, string> = {
   'weekend-preview': 'Weekend Preview',
   generic: 'Schefter Report',
 };
+const kickerFor = (type: string) => (type === 'generic' || !KICKERS[type] ? labels.reportShort : KICKERS[type]);
 
 /** Caption qualifier explaining why this player fronts the story. */
 const DESCRIPTORS: Record<string, string> = {
@@ -79,6 +81,9 @@ const article = pickLatestArticle(feed.posts, {
 });
 
 const author = article ? getAuthor(article.authorId) : null;
+// Persona byline and masthead (src/utils/persona.mjs).
+const labels = await getPersonaLabels('theleague');
+const byline = author ? await postByline({ league: 'theleague' }, author, getAuthorAvatar(author)) : null;
 
 // Cast the player the article features. Deterministic — the post already named
 // its hero. No id, or an unknown one, leaves the flank to the league mark.
@@ -93,12 +98,12 @@ const view: EventHeroView | null =
   article && author
     ? {
         ...articleHeroView(article, {
-          pill: KICKERS[articleType] ?? 'Schefter Report',
+          pill: kickerFor(articleType),
           // TheLeague's blue, the news wordmark. A story about the league is a
           // league event — the card never wears one club's colours, even when
           // the cast player is rostered.
           composite: { wordmark: 'NEWS', accent: 'kickoff', tone: null, scope: 'league' },
-          byline: { name: author.name, avatar: getAuthorAvatar(author) },
+          byline: { name: byline!.name, avatar: byline!.avatar },
           fallbackLink: '/theleague/news',
           // The LEAGUE's clock, never the host's — see articleDateLabel.
           dateLabel: articleDateLabel(article.timestamp, leagueClock(LEAGUES.theleague.slug).zone),
@@ -111,7 +116,7 @@ const view: EventHeroView | null =
 {view ? (
   <LeagueCompositeHero
     view={view}
-    regionLabel={KICKERS[articleType] ?? 'Schefter Report'}
+    regionLabel={kickerFor(articleType)}
     league="theleague"
     clampSummary
   />

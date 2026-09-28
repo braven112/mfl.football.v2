@@ -15,6 +15,7 @@
  * collide across leagues, which is also why the accent tokens are scoped by
  * `data-league` rather than resolved here).
  */
+import { getPersonaLabels } from '../../utils/persona-server';
 import theleagueConfig from '../../data/theleague.config.json';
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 import type { LeagueSlug } from '../../types/nav';
@@ -210,6 +211,8 @@ const orderedAwards: { key: string; card: AwardCard | null }[] = [
 // (scripts/lib/pecking-order-math.mjs) for issues written before that field.
 const methodology = issue.methodology
   ?? '50% all-play record · 50% last 3 weeks (rolling-3wk PPG)';
+// Owner-facing copy follows the league's persona (src/utils/persona.mjs).
+const labels = await getPersonaLabels(league);
 ---
 
 <article class="pr-issue">
@@ -383,7 +386,7 @@ const methodology = issue.methodology
   <footer class="pr-footnote">
     <p>
       Composite score: {methodology}. Rankings and awards are computed from the
-      week's final MFL feeds; commentary is Claude Schefter's.
+      week's final MFL feeds; commentary is {labels.name}'s.
     </p>
   </footer>
 </article>
