@@ -1,0 +1,29 @@
+---
+/**
+ * Free agents (archies) — thin route wrapper over the shared package-league
+ * page. The globs live here: a static import specifier cannot be a runtime
+ * variable, and cron-written feeds are never static imports.
+ */
+import PackageFreeAgentsPage from '../../components/shared/package-league/PackageFreeAgentsPage.astro';
+
+export const prerender = false;
+
+const leagueFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/league.json');
+const rosterFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/rosters.json');
+const playerFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/players.json');
+const ytdFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/playerScores-ytd.json');
+const projectionFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/projectedScores.json');
+const adpFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/adp-redraft.json');
+const injuryFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/injuries.json');
+---
+
+<PackageFreeAgentsPage
+  leagueSlug="archies"
+  leagueFeeds={leagueFeeds}
+  rosterFeeds={rosterFeeds}
+  playerFeeds={playerFeeds}
+  ytdFeeds={ytdFeeds}
+  projectionFeeds={projectionFeeds}
+  adpFeeds={adpFeeds}
+  injuryFeeds={injuryFeeds}
+/>

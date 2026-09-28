@@ -323,7 +323,30 @@ export function conferenceOfFranchise(
  * cut-player's ownership preflight.
  */
 export function freeAgencyIsLeagueWide(league: Record<string, any> = {}): boolean {
-  return String(league?.playerLimitUnit ?? 'LEAGUE').toUpperCase() !== 'CONFERENCE';
+  // DIVISION too (archies: nine pools) — only a LEAGUE-scoped league has one pool.
+  const unit = String(league?.playerLimitUnit ?? 'LEAGUE').toUpperCase();
+  return unit !== 'CONFERENCE' && unit !== 'DIVISION';
+}
+
+/**
+ * The player POOL a franchise claims from, or null in a single-pool league:
+ * its conference in a CONFERENCE league (the AFL), its division in a DIVISION
+ * league (archies). Callers compare two franchises' pools to decide whether a
+ * roster counts against the viewer — use this, not `conferenceOfFranchise`,
+ * which knows only conferences.
+ */
+export function poolOfFranchise(
+  league: Record<string, any> = {},
+  franchiseId: string
+): string | null {
+  const unit = String(league?.playerLimitUnit ?? 'LEAGUE').toUpperCase();
+  if (unit === 'CONFERENCE') return conferenceOfFranchise(league, franchiseId);
+  if (unit !== 'DIVISION') return null;
+  const franchises = Array.isArray(league?.franchises?.franchise)
+    ? league.franchises.franchise
+    : [league?.franchises?.franchise].filter(Boolean);
+  const mine = franchises.find((f: any) => String(f?.id) === String(franchiseId));
+  return mine?.division != null ? String(mine.division) : null;
 }
 
 /**

@@ -314,6 +314,7 @@ const ARCHIES_COLUMNS: ColumnMap = {
     { id: 'archies-standings', label: 'Standings' },
     { id: 'archies-rosters', label: 'Rosters' },
     { id: 'archies-transactions', label: 'Transactions' },
+    { id: 'archies-free-agents', label: 'Free Agents' },
   ],
   News: [
     { id: 'archies-news', label: 'League News' },
