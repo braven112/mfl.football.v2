@@ -11,6 +11,7 @@
 import WhatsNextCard from './WhatsNextCard.astro';
 import { getWhatsNextTimeline, getWhatsNextTimelineExcluding } from '../../utils/league-event-resolver';
 import { resolveLeaguePath } from '../../utils/nav-utils';
+import type { WhatsNextTimeline } from '../../types/league-events';
 
 interface Props {
   /** Event ID to exclude from the timeline (already shown in hero) */
@@ -19,14 +20,26 @@ interface Props {
   demoDate?: Date;
   /** Maximum number of event cards to show (default: 3) */
   maxCards?: number;
+  /**
+   * A timeline built by the caller. Another league passes its own (e.g. a
+   * package league's, src/utils/package-league-events.ts); omitted, the
+   * component resolves TheLeague's as it always has.
+   */
+  timeline?: WhatsNextTimeline;
+  /** "Full calendar" link. Defaults to TheLeague's; `null` hides the link. */
+  calendarHref?: string | null;
 }
 
-const { excludeEventId, demoDate, maxCards = 3 } = Astro.props;
+const { excludeEventId, demoDate, maxCards = 3, timeline: given, calendarHref } = Astro.props;
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 
-const timeline = excludeEventId
-  ? getWhatsNextTimelineExcluding(excludeEventId, demoDate)
-  : getWhatsNextTimeline(demoDate);
+const timeline =
+  given ??
+  (excludeEventId
+    ? getWhatsNextTimelineExcluding(excludeEventId, demoDate)
+    : getWhatsNextTimeline(demoDate));
+const calendarLink =
+  calendarHref === null ? null : calendarHref ?? resolveLeaguePath('/theleague/calendar', hideLeaguePrefix);
 const hasEvents = timeline.current || timeline.next || timeline.upcoming;
 
 // Forward-looking labels: only lead with "Happening Now" when an event is
@@ -41,12 +54,14 @@ const labels = leadActive
   <section class="whats-next" aria-label="Upcoming league events">
     <div class="whats-next__header">
       <h2 class="whats-next__heading">What's Next</h2>
-      <a href={resolveLeaguePath("/theleague/calendar", hideLeaguePrefix)} class="whats-next__calendar-link">
-        Full calendar
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
-          <path d="M5 12h14M12 5l7 7-7 7"/>
-        </svg>
-      </a>
+      {calendarLink && (
+        <a href={calendarLink} class="whats-next__calendar-link">
+          Full calendar
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </a>
+      )}
     </div>
     <div class:list={['whats-next__grid', { 'whats-next__grid--2col': maxCards === 2 }]}>
       {timeline.current && <WhatsNextCard event={timeline.current} position="current" label={labels.current} />}
