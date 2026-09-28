@@ -54,10 +54,9 @@ const activeTab = personalized ? 'foryou' : 'all';
 
 // Keep the "View all" link inside the current league's news page, honoring
 // clean-domain prefix stripping (e.g. /theleague/news → /news on theleague.us).
-const newsHref = resolveLeaguePath(
-  getLeagueContext(Astro.url).slug === 'afl-fantasy' ? '/afl-fantasy/news' : '/theleague/news',
-  Astro.locals.hideLeaguePrefix ?? false
-);
+// Registry-derived: every league's news page is /<slug>/news.
+const contextSlug = getLeagueContext(Astro.url).slug;
+const newsHref = resolveLeaguePath(`/${contextSlug}/news`, Astro.locals.hideLeaguePrefix ?? false);
 
 const now = new Date();
 
@@ -65,7 +64,8 @@ const now = new Date();
 const postIds = posts.map(p => p.id);
 const allReactions = await getBatchReactions(postIds, userFranchiseId);
 // Owner-facing copy follows the league's persona (src/utils/persona.mjs).
-const labels = await getPersonaLabels(posts[0]?.league);
+// With no posts yet, the page's own league names the persona (not the default).
+const labels = await getPersonaLabels(posts[0]?.league ?? contextSlug);
 const emptyText = emptyTextProp ?? `No news yet. ${labels.surname} is on assignment.`;
 ---
 

@@ -1,6 +1,6 @@
 # League chat providers + commissioner-editable news persona
 
-Status: Phases 1 and 2 done (PR #1255, `claude/slack-integration-groupme-ttsw77`): Slack, the persona everywhere, onboarding 10105 as `archies`, the platform super admin, the branding editor and the league's own logo. Phase 3 (Archie's look and homepage) is next.
+Status: Phases 1 and 2 done (PR #1255, `claude/slack-integration-groupme-ttsw77`): Slack, the persona everywhere, onboarding 10105 as `archies`, the platform super admin, the branding editor and the league's own logo. Phase 3 (Archie's look and homepage) is done except the MFL calendar sync, which waits on co-commissioner access.
 
 ## Why
 
@@ -241,7 +241,7 @@ commissioner or a platform admin.
   - the static page-directory search titles
   - `afl-hero-resolver.ts`'s desk byline (a synchronous, pure resolver)
 
-## Phase 3 — Archie's look and homepage (next)
+## Phase 3 — Archie's look and homepage (done, one item waiting)
 
 Added 2026-09-28 at the owner's request. Archie's launched on a deliberately
 small homepage (`PackageLeagueHome`) and TheLeague's navy chrome. This phase
@@ -284,12 +284,47 @@ have.
      Whether a platform-wide change reaches Archie's automatically, or needs
      `archies` tagged explicitly, is a decision this phase has to make.
 
-Open questions before building:
-- The scheme: start from the art's blues, or does the client have brand
-  colours?
-- Which homepage sections Archie's gets at launch, and which wait on the
-  division-pool work.
-- What's New: every platform change, or only changes that apply to Archie's.
+Decided 2026-09-28: the logo blues; every platform update; all sections; a
+NEW shared hero (not a port of TheLeague's); the calendar from MFL's own feed
+via co-commissioner access; What's New from now on (no backfill); the Owners'
+Poll stays off (its slot is in the layout).
+
+What landed:
+- **Colour scheme:** `html[data-league="archies"]` in `tokens.css` + its dark
+  twin, as PALETTE → SEMANTIC tokens (the owner's rule: recolour by editing
+  the palette alone). Guard: `tests/league-palette-tokens.test.ts`.
+- **Homepage:** `PackageLeagueHome` now has the TheLeague/AFL shape (main
+  column + news rail): `PackageLeagueHero`, the Owners' Poll slot (registry
+  gated), `PackageTeamSnapshot`, What's Next, the viewer's division (or every
+  division's top three), transactions, quick links, What's New, and the rail.
+  View models in `src/utils/package-league-home.ts`; the hero looks forward
+  out of season (`isSeasonWindowOpen`), and every "this week" is a list
+  because archies plays doubleheaders.
+- **Calendar:** `src/utils/package-league-events.ts` reads MFL's
+  `calendar.json` (draft, trade deadline, keepers, auction, custom events;
+  waiver noise skipped) and derives kickoff, playoffs, championship week and
+  the new league year. `/archies/calendar` lists them all.
+  `WhatsNext.astro` takes a `timeline` + `calendarHref` so any league can
+  pass its own.
+- **What's New:** `/archies/whats-new` (+ detail) on the shared pages; the
+  homepage row always renders, with an empty state until the first Monday
+  rollup. `both` already expands to archies (`BOTH_LEAGUES`); the
+  `/update-whats-new` doc now says so.
+- **Fixes on the way:** the news rail's "View all" link and persona label were
+  two-league ternaries (archies got TheLeague's); QuickLinks listed the
+  homepage on itself.
+
+Waiting:
+- **MFL calendar sync.** Archie must add `braven112` as co-commissioner in
+  MFL; then `calendar.json` syncs through the existing roster-sync job with
+  no code change, and the draft / trade deadline / custom dates appear on the
+  homepage and calendar page. Until then only the derived dates show.
+
+Follow-ups noticed (not in scope):
+- TheLeague's and the AFL's What's Next resolvers are two copies, and the AFL
+  copy resolves on TheLeague's Feb 14 league-year clock rather than its own
+  June 1. `getAflWhatsNextTimeline` / `getAllResolvedAflEvents` in
+  `src/utils/league-event-resolver.ts`.
 
 ## Phase 4 — later
 
