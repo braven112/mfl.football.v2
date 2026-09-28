@@ -509,6 +509,12 @@ export const LEAGUES = {
     /** No poll at launch; the shape is present so shared code never branches on undefined. */
     ownersPoll: { enabled: false, slots: 0, closeWeekday: 4, closeHourPT: 16 },
     /**
+     * The Pecking Order at 99 teams: every team is ranked, but the column
+     * writes up only the top 25; the rest show in their division lists
+     * (scripts/generate-pecking-order.mjs, PeckingOrderIssue.astro).
+     */
+    peckingOrder: { topN: 25 },
+    /**
      * TODO(commissioner): the league's own time zone is not confirmed yet.
      * Pacific is the site default and changes nothing for a viewer who has
      * picked their own clock.
@@ -536,7 +542,8 @@ export const LEAGUES = {
       contracts: false,
       salaryCap: false,
       keepers: false,
-      powerRankings: false,
+      /** The Pecking Order, Tuesdays (top 25 + divisions; announced in Slack). */
+      powerRankings: true,
       liveLineups: false,
       /** The news feed carries The Gauntlet. */
       schefterFeed: true,

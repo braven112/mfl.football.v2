@@ -1,0 +1,67 @@
+---
+/**
+ * The Pecking Order (Archie's) — landing page.
+ *
+ * Thin wrapper over the shared landing component: globs this league's issue
+ * JSON (the glob has to be a literal in the page) and hands it over. Which
+ * state the page renders — live issue vs. preseason preview — is decided in
+ * PeckingOrderLanding, so both leagues stay in step.
+ * Permalink to a specific issue lives at /archies/pecking-order/[year]/[week].
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../../../components/theleague/Breadcrumbs.astro';
+import PeckingOrderLanding from '../../../components/shared/PeckingOrderLanding.astro';
+import { type PeckingOrderData } from '../../../components/shared/PeckingOrderIssue.astro';
+import { resolvePeckingOrderLanding } from '../../../utils/pecking-order-landing';
+import { getTestDateFromSearchParams } from '../../../utils/league-year';
+
+const issueFiles = import.meta.glob<PeckingOrderData>(
+  '../../../../data/archies/pecking-order/*.json',
+  { eager: true, import: 'default' }
+);
+
+const issues = Object.entries(issueFiles)
+  .map(([file, data]) => {
+    const m = file.match(/(\d{4})-(\d{1,2})\.json$/);
+    if (!m) return null;
+    return {
+      year: parseInt(m[1], 10),
+      week: parseInt(m[2], 10),
+      data: data as PeckingOrderData,
+    };
+  })
+  .filter((x): x is { year: number; week: number; data: PeckingOrderData } => x !== null);
+
+// `?testDate=YYYY-MM-DD` shifts the reference date server-side so the preview
+// and live states can both be checked out of season.
+const now = getTestDateFromSearchParams(Astro.url.searchParams) ?? undefined;
+
+// Resolved twice (here and in the component) rather than threaded through as a
+// prop: the title needs the state before the body renders, and the resolver is
+// pure sorting + a date compare.
+const { mode, latest } = resolvePeckingOrderLanding(issues, now);
+
+const title = mode === 'live' && latest
+  ? `${latest.data.headline} · The Pecking Order · Week ${latest.week}`
+  : 'The Pecking Order — Weekly Power Rankings';
+---
+
+<TheLeagueLayout title={title}>
+  <div class="pr-page">
+    <Breadcrumbs items={[
+      { label: "Archie's", href: '/archies' },
+      { label: 'The Pecking Order' },
+    ]} />
+
+    <PeckingOrderLanding
+      issues={issues}
+      league="archies"
+      basePath="/archies/pecking-order"
+      now={now}
+    />
+  </div>
+</TheLeagueLayout>
+
+<style>
+.pr-page { min-height: 60vh; }
+</style>
