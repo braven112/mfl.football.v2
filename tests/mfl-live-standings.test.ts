@@ -111,6 +111,12 @@ describe('wiring', () => {
     expect(frontmatter).not.toMatch(/fetch\(/);
   });
 
+  it('the page only renders a week its own poll will accept (whole digits, 1-25)', () => {
+    const page = read('src/pages/live/standings.astro');
+    expect(page).toContain('/^\\d+$/.test(weekRaw)');
+    expect(page).toMatch(/weekParam >= 1 && weekParam <= 25/);
+  });
+
   it('the tables share one switch — the island passes a controlled mode', () => {
     const island = read('src/components/shared/live/LiveStandingsBoard.tsx');
     expect(island).toMatch(/<LvStandings[\s\S]*?mode=\{mode\}/);

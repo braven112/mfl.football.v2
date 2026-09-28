@@ -40,8 +40,11 @@ const now = new Date();
 // The RAW resolver result, never clamped up to 1 — MFL serves no live scoring
 // before the Week 1 Thursday.
 const currentWeek = getCurrentNFLWeek(now);
-const weekParam = Number.parseInt(Astro.url.searchParams.get('week') ?? '', 10);
-const week = Number.isFinite(weekParam) && weekParam > 0 ? weekParam : currentWeek;
+// Validated exactly as `/api/live-standings` validates it — whole digits,
+// 1-25 — or the first paint would render a week every poll then refuses.
+const weekRaw = (Astro.url.searchParams.get('week') ?? '').trim();
+const weekParam = /^\d+$/.test(weekRaw) ? Number(weekRaw) : NaN;
+const week = weekParam >= 1 && weekParam <= 25 ? weekParam : currentWeek;
 
 // A cadence hint only; the island polls regardless.
 const isLive = getDailySlot(now).slot === 'live-scoring';
