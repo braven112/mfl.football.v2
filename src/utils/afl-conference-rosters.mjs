@@ -76,6 +76,47 @@ export function buildConferenceStructure(leagueJson) {
 }
 
 /**
+ * The league's PLAYER POOLS, whatever MFL scopes them by (`playerLimitUnit`):
+ *
+ *   LEAGUE      one shared pool → null (every caller's single-pool path)
+ *   CONFERENCE  one pool per conference (the AFL) → buildConferenceStructure
+ *   DIVISION    one pool per DIVISION (archies: 9 pools of 11 franchises)
+ *
+ * Same `{ ids, names, franchiseConferences }` shape as the conference
+ * builder — "conference" in those field names means "pool" — so
+ * buildRosteredByConf and every generic helper work unchanged for N pools.
+ * A DIVISION league has no `conferences` block, which is exactly why the
+ * conference builder alone read archies as ONE pool and would have hidden
+ * every player held in another division.
+ */
+export function buildPoolStructure(leagueJson) {
+  const unit = String(leagueJson?.league?.playerLimitUnit ?? 'LEAGUE').toUpperCase();
+  if (unit === 'CONFERENCE') return buildConferenceStructure(leagueJson);
+  if (unit !== 'DIVISION') return null;
+  const divisions = leagueJson?.league?.divisions?.division;
+  const franchises = leagueJson?.league?.franchises?.franchise;
+  if (!divisions || !franchises) return null;
+  const divArr = Array.isArray(divisions) ? divisions : [divisions];
+  const frArr = Array.isArray(franchises) ? franchises : [franchises];
+  if (divArr.length < 2) return null;
+  const franchiseConferences = {};
+  for (const f of frArr) {
+    if (!f?.id || f?.division == null) return null; // unplaceable → single pool
+    franchiseConferences[f.id] = String(f.division);
+  }
+  const names = {};
+  for (const d of divArr) {
+    if (d?.id == null) continue;
+    // MFL pads some division names with a trailing space.
+    const name = String(d.name ?? `Division ${d.id}`).trim();
+    names[String(d.id)] = { name, abbrev: name.replace(/\s+Division$/i, '') };
+  }
+  const ids = [...new Set(Object.values(franchiseConferences))].sort();
+  for (const id of ids) if (!names[id]) names[id] = { name: `Division ${id}`, abbrev: id };
+  return { ids, names, franchiseConferences };
+}
+
+/**
  * Build per-conference rostered sets from an MFL rosters payload. Returns
  * `{ confIds, rosteredByConf, ownersByConf }` (Map<conferenceId,
  * Set<playerId>> and Map<conferenceId, Map<playerId, franchiseId>>; single
