@@ -30,6 +30,8 @@ import WhatsNewRow from '../../theleague/WhatsNewRow.astro';
 import DivisionStandings from './DivisionStandings.astro';
 import PackageLeagueHero from './PackageLeagueHero.astro';
 import PackageTeamSnapshot from './PackageTeamSnapshot.astro';
+import PackagePeckingOrderCard from './PackagePeckingOrderCard.astro';
+import type { PeckingOrderData } from '../PeckingOrderIssue.astro';
 import { getLeagueBySlug, type CanonicalLeagueSlug } from '../../../config/leagues';
 import { getAuthUser, franchiseIdForLeague } from '../../../utils/auth';
 import { groupStandingsByDivision, rosterPlayerIds, type PackageDivision, type PackageTeam } from '../../../utils/package-league';
@@ -61,8 +63,11 @@ interface Props {
   /** MFL calendar exports; absent until the sync account belongs to the league. */
   calendarFeeds: LazyFeedGlob;
   playoffFeeds: LazyFeedGlob;
-  /** Eager glob of data/<league>/pecking-order/*.json (may be empty). */
-  ownersPollIssues?: Record<string, any>;
+  /**
+   * Eager glob of data/<league>/pecking-order/*.json (may be empty): feeds the
+   * Pecking Order card and, when the registry turns it on, the Owners' Poll.
+   */
+  peckingOrderIssues?: Record<string, any>;
   posts: SchefterPost[];
 }
 
@@ -76,7 +81,7 @@ const {
   rosterFeeds,
   calendarFeeds,
   playoffFeeds,
-  ownersPollIssues = {},
+  peckingOrderIssues = {},
   posts,
 } = Astro.props;
 const league = getLeagueBySlug(leagueSlug)!;
@@ -141,16 +146,19 @@ const events = buildPackageLeagueEvents({ league, seasons, referenceDate: now })
 const timeline = packageWhatsNext(events, now, leagueYear);
 const nextEvent = timeline.current ?? null;
 
+// ── The Pecking Order (THIS season's issues only) ───────────────────────────
+const seasonIssues = Object.entries(peckingOrderIssues)
+  .map(([file, data]) => {
+    const m = file.match(/(\d{4})-(\d{1,2})\.json$/);
+    return m ? { year: Number(m[1]), week: Number(m[2]), data } : null;
+  })
+  .filter((x): x is { year: number; week: number; data: any } => !!x && x.year === seasonYear)
+  .sort((a, b) => b.week - a.week);
+const latestIssue = (seasonIssues[0]?.data as PeckingOrderData | undefined) ?? null;
+
 // ── Owners' Poll: only when the registry turns it on ─────────────────────────
 const pollIssue = league.ownersPoll?.enabled
-  ? Object.entries(ownersPollIssues)
-      .map(([file, data]) => {
-        const m = file.match(/(\d{4})-(\d{1,2})\.json$/);
-        return m ? { year: Number(m[1]), week: Number(m[2]), data } : null;
-      })
-      .filter((x): x is { year: number; week: number; data: any } => !!x)
-      .filter((x) => x.year === seasonYear && (x.data?.ownersPoll?.ranked?.length ?? 0) > 0)
-      .sort((a, b) => b.week - a.week)[0] ?? null
+  ? seasonIssues.find((x) => (x.data?.ownersPoll?.ranked?.length ?? 0) > 0) ?? null
   : null;
 const showOwnersPoll = !!league.ownersPoll?.enabled && isSeasonWindowOpen(seasonYear, now);
 
@@ -225,6 +233,14 @@ const whatsNew = getWhatsNewEntriesForLeague(league.navSlug);
           signInHref={signInHref}
           isAuthenticated={!!authUser}
           rosterSize={rosterSize}
+        />
+
+        <PackagePeckingOrderCard
+          issue={latestIssue}
+          teams={teamsById}
+          teamHref={teamHref}
+          columnHref={r(`${base}/pecking-order`)}
+          mine={mine}
         />
 
         <WhatsNext timeline={timeline} maxCards={2} calendarHref={r(`${base}/calendar`)} />
