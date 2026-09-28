@@ -31,12 +31,20 @@
  */
 
 import type { LiveMatchup, LiveStandingsRow } from '../../types/live';
+import { NFL_GAME_SECONDS } from '../live-win-probability';
 
 export type StandingsMode = 'projected' | 'live' | 'final';
 
 export const STANDINGS_MODES: readonly StandingsMode[] = ['projected', 'live', 'final'];
 
 export const DEFAULT_STANDINGS_MODE: StandingsMode = 'live';
+
+/** The label each view wears — on a table's own toggle and on `/live/standings`' shared one. */
+export const STANDINGS_MODE_LABEL: Record<StandingsMode, string> = {
+  projected: 'Projected',
+  live: 'Live',
+  final: 'Final',
+};
 
 export interface ProjectedStandingsRow extends LiveStandingsRow {
   /** MFL's own position — `rank` becomes the position in THIS view. */
@@ -62,9 +70,20 @@ export function isMatchupFinal(matchup: LiveMatchup): boolean {
 /**
  * Someone in this matchup has played. An unplayed week is a payload of zeros
  * (see `LiveLeagueStatus`), and a 0-0 "tie" from it is not a result.
+ *
+ * Evidence is points on the board, or a starter whose game is IN PROGRESS.
+ * NOT "fewer starters yet to play than starters": a starter on a BYE has no
+ * game, so MFL reports 0 seconds left and he reads as finished — one bye in a
+ * lineup made the matchup "started" before any kickoff, and Live added a 0-0
+ * tie to both records. A finished game worth exactly 0 is indistinguishable
+ * from a bye, so it is not evidence either; the first point scored is.
  */
-function hasStarted(matchup: LiveMatchup): boolean {
-  return matchup.sides.some((s) => s.live !== 0 || s.yetToPlay < s.players.length);
+export function hasStarted(matchup: LiveMatchup): boolean {
+  return matchup.sides.some(
+    (s) =>
+      s.live !== 0 ||
+      s.players.some((p) => p.secondsRemaining > 0 && p.secondsRemaining < NFL_GAME_SECONDS),
+  );
 }
 
 function winPct(row: { wins: number; losses: number; ties: number }): number {

@@ -8,6 +8,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   DEFAULT_STANDINGS_MODE,
+  hasStarted,
   projectStandings,
 } from '../src/utils/live/standings-projection';
 import { markWeekCounted } from '../src/utils/live/standings';
@@ -110,11 +111,32 @@ describe('views', () => {
   });
 
   it('Live ignores a matchup nobody has played; Projected does not', () => {
-    const unplayed = [matchup(side('A', 0, 120), side('C', 0, 100))];
+    // Nobody has kicked off: every starter's clock is still full.
+    const unplayed = [matchup(side('A', 0, 120, 3600), side('C', 0, 100, 3600))];
     unplayed[0].sides.forEach((s) => (s.yetToPlay = s.players.length));
     // Nothing to add → MFL's own order, not a re-rank of unchanged records.
     expect(projectStandings(rows, unplayed, 'live').every((r) => !r.includesWeek && r.move === 0)).toBe(true);
     expect(projectStandings(rows, unplayed, 'projected').find((r) => r.franchiseId === 'A')!.wins).toBe(5);
+  });
+
+  it('a starter on a BYE does not start the matchup before kickoff', () => {
+    // A bye has no game, so MFL reports 0 seconds left — it reads as finished.
+    // Counting it as "played" added a 0-0 tie to both records pre-kickoff.
+    const withBye = (id: string, projected: number): LiveTeam => ({
+      ...side(id, 0, projected, 3600),
+      players: [
+        { secondsRemaining: 0 } as LiveTeam['players'][number],
+        { secondsRemaining: 3600 } as LiveTeam['players'][number],
+      ],
+      yetToPlay: 1,
+    });
+    const preKickoff = [matchup(withBye('A', 120), side('C', 0, 100, 3600))];
+    expect(hasStarted(preKickoff[0])).toBe(false);
+    expect(projectStandings(rows, preKickoff, 'live').every((r) => !r.includesWeek && r.move === 0)).toBe(true);
+  });
+
+  it('a game in progress starts the matchup even before anyone scores', () => {
+    expect(hasStarted(matchup(side('A', 0, 120, 1800), side('C', 0, 100, 3600)))).toBe(true);
   });
 
   it('counts both games of a doubleheader', () => {
