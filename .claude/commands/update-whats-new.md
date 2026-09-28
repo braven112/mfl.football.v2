@@ -39,18 +39,23 @@ Everything else stages. All five types go in the same `changes` array.
 
 - Pages/features under `/theleague/...` or `src/data/theleague/` → `theleague`
 - Pages/features under `/afl-fantasy/...` or `data/afl-fantasy/` → `afl`
-- Shared infrastructure visible on both sites → `both`
+- Pages/features under `/archies/...` or `data/archies/` → `archies`
+- Shared infrastructure visible on every full-management site → `both`
 
 Display code fails closed (an untagged entry shows nowhere) and the rollup
-exits 1 on an untagged change. Valid slugs are `theleague` and `afl` — never
-`afl-fantasy`.
+exits 1 on an untagged change. Valid slugs are registry navSlugs (`theleague`,
+`afl`, `archies`, …) — never `afl-fantasy`.
 
-**`both` means the two full-management leagues, NOT every league.** Best Ball
-is draft-only and is excluded automatically (via the registry's `bestBall`
-flag). Before checking `both`, ask whether the change is real for a league with
-no lineups, no in-season roster management, no Schefter feed and no
-`/notifications` route — if it is best-ball-only, tag that league by name
-instead.
+**`both` means every full-management league, NOT every league.** It expands via
+`BOTH_LEAGUES` (`scripts/lib/weekly-changelog-format.mjs`): every registry
+league without the `bestBall` flag. That INCLUDES the standard-package leagues
+(Archie's today) — the owner decided in Sep 2026 that package leagues receive
+every platform update. Best Ball is draft-only and excluded automatically.
+Before checking `both`, ask whether the change is real (and its link resolves)
+in a league with no contracts, no salary cap, no lineups page and no
+`/notifications` route (Archie's) and in one with no in-season roster
+management (Best Ball). If a line only makes sense for some of them, tag those
+leagues by name instead of `both`.
 
 ## Step 4: Write the staged change
 

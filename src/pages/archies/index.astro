@@ -14,6 +14,13 @@ export const prerender = false;
 const standingsFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/standings.json');
 const transactionFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/transactions.json');
 const leagueFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/league.json');
+const scheduleFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/schedule.json');
+const rosterFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/rosters.json');
+// Absent until the sync account belongs to the league (the export is
+// owner/commissioner-gated); the calendar falls back to derived dates.
+const calendarFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/calendar.json');
+const playoffFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/playoff-brackets.json');
+const ownersPollIssues = import.meta.glob<any>('../../../data/archies/pecking-order/*.json', { eager: true, import: 'default' });
 
 let posts: SchefterFeed['posts'] = [];
 try {
@@ -29,5 +36,10 @@ try {
   standingsFeeds={standingsFeeds}
   transactionFeeds={transactionFeeds}
   leagueFeeds={leagueFeeds}
+  scheduleFeeds={scheduleFeeds}
+  rosterFeeds={rosterFeeds}
+  calendarFeeds={calendarFeeds}
+  playoffFeeds={playoffFeeds}
+  ownersPollIssues={ownersPollIssues}
   posts={posts}
 />

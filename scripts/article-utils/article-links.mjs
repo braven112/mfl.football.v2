@@ -87,7 +87,7 @@ export const DESTINATIONS = {
   rivalries: { path: '/rivalries', label: 'the rivalry pages', leagues: BOTH },
   franchises: { path: '/franchises', label: 'the franchise histories', leagues: BOTH },
   'draft-predictor': { path: '/draft/order', label: 'the draft order', leagues: BOTH },
-  calendar: { path: '/calendar', label: 'the league calendar', leagues: BOTH },
+  calendar: { path: '/calendar', label: 'the league calendar', leagues: BOTH_AND_ARCHIES },
 
   // ── Site features worth a plug ──
   'trade-builder': { path: '/front-office/trade-builder', label: 'the trade builder', leagues: BOTH },
@@ -96,7 +96,7 @@ export const DESTINATIONS = {
   rules: { path: '/rules', label: 'the constitution', leagues: BOTH },
   'rules-chat': { path: '/rules-chat', label: 'Roger, the rules bot', leagues: BOTH },
   'schefter-tip': { path: '/schefter/tip', label: 'the rumor mill tip line', leagues: BOTH },
-  'whats-new': { path: '/whats-new', label: "What's New", leagues: BOTH },
+  'whats-new': { path: '/whats-new', label: "What's New", leagues: BOTH_AND_ARCHIES },
   notifications: { path: '/notifications', label: 'push notifications', leagues: BOTH },
 
   // ── TheLeague only (a contract dynasty league; the AFL has no cap) ──

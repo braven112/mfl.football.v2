@@ -2,25 +2,52 @@
 /**
  * Homepage for a package league (the first is archies).
  *
- * Deliberately small: the league's name and mark, links to the launch pages,
- * the latest news (where The Gauntlet lands), the most recent transactions,
- * and each division's top three. Every section reads data the route hands
- * in, so a new package league is a thin route file and a registry entry.
+ * The same shape as TheLeague's and the AFL's homepages — a main column and
+ * the league's news rail — built only from sections that work for any league:
+ *
+ *   hero              PackageLeagueHero (this week's games / the league's week)
+ *   Owners' Poll      only when the registry turns the poll on
+ *   team snapshot     the signed-in owner's team
+ *   What's Next       the league's MFL calendar + derived season dates
+ *   standings         the viewer's division, or every division's top three
+ *   transactions      the latest moves (site only; never posted to chat)
+ *   quick links       the league's pages from the page directory
+ *   What's New        platform updates, always present at the foot
+ *   rail              the league's news desk (SchefterFeedCompact)
+ *
+ * Every section reads data the route hands in (globs must be literal per
+ * route), so a new package league is a thin route file and a registry entry.
+ * Colours are semantic tokens only; the league's palette drives them.
  *
  * No client script: nothing here needs to re-init under the ClientRouter.
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
-import SchefterWidget from '../../shared/SchefterWidget.astro';
+import SchefterFeedCompact from '../../shared/SchefterFeedCompact.astro';
+import OwnersPollHomeCard from '../../shared/owners-poll/OwnersPollHomeCard.astro';
+import QuickLinks from '../../shared/hp-sections/QuickLinks.astro';
+import WhatsNext from '../../theleague/WhatsNext.astro';
+import WhatsNewRow from '../../theleague/WhatsNewRow.astro';
 import DivisionStandings from './DivisionStandings.astro';
+import PackageLeagueHero from './PackageLeagueHero.astro';
+import PackageTeamSnapshot from './PackageTeamSnapshot.astro';
 import { getLeagueBySlug, type CanonicalLeagueSlug } from '../../../config/leagues';
 import { getAuthUser, franchiseIdForLeague } from '../../../utils/auth';
-import { groupStandingsByDivision, type PackageDivision, type PackageTeam } from '../../../utils/package-league';
+import { groupStandingsByDivision, rosterPlayerIds, type PackageDivision, type PackageTeam } from '../../../utils/package-league';
 import { loadSeasonFeed, resolveSeason, seasonsFromGlob, type LazyFeedGlob } from '../../../utils/mfl-feed-glob';
 import { getCurrentSeasonYear, getLeagueYearForSlug } from '../../../utils/league-year';
 import { loadTransactionsSeason } from '../../../utils/transactions-feeds';
 import { getGlobalPlayerMap } from '../../../utils/player-map';
-import { franchiseSlug } from '../../../utils/franchise-marks';
+import { franchiseSlug, leagueHasBrandBook } from '../../../utils/franchise-marks';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { parseTestDate } from '../../../utils/hero-resolver';
+import { resolvePackageHero, buildTeamSnapshot } from '../../../utils/package-league-home';
+import { buildPackageLeagueEvents, packageWhatsNext, type MflCalendarEvent } from '../../../utils/package-league-events';
+import { resolveSchefterRail } from '../../../utils/schefter-rail-view';
+import { getWhatsNewEntriesForLeague } from '../../../utils/whats-new-entries';
+import { isSeasonWindowOpen } from '../../../utils/pecking-order-season-window.mjs';
+import { getLeagueTeamBrands } from '../../../utils/league-team-brands';
+import { getPersonaLabels } from '../../../utils/persona-server';
+import { loginUrlForRequest } from '../../../utils/login-redirect';
 import type { SchefterPost } from '../../../types/schefter';
 
 interface Props {
@@ -29,31 +56,106 @@ interface Props {
   standingsFeeds: LazyFeedGlob;
   transactionFeeds: LazyFeedGlob;
   leagueFeeds: LazyFeedGlob;
+  scheduleFeeds: LazyFeedGlob;
+  rosterFeeds: LazyFeedGlob;
+  /** MFL calendar exports; absent until the sync account belongs to the league. */
+  calendarFeeds: LazyFeedGlob;
+  playoffFeeds: LazyFeedGlob;
+  /** Eager glob of data/<league>/pecking-order/*.json (may be empty). */
+  ownersPollIssues?: Record<string, any>;
   posts: SchefterPost[];
 }
 
-const { leagueSlug, config, standingsFeeds, transactionFeeds, leagueFeeds, posts } = Astro.props;
+const {
+  leagueSlug,
+  config,
+  standingsFeeds,
+  transactionFeeds,
+  leagueFeeds,
+  scheduleFeeds,
+  rosterFeeds,
+  calendarFeeds,
+  playoffFeeds,
+  ownersPollIssues = {},
+  posts,
+} = Astro.props;
 const league = getLeagueBySlug(leagueSlug)!;
-const logo = league.logo!;
 const hide = Astro.locals.hideLeaguePrefix ?? false;
 const r = (p: string) => resolveLeaguePath(p, hide);
 const base = `/${league.slug}`;
 
+// ?testDate= drives every date-dependent section, as on the other homepages.
+const now = parseTestDate(Astro.url.searchParams.get('testDate')) ?? new Date();
+
 const authUser = getAuthUser(Astro.request);
 const mine = franchiseIdForLeague(authUser, league.id);
-const teamsById = new Map(config.teams.map((t) => [t.franchiseId, t]));
+const teamsById: Record<string, PackageTeam> = Object.fromEntries(config.teams.map((t) => [t.franchiseId, t]));
+const teamSlugs = Object.fromEntries(config.teams.map((t) => [t.franchiseId, franchiseSlug(t)]));
+const teamHref = (id: string) =>
+  leagueHasBrandBook(league.slug) && teamSlugs[id] ? r(`${base}/brand/${teamSlugs[id]}`) : r(`${base}/rosters?team=${id}`);
+const signInHref = loginUrlForRequest(Astro, league);
 
-// Standings: results-shaped, so the SEASON year.
-const standingYears = seasonsFromGlob(standingsFeeds);
-const standingYear = resolveSeason(null, standingYears, getCurrentSeasonYear());
+// ── Results-shaped data: the SEASON year ─────────────────────────────────────
+const seasonYear = getCurrentSeasonYear(now);
+const standingYear = resolveSeason(null, seasonsFromGlob(standingsFeeds), seasonYear);
 const standingsFeed = standingYear ? await loadSeasonFeed(standingsFeeds, standingYear) : null;
 const groups = groupStandingsByDivision(standingsFeed, config.teams, config.divisions ?? []);
-const teamSlugs = Object.fromEntries(config.teams.map((t) => [t.franchiseId, franchiseSlug(t)]));
+const scheduleYear = resolveSeason(null, seasonsFromGlob(scheduleFeeds), seasonYear);
+const scheduleFeed = scheduleYear ? await loadSeasonFeed(scheduleFeeds, scheduleYear) : null;
 
-// Transactions: management-shaped, so the LEAGUE year.
-const txYears = seasonsFromGlob(transactionFeeds);
-const txYear = resolveSeason(null, txYears, getLeagueYearForSlug(league.slug));
-const leagueYear = getLeagueYearForSlug(league.slug);
+// ── Management-shaped data: the LEAGUE year ─────────────────────────────────
+const leagueYear = getLeagueYearForSlug(league.slug, now);
+const rosterYear = resolveSeason(null, seasonsFromGlob(rosterFeeds), leagueYear);
+const rostersFeed = rosterYear ? await loadSeasonFeed(rosterFeeds, rosterYear) : null;
+const leagueFeed = (rosterYear ? await loadSeasonFeed(leagueFeeds, rosterYear) : null) as { league?: { rosterSize?: string } } | null;
+const rosterSize = Number(leagueFeed?.league?.rosterSize) || null;
+
+// ── Hero + team snapshot ────────────────────────────────────────────────────
+const hero = resolvePackageHero(scheduleFeed, mine, { inSeason: isSeasonWindowOpen(seasonYear, now) });
+const snapshot = buildTeamSnapshot(
+  groups,
+  scheduleFeed,
+  mine,
+  // Active roster only: injured reserve and taxi do not count against rosterSize.
+  mine && rostersFeed ? rosterPlayerIds(rostersFeed, mine).filter((p) => p.status === 'ROSTER').length : null,
+);
+const labels = await getPersonaLabels(league.slug);
+// Articles are the persona's columns (The Gauntlet today), so the byline is
+// the league's persona name.
+const latestArticle = posts.find((p) => p.type === 'article') ?? null;
+const latestColumn = latestArticle
+  ? { headline: latestArticle.headline, href: r(`${base}/news/${latestArticle.id}`), byline: `By ${labels.name}` }
+  : null;
+
+// ── What's Next: the league's MFL calendar + derived season dates ──────────
+// A calendar feed lives in the LEAGUE-year directory it was exported into;
+// read this season's and next's so the timeline keeps looking forward.
+const seasons = await Promise.all(
+  [seasonYear, seasonYear + 1].map(async (y) => ({
+    seasonYear: y,
+    calendar: ((await loadSeasonFeed(calendarFeeds, y)) as MflCalendarEvent[] | null) ?? null,
+    playoffBrackets: await loadSeasonFeed(playoffFeeds, y),
+  })),
+);
+const events = buildPackageLeagueEvents({ league, seasons, referenceDate: now });
+const timeline = packageWhatsNext(events, now, leagueYear);
+const nextEvent = timeline.current ?? null;
+
+// ── Owners' Poll: only when the registry turns it on ─────────────────────────
+const pollIssue = league.ownersPoll?.enabled
+  ? Object.entries(ownersPollIssues)
+      .map(([file, data]) => {
+        const m = file.match(/(\d{4})-(\d{1,2})\.json$/);
+        return m ? { year: Number(m[1]), week: Number(m[2]), data } : null;
+      })
+      .filter((x): x is { year: number; week: number; data: any } => !!x)
+      .filter((x) => x.year === seasonYear && (x.data?.ownersPoll?.ranked?.length ?? 0) > 0)
+      .sort((a, b) => b.week - a.week)[0] ?? null
+  : null;
+const showOwnersPoll = !!league.ownersPoll?.enabled && isSeasonWindowOpen(seasonYear, now);
+
+// ── Transactions (site only) ────────────────────────────────────────────────
+const txYear = resolveSeason(null, seasonsFromGlob(transactionFeeds), leagueYear);
 const txRows = txYear
   ? (
       await loadTransactionsSeason({
@@ -78,136 +180,178 @@ const KIND_LABEL: Record<string, string> = {
 };
 const whenFmt = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone: 'America/Los_Angeles' });
 
-const links = [
-  { href: `${base}/standings`, label: 'Standings' },
-  { href: `${base}/rosters`, label: 'Rosters' },
-  { href: `${base}/transactions`, label: 'Transactions' },
-  { href: `${base}/news`, label: 'News' },
-  { href: `${base}/schedule-strength`, label: 'The Gauntlet' },
-  { href: `${base}/brand`, label: 'Team brands' },
-];
+// ── Standings: the viewer's division in full, else every division's top 3 ──
+const myGroup = mine ? groups.find((g) => g.rows.some((row) => row.franchiseId === mine)) ?? null : null;
+
+// ── Rail + What's New ───────────────────────────────────────────────────────
+const rail = await resolveSchefterRail({ league, posts, authUser, now });
+const whatsNew = getWhatsNewEntriesForLeague(league.navSlug);
 ---
 
 <TheLeagueLayout title={league.name}>
   <div class="pkg-home">
-    <header class="pkg-home__hero">
-      <img class="pkg-home__logo pkg-home__logo--light" src={logo.light} alt="" height="96" />
-      <img class="pkg-home__logo pkg-home__logo--dark" src={logo.dark} alt="" height="96" />
-      {league.wordmark && <img class="pkg-home__wordmark" src={league.wordmark} alt="" height="72" />}
-      <div>
-        <h1>{league.name}</h1>
-        <p>{config.teams.length} teams · {(config.divisions ?? []).length} divisions{standingYear ? ` · ${standingYear} season` : ''}</p>
-      </div>
-    </header>
-
-    <nav class="pkg-home__links" aria-label="League pages">
-      {links.map((l) => <a href={r(l.href)}>{l.label}</a>)}
-    </nav>
-
-    <div class="pkg-home__grid">
-      <section class="pkg-home__card" aria-labelledby="pkg-home-news">
-        <h2 id="pkg-home-news">Latest news</h2>
-        {posts.length > 0 ? (
-          <SchefterWidget posts={posts.slice(0, 4)} league={league.navSlug} allNewsLink={r(`${base}/news`)} />
-        ) : (
-          <p class="pkg-home__empty">
-            Nothing yet. The Gauntlet, the weekly strength-of-schedule column, lands here every Wednesday.
-          </p>
-        )}
-      </section>
-
-      <section class="pkg-home__card" aria-labelledby="pkg-home-tx">
-        <h2 id="pkg-home-tx">Recent transactions</h2>
-        {txRows.length > 0 ? (
-          <ul class="pkg-home__tx">
-            {txRows.map((t) => {
-              const team = teamsById.get(t.franchiseId);
-              return (
-                <li>
-                  <span class="pkg-home__tx-when">{whenFmt.format(new Date(t.at))}</span>
-                  <span class="pkg-home__tx-body">
-                    <strong>{team?.name ?? `Team ${t.franchiseId}`}</strong>
-                    {' '}
-                    <span class="pkg-home__tx-kind">{KIND_LABEL[t.kind] ?? t.rawType}</span>
-                    {t.added.length > 0 && <span> · added {t.added.map(playerName).join(', ')}</span>}
-                    {t.dropped.length > 0 && <span> · dropped {t.dropped.map(playerName).join(', ')}</span>}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        ) : (
-          <p class="pkg-home__empty">No transactions yet this season.</p>
-        )}
-        <a class="pkg-home__more" href={r(`${base}/transactions`)}>All transactions →</a>
-      </section>
-    </div>
-
-    <section class="pkg-home__standings" aria-labelledby="pkg-home-standings">
-      <div class="pkg-home__section-head">
-        <h2 id="pkg-home-standings">Division leaders</h2>
-        <a class="pkg-home__more" href={r(`${base}/standings`)}>Full standings →</a>
-      </div>
-      {groups.length > 0 ? (
-        <DivisionStandings
-          groups={groups}
-          compact={3}
-          teamHrefBase={r(`${base}/brand`)}
-          teamSlugs={teamSlugs}
-          highlightFranchiseId={mine}
+    <h1 class="pkg-home__sr">{league.name}</h1>
+    <div class="pkg-home__layout">
+      <div class="pkg-home__main">
+        <PackageLeagueHero
+          state={hero}
+          teams={teamsById}
+          teamHref={teamHref}
+          mine={mine}
+          latestColumn={latestColumn}
+          nextEvent={nextEvent}
+          signInHref={signInHref}
+          standingsHref={r(`${base}/standings`)}
+          rosterHref={r(`${base}/rosters${mine ? `?team=${mine}` : ''}`)}
+          leagueName={league.name}
         />
-      ) : (
-        <p class="pkg-home__empty">Standings appear once the first week is scored.</p>
-      )}
-    </section>
+
+        {showOwnersPoll && (
+          <OwnersPollHomeCard
+            issue={pollIssue ? { year: pollIssue.year, week: pollIssue.week, ...pollIssue.data } : null}
+            teams={getLeagueTeamBrands(league.slug)}
+            leagueSlug={league.slug}
+            ballotHref={r(`${base}/pecking-order/ballot`)}
+            columnHref={r(`${base}/pecking-order`)}
+          />
+        )}
+
+        <PackageTeamSnapshot
+          snapshot={snapshot}
+          teams={teamsById}
+          teamHref={teamHref}
+          rosterHref={r(`${base}/rosters${mine ? `?team=${mine}` : ''}`)}
+          standingsHref={r(`${base}/standings`)}
+          signInHref={signInHref}
+          isAuthenticated={!!authUser}
+          rosterSize={rosterSize}
+        />
+
+        <WhatsNext timeline={timeline} maxCards={2} calendarHref={r(`${base}/calendar`)} />
+
+        <section class:list={['pkg-home__card', { 'pkg-home__standings--one': !!myGroup }]} aria-labelledby="pkg-home-standings">
+          <div class="pkg-home__section-head">
+            <h2 id="pkg-home-standings">{myGroup ? myGroup.division.name : 'Division leaders'}</h2>
+            <a class="pkg-home__more" href={r(`${base}/standings`)}>{myGroup ? 'All divisions →' : 'Full standings →'}</a>
+          </div>
+          {groups.length > 0 ? (
+            <DivisionStandings
+              groups={myGroup ? [myGroup] : groups}
+              compact={myGroup ? undefined : 3}
+              teamHrefBase={r(`${base}/brand`)}
+              teamSlugs={teamSlugs}
+              highlightFranchiseId={mine}
+            />
+          ) : (
+            <p class="pkg-home__empty">Standings appear once the first week is scored.</p>
+          )}
+        </section>
+
+        <section class="pkg-home__card" aria-labelledby="pkg-home-tx">
+          <div class="pkg-home__section-head">
+            <h2 id="pkg-home-tx">Recent transactions</h2>
+            <a class="pkg-home__more" href={r(`${base}/transactions`)}>All transactions →</a>
+          </div>
+          {txRows.length > 0 ? (
+            <ul class="pkg-home__tx">
+              {txRows.map((t) => {
+                const team = teamsById[t.franchiseId];
+                return (
+                  <li>
+                    <span class="pkg-home__tx-when">{whenFmt.format(new Date(t.at))}</span>
+                    <span class="pkg-home__tx-body">
+                      <strong>{team?.name ?? `Team ${t.franchiseId}`}</strong>
+                      {' '}
+                      <span class="pkg-home__tx-kind">{KIND_LABEL[t.kind] ?? t.rawType}</span>
+                      {t.added.length > 0 && <span> · added {t.added.map(playerName).join(', ')}</span>}
+                      {t.dropped.length > 0 && <span> · dropped {t.dropped.map(playerName).join(', ')}</span>}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p class="pkg-home__empty">No transactions yet this season.</p>
+          )}
+        </section>
+
+        <QuickLinks league={league.slug} isAuthenticated={!!authUser} />
+
+        <WhatsNewRow
+          entries={whatsNew}
+          count={2}
+          basePath={hide ? '' : base}
+          allReleasesLink={r(`${base}/whats-new`)}
+          urlHost={`mfl.football${base}`}
+          lastVisitDate={Astro.cookies.get('whats_new_last_visit')?.value ?? null}
+          emptyText="New features for the league land here as they ship. Updates post every Monday."
+        />
+      </div>
+
+      <aside class="pkg-home__rail" aria-label={`${labels.reportShort} feed`} tabindex="0">
+        <SchefterFeedCompact
+          posts={rail.posts}
+          isAuthenticated={!!authUser}
+          userFranchiseId={mine ?? undefined}
+          personalized={rail.personalized}
+          forYouIds={rail.forYouIds}
+          watching={rail.watchingByPost}
+          emptyText={rail.emptyText ?? `Nothing on the wire yet. The Gauntlet lands every Wednesday.`}
+        />
+      </aside>
+    </div>
   </div>
 </TheLeagueLayout>
 
 <style>
-  .pkg-home { max-width: 1200px; margin: 0 auto; padding: 1.25rem 1rem 3rem; color: var(--page-text); }
-  .pkg-home__hero { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
-  .pkg-home__hero h1 { margin: 0; font-size: clamp(1.4rem, 4vw, 2rem); }
-  .pkg-home__hero p { margin: 0.2rem 0 0; color: var(--content-text-muted); }
-  .pkg-home__logo { flex: none; height: 96px; width: auto; }
-  .pkg-home__wordmark { flex: none; height: 72px; width: auto; }
-  @media (max-width: 600px) {
-    .pkg-home__hero { flex-wrap: wrap; }
-    .pkg-home__logo { height: 72px; }
-    .pkg-home__wordmark { height: 52px; }
+  .pkg-home { max-width: 1400px; margin: 0 auto; padding: 1.25rem 1rem 3rem; color: var(--page-text); container-type: inline-size; }
+  .pkg-home__sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
   }
-  .pkg-home__logo--dark { display: none; }
-  :global(html.dark) .pkg-home__logo--light { display: none; }
-  :global(html.dark) .pkg-home__logo--dark { display: block; }
-  .pkg-home__links { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.25rem; }
-  .pkg-home__links a {
-    padding: 0.4rem 0.8rem;
-    border-radius: 999px;
-    border: 1px solid var(--content-border);
-    background: var(--card-bg);
-    color: var(--page-text);
-    text-decoration: none;
-    font-weight: 600;
-    font-size: 0.9rem;
-  }
-  .pkg-home__links a:hover { background: var(--content-bg-muted); }
-  .pkg-home__grid {
+  /* The TheLeague/AFL homepage grid: a main column and the news rail. */
+  .pkg-home__layout {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
-    gap: 1rem;
-    margin-bottom: 1.5rem;
+    grid-template-columns: minmax(0, 1fr) 380px;
+    gap: 1.5rem;
+    align-items: start;
+  }
+  .pkg-home__main { min-width: 0; display: flex; flex-direction: column; gap: 1.5rem; }
+  .pkg-home__main > :global(*) { margin-bottom: 0; }
+  .pkg-home__rail {
+    min-width: 0;
+    position: sticky;
+    top: 2rem;
+    max-height: calc(100dvh - var(--header-height, 3.5rem) - 2rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    border-radius: var(--radius-lg);
+  }
+  @container (max-width: 1024px) {
+    .pkg-home__layout { grid-template-columns: minmax(0, 1fr) 320px; gap: 1rem; }
+  }
+  @container (max-width: 880px) {
+    .pkg-home__layout { grid-template-columns: 1fr; }
+    .pkg-home__rail { position: static; max-height: none; overflow-y: visible; }
   }
   .pkg-home__card {
     background: var(--card-bg);
     border: 1px solid var(--content-border);
-    border-radius: 12px;
-    padding: 1rem;
+    border-radius: var(--radius-lg);
+    padding: 1rem 1.25rem;
     min-width: 0;
   }
-  .pkg-home__card h2,
-  .pkg-home__section-head h2 { margin: 0 0 0.75rem; font-size: 1.05rem; }
-  .pkg-home__section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
+  .pkg-home__section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem; }
+  .pkg-home__section-head h2 { margin: 0; font-size: 1.15rem; color: var(--league-accent); }
+  /* One division (the viewer's) fills the card rather than one narrow column. */
+  .pkg-home__standings--one :global(.pkg-standings) { grid-template-columns: 1fr; }
   .pkg-home__empty { color: var(--content-text-muted); margin: 0; }
-  .pkg-home__tx { list-style: none; margin: 0 0 0.75rem; padding: 0; }
+  .pkg-home__tx { list-style: none; margin: 0; padding: 0; }
   .pkg-home__tx li {
     display: flex;
     gap: 0.6rem;
@@ -219,5 +363,5 @@ const links = [
   .pkg-home__tx-when { flex: none; width: 3.5rem; color: var(--content-text-muted); font-variant-numeric: tabular-nums; }
   .pkg-home__tx-body { min-width: 0; overflow-wrap: anywhere; }
   .pkg-home__tx-kind { color: var(--content-text-muted); }
-  .pkg-home__more { font-size: 0.85rem; font-weight: 600; color: var(--page-text); }
+  .pkg-home__more { font-size: 0.85rem; font-weight: 600; color: var(--color-primary-light); white-space: nowrap; }
 </style>
