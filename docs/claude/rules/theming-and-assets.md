@@ -601,3 +601,18 @@ sibling pipeline rather than the crest one:
 draws the mark's bounding box, which on a transparent PNG is a white rectangle
 on a dark card — the exact thing the crest ring exists to avoid.
 
+
+## A package league's colour scheme is PALETTE → SEMANTIC, never literals
+
+A package league (registry `optInNav` + `logo`, e.g. `archies`) gets its scheme
+from `html[data-league="<slug>"]` in `tokens.css` and
+`html.dark[data-league="<slug>"]` in `tokens-dark.css`. Inside those blocks
+the only colour literals live on `--league-palette-*` lines; every semantic
+token (`--color-primary`, `--breadcrumb-bar-bg`, `--nav-*`, `--btn-primary-*`, …)
+is a `var()` of the palette, and tints come from `color-mix()` of it. The owner
+asked for this so the league can be recoloured to anything by editing the
+palette alone. Each block states the contrast its palette must keep.
+Components read semantic tokens only. The dark block RE-ASSERTS every semantic
+token, because the generic `html.dark` block loads after the light per-league
+one and would otherwise pin TheLeague's dark blues. Guard:
+`tests/league-palette-tokens.test.ts`.
