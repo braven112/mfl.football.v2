@@ -326,7 +326,18 @@ Follow-ups noticed (not in scope):
   June 1. `getAflWhatsNextTimeline` / `getAllResolvedAflEvents` in
   `src/utils/league-event-resolver.ts`.
 
-## Phase 4 — later
+## Phase 4 — the Pecking Order for Archie's (in progress)
+
+Decided 2026-09-28:
+- **Scope:** the column ranks and writes up the league's TOP 25 overall, plus a
+  compact ranked list inside each of the 9 divisions, so every owner sees where
+  they stand without a 99-blurb column.
+- **Slack:** each weekly issue is announced in Archie's channel, like The
+  Gauntlet.
+- **Day:** Tuesday, the TheLeague/AFL slot (after Monday night is final, a
+  day before The Gauntlet).
+
+## Later
 
 - Pecking Order at 99-team scale.
 - Two-way Slack (mentions → tips) through the Events API, if a client wants it.
