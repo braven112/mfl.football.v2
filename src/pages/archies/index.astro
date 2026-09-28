@@ -20,7 +20,7 @@ const rosterFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/rosters.
 // owner/commissioner-gated); the calendar falls back to derived dates.
 const calendarFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/calendar.json');
 const playoffFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/playoff-brackets.json');
-const ownersPollIssues = import.meta.glob<any>('../../../data/archies/pecking-order/*.json', { eager: true, import: 'default' });
+const peckingOrderIssues = import.meta.glob<any>('../../../data/archies/pecking-order/*.json', { eager: true, import: 'default' });
 
 let posts: SchefterFeed['posts'] = [];
 try {
@@ -40,6 +40,6 @@ try {
   rosterFeeds={rosterFeeds}
   calendarFeeds={calendarFeeds}
   playoffFeeds={playoffFeeds}
-  ownersPollIssues={ownersPollIssues}
+  peckingOrderIssues={peckingOrderIssues}
   posts={posts}
 />

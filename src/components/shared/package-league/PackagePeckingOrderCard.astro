@@ -1,0 +1,126 @@
+---
+/**
+ * The Pecking Order teaser for a package league's homepage: the latest issue's
+ * top five, the signed-in owner's own place (league-wide and in their
+ * division), and a link to the column. Renders nothing until this season has
+ * an issue — last season's column never headlines a new season.
+ *
+ * Semantic tokens only, so it follows the league's palette.
+ */
+import type { PeckingOrderData } from '../PeckingOrderIssue.astro';
+import type { PackageTeam } from '../../../utils/package-league';
+
+interface Props {
+  issue: PeckingOrderData | null;
+  teams: Record<string, PackageTeam>;
+  teamHref: (franchiseId: string) => string;
+  columnHref: string;
+  /** The viewer's franchise in this league, or null. */
+  mine: string | null;
+  limit?: number;
+}
+
+const { issue, teams, teamHref, columnHref, mine, limit = 5 } = Astro.props;
+const top = issue ? issue.rankings.slice(0, limit) : [];
+const myRow = issue && mine ? issue.rankings.find((r) => r.franchiseId === mine) ?? null : null;
+
+// The viewer's place inside their division, in pecking order.
+let myDivisionPlace: { place: number; size: number; name: string } | null = null;
+if (issue && myRow) {
+  const div = (issue.standings?.divisions ?? []).find((d) => d.teams.some((t) => t.franchiseId === mine));
+  if (div) {
+    const ranks = div.teams
+      .map((t) => issue.rankings.find((r) => r.franchiseId === t.franchiseId)?.rank)
+      .filter((r): r is number => typeof r === 'number')
+      .sort((a, b) => a - b);
+    myDivisionPlace = { place: ranks.indexOf(myRow.rank) + 1, size: ranks.length, name: div.name };
+  }
+}
+
+const trend = (r: PeckingOrderData['rankings'][number]) => {
+  if (r.previousRank == null || r.trend === 'flat') return { glyph: '–', label: 'no change', cls: 'flat' };
+  const d = Math.abs(r.previousRank - r.rank);
+  return r.trend === 'up'
+    ? { glyph: `▲${d}`, label: `up ${d}`, cls: 'up' }
+    : { glyph: `▼${d}`, label: `down ${d}`, cls: 'down' };
+};
+const name = (id: string) => teams[id]?.name ?? `Team ${id}`;
+---
+
+{issue && top.length > 0 && (
+  <section class="pkg-po" aria-labelledby="pkg-po-title">
+    <div class="pkg-po__head">
+      <h2 id="pkg-po-title">The Pecking Order</h2>
+      <span class="pkg-po__week">Week {issue.week}</span>
+    </div>
+    {issue.headline && <p class="pkg-po__headline">{issue.headline}</p>}
+    <ol class="pkg-po__list">
+      {top.map((r) => {
+        const t = trend(r);
+        return (
+          <li class:list={['pkg-po__row', { 'pkg-po__row--mine': r.franchiseId === mine }]}>
+            <span class="pkg-po__rank">{r.rank}</span>
+            {teams[r.franchiseId]?.icon && <img src={teams[r.franchiseId].icon} alt="" width="28" height="28" loading="lazy" />}
+            <a class="pkg-po__team" href={teamHref(r.franchiseId)}>{name(r.franchiseId)}</a>
+            <span class={`pkg-po__trend pkg-po__trend--${t.cls}`} aria-label={t.label}>{t.glyph}</span>
+            <span class="pkg-po__ppg">{r.metrics.rolling3Ppg != null ? r.metrics.rolling3Ppg.toFixed(1) : '—'}<small> L3</small></span>
+          </li>
+        );
+      })}
+    </ol>
+    {myRow && myRow.rank > limit && (
+      <p class="pkg-po__mine">
+        <strong>{name(myRow.franchiseId)}</strong> sit <strong>#{myRow.rank}</strong> of {issue.rankings.length}
+        {myDivisionPlace && <> · {myDivisionPlace.place} of {myDivisionPlace.size} in the {myDivisionPlace.name}</>}
+        {trend(myRow).cls !== 'flat' && <> · {trend(myRow).label}</>}
+      </p>
+    )}
+    <a class="pkg-po__more" href={columnHref}>
+      {issue.topN ? `Read the top ${issue.topN} and every division →` : 'Read the full column →'}
+    </a>
+  </section>
+)}
+
+<style>
+  .pkg-po {
+    background: var(--card-bg);
+    border: 1px solid var(--content-border);
+    border-radius: var(--radius-lg);
+    padding: 1rem 1.25rem;
+    color: var(--page-text);
+  }
+  .pkg-po__head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
+  .pkg-po__head h2 { margin: 0; font-size: 1.15rem; color: var(--league-accent); }
+  .pkg-po__week {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--content-text-muted);
+  }
+  .pkg-po__headline { margin: 0.35rem 0 0.75rem; font-weight: 700; }
+  .pkg-po__list { list-style: none; margin: 0; padding: 0; }
+  .pkg-po__row {
+    display: grid;
+    grid-template-columns: 1.75rem 28px minmax(0, 1fr) auto 4.5rem;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.45rem 0.35rem;
+    border-bottom: 1px solid var(--content-border);
+  }
+  .pkg-po__row:last-child { border-bottom: none; }
+  .pkg-po__row--mine { background: var(--nav-active-bg); border-radius: var(--radius-md); }
+  .pkg-po__row img { border-radius: var(--radius-sm); }
+  .pkg-po__rank { font-family: var(--font-display); font-size: 1.25rem; color: var(--color-primary); text-align: center; }
+  .pkg-po__team { color: inherit; font-weight: 700; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pkg-po__team:hover { color: var(--color-primary); }
+  .pkg-po__trend { font-size: 0.8rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+  /* The -dark steps are the text-safe ones in each theme (tokens.css / tokens-dark.css). */
+  .pkg-po__trend--up { color: var(--color-success-dark); }
+  .pkg-po__trend--down { color: var(--color-error-dark); }
+  .pkg-po__trend--flat { color: var(--content-text-muted); }
+  .pkg-po__ppg { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+  .pkg-po__ppg small { font-weight: 400; color: var(--content-text-muted); }
+  .pkg-po__mine { margin: 0.75rem 0 0; font-size: 0.92rem; color: var(--content-text-muted); }
+  .pkg-po__mine strong { color: var(--page-text); }
+  .pkg-po__more { display: inline-block; margin-top: 0.75rem; font-weight: 600; color: var(--color-primary-light); }
+</style>
