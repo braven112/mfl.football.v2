@@ -1670,3 +1670,46 @@ button.lv-card:focus-visible {
   font-weight: var(--font-weight-bold);
   color: var(--page-text);
 }
+
+/* ── /live/standings — every watched league's table under one switch ── */
+
+.lv-live-standings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.lv-live-standings__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+}
+
+.lv-live-standings__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--page-text);
+}
+
+/* One column on a phone, two once each table has room for its four columns. */
+.lv-live-standings__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--spacing-lg);
+}
+
+@media (min-width: 900px) {
+  .lv-live-standings__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.lv-live-standings__held {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--content-text-muted);
+}

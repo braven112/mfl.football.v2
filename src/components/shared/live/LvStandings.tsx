@@ -40,6 +40,12 @@ export interface LvStandingsProps {
   matchups?: readonly LiveMatchup[];
   /** Starting view. Live unless a story says otherwise. */
   initialMode?: StandingsMode;
+  /**
+   * A view chosen OUTSIDE this table. When set, the table follows it and draws
+   * no toggle of its own — `/live/standings` stacks one table per league under
+   * a single switch, and a second switch per table would let them disagree.
+   */
+  mode?: StandingsMode;
 }
 
 const MODE_LABEL: Record<StandingsMode, string> = {
@@ -98,8 +104,10 @@ export default function LvStandings({
   leagueName,
   matchups = [],
   initialMode = DEFAULT_STANDINGS_MODE,
+  mode: controlledMode,
 }: LvStandingsProps): JSX.Element {
-  const [mode, setMode] = useState<StandingsMode>(initialMode);
+  const [ownMode, setMode] = useState<StandingsMode>(initialMode);
+  const mode = controlledMode ?? ownMode;
   const view = useMemo(
     () => (rows === null ? null : projectStandings(rows, matchups, mode)),
     [rows, matchups, mode],
@@ -122,19 +130,21 @@ export default function LvStandings({
   return (
     <div className="lv-standings-wrap">
       {/* Toggle buttons, the same pattern as Scores / Standings above. */}
-      <div className="lv-tabs lv-tabs--mode" role="group" aria-label="Standings view">
-        {STANDINGS_MODES.map((m) => (
-          <button
-            key={m}
-            type="button"
-            className={`lv-tabs__btn${mode === m ? ' lv-tabs__btn--on' : ''}`}
-            aria-pressed={mode === m}
-            onClick={() => setMode(m)}
-          >
-            {MODE_LABEL[m]}
-          </button>
-        ))}
-      </div>
+      {controlledMode === undefined && (
+        <div className="lv-tabs lv-tabs--mode" role="group" aria-label="Standings view">
+          {STANDINGS_MODES.map((m) => (
+            <button
+              key={m}
+              type="button"
+              className={`lv-tabs__btn${mode === m ? ' lv-tabs__btn--on' : ''}`}
+              aria-pressed={mode === m}
+              onClick={() => setMode(m)}
+            >
+              {MODE_LABEL[m]}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="lv-standings">
         <table className="lv-standings__table">
           <caption className="lv-standings__caption">

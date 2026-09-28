@@ -149,6 +149,7 @@ describe('MFL app sign-in wiring', () => {
     'src/layouts/MflAppLayout.astro',
     'src/pages/live/index.astro',
     'src/pages/live/settings.astro',
+    'src/pages/live/standings.astro',
   ];
 
   it.each(SURFACES)('%s links to /login, not a league login page', (rel) => {

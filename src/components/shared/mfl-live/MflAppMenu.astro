@@ -63,6 +63,7 @@ const { leagueLinks, ownerName, signedIn, signInHref, currentPath, showAnalytics
  */
 const BOARD_LINKS = [
 	{ href: '/live', label: 'Live board', icon: 'board', requiresAuth: false },
+	{ href: '/live/standings', label: 'Live standings', icon: 'standings', requiresAuth: false },
 	{ href: '/live/settings', label: 'Leagues & settings', icon: 'gear', requiresAuth: true },
 ] as const;
 
@@ -135,6 +136,15 @@ const showSignIn = !signedIn && !isCurrent(signInHref.split('?')[0]);
 									<path d="M10 20V4" />
 									<path d="M16 20v-7" />
 									<path d="M3 20h18" />
+								</Fragment>
+							) : link.icon === 'standings' ? (
+								<Fragment>
+									<path d="M8 6h13" />
+									<path d="M8 12h13" />
+									<path d="M8 18h13" />
+									<path d="M3 6h1" />
+									<path d="M3 12h1" />
+									<path d="M3 18h1" />
 								</Fragment>
 							) : (
 								<Fragment>
