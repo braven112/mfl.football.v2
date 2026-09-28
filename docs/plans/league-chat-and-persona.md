@@ -99,6 +99,58 @@ settings:
   post GroupMe-only. Route each through `chatConfigFor` when a Slack league
   turns that feature on.
 
+### Phase 2 — the persona everywhere an owner sees it
+
+The News Ops page (renamed from Schefter Ops) already names the league's
+persona. Owner-facing surfaces still say Schefter and must read the persona
+before 10105 launches:
+- the main nav's "Tip Schefter" item and the tip form
+- the Schefter-branded news pages, the byline and the post cards
+  (`SCHEFTER_AUTHORS`)
+- the page-directory titles and the OG images that say Schefter
+
+The resolver is `resolvePersona`. Build-time surfaces use the registry
+default; SSR surfaces use the commissioner's override.
+
+### Phase 2 — commissioner-editable team branding
+
+Decisions (2026-09-28):
+- **Commissioner only.** Owners do not edit their own team's branding.
+- **Everything is suggested first, then edited.** When a league is onboarded,
+  each team starts from a generated draft:
+  - name and logo from MFL
+  - `nameMedium` (15 characters or fewer), `nameShort` (10 or fewer),
+    `abbrev`, `aliases` and loader quips proposed by Claude
+  - `colorPrimary`, `colorSecondary`, `colorTertiary` and `colorQuaternary`
+    extracted from the MFL logo
+  - the dark variants (`colorPrimaryDark`, `colorSecondaryDark`) computed
+    with the Brand Book's ground rules, never guessed
+  The commissioner reviews and edits the draft rather than starting blank.
+  With 99 teams in 10105, that is the difference between usable and not.
+- **Image uploads.** Icon, dark icon, banner and chat crest go to Vercel
+  Blob, reusing the suggestion box's uploader (`ImageUploader.tsx`,
+  `/api/suggestions/upload`). The MFL logo is the starting suggestion.
+- **Every league, behind a registry flag** (`features.brandingEditor`): on for
+  10105 and new leagues, off for TheLeague and the AFL until chosen, because
+  their branding is hand-curated.
+- **Publishing takes 2–3 minutes.** Save dispatches a workflow
+  (`src/utils/workflow-dispatch.ts`, the announce composer's pattern) that
+  writes the league's `src/data/<league>.config.json`, commits it and lets
+  the deploy rebuild. Branding is read at build time in hundreds of places,
+  so the committed file stays the single source of truth; a live override
+  would reach only the SSR pages and split the site.
+- **Validation happens before commit:**
+  - name limits (`MAX_TEAM_NAME_LENGTH`, `MAX_SHORT_NAME_LENGTH`)
+  - hex colours, and the contrast rules in
+    `docs/claude/rules/theming-and-assets.md`
+  - https image URLs on our Blob host only
+  - a new or retired name also updates `aliases`, because Schefter's
+    redaction must cover every name a team has had
+    (`docs/claude/rules/schefter.md`)
+- **Throwback eras are out of scope** for the first cut. The editor changes
+  only the CURRENT identity. Era rewrites have their own recompute chain
+  (`docs/claude/insights/features/throwback-week.md`).
+
 ## Phase 3 — later
 
 - Pecking Order at 99-team scale.
