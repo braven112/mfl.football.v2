@@ -1,6 +1,6 @@
 # League chat providers + commissioner-editable news persona
 
-Status: Phases 1 and 2 done (PR #1255, `claude/slack-integration-groupme-ttsw77`): Slack, the persona everywhere, onboarding 10105 as `archies`, the platform super admin, the branding editor and the league's own logo. Phase 3 (Archie's look and homepage) is done except the MFL calendar sync, which waits on co-commissioner access.
+Status: Phases 1 and 2 done (PR #1255, `claude/slack-integration-groupme-ttsw77`): Slack, the persona everywhere, onboarding 10105 as `archies`, the platform super admin, the branding editor and the league's own logo. Phase 3 (Archie's look and homepage) is done except the MFL calendar sync, which waits on co-commissioner access. Phase 4 (the Pecking Order at 99 teams, with a homepage card) is done.
 
 ## Why
 
@@ -124,11 +124,11 @@ Still open for archies:
   This is the main risk.
 - Set the two Slack secrets (Vercel + GitHub Actions) once the client installs the app.
 - Confirm the league's time zone and trade deadline (both TODO in the registry).
-- Show the persona's name and avatar on the site's news byline (today
-  `SCHEFTER_AUTHORS` in `src/types/schefter.ts` is static).
-- Other chat senders (Roger reminders, the rumor mill, the Pecking Order) still
-  post GroupMe-only. Route each through `chatConfigFor` when a Slack league
-  turns that feature on.
+- ~~Show the persona's name and avatar on the news byline~~ — done (Phase 2,
+  persona everywhere).
+- Other chat senders (Roger reminders, the rumor mill) still post
+  GroupMe-only. Route each through `chatConfigFor` when a Slack league turns
+  that feature on. (The Pecking Order already reaches Slack — Phase 4.)
 
 ### Phase 2 — the persona everywhere an owner sees it
 
@@ -360,5 +360,8 @@ What landed:
 
 ## Later
 
-- Pecking Order at 99-team scale.
+- ~~Pecking Order at 99-team scale~~ — done (Phase 4).
+- **Per-division player pools** (the main risk, see Phase 2 "Still open"):
+  required before Archie's gets any free-agent, waiver or player-availability
+  page.
 - Two-way Slack (mentions → tips) through the Events API, if a client wants it.
