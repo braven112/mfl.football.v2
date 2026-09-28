@@ -36,7 +36,7 @@ import { createMFLApiClient, type RosterEntry } from './mfl-matchup-api';
 import { getLeagueById, leagueClock, type LeagueDefinition } from '../config/leagues';
 import { resolveWaiverWindow, describeWaiverWindow } from './waiver-window';
 import { DEFAULT_VIEWER_CLOCK, type ViewerClock } from './viewer-preferences';
-import { readBidRules, freeAgencyIsLeagueWide, poolOfFranchise, activeRosterIdsOf, rosterSlotOf } from './waiver-claim';
+import { readBidRules, freeAgencyIsLeagueWide, poolOfFranchise, bidBalance, activeRosterIdsOf, rosterSlotOf } from './waiver-claim';
 import { claimVerb, type ClaimContext } from './claim-context-shape';
 import { isAuctionSeason } from './auction-window';
 import type { AuthUser } from './auth';
@@ -207,7 +207,7 @@ export async function resolveClaimContext(user: AuthUser, clock: ViewerClock = D
     ? leaguePayload.franchises.franchise
     : [leaguePayload.franchises?.franchise].filter(Boolean);
   const mine = franchises.find((f: any) => String(f.id) === String(user.franchiseId));
-  const balance = Math.floor(Number(mine?.bbidAvailableBalance ?? 0));
+  const balance = bidBalance(mine?.bbidAvailableBalance);
 
   // getRosterEntries, NOT getRosters: the form's open-slot line and the write
   // endpoint's roster-limit check both turn on MFL's per-player `status`, and

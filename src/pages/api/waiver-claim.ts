@@ -45,6 +45,7 @@ import { JSON_HEADERS_NO_STORE as JSON_HEADERS, handledFailure } from '../../uti
 import { resolveWaiverWindow } from '../../utils/waiver-window';
 import { summarizeMflPage } from '../../utils/mfl-page-summary';
 import { fetchLockedPlayers, isPlayerLocked } from '../../utils/mfl-locked-players';
+import { checkRateLimit } from '../../utils/rate-limit';
 import {
   readBidRules,
   readPendingWaiverPlayerIds,
@@ -53,6 +54,8 @@ import {
   activeRosterIdsOf,
   freeAgencyIsLeagueWide,
   poolOfFranchise,
+  bidBalance,
+  formatBidAmount,
   type WaiverClaim,
 } from '../../utils/waiver-claim';
 
@@ -96,6 +99,11 @@ export const POST: APIRoute = async ({ request }) => {
   if (!user) return fail('Authentication required. Please sign in.', 401);
   if (!user.id) return fail('MFL session not found. Please sign in again.', 401);
   if (!user.franchiseId) return fail('No franchise associated with your account.', 403);
+
+  // Authenticated write that fans out to MFL (the header always said so; the
+  // limit itself was missing). Same budget as the filed-claims route.
+  const limit = await checkRateLimit('waiver-claim', user.id, 30, 60);
+  if (!limit.allowed) return fail('Too many requests — wait a moment and try again.', 429);
 
   try {
     const { claims, round, year: clientYear } = (await request.json()) as {
@@ -174,7 +182,7 @@ export const POST: APIRoute = async ({ request }) => {
       ? leaguePayload.franchises.franchise
       : [leaguePayload.franchises?.franchise].filter(Boolean);
     const myFranchise = franchises.find((f: any) => String(f.id) === String(user.franchiseId));
-    const availableBalance = Math.floor(Number(myFranchise?.bbidAvailableBalance ?? 0));
+    const availableBalance = bidBalance(myFranchise?.bbidAvailableBalance);
 
     const mflClient = createMFLApiClient({ leagueId, year: String(year), mflUserId: user.id });
     // getRosterEntries, NOT getRosters: the roster-limit check below needs MFL's
@@ -375,15 +383,21 @@ export const POST: APIRoute = async ({ request }) => {
             // endpoint" (docs/claude/insights/domains/mfl-api.md) earned its
             // place again here.
             //
-            // Sent as bare integer dollars: MFL parses this field itself and
-            // says so — "must not include letters or symbols" — so no `$`, no
-            // commas, no decimals. `validateClaims` has already guaranteed a
+            // Sent as bare integer dollars in a whole-dollar league: MFL parses
+            // this field itself and says so — "must not include letters or
+            // symbols" — so no `$`, no commas. A CENTS league (archies:
+            // bbidIncrement 0.01) sends two decimals ("12.50") via
+            // formatBidAmount: its own increment says MFL takes cents there,
+            // but that form has not yet been proven against a live claim —
+            // the owner chose to enable it (2026-09-28), and MFL's refusal text
+            // is surfaced by the page-summary check below if it objects.
+            // `validateClaims` has already guaranteed a
             // finite number at or above the minimum and on the increment for a
             // bbid league, so there is nothing left to coerce.
             //
             // Omitted entirely for a priority league rather than sent empty:
             // the AFL's form has no such field and its claims work today.
-            ...(rules.blindBid ? { BBID_AMT: String(c.bid) } : {}),
+            ...(rules.blindBid ? { BBID_AMT: formatBidAmount(Number(c.bid), rules.increment) } : {}),
             ROUND: String(round),
             COMMENTS: '',
             // `Submit Request`, NOT `Perform Add/Drop`. MFL's server dispatches

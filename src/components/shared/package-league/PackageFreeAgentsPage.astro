@@ -7,8 +7,12 @@
  * The page opens on the viewer's own division; `?division=` looks at another.
  * Every row also says how many divisions hold the player right now.
  *
- * VIEW ONLY: moves are made on MFL (the add/drop link at the foot). Wiring
- * claims is a follow-up (docs/plans/league-chat-and-persona.md, Phase 5).
+ * CLAIMS (Phase 6): the ⋮ button on a row opens the shared action sheet
+ * (WatchListBridge) → the shared claim form (WaiverClaimModal, inside
+ * PlayerDetailsModal) → /api/waiver-claim, which files into the OWNER'S own
+ * division whatever division is being browsed. So a row is only offered as
+ * claimable in the viewer's own division; the sheet re-checks the viewer's
+ * live claim context on top (docs/claude/insights/features/waiver-claims.md).
  *
  * Rosters are read live (the Redis franchise cache, ~2 min) and fall back to
  * the committed feed. Server-rendered with plain links for every filter, so
@@ -25,12 +29,19 @@ import { getCachedRosterFranchises } from '../../../utils/mfl-roster-cache';
 import { fetchLockedPlayers } from '../../../utils/mfl-locked-players';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { loginUrlForRequest } from '../../../utils/login-redirect';
+import PlayerDetailsModal from '../../theleague/PlayerDetailsModal.astro';
+import WatchListBridge from '../WatchListBridge.astro';
+import SignInModal from '../SignInModal.astro';
+import WaiverClaimsPanel from '../WaiverClaimsPanel.astro';
+import { readBidRules } from '../../../utils/waiver-claim';
+import { claimVerb as claimVerbFor } from '../../../utils/claim-context';
 import {
   poolStructure,
   startingPositions,
   resolvePool,
   heldByPool,
   buildFreeAgents,
+  displayName,
 } from '../../../utils/package-free-agents';
 
 interface Props {
@@ -98,6 +109,33 @@ if (structure && pool) {
   });
 }
 const shown = rows.slice(0, limit);
+
+// ── Claims ──────────────────────────────────────────────────────────────────
+const claimRules = readBidRules((leagueJson as any)?.league ?? {});
+const claimVerb = claimVerbFor(claimRules.system);
+const nameOf = new Map<string, string>(
+  ((playersFeed as any)?.players?.player ?? []).map((p: any) => [String(p.id), String(p.name ?? p.id)]),
+);
+const myRoster = mine
+  ? ([] as any[])
+      .concat((rosters as any[]).find((f: any) => String(f.id) === mine)?.player ?? [])
+      .map((p: any) => ({ id: String(p.id), name: displayName(nameOf.get(String(p.id)) ?? String(p.id)) }))
+      .sort((a, b) => a.name.localeCompare(b.name))
+  : [];
+// Filed claims, managed by the same shared panel as TheLeague and the AFL.
+const claimsPanelConfig = { canManage: !!mine && myRoster.length > 0, leagueId: league.id, system: claimRules.system, roster: myRoster };
+// A claim always lands in the owner's OWN division, so only that division's
+// rows are offered as claimable. Signed out, the sheet offers the sign-in
+// instead (claim-resume reopens the claim after it).
+const claimableView = mine ? pool === myPool : true;
+const signInConfig = {
+  leagueId: league.id,
+  seasonYear: year ?? getLeagueYearForSlug(league.slug),
+  redirectUrl: `${Astro.url.pathname}${Astro.url.search}`,
+  logoSrc: league.logo?.light ?? '',
+  logoAlt: `${league.name} logo`,
+  subtitle: 'Sign in with your MFL credentials to claim or watch players here',
+};
 const poolCount = structure?.ids.length ?? 0;
 
 const href = (params: Record<string, string | null>) => {
@@ -156,6 +194,7 @@ const poolName = pool && structure ? structure.names[pool]?.name ?? pool : '';
               <tr>
                 <th class="pkg-fa__num">#</th>
                 <th class="pkg-fa__player">Player</th>
+                <th class="pkg-fa__act" aria-label={`${claimVerb} or watch this player`}>{claimVerb}</th>
                 <th>Pts</th>
                 <th>Proj</th>
                 <th>ADP</th>
@@ -174,6 +213,26 @@ const poolName = pool && structure ? structure.names[pool]?.name ?? pool : '';
                       {row.locked && <span class="pkg-fa__tag" title="Recently dropped: MFL locks him until the lock lifts">Locked</span>}
                     </span>
                   </td>
+                  <td class="pkg-fa__act">
+                    <button
+                      type="button"
+                      class="pa-kebab"
+                      data-pa-open
+                      data-pa-claimable={claimableView && !row.locked ? 'true' : 'false'}
+                      data-pa-id={row.id}
+                      data-pa-name={row.name}
+                      data-pa-pos={row.position}
+                      data-pa-team={row.team}
+                      data-pa-espn=""
+                      data-pa-headshot=""
+                      data-pa-franchise=""
+                      data-pa-sub={row.locked ? 'Free agent · Locked (recently dropped)' : `Free agent in the ${poolName}`}
+                      aria-label={`Actions for ${row.name}`}
+                      title="Player actions"
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="12" cy="19" r="2" /></svg>
+                    </button>
+                  </td>
                   <td>{fmt(row.ytd)}</td>
                   <td>{fmt(row.projected)}</td>
                   <td>{row.adpRank ?? '—'}</td>
@@ -191,14 +250,25 @@ const poolName = pool && structure ? structure.names[pool]?.name ?? pool : '';
           </a>
         )}
 
+        {mine && pool !== myPool && (
+          <p class="pkg-fa__note">
+            Browsing another division — claims always go into your own.{' '}
+            <a href={href({ division: myPool, limit: null })}>Back to your division</a>
+          </p>
+        )}
+
         <p class="pkg-fa__foot">
           {rosterSource === 'live' ? 'Rosters are live from MFL (refreshed every couple of minutes).' : 'Rosters as of the last sync.'}
-          {' '}View only —
-          {addDropUrl ? <a href={addDropUrl} target="_blank" rel="noopener"> make moves on MFL ↗</a> : ' make moves on MFL.'}
+          {addDropUrl && <> You can also <a href={addDropUrl} target="_blank" rel="noopener">make moves on MFL ↗</a></>}
         </p>
       </>
     )}
+
+    {mine && <WaiverClaimsPanel config={claimsPanelConfig} />}
+    {!mine && <SignInModal config={signInConfig} />}
+    <WatchListBridge signedIn={!!mine} claimVerb={claimVerb} promptSignIn={!mine} />
   </div>
+  <PlayerDetailsModal hideContract={true} />
 </TheLeagueLayout>
 
 <style>
@@ -263,6 +333,9 @@ const poolName = pool && structure ? structure.names[pool]?.name ?? pool : '';
     color: var(--page-text);
   }
   .pkg-fa__tag--injury { background: var(--color-error-light); color: var(--color-error-dark); }
+  .pkg-fa__table th.pkg-fa__act, .pkg-fa__table td.pkg-fa__act { text-align: center; width: 3.5rem; }
+  .pkg-fa__note { margin-top: 0.75rem; font-size: 0.9rem; color: var(--content-text-muted); }
+  .pkg-fa__note a { color: var(--color-primary-light); font-weight: 600; }
   .pkg-fa__empty { color: var(--content-text-muted); }
   .pkg-fa__more { display: inline-block; margin-top: 0.75rem; font-weight: 600; color: var(--color-primary-light); }
   .pkg-fa__foot { margin-top: 1rem; font-size: 0.85rem; color: var(--content-text-muted); }
