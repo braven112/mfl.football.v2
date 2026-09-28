@@ -17,6 +17,7 @@ import { getLeagueYearForSlug } from '../../utils/league-year';
 import { getSearchPath, resolveDirectoryHref, resolveLeaguePath } from '../../utils/nav-utils';
 import { spriteUrl } from '../../utils/sprite-url';
 import NavToggleButton from '../nav/NavToggleButton.astro';
+import navConfig from '../../config/nav-config.json';
 
 interface Props {
   host?: string;
@@ -44,6 +45,17 @@ const envYear = getLeagueYearForSlug(getLeagueContext(Astro.url).slug).toString(
 const league = getLeagueContext(Astro.url);
 const isAFL = league.slug === 'afl-fantasy';
 const isBB1 = league.slug === 'best-ball-1';
+// A package league (archies): opt-in nav plus its own mark in the registry.
+// Its header is DERIVED — logo and short name from the registry, icons from
+// its own nav-config section — so the next package league needs no edit here.
+const leagueDef = getLeagueBySlug(league.slug);
+const pkg = !isAFL && !isBB1 && leagueDef?.optInNav && leagueDef.logo ? leagueDef : null;
+const pkgLinks = pkg
+  ? navConfig.sections
+      .filter((s: any) => s.leagueOnly === pkg.navSlug)
+      .flatMap((s: any) => s.links)
+      .slice(0, 5)
+  : [];
 
 // Use the year passed from the page, or fall back to the environment variable/current year.
 const year = (Astro.props.year || envYear).toString();
@@ -119,9 +131,14 @@ const searchHref = searchPath
   <div class="container">
     <div class="row">
       <div class="col left">
-        <a class="league-link" href={resolveLeaguePath(isAFL ? "/afl-fantasy" : isBB1 ? "/best-ball-1" : "/theleague", hideLeaguePrefix)}>
+        <a class="league-link" href={resolveLeaguePath(pkg ? `/${pkg.slug}` : isAFL ? "/afl-fantasy" : isBB1 ? "/best-ball-1" : "/theleague", hideLeaguePrefix)}>
           <div class="league_logo" id="league_logo">
-            {isAFL ? (
+            {pkg ? (
+              <>
+                <img src={pkg.logo!.light} alt={`${pkg.name} logo`} class="header-logo-img header-logo-img--light" />
+                <img src={pkg.logo!.dark} alt={`${pkg.name} logo`} class="header-logo-img header-logo-img--dark" />
+              </>
+            ) : isAFL ? (
               <>
                 <!-- AFL Logo — dual variant, CSS-swapped on html.dark -->
                 <img src="/assets/logos/afl-logo.svg" alt="AFL Logo" class="header-logo-img header-logo-img--light" />
@@ -153,7 +170,9 @@ const searchHref = searchPath
             )}
           </div>
           <div class="leaguename">
-            {isAFL ? (
+            {pkg ? (
+              <span class="leaguename--pkg">{pkg.shortName ?? pkg.name}</span>
+            ) : isAFL ? (
               <>
                 <span class="leaguename--afl-name">AFL</span>
               </>
@@ -175,7 +194,19 @@ const searchHref = searchPath
       <div class="col right">
         <!-- Desktop Navigation Icons -->
         <nav class:list={["desktop-nav", { "desktop-nav--hide-mobile": hideMobileNavIcons }]} aria-label="Main navigation">
-          {isBB1 ? (
+          {pkg ? (
+            <>
+              <!-- Package league: its own nav-config section's first links. -->
+              {pkgLinks.map((l: any) => (
+                <a href={resolveLeaguePath(`/${pkg.slug}${l.path}`, hideLeaguePrefix)} class="nav-icon-link" title={l.label}>
+                  <svg class="nav-icon" aria-hidden="true">
+                    <use href={`${spriteUrl}#icon-${l.icon}`}></use>
+                  </svg>
+                  <span class="nav-label">{l.label}</span>
+                </a>
+              ))}
+            </>
+          ) : isBB1 ? (
             <>
               <!-- Best-ball leagues are draft-only: no lineups or free agents —
                    the draft surfaces plus the scoreboard ARE the nav. -->
@@ -534,6 +565,11 @@ const searchHref = searchPath
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+  }
+
+  .leaguename--pkg {
+    font-weight: 700;
+    color: var(--logo-name-secondary-color, #1c497c);
   }
 
   .leaguename--bb-name {

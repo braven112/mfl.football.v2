@@ -1,6 +1,6 @@
 # League chat providers + commissioner-editable news persona
 
-Status: Phase 1 shipped on `claude/slack-integration-groupme-ttsw77`. Phases 2–3 not started.
+Status: Phase 1 done. Phase 2 piece 1 (onboard 10105 as `archies`) done on `claude/slack-integration-groupme-ttsw77`; the persona-everywhere and branding-editor pieces are next.
 
 ## Why
 
@@ -81,16 +81,49 @@ settings:
   token_rotation_enabled: false
 ```
 
-## Phase 2 — onboard 10105 (next)
+## Phase 2 — onboard 10105 (done: `archies`, mfl.football/archies)
 
-- Registry entry with every feature flag set explicitly, and
-  `chat: { provider: 'slack', ... }`.
-- Data sync, homepage with transactions (site only, not Slack), and a news page.
+What landed, and where the next package league plugs in:
+- **Registry** (`leagues-data.mjs` → `archies`): every feature flag set
+  explicitly, `chat: slack`, June 1 rollover, and the package-league fields:
+  `optInNav`, `advertiseOnSharedHost: false`, `shortName`, `logo`,
+  `themeColor`. The shared header, layout, footer and nav READ these, so the
+  next package league needs no edits in those files.
+- **Suggested branding**: `node scripts/suggest-league-branding.mjs --league <slug> --write`.
+  Names are derived by rule; colours come from the MFL art, weighted by
+  coverage × chroma, because this package's art is busy illustration where
+  the most common colour is the background. MFL's `icon` and `logo` are the
+  same 1500×636 banner, so the banner is used as-is and a 128px centre crop
+  becomes the icon (`public/assets/<slug>/icons/`). The script refuses to
+  overwrite edited branding without `--force`.
+- **Pages** (thin routes under `src/pages/archies/`): the home page, standings,
+  rosters, transactions, news, the news article page (`news/[id]`),
+  schedule-strength (The Gauntlet), the brand book and team brand pages,
+  login, forbidden, and admin/news. The shared bodies live in
+  `src/components/shared/package-league/` and `SchefterArticlePage.astro`.
+  The view models are in `src/utils/package-league.ts`; standings are GROUPED
+  by division and never re-sorted.
+- **Sync**: the archies row in `roster-sync.yml`. The Gauntlet runs on
+  Wednesdays in `schefter-articles.yml`. `scripts/lib/article-leagues.mjs`
+  limits archies to that one article type, and posts go to Slack through the
+  announce step (`SLACK_ARCHIES_BOT_TOKEN`, `SLACK_ARCHIES_CHANNEL_ID`).
+- **Findings the guards surfaced**:
+  - Seven archies franchises are named exactly for NFL clubs. That is allowed
+    in `tests/nfl-name-match.test.ts`: the name fallback is MFL-Live-only.
+  - Its bids are FAAB dollars with cent increments, so the transaction-parse
+    invariant takes a per-league budget.
+  - The shared parser rounds bids to whole dollars, so a $15.01 bid shows as
+    $15. That parser also feeds TheLeague's contract math, which is why it has
+    not changed yet.
+
+Still open for archies:
+
 - 99 franchises in 9 divisions, each division its own player pool
   (`playerLimitUnit: DIVISION`). Anything roster- or free-agent-scoped must be
   keyed per division, generalizing the AFL's two-conference split to N pools.
   This is the main risk.
-- Wire the two Slack secrets into `schefter-articles.yml`'s announce step.
+- Set the two Slack secrets (Vercel + GitHub Actions) once the client installs the app.
+- Confirm the league's time zone and trade deadline (both TODO in the registry).
 - Show the persona's name and avatar on the site's news byline (today
   `SCHEFTER_AUTHORS` in `src/types/schefter.ts` is static).
 - Other chat senders (Roger reminders, the rumor mill, the Pecking Order) still

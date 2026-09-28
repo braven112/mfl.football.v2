@@ -10,6 +10,7 @@ const LEAGUE_PAGE_DIRS: Record<LeagueSlug, string> = {
   theleague: path.join(REPO_ROOT, 'src/pages/theleague'),
   afl: path.join(REPO_ROOT, 'src/pages/afl-fantasy'),
   bb1: path.join(REPO_ROOT, 'src/pages/best-ball-1'),
+  archies: path.join(REPO_ROOT, 'src/pages/archies'),
 };
 
 interface NavLinkEntry {

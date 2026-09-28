@@ -1,0 +1,34 @@
+---
+/**
+ * News Ops — /archies/admin/news
+ *
+ * Thin wrapper: league-scoped admin gate + layout. The dashboard lives in
+ * the shared components/schefter/AdminDashboard.astro; the stats API it
+ * fronts is JWT-league-scoped the same way.
+ */
+export const prerender = false;
+
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import AdminDashboard from '../../../components/schefter/AdminDashboard.astro';
+import PersonaEditor from '../../../components/schefter/PersonaEditor.astro';
+import { getAuthUser, isCommissionerOrAdmin, isAuthorizedForLeague } from '../../../utils/auth';
+import { loginUrlForRequest, forbiddenPathFor } from '../../../utils/login-redirect';
+import { getLeagueBySlug } from '../../../config/leagues';
+
+// League-scoped gate: commissioner/admin AND the session must belong to
+// Archie's league — another league's commissioner session must not open its ops
+// dashboard.
+const user = getAuthUser(Astro.request);
+const archies = getLeagueBySlug('archies');
+if (!user) return Astro.redirect(loginUrlForRequest(Astro, getLeagueBySlug('archies')!));
+if (!archies) return Astro.redirect('/');
+if (!isCommissionerOrAdmin(user) || !isAuthorizedForLeague(user, archies.id)) {
+  return Astro.rewrite(forbiddenPathFor(archies, isCommissionerOrAdmin(user) ? 'league' : 'commissioner'));
+}
+---
+
+<TheLeagueLayout title="News Ops — Admin">
+  <AdminDashboard base="/archies" navSlug="archies">
+    <PersonaEditor slot="settings" navSlug="archies" />
+  </AdminDashboard>
+</TheLeagueLayout>

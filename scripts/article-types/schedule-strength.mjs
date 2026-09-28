@@ -208,6 +208,8 @@ export function relatedLinks(_enrichment, { league = 'theleague' } = {}) {
     featureLink(league, 'trade-builder'),
     featureLink(league, 'players'),
     featureLink(league, 'playoffs'),
+    // The one plug a package league (archies) has at launch.
+    featureLink(league, 'transactions'),
   );
 }
 

@@ -1,0 +1,196 @@
+---
+/**
+ * Rosters for a package league — one team at a time, picked from a list
+ * grouped by division. 99 teams is too many to render at once, so the page
+ * shows the requested team (`?team=`), else the viewer's own, else the first.
+ *
+ * The picker is a plain GET form: no client script, so nothing to re-init
+ * under the ClientRouter.
+ *
+ * Player names come from the site's global player map. MFL player ids are
+ * global, so this league's union composes with TheLeague's, the same fallback
+ * the transactions page uses.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../../theleague/Breadcrumbs.astro';
+import { getLeagueBySlug, type CanonicalLeagueSlug } from '../../../config/leagues';
+import { getAuthUser, franchiseIdForLeague } from '../../../utils/auth';
+import {
+  pickRosterTeam,
+  positionRank,
+  rosterPlayerIds,
+  type PackageDivision,
+  type PackageTeam,
+} from '../../../utils/package-league';
+import { loadSeasonFeed, resolveSeason, seasonsFromGlob, type LazyFeedGlob } from '../../../utils/mfl-feed-glob';
+import { getLeagueYearForSlug } from '../../../utils/league-year';
+import { getGlobalPlayerMap } from '../../../utils/player-map';
+import { franchiseSlug } from '../../../utils/franchise-marks';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+
+interface Props {
+  leagueSlug: CanonicalLeagueSlug;
+  rosterFeeds: LazyFeedGlob;
+  config: { teams: PackageTeam[]; divisions?: PackageDivision[] };
+}
+
+const { leagueSlug, rosterFeeds, config } = Astro.props;
+const league = getLeagueBySlug(leagueSlug)!;
+const hide = Astro.locals.hideLeaguePrefix ?? false;
+const r = (p: string) => resolveLeaguePath(p, hide);
+
+// Rosters are management-shaped: the LEAGUE year, not the season year.
+const years = seasonsFromGlob(rosterFeeds);
+const year = resolveSeason(null, years, getLeagueYearForSlug(league.slug));
+const feed = year ? await loadSeasonFeed(rosterFeeds, year) : null;
+
+const authUser = getAuthUser(Astro.request);
+const mine = franchiseIdForLeague(authUser, league.id);
+const teamId = pickRosterTeam(config.teams, Astro.url.searchParams.get('team'), mine);
+const team = config.teams.find((t) => t.franchiseId === teamId) ?? null;
+
+const primary = getGlobalPlayerMap(leagueSlug);
+const fallback = leagueSlug === 'theleague' ? primary : getGlobalPlayerMap('theleague');
+const STATUS_LABEL: Record<string, string> = { INJURED_RESERVE: 'IR', TAXI_SQUAD: 'Taxi' };
+
+const players = teamId
+  ? rosterPlayerIds(feed, teamId)
+      .map((p) => {
+        const who = primary.get(p.id) ?? fallback.get(p.id);
+        return {
+          id: p.id,
+          name: who?.name ?? `Player ${p.id}`,
+          position: who?.position ?? '',
+          nflTeam: who?.nflTeam ?? '',
+          headshot: who?.headshot ?? '',
+          status: STATUS_LABEL[p.status] ?? '',
+        };
+      })
+      .sort((a, b) => positionRank(a.position) - positionRank(b.position))
+  : [];
+
+// Picker: divisions in config order, teams alphabetically inside each.
+const divisions = config.divisions ?? [];
+const pickerGroups = [
+  ...divisions.map((d) => ({
+    label: d.name,
+    teams: config.teams.filter((t) => t.divisionId === d.id),
+  })),
+  { label: 'Other', teams: config.teams.filter((t) => !divisions.some((d) => d.id === t.divisionId)) },
+]
+  .filter((g) => g.teams.length > 0)
+  .map((g) => ({ ...g, teams: [...g.teams].sort((a, b) => a.name.localeCompare(b.name)) }));
+---
+
+<TheLeagueLayout title={`${team ? `${team.name} Roster` : 'Rosters'} | ${league.name}`}>
+  <div class="pkg-page">
+    <Breadcrumbs items={[{ label: league.name, href: `/${league.slug}` }, { label: 'Rosters' }]} />
+
+    <form class="pkg-roster__picker" method="get" action={r(`/${league.slug}/rosters`)}>
+      <label for="pkg-roster-team">Team</label>
+      <select id="pkg-roster-team" name="team">
+        {pickerGroups.map((g) => (
+          <optgroup label={g.label}>
+            {g.teams.map((t) => (
+              <option value={t.franchiseId} selected={t.franchiseId === teamId}>
+                {t.name}{t.franchiseId === mine ? ' (you)' : ''}
+              </option>
+            ))}
+          </optgroup>
+        ))}
+      </select>
+      <button type="submit">Show roster</button>
+    </form>
+
+    {team ? (
+      <section class="pkg-roster" aria-labelledby="pkg-roster-name">
+        <header class="pkg-roster__head">
+          {team.icon && <img src={team.icon} alt="" width="64" height="64" />}
+          <div>
+            <h1 id="pkg-roster-name">{team.name}</h1>
+            <p>
+              {team.division}
+              {' · '}
+              <a href={r(`/${league.slug}/brand/${franchiseSlug(team)}`)}>Team brand page</a>
+            </p>
+          </div>
+        </header>
+
+        {players.length > 0 ? (
+          <table class="pkg-roster__table">
+            <thead>
+              <tr>
+                <th scope="col">Pos</th>
+                <th scope="col">Player</th>
+                <th scope="col">NFL</th>
+                <th scope="col" class="pkg-roster__status-col">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {players.map((p) => (
+                <tr>
+                  <td class="pkg-roster__pos">{p.position}</td>
+                  <td>{p.name}</td>
+                  <td>{p.nflTeam}</td>
+                  <td class="pkg-roster__status-col">{p.status}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <p class="pkg-page__empty">No players on this roster yet.</p>
+        )}
+      </section>
+    ) : (
+      <p class="pkg-page__empty">No teams to show yet.</p>
+    )}
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .pkg-page { max-width: 900px; margin: 0 auto; padding: 1rem 1rem 3rem; }
+  .pkg-page__empty { color: var(--content-text-muted); }
+  .pkg-roster__picker {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0.75rem 0 1.25rem;
+  }
+  .pkg-roster__picker label { font-weight: 600; color: var(--page-text); }
+  .pkg-roster__picker select,
+  .pkg-roster__picker button {
+    font: inherit;
+    padding: 0.45rem 0.6rem;
+    border-radius: 8px;
+    border: 1px solid var(--content-border);
+    background: var(--card-bg);
+    color: var(--page-text);
+    max-width: 100%;
+  }
+  .pkg-roster__picker button { cursor: pointer; font-weight: 600; }
+  .pkg-roster {
+    background: var(--card-bg);
+    border: 1px solid var(--content-border);
+    border-radius: 12px;
+    padding: 1rem;
+  }
+  .pkg-roster__head { display: flex; align-items: center; gap: 0.9rem; margin-bottom: 0.75rem; }
+  .pkg-roster__head img { border-radius: 12px; flex: none; }
+  .pkg-roster__head h1 { margin: 0; font-size: 1.4rem; color: var(--page-text); }
+  .pkg-roster__head p { margin: 0.15rem 0 0; color: var(--content-text-muted); font-size: 0.9rem; }
+  .pkg-roster__head a { color: inherit; }
+  .pkg-roster__table { width: 100%; border-collapse: collapse; color: var(--page-text); font-size: 0.92rem; }
+  .pkg-roster__table th {
+    text-align: left;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    color: var(--content-text-muted);
+    padding: 0.35rem;
+    border-bottom: 1px solid var(--content-border);
+  }
+  .pkg-roster__table td { padding: 0.45rem 0.35rem; border-bottom: 1px solid var(--content-border); }
+  .pkg-roster__table tr:last-child td { border-bottom: none; }
+  .pkg-roster__pos { font-weight: 700; width: 3.5rem; }
+  .pkg-roster__status-col { text-align: right; color: var(--content-text-muted); }
+</style>

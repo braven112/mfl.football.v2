@@ -13,7 +13,7 @@
 /**
  * Supported league identifiers
  */
-export type LeagueSlug = 'theleague' | 'afl' | 'bb1';
+export type LeagueSlug = 'theleague' | 'afl' | 'bb1' | 'archies';
 
 /**
  * Link visibility modes

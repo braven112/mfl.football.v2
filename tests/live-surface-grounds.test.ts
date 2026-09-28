@@ -92,6 +92,8 @@ const DARK_SELECTOR: Record<LiveSurface, string> = {
   // bare `html.dark` value. That is deliberate and is asserted below.
   theleague: 'html.dark',
   bb1: 'html.dark',
+  // Same as Best Ball: no block of its own, so the bare html.dark value.
+  archies: 'html.dark',
   afl: 'html.dark[data-league="afl"]',
   mfl: 'html.dark[data-league="mfl"]',
 };

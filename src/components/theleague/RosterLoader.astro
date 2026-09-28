@@ -14,30 +14,36 @@ import '../../styles/roster-loader.css';
 import theleagueConfig from '../../data/theleague.config.json';
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 import bb1Config from '../../../data/best-ball-1/bb1.config.json';
+import archiesConfig from '../../../data/archies/archies.config.json';
+import type { LeagueSlug } from '../../types/nav';
 
 interface Props {
   /** Current league — picks which logo + lore the loader shows. */
-  league?: 'theleague' | 'afl' | 'bb1';
+  league?: LeagueSlug;
 }
 
 const { league = 'theleague' } = Astro.props;
-const logoUrl =
-  league === 'afl'
-    ? '/assets/logos/afl-logo.svg'
-    : league === 'bb1'
-      ? '/assets/logos/bestball-logo.svg'
-      : '/assets/logos/theleague-logo.svg';
-const logoDarkUrl =
-  league === 'afl'
-    ? '/assets/logos/afl-logo-dark.svg'
-    : league === 'bb1'
-      ? '/assets/logos/bestball-logo-dark.svg'
-      : '/assets/logos/theleague-logo-dark.svg';
+// Keyed by LeagueSlug so a new league is a type error here, not a silent
+// fall-through to TheLeague's logo.
+const LOGOS: Record<LeagueSlug, { light: string; dark: string }> = {
+  theleague: { light: '/assets/logos/theleague-logo.svg', dark: '/assets/logos/theleague-logo-dark.svg' },
+  afl: { light: '/assets/logos/afl-logo.svg', dark: '/assets/logos/afl-logo-dark.svg' },
+  bb1: { light: '/assets/logos/bestball-logo.svg', dark: '/assets/logos/bestball-logo-dark.svg' },
+  archies: { light: '/assets/logos/archies-logo.svg', dark: '/assets/logos/archies-logo-dark.svg' },
+};
+const logoUrl = (LOGOS[league] ?? LOGOS.theleague).light;
+const logoDarkUrl = (LOGOS[league] ?? LOGOS.theleague).dark;
 
 // Narration comes from the OFFICIAL per-league team data file: general league
 // flavor (`loaderLines`) + one or more quips per team (`loaderQuips`). Baked at
 // SSR for the current league; the leagues are fully independent.
-const cfg: any = league === 'afl' ? aflConfig : league === 'bb1' ? bb1Config : theleagueConfig;
+const CONFIGS: Record<LeagueSlug, any> = {
+  theleague: theleagueConfig,
+  afl: aflConfig,
+  bb1: bb1Config,
+  archies: archiesConfig,
+};
+const cfg: any = CONFIGS[league] ?? theleagueConfig;
 const loaderLines: string[] = [
   ...(cfg.loaderLines ?? []),
   ...cfg.teams.flatMap((t: any) => t.loaderQuips ?? []),

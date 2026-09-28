@@ -447,6 +447,100 @@ export const LEAGUES = {
     // redraft ADP is exactly the right opening board.
     defaultRankingSources: ['mfl-adp', 'espn', 'sharks'],
   },
+  /**
+   * Archie's Fantasy Football League — the first league on the standard custom
+   * package (docs/plans/league-chat-and-persona.md). 99 franchises in 9
+   * divisions, and every division is its OWN player pool
+   * (`playerLimitUnit: DIVISION`): the same player can be rostered once per
+   * division. Anything roster-, free-agent- or ownership-shaped must be keyed
+   * by division, the AFL's two-conference split generalized to N pools.
+   *
+   * Redraft (no salaries, contracts or keepers), head-to-head with victory
+   * points. Its chat is Slack, and the only thing posted there is the weekly
+   * strength-of-schedule column, The Gauntlet.
+   */
+  archies: {
+    id: '10105',
+    slug: 'archies',
+    navSlug: 'archies',
+    name: "Archie's Fantasy Football League",
+    mflHost: 'www48.myfantasyleague.com',
+    dataPath: 'data/archies',
+    /** Path-only on the shared host (mfl.football/archies), like Best Ball #1. */
+    domains: [],
+    /**
+     * Served at /archies but NOT listed on the mfl.football front door until
+     * the site owner decides a client league should be advertised there.
+     */
+    advertiseOnSharedHost: false,
+    /**
+     * Nav is OPT-IN, like Best Ball's: only links tagged `leagueOnly: archies`
+     * render (src/utils/nav-utils.ts), because the default link set is pages
+     * this league does not have yet.
+     */
+    optInNav: true,
+    /** Short display name for the site header (the full name is too long there). */
+    shortName: "Archie's",
+    /**
+     * The league's mark, read by the shared header and layout. A suggested
+     * placeholder (the site football glyph in league navy) until the league
+     * supplies its own art.
+     */
+    logo: { light: '/assets/logos/archies-logo.svg', dark: '/assets/logos/archies-logo-dark.svg' },
+    /** Browser chrome colour (the mark's navy). */
+    themeColor: '#1d3a6e',
+    /** Empty for the same reason as Best Ball #1's — see that entry. */
+    stagingDomains: [],
+    configPath: 'data/archies/archies.config.json',
+    schefterFeedPath: 'data/archies/schefter-feed.json',
+    /** Redraft league re-created on MFL over the summer — the AFL's clock. */
+    leagueYearRollover: { month: 6, day: 1 },
+    /** No poll at launch; the shape is present so shared code never branches on undefined. */
+    ownersPoll: { enabled: false, slots: 0, closeWeekday: 4, closeHourPT: 16 },
+    /**
+     * TODO(commissioner): the league's own time zone is not confirmed yet.
+     * Pacific is the site default and changes nothing for a viewer who has
+     * picked their own clock.
+     */
+    officialClock: {
+      id: 'PT',
+      zone: 'America/Los_Angeles',
+      label: 'PT',
+      name: "The league's clock (Pacific)",
+      equivalents: ['America/Vancouver', 'America/Tijuana'],
+    },
+    /** Slack only. Secrets are set per environment; see the plan doc's setup section. */
+    chat: { provider: 'slack', tokenEnv: 'SLACK_ARCHIES_BOT_TOKEN', channelEnv: 'SLACK_ARCHIES_CHANNEL_ID' },
+    /**
+     * TODO(commissioner): the trade deadline is not confirmed. `null` means
+     * "no deadline known" — callers already handle it, and inventing a date
+     * would put a wrong one in front of 99 owners.
+     */
+    tradeDeadline: null,
+    /**
+     * Every flag set on purpose. Launch surfaces: homepage (with
+     * transactions), news + The Gauntlet, standings, rosters + team pages.
+     */
+    features: {
+      contracts: false,
+      salaryCap: false,
+      keepers: false,
+      powerRankings: false,
+      liveLineups: false,
+      /** The news feed carries The Gauntlet. */
+      schefterFeed: true,
+      /** No tips / rumor mill: that lane is built on the GroupMe listener. */
+      schefterTips: false,
+      liveScoring: false,
+      liveScoringSample: false,
+      taxiSquad: false,
+      offseasonAuction: false,
+      accounting: false,
+      viewerPreferences: false,
+      pushNotifications: false,
+    },
+    defaultRankingSources: ['mfl-adp', 'espn', 'sharks'],
+  },
 };
 
 export const DEFAULT_LEAGUE_SLUG = 'theleague';
@@ -464,10 +558,10 @@ export const DEFAULT_LEAGUE_ID = LEAGUES[DEFAULT_LEAGUE_SLUG].id;
  * no feature flags. The only thing being added is permission to sign in to
  * `/live`, and a registry entry would give a league the whole site.
  *
- * 10105 is testing the board through the 2026 season (added Sep 2026). Remove
- * it here to revoke that access.
+ * 10105 tested the board here from Sep 2026 until it became a registered
+ * league (`archies`), whose owners sign in as any registered league's do.
  */
-export const MFL_LIVE_PILOT_LEAGUE_IDS = ['10105'];
+export const MFL_LIVE_PILOT_LEAGUE_IDS = [];
 
 /**
  * Every MFL league id whose owners may sign in to MFL Live, in PREFERENCE

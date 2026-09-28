@@ -39,7 +39,11 @@ afterEach(() => {
 });
 
 const [first, second] = ALL_LEAGUES.map((l) => l.id);
-const pilot = MFL_LIVE_PILOT_LEAGUE_IDS[0];
+// 10105 was the pilot until it became a registered league (`archies`). The
+// pilot MECHANISM is still live, so with no real pilot listed the auth tests
+// run against a synthetic one rather than silently testing nothing.
+const pilot = MFL_LIVE_PILOT_LEAGUE_IDS[0] ?? '55555';
+const signInIds = () => [...new Set([...mflLiveSignInLeagueIds(), pilot])];
 
 describe('mflLiveSignInLeagueIds', () => {
   it('lists every registered league in registry order, then the pilot leagues', () => {
@@ -49,7 +53,7 @@ describe('mflLiveSignInLeagueIds', () => {
     ]);
   });
 
-  it('includes the 2026 pilot league 10105', () => {
+  it('includes 10105, the 2026 pilot that became a registered league', () => {
     expect(mflLiveSignInLeagueIds()).toContain('10105');
   });
 });
@@ -63,7 +67,7 @@ describe('authenticateWithMFL — a list of acceptable leagues', () => {
       { league_id: first, franchise_id: '0012' },
     ]);
     const { authenticateWithMFL } = await import('../src/utils/mfl-login');
-    const result = await authenticateWithMFL('owner', 'pw', mflLiveSignInLeagueIds(), 2026);
+    const result = await authenticateWithMFL('owner', 'pw', signInIds(), 2026);
     expect(result.leagueId).toBe(first);
     expect(result.franchiseId).toBe('0012');
   });
@@ -74,7 +78,7 @@ describe('authenticateWithMFL — a list of acceptable leagues', () => {
       { league_id: pilot, franchise_id: '4' },
     ]);
     const { authenticateWithMFL } = await import('../src/utils/mfl-login');
-    const result = await authenticateWithMFL('tester', 'pw', mflLiveSignInLeagueIds(), 2026);
+    const result = await authenticateWithMFL('tester', 'pw', signInIds(), 2026);
     expect(result.leagueId).toBe(pilot);
     expect(result.franchiseId).toBe('0004');
   });
@@ -91,7 +95,7 @@ describe('authenticateWithMFL — a list of acceptable leagues', () => {
   it('never makes the league-scoped commissioner login for a list', async () => {
     const calls = stubFetch([{ league_id: first, franchise_id: '0001' }]);
     const { authenticateWithMFL } = await import('../src/utils/mfl-login');
-    await authenticateWithMFL('owner', 'pw', mflLiveSignInLeagueIds(), 2026);
+    await authenticateWithMFL('owner', 'pw', signInIds(), 2026);
     expect(calls.some((u) => LEAGUE_LOGIN.test(u))).toBe(false);
   });
 });
