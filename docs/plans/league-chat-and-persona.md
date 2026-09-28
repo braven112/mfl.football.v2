@@ -7,9 +7,10 @@ Status: Phase 1 shipped on `claude/slack-integration-groupme-ttsw77`. Phases 2â€
 The standard custom package offers ONE chat integration per league, GroupMe or
 Slack, and lets the league rename the news writer. The first client is MFL
 league **10105** (Archie's Fantasy Football League). It is Slack-only, and it
-wants just one thing in the chat: the weekly strength-of-schedule column, which
-that league calls **the Guillotine**. The Guillotine is a column name, not a
-competition format.
+wants just one thing in the chat: the weekly strength-of-schedule column,
+**The Gauntlet**. It keeps the same name every other league uses, so no
+per-league column naming is needed (decided 2026-09-28; an earlier draft
+called it "the Guillotine").
 
 ## Phase 1 â€” platform (done)
 
@@ -89,9 +90,6 @@ settings:
   (`playerLimitUnit: DIVISION`). Anything roster- or free-agent-scoped must be
   keyed per division, generalizing the AFL's two-conference split to N pools.
   This is the main risk.
-- The strength-of-schedule column's NAME per league ("The Gauntlet" today, "The
-  Guillotine" for 10105): it is hardcoded in the prompt and in
-  `components/shared/schedule-strength/*`.
 - Wire the two Slack secrets into `schefter-articles.yml`'s announce step.
 - Show the persona's name and avatar on the site's news byline (today
   `SCHEFTER_AUTHORS` in `src/types/schefter.ts` is static).
