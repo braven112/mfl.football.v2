@@ -26,6 +26,7 @@ import type { LiveMatchup, LiveStandingsRow } from '../../../types/live';
 import {
   DEFAULT_STANDINGS_MODE,
   STANDINGS_MODES,
+  STANDINGS_MODE_LABEL,
   projectStandings,
   type ProjectedStandingsRow,
   type StandingsMode,
@@ -47,12 +48,6 @@ export interface LvStandingsProps {
    */
   mode?: StandingsMode;
 }
-
-const MODE_LABEL: Record<StandingsMode, string> = {
-  projected: 'Projected',
-  live: 'Live',
-  final: 'Final',
-};
 
 function caption(mode: StandingsMode, leagueName: string, addsWeek: boolean): string {
   if (mode !== 'final' && !addsWeek) {
@@ -140,7 +135,7 @@ export default function LvStandings({
               aria-pressed={mode === m}
               onClick={() => setMode(m)}
             >
-              {MODE_LABEL[m]}
+              {STANDINGS_MODE_LABEL[m]}
             </button>
           ))}
         </div>

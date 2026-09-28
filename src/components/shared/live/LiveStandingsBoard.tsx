@@ -21,6 +21,7 @@ import type { LiveStandingsLeague, MflLiveStandings } from '../../../utils/live/
 import {
   DEFAULT_STANDINGS_MODE,
   STANDINGS_MODES,
+  STANDINGS_MODE_LABEL,
   type StandingsMode,
 } from '../../../utils/live/standings-projection';
 import type { FeedSnapshot } from '../../../utils/live-scoring-view';
@@ -29,12 +30,6 @@ import LvFeedStatus from './LvFeedStatus';
 
 const POLL_LIVE_MS = 25_000;
 const POLL_IDLE_MS = 90_000;
-
-const MODE_LABEL: Record<StandingsMode, string> = {
-  projected: 'Projected',
-  live: 'Live',
-  final: 'Final',
-};
 
 export interface LiveStandingsBoardProps {
   initial: MflLiveStandings;
@@ -145,7 +140,7 @@ export default function LiveStandingsBoard({
             aria-pressed={mode === m}
             onClick={() => setMode(m)}
           >
-            {MODE_LABEL[m]}
+            {STANDINGS_MODE_LABEL[m]}
           </button>
         ))}
       </div>
