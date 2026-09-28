@@ -362,6 +362,8 @@ What landed:
 
 - ~~Pecking Order at 99-team scale~~ — done (Phase 4).
 - **Per-division player pools** (the main risk, see Phase 2 "Still open"):
-  required before Archie's gets any free-agent, waiver or player-availability
-  page.
+  IN PROGRESS as Phase 5. Decided 2026-09-28: the first page it powers is a
+  **free agents page scoped to the viewer's division** (who is available to
+  YOU, plus who rosters a player in each other division), **view only** —
+  moves link out to MFL; add/drop and claims are a later follow-up.
 - Two-way Slack (mentions → tips) through the Events API, if a client wants it.
