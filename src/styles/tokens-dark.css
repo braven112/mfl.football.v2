@@ -743,47 +743,98 @@ html.dark[data-league="bb1"] {
    Archie's — dark-mode per-league overrides
    Same two layers as the light block in tokens.css: the palette holds the
    only colour values, every semantic token is a var() of it. Keeps the
-   neutral dark surface ramp (like Best Ball).
+   neutral dark surface ramp (like Best Ball); the chrome is black and the
+   wordmark's sky blue is the one accent — no navy, no dark blue.
    Every semantic token is RE-ASSERTED here even where the light block sets
    the same var(): the generic html.dark block loads after the light
-   per-league block and pins TheLeague's dark blues, so anything not repeated
-   here renders TheLeague on an Archie's page.
-   Contrast the palette must keep (checked on the dark card #1f1f1f):
-     --league-palette-brand-text >= 4.5:1  (8.3)
-     --league-palette-brand      >= 4.5:1  (6.5)
-     --league-palette-button     under white text >= 4.5:1  (5.7)
+   per-league block and pins TheLeague's dark blues and greens, so anything
+   not repeated here renders TheLeague on an Archie's page.
+   On dark the sky blue IS the brand voice for text too:
+     --league-palette-accent      on the card #262626   6.1:1   (AA text)
+     --league-palette-accent-soft on the card #262626   8.4:1   (hover text)
+     --league-palette-on-accent   on the accent fill    8.4:1   (button text)
+   White on the accent is 2.5:1, so a fill never carries white text.
    ======================================== */
 html.dark[data-league="archies"] {
   /* ── 1. Palette ── */
-  --league-palette-brand: #48a8f8;
-  --league-palette-brand-strong: #1868b8;
-  --league-palette-brand-text: #68c0fa;
-  --league-palette-brand-soft: #9bd5fb;        /* hover step for text on dark */
-  --league-palette-button: #1868b8;            /* fills under white text */
-  --league-palette-button-strong: #0f4f91;
-  --league-palette-chrome: #0a2442;
+  --league-palette-accent: #44aaff;
+  --league-palette-accent-soft: #77ccff;       /* hover step, for text and fills */
+  --league-palette-on-accent: #000000;
+  --league-palette-ink: #000000;               /* breadcrumb strip, footer, hero card */
+  --league-palette-text-muted: #9a9a9a;        /* secondary text: 4.9:1 even on an accent-tinted card */
+  --league-palette-line: #4a4a4a;              /* card + content borders: neutral, not html.dark's slate */
 
   /* ── 2. Semantic tokens → palette ── */
-  --color-primary: var(--league-palette-brand);
-  --color-primary-dark: var(--league-palette-brand-strong);
-  --color-primary-light: var(--league-palette-brand-text);
-  --color-secondary: var(--league-palette-brand-text);
-  --color-secondary-dark: var(--league-palette-brand);
-  --color-secondary-light: var(--league-palette-brand-soft);
-  --color-accent: var(--league-palette-brand);
-  --league-accent: var(--league-palette-brand);
-  --btn-primary-bg: var(--league-palette-button);
-  --btn-primary-bg-hover: var(--league-palette-button-strong);
-  --breadcrumb-bar-bg: var(--league-palette-chrome);
-  --breadcrumb-bar-border: var(--league-palette-brand);
-  --inverse-bg: var(--league-palette-chrome);
-  --link-color-accent: var(--league-palette-brand-text);
-  --link-color-accent-hover: var(--league-palette-brand-soft);
-  --nav-active-bg: color-mix(in srgb, var(--league-palette-brand) 15%, transparent);
-  --nav-active-text: var(--league-palette-brand-text);
-  --nav-active-border-left: var(--league-palette-brand);
+  --color-primary: var(--league-palette-accent);
+  --color-primary-dark: var(--league-palette-accent);
+  --color-primary-light: var(--league-palette-accent-soft);
+  --color-secondary: var(--league-palette-accent-soft);
+  --color-secondary-dark: var(--league-palette-accent);
+  --color-secondary-light: var(--league-palette-accent-soft);
+  --color-accent: var(--league-palette-accent);
+  --league-accent: var(--league-palette-accent);
+  --league-accent-fg: var(--league-palette-accent);        /* on dark the accent IS readable text */
+  --on-league-accent: var(--league-palette-on-accent);
+  --on-color-primary: var(--league-palette-on-accent);     /* --color-primary is the accent here */
+  --content-text-muted: var(--league-palette-text-muted);
+  --league-phase-regular-season: var(--league-palette-accent);   /* black would vanish on a dark card */
+  --on-league-phase-regular-season: var(--league-palette-on-accent);
+  --league-mini-hero-surface: var(--league-palette-ink);         /* html.dark's What's Next card is navy #0f1e2e */
+  --league-selected-fill: color-mix(in srgb, var(--page-text) 9%, var(--content-bg));   /* a selected tab: a sky tint over a dark card reads navy */
+  --color-gray-400: var(--color-gray-500);                 /* html.dark's #6b6b6b is 3.3:1 as table-head text */
+
+  --btn-primary-bg: var(--league-palette-accent);
+  --btn-primary-bg-hover: var(--league-palette-accent-soft);
+  --btn-primary-bg-focus: var(--league-palette-accent-soft);
+  --btn-primary-text: var(--league-palette-on-accent);
+  --btn-primary-border: var(--league-palette-accent);
+  --btn-primary-border-hover: var(--league-palette-accent-soft);
+  --btn-secondary-bg: var(--league-palette-accent-soft);   /* not TheLeague's emerald */
+  --btn-secondary-bg-hover: var(--league-palette-accent);
+  --btn-secondary-bg-focus: var(--league-palette-accent);
+  --btn-secondary-text: var(--league-palette-on-accent);
+  --btn-secondary-border: var(--league-palette-accent-soft);
+  --btn-secondary-border-hover: var(--league-palette-accent);
+  --btn-icon-text-focus: var(--league-palette-accent);
+
+  --link-color: var(--league-palette-accent);
+  --link-color-hover: var(--league-palette-accent-soft);   /* TheLeague's #2563eb is dark blue on a dark card */
+  --link-color-focus: var(--league-palette-accent-soft);
+  --link-color-accent: var(--league-palette-accent);
+  --link-color-accent-hover: var(--league-palette-accent-soft);
+  --link-color-inverse-hover: var(--league-palette-accent);
+
+  --breadcrumb-bar-bg: var(--league-palette-ink);
+  --breadcrumb-bar-border: var(--league-palette-accent);
+  --inverse-bg: var(--league-palette-ink);
+
+  /* html.dark's cards glow slate-blue from the top-left and wear slate
+     borders; here the glow is the neutral text colour and the lines grey. */
+  --card-bg: radial-gradient(92% 96% at 2% -6%, color-mix(in srgb, var(--page-text) 13%, transparent), var(--card-surface) 62%);
+  --color-border-default: var(--league-palette-line);
+  --content-border: var(--league-palette-line);
+  --content-border-color: var(--league-palette-line);
+  --inverse-bg-accent: var(--league-palette-accent);
+
+  --shadow-focus-ring: 0 0 0 3px color-mix(in srgb, var(--league-palette-accent) 40%, transparent);
+  --shadow-btn-hover: 0 10px 30px color-mix(in srgb, var(--league-palette-accent) 30%, transparent);
+  --input-border-focus: var(--league-palette-accent);
+
+  --logo-name-primary-color: var(--league-palette-accent);  /* html.dark's is TheLeague's logo green */
+  --logo-secondary-color: var(--league-palette-accent);
+
   --header-nav-icon-color: #ffffff;            /* resting nav icons: white on the dark header, not a brand colour */
-  --header-nav-icon-hover-color: var(--league-palette-brand-text);
-  --header-nav-label-color: var(--league-palette-brand-text);
-  --header-nav-label-hover-color: var(--league-palette-brand-soft);
+  --header-nav-icon-hover-color: var(--league-palette-accent);
+  --header-nav-label-color: var(--league-palette-accent);
+  --header-nav-label-hover-color: var(--league-palette-accent-soft);
+  --nav-active-bg: color-mix(in srgb, var(--page-text) 9%, transparent);   /* a blue tint over black reads navy */
+  --nav-active-text: var(--league-palette-accent);
+  --nav-active-border-left: var(--league-palette-accent);
+  --nav-focus-ring: 0 0 0 2px var(--league-palette-accent);
+  --nav-verify-bg: color-mix(in srgb, var(--league-palette-accent) 8%, transparent);
+  --nav-verify-hover-bg: color-mix(in srgb, var(--league-palette-accent) 15%, transparent);
+  --nav-verify-border: var(--league-palette-accent);
+  --nav-verify-text: var(--league-palette-accent);
+  --nav-switcher-active-bg: var(--league-palette-accent);
+  --nav-switcher-active-text: var(--league-palette-on-accent);
 }

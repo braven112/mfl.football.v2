@@ -175,7 +175,7 @@ const enriched = enrichEntries(sorted.slice(0, count), lastVisitDate);
 
   .whats-new-row__heading {
     font-size: 1.5rem;
-    color: var(--league-accent, #1c497c);
+    color: var(--league-accent-fg, var(--league-accent, #1c497c));
     margin: 0;
     padding-bottom: 0.5rem;
   }
@@ -183,7 +183,7 @@ const enriched = enrichEntries(sorted.slice(0, count), lastVisitDate);
   .whats-new-row__link {
     font-size: var(--font-size-sm);
     font-weight: 600;
-    color: var(--league-accent, #1c497c);
+    color: var(--league-accent-fg, var(--league-accent, #1c497c));
     text-decoration: none;
     white-space: nowrap;
   }

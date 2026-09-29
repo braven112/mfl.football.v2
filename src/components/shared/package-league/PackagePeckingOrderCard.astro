@@ -90,7 +90,7 @@ const name = (id: string) => teams[id]?.name ?? `Team ${id}`;
     color: var(--page-text);
   }
   .pkg-po__head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
-  .pkg-po__head h2 { margin: 0; font-size: 1.15rem; color: var(--league-accent); }
+  .pkg-po__head h2 { margin: 0; font-size: 1.15rem; color: var(--league-accent-fg, var(--league-accent)); }
   .pkg-po__week {
     font-size: 0.75rem;
     text-transform: uppercase;

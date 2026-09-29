@@ -178,3 +178,20 @@ html.dark[data-league="bb1"] ::selection {
   background: rgba(14, 138, 95, 0.55);
   color: #ffffff;
 }
+
+html.dark[data-league="archies"] ::selection {
+  background: color-mix(in srgb, var(--league-palette-accent) 40%, transparent);
+  color: var(--page-text);
+}
+
+/* html.dark's focus outline is TheLeague's #3b82f6 literal. */
+html.dark[data-league="archies"] :focus-visible {
+  outline-color: var(--league-accent);
+}
+
+/* Links are black text on light surfaces (the sky blue fails AA there), so
+   the accent shows as the underline wherever a link carries one. */
+html[data-league="archies"] a {
+  text-decoration-color: var(--league-accent);
+  text-underline-offset: 0.18em;
+}
