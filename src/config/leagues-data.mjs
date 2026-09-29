@@ -557,7 +557,18 @@ export const LEAGUES = {
       schefterFeed: true,
       /** No tips / rumor mill: that lane is built on the GroupMe listener. */
       schefterTips: false,
-      liveScoring: false,
+      /**
+       * The shared board (/archies/live-scoring) and /archies/broadcast. MFL
+       * serves this league's liveScoring in the FLAT shape (no pairings), so
+       * `loadLiveScoringPayload` pairs it from the committed schedule; 99
+       * matchups a week is why the board grows a division picker here.
+       */
+      liveScoring: true,
+      /**
+       * No offseason replay: the bundled sample is another league's teams,
+       * and the board's own empty state is the honest answer out of season
+       * (Best Ball #1's reasoning).
+       */
       liveScoringSample: false,
       taxiSquad: false,
       offseasonAuction: false,
