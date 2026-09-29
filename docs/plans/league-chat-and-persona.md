@@ -462,8 +462,13 @@ What landed:
       capability state carries a `view`) until those take a `league`.
   - Rosters: done — the AFL rosters page is `components/shared/rosters/
     RostersPage.astro`, rendered by the AFL and Archie's (divisions as pools);
-    the lite `PackageRostersPage` is retired. Archie's Trade option waits on
-    its Trade Builder page (`tradeBuilder={false}` in the route until then).
+    the lite `PackageRostersPage` is retired.
+  - Trade Builder: done — the AFL builder is `components/shared/trade-builder/
+    TradeBuilderPage.astro`, rendered by the AFL and `/archies/front-office/
+    trade-builder` (the path the roster sheet's Trade option opens; Archie's
+    has no Front Office hub, so its breadcrumbs skip it). Trades stay in the
+    viewer's pool — conference or division — via `rosterPools`; Archie's
+    values players on redraft ADP, the AFL on dynasty ADP.
   - Standings: DONE (`claude/archies-shared-standings`). TheLeague's page
     became `src/components/shared/standings/StandingsPage.astro`; TheLeague
     and archies render it through thin routes, with per-league differences

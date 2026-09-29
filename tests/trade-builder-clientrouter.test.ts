@@ -22,7 +22,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const PAGE = fs.readFileSync(
-  path.join(process.cwd(), 'src/components/afl-family/TradeBuilderPage.astro'),
+  path.join(process.cwd(), 'src/components/shared/trade-builder/TradeBuilderPage.astro'),
   'utf-8',
 );
 
