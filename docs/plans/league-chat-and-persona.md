@@ -495,6 +495,9 @@ What landed:
     resolves to the empty context (`tests/transactions-ledger-context.test.ts`),
     so their pages are unchanged — proven by HTML diff + pixel-identical
     screenshots.
+    Decided with the owner: the ledger OPENS on the signed-in owner's own
+    division (like Free Agents); `?division=all` is every division, and a
+    chosen team pulls the division to its own (`parseFilters`).
   - **Live Scoring — DONE (2026-09-29).** `features.liveScoring: true`,
     `liveScoringSample: false` (the bundled replay is another league's
     teams). `/archies/live-scoring` and `/archies/broadcast` are thin routes
