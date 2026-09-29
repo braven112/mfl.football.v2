@@ -110,7 +110,7 @@ const serializedSlices = JSON.stringify(slices);
   .chart-legend {
     display: grid;
     gap: 0.5rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     min-width: 0;
     align-self: start;
     justify-self: center;
@@ -129,7 +129,7 @@ const serializedSlices = JSON.stringify(slices);
     gap: 0.25rem;
     color: var(--color-gray-900, #111);
     font-weight: 500;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
   }
 
   :global(.chart-legend__label .legend-dot) {
@@ -146,7 +146,7 @@ const serializedSlices = JSON.stringify(slices);
 
   :global(.chart-legend__value) {
     color: var(--color-gray-900, #111);
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 300;
     white-space: nowrap;
   }

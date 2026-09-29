@@ -153,7 +153,7 @@ const cardClasses = [
     color: var(--card-ink);
     border: 1px solid color-mix(in srgb, var(--card-accent) var(--card-border-strength), transparent);
     box-shadow: var(--box-shadow-lg, 0 10px 28px rgba(15, 30, 46, 0.4));
-    transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+    transition: box-shadow var(--transition-base), transform var(--transition-base), border-color var(--transition-base);
   }
 
   :global(html.dark) .whats-next-card {
@@ -401,7 +401,7 @@ const cardClasses = [
     border-radius: var(--radius-md, 0.5rem);
     background: var(--card-link-bg);
     border: 1px solid var(--card-link-border);
-    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
   }
   .whats-next-card__link:hover {
     background: var(--card-link-hover-bg);

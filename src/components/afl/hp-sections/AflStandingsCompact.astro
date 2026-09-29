@@ -287,11 +287,11 @@ if (userRow) {
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     color: var(--afl-accent);
     text-decoration: none;
-    transition: gap 0.15s ease;
+    transition: gap var(--transition-fast);
     white-space: nowrap;
   }
 
@@ -306,7 +306,7 @@ if (userRow) {
   }
 
   .afl-tiers__th {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -350,7 +350,7 @@ if (userRow) {
   .afl-tiers__td--rank {
     text-align: center;
     color: var(--color-gray-400, #9ca3af);
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 600;
   }
 
@@ -373,7 +373,7 @@ if (userRow) {
 
   .afl-tiers__ap-record {
     display: block;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 700;
     color: var(--color-gray-800, #1f2937);
     font-variant-numeric: tabular-nums;
@@ -382,7 +382,7 @@ if (userRow) {
   .afl-tiers__ap-pct {
     display: block;
     margin-top: 0.0625rem;
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     color: var(--color-gray-400, #9ca3af);
     font-variant-numeric: tabular-nums;
   }
@@ -439,7 +439,7 @@ if (userRow) {
     /* Shrink the table a touch and tighten cell padding so the auto-layout
        table fits inside the card down to ~320px without clipping. */
     .afl-tiers__table {
-      font-size: 0.75rem;
+      font-size: var(--font-size-xs);
     }
 
     .afl-tiers__th,

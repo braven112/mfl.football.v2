@@ -77,6 +77,7 @@ const RATCHET_BASELINES = new Set([
   'tests/fixtures/typecheck-baseline.json',
   'tests/fixtures/page-fork-baseline.json',
   'tests/fixtures/clientrouter-init-baseline.json',
+  'tests/fixtures/design-literal-baseline.json',
 ]);
 
 /**

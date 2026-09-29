@@ -21,6 +21,11 @@ import { Font } from 'astro:assets';
 // Global utility classes (.visually-hidden, etc.) — frontmatter import so the
 // CSS ships unscoped; @import inside the <style> block below would get scoped.
 import '../styles/utilities.css';
+// Global polish layer + shared empty/error states. Imported here, NOT via
+// @import in the <style> block below: Astro scopes @imported rules to this
+// layout's own markup, so they would never reach a page's content.
+import '../styles/polish.css';
+import '../styles/states.css';
 import TheLeagueHeader from '../components/theleague/Header.astro';
 import TheLeagueFooter from '../components/theleague/Footer.astro';
 import NavDrawer from '../components/nav/NavDrawer.astro';

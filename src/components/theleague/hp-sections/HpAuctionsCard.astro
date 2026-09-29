@@ -310,7 +310,7 @@ const formatDollar = (n: number): string => `$${formatCompactNumber(n)}`;
 
   .hp-auc__title {
     margin: 0;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -329,12 +329,12 @@ const formatDollar = (n: number): string => `$${formatCompactNumber(n)}`;
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     color: var(--color-primary, #1c497c);
     text-decoration: none;
     white-space: nowrap;
-    transition: gap 0.15s ease;
+    transition: gap var(--transition-fast);
   }
 
   .hp-auc__cta-link:hover,
@@ -362,7 +362,7 @@ const formatDollar = (n: number): string => `$${formatCompactNumber(n)}`;
 
   .hp-auc__table th {
     text-align: left;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -485,11 +485,11 @@ const formatDollar = (n: number): string => `$${formatCompactNumber(n)}`;
     border: 1px solid var(--btn-primary-border, var(--color-primary, #1c497c));
     box-shadow: var(--shadow-sm);
     text-decoration: none;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    transition: background var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
   }
 
   .hp-auc__cta:hover {
@@ -510,14 +510,14 @@ const formatDollar = (n: number): string => `$${formatCompactNumber(n)}`;
   }
 
   .hp-auc__cta-ext {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     opacity: 0.85;
   }
 
   /* ── Footer note ── */
   .hp-auc__note {
     margin: 0.75rem 0 0;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--color-gray-500, #6b7280);
     line-height: 1.5;
   }
@@ -549,10 +549,10 @@ const formatDollar = (n: number): string => `$${formatCompactNumber(n)}`;
     background: color-mix(in srgb, var(--color-primary, #1c497c) 8%, #fff);
     color: var(--color-primary, #1c497c);
     font: inherit;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 600;
     cursor: pointer;
-    transition: background 0.15s ease;
+    transition: background var(--transition-fast);
   }
 
   .hp-auc__refresh[hidden] { display: none; }
@@ -567,7 +567,7 @@ const formatDollar = (n: number): string => `$${formatCompactNumber(n)}`;
   }
 
   .hp-auc__ext {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     opacity: 0.6;
   }
 
@@ -587,7 +587,7 @@ const formatDollar = (n: number): string => `$${formatCompactNumber(n)}`;
     }
 
     .hp-auc__table {
-      font-size: 0.75rem;
+      font-size: var(--font-size-xs);
     }
 
     .hp-auc__table th,

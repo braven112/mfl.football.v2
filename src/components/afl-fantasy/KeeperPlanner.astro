@@ -1205,7 +1205,7 @@ try {
     background: #fff;
     border-radius: 0.75rem;
     padding: 1rem 1.25rem;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    box-shadow: var(--shadow-md);
   }
 
   .kp-intro__title {
@@ -1217,7 +1217,7 @@ try {
 
   .kp-intro__copy {
     margin: 0;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     color: #4b5563;
     line-height: 1.5;
   }
@@ -1231,7 +1231,7 @@ try {
     background: #fff;
     border-radius: 0.75rem;
     padding: 0.75rem 1rem;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    box-shadow: var(--shadow-md);
     font-size: 0.8125rem;
   }
 
@@ -1271,7 +1271,7 @@ try {
   }
 
   .kp-lineup-meter__group {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     color: #4b5563;
     background: #f3f4f6;
@@ -1297,7 +1297,7 @@ try {
     background: #fff;
     border-radius: 0.75rem;
     padding: 1rem;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    box-shadow: var(--shadow-md);
     transition: outline 120ms ease;
     outline: 2px dashed transparent;
     outline-offset: -2px;
@@ -1402,7 +1402,7 @@ try {
 
   .kp-slot--empty .kp-slot__hint {
     color: #9ca3af;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
   }
 
   .kp-slot--filled {
@@ -1436,7 +1436,7 @@ try {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     color: #6b7280;
     pointer-events: none;
@@ -1452,7 +1452,7 @@ try {
     background: #fff;
     color: #6b7280;
     border-radius: 50%;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     border: 1px solid #e5e7eb;
   }
@@ -1480,7 +1480,7 @@ try {
   /* Legacy fallback text styles — used only when the PlayerCell clone
      fails (defensive path inside renderSlots). */
   .kp-slot__name {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 600;
     color: #0f172a;
     overflow: hidden;
@@ -1489,7 +1489,7 @@ try {
   }
 
   .kp-slot__pos {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     color: #6b7280;
     font-weight: 600;
     letter-spacing: 0.05em;
@@ -1505,7 +1505,7 @@ try {
     background: #fff;
     border-radius: 0.5rem;
     padding: 0.5rem 0.75rem;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    box-shadow: var(--shadow-md);
   }
 
   .kp-status {
@@ -1643,13 +1643,13 @@ try {
   }
 
   .kp-card__stat-line {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     color: #6b7280;
     white-space: nowrap;
   }
 
   .kp-card__trend {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 700;
     white-space: nowrap;
   }
@@ -1669,7 +1669,7 @@ try {
   }
 
   .kp-card__age {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: #6b7280;
     font-weight: 600;
   }
@@ -1677,7 +1677,7 @@ try {
   .kp-card__ir-pill {
     display: inline-block;
     padding: 0 0.375rem;
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 800;
     background: #fee2e2;
     color: #991b1b;
@@ -1716,7 +1716,7 @@ try {
 
   .kp-arrow:hover {
     border-color: var(--color-gray-300, #9ca3af);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    box-shadow: var(--shadow-sm);
   }
 
   /* .pa-kebab's shared stylesheet (player-action-button.css, loaded by
@@ -1760,7 +1760,7 @@ try {
     background: #fff;
     border-radius: 0.75rem;
     padding: 1rem;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    box-shadow: var(--shadow-md);
   }
 
   .kp-picks__header {
@@ -1780,7 +1780,7 @@ try {
   }
 
   .kp-picks__count {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     color: #6b7280;
   }
@@ -1798,7 +1798,7 @@ try {
     background: #f3f4f6;
     border-radius: 0.375rem;
     padding: 0.25rem 0.625rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: #374151;
     display: flex;
     flex-direction: column;
@@ -1811,7 +1811,7 @@ try {
 
   .kp-picks__via {
     color: #6b7280;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
   }
 
   /* Finalize modal */
@@ -1874,7 +1874,7 @@ try {
 
   .kp-finalize__copy {
     margin: 0 0 1rem;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     color: #4b5563;
     line-height: 1.5;
   }
@@ -1888,7 +1888,7 @@ try {
 
   .kp-finalize__col h4 {
     margin: 0 0 0.5rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     letter-spacing: 0.05em;
     text-transform: uppercase;
@@ -1925,12 +1925,12 @@ try {
     height: 100%;
     width: 0;
     background: #166534;
-    transition: width 200ms ease;
+    transition: width var(--transition-base);
   }
 
   .kp-finalize__progress-label {
     margin: 0.375rem 0 0;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: #6b7280;
   }
 

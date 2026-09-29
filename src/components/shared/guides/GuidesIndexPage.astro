@@ -136,8 +136,8 @@ const formatUpdated = (date: string) =>
     background: var(--card-bg);
     text-decoration: none;
     transition:
-      border-color 0.15s ease,
-      transform 0.15s ease;
+      border-color var(--transition-fast),
+      transform var(--transition-fast);
   }
 
   .guide-card:hover {
@@ -176,7 +176,7 @@ const formatUpdated = (date: string) =>
   }
 
   .guide-card__meta {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: var(--color-gray-500, #6b7280);

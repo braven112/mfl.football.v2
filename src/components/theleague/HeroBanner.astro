@@ -250,7 +250,7 @@ const imagePath = image ? `/assets/whats-new/${image}` : null;
     box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
     border-left: 5px solid var(--hero-accent);
     overflow: hidden;
-    transition: box-shadow 0.2s ease, transform 0.2s ease;
+    transition: box-shadow var(--transition-base), transform var(--transition-base);
   }
 
   .hero-banner::before {
@@ -379,7 +379,7 @@ const imagePath = image ? `/assets/whats-new/${image}` : null;
     border-radius: var(--radius-md, 0.5rem);
     text-decoration: none;
     white-space: nowrap;
-    transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+    transition: background var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
   }
 
   .hero-banner__cta:hover {
@@ -394,7 +394,7 @@ const imagePath = image ? `/assets/whats-new/${image}` : null;
 
   .hero-banner__cta-arrow {
     font-size: 1rem;
-    transition: transform 0.15s ease;
+    transition: transform var(--transition-fast);
   }
 
   .hero-banner__cta:hover .hero-banner__cta-arrow {
@@ -589,7 +589,7 @@ const imagePath = image ? `/assets/whats-new/${image}` : null;
 
   .hero-banner__kicker {
     display: inline-block;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -600,7 +600,7 @@ const imagePath = image ? `/assets/whats-new/${image}` : null;
   }
 
   .hero-banner__eyebrow-sep {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     color: var(--color-gray-400, #9ca3af);
   }
 
@@ -639,7 +639,7 @@ const imagePath = image ? `/assets/whats-new/${image}` : null;
   }
 
   .hero-banner__all-news {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 600;
     color: var(--color-primary, #1c497c);
     text-decoration: none;

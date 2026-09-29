@@ -90,7 +90,7 @@
   }
   .cb__crumb {
     margin-bottom: var(--spacing-sm, 0.75rem);
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm, 0.875rem);
   }
   .cb__crumb a {
     color: var(--color-gray-500, #6b7280);
@@ -178,7 +178,7 @@
     border-left: 3px solid var(--color-accent, #2563eb);
     border-radius: var(--radius-sm, 4px);
     background: color-mix(in srgb, currentColor 6%, transparent);
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm, 0.875rem);
     line-height: 1.5;
     max-width: 72ch;
   }
@@ -428,7 +428,7 @@
   }
   .cb__bmeta {
     display: block;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs, 0.75rem);
     opacity: 0.7;
   }
 

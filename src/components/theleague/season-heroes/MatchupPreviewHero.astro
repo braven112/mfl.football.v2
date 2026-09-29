@@ -419,7 +419,7 @@ for (const g of displayGames) {
   }
 
   .matchup-hero__section-title {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -445,11 +445,11 @@ for (const g of displayGames) {
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     color: var(--dh-accent);
     text-decoration: none;
-    transition: gap 0.15s ease;
+    transition: gap var(--transition-fast);
   }
 
   .matchup-hero__cta:hover {
@@ -468,7 +468,7 @@ for (const g of displayGames) {
   }
 
   .matchup-hero__slot-label {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -526,7 +526,7 @@ for (const g of displayGames) {
   }
 
   .matchup-hero__at {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     color: var(--color-gray-300, #d1d5db);
     font-weight: 500;
   }
@@ -536,7 +536,7 @@ for (const g of displayGames) {
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     text-transform: uppercase;
     letter-spacing: 0.04em;
   }
@@ -560,7 +560,7 @@ for (const g of displayGames) {
 
   .matchup-hero__login-hint {
     margin: 0.75rem 0 0;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--color-gray-400, #9ca3af);
     text-align: center;
     font-style: italic;

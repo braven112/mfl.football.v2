@@ -25,6 +25,97 @@ matches what was rendering — otherwise keep the light literal and override
 only under `html.dark` (see the admin-hub gate pills for the pattern).
 
 
+## The polish layer — motion, type, states, touch, surfaces
+
+Adopted Sep 2026 from the Impeccable design guidance (pbakaus/impeccable),
+filtered to what fits a stats-dense league site. The tokens live in
+`tokens.css` / `tokens-dark.css`; the site-wide rules in `src/styles/polish.css`;
+the shared states in `src/styles/states.css`. Both stylesheets are imported by
+all four base layouts and by Storybook's preview. Guard:
+`tests/design-polish.test.ts`, which also ratchets the legacy literals below
+against `tests/fixtures/design-literal-baseline.json` (retighten with
+`node scripts/ratchet.mjs --write`).
+
+- **A stylesheet `@import`ed inside a layout's `<style>` block is SCOPED.**
+  Astro rewrites its selectors to require the layout's `data-astro-cid-*`, so
+  its rules match only the layout's own markup (header, nav, footer). Custom
+  properties survive because they inherit, which is why the token files work
+  and why nobody noticed that the site-wide `:focus-visible` ring and the
+  dark-mode `::selection` colours in them never reached page content. Global
+  STYLING goes in `polish.css` / `states.css`, imported from the layout's
+  FRONTMATTER; the token files may declare only custom properties (and
+  `@font-face`). The test enforces both.
+- **Motion: never plain `ease`.** Its slow start makes a UI feel laggy. Use
+  `var(--transition-fast|base|slow)` (150/200/300ms on `--ease-out`, expo-out),
+  or pair `--duration-*` with `--ease-out` (entering, responding),
+  `--ease-in` (leaving; run exits at ~75% of the entrance), or `--ease-in-out`
+  (toggles). No bounce/elastic curves; don't animate width/height/top/left.
+  471 hand-typed `0.15s/0.2s/0.3s ease` transitions were swept onto the tokens
+  when this landed; the rest (other durations, explicit curves) are ratcheted.
+- **Reduced motion has a global floor**: `polish.css` collapses every
+  transition and smooth scroll under `prefers-reduced-motion`. It deliberately
+  does NOT zero animations — a spinner frozen mid-sweep reads as "stuck", so
+  each loader owns its static state (`loading.css`). The test pins that.
+- **Type**: sizes come from `--font-size-*`. `--font-size-2xs` (0.6875rem) and
+  `--font-size-3xs` (0.625rem) exist for the editorial micro/table labels in
+  `docs/claude/components.md`; every exact-equal literal (0.625/0.6875/0.75/
+  0.875rem) was swept onto its token. All-caps text takes
+  `letter-spacing: var(--tracking-caps)`. Headings get
+  `text-wrap-style: balance` and prose `pretty` globally — the LONGHAND,
+  because the `text-wrap` shorthand also sets `text-wrap-mode`, the property
+  `white-space: nowrap` sets, and would fight every one-line heading.
+- **Fonts swap without reflow.** The self-hosted UFC Sans families have
+  metric-matched local-Arial fallbacks (`UFC Sans Condensed Fallback`,
+  `UFC Sans Fallback`) second in `--font-display` / `--font-numeric`. The
+  percentages are Astro's fallback formula over the woff2 metrics — re-derive
+  them if a font file changes. Vend Sans gets the same from Astro's font API.
+- **Dark mode shows elevation by lightness, not shadow.** Page `#121212` →
+  content `#1e1e1e` → card `#262626` → overlay `#313131`
+  (`--color-surface-3`, `--surface-overlay`). Dark shadows were halved: on a
+  near-black ground a shadow is mostly invisible and the visible part is murk.
+  Anything that floats (menu, popover, modal) should sit on
+  `--surface-overlay`. Dark muted text moved `#8a8a8a` → `#9a9a9a` in the same
+  change, because the old value was 4.4:1 on the card (under AA).
+- **Dark-mode text compensation**: `html.dark body` gets `letter-spacing:
+  0.01em` — light-on-dark text reads tighter. Letter-spacing only, so no
+  layout's height moves; components that set their own tracking keep it.
+- **Browser surfaces** are branded in `polish.css`: `::selection`,
+  `caret-color`, `accent-color` (native checkboxes/radios/ranges),
+  `scrollbar-color`, and `text-underline-offset` on links. All read
+  `--color-primary`, so they follow the league and the theme.
+- **Touch targets**: `--touch-target-min` (44px) replaces every hardcoded
+  `min-height/min-width: 44px` (the test forbids the literal). For a small
+  icon button, add `.hit-area` to grow its tap area without changing its box.
+- **Shadows**: use `--shadow-sm|md|lg|xl`. The common neutral literals were
+  mapped onto them; literal shadows are ratcheted.
+
+### Empty and error states
+
+`EmptyState.astro` / `ErrorState.astro` (`src/components/shared/states/`),
+their React twins in `states-react.tsx`, and `buildEmptyStateHTML` /
+`buildErrorStateHTML` (`src/utils/state-html.ts`) for markup a script builds.
+The CSS is GLOBAL on purpose — a scoped copy would miss JS-built states (see
+the next section). Gallery: `/theleague/design-system`.
+
+- **Empty**: say what is missing, why that is fine or when it fills, and the
+  next step. "No brackets yet — they appear once playoff seeds are set."
+- **Error**: only for "we could not read it", never for a well-formed empty
+  answer — missing and zero are different facts (`LvEmptyState.tsx`). Say
+  what failed, that the data is missing rather than zero, and how to recover.
+- **Action labels are verb + object** ("See the standings", "Try again"),
+  never "OK" / "Submit".
+- Inside a card or a table cell pass `compact`: no dashed panel, so no card
+  inside a card.
+
+### What was deliberately NOT adopted
+
+Impeccable bans several things this site keeps on purpose: the 2px coloured
+left border on editorial section titles (house style; see components.md),
+sparklines/progress rings and big-number stat tiles (on a stats site they ARE
+the content), and em dashes. OKLCH was not adopted: ~10k hex values sit under
+contrast guards, and the migration risk outweighs the gain — use OKLCH for a
+new palette if you like, but don't convert the existing ones.
+
 ## Astro scoped CSS never reaches an element JS created
 
 A `<style>` block in a `.astro` file compiles to selectors that require the

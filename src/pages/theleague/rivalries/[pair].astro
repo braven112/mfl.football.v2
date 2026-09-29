@@ -5,6 +5,7 @@ import { resolveLeaguePath } from '../../../utils/nav-utils';
 import franchiseHistory from '../../../../data/theleague/derived/franchise-history.json';
 import leagueConfig from '../../../data/theleague.config.json';
 import { formatTradeAsset } from '../../../utils/franchise-trade-asset';
+import EmptyState from '../../../components/shared/states/EmptyState.astro';
 
 export const prerender = false;
 
@@ -221,9 +222,10 @@ const titleB = frB.currentNameMedium || frB.currentName;
     </header>
 
     {totalGames === 0 ? (
-      <p class="empty-state">
-        These franchises have not faced each other under their current owners. Cross-divisional matchups can take a while to surface in TheLeague's schedule rotation.
-      </p>
+      <EmptyState
+        title="They haven't met yet"
+        body="These franchises have not faced each other under their current owners. Cross-divisional matchups can take a while to surface in TheLeague's schedule rotation."
+      />
     ) : (
       <>
         <section class="quick-stats">
@@ -615,17 +617,8 @@ const titleB = frB.currentNameMedium || frB.currentName;
     border-radius: 999px;
     background: #fff3c4;
     color: #7a5b00;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
-  }
-
-  .empty-state {
-    margin: 1rem 0 2rem;
-    padding: 1.5rem;
-    border: 1px dashed var(--content-border, #e5e5e5);
-    border-radius: 0.5rem;
-    color: var(--content-text-muted, #666);
-    text-align: center;
   }
 
   /* ============================================
@@ -643,7 +636,7 @@ const titleB = frB.currentNameMedium || frB.currentName;
     padding: 0.75rem 1rem;
   }
   .stat-label {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     font-weight: 700;
@@ -656,7 +649,7 @@ const titleB = frB.currentNameMedium || frB.currentName;
     font-variant-numeric: tabular-nums;
   }
   .stat-sub {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--content-text-muted, #666);
     margin-top: 0.125rem;
   }
@@ -685,7 +678,7 @@ const titleB = frB.currentNameMedium || frB.currentName;
     border-radius: 0.5rem;
   }
   .hl-label {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: var(--content-text-muted, #888);
@@ -719,7 +712,7 @@ const titleB = frB.currentNameMedium || frB.currentName;
     padding: 0.625rem 0;
     border-bottom: 1px solid var(--content-border, #e5e5e5);
     align-items: center;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
   }
   .po-year {
     font-weight: 700;
@@ -741,7 +734,7 @@ const titleB = frB.currentNameMedium || frB.currentName;
       grid-template-columns: 3rem 1fr 1fr;
       grid-template-rows: auto auto;
     }
-    .po-round { grid-column: 2 / -1; font-size: 0.75rem; }
+    .po-round { grid-column: 2 / -1; font-size: var(--font-size-xs); }
     .po-score { text-align: left; }
   }
 
@@ -752,7 +745,7 @@ const titleB = frB.currentNameMedium || frB.currentName;
     border-radius: 999px;
     background: #fff3c4;
     color: #7a5b00;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
   }
 
@@ -772,7 +765,7 @@ const titleB = frB.currentNameMedium || frB.currentName;
     border-collapse: separate;
     border-spacing: 0;
     width: 100%;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-variant-numeric: tabular-nums;
   }
   .meetings thead th {
@@ -781,7 +774,7 @@ const titleB = frB.currentNameMedium || frB.currentName;
     background: var(--content-bg-muted, #f7f7f7);
     text-align: left;
     padding: 0.5rem 0.625rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: var(--content-text-muted, #666);
@@ -838,7 +831,7 @@ const titleB = frB.currentNameMedium || frB.currentName;
     padding: 0.5rem 0.75rem;
   }
   .t-name {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: var(--content-text-muted, #888);
@@ -849,7 +842,7 @@ const titleB = frB.currentNameMedium || frB.currentName;
     list-style: none;
     margin: 0;
     padding: 0;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
   }
   .trade-col li {
     padding: 0.125rem 0;
@@ -895,7 +888,7 @@ const titleB = frB.currentNameMedium || frB.currentName;
     padding: 0.25rem 0.5rem;
     border-radius: 999px;
     background: var(--card-bg, #fff);
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     color: var(--content-text-muted, #555);
   }
@@ -924,7 +917,7 @@ const titleB = frB.currentNameMedium || frB.currentName;
   .footnote a {
     color: var(--content-text-muted, #666);
     text-decoration: none;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
   }
   .footnote a:hover { text-decoration: underline; }
 </style>

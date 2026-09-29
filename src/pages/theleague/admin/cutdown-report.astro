@@ -1007,7 +1007,7 @@ const pausedMetaLine = pausedState.paused
     display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;
     flex-wrap: wrap; margin-bottom: 1.5rem;
   }
-  .ops-eyebrow { font-size: 0.75rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--content-text-muted, #64748b); margin: 0 0 0.25rem; }
+  .ops-eyebrow { font-size: var(--font-size-xs); letter-spacing: 0.04em; text-transform: uppercase; color: var(--content-text-muted, #64748b); margin: 0 0 0.25rem; }
   .ops-eyebrow a { color: inherit; text-decoration: underline; }
   .ops-title { font-size: 1.75rem; margin: 0 0 0.25rem; color: var(--page-text, #0f172a); }
   .ops-sub { margin: 0; color: var(--content-text-muted, #64748b); max-width: 70ch; font-size: 0.925rem; }
@@ -1044,7 +1044,7 @@ const pausedMetaLine = pausedState.paused
     display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; justify-content: flex-end;
     font-size: 0.82rem; color: var(--page-text, #0f172a);
   }
-  .cdr-kill-meta { font-size: 0.75rem; color: var(--color-gray-500, #6b7280); font-variant-numeric: tabular-nums; }
+  .cdr-kill-meta { font-size: var(--font-size-xs); color: var(--color-gray-500, #6b7280); font-variant-numeric: tabular-nums; }
 
   .cdr-btn {
     border: 1px solid var(--content-border, #e2e8f0); border-radius: 6px;
@@ -1132,7 +1132,7 @@ const pausedMetaLine = pausedState.paused
 
   /* Editorial section-title standard: uppercase + primary left border. */
   .cdr-section-title {
-    font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+    font-size: var(--font-size-xs); font-weight: 700; text-transform: uppercase;
     letter-spacing: 0.06em; color: var(--color-gray-900, #111827);
     padding-left: 0.625rem; border-left: 2px solid var(--color-primary, #1c497c);
     margin: 0 0 0.6rem;

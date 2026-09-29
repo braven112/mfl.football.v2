@@ -273,7 +273,7 @@ const week = projData?.projectedScores?.week ?? projData?.default?.projectedScor
   }
 
   .ww-hero__section-title {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -285,7 +285,7 @@ const week = projData?.projectedScores?.week ?? projData?.default?.projectedScor
   }
 
   .ww-hero__week-badge {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -302,7 +302,7 @@ const week = projData?.projectedScores?.week ?? projData?.default?.projectedScor
   }
 
   .ww-hero__countdown-label {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -326,14 +326,14 @@ const week = projData?.projectedScores?.week ?? projData?.default?.projectedScor
   }
 
   .ww-hero__deadline {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 600;
     color: var(--dh-accent);
     letter-spacing: 0.02em;
   }
 
   .ww-hero__subhead-text {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     color: var(--color-gray-400, #9ca3af);
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -364,7 +364,7 @@ const week = projData?.projectedScores?.week ?? projData?.default?.projectedScor
   .ww-hero__rank {
     width: 1.5rem;
     text-align: center;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     color: var(--color-gray-300, #d1d5db);
     flex-shrink: 0;
@@ -399,7 +399,7 @@ const week = projData?.projectedScores?.week ?? projData?.default?.projectedScor
     font-weight: 600;
     color: var(--dh-accent);
     text-decoration: none;
-    transition: gap 0.15s ease;
+    transition: gap var(--transition-fast);
   }
 
   .ww-hero__cta:hover {

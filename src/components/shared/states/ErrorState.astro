@@ -1,0 +1,25 @@
+---
+/**
+ * "We could not read it" — what failed, and how to recover.
+ *
+ * Never use this for a well-formed empty answer: missing and zero are
+ * different facts (see LvEmptyState.tsx), and this one takes the error tone.
+ *
+ * Pass `compact` inside a card or cell. Renders UiState.astro.
+ */
+import UiState from './UiState.astro';
+import type { StateAction } from '../../../utils/state-html';
+
+interface Props {
+  title: string;
+  body?: string;
+  actions?: StateAction[];
+  compact?: boolean;
+  class?: string;
+}
+
+// The slot is forwarded only when the caller gave one: UiState treats ANY
+// default slot as a replacement body line, even an empty one.
+const hasSlot = Astro.slots.has('default');
+---
+{hasSlot ? <UiState kind="error" {...Astro.props}><slot /></UiState> : <UiState kind="error" {...Astro.props} />}

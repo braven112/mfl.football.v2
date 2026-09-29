@@ -130,7 +130,7 @@ html.dark[data-league="afl"] {
 }
 
 .lsh__title {
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -146,7 +146,7 @@ html.dark[data-league="afl"] {
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
-  font-size: 0.6875rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -197,7 +197,7 @@ html.dark[data-league="afl"] {
 
 /* ── Game Window Label ── */
 .lsh__window {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -225,7 +225,7 @@ html.dark[data-league="afl"] {
   position: absolute;
   top: -0.5rem;
   right: 0.75rem;
-  font-size: 0.625rem;
+  font-size: var(--font-size-3xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -292,7 +292,7 @@ html.dark[data-league="afl"] {
 }
 
 .lsh__team-name {
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--lsh-ink-soft);
   overflow: hidden;
@@ -330,7 +330,7 @@ html.dark[data-league="afl"] {
 
 /* ── VS separator ── */
 .lsh__vs {
-  font-size: 0.625rem;
+  font-size: var(--font-size-3xs);
   font-weight: 600;
   text-transform: uppercase;
   color: var(--lsh-ink-dim);
@@ -366,7 +366,7 @@ html.dark[data-league="afl"] {
 }
 
 .lsh__champ-name {
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   color: var(--lsh-ink);
   overflow: hidden;
@@ -387,7 +387,7 @@ html.dark[data-league="afl"] {
 }
 
 .lsh__champ-vs {
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   text-transform: uppercase;
   color: var(--lsh-ink-dim);
@@ -396,7 +396,7 @@ html.dark[data-league="afl"] {
 }
 
 .lsh__champ-label {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;

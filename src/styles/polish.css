@@ -1,0 +1,180 @@
+/* ==========================================================================
+   Global polish layer — imported by every base layout, after the tokens.
+
+   The small, site-wide rules that make an interface feel finished rather than
+   merely correct: reduced motion, heading wrap, browser-surface colours, the
+   hit-area utility and dark-mode text compensation. Every rule here is a
+   default that a component can still override; none of them sets a size,
+   colour or spacing a component already chose.
+
+   Rules and reasoning: docs/claude/rules/theming-and-assets.md
+   § "The polish layer". Guard: tests/design-polish.test.ts.
+   ========================================================================== */
+
+/* ── Reduced motion ──────────────────────────────────────────────────────
+   One global floor under the 70-odd per-component rules. Transitions and
+   smooth scrolling collapse to instant; state still changes, it just doesn't
+   travel. ANIMATIONS are deliberately NOT zeroed here: a spinner or a
+   skeleton frozen mid-frame reads as "stuck", so each loader chooses its own
+   static state (see loading.css).
+   `data-motion-essential` opts an element out: a transition that DISPLAYS
+   elapsed time (Set Lineup's 1.3s hold-to-clear ring) is information, not
+   decoration, and collapsing it makes the ring read "done" the instant the
+   press starts, so the owner lets go and the clear is cancelled. */
+@media (prefers-reduced-motion: reduce) {
+  *:not([data-motion-essential]),
+  *:not([data-motion-essential])::before,
+  *:not([data-motion-essential])::after {
+    transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── Text wrapping ───────────────────────────────────────────────────────
+   Headings balance their lines instead of leaving one orphaned word; prose
+   avoids a lone last-line word. Both are progressive: unsupported browsers
+   wrap exactly as before.
+   The LONGHAND `text-wrap-style` on purpose: the `text-wrap: balance`
+   shorthand also sets `text-wrap-mode: wrap`, which is the same property
+   `white-space: nowrap` sets — a global shorthand here would fight every
+   heading a component deliberately keeps on one line. */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+figcaption,
+legend {
+  text-wrap-style: balance;
+}
+
+p,
+li,
+dd,
+blockquote {
+  text-wrap-style: pretty;
+}
+
+/* ── Browser surfaces ────────────────────────────────────────────────────
+   The parts of the page the browser draws for us, brought into the brand:
+   text selection, the input caret, native checkboxes/radios/ranges, link
+   underlines and the page scrollbar. They read --color-primary, which is
+   theme-aware (navy in light, bright blue in dark) and remapped only where a
+   league block remaps it (the MFL app's red); the AFL deliberately keeps the
+   blue primary and speaks through --league-accent instead. */
+::selection {
+  background-color: color-mix(in srgb, var(--color-primary) 28%, transparent);
+}
+
+:root {
+  accent-color: var(--color-primary);
+  caret-color: var(--color-primary);
+  scrollbar-color: color-mix(in srgb, var(--page-text) 28%, transparent) transparent;
+}
+
+/* scrollbar-color INHERITS, and since Chrome 121 an element whose
+   scrollbar-color is not `auto` ignores its ::-webkit-scrollbar rules — so
+   left to inherit, the root's value would silently disable every custom
+   webkit scrollbar on the site (AnchorNav's thin rail, …). The root's value
+   styles the page scrollbar; body hands `auto` back to everything inside. */
+body {
+  scrollbar-color: auto;
+}
+
+a {
+  text-underline-offset: 0.18em;
+  text-decoration-thickness: from-font;
+}
+
+/* ── Hit area ────────────────────────────────────────────────────────────
+   Grows a small control's TAP area to --touch-target-min without growing
+   its box, so a 24px icon button keeps its look and layout but can be hit
+   with a thumb. Put it on the button itself. The `position: relative` it
+   needs is at ZERO specificity (`:where`), so a button some other rule
+   positions absolutely (a modal's corner close) keeps that position — it is
+   already a containing block. */
+:where(.hit-area) {
+  position: relative;
+}
+
+.hit-area::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: max(100%, var(--touch-target-min));
+  height: max(100%, var(--touch-target-min));
+  transform: translate(-50%, -50%);
+}
+
+/* ── Dark-mode text compensation ─────────────────────────────────────────
+   Light text on a dark ground optically bleeds and reads tighter and heavier
+   than the same text on white. A hair of extra tracking restores the rhythm.
+   Letter-spacing only, inherited from the body; components that set their
+   own tracking keep it. It is NOT layout-neutral: dark-mode text runs ~1%
+   wider, so a string that exactly fills a nowrap/ellipsis cell in light can
+   truncate a character earlier in dark. Give such a cell its own
+   letter-spacing if that matters. */
+html.dark body {
+  letter-spacing: 0.01em;
+}
+
+/* ── Focus ring + dark-mode selection (moved from the token files) ────────
+   These lived in tokens.css / tokens-dark.css, which the layouts pull in with
+   `@import` inside a scoped <style> block — and Astro SCOPES @imported rules,
+   so until Sep 2026 they matched only the layout's own markup (header, nav,
+   footer) and never reached page content. Here they are genuinely global. */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  /* A card-coloured halo fills the 2px offset gap, so the ring is two-tone:
+     on a navy hero band — the same colour as the light-mode primary — the
+     card-coloured gap still shows where a single navy outline would vanish. */
+  box-shadow: 0 0 0 2px var(--card-surface, #fff);
+}
+
+/* Remove default outline for mouse users */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Interactive element focus styles */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--card-surface, #fff);
+}
+
+/* ========================================
+   Text Selection (Dark Mode)
+   Without this, selected text keeps its muted dark-mode color on the
+   browser's default highlight — near-unreadable slate-on-slate. Force
+   white text on a strong primary-tinted highlight.
+   ======================================== */
+html.dark ::selection {
+  background: rgba(59, 130, 246, 0.55);
+  color: #ffffff;
+}
+
+html.dark:is([data-league="afl"], [data-league="keeper"]) ::selection {
+  background: rgba(239, 83, 80, 0.5);
+  color: #ffffff;
+}
+
+html.dark[data-league="mfl"] ::selection {
+  background: rgba(239, 83, 80, 0.5);
+  color: #ffffff;
+}
+
+html.dark[data-league="bb1"] ::selection {
+  background: rgba(14, 138, 95, 0.55);
+  color: #ffffff;
+}

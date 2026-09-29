@@ -242,23 +242,30 @@ All new pages and components must follow the **editorial design language** estab
 
 **Section titles** — The signature editorial element:
 ```css
-font-size: 0.75rem;
+font-size: var(--font-size-xs);
 font-weight: 700;
 text-transform: uppercase;
-letter-spacing: 0.06em;
+letter-spacing: var(--tracking-caps);
 padding-left: 0.625rem;
 border-left: 2px solid var(--color-primary, #1c497c);
 ```
+
+The 2px left stripe is a DELIBERATE house-style exception. Impeccable's design
+guidance (and much "AI slop" critique) bans coloured side-stripe borders; this
+repo keeps it on editorial section titles only, by decision (Sep 2026). Don't
+spread it to cards, callouts or list items.
 
 **Typography scale** (most commonly used):
 | Role | Size | Weight |
 |------|------|--------|
 | Page/hero title | 1.35rem | 700 |
-| Section title | 0.75rem | 700, uppercase |
-| Body text | 0.875rem | 400–500 |
-| Detail label | 0.75rem | 600, uppercase, gray-400 |
-| Micro label | 0.6875rem | 600, uppercase |
-| Table header | 0.625rem | 600, uppercase, gray-400 |
+| Section title | `--font-size-xs` (0.75rem) | 700, uppercase |
+| Body text | `--font-size-sm` (0.875rem) | 400–500 |
+| Detail label | `--font-size-xs` (0.75rem) | 600, uppercase, gray-400 |
+| Micro label | `--font-size-2xs` (0.6875rem) | 600, uppercase |
+| Table header | `--font-size-3xs` (0.625rem) | 600, uppercase, gray-400 |
+
+Every uppercase role above also takes `letter-spacing: var(--tracking-caps)`.
 
 **Key metrics** — 3-column grid with gray-50 background cards, tabular-nums values
 

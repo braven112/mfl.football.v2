@@ -263,7 +263,7 @@
   font-size: 0.82rem;
   font-weight: var(--font-weight-bold);
   text-decoration: none;
-  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+  transition: border-color var(--transition-fast), color var(--transition-fast), background var(--transition-fast);
 }
 .st-chip:hover { border-color: var(--league-accent); color: var(--page-text); }
 /* The site's focus ring is drawn 2px OUTSIDE the box, with a box-shadow beyond

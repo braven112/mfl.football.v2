@@ -57,7 +57,7 @@ const {
     background: var(--card-bg-color, #ffffff);
     border-radius: 12px;
     box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
-    transition: box-shadow 0.2s ease, transform 0.2s ease;
+    transition: box-shadow var(--transition-base), transform var(--transition-base);
   }
 
   .metric-card:hover {
@@ -75,7 +75,7 @@ const {
   }
 
   .metric-card__label {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     color: var(--content-text-muted, #64748b);
     font-weight: 500;
     margin: 0;
@@ -89,13 +89,13 @@ const {
   }
 
   .metric-card__subtitle {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     color: var(--content-text-muted, #64748b);
     font-weight: 400;
   }
 
   .metric-card__hint {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 500;
     margin-top: 0.25rem;
     display: block;

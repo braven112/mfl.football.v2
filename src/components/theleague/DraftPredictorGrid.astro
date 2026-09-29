@@ -338,7 +338,7 @@ const specialPicksAssigned = hasCompensatoryPicks ? {
     border: 2px solid var(--draft-pick-border, transparent);
     background: var(--draft-pick-bg, var(--content-bg-muted, #f3f4f6));
     cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    transition: transform var(--transition-base), box-shadow var(--transition-base), border-color var(--transition-base);
     text-decoration: none;
   }
 
@@ -492,7 +492,7 @@ const specialPicksAssigned = hasCompensatoryPicks ? {
   }
 
   .draft-pick__name {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     color: var(--color-gray-900, #111827);
     line-height: 1.2;
@@ -506,7 +506,7 @@ const specialPicksAssigned = hasCompensatoryPicks ? {
   }
 
   .draft-pick__number {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 700;
     color: #2563eb;
   }
@@ -517,7 +517,7 @@ const specialPicksAssigned = hasCompensatoryPicks ? {
   }
 
   .draft-pick__label {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     color: #64748b;
     font-weight: 500;
     text-transform: uppercase;
@@ -529,7 +529,7 @@ const specialPicksAssigned = hasCompensatoryPicks ? {
     gap: 2rem;
     justify-content: center;
     padding: 1.5rem;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     color: #64748b;
     background: var(--card-bg-color, #fff);
     border-radius: 1rem;
@@ -642,7 +642,7 @@ const specialPicksAssigned = hasCompensatoryPicks ? {
     }
 
     .draft-pick__name {
-      font-size: 0.625rem;
+      font-size: var(--font-size-3xs);
       -webkit-line-clamp: 3;
     }
 
@@ -656,7 +656,7 @@ const specialPicksAssigned = hasCompensatoryPicks ? {
 
     .draft-grid-legend {
       gap: 1rem;
-      font-size: 0.75rem;
+      font-size: var(--font-size-xs);
       flex-wrap: wrap;
       padding: 1rem;
     }

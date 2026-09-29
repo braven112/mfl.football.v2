@@ -11,6 +11,8 @@ import { STORYBOOK_NFL_DARK_BASE_PATH, STORYBOOK_NFL_DARK_CODES } from './nfl-da
 import '../src/styles/tokens.css';
 import '../src/styles/tokens-dark.css';
 import '../src/styles/utilities.css';
+import '../src/styles/polish.css';
+import '../src/styles/states.css';
 
 /**
  * The global rules TheLeagueLayout owns, which a story never gets: the fonts

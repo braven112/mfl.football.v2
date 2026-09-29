@@ -521,7 +521,7 @@ const sectionRenderInfo = visibleSections.map((section) => {
     align-items: center;
     gap: 12px;
     padding: 12px 8px;
-    min-height: 44px;
+    min-height: var(--touch-target-min);
     color: var(--nav-text);
     text-decoration: none;
     border-radius: 6px;
@@ -689,7 +689,7 @@ const sectionRenderInfo = visibleSections.map((section) => {
       padding-bottom: var(--nav-spacing-md);
     }
     .nav-links__section-toggle {
-      min-height: 44px;
+      min-height: var(--touch-target-min);
     }
   }
 </style>

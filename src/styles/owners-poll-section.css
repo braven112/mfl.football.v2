@@ -26,7 +26,7 @@
 .op-strip__meta,
 .op-strip__note {
   color: var(--content-text-muted);
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   margin: 0.5rem 0 0;
 }
 .op-strip__split {
@@ -125,7 +125,7 @@
 
 /* --- published ballots -------------------------------------------------- */
 
-.op-ballots { margin-top: 1.25rem; font-size: 0.875rem; }
+.op-ballots { margin-top: 1.25rem; font-size: var(--font-size-sm); }
 .op-ballots summary {
   cursor: pointer;
   color: var(--content-text-muted);
@@ -173,7 +173,7 @@
    the Homer Index has something visible to point at. */
 .op-ballot__self { color: var(--page-text); font-weight: 600; }
 .op-ballot__badge {
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   padding: 0.15rem 0.45rem;
   border-radius: 999px;
   background: var(--content-bg);
@@ -191,13 +191,13 @@
    fine print: not knowing was the complaint that prompted the rewrite. */
 .op-strip__schedule {
   margin: 0.4rem 0 0;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   color: var(--content-text-muted);
 }
 
 .op-coverage {
   margin: 0 0 0.6rem;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   color: var(--content-text-muted);
 }
 .op-coverage strong { color: var(--page-text); }
@@ -205,7 +205,7 @@
 /* "Still good?" — shown only once a ballot passes the stale threshold. */
 .op-strip__stale {
   margin: 0.5rem 0 0;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   color: var(--content-text-muted);
 }
 

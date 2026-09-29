@@ -273,7 +273,7 @@ export default function TradeValueAnalysis({
           padding: 1rem;
         }
         .tva__title {
-          font-size: 0.75rem;
+          font-size: var(--font-size-xs);
           font-weight: 700;
           text-transform: uppercase;
           letter-spacing: 0.06em;
@@ -295,7 +295,7 @@ export default function TradeValueAnalysis({
           display: flex;
           align-items: center;
           gap: 0.35rem;
-          font-size: 0.75rem;
+          font-size: var(--font-size-xs);
           font-weight: 600;
           color: var(--color-gray-600, #4b5563);
           margin-bottom: 0.5rem;
@@ -382,7 +382,7 @@ export default function TradeValueAnalysis({
           color: var(--color-error, #dc2626);
         }
         .tva__rank {
-          font-size: 0.6875rem;
+          font-size: var(--font-size-2xs);
           font-weight: 600;
           color: var(--color-gray-400, #9ca3af);
           flex-shrink: 0;
@@ -395,7 +395,7 @@ export default function TradeValueAnalysis({
           align-items: center;
           gap: 0.5rem;
           margin-top: 0.5rem;
-          font-size: 0.75rem;
+          font-size: var(--font-size-xs);
           color: var(--color-gray-600, #4b5563);
           font-variant-numeric: tabular-nums;
         }

@@ -454,7 +454,7 @@ const showSignIn = !signedIn && !isCurrent(signInHref.split('?')[0]);
 		   of the tab order while closed. */
 		visibility: hidden;
 		/* ── visibility is STEPPED, and the step has to land on OPEN ──
-		   `transition: … visibility 200ms ease` looks equivalent and is not:
+		   `transition: … visibility var(--transition-base)` looks equivalent and is not:
 		   visibility interpolates discretely, so it stays `hidden` for the first
 		   instant of the open transition. The script focuses the close button in
 		   that instant, `.focus()` on a still-invisible element is a silent
@@ -462,12 +462,12 @@ const showSignIn = !signedIn && !isCurrent(signInHref.split('?')[0]);
 		   one Tab from the page behind it. Measured, not theorised.
 		   So: `0s` with a DELAY, flipping visible immediately on open (delay 0
 		   below) and waiting out the slide on close (delay 200ms here). */
-		transition: transform 200ms ease, visibility 0s linear 200ms;
+		transition: transform var(--transition-base), visibility 0s linear 200ms;
 	}
 	:global(html.mfl-menu-open) .mfl-menu__panel {
 		transform: translateX(0);
 		visibility: visible;
-		transition: transform 200ms ease, visibility 0s linear 0s;
+		transition: transform var(--transition-base), visibility 0s linear 0s;
 	}
 
 	/* The open-state rules below are `html.mfl-menu-open .mfl-menu__panel`, which

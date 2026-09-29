@@ -44,7 +44,7 @@
 }
 
 .sfc-feed__title {
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -56,7 +56,7 @@
 }
 
 .sfc-feed__view-all {
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   font-weight: 500;
   color: var(--sf-link-color, var(--color-primary, #1c497c));
   text-decoration: none;
@@ -94,7 +94,7 @@
   display: flex;
   gap: var(--sfc-post-gap);
   padding: var(--sfc-post-padding-y) var(--sfc-post-padding-x);
-  transition: background 0.15s ease;
+  transition: background var(--transition-fast);
 }
 
 .sfc-post:hover {
@@ -166,7 +166,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  font-size: 0.625rem;
+  font-size: var(--font-size-3xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -175,14 +175,14 @@
 }
 
 .sfc-post__milestone-icon {
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   line-height: 1;
 }
 
 .sfc-post__link {
   display: inline-block;
   margin-top: 0.25rem;
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   font-weight: 500;
   color: var(--sf-link-color, var(--color-primary, #1c497c));
   text-decoration: none;
@@ -270,7 +270,7 @@
 }
 
 .sfc-reply-toggle__count {
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
@@ -318,13 +318,13 @@
 }
 
 .sfc-reply__handle {
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   color: var(--sf-text-secondary, #6b7280);
   white-space: nowrap;
 }
 
 .sfc-reply__time {
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   color: var(--sf-text-secondary, #6b7280);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -376,7 +376,7 @@ html[data-league='afl'] .sfc-reply--roger .sfc-reply__content {
 }
 
 .sfc-typing__text {
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   color: var(--sf-text-secondary, #6b7280);
   font-style: italic;
 }
@@ -454,12 +454,12 @@ html[data-league='afl'] .sfc-reply--roger .sfc-reply__content {
   padding: 0.375rem 0.75rem;
   background: var(--btn-primary-bg, #1c497c);
   color: var(--btn-primary-text, #fff);
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   border: none;
   border-radius: var(--radius-md, 0.5rem);
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: background var(--transition-fast);
   min-height: 2rem;
 }
 
@@ -485,7 +485,7 @@ html[data-league='afl'] .sfc-reply--roger .sfc-reply__content {
 }
 
 .sfc-load-more__btn {
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   font-weight: 500;
   color: var(--sf-link-color, var(--color-primary, #1c497c));
   background: none;
@@ -536,7 +536,7 @@ html[data-league='afl'] .sfc-reply--roger .sfc-reply__content {
 
 .sfc-post__handle--groupme {
   color: var(--color-gray-400, #9ca3af);
-  font-size: 0.625rem;
+  font-size: var(--font-size-3xs);
 }
 
 .sfc-post__body--groupme {
@@ -559,7 +559,7 @@ html[data-league='afl'] .sfc-reply--roger .sfc-reply__content {
   height: 5rem;
   object-fit: cover;
   border-radius: var(--radius-md, 0.5rem);
-  transition: opacity 0.15s ease;
+  transition: opacity var(--transition-fast);
 }
 
 .sfc-post__gm-thumb-img:hover {
@@ -572,7 +572,7 @@ html[data-league='afl'] .sfc-reply--roger .sfc-reply__content {
   right: 0.25rem;
   background: rgba(0, 0, 0, 0.6);
   color: #fff;
-  font-size: 0.625rem;
+  font-size: var(--font-size-3xs);
   font-weight: 600;
   padding: 0.125rem 0.375rem;
   border-radius: 0.25rem;
@@ -585,7 +585,7 @@ html[data-league='afl'] .sfc-reply--roger .sfc-reply__content {
   align-items: center;
   gap: 0.25rem;
   margin-top: 0.25rem;
-  font-size: 0.6875rem;
+  font-size: var(--font-size-2xs);
   color: var(--color-gray-500, #6b7280);
   text-decoration: none;
 }
@@ -614,7 +614,7 @@ html[data-league='afl'] .sfc-reply--roger .sfc-reply__content {
 }
 
 .gmc-feedback {
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   padding: 0.375rem 0.625rem;
   border-radius: 0.375rem;
   margin-bottom: 0.5rem;
@@ -643,7 +643,7 @@ html[data-league='afl'] .sfc-reply--roger .sfc-reply__content {
 }
 
 .gmc-compose__label {
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   color: var(--color-gray-500, #6b7280);
 }
 
@@ -714,7 +714,7 @@ html[data-league='afl'] .sfc-reply--roger .sfc-reply__content {
 
 .gmc-compose__charcount,
 .gmc-compose__hint {
-  font-size: 0.625rem;
+  font-size: var(--font-size-3xs);
   color: var(--color-gray-300, #d1d5db);
 }
 
@@ -731,7 +731,7 @@ html[data-league='afl'] .sfc-reply--roger .sfc-reply__content {
 }
 
 .gmc-preview__label {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -759,7 +759,7 @@ html[data-league='afl'] .sfc-reply--roger .sfc-reply__content {
 }
 
 .gmc-preview__btn {
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   padding: 0.375rem 0.75rem;
   border: none;
@@ -833,7 +833,7 @@ html[data-league='afl'] .sfc-reply--roger .sfc-reply__content {
   border-radius: var(--radius-full, 9999px);
   background: transparent;
   font: inherit;
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--sf-text-secondary, #6b7280);
   cursor: pointer;
@@ -884,7 +884,7 @@ html[data-league='afl'] .sfc-reply--roger .sfc-reply__content {
   margin: 0.15rem 0 0.25rem;
   padding: 0.05rem 0.45rem 0.05rem 0.35rem;
   border-radius: var(--radius-full, 9999px);
-  font-size: 0.625rem;
+  font-size: var(--font-size-3xs);
   font-weight: 700;
   color: var(--league-accent, var(--color-primary, #1c497c));
   /* Derived from the league accent, exactly as .sf-post__watching does — a

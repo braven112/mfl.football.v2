@@ -192,7 +192,7 @@ const rowId = (slug: string) => `${idPrefix}-row-${slug}`;
     position: sticky;
     top: 0;
     z-index: 1;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: var(--content-text-muted, #666);
@@ -221,9 +221,9 @@ const rowId = (slug: string) => `${idPrefix}-row-${slug}`;
     text-decoration: none;
     display: flex;
     align-items: center;
-    min-height: 44px;
+    min-height: var(--touch-target-min);
   }
-  .dsm-row-header span { display: flex; align-items: center; min-height: 44px; }
+  .dsm-row-header span { display: flex; align-items: center; min-height: var(--touch-target-min); }
   .dsm-row-header a:hover { text-decoration: underline; }
   /* Inset, and lifted above the sticky headers — an outset ring on a sticky
      cell inside an overflow container is clipped on two sides. */
@@ -260,7 +260,7 @@ const rowId = (slug: string) => `${idPrefix}-row-${slug}`;
     position: relative;
   }
   .dsm-rec { display: block; font-weight: 600; }
-  .dsm-pct { display: block; font-size: 0.6875rem; opacity: 0.75; }
+  .dsm-pct { display: block; font-size: var(--font-size-2xs); opacity: 0.75; }
 
   .dsm-self {
     background: repeating-linear-gradient(
@@ -336,7 +336,7 @@ const rowId = (slug: string) => `${idPrefix}-row-${slug}`;
   @media (max-width: 600px) {
     .dsm-corner,
     .dsm-row-header { width: 7rem; min-width: 7rem; }
-    .dsm-row-header { font-size: 0.75rem; padding-inline: 0.5rem; }
+    .dsm-row-header { font-size: var(--font-size-xs); padding-inline: 0.5rem; }
     .dsm-col-header { width: 4.25rem; min-width: 4.25rem; }
   }
 </style>

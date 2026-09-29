@@ -172,7 +172,7 @@ const hrefFromHere = (path: string) => crossHostLeagueHref(Astro.url.hostname, p
   }
 
   .eyebrow {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.18em;
@@ -293,7 +293,7 @@ const hrefFromHere = (path: string) => crossHostLeagueHref(Astro.url.hostname, p
     gap: 0.6rem;
     color: var(--color-white, #ffffff);
     text-decoration: none;
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
   }
 
   .panel:hover {
@@ -393,7 +393,7 @@ const hrefFromHere = (path: string) => crossHostLeagueHref(Astro.url.hostname, p
   }
 
   .section-title {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -426,7 +426,7 @@ const hrefFromHere = (path: string) => crossHostLeagueHref(Astro.url.hostname, p
     padding: 1.1rem 1.1rem 1.3rem;
     text-decoration: none;
     color: inherit;
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
   }
 
   .wn-card:hover {

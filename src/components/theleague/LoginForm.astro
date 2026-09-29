@@ -419,7 +419,7 @@ const allLeaguePrefixes = ALL_LEAGUES.map((l) => `/${l.slug}`).join(' ');
   }
 
   .login-header__subtitle {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 400;
     color: var(--color-gray-500, #6b7280);
     margin: 0;
@@ -478,7 +478,7 @@ const allLeaguePrefixes = ALL_LEAGUES.map((l) => `/${l.slug}`).join(' ');
   }
 
   .login-field__label {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -488,13 +488,13 @@ const allLeaguePrefixes = ALL_LEAGUES.map((l) => `/${l.slug}`).join(' ');
 
   .login-field__input {
     padding: 0.6875rem 0.875rem;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-family: inherit;
     color: var(--input-text, #111827);
     background: var(--input-bg, #fff);
     border: 1px solid var(--input-border, #d1d5db);
     border-radius: var(--radius-md, 0.5rem);
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
     box-sizing: border-box;
     width: 100%;
   }
@@ -539,16 +539,16 @@ const allLeaguePrefixes = ALL_LEAGUES.map((l) => `/${l.slug}`).join(' ');
     width: 100%;
     background: var(--btn-primary-bg, #1c497c);
     color: var(--btn-primary-text, #fff);
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 600;
     font-family: inherit;
     border: none;
     border-radius: var(--radius-md, 0.5rem);
     padding: 0.75rem 1.25rem;
     cursor: pointer;
-    transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+    transition: background var(--transition-fast), box-shadow var(--transition-fast), transform 0.1s ease;
     margin-top: 0.25rem;
-    min-height: 44px;
+    min-height: var(--touch-target-min);
   }
 
   .login-form__submit:hover:not(:disabled) {
@@ -585,7 +585,7 @@ const allLeaguePrefixes = ALL_LEAGUES.map((l) => `/${l.slug}`).join(' ');
 
   /* ── Security Note ─────────────────────────────────────────── */
   .login-form__note {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--color-gray-500, #6b7280);
     text-align: center;
     line-height: 1.5;

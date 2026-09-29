@@ -148,7 +148,7 @@ export default function PlayerSelector({ team, selectedPlayerIds, onAdd, ranking
 
       <style>{`
         .player-selector__title {
-          font-size: 0.75rem;
+          font-size: var(--font-size-xs);
           font-weight: 700;
           text-transform: uppercase;
           letter-spacing: 0.06em;
@@ -167,7 +167,7 @@ export default function PlayerSelector({ team, selectedPlayerIds, onAdd, ranking
           padding: 0.5rem 0.75rem;
           border: 1px solid var(--content-border, #e2e8f0);
           border-radius: var(--radius-sm, 0.25rem);
-          font-size: 0.875rem;
+          font-size: var(--font-size-sm);
           background: var(--content-bg, #fff);
           color: var(--color-gray-900, #111827);
           box-sizing: border-box;
@@ -187,7 +187,7 @@ export default function PlayerSelector({ team, selectedPlayerIds, onAdd, ranking
           border: 1px solid var(--content-border, #e2e8f0);
           border-radius: var(--radius-sm, 0.25rem);
           background: transparent;
-          font-size: 0.75rem;
+          font-size: var(--font-size-xs);
           font-weight: 600;
           cursor: pointer;
           color: var(--color-gray-500, #6b7280);
@@ -224,7 +224,7 @@ export default function PlayerSelector({ team, selectedPlayerIds, onAdd, ranking
         .player-selector__empty {
           text-align: center;
           color: var(--color-gray-500, #6b7280);
-          font-size: 0.875rem;
+          font-size: var(--font-size-sm);
           padding: 1rem 0;
         }
         .player-selector__toggle {
@@ -324,13 +324,13 @@ function PlayerRow({
           font-variant-numeric: tabular-nums;
         }
         .player-row__salary {
-          font-size: 0.75rem;
+          font-size: var(--font-size-xs);
           font-weight: 600;
           color: var(--color-gray-500, #6b7280);
           white-space: nowrap;
         }
         .player-row__years {
-          font-size: 0.625rem;
+          font-size: var(--font-size-3xs);
           color: var(--color-gray-500, #6b7280);
           white-space: nowrap;
         }
@@ -354,11 +354,11 @@ function PlayerRow({
           color: #c4b5fd;
         }
         .player-row__trade-bait {
-          font-size: 0.75rem;
+          font-size: var(--font-size-xs);
           cursor: default;
         }
         .player-row__rank {
-          font-size: 0.75rem;
+          font-size: var(--font-size-xs);
           font-weight: 600;
           color: var(--color-gray-400, #9ca3af);
           font-variant-numeric: tabular-nums;

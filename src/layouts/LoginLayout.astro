@@ -1,5 +1,10 @@
 ---
 import { Font } from 'astro:assets';
+// Global polish layer + shared empty/error states. Imported here, NOT via
+// @import in the <style> block below: Astro scopes @imported rules to this
+// layout's own markup, so they would never reach a page's content.
+import '../styles/polish.css';
+import '../styles/states.css';
 import TheLeagueHeader from '../components/theleague/Header.astro';
 import Footer from '../components/Footer.astro';
 import { getThemePreference } from '../utils/theme-preference';

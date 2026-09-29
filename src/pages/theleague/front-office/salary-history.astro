@@ -229,7 +229,7 @@ function formatCurrency(val: number | null): string {
   }
 
   .page-hero__desc {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 400;
     line-height: 1.5;
     color: var(--color-gray-600, #4b5563);
@@ -254,7 +254,7 @@ function formatCurrency(val: number | null): string {
     border: none;
     border-radius: calc(var(--radius-md, 0.5rem) - 2px);
     cursor: pointer;
-    transition: all 150ms ease;
+    transition: all var(--transition-fast);
     white-space: nowrap;
     line-height: 1.2;
   }
@@ -292,7 +292,7 @@ function formatCurrency(val: number | null): string {
 
   .chart-card .section-header__title {
     margin: 0;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -333,7 +333,7 @@ function formatCurrency(val: number | null): string {
     background: transparent;
     border-radius: var(--radius-sm, 0.25rem);
     cursor: pointer;
-    transition: opacity 150ms ease;
+    transition: opacity var(--transition-fast);
   }
 
   :global(.chart-legend__item:hover) {
@@ -361,7 +361,7 @@ function formatCurrency(val: number | null): string {
   }
 
   :global(.chart-legend__label) {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -381,13 +381,13 @@ function formatCurrency(val: number | null): string {
     padding: 0.625rem 0.75rem;
     pointer-events: none;
     opacity: 0;
-    transition: opacity 150ms ease;
+    transition: opacity var(--transition-fast);
     z-index: var(--z-tooltip, 700);
     min-width: 160px;
   }
 
   :global(.chart-tooltip__title) {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -412,14 +412,14 @@ function formatCurrency(val: number | null): string {
   }
 
   :global(.chart-tooltip__name) {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 500;
     color: var(--color-gray-700, #374151);
     flex: 1;
   }
 
   :global(.chart-tooltip__value) {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     font-variant-numeric: tabular-nums;
     color: var(--color-gray-900, #111827);
@@ -430,7 +430,7 @@ function formatCurrency(val: number | null): string {
   }
 
   .sr-data-table__toggle {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     color: var(--color-gray-500, #6b7280);
     cursor: pointer;
@@ -450,7 +450,7 @@ function formatCurrency(val: number | null): string {
   }
 
   .sr-data-table__heading {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -474,14 +474,14 @@ function formatCurrency(val: number | null): string {
   .sr-data-table th,
   .sr-data-table td {
     padding: 0.375rem 0.5rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     text-align: right;
     white-space: nowrap;
   }
 
   .sr-data-table th {
     background: var(--color-gray-50, #f9fafb);
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -531,7 +531,7 @@ function formatCurrency(val: number | null): string {
   }
 
   .empty-state__title {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 600;
     color: var(--color-gray-700, #374151);
     margin: 0 0 0.25rem;
@@ -557,7 +557,7 @@ function formatCurrency(val: number | null): string {
       flex: 1;
       text-align: center;
       padding: 0.5rem 0.5rem;
-      font-size: 0.75rem;
+      font-size: var(--font-size-xs);
     }
 
     .chart-legend {
@@ -565,7 +565,7 @@ function formatCurrency(val: number | null): string {
     }
 
     :global(.chart-legend__label) {
-      font-size: 0.625rem;
+      font-size: var(--font-size-3xs);
     }
   }
 

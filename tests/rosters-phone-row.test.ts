@@ -259,7 +259,9 @@ describe('the phone sort chips (idea B)', () => {
     expect(rule(".roster-page[data-league='theleague'] .rr-chips")).toMatch(/min-width:\s*0;/);
     expect(rule(".roster-page[data-league='theleague'] .rr-chips")).toMatch(/flex:\s*1 1 100%;/);
     expect(rule('.rr-chip')).toMatch(/flex:\s*0 0 auto;/);
-    expect(rule('.rr-chip')).toMatch(/min-height:\s*44px;/);
+    // A thumb-sized tap target: --touch-target-min is 44px (tokens.css), and
+    // tests/design-polish.test.ts forbids the bare literal.
+    expect(rule('.rr-chip')).toMatch(/min-height:\s*var\(--touch-target-min\);/);
     // Hidden on desktop: the headers are the control there.
     expect(CSS).toMatch(/^\.rsim-bar,\s*\.rr-chips,\s*\.rr-ph \{\s*display: none;/m);
   });

@@ -161,7 +161,7 @@ const metrics: MetricDef[] = [
   }
 
   .hp-snapshot__title {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -176,11 +176,11 @@ const metrics: MetricDef[] = [
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     color: var(--dh-accent);
     text-decoration: none;
-    transition: gap 0.15s ease;
+    transition: gap var(--transition-fast);
   }
 
   .hp-snapshot__cta:hover {
@@ -203,7 +203,7 @@ const metrics: MetricDef[] = [
     border-radius: var(--radius-md, 0.5rem);
     text-decoration: none;
     text-align: center;
-    transition: background 0.15s ease;
+    transition: background var(--transition-fast);
   }
 
   .hp-snapshot__card:hover {
@@ -223,7 +223,7 @@ const metrics: MetricDef[] = [
   }
 
   .hp-snapshot__card-label {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -231,7 +231,7 @@ const metrics: MetricDef[] = [
   }
 
   .hp-snapshot__card-sub {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     color: var(--color-gray-500, #6b7280);
     font-variant-numeric: tabular-nums;
   }
@@ -267,14 +267,14 @@ const metrics: MetricDef[] = [
   }
 
   .hp-snapshot__guest-heading {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 600;
     color: var(--color-gray-700, #374151);
     margin: 0;
   }
 
   .hp-snapshot__guest-desc {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--color-gray-500, #6b7280);
     margin: 0.25rem 0 0;
   }
@@ -282,7 +282,7 @@ const metrics: MetricDef[] = [
   .hp-snapshot__guest-btn {
     flex-shrink: 0;
     padding: 0.4375rem 0.875rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     color: var(--btn-primary-text, #fff);
     background: var(--btn-primary-bg, var(--dh-accent));
@@ -291,7 +291,7 @@ const metrics: MetricDef[] = [
     box-shadow: var(--shadow-sm);
     text-decoration: none;
     white-space: nowrap;
-    transition: background 0.15s ease, border-color 0.15s ease;
+    transition: background var(--transition-fast), border-color var(--transition-fast);
   }
 
   .hp-snapshot__guest-btn:hover {

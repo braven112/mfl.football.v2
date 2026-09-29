@@ -875,7 +875,7 @@ const getHeadshot = (playerId: string, espnId?: string) => {
       padding: 1.25rem;
       box-shadow: var(--shadow-md);
       border: 1px solid var(--content-border);
-      transition: box-shadow 0.3s ease;
+      transition: box-shadow var(--transition-slow);
     }
 
     .status-sidebar__container:hover {
@@ -947,7 +947,7 @@ const getHeadshot = (playerId: string, espnId?: string) => {
     .metric[data-variant="applied"] .metric__value { color: var(--color-info-dark); }
 
     .metric__label {
-      font-size: 0.75rem;
+      font-size: var(--font-size-xs);
       font-weight: 500;
       text-transform: uppercase;
       letter-spacing: 0.04em;
@@ -1178,7 +1178,7 @@ const getHeadshot = (playerId: string, espnId?: string) => {
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      font-size: 0.75rem;
+      font-size: var(--font-size-xs);
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.06em;
@@ -1198,7 +1198,7 @@ const getHeadshot = (playerId: string, espnId?: string) => {
       border-radius: 10px;
       background: var(--color-gray-100, #f3f4f6);
       color: var(--color-gray-500, #6b7280);
-      font-size: 0.625rem;
+      font-size: var(--font-size-3xs);
       font-weight: 600;
     }
 
@@ -1276,14 +1276,14 @@ const getHeadshot = (playerId: string, espnId?: string) => {
     }
 
     .recent-item__type {
-      font-size: 0.625rem;
+      font-size: var(--font-size-3xs);
       text-transform: uppercase;
       letter-spacing: 0.03em;
       color: var(--color-gray-400, #9ca3af);
     }
 
     .recent-item__date {
-      font-size: 0.625rem;
+      font-size: var(--font-size-3xs);
       color: var(--color-gray-400, #9ca3af);
       font-variant-numeric: tabular-nums;
     }
@@ -1341,7 +1341,7 @@ const getHeadshot = (playerId: string, espnId?: string) => {
       color: var(--color-gray-600, #4b5563);
       border: 1px solid var(--color-gray-200, #e5e7eb);
       padding: 0.375rem 0.75rem;
-      font-size: 0.75rem;
+      font-size: var(--font-size-xs);
     }
     .action-btn--dismiss:hover:not(:disabled) {
       background: var(--color-gray-200, #e5e7eb);
@@ -1705,11 +1705,11 @@ const getHeadshot = (playerId: string, espnId?: string) => {
       border: none;
       border-radius: 6px;
       padding: 0.375rem 0.875rem;
-      font-size: 0.75rem;
+      font-size: var(--font-size-xs);
       font-weight: 600;
       letter-spacing: 0.01em;
       cursor: pointer;
-      transition: background-color var(--transition-fast, 0.15s ease);
+      transition: background-color var(--transition-fast);
     }
     :global(.inline-confirm__yes:hover:not(:disabled)) {
       background: var(--color-primary-dark, #163d68);
@@ -1724,11 +1724,11 @@ const getHeadshot = (playerId: string, espnId?: string) => {
       border: 1px solid var(--color-gray-200, #e5e7eb);
       border-radius: 6px;
       padding: 0.375rem 0.875rem;
-      font-size: 0.75rem;
+      font-size: var(--font-size-xs);
       font-weight: 600;
       letter-spacing: 0.01em;
       cursor: pointer;
-      transition: background-color var(--transition-fast, 0.15s ease), border-color var(--transition-fast, 0.15s ease);
+      transition: background-color var(--transition-fast), border-color var(--transition-fast);
     }
     :global(.inline-confirm__no:hover:not(:disabled)) {
       background: var(--color-gray-200, #e5e7eb);

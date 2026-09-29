@@ -144,7 +144,7 @@ function formatRecord(wlt: string): string {
   }
 
   .afl-champ-hero__kicker {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.1em;
@@ -161,7 +161,7 @@ function formatRecord(wlt: string): string {
 
   .afl-champ-hero__sub {
     margin: 0;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     color: var(--color-gray-500, #6b7280);
     max-width: 38ch;
   }
@@ -221,13 +221,13 @@ function formatRecord(wlt: string): string {
   }
 
   .afl-champ-hero__record {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--color-gray-500, #6b7280);
     font-variant-numeric: tabular-nums;
   }
 
   .afl-champ-hero__vs {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -239,11 +239,11 @@ function formatRecord(wlt: string): string {
     align-items: center;
     gap: 0.375rem;
     margin-top: 1.25rem;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 600;
     color: var(--afl-accent);
     text-decoration: none;
-    transition: gap 0.15s ease;
+    transition: gap var(--transition-fast);
   }
 
   .afl-champ-hero__cta:hover {

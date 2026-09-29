@@ -322,7 +322,7 @@ const serializedConfig = JSON.stringify({
   }
 
   .page-hero__desc {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 400;
     line-height: 1.5;
     color: var(--color-gray-600, #4b5563);
@@ -354,7 +354,7 @@ const serializedConfig = JSON.stringify({
   }
 
   .section-title {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -373,7 +373,7 @@ const serializedConfig = JSON.stringify({
   }
 
   .toolbar-select__label {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -400,12 +400,12 @@ const serializedConfig = JSON.stringify({
     align-items: center;
     justify-content: center;
     padding: 0.4375rem 0.875rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     border-radius: var(--radius-sm, 0.25rem);
     cursor: pointer;
     white-space: nowrap;
-    transition: background 0.15s ease;
+    transition: background var(--transition-fast);
     text-decoration: none;
     border: none;
   }
@@ -461,7 +461,7 @@ const serializedConfig = JSON.stringify({
   }
 
   .position-card__badge {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 500;
     color: var(--color-gray-500, #6b7280);
     font-variant-numeric: tabular-nums;
@@ -534,7 +534,7 @@ const serializedConfig = JSON.stringify({
   }
 
   .detail-label {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -543,7 +543,7 @@ const serializedConfig = JSON.stringify({
   }
 
   .detail-value {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 600;
     font-variant-numeric: tabular-nums;
     color: var(--color-gray-700, #374151);
@@ -559,7 +559,7 @@ const serializedConfig = JSON.stringify({
 
   .section-header__title {
     margin: 0;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -593,7 +593,7 @@ const serializedConfig = JSON.stringify({
 
   .editorial-table th {
     padding: 0.4rem 0.5rem;
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -662,12 +662,12 @@ const serializedConfig = JSON.stringify({
     border-radius: var(--radius-full, 9999px);
     background: transparent;
     cursor: pointer;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: var(--color-gray-500, #6b7280);
-    transition: background 0.15s ease, color 0.15s ease;
+    transition: background var(--transition-fast), color var(--transition-fast);
   }
 
   :global(.show-more-btn:hover) {
@@ -682,7 +682,7 @@ const serializedConfig = JSON.stringify({
 
   /* ── Empty State ── */
   .position-card__empty {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     color: var(--color-gray-500, #6b7280);
     margin: 0;
     text-align: center;

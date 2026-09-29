@@ -64,7 +64,7 @@ function viewHref(view: string): string {
     border-radius: 0.5rem;
     background: var(--color-gray-50, #f8fafc);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all var(--transition-base);
     position: relative;
     min-width: 69px;
     text-decoration: none;
@@ -110,13 +110,13 @@ function viewHref(view: string): string {
     bottom: -1.75rem;
     left: 50%;
     transform: translateX(-50%);
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 500;
     color: #64748b;
     white-space: nowrap;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.2s ease;
+    transition: opacity var(--transition-base);
   }
 
   .view-tab:hover .view-tab__label,

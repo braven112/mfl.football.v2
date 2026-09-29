@@ -32,7 +32,7 @@ const sortedYears = [...availableYears].sort((a, b) => b - a);
 
   .year-label {
     font-weight: 600;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     color: var(--page-text, #1a1a1a);
     margin: 0;
   }
@@ -43,10 +43,10 @@ const sortedYears = [...availableYears].sort((a, b) => b - a);
     border-radius: 0.5rem;
     background-color: var(--input-bg, #fff);
     color: var(--input-text, #1a1a1a);
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all var(--transition-base);
   }
 
   .year-select:hover {

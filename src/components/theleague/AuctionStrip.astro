@@ -144,7 +144,7 @@ const secondaryLinks: StripLink[] = [
 
   /* ── Title (editorial section-title variant) ── */
   .auction-strip__title {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -157,7 +157,7 @@ const secondaryLinks: StripLink[] = [
 
   /* ── UDFA note (post-draft variant) ── */
   .auction-strip__udfa-note {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 600;
     color: var(--cat-draft, #7c3aed);
     white-space: nowrap;
@@ -178,7 +178,7 @@ const secondaryLinks: StripLink[] = [
     font-weight: 700;
     white-space: nowrap;
     flex-shrink: 0;
-    transition: filter 0.15s ease, box-shadow 0.15s ease;
+    transition: filter var(--transition-fast), box-shadow var(--transition-fast);
   }
 
   .auction-strip__cta:hover {
@@ -193,12 +193,12 @@ const secondaryLinks: StripLink[] = [
 
   /* ── Simple text links (row 2) ── */
   .auction-strip__text-link {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 500;
     color: var(--color-gray-500, #6b7280);
     text-decoration: none;
     white-space: nowrap;
-    transition: color 0.15s ease;
+    transition: color var(--transition-fast);
   }
 
   .auction-strip__text-link:hover {
@@ -213,7 +213,7 @@ const secondaryLinks: StripLink[] = [
 
   .auction-strip__sep {
     color: var(--color-gray-300, #d1d5db);
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
   }
 
   /* ── Icons ── */
@@ -230,7 +230,7 @@ const secondaryLinks: StripLink[] = [
   }
 
   .auction-strip__ext {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     opacity: 0.6;
   }
 

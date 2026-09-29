@@ -50,7 +50,7 @@ text-decoration: underline;
 /* Collapsed keeps the header — and the count on the button — so live claims are
    never hidden behind something with no way back. */
 .wcp--collapsed { padding-bottom: 0.9rem; }
-.wcp__mfl { font-size: 0.75rem; color: var(--league-accent, var(--color-primary, #1c497c)); text-decoration: underline; }
+.wcp__mfl { font-size: var(--font-size-xs); color: var(--league-accent, var(--color-primary, #1c497c)); text-decoration: underline; }
 .wcp__note { margin: 0.6rem 0 0; font-size: 0.78rem; }
 .wcp__note--ok { color: var(--content-text-muted, #6b7280); }
 .wcp__note--warn { color: var(--color-warning-dark, #b45309); }

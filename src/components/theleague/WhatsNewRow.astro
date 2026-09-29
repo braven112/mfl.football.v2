@@ -155,7 +155,7 @@ const enriched = enrichEntries(sorted.slice(0, count), lastVisitDate);
   }
 
   .whats-new-row__link {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 600;
     color: var(--league-accent, #1c497c);
     text-decoration: none;
@@ -190,7 +190,7 @@ const enriched = enrichEntries(sorted.slice(0, count), lastVisitDate);
     text-decoration: none;
     color: inherit;
     overflow: hidden;
-    transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+    transition: box-shadow var(--transition-base), transform var(--transition-base), border-color var(--transition-base);
   }
 
   a.wnr-card,
@@ -237,7 +237,7 @@ const enriched = enrichEntries(sorted.slice(0, count), lastVisitDate);
     background: #e5e7eb;
     border-radius: 0.5rem;
     overflow: hidden;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-lg);
   }
 
   .wnr-card__browser-bar {
@@ -387,7 +387,7 @@ const enriched = enrichEntries(sorted.slice(0, count), lastVisitDate);
   }
 
   .wnr-card__date {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: var(--font-weight-semibold, 600);
     color: var(--muted-text-color, #6b7280);
   }
@@ -404,11 +404,11 @@ const enriched = enrichEntries(sorted.slice(0, count), lastVisitDate);
   }
 
   .wnr-card__read-more {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: var(--font-weight-semibold, 600);
     color: var(--color-primary, #1c497c);
     margin-top: var(--spacing-xs, 0.25rem);
-    transition: color 0.15s ease;
+    transition: color var(--transition-fast);
   }
 
   .wnr-card:hover .wnr-card__read-more {

@@ -335,7 +335,7 @@ const railMarks = rail.flatMap((entry) =>
   .rhdr-tile__body { display: flex; flex-direction: column; min-width: 0; }
 
   .rhdr-tile__kicker {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 600;
     letter-spacing: 0.12em;
     text-transform: uppercase;
@@ -444,14 +444,14 @@ const railMarks = rail.flatMap((entry) =>
     gap: 0.6rem;
   }
   .rhdr-rail__title {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 600;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--content-text-muted);
   }
   .rhdr-rail__cta {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 600;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -482,13 +482,13 @@ const railMarks = rail.flatMap((entry) =>
       display: inline-flex;
       align-items: center;
       gap: 0.25rem;
-      min-height: 44px;
+      min-height: var(--touch-target-min);
       margin: -0.75rem 0;
       padding: 0;
       border: 0;
       background: none;
       font: inherit;
-      font-size: 0.6875rem;
+      font-size: var(--font-size-2xs);
       font-weight: 600;
       letter-spacing: 0.06em;
       text-transform: uppercase;
@@ -501,7 +501,7 @@ const railMarks = rail.flatMap((entry) =>
       outline-offset: 2px;
       border-radius: 4px;
     }
-    .rhdr-rail__chev { display: inline-block; transition: transform 0.15s ease; }
+    .rhdr-rail__chev { display: inline-block; transition: transform var(--transition-fast); }
     .rhdr-rail__weeks[aria-expanded='true'] .rhdr-rail__chev { transform: rotate(180deg); }
   }
 

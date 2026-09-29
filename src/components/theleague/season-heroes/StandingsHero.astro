@@ -202,7 +202,7 @@ if (userFranchiseId && !userInTop) {
   }
 
   .standings-hero__section-title {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -217,11 +217,11 @@ if (userFranchiseId && !userInTop) {
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     color: var(--dh-accent);
     text-decoration: none;
-    transition: gap 0.15s ease;
+    transition: gap var(--transition-fast);
   }
 
   .standings-hero__cta:hover {
@@ -235,11 +235,11 @@ if (userFranchiseId && !userInTop) {
   .standings-hero__table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
   }
 
   .standings-hero__th {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -282,7 +282,7 @@ if (userFranchiseId && !userInTop) {
   }
 
   .standings-hero__ellipsis {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--color-gray-300, #d1d5db);
     letter-spacing: 0.15em;
   }
@@ -297,7 +297,7 @@ if (userFranchiseId && !userInTop) {
   .standings-hero__td--rank {
     text-align: center;
     color: var(--color-gray-400, #9ca3af);
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     width: 2rem;
   }

@@ -711,7 +711,7 @@ for (const [season, rankings] of jerryJonesStartersBySeason) {
   }
 
   .page-subtitle {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 500;
     color: var(--color-gray-600, #4b5563);
     margin: 0;
@@ -725,7 +725,7 @@ for (const [season, rankings] of jerryJonesStartersBySeason) {
   }
 
   .award-desc {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     color: var(--color-gray-500, #6b7280);
     display: flex;
     align-items: center;
@@ -743,7 +743,7 @@ for (const [season, rankings] of jerryJonesStartersBySeason) {
   .cross-link {
     display: inline-block;
     margin-top: 0.5rem;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 500;
     color: var(--color-primary, #1c497c);
     text-decoration: none;
@@ -779,7 +779,7 @@ for (const [season, rankings] of jerryJonesStartersBySeason) {
   }
 
   .filter-label {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -793,10 +793,10 @@ for (const [season, rankings] of jerryJonesStartersBySeason) {
     border-radius: var(--radius-md, 0.5rem);
     background-color: var(--input-bg, #fff);
     color: var(--input-text, #111827);
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 500;
     cursor: pointer;
-    transition: border-color var(--transition-fast, 150ms ease);
+    transition: border-color var(--transition-fast);
     width: fit-content;
   }
 
@@ -812,7 +812,7 @@ for (const [season, rankings] of jerryJonesStartersBySeason) {
 
   /* ──── Section Title (Editorial Signature) ──── */
   .section-title {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -849,7 +849,7 @@ for (const [season, rankings] of jerryJonesStartersBySeason) {
     padding: 0.15rem 0.4rem;
     background: linear-gradient(135deg, var(--color-error, #dc2626) 0%, var(--color-error-dark, #b91c1c) 100%);
     color: var(--color-white, #fff);
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -873,7 +873,7 @@ for (const [season, rankings] of jerryJonesStartersBySeason) {
     gap: 0.75rem;
     align-items: flex-start;
     box-shadow: var(--shadow-sm);
-    transition: box-shadow var(--transition-fast, 150ms ease);
+    transition: box-shadow var(--transition-fast);
   }
 
   .team-rank-card:hover {
@@ -912,7 +912,7 @@ for (const [season, rankings] of jerryJonesStartersBySeason) {
 
   .team-rank-name {
     margin: 0;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 700;
     color: var(--color-gray-900, #111827);
     display: flex;
@@ -929,7 +929,7 @@ for (const [season, rankings] of jerryJonesStartersBySeason) {
   }
 
   .stat {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--color-gray-500, #6b7280);
   }
 
@@ -977,7 +977,7 @@ for (const [season, rankings] of jerryJonesStartersBySeason) {
   }
 
   .lineup-slot {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 700;
     text-transform: uppercase;
     color: var(--color-white, #fff);
@@ -1008,7 +1008,7 @@ for (const [season, rankings] of jerryJonesStartersBySeason) {
   }
 
   .lineup-name {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     color: var(--color-gray-900, #111827);
     white-space: nowrap;
@@ -1017,7 +1017,7 @@ for (const [season, rankings] of jerryJonesStartersBySeason) {
   }
 
   .lineup-meta {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     color: var(--color-gray-500, #6b7280);
     font-variant-numeric: tabular-nums;
     display: flex;
@@ -1041,7 +1041,7 @@ for (const [season, rankings] of jerryJonesStartersBySeason) {
 
   /* ──── Position Groups ──── */
   .position-worst > h2 {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -1060,7 +1060,7 @@ for (const [season, rankings] of jerryJonesStartersBySeason) {
   }
 
   .position-group h3 {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -1072,7 +1072,7 @@ for (const [season, rankings] of jerryJonesStartersBySeason) {
 
   .empty-state {
     margin: 0;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     color: var(--color-gray-500, #6b7280);
   }
 
@@ -1088,7 +1088,7 @@ for (const [season, rankings] of jerryJonesStartersBySeason) {
   }
 
   .shame-subtitle {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     color: var(--color-gray-500, #6b7280);
     margin: -0.5rem 0 1rem 0;
   }
@@ -1098,7 +1098,7 @@ for (const [season, rankings] of jerryJonesStartersBySeason) {
   }
 
   .shame-season-title {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 700;
     color: var(--color-gray-900, #111827);
     margin: 0 0 0.625rem 0;
@@ -1108,7 +1108,7 @@ for (const [season, rankings] of jerryJonesStartersBySeason) {
   }
 
   .shame-season-summary {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 400;
     font-variant-numeric: tabular-nums;
     color: var(--color-gray-500, #6b7280);
@@ -1150,13 +1150,13 @@ for (const [season, rankings] of jerryJonesStartersBySeason) {
 
   .shame-name {
     font-weight: 600;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--color-gray-900, #111827);
     display: block;
   }
 
   .shame-meta {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     color: var(--color-gray-500, #6b7280);
     display: flex;
     align-items: center;
@@ -1176,14 +1176,14 @@ for (const [season, rankings] of jerryJonesStartersBySeason) {
 
   .shame-salary {
     font-weight: 700;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-variant-numeric: tabular-nums;
     color: var(--color-error, #dc2626);
     display: block;
   }
 
   .shame-team {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     color: var(--color-gray-500, #6b7280);
   }
 

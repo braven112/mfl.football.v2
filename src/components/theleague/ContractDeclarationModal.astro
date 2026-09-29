@@ -377,7 +377,7 @@ import '../../styles/player-modal-band.css';
     justify-content: center;
     color: rgba(255, 255, 255, 0.85);
     cursor: pointer;
-    transition: background 0.15s ease, color 0.15s ease;
+    transition: background var(--transition-fast), color var(--transition-fast);
   }
 
   .cdm-close:hover {
@@ -415,17 +415,17 @@ import '../../styles/player-modal-band.css';
     align-items: center;
     justify-content: center;
     cursor: default;
-    transition: border-color 0.2s ease, background 0.2s ease;
+    transition: border-color var(--transition-base), background var(--transition-base);
     flex-shrink: 0;
     padding: 0;
     font-family: inherit;
   }
 
   .cdm-stepper__dot span {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     color: var(--color-gray-400, #9ca3af);
-    transition: color 0.2s ease;
+    transition: color var(--transition-base);
     pointer-events: none;
   }
 
@@ -454,7 +454,7 @@ import '../../styles/player-modal-band.css';
     width: 2rem;
     height: 2px;
     background: var(--color-gray-200, #e5e7eb);
-    transition: background 0.3s ease;
+    transition: background var(--transition-slow);
   }
 
   .cdm-stepper__line.completed {
@@ -462,7 +462,7 @@ import '../../styles/player-modal-band.css';
   }
 
   .cdm-stepper__label {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -532,7 +532,7 @@ import '../../styles/player-modal-band.css';
   }
 
   .cdm-band__age {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     color: rgba(255, 255, 255, 0.92);
     background: rgba(255, 255, 255, 0.16);
@@ -562,7 +562,7 @@ import '../../styles/player-modal-band.css';
   }
 
   .cdm-band__meta-text {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 600;
     color: rgba(255, 255, 255, 0.92);
     min-width: 0;
@@ -572,7 +572,7 @@ import '../../styles/player-modal-band.css';
   }
 
   .cdm-band__sub {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: rgba(255, 255, 255, 0.66);
     line-height: 1.4;
     overflow: hidden;
@@ -596,7 +596,7 @@ import '../../styles/player-modal-band.css';
     border: 1px solid var(--content-border, #e2e8f0);
     border-left: 2px solid var(--color-primary, #1c497c);
     border-radius: var(--radius-sm, 0.25rem);
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     color: var(--color-primary, #1c497c);
     text-transform: uppercase;
@@ -661,7 +661,7 @@ import '../../styles/player-modal-band.css';
 
   .cdm-metric__label {
     display: block;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -678,7 +678,7 @@ import '../../styles/player-modal-band.css';
   }
 
   .cdm-cut-note {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--color-gray-400, #9ca3af);
     margin: 0.375rem 0 0;
     line-height: 1.4;
@@ -751,7 +751,7 @@ import '../../styles/player-modal-band.css';
 
   .cdm-section__title {
     margin: 0 0 0.75rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -781,7 +781,7 @@ import '../../styles/player-modal-band.css';
   }
 
   .cdm-salary-comparison__label {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -823,7 +823,7 @@ import '../../styles/player-modal-band.css';
   }
 
   .cdm-ext-years-row__label {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -856,7 +856,7 @@ import '../../styles/player-modal-band.css';
     align-items: center;
     gap: 0.375rem;
     margin-top: 0.5rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--color-gray-500, #6b7280);
   }
 
@@ -1019,7 +1019,7 @@ import '../../styles/player-modal-band.css';
   }
 
   .cdm-action-options :global(.cdm-action-option__desc) {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     color: var(--color-gray-500, #6b7280);
   }
 
@@ -1147,12 +1147,12 @@ import '../../styles/player-modal-band.css';
     background: transparent;
     border: none;
     font-family: inherit;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     color: var(--color-gray-500, #6b7280);
     cursor: pointer;
     padding: 0.25rem 0 0.5rem;
-    transition: color 0.15s ease;
+    transition: color var(--transition-fast);
   }
   .cdm-action-options :global(.cdm-action-back:hover) {
     color: var(--color-gray-800, #1f2937);
@@ -1175,7 +1175,7 @@ import '../../styles/player-modal-band.css';
 
   .cdm-action-options :global(.cdm-roster-move-subtitle) {
     margin: 0.5rem 0 0.75rem;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     color: var(--color-gray-700, #374151);
     line-height: 1.4;
   }
@@ -1197,7 +1197,7 @@ import '../../styles/player-modal-band.css';
     border-radius: var(--radius-md, 0.5rem);
     padding: 0.625rem 0.75rem;
     margin-bottom: 0.75rem;
-    transition: opacity 0.2s ease;
+    transition: opacity var(--transition-base);
   }
   .cdm-action-options :global(.cdm-roster-move-card__row) {
     display: flex;
@@ -1211,14 +1211,14 @@ import '../../styles/player-modal-band.css';
     border-bottom: none;
   }
   .cdm-action-options :global(.cdm-roster-move-card__label) {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: var(--color-gray-500, #6b7280);
   }
   .cdm-action-options :global(.cdm-roster-move-card__value) {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 500;
     color: var(--color-gray-700, #374151);
     font-variant-numeric: tabular-nums;
@@ -1258,7 +1258,7 @@ import '../../styles/player-modal-band.css';
     align-items: center;
     justify-content: center;
     width: 100%;
-    min-height: 44px;
+    min-height: var(--touch-target-min);
     padding: 0.625rem 1.25rem;
     background: var(--btn-primary-bg, #1c497c);
     color: var(--btn-primary-text, #fff);
@@ -1268,7 +1268,7 @@ import '../../styles/player-modal-band.css';
     border: none;
     border-radius: 8px;
     cursor: pointer;
-    transition: background 0.15s ease;
+    transition: background var(--transition-fast);
   }
   .cdm-action-options :global(.cdm-roster-move-cta:hover:not(:disabled)) {
     background: var(--btn-primary-bg-hover, #164066);
@@ -1308,7 +1308,7 @@ import '../../styles/player-modal-band.css';
     background: var(--color-gray-50, #f9fafb);
     border: none;
     cursor: pointer;
-    transition: background 0.15s ease;
+    transition: background var(--transition-fast);
   }
 
   .cdm-formula-toggle:hover {
@@ -1316,7 +1316,7 @@ import '../../styles/player-modal-band.css';
   }
 
   .cdm-formula-toggle__label {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -1325,7 +1325,7 @@ import '../../styles/player-modal-band.css';
 
   .cdm-formula-toggle__chevron {
     color: var(--color-gray-400, #9ca3af);
-    transition: transform 0.2s ease;
+    transition: transform var(--transition-base);
     flex-shrink: 0;
   }
 
@@ -1346,7 +1346,7 @@ import '../../styles/player-modal-band.css';
   }
 
   .cdm-formula__equation {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--color-gray-600, #4b5563);
     font-family: ui-monospace, monospace;
     line-height: 1.6;
@@ -1364,7 +1364,7 @@ import '../../styles/player-modal-band.css';
   :global(.cdm-formula__step) {
     display: flex;
     justify-content: space-between;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--color-gray-600, #4b5563);
   }
 
@@ -1389,7 +1389,7 @@ import '../../styles/player-modal-band.css';
   }
 
   :global(.cdm-formula__result-label) {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -1423,7 +1423,7 @@ import '../../styles/player-modal-band.css';
     background: var(--color-gray-50, #f9fafb);
     color: var(--color-gray-400, #9ca3af);
     font-weight: 600;
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     padding: 0.4rem 0.75rem;
@@ -1485,7 +1485,7 @@ import '../../styles/player-modal-band.css';
     background: var(--color-gray-50, #f9fafb);
     color: var(--color-gray-400, #9ca3af);
     font-weight: 600;
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     padding: 0.4rem 0.75rem;
@@ -1564,7 +1564,7 @@ import '../../styles/player-modal-band.css';
     font-family: inherit;
     cursor: pointer;
     padding: 0.625rem 0;
-    transition: color 0.15s ease;
+    transition: color var(--transition-fast);
     flex-shrink: 0;
   }
 
@@ -1580,11 +1580,11 @@ import '../../styles/player-modal-band.css';
     color: #fff;
     border-radius: var(--radius-md, 0.5rem);
     padding: 0.75rem 1.25rem;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 600;
     font-family: inherit;
     cursor: pointer;
-    transition: background 0.15s ease, opacity 0.15s ease;
+    transition: background var(--transition-fast), opacity var(--transition-fast);
     flex: 1;
   }
 
@@ -1669,7 +1669,7 @@ import '../../styles/player-modal-band.css';
     }
 
     .cdm-band__sub {
-      font-size: 0.6875rem;
+      font-size: var(--font-size-2xs);
     }
 
     .cdm-metrics {
@@ -1685,7 +1685,7 @@ import '../../styles/player-modal-band.css';
     }
 
     .cdm-metric__label {
-      font-size: 0.625rem;
+      font-size: var(--font-size-3xs);
     }
   }
 </style>

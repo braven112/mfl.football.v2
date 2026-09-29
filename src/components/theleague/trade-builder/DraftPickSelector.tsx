@@ -164,7 +164,7 @@ export default function DraftPickSelector({
           align-items: center;
         }
         .draft-picks__title {
-          font-size: 0.75rem;
+          font-size: var(--font-size-xs);
           font-weight: 700;
           text-transform: uppercase;
           letter-spacing: 0.06em;
@@ -199,7 +199,7 @@ export default function DraftPickSelector({
           background: var(--color-franchise-tag-light, #ede9fe);
           color: var(--color-franchise-tag, #7c3aed);
           border-radius: var(--radius-sm, 0.25rem);
-          font-size: 0.75rem;
+          font-size: var(--font-size-xs);
           font-weight: 600;
         }
         html.dark .draft-picks__badge {
@@ -227,7 +227,7 @@ export default function DraftPickSelector({
         }
         .draft-picks__year-label {
           width: 100%;
-          font-size: 0.6875rem;
+          font-size: var(--font-size-2xs);
           font-weight: 700;
           text-transform: uppercase;
           letter-spacing: 0.06em;
@@ -236,7 +236,7 @@ export default function DraftPickSelector({
         }
         .draft-picks__year-divider {
           width: 100%;
-          font-size: 0.6875rem;
+          font-size: var(--font-size-2xs);
           font-weight: 700;
           text-transform: uppercase;
           letter-spacing: 0.06em;
@@ -255,7 +255,7 @@ export default function DraftPickSelector({
           border: 1px dashed var(--content-border, #d1d5db);
           border-radius: var(--radius-sm, 0.25rem);
           background: transparent;
-          font-size: 0.75rem;
+          font-size: var(--font-size-xs);
           font-weight: 600;
           cursor: pointer;
           color: var(--color-gray-900, #111827);
@@ -272,7 +272,7 @@ export default function DraftPickSelector({
           outline-offset: 2px;
         }
         .draft-picks__empty {
-          font-size: 0.75rem;
+          font-size: var(--font-size-xs);
           color: var(--color-gray-500, #6b7280);
           margin-top: 0.25rem;
         }

@@ -95,11 +95,11 @@ html.dark {
      ======================================== */
   --color-surface-1: #121212;         /* Lowest: page background */
   --color-surface-2: #1e1e1e;         /* Mid: cards, panels */
-  --color-surface-3: #2a2a2a;         /* Highest: dropdowns, tooltips */
+  --color-surface-3: #313131;         /* Highest: dropdowns, tooltips — a visible step above the #262626 card, since in dark mode lightness (not shadow) is what reads as elevation */
   --color-border-default: #5f6885;    /* Standard borders (slate-tinted) */
   --color-border-subtle: #2e2e2e;     /* Faint dividers */
   --color-text-primary: #e0e0e0;      /* Body copy */
-  --color-text-secondary: #8a8a8a;    /* Labels, captions */
+  --color-text-secondary: #9a9a9a;    /* Labels, captions — 5.4:1 on the #262626 card, 4.7:1 on surface-3 (#8a8a8a was 4.4:1 / under AA) */
   --color-text-disabled: #5a5a5a;     /* Disabled text */
 
   /* ========================================
@@ -116,8 +116,8 @@ html.dark {
   --content-shadow: var(--shadow-card);
 
   --content-bg-muted: #181818;
-  --content-bg-accent: #2a2a2a;
-  --content-text-muted: #8a8a8a;
+  --content-bg-accent: var(--color-surface-3);
+  --content-text-muted: #9a9a9a;
 
   /* Draft pick tiles: translucent washes so the card gradient shows
      through (values dialed in via DevTools). */
@@ -260,7 +260,7 @@ html.dark {
   /* ========================================
      Component Tokens - Accent Content
      ======================================== */
-  --accent-content-bg-color: #2a2a2a;
+  --accent-content-bg-color: var(--color-surface-3);
   --accent-content-border-color: #3a3a3a;
   --accent-content-text-color: #e0e0e0;
   --accent-content-boxshadow-color: rgba(0, 0, 0, 0.3);
@@ -324,35 +324,44 @@ html.dark {
   /* ========================================
      Shadows (adjusted for dark surfaces)
      ======================================== */
-  /* Dark surfaces swallow low-alpha shadows — elevation needs pure-black
-     shadows at roughly 2.5x the light-mode opacity to read as "raised". */
+  /* Dark mode shows elevation with SURFACE LIGHTNESS, not shadow: page
+     #121212 → content #1e1e1e → card #262626 → overlay #313131 (surface-3,
+     --surface-overlay). A shadow on a near-black page is mostly invisible and
+     the part that shows reads as murk, so these stay pure black but soft —
+     about half the alpha they carried before Sep 2026 — and only separate an
+     element from what is directly behind it. */
   --shadow-color: 0deg 0% 0%;
 
-  --shadow-sm: 0.5px 1px 1px hsl(var(--shadow-color) / 0.5);
+  --shadow-sm: 0.5px 1px 1px hsl(var(--shadow-color) / 0.28);
 
   --shadow-md:
-    0 1px 1px hsl(var(--shadow-color) / 0.45),
-    0 2px 3px hsl(var(--shadow-color) / 0.35),
-    0 4px 6px hsl(var(--shadow-color) / 0.28);
+    0 1px 1px hsl(var(--shadow-color) / 0.24),
+    0 2px 3px hsl(var(--shadow-color) / 0.18),
+    0 4px 6px hsl(var(--shadow-color) / 0.14);
 
   --shadow-lg:
-    0 1px 1px hsl(var(--shadow-color) / 0.4),
-    0 2px 3px hsl(var(--shadow-color) / 0.32),
-    0 5px 6px hsl(var(--shadow-color) / 0.26),
-    0 8px 12px hsl(var(--shadow-color) / 0.2);
+    0 1px 1px hsl(var(--shadow-color) / 0.22),
+    0 2px 3px hsl(var(--shadow-color) / 0.17),
+    0 5px 6px hsl(var(--shadow-color) / 0.13),
+    0 8px 12px hsl(var(--shadow-color) / 0.1);
 
   --shadow-xl:
-    0 1px 1px hsl(var(--shadow-color) / 0.35),
-    0 2px 3px hsl(var(--shadow-color) / 0.3),
-    0 5px 6px hsl(var(--shadow-color) / 0.24),
-    0 10px 12px hsl(var(--shadow-color) / 0.18),
-    0 16px 24px hsl(var(--shadow-color) / 0.12);
+    0 1px 1px hsl(var(--shadow-color) / 0.2),
+    0 2px 3px hsl(var(--shadow-color) / 0.16),
+    0 5px 6px hsl(var(--shadow-color) / 0.12),
+    0 10px 12px hsl(var(--shadow-color) / 0.09),
+    0 16px 24px hsl(var(--shadow-color) / 0.06);
 
   --shadow-inset-sm: inset 0 1px 2px hsl(var(--shadow-color) / 0.25);
   --shadow-inset-md:
     inset 0 1px 1px hsl(var(--shadow-color) / 0.2),
     inset 0 2px 3px hsl(var(--shadow-color) / 0.16),
     inset 0 3px 5px hsl(var(--shadow-color) / 0.12);
+
+  /* Semantic elevation surfaces (light values in tokens.css). Reach for
+     these when building anything that floats: a popover, a menu, a modal. */
+  --surface-raised: var(--card-surface);
+  --surface-overlay: var(--color-surface-3);
 
   --shadow-card: var(--shadow-md);
   --shadow-btn-hover: 0 10px 30px rgba(59, 130, 246, 0.3);
@@ -424,7 +433,7 @@ html.dark {
   --nav-switcher-inactive-text: #6b6b6b;
 
   /* Tooltip */
-  --nav-tooltip-bg: #2a2a2a;
+  --nav-tooltip-bg: var(--color-surface-3);
   --nav-tooltip-text: #e0e0e0;
   --nav-tooltip-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 
@@ -707,27 +716,6 @@ html.dark[data-league="mfl"] {
 }
 
 /* ========================================
-   Text Selection (Dark Mode)
-   Without this, selected text keeps its muted dark-mode color on the
-   browser's default highlight — near-unreadable slate-on-slate. Force
-   white text on a strong primary-tinted highlight.
-   ======================================== */
-html.dark ::selection {
-  background: rgba(59, 130, 246, 0.55);
-  color: #ffffff;
-}
-
-html.dark:is([data-league="afl"], [data-league="keeper"]) ::selection {
-  background: rgba(239, 83, 80, 0.5);
-  color: #ffffff;
-}
-
-html.dark[data-league="mfl"] ::selection {
-  background: rgba(239, 83, 80, 0.5);
-  color: #ffffff;
-}
-
-/* ========================================
    Best Ball League #1 — dark-mode per-league overrides
    Unlike AFL, bb1 keeps the neutral dark surface ramp and only swaps the
    accent voice to emerald — the draft-only league doesn't carry enough
@@ -749,29 +737,4 @@ html.dark[data-league="bb1"] {
   --header-nav-icon-hover-color: var(--league-accent);
   --header-nav-label-color: var(--league-accent);
   --header-nav-label-hover-color: var(--league-accent);
-}
-
-html.dark[data-league="bb1"] ::selection {
-  background: rgba(14, 138, 95, 0.55);
-  color: #ffffff;
-}
-
-/* ========================================
-   Focus Visible Styles (Dark Mode)
-   ======================================== */
-html.dark :focus-visible {
-  outline: 2px solid #3b82f6;
-  outline-offset: 2px;
-}
-
-html.dark a:focus-visible,
-html.dark button:focus-visible,
-html.dark input:focus-visible,
-html.dark select:focus-visible,
-html.dark textarea:focus-visible,
-html.dark [role="button"]:focus-visible,
-html.dark [tabindex]:focus-visible {
-  outline: 2px solid #3b82f6;
-  outline-offset: 2px;
-  box-shadow: var(--shadow-focus-ring);
 }

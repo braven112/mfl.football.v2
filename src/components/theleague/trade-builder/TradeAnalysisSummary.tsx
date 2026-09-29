@@ -199,7 +199,7 @@ export default function TradeAnalysisSummary({
           margin-top: 1rem;
         }
         .trade-analysis__title {
-          font-size: 0.75rem;
+          font-size: var(--font-size-xs);
           font-weight: 700;
           text-transform: uppercase;
           letter-spacing: 0.06em;
@@ -220,7 +220,7 @@ export default function TradeAnalysisSummary({
           border: 1px solid var(--content-border, #e2e8f0);
         }
         .trade-analysis__card-title {
-          font-size: 0.75rem;
+          font-size: var(--font-size-xs);
           font-weight: 700;
           text-transform: uppercase;
           letter-spacing: 0.06em;
@@ -240,7 +240,7 @@ export default function TradeAnalysisSummary({
           gap: 0.25rem;
         }
         .trade-analysis__team-label {
-          font-size: 0.6875rem;
+          font-size: var(--font-size-2xs);
           font-weight: 700;
           text-transform: uppercase;
           letter-spacing: 0.06em;
@@ -268,7 +268,7 @@ export default function TradeAnalysisSummary({
           color: var(--color-error, #dc2626);
         }
         .trade-analysis__change--none {
-          font-size: 0.75rem;
+          font-size: var(--font-size-xs);
           color: var(--color-gray-500, #6b7280);
         }
         .trade-analysis__expiry {
@@ -286,12 +286,12 @@ export default function TradeAnalysisSummary({
           color: var(--color-gray-900, #111827);
         }
         .trade-analysis__dm-value {
-          font-size: 0.6875rem;
+          font-size: var(--font-size-2xs);
           color: var(--color-error, #dc2626);
           font-variant-numeric: tabular-nums;
         }
         .trade-analysis__roster-delta {
-          font-size: 0.875rem;
+          font-size: var(--font-size-sm);
           font-weight: 600;
           color: var(--color-gray-900, #111827);
           font-variant-numeric: tabular-nums;

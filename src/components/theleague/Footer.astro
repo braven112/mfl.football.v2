@@ -267,7 +267,7 @@ const bandStyle =
        (blue TheLeague / red AFL / emerald bb1 via --breadcrumb-bar-border),
        invisible in light where the token is unset. */
     border-top: 0.1rem solid var(--breadcrumb-bar-border, transparent);
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     line-height: 1.5;
   }
 
@@ -429,7 +429,7 @@ const bandStyle =
   /* ---------- link deck ---------- */
   .footer-deck { display: grid; gap: 1.625rem; }
   .deck-title {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.11em;
