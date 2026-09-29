@@ -153,7 +153,14 @@ export function getThrowbackFranchiseBrand(
   const team = ((leagueConfig as any).teams ?? []).find((t: any) => t.franchiseId === franchiseId);
   if (!team) return brand;
 
-  const identity = resolveThrowbackIdentity(team, ownerOverride);
+  // The whole league, so an era inherited or granted from another slot
+  // resolves here exactly as it does on the scoreboard.
+  const identity = resolveThrowbackIdentity(
+    team,
+    ownerOverride,
+    undefined,
+    (leagueConfig as any).teams ?? []
+  );
   return {
     ...brand,
     name: identity.name,

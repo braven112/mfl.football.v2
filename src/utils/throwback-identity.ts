@@ -124,6 +124,27 @@ export function getInheritedThrowbackEras(
 }
 
 /**
+ * Eras the commissioner LENT this franchise from another franchise's
+ * `history[]` (`ThrowbackRules.grants`). Tagged with `sourceFranchiseId` so
+ * the pick key names the slot it came from, like an inherited era.
+ */
+export function getGrantedThrowbackEras(
+  team: TeamConfig,
+  scope: ThrowbackScope,
+  allTeams: TeamConfig[] | undefined
+): FranchiseHistoryEntry[] {
+  if (!allTeams?.length) return [];
+  const out: FranchiseHistoryEntry[] = [];
+  for (const g of throwbackRules(scope).grants) {
+    if (g.franchiseId !== team.franchiseId) continue;
+    const source = allTeams.find((t) => t.franchiseId === g.sourceFranchiseId);
+    const era = source?.history?.find((e) => e.yearStart === g.yearStart);
+    if (era) out.push({ ...era, sourceFranchiseId: g.sourceFranchiseId });
+  }
+  return out;
+}
+
+/**
  * Eras a franchise may throw back to: its own `history[]` IN THIS LEAGUE,
  * minus entries whose art asset is claimed by another franchise (the scope's
  * asset conflicts) and minus entries identical to the team's current identity.
@@ -143,7 +164,10 @@ export function getEligibleThrowbackEras(
   scope: ThrowbackScope = DEFAULT_THROWBACK_SCOPE,
   allTeams?: TeamConfig[]
 ): FranchiseHistoryEntry[] {
-  const inherited = getInheritedThrowbackEras(team, allTeams);
+  const inherited = [
+    ...getInheritedThrowbackEras(team, allTeams),
+    ...getGrantedThrowbackEras(team, scope, allTeams),
+  ];
   if (!team.history?.length && inherited.length === 0) return [];
   const { rebrand } = throwbackRules(scope);
   // An era on loan to the Throwback Rebrand leaves its OWNER's picker while

@@ -24,6 +24,7 @@ import { getLeagueBySlug, getLeagueById } from '../config/leagues';
 import {
   DEFAULT_THROWBACK_ERA,
   THROWBACK_ASSET_CONFLICTS,
+  THROWBACK_ERA_GRANTS,
   THROWBACK_WEEKS,
 } from '../data/theleague/throwback-config';
 import {
@@ -58,6 +59,11 @@ export interface ThrowbackRules {
   /** Eras excluded from eligibility (art or name claimed elsewhere). */
   conflicts: { franchiseId: string; yearStart: number }[];
   /**
+   * Eras lent to a franchise from another franchise's `history[]` — a
+   * commissioner exception. Resolved against the league's team list.
+   */
+  grants: { franchiseId: string; sourceFranchiseId: string; yearStart: number }[];
+  /**
    * The Throwback Rebrand, when the league runs one: a franchise serving a
    * last-place rename wears a shame identity borrowed from another
    * franchise's history, overriding its own pick. Null where the league has
@@ -88,6 +94,7 @@ const RULES: Record<ThrowbackScope, ThrowbackRules> = {
     weeks: THROWBACK_WEEKS,
     defaults: DEFAULT_THROWBACK_ERA,
     conflicts: THROWBACK_ASSET_CONFLICTS,
+    grants: THROWBACK_ERA_GRANTS,
     // TheLeague has no last-place rename, so nothing to impose.
     rebrand: null,
   },
@@ -95,6 +102,7 @@ const RULES: Record<ThrowbackScope, ThrowbackRules> = {
     weeks: AFL_THROWBACK_WEEKS_LIST,
     defaults: AFL_DEFAULT_THROWBACK_ERA,
     conflicts: AFL_THROWBACK_ASSET_CONFLICTS,
+    grants: [],
     rebrand: toRebrandRule(AFL_THROWBACK_REBRAND, AFL_THROWBACK_REBRAND_ERA),
   },
 };
