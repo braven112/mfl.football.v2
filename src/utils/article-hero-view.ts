@@ -29,7 +29,7 @@
  * without a fork.
  */
 import type { CompositeHeroTreatment } from '../types/composite-hero';
-import type { EventHeroView } from './afl-hero-resolver';
+import type { EventHeroView } from './league-hero/types';
 import { splitTitleHeadline } from './whats-new-hero-headline';
 
 /** The author's face and name, rendered as the card's byline. */

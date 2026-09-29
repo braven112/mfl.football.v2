@@ -13,7 +13,10 @@
  *   - colorPrimary / colorSecondary are the two most prominent saturated
  *     colours in the franchise's MFL art;
  *   - banner is the MFL art itself (it is banner-shaped), and icon is a
- *     128px centre crop of it written to public/assets/<league>/icons/.
+ *     128px centre crop of it written to public/assets/<league>/icons/ —
+ *     flagged `iconCroppedFromBanner`, so the homepage hero draws it as a
+ *     circle (a square picture, not a drawn mark). The branding editor clears
+ *     the flag when the commissioner uploads a real icon.
  *
  * Dark-surface variants (`colorPrimaryDark` …) are deliberately NOT guessed:
  * every reader already falls back to the primary, and a hand-tuned dark cut
@@ -238,7 +241,8 @@ async function main() {
       color: colors?.primary ?? '#4b5563',
       colorPrimary: colors?.primary ?? '#4b5563',
       colorSecondary: colors?.secondary ?? '#e5e7eb',
-      ...(icon ? { icon } : {}),
+      // The icon is a banner CROP, so it is flagged (see the header).
+      ...(icon ? { icon, iconCroppedFromBanner: true } : {}),
       // The MFL art itself is the banner: it is already banner-shaped.
       ...(art ? { banner: art } : {}),
     });

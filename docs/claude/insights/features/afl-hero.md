@@ -1,7 +1,63 @@
 # AFL Homepage Hero
 
-Insights for the AFL homepage hero system (`src/utils/afl-hero-resolver.ts`,
-`src/components/afl/AflHero.astro`, `src/components/afl/AflEventHero.astro`).
+Insights for the AFL homepage hero. Since 2026-09-29 the AFL's hero IS the
+shared league hero: `src/utils/league-hero/` (resolver, views, profiles,
+casting, page plumbing) and `src/components/shared/league-hero/LeagueHero.astro`,
+with the AFL's facts in its profile. `src/components/afl/AflEventHero.astro` is
+still the branded event card every league's hero falls back to. Entries below
+that name `afl-hero-resolver.ts`, `afl-hero-casting.ts` or `AflHero.astro`
+predate the move — the code they describe now lives in those files.
+
+---
+
+## 2026-09-29 - The AFL hero became the shared league hero
+
+Archie's needed the AFL's hero (the owner's rule: package leagues get the REAL
+page), and the owner's brief widened it: ONE system any league can use, where
+every league's heroes are capabilities any other league can turn on.
+
+**What moved where.**
+
+| Was | Is |
+|---|---|
+| `afl-hero-resolver.ts` `resolveAflHeroState` | `league-hero/resolver.ts` `resolveLeagueHeroState({ league })` |
+| its `EVENT_VIEW` / `SLOT_VIEW` | `league-hero/views.ts` (by ROLE, not event id) |
+| AFL constants in the copy (7 keepers, AL Sat 12:30, NL email draft, Wk 15) | the AFL profile's `facts` / `pools` / `copy` (`profiles.ts`) |
+| `afl-hero-casting.ts` `castAflHeroModel` | `league-hero/casting.ts` `castLeagueHeroModel({ league })` |
+| `AflHero.astro` | `shared/league-hero/LeagueHero.astro` |
+| the page's recap / waiver / article / lineup / casting / accent block | `league-hero/page.ts` `resolveLeagueHomeHero` |
+| `conferenceDraft.{al,nl}` | `poolDraft.pools[]` (the AFL's pools are its conferences) |
+| `userConferenceId` | `userPoolId` |
+
+**Roles, not ids.** The resolver never matches `afl-al-draft`. A profile maps
+its events to roles (`keeper-deadline`, `pool-draft` + pool, `season-start`,
+`trade-deadline`, `playoffs`, `championship`, `new-league-year`, `draft`,
+`auction`); a BUILT calendar (a package league's MFL export) carries the role
+on the definition (`heroRole`, set in `package-league-events.ts`). That is the
+whole trick that lets one resolver drive an authored calendar and an MFL one.
+
+**The ladder is the profile's.** Rungs are functions in `HERO_STEPS`; a
+profile lists the ones it climbs in its order. The AFL's list reproduces the
+old resolver's order exactly (`CALENDAR_LADDER`).
+
+**Parity was proven, not assumed.** Homepage HTML before/after at 24 dates ×
+signed out/in. Identical except two things that differ between two runs of the
+UNCHANGED page too: the P1 lead-up's per-visit What's New pool (2026-09-06) and
+the news rail's wall-clock "23h ago"/"Yesterday". Record those before trusting
+a diff: without a noise baseline, the pool looks like a regression.
+
+**Old test names survive through `tests/helpers/afl-hero.ts`**, which states
+the AFL's hero in the shared API's terms (`resolveAflHeroState`,
+`castAflHeroModel`, `aflPoolDraft`). The AFL suites pin AFL behaviour and
+still should; they did not need rewriting to do it.
+
+**The guards that read source moved with it.** `hero-showcase-content` scans
+the shared views + resolver + the AFL's SECTION of the profiles file (not
+Archie's, whose `ARCHIE'S` wordmark the AFL never renders — and capabilities
+the AFL lacks keep their views in `capability-views.ts` for exactly this
+reason). `waiver-window-callers` found its rule in the AFL page; the waiver
+read now lives in `page.ts`, so the guard also discovers every page that hands
+the shared hero a `waiverCalendar` and checks THAT page's year pick.
 
 ---
 

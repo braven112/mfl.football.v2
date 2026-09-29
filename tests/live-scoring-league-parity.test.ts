@@ -13,7 +13,7 @@ import { resolve } from 'node:path';
 import { selectSupportingMatchups } from '../src/utils/live-scoring-view';
 import { buildLiveScoringHeroProps } from '../src/utils/live-scoring-hero-props';
 import { getLeagueBySlug } from '../src/config/leagues';
-import { resolveAflHeroState } from '../src/utils/afl-hero-resolver';
+import { resolveAflHeroState } from './helpers/afl-hero';
 
 const THELEAGUE = getLeagueBySlug('theleague')!;
 const AFL = getLeagueBySlug('afl-fantasy')!;
@@ -176,7 +176,7 @@ describe('both homepages forward the built props whole', () => {
   // leagues in step; a hand-listed forward drifts again on the next field.
   for (const [name, path] of [
     ['SeasonDailyHero', 'src/components/theleague/SeasonDailyHero.astro'],
-    ['AflHero', 'src/components/afl/AflHero.astro'],
+    ['LeagueHero', 'src/components/shared/league-hero/LeagueHero.astro'],
   ] as const) {
     it(`${name} spreads liveScoring rather than listing its fields`, () => {
       const tag = componentOpeningTag(read(path), 'LiveScoringHero');
@@ -195,15 +195,15 @@ describe('the AFL hero reads the live WINDOW, not the live SLOT', () => {
   // and the last game ends at 8:30. `isLive` drives both the poll and the
   // LIVE/FINAL badge, so a hardcoded `true` polls all evening and badges
   // finished games as live.
-  it('AflHero passes the resolved isLive, never a literal', () => {
-    const open = componentOpeningTag(read('src/components/afl/AflHero.astro'), 'LiveScoringHero');
-    expect(open, 'AflHero does not render <LiveScoringHero>').not.toBeNull();
-    expect(open!).toContain('isLive={state.isLive}');
+  it('LeagueHero passes the resolved isLive, never a literal', () => {
+    const open = componentOpeningTag(read('src/components/shared/league-hero/LeagueHero.astro'), 'LiveScoringHero');
+    expect(open, 'LeagueHero does not render <LiveScoringHero>').not.toBeNull();
+    expect(open!).toContain('isLive={state.isLive ?? false}');
     expect(open!).not.toMatch(/isLive=\{(true|false)\}/);
   });
 
-  it('the AFL resolver derives isLive from the clock', () => {
-    const src = read('src/utils/afl-hero-resolver.ts');
+  it('the shared resolver derives isLive from the clock', () => {
+    const src = read('src/utils/league-hero/resolver.ts');
     expect(src).toContain('isLive: isGameLive(now)');
   });
 

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { selectBreakingStory } from '../src/utils/offseason-hero-data';
 import { castStoryModel } from '../src/utils/hero-casting';
-import { resolveHeroState } from '../src/utils/hero-resolver';
+import { resolveHeroState } from '../src/utils/league-hero/season-state';
 
 const REF = new Date('2026-07-15T12:00:00-07:00'); // deep offseason, no game
 

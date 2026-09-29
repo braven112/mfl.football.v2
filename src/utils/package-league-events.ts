@@ -58,6 +58,21 @@ function typeInfo(type: string) {
   return null;
 }
 
+/** MFL calendar type → the homepage hero's role for it (league-hero/types.ts). */
+const HERO_ROLE: Record<string, string> = {
+  DRAFT_START: 'draft',
+  AUCTION_START: 'auction',
+  TRADE: 'trade-deadline',
+  KEEPERS: 'keeper-deadline',
+};
+
+/** The hero role + pool for an MFL calendar type: a per-unit draft is a POOL draft. */
+function heroRoleOf(type: string): { heroRole?: string; heroPool?: string } {
+  const unit = /^DRAFT_START_(?:CONFERENCE|DIVISION)(\d+)$/.exec(type);
+  if (unit) return { heroRole: 'pool-draft', heroPool: unit[1] };
+  return HERO_ROLE[type] ? { heroRole: HERO_ROLE[type] } : {};
+}
+
 interface Bracket {
   startWeek?: string;
   teamsInvolved?: string;
@@ -85,10 +100,11 @@ function def(
   icon: string,
   category: Category,
   sortOrder: number,
+  hero: Pick<LeagueEventDefinition, 'heroRole' | 'heroPool' | 'heroWeek'> = {},
 ): LeagueEventDefinition {
   // startDate/endDate are required by the schema but unused for a concrete
   // event: the dates are passed to resolveConcreteEvent directly.
-  return { id, name, description, icon, category, sortOrder, startDate: { type: 'fixed', month: 1, day: 1 } };
+  return { id, name, description, icon, category, sortOrder, startDate: { type: 'fixed', month: 1, day: 1 }, ...hero };
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -134,7 +150,7 @@ export function buildPackageLeagueEvents(input: {
       if (!start) continue;
       const end = mflTime(ev.end_time, seasonYear) ?? start;
       push(
-        def(`${league.slug}-mfl-${ev.id ?? type}-${seasonYear}`, name, info.description || name, info.icon, info.category, 10),
+        def(`${league.slug}-mfl-${ev.id ?? type}-${seasonYear}`, name, info.description || name, info.icon, info.category, 10, heroRoleOf(type)),
         start,
         end >= start ? end : start,
       );
@@ -142,15 +158,15 @@ export function buildPackageLeagueEvents(input: {
 
     // 2. Facts every league has.
     const kickoff = nflWeekStartInstant(seasonYear, 1);
-    push(def(`${league.slug}-kickoff-${seasonYear}`, 'Week 1 kicks off', `The ${seasonYear} NFL season starts.`, 'nfl', 'regular-season', 20), kickoff, kickoff);
+    push(def(`${league.slug}-kickoff-${seasonYear}`, 'Week 1 kicks off', `The ${seasonYear} NFL season starts.`, 'nfl', 'regular-season', 20, { heroRole: 'season-start' }), kickoff, kickoff);
 
     const bracket = championshipWeeks(playoffBrackets);
     if (bracket) {
       const po = nflWeekStartInstant(seasonYear, bracket.start);
-      push(def(`${league.slug}-playoffs-${seasonYear}`, 'Playoffs begin', `Week ${bracket.start}: the playoff bracket opens.`, 'playoff', 'regular-season', 30), po, po);
+      push(def(`${league.slug}-playoffs-${seasonYear}`, 'Playoffs begin', `Week ${bracket.start}: the playoff bracket opens.`, 'playoff', 'regular-season', 30, { heroRole: 'playoffs', heroWeek: bracket.start }), po, po);
       const champ = nflWeekStartInstant(seasonYear, bracket.final);
       push(
-        def(`${league.slug}-championship-${seasonYear}`, 'Championship week', `Week ${bracket.final}: the title is decided.`, 'champ', 'regular-season', 40),
+        def(`${league.slug}-championship-${seasonYear}`, 'Championship week', `Week ${bracket.final}: the title is decided.`, 'champ', 'regular-season', 40, { heroRole: 'championship', heroWeek: bracket.final }),
         champ,
         new Date(champ.getTime() + 6 * DAY_MS),
       );
@@ -159,7 +175,7 @@ export function buildPackageLeagueEvents(input: {
     const roll = league.leagueYearRollover;
     if (roll) {
       const newYear = new Date(seasonYear + 1, roll.month - 1, roll.day);
-      push(def(`${league.slug}-new-league-year-${seasonYear + 1}`, 'New league year', `The ${seasonYear + 1} league year begins on MFL.`, 'star', 'preseason', 0), newYear, newYear);
+      push(def(`${league.slug}-new-league-year-${seasonYear + 1}`, 'New league year', `The ${seasonYear + 1} league year begins on MFL.`, 'star', 'preseason', 0, { heroRole: 'new-league-year' }), newYear, newYear);
     }
   }
   return out.sort(compareResolved);
