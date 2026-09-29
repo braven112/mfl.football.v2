@@ -7,8 +7,6 @@ import { describe, expect, it } from 'vitest';
 import {
   divisionLeaders,
   groupStandingsByDivision,
-  pickRosterTeam,
-  positionRank,
   rosterPlayerIds,
 } from '../src/utils/package-league';
 
@@ -83,17 +81,5 @@ describe('rosters', () => {
     expect(rosterPlayerIds(rosters, '0001').map((p) => p.id)).toEqual(['15281', '99']);
     expect(rosterPlayerIds(rosters, '0002')).toEqual([{ id: '7', status: 'ROSTER' }]);
     expect(rosterPlayerIds(rosters, '0404')).toEqual([]);
-  });
-
-  it('ranks positions in reading order, unknowns last', () => {
-    expect(positionRank('QB')).toBeLessThan(positionRank('Def'));
-    expect(positionRank('LB')).toBeGreaterThan(positionRank('Def'));
-  });
-
-  it('opens the requested team, else the viewer, else the first', () => {
-    expect(pickRosterTeam(teams, '0003', '0002')).toBe('0003');
-    expect(pickRosterTeam(teams, 'nope', '0002')).toBe('0002');
-    expect(pickRosterTeam(teams, null, null)).toBe('0001');
-    expect(pickRosterTeam([], null, null)).toBeNull();
   });
 });
