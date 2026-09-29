@@ -24,7 +24,8 @@ import { getLeagueBySlug } from '../../config/leagues';
 import type { LiveBoard } from '../../types/live';
 import type { NflGame } from '../../types/live-scoring';
 import type { ThrowbackScope } from '../throwback-scope';
-import { getLeagueTeamConfigs } from '../league-team-brands';
+import { getLeagueConfigStructure, getLeagueTeamConfigs } from '../league-team-brands';
+import { buildPanelGroups } from './board-groups';
 import { getLeagueYearForSlug } from '../league-year';
 import { applyThrowbackToBoard, type ThrowbackPreview } from '../throwback-live-scoring';
 import { getCurrentRosterSample, getLiveScoringSample } from '../../data/live-scoring-sample';
@@ -79,6 +80,31 @@ export interface AssembledLeagueBoard {
 }
 
 export async function assembleLeagueBoard(
+  input: AssembleLeagueBoardInput,
+): Promise<AssembledLeagueBoard> {
+  const assembled = await assembleUngrouped(input);
+  /**
+   * The division picker's data, stamped HERE so the page's first paint and
+   * every poll carry it alike — the island replaces its board wholesale on
+   * each poll, so groups added only at SSR would vanish on the first tick.
+   * `undefined` for every league but a declared-divisions one (see
+   * `board-groups.ts`), which leaves their payloads byte-identical.
+   */
+  const groups = buildPanelGroups(
+    getLeagueConfigStructure(input.slug),
+    getLeagueTeamConfigs(input.slug),
+  );
+  if (!groups) return assembled;
+  return {
+    ...assembled,
+    board: {
+      ...assembled.board,
+      panels: assembled.board.panels.map((p) => ({ ...p, groups })),
+    },
+  };
+}
+
+async function assembleUngrouped(
   input: AssembleLeagueBoardInput,
 ): Promise<AssembledLeagueBoard> {
   const { slug, leagueId, week, year, authUser, searchParams, throwbackScope, sample = false } = input;
