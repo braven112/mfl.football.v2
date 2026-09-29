@@ -172,6 +172,11 @@ export function applyBrandingEdit(config, franchiseId, patch) {
     else next[key] = value;
   }
 
+  // A new icon is a real mark, not the banner crop the league was seeded with
+  // (`iconCroppedFromBanner`, see suggest-league-branding.mjs) — the heroes
+  // stop drawing it as a circle.
+  if ('icon' in patch && patch.icon !== before.icon) delete next.iconCroppedFromBanner;
+
   if (patch.colorPrimary && (!before.color || before.color === before.colorPrimary)) {
     next.color = patch.colorPrimary;
   }

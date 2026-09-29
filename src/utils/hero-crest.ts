@@ -28,7 +28,7 @@
  */
 import { getLeagueTeamConfig } from './league-team-brands';
 import { crestLeagueKey, resolveLargeSurfaceCrest } from './dark-surface-crest';
-import { resolveHeroFranchiseBackdrop, type HeroFranchiseBackdrop } from './hero-franchise-backdrop';
+import { isCroppedBannerCrest, resolveHeroFranchiseBackdrop, type HeroFranchiseBackdrop } from './hero-franchise-backdrop';
 import { getNFLTeamLogo, isValidTeamCode } from './nfl-logo';
 import type { CanonicalLeagueSlug } from '../config/leagues';
 
@@ -38,6 +38,8 @@ export interface HeroCrest {
   filter?: string;
   /** Which branch answered — for tests, and for a caption that names the mark. */
   kind: 'franchise' | 'nfl';
+  /** A banner crop rather than a drawn mark — the hero draws it as a circle. */
+  round?: boolean;
 }
 
 export interface HeroCrestInput {
@@ -78,7 +80,12 @@ export function resolveHeroCrest({ franchiseId, league, nflTeam }: HeroCrestInpu
       // is tuned for. Same call the draft broadcast's big crest makes.
       const art = resolveLargeSurfaceCrest(team, crestLeagueKey(league));
       if (art?.src) {
-        return { src: art.src, ...(art.filter ? { filter: art.filter } : {}), kind: 'franchise' };
+        return {
+          src: art.src,
+          ...(art.filter ? { filter: art.filter } : {}),
+          kind: 'franchise',
+          ...(isCroppedBannerCrest(team, art.src) ? { round: true } : {}),
+        };
       }
     }
     // A franchise that owns the story but ships no artwork falls through to its

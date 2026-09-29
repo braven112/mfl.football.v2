@@ -51,6 +51,25 @@ export interface HeroBackdropTeam extends DarkSurfaceCrestTeam {
   colorQuaternary?: string;
   /** Raw CSS `background`, painted verbatim. See the theming rules doc. */
   broadcastGradient?: string;
+  /**
+   * The team's `icon` is a centre CROP of its MFL
+   * banner art, not a drawn mark — what scripts/suggest-league-branding.mjs
+   * seeds a package league with. A square picture rather than a transparent
+   * logo, so a hero shows it as a circle. Cleared by the branding editor the
+   * moment the commissioner uploads a real icon (applyBrandingEdit).
+   */
+  iconCroppedFromBanner?: boolean;
+}
+
+/**
+ * Whether the crest a hero is about to draw is a banner crop (see
+ * `iconCroppedFromBanner`) — the hero then draws it as a circle. Only the
+ * seeded icon cuts count: any other artwork the team carries is a real mark.
+ */
+export function isCroppedBannerCrest(team: HeroBackdropTeam | null | undefined, src: string | null | undefined): boolean {
+  if (!team?.iconCroppedFromBanner || !src) return false;
+  // Only the seeded `icon` is a crop; an uploaded dark cut is a real mark.
+  return src === (team as HeroBackdropTeam & { icon?: string }).icon;
 }
 
 export interface HeroFranchiseBackdrop {
@@ -60,6 +79,8 @@ export interface HeroFranchiseBackdrop {
   crest: string;
   /** Inline `filter` carrying the measured outline, only for a LIGHT cut. */
   crestFilter?: string;
+  /** The crest is a banner crop — draw it as a circle (`isCroppedBannerCrest`). */
+  crestRound?: boolean;
   /**
    * The franchise's accent for the COPY band: headline word, countdown numeral,
    * eyebrow chip.
@@ -489,6 +510,7 @@ export function resolveHeroFranchiseBackdrop(
     gradient,
     crest: art.src,
     ...(art.filter ? { crestFilter: art.filter } : {}),
+    ...(isCroppedBannerCrest(team, art.src) ? { crestRound: true } : {}),
     accent,
     accentPanel,
     pillInk,

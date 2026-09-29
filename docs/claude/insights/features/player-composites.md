@@ -2248,3 +2248,26 @@ point of checking them against a third league before moving:
   `playoffs` / `championship` states cast their slot when they carry a view,
   and cast nothing (the bracket owns the flank) when they do not.
 
+## 2026-09-29 — A crest cropped from a banner is drawn as a circle
+
+Archie's team marks are not drawn logos: `suggest-league-branding.mjs` seeded
+each `icon` as a 128px centre CROP of the team's MFL banner art — a square
+picture. Watermarked full-size behind a hero it read as a hard-edged photo
+tile. The owner's call: a hero draws such a crest as a circle; a real mark
+stays as it is.
+
+- **Per team, not per league.** `iconCroppedFromBanner: true` on the team's
+  config, written by the seed and CLEARED by `applyBrandingEdit` the moment a
+  commissioner uploads a new icon. A league half-way through replacing its
+  crops shows circles only for the teams still on one.
+- **Only the seeded `icon` counts** (`isCroppedBannerCrest`): an uploaded dark
+  cut on a still-flagged team is a real mark.
+- **Both hero crest paths carry it**: `resolveHeroCrest` → `round` (the
+  composite's `cmh__crest--round`), and `resolveHeroFranchiseBackdrop` →
+  `crestRound` (the franchise card's `hero-fb__crest--round`, in
+  AflEventHero, EventHeroShell and the schedule page).
+- **Height-driven circle** (`height: 86%; aspect-ratio: 1; object-fit: cover`)
+  so it always fits the card; the width-driven square crest would have been
+  cut off by the card's own edges as a circle.
+- Guard: `tests/hero-crest-round.test.ts`.
+

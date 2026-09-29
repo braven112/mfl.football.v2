@@ -366,6 +366,18 @@ html.dark .cmh--red {
   user-select: none;
 }
 
+/* A crest that is a CROP of the team's banner art (a square picture, not a
+   drawn mark — `iconCroppedFromBanner`) is shown as a circle. Height-driven so
+   the circle always fits the card; `cover` fills it edge to edge. Placed after
+   the mobile width override below by specificity (two classes), not order. */
+.cmh__crest.cmh__crest--round {
+  width: auto;
+  height: 86%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
 /* ── Glow (z-1): tinted by the cast player's NFL team, or by the franchise
       that owns the story. ─────────────────────────────────────────────── */
 .cmh__glow {

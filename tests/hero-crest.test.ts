@@ -117,7 +117,7 @@ describe('hero crest resolution', () => {
 
 describe('hero crest rendering', () => {
   it('survives a 404 instead of painting a broken-image box', () => {
-    expect(shell).toMatch(/class="cmh__crest"[\s\S]{0,400}?onerror=/);
+    expect(shell).toMatch(/\['cmh__crest'[\s\S]{0,400}?onerror=/);
     const hidden = css.slice(css.indexOf('.cmh--no-crest .cmh__crest'));
     expect(hidden.slice(0, hidden.indexOf('}'))).toContain('display: none');
   });
