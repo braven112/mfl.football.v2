@@ -3,6 +3,7 @@ import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import aflConfig from '../../../../data/afl-fantasy/afl.config.json';
 import franchiseHistory from '../../../../data/afl-fantasy/derived/franchise-history.json';
 import { formatTradeAsset } from '../../../utils/franchise-trade-asset';
+import EmptyState from '../../../components/shared/states/EmptyState.astro';
 import {
   currentOwnerMeetings,
   tallyMeetings,
@@ -187,9 +188,10 @@ const shortB = frB.currentNameShort || nameB;
     </header>
 
     {totalGames === 0 ? (
-      <p class="rivalry-empty">
-        These two have no recorded head-to-head meetings under their current owners.
-      </p>
+      <EmptyState
+        title="They haven't met yet"
+        body="These two have no recorded head-to-head meetings under their current owners."
+      />
     ) : (
       <>
         <section class="rivalry-section">
@@ -408,12 +410,6 @@ const shortB = frB.currentNameShort || nameB;
     margin: 0.35rem 0 0;
     font-size: 0.8rem;
     color: var(--content-text-muted);
-  }
-
-  .rivalry-empty {
-    color: var(--content-text-muted);
-    text-align: center;
-    padding: var(--spacing-lg, 24px);
   }
 
   .rivalry-section {

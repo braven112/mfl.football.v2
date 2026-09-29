@@ -89,6 +89,17 @@ describe('global polish rules', () => {
     expect(block).not.toMatch(/animation/);
   });
 
+  it('lets a motion-essential element keep its transition (the hold-to-clear ring shows elapsed time)', () => {
+    expect(polish).toMatch(/\*:not\(\[data-motion-essential\]\)/);
+    for (const f of ['src/pages/theleague/lineup.astro', 'src/components/afl-family/LineupPage.astro']) {
+      expect(read(f), f).toMatch(/class="lineup-clear__progress" data-motion-essential/);
+    }
+  });
+
+  it('hands scrollbar-color back to `auto` below the root (it inherits, and disables ::-webkit-scrollbar)', () => {
+    expect(polish).toMatch(/body\s*\{\s*scrollbar-color:\s*auto;/);
+  });
+
   it('uses the text-wrap-style LONGHAND (the shorthand overrides white-space: nowrap)', () => {
     expect(polish).toMatch(/text-wrap-style:\s*balance/);
     expect(polish).not.toMatch(/^\s*text-wrap\s*:/m);
@@ -145,38 +156,34 @@ describe('empty / error state builders', () => {
 });
 
 describe('design literal ratchet', () => {
-  type Counts = Partial<Record<'transition' | 'fontSize' | 'shadow', number>>;
+  // Pinned on the TOTAL per kind, not per file: moving CSS out of a forked
+  // page into a shared component (which CLAUDE.md asks for) moves its
+  // literals between files without adding one, and a per-file pin would fail
+  // that. The per-file map in the fixture is kept for DIAGNOSIS — when a
+  // total rises, the files that grew are the ones to look at.
+  type Kind = 'transition' | 'fontSize' | 'shadow';
+  type Counts = Partial<Record<Kind, number>>;
   const now = collectDesignLiterals(join(ROOT, 'src')) as Record<string, Counts>;
   const recorded = baseline.files as Record<string, Counts>;
-  const KINDS = ['transition', 'fontSize', 'shadow'] as const;
-  const HINT: Record<(typeof KINDS)[number], string> = {
+  const KINDS: Kind[] = ['transition', 'fontSize', 'shadow'];
+  const HINT: Record<Kind, string> = {
     transition: 'var(--transition-fast|base|slow)',
     fontSize: 'var(--font-size-*)',
     shadow: 'var(--shadow-sm|md|lg|xl)',
   };
+  const total = (m: Record<string, Counts>, k: Kind) => Object.values(m).reduce((n, c) => n + (c[k] ?? 0), 0);
 
-  it('no file gains a hand-typed transition, font size or shadow', () => {
-    const grew: string[] = [];
-    for (const [file, counts] of Object.entries(now)) {
-      for (const kind of KINDS) {
-        const was = recorded[file]?.[kind] ?? 0;
-        const is = counts[kind] ?? 0;
-        if (is > was) grew.push(`${file}: ${kind} ${was} → ${is} (use ${HINT[kind]})`);
-      }
-    }
-    expect(grew, 'new literals — use the tokens instead').toEqual([]);
+  it.each(KINDS)('adds no hand-typed %s literal (use the tokens)', (kind) => {
+    const is = total(now, kind);
+    const was = baseline.totals[kind];
+    const grew = Object.entries(now)
+      .filter(([f, c]) => (c[kind] ?? 0) > (recorded[f]?.[kind] ?? 0))
+      .map(([f, c]) => `${f}: ${recorded[f]?.[kind] ?? 0} → ${c[kind]}`);
+    expect(is, `${kind} literals rose ${was} → ${is}; use ${HINT[kind]}. Files that grew:\n  ${grew.join('\n  ')}`).toBeLessThanOrEqual(was);
   });
 
-  it('a file that dropped literals is retightened (node scripts/ratchet.mjs --write)', () => {
-    const fell: string[] = [];
-    for (const [file, counts] of Object.entries(recorded)) {
-      for (const kind of KINDS) {
-        const was = counts[kind] ?? 0;
-        const is = now[file]?.[kind] ?? 0;
-        if (is < was) fell.push(`${file}: ${kind} ${was} → ${is}`);
-      }
-    }
-    expect(fell, 'progress — retighten tests/fixtures/design-literal-baseline.json').toEqual([]);
+  it.each(KINDS)('retightens the %s baseline when it falls (node scripts/ratchet.mjs --write)', (kind) => {
+    expect(total(now, kind), 'progress — retighten tests/fixtures/design-literal-baseline.json').toBe(baseline.totals[kind]);
   });
 });
 

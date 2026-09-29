@@ -131,53 +131,40 @@ let regressions = false;
 }
 
 // ---------------------------------------------------------------------------
-// Design literals (per file, per kind)
+// Design literals (pinned per kind on the TOTAL; per-file map for diagnosis)
 // ---------------------------------------------------------------------------
 {
   const KINDS = ['transition', 'fontSize', 'shadow'];
   const baseline = readJson(DESIGN_LITERAL_BASELINE);
   const now = collectDesignLiterals(join(ROOT, 'src'));
-  const grew = [];
-  const fell = [];
-  for (const file of new Set([...Object.keys(now), ...Object.keys(baseline.files)])) {
-    for (const kind of KINDS) {
-      const was = baseline.files[file]?.[kind] ?? 0;
-      const is = now[file]?.[kind] ?? 0;
-      if (is > was) grew.push(`${file}: ${kind} ${was} → ${is}`);
-      else if (is < was) fell.push(`${file}: ${kind} ${was} → ${is}`);
-    }
-  }
   const totals = Object.fromEntries(KINDS.map((k) => [k, totalDesignLiterals(now, k)]));
+  const rose = KINDS.filter((k) => totals[k] > baseline.totals[k]);
+  const fell = KINDS.filter((k) => totals[k] < baseline.totals[k]);
   console.log(`design literals: ${KINDS.map((k) => `${k} ${totals[k]} (baseline ${baseline.totals[k]})`).join(', ')}`);
-  if (grew.length) {
+  if (rose.length) {
     regressions = true;
-    console.log('  NEW literals (a regression — use the tokens instead):');
-    for (const line of grew) console.log(`    ${line}`);
+    for (const k of rose) {
+      console.log(`  ${k} ROSE (a regression — use the tokens instead). Files that grew:`);
+      for (const [f, c] of Object.entries(now)) {
+        const was = baseline.files[f]?.[k] ?? 0;
+        if ((c[k] ?? 0) > was) console.log(`    ${f}: ${was} → ${c[k]}`);
+      }
+    }
   }
   if (fell.length) {
     drift = true;
-    console.log(`  dropped since recorded (${write ? 'retightening' : 'run --write to retighten'}):`);
-    for (const line of fell) console.log(`    ${line}`);
-    // Only ever tightens: a file that also GREW keeps its old count for
-    // that kind, so --write cannot launder a regression into the baseline.
-    if (write) {
-      const files = {};
-      for (const file of Object.keys(baseline.files).concat(Object.keys(now))) {
-        const merged = {};
-        for (const kind of KINDS) {
-          const n = Math.min(baseline.files[file]?.[kind] ?? 0, now[file]?.[kind] ?? 0);
-          if (n > 0) merged[kind] = n;
-        }
-        if (Object.keys(merged).length) files[file] = merged;
-      }
-      baseline.files = Object.fromEntries(Object.entries(files).sort(([a], [b]) => a.localeCompare(b)));
-      baseline.totals = Object.fromEntries(KINDS.map((k) => [k, totalDesignLiterals(baseline.files, k)]));
+    console.log(`  fell since recorded: ${fell.join(', ')} (${write && !rose.length ? 'retightening' : 'run --write to retighten'})`);
+    // Only ever tightens: with any kind risen, nothing is written, so --write
+    // cannot launder a regression into the baseline.
+    if (write && !rose.length) {
+      baseline.files = now;
+      baseline.totals = totals;
       baseline.recordedAt = today;
       writeJson(DESIGN_LITERAL_BASELINE, baseline);
       console.log(`  wrote ${DESIGN_LITERAL_BASELINE}`);
     }
   }
-  if (!grew.length && !fell.length) console.log('  at baseline');
+  if (!rose.length && !fell.length) console.log('  at baseline');
 }
 
 // ---------------------------------------------------------------------------

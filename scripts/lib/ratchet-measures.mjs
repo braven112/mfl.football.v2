@@ -126,8 +126,8 @@ export function collectClientRouterOffenders(srcRoot) {
 /**
  * The three kinds of hand-typed value the design tokens exist to replace.
  * Each pattern is judged per LINE, which is how they are written in practice;
- * a multi-line `transition:` whose durations sit on continuation lines is
- * counted by its continuation lines (they carry the duration).
+ * a multi-line `transition:` is counted once per line that carries a literal
+ * duration, continuation lines included.
  *
  *  - transition: a literal duration (`0.2s`, `150ms`) in a transition — use
  *    `var(--transition-fast|base|slow)` or `--duration-*` + `--ease-*`.
@@ -165,7 +165,10 @@ export function collectDesignLiterals(srcRoot) {
     let inTransition = false;
     for (const line of readFileSync(file, 'utf8').split('\n')) {
       counts.transition += countLiteralTransitions(line, inTransition);
-      if (/\btransition\s*:\s*$/.test(line)) inTransition = true;
+      // A `transition:` that does not end its declaration on this line
+      // continues onto the next ones — whether it broke right after the colon
+      // or after its first value (`transition: a 0.2s ease,`).
+      if (/\btransition(?:-duration)?\s*:/.test(line)) inTransition = !/[;}]/.test(line);
       else if (/[;}]/.test(line)) inTransition = false;
       counts.fontSize += (line.match(FONT_SIZE_RE) ?? []).length;
       for (const m of line.matchAll(SHADOW_RE)) {

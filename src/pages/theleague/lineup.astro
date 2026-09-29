@@ -624,7 +624,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
       <button class="lineup-clear" id="lineup-clear" aria-label="Hold to clear all starter slots">
         <svg class="lineup-clear__ring" aria-hidden="true" width="28" height="28" viewBox="0 0 28 28">
           <circle cx="14" cy="14" r="12" fill="none" stroke="var(--color-gray-200, #e5e7eb)" stroke-width="2"/>
-          <circle class="lineup-clear__progress" cx="14" cy="14" r="12" fill="none" stroke="var(--color-gray-500, #6b7280)" stroke-width="2" stroke-linecap="round" stroke-dasharray="75.4" stroke-dashoffset="75.4" transform="rotate(-90 14 14)"/>
+          <circle class="lineup-clear__progress" data-motion-essential cx="14" cy="14" r="12" fill="none" stroke="var(--color-gray-500, #6b7280)" stroke-width="2" stroke-linecap="round" stroke-dasharray="75.4" stroke-dashoffset="75.4" transform="rotate(-90 14 14)"/>
           <path d="M10 10l8 8M18 10l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
         </svg>
         Hold to Clear
