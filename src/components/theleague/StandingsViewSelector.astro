@@ -8,13 +8,19 @@ export interface Props {
    * (AFL: before 2017 — see TIER_COMPETITION_FIRST_SEASON in afl-tier.ts).
    */
   showAllPlay?: boolean;
+  /**
+   * Label of the league-wide tab. 'Playoff' where that view is the playoff
+   * ladder (TheLeague, the AFL); a league whose playoff seeding we do not
+   * model shows its plain league table as 'League' (archies).
+   */
+  leagueLabel?: string;
 }
 
-const { activeView, showAllPlay = true } = Astro.props;
+const { activeView, showAllPlay = true, leagueLabel = 'Playoff' } = Astro.props;
 
 const ALL_VIEWS = [
   { key: 'division', label: 'Division', icon: 'icon-numberone', aria: 'Division Standings' },
-  { key: 'league', label: 'Playoff', icon: 'icon-trophy', aria: 'Playoff Standings' },
+  { key: 'league', label: leagueLabel, icon: 'icon-trophy', aria: `${leagueLabel} Standings` },
   { key: 'all_play', label: 'All-Play', icon: 'icon-line-chart', aria: 'All-Play Standings' },
 ] as const;
 

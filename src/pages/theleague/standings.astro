@@ -1,15 +1,13 @@
 ---
-import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
-import UnifiedStandingsTable from '../../components/theleague/standings/StandingsTable.astro';
-import { COLUMNS, TIERING, DIVISION_BADGES } from '../../components/theleague/standings/standings-table-config';
-import StandingsViewSelector from '../../components/theleague/StandingsViewSelector.astro';
-import YearSelector from '../../components/theleague/YearSelector.astro';
-import {
-  getDivisionStandings,
-  getLeagueStandings,
-  getAllPlayStandings,
-  getDivisionChampionDetails,
-} from '../../utils/standings';
+/**
+ * Standings (TheLeague) — thin route over the shared standings page.
+ *
+ * Kept in the route: the globs (a static import specifier cannot be a runtime
+ * variable), the bad-year redirect (a component cannot redirect) and the
+ * preferred-team cookie write (a component cannot set a cookie).
+ */
+import StandingsPage from '../../components/shared/standings/StandingsPage.astro';
+import { DIVISION_BADGES } from '../../components/theleague/standings/standings-table-config';
 import leagueConfig from '../../data/theleague.config.json';
 import { getAuthUser, franchiseIdForLeague } from '../../utils/auth';
 import {
@@ -17,559 +15,100 @@ import {
   setTheLeaguePreference,
   resolveTeamSelection,
 } from '../../utils/team-preferences';
-import { getCurrentSeasonYear, getTestDateFromSearchParams } from '../../utils/league-year';
-import { resolveConfigForYear, resolvePreferredTeamIdForYear, HISTORICAL_TEAM_ICON_FALLBACK } from '../../utils/team-names';
+import { resolveConfigForYear, resolvePreferredTeamIdForYear, type TeamConfig } from '../../utils/team-names';
 import { applyHistoricalDivisions } from '../../utils/historical-divisions';
 import { getLeagueBySlug } from '../../config/leagues';
-import { getStandingsFeedWithLiveRefresh, type StandingsFeed } from '../../utils/live-standings';
+import { loadSeasonFeed } from '../../utils/mfl-feed-glob';
+import { getCurrentSeasonYear, getTestDateFromSearchParams } from '../../utils/league-year';
 import { resolveThrowbackRequestState } from '../../utils/throwback-request-state';
 import { applyThrowbackToStandingsConfig } from '../../utils/throwback-standings';
+import {
+  chooseStandingsSeason,
+  loadDefendingChampions,
+  loadStandingsSeason,
+  parseStandingsView,
+  type StandingsConfig,
+} from '../../utils/standings-page';
 
-// Import standings data
-const standingsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/standings.json', {
-  eager: true,
-});
-const fetchMetaFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/fetch.meta.json', {
-  eager: true,
-});
+const league = getLeagueBySlug('theleague')!;
+const standingsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/standings.json');
+const fetchMetaFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/fetch.meta.json');
 // Per-season division alignment. The league realigned repeatedly (2007-2010 ran
 // Pacific/Midwest/Central/Atlantic), so grouping an archived year by today's
 // map put the wrong teams together — see utils/historical-divisions.ts.
-const leagueFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/league.json', {
-  eager: true,
+const leagueFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/league.json');
+
+const season = chooseStandingsSeason(standingsFeeds, Astro.url.searchParams.get('year'));
+if (!season.valid) {
+  return Astro.redirect(`/theleague/standings?year=${season.defaultYear}`);
+}
+const { selectedYear } = season;
+
+const { franchises, lastFetched } = await loadStandingsSeason({
+  league,
+  year: selectedYear,
+  standingsFeeds,
+  fetchMetaFeeds,
 });
-
-// Extract available years from the imported feeds
-const availableYears = Object.keys(standingsFeeds)
-  .map(path => {
-    const match = path.match(/\/(\d{4})\/standings\.json$/);
-    return match ? parseInt(match[1], 10) : null;
-  })
-  .filter((year): year is number => year !== null)
-  .sort((a, b) => b - a);
-
-// Get year from query parameter (default to latest available or current season year).
-// The default follows ?testDate= — the same clock the throwback gate below reads —
-// so /rollover-check can drive this page by date alone.
-const testDate = getTestDateFromSearchParams(Astro.url.searchParams);
-const currentSeasonYear = getCurrentSeasonYear(testDate ?? undefined);
-const defaultYear = availableYears.includes(currentSeasonYear)
-  ? currentSeasonYear
-  : availableYears[0] || currentSeasonYear;
-const requestedYear = Astro.url.searchParams.get('year');
-const selectedYear = requestedYear ? parseInt(requestedYear, 10) : defaultYear;
-// A fallback redirect keeps the test clock, or the preview lands on the real year.
-const testDateQuery = testDate
-  ? `&testDate=${encodeURIComponent(Astro.url.searchParams.get('testDate')!)}`
-  : '';
-
-// Validate that the requested year is available; redirect to default if not
-if (!availableYears.includes(selectedYear)) {
-  return Astro.redirect(`/theleague/standings?year=${defaultYear}${testDateQuery}`);
+if (!franchises) {
+  return Astro.redirect(`/theleague/standings?year=${season.defaultYear}`);
 }
 
-// Get standings data for selected year: the committed snapshot, refreshed
-// with a live MFL fetch when viewing the current season (60s TTL cache,
-// falls back to the committed feed on any error/timeout).
-const committedFeed = standingsFeeds[`../../../data/theleague/mfl-feeds/${selectedYear}/standings.json`] as
-  | StandingsFeed
-  | undefined;
+// Identities for the season (resolveConfigForYear), then that season's own
+// division alignment — resolveConfigForYear does NOT resolve division.
+// The JSON's inferred team type is wider than either helper's, so it is
+// declared once here as what it is: a standings config whose teams carry eras.
+const baseConfig = leagueConfig as unknown as StandingsConfig & { teams: TeamConfig[] };
+const configForYear = async (year: number): Promise<StandingsConfig> =>
+  applyHistoricalDivisions(resolveConfigForYear(baseConfig, year), await loadSeasonFeed(leagueFeeds, year));
 
-const { feed: selectedFeed, live: isLiveStandings, fetchedAt: liveFetchedAt } =
-  await getStandingsFeedWithLiveRefresh({
-    league: getLeagueBySlug('theleague')!,
-    year: selectedYear,
-    committedFeed,
-  });
-
-// Check if data is valid (has leagueStandings and no error)
-if (!selectedFeed || !selectedFeed.leagueStandings || selectedFeed.error) {
-  return Astro.redirect(`/theleague/standings?year=${defaultYear}${testDateQuery}`);
-}
-
-const fetchMeta = fetchMetaFeeds[`../../../data/theleague/mfl-feeds/${selectedYear}/fetch.meta.json`] as
-  | { lastFetched?: string }
-  | undefined;
-// When live data is in play, "last updated" is the live fetch time; otherwise
-// it's the committed snapshot's fetch timestamp.
-const lastFetched = isLiveStandings
-  ? liveFetchedAt
-  : fetchMeta?.lastFetched
-    ? new Date(fetchMeta.lastFetched)
-    : null;
-
-const franchises = selectedFeed.leagueStandings.franchise;
-
-// Resolve team identities for the selected year (e.g., Heavy Chevy for 2025, Dead Cap Walking for 2026)
-// then re-align divisions to that season's own league.json — resolveConfigForYear
-// handles names/icons/conference but NOT division.
-const seasonConfig = applyHistoricalDivisions(
-  resolveConfigForYear(leagueConfig, selectedYear),
-  leagueFeeds[`../../../data/theleague/mfl-feeds/${selectedYear}/league.json`]
-);
-
-// Throwback Week: the current season's rows wear each club's era art, with
-// today's name printed underneath (see utils/throwback-standings.ts).
-const { config: yearResolvedConfig, todayNames: throwbackTodayNames } = applyThrowbackToStandingsConfig(
-  'theleague',
-  seasonConfig,
-  await resolveThrowbackRequestState('theleague', Astro.url),
-  // Same clock the week gate uses, so a ?testDate= preview agrees with itself.
-  { isCurrentSeason: selectedYear === currentSeasonYear },
-);
-
-// Calculate standings for all views.
-//
-// preserveFeedOrder: MFL's leagueStandings rows arrive in the league's OFFICIAL
-// order, with the constitution's tiebreaker chain already applied — including
-// head-to-head, which we cannot reproduce (the feed's h2h* columns only echo the
-// overall record). MFL is the source of truth for standings order; never
-// re-sort locally. See scripts/compute-franchise-history.mjs for the 2015
-// Central case that proves it.
-const divisionStandings = getDivisionStandings(franchises, yearResolvedConfig, {
-  preserveFeedOrder: true,
-});
-const leagueStandings = getLeagueStandings(franchises, yearResolvedConfig, {
-  preserveFeedOrder: true,
-});
-const allPlayStandings = getAllPlayStandings(franchises, yearResolvedConfig, undefined, {
-  preserveFeedOrder: true,
-});
-
-// Get view from query parameter (default to 'division')
-const view = (Astro.url.searchParams.get('view') ||
-  'division') as 'division' | 'league' | 'all_play';
-
-// Get authenticated user and cookie preference
-const authUser = getAuthUser(Astro.request);
-const THELEAGUE_ID = getLeagueBySlug('theleague')!.id;
+// Preferred team. No `defaultTeam`: a visitor with no choice and no session
+// highlights NOBODY, and the resolver answers undefined for that.
 const myTeamParam = Astro.url.searchParams.get('myteam');
-const franchiseParam = Astro.url.searchParams.get('franchise');
-
-// If myteam param exists, set the cookie preference
 if (myTeamParam) {
   setTheLeaguePreference(Astro.cookies, myTeamParam);
 }
-
-// Get cookie preference
-const cookiePreference = getTheLeaguePreference(Astro.cookies);
-
-// Resolve which team to highlight. No `defaultTeam`: a visitor with no
-// choice and no session highlights NOBODY, and the resolver answers
-// undefined for that.
 const preferredTeamId = resolveTeamSelection({
   myTeamParam,
-  franchiseParam,
-  cookiePreference: cookiePreference?.franchiseId,
-  authUserFranchise: franchiseIdForLeague(authUser, THELEAGUE_ID),
+  franchiseParam: Astro.url.searchParams.get('franchise'),
+  cookiePreference: getTheLeaguePreference(Astro.cookies)?.franchiseId,
+  authUserFranchise: franchiseIdForLeague(getAuthUser(Astro.request), league.id),
 });
-const yearPreferredTeamId = resolvePreferredTeamIdForYear(leagueConfig, preferredTeamId, selectedYear);
 
-// Compute the DEFENDING champions — i.e. last season's division winners, not
-// the current year's leaders. Pull the previous year's standings feed to find
-// which franchise won each division last year, then display each champion
-// era-correct: the identity (name + icon) it wore the season it won. All
-// historical identities now have authentic local icons, so we only fall back
-// to the present-day identity if an era icon is the placeholder.
-const previousYear = selectedYear - 1;
-const previousFeed = standingsFeeds[`../../../data/theleague/mfl-feeds/${previousYear}/standings.json`] as
-  | { leagueStandings?: { franchise: any[] }; error?: any }
-  | undefined;
+// DEFENDING champions — last season's division winners, keyed by the division
+// they won under last season's own alignment, in the identity they wore then.
+const defendingChampions = await loadDefendingChampions({
+  standingsFeeds,
+  previousYear: selectedYear - 1,
+  previousConfig: await configForYear(selectedYear - 1),
+  currentTeams: leagueConfig.teams,
+});
 
-const currentIdentityById = new Map(
-  leagueConfig.teams.map(t => [t.franchiseId, { name: t.name, icon: t.icon }])
+// Throwback Week: the current season's rows wear each club's era art, with
+// today's name printed underneath (see utils/throwback-standings.ts).
+const { config: seasonConfig, todayNames: throwbackTodayNames } = applyThrowbackToStandingsConfig(
+  'theleague',
+  await configForYear(selectedYear),
+  await resolveThrowbackRequestState('theleague', Astro.url),
+  // Same clock the week gate uses, so a ?testDate= preview agrees with itself.
+  {
+    isCurrentSeason:
+      selectedYear === getCurrentSeasonYear(getTestDateFromSearchParams(Astro.url.searchParams) ?? undefined),
+  },
 );
-
-const lastYearChampions = previousFeed?.leagueStandings && !previousFeed.error
-  ? getDivisionChampionDetails(
-      previousFeed.leagueStandings.franchise,
-      // Last season's own alignment — the defending-champion header is keyed by
-      // division name, so using today's map could file a champion under a
-      // division that didn't exist (or that a different team won) that year.
-      applyHistoricalDivisions(
-        resolveConfigForYear(leagueConfig, previousYear),
-        leagueFeeds[`../../../data/theleague/mfl-feeds/${previousYear}/league.json`]
-      ),
-      { preserveFeedOrder: true }
-    )
-  : {};
-
-// Key the defending champion to the division it won last year, rendering the
-// identity it had that season (with a present-day fallback if the era icon is
-// missing or the franchise left the league).
-const defendingChampions: Record<string, { name: string; icon: string }> = {};
-for (const [divisionName, champ] of Object.entries(lastYearChampions)) {
-  const current = currentIdentityById.get(champ.id);
-  const eraIconUsable = champ.icon && champ.icon !== HISTORICAL_TEAM_ICON_FALLBACK;
-  defendingChampions[divisionName] = {
-    name: champ.name ?? current?.name ?? '',
-    icon: eraIconUsable ? champ.icon : (current?.icon ?? champ.icon),
-  };
-}
-
-// Compass badge artwork, keyed by DISPLAY name only — MFL's archived "Eastern"
-// is normalized to "East" by divisionAliases before it reaches the lookup.
-// See DIVISION_BADGES for why retired divisions are deliberately absent.
-const divisionBadges = DIVISION_BADGES;
 ---
 
-<TheLeagueLayout title="Standings">
-  <div class="standings-page">
-    <header class="standings-hero">
-      <div class="standings-hero__text">
-        {view === 'division' && (
-          <>
-            <h1 class="section-title">Division Standings</h1>
-            <p class="subtitle">Standings by division within the league</p>
-          </>
-        )}
-        {view === 'league' && (
-          <>
-            <h1 class="section-title">Playoff Standings</h1>
-            <p class="subtitle">Division winners are seeded 1-4</p>
-          </>
-        )}
-        {view === 'all_play' && (
-          <>
-            <h1 class="section-title">All-Play Standings</h1>
-            <p class="subtitle">Top ranked teams across the league</p>
-          </>
-        )}
-      </div>
-      <div class="standings-hero__actions">
-        <StandingsViewSelector activeView={view} />
-      </div>
-    </header>
-
-    <div class="standings-filters">
-      <div class="filter-item">
-        <span class="filter-label">Season:</span>
-        <YearSelector currentYear={selectedYear} availableYears={availableYears} />
-      </div>
-    </div>
-
-    <div class="standings-content">
-      {view === 'division' && (
-        <div class="division-view">
-          {divisionStandings.map(division => (
-            <UnifiedStandingsTable
-              teams={division.teams}
-              columns={COLUMNS.division}
-              teamCell="banner"
-              teamCellFallback="name"
-              accent="league-blue"
-              year={selectedYear}
-              preferredTeamId={yearPreferredTeamId}
-              franchiseBaseUrl="/theleague/franchises"
-              throwbackTodayNames={throwbackTodayNames}
-              header={{
-                kind: 'brandedDivision',
-                title: division.name,
-                badgeSrc: divisionBadges[division.name],
-                defendingChampion: defendingChampions[division.name]
-                  ? {
-                      name: defendingChampions[division.name].name,
-                      year: previousYear,
-                      logoSrc: defendingChampions[division.name].icon,
-                    }
-                  : undefined,
-              }}
-            />
-          ))}
-        </div>
-      )}
-
-      {view === 'league' && (
-        <div class="league-view">
-          <UnifiedStandingsTable
-            teams={leagueStandings}
-            columns={COLUMNS.leagueSeeded}
-            teamCell="banner"
-            teamCellFallback="blank"
-            tiering={TIERING.leagueSeed}
-            accent="league-blue"
-            year={selectedYear}
-            preferredTeamId={yearPreferredTeamId}
-            franchiseBaseUrl="/theleague/franchises"
-            throwbackTodayNames={throwbackTodayNames}
-          />
-        </div>
-      )}
-
-      {view === 'all_play' && (
-        <div class="all-play-view">
-          <UnifiedStandingsTable
-            teams={allPlayStandings}
-            columns={COLUMNS.allPlay}
-            teamCell="banner"
-            teamCellFallback="name"
-            accent="league-blue"
-            year={selectedYear}
-            preferredTeamId={yearPreferredTeamId}
-            franchiseBaseUrl="/theleague/franchises"
-            throwbackTodayNames={throwbackTodayNames}
-          />
-        </div>
-      )}
-
-      {lastFetched && (
-        <p class="data-disclaimer">
-          Data as of {lastFetched.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
-        </p>
-      )}
-    </div>
-  </div>
-</TheLeagueLayout>
-
-<style>
-  .standings-page {
-    display: grid;
-    gap: var(--padding-lg);
-  }
-
-  .standings-hero {
-    display: grid;
-    justify-content: center;
-    align-items: center;
-    gap: 1.5rem;
-    padding: 2rem;
-    background: var(--card-bg, #fff);
-    border-radius: 1rem;
-    box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
-  }
-
-  /* Dark mode: raised-card treatment — shadow alone can't separate
-     the section from the page background; add the border ring. */
-  :global(html.dark) .standings-hero {
-    box-shadow:
-      0 0 0 1px var(--content-border, #555555),
-      var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
-  }
-@media screen and (min-width: 600px) {
-  .standings-hero {
-    grid-template-columns: 1fr auto;
-  }
-}
-  .standings-hero__text h1 {
-    margin: 0;
-  }
-
-  .standings-hero__actions {
-    display: flex;
-    justify-content: center;
-  }
-
-  /* On narrow screens the hero is a single column (the two-column rule is
-     min-width: 600px). Make that column full-width so the view selector can
-     lay its tabs out across the row without wrapping the last one below. */
-  @media (max-width: 599px) {
-    .standings-hero {
-      grid-template-columns: 1fr;
-    }
-
-    .standings-hero__actions {
-      width: 100%;
-    }
-  }
-
-  .standings-filters {
-    background: var(--card-bg, #fff);
-    border-radius: 1rem;
-    box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
-    padding: 1rem 1.5rem;
-    display: flex;
-    gap: 1.5rem;
-    align-items: center;
-  }
-
-  :global(html.dark) .standings-filters {
-    box-shadow:
-      0 0 0 1px var(--content-border, #555555),
-      var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
-  }
-
-  .filter-item {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    font-weight: 700;
-    color: var(--page-text, #111827);
-  }
-
-  .card {
-    display: flex;
-    align-items: center;
-    gap: var(--padding-md);
-    padding: var(--padding-lg);
-    border-radius: 1rem;
-    background: var(--card-bg, #fff);
-    box-shadow: var(--box-shadow-lg);
-    position: relative;
-}
-
-  .standings-header h1 {
-    font-size: 2.5rem;
-    font-weight: 700;
-    color: var(--page-text, #1a1a1a);
-    margin: 0 0 0.5rem 0;
-  }
-
-  .subtitle {
-    font-size: 1rem;
-    color: var(--content-text-muted, #64748b);
-    margin: 0;
-  }
-
-  .standings-header-bar {
-    display: grid;
-
-    gap: 2rem;
-    margin-bottom: 2rem;
-    padding: 2rem;
-    background: var(--card-bg, #fff);
-    border-radius: 8px;
-    box-shadow: var(--shadow-md);
-  }
-   @media (min-width: 550px) {
-     .standings-header-bar {
-    grid-template-columns: 1fr auto;
-        align-items: start;
-     }
-   }
-
-  .standings-header-content {
-    /* content naturally flows on the left */
-  }
-
-  .standings-controls {
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
-    justify-content: flex-end;
-  }
-
-  .standings-content {
-    margin-bottom: 3rem;
-    /* Grid item of the `.standings-page` grid — let it shrink so a table wider
-       than the viewport scrolls inside its own wrapper instead of stretching
-       the page (mirrors the AFL standings fix). */
-    min-width: 0;
-  }
-
-  .section-title {
-    font-size: 2rem;
-    font-weight: 700;
-    color: var(--page-text, #1a1a1a);
-    margin: 0;
-  }
-
-  .section-subtitle {
-    color: var(--content-text-muted, #666);
-    margin: 0;
-    font-size: 0.95rem;
-  }
-
-  /* Division View */
-  .division-view {
-    display: grid;
-    gap: 2rem;
-  }
-
-  /* League View */
-  .league-view {
-    display: grid;
-    gap: 2rem;
-  }
-
-  .playoff-section {
-    margin-bottom: 2rem;
-  }
-
-  /* All-Play View */
-  .all-play-view {
-    display: grid;
-    gap: 2rem;
-  }
-
-  /* Info Section */
-  .standings-info {
-    margin-top: 3rem;
-    padding: 2rem;
-    background-color: var(--content-bg-muted, #f5f5f5);
-    border-radius: 8px;
-  }
-
-  .standings-info h2 {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--page-text, #1a1a1a);
-    margin: 0 0 1.5rem 0;
-  }
-
-  .info-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 2rem;
-  }
-
-  .info-card {
-    background: var(--card-bg, #fff);
-    padding: 1.5rem;
-    border-radius: 6px;
-    border-left: 4px solid var(--color-primary, #2c3e50);
-  }
-
-  .info-card h3 {
-    font-size: 1.125rem;
-    font-weight: 600;
-    color: var(--page-text, #1a1a1a);
-    margin: 0 0 1rem 0;
-  }
-
-  .info-card ul,
-  .info-card ol {
-    margin: 0;
-    padding-left: 1.5rem;
-    color: var(--content-text-muted, #555);
-  }
-
-  .info-card li {
-    margin-bottom: 0.5rem;
-  }
-
-  .info-card p {
-    margin: 0 0 0.5rem 0;
-    color: var(--content-text-muted, #555);
-  }
-
-  .tiebreaker-type {
-    font-weight: 600;
-    color: var(--page-text, #1a1a1a);
-    margin-bottom: 0.75rem !important;
-  }
-
-  /* Responsive */
-  @media (max-width: 767px) {
-    .standings-page {
-      padding: 1rem 0.5rem;
-    }
-
-    .standings-header h1 {
-      font-size: 1.875rem;
-    }
-
-    .info-grid {
-      grid-template-columns: 1fr;
-    }
-
-    .standings-info {
-      padding: 1rem;
-    }
-  }
-
-  .data-disclaimer {
-    margin: 1rem 0 0;
-    color: var(--content-text-muted, #64748b);
-    font-size: 0.95rem;
-  }
-</style>
+<StandingsPage
+  leagueSlug={league.slug}
+  title="Standings"
+  franchises={franchises}
+  config={seasonConfig}
+  selectedYear={selectedYear}
+  availableYears={season.availableYears}
+  view={parseStandingsView(Astro.url.searchParams.get('view'))}
+  preferredTeamId={resolvePreferredTeamIdForYear(baseConfig, preferredTeamId, selectedYear)}
+  lastFetched={lastFetched}
+  defendingChampions={defendingChampions}
+  divisionBadges={DIVISION_BADGES}
+  throwbackTodayNames={throwbackTodayNames}
+/>

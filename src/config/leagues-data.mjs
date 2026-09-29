@@ -528,6 +528,15 @@ export const LEAGUES = {
      */
     peckingOrder: { topN: 25 },
     /**
+     * MAD POWER 99 — the league's playoff seeding (bylaws: 9 division
+     * champions + 21 wild cards, 30 in). The 21 are each division's
+     * runner-up plus 12 more, as the league's own MFL widget seeds them
+     * (public/mfl/10105/standings.js, DECISIONS.md D2-D6). Every tier is in
+     * MFL's row order, which the league sorts on Victory Points, then points,
+     * then head-to-head.
+     */
+    standingsSeeding: { kind: 'mad', divisionLeaders: 9, runnersUp: 9, wildCards: 12 },
+    /**
      * MFL `playerLimitUnit: DIVISION`: each of the nine divisions is its own
      * player pool, so the same player is routinely on up to nine rosters at
      * once. "On another roster" proves nothing here (cut-player's preflight),

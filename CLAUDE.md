@@ -377,6 +377,17 @@ league onto it too. A slimmer look-alike built just for the new league is the
 "cheap knock-off" to avoid; the first Archie's pages were exactly that and are
 being replaced (docs/plans/league-chat-and-persona.md, Phase 7).
 
+**Share the standard views; a league's own competition stays its own.** The
+owner's model (Sep 2026), standings first: a league shows THREE standings
+tabs, by default Division / Playoffs / All-Play, and may replace any one with
+something of its own (the AFL's Tiers; one day Archie's skins game). The
+standard views are shared and configured per league as data (columns,
+seeding, labels). A league's own competition — tiers, relegation, skins —
+is one-of-one: build it as that league's component in a slot the shared page
+renders, and never generalise its rules into the shared profile "in case"
+another league wants it. Another client may be SHOWN it for ideas; theirs is
+built to their own rules. Details: `docs/claude/rules/standings-brackets-draft-order.md` rule 1c.
+
 A route that exists under two league directories in `src/pages/` is a
 **sibling**. Copying one league's page file into the next league and editing it
 is how this repo accumulated ~57,800 lines across 24 forked siblings —
