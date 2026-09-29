@@ -116,8 +116,9 @@ export interface TransactionRow {
   /** Populated only when `kind === 'trade'`. */
   trade: { sides: [TradeSide, TradeSide]; comments: string } | null;
   /**
-   * What the move cost, in whole dollars, or null when unknowable. Bids come
-   * from the feed; free agents are priced at `freeAgentPrice` (see options).
+   * What the move cost, in dollars to the cent, or null when unknowable. Bids
+   * come from the feed; free agents are priced at `freeAgentPrice` (see
+   * options). Whole dollars in every league but a cents-FAAB one.
    */
   amount: number | null;
   /** MFL sets `by_commish` when the commissioner acted for the franchise. */
@@ -192,7 +193,21 @@ function toMillis(value: unknown): number | null {
  */
 function toAmount(value: unknown): number | null {
   const n = Number(str(value).trim().replace(/[$,\s]/g, ''));
-  return Number.isFinite(n) && n > 0 ? Math.round(n) : null;
+  return Number.isFinite(n) && n > 0 ? roundToCents(n) : null;
+}
+
+/**
+ * Round to the CENT, not the dollar.
+ *
+ * A FAAB league bids in cents (archies: `bbidIncrement` 0.01), and whole-dollar
+ * rounding turned its $15.01 bid into $15 — two claims that MFL decided on a
+ * penny rendered as a tie. Every other league's prices are whole numbers
+ * (TheLeague's salaries, including the exponent-notation ones), and for a
+ * whole number this is exactly `Math.round`, so their rows — ids included —
+ * are unchanged. `tests/mfl-transactions-parse.test.ts` pins both halves.
+ */
+export function roundToCents(n: number): number {
+  return Math.round(n * 100) / 100;
 }
 
 /**
