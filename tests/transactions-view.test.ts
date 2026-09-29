@@ -286,3 +286,48 @@ describe('the types param arrives in two shapes', () => {
     expect([...f.kinds].sort()).toEqual(['auction', 'free-agent', 'trade']);
   });
 });
+
+describe('division filter (division-pool leagues only)', () => {
+  const divisionIds = ['00', '01'];
+  const divisionOf = (id: string) => ({ '0001': '00', '0002': '00', '0003': '01' } as Record<string, string>)[id];
+  const base = (qs: string, ids: readonly string[] = divisionIds) =>
+    parseFilters({ params: new URLSearchParams(qs), year: 2026, myFranchiseId: null, divisionIds: ids });
+
+  it('parses an offered division and ignores one that is not', () => {
+    expect(base('division=01').division).toBe('01');
+    expect(base('division=99').division).toBeNull();
+  });
+
+  it('is inert in a league with no division pools', () => {
+    // TheLeague and the AFL pass no divisionIds: a hand-typed ?division= must
+    // narrow nothing there, or their ledgers silently empty.
+    const f = parseFilters({ params: new URLSearchParams('division=00'), year: 2026, myFranchiseId: null });
+    expect(f.division).toBeNull();
+    expect(isDefaultView(f)).toBe(true);
+  });
+
+  it('counts as a non-default view', () => {
+    expect(isDefaultView(base('division=00'))).toBe(false);
+  });
+
+  it('keeps rows in the division, and a trade when either side is in it', () => {
+    const rows = [
+      row({ id: 'a', franchiseId: '0001' }),
+      row({ id: 'b', franchiseId: '0003' }),
+      row({
+        id: 't',
+        kind: 'trade',
+        franchiseId: '0003',
+        trade: {
+          sides: [
+            { franchiseId: '0003', players: ['1'], picks: [] },
+            { franchiseId: '0002', players: ['2'], picks: [] },
+          ],
+          comments: '',
+        } as TransactionRow['trade'],
+      }),
+    ];
+    const f = base('division=00&types=free-agent,trade');
+    expect(applyFilters({ rows, filters: f, nameOf: () => undefined, divisionOf }).map((r) => r.id)).toEqual(['a', 't']);
+  });
+});

@@ -112,9 +112,11 @@ What landed, and where the next package league plugs in:
     in `tests/nfl-name-match.test.ts`: the name fallback is MFL-Live-only.
   - Its bids are FAAB dollars with cent increments, so the transaction-parse
     invariant takes a per-league budget.
-  - The shared parser rounds bids to whole dollars, so a $15.01 bid shows as
-    $15. That parser also feeds TheLeague's contract math, which is why it has
-    not changed yet.
+  - ~~The shared parser rounds bids to whole dollars, so a $15.01 bid shows as
+    $15.~~ Fixed (Phase 7, transactions): `mfl-transactions.ts` rounds to the
+    CENT. Every TheLeague/AFL amount in the archive is already whole, so their
+    rows and ids are unchanged — `tests/mfl-transactions-parse.test.ts` pins
+    that archive-wide.
 
 Still open for archies:
 
@@ -462,6 +464,15 @@ What landed:
     RostersPage.astro`, rendered by the AFL and Archie's (divisions as pools);
     the lite `PackageRostersPage` is retired. Archie's Trade option waits on
     its Trade Builder page (`tradeBuilder={false}` in the route until then).
-  - Standings, Transactions: one separate session each, same approach,
-    stacked on this branch.
+  - Standings: one separate session, same approach, stacked on this branch.
+  - Transactions — DONE. It was already the shared `TransactionsPage` (all
+    three routes are thin wrappers); what it lacked was the league's own
+    facts, now read per season from `league.json`
+    (`loadLedgerLeagueContext`): a FAAB budget shows the bid column without a
+    salary cap (a winning $0 bid prints $0.00), a sub-dollar `bbidIncrement`
+    prints cents, and DIVISION pools add a Division filter, division-grouped
+    Team options and a division tag on each row. Every TheLeague/AFL season
+    resolves to the empty context (`tests/transactions-ledger-context.test.ts`),
+    so their pages are unchanged — proven by HTML diff + pixel-identical
+    screenshots.
 - Two-way Slack (mentions → tips) through the Events API, if a client wants it.

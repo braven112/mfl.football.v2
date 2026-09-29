@@ -15,6 +15,7 @@ import {
   type TransactionRow,
 } from './mfl-transactions';
 import { getCachedRecentTransactions } from './mfl-transactions-cache';
+import { buildPoolStructure } from './afl-conference-rosters.mjs';
 
 export type { LazyFeedGlob };
 export { seasonsFromGlob };
@@ -41,6 +42,92 @@ export async function loadLeagueMinimum(
   const raw = feed?.league?.bbidMinimum;
   const n = Number(typeof raw === 'string' ? raw : raw ?? NaN);
   return Number.isFinite(n) && n > 0 ? Math.round(n) : null;
+}
+
+/** One division, as the ledger labels it. */
+export interface LedgerDivision {
+  id: string;
+  /** "Barry Sanders Division" — MFL's name, trimmed. */
+  name: string;
+  /** "Barry Sanders" — the row tag, where the full name would crowd the team. */
+  abbrev: string;
+}
+
+/**
+ * What a season's `league.json` says about how to READ its ledger — as
+ * opposed to `loadLeagueMinimum`, which says how to PRICE it.
+ */
+export interface LedgerLeagueContext {
+  /**
+   * The season's blind-bid budget (MFL `bbidSeasonLimit`), or null. Non-null
+   * makes this a FAAB league: its bids are the only price a move has, so the
+   * amount column shows even though the league has no salary cap, and a
+   * winning $0 bid is a real $0 rather than "not recorded".
+   */
+  faabBudget: number | null;
+  /**
+   * Decimal places a bid is shown with: 2 when MFL takes bids in cents
+   * (`bbidIncrement` below a dollar — archies: 0.01), else 0. Formatting every
+   * amount in the season the same way keeps a column of $5.00 / $5.01 from
+   * reading as $5 / $5.01.
+   */
+  amountDecimals: 0 | 2;
+  /**
+   * The divisions, ONLY when each is its own player pool (MFL
+   * `playerLimitUnit: DIVISION` — archies' nine). There a move means something
+   * only inside its division: the same player can be added by nine teams, so
+   * "who picked him up" is unanswerable without it. Null for every other
+   * league — TheLeague's divisions share one pool and the AFL's pools are
+   * conferences — so their ledgers carry no division markup at all.
+   */
+  divisions: LedgerDivision[] | null;
+  /** franchise id → division id; empty when `divisions` is null. */
+  divisionOfFranchise: Record<string, string>;
+}
+
+const NO_LEDGER_CONTEXT: LedgerLeagueContext = {
+  faabBudget: null,
+  amountDecimals: 0,
+  divisions: null,
+  divisionOfFranchise: {},
+};
+
+/** Pure half of `loadLedgerLeagueContext`, for tests. */
+export function ledgerLeagueContextFrom(feed: unknown): LedgerLeagueContext {
+  const league = (feed as { league?: Record<string, unknown> } | null)?.league;
+  if (!league) return NO_LEDGER_CONTEXT;
+
+  const budget = Number(league.bbidSeasonLimit);
+  const increment = Number(league.bbidIncrement);
+
+  let divisions: LedgerDivision[] | null = null;
+  let divisionOfFranchise: Record<string, string> = {};
+  if (String(league.playerLimitUnit ?? '').toUpperCase() === 'DIVISION') {
+    const pools = buildPoolStructure(feed) as {
+      ids: string[];
+      names: Record<string, { name: string; abbrev: string }>;
+      franchiseConferences: Record<string, string>;
+    } | null;
+    if (pools) {
+      divisions = pools.ids.map((id) => ({ id, name: pools.names[id].name, abbrev: pools.names[id].abbrev }));
+      divisionOfFranchise = pools.franchiseConferences;
+    }
+  }
+
+  return {
+    faabBudget: Number.isFinite(budget) && budget > 0 ? budget : null,
+    amountDecimals: Number.isFinite(increment) && increment > 0 && increment < 1 ? 2 : 0,
+    divisions,
+    divisionOfFranchise,
+  };
+}
+
+/** The season's ledger context — see `LedgerLeagueContext`. */
+export async function loadLedgerLeagueContext(
+  leagueFeeds: LazyFeedGlob,
+  year: number
+): Promise<LedgerLeagueContext> {
+  return ledgerLeagueContextFrom(await loadSeasonFeed(leagueFeeds, year));
 }
 
 export interface LoadSeasonInput {

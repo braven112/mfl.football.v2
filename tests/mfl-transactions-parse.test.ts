@@ -259,6 +259,28 @@ describe('prices MFL writes in exponent notation', () => {
   });
 });
 
+describe('cents FAAB bids (archies: bbidIncrement 0.01)', () => {
+  it.each([
+    ['15.01', 15.01],
+    ['5.01', 5.01],
+    ['11.06', 11.06],
+    ['0.67', 0.67],
+    ['1.00', 1],
+  ])('keeps %s to the cent', (raw, expected) => {
+    // Whole-dollar rounding printed a $15.01 claim as $15 — the penny that
+    // decided the claim, erased.
+    const row = one({ type: 'BBID_WAIVER', franchise: '0073', timestamp: '1790172000', transaction: `15721,|${raw}|16604,` });
+    expect(row?.amount).toBe(expected);
+  });
+
+  it('two claims a penny apart get different ids', () => {
+    const at = { type: 'BBID_WAIVER', franchise: '0073', timestamp: '1790172000' };
+    const a = one({ ...at, transaction: '15721,|15.01|' });
+    const b = one({ ...at, transaction: '15721,|15|' });
+    expect(a?.id).not.toBe(b?.id);
+  });
+});
+
 describe("MFL's 0000 'nothing on this side' sentinel", () => {
   it('is not treated as a dropped player', () => {
     // 404 rows carry it in the drop slot of a claim that needed no cut. It is
@@ -390,6 +412,30 @@ describe('the committed archive', () => {
       }
     }
     expect(problems.slice(0, 20)).toEqual([]);
+  });
+
+  it('prices every non-FAAB league in whole dollars, so cent rounding changed none of their rows', () => {
+    // The parser rounds to the CENT so a cents league keeps its pennies. For
+    // that to leave TheLeague's contract math and every row id untouched, each
+    // amount those leagues have ever carried must already be a whole number.
+    const fractional: string[] = [];
+    for (const season of seasons) {
+      if (FAAB_BUDGET[season.slug]) continue;
+      for (const row of rowsFor(season)) {
+        if (row.amount !== null && !Number.isInteger(row.amount)) {
+          fractional.push(`${season.slug}/${season.year} ${row.rawType} ${row.amount}`);
+        }
+      }
+    }
+    expect(fractional.slice(0, 20)).toEqual([]);
+  });
+
+  it('keeps cents in the FAAB league archive', () => {
+    const cents = seasons
+      .filter((s) => FAAB_BUDGET[s.slug])
+      .flatMap((s) => rowsFor(s))
+      .filter((r) => r.amount !== null && !Number.isInteger(r.amount));
+    expect(cents.length).toBeGreaterThan(0);
   });
 
   it('never emits a player id that is really a draft-pick token', () => {
