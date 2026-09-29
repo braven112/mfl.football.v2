@@ -7,7 +7,7 @@ hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1273
 hotfix_sha: 5bfdac0
 followup_issue: 1274
 followup_pr:
-followup_session:
+followup_session: session_011D8hmjCBg3RQN3Rmc8eqZL
 ---
 
 # Follow-up: Throwback Week standings (era art + today's name)
