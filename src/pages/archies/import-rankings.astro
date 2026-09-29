@@ -1,0 +1,15 @@
+---
+/**
+ * Import Rankings (Archie's) — thin route wrapper.
+ * Shared implementation lives in components/shared/rankings-import/ImportRankingsPage.
+ * This league keeps its OWN rankings bucket (see src/utils/rankings-scope.ts);
+ * the built-in sources seed a composite on first load, which is what the Free
+ * Agents page's Rankings view and My Rank editor read. No Custom Rankings
+ * board here yet, so there is none to link admins to.
+ */
+import ImportRankingsPage from '../../components/shared/rankings-import/ImportRankingsPage.astro';
+
+export const prerender = false;
+---
+
+<ImportRankingsPage title="Import Rankings | Archie's" hasCustomRankings={false} />

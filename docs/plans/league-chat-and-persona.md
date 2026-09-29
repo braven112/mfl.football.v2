@@ -409,8 +409,11 @@ What landed:
       the viewer's own is no longer offered as claimable, because the claim
       files into the viewer's OWN pool (an AL owner browsing the NL could
       previously start a claim that MFL refuses).
-    - Open: Archie's has no Import Rankings page yet, so the My Rank editor
-      and the Rankings view have nothing to read until it does.
+    - Import Rankings: `/archies/import-rankings`, a thin route over the
+      shared ImportRankingsPage (its own `archies` bucket, built-in sources
+      seeded on first load), linked from the league nav. It feeds the Free
+      Agents Rankings view and My Rank editor. No Custom Rankings board (`/cr`)
+      for Archie's yet (`hasCustomRankings={false}`).
   - Rosters, Standings, Transactions: one separate session each, same
     approach, stacked on this branch.
 - Two-way Slack (mentions → tips) through the Events API, if a client wants it.
