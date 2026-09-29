@@ -91,7 +91,7 @@ export const DESTINATIONS = {
 
   // ── Site features worth a plug ──
   'trade-builder': { path: '/front-office/trade-builder', label: 'the trade builder', leagues: BOTH },
-  'import-rankings': { path: '/import-rankings', label: 'Import Rankings', leagues: BOTH },
+  'import-rankings': { path: '/import-rankings', label: 'Import Rankings', leagues: BOTH_AND_ARCHIES },
   'custom-rankings': { path: '/cr', label: 'your custom rankings board', leagues: BOTH },
   rules: { path: '/rules', label: 'the constitution', leagues: BOTH },
   'rules-chat': { path: '/rules-chat', label: 'Roger, the rules bot', leagues: BOTH },
