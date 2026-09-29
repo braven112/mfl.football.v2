@@ -458,6 +458,10 @@ What landed:
       RecapHero, the enrichers in `offseason-hero-data.ts`). Another league
       that lists a contract rung renders it on the shared event card (every
       capability state carries a `view`) until those take a `league`.
-  - Rosters, Standings, Transactions: one separate session each, same
-    approach, stacked on this branch.
+  - Rosters: done — the AFL rosters page is `components/shared/rosters/
+    RostersPage.astro`, rendered by the AFL and Archie's (divisions as pools);
+    the lite `PackageRostersPage` is retired. Archie's Trade option waits on
+    its Trade Builder page (`tradeBuilder={false}` in the route until then).
+  - Standings, Transactions: one separate session each, same approach,
+    stacked on this branch.
 - Two-way Slack (mentions → tips) through the Events API, if a client wants it.

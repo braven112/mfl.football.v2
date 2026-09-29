@@ -104,6 +104,8 @@ export interface RosterHeaderSkin {
 const BAND_SLUG: Partial<Record<CanonicalLeagueSlug, LeagueSlug>> = {
   theleague: 'theleague',
   'afl-fantasy': 'afl',
+  // The shared rosters page's header, in the club's own colours.
+  archies: 'archies',
 };
 
 /**

@@ -100,14 +100,20 @@ function readJson<T>(path: string): T | null {
  * excluded from the serverless bundle) so callers can render an em dash.
  */
 export function loadAflSeasonScores(year: number): SeasonScores {
-  const cacheKey = String(year);
+  return loadSeasonScores('data/afl-fantasy', year);
+}
+
+/**
+ * {@link loadAflSeasonScores} for any league, by its registry `dataPath`
+ * (`data/<league>`). The shared rosters page reads through this so a custom
+ * league's Total / Avg columns come from its OWN weekly results.
+ */
+export function loadSeasonScores(dataPath: string, year: number): SeasonScores {
+  const cacheKey = `${dataPath}|${year}`;
   const hit = seasonScoresCache.get(cacheKey);
   if (hit) return hit;
 
-  const path = resolve(
-    process.cwd(),
-    `data/afl-fantasy/mfl-feeds/${year}/weekly-results-raw.json`
-  );
+  const path = resolve(process.cwd(), `${dataPath}/mfl-feeds/${year}/weekly-results-raw.json`);
   const file = readJson<unknown>(path);
   // The second argument is the current week, which the canonical
   // implementation does not use; every scored week counts.
@@ -121,14 +127,16 @@ export function loadAflSeasonScores(year: number): SeasonScores {
  * {playerId → projected points} map. Cached per year.
  */
 export function loadAflProjections(year: number): Map<string, number> {
-  const cacheKey = String(year);
+  return loadProjections('data/afl-fantasy', year);
+}
+
+/** {@link loadAflProjections} for any league, by its registry `dataPath`. */
+export function loadProjections(dataPath: string, year: number): Map<string, number> {
+  const cacheKey = `${dataPath}|${year}`;
   const hit = projectionsCache.get(cacheKey);
   if (hit) return hit;
 
-  const path = resolve(
-    process.cwd(),
-    `data/afl-fantasy/mfl-feeds/${year}/projectedScores.json`
-  );
+  const path = resolve(process.cwd(), `${dataPath}/mfl-feeds/${year}/projectedScores.json`);
   const file = readJson<ProjectedScoresFile>(path);
   const entries = ensureArray(file?.projectedScores?.playerScore);
   const map = new Map<string, number>();

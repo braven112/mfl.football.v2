@@ -134,3 +134,22 @@ For the same reason it must stay server-rendered (`export const prerender =
 false`). Astro's prerendered-error-page branch fetches a static file instead of
 rendering with `initialProps = { error }`, which would silently drop both the
 error object and the log line.
+
+## Two failures `astro dev` does NOT report as a 500
+
+The "dev tells the truth" line above holds for a throw in a PAGE's own
+frontmatter. Two shapes found while extracting the shared rosters page
+(2026-09-29) still read as something else locally:
+
+- **A module that fails to LOAD is a quiet 404, with nothing in the log.** A
+  syntax error esbuild rejects (a `const` declared twice, which the Astro
+  compiler happily emits) in a component the page imports drops the route from
+  the dev router, so the request falls through to `[...path].astro`. The log
+  line is `[404] /afl-fantasy/rosters 12ms` and nothing else. If a route you
+  just edited 404s while its neighbours serve, compile the file
+  (`@astrojs/compiler` `transform`, then `esbuild` `transform` with
+  `loader: 'ts'`), which names the error in one line.
+- **A throw in an imported COMPONENT's frontmatter is a 200 with a truncated
+  body.** The page has already started streaming, so the status is committed:
+  the response is a 51-byte `<script src="/@vite/client">` and the error only
+  appears in `astro dev logs`. Check the body size, not the status.
