@@ -329,7 +329,7 @@ const heroSkin =
               SITE theme is dark. */}
           {heroSkin.crest && (
             <img
-              class="hero-fb__crest"
+              class:list={['hero-fb__crest', { 'hero-fb__crest--round': heroSkin.crestRound }]}
               src={heroSkin.crest}
               style={heroSkin.crestFilter ? `filter: ${heroSkin.crestFilter};` : undefined}
               alt=""

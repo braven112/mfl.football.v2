@@ -186,7 +186,7 @@ const countAriaLabel = hasCount
     <>
       {backdrop.crest && (
         <img
-          class="hero-fb__crest"
+          class:list={['hero-fb__crest', { 'hero-fb__crest--round': backdrop.crestRound }]}
           src={backdrop.crest}
           style={backdrop.crestFilter ? `filter: ${backdrop.crestFilter};` : undefined}
           alt=""
