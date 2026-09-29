@@ -192,4 +192,11 @@ describe('the action sheet follows the page', () => {
     expect(modal).toContain("if (modal.dataset.tradeBuilder === 'false') actionButtons['trade'].hidden = true;");
   });
 
+  it('re-wires on every astro:page-load, so a team switch never leaves it dead', () => {
+    // Captured once at module evaluation, the sheet pointed at the detached
+    // node after the first ClientRouter swap — every roster team switch.
+    expect(modal).toContain("document.addEventListener('astro:page-load', initAflActionModal);");
+    expect(modal).toContain("_modalEl.dataset.aamInit === '1'");
+    expect(modal).toContain("document.removeEventListener('keydown', escapeHandler)");
+  });
 });

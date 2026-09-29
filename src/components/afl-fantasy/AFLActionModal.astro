@@ -237,10 +237,21 @@ import { NFL_TEAM_CITIES, normalizeTeamCode } from '../../utils/nfl';
     signedIn?: boolean;
   }
 
+  /* Wired on EVERY astro:page-load, not once at module evaluation. A bundled
+     script runs once per session under the ClientRouter, but the sheet's DOM
+     is replaced by every swap — so a sheet captured at first load went dead
+     after the first team switch on a roster page (each switch is a swap),
+     with `openAFLActionModal` still pointing at the detached node. The flag
+     on the element keeps a repeat call for the SAME DOM (astro:page-load plus
+     the first-load fallback below) from stacking listeners. */
+  let escapeHandler: ((e: KeyboardEvent) => void) | null = null;
+
+  function initAflActionModal() {
   const _modalEl = document.getElementById('afl-action-modal') as HTMLDivElement | null;
-  if (!_modalEl) {
-    console.error('[afl-action-modal] root element not found');
-  } else {
+  // Not every page mounts the sheet; nothing to wire there.
+  if (!_modalEl || _modalEl.dataset.aamInit === '1') return;
+  _modalEl.dataset.aamInit = '1';
+  {
     // Pin into a const so closures keep the non-null narrowing
     const modal: HTMLDivElement = _modalEl;
     const playerNameEl = modal.querySelector('#aam-player-name') as HTMLElement;
@@ -647,13 +658,23 @@ import { NFL_TEAM_CITIES, normalizeTeamCode } from '../../utils/nfl';
       el.addEventListener('click', () => showStep('select'));
     });
 
-    document.addEventListener('keydown', (e) => {
+    // `document` outlives the swap: REPLACE the previous page's handler
+    // rather than stacking one per navigation.
+    if (escapeHandler) document.removeEventListener('keydown', escapeHandler);
+    escapeHandler = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !modal.hidden) closeModal();
-    });
+    };
+    document.addEventListener('keydown', escapeHandler);
 
-    // Expose a global opener so any roster table on the page can trigger us
+    // Expose a global opener so any roster table on the page can trigger us.
+    // Re-assigned per page, so it always opens THIS page's sheet.
     (window as any).openAFLActionModal = openModal;
   }
+  }
+
+  document.addEventListener('astro:page-load', initAflActionModal);
+  if (document.readyState !== 'loading') initAflActionModal();
+  else document.addEventListener('DOMContentLoaded', initAflActionModal, { once: true });
 </script>
 
 <style>
