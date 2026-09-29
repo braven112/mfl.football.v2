@@ -475,4 +475,17 @@ What landed:
     resolves to the empty context (`tests/transactions-ledger-context.test.ts`),
     so their pages are unchanged — proven by HTML diff + pixel-identical
     screenshots.
+  - **Live Scoring — DONE (2026-09-29).** `features.liveScoring: true`,
+    `liveScoringSample: false` (the bundled replay is another league's
+    teams). `/archies/live-scoring` and `/archies/broadcast` are thin routes
+    over the shared `LiveBoardPage` / `LiveBroadcastPage`. MFL serves this
+    league's liveScoring FLAT (no pairings), so `loadLiveScoringPayload` now
+    pairs any registered league from its committed schedule, and that one fix
+    covers the board, `/broadcast` and the homepage live hero. The board
+    grows a division picker for declared-divisions leagues (owner's call:
+    your games first, then My division (the default) / All / each division);
+    TheLeague, the AFL and Best Ball render unchanged. With this flag on, the
+    shared hero's live windows build the scoreboard instead of the "games are
+    on" card. Verified on real week-3 data: 99 paired Final games, drill-in box
+    scores, and the doubleheader on /broadcast.
 - Two-way Slack (mentions → tips) through the Events API, if a client wants it.
