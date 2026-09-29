@@ -731,50 +731,124 @@ html[data-league="bb1"] {
 /* ========================================
    Archie's Fantasy Football League — per-league theme overrides
    TWO LAYERS, on purpose, so the scheme can become any colour later:
-     1. PALETTE (--league-palette-*): the only raw colour values. Today the
-        blues of the league's own art (public/mfl/10105/): Archie's shirt
-        blue, the wordmark's sky blue, a deep navy for the chrome.
+     1. PALETTE (--league-palette-*): the only raw colour values. Today:
+        BLACK for the chrome and for anything that must read as text, and
+        the sky blue of the league's wordmark (public/assets/logos/
+        archies-wordmark.webp, #44aaff / #55ccff) as the one accent.
+        No navy and no dark blue anywhere — the owner's call (Sep 2026).
      2. SEMANTIC tokens (--color-primary, --breadcrumb-bar-bg, --nav-*, ...):
         every one is a var() of the palette, never a literal. Components read
         only the semantic tokens.
-   Recolouring the league = editing the six palette values here and their
-   dark twins in tokens-dark.css. Nothing else.
-   Contrast the palette must keep (checked for today's blues):
-     --league-palette-brand      under white text (buttons, fills)  >= 4.5:1  (5.7)
-     --league-palette-brand-text on white (links, labels)           >= 4.5:1  (5.1)
-     --league-palette-bright     decorative only (2.6 on white — never text)
-   Unlike the AFL, --color-primary IS remapped: this identity is one colour
-   family end to end. Paired with html.dark[data-league="archies"].
+   Recolouring the league = editing the palette values here and their dark
+   twins in tokens-dark.css. Nothing else.
+   How the two colours split, and the contrast that forces it:
+     --league-palette-accent  #44aaff is only 2.5:1 on white, so in LIGHT
+                              mode it is never text on a light surface. It
+                              is a FILL (buttons, pills, active nav) with
+                              --league-palette-on-accent (black) on top
+                              (8.4:1), a rule/underline/active bar, or text
+                              on the black chrome (8.4:1).
+     --league-palette-ink     black: the breadcrumb strip, footer, hero card,
+                              resting nav icons, and every "brand-coloured"
+                              text token (links, nav labels) — so
+                              --color-primary is ink, not the blue, because
+                              components use it as both text AND a fill
+                              under white text, and only black passes both.
+   Paired with html.dark[data-league="archies"].
    ======================================== */
 html[data-league="archies"] {
   /* ── 1. Palette ── */
-  --league-palette-brand: #1868b8;             /* primary voice: fills, active nav, headings accents */
-  --league-palette-brand-strong: #0f4f91;      /* hover / pressed step of the brand */
-  --league-palette-brand-deepest: #0c3f75;     /* strongest step */
-  --league-palette-brand-text: #1670c4;        /* brand as FOREGROUND on light surfaces */
-  --league-palette-bright: #3ea6f5;            /* accent fills and rules only */
-  --league-palette-chrome: #0c2d52;            /* breadcrumb strip, footer, resting nav icons */
+  --league-palette-accent: #44aaff;            /* wordmark sky blue: fills, rules, marks, text on black */
+  --league-palette-accent-soft: #55ccff;       /* wordmark cyan: hover step of the accent fill */
+  --league-palette-on-accent: #000000;         /* text on an accent fill (8.4:1) */
+  --league-palette-ink: #000000;               /* chrome + brand-voice text */
+  --league-palette-ink-raised: #262626;        /* hover step of an ink fill, and hairlines on the chrome */
+  --league-palette-on-ink: #ffffff;            /* text on an ink fill */
+  --league-palette-text-muted: #525252;        /* secondary text: 5.9:1 on the #e0e0e0 page, where the shared #6b7280 is 3.7:1 */
+  --league-palette-text-faint: #5f5f5f;        /* tertiary text: 4.8:1 on the page, 6.3:1 on white (the shared #9ca3af is 2.5:1) */
 
   /* ── 2. Semantic tokens → palette ── */
-  --color-primary: var(--league-palette-brand);
-  --color-primary-dark: var(--league-palette-brand-strong);
-  --color-primary-light: var(--league-palette-brand-text);
-  --color-secondary: var(--league-palette-brand-strong);   /* hovers go deeper, not TheLeague green */
-  --color-secondary-dark: var(--league-palette-brand-deepest);
-  --color-secondary-light: var(--league-palette-brand-text);
-  --color-accent: var(--league-palette-bright);
-  --league-accent: var(--league-palette-brand);
-  --breadcrumb-bar-bg: var(--league-palette-chrome);
-  --inverse-bg: var(--league-palette-chrome);              /* footer (via --inverse-content-bg) */
-  --inverse-bg-accent: var(--league-palette-bright);
-  --header-nav-icon-color: var(--league-palette-chrome);
-  --header-nav-icon-hover-color: var(--league-palette-brand);
-  --header-nav-label-color: var(--league-palette-brand);
-  --header-nav-label-hover-color: var(--league-palette-brand-strong);
-  --nav-active-bg: color-mix(in srgb, var(--league-palette-brand) 10%, transparent);
-  --nav-active-text: var(--league-palette-brand);
-  --nav-active-border-left: var(--league-palette-brand);
-  --primary-content-boxshadow-color: color-mix(in srgb, var(--league-palette-brand) 16%, transparent);
+  --color-primary: var(--league-palette-ink);
+  --color-primary-dark: var(--league-palette-ink);
+  --color-primary-light: var(--league-palette-ink);
+  --color-secondary: var(--league-palette-ink);            /* hovers stay black, never TheLeague green */
+  --color-secondary-dark: var(--league-palette-ink);
+  --color-secondary-light: var(--league-palette-ink);
+  --color-accent: var(--league-palette-accent);
+  --league-accent: var(--league-palette-accent);
+  /* Shared components read --league-accent (and --color-primary) as BOTH a
+     fill under white text and as text on the page. These say which: each is
+     read as `var(--league-accent-fg, var(--league-accent, …))` /
+     `var(--on-league-accent, #fff)`, so a league that does not define them
+     renders exactly what it did before. */
+  --league-accent-fg: var(--league-palette-ink);           /* accent as TEXT on a light surface */
+  --on-league-accent: var(--league-palette-on-accent);     /* text ON a --league-accent fill */
+  --on-color-primary: var(--league-palette-on-ink);        /* text ON a --color-primary fill */
+  --content-text-muted: var(--league-palette-text-muted);
+  /* ~650 shared rules read these two grey steps directly as secondary text
+     (breadcrumbs, table heads, counts). Neutral, and dark enough for AA. */
+  --color-gray-500: var(--league-palette-text-muted);
+  --color-gray-400: var(--league-palette-text-faint);
+  --badge-info-bg: color-mix(in srgb, var(--league-palette-accent) 22%, transparent);
+  --badge-info-text: var(--league-palette-ink);            /* TheLeague's #2563eb on #dbeafe is 4.2:1 */
+
+  --btn-primary-bg: var(--league-palette-accent);
+  --btn-primary-bg-hover: var(--league-palette-accent-soft);
+  --btn-primary-bg-focus: var(--league-palette-accent-soft);
+  --btn-primary-text: var(--league-palette-on-accent);
+  --btn-primary-border: var(--league-palette-accent);
+  --btn-primary-border-hover: var(--league-palette-ink);
+  --btn-secondary-bg: var(--league-palette-ink);
+  --btn-secondary-bg-hover: var(--league-palette-ink-raised);
+  --btn-secondary-bg-focus: var(--league-palette-ink-raised);
+  --btn-secondary-border: var(--league-palette-ink);
+  --btn-secondary-border-hover: var(--league-palette-accent);
+  --btn-icon-text-focus: var(--league-palette-ink);
+
+  --link-color-hover: var(--league-palette-ink);
+  --link-color-focus: var(--league-palette-ink);
+  --link-color-accent: var(--league-palette-ink);
+  --link-color-accent-hover: var(--league-palette-ink);
+  --link-color-inverse-hover: var(--league-palette-accent);
+
+  --breadcrumb-bar-bg: var(--league-palette-ink);
+  --inverse-bg: var(--league-palette-ink);                 /* footer, hero card (via --inverse-content-bg) */
+  --inverse-bg-accent: var(--league-palette-accent);
+  --inverse-border: var(--league-palette-ink-raised);
+
+  --content-bg-accent: var(--league-palette-accent);
+  --accent-content-bg-color: var(--league-palette-accent);
+  --accent-content-text-color: var(--league-palette-on-accent);
+  --accent-content-border-color: color-mix(in srgb, var(--league-palette-accent) 35%, transparent);
+  --accent-content-boxshadow-color: color-mix(in srgb, var(--league-palette-accent) 21%, transparent);
+  --primary-content-boxshadow-color: color-mix(in srgb, var(--league-palette-accent) 16%, transparent);
+  --secondary-content-boxshadow-color: color-mix(in srgb, var(--league-palette-accent) 16%, transparent);
+
+  --shadow-focus-ring: 0 0 0 3px color-mix(in srgb, var(--league-palette-accent) 45%, transparent);
+  --shadow-btn-hover: 0 10px 30px color-mix(in srgb, var(--league-palette-accent) 35%, transparent);
+  --input-border-focus: var(--league-palette-accent);
+
+  --header-nav-icon-color: var(--league-palette-ink);
+  --header-nav-icon-hover-color: var(--league-palette-accent);
+  --header-nav-label-color: var(--league-palette-ink);
+  --header-nav-label-hover-color: var(--league-palette-ink);
+  --nav-active-bg: color-mix(in srgb, var(--league-palette-accent) 18%, transparent);
+  --nav-active-text: var(--league-palette-ink);
+  --nav-active-border-left: var(--league-palette-accent);
+  --nav-focus-ring: 0 0 0 2px var(--league-palette-accent);
+  --nav-verify-bg: color-mix(in srgb, var(--league-palette-accent) 8%, transparent);
+  --nav-verify-hover-bg: color-mix(in srgb, var(--league-palette-accent) 18%, transparent);
+  --nav-verify-border: var(--league-palette-accent);
+  --nav-verify-text: var(--league-palette-ink);
+  --nav-switcher-active-bg: var(--league-palette-accent);
+  --nav-switcher-active-text: var(--league-palette-on-accent);
+}
+
+/* Links are black text on light surfaces (the sky blue fails AA there), so
+   the accent shows as the underline wherever a link carries one. */
+html[data-league="archies"] a {
+  text-decoration-color: var(--league-accent);
+  text-underline-offset: 0.18em;
 }
 
 /* ========================================

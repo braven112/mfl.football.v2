@@ -24,6 +24,10 @@
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import SchefterFeedCompact from '../../shared/SchefterFeedCompact.astro';
+// The rail's styles: TheLeague's and the AFL's homepages import these at page
+// level, so SchefterFeedCompact does not — without them the rail renders raw.
+import '../../../styles/schefter-feed.css';
+import '../../../styles/schefter-feed-compact.css';
 import OwnersPollHomeCard from '../../shared/owners-poll/OwnersPollHomeCard.astro';
 import QuickLinks from '../../shared/hp-sections/QuickLinks.astro';
 import WhatsNext from '../../theleague/WhatsNext.astro';
@@ -421,7 +425,7 @@ const heroLiveScoring =
     min-width: 0;
   }
   .pkg-home__section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem; }
-  .pkg-home__section-head h2 { margin: 0; font-size: 1.15rem; color: var(--league-accent); }
+  .pkg-home__section-head h2 { margin: 0; font-size: 1.15rem; color: var(--league-accent-fg, var(--league-accent)); }
   /* One division (the viewer's) fills the card rather than one narrow column. */
   .pkg-home__standings--one :global(.pkg-standings) { grid-template-columns: 1fr; }
   .pkg-home__empty { color: var(--content-text-muted); margin: 0; }

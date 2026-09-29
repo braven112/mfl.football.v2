@@ -37,7 +37,7 @@
 
 /* A watched player's kebab wears the accent so the list state shows at a glance. */
 .pa-kebab.is-watched {
-  color: var(--league-accent, var(--color-primary, #1c497c));
+  color: var(--league-accent-fg, var(--league-accent, var(--color-primary, #1c497c)));
   border-color: color-mix(in srgb, var(--league-accent, var(--color-primary, #1c497c)) 55%, transparent);
   background: color-mix(in srgb, var(--league-accent, var(--color-primary, #1c497c)) 10%, var(--content-bg, #fff));
 }
@@ -59,7 +59,7 @@
   font-size: 0.6875rem;
   font-weight: 700;
   letter-spacing: 0.02em;
-  color: var(--league-accent, var(--color-primary, #1c497c));
+  color: var(--league-accent-fg, var(--league-accent, var(--color-primary, #1c497c)));
   background: color-mix(in srgb, var(--league-accent, var(--color-primary, #1c497c)) 12%, transparent);
   vertical-align: middle;
   white-space: nowrap;

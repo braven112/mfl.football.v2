@@ -115,7 +115,7 @@ const team = snapshot ? teams[snapshot.franchiseId] : null;
     font-size: 0.7rem;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: var(--content-text-muted);
+    color: color-mix(in srgb, var(--page-text) 72%, transparent);   /* sits on the nav-active tint, where --content-text-muted drops under 4.5:1 */
   }
   .pkg-snap__stats dd { margin: 0.1rem 0 0; font-weight: 700; font-size: 1.15rem; font-variant-numeric: tabular-nums; }
   .pkg-snap__weeks { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.35rem; font-size: 0.92rem; }
