@@ -125,17 +125,29 @@ describe('capabilities decide the daily slots', () => {
   });
 
   it('a league with no live scoring keeps the live window, on a card that promises no scoreboard', () => {
-    // Sunday 1pm PT: games on. Sunday 9pm PT: the slot runs on, the games are final.
-    const on = archiesHero('2026-10-04T20:00:00Z');
-    expect(slotOf(on)).toBe('live-scoring');
-    expect(`${viewOf(on)?.headline} ${viewOf(on)?.accentWord}`).toBe('GAMES ARE ON.');
-    expect(viewOf(on)?.linkLabel).not.toMatch(/LIVE SCORES/);
-    const after = archiesHero('2026-10-05T04:00:00Z');
-    expect(slotOf(after)).toBe('live-scoring');
-    expect(`${viewOf(after)?.headline} ${viewOf(after)?.accentWord}`).toBe('THE SCORES ARE IN.');
-    // A league WITH live scoring keeps its scoreboard card.
+    // Every registered league has live scoring since Archie's got it
+    // (2026-09-29), so the no-scoreboard branch is exercised by switching
+    // Archie's capability off for this test only — never by naming a league
+    // as "the one without", which stops testing anything the day it gains it.
+    const caps = getLeagueHeroProfile('archies').capabilities;
+    const real = caps.liveScoring;
+    caps.liveScoring = false;
+    try {
+      // Sunday 1pm PT: games on. Sunday 9pm PT: the slot runs on, the games are final.
+      const on = archiesHero('2026-10-04T20:00:00Z');
+      expect(slotOf(on)).toBe('live-scoring');
+      expect(`${viewOf(on)?.headline} ${viewOf(on)?.accentWord}`).toBe('GAMES ARE ON.');
+      expect(viewOf(on)?.linkLabel).not.toMatch(/LIVE SCORES/);
+      const after = archiesHero('2026-10-05T04:00:00Z');
+      expect(slotOf(after)).toBe('live-scoring');
+      expect(`${viewOf(after)?.headline} ${viewOf(after)?.accentWord}`).toBe('THE SCORES ARE IN.');
+    } finally {
+      caps.liveScoring = real;
+    }
+    // A league WITH live scoring keeps its scoreboard card — Archie's included.
     const afl = resolveLeagueHeroState({ league: 'afl-fantasy', referenceDate: new Date('2026-10-04T20:00:00Z') });
     expect(viewOf(afl)?.linkLabel).toBe('VIEW LIVE SCORES');
+    expect(viewOf(archiesHero('2026-10-04T20:00:00Z'))?.linkLabel).toBe('VIEW LIVE SCORES');
   });
 
   it("Tuesday afternoon is the Pecking Order — when THIS week's issue is out", () => {
