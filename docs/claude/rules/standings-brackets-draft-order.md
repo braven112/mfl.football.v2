@@ -47,6 +47,36 @@ that stops being true, and it also pins the site's seeds to the league's own
 MFL widget (`public/mfl/10105/standings.js`) team for team.
 `tests/shared-standings-page.test.ts`.
 
+**1c. Three tabs: shared standard views, league-owned custom ones.** The
+owner's model (2026-09-29). Each league shows three standings tabs. The
+common set is Division / Playoffs / All-Play, and a league may REPLACE any
+one of them with a view of its own:
+
+| League | Tab 1 | Tab 2 | Tab 3 |
+|---|---|---|---|
+| TheLeague | Division | Playoffs | All-Play |
+| Archie's | Division | MAD (its playoffs) | All-Play (skins may replace it one day) |
+| AFL | Division | Playoffs (per conference) | Tiers |
+
+- The **standard views** (Division, Playoffs, All-Play) live in the shared
+  page and differ only by profile data: columns, seeding (e.g. MAD), labels.
+  A league's PLAYOFF format is a standard view with its own seeding, not a
+  custom tab — MAD is `standingsSeeding`, not an Archie's component.
+- A **custom view** is a side competition that is one-of-one: the AFL's tier
+  competition (all-play split into tiers, prizes, promotion / relegation),
+  Archie's skins game. It is that league's own component. The shared page
+  owns the tab bar, `?view=`, season picker, theming and mobile layout; the
+  league's route renders the custom component into the tab's slot. Its rules
+  never enter `standings-page-profile.ts` or the shared page.
+- Do not generalise a custom view for reuse. Another client may be shown it
+  for ideas; theirs is built to their own rules.
+
+Status: the slot mechanism is NOT built yet — today's tabs are fixed
+(Division / league-wide / All-Play, with a configurable middle label).
+Build it when the AFL moves onto the shared page: its Division and Playoffs
+tabs are standard views, and Tiers becomes its custom tab. Do not build the
+slot before a league needs it.
+
 **1a. The one sanctioned re-rank: MFL Live's Live / Projected standings.**
 The Standings tab on `/live/league/<id>` defaults to **Live** (this week's
 scores added to each record) and offers **Projected** (projected finals added)
