@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-09-29T00:16:29.036Z"
+    "fetchedAt": "2026-09-29T00:46:23.391Z"
   },
   "players": [
     {
@@ -2204,7 +2204,7 @@
         "active": true,
         "position": "QB",
         "depthChartPosition": "QB",
-        "depthChartOrder": 4,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "QB"
         ],
@@ -7275,7 +7275,12 @@
         ]
       },
       "gamesPlayed": 2,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "11247",
+          "name": "Ertz, Zach"
+        }
+      ]
     },
     {
       "id": "13303",
@@ -17304,6 +17309,10 @@
       "gamesPlayed": null,
       "depthChartAhead": [
         {
+          "id": "11247",
+          "name": "Ertz, Zach"
+        },
+        {
           "id": "13674",
           "name": "Goedert, Dallas"
         }
@@ -18075,8 +18084,8 @@
         "status": "Active",
         "active": true,
         "position": "TE",
-        "depthChartPosition": null,
-        "depthChartOrder": null,
+        "depthChartPosition": "TE",
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "TE"
         ],
