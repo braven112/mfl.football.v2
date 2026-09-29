@@ -121,14 +121,28 @@ it('builds a season that is under way, not just one that is finished', async () 
   // treats a parallel step's failure as non-fatal, so the derived file would
   // simply have stopped refreshing, in silence, for the whole regular season.
   //
-  // Simulates that state on real data: strip 2025's division titles (as an
-  // in-progress season has none) and require the build to succeed anyway.
+  // Simulates that state on real data: take the newest FINISHED season (one
+  // with division winners recorded), strip its titles (as an in-progress
+  // season has none) and require the build to succeed anyway.
+  //
+  // It must be a finished season, and every later season must be cut from the
+  // simulated ledger, because buildLeague replays EVERY year against its
+  // schedule.json. The live season's schedule.json is rewritten by roster sync
+  // as each game ends, while the committed ledger only moves when the derived
+  // chain lane runs — so replaying the live season here made this test a race
+  // against the sync. That race turned main red on 2026-09-29 (schedule.json
+  // replayed 6 games, the ledger held 4), and every PR with it. Whether the
+  // COMMITTED chain agrees with itself is the chain lane's own gate
+  // (scripts/recompute-derived-chain.mjs fails its run on the replay
+  // invariant); this test is about in-progress handling, not freshness.
   const { buildLeague } = await import('../scripts/compute-division-strength.mjs');
   const target = leagues[0];
   const original = readFileSync(target.ledgerPath, 'utf8');
   try {
     const ledger = JSON.parse(original);
-    const midYear = Math.max(...ledger.rows.map((r: any) => (r.seasonNotStarted ? 0 : r.year)));
+    const midYear = Math.max(...ledger.rows.map((r: any) => (r.wonDivision ? r.year : 0)));
+    expect(midYear, 'no finished season to simulate an in-progress one with').toBeGreaterThan(0);
+    ledger.rows = ledger.rows.filter((r: any) => r.year <= midYear);
     let stripped = 0;
     for (const row of ledger.rows) {
       if (row.year !== midYear) continue;

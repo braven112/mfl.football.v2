@@ -17,7 +17,7 @@
  */
 import type { ThrowbackPickerView } from '../../utils/throwback-settings-view';
 import { eraBannerStyle } from '../../utils/era-banner-style';
-import { eraPickKey } from '../../utils/throwback-identity';
+import { eraPickKey, throwbackEraProvenance } from '../../utils/throwback-identity';
 
 interface Props {
   view: ThrowbackPickerView;
@@ -108,11 +108,14 @@ const weekLabel = `Week ${previewWeek}`;
             <div class="tbw-card__years">
               {era.yearStart}–{era.yearEnd}
               {era.eraLabel && <span class="tbw-card__era-label">· {era.eraLabel}</span>}
-              {era.sourceFranchiseId && (
-                <span class="tbw-card__slot" title="Your team wore this under an earlier franchise slot">
-                  · as franchise {era.sourceFranchiseId}
-                </span>
-              )}
+              {(() => {
+                const provenance = throwbackEraProvenance(era);
+                return provenance && (
+                  <span class="tbw-card__slot" title={provenance.title}>
+                    · {provenance.label}
+                  </span>
+                );
+              })()}
             </div>
           </div>
           {/* Interactive content inside a label doesn't activate the radio,

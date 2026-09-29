@@ -139,9 +139,33 @@ export function getGrantedThrowbackEras(
     if (g.franchiseId !== team.franchiseId) continue;
     const source = allTeams.find((t) => t.franchiseId === g.sourceFranchiseId);
     const era = source?.history?.find((e) => e.yearStart === g.yearStart);
-    if (era) out.push({ ...era, sourceFranchiseId: g.sourceFranchiseId });
+    if (era) out.push({ ...era, sourceFranchiseId: g.sourceFranchiseId, grantedBy: source!.name });
   }
   return out;
+}
+
+/**
+ * The picker's note on where a borrowed era came from, or null for an era of
+ * the team's own slot. A granted era and an inherited one share a pick-key
+ * shape, but they are different claims: "your team wore this under an earlier
+ * slot" is true of an inherited era and false of a lent one.
+ */
+export function throwbackEraProvenance(
+  era: FranchiseHistoryEntry
+): { label: string; title: string } | null {
+  if (era.grantedBy) {
+    return {
+      label: `on loan from ${era.grantedBy}`,
+      title: `A commissioner exception: ${era.grantedBy} lent your team this era`,
+    };
+  }
+  if (era.sourceFranchiseId) {
+    return {
+      label: `as franchise ${era.sourceFranchiseId}`,
+      title: 'Your team wore this under an earlier franchise slot',
+    };
+  }
+  return null;
 }
 
 /**
