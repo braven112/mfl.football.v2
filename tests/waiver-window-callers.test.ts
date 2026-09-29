@@ -67,8 +67,7 @@ const CALLERS = walk(SRC_ROOT)
  */
 const EXPECTED_AT_LEAST = [
   join('src', 'pages', 'afl-fantasy', 'index.astro'),
-  // The AFL's Free Agents body is the AFL-family component (shared with the demo's keeper slot).
-  join('src', 'components', 'afl-family', 'PlayersPage.astro'),
+  join('src', 'components', 'shared', 'free-agents', 'FreeAgentsPage.astro'),
   join('src', 'pages', 'api', 'waiver-claim.ts'),
   join('src', 'pages', 'theleague', 'index.astro'),
   join('src', 'pages', 'theleague', 'players.astro'),
@@ -153,12 +152,12 @@ describe('every production caller names its leagueZone', () => {
 function calendarYearVars(source: string): string[] {
   const vars: string[] = [];
   // const <name> = import.meta.glob('.../mfl-feeds/<glob>/calendar.json', …)
-  const modulesVars = [
-    ...source.matchAll(/const\s+(\w+)\s*=\s*import\.meta\.glob\(\s*'[^']*mfl-feeds\/[^']*calendar\.json'/g),
-  ].map((m) => m[1]);
-  // …or, in a shared page component, the same glob handed in by its route as
-  // the `calendarModules` prop (a glob specifier cannot be a runtime variable).
-  if (/const\s*\{[^}]*\bcalendarModules\b[^}]*\}\s*=\s*Astro\.props/.test(source)) modulesVars.push('calendarModules');
+  const modulesVars = [...source.matchAll(
+    /const\s+(\w+)\s*=\s*import\.meta\.glob\(\s*'[^']*mfl-feeds\/[^']*calendar\.json'/g,
+  )].map((m) => m[1]);
+  // …or a SHARED page's `calendarModules` prop: the glob lives in each thin
+  // route (a static specifier cannot be a runtime variable), the pick here.
+  if (/\bcalendarModules\b[\s\S]{0,400}?\}\s*=\s*Astro\.props/.test(source)) modulesVars.push('calendarModules');
   for (const modulesVar of modulesVars) {
     // …then the entry picked out of THAT map, by year.
     const pick = new RegExp(

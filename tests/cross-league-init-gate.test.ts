@@ -69,6 +69,11 @@ interface GuardedPage {
    * inert, the opposite failure but just as dead.
    */
   markerBinding: string;
+  /**
+   * For a SHARED page whose slug comes from a prop: the thin route that
+   * renders it, and the prop binding that names this league there.
+   */
+  route?: { file: string; binding: string };
 }
 
 const PAIRS: Record<string, GuardedPage[]> = {
@@ -82,17 +87,12 @@ const PAIRS: Record<string, GuardedPage[]> = {
       markerBinding: `const PAGE_LEAGUE_SLUG = getLeagueBySlug('theleague')!.slug;`,
     },
     {
-      // The AFL's lineup is the AFL-FAMILY page component, shared with the
-      // custom-site demo's keeper slot: one controller for both, so its gate
-      // names the family marker and it reads its league off the page it found
-      // (the route binds `league` to getLeagueBySlug('afl-fantasy')). It still
-      // must never match TheLeague's page, which is what this pair pins.
       label: 'the AFL',
-      file: 'src/components/afl-family/LineupPage.astro',
+      file: 'src/pages/afl-fantasy/lineup.astro',
       slug: 'afl-fantasy',
-      gate: `const pageRoot = document.querySelector<HTMLElement>('.lineup-page[data-controller="afl-family"]');`,
-      marker: '<div class="lineup-page" data-league={PAGE_LEAGUE_SLUG} data-controller="afl-family">',
-      markerBinding: `const PAGE_LEAGUE_SLUG = league.slug;`,
+      gate: `if (!document.querySelector('.lineup-page[data-league="afl-fantasy"]')) return;`,
+      marker: '<div class="lineup-page" data-league={PAGE_LEAGUE_SLUG}>',
+      markerBinding: `const PAGE_LEAGUE_SLUG = getLeagueBySlug('afl-fantasy')!.slug;`,
     },
   ],
   Players: [
@@ -105,17 +105,22 @@ const PAIRS: Record<string, GuardedPage[]> = {
       marker: '<table class="players-table" id="players-table" data-league={theLeagueDef.slug}>',
       markerBinding: `const theLeagueDef = getLeagueBySlug('theleague');`,
     },
-    {
-      // The AFL-family players page, shared with the demo's keeper slot — see
-      // the lineup entry above for why its gate names the family marker.
-      label: 'the AFL',
-      file: 'src/components/afl-family/PlayersPage.astro',
-      slug: 'afl-fantasy',
-      gate: `const table = document.querySelector('#players-table[data-controller="afl-family"]');`,
+    // The AFL and every custom league render ONE shared page, so its gate is
+    // parametric: the marker and the gate both read the registry entry the
+    // ROUTE names, and `route` pins which slug that is.
+    ...['afl-fantasy', 'archies'].map((slug) => ({
+      label: slug,
+      file: 'src/components/shared/free-agents/FreeAgentsPage.astro',
+      slug,
+      gate: 'const table = document.querySelector(`#players-table[data-league="${leagueSlugForGate}"]`);',
       forbidden: `const table = document.getElementById('players-table');`,
-      marker: '<table class="players-table" id="players-table" data-league={aflLeague.slug} data-controller="afl-family">',
-      markerBinding: `const { league: aflLeague, freeAgentsData, leagueFeedModules, calendarModules, logoSrc } = Astro.props;`,
-    },
+      marker: '<table class="players-table" id="players-table" data-league={league.slug}>',
+      markerBinding: 'const league = getLeagueBySlug(leagueSlug)!;',
+      route: {
+        file: slug === 'archies' ? 'src/pages/archies/free-agents.astro' : 'src/pages/afl-fantasy/players.astro',
+        binding: `leagueSlug="${slug}"`,
+      },
+    })),
   ],
   Rosters: [
     {
@@ -131,18 +136,16 @@ const PAIRS: Record<string, GuardedPage[]> = {
       markerBinding: `const PAGE_LEAGUE_SLUG = getLeagueBySlug('theleague')!.slug;`,
     },
     {
-      // The AFL-family rosters page, shared with the demo's keeper slot — see
-      // the lineup entry above for why its gate names the family marker.
       label: 'the AFL',
-      file: 'src/components/afl-family/RostersPage.astro',
+      file: 'src/pages/afl-fantasy/rosters.astro',
       slug: 'afl-fantasy',
-      gate: `const pageRoot = document.querySelector<HTMLElement>('.roster-page[data-controller="afl-family"]');`,
+      gate: `const pageRoot = document.querySelector<HTMLElement>('.roster-page[data-league="afl-fantasy"]');`,
       // The direction that was really broken: this controller ran on
       // TheLeague's rosters page after an AFL -> TheLeague swap and bound a
       // second player-modal trigger onto it, reading the wrong league's data.
       forbidden: `const pageRoot = document.querySelector<HTMLElement>('.roster-page');`,
-      marker: '<section class="roster-page" data-league={PAGE_LEAGUE_SLUG} data-controller="afl-family" data-initial-view={initialView}>',
-      markerBinding: `const PAGE_LEAGUE_SLUG = aflLeague.slug;`,
+      marker: '<section class="roster-page" data-league={PAGE_LEAGUE_SLUG} data-initial-view={initialView}>',
+      markerBinding: `const PAGE_LEAGUE_SLUG = getLeagueBySlug('afl-fantasy')!.slug;`,
     },
   ],
 };
@@ -197,6 +200,12 @@ describe.each(Object.entries(PAIRS))('%s — cross-league init gate', (_pair, pa
       // registry. This is the half the marker check alone cannot see.
       expect(markup, `${page.file}: the marker must be bound to its own registry entry`)
         .toContain(page.markerBinding);
+      if (page.route) {
+        expect(read(page.route.file), `${page.route.file}: must render the shared page for ${page.slug}`)
+          .toContain(page.route.binding);
+        expect(markup, `${page.file}: the gate's slug must come from the same registry entry`)
+          .toContain('const leagueSlugForGate = league.slug;');
+      }
     },
   );
 });

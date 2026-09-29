@@ -62,8 +62,6 @@ const AFL_DIRS = [
   path.join(SRC, 'pages', 'afl-fantasy'),
   path.join(SRC, 'components', 'afl-fantasy'),
   path.join(SRC, 'components', 'afl'),
-  // The AFL-family page bodies (the AFL's pages, shared with the demo's keeper slot).
-  path.join(SRC, 'components', 'afl-family'),
 ];
 
 /**
@@ -119,19 +117,19 @@ const FORBIDDEN = [
  */
 const ALLOWLIST = new Map<string, string>([
   [
-    'components/afl-family/LineupPage.astro:--color-secondary',
+    'pages/afl-fantasy/lineup.astro:--color-secondary',
     'Categorical position palette (--lineup-pos-rb) + the swapped-slot accent. ' +
       'src/pages/theleague/lineup.astro declares an identical token block, so ' +
       'recoloring only the AFL diverges two sibling pages, and a red RB chip ' +
       'would collide with the error red on the same screen.',
   ],
   [
-    'components/afl-family/LineupPage.astro:#2e8743',
+    'pages/afl-fantasy/lineup.astro:#2e8743',
     'Fallback hex on the --lineup-pos-rb / --lineup-slot-swapped-accent / ' +
       '--btn-secondary-bg references above — same categorical-palette reason.',
   ],
   [
-    'components/afl-family/LineupPage.astro:--btn-secondary-bg',
+    'pages/afl-fantasy/lineup.astro:--btn-secondary-bg',
     'Alias of --color-secondary, used for --lineup-submit-ready in the same ' +
       'categorical token block as the position palette above. Same reason.',
   ],
@@ -157,7 +155,7 @@ const ALLOWLIST = new Map<string, string>([
       'What\'s New hero accent, now --league-accent.',
   ],
   [
-    'components/afl-family/PlayersPage.astro:#4ade80',
+    'components/shared/free-agents/FreeAgentsPage.astro:#4ade80',
     'Conference tag chip. Its own light/dark pair (#15803d / #4ade80) rather ' +
       'than a --color-secondary reference, and it is a categorical tag color, ' +
       'not brand voice. Recoloring it is a separate AL/NL design question.',

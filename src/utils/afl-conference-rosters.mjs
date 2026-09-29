@@ -8,7 +8,7 @@
  * player's `confs` lists the conferences currently holding him.
  *
  * This module is the single implementation of that math — imported by BOTH
- * the build-time snapshot script (scripts/compute-afl-free-agents.mjs) and
+ * the build-time snapshot script (scripts/compute-free-agents.mjs) and
  * the request-time live overlay (src/utils/afl-free-agents-live.ts). Plain
  * .mjs on purpose, same pattern as src/config/leagues-data.mjs: node scripts
  * and TS/src code can both import it, so the two consumers cannot drift.
