@@ -630,7 +630,7 @@ const bannerLabelFor = (name: string) =>
     padding: 0.75rem;
     text-align: left;
     font-weight: 600;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     color: var(--table-header-text, #94a3b8);
     border-bottom: 2px solid var(--table-border, #d0d0d0);
   }
@@ -642,7 +642,7 @@ const bannerLabelFor = (name: string) =>
   }
   .v-std tbody tr {
     background-color: var(--table-row-bg, #fff);
-    transition: background-color 0.2s ease;
+    transition: background-color var(--transition-base);
   }
   .v-std tbody tr:hover {
     background-color: var(--table-row-bg-hover, #f9f9f9);
@@ -746,7 +746,7 @@ const bannerLabelFor = (name: string) =>
     display: inline-block;
     line-height: 0;
     border-radius: 4px;
-    transition: opacity 0.15s ease, transform 0.15s ease;
+    transition: opacity var(--transition-fast), transform var(--transition-fast);
   }
   .v-std .team-banner-link:hover,
   .v-std .team-banner-link:focus-visible {
@@ -808,7 +808,7 @@ const bannerLabelFor = (name: string) =>
       padding: 0.5rem;
     }
     .v-std th {
-      font-size: 0.75rem;
+      font-size: var(--font-size-xs);
       padding: 0.5rem;
     }
     .v-std .team-banner {
@@ -827,7 +827,7 @@ const bannerLabelFor = (name: string) =>
     margin-bottom: 2rem;
     background: var(--card-bg, #fff);
     border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-md);
     padding-block: var(--padding-md);
     overflow-x: auto;
   }
@@ -856,7 +856,7 @@ const bannerLabelFor = (name: string) =>
     padding: 0.75rem;
     text-align: left;
     font-weight: 600;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     color: var(--table-header-text, #94a3b8);
     border-bottom: 2px solid var(--table-border, #d0d0d0);
   }
@@ -874,7 +874,7 @@ const bannerLabelFor = (name: string) =>
     border-bottom-color: rgba(255, 255, 255, 0.08);
   }
   .v-league tbody tr {
-    transition: opacity 0.2s ease;
+    transition: opacity var(--transition-base);
   }
   .v-league tbody tr:hover {
     opacity: 0.85;
@@ -995,7 +995,7 @@ const bannerLabelFor = (name: string) =>
     display: inline-block;
     line-height: 0;
     border-radius: 4px;
-    transition: opacity 0.15s ease, transform 0.15s ease;
+    transition: opacity var(--transition-fast), transform var(--transition-fast);
   }
   .v-league .team-banner-link:hover,
   .v-league .team-banner-link:focus-visible {
@@ -1041,7 +1041,7 @@ const bannerLabelFor = (name: string) =>
       padding: 0.5rem;
     }
     .v-league th {
-      font-size: 0.75rem;
+      font-size: var(--font-size-xs);
       padding: 0.5rem;
     }
     .v-league td {
@@ -1131,7 +1131,7 @@ const bannerLabelFor = (name: string) =>
     padding: 0.75rem;
     text-align: left;
     font-weight: 600;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     color: var(--table-header-text, #475569);
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -1139,11 +1139,11 @@ const bannerLabelFor = (name: string) =>
   .v-conf td {
     padding: 0.75rem;
     border-bottom: 1px solid var(--table-border, #e2e8f0);
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     color: var(--page-text, #1e293b);
   }
   .v-conf tbody tr {
-    transition: background-color 0.2s ease;
+    transition: background-color var(--transition-base);
   }
   .v-conf tbody tr:hover {
     background-color: var(--table-row-bg-hover, #f8fafc);
@@ -1248,7 +1248,7 @@ const bannerLabelFor = (name: string) =>
     display: inline-block;
     line-height: 0;
     border-radius: 4px;
-    transition: opacity 0.15s ease, transform 0.15s ease;
+    transition: opacity var(--transition-fast), transform var(--transition-fast);
   }
   .v-conf .team-banner-link:hover,
   .v-conf .team-banner-link:focus-visible {
@@ -1295,7 +1295,7 @@ const bannerLabelFor = (name: string) =>
     .v-conf th,
     .v-conf td {
       padding: 0.5rem;
-      font-size: 0.75rem;
+      font-size: var(--font-size-xs);
     }
     .v-conf .team-banner {
       max-width: 200px;
@@ -1373,7 +1373,7 @@ const bannerLabelFor = (name: string) =>
     font-weight: 700;
     color: var(--table-header-text, #111827);
     text-transform: uppercase;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     letter-spacing: 0.05em;
   }
   .v-tier .col-rank {
@@ -1393,7 +1393,7 @@ const bannerLabelFor = (name: string) =>
   }
   .v-tier tbody tr {
     border-bottom: 1px solid var(--table-border, #e5e7eb);
-    transition: background-color 0.15s ease;
+    transition: background-color var(--transition-fast);
   }
   .v-tier tbody tr:hover {
     background-color: var(--table-row-bg-hover, #f9fafb);
@@ -1414,7 +1414,7 @@ const bannerLabelFor = (name: string) =>
     background: #9ca3af;
     color: #fff;
     font-weight: 700;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
   }
   .v-tier tbody tr.gold-tier .rank-number {
     background: #ffd700;
@@ -1453,7 +1453,7 @@ const bannerLabelFor = (name: string) =>
     color: inherit;
     text-decoration: none;
     border-radius: 4px;
-    transition: opacity 0.15s ease, transform 0.15s ease;
+    transition: opacity var(--transition-fast), transform var(--transition-fast);
   }
   .v-tier a.team-info-link:hover,
   .v-tier a.team-info-link:focus-visible {
@@ -1481,7 +1481,7 @@ const bannerLabelFor = (name: string) =>
     color: #000;
     font-weight: 700;
     border-radius: 0.5rem;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
   }
   .v-tier tbody tr.gold-tier {
     background: linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 223, 0, 0.1) 100%);
@@ -1637,7 +1637,7 @@ const bannerLabelFor = (name: string) =>
     }
     .v-tier .prize-amount {
       padding: 0.2rem 0.4rem;
-      font-size: 0.75rem;
+      font-size: var(--font-size-xs);
     }
     .v-tier .rank-number {
       width: 26px;

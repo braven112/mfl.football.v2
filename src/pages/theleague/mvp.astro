@@ -613,7 +613,7 @@ const getNflLogo = (team: string) => getNflLogoUrl(team);
   }
 
   .filter-label {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 600;
     color: var(--content-text-muted, #475569);
     margin: 0;
@@ -625,10 +625,10 @@ const getNflLogo = (team: string) => getNflLogoUrl(team);
     border-radius: 0.5rem;
     background-color: var(--input-bg, #fff);
     color: var(--input-text, #1e293b);
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all var(--transition-base);
     width: fit-content;
   }
 
@@ -716,7 +716,7 @@ const getNflLogo = (team: string) => getNflLogoUrl(team);
     color: #fff;
     padding: 0.25rem 0.75rem;
     border-radius: 0.375rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     letter-spacing: 0.05em;
     text-transform: uppercase;
@@ -743,7 +743,7 @@ const getNflLogo = (team: string) => getNflLogoUrl(team);
     padding: 0.25rem 0.5rem;
     background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
     color: #fff;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.025em;
@@ -869,7 +869,7 @@ const getNflLogo = (team: string) => getNflLogoUrl(team);
   .cross-link {
     display: inline-block;
     margin-top: 0.25rem;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     color: #dc2626;
     text-decoration: none;
     font-weight: 500;

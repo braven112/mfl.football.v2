@@ -431,7 +431,7 @@ export default function TradeConfirmationModal({
           flex-shrink: 0;
         }
         .tcm-trading-as__label {
-          font-size: 0.6875rem;
+          font-size: var(--font-size-2xs);
           font-weight: 600;
           text-transform: uppercase;
           letter-spacing: 0.04em;
@@ -466,14 +466,14 @@ export default function TradeConfirmationModal({
           flex-shrink: 0;
         }
         .tcm-team-name {
-          font-size: 0.75rem;
+          font-size: var(--font-size-xs);
           font-weight: 700;
           text-transform: uppercase;
           letter-spacing: 0.06em;
           color: var(--color-gray-900, #111827);
         }
         .tcm-team-label {
-          font-size: 0.6875rem;
+          font-size: var(--font-size-2xs);
           font-weight: 500;
           color: var(--color-gray-500, #6b7280);
           text-transform: lowercase;
@@ -495,7 +495,7 @@ export default function TradeConfirmationModal({
         }
         .tcm-asset-name {
           flex: 1;
-          font-size: 0.875rem;
+          font-size: var(--font-size-sm);
           font-weight: 600;
           color: var(--color-gray-900, #111827);
           white-space: nowrap;
@@ -503,7 +503,7 @@ export default function TradeConfirmationModal({
           text-overflow: ellipsis;
         }
         .tcm-asset-pos {
-          font-size: 0.6875rem;
+          font-size: var(--font-size-2xs);
           font-weight: 600;
           text-transform: uppercase;
           background: var(--color-gray-100, #f3f4f6);
@@ -513,7 +513,7 @@ export default function TradeConfirmationModal({
           flex-shrink: 0;
         }
         .tcm-asset-salary {
-          font-size: 0.875rem;
+          font-size: var(--font-size-sm);
           font-weight: 600;
           font-variant-numeric: tabular-nums;
           color: var(--color-gray-700, #374151);
@@ -558,7 +558,7 @@ export default function TradeConfirmationModal({
         .tcm-cap-value--positive { color: var(--color-success-dark, #059669); }
         .tcm-cap-value--negative { color: var(--color-error, #dc2626); }
         .tcm-cap-label {
-          font-size: 0.6875rem;
+          font-size: var(--font-size-2xs);
           font-weight: 600;
           text-transform: uppercase;
           color: var(--color-gray-500, #6b7280);
@@ -568,7 +568,7 @@ export default function TradeConfirmationModal({
         }
         .tcm-message-label {
           display: block;
-          font-size: 0.75rem;
+          font-size: var(--font-size-xs);
           font-weight: 600;
           text-transform: uppercase;
           letter-spacing: 0.05em;
@@ -583,7 +583,7 @@ export default function TradeConfirmationModal({
           padding: 0.625rem;
           border: 1px solid var(--content-border, #e2e8f0);
           border-radius: var(--radius-sm, 0.25rem);
-          font-size: 0.875rem;
+          font-size: var(--font-size-sm);
           font-family: inherit;
           color: var(--color-gray-900, #111827);
           background: var(--content-bg, #fff);
@@ -598,7 +598,7 @@ export default function TradeConfirmationModal({
           position: absolute;
           bottom: 0.375rem;
           right: 0.375rem;
-          font-size: 0.6875rem;
+          font-size: var(--font-size-2xs);
           color: var(--color-gray-500, #6b7280);
           font-variant-numeric: tabular-nums;
         }
@@ -657,10 +657,10 @@ export default function TradeConfirmationModal({
           border: none;
           border-radius: var(--radius-md, 0.5rem);
           padding: 0.75rem 1.25rem;
-          font-size: 0.875rem;
+          font-size: var(--font-size-sm);
           font-weight: 600;
           cursor: pointer;
-          transition: background 0.15s ease;
+          transition: background var(--transition-fast);
         }
         .tcm-btn-submit:hover:not(:disabled) { background: var(--btn-primary-bg-hover, #164066); }
         .tcm-btn-submit:disabled { opacity: 0.7; cursor: not-allowed; }

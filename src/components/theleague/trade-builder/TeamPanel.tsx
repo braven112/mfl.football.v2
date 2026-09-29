@@ -160,7 +160,7 @@ export default function TeamPanel({
           gap: 0.25rem;
         }
         .team-panel__label {
-          font-size: 0.75rem;
+          font-size: var(--font-size-xs);
           font-weight: 600;
           text-transform: uppercase;
           letter-spacing: 0.06em;
@@ -191,7 +191,7 @@ export default function TeamPanel({
           background: var(--content-bg, #fff);
           color: var(--color-gray-900, #111827);
           cursor: pointer;
-          transition: border-color 0.15s ease;
+          transition: border-color var(--transition-fast);
         }
         .team-panel__select:focus-visible {
           outline: none;
@@ -199,7 +199,7 @@ export default function TeamPanel({
           box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 10%, transparent);
         }
         .team-panel__trade-bait-hint {
-          font-size: 0.75rem;
+          font-size: var(--font-size-xs);
           font-weight: 600;
           color: var(--color-warning-dark, #d97706);
           background: var(--color-warning-light, #fef3c7);
@@ -209,7 +209,7 @@ export default function TeamPanel({
           margin-top: 0.25rem;
         }
         .team-panel__section-title {
-          font-size: 0.75rem;
+          font-size: var(--font-size-xs);
           font-weight: 700;
           text-transform: uppercase;
           letter-spacing: 0.06em;

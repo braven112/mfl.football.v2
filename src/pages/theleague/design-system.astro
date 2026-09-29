@@ -6,6 +6,8 @@ import Spinner from '../../components/shared/loading/Spinner.astro';
 import Skeleton from '../../components/shared/loading/Skeleton.astro';
 import ThinkingDots from '../../components/shared/loading/ThinkingDots.astro';
 import BrandedLoader from '../../components/shared/loading/BrandedLoader.astro';
+import EmptyState from '../../components/shared/states/EmptyState.astro';
+import ErrorState from '../../components/shared/states/ErrorState.astro';
 import '../../styles/player-cell.css';
 
 export const prerender = false;
@@ -134,7 +136,7 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
           <h4 class="ds-editorial-section-title">Roster Breakdown</h4>
         </div>
         <div class="ds-code-hint">
-          <code>font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; border-left: 2px solid var(--color-primary);</code>
+          <code>font-size: var(--font-size-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; border-left: 2px solid var(--color-primary);</code>
         </div>
       </div>
     </section>
@@ -1058,6 +1060,44 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
       </div>
     </section>
 
+    <!-- ===== Empty & Error States ===== -->
+    <section class="ds-section">
+      <h2 class="ds-section-title">Empty &amp; Error States</h2>
+
+      <div class="ds-card">
+        <h3 class="ds-card__heading">Empty state</h3>
+        <p class="ds-card__desc">
+          <code>EmptyState.astro</code> (React: <code>states-react.tsx</code>; scripts: <code>buildEmptyStateHTML</code>).
+          Say what is missing, why that is fine or when it fills, and offer the next step. Action labels are verb + object.
+        </p>
+        <EmptyState
+          title="No brackets yet"
+          body="Brackets appear once playoff seeds are set after Week 14."
+          actions={[{ label: 'See the standings', href: '#' }]}
+        />
+      </div>
+
+      <div class="ds-card">
+        <h3 class="ds-card__heading">Error state</h3>
+        <p class="ds-card__desc">
+          <code>ErrorState.astro</code>. Only for "we could not read it" — never for a well-formed empty answer.
+          Say what failed, that the data is missing rather than zero, and how to recover.
+        </p>
+        <ErrorState
+          title="Couldn’t load the standings"
+          body="MyFantasyLeague didn’t answer. These are missing, not zero — trying again usually works."
+          actions={[{ label: 'Try again', id: 'retry' }]}
+        />
+      </div>
+
+      <div class="ds-card">
+        <h3 class="ds-card__heading">Compact</h3>
+        <p class="ds-card__desc">Inside a card or a table cell, pass <code>compact</code>: no dashed panel (no card within a card), left-aligned with its neighbours.</p>
+        <EmptyState compact title="No MVP votes yet." />
+        <ErrorState compact title="Couldn’t load this week’s scores." actions={[{ label: 'Try again', id: 'retry-compact' }]} />
+      </div>
+    </section>
+
     <!-- ===== Loading States ===== -->
     <section class="ds-section">
       <h2 class="ds-section-title">Loading States</h2>
@@ -1267,7 +1307,7 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
   }
 
   .ds-hero__subtitle {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 400;
     color: var(--color-gray-600, #4b5563);
     line-height: 1.5;
@@ -1295,7 +1335,7 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
   }
 
   .ds-preview-switcher__label {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     color: var(--color-gray-700, #374151);
   }
@@ -1324,10 +1364,10 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
     background: transparent;
     color: var(--content-text-muted, #6b7280);
     font-family: inherit;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     cursor: pointer;
-    transition: background 0.15s ease, color 0.15s ease;
+    transition: background var(--transition-fast), color var(--transition-fast);
   }
 
   .ds-preview-switcher__option svg {
@@ -1356,7 +1396,7 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
   }
 
   .ds-section-title {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -1378,7 +1418,7 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
   }
 
   .ds-card__heading {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 700;
     color: var(--color-gray-900, #111827);
     margin: 0 0 0.25rem;
@@ -1392,7 +1432,7 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
   }
 
   .ds-card__desc code {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     background: var(--color-gray-100, #f3f4f6);
     padding: 0.1rem 0.35rem;
     border-radius: var(--radius-sm, 0.25rem);
@@ -1421,7 +1461,7 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
   .ds-type-label {
     width: 6.5rem;
     flex-shrink: 0;
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -1435,7 +1475,7 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
 
   .ds-type-spec {
     flex-shrink: 0;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-family: var(--font-family-mono);
     color: var(--color-gray-400, #9ca3af);
     text-align: right;
@@ -1449,7 +1489,7 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
   }
 
   .ds-section-title-inline {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -1459,19 +1499,19 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
   }
 
   .ds-type--body {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 400;
     color: var(--color-gray-700, #374151);
   }
 
   .ds-type--meta {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 500;
     color: var(--color-gray-600, #4b5563);
   }
 
   .ds-type--detail-label {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -1479,7 +1519,7 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
   }
 
   .ds-type--micro-label {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -1487,7 +1527,7 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
   }
 
   .ds-type--table-header {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 600;
     text-transform: uppercase;
     color: var(--color-gray-400, #9ca3af);
@@ -1497,7 +1537,7 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
      Editorial Section Title (demo instances)
      ======================================== */
   .ds-editorial-section-title {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -1535,7 +1575,7 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
   }
 
   .ds-code-hint code {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-family: var(--font-family-mono);
     color: var(--color-gray-600, #4b5563);
     white-space: nowrap;
@@ -1585,7 +1625,7 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
   }
 
   .ds-metric-label {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -1618,7 +1658,7 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
   .ds-detail-label {
     width: 4.5rem;
     flex-shrink: 0;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -1627,7 +1667,7 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
   }
 
   .ds-detail-value {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     color: var(--color-gray-700, #374151);
   }
 
@@ -1653,7 +1693,7 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
     display: inline-block;
     padding: 0.15rem 0.5rem;
     border-radius: var(--radius-sm, 0.25rem);
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     white-space: nowrap;
   }
@@ -1682,7 +1722,7 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
     display: inline-block;
     padding: 0.375rem 0.75rem;
     border-radius: 6px;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -1761,13 +1801,13 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
   }
 
   .ds-designation-name {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 600;
     color: var(--color-gray-900, #111827);
   }
 
   .ds-designation-meta {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--content-text-muted, #6b7280);
   }
 
@@ -1812,12 +1852,12 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
   .ds-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
   }
 
   .ds-table thead th {
     background: var(--color-gray-50, #f9fafb);
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 600;
     text-transform: uppercase;
     color: var(--color-gray-400, #9ca3af);
@@ -1872,7 +1912,7 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
     border-radius: 6px;
     background: var(--content-bg-muted, #fafbfc);
     cursor: pointer;
-    transition: all var(--transition-fast, 150ms ease);
+    transition: all var(--transition-fast, var(--transition-fast));
   }
 
   .ds-option-card:hover {
@@ -1900,7 +1940,7 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
   }
 
   .ds-option-card__years {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 600;
     color: var(--color-gray-900, #111827);
   }
@@ -1943,14 +1983,14 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
   }
 
   .ds-color-name {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 600;
     font-family: var(--font-family-mono);
     color: var(--color-gray-700, #374151);
   }
 
   .ds-color-use {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     color: var(--color-gray-400, #9ca3af);
   }
 
@@ -1978,14 +2018,14 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
   }
 
   .ds-shadow-label {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 600;
     font-family: var(--font-family-mono);
     color: var(--color-gray-700, #374151);
   }
 
   .ds-shadow-use {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     color: var(--color-gray-400, #9ca3af);
   }
 
@@ -2006,7 +2046,7 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
 
   .ds-spacing-label {
     width: 2rem;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 600;
     font-family: var(--font-family-mono);
     color: var(--color-gray-700, #374151);
@@ -2021,7 +2061,7 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
   }
 
   .ds-spacing-value {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     color: var(--color-gray-400, #9ca3af);
     font-family: var(--font-family-mono);
   }
@@ -2051,7 +2091,7 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
   }
 
   .ds-radius-label {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 600;
     font-family: var(--font-family-mono);
     color: var(--color-gray-500, #6b7280);
@@ -2117,7 +2157,7 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
     display: flex;
     align-items: center;
     gap: 0.375rem;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 500;
     color: var(--color-gray-600, #4b5563);
   }
@@ -2197,7 +2237,7 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
   }
 
   .ds-section-intro {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     color: var(--color-gray-600, #4b5563);
     margin: -0.5rem 0 1.5rem;
     line-height: 1.55;
@@ -2221,7 +2261,7 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
     border-radius: 8px;
     padding: 0.625rem 1.25rem;
     cursor: pointer;
-    transition: background 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+    transition: background var(--transition-fast), color var(--transition-fast), opacity var(--transition-fast);
     border: none;
     line-height: 1;
     text-decoration: none; /* reset for <a> */
@@ -2282,7 +2322,7 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
   .ds-token-label {
     width: 3.5rem;
     flex-shrink: 0;
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -2291,7 +2331,7 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
 
   .ds-token-value {
     font-family: 'Courier New', monospace;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--color-gray-700, #374151);
     background: var(--color-gray-50, #f9fafb);
     padding: 0.1rem 0.375rem;
@@ -2319,7 +2359,7 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
   }
 
   .ds-anim-name {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 600;
     color: var(--color-gray-900, #111827);
   }
@@ -2332,7 +2372,7 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
   }
 
   .ds-anim-desc code {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     background: var(--color-gray-50, #f9fafb);
     padding: 0.1rem 0.3rem;
     border-radius: 3px;
@@ -2346,14 +2386,14 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
   }
 
   .ds-anim-spec-item {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 400;
     color: var(--color-gray-700, #374151);
     font-variant-numeric: tabular-nums;
   }
 
   .ds-anim-spec-label {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -2372,7 +2412,7 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
 
   .ds-anim-trigger {
     font-family: inherit;
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -2382,7 +2422,7 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
     border-radius: 4px;
     padding: 0.25rem 0.625rem;
     cursor: pointer;
-    transition: background 0.15s ease, color 0.15s ease;
+    transition: background var(--transition-fast), color var(--transition-fast);
   }
 
   .ds-anim-trigger:hover {

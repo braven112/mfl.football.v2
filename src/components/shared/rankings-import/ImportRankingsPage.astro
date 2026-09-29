@@ -479,7 +479,7 @@ const siteConfigs = [
     gap: 0.3rem;
     padding: 0.25rem 0.6rem;
     border-radius: 4px;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     text-decoration: none;
     letter-spacing: 0.02em;
@@ -665,7 +665,7 @@ const siteConfigs = [
     border-right: 2px solid currentColor;
     border-bottom: 2px solid currentColor;
     transform: rotate(-45deg);
-    transition: transform 0.2s ease;
+    transition: transform var(--transition-base);
   }
 
   .ri-import__manual[open] > .ri-import__manual-summary::after {
@@ -931,7 +931,7 @@ const siteConfigs = [
   }
 
   .ri-manage__weight-unit {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--content-text-muted, #64748b);
   }
 
@@ -957,7 +957,7 @@ const siteConfigs = [
     border: none;
     border-radius: 3px;
     padding: 0.125rem 0.375rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 500;
     color: var(--content-text-muted, #64748b);
     cursor: pointer;
@@ -1140,7 +1140,7 @@ const siteConfigs = [
   }
 
   .ri-guide__arrow {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--content-text-muted, #64748b);
     transition: transform 0.2s;
   }

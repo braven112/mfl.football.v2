@@ -55,10 +55,10 @@ export default function DraftPredictorViewToggle({ predictions, actualPicks, onV
           border-radius: 0.5rem;
           background: #fff;
           color: #64748b;
-          font-size: 0.875rem;
+          font-size: var(--font-size-sm);
           font-weight: 600;
           cursor: pointer;
-          transition: all 0.2s ease;
+          transition: all var(--transition-base);
         }
 
         .toggle-button:hover {
@@ -74,7 +74,7 @@ export default function DraftPredictorViewToggle({ predictions, actualPicks, onV
 
         .view-indicator {
           text-align: center;
-          font-size: 0.875rem;
+          font-size: var(--font-size-sm);
           color: #64748b;
           font-style: italic;
         }

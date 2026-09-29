@@ -172,7 +172,7 @@ const teams = (aflConfig.teams ?? []).slice().sort((a: any, b: any) => {
     font-size: 0.9375rem;
     border-radius: 8px;
     text-decoration: none;
-    transition: filter 0.15s ease;
+    transition: filter var(--transition-fast);
   }
 
   .afl-keepers__cta:hover {
@@ -215,12 +215,12 @@ const teams = (aflConfig.teams ?? []).slice().sort((a: any, b: any) => {
     border-radius: 8px;
     text-decoration: none;
     color: var(--page-text, #1a1a1a);
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
   }
 
   .keeper-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-lg);
   }
 
   :global(html.dark) .keeper-card {
@@ -273,7 +273,7 @@ const teams = (aflConfig.teams ?? []).slice().sort((a: any, b: any) => {
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     width: max-content;
   }
 

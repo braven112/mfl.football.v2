@@ -58,7 +58,7 @@ const { slices = [], chartId } = Astro.props;
   }
 
   :global(.age-bar-label) {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 500;
     color: var(--color-gray-900, #111);
     display: flex;
@@ -80,7 +80,7 @@ const { slices = [], chartId } = Astro.props;
     height: 24px;
     border-radius: 4px;
     position: relative;
-    transition: all 0.3s ease;
+    transition: all var(--transition-slow);
   }
 
   :global(.age-bar-fill:hover) {

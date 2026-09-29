@@ -1043,7 +1043,9 @@
         "data/theleague/broadcast-mappings.json",
         "src/utils/broadcast-channels.ts",
         "src/components/shared/NetworkBadge.astro",
-        "src/components/shared/NflGamesStrip.tsx"
+        "src/components/shared/NflGamesStrip.tsx",
+        "src/components/shared/states/**",
+        "src/utils/state-html.ts"
       ],
       "tests": [
         "tests/design-token-guard.test.ts",
@@ -1062,7 +1064,8 @@
         "tests/live-scoring-accent-theming.test.ts",
         "tests/live-ink-contrast.test.ts",
         "tests/trade-deadline-hero-shared.test.ts",
-        "tests/whats-new-hero-shot-reservation.test.ts"
+        "tests/whats-new-hero-shot-reservation.test.ts",
+        "tests/design-polish.test.ts"
       ]
     },
     {

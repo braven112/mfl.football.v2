@@ -491,7 +491,7 @@ const countAriaLabel = hasCount
     margin-top: 0.3rem;
     font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', 'Oswald', sans-serif);
     font-weight: 700;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--ev-ink-faint);
@@ -518,7 +518,7 @@ const countAriaLabel = hasCount
     text-transform: uppercase;
     text-decoration: none;
     white-space: nowrap;
-    transition: filter 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+    transition: filter var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast);
   }
   .tl-event-hero__cta:hover {
     filter: brightness(0.92);
@@ -527,7 +527,7 @@ const countAriaLabel = hasCount
   }
   .tl-event-hero__cta-arrow {
     font-size: 1.1rem;
-    transition: transform 0.15s ease;
+    transition: transform var(--transition-fast);
   }
   .tl-event-hero__cta:hover .tl-event-hero__cta-arrow {
     transform: translateX(2px);
@@ -553,7 +553,7 @@ const countAriaLabel = hasCount
   :global(.tl-hero-panel__title) {
     margin: 0;
     font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', 'Oswald', sans-serif);
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -575,7 +575,7 @@ const countAriaLabel = hasCount
     padding: 0.55rem 0.7rem;
   }
   :global(.tl-hero-panel__more-link) {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--ev-ink-faint);
     text-decoration: none;
     padding-left: 0.15rem;
@@ -584,7 +584,7 @@ const countAriaLabel = hasCount
     color: var(--ev-ink);
   }
   :global(.tl-hero-panel__empty) {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     line-height: 1.5;
     color: var(--ev-ink-faint);
     margin: 0;
@@ -608,7 +608,7 @@ const countAriaLabel = hasCount
     color: var(--ev-ink-soft);
     font-size: 0.78rem;
     font-weight: 600;
-    transition: background 0.15s ease, border-color 0.15s ease;
+    transition: background var(--transition-fast), border-color var(--transition-fast);
   }
   :global(.tl-hero-panel__link:hover) {
     background: var(--ev-tile-hover-bg);

@@ -166,7 +166,7 @@
   grid-template-columns: auto 1fr;
   gap: 0.4rem 0.75rem;
   margin: 0;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
 }
 
 .sched__card dt {
@@ -199,7 +199,7 @@
 .sched__compare,
 .sched__weeks {
   width: 100%;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   border-collapse: collapse;
 }
 
@@ -214,7 +214,7 @@
 
 .sched__compare thead th,
 .sched__weeks thead th {
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--color-text-secondary, #475569);
@@ -233,7 +233,7 @@
 
 .sched__compare small {
   display: block;
-  font-size: 0.6875rem;
+  font-size: var(--font-size-2xs);
   font-weight: 400;
   color: var(--color-text-disabled, #94a3b8);
 }
@@ -248,7 +248,7 @@
 .sched__tag {
   display: inline-block;
   padding: 0.1rem 0.45rem;
-  font-size: 0.6875rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   color: var(--badge-info-text, #1e3a8a);
   background: var(--badge-info-bg, #dbeafe);
@@ -266,7 +266,7 @@
   gap: 0.3rem;
   margin: 0;
   padding: 0;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   color: var(--color-text-primary, #0f172a);
   list-style: none;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -279,7 +279,7 @@
 .sched__preview {
   margin: 0 0 0.75rem;
   padding: 0.7rem 0.85rem;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   line-height: 1.5;
   color: var(--color-text-primary, #0f172a);
   background: var(--color-warning-light, #fef3c7);

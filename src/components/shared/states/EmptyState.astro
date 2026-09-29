@@ -1,0 +1,38 @@
+---
+/**
+ * "There is nothing here" — and why that is fine, or when it fills.
+ *
+ * Class list, role and icon come from src/utils/state-html.ts (shared with the
+ * React twin and client scripts); styles from the global src/styles/states.css.
+ * Pass `compact` inside a card or cell. A default slot, when given, replaces
+ * the `body` line (for copy that needs a link or <code>).
+ */
+import { STATE_ICONS, stateClassName, stateRole, type StateAction } from '../../../utils/state-html';
+
+interface Props {
+  title: string;
+  body?: string;
+  actions?: StateAction[];
+  compact?: boolean;
+  class?: string;
+}
+
+const { title, body, actions = [], compact = false, class: className } = Astro.props;
+const hasSlot = Astro.slots.has('default');
+---
+<div class={stateClassName('empty', { compact, class: className })} role={stateRole('empty')}>
+  {!compact && <span class="ui-state__icon" set:html={STATE_ICONS.empty} />}
+  <p class="ui-state__title">{title}</p>
+  {hasSlot ? <p class="ui-state__body"><slot /></p> : body && <p class="ui-state__body">{body}</p>}
+  {actions.length > 0 && (
+    <div class="ui-state__actions">
+      {actions.map((a) =>
+        a.href ? (
+          <a class="ui-state__action" href={a.href}>{a.label}</a>
+        ) : (
+          <button type="button" class="ui-state__action" data-state-action={a.id}>{a.label}</button>
+        ),
+      )}
+    </div>
+  )}
+</div>

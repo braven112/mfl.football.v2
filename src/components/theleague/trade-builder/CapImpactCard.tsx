@@ -96,7 +96,7 @@ const capStyles = (
       gap: 0.375rem;
     }
     .cap-impact__title {
-      font-size: 0.75rem;
+      font-size: var(--font-size-xs);
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.06em;
@@ -136,7 +136,7 @@ const capStyles = (
       color: var(--color-error, #dc2626);
     }
     .cap-impact__delta {
-      font-size: 0.875rem;
+      font-size: var(--font-size-sm);
       font-weight: 700;
       display: flex;
       align-items: center;
@@ -150,12 +150,12 @@ const capStyles = (
       color: var(--color-error, #dc2626);
     }
     .cap-impact__arrow {
-      font-size: 0.75rem;
+      font-size: var(--font-size-xs);
     }
     .cap-impact__warning {
       background: var(--color-error-dark, #b91c1c);
       color: #fff;
-      font-size: 0.75rem;
+      font-size: var(--font-size-xs);
       font-weight: 700;
       text-align: center;
       padding: 0.375rem 0.5rem;

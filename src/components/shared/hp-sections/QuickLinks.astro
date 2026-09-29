@@ -165,11 +165,11 @@ const cardHref = (page: PageEntry) =>
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     color: var(--afl-accent);
     text-decoration: none;
-    transition: gap 0.15s ease;
+    transition: gap var(--transition-fast);
   }
 
   .afl-links__cta:hover {
@@ -196,7 +196,7 @@ const cardHref = (page: PageEntry) =>
     border-radius: var(--radius-md, 0.5rem);
     background: var(--color-gray-50, #f9fafb);
     text-decoration: none;
-    transition: background 0.15s ease, transform 0.15s ease;
+    transition: background var(--transition-fast), transform var(--transition-fast);
   }
 
   .afl-links__card:hover {
@@ -238,7 +238,7 @@ const cardHref = (page: PageEntry) =>
   }
 
   .afl-links__desc {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     color: var(--color-gray-500, #6b7280);
     line-height: 1.4;
     display: -webkit-box;
@@ -275,7 +275,7 @@ const cardHref = (page: PageEntry) =>
   }
 
   .hp-links__title {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -290,11 +290,11 @@ const cardHref = (page: PageEntry) =>
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     color: var(--dh-accent);
     text-decoration: none;
-    transition: gap 0.15s ease;
+    transition: gap var(--transition-fast);
   }
 
   .hp-links__cta:hover {
@@ -315,7 +315,7 @@ const cardHref = (page: PageEntry) =>
     border-radius: var(--radius-md, 0.5rem);
     background: var(--color-gray-50, #f9fafb);
     text-decoration: none;
-    transition: background 0.15s ease, transform 0.15s ease;
+    transition: background var(--transition-fast), transform var(--transition-fast);
   }
 
   .hp-links__card:hover {
@@ -357,7 +357,7 @@ const cardHref = (page: PageEntry) =>
   }
 
   .hp-links__desc {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     color: var(--color-gray-500, #6b7280);
     line-height: 1.4;
     display: -webkit-box;

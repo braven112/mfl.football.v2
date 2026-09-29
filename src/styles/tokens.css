@@ -39,6 +39,53 @@
   font-display: swap;
 }
 
+/* Metric-matched fallbacks for the two self-hosted families. While the woff2
+   files load (font-display: swap), text renders in local Arial scaled so its
+   average glyph width and vertical metrics match UFC Sans — the swap then
+   lands without reflowing headings, scoreboards or table columns.
+   Numbers are Astro's fallback formula (size-adjust = xWidthAvg ratio,
+   overrides = UFC metric / adjusted em), fed with @capsizecss/unpack's read of
+   the woff2 files in public/assets/fonts and Astro's Arial / Arial Bold
+   metrics. Re-derive them if a font file is replaced. Where Arial does not
+   exist (most Android), local() fails, the face is skipped, and the stack
+   falls through to the next family exactly as it did before. */
+@font-face {
+  font-family: 'UFC Sans Condensed Fallback';
+  src: local('Arial'), local('ArialMT');
+  font-weight: 400;
+  size-adjust: 74.02%;
+  ascent-override: 125.63%;
+  descent-override: 36.47%;
+  line-gap-override: 27.02%;
+}
+@font-face {
+  font-family: 'UFC Sans Condensed Fallback';
+  src: local('Arial Bold'), local('Arial-BoldMT');
+  font-weight: 700;
+  size-adjust: 75.84%;
+  ascent-override: 122.63%;
+  descent-override: 35.6%;
+  line-gap-override: 26.37%;
+}
+@font-face {
+  font-family: 'UFC Sans Fallback';
+  src: local('Arial'), local('ArialMT');
+  font-weight: 400;
+  size-adjust: 84.57%;
+  ascent-override: 109.97%;
+  descent-override: 31.93%;
+  line-gap-override: 23.65%;
+}
+@font-face {
+  font-family: 'UFC Sans Fallback';
+  src: local('Arial'), local('ArialMT');
+  font-weight: 500;
+  size-adjust: 91.75%;
+  ascent-override: 101.37%;
+  descent-override: 29.43%;
+  line-gap-override: 21.8%;
+}
+
 :root {
   /* Overridden to dark in tokens-dark.css via html.dark */
   color-scheme: light;
@@ -50,10 +97,12 @@
   /* Font Families */
   --font-family-base: var(--font-vend-sans, 'Vend Sans'), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-family-mono: Menlo, Monaco, 'Lucida Console', 'Liberation Mono', 'DejaVu Sans Mono', 'Courier New', monospace;
-  --font-display: 'UFC Sans Condensed', 'Arial Narrow', 'Oswald', system-ui, sans-serif;
-  --font-numeric: 'UFC Sans', 'Vend Sans', system-ui, sans-serif;
+  --font-display: 'UFC Sans Condensed', 'UFC Sans Condensed Fallback', 'Arial Narrow', 'Oswald', system-ui, sans-serif;
+  --font-numeric: 'UFC Sans', 'UFC Sans Fallback', 'Vend Sans', system-ui, sans-serif;
 
   /* Font Sizes - Fluid scale */
+  --font-size-3xs: 0.625rem;   /* 10px — editorial micro labels (components.md "Editorial Design Standard") */
+  --font-size-2xs: 0.6875rem;  /* 11px — editorial eyebrow / meta line */
   --font-size-xs: 0.75rem;
   --font-size-sm: 0.875rem;
   --font-size-base: clamp(1rem, 0.34vw + 0.91rem, 1.19rem);
@@ -72,6 +121,11 @@
   --line-height-tight: 1.25;
   --line-height-base: 1.5;
   --line-height-relaxed: 1.75;
+
+  /* Letter spacing. All-caps text needs air: capitals set at default
+     tracking read cramped, most at the small sizes labels use. */
+  --tracking-caps: 0.06em;
+  --tracking-tight: -0.01em;   /* large display headings only; never below -0.04em */
 
   /* ========================================
      Team Icon Sizes
@@ -160,6 +214,11 @@
     inset 0 2px 3px hsl(var(--shadow-color) / 0.08),
     inset 0 3px 5px hsl(var(--shadow-color) / 0.06);
 
+  /* Semantic elevation surfaces. Light mode shows elevation with shadow, so
+     both are the card surface here; tokens-dark.css steps them in lightness. */
+  --surface-raised: var(--card-surface);
+  --surface-overlay: var(--card-surface);
+
   /* Component-specific shadows */
   --shadow-card: var(--shadow-md);
   --shadow-btn-hover: 0 10px 30px rgba(37, 99, 235, 0.35);
@@ -175,9 +234,34 @@
   /* ========================================
      Transitions
      ======================================== */
-  --transition-fast: 150ms ease;
-  --transition-base: 200ms ease;
-  --transition-slow: 300ms ease;
+  /* Easing. Never plain `ease` — its slow start makes UI feel laggy.
+     Entering / responding motion decelerates into place (ease-out);
+     leaving motion accelerates away (ease-in); a toggle between two
+     resting states uses ease-in-out. No bounce or elastic curves. */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);      /* expo-out: the default */
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);       /* exits */
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);  /* toggles, A→B moves */
+
+  /* Durations, by what the motion is for. Exits run ~75% of the entrance. */
+  --duration-instant: 100ms;   /* press / hover feedback */
+  --duration-fast: 150ms;      /* color, opacity, small state changes */
+  --duration-base: 200ms;      /* most state changes */
+  --duration-slow: 300ms;      /* expanding panels, layout-ish changes */
+  --duration-overlay: 400ms;   /* modals, drawers, sheets entering */
+
+  /* Duration + easing pairs for the `transition` shorthand:
+     `transition: color var(--transition-fast), transform var(--transition-base);` */
+  --transition-fast: var(--duration-fast) var(--ease-out);
+  --transition-base: var(--duration-base) var(--ease-out);
+  --transition-slow: var(--duration-slow) var(--ease-out);
+
+  /* ========================================
+     Touch targets
+     ======================================== */
+  /* WCAG 2.5.5 / Apple HIG minimum hit area. Use it as min-height/min-width
+     on controls, or put `.hit-area` (polish.css) on a small icon button to
+     grow its tap area without growing its box. */
+  --touch-target-min: 44px;
 
   /* ========================================
      Z-Index Scale
@@ -586,7 +670,7 @@
   --nav-border-radius-lg: 12px;
 
   /* Touch targets & icons */
-  --nav-touch-target-min: 44px;
+  --nav-touch-target-min: var(--touch-target-min);
   --nav-link-height: 48px;
   --nav-icon-size: 24px;
   --nav-icon-size-collapsed: 28px;
@@ -597,8 +681,8 @@
   --nav-transition: var(--nav-transition-duration) var(--nav-transition-timing);
   --nav-drawer-transition: transform var(--nav-transition);
   --nav-overlay-transition: opacity var(--nav-transition);
-  --nav-hover-transition: background-color 0.15s ease, color 0.15s ease;
-  --nav-focus-transition: box-shadow 0.15s ease;
+  --nav-hover-transition: background-color var(--transition-fast), color var(--transition-fast);
+  --nav-focus-transition: box-shadow var(--transition-fast);
 
   /* Z-index layers */
   --nav-z-overlay: 900;
@@ -635,7 +719,7 @@
 
   /* Section styling */
   --nav-section-color: #777777;
-  --nav-section-font-size: 0.75rem;
+  --nav-section-font-size: var(--font-size-xs);
   --nav-section-font-weight: 700;
   --nav-section-letter-spacing: 0.05em;
   --nav-section-margin-top: var(--nav-spacing-xl);
@@ -665,7 +749,7 @@
   --nav-badge-bg: #ef4444;
   --nav-badge-text: #ffffff;
   --nav-badge-size: 18px;
-  --nav-badge-font-size: 0.6875rem;
+  --nav-badge-font-size: var(--font-size-2xs);
   --nav-badge-font-weight: 600;
 
   /* League switcher */
@@ -821,30 +905,4 @@ html[data-league="mfl"] {
   --color-surface-3: #eceef1;                  /* elevated: the position chip, raised off the white card */
   --color-border-subtle: #e8eaed;              /* hairline row separators */
   --color-border-default: #dfe3e8;             /* the slightly stronger rule above the bench */
-}
-
-/* ========================================
-   Focus Visible Styles
-   ======================================== */
-:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
-}
-
-/* Remove default outline for mouse users */
-:focus:not(:focus-visible) {
-  outline: none;
-}
-
-/* Interactive element focus styles */
-a:focus-visible,
-button:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible,
-[role="button"]:focus-visible,
-[tabindex]:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
-  box-shadow: var(--shadow-focus-ring);
 }

@@ -270,7 +270,7 @@ const lastYear = yearsCovered[yearsCovered.length - 1];
     border-radius: 0.625rem;
     text-decoration: none;
     color: inherit;
-    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
   }
   .hot-card:hover {
     transform: translateY(-2px);
@@ -289,7 +289,7 @@ const lastYear = yearsCovered[yearsCovered.length - 1];
     object-fit: contain;
   }
   .hot-vs {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     color: var(--content-text-muted, #888);
     text-transform: uppercase;
@@ -300,7 +300,7 @@ const lastYear = yearsCovered[yearsCovered.length - 1];
     align-items: baseline;
     justify-content: center;
     gap: 0.375rem;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     text-align: center;
     flex-wrap: wrap;
   }
@@ -317,7 +317,7 @@ const lastYear = yearsCovered[yearsCovered.length - 1];
     border-radius: 999px;
     background: #fff3c4;
     color: #7a5b00;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
   }
 
@@ -386,7 +386,7 @@ const lastYear = yearsCovered[yearsCovered.length - 1];
     background: var(--table-row-bg-hover, #ebebeb);
     color: var(--page-text, inherit);
     border-radius: 0.25rem;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
   }
 
@@ -539,7 +539,7 @@ const lastYear = yearsCovered[yearsCovered.length - 1];
 
   @media (max-width: 600px) {
     .corner, .row-header { width: 7rem; min-width: 7rem; }
-    .row-name { font-size: 0.75rem; }
+    .row-name { font-size: var(--font-size-xs); }
     .col-header { width: 2.75rem; min-width: 2.75rem; }
     .col-header img { width: 24px; height: 24px; }
   }

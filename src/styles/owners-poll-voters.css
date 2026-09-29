@@ -96,7 +96,7 @@
 .opv-caveat {
   margin: 0 0 1rem;
   padding: 0.7rem 0.9rem;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   color: var(--content-text-muted);
   background: var(--content-bg-muted);
   border-left: 4px solid var(--color-warning);

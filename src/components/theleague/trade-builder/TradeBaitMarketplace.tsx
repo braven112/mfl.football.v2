@@ -247,7 +247,7 @@ const marketplaceStyles = `
   .marketplace__collapse-btn {
     background: none;
     border: none;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--muted-text-color, #6b7280);
     cursor: pointer;
     padding: 0.25rem;
@@ -267,7 +267,7 @@ const marketplaceStyles = `
     border: 1px solid var(--primary-content-border-color, #e2e8f0);
     border-radius: 1rem;
     background: transparent;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     cursor: pointer;
     color: var(--muted-text-color, #6b7280);
@@ -287,7 +287,7 @@ const marketplaceStyles = `
     border-color: #d97706;
   }
   .marketplace__filter-count {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     opacity: 0.8;
   }
   .marketplace__grid {
@@ -375,13 +375,13 @@ const marketplaceStyles = `
     flex-shrink: 0;
   }
   .marketplace__player-salary {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     color: var(--muted-text-color, #6b7280);
     white-space: nowrap;
   }
   .marketplace__player-years {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     color: var(--muted-text-color, #6b7280);
     white-space: nowrap;
   }
@@ -392,7 +392,7 @@ const marketplaceStyles = `
     color: #f59e0b;
     opacity: 0;
     transform: translateX(-4px);
-    transition: all 0.15s ease;
+    transition: all var(--transition-fast);
   }
   .marketplace__footer {
     display: flex;
@@ -416,7 +416,7 @@ const marketplaceStyles = `
     font-weight: 700;
     text-decoration: none;
     cursor: pointer;
-    transition: background 0.15s ease;
+    transition: background var(--transition-fast);
     white-space: nowrap;
     flex-shrink: 0;
   }
@@ -425,7 +425,7 @@ const marketplaceStyles = `
     color: #fff;
   }
   .marketplace__footer-hint {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: #92400e;
     flex: 1;
     min-width: 200px;
@@ -448,7 +448,7 @@ const marketplaceStyles = `
     margin: 0;
   }
   .marketplace__empty-text {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     color: var(--muted-text-color, #6b7280);
     margin: 0;
     max-width: 400px;

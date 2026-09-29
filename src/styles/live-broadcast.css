@@ -1624,7 +1624,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5vw;
-  min-height: 44px;
+  min-height: var(--touch-target-min);
   padding: 0.8vh 1.4vw;
   border-radius: 999px;
   border: 2px solid var(--lbc-hairline);

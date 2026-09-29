@@ -45,7 +45,7 @@
 
 .rel__kicker {
   margin: 0 0 0.4rem;
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -96,7 +96,7 @@
 }
 
 .rel__unit {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-2xs);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--color-text-secondary, #475569);
@@ -115,7 +115,7 @@
 .rel__reason,
 .rel__blurb {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   line-height: 1.55;
   text-align: center;
   color: var(--color-text-secondary, #475569);
@@ -192,7 +192,7 @@
 }
 
 .rel__week {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   letter-spacing: 0.07em;
   text-transform: uppercase;
@@ -264,7 +264,7 @@
   gap: 0.25rem;
   align-items: center;
   padding: 0.1rem 0.4rem;
-  font-size: 0.6875rem;
+  font-size: var(--font-size-2xs);
   color: var(--color-text-secondary, #475569);
   background: var(--color-surface-2, #f8fafc);
   border: 1px solid var(--color-border-subtle, #e2e8f0);
@@ -293,7 +293,7 @@
 }
 
 .rel__facts dt {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-2xs);
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--color-text-secondary, #475569);
@@ -307,7 +307,7 @@
 }
 
 .rel__facts small {
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   color: var(--color-text-disabled, #94a3b8);
 }
 
@@ -320,7 +320,7 @@
 
 .rel__grid {
   width: 100%;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   border-collapse: collapse;
 }
 
@@ -333,7 +333,7 @@
 }
 
 .rel__grid thead th {
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--color-text-secondary, #475569);
@@ -363,7 +363,7 @@
   display: inline-block;
   padding: 0.05rem 0.35rem;
   margin-left: 0.35rem;
-  font-size: 0.625rem;
+  font-size: var(--font-size-3xs);
   font-weight: 700;
   color: var(--badge-info-text, #1e3a8a);
   background: var(--badge-info-bg, #dbeafe);
@@ -383,7 +383,7 @@
 .rel__copy {
   min-height: 2.5rem;
   padding: 0 1rem;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--btn-primary-text, #fff);
   cursor: pointer;
@@ -433,7 +433,7 @@
   display: inline-block;
   padding: 0.05rem 0.4rem;
   margin-left: 0.4rem;
-  font-size: 0.625rem;
+  font-size: var(--font-size-3xs);
   font-weight: 700;
   letter-spacing: 0.06em;
   color: var(--badge-info-text, #1e3a8a);
@@ -445,7 +445,7 @@
    record to the current franchise, so the card has to name it somewhere. */
 .rel__now {
   display: block;
-  font-size: 0.6875rem;
+  font-size: var(--font-size-2xs);
   font-weight: 400;
   color: var(--color-text-secondary, #475569);
 }
@@ -457,7 +457,7 @@
    miss, and the tile is the only place that can say so. */
 .rel__factNote {
   margin: 0.35rem 0 0;
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   line-height: 1.35;
   color: var(--color-text-secondary, #475569);
 }
@@ -518,7 +518,7 @@
 
 .rel__ruleTier {
   display: inline-block;
-  font-size: 0.625rem;
+  font-size: var(--font-size-3xs);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--color-text-secondary, #475569);
@@ -558,7 +558,7 @@
 .rel__laterList {
   margin: 0.5rem 0 0;
   padding-left: 1.1rem;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   line-height: 1.5;
   color: var(--color-text-secondary, #475569);
 }
@@ -583,7 +583,7 @@
 .rel__verdictTag {
   display: inline-block;
   margin-right: 0.4rem;
-  font-size: 0.625rem;
+  font-size: var(--font-size-3xs);
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -610,7 +610,7 @@
 .rel__ruleWeight {
   display: inline-block;
   margin-left: 0.5rem;
-  font-size: 0.625rem;
+  font-size: var(--font-size-3xs);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   font-variant-numeric: tabular-nums;

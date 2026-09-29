@@ -229,12 +229,12 @@ export default function PendingTradeCard({
           flex-shrink: 0;
         }
         .ptc-team-name {
-          font-size: 0.875rem;
+          font-size: var(--font-size-sm);
           font-weight: 600;
           color: var(--color-gray-900, #111827);
         }
         .ptc-timestamp {
-          font-size: 0.75rem;
+          font-size: var(--font-size-xs);
           font-weight: 500;
           color: var(--color-gray-500, #6b7280);
         }
@@ -249,7 +249,7 @@ export default function PendingTradeCard({
           gap: 0.125rem;
         }
         .ptc-assets-label {
-          font-size: 0.625rem;
+          font-size: var(--font-size-3xs);
           font-weight: 600;
           text-transform: uppercase;
           letter-spacing: 0.05em;
@@ -275,7 +275,7 @@ export default function PendingTradeCard({
         }
         .ptc-asset-item--pick {
           font-weight: 400;
-          font-size: 0.75rem;
+          font-size: var(--font-size-xs);
           color: var(--color-gray-600, #4b5563);
         }
         .ptc-asset-item--empty {
@@ -296,7 +296,7 @@ export default function PendingTradeCard({
         }
         .ptc-btn {
           padding: 0.375rem 0.75rem;
-          font-size: 0.75rem;
+          font-size: var(--font-size-xs);
           font-weight: 600;
           border-radius: var(--radius-sm, 0.25rem);
           cursor: pointer;
@@ -362,7 +362,7 @@ export default function PendingTradeCard({
           display: flex;
           align-items: center;
           gap: 0.375rem;
-          font-size: 0.75rem;
+          font-size: var(--font-size-xs);
           color: var(--color-error, #dc2626);
           background: var(--color-error-light, #fee2e2);
           border: 1px solid var(--color-error-border, #fecaca);

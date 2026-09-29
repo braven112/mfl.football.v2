@@ -163,7 +163,7 @@ const getPickNumber = (pick: DraftPrediction | ActualDraftPick): string => {
     border-radius: 0.5rem;
     background: var(--content-bg-muted, #f9fafb);
     border: 1px solid var(--content-border, #e5e7eb);
-    transition: background-color 0.2s ease, border-color 0.2s ease;
+    transition: background-color var(--transition-base), border-color var(--transition-base);
   }
 
   .draft-pick-row:hover {
@@ -215,7 +215,7 @@ const getPickNumber = (pick: DraftPrediction | ActualDraftPick): string => {
   }
 
   .draft-pick-row__number {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 700;
     text-align: center;
     line-height: 1;
@@ -247,13 +247,13 @@ const getPickNumber = (pick: DraftPrediction | ActualDraftPick): string => {
   }
 
   .draft-pick-row__rank {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     color: var(--content-text-muted, #64748b);
   }
 
   .draft-pick-row__trade {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--content-text-muted, #64748b);
     white-space: nowrap;
     overflow: hidden;
@@ -267,7 +267,7 @@ const getPickNumber = (pick: DraftPrediction | ActualDraftPick): string => {
     flex-shrink: 0;
     width: 1.5rem;
     height: 1.5rem;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     cursor: help;
   }
 
@@ -297,7 +297,7 @@ const getPickNumber = (pick: DraftPrediction | ActualDraftPick): string => {
     padding: 2rem 1rem;
     text-align: center;
     color: var(--content-text-muted, #64748b);
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
   }
 
   @media (max-width: 640px) {
@@ -316,7 +316,7 @@ const getPickNumber = (pick: DraftPrediction | ActualDraftPick): string => {
     }
 
     .draft-pick-row__number {
-      font-size: 0.75rem;
+      font-size: var(--font-size-xs);
     }
 
     .draft-pick-row__rank {

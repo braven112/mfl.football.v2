@@ -183,7 +183,7 @@
     flex: 0 0 calc(100% + var(--rr-avatar) + 2rem);
     margin: -0.625rem -0.75rem 0.375rem calc(-1 * (var(--rr-avatar) + 1.25rem));
     padding: 0.375rem 0.75rem;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -326,7 +326,7 @@
 
   .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody .player-meta__pos,
   .roster-page[data-league='theleague'] #rosterTableBody .player-meta__pos {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     white-space: nowrap;
     color: var(--color-gray-600, #4b5563);
@@ -349,7 +349,7 @@
 
   .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody :is(tr[data-pos='QB'], tr[data-pos='RB'], tr[data-pos='WR'], tr[data-pos='TE'], tr[data-pos='PK'], tr[data-pos='DEF']) .player-meta__pos::before,
   .roster-page[data-league='theleague'] #rosterTableBody :is(tr[data-pos='QB'], tr[data-pos='RB'], tr[data-pos='WR'], tr[data-pos='TE'], tr[data-pos='PK'], tr[data-pos='DEF']) .player-meta__pos::before {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     letter-spacing: 0.02em;
     color: var(--color-gray-600, #4b5563);
@@ -375,7 +375,7 @@
   .roster-page[data-league='theleague'] #rosterTableBody .rr-ph {
     display: inline;
     color: var(--color-gray-600, #4b5563);
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     white-space: nowrap;
   }
 
@@ -393,7 +393,7 @@
     padding: 0.0625rem 0.3125rem;
     border: 1px solid var(--content-border, #e2e8f0);
     border-radius: 0.25rem;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
   }
 
@@ -409,7 +409,7 @@
     content: 'Yrs' / 'Years left';
     margin-right: 0.25rem;
     color: var(--color-gray-600, #4b5563);
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
   }
 
   .roster-page[data-league='theleague'] #rosterTableBody .rr-ph--thru { order: 23; }
@@ -433,7 +433,7 @@
     order: 29;
     position: relative;
     margin-left: auto;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--color-gray-600, #4b5563);
     text-align: right !important;
   }
@@ -455,7 +455,7 @@
   .roster-page[data-league='theleague'] #rosterTableBody .vs-at,
   .roster-page[data-league='theleague'] #rosterTableBody .opponent-bye {
     order: 23;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
   }
   .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody .opponent-bye,
   .roster-page[data-league='theleague'] #rosterTableBody .opponent-bye {
@@ -484,7 +484,7 @@
   .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody td[data-column='oppRank'] .rank-badge,
   .roster-page[data-league='theleague'].coach-mode #rosterTableBody td[data-column='oppRank'] .rank-badge {
     padding: 0.0625rem 0.375rem;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
   }
 
   /* Weather leads line 3, ahead of the spread / O/U / L3 numbers; on line
@@ -492,7 +492,7 @@
   .roster-page[data-league='theleague'].coach-mode #rosterTableBody td[data-column='weather'] {
     display: inline-block !important;
     order: 31;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
   }
 
   .roster-page[data-league='theleague'].coach-mode #rosterTableBody td[data-column='weather'] .weather-cell {
@@ -526,7 +526,7 @@
     display: block !important;
     order: 49;
     margin-left: auto;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--color-gray-600, #4b5563);
     text-align: right !important;
   }
@@ -550,14 +550,14 @@
 
   .roster-page[data-league='theleague'].coach-mode #rosterTableBody .spread-badge {
     order: 41;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
   }
 
   .roster-page[data-league='theleague'].coach-mode #rosterTableBody td[data-column='ou'],
   .roster-page[data-league='theleague'].coach-mode #rosterTableBody td[data-column='avgRecent'] {
     display: inline-flex !important;
     align-items: center;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--color-gray-600, #4b5563);
   }
 
@@ -674,7 +674,7 @@
   .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody .rr-ph--spread {
     padding: 0.0625rem 0.3125rem;
     border-radius: 4px;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
   }
 
@@ -711,7 +711,7 @@
     display: block !important;
     order: 49;
     margin-left: auto;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--color-gray-600, #4b5563);
     text-align: right !important;
   }
@@ -741,7 +741,7 @@
     display: block;
     padding: 0 !important;
     border: 0 !important;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     text-align: left !important;
     font-variant-numeric: tabular-nums;
   }
@@ -757,7 +757,7 @@
 
   .roster-page[data-league='theleague'] #deadMoneyTableBody td[data-column='dm-year1'] {
     flex: 0 0 6.25rem;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 700;
     text-align: right !important;
   }
@@ -820,7 +820,7 @@
   }
 
   .roster-page[data-league='theleague'] .mode-btn {
-    min-height: 44px;
+    min-height: var(--touch-target-min);
     padding: 0 0.875rem;
   }
 
@@ -888,10 +888,10 @@
     display: inline-flex;
     align-items: center;
     gap: 0.25rem;
-    min-height: 44px;
+    min-height: var(--touch-target-min);
     padding: 0 0.875rem;
     font: inherit;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 600;
     white-space: nowrap;
     color: var(--color-gray-700, #374151);
@@ -962,7 +962,7 @@
   }
 
   .rcap__title {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
@@ -1035,7 +1035,7 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 0.25rem 0.75rem;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     color: var(--content-text-muted, #64748b);
   }
 
@@ -1089,7 +1089,7 @@
     flex: none;
     padding: 0.25rem 0.5rem;
     border-radius: 999px;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     color: var(--badge-warning-text);
     background: var(--badge-warning-bg);
@@ -1105,7 +1105,7 @@
   }
 
   .rsim-bar__label {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     color: var(--content-text-muted, #64748b);
   }
 
@@ -1125,7 +1125,7 @@
   .rsim-bar__change,
   .rsim-move__effect,
   .rsim-years__change {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     color: var(--content-text-muted, #64748b);
@@ -1145,10 +1145,10 @@
 
   .rsim-bar__review {
     flex: none;
-    min-height: 44px;
+    min-height: var(--touch-target-min);
     padding: 0 1rem;
     font: inherit;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 700;
     color: var(--btn-primary-text, #ffffff);
     background: var(--btn-primary-bg, #1c497c);
@@ -1222,7 +1222,7 @@
 
 .rsim-sheet__subtitle {
   margin: 0 0 0.375rem;
-  font-size: 0.6875rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -1261,20 +1261,20 @@
 }
 
 .rsim-move__name {
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
 }
 
 .rsim-move__pos,
 .rsim-move__what {
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   color: var(--content-text-muted, #64748b);
 }
 
 .rsim-move__undo {
   flex: none;
-  min-width: 44px;
-  min-height: 44px;
+  min-width: var(--touch-target-min);
+  min-height: var(--touch-target-min);
   padding: 0 0.75rem;
   font: inherit;
   font-size: 0.8125rem;
@@ -1305,7 +1305,7 @@
 }
 
 .rsim-years thead th {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   color: var(--content-text-muted, #64748b);
 }
@@ -1323,12 +1323,12 @@
 }
 
 .rsim-sheet__btn {
-  min-height: 44px;
+  min-height: var(--touch-target-min);
   padding: 0 1rem;
   align-items: center;
   justify-content: center;
   font: inherit;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   border-radius: var(--radius-md, 0.5rem);
   cursor: pointer;

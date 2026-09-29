@@ -227,7 +227,7 @@
 }
 
 .loading-branded__narration {
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   font-style: italic;
   color: var(--color-gray-500, #6b7280);
   min-height: 1.2em;

@@ -71,7 +71,7 @@ export default function MultiYearCapTable({
           margin-top: 1rem;
         }
         .multiyear-cap__title {
-          font-size: 0.75rem;
+          font-size: var(--font-size-xs);
           font-weight: 700;
           text-transform: uppercase;
           letter-spacing: 0.06em;
@@ -92,7 +92,7 @@ export default function MultiYearCapTable({
         .multiyear-cap__th {
           text-align: center;
           padding: 0.5rem 0.75rem;
-          font-size: 0.625rem;
+          font-size: var(--font-size-3xs);
           font-weight: 600;
           text-transform: uppercase;
           color: var(--color-gray-500, #6b7280);
@@ -141,7 +141,7 @@ export default function MultiYearCapTable({
         }
         .multiyear-cap__sub {
           display: block;
-          font-size: 0.6875rem;
+          font-size: var(--font-size-2xs);
           font-weight: 500;
           opacity: 0.8;
         }

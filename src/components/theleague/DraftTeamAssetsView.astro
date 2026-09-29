@@ -144,7 +144,7 @@ const selectedTeam = uniqueTeams.find(t => t.id === selectedTeamId);
     padding: var(--padding-md);
     background: var(--content-bg, #fff);
     border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-md);
   }
 
   .team-selector label {
@@ -223,7 +223,7 @@ const selectedTeam = uniqueTeams.find(t => t.id === selectedTeamId);
     border-radius: 6px;
     font-weight: 600;
     color: var(--badge-info-text, #1e40af);
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
   }
 
   .assets-by-round {
@@ -244,7 +244,7 @@ const selectedTeam = uniqueTeams.find(t => t.id === selectedTeamId);
     color: var(--color-gray-900, #111827);
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
   }
 
   .assets-list {

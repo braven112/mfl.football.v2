@@ -518,7 +518,7 @@ export default function PendingTradesPanel({
           margin-bottom: 0.75rem;
         }
         .ptp-section-title {
-          font-size: 0.75rem;
+          font-size: var(--font-size-xs);
           font-weight: 700;
           text-transform: uppercase;
           letter-spacing: 0.06em;
@@ -564,7 +564,7 @@ export default function PendingTradesPanel({
         }
         .ptp-error-text {
           color: var(--color-error, #dc2626);
-          font-size: 0.875rem;
+          font-size: var(--font-size-sm);
           margin: 0 0 0.75rem 0;
         }
         .ptp-retry-btn {
@@ -604,7 +604,7 @@ export default function PendingTradesPanel({
           background: none;
           border: none;
           padding: 0;
-          font-size: 0.875rem;
+          font-size: var(--font-size-sm);
           font-weight: 600;
           color: var(--color-gray-900, #111827);
           cursor: pointer;
@@ -620,7 +620,7 @@ export default function PendingTradesPanel({
           outline-offset: 2px;
         }
         .ptp-draft-rename {
-          font-size: 0.875rem;
+          font-size: var(--font-size-sm);
           font-weight: 600;
           color: var(--color-gray-900, #111827);
           border: 1px solid var(--color-primary, #1c497c);
@@ -635,7 +635,7 @@ export default function PendingTradesPanel({
           outline-offset: 1px;
         }
         .ptp-draft-time {
-          font-size: 0.75rem;
+          font-size: var(--font-size-xs);
           color: var(--color-gray-400, #9ca3af);
           white-space: nowrap;
         }
@@ -661,7 +661,7 @@ export default function PendingTradesPanel({
         .ptp-draft-team { font-weight: 600; }
         .ptp-draft-assets {
           color: var(--color-gray-500, #6b7280);
-          font-size: 0.75rem;
+          font-size: var(--font-size-xs);
         }
         .ptp-draft-no-team {
           color: var(--color-gray-400, #9ca3af);
@@ -678,11 +678,11 @@ export default function PendingTradesPanel({
         .ptp-draft-btn {
           padding: 0.375rem 0.75rem;
           border-radius: var(--radius-sm, 0.25rem);
-          font-size: 0.75rem;
+          font-size: var(--font-size-xs);
           font-weight: 600;
           cursor: pointer;
           border: 1px solid var(--content-border, #e2e8f0);
-          transition: all 0.15s ease;
+          transition: all var(--transition-fast);
         }
         .ptp-draft-btn:focus-visible {
           outline: 2px solid var(--color-primary, #1c497c);
@@ -713,7 +713,7 @@ export default function PendingTradesPanel({
           border-top: 1px solid var(--color-gray-100, #f3f4f6);
         }
         .ptp-draft-delete-prompt {
-          font-size: 0.75rem;
+          font-size: var(--font-size-xs);
           color: var(--color-error, #dc2626);
           font-weight: 500;
         }
@@ -721,7 +721,7 @@ export default function PendingTradesPanel({
           background: none;
           border: none;
           padding: 0;
-          font-size: 0.6875rem;
+          font-size: var(--font-size-2xs);
           color: var(--color-gray-400, #9ca3af);
           cursor: pointer;
           text-decoration: underline;
@@ -734,7 +734,7 @@ export default function PendingTradesPanel({
           display: flex;
           align-items: center;
           gap: 0.375rem;
-          font-size: 0.75rem;
+          font-size: var(--font-size-xs);
           color: var(--color-error, #dc2626);
           background: var(--color-error-light, #fee2e2);
           border: 1px solid var(--color-error-border, #fecaca);

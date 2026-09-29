@@ -327,7 +327,7 @@ const { title = 'Player actions' } = Astro.props;
     align-items: center;
     justify-content: center;
     z-index: 3;
-    transition: background-color 0.15s ease;
+    transition: background-color var(--transition-fast);
   }
   .pam-close:hover { background: rgba(6, 9, 13, 0.7); }
 
@@ -373,7 +373,7 @@ const { title = 'Player actions' } = Astro.props;
     filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
   }
   .pam-band__meta-text {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 500;
     color: rgba(255, 255, 255, 0.85);
     min-width: 0;
@@ -396,7 +396,7 @@ const { title = 'Player actions' } = Astro.props;
   .pam-section__title {
     margin: 0 0 0.625rem;
     padding-left: 0.625rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     letter-spacing: 0.075em;
     text-transform: uppercase;
@@ -476,7 +476,7 @@ const { title = 'Player actions' } = Astro.props;
 
   .pam-action__body { display: grid; gap: 0.125rem; min-width: 0; }
   .pam-action__label { font-size: 0.9375rem; font-weight: 600; }
-  .pam-action__desc { font-size: 0.75rem; color: var(--color-gray-500, #6b7280); }
+  .pam-action__desc { font-size: var(--font-size-xs); color: var(--color-gray-500, #6b7280); }
 
   .pam-note {
     margin-top: 0.75rem;

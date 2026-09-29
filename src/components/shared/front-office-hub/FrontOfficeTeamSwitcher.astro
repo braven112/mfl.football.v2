@@ -165,7 +165,7 @@ const { teams, selectedTeamId } = Astro.props;
 
   .fo-switcher__label {
     margin: 0 0 0.5rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -196,8 +196,8 @@ const { teams, selectedTeamId } = Astro.props;
     position: relative;
     width: 46px;
     height: 46px;
-    min-width: 44px;
-    min-height: 44px;
+    min-width: var(--touch-target-min);
+    min-height: var(--touch-target-min);
     padding: 0.2rem;
     border: 2px solid transparent;
     border-radius: var(--radius-md, 0.5rem);
@@ -206,7 +206,7 @@ const { teams, selectedTeamId } = Astro.props;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: transform 0.2s ease, border-color 0.2s ease;
+    transition: transform var(--transition-base), border-color var(--transition-base);
   }
 
   @media (pointer: coarse) {

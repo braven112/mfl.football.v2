@@ -89,7 +89,7 @@ html.dark {
 }
 
 .plhero__title {
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -101,7 +101,7 @@ html.dark {
 }
 
 .plhero__eliminated-badge {
-  font-size: 0.625rem;
+  font-size: var(--font-size-3xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -122,7 +122,7 @@ html.dark {
 /* ── Round ── */
 .plhero__round-label {
   display: block;
-  font-size: 0.625rem;
+  font-size: var(--font-size-3xs);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -183,7 +183,7 @@ html.dark {
 }
 
 .plhero__seed {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--plhero-ink-dim);
@@ -221,7 +221,7 @@ html.dark {
 
 /* ── Score ── */
 .plhero__score {
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--plhero-ink-soft);
@@ -247,7 +247,7 @@ html.dark {
   font-weight: 700;
   text-decoration: none;
   border-radius: var(--radius-md, 0.5rem);
-  transition: filter 0.15s ease;
+  transition: filter var(--transition-fast);
   align-self: flex-start;
 }
 

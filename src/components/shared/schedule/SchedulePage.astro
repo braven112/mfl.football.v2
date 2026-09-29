@@ -896,7 +896,7 @@ const heroSkin =
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     letter-spacing: 0.09em;
     text-transform: uppercase;
     color: var(--sch-ink-faint);
@@ -921,7 +921,7 @@ const heroSkin =
   .sch-stat__value--sm { font-size: 1.4rem; line-height: 1.15; }
   .sch-stat__label {
     font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', sans-serif);
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: var(--font-weight-semibold, 600);
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -947,7 +947,7 @@ const heroSkin =
   .sch-next__dot { width: 7px; height: 7px; border-radius: 50%; background: var(--sch-accent-ink); }
   .sch-next__kicker {
     font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', sans-serif);
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: var(--font-weight-semibold, 600);
     letter-spacing: 0.11em;
     text-transform: uppercase;
@@ -991,7 +991,7 @@ const heroSkin =
     text-transform: uppercase;
     text-decoration: none;
     white-space: nowrap;
-    transition: filter var(--transition-fast, 150ms ease);
+    transition: filter var(--transition-fast, var(--transition-fast));
   }
   .sch-btn:hover { filter: brightness(0.92); color: var(--color-white, #fff); }
   .sch-btn--ghost {
@@ -1059,7 +1059,7 @@ const heroSkin =
     color: var(--color-gray-700, #374151);
   }
   .sch-month__rule { flex: 1; height: 1px; background: var(--table-border, #e2e8f0); }
-  .sch-month__meta { font-size: 0.6875rem; color: var(--content-text-muted, #6b7280); }
+  .sch-month__meta { font-size: var(--font-size-2xs); color: var(--content-text-muted, #6b7280); }
 
   /* An anchored row must not land under the site's sticky header. Both deep
      link targets carry it; 96px clears the header at every breakpoint. */
@@ -1092,7 +1092,7 @@ const heroSkin =
   .sch-row.is-now .sch-row__weeknum { color: var(--sch-accent); }
   .sch-row__date {
     display: block;
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--content-text-muted, #6b7280);
@@ -1135,7 +1135,7 @@ const heroSkin =
   .sch-tag--now { background: var(--sch-accent); color: var(--color-white, #fff); }
   .sch-row__sub {
     display: block;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     color: var(--content-text-muted, #6b7280);
     margin-top: 0.1875rem;
   }
@@ -1150,7 +1150,7 @@ const heroSkin =
   .sch-row__points--pending { color: var(--content-text-muted, #6b7280); font-weight: var(--font-weight-semibold, 600); }
   .sch-row__margin {
     display: block;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-variant-numeric: tabular-nums;
     color: var(--content-text-muted, #6b7280);
     margin-top: 0.125rem;
@@ -1179,7 +1179,7 @@ const heroSkin =
   thead .sch-grid__club {
     z-index: 2;
     padding: 0.75rem 1rem 0.625rem;
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: var(--font-weight-bold, 700);
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -1196,7 +1196,7 @@ const heroSkin =
   .sch-grid__rank {
     flex-shrink: 0;
     width: 16px;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: var(--font-weight-semibold, 600);
     font-variant-numeric: tabular-nums;
     color: var(--content-text-muted, #6b7280);
@@ -1213,7 +1213,7 @@ const heroSkin =
   }
   .sch-grid__record {
     flex-shrink: 0;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: var(--font-weight-semibold, 600);
     font-variant-numeric: tabular-nums;
     color: var(--color-gray-700, #374151);
@@ -1222,7 +1222,7 @@ const heroSkin =
     text-align: left;
     padding: 0.5rem 1rem;
     font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', sans-serif);
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--content-text-muted, #6b7280);
@@ -1296,7 +1296,7 @@ const heroSkin =
   .sch-tile__opp { display: block; }
   .sch-tile__score {
     display: block;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: var(--font-weight-medium, 500);
     font-variant-numeric: tabular-nums;
     opacity: 0.75;
@@ -1313,7 +1313,7 @@ const heroSkin =
   }
   .sch-seasons { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
   .sch-seasons__label {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     text-transform: uppercase;
     letter-spacing: 0.06em;
     color: var(--content-text-muted, #6b7280);
@@ -1366,7 +1366,7 @@ const heroSkin =
     list-style: none;
     margin: var(--spacing-md, 1rem) 0 0;
     padding: 0;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     color: var(--content-text-muted, #6b7280);
   }
   .sch-legend li { display: inline-flex; align-items: center; gap: 0.4375rem; }

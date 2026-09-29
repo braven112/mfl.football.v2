@@ -129,7 +129,7 @@ function formatDate(iso: string): string {
   }
 
   .ft-header__eyebrow {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 700;
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -146,7 +146,7 @@ function formatDate(iso: string): string {
   }
 
   .ft-header__sub {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     color: var(--color-gray-500, #6b7280);
     margin: 0;
   }
@@ -165,7 +165,7 @@ function formatDate(iso: string): string {
     background: var(--card-bg, white);
     white-space: nowrap;
     flex-shrink: 0;
-    transition: all 0.15s ease;
+    transition: all var(--transition-fast);
   }
 
   .ft-back-btn:hover {
@@ -195,7 +195,7 @@ function formatDate(iso: string): string {
   }
 
   .ft-empty__hint {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     color: var(--color-gray-400, #9ca3af);
     margin: 0;
   }
@@ -210,7 +210,7 @@ function formatDate(iso: string): string {
   .ft-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
   }
 
   .ft-table thead tr {
@@ -220,7 +220,7 @@ function formatDate(iso: string): string {
 
   .ft-table th {
     padding: 0.625rem 1rem;
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -297,7 +297,7 @@ function formatDate(iso: string): string {
     align-items: center;
     padding: 0.2rem 0.5rem;
     border-radius: 4px;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.04em;

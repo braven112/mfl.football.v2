@@ -1561,7 +1561,7 @@ const { base, navSlug } = Astro.props;
     display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;
     flex-wrap: wrap; margin-bottom: 1.5rem;
   }
-  .ops-eyebrow { font-size: 0.75rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--content-text-muted, #64748b); margin: 0 0 0.25rem; }
+  .ops-eyebrow { font-size: var(--font-size-xs); letter-spacing: 0.04em; text-transform: uppercase; color: var(--content-text-muted, #64748b); margin: 0 0 0.25rem; }
   .ops-eyebrow a { color: inherit; text-decoration: underline; }
   .ops-title { font-size: 1.75rem; margin: 0 0 0.25rem; color: var(--page-text, #0f172a); }
   .ops-sub { margin: 0; color: var(--content-text-muted, #64748b); max-width: 70ch; font-size: 0.925rem; }
@@ -1569,7 +1569,7 @@ const { base, navSlug } = Astro.props;
   .ops-header__actions { display: flex; align-items: center; gap: 0.75rem; }
   .ops-btn {
     background: var(--color-primary, #0ea5e9); color: white; border: 0;
-    padding: 0.5rem 0.9rem; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.875rem;
+    padding: 0.5rem 0.9rem; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: var(--font-size-sm);
   }
   .ops-btn:hover { filter: brightness(1.05); }
   .ops-updated { font-size: 0.8rem; color: var(--content-text-muted, #64748b); }
@@ -1579,7 +1579,7 @@ const { base, navSlug } = Astro.props;
     border-radius: 10px; padding: 0.9rem 1rem; margin-bottom: 1rem;
   }
   .ops-env__title { font-size: 0.8rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; margin: 0 0 0.25rem; color: var(--content-text-muted, #64748b); }
-  .ops-env__repo { font-weight: 500; text-transform: none; letter-spacing: 0; font-size: 0.75rem; }
+  .ops-env__repo { font-weight: 500; text-transform: none; letter-spacing: 0; font-size: var(--font-size-xs); }
   .ops-env__subtitle { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--content-text-muted, #64748b); margin: 0.9rem 0 0.4rem; }
   .ops-env__hint { font-size: 0.78rem; color: var(--content-text-muted, #64748b); margin: 0 0 0.6rem; }
   .ops-env__hint code { background: var(--content-bg-muted, #f1f5f9); padding: 0.05rem 0.3rem; border-radius: 4px; }
@@ -1715,7 +1715,7 @@ const { base, navSlug } = Astro.props;
   .ops-cluster { margin-top: 1.5rem; }
   .ops-cluster:first-of-type { margin-top: 1rem; }
   .ops-cluster__title {
-    font-size: 0.75rem; font-weight: 700;
+    font-size: var(--font-size-xs); font-weight: 700;
     text-transform: uppercase; letter-spacing: 0.06em;
     color: var(--content-text-muted, #64748b);
     margin: 0 0 0.6rem;
@@ -1750,7 +1750,7 @@ const { base, navSlug } = Astro.props;
     margin-left: auto;
   }
   .ops-diag__chev {
-    display: inline-block; transition: transform 150ms ease;
+    display: inline-block; transition: transform var(--transition-fast);
     font-size: 0.85rem; color: var(--content-text-muted, #64748b);
   }
   .ops-diag[open] .ops-diag__chev { transform: rotate(90deg); }
@@ -1778,7 +1778,7 @@ const { base, navSlug } = Astro.props;
 
   .ops-card__title { font-size: 1rem; margin: 0 0 0.25rem; color: var(--page-text, #0f172a); }
   .ops-card__hint { font-size: 0.78rem; color: var(--content-text-muted, #64748b); margin: 0 0 0.75rem; }
-  .ops-card__hint code { font-size: 0.75rem; background: var(--content-bg-muted, #f1f5f9); padding: 0.05rem 0.3rem; border-radius: 4px; }
+  .ops-card__hint code { font-size: var(--font-size-xs); background: var(--content-bg-muted, #f1f5f9); padding: 0.05rem 0.3rem; border-radius: 4px; }
 
   .ops-dl { margin: 0; display: grid; gap: 0.35rem; }
   .ops-dl--cols { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.5rem 1rem; }
@@ -1832,7 +1832,7 @@ const { base, navSlug } = Astro.props;
   .ops-archive__summary::-webkit-details-marker { display: none; }
   .ops-archive__summary::before {
     content: '▸'; display: inline-block; width: 0.8rem;
-    color: var(--content-text-muted, #64748b); transition: transform 0.15s ease;
+    color: var(--content-text-muted, #64748b); transition: transform var(--transition-fast);
   }
   .ops-archive__row[open] .ops-archive__summary::before { transform: rotate(90deg); }
   .ops-archive__owners { flex: 1 1 auto; min-width: 0; }

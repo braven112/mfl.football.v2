@@ -350,7 +350,7 @@ const identityHref = (h: (typeof historicalIdentities)[number]): string => {
   }
 
   .conference-count {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 400;
     color: var(--content-text-muted, #6b7280);
   }
@@ -378,7 +378,7 @@ const identityHref = (h: (typeof historicalIdentities)[number]): string => {
     flex-direction: column;
     gap: 0.625rem;
     flex: 1;
-    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
   }
 
   :global(html.dark) .card-body {
@@ -387,7 +387,7 @@ const identityHref = (h: (typeof historicalIdentities)[number]): string => {
 
   .franchise-card:hover .card-body {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+    box-shadow: var(--shadow-lg);
     border-color: var(--accent);
   }
 
@@ -417,7 +417,7 @@ const identityHref = (h: (typeof historicalIdentities)[number]): string => {
 
   .division {
     margin: 0.125rem 0 0;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: var(--content-text-muted, #6b7280);
@@ -437,7 +437,7 @@ const identityHref = (h: (typeof historicalIdentities)[number]): string => {
   }
 
   .stats dt {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: var(--content-text-muted, #6b7280);
@@ -473,7 +473,7 @@ const identityHref = (h: (typeof historicalIdentities)[number]): string => {
     gap: 0.3125rem;
     padding: 0.125rem 0.5rem 0.125rem 0.1875rem;
     border-radius: 999px;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     background: var(--content-bg-muted, #f5f5f5);
     color: var(--content-text-muted, #555);
@@ -556,7 +556,7 @@ const identityHref = (h: (typeof historicalIdentities)[number]): string => {
     border: 1px solid var(--content-border, #e5e7eb);
     text-decoration: none;
     color: var(--page-text, #111827);
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
   }
 
   .identity-list a:hover {

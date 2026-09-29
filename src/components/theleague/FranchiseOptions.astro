@@ -499,7 +499,7 @@ const getPlayerDisplayName = (player: typeof players[0]): string => {
 
   .eligibility-table tbody tr {
     border-bottom: 1px solid var(--table-border, #e9ecef);
-    transition: background 0.2s ease;
+    transition: background var(--transition-base);
   }
 
   .eligibility-table tbody tr:nth-child(even) {
@@ -565,7 +565,7 @@ const getPlayerDisplayName = (player: typeof players[0]): string => {
     border-radius: 0.375rem;
     background: var(--league-accent, #1c497c);
     color: var(--btn-primary-text, #fff);
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     cursor: pointer;
     white-space: nowrap;

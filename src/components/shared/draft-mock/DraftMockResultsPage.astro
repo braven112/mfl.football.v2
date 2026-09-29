@@ -299,7 +299,7 @@ const createdDate = new Date(session.createdAt).toLocaleDateString('en-US', {
   }
 
   .section-header__title {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -317,7 +317,7 @@ const createdDate = new Date(session.createdAt).toLocaleDateString('en-US', {
   }
 
   .results__round-label {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -351,7 +351,7 @@ const createdDate = new Date(session.createdAt).toLocaleDateString('en-US', {
   }
 
   .results__pick-number {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 600;
     text-transform: uppercase;
     color: var(--color-gray-400, #9ca3af);
@@ -359,7 +359,7 @@ const createdDate = new Date(session.createdAt).toLocaleDateString('en-US', {
   }
 
   .results__pick-team {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 600;
     color: var(--color-gray-500, #6b7280);
   }
@@ -380,7 +380,7 @@ const createdDate = new Date(session.createdAt).toLocaleDateString('en-US', {
   }
 
   .results__pick-pos {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 600;
   }
 
@@ -464,7 +464,7 @@ const createdDate = new Date(session.createdAt).toLocaleDateString('en-US', {
   }
 
   .results__team-pick-num {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 600;
     color: var(--color-gray-400, #9ca3af);
     font-variant-numeric: tabular-nums;
@@ -481,7 +481,7 @@ const createdDate = new Date(session.createdAt).toLocaleDateString('en-US', {
   }
 
   .results__team-pick-pos {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 600;
     margin-left: auto;
   }
@@ -499,9 +499,9 @@ const createdDate = new Date(session.createdAt).toLocaleDateString('en-US', {
     color: #fff;
     border-radius: 0.375rem;
     text-decoration: none;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 600;
-    transition: opacity 0.15s ease;
+    transition: opacity var(--transition-fast);
   }
 
   .results__cta-btn:hover {

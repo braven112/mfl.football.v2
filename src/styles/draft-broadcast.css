@@ -135,7 +135,7 @@
   text-transform: uppercase;
   cursor: pointer;
   opacity: 0.45;
-  transition: opacity 200ms ease, background 200ms ease;
+  transition: opacity var(--transition-base), background var(--transition-base);
 }
 
 /* :hover and :focus-visible are deliberately NOT one selector list. A single

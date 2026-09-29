@@ -68,7 +68,7 @@ const { tableBodyId = 'deadMoneyTableBody', class: className } = Astro.props;
   }
 
   .dead-money-table-header p {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     color: var(--content-text-muted, #64748b);
     margin: 0;
   }
@@ -81,7 +81,7 @@ const { tableBodyId = 'deadMoneyTableBody', class: className } = Astro.props;
   .roster-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
   }
 
   .roster-table--compact {
@@ -101,7 +101,7 @@ const { tableBodyId = 'deadMoneyTableBody', class: className } = Astro.props;
     padding: 0.5rem 1rem;
     text-align: left;
     font-weight: 600;
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     text-transform: uppercase;
     letter-spacing: 0.06em;
     color: var(--color-gray-400, #9ca3af);
@@ -162,7 +162,7 @@ const { tableBodyId = 'deadMoneyTableBody', class: className } = Astro.props;
     }
 
     .roster-table--compact {
-      font-size: 0.75rem;
+      font-size: var(--font-size-xs);
     }
 
     .roster-table th {

@@ -266,7 +266,7 @@ function gradeColor(grade: string): string {
     border-radius: 999px;
     background: color-mix(in srgb, var(--color-secondary, #2e8743) 12%, transparent);
     color: var(--color-secondary, #2e8743);
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -308,7 +308,7 @@ function gradeColor(grade: string): string {
   }
 
   .sf-article__author-name {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 700;
     color: var(--sf-text-primary, #0f1419);
   }
@@ -437,7 +437,7 @@ function gradeColor(grade: string): string {
 
   .sf-grade-card__body {
     padding: 0.625rem 1rem;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     line-height: 1.55;
     color: var(--sf-text-body, #1f2937);
   }
@@ -471,14 +471,14 @@ function gradeColor(grade: string): string {
   }
 
   .sf-grade-card__stat-value {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     color: var(--sf-text-primary, #0f1419);
   }
 
   .sf-grade-card__stat-label {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -491,7 +491,7 @@ function gradeColor(grade: string): string {
 
   .sf-grade-card__pickups-title {
     display: block;
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -516,7 +516,7 @@ function gradeColor(grade: string): string {
   .sf-grade-card__pickup-pos {
     flex-shrink: 0;
     width: 2rem;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     text-transform: uppercase;
     color: var(--color-gray-400, #9ca3af);
@@ -538,7 +538,7 @@ function gradeColor(grade: string): string {
 
   .sf-grade-card__holes {
     padding: 0.5rem 1rem 0.75rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     color: var(--color-warning, #d97706);
     border-top: 1px solid var(--sf-border, #e5e7eb);

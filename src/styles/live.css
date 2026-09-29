@@ -1032,7 +1032,7 @@ button.lv-card:focus-visible {
   font-weight: var(--font-weight-bold);
   letter-spacing: 0.02em;
   cursor: pointer;
-  transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+  transition: color var(--transition-fast), border-color var(--transition-fast), background-color var(--transition-fast);
 }
 .lv-bench__toggle:hover {
   color: var(--page-text);

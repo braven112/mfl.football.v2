@@ -16,7 +16,7 @@
 }
 
 .hero-stub__title {
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -46,7 +46,7 @@
 }
 
 .hero-stub__label {
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--color-gray-700, #374151);
   margin: 0;
