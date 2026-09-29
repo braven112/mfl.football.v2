@@ -56,8 +56,13 @@ interface Props {
   nameOf: (franchiseId: string) => string;
   iconOf: (franchiseId: string) => string | null;
   recordOf: (franchiseId: string) => string | null;
-  /** Week-anchored schedule href; omit the week for the page itself. */
-  scheduleHref: (week?: number) => string;
+  /**
+   * Week-anchored schedule href; omit the week for the page itself. Null for
+   * a league with no schedule page: the tiles and dots render as plain,
+   * un-linked marks and the "Full schedule" link is dropped, rather than
+   * pointing at a route that 404s.
+   */
+  scheduleHref?: ((week?: number) => string) | null;
   /**
    * When the coming week's lineups LOCK, already in the viewer's clock — or
    * null when there is nothing to warn about (the week has started, or this
@@ -134,7 +139,7 @@ const railMarks = rail.flatMap((entry) =>
 
 <div class="rhdr-bar">
   {lastPlayed ? (
-    <a class:list={['rhdr-tile', { 'rhdr-tile--multi': lastPlayed.games.length > 1 }]} href={scheduleHref(lastPlayed.week)}>
+    <a class:list={['rhdr-tile', { 'rhdr-tile--multi': lastPlayed.games.length > 1 }]} href={scheduleHref ? scheduleHref(lastPlayed.week) : undefined}>
       {lastPlayed.games.length === 1 ? (
         <Fragment>
           {iconOf(lastPlayed.games[0].opponentId) && (
@@ -202,7 +207,7 @@ const railMarks = rail.flatMap((entry) =>
   )}
 
   {upNext ? (
-    <a class:list={['rhdr-tile', { 'rhdr-tile--multi': upNext.games.length > 1 }]} href={scheduleHref(upNext.week)}>
+    <a class:list={['rhdr-tile', { 'rhdr-tile--multi': upNext.games.length > 1 }]} href={scheduleHref ? scheduleHref(upNext.week) : undefined}>
       {upNext.games.length === 1 ? (
         <Fragment>
           {iconOf(upNext.games[0].opponentId) && (
@@ -263,7 +268,7 @@ const railMarks = rail.flatMap((entry) =>
     <div class="rhdr-rail">
       <div class="rhdr-rail__head">
         <span class="rhdr-rail__title">Season</span>
-        <a class="rhdr-rail__cta" href={scheduleHref()}>Full schedule &amp; scores →</a>
+        {scheduleHref && <a class="rhdr-rail__cta" href={scheduleHref()}>Full schedule &amp; scores →</a>}
       </div>
       <div class="rhdr-rail__dots">
         {railMarks.map(({ entry, game, weekStart }) => (
@@ -276,7 +281,8 @@ const railMarks = rail.flatMap((entry) =>
               'is-now': !game?.played && entry.isCurrent,
               'is-future': !game?.played && !entry.isCurrent,
             }]}
-            href={scheduleHref(entry.week)}
+            href={scheduleHref ? scheduleHref(entry.week) : undefined}
+            role={scheduleHref ? undefined : 'img'}
             aria-label={railLabel(entry, game)}
           ><span class="rhdr-rail__mark" aria-hidden="true"></span></a>
         ))}

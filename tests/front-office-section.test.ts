@@ -187,7 +187,7 @@ describe('the hub is a real page now, not a links-only landing page', () => {
     expect(readFileSync('src/pages/theleague/rosters.astro', 'utf-8')).toMatch(
       /data-view-content="nextyear"/,
     );
-    expect(readFileSync('src/pages/afl-fantasy/rosters.astro', 'utf-8')).toMatch(
+    expect(readFileSync('src/components/shared/rosters/RostersPage.astro', 'utf-8')).toMatch(
       /data-view-content="planner"[\s\S]*?<KeeperPlanner/,
     );
     expect(readFileSync('src/pages/afl-fantasy/keepers.astro', 'utf-8')).toMatch(
@@ -242,6 +242,8 @@ describe('every Front Office page has a way back', () => {
     ],
     'afl-fantasy': [
       'src/pages/afl-fantasy/front-office/trade-builder.astro',
+      // A thin route over the shared rosters page; it hands FrontOfficeNav
+      // to the component's `breadcrumbs` slot.
       'src/pages/afl-fantasy/rosters.astro',
       'src/pages/afl-fantasy/keepers.astro',
       'src/pages/afl-fantasy/keeper-analysis.astro',

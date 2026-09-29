@@ -1,14 +1,91 @@
 ---
 /**
- * Rosters (archies) — thin route wrapper over the shared package-league page.
- * The glob lives here: a static import specifier cannot be a runtime variable.
+ * Rosters (archies) — thin route wrapper over the SAME shared rosters page the
+ * AFL renders (src/components/shared/rosters/RostersPage.astro). Custom
+ * leagues get the real page, never a lite look-alike (CLAUDE.md, "Second
+ * league's copy of a page").
+ *
+ * Archie's player pools are its nine divisions (`playerLimitUnit: DIVISION`),
+ * so the page is handed `divisions` rather than `conferences`: the header's
+ * team switcher groups the 99 clubs by division (viewer's own first) and the
+ * header standing ranks a club inside its division.
+ *
+ * The globs, the empty-year redirect and the page's link set live here, for
+ * the reasons given in the AFL's route.
  */
-import PackageRostersPage from '../../components/shared/package-league/PackageRostersPage.astro';
+import RostersPage from '../../components/shared/rosters/RostersPage.astro';
+import Breadcrumbs from '../../components/theleague/Breadcrumbs.astro';
+import { getLeagueBySlug } from '../../config/leagues';
+import { getLeagueYearForSlug } from '../../utils/league-year';
+import { franchiseSlug } from '../../utils/franchise-marks';
+import { resolveLeaguePath } from '../../utils/nav-utils';
+import {
+  feedForYear,
+  resolveRosterYear,
+  rosterYearIsRenderable,
+  rosterYears,
+} from '../../utils/rosters/roster-page-feeds';
 import config from '../../../data/archies/archies.config.json';
 
 export const prerender = false;
 
-const rosterFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/rosters.json');
+const league = getLeagueBySlug('archies')!;
+const hide = Astro.locals.hideLeaguePrefix ?? false;
+const r = (p: string) => resolveLeaguePath(p, hide);
+
+const feeds = {
+  rosters: import.meta.glob('../../../data/archies/mfl-feeds/*/rosters.json', { eager: true }),
+  // Megafiles carry the current-era year filter (tests/current-era-feed-globs.test.ts).
+  players: import.meta.glob('../../../data/archies/mfl-feeds/20{2[5-9],[3-9][0-9]}/players.json', { eager: true }),
+  ytdScores: import.meta.glob(
+    '../../../data/archies/mfl-feeds/20{2[5-9],[3-9][0-9]}/playerScores-ytd.json',
+    { eager: true }
+  ),
+  tradeBait: import.meta.glob('../../../data/archies/mfl-feeds/*/tradeBait.json', { eager: true }),
+  tradeBaitByFranchise: import.meta.glob(
+    '../../../data/archies/mfl-feeds/*/tradeBait-by-franchise.json',
+    { eager: true }
+  ),
+  futurePicks: import.meta.glob('../../../data/archies/mfl-feeds/*/futureDraftPicks.json', { eager: true }),
+  schedule: import.meta.glob('../../../data/archies/mfl-feeds/*/schedule.json', { eager: true, import: 'default' }),
+  standings: import.meta.glob('../../../data/archies/mfl-feeds/*/standings.json', { eager: true, import: 'default' }),
+};
+const leagueFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/league.json', {
+  eager: true,
+  import: 'default',
+});
+
+const leagueYear = getLeagueYearForSlug(league.slug);
+const availableYears = rosterYears(feeds.rosters);
+const selectedYear = resolveRosterYear(Astro.url.searchParams.get('year'), availableYears, leagueYear);
+
+if (!rosterYearIsRenderable(feeds.rosters, feeds.players, selectedYear)) {
+  return Astro.redirect(r(`/${league.slug}/rosters?year=${availableYears[0] ?? leagueYear}`));
+}
+
+// The league's own active-roster size, from MFL's league settings.
+const rosterSize = Number(feedForYear(leagueFeeds, selectedYear, 'league.json')?.league?.rosterSize) || 0;
+
+const teamById = new Map(config.teams.map((t) => [t.franchiseId, t]));
 ---
 
-<PackageRostersPage leagueSlug="archies" rosterFeeds={rosterFeeds} config={config} />
+<RostersPage
+  leagueSlug={league.slug}
+  leagueLabel={league.shortName ?? league.name}
+  feeds={feeds}
+  availableYears={availableYears}
+  selectedYear={selectedYear}
+  teams={config.teams}
+  divisions={config.divisions}
+  rosterSize={rosterSize}
+  tradeBuilder={false}
+  rankingsPage={false}
+  schedulePage={false}
+  franchiseLink={(id: string) => {
+    const team = teamById.get(id);
+    return team ? { href: r(`/${league.slug}/brand/${franchiseSlug(team)}`), label: 'Team brand page →' } : null;
+  }}
+  signIn={{ logoSrc: league.logo?.light ?? '', logoAlt: `${league.shortName ?? league.name} logo` }}
+>
+  <Breadcrumbs slot="breadcrumbs" items={[{ label: 'Home', href: r(`/${league.slug}`) }, { label: 'Rosters' }]} />
+</RostersPage>

@@ -133,27 +133,3 @@ export function rosterPlayerIds(feed: unknown, franchiseId: string): Array<{ id:
     .map((p) => ({ id: String(p.id ?? ''), status: String(p.status ?? 'ROSTER') }))
     .filter((p) => p.id);
 }
-
-/** Reading order for a roster: by position, then as MFL listed them. */
-export const POSITION_ORDER = ['QB', 'RB', 'WR', 'TE', 'PK', 'Def'];
-
-export function positionRank(position: string | undefined): number {
-  const i = POSITION_ORDER.findIndex((p) => p.toLowerCase() === String(position ?? '').toLowerCase());
-  return i === -1 ? POSITION_ORDER.length : i;
-}
-
-/**
- * The franchise whose roster opens: the requested one if it exists, else the
- * viewer's own, else the first team. A roster page cannot render "nobody",
- * so a default is legitimate here (docs/claude/rules/preferred-team.md).
- */
-export function pickRosterTeam(
-  teams: PackageTeam[],
-  requested: string | null | undefined,
-  viewerFranchiseId: string | null | undefined,
-): string | null {
-  const ids = new Set(teams.map((t) => t.franchiseId));
-  if (requested && ids.has(requested)) return requested;
-  if (viewerFranchiseId && ids.has(viewerFranchiseId)) return viewerFranchiseId;
-  return teams[0]?.franchiseId ?? null;
-}
