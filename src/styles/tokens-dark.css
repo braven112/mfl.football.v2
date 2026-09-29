@@ -796,6 +796,7 @@ html.dark[data-league="archies"] {
   --league-phase-regular-season: var(--league-palette-accent);   /* black would vanish on a dark card */
   --on-league-phase-regular-season: var(--league-palette-on-accent);
   --league-mini-hero-surface: var(--league-palette-ink);         /* html.dark's What's Next card is navy #0f1e2e */
+  --league-selected-fill: color-mix(in srgb, var(--page-text) 9%, var(--content-bg));   /* a selected tab: a sky tint over a dark card reads navy */
   --color-gray-400: var(--color-gray-500);                 /* html.dark's #6b6b6b is 3.3:1 as table-head text */
 
   --btn-primary-bg: var(--league-palette-accent);
