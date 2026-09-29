@@ -342,11 +342,11 @@ export const marqueeMatchups = (
 /**
  * The homepage tease, decided ONCE for both leagues.
  *
- * There are two independent hero resolvers — `resolveHeroState` for The League
- * and `resolveAflHeroState` for the AFL — and they share no code. Putting the
- * countdown decision in either of them would mean writing it twice and having
- * one of them drift, which is the failure this repo has already shipped in
- * other places. Both call this instead; all they own is how the result looks.
+ * Every league's hero runs on the shared league-hero resolver
+ * (src/utils/league-hero/resolver.ts), whose schedule-release rung calls this.
+ * It stays a separate module because the reveal CRON asks the same question,
+ * and a countdown written twice is a countdown that eventually disagrees with
+ * itself — the failure this repo has already shipped in other places.
  *
  * @param {string} slug
  * @param {Date} now

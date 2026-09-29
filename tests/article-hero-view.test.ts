@@ -188,7 +188,7 @@ describe('both leagues render the ONE shared card', () => {
   // If a league grows its own article hero again, this is the test that says so.
   const files = [
     'src/components/theleague/season-heroes/ArticleHero.astro',
-    'src/components/afl/AflHero.astro',
+    'src/components/shared/league-hero/LeagueHero.astro',
   ];
 
   it.each(files)('%s routes through LeagueCompositeHero', (file) => {
@@ -204,14 +204,14 @@ describe('both leagues render the ONE shared card', () => {
   });
 
   it('the AFL news slot no longer hardcodes the listing page as its CTA', () => {
-    const src = readFileSync(join(ROOT, 'src/utils/afl-hero-resolver.ts'), 'utf8');
-    const start = src.indexOf("'slot:article':");
-    const end = src.indexOf('feature: ({ now, whatsNewEntry');
+    const src = readFileSync(join(ROOT, 'src/utils/league-hero/views.ts'), 'utf8');
+    const start = src.indexOf('export function articleSlotView(');
+    const end = src.indexOf('export function featureSlotView(');
     // Assert the markers BEFORE slicing. A missing end marker makes `slice`
     // run to EOF, and the assertions below then pass against the whole file —
     // the scanner would go quiet rather than fail, which is the failure mode
     // hero-showcase-content.test.ts already carries a comment about.
-    expect(start, "'slot:article': marker moved — re-anchor this scan").toBeGreaterThan(-1);
+    expect(start, 'articleSlotView marker moved — re-anchor this scan').toBeGreaterThan(-1);
     expect(end, 'feature-slot marker moved — re-anchor this scan').toBeGreaterThan(start);
     const slot = src.slice(start, end);
     // The listing may appear as the FALLBACK and as the empty-desk link, but

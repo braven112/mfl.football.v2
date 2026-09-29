@@ -417,6 +417,47 @@ What landed:
       seeded on first load), linked from the league nav. It feeds the Free
       Agents Rankings view and My Rank editor. No Custom Rankings board (`/cr`)
       for Archie's yet (`hasCustomRankings={false}`).
+  - **Homepage hero — DONE (2026-09-29).** One hero system for every league
+    (`src/utils/league-hero/`, `components/shared/league-hero/LeagueHero.astro`).
+    The owner's brief: "one system any league can use — every league's
+    features available to the others"; a league with an auction gets the
+    auction heroes, a league that only drafts gets the draft heroes, one with
+    both gets both.
+    - Shape: one resolver (`resolveLeagueHeroState`) that climbs a LADDER of
+      rungs; each league is a PROFILE (`profiles.ts`) naming its rungs, its
+      calendar (roles on events, or constitution `clock` hooks), its
+      capabilities (read from the registry where it knows: `liveScoring`,
+      `powerRankings`…) and the facts its copy names. Nothing shared names a
+      league (`tests/league-hero.test.ts`).
+    - The AFL moved onto it whole (its resolver, casting, router and page
+      plumbing became the shared ones; AL/NL drafts are the generic
+      `pool-draft` rung). TheLeague's DECISIONS moved too — its contract
+      offseason (auction, rookie draft, tags, UDFA, cut watch, breaking story,
+      What's New fallback) is `contract-steps.ts`, rungs any league can list —
+      while its twenty bespoke components still render them, through
+      `toSeasonHeroState` (`season-state.ts`).
+    - Parity: both homepages' HTML diffed before/after at 24 dates × signed
+      out/in (offseason, auction, draft, keeper, kickoff, every weekday slot,
+      trade deadline, playoffs, championship, champion crowned). Identical
+      except the pages' own per-visit random picks (a What's New pool, the
+      champion copy), which differ between two unchanged runs too.
+    - Archie's gets, at launch: the weekly rotation (game day, Tuesday recap,
+      Monday standings, waivers, news), **Tuesday afternoon = the Pecking
+      Order** (only when THIS week's issue is out), **Wednesday night = The
+      Gauntlet** (only when there is one), the calendar heroes its MFL export
+      carries (a league-wide draft, auction, trade deadline, kickoff,
+      playoffs, title game), What's New, the default card. Divisions are its
+      player pools, so the owner's glow/crest is scoped to their division.
+    - No live scoring yet: the live windows show an honest "games are on /
+      the scores are in" card. The page already builds the scoreboard when
+      the registry flips `liveScoring` — the separate live-scoring session
+      (`claude/archies-live-scoring`) only has to flip it.
+    - Retired: `PackageLeagueHero` and `resolvePackageHero` (the lite hero).
+    - Not yet shared: TheLeague's bespoke components still read TheLeague's
+      data (StandingsHero, WaiverWireHero, MatchupPreviewHero, ArticleHero,
+      RecapHero, the enrichers in `offseason-hero-data.ts`). Another league
+      that lists a contract rung renders it on the shared event card (every
+      capability state carries a `view`) until those take a `league`.
   - Rosters, Standings, Transactions: one separate session each, same
     approach, stacked on this branch.
 - Two-way Slack (mentions → tips) through the Events API, if a client wants it.

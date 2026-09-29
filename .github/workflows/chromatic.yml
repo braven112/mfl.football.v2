@@ -79,7 +79,6 @@ on:
       - 'src/styles/utilities.css'
       - 'src/styles/whats-new-hero-shot.css'
       # Utils that reach a story. 247 utils exist; these 44 render.
-      - 'src/utils/afl-hero-resolver.ts'
       - 'src/utils/afl-tier-logo.ts'
       - 'src/utils/afl-tier.ts'
       - 'src/utils/article-hero-view.ts'
@@ -111,6 +110,8 @@ on:
       - 'src/utils/labor-day.mjs'
       - 'src/utils/league-event-hero-view.ts'
       - 'src/utils/league-event-resolver.ts'
+      - 'src/utils/league-hero/marks.ts'
+      - 'src/utils/league-hero/types.ts'
       - 'src/utils/league-host-map.ts'
       - 'src/utils/league-team-brands.ts'
       - 'src/utils/league-year.ts'
@@ -355,7 +356,6 @@ on:
       - 'src/styles/utilities.css'
       - 'src/styles/whats-new-hero-shot.css'
       # Utils that reach a story. 247 utils exist; these 44 render.
-      - 'src/utils/afl-hero-resolver.ts'
       - 'src/utils/afl-tier-logo.ts'
       - 'src/utils/afl-tier.ts'
       - 'src/utils/article-hero-view.ts'
@@ -387,6 +387,8 @@ on:
       - 'src/utils/labor-day.mjs'
       - 'src/utils/league-event-hero-view.ts'
       - 'src/utils/league-event-resolver.ts'
+      - 'src/utils/league-hero/marks.ts'
+      - 'src/utils/league-hero/types.ts'
       - 'src/utils/league-host-map.ts'
       - 'src/utils/league-team-brands.ts'
       - 'src/utils/league-year.ts'
