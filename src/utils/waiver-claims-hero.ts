@@ -12,7 +12,7 @@
  * is cast by each league's caller (`castTopFreeAgentModel`, 'Top Target').
  */
 import type { CompositeHeroTreatment } from '../types/composite-hero';
-import type { EventHeroView } from './afl-hero-resolver';
+import type { EventHeroView } from './league-hero/types';
 import { waiverDeadlineCopy, type WaiverDeadlineCopy } from './waiver-deadline-copy';
 
 /** Used when the route supplied no copy: names no day rather than guessing one. */

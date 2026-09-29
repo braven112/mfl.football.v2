@@ -1,12 +1,12 @@
 /**
- * View models for a package league's homepage (archies first): the hero and
- * the team snapshot. Pure functions over committed feeds so they are testable
- * and so the shared component holds markup only.
+ * View models for a package league's homepage (archies first): the team
+ * snapshot and the league's week in the books. Pure functions over committed
+ * feeds so they are testable and so the shared component holds markup only.
  *
- * Deliberately league-agnostic. TheLeague's and the AFL's heroes are built on
- * contracts, auctions and conferences; a package league has none of that, so
- * its hero is made only from what every MFL league has: a schedule, scores
- * and standings.
+ * The HERO is not here: a package league renders the same shared hero every
+ * league does (src/utils/league-hero/), driven by its profile. Its first,
+ * lite hero was built here and retired for exactly that reason (CLAUDE.md
+ * "Custom (standard-package) leagues get the REAL page").
  *
  * Doubleheaders are the norm here (archies plays two games a week in weeks
  * 1-14), so every "this week" value is a LIST of games — never collapse it to
@@ -48,16 +48,6 @@ export interface WeekInTheBooks {
   games: number;
 }
 
-export type PackageHeroState =
-  /** Signed-in owner, season under way: their games this week (+ last week's results). */
-  | { kind: 'my-week'; week: number; games: HomeGame[]; lastWeek: { week: number; games: HomeGame[] } | null; league: WeekInTheBooks | null }
-  /** Signed-in owner, season over for them: how their season finished. */
-  | { kind: 'my-season-done'; lastWeek: { week: number; games: HomeGame[] }; league: WeekInTheBooks | null }
-  /** Anyone else during the season: the league's latest scored week. */
-  | { kind: 'league-week'; league: WeekInTheBooks; nextWeek: number | null }
-  /** No games scored yet this season (preseason / offseason). */
-  | { kind: 'offseason' };
-
 type ParsedWeek = ReturnType<typeof parseWeeklySchedule>[number];
 
 /** League-wide: the latest week with at least one played game, summarised. */
@@ -85,47 +75,6 @@ export function weekInTheBooks(weeks: ParsedWeek[]): WeekInTheBooks | null {
     return { week, top: ranked[0], low: ranked[ranked.length - 1], blowout, nailBiter, games: played.length };
   }
   return null;
-}
-
-/** The first week that still has an unplayed game, league-wide. */
-function nextLeagueWeek(weeks: ParsedWeek[]): number | null {
-  for (const { week, matchups } of weeks) {
-    if (matchups.some((m) => m.franchises.some((f) => f.score == null))) return week;
-  }
-  return null;
-}
-
-/**
- * Which hero to show.
- *
- * @param scheduleFeed  The season's MFL `schedule.json`.
- * @param mine          The viewer's franchise IN THIS LEAGUE, or null (never
- *                      a default team: "nobody" is a real answer here).
- */
-export function resolvePackageHero(
-  scheduleFeed: unknown,
-  mine: string | null,
-  opts: { inSeason?: boolean } = {},
-): PackageHeroState {
-  // Out of season the hero looks FORWARD (the next calendar event), never at
-  // a finished season's last week: a completed feed would otherwise headline
-  // "week 17 in the books" all spring (CLAUDE.md: "The feeds have a completed
-  // week" is NOT an offseason guard).
-  if (opts.inSeason === false) return { kind: 'offseason' };
-  const weeks = parseWeeklySchedule(scheduleFeed);
-  const league = weekInTheBooks(weeks);
-
-  if (mine) {
-    const sched = franchiseSchedule(weeks, mine);
-    if (sched.length > 0) {
-      const last = findLastPlayedWeek(sched);
-      const next = findNextWeek(sched);
-      if (next) return { kind: 'my-week', week: next.week, games: next.games, lastWeek: last, league };
-      if (last) return { kind: 'my-season-done', lastWeek: last, league };
-    }
-  }
-  if (league) return { kind: 'league-week', league, nextWeek: nextLeagueWeek(weeks) };
-  return { kind: 'offseason' };
 }
 
 export interface TeamSnapshot {

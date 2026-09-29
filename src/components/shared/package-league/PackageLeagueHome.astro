@@ -5,7 +5,8 @@
  * The same shape as TheLeague's and the AFL's homepages — a main column and
  * the league's news rail — built only from sections that work for any league:
  *
- *   hero              PackageLeagueHero (this week's games / the league's week)
+ *   hero              LeagueHero — the SAME hero TheLeague and the AFL render,
+ *                     driven by this league's hero profile (league-hero/)
  *   Owners' Poll      only when the registry turns the poll on
  *   team snapshot     the signed-in owner's team
  *   What's Next       the league's MFL calendar + derived season dates
@@ -28,11 +29,12 @@ import QuickLinks from '../../shared/hp-sections/QuickLinks.astro';
 import WhatsNext from '../../theleague/WhatsNext.astro';
 import WhatsNewRow from '../../theleague/WhatsNewRow.astro';
 import DivisionStandings from './DivisionStandings.astro';
-import PackageLeagueHero from './PackageLeagueHero.astro';
+import LeagueHero from '../league-hero/LeagueHero.astro';
 import PackageTeamSnapshot from './PackageTeamSnapshot.astro';
 import PackagePeckingOrderCard from './PackagePeckingOrderCard.astro';
 import type { PeckingOrderData } from '../PeckingOrderIssue.astro';
-import { getLeagueBySlug, type CanonicalLeagueSlug } from '../../../config/leagues';
+import { getLeagueBySlug, leagueHasFeature, type CanonicalLeagueSlug } from '../../../config/leagues';
+import { buildLiveScoringHeroProps } from '../../../utils/live-scoring-hero-props';
 import { getAuthUser, franchiseIdForLeague } from '../../../utils/auth';
 import { groupStandingsByDivision, rosterPlayerIds, type PackageDivision, type PackageTeam } from '../../../utils/package-league';
 import { loadSeasonFeed, resolveSeason, seasonsFromGlob, type LazyFeedGlob } from '../../../utils/mfl-feed-glob';
@@ -42,7 +44,11 @@ import { getGlobalPlayerMap } from '../../../utils/player-map';
 import { franchiseSlug, leagueHasBrandBook } from '../../../utils/franchise-marks';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { parseTestDate } from '../../../utils/hero-resolver';
-import { resolvePackageHero, buildTeamSnapshot } from '../../../utils/package-league-home';
+import { buildTeamSnapshot } from '../../../utils/package-league-home';
+import { resolveLeagueHomeHero } from '../../../utils/league-hero/page';
+import { getWeekInTheBooks } from '../../../utils/offseason-hero-data';
+import { resolveHeroFranchiseBackdrop } from '../../../utils/hero-franchise-backdrop';
+import { crestLeagueKey } from '../../../utils/dark-surface-crest';
 import { buildPackageLeagueEvents, packageWhatsNext, type MflCalendarEvent } from '../../../utils/package-league-events';
 import { resolveSchefterRail } from '../../../utils/schefter-rail-view';
 import { getWhatsNewEntriesForLeague } from '../../../utils/whats-new-entries';
@@ -115,8 +121,7 @@ const rostersFeed = rosterYear ? await loadSeasonFeed(rosterFeeds, rosterYear) :
 const leagueFeed = (rosterYear ? await loadSeasonFeed(leagueFeeds, rosterYear) : null) as { league?: { rosterSize?: string } } | null;
 const rosterSize = Number(leagueFeed?.league?.rosterSize) || null;
 
-// ── Hero + team snapshot ────────────────────────────────────────────────────
-const hero = resolvePackageHero(scheduleFeed, mine, { inSeason: isSeasonWindowOpen(seasonYear, now) });
+// ── Team snapshot ───────────────────────────────────────────────────────────
 const snapshot = buildTeamSnapshot(
   groups,
   scheduleFeed,
@@ -125,12 +130,6 @@ const snapshot = buildTeamSnapshot(
   mine && rostersFeed ? rosterPlayerIds(rostersFeed, mine).filter((p) => p.status === 'ROSTER').length : null,
 );
 const labels = await getPersonaLabels(league.slug);
-// Articles are the persona's columns (The Gauntlet today), so the byline is
-// the league's persona name.
-const latestArticle = posts.find((p) => p.type === 'article') ?? null;
-const latestColumn = latestArticle
-  ? { headline: latestArticle.headline, href: r(`${base}/news/${latestArticle.id}`), byline: `By ${labels.name}` }
-  : null;
 
 // ── What's Next: the league's MFL calendar + derived season dates ──────────
 // A calendar feed lives in the LEAGUE-year directory it was exported into;
@@ -144,7 +143,6 @@ const seasons = await Promise.all(
 );
 const events = buildPackageLeagueEvents({ league, seasons, referenceDate: now });
 const timeline = packageWhatsNext(events, now, leagueYear);
-const nextEvent = timeline.current ?? null;
 
 // ── The Pecking Order (THIS season's issues only) ───────────────────────────
 const seasonIssues = Object.entries(peckingOrderIssues)
@@ -194,6 +192,71 @@ const myGroup = mine ? groups.find((g) => g.rows.some((row) => row.franchiseId =
 // ── Rail + What's New ───────────────────────────────────────────────────────
 const rail = await resolveSchefterRail({ league, posts, authUser, now });
 const whatsNew = getWhatsNewEntriesForLeague(league.navSlug);
+
+// ── The hero: the shared league hero, from this league's feeds ─────────────
+// Each division is a player POOL (MFL `playerLimitUnit: DIVISION`): the same
+// player is on up to nine rosters, so the glow's franchise is scoped to the
+// viewer's own division — see hero-franchise-accent.ts.
+const divisionOf = (franchiseId: string) => teamsById[franchiseId]?.divisionId ?? null;
+// The Pecking Order slot promotes THIS week's issue only — the one about the
+// week in the books. Last week's issue on this Tuesday would be old news
+// under a "power rankings are out" headline.
+const weekInBooks = getWeekInTheBooks(seasonYear, league.slug, now);
+const thisWeeksIssue = seasonIssues.find((x) => x.week === weekInBooks && weekInBooks > 0) ?? null;
+const orderLeaderId: string | undefined = thisWeeksIssue?.data?.rankings?.[0]?.franchiseId;
+// MFL's own standings order already applies the league's tiebreakers — never re-sort it.
+const standingsRows = (standingsFeed as { leagueStandings?: { franchise?: Array<{ id: string }> } } | null)?.leagueStandings?.franchise;
+const heroState = await resolveLeagueHomeHero({
+  league,
+  effectiveDate: now,
+  testMode: !!Astro.url.searchParams.get('testDate'),
+  cookies: Astro.cookies,
+  authUser,
+  authFranchiseId: mine,
+  castFranchiseId: mine ?? undefined,
+  userPoolId: mine ? divisionOf(mine) ?? undefined : undefined,
+  poolOf: divisionOf,
+  posts,
+  waiverCalendar: ((await loadSeasonFeed(calendarFeeds, leagueYear)) as unknown[] | null) ?? [],
+  leagueYear,
+  events,
+  timeline,
+  whatsNewEntries: whatsNew,
+  standingsLeaderId: Array.isArray(standingsRows) ? standingsRows[0]?.id : undefined,
+  peckingOrder: thisWeeksIssue
+    ? {
+        week: thisWeeksIssue.week,
+        leader: orderLeaderId && teamsById[orderLeaderId]
+          ? { franchiseId: orderLeaderId, name: teamsById[orderLeaderId].name }
+          : undefined,
+        href: r(`${base}/pecking-order/${thisWeeksIssue.year}/${thisWeeksIssue.week}`),
+      }
+    : undefined,
+  // The Gauntlet: the weekly column carries its schedule-strength payload.
+  isColumn: (post) => !!post.scheduleStrength,
+});
+// The signed-in owner's colours + crest behind the promo card — the SESSION's
+// franchise, never a browsed one (the same rule as the other homepages).
+const heroBackdrop = resolveHeroFranchiseBackdrop(mine ? (teamsById[mine] as any) : undefined, crestLeagueKey(league.slug));
+
+// The live scoreboard, the moment the registry turns `liveScoring` on for this
+// league — the same shared builder the other homepages use, its supporting
+// matchups scoped to the viewer's own division (ninety-nine teams' closest
+// games are mostly strangers'). Off, the hero's live window keeps its
+// no-scoreboard card.
+const heroLiveScoring =
+  leagueHasFeature(league.slug, 'liveScoring') && 'slot' in heroState && heroState.slot === 'live-scoring' && heroState.week
+    ? await buildLiveScoringHeroProps({
+        league: league.slug,
+        week: heroState.week,
+        origin: Astro.url,
+        teams: config.teams as any,
+        userFranchiseId: mine ?? undefined,
+        ...(mine && divisionOf(mine)
+          ? { scopeFranchiseIds: config.teams.filter((t) => t.divisionId === divisionOf(mine)).map((t) => t.franchiseId) }
+          : {}),
+      })
+    : undefined;
 ---
 
 <TheLeagueLayout title={league.name}>
@@ -201,17 +264,12 @@ const whatsNew = getWhatsNewEntriesForLeague(league.navSlug);
     <h1 class="pkg-home__sr">{league.name}</h1>
     <div class="pkg-home__layout">
       <div class="pkg-home__main">
-        <PackageLeagueHero
-          state={hero}
-          teams={teamsById}
-          teamHref={teamHref}
-          mine={mine}
-          latestColumn={latestColumn}
-          nextEvent={nextEvent}
-          signInHref={signInHref}
-          standingsHref={r(`${base}/standings`)}
-          rosterHref={r(`${base}/rosters${mine ? `?team=${mine}` : ''}`)}
-          leagueName={league.name}
+        <LeagueHero
+          league={league.slug}
+          state={heroState}
+          userFranchiseId={mine ?? undefined}
+          backdrop={heroBackdrop}
+          liveScoring={heroLiveScoring}
         />
 
         {showOwnersPoll && (

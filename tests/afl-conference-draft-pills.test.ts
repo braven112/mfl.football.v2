@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveAflHeroState } from '../src/utils/afl-hero-resolver';
+import { resolveAflHeroState, aflPoolDraft } from './helpers/afl-hero';
 import { resolveDateForYear, getAllResolvedAflEvents } from '../src/utils/league-event-resolver';
 
 /**
@@ -57,7 +57,7 @@ describe('AFL conference-draft pills', () => {
   it('lead-up week: both pills show this year — AL 12:30 PM, NL 9 AM', () => {
     const state = draftState(new Date(2026, 7, 26, 12, 0)); // Wed Aug 26
     expect(state.eventId).toBe('afl-al-draft');
-    const cd = state.conferenceDraft!;
+    const cd = aflPoolDraft(state)!;
     expect(ymd(cd.al.date)).toBe('2026-8-29');
     expect(ymd(cd.nl.date)).toBe('2026-8-30');
     expect(cd.al.date.getHours()).toBe(12);
@@ -70,7 +70,7 @@ describe('AFL conference-draft pills', () => {
   it('AL draft day: AL pill is live, both dates are this year', () => {
     const state = draftState(new Date(2026, 7, 29, 13, 0)); // Sat Aug 29, 1 PM (after 12:30 start)
     expect(state.eventId).toBe('afl-al-draft');
-    const cd = state.conferenceDraft!;
+    const cd = aflPoolDraft(state)!;
     expect(ymd(cd.al.date)).toBe('2026-8-29');
     expect(ymd(cd.nl.date)).toBe('2026-8-30');
     expect(cd.al.live).toBe(true);
@@ -80,7 +80,7 @@ describe('AFL conference-draft pills', () => {
   it('NL draft day: AL pill keeps THIS year\'s (just-passed) date, not next year\'s', () => {
     const state = draftState(new Date(2026, 7, 30, 12, 0)); // Sun Aug 30
     expect(state.eventId).toBe('afl-nl-draft');
-    const cd = state.conferenceDraft!;
+    const cd = aflPoolDraft(state)!;
     // The regression: dedup had swapped the past AL event for 2027's
     // occurrence (Sat Aug 28, 2027) and the pill showed "Sat, Aug 28".
     expect(ymd(cd.al.date)).toBe('2026-8-29');
@@ -90,7 +90,7 @@ describe('AFL conference-draft pills', () => {
   });
 
   it('draft-day live boundaries: not live at 12:29 PM, live 12:30 PM through 8:45 PM, over at 8:46 PM', () => {
-    const at = (h: number, m: number) => draftState(new Date(2026, 7, 29, h, m)).conferenceDraft!;
+    const at = (h: number, m: number) => aflPoolDraft(draftState(new Date(2026, 7, 29, h, m)))!;
     expect(at(12, 29).al.live).toBe(false);
     expect(at(12, 30).al.live).toBe(true);
     expect(at(20, 45).al.live).toBe(true);
@@ -98,7 +98,7 @@ describe('AFL conference-draft pills', () => {
     // must still show THIS year's date.
     const after = draftState(new Date(2026, 7, 29, 20, 46));
     expect(after.eventId).toBe('afl-nl-draft');
-    expect(ymd(after.conferenceDraft!.al.date)).toBe('2026-8-29');
+    expect(ymd(aflPoolDraft(after)!.al.date)).toBe('2026-8-29');
   });
 });
 

@@ -163,11 +163,12 @@ describe('hero crest rendering', () => {
     }
   });
 
-  it('the AFL takes its crest from the SAME franchise as its glow', () => {
-    // Two answers to "whose hero is this" on one card is the bug.
-    const page = read('src/pages/afl-fantasy/index.astro');
-    expect(page).toContain('heroState.view.modelAccent = heroAccent.color');
-    expect(page).toContain('heroState.view.modelFranchiseId = heroAccent.franchiseId');
+  it('the shared hero takes its crest from the SAME franchise as its glow', () => {
+    // Two answers to "whose hero is this" on one card is the bug. Every league's
+    // homepage (the AFL's first) casts and tints through this one helper.
+    const page = read('src/utils/league-hero/page.ts');
+    expect(page).toContain('state.view.modelAccent = heroAccent.color');
+    expect(page).toContain('state.view.modelFranchiseId = heroAccent.franchiseId');
     expect(read('src/components/shared/LeagueCompositeHero.astro')).toContain('view.modelFranchiseId');
   });
 });

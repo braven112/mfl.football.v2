@@ -280,7 +280,7 @@ result can't be resolved):
   later pick trades.
 
 Surfaces that only ever render in one phase can hardcode that phase's
-framing: the AL/NL draft heroes (`afl-hero-resolver.ts`) and the NFL-draft /
+framing: the AL/NL draft heroes (`league-hero/views.ts`, the AFL profile's pools) and the NFL-draft /
 rookie-draft heroes (`league-event-hero-view.ts`) only appear in offseason
 windows where the order is official, so they say "View Draft Order", never
 "predictor". Static copy (nav, page directory, Roger's prompt/seeds) should

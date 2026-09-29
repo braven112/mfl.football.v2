@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveAflHeroState } from '../src/utils/afl-hero-resolver';
+import { resolveAflHeroState } from './helpers/afl-hero';
 import { buildMflLiveDraftUrl, buildMflOptionUrl } from '../src/utils/mfl-url';
 import { LEAGUES } from '../src/config/leagues';
 

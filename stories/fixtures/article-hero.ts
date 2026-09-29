@@ -21,7 +21,7 @@
  *
  * Plain object literals and no imports beyond types (Trap 6).
  */
-import type { EventHeroView } from '../../src/utils/afl-hero-resolver';
+import type { EventHeroView } from '../../src/utils/league-hero/types';
 import type { HeroModel } from '../../src/utils/hero-casting';
 
 const FACE =
