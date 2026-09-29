@@ -118,6 +118,10 @@ export interface StandingsTableProps {
   /** Tier-table extras (only read when a prize/rankCircle column is present). */
   tierName?: string;
   promotionCutoff?: number;
+  /** Throwback Week: franchiseId → TODAY's team name, printed as a second line
+   *  under the era art. Omitted outside a throwback week, and the team cell
+   *  then renders exactly as before. See `utils/throwback-standings.ts`. */
+  throwbackTodayNames?: Record<string, string>;
 }
 
 // ---------------------------------------------------------------------------

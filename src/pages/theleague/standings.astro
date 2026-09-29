@@ -17,11 +17,13 @@ import {
   setTheLeaguePreference,
   resolveTeamSelection,
 } from '../../utils/team-preferences';
-import { getCurrentSeasonYear } from '../../utils/league-year';
+import { getCurrentSeasonYear, getTestDateFromSearchParams } from '../../utils/league-year';
 import { resolveConfigForYear, resolvePreferredTeamIdForYear, HISTORICAL_TEAM_ICON_FALLBACK } from '../../utils/team-names';
 import { applyHistoricalDivisions } from '../../utils/historical-divisions';
 import { getLeagueBySlug } from '../../config/leagues';
 import { getStandingsFeedWithLiveRefresh, type StandingsFeed } from '../../utils/live-standings';
+import { resolveThrowbackRequestState } from '../../utils/throwback-request-state';
+import { applyThrowbackToStandingsConfig } from '../../utils/throwback-standings';
 
 // Import standings data
 const standingsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/standings.json', {
@@ -94,9 +96,23 @@ const franchises = selectedFeed.leagueStandings.franchise;
 // Resolve team identities for the selected year (e.g., Heavy Chevy for 2025, Dead Cap Walking for 2026)
 // then re-align divisions to that season's own league.json — resolveConfigForYear
 // handles names/icons/conference but NOT division.
-const yearResolvedConfig = applyHistoricalDivisions(
+const seasonConfig = applyHistoricalDivisions(
   resolveConfigForYear(leagueConfig, selectedYear),
   leagueFeeds[`../../../data/theleague/mfl-feeds/${selectedYear}/league.json`]
+);
+
+// Throwback Week: the current season's rows wear each club's era art, with
+// today's name printed underneath (see utils/throwback-standings.ts).
+const { config: yearResolvedConfig, todayNames: throwbackTodayNames } = applyThrowbackToStandingsConfig(
+  'theleague',
+  seasonConfig,
+  await resolveThrowbackRequestState('theleague', Astro.url),
+  // Same clock the week gate uses, so a ?testDate= preview agrees with itself.
+  {
+    isCurrentSeason:
+      selectedYear ===
+      getCurrentSeasonYear(getTestDateFromSearchParams(Astro.url.searchParams) ?? undefined),
+  },
 );
 
 // Calculate standings for all views.
@@ -242,6 +258,7 @@ const divisionBadges = DIVISION_BADGES;
               year={selectedYear}
               preferredTeamId={yearPreferredTeamId}
               franchiseBaseUrl="/theleague/franchises"
+              throwbackTodayNames={throwbackTodayNames}
               header={{
                 kind: 'brandedDivision',
                 title: division.name,
@@ -271,6 +288,7 @@ const divisionBadges = DIVISION_BADGES;
             year={selectedYear}
             preferredTeamId={yearPreferredTeamId}
             franchiseBaseUrl="/theleague/franchises"
+            throwbackTodayNames={throwbackTodayNames}
           />
         </div>
       )}
@@ -286,6 +304,7 @@ const divisionBadges = DIVISION_BADGES;
             year={selectedYear}
             preferredTeamId={yearPreferredTeamId}
             franchiseBaseUrl="/theleague/franchises"
+            throwbackTodayNames={throwbackTodayNames}
           />
         </div>
       )}
