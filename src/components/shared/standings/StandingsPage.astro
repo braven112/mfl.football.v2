@@ -19,7 +19,8 @@ import StandingsViewSelector from '../../theleague/StandingsViewSelector.astro';
 import YearSelector from '../../theleague/YearSelector.astro';
 import { getDivisionStandings, getLeagueStandings, getAllPlayStandings } from '../../../utils/standings';
 import type { StandingsFranchise, TeamStanding } from '../../../types/standings';
-import type { CanonicalLeagueSlug } from '../../../config/leagues';
+import { getLeagueBySlug, type CanonicalLeagueSlug } from '../../../config/leagues';
+import { madSeeds } from '../../../utils/mad-standings';
 import type { DefendingChampion, StandingsView } from '../../../utils/standings-page';
 import { standingsPageProfile } from './standings-page-profile';
 
@@ -58,18 +59,36 @@ const {
   franchiseHrefs,
 } = Astro.props;
 
-const divisionStandings = getDivisionStandings(franchises, config, { preserveFeedOrder: true });
-const profile = standingsPageProfile(leagueSlug, divisionStandings.length);
+const seeding = getLeagueBySlug(leagueSlug)?.standingsSeeding;
+const rawDivisionStandings = getDivisionStandings(franchises, config, { preserveFeedOrder: true });
+const profile = standingsPageProfile(leagueSlug, rawDivisionStandings.length, seeding);
 
+// A league with its own playoff seeding (archies: MAD POWER 99) replaces the
+// default ladder's seed on every row, so each view's pills read the league's
+// real seeds. Taken from MFL's rows in feed order — nothing is re-sorted.
+const divisionOfTeam = new Map(config.teams.map((t) => [t.franchiseId, t.division]));
+const leagueSeeds = seeding?.kind === 'mad' ? madSeeds(franchises, (id) => divisionOfTeam.get(id), seeding) : null;
+const seedById = new Map(leagueSeeds?.map((s) => [s.id, s.seed]));
+const withLeagueSeed = (t: TeamStanding): TeamStanding => (leagueSeeds ? { ...t, seed: seedById.get(t.id) } : t);
+
+const divisionStandings = rawDivisionStandings.map((d) => ({ ...d, teams: d.teams.map(withLeagueSeed) }));
 const seededStandings = getLeagueStandings(franchises, config, { preserveFeedOrder: true });
 let leagueStandings: TeamStanding[] = seededStandings;
-if (profile.leagueViewOrder === 'feed') {
+if (leagueSeeds) {
+  const byId = new Map(seededStandings.map((t) => [t.id, t]));
+  leagueStandings = leagueSeeds
+    .map((s) => byId.get(s.id))
+    .filter((t): t is TeamStanding => Boolean(t))
+    .map(withLeagueSeed);
+} else if (profile.leagueViewOrder === 'feed') {
   // MFL's rows exactly as exported, each still carrying its seed (which is
   // what the DIV pill reads).
   const byId = new Map(seededStandings.map((t) => [t.id, t]));
   leagueStandings = franchises.map((f) => byId.get(f.id)).filter((t): t is TeamStanding => Boolean(t));
 }
-const allPlayStandings = getAllPlayStandings(franchises, config, undefined, { preserveFeedOrder: true });
+const allPlayStandings = getAllPlayStandings(franchises, config, undefined, { preserveFeedOrder: true }).map(
+  withLeagueSeed
+);
 
 const previousYear = selectedYear - 1;
 const copy = profile.copy[view];

@@ -13,7 +13,7 @@ import {
   type StandingsColumn,
   type StandingsTiering,
 } from '../../theleague/standings/standings-table-config';
-import type { CanonicalLeagueSlug } from '../../../config/leagues';
+import type { CanonicalLeagueSlug, LeagueDefinition } from '../../../config/leagues';
 
 export interface StandingsViewCopy {
   title: string;
@@ -121,6 +121,56 @@ function packageLeagueProfile(divisionCount: number): StandingsPageProfile {
   };
 }
 
+/**
+ * A package league with its own playoff seeding (archies: MAD POWER 99).
+ * The League tab becomes the league's playoff standings — every team seeded,
+ * banded by tier — and the DIV / 2ND / WC pills carry real seeds everywhere.
+ */
+function madProfile(
+  divisionCount: number,
+  seeding: NonNullable<LeagueDefinition['standingsSeeding']>
+): StandingsPageProfile {
+  const base = packageLeagueProfile(divisionCount);
+  const tiering = TIERING.mad(seeding);
+  const inPlayoffs = seeding.divisionLeaders + seeding.runnersUp + seeding.wildCards;
+  return {
+    ...base,
+    columns: {
+      // The pill carries a real seed here, so its column says so.
+      division: base.columns.division.map((c) => (c.key === 'playoffBadge' ? { ...c, header: 'Seed' } : c)),
+      allPlay: base.columns.allPlay.map((c) => (c.key === 'playoffBadge' ? { ...c, header: 'Seed' } : c)),
+      league: [
+        { key: 'seedPlain', header: 'Seed' },
+        { key: 'team', header: 'Team' },
+        { key: 'playoffBadge', header: 'Tier', hideBelow: 'sm' },
+        { key: 'overallRecord', header: 'Overall' },
+        { key: 'vp', header: 'VP' },
+        { key: 'overallPct', header: 'PCT', hideBelow: 'sm' },
+        { key: 'streak', header: 'Strk', hideBelow: 'sm' },
+        { key: 'divRecord', header: 'Div Rec', hideBelow: 'sm' },
+        { key: 'pf', header: 'PF', hideBelow: 'sm' },
+        { key: 'pa', header: 'PA', hideBelow: 'sm' },
+      ],
+    },
+    leagueViewOrder: 'seeded',
+    leagueTabLabel: 'MAD',
+    // Banner only, like TheLeague's playoff table: 99 rows, and the art carries the name.
+    leagueTeamCellFallback: 'blank',
+    copy: {
+      ...base.copy,
+      league: {
+        title: 'MAD Power 99',
+        subtitle:
+          `The playoff race: ${seeding.divisionLeaders} division leaders, ${seeding.runnersUp} runners-up and ` +
+          `${seeding.wildCards} wild cards — ${inPlayoffs} teams, combined score over weeks 15-17`,
+      },
+    },
+    badgeSeeding: tiering,
+    leagueTiering: tiering,
+    badgeShowsSeed: true,
+  };
+}
+
 /** Leagues with a bespoke profile; every other league is a package league. */
 const PROFILES: Partial<Record<CanonicalLeagueSlug, StandingsPageProfile>> = {
   theleague: THELEAGUE,
@@ -129,7 +179,10 @@ const PROFILES: Partial<Record<CanonicalLeagueSlug, StandingsPageProfile>> = {
 /** The profile for a league on the shared standings page. */
 export function standingsPageProfile(
   slug: CanonicalLeagueSlug,
-  divisionCount: number
+  divisionCount: number,
+  seeding?: LeagueDefinition['standingsSeeding']
 ): StandingsPageProfile {
-  return PROFILES[slug] ?? packageLeagueProfile(divisionCount);
+  const bespoke = PROFILES[slug];
+  if (bespoke) return bespoke;
+  return seeding?.kind === 'mad' ? madProfile(divisionCount, seeding) : packageLeagueProfile(divisionCount);
 }

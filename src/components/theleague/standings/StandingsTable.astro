@@ -870,6 +870,15 @@ const bannerLabelFor = (name: string) =>
   .v-league .tier-play-in {
     background-color: var(--table-row-bg, #fff);
   }
+  /* MAD POWER 99's second tier (archies): each division's runner-up. Tinted
+     off the league's own primary so it reads apart from the gold leaders and
+     the grey wild cards in both themes, from tokens alone. */
+  .v-league .tier-runners-up {
+    background-color: color-mix(in srgb, var(--color-primary, #3b82f6) 14%, var(--table-row-bg, #fff));
+  }
+  .v-league .tier-runners-up.tier-boundary {
+    border-bottom: 4px solid color-mix(in srgb, var(--color-primary, #3b82f6) 45%, transparent) !important;
+  }
   .v-league .tier-toilet-bowl {
     background-color: #f5e6d3;
     color: #1a1a1a;

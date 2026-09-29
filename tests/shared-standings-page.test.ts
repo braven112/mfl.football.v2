@@ -11,6 +11,8 @@ import {
   resolvePlayoffBadgeStatus,
 } from '../src/components/theleague/standings/standings-table-config';
 import type { StandingsFranchise } from '../src/types/standings';
+import { madSeeds, madPlayoffSize } from '../src/utils/mad-standings';
+import { getLeagueBySlug } from '../src/config/leagues';
 
 /**
  * The standings page is ONE shared component (StandingsPage.astro) that
@@ -220,5 +222,95 @@ describe('the routes render the ONE shared page', () => {
     const calls = page.match(/get(Division|League|AllPlay)Standings\([^;]*\)/g) ?? [];
     expect(calls.length).toBeGreaterThanOrEqual(3);
     for (const call of calls) expect(call).toContain('preserveFeedOrder: true');
+  });
+});
+
+describe('MAD POWER 99 on the site matches the league widget', () => {
+  // The widget's OWN tiers() and tier sizes, lifted from the file it serves
+  // on MFL (public/mfl/10105/standings.js) and run in a vm — so the site can
+  // never drift from what owners see on the league's MFL home page.
+  const src = readFileSync('public/mfl/10105/standings.js', 'utf8');
+  const start = src.indexOf('function tiers(teams)');
+  let depth = 0;
+  let end = src.indexOf('{', start);
+  for (; end < src.length; end++) {
+    if (src[end] === '{') depth++;
+    else if (src[end] === '}' && --depth === 0) break;
+  }
+  const constant = (name: string) => Number(new RegExp(`var ${name}\\s*=\\s*(\\d+)`).exec(src)![1]);
+  const widgetTiers = new Function(
+    'DIVISION_LEADER_SEEDS',
+    'RUNNER_UP_SEEDS',
+    'WILD_CARD_SEEDS',
+    `${src.slice(start, end + 1)}; return tiers;`
+  )(constant('DIVISION_LEADER_SEEDS'), constant('RUNNER_UP_SEEDS'), constant('WILD_CARD_SEEDS'));
+
+  const seeding = getLeagueBySlug('archies')!.standingsSeeding!;
+
+  it('the registry carries the widget’s tier sizes', () => {
+    expect(seeding).toEqual({
+      kind: 'mad',
+      divisionLeaders: constant('DIVISION_LEADER_SEEDS'),
+      runnersUp: constant('RUNNER_UP_SEEDS'),
+      wildCards: constant('WILD_CARD_SEEDS'),
+    });
+  });
+
+  it('seeds every team exactly as the widget does, on the committed feed', () => {
+    const rows = archiesRows();
+    const widget = widgetTiers(
+      rows.map((r, i) => ({
+        id: r.id,
+        division: archiesDivisionOf(r.id),
+        vp: Number(r.vp) || 0,
+        pf: Number(r.pf ?? (r as unknown as { avgpf: string }).avgpf) || 0,
+        feedOrder: i,
+      }))
+    ) as { entries: Array<{ team: { id: string }; seed: number; tier: string }> };
+    const tierName: Record<string, string> = { leader: 'leader', second: 'runnerUp', wild: 'wildCard', field: 'field' };
+    const ours = madSeeds(rows, archiesDivisionOf, seeding);
+    expect(ours.map((s) => [s.id, s.seed, s.tier])).toEqual(
+      widget.entries.map((e) => [e.team.id, e.seed, tierName[e.tier]])
+    );
+  });
+
+  it('holds because MFL already sorts this league on Victory Points, then points', () => {
+    // madSeeds never re-sorts; it relies on MFL's row order BEING the VP/PF
+    // order. If the league changes its MFL standings sort, this fails first.
+    const rows = archiesRows();
+    for (let i = 1; i < rows.length; i++) {
+      const [a, b] = [rows[i - 1], rows[i]];
+      const vpA = Number(a.vp);
+      const vpB = Number(b.vp);
+      expect(vpA, `${a.id} above ${b.id}`).toBeGreaterThanOrEqual(vpB);
+      if (vpA === vpB) expect(Number(a.pf), `${a.id} above ${b.id}`).toBeGreaterThanOrEqual(Number(b.pf));
+    }
+  });
+
+  it('puts the right number of teams in each tier, one leader and one runner-up per division', () => {
+    const seeds = madSeeds(archiesRows(), archiesDivisionOf, seeding);
+    const count = (t: string) => seeds.filter((s) => s.tier === t).length;
+    expect([count('leader'), count('runnerUp'), count('wildCard'), count('field')]).toEqual([9, 9, 12, 69]);
+    const divsOf = (t: string) => new Set(seeds.filter((s) => s.tier === t).map((s) => archiesDivisionOf(s.id)));
+    expect(divsOf('leader').size).toBe(9);
+    expect(divsOf('runnerUp').size).toBe(9);
+    expect(madPlayoffSize(seeding)).toBe(30);
+  });
+
+  it('the MAD profile bands and badges follow the seeds', () => {
+    const p = standingsPageProfile('archies', 9, seeding);
+    expect(p.leagueTabLabel).toBe('MAD');
+    expect(p.leagueTiering).toEqual(TIERING.mad(seeding));
+    const status = (seed: number) =>
+      resolvePlayoffBadgeStatus({ seed } as unknown as Parameters<typeof resolvePlayoffBadgeStatus>[0], p.badgeSeeding!);
+    expect([status(1), status(9), status(10), status(18), status(19), status(30), status(31)]).toEqual([
+      'division_winner',
+      'division_winner',
+      'runner_up',
+      'runner_up',
+      'wild_card',
+      'wild_card',
+      null,
+    ]);
   });
 });

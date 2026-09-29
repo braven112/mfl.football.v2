@@ -39,6 +39,12 @@ gets them from `utils/standings-derived.ts`, which only FILLS blanks and never
 moves a row. That league must read the committed snapshot, not the live
 refresh (`liveRefresh: false`): derived columns come from committed weekly
 scores, so live rows would sit beside derived ones a week older.
+A league with its own playoff seeding declares it in the registry
+(`standingsSeeding`); Archie's MAD POWER 99 (`utils/mad-standings.ts`) takes
+each tier in MFL's row order and never re-sorts, which is only correct while
+the league's MFL sort is Victory Points then points — the test fails the day
+that stops being true, and it also pins the site's seeds to the league's own
+MFL widget (`public/mfl/10105/standings.js`) team for team.
 `tests/shared-standings-page.test.ts`.
 
 **1a. The one sanctioned re-rank: MFL Live's Live / Projected standings.**

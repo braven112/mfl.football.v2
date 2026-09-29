@@ -67,7 +67,7 @@ export type TeamCellFallback = 'name' | 'blank';
 export interface StandingsTiering {
   seedField: 'seed' | 'conferenceSeed';
   bands: Array<{
-    name: 'division-winners' | 'wild-cards' | 'play-in' | 'toilet-bowl' | 'eliminated';
+    name: 'division-winners' | 'runners-up' | 'wild-cards' | 'play-in' | 'toilet-bowl' | 'eliminated';
     upTo?: number;
     boundary?: boolean;
   }>;
@@ -252,6 +252,18 @@ export const TIERING = {
       { name: 'eliminated' },
     ],
   }),
+  /** MAD POWER 99 (archies): division leaders, then each division's
+   *  runner-up, then wild cards — sizes from the registry's
+   *  `standingsSeeding`, seeds from `madSeeds` (utils/mad-standings.ts). */
+  mad: (s: { divisionLeaders: number; runnersUp: number; wildCards: number }): StandingsTiering => ({
+    seedField: 'seed',
+    bands: [
+      { name: 'division-winners', upTo: s.divisionLeaders, boundary: true },
+      { name: 'runners-up', upTo: s.divisionLeaders + s.runnersUp, boundary: true },
+      { name: 'wild-cards', upTo: s.divisionLeaders + s.runnersUp + s.wildCards, boundary: true },
+      { name: 'eliminated' },
+    ],
+  }),
   conferenceSeed: (dwCount: number): StandingsTiering => ({
     seedField: 'conferenceSeed',
     bands: [
@@ -260,7 +272,7 @@ export const TIERING = {
       { name: 'eliminated' },
     ],
   }),
-} satisfies Record<string, StandingsTiering | ((n: number) => StandingsTiering)>;
+} satisfies Record<string, StandingsTiering | ((arg: never) => StandingsTiering)>;
 
 /** The seed a tiering config ranks a team by — the field its bands are cut on. */
 export function seedValueFor(team: TeamStanding, tiering: StandingsTiering): number | undefined {
@@ -283,9 +295,10 @@ export function seedValueFor(team: TeamStanding, tiering: StandingsTiering): num
 export function resolvePlayoffBadgeStatus(
   team: TeamStanding,
   tiering: StandingsTiering
-): 'division_winner' | 'wild_card' | null {
+): 'division_winner' | 'runner_up' | 'wild_card' | null {
   const band = resolveBand(seedValueFor(team, tiering), tiering);
   if (band === 'division-winners') return 'division_winner';
+  if (band === 'runners-up') return 'runner_up';
   if (band === 'wild-cards') return 'wild_card';
   return null;
 }

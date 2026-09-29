@@ -265,6 +265,15 @@ export interface LeagueDefinition {
    */
   peckingOrder?: { topN?: number };
   /**
+   * The league's own playoff seeding, when it is not TheLeague's "division
+   * winners, then wild cards" ladder. `mad` is Archie's MAD POWER 99: each
+   * division's first `divisionLeaders` rows, then its second rows
+   * (`runnersUp`), then `wildCards` more — each tier in MFL's row order. Read
+   * by the shared standings page and the league's MFL widget
+   * (public/mfl/10105/standings.js). Absent → the default ladder.
+   */
+  standingsSeeding?: { kind: 'mad'; divisionLeaders: number; runnersUp: number; wildCards: number };
+  /**
    * The zone this league keeps its own time in — see `officialClock` in
    * leagues-data.mjs. Always present; read it with `leagueClock(slug)` rather
    * than reaching into the entry, and never fall back to a hardcoded Pacific
