@@ -1,13 +1,14 @@
 ---
 slug: cowboy-up-degenerates
-status: in-progress
+status: shipped
 severity: P2
 opened: 2026-09-29
 hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1269
 hotfix_sha: 393744b
 followup_issue: 1270
-followup_pr:
-followup_session:
+followup_pr: https://github.com/braven112/mfl.football.v2/pull/1272
+shipped: 2026-09-29
+followup_session: session_019MoN9tgt6b2kMPGW2fQRUj
 ---
 
 # Follow-up: Cowboy Up throws back as the Degenerates
