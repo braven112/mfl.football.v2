@@ -360,6 +360,15 @@ tells you to add the entry in the first place — you have to remember.
 
 ## Second league's copy of a page — build a component, not a second page
 
+**Custom (standard-package) leagues get the REAL page, never a lite version.**
+The owner's rule (Sep 2026): a package league such as `archies` renders the
+same shared component TheLeague and the AFL render — extract the full-league
+page into a shared component (generalising conferences to N player pools,
+gating contract/salary features on `leagueHasFeature`) and move the existing
+league onto it too. A slimmer look-alike built just for the new league is the
+"cheap knock-off" to avoid; the first Archie's pages were exactly that and are
+being replaced (docs/plans/league-chat-and-persona.md, Phase 7).
+
 A route that exists under two league directories in `src/pages/` is a
 **sibling**. Copying one league's page file into the next league and editing it
 is how this repo accumulated ~57,800 lines across 24 forked siblings —
