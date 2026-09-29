@@ -62,7 +62,20 @@ export interface TransactionFilters {
    * so the param is inert everywhere else.
    */
   division: string | null;
+  /**
+   * True when `division` came from the viewer's own division rather than the
+   * URL. The page OPENS there, so it is still the default view (no Reset).
+   */
+  divisionDefaulted: boolean;
 }
+
+/**
+ * The `?division=` value meaning "every division". Explicit rather than an
+ * absent param, because absent now means "the viewer's own division" — and
+ * the filter form drops empty fields from the querystring, so an empty value
+ * could never say "all".
+ */
+export const ALL_DIVISIONS = 'all';
 
 const isKind = (v: string): v is TransactionKind =>
   (ALL_KINDS as readonly string[]).includes(v);
@@ -89,6 +102,12 @@ export interface ParseFiltersInput {
    * for every league whose divisions are not player pools.
    */
   divisionIds?: readonly string[];
+  /**
+   * Franchise id → division id. With it, a chosen team pulls the division to
+   * its own: the form always submits the division select, so without this a
+   * team picked from another division filtered to nothing.
+   */
+  divisionOf?: (franchiseId: string) => string | undefined;
 }
 
 /**
@@ -96,7 +115,7 @@ export interface ParseFiltersInput {
  * these are query params, so a hand-edited one is expected, not exceptional.
  */
 export function parseFilters(input: ParseFiltersInput): TransactionFilters {
-  const { params, year, myFranchiseId, divisionIds = [] } = input;
+  const { params, year, myFranchiseId, divisionIds = [], divisionOf } = input;
 
   // BOTH shapes, because both occur. A checkbox group posts one `types=` param
   // PER BOX (`?types=free-agent&types=auction`), so `params.get` would read the
@@ -120,8 +139,23 @@ export function parseFilters(input: ParseFiltersInput): TransactionFilters {
   const mine = params.get('mine') === '1' && Boolean(myFranchiseId);
   const team = mine ? myFranchiseId : (params.get('team') || null);
 
+  // Division, in order: a chosen team's own division; an explicit id or
+  // `all` from the URL; else the viewer's own division — the ledger OPENS on
+  // the viewer's player pool, like the Free Agents page. Every branch is
+  // gated on `divisionIds`, so a league without division pools gets null.
   const divisionRaw = params.get('division');
-  const division = divisionRaw && divisionIds.includes(divisionRaw) ? divisionRaw : null;
+  const teamDivision = team ? divisionOf?.(team) : undefined;
+  const ownDivision = myFranchiseId ? divisionOf?.(myFranchiseId) : undefined;
+  let division: string | null = null;
+  let divisionDefaulted = false;
+  if (teamDivision && divisionIds.includes(teamDivision)) {
+    division = teamDivision;
+  } else if (divisionRaw && divisionIds.includes(divisionRaw)) {
+    division = divisionRaw;
+  } else if (divisionRaw !== ALL_DIVISIONS && !team && ownDivision && divisionIds.includes(ownDivision)) {
+    division = ownDivision;
+    divisionDefaulted = true;
+  }
 
   return {
     year,
@@ -134,6 +168,7 @@ export function parseFilters(input: ParseFiltersInput): TransactionFilters {
     kindsExplicit,
     mine,
     division,
+    divisionDefaulted,
   };
 }
 
@@ -163,7 +198,7 @@ export function kindsPresentIn(
 export function isDefaultView(filters: TransactionFilters): boolean {
   return (
     !filters.team &&
-    !filters.division &&
+    (!filters.division || filters.divisionDefaulted) &&
     !filters.query &&
     filters.week === null &&
     filters.from === null &&

@@ -40,6 +40,7 @@ import {
   filterHref,
   isDefaultView,
   kindsPresentIn,
+  ALL_DIVISIONS,
 } from '../../../utils/transactions-view';
 import type { TransactionRow } from '../../../utils/mfl-transactions';
 
@@ -100,7 +101,13 @@ const viewerClock = await readViewerClock(Astro.cookies, authUser, leagueSlug);
 // country and returns the real zone.
 const zone = chosenZone(viewerClock.prefs, viewerClock.leagueClock).zone;
 
-const filters = parseFilters({ params, year, myFranchiseId, divisionIds: (divisions ?? []).map((d) => d.id) });
+const filters = parseFilters({
+  params,
+  year,
+  myFranchiseId,
+  divisionIds: (divisions ?? []).map((d) => d.id),
+  divisionOf,
+});
 
 // The AFL's own identity union first, TheLeague's as the fallback: MFL player
 // ids are global so the two compose, and the AFL's archive reaches back
@@ -251,7 +258,7 @@ const totalLabel = visible.length === 1 ? '1 move' : `${visible.length.toLocaleS
         <label class="tx__field">
           <span>Division</span>
           <select name="division">
-            <option value="">All divisions</option>
+            <option value={ALL_DIVISIONS} selected={filters.division === null}>All divisions</option>
             {divisions.map((d) => (
               <option value={d.id} selected={filters.division === d.id}>{d.name}</option>
             ))}
@@ -476,6 +483,16 @@ const totalLabel = visible.length === 1 ? '1 move' : `${visible.length.toLocaleS
       form.requestSubmit();
       for (const el of emptied) el.disabled = false;
     };
+
+    // A chosen team pins the division to its own (parseFilters), so changing
+    // the division has to let go of the team, or the new division is overridden
+    // and the select snaps back. Registered BEFORE the submit listeners below:
+    // listeners on one element run in registration order.
+    const division = form.querySelector<HTMLSelectElement>('select[name="division"]');
+    const team = form.querySelector<HTMLSelectElement>('select[name="team"]');
+    if (division && team) {
+      division.addEventListener('change', () => { team.value = ''; });
+    }
 
     for (const el of Array.from(form.querySelectorAll<HTMLElement>('select, input[type="checkbox"]'))) {
       el.addEventListener('change', submit);
