@@ -22,7 +22,7 @@ import { kickedOffSeason, snapCountSeason } from '../src/utils/snap-count-season
  */
 const POINTS_COLUMN_PAGES = [
   'src/pages/theleague/players.astro',
-  'src/pages/afl-fantasy/players.astro',
+  'src/components/shared/free-agents/FreeAgentsPage.astro',
   'src/pages/theleague/front-office/projected-free-agents.astro',
 ];
 
@@ -120,7 +120,7 @@ describe('both Free Agents pages read the full-pool feed', () => {
     const sources = [
       'src/pages/theleague/players.astro',
       'src/pages/theleague/front-office/projected-free-agents.astro',
-      'scripts/compute-afl-free-agents.mjs',
+      'scripts/compute-free-agents.mjs',
     ];
     for (const file of sources) {
       const src = readFileSync(file, 'utf8');
@@ -138,7 +138,7 @@ describe('both Free Agents pages read the full-pool feed', () => {
     // doubleheader double appears top and bottom and cancels out. Feeding it
     // into the points column does not — that is the bug that put 55.6 on
     // screen for a 27.8 season.
-    const files = [...POINTS_COLUMN_PAGES, 'scripts/compute-afl-free-agents.mjs'];
+    const files = [...POINTS_COLUMN_PAGES, 'scripts/compute-free-agents.mjs'];
     for (const file of files) {
       const src = readFileSync(file, 'utf8');
       expect(src, file).not.toMatch(/ytdPtsMap\.get\([^)]*\)\s*\?\?\s*weeklyPtsMap/);

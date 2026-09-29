@@ -1,6 +1,17 @@
 #!/usr/bin/env node
 /**
- * Compute the AFL Free Agents snapshot → data/afl-fantasy/derived/free-agents.json.
+ * Compute a league's Free Agents snapshot → data/<league>/derived/free-agents.json.
+ *
+ * One script for every league that renders the shared Free Agents page
+ * (src/components/shared/free-agents/FreeAgentsPage.astro): the AFL and every
+ * custom league (archies). `--league <slug>` picks the league (default
+ * afl-fantasy, so the AFL's output is unchanged); `--all` runs every league
+ * that renders the shared page. Player POOLS come from MFL's
+ * `playerLimitUnit` via buildPoolStructure — the AFL's two conferences, a
+ * custom league's divisions (archies: nine), or one shared pool.
+ *
+ * (Originally scripts/compute-afl-free-agents.mjs; the notes below still
+ * describe the AFL case, which is the one that motivated the design.)
  *
  * Why this exists (load-bearing — read before editing):
  *
@@ -28,7 +39,7 @@
  * data/theleague/derived/franchise-history.json and
  * data/afl-fantasy/resolved-events.json — regenerated every deploy in prebuild.
  *
- * Usage: node scripts/compute-afl-free-agents.mjs
+ * Usage: node scripts/compute-free-agents.mjs [--league <slug> | --all]
  */
 
 import fs from 'node:fs';
@@ -37,7 +48,7 @@ import { fileURLToPath } from 'node:url';
 import { loadEnv } from 'vite';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 import {
-  buildConferenceStructure,
+  buildPoolStructure,
   buildRosteredByConf,
   confsForPlayer,
   ownersForPlayer,
@@ -57,7 +68,22 @@ const ROOT = path.resolve(__dirname, '..');
 const fileEnv = loadEnv(process.env.NODE_ENV ?? 'development', ROOT, '');
 for (const [k, v] of Object.entries(fileEnv)) process.env[k] ??= v;
 
-const aflLeague = getLeagueBySlug('afl-fantasy');
+// Leagues that render the shared Free Agents page from this snapshot.
+export const SHARED_FREE_AGENT_LEAGUES = ['afl-fantasy', 'archies'];
+const argv = process.argv.slice(2);
+if (argv.includes('--all')) {
+  const { execFileSync } = await import('node:child_process');
+  for (const slug of SHARED_FREE_AGENT_LEAGUES) {
+    execFileSync(process.execPath, [fileURLToPath(import.meta.url), '--league', slug], { stdio: 'inherit' });
+  }
+  process.exit(0);
+}
+const leagueArg = argv.includes('--league') ? argv[argv.indexOf('--league') + 1] : 'afl-fantasy';
+const aflLeague = getLeagueBySlug(leagueArg);
+if (!aflLeague) {
+  console.error(`[compute-free-agents] unknown league: ${leagueArg}`);
+  process.exit(1);
+}
 const FEEDS_DIR = path.join(ROOT, aflLeague.dataPath, 'mfl-feeds');
 const OUTPUT_DIR = path.join(ROOT, aflLeague.dataPath, 'derived');
 const OUTPUT_PATH = path.join(OUTPUT_DIR, 'free-agents.json');
@@ -165,7 +191,9 @@ const playersData = readFeed(currentYear, 'players.json');
 const rostersData = readFeed(currentYear, 'rosters.json');
 const leagueData = readFeed(currentYear, 'league.json');
 const projectedScoresData = readFeed(currentYear, 'projectedScores.json');
-const adpDynastyData = readFeed(currentYear, 'adp-dynasty.json');
+// Dynasty ADP where the league has it (the AFL); a redraft league (archies)
+// syncs only redraft ADP, which is the right board for it.
+const adpDynastyData = readFeed(currentYear, 'adp-dynasty.json') ?? readFeed(currentYear, 'adp-redraft.json');
 const seasonWeeklyData = readFeed(statsSeasonYear, 'weekly-results-raw.json');
 const seasonYtdData = readFeed(statsSeasonYear, 'playerScores-ytd.json');
 
@@ -250,7 +278,7 @@ if (Array.isArray(seasonWeeklyData)) {
 // The math is shared with the live request-time overlay
 // (src/utils/afl-free-agents-live.ts) via afl-conference-rosters.mjs so the
 // two consumers can't drift.
-let conferenceStructure = buildConferenceStructure(leagueData);
+let conferenceStructure = buildPoolStructure(leagueData);
 if (!conferenceStructure) {
   // A missing/unusable league.json must not silently bake single-pool
   // semantics (the hidden-player bug) when the last committed snapshot
@@ -259,7 +287,7 @@ if (!conferenceStructure) {
   const prior = readJson(OUTPUT_PATH);
   if (prior?.players?.length && prior?.conferences) {
     console.warn(
-      '[compute-afl-free-agents] league feed missing or carries no usable conference structure — keeping the previous derived snapshot'
+      '[compute-free-agents] league feed missing or carries no usable conference structure — keeping the previous derived snapshot'
     );
     process.exit(0);
   }
@@ -280,12 +308,12 @@ if (!rosterSets && conferenceStructure) {
     const prior = readJson(OUTPUT_PATH);
     if (prior?.players?.length && prior?.conferences) {
       console.warn(
-        '[compute-afl-free-agents] rosters feed does not line up with the league feed conference map — keeping the previous derived snapshot'
+        '[compute-free-agents] rosters feed does not line up with the league feed conference map — keeping the previous derived snapshot'
       );
       process.exit(0);
     }
     console.warn(
-      '[compute-afl-free-agents] rosters feed does not line up with the league feed conference map and no usable prior snapshot exists — falling back to a single shared pool'
+      '[compute-free-agents] rosters feed does not line up with the league feed conference map and no usable prior snapshot exists — falling back to a single shared pool'
     );
     conferenceStructure = null;
     rosterSets = singlePool;
@@ -296,7 +324,7 @@ if (!rosterSets && conferenceStructure) {
 // kept so the live overlay can still restore real flags at request time.
 if (!rosterSets) {
   console.warn(
-    '[compute-afl-free-agents] rosters feed missing or empty — baking all players as available'
+    '[compute-free-agents] rosters feed missing or empty — baking all players as available'
   );
   const emptyConfIds = conferenceStructure ? conferenceStructure.ids : [''];
   rosterSets = {
@@ -314,8 +342,15 @@ const rosterFranchiseCount = (() => {
   return Array.isArray(raw) ? raw.length : 1;
 })();
 
-// Fantasy-relevant positions (AFL is offense + K + team DEF, no IDP)
-const fantasyPositions = new Set(['QB', 'RB', 'WR', 'TE', 'PK', 'Def', 'DEF']);
+// Fantasy-relevant positions: the ones the league STARTS (league.starters),
+// so a league that starts no kicker (archies) lists none. Falls back to the
+// AFL's set (offense + K + team DEF, no IDP), which its starters also give.
+const starterPositions = [].concat(leagueData?.league?.starters?.position ?? []).map((p) => p?.name).filter(Boolean);
+const fantasyPositions = new Set(
+  starterPositions.length ? [...starterPositions, ...(starterPositions.includes('Def') ? ['DEF'] : [])] : ['QB', 'RB', 'WR', 'TE', 'PK', 'Def', 'DEF'],
+);
+// The page's position pills, in its own order and spelling (DEF, PK).
+const positions = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'].filter((pos) => fantasyPositions.has(pos) || (pos === 'DEF' && fantasyPositions.has('Def')));
 
 const allPlayers = playersData?.players?.player;
 const playerList = [];
@@ -468,6 +503,7 @@ const output = {
   defaultSort,
   defaultDir,
   faCounts,
+  positions,
   nflTeamsList,
   topFa,
   players: playerList,
@@ -476,7 +512,7 @@ const output = {
 fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 fs.writeFileSync(OUTPUT_PATH, JSON.stringify(output) + '\n');
 console.log(
-  `[compute-afl-free-agents] year=${currentYear} statsSeason=${statsSeasonYear} ` +
+  `[compute-free-agents] year=${currentYear} statsSeason=${statsSeasonYear} ` +
     `ytdScores=${ytdPtsMap.size} players=${playerList.length} freeAgents=${freeAgents.length} ` +
     `→ ${path.relative(ROOT, OUTPUT_PATH)}`
 );

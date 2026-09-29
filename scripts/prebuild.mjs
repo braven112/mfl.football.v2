@@ -22,7 +22,7 @@
  *
  * Verified before marking any step: running the compute steps against a clean
  * tree reproduced the committed files byte-for-byte apart from their
- * `generatedAt` stamp. The one genuine difference is compute:afl-free-agents,
+ * `generatedAt` stamp. The one genuine difference is compute:free-agents,
  * whose input is live — a preview showing free agents from the last production
  * build is the accepted trade, not a bug.
  *
@@ -52,7 +52,7 @@ const SEQUENTIAL = [
   // edit to a producer preview against the stale committed file. A guard in that
   // test fails if a chain producer stops appearing in this list.
   { name: 'compute:franchise-history', cmd: 'pnpm run compute:franchise-history', previewSkip: true },
-  { name: 'compute:afl-free-agents', cmd: 'pnpm run compute:afl-free-agents', previewSkip: true },
+  { name: 'compute:free-agents', cmd: 'pnpm run compute:free-agents', previewSkip: true },
   // compute:franchise-history above defaults to TheLeague, so the AFL's copy
   // was only ever refreshed by hand or by the backfill workflow — it went stale
   // against its own committed feeds between runs. Adding the record book to

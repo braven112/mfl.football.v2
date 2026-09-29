@@ -25,7 +25,7 @@ import { franchiseIdForLeague, type AuthUser } from '../src/utils/auth';
 const root = join(__dirname, '..');
 const read = (p: string) => readFileSync(join(root, p), 'utf8');
 
-const PAGES = ['src/pages/theleague/players.astro', 'src/pages/afl-fantasy/players.astro'];
+const PAGES = ['src/pages/theleague/players.astro', 'src/components/shared/free-agents/FreeAgentsPage.astro'];
 const BRIDGE = 'src/components/shared/WatchListBridge.astro';
 
 const owner = (over: Partial<AuthUser> = {}): AuthUser => ({
@@ -63,7 +63,7 @@ describe('both free-agent pages derive their verdict through the resolver', () =
     const frontmatter = src.slice(0, src.indexOf('\n---', 4));
 
     it(`${page}: claimFranchiseId comes from franchiseIdForLeague, not an inline leagueId compare`, () => {
-      expect(frontmatter).toMatch(/import \{[^}]*franchiseIdForLeague[^}]*\} from '\.\.\/\.\.\/utils\/auth'/);
+      expect(frontmatter).toMatch(/import \{[^}]*franchiseIdForLeague[^}]*\} from '(?:\.\.\/)+utils\/auth'/);
       expect(frontmatter).toMatch(/const claimFranchiseId = franchiseIdForLeague\(authUser, /);
       expect(frontmatter).not.toMatch(/authUser\.leagueId ===/);
     });

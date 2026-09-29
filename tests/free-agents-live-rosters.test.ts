@@ -31,7 +31,7 @@ const root = resolve(__dirname, '..');
 const read = (p: string) => readFileSync(resolve(root, p), 'utf8');
 
 const THELEAGUE = 'src/pages/theleague/players.astro';
-const AFL = 'src/pages/afl-fantasy/players.astro';
+const AFL = 'src/components/shared/free-agents/FreeAgentsPage.astro';
 
 describe('free agents are derived from a LIVE roster read', () => {
   it("TheLeague's players page reads the live roster cache", () => {
@@ -86,12 +86,12 @@ describe('free agents are derived from a LIVE roster read', () => {
     ).toBe(true);
   });
 
-  it("the AFL's players page keeps its own live overlay — and CALLS it", () => {
+  it("the shared Free Agents page (AFL + custom leagues) keeps its live overlay — and CALLS it", () => {
     const src = read(AFL);
     // Not the module name: that is satisfied by the import line alone, so
     // deleting the call while leaving the import would keep this green and the
     // guard would pin nothing. Assert the call sites.
-    for (const fn of ['fetchLiveAflRosters', 'applyLiveRosters']) {
+    for (const fn of ['fetchLiveLeagueRosters', 'applyLiveRosters']) {
       expect(
         new RegExp(`${fn}\\s*\\(`).test(src),
         `${AFL} imports its live overlay but no longer calls ${fn}(). It is the ` +

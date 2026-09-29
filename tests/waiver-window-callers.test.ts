@@ -67,7 +67,7 @@ const CALLERS = walk(SRC_ROOT)
  */
 const EXPECTED_AT_LEAST = [
   join('src', 'pages', 'afl-fantasy', 'index.astro'),
-  join('src', 'pages', 'afl-fantasy', 'players.astro'),
+  join('src', 'components', 'shared', 'free-agents', 'FreeAgentsPage.astro'),
   join('src', 'pages', 'api', 'waiver-claim.ts'),
   join('src', 'pages', 'theleague', 'index.astro'),
   join('src', 'pages', 'theleague', 'players.astro'),
@@ -152,10 +152,13 @@ describe('every production caller names its leagueZone', () => {
 function calendarYearVars(source: string): string[] {
   const vars: string[] = [];
   // const <name> = import.meta.glob('.../mfl-feeds/<glob>/calendar.json', …)
-  for (const m of source.matchAll(
+  const modulesVars = [...source.matchAll(
     /const\s+(\w+)\s*=\s*import\.meta\.glob\(\s*'[^']*mfl-feeds\/[^']*calendar\.json'/g,
-  )) {
-    const modulesVar = m[1];
+  )].map((m) => m[1]);
+  // …or a SHARED page's `calendarModules` prop: the glob lives in each thin
+  // route (a static specifier cannot be a runtime variable), the pick here.
+  if (/\bcalendarModules\b[\s\S]{0,400}?\}\s*=\s*Astro\.props/.test(source)) modulesVars.push('calendarModules');
+  for (const modulesVar of modulesVars) {
     // …then the entry picked out of THAT map, by year.
     const pick = new RegExp(
       `Object\\.(?:entries|keys)\\(${modulesVar}\\)[\\s\\S]{0,120}?\\.includes\\(\`\\/\\$\\{(\\w+)\\}\\/\`\\)`,

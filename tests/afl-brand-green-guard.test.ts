@@ -155,7 +155,7 @@ const ALLOWLIST = new Map<string, string>([
       'What\'s New hero accent, now --league-accent.',
   ],
   [
-    'pages/afl-fantasy/players.astro:#4ade80',
+    'components/shared/free-agents/FreeAgentsPage.astro:#4ade80',
     'Conference tag chip. Its own light/dark pair (#15803d / #4ade80) rather ' +
       'than a --color-secondary reference, and it is a categorical tag color, ' +
       'not brand voice. Recoloring it is a separate AL/NL design question.',
