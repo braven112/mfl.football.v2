@@ -1,0 +1,288 @@
+---
+/**
+ * The standings page — ONE component for every league on it (TheLeague and the
+ * standard-package leagues; the AFL's tier/conference page is still its own).
+ *
+ * The route passes MFL's rows for the season, already loaded, plus everything
+ * that must be decided in a page: the year (a bad one redirects), the viewer's
+ * preferred team (resolving it writes a cookie) and the season's own config.
+ * What differs per league is DATA in `standings-page-profile.ts`.
+ *
+ * MFL's row order is the official order and is never re-sorted here: every
+ * producer is called with `preserveFeedOrder` (docs/claude/rules/
+ * standings-brackets-draft-order.md). The all-play view ranks on all-play by
+ * definition — that is a different competition, not a re-sort of standings.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import UnifiedStandingsTable from '../../theleague/standings/StandingsTable.astro';
+import StandingsViewSelector from '../../theleague/StandingsViewSelector.astro';
+import YearSelector from '../../theleague/YearSelector.astro';
+import { getDivisionStandings, getLeagueStandings, getAllPlayStandings } from '../../../utils/standings';
+import type { StandingsFranchise, TeamStanding } from '../../../types/standings';
+import type { CanonicalLeagueSlug } from '../../../config/leagues';
+import type { DefendingChampion, StandingsView } from '../../../utils/standings-page';
+import { standingsPageProfile } from './standings-page-profile';
+
+interface Props {
+  leagueSlug: CanonicalLeagueSlug;
+  /** `<title>` for the layout. */
+  title: string;
+  franchises: StandingsFranchise[];
+  /** The selected season's config: identities AND division alignment for that year. */
+  config: Parameters<typeof getDivisionStandings>[1];
+  selectedYear: number;
+  availableYears: number[];
+  view: StandingsView;
+  preferredTeamId?: string;
+  lastFetched: Date | null;
+  /** Last season's division winners, keyed by division name. */
+  defendingChampions?: Record<string, DefendingChampion>;
+  /** Division badge artwork keyed by division display name (TheLeague's compass badges). */
+  divisionBadges?: Record<string, string>;
+  /** Per-team link overrides (id → href) for a league without franchise pages. */
+  franchiseHrefs?: Record<string, string>;
+}
+
+const {
+  leagueSlug,
+  title,
+  franchises,
+  config,
+  selectedYear,
+  availableYears,
+  view,
+  preferredTeamId,
+  lastFetched,
+  defendingChampions = {},
+  divisionBadges = {},
+  franchiseHrefs,
+} = Astro.props;
+
+const divisionStandings = getDivisionStandings(franchises, config, { preserveFeedOrder: true });
+const profile = standingsPageProfile(leagueSlug, divisionStandings.length);
+
+const seededStandings = getLeagueStandings(franchises, config, { preserveFeedOrder: true });
+let leagueStandings: TeamStanding[] = seededStandings;
+if (profile.leagueViewOrder === 'feed') {
+  // MFL's rows exactly as exported, each still carrying its seed (which is
+  // what the DIV pill reads).
+  const byId = new Map(seededStandings.map((t) => [t.id, t]));
+  leagueStandings = franchises.map((f) => byId.get(f.id)).filter((t): t is TeamStanding => Boolean(t));
+}
+const allPlayStandings = getAllPlayStandings(franchises, config, undefined, { preserveFeedOrder: true });
+
+const previousYear = selectedYear - 1;
+const copy = profile.copy[view];
+const shared = {
+  teamCell: 'banner' as const,
+  accent: 'league-blue' as const,
+  year: selectedYear,
+  preferredTeamId,
+  franchiseBaseUrl: profile.franchiseBaseUrl,
+  franchiseHrefs,
+  badgeSeeding: profile.badgeSeeding,
+  badgeShowsSeed: profile.badgeShowsSeed,
+};
+---
+
+<TheLeagueLayout title={title}>
+  <div class="standings-page">
+    <header class="standings-hero">
+      <div class="standings-hero__text">
+        <h1 class="section-title">{copy.title}</h1>
+        <p class="subtitle">{copy.subtitle}</p>
+      </div>
+      <div class="standings-hero__actions">
+        <StandingsViewSelector activeView={view} leagueLabel={profile.leagueTabLabel} />
+      </div>
+    </header>
+
+    <div class="standings-filters">
+      <div class="filter-item">
+        <span class="filter-label">Season:</span>
+        <YearSelector currentYear={selectedYear} availableYears={availableYears} />
+      </div>
+    </div>
+
+    <div class="standings-content">
+      {franchises.length === 0 && (
+        <p class="standings-empty">No standings yet — they appear once the season's first week is scored.</p>
+      )}
+
+      {view === 'division' && (
+        <div class="division-view">
+          {divisionStandings.map(division => (
+            <UnifiedStandingsTable
+              {...shared}
+              teams={division.teams}
+              columns={profile.columns.division}
+              teamCellFallback="name"
+              header={{
+                kind: 'brandedDivision',
+                title: division.name,
+                badgeSrc: divisionBadges[division.name],
+                defendingChampion: defendingChampions[division.name]
+                  ? {
+                      name: defendingChampions[division.name].name,
+                      year: previousYear,
+                      logoSrc: defendingChampions[division.name].icon,
+                    }
+                  : undefined,
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      {view === 'league' && (
+        <div class="league-view">
+          <UnifiedStandingsTable
+            {...shared}
+            teams={leagueStandings}
+            columns={profile.columns.league}
+            teamCellFallback={profile.leagueTeamCellFallback}
+            tiering={profile.leagueTiering}
+          />
+        </div>
+      )}
+
+      {view === 'all_play' && (
+        <div class="all-play-view">
+          <UnifiedStandingsTable
+            {...shared}
+            teams={allPlayStandings}
+            columns={profile.columns.allPlay}
+            teamCellFallback="name"
+          />
+        </div>
+      )}
+
+      {lastFetched && (
+        <p class="data-disclaimer">
+          Data as of {lastFetched.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
+        </p>
+      )}
+    </div>
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .standings-page {
+    display: grid;
+    gap: var(--padding-lg);
+  }
+
+  .standings-hero {
+    display: grid;
+    justify-content: center;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 2rem;
+    background: var(--card-bg, #fff);
+    border-radius: 1rem;
+    box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+  }
+
+  /* Dark mode: raised-card treatment — shadow alone can't separate
+     the section from the page background; add the border ring. */
+  :global(html.dark) .standings-hero {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+  }
+  @media screen and (min-width: 600px) {
+    .standings-hero {
+      grid-template-columns: 1fr auto;
+    }
+  }
+  .standings-hero__text h1 {
+    margin: 0;
+  }
+
+  .standings-hero__actions {
+    display: flex;
+    justify-content: center;
+  }
+
+  /* On narrow screens the hero is a single column (the two-column rule is
+     min-width: 600px). Make that column full-width so the view selector can
+     lay its tabs out across the row without wrapping the last one below. */
+  @media (max-width: 599px) {
+    .standings-hero {
+      grid-template-columns: 1fr;
+    }
+
+    .standings-hero__actions {
+      width: 100%;
+    }
+  }
+
+  .standings-filters {
+    background: var(--card-bg, #fff);
+    border-radius: 1rem;
+    box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+    padding: 1rem 1.5rem;
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+  }
+
+  :global(html.dark) .standings-filters {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
+  }
+
+  .filter-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 700;
+    color: var(--page-text, #111827);
+  }
+
+  .subtitle {
+    font-size: 1rem;
+    color: var(--content-text-muted, #64748b);
+    margin: 0;
+  }
+
+  .standings-content {
+    margin-bottom: 3rem;
+    /* Grid item of the `.standings-page` grid — let it shrink so a table wider
+       than the viewport scrolls inside its own wrapper instead of stretching
+       the page (mirrors the AFL standings fix). */
+    min-width: 0;
+  }
+
+  .section-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--page-text, #1a1a1a);
+    margin: 0;
+  }
+
+  .division-view,
+  .league-view,
+  .all-play-view {
+    display: grid;
+    gap: 2rem;
+  }
+
+  @media (max-width: 767px) {
+    .standings-page {
+      padding: 1rem 0.5rem;
+    }
+  }
+
+  .standings-empty {
+    margin: 0;
+    color: var(--content-text-muted, #64748b);
+  }
+
+  .data-disclaimer {
+    margin: 1rem 0 0;
+    color: var(--content-text-muted, #64748b);
+    font-size: 0.95rem;
+  }
+</style>

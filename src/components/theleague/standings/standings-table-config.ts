@@ -17,6 +17,7 @@ export type StandingsColumnKey =
   | 'seedAccent' // conference-colored '#{conferenceSeed}', AL red / NL blue
   | 'playoffBadge' // <PlayoffBadge> (division / all-play)
   | 'rankCircle' // circular rank badge (tier table)
+  | 'rankPlain' // plain bold '#{row position}' — MFL's own order (package-league league view)
   | 'team' // team cell — render mode set by `teamCell`
   | 'overallRecord' // h2hwlt
   | 'overallPct' // h2hpct (3dp)
@@ -107,11 +108,19 @@ export interface StandingsTableProps {
    *  league-wide seed). Conference leagues pass `TIERING.conferenceSeed(n)`;
    *  see `resolvePlayoffBadgeStatus`. */
   badgeSeeding?: StandingsTiering;
+  /** Print the ladder's seed number inside the DIV / WC pill. Default true.
+   *  False for a league whose playoff seeding we do not model (archies): the
+   *  pill then says only that the team leads its division. */
+  badgeShowsSeed?: boolean;
   header?: StandingsHeader;
   year?: number;
   preferredTeamId?: string;
   rosterBaseUrl?: string;
   franchiseBaseUrl?: string;
+  /** Per-franchise team-link overrides (id → href), for a league whose team
+   *  pages are not `${franchiseBaseUrl}/${id}` (archies links its brand pages,
+   *  which are keyed by slug). Wins over franchiseBaseUrl / rosterBaseUrl. */
+  franchiseHrefs?: Record<string, string>;
   /** AFL red / conference-blue card glow vs TheLeague blue. Replaces the
    *  data-league / conferenceId branches. */
   accent?: StandingsAccent;
@@ -233,6 +242,16 @@ export const TIERING = {
     seedField: 'conferenceSeed',
     bands: [{ name: 'eliminated' }],
   },
+  /** Division winners only — one band per division leader, no wild cards.
+   *  For a league whose playoff format we do not model (archies, 9 divisions):
+   *  the one claim the feed proves is who leads each division. */
+  divisionWinners: (divisionCount: number): StandingsTiering => ({
+    seedField: 'seed',
+    bands: [
+      { name: 'division-winners', upTo: divisionCount, boundary: true },
+      { name: 'eliminated' },
+    ],
+  }),
   conferenceSeed: (dwCount: number): StandingsTiering => ({
     seedField: 'conferenceSeed',
     bands: [

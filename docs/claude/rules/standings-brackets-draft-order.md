@@ -30,6 +30,17 @@ teams with identical 4-2-0 division records, where MFL credited the team with
 LOWER all-play and LOWER points because it swept the season series.
 `divisionTiebreaker` in standings.ts now has no production callers.
 
+**1b. One standings page, many leagues.** `/theleague/standings` and
+`/archies/standings` render the same `src/components/shared/standings/StandingsPage.astro`
+(the AFL's is still its own). Per-league differences are data in
+`standings-page-profile.ts`, never a slug branch in the page. A league whose
+export lacks columns (archies: no all-play, PA, streak or division record)
+gets them from `utils/standings-derived.ts`, which only FILLS blanks and never
+moves a row. That league must read the committed snapshot, not the live
+refresh (`liveRefresh: false`): derived columns come from committed weekly
+scores, so live rows would sit beside derived ones a week older.
+`tests/shared-standings-page.test.ts`.
+
 **1a. The one sanctioned re-rank: MFL Live's Live / Projected standings.**
 The Standings tab on `/live/league/<id>` defaults to **Live** (this week's
 scores added to each record) and offers **Projected** (projected finals added)
