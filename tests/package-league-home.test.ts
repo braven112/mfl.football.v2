@@ -1,6 +1,6 @@
 /**
- * The package-league homepage's view models: the hero, the team snapshot and
- * the What's Next calendar (src/utils/package-league-home.ts,
+ * The package-league homepage's view models: the team snapshot and the What's
+ * Next calendar (the hero is the shared league hero — tests/league-hero.test.ts) (src/utils/package-league-home.ts,
  * src/utils/package-league-events.ts). Pinned against archies' real 2026
  * feeds, which carry doubleheader weeks — every "this week" must be a LIST.
  */
@@ -9,7 +9,7 @@ import schedule from '../data/archies/mfl-feeds/2026/schedule.json';
 import standings from '../data/archies/mfl-feeds/2026/standings.json';
 import brackets from '../data/archies/mfl-feeds/2026/playoff-brackets.json';
 import config from '../data/archies/archies.config.json';
-import { resolvePackageHero, buildTeamSnapshot, weekInTheBooks } from '../src/utils/package-league-home';
+import { buildTeamSnapshot, weekInTheBooks } from '../src/utils/package-league-home';
 import { buildPackageLeagueEvents, packageWhatsNext } from '../src/utils/package-league-events';
 import { groupStandingsByDivision } from '../src/utils/package-league';
 import { parseWeeklySchedule } from '../src/utils/schedule-data.mjs';
@@ -17,30 +17,6 @@ import { getLeagueBySlug } from '../src/config/leagues';
 
 const league = getLeagueBySlug('archies')!;
 const groups = groupStandingsByDivision(standings, config.teams as any, (config as any).divisions ?? []);
-
-describe('resolvePackageHero', () => {
-  it('shows a signed-in owner every game of their next week (doubleheaders are two)', () => {
-    const hero = resolvePackageHero(schedule, '0014', { inSeason: true });
-    expect(hero.kind).toBe('my-week');
-    if (hero.kind !== 'my-week') return;
-    expect(hero.games.length).toBe(2);
-    expect(hero.games.every((g) => !g.played)).toBe(true);
-    expect(hero.lastWeek?.games.every((g) => g.played)).toBe(true);
-  });
-
-  it('shows everyone else the league week in the books, never a default team', () => {
-    const hero = resolvePackageHero(schedule, null, { inSeason: true });
-    expect(hero.kind).toBe('league-week');
-  });
-
-  it('looks forward out of season even though the feed has completed weeks', () => {
-    expect(resolvePackageHero(schedule, '0014', { inSeason: false }).kind).toBe('offseason');
-  });
-
-  it('is offseason with no schedule at all', () => {
-    expect(resolvePackageHero(null, null).kind).toBe('offseason');
-  });
-});
 
 describe('weekInTheBooks', () => {
   it('lists a doubleheader team once, by its best game', () => {

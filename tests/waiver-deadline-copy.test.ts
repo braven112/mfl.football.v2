@@ -17,7 +17,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { relativeDayWord, waiverDeadlineCopy } from '../src/utils/waiver-deadline-copy';
 import { resolveWaiverWindow, type MflCalendarEvent } from '../src/utils/waiver-window';
-import { resolveAflHeroState } from '../src/utils/afl-hero-resolver';
+import { resolveAflHeroState } from './helpers/afl-hero';
 import type { ViewerClock } from '../src/utils/viewer-preferences';
 import { leagueClock } from '../src/config/leagues';
 
@@ -224,7 +224,8 @@ describe('waiverDeadlineCopy — an unreadable calendar', () => {
 
 describe('the heroes carry no hardcoded waiver day', () => {
   const sources: Array<[string, string]> = [
-    ['src/utils/afl-hero-resolver.ts', 'AFL hero resolver'],
+    ['src/utils/league-hero/views.ts', 'shared league hero views'],
+    ['src/utils/league-hero/profiles.ts', 'league hero profiles'],
     ['src/components/theleague/season-heroes/WaiverWireHero.astro', "TheLeague's waiver hero"],
   ];
 

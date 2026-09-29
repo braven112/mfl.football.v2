@@ -4,7 +4,7 @@
  *
  * Drop-in renderer for AFL's calendar-driven promo states (keeper deadline,
  * conference draft, champion-crowned, offseason/default). Driven entirely by
- * props that AflHero.astro derives from the resolver's HeroContent + state, so
+ * props that LeagueHero.astro derives from the resolver's HeroContent + state, so
  * it stays wired into the existing event system — no new data source.
  *
  * Visual: deep-navy card, corner accent glow, condensed display headline with a
@@ -15,10 +15,11 @@
 import { spriteUrl } from '../../utils/sprite-url';
 import ThemeImage from '../ThemeImage.astro';
 import type { HeroModel } from '../../utils/hero-casting';
-import type { HeroSecondaryLink } from '../../utils/afl-hero-resolver';
+import type { HeroSecondaryLink } from '../../utils/league-hero/types';
 import { getNflTeamColors, hexToRgba } from '../../utils/nfl-team-colors';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
-import { LEAGUES } from '../../config/leagues';
+import type { CanonicalLeagueSlug } from '../../config/leagues';
+import { heroFrameUrl, heroLeagueMark } from '../../utils/league-hero/marks';
 import type { HeroFranchiseBackdrop } from '../../utils/hero-franchise-backdrop';
 import '../../styles/hero-franchise-backdrop.css';
 
@@ -92,6 +93,13 @@ interface Props {
    * before — which is why nothing here branches on auth itself.
    */
   backdrop?: HeroFranchiseBackdrop | null;
+  /**
+   * Whose card this is — picks the fallback mark and the screenshot frame's
+   * address, never the palette (that is `accent`/`glow` and the backdrop).
+   * The AFL's by default; every league's homepage hero renders this card
+   * through the shared `LeagueHero`.
+   */
+  league?: CanonicalLeagueSlug;
 }
 
 const {
@@ -119,6 +127,7 @@ const {
   bordered = false,
   regionLabel = 'AFL hero',
   backdrop = null,
+  league = 'afl-fantasy',
 } = Astro.props;
 
 // Composite model treatment: a color tints the glow behind the cutout (alpha
@@ -145,10 +154,7 @@ const effectiveAccent = backdrop?.accent ?? accent;
 const shotSrc = screenshot ? `/assets/whats-new/${screenshot}` : null;
 const shotDarkSrc = shotSrc ? shotSrc.replace(/\.(\w+)$/, '-dark.$1') : null;
 // Frame chrome URL text from the league registry — never hardcode domains.
-const aflLeague = LEAGUES['afl-fantasy'];
-const shotFrameUrl = link
-  ? `${aflLeague.domains[0]}${link.replace(`/${aflLeague.slug}`, '')}`
-  : aflLeague.domains[0];
+const shotFrameUrl = heroFrameUrl(league, link);
 
 // Display-type step-down. Every hand-written slot headline is a short shout
 // ("GAMES ARE LIVE."); a feature headline derived from a What's New title runs
@@ -207,7 +213,7 @@ const countAriaLabel = hasCount
           decoding="async"
           onerror="this.closest('.afl-event-hero').classList.add('afl-event-hero--no-model')"
         />
-        <img class="afl-event-hero__logo-art afl-event-hero__logo-art--dark" src="/assets/logos/afl-logo-dark.svg" alt="" loading="lazy" />
+        <img class="afl-event-hero__logo-art afl-event-hero__logo-art--dark" src={heroLeagueMark(league)} alt="" loading="lazy" />
       </div>
       <span class="afl-event-hero__model-caption">
         <strong>{model.name}</strong>
@@ -263,7 +269,7 @@ const countAriaLabel = hasCount
         </script>
       </div>
       {/* Mobile (and light-capture 404) stand-in — the frame is hidden there */}
-      <img class="afl-event-hero__shot-logo afl-event-hero__shot-logo--dark" src="/assets/logos/afl-logo-dark.svg" alt="" aria-hidden="true" loading="lazy" />
+      <img class="afl-event-hero__shot-logo afl-event-hero__shot-logo--dark" src={heroLeagueMark(league)} alt="" aria-hidden="true" loading="lazy" />
     </>
   ) : player && (
     <div class="afl-event-hero__player" aria-hidden="true">

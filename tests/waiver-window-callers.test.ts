@@ -66,7 +66,9 @@ const CALLERS = walk(SRC_ROOT)
  * automatically and a vanished one is noticed.
  */
 const EXPECTED_AT_LEAST = [
-  join('src', 'pages', 'afl-fantasy', 'index.astro'),
+  // The shared league hero reads every league's waiver calendar for its
+  // waiver card (the AFL's and Archie's homepages hand it theirs).
+  join('src', 'utils', 'league-hero', 'page.ts'),
   join('src', 'components', 'shared', 'free-agents', 'FreeAgentsPage.astro'),
   join('src', 'pages', 'api', 'waiver-claim.ts'),
   join('src', 'pages', 'theleague', 'index.astro'),
@@ -158,6 +160,10 @@ function calendarYearVars(source: string): string[] {
   // …or a SHARED page's `calendarModules` prop: the glob lives in each thin
   // route (a static specifier cannot be a runtime variable), the pick here.
   if (/\bcalendarModules\b[\s\S]{0,400}?\}\s*=\s*Astro\.props/.test(source)) modulesVars.push('calendarModules');
+  // …or the WAIVER calendar handed to the shared hero out of a lazy per-season
+  // glob (the package-league homepage's shape). Only that read: the same page
+  // also reads this season's and next's calendars for What's Next, on purpose.
+  for (const m of source.matchAll(/waiverCalendar:[^\n]*loadSeasonFeed\(\s*calendarFeeds\s*,\s*(\w+)\s*\)/g)) vars.push(m[1]);
   for (const modulesVar of modulesVars) {
     // …then the entry picked out of THAT map, by year.
     const pick = new RegExp(
@@ -168,8 +174,26 @@ function calendarYearVars(source: string): string[] {
   return vars;
 }
 
+/**
+ * Pages that hand the shared league hero a waiver calendar
+ * (`resolveLeagueHomeHero({ waiverCalendar })`). The hero reads it with
+ * `resolveWaiverWindow`, but which YEAR's file it is was the page's pick —
+ * rule 1 is checked where the pick is made.
+ */
+const HERO_PAGES = walk(SRC_ROOT)
+  .filter((f) => f.endsWith('.astro'))
+  .filter((f) => /resolveLeagueHomeHero\s*\(\{[\s\S]*?waiverCalendar/.test(readFileSync(f, 'utf8')))
+  .sort();
+
+describe('the shared hero is handed its calendars by the pages that own them', () => {
+  it('finds the AFL and the package-league homepages — a vacuous pass is a failed guard', () => {
+    expect(HERO_PAGES).toContain(join('src', 'pages', 'afl-fantasy', 'index.astro'));
+    expect(HERO_PAGES).toContain(join('src', 'components', 'shared', 'package-league', 'PackageLeagueHome.astro'));
+  });
+});
+
 describe('the waiver calendar is selected on the LEAGUE year, never the season year', () => {
-  const PAGES = CALLERS.filter((f) => f.endsWith('.astro'));
+  const PAGES = [...new Set([...CALLERS.filter((f) => f.endsWith('.astro')), ...HERO_PAGES])];
 
   it.each(PAGES)('%s keys its calendar lookup off a league-year clock', (file) => {
     const source = readFileSync(file, 'utf8');

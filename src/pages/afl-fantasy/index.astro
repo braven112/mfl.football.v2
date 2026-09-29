@@ -8,7 +8,7 @@
  *           timeline, quick links.
  *   Right — Schefter Report news feed (sticky sidebar).
  *
- * The hero rotation is driven by `resolveAflHeroState` which encodes AFL's
+ * The hero is the shared league hero (`resolveLeagueHomeHero`), whose AFL profile encodes AFL's
  * calendar cadence: long quiet offseason → keeper window in June/July →
  * conference draft weekend before Labor Day → regular season → playoffs →
  * championship. What's New entries tagged `leagues: ['afl']` (or untagged)
@@ -16,10 +16,10 @@
  */
 export const prerender = false;
 
-import { getPersonaLabels, postByline } from '../../utils/persona-server';
+import { getPersonaLabels } from '../../utils/persona-server';
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import SchefterFeedCompact from '../../components/shared/SchefterFeedCompact.astro';
-import AflHero from '../../components/afl/AflHero.astro';
+import LeagueHero from '../../components/shared/league-hero/LeagueHero.astro';
 import OwnersPollHomeCard from '../../components/shared/owners-poll/OwnersPollHomeCard.astro';
 // TEMPORARY (2026-08-20 → 08-23): for this preseason weekend the hero IS the
 // live-scoring test drive — it REPLACES AflHero rather than stacking above it.
@@ -39,21 +39,9 @@ import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 import feedData from '../../../data/afl-fantasy/schefter-feed.json';
 import { getWhatsNewEntriesForLeague } from '../../utils/whats-new-entries';
 
-import { getAuthor, getAuthorAvatar, type SchefterFeed as FeedType } from '../../types/schefter';
+import type { SchefterFeed as FeedType } from '../../types/schefter';
 import { parseTestDate } from '../../utils/hero-resolver';
-import { resolveAflHeroState } from '../../utils/afl-hero-resolver';
-import { pickLatestArticle } from '../../utils/article-hero-view';
-import { isSaturdayEveningPT } from '../../utils/sunday-ticket-window';
-import { hasSubmittedLineup } from '../../utils/lineup-submitted';
-import { getCurrentNFLWeek as currentNflWeekForHero } from '../../utils/current-week';
-import { getRelease } from '../../utils/schedule-release-store';
-import { castAflHeroModel } from '../../utils/afl-hero-casting';
-import { resolveHeroFranchiseAccent } from '../../utils/hero-franchise-accent';
-import { getWeekInTheBooks, getOwnersByPlayer } from '../../utils/offseason-hero-data';
-import { resolveRecapDestination } from '../../utils/hero-recap-destination';
-import { resolveWaiverWindow } from '../../utils/waiver-window';
-import { waiverDeadlineCopy } from '../../utils/waiver-deadline-copy';
-import { readViewerClock } from '../../utils/viewer-preferences-page';
+import { resolveLeagueHomeHero } from '../../utils/league-hero/page';
 import { getFranchiseConference } from '../../utils/afl-conference';
 import {
   buildLiveScoringHeroProps,
@@ -79,7 +67,7 @@ import {
 import { getAuthUser, franchiseIdForLeague } from '../../utils/auth';
 import InstallAppPrompt from '../../components/shared/pwa/InstallAppPrompt.astro';
 import { spriteUrl } from '../../utils/sprite-url';
-import { getLeagueBySlug, leagueClock } from '../../config/leagues';
+import { getLeagueBySlug } from '../../config/leagues';
 import { readInstallState } from '../../utils/app-install-state';
 import { resolveSchefterRail } from '../../utils/schefter-rail-view';
 
@@ -202,25 +190,6 @@ const testMode = !!testDateParam;
 const timeline = getAflWhatsNextTimeline(effectiveDate);
 const aflWhatsNew = getWhatsNewEntriesForLeague('afl');
 
-// Whether this season's reveal is already locked — read here so the resolver
-// stays synchronous and side-effect free.
-const aflScheduleReleaseRevealed = Boolean(
-  await getRelease('afl-fantasy', effectiveDate.getUTCFullYear()),
-);
-// Saturday from 5pm: an owner whose lineup is already in gets the Sunday
-// Ticket hero instead of the lineup-lock reminder. One cached live read, only
-// in that window, and only for the SIGNED-IN owner (`authAflFranchiseId`) —
-// a browsed team from ?myteam= or the preference cookie is not an owner.
-const lineupSubmitted =
-  authAflFranchiseId && isSaturdayEveningPT(effectiveDate)
-    ? await hasSubmittedLineup({
-        league: AFL,
-        franchiseId: authAflFranchiseId,
-        week: currentNflWeekForHero(effectiveDate) ?? 1,
-        leagueYear: getAflLeagueYear(effectiveDate),
-      })
-    : null;
-
 // ── Standings + roster data ─────────────────────────────────────────────────
 const standingsFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/standings.json', { eager: true });
 const rosterFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/rosters.json', { eager: true });
@@ -247,102 +216,6 @@ function resolveSeasonYearWithData(): number {
 }
 
 const seasonYear = resolveSeasonYearWithData();
-
-// Where Tuesday's recap hero points. Resolved here, not in the resolver, for
-// the same reason as the reveal flag above: this reads two feeds off disk and
-// the resolver stays synchronous.
-//
-// The week is `getWeekInTheBooks`, NOT `getCurrentNFLWeek` — the latter rolls
-// to the UPCOMING week on Tuesday, the very morning this slot runs, so it named
-// the week whose games had not been played. Nor is it the raw
-// `getLatestScoredWeek`, which reads a one-week feed that MFL rolls on the same
-// morning and would name the unplayed week from the other direction. See
-// hero-recap-destination.ts and getWeekInTheBooks.
-//
-// The YEAR is `getCurrentSeasonYear`, and pointedly NOT the walked-back
-// `seasonYear` the rest of the page renders. They diverge for exactly one
-// window — kickoff until the first week's results land, when MFL has created
-// the new season but not populated it — and that is the window where sharing
-// one value does damage. The page walking back is right: an empty standings
-// table helps nobody, so it shows last season's. A recap hero walking back is
-// WRONG: during the new season it would announce "Week 18 is in the books" over
-// last season's championship and link its scoreboard. A stale recap reads as
-// current in a way a stale standings table does not.
-//
-// So the recap stays on the live season and simply has no week yet, which
-// `resolveRecapDestination` already degrades correctly (week 0 → the news
-// feed). The copy for that state is handled in afl-hero-resolver's `slot:recap`.
-const liveSeasonYear = getCurrentSeasonYear(effectiveDate);
-const aflRecap = resolveRecapDestination({
-  league: AFL.slug,
-  completedWeek: getWeekInTheBooks(liveSeasonYear, AFL.slug, effectiveDate),
-});
-
-// ── The waiver deadline the hero shouts about ───────────────────────────────
-// The DAY and the HOUR come from MFL's own calendar, never from prose: the
-// league's rules doc says in as many words that the documented time is not the
-// source of truth, and the 2026 feed has the AFL processing Wednesday 8pm PT
-// all season EXCEPT a Tuesday run on Dec 29. The hero slot itself spans Tuesday
-// 2pm → Wednesday 8pm PT, so a hardcoded "tonight" was wrong for ten hours a
-// week. Same glob shape as /players, which reads the same feed.
-const aflCalendarModules = import.meta.glob(
-  '../../../data/afl-fantasy/mfl-feeds/20{2[5-9],[3-9][0-9]}/calendar.json',
-  { eager: true }
-);
-// Keyed by the AFL's MFL LEAGUE year, not the season-results year: the AFL
-// rolls its feed year on June 1, so between then and Labor Day
-// `getCurrentSeasonYear` still names last season and this lookup would read
-// the PRIOR year's calendar — stale marks, or no file at all → `unknown` →
-// a hero that names no day. `/players` selects this same feed with
-// `getAflLeagueYear` (players.astro `claimYear`); match it.
-const aflWaiverCalendarYear = getAflLeagueYear(effectiveDate);
-const aflCalendarEvents =
-  (Object.entries(aflCalendarModules).find(([path]) => path.includes(`/${aflWaiverCalendarYear}/`))?.[1] as any)?.default ?? [];
-// READ-only: a page render must never WRITE a preference cookie (that throws
-// ResponseSentError from anywhere but the route, and blanks the page).
-const aflViewerClock = await readViewerClock(Astro.cookies, authUser, AFL.slug);
-const aflWaiverCopy = waiverDeadlineCopy(
-  resolveWaiverWindow(aflCalendarEvents, effectiveDate, leagueClock(AFL.slug).zone),
-  { now: effectiveDate, clock: aflViewerClock },
-);
-
-// ── The story the news slot promotes ────────────────────────────────────────
-// Resolved HERE rather than in the resolver, for the same reason `recap` and
-// `waiver` are: the feed is on disk and the resolver is synchronous and pure.
-// Bounded to the last week so the slot cannot promote a three-month-old
-// article as this week's news — past that it falls through to the desk card,
-// which is the only state allowed to point at the news listing.
-const aflLatestPost = pickLatestArticle((feedData as FeedType).posts, {
-  now: effectiveDate,
-  within: 7 * 24 * 60 * 60 * 1000,
-});
-// The byline is the POST's own author — the feeds carry external reporters,
-// and the house face on someone else's story misattributes it.
-// …and when that author is the league's own desk, it wears the persona.
-const aflLatestByline = aflLatestPost
-  ? await postByline({ league: 'afl-fantasy' }, getAuthor(aflLatestPost.authorId), getAuthorAvatar(getAuthor(aflLatestPost.authorId)))
-  : null;
-const aflLatestArticle = aflLatestPost
-  ? {
-      post: aflLatestPost,
-      byline: { name: aflLatestByline!.name, avatar: aflLatestByline!.avatar },
-    }
-  : undefined;
-
-const heroState = resolveAflHeroState({
-  referenceDate: effectiveDate,
-  lineupSubmitted,
-  testMode,
-  whatsNewEntries: aflWhatsNew,
-  timeline,
-  userConferenceId,
-  userTier: userTeam?.tier,
-  scheduleReleaseRevealed: aflScheduleReleaseRevealed,
-  recap: aflRecap,
-  waiver: aflWaiverCopy,
-  article: aflLatestArticle,
-});
-
 
 /**
  * Rosters run on the LEAGUE year, which is NOT the season year — the two clocks
@@ -419,6 +292,53 @@ const record = recordParts.length === 3 && recordParts.every(Number.isFinite)
   ? { wins: recordParts[0], losses: recordParts[1], ties: recordParts[2] }
   : undefined;
 
+// ── The hero ────────────────────────────────────────────────────────────────
+// The shared league hero (src/utils/league-hero/): resolved, then cast, from
+// this league's own feeds. The standings leader personalizes the Monday slot.
+const standingsLeaderId = standingsFranchises.length
+  ? [...standingsFranchises].sort((a: any, b: any) => {
+      const pct = (f: any) => {
+        const [w, l, t] = (f.h2hwlt ?? '').split('-').map((n: string) => parseInt(n, 10));
+        const games = (w || 0) + (l || 0) + (t || 0);
+        return games ? ((w || 0) + (t || 0) * 0.5) / games : 0;
+      };
+      return pct(b) - pct(a) || parseFloat(b.pf || '0') - parseFloat(a.pf || '0');
+    })[0]?.id
+  : undefined;
+
+// The waiver deadline's DAY and HOUR come from MFL's own calendar, never from
+// prose — the 2026 feed has the AFL processing Wednesday 8pm PT all season
+// EXCEPT a Tuesday run on Dec 29. Keyed by the AFL's MFL LEAGUE year (June 1
+// rollover), which is what `/players` reads the same feed with.
+const aflCalendarModules = import.meta.glob(
+  '../../../data/afl-fantasy/mfl-feeds/20{2[5-9],[3-9][0-9]}/calendar.json',
+  { eager: true }
+);
+const aflLeagueYearForHero = getAflLeagueYear(effectiveDate);
+const aflWaiverCalendar =
+  (Object.entries(aflCalendarModules).find(([path]) => path.includes(`/${aflLeagueYearForHero}/`))?.[1] as any)?.default ?? [];
+
+const heroState = await resolveLeagueHomeHero({
+  league: AFL,
+  effectiveDate,
+  testMode,
+  cookies: Astro.cookies,
+  authUser,
+  authFranchiseId: authAflFranchiseId,
+  // The browsed team casts (the My Team card follows it too); the SIGNED-IN
+  // franchise alone decides whose colours the card wears.
+  castFranchiseId: userFranchiseId,
+  userPoolId: userConferenceId,
+  userTier: userTeam?.tier,
+  poolOf: getFranchiseConference,
+  posts: (feedData as FeedType).posts,
+  waiverCalendar: aflWaiverCalendar,
+  leagueYear: aflLeagueYearForHero,
+  timeline,
+  whatsNewEntries: aflWhatsNew,
+  standingsLeaderId,
+});
+
 const inSeasonVariant = heroState.kind === 'regular-season' || heroState.kind === 'playoffs' || heroState.kind === 'championship';
 
 // ── Team snapshot spotlight (offseason fourth tile) ─────────────────────────
@@ -436,64 +356,6 @@ const spotlight = !inSeasonVariant && userFranchiseId
       }),
     })
   : null;
-
-// ── Hero composite casting ──────────────────────────────────────────────────
-// Attach the cast player model to the hero view (composite ESPN cutout over
-// team-color treatment). Every state casts a semantically relevant player;
-// null (missing feeds) falls back to the existing webp art inside the hero.
-// The standings leader personalizes the Monday standings slot.
-const standingsLeaderId = standingsFranchises.length
-  ? [...standingsFranchises].sort((a: any, b: any) => {
-      const pct = (f: any) => {
-        const [w, l, t] = (f.h2hwlt ?? '').split('-').map((n: string) => parseInt(n, 10));
-        const games = (w || 0) + (l || 0) + (t || 0);
-        return games ? ((w || 0) + (t || 0) * 0.5) / games : 0;
-      };
-      return pct(b) - pct(a) || parseFloat(b.pf || '0') - parseFloat(a.pf || '0');
-    })[0]?.id
-  : undefined;
-
-if ('view' in heroState) {
-  const heroLeagueYear = getAflLeagueYear(effectiveDate);
-  heroState.view.model = castAflHeroModel(heroState, {
-    referenceDate: effectiveDate,
-    leagueYear: heroLeagueYear,
-    userFranchiseId,
-    standingsLeaderId,
-    // The recap card captions its Top Scorer with `aflRecap.week`, so the cast
-    // has to be scoped to that week — and to `liveSeasonYear`, the season that
-    // week was derived from, which is NOT `heroLeagueYear` between June 1 and
-    // Labor Day (the league year advances first). See AflCastingInput.recap.
-    recap: { seasonYear: liveSeasonYear, week: aflRecap.week },
-    // The news card promotes a specific story, so it casts that story's player.
-    articlePlayerId: aflLatestArticle?.post.heroPlayerId,
-  });
-  // Tint the glow with the viewer's OWN franchise when their conference
-  // rosters the cast player — the hero is then visibly about their team, not
-  // just about a player. Scoped to the viewer's conference because the AFL
-  // rosters the same player twice; see hero-franchise-accent.ts. Resolved here
-  // rather than in the component: it needs the rosters feed and the session.
-  const heroAccent = resolveHeroFranchiseAccent({
-    playerId: heroState.view.model?.mflId,
-    ownersByPlayer: heroState.view.model
-      ? getOwnersByPlayer(heroLeagueYear, AFL.slug, { activeOnly: false })
-      : null,
-    // The SIGNED-IN franchise's conference, deliberately not `userConferenceId`
-    // — that one follows the `?myteam=` / cookie preference, and a hero painted
-    // in someone's colours should rest on having signed in rather than on a
-    // query param. Same rule, same reason, as `backdrop` above.
-    viewerConferenceId: authAflFranchiseId ? getFranchiseConference(authAflFranchiseId) : null,
-    conferenceOf: getFranchiseConference,
-    league: AFL.slug,
-    // Only an OVERRIDE is meaningful here — the hero already falls back to the
-    // player's NFL team on its own, so an empty fallback means "don't override".
-    fallback: '',
-  });
-  heroState.view.modelAccent = heroAccent.color || null;
-  // The SAME franchise carries the crest, so the glow and the mark can never
-  // disagree about whose hero this is.
-  heroState.view.modelFranchiseId = heroAccent.franchiseId;
-}
 
 // ── Schefter feed ───────────────────────────────────────────────────────────
 // The rail IS the owner's Watching feed. The WHOLE feed goes in: slicing to
@@ -557,7 +419,8 @@ const labels = await getPersonaLabels('afl-fantasy');
       {testDriveHero ? (
         <LiveScoringTestDrive slug={AFL.slug} referenceDate={effectiveDate} />
       ) : (
-        <AflHero
+        <LeagueHero
+          league={AFL.slug}
           state={heroState}
           liveScoring={aflLiveScoring}
           config={aflConfig}

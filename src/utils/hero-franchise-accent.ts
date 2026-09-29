@@ -14,7 +14,8 @@
  *
  * The rule that resolves it, and the reason it is not "whoever owns him":
  *
- *   Scope ownership to the VIEWER'S OWN CONFERENCE. Inside one conference a
+ *   Scope ownership to the VIEWER'S OWN CONFERENCE (more generally, their
+ *   player POOL — Archie's nine divisions are nine pools). Inside one pool a
  *   player has at most one owner, so the ambiguity disappears rather than being
  *   broken by a tiebreak nobody can predict. A viewer in the AL sees the AL
  *   franchise's colors; the NL owner of the same player is not their story.
@@ -37,7 +38,6 @@
 import { getLeagueTeamBrands } from './league-team-brands';
 import { ensureContrastOn } from './team-color-contrast';
 import type { CanonicalLeagueSlug } from '../config/leagues';
-import type { ConferenceId } from './afl-conference';
 
 /**
  * A glow tint sits under white caption text at low alpha. 2.2:1 against white
@@ -52,10 +52,14 @@ export interface FranchiseAccentInput {
   playerId: string | undefined;
   /** Every franchise rostering him, from `getOwnersByPlayer` — a LIST, always. */
   ownersByPlayer: Map<string, string[]> | null | undefined;
-  /** The viewer's conference, or null for a guest / a league without conferences. */
-  viewerConferenceId: ConferenceId | null | undefined;
-  /** Resolves a franchise id to its conference; null for a league without them. */
-  conferenceOf: (franchiseId: string) => ConferenceId | null;
+  /**
+   * The viewer's player POOL — the AFL's conference, Archie's division — or
+   * null for a guest / a league with one flat pool. Any league whose registry
+   * says `duplicatePlayers` has pools, and the rule below is the same for all.
+   */
+  viewerConferenceId: string | null | undefined;
+  /** Resolves a franchise id to its pool; null for a league without them. */
+  conferenceOf: (franchiseId: string) => string | null;
   league: CanonicalLeagueSlug;
   /** The NFL team primary — the answer whenever no franchise claims the story. */
   fallback: string;

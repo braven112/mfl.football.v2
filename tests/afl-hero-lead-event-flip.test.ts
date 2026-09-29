@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveAflHeroState } from '../src/utils/afl-hero-resolver';
+import { resolveAflHeroState, aflPoolDraft } from './helpers/afl-hero';
 import type { WhatsNewEntry } from '../src/types/whats-new';
 
 /**
@@ -125,7 +125,7 @@ describe('AFL hero: an upcoming countdown pools with fresh What\'s New articles'
     if (state.kind !== 'calendar-event') throw new Error('unreachable');
     expect(state.eventId).toBe('afl-nl-draft');
     expect(state.priority).toBe('P1');
-    expect(state.conferenceDraft?.al.live).toBe(true);
+    expect(aflPoolDraft(state)?.al.live).toBe(true);
   });
 
   it('an rng that returns exactly 1 still resolves (clamped to the last slot)', () => {

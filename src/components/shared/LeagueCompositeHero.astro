@@ -13,7 +13,7 @@
  * All copy comes from the resolved `EventHeroView`, so nothing is written
  * twice: the keeper deadline's summary, the conference drafts' conference-aware
  * headline and CTA, the countdown and its label all still live in
- * `afl-hero-resolver.ts`. This component only decides how they LOOK, and even
+ * `league-hero/views.ts`. This component only decides how they LOOK, and even
  * that is handed to it (`view.composite`) for the same reason.
  *
  * Which states arrive here is `AflHero`'s call, and it is conservative: a state
@@ -22,8 +22,9 @@
  * always worked rather than to an empty flank.
  */
 import { getPersonaLabels } from '../../utils/persona-server';
-import type { EventHeroView } from '../../utils/afl-hero-resolver';
-import { LEAGUES } from '../../config/leagues';
+import type { EventHeroView } from '../../utils/league-hero/types';
+import type { CanonicalLeagueSlug } from '../../config/leagues';
+import { heroFrameUrl, heroLeagueMark } from '../../utils/league-hero/marks';
 import { getNflTeamColors } from '../../utils/nfl-team-colors';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
 import { resolveHeroCrest, resolveHeroFranchiseSkin } from '../../utils/hero-crest';
@@ -52,7 +53,7 @@ interface Props {
    * the crest artwork, the franchise skin, the fallback mark and the
    * screenshot frame's domain — never the palette, which is `view.composite`.
    */
-  league?: 'afl-fantasy' | 'theleague';
+  league?: CanonicalLeagueSlug;
 }
 
 const { view, regionLabel, clampSummary = false, league = 'afl-fantasy' } = Astro.props;
@@ -67,7 +68,7 @@ const model = view.model ?? null;
  * A What's New entry's own screenshot is the art, exactly as it is on
  * TheLeague's feature composite — the feature IS the picture, and a player
  * cutout over it would cover the thing being announced. So this is the one
- * state that can render with no cast model at all: `castAflHeroModel` casts a
+ * state that can render with no cast model at all: `castLeagueHeroModel` casts a
  * player for a feature ONLY when the entry names one, and an entry that names
  * nobody still has a screenshot worth showing.
  *
@@ -77,10 +78,7 @@ const model = view.model ?? null;
  */
 const shotSrc = view.screenshot ? `/assets/whats-new/${view.screenshot}` : null;
 const shotDarkSrc = shotSrc ? shotSrc.replace(/\.(\w+)$/, '-dark.$1') : null;
-const leagueEntry = LEAGUES[league];
-const shotFrameUrl = view.link
-  ? `${leagueEntry.domains[0]}${view.link.replace(`/${leagueEntry.slug}`, '')}`
-  : leagueEntry.domains[0];
+const shotFrameUrl = heroFrameUrl(league, view.link);
 // The model wins when there is one: a named player is a deliberate casting
 // choice by whoever wrote the entry, and the screenshot is the fallback art.
 const artMode: 'model' | 'shot' | 'logo' = model ? 'model' : shotSrc ? 'shot' : 'logo';
@@ -109,7 +107,7 @@ const franchise =
 // CompositeHero's CSS keeps it hidden until the cutout's onerror fires (and
 // while a crest fills the card), so passing it only in logo mode left a free
 // agent — who has no crest — with an empty flank when his headshot 404'd.
-const LOGO = league === 'theleague' ? '/assets/logos/theleague-logo-dark.svg' : '/assets/logos/afl-logo-dark.svg';
+const LOGO = heroLeagueMark(league);
 
 // `crest` is passed only in model mode: behind a browser-framed screenshot a
 // watermark reads as smudge rather than as a mark.
