@@ -22,7 +22,7 @@ import {
   resolveAFLTeamSelection,
 } from '../../utils/team-preferences';
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
-import { getCurrentSeasonYear } from '../../utils/league-year';
+import { getCurrentSeasonYear, getTestDateFromSearchParams } from '../../utils/league-year';
 import { getTierMembership, TIER_COMPETITION_FIRST_SEASON, AFL_CUP } from '../../utils/afl-tier';
 import { resolveTierCutoffWeek } from '../../utils/all-play.mjs';
 import {
@@ -139,7 +139,12 @@ const { config: seasonConfig, todayNames: throwbackTodayNames } = applyThrowback
   'afl',
   applySeasonStructure(yearResolvedConfig, seasonStructure),
   await resolveThrowbackRequestState('afl', Astro.url),
-  { isCurrentSeason: selectedYear === currentSeasonYear },
+  // Same clock the week gate uses, so a ?testDate= preview agrees with itself.
+  {
+    isCurrentSeason:
+      selectedYear ===
+      getCurrentSeasonYear(getTestDateFromSearchParams(Astro.url.searchParams) ?? undefined),
+  },
 );
 
 // Team Preference Cookie Integration

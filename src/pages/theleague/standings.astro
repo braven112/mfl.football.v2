@@ -17,7 +17,7 @@ import {
   setTheLeaguePreference,
   resolveTeamSelection,
 } from '../../utils/team-preferences';
-import { getCurrentSeasonYear } from '../../utils/league-year';
+import { getCurrentSeasonYear, getTestDateFromSearchParams } from '../../utils/league-year';
 import { resolveConfigForYear, resolvePreferredTeamIdForYear, HISTORICAL_TEAM_ICON_FALLBACK } from '../../utils/team-names';
 import { applyHistoricalDivisions } from '../../utils/historical-divisions';
 import { getLeagueBySlug } from '../../config/leagues';
@@ -107,7 +107,12 @@ const { config: yearResolvedConfig, todayNames: throwbackTodayNames } = applyThr
   'theleague',
   seasonConfig,
   await resolveThrowbackRequestState('theleague', Astro.url),
-  { isCurrentSeason: selectedYear === currentSeasonYear },
+  // Same clock the week gate uses, so a ?testDate= preview agrees with itself.
+  {
+    isCurrentSeason:
+      selectedYear ===
+      getCurrentSeasonYear(getTestDateFromSearchParams(Astro.url.searchParams) ?? undefined),
+  },
 );
 
 // Calculate standings for all views.
@@ -253,7 +258,7 @@ const divisionBadges = DIVISION_BADGES;
               year={selectedYear}
               preferredTeamId={yearPreferredTeamId}
               franchiseBaseUrl="/theleague/franchises"
-            throwbackTodayNames={throwbackTodayNames}
+              throwbackTodayNames={throwbackTodayNames}
               header={{
                 kind: 'brandedDivision',
                 title: division.name,
