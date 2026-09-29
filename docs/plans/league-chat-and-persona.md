@@ -393,4 +393,13 @@ What landed:
   - Not verified live: the first real claim (the environment has no owner
     session); the waiver window reads "unknown" until the MFL calendar syncs
     (co-commissioner access), which files a queued claim — the safe default.
+- **Phase 7 — the real pages, shared** (owner's rule, 2026-09-29): custom
+  leagues must render the SAME shared components as TheLeague and the AFL,
+  never a lite look-alike. The first Archie's Free Agents, Rosters, Standings
+  and Transactions pages were lite versions and are being replaced:
+  - Free Agents: extract the AFL players page into one shared component
+    (conferences → N pools) used by the AFL AND every custom league; the AFL
+    is checked before/after for identical output. (This session.)
+  - Rosters, Standings, Transactions: one separate session each, same
+    approach, stacked on this branch.
 - Two-way Slack (mentions → tips) through the Events API, if a client wants it.
