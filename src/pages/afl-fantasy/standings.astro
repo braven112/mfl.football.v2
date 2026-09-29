@@ -35,6 +35,8 @@ import ThemeImage from '../../components/ThemeImage.astro';
 import { getLeagueBySlug } from '../../config/leagues';
 import { getAuthUser, franchiseIdForLeague } from '../../utils/auth';
 import { getStandingsFeedWithLiveRefresh, type StandingsFeed } from '../../utils/live-standings';
+import { resolveThrowbackRequestState } from '../../utils/throwback-request-state';
+import { applyThrowbackToStandingsConfig } from '../../utils/throwback-standings';
 
 // Get league context from URL
 const league = getLeagueContext(Astro.url);
@@ -129,7 +131,16 @@ const yearResolvedConfig = resolveConfigForYear(
 const seasonStructure = extractSeasonStructure(
   leagueFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/league.json`]
 );
-const seasonConfig = applySeasonStructure(yearResolvedConfig, seasonStructure);
+// Throwback Week: the current season's rows wear each club's era art, with
+// today's name printed underneath (see utils/throwback-standings.ts).
+// yearResolvedConfig stays un-thrown-back — the preferred-team lookup below
+// follows owners across slots by the real season identity.
+const { config: seasonConfig, todayNames: throwbackTodayNames } = applyThrowbackToStandingsConfig(
+  'afl',
+  applySeasonStructure(yearResolvedConfig, seasonStructure),
+  await resolveThrowbackRequestState('afl', Astro.url),
+  { isCurrentSeason: selectedYear === currentSeasonYear },
+);
 
 // Team Preference Cookie Integration
 // Get URL parameters for team preference
@@ -398,6 +409,7 @@ function divisionHeader(name: string, confId?: '00' | '01') {
               year={selectedYear}
               preferredTeamId={yearPreferredTeamId}
               rosterBaseUrl={`${baseUrl}/rosters`}
+              throwbackTodayNames={throwbackTodayNames}
               header={divisionHeader(division.name, divisionToConf[division.name])}
             />
           ))}
@@ -417,6 +429,7 @@ function divisionHeader(name: string, confId?: '00' | '01') {
             year={selectedYear}
             preferredTeamId={yearPreferredTeamId}
             rosterBaseUrl={`${baseUrl}/rosters`}
+            throwbackTodayNames={throwbackTodayNames}
           />
           <UnifiedStandingsTable
             teams={conferenceBStandings.allTeams}
@@ -429,6 +442,7 @@ function divisionHeader(name: string, confId?: '00' | '01') {
             year={selectedYear}
             preferredTeamId={yearPreferredTeamId}
             rosterBaseUrl={`${baseUrl}/rosters`}
+            throwbackTodayNames={throwbackTodayNames}
           />
 
           {nitTeams.length > 0 && (
@@ -478,6 +492,9 @@ function divisionHeader(name: string, confId?: '00' | '01') {
                               )}
                               <div class="team-meta">
                                 <span class="team-name">{team.teamName}</span>
+                                {throwbackTodayNames?.[team.id] && throwbackTodayNames[team.id] !== team.teamName && (
+                                  <span class="team-today-name">{throwbackTodayNames[team.id]}</span>
+                                )}
                                 <span class="team-division">Seed {team.seed || '—'} • Div {team.division}</span>
                               </div>
                             </a>
@@ -508,6 +525,7 @@ function divisionHeader(name: string, confId?: '00' | '01') {
               header={tierHeader(tierGroup.tier)}
               year={selectedYear}
               rosterBaseUrl={`${baseUrl}/rosters`}
+              throwbackTodayNames={throwbackTodayNames}
             />
           ))}
         </div>
@@ -525,6 +543,7 @@ function divisionHeader(name: string, confId?: '00' | '01') {
             promotionCutoff={isInauguralAllPlaySeason ? 12 : undefined}
             year={selectedYear}
             rosterBaseUrl={`${baseUrl}/rosters`}
+            throwbackTodayNames={throwbackTodayNames}
           />
         </div>
       )}
@@ -1153,6 +1172,12 @@ function divisionHeader(name: string, confId?: '00' | '01') {
   .nit-table .team-name {
     font-weight: 700;
     color: var(--page-text, #111827);
+  }
+
+  .nit-table .team-today-name {
+    color: var(--content-text-muted, #6b7280);
+    font-size: 0.8rem;
+    font-weight: 600;
   }
 
   .nit-table .team-division {
