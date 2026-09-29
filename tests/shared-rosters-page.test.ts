@@ -171,9 +171,10 @@ describe('the routes are thin wrappers over the one page', () => {
     const src = read('src/pages/archies/rosters.astro');
     expect(src).toContain('divisions={config.divisions}');
     expect(src).not.toMatch(/conferences=/);
-    // No Trade Builder, Import Rankings, schedule or Front Office hub yet.
+    // No Trade Builder, schedule or Front Office hub yet; Import Rankings exists.
     expect(src).toContain('tradeBuilder={false}');
-    expect(src).toContain('rankingsPage={false}');
+    expect(fs.existsSync('src/pages/archies/import-rankings.astro')).toBe(true);
+    expect(src).toContain('rankingsPage={true}');
     expect(src).toContain('schedulePage={false}');
     expect(src).not.toContain('FrontOfficeNav');
   });
