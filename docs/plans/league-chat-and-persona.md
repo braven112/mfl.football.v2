@@ -315,10 +315,13 @@ What landed:
   homepage on itself.
 
 Waiting:
-- **MFL calendar sync.** Archie must add `braven112` as co-commissioner in
-  MFL; then `calendar.json` syncs through the existing roster-sync job with
-  no code change, and the draft / trade deadline / custom dates appear on the
-  homepage and calendar page. Until then only the derived dates show.
+- **MFL calendar sync.** `braven112` IS co-commissioner now (confirmed by
+  the owner 2026-09-29). `calendar.json` is fetched with the `MFL_USER_ID`
+  cookie by the archies row of `roster-sync.yml`, which only exists on this
+  branch — so the first sync after PR #1255 merges brings the draft / trade
+  deadline / custom dates onto the homepage, calendar page and the Free
+  Agents waiver-window line. Don't dispatch roster-sync on the branch to get
+  it sooner: the job rebases onto main, pushes, and fires gameday pushes.
 
 Follow-ups noticed (not in scope):
 - TheLeague's and the AFL's What's Next resolvers are two copies, and the AFL
