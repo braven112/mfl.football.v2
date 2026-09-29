@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-09-29T04:01:25.530Z"
+    "fetchedAt": "2026-09-29T10:01:25.688Z"
   },
   "players": [
     {
@@ -220,12 +220,12 @@
       "gamesPlayed": 2,
       "depthChartAhead": [
         {
-          "id": "16167",
-          "name": "Achane, De'Von"
-        },
-        {
           "id": "17059",
           "name": "Gordon, Ollie"
+        },
+        {
+          "id": "16167",
+          "name": "Achane, De'Von"
         }
       ]
     },
@@ -2068,7 +2068,7 @@
         "status": "Active",
         "active": true,
         "position": "WR",
-        "depthChartPosition": "RWR",
+        "depthChartPosition": "SWR",
         "depthChartOrder": 2,
         "fantasyPositions": [
           "WR"
@@ -2990,7 +2990,7 @@
         "active": true,
         "position": "QB",
         "depthChartPosition": "QB",
-        "depthChartOrder": 3,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "QB"
         ],
@@ -6918,7 +6918,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 5,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "WR"
         ],
@@ -6956,10 +6956,6 @@
         {
           "id": "13163",
           "name": "Godwin, Chris"
-        },
-        {
-          "id": "16628",
-          "name": "McMillan, Jalen"
         },
         {
           "id": "17520",
@@ -9891,7 +9887,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 2,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "RB"
         ],
@@ -9921,12 +9917,7 @@
         ]
       },
       "gamesPlayed": 3,
-      "depthChartAhead": [
-        {
-          "id": "16167",
-          "name": "Achane, De'Von"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "17256",
@@ -11673,7 +11664,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 3,
+        "depthChartOrder": 7,
         "fantasyPositions": [
           "WR"
         ],
@@ -11710,6 +11701,14 @@
         {
           "id": "13163",
           "name": "Godwin, Chris"
+        },
+        {
+          "id": "17520",
+          "name": "Hurst, Ted"
+        },
+        {
+          "id": "17079",
+          "name": "Johnson, Tez"
         }
       ]
     },
@@ -12613,7 +12612,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 4,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "WR"
         ],
@@ -12651,10 +12650,6 @@
         {
           "id": "13163",
           "name": "Godwin, Chris"
-        },
-        {
-          "id": "16628",
-          "name": "McMillan, Jalen"
         }
       ]
     },
@@ -19231,7 +19226,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 1,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "RB"
         ],
@@ -19261,7 +19256,12 @@
         ]
       },
       "gamesPlayed": 3,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "17059",
+          "name": "Gordon, Ollie"
+        }
+      ]
     },
     {
       "id": "16287",
