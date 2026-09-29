@@ -785,6 +785,11 @@ html[data-league="archies"] {
   --on-league-accent: var(--league-palette-on-accent);     /* text ON a --league-accent fill */
   --on-color-primary: var(--league-palette-on-ink);        /* text ON a --color-primary fill */
   --content-text-muted: var(--league-palette-text-muted);
+  /* Shared cards with a navy literal, repainted (each read with its original
+     literal as fallback): the What's Next in-season card, the roster age stats. */
+  --league-phase-regular-season: var(--league-palette-ink);
+  --league-stat-fill: var(--league-palette-ink);
+  --on-league-stat-fill: var(--league-palette-on-ink);
   /* ~650 shared rules read these two grey steps directly as secondary text
      (breadcrumbs, table heads, counts). Neutral, and dark enough for AA. */
   --color-gray-500: var(--league-palette-text-muted);
