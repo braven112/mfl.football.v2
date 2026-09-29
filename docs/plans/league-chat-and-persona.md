@@ -464,7 +464,27 @@ What landed:
     RostersPage.astro`, rendered by the AFL and Archie's (divisions as pools);
     the lite `PackageRostersPage` is retired. Archie's Trade option waits on
     its Trade Builder page (`tradeBuilder={false}` in the route until then).
-  - Standings: one separate session, same approach, stacked on this branch.
+  - Standings: DONE (`claude/archies-shared-standings`). TheLeague's page
+    became `src/components/shared/standings/StandingsPage.astro`; TheLeague
+    and archies render it through thin routes, with per-league differences
+    as data in `standings-page-profile.ts`. TheLeague is byte-identical
+    before/after. Archie's has three tabs (owner, 2026-09-29): **Division**
+    (all 9), **MAD** — MAD POWER 99, the league's playoff standings, seeded
+    exactly as its MFL widget does (`public/mfl/10105/standings.js`):
+    leaders 1-9, runners-up 10-18, 12 wild cards 19-30, the field after
+    (`utils/mad-standings.ts`, sizes in the registry's `standingsSeeding`)
+    — and **All-Play**, for fun. The bylaws PDF still says win % ranks the
+    standings; the commissioner moved MFL to Victory Points after it was
+    written, and MFL's order is what the page follows. All-play / PA /
+    streak / division record are derived from committed weekly scores +
+    schedule (`utils/standings-derived.ts`); Archie's reads the committed
+    snapshot, not live MFL (its live export lacks `pf`/`h2hpct` and runs
+    ahead of the derived columns). `PackageStandingsPage` retired;
+    `DivisionStandings` stays for the homepage. Still forked: the AFL's page.
+    Next for standings: the three-tab model (rules doc rule 1c). Leagues pick
+    three tabs, a custom one replacing a standard view in a slot the shared
+    page renders; built with the AFL move (Tiers = the AFL's custom tab),
+    later Archie's skins. Custom competitions stay league-owned.
   - Transactions — DONE. It was already the shared `TransactionsPage` (all
     three routes are thin wrappers); what it lacked was the league's own
     facts, now read per season from `league.json`

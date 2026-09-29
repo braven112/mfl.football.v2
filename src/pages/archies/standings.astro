@@ -1,14 +1,79 @@
 ---
 /**
- * Standings (archies) — thin route wrapper over the shared package-league page.
- * The glob lives here: a static import specifier cannot be a runtime variable.
+ * Standings (archies) — thin route over the SAME shared standings page
+ * TheLeague renders (the owner's rule: a package league gets the real page,
+ * never a lite look-alike).
+ *
+ * Kept in the route: the globs (a static import specifier cannot be a runtime
+ * variable) and the bad-year redirect (a component cannot redirect).
  */
-import PackageStandingsPage from '../../components/shared/package-league/PackageStandingsPage.astro';
+import StandingsPage from '../../components/shared/standings/StandingsPage.astro';
 import config from '../../../data/archies/archies.config.json';
+import { getAuthUser, franchiseIdForLeague } from '../../utils/auth';
+import { getLeagueBySlug } from '../../config/leagues';
+import { loadSeasonFeed } from '../../utils/mfl-feed-glob';
+import { franchiseSlug } from '../../utils/franchise-marks';
+import { resolveLeaguePath } from '../../utils/nav-utils';
+import { fillDerivedStandings } from '../../utils/standings-derived';
+import {
+  chooseStandingsSeason,
+  loadStandingsSeason,
+  parseStandingsView,
+} from '../../utils/standings-page';
 
 export const prerender = false;
 
+const league = getLeagueBySlug('archies')!;
 const standingsFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/standings.json');
+const fetchMetaFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/fetch.meta.json');
+// Archie's export has no all-play, PA, streak or division record; they are
+// derived from these (utils/standings-derived.ts).
+const weeklyResultsFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/weekly-results.json');
+const scheduleFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/schedule.json');
+
+const season = chooseStandingsSeason(standingsFeeds, Astro.url.searchParams.get('year'));
+if (!season.valid) {
+  return Astro.redirect(resolveLeaguePath(`/archies/standings?year=${season.defaultYear}`, Astro.locals.hideLeaguePrefix ?? false));
+}
+const { selectedYear } = season;
+
+const { franchises, lastFetched } = await loadStandingsSeason({
+  league,
+  year: selectedYear,
+  standingsFeeds,
+  fetchMetaFeeds,
+  // Every column from one sync, never live rows beside derived ones a week
+  // older — see loadStandingsSeason.
+  liveRefresh: false,
+});
+
+// The shared producers order divisions by NAME; the config lists them as {id, name}.
+const seasonConfig = { ...config, divisions: config.divisions.map((d) => d.name) };
+const divisionById = new Map(config.teams.map((t) => [t.franchiseId, t.division]));
+const rows = franchises
+  ? fillDerivedStandings(franchises, {
+      weeklyResults: (await loadSeasonFeed(weeklyResultsFeeds, selectedYear)) as never,
+      schedule: (await loadSeasonFeed(scheduleFeeds, selectedYear)) as never,
+      divisionOf: (id) => divisionById.get(id),
+    })
+  : [];
+
+// No franchise pages here: team links go to each club's brand page.
+const hide = Astro.locals.hideLeaguePrefix ?? false;
+const franchiseHrefs = Object.fromEntries(
+  config.teams.map((t) => [t.franchiseId, resolveLeaguePath(`/archies/brand/${franchiseSlug(t)}`, hide)])
+);
 ---
 
-<PackageStandingsPage leagueSlug="archies" standingsFeeds={standingsFeeds} config={config} />
+<StandingsPage
+  leagueSlug={league.slug}
+  title={`Standings ${selectedYear} | ${league.name}`}
+  franchises={rows}
+  config={seasonConfig}
+  selectedYear={selectedYear}
+  availableYears={season.availableYears}
+  view={parseStandingsView(Astro.url.searchParams.get('view'))}
+  preferredTeamId={franchiseIdForLeague(getAuthUser(Astro.request), league.id) ?? undefined}
+  lastFetched={lastFetched}
+  franchiseHrefs={franchiseHrefs}
+/>

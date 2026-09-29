@@ -143,6 +143,40 @@ export function attachTrend(rankings, previous) {
   });
 }
 
+const asArray = (x) => (Array.isArray(x) ? x : x == null ? [] : [x]);
+
+/**
+ * Every week's H2H pairings, keyed by week: Map<week, Array<{ id, isHome }[]>>.
+ *
+ * Two sources, because neither covers both jobs. schedule.json is the only
+ * forward-looking one — it has next week's matchup, which is what Matchup of
+ * the Week previews. weekly-results-raw.json only has weeks already played,
+ * but it exists for every league-year on disk, including the AFL seasons that
+ * predate schedule.json being fetched for that league. Schedule wins where
+ * both have a week; raw fills the rest.
+ */
+export function buildPairings(schedule, rawWeekly) {
+  const byWeek = new Map();
+  const pairingsOf = (matchup) =>
+    asArray(matchup)
+      .map(m => asArray(m?.franchise).map(f => ({ id: f.id, isHome: f.isHome })))
+      .filter(g => g.length === 2);
+
+  for (const entry of asArray(rawWeekly)) {
+    const wk = int(entry?.weeklyResults?.week);
+    if (!wk) continue;
+    const games = pairingsOf(entry.weeklyResults.matchup);
+    if (games.length) byWeek.set(wk, games);
+  }
+  for (const w of asArray(schedule?.schedule?.weeklySchedule)) {
+    const wk = int(w?.week);
+    if (!wk) continue;
+    const games = pairingsOf(w.matchup);
+    if (games.length) byWeek.set(wk, games);
+  }
+  return byWeek;
+}
+
 /**
  * Fill the standings fields the column reads but a league's MFL export may
  * not carry — `all_play_pct`, `all_play_wlt`, `strk`, `pa` — from the weekly

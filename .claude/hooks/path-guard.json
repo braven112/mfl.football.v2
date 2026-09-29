@@ -932,10 +932,12 @@
         "scripts/*bracket*",
         "scripts/*standings*",
         "src/components/theleague/standings/*",
+        "src/components/shared/standings/*",
         "src/components/theleague/PlayoffBadge.astro",
         "src/pages/*/standings.astro"
       ],
       "tests": [
+        "tests/shared-standings-page.test.ts",
         "tests/standings-all-play.test.ts",
         "tests/afl-bracket-kind.test.ts",
         "tests/draft-order-phase.test.ts",

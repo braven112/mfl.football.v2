@@ -42,11 +42,13 @@ const {
   teamCellFallback = 'name',
   tiering,
   badgeSeeding,
+  badgeShowsSeed = true,
   header,
   year = new Date().getFullYear(),
   preferredTeamId,
   rosterBaseUrl,
   franchiseBaseUrl,
+  franchiseHrefs,
   accent = 'league-blue',
   tierName = '',
   promotionCutoff,
@@ -85,6 +87,7 @@ function colClass(col: StandingsColumn): string {
     case 'seedPlain':
     case 'seedAccent':
     case 'seedPill':
+    case 'rankPlain':
       return 'col-seed';
     case 'rankCircle':
       return 'col-rank';
@@ -223,10 +226,11 @@ function tierBorderClass(rank: number): string {
 }
 
 function bannerHrefFor(id: string): string | null {
+  if (franchiseHrefs?.[id]) return franchiseHrefs[id];
   return franchiseBaseUrl ? `${franchiseBaseUrl}/${id}` : rosterBaseUrl ? `${rosterBaseUrl}?franchise=${id}` : null;
 }
 const bannerLabelFor = (name: string) =>
-  franchiseBaseUrl ? `View ${name} franchise page` : `View ${name} roster`;
+  franchiseBaseUrl || franchiseHrefs ? `View ${name} franchise page` : `View ${name} roster`;
 ---
 
 <div class={containerClass} style={inlineStyle}>
@@ -360,13 +364,14 @@ const bannerLabelFor = (name: string) =>
                     {col.key === 'playoffBadge' && (
                       <PlayoffBadge
                         status={resolvePlayoffBadgeStatus(team, badgeTiering)}
-                        seed={seedValueFor(team, badgeTiering)}
+                        seed={badgeShowsSeed ? seedValueFor(team, badgeTiering) : undefined}
                       />
                     )}
                     {col.key === 'seedPlain' && <span class="seed-number">#{team.seed}</span>}
                     {col.key === 'seedAccent' && <span class="seed-number">#{team.conferenceSeed}</span>}
                     {col.key === 'seedPill' && <span class="seed-badge">#{team.seed}</span>}
                     {col.key === 'rankCircle' && <span class="rank-number">{rank}</span>}
+                    {col.key === 'rankPlain' && <span class="seed-number">#{rank}</span>}
 
                     {col.key === 'team' && teamCell === 'banner' && (
                       <div class="team-info">
@@ -416,7 +421,7 @@ const bannerLabelFor = (name: string) =>
                       </>
                     )}
 
-                    {!['playoffBadge', 'seedPlain', 'seedAccent', 'seedPill', 'rankCircle', 'team', 'prize'].includes(
+                    {!['playoffBadge', 'seedPlain', 'seedAccent', 'seedPill', 'rankCircle', 'rankPlain', 'team', 'prize'].includes(
                       col.key
                     ) && cellText(col, team)}
                   </td>
@@ -865,6 +870,15 @@ const bannerLabelFor = (name: string) =>
   .v-league .tier-play-in {
     background-color: var(--table-row-bg, #fff);
   }
+  /* MAD POWER 99's second tier (archies): each division's runner-up. Tinted
+     off the league's own primary so it reads apart from the gold leaders and
+     the grey wild cards in both themes, from tokens alone. */
+  .v-league .tier-runners-up {
+    background-color: color-mix(in srgb, var(--color-primary, #3b82f6) 14%, var(--table-row-bg, #fff));
+  }
+  .v-league .tier-runners-up.tier-boundary {
+    border-bottom: 4px solid color-mix(in srgb, var(--color-primary, #3b82f6) 45%, transparent) !important;
+  }
   .v-league .tier-toilet-bowl {
     background-color: #f5e6d3;
     color: #1a1a1a;
@@ -980,6 +994,9 @@ const bannerLabelFor = (name: string) =>
   .v-league .team-banner-link:focus-visible {
     outline: 2px solid var(--color-primary, #2563eb);
     outline-offset: 2px;
+  }
+  .v-std .seed-number {
+    font-weight: 700;
   }
   .v-league .seed-number {
     font-weight: 700;
