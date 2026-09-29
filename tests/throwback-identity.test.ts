@@ -32,7 +32,31 @@ describe('throwback-identity', () => {
     // Only one franchise gets to be the Sabertooths on the scoreboard (the
     // Geeks, whose seeded default it is). The Dangsters keep their other
     // recovered eras.
-    expect(eligible.map((e) => e.name)).toEqual(['Degenerates', 'Da Dangsters']);
+    // Degenerates is gone too — it is granted exclusively to Cowboy Up.
+    expect(eligible.map((e) => e.name)).toEqual(['Da Dangsters']);
+  });
+
+  it('Cowboy Up wears the Degenerates by default — a granted era, exclusive to them', () => {
+    // Commissioner exception (Sept 2026): Da Dangsters' 2008 era is lent to
+    // 0014. Without the league's team list the grant cannot resolve, so every
+    // surface must pass it — the scoreboard, the lineup brand and the picker.
+    const identity = resolveThrowbackIdentity(findTeam('0014'), undefined, undefined, teams);
+    expect(identity.name).toBe('Degenerates');
+    expect(identity.icon).toBe('/assets/theleague/history/degenerates_icon_circle.png');
+
+    const eligible = getEligibleThrowbackEras(findTeam('0014'), undefined, teams);
+    expect(eligible.map((e) => e.name)).toEqual(['Devil Dogs', 'Degenerates']);
+    expect(eligible.find((e) => e.name === 'Degenerates')?.sourceFranchiseId).toBe('0002');
+
+    // An owner pick still wins over the granted default.
+    expect(resolveThrowbackIdentity(findTeam('0014'), 2007, undefined, teams).name).toBe('Devil Dogs');
+
+    // The lineup page resolves through getThrowbackFranchiseBrand.
+    expect(getThrowbackFranchiseBrand('0014', true).name).toBe('Degenerates');
+
+    // And the scoreboard overlay: exactly one Degenerates on the board.
+    const board = applyThrowbackOverrides(teams as unknown as ConfigTeam[], true);
+    expect(board.filter((t) => t.name === 'Degenerates').map((t) => t.franchiseId)).toEqual(['0014']);
   });
 
   it('keeps the Sabertooths entry eligible for Gridiron Geeks', () => {
