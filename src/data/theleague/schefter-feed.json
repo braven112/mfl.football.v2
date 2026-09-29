@@ -1,7 +1,47 @@
 {
-  "lastScanTimestamp": "2026-09-29T23:04:38.652Z",
+  "lastScanTimestamp": "2026-09-29T23:42:23.508Z",
   "lastProcessedMflTimestamp": "1790528400",
   "posts": [
+    {
+      "id": "sf_speculation_1790725353249_81c3603a",
+      "timestamp": "2026-09-29T23:42:23.508Z",
+      "type": "transaction",
+      "transactionSubType": "trade_speculation",
+      "tier": "rumor",
+      "headline": "Schefter speculating…",
+      "body": "🟡 The talk-radio crowd in Midwestside-country has been kicking around a wild one: what if Dead Cap shipped out both Caleb Williams and Mac Jones to pry Amon-Ra St. Brown away from the division? It's pure speculation — neither front office has acknowledged anything — but fan boards are floating the idea as a way to reset the QB room while landing an elite receiver in his prime. This isn't coming from the building; it's coming from outside it.",
+      "authorId": "claude",
+      "franchiseIds": [
+        "0011",
+        "0004"
+      ],
+      "league": "theleague",
+      "link": "/theleague/front-office/trade-builder?b=0011",
+      "linkLabel": "Open in Trade Builder →",
+      "speculation": {
+        "seller": "0011",
+        "buyer": "0004",
+        "marquee": {
+          "id": "15287",
+          "name": "St. Brown, Amon-Ra",
+          "position": "WR"
+        },
+        "returnPkg": [
+          {
+            "id": "16579",
+            "name": "Williams, Caleb",
+            "position": "QB"
+          },
+          {
+            "id": "15241",
+            "name": "Jones, Mac",
+            "position": "QB"
+          }
+        ],
+        "score": 107,
+        "capRelief": false
+      }
+    },
     {
       "id": "wire_50061004",
       "timestamp": "2026-09-29T20:34:54Z",
