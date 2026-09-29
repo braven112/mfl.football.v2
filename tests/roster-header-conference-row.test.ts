@@ -125,7 +125,7 @@ describe('one conference at a time, with no client script', () => {
       .toMatch(/type="radio"[\s\S]*?name=\{radioName\}/);
     // Rendered ONLY where there is more than one conference: TheLeague's
     // single table must keep its divisions visible.
-    expect(TEAM_ROW).toMatch(/\{showConferences && \(\s*<input/);
+    expect(TEAM_ROW).toMatch(/\{showConferences && groups\.map/);
     expect(TEAM_ROW).toMatch(/const showConferences = groups\.length > 1;/);
   });
 
@@ -137,19 +137,16 @@ describe('one conference at a time, with no client script', () => {
     );
     expect(STYLE, 'an unscoped rule would blank TheLeague’s switcher entirely')
       .not.toMatch(/^\s*\.rhdr-teams__divisions\s*\{[^}]*display:\s*none/m);
-    // Paired by `:has()` rather than a per-position selector list, which
-    // stopped at two and left a third conference unable to open at all.
     expect(STYLE, 'the checked conference re-shows its divisions').toMatch(
-      /\.rhdr-teams__conf:has\(> \.rhdr-teams__radio:checked\)\s*\.rhdr-teams__divisions\s*\{\s*display:\s*flex;/,
+      /:checked\s*~\s*\.rhdr-teams__conf:nth-of-type\(1\)\s*\.rhdr-teams__divisions/,
     );
-    expect(STYLE, 'a per-position list only ever covers the first N conferences').not.toMatch(/nth-of-type/);
   });
 
   it('gives a collapsed conference its rail width and nothing more', () => {
     // `flex: 1 0 auto` on both left a dead band between the two rails, because
     // the collapsed one kept its share of the row while showing nothing.
     expect(STYLE).toMatch(/\.rhdr-teams:has\(\.rhdr-teams__radio\)\s*\.rhdr-teams__conf\s*\{\s*flex:\s*none;/);
-    expect(STYLE).toMatch(/\.rhdr-teams__conf:has\(> \.rhdr-teams__radio:checked\)\s*\{\s*flex:\s*1 0 auto;/);
+    expect(STYLE).toMatch(/:checked\s*~\s*\.rhdr-teams__conf:nth-of-type\(2\)\s*\{\s*\n?\s*flex:\s*1 0 auto;/);
   });
 
   it('opens exactly one, and it is the viewer’s own', () => {
@@ -182,7 +179,7 @@ describe('one conference at a time, with no client script', () => {
 });
 
 describe('the plate says what the page IS, per league', () => {
-  const AFL_PAGE = read('src/components/afl-family/RostersPage.astro');
+  const AFL_PAGE = read('src/components/shared/rosters/RostersPage.astro');
   const TL_PAGE = read('src/pages/theleague/rosters.astro');
   const NAMEPLATE = read('src/components/shared/roster-header/RosterNameplate.astro');
 

@@ -1,64 +1,82 @@
 ---
 /**
- * Rosters (AFL) — thin route wrapper around the AFL-family rosters page
- * (components/afl-family/RostersPage), shared with the custom-site demo's
- * keeper slot.
- *
- * Kept HERE: the feed globs (a specifier cannot be a runtime variable), the
- * season redirect (`Astro.redirect()` only redirects from a page) and the
- * team-preference cookie (a component cannot set one).
+ * Rosters (AFL) — thin route wrapper over the shared rosters page
+ * (src/components/shared/rosters/RostersPage.astro), which Archie's renders
+ * too. What stays here, and why: the literal globs (a static import specifier
+ * cannot be a runtime variable), the empty-year redirect (`Astro.redirect()`
+ * only redirects from a PAGE) and the `?myteam` preference cookie WRITE
+ * (`Astro.cookies.set` from a component throws after the headers commit).
  */
-import RostersPage from '../../components/afl-family/RostersPage.astro';
-import aflConfig from '../../../data/afl-fantasy/afl.config.json';
-import { feedsByYear } from '../../utils/afl-family-standings';
-import { resolveRostersRoute } from '../../utils/afl-family-rosters';
-import { setAFLPreference, getAFLTeamData } from '../../utils/team-preferences';
+import RostersPage from '../../components/shared/rosters/RostersPage.astro';
+import FrontOfficeNav from '../../components/shared/front-office-nav/FrontOfficeNav.astro';
 import { getLeagueBySlug } from '../../config/leagues';
+import { getAFLPreference, getAFLTeamData, setAFLPreference } from '../../utils/team-preferences';
+import { getAllTeams } from '../../utils/afl-conference';
+import { resolveRosterYear, rosterYearIsRenderable, rosterYears } from '../../utils/rosters/roster-page-feeds';
+import aflLeagueConfig from '../../../data/afl-fantasy/afl.config.json';
 
 export const prerender = false;
 
-// AFL 2026 league hasn't been created on MFL yet — fall back to 2025 until
-// the new league exists and feeds populate.
+const league = getLeagueBySlug('afl-fantasy')!;
+
+// Used only when no year has roster data at all (a fresh checkout's feeds).
 const FALLBACK_YEAR = 2025;
 
 const myTeamParam = Astro.url.searchParams.get('myteam');
 if (myTeamParam) {
   const teamData = getAFLTeamData(myTeamParam);
-  if (teamData) setAFLPreference(Astro.cookies, myTeamParam, teamData.conference, teamData.tier);
+  if (teamData) {
+    setAFLPreference(Astro.cookies, myTeamParam, teamData.conference, teamData.tier);
+  }
 }
 
 const feeds = {
-  rosters: feedsByYear(import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/rosters.json', { eager: true })),
-  players: feedsByYear(import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/players.json', { eager: true })),
+  rosters: import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/rosters.json', { eager: true }),
+  players: import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/players.json', { eager: true }),
   // Season-to-date points for the whole pool, the SAME source the Free Agents
-  // column reads (src/utils/stats-season.mjs). Committed from 2025 on.
-  ytdScores: feedsByYear(
-    import.meta.glob('../../../data/afl-fantasy/mfl-feeds/20{2[5-9],[3-9][0-9]}/playerScores-ytd.json', { eager: true }),
+  // column reads (src/utils/stats-season.mjs). Committed from 2025 on, so the
+  // year glob matches what theleague/players.astro uses.
+  ytdScores: import.meta.glob(
+    '../../../data/afl-fantasy/mfl-feeds/20{2[5-9],[3-9][0-9]}/playerScores-ytd.json',
+    { eager: true }
   ),
-  tradeBait: feedsByYear(import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/tradeBait.json', { eager: true })),
-  tradeBaitByFranchise: feedsByYear(
-    import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/tradeBait-by-franchise.json', { eager: true }),
+  tradeBait: import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/tradeBait.json', { eager: true }),
+  tradeBaitByFranchise: import.meta.glob(
+    '../../../data/afl-fantasy/mfl-feeds/*/tradeBait-by-franchise.json',
+    { eager: true }
   ),
-  futurePicks: feedsByYear(import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/futureDraftPicks.json', { eager: true })),
-  // The roster header's gameday bar, keyed by the LEAGUE year like every
-  // other feed directory here.
-  schedule: feedsByYear(
-    import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/schedule.json', { eager: true, import: 'default' }),
-  ),
-  standings: feedsByYear(
-    import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/standings.json', { eager: true, import: 'default' }),
-  ),
+  futurePicks: import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/futureDraftPicks.json', { eager: true }),
+  schedule: import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/schedule.json', { eager: true, import: 'default' }),
+  standings: import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/standings.json', { eager: true, import: 'default' }),
 };
-const route = resolveRostersRoute(Astro.url, '/afl-fantasy', feeds.rosters, feeds.players, FALLBACK_YEAR);
-if ('redirect' in route) return Astro.redirect(route.redirect);
+
+// Year selector: only years whose rosters.json has real data (skips an
+// empty/errored placeholder for a league year MFL has not created yet).
+const availableYears = rosterYears(feeds.rosters);
+const selectedYear = resolveRosterYear(Astro.url.searchParams.get('year'), availableYears, FALLBACK_YEAR);
+
+if (!rosterYearIsRenderable(feeds.rosters, feeds.players, selectedYear)) {
+  return Astro.redirect(`/afl-fantasy/rosters?year=${availableYears[0] ?? FALLBACK_YEAR}`);
+}
+
+const pref = getAFLPreference(Astro.cookies);
 ---
 
 <RostersPage
-  league={getLeagueBySlug('afl-fantasy')!}
-  config={aflConfig}
-  selectedYear={route.selectedYear}
-  availableYears={route.availableYears}
+  leagueSlug={league.slug}
+  leagueLabel="AFL"
   feeds={feeds}
-  throwbackScope="afl"
-  logoSrc="/assets/logos/afl-logo.svg"
-/>
+  availableYears={availableYears}
+  selectedYear={selectedYear}
+  teams={getAllTeams()}
+  conferences={aflLeagueConfig.conferences}
+  preference={pref ? { franchiseId: pref.franchiseId, conferenceId: pref.conferenceId } : null}
+  rosterSize={16}
+  tradeBuilder={true}
+  rankingsPage={true}
+  schedulePage={true}
+  franchiseLink={(id: string) => ({ href: `/afl-fantasy/franchises/${id}`, label: 'Franchise history →' })}
+  signIn={{ logoSrc: '/assets/logos/afl-logo.svg', logoAlt: 'AFL logo' }}
+>
+  <FrontOfficeNav slot="breadcrumbs" leagueSlug="afl-fantasy" current="rosters" crumb="Rosters" bare />
+</RostersPage>

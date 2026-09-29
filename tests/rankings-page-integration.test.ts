@@ -28,7 +28,7 @@ const FREE_AGENT_PAGES = [
 
 const ROSTER_PAGES = [
   'src/pages/theleague/rosters.astro',
-  'src/pages/afl-fantasy/rosters.astro',
+  'src/components/shared/rosters/RostersPage.astro',
 ];
 
 const LINEUP_PAGES = ['src/pages/theleague/lineup.astro', 'src/pages/afl-fantasy/lineup.astro'];
@@ -188,7 +188,7 @@ describe('rankings reach every decision page', () => {
   describe('Rosters', () => {
     it.each(ROSTER_PAGES)('%s fills its Rank column via the shared module', (page) => {
       const src = read(page);
-      expect(src).toContain("from '../../utils/rankings-roster-column'");
+      expect(src).toMatch(/from '(\.\.\/)+utils\/rankings-roster-column'/);
       expect(src).toContain('initRosterRankColumn(');
     });
 
@@ -315,7 +315,8 @@ describe('rankings reach every decision page', () => {
     it.each(EDITOR_HOSTS)('%s mounts the editor', (page) => {
       const src = read(page);
       expect(src).toContain('components/shared/rankings/MyRankEditor.astro');
-      // A literal nav slug, or the shared Free Agents page's registry lookup.
+      // A literal nav slug, or the shared Free Agents / rosters page's
+      // registry lookup (those pages serve several leagues).
       expect(src).toMatch(/<MyRankEditor\s+league=(?:"(theleague|afl)"|\{league\.navSlug\})/);
     });
 

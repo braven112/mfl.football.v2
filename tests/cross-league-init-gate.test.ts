@@ -136,16 +136,26 @@ const PAIRS: Record<string, GuardedPage[]> = {
       markerBinding: `const PAGE_LEAGUE_SLUG = getLeagueBySlug('theleague')!.slug;`,
     },
     {
-      label: 'the AFL',
-      file: 'src/pages/afl-fantasy/rosters.astro',
+      // The AFL's page is now the SHARED rosters component, which Archie's
+      // (and every custom league) renders too — one bundled module serving
+      // several leagues, so its gate cannot spell one slug. It names the league
+      // from the page's OWN config element (`#afl-roster-config`, replaced by
+      // every swap and rendered by no other page), then asks for the root that
+      // carries that league. Arriving on TheLeague's forked page, the config
+      // is absent and the gate returns — which is the direction that was
+      // really broken (below).
+      label: 'the AFL (shared rosters page)',
+      file: 'src/components/shared/rosters/RostersPage.astro',
       slug: 'afl-fantasy',
-      gate: `const pageRoot = document.querySelector<HTMLElement>('.roster-page[data-league="afl-fantasy"]');`,
+      gate: 'document.querySelector<HTMLElement>(`.roster-page[data-league="${pageLeague}"]`)',
       // The direction that was really broken: this controller ran on
       // TheLeague's rosters page after an AFL -> TheLeague swap and bound a
       // second player-modal trigger onto it, reading the wrong league's data.
       forbidden: `const pageRoot = document.querySelector<HTMLElement>('.roster-page');`,
       marker: '<section class="roster-page" data-league={PAGE_LEAGUE_SLUG} data-initial-view={initialView}>',
-      markerBinding: `const PAGE_LEAGUE_SLUG = getLeagueBySlug('afl-fantasy')!.slug;`,
+      // Bound to the registry entry of the league the ROUTE passed in, and the
+      // client gate reads the same value back out of the page config.
+      markerBinding: `const PAGE_LEAGUE_SLUG = league.slug;`,
     },
   ],
 };

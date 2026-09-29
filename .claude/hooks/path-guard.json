@@ -811,9 +811,12 @@
         "src/utils/roster-header-skin.ts",
         "src/utils/throwback-request-state.ts",
         "src/utils/rosters/*.ts",
-        "src/components/afl-family/RostersPage.astro"
+        "src/components/afl-family/RostersPage.astro",
+        "src/components/shared/rosters/*.astro",
+        "src/components/afl-fantasy/AFLActionModal.astro"
       ],
       "tests": [
+        "tests/shared-rosters-page.test.ts",
         "tests/cross-league-init-gate.test.ts",
         "tests/page-fork-ratchet.test.ts",
         "tests/roster-header-data.test.ts",

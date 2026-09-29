@@ -22,10 +22,34 @@
  */
 // Owner-facing copy follows the league's persona (src/utils/persona.mjs).
 import { getPersonaLabels } from '../../utils/persona-server';
-const labels = await getPersonaLabels('afl-fantasy');
+import type { CanonicalLeagueSlug } from '../../config/leagues';
+
+interface Props {
+  /**
+   * The league whose page mounts the sheet. It is also the shared rosters
+   * page's sheet for custom leagues (src/components/shared/rosters/), so the
+   * persona copy and the Trade target follow the PAGE's league. The write
+   * endpoints need nothing here: they scope by the session's league.
+   */
+  leagueSlug?: CanonicalLeagueSlug;
+  /** False for a league with no Trade Builder page yet — the Trade option is hidden rather than 404ing. */
+  tradeBuilder?: boolean;
+}
+
+const { leagueSlug = 'afl-fantasy', tradeBuilder = true } = Astro.props;
+const labels = await getPersonaLabels(leagueSlug);
 ---
 
-<div class="afl-action-modal" id="afl-action-modal" role="dialog" aria-modal="true" aria-labelledby="aam-player-name" hidden>
+<div
+  class="afl-action-modal"
+  id="afl-action-modal"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="aam-player-name"
+  data-league={leagueSlug}
+  data-trade-builder={tradeBuilder ? 'true' : 'false'}
+  hidden
+>
   <div class="afl-action-modal__overlay" data-aam-close></div>
   <div class="afl-action-modal__content">
     <!-- Circular close button — same shape as TheLeague's ContractDeclarationModal (cdm-close) -->
@@ -181,13 +205,6 @@ import { NFL_TEAM_CITIES, normalizeTeamCode } from '../../utils/nfl';
   const OWNER_ACTIONS: ModalAction[] = ['ir-to', 'ir-from', 'cut', 'trade-bait-add', 'trade-bait-remove', 'trade'];
 
   interface ActionPayload {
-    /**
-     * Open straight on this action's confirm step: the roster page's player
-     * sheet hands its picks here (docs/plans/rosters-mobile-layout.md § 8), so
-     * this modal keeps the confirmation and the write. Honoured only for an
-     * action the viewer is shown — a hidden (non-owner) write is never reached.
-     */
-    action?: ModalAction;
     playerId: string;
     playerName: string;
     /** ROSTER | INJURED_RESERVE — drives which IR action is shown */
@@ -374,6 +391,8 @@ import { NFL_TEAM_CITIES, normalizeTeamCode } from '../../utils/nfl';
       if (payload.isOwner === false) {
         for (const id of OWNER_ACTIONS) actionButtons[id].hidden = true;
       }
+      // A league with no Trade Builder page yet: no option that would 404.
+      if (modal.dataset.tradeBuilder === 'false') actionButtons['trade'].hidden = true;
       selectErrorEl.hidden = true;
       selectErrorEl.textContent = '';
       paintWatch();
@@ -383,11 +402,6 @@ import { NFL_TEAM_CITIES, normalizeTeamCode } from '../../utils/nfl';
       modal.hidden = false;
       modal.classList.add('is-open');
       document.body.style.overflow = 'hidden';
-
-      const direct = payload.action;
-      if (direct && direct !== 'watch' && actionButtons[direct] && !actionButtons[direct].hidden) {
-        pickAction(direct);
-      }
     }
 
     function closeModal() {
@@ -547,10 +561,9 @@ import { NFL_TEAM_CITIES, normalizeTeamCode } from '../../utils/nfl';
       const action = pendingAction;
 
       if (action === 'trade') {
-        // The AFL-family league this page belongs to (the layout stamps its nav
-        // slug on <html>): the AFL, or the custom-site demo's keeper slot.
-        const leaguePrefix = document.documentElement.dataset.league === 'keeper' ? '/keeper' : '/afl-fantasy';
-        const target = `${leaguePrefix}/front-office/trade-builder?from=${encodeURIComponent(franchiseId ?? '')}&player=${encodeURIComponent(playerId)}`;
+        // The PAGE's league, read off the sheet the page rendered.
+        const leagueSlug = modal.dataset.league || 'afl-fantasy';
+        const target = `/${leagueSlug}/front-office/trade-builder?from=${encodeURIComponent(franchiseId ?? '')}&player=${encodeURIComponent(playerId)}`;
         window.location.href = target;
         return;
       }
@@ -720,7 +733,7 @@ import { NFL_TEAM_CITIES, normalizeTeamCode } from '../../utils/nfl';
     align-items: center;
     justify-content: center;
     z-index: 1;
-    transition: background-color var(--transition-fast), color var(--transition-fast);
+    transition: background-color 0.15s ease, color 0.15s ease;
   }
 
   .aam-close:hover {
@@ -819,7 +832,7 @@ import { NFL_TEAM_CITIES, normalizeTeamCode } from '../../utils/nfl';
   }
 
   .aam-hero__meta-text {
-    font-size: var(--font-size-sm);
+    font-size: 0.875rem;
     font-weight: 500;
     color: var(--color-gray-600, #4b5563);
   }
@@ -851,7 +864,7 @@ import { NFL_TEAM_CITIES, normalizeTeamCode } from '../../utils/nfl';
   .aam-section__title {
     margin: 0 0 0.625rem;
     padding-left: 0.625rem;
-    font-size: var(--font-size-xs);
+    font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 0.075em;
     text-transform: uppercase;
@@ -953,7 +966,7 @@ import { NFL_TEAM_CITIES, normalizeTeamCode } from '../../utils/nfl';
   }
 
   .aam-action__desc {
-    font-size: var(--font-size-xs);
+    font-size: 0.75rem;
     /* light value is #6b7280 — identical to what was hardcoded */
     color: var(--color-gray-500, #6b7280);
   }
@@ -1010,7 +1023,7 @@ import { NFL_TEAM_CITIES, normalizeTeamCode } from '../../utils/nfl';
   .aam-btn {
     padding: 0.5rem 1rem;
     border-radius: 0.375rem;
-    font-size: var(--font-size-sm);
+    font-size: 0.875rem;
     font-weight: 600;
     cursor: pointer;
     border: 1px solid transparent;
