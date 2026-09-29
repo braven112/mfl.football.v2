@@ -139,7 +139,7 @@ if you enumerated them.
   the old way and say whether the leftovers are deliberate.
 - **The two-league page pairs drifting apart.** TheLeague and AFL have
   near-identical sibling pages (`theleague/players.astro` /
-  `afl-fantasy/players.astro`, both lineup pages, both draft predictors). A fix
+  `shared/free-agents/FreeAgentsPage.astro` (AFL + custom leagues), both lineup pages, both draft predictors). A fix
   applied to one and not the other is a recurring bug class here, and it is
   **invisible in a diff that only touches one of them** — so this check cannot
   be done from the diff alone. Run `node scripts/sibling-drift.mjs` for the

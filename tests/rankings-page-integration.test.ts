@@ -23,7 +23,7 @@ const read = (p: string) => readFileSync(p, 'utf8');
 
 const FREE_AGENT_PAGES = [
   'src/pages/theleague/players.astro',
-  'src/pages/afl-fantasy/players.astro',
+  'src/components/shared/free-agents/FreeAgentsPage.astro',
 ];
 
 const ROSTER_PAGES = [
@@ -37,7 +37,7 @@ describe('rankings reach every decision page', () => {
   describe('Free Agents', () => {
     it.each(FREE_AGENT_PAGES)('%s injects ranking columns via the shared module', (page) => {
       const src = read(page);
-      expect(src).toContain("from '../../utils/rankings-table'");
+      expect(src).toMatch(/from '(?:\.\.\/)+utils\/rankings-table'/);
       expect(src).toContain('initRankingTable(');
     });
 
@@ -91,7 +91,7 @@ describe('rankings reach every decision page', () => {
       // `white-space: nowrap`, which is why "My Rank" and "FBG ®" wrapped onto
       // two lines while every static header stayed on one. The fix has to be
       // global CSS; a scoped rule silently does nothing here.
-      expect(read(page)).toContain("import '../../styles/ranking-columns.css'");
+      expect(read(page)).toMatch(/import '(?:\.\.\/)+styles\/ranking-columns\.css'/);
     });
 
     it('the injected-header stylesheet keeps ranking titles on one line', () => {
@@ -315,7 +315,8 @@ describe('rankings reach every decision page', () => {
     it.each(EDITOR_HOSTS)('%s mounts the editor', (page) => {
       const src = read(page);
       expect(src).toContain('components/shared/rankings/MyRankEditor.astro');
-      expect(src).toMatch(/<MyRankEditor\s+league="(theleague|afl)"/);
+      // A literal nav slug, or the shared Free Agents page's registry lookup.
+      expect(src).toMatch(/<MyRankEditor\s+league=(?:"(theleague|afl)"|\{league\.navSlug\})/);
     });
 
     it.each(FREE_AGENT_PAGES)('%s keeps the trigger out of the View group', (page) => {

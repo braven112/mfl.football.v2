@@ -15,17 +15,12 @@ import tlLeague from '../data/theleague/mfl-feeds/2026/league.json';
 import { buildPoolStructure, buildConferenceStructure } from '../src/utils/afl-conference-rosters.mjs';
 import { poolOfFranchise, freeAgencyIsLeagueWide } from '../src/utils/waiver-claim';
 import { lockedUnitKey } from '../src/utils/mfl-locked-players';
-import {
-  poolStructure,
-  startingPositions,
-  resolvePool,
-  heldByPool,
-  buildFreeAgents,
-  displayName,
-} from '../src/utils/package-free-agents';
+import { resolveConferenceSelection } from '../src/utils/afl-free-agents-live';
+import archiesFreeAgents from '../data/archies/derived/free-agents.json';
 import { LEAGUES } from '../src/config/leagues-data.mjs';
 
-const archies = poolStructure(archiesLeague)!;
+type Pools = { ids: string[]; names: Record<string, { name: string; abbrev: string }>; franchiseConferences: Record<string, string> };
+const archies = buildPoolStructure(archiesLeague) as unknown as Pools;
 const rosters = (archiesRosters as any).rosters.franchise;
 
 describe('buildPoolStructure', () => {
@@ -72,7 +67,12 @@ describe('pool-aware claim helpers', () => {
 });
 
 describe('division free agents', () => {
-  const held = heldByPool(rosters, archies);
+  // Pool membership straight off the committed roster feed.
+  const held = new Map<string, Set<string>>(archies.ids.map((id) => [id, new Set<string>()]));
+  for (const f of rosters) {
+    const pool = archies.franchiseConferences[f.id];
+    for (const p of [].concat(f.player ?? [])) held.get(pool)!.add((p as any).id);
+  }
 
   it('never holds a player twice inside one division (the census)', () => {
     for (const f of rosters) {
@@ -88,31 +88,39 @@ describe('division free agents', () => {
     expect(multi.length).toBeGreaterThan(100);
   });
 
-  it("lists only players free in THIS division, at the league's starting positions", () => {
-    const positions = startingPositions(archiesLeague);
-    expect(positions).toEqual(['QB', 'RB', 'WR', 'TE', 'Def']);
-    const pool = archies.ids[0];
-    const rows = buildFreeAgents({ players: (archiesPlayers as any).players.player, positions, pool, held });
-    const mine = held.get(pool)!;
-    expect(rows.length).toBeGreaterThan(0);
-    expect(rows.every((r) => !mine.has(r.id))).toBe(true);
-    expect(rows.every((r) => positions.includes(r.position))).toBe(true);
-    // A player rostered in other divisions can still be free here.
-    expect(rows.some((r) => r.heldIn > 0)).toBe(true);
+  // The shared Free Agents page (the AFL's, extracted) renders archies from
+  // this snapshot: scripts/compute-free-agents.mjs --league archies.
+  const snap = archiesFreeAgents as any;
+
+  it('snapshots the nine divisions as the pools, at the positions the league starts', () => {
+    expect(snap.conferences).toEqual(buildPoolStructure(archiesLeague));
+    expect(snap.positions).toEqual(['QB', 'RB', 'WR', 'TE', 'DEF']);
+  });
+
+  it('keys every holding to a real division and a franchise IN that division', () => {
+    let multiPool = 0;
+    for (const p of snap.players) {
+      const confs: string[] = p.confs ?? [];
+      if (confs.length > 1) multiPool++;
+      for (const c of confs) {
+        expect(archies.ids).toContain(c);
+        expect(archies.franchiseConferences[p.owners[c]]).toBe(c);
+      }
+    }
+    // A player rostered in other divisions can still be free in this one.
+    expect(multiPool).toBeGreaterThan(100);
   });
 
   it("opens on the viewer's own division, honours a real request, never invents one", () => {
+    const lid = (archiesLeague as any).league.id;
     const fid = Object.keys(archies.franchiseConferences)[40];
     const own = archies.franchiseConferences[fid];
-    expect(resolvePool(archies, null, fid)).toBe(own);
-    expect(resolvePool(archies, archies.ids[3], fid)).toBe(archies.ids[3]);
-    expect(resolvePool(archies, 'nope', fid)).toBe(own);
-    expect(resolvePool(archies, null, null)).toBe(archies.ids[0]);
-  });
-
-  it('turns MFL "Last, First" into a display name', () => {
-    expect(displayName('Allen, Josh')).toBe('Josh Allen');
-    expect(displayName('Bills, Buffalo')).toBe('Buffalo Bills');
-    expect(displayName('Plain')).toBe('Plain');
+    const me = { franchiseId: fid, leagueId: lid };
+    expect(resolveConferenceSelection(archies as any, me, lid, null)).toEqual({ userConfId: own, activeConfId: own });
+    expect(resolveConferenceSelection(archies as any, me, lid, archies.ids[3]).activeConfId).toBe(archies.ids[3]);
+    expect(resolveConferenceSelection(archies as any, me, lid, 'nope').activeConfId).toBe(own);
+    expect(resolveConferenceSelection(archies as any, null, lid, null).activeConfId).toBe(archies.ids[0]);
+    // A session from another league never picks the division.
+    expect(resolveConferenceSelection(archies as any, { franchiseId: fid, leagueId: 'other' }, lid, null).userConfId).toBeNull();
   });
 });

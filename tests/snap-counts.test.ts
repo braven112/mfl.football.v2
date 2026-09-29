@@ -32,7 +32,7 @@ import { nflWeekOneKickoff } from '../src/utils/pecking-order-season-window.mjs'
  */
 const PLAYER_PAGES = [
   path.join('src', 'pages', 'theleague', 'players.astro'),
-  path.join('src', 'pages', 'afl-fantasy', 'players.astro'),
+  path.join('src', 'components', 'shared', 'free-agents', 'FreeAgentsPage.astro'),
 ];
 const pageSources = new Map(PLAYER_PAGES.map((p) => [p, fs.readFileSync(p, 'utf8')]));
 

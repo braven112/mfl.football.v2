@@ -373,10 +373,8 @@ What landed:
     (190 of its 213 rostered players are on several rosters, never twice in
     one division). Registry: archies `duplicatePlayers: true`.
     Guard: `tests/player-pools.test.ts`.
-  - Page: `/archies/free-agents` (PackageFreeAgentsPage + package-free-agents.ts):
-    opens on the viewer's division, `?division=` / `?pos=` links, live rosters
-    (Redis franchise cache) with the synced feed as fallback, MFL locks shown,
-    "held in N/9 divisions" per player.
+  - Page: `/archies/free-agents` — first built as a lite page; replaced in
+    Phase 7 by the shared Free Agents page (below).
 - **Phase 6 — the free agents page is FUNCTIONAL** (built 2026-09-28): the
   row ⋮ opens the shared action sheet (WatchListBridge) → the shared claim
   form (WaiverClaimModal inside PlayerDetailsModal) → /api/waiver-claim, which
@@ -397,9 +395,22 @@ What landed:
   leagues must render the SAME shared components as TheLeague and the AFL,
   never a lite look-alike. The first Archie's Free Agents, Rosters, Standings
   and Transactions pages were lite versions and are being replaced:
-  - Free Agents: extract the AFL players page into one shared component
-    (conferences → N pools) used by the AFL AND every custom league; the AFL
-    is checked before/after for identical output. (This session.)
+  - **Free Agents — DONE (2026-09-29).** The AFL players page is now
+    `src/components/shared/free-agents/FreeAgentsPage.astro`; the AFL route
+    (`/afl-fantasy/players`) and `/archies/free-agents` are thin wrappers that
+    hand in the derived snapshot, the league/calendar globs and (AFL only) the
+    conference crests. Pools are MFL's `playerLimitUnit`, so Archie's switcher
+    is its nine divisions. `scripts/compute-free-agents.mjs --all` builds
+    every league's snapshot (`SHARED_FREE_AGENT_LEAGUES`), with the league's
+    own starting positions. Before/after HTML of the AFL page (signed out,
+    signed in, `?conf=NL`) differs only by the intended changes below. The
+    lite page and `package-free-agents.ts` are deleted.
+    - One behaviour change, both leagues: a row browsed in a pool that is not
+      the viewer's own is no longer offered as claimable, because the claim
+      files into the viewer's OWN pool (an AL owner browsing the NL could
+      previously start a claim that MFL refuses).
+    - Open: Archie's has no Import Rankings page yet, so the My Rank editor
+      and the Rankings view have nothing to read until it does.
   - Rosters, Standings, Transactions: one separate session each, same
     approach, stacked on this branch.
 - Two-way Slack (mentions → tips) through the Events API, if a client wants it.

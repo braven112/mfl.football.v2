@@ -69,6 +69,11 @@ interface GuardedPage {
    * inert, the opposite failure but just as dead.
    */
   markerBinding: string;
+  /**
+   * For a SHARED page whose slug comes from a prop: the thin route that
+   * renders it, and the prop binding that names this league there.
+   */
+  route?: { file: string; binding: string };
 }
 
 const PAIRS: Record<string, GuardedPage[]> = {
@@ -100,15 +105,22 @@ const PAIRS: Record<string, GuardedPage[]> = {
       marker: '<table class="players-table" id="players-table" data-league={theLeagueDef.slug}>',
       markerBinding: `const theLeagueDef = getLeagueBySlug('theleague');`,
     },
-    {
-      label: 'the AFL',
-      file: 'src/pages/afl-fantasy/players.astro',
-      slug: 'afl-fantasy',
-      gate: `const table = document.querySelector('#players-table[data-league="afl-fantasy"]');`,
+    // The AFL and every custom league render ONE shared page, so its gate is
+    // parametric: the marker and the gate both read the registry entry the
+    // ROUTE names, and `route` pins which slug that is.
+    ...['afl-fantasy', 'archies'].map((slug) => ({
+      label: slug,
+      file: 'src/components/shared/free-agents/FreeAgentsPage.astro',
+      slug,
+      gate: 'const table = document.querySelector(`#players-table[data-league="${leagueSlugForGate}"]`);',
       forbidden: `const table = document.getElementById('players-table');`,
-      marker: '<table class="players-table" id="players-table" data-league={aflLeague.slug}>',
-      markerBinding: `const aflLeague = getLeagueBySlug('afl-fantasy')!;`,
-    },
+      marker: '<table class="players-table" id="players-table" data-league={league.slug}>',
+      markerBinding: 'const league = getLeagueBySlug(leagueSlug)!;',
+      route: {
+        file: slug === 'archies' ? 'src/pages/archies/free-agents.astro' : 'src/pages/afl-fantasy/players.astro',
+        binding: `leagueSlug="${slug}"`,
+      },
+    })),
   ],
   Rosters: [
     {
@@ -188,6 +200,12 @@ describe.each(Object.entries(PAIRS))('%s — cross-league init gate', (_pair, pa
       // registry. This is the half the marker check alone cannot see.
       expect(markup, `${page.file}: the marker must be bound to its own registry entry`)
         .toContain(page.markerBinding);
+      if (page.route) {
+        expect(read(page.route.file), `${page.route.file}: must render the shared page for ${page.slug}`)
+          .toContain(page.route.binding);
+        expect(markup, `${page.file}: the gate's slug must come from the same registry entry`)
+          .toContain('const leagueSlugForGate = league.slug;');
+      }
     },
   );
 });
