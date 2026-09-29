@@ -137,6 +137,19 @@ numbers. For SVG ink use an alpha bounding box over rendered pixels: `getBBox()`
 excludes stroke, and the halo on every `-dark` badge *is* a stroke.
 <!-- /CURATED-HEAD -->
 
+## 2026-09-29 - A Global Stylesheet @imported In A Layout <style> Is Not Global (scoped-@import)
+
+Astro scopes rules that a component `<style>` block pulls in with `@import`,
+exactly like its own rules: every selector gains the layout's
+`[data-astro-cid-*]`, so it matches the header, nav and footer and nothing a
+page renders. Custom properties survive (they inherit from `:root`), which is
+why the token files always "worked" — and why the site-wide `:focus-visible`
+ring and dark `::selection` rules sitting in those same files silently never
+reached page content until Sep 2026. Tell: the rule works on the nav and not
+on a button two inches below it. Global STYLING is a frontmatter
+`import '../styles/x.css'` (see `polish.css`); the token files are guarded to
+hold custom properties only (`tests/design-polish.test.ts`).
+
 ## 2026-09-23 - A Contrast Floor Is Only Real Against The Ink You Actually Paint
 
 **Context:** The roster header's plate went from a gradient to one flat club
