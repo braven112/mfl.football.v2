@@ -7,6 +7,7 @@
  */
 
 import {
+  chooseTeamName,
   HISTORICAL_TEAM_BANNER_FALLBACK,
   HISTORICAL_TEAM_ICON_FALLBACK,
   type FranchiseHistoryEntry,
@@ -139,7 +140,15 @@ export function getGrantedThrowbackEras(
     if (g.franchiseId !== team.franchiseId) continue;
     const source = allTeams.find((t) => t.franchiseId === g.sourceFranchiseId);
     const era = source?.history?.find((e) => e.yearStart === g.yearStart);
-    if (era) out.push({ ...era, sourceFranchiseId: g.sourceFranchiseId, grantedBy: source!.name });
+    if (!era) continue;
+    const grantedBy = chooseTeamName({
+      fullName: source!.name,
+      nameMedium: source!.nameMedium,
+      nameShort: source!.nameShort,
+      abbrev: source!.abbrev,
+      aliases: source!.aliases,
+    });
+    out.push({ ...era, sourceFranchiseId: g.sourceFranchiseId, grantedBy });
   }
   return out;
 }
