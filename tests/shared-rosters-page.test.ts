@@ -24,11 +24,20 @@ const read = (p: string) => fs.readFileSync(path.join(process.cwd(), p), 'utf-8'
 const COMPONENT = 'src/components/shared/rosters/RostersPage.astro';
 const ROUTES = ['src/pages/afl-fantasy/rosters.astro', 'src/pages/archies/rosters.astro'];
 
-const stripComments = (src: string) =>
-  src
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/<!--[\s\S]*?-->/g, '')
-    .replace(/(^|[^:'"`])\/\/.*$/gm, '$1');
+// Looped to a fixed point: one pass can splice a new `<!--` out of the
+// remains of two (CodeQL js/incomplete-multi-character-sanitization).
+const stripComments = (src: string) => {
+  let prev: string;
+  let next = src;
+  do {
+    prev = next;
+    next = prev
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/<!--[\s\S]*?-->/g, '')
+      .replace(/(^|[^:'"`])\/\/.*$/gm, '$1');
+  } while (next !== prev);
+  return next;
+};
 
 describe('roster-page-feeds — the route globs, looked up by suffix', () => {
   const glob = {

@@ -17,12 +17,21 @@ const ROUTES = {
   archies: 'src/pages/archies/front-office/trade-builder.astro',
 };
 
-const stripComments = (src: string) =>
-  src
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/<!--[\s\S]*?-->/g, '')
-    .replace(/\{\/\*[\s\S]*?\*\/\}/g, '')
-    .replace(/(^|[^:'"`])\/\/.*$/gm, '$1');
+// Looped to a fixed point: one pass can splice a new `<!--` out of the
+// remains of two (CodeQL js/incomplete-multi-character-sanitization).
+const stripComments = (src: string) => {
+  let prev: string;
+  let next = src;
+  do {
+    prev = next;
+    next = prev
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/<!--[\s\S]*?-->/g, '')
+      .replace(/\{\/\*[\s\S]*?\*\/\}/g, '')
+      .replace(/(^|[^:'"`])\/\/.*$/gm, '$1');
+  } while (next !== prev);
+  return next;
+};
 
 describe('the shared trade builder names no league', () => {
   const code = stripComments(read(COMPONENT));

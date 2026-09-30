@@ -35,11 +35,20 @@ function walk(dir: string, out: string[] = []): string[] {
   return out;
 }
 
-const stripComments = (src: string) =>
-  src
-    .replace(/<!--[\s\S]*?-->/g, '')
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+// Looped to a fixed point: one pass can splice a new `<!--` out of the
+// remains of two (CodeQL js/incomplete-multi-character-sanitization).
+const stripComments = (src: string) => {
+  let prev: string;
+  let next = src;
+  do {
+    prev = next;
+    next = prev
+      .replace(/<!--[\s\S]*?-->/g, '')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+  } while (next !== prev);
+  return next;
+};
 
 describe('persona literal guard', () => {
   it('no page or component hardcodes the persona’s name in owner-facing copy', () => {
