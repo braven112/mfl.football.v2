@@ -104,7 +104,10 @@ export interface ThrowbackPickerView {
    * under another slot.
    */
   poolEras: FranchiseHistoryEntry[];
-  /** era pick key -> name of the franchise that already claimed it. */
+  /**
+   * era pick key -> the chip naming who holds it: "Claimed by X", or "X's
+   * default" for a team that has not picked yet and so still holds its own.
+   */
   claimedBy: Record<string, string>;
   /** True when the saved pick lost its era to an earlier claim. */
   outbid: boolean;
@@ -184,12 +187,14 @@ export async function buildThrowbackPickerView(
   const preference = picks[user.franchiseId] ?? null;
   const selectedKey = preference ? throwbackPickKey(preference) : null;
 
-  const { eras, claims, outbid } = resolveThrowbackAssignments(teams, picks, scope);
+  const { eras, claims, outbid, reservedDefaults } = resolveThrowbackAssignments(teams, picks, scope);
   const nameOf = (id: string) => teams.find((t) => t.franchiseId === id)?.name ?? `franchise ${id}`;
   const claimedBy: Record<string, string> = {};
   for (const era of pickable) {
-    const holder = claims.get(eraClaimId(team, era));
-    if (holder && holder !== user.franchiseId) claimedBy[eraPickKey(era)] = nameOf(holder);
+    const id = eraClaimId(team, era);
+    const holder = claims.get(id);
+    if (!holder || holder === user.franchiseId) continue;
+    claimedBy[eraPickKey(era)] = reservedDefaults.has(id) ? `${nameOf(holder)}'s default` : `Claimed by ${nameOf(holder)}`;
   }
   const worn = eras.get(user.franchiseId);
   const isOutbid = outbid.has(user.franchiseId);
@@ -255,7 +260,12 @@ export async function buildThrowbackSettingsView(
       }
       const eligible = getEligibleThrowbackEras(t, scope, teams);
       const wears = assignments.eras.get(t.franchiseId) ?? null;
-      const holdsClaim = !!wears && assignments.claims.get(eraClaimId(t, wears)) === t.franchiseId;
+      // A reserved default is held in `claims` too, but it is not a pick.
+      const wornId = wears ? eraClaimId(t, wears) : null;
+      const holdsClaim =
+        !!wornId &&
+        assignments.claims.get(wornId) === t.franchiseId &&
+        !assignments.reservedDefaults.has(wornId);
       const pickedEra = holdsClaim ? wears : undefined;
       const defaultEra = holdsClaim ? null : wears;
 
