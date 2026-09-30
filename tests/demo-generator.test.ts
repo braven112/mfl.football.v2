@@ -277,9 +277,25 @@ describe('the current week is the last one fully played', () => {
 });
 
 describe('the week being played right now', () => {
-  // 2026's feeds carry week 3 with only Thursday's game scored.
+  // Rebuilt from the feed rather than read off it: the committed 2026 feed is
+  // cron-synced, so whether it happens to hold a half-played week depends on
+  // when the test runs. Take the last finished week and keep only ONE NFL
+  // team's scores in it — the shape of a week where only Thursday is in.
   const facts = new Map([2025, 2026].map((y) => [y, loadSeasonFacts(FEEDS, y)]));
-  const currentWeek = lastCompletedWeek(facts.get(2026)!.scores);
+  const full = facts.get(2026)!;
+  const liveWeekNo = lastCompletedWeek(full.scores);
+  const currentWeek = liveWeekNo - 1;
+  const thursdayTeam = [...full.scores.get(liveWeekNo)!]
+    .filter(([, pts]) => pts !== 0)
+    .map(([pid]) => full.players.get(pid)?.team)
+    .find(Boolean);
+  const partial = new Map(
+    [...full.scores.get(liveWeekNo)!].filter(([pid]) => full.players.get(pid)?.team === thursdayTeam),
+  );
+  facts.set(2026, {
+    ...full,
+    scores: new Map([...[...full.scores].filter(([w]) => w < liveWeekNo), [liveWeekNo, partial]]),
+  });
   const [, season] = simulateLeague({
     years: [2025, 2026],
     facts,

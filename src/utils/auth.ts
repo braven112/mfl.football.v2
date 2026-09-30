@@ -89,7 +89,7 @@ export function isCommissionerOrAdmin(user: AuthUser): boolean {
   // A pilot-league session (MFL Live only) is never a commissioner HERE: the
   // role came from a league this site does not run, and a role check with no
   // league attached would otherwise open every admin surface to it.
-  if (!getLeagueById(user.leagueId)) return false;
+  if (MFL_LIVE_PILOT_LEAGUE_IDS.includes(user.leagueId)) return false;
 
   if (user.role === 'commissioner' || user.role === 'admin') return true;
 
