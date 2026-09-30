@@ -79,7 +79,7 @@ const rows: Row[] = [
     ? [{
         kind: 'heading' as const,
         title: 'Up for grabs',
-        note: "Looks from owners who have left the league. First come, first served — one team per era.",
+        note: "Looks from owners who have left the league. First come, first served — one team per era, and a team keeps its default until it picks another.",
         pool: false,
         toggle: true,
       }]
@@ -103,7 +103,8 @@ const rows: Row[] = [
       Pick which era shows up for {team.name} on live scoring, matchups, and
       your lineup during a designated Throwback Week — one of your own, or any
       look from an owner who has left the league. Those are first come, first
-      served: once somebody claims one, it's theirs. Your choice is saved
+      served: once somebody claims one, it's theirs. A team's default stays
+      its own until its owner picks a different era. Your choice is saved
       automatically and stays put until you change it.
     </>
   )}
@@ -148,8 +149,9 @@ const rows: Row[] = [
     )}
     {outbid && !locked && (
       <p class="tbw-notice">
-        Another team claimed your era first, so you're wearing your default
-        until you pick something else.
+        Your era belongs to another team — it claimed it first, or it's still
+        that team's default — so you're wearing your default until you pick
+        something else.
       </p>
     )}
     {/* ONE grid and ONE card template for both groups. The pool is hidden by
@@ -206,7 +208,7 @@ const rows: Row[] = [
                     <span class="tbw-card__default-chip">Your {weekLabel} default</span>
                   )}
                   {row.claimedBy && (
-                    <span class="tbw-card__claimed-chip">Claimed by {row.claimedBy}</span>
+                    <span class="tbw-card__claimed-chip">{row.claimedBy}</span>
                   )}
                 </div>
                 <div class="tbw-card__years">
@@ -450,12 +452,14 @@ const rows: Row[] = [
   }
 
   .tbw-card__claimed-chip {
-    /* Its own line under the name, never wrapped: inline beside a name in a
-       240px card, the pill broke across two lines. */
+    /* Its own line under the name (inline beside a name in a 240px card,
+       the pill broke across two lines). It carries a franchise's full name,
+       so it may still wrap inside the card rather than widen it. */
     display: block;
     width: fit-content;
+    max-width: 100%;
     margin-top: 0.3rem;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
     padding: 0.1rem 0.45rem;
     border-radius: 999px;
     border: 1px solid var(--card-border);
@@ -546,12 +550,14 @@ const rows: Row[] = [
   }
 
   .tbw-card__default-chip {
-    /* Its own line under the name, never wrapped: inline beside a name in a
-       240px card, the pill broke across two lines. */
+    /* Its own line under the name (inline beside a name in a 240px card,
+       the pill broke across two lines). It carries a franchise's full name,
+       so it may still wrap inside the card rather than widen it. */
     display: block;
     width: fit-content;
+    max-width: 100%;
     margin-top: 0.3rem;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
     padding: 0.1rem 0.45rem;
     border-radius: 999px;
     background: var(--color-accent);

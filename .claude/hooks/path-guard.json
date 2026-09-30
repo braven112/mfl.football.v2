@@ -1080,6 +1080,7 @@
       "paths": [
         "src/data/*/throwback-*",
         "src/utils/throwback*",
+        "src/pages/api/throwback-preference.ts",
         "src/components/shared/Throwback*.astro",
         "src/utils/era-*",
         "scripts/*era*"
@@ -1088,6 +1089,7 @@
         "tests/throwback-identity.test.ts",
         "tests/afl-throwback-identity.test.ts",
         "tests/throwback-claims.test.ts",
+        "tests/throwback-preference-api.test.ts",
         "tests/era-crest-stroke.test.ts",
         "tests/era-palette-provenance.test.ts",
         "tests/era-banner-style.test.ts"

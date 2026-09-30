@@ -532,7 +532,8 @@ Owner-directed rule: an owner may wear ANY era in their league, except an era
 worn by an owner who is still in the league — that one is theirs alone ("nobody
 else can take the Pigskins' old looks but me; an owner who has left can have
 his banner taken"). An open era goes to ONE franchise, first come first served;
-an unpicked team's default steps aside for a claim; picks lock from the
+a team's default is reserved to it until its owner picks a different era
+(see "A default is reserved" below — the hotfix shipped the opposite); picks lock from the
 throwback week's first kickoff until the week is over (`isThrowbackPickLocked`,
 kickoff from `nfl-week-starts.mjs`). Both leagues; the AFL pool spans all 24
 teams, not one conference.
@@ -559,9 +560,9 @@ What makes it work, and what to keep true:
   in one era.
 - **Claim order is `claimedAt`** on the stored pick. A pick saved before this
   existed has none and ranks first; re-saving the same era keeps your
-  timestamp. The API resolves the league WITHOUT the caller's pick and 409s
-  if any claim is left on the era, so a later owner cannot take it; a
-  simultaneous race is settled by timestamp at render.
+  timestamp. The API resolves the league WITH every saved pick, the caller's
+  included, and 409s when anyone else holds the era — see "Claiming is
+  atomic" below for why both halves of that sentence matter.
 - **The asset-conflict lists still apply to the pool.** A conflicted era is out
   for everybody (Degenerates stays Cowboy Up's grant; the Sabertooths 2007 stays
   the Geeks'). Every era the new "reserved to another current owner" filter
@@ -571,3 +572,50 @@ What makes it work, and what to keep true:
 
 Guard: `tests/throwback-claims.test.ts` (a real-config sweep that no current
 owner's era is offered to anyone else, plus the claim, default and lock rules).
+
+### A default is reserved until its owner picks something else (follow-up #1276)
+
+The hotfix let a claim bump an unpicked team off its default ("a default steps
+aside"), and called the fallback — a team with every own era claimed wears its
+CURRENT look — unreachable. It was one click away: 23 of the 40 teams' seeded
+defaults are a departed owner's era of their own slot, so every one of them was
+in the open pool, and TheLeague's 0010 and 0012 have exactly one eligible era.
+
+Owner-directed rule: a team's seeded default (`pickDefaultThrowbackEra` over
+its own eligible list, no claims applied — `defaultErasByFranchise`) is ITS
+while it has no saved pick, or its saved pick IS that default. Saving any other
+era releases it to the pool. Released stays released: the switch back is
+refused if somebody claimed it meanwhile, because the resolver sees the
+owner's CURRENT pick, which is what released it. The picker labels a reserved
+default "X's default", not "Claimed by X" (`reservedDefaults` on
+`ThrowbackAssignments`).
+
+The pickable LIST is deliberately unchanged — every team is still offered
+every open era, reserved or not, and the reservation is applied at resolve
+time. Filtering the list instead would make "what may I pick" depend on other
+owners' picks, and every caller of `getPickableThrowbackEras` would need the
+league's picks to answer it.
+
+### Claiming is atomic, under one league-wide lock (follow-up #1276)
+
+The hotfix read the league, checked the era, then wrote — two Redis calls, so
+two owners saving one open era at the same moment were both told "Saved." Two
+more holes sat in the same lines, found by Copilot after the merge:
+`getAllThrowbackPreferences` returns `{}` when `mget` fails, which the check
+read as "every era is free"; and resolving WITHOUT the caller's pick made an
+outbid record look like the holder, so the rightful winner of an old tie got a
+409 re-saving its own era.
+
+`withThrowbackClaimLock` (`throwback-store.ts`) wraps read-check-write in a
+`SET NX EX 5` lock on `throwback:lock:<scope>`, released by a compare-and-delete
+script so a request never frees another's lock. A per-era claim key was the
+brief's idea and was rejected: it is a second record to keep in step with the
+picks (a failed release leaves a stale claim), and existing picks have none.
+Saves are rare, so the league simply takes turns. The claim path reads through
+`loadAllThrowbackPreferences`, which returns null on failure (→ 503, nothing
+written); render paths keep the degrading `{}`.
+
+Guard: `tests/throwback-preference-api.test.ts` drives the real POST handler
+against an in-memory Redis whose every call yields, so two saves genuinely
+interleave. With the lock bypassed the race test fails.
+

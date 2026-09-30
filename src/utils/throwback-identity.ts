@@ -268,8 +268,9 @@ export function getImposedThrowbackEra(
 // just their own franchise's — except an era worn by an owner who is still in
 // the league, which stays theirs alone (`throwbackEraOwner`). An era from an
 // owner who has LEFT is open to everyone, and only one franchise may wear it:
-// the first to claim it. An owner with no pick wears their default, and a
-// default steps aside for a claim rather than doubling up on the scoreboard.
+// the first to claim it. An owner with no pick wears their default, which is
+// reserved to them until they pick something else — only then is it
+// claimable (`resolveThrowbackAssignments` step 2).
 // Picks lock at the throwback week's first kickoff (`isThrowbackPickLocked`).
 
 /**
@@ -371,6 +372,39 @@ export interface ThrowbackAssignments {
   claims: Map<string, string>;
   /** Franchises whose saved pick lost the era to an earlier claim. */
   outbid: Set<string>;
+  /**
+   * The subset of `claims` held as a franchise's reserved DEFAULT rather than
+   * by a saved pick — the picker words those "X's default", not "claimed".
+   */
+  reservedDefaults: Set<string>;
+}
+
+const defaultEraCache = new WeakMap<object, Map<ThrowbackScope, Map<string, FranchiseHistoryEntry>>>();
+
+/**
+ * franchiseId -> the era it wears when its owner has picked nothing: its
+ * seeded default, chosen from its OWN eligible list with no claims applied.
+ * Memoized per team list; it depends on nothing a request can change.
+ */
+function defaultErasByFranchise(
+  allTeams: TeamConfig[],
+  scope: ThrowbackScope,
+): Map<string, FranchiseHistoryEntry> {
+  const cached = defaultEraCache.get(allTeams)?.get(scope);
+  if (cached) return cached;
+  const out = new Map<string, FranchiseHistoryEntry>();
+  const seeds = throwbackRules(scope).defaults;
+  for (const team of allTeams) {
+    const era = pickDefaultThrowbackEra(getEligibleThrowbackEras(team, scope, allTeams), seeds[team.franchiseId]);
+    if (era) out.set(team.franchiseId, era);
+  }
+  let byScope = defaultEraCache.get(allTeams);
+  if (!byScope) {
+    byScope = new Map();
+    defaultEraCache.set(allTeams, byScope);
+  }
+  byScope.set(scope, out);
+  return out;
 }
 
 const assignmentCache = new WeakMap<object, WeakMap<object, Map<ThrowbackScope, ThrowbackAssignments>>>();
@@ -380,10 +414,17 @@ const assignmentCache = new WeakMap<object, WeakMap<object, Map<ThrowbackScope, 
  * to honor "one era, one franchise". Order:
  *
  * 1. The imposed Throwback Rebrand.
- * 2. Saved picks, validated against each team's pickable list. Two picks on
- *    one era: the earlier `claimedAt` wins (a pick older than claiming reads
- *    as 0), ties to the lower franchise id. The loser falls to step 3.
- * 3. Defaults, from each team's own eligible eras minus anything already
+ * 2. Reserved defaults (owner-directed, Sept 2026). A franchise's seeded
+ *    default is ITS until its owner saves a pick for a different era — only
+ *    then does it join the open pool. A team that has picked nothing is never
+ *    bumped off its own look by somebody else's click. Once released it stays
+ *    released: the API refuses the switch back if another team has claimed
+ *    it meanwhile, because the owner's current pick is what released it.
+ * 3. Saved picks, validated against each team's pickable list. A pick on
+ *    another franchise's reserved default loses outright. Two picks on one
+ *    era: the earlier `claimedAt` wins (a pick older than claiming reads as
+ *    0), ties to the lower franchise id. The loser falls to step 4.
+ * 4. Defaults, from each team's own eligible eras minus anything already
  *    worn, so a default never doubles up on a claimed era.
  *
  * Memoized on the picks object: every surface resolves each franchise through
@@ -401,9 +442,10 @@ export function resolveThrowbackAssignments(
   const claims = new Map<string, string>();
   const outbid = new Set<string>();
   const taken = new Set<string>();
+  const reservedDefaults = new Set<string>();
 
-  // 2. Candidate picks, grouped by the era they claim.
-  const contenders = new Map<string, { franchiseId: string; era: FranchiseHistoryEntry; at: number }[]>();
+  // Each non-imposed team's saved pick, validated against what it may pick.
+  const validPicks = new Map<string, FranchiseHistoryEntry>();
   for (const team of allTeams) {
     if (getImposedThrowbackEra(team.franchiseId, scope)) continue;
     const raw = picks[team.franchiseId];
@@ -412,10 +454,34 @@ export function resolveThrowbackAssignments(
     const era = getPickableThrowbackEras(team, scope, allTeams).find((e) =>
       samePick({ yearStart: e.yearStart, sourceFranchiseId: e.sourceFranchiseId }, pick),
     );
+    if (era) validPicks.set(team.franchiseId, era);
+  }
+
+  // 2. Reserved defaults: held until the owner picks something else.
+  const reservedBy = new Map<string, string>();
+  for (const [franchiseId, era] of defaultErasByFranchise(allTeams, scope)) {
+    if (getImposedThrowbackEra(franchiseId, scope)) continue;
+    const id = eraClaimId({ franchiseId }, era);
+    const own = validPicks.get(franchiseId);
+    if (own && eraClaimId({ franchiseId }, own) !== id) continue;
+    reservedBy.set(id, franchiseId);
+  }
+
+  // 3. Candidate picks, grouped by the era they claim.
+  const contenders = new Map<string, { franchiseId: string; era: FranchiseHistoryEntry; at: number }[]>();
+  for (const team of allTeams) {
+    const era = validPicks.get(team.franchiseId);
     if (!era) continue;
+    const pick = picks[team.franchiseId] as ThrowbackPick | number;
     const id = eraClaimId(team, era);
+    const reserver = reservedBy.get(id);
+    if (reserver && reserver !== team.franchiseId) {
+      outbid.add(team.franchiseId);
+      continue;
+    }
     if (!contenders.has(id)) contenders.set(id, []);
-    contenders.get(id)!.push({ franchiseId: team.franchiseId, era, at: pick.claimedAt ?? 0 });
+    const at = typeof pick === 'number' ? 0 : (pick.claimedAt ?? 0);
+    contenders.get(id)!.push({ franchiseId: team.franchiseId, era, at });
   }
   for (const [id, list] of contenders) {
     list.sort((a, b) => a.at - b.at || a.franchiseId.localeCompare(b.franchiseId));
@@ -424,6 +490,12 @@ export function resolveThrowbackAssignments(
     claims.set(id, winner.franchiseId);
     taken.add(id);
     for (const l of losers) outbid.add(l.franchiseId);
+  }
+  for (const [id, franchiseId] of reservedBy) {
+    if (claims.has(id)) continue; // its owner picked it outright
+    claims.set(id, franchiseId);
+    taken.add(id);
+    reservedDefaults.add(id);
   }
 
   for (const team of allTeams) {
@@ -434,16 +506,19 @@ export function resolveThrowbackAssignments(
       continue;
     }
     if (eras.has(team.franchiseId)) continue;
-    // 3. Default, stepping around every era already worn.
-    const eligible = getEligibleThrowbackEras(team, scope, allTeams).filter(
-      (e) => !taken.has(eraClaimId(team, e)),
-    );
+    // 4. Default, stepping around every era already worn. A team with no
+    //    pick finds its own default reserved to it, so this only steps when
+    //    its owner released the default by picking — and then lost that pick.
+    const eligible = getEligibleThrowbackEras(team, scope, allTeams).filter((e) => {
+      const id = eraClaimId(team, e);
+      return !taken.has(id) || claims.get(id) === team.franchiseId;
+    });
     const chosen = pickDefaultThrowbackEra(eligible, throwbackRules(scope).defaults[team.franchiseId]);
     if (chosen) taken.add(eraClaimId(team, chosen));
     eras.set(team.franchiseId, chosen);
   }
 
-  const result: ThrowbackAssignments = { eras, claims, outbid };
+  const result: ThrowbackAssignments = { eras, claims, outbid, reservedDefaults };
   let byTeams = assignmentCache.get(picks);
   if (!byTeams) {
     byTeams = new WeakMap();

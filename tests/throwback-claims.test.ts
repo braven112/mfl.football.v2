@@ -2,8 +2,9 @@
  * The league-wide era pool (Sept 2026): any owner may wear any era in the
  * league, EXCEPT an era worn by an owner who is still here — that one is
  * theirs alone. A departed owner's era is open to everyone, one franchise at
- * a time, first come first served; a default steps aside for a claim; picks
- * lock from the throwback week's first kickoff.
+ * a time, first come first served; a team's default is reserved to it until
+ * its owner picks something else; picks lock from the throwback week's first
+ * kickoff; and a claim is settled atomically under a league-wide lock.
  */
 import { describe, it, expect } from 'vitest';
 import tlConfig from '../src/data/theleague.config.json';
@@ -12,6 +13,7 @@ import {
   eraClaimId,
   eraPickKey,
   getEligibleThrowbackEras,
+  getImposedThrowbackEra,
   getPickableThrowbackEras,
   resolveThrowbackAssignments,
   resolveThrowbackIdentity,
@@ -19,7 +21,7 @@ import {
 } from '../src/utils/throwback-identity';
 import { throwbackEraOwner } from '../src/utils/throwback-era-owner';
 import { isThrowbackPickLocked, type ThrowbackScope } from '../src/utils/throwback-scope';
-import type { TeamConfig } from '../src/utils/team-names';
+import type { FranchiseHistoryEntry, TeamConfig } from '../src/utils/team-names';
 
 const LEAGUES: [ThrowbackScope, TeamConfig[]][] = [
   ['theleague', (tlConfig as any).teams],
@@ -132,21 +134,85 @@ describe('one era, one franchise', () => {
     expect(claims.get('0004:2020')).toBe('0002');
   });
 
-  it("an unpicked team's default steps around an era someone claimed", () => {
-    // Find a franchise whose default is an era from a departed owner, then
-    // have somebody else claim it.
-    const { eras: baseline } = resolveThrowbackAssignments(tlTeams, {}, 'theleague');
-    const victim = tlTeams.find((t) => {
-      const e = baseline.get(t.franchiseId);
-      return e && !e.sourceFranchiseId && throwbackEraOwner(t.franchiseId, e.yearStart, 'theleague', tlTeams) === null;
+  // A team whose default is a departed owner's era — the only kind anyone
+  // else can pick. Poker in the Rear 2012, franchise 0003's slot.
+  const victimOf = (scope: ThrowbackScope, teams: TeamConfig[]) => {
+    const { eras } = resolveThrowbackAssignments(teams, {}, scope);
+    const victim = teams.find((t) => {
+      const e = eras.get(t.franchiseId);
+      if (!e) return false;
+      const slot = e.sourceFranchiseId ?? t.franchiseId;
+      return throwbackEraOwner(slot, e.yearStart, scope, teams) === null &&
+        teams.some((o) => o !== t && getPickableThrowbackEras(o, scope, teams).some((p) => eraClaimId(o, p) === eraClaimId(t, e)));
     })!;
-    expect(victim).toBeDefined();
-    const era = baseline.get(victim.franchiseId)!;
-    const thief = tlTeams.find((t) => t.franchiseId !== victim.franchiseId)!;
+    return { victim, era: eras.get(victim.franchiseId)! };
+  };
+  const claimOf = (claimer: TeamConfig, victim: TeamConfig, era: FranchiseHistoryEntry, at: number): ThrowbackPick =>
+    claimer.franchiseId === (era.sourceFranchiseId ?? victim.franchiseId)
+      ? { yearStart: era.yearStart, claimedAt: at }
+      : { yearStart: era.yearStart, sourceFranchiseId: era.sourceFranchiseId ?? victim.franchiseId, claimedAt: at };
+
+  it.each(LEAGUES)("%s: a team that has picked nothing keeps its default, whoever else claims it", (scope, teams) => {
+    const { victim, era } = victimOf(scope, teams);
+    expect(victim, `${scope}: no team has a claimable default`).toBeDefined();
+    const picks: Record<string, ThrowbackPick> = {};
+    teams.forEach((t, i) => {
+      if (t !== victim) picks[t.franchiseId] = claimOf(t, victim, era, 1 + i);
+    });
+    const { eras, claims, outbid, reservedDefaults } = resolveThrowbackAssignments(teams, picks, scope);
+    const id = eraClaimId(victim, era);
+    expect(eras.get(victim.franchiseId)?.name).toBe(era.name);
+    expect(claims.get(id)).toBe(victim.franchiseId);
+    expect(reservedDefaults.has(id)).toBe(true);
+    for (const t of teams) {
+      if (t === victim || getImposedThrowbackEra(t.franchiseId, scope)) continue;
+      const worn = eras.get(t.franchiseId);
+      expect(worn && eraClaimId(t, worn), `${t.franchiseId} wears ${victim.franchiseId}'s default`).not.toBe(id);
+    }
+    expect(outbid.size).toBeGreaterThan(0);
+  });
+
+  it('a team whose owner picked its default outright still holds it', () => {
+    const { victim, era } = victimOf('theleague', tlTeams);
+    const thief = tlTeams.find((t) => t !== victim)!;
     const picks = {
-      [thief.franchiseId]: { yearStart: era.yearStart, sourceFranchiseId: victim.franchiseId, claimedAt: 1 },
+      [victim.franchiseId]: { yearStart: era.yearStart, claimedAt: 50 },
+      [thief.franchiseId]: claimOf(thief, victim, era, 1),
     };
-    const { eras } = resolveThrowbackAssignments(tlTeams, picks, 'theleague');
+    const { eras, outbid } = resolveThrowbackAssignments(tlTeams, picks, 'theleague');
+    expect(eras.get(victim.franchiseId)?.name).toBe(era.name);
+    expect(outbid.has(thief.franchiseId)).toBe(true);
+  });
+
+  it('picking another era releases the default to the pool', () => {
+    const { victim, era } = victimOf('theleague', tlTeams);
+    const other = getPickableThrowbackEras(victim, 'theleague', tlTeams).find(
+      (e) => eraClaimId(victim, e) !== eraClaimId(victim, era),
+    )!;
+    const thief = tlTeams.find((t) => t !== victim)!;
+    const picks = {
+      [victim.franchiseId]: { yearStart: other.yearStart, sourceFranchiseId: other.sourceFranchiseId, claimedAt: 5 },
+      [thief.franchiseId]: claimOf(thief, victim, era, 9),
+    };
+    const { eras, claims, reservedDefaults } = resolveThrowbackAssignments(tlTeams, picks, 'theleague');
+    const id = eraClaimId(victim, era);
+    expect(eras.get(thief.franchiseId)?.name).toBe(era.name);
+    expect(claims.get(id)).toBe(thief.franchiseId);
+    expect(reservedDefaults.has(id)).toBe(false);
+  });
+
+  it('a released default that someone claimed is not handed back when its owner is outbid elsewhere', () => {
+    const { victim, era } = victimOf('theleague', tlTeams);
+    const [thief, rival] = tlTeams.filter((t) => t !== victim);
+    // Heavy Chevy 2020 (slot 0004), which the rival claimed first.
+    const pool = { yearStart: 2020, sourceFranchiseId: '0004' };
+    const picks = {
+      [victim.franchiseId]: { ...pool, claimedAt: 20 },
+      [rival.franchiseId]: { ...pool, claimedAt: 10 },
+      [thief.franchiseId]: claimOf(thief, victim, era, 30),
+    };
+    const { eras, outbid } = resolveThrowbackAssignments(tlTeams, picks, 'theleague');
+    expect(outbid.has(victim.franchiseId)).toBe(true);
     expect(eras.get(thief.franchiseId)?.name).toBe(era.name);
     const after = eras.get(victim.franchiseId);
     expect(after && eraClaimId(victim, after)).not.toBe(eraClaimId(victim, era));
@@ -193,5 +259,17 @@ describe('the picker view', () => {
       const [slot, year] = key.split(':');
       expect(throwbackEraOwner(slot, Number(year), 'afl', aflTeams), key).toBeNull();
     }
+  });
+
+  it("labels another team's reserved default as its default, not a claim", async () => {
+    // No Redis in tests: nobody has picked, so every default is reserved.
+    const { buildThrowbackPickerView } = await import('../src/utils/throwback-settings-view');
+    const view = await buildThrowbackPickerView(
+      { franchiseId: '0001', leagueId: 'x' } as any,
+      tlTeams,
+      'theleague',
+    );
+    expect(view!.claimedBy['0003:2012']).toBe(`${team(tlTeams, '0003').name}'s default`);
+    expect(Object.values(view!.claimedBy).some((c) => c.startsWith('Claimed by'))).toBe(false);
   });
 });
