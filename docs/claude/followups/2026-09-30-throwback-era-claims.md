@@ -7,7 +7,7 @@ hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1275
 hotfix_sha: 0a354c2
 followup_issue: 1276
 followup_pr:
-followup_session:
+followup_session: session_01AqVrTug8rqx8Zq42SiNNmR
 ---
 
 # Follow-up: the league-wide Throwback Week era pool
