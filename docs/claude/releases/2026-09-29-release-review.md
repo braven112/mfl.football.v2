@@ -26,6 +26,18 @@ in `db76ec07a3` + `316eca175c`:
 - `demo-generator`'s live-week test depended on the cron-synced 2026 feed still
   holding a half-played week. It now builds that week itself.
 
+## Landed after the review
+
+- #1266: the AFL's What's Next and calendar now use the AFL's own league year
+  (it rolls June 1), not TheLeague's Feb 14 date. The change is utility code
+  only, pinned by `tests/afl-event-league-year.test.ts`, and CI was green on the
+  promoted tip.
+
+## Promotion
+
+`main` fast-forwarded `314e6c4e0b → d01861d556` on 2026-09-29, 22:3x PT, after
+Chromatic build 544 (95 visual changes) was accepted.
+
 ## Blocks promotion
 
 None.
