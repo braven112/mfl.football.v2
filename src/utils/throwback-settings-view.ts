@@ -260,7 +260,12 @@ export async function buildThrowbackSettingsView(
       }
       const eligible = getEligibleThrowbackEras(t, scope, teams);
       const wears = assignments.eras.get(t.franchiseId) ?? null;
-      const holdsClaim = !!wears && assignments.claims.get(eraClaimId(t, wears)) === t.franchiseId;
+      // A reserved default is held in `claims` too, but it is not a pick.
+      const wornId = wears ? eraClaimId(t, wears) : null;
+      const holdsClaim =
+        !!wornId &&
+        assignments.claims.get(wornId) === t.franchiseId &&
+        !assignments.reservedDefaults.has(wornId);
       const pickedEra = holdsClaim ? wears : undefined;
       const defaultEra = holdsClaim ? null : wears;
 

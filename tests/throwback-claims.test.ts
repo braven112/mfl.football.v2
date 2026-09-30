@@ -272,4 +272,19 @@ describe('the picker view', () => {
     expect(view!.claimedBy['0003:2012']).toBe(`${team(tlTeams, '0003').name}'s default`);
     expect(Object.values(view!.claimedBy).some((c) => c.startsWith('Claimed by'))).toBe(false);
   });
+
+  it("the commissioner panel does not count a reserved default as a pick", async () => {
+    const { buildThrowbackSettingsView } = await import('../src/utils/throwback-settings-view');
+    const view = await buildThrowbackSettingsView(
+      { franchiseId: '0001', leagueId: 'x', role: 'admin' } as any,
+      tlTeams,
+      'theleague',
+    );
+    expect(view!.commishRows.length).toBe(tlTeams.length);
+    // No Redis in tests, so nobody has picked.
+    expect(view!.commishRows.filter((r) => r.hasPick).map((r) => r.franchiseId)).toEqual([]);
+    const poker = view!.commishRows.find((r) => r.franchiseId === '0003')!;
+    expect(poker.eras.find((e) => e.isDefault)?.yearStart).toBe(2012);
+  });
 });
+
