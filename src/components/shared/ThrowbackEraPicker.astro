@@ -214,7 +214,8 @@ const rows: Row[] = [
                   {row.era.eraLabel && <span class="tbw-card__era-label">· {row.era.eraLabel}</span>}
                   {/* The pool's slot is named by its group heading instead. */}
                   {(() => {
-                    const provenance = row.pool ? null : throwbackEraProvenance(row.era);
+                    const era = row.era;
+                    const provenance = row.pool ? null : throwbackEraProvenance(era);
                     return provenance && (
                       <span class="tbw-card__slot" title={provenance.title}>
                         · {provenance.label}
