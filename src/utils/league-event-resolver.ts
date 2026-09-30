@@ -15,7 +15,7 @@ import type {
 } from '../types/league-events';
 import { THE_LEAGUE_EVENTS } from '../data/theleague/league-events';
 import { LEAGUE_YEAR_OVERRIDES } from '../data/theleague/league-year-config';
-import { getCurrentLeagueYear, getLaborDayForYear } from './league-year';
+import { getCurrentLeagueYear, getLaborDayForYear, getLeagueYearForSlug } from './league-year';
 import { nflWeekStart } from './nfl-week-starts.mjs';
 import {
   CHAMPIONSHIP_WEEK,
@@ -503,13 +503,23 @@ const AFL_LINK_VARS_DEFAULT = {
 };
 
 /**
+ * The AFL's league year, on the AFL's OWN clock: it rolls on June 1
+ * (`leagueYearRollover` in the registry), not on TheLeague's Feb 14.
+ * `getCurrentLeagueYear` is TheLeague's clock — using it here put the AFL a
+ * year ahead from Feb 14 to May 31. tests/afl-event-league-year.test.ts.
+ */
+function aflLeagueYear(now: Date): number {
+  return getLeagueYearForSlug(AFL_LEAGUE.slug, now);
+}
+
+/**
  * Get the AFL Fantasy "What's Next" timeline.
- * Spans current + next league year so the transition period (~Feb 14) still
+ * Spans current + next league year so the run-up to the June 1 rollover still
  * surfaces the upcoming year's events.
  */
 export function getAflWhatsNextTimeline(referenceDate?: Date): WhatsNextTimeline {
   const now = referenceDate || new Date();
-  const leagueYear = getCurrentLeagueYear(now);
+  const leagueYear = aflLeagueYear(now);
   const nextLeagueYear = leagueYear + 1;
 
   const makeVars = (year: number): LinkTemplateVars => ({
@@ -539,7 +549,7 @@ export function getAllResolvedAflEvents(options?: {
   referenceDate?: Date;
 }): ResolvedLeagueEvent[] {
   const now = options?.referenceDate || new Date();
-  const year = options?.leagueYear || getCurrentLeagueYear(now);
+  const year = options?.leagueYear || aflLeagueYear(now);
   const vars: LinkTemplateVars = {
     ...AFL_LINK_VARS_DEFAULT,
     year: year.toString(),
