@@ -38,7 +38,7 @@ import { byeWeeksByTeam } from '../../utils/nfl-bye-lookup';
 import leagueConfig from '../../data/theleague.config.json';
 import { getLeagueBySlug, leagueClock } from '../../config/leagues';
 import { getCachedRosters } from '../../utils/mfl-roster-cache';
-import { fetchLockedPlayers } from '../../utils/mfl-locked-players';
+import { dropLocksIn, fetchLockedPlayers } from '../../utils/mfl-locked-players';
 import { resolveAuctionWindow } from '../../utils/auction-window';
 import { NO_HEADSHOT_SILHOUETTE, getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark, getPlayerAvatarStyleMaps } from '../../utils/nfl-team-colors';
 import { isDraftComplete } from '../../utils/draft-utils';
@@ -765,9 +765,21 @@ for (const p of playerList) {
 }
 const nflTeamsList = [...nflTeamsSet].sort();
 
+// Auction season has its own Bid flow on MFL; claims are the rest of the year.
+// Which waiver window is live comes from MFL's own calendar (synced by
+// scripts/fetch-mfl-feeds.mjs — the export is owner-gated, so it cannot be read
+// from the browser). `currentWaiverType` is the league's SYSTEM, not the state.
+const calendarModules = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/calendar.json',
+  { eager: true }
+);
+const calendarEvents =
+  (Object.entries(calendarModules).find(([p]) => p.includes(`/${currentYear}/`))?.[1] as any)?.default ?? [];
+const waiverWindow = resolveWaiverWindow(calendarEvents, new Date(), leagueClock(theLeagueDef.slug).zone);
 // `locked` only on the few locked free agents, so the rest ship nothing extra.
 // Single-pool league: MFL's one LEAGUE unit is keyed ''.
-const lockedIds = lockedPlayers?.[''];
+// Drop locks only mean something in an FCFS window — see dropLocksIn.
+const lockedIds = dropLocksIn(lockedPlayers, waiverWindow.mode)?.[''];
 const playerDataJson = JSON.stringify(
   lockedIds && lockedIds.size > 0
     ? playerList.map((p) => (!p.rostered && lockedIds.has(p.id) ? { ...p, locked: true } : p))
@@ -829,17 +841,6 @@ const myRoster = claimFranchiseId
       .map(([id]) => ({ id, name: claimNameById.get(id) ?? `Player ${id}` }))
       .sort((a, b) => a.name.localeCompare(b.name))
   : [];
-// Auction season has its own Bid flow on MFL; claims are the rest of the year.
-// Which waiver window is live comes from MFL's own calendar (synced by
-// scripts/fetch-mfl-feeds.mjs — the export is owner-gated, so it cannot be read
-// from the browser). `currentWaiverType` is the league's SYSTEM, not the state.
-const calendarModules = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/calendar.json',
-  { eager: true }
-);
-const calendarEvents =
-  (Object.entries(calendarModules).find(([p]) => p.includes(`/${currentYear}/`))?.[1] as any)?.default ?? [];
-const waiverWindow = resolveWaiverWindow(calendarEvents, new Date(), leagueClock(theLeagueDef.slug).zone);
 // The deadline in the header line, on the viewer's own clock when they have
 // named one (PT alone until then). Read-only: a page render must never write a
 // preference cookie, and only /preferences and the Sunday Ticket chips do.
