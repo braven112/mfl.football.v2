@@ -619,3 +619,37 @@ Guard: `tests/throwback-preference-api.test.ts` drives the real POST handler
 against an in-memory Redis whose every call yields, so two saves genuinely
 interleave. With the lock bypassed the race test fails.
 
+---
+
+## Standings is a throwback consumer, and it has one clock (September 2026)
+
+Throwback Week reached the standings pages through the fast lane (#1273): the
+current season's rows wear each club's era art, with today's name on a second
+line (`.team-today-name`). `applyThrowbackToStandingsConfig`
+(`src/utils/throwback-standings.ts`) wraps `applyThrowbackOverrides`, so
+standings resolves eras through the same chokepoint as every other surface.
+Guard: `tests/throwback-standings.test.ts`.
+
+Three things worth knowing before the next surface copies it:
+
+- **Archived seasons keep their own year's identity.** The helper only throws
+  back when `isCurrentSeason` is true. A 2019 table already shows 2019's names
+  and art through `resolveConfigForYear`. Swapping in an era there would show a
+  mark that season never wore, next to a "today" name that was not that
+  season's name either.
+- **The throwback gate and the default year must read the SAME clock.** The
+  hotfix first gated on the real clock's season while `resolveThrowbackRequestState`
+  read `?testDate=`, so a date preview across Labor Day disagreed with itself
+  (Copilot caught it). The follow-up (#1274) finished the job:
+  `currentSeasonYear` itself now comes from `?testDate=` — in TheLeague's page,
+  and in `resolveStandingsRoute` (`src/utils/afl-family-standings.ts`) for the
+  AFL family, whose `StandingsPage` gates on the same test clock — and the
+  fallback redirects carry `testDate` along. So
+  `?testDate=2025-09-28` alone renders 2025's table in throwback, and
+  `/rollover-check` can drive both pages by date. The guard pins all three
+  (no bare `getCurrentSeasonYear()` on either page).
+- **A new second-line element needs `flex-wrap` in EVERY table variant.**
+  `flex-basis: 100%` only starts a new line when the container wraps. The AFL
+  conference view's `.v-conf .team-info` did not wrap, so today's name squeezed
+  in beside the banner there and nowhere else. Only a reviewer noticed. When a
+  table has variants, render each one before calling a layout change done.
