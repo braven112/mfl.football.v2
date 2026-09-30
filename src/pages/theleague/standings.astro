@@ -48,17 +48,24 @@ const availableYears = Object.keys(standingsFeeds)
   .filter((year): year is number => year !== null)
   .sort((a, b) => b - a);
 
-// Get year from query parameter (default to latest available or current season year)
-const currentSeasonYear = getCurrentSeasonYear();
+// Get year from query parameter (default to latest available or current season year).
+// The default follows ?testDate= — the same clock the throwback gate below reads —
+// so /rollover-check can drive this page by date alone.
+const testDate = getTestDateFromSearchParams(Astro.url.searchParams);
+const currentSeasonYear = getCurrentSeasonYear(testDate ?? undefined);
 const defaultYear = availableYears.includes(currentSeasonYear)
   ? currentSeasonYear
   : availableYears[0] || currentSeasonYear;
 const requestedYear = Astro.url.searchParams.get('year');
 const selectedYear = requestedYear ? parseInt(requestedYear, 10) : defaultYear;
+// A fallback redirect keeps the test clock, or the preview lands on the real year.
+const testDateQuery = testDate
+  ? `&testDate=${encodeURIComponent(Astro.url.searchParams.get('testDate')!)}`
+  : '';
 
 // Validate that the requested year is available; redirect to default if not
 if (!availableYears.includes(selectedYear)) {
-  return Astro.redirect(`/theleague/standings?year=${defaultYear}`);
+  return Astro.redirect(`/theleague/standings?year=${defaultYear}${testDateQuery}`);
 }
 
 // Get standings data for selected year: the committed snapshot, refreshed
@@ -77,7 +84,7 @@ const { feed: selectedFeed, live: isLiveStandings, fetchedAt: liveFetchedAt } =
 
 // Check if data is valid (has leagueStandings and no error)
 if (!selectedFeed || !selectedFeed.leagueStandings || selectedFeed.error) {
-  return Astro.redirect(`/theleague/standings?year=${defaultYear}`);
+  return Astro.redirect(`/theleague/standings?year=${defaultYear}${testDateQuery}`);
 }
 
 const fetchMeta = fetchMetaFeeds[`../../../data/theleague/mfl-feeds/${selectedYear}/fetch.meta.json`] as
@@ -108,11 +115,7 @@ const { config: yearResolvedConfig, todayNames: throwbackTodayNames } = applyThr
   seasonConfig,
   await resolveThrowbackRequestState('theleague', Astro.url),
   // Same clock the week gate uses, so a ?testDate= preview agrees with itself.
-  {
-    isCurrentSeason:
-      selectedYear ===
-      getCurrentSeasonYear(getTestDateFromSearchParams(Astro.url.searchParams) ?? undefined),
-  },
+  { isCurrentSeason: selectedYear === currentSeasonYear },
 );
 
 // Calculate standings for all views.
