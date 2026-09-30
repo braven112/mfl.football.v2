@@ -19,8 +19,11 @@
  *
  * Claiming: an owner may pick any era in the league except one reserved to
  * another current owner (`getPickableThrowbackEras`), and only if no other
- * franchise has already claimed it (409, naming who). Picks lock (423) from
- * the throwback week's first kickoff until the week is over.
+ * franchise holds it — by an earlier claim, or as its default while that
+ * team has picked nothing else (409, naming who). The check and the write run
+ * under a league-wide lock (`withThrowbackClaimLock`), so it is atomic; a
+ * lock or read that fails refuses with 503 rather than guessing. Picks lock
+ * (423) from the throwback week's first kickoff until the week is over.
  */
 
 import type { APIRoute } from 'astro';
@@ -34,9 +37,10 @@ import {
   throwbackPickKey,
 } from '../../utils/throwback-identity';
 import {
-  getAllThrowbackPreferences,
   getThrowbackPreference,
+  loadAllThrowbackPreferences,
   setThrowbackPreference,
+  withThrowbackClaimLock,
 } from '../../utils/throwback-store';
 import {
   isThrowbackPickLocked,
@@ -52,6 +56,13 @@ const TEAMS_BY_SCOPE: Record<ThrowbackScope, any[]> = {
   theleague: (theleagueConfig as any).teams ?? [],
   afl: (aflConfig as any).teams ?? [],
 };
+
+function storageUnavailable(): Response {
+  return new Response(JSON.stringify({ success: false, error: 'Storage not configured or write failed' }), {
+    status: 503,
+    headers: JSON_HEADERS,
+  });
+}
 
 interface ThrowbackSession {
   user: AuthUser & { franchiseId: string };
@@ -169,32 +180,48 @@ export const POST: APIRoute = async ({ request }) => {
     });
   }
 
-  // One era, one franchise. Resolve the league WITHOUT this owner's pick: any
-  // claim left on the era belongs to somebody else, and it got there first.
-  const allPicks = await getAllThrowbackPreferences(teams.map((t: any) => t.franchiseId), scope);
-  const { [user.franchiseId]: previous, ...others } = allPicks;
-  const holder = resolveThrowbackAssignments(teams, others, scope).claims.get(eraClaimId(team, era));
-  if (holder) {
-    const holderName = teams.find((t: any) => t.franchiseId === holder)?.name ?? 'another team';
+  // One era, one franchise — settled under the league's claim lock, so two
+  // owners saving one open era at the same moment cannot both be told
+  // "Saved." (the second one reads the first one's write and gets the 409).
+  const outcome = await withThrowbackClaimLock(scope, async (): Promise<Response | null> => {
+    // A failed read must not look like an empty league, where every era is free.
+    const allPicks = await loadAllThrowbackPreferences(teams.map((t: any) => t.franchiseId), scope);
+    if (!allPicks) return storageUnavailable();
+
+    // Resolve with EVERY saved pick, this owner's included: that is how the
+    // winner of an old tie re-saves its own era without being refused, and
+    // how an owner whose current pick released their default learns it was
+    // claimed while they were away.
+    const previous = allPicks[user.franchiseId];
+    const { claims, reservedDefaults } = resolveThrowbackAssignments(teams, allPicks, scope);
+    const claimId = eraClaimId(team, era);
+    const holder = claims.get(claimId);
+    if (holder && holder !== user.franchiseId) {
+      const holderName = teams.find((t: any) => t.franchiseId === holder)?.name ?? 'another team';
+      const error = reservedDefaults.has(claimId)
+        ? `${era.name} (${era.yearStart}) is ${holderName}'s default until its owner picks a different era.`
+        : `${era.name} (${era.yearStart}) is already claimed by ${holderName}.`;
+      return new Response(JSON.stringify({ error, claimedBy: holder }), { status: 409, headers: JSON_HEADERS });
+    }
+
+    // Re-saving the era you already hold keeps your place in line — including
+    // a pick from before claiming existed, which has no timestamp and ranks
+    // first.
+    const claimedAt =
+      previous && throwbackPickKey(previous) === throwbackPickKey(pick)
+        ? previous.claimedAt
+        : Date.now();
+    const saved = await setThrowbackPreference(user.franchiseId, { ...pick, claimedAt }, scope);
+    return saved ? null : storageUnavailable();
+  });
+
+  if (!outcome.acquired) {
     return new Response(
-      JSON.stringify({ error: `${era.name} (${era.yearStart}) is already claimed by ${holderName}.`, claimedBy: holder }),
-      { status: 409, headers: JSON_HEADERS },
+      JSON.stringify({ success: false, error: 'Another save is in progress — try again in a moment.' }),
+      { status: 503, headers: JSON_HEADERS },
     );
   }
-
-  // Re-saving the era you already hold keeps your place in line — including a
-  // pick from before claiming existed, which has no timestamp and ranks first.
-  const claimedAt =
-    previous && throwbackPickKey(previous) === throwbackPickKey(pick)
-      ? previous.claimedAt
-      : Date.now();
-  const saved = await setThrowbackPreference(user.franchiseId, { ...pick, claimedAt }, scope);
-  if (!saved) {
-    return new Response(JSON.stringify({ success: false, error: 'Storage not configured or write failed' }), {
-      status: 503,
-      headers: JSON_HEADERS,
-    });
-  }
+  if (outcome.value) return outcome.value;
 
   return new Response(JSON.stringify({ success: true }), {
     status: 200,
