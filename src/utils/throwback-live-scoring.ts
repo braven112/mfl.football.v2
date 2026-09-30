@@ -16,7 +16,7 @@ import type { AuthUser } from './auth';
 import { isCommissionerOrAdmin } from './auth';
 import {
   eraPickKey,
-  getEligibleThrowbackEras,
+  getPickableThrowbackEras,
   parseThrowbackPickKey,
   throwbackPickKey,
   type ThrowbackPick,
@@ -109,15 +109,17 @@ export async function applyThrowbackToBoard(
 
     const targetTeam = configTeams.find((t) => t.franchiseId === targetFranchiseId);
     const chosen = targetTeam
-      ? getEligibleThrowbackEras(
-          targetTeam as Parameters<typeof getEligibleThrowbackEras>[0],
+      ? getPickableThrowbackEras(
+          targetTeam as Parameters<typeof getPickableThrowbackEras>[0],
           scope,
-          configTeams as Parameters<typeof getEligibleThrowbackEras>[2]
+          configTeams as Parameters<typeof getPickableThrowbackEras>[2]
         ).find((e) => eraPickKey(e) === throwbackPickKey(previewPick))
       : undefined;
 
     if (chosen && targetTeam) {
-      ownerOverrides[targetFranchiseId] = previewPick;
+      // Ranked ahead of every real claim: a preview shows the era on YOUR
+      // team, even one somebody else holds, without saving anything.
+      ownerOverrides[targetFranchiseId] = { ...previewPick, claimedAt: -1 };
       preview = {
         yearStart: previewPick.yearStart,
         sourceFranchiseId: previewPick.sourceFranchiseId ?? undefined,

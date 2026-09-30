@@ -522,3 +522,52 @@ router replaces, and the endpoint takes its scope from the session.
 `tests/era-banner-style.test.ts` now resolves each banner rule in whichever of
 the two components defines it and fails if one is defined in both — the guard
 against the fork this split exists to avoid.
+
+
+---
+
+## The league-wide era pool: claim any departed owner's look (September 2026)
+
+Owner-directed rule: an owner may wear ANY era in their league, except an era
+worn by an owner who is still in the league — that one is theirs alone ("nobody
+else can take the Pigskins' old looks but me; an owner who has left can have
+his banner taken"). An open era goes to ONE franchise, first come first served;
+an unpicked team's default steps aside for a claim; picks lock from the
+throwback week's first kickoff until the week is over (`isThrowbackPickLocked`,
+kickoff from `nfl-week-starts.mjs`). Both leagues; the AFL pool spans all 24
+teams, not one conference.
+
+What makes it work, and what to keep true:
+
+- **Ownership is not re-derived.** `throwbackEraOwner`
+  (`src/utils/throwback-era-owner.ts`) asks the owners registry first, then
+  `buildAttributor` — the one boundary implementation. The registry matters:
+  AFL Computer Jocks 2014 (slot 0018) is Jomar Marinio's, who runs 0005 today;
+  the attributor alone calls it a former owner's and would have put it up for
+  grabs.
+- **Two lists, on purpose.** `getEligibleThrowbackEras` is still the team's
+  OWN eras and the only pool a DEFAULT is chosen from — nobody is defaulted
+  into another club's past. `getPickableThrowbackEras` adds the open pool and
+  any registry-reserved era under another slot; it is what the picker offers
+  and what the API validates against.
+- **One team's pick cannot resolve one team any more.** Whether a pick holds,
+  and what a default lands on, depends on the whole league's picks, so every
+  surface passes all of them: `resolveThrowbackIdentity(..., leaguePicks)` →
+  `resolveThrowbackAssignments`. Both lineup pages used to read picks for the
+  viewer and opponents only; they now read the league. A new surface that
+  passes a single pick gets the old per-team answer, which can show two teams
+  in one era.
+- **Claim order is `claimedAt`** on the stored pick. A pick saved before this
+  existed has none and ranks first; re-saving the same era keeps your
+  timestamp. The API resolves the league WITHOUT the caller's pick and 409s
+  if any claim is left on the era, so a later owner cannot take it; a
+  simultaneous race is settled by timestamp at render.
+- **The asset-conflict lists still apply to the pool.** A conflicted era is out
+  for everybody (Degenerates stays Cowboy Up's grant; the Sabertooths 2007 stays
+  the Geeks'). Every era the new "reserved to another current owner" filter
+  removes from a slot's own list was already conflicted by hand — the filter
+  changed no team's own list when it landed; it exists so the next move needs
+  no hand entry.
+
+Guard: `tests/throwback-claims.test.ts` (a real-config sweep that no current
+owner's era is offered to anyone else, plus the claim, default and lock rules).

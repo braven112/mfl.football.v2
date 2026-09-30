@@ -515,14 +515,12 @@ const userProjTotal = slots.reduce(
 const aflTeams: any[] = (aflConfig as any).teams ?? [];
 const aflTeamsById = new Map<string, any>(aflTeams.map((t: any) => [t.franchiseId, t]));
 
-// Throwback Week. Resolved server-side, once, for the franchises this page
-// actually renders — the viewer's team and its opponents.
+// Throwback Week. Resolved server-side, once. The picks are read for the
+// WHOLE league, not just the teams this page renders: eras are claimed
+// league-wide, so an opponent's era depends on what everyone else claimed.
 const aflThrowbackActive = isThrowbackWeekForScope(week, 'afl');
 const aflThrowbackOverrides = aflThrowbackActive
-  ? await getAllThrowbackPreferences(
-      [user.franchiseId, ...userMatchups.map((m) => m.opponentFranchiseId)],
-      'afl',
-    )
+  ? await getAllThrowbackPreferences(aflTeams.map((t: any) => t.franchiseId), 'afl')
   : {};
 // The manifest key is the league SLUG (`afl`), not the route directory.
 const crestStrokes = crestStrokeIndex('afl', (aflConfig as any).teams ?? []);
@@ -551,6 +549,7 @@ const matchupCards = buildMatchupCards({
         aflThrowbackOverrides[franchiseId],
         'afl',
         aflTeams,
+        aflThrowbackOverrides,
       );
       // Only when the franchise ACTUALLY threw back. `resolveThrowbackIdentity`
       // falls through to the current identity for one with no eligible era,
