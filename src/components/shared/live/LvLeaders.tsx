@@ -77,22 +77,29 @@ export default function LvLeaders({ leaders, meta }: LvLeadersProps): JSX.Elemen
               const name = who?.name || `Player ${row.playerId}`;
               const position = who?.position ?? '';
               const nflTeam = who?.nflTeam ?? '';
+              // `?? []`: leaders are rebuilt per request, but a board built by the
+              // server before the one-row-per-player change (a response cached or
+              // in flight across a deploy) carries rows with no `owners`. Render
+              // the performance ownerless rather than throw and blank the strip.
+              const owners = (row.owners ?? []).map((o) => o.franchiseName).join(', ');
+              const status = row.secondsRemaining <= 0 ? '' : 'playing';
               return (
-                // The PAIR is the key: the same player started by two owners
-                // is two legitimate rows, and in the AFL that is routine.
-                <li className="lv-leaders__row" key={`${row.franchiseId}:${row.playerId}`}>
+                // One row per player: in the AFL he is routinely started by
+                // several owners, and every one of them is named on line two.
+                <li className="lv-leaders__row" key={row.playerId}>
                   <span className="lv-leaders__pos">{i + 1}</span>
-                  <span className="lv-leaders__name">
-                    {name}
-                    {(position || nflTeam) && (
-                      <span className="lv-leaders__meta">
-                        {[position, nflTeam].filter(Boolean).join(' · ')}
-                      </span>
-                    )}
-                  </span>
-                  <span className="lv-leaders__sub">
-                    {row.franchiseName}
-                    {row.secondsRemaining <= 0 ? '' : ' · playing'}
+                  <span className="lv-leaders__who">
+                    <span className="lv-leaders__name">
+                      {name}
+                      {(position || nflTeam) && (
+                        <span className="lv-leaders__meta">
+                          {[position, nflTeam].filter(Boolean).join(' · ')}
+                        </span>
+                      )}
+                    </span>
+                    <span className="lv-leaders__owners">
+                      {[owners, status].filter(Boolean).join(' · ')}
+                    </span>
                   </span>
                   <span className="lv-leaders__pts">{fmt(row.points)}</span>
                 </li>

@@ -67,6 +67,9 @@ export function applyThrowbackOverrides(
       ownerOverrides[t.franchiseId],
       scope,
       configTeams as Parameters<typeof resolveThrowbackIdentity>[3],
+      // The whole league's picks, so a claimed era stays with ONE franchise
+      // and an unpicked team's default steps around it.
+      ownerOverrides,
     );
     // Don't fall back to the CURRENT team's nameMedium/nameShort/abbrev when
     // the legacy era entry doesn't define its own — that would silently

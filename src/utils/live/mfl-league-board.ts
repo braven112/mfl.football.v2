@@ -155,6 +155,7 @@ export async function assembleMflLeagueBoard(
           mflUserCookie: user.id,
           viewerFranchiseId,
           franchiseNames: read?.franchiseNames ?? {},
+          franchiseIcons: read?.franchiseIcons ?? {},
         });
 
   // The read failed outright. `ok: false` with an empty snapshot is what makes
@@ -186,6 +187,7 @@ export async function assembleMflLeagueBoard(
     snapshot: read.snapshot ?? emptyLiveSnapshot(),
     projections: read.projections,
     franchiseNames: read.franchiseNames,
+    franchiseIcons: read.franchiseIcons,
     viewerFranchiseId,
     // ALWAYS MFL Live's ground, registered league or not: this renders on MFL
     // Live's card, and a colour pair resolved against the wrong ground is a

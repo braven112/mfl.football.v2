@@ -10,7 +10,7 @@
 
 import { getSessionTokenFromCookie, validateSessionToken } from './session';
 import { isAdminFranchise } from '../config/nav-config';
-import { getLeagueById } from '../config/leagues';
+import { getLeagueById, MFL_LIVE_PILOT_LEAGUE_IDS } from '../config/leagues';
 import { isDemoDeploy } from './deploy-environment';
 
 export interface AuthUser {
@@ -45,8 +45,13 @@ export function getAuthUser(request: Request): AuthUser | null {
   // before that (90-day lifetime) could carry any MFL league — and the site
   // has endpoints that key on franchiseId alone, where a foreign league's
   // franchise 0001 is indistinguishable from ours. Rejecting here voids those
-  // tokens immediately instead of letting them age out.
-  if (!sessionData.leagueId || !getLeagueById(sessionData.leagueId)) return null;
+  // tokens immediately instead of letting them age out. The invited MFL Live
+  // pilot leagues are the one exception: their owners sign in through the
+  // mfl-live scope only, and the list lives in the registry, never a request.
+  if (!sessionData.leagueId) return null;
+  if (!getLeagueById(sessionData.leagueId) && !MFL_LIVE_PILOT_LEAGUE_IDS.includes(sessionData.leagueId)) {
+    return null;
+  }
 
   return {
     id: sessionData.userId,
@@ -80,6 +85,11 @@ export function isCommissionerOrAdmin(user: AuthUser): boolean {
   // Nobody is a commissioner on the custom-site demo: its visitors are
   // prospects, and every admin surface assumes a real league behind it.
   if (isDemoDeploy()) return false;
+
+  // A pilot-league session (MFL Live only) is never a commissioner HERE: the
+  // role came from a league this site does not run, and a role check with no
+  // league attached would otherwise open every admin surface to it.
+  if (!getLeagueById(user.leagueId)) return false;
 
   if (user.role === 'commissioner' || user.role === 'admin') return true;
 

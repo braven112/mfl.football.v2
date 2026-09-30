@@ -23,7 +23,6 @@ import { byeWeeksForSeason } from '../../utils/nfl-bye-weeks';
 import { getRelease } from '../../utils/schedule-release-store';
 import { getLeagueTeamBrands } from '../../utils/league-team-brands';
 import { getThrowbackFranchiseBrand } from '../../utils/franchise-brand';
-import { DEFAULT_THROWBACK_ERA } from '../../data/theleague/throwback-config';
 import { THROWBACK_REASON } from '../../utils/schedule-release.mjs';
 import { SCHEDULE_POLICY } from '../../utils/schedule-plan.mjs';
 import { releaseIsReady, scheduleReleaseDate } from '../../utils/schedule-release.mjs';
@@ -97,7 +96,7 @@ const throwbackBrands = (slug: string, _leagueId: string, release: any) => {
   const pick = (release?.marquee ?? []).find((m: any) => m.why?.includes(THROWBACK_REASON));
   if (!pick) return null;
   const brandOf = (id: string) => {
-    const b = getThrowbackFranchiseBrand(id, true, DEFAULT_THROWBACK_ERA[id]);
+    const b = getThrowbackFranchiseBrand(id, true);
     // No dark variant: `getThrowbackFranchiseBrand` deliberately clears the
     // *Dark colors when it swaps in an era palette, because those belong to the
     // CURRENT brand and eras have none. The one colour is used in both themes.

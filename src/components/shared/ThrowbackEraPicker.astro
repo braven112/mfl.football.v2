@@ -17,7 +17,7 @@
  */
 import type { ThrowbackPickerView } from '../../utils/throwback-settings-view';
 import { eraBannerStyle } from '../../utils/era-banner-style';
-import { eraPickKey } from '../../utils/throwback-identity';
+import { eraPickKey, throwbackEraProvenance } from '../../utils/throwback-identity';
 
 interface Props {
   view: ThrowbackPickerView;
@@ -26,11 +26,69 @@ interface Props {
 }
 
 const { view, scoreboardPath } = Astro.props as Props;
-const { team, imposedEra, eligibleEras, selectedKey, ownDefaultKey, previewWeek } = view;
+const {
+  team,
+  imposedEra,
+  eligibleEras,
+  poolEras,
+  claimedBy,
+  outbid,
+  locked,
+  selectedKey,
+  ownDefaultKey,
+  previewWeek,
+  slotNames,
+} = view;
 
 const scoreboard = `${scoreboardPath}?week=${previewWeek}&demo=1`;
 /** "Week 8" etc. — the copy must never hardcode TheLeague's Week 4. */
 const weekLabel = `Week ${previewWeek}`;
+/** Open the pool when the owner's pick lives in it, so they can see it. */
+const poolHasSelection = poolEras.some((e) => eraPickKey(e) === selectedKey);
+/**
+ * Pool eras grouped by the slot they came from, labelled with the franchise
+ * that holds that slot today — "Sabertooths (2007)" means little on its own,
+ * "from the Pacific Pigskins' slot" says where to picture it.
+ */
+const poolGroups = (() => {
+  const groups = new Map<string, typeof poolEras>();
+  for (const era of poolEras) {
+    const slot = era.sourceFranchiseId ?? '';
+    if (!groups.has(slot)) groups.set(slot, []);
+    groups.get(slot)!.push(era);
+  }
+  return [...groups.entries()].map(([slot, eras]) => ({ slot, eras }));
+})();
+const allEras = [...eligibleEras, ...poolEras];
+
+type Row =
+  | { kind: 'heading'; title: string; note?: string; pool: boolean; toggle?: boolean }
+  | { kind: 'era'; era: (typeof allEras)[number]; pool: boolean; claimedBy: string | undefined };
+const eraRow = (era: (typeof allEras)[number], pool: boolean): Row => ({
+  kind: 'era',
+  era,
+  pool,
+  claimedBy: claimedBy[eraPickKey(era)],
+});
+const rows: Row[] = [
+  ...(eligibleEras.length > 0 && poolEras.length > 0
+    ? [{ kind: 'heading' as const, title: 'Your eras', pool: false }]
+    : []),
+  ...eligibleEras.map((era) => eraRow(era, false)),
+  ...(poolEras.length > 0
+    ? [{
+        kind: 'heading' as const,
+        title: 'Up for grabs',
+        note: "Looks from owners who have left the league. First come, first served — one team per era.",
+        pool: false,
+        toggle: true,
+      }]
+    : []),
+  ...poolGroups.flatMap(({ slot, eras }) => [
+    { kind: 'heading' as const, title: `From the ${slotNames[slot] ?? `franchise ${slot}`} slot`, pool: true },
+    ...eras.map((era) => eraRow(era, true)),
+  ]),
+];
 ---
 
 <p class="tbw-lede">
@@ -42,8 +100,10 @@ const weekLabel = `Week ${previewWeek}`;
     </>
   ) : (
     <>
-      Pick which era of {team.name} shows up on live scoring, matchups, and
-      your lineup during a designated Throwback Week. Your choice is saved
+      Pick which era shows up for {team.name} on live scoring, matchups, and
+      your lineup during a designated Throwback Week — one of your own, or any
+      look from an owner who has left the league. Those are first come, first
+      served: once somebody claims one, it's theirs. Your choice is saved
       automatically and stays put until you change it.
     </>
   )}
@@ -74,59 +134,110 @@ const weekLabel = `Week ${previewWeek}`;
       </div>
     </div>
   </section>
-) : eligibleEras.length === 0 ? (
+) : allEras.length === 0 ? (
   <p class="tbw-empty">
     {team.name} doesn't have any eligible legacy eras yet — check back
     once more vintage art is recovered.
   </p>
 ) : (
-  <form id="tbw-form" class="tbw-grid" data-selected={selectedKey ?? ''}>
-    {eligibleEras.map((era) => (
-      <label class="tbw-card" data-era-key={eraPickKey(era)}>
-        <input
-          type="radio"
-          name="eraKey"
-          value={eraPickKey(era)}
-          checked={eraPickKey(era) === selectedKey}
-        />
-        <img
-          class="tbw-card__banner"
-          src={era.banner}
-          alt={`${era.name} banner`}
-          style={eraBannerStyle(era)}
-          loading="lazy"
-        />
-        <div class="tbw-card__body">
-          <img class="tbw-card__icon" src={era.icon} alt="" loading="lazy" />
-          <div>
-            <div class="tbw-card__name">
-              {era.name}
-              {selectedKey === null && eraPickKey(era) === ownDefaultKey && (
-                <span class="tbw-card__default-chip">Your {weekLabel} default</span>
-              )}
-            </div>
-            <div class="tbw-card__years">
-              {era.yearStart}–{era.yearEnd}
-              {era.eraLabel && <span class="tbw-card__era-label">· {era.eraLabel}</span>}
-              {era.sourceFranchiseId && (
-                <span class="tbw-card__slot" title="Your team wore this under an earlier franchise slot">
-                  · as franchise {era.sourceFranchiseId}
-                </span>
-              )}
-            </div>
+  <form id="tbw-form" data-selected={selectedKey ?? ''}>
+    {locked && (
+      <p class="tbw-notice">
+        Throwback Week is underway, so eras are locked until the week is over.
+      </p>
+    )}
+    {outbid && !locked && (
+      <p class="tbw-notice">
+        Another team claimed your era first, so you're wearing your default
+        until you pick something else.
+      </p>
+    )}
+    {/* ONE grid and ONE card template for both groups. The pool is hidden by
+        a CSS-only toggle (a checkbox outside the `eraKey` radios, so the save
+        handler never sees it) rather than split into a second container,
+        which would have meant a second copy of the card markup. */}
+    {poolEras.length > 0 && (
+      <input
+        type="checkbox"
+        id="tbw-pool-toggle"
+        class="tbw-pool-toggle"
+        checked={poolHasSelection}
+      />
+    )}
+    <div class="tbw-grid">
+      {rows.map((row) =>
+        row.kind === 'heading' ? (
+          <div class={`tbw-group ${row.pool ? 'tbw-group--pool' : ''}`} data-pool={row.pool ? '' : undefined}>
+            <h3 class="tbw-group__title">{row.title}</h3>
+            {row.note && <p class="tbw-group__note">{row.note}</p>}
+            {row.toggle && (
+              <label for="tbw-pool-toggle" class="tbw-group__toggle">
+                <span class="tbw-group__toggle-show">Show {poolEras.length} eras</span>
+                <span class="tbw-group__toggle-hide">Hide them</span>
+              </label>
+            )}
           </div>
-          {/* Interactive content inside a label doesn't activate the radio,
-              so following this link neither selects nor saves the era. */}
-          <a
-            class="tbw-card__preview"
-            href={`${scoreboard}&previewEra=${eraPickKey(era)}`}
-            aria-label={`Preview ${era.name} (${era.yearStart}) on the scoreboard without saving`}
+        ) : (
+          <label
+            class={`tbw-card ${row.claimedBy ? 'tbw-card--claimed' : ''}`}
+            data-era-key={eraPickKey(row.era)}
+            data-pool={row.pool ? '' : undefined}
           >
-            Preview →
-          </a>
-        </div>
-      </label>
-    ))}
+            <input
+              type="radio"
+              name="eraKey"
+              value={eraPickKey(row.era)}
+              checked={eraPickKey(row.era) === selectedKey}
+              disabled={locked || !!row.claimedBy}
+            />
+            <img
+              class="tbw-card__banner"
+              src={row.era.banner}
+              alt={`${row.era.name} banner`}
+              style={eraBannerStyle(row.era)}
+              loading="lazy"
+            />
+            <div class="tbw-card__body">
+              <img class="tbw-card__icon" src={row.era.icon} alt="" loading="lazy" />
+              <div class="tbw-card__text">
+                <div class="tbw-card__name">
+                  {row.era.name}
+                  {eraPickKey(row.era) === ownDefaultKey && (
+                    <span class="tbw-card__default-chip">Your {weekLabel} default</span>
+                  )}
+                  {row.claimedBy && (
+                    <span class="tbw-card__claimed-chip">Claimed by {row.claimedBy}</span>
+                  )}
+                </div>
+                <div class="tbw-card__years">
+                  {row.era.yearStart}–{row.era.yearEnd}
+                  {row.era.eraLabel && <span class="tbw-card__era-label">· {row.era.eraLabel}</span>}
+                  {/* The pool's slot is named by its group heading instead. */}
+                  {(() => {
+                    const era = row.era;
+                    const provenance = row.pool ? null : throwbackEraProvenance(era);
+                    return provenance && (
+                      <span class="tbw-card__slot" title={provenance.title}>
+                        · {provenance.label}
+                      </span>
+                    );
+                  })()}
+                </div>
+              </div>
+              {/* Interactive content inside a label doesn't activate the radio,
+                  so following this link neither selects nor saves the era. */}
+              <a
+                class="tbw-card__preview"
+                href={`${scoreboard}&previewEra=${eraPickKey(row.era)}`}
+                aria-label={`Preview ${row.era.name} (${row.era.yearStart}) on the scoreboard without saving`}
+              >
+                Preview →
+              </a>
+            </div>
+          </label>
+        )
+      )}
+    </div>
   </form>
 )}
 
@@ -152,6 +263,13 @@ const weekLabel = `Week ${previewWeek}`;
       const target = event.target as HTMLInputElement;
       if (target.name !== 'eraKey') return;
 
+      const revert = () => {
+        const previous = form.dataset.selected ?? '';
+        form.querySelectorAll<HTMLInputElement>('input[name="eraKey"]').forEach((input) => {
+          input.checked = input.value === previous;
+        });
+      };
+
       // `{slot}:{year}` for an era inherited from a franchise slot this team
       // used to occupy, a bare year for its own — the API validates both.
       const [a, b] = target.value.split(':');
@@ -170,8 +288,17 @@ const weekLabel = `Week ${previewWeek}`;
           body: JSON.stringify(payload),
         });
         const data = await res.json();
-        if (status) status.textContent = data.success ? 'Saved.' : (data.error || 'Failed to save.');
+        if (data.success) {
+          form.dataset.selected = target.value;
+          if (status) status.textContent = 'Saved.';
+        } else {
+          // Claimed by someone else (409) or locked (423): the radio must not
+          // keep showing an era the owner does not hold.
+          revert();
+          if (status) status.textContent = data.error || 'Failed to save.';
+        }
       } catch {
+        revert();
         if (status) status.textContent = 'Failed to save — check your connection.';
       }
     });
@@ -258,6 +385,86 @@ const weekLabel = `Week ${previewWeek}`;
     margin-top: 1.5rem;
   }
 
+  .tbw-notice {
+    margin: 1rem 0 0;
+    padding: 0.6rem 0.8rem;
+    border-left: 3px solid var(--color-accent);
+    background: var(--card-surface);
+    font-size: var(--font-size-sm);
+  }
+
+  /* Group headings span the whole grid row. */
+  .tbw-group {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 0.75rem;
+    margin-top: 0.5rem;
+  }
+  .tbw-group__title {
+    margin: 0;
+    font-size: var(--font-size-lg);
+  }
+  .tbw-group--pool .tbw-group__title {
+    font-size: var(--font-size-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--content-text-muted);
+  }
+  .tbw-group__note {
+    margin: 0;
+    flex-basis: 100%;
+    font-size: var(--font-size-sm);
+    color: var(--content-text-muted);
+  }
+  .tbw-group__toggle {
+    font-weight: 600;
+    font-size: var(--font-size-sm);
+    color: var(--color-accent);
+    cursor: pointer;
+  }
+  .tbw-group__toggle:hover {
+    text-decoration: underline;
+  }
+
+  /* The pool collapses behind a checkbox, no script: hidden until toggled. */
+  .tbw-pool-toggle {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+  #tbw-form:not(:has(.tbw-pool-toggle:checked)) [data-pool],
+  #tbw-form:not(:has(.tbw-pool-toggle:checked)) .tbw-group__toggle-hide,
+  #tbw-form:has(.tbw-pool-toggle:checked) .tbw-group__toggle-show {
+    display: none;
+  }
+  #tbw-form:has(.tbw-pool-toggle:focus-visible) .tbw-group__toggle {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  .tbw-card--claimed {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+
+  .tbw-card__claimed-chip {
+    /* Its own line under the name, never wrapped: inline beside a name in a
+       240px card, the pill broke across two lines. */
+    display: block;
+    width: fit-content;
+    margin-top: 0.3rem;
+    white-space: nowrap;
+    padding: 0.1rem 0.45rem;
+    border-radius: 999px;
+    border: 1px solid var(--card-border);
+    color: var(--content-text-muted);
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    vertical-align: middle;
+  }
+
   .tbw-card {
     position: relative;
     display: block;
@@ -296,9 +503,19 @@ const weekLabel = `Week ${previewWeek}`;
 
   .tbw-card__body {
     display: flex;
+    /* Wraps so "Preview" drops to its own line rather than being pushed out
+       of the card when a chip makes the name column wide. */
+    flex-wrap: wrap;
     align-items: center;
     gap: 0.75rem;
     padding: 0.75rem;
+  }
+
+  /* Grows beside the crest and shrinks to its own min-content, which is the
+     un-wrappable chip when there is one — so only "Preview" ever wraps. */
+  .tbw-card__text {
+    flex: 1 1 0;
+    min-width: min-content;
   }
 
   .tbw-card__preview {
@@ -329,8 +546,12 @@ const weekLabel = `Week ${previewWeek}`;
   }
 
   .tbw-card__default-chip {
-    display: inline-block;
-    margin-left: 0.45rem;
+    /* Its own line under the name, never wrapped: inline beside a name in a
+       240px card, the pill broke across two lines. */
+    display: block;
+    width: fit-content;
+    margin-top: 0.3rem;
+    white-space: nowrap;
     padding: 0.1rem 0.45rem;
     border-radius: 999px;
     background: var(--color-accent);

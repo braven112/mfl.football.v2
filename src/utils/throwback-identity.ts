@@ -7,6 +7,7 @@
  */
 
 import {
+  chooseTeamName,
   HISTORICAL_TEAM_BANNER_FALLBACK,
   HISTORICAL_TEAM_ICON_FALLBACK,
   type FranchiseHistoryEntry,
@@ -18,6 +19,7 @@ import {
   throwbackRules,
   type ThrowbackScope,
 } from './throwback-scope';
+import { throwbackEraOwner } from './throwback-era-owner';
 
 function isConflicted(
   franchiseId: string,
@@ -44,6 +46,13 @@ function isSameAsCurrent(team: TeamConfig, entry: FranchiseHistoryEntry): boolea
 export interface ThrowbackPick {
   yearStart: number;
   sourceFranchiseId?: string | null;
+  /**
+   * When the pick was saved (epoch ms). Decides a tie when two franchises hold
+   * a pick on the same open era — earliest wins. Absent on every pick saved
+   * before eras could be claimed across the league, which reads as 0: those
+   * owners picked first.
+   */
+  claimedAt?: number | null;
 }
 
 /**
@@ -124,6 +133,59 @@ export function getInheritedThrowbackEras(
 }
 
 /**
+ * Eras the commissioner LENT this franchise from another franchise's
+ * `history[]` (`ThrowbackRules.grants`). Tagged with `sourceFranchiseId` so
+ * the pick key names the slot it came from, like an inherited era.
+ */
+export function getGrantedThrowbackEras(
+  team: TeamConfig,
+  scope: ThrowbackScope,
+  allTeams: TeamConfig[] | undefined
+): FranchiseHistoryEntry[] {
+  if (!allTeams?.length) return [];
+  const out: FranchiseHistoryEntry[] = [];
+  for (const g of throwbackRules(scope).grants) {
+    if (g.franchiseId !== team.franchiseId) continue;
+    const source = allTeams.find((t) => t.franchiseId === g.sourceFranchiseId);
+    const era = source?.history?.find((e) => e.yearStart === g.yearStart);
+    if (!era) continue;
+    const grantedBy = chooseTeamName({
+      fullName: source!.name,
+      nameMedium: source!.nameMedium,
+      nameShort: source!.nameShort,
+      abbrev: source!.abbrev,
+      aliases: source!.aliases,
+    });
+    out.push({ ...era, sourceFranchiseId: g.sourceFranchiseId, grantedBy });
+  }
+  return out;
+}
+
+/**
+ * The picker's note on where a borrowed era came from, or null for an era of
+ * the team's own slot. A granted era and an inherited one share a pick-key
+ * shape, but they are different claims: "your team wore this under an earlier
+ * slot" is true of an inherited era and false of a lent one.
+ */
+export function throwbackEraProvenance(
+  era: FranchiseHistoryEntry
+): { label: string; title: string } | null {
+  if (era.grantedBy) {
+    return {
+      label: `on loan from ${era.grantedBy}`,
+      title: `A commissioner exception: ${era.grantedBy} lent your team this era`,
+    };
+  }
+  if (era.sourceFranchiseId) {
+    return {
+      label: `as franchise ${era.sourceFranchiseId}`,
+      title: 'Your team wore this under an earlier franchise slot',
+    };
+  }
+  return null;
+}
+
+/**
  * Eras a franchise may throw back to: its own `history[]` IN THIS LEAGUE,
  * minus entries whose art asset is claimed by another franchise (the scope's
  * asset conflicts) and minus entries identical to the team's current identity.
@@ -143,7 +205,10 @@ export function getEligibleThrowbackEras(
   scope: ThrowbackScope = DEFAULT_THROWBACK_SCOPE,
   allTeams?: TeamConfig[]
 ): FranchiseHistoryEntry[] {
-  const inherited = getInheritedThrowbackEras(team, allTeams);
+  const inherited = [
+    ...getInheritedThrowbackEras(team, allTeams),
+    ...getGrantedThrowbackEras(team, scope, allTeams),
+  ];
   if (!team.history?.length && inherited.length === 0) return [];
   const { rebrand } = throwbackRules(scope);
   // An era on loan to the Throwback Rebrand leaves its OWNER's picker while
@@ -158,11 +223,22 @@ export function getEligibleThrowbackEras(
   // Conflicts are keyed on the OWNING franchise, so an inherited era is not
   // filtered by the conflict that (correctly) keeps the slot's current
   // occupant from wearing it.
+  //
+  // An era whose owner now runs a DIFFERENT franchise is reserved to them
+  // (`throwbackEraOwner`), so it leaves this slot's list even when no asset
+  // conflict was ever written for it. Needs the league's team list to know;
+  // without one the slot keeps its whole history, as it always has.
+  const reservedElsewhere = (entry: FranchiseHistoryEntry) => {
+    if (!allTeams?.length) return false;
+    const owner = throwbackEraOwner(team.franchiseId, entry.yearStart, scope, allTeams);
+    return owner !== null && owner !== team.franchiseId;
+  };
   const own = (team.history ?? []).filter(
     (entry) =>
       !isConflicted(team.franchiseId, entry.yearStart, scope) &&
       !isSameAsCurrent(team, entry) &&
-      !onLoan(entry)
+      !onLoan(entry) &&
+      !reservedElsewhere(entry)
   );
   const borrowed = inherited.filter((entry) => !isSameAsCurrent(team, entry) && !onLoan(entry));
   return [...own, ...borrowed].sort((a, b) => a.yearStart - b.yearStart);
@@ -182,6 +258,204 @@ export function getImposedThrowbackEra(
 ): FranchiseHistoryEntry | null {
   const { rebrand } = throwbackRules(scope);
   return rebrand && rebrand.franchiseId === franchiseId ? rebrand.era : null;
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// The league-wide era pool
+// ───────────────────────────────────────────────────────────────────────────
+//
+// Owner-directed (Sept 2026): an owner may wear ANY era in the league, not
+// just their own franchise's — except an era worn by an owner who is still in
+// the league, which stays theirs alone (`throwbackEraOwner`). An era from an
+// owner who has LEFT is open to everyone, and only one franchise may wear it:
+// the first to claim it. An owner with no pick wears their default, and a
+// default steps aside for a claim rather than doubling up on the scoreboard.
+// Picks lock at the throwback week's first kickoff (`isThrowbackPickLocked`).
+
+/**
+ * The league-wide identity of an era: the slot whose `history[]` holds it,
+ * plus its year. A franchise's own era keys by a bare year in its picker and
+ * another franchise's by `{slot}:{year}`, so the PICK key cannot be compared
+ * across franchises — this can.
+ */
+export function eraClaimId(team: Pick<TeamConfig, 'franchiseId'>, era: FranchiseHistoryEntry): string {
+  return `${era.sourceFranchiseId ?? team.franchiseId}:${era.yearStart}`;
+}
+
+/**
+ * Eras in OTHER franchises' `history[]` that belong to this team's owner by
+ * the registry but are not reached through `ownerHistory` — an owner who ran
+ * a different slot for a stretch the config never recorded as a move. They
+ * are theirs to pick, never offered to anyone else.
+ */
+function getRegistryReservedEras(
+  team: TeamConfig,
+  scope: ThrowbackScope,
+  allTeams: TeamConfig[]
+): FranchiseHistoryEntry[] {
+  const out: FranchiseHistoryEntry[] = [];
+  for (const source of allTeams) {
+    if (source.franchiseId === team.franchiseId) continue;
+    for (const era of source.history ?? []) {
+      if (throwbackEraOwner(source.franchiseId, era.yearStart, scope, allTeams) !== team.franchiseId) continue;
+      if (isSameAsCurrent(team, era)) continue;
+      out.push({ ...era, sourceFranchiseId: source.franchiseId });
+    }
+  }
+  return out;
+}
+
+/**
+ * Eras in OTHER franchises' `history[]` whose owner has left the league — the
+ * open pool this team may claim. Filtered by the same rules the slot's own
+ * list uses: an asset conflict excludes an era for everybody, an era that IS
+ * its slot's current look is no throwback at all, and the Throwback Rebrand's
+ * borrowed era is already being worn.
+ */
+export function getOpenThrowbackEras(
+  team: TeamConfig,
+  scope: ThrowbackScope,
+  allTeams: TeamConfig[] | undefined
+): FranchiseHistoryEntry[] {
+  if (!allTeams?.length) return [];
+  const { rebrand } = throwbackRules(scope);
+  const out: FranchiseHistoryEntry[] = [];
+  for (const source of allTeams) {
+    if (source.franchiseId === team.franchiseId) continue;
+    for (const era of source.history ?? []) {
+      if (throwbackEraOwner(source.franchiseId, era.yearStart, scope, allTeams) !== null) continue;
+      if (isConflicted(source.franchiseId, era.yearStart, scope)) continue;
+      if (isSameAsCurrent(source, era)) continue;
+      if (
+        rebrand &&
+        rebrand.sourceFranchiseId === source.franchiseId &&
+        rebrand.era.yearStart === era.yearStart
+      ) continue;
+      out.push({ ...era, sourceFranchiseId: source.franchiseId });
+    }
+  }
+  return out.sort((a, b) => a.yearStart - b.yearStart);
+}
+
+/**
+ * Every era this team may PICK: its own eligible eras (what its default is
+ * chosen from), the eras its owner wore under another slot, and the open pool.
+ * `getEligibleThrowbackEras` stays the narrower list on purpose — a franchise
+ * is never DEFAULTED into another club's past.
+ */
+export function getPickableThrowbackEras(
+  team: TeamConfig,
+  scope: ThrowbackScope = DEFAULT_THROWBACK_SCOPE,
+  allTeams?: TeamConfig[]
+): FranchiseHistoryEntry[] {
+  const eligible = getEligibleThrowbackEras(team, scope, allTeams);
+  if (!allTeams?.length) return eligible;
+  const seen = new Set(eligible.map((e) => eraClaimId(team, e)));
+  const extra: FranchiseHistoryEntry[] = [];
+  for (const era of [
+    ...getRegistryReservedEras(team, scope, allTeams),
+    ...getOpenThrowbackEras(team, scope, allTeams),
+  ]) {
+    const id = eraClaimId(team, era);
+    if (seen.has(id)) continue;
+    seen.add(id);
+    extra.push(era);
+  }
+  return [...eligible, ...extra];
+}
+
+export interface ThrowbackAssignments {
+  /** franchiseId -> the era it wears, or null for its current identity. */
+  eras: Map<string, FranchiseHistoryEntry | null>;
+  /** eraClaimId -> the franchise whose saved pick holds it. */
+  claims: Map<string, string>;
+  /** Franchises whose saved pick lost the era to an earlier claim. */
+  outbid: Set<string>;
+}
+
+const assignmentCache = new WeakMap<object, WeakMap<object, Map<ThrowbackScope, ThrowbackAssignments>>>();
+
+/**
+ * What every franchise in the league wears, resolved TOGETHER — the only way
+ * to honor "one era, one franchise". Order:
+ *
+ * 1. The imposed Throwback Rebrand.
+ * 2. Saved picks, validated against each team's pickable list. Two picks on
+ *    one era: the earlier `claimedAt` wins (a pick older than claiming reads
+ *    as 0), ties to the lower franchise id. The loser falls to step 3.
+ * 3. Defaults, from each team's own eligible eras minus anything already
+ *    worn, so a default never doubles up on a claimed era.
+ *
+ * Memoized on the picks object: every surface resolves each franchise through
+ * this, and a scoreboard asks once per team.
+ */
+export function resolveThrowbackAssignments(
+  allTeams: TeamConfig[],
+  picks: Record<string, ThrowbackPick | number | undefined>,
+  scope: ThrowbackScope = DEFAULT_THROWBACK_SCOPE
+): ThrowbackAssignments {
+  const cached = assignmentCache.get(picks)?.get(allTeams)?.get(scope);
+  if (cached) return cached;
+
+  const eras = new Map<string, FranchiseHistoryEntry | null>();
+  const claims = new Map<string, string>();
+  const outbid = new Set<string>();
+  const taken = new Set<string>();
+
+  // 2. Candidate picks, grouped by the era they claim.
+  const contenders = new Map<string, { franchiseId: string; era: FranchiseHistoryEntry; at: number }[]>();
+  for (const team of allTeams) {
+    if (getImposedThrowbackEra(team.franchiseId, scope)) continue;
+    const raw = picks[team.franchiseId];
+    if (raw === undefined || raw === null) continue;
+    const pick: ThrowbackPick = typeof raw === 'number' ? { yearStart: raw } : raw;
+    const era = getPickableThrowbackEras(team, scope, allTeams).find((e) =>
+      samePick({ yearStart: e.yearStart, sourceFranchiseId: e.sourceFranchiseId }, pick),
+    );
+    if (!era) continue;
+    const id = eraClaimId(team, era);
+    if (!contenders.has(id)) contenders.set(id, []);
+    contenders.get(id)!.push({ franchiseId: team.franchiseId, era, at: pick.claimedAt ?? 0 });
+  }
+  for (const [id, list] of contenders) {
+    list.sort((a, b) => a.at - b.at || a.franchiseId.localeCompare(b.franchiseId));
+    const [winner, ...losers] = list;
+    eras.set(winner.franchiseId, winner.era);
+    claims.set(id, winner.franchiseId);
+    taken.add(id);
+    for (const l of losers) outbid.add(l.franchiseId);
+  }
+
+  for (const team of allTeams) {
+    // 1. Imposed.
+    const imposed = getImposedThrowbackEra(team.franchiseId, scope);
+    if (imposed) {
+      eras.set(team.franchiseId, imposed);
+      continue;
+    }
+    if (eras.has(team.franchiseId)) continue;
+    // 3. Default, stepping around every era already worn.
+    const eligible = getEligibleThrowbackEras(team, scope, allTeams).filter(
+      (e) => !taken.has(eraClaimId(team, e)),
+    );
+    const chosen = pickDefaultThrowbackEra(eligible, throwbackRules(scope).defaults[team.franchiseId]);
+    if (chosen) taken.add(eraClaimId(team, chosen));
+    eras.set(team.franchiseId, chosen);
+  }
+
+  const result: ThrowbackAssignments = { eras, claims, outbid };
+  let byTeams = assignmentCache.get(picks);
+  if (!byTeams) {
+    byTeams = new WeakMap();
+    assignmentCache.set(picks, byTeams);
+  }
+  let byScope = byTeams.get(allTeams);
+  if (!byScope) {
+    byScope = new Map();
+    byTeams.set(allTeams, byScope);
+  }
+  byScope.set(scope, result);
+  return result;
 }
 
 function toIdentity(entry: FranchiseHistoryEntry): TeamIdentity {
@@ -285,8 +559,19 @@ export function resolveThrowbackIdentity(
   team: TeamConfig,
   ownerOverride?: ThrowbackPick | number,
   scope: ThrowbackScope = DEFAULT_THROWBACK_SCOPE,
-  allTeams?: TeamConfig[]
+  allTeams?: TeamConfig[],
+  leaguePicks?: Record<string, ThrowbackPick | number | undefined>
 ): TeamIdentity {
+  // With every franchise's pick in hand, resolve the league together — the
+  // only way a claimed era can stay with one franchise and a default can step
+  // around it. `ownerOverride` is ignored on this path; the team's own entry
+  // in `leaguePicks` is its pick.
+  if (leaguePicks && allTeams?.length) {
+    const era = resolveThrowbackAssignments(allTeams, leaguePicks, scope).eras.get(team.franchiseId);
+    if (era) return toIdentity(era);
+    if (era === null) return currentIdentity(team);
+  }
+
   // The Throwback Rebrand comes FIRST and ignores the owner override. A
   // last-place rename is imposed, not chosen — this franchise did not pick
   // its current name either.
@@ -300,7 +585,10 @@ export function resolveThrowbackIdentity(
     // before eras could be inherited, and it means "my own era of that year".
     const pick: ThrowbackPick =
       typeof ownerOverride === 'number' ? { yearStart: ownerOverride } : ownerOverride;
-    const chosen = eligible.find((e) =>
+    // Any era the picker offers, the open pool included. Without the whole
+    // league's picks this path cannot tell whether someone else claimed it
+    // first — callers that render more than one team pass `leaguePicks`.
+    const chosen = getPickableThrowbackEras(team, scope, allTeams).find((e) =>
       samePick({ yearStart: e.yearStart, sourceFranchiseId: e.sourceFranchiseId }, pick),
     );
     if (chosen) return toIdentity(chosen);
@@ -312,6 +600,10 @@ export function resolveThrowbackIdentity(
   );
   if (chosen) return toIdentity(chosen);
 
+  return currentIdentity(team);
+}
+
+function currentIdentity(team: TeamConfig): TeamIdentity {
   return {
     name: team.name,
     nameMedium: team.nameMedium,

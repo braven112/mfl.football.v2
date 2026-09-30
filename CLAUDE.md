@@ -172,7 +172,9 @@ The old `X-User-Context` / `X-Auth-User` header fallbacks were removed in
 June 2026 — they allowed full auth bypass. Never re-add unsigned identity
 sources. A session exists only for a REGISTRY league: login refuses any other
 `leagueId` and `getAuthUser` voids a token naming one, because a stranger's
-league has a franchise 0001 too. `isCommissionerOrAdmin` trusts a role that
+league has a franchise 0001 too. The only exception is MFL Live's invited
+pilot leagues (`MFL_LIVE_PILOT_LEAGUE_IDS`), reachable solely through the
+`mfl-live` sign-in scope and never a commissioner here. `isCommissionerOrAdmin` trusts a role that
 carries no league, so an endpoint acting on a FIXED league (contracts,
 autocut, TheLeague's GroupMe) gates with `isCommissionerOrAdminForLeague`, and
 MFL writes use the caller's own cookie, never the server's env credentials

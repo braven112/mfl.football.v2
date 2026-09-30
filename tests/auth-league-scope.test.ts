@@ -14,13 +14,17 @@
  * 3. `isCommissionerOrAdmin` trusts a role that carries no league, so an AFL
  *    commissioner session passed the gate on endpoints that write TheLeague's
  *    contracts. Those endpoints use `isCommissionerOrAdminForLeague`.
+ *
+ * The one exception is MFL Live's invited pilot leagues
+ * (`MFL_LIVE_PILOT_LEAGUE_IDS`): reachable only through the mfl-live sign-in
+ * scope, kept by getAuthUser, and never a commissioner on this site.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { createSessionToken } from '../src/utils/session';
-import { getAuthUser, isCommissionerOrAdminForLeague, type AuthUser } from '../src/utils/auth';
-import { getLeagueBySlug } from '../src/config/leagues';
+import { getAuthUser, isCommissionerOrAdmin, isCommissionerOrAdminForLeague, type AuthUser } from '../src/utils/auth';
+import { getLeagueBySlug, MFL_LIVE_PILOT_LEAGUE_IDS } from '../src/config/leagues';
 
 const ROOT = join(__dirname, '..');
 const read = (p: string) => readFileSync(join(ROOT, p), 'utf8');
@@ -50,6 +54,23 @@ describe('getAuthUser — registry leagues only', () => {
 
   it('voids a validly signed session for a league outside the registry', () => {
     expect(getAuthUser(requestWith(FOREIGN_ID))).toBeNull();
+  });
+
+  it('keeps a session for an invited MFL Live pilot league', () => {
+    const pilot = MFL_LIVE_PILOT_LEAGUE_IDS[0];
+    expect(getAuthUser(requestWith(pilot))?.leagueId).toBe(pilot);
+  });
+
+  it('never treats a pilot-league commissioner as a commissioner here', () => {
+    expect(
+      isCommissionerOrAdmin({
+        id: 'u1',
+        name: 'c',
+        franchiseId: '0001',
+        leagueId: MFL_LIVE_PILOT_LEAGUE_IDS[0],
+        role: 'commissioner',
+      }),
+    ).toBe(false);
   });
 
   it('voids a session with no league at all', () => {
@@ -123,6 +144,32 @@ describe('/api/auth/login — refuses leagues outside the registry', () => {
     expect(res.status).toBe(200);
     expect(authenticateWithMFL.mock.calls[0][2]).toBe(AFL_ID);
     expect((await res.json()).user.leagueId).toBe(AFL_ID);
+  });
+
+  it('MFL Live signs a pilot-league owner in, scoped to the pilot league', async () => {
+    const pilot = MFL_LIVE_PILOT_LEAGUE_IDS[0];
+    authenticateWithMFL.mockResolvedValue({
+      success: true,
+      userId: 'cookie',
+      franchiseId: '0004',
+      leagueId: pilot,
+      role: 'owner',
+    });
+    const res = await post({ scope: 'mfl-live' });
+    expect(res.status).toBe(200);
+    expect((await res.json()).user.leagueId).toBe(pilot);
+  });
+
+  it('MFL Live refuses a session for a league outside the sign-in list', async () => {
+    authenticateWithMFL.mockResolvedValue({
+      success: true,
+      userId: 'cookie',
+      franchiseId: '0001',
+      leagueId: FOREIGN_ID,
+      role: 'owner',
+    });
+    const res = await post({ scope: 'mfl-live' });
+    expect(res.status).toBe(403);
   });
 });
 

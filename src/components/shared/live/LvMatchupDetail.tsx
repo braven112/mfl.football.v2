@@ -8,12 +8,13 @@
  * and a live drive must not vanish because somebody opened a matchup.
  *
  * ── THE TOP ROW ───────────────────────────────────────────────────────────
- * The back control and the freshness pill share it, so the pill is on screen
- * before an owner scrolls: on a phone this header IS the first screen. The
- * row's inline inset lives on the ROW, not on the button, so that when it wraps
- * the pill starts at the same x as the button above it.
+ * The back control only. There is NO freshness pill here: the board header
+ * (Week picker + pill) stays on screen while a matchup is open, and a second
+ * copy in this row printed "Tracking · updated Ns ago" twice, one line apart.
+ * The row's inline inset lives on the ROW, not on the button, so anything
+ * added to it and wrapped on a phone starts at the same x as the button.
  */
-import type { JSX, ReactNode } from 'react';
+import type { JSX } from 'react';
 import type { LiveMatchup, LiveMoment, LiveTeam } from '../../../types/live';
 import type { NflGame, PlayerBoxScore, PlayerMeta } from '../../../types/live-scoring';
 import { renderOrder, winProbabilityFor } from '../../../utils/live/model';
@@ -41,8 +42,6 @@ export interface LvMatchupDetailProps {
   momentPartial?: boolean;
   viewerFirst?: boolean;
   isFinal?: boolean;
-  /** The freshness pill, rendered by the board so it keeps its own ticker. */
-  status?: ReactNode;
   onBack: () => void;
 }
 
@@ -57,7 +56,6 @@ export default function LvMatchupDetail({
   momentPartial,
   viewerFirst = false,
   isFinal = false,
-  status,
   onBack,
 }: LvMatchupDetailProps): JSX.Element {
   const [first, second] = renderOrder(matchup, viewerFirst);
@@ -71,7 +69,6 @@ export default function LvMatchupDetail({
         <button type="button" className="lv-back" onClick={onBack}>
           ← All matchups
         </button>
-        {status}
       </div>
 
       {/* The scores take the INK pair, not the fill pair: `--t0`/`--t1` only

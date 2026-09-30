@@ -597,14 +597,6 @@ export default function LiveBoard({
           momentPartial={detail.partial}
           viewerFirst={viewerFirst}
           isFinal={isMatchupFinal(open.matchup)}
-          status={
-            <LvFeedStatus
-              feeds={feeds}
-              anyLive={gamesLive > 0}
-              gamesLive={gamesLive}
-              compact
-            />
-          }
           onBack={() => setSelected(null)}
         />
         </>

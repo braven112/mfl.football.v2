@@ -325,7 +325,7 @@ export function buildFranchiseBandBrands(
     let crestFilter = team.iconDark ? undefined : strokes[franchiseId];
 
     if (throwback && scope) {
-      const identity = resolveThrowbackIdentity(team, overrides[franchiseId], scope, teams);
+      const identity = resolveThrowbackIdentity(team, overrides[franchiseId], scope, teams, overrides);
       name = identity.name;
       // Same treatment as the current identity above — a few eras are
       // monochrome (the palette sampler falls back to a dark neutral for

@@ -36,7 +36,12 @@ import {
 } from '../../utils/team-names';
 import { extractSeasonStructure, applySeasonStructure } from '../../utils/afl-structure';
 import ThemeImage from '../../components/ThemeImage.astro';
+import { getCurrentSeasonYear, getTestDateFromSearchParams } from '../../utils/league-year';
+import { resolveThrowbackRequestState } from '../../utils/throwback-request-state';
+import { applyThrowbackToStandingsConfig } from '../../utils/throwback-standings';
+import { strictThrowbackScopeForNavSlug } from '../../utils/throwback-scope';
 import type { LeagueDefinition } from '../../config/leagues';
+import type { LeagueSlug } from '../../types/nav';
 import type { StandingsFeed } from '../../utils/live-standings';
 import type { AflFamilySlug, ConferenceId } from '../../utils/afl-conference';
 import { leagueConferenceIds } from '../../utils/afl-conference';
@@ -87,7 +92,25 @@ const yearResolvedConfig = resolveConfigForYear(
 // division winners, and seeds reflect that season — not today's four-division
 // layout. Falls back to the current structure if the feed is missing.
 const seasonStructure = extractSeasonStructure(seasonLeagueFeed as any);
-const seasonConfig = applySeasonStructure(yearResolvedConfig, seasonStructure);
+// Throwback Week: the current season's rows wear each club's era art, with
+// today's name printed underneath (see utils/throwback-standings.ts).
+// yearResolvedConfig stays un-thrown-back — the preferred-team lookup below
+// follows owners across slots by the real season identity. A league with no
+// throwback scope (the custom-site demo) never reads the preference store.
+const throwbackNavSlug = leagueDef.navSlug as LeagueSlug;
+const { config: seasonConfig, todayNames: throwbackTodayNames } = strictThrowbackScopeForNavSlug(throwbackNavSlug)
+  ? applyThrowbackToStandingsConfig(
+      throwbackNavSlug,
+      applySeasonStructure(yearResolvedConfig, seasonStructure),
+      await resolveThrowbackRequestState(throwbackNavSlug, Astro.url),
+      // Same clock the week gate uses, so a ?testDate= preview agrees with itself.
+      {
+        isCurrentSeason:
+          selectedYear ===
+          getCurrentSeasonYear(getTestDateFromSearchParams(Astro.url.searchParams) ?? undefined),
+      },
+    )
+  : { config: applySeasonStructure(yearResolvedConfig, seasonStructure), todayNames: undefined };
 
 // Follow the owner across franchise slots for historical seasons (e.g. the
 // 2016→2017 conference realignment moved owners between franchise IDs).
@@ -357,6 +380,7 @@ function divisionHeader(name: string, confId?: string) {
               year={selectedYear}
               preferredTeamId={yearPreferredTeamId}
               rosterBaseUrl={`${baseUrl}/rosters`}
+              throwbackTodayNames={throwbackTodayNames}
               header={divisionHeader(division.name, divisionToConf[division.name])}
             />
           ))}
@@ -377,6 +401,7 @@ function divisionHeader(name: string, confId?: string) {
               year={selectedYear}
               preferredTeamId={yearPreferredTeamId}
               rosterBaseUrl={`${baseUrl}/rosters`}
+              throwbackTodayNames={throwbackTodayNames}
             />
           ))}
 
@@ -427,6 +452,9 @@ function divisionHeader(name: string, confId?: string) {
                               )}
                               <div class="team-meta">
                                 <span class="team-name">{team.teamName}</span>
+                                {throwbackTodayNames?.[team.id] && throwbackTodayNames[team.id] !== team.teamName && (
+                                  <span class="team-today-name">{throwbackTodayNames[team.id]}</span>
+                                )}
                                 <span class="team-division">Seed {team.seed || '—'} • Div {team.division}</span>
                               </div>
                             </a>
@@ -463,6 +491,7 @@ function divisionHeader(name: string, confId?: string) {
               header={tierHeader(tierGroup.tier)}
               year={selectedYear}
               rosterBaseUrl={`${baseUrl}/rosters`}
+              throwbackTodayNames={throwbackTodayNames}
             />
           ))}
         </div>
@@ -480,6 +509,7 @@ function divisionHeader(name: string, confId?: string) {
             promotionCutoff={isInauguralAllPlaySeason ? 12 : undefined}
             year={selectedYear}
             rosterBaseUrl={`${baseUrl}/rosters`}
+            throwbackTodayNames={throwbackTodayNames}
           />
         </div>
       )}
@@ -1113,6 +1143,12 @@ function divisionHeader(name: string, confId?: string) {
   .nit-table .team-name {
     font-weight: 700;
     color: var(--page-text, #111827);
+  }
+
+  .nit-table .team-today-name {
+    color: var(--content-text-muted, #6b7280);
+    font-size: 0.8rem;
+    font-weight: 600;
   }
 
   .nit-table .team-division {

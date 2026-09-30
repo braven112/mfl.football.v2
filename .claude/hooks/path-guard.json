@@ -553,9 +553,11 @@
         "tests/live-ink-contrast.test.ts",
         "tests/live-no-flex.test.ts",
         "tests/live-league-board-outside.test.ts",
+        "tests/live-leaders-render.test.ts",
         "tests/live-league-standings.test.ts",
         "tests/live-standings-projection.test.ts",
         "tests/live-league-board-guard.test.ts",
+        "tests/live-league-board-assemble.test.ts",
         "tests/live-row-projections.test.ts",
         "tests/live-schedule-pairings.test.ts",
         "tests/mfl-live-uploaded-mark.test.ts"
@@ -1121,6 +1123,7 @@
       "tests": [
         "tests/throwback-identity.test.ts",
         "tests/afl-throwback-identity.test.ts",
+        "tests/throwback-claims.test.ts",
         "tests/era-crest-stroke.test.ts",
         "tests/era-palette-provenance.test.ts",
         "tests/era-banner-style.test.ts"

@@ -15,7 +15,11 @@
  *      identity, and an inferred one must never displace it. A league that
  *      called itself "Saints" AND drew its own crest gets its crest.
  *   3. **A franchise whose name IS an NFL club** — that club's mark and brand
- *      colour stand in (`nfl-name-match.ts`). Exact whole-name match only.
+ *      colour stand in (`nfl-name-match.ts`). Exact whole-name match only,
+ *      and ONLY in a league that uploaded no marks at all. In a league that
+ *      did, a franchise without one drops to initials: one Chicago Bears logo
+ *      among ninety-eight uploaded crests reads as a different league's team,
+ *      and it is what Archie's board showed when its crests went missing.
  *   4. **Everything else** — initials on a neutral field. Initials are a TEXT
  *      label, not invented artwork: no fabricated crest, and no invented brand
  *      hue. The two sides of a matchup are separated by a neutral step, which
@@ -118,6 +122,19 @@ export interface ResolveIdentityInput {
    * committed crest that outranks it anyway.
    */
   mflIcon?: string | null;
+  /**
+   * Does ANY franchise in this league have an uploaded mark? When it does,
+   * rung 3 is skipped for the whole league — see this module's header. Compute
+   * it with `leagueHasUploadedMarks` over the same map `mflIcon` comes from.
+   */
+  leagueHasMarks?: boolean;
+}
+
+/** True when any franchise in a league's mark map carries an uploaded icon. */
+export function leagueHasUploadedMarks(
+  icons: Record<string, string | null | undefined> | null | undefined,
+): boolean {
+  return Object.values(icons ?? {}).some((u) => !!`${u ?? ''}`.trim());
 }
 
 export function resolveFranchiseIdentity(input: ResolveIdentityInput): FranchiseIdentity {
@@ -172,7 +189,8 @@ export function resolveFranchiseIdentity(input: ResolveIdentityInput): Franchise
   }
 
   // ── Rung 3: the name IS an NFL club ─────────────────────────────────────
-  const nflCode = matchNflTeamName(franchiseName);
+  // Only where the league has no art of its own. See this module's header.
+  const nflCode = input.leagueHasMarks ? null : matchNflTeamName(franchiseName);
   if (nflCode) {
     // Through the accessor, never the table: it normalizes the code and
     // supplies the fallback, and `tests/team-color-backdrop-guard.test.ts`

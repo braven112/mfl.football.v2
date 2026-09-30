@@ -51,6 +51,7 @@ const {
   tierName = '',
   promotionCutoff,
   tierMovement,
+  throwbackTodayNames,
 } = Astro.props as StandingsTableProps;
 const teamCount = teams.length;
 // A league that declares its own promotion/relegation counts (the custom-site
@@ -367,6 +368,12 @@ const bannerLabelFor = (name: string) =>
                 ? Boolean(team.teamBanner) && team.teamBanner !== HISTORICAL_TEAM_BANNER_FALLBACK
                 : Boolean(team.teamBanner));
             const href = bannerHrefFor(team.id);
+            // Throwback Week: the art is the era's, so today's name rides
+            // underneath. Skipped when the row already prints that exact name
+            // as its text fallback (no banner, and no era name change).
+            const todayName = throwbackTodayNames?.[team.id];
+            const printsNameText = teamCell === 'icon' || (!showBanner && teamCellFallback === 'name');
+            const showTodayName = Boolean(todayName) && !(printsNameText && todayName === team.teamName);
 
             return (
               <tr
@@ -400,6 +407,7 @@ const bannerLabelFor = (name: string) =>
                         {teamCellFallback === 'name' && (
                           <span class={showBanner ? 'team-name' : 'team-name team-name--fallback'}>{team.teamName}</span>
                         )}
+                        {showTodayName && <span class="team-today-name">{todayName}</span>}
                       </div>
                     )}
                     {col.key === 'team' && teamCell === 'icon' &&
@@ -410,12 +418,26 @@ const bannerLabelFor = (name: string) =>
                           aria-label={`View ${team.teamName} roster`}
                         >
                           {team.teamIcon && <img src={team.teamIcon} alt={team.teamName} class="team-icon" loading="lazy" />}
-                          <span class="team-name">{team.teamName}</span>
+                          {showTodayName ? (
+                            <span class="team-name-stack">
+                              <span class="team-name">{team.teamName}</span>
+                              <span class="team-today-name">{todayName}</span>
+                            </span>
+                          ) : (
+                            <span class="team-name">{team.teamName}</span>
+                          )}
                         </a>
                       ) : (
                         <div class="team-info">
                           {team.teamIcon && <img src={team.teamIcon} alt={team.teamName} class="team-icon" loading="lazy" />}
-                          <span class="team-name">{team.teamName}</span>
+                          {showTodayName ? (
+                            <span class="team-name-stack">
+                              <span class="team-name">{team.teamName}</span>
+                              <span class="team-today-name">{todayName}</span>
+                            </span>
+                          ) : (
+                            <span class="team-name">{team.teamName}</span>
+                          )}
                         </div>
                       ))}
 
@@ -474,6 +496,21 @@ const bannerLabelFor = (name: string) =>
   }
   .table-wrapper {
     overflow-x: auto;
+  }
+  /* Throwback Week: today's team name, on its own line under the era art.
+     `flex-basis: 100%` forces the wrap inside the flex `.team-info` row. */
+  .team-today-name {
+    display: block;
+    flex-basis: 100%;
+    font-size: 0.8rem;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--content-text-muted, #64748b);
+  }
+  .team-name-stack {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
   }
   /* `.hide-sm` (from a column's `hideBelow: 'sm'`) drops secondary columns below
      768px across EVERY variant, collapsing each table to rank/seed + team +
@@ -1237,6 +1274,7 @@ const bannerLabelFor = (name: string) =>
   .v-conf .team-info {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
   }
   .v-conf .team-banner {
     width: 100%;

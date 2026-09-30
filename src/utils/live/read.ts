@@ -34,7 +34,7 @@ import { hasLiveSignal, type LiveSnapshot } from '../live-scoring-snapshot';
 import { computeTeamTotals } from '../live-scoring-view';
 import { getPlayerMap } from '../player-map';
 import { getLeagueTeamBrands } from '../league-team-brands';
-import { franchiseInitials, resolveFranchiseIdentity } from '../mfl-live-identity';
+import { franchiseInitials, leagueHasUploadedMarks, resolveFranchiseIdentity } from '../mfl-live-identity';
 import type { PlayerMeta } from '../../types/live-scoring';
 import type {
   LiveBoard,
@@ -254,6 +254,14 @@ export interface BuildBoardInput {
    * one, and the brands carry colours and a crest that a name cannot.
    */
   franchiseNames?: Record<string, string>;
+  /**
+   * Each franchise's OWN uploaded mark, for a league with no committed brands
+   * — from the same `readCrossLeagueLive` read as `franchiseNames`. Without it
+   * an outside league skips the ladder's uploaded-mark rung entirely, which is
+   * how Archie's league showed a Chicago Bears logo and initials instead of
+   * its own crests.
+   */
+  franchiseIcons?: Record<string, string>;
   identityOverrides?: Record<string, { name?: string; nameShort?: string; icon?: string }>;
   /**
    * Player identity, when the caller already has it.
@@ -356,6 +364,8 @@ export function buildBoardFromSnapshot(input: BuildBoardInput): LiveBoard {
   }
 
   const overrides = input.identityOverrides ?? {};
+  const icons = input.franchiseIcons ?? {};
+  const leagueHasMarks = leagueHasUploadedMarks(icons);
 
   const teamFor = (franchiseId: string) => {
     const franchiseName = names[franchiseId] ?? `Franchise ${franchiseId}`;
@@ -369,6 +379,8 @@ export function buildBoardFromSnapshot(input: BuildBoardInput): LiveBoard {
       // club match and then to text — exactly the marks MFL Live already shows
       // for it, so the two views cannot disagree about who a franchise is.
       leagueSlug: slug ?? undefined,
+      mflIcon: icons[franchiseId],
+      leagueHasMarks,
     });
     // Throwback art, when the caller supplied any. `initials` are RE-DERIVED
     // from the era name rather than carried over — they are the text rung's

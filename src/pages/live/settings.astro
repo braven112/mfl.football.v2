@@ -84,6 +84,7 @@ const rows = leagues.map((league) => {
     // From the same read as the name. A franchise's own uploaded art, so this
     // list shows what the board shows.
     mflIcon: viewerNames[league.id]?.icon,
+    leagueHasMarks: viewerNames[league.id]?.leagueHasMarks,
   });
   return {
     id: league.id,

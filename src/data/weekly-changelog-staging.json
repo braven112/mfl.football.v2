@@ -167,9 +167,49 @@
       "league": "both"
     },
     {
+      "date": "2026-09-27",
+      "type": "bug-fix",
+      "summary": "Live Scoring: an open matchup has breathing room below the Week dropdown again, and no longer shows the \"updated\" status twice.",
+      "impact": "user",
+      "area": "live-scoring",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-27",
+      "type": "bug-fix",
+      "summary": "MFL Live sign-in at v2.mfl.football/login now works for every league's owners, not just TheLeague's, so AFL owners can watch all their teams on one board.",
+      "impact": "user",
+      "area": "live-scoring",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-27",
+      "type": "bug-fix",
+      "summary": "MFL Live league boards show each outside league's own uploaded team logos again, and only fall back to NFL logos in a league that has none.",
+      "impact": "user",
+      "area": "live-scoring",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-27",
+      "type": "enhancement",
+      "summary": "MFL Live's Top Performances lists each player once, with everyone who started him on a second line, instead of repeating the player for every owner.",
+      "impact": "user",
+      "area": "live-scoring",
+      "league": "both"
+    },
+    {
       "date": "2026-09-28",
       "type": "enhancement",
       "summary": "MFL Live has a new Live standings page in its menu: every league you follow on one page, with one Live / Projected / Final switch for all of them.",
+      "impact": "user",
+      "area": "live-scoring",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-28",
+      "type": "bug-fix",
+      "summary": "MFL Live's Live standings no longer add a 0-0 tie before kickoff when a starting lineup includes a player on bye.",
       "impact": "user",
       "area": "live-scoring",
       "league": "both"
@@ -180,6 +220,38 @@
       "summary": "Smoother, snappier animations across the site, clearer dark-mode panels and muted text, and friendlier empty states on the playoffs and rivalry pages.",
       "impact": "user",
       "area": "design-system",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-29",
+      "type": "enhancement",
+      "summary": "Throwback Week: Cowboy Up now suits up as the Degenerates, a one-time commissioner exception borrowed from Da Dangsters' 2008-2014 era.",
+      "impact": "user",
+      "area": "franchises",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-09-29",
+      "type": "enhancement",
+      "summary": "Throwback Week: standings now show each team's old-school art, with today's team name on a second line underneath.",
+      "impact": "user",
+      "area": "standings",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-29",
+      "type": "bug-fix",
+      "summary": "Throwback era picker: a borrowed era now reads \"on loan from Da Dangsters\" instead of claiming your team once wore it under another franchise slot.",
+      "impact": "user",
+      "area": "franchises",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-09-30",
+      "type": "enhancement",
+      "summary": "Throwback Week: claim any era from an owner who has left the league — first come, first served, one team per look. Your own eras stay yours.",
+      "impact": "user",
+      "area": "franchises",
       "league": "both"
     }
   ]

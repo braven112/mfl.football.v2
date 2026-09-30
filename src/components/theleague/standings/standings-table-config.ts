@@ -124,6 +124,10 @@ export interface StandingsTableProps {
    * (`tierCompetition.movement`). Absent, the AFL's fixed two-tier bands apply.
    */
   tierMovement?: { promote: number; relegate: number };
+  /** Throwback Week: franchiseId → TODAY's team name, printed as a second line
+   *  under the era art. Omitted outside a throwback week, and the team cell
+   *  then renders exactly as before. See `utils/throwback-standings.ts`. */
+  throwbackTodayNames?: Record<string, string>;
 }
 
 // ---------------------------------------------------------------------------
