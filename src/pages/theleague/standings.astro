@@ -38,9 +38,18 @@ const fetchMetaFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/fet
 // map put the wrong teams together — see utils/historical-divisions.ts.
 const leagueFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/league.json');
 
-const season = chooseStandingsSeason(standingsFeeds, Astro.url.searchParams.get('year'));
+// The default year follows ?testDate= — the same clock the throwback gate below
+// reads — so /rollover-check can drive this page by date alone.
+const testDate = getTestDateFromSearchParams(Astro.url.searchParams);
+const currentSeasonYear = getCurrentSeasonYear(testDate ?? undefined);
+// A fallback redirect keeps the test clock, or the preview lands on the real year.
+const testDateQuery = testDate
+  ? `&testDate=${encodeURIComponent(Astro.url.searchParams.get('testDate')!)}`
+  : '';
+
+const season = chooseStandingsSeason(standingsFeeds, Astro.url.searchParams.get('year'), currentSeasonYear);
 if (!season.valid) {
-  return Astro.redirect(`/theleague/standings?year=${season.defaultYear}`);
+  return Astro.redirect(`/theleague/standings?year=${season.defaultYear}${testDateQuery}`);
 }
 const { selectedYear } = season;
 
@@ -51,7 +60,7 @@ const { franchises, lastFetched } = await loadStandingsSeason({
   fetchMetaFeeds,
 });
 if (!franchises) {
-  return Astro.redirect(`/theleague/standings?year=${season.defaultYear}`);
+  return Astro.redirect(`/theleague/standings?year=${season.defaultYear}${testDateQuery}`);
 }
 
 // Identities for the season (resolveConfigForYear), then that season's own
@@ -91,10 +100,7 @@ const { config: seasonConfig, todayNames: throwbackTodayNames } = applyThrowback
   await configForYear(selectedYear),
   await resolveThrowbackRequestState('theleague', Astro.url),
   // Same clock the week gate uses, so a ?testDate= preview agrees with itself.
-  {
-    isCurrentSeason:
-      selectedYear === getCurrentSeasonYear(getTestDateFromSearchParams(Astro.url.searchParams) ?? undefined),
-  },
+  { isCurrentSeason: selectedYear === currentSeasonYear },
 );
 ---
 
