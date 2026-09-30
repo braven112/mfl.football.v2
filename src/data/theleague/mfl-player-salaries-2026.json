@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-09-30T17:01:34.218Z"
+    "fetchedAt": "2026-09-30T20:01:26.814Z"
   },
   "players": [
     {
@@ -1220,7 +1220,7 @@
           "RB"
         ],
         "experience": 6,
-        "injuryStatus": "Questionable",
+        "injuryStatus": "Out",
         "injuryBodyPart": "Toe",
         "gsisId": null
       },
@@ -1289,8 +1289,8 @@
           "QB"
         ],
         "experience": 8,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Questionable",
+        "injuryBodyPart": "Undisclosed",
         "gsisId": "00-0034796"
       },
       "nflverse": {
@@ -2211,8 +2211,8 @@
         "status": "Inactive",
         "active": true,
         "position": "WR",
-        "depthChartPosition": "SWR",
-        "depthChartOrder": 4,
+        "depthChartPosition": null,
+        "depthChartOrder": 6,
         "fantasyPositions": [
           "WR"
         ],
@@ -2241,16 +2241,7 @@
         ]
       },
       "gamesPlayed": 2,
-      "depthChartAhead": [
-        {
-          "id": "15789",
-          "name": "Watson, Christian"
-        },
-        {
-          "id": "17075",
-          "name": "Golden, Matthew"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "17099",
@@ -3513,7 +3504,7 @@
           "WR"
         ],
         "experience": 2,
-        "injuryStatus": "Questionable",
+        "injuryStatus": "Doubtful",
         "injuryBodyPart": "Knee",
         "gsisId": null
       },
@@ -14176,7 +14167,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": null,
-        "depthChartOrder": 9,
+        "depthChartOrder": 8,
         "fantasyPositions": [
           "WR"
         ],
