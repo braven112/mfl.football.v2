@@ -133,10 +133,16 @@ export function isValidSchefterPostId(id: string): boolean {
 /** Post bodies carry a small allowlist of tags (<strong>, <em>, …) — strip
  *  them (plus their entities) for plain-text OG meta values. */
 function stripPostHtml(html: string): string {
-  return html
-    // Tags become a space, not '' — '</p><p>' boundaries must not glue
-    // sentences together; the \s+ collapse below re-normalizes.
-    .replace(/<[^>]+>/g, ' ')
+  // Tags become a space, not '' — '</p><p>' boundaries must not glue
+  // sentences together; the \s+ collapse below re-normalizes. Looped to a
+  // fixed point: one pass over `<<b>>` leaves a stray `<>` (CodeQL
+  // js/incomplete-multi-character-sanitization).
+  let text = html;
+  for (let previous = ''; previous !== text; ) {
+    previous = text;
+    text = text.replace(/<[^<>]*>/g, ' ');
+  }
+  return text
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')

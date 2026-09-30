@@ -37,13 +37,22 @@ function walk(dir: string, out: string[] = []): string[] {
 
 // Looped to a fixed point: one pass can splice a new `<!--` out of the
 // remains of two (CodeQL js/incomplete-multi-character-sanitization).
-const stripComments = (src: string) => {
+function stripHtmlComments(src: string): string {
   let prev: string;
   let next = src;
   do {
     prev = next;
+    next = prev.replace(/<!--[\s\S]*?-->/g, '');
+  } while (next !== prev);
+  return next;
+}
+
+const stripComments = (src: string) => {
+  let prev: string;
+  let next = stripHtmlComments(src);
+  do {
+    prev = next;
     next = prev
-      .replace(/<!--[\s\S]*?-->/g, '')
       .replace(/\/\*[\s\S]*?\*\//g, '')
       .replace(/(^|[^:])\/\/[^\n]*/g, '$1');
   } while (next !== prev);

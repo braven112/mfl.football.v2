@@ -13,6 +13,7 @@
  * sees another owner's identity.
  */
 import { getPersonaLabels } from '../../utils/persona-server';
+import { stripTags } from '../../utils/whats-new-links';
 import { composeSharedTip, readSharedPayload } from '../../utils/share-target';
 import Breadcrumbs from '../theleague/Breadcrumbs.astro';
 import { chooseTeamName } from '../../utils/team-names';
@@ -63,7 +64,7 @@ const lastRumor = feed.posts
 
 const lastRumorSnippet = (() => {
   if (!lastRumor) return null;
-  const raw = String(lastRumor.body ?? '').replace(/<[^>]+>/g, '').trim();
+  const raw = stripTags(String(lastRumor.body ?? '')).trim();
   if (!raw) return null;
   const match = raw.match(/^[^.!?]+[.!?]/);
   const sentence = match ? match[0] : raw;
@@ -113,7 +114,7 @@ const recentRumors = feed.posts
   .map((p: any) => ({
     id: p.id,
     label: (() => {
-      const raw = String(p.headline || p.body || '').replace(/<[^>]+>/g, '').trim();
+      const raw = stripTags(String(p.headline || p.body || '')).trim();
       const when = new Date(p.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       const text = raw.length > 64 ? raw.slice(0, 61).trimEnd() + '…' : raw;
       return `${when} — ${text}`;

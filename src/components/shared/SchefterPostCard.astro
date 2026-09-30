@@ -14,6 +14,7 @@
  * never from user input. The allowed tags are: <strong>, <em>, <span>, <br>.
  */
 import type { SchefterPost } from '../../types/schefter';
+import { stripTags } from '../../utils/whats-new-links';
 import { getAuthor, getAuthorAvatar } from '../../types/schefter';
 import { getPersonaLabels, postByline } from '../../utils/persona-server';
 import { formatRelativeTime, getMilestoneLabel, isRumorLikePost } from '../../utils/schefter-feed';
@@ -112,7 +113,7 @@ const whisperLoginHref = (league: string | undefined) =>
   loginUrlForRequest(Astro, getLeagueBySlug(league === 'afl' ? 'afl-fantasy' : 'theleague')!);
 ---
 
-<article id={`post-${post.id}`} class={tierClass} data-post-id={post.id} data-tier={post.tier} data-post-type={post.transactionSubType ?? post.type} data-author={post.authorId ?? 'claude'} data-rumor-impression={isRumorLike ? 'true' : undefined} data-watching={isWatching ? 'true' : undefined} aria-label={`${displayName}: ${post.headline || post.body?.replace(/<[^>]+>/g, '').slice(0, 80) || 'Post'}`}>
+<article id={`post-${post.id}`} class={tierClass} data-post-id={post.id} data-tier={post.tier} data-post-type={post.transactionSubType ?? post.type} data-author={post.authorId ?? 'claude'} data-rumor-impression={isRumorLike ? 'true' : undefined} data-watching={isWatching ? 'true' : undefined} aria-label={`${displayName}: ${post.headline || (post.body ? stripTags(post.body).slice(0, 80) : '') || 'Post'}`}>
   <img class={`sf-avatar${isGroupMe ? ' sf-avatar--groupme' : ''}`} src={avatarSrc} alt="" aria-hidden="true" width="40" height="40" loading="lazy" />
 
   <div class="sf-post__content">

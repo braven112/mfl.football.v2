@@ -11,6 +11,7 @@
  */
 
 import type { APIRoute } from 'astro';
+import { stripTags } from '../../../../utils/whats-new-links';
 import { getAuthUser } from '../../../../utils/auth';
 import { checkRateLimit } from '../../../../utils/rate-limit';
 import type { SchefterReply, AiReplyRequest } from '../../../../types/schefter-replies';
@@ -168,7 +169,7 @@ export const POST: APIRoute = async ({ params, request }) => {
   if (post) {
     contextParts.push(`Original post: "${post.headline}"`);
     if (post.body) {
-      const bodyText = post.body.replace(/<[^>]+>/g, '').slice(0, 200);
+      const bodyText = stripTags(post.body).slice(0, 200);
       contextParts.push(`Post body: "${bodyText}"`);
     }
   }
