@@ -199,7 +199,7 @@ const rows: Row[] = [
             />
             <div class="tbw-card__body">
               <img class="tbw-card__icon" src={row.era.icon} alt="" loading="lazy" />
-              <div>
+              <div class="tbw-card__text">
                 <div class="tbw-card__name">
                   {row.era.name}
                   {eraPickKey(row.era) === ownDefaultKey && (
@@ -449,8 +449,12 @@ const rows: Row[] = [
   }
 
   .tbw-card__claimed-chip {
-    display: inline-block;
-    margin-left: 0.45rem;
+    /* Its own line under the name, never wrapped: inline beside a name in a
+       240px card, the pill broke across two lines. */
+    display: block;
+    width: fit-content;
+    margin-top: 0.3rem;
+    white-space: nowrap;
     padding: 0.1rem 0.45rem;
     border-radius: 999px;
     border: 1px solid var(--card-border);
@@ -498,9 +502,19 @@ const rows: Row[] = [
 
   .tbw-card__body {
     display: flex;
+    /* Wraps so "Preview" drops to its own line rather than being pushed out
+       of the card when a chip makes the name column wide. */
+    flex-wrap: wrap;
     align-items: center;
     gap: 0.75rem;
     padding: 0.75rem;
+  }
+
+  /* Grows beside the crest and shrinks to its own min-content, which is the
+     un-wrappable chip when there is one — so only "Preview" ever wraps. */
+  .tbw-card__text {
+    flex: 1 1 0;
+    min-width: min-content;
   }
 
   .tbw-card__preview {
@@ -531,8 +545,12 @@ const rows: Row[] = [
   }
 
   .tbw-card__default-chip {
-    display: inline-block;
-    margin-left: 0.45rem;
+    /* Its own line under the name, never wrapped: inline beside a name in a
+       240px card, the pill broke across two lines. */
+    display: block;
+    width: fit-content;
+    margin-top: 0.3rem;
+    white-space: nowrap;
     padding: 0.1rem 0.45rem;
     border-radius: 999px;
     background: var(--color-accent);
