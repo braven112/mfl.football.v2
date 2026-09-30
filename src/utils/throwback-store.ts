@@ -31,6 +31,22 @@ export interface ThrowbackPreference {
    * optional rather than nullable — an old record stays valid as-is.
    */
   sourceFranchiseId?: string;
+  /**
+   * When this era was claimed (epoch ms). Two franchises can end up holding
+   * one open era — a race, or a pick made before the other owner's — and the
+   * earlier claim wins (`resolveThrowbackAssignments`). Absent on picks saved
+   * before cross-league claiming existed; those read as the earliest.
+   */
+  claimedAt?: number;
+}
+
+/** Normalize a raw KV record, dropping any field of the wrong type. */
+function toPreference(raw: any): ThrowbackPreference | null {
+  if (!raw || typeof raw.yearStart !== 'number') return null;
+  const out: ThrowbackPreference = { yearStart: raw.yearStart };
+  if (typeof raw.sourceFranchiseId === 'string') out.sourceFranchiseId = raw.sourceFranchiseId;
+  if (typeof raw.claimedAt === 'number') out.claimedAt = raw.claimedAt;
+  return out;
 }
 
 export function makeThrowbackKey(
@@ -47,7 +63,7 @@ export async function getThrowbackPreference(
   const redis = await getRedis();
   if (!redis) return null;
   try {
-    return await redis.get<ThrowbackPreference>(makeThrowbackKey(franchiseId, scope));
+    return toPreference(await redis.get<ThrowbackPreference>(makeThrowbackKey(franchiseId, scope)));
   } catch (err) {
     console.error('Failed to load throwback preference from KV:', err);
     return null;
@@ -67,6 +83,7 @@ export async function setThrowbackPreference(
     const value: ThrowbackPreference = pick.sourceFranchiseId
       ? { yearStart: pick.yearStart, sourceFranchiseId: pick.sourceFranchiseId }
       : { yearStart: pick.yearStart };
+    if (typeof pick.claimedAt === 'number') value.claimedAt = pick.claimedAt;
     await redis.set(makeThrowbackKey(franchiseId, scope), value);
     return true;
   } catch (err) {
@@ -93,12 +110,8 @@ export async function getAllThrowbackPreferences(
     const keys = franchiseIds.map((id) => makeThrowbackKey(id, scope));
     const values = await redis.mget<ThrowbackPreference>(...keys);
     franchiseIds.forEach((franchiseId, i) => {
-      const pref = values[i];
-      if (pref && typeof pref.yearStart === 'number') {
-        result[franchiseId] = typeof pref.sourceFranchiseId === 'string'
-          ? { yearStart: pref.yearStart, sourceFranchiseId: pref.sourceFranchiseId }
-          : { yearStart: pref.yearStart };
-      }
+      const pref = toPreference(values[i]);
+      if (pref) result[franchiseId] = pref;
     });
   } catch (err) {
     console.error('Failed to batch-load throwback preferences from KV:', err);

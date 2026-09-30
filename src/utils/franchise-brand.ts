@@ -145,7 +145,13 @@ export function getFranchiseBrand(franchiseId: string): FranchiseBrand {
 export function getThrowbackFranchiseBrand(
   franchiseId: string,
   isActive: boolean,
-  ownerOverride?: ThrowbackPick | number
+  ownerOverride?: ThrowbackPick | number,
+  /**
+   * Every franchise's saved pick. Pass it whenever you have it: eras are
+   * claimed league-wide, so one team's pick alone cannot say whether another
+   * franchise claimed that era first, or whether its default was taken.
+   */
+  leaguePicks?: Record<string, ThrowbackPick | number | undefined>
 ): FranchiseBrand {
   const brand = getFranchiseBrand(franchiseId);
   if (!isActive) return brand;
@@ -159,7 +165,8 @@ export function getThrowbackFranchiseBrand(
     team,
     ownerOverride,
     undefined,
-    (leagueConfig as any).teams ?? []
+    (leagueConfig as any).teams ?? [],
+    leaguePicks
   );
   return {
     ...brand,

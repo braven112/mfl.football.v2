@@ -526,8 +526,11 @@ const userProjTotal = slots.reduce(
 const crestStrokes = crestStrokeIndex('theleague', (leagueConfig as any).teams ?? []);
 
 const throwbackActive = isThrowbackWeek(week);
+// EVERY franchise's pick, not just the ones on this page: eras are claimed
+// league-wide, so whether an opponent actually wears its pick (or its default)
+// depends on what the rest of the league claimed.
 const throwbackOverrides = throwbackActive
-  ? await getAllThrowbackPreferences([user.franchiseId, ...userMatchups.map((m) => m.opponentFranchiseId)])
+  ? await getAllThrowbackPreferences(((leagueConfig as any).teams ?? []).map((t: any) => t.franchiseId))
   : {};
 
 const matchupCards = buildMatchupCards({
@@ -545,7 +548,7 @@ const matchupCards = buildMatchupCards({
   slotPositions: SLOT_POSITIONS,
   slotEligibility: SLOT_ELIGIBILITY,
   brandFor: (franchiseId) => {
-    const brand = getThrowbackFranchiseBrand(franchiseId, throwbackActive, throwbackOverrides[franchiseId]);
+    const brand = getThrowbackFranchiseBrand(franchiseId, throwbackActive, throwbackOverrides[franchiseId], throwbackOverrides);
     // A throwback brand arrives with its dark cuts already cleared, so an era
     // crest resolves to the era artwork and is never ringed — see
     // `getThrowbackFranchiseBrand`.
