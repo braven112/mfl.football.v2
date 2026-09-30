@@ -179,3 +179,19 @@ describe('picks lock at kickoff', () => {
     expect(isThrowbackPickLocked('afl', new Date('2026-10-03T12:00:00-07:00'))).toBe(false);
   });
 });
+
+describe('the picker view', () => {
+  it("lists an owner's era from another slot with their own eras, not the open pool", async () => {
+    const { buildThrowbackPickerView } = await import('../src/utils/throwback-settings-view');
+    const view = await buildThrowbackPickerView(
+      { franchiseId: '0005', leagueId: 'x' } as any,
+      aflTeams,
+      'afl',
+    );
+    const pooled = view!.poolEras.map(eraPickKey);
+    for (const key of pooled) {
+      const [slot, year] = key.split(':');
+      expect(throwbackEraOwner(slot, Number(year), 'afl', aflTeams), key).toBeNull();
+    }
+  });
+});

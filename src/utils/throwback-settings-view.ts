@@ -26,6 +26,7 @@ import {
   throwbackPickKey,
 } from './throwback-identity';
 import { getAllThrowbackPreferences, getRedis } from './throwback-store';
+import { throwbackEraOwner } from './throwback-era-owner';
 import { isThrowbackPickLocked, throwbackRules, type ThrowbackScope } from './throwback-scope';
 import type { FranchiseHistoryEntry, TeamConfig } from './team-names';
 
@@ -91,7 +92,11 @@ export interface ThrowbackPickerView {
    * the silent failure this field exists to prevent.
    */
   imposedEra: ThrowbackEraView | null;
-  /** This franchise's own eras — what its default is chosen from. */
+  /**
+   * This franchise's own eras: its slot's history, inherited and granted eras
+   * (what its default is chosen from), plus any era its owner wore under
+   * another slot.
+   */
   eligibleEras: FranchiseHistoryEntry[];
   /**
    * Eras from OTHER franchises this one may claim: the open pool (owners who
@@ -161,10 +166,19 @@ export async function buildThrowbackPickerView(
   if (!team) return null;
 
   const imposed = getImposedThrowbackEra(user.franchiseId, scope);
-  const eligibleEras = imposed ? [] : getEligibleThrowbackEras(team, scope, teams);
   const pickable = imposed ? [] : getPickableThrowbackEras(team, scope, teams);
-  const ownKeys = new Set(eligibleEras.map(eraPickKey));
-  const poolEras = pickable.filter((e) => !ownKeys.has(eraPickKey(e)));
+  const ownKeys = new Set(
+    (imposed ? [] : getEligibleThrowbackEras(team, scope, teams)).map(eraPickKey),
+  );
+  // An era this owner wore under ANOTHER slot is still theirs — reserved, not
+  // up for grabs — so it lists with their own eras rather than under the
+  // "first come, first served" pool heading.
+  const isOwn = (e: FranchiseHistoryEntry) =>
+    ownKeys.has(eraPickKey(e)) ||
+    (!!e.sourceFranchiseId &&
+      throwbackEraOwner(e.sourceFranchiseId, e.yearStart, scope, teams) === team.franchiseId);
+  const eligibleEras = pickable.filter(isOwn);
+  const poolEras = pickable.filter((e) => !isOwn(e));
 
   const picks = await getAllThrowbackPreferences(teams.map((t) => t.franchiseId), scope);
   const preference = picks[user.franchiseId] ?? null;
