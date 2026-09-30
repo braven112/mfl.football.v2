@@ -1,8 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import leagueConfig from '../src/data/theleague.config.json';
-import { getEligibleThrowbackEras, resolveThrowbackIdentity } from '../src/utils/throwback-identity';
+import {
+  getEligibleThrowbackEras,
+  resolveThrowbackIdentity,
+  throwbackEraProvenance,
+} from '../src/utils/throwback-identity';
 import { applyThrowbackOverrides, type ConfigTeam } from '../src/utils/live-scoring-data';
 import { getFranchiseBrand, getThrowbackFranchiseBrand } from '../src/utils/franchise-brand';
 import type { TeamConfig } from '../src/utils/team-names';
@@ -57,6 +61,36 @@ describe('throwback-identity', () => {
     // And the scoreboard overlay: exactly one Degenerates on the board.
     const board = applyThrowbackOverrides(teams as unknown as ConfigTeam[], true);
     expect(board.filter((t) => t.name === 'Degenerates').map((t) => t.franchiseId)).toEqual(['0014']);
+  });
+
+  it('labels a granted era as on loan, never as a former franchise slot', () => {
+    // Cowboy Up never occupied slot 0002; "as franchise 0002" with the tooltip
+    // "Your team wore this under an earlier franchise slot" was false for it.
+    const degenerates = getEligibleThrowbackEras(findTeam('0014'), undefined, teams)
+      .find((e) => e.name === 'Degenerates')!;
+    expect(degenerates.grantedBy).toBe('Da Dangsters');
+    const provenance = throwbackEraProvenance(degenerates)!;
+    expect(provenance.label).toBe('on loan from Da Dangsters');
+    expect(provenance.title).not.toMatch(/earlier franchise slot/);
+
+    // An INHERITED era (sourceFranchiseId, no grant) keeps its slot label.
+    const inherited = { ...degenerates, grantedBy: undefined };
+    expect(throwbackEraProvenance(inherited)?.label).toBe('as franchise 0002');
+
+    // The team's own era carries no note at all.
+    const devilDogs = getEligibleThrowbackEras(findTeam('0014'), undefined, teams)
+      .find((e) => e.name === 'Devil Dogs')!;
+    expect(throwbackEraProvenance(devilDogs)).toBeNull();
+  });
+
+  it('the era picker takes its provenance note from throwbackEraProvenance, not sourceFranchiseId', () => {
+    const picker = readFileSync(
+      join(process.cwd(), 'src/components/shared/ThrowbackEraPicker.astro'),
+      'utf8'
+    );
+    const markup = picker.slice(0, picker.indexOf('<script>'));
+    expect(markup).toContain('throwbackEraProvenance(era)');
+    expect(markup).not.toMatch(/as franchise \{era\.sourceFranchiseId\}/);
   });
 
   it('keeps the Sabertooths entry eligible for Gridiron Geeks', () => {

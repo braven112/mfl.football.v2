@@ -4,6 +4,12 @@ Feature: every NFL Week 4 (`THROWBACK_WEEKS` in `src/data/theleague/throwback-co
 the weekly surfaces (live scoring, matchups, submit lineup) swap every team to a
 legacy identity — name, icon, banner, AND colors. Built July 2026 on PR #428.
 
+## 2026-09-29 - A granted era is not an inherited one, even though they share a pick key
+
+**Context:** Hotfix #1269 added `THROWBACK_ERA_GRANTS` so Cowboy Up (0014) could wear Da Dangsters' (0002) "Degenerates". A granted era carries `sourceFranchiseId`, which makes its pick key `0002:2008`, the same shape as an era inherited from a former slot. The picker read `sourceFranchiseId` alone and labelled it "· as franchise 0002 — Your team wore this under an earlier franchise slot", which is false.
+
+**Insight:** `sourceFranchiseId` answers "which `history[]` is this from", not "did this team wear it". Those are different claims, so a runtime `grantedBy` (the lender's current name) now rides beside it, set only in `getGrantedThrowbackEras`. `throwbackEraProvenance(era)` is the one place that turns an era into its note: "on loan from Da Dangsters", "as franchise 0007", or nothing. `tests/throwback-identity.test.ts` pins both labels and scans the picker to make sure it goes through the helper.
+
 ## 2026-07-13 - Architecture: two chokepoints, one resolver
 
 **Context:** Throwback identity had to reach three surfaces (live scoring, matchups, lineup) plus previews, without touching each renderer.

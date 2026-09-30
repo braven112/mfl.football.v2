@@ -1,5 +1,15 @@
 # Franchise History Pages — Insights
 
+## 2026-09-29 - A data test that replays the LIVE season races the roster sync
+
+**Context:** Main went red on `tests/division-strength-data.test.ts` ("builds a season that is under way"). Roster sync had committed 2026 `schedule.json` with 6 games played, while the committed `season-ledger.json` still held 4. Hotfix #1269 carried a chain recompute to get green; follow-up #1270 F2 asked which lane should own it.
+
+**Insight:** No lane was at fault. `buildLeague` replays EVERY ledger year against that year's `schedule.json`. The live season's schedule is rewritten on the sync cadence, but the ledger only moves when the daily derived-chain lane runs. So any test that calls `buildLeague` on the committed files is a race against the sync. After every game day it was red for up to a day, on main and on every PR. It was the only chain suite affected: all eleven chain guard suites at the red commit failed that single test.
+
+**Resolution:** The test now simulates "in progress" on the newest FINISHED season (the newest year with a `wonDivision` row) and cuts every later year from its scratch ledger. A finished season's schedule never moves again. Freshness stays the chain lane's job: `recompute-derived-chain.mjs` fails its own run on the replay invariant before it commits. Two alternatives were rejected. Having roster sync dispatch the chain costs a production build per result commit. Recomputing the chain inside roster sync means touching the hottest workflow and adding a feed-merge commit for milestone posts.
+
+**Rule:** A committed-data test must never compare two files written by different lanes on the in-flight season. Pin it to a finished season, or compare files one lane commits together.
+
 ## 2026-09-15 - The derived chain had three partial committers; now one script commits it whole
 
 **Context:** follow-up to the milestone entries below. `franchise-history.json`
