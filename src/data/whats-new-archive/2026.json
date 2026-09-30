@@ -1,5 +1,50 @@
 [
   {
+    "id": "schefter-tip-receipts",
+    "date": "2026-09-03",
+    "category": "enhancement",
+    "icon": "clipboard",
+    "leagues": [
+      "theleague",
+      "afl"
+    ],
+    "excludeFromHero": true,
+    "title": "Your Tip Now Tells You How It Ended",
+    "link": "/schefter/tip",
+    "linkLabel": "Send Schefter a tip",
+    "summary": "Send a tip and it either turns into a rumor or it doesn't — and until now, \"doesn't\" looked exactly like a broken tip line. Your record card on the tip page now carries a receipt for your last tip: it ran, it got spiked, or it aged out.",
+    "description": [
+      "Here is what filing a tip used to feel like. You'd write something up on the <a href=\"/schefter/tip\">tip page</a>, hit send, get a cheerful \"Schefter's got it\" — and then nothing. Maybe a rumor showed up on <a href=\"/schefter\">the feed</a> a few hours later. Maybe it never did. There was no way to tell the difference between a tip Schefter passed on and a tip line that had quietly stopped working, which is a rough way to treat the people doing the reporting.",
+      "So your <strong>record</strong> card now shows a receipt for your most recent tip, and it says one of three things. <strong>It made the wire</strong> — with a link straight to the rumor it became. <strong>It got spiked</strong> — Schefter ran it, couldn't find an angle he was willing to print, and let it go. Or <strong>it aged out</strong> — nothing wrong with the tip, the wire was just quiet and it never got picked up before it expired.",
+      "The spiked note is the useful one, because it comes with the actual editorial standard attached: tips carrying a name, a number, or a deadline clear the bar far more often than tips carrying a vibe. \"Somebody's shopping a receiver\" is a shrug. \"They want a second for the receiver before Sunday\" is a story.",
+      "Nothing about this touches your anonymity. The receipt is filed against the same one-way hash your <a href=\"/schefter/tip\">codename</a> hangs on, it only ever loads for you, and it clears itself out after two weeks. Schefter still doesn't know who you are, and neither do we."
+    ],
+    "image": "schefter-tip-receipts.webp",
+    "imageAlt": "The Tip Schefter page with the Your Record card in the right rail showing a spiked receipt: 'Your last tip didn't make the wire — Schefter couldn't find an angle he could print.'"
+  },
+  {
+    "id": "afl-draft-room",
+    "date": "2026-09-03",
+    "category": "new-page",
+    "icon": "draft-podium",
+    "leagues": [
+      "afl"
+    ],
+    "title": "The AFL Gets A Draft Room, Twice",
+    "link": "/draft/room",
+    "linkLabel": "Open your draft room",
+    "summary": "A live board for your conference's draft — the picks as they land, who's on the clock, the pool, your queue and the room chat. It opens on YOUR conference, because the AL and the NL are two different drafts that happen to share a season, and the last thing an NL owner needs on draft weekend is a screen full of the AL's picks.",
+    "description": [
+      "The League has had a draft room for two years. The AFL has had a spreadsheet's worth of browser tabs. That ends now — with one wrinkle that took longer to get right than the room itself.",
+      "The AFL doesn't hold a draft. It holds two. The <a href=\"/draft/order\">American League</a> gets in a room, sets a clock and picks in front of each other. The National League runs an email draft that unspools over days while people are at work. Same season, same rules, completely different events — and MyFantasyLeague only records one setting for the whole league, so software that trusts the feed gets one of the two wrong every time.",
+      "So the room asks which draft you mean, and then commits to it. Land on it as an NL owner and you get the NL board, the NL's twelve teams, a clock that counts in hours because that's how your draft actually moves, and a button that opens MFL's email-draft page. Land on it as an AL owner and you get a clock in minutes and the live draft applet. Switch to the other conference whenever you like — it'll say plainly that you're watching someone else's draft and won't pretend you're on the clock.",
+      "Everything else the room already did comes along: the board fills as picks land, the pool sorts by redraft ADP with search and position filters, you can stack a queue, and there's chat. It sits with the rest of the draft tools — the <a href=\"/draft\">draft hub</a>, the <a href=\"/draft/order\">order</a>, the <a href=\"/draft/broadcast\">big board</a> and <a href=\"/draft/results\">every draft we've ever held</a> — one click from each other along the top."
+    ],
+    "image": "afl-draft-room.webp",
+    "imageAlt": "The AFL Draft Room showing the National League's draft. Across the top, tabs for Draft, Order, Results, Broadcast, Room, Rankings and My List, with Room selected. Below them a Conference row offers two chips — “American League / live draft” and “National League / email draft” — with the National League one highlighted. Two notices follow: “You're watching the National League's draft. You don't pick in this one — switch above for your own conference.” and an explanation that the NL drafts by email over several days so the clock counts in hours. A blue banner reads “ON THE CLOCK · 6.07 — Swiftie 4 Life” with “9h 22m” at the right. Under it the round-6 board shows picks 6.01 through 6.06 already made — Malik Washington, Emmett Johnson, Kenyon Sadiq, Chigoziem Okonkwo, Matthew Golden and Brock Purdy — with 6.07 marked “On the clock”. The player pool beneath lists 1,235 available players led by Jahmyr Gibbs, Bijan Robinson and Ja'Marr Chase.",
+    "excludeFromHero": true
+  },
+  {
     "id": "draft-section",
     "date": "2026-09-02",
     "category": "new-page",

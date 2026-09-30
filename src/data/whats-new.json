@@ -1,5 +1,113 @@
 [
   {
+    "id": "weekly-rollup-2026-09-28",
+    "date": "2026-09-28",
+    "title": "Rosters open in your team's colours",
+    "summary": "The roster page leads with your club now — its colour, its crest, your record, rank and points — then last week's result, this week's game and every week of the season as a row you can click straight into the schedule. One header, both leagues.",
+    "description": [
+      {
+        "type": "list",
+        "heading": "New this week",
+        "items": [
+          "<a href=\"/rosters\">Rosters</a> now open in your team's colours, with your last result, next game and season so far — every dot opens that week on the <a href=\"/schedule\">schedule</a>.",
+          "<a href=\"/players\">Free Agents</a> now shows a lock next to recently dropped players MFL won't let you add yet, and claiming one explains why instead of failing with HTTP 502.",
+          "Free Agents on your phone is now a clean list — player, points and projection — and tapping anywhere on a row opens his full card, with Claim/Bid and Watch inside.",
+          "Tap a player on Rosters for a new Salary tab: every contract year, what a cut would cost, his tag and extension prices, and a one-tap Simulate cut you can undo right there.",
+          "Rosters on your phone are now cards — salary and contract in GM, matchup and projection in Coach — with a cap bar, sort chips for the tab you're on, and a bar that keeps simulated moves in view.",
+          "On phones, the Rosters header tucks last week's result and the next game behind a Last & next game toggle beside the Full schedule link.",
+          "Positions now wear the same colors everywhere: QB red, RB blue, WR green, TE purple, PK orange, DEF cyan across rosters, charts and the draft room.",
+          "Simulate a cut, trade, tag or extension on any team's player from their player card, not just your own; Submit still files only your own team's tags and extensions.",
+          "MFL Live's league standings now update live by default, re-ranking as scores change, with Projected and Final views one tap away.",
+          "MFL Live's Top Performances lists each player once, with everyone who started him on a second line, instead of repeating the player for every owner.",
+          "MFL Live has a new Live standings page in its menu: every league you follow on one page, with one Live / Projected / Final switch for all of them.",
+          "Smoother, snappier animations across the site, clearer dark-mode panels and muted text, and friendlier empty states on the playoffs and rivalry pages.",
+          "Throwback Week: Cowboy Up now suits up as the Degenerates, a one-time commissioner exception borrowed from Da Dangsters' 2008-2014 era.",
+          "Throwback Week: standings now show each team's old-school art, with today's team name on a second line underneath.",
+          "Throwback Week: claim any era from an owner who has left the league — first come, first served, one team per look. Your own eras stay yours, and so does your default until you pick another."
+        ]
+      },
+      {
+        "type": "list",
+        "heading": "Fixes & polish",
+        "items": [
+          "<strong>Rosters</strong> — The <a href=\"/rosters\">roster</a> header's cap space now includes dead money and updates as you simulate cuts, trades and extensions.",
+          "<strong>Rosters</strong> — A contract's total remaining now includes each year's 10% raise, matching the salary table, instead of this year's salary times the years left.",
+          "<strong>Free Agents</strong> — When a waiver claim or first-come add fails, the claim window now shows MFL's reason and a link to its add/drop page instead of a bare HTTP error.",
+          "<strong>Free Agents</strong> — TheLeague's Free Agents PPG column is now points per NFL game played, so free agents finally show a rate — and it matches the Per Game on his player card.",
+          "<strong>Set Lineup</strong> — Set Lineup and Rosters now mark the right NFL bye weeks — they were reading last season's calendar, and Washington and Jacksonville byes never showed at all.",
+          "<strong>Design System & Theming</strong> — The Installation Guide link on the CSS Customization page now opens the new MFL template install guide instead of a page that didn't exist.",
+          "<strong>Design System & Theming</strong> — Player cards open from the keyboard (Tab to a name, press Enter), keep focus inside while open, and return you to the player's name when closed.",
+          "<strong>Live Scoring</strong> — Live Scoring's win-probability bar now reads in the same order as the scoreboard: the team on the left gets the left share of the bar, in its own colour.",
+          "<strong>Live Scoring</strong> — Live Scoring: an open matchup has breathing room below the Week dropdown again, and no longer shows the \"updated\" status twice.",
+          "<strong>Live Scoring</strong> — MFL Live sign-in at v2.mfl.football/login now works for every league's owners, not just TheLeague's, so AFL owners can watch all their teams on one board.",
+          "<strong>Live Scoring</strong> — MFL Live league boards show each outside league's own uploaded team logos again, and only fall back to NFL logos in a league that has none.",
+          "<strong>Live Scoring</strong> — MFL Live's Live standings no longer add a 0-0 tie before kickoff when a starting lineup includes a player on bye.",
+          "<strong>Franchise Pages</strong> — Throwback era picker: a borrowed era now reads \"on loan from Da Dangsters\" instead of claiming your team once wore it under another franchise slot."
+        ]
+      },
+      "Everything above shipped in the week of Sep 23-30. Older weeks are in <a href=\"/whats-new\">the archive</a>, and the how-to pages for each feature live in <a href=\"/guides\">the guides</a>."
+    ],
+    "category": "weekly",
+    "icon": "news",
+    "excludeFromHero": true,
+    "leagues": [
+      "theleague"
+    ],
+    "image": "roster-header.webp",
+    "imageAlt": "TheLeague's roster page with the new header: the club nameplate in its own colour, last result and next game, the season rail, and every club's crest in a row below"
+  },
+  {
+    "id": "weekly-rollup-2026-09-28-afl",
+    "date": "2026-09-28",
+    "title": "Rosters open in your team's colours",
+    "summary": "The roster page leads with your club now — its colour, its crest, your record, rank and points — then last week's result, this week's game and every week of the season as a row you can click straight into the schedule. One header, both leagues.",
+    "description": [
+      {
+        "type": "list",
+        "heading": "New this week",
+        "items": [
+          "<a href=\"/rosters\">Rosters</a> now open in your team's colours, with your last result, next game and season so far — every dot opens that week on the <a href=\"/schedule\">schedule</a>.",
+          "<a href=\"/players\">Free Agents</a> now shows a lock next to recently dropped players MFL won't let you add yet, and claiming one explains why instead of failing with HTTP 502.",
+          "Free Agents on your phone is now a clean list — player, points and projection — and tapping anywhere on a row opens his full card, with Claim/Bid and Watch inside.",
+          "On phones, the Rosters header tucks last week's result and the next game behind a Last & next game toggle beside the Full schedule link.",
+          "Positions now wear the same colors everywhere: QB red, RB blue, WR green, TE purple, PK orange, DEF cyan across rosters, charts and the draft room.",
+          "AFL rosters on your phone are now cards like TheLeague's: kickoff, opponent and rank, then weather, spread, O/U and last-3, with the projection up top.",
+          "Tap an AFL roster player for Summary and Game log tabs, this week's matchup, and your trade block, IR, trade and cut options.",
+          "MFL Live's league standings now update live by default, re-ranking as scores change, with Projected and Final views one tap away.",
+          "MFL Live's Top Performances lists each player once, with everyone who started him on a second line, instead of repeating the player for every owner.",
+          "MFL Live has a new Live standings page in its menu: every league you follow on one page, with one Live / Projected / Final switch for all of them.",
+          "Smoother, snappier animations across the site, clearer dark-mode panels and muted text, and friendlier empty states on the playoffs and rivalry pages.",
+          "Throwback Week: standings now show each team's old-school art, with today's team name on a second line underneath.",
+          "Throwback Week: claim any era from an owner who has left the league — first come, first served, one team per look. Your own eras stay yours, and so does your default until you pick another."
+        ]
+      },
+      {
+        "type": "list",
+        "heading": "Fixes & polish",
+        "items": [
+          "<strong>Free Agents</strong> — When a waiver claim or first-come add fails, the claim window now shows MFL's reason and a link to its add/drop page instead of a bare HTTP error.",
+          "<strong>Set Lineup</strong> — Set Lineup and Rosters now mark the right NFL bye weeks — they were reading last season's calendar, and Washington and Jacksonville byes never showed at all.",
+          "<strong>Live Scoring</strong> — Live Scoring's win-probability bar now reads in the same order as the scoreboard: the team on the left gets the left share of the bar, in its own colour.",
+          "<strong>Live Scoring</strong> — Live Scoring: an open matchup has breathing room below the Week dropdown again, and no longer shows the \"updated\" status twice.",
+          "<strong>Live Scoring</strong> — MFL Live sign-in at v2.mfl.football/login now works for every league's owners, not just TheLeague's, so AFL owners can watch all their teams on one board.",
+          "<strong>Live Scoring</strong> — MFL Live league boards show each outside league's own uploaded team logos again, and only fall back to NFL logos in a league that has none.",
+          "<strong>Live Scoring</strong> — MFL Live's Live standings no longer add a 0-0 tie before kickoff when a starting lineup includes a player on bye.",
+          "<strong>Rosters</strong> — AFL rosters now show game weather and the over/under, from the same source TheLeague uses, so one game reads the same in both leagues.",
+          "<strong>Design System & Theming</strong> — Player cards open from the keyboard (Tab to a name, press Enter), keep focus inside while open, and return you to the player's name when closed."
+        ]
+      },
+      "Everything above shipped in the week of Sep 23-30. Older weeks are in <a href=\"/whats-new\">the archive</a>, and the how-to pages for each feature live in <a href=\"/guides\">the guides</a>."
+    ],
+    "category": "weekly",
+    "icon": "news",
+    "excludeFromHero": true,
+    "leagues": [
+      "afl"
+    ],
+    "image": "roster-header.webp",
+    "imageAlt": "TheLeague's roster page with the new header: the club nameplate in its own colour, last result and next game, the season rail, and every club's crest in a row below"
+  },
+  {
     "id": "weekly-rollup-2026-09-21",
     "date": "2026-09-21",
     "title": "Front Office is now your League Planner's home",
@@ -1150,50 +1258,5 @@
     ],
     "image": "sign-in-to-bid.webp",
     "imageAlt": "The sign-in modal open over TheLeague's Free Agents page in dark mode, asking for MFL username and password with the note that credentials are validated directly with MyFantasyLeague"
-  },
-  {
-    "id": "schefter-tip-receipts",
-    "date": "2026-09-03",
-    "category": "enhancement",
-    "icon": "clipboard",
-    "leagues": [
-      "theleague",
-      "afl"
-    ],
-    "excludeFromHero": true,
-    "title": "Your Tip Now Tells You How It Ended",
-    "link": "/schefter/tip",
-    "linkLabel": "Send Schefter a tip",
-    "summary": "Send a tip and it either turns into a rumor or it doesn't — and until now, \"doesn't\" looked exactly like a broken tip line. Your record card on the tip page now carries a receipt for your last tip: it ran, it got spiked, or it aged out.",
-    "description": [
-      "Here is what filing a tip used to feel like. You'd write something up on the <a href=\"/schefter/tip\">tip page</a>, hit send, get a cheerful \"Schefter's got it\" — and then nothing. Maybe a rumor showed up on <a href=\"/schefter\">the feed</a> a few hours later. Maybe it never did. There was no way to tell the difference between a tip Schefter passed on and a tip line that had quietly stopped working, which is a rough way to treat the people doing the reporting.",
-      "So your <strong>record</strong> card now shows a receipt for your most recent tip, and it says one of three things. <strong>It made the wire</strong> — with a link straight to the rumor it became. <strong>It got spiked</strong> — Schefter ran it, couldn't find an angle he was willing to print, and let it go. Or <strong>it aged out</strong> — nothing wrong with the tip, the wire was just quiet and it never got picked up before it expired.",
-      "The spiked note is the useful one, because it comes with the actual editorial standard attached: tips carrying a name, a number, or a deadline clear the bar far more often than tips carrying a vibe. \"Somebody's shopping a receiver\" is a shrug. \"They want a second for the receiver before Sunday\" is a story.",
-      "Nothing about this touches your anonymity. The receipt is filed against the same one-way hash your <a href=\"/schefter/tip\">codename</a> hangs on, it only ever loads for you, and it clears itself out after two weeks. Schefter still doesn't know who you are, and neither do we."
-    ],
-    "image": "schefter-tip-receipts.webp",
-    "imageAlt": "The Tip Schefter page with the Your Record card in the right rail showing a spiked receipt: 'Your last tip didn't make the wire — Schefter couldn't find an angle he could print.'"
-  },
-  {
-    "id": "afl-draft-room",
-    "date": "2026-09-03",
-    "category": "new-page",
-    "icon": "draft-podium",
-    "leagues": [
-      "afl"
-    ],
-    "title": "The AFL Gets A Draft Room, Twice",
-    "link": "/draft/room",
-    "linkLabel": "Open your draft room",
-    "summary": "A live board for your conference's draft — the picks as they land, who's on the clock, the pool, your queue and the room chat. It opens on YOUR conference, because the AL and the NL are two different drafts that happen to share a season, and the last thing an NL owner needs on draft weekend is a screen full of the AL's picks.",
-    "description": [
-      "The League has had a draft room for two years. The AFL has had a spreadsheet's worth of browser tabs. That ends now — with one wrinkle that took longer to get right than the room itself.",
-      "The AFL doesn't hold a draft. It holds two. The <a href=\"/draft/order\">American League</a> gets in a room, sets a clock and picks in front of each other. The National League runs an email draft that unspools over days while people are at work. Same season, same rules, completely different events — and MyFantasyLeague only records one setting for the whole league, so software that trusts the feed gets one of the two wrong every time.",
-      "So the room asks which draft you mean, and then commits to it. Land on it as an NL owner and you get the NL board, the NL's twelve teams, a clock that counts in hours because that's how your draft actually moves, and a button that opens MFL's email-draft page. Land on it as an AL owner and you get a clock in minutes and the live draft applet. Switch to the other conference whenever you like — it'll say plainly that you're watching someone else's draft and won't pretend you're on the clock.",
-      "Everything else the room already did comes along: the board fills as picks land, the pool sorts by redraft ADP with search and position filters, you can stack a queue, and there's chat. It sits with the rest of the draft tools — the <a href=\"/draft\">draft hub</a>, the <a href=\"/draft/order\">order</a>, the <a href=\"/draft/broadcast\">big board</a> and <a href=\"/draft/results\">every draft we've ever held</a> — one click from each other along the top."
-    ],
-    "image": "afl-draft-room.webp",
-    "imageAlt": "The AFL Draft Room showing the National League's draft. Across the top, tabs for Draft, Order, Results, Broadcast, Room, Rankings and My List, with Room selected. Below them a Conference row offers two chips — “American League / live draft” and “National League / email draft” — with the National League one highlighted. Two notices follow: “You're watching the National League's draft. You don't pick in this one — switch above for your own conference.” and an explanation that the NL drafts by email over several days so the clock counts in hours. A blue banner reads “ON THE CLOCK · 6.07 — Swiftie 4 Life” with “9h 22m” at the right. Under it the round-6 board shows picks 6.01 through 6.06 already made — Malik Washington, Emmett Johnson, Kenyon Sadiq, Chigoziem Okonkwo, Matthew Golden and Brock Purdy — with 6.07 marked “On the clock”. The player pool beneath lists 1,235 available players led by Jahmyr Gibbs, Bijan Robinson and Ja'Marr Chase.",
-    "excludeFromHero": true
   }
 ]
