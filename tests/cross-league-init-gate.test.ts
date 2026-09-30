@@ -87,12 +87,17 @@ const PAIRS: Record<string, GuardedPage[]> = {
       markerBinding: `const PAGE_LEAGUE_SLUG = getLeagueBySlug('theleague')!.slug;`,
     },
     {
+      // The AFL's lineup is the AFL-FAMILY page component, shared with the
+      // custom-site demo's keeper slot: one controller for both, so its gate
+      // names the family marker and it reads its league off the page it found
+      // (the route binds `league` to getLeagueBySlug('afl-fantasy')). It still
+      // must never match TheLeague's page, which is what this pair pins.
       label: 'the AFL',
-      file: 'src/pages/afl-fantasy/lineup.astro',
+      file: 'src/components/afl-family/LineupPage.astro',
       slug: 'afl-fantasy',
-      gate: `if (!document.querySelector('.lineup-page[data-league="afl-fantasy"]')) return;`,
-      marker: '<div class="lineup-page" data-league={PAGE_LEAGUE_SLUG}>',
-      markerBinding: `const PAGE_LEAGUE_SLUG = getLeagueBySlug('afl-fantasy')!.slug;`,
+      gate: `const pageRoot = document.querySelector<HTMLElement>('.lineup-page[data-controller="afl-family"]');`,
+      marker: '<div class="lineup-page" data-league={PAGE_LEAGUE_SLUG} data-controller="afl-family">',
+      markerBinding: `const PAGE_LEAGUE_SLUG = league.slug;`,
     },
   ],
   Players: [
@@ -108,7 +113,12 @@ const PAIRS: Record<string, GuardedPage[]> = {
     // The AFL and every custom league render ONE shared page, so its gate is
     // parametric: the marker and the gate both read the registry entry the
     // ROUTE names, and `route` pins which slug that is.
-    ...['afl-fantasy', 'archies'].map((slug) => ({
+    ...(
+      [
+        ['afl-fantasy', 'src/pages/afl-fantasy/players.astro'],
+        ['archies', 'src/pages/archies/free-agents.astro'],
+      ] as const
+    ).map(([slug, routeFile]) => ({
       label: slug,
       file: 'src/components/shared/free-agents/FreeAgentsPage.astro',
       slug,
@@ -117,7 +127,7 @@ const PAIRS: Record<string, GuardedPage[]> = {
       marker: '<table class="players-table" id="players-table" data-league={league.slug}>',
       markerBinding: 'const league = getLeagueBySlug(leagueSlug)!;',
       route: {
-        file: slug === 'archies' ? 'src/pages/archies/free-agents.astro' : 'src/pages/afl-fantasy/players.astro',
+        file: routeFile,
         binding: `leagueSlug="${slug}"`,
       },
     })),

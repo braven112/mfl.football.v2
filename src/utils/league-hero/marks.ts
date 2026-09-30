@@ -29,7 +29,9 @@ export function heroLeagueMark(league: CanonicalLeagueSlug): string {
  * Display text, never an href — the frame is decoration.
  */
 export function heroFrameUrl(league: CanonicalLeagueSlug, link?: string): string {
+  // A demo-only slot (keeper) is absent off the demo: nothing to print.
   const entry = LEAGUES[league];
+  if (!entry) return '';
   const domain = entry.domains[0];
   if (domain) return link ? `${domain}${link.replace(`/${entry.slug}`, '')}` : domain;
   return leagueUrl(entry, link ?? '/').replace(/^https?:\/\//, '');

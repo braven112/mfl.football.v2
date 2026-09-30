@@ -31,7 +31,7 @@ const ROSTER_PAGES = [
   'src/components/shared/rosters/RostersPage.astro',
 ];
 
-const LINEUP_PAGES = ['src/pages/theleague/lineup.astro', 'src/pages/afl-fantasy/lineup.astro'];
+const LINEUP_PAGES = ['src/pages/theleague/lineup.astro', 'src/components/afl-family/LineupPage.astro'];
 
 describe('rankings reach every decision page', () => {
   describe('Free Agents', () => {

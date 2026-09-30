@@ -38,6 +38,9 @@ import { NO_HEADSHOT_SILHOUETTE, getPlayerAvatarBackground, getPlayerAvatarBorde
 import '../../../styles/player-cell.css';
 import '../../../styles/ranking-columns.css';
 import '../../../styles/snap-columns.css';
+import '../../../styles/free-agents-mobile.css';
+import nflByeWeeksFile from '../../../../data/nfl/bye-weeks.json';
+import { byeWeeksByTeam } from '../../../utils/nfl-bye-lookup';
 import { fetchLiveLeagueRosters, applyLiveRosters, conferenceScopedView, resolveConferenceSelection, type FaSnapshot } from '../../../utils/afl-free-agents-live';
 import { fetchLockedPlayers } from '../../../utils/mfl-locked-players';
 import { getAuthUser, franchiseIdForLeague } from '../../../utils/auth';
@@ -408,6 +411,9 @@ const playersWithSnaps = hasSnapCounts
     })
   : players;
 const playerDataJson = JSON.stringify(playersWithSnaps);
+// Team -> bye week for the player sheet's Details (both code dialects; see
+// nfl-bye-lookup.ts). 32 teams, not a field on every row.
+const byeWeeksJson = JSON.stringify(byeWeeksByTeam(nflByeWeeksFile, snapNowRef));
 const defSpotlightJson = JSON.stringify(DEF_SPOTLIGHT_PLAYERS);
 const conferenceMetaJson = JSON.stringify(conferenceMeta ?? null);
 const activeConfIdJson = JSON.stringify(activeConfId);
@@ -709,28 +715,28 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
                 league's verb as its header rather than staying nameless. */}
             <th class="col-player-actions" aria-label={`${claimVerb} or watch this player`}><div class="th-content">{claimVerb}</div></th>
             <th class="sortable col-age" data-sort="age"><div class="th-content">Age</div></th>
-            <th class="sortable col-sm" data-sort="exp"><div class="th-content">Exp</div></th>
-            <th class="sortable col-sm" data-sort="draftRd"><div class="th-content">Draft</div></th>
-            <th class="sortable col-text col-group--stats col-college" data-sort="college" title="College" aria-label="College"><div class="th-content">C</div></th>
-            <th class="sortable col-sm" data-sort="height"><div class="th-content">Ht</div></th>
-            <th class="sortable col-sm" data-sort="weight"><div class="th-content">Wt</div></th>
+            <th class="m-hide sortable col-sm" data-sort="exp"><div class="th-content">Exp</div></th>
+            <th class="m-hide sortable col-sm" data-sort="draftRd"><div class="th-content">Draft</div></th>
+            <th class="m-hide sortable col-text col-group--stats col-college" data-sort="college" title="College" aria-label="College"><div class="th-content">C</div></th>
+            <th class="m-hide sortable col-sm" data-sort="height"><div class="th-content">Ht</div></th>
+            <th class="m-hide sortable col-sm" data-sort="weight"><div class="th-content">Wt</div></th>
             {hasSnapCounts && (
-              <th class="sortable col-sm col-group--stats" data-sort="snapGames" title={`Games with an offensive snap \u2014 ${snapScopeTitle}`}>
+              <th class="m-hide sortable col-sm col-group--stats" data-sort="snapGames" title={`Games with an offensive snap \u2014 ${snapScopeTitle}`}>
                 <div class="th-content"><span class="th-label">GP<small class="th-season">{snapSeasonLabel}</small></span></div>
               </th>
             )}
             {hasSnapCounts && (
-              <th class="sortable col-sm col-group--stats" data-sort="snaps" title={`Offensive snaps \u2014 ${snapScopeTitle}`}>
+              <th class="m-hide sortable col-sm col-group--stats" data-sort="snaps" title={`Offensive snaps \u2014 ${snapScopeTitle}`}>
                 <div class="th-content"><span class="th-label">Snaps<small class="th-season">{snapSeasonLabel}</small></span></div>
               </th>
             )}
             {hasSnapCounts && (
-              <th class="sortable col-num col-group--stats" data-sort="snapPct" title={`Share of his team's offensive plays in the games he played \u2014 ${snapScopeTitle}`}>
+              <th class="m-hide sortable col-num col-group--stats" data-sort="snapPct" title={`Share of his team's offensive plays in the games he played \u2014 ${snapScopeTitle}`}>
                 <div class="th-content"><span class="th-label">Snap%<small class="th-season">{snapSeasonLabel}</small></span></div>
               </th>
             )}
             {hasAdp && (
-              <th class="sortable col-num col-group--stats" data-sort="adpDyn"><div class="th-content">ADP</div></th>
+              <th class="m-hide sortable col-num col-group--stats" data-sort="adpDyn"><div class="th-content">ADP</div></th>
             )}
             {hasSeasonPts && (
               <th
@@ -776,7 +782,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   ></script>
 </TheLeagueLayout>
 
-<script define:vars={{ playerDataJson, hasProjected, hasSeasonPts, hasAdp, hasSnapCounts, defaultSort, defaultDir, mflHost, defSpotlightJson, conferenceMetaJson, activeConfIdJson, nflAvatarBgJson, nflAvatarBorderJson, nflAvatarBgFallback, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, noHeadshot, logoOnerror: NFL_LOGO_ONERROR, collegeLogoOnerror: COLLEGE_LOGO_ONERROR, collegeLogoOnload: COLLEGE_LOGO_ONLOAD, viewModeKey, claimPoolJson, leagueSlugForGate }}>
+<script define:vars={{ snapSeasonLabel, byeWeeksJson, playerDataJson, hasProjected, hasSeasonPts, hasAdp, hasSnapCounts, defaultSort, defaultDir, mflHost, defSpotlightJson, conferenceMetaJson, activeConfIdJson, nflAvatarBgJson, nflAvatarBorderJson, nflAvatarBgFallback, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, noHeadshot, logoOnerror: NFL_LOGO_ONERROR, collegeLogoOnerror: COLLEGE_LOGO_ONERROR, collegeLogoOnload: COLLEGE_LOGO_ONLOAD, viewModeKey, claimPoolJson, leagueSlugForGate }}>
   const players = JSON.parse(playerDataJson);
   // Duplicate-player conference metadata (null = single shared pool).
   const conferenceMeta = JSON.parse(conferenceMetaJson);
@@ -944,6 +950,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   // spotlighted we show one defender's ESPN headshot over the logo watermark and
   // (unless reduced-motion) rotate through the pool so it doesn't feel static.
   const DEF_SPOTLIGHT = JSON.parse(defSpotlightJson);
+  const BYE_WEEKS = JSON.parse(byeWeeksJson);
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const DEF_ROTATE_MS = 4500;
   let defRotateTimer = null;
@@ -1109,6 +1116,12 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
     // Watch list is a FILTER wearing the Stats columns, not a column group.
     const showStats = activeView === 'stats' || activeView === 'watchlist';
+    // Phones key their compact row off this (the max-width: 767px block):
+    // Proj is one of the two stats a phone row keeps, but only in the
+    // Stats-shaped views.
+    document.querySelectorAll('.players-table').forEach(t => {
+      t.setAttribute('data-stats-view', String(showStats));
+    });
 
     document.querySelectorAll('.col-group--stats').forEach(el => {
       el.style.display = showStats ? '' : 'none';
@@ -1361,6 +1374,13 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         draftYear: p.draftYear || null, draftTeam: p.draftTeam || null,
         draftRound: p.draftRd || null, draftPick: p.draftPick || null,
         points: p.projected != null ? p.projected : (p.seasonPts != null ? p.seasonPts : null),
+        // The columns a phone row hides — the sheet's Details carries them.
+        offenseSnaps: p.snaps != null ? p.snaps : null,
+        snapGames: p.snapGames != null ? p.snapGames : null,
+        snapPct: p.snapPct != null ? p.snapPct : null,
+        snapSeason: snapSeasonLabel || null,
+        adp: p.adpDyn != null ? p.adpDyn : null,
+        byeWeek: BYE_WEEKS[String(p.team || '').toUpperCase()] ?? null,
         // Rostered in THIS conference → the modal band wears that franchise
         // and the strip names it. Re-read per render, so flipping the
         // conference switcher re-owns every row with it.
@@ -1399,7 +1419,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
               <img src="${headshot}" alt="" loading="lazy" decoding="async" onerror="${isDef ? escapeAttr(logoOnerror) : escapeAttr(buildOnerror(p.id, p.espnId))}" />
             </div>
             <div class="player-cell__info">
-              <strong class="player-cell__name player-cell__name--clickable" data-player-modal="${modalJson}">${escapeAttr(p.name)}${lockMark}${rosteredDot}${watchMark}</strong>
+              <strong class="player-cell__name player-cell__name--clickable" data-player-modal="${modalJson}" tabindex="0" role="button">${escapeAttr(p.name)}${lockMark}${rosteredDot}${watchMark}</strong>
               <div class="player-meta">
                 ${isDef ? '' : `<img src="${escapeAttr(logo)}" alt="${escapeAttr(p.team)}" class="player-meta__logo" onerror="${escapeAttr(logoOnerror)}" />`}<span class="player-meta__pos">${posLabel}</span>${confTag}
               </div>
@@ -1408,11 +1428,11 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         </td>
         ${kebabCell}
         <td class="cell-age">${p.age ?? '-'}</td>
-        <td class="cell-sm">${p.exp != null ? p.exp : '-'}</td>
-        <td class="cell-sm">${p.draftRd != null ? 'Rd ' + p.draftRd : '<span class="na">-</span>'}</td>
-        <td class="cell-college col-group--stats">${p.collegeLogo ? `<img src="${escapeAttr(p.collegeLogo)}" alt="${escapeAttr(p.college || '')}" title="${escapeAttr(p.college || '')}" class="college-logo" loading="lazy" decoding="async" onerror="${escapeAttr(collegeLogoOnerror)}" onload="${escapeAttr(collegeLogoOnload)}" />` : (p.college ? `<span class="na" title="${escapeAttr(p.college)}">-</span>` : '<span class="na">-</span>')}</td>
-        <td class="cell-sm">${htDisplay}</td>
-        <td class="cell-sm">${wtDisplay}</td>`;
+        <td class="m-hide cell-sm">${p.exp != null ? p.exp : '-'}</td>
+        <td class="m-hide cell-sm">${p.draftRd != null ? 'Rd ' + p.draftRd : '<span class="na">-</span>'}</td>
+        <td class="m-hide cell-college col-group--stats">${p.collegeLogo ? `<img src="${escapeAttr(p.collegeLogo)}" alt="${escapeAttr(p.college || '')}" title="${escapeAttr(p.college || '')}" class="college-logo" loading="lazy" decoding="async" onerror="${escapeAttr(collegeLogoOnerror)}" onload="${escapeAttr(collegeLogoOnload)}" />` : (p.college ? `<span class="na" title="${escapeAttr(p.college)}">-</span>` : '<span class="na">-</span>')}</td>
+        <td class="m-hide cell-sm">${htDisplay}</td>
+        <td class="m-hide cell-sm">${wtDisplay}</td>`;
 
       // Ranking cells sit right after Wt, matching where the module script
       // injects their headers. Class list mirrors rankingCellClasses() in
@@ -1426,13 +1446,13 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       }
 
       if (hasSnapCounts) {
-        html += `<td class="cell-sm col-group--stats">${p.snapGames != null ? p.snapGames : '<span class="na">-</span>'}</td>`;
-        html += `<td class="cell-sm col-group--stats">${p.snaps != null ? p.snaps : '<span class="na">-</span>'}</td>`;
-        html += `<td class="cell-num col-group--stats">${p.snapPct != null ? p.snapPct.toFixed(1) + '%' : '<span class="na">-</span>'}</td>`;
+        html += `<td class="m-hide cell-sm col-group--stats">${p.snapGames != null ? p.snapGames : '<span class="na">-</span>'}</td>`;
+        html += `<td class="m-hide cell-sm col-group--stats">${p.snaps != null ? p.snaps : '<span class="na">-</span>'}</td>`;
+        html += `<td class="m-hide cell-num col-group--stats">${p.snapPct != null ? p.snapPct.toFixed(1) + '%' : '<span class="na">-</span>'}</td>`;
       }
 
       if (hasAdp) {
-        html += `<td class="cell-num col-group--stats">${p.adpDyn != null ? p.adpDyn.toFixed(1) : '<span class="na">-</span>'}</td>`;
+        html += `<td class="m-hide cell-num col-group--stats">${p.adpDyn != null ? p.adpDyn.toFixed(1) : '<span class="na">-</span>'}</td>`;
       }
       if (hasSeasonPts) {
         html += `<td class="cell-num col-group--stats">${p.seasonPts != null ? p.seasonPts.toFixed(1) : '<span class="na">-</span>'}</td>`;
@@ -1835,7 +1855,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     const tbody = document.getElementById('player-table-body');
     if (tbody && !tbody.dataset.modalInit) {
       tbody.dataset.modalInit = 'true';
-      initPlayerModalTrigger(tbody);
+      initPlayerModalTrigger(tbody, { rowTapMedia: '(max-width: 767px)' });
     }
   }
   if (document.readyState === 'loading') {
@@ -2014,7 +2034,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   }
   :global(html.dark) .hero-spotlight__name { color: #fff; }
   .hero-spotlight__meta {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 500;
     color: #4b5563;
     font-variant-numeric: tabular-nums;
@@ -2048,7 +2068,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     line-height: 1.2;
   }
   .hero-count {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 500;
     color: var(--color-gray-400, #9ca3af);
     text-transform: uppercase;
@@ -2228,7 +2248,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     flex-shrink: 0;
   }
   .players-section-title {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -2240,7 +2260,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     white-space: nowrap;
   }
   .showing-count {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--color-gray-400, #9ca3af);
     font-weight: 500;
     font-variant-numeric: tabular-nums;
@@ -2316,7 +2336,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   .watch-scope-btn.active {
     background: var(--content-bg, #fff);
     color: var(--league-accent-fg, var(--league-accent, #c41e3a));
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+    box-shadow: var(--shadow-sm);
   }
 
   /* ── Filter toggle ── */
@@ -2356,7 +2376,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     border-radius: 9px;
     background: var(--league-accent, #c41e3a);
     color: var(--on-league-accent, white);
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     line-height: 1;
   }
@@ -2395,7 +2415,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     box-shadow: var(--shadow-sm);
   }
   .filters-panel-title {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -2417,7 +2437,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     gap: 0.3rem;
   }
   .filter-label {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     color: var(--color-gray-400, #9ca3af);
     text-transform: uppercase;
@@ -2444,7 +2464,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   }
   .filter-range__sep {
     color: var(--color-gray-400, #9ca3af);
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
   }
   .filter-input-num {
     width: 70px;
@@ -2507,7 +2527,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     border-radius: var(--radius-md, 0.5rem);
     background: var(--content-bg, #fff);
     color: var(--league-accent-fg, var(--league-accent, #c41e3a));
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
@@ -2534,7 +2554,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   .players-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
   }
   .players-table thead {
     background: var(--color-gray-50, #f9fafb);
@@ -2551,7 +2571,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     text-align: left;
     font-weight: 600;
     white-space: nowrap;
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--color-gray-400, #9ca3af);
@@ -2628,7 +2648,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   :global(.cell-rank) {
     text-align: center;
     color: var(--color-gray-400, #9ca3af);
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     font-variant-numeric: tabular-nums;
   }
@@ -2689,7 +2709,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     padding: 0.05rem 0.3rem;
     margin-left: 0.3rem;
     border-radius: 4px;
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 700;
     letter-spacing: 0.03em;
     text-transform: uppercase;
@@ -2795,7 +2815,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     padding: 0.2rem 0.55rem;
     border-radius: var(--radius-full, 999px);
     border: 1px solid currentColor;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.03em;
@@ -2835,7 +2855,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     align-items: center;
     gap: 0.35rem;
     padding: 0.2rem 0.55rem;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.03em;
@@ -2854,7 +2874,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   }
   .waiver-window-line__chevron {
     flex: none;
-    transition: transform 0.15s ease;
+    transition: transform var(--transition-fast);
   }
   .waiver-window-line[open] .waiver-window-line__chevron {
     transform: rotate(180deg);
@@ -2863,7 +2883,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     margin: 0;
     padding: 0 0.6rem 0.5rem;
     max-width: 260px;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 500;
     text-transform: none;
     letter-spacing: normal;

@@ -19,7 +19,7 @@
  * (`MFL_LIVE_PILOT_LEAGUE_IDS`): reachable only through the mfl-live sign-in
  * scope, kept by getAuthUser, and never a commissioner on this site.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from 'vitest';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { createSessionToken } from '../src/utils/session';
@@ -32,6 +32,18 @@ const read = (p: string) => readFileSync(join(ROOT, p), 'utf8');
 const THELEAGUE_ID = getLeagueBySlug('theleague')!.id;
 const AFL_ID = getLeagueBySlug('afl-fantasy')!.id;
 const FOREIGN_ID = '99999';
+
+// The pilot list can be empty (10105 left it when it became `archies`), and
+// the exception must keep working for the next invited league — so when there
+// is none, stand one in for the duration. The code reads the list per call.
+const STAND_IN_PILOT = '88888';
+const standIn = MFL_LIVE_PILOT_LEAGUE_IDS.length === 0;
+beforeAll(() => {
+  if (standIn) (MFL_LIVE_PILOT_LEAGUE_IDS as string[]).push(STAND_IN_PILOT);
+});
+afterAll(() => {
+  if (standIn) (MFL_LIVE_PILOT_LEAGUE_IDS as string[]).splice(0);
+});
 
 const requestWith = (leagueId: string) =>
   new Request('https://example.test/', {
@@ -109,6 +121,11 @@ describe('/api/auth/login — refuses leagues outside the registry', () => {
   });
 
   const post = async (body: Record<string, unknown>) => {
+    // resetModules gave the handler a fresh registry: stand the pilot in there too.
+    const fresh = await import('../src/config/leagues-data.mjs');
+    if (standIn && !fresh.MFL_LIVE_PILOT_LEAGUE_IDS.includes(STAND_IN_PILOT)) {
+      (fresh.MFL_LIVE_PILOT_LEAGUE_IDS as string[]).push(STAND_IN_PILOT);
+    }
     const { POST } = await import('../src/pages/api/auth/login');
     return POST({
       request: new Request('https://example.test/api/auth/login', {

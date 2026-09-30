@@ -112,13 +112,13 @@ const until = (e: ResolvedLeagueEvent) => {
     border: 1px solid var(--content-border);
     border-radius: var(--radius-lg);
   }
-  .pkg-cal__event--active { border-color: var(--color-primary); box-shadow: 0 0 0 1px var(--color-primary); }
+  .pkg-cal__event--active { border-color: var(--color-primary); outline: 1px solid var(--color-primary); }
   .pkg-cal__event--past { opacity: 0.7; }
   .pkg-cal__icon { color: var(--color-primary); }
-  .pkg-cal__cat { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--content-text-muted); }
-  .pkg-cal__text h3 { margin: 0.1rem 0; font-size: 1.05rem; }
-  .pkg-cal__text p { margin: 0; font-size: 0.9rem; color: var(--content-text-muted); }
-  .pkg-cal__when { display: grid; justify-items: end; gap: 0.15rem; font-size: 0.9rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .pkg-cal__cat { font-size: var(--font-size-2xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--content-text-muted); }
+  .pkg-cal__text h3 { margin: 0.1rem 0; font-size: var(--font-size-base); }
+  .pkg-cal__text p { margin: 0; font-size: var(--font-size-sm); color: var(--content-text-muted); }
+  .pkg-cal__when { display: grid; justify-items: end; gap: 0.15rem; font-size: var(--font-size-sm); font-variant-numeric: tabular-nums; white-space: nowrap; }
   .pkg-cal__until { font-weight: 700; color: var(--color-primary-light); }
   @media (max-width: 600px) {
     .pkg-cal__event { grid-template-columns: auto 1fr; }

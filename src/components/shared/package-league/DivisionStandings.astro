@@ -92,7 +92,7 @@ const fmt = (n: number) => n.toFixed(2).replace(/\.00$/, '');
   }
   .pkg-standings__title {
     margin: 0 0 0.5rem;
-    font-size: 0.85rem;
+    font-size: var(--font-size-sm);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -101,12 +101,12 @@ const fmt = (n: number) => n.toFixed(2).replace(/\.00$/, '');
   .pkg-standings__table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.9rem;
+    font-size: var(--font-size-sm);
     color: var(--page-text);
   }
   .pkg-standings__table th {
     text-align: left;
-    font-size: 0.7rem;
+    font-size: var(--font-size-2xs);
     font-weight: 600;
     text-transform: uppercase;
     color: var(--content-text-muted);

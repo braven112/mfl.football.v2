@@ -35,16 +35,22 @@ import KeeperPlanner, {
 import { spriteUrl } from '../../../utils/sprite-url';
 import { getCurrentWeek } from '../../../utils/current-week';
 import { nflWeekStartInstant } from '../../../utils/nfl-week-starts.mjs';
-import { formatForViewer } from '../../../utils/viewer-clock';
+import { formatForViewer, viewerClockZone } from '../../../utils/viewer-clock';
 import { readViewerClock } from '../../../utils/viewer-preferences-page';
 import { getCurrentSeasonYear } from '../../../utils/league-year';
 import {
-  fetchNflMatchups,
   loadFantasyPointsAllowed,
   getOpponentFpa,
   fpaTier,
-  type NflMatchup,
 } from '../../../utils/nfl-matchups';
+// Odds and weather: the ONE system every league reads (coach-data.ts), through
+// the same door TheLeague's roster page uses.
+import {
+  loadLiveOddsData,
+  oddsForTeam,
+  getWeatherIcon,
+  type GameOdds,
+} from '../../../utils/rosters/live-odds';
 import { normalizeTeamCode, getNFLTeamName, getNFLTeamLogo } from '../../../utils/nfl-logo';
 import { getPlayerHeadshot } from '../../../constants/roster-constants';
 import { formatMflName } from '../../../utils/player-name-matching';
@@ -54,7 +60,13 @@ import {
   loadSeasonScores,
   loadProjections,
   summarizeSeasonScores,
+  recentScoreAverage,
 } from '../../../utils/afl-player-scoring';
+import { buildPhoneLineSpans, phonePosKey, teamSpread } from '../../../utils/rosters/phone-row';
+// The phone layout, shared with TheLeague (docs/plans/rosters-mobile-layout.md
+// § 8). Imported here, in the frontmatter: the rules reach rows a scoped
+// <style> would not.
+import '../../../styles/rosters-mobile.css';
 import { resolveStatsSeasonYear, parseYtdPlayerScores } from '../../../utils/stats-season.mjs';
 import { getAuthUser, franchiseIdForLeague } from '../../../utils/auth';
 import { resolveOwnerPresence } from '../../../utils/rosters/owner-presence';
@@ -359,8 +371,12 @@ const ownerSeenFor = await resolveOwnerPresence(LEAGUE_ID);
 const headerLockAt = headerSchedule.upNext != null && headerWeek != null
   ? nflWeekStartInstant(selectedYear, headerSchedule.upNext.week)
   : null;
+/* One read serves the lineup-lock line and the phone rows' kickoff times,
+   which print in ONE clock (`viewerClockZone`, the compact-surface form). */
+const pageViewerClock = await readViewerClock(Astro.cookies, authUser, PAGE_LEAGUE_SLUG);
+const rowKickoffClock = viewerClockZone(pageViewerClock);
 const headerLineupLock = headerLockAt != null && headerLockAt.getTime() > Date.now()
-  ? formatForViewer(headerLockAt, await readViewerClock(Astro.cookies, authUser, PAGE_LEAGUE_SLUG), { weekday: true })
+  ? formatForViewer(headerLockAt, pageViewerClock, { weekday: true })
   : null;
 
 /* The VIEWER's conference, never the viewed club's — an order that followed
@@ -531,7 +547,7 @@ const sortedTableRoster: RosterEntry[] = [...activeRosterPlayers, ...irRosterPla
 const nflWeek = getCurrentWeek();
 const nflYear = resolveStatsSeasonYear(testDate ?? undefined);
 const fpaData = loadFantasyPointsAllowed(nflYear) ?? loadFantasyPointsAllowed(nflYear - 1);
-const oddsMap = await fetchNflMatchups(nflWeek, { year: nflYear });
+const oddsMap = await loadLiveOddsData(nflWeek);
 
 // Per-player season scoring + this week's projection, all keyed on
 // selectedYear so the year picker's archive seasons show THEIR numbers. Every
@@ -592,7 +608,7 @@ for (const entry of roster) {
 }
 
 interface PlayerMatchup {
-  matchup: NflMatchup | null;
+  matchup: GameOdds | null;
   oppRank: number | null;
   oppAvg: number | null;
   oppCode: string | null;
@@ -604,11 +620,12 @@ interface PlayerMatchup {
   scoreGames: number;
   /** Points per game played, over the weeks a roster held him. */
   scoreAverage: number | null;
+  /** The last three scored weeks' average — the phone card's L3. */
+  recentAverage: number | null;
 }
 const matchupByPlayerId = new Map<string, PlayerMatchup>();
 for (const player of sortedTableRoster) {
-  const teamCode = player.team ? normalizeTeamCode(player.team) : '';
-  const matchup = teamCode ? oddsMap[teamCode] ?? null : null;
+  const matchup = oddsForTeam(oddsMap, player.team);
   const oppCode = matchup ? normalizeTeamCode(matchup.opponent) : null;
   const fpa = oppCode ? getOpponentFpa(fpaData, oppCode, player.position) : null;
   const season = summarizeSeasonScores(leagueSeasonScores, player.id);
@@ -621,6 +638,7 @@ for (const player of sortedTableRoster) {
     scoreTotal: leagueYtdPoints.get(player.id) ?? null,
     scoreGames: season.games,
     scoreAverage: season.average,
+    recentAverage: recentScoreAverage(aflSeasonScores, player.id),
   });
 }
 
@@ -653,15 +671,24 @@ const headerFeaturedPlayer = bestPlayerByPositionRank(
 // Small format helpers so the JSX stays declarative
 const formatPoints = (v: number | null): string =>
   v == null ? '—' : v.toFixed(1);
-const formatWeather = (m: NflMatchup | null): string => {
+const formatWeather = (m: GameOdds | null): string => {
   if (!m?.weather) return '—';
   const t = m.weather.temperature;
   if (typeof t === 'number') return `${Math.round(t)}°`;
   return m.weather.displayValue ?? '—';
 };
-const formatOverUnder = (m: NflMatchup | null): string => {
-  if (!m?.overUnder) return '—';
-  const trimmed = m.overUnder.trim();
+/* The phone card's weather: TheLeague's Coach card shows the temperature
+   and a sky icon; the desktop cell here keeps its bare temperature. */
+const phoneWeather = (m: GameOdds | null): string | null => {
+  if (!m?.weather) return null;
+  const t = m.weather.temperature;
+  const temp = typeof t === 'number' ? `${Math.round(t)}°` : '';
+  const icon = m.weather.displayValue ? getWeatherIcon(m.weather.displayValue) : '';
+  return [temp, icon].filter(Boolean).join(' ') || null;
+};
+const formatOverUnder = (m: GameOdds | null): string => {
+  // ESPN hands a number through as-is; 'N/A' when the game is not priced.
+  const trimmed = String(m?.overUnder ?? '').trim();
   return trimmed && trimmed !== 'N/A' ? trimmed : '—';
 };
 
@@ -671,10 +698,10 @@ const activeRoster = roster.filter((p) => p.status === 'ROSTER').length;
 const injuredReserve = roster.filter((p) => p.status === 'INJURED_RESERVE').length;
 
 // Build the KeeperPlanner inputs (only really used when isOwner is true)
-// The planner is keeper-league only; its stats read the AFL's own keeper data,
-// so a league without keepers never builds them.
+// The planner is keeper-league only; its stats read the league's own feeds, so
+// a league without keepers never builds them.
 const plannerStatsById = hasKeepers
-  ? buildKeeperPlannerStats(selectedYear)
+  ? buildKeeperPlannerStats(selectedYear, league.dataPath)
   : new Map<string, ReturnType<typeof buildKeeperPlannerStats> extends Map<string, infer V> ? V : never>();
 const plannerRoster: KeeperPlannerPlayer[] = roster.map((p) => {
   const stats = plannerStatsById.get(p.id);
@@ -1131,8 +1158,11 @@ const pageConfig = {
                   const avg = m?.scoreAverage ?? null;
                   const projected = m?.projected ?? null;
                   const tier = oppRank != null ? fpaTier(oppRank) : null;
+                  const recent = m?.recentAverage ?? null;
                   return (
                     <tr
+                      class="roster-row"
+                      data-pos={phonePosKey(player.position) || undefined}
                       data-player-id={player.id}
                       data-player-status={player.status}
                       data-player-name={player.name}
@@ -1177,6 +1207,19 @@ const pageConfig = {
                             )}
                           </Fragment>
                         </PlayerCell>
+                        {/* The phone card's extra line data (phone-row.ts):
+                            EMPTY spans printed from data-t, so the desktop
+                            table's text is unchanged. */}
+                        <Fragment set:html={buildPhoneLineSpans({
+                          kickoffIso: matchup?.date ?? null,
+                          kickoffZone: rowKickoffClock.zone,
+                          kickoffLabel: rowKickoffClock.label,
+                          opponent: oppCode,
+                          spread: matchup ? teamSpread(matchup.spread, player.team, normalizeTeamCode) : null,
+                          lastThree: recent != null ? recent.toFixed(1) : null,
+                          weather: phoneWeather(matchup),
+                          overUnder: formatOverUnder(matchup) === '—' ? null : formatOverUnder(matchup),
+                        })} />
                       </td>
                       {/* Every viewer gets the sheet: owners for roster
                           writes, everyone for Watch (My Watch List). */}
@@ -1857,6 +1900,11 @@ const pageConfig = {
 
   <script>
     import { initPlayerModalTrigger } from '../../../utils/player-modal-trigger';
+    import {
+      buildAflSheetFields,
+      createAflSheetActionHandler,
+      type AflSheetActionId,
+    } from '../../../utils/rosters/afl-phone-sheet';
   import { loadWatchList } from '../../../utils/watch-list-client';
 
     // Re-read the page config from the DOM on demand — values like
@@ -1871,6 +1919,99 @@ const pageConfig = {
     // be bound exactly once — not per navigation — or stacked handlers would
     // double-open the modal. Module-scoped so it survives across page loads.
     let actionDelegationBound = false;
+
+    /* Opens AFLActionModal for one row: from the row's ⋮ button, or from the
+       player sheet with `action` (the sheet's hero / ⋮ menu / More actions),
+       which takes the modal straight to that action's confirm step. */
+    function openActionModalFor(row: HTMLTableRowElement, action?: AflSheetActionId) {
+      const config = readConfig();
+      const opener = (window as any).openAFLActionModal as
+        | ((p: {
+            /** Open straight on this action's confirm step (the player sheet). */
+            action?: AflSheetActionId;
+            playerId: string;
+            playerName: string;
+            status?: string;
+            isOnTradeBait?: boolean;
+            franchiseId?: string;
+            headshot?: string;
+            position?: string;
+            nflTeam?: string;
+            birthdate?: number | null;
+            college?: string | null;
+            draftYear?: number | null;
+            draftRound?: number | null;
+            draftPick?: number | null;
+            draftTeam?: string | null;
+            isOwner?: boolean;
+            signedIn?: boolean;
+          }) => void)
+        | undefined;
+      if (typeof opener !== 'function') {
+        console.warn('[afl-rosters] AFLActionModal not loaded; ignoring action.');
+        return;
+      }
+
+      // Pull the player lockup details off the PlayerCell already rendered in
+      // the row. This avoids duplicating the same data into row dataset
+      // attributes server-side, and keeps the modal hero in sync with whatever
+      // PlayerCell ended up resolving (NFL-photo / college-photo / default).
+      const playerCell = row.querySelector('[data-column="player"] .player-cell');
+      const headshotImg = playerCell?.querySelector('.player-cell__avatar img') as HTMLImageElement | null;
+      const logoImg = playerCell?.querySelector('.player-meta__logo') as HTMLImageElement | null;
+      const posEl = playerCell?.querySelector('.player-meta__pos');
+      // Position label can include contract tags ("QB - RC"); strip them.
+      const positionRaw = posEl?.textContent?.trim().split('-')[0]?.trim() ?? '';
+      // Logo URL ends in `/{TEAM}.svg`; pull the code off the end.
+      const logoSrc = logoImg?.getAttribute('src') ?? '';
+      const teamCodeMatch = logoSrc.match(/\/nfl-logos\/([^/.]+)\.svg$/);
+      const teamCode = teamCodeMatch ? teamCodeMatch[1] : '';
+
+      // The PlayerCell also serializes the full player payload onto the name
+      // element via data-player-modal — same JSON PlayerDetailsModal uses. Re-
+      // parse it so the action modal hero can show age / college / draft pick
+      // without duplicating those fields into separate data attributes.
+      const nameEl = playerCell?.querySelector('.player-cell__name[data-player-modal]');
+      const rawJson = nameEl?.getAttribute('data-player-modal') ?? '';
+      let extra: {
+        birthdate?: number | null;
+        college?: string | null;
+        draftYear?: number | null;
+        draftRound?: number | null;
+        draftPick?: number | null;
+        draftTeam?: string | null;
+      } = {};
+      if (rawJson) {
+        try {
+          const parsed = JSON.parse(rawJson) as Record<string, unknown>;
+          extra = {
+            birthdate: typeof parsed.birthdate === 'number' ? parsed.birthdate : null,
+            college: typeof parsed.college === 'string' ? parsed.college : null,
+            draftYear: typeof parsed.draftYear === 'number' ? parsed.draftYear : null,
+            draftRound: typeof parsed.draftRound === 'number' ? parsed.draftRound : null,
+            draftPick: typeof parsed.draftPick === 'number' ? parsed.draftPick : null,
+            draftTeam: typeof parsed.draftTeam === 'string' ? parsed.draftTeam : null,
+          };
+        } catch {
+          // Malformed JSON — leave extra empty; modal will fall back gracefully.
+        }
+      }
+
+      opener({
+        action,
+        playerId: row.dataset.playerId ?? '',
+        playerName: row.dataset.playerName ?? 'Player',
+        status: row.dataset.playerStatus,
+        isOnTradeBait: row.dataset.onTradeBait === 'true',
+        franchiseId: config.selectedFranchiseId,
+        isOwner: config.isOwner === true,
+        signedIn: config.signedIn === true,
+        headshot: headshotImg?.getAttribute('src') ?? undefined,
+        position: positionRaw || undefined,
+        nflTeam: teamCode || undefined,
+        ...extra,
+      });
+    }
 
     // Runs on initial load AND after every ClientRouter navigation. Without
     // this, Astro evaluates the script module only once, so navigating onto
@@ -1963,7 +2104,26 @@ const pageConfig = {
     // `pageRoot`, not a fresh bare-class query — the gate above already
     // resolved THIS league's page root, and re-asking without the league is
     // the same hazard one statement later.
-    initPlayerModalTrigger(pageRoot);
+    // On a phone the whole row opens the sheet (the ⋮ column is hidden
+    // there), and `enrich` adds the tabs, This week and the owner's actions
+    // (docs/plans/rosters-mobile-layout.md § 8). A row outside the roster
+    // tables — the planner's cards — keeps the plain sheet.
+    initPlayerModalTrigger(pageRoot, {
+      rowTapMedia: '(max-width: 767px)',
+      enrich: (data, { row }) => {
+        if (!row || !row.closest('.roster-table--afl')) return data;
+        const config = readConfig();
+        return {
+          ...data,
+          ...buildAflSheetFields(row, {
+            isOwner: config.isOwner === true,
+            status: row.dataset.playerStatus ?? '',
+            onTradeBait: row.dataset.onTradeBait === 'true',
+          }),
+          onAction: createAflSheetActionHandler((action) => openActionModalFor(row, action)),
+        };
+      },
+    });
 
     // Warm the watch list so the sheet's Watch option opens in the right
     // state; the store caches per league and no-ops on repeat.
@@ -1983,92 +2143,9 @@ const pageConfig = {
       const livePage = readConfig().leagueSlug;
       if (!livePage || !trigger.closest(`.roster-page[data-league="${livePage}"]`)) return;
       e.stopPropagation();
-      const config = readConfig();
       const row = trigger.closest('tr') as HTMLTableRowElement | null;
       if (!row) return;
-      const opener = (window as any).openAFLActionModal as
-        | ((p: {
-            playerId: string;
-            playerName: string;
-            status?: string;
-            isOnTradeBait?: boolean;
-            franchiseId?: string;
-            headshot?: string;
-            position?: string;
-            nflTeam?: string;
-            birthdate?: number | null;
-            college?: string | null;
-            draftYear?: number | null;
-            draftRound?: number | null;
-            draftPick?: number | null;
-            draftTeam?: string | null;
-            isOwner?: boolean;
-            signedIn?: boolean;
-          }) => void)
-        | undefined;
-      if (typeof opener !== 'function') {
-        console.warn('[afl-rosters] AFLActionModal not loaded; ignoring action.');
-        return;
-      }
-
-      // Pull the player lockup details off the PlayerCell already rendered in
-      // the row. This avoids duplicating the same data into row dataset
-      // attributes server-side, and keeps the modal hero in sync with whatever
-      // PlayerCell ended up resolving (NFL-photo / college-photo / default).
-      const playerCell = row.querySelector('[data-column="player"] .player-cell');
-      const headshotImg = playerCell?.querySelector('.player-cell__avatar img') as HTMLImageElement | null;
-      const logoImg = playerCell?.querySelector('.player-meta__logo') as HTMLImageElement | null;
-      const posEl = playerCell?.querySelector('.player-meta__pos');
-      // Position label can include contract tags ("QB - RC"); strip them.
-      const positionRaw = posEl?.textContent?.trim().split('-')[0]?.trim() ?? '';
-      // Logo URL ends in `/{TEAM}.svg`; pull the code off the end.
-      const logoSrc = logoImg?.getAttribute('src') ?? '';
-      const teamCodeMatch = logoSrc.match(/\/nfl-logos\/([^/.]+)\.svg$/);
-      const teamCode = teamCodeMatch ? teamCodeMatch[1] : '';
-
-      // The PlayerCell also serializes the full player payload onto the name
-      // element via data-player-modal — same JSON PlayerDetailsModal uses. Re-
-      // parse it so the action modal hero can show age / college / draft pick
-      // without duplicating those fields into separate data attributes.
-      const nameEl = playerCell?.querySelector('.player-cell__name[data-player-modal]');
-      const rawJson = nameEl?.getAttribute('data-player-modal') ?? '';
-      let extra: {
-        birthdate?: number | null;
-        college?: string | null;
-        draftYear?: number | null;
-        draftRound?: number | null;
-        draftPick?: number | null;
-        draftTeam?: string | null;
-      } = {};
-      if (rawJson) {
-        try {
-          const parsed = JSON.parse(rawJson) as Record<string, unknown>;
-          extra = {
-            birthdate: typeof parsed.birthdate === 'number' ? parsed.birthdate : null,
-            college: typeof parsed.college === 'string' ? parsed.college : null,
-            draftYear: typeof parsed.draftYear === 'number' ? parsed.draftYear : null,
-            draftRound: typeof parsed.draftRound === 'number' ? parsed.draftRound : null,
-            draftPick: typeof parsed.draftPick === 'number' ? parsed.draftPick : null,
-            draftTeam: typeof parsed.draftTeam === 'string' ? parsed.draftTeam : null,
-          };
-        } catch {
-          // Malformed JSON — leave extra empty; modal will fall back gracefully.
-        }
-      }
-
-      opener({
-        playerId: row.dataset.playerId ?? '',
-        playerName: row.dataset.playerName ?? 'Player',
-        status: row.dataset.playerStatus,
-        isOnTradeBait: row.dataset.onTradeBait === 'true',
-        franchiseId: config.selectedFranchiseId,
-        isOwner: config.isOwner === true,
-        signedIn: config.signedIn === true,
-        headshot: headshotImg?.getAttribute('src') ?? undefined,
-        position: positionRaw || undefined,
-        nflTeam: teamCode || undefined,
-        ...extra,
-      });
+      openActionModalFor(row);
     });
     }
 
@@ -2135,7 +2212,7 @@ const pageConfig = {
     }
 
     .roster-controls-bar__group label {
-      font-size: 0.6875rem;
+      font-size: var(--font-size-2xs);
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.05em;
@@ -2267,7 +2344,7 @@ const pageConfig = {
     }
 
     .roster-table th {
-      font-size: 0.625rem;
+      font-size: var(--font-size-3xs);
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.06em;
@@ -2368,7 +2445,7 @@ const pageConfig = {
       padding: 0.12rem 0.55rem;
       border-radius: 0.5rem;
       font-weight: 700;
-      font-size: 0.75rem;
+      font-size: var(--font-size-xs);
       font-variant-numeric: tabular-nums;
       line-height: 1.4;
     }
@@ -2398,7 +2475,7 @@ const pageConfig = {
     }
 
     .vs-at {
-      font-size: 0.75rem;
+      font-size: var(--font-size-xs);
       color: var(--color-gray-500, #64748b);
       font-weight: 500;
       width: 1.25rem;
@@ -2457,7 +2534,7 @@ const pageConfig = {
       background: var(--color-gray-50, #f3f4f6);
       color: var(--color-gray-700, #374151);
       border-color: var(--color-gray-300, #9ca3af);
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      box-shadow: var(--shadow-sm);
     }
 
     .ufa-action-btn:focus-visible {
@@ -2506,7 +2583,7 @@ const pageConfig = {
       background: var(--content-bg, #fff);
       border-radius: 0.75rem;
       padding: 1.25rem;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+      box-shadow: var(--shadow-md);
     }
 
     :global(html.dark) .chart-card {
@@ -2525,14 +2602,14 @@ const pageConfig = {
 
     .chart-card__title {
       margin: 0;
-      font-size: 0.875rem;
+      font-size: var(--font-size-sm);
       font-weight: 700;
       color: var(--color-gray-900, #0f172a);
     }
 
     .chart-card__subtitle {
       margin: 0.125rem 0 0;
-      font-size: 0.75rem;
+      font-size: var(--font-size-xs);
       color: var(--content-text-muted, #6b7280);
     }
 
@@ -2572,7 +2649,7 @@ const pageConfig = {
     }
 
     .strip-plot__lane-label {
-      font-size: 10px;
+      font-size: var(--font-size-3xs);
       font-weight: 700;
       fill: var(--content-text-muted, #6b7280);
       letter-spacing: 0.04em;
@@ -2608,7 +2685,7 @@ const pageConfig = {
     }
 
     .donut-chart__num {
-      font-size: 14px;
+      font-size: var(--font-size-sm);
       font-weight: 800;
       fill: var(--color-gray-900, #0f172a);
     }
@@ -2663,7 +2740,7 @@ const pageConfig = {
 
     .donut-legend__pct {
       color: var(--content-text-muted, #6b7280);
-      font-size: 0.75rem;
+      font-size: var(--font-size-xs);
       font-variant-numeric: tabular-nums;
     }
 
@@ -2690,7 +2767,7 @@ const pageConfig = {
 
     .age-stats__label {
       margin-top: 0.25rem;
-      font-size: 0.6875rem;
+      font-size: var(--font-size-2xs);
       font-weight: 700;
       letter-spacing: 0.05em;
       text-transform: uppercase;
@@ -2713,7 +2790,7 @@ const pageConfig = {
     }
 
     .age-stats__row-label {
-      font-size: 0.6875rem;
+      font-size: var(--font-size-2xs);
       font-weight: 700;
       letter-spacing: 0.05em;
       text-transform: uppercase;
@@ -2764,7 +2841,7 @@ const pageConfig = {
 
     .bar-row__label--code {
       font-family: ui-monospace, SFMono-Regular, monospace;
-      font-size: 0.75rem;
+      font-size: var(--font-size-xs);
     }
 
     .bar-row__track {
@@ -2780,7 +2857,7 @@ const pageConfig = {
       inset: 0;
       background: #c41e3a;
       border-radius: 6px;
-      transition: width 200ms ease;
+      transition: width var(--transition-base);
     }
 
     .bar-row__fill--blue {
@@ -2825,7 +2902,7 @@ const pageConfig = {
 
     .section-header__title {
       margin: 0;
-      font-size: 0.75rem;
+      font-size: var(--font-size-xs);
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.06em;
@@ -2911,7 +2988,7 @@ const pageConfig = {
       border-radius: 0.75rem;
       padding: 3rem 1.5rem;
       text-align: center;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+      box-shadow: var(--shadow-md);
       color: var(--content-text-muted, #6b7280);
     }
 

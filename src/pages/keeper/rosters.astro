@@ -1,40 +1,71 @@
 ---
 /**
- * Rosters (the custom-site demo's keeper league) — thin route wrapper around
- * the AFL-family rosters page, keeper planner included. No preference cookie
- * and no Throwback Week here. Off the demo this slot does not exist: the
- * middleware answers 404 before this runs.
+ * Rosters (the custom-site demo's keeper league) — thin route wrapper over the
+ * shared rosters page every league renders
+ * (src/components/shared/rosters/RostersPage.astro), keeper planner included
+ * (gated on the registry's `keepers` feature). No preference cookie and no
+ * Throwback Week here. One conference and no division pools (its config's
+ * `divisions` are bare names), so the whole league is one player pool. Off
+ * the demo this slot does not exist: the middleware answers 404 first.
  */
-import RostersPage from '../../components/afl-family/RostersPage.astro';
-import { feedsByYear } from '../../utils/afl-family-standings';
-import { resolveRostersRoute } from '../../utils/afl-family-rosters';
+import RostersPage from '../../components/shared/rosters/RostersPage.astro';
+import FrontOfficeNav from '../../components/shared/front-office-nav/FrontOfficeNav.astro';
 import { keeperConfig, keeperLeague } from '../../utils/keeper-slot';
 import { getLeagueYearForSlug } from '../../utils/league-year';
+import { resolveLeaguePath } from '../../utils/nav-utils';
+import {
+  feedForYear,
+  resolveRosterYear,
+  rosterYearIsRenderable,
+  rosterYears,
+} from '../../utils/rosters/roster-page-feeds';
+
+export const prerender = false;
 
 const league = keeperLeague();
 if (!league) return Astro.rewrite('/_not-found');
+const r = (p: string) => resolveLeaguePath(p, Astro.locals.hideLeaguePrefix ?? false);
+const config = keeperConfig();
+
 const feeds = {
   // Current era only (the season picker offers what these match): a bare year
   // glob bakes every season's players.json into the server chunk.
-  rosters: feedsByYear(import.meta.glob('../../../data/keeper/mfl-feeds/20{2[5-9],[3-9][0-9]}/rosters.json', { eager: true })),
-  players: feedsByYear(import.meta.glob('../../../data/keeper/mfl-feeds/20{2[5-9],[3-9][0-9]}/players.json', { eager: true })),
-  ytdScores: feedsByYear(import.meta.glob('../../../data/keeper/mfl-feeds/*/playerScores-ytd.json', { eager: true })),
-  tradeBait: feedsByYear(import.meta.glob('../../../data/keeper/mfl-feeds/*/tradeBait.json', { eager: true })),
-  tradeBaitByFranchise: feedsByYear(import.meta.glob('../../../data/keeper/mfl-feeds/*/tradeBait-by-franchise.json', { eager: true })),
-  futurePicks: feedsByYear(import.meta.glob('../../../data/keeper/mfl-feeds/*/futureDraftPicks.json', { eager: true })),
-  schedule: feedsByYear(import.meta.glob('../../../data/keeper/mfl-feeds/*/schedule.json', { eager: true, import: 'default' })),
-  standings: feedsByYear(import.meta.glob('../../../data/keeper/mfl-feeds/*/standings.json', { eager: true, import: 'default' })),
+  rosters: import.meta.glob('../../../data/keeper/mfl-feeds/20{2[5-9],[3-9][0-9]}/rosters.json', { eager: true }),
+  players: import.meta.glob('../../../data/keeper/mfl-feeds/20{2[5-9],[3-9][0-9]}/players.json', { eager: true }),
+  ytdScores: import.meta.glob('../../../data/keeper/mfl-feeds/20{2[5-9],[3-9][0-9]}/playerScores-ytd.json', { eager: true }),
+  tradeBait: import.meta.glob('../../../data/keeper/mfl-feeds/*/tradeBait.json', { eager: true }),
+  tradeBaitByFranchise: import.meta.glob('../../../data/keeper/mfl-feeds/*/tradeBait-by-franchise.json', { eager: true }),
+  futurePicks: import.meta.glob('../../../data/keeper/mfl-feeds/*/futureDraftPicks.json', { eager: true }),
+  schedule: import.meta.glob('../../../data/keeper/mfl-feeds/*/schedule.json', { eager: true, import: 'default' }),
+  standings: import.meta.glob('../../../data/keeper/mfl-feeds/*/standings.json', { eager: true, import: 'default' }),
 };
-const route = resolveRostersRoute(Astro.url, '/keeper', feeds.rosters, feeds.players, getLeagueYearForSlug('keeper'));
-if ('redirect' in route) return Astro.redirect(route.redirect);
+const leagueFeeds = import.meta.glob('../../../data/keeper/mfl-feeds/*/league.json', { eager: true, import: 'default' });
+
+const leagueYear = getLeagueYearForSlug(league.slug);
+const availableYears = rosterYears(feeds.rosters);
+const selectedYear = resolveRosterYear(Astro.url.searchParams.get('year'), availableYears, leagueYear);
+
+if (!rosterYearIsRenderable(feeds.rosters, feeds.players, selectedYear)) {
+  if (!availableYears.length) return Astro.rewrite('/_not-found');
+  return Astro.redirect(r(`/${league.slug}/rosters?year=${availableYears[0]}`));
+}
+
+const rosterSize = Number(feedForYear(leagueFeeds, selectedYear, 'league.json')?.league?.rosterSize) || 0;
 ---
 
 <RostersPage
-  league={league}
-  config={keeperConfig()}
-  selectedYear={route.selectedYear}
-  availableYears={route.availableYears}
+  leagueSlug="keeper"
+  leagueLabel={league.shortName ?? league.name}
   feeds={feeds}
-  throwbackScope={null}
-  logoSrc="/assets/logos/keeper-logo.svg"
-/>
+  availableYears={availableYears}
+  selectedYear={selectedYear}
+  teams={config.teams}
+  conferences={config.conferences ?? []}
+  rosterSize={rosterSize}
+  tradeBuilder={true}
+  rankingsPage={false}
+  schedulePage={false}
+  signIn={{ logoSrc: '/assets/logos/keeper-logo.svg', logoAlt: `${league.name} logo` }}
+>
+  <FrontOfficeNav slot="breadcrumbs" leagueSlug="keeper" current="rosters" crumb="Rosters" bare />
+</RostersPage>

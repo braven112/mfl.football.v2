@@ -92,7 +92,7 @@ const name = (id: string) => teams[id]?.name ?? `Team ${id}`;
   .pkg-po__head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
   .pkg-po__head h2 { margin: 0; font-size: 1.15rem; color: var(--league-accent-fg, var(--league-accent)); }
   .pkg-po__week {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     text-transform: uppercase;
     letter-spacing: 0.06em;
     color: var(--content-text-muted);
@@ -113,14 +113,14 @@ const name = (id: string) => teams[id]?.name ?? `Team ${id}`;
   .pkg-po__rank { font-family: var(--font-display); font-size: 1.25rem; color: var(--color-primary); text-align: center; }
   .pkg-po__team { color: inherit; font-weight: 700; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .pkg-po__team:hover { color: var(--color-primary); }
-  .pkg-po__trend { font-size: 0.8rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .pkg-po__trend { font-size: var(--font-size-xs); font-weight: 700; font-variant-numeric: tabular-nums; }
   /* The -dark steps are the text-safe ones in each theme (tokens.css / tokens-dark.css). */
   .pkg-po__trend--up { color: var(--color-success-dark); }
   .pkg-po__trend--down { color: var(--color-error-dark); }
   .pkg-po__trend--flat { color: var(--content-text-muted); }
   .pkg-po__ppg { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
   .pkg-po__ppg small { font-weight: 400; color: var(--content-text-muted); }
-  .pkg-po__mine { margin: 0.75rem 0 0; font-size: 0.92rem; color: var(--content-text-muted); }
+  .pkg-po__mine { margin: 0.75rem 0 0; font-size: var(--font-size-sm); color: var(--content-text-muted); }
   .pkg-po__mine strong { color: var(--page-text); }
   .pkg-po__more { display: inline-block; margin-top: 0.75rem; font-weight: 600; color: var(--color-primary-light); }
 </style>

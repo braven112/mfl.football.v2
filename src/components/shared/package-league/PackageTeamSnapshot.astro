@@ -99,7 +99,7 @@ const team = snapshot ? teams[snapshot.franchiseId] : null;
   .pkg-snap__name { margin: 0; font-size: 1.25rem; }
   .pkg-snap__name a { color: inherit; text-decoration: none; }
   .pkg-snap__name a:hover { color: var(--color-primary); }
-  .pkg-snap__div { margin: 0.1rem 0 0; color: var(--content-text-muted); font-size: 0.9rem; }
+  .pkg-snap__div { margin: 0.1rem 0 0; color: var(--content-text-muted); font-size: var(--font-size-sm); }
   .pkg-snap__stats {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(6rem, 1fr));
@@ -112,13 +112,13 @@ const team = snapshot ? teams[snapshot.franchiseId] : null;
     background: var(--nav-active-bg);
   }
   .pkg-snap__stats dt {
-    font-size: 0.7rem;
+    font-size: var(--font-size-2xs);
     text-transform: uppercase;
     letter-spacing: 0.06em;
     color: color-mix(in srgb, var(--page-text) 72%, transparent);   /* sits on the nav-active tint, where --content-text-muted drops under 4.5:1 */
   }
   .pkg-snap__stats dd { margin: 0.1rem 0 0; font-weight: 700; font-size: 1.15rem; font-variant-numeric: tabular-nums; }
-  .pkg-snap__weeks { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.35rem; font-size: 0.92rem; }
+  .pkg-snap__weeks { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.35rem; font-size: var(--font-size-sm); }
   .pkg-snap__wk { display: inline-block; min-width: 4.5rem; font-weight: 700; color: var(--color-primary); }
   .pkg-snap__links { display: flex; gap: 1rem; margin-top: 0.75rem; font-weight: 600; }
   .pkg-snap__links a { color: var(--color-primary-light); }

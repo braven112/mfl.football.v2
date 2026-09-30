@@ -189,15 +189,15 @@ const leagueSlug = getLeagueByNavSlug(navSlug)?.slug ?? '';
     margin-bottom: 1.5rem;
   }
   .persona__head h2 { margin: 0 0 0.3rem; font-size: 1.1rem; color: var(--page-text); }
-  .persona__lede { margin: 0 0 0.9rem; font-size: 0.85rem; color: var(--content-text-muted); }
+  .persona__lede { margin: 0 0 0.9rem; font-size: var(--font-size-sm); color: var(--content-text-muted); }
   .persona__form { display: flex; flex-direction: column; gap: 0.8rem; }
   .persona__field { display: flex; flex-direction: column; gap: 0.3rem; }
-  .persona__field > span { font-size: 0.8rem; font-weight: 700; color: var(--page-text); }
-  .persona__field small { display: block; font-weight: 400; font-size: 0.72rem; color: var(--content-text-muted); }
+  .persona__field > span { font-size: var(--font-size-xs); font-weight: 700; color: var(--page-text); }
+  .persona__field small { display: block; font-weight: 400; font-size: var(--font-size-2xs); color: var(--content-text-muted); }
   .persona__field input,
   .persona__field textarea {
     font: inherit;
-    font-size: 0.9rem;
+    font-size: var(--font-size-sm);
     padding: 0.5rem 0.6rem;
     border: 1px solid var(--content-border);
     border-radius: 8px;
@@ -211,7 +211,7 @@ const leagueSlug = getLeagueByNavSlug(navSlug)?.slug ?? '';
   .persona__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; }
   .persona__btn {
     font: inherit;
-    font-size: 0.85rem;
+    font-size: var(--font-size-sm);
     font-weight: 600;
     padding: 0.45rem 0.9rem;
     border-radius: 8px;
@@ -222,7 +222,7 @@ const leagueSlug = getLeagueByNavSlug(navSlug)?.slug ?? '';
   }
   .persona__btn--primary { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
   .persona__btn:disabled { opacity: 0.6; cursor: progress; }
-  .persona__status { font-size: 0.8rem; color: var(--content-text-muted); }
+  .persona__status { font-size: var(--font-size-xs); color: var(--content-text-muted); }
   .persona__status[data-kind='ok'] { color: var(--color-success-dark); }
   .persona__status[data-kind='bad'] { color: var(--color-error-dark); }
 </style>
