@@ -48,7 +48,7 @@ import { byeWeeksByTeam } from '../../utils/nfl-bye-lookup';
 // row assembly live in scripts/compute-afl-free-agents.mjs (wired into prebuild);
 // this page imports only the finished ~400KB result. See the SSR note below.
 import { fetchLiveAflRosters, applyLiveRosters, conferenceScopedView, resolveConferenceSelection, type FaSnapshot } from '../../utils/afl-free-agents-live';
-import { fetchLockedPlayers } from '../../utils/mfl-locked-players';
+import { dropLocksIn, fetchLockedPlayers } from '../../utils/mfl-locked-players';
 import { getAuthUser, franchiseIdForLeague } from '../../utils/auth';
 import { readBidRules } from '../../utils/waiver-claim';
 import { claimVerb as claimVerbFor } from '../../utils/claim-context';
@@ -145,14 +145,23 @@ const snapSeasonLabel = snapCounts.seasonLabel;
 const snapScopeTitle = snapCounts.scopeTitle;
 
 const snapshot = freeAgentsData as unknown as FaSnapshot;
+const claimYear = getLeagueYearForSlug(aflLeague.slug);
+// Which waiver window is live comes from MFL's own calendar (synced by
+// scripts/fetch-mfl-feeds.mjs — the export is owner-gated, so it cannot be read
+// from the browser). `currentWaiverType` is the league's SYSTEM, not the state.
+const calendarEvents =
+  (Object.entries(calendarModules).find(([p]) => p.includes(`/${claimYear}/`))?.[1] as any)?.default ?? [];
+const waiverWindow = resolveWaiverWindow(calendarEvents, new Date(), leagueClock(aflLeague.slug).zone);
 // MFL's own lock list (recently dropped players) is read alongside the live
 // rosters, per conference — see src/utils/mfl-locked-players.ts. Null (MFL
 // unreachable) just means no lock icons; the claim route re-checks anyway.
-const [liveRosters, lockedPlayers] = await Promise.all([
+const [liveRosters, fetchedLocks] = await Promise.all([
   fetchLiveAflRosters(snapshot.generatedForYear, snapshot, aflLeague.id),
   fetchLockedPlayers(aflLeague.id, snapshot.generatedForYear),
 ]);
 const liveView = applyLiveRosters(snapshot, liveRosters);
+// Drop locks only mean something in an FCFS window — see dropLocksIn.
+const lockedPlayers = dropLocksIn(fetchedLocks, waiverWindow.mode);
 // `lockedConfs` lists the conferences in which MFL has this player locked. It
 // is per conference because availability is: locked in the AL can mean held
 // in the NL. Only set when non-empty, so ~800 unlocked rows ship nothing extra.
@@ -222,7 +231,6 @@ const scoped = conferenceScopedView(liveView, activeConfId, { includeRookies: tr
 // league.json is ~12 KB, so an era-filtered glob costs nothing (the megafile
 // guard in tests/current-era-feed-globs.test.ts is about players.json).
 const aflLeagueModules = leagueFeedModules;
-const claimYear = getLeagueYearForSlug(aflLeague.slug);
 const aflLeagueFeed =
   (Object.entries(aflLeagueModules).find(([path]) => path.includes(`/${claimYear}/`))?.[1] as any)
     ?.default?.league ?? {};
@@ -252,12 +260,6 @@ const claimRoster = claimFranchiseId
   : [];
 // Passed to the CLIENT script via define:vars — the row builder runs in the
 // browser and cannot see frontmatter consts.
-// Which waiver window is live comes from MFL's own calendar (synced by
-// scripts/fetch-mfl-feeds.mjs — the export is owner-gated, so it cannot be read
-// from the browser). `currentWaiverType` is the league's SYSTEM, not the state.
-const calendarEvents =
-  (Object.entries(calendarModules).find(([p]) => p.includes(`/${claimYear}/`))?.[1] as any)?.default ?? [];
-const waiverWindow = resolveWaiverWindow(calendarEvents, new Date(), leagueClock(aflLeague.slug).zone);
 // The deadline in the header line, on the viewer's own clock when they have
 // named one (PT alone until then). Read-only: a page render must never write a
 // preference cookie, and only /preferences and the Sunday Ticket chips do.

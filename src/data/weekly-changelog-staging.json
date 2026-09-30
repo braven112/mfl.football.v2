@@ -1,4 +1,13 @@
 {
   "weekOf": "2026-10-05",
-  "changes": []
+  "changes": [
+    {
+      "date": "2026-09-30",
+      "type": "bug-fix",
+      "summary": "Waiver claims work again during the waiver window — every claim was being refused as \"player locked\", and <a href=\"/players\">Free Agents</a> offers Add on every free agent again.",
+      "impact": "user",
+      "area": "free-agents",
+      "league": "both"
+    }
+  ]
 }
