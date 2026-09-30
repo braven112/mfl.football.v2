@@ -22,6 +22,8 @@
  * its own cause instead of costing another round-trip through a human.
  */
 
+import { stripTags } from './whats-new-links';
+
 export interface MflPageSummary {
   title: string | null;
   /** `name=value` of every submit control, in document order. */
@@ -74,17 +76,27 @@ export function summarizeMflPage(html: string, maxText = 1200): MflPageSummary {
     submits.push([name, value].filter(Boolean).join('=') || '(unnamed submit)');
   }
   for (const [tag, inner] of body.matchAll(/<button[^>]*>([\s\S]*?)<\/button>/gi)) {
-    const label = inner.replace(/<[^>]*>/g, '').trim();
+    const label = stripTags(inner).trim();
     submits.push([attr(tag, 'name'), label].filter(Boolean).join('=') || '(button)');
   }
 
-  const text = body
-    // Drop the parts that are never visible copy but are most of the bytes.
-    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<head[\s\S]*?<\/head>/gi, ' ')
-    .replace(/<!--[\s\S]*?-->/g, ' ')
-    .replace(/<[^>]+>/g, ' ')
+  // Drop the parts that are never visible copy but are most of the bytes. The
+  // closing tags tolerate attributes and whitespace (`</script >`), and the
+  // strip loops to a fixed point, so one pass cannot splice a new tag or
+  // comment out of the remains of two (CodeQL bad-tag-filter /
+  // incomplete-multi-character-sanitization). Plain text for a log line;
+  // nothing here is rendered.
+  let stripped = body;
+  for (let previous = ''; previous !== stripped; ) {
+    previous = stripped;
+    stripped = stripped
+      .replace(/<script\b[\s\S]*?<\/script\b[^>]*>/gi, ' ')
+      .replace(/<style\b[\s\S]*?<\/style\b[^>]*>/gi, ' ')
+      .replace(/<head\b[\s\S]*?<\/head\b[^>]*>/gi, ' ')
+      .replace(/<!--[\s\S]*?--!?>/g, ' ')
+      .replace(/<[^<>]*>/g, ' ');
+  }
+  const text = stripped
     .replace(/&nbsp;/gi, ' ')
     .replace(/&amp;/gi, '&')
     .replace(/\s+/g, ' ')
