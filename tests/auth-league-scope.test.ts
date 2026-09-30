@@ -249,3 +249,34 @@ describe('AI endpoints key their rate limit by league AND franchise', () => {
     });
   }
 });
+
+describe('/api/admin/schefter-announce — a commissioner announces only into their own league', () => {
+  const ARCHIES_ID = getLeagueBySlug('archies')!.id;
+  const announce = async (leagueId: string, leagues: string, name = 'commish') => {
+    // Same module graph for signer and verifier: an earlier describe reset the
+    // module registry, and a fresh session module may sign with a fresh secret.
+    vi.resetModules();
+    const { POST } = await import('../src/pages/api/admin/schefter-announce');
+    const { createSessionToken: sign } = await import('../src/utils/session');
+    const token = sign({ userId: 'u1', username: name, franchiseId: '0001', leagueId, role: 'commissioner' });
+    return POST({
+      request: new Request('https://example.test/api/admin/schefter-announce', {
+        method: 'POST',
+        headers: { cookie: `session_token=${token}` },
+        body: JSON.stringify({ action: 'preview', slug: 'hello', headline: 'Hello', body: 'Body text.', leagues }),
+      }),
+    } as never);
+  };
+
+  it("refuses another league's commissioner (Archie's → TheLeague)", async () => {
+    expect((await announce(ARCHIES_ID, 'theleague')).status).toBe(403);
+  });
+
+  it("refuses a TheLeague commissioner announcing into the AFL", async () => {
+    expect((await announce(THELEAGUE_ID, 'both')).status).toBe(403);
+  });
+
+  it("lets a commissioner preview into their own league", async () => {
+    expect((await announce(THELEAGUE_ID, 'theleague')).status).not.toBe(403);
+  });
+});

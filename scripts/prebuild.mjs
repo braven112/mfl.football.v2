@@ -74,6 +74,9 @@ const SEQUENTIAL = [
   // half of the lookup and TheLeague's is the fallback for the rest (MFL
   // player ids are global, so the two compose).
   { name: 'compute:player-identity-union:afl', cmd: 'pnpm run compute:player-identity-union:afl', previewSkip: true },
+  // And for Archie's: its transactions, rosters and homepage name players from
+  // this, with TheLeague's union as the fallback.
+  { name: 'compute:player-identity-union:archies', cmd: 'pnpm run compute:player-identity-union:archies', previewSkip: true },
   // Rebuilds the frozen roster payloads for every HISTORICAL TheLeague season
   // (current league/season years stay live on the page). Runs after the
   // identity union for the same reason as it: the committed feeds it reads

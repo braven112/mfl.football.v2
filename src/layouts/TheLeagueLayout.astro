@@ -243,7 +243,12 @@ const transactionHubConfig = buildTransactionHubConfig(
 	leagueContext.slug,
 	layoutAuthUser,
 	resolveLeaguePath(
-		leagueContext.slug === 'afl-fantasy' || leagueContext.slug === 'keeper' ? `/${leagueContext.slug}/players` : '/theleague/players',
+		// A package league's pool page is Free Agents; the AFL family's is Players.
+		packageLeague
+			? `/${packageLeague.slug}/free-agents`
+			: leagueContext.slug === 'afl-fantasy' || leagueContext.slug === 'keeper'
+				? `/${leagueContext.slug}/players`
+				: '/theleague/players',
 		hideLeaguePrefix,
 	),
 	// Roster-management clock: waivers are a roster action, so the waiver

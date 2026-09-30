@@ -997,7 +997,9 @@ export const GET: APIRoute = async ({ request, url }) => {
   // what lets the site owner open a client league's News Ops.
   const resolved = resolveAdministeredLeague(getAuthUser(request), url.searchParams.get('league'));
   if (!resolved.ok) {
-    return json({ error: resolved.status === 401 ? 'forbidden' : resolved.error }, 403);
+    // 401 = sign in, 403 = not this league's admin — the same contract as the
+    // persona and branding routes.
+    return json({ error: resolved.error }, resolved.status);
   }
   const league = resolved.league;
 

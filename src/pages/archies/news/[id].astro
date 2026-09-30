@@ -3,11 +3,10 @@
  * One news article (archies) — thin route: finds the post (active feed, then
  * the per-year archives) and redirects to the news index when it is missing.
  * The body is the shared SchefterArticlePage. The lookup and redirect stay
- * here: `Astro.redirect()` only works from a page, and these imports are
+ * here: `Astro.redirect()` only works from a page, and these globs are
  * static specifiers.
  */
 import SchefterArticlePage from '../../../components/shared/SchefterArticlePage.astro';
-import feedData from '../../../../data/archies/schefter-feed.json';
 import config from '../../../../data/archies/archies.config.json';
 import type { SchefterFeed, SchefterPost } from '../../../types/schefter';
 import type { GauntletDerived } from '../../../utils/schedule-strength';
@@ -22,9 +21,15 @@ const archiveFiles = import.meta.glob<{ posts?: SchefterPost[] } | SchefterPost[
   { import: 'default' },
 );
 
+// Read through a glob, not a static import: the feed is cron-written, and a
+// checkout without it must serve the archives rather than fail the build.
+const feedData = Object.values(
+  import.meta.glob<SchefterFeed>('../../../../data/archies/schefter-feed.json', { eager: true, import: 'default' }),
+)[0];
+
 const { id } = Astro.params;
 const isArticle = (p: SchefterPost) => p.type === 'article' && p.id === id && !!p.content;
-let post = ((feedData as unknown as SchefterFeed).posts ?? []).find(isArticle);
+let post = (feedData?.posts ?? []).find(isArticle);
 if (!post) {
   for (const key of Object.keys(archiveFiles).sort().reverse()) {
     const data = await archiveFiles[key]();
