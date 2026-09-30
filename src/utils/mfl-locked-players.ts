@@ -18,6 +18,7 @@
  */
 import { buildMflExportUrl } from './mfl-url';
 import { fetchWithTimeout } from './fetch-with-timeout';
+import type { WaiverMode } from './waiver-window';
 
 /** `{ [unitKey]: Set<playerId> }` — '' for a single-pool league, else the conference id. */
 export type LockedPlayersByUnit = Record<string, Set<string>>;
@@ -57,6 +58,24 @@ export function isPlayerLocked(
 ): boolean {
   if (!locked) return false;
   return locked[conferenceId ?? '']?.has(String(playerId)) ?? false;
+}
+
+/**
+ * The locks that mean "recently dropped" — which only exist in an FCFS window.
+ *
+ * MFL's `locked` flag means "cannot be added INSTANTLY", and it has two causes
+ * the export does not tell apart: a drop lock on one player, and the weekly
+ * waiver lock on the whole pool (every free agent in both leagues read
+ * `locked` on 2026-09-30). In the WAIVER window a claim is exactly how a
+ * locked player is added, so a lock says nothing there; refusing on it turned
+ * down every claim in both leagues. Which window is live is MFL's own calendar
+ * (`resolveWaiverWindow`), never a guess from the flag.
+ */
+export function dropLocksIn(
+  locked: LockedPlayersByUnit | null,
+  mode: WaiverMode,
+): LockedPlayersByUnit | null {
+  return mode === 'fcfs' ? locked : null;
 }
 
 // One MFL read per league per warm instance per minute — the lock list only
