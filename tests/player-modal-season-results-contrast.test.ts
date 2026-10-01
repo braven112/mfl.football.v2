@@ -13,8 +13,13 @@ import { resolve } from 'node:path';
  * long half of each header is visually hidden (still read aloud) and the
  * opponent column drops its min-width.
  *
+ * The rest of the card had the same flaw (follow-up #1289): its labels,
+ * section titles and descriptions used raw gray-400/500. gray-400 is only
+ * 2.5:1 on the LIGHT card and 2.8:1 on the dark one, so the modal-wide
+ * check below forbids a raw gray-300/400/500 text colour anywhere in the file.
+ *
  * Rule: docs/claude/rules/theming-and-assets.md § "Muted text in the player
- * card's Season Results table".
+ * card".
  */
 const SRC = readFileSync(
   resolve(__dirname, '../src/components/theleague/PlayerDetailsModal.astro'),
@@ -72,5 +77,26 @@ describe('Season Results table stays readable', () => {
     expect(decls).not.toMatch(/display\s*:\s*none/);
     expect(hide![1]).toMatch(/clip/);
     expect(phone).toMatch(/\.weekly-results-table :global\(\.wr-opp\)\s*\{\s*min-width:\s*0/);
+  });
+});
+
+describe('the whole player card keeps muted text readable', () => {
+  it('never colours text a raw gray-300/400/500 step, anywhere in the modal', () => {
+    // Strip comments first: the explanatory notes name these steps on purpose.
+    const code = SRC.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    const offenders = code
+      .split('\n')
+      .map((line, i) => ({ line: i + 1, text: line.trim() }))
+      .filter(({ text }) => /(^|[^-])color\s*:\s*var\(--color-gray-(300|400|500)\b/.test(text));
+    expect(offenders).toEqual([]);
+  });
+
+  it('routes its muted labels through --content-text-muted (scan is not vacuous)', () => {
+    for (const sel of ['.pdm-owner__label', '.pdm-metric__label', '.pdm-section__title', '.pdm-detail__label']) {
+      const at = SRC.indexOf(`  ${sel} {`);
+      expect(at, `${sel} rule not found`).toBeGreaterThan(-1);
+      const body = SRC.slice(at, SRC.indexOf('}', at));
+      expect(body, sel).toMatch(/color:\s*var\(--content-text-muted\b/);
+    }
   });
 });
