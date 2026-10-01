@@ -193,6 +193,19 @@ muted line 3, and everything else moves to the sheet. Line 2 = kickoff,
 2026-09-26). Line 3 = spread · O/U · L3 trend
 arrow.
 
+**Lines 2 and 3 never wrap (2026-10-01).** At worst-case values ("Wed 10:00
+AM AEST @ #32", "100° -13.5 O/U 48.5 · L3 28.8↑ avg 28.8") each line is
+~250px of a ~260px line on a 384px phone, so a 10:00 kickoff or a two-digit
+rank bumped the rank badge or the average onto a fourth line. Tighter gaps
+only move that cliff. The row is a size container and every item on those two
+lines (text, badges, both logos) is sized from one length, `--rr-meta:
+clamp(10px, 4.2cqi, 12px)`, so the lines shrink as a whole instead of
+wrapping. The 10px floor (in rem, so a larger default text size lifts it) is
+deliberate: without it a 280px phone got ~8px text. At the floor a worst-case
+line can wrap again, but only below a ~330px phone. Anything new on line 2 or 3 must size
+from `--rr-meta` (em padding, `calc(var(--rr-meta) * n)` for images), or it
+reintroduces a fixed width that can push the line over.
+
 The **kickoff time is not a column today.** It is the one piece of new data
 this design proposes (open question 2). Without it, line 2 starts at the
 opponent.
