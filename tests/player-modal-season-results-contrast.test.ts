@@ -6,10 +6,15 @@ import { resolve } from 'node:path';
  * The player card's Season Results table shipped unreadable in dark mode
  * (Oct 2026): unplayed weeks were coloured `--color-gray-300` and byes faded
  * to `opacity: 0.4`. Dark themes map gray-300 to a navy one shade off the
- * card surface, so the whole upcoming schedule vanished. gray-400 is the
- * next-faintest step and fails contrast on both grounds, so the table's text
- * floor is gray-500. On a phone it also scrolled sideways with "Rank vs QB"
- * cut off — the long half of each header is hidden below 640px.
+ * card surface, so the whole upcoming schedule vanished. No raw gray step is
+ * safe as muted TEXT here — even gray-500 is 4.4:1 on the default dark card —
+ * so the table's text floor is the semantic `--content-text-muted`. On a
+ * phone it also scrolled sideways with "Rank vs QB" cut off: below 640px the
+ * long half of each header is visually hidden (still read aloud) and the
+ * opponent column drops its min-width.
+ *
+ * Rule: docs/claude/rules/theming-and-assets.md § "Muted text in the player
+ * card's Season Results table".
  */
 const SRC = readFileSync(
   resolve(__dirname, '../src/components/theleague/PlayerDetailsModal.astro'),
@@ -25,14 +30,27 @@ function weeklyRules(): Array<{ selector: string; body: string }> {
   return rules;
 }
 
+/** The body of one @media block, brace-matched (not sliced to EOF). */
+function mediaBlock(header: string): string {
+  const at = SRC.indexOf(header);
+  expect(at, `${header} not found`).toBeGreaterThan(-1);
+  const open = SRC.indexOf('{', at);
+  let depth = 0;
+  for (let i = open; i < SRC.length; i++) {
+    if (SRC[i] === '{') depth++;
+    else if (SRC[i] === '}' && --depth === 0) return SRC.slice(open + 1, i);
+  }
+  throw new Error(`${header} is unterminated`);
+}
+
 describe('Season Results table stays readable', () => {
   it('finds the table rules (scan is not vacuous)', () => {
     expect(weeklyRules().length).toBeGreaterThan(10);
   });
 
-  it('never colours its text gray-300 or gray-400', () => {
+  it('never colours its text a raw gray-300/400/500 step', () => {
     const offenders = weeklyRules()
-      .filter((r) => /(^|[^-])color:\s*var\(--color-gray-(300|400)\b/.test(r.body))
+      .filter((r) => /(^|[^-])color:\s*var\(--color-gray-(300|400|500)\b/.test(r.body))
       .map((r) => r.selector);
     expect(offenders).toEqual([]);
   });
@@ -46,7 +64,13 @@ describe('Season Results table stays readable', () => {
 
   it('shortens its headers on a phone so the table does not scroll sideways', () => {
     expect(SRC).toMatch(/<th class="wr-rank" id="wr-rank-header">Rank<span class="wr-hdr-long">/);
-    const phone = SRC.slice(SRC.indexOf('@media (max-width: 640px)'));
-    expect(phone).toMatch(/\.weekly-results-table \.wr-hdr-long\s*\{\s*display:\s*none/);
+    const phone = mediaBlock('@media (max-width: 640px)');
+    const hide = phone.match(/\.weekly-results-table \.wr-hdr-long\s*\{([^}]*)\}/);
+    expect(hide, 'header-shortening rule must live inside the phone media query').toBeTruthy();
+    // Visually hidden, never display:none — the full header stays in the a11y tree.
+    const decls = hide![1].replace(/\/\*[\s\S]*?\*\//g, '');
+    expect(decls).not.toMatch(/display\s*:\s*none/);
+    expect(hide![1]).toMatch(/clip/);
+    expect(phone).toMatch(/\.weekly-results-table :global\(\.wr-opp\)\s*\{\s*min-width:\s*0/);
   });
 });

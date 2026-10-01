@@ -600,6 +600,17 @@ that letterboxes to about 18×11 in an 18×18 slot. That is how it already
 renders in the header; it is not a bug, but do not expect it to fill a square
 next to icons that do.
 
+## Muted text in the player card's Season Results table
+
+Muted TEXT (unplayed weeks, byes, headers, week numbers, status) uses
+`--content-text-muted`, never a raw gray step and never `opacity`. Dark
+themes remap the gray scale: `--color-gray-300` becomes a navy one shade off
+the card, which made the whole upcoming schedule vanish in Oct 2026, and even
+`--color-gray-500` is only 4.4:1 on the default dark card. The semantic token
+clears AA in every theme. On a phone the long half of each header ("…onent",
+" vs QB") is visually hidden, not `display: none`, so a screen reader still
+hears the full header. Guard: `tests/player-modal-season-results-contrast.test.ts`.
+
 ## Overlays on a phone — size against `dvh`, never bare `vh`
 
 `vh` is the LARGE viewport: the page as it would be with the browser chrome
