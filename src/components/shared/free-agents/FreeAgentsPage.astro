@@ -42,7 +42,8 @@ import '../../../styles/free-agents-mobile.css';
 import nflByeWeeksFile from '../../../../data/nfl/bye-weeks.json';
 import { byeWeeksByTeam } from '../../../utils/nfl-bye-lookup';
 import { fetchLiveLeagueRosters, applyLiveRosters, conferenceScopedView, resolveConferenceSelection, type FaSnapshot } from '../../../utils/afl-free-agents-live';
-import { dropLocksIn, fetchLockedPlayers } from '../../../utils/mfl-locked-players';
+import { fetchDropLocks } from '../../../utils/mfl-locked-players';
+import { waiverEventsLiveFirst } from '../../../utils/live-waiver-calendar';
 import { getAuthUser, franchiseIdForLeague } from '../../../utils/auth';
 import { readBidRules } from '../../../utils/waiver-claim';
 import { claimVerb as claimVerbFor } from '../../../utils/claim-context';
@@ -164,22 +165,31 @@ const snapScopeTitle = snapCounts.scopeTitle;
 
 const snapshot = freeAgentsData as FaSnapshot;
 const claimYear = getLeagueYearForSlug(league.slug);
-// Which waiver window is live comes from MFL's own calendar (synced by
-// scripts/fetch-mfl-feeds.mjs — the export is owner-gated, so it cannot be read
-// from the browser). `currentWaiverType` is the league's SYSTEM, not the state.
-const calendarEvents =
+// Which waiver window is live comes from MFL's own calendar, read LIVE with the
+// viewer's cookie (the export is owner-gated) and falling back to the copy
+// synced by scripts/fetch-mfl-feeds.mjs — a lagging sync must not show the
+// wrong window's locks while the claim route, which reads live, decides
+// differently. `currentWaiverType` is the league's SYSTEM, not the state.
+const committedCalendarEvents =
   (Object.entries(calendarModules).find(([p]) => p.includes(`/${claimYear}/`))?.[1] as any)?.default ?? [];
-const waiverWindow = resolveWaiverWindow(calendarEvents, new Date(), leagueClock(league.slug).zone);
-// MFL's own lock list (recently dropped players) is read alongside the live
-// rosters, per conference — see src/utils/mfl-locked-players.ts. Null (MFL
-// unreachable) just means no lock icons; the claim route re-checks anyway.
-const [liveRosters, fetchedLocks] = await Promise.all([
+// The pool default and claim context below read the same session.
+const authUser = getAuthUser(Astro.request);
+const [liveRosters, calendarEvents] = await Promise.all([
   fetchLiveLeagueRosters(league.slug, snapshot.generatedForYear, snapshot),
-  fetchLockedPlayers(league.id, snapshot.generatedForYear),
+  waiverEventsLiveFirst(
+    claimYear,
+    league.id,
+    franchiseIdForLeague(authUser, league.id) ? authUser?.id : null,
+    committedCalendarEvents,
+  ),
 ]);
 const liveView = applyLiveRosters(snapshot, liveRosters);
-// Drop locks only mean something in an FCFS window — see dropLocksIn.
-const lockedPlayers = dropLocksIn(fetchedLocks, waiverWindow.mode);
+const waiverWindow = resolveWaiverWindow(calendarEvents, new Date(), leagueClock(league.slug).zone);
+// MFL's own lock list (recently dropped players), per conference — see
+// src/utils/mfl-locked-players.ts. Only an FCFS window reads it; null (waiver
+// window, or MFL unreachable) just means no lock icons, and the claim route
+// re-checks anyway.
+const lockedPlayers = await fetchDropLocks(league.id, snapshot.generatedForYear, waiverWindow.mode);
 // `lockedConfs` lists the conferences in which MFL has this player locked. It
 // is per conference because availability is: locked in the AL can mean held
 // in the NL. Only set when non-empty, so ~800 unlocked rows ship nothing extra.
@@ -226,8 +236,7 @@ const conferenceMeta = snapshot.conferences;
 //
 // NB: this makes the SSR HTML session-personalized — never add shared-cache
 // headers (s-maxage/CDN caching) to this page or one user's default
-// conference gets served to everyone.
-const authUser = getAuthUser(Astro.request);
+// conference gets served to everyone. (`authUser` is read above.)
 const { userConfId, activeConfId } = resolveConferenceSelection(
   conferenceMeta,
   authUser,

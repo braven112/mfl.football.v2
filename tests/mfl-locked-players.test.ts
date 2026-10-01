@@ -1,6 +1,4 @@
 import { describe, it, expect } from 'vitest';
-import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join } from 'node:path';
 import { parseLockedPlayers, isPlayerLocked, lockedUnitKey, dropLocksIn } from '../src/utils/mfl-locked-players';
 
 // Shapes captured from MFL's live `export?TYPE=freeAgents` (2026-09-24): the
@@ -66,21 +64,6 @@ describe('mfl-locked-players', () => {
 // window. The shared Free Agents page was extracted while the hotfix landed on
 // its predecessor, and a copy that reads the raw list refuses every waiver
 // claim in the league (#1280).
-describe('every lock reader gates on the waiver window', () => {
-  const walk = (dir: string): string[] =>
-    readdirSync(dir).flatMap((f) => {
-      const p = join(dir, f);
-      return statSync(p).isDirectory() ? walk(p) : /\.(astro|ts)$/.test(p) ? [p] : [];
-    });
-  const readers = walk('src').filter(
-    (f) => !f.endsWith('mfl-locked-players.ts') && readFileSync(f, 'utf8').includes('fetchLockedPlayers('),
-  );
-
-  it('finds the readers', () => {
-    expect(readers.length).toBeGreaterThan(0);
-  });
-
-  it.each(readers)('%s applies dropLocksIn', (file) => {
-    expect(readFileSync(file, 'utf8')).toMatch(/dropLocksIn\(/);
-  });
-});
+// The call-site guard ("every lock reader gates on the waiver window") lives in
+// tests/mfl-locks-window-gate.test.ts: the raw reader is private now, and every
+// consumer must read through fetchDropLocks.

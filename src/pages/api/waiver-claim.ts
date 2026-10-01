@@ -45,7 +45,7 @@ import { bustRosterCaches } from '../../utils/mfl-roster-cache';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS, handledFailure } from '../../utils/api-response';
 import { resolveWaiverWindow } from '../../utils/waiver-window';
 import { summarizeMflPage } from '../../utils/mfl-page-summary';
-import { dropLocksIn, fetchLockedPlayers, isPlayerLocked } from '../../utils/mfl-locked-players';
+import { fetchDropLocks, isPlayerLocked } from '../../utils/mfl-locked-players';
 import { checkRateLimit } from '../../utils/rate-limit';
 import {
   readBidRules,
@@ -240,9 +240,9 @@ export const POST: APIRoute = async ({ request }) => {
     // first and say so plainly. A failed read is "unknown", not "locked": fall
     // through and let MFL decide, exactly as before this check existed.
     // FCFS only: in the waiver window MFL marks the WHOLE pool locked and a
-    // queued claim is the right request for every one of them (dropLocksIn),
-    // so the read is skipped there rather than made and discarded.
-    const locked = dropLocksIn(immediate ? await fetchLockedPlayers(leagueId, year, { fresh: true }) : null, window.mode);
+    // queued claim is the right request for every one of them, so
+    // fetchDropLocks answers null there without reading.
+    const locked = await fetchDropLocks(leagueId, year, window.mode, { fresh: true });
     // FCFS writes only the FIRST claim (see `writes` below), so only that one is
     // checked there — a locked alternative further down a board must not stop
     // an available first pick.
