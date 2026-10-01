@@ -638,7 +638,7 @@ for (const player of sortedTableRoster) {
     scoreTotal: leagueYtdPoints.get(player.id) ?? null,
     scoreGames: season.games,
     scoreAverage: season.average,
-    recentAverage: recentScoreAverage(aflSeasonScores, player.id),
+    recentAverage: recentScoreAverage(leagueSeasonScores, player.id),
   });
 }
 
