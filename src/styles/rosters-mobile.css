@@ -726,6 +726,70 @@
     content: 'avg ' / 'Season average ';
   }
 
+  /* ── Coach lines 2 and 3 never wrap (user, 2026-10-01) ──────────────── */
+  /* A worst-case matchup ("Wed 10:00 AM AEST @ [logo] #32", "100° -13.5
+     O/U 48.5 · L3 28.8↑ avg 28.8") is ~250px of a ~260px line on a 384px
+     phone, so a 10:00 kickoff, a two-digit rank or a half-point spread
+     pushed the last item onto a line of its own. Tighter spacing alone
+     only moves that cliff. So the row is a size container, and everything
+     on lines 2 and 3 (text, badges and both logos) is sized from ONE
+     length, --rr-meta, which is the usual 12px until the line is too
+     narrow for it and then shrinks with the line. The two lines scale as
+     a whole, so they cannot overflow at any width. The column gap is the
+     only fixed length, and the 4.2cqi slope leaves room for it down to a
+     ~200px line (a 320px phone). Line 1 keeps its own sizes: the name
+     wraps by design. */
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody > tr.roster-row,
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody > tr.roster-row {
+    container-type: inline-size;
+    column-gap: 0.25rem;
+    --rr-meta: min(var(--font-size-xs), 4.2cqi);
+  }
+
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody tr[data-pos] .player-meta__pos::before,
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody .rr-ph,
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody .vs-at,
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody .opponent-bye,
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody td[data-column='avg'],
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody tr[data-pos] .player-meta__pos::before,
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody .rr-ph,
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody .vs-at,
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody .opponent-bye,
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody td[data-column='weather'],
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody td[data-column='ou'],
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody td[data-column='avgRecent'],
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody td[data-column='avgSeason'] {
+    font-size: var(--rr-meta);
+  }
+
+  /* The badges keep their 11-on-12 ratio, with padding in em so it shrinks
+     with them. */
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody .rr-ph--spread,
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody td[data-column='oppRank'] .rank-badge,
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody .spread-badge,
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody td[data-column='oppRank'] .rank-badge {
+    font-size: calc(var(--rr-meta) * 11 / 12);
+    padding: 0.0625em 0.3em;
+  }
+
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody .player-meta__logo,
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody .player-meta__logo {
+    width: min(var(--player-logo-size), calc(var(--rr-meta) * 4 / 3));
+    height: min(var(--player-logo-size), calc(var(--rr-meta) * 4 / 3));
+  }
+
+  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody td[data-column='opponent'] .opponent-logo,
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody td[data-column='opponent'] .opponent-logo {
+    width: calc(var(--rr-meta) * 5 / 3) !important;
+    height: calc(var(--rr-meta) * 5 / 3) !important;
+  }
+
+  /* The column gap already spaces these; the extra 4px each was slack. */
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody td[data-column='ou']::before,
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody td[data-column='avgRecent']::before {
+    margin-left: 0;
+  }
+
   /* ── Cap Hits / Dead Money: the same card treatment ─────────────────── */
   .roster-page[data-league='theleague'] #deadMoneyTableBody > tr {
     display: flex;
