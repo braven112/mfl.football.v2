@@ -7,7 +7,7 @@ hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1288
 hotfix_sha: c177462
 followup_issue: 1291
 followup_pr:
-followup_session:
+followup_session: session_015p8F872MvYWtfVUvcLSGFG
 ---
 
 # Follow-up: contract declarations failed with "reading 'cancelled'"
