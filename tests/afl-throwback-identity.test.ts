@@ -530,11 +530,13 @@ const KNOWN_INVISIBLE_ERAS = new Set([
   // 124 KB HTML 404. These entries point at the 2025 rebrand files, so the
   // eras do not appear in TheLeague's picker.
   //
-  // The art is NOT lost: `https://mfl.football/images/team_banners/<file>`
-  // still serves the same files (browser User-Agent required — it answers
-  // 406 to curl's default). Recover it from there and the line comes out.
-  // Gridiron Geeks 2014 (#706) and Maverick 2016 (the Mel Gibson
-  // gunslinger art, Oct 2026) came out that way.
+  // `https://mfl.football/images/team_banners/<file>` still serves those
+  // files (browser User-Agent required — it answers 406 to curl's default),
+  // which is how Maverick 2016 (the Mel Gibson gunslinger art, Oct 2026) and
+  // Gridiron Geeks 2014 (#706) came out. These two were checked there too and
+  // are deliberately left: Cowboy Up's old banner is byte-for-byte today's,
+  // and Computer Jocks' differs only in the wordmark's shade of green — no
+  // distinct look to throw back to.
   'theleague 0010 2016', // Computer Jocks
   'theleague 0014 2018', // Cowboy Up
 ]);
