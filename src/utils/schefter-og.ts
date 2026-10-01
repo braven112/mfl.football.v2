@@ -17,7 +17,7 @@
  *     slow CDN can never hang or break an unfurl.
  */
 
-import { readFileSync, statSync, readdirSync } from 'node:fs';
+import { closeSync, fstatSync, openSync, readFileSync, readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import satori from 'satori';
 import { Resvg } from '@resvg/resvg-js';
@@ -58,26 +58,33 @@ const feedCache = new Map<OgLeague, FeedCacheEntry>();
 
 function getFeedIndex(league: OgLeague): Map<string, SchefterPost> {
   const filePath = join(process.cwd(), FEED_PATHS[league]);
-  let mtimeMs: number;
+  const cached = feedCache.get(league);
+  // One open handle for both the mtime check and the read, so the bytes parsed
+  // are the bytes whose mtime was checked (CodeQL js/file-system-race).
+  let fd: number;
   try {
-    mtimeMs = statSync(filePath).mtimeMs;
+    fd = openSync(filePath, 'r');
   } catch {
     return new Map();
   }
-  const cached = feedCache.get(league);
-  if (cached && cached.mtimeMs === mtimeMs) return cached.byId;
-
-  const byId = new Map<string, SchefterPost>();
   try {
-    const feed = JSON.parse(readFileSync(filePath, 'utf-8')) as SchefterFeed;
-    for (const post of feed.posts ?? []) byId.set(post.id, post);
-  } catch {
-    // A cron job may be rewriting the file mid-read — serve the last good
-    // index rather than 404ing every known post until the next clean read.
-    return cached ? cached.byId : new Map();
+    const mtimeMs = fstatSync(fd).mtimeMs;
+    if (cached && cached.mtimeMs === mtimeMs) return cached.byId;
+
+    const byId = new Map<string, SchefterPost>();
+    try {
+      const feed = JSON.parse(readFileSync(fd, 'utf-8')) as SchefterFeed;
+      for (const post of feed.posts ?? []) byId.set(post.id, post);
+    } catch {
+      // A cron job may be rewriting the file mid-read — serve the last good
+      // index rather than 404ing every known post until the next clean read.
+      return cached ? cached.byId : new Map();
+    }
+    feedCache.set(league, { mtimeMs, byId });
+    return byId;
+  } finally {
+    closeSync(fd);
   }
-  feedCache.set(league, { mtimeMs, byId });
-  return byId;
 }
 
 // ── Archive fallback ─────────────────────────────────────────────────────
