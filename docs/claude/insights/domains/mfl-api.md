@@ -3436,10 +3436,27 @@ So neither "prefer `icon` because it is small" nor "the subject is centered" can
 
 **Insight:** `export?TYPE=freeAgents` tags every player MFL will not currently let anyone add with `status: "locked"` — the rows its own add/drop page marks `*`. Three things the 2026-02-13 entry above got wrong or did not know:
 
-1. **It is not an offseason state.** In season it is the recently-dropped lock both constitutions describe: the AFL locks a dropped player until the next Sunday kickoff, TheLeague until Sunday 10:15 AM PT. The claim window and the lock window do not overlap, so a locked player is never legitimately claimable — not by FCFS and not by a queued waiver claim.
+1. **It is not an offseason state.** In season it is the recently-dropped lock both constitutions describe: the AFL locks a dropped player until the next Sunday kickoff, TheLeague until Sunday 10:15 AM PT. ~~The claim window and the lock window do not overlap, so a locked player is never legitimately claimable — not by FCFS and not by a queued waiver claim.~~ **WRONG — see the 2026-09-30 entry below: in the WAIVER window the whole pool reads `locked`, and a queued claim is how every one of them is added. Reading this sentence as true refused every claim in both leagues for three days.**
 2. **It is per unit.** The AFL answers `CONFERENCE00` and `CONFERENCE01` separately, and `0530` was locked in the AL while rostered in the NL. TheLeague answers one `LEAGUE` unit.
 3. **It needs no owner cookie.** `docs/features/mfl-api.md` listed this export as owner-authenticated; an unauthenticated read (the `api.` host, following its redirect, no `MFL_USER_ID`) returned `{ '00': 10, '01': 7 }` locked players for the AFL, `0530` among the AL's, and TheLeague's `LEAGUE` unit too.
 
 **Evidence:** Live reads on 2026-09-24 while diagnosing, from the sandbox and from a Vercel preview of #1209. No runtime errors were logged for the incident: the error was handled, then its body was discarded at the edge.
 
-**Recommendation:** Ask MFL for the lock list rather than deriving it from a calendar — `fetchLockedPlayers` / `isPlayerLocked` in `src/utils/mfl-locked-players.ts`, keyed by unit, failing open (a failed read is "unknown", never "locked"). And return every handled failure from a route whose message the owner must read as `200` + `{ success: false }` — `handledFailure` in `src/utils/api-response.ts`; guard `tests/claim-route-handled-failure-guard.test.ts`. Still open: whether a locked player takes a bid in TheLeague's offseason auction (Feb–Mar) — the Free Agents page leaves the auction flow ungated until that is observed.
+**Recommendation:** Ask MFL for the lock list rather than deriving it from a calendar — `fetchDropLocks` (superseding the raw `fetchLockedPlayers`, now private) / `isPlayerLocked` in `src/utils/mfl-locked-players.ts`, keyed by unit, failing open (a failed read is "unknown", never "locked"). And return every handled failure from a route whose message the owner must read as `200` + `{ success: false }` — `handledFailure` in `src/utils/api-response.ts`; guard `tests/claim-route-handled-failure-guard.test.ts`. Still open: whether a locked player takes a bid in TheLeague's offseason auction (Feb–Mar) — the Free Agents page leaves the auction flow ungated until that is observed.
+
+## 2026-09-30 - `status: "locked"` Means "No INSTANT Add" — The Whole Pool In The Waiver Window
+
+**Context:** From ~2026-09-27 to hotfix #1280 every waiver claim in both leagues was refused by our own pre-check ("This player is locked on MFL — he was recently dropped…"), and both Free Agents pages hid Add on every row. Reported in the AFL GroupMe. Follow-up #1281.
+
+**Insight:** The freeAgents flag does not say "recently dropped". It says "cannot be added INSTANTLY", and that has two causes the export does not tell apart:
+
+1. **The waiver window locks the whole pool.** 812/812 AL, 814/814 NL and 619/619 TheLeague free agents read `locked` on 2026-09-30. There a queued waiver claim is exactly how a locked player is added, so the flag carries no information about a claim.
+2. **Only in FCFS is it a drop lock** — the player-specific lock both constitutions describe (AFL: until the next Sunday kickoff; TheLeague: Sunday 10:15 AM PT), which MFL refuses on an instant add with "<Name> Cannot Be Added Because Is Locked."
+
+Which window is live is MFL's own calendar (`resolveWaiverWindow`), never inferred from "every row is locked" — the user rejected that heuristic explicitly. The calendar export is owner-gated, so a page reads it live with the viewer's cookie (`waiverEventsLiveFirst`, `src/utils/live-waiver-calendar.ts`) and falls back to the synced `calendar.json`; a lagging sync otherwise shows one window's locks while the claim route, reading live, decides by the other.
+
+**Still unknown (F1 of #1281, dropped pending observation):** whether MFL refuses a queued claim on a player dropped DURING the waiver window (Sun→Wed, before FCFS opens). The export cannot distinguish that drop lock from the pool lock, so the app shows nothing and lets MFL decide; a refusal at submit time reaches the owner verbatim through the route's `Cannot Save Request:` pattern. If an owner reports a claim that was filed but silently never processed, the drop set has to come from the transactions feed (FREE_AGENT/WAIVER drops since the window opened), verified against that real case first.
+
+**Evidence:** Production 409s on `/api/waiver-claim` (7 over 3 days); freeAgents reads on 2026-09-30 during the waiver window; verified after #1280 that no row reads locked on either page in that window.
+
+**Recommendation:** Never read the flag raw. `fetchDropLocks(leagueId, year, mode)` is the only door — it answers null outside FCFS without an MFL read. Guard: `tests/mfl-locks-window-gate.test.ts` (the raw reader is private; every consumer goes through `fetchDropLocks`; both pages resolve the window live before reading locks).

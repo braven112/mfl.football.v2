@@ -31,7 +31,7 @@
  */
 
 import { getCurrentLeagueYear, getRolloverLeagueYear } from './league-year';
-import { mflFetch } from './mfl-fetch';
+import { readLiveWaiverEvents } from './live-waiver-calendar';
 import { createMFLApiClient, type RosterEntry } from './mfl-matchup-api';
 import { getLeagueById, leagueClock, type LeagueDefinition } from '../config/leagues';
 import { resolveWaiverWindow, describeWaiverWindow } from './waiver-window';
@@ -92,39 +92,6 @@ function committedWaiverEvents(dataPath: string, year: number): unknown[] {
 }
 
 /**
- * Read MFL's calendar to learn which waiver window is live.
- *
- * mflFetch, NOT fetch: the calendar export is owner-gated and undici drops the
- * Cookie on MFL's api → www## redirect, so a bare fetch reads back "API
- * requires a logged in user", which parses as an empty calendar → 'unknown'.
- * The same trap is documented at the POST endpoint's own calendar read.
- *
- * Returns null — NOT an empty array — when the read did not produce a usable
- * calendar, so the caller can tell "MFL says there are no waiver events" from
- * "we could not ask", and fall back to the committed feed only in the second
- * case.
- */
-async function readWaiverEvents(
-  year: number,
-  leagueId: string,
-  mflUserCookie: string,
-): Promise<unknown[] | null> {
-  try {
-    const res = await mflFetch({
-      url: `https://api.myfantasyleague.com/${year}/export?TYPE=calendar&L=${leagueId}&JSON=1&_=${Date.now()}`,
-      method: 'GET',
-      mflUserCookie,
-    });
-    const body = await res.json().catch(() => null);
-    const raw = body?.calendar?.event;
-    if (!raw) return null;
-    return Array.isArray(raw) ? raw : [raw];
-  } catch {
-    return null;
-  }
-}
-
-/**
  * Names for a bounded set of player ids.
  *
  * MFL's players export is several megabytes unfiltered, so this asks only for
@@ -168,7 +135,7 @@ export async function resolveClaimContext(user: AuthUser, clock: ViewerClock = D
   // Live first, committed feed second. The live read is the fresher of the two
   // but it is owner-gated, so it is also the one that can come back empty for
   // reasons that have nothing to do with the league's schedule.
-  const live = await readWaiverEvents(year, leagueId, user.id);
+  const live = await readLiveWaiverEvents(year, leagueId, user.id);
   const events = live ?? committedWaiverEvents(league.dataPath, year);
   const window = resolveWaiverWindow(events as never, new Date(), leagueClock(league.slug).zone);
 

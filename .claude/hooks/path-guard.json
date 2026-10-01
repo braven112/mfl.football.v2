@@ -40,10 +40,13 @@
         "src/pages/api/waiver-claims.ts",
         "src/utils/*waiver*",
         "src/utils/mfl-matchup-api.ts",
-        "src/utils/waiver-system.ts"
+        "src/utils/waiver-system.ts",
+        "src/utils/mfl-locked-players.ts"
       ],
       "tests": [
         "tests/afl-waiver-order.test.ts",
+        "tests/mfl-locks-window-gate.test.ts",
+        "tests/mfl-locked-players.test.ts",
         "tests/waiver-claim.test.ts",
         "tests/claim-route-handled-failure-guard.test.ts",
         "tests/waiver-order-display.test.ts",
@@ -312,7 +315,8 @@
         "tests/snap-counts.test.ts",
         "tests/waiver-claim.test.ts",
         "tests/waiver-filed-claims.test.ts",
-        "tests/waiver-window-callers.test.ts"
+        "tests/waiver-window-callers.test.ts",
+        "tests/mfl-locks-window-gate.test.ts"
       ]
     },
     {
