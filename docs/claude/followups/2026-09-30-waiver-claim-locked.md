@@ -6,7 +6,7 @@ opened: 2026-09-30
 hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1280
 hotfix_sha: 4e0ecbc
 followup_issue: 1281
-followup_pr: PENDING
+followup_pr: https://github.com/braven112/mfl.football.v2/pull/1287
 shipped: 2026-10-01
 followup_session: https://claude.ai/code/session_013KbzgSmzCoSxmsPETQvJVM
 ---
