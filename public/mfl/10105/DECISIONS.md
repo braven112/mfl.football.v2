@@ -228,6 +228,18 @@ for it. If the division count ever changes, the three constants at the top of
 No. MFL's standings decide who leads a division; VP only orders those nine
 among themselves. Confirmed as correct by the client.
 
+## The same seeding on the site (2026-09-29)
+
+`/archies/standings?view=league` (the **MAD** tab) shows this seeding too,
+from `src/utils/mad-standings.ts` with the tier sizes in the league registry
+(`standingsSeeding`). `tests/shared-standings-page.test.ts` runs THIS file's
+`tiers()` against the committed feed and requires the site's seeds to match it
+team for team — change the seeding here and that test says the site must
+follow. The site takes each tier in MFL's row order instead of re-sorting on
+VP / PF: MFL's standings sort is now `VICTORY_POINTS, PTS, H2H` (it was
+`PCT, PTS, H2H` when the table above was recorded), so the two agree, and MFL
+also breaks a full VP + PF tie on head-to-head.
+
 ## Everything is settled
 
 No open questions remain. The widget is live, reads MFL on every page load, and

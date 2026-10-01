@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { gameDayPreviewSlotView, isSundayPT } from '../src/utils/afl-hero-resolver';
+import { gameDayPreviewSlotView } from './helpers/afl-hero';
+import { isSundayPT } from '../src/utils/sunday-ticket-window';
 
 // Sat Sep 12 2026 09:00 PT = 16:00Z ; Sun Sep 13 2026 08:00 PT = 15:00Z
 const SAT = new Date(Date.UTC(2026, 8, 12, 16));

@@ -13,6 +13,7 @@
 import type { WhatsNewEntry } from '../../types/whats-new';
 import { WHATS_NEW_CATEGORY_LABELS } from '../../types/whats-new';
 import { sortEntriesNewestFirst, enrichEntries } from '../../utils/whats-new-helpers';
+import { ALL_LEAGUES } from '../../config/leagues';
 
 interface Props {
   /** Raw What's New entries from whats-new.json */
@@ -34,6 +35,12 @@ interface Props {
    * currently headlining the hero, so the same story isn't shown twice.
    */
   excludeId?: string;
+  /**
+   * Shown when there is nothing to list. Omitted, an empty row renders
+   * nothing (TheLeague/AFL behaviour); a package league passes a line so its
+   * What's New section is always present at the foot of the homepage.
+   */
+  emptyText?: string;
 }
 
 const {
@@ -45,7 +52,11 @@ const {
   lastVisitDate = null,
   urlHost = 'theleague.us',
   excludeId,
+  emptyText,
 } = Astro.props;
+
+// Any registry league's route prefix, stripped for the fake browser bar.
+const LEAGUE_PREFIX = new RegExp(`^/(${ALL_LEAGUES.map((l) => l.slug).join('|')})(?=/|$)`);
 
 const MULTICOLOR_ICONS = ['nfl'];
 
@@ -78,7 +89,7 @@ const enriched = enrichEntries(sorted.slice(0, count), lastVisitDate);
                     <span class="wnr-card__dot wnr-card__dot--red" />
                     <span class="wnr-card__dot wnr-card__dot--yellow" />
                     <span class="wnr-card__dot wnr-card__dot--green" />
-                    <span class="wnr-card__url">{entry.link ? `${urlHost}${entry.link.replace(/^\/(theleague|afl-fantasy)/, '')}` : urlHost}</span>
+                    <span class="wnr-card__url">{entry.link ? `${urlHost}${entry.link.replace(LEAGUE_PREFIX, '')}` : urlHost}</span>
                   </div>
                   <img
                     src={imagePath}
@@ -130,6 +141,16 @@ const enriched = enrichEntries(sorted.slice(0, count), lastVisitDate);
   </section>
 )}
 
+{enriched.length === 0 && emptyText && (
+  <section class="whats-new-row" aria-label="Recent feature updates">
+    <div class="whats-new-row__header">
+      <h2 class="whats-new-row__heading">What's New</h2>
+      <a href={allReleasesLink} class="whats-new-row__link">All releases &rarr;</a>
+    </div>
+    <p class="whats-new-row__empty">{emptyText}</p>
+  </section>
+)}
+
 <style>
   /* ── Section layout (mirrors WhatsNext.astro) ── */
   /* The --cat-* category palette and --wn-fresh-* chip tokens live in
@@ -147,9 +168,14 @@ const enriched = enrichEntries(sorted.slice(0, count), lastVisitDate);
     gap: 1rem;
   }
 
+  .whats-new-row__empty {
+    margin: 0;
+    color: var(--content-text-muted);
+  }
+
   .whats-new-row__heading {
     font-size: 1.5rem;
-    color: var(--league-accent, #1c497c);
+    color: var(--league-accent-fg, var(--league-accent, #1c497c));
     margin: 0;
     padding-bottom: 0.5rem;
   }
@@ -157,7 +183,7 @@ const enriched = enrichEntries(sorted.slice(0, count), lastVisitDate);
   .whats-new-row__link {
     font-size: var(--font-size-sm);
     font-weight: 600;
-    color: var(--league-accent, #1c497c);
+    color: var(--league-accent-fg, var(--league-accent, #1c497c));
     text-decoration: none;
     white-space: nowrap;
   }

@@ -307,7 +307,7 @@ describe('resolveConferenceSelection', () => {
 
 describe('ownersForPlayer', () => {
   it('returns {} for hand-built sets with no owner map (the empty-rosters fallback)', () => {
-    // scripts/compute-afl-free-agents.mjs builds this shape itself when the
+    // scripts/compute-free-agents.mjs builds this shape itself when the
     // rosters feed is missing, and it runs in prebuild — throwing here would
     // fail the whole build instead of baking "nobody owns anyone", which is
     // what that fallback means.

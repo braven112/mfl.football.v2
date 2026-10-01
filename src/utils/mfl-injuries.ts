@@ -46,6 +46,9 @@ const INJURY_FEEDS: Record<string, Record<string, unknown>> = {
   'afl-fantasy': import.meta.glob('../../data/afl-fantasy/mfl-feeds/*/injuries.json', {
     eager: true,
   }),
+  archies: import.meta.glob('../../data/archies/mfl-feeds/*/injuries.json', {
+    eager: true,
+  }),
 };
 
 /**

@@ -32,6 +32,12 @@ import LvWeekPicker from './LvWeekPicker';
 import LvStandings from './LvStandings';
 import { isMatchupFinal } from '../../../utils/live/standings-projection';
 import LvLeaders from './LvLeaders';
+import LvGroupPicker from './LvGroupPicker';
+import {
+  ALL_GROUPS,
+  filterMatchupsByGroup,
+  viewerGroupId as groupOfViewer,
+} from '../../../utils/live/board-groups';
 import {
   nextHoldExpiry,
   resolvePanelViews,
@@ -134,6 +140,11 @@ function PanelCards({
   panel: LivePanel;
   card: (panel: LivePanel, matchup: LiveMatchup, lead: boolean) => JSX.Element;
 }): JSX.Element {
+  // A panel with divisions (Archie's) gets the picker; every other board
+  // renders exactly as it always has.
+  if (panel.groups && panel.groups.length > 1) {
+    return <GroupedPanelCards panel={panel} groups={panel.groups} card={card} />;
+  }
   const ordered = orderPanelMatchups(panel.matchups);
   return (
     <>
@@ -145,6 +156,59 @@ function PanelCards({
       {ordered.rest.length > 0 && (
         <div className="lv-cards">{ordered.rest.map((m) => card(panel, m, false))}</div>
       )}
+    </>
+  );
+}
+
+/**
+ * A board too long for one scroll, cut by division.
+ *
+ * The viewer's own games stay ABOVE the chips and are never filtered: they
+ * are the reason anyone opened the page, and a division pick that hid them
+ * would be a way to lose your own score. The rest follow the pick, still in
+ * the board's usual closest-first order. Signed in, the pick starts on the
+ * viewer's division; signed out there is no division to start on, so it
+ * starts on All.
+ *
+ * The choice is component state, keyed by the panel's league like the
+ * section around it, so a poll (which replaces the board wholesale) keeps it.
+ */
+function GroupedPanelCards({
+  panel,
+  groups,
+  card,
+}: {
+  panel: LivePanel;
+  groups: NonNullable<LivePanel['groups']>;
+  card: (panel: LivePanel, matchup: LiveMatchup, lead: boolean) => JSX.Element;
+}): JSX.Element {
+  const mine = groupOfViewer(groups, panel.viewerFranchiseId);
+  const [pick, setPick] = useState<string>(mine ?? ALL_GROUPS);
+
+  const ordered = orderPanelMatchups(panel.matchups);
+  const yours = ordered.hasYours ? ordered.featured : [];
+  const others = orderPanelMatchups(
+    filterMatchupsByGroup(
+      panel.matchups.filter((m) => !yours.includes(m)),
+      groups,
+      pick,
+    ),
+  );
+  // With no games of the viewer's own, the closest game in the pick leads, as
+  // on every other board.
+  const rest = ordered.hasYours ? [...others.featured, ...others.rest] : others.rest;
+  const lead = ordered.hasYours ? yours : others.featured;
+
+  return (
+    <>
+      {ordered.hasYours && lead.length > 0 && (
+        <div className="lv-cards lv-cards--lead">{lead.map((m) => card(panel, m, true))}</div>
+      )}
+      <LvGroupPicker groups={groups} viewerGroupId={mine} value={pick} onChange={setPick} />
+      {!ordered.hasYours && lead.length > 0 && (
+        <div className="lv-cards lv-cards--lead">{lead.map((m) => card(panel, m, true))}</div>
+      )}
+      {rest.length > 0 && <div className="lv-cards">{rest.map((m) => card(panel, m, false))}</div>}
     </>
   );
 }

@@ -65,7 +65,7 @@ const brand = view.userFranchiseId ? getFranchiseBrand(view.userFranchiseId) : n
   >
     <Breadcrumbs slot="breadcrumbs" items={[
       { label: 'The League', href: '/theleague' },
-      { label: 'The Schefter Report' },
+      { label: view.labels.report },
     ]} />
     <HottestDesksWidget slot="rail" desks={hottestDesks} windowLabel="this week" />
   </SchefterNewsPage>

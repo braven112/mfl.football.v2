@@ -1,0 +1,60 @@
+---
+/**
+ * Archie's Fantasy Football League login page — mirrors /afl-fantasy/login but scopes
+ * the MFL authentication (and resulting JWT) to Archie's league so
+ * owners (and the commissioner, for News Ops) land with the right leagueId.
+ */
+
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import LoginForm from '../../components/theleague/LoginForm.astro';
+import { getAuthUser } from '../../utils/auth';
+import { resolveLoginDestination } from '../../utils/login-redirect';
+import { getLeagueYearForSlug } from '../../utils/league-year';
+import { getLeagueBySlug } from '../../config/leagues';
+
+export const prerender = false;
+
+const LEAGUE = getLeagueBySlug('archies')!;
+const LOGIN_YEAR = getLeagueYearForSlug(LEAGUE.slug);
+
+// Where a successful sign-in lands: the requested page, else this league's
+// home. This page used to read `?next=` ALONE, so a `?redirect=` link — the
+// param TheLeague's gates emitted for years — was silently dropped and the
+// owner landed on the league home wondering what happened.
+// `resolveLoginDestination` reads both and validates against THIS league.
+const safeNext = resolveLoginDestination(Astro.url, LEAGUE);
+
+// Already signed in to this league → follow the deep link, not just the home.
+const authUser = getAuthUser(Astro.request);
+if (authUser?.leagueId === LEAGUE.id) {
+  return Astro.redirect(safeNext);
+}
+---
+
+<TheLeagueLayout title={`Sign In — ${LEAGUE.name}`}>
+  <div class="pkg-login-page">
+    <LoginForm
+      leagueId={LEAGUE.id}
+      seasonYear={LOGIN_YEAR}
+      redirectUrl={safeNext}
+      logoSrc={LEAGUE.logo!.light}
+      logoAlt="Archie's Fantasy Football League logo"
+      subtitle={`Sign in with your MFL credentials for ${LEAGUE.name}`}
+    />
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .pkg-login-page {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 4rem var(--spacing-lg, 1.5rem) var(--spacing-2xl, 3rem);
+  }
+
+  @media (max-width: 640px) {
+    .pkg-login-page {
+      padding: 2.5rem var(--spacing-md, 1rem) var(--spacing-xl, 2rem);
+    }
+  }
+</style>

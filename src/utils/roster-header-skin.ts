@@ -106,6 +106,8 @@ const BAND_SLUG: Partial<Record<CanonicalLeagueSlug, LeagueSlug>> = {
   'afl-fantasy': 'afl',
   // The custom-site demo's keeper slot — its franchises, from its own config.
   keeper: 'keeper',
+  // The shared rosters page's header, in the club's own colours.
+  archies: 'archies',
 };
 
 /**

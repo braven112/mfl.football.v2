@@ -12,6 +12,8 @@
  */
 import { getAuthUser, isCommissionerOrAdmin, isAuthorizedForLeague } from '../../utils/auth';
 import { getLeagueBySlug, getLeagueByNavSlug, leagueOrigin } from '../../config/leagues';
+import { getRedis } from '../../utils/redis-client';
+import { personaKey, resolvePersona } from '../../utils/persona.mjs';
 import { OFFER_POST_PROBABILITY } from '../../../scripts/lib/redact-trade-offer.mjs';
 import whatsNew from '../../data/whats-new.json';
 
@@ -62,15 +64,33 @@ interface Props {
   navSlug: string;
 }
 const { base, navSlug } = Astro.props;
+
+// The page names the league's news persona, not Schefter by default: a league
+// whose commissioner renamed the writer should see that name here too. A
+// failed read shows the league's default, never a blank.
+const personaLeague = getLeagueByNavSlug(navSlug);
+let personaStored: unknown = null;
+try {
+  const redis = personaLeague ? await getRedis() : null;
+  if (redis && personaLeague) personaStored = await redis.get(personaKey(personaLeague.slug));
+} catch {
+  personaStored = null;
+}
+const personaName = resolvePersona(personaLeague ?? null, personaStored).name;
 ---
-  <div class="ops-page" data-page-base={base}>
+  <div class="ops-page" data-page-base={base} data-persona-name={personaName}>
     <header class="ops-header">
       <div>
-        <p class="ops-eyebrow"><a href={`${base}/admin`}>Admin</a> / Schefter Ops</p>
-        <h1 class="ops-title">Schefter Operations</h1>
+        <p class="ops-eyebrow">
+          <a href={`${base}/admin`}>Admin</a> / News Ops
+          {personaLeague?.features.brandingEditor && (
+            <> · <a href={`${base}/admin/branding`}>Team branding →</a></>
+          )}
+        </p>
+        <h1 class="ops-title">News Ops</h1>
         <p class="ops-sub">
           Validates the rumor mill is actually consuming tips, GroupMe mentions, and trade proposals —
-          and that Claude is announcing pending trades. All counts are read-only.
+          and that {personaName} is announcing pending trades. All counts are read-only.
         </p>
       </div>
       <div class="ops-header__actions">
@@ -79,11 +99,14 @@ const { base, navSlug } = Astro.props;
       </div>
     </header>
 
+    <!-- League settings the route passes in (the persona editor). -->
+    <slot name="settings" />
+
     <section class="ann" aria-labelledby="ann-title">
       <header class="ann__head">
         <h2 id="ann-title" class="ops-card__title">Broadcast an announcement</h2>
         <p class="ops-card__hint">
-          Ship a hand-written Schefter post to the news feed and (optionally) the GroupMe.
+          Ship a hand-written {personaName} post to the news feed and (optionally) the GroupMe.
           <strong>Preview</strong> renders exactly what will post; <strong>Send</strong> dispatches
           the publish workflow — the feed post appears once it commits and the site redeploys
           (~1–2 min), and GroupMe fires during the run.
@@ -126,7 +149,7 @@ const { base, navSlug } = Astro.props;
         <label class="ann-field">
           <span>Body <small>the GroupMe text; blank uses the default</small></span>
           <textarea id="ann-body" name="body" rows="4"
-            placeholder="📱 SCHEFTER: The site just leveled up…"></textarea>
+            placeholder="📱 The site just leveled up…"></textarea>
         </label>
         <label class="ann-field">
           <span>Link <small>optional CTA target; blank links to the feed post</small></span>
@@ -135,7 +158,7 @@ const { base, navSlug } = Astro.props;
         </label>
         <label class="ann-check">
           <input id="ann-groupme" name="sendGroupMe" type="checkbox" checked />
-          <span>Also ping the Schefter GroupMe</span>
+          <span>Also post it to the league GroupMe as {personaName}</span>
         </label>
 
         <div class="ann-actions">
@@ -152,10 +175,10 @@ const { base, navSlug } = Astro.props;
       <header class="ops-hero__head">
         <h2 id="hero-channel-mix" class="ops-card__title">Channel Mix</h2>
         <p class="ops-card__hint">
-          What's feeding Schefter's GroupMe posts.
+          What's feeding {personaName}'s GroupMe posts.
           <strong>Coming Next</strong> = current tip queue (the next post is forming from this).
           <strong>7 days</strong> + <strong>All-time</strong> = byline posts that already shipped, by source.
-          Wire/ESPN syndication is excluded — that's not Schefter writing.
+          Wire/ESPN syndication is excluded — that's not {personaName} writing.
         </p>
       </header>
 
@@ -388,10 +411,10 @@ const { base, navSlug } = Astro.props;
           how many GitHub Actions runs had a chance to leak the rumor — every
           15 minutes the scanner rolls a die against <code>p</code> while the
           offer is in-flight. The <strong>signal</strong> pill on a posted row
-          counts how many times Schefter has reported on this same offer:
+          counts how many times {personaName} has reported on this same offer:
           signal 1 names one team only, signal 2 adds the marquee player,
           signal 3+ keeps adding the next-best player. The post link drops
-          you on the news feed where Schefter most recently announced it
+          you on the news feed where {personaName} most recently announced it
           (same content as GroupMe).
         </p>
         <div id="ops-archive-body" class="ops-archive">Loading…</div>
@@ -487,7 +510,7 @@ const { base, navSlug } = Astro.props;
     <section class="ops-cluster" aria-labelledby="cluster-stream">
       <h2 class="ops-cluster__title" id="cluster-stream">
         Diagnostic Stream
-        <span class="ops-cluster__sub">Live GroupMe traffic and how Schefter classified it.</span>
+        <span class="ops-cluster__sub">Live GroupMe traffic and how {personaName} classified it.</span>
       </h2>
       <div class="ops-grid">
       <article class="ops-card ops-card--wide" aria-labelledby="card-recent-groupme">
@@ -496,11 +519,11 @@ const { base, navSlug } = Astro.props;
           <span id="ops-recent-groupme-summary" class="ops-card__badge">—</span>
         </h3>
         <p class="ops-card__hint">
-          The chat stream Schefter is watching. Each message is tagged with one of four states:
+          The chat stream {personaName} is watching. Each message is tagged with one of four states:
           <span class="ops-pill ops-pill--info">posted</span> became a published post,
           <span class="ops-pill ops-pill--ok">pending</span> is in the live tips queue,
           <span class="ops-pill ops-pill--warn">expired</span> matched the regex but aged out (24h TTL),
-          <span class="ops-pill ops-pill--mute">no match</span> didn't address Schefter so was never queued.
+          <span class="ops-pill ops-pill--mute">no match</span> didn't address {personaName} so was never queued.
         </p>
         <div id="ops-recent-groupme-body" class="ops-gm">Loading…</div>
       </article>
@@ -538,7 +561,18 @@ const { base, navSlug } = Astro.props;
 
 <script>
   const PAGE_BASE = document.querySelector('[data-page-base]')?.getAttribute('data-page-base') ?? '/theleague';
-  const endpoint = '/api/admin/schefter-stats';
+  // Name the page's league: a commissioner can only name their own (the API
+  // refuses another); a platform admin may open any league's ops.
+  // Read per request, never at load: under the ClientRouter this module
+  // outlives a navigation from one league's ops page to another's.
+  const statsEndpoint = () => {
+    const slug = document.querySelector('[data-page-base]')?.getAttribute('data-page-base')?.replace(/^\//, '') ?? '';
+    return slug ? `/api/admin/schefter-stats?league=${encodeURIComponent(slug)}` : '/api/admin/schefter-stats';
+  };
+  // The league's news persona, rendered by the server. Read at use, not at
+  // load, so it is always the page on screen.
+  const personaName = () =>
+    document.querySelector('[data-page-base]')?.getAttribute('data-persona-name') || 'the columnist';
 
   function fmtTs(ts: unknown): string {
     if (ts === null || ts === undefined || ts === '' || ts === 0) return '—';
@@ -657,7 +691,7 @@ const { base, navSlug } = Astro.props;
         const exposureSuffix = exposureLabel ? ` · ${exposureLabel}` : '';
         if (e.postId) {
           const safePid = encodeURIComponent(e.postId);
-          pills.push(`<a class="ops-pill ops-pill--info ops-pill--link" href="${PAGE_BASE}/news#post-${safePid}" title="View Schefter's most recent post about this offer">posted${exposureSuffix}</a>`);
+          pills.push(`<a class="ops-pill ops-pill--info ops-pill--link" href="${PAGE_BASE}/news#post-${safePid}" title="View ${escapeHtml(personaName())}'s most recent post about this offer">posted${exposureSuffix}</a>`);
         } else {
           pills.push(`<span class="ops-pill ops-pill--info">posted${exposureSuffix}</span>`);
         }
@@ -807,7 +841,7 @@ const { base, navSlug } = Astro.props;
       '7d': 'Last 7 days',
       allTime: 'All-time',
     };
-    const QUEUE_EMPTY_TEXT = 'Queue empty — Schefter is between rumors. Next post forms when a tip lands.';
+    const QUEUE_EMPTY_TEXT = `Queue empty — ${personaName()} is between rumors. Next post forms when a tip lands.`;
     const HISTORICAL_EMPTY_TEXT = 'No byline posts yet in this window.';
     function renderChannelMix(windowKey: WindowKey) {
       const w = getMix(windowKey);
@@ -1226,7 +1260,7 @@ const { base, navSlug } = Astro.props;
 
   async function load() {
     try {
-      const res = await fetch(endpoint, { credentials: 'same-origin' });
+      const res = await fetch(statsEndpoint(), { credentials: 'same-origin' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       render(data);
@@ -1528,7 +1562,8 @@ const { base, navSlug } = Astro.props;
       if (!previewOk) return;
       const where = leaguesEl.options[leaguesEl.selectedIndex].text;
       const ping = groupmeEl.checked ? ' and ping GroupMe' : '';
-      if (!confirm(`Publish this Schefter announcement to ${where}${ping}? This posts to the live feed.`)) return;
+      const writer = document.querySelector('[data-page-base]')?.getAttribute('data-persona-name') || 'news';
+      if (!confirm(`Publish this ${writer} announcement to ${where}${ping}? This posts to the live feed.`)) return;
       sendBtn.disabled = true;
       previewBtn.disabled = true;
       setStatus('Dispatching…');

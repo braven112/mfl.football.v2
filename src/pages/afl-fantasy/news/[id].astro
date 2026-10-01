@@ -13,6 +13,9 @@ import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import Breadcrumbs from '../../../components/theleague/Breadcrumbs.astro';
 import SchefterReactionBar from '../../../components/shared/SchefterReactionBar.tsx';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { getAuthor, getAuthorAvatar } from '../../../types/schefter';
+import { getLeaguePersona, postByline } from '../../../utils/persona-server';
+import { personaLabels } from '../../../utils/persona.mjs';
 import feedData from '../../../../data/afl-fantasy/schefter-feed.json';
 import type { SchefterFeed, SchefterPost } from '../../../types/schefter';
 import '../../../styles/schefter-feed.css';
@@ -56,6 +59,10 @@ if (!post) {
 if (!post) {
   return Astro.redirect('/afl-fantasy/news');
 }
+// Masthead and byline follow the league's persona (src/utils/persona.mjs).
+const labels = personaLabels(await getLeaguePersona('afl-fantasy'));
+const byAuthor = getAuthor(post.authorId);
+const byline = await postByline({ league: 'afl-fantasy' }, byAuthor, getAuthorAvatar(byAuthor));
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 const imagePath = post.image ? `/assets/schefter/${post.image}` : null;
@@ -65,12 +72,12 @@ const formattedDate = new Date(post.timestamp).toLocaleDateString('en-US', {
 
 ---
 
-<TheLeagueLayout title={`${post.headline} — The Schefter Report`}>
+<TheLeagueLayout title={`${post.headline} — ${labels.report}`}>
   <div class="sf-article">
 
     <Breadcrumbs items={[
       { label: 'AFL Fantasy', href: '/afl-fantasy' },
-      { label: 'The Schefter Report', href: '/afl-fantasy/news' },
+      { label: labels.report, href: '/afl-fantasy/news' },
       { label: post.headline },
     ]} />
 
@@ -96,10 +103,10 @@ const formattedDate = new Date(post.timestamp).toLocaleDateString('en-US', {
         <h1 class="sf-article__title">{post.headline}</h1>
 
         <div class="sf-article__author">
-          <img class="sf-article__author-avatar" src="/assets/claude-schefter-avatar.webp" alt="" aria-hidden="true" width="32" height="32" />
+          <img class="sf-article__author-avatar" src={byline.avatar} alt="" aria-hidden="true" width="32" height="32" />
           <div>
-            <span class="sf-article__author-name">Claude Schefter</span>
-            <span class="sf-article__author-handle">@schefter</span>
+            <span class="sf-article__author-name">{byline.name}</span>
+            <span class="sf-article__author-handle">{byline.handle}</span>
           </div>
         </div>
       </div>
@@ -129,7 +136,7 @@ const formattedDate = new Date(post.timestamp).toLocaleDateString('en-US', {
 
       <div class="sf-article__footer">
         <a href={r('/afl-fantasy/news')} class="sf-article__footer-link">
-          ← More from The Schefter Report
+          ← More from {labels.report}
         </a>
       </div>
     </div>

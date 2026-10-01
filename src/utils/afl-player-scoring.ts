@@ -101,16 +101,21 @@ function readJson<T>(path: string): T | null {
  * excluded from the serverless bundle) so callers can render an em dash.
  */
 export function loadAflSeasonScores(year: number, dataPath = getLeagueBySlug('afl-fantasy')!.dataPath): SeasonScores {
-  // `dataPath` is the league's registry dataPath — the AFL's by default; the
-  // custom-site demo's keeper slot reads its own.
-  const cacheKey = `${dataPath}:${year}`;
+  // The AFL's by default; another AFL-shaped league (the demo's keeper slot) passes its own.
+  return loadSeasonScores(dataPath, year);
+}
+
+/**
+ * {@link loadAflSeasonScores} for any league, by its registry `dataPath`
+ * (`data/<league>`). The shared rosters page reads through this so a custom
+ * league's Total / Avg columns come from its OWN weekly results.
+ */
+export function loadSeasonScores(dataPath: string, year: number): SeasonScores {
+  const cacheKey = `${dataPath}|${year}`;
   const hit = seasonScoresCache.get(cacheKey);
   if (hit) return hit;
 
-  const path = resolve(
-    process.cwd(),
-    `${dataPath}/mfl-feeds/${year}/weekly-results-raw.json`
-  );
+  const path = resolve(process.cwd(), `${dataPath}/mfl-feeds/${year}/weekly-results-raw.json`);
   const file = readJson<unknown>(path);
   // The second argument is the current week, which the canonical
   // implementation does not use; every scored week counts.
@@ -124,14 +129,16 @@ export function loadAflSeasonScores(year: number, dataPath = getLeagueBySlug('af
  * {playerId → projected points} map. Cached per year.
  */
 export function loadAflProjections(year: number, dataPath = getLeagueBySlug('afl-fantasy')!.dataPath): Map<string, number> {
-  const cacheKey = `${dataPath}:${year}`;
+  return loadProjections(dataPath, year);
+}
+
+/** {@link loadAflProjections} for any league, by its registry `dataPath`. */
+export function loadProjections(dataPath: string, year: number): Map<string, number> {
+  const cacheKey = `${dataPath}|${year}`;
   const hit = projectionsCache.get(cacheKey);
   if (hit) return hit;
 
-  const path = resolve(
-    process.cwd(),
-    `${dataPath}/mfl-feeds/${year}/projectedScores.json`
-  );
+  const path = resolve(process.cwd(), `${dataPath}/mfl-feeds/${year}/projectedScores.json`);
   const file = readJson<ProjectedScoresFile>(path);
   const entries = ensureArray(file?.projectedScores?.playerScore);
   const map = new Map<string, number>();

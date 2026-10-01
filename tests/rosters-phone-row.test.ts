@@ -11,6 +11,7 @@
  * the rows").
  */
 import { describe, it, expect } from 'vitest';
+import { stripTags } from '../src/utils/whats-new-links';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
@@ -101,7 +102,7 @@ describe('buildPhoneLineSpans', () => {
   it('adds no text at all — the desktop parity harness reads td.textContent', () => {
     // Everything the card prints rides in an attribute; strip the tags and
     // nothing is left.
-    expect(html.replace(/<[^>]*>/g, '')).toBe('');
+    expect(stripTags(html)).toBe('');
   });
 
   it('carries each value in its own kind of span', () => {
@@ -159,7 +160,7 @@ function theadSortHeaders(page: string): SortHeader[] {
     const attrs = m[1];
     const cls = /class="([^"]*)"/.exec(attrs)?.[1] ?? '';
     const classList = { contains: (c: string) => cls.split(/\s+/).includes(c) };
-    const text = m[2].replace(/<[^>]+>/g, '').replace(/\{[^}]*\}/g, '').trim();
+    const text = stripTags(m[2]).replace(/\{[^}]*\}/g, '').trim();
     const literal = /data-sort-key="([^"]+)"/.exec(attrs)?.[1];
     if (literal) out.push({ key: literal, mode: headerMode(classList), text });
     if (attrs.includes('data-sort-key={`salary_${index}`}')) {

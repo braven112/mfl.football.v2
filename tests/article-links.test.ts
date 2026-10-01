@@ -13,6 +13,7 @@ import {
   withLinkDirective,
 } from '../scripts/article-utils/article-links.mjs';
 import { LEAGUES, ALL_LEAGUES } from '../src/config/leagues-data.mjs';
+import { VALID_LEAGUES, leagueWritesType } from '../scripts/lib/article-leagues.mjs';
 import { astroRouteExists } from './helpers/astro-routes';
 
 /**
@@ -34,13 +35,13 @@ const PIPELINE = path.resolve(__dirname, '../scripts/schefter-weekly-articles.mj
 
 const typeFiles = readdirSync(TYPES_DIR).filter((f) => f.endsWith('.mjs')).sort();
 
-/** Leagues the pipeline will accept on --league, read from the pipeline itself. */
-const pipelineLeagues = (): string[] => {
-  const src = readFileSync(PIPELINE, 'utf8');
-  const m = src.match(/const VALID_LEAGUES = \[([^\]]*)\]/);
-  if (!m) throw new Error('VALID_LEAGUES not found in the pipeline');
-  return [...m[1].matchAll(/'([^']+)'/g)].map((x) => x[1]);
-};
+/**
+ * Leagues the pipeline writes for, and — per type file — only the ones that
+ * actually get that type (scripts/lib/article-leagues.mjs; a package league
+ * buys a few types, not all of them).
+ */
+const pipelineLeagues = (file?: string): string[] =>
+  VALID_LEAGUES.filter((league: string) => !file || leagueWritesType(league, file.replace(/\.mjs$/, '')));
 
 /**
  * Does an href resolve to a real Astro route? See tests/helpers/astro-routes.
@@ -132,7 +133,7 @@ describe('article links — destinations are real pages', () => {
 
 describe('article links — every type declares where it points', () => {
   for (const file of typeFiles) {
-    for (const league of pipelineLeagues()) {
+    for (const league of pipelineLeagues(file)) {
       it(`${file} (${league}) declares exactly one primary link, all resolvable`, async () => {
         const mod = await import(path.join(TYPES_DIR, file));
         const links = mod.relatedLinks({ year: 2026, week: 1 }, { league });
@@ -182,7 +183,7 @@ describe('article links — every type declares where it points', () => {
   it('schedule-release leads with the schedule release page', async () => {
     // The specific regression: this column exists to send people to that page.
     const mod = await import(path.join(TYPES_DIR, 'schedule-release.mjs'));
-    for (const league of pipelineLeagues()) {
+    for (const league of pipelineLeagues('schedule-release.mjs')) {
       const links = mod.relatedLinks({}, { league });
       const primary = links.find((l: { primary?: boolean }) => l.primary);
       expect(primary.href).toBe(`/${LEAGUES[league].slug}/schedule-release`);

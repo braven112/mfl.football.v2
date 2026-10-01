@@ -19,8 +19,10 @@
  * verdict. Preseason is when owners are ON the site, so the page has to teach
  * the format before there is any real data to show.
  */
+import { getPersonaLabels } from '../../utils/persona-server';
 import PeckingOrderIssue, { type PeckingOrderData } from './PeckingOrderIssue.astro';
 import type { LeagueSlug } from '../../types/nav';
+import { getLeagueByNavSlug } from '../../config/leagues';
 import { resolvePeckingOrderLanding, type LandingIssue } from '../../utils/pecking-order-landing';
 
 export interface Props {
@@ -45,7 +47,10 @@ const firstIssueLabel = firstIssueDate
 
 // Field size comes from the sample itself, so the copy can never claim a
 // number the league does not have (16 in TheLeague, 24 in the AFL).
+const leagueDef = getLeagueByNavSlug(league);
 const teamCount = latest?.data.rankings?.length ?? null;
+// A big league writes up only its top N (registry peckingOrder.topN).
+const topN = leagueDef.peckingOrder?.topN ?? null;
 
 // The sample's own methodology string, so this page and the issue below it
 // can't drift apart on the formula.
@@ -75,11 +80,18 @@ const HOW_IT_WORKS = [
     title: 'Awards, weekly',
     body: `Stat of the Week, Bench Blunder, Heater, Cooler, and the Matchup of the Week — the highest-ranked clash on the coming slate.`,
   },
-  {
-    title: 'Standings, on the same page',
-    body: `Divisions and the full all-play table sit at the bottom of every issue, so the rankings and the receipts live together.`,
-  },
+  topN
+    ? {
+        title: 'Every team, every division',
+        body: `The top ${topN} get the write-up; every division follows, each team in pecking order with its league-wide rank, so nobody is left off the board.`,
+      }
+    : {
+        title: 'Standings, on the same page',
+        body: `Divisions and the full all-play table sit at the bottom of every issue, so the rankings and the receipts live together.`,
+      },
 ];
+// Owner-facing copy follows the league's persona (src/utils/persona.mjs).
+const labels = await getPersonaLabels(leagueDef.slug);
 ---
 
 {isPreview && (
@@ -87,7 +99,7 @@ const HOW_IT_WORKS = [
     <p class="po-intro__eyebrow">
       <img
         class="po-intro__avatar"
-        src="/assets/claude-schefter-avatar.webp"
+        src={labels.avatar}
         alt=""
         aria-hidden="true"
         width="28"
@@ -98,9 +110,10 @@ const HOW_IT_WORKS = [
     </p>
     <h1 class="po-intro__title" id="po-intro-title">The Pecking Order</h1>
     <p class="po-intro__lede">
-      Every Tuesday morning of the season, Claude Schefter ranks
+      Every Tuesday morning of the season, {labels.name} ranks
       {teamCount ? ` all ${teamCount} teams, 1 through ${teamCount},` : ' the whole league,'}
-      and says out loud what he thinks of your football team. It lands here and in the group chat
+      {topN ? ` writes up the top ${topN},` : ''}
+      and says out loud what they think of your football team. It lands here and in the group chat
       before you've finished your coffee.
     </p>
 

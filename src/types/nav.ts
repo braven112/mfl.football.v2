@@ -13,7 +13,7 @@
 /**
  * Supported league identifiers
  */
-export type LeagueSlug = 'theleague' | 'afl' | 'bb1' | 'keeper';
+export type LeagueSlug = 'theleague' | 'afl' | 'bb1' | 'keeper' | 'archies';
 
 /**
  * The custom-site demo's keeper league (`keeper`, registered only on a demo

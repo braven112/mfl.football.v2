@@ -21,6 +21,7 @@ import theLeagueConfig from '../data/theleague.config.json';
 import aflConfig from '../../data/afl-fantasy/afl.config.json';
 import bb1Config from '../../data/best-ball-1/bb1.config.json';
 import { keeperLeagueConfig } from './keeper-config';
+import archiesConfig from '../../data/archies/archies.config.json';
 
 /** One franchise's brand, as the matchup UI consumes it. */
 export interface TeamBrand {
@@ -40,14 +41,26 @@ export interface TeamBrand {
   icon: string;
 }
 
-const CONFIGS: Record<string, { teams?: any[] }> = {
-  theleague: theLeagueConfig as unknown as { teams?: any[] },
-  'afl-fantasy': aflConfig as unknown as { teams?: any[] },
+type LeagueConfig = { teams?: any[]; structure?: string };
+
+const CONFIGS: Record<string, LeagueConfig> = {
+  theleague: theLeagueConfig as unknown as LeagueConfig,
+  'afl-fantasy': aflConfig as unknown as LeagueConfig,
   // Best Ball is on the Sunday Ticket board as one of the owner's leagues, so
   // its franchises need names here too (wired 2026-09-05).
-  'best-ball-1': bb1Config as unknown as { teams?: any[] },
-  keeper: keeperLeagueConfig,
+  'best-ball-1': bb1Config as unknown as LeagueConfig,
+  keeper: keeperLeagueConfig as unknown as LeagueConfig,
+  archies: archiesConfig as unknown as LeagueConfig,
 };
+
+/**
+ * The config's declared `structure` (`'divisions'`, `'two-conference'`), or
+ * null where the config states none (TheLeague, Best Ball). Package leagues
+ * get it from `scripts/suggest-league-branding.mjs`.
+ */
+export function getLeagueConfigStructure(slug: string): string | null {
+  return CONFIGS[slug]?.structure ?? null;
+}
 
 /** Neutral stand-in so a franchise missing from a config renders, never throws. */
 const FALLBACK_COLOR = '#64748b';

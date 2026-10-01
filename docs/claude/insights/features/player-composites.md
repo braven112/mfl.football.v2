@@ -25,7 +25,8 @@ per player.
 | `src/components/shared/CompositeHero.astro` + `src/styles/composite-hero.css` | **The** spotlight shell — gradient, ghost wordmark, glow, cutout, frosted caption, editorial column. Every per-hero dimension is a `--cmh-*` custom property; every palette is a named accent. |
 | `src/components/shared/CompositePanelBoard.astro` + `src/styles/composite-panel-board.css` | **The** four-panel board (UDFA, tag showcase). `fill="pad"` keeps it full, `fill="drop"` shows only real faces. |
 | `src/components/theleague/*CompositeHero.astro` | Per-phase configurations of those two shells — copy, casting, geometry. They no longer own any of the treatment. (An earlier note here said the heroes share no base component; that stopped being true in Sep 2026.) |
-| `src/components/shared/LeagueCompositeHero.astro` | Renders an `EventHeroView` as a composite for either league (`league` prop; was `AflCompositeHero`). Every AFL composite state, plus TheLeague's waiver day. |
+| `src/components/shared/LeagueCompositeHero.astro` | Renders an `EventHeroView` as a composite for ANY league (`league` prop; was `AflCompositeHero`). Every shared-hero composite state, plus TheLeague's waiver day and news card. |
+| `src/utils/league-hero/` | **The shared homepage hero** (Sep 2026): `resolver.ts` (one ladder, every league), `profiles.ts` (per-league rungs, calendar, facts), `casting.ts` (`castLeagueHeroModel` — was `afl-hero-casting.ts`), `page.ts` (the homepage's reads + cast + accent). Casting rules below apply unchanged; `league` is an input now. |
 | `src/utils/hero-franchise-accent.ts` | Which colour tints the glow — the player's NFL team, or the viewer's own franchise. |
 | `src/utils/hero-crest.ts` | Which CREST sits behind the hero — the franchise's when one owns the story, the cast player's NFL team otherwise. |
 | `src/utils/nfl-team-colors.ts` | 32-team primary/secondary hex map (ESPN codes), nickname helper, `hexToRgba` |
@@ -2222,3 +2223,51 @@ the dark/band cut, resolved server-side. Same rule and same reason as
 `hero-franchise-backdrop.ts` resolving a franchise crest rather than leaving it
 to the `html.dark` swap — a light-theme viewer would otherwise get the light
 mark on ink.
+
+## 2026-09-29 — One caster for every league's homepage hero
+
+`afl-hero-casting.ts` became `league-hero/casting.ts` (`castLeagueHeroModel`,
+`league` in its input) when the AFL's hero became the shared league hero and
+Archie's moved onto it. Nothing about the rules changed, and that was the
+point of checking them against a third league before moving:
+
+- **Starter slots stay strict.** Archie's is a duplicate-player league (one
+  player on up to nine rosters, one per division), so its starter casts go
+  through `castsFor` over `getOwnersByPlayer` exactly as the AFL's do. The
+  franchise accent is scoped to the viewer's DIVISION (`poolOf` in
+  `resolveLeagueHomeHero`) — `resolveHeroFranchiseAccent` takes any pool id
+  now, not just an AFL `ConferenceId`.
+- **Calendar casts key on ROLE, not event id.** `castLeagueHeroModel` switches
+  on `state.role` (`keeper-deadline`, `pool-draft`, `draft`, `auction`,
+  `season-start`, `trade-deadline`, `new-league-year`), so a package league's
+  MFL-export draft casts "Best Available" the same as the AL/NL drafts.
+- **Two new slots cast by meaning.** The Pecking Order slot casts the #1
+  team's headliner ("Top of the Order"); the weekly-column slot casts the
+  player the column names, else a headliner — same shape as the news card.
+- **A league with no bracket hero keeps casting through the playoffs**:
+  `playoffs` / `championship` states cast their slot when they carry a view,
+  and cast nothing (the bracket owns the flank) when they do not.
+
+## 2026-09-29 — A crest cropped from a banner is drawn as a circle
+
+Archie's team marks are not drawn logos: `suggest-league-branding.mjs` seeded
+each `icon` as a 128px centre CROP of the team's MFL banner art — a square
+picture. Watermarked full-size behind a hero it read as a hard-edged photo
+tile. The owner's call: a hero draws such a crest as a circle; a real mark
+stays as it is.
+
+- **Per team, not per league.** `iconCroppedFromBanner: true` on the team's
+  config, written by the seed and CLEARED by `applyBrandingEdit` the moment a
+  commissioner uploads a new icon. A league half-way through replacing its
+  crops shows circles only for the teams still on one.
+- **Only the seeded `icon` counts** (`isCroppedBannerCrest`): an uploaded dark
+  cut on a still-flagged team is a real mark.
+- **Both hero crest paths carry it**: `resolveHeroCrest` → `round` (the
+  composite's `cmh__crest--round`), and `resolveHeroFranchiseBackdrop` →
+  `crestRound` (the franchise card's `hero-fb__crest--round`, in
+  AflEventHero, EventHeroShell and the schedule page).
+- **Height-driven circle** (`height: 86%; aspect-ratio: 1; object-fit: cover`)
+  so it always fits the card; the width-driven square crest would have been
+  cut off by the card's own edges as a circle.
+- Guard: `tests/hero-crest-round.test.ts`.
+

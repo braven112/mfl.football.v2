@@ -133,9 +133,9 @@
         "src/components/**/*.astro",
         "src/scripts/*",
         "src/components/afl-family/LineupPage.astro",
-        "src/components/afl-family/PlayersPage.astro",
+        "src/components/shared/free-agents/FreeAgentsPage.astro",
         "src/components/afl-family/StandingsPage.astro",
-        "src/components/afl-family/RostersPage.astro"
+        "src/components/shared/rosters/RostersPage.astro"
       ],
       "note": "Bundled <script> blocks run ONCE per session under the ClientRouter: init on astro:page-load (never DOMContentLoaded), re-read elements inside init(), replace document/window listeners rather than stacking them. See docs/claude/insights/domains/frontend.md \"Astro and ClientRouter\".",
       "tests": [
@@ -149,13 +149,15 @@
       "paths": [
         "src/pages/*/assets.astro",
         "src/pages/*/front-office/salary-analytics.astro",
-        "src/pages/*/front-office/trade-builder.astro"
+        "src/pages/*/front-office/trade-builder.astro",
+        "src/components/shared/trade-builder/*.astro"
       ],
       "note": "These pages have each shipped a 'goes dead after in-site navigation' bug: init must re-run on astro:page-load, and module-level state must not capture the previous page's DOM.",
       "tests": [
         "tests/assets-page-clientrouter.test.ts",
         "tests/salary-page-clientrouter.test.ts",
         "tests/trade-builder-clientrouter.test.ts",
+        "tests/shared-trade-builder.test.ts",
         "tests/clientrouter-init-ratchet.test.ts"
       ]
     },
@@ -275,12 +277,14 @@
       "paths": [
         "src/pages/theleague/players.astro",
         "src/pages/afl-fantasy/players.astro",
+        "src/pages/archies/free-agents.astro",
+        "src/components/shared/free-agents/FreeAgentsPage.astro",
         "src/utils/snap-count-season.mjs",
         "src/styles/snap-columns.css",
         "scripts/lib/snap-counts.mjs",
         "scripts/fetch-snap-counts.mjs",
         "src/utils/stats-season.mjs",
-        "scripts/compute-afl-free-agents.mjs",
+        "scripts/compute-free-agents.mjs",
         "src/components/shared/WatchListBridge.astro",
         "src/components/shared/WaiverPriorityModal.astro",
         "src/components/shared/WaiverClaimModal.astro",
@@ -294,8 +298,7 @@
         "src/components/shared/WaiverClaimsPanel.astro",
         "src/pages/api/waiver-claims.ts",
         "src/scripts/transaction-hub.ts",
-        "src/components/theleague/TransactionHubModal.astro",
-        "src/components/afl-family/PlayersPage.astro"
+        "src/components/theleague/TransactionHubModal.astro"
       ],
       "note": "The ⋮ menu sits right after the Player column (it was nine columns off-screen on a phone, #974) and its header carries the league's own verb; the acquisition itself lives in PlayerDetailsModal, so it reaches every page the modal does — which means WaiverClaimModal is mounted by that modal and by no page, the offer is a SESSION verdict from /api/claim-context (both leagues have a franchise 0001), and the form must survive landing before or after the context does. The waiver priority dialog opens on the synced order and time-boxes the live read; the page's signed-in verdict is computed ONCE (franchiseIdForLeague) and read back off #watch-list-bridge[data-signed-in], never a second copy. The Auction view is a LIVE board (Place Bid deep links, a 60s poll, a 36h clock), so it belongs to resolveAuctionWindow and not to `hasAuctionData` — the auction RESULTS feed keeps its rows all year, which left the board on the page in September. See docs/claude/insights/features/waiver-claims.md and watch-list.md.",
       "tests": [
@@ -368,13 +371,14 @@
       "rules": "docs/claude/insights/features/player-composites.md",
       "paths": [
         "src/utils/hero-*",
-        "src/utils/afl-hero-*",
+        "src/utils/league-hero/*",
         "src/utils/offseason-hero-data.ts",
         "src/utils/league-event-hero-view.ts",
         "src/utils/playoff-hero-helpers.ts",
         "src/components/shared/Composite*.astro",
         "src/components/shared/LeagueCompositeHero.astro",
-        "src/components/afl/AflHero.astro",
+        "src/components/shared/league-hero/LeagueHero.astro",
+        "src/components/shared/package-league/PackageLeagueHome.astro",
         "src/components/theleague/*CompositeHero.astro",
         "src/components/theleague/season-heroes/RecapCompositeHero.astro",
         "src/components/theleague/season-heroes/RecapHero.astro",
@@ -396,6 +400,7 @@
       "tests": [
         "tests/hero-casting.test.ts",
         "tests/afl-hero-casting.test.ts",
+        "tests/league-hero.test.ts",
         "tests/hero-resolver.test.ts",
         "tests/offseason-hero-data.test.ts",
         "tests/afl-hero-lead-event-flip.test.ts",
@@ -807,9 +812,11 @@
         "src/utils/roster-header-skin.ts",
         "src/utils/throwback-request-state.ts",
         "src/utils/rosters/*.ts",
-        "src/components/afl-family/RostersPage.astro"
+        "src/components/shared/rosters/*.astro",
+        "src/components/afl-fantasy/AFLActionModal.astro"
       ],
       "tests": [
+        "tests/shared-rosters-page.test.ts",
         "tests/cross-league-init-gate.test.ts",
         "tests/page-fork-ratchet.test.ts",
         "tests/roster-header-data.test.ts",
@@ -956,11 +963,13 @@
         "scripts/*bracket*",
         "scripts/*standings*",
         "src/components/theleague/standings/*",
+        "src/components/shared/standings/*",
         "src/components/theleague/PlayoffBadge.astro",
         "src/pages/*/standings.astro",
         "src/components/afl-family/StandingsPage.astro"
       ],
       "tests": [
+        "tests/shared-standings-page.test.ts",
         "tests/standings-all-play.test.ts",
         "tests/afl-bracket-kind.test.ts",
         "tests/draft-order-phase.test.ts",
@@ -1067,7 +1076,8 @@
         "tests/live-ink-contrast.test.ts",
         "tests/trade-deadline-hero-shared.test.ts",
         "tests/whats-new-hero-shot-reservation.test.ts",
-        "tests/design-polish.test.ts"
+        "tests/design-polish.test.ts",
+        "tests/league-palette-tokens.test.ts"
       ]
     },
     {
@@ -1180,9 +1190,9 @@
         "src/pages/**/*.astro",
         "src/layouts/*.astro",
         "src/components/afl-family/LineupPage.astro",
-        "src/components/afl-family/PlayersPage.astro",
+        "src/components/shared/free-agents/FreeAgentsPage.astro",
         "src/components/afl-family/StandingsPage.astro",
-        "src/components/afl-family/RostersPage.astro"
+        "src/components/shared/rosters/RostersPage.astro"
       ],
       "tests": [
         "tests/origin-check-content-type.test.ts"

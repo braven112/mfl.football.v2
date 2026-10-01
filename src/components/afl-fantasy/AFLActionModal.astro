@@ -20,9 +20,36 @@
  * Open via window.openAFLActionModal({ playerId, playerName, status,
  * isOnTradeBait }). Close via the X button, overlay click, or ESC.
  */
+// Owner-facing copy follows the league's persona (src/utils/persona.mjs).
+import { getPersonaLabels } from '../../utils/persona-server';
+import type { CanonicalLeagueSlug } from '../../config/leagues';
+
+interface Props {
+  /**
+   * The league whose page mounts the sheet. It is also the shared rosters
+   * page's sheet for custom leagues (src/components/shared/rosters/), so the
+   * persona copy and the Trade target follow the PAGE's league. The write
+   * endpoints need nothing here: they scope by the session's league.
+   */
+  leagueSlug?: CanonicalLeagueSlug;
+  /** False for a league with no Trade Builder page yet — the Trade option is hidden rather than 404ing. */
+  tradeBuilder?: boolean;
+}
+
+const { leagueSlug = 'afl-fantasy', tradeBuilder = true } = Astro.props;
+const labels = await getPersonaLabels(leagueSlug);
 ---
 
-<div class="afl-action-modal" id="afl-action-modal" role="dialog" aria-modal="true" aria-labelledby="aam-player-name" hidden>
+<div
+  class="afl-action-modal"
+  id="afl-action-modal"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="aam-player-name"
+  data-league={leagueSlug}
+  data-trade-builder={tradeBuilder ? 'true' : 'false'}
+  hidden
+>
   <div class="afl-action-modal__overlay" data-aam-close></div>
   <div class="afl-action-modal__content">
     <!-- Circular close button — same shape as TheLeague's ContractDeclarationModal (cdm-close) -->
@@ -77,7 +104,7 @@
                 </span>
                 <span class="aam-action__body">
                   <span class="aam-action__label" id="aam-watch-label">Watch player</span>
-                  <span class="aam-action__desc" id="aam-watch-desc">His news lights up in the Schefter Report</span>
+                  <span class="aam-action__desc" id="aam-watch-desc" data-idle={`His news lights up in the ${labels.reportShort}`}>His news lights up in the {labels.reportShort}</span>
                 </span>
               </button>
             </li>
@@ -217,10 +244,21 @@
     signedIn?: boolean;
   }
 
+  /* Wired on EVERY astro:page-load, not once at module evaluation. A bundled
+     script runs once per session under the ClientRouter, but the sheet's DOM
+     is replaced by every swap — so a sheet captured at first load went dead
+     after the first team switch on a roster page (each switch is a swap),
+     with `openAFLActionModal` still pointing at the detached node. The flag
+     on the element keeps a repeat call for the SAME DOM (astro:page-load plus
+     the first-load fallback below) from stacking listeners. */
+  let escapeHandler: ((e: KeyboardEvent) => void) | null = null;
+
+  function initAflActionModal() {
   const _modalEl = document.getElementById('afl-action-modal') as HTMLDivElement | null;
-  if (!_modalEl) {
-    console.error('[afl-action-modal] root element not found');
-  } else {
+  // Not every page mounts the sheet; nothing to wire there.
+  if (!_modalEl || _modalEl.dataset.aamInit === '1') return;
+  _modalEl.dataset.aamInit = '1';
+  {
     // Pin into a const so closures keep the non-null narrowing
     const modal: HTMLDivElement = _modalEl;
     const playerNameEl = modal.querySelector('#aam-player-name') as HTMLElement;
@@ -371,6 +409,8 @@
       if (payload.isOwner === false) {
         for (const id of OWNER_ACTIONS) actionButtons[id].hidden = true;
       }
+      // A league with no Trade Builder page yet: no option that would 404.
+      if (modal.dataset.tradeBuilder === 'false') actionButtons['trade'].hidden = true;
       selectErrorEl.hidden = true;
       selectErrorEl.textContent = '';
       paintWatch();
@@ -419,7 +459,7 @@
           ? 'Sign in to build your watch list'
           : watched
             ? 'Remove him from your watch list'
-            : 'His news lights up in the Schefter Report';
+            : desc.dataset.idle || 'His news lights up in the Schefter Report';
       }
     }
     async function runWatch() {
@@ -544,10 +584,9 @@
       const action = pendingAction;
 
       if (action === 'trade') {
-        // The AFL-family league this page belongs to (the layout stamps its nav
-        // slug on <html>): the AFL, or the custom-site demo's keeper slot.
-        const leaguePrefix = document.documentElement.dataset.league === 'keeper' ? '/keeper' : '/afl-fantasy';
-        const target = `${leaguePrefix}/front-office/trade-builder?from=${encodeURIComponent(franchiseId ?? '')}&player=${encodeURIComponent(playerId)}`;
+        // The PAGE's league, read off the sheet the page rendered.
+        const leagueSlug = modal.dataset.league || 'afl-fantasy';
+        const target = `/${leagueSlug}/front-office/trade-builder?from=${encodeURIComponent(franchiseId ?? '')}&player=${encodeURIComponent(playerId)}`;
         window.location.href = target;
         return;
       }
@@ -631,13 +670,23 @@
       el.addEventListener('click', () => showStep('select'));
     });
 
-    document.addEventListener('keydown', (e) => {
+    // `document` outlives the swap: REPLACE the previous page's handler
+    // rather than stacking one per navigation.
+    if (escapeHandler) document.removeEventListener('keydown', escapeHandler);
+    escapeHandler = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !modal.hidden) closeModal();
-    });
+    };
+    document.addEventListener('keydown', escapeHandler);
 
-    // Expose a global opener so any roster table on the page can trigger us
+    // Expose a global opener so any roster table on the page can trigger us.
+    // Re-assigned per page, so it always opens THIS page's sheet.
     (window as any).openAFLActionModal = openModal;
   }
+  }
+
+  document.addEventListener('astro:page-load', initAflActionModal);
+  if (document.readyState !== 'loading') initAflActionModal();
+  else document.addEventListener('DOMContentLoaded', initAflActionModal, { once: true });
 </script>
 
 <style>

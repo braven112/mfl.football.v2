@@ -107,6 +107,13 @@ export function buildMflLiveDraftUrl({ leagueId, year, host }: BuildMflLiveDraft
  */
 export const MFL_EMAIL_DRAFT_OPTION = 52;
 
+/**
+ * MFL option number for an owner's Submit Lineup page (`O=`). Behind MFL's own
+ * login, like every option page — a league whose lineups are set on MFL
+ * rather than on this site (Archie's) links owners straight to it.
+ */
+export const MFL_LINEUP_OPTION = '02';
+
 export interface BuildMflOptionUrlOptions {
   /** League id, e.g. '19621'. Read it from the registry — never inline. */
   leagueId: string | number;

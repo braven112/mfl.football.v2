@@ -323,46 +323,63 @@ export function resolveAllEvents(
           endDate.setHours(20, 45, 0, 0);
         }
       }
-
-      const now = referenceDate.getTime();
-      const startMs = startDate.getTime();
-      const endMs = endDate.getTime();
-
-      const isActive = now >= startMs && now <= endMs;
-      const isPast = now > endMs;
-      const daysUntilStart = Math.ceil((startMs - now) / (1000 * 60 * 60 * 24));
-      const startMidnight = new Date(startDate);
-      startMidnight.setHours(0, 0, 0, 0);
-      const refMidnight = new Date(referenceDate);
-      refMidnight.setHours(0, 0, 0, 0);
-      const daysUntilStartCalendar = Math.round(
-        (startMidnight.getTime() - refMidnight.getTime()) / (1000 * 60 * 60 * 24),
-      );
-      const isUrgent =
-        !isPast &&
-        !isActive &&
-        def.urgencyDays != null &&
-        daysUntilStart <= def.urgencyDays &&
-        daysUntilStart > 0;
-
-      return {
-        definition: def,
-        startDate,
-        endDate,
-        isActive,
-        isPast,
-        isUrgent,
-        daysUntilStart,
-        daysUntilStartCalendar,
-        actionLinks: resolveLinks(def.actionLinks, linkVars),
-        resultLinks: resolveLinks(def.resultLinks, linkVars),
-      };
+      return resolveConcreteEvent(def, startDate, endDate, referenceDate, linkVars);
     })
-    .sort((a, b) => {
-      const timeDiff = a.startDate.getTime() - b.startDate.getTime();
-      if (timeDiff !== 0) return timeDiff;
-      return a.definition.sortOrder - b.definition.sortOrder;
-    });
+    .sort(compareResolved);
+}
+
+/** Start date, then the definition's sortOrder. */
+export function compareResolved(a: ResolvedLeagueEvent, b: ResolvedLeagueEvent): number {
+  const timeDiff = a.startDate.getTime() - b.startDate.getTime();
+  if (timeDiff !== 0) return timeDiff;
+  return a.definition.sortOrder - b.definition.sortOrder;
+}
+
+/**
+ * One event whose dates are already known (e.g. read from MFL's calendar feed
+ * rather than derived from a rule), with the same active/past/urgent
+ * bookkeeping every other event gets.
+ */
+export function resolveConcreteEvent(
+  def: LeagueEventDefinition,
+  startDate: Date,
+  endDate: Date,
+  referenceDate: Date,
+  linkVars: LinkTemplateVars,
+): ResolvedLeagueEvent {
+  const now = referenceDate.getTime();
+  const startMs = startDate.getTime();
+  const endMs = endDate.getTime();
+
+  const isActive = now >= startMs && now <= endMs;
+  const isPast = now > endMs;
+  const daysUntilStart = Math.ceil((startMs - now) / (1000 * 60 * 60 * 24));
+  const startMidnight = new Date(startDate);
+  startMidnight.setHours(0, 0, 0, 0);
+  const refMidnight = new Date(referenceDate);
+  refMidnight.setHours(0, 0, 0, 0);
+  const daysUntilStartCalendar = Math.round(
+    (startMidnight.getTime() - refMidnight.getTime()) / (1000 * 60 * 60 * 24),
+  );
+  const isUrgent =
+    !isPast &&
+    !isActive &&
+    def.urgencyDays != null &&
+    daysUntilStart <= def.urgencyDays &&
+    daysUntilStart > 0;
+
+  return {
+    definition: def,
+    startDate,
+    endDate,
+    isActive,
+    isPast,
+    isUrgent,
+    daysUntilStart,
+    daysUntilStartCalendar,
+    actionLinks: resolveLinks(def.actionLinks, linkVars),
+    resultLinks: resolveLinks(def.resultLinks, linkVars),
+  };
 }
 
 /**

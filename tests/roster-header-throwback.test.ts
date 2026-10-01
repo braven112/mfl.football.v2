@@ -88,13 +88,12 @@ describe('the plate is never a partial overlay', () => {
 });
 
 describe('the switcher throws back with the plate above it', () => {
-  for (const page of ['src/pages/theleague/rosters.astro', 'src/components/afl-family/RostersPage.astro']) {
+  for (const page of ['src/pages/theleague/rosters.astro', 'src/components/shared/rosters/RostersPage.astro']) {
     it(`${page} feeds buildTeamGroups an identity resolver`, () => {
       const src = read(page);
       expect(src).toContain('identityOf: headerIdentityOf,');
       expect(src, 'the resolver must read the same skin the plate does')
-        // A literal slug, or the shared component's own league (`aflLeague.slug`).
-        .toMatch(/resolveRosterHeaderSkin\(franchiseId, (?:'[a-z-]+'|aflLeague\.slug), headerThrowback\)/);
+        .toMatch(/resolveRosterHeaderSkin\(franchiseId, ('[a-z-]+'|PAGE_LEAGUE_SLUG), headerThrowback\)/);
       // A closure over `headerThrowback` that is declared after it is a TDZ
       // crash at render, not a type error.
       expect(src.indexOf('const headerThrowback'))
@@ -103,7 +102,7 @@ describe('the switcher throws back with the plate above it', () => {
   }
 
   it('resolves the throwback state from the shared helper, not inline', () => {
-    for (const page of ['src/pages/theleague/rosters.astro', 'src/components/afl-family/RostersPage.astro']) {
+    for (const page of ['src/pages/theleague/rosters.astro', 'src/components/shared/rosters/RostersPage.astro']) {
       const src = read(page);
       expect(src).toContain('resolveThrowbackRequestState(');
       expect(src, 'eras are never resolved inline in a page')

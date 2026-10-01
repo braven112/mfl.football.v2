@@ -1,0 +1,228 @@
+---
+/**
+ * News persona editor — the commissioner renames the league's columnist and
+ * rewrites his voice. Talks only to /api/admin/persona, naming the page's
+ * league in `?league=`. The API decides whether the session may edit it: a
+ * commissioner only their own, a platform admin any
+ * (src/utils/league-admin.ts). `navSlug` also tags the root for the page-load gate.
+ *
+ * Rendered by the league's /admin/news route, which owns the
+ * commissioner gate (a component cannot redirect — see CLAUDE.md).
+ */
+import { PERSONA_LIMITS } from '../../utils/persona.mjs';
+import { getLeagueByNavSlug } from '../../config/leagues';
+import type { LeagueSlug } from '../../types/nav';
+
+interface Props {
+  /** The league's nav slug — tags the root so a cross-league swap re-inits. */
+  navSlug: LeagueSlug;
+}
+const { navSlug } = Astro.props;
+// The API is told which league this page edits. A commissioner can only ever
+// name their own (the API refuses another); a platform admin can edit any.
+const leagueSlug = getLeagueByNavSlug(navSlug)?.slug ?? '';
+---
+
+<section class="persona" id="persona-editor" data-league={navSlug} data-league-slug={leagueSlug} aria-labelledby="persona-title">
+  <header class="persona__head">
+    <h2 id="persona-title">News persona</h2>
+    <p class="persona__lede">
+      Who writes your league's automated columns. The name and voice go into every column from the
+      next run on; the avatar shows next to chat posts. Leave it as Claude Schefter, or make it yours.
+    </p>
+  </header>
+
+  <form class="persona__form" id="persona-form" autocomplete="off">
+    <label class="persona__field">
+      <span>Name <small>Up to {PERSONA_LIMITS.name} characters.</small></span>
+      <input id="persona-name" name="name" type="text" maxlength={PERSONA_LIMITS.name} required />
+    </label>
+
+    <label class="persona__field">
+      <span>Avatar URL <small>Optional. A full https:// link to a square image.</small></span>
+      <input id="persona-avatar" name="avatarUrl" type="url" maxlength={PERSONA_LIMITS.avatarUrl} placeholder="https://" />
+    </label>
+
+    <label class="persona__field">
+      <span>
+        Voice
+        <small>
+          How he writes: tone, catchphrases, running bits. Tone only; he still reports only what the
+          data says. Up to {PERSONA_LIMITS.voice} characters.
+        </small>
+      </span>
+      <textarea id="persona-voice" name="voice" rows="6" maxlength={PERSONA_LIMITS.voice} required></textarea>
+      <small class="persona__count" id="persona-count" aria-live="polite"></small>
+    </label>
+
+    <div class="persona__actions">
+      <button type="submit" class="persona__btn persona__btn--primary" id="persona-save">Save persona</button>
+      <button type="button" class="persona__btn" id="persona-reset">Reset to default</button>
+      <span class="persona__status" id="persona-status" role="status" aria-live="polite"></span>
+    </div>
+  </form>
+</section>
+
+<script>
+  // Re-run on every ClientRouter navigation; the root node is replaced by a
+  // swap, so a bound flag on it cannot survive into the next page.
+  const ENDPOINT = '/api/admin/persona';
+
+  type PersonaView = {
+    ok: boolean;
+    errors?: string[];
+    error?: string;
+    persona?: { name: string; avatarUrl: string; voice: string; source: string };
+    limits?: { voice: number };
+  };
+
+  function initPersonaEditor() {
+    const root = document.getElementById('persona-editor');
+    if (!root || root.dataset.bound === '1') return;
+    root.dataset.bound = '1';
+
+    const form = root.querySelector<HTMLFormElement>('#persona-form')!;
+    const nameEl = root.querySelector<HTMLInputElement>('#persona-name')!;
+    const avatarEl = root.querySelector<HTMLInputElement>('#persona-avatar')!;
+    const voiceEl = root.querySelector<HTMLTextAreaElement>('#persona-voice')!;
+    const countEl = root.querySelector<HTMLElement>('#persona-count')!;
+    const statusEl = root.querySelector<HTMLElement>('#persona-status')!;
+    const saveBtn = root.querySelector<HTMLButtonElement>('#persona-save')!;
+    const resetBtn = root.querySelector<HTMLButtonElement>('#persona-reset')!;
+    const voiceMax = Number(voiceEl.maxLength) || 0;
+
+    const setStatus = (msg: string, kind: 'ok' | 'bad' | 'muted' = 'muted') => {
+      statusEl.textContent = msg;
+      statusEl.dataset.kind = kind;
+    };
+    const updateCount = () => {
+      countEl.textContent = voiceMax ? `${voiceEl.value.length} / ${voiceMax}` : '';
+    };
+    const fill = (data: PersonaView) => {
+      if (!data.persona) return;
+      nameEl.value = data.persona.name;
+      avatarEl.value = data.persona.avatarUrl;
+      voiceEl.value = data.persona.voice;
+      updateCount();
+    };
+    const describe = (data: PersonaView, status: number) =>
+      (data.errors ?? []).join(' ') || data.error || `Request failed (HTTP ${status}).`;
+
+    async function call(method: 'GET' | 'PUT' | 'DELETE', body?: object) {
+      // Every non-GET carries a JSON content type, even the bodiless DELETE:
+      // Astro's checkOrigin 403s a write with no content type when the
+      // browser omits Origin.
+      const write = method !== 'GET';
+      const league = root!.dataset.leagueSlug || '';
+      const url = league ? `${ENDPOINT}?league=${encodeURIComponent(league)}` : ENDPOINT;
+      const res = await fetch(url, {
+        method,
+        credentials: 'same-origin',
+        headers: write ? { 'Content-Type': 'application/json' } : undefined,
+        body: write ? JSON.stringify(body ?? {}) : undefined,
+      });
+      const data = (await res.json().catch(() => ({ ok: false }))) as PersonaView;
+      return { res, data };
+    }
+
+    voiceEl.addEventListener('input', updateCount);
+
+    (async () => {
+      setStatus('Loading…');
+      try {
+        const { res, data } = await call('GET');
+        if (!res.ok || !data.ok) return setStatus(describe(data, res.status), 'bad');
+        fill(data);
+        setStatus(data.persona?.source === 'league' ? 'Custom persona in use.' : 'Using the default persona.');
+      } catch {
+        setStatus('Could not load the current persona.', 'bad');
+      }
+    })();
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      saveBtn.disabled = true;
+      setStatus('Saving…');
+      try {
+        const { res, data } = await call('PUT', {
+          name: nameEl.value,
+          avatarUrl: avatarEl.value,
+          voice: voiceEl.value,
+        });
+        if (!res.ok || !data.ok) return setStatus(describe(data, res.status), 'bad');
+        fill(data);
+        setStatus('Saved. The next column is written by this persona.', 'ok');
+      } catch {
+        setStatus('Could not save — check your connection.', 'bad');
+      } finally {
+        saveBtn.disabled = false;
+      }
+    });
+
+    resetBtn.addEventListener('click', async () => {
+      if (!confirm('Reset the persona to the league default?')) return;
+      resetBtn.disabled = true;
+      setStatus('Resetting…');
+      try {
+        const { res, data } = await call('DELETE');
+        if (!res.ok || !data.ok) return setStatus(describe(data, res.status), 'bad');
+        fill(data);
+        setStatus('Reset to the default persona.', 'ok');
+      } catch {
+        setStatus('Could not reset — check your connection.', 'bad');
+      } finally {
+        resetBtn.disabled = false;
+      }
+    });
+  }
+
+  document.addEventListener('astro:page-load', initPersonaEditor);
+</script>
+
+<style>
+  .persona {
+    background: var(--content-bg-muted);
+    border: 1px solid var(--content-border);
+    border-left: 4px solid var(--color-primary);
+    border-radius: 12px;
+    padding: 1.1rem 1.2rem;
+    margin-bottom: 1.5rem;
+  }
+  .persona__head h2 { margin: 0 0 0.3rem; font-size: 1.1rem; color: var(--page-text); }
+  .persona__lede { margin: 0 0 0.9rem; font-size: var(--font-size-sm); color: var(--content-text-muted); }
+  .persona__form { display: flex; flex-direction: column; gap: 0.8rem; }
+  .persona__field { display: flex; flex-direction: column; gap: 0.3rem; }
+  .persona__field > span { font-size: var(--font-size-xs); font-weight: 700; color: var(--page-text); }
+  .persona__field small { display: block; font-weight: 400; font-size: var(--font-size-2xs); color: var(--content-text-muted); }
+  .persona__field input,
+  .persona__field textarea {
+    font: inherit;
+    font-size: var(--font-size-sm);
+    padding: 0.5rem 0.6rem;
+    border: 1px solid var(--content-border);
+    border-radius: 8px;
+    background: var(--content-bg);
+    color: var(--page-text);
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .persona__field textarea { resize: vertical; min-height: 7rem; }
+  .persona__count { align-self: flex-end; }
+  .persona__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; }
+  .persona__btn {
+    font: inherit;
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    padding: 0.45rem 0.9rem;
+    border-radius: 8px;
+    border: 1px solid var(--content-border);
+    background: var(--content-bg);
+    color: var(--page-text);
+    cursor: pointer;
+  }
+  .persona__btn--primary { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
+  .persona__btn:disabled { opacity: 0.6; cursor: progress; }
+  .persona__status { font-size: var(--font-size-xs); color: var(--content-text-muted); }
+  .persona__status[data-kind='ok'] { color: var(--color-success-dark); }
+  .persona__status[data-kind='bad'] { color: var(--color-error-dark); }
+</style>

@@ -22,7 +22,7 @@ import {
   resolveRecapDestination,
   weeklyRecapPostId,
 } from '../src/utils/hero-recap-destination';
-import { resolveAflHeroState } from '../src/utils/afl-hero-resolver';
+import { resolveAflHeroState } from './helpers/afl-hero';
 
 const recapPost = (year: number, week: number, extra: Record<string, unknown> = {}) => ({
   id: weeklyRecapPostId(year, week),
@@ -225,13 +225,18 @@ describe('the AFL recap hero renders the resolved destination', () => {
  */
 describe('the AFL homepage does not feed the walked-back year to the recap', () => {
   const PAGE = readFileSync('src/pages/afl-fantasy/index.astro', 'utf8');
+  // The hero's recap is resolved by the shared homepage helper, which never
+  // SEES the page's walked-back year: it computes its own from the live clock.
+  const HERO = readFileSync('src/utils/league-hero/page.ts', 'utf8');
 
   it('computes the recap year from the live clock, never the walk-back', () => {
-    expect(PAGE).toMatch(/const liveSeasonYear = getCurrentSeasonYear\(effectiveDate\);/);
-    // The walk-back still exists for what the page RENDERS.
+    expect(HERO).toMatch(/const liveSeasonYear = getCurrentSeasonYear\(effectiveDate\);/);
+    // The walk-back still exists for what the page RENDERS…
     expect(PAGE).toMatch(/const seasonYear = resolveSeasonYearWithData\(\);/);
-    // …and is not what the recap is built from.
-    expect(PAGE).not.toMatch(/const liveSeasonYear = resolveSeasonYearWithData/);
+    // …and is not handed to the hero at all.
+    expect(HERO).not.toMatch(/resolveSeasonYearWithData|seasonYear:\s*seasonYear\b/);
+    const call = PAGE.slice(PAGE.indexOf('resolveLeagueHomeHero({'), PAGE.indexOf('resolveLeagueHomeHero({') + 1200);
+    expect(call).not.toMatch(/\bseasonYear\b/);
   });
 
   it('builds the recap week from the live year, never the walk-back', () => {
@@ -240,9 +245,9 @@ describe('the AFL homepage does not feed the walked-back year to the recap', () 
     // Top Players rather than an article whose id had to be minted from a year
     // — so the week is the ONE place the live clock can still be swapped for
     // the walked-back one. The negative assertions are the real protection.
-    const call = PAGE.slice(
-      PAGE.indexOf('resolveRecapDestination({'),
-      PAGE.indexOf('resolveRecapDestination({') + 400,
+    const call = HERO.slice(
+      HERO.indexOf('resolveRecapDestination({'),
+      HERO.indexOf('resolveRecapDestination({') + 400,
     );
     expect(call).toContain('getWeekInTheBooks(liveSeasonYear');
     expect(call).not.toMatch(/getWeekInTheBooks\(seasonYear\b/);
@@ -255,14 +260,14 @@ describe('the AFL homepage does not feed the walked-back year to the recap', () 
     // file can prove the right pair is handed over: swapping in the walked-back
     // `seasonYear`, or `heroState.week` (the UPCOMING week — the original #1085
     // bug) for `aflRecap.week`, leaves the rest of the suite green.
-    const call = PAGE.slice(
-      PAGE.indexOf('castAflHeroModel(heroState, {'),
-      PAGE.indexOf('castAflHeroModel(heroState, {') + 800,
+    const call = HERO.slice(
+      HERO.indexOf('castLeagueHeroModel(state, {'),
+      HERO.indexOf('castLeagueHeroModel(state, {') + 1000,
     );
-    expect(call).toContain('recap: { seasonYear: liveSeasonYear, week: aflRecap.week }');
+    expect(call).toContain('recap: { seasonYear: liveSeasonYear, week: recap.week }');
     // Not the walked-back year, and not the upcoming week.
     expect(call).not.toMatch(/recap:\s*\{[^}]*seasonYear:\s*seasonYear\b/);
-    expect(call).not.toMatch(/week:\s*heroState\.week/);
+    expect(call).not.toMatch(/week:\s*(heroState|state)\.week/);
     expect(call).not.toMatch(/week:\s*currentNflWeekForHero/);
   });
 
@@ -277,7 +282,7 @@ describe('the AFL homepage does not feed the walked-back year to the recap', () 
     // `const standingsFeeds` is initialised before the call runs.
     const glob = PAGE.indexOf('const standingsFeeds = import.meta.glob');
     const call = PAGE.indexOf('const seasonYear = resolveSeasonYearWithData();');
-    const hero = PAGE.indexOf('resolveRecapDestination({');
+    const hero = PAGE.indexOf('resolveLeagueHomeHero({');
     expect(glob).toBeGreaterThan(-1);
     expect(call).toBeGreaterThan(-1);
     expect(hero).toBeGreaterThan(-1);
@@ -292,15 +297,15 @@ describe('the AFL homepage does not feed the walked-back year to the recap', () 
 
 describe('no recap surface points at a non-recap page', () => {
   it('neither hero hardcodes /news or /standings for its recap CTA', () => {
-    const afl = readFileSync('src/utils/afl-hero-resolver.ts', 'utf8');
-    // From the SLOT_VIEW entry, not the SlotKey union that lists the name first.
-    const start = afl.indexOf("'slot:recap': (");
+    const shared = readFileSync('src/utils/league-hero/views.ts', 'utf8');
+    const start = shared.indexOf('export function recapSlotView(');
     expect(start).toBeGreaterThan(-1);
-    const slot = afl.slice(start, afl.indexOf("'slot:waiver-wire': ("));
+    const slot = shared.slice(start, shared.indexOf('export function waiverSlotView('));
     expect(slot).toContain('recap?.href');
-    // The bare literal may survive only as the `??` fallback for a caller that
+    // The news listing may survive only as the `??` fallback for a caller that
     // passed no destination at all.
-    expect(slot.replace(/recap\?\.href \?\? '\/afl-fantasy\/news'/g, '')).not.toContain("'/afl-fantasy/news'");
+    expect(slot.replace(/recap\?\.href \?\? p\('\/news'\)/g, '')).not.toContain("'/news'");
+    expect(slot).not.toMatch(/'\/[a-z-]+\/(news|standings)'/);
 
     const tl = readFileSync('src/components/theleague/season-heroes/RecapCompositeHero.astro', 'utf8');
     expect(tl).toContain('resolveRecapDestination');

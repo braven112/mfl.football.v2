@@ -114,7 +114,7 @@ const cardClasses = [
     --cat-preseason: #2563eb;
     --cat-free-agency: #2e8743;
     --cat-draft: #7c3aed;
-    --cat-regular-season: #1c497c;
+    --cat-regular-season: var(--league-phase-regular-season, #1c497c);   /* a league may repaint the in-season card (Archie's has no navy) */
   }
 
   /* ── Mini-hero shell ──
@@ -124,6 +124,7 @@ const cardClasses = [
      so both themes share one set of rules. */
   .whats-next-card {
     --card-accent: var(--cat-regular-season);
+    --card-pill-ink: var(--on-league-phase-regular-season, #fff);
     --card-glow-strength: 24%;
     --card-glow: color-mix(in srgb, var(--card-accent) var(--card-glow-strength), transparent);
     --card-border-strength: 45%;
@@ -159,7 +160,7 @@ const cardClasses = [
   :global(html.dark) .whats-next-card {
     --card-glow-strength: 52%;
     --card-border-strength: 55%;
-    --card-surface: #0f1e2e;
+    --card-surface: var(--league-mini-hero-surface, #0f1e2e);
     --card-ink: #ffffff;
     --card-ink-soft: rgba(255, 255, 255, 0.72);
     --card-ink-faint: rgba(255, 255, 255, 0.55);
@@ -171,7 +172,7 @@ const cardClasses = [
     --card-link-border: rgba(255, 255, 255, 0.14);
     --card-link-ink: rgba(255, 255, 255, 0.88);
     --card-link-hover-bg: #ffffff;
-    --card-link-hover-ink: #0f1e2e;
+    --card-link-hover-ink: var(--league-mini-hero-surface, #0f1e2e);
     --card-link-hover-border: #ffffff;
     --card-pill-muted-bg: rgba(255, 255, 255, 0.12);
     --card-pill-muted-ink: rgba(255, 255, 255, 0.7);
@@ -215,6 +216,7 @@ const cardClasses = [
   }
   .whats-next-card--regular-season {
     --card-accent: var(--cat-regular-season);
+    --card-pill-ink: var(--on-league-phase-regular-season, #fff);
   }
 
   /* Coming-soon cards sit slightly back in the timeline. */
@@ -271,7 +273,7 @@ const cardClasses = [
     padding: 0.3rem 0.7rem;
     border-radius: 999px;
     background: var(--card-accent);
-    color: #fff;
+    color: var(--card-pill-ink, #fff);
   }
   .whats-next-card--active .whats-next-card__pill {
     background: var(--color-success, #10b981);

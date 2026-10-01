@@ -3,11 +3,15 @@
  *
  * POST /api/schefter-replies/{postId}/ai-reply
  *
- * Generates a reply from Claude Schefter or Ask Roger using Haiku.
- * Called after a user posts a reply to trigger an AI response.
+ * Generates a reply from the league's news persona (Claude Schefter by
+ * default) or Ask Roger using Haiku. Called after a user posts a reply to
+ * trigger an AI response. The league is the SESSION's: its feed supplies the
+ * post context, its persona names the replier, and its name goes in the
+ * prompt — TheLeague's default-persona prompt is byte-identical to before.
  */
 
 import type { APIRoute } from 'astro';
+import { stripTags } from '../../../../utils/whats-new-links';
 import { getAuthUser } from '../../../../utils/auth';
 import { checkRateLimit } from '../../../../utils/rate-limit';
 import type { SchefterReply, AiReplyRequest } from '../../../../types/schefter-replies';
@@ -18,6 +22,9 @@ import {
 } from '../../../../utils/schefter-replies-storage';
 import { getAuthor, getAuthorAvatar } from '../../../../types/schefter';
 import type { SchefterPost } from '../../../../types/schefter';
+import { getLeagueById, type LeagueDefinition } from '../../../../config/leagues';
+import { getLeaguePersona } from '../../../../utils/persona-server';
+import { isDefaultPersona, personaByline } from '../../../../utils/persona.mjs';
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -58,15 +65,46 @@ Rules:
 - Never mention being an AI or language model
 - Be the voice of reason, but make it entertaining`;
 
-/** Find the original post from the feed data */
-async function findPost(postId: string): Promise<SchefterPost | null> {
+// Every league's feed, loaded lazily (a feed is ~1 MB): TheLeague's lives
+// under src/data, the rest under data/. Keyed by the registry's
+// `schefterFeedPath`, so a new league needs no edit here.
+const SRC_FEEDS = import.meta.glob('../../../../data/*/schefter-feed.json', { import: 'default' });
+const ROOT_FEEDS = import.meta.glob('../../../../../data/*/schefter-feed.json', { import: 'default' });
+const FEED_LOADERS: Record<string, () => Promise<unknown>> = Object.fromEntries([
+  ...Object.entries(SRC_FEEDS).map(([k, load]) => [`src/${k.replace(/^(\.\.\/)+/, '')}`, load]),
+  ...Object.entries(ROOT_FEEDS).map(([k, load]) => [k.replace(/^(\.\.\/)+/, ''), load]),
+]);
+
+/** Find the original post in the league's own feed */
+async function findPost(league: LeagueDefinition, postId: string): Promise<SchefterPost | null> {
+  const load = league.schefterFeedPath ? FEED_LOADERS[league.schefterFeedPath] : undefined;
+  if (!load) return null;
   try {
-    const feedModule = await import('../../../../data/theleague/schefter-feed.json');
-    const feed = feedModule.default ?? feedModule;
-    return (feed.posts ?? []).find((p: SchefterPost) => p.id === postId) ?? null;
+    const feed = (await load()) as { posts?: SchefterPost[] };
+    return (feed.posts ?? []).find((p) => p.id === postId) ?? null;
   } catch {
     return null;
   }
+}
+
+/** The persona's system prompt for a league other than TheLeague, or a renamed persona. */
+function personaSystem(persona: { name: string; voice: string }, leagueName: string): string {
+  return `You are ${persona.name}, the league's beat reporter and insider for a fantasy football league called ${leagueName}. You're responding to league owners in the comments of your news feed.
+
+Voice:
+${persona.voice}
+
+Personality:
+- Play along with smack talk — roast owners when they deserve it
+- Be entertaining, witty, and slightly sarcastic but never mean-spirited
+- Reference the post content for context when relevant
+- Encourage banter and rivalry between owners
+
+Rules:
+- Keep replies under 140 characters — old-school Twitter length, punchy and tight
+- Never break character — you ARE ${persona.name}
+- Never mention being an AI or language model
+- Be opinionated — take sides, make predictions, call out bad takes`;
 }
 
 /** Decide which AI character responds */
@@ -82,6 +120,10 @@ const RATE_LIMIT_WINDOW = 3600; // 1 hour
 export const POST: APIRoute = async ({ params, request }) => {
   const user = getAuthUser(request);
   if (!user?.franchiseId) return json({ error: 'Authentication required' }, 401);
+  // getAuthUser only returns sessions for a registry league (or an MFL Live
+  // pilot, which has no feed and no replies to answer).
+  const league = getLeagueById(user.leagueId);
+  if (!league) return json({ error: 'No news feed for this league' }, 404);
 
   // Keyed by league AND franchise: both leagues have a franchise 0001.
   const limit = await checkRateLimit('ai-reply', `${user.leagueId}:${user.franchiseId}`, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW);
@@ -104,20 +146,30 @@ export const POST: APIRoute = async ({ params, request }) => {
   // Load context
   const [userReply, post] = await Promise.all([
     getReplyById(postId, body.userReplyId),
-    findPost(postId),
+    findPost(league, postId),
   ]);
 
   if (!userReply) return json({ error: 'User reply not found' }, 404);
 
   const character = chooseCharacter(post);
-  const systemPrompt = character === 'roger' ? ROGER_SYSTEM : CLAUDE_SYSTEM;
+  const persona = await getLeaguePersona(league.slug);
+  const leagueName = league.shortName ?? league.name;
+  const original = league.slug === 'theleague';
+  const systemPrompt =
+    character === 'roger'
+      ? original
+        ? ROGER_SYSTEM
+        : ROGER_SYSTEM.replace('a dynasty fantasy football league called TheLeague', `a fantasy football league called ${leagueName}`)
+      : original && isDefaultPersona(persona)
+        ? CLAUDE_SYSTEM
+        : personaSystem(persona, leagueName);
 
   // Build context for the AI
   const contextParts: string[] = [];
   if (post) {
     contextParts.push(`Original post: "${post.headline}"`);
     if (post.body) {
-      const bodyText = post.body.replace(/<[^>]+>/g, '').slice(0, 200);
+      const bodyText = stripTags(post.body).slice(0, 200);
       contextParts.push(`Post body: "${bodyText}"`);
     }
   }
@@ -145,7 +197,8 @@ export const POST: APIRoute = async ({ params, request }) => {
     if (!aiText) return json({ error: 'AI generated empty response' }, 500);
 
     const author = getAuthor(character);
-    const avatarUrl = getAuthorAvatar(author);
+    // The persona renames only its own byline; Roger keeps his.
+    const byline = personaByline(author, getAuthorAvatar(author), persona);
 
     const aiReply: SchefterReply = {
       id: generateReplyId(),
@@ -154,9 +207,9 @@ export const POST: APIRoute = async ({ params, request }) => {
       body: aiText,
       author: {
         type: 'ai',
-        name: author.name,
-        avatar: avatarUrl,
-        handle: author.handle,
+        name: byline.name,
+        avatar: byline.avatar,
+        handle: byline.handle,
         aiCharacter: character,
       },
       createdAt: new Date().toISOString(),

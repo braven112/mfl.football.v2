@@ -1,0 +1,31 @@
+---
+/**
+ * Free agents (archies) — thin route over the shared Free Agents page, the
+ * same one the AFL renders (src/components/shared/free-agents/FreeAgentsPage.astro).
+ * Archie's pools players by DIVISION, so the switcher is its nine divisions.
+ * The snapshot import and globs live here: a static import specifier cannot
+ * be a runtime variable.
+ */
+import FreeAgentsPage from '../../components/shared/free-agents/FreeAgentsPage.astro';
+import freeAgentsData from '../../../data/archies/derived/free-agents.json';
+
+export const prerender = false;
+
+const leagueModules = import.meta.glob(
+  '../../../data/archies/mfl-feeds/20{2[5-9],[3-9][0-9]}/league.json',
+  { eager: true }
+);
+const calendarModules = import.meta.glob(
+  '../../../data/archies/mfl-feeds/20{2[5-9],[3-9][0-9]}/calendar.json',
+  { eager: true }
+);
+---
+
+<FreeAgentsPage
+  leagueSlug="archies"
+  snapshot={freeAgentsData}
+  leagueModules={leagueModules}
+  calendarModules={calendarModules}
+  title="Free Agents | Archie's"
+  poolNoun="Division"
+/>

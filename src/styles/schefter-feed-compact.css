@@ -784,7 +784,7 @@ html[data-league='afl'] .sfc-reply--roger .sfc-reply__content {
 
 .gmc-preview__btn--send {
   background: var(--color-primary, #1c497c);
-  color: white;
+  color: var(--on-color-primary, white);
 }
 
 /* ── Reduced Motion ── */
@@ -847,7 +847,7 @@ html[data-league='afl'] .sfc-reply--roger .sfc-reply__content {
 
 .sfc-tab--active,
 .sfc-tab--active:hover {
-  color: #fff;
+  color: var(--on-league-accent, #fff);
   background: var(--league-accent, var(--color-primary, #1c497c));
 }
 
@@ -886,7 +886,7 @@ html[data-league='afl'] .sfc-reply--roger .sfc-reply__content {
   border-radius: var(--radius-full, 9999px);
   font-size: var(--font-size-3xs);
   font-weight: 700;
-  color: var(--league-accent, var(--color-primary, #1c497c));
+  color: var(--league-accent-fg, var(--league-accent, var(--color-primary, #1c497c)));
   /* Derived from the league accent, exactly as .sf-post__watching does — a
      fixed rgba() fallback here would render the same tint in BOTH themes. */
   background: color-mix(in srgb, var(--league-accent, var(--color-primary, #1c497c)) 12%, transparent);

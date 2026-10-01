@@ -1,7 +1,7 @@
 /**
  * Fixtures for LeagueCompositeHero — hand-built `EventHeroView`s.
  *
- * The real views come from `afl-hero-resolver.ts` (AFL) and
+ * The real views come from `league-hero/views.ts` (every league) and
  * `waiverClaimsHeroView` (both leagues), which read MFL's calendar and the
  * viewer's clock. These are frozen copies of what those produce on a
  * Wednesday waiver day, so the story needs no clock and no feed.
@@ -17,7 +17,7 @@
  * Plain object literals and no imports beyond types: fixture modules are
  * bundled for the browser (Trap 6).
  */
-import type { EventHeroView } from '../../src/utils/afl-hero-resolver';
+import type { EventHeroView } from '../../src/utils/league-hero/types';
 import type { HeroModel } from '../../src/utils/hero-casting';
 
 const FACE =

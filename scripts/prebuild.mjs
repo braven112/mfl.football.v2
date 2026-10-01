@@ -22,7 +22,7 @@
  *
  * Verified before marking any step: running the compute steps against a clean
  * tree reproduced the committed files byte-for-byte apart from their
- * `generatedAt` stamp. The one genuine difference is compute:afl-free-agents,
+ * `generatedAt` stamp. The one genuine difference is compute:free-agents,
  * whose input is live — a preview showing free agents from the last production
  * build is the accepted trade, not a bug.
  *
@@ -53,7 +53,7 @@ const SEQUENTIAL = [
   // edit to a producer preview against the stale committed file. A guard in that
   // test fails if a chain producer stops appearing in this list.
   { name: 'compute:franchise-history', cmd: 'pnpm run compute:franchise-history', previewSkip: true },
-  { name: 'compute:afl-free-agents', cmd: 'pnpm run compute:afl-free-agents', previewSkip: true },
+  { name: 'compute:free-agents', cmd: 'pnpm run compute:free-agents', previewSkip: true },
   // compute:franchise-history above defaults to TheLeague, so the AFL's copy
   // was only ever refreshed by hand or by the backfill workflow — it went stale
   // against its own committed feeds between runs. Adding the record book to
@@ -74,6 +74,9 @@ const SEQUENTIAL = [
   // half of the lookup and TheLeague's is the fallback for the rest (MFL
   // player ids are global, so the two compose).
   { name: 'compute:player-identity-union:afl', cmd: 'pnpm run compute:player-identity-union:afl', previewSkip: true },
+  // And for Archie's: its transactions, rosters and homepage name players from
+  // this, with TheLeague's union as the fallback.
+  { name: 'compute:player-identity-union:archies', cmd: 'pnpm run compute:player-identity-union:archies', previewSkip: true },
   // Rebuilds the frozen roster payloads for every HISTORICAL TheLeague season
   // (current league/season years stay live on the page). Runs after the
   // identity union for the same reason as it: the committed feeds it reads

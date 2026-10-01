@@ -181,9 +181,9 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
   return { factSheet: lines.join('\n'), enrichment: {} };
 }
 
-export function getSystemPrompt({ league = DEFAULT_LEAGUE_SLUG } = {}) {
+export function getSystemPrompt({ league = DEFAULT_LEAGUE_SLUG, persona } = {}) {
   return buildCachedSystem(`\n\nARTICLE TYPE: Matchup Preview + Broadcast Guide
-Break down each fantasy matchup for the week. Pick winners for each matchup — be bold, be wrong sometimes, that's what makes it fun. Include a section about which NFL games to watch based on rostered players. This is the Saturday morning "what to watch" guide.\nIf the fact sheet's FORMAT line says DOUBLEHEADER, every team plays twice: pick a winner for each GAME separately and name the team facing the toughest two-game slate.`, { league });
+Break down each fantasy matchup for the week. Pick winners for each matchup — be bold, be wrong sometimes, that's what makes it fun. Include a section about which NFL games to watch based on rostered players. This is the Saturday morning "what to watch" guide.\nIf the fact sheet's FORMAT line says DOUBLEHEADER, every team plays twice: pick a winner for each GAME separately and name the team facing the toughest two-game slate.`, { league, persona });
 }
 
 export function getUserPrompt(factSheet) {

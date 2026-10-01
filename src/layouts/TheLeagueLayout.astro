@@ -46,6 +46,7 @@ import { NAV_COOKIES } from '../types/nav';
 import { getAFLPreference, getTheLeaguePreference, getBestBall1Preference } from '../utils/team-preferences';
 import { getAuthUser, isCommissionerOrAdmin } from '../utils/auth';
 import { getLeagueBySlug, getLeagueByNavSlug, isSharedAppHost } from '../config/leagues';
+import { getLeagueTeamConfigs } from '../utils/league-team-brands';
 import { HOST_TO_SLUG } from '../utils/league-host-map';
 import { loginPathFor } from '../utils/login-redirect';
 import { buildTransactionHubConfig } from '../utils/transaction-hub-config';
@@ -98,6 +99,12 @@ const league: LeagueSlug =
 // Draft-only best-ball leagues have no trades — management chrome like the
 // Transaction Hub must not render (its links would point cross-league).
 const isBestBallLeague = !!getLeagueBySlug(leagueContext.slug)?.bestBall;
+// A package league (archies): opt-in nav, its own mark in the registry. Read
+// from the registry so the layout needs no new branch for the next one.
+const packageLeague = (() => {
+	const def = getLeagueBySlug(leagueContext.slug);
+	return def && def.optInNav && !def.bestBall && def.logo ? def : null;
+})();
 
 // Check for myteam in URL and set cookie if present
 const myteamParam = parseMyTeamFromUrl(Astro.url);
@@ -126,7 +133,7 @@ const aflMflId = getLeagueBySlug('afl-fantasy')?.id;
 const theLeagueMflId = getLeagueBySlug('theleague')?.id;
 const bb1MflId = getLeagueBySlug('best-ball-1')?.id;
 const currentLeagueMflId =
-	league === 'afl' ? aflMflId : league === 'bb1' ? bb1MflId : league === 'keeper' ? getLeagueBySlug('keeper')?.id : theLeagueMflId;
+	packageLeague?.id ?? (league === 'afl' ? aflMflId : league === 'bb1' ? bb1MflId : league === 'keeper' ? getLeagueBySlug('keeper')?.id : theLeagueMflId);
 
 // Get team preference based on current league context
 let myteam: string | null = null;
@@ -173,6 +180,16 @@ if (league === 'afl') {
 	)[0];
 	if (sessionFranchiseId && keeperConfig) {
 		teamInfo = buildNavTeamInfo(sessionFranchiseId, keeperConfig.teams, 'keeper' as LeagueSlug);
+	}
+} else if (packageLeague) {
+	// Package league: no preference cookie yet — the signed session only, both
+	// for personalization and for the nav chip.
+	const jwtFranchiseId =
+		layoutAuthUser && layoutAuthUser.leagueId === packageLeague.id ? layoutAuthUser.franchiseId : null;
+	myteam = myteamParam || jwtFranchiseId || null;
+	sessionFranchiseId = jwtFranchiseId || null;
+	if (jwtFranchiseId) {
+		teamInfo = buildNavTeamInfo(jwtFranchiseId, getLeagueTeamConfigs(packageLeague.slug), league);
 	}
 } else if (league === 'bb1') {
 	// Best Ball League #1: same simple shape as TheLeague (no conference/tier)
@@ -226,7 +243,12 @@ const transactionHubConfig = buildTransactionHubConfig(
 	leagueContext.slug,
 	layoutAuthUser,
 	resolveLeaguePath(
-		leagueContext.slug === 'afl-fantasy' || leagueContext.slug === 'keeper' ? `/${leagueContext.slug}/players` : '/theleague/players',
+		// A package league's pool page is Free Agents; the AFL family's is Players.
+		packageLeague
+			? `/${packageLeague.slug}/free-agents`
+			: leagueContext.slug === 'afl-fantasy' || leagueContext.slug === 'keeper'
+				? `/${leagueContext.slug}/players`
+				: '/theleague/players',
 		hideLeaguePrefix,
 	),
 	// Roster-management clock: waivers are a roster action, so the waiver
@@ -343,6 +365,14 @@ import DemoTour from '../components/shared/DemoTour.astro';
 				<link rel="icon" type="image/svg+xml" href="/assets/logos/keeper-logo.svg" />
 				<meta name="theme-color" content="#1f3a5f" data-theme-color-light="#1f3a5f" />
 				<meta name="apple-mobile-web-app-title" content="Keeper League" />
+			</>
+		) : packageLeague ? (
+			<>
+				<link rel="icon" type={packageLeague.logo!.light.endsWith('.svg') ? 'image/svg+xml' : packageLeague.logo!.light.endsWith('.webp') ? 'image/webp' : 'image/png'} href={packageLeague.logo!.light} />
+				<meta name="theme-color" content={packageLeague.themeColor ?? '#1c497c'} data-theme-color-light={packageLeague.themeColor ?? '#1c497c'} />
+				<meta name="mobile-web-app-capable" content="yes" />
+				<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+				<meta name="apple-mobile-web-app-title" content={packageLeague.shortName ?? packageLeague.name} />
 			</>
 		) : league === 'bb1' ? (
 			<>

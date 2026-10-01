@@ -14,7 +14,7 @@
  * league registry `duplicatePlayers: true` — so `rostered` means "held in
  * EVERY conference" and `confs` lists the holders) is the shared
  * implementation in afl-conference-rosters.mjs, also used by
- * scripts/compute-afl-free-agents.mjs. Don't re-implement it here.
+ * scripts/compute-free-agents.mjs. Don't re-implement it here.
  */
 import { getLeagueBySlug } from '../config/leagues';
 import { buildMflExportUrl } from './mfl-url';
@@ -233,27 +233,21 @@ export function resolveConferenceSelection(
 
 // Module-level cache: one MFL fetch per warm serverless instance per minute,
 // so page traffic never hammers MFL. Failures are cached briefly too, so an
-// MFL outage doesn't add a 5s timeout to every request. Keyed by year (a
-// caller passing a different year must not get the cached year's rosters),
-// and concurrent cold-cache callers share one in-flight fetch.
+// MFL outage doesn't add a 5s timeout to every request. Keyed by league AND
+// year (a caller passing a different year — or, since the shared Free Agents
+// page serves every league, a different league — must never get another
+// key's rosters), and concurrent cold-cache callers share one in-flight fetch.
 const LIVE_TTL_MS = 60_000;
 const ERROR_TTL_MS = 20_000;
-// Keyed by league as well as year: the AFL-family page serves more than one
-// league (the custom-site demo's keeper slot), and one league's rosters must
-// never answer for another's.
-let rostersCache: { at: number; ok: boolean; year: string; data: unknown } | null = null;
-let inflight: { year: string; promise: Promise<unknown | null> } | null = null;
+const rostersCache = new Map<string, { at: number; ok: boolean; data: unknown }>();
+const inflight = new Map<string, Promise<unknown | null>>();
 
 /** Snapshot fields the fetch layer uses to validate a payload before caching it. */
 export type FaFetchValidation = Pick<FaSnapshot, 'conferences' | 'rosterFranchiseCount'>;
 
-async function doFetchRosters(
-  year: string,
-  validation: FaFetchValidation | undefined,
-  leagueId: string,
-): Promise<unknown | null> {
-  const prior = rostersCache;
-  const cacheKey = `${leagueId}:${year}`;
+async function doFetchRosters(leagueId: string, year: string, validation?: FaFetchValidation): Promise<unknown | null> {
+  const key = `${leagueId}:${year}`;
+  const prior = rostersCache.get(key);
   const url = buildMflExportUrl({ type: 'rosters', leagueId, year });
   try {
     const res = await fetchWithTimeout(url, { timeoutMs: 5000 });
@@ -267,51 +261,56 @@ async function doFetchRosters(
     if (!rosterSetsFor(data, validation?.conferences ?? null, validation?.rosterFranchiseCount)) {
       throw new Error('MFL rosters payload failed plausibility validation');
     }
-    rostersCache = { at: Date.now(), ok: true, year: cacheKey, data };
+    rostersCache.set(key, { at: Date.now(), ok: true, data });
     return data;
   } catch (err) {
     // Loud enough to spot in Vercel logs if MFL persistently rejects the
     // request (e.g. the league stops answering unauthenticated reads) —
     // otherwise the page silently degrades to deploy-time flags forever.
-    console.warn('[afl-free-agents-live] MFL rosters fetch failed — serving last-good/baked flags:', err);
-    // Keep serving the last-known-good payload for this year during a blip
+    console.warn(`[free-agents-live] MFL rosters fetch failed for ${key} — serving last-good/baked flags:`, err);
+    // Keep serving the last-known-good payload for this key during a blip
     // (a minute-old roster beats oscillating back to deploy-time flags);
     // the shorter error TTL retries soon. Chained off prior.data — not
     // prior.ok — so the payload survives consecutive failures across error
     // windows for the whole outage.
-    const lastGood = prior && prior.year === cacheKey && prior.data != null ? prior.data : null;
-    rostersCache = { at: Date.now(), ok: false, year: cacheKey, data: lastGood };
+    const lastGood = prior && prior.data != null ? prior.data : null;
+    rostersCache.set(key, { at: Date.now(), ok: false, data: lastGood });
     return lastGood;
   }
 }
 
 /**
- * Fetch the AFL's live rosters export from MFL (public read, no auth), cached
- * in memory for 60s. Pass the snapshot (or its conferences +
- * rosterFranchiseCount) so the payload is validated to the overlay's
- * plausibility bar before being cached. Returns null on any failure —
- * callers fall back to the snapshot's baked roster flags via
+ * Fetch a league's live rosters export from MFL (public read, no auth),
+ * cached in memory for 60s per league + year. Pass the snapshot (or its
+ * conferences + rosterFranchiseCount) so the payload is validated to the
+ * overlay's plausibility bar before being cached. Returns null on any failure
+ * — callers fall back to the snapshot's baked roster flags via
  * applyLiveRosters.
  */
+export async function fetchLiveLeagueRosters(
+  leagueSlug: string,
+  year: number | string,
+  validation?: FaFetchValidation,
+): Promise<unknown | null> {
+  const league = getLeagueBySlug(leagueSlug as any);
+  if (!league) return null;
+  const key = `${league.id}:${String(year)}`;
+  const now = Date.now();
+  const hit = rostersCache.get(key);
+  if (hit && now - hit.at < (hit.ok ? LIVE_TTL_MS : ERROR_TTL_MS)) return hit.data;
+  const pending = inflight.get(key);
+  if (pending) return pending;
+  const promise = doFetchRosters(league.id, String(year), validation).finally(() => {
+    if (inflight.get(key) === promise) inflight.delete(key);
+  });
+  inflight.set(key, promise);
+  return promise;
+}
+
+/** The AFL's live rosters — `fetchLiveLeagueRosters('afl-fantasy', …)`. */
 export async function fetchLiveAflRosters(
   year: number | string,
   validation?: FaFetchValidation,
-  leagueId: string = getLeagueBySlug('afl-fantasy')!.id,
 ): Promise<unknown | null> {
-  // The cache key carries the league (see rostersCache).
-  const yearKey = `${leagueId}:${year}`;
-  const now = Date.now();
-  if (
-    rostersCache &&
-    rostersCache.year === yearKey &&
-    now - rostersCache.at < (rostersCache.ok ? LIVE_TTL_MS : ERROR_TTL_MS)
-  ) {
-    return rostersCache.data;
-  }
-  if (inflight && inflight.year === yearKey) return inflight.promise;
-  const promise = doFetchRosters(String(year), validation, leagueId).finally(() => {
-    if (inflight?.promise === promise) inflight = null;
-  });
-  inflight = { year: yearKey, promise };
-  return promise;
+  return fetchLiveLeagueRosters('afl-fantasy', year, validation);
 }

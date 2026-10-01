@@ -1,12 +1,12 @@
 /**
- * Hero Resolver - Automated Homepage Marketing Engine
+ * Hero Resolver — TheLeague's hero calendar: the dates its constitution sets
+ * (auction, rookie draft, tags, cut-down, the season's phases), the daily
+ * slot rotation every league's hero shares, and TheLeague's What's New
+ * fallback (`resolveHeroContent`).
  *
- * Two resolver systems:
- *
- * 1. resolveHeroContent() — Original waterfall resolver for index.astro (backward compat)
- * 2. resolveHeroState() — New state machine for new-hp.astro with time/day awareness
- *
- * State machine priority (highest to lowest):
+ * The state machine itself is the shared league hero
+ * (src/utils/league-hero/resolver.ts); TheLeague's ladder there, highest
+ * priority first:
  * P0++  Trade Deadline Day (24h override)
  * P0    Championship / Champion Crowned / Auction / Draft / Daily Rotation / Playoffs
  * P1    Tag Window / Tagged Showcase / UDFA / Cut Watch
@@ -17,10 +17,9 @@
  */
 
 import type { WhatsNewEntry, HeroContent } from '../types/whats-new';
-import { scheduleReleaseTease, scheduleReleaseTeaseCopy } from './schedule-release.mjs';
 import { WHATS_NEW_CATEGORY_LABELS, entryAppliesToLeague } from '../types/whats-new';
 import type { WhatsNextTimeline, ResolvedLeagueEvent } from '../types/league-events';
-import type { HeroState, SeasonPhase, DailySlot, GameWindow, HeroPriority } from '../types/hero-state';
+import type { SeasonPhase, DailySlot, GameWindow } from '../types/hero-state';
 import { formatEventDate, formatEventDateRange, getStatusText } from './event-date-formatter';
 import { getNthDayOfMonth, getNflDraftDate, getRookieDraftDate } from './league-event-resolver';
 import { nflKickoff, nflWeekStart, nflWeekEndIsoDate } from './nfl-week-starts.mjs';
@@ -30,7 +29,6 @@ import {
   PLAYOFFS_START_WEEK,
 } from './fantasy-bracket.mjs';
 import { getCurrentNFLWeek } from './current-week';
-import { buildLeagueEventView } from './league-event-hero-view';
 import { dailyPick } from './hero-casting';
 
 /** Format a YYYY-MM-DD date string for eyebrow display (e.g., "Mar 2, 2026") */
@@ -79,8 +77,8 @@ const EVENT_CATEGORY_COLORS: Record<string, string> = {
 /**
  * Convert a WhatsNewEntry to HeroContent. Entries without an explicit link
  * CTA into their own What's New article — never the generic listing.
- * ⚠️ Duplicated in afl-hero-resolver.ts (featureToHero AND its SLOT_VIEW.feature,
- * which is what the AFL hero actually renders) — keep all three in sync.
+ * ⚠️ The shared hero builds the same default in league-hero/views.ts
+ * (`featureToHero`, `featureSlotView`) — keep them in sync.
  */
 function featureToHero(entry: WhatsNewEntry): HeroContent {
   return {
@@ -633,7 +631,7 @@ export function isTradeDeadlineDay(referenceDate: Date): boolean {
  * Check if the reference date is in the champion crowned period.
  * After championship Monday night → +7 days.
  */
-function isChampionCrownedPeriod(referenceDate: Date): boolean {
+export function isChampionCrownedPeriod(referenceDate: Date): boolean {
   const { year } = getPTComponents(referenceDate);
   // Championship Monday night end
   const champMondayEnd = weekEndOfDay(year, CHAMPIONSHIP_WEEK);
@@ -662,7 +660,7 @@ function isChampionCrownedPeriod(referenceDate: Date): boolean {
 }
 
 /** Check if in the tag & extension window (after champion crowned → Feb 14) */
-function isTagWindow(referenceDate: Date): boolean {
+export function isTagWindow(referenceDate: Date): boolean {
   const { month, day, year } = getPTComponents(referenceDate);
 
   // Tag window: Jan 8 → Feb 14 (approximate, after champion crowned hero expires)
@@ -675,7 +673,7 @@ function isTagWindow(referenceDate: Date): boolean {
 }
 
 /** Check if in the tagged player showcase period (Feb 15 → auction start) */
-function isTaggedShowcase(referenceDate: Date): boolean {
+export function isTaggedShowcase(referenceDate: Date): boolean {
   const { year } = getPTComponents(referenceDate);
 
   const showcaseStart = new Date(year, 1, 15); // Feb 15
@@ -685,7 +683,7 @@ function isTaggedShowcase(referenceDate: Date): boolean {
 }
 
 /** Check if in the UDFA free agent window (after draft hero → +7 days, or during draft period if draft complete) */
-function isUDFAWindow(referenceDate: Date, draftComplete?: boolean): boolean {
+export function isUDFAWindow(referenceDate: Date, draftComplete?: boolean): boolean {
   const year = referenceDate.getFullYear();
   const draftHeroStart = getDraftHeroStart(year);
 
@@ -894,459 +892,11 @@ export function isGameLive(referenceDate: Date): boolean {
 }
 
 // ── State Machine ──
-
-/** Helper to build a HeroState with common defaults */
-function buildState(
-  phase: SeasonPhase,
-  priority: HeroPriority,
-  resolvedBy: string,
-  referenceDate: Date,
-  testMode: boolean,
-  overrides?: Partial<HeroState>,
-): HeroState {
-  return {
-    phase,
-    priority,
-    metadata: {
-      gameWindow: null,
-      isLive: false,
-      referenceDate,
-      testMode,
-      resolvedBy,
-    },
-    ...overrides,
-  };
-}
-
-/**
- * Resolve the hero state for the new homepage.
- *
- * This is the new state machine that supports time-of-day awareness,
- * day-of-week routing, and the full seasonal calendar.
- *
- * @param referenceDate - Current date (defaults to now, overridable via ?testDate)
- * @param testMode - Whether ?testDate was used
- * @param entries - Optional What's New entries for fallback resolution
- * @param timeline - Optional WhatsNext timeline for fallback resolution
- * @param rng - Injectable random source (0..1) for the roster-deadline coin
- *   flip; defaults to Math.random. Override in tests for deterministic results.
- * @param scheduleReleaseRevealed - Whether this season's schedule reveal is
- *   already locked. Passed in rather than read here: the archive lives on disk
- *   and this resolver stays synchronous and side-effect free, the same way
- *   `draftComplete` is resolved by the page.
- */
-export function resolveHeroState(
-  referenceDate?: Date,
-  testMode: boolean = false,
-  entries?: WhatsNewEntry[],
-  timeline?: WhatsNextTimeline,
-  draftComplete?: boolean,
-  hasBreakingStory: boolean = false,
-  rng: () => number = Math.random,
-  scheduleReleaseRevealed: boolean = false,
-): HeroState {
-  const now = referenceDate ?? new Date();
-  const week = getCurrentNFLWeek(now) ?? undefined;
-
-  // --- P0++: Trade Deadline Day (24h override) ---
-  if (isTradeDeadlineDay(now)) {
-    const { year } = getPTComponents(now);
-    return buildState('trade-deadline', 'P0++', 'isTradeDeadlineDay', now, testMode, {
-      tradeDeadlineProps: {
-        deadlineMidnightPT: `${year}-11-14T00:00:00-08:00`,
-      },
-      fallbackHero: {
-        source: 'event',
-        title: 'Trade Deadline',
-        summary: 'Make your moves before midnight PT. After today, rosters are locked for trades.',
-        link: '/theleague/front-office/trade-builder',
-        linkLabel: 'Open Trade Builder',
-        icon: 'handshake',
-        accentColor: 'var(--color-error, #dc2626)',
-        kicker: 'Trade Deadline — Today',
-        isUrgent: true,
-      },
-    });
-  }
-
-  // --- P0: Championship Week ---
-  if (isChampionshipWeek(now)) {
-    const { slot, gameWindow } = getDailySlot(now);
-    return buildState('championship', 'P0', 'isChampionshipWeek', now, testMode, {
-      slot,
-      metadata: {
-        week,
-        gameWindow,
-        isLive: isGameLive(now),
-        referenceDate: now,
-        testMode,
-        resolvedBy: 'isChampionshipWeek',
-      },
-    });
-  }
-
-  // --- P0: Champion Crowned ---
-  if (isChampionCrownedPeriod(now)) {
-    return buildState('champion-crowned', 'P0', 'isChampionCrownedPeriod', now, testMode, {
-      fallbackHero: {
-        source: 'event',
-        title: 'League Champion',
-        summary: 'The season is over. A new champion has been crowned.',
-        link: '/theleague/playoffs',
-        linkLabel: 'View Championship Recap',
-        icon: 'trophy',
-        accentColor: 'var(--color-warning, #d97706)',
-        kicker: 'Champion Crowned',
-        isActive: true,
-      },
-    });
-  }
-
-  // --- P0: Auction Hero (existing) ---
-  if (isAuctionHeroPeriod(now)) {
-    const live = isAuctionLive(now);
-    const year = now.getFullYear();
-    return buildState(
-      live ? 'auction-live' : 'auction-preview',
-      'P0', 'isAuctionHeroPeriod', now, testMode,
-      {
-        auctionProps: {
-          live,
-          leagueYear: year,
-        },
-      },
-    );
-  }
-
-  // --- P0: Draft Hero (existing — skipped when draft is complete) ---
-  if (isDraftHeroPeriod(now) && !draftComplete) {
-    const live = isDraftLive(now);
-    const year = now.getFullYear();
-    return buildState(
-      live ? 'draft-live' : 'draft-announced',
-      'P0', 'isDraftHeroPeriod', now, testMode,
-      {
-        draftProps: {
-          live,
-          leagueYear: year,
-          draftStartFormatted: getDraftStartFormatted(year),
-        },
-      },
-    );
-  }
-
-  // --- P0: Breaking Story (fresh <48h trade/auction bomb) ---
-  // Sits below the trade-deadline / championship / auction / draft windows but
-  // above every ambient slot (regular-season, playoffs, offseason). Yields only
-  // to a game that's ACTUALLY in-season live — isGameLive alone is true on any
-  // game-time window (incl. offseason Sundays), which would wrongly suppress it.
-  if (hasBreakingStory && !(isGameLive(now) && (isRegularSeason(now) || isPlayoffPeriod(now)))) {
-    return buildState('breaking-story', 'P0', 'hasBreakingStory', now, testMode, {});
-  }
-
-  // --- P0: Regular Season Daily Rotation ---
-  if (isRegularSeason(now) && !isTradeDeadlineDay(now)) {
-    const { slot, gameWindow } = getDailySlot(now);
-    return buildState('regular-season', 'P0', 'isRegularSeason', now, testMode, {
-      slot,
-      metadata: {
-        week,
-        gameWindow,
-        isLive: isGameLive(now),
-        referenceDate: now,
-        testMode,
-        resolvedBy: 'isRegularSeason',
-      },
-    });
-  }
-
-  // --- P0: Playoff Period ---
-  if (isPlayoffPeriod(now)) {
-    const { slot, gameWindow } = getDailySlot(now);
-    return buildState('playoffs', 'P0', 'isPlayoffPeriod', now, testMode, {
-      slot,
-      metadata: {
-        week,
-        gameWindow,
-        isLive: isGameLive(now),
-        referenceDate: now,
-        testMode,
-        resolvedBy: 'isPlayoffPeriod',
-      },
-    });
-  }
-
-  // --- P1: Schedule Release — countdown, release day, and the week after ---
-  //
-  // Sits at P1 so a live P0 (championship, trade deadline, draft) still owns
-  // the homepage, but it outranks the ambient offseason phases below, which is
-  // exactly the stretch of calendar it falls in. The decision comes from
-  // src/utils/schedule-release.mjs so The League and the AFL — which share no
-  // hero code at all — cannot drift apart on when the tease starts.
-  {
-    const tease = scheduleReleaseTease('theleague', now, { revealed: scheduleReleaseRevealed });
-    const copy = scheduleReleaseTeaseCopy(tease, 'The League');
-    if (tease.show && copy) {
-      return buildState('schedule-release', 'P1', 'scheduleReleaseTease', now, testMode, {
-        fallbackHero: {
-          source: 'event',
-          title: copy.title,
-          summary: copy.summary,
-          link: '/theleague/schedule-release',
-          linkLabel: tease.phase === 'out' ? 'See the schedule' : 'See the countdown',
-          icon: 'calendar',
-          accentColor: 'var(--accent-color, #1c497c)',
-          kicker: copy.kicker,
-          isUrgent: tease.phase === 'imminent',
-          isActive: tease.phase === 'out',
-        },
-      });
-    }
-  }
-
-  // --- P1: Tag & Extension Window ---
-  if (isTagWindow(now)) {
-    return buildState('tag-window', 'P1', 'isTagWindow', now, testMode, {
-      fallbackHero: {
-        source: 'event',
-        title: 'Franchise Tags & Extensions',
-        summary: 'Protect your core. Tag players to retain exclusive rights. Extend contracts before they hit the open market.',
-        link: '/theleague/rosters',
-        linkLabel: 'Manage Your Roster',
-        icon: 'tag',
-        accentColor: 'var(--cat-preseason, #2563eb)',
-        kicker: 'Offseason',
-        isActive: true,
-      },
-    });
-  }
-
-  // --- P1: Tagged Player Showcase ---
-  if (isTaggedShowcase(now)) {
-    return buildState('tagged-showcase', 'P1', 'isTaggedShowcase', now, testMode, {
-      fallbackHero: {
-        source: 'event',
-        title: 'Tagged Players — Open for Offers',
-        summary: 'These franchise-tagged players can be poached. Make an offer before the matching period ends.',
-        link: '/theleague/rosters',
-        linkLabel: 'View Roster Details',
-        icon: 'target',
-        accentColor: 'var(--cat-free-agency, #2e8743)',
-        kicker: 'Tag Showcase',
-        isActive: true,
-      },
-    });
-  }
-
-  // --- P1: UDFA Free Agent Window ---
-  if (isUDFAWindow(now, draftComplete)) {
-    return buildState('udfa-window', 'P1', 'isUDFAWindow', now, testMode, {
-      fallbackHero: {
-        source: 'event',
-        title: 'Undrafted Free Agents Available',
-        summary: 'The draft is over but the bargains aren\'t. Undrafted rookies are now free agents.',
-        link: '/theleague/free-agents',
-        linkLabel: 'Browse Free Agents',
-        icon: 'binoculars',
-        accentColor: 'var(--cat-draft, #7c3aed)',
-        kicker: 'UDFA Window',
-        isActive: true,
-      },
-    });
-  }
-
-  // --- P1: Cut Watch — final 30 days (imminent roster deadline) ---
-  // The only ambient offseason state that outranks a fresh feature: the deadline
-  // is close enough that it must lead regardless of what just shipped.
-  //
-  // Exception: an extended-rotation entry (explicit `heroRotationDays`, e.g. the
-  // Throwback Week era-picker campaign) stays in rotation through the urgent
-  // tier — Cut Watch and the promo split visits 50/50 via the same coin-flip
-  // contract as the July flip below (rng() < 0.5 = deadline wins). Ordinary
-  // 7-day features are still locked out here.
-  if (isCutWatchUrgent(now)) {
-    const extendedPromoCompeting = !!timeline && hasExtendedRotationEntry(entries, now);
-    const promoWinsFlip = extendedPromoCompeting && rng() >= 0.5;
-    if (!promoWinsFlip) {
-      return buildState('cut-watch', 'P1', 'isCutWatchUrgent', now, testMode, {
-        fallbackHero: {
-          source: 'event',
-          title: 'Cut Watch — Roster Deadline',
-          summary: 'Teams must cut to 22 active players. Who\'s on the bubble?',
-          link: '/theleague/rosters',
-          linkLabel: 'View Full Rosters',
-          icon: 'scissors',
-          accentColor: 'var(--color-error, #dc2626)',
-          kicker: 'Cut Watch',
-          isUrgent: true,
-        },
-      });
-    }
-    // Promo won the flip — fall through: isCutWatchEarly is false during the
-    // urgent tier, so the ambient P3 block below defers and the P2 fallback
-    // resolves the fresh feature.
-  }
-
-  // --- P3: Ambient offseason phases ---
-  // Tag Window, Tagged Showcase, UDFA, early Cut Watch, and the Preseason
-  // Countdown are roster *context*, not deadlines. A genuinely fresh (≤7 day)
-  // feature gets to lead instead — so we step aside when one is competing and
-  // let it surface as P2 in the fallback below. (When no timeline is supplied,
-  // there's nowhere to render the feature, so we don't defer.)
-  const hasFreshFeature = !!timeline && hasFreshFeatureEntry(entries, now);
-
-  // After July 1, the roster deadline claims at least half the homepage: even
-  // when a fresh feature is competing, early Cut Watch wins the hero on ~50% of
-  // visits (a per-visit coin flip). This narrows the window in which a What's New
-  // article can headline the hero as the deadline approaches. Notes:
-  //  - Before July 1, features still lead early Cut Watch (no flip).
-  //  - The final-30-day *urgent* Cut Watch tier already outranks features (P1
-  //    above — with its own flip for extended-rotation promos), so this only
-  //    affects the early/ambient tier (~Jul 1 → faClose−30d).
-  //  - With no fresh feature, early Cut Watch shows 100% anyway, so the "at least
-  //    50%" floor always holds.
-  //  - Per-visit randomness is intentional (the hero may differ between
-  //    refreshes); `rng` is injectable so tests stay deterministic.
-  const { month: ptMonth } = getPTComponents(now);
-  const rosterDeadlineWinsCoinFlip =
-    hasFreshFeature && isCutWatchEarly(now) && ptMonth >= 7 && rng() < 0.5;
-
-  const deferToFeature = hasFreshFeature && !rosterDeadlineWinsCoinFlip;
-  if (!deferToFeature) {
-    // --- P3: Tag & Extension Window ---
-    if (isTagWindow(now)) {
-      return buildState('tag-window', 'P3', 'isTagWindow', now, testMode, {
-        fallbackHero: {
-          source: 'event',
-          title: 'Franchise Tags & Extensions',
-          summary: 'Protect your core. Tag players to retain exclusive rights. Extend contracts before they hit the open market.',
-          link: '/theleague/rosters',
-          linkLabel: 'Manage Your Roster',
-          icon: 'tag',
-          accentColor: 'var(--cat-preseason, #60a5fa)',
-          kicker: 'Offseason',
-          isActive: true,
-        },
-      });
-    }
-
-    // --- P3: Tagged Player Showcase ---
-    if (isTaggedShowcase(now)) {
-      return buildState('tagged-showcase', 'P3', 'isTaggedShowcase', now, testMode, {
-        fallbackHero: {
-          source: 'event',
-          title: 'Tagged Players — Open for Offers',
-          summary: 'These franchise-tagged players can be poached. Make an offer before the matching period ends.',
-          link: '/theleague/rosters',
-          linkLabel: 'View Roster Details',
-          icon: 'target',
-          accentColor: 'var(--cat-free-agency, #2e8743)',
-          kicker: 'Tag Showcase',
-          isActive: true,
-        },
-      });
-    }
-
-    // --- P3: Draft Countdown (Auction Hero end → Draft Hero start) ---
-    if (isDraftCountdown(now)) {
-      return buildState('draft-countdown', 'P3', 'isDraftCountdown', now, testMode, {
-        fallbackHero: {
-          source: 'event',
-          title: 'Draft Season Is Here',
-          summary: 'The auction is settled — now scout the rookie class. Build your board and rehearse before draft day.',
-          link: '/theleague/draft/mock',
-          linkLabel: 'Run a mock draft',
-          icon: 'draft-podium',
-          accentColor: 'var(--cat-draft, #7c3aed)',
-          kicker: 'Draft Season',
-          isActive: true,
-        },
-      });
-    }
-
-    // --- P3: UDFA Free Agent Window ---
-    if (isUDFAWindow(now, draftComplete)) {
-      return buildState('udfa-window', 'P3', 'isUDFAWindow', now, testMode, {
-        fallbackHero: {
-          source: 'event',
-          title: 'Undrafted Free Agents Available',
-          summary: 'The draft is over but the bargains aren\'t. Undrafted rookies are now free agents.',
-          link: '/theleague/free-agents',
-          linkLabel: 'Browse Free Agents',
-          icon: 'binoculars',
-          accentColor: 'var(--cat-draft, #7c3aed)',
-          kicker: 'UDFA Window',
-          isActive: true,
-        },
-      });
-    }
-
-    // --- P3: Cut Watch — early/ambient tier (Jun 1 → faClose −30d) ---
-    if (isCutWatchEarly(now)) {
-      return buildState('cut-watch', 'P3', 'isCutWatchEarly', now, testMode, {
-        fallbackHero: {
-          source: 'event',
-          title: 'Cut Watch — Roster Planning',
-          summary: 'Rosters trim to 22 active players before the season. Start lining up your cuts.',
-          link: '/theleague/rosters',
-          linkLabel: 'View Full Rosters',
-          icon: 'scissors',
-          accentColor: 'var(--cat-preseason, #60a5fa)',
-          kicker: 'Cut Watch',
-          isActive: true,
-        },
-      });
-    }
-
-    // --- P3: Preseason Countdown (FA close → NFL kickoff) ---
-    if (isPreseasonCountdown(now)) {
-      return buildState('preseason-countdown', 'P3', 'isPreseasonCountdown', now, testMode, {
-        fallbackHero: {
-          source: 'event',
-          title: 'Kickoff Is Coming',
-          summary: 'Rosters are set. The countdown to Week 1 is on — lock your lineup and get ready.',
-          link: '/theleague/standings',
-          linkLabel: 'View Standings',
-          icon: 'whistle',
-          accentColor: 'var(--cat-regular-season, #1c497c)',
-          kicker: 'Preseason',
-          isActive: true,
-        },
-      });
-    }
-  }
-
-  // --- P2-P5: Fallback through existing resolver ---
-  if (entries && timeline) {
-    const fallback = resolveHeroContent(entries, timeline, now);
-    const priority: HeroPriority = fallback.source === 'feature' ? 'P2' :
-      fallback.source === 'event' ? (fallback.isUrgent ? 'P3' : fallback.isActive ? 'P4' : 'P4') : 'P5';
-    const { view, bordered } = buildLeagueEventView(fallback, timeline, now);
-    return buildState('offseason-fallback', priority, 'resolveHeroContent-fallback', now, testMode, {
-      fallbackHero: fallback,
-      eventView: view,
-      eventBordered: bordered,
-    });
-  }
-
-  // Ultimate fallback
-  const ultimateFallback: HeroContent = {
-    source: 'default',
-    title: "What's New",
-    summary: 'See all the latest features, tools, and improvements we\'ve shipped.',
-    link: '/theleague/whats-new',
-    linkLabel: 'View all updates',
-    icon: 'star',
-    accentColor: 'var(--color-primary, #1c497c)',
-    kicker: "What's New",
-  };
-  const ultimate = buildLeagueEventView(ultimateFallback, timeline, now);
-  return buildState('offseason-fallback', 'P5', 'ultimate-fallback', now, testMode, {
-    fallbackHero: ultimateFallback,
-    eventView: ultimate.view,
-    eventBordered: ultimate.bordered,
-  });
-}
+// The homepage hero's state machine is the SHARED league hero now
+// (src/utils/league-hero/resolver.ts). TheLeague's profile there reads the
+// constitution's dates from this file — the phase windows above, the daily
+// slot rotation — and `resolveHeroState` (league-hero/season-state.ts) maps
+// its decision into the `HeroState` TheLeague's hero components take.
 
 /**
  * Parse a testDate string that supports both date-only and date+time formats.
