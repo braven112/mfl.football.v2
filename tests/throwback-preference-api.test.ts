@@ -75,8 +75,8 @@ const key = (id: string) => makeThrowbackKey(id, 'theleague');
 // Heavy Chevy 2020: slot 0004 under an owner who has left, and not 0004's
 // default (Drunk Indians 2019) — plainly open to anyone.
 const HEAVY_CHEVY = { yearStart: 2020, sourceFranchiseId: '0004' };
-// Poker in the Rear 2012: franchise 0003's DEFAULT, from a departed owner.
-const POKER = { yearStart: 2012, sourceFranchiseId: '0003' };
+// Drunk Indians 2019: franchise 0004's DEFAULT, from a departed owner.
+const DRUNK_INDIANS = { yearStart: 2019, sourceFranchiseId: '0004' };
 
 beforeEach(() => {
   store.clear();
@@ -127,23 +127,23 @@ describe('who holds an era is resolved from every saved pick', () => {
 
 describe("a team's default is reserved until its owner picks something else", () => {
   it('refuses a claim on the default of a team that has picked nothing', async () => {
-    const res = await save('0001', POKER);
+    const res = await save('0001', DRUNK_INDIANS);
     expect(res.status).toBe(409);
     const body = await res.json();
-    expect(body.claimedBy).toBe('0003');
+    expect(body.claimedBy).toBe('0004');
     expect(body.error).toMatch(/default/);
   });
 
   it('opens it once that owner picks a different era, and does not hand it back', async () => {
-    expect((await save('0003', HEAVY_CHEVY)).status).toBe(200);
-    expect((await save('0001', POKER)).status).toBe(200);
-    // 0003 changes its mind — but its default is 0001's now.
-    const back = await save('0003', { yearStart: 2012 });
+    expect((await save('0004', { yearStart: 2020 })).status).toBe(200);
+    expect((await save('0001', DRUNK_INDIANS)).status).toBe(200);
+    // 0004 changes its mind — but its default is 0001's now.
+    const back = await save('0004', { yearStart: 2019 });
     expect(back.status).toBe(409);
     expect((await back.json()).claimedBy).toBe('0001');
   });
 
   it('its owner may still pick it outright', async () => {
-    expect((await save('0003', { yearStart: 2012 })).status).toBe(200);
+    expect((await save('0004', { yearStart: 2019 })).status).toBe(200);
   });
 });
