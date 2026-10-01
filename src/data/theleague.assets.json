@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-04T04:58:15.749Z",
+  "generatedAt": "2026-10-01T05:00:16.876Z",
   "teams": [
     {
       "key": "history_acer_fc_edge",
@@ -963,6 +963,12 @@
         "banners": [
           {
             "type": "banners",
+            "filename": "maverick_2016_banner.png",
+            "relativePath": "/assets/theleague/history/maverick_2016_banner.png",
+            "extension": ".png"
+          },
+          {
+            "type": "banners",
             "filename": "maverick.png",
             "relativePath": "/assets/theleague/banners/maverick.png",
             "extension": ".png"
@@ -979,12 +985,25 @@
         "icons": [
           {
             "type": "icons",
+            "filename": "maverick_2016_icon_circle.png",
+            "relativePath": "/assets/theleague/history/maverick_2016_icon_circle.png",
+            "extension": ".png"
+          },
+          {
+            "type": "icons",
             "filename": "maverick.png",
             "relativePath": "/assets/theleague/icons/maverick.png",
             "extension": ".png"
           }
         ]
-      }
+      },
+      "eras": [
+        {
+          "yearStart": 2016,
+          "yearEnd": 2024,
+          "franchiseId": "0003"
+        }
+      ]
     },
     {
       "key": "maverick_dark",
