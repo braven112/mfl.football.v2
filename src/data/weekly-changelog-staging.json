@@ -24,6 +24,14 @@
       "impact": "user",
       "area": "rosters",
       "league": "both"
+    },
+    {
+      "date": "2026-10-01",
+      "type": "bug-fix",
+      "summary": "Declaring a contract works again — it was failing with \"Cannot read properties of undefined (reading 'cancelled')\" and never filed.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "theleague"
     }
   ]
 }
