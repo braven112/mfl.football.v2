@@ -7,7 +7,7 @@ hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1285
 hotfix_sha: 6d88aed
 followup_issue: 1289
 followup_pr:
-followup_session:
+followup_session: session_01QzWpYen2jPUDGHwuAbeyQd
 ---
 
 # Follow-up: the player card's Season Results table was unreadable in dark mode
