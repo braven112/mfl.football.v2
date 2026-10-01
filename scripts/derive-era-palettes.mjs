@@ -215,52 +215,52 @@ function patch(lines, fid, yearStart, values) {
 }
 
 async function main(args) {
-const write = args.includes('--write');
-const only = args.includes('--only') ? args[args.indexOf('--only') + 1] : null;
-const slug = args.includes('--league') ? args[args.indexOf('--league') + 1] : DEFAULT_LEAGUE;
-const league = getLeagueBySlug(slug);
-if (!league?.configPath) throw new Error(`unknown league "${slug}" (want a registry slug)`);
-const CONFIG = league.configPath;
-const maskBadge = BADGE_LEAGUES.has(slug);
+  const write = args.includes('--write');
+  const only = args.includes('--only') ? args[args.indexOf('--only') + 1] : null;
+  const slug = args.includes('--league') ? args[args.indexOf('--league') + 1] : DEFAULT_LEAGUE;
+  const league = getLeagueBySlug(slug);
+  if (!league?.configPath) throw new Error(`unknown league "${slug}" (want a registry slug)`);
+  const CONFIG = league.configPath;
+  const maskBadge = BADGE_LEAGUES.has(slug);
 
-const raw = readFileSync(CONFIG, 'utf8');
-const cfg = JSON.parse(raw);
-const lines = raw.split('\n');
-let changed = 0;
+  const raw = readFileSync(CONFIG, 'utf8');
+  const cfg = JSON.parse(raw);
+  const lines = raw.split('\n');
+  let changed = 0;
 
-for (const team of cfg.teams) {
-  if (only && team.franchiseId !== only) continue;
-  for (const era of team.history ?? []) {
-    if (!era.banner) continue;
-    const got = await derivePalette('public' + era.banner, { maskBadge });
-    if (!got) { console.log(`  ${team.franchiseId} ${era.yearStart} — no sampleable pixels`); continue; }
-    const same = got.primary === era.colorPrimary && got.secondary === era.colorSecondary;
-    console.log(
-      `${team.franchiseId} ${String(era.yearStart).padEnd(5)} ${era.name.slice(0, 26).padEnd(27)}` +
-      `${era.colorPrimary ?? '-------'} ${era.colorSecondary ?? '-------'}  ->  ${got.primary} ${got.secondary}` +
-      `${same ? '' : '   *'}`
-    );
-    if (!same) changed++;
-    if (write) {
-      const values = { colorPrimary: got.primary, colorSecondary: got.secondary };
-      if (era.iconStroke) values.iconStroke = got.rim;
-      // A miss must be loud: a silent skip leaves the old palette in place
-      // and looks exactly like "the derivation decided not to change it".
-      if (!patch(lines, team.franchiseId, era.yearStart, values)) {
-        throw new Error(`could not patch ${team.franchiseId} ${era.yearStart}`);
+  for (const team of cfg.teams) {
+    if (only && team.franchiseId !== only) continue;
+    for (const era of team.history ?? []) {
+      if (!era.banner) continue;
+      const got = await derivePalette('public' + era.banner, { maskBadge });
+      if (!got) { console.log(`  ${team.franchiseId} ${era.yearStart} — no sampleable pixels`); continue; }
+      const same = got.primary === era.colorPrimary && got.secondary === era.colorSecondary;
+      console.log(
+        `${team.franchiseId} ${String(era.yearStart).padEnd(5)} ${era.name.slice(0, 26).padEnd(27)}` +
+        `${era.colorPrimary ?? '-------'} ${era.colorSecondary ?? '-------'}  ->  ${got.primary} ${got.secondary}` +
+        `${same ? '' : '   *'}`
+      );
+      if (!same) changed++;
+      if (write) {
+        const values = { colorPrimary: got.primary, colorSecondary: got.secondary };
+        if (era.iconStroke) values.iconStroke = got.rim;
+        // A miss must be loud: a silent skip leaves the old palette in place
+        // and looks exactly like "the derivation decided not to change it".
+        if (!patch(lines, team.franchiseId, era.yearStart, values)) {
+          throw new Error(`could not patch ${team.franchiseId} ${era.yearStart}`);
+        }
       }
     }
   }
-}
 
-if (write) {
-  const out = lines.join('\n');
-  JSON.parse(out); // fail before writing, never after
-  writeFileSync(CONFIG, out);
-  console.log(`\nwrote ${CONFIG} — ${changed} palettes changed`);
-} else {
-  console.log(`\n${changed} palettes would change (run with --write)`);
-}
+  if (write) {
+    const out = lines.join('\n');
+    JSON.parse(out); // fail before writing, never after
+    writeFileSync(CONFIG, out);
+    console.log(`\nwrote ${CONFIG} — ${changed} palettes changed`);
+  } else {
+    console.log(`\n${changed} palettes would change (run with --write)`);
+  }
 }
 
 // Importable for derivePalette without running the CLI.

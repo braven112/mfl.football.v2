@@ -74,7 +74,7 @@ describe.each(LEAGUES)('$name era palettes come from the era’s own art', ({ na
     expect(eras.filter(({ era }) => era.banner).length).toBeGreaterThan(10);
   });
 
-  it('every color exists in the banner outside the conference badge', async () => {
+  it('every color exists in the banner (outside the AFL conference badge)', async () => {
     const orphans: string[] = [];
     const stillOrphaned = new Set<string>();
     for (const { team, era } of eras) {
