@@ -1,12 +1,13 @@
 ---
 slug: season-results-readable
-status: open
+status: shipped
 severity: P1
 opened: 2026-10-01
 hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1285
 hotfix_sha: 6d88aed
 followup_issue: 1289
-followup_pr:
+followup_pr: PENDING
+shipped: 2026-10-01
 followup_session: session_01QzWpYen2jPUDGHwuAbeyQd
 ---
 
@@ -35,7 +36,7 @@ merge.
 
 ## Deferred items
 
-- [ ] **F1 — The rest of the player card still uses raw `--color-gray-400` for muted text**
+- [x] **F1 — The rest of the player card still uses raw `--color-gray-400` for muted text**
   - Source: deferred at implementation (Claude, hotfix adjudication)
   - Where: `src/components/theleague/PlayerDetailsModal.astro`:
     `.pdm-owner__label` ~L680, `.pdm-metric__label` ~L851,
@@ -46,6 +47,15 @@ merge.
     likely below AA on the dark card. Measure each against its real surface,
     move the failing ones to `--content-text-muted`, and widen the guard (or
     add a sibling) to cover the whole modal.
+  - **Worked (2026-10-01).** Re-validated: still true, and worse than stated.
+    gray-400 fails AA in EVERY theme, light included (2.54:1 on white; dark
+    2.84 / 3.28 / 3.80). Four more declarations used gray-500, which fails only
+    TheLeague's default dark card (4.38:1): `.pdm-watch__desc`,
+    `.pdm-claim__desc`, `#pdm-week-body dt`, `.pdm-saltile__label`. All nine
+    now use `--content-text-muted` (4.83 light, 5.38 / 5.59 / 6.13 dark). The
+    guard gained a modal-wide scan (no raw gray-300/400/500 text colour
+    anywhere in the file), mutation-checked. Verified in Chromium at 375px in
+    both themes. No reviewer comments landed on #1285 after the merge.
 
 ## Context to start cold
 - `--content-text-muted` is `var(--color-gray-500)` in light (`tokens.css`) and
