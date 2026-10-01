@@ -605,7 +605,9 @@ next to icons that do.
 Muted TEXT anywhere in `PlayerDetailsModal.astro` (unplayed weeks, byes,
 table headers, week numbers, status, and the card's labels, section titles and
 descriptions) uses
-`--content-text-muted`, never a raw gray step and never `opacity`. Dark
+`--content-text-muted`, never `--color-gray-300`/`400`/`500` and never
+`opacity`. (`--color-gray-600` and darker are body-strength text, not muted
+— 7.6:1 light, 5.8:1 on the default dark card — and stay legal.) Dark
 themes remap the gray scale: `--color-gray-300` becomes a navy one shade off
 the card, which made the whole upcoming schedule vanish in Oct 2026, and even
 `--color-gray-500` is only 4.4:1 on the default dark card. The semantic token
