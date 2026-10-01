@@ -33,10 +33,11 @@ const LEAGUES = [
 
 /**
  * Colors that predate this guard and are NOT in their art. Only ever shrink:
- * fix the palette, then delete the line. `#012c0b` is a dark green deeper
- * than anything in the Mistakes Were Made banner (nearest pixel ~113 away).
+ * fix the palette, then delete the line. Empty since Oct 2026, when
+ * Mistakes Were Made 2007's `#012c0b` (a green darker than anything in its
+ * banner) was repainted to the derived `#d3ebdc`.
  */
-const KNOWN_ORPHANS = new Set(['TheLeague 0003 2007 colorSecondary']);
+const KNOWN_ORPHANS = new Set<string>();
 
 const erasOf = (config: any) =>
   (config.teams as any[]).flatMap((t) => (t.history ?? []).map((era: any) => ({ team: t, era })));

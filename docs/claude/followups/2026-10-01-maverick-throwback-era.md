@@ -7,7 +7,7 @@ opened: 2026-10-01
 hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1282
 hotfix_sha: 5f996db
 followup_issue: 1286
-followup_pr:
+followup_pr: https://github.com/braven112/mfl.football.v2/pull/1290
 followup_session:
 ---
 
@@ -46,6 +46,12 @@ Maverick in the original Mel Gibson look. P1: cosmetic, but tied to a deadline.
     palette was hand-sampled instead (red wordmark, gold edging). Either take a
     `--league` flag through the registry, or record that TheLeague palettes are
     hand-set. Then re-derive 0003 2016 and compare with the hand-picked pair.
+  - Done: `--league <slug>` through the registry (default AFL; AFL output
+    byte-identical to before). Badge mask is AFL-only. Maverick 2016 derives
+    `#be1320 / #ab7744` vs hand `#b80d1a / #e8a848` — same red, the hand pick
+    is the brighter gold of the edging; kept. The provenance guard now covers
+    TheLeague (41/42 eras clean; the one orphan, Mistakes Were Made 2007
+    secondary `#012c0b`, repainted to the derived `#d3ebdc` with Brandon's ok).
 
 - [x] **F2 — Two insight docs still say theleague.us art is only on the Wayback Machine or gone**
   - Source: deferred at implementation
