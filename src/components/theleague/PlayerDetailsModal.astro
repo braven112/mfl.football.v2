@@ -386,9 +386,9 @@ const tabAttrs = (id: SheetTab): HTMLAttributes<'button'> => {
               <tr>
                 <th class="wr-wk">Wk</th>
                 <th class="wr-pts">Pts</th>
-                <th class="wr-opp">Opponent</th>
-                <th class="wr-avg" id="wr-avg-header">Opp Avg</th>
-                <th class="wr-rank" id="wr-rank-header">Opp Rank</th>
+                <th class="wr-opp">Opp<span class="wr-hdr-long">onent</span></th>
+                <th class="wr-avg" id="wr-avg-header">Avg<span class="wr-hdr-long"> vs <span id="wr-avg-pos">Opp</span></span></th>
+                <th class="wr-rank" id="wr-rank-header">Rank<span class="wr-hdr-long"> vs <span id="wr-rank-pos">Opp</span></span></th>
                 <th class="wr-status">Status</th>
               </tr>
             </thead>
@@ -906,7 +906,7 @@ const tabAttrs = (id: SheetTab): HTMLAttributes<'button'> => {
 
   .weekly-results-table thead th {
     background: var(--color-gray-50, #f9fafb);
-    color: var(--color-gray-400, #9ca3af);
+    color: var(--color-gray-500, #6b7280);
     font-weight: 600;
     font-size: var(--font-size-3xs);
     text-transform: uppercase;
@@ -945,7 +945,7 @@ const tabAttrs = (id: SheetTab): HTMLAttributes<'button'> => {
   .weekly-results-table :global(.wr-wk) {
     text-align: center;
     width: 1.75rem;
-    color: var(--color-gray-400, #9ca3af);
+    color: var(--color-gray-500, #6b7280);
     font-size: var(--font-size-2xs);
   }
 
@@ -968,18 +968,21 @@ const tabAttrs = (id: SheetTab): HTMLAttributes<'button'> => {
 
   .weekly-results-table :global(.wr-status) {
     font-size: var(--font-size-2xs);
-    color: var(--color-gray-400, #9ca3af);
+    color: var(--color-gray-500, #6b7280);
     text-align: center;
   }
 
   .weekly-results-table :global(.wr-rank-easy) { color: var(--color-success-dark, #059669); font-weight: 600; }
   .weekly-results-table :global(.wr-rank-hard) { color: var(--color-error, #dc2626); font-weight: 600; }
 
-  .weekly-results-table :global(.wr-bye-row td) { opacity: 0.4; font-style: italic; }
-  .weekly-results-table :global(.wr-empty-row td) { color: var(--color-gray-300, #d1d5db); }
+  /* Unplayed and bye weeks are muted with gray-500, never gray-300 or a low
+     opacity: dark theme maps gray-300 to a navy a shade off the card surface,
+     which left the upcoming schedule unreadable. */
+  .weekly-results-table :global(.wr-bye-row td) { color: var(--color-gray-500, #6b7280); font-style: italic; }
+  .weekly-results-table :global(.wr-empty-row td) { color: var(--color-gray-500, #6b7280); }
 
   .weekly-results-table :global(.wr-starter) { color: var(--color-success-dark, #059669); }
-  .weekly-results-table :global(.wr-nonstarter) { color: var(--color-gray-400, #9ca3af); }
+  .weekly-results-table :global(.wr-nonstarter) { color: var(--color-gray-500, #6b7280); }
 
   /* Weekly-results status badge (franchise icon + S/NS pill).
      Injected via innerHTML → :global. Light values reproduce the former
@@ -1670,6 +1673,11 @@ const tabAttrs = (id: SheetTab): HTMLAttributes<'button'> => {
 
     .weekly-results-table :global(.wr-avg) { display: none; }
     #wr-avg-header { display: none; }
+
+    /* Phone: short headers ("Opp", "Rank") so the table fits the sheet
+       instead of scrolling sideways with "Rank vs QB" cut off. */
+    .weekly-results-table .wr-hdr-long { display: none; }
+    .weekly-results-table :global(.wr-opp) { min-width: 0; }
 
     .pdm-detail__label {
       width: 3.75rem;
@@ -2816,8 +2824,8 @@ const tabAttrs = (id: SheetTab): HTMLAttributes<'button'> => {
       var weeklyBody = document.getElementById('weekly-results-body');
       var weeklyFoot = document.getElementById('weekly-results-foot');
       var weeklyTotal = document.getElementById('weekly-results-total');
-      var avgHeader = document.getElementById('wr-avg-header');
-      var rankHeader = document.getElementById('wr-rank-header');
+      var avgHeader = document.getElementById('wr-avg-pos');
+      var rankHeader = document.getElementById('wr-rank-pos');
 
       if (weeklySection && weeklyBody) {
         // Re-read the island on EVERY open, and never cache it on `window`.
@@ -2854,8 +2862,8 @@ const tabAttrs = (id: SheetTab): HTMLAttributes<'button'> => {
 
           var pos = (playerData.position || '').toUpperCase();
           var displayPos = ['SWR', 'LWR', 'RWR'].indexOf(pos) >= 0 ? 'WR' : pos;
-          if (avgHeader) avgHeader.textContent = 'Avg vs ' + displayPos;
-          if (rankHeader) rankHeader.textContent = 'Rank vs ' + displayPos;
+          if (avgHeader) avgHeader.textContent = displayPos;
+          if (rankHeader) rankHeader.textContent = displayPos;
 
           var html = '';
           var totalPts = 0;
