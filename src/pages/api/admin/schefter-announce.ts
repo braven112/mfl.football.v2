@@ -219,7 +219,9 @@ export const POST: APIRoute = async ({ request }) => {
     );
   } catch (err) {
     console.error('[announce] dispatch failed:', err);
-    return json({ ok: false, error: 'dispatch failed', detail: err instanceof Error ? err.message : String(err) }, 200);
+    // The cause goes to the runtime log, never the response (CodeQL
+    // js/stack-trace-exposure); the UI shows the generic error.
+    return json({ ok: false, error: 'dispatch failed', detail: 'See the server log for the cause.' }, 200);
   }
   console.log('[announce] send: dispatch response', res.status);
 
@@ -246,9 +248,9 @@ export const POST: APIRoute = async ({ request }) => {
       'Announcement dispatched. The feed post lands after the run commits and the site redeploys (~1–2 min); GroupMe fires during the run.',
   });
  } catch (err) {
-  // Never leak a bare platform 502 — always return a readable JSON error so the
-  // admin UI can show the cause (and log it so it lands in the runtime logs).
+  // Never leak a bare platform 502 — always return a readable JSON error, and
+  // log the cause so it lands in the runtime logs (not in the response).
   console.error('[announce] unhandled error:', err);
-  return json({ ok: false, error: 'server error', detail: err instanceof Error ? err.message : String(err) }, 200);
+  return json({ ok: false, error: 'server error', detail: 'See the server log for the cause.' }, 200);
  }
 };

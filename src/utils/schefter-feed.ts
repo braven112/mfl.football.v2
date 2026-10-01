@@ -142,12 +142,14 @@ function stripPostHtml(html: string): string {
     previous = text;
     text = text.replace(/<[^<>]*>/g, ' ');
   }
+  // `&amp;` decodes LAST: decoding it first turns `&amp;lt;` into `<` — a
+  // double unescape (CodeQL js/double-escaping).
   return text
-    .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&#39;|&apos;/g, "'")
     .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, '&')
     .replace(/\s+/g, ' ')
     .trim();
 }

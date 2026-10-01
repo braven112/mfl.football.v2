@@ -381,7 +381,9 @@ function stripAstroComments(content: string): string {
     const closeIdx = content.indexOf('\n---', 3);
     if (closeIdx !== -1) regions.push([0, closeIdx + 4]);
   }
-  const scriptRe = /<script[^>]*>[\s\S]*?<\/script>/g;
+  // The close tag tolerates whitespace/attributes (`</script >`), as a browser
+  // does (CodeQL js/bad-tag-filter).
+  const scriptRe = /<script\b[^>]*>[\s\S]*?<\/script\b[^>]*>/gi;
   let m: RegExpExecArray | null;
   while ((m = scriptRe.exec(content))) {
     regions.push([m.index, m.index + m[0].length]);
