@@ -734,16 +734,17 @@
      only moves that cliff. So the row is a size container, and everything
      on lines 2 and 3 (text, badges and both logos) is sized from ONE
      length, --rr-meta, which is the usual 12px until the line is too
-     narrow for it and then shrinks with the line. The two lines scale as
-     a whole, so they cannot overflow at any width. The column gap is the
-     only fixed length, and the 4.2cqi slope leaves room for it down to a
-     ~200px line (a 320px phone). Line 1 keeps its own sizes: the name
-     wraps by design. */
+     narrow for it and then shrinks with the line, the two lines scaling
+     as a whole. It stops at a 10px floor (rem, so a larger default text
+     size still lifts it): below ~8px the text stopped being readable, so
+     at the floor a worst-case line can wrap again, but only on a phone
+     narrower than ~330px. Line 1 keeps its own sizes: the name wraps by
+     design. */
   .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody > tr.roster-row,
   .roster-page[data-league='theleague'].coach-mode #rosterTableBody > tr.roster-row {
     container-type: inline-size;
     column-gap: 0.25rem;
-    --rr-meta: min(var(--font-size-xs), 4.2cqi);
+    --rr-meta: clamp(0.625rem, 4.2cqi, var(--font-size-xs));
   }
 
   .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody tr[data-pos] .player-meta__pos::before,
