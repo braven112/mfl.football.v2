@@ -29,9 +29,15 @@
  * and compete with the hues on population.
  *
  * Usage:
- *   node scripts/derive-era-palettes.mjs                 # report only
+ *   node scripts/derive-era-palettes.mjs                 # report only (AFL)
  *   node scripts/derive-era-palettes.mjs --write         # patch the config
  *   node scripts/derive-era-palettes.mjs --only 0001     # one franchise
+ *   node scripts/derive-era-palettes.mjs --league theleague --only 0003
+ *
+ * `--league` takes a registry slug and reads that league's `configPath`; it
+ * defaults to the AFL, the league this was first written for. The badge mask
+ * is AFL-only (BADGE_LEAGUES): TheLeague's banners carry no conference plate,
+ * so masking that corner there would only throw away real team art.
  *
  * `--write` edits the config LINE BY LINE. Never round-trip it through
  * JSON.stringify: that reflows the whole 2000-line file and buries the change.
@@ -39,8 +45,12 @@
 
 import sharp from 'sharp';
 import { readFileSync, writeFileSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
+import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 
-const CONFIG = 'data/afl-fantasy/afl.config.json';
+/** Leagues whose banners carry the AL/NL conference plate. */
+const BADGE_LEAGUES = new Set(['afl-fantasy']);
+const DEFAULT_LEAGUE = 'afl-fantasy';
 
 /** The conference plate occupies the bottom-left corner of every AFL banner. */
 const BADGE_W = 0.11;   // fraction of width
@@ -91,7 +101,7 @@ const SKIN = (h, s, l) => h >= 8 && h <= 42 && s < 0.55 && l > 0.32 && l < 0.86;
 
 const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 
-export async function derivePalette(file) {
+export async function derivePalette(file, { maskBadge = true } = {}) {
   const { data, info } = await sharp(file)
     .resize(260, 260, { fit: 'inside', withoutEnlargement: false })
     .ensureAlpha().raw().toBuffer({ resolveWithObject: true });
@@ -103,7 +113,7 @@ export async function derivePalette(file) {
 
   for (let i = 0, px = 0; i < data.length; i += 4, px++) {
     const x = px % info.width, y = (px / info.width) | 0;
-    if (x < badgeX && y > badgeY) continue;             // conference plate
+    if (maskBadge && x < badgeX && y > badgeY) continue; // conference plate
     const [r, g, b, a] = [data[i], data[i + 1], data[i + 2], data[i + 3]];
     if (a < 128) continue;
     const [h, s, l] = rgb2hsl(r, g, b);
@@ -204,9 +214,14 @@ function patch(lines, fid, yearStart, values) {
   return false;
 }
 
-const args = process.argv.slice(2);
+async function main(args) {
 const write = args.includes('--write');
 const only = args.includes('--only') ? args[args.indexOf('--only') + 1] : null;
+const slug = args.includes('--league') ? args[args.indexOf('--league') + 1] : DEFAULT_LEAGUE;
+const league = getLeagueBySlug(slug);
+if (!league?.configPath) throw new Error(`unknown league "${slug}" (want a registry slug)`);
+const CONFIG = league.configPath;
+const maskBadge = BADGE_LEAGUES.has(slug);
 
 const raw = readFileSync(CONFIG, 'utf8');
 const cfg = JSON.parse(raw);
@@ -217,7 +232,7 @@ for (const team of cfg.teams) {
   if (only && team.franchiseId !== only) continue;
   for (const era of team.history ?? []) {
     if (!era.banner) continue;
-    const got = await derivePalette('public' + era.banner);
+    const got = await derivePalette('public' + era.banner, { maskBadge });
     if (!got) { console.log(`  ${team.franchiseId} ${era.yearStart} — no sampleable pixels`); continue; }
     const same = got.primary === era.colorPrimary && got.secondary === era.colorSecondary;
     console.log(
@@ -245,4 +260,10 @@ if (write) {
   console.log(`\nwrote ${CONFIG} — ${changed} palettes changed`);
 } else {
   console.log(`\n${changed} palettes would change (run with --write)`);
+}
+}
+
+// Importable for derivePalette without running the CLI.
+if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
+  await main(process.argv.slice(2));
 }

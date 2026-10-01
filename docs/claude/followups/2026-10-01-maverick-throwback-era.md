@@ -1,6 +1,7 @@
 ---
 slug: maverick-throwback-era
-status: open
+status: shipped
+shipped: 2026-10-01
 severity: P1
 opened: 2026-10-01
 hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1282
@@ -38,7 +39,7 @@ Maverick in the original Mel Gibson look. P1: cosmetic, but tied to a deadline.
 
 ## Deferred items
 
-- [ ] **F1 — `derive-era-palettes.mjs` only reads the AFL config**
+- [x] **F1 — `derive-era-palettes.mjs` only reads the AFL config**
   - Source: deferred at implementation
   - Where: `scripts/derive-era-palettes.mjs:43` (`const CONFIG = 'data/afl-fantasy/afl.config.json'`)
   - Why deferred: making it league-aware widens a P1 data fix; the Maverick
@@ -46,7 +47,7 @@ Maverick in the original Mel Gibson look. P1: cosmetic, but tied to a deadline.
     `--league` flag through the registry, or record that TheLeague palettes are
     hand-set. Then re-derive 0003 2016 and compare with the hand-picked pair.
 
-- [ ] **F2 — Two insight docs still say theleague.us art is only on the Wayback Machine or gone**
+- [x] **F2 — Two insight docs still say theleague.us art is only on the Wayback Machine or gone**
   - Source: deferred at implementation
   - Where: `docs/claude/insights/features/throwback-week.md:39`,
     `docs/claude/insights/domains/frontend.md:2252`
@@ -56,6 +57,7 @@ Maverick in the original Mel Gibson look. P1: cosmetic, but tied to a deadline.
     computer_jocks and cowboy_up. Computer Jocks 2016 and Cowboy Up 2018 were
     checked and deliberately left: their old art matches today's (Cowboy Up
     pixel-identical, Computer Jocks only a darker green).
+  - Done: both docs updated.
 
 ## Context to start cold
 - The 2016–2024 banner was in every 2016–2024 `data/theleague/mfl-feeds/<y>/league.json`

@@ -38,6 +38,8 @@ Eligibility (`getEligibleThrowbackEras`) = `history[]` minus `THROWBACK_ASSET_CO
 
 **Context:** Most legacy art URLs (`theleague.us/images/team_banners/…`, `dynastytheleague.com/…`) are dead; recovery went through the Wayback Machine.
 
+**Update (Oct 2026):** the `theleague.us/images/team_banners/` folder is NOT gone — `https://mfl.football/images/team_banners/<file>` rehosts it, same filenames. It needs a browser User-Agent (curl's default gets a 406). Checked for `maverick`, `computer_jocks` and `cowboy_up`; Maverick's 2016–2024 banner was recovered from it. Try it before the Wayback Machine. Computer Jocks 2016 and Cowboy Up 2018 were deliberately left on today's art: Cowboy Up's old file is pixel-identical, Computer Jocks' only a darker green.
+
 **Insight:** `data/theleague/mfl-feeds/{year}/option07.json` is NOT JSON — it's saved HTML of MFL's per-year icon/banner setup page, listing the exact art file URL for every team that year. Grep it to learn what filenames existed and when they changed (e.g. `executioners.png` vs `executioners1.png` = a mid-era redesign; DMOC's icon was `dark_magicians_of_chaos_ico.png` — `_ico`, not `_icon`). Cross-check `league.json` per year for name-change years. MFL's own `fflnetdynamic{year}/13522_franchise_icon{id}` pattern has NO files for this league — art was always custom-URL, so MFL hosted no copies. Some "lost" TheLeague art survives in `public/assets/afl/history/` (shared owners uploaded variants to the AFL league) — but beware league-specific variants (the AFL Da Dangsters banner carries an "NL" conference mark; the TheLeague version differs).
 
 Old MFL "icons" are 300×50 strips (mini-banners) at exactly the 6:1 ratio of the site's 950×158 banners — some recovered `*_icon.png` files ARE the missing banners, just small (LBer-DeCleaters, Devil Dogs).
@@ -46,6 +48,8 @@ Old MFL "icons" are 300×50 strips (mini-banners) at exactly the 6:1 ratio of th
 
 **Insight:** Palettes were derived by sampling era art (hue-bucketed, saturation-filtered, icon pixels double-weighted, dark-neutral fallback for monochrome art) — good enough for ~90% of eras, but character-heavy art skews toward flesh/wood tones (Executioners sampled brick-brown off a red banner). Ship auto-derived values, then present swatches next to the art for human correction; corrections landed as one-line hex edits.
 
+
+**Update (Oct 2026):** `scripts/derive-era-palettes.mjs` now takes `--league <slug>` (registry `configPath`, default the AFL), and masks the AL/NL badge corner only for the AFL. TheLeague's palettes are still hand-set — run `--league theleague` for a report, not `--write`, and correct by eye. `tests/era-palette-provenance.test.ts` now holds both leagues' palettes to their own art; the one pre-existing TheLeague orphan (Mistakes Were Made 2007 secondary `#012c0b`) is listed in `KNOWN_ORPHANS`, which may only shrink. Maverick 2016 derived `#be1320 / #ab7744` against the hand-picked `#b80d1a / #e8a848`: same red, the hand pick takes the brighter gold of the edging rather than the bucket mean, and both are in the art.
 ## 2026-07-13 - Editing theleague.config.json programmatically
 
 **Insight:** Never `JSON.parse` → mutate → `JSON.stringify(…, null, 2)` this file — it reformats single-line arrays (`loaderQuips`) onto multiple lines and produces a 90-line diff for a 2-line change. Insert/edit lines surgically (the era color insertion used a line-walker keyed on 8/10-space indentation). `git checkout` the file and redo surgically if a rewrite sneaks in.
