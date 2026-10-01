@@ -523,18 +523,18 @@ describe('era keys stay unique', () => {
  * the only option available — not a mistake left in place.
  */
 const KNOWN_INVISIBLE_ERAS = new Set([
-  // All three are the same story, and it is TheLeague's version of the AFL bug
+  // Both are the same story, and it is TheLeague's version of the AFL bug
   // this guard was written for: the franchise's LAST pre-2025 look lived on
   // `theleague.us/images/team_banners/*.png` — named in every one of those
   // years' league.json — and that host now answers every image request with a
-  // 124 KB HTML 404. There is no rehost of it (unlike afl-fantasy.com, which
-  // mfl.football mirrors), so these entries point at the 2025 rebrand files
-  // and the eras do not appear in TheLeague's picker.
+  // 124 KB HTML 404. These entries point at the 2025 rebrand files, so the
+  // eras do not appear in TheLeague's picker.
   //
-  // Recover the art — an owner's copy, an archive — and the line comes out.
-  // Gridiron Geeks 2014 came out that way: #706 gave it real
-  // `history/geeks_2014_*` art, so the ratchet caught the stale entry.
-  'theleague 0003 2016', // Maverick
+  // The art is NOT lost: `https://mfl.football/images/team_banners/<file>`
+  // still serves the same files (browser User-Agent required — it answers
+  // 406 to curl's default). Recover it from there and the line comes out.
+  // Gridiron Geeks 2014 (#706) and Maverick 2016 (the Mel Gibson
+  // gunslinger art, Oct 2026) came out that way.
   'theleague 0010 2016', // Computer Jocks
   'theleague 0014 2018', // Cowboy Up
 ]);

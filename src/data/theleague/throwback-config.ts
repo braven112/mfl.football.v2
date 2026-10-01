@@ -68,7 +68,7 @@ export const THROWBACK_ERA_GRANTS: {
 export const DEFAULT_THROWBACK_ERA: Record<string, number | string> = {
   '0001': 2013, // Pacific Pigskins (2013 razorback-head — most recent old look; 2007 black is the alt)
   '0002': 2015, // Da Dangsters (vintage 2015-2024 icon)
-  '0003': 2012, // Poker in the Rear — "The smooch" era (commissioner pick over the 2015 "Lucky sevens" look)
+  '0003': 2016, // Maverick — "The gunslinger" era, the 2016-2024 Mel Gibson art (commissioner pick, Oct 2026; 2012 "The smooch" is the alt)
   '0004': 2019, // Drunk Indians (commissioner pick, July 2026 — over the more recent Heavy Chevy)
   '0005': 2007, // The Executioners (full rebrand beats the 2016 round-badge Ninjas look)
   '0006': 2007, // LBer-DeCleaters (only prior era)

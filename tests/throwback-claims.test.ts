@@ -135,7 +135,7 @@ describe('one era, one franchise', () => {
   });
 
   // A team whose default is a departed owner's era — the only kind anyone
-  // else can pick. Poker in the Rear 2012, franchise 0003's slot.
+  // else can pick. Drunk Indians 2019, franchise 0004's slot.
   const victimOf = (scope: ThrowbackScope, teams: TeamConfig[]) => {
     const { eras } = resolveThrowbackAssignments(teams, {}, scope);
     const victim = teams.find((t) => {
@@ -204,8 +204,9 @@ describe('one era, one franchise', () => {
   it('a released default that someone claimed is not handed back when its owner is outbid elsewhere', () => {
     const { victim, era } = victimOf('theleague', tlTeams);
     const [thief, rival] = tlTeams.filter((t) => t !== victim);
-    // Heavy Chevy 2020 (slot 0004), which the rival claimed first.
-    const pool = { yearStart: 2020, sourceFranchiseId: '0004' };
+    // Poker in the Rear 2012 (slot 0003, a departed owner's era and nobody's
+    // default), which the rival claimed first.
+    const pool = { yearStart: 2012, sourceFranchiseId: '0003' };
     const picks = {
       [victim.franchiseId]: { ...pool, claimedAt: 20 },
       [rival.franchiseId]: { ...pool, claimedAt: 10 },
@@ -269,7 +270,7 @@ describe('the picker view', () => {
       tlTeams,
       'theleague',
     );
-    expect(view!.claimedBy['0003:2012']).toBe(`${team(tlTeams, '0003').name}'s default`);
+    expect(view!.claimedBy['0004:2019']).toBe(`${team(tlTeams, '0004').name}'s default`);
     expect(Object.values(view!.claimedBy).some((c) => c.startsWith('Claimed by'))).toBe(false);
   });
 
@@ -283,8 +284,8 @@ describe('the picker view', () => {
     expect(view!.commishRows.length).toBe(tlTeams.length);
     // No Redis in tests, so nobody has picked.
     expect(view!.commishRows.filter((r) => r.hasPick).map((r) => r.franchiseId)).toEqual([]);
-    const poker = view!.commishRows.find((r) => r.franchiseId === '0003')!;
-    expect(poker.eras.find((e) => e.isDefault)?.yearStart).toBe(2012);
+    const maverick = view!.commishRows.find((r) => r.franchiseId === '0003')!;
+    expect(maverick.eras.find((e) => e.isDefault)?.yearStart).toBe(2016);
   });
 });
 
