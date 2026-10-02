@@ -302,6 +302,35 @@ describe('colours are resolved per theme, against THIS surface’s card', () => 
     expect(vars['--t0-light']).not.toBe(vars['--t1-light']);
     expect(vars['--t0-dark']).not.toBe(vars['--t1-dark']);
   });
+
+  it('lets the VIEWER keep their colour when the two clash', () => {
+    // Pigskins red vs an opponent claiming the same red (dark #d8384b): side 0
+    // used to win by position, so the viewer on side 1 rendered grey.
+    const pigskins = { color: '#cc2936', colorPrimary: '#bd1f2b', colorPrimaryDark: '#e23b46' };
+    const rival = { color: '#0d2b56', colorPrimary: '#153366', colorPrimaryDark: '#d8384b' };
+    const viewerFirst = resolveMatchupColorVars(pigskins, rival, 'theleague', 0);
+    const viewerSecond = resolveMatchupColorVars(rival, pigskins, 'theleague', 1);
+    for (const theme of ['light', 'dark']) {
+      expect(viewerSecond[`--t1-${theme}`]).toBe(viewerFirst[`--t0-${theme}`]);
+      expect(viewerSecond[`--t0-${theme}`]).toBe(viewerFirst[`--t1-${theme}`]);
+    }
+  });
+
+  it('gives the clash to the viewer’s side through buildLiveMatchup', () => {
+    const clash = (viewer: string | null) =>
+      buildLiveMatchup({
+        index: 0,
+        side0: team('0014', 0),
+        side1: team('0001', 0),
+        side0Colors: { color: '#c41e3a' },
+        side1Colors: { color: '#c41e3a' },
+        surface: 'theleague',
+        viewerFranchiseId: viewer,
+      }).colorVars;
+    // Viewer on side 1 keeps the brand red; with no viewer, side 0 does.
+    expect(clash('0001')['--t1-light']).toBe(clash(null)['--t0-light']);
+    expect(clash('0001')['--t0-light']).not.toBe(clash('0001')['--t1-light']);
+  });
 });
 
 describe('orderPanelMatchups — the viewer leads, then the closest game', () => {

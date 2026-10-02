@@ -233,18 +233,30 @@ function darkClaim(claim: FranchiseColorClaim): FranchiseColorClaim {
  * at the first passing shade, so a colour that already reads stays exactly
  * on-brand — only the ones that genuinely fail move.
  */
+/**
+ * ── WHO KEEPS THEIR COLOUR ────────────────────────────────────────────────
+ * `resolveTeamColorPair` is asymmetric: its first team keeps its colour and
+ * the second is moved off it when the two clash. `prioritySide` names which
+ * side goes first — the viewer's own franchise when there is one, because an
+ * owner reads their own colour as "me". Defaulting to side 0 put the Pigskins
+ * (side 1, the viewer) in grey against an opponent wearing the same red.
+ * The vars stay keyed by side index either way.
+ */
 export function resolveMatchupColorVars(
   side0: FranchiseColorClaim,
   side1: FranchiseColorClaim,
   surface: LiveSurface,
+  prioritySide: 0 | 1 = 0,
 ): Record<string, string> {
   const grounds = groundsFor(surface);
   const opts = { forceAdjust: true, homeVisibilityFallback: true } as const;
-  const light = resolveTeamColorPair(side0, side1, { ...opts, background: grounds.light });
-  const dark = resolveTeamColorPair(darkClaim(side0), darkClaim(side1), {
-    ...opts,
-    background: grounds.dark,
-  });
+  const [first, second] = prioritySide === 1 ? [side1, side0] : [side0, side1];
+  const pair = (background: string, a: FranchiseColorClaim, b: FranchiseColorClaim) => {
+    const r = resolveTeamColorPair(a, b, { ...opts, background });
+    return prioritySide === 1 ? { home: r.away, away: r.home } : r;
+  };
+  const light = pair(grounds.light, first, second);
+  const dark = pair(grounds.dark, darkClaim(first), darkClaim(second));
   return {
     '--t0-light': light.home,
     '--t1-light': light.away,
@@ -349,6 +361,11 @@ export function buildLiveMatchup(input: BuildLiveMatchupInput): LiveMatchup {
       side1.projectedFinal,
       side0.remainingPoints + side1.remainingPoints,
     ),
-    colorVars: resolveMatchupColorVars(input.side0Colors, input.side1Colors, input.surface),
+    colorVars: resolveMatchupColorVars(
+      input.side0Colors,
+      input.side1Colors,
+      input.surface,
+      viewerSide ?? 0,
+    ),
   };
 }

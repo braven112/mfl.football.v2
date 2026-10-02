@@ -28,7 +28,7 @@ import { getLeagueTeamConfigs } from '../league-team-brands';
 import { getLeagueYearForSlug } from '../league-year';
 import { applyThrowbackToBoard, type ThrowbackPreview } from '../throwback-live-scoring';
 import { getCurrentRosterSample, getLiveScoringSample } from '../../data/live-scoring-sample';
-import { buildBoardFromSnapshot, readLeagueLive } from './read';
+import { buildBoardFromSnapshot, readLeagueLive, type LiveIdentityOverride } from './read';
 import type { ConfigTeam } from '../live-scoring-data';
 
 export interface AssembleLeagueBoardInput {
@@ -106,15 +106,29 @@ export async function assembleLeagueBoard(
    *
    * `readLeagueLive` resolves identity from the registry, so without this the
    * board keeps every club's present-day mark and Throwback Week is invisible.
-   * Name, short name and icon only — colours are resolved against the surface's
-   * card ground and an era's palette has not been through that check.
+   * Colours ride along only when the era defines its own palette — which
+   * `applyThrowbackOverrides` signals by swapping `colorPrimary`. A franchise
+   * wearing today's colours keeps the registry's claim, dark variants and all.
    */
-  const identityOverrides = throwback
+  const presentPrimary = new Map(
+    (getLeagueTeamConfigs(slug) as ConfigTeam[]).map((t) => [t.franchiseId, t.colorPrimary]),
+  );
+  const identityOverrides: Record<string, LiveIdentityOverride> | undefined = throwback
     ? Object.fromEntries(
-        throwback.configTeams.map((t) => [
-          t.franchiseId,
-          { name: t.name, nameShort: t.nameShort, icon: t.icon },
-        ]),
+        throwback.configTeams.map((t) => {
+          const eraColors =
+            t.colorPrimary && t.colorPrimary !== presentPrimary.get(t.franchiseId)
+              ? {
+                  color: t.colorPrimary,
+                  colorPrimary: t.colorPrimary,
+                  colorSecondary: t.colorSecondary,
+                }
+              : undefined;
+          return [
+            t.franchiseId,
+            { name: t.name, nameShort: t.nameShort, icon: t.icon, colors: eraColors },
+          ];
+        }),
       )
     : undefined;
 
