@@ -1039,6 +1039,13 @@ html.dark[data-league='afl'] .sf-post__link--external {
   transition: background 0.15s, border-color 0.15s;
 }
 
+/* An <a>: restate colour and decoration on hover/focus, or the layouts'
+   global a:hover turns it red and underlined (tests/cta-pattern.test.ts). */
+.sfc-whisper__signin:is(:hover, :focus) {
+  color: var(--sf-accent, #1c497c);
+  text-decoration: none;
+}
+
 .sfc-whisper__trigger:hover,
 .sfc-whisper__signin:hover {
   background: color-mix(in srgb, var(--sf-accent, #1c497c) 8%, transparent);

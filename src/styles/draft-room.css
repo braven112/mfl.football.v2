@@ -2400,6 +2400,12 @@ html.dark .dr-side-panel {
   white-space: nowrap;
   transition: background 0.15s var(--dr-easing-ease);
 }
+/* An <a>: restate colour and decoration on hover/focus, or the layouts'
+   global a:hover turns it red and underlined (tests/cta-pattern.test.ts). */
+.dr-mfl-pick-link:is(:hover, :focus) {
+  color: var(--color-primary, #1c497c);
+  text-decoration: none;
+}
 .dr-mfl-pick-link:hover,
 .dr-mfl-pick-link:focus-visible {
   background: var(--color-gray-100, #f3f4f6);

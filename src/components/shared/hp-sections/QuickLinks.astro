@@ -109,12 +109,7 @@ const cardHref = (page: PageEntry) =>
 <section class={cls} aria-label="Quick links">
   <div class={`${cls}__header`}>
     <h3 class={`${cls}__title`}>Explore</h3>
-    <a href={ctaHref} class={`${cls}__cta`}>
-      All pages
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
-        <path d="M5 12h14M12 5l7 7-7 7"/>
-      </svg>
-    </a>
+    <a href={ctaHref} class={`cta-link ${cls}__cta`}>All pages</a>
   </div>
   {isAfl && pages.length === 0 ? (
     <p class={`${cls}__empty`}>No AFL pages registered in the directory yet.</p>
@@ -166,18 +161,8 @@ const cardHref = (page: PageEntry) =>
   }
 
   .afl-links__cta {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
+    --cta-link-ink: var(--afl-accent);
     font-size: var(--font-size-xs);
-    font-weight: 600;
-    color: var(--afl-accent);
-    text-decoration: none;
-    transition: gap var(--transition-fast);
-  }
-
-  .afl-links__cta:hover {
-    gap: 0.5rem;
   }
 
   .afl-links__empty {
@@ -291,18 +276,8 @@ const cardHref = (page: PageEntry) =>
   }
 
   .hp-links__cta {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
+    --cta-link-ink: var(--league-accent-fg, var(--dh-accent));
     font-size: var(--font-size-xs);
-    font-weight: 600;
-    color: var(--league-accent-fg, var(--dh-accent));
-    text-decoration: none;
-    transition: gap var(--transition-fast);
-  }
-
-  .hp-links__cta:hover {
-    gap: 0.5rem;
   }
 
   .hp-links__grid {

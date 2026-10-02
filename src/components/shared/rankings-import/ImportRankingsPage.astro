@@ -496,22 +496,34 @@ const siteConfigs = [
     filter: brightness(0.9);
   }
 
-  .bm-card__rankings-btn--dynasty {
+  /* These are <a>s: the colour rules below list :hover/:focus too, and
+     decoration is restated, or the layouts' global a:hover turns the chip
+     text red and underlined (tests/cta-pattern.test.ts). */
+  .bm-card__rankings-btn:is(:hover, :focus),
+  .bm-card__drag-link:is(:hover, :focus) {
+    text-decoration: none;
+  }
+
+  .bm-card__rankings-btn--dynasty,
+  .bm-card__rankings-btn--dynasty:is(:hover, :focus) {
     background: #c0d4f5;
     color: #1e40af;
   }
 
-  .bm-card__rankings-btn--redraft {
+  .bm-card__rankings-btn--redraft,
+  .bm-card__rankings-btn--redraft:is(:hover, :focus) {
     background: #fef3c7;
     color: #92400e;
   }
 
-  .bm-card__rankings-btn--adp {
+  .bm-card__rankings-btn--adp,
+  .bm-card__rankings-btn--adp:is(:hover, :focus) {
     background: #d0c5f5;
     color: #5b21b6;
   }
 
-  .bm-card__rankings-btn--overall {
+  .bm-card__rankings-btn--overall,
+  .bm-card__rankings-btn--overall:is(:hover, :focus) {
     background: #e0e7ff;
     color: #4338ca;
   }
@@ -536,6 +548,10 @@ const siteConfigs = [
 
   .bm-card__drag-link:hover {
     background: var(--btn-primary-bg-hover, #163c65);
+  }
+
+  .bm-card__drag-link:is(:hover, :focus) {
+    color: var(--on-color-primary, #fff);
   }
 
   /* ---- Import Section ---- */

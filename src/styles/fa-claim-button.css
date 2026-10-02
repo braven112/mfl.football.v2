@@ -44,6 +44,8 @@
 .place-bid-link:hover {
   background: var(--league-accent, var(--color-primary, #1c497c));
   color: var(--on-league-accent, #fff);
+  /* An <a>: the layouts' global a:hover would otherwise underline it. */
+  text-decoration: none;
 }
 
 /* Only the properties a <button> does NOT inherit are reset — border, padding,

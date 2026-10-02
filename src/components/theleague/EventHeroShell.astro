@@ -595,6 +595,12 @@ const countAriaLabel = hasCount
     font-weight: 600;
     transition: background var(--transition-fast), border-color var(--transition-fast);
   }
+  /* An <a>: restate colour and decoration, or the layouts' global a:hover
+     turns the tile's label red and underlined (tests/cta-pattern.test.ts). */
+  :global(.tl-hero-panel__link:is(:hover, :focus)) {
+    color: var(--ev-ink-soft);
+    text-decoration: none;
+  }
   :global(.tl-hero-panel__link:hover) {
     background: var(--ev-tile-hover-bg);
     border-color: var(--ev-tile-hover-border);

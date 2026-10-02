@@ -109,6 +109,11 @@
   cursor: not-allowed;
 }
 
+/* A disabled <a> has no `disabled` attribute to stop the click. */
+.cta[aria-disabled='true'] {
+  pointer-events: none;
+}
+
 /* ── Arrow link: a text link that goes somewhere ───────────────────────── */
 :where(.cta-link) {
   --cta-link-ink: var(--primary-link-default-text-color);
