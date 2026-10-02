@@ -59,6 +59,11 @@ import '../src/styles/whats-new-hero-shot.css';
 // route does — so without this line every Live story renders correct DOM with
 // no rules, which on a stylesheet REWRITE is the worst possible false negative.
 import '../src/styles/live.css';
+// The draft room's sheet. Like live.css, only the island that owns it
+// (DraftRoom.tsx, which no story can render) imports it, so the draft-room
+// stories would otherwise get correct DOM and no rules. Every selector in it
+// is scoped to `.draft-room` / `.dr-*`, so it cannot restyle another story.
+import '../src/styles/draft-room.css';
 
 /**
  * Theme and league are BOTH pure CSS in this codebase:

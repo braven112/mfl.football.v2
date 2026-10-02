@@ -469,7 +469,18 @@ presentational shared component fails until it ships with a story (or an
 fails until the baseline is retightened with `--write` — which refuses to grow
 it. Oct 2026: 270 shared components, backlog 145 → 138 after the first batch
 (the seven remaining `Lv*` leaves — `LvGroupPicker` landed on staging while
-the batch was in flight).
+the batch was in flight), then → 126 with the draft room (`Draft Room/*`).
+
+**Draft-room stories — three things that were not obvious.**
+`draft-room.css` is imported only by `DraftRoom.tsx`, which no story can
+render, so it is imported in `preview.ts` (every selector is `.draft-room`- or
+`.dr-`-scoped, so it cannot restyle another story) and every story wraps in a
+`.draft-room` element reset to natural height (`stories/draft-room/decorator.ts`).
+The timer banner is driven by `mockClockSeconds`, which overrides its
+wall-clock countdown outright — never by a pick timestamp relative to
+`Date.now()`. And `PickRevealSplash` carries `disableSnapshot`: it dismisses
+itself on a real 3.6s timer, so a capture is a race; an injectable hold time
+would fix that, and is a component change.
 
 **It reads the DISK, not `git ls-files`.** The first version listed files from
 the git index, so a story or component nobody had `git add`-ed yet was

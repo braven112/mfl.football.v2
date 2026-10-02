@@ -53,9 +53,17 @@ function componentIdentifier(src: string): string | null {
   return src.match(/^\s*component:\s*([A-Za-z_$][\w$]*)\s*,/m)?.[1] ?? null;
 }
 
-/** The module specifier that identifier was imported from. */
+/**
+ * The module specifier that identifier was imported from — as a default import
+ * (`import X from`) or a named one (`import { X } from`). The draft-room
+ * components export by name, and a guard that only read the default form
+ * could not tell their React stories from Astro ones.
+ */
 function importSpecifierFor(src: string, ident: string): string | null {
-  const re = new RegExp(`^\\s*import\\s+${ident}\\s+from\\s+['"]([^'"]+)['"]`, 'm');
+  const re = new RegExp(
+    `^\\s*import\\s+(?:${ident}|\\{[^}]*\\b${ident}\\b[^}]*\\})\\s+from\\s+['"]([^'"]+)['"]`,
+    'm',
+  );
   return src.match(re)?.[1] ?? null;
 }
 
