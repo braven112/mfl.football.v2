@@ -210,6 +210,15 @@ export interface PlayerBoxScore {
   statLine: string;
   /** ESPN event id of the game the line came from. */
   gameId: string;
+  /**
+   * The line as MFL stat counts keyed by rule abbreviation (`PY`, `#P`, `CC`…),
+   * league-neutral — each league's rules score it (`scorePlayerStats`). A
+   * missing code means "ESPN does not say", never zero. Optional so an older
+   * payload still renders.
+   */
+  stats?: Record<string, number>;
+  /** Length of each made field goal, from the scoring plays (MFL's `FG`). */
+  fgLengths?: number[];
 }
 
 /**

@@ -14,14 +14,15 @@
  * The row's inline inset lives on the ROW, not on the button, so anything
  * added to it and wrapped on a phone starts at the same x as the button.
  */
-import type { JSX } from 'react';
+import { useRef, useState, type JSX } from 'react';
 import type { LiveMatchup, LiveMoment, LiveTeam } from '../../../types/live';
-import type { NflGame, PlayerBoxScore, PlayerMeta } from '../../../types/live-scoring';
+import type { LivePlayerRow, NflGame, PlayerBoxScore, PlayerMeta } from '../../../types/live-scoring';
 import { renderOrder, winProbabilityFor } from '../../../utils/live/model';
 import LvWinProbBar from './LvWinProbBar';
 import LvLineup from './LvLineup';
 import LvBench from './LvBench';
 import LvMomentTicker from './LvMomentTicker';
+import LvStatSheet from './LvStatSheet';
 
 const fmt = (n: number) => n.toFixed(1);
 
@@ -42,6 +43,13 @@ export interface LvMatchupDetailProps {
   momentPartial?: boolean;
   viewerFirst?: boolean;
   isFinal?: boolean;
+  /**
+   * The MFL league this matchup belongs to, and the season — what the stat
+   * sheet needs to fetch the right scoring rules. Without a league id the rows
+   * stay inert (a story, a static render).
+   */
+  leagueId?: string;
+  year?: number;
   onBack: () => void;
 }
 
@@ -56,12 +64,38 @@ export default function LvMatchupDetail({
   momentPartial,
   viewerFirst = false,
   isFinal = false,
+  leagueId,
+  year,
   onBack,
 }: LvMatchupDetailProps): JSX.Element {
   const [first, second] = renderOrder(matchup, viewerFirst);
   const a: LiveTeam = matchup.sides[first];
   const b: LiveTeam = matchup.sides[second];
   const pFirst = winProbabilityFor(matchup, first);
+
+  /**
+   * The open stat sheet, as an IDENTITY — matchup side + player id — and the
+   * row re-found in the current `matchup` every render, so the sheet moves
+   * with each poll instead of freezing at the moment it was tapped. The side
+   * is the MATCHUP side, not the render position: `renderOrder` can swap the
+   * pair, and in the AFL the same player can start for both franchises.
+   */
+  const [sheet, setSheet] = useState<{ side: 0 | 1; id: string } | null>(null);
+  const lastSheetRow = useRef<{ row: LivePlayerRow; team: LiveTeam } | null>(null);
+  let sheetRow: { row: LivePlayerRow; team: LiveTeam } | null = null;
+  if (sheet) {
+    const team = matchup.sides[sheet.side];
+    const row = [...team.players, ...team.bench].find((r) => r.id === sheet.id);
+    // A poll that briefly drops the row holds the last good one rather than
+    // slamming the sheet shut mid-read.
+    sheetRow = row ? { row, team } : lastSheetRow.current;
+    lastSheetRow.current = sheetRow;
+  }
+  const onOpenPlayer =
+    leagueId && year
+      ? (row: LivePlayerRow, rendered: 0 | 1) =>
+          setSheet({ side: rendered === 0 ? first : second, id: row.id })
+      : undefined;
 
   return (
     <div className="lv-detail lv-matchup" style={matchup.colorVars}>
@@ -111,6 +145,7 @@ export default function LvMatchupDetail({
           gamesByTeam={gamesByTeam}
           boxScore={boxScore}
           detailStatus={detailStatus}
+          onOpenPlayer={onOpenPlayer}
         />
         <LvBench
           side0={a.bench}
@@ -121,6 +156,7 @@ export default function LvMatchupDetail({
           gamesByTeam={gamesByTeam}
           boxScore={boxScore}
           detailStatus={detailStatus}
+          onOpenPlayer={onOpenPlayer}
         />
       </div>
 
@@ -129,6 +165,19 @@ export default function LvMatchupDetail({
         status={momentStatus}
         partial={momentPartial}
       />
+
+      {sheet && sheetRow && leagueId && year && (
+        <LvStatSheet
+          row={sheetRow.row}
+          meta={meta[sheetRow.row.id]}
+          box={boxScore?.[sheetRow.row.id]}
+          detailStatus={detailStatus}
+          leagueId={leagueId}
+          year={year}
+          franchiseName={sheetRow.team.nameShort || sheetRow.team.name}
+          onClose={() => setSheet(null)}
+        />
+      )}
     </div>
   );
 }

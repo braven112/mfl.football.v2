@@ -418,6 +418,34 @@ which is exactly why the split exists — verify parsing offline against
   four viewer/order cases against the header they sit under;
   `tests/live-kit-leaves.test.ts` pins the bar on its own.
 
+- **The stat sheet's total is MFL's; its lines are ours, and the gap is said
+  out loud.** Tapping a row in the matchup detail opens `LvStatSheet` (bottom
+  sheet on a phone, dialog from 640px): each stat with the points it earned
+  under that LEAGUE's rules. MFL publishes no per-stat breakdown, so it is
+  re-derived: `boxScoreToMflStats` turns ESPN's box score into MFL's own rule
+  codes (`PY`, `#P`, `CC`, …) server-side, league-neutral, on
+  `PlayerBoxScore.stats`; `/api/live-scoring-rules?L=` reads `TYPE=rules` for
+  ANY league id (registry host, else `api.myfantasyleague.com`, which
+  redirects — the host is never read from the request); `scorePlayerStats`
+  applies them in the browser. Three things it took to match MFL exactly on
+  the 2026 W3 census (TheLeague 500/500, AFL 326/326):
+  - a combined event (`UY+KY`) is known when ANY part is — requiring both
+    dropped every kick returner's yards;
+  - two-point conversions exist only in the TD play's PROSE ("X Pass to Y for
+    Two-Point Conversion"), credited by exact, unique name against that GAME's
+    box score (`parseTwoPointConversion`);
+  - each field goal is scored by its own length (`fgLengths`, from the
+    scoring plays) — the box score carries only the longest.
+  What it must keep: a rule whose stat ESPN does not report is SKIPPED, never
+  scored at zero (a "0 first downs" penalty would be charged to a player who
+  had six), and the bottom line is the row's own `live`, with
+  `total − itemized` on one "Not itemized" line. A league like Archie's that
+  scores first downs and 20-yard plays matches less often, by design, and the
+  sheet still adds up. DEF gets no breakdown for the same reason it gets no
+  stat line. A league with no published rules ("No League Scoring Rules") is
+  an ANSWER, cached; a failed read never is. Guard:
+  `tests/live-stat-sheet.test.ts`.
+
 ## Game odds and weather — one system for every league
 
 A week's spread, over/under, kickoff and stadium weather come from ONE place:

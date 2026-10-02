@@ -304,6 +304,169 @@ export function formatStatLine(line: EspnBoxScoreLine): string {
 }
 
 /**
+ * One box-score line as MFL stat counts, keyed by MFL's own rule abbreviations
+ * (`PY`, `#P`, `CC`, … — the `event` codes a league's `TYPE=rules` export
+ * scores). League-NEUTRAL on purpose: the same counts serve every league on a
+ * cross-league board, and each league's rules turn them into points
+ * client-side (`scorePlayerStats`).
+ *
+ * Only what ESPN's box score actually states is emitted. A code missing from
+ * the map means "we do not know", never "zero" — a league scoring first downs
+ * or 20-yard plays must see those as un-itemized rather than as 0 points, so
+ * the stat sheet's reconciling line can carry the difference honestly.
+ *
+ * `FG` (length of each made field goal) is per-kick and is NOT here: the box
+ * score only carries the longest. The caller attaches `fgLengths` from the
+ * scoring plays.
+ */
+export function boxScoreToMflStats(line: EspnBoxScoreLine): Record<string, number> {
+  const g = (name: string) => line.groups.find((x) => x.name === name)?.stats;
+  const out: Record<string, number> = {};
+  const pair = (raw: string | undefined): [number, number] | null => {
+    const m = typeof raw === 'string' ? raw.match(/^(\d+)\s*[/-]\s*(\d+)$/) : null;
+    return m ? [Number(m[1]), Number(m[2])] : null;
+  };
+  const set = (code: string, raw: string | undefined) => {
+    if (raw == null || raw === '' || raw === '--') return;
+    const n = Number(raw);
+    if (Number.isFinite(n)) out[code] = n;
+  };
+
+  const pass = g('passing');
+  if (pass) {
+    const cmp = pair(pass['completions/passingAttempts']);
+    if (cmp) {
+      out.PC = cmp[0];
+      out.PA = cmp[1];
+      out.INC = cmp[1] - cmp[0];
+    }
+    set('PY', pass.passingYards);
+    set('#P', pass.passingTouchdowns);
+    set('IN', pass.interceptions);
+    const sk = pair(pass['sacks-sackYardsLost']);
+    if (sk) {
+      out.TSK = sk[0];
+      out.TSY = sk[1];
+    }
+  }
+
+  const rush = g('rushing');
+  if (rush) {
+    set('RA', rush.rushingAttempts);
+    set('RY', rush.rushingYards);
+    set('#R', rush.rushingTouchdowns);
+  }
+
+  const rec = g('receiving');
+  if (rec) {
+    set('CC', rec.receptions);
+    set('CY', rec.receivingYards);
+    set('#C', rec.receivingTouchdowns);
+    set('TGT', rec.receivingTargets);
+  }
+
+  const fum = g('fumbles');
+  if (fum) {
+    set('FU', fum.fumbles);
+    set('FL', fum.fumblesLost);
+  }
+
+  const kick = g('kicking');
+  if (kick) {
+    const fg = pair(kick['fieldGoalsMade/fieldGoalAttempts']);
+    if (fg) {
+      out['#F'] = fg[0];
+      out['#A'] = fg[1];
+      out['#M'] = fg[1] - fg[0];
+    }
+    const xp = pair(kick['extraPointsMade/extraPointAttempts']);
+    if (xp) {
+      out.EP = xp[0];
+      out.EA = xp[1];
+      out.EM = xp[1] - xp[0];
+    }
+  }
+
+  const kr = g('kickReturns');
+  if (kr) {
+    set('#K', kr.kickReturns);
+    set('KY', kr.kickReturnYards);
+    set('#KT', kr.kickReturnTouchdowns);
+  }
+  const pr = g('puntReturns');
+  if (pr) {
+    set('#U', pr.puntReturns);
+    set('UY', pr.puntReturnYards);
+    set('#UT', pr.puntReturnTouchdowns);
+  }
+
+  // Individual defensive players (IDP leagues on MFL Live).
+  const def = g('defensive');
+  if (def) {
+    set('TK', def.soloTackles);
+    if (def.totalTackles != null && def.soloTackles != null) {
+      const ast = Number(def.totalTackles) - Number(def.soloTackles);
+      if (Number.isFinite(ast)) out.AS = ast;
+    }
+    set('SK', def.sacks);
+    set('TKL', def.tacklesForLoss);
+    set('PD', def.passesDefended);
+    set('QH', def.QBHits);
+  }
+  const ints = g('interceptions');
+  if (ints) {
+    set('IC', ints.interceptions);
+    set('ICY', ints.interceptionYards);
+    set('#IR', ints.interceptionTouchdowns);
+  }
+
+  // MFL's composite totals, derived only from parts we actually have.
+  const has = (...codes: string[]) => codes.some((c) => c in out);
+  const sum = (...codes: string[]) => codes.reduce((t, c) => t + (out[c] ?? 0), 0);
+  if (has('RY', 'CY')) out.RCY = sum('RY', 'CY');
+  if (has('PY', 'RY')) out.PRY = sum('PY', 'RY');
+  if (has('RY', 'CY')) out.TYS = sum('RY', 'CY');
+  if (has('PY', 'RY', 'CY', 'KY', 'UY')) out.TY = sum('PY', 'RY', 'CY', 'KY', 'UY');
+  // Passing TDs are the thrower's, not touchdowns he scored.
+  if (has('#R', '#C', '#KT', '#UT', '#IR')) out['#TD'] = sum('#R', '#C', '#KT', '#UT', '#IR');
+
+  return out;
+}
+
+/**
+ * "Brandon Aubrey 53 Yd Field Goal" → 53. Null when the play is not a made
+ * field goal or ESPN's text carries no distance.
+ */
+export function fieldGoalLength(typeAbbrev: string, text: string): number | null {
+  if (typeAbbrev !== 'FG') return null;
+  const m = text.match(/(\d{1,2})\s*Yd\s+Field Goal/i);
+  return m ? Number(m[1]) : null;
+}
+
+/**
+ * Who converted a two-point try, from ESPN's scoring-play text.
+ *
+ * ESPN reports the conversion on the TOUCHDOWN play and names its players
+ * only in prose — "(Dak Prescott Pass to CeeDee Lamb for Two-Point
+ * Conversion)", "(Bijan Robinson Run for Two-Point Conversion)" — never as a
+ * participant. Null when the text names no successful conversion (a failed
+ * try reads "Two-Point Pass Conversion Failed" / "… Conversion Failed").
+ */
+export function parseTwoPointConversion(
+  text: string,
+): { passer?: string; receiver?: string; rusher?: string } | null {
+  const m = text.match(
+    /\(([^()]+?)\s+(Pass|Run|Rush)(?:\s+to\s+([^()]+?))?\s+for\s+Two-Point\s+Conversion\)/i,
+  );
+  if (!m) return null;
+  const [, first, kind, second] = m;
+  if (/pass/i.test(kind)) {
+    return second ? { passer: first.trim(), receiver: second.trim() } : null;
+  }
+  return { rusher: first.trim() };
+}
+
+/**
  * DEF/ST is deliberately left with NO stat line.
  *
  * `boxscore.players` is keyed by ESPN athlete id and a team defense is not an
