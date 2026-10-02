@@ -47,7 +47,16 @@ interface TvLogoManifest {
   /** Optional so an older committed manifest (no light pass) still builds. */
   needsLightStroke?: Array<{ file: string; legible: number }>;
   darkVariants: Array<{ file: string; dark: string }>;
+  /** Marks no wider than they are tall; optional for an older manifest. */
+  squareMarks?: Array<{ file: string; aspect: number }>;
 }
+
+/**
+ * How much larger a square mark draws than the height its surface sets. Read
+ * by every logo class as `--tv-logo-scale` (`network-badge.css`,
+ * `sunday-ticket.css`), so the bump lands everywhere the mark does.
+ */
+export const TV_LOGO_SQUARE_SCALE = 1.25;
 
 function cssStringEscape(value: string): string {
   return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
@@ -71,7 +80,13 @@ export function buildTvLogoThemeCss(data: TvLogoManifest = manifest as TvLogoMan
   if (lightStroked.length > 0) {
     rules.push(`${lightStroked.join(',\n')} { filter: ${crestStrokeFilter(TV_LOGO_LIGHT_STROKE_COLOR)}; }`);
   }
+  // Keyed on the src attribute, which a dark swap's `content:` leaves alone,
+  // so one rule covers both themes. `html ` keeps it off the bare-`img[` shape.
+  const square = (data.squareMarks ?? []).map((e) => `html img[src="${cssStringEscape(srcOf(e.file))}"]`);
+  if (square.length > 0) {
+    rules.push(`${square.join(',\n')} { --tv-logo-scale: ${TV_LOGO_SQUARE_SCALE}; }`);
+  }
   if (rules.length === 0) return '';
-  const counts = `${data.darkVariants.length} swap, ${data.needsStroke.length} stroke, ${(data.needsLightStroke ?? []).length} light stroke`;
+  const counts = `${data.darkVariants.length} swap, ${data.needsStroke.length} stroke, ${(data.needsLightStroke ?? []).length} light stroke, ${(data.squareMarks ?? []).length} square`;
   return `/* tv-logo theme: ${counts} */\n${rules.join('\n')}`;
 }

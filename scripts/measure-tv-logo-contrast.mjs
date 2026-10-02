@@ -37,6 +37,7 @@
 import { readFileSync, writeFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import path from 'path';
+import sharp from 'sharp';
 import { measureCrest, STROKE_THRESHOLD, DARK_CARD_SURFACE, LIGHT_CARD_SURFACE } from './measure-crest-contrast.mjs';
 
 /**
@@ -44,6 +45,15 @@ import { measureCrest, STROKE_THRESHOLD, DARK_CARD_SURFACE, LIGHT_CARD_SURFACE }
  * dark pass — see the header: a mark with pale DETAIL is not a pale mark.
  */
 export const LIGHT_STROKE_THRESHOLD = 0.25;
+
+/**
+ * A mark at or below this width:height ratio is drawn larger. Every surface
+ * sizes the marks by HEIGHT, so a square mark (NBC's peacock, ABC's disc, the
+ * TNF shield) carries a fraction of a wordmark's ink at the same height and
+ * reads as the small one in the row. 1.2 takes the square and portrait marks
+ * and stops short of Sunday Ticket's 1.28 badge.
+ */
+export const SQUARE_ASPECT_MAX = 1.2;
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MAPPINGS_PATH = path.join(ROOT, 'data/theleague/broadcast-mappings.json');
@@ -81,12 +91,14 @@ export async function measureAllTvLogos(mappings) {
     // included: `logoDark` says what to draw on the DARK card and has no
     // bearing on whether the light artwork survives the white one.
     const legibleLight = await measureCrest(file, LIGHT_CARD_SURFACE);
+    const { width, height } = await sharp(file).metadata();
+    const aspect = width / height;
     if (entry.logoDark) {
-      results.push({ ...entry, legible: null, legibleLight });
+      results.push({ ...entry, legible: null, legibleLight, aspect });
       continue;
     }
     const legible = await measureCrest(file, DARK_CARD_SURFACE);
-    results.push({ ...entry, legible, legibleLight });
+    results.push({ ...entry, legible, legibleLight, aspect });
   }
   return results;
 }
@@ -111,6 +123,10 @@ export function buildTvLogoManifest(results) {
       .filter((r) => r.legibleLight !== null && r.legibleLight < LIGHT_STROKE_THRESHOLD)
       .map((r) => ({ file: r.file, legible: Number(r.legibleLight.toFixed(3)) })),
     darkVariants: results.filter((r) => r.logoDark).map((r) => ({ file: r.file, dark: r.logoDark })),
+    squareAspectMax: SQUARE_ASPECT_MAX,
+    squareMarks: results
+      .filter((r) => r.aspect <= SQUARE_ASPECT_MAX)
+      .map((r) => ({ file: r.file, aspect: Number(r.aspect.toFixed(2)) })),
   };
 }
 
