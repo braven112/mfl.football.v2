@@ -1493,7 +1493,7 @@ export function createCdmWizard(deps: CdmWizardContext) {
     }
   };
 
-  const submitDeclaration = async () => {
+  const handleDeclarationSubmit = async () => {
     if (!cdmState.playerData || cdmState.selectedYears === null) return;
 
     const origBtnText = cdmSubmitBtn.textContent;
@@ -1656,7 +1656,7 @@ export function createCdmWizard(deps: CdmWizardContext) {
       closeDeclarationModal();
       return;
     }
-    submitDeclaration();
+    handleDeclarationSubmit();
   });
   // Document-level, so it is REPLACED per init rather than added again. The
   // page added it fresh on every initRosterPage, which stacks one handler per
