@@ -17,7 +17,7 @@ import { resolve } from 'node:path';
  * means the SWAP failed, not the animation: the tap went nowhere.
  */
 
-const GUARD = resolve(__dirname, '../src/components/TransitionNoiseGuard.astro');
+const GUARD = resolve(__dirname, '../src/components/shared/TransitionNoiseGuard.astro');
 const LAYOUT = resolve(__dirname, '../src/layouts/TheLeagueLayout.astro');
 
 function guardSource(): string {

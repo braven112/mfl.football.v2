@@ -31,8 +31,8 @@ on:
     branches: [main]
     paths:
       # Components a story renders.
-      - 'src/components/TeamIconCell.astro'
-      - 'src/components/ThemeImage.astro'
+      - 'src/components/shared/TeamIconCell.astro'
+      - 'src/components/shared/ThemeImage.astro'
       - 'src/components/shared/CompositeHero.astro'
       - 'src/components/shared/LeagueCompositeHero.astro'
       - 'src/components/shared/LineupGameStrip.astro'
@@ -324,8 +324,8 @@ on:
     types: [opened, ready_for_review, labeled, synchronize]
     paths:
       # Components a story renders.
-      - 'src/components/TeamIconCell.astro'
-      - 'src/components/ThemeImage.astro'
+      - 'src/components/shared/TeamIconCell.astro'
+      - 'src/components/shared/ThemeImage.astro'
       - 'src/components/shared/CompositeHero.astro'
       - 'src/components/shared/LeagueCompositeHero.astro'
       - 'src/components/shared/LineupGameStrip.astro'

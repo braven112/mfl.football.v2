@@ -22,9 +22,11 @@ A complete authentication system that:
 | `src/pages/api/auth/logout.ts` | Logout endpoint - clears session |
 | `src/pages/login.astro` | Login page |
 | `src/components/LoginForm.tsx` | Login form component |
-| `src/components/AuthContext.tsx` | React context for auth state |
+| `src/components/AuthContext.tsx` | (deleted Oct 2026) React context for auth state |
 | `src/pages/theleague.astro` | Updated to require login |
 | `src/utils/auth.ts` | Updated to check JWT cookies |
+
+> **Oct 2026:** `src/components/AuthContext.tsx` was deleted — nothing ever imported it. Server code reads the session with `getAuthUser()` (`src/utils/auth.ts`); restore the context from git history if a React-heavy surface needs one.
 
 ---
 

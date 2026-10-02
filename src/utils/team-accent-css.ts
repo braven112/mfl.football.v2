@@ -32,7 +32,7 @@
  * 0001), so every block is scoped by the `data-league` attribute the layout
  * puts on <html>.
  *
- * Consumed by `src/components/TeamAccentStyles.astro`, included once in the
+ * Consumed by `src/components/shared/TeamAccentStyles.astro`, included once in the
  * shared layout <head>.
  */
 

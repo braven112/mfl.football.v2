@@ -118,7 +118,7 @@ describe('chromatic path filter', () => {
     // coverage assertion below vacuously pass.
     expect(deps.length).toBeGreaterThan(90);
     expect(deps).toContain('src/utils/franchise-brand.ts');
-    expect(deps).toContain('src/components/TeamIconCell.astro');
+    expect(deps).toContain('src/components/shared/TeamIconCell.astro');
   });
 
   it('does not drop rendering files that live outside src/', () => {

@@ -1,4 +1,4 @@
-import TeamIconCell from '../../src/components/TeamIconCell.astro';
+import TeamIconCell from '../../src/components/shared/TeamIconCell.astro';
 import { themeModes } from '../../.storybook/modes';
 
 /**

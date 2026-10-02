@@ -1236,7 +1236,7 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
   // Deliberately does NOT import theme-preference.ts / call
   // setClientThemePreference — this is a transient QA preview, not a saved
   // setting. It reuses window.__applyTheme() (defined by ThemeScript, see
-  // src/components/ThemeScript.astro) purely to toggle the `dark` class +
+  // src/components/shared/ThemeScript.astro) purely to toggle the `dark` class +
   // theme-color meta the same way the real toggle does, then restores the
   // visitor's actual cookie-resolved theme when they navigate away so the
   // preview never leaks into the rest of the site.

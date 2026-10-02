@@ -298,17 +298,21 @@ When building a new page following the editorial standard:
 
 ```
 src/components/
-├── shared/              # Shared across leagues
-│   ├── Card.astro
-│   ├── Button.astro
-│   └── DataTable.astro
-├── theleague/           # TheLeague-specific
-│   ├── RosterCard.astro
-│   └── StandingsTable.astro
-├── afl-fantasy/         # AFL-specific
-│   └── DraftBoard.astro
-└── AuthContext.tsx      # React context provider
+├── shared/              # Rendered by MORE THAN ONE league (or by a shared
+│   │                    # layout) — site chrome, theme helpers, page bodies
+│   ├── PlayerCell.astro
+│   ├── ThemeToggle.astro
+│   ├── lineup/LineupPage.astro
+│   └── standings/StandingsTable.astro
+├── theleague/           # Rendered by TheLeague ALONE
+├── afl/  afl-fantasy/   # Rendered by the AFL alone
+├── keeper/  best-ball/  bigleague/
+├── nav/  schefter/      # Feature folders
+└── (no loose files)     # tests/components-root-guard.test.ts
 ```
+
+A component moves to `shared/` in the change that gives it a second
+league. Nothing lives loose at the root of `src/components/`.
 
 ## Props Typing
 
