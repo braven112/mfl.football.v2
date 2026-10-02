@@ -57,6 +57,13 @@ describe('parsing MFL rules', () => {
     expect(parsePoints('*-.6')).toEqual({ kind: 'per', points: -0.6, every: 1 });
     expect(parsePoints('*1/10')).toEqual({ kind: 'per', points: 1, every: 10 });
     expect(parsePoints('15')).toEqual({ kind: 'flat', points: 15, every: 1 });
+    // Slash notation without the `*` is still per-unit (Archie's ".1/2.5").
+    expect(parsePoints('.1/2.5')).toEqual({ kind: 'per', points: 0.1, every: 2.5 });
+  });
+
+  it('keeps every rule in a real outside league, including slash-notation ones', () => {
+    const def = outsideRules.find((b) => b.positions.includes('Def'))!;
+    expect(def.rules.find((r) => r.event.join('+') === 'UY')).toMatchObject({ kind: 'per', every: 2.5 });
   });
 
   it('splits combined events and multi-position blocks', () => {

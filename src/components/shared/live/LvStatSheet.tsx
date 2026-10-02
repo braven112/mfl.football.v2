@@ -113,7 +113,32 @@ export default function LvStatSheet({
   useEffect(() => {
     previousFocus.current = document.activeElement as HTMLElement;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') close();
+      if (e.key === 'Escape') {
+        close();
+        return;
+      }
+      // Keep Tab inside the dialog. `aria-modal` tells a screen reader the
+      // page behind is hidden; letting Tab walk into it breaks that promise
+      // (Copilot, #1297). The panel itself is the fallback stop, so a sheet
+      // whose only control is Close still holds focus.
+      if (e.key !== 'Tab') return;
+      const panel = dialogRef.current;
+      if (!panel) return;
+      const focusable = Array.from(
+        panel.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((el) => !el.hasAttribute('disabled'));
+      const first = focusable[0] ?? panel;
+      const last = focusable[focusable.length - 1] ?? panel;
+      const active = document.activeElement;
+      if (e.shiftKey && (active === first || active === panel || !panel.contains(active))) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (active === last || !panel.contains(active))) {
+        e.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener('keydown', onKey);
     const previousOverflow = document.body.style.overflow;

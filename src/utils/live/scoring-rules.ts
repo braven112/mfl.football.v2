@@ -156,11 +156,15 @@ export function parseRange(raw: string): [number, number] | null {
   return Number.isFinite(lo) && Number.isFinite(hi) ? [lo, hi] : null;
 }
 
-/** "*.04" → per .04; "*1/10" → per 1 every 10; "15" → flat 15. */
+/** "*.04" → per .04; "*1/10" or "1/10" → 1 per whole 10; "15" → flat 15. */
 export function parsePoints(raw: string): Pick<ScoringRule, 'kind' | 'points' | 'every'> | null {
   const s = raw.trim();
-  if (s.startsWith('*')) {
-    const [num, den] = s.slice(1).split('/');
+  // "a/b" is per-unit with or without the leading `*`: Archie's league
+  // writes ".1/2.5" for a tenth of a point per whole 2.5 yards, and reading
+  // that as a flat number made it NaN and dropped the rule (Copilot, #1297).
+  const body = s.startsWith('*') ? s.slice(1) : s;
+  if (s.startsWith('*') || body.includes('/')) {
+    const [num, den] = body.split('/');
     const points = Number(num);
     const every = den === undefined ? 1 : Number(den);
     if (!Number.isFinite(points) || !Number.isFinite(every) || every <= 0) return null;
