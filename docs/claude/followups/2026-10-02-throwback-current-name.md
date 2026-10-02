@@ -45,6 +45,11 @@ scores stay on one line. Guard test: `tests/live-read-league.test.ts`.
     so it needed nothing. Guard: `tests/live-matchup-card-current-line.test.ts`
     (fails with the fix reverted), wired into path-guard's live domain.
   - No late reviewer findings landed on #1302 after merge.
+  - **Later the same day:** the owner asked for the detail header's names to be
+    TOP-aligned, because bottom alignment pushed the un-renamed side's name
+    down. The header is now `align-items: start` and uses the same per-matchup
+    empty placeholder line, so the scores still line up. Covered by the same
+    guard file.
 
 ## Context to start cold
 - Only `readLeagueLive` sets `currentName`, from the throwback
