@@ -290,6 +290,8 @@ export interface BuildLiveTeamInput {
    * which is how the offseason replay keeps its own.
    */
   projections?: ReadonlyMap<string, number>;
+  /** Today's name under a Throwback era that renamed the club. See `LiveTeam.currentName`. */
+  currentName?: string;
 }
 
 /**
@@ -312,6 +314,7 @@ export function buildLiveTeam(input: BuildLiveTeamInput): LiveTeam {
     icon: identity.icon,
     iconAlt: identityIconAlt(identity),
     rung: identity.rung,
+    ...(input.currentName ? { currentName: input.currentName } : {}),
     live: totals.live,
     projectedFinal: totals.projectedFinal,
     remainingPoints: totals.remainingPoints,
