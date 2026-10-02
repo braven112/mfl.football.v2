@@ -312,7 +312,10 @@ on:
   # a coverage hole.
   #
   # The `visual-check` label forces a run on demand (remove and re-add to
-  # re-run) for a diff the paths list does not match.
+  # re-run) for a diff the paths list does not match — on a PR into `main`
+  # only. The label is read inside the `pull_request` event, and that event is
+  # filtered to `branches: [main]` below, so on a feature PR into `staging` the
+  # workflow never starts and the label does nothing.
   #
   # `branches: [main]` — DELIBERATELY not `[main, staging]`, unlike ci.yml and
   # codeql.yml. Every other check gates a merge into `staging` because that
@@ -326,8 +329,10 @@ on:
   # real owners use, until Tuesday. `/release-review` step 6c compensates by
   # naming which commits in the range touched the story import closure, so the
   # promotion's batch of diffs can be attributed to features rather than
-  # guessed at. Use the `visual-check` label on any feature PR where an earlier
-  # look is worth a build.
+  # guessed at. For an earlier look at a feature branch, start the workflow by
+  # hand (Actions -> Chromatic -> "Run workflow", pick the branch): that is
+  # the `workflow_dispatch` trigger, and it runs on any ref. The `visual-check`
+  # label CANNOT do this — a PR into `staging` never reaches this workflow.
   pull_request:
     branches: [main]
     types: [opened, ready_for_review, labeled, synchronize]

@@ -207,9 +207,13 @@ Two things to hold onto, both from the long comment block in `chromatic.yml`:
    really is a PR with a Chromatic run, not a direct push.
 2. **A week of diffs arrives at once, and attribution gets harder.** Fifteen
    changed snapshots on Tuesday, and working out which of six features caused
-   which is real work. The `visual-check` label escape hatch already exists —
-   keep it, and use it on any feature PR that touches a component in the story
-   closure so its diff is reviewed in isolation while the context is fresh.
+   which is real work. The escape hatch for a feature branch is a manual run
+   (Actions → Chromatic → "Run workflow" on that branch, the `workflow_dispatch`
+   trigger) — use it on any feature branch that touches a component in the
+   story closure so its diff is reviewed in isolation while the context is
+   fresh. (This used to say "the `visual-check` label"; that label only works
+   on a PR into `main`, because the workflow's `pull_request` trigger is
+   filtered to `main` and never fires for a PR into `staging`.)
 
 **The accepted cost, stated plainly** [DECIDED]: `staging` is otherwise held to
 production standards, but visual regressions are the one class that can sit

@@ -681,7 +681,11 @@ It now fires on:
 
 - `push` to **main only** (the baseline run, the one that auto-accepts)
 - `pull_request` with `types: [opened, ready_for_review, labeled, synchronize]`
-- the `visual-check` label on demand — remove and re-add it to re-run
+- the `visual-check` label on demand — remove and re-add it to re-run. **On a
+  PR into `main` only**: the `pull_request` trigger is filtered to
+  `branches: [main]`, so on a feature PR into `staging` the workflow never
+  starts and the label does nothing. For an early look at a feature branch,
+  run the workflow by hand (`workflow_dispatch`, any ref).
 
 **The cost control is the `paths:` list, NOT the trigger type.** A revision of
 this change dropped `synchronize` to make PR iteration free, and that was a
