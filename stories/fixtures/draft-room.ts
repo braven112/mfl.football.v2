@@ -180,10 +180,13 @@ export const MOCK_SESSION: MockDraftSession = {
   createdBy: USER_TEAM_ID,
   createdAt: '2026-04-20T18:00:00Z',
   status: 'active',
-  draftOrder: [...ORDER, ...ORDER.slice().reverse()],
+  // The same straight order as the board, both rounds.
+  draftOrder: [...ORDER, ...ORDER],
   picksPerRound: ORDER.length,
   totalRounds: 2,
-  currentPickIndex: 8,
+  // 2.01 — the Mariachi Ninjas on the clock, as the story's
+  // `onClockFranchiseId` says.
+  currentPickIndex: 6,
   timerSeconds: 120,
   picks: [],
   participants: [],
