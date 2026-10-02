@@ -402,6 +402,21 @@ describe('Throwback Week dresses the board', () => {
     expect(panel.matchups[0].sides[0].icon).toBe('/assets/era/maulers.png');
   });
 
+  it("keeps today's name as currentName only when the era renamed the club", async () => {
+    const plain = (await panelOf({ slug: 'theleague', week: WEEK, year: YEAR })).matchups[0];
+    const today = plain.sides[0].name;
+    expect(plain.sides[0].currentName).toBeUndefined();
+
+    const renamed = await dressed({ '0001': { name: 'Steel City Maulers' } });
+    expect(renamed.matchups[0].sides[0].currentName).toBe(today);
+    // The undressed side has nothing to explain.
+    expect(renamed.matchups[0].sides[1].currentName).toBeUndefined();
+
+    // An era wearing today's name (new crest only) adds no second line.
+    const sameName = await dressed({ '0001': { name: today, icon: '/assets/era/x.png' } });
+    expect(sameName.matchups[0].sides[0].currentName).toBeUndefined();
+  });
+
   it('RE-DERIVES the initials from the era name', async () => {
     // The initials are the text rung's fallback mark. A 1997 name showing
     // today's initials is the same half-dressed board this exists to prevent.

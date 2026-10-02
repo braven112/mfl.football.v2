@@ -77,6 +77,7 @@ export default function LvMatchupDetail({
       <div className="lv-scorehead">
         <div className="lv-scorehead__side">
           <div className="lv-scorehead__name">{a.nameShort || a.name}</div>
+          {a.currentName && <div className="lv-scorehead__current">{a.currentName}</div>}
           <div className="lv-scorehead__score" style={{ color: `var(--t${first}-ink)` }}>
             {fmt(a.live)}
           </div>
@@ -84,6 +85,7 @@ export default function LvMatchupDetail({
         <span className="lv-scorehead__at">@</span>
         <div className="lv-scorehead__side lv-scorehead__side--right">
           <div className="lv-scorehead__name">{b.nameShort || b.name}</div>
+          {b.currentName && <div className="lv-scorehead__current">{b.currentName}</div>}
           <div className="lv-scorehead__score" style={{ color: `var(--t${second}-ink)` }}>
             {fmt(b.live)}
           </div>
