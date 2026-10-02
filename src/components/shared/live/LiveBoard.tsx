@@ -661,6 +661,10 @@ export default function LiveBoard({
           momentPartial={detail.partial}
           viewerFirst={viewerFirst}
           isFinal={isMatchupFinal(open.matchup)}
+          // Only on a LIVE board: the bundled sample has no box scores to
+          // itemize, so every sheet there would read "Loading stats…" forever.
+          leagueId={demoLabel || !pollUrl ? undefined : open.panel.leagueId}
+          year={board.year}
           onBack={() => setSelected(null)}
         />
         </>

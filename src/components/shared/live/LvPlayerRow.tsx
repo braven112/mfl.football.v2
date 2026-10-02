@@ -77,6 +77,11 @@ export interface LvPlayerRowProps {
    * had done nothing — silence must mean "no stats yet", never "feed down".
    */
   detailStatus?: 'ok' | 'error' | 'pending';
+  /**
+   * Opens this player's stat sheet. Omitted, the row is inert — the cards and
+   * stories render rows that open nothing.
+   */
+  onOpen?: () => void;
 }
 
 export default function LvPlayerRow({
@@ -86,6 +91,7 @@ export default function LvPlayerRow({
   game,
   box,
   detailStatus = 'ok',
+  onOpen,
 }: LvPlayerRowProps): JSX.Element {
   const position = meta?.position ?? '';
   const team = meta?.nflTeam ?? '';
@@ -161,7 +167,25 @@ export default function LvPlayerRow({
     <div
       className={`lv-prow${side === 'right' ? ' lv-prow--right' : ''}${
         redZone ? ' lv-prow--redzone' : ''
-      }`}
+      }${onOpen ? ' lv-prow--open' : ''}`}
+      /* A div with button semantics rather than a <button>: the row is a
+         subgrid item whose tracks the paired side shares, and a <button>
+         brings UA box styling that the matchup card already had to fight. */
+      {...(onOpen
+        ? {
+            role: 'button',
+            tabIndex: 0,
+            'aria-haspopup': 'dialog' as const,
+            'aria-label': `${meta?.name ?? `Player ${row.id}`}: ${fmt(row.live)} points — show scoring details`,
+            onClick: onOpen,
+            onKeyDown: (e: { key: string; preventDefault: () => void }) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onOpen();
+              }
+            },
+          }
+        : {})}
     >
       <span
         className={`lv-headshot${isDef ? ' lv-headshot--def' : ''}`}

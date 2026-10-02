@@ -37,6 +37,9 @@ import {
   buildSummaryUrl,
   buildTeamCodesById,
   formatStatLine,
+  boxScoreToMflStats,
+  fieldGoalLength,
+  parseTwoPointConversion,
   parseBoxScore,
   comparePlaysChronologically,
   isTwoPointConversion,
@@ -308,7 +311,42 @@ export async function loadNflGameDetail(
         nflTeam: line.teamCode,
         statLine,
         gameId: started[i].eventId,
+        stats: boxScoreToMflStats(line),
       };
+    }
+
+    // Two-point conversions exist only in the play's prose, so the names it
+    // gives are matched to THIS game's box score — the athletes who actually
+    // played in it — and only on an exact, unique name. A name we cannot
+    // place credits nobody; the sheet's reconciling line carries it instead.
+    const byName = new Map<string, string | null>();
+    for (const line of detail.boxScore) {
+      const mflId = espnToMfl.get(line.espnAthleteId);
+      if (!mflId || !line.athleteName) continue;
+      const key = line.athleteName.toLowerCase();
+      byName.set(key, byName.has(key) && byName.get(key) !== mflId ? null : mflId);
+    }
+    const credit = (name: string | undefined, code: string) => {
+      const id = name ? byName.get(name.toLowerCase()) : undefined;
+      const row = id ? boxScore[id] : undefined;
+      if (row?.stats) row.stats[code] = (row.stats[code] ?? 0) + 1;
+    };
+    for (const play of detail.plays) {
+      const conv = parseTwoPointConversion(play.text);
+      if (!conv) continue;
+      credit(conv.passer, 'P2');
+      credit(conv.receiver, 'C2');
+      credit(conv.rusher, 'R2');
+    }
+
+    // MFL scores each field goal by its length, which the box score does not
+    // carry — only the longest. The scoring plays name every one.
+    for (const play of detail.plays) {
+      const len = fieldGoalLength(play.typeAbbrev, play.text);
+      if (len === null) continue;
+      const kicker = play.espnAthleteIds.map((id) => espnToMfl.get(id)).find((id) => !!id);
+      const row = kicker ? boxScore[kicker] : undefined;
+      if (row) (row.fgLengths ??= []).push(len);
     }
 
     const emit = (play: EspnScoringPlay | EspnNotablePlay) => {

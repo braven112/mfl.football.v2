@@ -982,6 +982,18 @@ button.lv-card:focus-visible {
   background: color-mix(in srgb, var(--color-error) 7%, transparent);
 }
 
+/* A row that opens its stat sheet. The hover/focus wash is the only cue a
+   row is tappable; the red-zone tint keeps priority when both apply. */
+.lv-prow--open { cursor: pointer; }
+.lv-prow--open:hover:not(.lv-prow--redzone),
+.lv-prow--open:focus-visible:not(.lv-prow--redzone) {
+  background: color-mix(in srgb, var(--content-text-muted) 9%, transparent);
+}
+.lv-prow--open:focus-visible {
+  outline: 2px solid var(--color-primary, currentColor);
+  outline-offset: -2px;
+}
+
 /* ── the bench ───────────────────────────────────────────────────────────── */
 
 /**
@@ -1761,3 +1773,209 @@ button.lv-card:focus-visible {
   font-size: var(--font-size-sm);
   color: var(--content-text-muted);
 }
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   THE STAT SHEET — one player's scoring, stat by stat (`LvStatSheet.tsx`).
+   Bottom sheet on a phone, centred dialog from 640px up: the same shape as
+   the My Rank editor (`my-rank-editor.css`), and capped against `dvh` for the
+   same reason — see docs/claude/rules/theming-and-assets.md § "Overlays on a
+   phone". Portaled to <body>, so nothing here may depend on `.lv` ancestry.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.lv-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.55);
+  /* Every overlay in this codebase blurs its backdrop. */
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  animation: lv-sheet-fade 160ms ease;
+}
+
+.lv-sheet__panel {
+  width: 100%;
+  /* `vh` first as the fallback; `dvh` is the visible viewport on a phone. */
+  max-height: 88vh;
+  max-height: 88dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--card-surface);
+  color: var(--page-text);
+  border: 1px solid var(--card-border);
+  border-bottom: 0;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  box-shadow: var(--shadow-xl);
+  outline: none;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  animation: lv-sheet-rise 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes lv-sheet-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes lv-sheet-rise {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lv-sheet, .lv-sheet__panel { animation: none; }
+}
+
+@media (min-width: 640px) {
+  .lv-sheet {
+    align-items: center;
+    padding: var(--spacing-lg);
+  }
+  .lv-sheet__panel {
+    max-width: 440px;
+    max-height: 80vh;
+    max-height: 80dvh;
+    border-bottom: 1px solid var(--card-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    animation: lv-sheet-fade 160ms ease;
+  }
+}
+
+/* Header and footer hold their height; the body is the part that scrolls. */
+.lv-sheet__header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: 1rem 1rem 0.75rem;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.lv-sheet__who {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.lv-sheet__title {
+  margin: 0;
+  /* Stated, not inherited: the site's global heading rule colours an <h2>
+     with the league accent, which read as a link in dark mode. */
+  color: var(--page-text);
+  font-family: var(--font-display);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lv-sheet__sub {
+  margin: 0.15rem 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--content-text-muted);
+}
+
+.lv-sheet__total {
+  flex: 0 0 auto;
+  font-family: var(--font-display);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.lv-sheet__pts {
+  margin-left: 0.2rem;
+  font-size: var(--font-size-xs);
+  font-weight: normal;
+  color: var(--content-text-muted);
+}
+
+.lv-sheet__close {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid var(--card-border);
+  background: var(--card-surface);
+  color: var(--content-text-muted);
+  font-size: var(--font-size-lg);
+  line-height: 1;
+  cursor: pointer;
+}
+.lv-sheet__close:hover,
+.lv-sheet__close:focus-visible { color: var(--page-text); }
+
+.lv-sheet__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0.5rem 1rem 1rem;
+}
+
+.lv-sheet__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.lv-sheet__table th,
+.lv-sheet__table td {
+  padding: 0.5rem 0;
+  text-align: left;
+  font-weight: normal;
+  border-bottom: 1px solid color-mix(in srgb, var(--card-border) 70%, transparent);
+}
+
+.lv-sheet__table thead th {
+  padding-top: 0.25rem;
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--content-text-muted);
+}
+
+.lv-sheet__table .lv-sheet__num {
+  text-align: right;
+  padding-left: var(--spacing-sm);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.lv-sheet__pt { font-weight: var(--font-weight-bold); }
+.lv-sheet__pt--neg { color: var(--color-error); }
+
+.lv-sheet__other th { color: var(--content-text-muted); }
+
+.lv-sheet__hint {
+  display: block;
+  font-size: var(--font-size-xs);
+  color: var(--content-text-muted);
+}
+
+.lv-sheet__table tfoot th,
+.lv-sheet__table tfoot td {
+  border-bottom: 0;
+  padding-top: 0.65rem;
+  font-weight: var(--font-weight-bold);
+}
+
+.lv-sheet__none,
+.lv-sheet__empty,
+.lv-sheet__note,
+.lv-sheet__line {
+  margin: 0.5rem 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--content-text-muted);
+}
+
+.lv-sheet__line { font-size: var(--font-size-xs); }
