@@ -52,9 +52,9 @@ interface TvLogoManifest {
 }
 
 /**
- * How much larger a square mark draws than the height its surface sets. Read
- * by every logo class as `--tv-logo-scale` (`network-badge.css`,
- * `sunday-ticket.css`), so the bump lands everywhere the mark does.
+ * How much larger a square mark draws than the height its surface sets. Only
+ * a surface that opts in reads `--tv-logo-scale` — today the two Set Lineup
+ * pages' opponent-line badge; everywhere else the variable is inert.
  */
 export const TV_LOGO_SQUARE_SCALE = 1.25;
 

@@ -86,14 +86,18 @@ describe('buildTvLogoThemeCss', () => {
     expect(css).not.toContain('html.dark img[src="/assets/tv-logos/channel-5-uk.png"]');
   });
 
-  it('draws square marks larger in both themes, through the one scale variable every logo class reads', () => {
+  it('draws square marks larger in both themes, on the Set Lineup pages only', () => {
     const css = buildTvLogoThemeCss();
     expect(css).toContain('html img[src="/assets/tv-logos/nbc.png"]');
     expect(css).toContain('html img[src="/assets/tv-logos/prime-video.png"]');
     expect(css).toContain(`--tv-logo-scale: ${TV_LOGO_SQUARE_SCALE};`);
     expect(css).not.toContain('html img[src="/assets/tv-logos/espn.png"]');
+    for (const page of ['src/pages/theleague/lineup.astro', 'src/components/afl-family/LineupPage.astro']) {
+      expect(readFileSync(page, 'utf8'), page).toContain('var(--tv-logo-scale, 1)');
+    }
+    // Opt-in only: the shared badge and the Sunday Ticket board keep their size.
     for (const sheet of ['src/styles/network-badge.css', 'src/styles/sunday-ticket.css']) {
-      expect(readFileSync(sheet, 'utf8'), sheet).toContain('var(--tv-logo-scale, 1)');
+      expect(readFileSync(sheet, 'utf8'), sheet).not.toContain('--tv-logo-scale');
     }
   });
 

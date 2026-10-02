@@ -2192,6 +2192,15 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     align-self: center;
     margin-right: 0.1rem;
   }
+  /* A square mark (NBC, ABC, FOX, the TNF shield) at 11px carries a fraction
+     of a wordmark's ink and reads as a dot, so it draws taller by
+     `--tv-logo-scale`, which tv-logo-theme-css.ts sets on those marks by src.
+     It overflows the 11px box evenly instead of growing it, so the row's
+     line does not move. Lineup pages only: the other surfaces left as sized. */
+  .lineup-slot__net .net-badge__logo,
+  .lineup-bench-row__net .net-badge__logo {
+    height: calc(100% * var(--tv-logo-scale, 1));
+  }
 
   /* No narrow-phone hide. One lived here — `:global()`-wrapped, so it never
      once ran — written when the row carried a prefix, a crest, a three-letter

@@ -312,7 +312,7 @@
   font-size: 0.78rem;
   color: var(--content-text-muted);
 }
-.st-free__logo { height: calc(1.5rem * var(--tv-logo-scale, 1)); width: auto; max-width: 5rem; object-fit: contain; display: block; }
+.st-free__logo { height: 1.5rem; width: auto; max-width: 5rem; object-fit: contain; display: block; }
 .st-free__name { font-weight: var(--font-weight-bold); color: var(--page-text); }
 .st-jump { display: flex; gap: 0.5rem; }
 .st-jump__link {
@@ -345,7 +345,7 @@
 .st-window__sched { margin-left: auto; font-size: 0.72rem; color: var(--content-text-muted); }
 /* The country's Sunday Ticket carrier, on the same white pill as the channel marks. */
 .st-provider { display: inline-flex; align-items: center; height: 1.8rem; cursor: help; }
-.st-provider__logo { height: calc(1.3rem * var(--tv-logo-scale, 1)); width: auto; max-width: 7.5rem; object-fit: contain; display: block; }
+.st-provider__logo { height: 1.3rem; width: auto; max-width: 7.5rem; object-fit: contain; display: block; }
 .st-provider__name { font-size: 0.72rem; font-weight: var(--font-weight-bold); color: var(--page-text); }
 .st-window__overflow { margin: 0; font-size: 0.82rem; color: var(--content-text-muted); }
 .st-window__overflow-label { font-weight: var(--font-weight-bold); margin-right: 0.3rem; }
@@ -416,7 +416,7 @@
   cursor: help;
 }
 .st-net--mark { background: none; padding: 0; height: 1.9rem; }
-.st-net__logo { height: calc(1.4rem * var(--tv-logo-scale, 1)); width: auto; max-width: 6rem; object-fit: contain; display: block; }
+.st-net__logo { height: 1.4rem; width: auto; max-width: 6rem; object-fit: contain; display: block; }
 .st-box__count {
   margin-left: auto;
   color: var(--league-accent);
