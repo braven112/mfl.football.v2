@@ -10,12 +10,113 @@
       "league": "both"
     },
     {
+      "date": "2026-09-29",
+      "type": "bug-fix",
+      "summary": "Free Agents no longer offers a claim on a player you're viewing in the other conference — claims always file into your own.",
+      "impact": "user",
+      "area": "free-agents",
+      "league": "afl"
+    },
+    {
+      "date": "2026-09-29",
+      "type": "enhancement",
+      "summary": "The homepage hero now runs the same weekly rotation as the other leagues: game day, the Tuesday recap, the Pecking Order, waivers and The Gauntlet, cast with your own players.",
+      "impact": "user",
+      "area": "homepage",
+      "league": "archies"
+    },
+    {
+      "date": "2026-09-29",
+      "type": "enhancement",
+      "summary": "<a href=\"/rosters\">Rosters</a> are now the full roster page: this week's matchup, opponent rank, season points and projection for every player, plus Release, IR and trade-block actions on your own team.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "archies"
+    },
+    {
+      "date": "2026-09-29",
+      "type": "bug-fix",
+      "summary": "The ⋮ player menu on <a href=\"/rosters\">Rosters</a> opens again after you switch to another team from the crest row, instead of going dead until you reload.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "afl"
+    },
+    {
+      "date": "2026-09-29",
+      "type": "new-page",
+      "summary": "<a href=\"/live-scoring\">Live Scoring</a> is here: both of your games first, then every matchup by division, with win odds, box scores and a scoring ticker.",
+      "impact": "user",
+      "area": "live-scoring",
+      "league": "archies",
+      "featured": true,
+      "headline": "Live Scoring comes to Archie's",
+      "lede": "Your two games up top, then every matchup in all nine divisions — live win odds, box scores and a scoring ticker, all on one page.",
+      "image": "archies-live-scoring.webp",
+      "imageAlt": "Archie's Live Scoring page: division filter pills above a featured matchup card with projections and a win-odds bar, and smaller matchup cards below."
+    },
+    {
+      "date": "2026-09-29",
+      "type": "enhancement",
+      "summary": "Standings now has three tabs: Division, MAD (the MAD Power 99 playoff race, 30 teams in) and All-Play, plus PA, streak and division records.",
+      "impact": "user",
+      "area": "standings",
+      "league": "archies"
+    },
+    {
+      "date": "2026-09-29",
+      "type": "enhancement",
+      "summary": "Archie's has a new look: black header and footer, the wordmark's sky blue as the accent, and sharper text contrast in light and dark.",
+      "impact": "user",
+      "area": "design-system",
+      "league": "archies"
+    },
+    {
+      "date": "2026-09-29",
+      "type": "new-page",
+      "summary": "New: the <a href=\"/front-office/trade-builder\">Trade Builder</a>. Pick players from your roster and a division rival's, check the value balance, and send the offer, or start one from the ⋮ menu on Rosters.",
+      "impact": "user",
+      "area": "trade-builder",
+      "league": "archies"
+    },
+    {
       "date": "2026-10-01",
       "type": "bug-fix",
       "summary": "Maverick's 2016–2024 seasons show their original Mel Gibson art again instead of today's logo, and it's now Maverick's default Throwback Week look.",
       "impact": "user",
       "area": "franchises",
       "league": "theleague"
+    },
+    {
+      "date": "2026-10-01",
+      "type": "bug-fix",
+      "summary": "The player card's Season Results table is readable again — upcoming weeks and byes no longer vanish in dark mode, and it fits a phone without scrolling sideways.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "both"
+    },
+    {
+      "date": "2026-10-01",
+      "type": "bug-fix",
+      "summary": "Declaring a contract works again — it was failing with \"Cannot read properties of undefined (reading 'cancelled')\" and never filed.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-10-01",
+      "type": "bug-fix",
+      "summary": "The rest of the player card's faded labels (stats, details, section titles, \"Rostered by\") are now easy to read in both light and dark mode.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "both"
+    },
+    {
+      "date": "2026-10-01",
+      "type": "bug-fix",
+      "summary": "On a phone, Coach view roster cards keep the matchup and the stats line on one line each — a 10:00 kickoff or a two-digit rank no longer bumps the rank or the average onto a line of its own.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "both"
     }
   ]
 }

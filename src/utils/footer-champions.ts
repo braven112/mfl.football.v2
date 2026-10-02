@@ -263,5 +263,8 @@ export function leagueHasChampionBand(slug: CanonicalLeagueSlug): boolean {
   const league = getLeagueBySlug(slug);
   // The demo's big league (the AFL's slot) keeps no AFL trophy case.
   if (slug === 'afl-fantasy' && league?.demoPath) return false;
-  return Boolean(league) && !league?.bestBall;
+  // Best-ball has no champions; an opt-in-nav package league (archies) has
+  // them but launches without the /franchises and /playoffs pages the band
+  // and Trophy Case link to, so it would ship two guaranteed 404s.
+  return Boolean(league) && !league?.bestBall && !league?.optInNav;
 }

@@ -29,7 +29,7 @@ import { getGlobalPlayerMap, type PlayerIdentity } from '../../../utils/player-m
 import { getAuthUser, franchiseIdForLeague } from '../../../utils/auth';
 import { readViewerClock } from '../../../utils/viewer-preferences-page';
 import { chosenZone } from '../../../utils/viewer-preferences';
-import { loadTransactionsSeason, seasonsFromGlob, type LazyFeedGlob } from '../../../utils/transactions-feeds';
+import { loadTransactionsSeason, loadLedgerLeagueContext, seasonsFromGlob, type LazyFeedGlob } from '../../../utils/transactions-feeds';
 import { resolveSeason } from '../../../utils/mfl-feed-glob';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
 import { formatPickLabel } from '../../../utils/mfl-pick-tokens.mjs';
@@ -40,6 +40,7 @@ import {
   filterHref,
   isDefaultView,
   kindsPresentIn,
+  ALL_DIVISIONS,
 } from '../../../utils/transactions-view';
 import type { TransactionRow } from '../../../utils/mfl-transactions';
 
@@ -65,15 +66,28 @@ const availableYears = seasonsFromGlob(transactionFeeds);
 const year = resolveSeason(params.get('year'), availableYears, getCurrentLeagueYear()) ?? getCurrentLeagueYear();
 
 const hasSalaryCap = leagueHasFeature(leagueSlug, 'salaryCap');
-const rows = await loadTransactionsSeason({
-  transactionFeeds,
-  leagueFeeds,
-  year,
-  hasSalaryCap,
-  leagueId: league.id,
-  // Only the current league year can gain rows since the last sync.
-  isCurrentSeason: year === getCurrentLeagueYear(),
-});
+const [rows, ledger] = await Promise.all([
+  loadTransactionsSeason({
+    transactionFeeds,
+    leagueFeeds,
+    year,
+    hasSalaryCap,
+    leagueId: league.id,
+    // Only the current league year can gain rows since the last sync.
+    isCurrentSeason: year === getCurrentLeagueYear(),
+  }),
+  // Per SEASON, from that season's league.json — a league can change its bid
+  // rules or its divisions between years.
+  loadLedgerLeagueContext(leagueFeeds, year),
+]);
+// A FAAB league has no salary cap, but its bids ARE what a move cost, so the
+// amount column is shown for it too. Gated on the season's own budget rather
+// than a new registry flag: it is a fact MFL already publishes.
+const isFaab = ledger.faabBudget !== null;
+const showAmounts = hasSalaryCap || isFaab;
+const divisions = ledger.divisions;
+const divisionOf = (franchiseId: string): string | undefined => ledger.divisionOfFranchise[franchiseId];
+const divisionById = new Map((divisions ?? []).map((d) => [d.id, d]));
 
 // READ-ONLY. Resolving a preference WRITES a cookie and belongs to the route —
 // from a component it throws ResponseSentError after the headers commit
@@ -87,7 +101,13 @@ const viewerClock = await readViewerClock(Astro.cookies, authUser, leagueSlug);
 // country and returns the real zone.
 const zone = chosenZone(viewerClock.prefs, viewerClock.leagueClock).zone;
 
-const filters = parseFilters({ params, year, myFranchiseId });
+const filters = parseFilters({
+  params,
+  year,
+  myFranchiseId,
+  divisionIds: (divisions ?? []).map((d) => d.id),
+  divisionOf,
+});
 
 // The AFL's own identity union first, TheLeague's as the fallback: MFL player
 // ids are global so the two compose, and the AFL's archive reaches back
@@ -98,15 +118,38 @@ const playerOf = (id: string): PlayerIdentity | undefined =>
   primaryPlayers.get(id) ?? fallbackPlayers.get(id);
 const nameOf = (id: string): string | undefined => playerOf(id)?.name;
 
-const visible = applyFilters({ rows, filters, nameOf });
+const visible = applyFilters({ rows, filters, nameOf, divisionOf });
 const groups = groupByDay(visible, zone);
 
 const brands = getLeagueTeamBrands(leagueSlug);
 const teamOptions = Object.values(brands).sort((a, b) => a.name.localeCompare(b.name));
+// 99 teams in one flat <select> is a scroll, not a choice: in a division-pool
+// league the options are grouped under their division, in MFL's order.
+const teamGroups = divisions
+  ? divisions
+      .map((d) => ({ label: d.name, teams: teamOptions.filter((t) => divisionOf(t.franchiseId) === d.id) }))
+      .filter((g) => g.teams.length > 0)
+  : null;
 const nameForFranchise = (id: string) => brands[id]?.nameShort || brands[id]?.name || `Team ${id}`;
 
 const timeFmt = new Intl.DateTimeFormat('en-US', { timeZone: zone, hour: 'numeric', minute: '2-digit' });
-const moneyFmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+// Cents only where MFL takes cents bids — and then on EVERY amount, so a column
+// of $5.00 / $5.01 lines up. Whole-dollar leagues keep maximumFractionDigits 0.
+const moneyFmt = ledger.amountDecimals === 2
+  ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+
+/**
+ * The amount cell's text, or null for a dash. In a FAAB league a winning
+ * blind bid with no amount is a $0 bid — MFL writes `|0|` and the parser reads
+ * zero as "no price" — so it prints as $0.00 rather than "not recorded".
+ */
+function amountLabel(row: TransactionRow): string | null {
+  if (row.amount !== null) return moneyFmt.format(row.amount);
+  if (isFaab && row.kind === 'blind-bid') return moneyFmt.format(0);
+  return null;
+}
+const dashTitle = isFaab ? 'No bid — first come, first served' : 'Not recorded in the feed';
 
 /** Label for the badge on each row. */
 const KIND_LABEL: Record<string, string> = {
@@ -136,6 +179,8 @@ interface RenderRow {
   row: TransactionRow;
   time: string;
   teamName: string;
+  /** The franchise's division abbrev, in a division-pool league only. */
+  division: string | undefined;
   crest: string | undefined;
   accent: string;
   added: PlayerCells;
@@ -150,6 +195,7 @@ for (const row of visible) {
     row,
     time: timeFmt.format(new Date(row.at)),
     teamName: nameForFranchise(row.franchiseId),
+    division: divisionById.get(divisionOf(row.franchiseId) ?? '')?.abbrev,
     crest: brands[row.franchiseId]?.icon,
     // `teamAccentVar`, NOT the raw brand colour. The token layer
     // (TeamAccentStyles, already in this layout) does three things a raw
@@ -161,7 +207,7 @@ for (const row of visible) {
     accent: teamAccentVar(row.franchiseId, 'var(--tx-accent)'),
     added: cellsFor(row.added),
     dropped: cellsFor(row.dropped),
-    amount: row.amount === null ? null : moneyFmt.format(row.amount),
+    amount: amountLabel(row),
     tradeSides: row.trade
       ? row.trade.sides.map((side) => ({
           name: nameForFranchise(side.franchiseId),
@@ -208,13 +254,33 @@ const totalLabel = visible.length === 1 ? '1 move' : `${visible.length.toLocaleS
         <input type="search" name="q" value={filters.query} placeholder="Search a name…" autocomplete="off" />
       </label>
 
+      {divisions && (
+        <label class="tx__field">
+          <span>Division</span>
+          <select name="division">
+            <option value={ALL_DIVISIONS} selected={filters.division === null}>All divisions</option>
+            {divisions.map((d) => (
+              <option value={d.id} selected={filters.division === d.id}>{d.name}</option>
+            ))}
+          </select>
+        </label>
+      )}
+
       <label class="tx__field">
         <span>Team</span>
         <select name="team">
           <option value="">All teams</option>
-          {teamOptions.map((t) => (
-            <option value={t.franchiseId} selected={filters.team === t.franchiseId && !filters.mine}>{t.name}</option>
-          ))}
+          {teamGroups
+            ? teamGroups.map((g) => (
+                <optgroup label={g.label}>
+                  {g.teams.map((t) => (
+                    <option value={t.franchiseId} selected={filters.team === t.franchiseId && !filters.mine}>{t.name}</option>
+                  ))}
+                </optgroup>
+              ))
+            : teamOptions.map((t) => (
+                <option value={t.franchiseId} selected={filters.team === t.franchiseId && !filters.mine}>{t.name}</option>
+              ))}
         </select>
       </label>
 
@@ -255,6 +321,7 @@ const totalLabel = visible.length === 1 ? '1 move' : `${visible.length.toLocaleS
       {totalLabel}
       {filters.query && <> matching <strong>{filters.query}</strong></>}
       {filters.team && <> for <strong>{nameForFranchise(filters.team)}</strong></>}
+      {filters.division && <> in the <strong>{divisionById.get(filters.division)?.name}</strong></>}
       {filters.week !== null && <> in <strong>week {filters.week}</strong></>}
       <span class="tx__count-year"> · {year} season</span>
     </p>
@@ -279,7 +346,14 @@ const totalLabel = visible.length === 1 ? '1 move' : `${visible.length.toLocaleS
 
                     <span class="tx__team">
                       {r.crest && <img class="tx__crest" src={r.crest} alt="" width="22" height="22" loading="lazy" decoding="async" />}
-                      <span class="tx__team-name">{r.teamName}</span>
+                      {r.division ? (
+                        <span class="tx__team-text">
+                          <span class="tx__team-name">{r.teamName}</span>
+                          <span class="tx__division">{r.division}</span>
+                        </span>
+                      ) : (
+                        <span class="tx__team-name">{r.teamName}</span>
+                      )}
                     </span>
 
                     <span class="tx__badge" data-kind={row.kind}>{KIND_LABEL[row.kind]}</span>
@@ -356,8 +430,8 @@ const totalLabel = visible.length === 1 ? '1 move' : `${visible.length.toLocaleS
                       )}
                     </div>
 
-                    {hasSalaryCap && (
-                      <span class="tx__amount">{r.amount ?? <span class="tx__dash" title="Not recorded in the feed">—</span>}</span>
+                    {showAmounts && (
+                      <span class="tx__amount">{r.amount ?? <span class="tx__dash" title={dashTitle}>—</span>}</span>
                     )}
 
                     {/* Trades are excluded: MFL stamps by_commish on everything its
@@ -409,6 +483,16 @@ const totalLabel = visible.length === 1 ? '1 move' : `${visible.length.toLocaleS
       form.requestSubmit();
       for (const el of emptied) el.disabled = false;
     };
+
+    // A chosen team pins the division to its own (parseFilters), so changing
+    // the division has to let go of the team, or the new division is overridden
+    // and the select snaps back. Registered BEFORE the submit listeners below:
+    // listeners on one element run in registration order.
+    const division = form.querySelector<HTMLSelectElement>('select[name="division"]');
+    const team = form.querySelector<HTMLSelectElement>('select[name="team"]');
+    if (division && team) {
+      division.addEventListener('change', () => { team.value = ''; });
+    }
 
     for (const el of Array.from(form.querySelectorAll<HTMLElement>('select, input[type="checkbox"]'))) {
       el.addEventListener('change', submit);
@@ -587,6 +671,14 @@ const totalLabel = visible.length === 1 ? '1 move' : `${visible.length.toLocaleS
   }
   .tx__team { display: inline-flex; align-items: center; gap: 0.4rem; min-width: 0; }
   .tx__crest { width: 22px; height: 22px; object-fit: contain; flex: none; }
+  .tx__team-text { display: flex; flex-direction: column; min-width: 0; }
+  .tx__division {
+    font-size: var(--font-size-xs, 0.75rem);
+    color: var(--tx-ink-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   .tx__team-name {
     font-weight: 600;
     font-size: var(--font-size-sm, 0.875rem);

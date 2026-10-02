@@ -30,7 +30,11 @@ interface Props {
   schefterArticles?: SchefterPost[];
   /** Fallback permalink base for a rail article with no explicit link. */
   articleBasePath: string;
-  tipHref: string;
+  /**
+   * The tip form. Omitted for a league with no tips lane (`schefterTips`
+   * off), which drops the "Got a tip?" promo rather than linking a 404.
+   */
+  tipHref?: string;
 }
 
 const {
@@ -90,6 +94,7 @@ const pollGroupMe = isGroupMeTab && isAuthenticated;
 
     {isGroupMeTab && isAuthenticated && view.userFranchiseId && (
       <GroupMeChatPanel
+        personaSurname={view.labels.surname}
         client:visible
         teamName={userTeamName ?? 'My Team'}
         teamIcon={userTeamIcon ?? ''}
@@ -112,35 +117,37 @@ const pollGroupMe = isGroupMeTab && isAuthenticated;
         userTeamIcon={userTeamIcon}
         initialLimit={25}
         watching={view.watchingByPost}
-        emptyText={isWatchingTab ? view.emptyText : undefined}
+        emptyText={isWatchingTab ? view.emptyText : `No news yet. ${view.labels.surname} is on assignment.`}
       />
     </div>
   </div>
 
   <aside class="sf-news-rail" aria-label="Tip the beat reporter">
-    <a href={tipHref} class="sf-rail-promo">
-      <img
-        src="/assets/claude-schefter-avatar.webp"
-        alt=""
-        class="sf-rail-promo__avatar"
-        width="40"
-        height="40"
-        loading="lazy"
-      />
-      <div class="sf-rail-promo__body">
-        <div class="sf-rail-promo__title">Got a tip?</div>
-        <p class="sf-rail-promo__text">Drop anonymous intel to Claude Schefter. Rumors, roster gripes, bold predictions — he'll fold it in without naming names.</p>
-      </div>
-      <svg class="sf-rail-promo__arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <path d="M9 18l6-6-6-6"/>
-      </svg>
-    </a>
+    {tipHref && (
+      <a href={tipHref} class="sf-rail-promo">
+        <img
+          src={view.labels.avatar}
+          alt=""
+          class="sf-rail-promo__avatar"
+          width="40"
+          height="40"
+          loading="lazy"
+        />
+        <div class="sf-rail-promo__body">
+          <div class="sf-rail-promo__title">Got a tip?</div>
+          <p class="sf-rail-promo__text">Drop anonymous intel to {view.labels.name}. Rumors, roster gripes, bold predictions — {view.labels.surname} folds it in without naming names.</p>
+        </div>
+        <svg class="sf-rail-promo__arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M9 18l6-6-6-6"/>
+        </svg>
+      </a>
+    )}
 
     <slot name="rail" />
 
     {schefterArticles.length > 0 && (
-      <section class="sf-rail-section" aria-label="Featured articles from Claude Schefter">
-        <h2 class="sf-rail-section__title">From the Schefter Report</h2>
+      <section class="sf-rail-section" aria-label={`Featured articles from ${view.labels.name}`}>
+        <h2 class="sf-rail-section__title">From the {view.labels.reportShort}</h2>
         <ul class="sf-rail-articles">
           {schefterArticles.map((article: any) => (
             <li class="sf-rail-articles__item">

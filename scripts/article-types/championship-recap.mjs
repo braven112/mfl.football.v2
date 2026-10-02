@@ -118,9 +118,9 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
   return { factSheet: lines.join('\n'), enrichment: {} };
 }
 
-export function getSystemPrompt({ league = DEFAULT_LEAGUE_SLUG } = {}) {
+export function getSystemPrompt({ league = DEFAULT_LEAGUE_SLUG, persona } = {}) {
   return buildCachedSystem(`\n\nARTICLE TYPE: Championship Recap
-This is the biggest article of the year. Crown the champion with all the fanfare they deserve. Celebrate greatness — the MVP performances, the dynasty implications. This team just won the whole damn thing. Make it feel like a coronation. But also give the runner-up credit for getting there.`, { league });
+This is the biggest article of the year. Crown the champion with all the fanfare they deserve. Celebrate greatness — the MVP performances, the dynasty implications. This team just won the whole damn thing. Make it feel like a coronation. But also give the runner-up credit for getting there.`, { league, persona });
 }
 
 export function getUserPrompt(factSheet) {

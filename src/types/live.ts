@@ -188,6 +188,23 @@ export interface LivePanel {
    * nothing rather than as a row of zeros.
    */
   leaders?: LiveLeaders | null;
+  /**
+   * The league's divisions, for the board's division picker.
+   *
+   * Only a league whose matchup count outgrows one scroll carries these
+   * (`panelGroupsFor` — today Archie's, 99 franchises in nine divisions and 99
+   * games a week). `undefined` everywhere else, and a board without them
+   * renders exactly as it did before the picker existed. Static per league,
+   * so it rides the league board's own assembly rather than a second read.
+   */
+  groups?: LivePanelGroup[];
+}
+
+/** One division on a league board: a label and the franchises in it. */
+export interface LivePanelGroup {
+  id: string;
+  name: string;
+  franchiseIds: string[];
 }
 
 /**

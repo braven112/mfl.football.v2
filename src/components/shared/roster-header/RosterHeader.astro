@@ -66,7 +66,8 @@ interface Props {
   teamHref: (franchiseId: string) => string;
   /** Prefetch strategy for the crest links; see TeamDivisionRow. */
   prefetch?: false | 'tap' | 'hover' | 'viewport' | 'load';
-  scheduleHref: (week?: number) => string;
+  /** Null for a league with no schedule page (see GamedayBar). */
+  scheduleHref?: ((week?: number) => string) | null;
   /** When this week's lineups lock, in the viewer's clock; null if nothing to warn about. */
   lineupLock?: string | null;
   /**

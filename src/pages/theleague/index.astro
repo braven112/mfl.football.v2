@@ -7,6 +7,7 @@
  */
 export const prerender = false;
 
+import { getPersonaLabels } from '../../utils/persona-server';
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import SchefterFeedCompact from '../../components/shared/SchefterFeedCompact.astro';
 import SeasonDailyHero from '../../components/theleague/SeasonDailyHero.astro';
@@ -35,7 +36,8 @@ import { getLeagueBySlug, leagueClock } from '../../config/leagues';
 import { readInstallState } from '../../utils/app-install-state';
 import { resolveSchefterRail } from '../../utils/schefter-rail-view';
 import { resolveHeroFranchiseBackdrop } from '../../utils/hero-franchise-backdrop';
-import { resolveHeroState, parseTestDate, isAuctionStripPeriod, isEntryInHeroWindow } from '../../utils/hero-resolver';
+import { parseTestDate, isAuctionStripPeriod, isEntryInHeroWindow } from '../../utils/hero-resolver';
+import { resolveHeroState } from '../../utils/league-hero/season-state';
 import { getRelease } from '../../utils/schedule-release-store';
 import { getThrowbackPreference } from '../../utils/throwback-store';
 import { enrichHeroState, isDraftComplete, getRosteredPlayerIds, getAdpRankedIds, getFranchiseHeadliners, getFranchiseCompositableHeadliners, getKickoffGame, getWeekGameCandidates, selectBreakingStory } from '../../utils/offseason-hero-data';
@@ -872,6 +874,8 @@ if ((heroState.phase === 'playoffs' || heroState.phase === 'championship') && he
     }
   } catch { /* bracket data is best-effort */ }
 }
+// Owner-facing copy follows the league's persona (src/utils/persona.mjs).
+const labels = await getPersonaLabels('theleague');
 ---
 
 <TheLeagueLayout title="Home">
@@ -978,7 +982,7 @@ if ((heroState.phase === 'playoffs' || heroState.phase === 'championship') && he
       )}
     </section>
 
-    <aside class="hp2__sidebar" aria-label="Schefter Report feed" tabindex="0">
+    <aside class="hp2__sidebar" aria-label={`${labels.reportShort} feed`} tabindex="0">
       <SchefterFeedCompact
         posts={rail.posts}
         isAuthenticated={isAuthenticated}

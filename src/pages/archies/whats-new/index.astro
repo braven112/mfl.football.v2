@@ -1,0 +1,16 @@
+---
+/**
+ * What's New (Archie's) — thin route wrapper.
+ * Shared implementation lives in components/shared/whats-new/WhatsNewIndexPage.
+ */
+import WhatsNewIndexPage from '../../../components/shared/whats-new/WhatsNewIndexPage.astro';
+
+export const prerender = false;
+---
+
+<WhatsNewIndexPage
+  leagueSlug="archies"
+  title="What's New — Archie's"
+  subtitle="New features, improvements, and updates for Archie's Fantasy Football League."
+  emptyStateText="New features land here as they ship. Updates post every Monday."
+/>

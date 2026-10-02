@@ -19,7 +19,7 @@ What CI cannot catch is what review must stay pointed at, and only this:
 1. Does the fix actually fix the reported failure?
 2. Does it break something that currently works?
 3. Did the **sibling league page** drift? TheLeague and AFL have near-identical
-   pairs (`theleague/players.astro` / `afl-fantasy/players.astro`, both lineup
+   pairs (`theleague/players.astro` / `shared/free-agents/FreeAgentsPage.astro` (AFL + custom leagues), both lineup
    pages, both draft predictors). A fix applied to one and not the other is a
    recurring bug class here and is invisible in a diff that touches only one.
 

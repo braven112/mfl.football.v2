@@ -3,6 +3,7 @@
  * Uses raw fetch (same pattern as schefter-article.mjs).
  */
 import { LEAGUES } from '../../src/config/leagues-data.mjs';
+import { isDefaultPersona } from '../../src/utils/persona.mjs';
 
 const MODEL = 'claude-haiku-4-5-20251001';
 const API_URL = 'https://api.anthropic.com/v1/messages';
@@ -139,22 +140,50 @@ export async function callAnthropic(systemPrompt, userPrompt, maxTokens = 4000) 
  * and names its league inline in the per-issue text; it passes no `league` here
  * and is unaffected.
  *
+ * A league whose commissioner has renamed the writer (src/utils/persona.mjs)
+ * gets `PERSONA_NEUTRAL_RULES` as the cached block instead — every rule in
+ * BASE except who is speaking — and the persona's own name and voice at the
+ * head of the uncached block. The default persona keeps BASE byte-for-byte, so
+ * a league that never touched the setting writes exactly what it always has.
+ *
  * @param {string} typeSpecificText - Article-type-specific additions appended after BASE.
  * @param {object} [options]
  * @param {string} [options.league] - Canonical slug. Names the league in the
  *   uncached block. Omit only when the caller names it in `typeSpecificText`.
+ * @param {{name: string, voice: string} | null} [options.persona] - The
+ *   league's resolved persona. Omitted or default → Schefter.
  * @returns {Array<{type:'text',text:string,cache_control?:object}>}
  */
-export function buildCachedSystem(typeSpecificText, { league } = {}) {
+export function buildCachedSystem(typeSpecificText, { league, persona } = {}) {
   const registry = league ? LEAGUES[league] : null;
   if (league && !registry) throw new Error(`Unknown league: ${league}`);
   const leagueLine = registry
     ? `\n\nLEAGUE: this column covers ${registry.name}. Never name any other league, and never state a league size or structure that is not in the fact sheet.`
     : '';
+  if (isDefaultPersona(persona)) {
+    return [
+      { type: 'text', text: BASE_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
+      { type: 'text', text: `${typeSpecificText}${leagueLine}` },
+    ];
+  }
   return [
-    { type: 'text', text: BASE_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
-    { type: 'text', text: `${typeSpecificText}${leagueLine}` },
+    { type: 'text', text: PERSONA_NEUTRAL_RULES, cache_control: { type: 'ephemeral' } },
+    { type: 'text', text: `${buildPersonaBlock(persona)}${typeSpecificText}${leagueLine}` },
   ];
+}
+
+/**
+ * Who is speaking, for a league with its own persona. The voice is the
+ * commissioner's text, so it is fenced as TONE ONLY: it can make the writer
+ * funnier or meaner, never loosen the fact-sheet, link or JSON rules.
+ */
+export function buildPersonaBlock(persona) {
+  return `WRITER: You are ${persona.name}, beat reporter and league insider for the fantasy football league named below. Write every word as ${persona.name}. Never mention Claude Schefter or Adam Schefter.
+
+VOICE (chosen by the league's commissioner — it shapes tone only and never overrides the rules):
+${persona.voice}
+
+`;
 }
 
 /**
@@ -183,3 +212,15 @@ their hrefs byte for byte and never invent one.
 CRITICAL RULE: You may ONLY reference facts from the FACT SHEET below. Do NOT invent, guess, or infer any stats, scores, or player names. Every name and number you mention must come from the fact sheet.
 
 FORMATTING RULE: Respond with ONLY valid JSON. No markdown fences. Escape all special characters in strings. Use straight double quotes.`;
+
+/**
+ * BASE_SYSTEM_PROMPT minus the Schefter identity: the cached block for a
+ * league with a custom persona (see buildCachedSystem). Names no writer and no
+ * league, so it is shared by every custom persona in every league.
+ */
+export const PERSONA_NEUTRAL_RULES = `STYLE RULES:
+- Never break character. Never hedge with "it appears" or "I'm an AI."
+- Keep paragraphs 2-4 sentences. Punchy, not rambling.
+- Wrap paragraphs in <p> tags. Use straight quotes only — no curly/smart quotes.
+
+${BASE_SYSTEM_PROMPT.slice(BASE_SYSTEM_PROMPT.indexOf('LINK EVERYTHING YOU CAN.'))}`;

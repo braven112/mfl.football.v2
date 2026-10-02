@@ -600,6 +600,25 @@ that letterboxes to about 18×11 in an 18×18 slot. That is how it already
 renders in the header; it is not a bug, but do not expect it to fill a square
 next to icons that do.
 
+## Muted text in the player card
+
+Muted TEXT anywhere in `PlayerDetailsModal.astro` (unplayed weeks, byes,
+table headers, week numbers, status, and the card's labels, section titles and
+descriptions) uses
+`--content-text-muted`, never `--color-gray-300`/`400`/`500` and never
+`opacity`. (`--color-gray-600` and darker are body-strength text, not muted
+— 7.6:1 light, 5.8:1 on the default dark card — and stay legal.) Dark
+themes remap the gray scale: `--color-gray-300` becomes a navy one shade off
+the card, which made the whole upcoming schedule vanish in Oct 2026, and even
+`--color-gray-500` is only 4.4:1 on the default dark card. The semantic token
+clears AA in every theme. On a phone the long half of each header ("…onent",
+" vs QB") is visually hidden, not `display: none`, so a screen reader still
+hears the full header. The rest of the card used raw `--color-gray-400` for
+its labels until #1289 — 2.5:1 on the LIGHT card, so this is not a dark-only
+trap: measure a muted colour against white too. Guard:
+`tests/player-modal-season-results-contrast.test.ts` (table rules + a
+modal-wide scan).
+
 ## Overlays on a phone — size against `dvh`, never bare `vh`
 
 `vh` is the LARGE viewport: the page as it would be with the browser chrome
@@ -692,3 +711,18 @@ sibling pipeline rather than the crest one:
 draws the mark's bounding box, which on a transparent PNG is a white rectangle
 on a dark card — the exact thing the crest ring exists to avoid.
 
+
+## A package league's colour scheme is PALETTE → SEMANTIC, never literals
+
+A package league (registry `optInNav` + `logo`, e.g. `archies`) gets its scheme
+from `html[data-league="<slug>"]` in `tokens.css` and
+`html.dark[data-league="<slug>"]` in `tokens-dark.css`. Inside those blocks
+the only colour literals live on `--league-palette-*` lines; every semantic
+token (`--color-primary`, `--breadcrumb-bar-bg`, `--nav-*`, `--btn-primary-*`, …)
+is a `var()` of the palette, and tints come from `color-mix()` of it. The owner
+asked for this so the league can be recoloured to anything by editing the
+palette alone. Each block states the contrast its palette must keep.
+Components read semantic tokens only. The dark block RE-ASSERTS every semantic
+token, because the generic `html.dark` block loads after the light per-league
+one and would otherwise pin TheLeague's dark blues. Guard:
+`tests/league-palette-tokens.test.ts`.

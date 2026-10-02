@@ -292,6 +292,29 @@ which is exactly why the split exists — verify parsing offline against
   the fallback exists to remove; and an empty answer is never cached, for the
   reason every other never-cache-a-failure rule here exists. Guard:
   `tests/live-schedule-pairings.test.ts`.
+  **The fallback now lives in `loadLiveScoringPayload` too (2026-09-29),
+  and that is the copy that matters for a league we run.** The one above sits
+  in `cross-league-live.ts`, so only MFL Live got it; the league board, the
+  homepage live hero (`buildLiveScoringHeroProps`) and `/broadcast` all read
+  through `loadLiveScoringPayload` and would have told Archie's 99 owners they
+  had no game the moment `features.liveScoring` was flipped. A REGISTERED
+  league needs no owner cookie: `readRegisteredSchedulePairings` reads the
+  committed `mfl-feeds/<year>/schedule.json` first and a public
+  `TYPE=schedule&W=` only when the disk copy lacks the week. Same gates
+  (`ok`, `hasLiveSignal`, no pairings yet), same week check. The pairings ride
+  inside the 20s payload cache, so a poll costs nothing extra, and MFL Live's
+  cookie read no longer fires for a registered league (it arrives paired).
+  Guard: `tests/archies-live-scoring.test.ts`.
+- **A 99-matchup board gets a division picker; every other board is
+  unchanged.** `buildPanelGroups` (`utils/live/board-groups.ts`) stamps
+  `LivePanel.groups` only for a league whose config declares
+  `structure: 'divisions'` (Archie's). The stamp happens in
+  `assembleLeagueBoard`, which serves BOTH the page and the poll route. The
+  island replaces its board wholesale on every poll, so groups added at SSR
+  only would vanish on the first tick. The viewer's own games stay above the
+  chips and are never filtered. A division shows every game with a team FROM
+  it (a third of Archie's games cross divisions), and a stale or unknown pick
+  shows All rather than nothing.
 - **Every failed MFL read now says why, and one league-week is read once per
   20s.** Before that, timeout, refused connection, HTTP error, HTML-under-a-200
   and an MFL `error` key all collapsed into the same silent `ok: false` — the

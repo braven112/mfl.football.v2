@@ -108,7 +108,7 @@ describe('Brand Book — franchise and club namespaces', () => {
   }
 
   it('covers exactly the full-management leagues', () => {
-    expect(BRAND_BOOK_LEAGUES).toEqual(['theleague', 'afl-fantasy']);
+    expect(BRAND_BOOK_LEAGUES).toEqual(['theleague', 'afl-fantasy', 'archies']);
     // Best Ball is draft-only and carries no crest art. An empty book renders
     // the NFL half alone rather than throwing, which is why this is a flag
     // rather than a lookup that can fail.

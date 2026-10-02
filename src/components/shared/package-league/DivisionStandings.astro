@@ -1,0 +1,128 @@
+---
+/**
+ * Division standings for a package league — one card per division, rows in
+ * MFL's order (src/utils/package-league.ts never re-sorts; MFL's order already
+ * applies tiebreakers this site cannot reproduce).
+ *
+ * `compact` shows each division's top rows only, for the homepage.
+ */
+import type { DivisionStandings } from '../../../utils/package-league';
+
+interface Props {
+  groups: DivisionStandings[];
+  /** Prefix for a team's brand page link, e.g. '/archies/brand'. Omit for no links. */
+  teamHrefBase?: string;
+  /** Map franchiseId → brand-page slug, required with `teamHrefBase`. */
+  teamSlugs?: Record<string, string>;
+  /** Show only this many rows per division. */
+  compact?: number;
+  /** The viewer's franchise, highlighted when present. */
+  highlightFranchiseId?: string | null;
+  /** Whether the league sorts on victory points (shows the VP column). */
+  showVictoryPoints?: boolean;
+}
+
+const {
+  groups,
+  teamHrefBase,
+  teamSlugs = {},
+  compact,
+  highlightFranchiseId = null,
+  showVictoryPoints = true,
+} = Astro.props;
+
+const hrefFor = (id: string) =>
+  teamHrefBase && teamSlugs[id] ? `${teamHrefBase}/${teamSlugs[id]}` : null;
+const fmt = (n: number) => n.toFixed(2).replace(/\.00$/, '');
+---
+
+<div class:list={['pkg-standings', { 'pkg-standings--compact': !!compact }]}>
+  {groups.map((g) => {
+    const rows = compact ? g.rows.slice(0, compact) : g.rows;
+    return (
+      <section class="pkg-standings__division" aria-label={g.division.name}>
+        <h3 class="pkg-standings__title">{g.division.name}</h3>
+        <table class="pkg-standings__table">
+          <thead>
+            <tr>
+              <th scope="col" class="pkg-standings__num">#</th>
+              <th scope="col">Team</th>
+              <th scope="col" class="pkg-standings__num">W-L</th>
+              {showVictoryPoints && <th scope="col" class="pkg-standings__num" title="Victory points">VP</th>}
+              {!compact && <th scope="col" class="pkg-standings__num" title="Points for">PF</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => {
+              const href = hrefFor(r.franchiseId);
+              return (
+                <tr class:list={{ 'is-mine': r.franchiseId === highlightFranchiseId }}>
+                  <td class="pkg-standings__num">{r.place}</td>
+                  <td>
+                    <span class="pkg-standings__team">
+                      {r.icon && <img src={r.icon} alt="" width="24" height="24" loading="lazy" />}
+                      {href ? <a href={href}>{r.name}</a> : <span>{r.name}</span>}
+                    </span>
+                  </td>
+                  <td class="pkg-standings__num">{r.record}</td>
+                  {showVictoryPoints && <td class="pkg-standings__num">{r.victoryPoints ?? '—'}</td>}
+                  {!compact && <td class="pkg-standings__num">{fmt(r.pointsFor)}</td>}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </section>
+    );
+  })}
+</div>
+
+<style>
+  .pkg-standings {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+    gap: 1rem;
+  }
+  .pkg-standings__division {
+    background: var(--card-bg);
+    border: 1px solid var(--content-border);
+    border-radius: 12px;
+    padding: 0.75rem 0.9rem;
+    min-width: 0;
+  }
+  .pkg-standings__title {
+    margin: 0 0 0.5rem;
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--content-text-muted);
+  }
+  .pkg-standings__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--font-size-sm);
+    color: var(--page-text);
+  }
+  .pkg-standings__table th {
+    text-align: left;
+    font-size: var(--font-size-2xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--content-text-muted);
+    padding: 0.25rem 0.35rem;
+    border-bottom: 1px solid var(--content-border);
+  }
+  .pkg-standings__table td {
+    padding: 0.35rem;
+    border-bottom: 1px solid var(--content-border);
+  }
+  .pkg-standings__table tr:last-child td { border-bottom: none; }
+  .pkg-standings__num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .pkg-standings__table th.pkg-standings__num { text-align: right; }
+  .pkg-standings__team { display: inline-flex; align-items: center; gap: 0.45rem; min-width: 0; }
+  .pkg-standings__team img { border-radius: 6px; flex: none; }
+  .pkg-standings__team a { color: inherit; text-decoration: none; font-weight: 600; }
+  .pkg-standings__team a:hover { text-decoration: underline; }
+  .pkg-standings__table tr.is-mine td { background: var(--content-bg-muted); }
+</style>

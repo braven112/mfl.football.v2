@@ -20,6 +20,8 @@ const TYPING_NARRATION = [
 ];
 
 interface Props {
+  /** The league persona's name, for the AI reply's typing label. */
+  personaName?: string;
   postId: string;
   postHeadline: string;
   postAuthorId?: string;
@@ -47,6 +49,7 @@ const CHAT_ICON = (
 );
 
 export default function SchefterReplyThread({
+  personaName = 'Claude Schefter',
   postId,
   postHeadline,
   postAuthorId,
@@ -56,7 +59,7 @@ export default function SchefterReplyThread({
   userTeamIcon,
 }: Props) {
   const isRogerPost = postAuthorId === 'roger';
-  const defaultAiName = isRogerPost ? 'Ask Roger' : 'Claude Schefter';
+  const defaultAiName = isRogerPost ? 'Ask Roger' : personaName;
   const defaultAiAvatar = isRogerPost ? '/assets/commissioner-avatar.webp' : '/assets/claude-schefter-avatar.webp';
 
   const [replies, setReplies] = useState<SchefterReply[]>([]);

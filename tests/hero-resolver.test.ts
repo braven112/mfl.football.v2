@@ -2,9 +2,10 @@ import { describe, it, expect } from 'vitest';
 import {
   resolveHeroContent, isAuctionHeroPeriod, isAuctionLive, isAuctionStripPeriod,
   isDraftHeroPeriod, isDraftLive, getDraftStartFormatted,
-  resolveHeroState, isRegularSeason, isPlayoffPeriod, isChampionshipWeek,
+  isRegularSeason, isPlayoffPeriod, isChampionshipWeek,
   isTradeDeadlineDay, getDailySlot, parseTestDate,
 } from '../src/utils/hero-resolver';
+import { resolveHeroState } from '../src/utils/league-hero/season-state';
 import type { WhatsNewEntry } from '../src/types/whats-new';
 import type { WhatsNextTimeline, ResolvedLeagueEvent, LeagueEventDefinition } from '../src/types/league-events';
 

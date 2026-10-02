@@ -1,32 +1,46 @@
 ---
 /**
- * Free Agents (AFL) — thin route wrapper around the AFL-family players page
- * (components/afl-family/PlayersPage), shared with the custom-site demo's
- * keeper slot. The data imports stay HERE: a glob or import specifier cannot
- * be a runtime variable, and importing every league's snapshot in the shared
- * component would ship them all on every render.
+ * AFL Free Agents — thin route over the shared page every duplicate-player
+ * league renders (src/components/shared/free-agents/FreeAgentsPage.astro).
  *
- * SSR, not prerendered — see the component's notes (apex rewrites need an
- * SSR route; the derived snapshot keeps the function small).
+ * What stays here, and why: the snapshot import and the feed globs, because a
+ * static import specifier cannot be a runtime variable; and the conference
+ * crests, which only the AFL has.
+ *
+ * SSR, not prerendered: apex routing (www.afl-fantasy.com/players) rewrites
+ * only to routes registered in the SSR function. The snapshot is the ~0.4 MB
+ * output of scripts/compute-free-agents.mjs, not 24 years of feeds, so the
+ * function stays small (see the SSR note in the shared page).
  */
-import PlayersPage from '../../components/afl-family/PlayersPage.astro';
+import FreeAgentsPage, { type PoolLogo } from '../../components/shared/free-agents/FreeAgentsPage.astro';
 import freeAgentsData from '../../../data/afl-fantasy/derived/free-agents.json';
-import { getLeagueBySlug } from '../../config/leagues';
+import { isValidConferenceId, getConferenceLogo, getConferenceLogoDark } from '../../utils/afl-conference';
 
-// league.json is ~12 KB, so an era-filtered glob costs nothing (the megafile
-// guard in tests/current-era-feed-globs.test.ts is about players.json).
-const leagueFeedModules = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/20{2[5-9],[3-9][0-9]}/league.json', {
-  eager: true,
-});
-const calendarModules = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/20{2[5-9],[3-9][0-9]}/calendar.json', {
-  eager: true,
-});
+// league.json and calendar.json are ~12 KB each, so era-filtered eager globs
+// cost nothing (tests/current-era-feed-globs.test.ts is about players.json).
+const leagueModules = import.meta.glob(
+  '../../../data/afl-fantasy/mfl-feeds/20{2[5-9],[3-9][0-9]}/league.json',
+  { eager: true }
+);
+const calendarModules = import.meta.glob(
+  '../../../data/afl-fantasy/mfl-feeds/20{2[5-9],[3-9][0-9]}/calendar.json',
+  { eager: true }
+);
+
+// The crests exist only for the two real conference ids, so a feed that grew
+// a third still falls back to its name rather than requesting a 404 image.
+const poolLogos: Record<string, PoolLogo> = {};
+for (const id of freeAgentsData.conferences?.ids ?? []) {
+  if (isValidConferenceId(id)) poolLogos[id] = { src: getConferenceLogo(id), darkSrc: getConferenceLogoDark(id) };
+}
 ---
 
-<PlayersPage
-  league={getLeagueBySlug('afl-fantasy')!}
-  freeAgentsData={freeAgentsData}
-  leagueFeedModules={leagueFeedModules}
+<FreeAgentsPage
+  leagueSlug="afl-fantasy"
+  snapshot={freeAgentsData}
+  leagueModules={leagueModules}
   calendarModules={calendarModules}
-  logoSrc="/assets/logos/afl-logo.svg"
+  title="Free Agents | AFL"
+  poolLogos={poolLogos}
+  signInLogo={{ src: '/assets/logos/afl-logo.svg', alt: 'AFL logo' }}
 />

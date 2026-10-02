@@ -1,0 +1,14 @@
+---
+/**
+ * Archie's — full calendar. Thin route wrapper: the literal globs live here
+ * (static import specifiers cannot be runtime variables).
+ */
+import PackageCalendarPage from '../../components/shared/package-league/PackageCalendarPage.astro';
+
+export const prerender = false;
+
+const calendarFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/calendar.json');
+const playoffFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/playoff-brackets.json');
+---
+
+<PackageCalendarPage leagueSlug="archies" calendarFeeds={calendarFeeds} playoffFeeds={playoffFeeds} />

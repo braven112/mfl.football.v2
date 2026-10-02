@@ -133,15 +133,23 @@ export function isValidSchefterPostId(id: string): boolean {
 /** Post bodies carry a small allowlist of tags (<strong>, <em>, …) — strip
  *  them (plus their entities) for plain-text OG meta values. */
 function stripPostHtml(html: string): string {
-  return html
-    // Tags become a space, not '' — '</p><p>' boundaries must not glue
-    // sentences together; the \s+ collapse below re-normalizes.
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&amp;/g, '&')
+  // Tags become a space, not '' — '</p><p>' boundaries must not glue
+  // sentences together; the \s+ collapse below re-normalizes. Looped to a
+  // fixed point: one pass over `<<b>>` leaves a stray `<>` (CodeQL
+  // js/incomplete-multi-character-sanitization).
+  let text = html;
+  for (let previous = ''; previous !== text; ) {
+    previous = text;
+    text = text.replace(/<[^<>]*>/g, ' ');
+  }
+  // `&amp;` decodes LAST: decoding it first turns `&amp;lt;` into `<` — a
+  // double unescape (CodeQL js/double-escaping).
+  return text
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&#39;|&apos;/g, "'")
     .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, '&')
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -180,7 +188,7 @@ export function schefterPostOgText(
 export function buildSchefterPostOg(
   post: SchefterPost,
   pageUrl: URL,
-  league: 'theleague' | 'afl-fantasy' = 'theleague'
+  league: 'theleague' | 'afl-fantasy' | 'archies' = 'theleague'
 ): { title: string; description?: string; image: string; url: string } {
   const { title, description } = schefterPostOgText(post);
   const leagueQuery = league === 'theleague' ? '' : `?league=${league}`;

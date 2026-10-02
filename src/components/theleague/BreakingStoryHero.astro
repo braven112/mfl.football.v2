@@ -11,6 +11,7 @@
  * The router only mounts this when a compositable breaking story exists, so
  * there is no in-component fallback: no story, no hero.
  */
+import { getPersonaLabels } from '../../utils/persona-server';
 import type { HeroModel } from '../../utils/hero-casting';
 import type { BreakingStory } from '../../utils/offseason-hero-data';
 import { getNflTeamColors, getNflTeamNickname, hexToRgba } from '../../utils/nfl-team-colors';
@@ -58,6 +59,8 @@ const safeExternal =
 const ctaHref = rosterHref ?? safeExternal ?? r('/theleague/news');
 const ctaExternal = !rosterHref && !!safeExternal;
 const ctaLabel = rosterHref ? 'See the roster' : safeExternal ? 'Read the full story' : 'See the latest';
+// Owner-facing copy follows the league's persona (src/utils/persona.mjs).
+const labels = await getPersonaLabels('theleague');
 ---
 
 <section
@@ -83,7 +86,7 @@ const ctaLabel = rosterHref ? 'See the roster' : safeExternal ? 'Read the full s
 
   <div class="bsh__content">
     <p class="bsh__eyebrow">
-      <span class="bsh__tag">Schefter Report · Breaking</span>
+      <span class="bsh__tag">{labels.reportShort} · Breaking</span>
       <time class="bsh__time">{timeAgo}</time>
     </p>
     <h2 class="bsh__title">{story.headline}</h2>

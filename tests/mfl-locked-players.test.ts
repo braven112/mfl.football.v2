@@ -59,3 +59,11 @@ describe('mfl-locked-players', () => {
     expect(isPlayerLocked(dropLocksIn(locked, 'fcfs'), '0530', '00')).toBe(true);
   });
 });
+
+// Every page or route that reads MFL's lock list must gate it on the FCFS
+// window. The shared Free Agents page was extracted while the hotfix landed on
+// its predecessor, and a copy that reads the raw list refuses every waiver
+// claim in the league (#1280).
+// The call-site guard ("every lock reader gates on the waiver window") lives in
+// tests/mfl-locks-window-gate.test.ts: the raw reader is private now, and every
+// consumer must read through fetchDropLocks.

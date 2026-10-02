@@ -47,11 +47,11 @@ describe('the shared trade deadline hero', () => {
 
   for (const [name, path] of [
     ['SeasonDailyHero', 'src/components/theleague/SeasonDailyHero.astro'],
-    ['AflHero', 'src/components/afl/AflHero.astro'],
+    ['LeagueHero', 'src/components/shared/league-hero/LeagueHero.astro'],
   ] as const) {
     it(`${name} imports it from shared/ and passes an href`, () => {
       const src = read(path);
-      expect(src).toMatch(/from ['"][^'"]*shared\/TradeDeadlineHero['"]/);
+      expect(src).toMatch(/from ['"][^'"]*(shared|\.\.)\/TradeDeadlineHero['"]/);
       const tag = componentOpeningTag(src, 'TradeDeadlineHero');
       expect(tag, `${name} does not render <TradeDeadlineHero>`).not.toBeNull();
       expect(tag!).toMatch(/tradeBuilderHref=\{/);
@@ -65,8 +65,11 @@ describe('the shared trade deadline hero', () => {
     // registry rather than writing the directory into the component.
     expect(read('src/components/theleague/SeasonDailyHero.astro'))
       .toMatch(/tradeBuilderHref=\{resolveLeaguePath\('\/theleague\/front-office\/trade-builder'\)\}/);
-    const afl = read('src/components/afl/AflHero.astro');
-    expect(afl).toMatch(/ensureLeaguePrefix\(getLeagueBySlug\('afl-fantasy'\)!?, '\/front-office\/trade-builder'\)/);
+    // The shared hero (the AFL, and every league after it) builds the path
+    // from the registry entry and the league's own hero profile.
+    const shared = read('src/components/shared/league-hero/LeagueHero.astro');
+    expect(shared).toMatch(/ensureLeaguePrefix\(getLeagueBySlug\(league\)!?, profile\.facts\.tradeDeadline\.path\)/);
+    expect(read('src/utils/league-hero/profiles.ts')).toContain("path: '/front-office/trade-builder'");
   });
 });
 

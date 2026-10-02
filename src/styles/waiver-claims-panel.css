@@ -46,11 +46,11 @@ cursor: pointer;
 font-family: inherit;
 text-decoration: underline;
 }
-.wcp__toggle:hover { color: var(--league-accent, var(--color-primary, #1c497c)); }
+.wcp__toggle:hover { color: var(--league-accent-fg, var(--league-accent, var(--color-primary, #1c497c))); }
 /* Collapsed keeps the header — and the count on the button — so live claims are
    never hidden behind something with no way back. */
 .wcp--collapsed { padding-bottom: 0.9rem; }
-.wcp__mfl { font-size: var(--font-size-xs); color: var(--league-accent, var(--color-primary, #1c497c)); text-decoration: underline; }
+.wcp__mfl { font-size: var(--font-size-xs); color: var(--league-accent-fg, var(--league-accent, var(--color-primary, #1c497c))); text-decoration: underline; }
 .wcp__note { margin: 0.6rem 0 0; font-size: 0.78rem; }
 .wcp__note--ok { color: var(--content-text-muted, #6b7280); }
 .wcp__note--warn { color: var(--color-warning-dark, #b45309); }
@@ -72,7 +72,7 @@ text-decoration: underline;
   place-items: center;
   border-radius: 999px;
   background: var(--league-accent, var(--color-primary, #1c497c));
-  color: #fff;
+  color: var(--on-league-accent, #fff);
   font-size: 0.72rem;
   font-weight: 700;
 }
@@ -112,7 +112,7 @@ text-decoration: underline;
    owner scans for. Priority leagues never render it. */
 .wcp__bid {
   font-weight: 700;
-  color: var(--league-accent, var(--color-primary, #1c497c));
+  color: var(--league-accent-fg, var(--league-accent, var(--color-primary, #1c497c)));
 }
 .wcp__drop {
   padding-left: calc(var(--wcp-avatar) + var(--wcp-cell-gap));
@@ -126,7 +126,7 @@ text-decoration: underline;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  color: var(--league-accent, var(--color-primary, #1c497c));
+  color: var(--league-accent-fg, var(--league-accent, var(--color-primary, #1c497c)));
   background: none;
   border: 1px solid currentColor;
   border-radius: var(--radius-full, 999px);

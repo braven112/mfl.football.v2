@@ -532,7 +532,7 @@ describe('the crest row shows the clubs at full strength, in their own colour', 
 
   it('rings the viewed club in its own colour, never the accent', () => {
     const active = CSS.slice(CSS.indexOf("[aria-current='page'] img"));
-    const rules = active.slice(0, active.indexOf('.rhdr-teams__crest:focus-visible'));
+    const rules = active.slice(0, active.indexOf('.rhdr-teams__crest[data-mine'));
     expect(rules).toMatch(/--rhdr-ring/);
     expect(rules, '--color-accent is green here, same as a win on the rail above')
       .not.toContain('--color-accent');
@@ -758,7 +758,7 @@ describe('resolveHeaderSchedule', () => {
   });
 
   it('is what both roster pages call, with a null for a season off the live clock', () => {
-    for (const page of ['src/pages/theleague/rosters.astro', 'src/components/afl-family/RostersPage.astro']) {
+    for (const page of ['src/pages/theleague/rosters.astro', 'src/components/shared/rosters/RostersPage.astro']) {
       const src = fs.readFileSync(path.join(process.cwd(), page), 'utf-8');
       expect(src, `${page} must go through resolveHeaderSchedule`).toContain('resolveHeaderSchedule(');
       expect(src, `${page} must null the week off a live season`)

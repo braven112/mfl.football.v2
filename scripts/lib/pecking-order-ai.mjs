@@ -8,6 +8,7 @@
  */
 
 import { buildCachedSystem } from '../article-utils/ai-client.mjs';
+import { isDefaultPersona } from '../../src/utils/persona.mjs';
 
 // ─── Quality-gate constants ────────────────────────────────────────
 
@@ -44,18 +45,32 @@ const CURLY_QUOTE_RE = /[‘’“”]/;
  * @param {object} args.issue — partial issue (rankings + awards), pre-AI.
  * @param {Map<string, object>} args.teams — franchiseId → team config.
  * @param {string} [args.leagueName] — league this issue belongs to.
+ * @param {string} [args.leagueKind] — 'dynasty' (default) or 'redraft'.
+ * @param {string} [args.voiceName] — the league persona's name (default Schefter).
+ * @param {number|null} [args.topN] — write up only ranks 1..N (a big league).
  * @returns {string} Plaintext fact sheet.
  */
-export function buildFactSheet({ issue, teams, leagueName = 'TheLeague' }) {
+export function buildFactSheet({
+  issue,
+  teams,
+  leagueName = 'TheLeague',
+  leagueKind = 'dynasty',
+  voiceName = 'Claude Schefter',
+  topN = null,
+}) {
   const size = issue.rankings.length;
+  // A big league (archies: 99 teams) writes up only its top N; the sheet then
+  // carries only those rows, and only their names, so the prompt stays a size
+  // the model can answer in one call.
+  const rows = topN ? issue.rankings.filter((r) => r.rank <= topN) : issue.rankings;
   const lines = [];
   lines.push(`THE PECKING ORDER FACT SHEET — ${issue.year} Week ${issue.week}`);
   lines.push('');
-  lines.push(`League: ${leagueName} (${size} dynasty franchises). Voice: Claude Schefter.`);
+  lines.push(`League: ${leagueName} (${size} ${leagueKind} franchises). Voice: ${voiceName}.`);
   lines.push('');
 
   // ─ Rankings table ─
-  lines.push(`=== RANKINGS (1-${size}) ===`);
+  lines.push(topN ? `=== RANKINGS (top ${rows.length} of ${size}) ===` : `=== RANKINGS (1-${size}) ===`);
   lines.push('Ranking formula: 50% all-play record + 50% last-3-weeks scoring. Season PPG is context only.');
   // The blurb key is on every row because the response is keyed by franchiseId
   // and nothing else in the sheet carries one. Without it the model invents
@@ -63,7 +78,7 @@ export function buildFactSheet({ issue, teams, leagueName = 'TheLeague' }) {
   // and the whole column silently falls back to templated voice — which is
   // exactly what shipped from launch until 2026-08-14.
   lines.push('Format: rank | team | trend | all-play % | rolling-3wk record | rolling-3wk PPG | streak | season PPG | blurb key');
-  for (const r of issue.rankings) {
+  for (const r of rows) {
     const team = teams.get(r.franchiseId);
     const name = team?.nameMedium ?? team?.name ?? r.franchiseId;
     const trend = r.previousRank == null
@@ -86,7 +101,10 @@ export function buildFactSheet({ issue, teams, leagueName = 'TheLeague' }) {
   lines.push('');
 
   // ─ Awards (deterministic context) ─
-  lines.push('=== WEEKLY AWARDS (deterministic data — re-voice in Schefter style) ===');
+  // The writer's surname ("Schefter" for the default persona, so the default
+  // sheet is unchanged).
+  const voiceSurname = voiceName.trim().split(/\s+/).pop() || voiceName;
+  lines.push(`=== WEEKLY AWARDS (deterministic data — re-voice in ${voiceSurname} style) ===`);
   for (const [key, card] of Object.entries(issue.awards || {})) {
     if (!card) continue;
     const fid = card.franchiseId ?? card.homeId;
@@ -101,7 +119,17 @@ export function buildFactSheet({ issue, teams, leagueName = 'TheLeague' }) {
 
   // ─ Allowed name tokens (helps the model not invent) ─
   lines.push('=== ALLOWED FRANCHISE NAME TOKENS ===');
-  for (const [fid, t] of teams) {
+  // With a top-N cut, only the teams the sheet actually mentions: the ranked
+  // rows plus every award's teams (an award can go to a team outside the top N).
+  let named = teams;
+  if (topN) {
+    const ids = new Set(rows.map((r) => r.franchiseId));
+    for (const card of Object.values(issue.awards || {})) {
+      for (const id of [card?.franchiseId, card?.homeId, card?.awayId]) if (id) ids.add(id);
+    }
+    named = new Map([...teams].filter(([fid]) => ids.has(fid)));
+  }
+  for (const [fid, t] of named) {
     const aliases = (t.aliases || []).join(', ');
     lines.push(`- [${fid}] ${t.name} (also: ${[t.nameMedium, t.nameShort, t.abbrev, aliases].filter(Boolean).join(', ')})`);
   }
@@ -140,10 +168,25 @@ LENGTH
  * reporter and is deliberately left alone — it is the cache-eligible half of the
  * system prompt. The league gets named in the per-issue half instead, so an AFL
  * issue can't inherit the wrong league's name in its copy.
+ *
+ * @param {string} [leagueName]
+ * @param {{ persona?: { name: string, voice: string, avatarUrl?: string } | null, topN?: number | null }} [options]
  */
-export function getSystemPrompt(leagueName = 'TheLeague') {
+export function getSystemPrompt(leagueName = 'TheLeague', { persona = null, topN = null } = {}) {
+  // A renamed writer (src/utils/persona.mjs) must not be told to write "in
+  // Schefter voice": buildCachedSystem supplies the persona's own voice, so the
+  // Schefter lines come out. The default persona keeps the text byte-for-byte.
+  const typeText = isDefaultPersona(persona)
+    ? TYPE_SPECIFIC_PROMPT
+    : TYPE_SPECIFIC_PROMPT
+        .replace(' in Schefter voice.', " in the writer's voice.")
+        .replace(/\n- Schefter: confident[^\n]*/, '\n- Confident, punchy, opinionated, in the voice described above.');
+  const topNText = topN
+    ? `\n\nTOP ${topN} ONLY: the league is too big to write up every team. The rankings table lists only the top ${topN}; write blurbs for exactly those rows and never mention a team's rank outside them.`
+    : '';
   return buildCachedSystem(
-    `${TYPE_SPECIFIC_PROMPT}\n\nLEAGUE: this issue covers ${leagueName}. Never name any other league.`,
+    `${typeText}${topNText}\n\nLEAGUE: this issue covers ${leagueName}. Never name any other league.`,
+    { persona },
   );
 }
 

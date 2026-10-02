@@ -93,7 +93,7 @@ Cost: ~17 extra calls per league per day, inside a job that already makes 17.
 
 ### Derived payload — do NOT glob this from the page
 
-Follow `scripts/compute-afl-free-agents.mjs` exactly. That script exists
+Follow `scripts/compute-free-agents.mjs` exactly. That script exists
 because an SSR page that eager-globs multi-year feeds bundles them into the
 shared `_render` serverless function, which already runs near Vercel's 250 MB
 limit. `/top-players` is SSR for the same apex-rewrite reason `/players` is.
@@ -107,7 +107,7 @@ Reads: `player-scores-weekly.json`, `players.json`, `rosters.json`,
 `fantasyPointsAllowed.json`. Emits finished rows — id, name, position, NFL
 team, weeks[], total, avg, games, posRank, overallRank, owner(s) — plus the
 week range and a `generatedAt`. Wired into `scripts/prebuild.mjs` with
-`previewSkip: true`, alongside `compute:afl-free-agents`.
+`previewSkip: true`, alongside `compute:free-agents`.
 
 Writes go through the repo's canonical JSON writer (sorted keys, stable array
 order) — MFL returns arrays nondeterministically and a plain `writeFileSync`

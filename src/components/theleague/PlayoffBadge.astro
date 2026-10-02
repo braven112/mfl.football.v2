@@ -1,6 +1,7 @@
 ---
 export interface Props {
-  status: 'division_winner' | 'wild_card' | null;
+  /** runner_up: a division's second seed — MAD POWER 99 (archies) only. */
+  status: 'division_winner' | 'runner_up' | 'wild_card' | null;
   seed?: number;
 }
 
@@ -10,6 +11,13 @@ const { status, seed } = Astro.props;
 {status === 'division_winner' && (
   <div class="badge badge-division-winner" title="Division Winner">
     <span class="badge-label">DIV</span>
+    {seed && <span class="badge-seed">#{seed}</span>}
+  </div>
+)}
+
+{status === 'runner_up' && (
+  <div class="badge badge-runner-up" title="Division Runner-Up">
+    <span class="badge-label">2ND</span>
     {seed && <span class="badge-seed">#{seed}</span>}
   </div>
 )}
@@ -37,6 +45,15 @@ const { status, seed } = Astro.props;
     background-color: #ffd700;
     color: #1a1a1a;
     box-shadow: 0 2px 4px rgba(255, 215, 0, 0.3);
+  }
+
+  /* The league's primary, which every league redefines for dark mode — so
+     the pill stays legible on both grounds without its own dark rule. */
+  .badge-runner-up {
+    background-color: color-mix(in srgb, var(--color-primary, #3b82f6) 30%, transparent);
+    outline: 1px solid var(--color-primary, #3b82f6);
+    outline-offset: -1px;
+    color: var(--page-text, #1a1a1a);
   }
 
   .badge-wild-card {

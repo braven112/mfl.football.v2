@@ -67,12 +67,17 @@ const AFL_DIRS = [
 ];
 
 /**
- * AFL-only files that live outside those trees. `afl-hero-resolver.ts` sits in
- * src/utils/ and emits `accentColor` strings straight into the AFL homepage
- * hero — it shipped `var(--color-secondary)` for the What's New hero. A
- * directory-shaped guard misses it, so name it explicitly.
+ * Files outside those trees that render on the AFL. The shared league hero
+ * (src/utils/league-hero/) emits `accentColor` strings straight into the AFL
+ * homepage hero — its AFL predecessor shipped `var(--color-secondary)` for the
+ * What's New hero. A directory-shaped guard misses it, so name them.
  */
-const AFL_FILES = [path.join(SRC, 'utils', 'afl-hero-resolver.ts')];
+const AFL_FILES = [
+  path.join(SRC, 'utils', 'league-hero', 'views.ts'),
+  path.join(SRC, 'utils', 'league-hero', 'resolver.ts'),
+  path.join(SRC, 'utils', 'league-hero', 'profiles.ts'),
+  path.join(SRC, 'components', 'shared', 'league-hero', 'LeagueHero.astro'),
+];
 
 /**
  * SHARED stylesheets that AFL pages import. A green here renders on the AFL
@@ -147,7 +152,7 @@ const ALLOWLIST = new Map<string, string>([
       'in an applied rule.',
   ],
   [
-    'utils/afl-hero-resolver.ts:#2e8743',
+    'utils/league-hero/views.ts:#2e8743',
     'Two categorical uses, neither brand voice. ACCENT_GREEN is one entry in ' +
       'the AFL hero MOOD palette (gold / red / green / amber / steel), raw ' +
       'strings by design because they flow into --ev-accent as inline custom ' +
@@ -157,7 +162,7 @@ const ALLOWLIST = new Map<string, string>([
       'What\'s New hero accent, now --league-accent.',
   ],
   [
-    'components/afl-family/PlayersPage.astro:#4ade80',
+    'components/shared/free-agents/FreeAgentsPage.astro:#4ade80',
     'Conference tag chip. Its own light/dark pair (#15803d / #4ade80) rather ' +
       'than a --color-secondary reference, and it is a categorical tag color, ' +
       'not brand voice. Recoloring it is a separate AL/NL design question.',

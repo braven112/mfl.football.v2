@@ -55,8 +55,42 @@ function everyFranchise(): Array<{ league: string; name: string; nameShort?: str
   return out;
 }
 
+/**
+ * Franchises whose name IS an NFL club, on purpose — not a false positive.
+ *
+ * Archie's league (10105) names teams after mascots, and seven of them are
+ * exactly an NFL nickname. The matcher is right that "Lions" is DET; it is
+ * never CONSULTED for them: the NFL-name fallback is an MFL Live feature for
+ * leagues this site does NOT run, and a custom (registered) league always
+ * draws its own marks. (Belt and braces: rung 2 is also skipped for any league
+ * with uploaded marks, `leagueHasUploadedMarks` in mfl-live-board.ts.) Listed
+ * by hand so the next one is a decision: a name that matches and is not here
+ * still fails.
+ */
+const NAMED_FOR_THE_CLUB = new Set([
+  'archies:Lions',
+  'archies:Eagles',
+  'archies:Bears',
+  'archies:Chargers',
+  'archies:Saints',
+  'archies:Vikings',
+  'archies:Rams',
+]);
+const isNamedForTheClub = (f: { league: string; name: string }) =>
+  NAMED_FOR_THE_CLUB.has(`${f.league}:${f.name}`);
+
 describe('NFL name match — the zero-false-positive property', () => {
-  const franchises = everyFranchise();
+  const franchises = everyFranchise().filter((f) => !isNamedForTheClub(f));
+
+  it('every NAMED_FOR_THE_CLUB entry still exists and still matches', () => {
+    // A stale entry would quietly exempt whatever franchise takes the name next.
+    const all = everyFranchise();
+    for (const key of NAMED_FOR_THE_CLUB) {
+      const f = all.find((x) => `${x.league}:${x.name}` === key);
+      expect(f, `${key} is no longer a franchise — drop it from the list`).toBeTruthy();
+      expect(matchNflTeamName(f!.name), `${key} no longer matches — drop it`).not.toBeNull();
+    }
+  });
 
   it('reads franchise names from every league in the registry', () => {
     // If this drops to nothing the assertion below passes vacuously, which
@@ -91,7 +125,7 @@ describe('NFL name match — only the FULL name is a valid input', () => {
    * So the hazard is pinned as a POSITIVE assertion — these forms really do
    * match, which is exactly why nothing may feed them to the matcher.
    */
-  const franchises = everyFranchise();
+  const franchises = everyFranchise().filter((f) => !isNamedForTheClub(f));
 
   it('the short forms of a real franchise DO match, which is the trap', () => {
     const boondock = franchises.find((f) => f.name === 'The Boondock Saints');

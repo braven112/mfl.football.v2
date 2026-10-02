@@ -31,7 +31,7 @@
  */
 
 /** The `data-league` attribute value a surface renders under. */
-export type LiveSurface = 'theleague' | 'afl' | 'bb1' | 'mfl';
+export type LiveSurface = 'theleague' | 'afl' | 'bb1' | 'archies' | 'mfl';
 
 export interface SurfaceGrounds {
   /** `--card-surface` in the light theme. */
@@ -42,13 +42,14 @@ export interface SurfaceGrounds {
 
 /**
  * Light is `--color-white` for every league — no league overrides it.
- * Dark is per league, and `bb1` deliberately shares the bare `html.dark`
- * value because its own block does not override `--card-surface`.
+ * Dark is per league, and `bb1` and `archies` deliberately share the bare
+ * `html.dark` value because neither overrides `--card-surface`.
  */
 export const SURFACE_GROUNDS: Record<LiveSurface, SurfaceGrounds> = {
   theleague: { light: '#ffffff', dark: '#262626' },
   afl: { light: '#ffffff', dark: '#16283c' },
   bb1: { light: '#ffffff', dark: '#262626' },
+  archies: { light: '#ffffff', dark: '#262626' },
   mfl: { light: '#ffffff', dark: '#1e2126' },
 };
 
@@ -61,6 +62,7 @@ const SLUG_TO_SURFACE: Record<string, LiveSurface> = {
   theleague: 'theleague',
   'afl-fantasy': 'afl',
   'best-ball-1': 'bb1',
+  archies: 'archies',
 };
 
 /** The surface a league's own live-scoring page draws on. */

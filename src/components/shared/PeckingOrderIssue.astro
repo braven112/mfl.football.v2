@@ -15,8 +15,12 @@
  * collide across leagues, which is also why the accent tokens are scoped by
  * `data-league` rather than resolved here).
  */
+import { getPersonaLabels } from '../../utils/persona-server';
 import theleagueConfig from '../../data/theleague.config.json';
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
+import archiesConfig from '../../../data/archies/archies.config.json';
+import { getLeagueByNavSlug } from '../../config/leagues';
+import { franchiseSlug } from '../../utils/franchise-marks';
 import type { LeagueSlug } from '../../types/nav';
 import { teamAccentVar } from '../../utils/team-accent-css';
 import { getLeaguePrefix, resolveLeaguePath } from '../../utils/nav-utils';
@@ -98,6 +102,12 @@ export interface PeckingOrderData {
     divisions: { name: string; conference?: string; teams: StandingsTeamRow[] }[];
     allPlay: { franchiseId: string; name: string; nameMedium: string; abbrev: string; division: string; allPlayPct: number; allPlayWLT: string; pf: number }[];
   };
+  /**
+   * A big league's cut (registry `peckingOrder.topN`): only rows ranked 1..N
+   * carry a blurb and render as cards; every team still appears, ranked, in
+   * its division list.
+   */
+  topN?: number;
 }
 
 export interface Props {
@@ -117,6 +127,7 @@ export interface Props {
 const CONFIGS: Partial<Record<LeagueSlug, { teams: any[] }>> = {
   theleague: theleagueConfig as any,
   afl: aflConfig as any,
+  archies: archiesConfig as any,
 };
 
 /**
@@ -129,6 +140,7 @@ const CONFIGS: Partial<Record<LeagueSlug, { teams: any[] }>> = {
 const ISSUE_SLUG_TO_NAV: Record<string, LeagueSlug> = {
   theleague: 'theleague',
   'afl-fantasy': 'afl',
+  archies: 'archies',
 };
 
 const { issue, league: leagueProp, variant = 'live' } = Astro.props as Props;
@@ -147,8 +159,15 @@ for (const t of (CONFIGS[league] ?? theleagueConfig as any).teams) {
 // league's own apex host the prefix is redundant and gets stripped, same as
 // Breadcrumbs does.
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
-const franchiseHref = (franchiseId: string) =>
-  resolveLeaguePath(`${getLeaguePrefix(league)}/franchises/${franchiseId}`, hideLeaguePrefix);
+// A package league has no franchise pages; its team page is the brand book's.
+const leagueDef = getLeagueByNavSlug(league);
+const isPackageLeague = !!(leagueDef.optInNav && leagueDef.logo);
+const franchiseHref = (franchiseId: string) => {
+  const team = teams.get(franchiseId);
+  return isPackageLeague && team
+    ? resolveLeaguePath(`/${leagueDef.slug}/brand/${franchiseSlug(team)}`, hideLeaguePrefix)
+    : resolveLeaguePath(`${getLeaguePrefix(league)}/franchises/${franchiseId}`, hideLeaguePrefix);
+};
 
 /**
  * Brand accent for a card — the site-wide franchise token, not the raw config
@@ -210,6 +229,27 @@ const orderedAwards: { key: string; card: AwardCard | null }[] = [
 // (scripts/lib/pecking-order-math.mjs) for issues written before that field.
 const methodology = issue.methodology
   ?? '50% all-play record · 50% last 3 weeks (rolling-3wk PPG)';
+// Owner-facing copy follows the league's persona (src/utils/persona.mjs).
+const labels = await getPersonaLabels(leagueDef.slug);
+
+// ── Top-N cut (a 99-team league) ────────────────────────────────────────────
+const featured = issue.topN ? issue.rankings.filter((r) => r.rank <= issue.topN!) : issue.rankings;
+const rankOf = new Map(issue.rankings.map((r) => [r.franchiseId, r]));
+const recordOf = new Map(
+  (issue.standings?.divisions ?? []).flatMap((d) => d.teams.map((t) => [t.franchiseId, t] as const)),
+);
+// Every division's teams in PECKING ORDER (not standings order): the column's
+// verdict, compactly, for the teams outside the top N.
+const divisionOrder: { name: string; rows: { place: number; row: PeckingOrderData['rankings'][number] }[] }[] = issue.topN
+  ? (issue.standings?.divisions ?? []).map((d) => ({
+      name: d.name,
+      rows: d.teams
+        .map((t) => rankOf.get(t.franchiseId))
+        .filter((r): r is PeckingOrderData['rankings'][number] => !!r)
+        .sort((a, b) => a.rank - b.rank)
+        .map((row, i) => ({ place: i + 1, row })),
+    }))
+  : [];
 ---
 
 <article class="pr-issue">
@@ -229,21 +269,21 @@ const methodology = issue.methodology
     <p class="pr-hero__lede">{issue.lede}</p>
   </header>
 
-  <section class="pr-section" aria-label={`The Pecking Order 1-${issue.rankings.length}`}>
+  <section class="pr-section" aria-label={`The Pecking Order 1-${featured.length}`}>
     <h2 class="pr-section__title pr-section__title--brand">
       <img
         class="pr-section__avatar"
-        src="/assets/claude-schefter-avatar.webp"
+        src={labels.avatar}
         alt=""
         aria-hidden="true"
         width="36"
         height="36"
         loading="lazy"
       />
-      <span>The Pecking Order</span>
+      <span>{issue.topN ? `The Pecking Order · Top ${featured.length} of ${issue.rankings.length}` : 'The Pecking Order'}</span>
     </h2>
     <ol class="pr-rankings">
-      {issue.rankings.map(row => {
+      {featured.map(row => {
         const team = teams.get(row.franchiseId);
         return (
           <li class="pr-card" style={accentStyle(row.franchiseId)}>
@@ -324,7 +364,50 @@ const methodology = issue.methodology
     </div>
   </section>
 
-  {issue.standings && (
+  {issue.topN && divisionOrder.length > 0 && (
+    <section class="pr-section" aria-label="Pecking order by division">
+      <h2 class="pr-section__title">By division</h2>
+      <p class="pr-section__note">Every team, in pecking order within its division. # is the league-wide rank.</p>
+      <div class="pr-divs">
+        {divisionOrder.map((d) => (
+          <div class="pr-table-block">
+            <h3 class="pr-table-block__title">{d.name}</h3>
+            <div class="pr-table-wrap">
+              <table class="pr-table">
+                <thead>
+                  <tr><th>Div</th><th class="pr-table__team">Team</th><th>#</th><th>W-L</th><th>L3 PPG</th></tr>
+                </thead>
+                <tbody>
+                  {d.rows.map(({ place, row }) => {
+                    const team = teams.get(row.franchiseId);
+                    const rec = recordOf.get(row.franchiseId);
+                    return (
+                      <tr>
+                        <td>{place}</td>
+                        <td class="pr-table__team">
+                          <a href={franchiseHref(row.franchiseId)}>{team?.nameMedium ?? team?.name ?? row.franchiseId}</a>
+                        </td>
+                        <td>
+                          {row.rank}
+                          {row.previousRank != null && row.trend !== 'flat' && (
+                            <span class={`pr-card__trend--${row.trend}`}> {trendGlyph(row.trend)}</span>
+                          )}
+                        </td>
+                        <td>{rec ? `${rec.wins}-${rec.losses}${rec.ties ? `-${rec.ties}` : ''}` : '—'}</td>
+                        <td>{row.metrics.rolling3Ppg != null ? row.metrics.rolling3Ppg.toFixed(1) : '—'}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  )}
+
+  {issue.standings && !issue.topN && (
     <section class="pr-section" aria-label="Standings snapshot">
       <h2 class="pr-section__title">Standings Snapshot</h2>
       <div class="pr-standings">
@@ -383,7 +466,7 @@ const methodology = issue.methodology
   <footer class="pr-footnote">
     <p>
       Composite score: {methodology}. Rankings and awards are computed from the
-      week's final MFL feeds; commentary is Claude Schefter's.
+      week's final MFL feeds; commentary is {labels.name}'s.
     </p>
   </footer>
 </article>
@@ -604,6 +687,21 @@ const methodology = issue.methodology
   font-size: 0.85rem;
   line-height: 1.4;
   color: var(--content-text-muted, #4b5563);
+}
+
+/* A top-N league's division lists: as many columns as fit. */
+.pr-divs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: 1.25rem;
+  align-items: start;
+}
+.pr-divs .pr-table th.pr-table__team,
+.pr-divs .pr-table td.pr-table__team { text-align: left; }
+.pr-section__note {
+  margin: -0.25rem 0 1rem;
+  font-size: var(--font-size-sm);
+  color: var(--content-text-muted);
 }
 
 .pr-standings {

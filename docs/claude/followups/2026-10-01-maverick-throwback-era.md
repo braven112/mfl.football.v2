@@ -8,7 +8,7 @@ hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1282
 hotfix_sha: 5f996db
 followup_issue: 1286
 followup_pr: https://github.com/braven112/mfl.football.v2/pull/1290
-followup_session:
+followup_session: session_013b2UiPMfxzAxiBWw9epdCW
 ---
 
 # Follow-up: Maverick's 2016–2024 era art, and the Throwback default

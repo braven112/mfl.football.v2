@@ -28,12 +28,12 @@
  */
 
 import { getLeagueBySlug, leagueClock } from '../config/leagues';
+import { getLeagueTeamConfigs } from './league-team-brands';
 import {
   getConferenceName,
   getConferenceTeams,
   getFranchiseConference,
 } from './afl-conference';
-import theLeagueConfig from '../data/theleague.config.json';
 import { leagueUsesWaiverPriority } from './waiver-system';
 import type { WaiverPriorityRenderTeam } from './waiver-priority-render';
 import type { LeagueClock } from './viewer-preferences';
@@ -125,12 +125,15 @@ export function buildTransactionHubConfig(
     };
   }
 
-  // TheLeague: one pool, no conference split, so the whole league is the line.
+  // Every other league: one line, the whole league — read from THIS league's
+  // config. It used to fall through to TheLeague's for any non-AFL league, so
+  // an Archie's or keeper-demo owner saw TheLeague's franchises in their hub.
+  const leagueTeams = getLeagueTeamConfigs(leagueSlug);
   return {
     signedIn: true,
     franchiseId,
     conferenceName: '',
-    teams: (theLeagueConfig.teams ?? []).map((t: any) => ({
+    teams: (leagueTeams ?? []).map((t: any) => ({
       franchiseId: t.franchiseId,
       name: t.nameMedium || t.name,
       icon: t.icon,

@@ -22,7 +22,7 @@ import path from 'node:path';
 /** Pages whose client scripts render list content — the costly place to fail. */
 const PAGES = [
   'src/pages/theleague/players.astro',
-  'src/components/afl-family/PlayersPage.astro',
+  'src/components/shared/free-agents/FreeAgentsPage.astro',
 ];
 
 /** Extract `{{ a, b, c: d }}` keys from a define:vars attribute. */

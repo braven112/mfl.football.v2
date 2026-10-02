@@ -1,0 +1,97 @@
+---
+/**
+ * One news article — the shared body for a league's /news/[id] route.
+ *
+ * Extracted from the AFL's route for the package leagues (archies first). The
+ * ROUTE still finds the post and redirects when it is missing, and must:
+ * `Astro.redirect()` only redirects from a page, and the feed + glob imports
+ * are static specifiers that cannot be runtime variables.
+ */
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../theleague/Breadcrumbs.astro';
+import SchefterReactionBar from './SchefterReactionBar.tsx';
+import GauntletArticleSection from './schedule-strength/GauntletArticleSection.astro';
+import { resolveLeaguePath } from '../../utils/nav-utils';
+import { getLeagueBySlug, type CanonicalLeagueSlug } from '../../config/leagues';
+import type { SchefterPost } from '../../types/schefter';
+import { getAuthor, getAuthorAvatar } from '../../types/schefter';
+import { postByline } from '../../utils/persona-server';
+import type { GauntletDerived } from '../../utils/schedule-strength';
+import '../../styles/schefter-feed.css';
+
+interface Props {
+  leagueSlug: CanonicalLeagueSlug;
+  post: SchefterPost;
+  gauntletFiles: Record<string, () => Promise<GauntletDerived>>;
+  teams: Array<{ franchiseId: string; name: string; [k: string]: unknown }>;
+}
+
+const { leagueSlug, post, gauntletFiles, teams } = Astro.props;
+// The byline is the league's persona when it wrote the piece (src/utils/persona.mjs).
+const baseAuthor = getAuthor(post.authorId);
+const byline = await postByline({ league: getLeagueBySlug(leagueSlug)?.navSlug }, baseAuthor, getAuthorAvatar(baseAuthor));
+const league = getLeagueBySlug(leagueSlug)!;
+const base = `/${league.slug}`;
+const r = (path: string) => resolveLeaguePath(path, Astro.locals.hideLeaguePrefix ?? false);
+const imagePath = post.image ? `/assets/schefter/${post.image}` : null;
+const formattedDate = new Date(post.timestamp).toLocaleDateString('en-US', {
+  year: 'numeric', month: 'long', day: 'numeric',
+});
+---
+
+<TheLeagueLayout title={`${post.headline} — ${league.name} News`}>
+  <div class="sf-article">
+    <Breadcrumbs items={[
+      { label: league.name, href: base },
+      { label: 'News', href: `${base}/news` },
+      { label: post.headline },
+    ]} />
+
+    <div class="sf-article__card">
+      {imagePath && (
+        <div class="sf-article__hero-wrap">
+          <img src={imagePath} alt={post.imageAlt ?? post.headline} class="sf-article__hero-img" loading="eager" />
+        </div>
+      )}
+
+      <div class="sf-article__header">
+        <div class="sf-article__meta">
+          <span class="sf-article__badge">Article</span>
+          <span class="sf-article__meta-dot" aria-hidden="true"></span>
+          <time class="sf-article__date" datetime={post.timestamp}>{formattedDate}</time>
+        </div>
+        <h1 class="sf-article__title">{post.headline}</h1>
+        <div class="sf-article__author">
+          <img class="sf-article__author-avatar" src={byline.avatar} alt="" aria-hidden="true" width="32" height="32" />
+          <div>
+            <span class="sf-article__author-name">{byline.name}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="sf-article__body">
+        {post.content?.map((paragraph) => <p set:html={paragraph} />)}
+      </div>
+
+      <GauntletArticleSection
+        gauntletRef={post.scheduleStrength}
+        files={gauntletFiles}
+        teams={teams}
+        baseUrl={base}
+        dashboardHref={r(`${base}/schedule-strength`)}
+      />
+
+      <div class="sf-article__reactions">
+        <SchefterReactionBar client:visible postId={post.id} isAuthenticated={false} />
+      </div>
+
+      <div class="sf-article__footer">
+        <a href={r(`${base}/news`)} class="sf-article__footer-link">← More league news</a>
+      </div>
+    </div>
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .sf-article { max-width: 40rem; margin: 0 auto; padding: 1rem 0; }
+</style>

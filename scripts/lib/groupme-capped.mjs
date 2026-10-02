@@ -80,6 +80,10 @@ export async function postToGroupMeCapped({
   dryRun = false,
   now = new Date(),
   log = console,
+  // The sender behind the cap. GroupMe by default; a Slack league passes
+  // `slackSenderFor(league)` (scripts/lib/chat.mjs) so its channel gets the
+  // same one-post-a-day plan without a second copy of the cap.
+  send = postToGroupMe,
   ...handlers
 }) {
   if (!kind) throw new TypeError('postToGroupMeCapped: a `kind` is required.');
@@ -104,7 +108,7 @@ export async function postToGroupMeCapped({
     }
   }
 
-  const result = await postToGroupMe({ botId, text, attachments, dryRun, ...handlers });
+  const result = await send({ botId, text, attachments, dryRun, ...handlers });
 
   // A post that never left (missing bot id, HTTP error) must not keep the day
   // claimed, or a transient failure costs the league its one message.

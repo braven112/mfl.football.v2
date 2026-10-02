@@ -68,32 +68,35 @@ const isOwnHost = (hostname) => OWN_HOSTS.has(String(hostname).toLowerCase());
  * a link is a place in a sentence, not a button.
  */
 const BOTH = ['theleague', 'afl-fantasy'];
+/** A destination that archies (a package league) ALSO ships at launch. */
+const BOTH_AND_ARCHIES = [...BOTH, 'archies'];
 
 export const DESTINATIONS = {
   // ── What articles are usually ABOUT ──
   'schedule-release': { path: '/schedule-release', label: 'the schedule release page', leagues: BOTH },
-  'schedule-strength': { path: '/schedule-strength', label: 'the Gauntlet rankings', leagues: BOTH },
-  standings: { path: '/standings', label: 'the standings', leagues: BOTH },
-  rosters: { path: '/rosters', label: 'the rosters', leagues: BOTH },
+  'schedule-strength': { path: '/schedule-strength', label: 'the Gauntlet rankings', leagues: BOTH_AND_ARCHIES },
+  standings: { path: '/standings', label: 'the standings', leagues: BOTH_AND_ARCHIES },
+  rosters: { path: '/rosters', label: 'the rosters', leagues: BOTH_AND_ARCHIES },
+  transactions: { path: '/transactions', label: 'the transaction log', leagues: BOTH_AND_ARCHIES },
   players: { path: '/players', label: 'the free agent board', leagues: BOTH },
   playoffs: { path: '/playoffs', label: 'the playoff bracket', leagues: BOTH },
-  'live-scoring': { path: '/live-scoring', label: 'the live scoreboard', leagues: BOTH },
+  'live-scoring': { path: '/live-scoring', label: 'the live scoreboard', leagues: BOTH_AND_ARCHIES },
   'sunday-ticket': { path: '/sunday-ticket', label: 'the Sunday Ticket board', leagues: BOTH },
   lineup: { path: '/lineup', label: 'your lineup', leagues: BOTH },
-  'pecking-order': { path: '/pecking-order', label: 'the pecking order', leagues: BOTH },
+  'pecking-order': { path: '/pecking-order', label: 'the pecking order', leagues: BOTH_AND_ARCHIES },
   rivalries: { path: '/rivalries', label: 'the rivalry pages', leagues: BOTH },
   franchises: { path: '/franchises', label: 'the franchise histories', leagues: BOTH },
   'draft-predictor': { path: '/draft/order', label: 'the draft order', leagues: BOTH },
-  calendar: { path: '/calendar', label: 'the league calendar', leagues: BOTH },
+  calendar: { path: '/calendar', label: 'the league calendar', leagues: BOTH_AND_ARCHIES },
 
   // ── Site features worth a plug ──
-  'trade-builder': { path: '/front-office/trade-builder', label: 'the trade builder', leagues: BOTH },
-  'import-rankings': { path: '/import-rankings', label: 'Import Rankings', leagues: BOTH },
+  'trade-builder': { path: '/front-office/trade-builder', label: 'the trade builder', leagues: BOTH_AND_ARCHIES },
+  'import-rankings': { path: '/import-rankings', label: 'Import Rankings', leagues: BOTH_AND_ARCHIES },
   'custom-rankings': { path: '/cr', label: 'your custom rankings board', leagues: BOTH },
   rules: { path: '/rules', label: 'the constitution', leagues: BOTH },
   'rules-chat': { path: '/rules-chat', label: 'Roger, the rules bot', leagues: BOTH },
   'schefter-tip': { path: '/schefter/tip', label: 'the rumor mill tip line', leagues: BOTH },
-  'whats-new': { path: '/whats-new', label: "What's New", leagues: BOTH },
+  'whats-new': { path: '/whats-new', label: "What's New", leagues: BOTH_AND_ARCHIES },
   notifications: { path: '/notifications', label: 'push notifications', leagues: BOTH },
 
   // ── TheLeague only (a contract dynasty league; the AFL has no cap) ──

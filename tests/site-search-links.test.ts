@@ -35,7 +35,7 @@ describe('getSearchPath', () => {
   it('covers every registered league', () => {
     // A new league added to the registry gets an explicit answer here rather
     // than silently falling into the "no search" branch.
-    expect(LEAGUES.sort()).toEqual(['afl-fantasy', 'best-ball-1', 'theleague']);
+    expect(LEAGUES.sort()).toEqual(['afl-fantasy', 'archies', 'best-ball-1', 'theleague']);
   });
 
   for (const slug of LEAGUES) {

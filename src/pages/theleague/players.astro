@@ -38,7 +38,8 @@ import { byeWeeksByTeam } from '../../utils/nfl-bye-lookup';
 import leagueConfig from '../../data/theleague.config.json';
 import { getLeagueBySlug, leagueClock } from '../../config/leagues';
 import { getCachedRosters } from '../../utils/mfl-roster-cache';
-import { dropLocksIn, fetchLockedPlayers } from '../../utils/mfl-locked-players';
+import { fetchDropLocks } from '../../utils/mfl-locked-players';
+import { waiverEventsLiveFirst } from '../../utils/live-waiver-calendar';
 import { resolveAuctionWindow } from '../../utils/auction-window';
 import { NO_HEADSHOT_SILHOUETTE, getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark, getPlayerAvatarStyleMaps } from '../../utils/nfl-team-colors';
 import { isDraftComplete } from '../../utils/draft-utils';
@@ -316,13 +317,34 @@ if (projectedScoresData?.projectedScores?.playerScore) {
 // and the precise failure the fallback exists to prevent. A live league always
 // has rostered players, so an empty map means "no usable answer", never
 // "nobody is rostered".
-// MFL's lock list (recently dropped players) rides along — see
-// src/utils/mfl-locked-players.ts. Null (MFL unreachable) just means no lock
-// icons; the claim route re-checks before it writes.
-const [cachedRosterPlayers, lockedPlayers] = await Promise.all([
+// Which waiver window is live comes from MFL's own calendar, read LIVE with the
+// viewer's cookie (the export is owner-gated) and falling back to the copy
+// synced by scripts/fetch-mfl-feeds.mjs — a lagging sync must not show the
+// wrong window's locks while the claim route, which reads live, decides
+// differently. `currentWaiverType` is the league's SYSTEM, not the state.
+const calendarModules = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/calendar.json',
+  { eager: true }
+);
+const committedCalendarEvents =
+  (Object.entries(calendarModules).find(([p]) => p.includes(`/${currentYear}/`))?.[1] as any)?.default ?? [];
+// Admin gate + claim context below read the same session.
+const authUser = getAuthUser(Astro.request);
+const [cachedRosterPlayers, calendarEvents] = await Promise.all([
   getCachedRosters(String(currentYear), mflLeagueId),
-  fetchLockedPlayers(mflLeagueId, currentYear),
+  waiverEventsLiveFirst(
+    currentYear,
+    mflLeagueId,
+    franchiseIdForLeague(authUser, mflLeagueId) ? authUser?.id : null,
+    committedCalendarEvents,
+  ),
 ]);
+const waiverWindow = resolveWaiverWindow(calendarEvents, new Date(), leagueClock(theLeagueDef.slug).zone);
+// MFL's lock list (recently dropped players) — see
+// src/utils/mfl-locked-players.ts. Only an FCFS window reads it; null (waiver
+// window, or MFL unreachable) just means no lock icons, and the claim route
+// re-checks before it writes.
+const lockedPlayers = await fetchDropLocks(mflLeagueId, currentYear, waiverWindow.mode);
 
 const rosteredPlayers = new Map<string, { salary: number | null; contractYrs: number | null; franchiseId: string }>();
 if (cachedRosterPlayers && Object.keys(cachedRosterPlayers).length > 0) {
@@ -766,20 +788,10 @@ for (const p of playerList) {
 const nflTeamsList = [...nflTeamsSet].sort();
 
 // Auction season has its own Bid flow on MFL; claims are the rest of the year.
-// Which waiver window is live comes from MFL's own calendar (synced by
-// scripts/fetch-mfl-feeds.mjs — the export is owner-gated, so it cannot be read
-// from the browser). `currentWaiverType` is the league's SYSTEM, not the state.
-const calendarModules = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/calendar.json',
-  { eager: true }
-);
-const calendarEvents =
-  (Object.entries(calendarModules).find(([p]) => p.includes(`/${currentYear}/`))?.[1] as any)?.default ?? [];
-const waiverWindow = resolveWaiverWindow(calendarEvents, new Date(), leagueClock(theLeagueDef.slug).zone);
+// (`waiverWindow` is resolved above, beside the lock read it gates.)
 // `locked` only on the few locked free agents, so the rest ship nothing extra.
 // Single-pool league: MFL's one LEAGUE unit is keyed ''.
-// Drop locks only mean something in an FCFS window — see dropLocksIn.
-const lockedIds = dropLocksIn(lockedPlayers, waiverWindow.mode)?.[''];
+const lockedIds = lockedPlayers?.[''];
 const playerDataJson = JSON.stringify(
   lockedIds && lockedIds.size > 0
     ? playerList.map((p) => (!p.rostered && lockedIds.has(p.id) ? { ...p, locked: true } : p))
@@ -813,7 +825,6 @@ const nflAvatarRingDarkJson = JSON.stringify(nflAvatarRingDark);
 const noHeadshot = NO_HEADSHOT_SILHOUETTE;
 
 // Admin gate: Value view is only visible to admin franchises (same auth as nav sidebar)
-const authUser = getAuthUser(Astro.request);
 const isAdmin = !!authUser && isCommissionerOrAdmin(authUser);
 
 // ── Waiver claim context ────────────────────────────────────────────────────

@@ -478,7 +478,7 @@ if (mine.length !== 1) return fallback;`,
           kind: 'prose',
           html: [
             'Which hero shows is not a toggle — it is resolved from the calendar by ' +
-              '<code>resolveAflHeroState</code>, on a priority ladder from P0 (an active event: draft day, ' +
+              '<code>resolveLeagueHeroState</code>, on a priority ladder from P0 (an active event: draft day, ' +
               'the trade deadline, championship week) down to P5 (the default). Three phases have an ' +
               'identity of their own and render as composites; the rest render through the AFL’s branded ' +
               'promo card, which is also the fallback whenever no player can be cast. A missing feed ' +
@@ -595,8 +595,8 @@ if (mine.length !== 1) return fallback;`,
     ],
     filesLabel: 'Key files',
     files: [
-      'src/utils/afl-hero-resolver.ts',
-      'src/utils/afl-hero-casting.ts',
+      'src/utils/league-hero/resolver.ts',
+      'src/utils/league-hero/casting.ts',
       'src/utils/hero-franchise-accent.ts',
       'src/components/shared/LeagueCompositeHero.astro',
       'src/components/shared/CompositeHero.astro',

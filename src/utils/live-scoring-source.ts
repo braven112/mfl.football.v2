@@ -30,9 +30,11 @@ import { buildMflExportUrl } from './mfl-url';
 import { PLAYOFFS_START_WEEK } from './fantasy-bracket.mjs';
 import {
   emptyLiveSnapshot,
+  hasLiveSignal,
   parseLiveScoringPayload,
   type LiveSnapshot,
 } from './live-scoring-snapshot';
+import { readRegisteredSchedulePairings } from './mfl-schedule-pairings';
 
 /** The wire shape `/api/live-scoring` answers with. */
 export interface LiveScoringPayload extends LiveSnapshot {
@@ -273,6 +275,29 @@ export async function loadLiveScoringPayload(
   }
 
   await mergePlayoffBrackets(snapshot, playoffBracketsResponse, { leagueId, year, week, host });
+
+  /**
+   * SCORING, BUT UNPAIRED — ask the league's own schedule who is playing.
+   *
+   * MFL serves `liveScoring` in two shapes and only the matchup-grouped one
+   * names opponents. Archie's (99 franchises, two games a week each) serves
+   * the flat one: real starters, real scores, `matchups: []`, which every
+   * board reads as "no game this week". MFL Live already fell back to the
+   * schedule for this (`cross-league-live.ts`); doing it HERE is what reaches
+   * the league board, the homepage live hero and `/broadcast` too, since all
+   * of them read through this function.
+   *
+   * Registered leagues only — the registry names the host and the committed
+   * feed, so no owner cookie is needed. Gated on `hasLiveSignal`: an unplayed
+   * week is `not-played` whatever its pairings say, so there is nothing to
+   * fix and no read to spend. Pairings travel INSIDE the cached payload, so a
+   * poll inside the TTL costs nothing extra.
+   */
+  const registered = getLeagueById(leagueId);
+  if (ok && registered && snapshot.matchups.length === 0 && hasLiveSignal(snapshot)) {
+    const pairings = await readRegisteredSchedulePairings(registered, Number(year), Number(week));
+    if (pairings.length > 0) snapshot = { ...snapshot, matchups: pairings };
+  }
 
   const payload: LiveScoringPayload = { ok, week: Number(week), ...snapshot };
 

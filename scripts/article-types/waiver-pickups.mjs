@@ -181,9 +181,9 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
   return { factSheet: lines.join('\n'), enrichment: { heroPlayerId } };
 }
 
-export function getSystemPrompt({ league = DEFAULT_LEAGUE_SLUG } = {}) {
+export function getSystemPrompt({ league = DEFAULT_LEAGUE_SLUG, persona } = {}) {
   return buildCachedSystem(`\n\nARTICLE TYPE: Waiver Pickups
-Grade the waiver wire activity for the week. Who made the best claims? Who overpaid? Who missed out on players they needed? Talk about which pickups could be league-winners and which are desperation moves.`, { league });
+Grade the waiver wire activity for the week. Who made the best claims? Who overpaid? Who missed out on players they needed? Talk about which pickups could be league-winners and which are desperation moves.`, { league, persona });
 }
 
 export function getUserPrompt(factSheet) {

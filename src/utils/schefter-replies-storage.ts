@@ -19,7 +19,8 @@ const KEYS = {
 } as const;
 
 export function generateReplyId(): string {
-  return `sfr_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`;
+  // crypto, not Math.random: the id names a stored row (CodeQL insecure-randomness).
+  return `sfr_${crypto.randomUUID().replace(/-/g, '').slice(0, 8)}${Date.now().toString(36)}`;
 }
 
 /** Get all replies for a post, sorted chronologically */

@@ -44,6 +44,8 @@ const CLASS_PREFIX: Record<CanonicalLeagueSlug, string> = {
   // ever rendered there (no bb1 page uses QuickLinks today).
   'best-ball-1': 'hp-links',
   keeper: 'afl-links',
+  // Package leagues use the same neutral styling.
+  archies: 'hp-links',
 };
 const cls = CLASS_PREFIX[leagueSlug];
 
@@ -69,7 +71,9 @@ if (isAfl) {
   // TheLeague's homepage grid (and vice versa for best-ball).
   const visible = allPages
     .filter(p => pathBelongsToLeague(p.path, leagueSlug))
-    .filter(p => p.visibility === 'all' && p.id !== 'homepage' && p.id !== 'new-hp');
+    .filter(p => p.visibility === 'all' && p.id !== 'homepage' && p.id !== 'new-hp')
+    // The league's own homepage is where this grid renders; never link to it.
+    .filter(p => p.path !== `/${league.slug}`);
 
   // Sort: logged-in users get "my-team" tools first, then by popularity
   const sorted = [...visible].sort((a, b) => {
@@ -292,7 +296,7 @@ const cardHref = (page: PageEntry) =>
     gap: 0.375rem;
     font-size: var(--font-size-xs);
     font-weight: 600;
-    color: var(--dh-accent);
+    color: var(--league-accent-fg, var(--dh-accent));
     text-decoration: none;
     transition: gap var(--transition-fast);
   }

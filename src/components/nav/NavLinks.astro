@@ -20,6 +20,7 @@
  *   the only place a link can sit that is first in both phases.
  */
 
+import { getPersonaLabels } from '../../utils/persona-server';
 import type { NavLinksProps, NavSection, NavLink, LeagueSlug, LeaguePhase, NavSectionDefaultOpen } from '../../types/nav';
 import { NAV_COOKIES, isAflFamily } from '../../types/nav';
 import { getAFLPreference, getAFLTeamData } from '../../utils/team-preferences';
@@ -115,9 +116,14 @@ function isLinkNew(link: NavLink): boolean {
   return isNewSince(link.newSince, spotlightClock);
 }
 
+// Link labels are static JSON ("Tip Schefter"); the league's persona renames
+// its own name in them (src/utils/persona.mjs). The default persona is a no-op.
+const navPersona = await getPersonaLabels(league);
+const withPersona = (text: string) => text.replace(/\bSchefter\b/g, navPersona.surname);
+
 function getLabel(link: NavLink, lg: LeagueSlug): string {
-  if (isAflFamily(lg) && link.labelAFL) return link.labelAFL;
-  return link.label;
+  if (isAflFamily(lg) && link.labelAFL) return withPersona(link.labelAFL);
+  return withPersona(link.label);
 }
 
 function getAflCompetitionOverride(

@@ -40,6 +40,7 @@ import theleagueConfig from '../data/theleague.config.json';
 import aflConfig from '../../data/afl-fantasy/afl.config.json';
 import bb1Config from '../../data/best-ball-1/bb1.config.json';
 import { keeperLeagueConfig } from './keeper-config';
+import archiesConfig from '../../data/archies/archies.config.json';
 import type { LeagueSlug } from '../types/nav';
 import { getTeamAccentPair } from './team-colors';
 
@@ -48,6 +49,7 @@ const CONFIGS: Record<LeagueSlug, { teams: any[] }> = {
   afl: aflConfig as any,
   bb1: bb1Config as any,
   keeper: keeperLeagueConfig,
+  archies: archiesConfig as any,
 };
 
 /** The custom property holding a franchise's theme-aware accent. */

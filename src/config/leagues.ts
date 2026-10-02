@@ -29,7 +29,7 @@ import {
 } from './leagues-data.mjs';
 
 /** Canonical slug: the path segment under src/pages/ */
-export type CanonicalLeagueSlug = 'theleague' | 'afl-fantasy' | 'best-ball-1' | 'keeper';
+export type CanonicalLeagueSlug = 'theleague' | 'afl-fantasy' | 'best-ball-1' | 'keeper' | 'archies';
 
 /**
  * Slots registered only on a custom-site demo deployment (see the `isDemoEnv`
@@ -100,6 +100,8 @@ export interface LeagueFeatures {
    * Same reason: the account menu links it only where the page exists.
    */
   pushNotifications: boolean;
+  /** Commissioner branding editor (names, colours, uploaded marks). */
+  brandingEditor: boolean;
 }
 
 /**
@@ -204,6 +206,10 @@ export interface LeagueClock {
   equivalents?: readonly string[];
 }
 
+export type LeagueChatConfig =
+  | { provider: 'groupme'; botEnv: string }
+  | { provider: 'slack'; tokenEnv: string; channelEnv: string };
+
 export interface LeagueDefinition {
   id: string;
   slug: CanonicalLeagueSlug;
@@ -264,12 +270,55 @@ export interface LeagueDefinition {
    */
   ownersPoll: OwnersPollConfig;
   /**
+   * Pecking Order options for a big league. `topN`: write up only the top N
+   * teams (the rest are ranked and shown in their division lists). Absent →
+   * every team gets a blurb, as TheLeague and the AFL always have.
+   */
+  peckingOrder?: { topN?: number };
+  /**
+   * The league's own playoff seeding, when it is not TheLeague's "division
+   * winners, then wild cards" ladder. `mad` is Archie's MAD POWER 99: each
+   * division's first `divisionLeaders` rows, then its second rows
+   * (`runnersUp`), then `wildCards` more — each tier in MFL's row order. Read
+   * by the shared standings page and the league's MFL widget
+   * (public/mfl/10105/standings.js). Absent → the default ladder.
+   */
+  standingsSeeding?: { kind: 'mad'; divisionLeaders: number; runnersUp: number; wildCards: number };
+  /**
    * The zone this league keeps its own time in — see `officialClock` in
    * leagues-data.mjs. Always present; read it with `leagueClock(slug)` rather
    * than reaching into the entry, and never fall back to a hardcoded Pacific
    * when you have a slug in hand.
    */
   officialClock: LeagueClock;
+  /**
+   * `false` keeps the league off the mfl.football front door (src/pages/index.astro)
+   * while it stays served at its own path. Absent → listed.
+   */
+  advertiseOnSharedHost?: boolean;
+  /**
+   * Nav renders only links tagged `leagueOnly: <navSlug>` (src/utils/nav-utils.ts),
+   * as it always has for best-ball. Absent → the default link set.
+   */
+  optInNav?: boolean;
+  /** Short display name for tight spaces (the site header). */
+  shortName?: string;
+  /** The league's mark for the shared header and layout, per theme. */
+  logo?: { light: string; dark: string };
+  /** Optional wordmark shown beside `logo` instead of the text short name. */
+  wordmark?: string;
+  /** Browser chrome `theme-color` for a package league. */
+  themeColor?: string;
+  /**
+   * The chat the league's news persona posts into (scripts/lib/chat.mjs).
+   * Env var NAMES only. Absent → the league has no chat.
+   */
+  chat?: LeagueChatConfig;
+  /**
+   * The league's default news persona, used until the commissioner saves one
+   * (src/utils/persona.mjs). Absent → Claude Schefter.
+   */
+  persona?: { name?: string; avatarUrl?: string; voice?: string };
   features: LeagueFeatures;
 }
 
