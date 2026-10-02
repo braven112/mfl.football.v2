@@ -1,6 +1,7 @@
 # League themes — one theme file drives the site and the MFL skin
 
-Status: **phase 1 done** (Oct 2026) — theme library + generator, zero visual change.
+Status: **phases 1 and 4 done** (Oct 2026) — theme library + generator (zero
+visual change), CTAs on theme slots, and the per-league review pages. PR #1308.
 
 ## Goal
 
@@ -142,7 +143,7 @@ next to the Brand Book (`/<league>/brand`) and links to it.
    `MflAppLayout.astro` directly, same as today.
 2. **Token renames + out-of-band selector removal + hex ratchet.**
 3. **Contract guard + proposal generator.**
-4. **Review page.**
+4. **Review page.** Done — `/<league>/theme/light` and `/theme/dark`.
 5. **Fonts per theme.**
 6. **MFL skin generation** (validate against a scratch league, not an existing
    skin).
@@ -180,3 +181,23 @@ colors); everything after it is additive.
   override to `:root:not(.dark)` to get there.
 - Still league-named (phase 2): `--afl-*`, `--bb-green`, `--mfl-ink*`, and
   `null` values where a theme leaves a token unset.
+
+## Phase 4 — as built
+
+- `src/pages/<league>/theme/{light,dark,index}.astro` for theleague,
+  afl-fantasy, best-ball-1 and archies; the body is
+  `src/components/shared/theme/ThemePage.astro`. `/theme` redirects to light.
+- `TheLeagueLayout`'s `themeLock` prop writes `<html data-theme-lock>`, and
+  `ThemeScript` resolves to that mode whatever the preference, so a review
+  page cannot be flipped by the toggle or by prefers-color-scheme.
+- Everything renders through the live tokens. Resolved values and contrast
+  ratios are read in the browser, because only the browser knows where a
+  `var()` chain ends.
+- Directory entries are `visibility: admin`: a review tool, linked to the
+  league, not an owner page in search or the footer.
+- The page found the first real defect on day one. On the AFL's navy dark
+  ground, `--color-primary` cannot both be text and carry white, so
+  `--color-primary-fill` now splits the fill from the text (see the AFL
+  theme's note). TheLeague and Best Ball dark still fail the same pair at
+  3.68:1, and each needs one `--color-primary-fill` value.
+
