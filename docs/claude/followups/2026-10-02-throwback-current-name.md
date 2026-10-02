@@ -1,12 +1,13 @@
 ---
 slug: throwback-current-name
-status: open
+status: shipped
 severity: P1
 opened: 2026-10-02
 hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1302
 hotfix_sha: a726dcb
 followup_issue: 1303
-followup_pr:
+followup_pr: (pending)
+shipped: 2026-10-02
 followup_session:
 ---
 
@@ -28,7 +29,7 @@ scores stay on one line. Guard test: `tests/live-read-league.test.ts`.
 
 ## Deferred items
 
-- [ ] **F1 — Matchup-card rows are uneven when only one side has the extra name line**
+- [x] **F1 — Matchup-card rows are uneven when only one side has the extra name line**
   - Source: deferred at implementation (seen in screenshots)
   - Where: `src/styles/live.css` (`.lv-side`, `.lv-side__current`),
     `src/components/shared/live/LvMatchupCard.tsx` (`sideRow`)
@@ -36,6 +37,14 @@ scores stay on one line. Guard test: `tests/live-read-league.test.ts`.
     line are both design calls, not hotfix material.
   - Reproduce: `/theleague/live-scoring?week=4` during Throwback Week,
     The Executioners vs Da Dangsters.
+  - **Worked (2026-10-02):** per-card rule, chosen by the user over a
+    board-wide or always-on fixed row height. If either side of a card has
+    `currentName`, the other row renders an empty, `aria-hidden`
+    `.lv-side__current--empty` placeholder line; a card with no renamed side
+    is unchanged. The detail header was already bottom-aligned by the hotfix,
+    so it needed nothing. Guard: `tests/live-matchup-card-current-line.test.ts`
+    (fails with the fix reverted), wired into path-guard's live domain.
+  - No late reviewer findings landed on #1302 after merge.
 
 ## Context to start cold
 - Only `readLeagueLive` sets `currentName`, from the throwback
