@@ -78,6 +78,11 @@ export default function LvMatchupCard({
 
   // `ahead` is which SIDE is winning, not whether this CARD leads its panel —
   // two different "lead"s, and naming them the same shadowed the prop.
+  //
+  // The "today's name" line is all-or-nothing PER CARD: when only one side's
+  // era renamed its club, the other row keeps an empty placeholder line, or
+  // the two rows render at different heights (Throwback Week, 2026-10-02).
+  const holdsCurrentLine = Boolean(a.currentName || b.currentName);
   const sideRow = (team: LiveTeam, ahead: boolean, which: 0 | 1) => (
     <div className={`lv-side${ahead ? ' lv-side--lead' : ''}`}>
       {/* CROPPED ONLY ON THE UPLOADED-ART RUNG. "Icon" is MFL's word, not a
@@ -98,7 +103,15 @@ export default function LvMatchupCard({
       />
       <span className="lv-side__name">
         {team.nameShort || team.name}
-        {team.currentName && <span className="lv-side__current">{team.currentName}</span>}
+        {team.currentName ? (
+          <span className="lv-side__current">{team.currentName}</span>
+        ) : (
+          holdsCurrentLine && (
+            <span className="lv-side__current lv-side__current--empty" aria-hidden="true">
+              {'\u00a0'}
+            </span>
+          )
+        )}
       </span>
       <span className="lv-side__proj">{fmt(team.projectedFinal)}</span>
       {/* INK, not the fill pair: this is text, and `--t0`/`--t1` only clear ΔE
