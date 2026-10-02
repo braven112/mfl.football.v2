@@ -42,7 +42,9 @@
   --cta-bg-hover: var(--btn-primary-bg-hover);
   --cta-ink: var(--btn-primary-text);
   --cta-ink-hover: var(--cta-ink);
-  --cta-border: var(--btn-primary-bg);
+  /* The border follows the fill, so a component that re-points only
+     --cta-bg never wears a ring in the default primary colour. */
+  --cta-border: var(--cta-bg);
   --cta-border-hover: var(--cta-bg-hover);
   --cta-focus-ring: var(--btn-primary-border-hover);
 

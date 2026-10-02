@@ -476,9 +476,6 @@ const marketplaceStyles = `
       align-items: stretch;
       text-align: center;
     }
-    .marketplace__cta-btn {
-      justify-content: center;
-    }
   }
 
   /* Dark mode: the amber "marketplace" branding is intentionally saturated

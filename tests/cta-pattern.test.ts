@@ -23,6 +23,7 @@ import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { walkFiles } from './helpers/scan-guard';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p: string) => fs.readFileSync(path.join(ROOT, p), 'utf8');
@@ -47,17 +48,8 @@ const ALLOWED: Record<string, string> = {
 
 const CTA_CLASS = /^(?:btn|[a-z0-9-]+(?:__|-)(?:cta|btn|button)(?:-[a-z0-9-]+|--[a-z0-9-]+)?)$/;
 
-function walk(dir: string, out: string[] = []): string[] {
-  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-    const p = path.join(dir, e.name);
-    if (e.isDirectory()) walk(p, out);
-    else if (/\.(astro|tsx|jsx)$/.test(e.name)) out.push(p);
-  }
-  return out;
-}
-
 /** The text of every `<a …>` opening tag, brace/quote aware. */
-export function anchorTags(src: string): { tag: string; line: number }[] {
+function anchorTags(src: string): { tag: string; line: number }[] {
   const out: { tag: string; line: number }[] = [];
   const re = /<a(?=[\s>])/g;
   let m: RegExpExecArray | null;
@@ -82,7 +74,7 @@ export function anchorTags(src: string): { tag: string; line: number }[] {
 }
 
 /** Class-name-looking tokens inside class= / className= / class:list=. */
-export function classTokens(tag: string): string[] {
+function classTokens(tag: string): string[] {
   const attr = /\b(?:class|className|class:list)=/g;
   const tokens: string[] = [];
   let m: RegExpExecArray | null;
@@ -146,9 +138,8 @@ describe('cta.css out-ranks the global link hover', () => {
 
 describe('every CTA-styled link uses the shared pattern', () => {
   const offenders: string[] = [];
-  for (const file of walk(path.join(ROOT, 'src'))) {
-    const rel = path.relative(ROOT, file);
-    for (const { tag, line } of anchorTags(fs.readFileSync(file, 'utf8'))) {
+  for (const rel of walkFiles({ roots: ['src'], extensions: ['.astro', '.tsx', '.jsx'] })) {
+    for (const { tag, line } of anchorTags(read(rel))) {
       const tokens = classTokens(tag);
       if (tokens.includes('cta') || tokens.includes('cta-link')) continue;
       const hit = tokens.find((t) => CTA_CLASS.test(t));
