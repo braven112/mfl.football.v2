@@ -77,6 +77,46 @@
       "impact": "user",
       "area": "trade-builder",
       "league": "archies"
+    },
+    {
+      "date": "2026-10-01",
+      "type": "bug-fix",
+      "summary": "Maverick's 2016–2024 seasons show their original Mel Gibson art again instead of today's logo, and it's now Maverick's default Throwback Week look.",
+      "impact": "user",
+      "area": "franchises",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-10-01",
+      "type": "bug-fix",
+      "summary": "The player card's Season Results table is readable again — upcoming weeks and byes no longer vanish in dark mode, and it fits a phone without scrolling sideways.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "both"
+    },
+    {
+      "date": "2026-10-01",
+      "type": "bug-fix",
+      "summary": "Declaring a contract works again — it was failing with \"Cannot read properties of undefined (reading 'cancelled')\" and never filed.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-10-01",
+      "type": "bug-fix",
+      "summary": "The rest of the player card's faded labels (stats, details, section titles, \"Rostered by\") are now easy to read in both light and dark mode.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "both"
+    },
+    {
+      "date": "2026-10-01",
+      "type": "bug-fix",
+      "summary": "On a phone, Coach view roster cards keep the matchup and the stats line on one line each — a 10:00 kickoff or a two-digit rank no longer bumps the rank or the average onto a line of its own.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "both"
     }
   ]
 }
