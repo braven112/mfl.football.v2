@@ -12,13 +12,13 @@ handful of shared components still enumerate leagues with binary ternaries
 that silently dump a new league into TheLeague's branch (wrong branding,
 wrong links — the bug is invisible until you LOOK at a rendered page):
 
-- `src/components/theleague/Header.astro` — logo, wordmark, and desktop nav
+- `src/components/shared/Header.astro` — logo, wordmark, and desktop nav
   icons all branch per league.
-- `src/components/theleague/Footer.astro` — champion banner + four link
+- `src/components/shared/Footer.astro` — champion banner + four link
   columns; bb1 pages shipped TheLeague's footer until a What's New
   screenshot exposed it. **Screenshot-review every new league's page chrome;
   route smoke tests (200s) don't catch wrong-league branding.**
-- `src/components/theleague/RosterLoader.astro`, `src/pages/api/auth/login.ts`
+- `src/components/shared/RosterLoader.astro`, `src/pages/api/auth/login.ts`
   (preference-cookie arm), `src/utils/team-preferences.ts`,
   `src/utils/league-context.ts` (cross-league switcher pairs).
 

@@ -22,18 +22,18 @@
  * gates inclusion on isOwner, so unauthorized owners never see this UI.
  */
 
-import { getLeagueBySlug } from '../../config/leagues';
+import { getLeagueBySlug } from '../../../config/leagues';
 import fs from 'node:fs';
 import path from 'node:path';
-import PlayerCell from '../shared/PlayerCell.astro';
+import PlayerCell from '../PlayerCell.astro';
 // The ⋮ kebab's styles. Imported here rather than left to the host: the
 // free-agent pages get this via WatchListBridge, but the Front Office panel
 // mounts AFLActionModal instead, which carries no stylesheet of its own.
-import '../../styles/player-action-button.css';
-import { KEEPER_LIMIT } from '../../utils/afl-keepers-storage';
-import { keeperDeadlineFor, newSeasonStartsFor } from '../../utils/afl-mock-draft';
-import { getTestDateFromSearchParams } from '../../utils/league-year';
-import { isDraftConducted } from '../../utils/draft-utils';
+import '../../../styles/player-action-button.css';
+import { KEEPER_LIMIT } from '../../../utils/afl-keepers-storage';
+import { keeperDeadlineFor, newSeasonStartsFor } from '../../../utils/afl-mock-draft';
+import { getTestDateFromSearchParams } from '../../../utils/league-year';
+import { isDraftConducted } from '../../../utils/draft-utils';
 
 export interface KeeperPlannerPlayer {
   id: string;
@@ -443,9 +443,9 @@ try {
 </div>
 
 <script>
-  import { LINEUP_SLOTS, BENCH_CREDIT, slotGroupFor, type SlotGroup } from '../../utils/afl-keeper-analysis';
-  import { buildRankingLookup, onRankingsChanged, COMPOSITE_IMPORT_ID } from '../../utils/rankings-lookup';
-  import { initPlayerModalTrigger } from '../../utils/player-modal-trigger';
+  import { LINEUP_SLOTS, BENCH_CREDIT, slotGroupFor, type SlotGroup } from '../../../utils/afl-keeper-analysis';
+  import { buildRankingLookup, onRankingsChanged, COMPOSITE_IMPORT_ID } from '../../../utils/rankings-lookup';
+  import { initPlayerModalTrigger } from '../../../utils/player-modal-trigger';
 
   interface PlayerLookup {
     id: string;

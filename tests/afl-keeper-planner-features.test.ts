@@ -9,7 +9,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { buildKeeperPlannerStats } from '../src/utils/afl-keeper-planner-stats';
 
-const SRC = readFileSync('src/components/afl-fantasy/KeeperPlanner.astro', 'utf-8');
+const SRC = readFileSync('src/components/shared/keepers/KeeperPlanner.astro', 'utf-8');
 const ROSTERS_SRC = readFileSync('src/components/shared/rosters/RostersPage.astro', 'utf-8');
 const FRONT_OFFICE_DATA_SRC = readFileSync('src/utils/front-office-keeper-data.ts', 'utf-8');
 
@@ -65,7 +65,7 @@ describe('KeeperPlanner decision-support features', () => {
   });
 
   it('sort-by-My-Rank uses the shared composite lookup, scoped automatically', () => {
-    expect(SRC).toMatch(/from '\.\.\/\.\.\/utils\/rankings-lookup'/);
+    expect(SRC).toMatch(/from '(?:\.\.\/)+utils\/rankings-lookup'/);
     expect(SRC).toMatch(/buildRankingLookup\(\)/);
     expect(SRC).toMatch(/COMPOSITE_IMPORT_ID/);
     // Falls back to the server-rendered position/name order when there's no
@@ -81,7 +81,7 @@ describe('KeeperPlanner decision-support features', () => {
   });
 
   it('the lineup-slot meter is driven by the shared LINEUP_SLOTS constants, not re-typed numbers', () => {
-    expect(SRC).toMatch(/from '\.\.\/\.\.\/utils\/afl-keeper-analysis'/);
+    expect(SRC).toMatch(/from '(?:\.\.\/)+utils\/afl-keeper-analysis'/);
     expect(SRC).toMatch(/LINEUP_SLOTS\[group\]/);
     expect(SRC).toMatch(/BENCH_CREDIT\[group\]/);
     expect(SRC).toMatch(/slotGroupFor\(/);
@@ -296,7 +296,7 @@ describe('KeeperPlanner showActions (kebab + modal trigger), opt-in only', () =>
   });
 
   it('calls initPlayerModalTrigger on its own root only when showActions, never unconditionally', () => {
-    expect(SRC).toMatch(/from '\.\.\/\.\.\/utils\/player-modal-trigger'/);
+    expect(SRC).toMatch(/from '(?:\.\.\/)+utils\/player-modal-trigger'/);
     expect(SRC).toMatch(/if \(showActions\) initPlayerModalTrigger\(root\);/);
   });
 
@@ -323,7 +323,7 @@ describe('KeeperPlanner showActions (kebab + modal trigger), opt-in only', () =>
 });
 
 describe('AFLActionModal announces its writes', () => {
-  const MODAL_SRC = readFileSync('src/components/afl-fantasy/AFLActionModal.astro', 'utf-8');
+  const MODAL_SRC = readFileSync('src/components/shared/AFLActionModal.astro', 'utf-8');
 
   it('dispatches afl-action:done so non-table surfaces can update themselves', () => {
     // Its three optimistic helpers all query `tr[data-player-id]` and bail

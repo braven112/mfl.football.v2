@@ -22,7 +22,7 @@ cutting off "Rank vs QB". An owner reported it from a phone screenshot during
 the season.
 
 ## What the hotfix did
-Forward fix in `src/components/theleague/PlayerDetailsModal.astro`:
+Forward fix in `src/components/shared/PlayerDetailsModal.astro`:
 - All muted text in the table now uses `--content-text-muted`. That covers
   headers, week, status, non-starter, bye and empty rows.
 - At ≤640px the long half of each header is visually hidden but still read by
@@ -38,7 +38,7 @@ merge.
 
 - [x] **F1 — The rest of the player card still uses raw `--color-gray-400` for muted text**
   - Source: deferred at implementation (Claude, hotfix adjudication)
-  - Where: `src/components/theleague/PlayerDetailsModal.astro`:
+  - Where: `src/components/shared/PlayerDetailsModal.astro`:
     `.pdm-owner__label` ~L680, `.pdm-metric__label` ~L851,
     `.pdm-metric--fa .pdm-metric__value` ~L856, `.pdm-section__title` ~L877,
     `.pdm-detail__label` ~L1093

@@ -83,7 +83,7 @@ permanent audit trail I can review and pause.
 - `scripts/apply-pending-contracts.mjs` + `.yml` — deadline job + dry-run input
 - `scripts/lib/redis.mjs` — raw Upstash REST for scripts
 - `scripts/lib/roger-reminder-window.mjs` — never-early date semantics
-- `src/components/afl-fantasy/KeeperPlanner.astro:662-714` — sequential cuts
+- `src/components/shared/keepers/KeeperPlanner.astro:662-714` — sequential cuts
 - `src/utils/salary-calculations.ts` + CDM cut-cost copy — cap math
 - `src/utils/mfl-fetch.ts` — redirect-safe MFL fetch (owner cookie)
 

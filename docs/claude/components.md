@@ -235,7 +235,7 @@ Layered shadows increase rendering load. Avoid animating shadow tokens directly.
 
 All new pages and components must follow the **editorial design language** established by the PlayerDetailsModal and related modal components. This creates a consistent, data-dense, sports-editorial feel across the site.
 
-**Canonical reference:** `src/components/theleague/PlayerDetailsModal.astro`
+**Canonical reference:** `src/components/shared/PlayerDetailsModal.astro`
 **Full pattern catalog:** `docs/claude/insights/domains/design-system.md` (search "Editorial Design Standard")
 
 ### Quick Reference
@@ -371,6 +371,6 @@ See **CLAUDE.md > Player Display** for the full specification.
 
 **Existing implementations for reference:**
 - Roster table: `src/pages/theleague/rosters.astro` (lines ~5890-5894, DEF swap logic)
-- Potential Targets: `src/components/theleague/FreeAgentNeedsCard.astro`
+- Potential Targets: `src/components/shared/FreeAgentNeedsCard.astro`
 - Trade builder: `src/components/theleague/trade-builder/PlayerCard.tsx`
 - Free agents table: `src/pages/theleague/players.astro` (inline p-row pattern)

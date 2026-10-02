@@ -10,7 +10,7 @@ platform bucket, and `/activity` renders the split for both leagues.
 | Storage + readers | `src/utils/owner-activity.ts` (`recordVisit`, `recordAnonymousVisit`, `getSurfaceSection`) |
 | Endpoint | `src/pages/api/track-visit.ts` |
 | Detection | `src/layouts/TheLeagueLayout.astro` (visit tracker script) |
-| UI | `src/components/theleague/OwnerActivityReport.astro`, both `activity.astro` routes |
+| UI | `src/components/shared/OwnerActivityReport.astro`, both `activity.astro` routes |
 | Guard | `tests/visit-surface.test.ts`, `tests/origin-check-content-type.test.ts` (every browser POST/DELETE/beacon, not just this one) |
 
 Since 2026-09-10 the anonymous path counts more than the surface split — see

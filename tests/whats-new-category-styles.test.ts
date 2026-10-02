@@ -32,7 +32,7 @@ const ROOT = resolve(__dirname, '..');
 const STYLED_BY_CATEGORY = [
   'src/components/shared/whats-new/WhatsNewDetailPage.astro',
   'src/components/shared/whats-new/WhatsNewIndexPage.astro',
-  'src/components/theleague/WhatsNewRow.astro',
+  'src/components/shared/WhatsNewRow.astro',
 ];
 
 const CATEGORIES = Object.keys(WHATS_NEW_CATEGORY_LABELS) as WhatsNewCategory[];

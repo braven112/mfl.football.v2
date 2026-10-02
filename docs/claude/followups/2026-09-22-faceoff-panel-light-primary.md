@@ -18,7 +18,7 @@ that PR did not touch — see **Why this was deferred**.
 
 ## What's wrong
 
-`src/components/theleague/FaceoffComposite.astro#panelOf` builds each panel as
+`src/components/shared/FaceoffComposite.astro#panelOf` builds each panel as
 
 ```ts
 gradient: `linear-gradient(160deg, #0b0e12 0%, ${color} 150%)`

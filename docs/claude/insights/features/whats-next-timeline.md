@@ -69,7 +69,7 @@
 
 **Single-year unit tests can now legitimately be empty.** `selectWhatsNextTimeline` over one year's events at end-of-December returns all-null (no future events) — that's correct. Production never hits this because `getMergedResolvedEvents` spans current + next league year. Tests that asserted a trailing past event as `current` were updated.
 
-**Evidence:** `src/utils/league-event-resolver.ts` (`selectWhatsNextTimeline`), `src/components/theleague/WhatsNext.astro`, `src/components/afl/hp-sections/AflWhatsNext.astro`, `tests/league-event-resolver.test.ts`.
+**Evidence:** `src/utils/league-event-resolver.ts` (`selectWhatsNextTimeline`), `src/components/shared/WhatsNext.astro`, `src/components/afl/hp-sections/AflWhatsNext.astro`, `tests/league-event-resolver.test.ts`.
 
 ---
 

@@ -10,7 +10,7 @@ Domain knowledge about accessibility patterns, ARIA usage, and inclusive design.
 
 **Insight:** The current hamburger menu uses proper ARIA attributes for toggle state.
 
-**Evidence:** From `src/components/theleague/Header.astro`:
+**Evidence:** From `src/components/shared/Header.astro`:
 ```html
 <button
   class="hamburger-btn"
@@ -38,7 +38,7 @@ hamburgerBtn?.setAttribute("aria-expanded", isActive ? "true" : "false");
 
 **Insight:** Current drawer supports Escape key to close.
 
-**Evidence:** From `src/components/theleague/Header.astro`:
+**Evidence:** From `src/components/shared/Header.astro`:
 ```javascript
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && navMenu?.classList.contains("active")) {
@@ -61,7 +61,7 @@ document.addEventListener("keydown", (e) => {
 
 **Insight:** Current implementation locks body scroll when drawer is open.
 
-**Evidence:** From `src/components/theleague/Header.astro`:
+**Evidence:** From `src/components/shared/Header.astro`:
 ```javascript
 document.body.style.overflow = isActive ? "hidden" : "";
 ```

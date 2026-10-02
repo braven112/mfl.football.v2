@@ -653,7 +653,7 @@ already documented — this is a second instance of it, not a new finding.)
 passes on it. It should not feel like it does: `--cat-regular-season` has no
 value in `tokens.css` or `tokens-dark.css`, and is declared in exactly two
 places in the repo — the scoped `<style>` blocks of
-`src/components/theleague/WhatsNextCard.astro` and `CalendarEventCard.astro`.
+`src/components/shared/WhatsNextCard.astro` and `CalendarEventCard.astro`.
 Neither declaration is an ancestor of the AFL card, so that `var()` renders
 its `#1c497c` fallback, in both themes, forever.
 
@@ -1239,7 +1239,7 @@ token-based (light) and invert via tokens-dark.
 
 **Insight:** The codebase uses `--shadow-md` and similar tokens for consistent shadows.
 
-**Evidence:** `src/components/theleague/Header.astro:247` uses `box-shadow: var(--shadow-md);`
+**Evidence:** `src/components/shared/Header.astro:247` uses `box-shadow: var(--shadow-md);`
 
 **Recommendation:** Use shadow tokens rather than hardcoded values:
 ```css
@@ -2251,7 +2251,7 @@ window.addEventListener('resize', handler, { signal: ac.signal });
 
 **Gotcha:** the multicolor NFL sprite (`MULTICOLOR_ICONS = ['nfl']`) must NOT be tinted — give it a `--chip--multicolor` modifier that sets the chip bg to neutral `rgba(255,255,255,.1)` and the icon `fill: none`, otherwise the accent recolors the league logo.
 
-**Evidence:** `src/components/theleague/CalendarEventCard.astro`, `src/components/theleague/WhatsNextCard.astro`, mirrors `src/components/theleague/EventHeroShell.astro`.
+**Evidence:** `src/components/theleague/CalendarEventCard.astro`, `src/components/shared/WhatsNextCard.astro`, mirrors `src/components/theleague/EventHeroShell.astro`.
 
 ## 2026-06-24 - Per-League Theming via `html[data-league]` + Single-Value-Per-League Tokens
 
@@ -2744,7 +2744,7 @@ defined *anywhere*) but renders its fallback in light mode. Dark-only tokens are
 safe *only* inside a `:global(html.dark)` block. Check which theme file a token
 lives in before using it in a theme-agnostic rule.
 
-**Evidence:** `src/components/afl-fantasy/AFLActionModal.astro` — light rules
+**Evidence:** `src/components/shared/AFLActionModal.astro` — light rules
 unchanged, all dark behavior in `:global(html.dark)` blocks. Verified with
 `getComputedStyle` on the running page: panel `rgb(22,40,60)`, rows
 `rgb(29,51,73)`, borders `rgb(46,69,96)`.

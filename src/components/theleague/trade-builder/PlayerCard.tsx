@@ -1,7 +1,7 @@
 import React from 'react';
 import type { TradeBuilderPlayer, RookieExtensionSim } from '../../../types/trade-builder';
 import { formatCurrency } from '../../../utils/formatters';
-import { PlayerCell } from '../PlayerCell';
+import { PlayerCell } from '../../shared/PlayerCell';
 
 
 interface Props {

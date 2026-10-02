@@ -392,9 +392,9 @@ describe('buildFranchiseBandBrands', () => {
 
 describe('band wiring', () => {
   const MODALS = [
-    'src/components/theleague/PlayerDetailsModal.astro',
+    'src/components/shared/PlayerDetailsModal.astro',
     'src/components/theleague/PlayerNewsModal.astro',
-    'src/components/theleague/PlayerInjuryModal.astro',
+    'src/components/shared/PlayerInjuryModal.astro',
     'src/components/theleague/ContractDeclarationModal.astro',
   ];
 

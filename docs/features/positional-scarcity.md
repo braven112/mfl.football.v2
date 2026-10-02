@@ -178,8 +178,8 @@ export function adjustRankByScarcity(
 | File | Change |
 |------|--------|
 | `src/pages/theleague/cr.astro` | Add projected scores glob (if not already added by VORP), calculate scarcity map, pass as prop |
-| `src/components/theleague/custom-rankings/CustomRankingsPage.tsx` | Accept `scarcityMap` prop, add "Scarcity" toggle |
-| `src/components/theleague/custom-rankings/PlayerRow.tsx` | Show scarcity-adjusted rank when toggle is on |
+| `src/components/shared/custom-rankings/CustomRankingsPage.tsx` | Accept `scarcityMap` prop, add "Scarcity" toggle |
+| `src/components/shared/custom-rankings/PlayerRow.tsx` | Show scarcity-adjusted rank when toggle is on |
 | `src/styles/custom-rankings.css` | Add `.cr-scarcity-badge` styles |
 
 ---

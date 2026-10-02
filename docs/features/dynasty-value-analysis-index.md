@@ -139,8 +139,8 @@ These features complement the [Auction Price Predictor](auction-predictor-design
 | `src/pages/theleague/cr.astro` | VORP Rankings, Positional Scarcity |
 | `src/pages/theleague/trade-builder.astro` | Trade Value Analyzer, Draft Pick Valuation |
 | `src/pages/theleague/rosters.astro` | Cap Opportunity Cost, Roster Construction Optimizer |
-| `src/components/theleague/custom-rankings/CustomRankingsPage.tsx` | VORP Rankings, Positional Scarcity |
-| `src/components/theleague/custom-rankings/PlayerRow.tsx` | VORP Rankings, Positional Scarcity |
+| `src/components/shared/custom-rankings/CustomRankingsPage.tsx` | VORP Rankings, Positional Scarcity |
+| `src/components/shared/custom-rankings/PlayerRow.tsx` | VORP Rankings, Positional Scarcity |
 | `src/components/theleague/trade-builder/TradeBuilder.tsx` | Trade Value Analyzer, Draft Pick Valuation |
 | `src/styles/custom-rankings.css` | VORP Rankings, Positional Scarcity |
 | `src/types/trade-builder.ts` | Trade Value Analyzer, Draft Pick Valuation |

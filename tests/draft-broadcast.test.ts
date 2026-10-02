@@ -817,7 +817,7 @@ describe('the origin line and its logo', () => {
     // SERVER gates its school-logo lookup on it too: a drifted copy would keep
     // resolving marks for players the card had started labelling with a team.
     const surfaces = [
-      'src/components/theleague/draft-room/PickRevealSplash.tsx',
+      'src/components/shared/draft-room/PickRevealSplash.tsx',
       'src/utils/draft-broadcast.ts',
       'src/utils/draft-broadcast-server.ts',
     ];

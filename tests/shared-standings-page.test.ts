@@ -9,7 +9,7 @@ import {
   COLUMNS,
   TIERING,
   resolvePlayoffBadgeStatus,
-} from '../src/components/theleague/standings/standings-table-config';
+} from '../src/components/shared/standings/standings-table-config';
 import type { StandingsFranchise } from '../src/types/standings';
 import { madSeeds, madPlayoffSize } from '../src/utils/mad-standings';
 import { getLeagueBySlug } from '../src/config/leagues';

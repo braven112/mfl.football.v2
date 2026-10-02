@@ -29,7 +29,7 @@ import {
 } from '../src/utils/historical-divisions';
 import { resolveConfigForYear } from '../src/utils/team-names';
 import { getDivisionStandings } from '../src/utils/standings';
-import { DIVISION_BADGES } from '../src/components/theleague/standings/standings-table-config';
+import { DIVISION_BADGES } from '../src/components/shared/standings/standings-table-config';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 import leagueConfig from '../src/data/theleague.config.json';
 import franchiseHistory from '../data/theleague/derived/franchise-history.json';

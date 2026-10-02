@@ -42,11 +42,11 @@ const LAYOUTS = [
 const ALLOWED: Record<string, string> = {
   'src/components/shared/live-broadcast/BroadcastControls.astro::lbc-bar__btn':
     'Broadcast toolbar chip, styled as a set with the sound/fullscreen <button>s on a bar that is dark in both themes; its own :hover restates colour and decoration.',
-  'src/components/theleague/suggestions/AdminToolbar.tsx::sb-admin__btn':
+  'src/components/shared/suggestions/AdminToolbar.tsx::sb-admin__btn':
     'Admin toolbar chip (pin/lock/archive/issue link) styled as a set with toggle <button>s; SuggestionBoxPage restates colour and decoration on :hover.',
   'src/components/nav/NavHeader.astro::nav-header__switch-btn':
     'Nav league-switcher icon button: no text to underline, and its scoped :hover restates colour.',
-  'src/components/theleague/rankings-import/BookmarkletCard.tsx::bm-card__rankings-btn':
+  'src/components/shared/rankings-import/BookmarkletCard.tsx::bm-card__rankings-btn':
     'Colour-coded source chips (dynasty/redraft/ADP/overall), not CTAs; ImportRankingsPage restates colour and decoration on :hover/:focus.',
 };
 

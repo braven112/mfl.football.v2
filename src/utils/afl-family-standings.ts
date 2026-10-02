@@ -1,6 +1,6 @@
 /**
- * The route half of the AFL-family standings page (components/afl-family/
- * StandingsPage), shared by /afl-fantasy/standings and the custom-site demo's
+ * The route half of the AFL-family standings page (components/shared/standings/
+ * AflFamilyStandingsPage), shared by /afl-fantasy/standings and the custom-site demo's
  * /keeper/standings.
  *
  * It lives outside the component because two of its answers are REDIRECTS,

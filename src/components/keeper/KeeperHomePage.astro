@@ -9,8 +9,8 @@
  * The route hands in the season's feeds (a glob cannot take a variable).
  */
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
-import UnifiedStandingsTable from '../theleague/standings/StandingsTable.astro';
-import { COLUMNS, TIERING } from '../theleague/standings/standings-table-config';
+import UnifiedStandingsTable from '../shared/standings/StandingsTable.astro';
+import { COLUMNS, TIERING } from '../shared/standings/standings-table-config';
 import { getDivisionStandings } from '../../utils/standings';
 import { resolveConfigForYear } from '../../utils/team-names';
 import { extractSeasonStructure, applySeasonStructure } from '../../utils/afl-structure';

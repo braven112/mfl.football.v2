@@ -58,7 +58,7 @@ replaced. New files: `src/utils/player-week-scores.mjs` (parser),
 `src/utils/weekly-player-results-feed.ts` (cached per-league-season loader),
 `tests/weekly-player-results-full-pool.test.ts` (31 assertions). Changed:
 `src/utils/weekly-player-results.ts` (union of both id sources, owners as a
-LIST), `src/components/theleague/PlayerDetailsModal.astro` (multi-owner badges,
+LIST), `src/components/shared/PlayerDetailsModal.astro` (multi-owner badges,
 brand-map crest, no `window` cache), both AFL pages (payload island), three
 TheLeague pages (pass the fallback), `scripts/fetch-mfl-feeds.mjs` (the feed),
 `scripts/fetch-fantasy-points-allowed.mjs` + `.github/workflows/weekly-stats-sync.yml`

@@ -619,7 +619,7 @@ any reader cares about; count the axis the entry is claiming.
 **Files:** `src/utils/dark-surface-crest.ts` (the general rule),
 `src/utils/broadcast-crest.ts` (now only the 68vh exception),
 `src/utils/franchise-brand.ts` (`eraCrestOverrides`),
-`src/components/theleague/FaceoffComposite.astro` (`watermarkFilter`),
+`src/components/shared/FaceoffComposite.astro` (`watermarkFilter`),
 `tests/dark-surface-crest.test.ts`. Rule lives in
 `docs/claude/rules/theming-and-assets.md`.
 

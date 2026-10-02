@@ -73,7 +73,7 @@ describe('getSearchPath', () => {
 
 describe('the header search icon', () => {
   const header = readFileSync(
-    path.join(ROOT, 'src/components/theleague/Header.astro'),
+    path.join(ROOT, 'src/components/shared/Header.astro'),
     'utf8',
   );
 

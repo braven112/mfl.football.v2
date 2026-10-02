@@ -702,7 +702,7 @@ observer.observe(drawer, { attributes: true, attributeFilter: ['class'] });
 4. **Type Safety with Explicit Casts**: Used explicit `LeagueSlug` type casts when building teamInfo to ensure TypeScript correctness.
 
 **Files Modified:**
-- `src/components/theleague/Header.astro` - Removed inline nav, added NavToggleButton
+- `src/components/shared/Header.astro` - Removed inline nav, added NavToggleButton
 - `src/layouts/TheLeagueLayout.astro` - Added NavDrawer integration, page wrapper, and sync script
 
 **Next Steps:**
@@ -955,7 +955,7 @@ the word points at two unrelated things in this repo.
 | Thing | Rendered by | Fed by | Holds |
 |---|---|---|---|
 | The nav drawer's bottom strip | `src/components/nav/NavFooter.astro` | `nav-config.json` → `footerLinks` | The team chip / verify prompt, and one link: "Back to MFL" |
-| The site footer deck | `src/components/theleague/Footer.astro` | `src/config/footer-config.ts` → `THELEAGUE_COLUMNS` / `AFL_COLUMNS` | The five-column site directory (My Team, This Week, Front Office, Record Book, League Office) |
+| The site footer deck | `src/components/shared/Footer.astro` | `src/config/footer-config.ts` → `THELEAGUE_COLUMNS` / `AFL_COLUMNS` | The five-column site directory (My Team, This Week, Front Office, Record Book, League Office) |
 
 A `footerLinks` array sitting right there in `nav-config.json` is the trap:
 it looks like the site directory and is not — it is the drawer's own footer, and

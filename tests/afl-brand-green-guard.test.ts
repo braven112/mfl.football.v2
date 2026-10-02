@@ -62,8 +62,6 @@ const AFL_DIRS = [
   path.join(SRC, 'pages', 'afl-fantasy'),
   path.join(SRC, 'components', 'afl-fantasy'),
   path.join(SRC, 'components', 'afl'),
-  // The AFL-family page bodies (the AFL's pages, shared with the demo's keeper slot).
-  path.join(SRC, 'components', 'afl-family'),
 ];
 
 /**
@@ -77,6 +75,17 @@ const AFL_FILES = [
   path.join(SRC, 'utils', 'league-hero', 'resolver.ts'),
   path.join(SRC, 'utils', 'league-hero', 'profiles.ts'),
   path.join(SRC, 'components', 'shared', 'league-hero', 'LeagueHero.astro'),
+  // Components that lived in components/afl-family, afl-fantasy or afl (and
+  // were scanned as AFL trees) until Oct 2026, when everything more than one
+  // league renders moved to components/shared/. They still render on the AFL,
+  // so they are named here rather than dropped from the scan.
+  path.join(SRC, 'components', 'shared', 'AFLActionModal.astro'),
+  path.join(SRC, 'components', 'shared', 'AflChampionshipHero.astro'),
+  path.join(SRC, 'components', 'shared', 'AflEventHero.astro'),
+  path.join(SRC, 'components', 'shared', 'AflPlayoffsHero.astro'),
+  path.join(SRC, 'components', 'shared', 'keepers', 'KeeperPlanner.astro'),
+  path.join(SRC, 'components', 'shared', 'keepers', 'KeepersPage.astro'),
+  path.join(SRC, 'components', 'shared', 'standings', 'AflFamilyStandingsPage.astro'),
 ];
 
 /**

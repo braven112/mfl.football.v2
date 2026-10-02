@@ -144,7 +144,7 @@ describe('resolveHeroFranchiseBackdrop', () => {
 
 describe('hero components', () => {
   const HEROES = [
-    { file: 'src/components/afl/AflEventHero.astro', ns: 'afl-event-hero' },
+    { file: 'src/components/shared/AflEventHero.astro', ns: 'afl-event-hero' },
     { file: 'src/components/theleague/EventHeroShell.astro', ns: 'tl-event-hero' },
   ];
 

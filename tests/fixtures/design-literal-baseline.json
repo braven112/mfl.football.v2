@@ -7,14 +7,14 @@
     "shadow": 240
   },
   "files": {
-    "src/components/afl-family/KeepersPage.astro": {
+    "src/components/shared/keepers/KeepersPage.astro": {
       "fontSize": 6,
       "shadow": 3
     },
-    "src/components/afl-family/StandingsPage.astro": {
+    "src/components/shared/standings/AflFamilyStandingsPage.astro": {
       "fontSize": 17
     },
-    "src/components/afl-fantasy/AFLActionModal.astro": {
+    "src/components/shared/AFLActionModal.astro": {
       "transition": 1,
       "fontSize": 6,
       "shadow": 1
@@ -22,19 +22,19 @@
     "src/components/afl-fantasy/KeeperAnalysisCard.astro": {
       "fontSize": 8
     },
-    "src/components/afl-fantasy/KeeperPlanner.astro": {
+    "src/components/shared/keepers/KeeperPlanner.astro": {
       "transition": 4,
       "fontSize": 11,
       "shadow": 3
     },
-    "src/components/afl/AflChampionshipHero.astro": {
+    "src/components/shared/AflChampionshipHero.astro": {
       "fontSize": 3
     },
-    "src/components/afl/AflEventHero.astro": {
+    "src/components/shared/AflEventHero.astro": {
       "fontSize": 7,
       "shadow": 4
     },
-    "src/components/afl/AflPlayoffsHero.astro": {
+    "src/components/shared/AflPlayoffsHero.astro": {
       "fontSize": 4
     },
     "src/components/afl/hp-sections/AflConferencePlayoffPreview.astro": {
@@ -391,7 +391,7 @@
     "src/components/theleague/BarChart.astro": {
       "fontSize": 1
     },
-    "src/components/theleague/Breadcrumbs.astro": {
+    "src/components/shared/Breadcrumbs.astro": {
       "fontSize": 1
     },
     "src/components/theleague/BreakingStoryHero.astro": {
@@ -404,7 +404,7 @@
     "src/components/theleague/ChampionCrownedHero.astro": {
       "fontSize": 4
     },
-    "src/components/theleague/ChartCard.astro": {
+    "src/components/shared/ChartCard.astro": {
       "fontSize": 4
     },
     "src/components/theleague/ContractDeclarationModal.astro": {
@@ -441,7 +441,7 @@
     "src/components/theleague/DraftPicksCard.astro": {
       "fontSize": 3
     },
-    "src/components/theleague/DraftPredictorGrid.astro": {
+    "src/components/shared/DraftPredictorGrid.astro": {
       "fontSize": 6,
       "shadow": 7
     },
@@ -461,20 +461,20 @@
     "src/components/theleague/EventHeroShell.astro": {
       "fontSize": 6
     },
-    "src/components/theleague/FaceoffComposite.astro": {
+    "src/components/shared/FaceoffComposite.astro": {
       "fontSize": 8
     },
-    "src/components/theleague/Footer.astro": {
+    "src/components/shared/Footer.astro": {
       "fontSize": 10
     },
-    "src/components/theleague/FranchiseOptions.astro": {
+    "src/components/shared/FranchiseOptions.astro": {
       "fontSize": 5
     },
-    "src/components/theleague/FreeAgentNeedsCard.astro": {
+    "src/components/shared/FreeAgentNeedsCard.astro": {
       "transition": 1,
       "fontSize": 3
     },
-    "src/components/theleague/Header.astro": {
+    "src/components/shared/Header.astro": {
       "transition": 2,
       "fontSize": 9
     },
@@ -517,29 +517,29 @@
       "fontSize": 1,
       "shadow": 1
     },
-    "src/components/theleague/LoginForm.astro": {
+    "src/components/shared/LoginForm.astro": {
       "transition": 1,
       "fontSize": 4,
       "shadow": 1
     },
-    "src/components/theleague/MetricCard.astro": {
+    "src/components/shared/MetricCard.astro": {
       "fontSize": 2
     },
-    "src/components/theleague/OwnerActivityReport.astro": {
+    "src/components/shared/OwnerActivityReport.astro": {
       "fontSize": 9,
       "shadow": 7
     },
-    "src/components/theleague/PlayerDetailsModal.astro": {
+    "src/components/shared/PlayerDetailsModal.astro": {
       "fontSize": 11
     },
-    "src/components/theleague/PlayerInjuryModal.astro": {
+    "src/components/shared/PlayerInjuryModal.astro": {
       "fontSize": 4,
       "shadow": 1
     },
     "src/components/theleague/PlayerNewsModal.astro": {
       "fontSize": 3
     },
-    "src/components/theleague/PlayoffBadge.astro": {
+    "src/components/shared/PlayoffBadge.astro": {
       "fontSize": 1,
       "shadow": 2
     },
@@ -573,11 +573,11 @@
     "src/components/theleague/season-heroes/WaiverWireHero.astro": {
       "fontSize": 3
     },
-    "src/components/theleague/standings/StandingsTable.astro": {
+    "src/components/shared/standings/StandingsTable.astro": {
       "fontSize": 26,
       "shadow": 5
     },
-    "src/components/theleague/StandingsViewSelector.astro": {
+    "src/components/shared/StandingsViewSelector.astro": {
       "fontSize": 1
     },
     "src/components/theleague/TaggedPlayerShowcaseHero.astro": {
@@ -649,21 +649,21 @@
     "src/components/theleague/trade-builder/TradeValueAnalysis.tsx": {
       "fontSize": 5
     },
-    "src/components/theleague/TransactionHubModal.astro": {
+    "src/components/shared/TransactionHubModal.astro": {
       "fontSize": 18,
       "shadow": 2
     },
-    "src/components/theleague/VeteranExtensionCandidates.astro": {
+    "src/components/shared/VeteranExtensionCandidates.astro": {
       "fontSize": 5
     },
-    "src/components/theleague/WhatsNewRow.astro": {
+    "src/components/shared/WhatsNewRow.astro": {
       "fontSize": 5
     },
-    "src/components/theleague/WhatsNextCard.astro": {
+    "src/components/shared/WhatsNextCard.astro": {
       "fontSize": 11,
       "shadow": 4
     },
-    "src/components/theleague/YearSelector.astro": {
+    "src/components/shared/YearSelector.astro": {
       "shadow": 1
     },
     "src/layouts/MflAppLayout.astro": {

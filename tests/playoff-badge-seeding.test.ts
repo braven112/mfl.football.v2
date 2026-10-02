@@ -5,7 +5,7 @@ import {
   TIERING,
   resolvePlayoffBadgeStatus,
   seedValueFor,
-} from '../src/components/theleague/standings/standings-table-config';
+} from '../src/components/shared/standings/standings-table-config';
 import type { StandingsFranchise, TeamStanding } from '../src/types/standings';
 
 /**

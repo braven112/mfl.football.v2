@@ -11,14 +11,14 @@
  * without them (the keeper demo) passes false and gets division and playoff
  * views only.
  */
-import DemoSideCompetition from '../shared/DemoSideCompetition.astro';
-import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
-import UnifiedStandingsTable from '../../components/theleague/standings/StandingsTable.astro';
-import { COLUMNS, TIERING } from '../../components/theleague/standings/standings-table-config';
-import { getTierLogo, getTierLogoDark, PREMIER_LEAGUE, D_LEAGUE } from '../../utils/afl-tier-logo';
-import { getConferenceColor, getConferenceLogo, getConferenceLogoDark } from '../../utils/afl-conference';
-import StandingsViewSelector from '../../components/theleague/StandingsViewSelector.astro';
-import YearSelector from '../../components/theleague/YearSelector.astro';
+import DemoSideCompetition from '../DemoSideCompetition.astro';
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import UnifiedStandingsTable from './StandingsTable.astro';
+import { COLUMNS, TIERING } from './standings-table-config';
+import { getTierLogo, getTierLogoDark, PREMIER_LEAGUE, D_LEAGUE } from '../../../utils/afl-tier-logo';
+import { getConferenceColor, getConferenceLogo, getConferenceLogoDark } from '../../../utils/afl-conference';
+import StandingsViewSelector from '../StandingsViewSelector.astro';
+import YearSelector from '../YearSelector.astro';
 import {
   getDivisionStandings,
   getConferenceStandings,
@@ -26,25 +26,25 @@ import {
   getAllPlayStandings,
   calculateAllPlayFromWeekly,
   type WeeklyResultsData,
-} from '../../utils/standings';
-import { getTierMembership, TIER_COMPETITION_FIRST_SEASON, AFL_CUP } from '../../utils/afl-tier';
-import { resolveTierCutoffWeek } from '../../utils/all-play.mjs';
+} from '../../../utils/standings';
+import { getTierMembership, TIER_COMPETITION_FIRST_SEASON, AFL_CUP } from '../../../utils/afl-tier';
+import { resolveTierCutoffWeek } from '../../../utils/all-play.mjs';
 import {
   resolveConfigForYear,
   resolvePreferredTeamIdForYear,
   type TeamConfig,
-} from '../../utils/team-names';
-import { extractSeasonStructure, applySeasonStructure } from '../../utils/afl-structure';
-import ThemeImage from '../../components/ThemeImage.astro';
-import { getCurrentSeasonYear, getTestDateFromSearchParams } from '../../utils/league-year';
-import { resolveThrowbackRequestState } from '../../utils/throwback-request-state';
-import { applyThrowbackToStandingsConfig } from '../../utils/throwback-standings';
-import { strictThrowbackScopeForNavSlug } from '../../utils/throwback-scope';
-import type { LeagueDefinition } from '../../config/leagues';
-import type { LeagueSlug } from '../../types/nav';
-import type { StandingsFeed } from '../../utils/live-standings';
-import type { AflFamilySlug, ConferenceId } from '../../utils/afl-conference';
-import { leagueConferenceIds } from '../../utils/afl-conference';
+} from '../../../utils/team-names';
+import { extractSeasonStructure, applySeasonStructure } from '../../../utils/afl-structure';
+import ThemeImage from '../../ThemeImage.astro';
+import { getCurrentSeasonYear, getTestDateFromSearchParams } from '../../../utils/league-year';
+import { resolveThrowbackRequestState } from '../../../utils/throwback-request-state';
+import { applyThrowbackToStandingsConfig } from '../../../utils/throwback-standings';
+import { strictThrowbackScopeForNavSlug } from '../../../utils/throwback-scope';
+import type { LeagueDefinition } from '../../../config/leagues';
+import type { LeagueSlug } from '../../../types/nav';
+import type { StandingsFeed } from '../../../utils/live-standings';
+import type { AflFamilySlug, ConferenceId } from '../../../utils/afl-conference';
+import { leagueConferenceIds } from '../../../utils/afl-conference';
 
 interface Props {
   league: LeagueDefinition;

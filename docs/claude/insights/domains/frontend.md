@@ -261,7 +261,7 @@ heading renders. A comment on each says which question it answers.
 
 ## 2026-09-15 - An `auto-fill` Track Minimum Is a READABILITY Budget; and `container-type` Silently Becomes a Containing Block for `position: fixed`
 
-**Context:** The AFL keeper planner (`src/components/afl-fantasy/KeeperPlanner.astro`)
+**Context:** The AFL keeper planner (`src/components/shared/keepers/KeeperPlanner.astro`)
 shipped with `repeat(auto-fill, minmax(220px, 1fr))` on its keeper slots and
 `minmax(260px, 1fr)` on its cut pool. Inside the front-office hub — which
 reserves a 220px sidebar, leaving the panel a ~870px content column — that
@@ -1905,7 +1905,7 @@ const iconUrl = teamConfig?.icon;
 
 **Insight:** The codebase has two separate header/nav systems:
 1. `src/components/Header.astro` - Main site header with hamburger drawer
-2. `src/components/theleague/Header.astro` - League-specific with breadcrumb + icon nav + drawer
+2. `src/components/shared/Header.astro` - League-specific with breadcrumb + icon nav + drawer
 
 Both slide from the right and share similar patterns but have different link structures.
 
@@ -2147,7 +2147,7 @@ Pattern:
 
 **Evidence:** `src/utils/team-colors.ts` imports `../data/theleague.config.json` directly and only registers `team.color` values. `data/afl-fantasy/afl.config.json` teams (24 of them) carry `icon`/`banner` but no `color`.
 
-**Recommendation:** For any per-franchise chart on a non-TheLeague site, supply your own palette rather than calling `getTeamColor()`. The AFL Owner Activity page (`src/pages/afl-fantasy/activity.astro`) does this with a local 24-entry `CHART_PALETTE` keyed by franchise index. The shared render component (`src/components/theleague/OwnerActivityReport.astro`) stays color-agnostic — it just consumes a pre-resolved `color` on each chart series, so each league page resolves colors its own way. If colored franchise charts become common for AFL, the durable fix is to add a `color` field per team in `afl.config.json` and generalize `team-colors.ts` to load by league.
+**Recommendation:** For any per-franchise chart on a non-TheLeague site, supply your own palette rather than calling `getTeamColor()`. The AFL Owner Activity page (`src/pages/afl-fantasy/activity.astro`) does this with a local 24-entry `CHART_PALETTE` keyed by franchise index. The shared render component (`src/components/shared/OwnerActivityReport.astro`) stays color-agnostic — it just consumes a pre-resolved `color` on each chart series, so each league page resolves colors its own way. If colored franchise charts become common for AFL, the durable fix is to add a `color` field per team in `afl.config.json` and generalize `team-colors.ts` to load by league.
 
 ---
 
@@ -2175,7 +2175,7 @@ Pattern:
 
 ## 2026-06-24 - View-Switcher Tabs: Use Server-Rendered `<a>`, Not JS Click Handlers
 
-**Context:** The standings page tabs (Division / Playoff / All-Play, `src/components/theleague/StandingsViewSelector.astro`) were dead — clicking did nothing. The component rendered `<button>`s and attached `click` listeners in a `<script>` that ran on `DOMContentLoaded` and re-ran on `astro:after-swap`.
+**Context:** The standings page tabs (Division / Playoff / All-Play, `src/components/shared/StandingsViewSelector.astro`) were dead — clicking did nothing. The component rendered `<button>`s and attached `click` listeners in a `<script>` that ran on `DOMContentLoaded` and re-ran on `astro:after-swap`.
 
 **Insight:** Under the layout's `ClientRouter` (View Transitions), those click listeners never bound on the navigation paths users actually took, so the buttons were inert (verified: a programmatic `.click()` did nothing, while setting `window.location.href` directly navigated fine — proving the nav logic was right and only the listener binding was broken). Astro module `<script>`s execute once per session and are NOT re-run on swapped navigations; the `astro:after-swap` re-init is fragile and easy to get wrong. For pure navigation controls this whole machinery is unnecessary.
 
@@ -2211,7 +2211,7 @@ Pattern:
 
 ## 2026-06-27 - Genuinely-Interactive `<script>` Must Re-Init on `astro:page-load` — With Two Traps
 
-**Context:** The AFL Keeper Planner (`src/components/afl-fantasy/KeeperPlanner.astro`) and the AFL roster page's view-switch script (`src/pages/afl-fantasy/rosters.astro`) did all their DOM wiring at module-eval time. Symptom: drag-and-drop, the keep/cut arrow buttons, and the Roster/Analytics/Planner tabs worked on a hard refresh but went completely dead when you reached the page via in-site (ClientRouter) navigation. A hard refresh fixed it every time — the tell-tale signature of "module script ran once, never re-ran on swap."
+**Context:** The AFL Keeper Planner (`src/components/shared/keepers/KeeperPlanner.astro`) and the AFL roster page's view-switch script (`src/pages/afl-fantasy/rosters.astro`) did all their DOM wiring at module-eval time. Symptom: drag-and-drop, the keep/cut arrow buttons, and the Roster/Analytics/Planner tabs worked on a hard refresh but went completely dead when you reached the page via in-site (ClientRouter) navigation. A hard refresh fixed it every time — the tell-tale signature of "module script ran once, never re-ran on swap."
 
 **Insight:** This is the same root cause as the 2026-03-13 and 2026-06-24 insights, but the fix is different because these controls *can't* be plain `<a>` links — they toggle in-page view containers instantly (no reload) and do native drag-drop. So the right move is to keep the `<script>` but move all setup into a named `init()` and register it with `document.addEventListener('astro:page-load', init)` (fires on first load AND every swap). Two non-obvious traps when doing this:
 1. **Element-scoped listeners are free to re-bind; document-scoped ones are not.** Listeners attached to elements inside the swapped page (the planner root, tab buttons, selects) are safe to re-attach every `page-load` because the old DOM — and its listeners — is discarded on swap. But a listener on `document` (e.g. a delegated action-modal click handler, or a global `keydown` Escape handler) *stacks* on every navigation, so it fires N times and double-opens modals. Guard those with a module-scoped boolean (`let bound = false; if (!bound) { bound = true; document.addEventListener(...) }`) so they bind exactly once for the session.
@@ -3938,7 +3938,7 @@ floating surface wants a solid token (`--content-bg`).
 ## 2026-09-26 - A popover anchored to one side of its button is only right for one place in the row
 
 **Context:** The Rosters player sheet's ⋮ contract menu
-(`src/components/theleague/PlayerDetailsModal.astro`) was `right: 0` under the
+(`src/components/shared/PlayerDetailsModal.astro`) was `right: 0` under the
 ⋮. Built and screenshotted on an OWN-team player, where the hero row is four
 buttons and the ⋮ is last, at the right. On another owner's player the row is
 Watch · Trade for him · ⋮, the ⋮ sits left of centre, and the user's phone

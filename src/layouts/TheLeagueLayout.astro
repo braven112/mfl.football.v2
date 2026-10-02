@@ -30,8 +30,8 @@ import '../styles/states.css';
 // state rules must out-rank this layout's global a:hover, which a scoped copy
 // could not reach. docs/claude/rules/theming-and-assets.md § "CTAs".
 import '../styles/cta.css';
-import TheLeagueHeader from '../components/theleague/Header.astro';
-import TheLeagueFooter from '../components/theleague/Footer.astro';
+import TheLeagueHeader from '../components/shared/Header.astro';
+import TheLeagueFooter from '../components/shared/Footer.astro';
 import NavDrawer from '../components/nav/NavDrawer.astro';
 import TeamIconDarkStyles from '../components/TeamIconDarkStyles.astro';
 import NflLogoDarkStyles from '../components/NflLogoDarkStyles.astro';
@@ -39,8 +39,8 @@ import TeamAccentStyles from '../components/TeamAccentStyles.astro';
 import FranchiseBandBrands from '../components/FranchiseBandBrands.astro';
 import ThemeScript from '../components/ThemeScript.astro';
 import { getThemePreference } from '../utils/theme-preference';
-import TransactionHubModal from '../components/theleague/TransactionHubModal.astro';
-import RosterLoader from '../components/theleague/RosterLoader.astro';
+import TransactionHubModal from '../components/shared/TransactionHubModal.astro';
+import RosterLoader from '../components/shared/RosterLoader.astro';
 import { getLeagueContext } from '../utils/league-context';
 import { getLeagueYearForSlug } from '../utils/league-year';
 import { navConfig, getAdminFranchiseIds } from '../config/nav-config';

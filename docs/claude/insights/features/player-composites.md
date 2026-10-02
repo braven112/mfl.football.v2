@@ -607,7 +607,7 @@ Three traps, all hit in one session:
 ## Draft-room pick-reveal splash (shipped 2026-07-06)
 
 8. **Pick-reveal splash (live + mock draft room)** —
-   `src/components/theleague/draft-room/PickRevealSplash.tsx`, first REACT
+   `src/components/shared/draft-room/PickRevealSplash.tsx`, first REACT
    composite (the heroes are all Astro): "With the 1.03, the {franchise}
    select {player}" over a **franchise-brand** gradient (rookies rarely have
    an NFL team at draft time, so the drafting fantasy franchise tints the

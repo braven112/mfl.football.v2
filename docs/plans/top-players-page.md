@@ -121,7 +121,7 @@ Already shared, drop straight in:
 
 | Piece | Path | Note |
 |---|---|---|
-| `PlayerDetailsModal` | `src/components/theleague/PlayerDetailsModal.astro` | **already used by both leagues** — `afl-fantasy/players.astro` imports it from the theleague dir |
+| `PlayerDetailsModal` | `src/components/shared/PlayerDetailsModal.astro` | **already used by both leagues** — `afl-fantasy/players.astro` imports it from the theleague dir |
 | `buildPlayerCellHTML` / `escapeHtml` | `src/utils/player-cell-html.ts` | the headshot + name + team + logo cell |
 | `initPlayerModalTrigger` | `src/utils/player-modal-trigger.ts` | click-to-open wiring |
 | `player-cell.css` | `src/styles/player-cell.css` | |

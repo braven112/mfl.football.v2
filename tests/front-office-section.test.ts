@@ -192,7 +192,7 @@ describe('the hub is a real page now, not a links-only landing page', () => {
     expect(readFileSync('src/components/shared/rosters/RostersPage.astro', 'utf-8')).toMatch(
       /data-view-content="planner"[\s\S]*?<KeeperPlanner/,
     );
-    expect(readFileSync('src/components/afl-family/KeepersPage.astro', 'utf-8')).toMatch(
+    expect(readFileSync('src/components/shared/keepers/KeepersPage.astro', 'utf-8')).toMatch(
       /PLANNER_VIEW = 'view=planner'/,
     );
   });
@@ -247,7 +247,7 @@ describe('every Front Office page has a way back', () => {
       // The shared rosters page takes FrontOfficeNav from its route's
       // `breadcrumbs` slot; the AFL's route is what renders it.
       'src/pages/afl-fantasy/rosters.astro',
-      'src/components/afl-family/KeepersPage.astro',
+      'src/components/shared/keepers/KeepersPage.astro',
       'src/pages/afl-fantasy/keeper-analysis.astro',
     ],
     // The custom-site demo's keeper slot renders the shared page bodies.

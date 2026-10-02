@@ -189,7 +189,7 @@ describe('the position filter must never reach the push', () => {
     // with quarterbacks. The push list is a pure function of (order, pool);
     // this pins that positionFilter is not wired into it.
     const src = readFileSync(
-      join(root, 'src/components/theleague/custom-rankings/CustomRankingsPage.tsx'),
+      join(root, 'src/components/shared/custom-rankings/CustomRankingsPage.tsx'),
       'utf-8',
     );
     const decl = src.slice(src.indexOf('const pushableRankings'));

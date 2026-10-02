@@ -17,7 +17,7 @@ import type { SheetActionApi } from '../src/utils/player-modal-trigger';
 
 const page = readFileSync('src/components/shared/rosters/RostersPage.astro', 'utf8');
 const css = readFileSync('src/styles/rosters-mobile.css', 'utf8');
-const modal = readFileSync('src/components/afl-fantasy/AFLActionModal.astro', 'utf8');
+const modal = readFileSync('src/components/shared/AFLActionModal.astro', 'utf8');
 
 describe('teamSpread signs the line the way TheLeague’s badge does', () => {
   it('favoured team reads +, the underdog -', () => {

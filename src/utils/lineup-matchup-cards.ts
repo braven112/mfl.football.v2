@@ -14,7 +14,7 @@
  */
 
 import type { PlayerIdentity } from './player-map';
-import type { FaceoffSide } from '../components/theleague/FaceoffComposite.astro';
+import type { FaceoffSide } from '../components/shared/FaceoffComposite.astro';
 import { extractLineupStarters, type WeekMatchup } from './lineup-sources';
 import {
   buildPositionDemand,
