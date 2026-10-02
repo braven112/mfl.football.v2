@@ -551,6 +551,15 @@ button.lv-card:focus-visible {
   font-weight: var(--font-weight-semibold);
 }
 
+.lv-side__current {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-normal);
+  color: var(--content-text-muted);
+}
+
 .lv-side--lead .lv-side__name { color: var(--page-text); }
 .lv-side:not(.lv-side--lead) .lv-side__name { color: var(--content-text-muted); }
 
@@ -631,6 +640,17 @@ button.lv-card:focus-visible {
   white-space: nowrap;
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
+}
+
+/* Today's name under a Throwback Week era that renamed the club. Quiet on
+   purpose: the era is the headline, this is only the "who is that?" answer. */
+.lv-scorehead__current {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--font-size-xs);
+  color: var(--content-text-muted);
 }
 
 .lv-scorehead__score {

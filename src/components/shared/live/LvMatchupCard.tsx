@@ -93,7 +93,10 @@ export default function LvMatchupCard({
         crop={team.rung === 'mfl'}
         classes={{ wrap: 'lv-side__crest', crop: 'lv-side__crest--crop', text: 'lv-side__initials' }}
       />
-      <span className="lv-side__name">{team.nameShort || team.name}</span>
+      <span className="lv-side__name">
+        {team.nameShort || team.name}
+        {team.currentName && <span className="lv-side__current">{team.currentName}</span>}
+      </span>
       <span className="lv-side__proj">{fmt(team.projectedFinal)}</span>
       {/* INK, not the fill pair: this is text, and `--t0`/`--t1` only clear ΔE
           against the card. See `resolveMatchupColorVars`. */}
