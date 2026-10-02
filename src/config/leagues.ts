@@ -215,6 +215,8 @@ export interface LeagueDefinition {
   slug: CanonicalLeagueSlug;
   /** Short slug used by nav config / styles */
   navSlug: LeagueSlug;
+  /** Color theme id — a file in src/themes/ (see scripts/generate-league-themes.mjs). */
+  theme: string;
   name: string;
   mflHost: string;
   dataPath: string;

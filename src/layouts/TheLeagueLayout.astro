@@ -736,6 +736,8 @@ import DemoTour from '../components/shared/DemoTour.astro';
 	@import '../styles/tokens.css';
 	/* Dark-mode token overrides (scoped under html.dark) — must come after tokens.css */
 	@import '../styles/tokens-dark.css';
+	/* Per-league theme palettes (generated from src/themes/*.json) */
+	@import '../styles/league-themes.generated.css';
 
 	/* Navigation progress bar */
 	#nav-progress {

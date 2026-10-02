@@ -15,7 +15,8 @@
  *
  * ── WHY data-league="mfl" ON A HOST THAT BELONGS TO NO LEAGUE ─────────────
  * The token system keys every palette off this attribute, and this app needs
- * a palette (tokens.css + tokens-dark.css both carry an `mfl` block). The
+ * a palette (the `mfl-live` theme, src/themes/mfl-live.json, mapped to `mfl`
+ * by THEMED_SURFACES in scripts/generate-league-themes.mjs). The
  * value is a THEME KEY, not a league: "mfl" is not in the registry, has no
  * MFL id, and must never appear in HOST_TO_SLUG — which is exactly why it is
  * written as a literal here rather than derived from a league lookup. There
@@ -228,6 +229,8 @@ const leagueLinks = ALL_LEAGUES.filter((league) => !league.bestBall).map((league
 	@import '../styles/tokens.css';
 	/* Dark-mode token overrides (scoped under html.dark) — must come after tokens.css */
 	@import '../styles/tokens-dark.css';
+	/* Per-league theme palettes (generated from src/themes/*.json) */
+	@import '../styles/league-themes.generated.css';
 
 	:global(html) {
 		background: var(--page-bg);

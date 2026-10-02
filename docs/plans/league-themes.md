@@ -1,6 +1,6 @@
 # League themes — one theme file drives the site and the MFL skin
 
-Status: **planned, not started** (Oct 2026).
+Status: **phase 1 done** (Oct 2026) — theme library + generator, zero visual change.
 
 ## Goal
 
@@ -151,10 +151,26 @@ next to the Brand Book (`/<league>/brand`) and links to it.
 Each phase is its own PR. Phase 1 is the riskiest (it touches every page's
 colors); everything after it is additive.
 
-## Open items
+## Resolved
 
-- Exact route for the review page, and whether non-admins (the league being
-  onboarded) can open it pre-launch.
-- Fonts in OG images (`astro.config` lists UFC Sans TTFs explicitly).
-- Whether a theme also owns logo/wordmark asset paths, or that stays in the
-  registry.
+- **Logos** stay in the league registry, not the theme.
+- **Review page** — the league being onboarded can open it (and the site)
+  before launch, not only admins.
+- **Fonts carry through to share (OG) images** — `astro.config` lists the UFC
+  Sans TTFs explicitly today, so phase 5 has to feed the theme's fonts there.
+
+## Phase 1 — as built
+
+- `src/themes/{theleague,afl,bb1,archies,mfl-live}.json`; the keeper slot
+  names `afl`. Values are each league's EXACT pre-migration cascade, kept as declared
+  (a value may still be a `var()` of another token — Archie's palette layer
+  depends on it) over the 141 tokens any league block used
+  to override (Archie's palette layer included) — that set seeded `src/config/theme-tokens.mjs`.
+- Those 141 tokens were removed from `tokens.css` `:root` and
+  `tokens-dark.css` `html.dark`, with all five league blocks.
+- Verified in Chromium: every custom property on `<html>` across 10 pages ×
+  light/dark, plus every theme swapped onto two pages and no `data-league` —
+  40,050 computed values, 0 differences. Two pages had to move a `:root`
+  override to `:root:not(.dark)` to get there.
+- Still league-named (phase 2): `--afl-*`, `--bb-green`, `--mfl-ink*`, and
+  `null` values where a theme leaves a token unset.

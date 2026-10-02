@@ -25,6 +25,35 @@ matches what was rendering — otherwise keep the light literal and override
 only under `html.dark` (see the admin-hub gate pills for the pattern).
 
 
+## League themes — a league's palette lives in ONE file
+
+Each league's colors are a theme file, `src/themes/<id>.json`, named by the
+league's `theme` in the registry (`leagues-data.mjs`). Any league may name any
+theme; a theme is complete on its own and never inherits from another.
+`scripts/generate-league-themes.mjs` compiles them into
+`src/styles/league-themes.generated.css` (committed; imported by every layout
+and Storybook). Plan and later phases: `docs/plans/league-themes.md`.
+
+- **Edit the theme file, then run the generator.** Never hand-edit the
+  generated CSS, and never add a `html[data-league="…"]` block to
+  `tokens.css` / `tokens-dark.css` — those hold only the shared defaults.
+- **The contract is `src/config/theme-tokens.mjs`.** Every theme names every
+  token there, in `light` AND `dark`; `null` means "deliberately unset". A
+  value may be a `var()` of one of the theme's own tokens or of a shared
+  default — never of another theme. That
+  completeness is what makes the missing-dark-token trap above impossible for
+  league colors. A token in that list is declared ONLY by the generated CSS.
+- **Themed tokens outrank `:root`.** The theme blocks sit at
+  `html[data-league]` (0,1,1) and `html.dark[data-league]` (0,2,1), and the
+  default theme also covers `html:not([data-league])`. A page that overrides a
+  themed token on a bare `:root {}` silently loses — use `:root:not(.dark)`
+  for a light-only override (SplashLayout, css-customization).
+- **A non-league surface** (MFL Live's `data-league="mfl"`) maps to its theme
+  in `THEMED_SURFACES` in the generator, never through the registry.
+- Guard: `tests/league-themes.test.ts` — generated CSS fresh, every theme
+  complete, every league's theme exists, no themed token in the shared token
+  files, no themed token on a weak `:root`/`html` selector.
+
 ## The polish layer — motion, type, states, touch, surfaces
 
 Adopted Sep 2026 from the Impeccable design guidance (pbakaus/impeccable),
@@ -781,14 +810,13 @@ on a dark card — the exact thing the crest ring exists to avoid.
 ## A package league's colour scheme is PALETTE → SEMANTIC, never literals
 
 A package league (registry `optInNav` + `logo`, e.g. `archies`) gets its scheme
-from `html[data-league="<slug>"]` in `tokens.css` and
-`html.dark[data-league="<slug>"]` in `tokens-dark.css`. Inside those blocks
-the only colour literals live on `--league-palette-*` lines; every semantic
-token (`--color-primary`, `--breadcrumb-bar-bg`, `--nav-*`, `--btn-primary-*`, …)
-is a `var()` of the palette, and tints come from `color-mix()` of it. The owner
-asked for this so the league can be recoloured to anything by editing the
-palette alone. Each block states the contrast its palette must keep.
-Components read semantic tokens only. The dark block RE-ASSERTS every semantic
-token, because the generic `html.dark` block loads after the light per-league
-one and would otherwise pin TheLeague's dark blues. Guard:
-`tests/league-palette-tokens.test.ts`.
+from its theme file (`src/themes/<theme>.json`, see "League themes" above).
+Wherever that theme departs from the default theme, the only colour literals
+live on `--league-palette-*` tokens; every semantic token (`--color-primary`,
+`--breadcrumb-bar-bg`, `--nav-*`, `--btn-primary-*`, …) is a `var()` of the
+palette, and tints come from `color-mix()` of it. The owner asked for this so
+the league can be recoloured to anything by editing the palette alone.
+Components read semantic tokens only. Both `light` and `dark` must hold every
+token (the theme contract), so the old trap — the generic `html.dark` block
+pinning TheLeague's dark blues over a light-only league block — cannot
+recur. Guard: `tests/league-palette-tokens.test.ts`.

@@ -18,6 +18,12 @@ export const LEAGUES = {
     slug: 'theleague',
     /** Short slug used by nav config / styles (LeagueSlug type) */
     navSlug: 'theleague',
+    /**
+     * Color theme — a file in src/themes/. Any league may name any theme;
+     * a theme is complete on its own and never inherits from another.
+     * Compiled by scripts/generate-league-themes.mjs.
+     */
+    theme: 'theleague',
     name: 'The League',
     /** MFL server hostname for this league */
     mflHost: 'www49.myfantasyleague.com',
@@ -190,6 +196,7 @@ export const LEAGUES = {
     id: '19621',
     slug: 'afl-fantasy',
     navSlug: 'afl',
+    theme: 'afl',
     name: 'AFL',
     mflHost: 'www44.myfantasyleague.com',
     dataPath: 'data/afl-fantasy',
@@ -353,6 +360,7 @@ export const LEAGUES = {
     id: '37610',
     slug: 'best-ball-1',
     navSlug: 'bb1',
+    theme: 'bb1',
     name: 'Best Ball #1',
     mflHost: 'www45.myfantasyleague.com',
     dataPath: 'data/best-ball-1',
@@ -482,6 +490,7 @@ export const LEAGUES = {
     id: '10105',
     slug: 'archies',
     navSlug: 'archies',
+    theme: 'archies',
     name: "Archie's Fantasy Football League",
     mflHost: 'www48.myfantasyleague.com',
     dataPath: 'data/archies',
@@ -648,6 +657,8 @@ if (isDemoEnv()) {
     id: '99002',
     slug: 'keeper',
     navSlug: 'keeper',
+    /** Wears the AFL's theme — reuse by naming it, not by sharing a selector. */
+    theme: 'afl',
     /**
      * Only these nav links render here — the keeper slot has the AFL's core
      * pages, not all of them, and an untagged link to one it lacks is a 404.

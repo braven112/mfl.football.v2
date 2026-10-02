@@ -1047,6 +1047,10 @@
       "rules": "docs/claude/rules/theming-and-assets.md",
       "paths": [
         "src/styles/**",
+        "src/themes/**",
+        "src/config/theme-tokens.mjs",
+        "scripts/generate-league-themes.mjs",
+        "scripts/lib/theme-resolve.mjs",
         "src/utils/theme*",
         "src/utils/team-color*",
         "src/utils/team-icon*",
@@ -1068,6 +1072,7 @@
       ],
       "tests": [
         "tests/design-token-guard.test.ts",
+        "tests/league-themes.test.ts",
         "tests/dialog-closed-display.test.ts",
         "tests/position-pill-tokens.test.ts",
         "tests/team-color-backdrop-guard.test.ts",
