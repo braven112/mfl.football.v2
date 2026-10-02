@@ -119,6 +119,14 @@
   font-weight: var(--font-weight-semibold);
   text-decoration: none;
   white-space: nowrap;
+  /* On a <button> ("Show more"), drop the UA button box so it reads as the
+     same text link as the <a> form. */
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
 }
 
 /* The arrow is drawn here so markup never types its own — and is hidden from
