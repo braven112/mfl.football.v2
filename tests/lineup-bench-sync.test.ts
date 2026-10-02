@@ -22,8 +22,7 @@ import { stripComments } from './helpers/js-source';
 import { selectBenchPlayers, buildBenchRowHTML } from '../src/utils/lineup-bench';
 
 const PAGES = [
-  ['TheLeague', 'src/pages/theleague/lineup.astro'],
-  ['the AFL', 'src/components/afl-family/LineupPage.astro'],
+  ['every league', 'src/components/shared/lineup/LineupPage.astro'],
 ] as const;
 
 function pageSource(file: string): string {
@@ -131,7 +130,7 @@ describe.each(PAGES)('%s lineup page keeps its bench in sync', (_league, file) =
   const SCRIPT = controllerScript(file);
 
   it('server-renders the bench from the shared derivation, not an inline filter', () => {
-    expect(SRC).toContain("import { selectBenchPlayers } from '../../utils/lineup-bench'");
+    expect(SRC).toContain("import { selectBenchPlayers } from '../../../utils/lineup-bench'");
     expect(SRC, 'the bench <ul> must map the derived list').toContain('{benchRoster.map(player => {');
     expect(SRC, 'the count must be the derived list’s length, not a subtraction that can drift')
       .toContain('<strong id="bench-count">{benchRoster.length}</strong>');
@@ -140,7 +139,7 @@ describe.each(PAGES)('%s lineup page keeps its bench in sync', (_league, file) =
   });
 
   it('re-renders the bench client-side from the LIVE slots', () => {
-    expect(SCRIPT).toContain("from '../../utils/lineup-bench'");
+    expect(SCRIPT).toContain("from '../../../utils/lineup-bench'");
     expect(SCRIPT, 'the client needs its own renderBench()').toContain('function renderBench()');
     expect(SCRIPT, 'the bench must be derived from currentSlots, never from the server payload’s slots')
       .toMatch(/selectBenchPlayers\([^)]*currentSlots\)/);

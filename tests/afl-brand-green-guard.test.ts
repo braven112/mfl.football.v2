@@ -124,19 +124,19 @@ const FORBIDDEN = [
  */
 const ALLOWLIST = new Map<string, string>([
   [
-    'components/afl-family/LineupPage.astro:--color-secondary',
+    'components/shared/lineup/LineupPage.astro:--color-secondary',
     'Categorical position palette (--lineup-pos-rb) + the swapped-slot accent. ' +
-      'src/pages/theleague/lineup.astro declares an identical token block, so ' +
-      'recoloring only the AFL diverges two sibling pages, and a red RB chip ' +
-      'would collide with the error red on the same screen.',
+      'This one component is every league\'s lineup page (TheLeague included), ' +
+      'so the token block is shared rather than AFL brand voice, and a red RB ' +
+      'chip would collide with the error red on the same screen.',
   ],
   [
-    'components/afl-family/LineupPage.astro:#2e8743',
+    'components/shared/lineup/LineupPage.astro:#2e8743',
     'Fallback hex on the --lineup-pos-rb / --lineup-slot-swapped-accent / ' +
       '--btn-secondary-bg references above — same categorical-palette reason.',
   ],
   [
-    'components/afl-family/LineupPage.astro:--btn-secondary-bg',
+    'components/shared/lineup/LineupPage.astro:--btn-secondary-bg',
     'Alias of --color-secondary, used for --lineup-submit-ready in the same ' +
       'categorical token block as the position palette above. Same reason.',
   ],

@@ -106,7 +106,7 @@ The static fallback **keeps the same ARIA label** — reduced-motion users and s
 
 Loaders must work in all three render contexts this site uses — Astro templates, React islands, and vanilla-JS HTML-string builders. Follow the canonical **dual Astro + JS pattern** already proven by `PlayerCell`:
 
-- [src/components/theleague/PlayerCell.astro](../../src/components/theleague/PlayerCell.astro) — Astro component
+- [src/components/shared/PlayerCell.astro](../../src/components/shared/PlayerCell.astro) — Astro component
 - [src/utils/player-cell-html.ts](../../src/utils/player-cell-html.ts) — `buildPlayerCellHTML()` emitting the *same* classes for client-side rendering
 - [src/styles/player-cell.css](../../src/styles/player-cell.css) — one stylesheet; size/variant via CSS custom props on the root class
 

@@ -361,7 +361,7 @@ See CLAUDE.md for complete team name display standards.
 All player lists, cards, and tables **must** use the standard Player Lockup pattern.
 See **CLAUDE.md > Player Display** for the full specification.
 
-**Component:** `src/components/theleague/PlayerCell.astro`
+**Component:** `src/components/shared/PlayerCell.astro`
 
 **Quick checklist:**
 - [ ] Using `PlayerCell.astro` (or React equivalent for `.tsx` contexts)?

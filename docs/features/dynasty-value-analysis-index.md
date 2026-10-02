@@ -65,7 +65,7 @@ const currentYear = getCurrentLeagueYear();
 | `SALARY_CAP`, `ESCALATION_RATE` | `src/utils/salary-calculations.ts` | All features |
 | `formatCurrency()` | `src/utils/formatters.ts` | All features with dollar display |
 | `buildPlayerCellHTML()` | `src/utils/player-cell-html.ts` | Features 2, 7 (Free Agents page) |
-| `PlayerCell.astro` | `src/components/theleague/PlayerCell.astro` | Features 5, 6 (Roster page) |
+| `PlayerCell.astro` | `src/components/shared/PlayerCell.astro` | Features 5, 6 (Roster page) |
 | `calculateCapCharges()` | `src/utils/salary-calculations.ts` | Features 5, 6 |
 | `calculateAllSurplusValues()` | `src/utils/surplus-value.ts` | Features 2, 3, 4 (after Phase 1) |
 

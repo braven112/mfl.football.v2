@@ -2,19 +2,14 @@
   "$comment": "Ratchet baseline for hand-typed design values the tokens replace: literal transition durations, literal font-size, literal box-shadow, per file under src/ (src/assets/, the MFL-hosted skin, excluded). Totals per kind may only SHRINK (the per-file map is for diagnosis, so moving CSS between files is free): tests/design-polish.test.ts fails when a total rises (use --transition-*, --font-size-*, --shadow-*) and when it falls (retighten with node scripts/ratchet.mjs --write). Rule: docs/claude/rules/theming-and-assets.md, The polish layer.",
   "recordedAt": "2026-10-02",
   "totals": {
-    "transition": 207,
-    "fontSize": 2094,
-    "shadow": 244
+    "transition": 206,
+    "fontSize": 2084,
+    "shadow": 240
   },
   "files": {
     "src/components/afl-family/KeepersPage.astro": {
       "fontSize": 6,
       "shadow": 3
-    },
-    "src/components/afl-family/LineupPage.astro": {
-      "transition": 1,
-      "fontSize": 10,
-      "shadow": 4
     },
     "src/components/afl-family/StandingsPage.astro": {
       "fontSize": 17
@@ -95,6 +90,9 @@
       "fontSize": 69,
       "shadow": 2
     },
+    "src/components/schefter/PersonaEditor.astro": {
+      "fontSize": 1
+    },
     "src/components/schefter/RumorThread.astro": {
       "fontSize": 3
     },
@@ -117,6 +115,9 @@
     },
     "src/components/shared/brand/BrandPage.astro": {
       "fontSize": 5
+    },
+    "src/components/shared/branding/BrandingEditor.astro": {
+      "fontSize": 1
     },
     "src/components/shared/demo-leads/DemoLeadsPage.astro": {
       "fontSize": 1
@@ -175,6 +176,11 @@
     "src/components/shared/franchises/PreviousOwners.astro": {
       "fontSize": 6
     },
+    "src/components/shared/free-agents/FreeAgentsPage.astro": {
+      "transition": 11,
+      "fontSize": 20,
+      "shadow": 4
+    },
     "src/components/shared/front-office-hub/CapProjectionTable.astro": {
       "fontSize": 8,
       "shadow": 1
@@ -224,6 +230,11 @@
     "src/components/shared/LeagueCompositeHero.astro": {
       "fontSize": 2
     },
+    "src/components/shared/lineup/LineupPage.astro": {
+      "transition": 1,
+      "fontSize": 10,
+      "shadow": 4
+    },
     "src/components/shared/LineupGameStrip.astro": {
       "fontSize": 4
     },
@@ -241,6 +252,18 @@
     "src/components/shared/owners/OwnersIndexPage.astro": {
       "fontSize": 6,
       "shadow": 2
+    },
+    "src/components/shared/package-league/PackageCalendarPage.astro": {
+      "fontSize": 1
+    },
+    "src/components/shared/package-league/PackageLeagueHome.astro": {
+      "fontSize": 1
+    },
+    "src/components/shared/package-league/PackagePeckingOrderCard.astro": {
+      "fontSize": 2
+    },
+    "src/components/shared/package-league/PackageTeamSnapshot.astro": {
+      "fontSize": 2
     },
     "src/components/shared/PeckingOrderIssue.astro": {
       "fontSize": 15
@@ -277,6 +300,10 @@
       "transition": 2,
       "fontSize": 1,
       "shadow": 2
+    },
+    "src/components/shared/rosters/RostersPage.astro": {
+      "transition": 1,
+      "fontSize": 22
     },
     "src/components/shared/schedule-strength/GauntletArticleSection.astro": {
       "fontSize": 2
@@ -319,6 +346,9 @@
       "fontSize": 1,
       "shadow": 1
     },
+    "src/components/shared/standings/StandingsPage.astro": {
+      "fontSize": 2
+    },
     "src/components/shared/suggestions/SuggestionBoxPage.astro": {
       "transition": 10,
       "fontSize": 27,
@@ -332,6 +362,9 @@
     },
     "src/components/shared/top-players/TopPlayersPage.astro": {
       "fontSize": 9
+    },
+    "src/components/shared/trade-builder/TradeBuilderPage.astro": {
+      "fontSize": 16
     },
     "src/components/shared/WaiverClaimModal.astro": {
       "fontSize": 6
@@ -818,11 +851,6 @@
       "fontSize": 1,
       "shadow": 1
     },
-    "src/pages/theleague/lineup.astro": {
-      "transition": 1,
-      "fontSize": 10,
-      "shadow": 4
-    },
     "src/pages/theleague/mvp.astro": {
       "fontSize": 4,
       "shadow": 3
@@ -869,9 +897,6 @@
     "src/pages/theleague/rules.astro": {
       "fontSize": 12,
       "shadow": 2
-    },
-    "src/pages/theleague/standings.astro": {
-      "fontSize": 8
     },
     "src/pages/theleague/stats.astro": {
       "fontSize": 4,

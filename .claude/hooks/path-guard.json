@@ -135,7 +135,7 @@
         "src/pages/**/*.astro",
         "src/components/**/*.astro",
         "src/scripts/*",
-        "src/components/afl-family/LineupPage.astro",
+        "src/components/shared/lineup/LineupPage.astro",
         "src/components/shared/free-agents/FreeAgentsPage.astro",
         "src/components/afl-family/StandingsPage.astro",
         "src/components/shared/rosters/RostersPage.astro"
@@ -455,7 +455,7 @@
         "src/pages/api/*/lineup*",
         "src/pages/api/lineup*",
         "src/utils/lineup*",
-        "src/components/afl-family/LineupPage.astro"
+        "src/components/shared/lineup/LineupPage.astro"
       ],
       "tests": [
         "tests/lineup-bench-sync.test.ts",
@@ -684,7 +684,7 @@
         "src/pages/*/pecking-order/ballot.astro",
         "src/pages/*/pecking-order/voters.astro",
         "src/pages/*/lineup.astro",
-        "src/components/afl-family/LineupPage.astro"
+        "src/components/shared/lineup/LineupPage.astro"
       ],
       "tests": [
         "tests/owners-poll-ballot.test.ts",
@@ -1198,7 +1198,7 @@
         "src/components/**/*.astro",
         "src/pages/**/*.astro",
         "src/layouts/*.astro",
-        "src/components/afl-family/LineupPage.astro",
+        "src/components/shared/lineup/LineupPage.astro",
         "src/components/shared/free-agents/FreeAgentsPage.astro",
         "src/components/afl-family/StandingsPage.astro",
         "src/components/shared/rosters/RostersPage.astro"

@@ -91,7 +91,7 @@ describe('global polish rules', () => {
 
   it('lets a motion-essential element keep its transition (the hold-to-clear ring shows elapsed time)', () => {
     expect(polish).toMatch(/\*:not\(\[data-motion-essential\]\)/);
-    for (const f of ['src/pages/theleague/lineup.astro', 'src/components/afl-family/LineupPage.astro']) {
+    for (const f of ['src/components/shared/lineup/LineupPage.astro']) {
       expect(read(f), f).toMatch(/class="lineup-clear__progress" data-motion-essential/);
     }
   });

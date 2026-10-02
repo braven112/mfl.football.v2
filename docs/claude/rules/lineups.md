@@ -6,8 +6,14 @@
 
 ## Set Lineup — reading a submitted lineup, and MFL's soft failures
 
-Both lineup pages (`src/pages/theleague/lineup.astro`,
-`src/pages/afl-fantasy/lineup.astro`) SSR ~9 live MFL calls per view, and a
+Every league's Set Lineup page is ONE component,
+`src/components/shared/lineup/LineupPage.astro`; each `src/pages/<league>/lineup.astro`
+is a thin wrapper holding only that league's auth gate and config (unified
+Oct 2026 — TheLeague had its own forked copy until then, so "both pages" below
+is history: a fix now lands once). A league difference belongs in a prop or in
+`src/utils/lineup-page-keys.ts` (API route, draft storage key), never in a
+league literal, and `tests/lineup-page-clientrouter.test.ts` fails if a route
+grows its own body again. The page SSRs ~9 live MFL calls per view, and a
 week switch is a full page reload. Three things that bit us (owner report,
 2026-08-18: "future weeks show no players one week and only numbers another"):
 
