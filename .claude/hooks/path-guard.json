@@ -1014,12 +1014,15 @@
       "paths": [
         ".storybook/**",
         "stories/**",
-        "astro.config.ts"
+        "astro.config.ts",
+        "scripts/story-coverage.mjs",
+        "scripts/lib/story-coverage.mjs"
       ],
       "tests": [
         "tests/storybook-layout-globals.test.ts",
         "tests/storybook-dark-logo-mirror.test.ts",
-        "tests/storybook-story-renderer.test.ts"
+        "tests/storybook-story-renderer.test.ts",
+        "tests/story-coverage.test.ts"
       ]
     },
     {
