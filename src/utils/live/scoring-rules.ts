@@ -215,7 +215,7 @@ export interface StatSheetLine {
   /** The rule event as MFL spells it, e.g. `PY` or `UY+KY`. */
   event: string;
   label: string;
-  /** Display value: "312", "41, 53 yds". */
+  /** Display value with its unit: "312 yds", "2 TD", "41, 53 yds". */
   value: string;
   /** Points this stat earned under the league's rules; null when unscored. */
   points: number | null;
@@ -238,6 +238,27 @@ export interface StatSheet {
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 const fmtValue = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
+
+/**
+ * The unit each value is printed with — "186 yds", "2 TD", "6 car" — so the
+ * value column reads on its own and needs no "Value" header. Abbreviations
+ * that read the same singular and plural, so "1 TD" and "2 TD" both stand.
+ */
+const UNITS: Record<string, string> = {
+  PC: 'cmp', PA: 'att', INC: 'inc', PY: 'yds', '#P': 'TD', IN: 'INT', TSK: 'sk', TSY: 'yds',
+  P2: '2PT', RA: 'car', RY: 'yds', '#R': 'TD', R2: '2PT',
+  CC: 'rec', TGT: 'tgt', CY: 'yds', '#C': 'TD', C2: '2PT',
+  RCY: 'yds', PRY: 'yds', TYS: 'yds', TY: 'yds', '#TD': 'TD',
+  FU: 'FUM', FL: 'FUM', '#F': 'FG', '#A': 'att', '#M': 'FG', EP: 'XP', EA: 'att', EM: 'XP',
+  '#K': 'ret', KY: 'yds', '#KT': 'TD', '#U': 'ret', UY: 'yds', '#UT': 'TD',
+  TK: 'tkl', AS: 'ast', SK: 'sk', TKL: 'TFL', PD: 'PD', QH: 'hits', IC: 'INT', ICY: 'yds', '#IR': 'TD',
+};
+
+/** A value with its unit; a combined event (`UY+KY`) takes its first code's. */
+const withUnit = (codes: string[], n: number): string => {
+  const unit = UNITS[codes[0]];
+  return unit ? `${fmtValue(n)} ${unit}` : fmtValue(n);
+};
 
 export interface ScorePlayerInput {
   rules: PositionRuleSet[] | null;
@@ -264,7 +285,7 @@ export function scorePlayerStats({
   total,
 }: ScorePlayerInput): StatSheet {
   const pos = canonPosition(position);
-  const lines = new Map<string, StatSheetLine & { order: number }>();
+  const lines = new Map<string, StatSheetLine & { order: number; raw: number }>();
 
   if (rules) {
     for (const block of rules) {
@@ -285,7 +306,7 @@ export function scorePlayerStats({
               ? Math.floor(len / rule.every) * rule.points
               : rule.points;
           }
-          display = fgLengths.length ? `${fgLengths.join(', ')} yds` : '0';
+          display = `${fgLengths.join(', ')} yds`;
         } else {
           // A combined event (`UY+KY`) is known when ANY part is: a player
           // with kick returns and no punt returns has 0 punt return yards,
@@ -297,7 +318,7 @@ export function scorePlayerStats({
               ? Math.floor(value / rule.every) * rule.points
               : rule.points;
           }
-          display = fmtValue(value);
+          display = withUnit(rule.event, value);
         }
 
         const prev = lines.get(key);
@@ -308,6 +329,7 @@ export function scorePlayerStats({
             event: key,
             label: rule.event.map((c) => LABELS[c] ?? c).join(' + '),
             value: display,
+            raw: value,
             points,
             order: orderOf(rule.event[0]),
           });
@@ -321,7 +343,8 @@ export function scorePlayerStats({
       lines.set(code, {
         event: code,
         label: LABELS[code],
-        value: fmtValue(value),
+        value: withUnit([code], value),
+        raw: value,
         points: null,
         order: orderOf(code),
       });
@@ -331,6 +354,7 @@ export function scorePlayerStats({
         event: 'FG',
         label: LABELS.FG,
         value: `${fgLengths.join(', ')} yds`,
+        raw: fgLengths.length,
         points: null,
         order: orderOf('FG'),
       });
@@ -340,9 +364,9 @@ export function scorePlayerStats({
   // A stat that did nothing and paid nothing is noise ("0 punt return yards").
   const kept = [...lines.values()]
     .map((l) => ({ ...l, points: l.points === null ? null : round2(l.points) }))
-    .filter((l) => l.value !== '0' || (l.points !== null && l.points !== 0))
+    .filter((l) => l.raw !== 0 || (l.points !== null && l.points !== 0))
     .sort((a, b) => a.order - b.order || a.event.localeCompare(b.event))
-    .map(({ order: _order, ...l }) => l);
+    .map(({ order: _order, raw: _raw, ...l }) => l);
 
   const itemized = round2(kept.reduce((t, l) => t + (l.points ?? 0), 0));
   const scored = rules !== null;

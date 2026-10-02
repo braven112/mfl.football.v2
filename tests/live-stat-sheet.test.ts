@@ -87,6 +87,21 @@ describe('scoring a line', () => {
     expect(s.unitemized).toBe(0);
   });
 
+  it('every value carries its unit, so the column needs no "Value" heading', () => {
+    const s = scorePlayerStats({
+      rules: theLeagueRules,
+      position: 'QB',
+      stats: { PY: 186, '#P': 2, RA: 6, RY: 50, IN: 1 },
+      total: 22.44,
+    });
+    expect(Object.fromEntries(s.lines.map((l) => [l.event, l.value]))).toMatchObject({
+      PY: '186 yds',
+      '#P': '2 TD',
+      IN: '1 INT',
+      RY: '50 yds',
+    });
+  });
+
   it('a combined event needs only ONE part (kick returns, no punt returns)', () => {
     const s = scorePlayerStats({
       rules: theLeagueRules,

@@ -216,8 +216,11 @@ export default function LvStatSheet({
               <thead>
                 <tr>
                   <th scope="col">Stat</th>
+                  {/* Each value carries its own unit ("186 yds", "2 TD"), so
+                      this column needs no visible heading — only a name for
+                      a screen reader. */}
                   <th scope="col" className="lv-sheet__num">
-                    Value
+                    <span className="visually-hidden">Value</span>
                   </th>
                   {showPoints && (
                     <th scope="col" className="lv-sheet__num">
