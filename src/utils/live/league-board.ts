@@ -106,18 +106,30 @@ export async function assembleLeagueBoard(
    *
    * `readLeagueLive` resolves identity from the registry, so without this the
    * board keeps every club's present-day mark and Throwback Week is invisible.
-   * Colours ride along only when the era defines its own palette — which
-   * `applyThrowbackOverrides` signals by swapping `colorPrimary`. A franchise
-   * wearing today's colours keeps the registry's claim, dark variants and all.
+   * Colours ride along only when the era defines its own palette. Detected
+   * over the WHOLE claim, not the primary alone: `applyThrowbackOverrides`
+   * clears the present-day `*Dark` variants whenever an era brings colours,
+   * and Da Dangsters' 2015 era shares today's primary — a primary-only compare
+   * missed it and let the modern dark-mode colours back over the era. A
+   * franchise wearing today's colours keeps the registry's claim untouched.
    */
-  const presentPrimary = new Map(
-    (getLeagueTeamConfigs(slug) as ConfigTeam[]).map((t) => [t.franchiseId, t.colorPrimary]),
+  const CLAIM_KEYS = [
+    'color',
+    'colorPrimary',
+    'colorSecondary',
+    'colorPrimaryDark',
+    'colorSecondaryDark',
+  ] as const;
+  const present = new Map(
+    (getLeagueTeamConfigs(slug) as ConfigTeam[]).map((t) => [t.franchiseId, t]),
   );
   const identityOverrides: Record<string, LiveIdentityOverride> | undefined = throwback
     ? Object.fromEntries(
         throwback.configTeams.map((t) => {
+          const today = present.get(t.franchiseId);
+          const changed = !!today && CLAIM_KEYS.some((k) => t[k] !== today[k]);
           const eraColors =
-            t.colorPrimary && t.colorPrimary !== presentPrimary.get(t.franchiseId)
+            changed && t.colorPrimary
               ? {
                   color: t.colorPrimary,
                   colorPrimary: t.colorPrimary,
