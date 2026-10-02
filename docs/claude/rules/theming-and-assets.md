@@ -692,6 +692,14 @@ sibling pipeline rather than the crest one:
   YouTube TV's) SWAPS under `html.dark` and is never stroked; a mark below the
   threshold takes the same four-shadow ring as a crest
   (`src/utils/tv-logo-theme-css.ts`, keyed on exact `src`).
+- **Square marks get a size hook, not a size.** Every surface sizes the marks
+  by HEIGHT, so a mark at or below 1.2 width:height (`SQUARE_ASPECT_MAX`: NBC,
+  ABC, FOX, DAZN, Channel 5, the Prime/TNF shield) carries a fraction of a
+  wordmark's ink and reads as the small one. The manifest lists them as
+  `squareMarks` and the theme CSS sets `--tv-logo-scale` on each by `src` —
+  but only a surface that multiplies its height by that variable grows. Today
+  that is the two Set Lineup pages' opponent badge, by request; Sunday Ticket
+  and the shared `.net-badge` deliberately do not read it.
 - **The marks stroke in BOTH directions, and the crests do not.** A crest is
   league artwork and skews dark; a network mark is whoever holds the rights,
   and two of them are pale by brand — Channel 5's yellow 5 and Kayo's light

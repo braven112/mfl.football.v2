@@ -4,7 +4,7 @@ import path from 'path';
 import { buildTvLogoManifest, collectTvLogos, measureAllTvLogos } from '../scripts/measure-tv-logo-contrast.mjs';
 import { STROKE_THRESHOLD } from '../scripts/measure-crest-contrast.mjs';
 import { LIGHT_STROKE_THRESHOLD } from '../scripts/measure-tv-logo-contrast.mjs';
-import { buildTvLogoThemeCss, TV_LOGO_LIGHT_STROKE_COLOR } from '../src/utils/tv-logo-theme-css';
+import { buildTvLogoThemeCss, TV_LOGO_LIGHT_STROKE_COLOR, TV_LOGO_SQUARE_SCALE } from '../src/utils/tv-logo-theme-css';
 import { CREST_STROKE_FILTER, crestStrokeFilter } from '../src/utils/crest-dark-stroke-css';
 import { buildAllTeamIconDarkCss } from '../src/utils/team-icon-dark-styles';
 
@@ -21,6 +21,7 @@ describe('tv-logo dark-mode manifest', () => {
     expect(measured.needsLightStroke).toEqual(manifest.needsLightStroke);
     expect(measured.lightThreshold).toBe(manifest.lightThreshold);
     expect(measured.darkVariants).toEqual(manifest.darkVariants);
+    expect(measured.squareMarks).toEqual(manifest.squareMarks);
     expect(measured.threshold).toBe(manifest.threshold);
   }, 60_000);
 
@@ -83,6 +84,21 @@ describe('buildTvLogoThemeCss', () => {
     expect(css).toContain('html:not(.dark) img[src="/assets/tv-logos/kayo-sports.png"]');
     expect(css).toContain(`filter: ${crestStrokeFilter(TV_LOGO_LIGHT_STROKE_COLOR)}`);
     expect(css).not.toContain('html.dark img[src="/assets/tv-logos/channel-5-uk.png"]');
+  });
+
+  it('draws square marks larger in both themes, on the Set Lineup pages only', () => {
+    const css = buildTvLogoThemeCss();
+    expect(css).toContain('html img[src="/assets/tv-logos/nbc.png"]');
+    expect(css).toContain('html img[src="/assets/tv-logos/prime-video.png"]');
+    expect(css).toContain(`--tv-logo-scale: ${TV_LOGO_SQUARE_SCALE};`);
+    expect(css).not.toContain('html img[src="/assets/tv-logos/espn.png"]');
+    for (const page of ['src/pages/theleague/lineup.astro', 'src/components/afl-family/LineupPage.astro']) {
+      expect(readFileSync(page, 'utf8'), page).toContain('var(--tv-logo-scale, 1)');
+    }
+    // Opt-in only: the shared badge and the Sunday Ticket board keep their size.
+    for (const sheet of ['src/styles/network-badge.css', 'src/styles/sunday-ticket.css']) {
+      expect(readFileSync(sheet, 'utf8'), sheet).not.toContain('--tv-logo-scale');
+    }
   });
 
   it('is empty with nothing to do, and is part of the ONE composed stylesheet', () => {
