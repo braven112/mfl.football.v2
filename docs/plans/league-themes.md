@@ -153,6 +153,12 @@ colors); everything after it is additive.
 
 ## Resolved
 
+- **CTAs wear the league's colour** — the theme slots `--cta-fill` /
+  `--cta-fill-hover` / `--on-cta-fill` feed `src/styles/cta.css`, set to each
+  league's accent at an AA-passing step (guarded per theme and mode).
+- **Review pages: one per theme per mode** — a light page and a dark page for
+  every theme, not one page with both side by side.
+
 - **Logos** stay in the league registry, not the theme.
 - **Review page** — the league being onboarded can open it (and the site)
   before launch, not only admins.

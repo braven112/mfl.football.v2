@@ -80,6 +80,10 @@ export const THEMED_TOKENS = [
   '--on-color-primary',
   '--shadow-btn-hover',
   '--shadow-focus-ring',
+  // Call to action — the shared .cta fill (src/styles/cta.css)
+  '--cta-fill',
+  '--cta-fill-hover',
+  '--on-cta-fill',
   // Secondary
   '--btn-secondary-bg',
   '--btn-secondary-bg-focus',

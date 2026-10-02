@@ -837,12 +837,9 @@ const countAriaLabel = hasCount
     background: var(--ev-divider);
   }
 
-  /* The card is navy in BOTH themes, so the fill is the league accent pinned
-     here rather than the theme-switching --btn-primary-bg default. */
+  /* The fill is the AFL theme's --cta-fill (src/themes/afl.json): the red
+     accent, deepened in dark so white text keeps AA on the navy card. */
   .afl-event-hero__cta {
-    --cta-bg: var(--league-accent, #c41e3a);
-    --cta-bg-hover: color-mix(in srgb, var(--cta-bg) 85%, black);
-    --cta-ink: #fff;
     /* There is no global box-sizing reset in this repo (see the note in
        live-scoring.css). Without this the --ghost modifier's 1px border sits
        OUTSIDE the fixed 50px height and the two buttons in this flex row

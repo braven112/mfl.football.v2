@@ -152,7 +152,7 @@ Every call-to-action link or button is the shared pattern in
 
 | Shape | Markup | Hover |
 |---|---|---|
-| Primary (filled) | `class="cta cta--primary"` | background steps to `--btn-primary-bg-hover`, lifts 1px; text never changes, never underlines |
+| Primary (filled) | `class="cta cta--primary"` | background steps to the theme's `--cta-fill-hover`, lifts 1px; text never changes, never underlines |
 | Ghost (outlined) | `class="cta cta--ghost"` | same, on a 10% tint of its ink |
 | Arrow link | `class="cta-link"` | link-hover colour, the arrow nudges right, no underline |
 
@@ -188,7 +188,16 @@ whatever the stylesheet order. COLOURS go through variables —
 arrow link). Never set `background` / `color` on the BEM class directly: the
 hover rule reads the variables and would replace a hard-coded value. A white
 pill on a team-colour hero is `--cta-bg: #fff; --cta-ink: <team>`; the
-generic site accent is the default and needs nothing.
+league's own colour is the default and needs nothing.
+
+**The default fill is the league's, from its theme.** `--cta-bg` /
+`--cta-bg-hover` / `--cta-ink` default to the theme slots `--cta-fill` /
+`--cta-fill-hover` / `--on-cta-fill` (`src/themes/<id>.json`), set to each
+league's accent at an AA-passing step: AFL red, Best Ball emerald, Archie's sky
+blue, MFL Live red, TheLeague blue. Never re-point a CTA to `--league-accent`
+to "get the league colour" — the accent is often too light to carry white
+text in dark (MFL Live's `#ef5350` is 3.49:1, which four pages shipped), and
+the theme's fill already accounts for that.
 
 Guard: `tests/cta-pattern.test.ts` fails on any `<a>` carrying a CTA-shaped
 class (`block__cta`, `block__elem-btn`, `block-btn`, `…__button`, bare `btn`

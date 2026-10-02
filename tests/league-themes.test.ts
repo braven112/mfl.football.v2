@@ -22,6 +22,22 @@ import { fileURLToPath } from 'node:url';
 import postcss from 'postcss';
 import { THEMED_TOKENS } from '../src/config/theme-tokens.mjs';
 import { loadThemes, loadSurfaces } from '../scripts/generate-league-themes.mjs';
+import { resolveTheme } from '../scripts/lib/theme-resolve.mjs';
+
+/** WCAG contrast of two #rgb / #rrggbb colours. */
+function contrast(a: string, b: string): number {
+  const lum = (hex: string) => {
+    let h = hex.replace('#', '');
+    if (h.length === 3) h = [...h].map((c) => c + c).join('');
+    const [r, g, bl] = [0, 2, 4].map((i) => {
+      const v = parseInt(h.slice(i, i + 2), 16) / 255;
+      return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r! + 0.7152 * g! + 0.0722 * bl!;
+  };
+  const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p);
+  return (x! + 0.05) / (y! + 0.05);
+}
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const themes = loadThemes();
@@ -99,6 +115,16 @@ describe('league themes', () => {
         });
       }
 
+      for (const mode of ['light', 'dark'] as const) {
+        it(`CTA text clears AA on its fill and hover in ${mode}`, () => {
+          const r = resolveTheme(theme, mode);
+          for (const fill of ['--cta-fill', '--cta-fill-hover']) {
+            expect(r[fill], fill).toMatch(/^#[0-9a-f]{3}([0-9a-f]{3})?$/i);
+            expect(contrast(r['--on-cta-fill']!, r[fill]!), `--on-cta-fill on ${fill}`).toBeGreaterThanOrEqual(4.5);
+          }
+        });
+      }
+
       it('notes only name themed tokens', () => {
         expect(Object.keys(theme.notes ?? {}).filter((k) => !TOKENS.has(k))).toEqual([]);
       });
@@ -123,6 +149,15 @@ describe('league themes', () => {
       });
       expect(offenders).toEqual([]);
     }
+  });
+
+  it('no CTA re-points its fill to --league-accent (the theme\'s --cta-fill is the league colour)', () => {
+    // MFL Live's dark accent carries white at 3.49:1; four pages shipped it as
+    // a button fill before CTAs read the theme.
+    const offenders = walk(path.join(ROOT, 'src'), ['.css', '.astro', '.tsx'])
+      .filter((f) => /--cta-(bg|bg-hover)\s*:\s*var\(--league-accent/.test(fs.readFileSync(f, 'utf8')))
+      .map((f) => path.relative(ROOT, f));
+    expect(offenders).toEqual([]);
   });
 
   it('no stylesheet sets a themed token on a selector the theme blocks outrank', () => {

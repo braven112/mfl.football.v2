@@ -165,13 +165,8 @@ if (authUser && week) {
 		color: var(--color-text-secondary);
 	}
 
-	/* MFL Live's fill is --league-accent: in dark, --btn-primary-bg falls back to
-	   TheLeague's blue, which this palette never intends (tokens-dark.css). */
+	/* The fill is the mfl-live theme's --cta-fill (src/themes/mfl-live.json). */
 	.mfl-live-intro__cta {
-		--cta-bg: var(--league-accent);
-		--cta-bg-hover: color-mix(in srgb, var(--league-accent) 85%, black);
-		--cta-border: var(--league-accent);
-		--cta-ink: #ffffff;
 		padding: 0.7rem 1.15rem;
 	}
 </style>

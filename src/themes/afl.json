@@ -6,7 +6,8 @@
     "--afl-gold": "Amber accent for championship hero tints and borders. Not the badge gold - use --afl-trophy-gold to match award art.",
     "--afl-gold-text": "Gold as FOREGROUND. --afl-gold is 3.2:1 on a white card and --afl-trophy-gold 2.4:1, both under AA; this is 5.0:1. Dark flips to the metallic badge gold (6.3:1 on the navy card).",
     "--color-primary": "Deliberately the shared blue in both modes: it feeds FILLS (nav active pill, buttons, focus rings), where a white value would be white-on-white.",
-    "--link-color": "Dark: headings and plain anchors go white with a red hover, so red stays the accent and not the body voice."
+    "--link-color": "Dark: headings and plain anchors go white with a red hover, so red stays the accent and not the body voice.",
+    "--cta-fill": "The CTA fill is the league accent. Light: red #c41e3a carries white at 5.84:1. Dark: the accent #ef5350 carries white at only 3.49:1, so the fill is the deeper #d81b41 (5.06:1, MFL Live's dark button red); hover #e02a4d is 4.56:1."
   },
   "light": {
     "--btn-inverse-bg": "#e2e8f0",
@@ -68,6 +69,9 @@
     "--on-color-primary": null,
     "--shadow-btn-hover": "0 10px 30px rgba(37, 99, 235, 0.35)",
     "--shadow-focus-ring": "0 0 0 3px rgba(28, 73, 124, 0.25)",
+    "--cta-fill": "var(--league-accent)",
+    "--cta-fill-hover": "#a8172c",
+    "--on-cta-fill": "#ffffff",
     "--btn-secondary-bg": "var(--color-secondary)",
     "--btn-secondary-bg-focus": "#22663a",
     "--btn-secondary-bg-hover": "var(--color-secondary-dark)",
@@ -211,6 +215,9 @@
     "--on-color-primary": null,
     "--shadow-btn-hover": "0 10px 30px rgba(59, 130, 246, 0.3)",
     "--shadow-focus-ring": "0 0 0 3px rgba(59, 130, 246, 0.4)",
+    "--cta-fill": "#d81b41",
+    "--cta-fill-hover": "#e02a4d",
+    "--on-cta-fill": "#ffffff",
     "--btn-secondary-bg": "#10b981",
     "--btn-secondary-bg-focus": "#34d399",
     "--btn-secondary-bg-hover": "#34d399",

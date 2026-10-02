@@ -73,13 +73,19 @@ export function substitute(value, scope, seen = new Set()) {
   return out.trim();
 }
 
-/** token → resolved value (null where the theme leaves it unset) for one mode. */
+/**
+ * token → resolved value (null where the theme leaves it unset) for one mode.
+ * @param {{ light: Record<string, string | null>, dark: Record<string, string | null> }} theme
+ * @param {'light' | 'dark'} mode
+ * @returns {Record<string, string | null>}
+ */
 export function resolveTheme(theme, mode) {
   const scope = new Map(sharedDefaults()[mode]);
   for (const [token, value] of Object.entries(theme[mode])) {
     if (value == null) scope.delete(token);
     else scope.set(token, value);
   }
+  /** @type {Record<string, string | null>} */
   const out = {};
   for (const [token, value] of Object.entries(theme[mode])) {
     out[token] = value == null ? null : substitute(value, scope, new Set([token]));

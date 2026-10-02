@@ -55,6 +55,9 @@ html[data-league="keeper"] {
   --input-border-focus: var(--color-primary);
   --shadow-btn-hover: 0 10px 30px rgba(37, 99, 235, 0.35);
   --shadow-focus-ring: 0 0 0 3px rgba(28, 73, 124, 0.25);
+  --cta-fill: var(--league-accent); /* The CTA fill is the league accent. Light: red #c41e3a carries white at 5.84:1. Dark: the accent #ef5350 carries white at only 3.49:1, so the fill is the deeper #d81b41 (5.06:1, MFL Live's dark button red); hover #e02a4d is 4.56:1. */
+  --cta-fill-hover: #a8172c;
+  --on-cta-fill: #ffffff;
   --btn-secondary-bg: var(--color-secondary);
   --btn-secondary-bg-focus: #22663a;
   --btn-secondary-bg-hover: var(--color-secondary-dark);
@@ -175,6 +178,9 @@ html.dark[data-league="keeper"] {
   --input-border-focus: #3b82f6;
   --shadow-btn-hover: 0 10px 30px rgba(59, 130, 246, 0.3);
   --shadow-focus-ring: 0 0 0 3px rgba(59, 130, 246, 0.4);
+  --cta-fill: #d81b41;
+  --cta-fill-hover: #e02a4d;
+  --on-cta-fill: #ffffff;
   --btn-secondary-bg: #10b981;
   --btn-secondary-bg-focus: #34d399;
   --btn-secondary-bg-hover: #34d399;
@@ -293,6 +299,9 @@ html[data-league="archies"] {
   --on-color-primary: var(--league-palette-on-ink);
   --shadow-btn-hover: 0 10px 30px color-mix(in srgb, var(--league-palette-accent) 35%, transparent);
   --shadow-focus-ring: 0 0 0 3px color-mix(in srgb, var(--league-palette-accent) 45%, transparent);
+  --cta-fill: var(--btn-primary-bg);
+  --cta-fill-hover: var(--btn-primary-bg-hover);
+  --on-cta-fill: var(--btn-primary-text);
   --btn-secondary-bg: var(--league-palette-ink);
   --btn-secondary-bg-focus: var(--league-palette-ink-raised);
   --btn-secondary-bg-hover: var(--league-palette-ink-raised);
@@ -421,6 +430,9 @@ html.dark[data-league="archies"] {
   --on-color-primary: var(--league-palette-on-accent);
   --shadow-btn-hover: 0 10px 30px color-mix(in srgb, var(--league-palette-accent) 30%, transparent);
   --shadow-focus-ring: 0 0 0 3px color-mix(in srgb, var(--league-palette-accent) 40%, transparent);
+  --cta-fill: var(--btn-primary-bg);
+  --cta-fill-hover: var(--btn-primary-bg-hover);
+  --on-cta-fill: var(--btn-primary-text);
   --btn-secondary-bg: var(--league-palette-accent-soft);
   --btn-secondary-bg-focus: var(--league-palette-accent);
   --btn-secondary-bg-hover: var(--league-palette-accent);
@@ -550,6 +562,9 @@ html[data-league="bb1"] {
   --input-border-focus: var(--color-primary);
   --shadow-btn-hover: 0 10px 30px rgba(37, 99, 235, 0.35);
   --shadow-focus-ring: 0 0 0 3px rgba(28, 73, 124, 0.25);
+  --cta-fill: #0b7a54; /* The CTA fill is the emerald accent. Light: the accent #0e8a5f carries white at only 4.36:1, so the fill is one step deeper, #0b7a54 (5.35:1). Dark: the bright accent #34d399 with near-black text (9.98:1), as Archie's does with its sky blue. */
+  --cta-fill-hover: #08694a;
+  --on-cta-fill: #ffffff;
   --btn-secondary-bg: var(--color-secondary);
   --btn-secondary-bg-focus: #22663a;
   --btn-secondary-bg-hover: var(--color-secondary-dark);
@@ -665,6 +680,9 @@ html.dark[data-league="bb1"] {
   --input-border-focus: #3b82f6;
   --shadow-btn-hover: 0 10px 30px rgba(59, 130, 246, 0.3);
   --shadow-focus-ring: 0 0 0 3px rgba(59, 130, 246, 0.4);
+  --cta-fill: var(--league-accent);
+  --cta-fill-hover: #6ee7b7;
+  --on-cta-fill: #0b0f16;
   --btn-secondary-bg: #10b981;
   --btn-secondary-bg-focus: #34d399;
   --btn-secondary-bg-hover: #34d399;
@@ -783,6 +801,9 @@ html[data-league="mfl"] {
   --input-border-focus: var(--color-primary);
   --shadow-btn-hover: 0 10px 30px rgba(37, 99, 235, 0.35);
   --shadow-focus-ring: 0 0 0 3px rgba(196, 30, 58, 0.25);
+  --cta-fill: var(--btn-primary-bg);
+  --cta-fill-hover: var(--btn-primary-bg-hover);
+  --on-cta-fill: var(--btn-primary-text);
   --btn-secondary-bg: var(--color-secondary);
   --btn-secondary-bg-focus: #22663a;
   --btn-secondary-bg-hover: var(--color-secondary-dark);
@@ -903,6 +924,9 @@ html.dark[data-league="mfl"] {
   --input-border-focus: #ef5350;
   --shadow-btn-hover: 0 10px 30px rgba(216, 27, 65, 0.3);
   --shadow-focus-ring: 0 0 0 3px rgba(239, 83, 80, 0.4);
+  --cta-fill: var(--btn-primary-bg);
+  --cta-fill-hover: var(--btn-primary-bg-hover);
+  --on-cta-fill: var(--btn-primary-text);
   --btn-secondary-bg: #10b981;
   --btn-secondary-bg-focus: #34d399;
   --btn-secondary-bg-hover: #34d399;
@@ -1022,6 +1046,9 @@ html:not([data-league]) {
   --input-border-focus: var(--color-primary);
   --shadow-btn-hover: 0 10px 30px rgba(37, 99, 235, 0.35);
   --shadow-focus-ring: 0 0 0 3px rgba(28, 73, 124, 0.25);
+  --cta-fill: var(--btn-primary-bg);
+  --cta-fill-hover: var(--btn-primary-bg-hover);
+  --on-cta-fill: var(--btn-primary-text);
   --btn-secondary-bg: var(--color-secondary);
   --btn-secondary-bg-focus: #22663a;
   --btn-secondary-bg-hover: var(--color-secondary-dark);
@@ -1134,6 +1161,9 @@ html.dark:not([data-league]) {
   --input-border-focus: #3b82f6;
   --shadow-btn-hover: 0 10px 30px rgba(59, 130, 246, 0.3);
   --shadow-focus-ring: 0 0 0 3px rgba(59, 130, 246, 0.4);
+  --cta-fill: var(--btn-primary-bg);
+  --cta-fill-hover: var(--btn-primary-bg-hover);
+  --on-cta-fill: var(--btn-primary-text);
   --btn-secondary-bg: #10b981;
   --btn-secondary-bg-focus: #34d399;
   --btn-secondary-bg-hover: #34d399;
