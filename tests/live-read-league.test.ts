@@ -35,7 +35,7 @@ vi.mock('../src/utils/player-map', async (importOriginal) => {
   return { ...actual, getPlayerMap: () => playerMapEntries };
 });
 
-import { buildBoardFromSnapshot, readLeagueLive } from '../src/utils/live/read';
+import { buildBoardFromSnapshot, readLeagueLive, type LiveIdentityOverride } from '../src/utils/live/read';
 import { getLeagueBySlug } from '../src/config/leagues';
 
 const WEEK = 3;
@@ -377,8 +377,8 @@ describe('the board’s own frame', () => {
   });
 });
 
-describe('Throwback Week dresses the board, and only in art', () => {
-  const dressed = async (over: Record<string, { name?: string; nameShort?: string; icon?: string }>) =>
+describe('Throwback Week dresses the board', () => {
+  const dressed = async (over: Record<string, LiveIdentityOverride>) =>
     panelOf({
       slug: 'theleague',
       week: WEEK,
@@ -417,14 +417,23 @@ describe('Throwback Week dresses the board, and only in art', () => {
     expect(panel.matchups[0].sides[1].icon).toBe(plain.sides[1].icon);
   });
 
-  it('does NOT let an era change the colour pair', async () => {
-    // The pair is resolved against this surface's card ground and an era's
-    // palette has not been through that check. Throwback swaps art, not colour.
+  it('leaves the colour pair alone when the era brings no palette', async () => {
     const plain = (await panelOf({ slug: 'theleague', week: WEEK, year: YEAR })).matchups[0];
     const panel = await dressed({
       '0001': { name: 'Steel City Maulers', icon: '/assets/era/maulers.png' },
     });
     expect(panel.matchups[0].colorVars).toEqual(plain.colorVars);
+  });
+
+  it('dresses the colour pair in the era palette when one is supplied', async () => {
+    // Cowboy Up wearing the green Degenerates crest kept claiming its own
+    // dark-mode red, won the clash, and pushed the Pigskins to grey.
+    const plain = (await panelOf({ slug: 'theleague', week: WEEK, year: YEAR })).matchups[0];
+    const panel = await dressed({
+      '0001': { name: 'Degenerates', colors: { color: '#286528', colorPrimary: '#286528', colorSecondary: '#dec341' } },
+    });
+    expect(panel.matchups[0].colorVars['--t0-light']).not.toBe(plain.colorVars['--t0-light']);
+    expect(panel.matchups[0].colorVars['--t0-light']).toBe('#286528');
   });
 
   it('is a no-op when the caller supplies nothing', async () => {
