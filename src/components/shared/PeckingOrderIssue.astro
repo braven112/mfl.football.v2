@@ -25,9 +25,7 @@ import type { LeagueSlug } from '../../types/nav';
 import { teamAccentVar } from '../../utils/team-accent-css';
 import { getLeaguePrefix, resolveLeaguePath } from '../../utils/nav-utils';
 import { isRetroactivelyGenerated } from '../../utils/pecking-order-landing';
-import OwnersPollSection, {
-  type OwnersPollBlock,
-} from './owners-poll/OwnersPollSection.astro';
+import type { OwnersPollBlock } from './owners-poll/OwnersPollResults.astro';
 import '../../styles/owners-poll-section.css';
 
 export interface RankingRow {
@@ -328,13 +326,23 @@ const divisionOrder: { name: string; rows: { place: number; row: PeckingOrderDat
     </ol>
   </section>
 
-  <OwnersPollSection
-    poll={issue.ownersPoll}
-    teams={teams}
-    leagueParam={league}
-    ballotHref={resolveLeaguePath(`${getLeaguePrefix(league)}/pecking-order/ballot`, hideLeaguePrefix)}
-    issueWeek={issue.week}
-  />
+  {/*
+    The Owners' Poll is its own feature now (/owners-poll). The column keeps a
+    one-line teaser and nothing else: the owner rankings sit behind a vote on
+    the poll page, and printing them here would hand every reader the payoff
+    that is meant to bring them to the ballot.
+  */}
+  {issue.ownersPoll && (
+    <aside class="op-strip op-strip--teaser" aria-label="The Owners' Poll">
+      <p class="op-strip__title">What does the room think?</p>
+      <p class="op-strip__cta">
+        The Owners’ Poll ranks the league by owner vote, not the numbers.{' '}
+        <a href={resolveLeaguePath(`${getLeaguePrefix(league)}/owners-poll`, hideLeaguePrefix)}>
+          Vote to see the owners’ rankings ›
+        </a>
+      </p>
+    </aside>
+  )}
 
   <section class="pr-section" aria-label="Weekly awards">
     <h2 class="pr-section__title">Awards</h2>

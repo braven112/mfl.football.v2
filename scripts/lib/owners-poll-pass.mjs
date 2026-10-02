@@ -17,10 +17,6 @@ import {
   SHORT_WINDOW_HOURS,
 } from '../../src/utils/owners-poll-window.mjs';
 import { normalizeFranchiseId } from '../../src/utils/franchise-id.mjs';
-import {
-  standingVoteLine,
-  resultTimingPhrase,
-} from '../../src/utils/owners-poll-copy.mjs';
 import { isBallotStale } from '../../src/utils/owners-poll-ballot.mjs';
 import {
   tallyOwnersPoll,
@@ -52,8 +48,12 @@ import {
 /** @type {PollLogger} */
 const DEFAULT_LOG = { log: (...a) => console.log(...a), warn: (...a) => console.warn(...a) };
 
-/** Where the ballot lives, for every message that links to it. */
-export const BALLOT_PATH = '/pecking-order/ballot';
+/**
+ * The poll's own page — ballot and results together (vote, then see the
+ * owners' rankings). Every message about the poll links here, never to The
+ * Pecking Order: they are separate features.
+ */
+export const BALLOT_PATH = '/owners-poll';
 
 /**
  * Format an announce instant for CHAT and PUSH.
@@ -428,32 +428,6 @@ function round2(x) {
 // ─── Chat copy ─────────────────────────────────────────────────────
 
 /**
- * The line appended to Tuesday's column announcement.
- *
- * Leads with the disagreement bait rather than the chore. "Cast your ballot"
- * is a task; "the computer says X is #1, disagree?" is an invitation, and the
- * whole feature is built on owners wanting to argue with the machine.
- */
-export function buildOpenLine(issue, teams, league) {
-  const poll = issue.ownersPoll;
-  if (!poll || poll.status !== 'open') return null;
-  const top = issue.rankings[0];
-  const bottom = issue.rankings[issue.rankings.length - 1];
-  const name = (fid) => teams.get(fid)?.nameMedium ?? fid;
-  const when = resultTimingPhrase(
-    formatResultTimePT(poll.closesAt),
-    Boolean(poll.clampedToKickoff),
-  );
-  return [
-    `🗳️ THE OWNERS' POLL — the computer has ${name(top.franchiseId)} #1 and ${name(bottom.franchiseId)} last.`,
-    // Never "go vote" any more: most of the league already has a ballot on
-    // file, and telling them to cast one reads as a chore they already did.
-    // The ask is to CHANGE it, which is the only action left.
-    `Disagree? ${standingVoteLine(when)} ▸ ${leagueUrl(league, BALLOT_PATH)}`,
-  ].join('\n');
-}
-
-/**
  * The reveal — the poll's ONE chat post on the day it closes.
  *
  * GroupMe is capped at a single poll post per Pacific day (see
@@ -503,9 +477,9 @@ export function buildRevealMessage({ league, issue, teams, callback = null }) {
   if (callback) lines.push(`📼 ${callback}`);
 
   // The reveal is also the moment to say the poll did not just close: an owner
-  // reading this can change their vote right now and it counts next time. The
-  // link is the BALLOT — the full room rankings sit behind a vote there, which
-  // is the turnout lever this post exists to pull.
+  // reading this can vote right now and it counts next time. The link is the
+  // poll page — the full owners' rankings sit behind a vote there, which is the
+  // turnout lever this post exists to pull.
   lines.push(
     `Vote to see the full rankings — ballots stand until you change them. ▸ ${leagueUrl(league, BALLOT_PATH)}`,
   );

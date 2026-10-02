@@ -105,7 +105,7 @@ describe('buildRevealFeedPost', () => {
     expect(post.id).toBe('sf_owners_poll_theleague_2026_w5');
     expect(post.type).toBe('power-ranking');
     expect(post.league).toBe('theleague');
-    expect(post.link).toBe('/pecking-order/ballot');
+    expect(post.link).toBe('/owners-poll');
     expect(post.headline).toContain('Team 1');
   });
 
@@ -313,7 +313,7 @@ describe('buildOpenPushes', () => {
     expect(pushes[0].body).toContain('Team 16');
     expect(pushes[0].body).toMatch(/always open/i);
     expect(pushes[0].body).toMatch(/Thursday/);
-    expect(pushes[0].url).toContain('/pecking-order/ballot');
+    expect(pushes[0].url).toBe('/owners-poll');
   });
 
   it('sends nothing once the poll is closed', () => {

@@ -45,6 +45,12 @@ interface Props {
   /** The viewer's own franchise, highlighted — self-voting is allowed. */
   ownFranchiseId: string;
   columnHref: string;
+  /**
+   * The page is holding the owners' rankings back until this owner votes.
+   * A first successful save reloads it so the server renders them — the
+   * vote → see-the-results flow every poll post links into.
+   */
+  revealOnSave?: boolean;
   /** Empty when push isn't configured; the prompt then renders nothing. */
   vapidPublicKey?: string;
   /**
@@ -77,6 +83,7 @@ export default function BallotBuilder({
   leagueParam,
   ownFranchiseId,
   columnHref,
+  revealOnSave = false,
   vapidPublicKey = '',
   officialClock,
 }: Props) {
@@ -156,12 +163,18 @@ export default function BallotBuilder({
       setFromPrefill(false);
       setJustSaved(true);
       if (data?.turnout) setTurnout(data.turnout);
+      if (revealOnSave) {
+        // The rankings are server-rendered behind the ballot check, so the
+        // only way to show them is a fresh render. Land on them, not the top.
+        window.location.hash = 'op-results';
+        window.location.reload();
+      }
     } catch {
       setSaveError('Could not reach the poll. Check your connection and try again.');
     } finally {
       setSaving(false);
     }
-  }, [endpoint, selection]);
+  }, [endpoint, selection, revealOnSave]);
 
   const complete = isComplete(selection, slots);
   const dirty =

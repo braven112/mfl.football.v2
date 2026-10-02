@@ -97,11 +97,12 @@ describe('the poll only ever posts to chat twice a week', () => {
     expect(GENERATOR).not.toMatch(/\bpostToGroupMe\s*\(/);
   });
 
-  it('folds the ballot invite into the column post instead of adding one', () => {
-    expect(GENERATOR).toMatch(/buildOpenLine/);
-    // buildOpenLine returns a LINE appended to the announcement, never a post.
-    expect(PASS).toMatch(/export function buildOpenLine/);
-    expect(PASS).not.toMatch(/postToGroupMe[\s\S]{0,200}buildOpenLine/);
+  it('keeps the poll out of the Pecking Order post — they are separate features', () => {
+    // The column's Tuesday post used to carry the ballot invite, which is what
+    // made the poll read as part of the column. The poll's one chat post is
+    // now the results post, and it links the poll page.
+    expect(GENERATOR).not.toMatch(/buildOpenLine/);
+    expect(PASS).not.toMatch(/export function buildOpenLine/);
   });
 });
 
