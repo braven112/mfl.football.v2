@@ -32,14 +32,28 @@
    * danger    — expired or imminent (red)
    * complete  — draft done (green)
    * suspended — overnight pause window (neutral, low emphasis)
+   *
+   * These are FILLS under fixed white text, so each one is a literal deep
+   * shade that clears 4.5:1 against white in BOTH themes — the banner carries
+   * small text (the eyebrow, the team name), not just the big clock. They
+   * used to read the semantic tokens (--color-warning, --color-success,
+   * --color-gray-700…), which are TEXT colours: tokens-dark.css lightens
+   * them so they read on a dark page, which turned the dark-mode banner into
+   * white on pastel (warning 1.7:1, idle 1.8:1, complete 1.9:1), and the
+   * light-mode success green was already 2.5:1. Don't point these back at a
+   * semantic token. Guard: tests/draft-timer-banner-contrast.test.ts.
+   *
+   * `other` alone stays on the league's --color-primary (blue for TheLeague
+   * and the AFL, red for mfl, ink for Archie's); its dark-mode value is
+   * deepened in the html.dark block below.
    */
-  --dr-timer-bg-idle: var(--color-gray-700, #374151);
+  --dr-timer-bg-idle: #374151;
   --dr-timer-bg-other: var(--color-primary, #1c497c);
-  --dr-timer-bg-you: linear-gradient(135deg, #10b981 0%, #059669 60%, #f59e0b 100%);
-  --dr-timer-bg-warning: var(--color-warning, #f59e0b);
-  --dr-timer-bg-danger: var(--color-error, #dc2626);
-  --dr-timer-bg-complete: var(--color-success, #16a34a);
-  --dr-timer-bg-suspended: var(--color-gray-500, #6b7280);
+  --dr-timer-bg-you: linear-gradient(135deg, #047857 0%, #065f46 60%, #b45309 100%);
+  --dr-timer-bg-warning: #b45309;
+  --dr-timer-bg-danger: #b91c1c;
+  --dr-timer-bg-complete: #15803d;
+  --dr-timer-bg-suspended: #4b5563;
   --dr-timer-bg: var(--dr-timer-bg-other);
   --dr-timer-text: #ffffff;
   --dr-timer-accent: var(--color-warning, #f59e0b);
@@ -159,6 +173,11 @@
  *     would break that white-on-badge contrast instead of fixing anything).
  */
 html.dark .draft-room {
+  /* Dark mode's --color-primary is brightened to read as TEXT on a dark page
+     (#3b82f6, 3.7:1 under white), so the "other team" fill is pulled back
+     toward black. A mix, not a literal, so it stays the LEAGUE's colour. */
+  --dr-timer-bg-other: color-mix(in srgb, var(--color-primary, #3b82f6) 70%, #000000);
+
   --dr-cell-bg-user: color-mix(in srgb, var(--color-primary, #3b82f6) 12%, var(--content-bg, #1e1e1e));
   --dr-chat-pick-bg: color-mix(in srgb, var(--color-primary, #3b82f6) 10%, var(--content-bg, #1e1e1e));
   --dr-chat-reaction-active-bg: color-mix(in srgb, var(--color-primary, #3b82f6) 18%, var(--content-bg, #1e1e1e));
