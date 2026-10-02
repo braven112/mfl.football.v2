@@ -172,9 +172,9 @@ const {
   }
   .gauntlet__years a:focus-visible { outline: 2px solid var(--gnt-focus); outline-offset: 2px; }
   .gauntlet__years a[aria-current] {
-    background: var(--color-primary, #1c497c);
+    background: var(--color-primary-fill, var(--color-primary, #1c497c));
     border-color: var(--color-primary, #1c497c);
-    color: #ffffff;
+    color: var(--on-color-primary, #ffffff);
     font-weight: 600;
   }
 

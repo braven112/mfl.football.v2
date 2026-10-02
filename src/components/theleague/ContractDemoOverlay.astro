@@ -1030,8 +1030,8 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
   .cdemo-nav__back[hidden] { visibility: hidden; }
 
   .cdemo-nav__next {
-    background: var(--color-primary, #1c497c);
-    color: #fff;
+    background: var(--color-primary-fill, var(--color-primary, #1c497c));
+    color: var(--on-color-primary, #fff);
     margin-left: auto;
   }
 
@@ -1039,8 +1039,8 @@ import { getPlayerHeadshot } from '../../constants/roster-constants';
 
   .cdemo-nav__start {
     display: none;
-    background: var(--color-primary, #1c497c);
-    color: #fff;
+    background: var(--color-primary-fill, var(--color-primary, #1c497c));
+    color: var(--on-color-primary, #fff);
     margin-left: auto;
     gap: 0.5rem;
   }

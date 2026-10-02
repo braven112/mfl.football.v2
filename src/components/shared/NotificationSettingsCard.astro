@@ -320,8 +320,8 @@ const vapidPublicKey = (import.meta.env.PUBLIC_VAPID_PUBLIC_KEY as string | unde
   }
 
   .push-btn--primary {
-    background: var(--color-primary);
-    color: #fff;
+    background: var(--color-primary-fill, var(--color-primary));
+    color: var(--on-color-primary, #fff);
   }
 
   .push-btn--primary:hover:not(:disabled) {

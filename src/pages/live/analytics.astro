@@ -510,9 +510,9 @@ const sectionChips = [
 		text-decoration: none;
 	}
 	.ins__chip[aria-current='true'] {
-		background: var(--color-primary);
+		background: var(--color-primary-fill, var(--color-primary));
 		border-color: var(--color-primary);
-		color: #fff;
+		color: var(--on-color-primary, #fff);
 	}
 
 	.ins__tiles {

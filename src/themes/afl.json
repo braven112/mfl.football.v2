@@ -7,7 +7,8 @@
     "--afl-gold-text": "Gold as FOREGROUND. --afl-gold is 3.2:1 on a white card and --afl-trophy-gold 2.4:1, both under AA; this is 5.0:1. Dark flips to the metallic badge gold (6.3:1 on the navy card).",
     "--color-primary": "Deliberately the shared blue in both modes: it feeds FILLS (nav active pill, buttons, focus rings), where a white value would be white-on-white.",
     "--link-color": "Dark: headings and plain anchors go white with a red hover, so red stays the accent and not the body voice.",
-    "--cta-fill": "The CTA fill is the league accent. Light: red #c41e3a carries white at 5.84:1. Dark: the accent #ef5350 carries white at only 3.49:1, so the fill is the deeper #d81b41 (5.06:1, MFL Live's dark button red); hover #e02a4d is 4.56:1."
+    "--cta-fill": "The CTA fill is the league accent. Light: red #c41e3a carries white at 5.84:1. Dark: the accent #ef5350 carries white at only 3.49:1, so the fill is the deeper #d81b41 (5.06:1, MFL Live's dark button red); hover #e02a4d is 4.56:1.",
+    "--color-primary-fill": "Primary as a FILL under text (pills, chips, active nav). Dark: --color-primary #3b82f6 is the TEXT blue (4.07:1 on the navy card) and carries white at only 3.68:1; the fill is #2563eb, white 5.17:1, the dark primary button's blue. Unset = fills use --color-primary."
   },
   "light": {
     "--btn-inverse-bg": "#e2e8f0",
@@ -65,6 +66,7 @@
     "--color-primary": "#1c497c",
     "--color-primary-dark": "#164066",
     "--color-primary-light": "#2563eb",
+    "--color-primary-fill": null,
     "--input-border-focus": "var(--color-primary)",
     "--on-color-primary": null,
     "--shadow-btn-hover": "0 10px 30px rgba(37, 99, 235, 0.35)",
@@ -211,6 +213,7 @@
     "--color-primary": "#3b82f6",
     "--color-primary-dark": "#2563eb",
     "--color-primary-light": "#60a5fa",
+    "--color-primary-fill": "#2563eb",
     "--input-border-focus": "#3b82f6",
     "--on-color-primary": null,
     "--shadow-btn-hover": "0 10px 30px rgba(59, 130, 246, 0.3)",

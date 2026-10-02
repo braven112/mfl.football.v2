@@ -228,6 +228,22 @@
       "impact": "user",
       "area": "design-system",
       "league": "bb1"
+    },
+    {
+      "date": "2026-10-02",
+      "type": "bug-fix",
+      "summary": "In dark mode, blue pills, tags and highlighted tabs are a deeper blue, so their white text is easy to read.",
+      "impact": "user",
+      "area": "design-system",
+      "league": "afl"
+    },
+    {
+      "date": "2026-10-02",
+      "type": "bug-fix",
+      "summary": "In dark mode, sky-blue pills, tags and highlighted tabs now carry black text instead of hard-to-read white.",
+      "impact": "user",
+      "area": "design-system",
+      "league": "archies"
     }
   ]
 }

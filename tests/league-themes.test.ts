@@ -160,6 +160,25 @@ describe('league themes', () => {
     expect(offenders).toEqual([]);
   });
 
+  it('a --color-primary FILL under white text reads the fill and on-fill slots', () => {
+    // --color-primary is the TEXT blue; on the AFL's navy dark ground no one
+    // blue carries white AND reads as text. A rule that fills with it under
+    // a hard-coded white must go through --color-primary-fill /
+    // --on-color-primary, which the theme sets where the two jobs split.
+    const WHITE = /^(#fff|#ffffff|white|var\(--color-white(, ?#fff(fff)?)?\))$/i;
+    const offenders: string[] = [];
+    for (const file of walk(path.join(ROOT, 'src'), ['.css', '.astro', '.tsx'])) {
+      if (file.includes('league-themes.generated') || file.includes(`${path.sep}themes${path.sep}`)) continue;
+      for (const m of fs.readFileSync(file, 'utf8').matchAll(/\{([^{}]*?)\}/g)) {
+        const body = m[1]!;
+        if (!/background(?:-color)?\s*:\s*var\(--color-primary\b/.test(body)) continue;
+        const c = body.match(/(?:^|[;\s{])color\s*:\s*([^;]+?)\s*(?:!important)?\s*;/);
+        if (c && WHITE.test(c[1]!.trim())) offenders.push(path.relative(ROOT, file));
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
   it('no stylesheet sets a themed token on a selector the theme blocks outrank', () => {
     const WEAK = new Set([':root', 'html', 'html.dark', ':root.dark', 'html:root']);
     const files = [

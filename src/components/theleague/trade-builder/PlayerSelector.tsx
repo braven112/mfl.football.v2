@@ -194,8 +194,8 @@ export default function PlayerSelector({ team, selectedPlayerIds, onAdd, ranking
           transition: all 0.1s ease;
         }
         .player-selector__pos-btn--active {
-          background: var(--color-primary, #1c497c);
-          color: #fff;
+          background: var(--color-primary-fill, var(--color-primary, #1c497c));
+          color: var(--on-color-primary, #fff);
           border-color: var(--color-primary, #1c497c);
         }
         .player-selector__pos-btn--bait {

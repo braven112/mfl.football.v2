@@ -414,8 +414,8 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     justify-content: center;
     gap: 0.5rem;
     padding: 0.625rem 1rem;
-    background: var(--color-primary, #1c497c);
-    color: #fff;
+    background: var(--color-primary-fill, var(--color-primary, #1c497c));
+    color: var(--on-color-primary, #fff);
     border: none;
     border-radius: var(--radius-md, 0.5rem);
     font-size: 0.8125rem;
@@ -529,8 +529,8 @@ const teamIcons = config.teams.map((t: { franchiseId: string; icon: string }) =>
     height: 28px;
     min-width: 28px;
     border-radius: var(--radius-full, 9999px);
-    background: var(--color-primary, #1c497c);
-    color: #fff;
+    background: var(--color-primary-fill, var(--color-primary, #1c497c));
+    color: var(--on-color-primary, #fff);
     display: flex;
     align-items: center;
     justify-content: center;

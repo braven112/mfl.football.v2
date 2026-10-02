@@ -1075,8 +1075,8 @@ const getHeadshot = (playerId: string, espnId?: string) => {
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      color: var(--color-white);
-      background: var(--color-primary);
+      color: var(--on-color-primary, var(--color-white));
+      background: var(--color-primary-fill, var(--color-primary));
       padding: 0.25rem 0.625rem;
       border-radius: var(--radius-sm);
     }
@@ -1328,8 +1328,8 @@ const getHeadshot = (playerId: string, espnId?: string) => {
 
     /* Approve = Primary (navy) */
     .action-btn--approve {
-      background: var(--color-primary, #1c497c);
-      color: #fff;
+      background: var(--color-primary-fill, var(--color-primary, #1c497c));
+      color: var(--on-color-primary, #fff);
     }
     .action-btn--approve:hover:not(:disabled) {
       background: var(--color-primary-dark, #163d68);
@@ -1700,8 +1700,8 @@ const getHeadshot = (playerId: string, espnId?: string) => {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      background: var(--color-primary, #1c497c);
-      color: #fff;
+      background: var(--color-primary-fill, var(--color-primary, #1c497c));
+      color: var(--on-color-primary, #fff);
       border: none;
       border-radius: 6px;
       padding: 0.375rem 0.875rem;

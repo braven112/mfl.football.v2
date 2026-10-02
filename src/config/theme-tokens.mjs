@@ -98,6 +98,7 @@ export const THEME_TOKEN_GROUPS = [
       '--color-primary',
       '--color-primary-dark',
       '--color-primary-light',
+      '--color-primary-fill',
       '--input-border-focus',
       '--on-color-primary',
       '--shadow-btn-hover',

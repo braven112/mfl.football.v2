@@ -269,8 +269,8 @@ html.dark .mre__link {
   padding: 0.45rem 1.1rem;
   border: 0;
   border-radius: var(--radius-full, 999px);
-  background: var(--color-primary, #1c497c);
-  color: #fff;
+  background: var(--color-primary-fill, var(--color-primary, #1c497c));
+  color: var(--on-color-primary, #fff);
   font-size: 0.8125rem;
   font-weight: 700;
   cursor: pointer;
