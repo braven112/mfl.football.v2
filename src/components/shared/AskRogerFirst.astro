@@ -82,7 +82,7 @@ const homeHref = r(`/${league.slug}`);
       </p>
 
       <div class="roger-403__links">
-        <a href={homeHref} class="roger-403__btn roger-403__btn--primary">
+        <a href={homeHref} class="cta cta--primary roger-403__btn">
           Back to {league.name}
         </a>
       </div>
@@ -191,51 +191,14 @@ const homeHref = r(`/${league.slug}`);
     gap: var(--spacing-sm, 0.75rem);
   }
 
-  /* FILLED, not outlined — the --btn-secondary-* set is designed as a filled
-     button, so its `text` token is white in LIGHT mode and near-black in dark.
-     Taking the border and text but not the background rendered "Back to The
-     League" as white-on-white and the button looked empty. Use the trio
-     together, or none of it. (docs/claude/rules/theming-and-assets.md: a
-     token's light and dark values differ — check the LIGHT one.) */
+  /* A shared `.cta` (src/styles/cta.css) — colours, hover and focus come from
+     there. The lone button is wide enough to read as the way out without
+     being a full-width slab on desktop. */
   .roger-403__btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     min-height: 2.75rem;
-    padding: 0 var(--spacing-lg, 1.25rem);
-    border-radius: var(--radius-md, 8px);
-    background: var(--btn-secondary-bg);
-    border: 1px solid var(--btn-secondary-border);
-    color: var(--btn-secondary-text);
-    font-weight: 600;
-    text-decoration: none;
-  }
-
-  .roger-403__btn:hover {
-    background: var(--btn-secondary-bg-hover);
-    border-color: var(--btn-secondary-border-hover);
-  }
-
-  .roger-403__btn--primary {
-    background: var(--btn-primary-bg);
-    border-color: var(--btn-primary-border);
-    color: var(--btn-primary-text);
-  }
-
-  .roger-403__btn--primary:hover {
-    background: var(--btn-primary-bg-hover);
-    border-color: var(--btn-primary-border-hover);
-  }
-
-  /* The lone button is wide enough to read as the way out without being a
-     full-width slab on desktop. */
-  .roger-403__btn {
     min-width: 14rem;
-  }
-
-  .roger-403__btn:focus-visible {
-    outline: none;
-    box-shadow: var(--box-shadow-focus-ring);
+    padding: 0 var(--spacing-lg, 1.25rem);
+    font-weight: 600;
   }
 
   @media (max-width: 640px) {

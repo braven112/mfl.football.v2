@@ -695,7 +695,7 @@ const hasHighlights = Boolean(
         {coverageNote && (
           <p class="rivals-caveat">{coverageNote}</p>
         )}
-        <a class="rivals-more" href="/afl-fantasy/rivalries">See full rivalry matrix →</a>
+        <a class="cta-link rivals-more" href="/afl-fantasy/rivalries">See full rivalry matrix</a>
       </section>
     )}
 
@@ -1144,16 +1144,9 @@ const hasHighlights = Boolean(
   }
 
   .rivals-more {
-    display: inline-block;
+    --cta-link-ink: var(--league-accent);
     margin-top: var(--spacing-md, 16px);
     font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--league-accent);
-    text-decoration: none;
-  }
-
-  .rivals-more:hover {
-    text-decoration: underline;
   }
 
   /* --- Trade ledger --- */

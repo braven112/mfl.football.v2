@@ -88,6 +88,13 @@
     border-color var(--transition-fast);
 }
 
+/* An <a>: restate colour and decoration on hover/focus, or the layouts'
+   global a:hover turns it red and underlined (tests/cta-pattern.test.ts). */
+.ui-state__action:is(:hover, :focus) {
+  color: var(--page-text);
+  text-decoration: none;
+}
+
 .ui-state__action:hover {
   border-color: var(--color-primary);
   background: color-mix(in srgb, var(--color-primary) 8%, var(--card-surface));

@@ -185,7 +185,7 @@ export function DraftQueuePanel({
             href={mflPickUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="dr-submit-pick-btn"
+            className="cta cta--primary dr-submit-pick-btn"
           >
             Pick on MFL ↗
           </a>
@@ -200,7 +200,7 @@ export function DraftQueuePanel({
             type="button"
             onClick={() => topItem && onSubmitPick(topItem.playerId)}
             disabled={isSubmittingPick || !topItem}
-            className={`dr-submit-pick-btn loading-btn loading-btn--on-accent${isSubmittingPick ? ' is-loading' : ''}`}
+            className={`cta cta--primary dr-submit-pick-btn loading-btn loading-btn--on-accent${isSubmittingPick ? ' is-loading' : ''}`}
             aria-busy={isSubmittingPick || undefined}
             aria-label={isSubmittingPick ? 'Submitting pick' : undefined}
           >

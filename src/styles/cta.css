@@ -1,0 +1,174 @@
+/* ==========================================================================
+   CTA pattern — the one call-to-action look, site-wide.
+
+   Imported by every base layout (frontmatter import, so it ships unscoped)
+   and by Storybook's preview. Three shapes:
+
+     <a class="cta cta--primary" href="…">Change your vote</a>
+     <a class="cta cta--ghost"   href="…">Maybe later</a>
+     <a class="cta-link"         href="…">The Pecking Order</a>   (arrow added)
+
+   The classes work on <a> and <button> alike: <a> when it navigates, <button>
+   when it runs script.
+
+   WHY THIS EXISTS. Every base layout carries a global `a:hover` rule — link
+   colour + underline — at specificity (0,1,1). A one-off CTA class like
+   `.ophc__button` is (0,1,0), so unless it restated colour AND decoration in
+   its own :hover it inherited the link hover: the Owners' Poll's blue
+   "Change your vote" button turned red and underlined on hover, and ~100
+   hand-rolled CTAs each had their own chance to repeat that. The state rules
+   below are written at (0,2,0) so they beat it once, here, for every CTA.
+
+   CUSTOMISING. The base rules sit inside :where(), so they carry ZERO
+   specificity: a component's own class (`.cmh__cta { padding: … }`) wins
+   regardless of stylesheet order. Colours are custom properties — a hero that
+   needs a white pill on a team colour sets `--cta-bg`, `--cta-bg-hover`,
+   `--cta-ink`, `--cta-border` on its own class, never `background` / `color`
+   directly (the (0,2,0) state rules read the variables, so a hard-coded
+   `background` would be replaced on hover).
+
+   HOVER CONVENTION. Filled CTAs: background steps to the hover token and the
+   button lifts 1px. Text colour never changes and is never underlined.
+   Arrow links: colour steps to the link-hover token, the arrow nudges right,
+   no underline.
+
+   Rules and reasoning: docs/claude/rules/theming-and-assets.md
+   § "CTAs — one pattern". Guard: tests/cta-pattern.test.ts.
+   ========================================================================== */
+
+/* ── Base + primary ─────────────────────────────────────────────────────── */
+:where(.cta) {
+  --cta-bg: var(--btn-primary-bg);
+  --cta-bg-hover: var(--btn-primary-bg-hover);
+  --cta-ink: var(--btn-primary-text);
+  --cta-ink-hover: var(--cta-ink);
+  /* The border follows the fill, so a component that re-points only
+     --cta-bg never wears a ring in the default primary colour. */
+  --cta-border: var(--cta-bg);
+  --cta-border-hover: var(--cta-bg-hover);
+  --cta-focus-ring: var(--btn-primary-border-hover);
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  padding: 0.625rem 1.25rem;
+  border: 1px solid var(--cta-border);
+  border-radius: var(--radius-md);
+  background: var(--cta-bg);
+  color: var(--cta-ink);
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.2;
+  text-align: center;
+  text-decoration: none;
+  /* A button label is not prose — it never wraps mid-phrase. */
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+/* ── Ghost: outlined, transparent ground ───────────────────────────────── */
+:where(.cta--ghost) {
+  --cta-bg: transparent;
+  --cta-ink: var(--primary-link-default-text-color);
+  --cta-border: currentColor;
+  --cta-border-hover: currentColor;
+  --cta-bg-hover: color-mix(in srgb, currentColor 10%, transparent);
+}
+
+/* ── States — (0,2,0), beats every layout's global a:hover/a:focus ─────── */
+.cta:is(:link, :visited, :hover, :focus, :active) {
+  color: var(--cta-ink);
+  text-decoration: none;
+}
+
+.cta:hover:not(:disabled, [aria-disabled='true']) {
+  background: var(--cta-bg-hover);
+  border-color: var(--cta-border-hover);
+  color: var(--cta-ink-hover);
+  transform: translateY(-1px);
+}
+
+.cta:active:not(:disabled, [aria-disabled='true']) {
+  transform: none;
+}
+
+.cta:focus-visible {
+  outline: 2px solid var(--cta-focus-ring);
+  outline-offset: 2px;
+}
+
+.cta:is(:disabled, [aria-disabled='true']) {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* A disabled <a> has no `disabled` attribute to stop the click. */
+.cta[aria-disabled='true'] {
+  pointer-events: none;
+}
+
+/* ── Arrow link: a text link that goes somewhere ───────────────────────── */
+:where(.cta-link) {
+  --cta-link-ink: var(--primary-link-default-text-color);
+  --cta-link-ink-hover: var(--primary-link-hover-text-color);
+
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  color: var(--cta-link-ink);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+  white-space: nowrap;
+  /* On a <button> ("Show more"), drop the UA button box so it reads as the
+     same text link as the <a> form. */
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+}
+
+/* The arrow is drawn here so markup never types its own — and is hidden from
+   assistive tech (the alt-text form of `content`), which would otherwise read
+   "single right-pointing angle quotation mark". */
+:where(.cta-link)::after {
+  content: '›';
+  content: '›' / '';
+  display: inline-block;
+  transition: transform var(--transition-fast);
+}
+
+.cta-link:is(:link, :visited, :focus, :active) {
+  color: var(--cta-link-ink);
+  text-decoration: none;
+}
+
+.cta-link:hover {
+  color: var(--cta-link-ink-hover);
+  text-decoration: none;
+}
+
+.cta-link:hover::after {
+  transform: translateX(2px);
+}
+
+.cta-link:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cta:hover:not(:disabled, [aria-disabled='true']),
+  .cta-link:hover::after {
+    transform: none;
+  }
+}

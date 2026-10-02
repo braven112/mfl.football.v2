@@ -611,14 +611,9 @@ html.dark[data-league='afl'] .sf-post__link--external {
 }
 
 .sf-widget__view-all {
+  --cta-link-ink: var(--sf-link-color);
   font-size: var(--font-size-xs);
   font-weight: 500;
-  color: var(--sf-link-color);
-  text-decoration: none;
-}
-
-.sf-widget__view-all:hover {
-  text-decoration: underline;
 }
 
 .sf-widget__list {
@@ -1042,6 +1037,13 @@ html.dark[data-league='afl'] .sf-post__link--external {
   cursor: pointer;
   text-decoration: none;
   transition: background 0.15s, border-color 0.15s;
+}
+
+/* An <a>: restate colour and decoration on hover/focus, or the layouts'
+   global a:hover turns it red and underlined (tests/cta-pattern.test.ts). */
+.sfc-whisper__signin:is(:hover, :focus) {
+  color: var(--sf-accent, #1c497c);
+  text-decoration: none;
 }
 
 .sfc-whisper__trigger:hover,

@@ -80,7 +80,7 @@ const team = snapshot ? teams[snapshot.franchiseId] : null;
           ? 'This account is not an owner in this league.'
           : 'Sign in with your MFL account to see your record, division place and this week’s games.'}
       </p>
-      {!isAuthenticated && <a class="pkg-snap__btn" href={signInHref}>Sign in</a>}
+      {!isAuthenticated && <a class="cta cta--primary pkg-snap__btn" href={signInHref}>Sign in</a>}
     </>
   )}
 </section>
@@ -123,13 +123,9 @@ const team = snapshot ? teams[snapshot.franchiseId] : null;
   .pkg-snap__links { display: flex; gap: 1rem; margin-top: 0.75rem; font-weight: 600; }
   .pkg-snap__links a { color: var(--color-primary-light); }
   .pkg-snap__empty { margin: 0.35rem 0 0.75rem; color: var(--content-text-muted); }
+  /* Shared CTA (src/styles/cta.css); only the pill shape is local. */
   .pkg-snap__btn {
-    display: inline-block;
     padding: 0.45rem 1rem;
     border-radius: var(--radius-full);
-    background: var(--btn-primary-bg);
-    color: var(--btn-primary-text);
-    text-decoration: none;
-    font-weight: 700;
   }
 </style>

@@ -114,9 +114,8 @@ function formatRecord(wlt: string): string {
     )}
   </div>
 
-  <a href="/afl-fantasy/playoffs" class="afl-champ-hero__cta">
+  <a href="/afl-fantasy/playoffs" class="cta-link afl-champ-hero__cta">
     View bracket
-    <span aria-hidden="true">→</span>
   </a>
 </section>
 
@@ -235,19 +234,9 @@ function formatRecord(wlt: string): string {
   }
 
   .afl-champ-hero__cta {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
+    --cta-link-ink: var(--afl-accent);
     margin-top: 1.25rem;
     font-size: var(--font-size-sm);
-    font-weight: 600;
-    color: var(--afl-accent);
-    text-decoration: none;
-    transition: gap var(--transition-fast);
-  }
-
-  .afl-champ-hero__cta:hover {
-    gap: 0.5rem;
   }
 
   @media (max-width: 560px) {

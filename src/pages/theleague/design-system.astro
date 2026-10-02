@@ -746,99 +746,118 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
     <section class="ds-section">
       <h2 class="ds-section-title">Buttons &amp; CTAs</h2>
       <p class="ds-section-intro">
-        The same visual styles apply to both <code>&lt;button&gt;</code> elements and <code>&lt;a&gt;</code> anchor CTAs — the CSS classes are identical. Use <code>&lt;button&gt;</code> for in-page actions (submit, open modal, trigger JS) and <code>&lt;a&gt;</code> when the action navigates to a URL.
+        Every call-to-action on the site is one shared pattern, defined once in <code>src/styles/cta.css</code> and loaded by every layout. Three shapes: <code>cta cta--primary</code>, <code>cta cta--ghost</code> and <code>cta-link</code>. They work identically on <code>&lt;button&gt;</code> (in-page actions: submit, open a modal, run script) and <code>&lt;a&gt;</code> (anything that navigates). Never hand-roll a <code>__cta</code> / <code>__btn</code> look — add the shared class and keep your own BEM class only for layout (padding, width, margin). <code>tests/cta-pattern.test.ts</code> fails on a CTA-shaped link without it.
       </p>
 
       <!-- Primary -->
       <div class="ds-card">
-        <h3 class="ds-card__heading">Primary — Dark Blue</h3>
+        <h3 class="ds-card__heading">Primary — <code>cta cta--primary</code></h3>
         <p class="ds-card__desc">
-          The standard CTA for both buttons and links across all modals, forms, and page-level actions. Sourced from the demo modal's "Next" and "Start Exploring" buttons.
+          The standard filled CTA for page-level actions, forms and modals.
         </p>
         <div class="ds-btn-row">
-          <button class="ds-btn ds-btn--primary">Button CTA</button>
-          <a href="#" class="ds-btn ds-btn--primary">Link CTA</a>
-          <button class="ds-btn ds-btn--primary" disabled>Disabled</button>
+          <button type="button" class="cta cta--primary">Button CTA</button>
+          <a href="#" class="cta cta--primary">Link CTA</a>
+          <button type="button" class="cta cta--primary" disabled>Disabled</button>
+          <a href="#" class="cta cta--primary" aria-disabled="true">Disabled link</a>
         </div>
         <div class="ds-token-spec">
           <div class="ds-token-row">
+            <span class="ds-token-label">Markup</span>
+            <code class="ds-token-value">&lt;a class="cta cta--primary" href="…"&gt;Change your vote&lt;/a&gt;</code>
+          </div>
+          <div class="ds-token-row">
             <span class="ds-token-label">Base</span>
-            <code class="ds-token-value">var(--btn-primary-bg) → var(--color-primary, #1c497c)</code>
+            <code class="ds-token-value">--cta-bg → var(--btn-primary-bg)</code>
           </div>
           <div class="ds-token-row">
             <span class="ds-token-label">Hover</span>
-            <code class="ds-token-value">var(--btn-primary-bg-hover) → var(--color-primary-dark, #164066)</code>
+            <code class="ds-token-value">--cta-bg-hover → var(--btn-primary-bg-hover), translateY(-1px)</code>
           </div>
           <div class="ds-token-row">
             <span class="ds-token-label">Text</span>
-            <code class="ds-token-value">var(--btn-primary-text) → #ffffff</code>
+            <code class="ds-token-value">--cta-ink → var(--btn-primary-text) — never changes, never underlined</code>
           </div>
           <div class="ds-token-row">
-            <span class="ds-token-label">Radius</span>
-            <code class="ds-token-value">8px</code>
+            <span class="ds-token-label">Shape</span>
+            <code class="ds-token-value">padding 0.625rem 1.25rem · var(--radius-md) · var(--font-size-sm) · bold</code>
           </div>
           <div class="ds-token-row">
-            <span class="ds-token-label">Padding</span>
-            <code class="ds-token-value">0.625rem 1.25rem</code>
-          </div>
-        </div>
-      </div>
-
-      <!-- Secondary / Green -->
-      <div class="ds-card">
-        <h3 class="ds-card__heading">Secondary — Green (Select Spaces)</h3>
-        <p class="ds-card__desc">
-          Reserved for affirmative actions where green signals "go" or positive intent — e.g. submitting a bid, confirming a roster action. Not a general-purpose CTA; default to primary blue.
-        </p>
-        <div class="ds-btn-row">
-          <button class="ds-btn ds-btn--secondary">Submit Bid</button>
-          <a href="#" class="ds-btn ds-btn--secondary">View Results</a>
-        </div>
-        <div class="ds-token-spec">
-          <div class="ds-token-row">
-            <span class="ds-token-label">Base</span>
-            <code class="ds-token-value">var(--btn-secondary-bg) → var(--color-secondary, #2e8743)</code>
-          </div>
-          <div class="ds-token-row">
-            <span class="ds-token-label">Hover</span>
-            <code class="ds-token-value">var(--btn-secondary-bg-hover) → var(--color-secondary-dark, #26743a)</code>
-          </div>
-          <div class="ds-token-row">
-            <span class="ds-token-label">Text</span>
-            <code class="ds-token-value">var(--btn-secondary-text) → #ffffff</code>
+            <span class="ds-token-label">Disabled</span>
+            <code class="ds-token-value">:disabled or aria-disabled="true" → opacity 0.45, no hover</code>
           </div>
         </div>
       </div>
 
       <!-- Ghost -->
       <div class="ds-card">
-        <h3 class="ds-card__heading">Ghost / Text</h3>
+        <h3 class="ds-card__heading">Ghost — <code>cta cta--ghost</code></h3>
         <p class="ds-card__desc">
-          Low-emphasis action — no background, blends into the surface. Paired with a primary CTA for "Back", "Cancel", or soft navigation. Works on both <code>&lt;button&gt;</code> and <code>&lt;a&gt;</code>.
+          Outlined, transparent ground, link-coloured ink. The secondary action sitting beside a primary: "Back", "Cancel", "Maybe later".
         </p>
         <div class="ds-btn-row">
-          <button class="ds-btn ds-btn--ghost">Back</button>
-          <button class="ds-btn ds-btn--primary">Next</button>
+          <button type="button" class="cta cta--ghost">Back</button>
+          <button type="button" class="cta cta--primary">Next</button>
         </div>
         <div class="ds-btn-row">
-          <a href="#" class="ds-btn ds-btn--ghost">Cancel</a>
-          <a href="#" class="ds-btn ds-btn--primary">Continue →</a>
+          <a href="#" class="cta cta--ghost">Cancel</a>
+          <a href="#" class="cta cta--primary">Continue</a>
+          <button type="button" class="cta cta--ghost" disabled>Disabled</button>
         </div>
       </div>
 
-      <!-- Element guidance -->
+      <!-- Arrow link -->
       <div class="ds-card">
-        <h3 class="ds-card__heading">Element Selection Guide</h3>
+        <h3 class="ds-card__heading">Arrow link — <code>cta-link</code></h3>
+        <p class="ds-card__desc">
+          A text link that goes somewhere: "see more", cross-links between pages. The CSS draws the trailing arrow, so the label never types its own <code>›</code> or <code>→</code>.
+        </p>
+        <div class="ds-btn-row">
+          <a href="#" class="cta-link">See full rivalry matrix</a>
+          <a href="#" class="cta-link">The Pecking Order</a>
+        </div>
+      </div>
+
+      <!-- Hover convention -->
+      <div class="ds-card">
+        <h3 class="ds-card__heading">Hover Convention</h3>
         <div class="ds-token-spec" style="margin-top: 0; padding-top: 0; border-top: none;">
           <div class="ds-token-row">
-            <span class="ds-token-label">Use</span>
-            <code class="ds-token-value">&lt;button&gt;</code>
-            <span style="font-size:0.8125rem; color: var(--color-gray-600, #4b5563); margin-left: 0.5rem;">In-page actions: submit form, open modal, trigger JS</span>
+            <span class="ds-token-label">Filled</span>
+            <code class="ds-token-value">background steps to its hover token + 1px lift; text colour never changes, never underlines</code>
           </div>
           <div class="ds-token-row">
-            <span class="ds-token-label">Use</span>
-            <code class="ds-token-value">&lt;a href&gt;</code>
-            <span style="font-size:0.8125rem; color: var(--color-gray-600, #4b5563); margin-left: 0.5rem;">Navigation: links to pages, external URLs, anchors</span>
+            <span class="ds-token-label">Arrow link</span>
+            <code class="ds-token-value">ink steps to the link-hover token, the arrow nudges right, no underline</code>
+          </div>
+          <div class="ds-token-row">
+            <span class="ds-token-label">Why</span>
+            <code class="ds-token-value">the state rules sit at (0,2,0) and beat every layout's global a:hover (red + underline)</code>
+          </div>
+        </div>
+      </div>
+
+      <!-- Customising -->
+      <div class="ds-card">
+        <h3 class="ds-card__heading">Customising — the <code>--cta-*</code> variables</h3>
+        <p class="ds-card__desc">
+          The base rules carry zero specificity, so your own class wins for layout. Colours are custom properties — set them on your class, never <code>background</code> / <code>color</code> directly (the hover rule reads the variables and would replace a hard-coded background). Filled and ghost: <code>--cta-bg</code>, <code>--cta-bg-hover</code>, <code>--cta-ink</code>, <code>--cta-ink-hover</code>, <code>--cta-border</code>, <code>--cta-border-hover</code>, <code>--cta-focus-ring</code>. Arrow link: <code>--cta-link-ink</code>, <code>--cta-link-ink-hover</code>.
+        </p>
+        <p class="ds-card__desc">
+          Example — the green affirmative CTA ("Submit Bid"), reserved for actions where green signals "go". Not a general-purpose CTA; default to primary.
+        </p>
+        <div class="ds-btn-row">
+          <button type="button" class="cta cta--primary" style="--cta-bg: var(--btn-secondary-bg); --cta-bg-hover: var(--btn-secondary-bg-hover); --cta-ink: var(--btn-secondary-text); --cta-border: var(--btn-secondary-bg)">Submit Bid</button>
+          <a href="#" class="cta cta--primary" style="--cta-bg: var(--btn-secondary-bg); --cta-bg-hover: var(--btn-secondary-bg-hover); --cta-ink: var(--btn-secondary-text); --cta-border: var(--btn-secondary-bg)">View Results</a>
+        </div>
+        <div class="ds-token-spec">
+          <div class="ds-token-row">
+            <span class="ds-token-label">Inline</span>
+            <code class="ds-token-value">style="--cta-bg: var(--btn-secondary-bg); --cta-bg-hover: var(--btn-secondary-bg-hover); --cta-ink: var(--btn-secondary-text); --cta-border: var(--btn-secondary-bg)"</code>
+          </div>
+          <div class="ds-token-row">
+            <span class="ds-token-label">Class</span>
+            <code class="ds-token-value">.hero__cta {'{'} --cta-bg: #fff; --cta-bg-hover: color-mix(in srgb, #fff 88%, black); --cta-ink: var(--league-accent); --cta-border: #fff; {'}'}</code>
           </div>
         </div>
       </div>
@@ -1145,8 +1164,8 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
         <h3 class="ds-card__heading">Button Loading (tier 3)</h3>
         <p class="ds-card__desc">Add <code>loading-btn</code> + <code>is-loading</code> to a button: spinner replaces the label and the button disables — double-submit prevention comes free. Use <code>loading-btn--on-accent</code> on solid accent fills.</p>
         <div style="display: flex; align-items: center; gap: 1rem;">
-          <button class="ds-btn ds-btn--primary loading-btn loading-btn--on-accent is-loading" disabled aria-busy="true" aria-label="Submitting lineup">Submit Lineup</button>
-          <button class="ds-btn ds-btn--ghost loading-btn is-loading" disabled aria-busy="true" aria-label="Saving">Save</button>
+          <button type="button" class="cta cta--primary loading-btn loading-btn--on-accent is-loading" disabled aria-busy="true" aria-label="Submitting lineup">Submit Lineup</button>
+          <button type="button" class="cta cta--ghost loading-btn is-loading" disabled aria-busy="true" aria-label="Saving">Save</button>
         </div>
       </div>
 
@@ -2248,55 +2267,6 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
     background: var(--color-gray-100, #f3f4f6);
     padding: 0.1rem 0.35rem;
     border-radius: 4px;
-    color: var(--color-gray-700, #374151);
-  }
-
-  .ds-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-family: inherit;
-    font-size: 0.8125rem;
-    font-weight: 600;
-    border-radius: 8px;
-    padding: 0.625rem 1.25rem;
-    cursor: pointer;
-    transition: background var(--transition-fast), color var(--transition-fast), opacity var(--transition-fast);
-    border: none;
-    line-height: 1;
-    text-decoration: none; /* reset for <a> */
-  }
-
-  .ds-btn:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
-  }
-
-  .ds-btn--primary {
-    background: var(--btn-primary-bg, #1c497c);
-    color: var(--btn-primary-text, #fff);
-  }
-
-  .ds-btn--primary:hover:not(:disabled) {
-    background: var(--btn-primary-bg-hover, #164066);
-  }
-
-  .ds-btn--secondary {
-    background: var(--btn-secondary-bg, #2e8743);
-    color: var(--btn-secondary-text, #fff);
-  }
-
-  .ds-btn--secondary:hover:not(:disabled) {
-    background: var(--btn-secondary-bg-hover, #26743a);
-  }
-
-  .ds-btn--ghost {
-    background: transparent;
-    color: var(--color-gray-500, #6b7280);
-    padding-left: 0;
-  }
-
-  .ds-btn--ghost:hover:not(:disabled) {
     color: var(--color-gray-700, #374151);
   }
 

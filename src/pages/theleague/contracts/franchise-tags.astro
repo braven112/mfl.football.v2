@@ -60,7 +60,7 @@ function formatDate(iso: string): string {
           <h1 class="ft-header__title">Franchise Tags</h1>
           <p class="ft-header__sub">{leagueYear} Offseason &mdash; {sorted.length} tag{sorted.length !== 1 ? 's' : ''} declared</p>
         </div>
-        <a href="/theleague/rosters" class="ft-back-btn">
+        <a href="/theleague/rosters" class="cta cta--ghost ft-back-btn">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
           Back to Rosters
         </a>
@@ -152,25 +152,10 @@ function formatDate(iso: string): string {
   }
 
   .ft-back-btn {
-    display: inline-flex;
-    align-items: center;
     gap: 0.375rem;
     padding: 0.5rem 0.875rem;
     font-size: 0.8125rem;
-    font-weight: 600;
-    color: var(--color-gray-600, #4b5563);
-    border: 1px solid var(--color-gray-200, #e5e7eb);
-    border-radius: 6px;
-    text-decoration: none;
-    background: var(--card-bg, white);
-    white-space: nowrap;
     flex-shrink: 0;
-    transition: all var(--transition-fast);
-  }
-
-  .ft-back-btn:hover {
-    background: var(--color-gray-50, #f9fafb);
-    border-color: var(--color-gray-300, #d1d5db);
   }
 
   /* Empty state */

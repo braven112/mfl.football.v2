@@ -255,8 +255,8 @@ const getNflLogo = (team: string) => getNflLogoUrl(team);
         Most efficient contracts by season, calculated as points scored divided
         by salary.
       </p>
-      <a href="/theleague/front-office/dead-money" class="cross-link">
-        Looking for the other end of the spectrum? &rarr; The Dead Money Awards
+      <a href="/theleague/front-office/dead-money" class="cta-link cross-link">
+        Looking for the other end of the spectrum? The Dead Money Awards
       </a>
     </header>
 
@@ -866,21 +866,19 @@ const getNflLogo = (team: string) => getNflLogoUrl(team);
     color: var(--content-text-muted, #6b7280);
   }
 
+  /* Dead money reads red — the link keeps that ink, hover included. */
   .cross-link {
-    display: inline-block;
+    --cta-link-ink: #dc2626;
+    --cta-link-ink-hover: color-mix(in srgb, #dc2626 80%, black);
     margin-top: 0.25rem;
     font-size: var(--font-size-sm);
-    color: #dc2626;
-    text-decoration: none;
-    font-weight: 500;
-  }
-
-  .cross-link:hover {
-    text-decoration: underline;
+    /* A sentence, not a button label — let it wrap on a phone. */
+    white-space: normal;
   }
 
   :global(html.dark) .cross-link {
-    color: var(--color-error, #f87171);
+    --cta-link-ink: var(--color-error, #f87171);
+    --cta-link-ink-hover: color-mix(in srgb, var(--color-error, #f87171) 80%, white);
   }
 </style>
 

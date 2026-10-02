@@ -114,22 +114,8 @@
   margin: 0;
 }
 
-.ophc__button {
-  display: inline-block;
-  padding: 0.4rem 0.85rem;
-  border-radius: var(--radius-sm, 6px);
-  background: var(--primary-color);
-  color: var(--content-bg);
-  font-size: 0.85rem;
-  font-weight: 600;
-  text-decoration: none;
-}
-.ophc__button:hover { opacity: 0.9; }
-
-.ophc__more {
-  font-size: 0.85rem;
-  color: var(--link-color, var(--primary-color));
-}
+/* The ballot link and the column link are the shared CTA pattern
+   (src/styles/cta.css) — .cta--primary and .cta-link. */
 
 @media (max-width: 640px) {
   .ophc { padding: 0.85rem 0.9rem; }

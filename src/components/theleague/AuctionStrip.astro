@@ -96,7 +96,7 @@ const secondaryLinks: StripLink[] = [
 
   <a
     href={primaryLink.href}
-    class="auction-strip__cta"
+    class="cta cta--primary auction-strip__cta"
     target="_blank"
     rel="noopener noreferrer"
     aria-label="Place Auction Bid (opens in new tab)"
@@ -166,29 +166,10 @@ const secondaryLinks: StripLink[] = [
 
   /* ── Primary CTA ── */
   .auction-strip__cta {
-    display: inline-flex;
-    align-items: center;
     gap: 0.375rem;
     padding: 0.375rem 0.875rem;
-    border-radius: var(--radius-md, 0.5rem);
-    background: var(--color-primary, #1c497c);
-    color: #fff;
-    text-decoration: none;
     font-size: 0.8125rem;
-    font-weight: 700;
-    white-space: nowrap;
     flex-shrink: 0;
-    transition: filter var(--transition-fast), box-shadow var(--transition-fast);
-  }
-
-  .auction-strip__cta:hover {
-    filter: brightness(0.92);
-    box-shadow: 0 2px 8px color-mix(in srgb, var(--color-primary, #1c497c) 30%, transparent);
-  }
-
-  .auction-strip__cta:focus-visible {
-    outline: 2px solid var(--color-primary, #1c497c);
-    outline-offset: 2px;
   }
 
   /* ── Simple text links (row 2) ── */
@@ -261,12 +242,10 @@ const secondaryLinks: StripLink[] = [
 
     .auction-strip__cta {
       align-self: stretch;
-      justify-content: center;
     }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .auction-strip__cta,
     .auction-strip__text-link {
       transition: none;
     }

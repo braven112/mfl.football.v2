@@ -729,11 +729,11 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
             </p>
           </div>
           <div class="insights-closing__ctas">
-            <a href="/theleague/about" class="insights-btn insights-btn--primary">
+            <a href="/theleague/about" class="cta cta--primary">
               Read the Full Case Study
               <span class="insights-btn__arrow">→</span>
             </a>
-            <a href="/theleague/whats-new" class="insights-btn insights-btn--ghost">
+            <a href="/theleague/whats-new" class="cta cta--ghost">
               What's New
               <span class="insights-btn__arrow">→</span>
             </a>
@@ -1229,39 +1229,8 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
   /* ===========================
      Buttons
   =========================== */
-  .insights-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.625rem 1.25rem;
-    border-radius: 0.5rem;
-    font-size: var(--font-size-sm);
-    font-weight: 600;
-    text-decoration: none;
-    transition: all var(--transition-fast);
-    white-space: nowrap;
-  }
-
-  .insights-btn--primary {
-    background: var(--color-primary, #1c497c);
-    color: white;
-  }
-
-  .insights-btn--primary:hover {
-    background: var(--btn-primary-bg-hover, #164066);
-  }
-
-  .insights-btn--ghost {
-    background: transparent;
-    color: var(--color-gray-600, #4b5563);
-    border: 1px solid var(--content-border, #e2e8f0);
-  }
-
-  .insights-btn--ghost:hover {
-    border-color: var(--color-gray-400, #9ca3af);
-    color: var(--color-gray-900, #111827);
-  }
-
+  /* Shape, colour and hover come from the shared .cta pattern
+     (src/styles/cta.css). */
   .insights-btn__arrow {
     opacity: 0.7;
   }

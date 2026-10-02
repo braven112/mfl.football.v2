@@ -382,8 +382,8 @@ for (const [season, rankings] of jerryJonesStartersBySeason) {
           <span><strong>The Brock Osweiler Award</strong> — Goes to the player (min $1.5M salary) who burned the most salary per point scored.</span>
         </div>
       </div>
-      <a href="/theleague/mvp" class="cross-link">
-        Looking for the winners? &rarr; GM MVP Awards
+      <a href="/theleague/mvp" class="cta-link cross-link">
+        Looking for the winners? The GM MVP Awards
       </a>
     </header>
 
@@ -741,24 +741,10 @@ for (const [season, rankings] of jerryJonesStartersBySeason) {
   }
 
   .cross-link {
-    display: inline-block;
     margin-top: 0.5rem;
     font-size: var(--font-size-sm);
-    font-weight: 500;
-    color: var(--color-primary, #1c497c);
-    text-decoration: none;
-  }
-
-  .cross-link:hover,
-  .cross-link:focus-visible {
-    color: var(--color-primary-dark, #164066);
-    text-decoration: underline;
-  }
-
-  .cross-link:focus-visible {
-    outline: 2px solid var(--color-primary, #1c497c);
-    outline-offset: 2px;
-    border-radius: var(--radius-sm, 0.25rem);
+    /* A sentence, not a button label — let it wrap on a phone. */
+    white-space: normal;
   }
 
   /* ──── Filters ──── */

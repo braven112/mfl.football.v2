@@ -159,7 +159,7 @@ const countAriaLabel = hasCount
         {hasCount && link && <span class="tl-event-hero__divider" aria-hidden="true"></span>}
         {link && (
           <a
-            class="tl-event-hero__cta"
+            class="cta cta--primary tl-event-hero__cta"
             href={link}
             target={isExternal ? '_blank' : undefined}
             rel={isExternal ? 'noopener noreferrer' : undefined}
@@ -503,34 +503,20 @@ const countAriaLabel = hasCount
   }
 
   .tl-event-hero__cta {
-    display: inline-flex;
-    align-items: center;
+    --cta-bg: var(--ev-cta-bg);
+    --cta-bg-hover: color-mix(in srgb, var(--ev-cta-bg) 88%, black);
+    --cta-ink: var(--ev-cta-ink);
+    --cta-border: var(--ev-cta-bg);
     gap: 0.5rem;
     height: 50px;
     padding: 0 1.5rem;
-    border-radius: var(--radius-md, 0.5rem);
-    background: var(--ev-cta-bg);
-    color: var(--ev-cta-ink);
     font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', 'Oswald', sans-serif);
-    font-weight: 700;
     font-size: 1.0625rem;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    text-decoration: none;
-    white-space: nowrap;
-    transition: filter var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast);
-  }
-  .tl-event-hero__cta:hover {
-    filter: brightness(0.92);
-    transform: translateY(-1px);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
   }
   .tl-event-hero__cta-arrow {
     font-size: 1.1rem;
-    transition: transform var(--transition-fast);
-  }
-  .tl-event-hero__cta:hover .tl-event-hero__cta-arrow {
-    transform: translateX(2px);
   }
 
   /* ── Right data panel (slotted) ── */
@@ -574,14 +560,13 @@ const countAriaLabel = hasCount
     border-radius: var(--radius-md, 0.5rem);
     padding: 0.55rem 0.7rem;
   }
+  /* The hero's own ink, faint until hovered. */
   :global(.tl-hero-panel__more-link) {
+    --cta-link-ink: var(--ev-ink-faint);
+    --cta-link-ink-hover: var(--ev-ink);
     font-size: var(--font-size-xs);
-    color: var(--ev-ink-faint);
-    text-decoration: none;
+    font-weight: 400;
     padding-left: 0.15rem;
-  }
-  :global(.tl-hero-panel__more-link:hover) {
-    color: var(--ev-ink);
   }
   :global(.tl-hero-panel__empty) {
     font-size: var(--font-size-sm);
@@ -609,6 +594,12 @@ const countAriaLabel = hasCount
     font-size: 0.78rem;
     font-weight: 600;
     transition: background var(--transition-fast), border-color var(--transition-fast);
+  }
+  /* An <a>: restate colour and decoration, or the layouts' global a:hover
+     turns the tile's label red and underlined (tests/cta-pattern.test.ts). */
+  :global(.tl-hero-panel__link:is(:hover, :focus)) {
+    color: var(--ev-ink-soft);
+    text-decoration: none;
   }
   :global(.tl-hero-panel__link:hover) {
     background: var(--ev-tile-hover-bg);

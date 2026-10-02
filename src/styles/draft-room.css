@@ -860,24 +860,18 @@ html.dark .dr-side-panel {
 
 /* Draft action button (inline, green) */
 .dr-draft-btn {
+  --cta-bg: var(--color-success, #16a34a);
+  --cta-bg-hover: var(--color-success-dark, #15803d);
+  --cta-ink: #ffffff;
+  --cta-border: var(--cta-bg);
   flex-shrink: 0;
   padding: 0.25rem 0.5rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
   border-radius: var(--radius-sm, 0.25rem);
-  background: var(--color-success, #16a34a);
-  color: #ffffff;
-  cursor: pointer;
   font-size: var(--font-size-3xs);
-  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   line-height: 1;
-  transition: background 0.15s var(--dr-easing-ease);
 }
-.dr-draft-btn:hover { background: var(--color-success-dark, #15803d); }
 
 /* Add-to-queue (+ / ✓) icon button */
 .dr-add-queue-btn {
@@ -1106,23 +1100,9 @@ html.dark .dr-side-panel {
 .dr-submit-pick-btn {
   width: 100%;
   padding: 0.625rem;
-  border: none;
-  border-radius: var(--radius-md, 0.5rem);
-  background: var(--color-primary, #1c497c);
-  color: #ffffff;
   font-size: 0.8125rem;
-  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  cursor: pointer;
-  transition: background 0.15s var(--dr-easing-ease);
-}
-.dr-submit-pick-btn:hover:not(:disabled) {
-  background: var(--btn-primary-bg-hover, #164066);
-}
-.dr-submit-pick-btn:disabled {
-  background: var(--color-gray-300, #d1d5db);
-  cursor: not-allowed;
 }
 
 /* ── Queue Row (sortable list item) ── */
@@ -2420,17 +2400,16 @@ html.dark .dr-side-panel {
   white-space: nowrap;
   transition: background 0.15s var(--dr-easing-ease);
 }
+/* An <a>: restate colour and decoration on hover/focus, or the layouts'
+   global a:hover turns it red and underlined (tests/cta-pattern.test.ts). */
+.dr-mfl-pick-link:is(:hover, :focus) {
+  color: var(--color-primary, #1c497c);
+  text-decoration: none;
+}
 .dr-mfl-pick-link:hover,
 .dr-mfl-pick-link:focus-visible {
   background: var(--color-gray-100, #f3f4f6);
   outline: none;
-}
-
-/* Anchor variant of .dr-submit-pick-btn — strip the underline & center text. */
-a.dr-submit-pick-btn {
-  display: block;
-  text-align: center;
-  text-decoration: none;
 }
 
 /* Local-only queue hint (replaces auto-pick label in live mode). */

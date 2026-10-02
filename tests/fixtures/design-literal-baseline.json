@@ -1,10 +1,10 @@
 {
   "$comment": "Ratchet baseline for hand-typed design values the tokens replace: literal transition durations, literal font-size, literal box-shadow, per file under src/ (src/assets/, the MFL-hosted skin, excluded). Totals per kind may only SHRINK (the per-file map is for diagnosis, so moving CSS between files is free): tests/design-polish.test.ts fails when a total rises (use --transition-*, --font-size-*, --shadow-*) and when it falls (retighten with node scripts/ratchet.mjs --write). Rule: docs/claude/rules/theming-and-assets.md, The polish layer.",
-  "recordedAt": "2026-09-29",
+  "recordedAt": "2026-10-02",
   "totals": {
-    "transition": 213,
-    "fontSize": 2099,
-    "shadow": 251
+    "transition": 207,
+    "fontSize": 2094,
+    "shadow": 244
   },
   "files": {
     "src/components/afl-family/KeepersPage.astro": {
@@ -37,7 +37,7 @@
     },
     "src/components/afl/AflEventHero.astro": {
       "fontSize": 7,
-      "shadow": 6
+      "shadow": 4
     },
     "src/components/afl/AflPlayoffsHero.astro": {
       "fontSize": 4
@@ -353,8 +353,7 @@
       "shadow": 1
     },
     "src/components/theleague/AuctionStrip.astro": {
-      "fontSize": 1,
-      "shadow": 1
+      "fontSize": 1
     },
     "src/components/theleague/BarChart.astro": {
       "fontSize": 1
@@ -363,7 +362,6 @@
       "fontSize": 1
     },
     "src/components/theleague/BreakingStoryHero.astro": {
-      "transition": 1,
       "fontSize": 5
     },
     "src/components/theleague/CalendarEventCard.astro": {
@@ -371,8 +369,7 @@
       "shadow": 4
     },
     "src/components/theleague/ChampionCrownedHero.astro": {
-      "fontSize": 4,
-      "shadow": 1
+      "fontSize": 4
     },
     "src/components/theleague/ChartCard.astro": {
       "fontSize": 4
@@ -429,8 +426,7 @@
       "fontSize": 1
     },
     "src/components/theleague/EventHeroShell.astro": {
-      "fontSize": 6,
-      "shadow": 1
+      "fontSize": 6
     },
     "src/components/theleague/FaceoffComposite.astro": {
       "fontSize": 8
@@ -456,7 +452,7 @@
     },
     "src/components/theleague/HeroBanner.astro": {
       "fontSize": 10,
-      "shadow": 3
+      "shadow": 2
     },
     "src/components/theleague/HottestDesksWidget.astro": {
       "fontSize": 2
@@ -532,7 +528,6 @@
       "fontSize": 2
     },
     "src/components/theleague/season-heroes/MatchupSplitHero.astro": {
-      "transition": 1,
       "fontSize": 2
     },
     "src/components/theleague/season-heroes/RecapHero.astro": {
@@ -771,7 +766,7 @@
       "fontSize": 14
     },
     "src/pages/theleague/design-system.astro": {
-      "fontSize": 16,
+      "fontSize": 13,
       "shadow": 2
     },
     "src/pages/theleague/draft/order.astro": {
@@ -869,7 +864,7 @@
     "src/pages/theleague/rules-chat.astro": {
       "transition": 1,
       "fontSize": 9,
-      "shadow": 6
+      "shadow": 5
     },
     "src/pages/theleague/rules.astro": {
       "fontSize": 12,
@@ -889,11 +884,9 @@
       "fontSize": 29
     },
     "src/styles/composite-hero.css": {
-      "transition": 1,
       "fontSize": 7
     },
     "src/styles/composite-panel-board.css": {
-      "transition": 1,
       "fontSize": 6
     },
     "src/styles/custom-rankings.css": {
@@ -905,7 +898,7 @@
       "fontSize": 1
     },
     "src/styles/draft-room.css": {
-      "transition": 24,
+      "transition": 22,
       "fontSize": 41,
       "shadow": 5
     },
@@ -961,7 +954,7 @@
       "fontSize": 11
     },
     "src/styles/owners-poll-card.css": {
-      "fontSize": 8
+      "fontSize": 6
     },
     "src/styles/owners-poll-section.css": {
       "fontSize": 9

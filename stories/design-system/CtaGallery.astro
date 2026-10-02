@@ -1,0 +1,246 @@
+---
+/**
+ * Story-only gallery for the shared CTA pattern (src/styles/cta.css).
+ *
+ * Renders the REAL classes — nothing here restyles a CTA, so what the canvas
+ * shows is what every page ships. cta.css reaches the canvas through
+ * .storybook/preview.ts (Trap 2 in docs/claude/rules/storybook.md: a
+ * frontmatter CSS import would not).
+ *
+ * The "Hover" column cannot use :hover (Chromatic never hovers), so it
+ * re-points the CTA's own variables at their hover values — the same
+ * variables the real :hover rule reads — plus the 1px lift. Hover the live
+ * column to compare.
+ *
+ * Keep every inline element on one source line with its neighbours (Trap 4:
+ * Storybook does not load astro.config's compressHTML).
+ */
+
+export type Variant = 'primary' | 'ghost' | 'link';
+
+export interface Props {
+  /** `gallery` renders everything; `single` renders one CTA from the args. */
+  mode?: 'gallery' | 'single';
+  variant?: Variant;
+  element?: 'a' | 'button';
+  label?: string;
+  disabled?: boolean;
+}
+
+const {
+  mode = 'gallery',
+  variant = 'primary',
+  element = 'a',
+  label = 'Change your vote',
+  disabled = false,
+} = Astro.props;
+
+const classFor = (v: Variant) => (v === 'link' ? 'cta-link' : `cta cta--${v}`);
+
+// Simulated hover — the variables the real `.cta:hover` / `.cta-link:hover`
+// rules read, pointed at their hover values.
+const HOVER_STYLE: Record<Variant, string> = {
+  primary: '--cta-bg: var(--cta-bg-hover); --cta-border: var(--cta-border-hover); transform: translateY(-1px);',
+  ghost: '--cta-bg: var(--cta-bg-hover); --cta-border: var(--cta-border-hover); transform: translateY(-1px);',
+  link: '--cta-link-ink: var(--cta-link-ink-hover);',
+};
+
+const ROWS: { variant: Variant; name: string; markup: string; use: string }[] = [
+  {
+    variant: 'primary',
+    name: 'Primary',
+    markup: 'class="cta cta--primary"',
+    use: 'The one action a surface exists for. One per card or hero.',
+  },
+  {
+    variant: 'ghost',
+    name: 'Ghost',
+    markup: 'class="cta cta--ghost"',
+    use: 'The secondary action beside a primary: Back, Cancel, the other option.',
+  },
+  {
+    variant: 'link',
+    name: 'Arrow link',
+    markup: 'class="cta-link"',
+    use: 'Navigation to more of the same: View all, The Pecking Order. The arrow is drawn; never type one.',
+  },
+];
+---
+
+{mode === 'single' ? (
+  <div class="ctag ctag--single">
+    {element === 'button' ? (
+      <button type="button" class={classFor(variant)} disabled={disabled}>{label}</button>
+    ) : (
+      <a href="#" class={classFor(variant)} aria-disabled={disabled ? 'true' : undefined}>{label}</a>
+    )}
+  </div>
+) : (
+  <section class="ctag">
+    <header class="ctag__head">
+      <h2 class="ctag__title">CTAs</h2>
+      <p class="ctag__lede">One pattern for every call to action, on <code>&lt;a&gt;</code> and <code>&lt;button&gt;</code> alike. Source: <code>src/styles/cta.css</code>. Hover never changes the text colour and never underlines.</p>
+    </header>
+
+    <div class="ctag__grid" role="table" aria-label="CTA variants and states">
+      <div class="ctag__row ctag__row--head" role="row">
+        <span role="columnheader">Variant</span>
+        <span role="columnheader">Live (hover me)</span>
+        <span role="columnheader">Hover</span>
+        <span role="columnheader">Button</span>
+        <span role="columnheader">Disabled</span>
+      </div>
+      {ROWS.map((row) => (
+        <div class="ctag__row" role="row">
+          <span class="ctag__name" role="cell">
+            <strong>{row.name}</strong>
+            <code>{row.markup}</code>
+            <small>{row.use}</small>
+          </span>
+          <span role="cell"><a href="#" class={classFor(row.variant)}>{row.variant === 'link' ? 'The Pecking Order' : 'Change your vote'}</a></span>
+          <span role="cell"><a href="#" class={classFor(row.variant)} style={HOVER_STYLE[row.variant]}>{row.variant === 'link' ? 'The Pecking Order' : 'Change your vote'}</a></span>
+          <span role="cell"><button type="button" class={classFor(row.variant)}>{row.variant === 'link' ? 'Show more' : 'Submit bid'}</button></span>
+          <span role="cell">{row.variant === 'link' ? <span class="ctag__na">n/a</span> : <button type="button" class={classFor(row.variant)} disabled>Locked</button>}</span>
+        </div>
+      ))}
+    </div>
+
+    <h3 class="ctag__sub">In context: a primary with its arrow link</h3>
+    <div class="ctag__card">
+      <p class="ctag__card-title">The Owners' Poll</p>
+      <p class="ctag__links"><a href="#" class="cta cta--primary">Change your vote</a> <a href="#" class="cta-link">The Pecking Order</a></p>
+    </div>
+
+    <h3 class="ctag__sub">Custom ground: colours through <code>--cta-*</code>, never <code>background</code></h3>
+    <div class="ctag__hero">
+      <p class="ctag__hero-title">Week 3 Recap</p>
+      <p class="ctag__links"><a href="#" class="cta cta--primary ctag__hero-cta">Read the recap</a> <a href="#" class="cta cta--ghost ctag__hero-ghost">All recaps</a></p>
+    </div>
+    <pre class="ctag__code"><code>{`.recap__cta {
+  --cta-bg: #fff;
+  --cta-bg-hover: color-mix(in srgb, #fff 88%, black);
+  --cta-ink: var(--team-color);
+  --cta-border: #fff;
+}`}</code></pre>
+  </section>
+)}
+
+<style>
+  .ctag {
+    display: grid;
+    gap: 1.25rem;
+    padding: 1.5rem;
+    max-width: 60rem;
+    color: var(--page-text);
+  }
+  .ctag--single {
+    padding: 2rem;
+  }
+  .ctag__title {
+    margin: 0;
+  }
+  .ctag__lede {
+    margin: 0.25rem 0 0;
+    color: var(--content-text-muted);
+  }
+  .ctag__grid {
+    display: grid;
+    gap: 0;
+    border: 1px solid var(--content-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: var(--card-bg);
+  }
+  .ctag__row {
+    display: grid;
+    grid-template-columns: minmax(14rem, 2fr) repeat(4, minmax(9rem, 1fr));
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border-top: 1px solid var(--content-border);
+  }
+  .ctag__row--head {
+    border-top: 0;
+    padding-block: 0.6rem;
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--content-text-muted);
+    background: var(--content-bg-muted);
+  }
+  .ctag__name {
+    display: grid;
+    gap: 0.2rem;
+  }
+  .ctag__name code {
+    font-size: var(--font-size-xs);
+  }
+  .ctag__name small,
+  .ctag__na {
+    color: var(--content-text-muted);
+    font-size: var(--font-size-xs);
+  }
+  .ctag__sub {
+    margin: 0.5rem 0 0;
+    font-size: var(--font-size-base);
+  }
+  .ctag__card,
+  .ctag__hero {
+    padding: 1.25rem;
+    border-radius: var(--radius-md);
+  }
+  .ctag__card {
+    border: 1px solid var(--content-border);
+    background: var(--card-bg);
+  }
+  .ctag__card-title,
+  .ctag__hero-title {
+    margin: 0 0 0.75rem;
+    font-weight: var(--font-weight-bold);
+  }
+  .ctag__links {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0;
+  }
+  /* A team-colour ground, dark in both themes. */
+  .ctag__hero {
+    --ctag-team: #1c497c;
+    background: var(--ctag-team);
+    color: #fff;
+  }
+  .ctag__hero-cta {
+    --cta-bg: #fff;
+    --cta-bg-hover: color-mix(in srgb, #fff 88%, black);
+    --cta-ink: var(--ctag-team);
+    --cta-border: #fff;
+    --cta-focus-ring: #fff;
+  }
+  .ctag__hero-ghost {
+    --cta-ink: #fff;
+    --cta-focus-ring: #fff;
+  }
+  .ctag__code {
+    margin: 0;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-md);
+    background: var(--content-bg-muted);
+    font-size: var(--font-size-xs);
+    overflow-x: auto;
+  }
+
+  @media (max-width: 760px) {
+    .ctag__row {
+      grid-template-columns: 1fr 1fr;
+    }
+    .ctag__row--head {
+      display: none;
+    }
+    .ctag__name {
+      grid-column: 1 / -1;
+    }
+  }
+</style>

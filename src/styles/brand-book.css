@@ -505,6 +505,12 @@
   text-decoration: none;
   cursor: pointer;
 }
+/* An <a>: restate colour and decoration on hover/focus, or the layouts'
+   global a:hover turns it red and underlined (tests/cta-pattern.test.ts). */
+.cb__dl:is(:hover, :focus) {
+  color: var(--page-text, #111827);
+  text-decoration: none;
+}
 .cb-copy:hover,
 .cb__dl:hover,
 .cb-copy:focus-visible,

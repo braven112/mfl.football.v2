@@ -1834,6 +1834,9 @@
 .lbc-bar__btn:hover,
 .lbc-bar__btn:focus {
   color: var(--page-text);
+  /* Restated: the layouts' global a:hover underlines at (0,1,1), which beats
+     the base rule's `none` on the Leagues link. */
+  text-decoration: none;
 }
 
 /* `:focus`, not `:focus-visible` alone — a set-top browser without

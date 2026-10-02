@@ -312,7 +312,7 @@ const countAriaLabel = hasCount
         {hasCount && (link || secondaryLinks.length > 0) && <span class="afl-event-hero__divider" aria-hidden="true"></span>}
         {link && (
           <a
-            class="afl-event-hero__cta"
+            class="cta cta--primary afl-event-hero__cta"
             href={link}
             target={isExternal ? '_blank' : undefined}
             rel={isExternal ? 'noopener noreferrer' : undefined}
@@ -322,7 +322,7 @@ const countAriaLabel = hasCount
           </a>
         )}
         {secondaryLinks.map((secondary) => (
-          <a class="afl-event-hero__cta afl-event-hero__cta--ghost" href={secondary.href}>
+          <a class="cta cta--ghost afl-event-hero__cta afl-event-hero__cta--ghost" href={secondary.href}>
             {secondary.live && (
               <>
                 <span class="afl-event-hero__live-dot" aria-hidden="true"></span>
@@ -413,11 +413,10 @@ const countAriaLabel = hasCount
      than the accent itself — the accent is tuned to be legible on a dark
      gradient, which is the opposite problem. */
   .afl-event-hero--franchise .afl-event-hero__cta:not(.afl-event-hero__cta--ghost) {
-    background: #ffffff;
-    color: var(--hero-fb-cta-ink, #10131a);
-  }
-  .afl-event-hero--franchise .afl-event-hero__cta:not(.afl-event-hero__cta--ghost):hover {
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+    --cta-bg: #ffffff;
+    --cta-bg-hover: color-mix(in srgb, #ffffff 88%, black);
+    --cta-border: #ffffff;
+    --cta-ink: var(--hero-fb-cta-ink, #10131a);
   }
   .afl-event-hero--franchise .afl-event-hero__glow {
     display: none;
@@ -838,40 +837,27 @@ const countAriaLabel = hasCount
     background: var(--ev-divider);
   }
 
+  /* The card is navy in BOTH themes, so the fill is the league accent pinned
+     here rather than the theme-switching --btn-primary-bg default. */
   .afl-event-hero__cta {
-    display: inline-flex;
-    align-items: center;
+    --cta-bg: var(--league-accent, #c41e3a);
+    --cta-bg-hover: color-mix(in srgb, var(--cta-bg) 85%, black);
+    --cta-ink: #fff;
     /* There is no global box-sizing reset in this repo (see the note in
        live-scoring.css). Without this the --ghost modifier's 1px border sits
        OUTSIDE the fixed 50px height and the two buttons in this flex row
-       disagree by a pixel top and bottom. No-op for the borderless primary. */
+       disagree by a pixel top and bottom. */
     box-sizing: border-box;
     gap: 0.5rem;
     height: 50px;
     padding: 0 1.5rem;
-    border-radius: var(--radius-md, 0.5rem);
-    background: var(--league-accent, #c41e3a);
-    color: #fff;
     font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', 'Oswald', sans-serif);
-    font-weight: 700;
     font-size: 1.0625rem;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    text-decoration: none;
-    white-space: nowrap;
-    transition: filter var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast);
-  }
-  .afl-event-hero__cta:hover {
-    filter: brightness(0.92);
-    transform: translateY(-1px);
-    box-shadow: 0 6px 16px rgba(196, 30, 58, 0.35);
   }
   .afl-event-hero__cta-arrow {
     font-size: 1.1rem;
-    transition: transform var(--transition-fast);
-  }
-  .afl-event-hero__cta:hover .afl-event-hero__cta-arrow {
-    transform: translateX(2px);
   }
 
   /* Ghost CTA — the OTHER conference's live board. Outlined rather than solid
@@ -879,14 +865,11 @@ const countAriaLabel = hasCount
      still the headline, this is the room next door. The card is navy in both
      themes, so these white-alpha values need no theme split. */
   .afl-event-hero__cta--ghost {
-    background: rgba(255, 255, 255, 0.07);
-    border: 1px solid var(--ev-divider);
-    color: var(--ev-ink);
-  }
-  .afl-event-hero__cta--ghost:hover {
-    background: rgba(255, 255, 255, 0.14);
-    filter: none;
-    box-shadow: none;
+    --cta-bg: rgba(255, 255, 255, 0.07);
+    --cta-bg-hover: rgba(255, 255, 255, 0.14);
+    --cta-border: var(--ev-divider);
+    --cta-border-hover: var(--ev-divider);
+    --cta-ink: var(--ev-ink);
   }
   .afl-event-hero__live-dot {
     width: 0.5rem;

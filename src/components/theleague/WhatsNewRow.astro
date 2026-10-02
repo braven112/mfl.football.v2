@@ -69,7 +69,7 @@ const enriched = enrichEntries(sorted.slice(0, count), lastVisitDate);
   <section class="whats-new-row" aria-label="Recent feature updates">
     <div class="whats-new-row__header">
       <h2 class="whats-new-row__heading">What's New</h2>
-      <a href={allReleasesLink} class="whats-new-row__link">All releases &rarr;</a>
+      <a href={allReleasesLink} class="cta-link whats-new-row__link">All releases</a>
     </div>
     <div class="whats-new-row__grid">
       {enriched.map(entry => {
@@ -181,15 +181,8 @@ const enriched = enrichEntries(sorted.slice(0, count), lastVisitDate);
   }
 
   .whats-new-row__link {
+    --cta-link-ink: var(--league-accent-fg, var(--league-accent, #1c497c));
     font-size: var(--font-size-sm);
-    font-weight: 600;
-    color: var(--league-accent-fg, var(--league-accent, #1c497c));
-    text-decoration: none;
-    white-space: nowrap;
-  }
-
-  .whats-new-row__link:hover {
-    text-decoration: underline;
   }
 
   .whats-new-row__grid {

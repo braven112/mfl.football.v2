@@ -151,7 +151,7 @@ const hrefFromHere = (path: string) => crossHostLeagueHref(Astro.url.hostname, p
             <span class="lockup-name">{league.name}</span>
           </span>
           <p class="stats">{meta.stats}</p>
-          <span class="cta">Enter {league.name} →</span>
+          <span class="panel__enter">Enter {league.name} →</span>
         </a>
       );
     })}
@@ -386,7 +386,7 @@ const hrefFromHere = (path: string) => crossHostLeagueHref(Astro.url.hostname, p
     margin: 0;
   }
 
-  .cta {
+  .panel__enter {
     align-self: flex-start;
     margin-top: 0.4rem;
     font-size: 0.8rem;

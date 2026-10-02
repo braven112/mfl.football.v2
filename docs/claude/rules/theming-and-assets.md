@@ -116,6 +116,64 @@ the content), and em dashes. OKLCH was not adopted: ~10k hex values sit under
 contrast guards, and the migration risk outweighs the gain — use OKLCH for a
 new palette if you like, but don't convert the existing ones.
 
+## CTAs — one pattern, `.cta` / `.cta-link`
+
+Every call-to-action link or button is the shared pattern in
+`src/styles/cta.css`, loaded by all four base layouts and Storybook:
+
+| Shape | Markup | Hover |
+|---|---|---|
+| Primary (filled) | `class="cta cta--primary"` | background steps to `--btn-primary-bg-hover`, lifts 1px; text never changes, never underlines |
+| Ghost (outlined) | `class="cta cta--ghost"` | same, on a 10% tint of its ink |
+| Arrow link | `class="cta-link"` | link-hover colour, the arrow nudges right, no underline |
+
+`.cta-link` draws its own `›` — never type an arrow into its label.
+Gallery: `/theleague/design-system`.
+
+**Why it exists.** Every base layout has a global `a:hover` / `a:focus`
+(link colour + underline) at specificity (0,1,1). A CTA class in UNSCOPED CSS
+— `src/styles/*.css`, `<style is:global>`, `:global(...)`, and every `.tsx`
+component's stylesheet — is (0,1,0), so any such CTA that did not restate
+colour AND decoration in its own `:hover` wore the link hover: the Owners'
+Poll's blue "Change your vote" (`owners-poll-card.css`) turned red and
+underlined (Oct 2026). A class in an Astro SCOPED `<style>` compiles to
+`.x[data-astro-cid-…]` (0,2,0) and already won — which is why the bug lived in
+the shared stylesheets, and why a scoped `color:` on a CTA's own class TIES
+with the state rules below (order-dependent) instead of losing cleanly. About
+a hundred hand-rolled `__cta` / `__btn` classes each had their own hover —
+opacity, brightness, lift, underline. `cta.css` states the rules once at
+(0,2,0).
+
+**A link that is not a CTA** (a chip, a tile, a toolbar button) and is styled
+from unscoped CSS must still restate `color` and `text-decoration` under
+`:is(:hover, :focus)` — `.ui-state__action`, `.cb__dl`, `.tl-hero-panel__link`
+and the bookmarklet chips do. The guard below only sees CTA-SHAPED class
+names, so this one is on you.
+
+**Customising.** Keep the component's BEM class next to `cta` for layout:
+the base rules sit inside `:where()` (zero specificity), so `padding`,
+`font-size`, `width`, `margin` on the component's own class always win,
+whatever the stylesheet order. COLOURS go through variables —
+`--cta-bg`, `--cta-bg-hover`, `--cta-ink`, `--cta-border`,
+`--cta-border-hover`, `--cta-focus-ring` (`--cta-link-ink[-hover]` for the
+arrow link). Never set `background` / `color` on the BEM class directly: the
+hover rule reads the variables and would replace a hard-coded value. A white
+pill on a team-colour hero is `--cta-bg: #fff; --cta-ink: <team>`; the
+generic site accent is the default and needs nothing.
+
+Guard: `tests/cta-pattern.test.ts` fails on any `<a>` carrying a CTA-shaped
+class (`block__cta`, `block__elem-btn`, `block-btn`, `…__button`, bare `btn`
+or a `btn-…` prefix) without `cta` or `cta-link`, on a layout that stops importing the file, and on a base rule that
+gains specificity. A link that genuinely is not a CTA (a toolbar toggle, a
+broadcast-bar chip) goes in its `ALLOWED` map with the reason. It cannot see a
+class name assembled at runtime (`` class={`${cls}__cta`} ``) or markup built
+in a `.ts` string — write those with the shared class from the start.
+
+Never reuse `cta` or `cta-link` as a page-local class name: the global rules
+apply to it (the splash page's `<span class="cta">` and the CSS-customization
+page's `.cta-link` pills both inherited a border, an arrow and a hover before
+they were renamed).
+
 ## Astro scoped CSS never reaches an element JS created
 
 A `<style>` block in a `.astro` file compiles to selectors that require the

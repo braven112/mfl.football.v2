@@ -77,7 +77,7 @@ export default function TradeBaitMarketplace({ teams, leagueYear, onStartTrade }
           </p>
           <a
             href="/theleague/rosters"
-            className="marketplace__cta-btn"
+            className="cta cta--primary marketplace__cta-btn"
           >
             Manage Your Trade Bait
           </a>
@@ -189,7 +189,7 @@ export default function TradeBaitMarketplace({ teams, leagueYear, onStartTrade }
           <div className="marketplace__footer">
             <a
               href="/theleague/rosters"
-              className="marketplace__cta-btn"
+              className="cta cta--primary marketplace__cta-btn"
             >
               Manage Your Trade Bait
             </a>
@@ -403,26 +403,17 @@ const marketplaceStyles = `
     border-top: 1px solid #fde68a;
     flex-wrap: wrap;
   }
+  /* The marketplace's amber branding, not the site accent. */
   .marketplace__cta-btn {
-    display: inline-flex;
-    align-items: center;
+    --cta-bg: #f59e0b;
+    --cta-bg-hover: #d97706;
+    --cta-ink: #fff;
+    --cta-border: var(--cta-bg);
     gap: 0.375rem;
     padding: 0.5rem 1rem;
-    background: #f59e0b;
-    color: #fff;
-    border: none;
     border-radius: 0.5rem;
     font-size: 0.8125rem;
-    font-weight: 700;
-    text-decoration: none;
-    cursor: pointer;
-    transition: background var(--transition-fast);
-    white-space: nowrap;
     flex-shrink: 0;
-  }
-  .marketplace__cta-btn:hover {
-    background: #d97706;
-    color: #fff;
   }
   .marketplace__footer-hint {
     font-size: var(--font-size-xs);
@@ -484,9 +475,6 @@ const marketplaceStyles = `
       flex-direction: column;
       align-items: stretch;
       text-align: center;
-    }
-    .marketplace__cta-btn {
-      justify-content: center;
     }
   }
 

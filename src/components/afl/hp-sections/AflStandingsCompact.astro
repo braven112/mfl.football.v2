@@ -184,11 +184,8 @@ if (userRow) {
         <p class="afl-tiers__sub">{subtitle}</p>
       </div>
     </div>
-    <a href="/afl-fantasy/standings?view=all_play" class="afl-tiers__cta">
+    <a href="/afl-fantasy/standings?view=all_play" class="cta-link afl-tiers__cta">
       Full standings
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
-        <path d="M5 12h14M12 5l7 7-7 7"/>
-      </svg>
     </a>
   </div>
 
@@ -284,19 +281,8 @@ if (userRow) {
   }
 
   .afl-tiers__cta {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
+    --cta-link-ink: var(--afl-accent);
     font-size: var(--font-size-xs);
-    font-weight: 600;
-    color: var(--afl-accent);
-    text-decoration: none;
-    transition: gap var(--transition-fast);
-    white-space: nowrap;
-  }
-
-  .afl-tiers__cta:hover {
-    gap: 0.5rem;
   }
 
   .afl-tiers__table {

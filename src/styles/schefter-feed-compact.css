@@ -56,20 +56,9 @@
 }
 
 .sfc-feed__view-all {
+  --cta-link-ink: var(--sf-link-color, var(--color-primary, #1c497c));
   font-size: var(--font-size-xs);
   font-weight: 500;
-  color: var(--sf-link-color, var(--color-primary, #1c497c));
-  text-decoration: none;
-}
-
-.sfc-feed__view-all:hover {
-  text-decoration: underline;
-}
-
-.sfc-feed__view-all:focus-visible {
-  outline: 2px solid var(--color-primary, #1c497c);
-  outline-offset: 2px;
-  border-radius: var(--radius-sm, 0.25rem);
 }
 
 .sfc-feed__list {

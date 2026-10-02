@@ -113,7 +113,7 @@ export default function PlayoffBracketHero({
         ))}
       </div>
 
-      <a href="/theleague/playoffs" className="plhero__cta">
+      <a href="/theleague/playoffs" className="cta cta--primary plhero__cta">
         View Full Bracket
       </a>
     </div>

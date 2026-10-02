@@ -180,10 +180,10 @@ const serializedConfig = JSON.stringify({
             <option value="season">Season Total</option>
           </select>
         </label>
-        <button type="button" id="exportXlsxBtn" class="toolbar-btn toolbar-btn--primary">
+        <button type="button" id="exportXlsxBtn" class="cta cta--primary toolbar-btn">
           Export to Excel
         </button>
-        <a id="archiveSheetLink" class="toolbar-btn toolbar-btn--ghost" href="#" target="_blank" rel="noopener noreferrer" style="display: none;">
+        <a id="archiveSheetLink" class="cta cta--ghost toolbar-btn toolbar-btn--ghost" href="#" target="_blank" rel="noopener noreferrer" style="display: none;">
           Original Spreadsheet
         </a>
       </div>
@@ -395,43 +395,21 @@ const serializedConfig = JSON.stringify({
     outline-offset: 2px;
   }
 
+  /* Shape, colour and hover come from the shared .cta pattern
+     (src/styles/cta.css); the toolbar runs them compact. The ghost is the
+     toolbar's neutral grey rather than link-blue. */
   .toolbar-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     padding: 0.4375rem 0.875rem;
     font-size: var(--font-size-xs);
     font-weight: 600;
     border-radius: var(--radius-sm, 0.25rem);
-    cursor: pointer;
-    white-space: nowrap;
-    transition: background var(--transition-fast);
-    text-decoration: none;
-    border: none;
-  }
-
-  .toolbar-btn:focus-visible {
-    outline: 2px solid var(--color-primary, #1c497c);
-    outline-offset: 2px;
-  }
-
-  .toolbar-btn--primary {
-    background: var(--btn-primary-bg, #1c497c);
-    color: var(--btn-primary-text, #ffffff);
-  }
-
-  .toolbar-btn--primary:hover {
-    background: var(--btn-primary-bg-hover, #164066);
   }
 
   .toolbar-btn--ghost {
-    background: transparent;
-    color: var(--color-gray-600, #4b5563);
-    border: 1px solid var(--content-border, #e2e8f0);
-  }
-
-  .toolbar-btn--ghost:hover {
-    background: var(--color-gray-50, #f9fafb);
+    --cta-ink: var(--color-gray-600, #4b5563);
+    --cta-border: var(--content-border, #e2e8f0);
+    --cta-border-hover: var(--content-border, #e2e8f0);
+    --cta-bg-hover: var(--color-gray-50, #f9fafb);
   }
 
   /* ── Position Card Grid ── */
@@ -731,7 +709,6 @@ const serializedConfig = JSON.stringify({
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .toolbar-btn,
     :global(.show-more-btn) {
       transition: none;
     }

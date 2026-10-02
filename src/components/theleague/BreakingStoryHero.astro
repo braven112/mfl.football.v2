@@ -92,7 +92,7 @@ const labels = await getPersonaLabels('theleague');
     <h2 class="bsh__title">{story.headline}</h2>
     {summary && <p class="bsh__summary">{summary}</p>}
     <a
-      class="bsh__cta"
+      class="cta cta--primary bsh__cta"
       href={ctaHref}
       target={ctaExternal ? '_blank' : undefined}
       rel={ctaExternal ? 'noopener noreferrer' : undefined}
@@ -274,36 +274,13 @@ const labels = await getPersonaLabels('theleague');
   }
 
   .bsh__cta {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    background: var(--bsh-cta-bg);
-    color: var(--bsh-cta-ink);
+    --cta-bg: var(--bsh-cta-bg);
+    --cta-bg-hover: color-mix(in srgb, var(--bsh-cta-bg) 88%, black);
+    --cta-ink: var(--bsh-cta-ink);
+    --cta-border: var(--bsh-cta-bg);
+    --cta-focus-ring: var(--bsh-tag-bg);
     font-size: 0.8125rem;
-    font-weight: 700;
     padding: 0.6rem 1.05rem;
-    border-radius: var(--radius-md, 0.5rem);
-    text-decoration: none;
-    transition: transform 120ms ease;
-  }
-
-  .bsh__cta:hover {
-    transform: translateY(-1px);
-  }
-
-  .bsh__cta:focus-visible {
-    outline: 2px solid var(--bsh-tag-bg);
-    outline-offset: 2px;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .bsh__cta {
-      transition: none;
-    }
-
-    .bsh__cta:hover {
-      transform: none;
-    }
   }
 
   @media (max-width: 640px) {

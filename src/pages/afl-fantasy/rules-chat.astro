@@ -61,7 +61,7 @@ const teamIcons = aflConfig.teams.map((t: { franchiseId: string; icon: string })
           <div class="rqa-roger-card__name">Roger</div>
           <div class="rqa-roger-card__role">AI Rules Expert</div>
           <p class="rqa-roger-card__bio">He's read the AFL constitution cover to cover — every conference, every division, and the fine print about promotion and relegation that even the Commissioner forgot about.</p>
-          <a href="/afl-fantasy/rules" class="rqa-roger-card__cta">
+          <a href="/afl-fantasy/rules" class="cta cta--primary rqa-roger-card__cta">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
               <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
               <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
@@ -210,24 +210,16 @@ const teamIcons = aflConfig.teams.map((t: { franchiseId: string; icon: string })
     color: var(--color-gray-400, #9ca3af);
     margin: 0.75rem 0 0 0;
   }
+  /* The page's whole palette derives from --afl-accent, so the CTA does too. */
   .rqa-roger-card__cta {
+    --cta-bg: var(--afl-accent);
+    --cta-bg-hover: var(--afl-accent-hover);
+    --cta-border: var(--afl-accent);
+    --cta-ink: #fff;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
     margin-top: 1rem;
     padding: 0.625rem 1rem;
-    background: var(--afl-accent);
-    color: #fff;
-    border-radius: var(--radius-md, 0.5rem);
     font-size: 0.8125rem;
-    font-weight: 600;
-    text-decoration: none;
-    transition: background var(--transition-fast);
-  }
-  .rqa-roger-card__cta:hover {
-    background: var(--afl-accent-hover);
-    text-decoration: none;
   }
 
   /* Sidebar sections */

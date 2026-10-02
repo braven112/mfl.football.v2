@@ -72,7 +72,7 @@ const emptyText = emptyTextProp ?? `No news yet. ${labels.surname} is on assignm
 <section class="sfc-feed" aria-label="Latest league news" data-sfc-active-tab={activeTab}>
   <div class="sfc-feed__header">
     <h2 class="sfc-feed__title">{labels.reportShort}</h2>
-    <a href={newsHref} class="sfc-feed__view-all">View all <span aria-hidden="true">→</span></a>
+    <a href={newsHref} class="cta-link sfc-feed__view-all">View all</a>
   </div>
 
   {personalized && (

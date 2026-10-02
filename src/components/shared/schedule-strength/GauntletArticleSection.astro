@@ -78,8 +78,8 @@ if (gauntletRef) {
         <TrapWeeksStrip trapWeeks={view.trapWeeks} />
       </section>
     )}
-    <a class="sf-gauntlet__cta" href={dashboardHref}>
-      Full dashboard: week-by-week heat map →
+    <a class="cta-link sf-gauntlet__cta" href={dashboardHref}>
+      Full dashboard: week-by-week heat map
     </a>
   </div>
 )}
@@ -109,10 +109,8 @@ if (gauntletRef) {
   }
 
   .sf-gauntlet__cta {
+    align-self: flex-start;
     font-weight: 700;
     font-size: 0.9rem;
-    color: var(--link-color, var(--color-primary, #1c497c));
-    text-decoration: none;
   }
-  .sf-gauntlet__cta:hover { text-decoration: underline; }
 </style>
