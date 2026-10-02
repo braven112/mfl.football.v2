@@ -29,6 +29,16 @@ export function clearScoringRulesCache(): void {
   cache.clear();
 }
 
+/**
+ * Whether a read for this league-year would be answered from memory. The route
+ * rate-limits only the reads that would reach MFL, so ordinary viewers never
+ * pay for the check.
+ */
+export function hasCachedScoringRules(leagueId: string, year: string): boolean {
+  const hit = cache.get(`${leagueId}:${year}`);
+  return !!hit && Date.now() - hit.at < RULES_TTL_MS;
+}
+
 /** MFL league ids are short digit strings. Anything else is refused. */
 export function isValidLeagueId(raw: string): boolean {
   return /^\d{1,7}$/.test(raw);

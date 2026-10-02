@@ -919,3 +919,27 @@ branch cut from `main` could not be retargeted at `staging` without dragging
 feature onto `staging`. Before a feature that builds on a recent change,
 check the base branch actually carries that change:
 `git cat-file -e origin/staging:<path>`.
+
+## 2026-10-02 — The stat sheet: MFL has the rules and the total, ESPN has the stats
+
+**MFL's export API has no per-player stat breakdown, so we rebuild it.** We
+checked: `liveScoring&DETAILS=1` gives each player `score`, `status`,
+`gameSecondsRemaining` and an `updatedStats` field that was empty for every
+player in finished games (W3 and the W4 Thursday game). `playerScores&DETAILS=1`
+returns only the total, and there is no `playerStats` export. So the sheet
+scores ESPN's box score (mapped to MFL's rule codes) with the league's own
+`TYPE=rules`. A mid-game check of `updatedStats` was scheduled for 2026-10-04;
+if it carries stat codes while games are live, it is a direct MFL source worth
+revisiting.
+
+**Measure it as a census before trusting it.** The first cut matched MFL on
+88% of TheLeague rows. Every miss fell into one of two shapes, and neither shows
+up in a unit test written from the rules alone: a combined event (`UY+KY`) that
+required both parts, and two-point conversions, which ESPN reports only in the
+touchdown play's prose. After both fixes: TheLeague 500/500, AFL 326/326. A
+league that scores what no box score itemizes (Archie's: first downs, 20-yard
+plays) is reconciled by a "Not itemized" line rather than chased.
+
+**`api.myfantasyleague.com` redirects any league to its own host.** That is
+what lets a cross-league surface read a stranger's league with only a numeric
+id. The request never supplies a host, so there is nothing to validate.
