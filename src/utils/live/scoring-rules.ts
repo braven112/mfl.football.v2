@@ -23,6 +23,8 @@
  * on zero would be paid for a stat ESPN never reported.
  */
 
+import { asArray } from '../mfl-normalize';
+
 /** One `<rule>` from MFL's `TYPE=rules` export. */
 export interface ScoringRule {
   /** The event's codes; `UY+KY` scores the SUM of punt and kick return yards. */
@@ -144,8 +146,6 @@ const text = (v: unknown): string => {
   return typeof v === 'string' || typeof v === 'number' ? String(v) : '';
 };
 
-const asList = <T,>(v: T | T[] | undefined | null): T[] =>
-  v == null ? [] : Array.isArray(v) ? v : [v];
 
 /** "-50-999" → [-50, 999]; "0-10" → [0, 10]. Null when unparseable. */
 export function parseRange(raw: string): [number, number] | null {
@@ -176,7 +176,7 @@ export function parsePoints(raw: string): Pick<ScoringRule, 'kind' | 'points' | 
  * caller decides whether that was a failed read or a league without rules.
  */
 export function parseScoringRules(payload: unknown): PositionRuleSet[] | null {
-  const blocks = asList((payload as any)?.rules?.positionRules);
+  const blocks = asArray((payload as any)?.rules?.positionRules);
   if (blocks.length === 0) return null;
   const out: PositionRuleSet[] = [];
   for (const block of blocks) {
@@ -185,7 +185,7 @@ export function parseScoringRules(payload: unknown): PositionRuleSet[] | null {
       .map((p) => p.trim())
       .filter(Boolean);
     const rules: ScoringRule[] = [];
-    for (const r of asList(block?.rule)) {
+    for (const r of asArray(block?.rule)) {
       const event = text(r?.event)
         .split('+')
         .map((e) => e.trim())

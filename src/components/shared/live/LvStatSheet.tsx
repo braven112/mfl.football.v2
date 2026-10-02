@@ -124,7 +124,6 @@ export default function LvStatSheet({
       document.body.style.overflow = previousOverflow;
     };
     // Mount/unmount only — `close` changes identity with the parent's render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (typeof document === 'undefined') return null;
