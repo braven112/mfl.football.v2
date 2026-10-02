@@ -72,6 +72,9 @@ export default function LvMatchupCard({
   const aName = a.nameShort || a.name;
   const bName = b.nameShort || b.name;
   const aLeads = a.live >= b.live;
+  // The button's label replaces its visible text for a screen reader, so a
+  // Throwback era's "today's name" line has to be spelled out here too.
+  const labelName = (t: LiveTeam) => (t.currentName ? `${t.name} (${t.currentName})` : t.name);
 
   // `ahead` is which SIDE is winning, not whether this CARD leads its panel —
   // two different "lead"s, and naming them the same shadowed the prop.
@@ -113,7 +116,7 @@ export default function LvMatchupCard({
       style={matchup.colorVars}
       onClick={onOpen}
       aria-label={
-        `Open ${a.name} against ${b.name}` +
+        `Open ${labelName(a)} against ${labelName(b)}` +
         (showYtp
           ? `. ${aName} ${a.yetToPlay} to play, ${bName} ${b.yetToPlay} to play`
           : '')
