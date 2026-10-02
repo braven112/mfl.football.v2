@@ -503,9 +503,11 @@ export function buildRevealMessage({ league, issue, teams, callback = null }) {
   if (callback) lines.push(`📼 ${callback}`);
 
   // The reveal is also the moment to say the poll did not just close: an owner
-  // reading this can change their vote right now and it counts next time.
+  // reading this can change their vote right now and it counts next time. The
+  // link is the BALLOT — the full room rankings sit behind a vote there, which
+  // is the turnout lever this post exists to pull.
   lines.push(
-    `Ballots stand until you change them — next result in a week. Every ballot ▸ ${leagueUrl(league, '/pecking-order')}`,
+    `Vote to see the full rankings — ballots stand until you change them. ▸ ${leagueUrl(league, BALLOT_PATH)}`,
   );
   return lines.join('\n');
 }

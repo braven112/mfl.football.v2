@@ -252,7 +252,10 @@ export function buildRevealFeedPost({
 
   const name = (fid) => teams.get(fid)?.nameMedium ?? teams.get(fid)?.name ?? fid;
   const id = `sf_owners_poll_${league.slug}_${issue.year}_w${issue.week}`;
-  const link = `${COLUMN_PATH}/${issue.year}/${issue.week}`;
+  // The post links to the BALLOT, not the issue permalink. The post exists to
+  // drive turnout: the full room rankings sit behind a vote on the ballot page,
+  // so "see where the room has everyone" is itself the reason to cast one.
+  const link = BALLOT_PATH;
 
   // No post for a week nobody voted in. The feed is a durable record of what
   // happened, and "nothing happened" is not a record worth keeping — it is an
@@ -305,7 +308,7 @@ export function buildRevealFeedPost({
       new Set([...top.map((r) => r.franchiseId), biggest?.franchiseId, homer?.franchiseId].filter(Boolean)),
     ),
     link,
-    linkLabel: 'Every ballot',
+    linkLabel: 'Vote to see the full rankings',
     league: league.slug,
     authorId: 'claude',
   };

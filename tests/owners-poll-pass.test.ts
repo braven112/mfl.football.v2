@@ -529,6 +529,9 @@ describe('chat copy', () => {
     expect(text).toContain('4/16');
     expect(text).toMatch(/^1\./m);
     expect(text).not.toMatch(/quorum|no consensus/i);
+    // The reveal drives turnout: it links the BALLOT (where the full rankings
+    // unlock after a vote), never the read-only column.
+    expect(text).toMatch(/\/pecking-order\/ballot$/);
   });
 
   it('reveal leads with the top 3 and the biggest split', () => {
