@@ -623,7 +623,9 @@ button.lv-card:focus-visible {
 .lv-scorehead {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  align-items: center;
+  /* Bottom-aligned so the two scores share a baseline even when only one side
+     carries a Throwback "today's name" line. */
+  align-items: end;
   gap: var(--spacing-sm);
   padding: 0 0.6rem 0.6rem;
 }
@@ -661,6 +663,7 @@ button.lv-card:focus-visible {
 }
 
 .lv-scorehead__at {
+  align-self: center;
   color: var(--content-text-muted);
   font-size: var(--font-size-sm);
 }
@@ -1364,7 +1367,7 @@ button.lv-card:focus-visible {
   .lv-scorehead {
     gap: 0.4rem;
     padding: 0.55rem 0.6rem;
-    align-items: center;
+    align-items: end;
   }
   .lv-scorehead__name { overflow-wrap: anywhere; }
 }
