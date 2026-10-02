@@ -194,7 +194,7 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
             <!-- CTA -->
             {entry.link && (
               <div class="wn-detail__cta">
-                <a href={r(entry.link)} class="wn-detail__cta-link">
+                <a href={r(entry.link)} class="cta cta--primary wn-detail__cta-link">
                   {entry.linkLabel ?? 'Check it out'}
                   <svg class="wn-detail__cta-arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="14" height="14">
                     <path d="M3 8h10M9 4l4 4-4 4" />
@@ -731,36 +731,15 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
   }
 
   .wn-detail__cta-link {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     gap: 0.375rem;
-    font-family: inherit;
     font-size: 0.8125rem;
     font-weight: 600;
     line-height: 1;
     border-radius: 8px;
-    padding: 0.625rem 1.25rem;
-    border: none;
-    cursor: pointer;
-    text-decoration: none;
-    white-space: nowrap;
-    background: var(--btn-primary-bg, #1c497c);
-    color: var(--btn-primary-text, #fff);
-    transition: background var(--transition-fast), color var(--transition-fast), opacity var(--transition-fast);
-  }
-
-  .wn-detail__cta-link:hover {
-    background: var(--btn-primary-bg-hover, #164066);
   }
 
   .wn-detail__cta-arrow {
     flex-shrink: 0;
-    transition: transform var(--transition-fast);
-  }
-
-  .wn-detail__cta-link:hover .wn-detail__cta-arrow {
-    transform: translateX(2px);
   }
 
   .wn-detail__detail-list {

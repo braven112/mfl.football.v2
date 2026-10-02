@@ -1931,9 +1931,15 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     color: var(--color-gray-600, #4b5563);
     transition: border-color var(--transition-fast), background var(--transition-fast);
   }
-  .sb-admin__btn:hover {
+  /* The "Issue #N" chip is an <a>: restate colour and decoration, or the
+     layout's global a:hover turns it red and underlined. A toolbar chip, not
+     a CTA — see the ALLOWED map in tests/cta-pattern.test.ts. */
+  .sb-admin__btn:hover,
+  .sb-admin__btn:focus {
     border-color: var(--color-gray-300, #d1d5db);
     background: var(--card-bg, #fff);
+    color: var(--color-gray-600, #4b5563);
+    text-decoration: none;
   }
   .sb-admin__btn--active {
     border-color: var(--color-primary, #1c497c);

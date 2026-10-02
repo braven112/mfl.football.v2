@@ -360,7 +360,7 @@ const whereLabel: Record<'mfl' | 'here' | 'both', string> = {
       </ol>
 
       <div class="faq__cta">
-        <a class="faq__cta-btn" href={path('/suggestions')}>Post an idea on The Board</a>
+        <a class="cta cta--primary faq__cta-btn" href={path('/suggestions')}>Post an idea on The Board</a>
         <p class="faq__cta-note">
           Rule changes still need a 75% vote per the <a href={path('/rules')}>constitution</a> —
           The Board is where they get pitched, not where they get ratified. Anything about
@@ -613,16 +613,11 @@ const whereLabel: Record<'mfl' | 'here' | 'both', string> = {
     border-radius: var(--radius-md, 0.5rem);
   }
   .faq__cta-btn {
-    display: inline-block;
     padding: 0.6rem 1.15rem;
     font-weight: 600;
     font-size: 0.9375rem;
-    color: var(--color-white, #fff);
-    background: var(--league-accent, #1c497c);
     border-radius: var(--radius-sm, 0.25rem);
-    text-decoration: none;
   }
-  .faq__cta-btn:hover { opacity: 0.9; }
   .faq__cta-note {
     margin: 0.85rem 0 0;
     font-size: 0.8125rem;

@@ -216,6 +216,17 @@
   border-radius: 8px;
 }
 
+/* Export CSV is an <a>, so it is a shared `.cta` (src/styles/cta.css) to beat
+   the layout's global a:hover; these variables keep it identical to the
+   neutral Refresh button beside it. */
+.acct__btn.cta {
+  --cta-bg: var(--color-surface-1, #fff);
+  --cta-bg-hover: color-mix(in srgb, var(--color-surface-1, #fff) 92%, var(--color-text-primary, #0f172a));
+  --cta-ink: var(--color-text-primary, #0f172a);
+  --cta-border: var(--color-border-default, #cbd5e1);
+  --cta-border-hover: var(--color-border-default, #cbd5e1);
+}
+
 .acct__btn--primary {
   color: var(--btn-primary-text, #fff);
   background: var(--btn-primary-bg, #1c497c);

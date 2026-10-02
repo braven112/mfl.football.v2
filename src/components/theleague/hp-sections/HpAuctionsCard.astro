@@ -37,13 +37,12 @@ const formatDollar = (n: number): string => `$${formatCompactNumber(n)}`;
     </div>
     <a
       href={placeBidUrl}
-      class="hp-auc__cta-link"
+      class="cta-link hp-auc__cta-link"
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Place auction bid (opens in new tab)"
     >
       Place a bid
-      <span class="hp-auc__ext" aria-hidden="true">&#8599;</span>
     </a>
   </div>
 
@@ -113,7 +112,7 @@ const formatDollar = (n: number): string => `$${formatCompactNumber(n)}`;
 
   <a
     href={placeBidUrl}
-    class="hp-auc__cta"
+    class="cta cta--primary hp-auc__cta"
     target="_blank"
     rel="noopener noreferrer"
     aria-label="Place auction bid (opens in new tab)"
@@ -326,26 +325,7 @@ const formatDollar = (n: number): string => `$${formatCompactNumber(n)}`;
 
   .hp-auc__cta-link {
     flex-shrink: 0;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
     font-size: var(--font-size-xs);
-    font-weight: 600;
-    color: var(--color-primary, #1c497c);
-    text-decoration: none;
-    white-space: nowrap;
-    transition: gap var(--transition-fast);
-  }
-
-  .hp-auc__cta-link:hover,
-  .hp-auc__cta-link:focus-visible {
-    gap: 0.5rem;
-  }
-
-  .hp-auc__cta-link:focus-visible {
-    outline: 2px solid var(--color-primary, #1c497c);
-    outline-offset: 2px;
-    border-radius: var(--radius-sm, 0.25rem);
   }
 
   .hp-auc__table-wrap {
@@ -472,34 +452,13 @@ const formatDollar = (n: number): string => `$${formatCompactNumber(n)}`;
 
   /* ── Primary CTA — design-system primary button (blue) ── */
   .hp-auc__cta {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     gap: 0.5rem;
     margin-top: 1rem;
     width: 100%;
     padding: 0.75rem 1.25rem;
-    border-radius: var(--radius-md, 0.5rem);
-    background: var(--btn-primary-bg, var(--color-primary, #1c497c));
-    color: var(--btn-primary-text, #fff);
-    border: 1px solid var(--btn-primary-border, var(--color-primary, #1c497c));
     box-shadow: var(--shadow-sm);
-    text-decoration: none;
-    font-size: var(--font-size-sm);
-    font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    transition: background var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
-  }
-
-  .hp-auc__cta:hover {
-    background: var(--btn-primary-bg-hover, var(--color-primary-dark, #164066));
-    border-color: var(--btn-primary-bg-hover, var(--color-primary-dark, #164066));
-  }
-
-  .hp-auc__cta:focus-visible {
-    outline: 2px solid var(--color-primary, #1c497c);
-    outline-offset: 2px;
   }
 
   .hp-auc__cta-icon {
@@ -616,12 +575,5 @@ const formatDollar = (n: number): string => `$${formatCompactNumber(n)}`;
     .hp-auc__col-player { width: 50%; }
     .hp-auc__col-bid    { width: 26%; }
     .hp-auc__col-time   { width: 24%; }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .hp-auc__cta-link,
-    .hp-auc__cta {
-      transition: none;
-    }
   }
 </style>

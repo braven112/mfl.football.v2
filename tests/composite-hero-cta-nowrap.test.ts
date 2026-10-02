@@ -40,7 +40,24 @@ function ruleBody(selector: string, from = 0): string {
 
 describe('composite hero CTA', () => {
   it('never breaks its label across lines', () => {
-    expect(ruleBody('.cmh__cta')).toContain('white-space: nowrap');
+    // Since Oct 2026 the CTA is a shared `.cta` (src/styles/cta.css), whose
+    // base rule carries the `nowrap`; every hero's CTA must therefore carry
+    // the shared class, and the shared base must keep the declaration.
+    const ctaCss = readFileSync(join(__dirname, '..', 'src/styles/cta.css'), 'utf8');
+    const base = ctaCss.slice(ctaCss.indexOf(':where(.cta) {'));
+    expect(base.slice(0, base.indexOf('}'))).toContain('white-space: nowrap');
+    for (const file of [
+      'src/components/shared/CompositeHero.astro',
+      'src/components/shared/LeagueCompositeHero.astro',
+      'src/components/theleague/AuctionCompositeHero.astro',
+      'src/components/theleague/CutWatchCompositeHero.astro',
+      'src/components/theleague/PreseasonCompositeHero.astro',
+      'src/components/theleague/season-heroes/RecapCompositeHero.astro',
+    ]) {
+      const src = readFileSync(join(__dirname, '..', file), 'utf8');
+      expect(src, `${file} must render .cmh__cta as a shared .cta`).toMatch(/class="cta cta--primary cmh__cta"/);
+      expect(src).not.toMatch(/class="cmh__cta"/);
+    }
   });
 
   it('cannot be squeezed into overflowing instead', () => {

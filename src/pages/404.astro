@@ -74,7 +74,7 @@ const tickerLines = [
         </p>
 
         <div class="bn-links">
-          <a href={homeHref} class="btn btn--primary">{homeLabel}</a>
+          <a href={homeHref} class="cta cta--primary btn btn--primary">{homeLabel}</a>
         </div>
       </div>
 
@@ -224,25 +224,11 @@ const tickerLines = [
     flex-wrap: wrap;
   }
 
+  /* The shared .cta pattern (src/styles/cta.css) supplies shape, colour and
+     hover; the error pages only run their buttons a size up. */
   .btn {
-    display: inline-block;
     padding: 0.75rem 1.25rem;
     font-size: 1rem;
-    font-weight: 600;
-    text-decoration: none;
-    border-radius: var(--radius-md);
-    transition: all var(--transition-base);
-    border: 2px solid transparent;
-  }
-
-  .btn--primary {
-    background: var(--primary-color);
-    color: #fff;
-  }
-
-  .btn--primary:hover {
-    background: var(--secondary-color);
-    transform: translateY(-2px);
   }
 
   /* --- chyron ticker (constant dark bar in both themes) --- */

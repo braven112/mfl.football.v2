@@ -5,6 +5,10 @@ import { Font } from 'astro:assets';
 // layout's own markup, so they would never reach a page's content.
 import '../styles/polish.css';
 import '../styles/states.css';
+// The one CTA pattern (.cta / .cta-link). Also a frontmatter import: its
+// state rules must out-rank this layout's global a:hover, which a scoped copy
+// could not reach. docs/claude/rules/theming-and-assets.md § "CTAs".
+import '../styles/cta.css';
 import TheLeagueHeader from '../components/theleague/Header.astro';
 import Footer from '../components/Footer.astro';
 import { getThemePreference } from '../utils/theme-preference';

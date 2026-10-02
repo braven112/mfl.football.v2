@@ -337,7 +337,7 @@ const pageConfig = {
       <section class="tb-gate">
         <h1>Trade Builder</h1>
         <p>Sign in as {/^[AEIOU]/.test(leagueLabel) ? 'an' : 'a'} {leagueLabel} owner to draft trade proposals.</p>
-        <a href={loginHref} class="tb-btn tb-btn--primary">Sign in</a>
+        <a href={loginHref} class="cta cta--primary tb-btn tb-btn--primary">Sign in</a>
       </section>
     ) : !toTeam ? (
       <section class="tb-gate">
@@ -1450,12 +1450,14 @@ const pageConfig = {
       cursor: not-allowed;
     }
 
-    .tb-btn--primary {
+    /* The sign-in link is a shared .cta (colours from cta.css); these colours
+       are for the Send-proposal form button, which stays a plain button. */
+    .tb-btn--primary:not(.cta) {
       background: var(--league-accent, #c41e3a);
       color: #fff;
     }
 
-    .tb-btn--primary:hover:not(:disabled) {
+    .tb-btn--primary:not(.cta):hover:not(:disabled) {
       background: color-mix(in srgb, var(--league-accent, #c41e3a) 85%, black);
     }
 

@@ -611,14 +611,9 @@ html.dark[data-league='afl'] .sf-post__link--external {
 }
 
 .sf-widget__view-all {
+  --cta-link-ink: var(--sf-link-color);
   font-size: var(--font-size-xs);
   font-weight: 500;
-  color: var(--sf-link-color);
-  text-decoration: none;
-}
-
-.sf-widget__view-all:hover {
-  text-decoration: underline;
 }
 
 .sf-widget__list {

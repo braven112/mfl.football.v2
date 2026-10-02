@@ -146,7 +146,7 @@ export default function TradeDeadlineHero({ deadlineMidnightPT, referenceNowISO,
       )}
 
       {!isExpired && (
-        <a href={tradeBuilderHref} className="tdhero__cta">
+        <a href={tradeBuilderHref} className="cta cta--primary tdhero__cta">
           Open Trade Builder
         </a>
       )}

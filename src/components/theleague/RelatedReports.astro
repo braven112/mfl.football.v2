@@ -57,11 +57,8 @@ const siblings = current?.subcategory
   <aside class="related-reports" aria-labelledby="related-reports-heading">
     <div class="related-reports__header">
       <h2 class="related-reports__title" id="related-reports-heading">Related reports</h2>
-      <a href={r('/theleague/stats')} class="related-reports__cta">
+      <a href={r('/theleague/stats')} class="cta-link related-reports__cta">
         All stats &amp; reports
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
-          <path d="M5 12h14M12 5l7 7-7 7"/>
-        </svg>
       </a>
     </div>
     <div class="related-reports__grid">
@@ -82,11 +79,8 @@ const siblings = current?.subcategory
   <aside class="related-reports related-reports--solo" aria-labelledby="related-reports-heading">
     <div class="related-reports__header">
       <h2 class="related-reports__title" id="related-reports-heading">More stats &amp; reports</h2>
-      <a href={r('/theleague/stats')} class="related-reports__cta">
+      <a href={r('/theleague/stats')} class="cta-link related-reports__cta">
         Back to Stats &amp; Reports
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
-          <path d="M5 12h14M12 5l7 7-7 7"/>
-        </svg>
       </a>
     </div>
   </aside>
@@ -124,19 +118,7 @@ const siblings = current?.subcategory
   }
 
   .related-reports__cta {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
     font-size: var(--font-size-xs);
-    font-weight: 600;
-    color: var(--rr-accent);
-    text-decoration: none;
-    transition: gap var(--transition-fast);
-    white-space: nowrap;
-  }
-
-  .related-reports__cta:hover {
-    gap: 0.5rem;
   }
 
   .related-reports__grid {

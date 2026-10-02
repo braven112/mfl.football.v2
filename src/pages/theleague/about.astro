@@ -660,20 +660,20 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
             </p>
           </div>
           <div class="about-closing__ctas">
-            <a href="/theleague/rosters" class="about-btn about-btn--primary">
+            <a href="/theleague/rosters" class="cta cta--primary about-btn about-btn--primary">
               Explore the Roster Hub
               <span class="about-btn__arrow">→</span>
             </a>
-            <a href="/theleague/front-office/trade-builder" class="about-btn about-btn--ghost">
+            <a href="/theleague/front-office/trade-builder" class="cta cta--ghost about-btn about-btn--ghost">
               Try the Trade Builder
               <span class="about-btn__arrow">→</span>
             </a>
-            <a href="/theleague/whats-new" class="about-btn about-btn--ghost">
+            <a href="/theleague/whats-new" class="cta cta--ghost about-btn about-btn--ghost">
               What's New
               <span class="about-btn__arrow">→</span>
             </a>
             <!-- The "so which site is real?" question this page doesn't answer. -->
-            <a href="/theleague/faq" class="about-btn about-btn--ghost">
+            <a href="/theleague/faq" class="cta cta--ghost about-btn about-btn--ghost">
               This site vs. MFL
               <span class="about-btn__arrow">→</span>
             </a>
@@ -1493,44 +1493,10 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
   /* ===========================
      Buttons
   =========================== */
+  /* Shape, colour and hover come from the shared .cta pattern
+     (src/styles/cta.css); these run a touch smaller than the default. */
   .about-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
     font-size: 0.8125rem;
-    font-weight: 600;
-    padding: 0.625rem 1.25rem;
-    border-radius: 8px;
-    text-decoration: none;
-    transition: background var(--transition-fast), border-color var(--transition-fast);
-  }
-
-  .about-btn--primary {
-    background: var(--btn-primary-bg, #1c497c);
-    color: #fff;
-    border: 1px solid transparent;
-  }
-
-  .about-btn--primary:hover {
-    background: var(--btn-primary-bg-hover, #164066);
-  }
-
-  .about-btn--ghost {
-    background: transparent;
-    color: var(--color-primary, #1c497c);
-    border: 1px solid color-mix(in srgb, var(--color-primary, #1c497c) 35%, transparent);
-  }
-
-  .about-btn--ghost:hover {
-    background: color-mix(in srgb, var(--color-primary, #1c497c) 6%, transparent);
-  }
-
-  .about-btn__arrow {
-    transition: transform var(--transition-fast);
-  }
-
-  .about-btn:hover .about-btn__arrow {
-    transform: translateX(3px);
   }
 
   /* ===========================
@@ -1622,10 +1588,6 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 
     .about-closing__ctas {
       flex-direction: column;
-    }
-
-    .about-btn {
-      justify-content: center;
     }
 
     .about-quote {

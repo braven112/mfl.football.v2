@@ -204,7 +204,7 @@ export function PlayerPoolPanel({
             rel="noopener noreferrer"
             aria-label={`Open MFL to draft ${player.name}`}
             title="Make your pick on MFL"
-            className="dr-draft-btn"
+            className="cta cta--primary dr-draft-btn"
           >
             MFL ↗
           </a>
@@ -213,7 +213,7 @@ export function PlayerPoolPanel({
             type="button"
             onClick={() => onSubmitPick(player.id)}
             aria-label={`Draft ${player.name}`}
-            className="dr-draft-btn"
+            className="cta cta--primary dr-draft-btn"
           >
             Draft
           </button>

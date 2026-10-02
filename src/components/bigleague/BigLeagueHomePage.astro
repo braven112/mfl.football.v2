@@ -104,7 +104,7 @@ const tools = [
             <span>{myTier}</span>
           </div>
         )}
-        <a class="blh__team-cta" href={`${prefix}/rosters?franchise=${team.franchiseId}`}>Your roster →</a>
+        <a class="cta-link blh__team-cta" href={`${prefix}/rosters?franchise=${team.franchiseId}`}>Your roster</a>
       </section>
     )}
 
@@ -157,7 +157,7 @@ const tools = [
               {t.myRank > 3 && <p class="blh__mine-rank">You: #{t.myRank} of {t.size}</p>}
             </div>
           ))}
-          <a class="blh__more" href={`${prefix}/standings?view=all_play`}>Full tier tables →</a>
+          <a class="cta-link blh__more" href={`${prefix}/standings?view=all_play`}>Full tier tables</a>
         </section>
 
         <section class="blh__card" aria-label="How the league works">
@@ -235,7 +235,6 @@ const tools = [
   }
   .blh__team-cta {
     font-weight: 600;
-    white-space: nowrap;
   }
   .blh__tools {
     display: grid;

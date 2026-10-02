@@ -237,22 +237,14 @@ html.dark {
 
 /* ── CTA ── */
 .plhero__cta {
-  display: inline-flex;
-  align-items: center;
+  --cta-bg: var(--plhero-cta-bg);
+  --cta-bg-hover: color-mix(in srgb, var(--plhero-cta-bg) 88%, black);
+  --cta-ink: var(--plhero-cta-ink);
+  --cta-border: var(--plhero-cta-bg);
   gap: 0.5rem;
   padding: 0.5rem 1.25rem;
-  background: var(--plhero-cta-bg);
-  color: var(--plhero-cta-ink);
   font-size: 0.8125rem;
-  font-weight: 700;
-  text-decoration: none;
-  border-radius: var(--radius-md, 0.5rem);
-  transition: filter var(--transition-fast);
   align-self: flex-start;
-}
-
-.plhero__cta:hover {
-  filter: brightness(0.92);
 }
 
 /* ── Responsive ── */

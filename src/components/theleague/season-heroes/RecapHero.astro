@@ -81,11 +81,8 @@ const excerpt = recap?.body
             </div>
           )}
           {recap.link && (
-            <a href={recap.link} class="recap-hero__cta">
+            <a href={recap.link} class="cta-link recap-hero__cta">
               Read full recap
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
-                <path d="M5 12h14M12 5l7 7-7 7"/>
-              </svg>
             </a>
           )}
         </div>
@@ -201,18 +198,7 @@ const excerpt = recap?.body
   }
 
   .recap-hero__cta {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
     font-size: 0.8125rem;
-    font-weight: 600;
-    color: var(--color-primary, #1c497c);
-    text-decoration: none;
-    transition: gap var(--transition-fast);
-  }
-
-  .recap-hero__cta:hover {
-    gap: 0.5rem;
   }
 
   .recap-hero__layout:not(:has(.recap-hero__image-wrap)) {

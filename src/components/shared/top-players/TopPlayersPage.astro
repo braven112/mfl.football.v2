@@ -182,7 +182,7 @@ const COLUMNS: { key: SortKey; label: string; title: string }[] = isWeek
             {view.mode === 'leaders' && (
               <h2 class="tp-section__title">
                 {section.position}
-                <a class="tp-section__more" href={viewHref(basePath, view, { mode: 'position', position: section.position })}>
+                <a class="cta-link tp-section__more" href={viewHref(basePath, view, { mode: 'position', position: section.position })}>
                   All {section.position}
                 </a>
               </h2>
@@ -431,13 +431,9 @@ const COLUMNS: { key: SortKey; label: string; title: string }[] = isWeek
     color: var(--page-text);
   }
   .tp-section__more {
+    --cta-link-ink: var(--league-accent);
     font-size: 0.8rem;
     font-weight: 400;
-    color: var(--league-accent);
-    text-decoration: none;
-  }
-  .tp-section__more:hover {
-    text-decoration: underline;
   }
 
   /* The table is the one thing that can overflow a phone; scroll it rather

@@ -275,7 +275,7 @@ const railMarks = rail.flatMap((entry) =>
           <button type="button" class="rhdr-rail__weeks" data-rhdr-weeks-toggle aria-expanded="false">
             Last &amp; next game <span class="rhdr-rail__chev" aria-hidden="true">▾</span>
           </button>
-          {scheduleHref && <a class="rhdr-rail__cta" href={scheduleHref()}>Full schedule &amp; scores →</a>}
+          {scheduleHref && <a class="cta-link rhdr-rail__cta" href={scheduleHref()}>Full schedule &amp; scores</a>}
         </span>
       </div>
       <div class="rhdr-rail__dots">
@@ -461,11 +461,8 @@ const railMarks = rail.flatMap((entry) =>
     font-weight: 600;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    white-space: nowrap;
-    color: var(--color-accent, #1c497c);
-    text-decoration: none;
+    --cta-link-ink: var(--color-accent, #1c497c);
   }
-  .rhdr-rail__cta:hover { text-decoration: underline; }
 
   /* The phone-only week toggle. Hidden on wider screens, where both tiles
      always show. */

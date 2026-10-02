@@ -94,7 +94,7 @@ const imagePath = image ? `/assets/whats-new/${image}` : null;
             {link && (
               <a
                 href={link}
-                class="hero-banner__cta"
+                class="cta cta--primary hero-banner__cta"
                 target={isExternal ? '_blank' : undefined}
                 rel={isExternal ? 'noopener noreferrer' : undefined}
               >
@@ -103,9 +103,8 @@ const imagePath = image ? `/assets/whats-new/${image}` : null;
               </a>
             )}
             {allNewsLink && (
-              <a href={allNewsLink} class="hero-banner__all-news">
+              <a href={allNewsLink} class="cta-link hero-banner__all-news">
                 {allNewsLabel}
-                <span aria-hidden="true"> &rarr;</span>
               </a>
             )}
           </div>
@@ -187,7 +186,7 @@ const imagePath = image ? `/assets/whats-new/${image}` : null;
           <div class="hero-banner__actions">
             <a
               href={link}
-              class="hero-banner__cta"
+              class="cta cta--primary hero-banner__cta"
               target={isExternal ? '_blank' : undefined}
               rel={isExternal ? 'noopener noreferrer' : undefined}
             >
@@ -225,7 +224,7 @@ const imagePath = image ? `/assets/whats-new/${image}` : null;
           <div class="hero-banner__actions">
             <a
               href={link}
-              class="hero-banner__cta"
+              class="cta cta--primary hero-banner__cta"
               target={isExternal ? '_blank' : undefined}
               rel={isExternal ? 'noopener noreferrer' : undefined}
             >
@@ -368,37 +367,16 @@ const imagePath = image ? `/assets/whats-new/${image}` : null;
   }
 
   .hero-banner__cta {
-    display: inline-flex;
-    align-items: center;
+    /* Per-event accent (inline --hero-accent), not the generic site primary. */
+    --cta-bg: var(--hero-accent);
+    --cta-bg-hover: color-mix(in srgb, var(--hero-accent) 88%, black);
+    --cta-border: var(--hero-accent);
     gap: 0.375rem;
-    padding: 0.625rem 1.25rem;
-    font-size: var(--font-size-sm, 0.875rem);
     font-weight: var(--font-weight-semibold, 600);
-    color: var(--btn-primary-text, #fff);
-    background: var(--hero-accent);
-    border-radius: var(--radius-md, 0.5rem);
-    text-decoration: none;
-    white-space: nowrap;
-    transition: background var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
-  }
-
-  .hero-banner__cta:hover {
-    filter: brightness(0.9);
-    box-shadow: 0 4px 12px color-mix(in srgb, var(--hero-accent) 35%, transparent);
-    transform: translateY(-1px);
-  }
-
-  .hero-banner__cta:active {
-    transform: translateY(0);
   }
 
   .hero-banner__cta-arrow {
     font-size: 1rem;
-    transition: transform var(--transition-fast);
-  }
-
-  .hero-banner__cta:hover .hero-banner__cta-arrow {
-    transform: translateX(2px);
   }
 
   /* ── Image support ── */
@@ -640,14 +618,6 @@ const imagePath = image ? `/assets/whats-new/${image}` : null;
 
   .hero-banner__all-news {
     font-size: var(--font-size-sm);
-    font-weight: 600;
-    color: var(--color-primary, #1c497c);
-    text-decoration: none;
-    white-space: nowrap;
-  }
-
-  .hero-banner__all-news:hover {
-    text-decoration: underline;
   }
 
   /* Image — on the right, browser-frame chrome */

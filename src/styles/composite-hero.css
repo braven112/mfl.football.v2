@@ -568,10 +568,14 @@ html.dark .cmh--red {
   margin: 0 0 var(--cmh-footer-mb);
 }
 
+/* A shared `.cta` (src/styles/cta.css) — the hero's white pill is carried
+   through the --cta-* variables so the shared hover can read it. */
 .cmh__cta {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
+  --cta-bg: var(--cmh-cta-bg);
+  --cta-bg-hover: color-mix(in srgb, var(--cmh-cta-bg) 88%, black);
+  --cta-border: var(--cmh-cta-bg);
+  --cta-ink: var(--cmh-cta-ink);
+  --cta-focus-ring: var(--cmh-pill-ink);
   /* A button label is not prose. "View Draft Order" broke across two lines on
      a 390px phone — the footer is `nowrap` by default, so the metrics beside
      it took the width and the CTA absorbed the squeeze by wrapping mid-phrase,
@@ -580,26 +584,11 @@ html.dark .cmh--red {
      the failure from a wrapped label to an overflowing one. Together they make
      the METRICS give up width instead — they are a stacked label that already
      wraps gracefully — and, on the mobile footer below, let the CTA drop to
-     its own row when there is genuinely no room. */
-  white-space: nowrap;
+     its own row when there is genuinely no room. `nowrap` itself comes from
+     the shared `.cta` base. */
   flex-shrink: 0;
-  background: var(--cmh-cta-bg);
-  color: var(--cmh-cta-ink);
   font-size: 0.8125rem;
-  font-weight: 700;
   padding: 0.6rem 1.05rem;
-  border-radius: var(--radius-md, 0.5rem);
-  text-decoration: none;
-  transition: transform 120ms ease;
-}
-
-.cmh__cta:hover {
-  transform: translateY(-1px);
-}
-
-.cmh__cta:focus-visible {
-  outline: 2px solid var(--cmh-pill-ink);
-  outline-offset: 2px;
 }
 
 .cmh__count,
@@ -689,16 +678,6 @@ html.dark .cmh--red {
   border-color: var(--cmh-pill-border);
   color: var(--cmh-pill-ink);
   font-weight: 700;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .cmh__cta {
-    transition: none;
-  }
-
-  .cmh__cta:hover {
-    transform: none;
-  }
 }
 
 @media (max-width: 640px) {

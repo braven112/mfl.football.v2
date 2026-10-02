@@ -83,7 +83,7 @@ const markFilter = crestStrokeFilter();
         )}
         <h2 class="msh__title">{resolved.stars.awayName} at {resolved.stars.homeName}</h2>
       </div>
-      <a class="msh__cta" href={r('/theleague/sunday-ticket')}>
+      <a class="cta cta--primary msh__cta" href={r('/theleague/sunday-ticket')}>
         {isSunday ? 'Build your multiview' : 'Sunday Ticket preview'}
         <span aria-hidden="true">→</span>
       </a>
@@ -142,40 +142,18 @@ const markFilter = crestStrokeFilter();
   }
 
   .msh__cta {
+    --cta-bg: #ffffff;
+    --cta-bg-hover: color-mix(in srgb, #ffffff 88%, black);
+    --cta-ink: #0b0e12;
+    --cta-border: #ffffff;
+    --cta-focus-ring: var(--msh-accent);
     flex-shrink: 0;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    background: #ffffff;
-    color: #0b0e12;
     font-size: 0.8125rem;
-    font-weight: 700;
     padding: 0.6rem 1.05rem;
-    border-radius: var(--radius-md, 0.5rem);
-    text-decoration: none;
-    transition: transform 120ms ease;
   }
 
   .msh__eyebrow--st { display: inline-flex; align-items: center; gap: 0.5rem; }
   .msh__mark { height: 1.9rem; width: auto; object-fit: contain; }
-  .msh__cta:hover {
-    transform: translateY(-1px);
-  }
-
-  .msh__cta:focus-visible {
-    outline: 2px solid var(--msh-accent);
-    outline-offset: 2px;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .msh__cta {
-      transition: none;
-    }
-
-    .msh__cta:hover {
-      transform: none;
-    }
-  }
 
   @media (max-width: 640px) {
     .msh__band {

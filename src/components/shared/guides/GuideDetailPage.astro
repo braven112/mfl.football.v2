@@ -98,7 +98,7 @@ const updatedDisplay = new Date(`${guide.updated}T12:00:00`).toLocaleDateString(
 
       {guide.featurePath && (
         <div class="guide__cta">
-          <a href={r(guide.featurePath)} class="guide__cta-link">
+          <a href={r(guide.featurePath)} class="cta cta--primary guide__cta-link">
             {guide.featureLabel ?? 'Open it'}
           </a>
         </div>
@@ -237,14 +237,8 @@ const updatedDisplay = new Date(`${guide.updated}T12:00:00`).toLocaleDateString(
   }
 
   .guide__cta-link {
-    display: inline-block;
     padding: 0.5rem 1rem;
-    border-radius: var(--radius-md);
-    background: var(--color-primary, #1c497c);
-    color: #ffffff;
-    font-size: var(--font-size-sm);
     font-weight: 600;
-    text-decoration: none;
   }
 
   .guide__back {

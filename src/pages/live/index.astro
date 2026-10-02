@@ -115,7 +115,7 @@ if (authUser && week) {
 				Every matchup from every league your MyFantasyLeague account is in, scoring
 				live on one screen.
 			</p>
-			<a class="mfl-live-intro__cta" href="/login">Sign in with MyFantasyLeague</a>
+			<a class="cta cta--primary mfl-live-intro__cta" href="/login">Sign in with MyFantasyLeague</a>
 		</section>
 	) : !week ? (
 		<section class="mfl-live-intro">
@@ -132,7 +132,7 @@ if (authUser && week) {
 				Something went wrong reading MyFantasyLeague. Refreshing usually sorts it; if
 				it doesn&rsquo;t, your MFL sign-in may have expired.
 			</p>
-			<a class="mfl-live-intro__cta" href="/login">Sign in again</a>
+			<a class="cta cta--primary mfl-live-intro__cta" href="/login">Sign in again</a>
 		</section>
 	) : (
 		<LiveBoard
@@ -165,17 +165,13 @@ if (authUser && week) {
 		color: var(--color-text-secondary);
 	}
 
+	/* MFL Live's fill is --league-accent: in dark, --btn-primary-bg falls back to
+	   TheLeague's blue, which this palette never intends (tokens-dark.css). */
 	.mfl-live-intro__cta {
-		display: inline-block;
+		--cta-bg: var(--league-accent);
+		--cta-bg-hover: color-mix(in srgb, var(--league-accent) 85%, black);
+		--cta-border: var(--league-accent);
+		--cta-ink: #ffffff;
 		padding: 0.7rem 1.15rem;
-		border-radius: 0.5rem;
-		background: var(--league-accent);
-		color: #ffffff;
-		font-weight: 600;
-		text-decoration: none;
-	}
-	.mfl-live-intro__cta:hover,
-	.mfl-live-intro__cta:focus-visible {
-		filter: brightness(1.08);
 	}
 </style>

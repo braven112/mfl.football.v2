@@ -75,14 +75,14 @@
     font-size: 0.9rem;
     color: var(--color-text-secondary);
   }
+  /* --league-accent, not the default --btn-primary-bg: in dark the latter
+     falls back to TheLeague's blue, which this palette never intends. */
   .mls__cta {
-    display: inline-block;
+    --cta-bg: var(--league-accent);
+    --cta-bg-hover: color-mix(in srgb, var(--league-accent) 85%, black);
+    --cta-border: var(--league-accent);
+    --cta-ink: #ffffff;
     padding: 0.7rem 1.15rem;
-    border-radius: 0.5rem;
-    background: var(--league-accent);
-    color: #ffffff;
-    font-weight: 600;
-    text-decoration: none;
   }
 
   .mls__list {

@@ -170,11 +170,8 @@ const visible = rows.slice(0, 6);
           <p class="afl-conf__sub">Top {playoffSlots} clinch playoff seeds. Division winners take seeds 1–2.</p>
         </div>
       </div>
-      <a href="/afl-fantasy/standings?view=league" class="afl-conf__cta">
+      <a href="/afl-fantasy/standings?view=league" class="cta-link afl-conf__cta">
         Full bracket
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
-          <path d="M5 12h14M12 5l7 7-7 7"/>
-        </svg>
       </a>
     </div>
 
@@ -286,19 +283,8 @@ const visible = rows.slice(0, 6);
   }
 
   .afl-conf__cta {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
+    --cta-link-ink: var(--afl-accent);
     font-size: var(--font-size-xs);
-    font-weight: 600;
-    color: var(--afl-accent);
-    text-decoration: none;
-    transition: gap var(--transition-fast);
-    white-space: nowrap;
-  }
-
-  .afl-conf__cta:hover {
-    gap: 0.5rem;
   }
 
   .afl-conf__table {

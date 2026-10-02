@@ -207,7 +207,7 @@ const clientConfig = {
             : 'The keeper planner is private to each team owner.'}
         </p>
         {!signedIn && (
-          <p><a class="fo-private__cta" href={signInHref}>Sign in to {league.name} →</a></p>
+          <p><a class="cta cta--primary fo-private__cta" href={signInHref}>Sign in to {league.name} →</a></p>
         )}
       </div>
     </div>
@@ -488,26 +488,12 @@ const clientConfig = {
   }
 
   .fo-private__cta {
-    display: inline-flex;
-    align-items: center;
     gap: 0.375rem;
     margin-top: 0.5rem;
     padding: 0.5rem 1rem;
-    background: var(--league-accent, #c41e3a);
-    color: #fff;
     font-weight: 600;
     font-size: 0.9375rem;
     border-radius: 8px;
-    text-decoration: none;
-  }
-
-  .fo-private__cta:hover {
-    filter: brightness(0.92);
-  }
-
-  .fo-private__cta:focus-visible {
-    outline: 2px solid var(--league-accent, #c41e3a);
-    outline-offset: 2px;
   }
 
   .planner-section__lede {

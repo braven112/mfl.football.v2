@@ -205,23 +205,15 @@ html.dark[data-league="afl"] {
 }
 
 /* ── CTA Button ── */
+/* A shared `.cta` (src/styles/cta.css); the hero's own palette rides the
+   --cta-* variables so the shared hover can read it. */
 .tdhero__cta {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
+  --cta-bg: var(--tdhero-cta-bg);
+  --cta-bg-hover: color-mix(in srgb, var(--tdhero-cta-bg) 88%, var(--tdhero-cta-ink));
+  --cta-border: var(--tdhero-cta-bg);
+  --cta-ink: var(--tdhero-cta-ink);
   padding: 0.625rem 1.5rem;
-  background: var(--tdhero-cta-bg);
-  color: var(--tdhero-cta-ink);
-  font-size: var(--font-size-sm);
-  font-weight: 700;
-  text-decoration: none;
-  border-radius: var(--radius-md, 0.5rem);
-  transition: filter var(--transition-fast);
   margin-top: 0.25rem;
-}
-
-.tdhero__cta:hover {
-  filter: brightness(0.92);
 }
 
 /* ── Responsive ── */

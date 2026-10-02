@@ -570,22 +570,18 @@ html.dark .hc-shot__scope { color: var(--color-gray-300, #d1d5db); }
 .hc-closing__ctas { grid-column: 1 / -1; display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 0.5rem; }
 
 .hc-btn {
-  display: inline-flex;
-  align-items: center;
   gap: 0.5rem;
   font-size: 0.8125rem;
   font-weight: 600;
-  padding: 0.625rem 1.25rem;
   border-radius: 8px;
-  text-decoration: none;
-  transition: background var(--transition-fast), border-color var(--transition-fast);
 }
-.hc-btn--primary { background: var(--btn-primary-bg, #1c497c); color: #fff; border: 1px solid transparent; }
-.hc-btn--primary:hover { background: var(--btn-primary-bg-hover, #164066); }
-.hc-btn--ghost { background: transparent; color: var(--hcp-accent); border: 1px solid color-mix(in srgb, var(--hcp-accent) 35%, transparent); }
-.hc-btn--ghost:hover { background: color-mix(in srgb, var(--hcp-accent) 6%, transparent); }
-.hc-btn__arrow { transition: transform var(--transition-fast); }
-.hc-btn:hover .hc-btn__arrow { transform: translateX(3px); }
+/* The ghost wears the showcase's own accent, not the site link colour. */
+.hc-btn--ghost {
+  --cta-ink: var(--hcp-accent);
+  --cta-border: color-mix(in srgb, var(--hcp-accent) 35%, transparent);
+  --cta-border-hover: var(--cta-border);
+  --cta-bg-hover: color-mix(in srgb, var(--hcp-accent) 6%, transparent);
+}
 
 /* ===========================
    Responsive
@@ -607,7 +603,3 @@ html.dark .hc-shot__scope { color: var(--color-gray-300, #d1d5db); }
   .hc-layers, .hc-cat-grid, .hc-phase-grid, .hc-ship-grid { grid-template-columns: 1fr; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .hc-btn, .hc-btn__arrow { transition: none; }
-  .hc-btn:hover .hc-btn__arrow { transform: none; }
-}

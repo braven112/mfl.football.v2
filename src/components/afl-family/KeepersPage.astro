@@ -53,7 +53,7 @@ const teams = (aflConfig.teams ?? []).slice().sort((a: any, b: any) => {
         the 7 you're protecting versus everyone headed to the draft pool. When
         you're ready, the planner finalizes your keepers in one step.
       </p>
-      <a class="afl-keepers__cta" href={`${prefix}/rosters?${PLANNER_VIEW}`}>
+      <a class="cta cta--primary afl-keepers__cta" href={`${prefix}/rosters?${PLANNER_VIEW}`}>
         Manage Keepers →
       </a>
     </section>
@@ -162,21 +162,10 @@ const teams = (aflConfig.teams ?? []).slice().sort((a: any, b: any) => {
   }
 
   .afl-keepers__cta {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
     padding: 0.5rem 1rem;
-    background: var(--league-accent, #c41e3a);
-    color: #fff;
     font-weight: 600;
     font-size: 0.9375rem;
     border-radius: 8px;
-    text-decoration: none;
-    transition: filter var(--transition-fast);
-  }
-
-  .afl-keepers__cta:hover {
-    filter: brightness(0.92);
   }
 
   .afl-keepers__grid-sub {

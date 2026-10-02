@@ -96,11 +96,8 @@ const metrics: MetricDef[] = [
         )}
         <h3 class="hp-snapshot__title">My Team</h3>
       </div>
-      <a href={r('/theleague/rosters')} class="hp-snapshot__cta">
+      <a href={r('/theleague/rosters')} class="cta-link hp-snapshot__cta">
         Full roster
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
-          <path d="M5 12h14M12 5l7 7-7 7"/>
-        </svg>
       </a>
     </div>
     <div class="hp-snapshot__grid">
@@ -123,7 +120,7 @@ const metrics: MetricDef[] = [
         <p class="hp-snapshot__guest-heading">Your team at a glance</p>
         <p class="hp-snapshot__guest-desc">Log in to see your cap space, roster status, and expiring contracts.</p>
       </div>
-      <a href={loginHref} class="hp-snapshot__guest-btn">Log in</a>
+      <a href={loginHref} class="cta cta--primary hp-snapshot__guest-btn">Log in</a>
     </div>
   </section>
 )}
@@ -173,18 +170,7 @@ const metrics: MetricDef[] = [
   }
 
   .hp-snapshot__cta {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
     font-size: var(--font-size-xs);
-    font-weight: 600;
-    color: var(--dh-accent);
-    text-decoration: none;
-    transition: gap var(--transition-fast);
-  }
-
-  .hp-snapshot__cta:hover {
-    gap: 0.5rem;
   }
 
   .hp-snapshot__grid {
@@ -284,19 +270,7 @@ const metrics: MetricDef[] = [
     padding: 0.4375rem 0.875rem;
     font-size: var(--font-size-xs);
     font-weight: 600;
-    color: var(--btn-primary-text, #fff);
-    background: var(--btn-primary-bg, var(--dh-accent));
-    border: 1px solid var(--btn-primary-border, var(--dh-accent));
-    border-radius: var(--radius-md, 0.5rem);
     box-shadow: var(--shadow-sm);
-    text-decoration: none;
-    white-space: nowrap;
-    transition: background var(--transition-fast), border-color var(--transition-fast);
-  }
-
-  .hp-snapshot__guest-btn:hover {
-    background: var(--btn-primary-bg-hover, var(--color-primary-dark, #164066));
-    border-color: var(--btn-primary-bg-hover, var(--color-primary-dark, #164066));
   }
 
   @media (max-width: 640px) {
@@ -314,7 +288,6 @@ const metrics: MetricDef[] = [
 
     .hp-snapshot__guest-btn {
       width: 100%;
-      text-align: center;
       box-sizing: border-box;
     }
   }

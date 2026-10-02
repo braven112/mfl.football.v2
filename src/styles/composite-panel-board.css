@@ -199,38 +199,17 @@ html.dark .cpb--green-frame {
   margin: 0;
 }
 
+/* A shared `.cta` (src/styles/cta.css); the board's own pill colours ride the
+   --cta-* variables so the shared hover can read them. */
 .cpb__cta {
+  --cta-bg: var(--cpb-cta-bg);
+  --cta-bg-hover: color-mix(in srgb, var(--cpb-cta-bg) 88%, black);
+  --cta-border: var(--cpb-cta-bg);
+  --cta-ink: var(--cpb-cta-ink);
+  --cta-focus-ring: var(--cpb-accent);
   flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: var(--cpb-cta-bg);
-  color: var(--cpb-cta-ink);
   font-size: 0.8125rem;
-  font-weight: 700;
   padding: 0.6rem 1.05rem;
-  border-radius: var(--radius-md, 0.5rem);
-  text-decoration: none;
-  transition: transform 120ms ease;
-}
-
-.cpb__cta:hover {
-  transform: translateY(-1px);
-}
-
-.cpb__cta:focus-visible {
-  outline: 2px solid var(--cpb-accent);
-  outline-offset: 2px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .cpb__cta {
-    transition: none;
-  }
-
-  .cpb__cta:hover {
-    transform: none;
-  }
 }
 
 @media (max-width: 640px) {

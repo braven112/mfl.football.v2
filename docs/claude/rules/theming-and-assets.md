@@ -116,6 +116,45 @@ the content), and em dashes. OKLCH was not adopted: ~10k hex values sit under
 contrast guards, and the migration risk outweighs the gain — use OKLCH for a
 new palette if you like, but don't convert the existing ones.
 
+## CTAs — one pattern, `.cta` / `.cta-link`
+
+Every call-to-action link or button is the shared pattern in
+`src/styles/cta.css`, loaded by all four base layouts and Storybook:
+
+| Shape | Markup | Hover |
+|---|---|---|
+| Primary (filled) | `class="cta cta--primary"` | background steps to `--btn-primary-bg-hover`, lifts 1px; text never changes, never underlines |
+| Ghost (outlined) | `class="cta cta--ghost"` | same, on a 10% tint of its ink |
+| Arrow link | `class="cta-link"` | link-hover colour, the arrow nudges right, no underline |
+
+`.cta-link` draws its own `›` — never type an arrow into its label.
+Gallery: `/theleague/design-system`.
+
+**Why it exists.** Every base layout has a global `a:hover` (link colour +
+underline) at specificity (0,1,1). A one-off CTA class is (0,1,0), so any CTA
+that did not restate colour AND decoration in its own `:hover` wore the link
+hover: the Owners' Poll's blue "Change your vote" turned red and underlined
+(Oct 2026). About a hundred hand-rolled `__cta` / `__btn` classes each had
+their own hover — opacity, brightness, lift, underline — and their own chance
+at that bug. `cta.css` states the rules once at (0,2,0).
+
+**Customising.** Keep the component's BEM class next to `cta` for layout:
+the base rules sit inside `:where()` (zero specificity), so `padding`,
+`font-size`, `width`, `margin` on the component's own class always win,
+whatever the stylesheet order. COLOURS go through variables —
+`--cta-bg`, `--cta-bg-hover`, `--cta-ink`, `--cta-border`,
+`--cta-border-hover`, `--cta-focus-ring` (`--cta-link-ink[-hover]` for the
+arrow link). Never set `background` / `color` on the BEM class directly: the
+hover rule reads the variables and would replace a hard-coded value. A white
+pill on a team-colour hero is `--cta-bg: #fff; --cta-ink: <team>`; the
+generic site accent is the default and needs nothing.
+
+Guard: `tests/cta-pattern.test.ts` fails on any `<a>` carrying a CTA-shaped
+class (`…__cta`, `…__btn`, `…-btn`, `…__button`, bare `btn`) without `cta` or
+`cta-link`, on a layout that stops importing the file, and on a base rule that
+gains specificity. A link that genuinely is not a CTA (a toolbar toggle, a
+broadcast-bar chip) goes in its `ALLOWED` map with the reason.
+
 ## Astro scoped CSS never reaches an element JS created
 
 A `<style>` block in a `.astro` file compiles to selectors that require the
