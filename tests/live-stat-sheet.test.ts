@@ -226,9 +226,9 @@ describe('loading a league\'s rules', () => {
 
   it('reads a league outside the registry through api.myfantasyleague.com', async () => {
     const f = ok(fixture('mfl-rules-outside-league.json'));
-    const r = await loadLeagueScoringRules('10105', '2026', f);
+    const r = await loadLeagueScoringRules('54321', '2026', f);
     expect(r.ok).toBe(true);
-    expect(String((f as any).mock.calls[0][0])).toMatch(/^https:\/\/api\.myfantasyleague\.com\/2026\/export\?TYPE=rules&L=10105/);
+    expect(String((f as any).mock.calls[0][0])).toMatch(/^https:\/\/api\.myfantasyleague\.com\/2026\/export\?TYPE=rules&L=54321/);
   });
 
   it('"No League Scoring Rules" is an answer (ok, rules null), and is cached', async () => {
