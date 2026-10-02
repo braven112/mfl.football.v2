@@ -75,6 +75,14 @@ describe('the classifier', () => {
     expect(classify('a.astro', '---\n---\n<button>t</button><script>x()</script>')).toBeNull();
   });
 
+  it('skips script, style and comment bodies whatever their case', () => {
+    // A tag-shaped string inside a script is code, not markup.
+    expect(classify('a.astro', "---\n---\n<script is:inline>el.innerHTML = '<div>x</div>';</script>")).toBe('nonVisual');
+    expect(classify('a.astro', '---\n---\n<SCRIPT>x()</SCRIPT>')).toBe('nonVisual');
+    expect(classify('a.astro', '---\n---\n<!-- <div>old</div> --><style>a{}</style>')).toBe('nonVisual');
+    expect(classify('a.astro', '---\n---\n{/* <div/> */}<style>a{}</style>')).toBe('nonVisual');
+  });
+
   it('reads a React island that fetches as data-bound', () => {
     expect(classify('a.tsx', 'useEffect(() => { fetch("/api/x") }, [])')).toBe('dataBound');
     expect(classify('a.tsx', 'export default () => <div/>')).toBeNull();

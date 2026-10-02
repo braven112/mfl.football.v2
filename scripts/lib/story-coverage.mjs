@@ -83,16 +83,56 @@ function frontmatter(src) {
   return m ? m[1] : '';
 }
 
+/**
+ * The element names a template opens, in order — a scan, not a strip.
+ *
+ * A <script>/<style> body is skipped whole (matched case-insensitively), so a
+ * `'<div>'` string inside a client script is not read as markup; so are HTML
+ * and JSX comments. Written as a walk rather than as chained `.replace()`
+ * calls on purpose: removing tag-shaped spans with regexes is the
+ * "incomplete multi-character sanitization" pattern CodeQL flags, and it also
+ * missed an upper-case `<SCRIPT>`. Nothing here sanitizes anything — the input
+ * is this repo's own source and the output is a list of names.
+ */
+function templateTags(src) {
+  const body = src.replace(/^---\r?\n[\s\S]*?\r?\n---/, '');
+  const lower = body.toLowerCase();
+  const tags = [];
+  let i = 0;
+  while (i < body.length) {
+    const lt = body.indexOf('<', i);
+    const jsxComment = body.indexOf('{/*', i);
+    if (jsxComment !== -1 && (lt === -1 || jsxComment < lt)) {
+      const end = body.indexOf('*/}', jsxComment + 3);
+      i = end === -1 ? body.length : end + 3;
+      continue;
+    }
+    if (lt === -1) break;
+    if (body.startsWith('<!--', lt)) {
+      const end = body.indexOf('-->', lt + 4);
+      i = end === -1 ? body.length : end + 3;
+      continue;
+    }
+    const m = /^<([A-Za-z][\w.-]*)/.exec(body.slice(lt, lt + 64));
+    if (!m) {
+      i = lt + 1;
+      continue;
+    }
+    tags.push(m[1]);
+    const name = m[1].toLowerCase();
+    if (name === 'script' || name === 'style') {
+      const close = lower.indexOf(`</${name}`, lt + m[0].length);
+      i = close === -1 ? body.length : close + name.length + 2;
+      continue;
+    }
+    i = lt + m[0].length;
+  }
+  return tags;
+}
+
 /** True when the template renders no element besides style/script. */
 function rendersNothing(src) {
-  const body = src
-    .replace(/^---\r?\n[\s\S]*?\r?\n---/, '')
-    .replace(/<style[\s\S]*?<\/style>/g, '')
-    .replace(/<script[\s\S]*?<\/script>/g, '')
-    .replace(/<!--[\s\S]*?-->/g, '')
-    .replace(/\{\/\*[\s\S]*?\*\/\}/g, '');
-  const tags = [...body.matchAll(/<([A-Za-z][\w.-]*)/g)].map((m) => m[1]);
-  return tags.every((t) => t === 'Fragment' || t === 'style' || t === 'script');
+  return templateTags(src).every((t) => t === 'Fragment' || /^(style|script)$/i.test(t));
 }
 
 export function classify(file, src) {
