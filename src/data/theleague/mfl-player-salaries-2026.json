@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-10-02T12:01:26.632Z"
+    "fetchedAt": "2026-10-02T15:01:30.900Z"
   },
   "players": [
     {
@@ -1788,8 +1788,8 @@
           "RB"
         ],
         "experience": 4,
-        "injuryStatus": "Doubtful",
-        "injuryBodyPart": "Thigh",
+        "injuryStatus": "Out",
+        "injuryBodyPart": "Quadriceps",
         "gsisId": null
       },
       "nflverse": {
@@ -3507,7 +3507,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 4,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "WR"
         ],
@@ -3544,6 +3544,10 @@
         {
           "id": "16809",
           "name": "Coker, Jalen"
+        },
+        {
+          "id": "15759",
+          "name": "Metchie, John"
         }
       ]
     },
@@ -4366,7 +4370,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 5,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "WR"
         ],
@@ -4403,10 +4407,6 @@
         {
           "id": "16809",
           "name": "Coker, Jalen"
-        },
-        {
-          "id": "16639",
-          "name": "Legette, Xavier"
         }
       ]
     },
@@ -11480,7 +11480,7 @@
           "WR"
         ],
         "experience": 2,
-        "injuryStatus": "Doubtful",
+        "injuryStatus": "Out",
         "injuryBodyPart": "Finger",
         "gsisId": null
       },
@@ -22504,7 +22504,7 @@
           "QB"
         ],
         "experience": 2,
-        "injuryStatus": "Questionable",
+        "injuryStatus": "Out",
         "injuryBodyPart": "Elbow",
         "gsisId": null
       },
