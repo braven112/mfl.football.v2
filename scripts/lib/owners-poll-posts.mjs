@@ -9,7 +9,7 @@
  * See docs/plans/owners-poll.md, "Turnout levers".
  */
 
-import { leagueUrl } from '../../src/config/leagues-data.mjs';
+import { ensureLeaguePrefix, leagueUrl } from '../../src/config/leagues-data.mjs';
 import { pairwiseAccuracy } from '../../src/utils/owners-poll-accuracy.mjs';
 import {
   standingVoteLine,
@@ -17,10 +17,8 @@ import {
   weeksSince,
   resultTimingPhrase,
 } from '../../src/utils/owners-poll-copy.mjs';
-import { formatResultTimePT } from './owners-poll-pass.mjs';
 
-const BALLOT_PATH = '/pecking-order/ballot';
-const COLUMN_PATH = '/pecking-order';
+import { BALLOT_PATH, formatResultTimePT } from './owners-poll-pass.mjs';
 
 /**
  * One push per VOTER, about their own team.
@@ -42,7 +40,8 @@ export function buildVoterPushes({ league, issue, teams, previousIssue = null })
 
   const name = (fid) => teams.get(fid)?.nameMedium ?? teams.get(fid)?.name ?? fid;
   const consensusRank = new Map((poll.ranked ?? []).map((r) => [r.franchiseId, r]));
-  const url = `${COLUMN_PATH}`;
+  // The poll page, where a voter's ballot unlocks the full owners' rankings.
+  const url = BALLOT_PATH;
 
   // Last week's ballots scored against THIS week's column — the first moment
   // an owner's accuracy can be known, which makes the reveal the natural place
@@ -252,7 +251,12 @@ export function buildRevealFeedPost({
 
   const name = (fid) => teams.get(fid)?.nameMedium ?? teams.get(fid)?.name ?? fid;
   const id = `sf_owners_poll_${league.slug}_${issue.year}_w${issue.week}`;
-  const link = `${COLUMN_PATH}/${issue.year}/${issue.week}`;
+  // The post links to the POLL page, not the Pecking Order issue. The post
+  // exists to drive turnout: the full owners' rankings sit behind a vote there,
+  // so "see where the room has everyone" is itself the reason to cast one.
+  // Prefixed like every other feed link: the card renders it raw, and an
+  // unprefixed path 404s on the shared host.
+  const link = ensureLeaguePrefix(league, BALLOT_PATH);
 
   // No post for a week nobody voted in. The feed is a durable record of what
   // happened, and "nothing happened" is not a record worth keeping — it is an
@@ -305,7 +309,7 @@ export function buildRevealFeedPost({
       new Set([...top.map((r) => r.franchiseId), biggest?.franchiseId, homer?.franchiseId].filter(Boolean)),
     ),
     link,
-    linkLabel: 'Every ballot',
+    linkLabel: 'Vote to see the full rankings',
     league: league.slug,
     authorId: 'claude',
   };

@@ -435,8 +435,7 @@ const labels = await getPersonaLabels('afl-fantasy');
           issue={ownersPollIssue ? { year: ownersPollIssue.year, week: ownersPollIssue.week, ownersPoll: ownersPollIssue.data.ownersPoll } : null}
           teams={getLeagueTeamBrands(AFL.slug)}
           leagueSlug={AFL.slug}
-          ballotHref={ensureLeaguePrefix(AFL, '/pecking-order/ballot')}
-          columnHref={ensureLeaguePrefix(AFL, '/pecking-order')}
+          ballotHref={ensureLeaguePrefix(AFL, '/owners-poll')}
         />
       )}
 

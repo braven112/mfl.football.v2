@@ -1,7 +1,19 @@
 # The Owners' Poll — insights
 
-Weekly owner vote that publishes inside The Pecking Order. Plan:
-`docs/plans/owners-poll.md`.
+Weekly owner vote. Published inside The Pecking Order until 2026-10-02; now its
+own feature at `/<league>/owners-poll` (vote, then see the owners' rankings).
+Plan: `docs/plans/owners-poll.md`, "Its own page".
+
+## 2026-10-02 — Split out of The Pecking Order
+
+Owners found the poll confusing because every surface said "Pecking Order":
+the results post linked `/pecking-order`, the ballot lived under it, and the
+Tuesday column post asked for votes. The fix was structural, not copy: one page
+(`/owners-poll`) holds the ballot and the results, the results unlock on a
+ballot on file, and every Claude post about the poll links that page so the
+results post doubles as the turnout ask. The lock fails OPEN (`hasStandingBallot`
+answers `null` for "could not ask") — an engagement gate that locks out the
+voters during a Redis blip punishes the people it is meant to reward.
 
 ## 2026-09-18 — The quorum was the thing making the feature announce its own failure
 
@@ -95,7 +107,7 @@ one session, none of which any test would have been written to catch.
 
 ## 2026-09-06 — A section that renders nothing when its data is absent can ship invisible
 
-`OwnersPollSection.astro` correctly renders NOTHING when an issue has no
+`OwnersPollSection.astro` (removed 2026-10-02; the poll has its own page now) correctly rendered NOTHING when an issue has no
 `ownersPoll` block — that is what keeps archived columns untouched. But the
 poll shipped after the last real column ran, so every committed issue was in
 that state, and the result was a one-way link: `/pecking-order/ballot` and

@@ -281,8 +281,7 @@ const heroLiveScoring =
             issue={pollIssue ? { year: pollIssue.year, week: pollIssue.week, ...pollIssue.data } : null}
             teams={getLeagueTeamBrands(league.slug)}
             leagueSlug={league.slug}
-            ballotHref={r(`${base}/pecking-order/ballot`)}
-            columnHref={r(`${base}/pecking-order`)}
+            ballotHref={r(`${base}/owners-poll`)}
           />
         )}
 

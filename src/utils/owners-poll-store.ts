@@ -278,6 +278,36 @@ export async function readBallot(
 }
 
 /**
+ * Whether a franchise has a standing ballot on file — the gate on the poll
+ * page's full rankings ("vote to see where the room has everyone").
+ *
+ * Three answers, never two: `null` means we could not ASK (no Redis, a read
+ * error), which must not merge with "has not voted". The caller decides what an
+ * unknown means; for an engagement gate the answer is to show the results,
+ * since locking every owner out during a Redis blip punishes the voters too.
+ */
+export async function hasStandingBallot(
+  scope: string,
+  window: OwnersPollWindow,
+  franchiseId: string,
+): Promise<boolean | null> {
+  const redis = await getRedis();
+  if (!redis) return null;
+  try {
+    const raw = await redis.hget(ownersPollStandingKey(scope, window.year), franchiseId);
+    if (raw == null) return false;
+    return parseStoredBallot(raw, {
+      slots: window.slots,
+      eligibleFranchiseIds: window.eligibleFranchiseIds,
+      seasonYear: window.year,
+    }) != null;
+  } catch (err) {
+    console.error('[owners-poll] failed to check for a standing ballot:', err);
+    return null;
+  }
+}
+
+/**
  * Re-affirm the caller's standing ballot without changing it — "Still good".
  *
  * Read-modify-write, deliberately: the ranking comes from the STORED record,

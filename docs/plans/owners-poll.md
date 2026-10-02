@@ -15,9 +15,37 @@
 > | A ballot is cast per week; prefill from last week's | **A ballot is a standing vote** on a season-scoped hash, carried forward until changed. Prefill is gone — there is nothing to prefill from. |
 > | A no-quorum week posts an honest "came up short" | **A zero-ballot week posts nothing at all** — no chat post, no feed post, no poll section. |
 > | The ballot strip lives on the Set Lineup page | Removed. |
+> | The poll publishes inside The Pecking Order; ballot at `/pecking-order/ballot` | **Its own feature (2026-10-02)** — see "Its own page" below. |
 >
 > See `docs/claude/insights/features/owners-poll.md` (2026-09-18 entries) for
 > the reasoning behind each reversal.
+
+## Its own page (2026-10-02)
+
+The poll was a section of The Pecking Order, and owners could not tell the two
+apart: the GroupMe results post linked to `/pecking-order`, the ballot lived at
+`/pecking-order/ballot`, and Tuesday's column post carried the vote ask. They
+are now separate features, with one flow: **vote → see the results.**
+
+- **`/<league>/owners-poll`** is the ballot AND the results. The newest closed
+  week's owner rankings (`OwnersPollResults.astro`) render only for an owner
+  with a standing ballot on file (`resolveResultsUnlocked`,
+  `src/utils/owners-poll-results.ts`); everyone else gets the ballot and a
+  locked card. A first save reloads the page onto the results. The lock fails
+  OPEN — paused/offseason (nothing to vote in) or Redis unreadable
+  (`hasStandingBallot` returns null, never false) both show the results.
+- **`/<league>/owners-poll/voters`** is the voters page (moved).
+  `/pecking-order/ballot` and `/pecking-order/voters` 301 to the new routes.
+- **The Pecking Order column** carries a one-line teaser linking the poll page,
+  and nothing else — printing the rankings there would hand every reader the
+  payoff that is meant to bring them to the ballot.
+- **Tuesday's Pecking Order GroupMe post has no poll line** (`buildOpenLine` is
+  gone). The poll's chat presence is Claude's results post later in the week
+  (`buildRevealMessage`), which ends with the vote link. The feed reveal post,
+  every push, and the homepage card all link `/owners-poll` too
+  (`BALLOT_PATH` in `owners-poll-pass.mjs`).
+- Results are still TALLIED into the weekly issue file — that is storage, not
+  presentation, and moving it would mean migrating every archived week.
 
 **Status:** plan, not built. Decisions below marked **[DECIDED]** came from
 Brandon; **[OPEN]** ones still need a call before implementation starts.

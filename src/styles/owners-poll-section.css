@@ -1,5 +1,6 @@
 /**
- * The Owners' Poll section, inside a Pecking Order issue.
+ * The Owners' Poll results table (OwnersPollResults, on /owners-poll) and the
+ * one-line teaser a Pecking Order issue carries in its place.
  *
  * Every custom property here is defined in BOTH src/styles/tokens.css and
  * tokens-dark.css (tests/design-token-guard.test.ts enforces that a referenced
@@ -23,8 +24,7 @@
   color: var(--content-text-muted);
   font-size: 0.9rem;
 }
-.op-strip__meta,
-.op-strip__note {
+.op-strip__meta {
   color: var(--content-text-muted);
   font-size: var(--font-size-sm);
   margin: 0.5rem 0 0;
@@ -34,20 +34,7 @@
   font-size: 0.925rem;
 }
 
-.op-strip__live { margin-top: 0.75rem; }
 .op-strip__cta { margin: 0.65rem 0 0; font-size: 0.925rem; }
-.op-strip__tease { color: var(--content-text-muted); }
-
-.op-strip__button {
-  display: inline-block;
-  background: var(--primary-color);
-  color: #fff;
-  text-decoration: none;
-  font-weight: 700;
-  padding: 0.55rem 1rem;
-  min-height: 2.5rem;
-  border-radius: var(--radius-md, 8px);
-}
 
 /* --- consensus table ---------------------------------------------------- */
 
@@ -184,46 +171,3 @@
 @media (max-width: 34rem) {
   .op-ballot__owner { min-width: 0; }
 }
-
-/* --- standing-vote schedule + staleness prompt ------------------------- */
-
-/* The sentence that answers "when does this start and end". Deliberately not
-   fine print: not knowing was the complaint that prompted the rewrite. */
-.op-strip__schedule {
-  margin: 0.4rem 0 0;
-  font-size: var(--font-size-sm);
-  color: var(--content-text-muted);
-}
-
-.op-coverage {
-  margin: 0 0 0.6rem;
-  font-size: var(--font-size-sm);
-  color: var(--content-text-muted);
-}
-.op-coverage strong { color: var(--page-text); }
-
-/* "Still good?" — shown only once a ballot passes the stale threshold. */
-.op-strip__stale {
-  margin: 0.5rem 0 0;
-  font-size: var(--font-size-sm);
-  color: var(--content-text-muted);
-}
-
-.op-strip__affirm {
-  display: inline-block;
-  padding: 0.25rem 0.7rem;
-  border: 1px solid var(--primary-color);
-  border-radius: var(--radius-sm, 6px);
-  background: transparent;
-  color: var(--primary-color);
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-}
-.op-strip__affirm:hover:not(:disabled) {
-  background: var(--primary-color);
-  /* Dark ink on the filled accent, never white. --league-accent is LIGHT in
-     dark mode, where white-on-accent measures under the 4.5:1 floor. */
-  color: var(--content-bg);
-}
-.op-strip__affirm:disabled { opacity: 0.6; cursor: default; }

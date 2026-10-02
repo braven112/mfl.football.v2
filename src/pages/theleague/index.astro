@@ -915,8 +915,7 @@ const labels = await getPersonaLabels('theleague');
           issue={ownersPollIssue ? { year: ownersPollIssue.year, week: ownersPollIssue.week, ownersPoll: ownersPollIssue.data.ownersPoll } : null}
           teams={getLeagueTeamBrands(THELEAGUE.slug)}
           leagueSlug={THELEAGUE.slug}
-          ballotHref={r('/theleague/pecking-order/ballot')}
-          columnHref={r('/theleague/pecking-order')}
+          ballotHref={r('/theleague/owners-poll')}
         />
       )}
 

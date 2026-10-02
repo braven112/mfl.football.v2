@@ -247,20 +247,13 @@ describe('the Pecking Order queues too — same race, softer symptom', () => {
   /**
    * The column's announcement links `/pecking-order`, a page that exists every
    * week of the year. So instead of a redirect, a pre-deploy tap showed LAST
-   * week's column to everyone the message had just told to read this one — and
-   * the ballot it invites them to vote in lives inside the issue file, so the
-   * poll section was not there either.
+   * week's column to everyone the message had just told to read this one.
    */
   let generator = '';
-  let POLL_SECTION = '';
   let REVEAL_POST = '';
   beforeEach(async () => {
     generator ||= await fs.readFile(
       path.join(REPO_ROOT, 'scripts/generate-pecking-order.mjs'),
-      'utf8',
-    );
-    POLL_SECTION ||= await fs.readFile(
-      path.join(REPO_ROOT, 'src/components/shared/owners-poll/OwnersPollSection.astro'),
       'utf8',
     );
     if (!REVEAL_POST) {

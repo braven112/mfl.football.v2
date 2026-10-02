@@ -43,7 +43,6 @@ import {
   SYNTHETIC_POLL_SOURCE,
   readTurnout,
   describeTurnoutFailure,
-  buildOpenLine,
   buildRevealMessage,
   normalizeFranchiseIds,
 } from './lib/owners-poll-pass.mjs';
@@ -702,11 +701,10 @@ export function buildGroupMeAnnouncement(issue, teams, league) {
   // redirect hop or 404s.
   lines.push(`Full rankings, awards, and standings ▸ ${leagueUrl(league, '/pecking-order')}`);
 
-  // The ballot invite rides along with the column rather than as its own post:
-  // one Tuesday message, not two. buildOpenLine returns null when no ballot
-  // opened, so the announcement is unchanged for a league without the poll.
-  const openLine = buildOpenLine(issue, teams, league);
-  if (openLine) lines.push('', openLine);
+  // No Owners' Poll line. The poll is its own feature with its own page, and
+  // folding its invite into the column is what made the two read as one. The
+  // poll's chat presence is Claude's results post later in the week, which
+  // carries the vote link (buildRevealMessage).
 
   return lines.join('\n');
 }
