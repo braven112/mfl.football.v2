@@ -9,7 +9,7 @@
  * See docs/plans/owners-poll.md, "Turnout levers".
  */
 
-import { leagueUrl } from '../../src/config/leagues-data.mjs';
+import { ensureLeaguePrefix, leagueUrl } from '../../src/config/leagues-data.mjs';
 import { pairwiseAccuracy } from '../../src/utils/owners-poll-accuracy.mjs';
 import {
   standingVoteLine,
@@ -254,7 +254,9 @@ export function buildRevealFeedPost({
   // The post links to the POLL page, not the Pecking Order issue. The post
   // exists to drive turnout: the full owners' rankings sit behind a vote there,
   // so "see where the room has everyone" is itself the reason to cast one.
-  const link = BALLOT_PATH;
+  // Prefixed like every other feed link: the card renders it raw, and an
+  // unprefixed path 404s on the shared host.
+  const link = ensureLeaguePrefix(league, BALLOT_PATH);
 
   // No post for a week nobody voted in. The feed is a durable record of what
   // happened, and "nothing happened" is not a record worth keeping — it is an

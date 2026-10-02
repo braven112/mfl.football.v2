@@ -105,7 +105,7 @@ describe('buildRevealFeedPost', () => {
     expect(post.id).toBe('sf_owners_poll_theleague_2026_w5');
     expect(post.type).toBe('power-ranking');
     expect(post.league).toBe('theleague');
-    expect(post.link).toBe('/owners-poll');
+    expect(post.link).toBe('/theleague/owners-poll');
     expect(post.headline).toContain('Team 1');
   });
 

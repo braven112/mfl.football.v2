@@ -2,7 +2,7 @@
  * Seed a SYNTHETIC Owners' Poll into an archived Pecking Order issue.
  *
  * Why this exists: the poll shipped after the last real column ran, so every
- * committed issue predates it and `OwnersPollSection.astro` — which renders
+ * committed issue predates it and `OwnersPollSection.astro` (since replaced by the /owners-poll page) — which rendered
  * nothing when the `ownersPoll` block is absent — leaves the column with no
  * mention of the feature at all. The ballot and voters pages link INTO the
  * column, so the one page owners land on had nothing to show them. This fills
