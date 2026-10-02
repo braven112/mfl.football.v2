@@ -36,6 +36,11 @@
  *
  * Naming the league in the selector is what separates them. This guard pins
  * that for every page pair below; add new forked pairs here as they appear.
+ *
+ * Set Lineup left this list in Oct 2026 by UNFORKING: every league now renders
+ * one component (components/shared/lineup/LineupPage) with one controller, so
+ * there is no departing league's listener left to bind the arriving page.
+ * tests/lineup-page-clientrouter.test.ts still pins that controller's gate.
  */
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
@@ -77,29 +82,6 @@ interface GuardedPage {
 }
 
 const PAIRS: Record<string, GuardedPage[]> = {
-  'Set Lineup': [
-    {
-      label: 'TheLeague',
-      file: 'src/pages/theleague/lineup.astro',
-      slug: 'theleague',
-      gate: `if (!document.querySelector('.lineup-page[data-league="theleague"]')) return;`,
-      marker: '<div class="lineup-page" data-league={PAGE_LEAGUE_SLUG}>',
-      markerBinding: `const PAGE_LEAGUE_SLUG = getLeagueBySlug('theleague')!.slug;`,
-    },
-    {
-      // The AFL's lineup is the AFL-FAMILY page component, shared with the
-      // custom-site demo's keeper slot: one controller for both, so its gate
-      // names the family marker and it reads its league off the page it found
-      // (the route binds `league` to getLeagueBySlug('afl-fantasy')). It still
-      // must never match TheLeague's page, which is what this pair pins.
-      label: 'the AFL',
-      file: 'src/components/afl-family/LineupPage.astro',
-      slug: 'afl-fantasy',
-      gate: `const pageRoot = document.querySelector<HTMLElement>('.lineup-page[data-controller="afl-family"]');`,
-      marker: '<div class="lineup-page" data-league={PAGE_LEAGUE_SLUG} data-controller="afl-family">',
-      markerBinding: `const PAGE_LEAGUE_SLUG = league.slug;`,
-    },
-  ],
   Players: [
     {
       label: 'TheLeague',

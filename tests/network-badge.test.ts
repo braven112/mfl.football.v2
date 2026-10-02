@@ -26,8 +26,7 @@ const read = (p: string) => readFileSync(root(p), 'utf8');
 const BADGE_SURFACES = [
   'src/components/shared/NetworkBadge.astro',
   'src/components/shared/NflGamesStrip.tsx',
-  'src/pages/theleague/lineup.astro',
-  'src/components/afl-family/LineupPage.astro',
+  'src/components/shared/lineup/LineupPage.astro',
 ] as const;
 
 /**
@@ -78,8 +77,7 @@ const STRIP_ROUTES = [
 ] as const;
 
 const LINEUP_PAGES = [
-  'src/pages/theleague/lineup.astro',
-  'src/components/afl-family/LineupPage.astro',
+  'src/components/shared/lineup/LineupPage.astro',
 ] as const;
 
 describe('network badge — one resolver', () => {

@@ -36,7 +36,7 @@ As a [league member / commissioner / guest], I want [capability] so that [benefi
 - [Year utility: getCurrentLeagueYear() | getCurrentSeasonYear()]
 
 ### Existing Patterns to Reuse
-- `src/components/theleague/PlayerCell.astro` — Player display lockup
+- `src/components/shared/PlayerCell.astro` — Player display lockup
 - `src/utils/team-names.ts` → `chooseTeamName()` — Team name overflow prevention
 - `src/utils/salary-calculations.ts` — Cap math (if salary-related)
 - [Other specific utilities or components with file paths]

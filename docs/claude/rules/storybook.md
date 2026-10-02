@@ -445,6 +445,43 @@ and `getPlayerMap(year)`, and import `theleague.config.json` directly. That is
 a finding, not a Storybook limitation — it is also why they can't be reused by
 a second product.
 
+## Coverage of the shared components — derived, and it only goes up
+
+`node scripts/story-coverage.mjs` reports how much of `src/components/shared/`
+is in a snapshot (`--all` lists every bucket). Each shared `.astro`/`.tsx`
+lands in exactly one bucket, and every bucket but one is DERIVED from source
+(`scripts/lib/story-coverage.mjs`), never hand-labelled:
+
+| Bucket | Meaning |
+|---|---|
+| story | a story imports it |
+| covered | a storied component renders it, so it is in a snapshot anyway |
+| page | `*Page.astro`/`*Page.tsx` — feeds, clock and session; args cannot drive it |
+| dataBound | resolves its own data in frontmatter (session, cookies, feed globs, `await import`, the year clocks, `fetch`), or a React island that fetches — a story of it would snapshot live data (see "Deleted: the Pecking Order stories") |
+| nonVisual | renders no element besides `<style>`/`<script>` (`ThemeScript`, the `*DarkStyles` sheets) |
+| exempt | presentational but genuinely unstoryable — the ONLY hand-made bucket, and each entry carries a written reason in the baseline |
+| backlog | presentational, storyable, no story yet |
+
+`tests/story-coverage.test.ts` freezes the backlog in
+`tests/fixtures/story-coverage-baseline.json` and lets it only shrink: a NEW
+presentational shared component fails until it ships with a story (or an
+`exempt` reason a reviewer can read), and a backlog entry that got a story
+fails until the baseline is retightened with `--write` — which refuses to grow
+it. Oct 2026: 270 shared components, backlog 145 → 138 after the first batch
+(the seven remaining `Lv*` leaves — `LvGroupPicker` landed on staging while
+the batch was in flight).
+
+**It reads the DISK, not `git ls-files`.** The first version listed files from
+the git index, so a story or component nobody had `git add`-ed yet was
+invisible — the guard passed while its author was writing the very file it
+exists to see. A new file is exactly the state the guard has to judge.
+
+**Ticking components need minute-scale fixture ages.** `LvFeedStatus` and
+`LvStaleNotice` re-read `Date.now()` every second, so a fixture age in seconds
+would differ between story load and capture. `minutesAgo(n + 0.5)` in
+`stories/fixtures/live-kit.ts` gives "nm ago" with thirty seconds of slack
+either side.
+
 ## One cast of teams across the whole suite
 
 Every story that needs a franchise draws from one small cast: **Pacific
@@ -644,7 +681,11 @@ It now fires on:
 
 - `push` to **main only** (the baseline run, the one that auto-accepts)
 - `pull_request` with `types: [opened, ready_for_review, labeled, synchronize]`
-- the `visual-check` label on demand — remove and re-add it to re-run
+- the `visual-check` label on demand — remove and re-add it to re-run. **On a
+  PR into `main` only**: the `pull_request` trigger is filtered to
+  `branches: [main]`, so on a feature PR into `staging` the workflow never
+  starts and the label does nothing. For an early look at a feature branch,
+  run the workflow by hand (`workflow_dispatch`, any ref).
 
 **The cost control is the `paths:` list, NOT the trigger type.** A revision of
 this change dropped `synchronize` to make PR iteration free, and that was a

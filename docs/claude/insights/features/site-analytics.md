@@ -13,7 +13,7 @@ adoption.
 | Install + notification adoption (Redis) | `src/utils/site-adoption.ts` |
 | Counters + readers | `src/utils/owner-activity.ts` |
 | Endpoint | `src/pages/api/track-visit.ts` |
-| UI | `src/components/theleague/OwnerActivityReport.astro`, both `activity.astro` routes |
+| UI | `src/components/shared/OwnerActivityReport.astro`, both `activity.astro` routes |
 | Guards | `tests/site-analytics.test.ts`, `tests/site-adoption.test.ts`, `tests/redis-command-reductions.test.ts` |
 
 ---

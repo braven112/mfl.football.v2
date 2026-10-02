@@ -16,7 +16,7 @@ const PANEL_SRC = readFileSync(
   'src/components/shared/front-office-hub/FrontOfficePanel.astro',
   'utf-8',
 );
-const CARD_SRC = readFileSync('src/components/theleague/FreeAgentNeedsCard.astro', 'utf-8');
+const CARD_SRC = readFileSync('src/components/shared/FreeAgentNeedsCard.astro', 'utf-8');
 const ROUTE_SRC = readFileSync('src/pages/theleague/front-office/index.astro', 'utf-8');
 
 describe('TheLeaguePlannerPanel mounts the player modal + watch bridge once', () => {

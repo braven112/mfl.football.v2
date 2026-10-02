@@ -273,7 +273,7 @@ describe('the "Rostered by" strip (user, 2026-09-26)', () => {
     expect(buildRosterSheetFields(facts(), pricing).hideOwnerStrip).toBe(true);
   });
   it('the modal hides the strip only when an opener sends the flag', () => {
-    const modal = readFileSync('src/components/theleague/PlayerDetailsModal.astro', 'utf8');
+    const modal = readFileSync('src/components/shared/PlayerDetailsModal.astro', 'utf8');
     expect(modal).toContain('if (ownerBrand && !playerData.hideOwnerStrip) {');
   });
   it('no opener but the two roster pages sends it', () => {
@@ -281,7 +281,7 @@ describe('the "Rostered by" strip (user, 2026-09-26)', () => {
     // reason: its header names the club and wears its crest (PR C).
     const hits = execSync("git grep -l hideOwnerStrip -- src", { encoding: 'utf8' }).trim().split('\n').sort();
     expect(hits).toEqual([
-      'src/components/theleague/PlayerDetailsModal.astro',
+      'src/components/shared/PlayerDetailsModal.astro',
       'src/utils/player-modal-trigger.ts',
       'src/utils/rosters/afl-phone-sheet.ts',
       'src/utils/rosters/phone-sheet.ts',

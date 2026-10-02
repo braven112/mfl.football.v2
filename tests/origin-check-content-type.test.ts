@@ -45,7 +45,7 @@ const ALLOWLIST: { file: string; count: number; reason: string }[] = [
 		reason: 'server-to-MFL requests; Astro only checks requests it RECEIVES',
 	},
 	{
-		file: 'src/components/theleague/suggestions/ImageUploader.tsx',
+		file: 'src/components/shared/suggestions/ImageUploader.tsx',
 		count: 1,
 		reason:
 			'multipart image upload cannot be JSON; still exposed to the check in browsers that drop Origin — moving it off FormData is a separate change',

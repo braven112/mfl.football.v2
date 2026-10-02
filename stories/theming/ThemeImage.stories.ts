@@ -1,4 +1,4 @@
-import ThemeImage from '../../src/components/ThemeImage.astro';
+import ThemeImage from '../../src/components/shared/ThemeImage.astro';
 import { themeModes } from '../../.storybook/modes';
 
 /**

@@ -33,7 +33,7 @@
       "paths": [
         ".github/workflows/*waiver-order*",
         "scripts/*waiver-order*",
-        "src/components/theleague/TransactionHubModal.astro",
+        "src/components/shared/TransactionHubModal.astro",
         "src/pages/api/waiver-order.ts",
         "src/scripts/transaction-hub.ts",
         "src/pages/api/waiver-claim.ts",
@@ -62,7 +62,7 @@
       "paths": [
         "src/components/shared/AskRogerFirst.astro",
         "src/components/shared/SignInModal.astro",
-        "src/components/theleague/LoginForm.astro",
+        "src/components/shared/LoginForm.astro",
         "src/middleware.ts",
         "src/pages/*/forbidden.astro",
         "src/pages/*/login.astro",
@@ -135,9 +135,9 @@
         "src/pages/**/*.astro",
         "src/components/**/*.astro",
         "src/scripts/*",
-        "src/components/afl-family/LineupPage.astro",
+        "src/components/shared/lineup/LineupPage.astro",
         "src/components/shared/free-agents/FreeAgentsPage.astro",
-        "src/components/afl-family/StandingsPage.astro",
+        "src/components/shared/standings/AflFamilyStandingsPage.astro",
         "src/components/shared/rosters/RostersPage.astro"
       ],
       "note": "Bundled <script> blocks run ONCE per session under the ClientRouter: init on astro:page-load (never DOMContentLoaded), re-read elements inside init(), replace document/window listeners rather than stacking them. See docs/claude/insights/domains/frontend.md \"Astro and ClientRouter\".",
@@ -291,7 +291,7 @@
         "src/components/shared/WatchListBridge.astro",
         "src/components/shared/WaiverPriorityModal.astro",
         "src/components/shared/WaiverClaimModal.astro",
-        "src/components/theleague/PlayerDetailsModal.astro",
+        "src/components/shared/PlayerDetailsModal.astro",
         "src/utils/claim-context.ts",
         "src/utils/claim-context-shape.ts",
         "src/utils/player-claim-client.ts",
@@ -301,7 +301,7 @@
         "src/components/shared/WaiverClaimsPanel.astro",
         "src/pages/api/waiver-claims.ts",
         "src/scripts/transaction-hub.ts",
-        "src/components/theleague/TransactionHubModal.astro"
+        "src/components/shared/TransactionHubModal.astro"
       ],
       "note": "The ⋮ menu sits right after the Player column (it was nine columns off-screen on a phone, #974) and its header carries the league's own verb; the acquisition itself lives in PlayerDetailsModal, so it reaches every page the modal does — which means WaiverClaimModal is mounted by that modal and by no page, the offer is a SESSION verdict from /api/claim-context (both leagues have a franchise 0001), and the form must survive landing before or after the context does. The waiver priority dialog opens on the synced order and time-boxes the live read; the page's signed-in verdict is computed ONCE (franchiseIdForLeague) and read back off #watch-list-bridge[data-signed-in], never a second copy. The Auction view is a LIVE board (Place Bid deep links, a 60s poll, a 36h clock), so it belongs to resolveAuctionWindow and not to `hasAuctionData` — the auction RESULTS feed keeps its rows all year, which left the board on the page in September. See docs/claude/insights/features/waiver-claims.md and watch-list.md.",
       "tests": [
@@ -455,7 +455,7 @@
         "src/pages/api/*/lineup*",
         "src/pages/api/lineup*",
         "src/utils/lineup*",
-        "src/components/afl-family/LineupPage.astro"
+        "src/components/shared/lineup/LineupPage.astro"
       ],
       "tests": [
         "tests/lineup-bench-sync.test.ts",
@@ -626,7 +626,7 @@
         "src/config/nav-config.ts",
         "src/config/footer-config.ts",
         "src/components/nav/*",
-        "src/components/theleague/Footer.astro",
+        "src/components/shared/Footer.astro",
         "src/utils/nav-utils.ts",
         "src/utils/feature-spotlight.ts",
         "src/styles/feature-spotlight.css"
@@ -684,7 +684,7 @@
         "src/pages/*/pecking-order/ballot.astro",
         "src/pages/*/pecking-order/voters.astro",
         "src/pages/*/lineup.astro",
-        "src/components/afl-family/LineupPage.astro"
+        "src/components/shared/lineup/LineupPage.astro"
       ],
       "tests": [
         "tests/owners-poll-ballot.test.ts",
@@ -719,7 +719,7 @@
         "scripts/push-weekly-changelog.mjs",
         "scripts/lib/weekly-changelog-format.mjs",
         "src/components/shared/whats-new/*.astro",
-        "src/components/theleague/WhatsNewRow.astro"
+        "src/components/shared/WhatsNewRow.astro"
       ],
       "note": "See CLAUDE.md \"Changelog — one article a week, everything else stages\". Everything user-facing STAGES; the Monday rollup publishes one article per league. A staged summary is one line (200 visible chars) because it renders as a bullet — depth belongs in a /guides page the line links to. Guide screenshots live in public/assets/guides/, never the changelog's directory. `both` means the full-management leagues only (registry `bestBall` flag), and both the rollup and the data test must route through leaguesForStagedChange(). And a link inside a description LIST item must stay reachable from whats-new-links.ts#htmlFragments: a fragment the guards cannot see is league-prefixed by the renderer anyway and ships pointing at the wrong league.",
       "tests": [
@@ -755,7 +755,7 @@
         "src/utils/trade-builder-link.ts",
         "src/pages/api/claim-context.ts",
         "src/components/shared/WaiverClaimModal.astro",
-        "src/components/theleague/PlayerDetailsModal.astro"
+        "src/components/shared/PlayerDetailsModal.astro"
       ],
       "note": "The player card offers exactly one acquisition per player, decided by the SERVER: free agent -> Claim/Bid, held by a rival in the viewer's scope -> Trade for him, on the viewer's own roster -> neither. The scope is conference-aware (the AFL rosters the same player once per conference), and the two Trade Builders take different query params. Never gate the trade affordance on `canClaim` — that goes false for the whole auction season.",
       "tests": [
@@ -820,7 +820,7 @@
         "src/utils/throwback-request-state.ts",
         "src/utils/rosters/*.ts",
         "src/components/shared/rosters/*.astro",
-        "src/components/afl-fantasy/AFLActionModal.astro"
+        "src/components/shared/AFLActionModal.astro"
       ],
       "tests": [
         "tests/shared-rosters-page.test.ts",
@@ -969,11 +969,10 @@
         "src/utils/*bracket*",
         "scripts/*bracket*",
         "scripts/*standings*",
-        "src/components/theleague/standings/*",
         "src/components/shared/standings/*",
-        "src/components/theleague/PlayoffBadge.astro",
+        "src/components/shared/PlayoffBadge.astro",
         "src/pages/*/standings.astro",
-        "src/components/afl-family/StandingsPage.astro"
+        "src/components/shared/standings/AflFamilyStandingsPage.astro"
       ],
       "tests": [
         "tests/shared-standings-page.test.ts",
@@ -1014,12 +1013,15 @@
       "paths": [
         ".storybook/**",
         "stories/**",
-        "astro.config.ts"
+        "astro.config.ts",
+        "scripts/story-coverage.mjs",
+        "scripts/lib/story-coverage.mjs"
       ],
       "tests": [
         "tests/storybook-layout-globals.test.ts",
         "tests/storybook-dark-logo-mirror.test.ts",
-        "tests/storybook-story-renderer.test.ts"
+        "tests/storybook-story-renderer.test.ts",
+        "tests/story-coverage.test.ts"
       ]
     },
     {
@@ -1031,7 +1033,6 @@
         "src/utils/github-issues.ts",
         "src/pages/api/suggestions/**",
         "src/components/shared/suggestions/**",
-        "src/components/theleague/suggestions/**",
         "src/pages/*/suggestions.astro",
         "src/components/shared/faq/**"
       ],
@@ -1052,7 +1053,7 @@
         "src/utils/franchise-band-brand.ts",
         "src/utils/crest-dark-stroke-css.ts",
         "src/utils/dark-surface-crest.ts",
-        "src/components/theleague/PlayerDetailsModal.astro",
+        "src/components/shared/PlayerDetailsModal.astro",
         "src/utils/*logo*",
         "public/sw.js",
         "src/data/tv-logo-stroke-manifest.json",
@@ -1198,9 +1199,9 @@
         "src/components/**/*.astro",
         "src/pages/**/*.astro",
         "src/layouts/*.astro",
-        "src/components/afl-family/LineupPage.astro",
+        "src/components/shared/lineup/LineupPage.astro",
         "src/components/shared/free-agents/FreeAgentsPage.astro",
-        "src/components/afl-family/StandingsPage.astro",
+        "src/components/shared/standings/AflFamilyStandingsPage.astro",
         "src/components/shared/rosters/RostersPage.astro"
       ],
       "tests": [
@@ -1340,7 +1341,7 @@
         "src/pages/afl-fantasy/draft/order.astro",
         "src/pages/afl-fantasy/draft/room.astro",
         "src/pages/afl-fantasy/front-office/index.astro",
-        "src/components/afl-family/StandingsPage.astro"
+        "src/components/shared/standings/AflFamilyStandingsPage.astro"
       ],
       "tests": [
         "tests/preferred-team-resolution-guard.test.ts",

@@ -31,7 +31,7 @@ const ROSTER_PAGES = [
   'src/components/shared/rosters/RostersPage.astro',
 ];
 
-const LINEUP_PAGES = ['src/pages/theleague/lineup.astro', 'src/components/afl-family/LineupPage.astro'];
+const LINEUP_PAGES = ['src/components/shared/lineup/LineupPage.astro'];
 
 describe('rankings reach every decision page', () => {
   describe('Free Agents', () => {
@@ -214,7 +214,7 @@ describe('rankings reach every decision page', () => {
   describe('Set Lineup', () => {
     it.each(LINEUP_PAGES)('%s reads the owner board via the shared module', (page) => {
       const src = read(page);
-      expect(src).toContain("from '../../utils/lineup-rankings'");
+      expect(src).toContain("/utils/lineup-rankings'");
       expect(src).toContain('loadLineupRankings()');
     });
 

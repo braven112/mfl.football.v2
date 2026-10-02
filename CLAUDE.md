@@ -388,6 +388,17 @@ renders, and never generalise its rules into the shared profile "in case"
 another league wants it. Another client may be SHOWN it for ideas; theirs is
 built to their own rules. Details: `docs/claude/rules/standings-brackets-draft-order.md` rule 1c.
 
+**Where a component lives: `src/components/shared/` if more than one league
+renders it; a league folder (`theleague/`, `afl/`, …) only for a component
+that league alone uses.** A component that started in one league's folder and
+gained a second caller moves to `shared/` in the change that adds the caller
+(the lineup page and `PlayerCell` moved that way in Oct 2026, then a sweep
+moved every other multi-league component — the whole `afl-family/` folder
+included, since the AFL and the keeper slot both render it). Nothing lives
+loose at the root of `src/components/`. Guard:
+`tests/components-root-guard.test.ts` — it walks the import graph and fails on
+a league folder's component imported from outside that league.
+
 A route that exists under two league directories in `src/pages/` is a
 **sibling**. Copying one league's page file into the next league and editing it
 is how this repo accumulated ~57,800 lines across 24 forked siblings —

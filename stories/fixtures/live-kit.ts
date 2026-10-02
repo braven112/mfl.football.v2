@@ -44,7 +44,8 @@
  * is a bad place to normalise carrying them around.
  */
 import { resolveMatchupColorVars } from '../../src/utils/live/model';
-import type { LiveMatchup, LiveTeam } from '../../src/types/live';
+import type { LiveLeaders, LiveMatchup, LiveStandingsRow, LiveTeam } from '../../src/types/live';
+import type { RedZoneAlert } from '../../src/utils/broadcast-moments';
 import type {
   LivePlayerRow,
   NflGame,
@@ -311,3 +312,117 @@ export const NEAR_BLACK_MATCHUP: LiveMatchup = {
   p0: 0.52,
   colorVars: NEAR_BLACK_COLOR_VARS,
 };
+
+// ── The board's furniture: leaders, standings, red zone, freshness ───────
+//
+// Crests stay on the two files already named in `STORY_ASSET_GLOBS`
+// (pigskins.png, ninjas.png). Every other franchise takes the TEXT rung —
+// `icon: ''`, so LvMark draws initials — which is a real branch worth a
+// snapshot and adds nothing to the Chromatic trigger.
+
+/**
+ * The week's leaders. Each row puts one documented branch on screen:
+ *  - a team still waiting on starters ("1 to play") beside one that is done;
+ *  - a player started by TWO franchises — routine in the AFL, and the reason a
+ *    row lists every owner on line two;
+ *  - a player still on the field ("playing") beside finished ones;
+ *  - an id `LIVE_META` does not know, which must render as "Player <id>"
+ *    rather than vanish and take a real performance off the board.
+ */
+export const LIVE_LEADERS: LiveLeaders = {
+  teams: [
+    { franchiseId: '0001', name: 'Pacific Pigskins', nameShort: 'Pigskins', initials: 'PP', icon: '/assets/theleague/icons/pigskins.png', iconAlt: 'Pacific Pigskins', rung: 'league', live: 71.9, yetToPlay: 1 },
+    { franchiseId: '0007', name: 'Cowboy Up', nameShort: 'Cowboy Up', initials: 'CU', icon: '', iconAlt: '', rung: 'text', live: 64.3, yetToPlay: 0 },
+    { franchiseId: '0013', name: 'Nagoya Ninjas', nameShort: 'Ninjas', initials: 'NN', icon: '/assets/afl/icons/ninjas.png', iconAlt: 'Nagoya Ninjas', rung: 'league', live: 52.2, yetToPlay: 1 },
+  ],
+  players: [
+    { playerId: 'p1', owners: [{ franchiseId: '0001', franchiseName: 'Pigskins' }], points: 24.6, secondsRemaining: 0 },
+    { playerId: 'q1', owners: [{ franchiseId: '0007', franchiseName: 'Cowboy Up' }, { franchiseId: '0013', franchiseName: 'Ninjas' }], points: 19.8, secondsRemaining: 0 },
+    { playerId: 'p3', owners: [{ franchiseId: '0001', franchiseName: 'Pigskins' }], points: 14.2, secondsRemaining: 1260 },
+    { playerId: '99999', owners: [{ franchiseId: '0004', franchiseName: 'Wabbits' }], points: 11.0, secondsRemaining: 0 },
+  ],
+};
+
+const standing = (
+  rank: number,
+  franchiseId: string,
+  name: string,
+  nameShort: string,
+  initials: string,
+  icon: string,
+  wins: number,
+  losses: number,
+  pointsFor: number,
+  isViewer = false,
+): LiveStandingsRow => ({
+  franchiseId,
+  rank,
+  name,
+  nameShort,
+  initials,
+  icon,
+  iconAlt: icon ? name : '',
+  rung: icon ? 'league' : 'text',
+  wins,
+  losses,
+  ties: 0,
+  pointsFor,
+  isViewer,
+  // Nothing from this week is in MFL's record yet, so the Live view adds
+  // LIVE_MATCHUP to both sides.
+  weekGamesCounted: 0,
+});
+
+/**
+ * MFL's table, in MFL's order, built so LIVE_MATCHUP visibly moves it.
+ *
+ * Officially the viewer (Pigskins) sits 4th and its opponent (Ninjas) 2nd,
+ * both 3-2. Live adds this week's 71.9–52.2 as it stands: Pigskins go 4-2 and
+ * climb to 2nd (▲2), Ninjas go 3-3 and drop to 4th (▼2). Final shows the same
+ * rows untouched. So one fixture pins both halves of the rule in
+ * `docs/claude/rules/standings-brackets-draft-order.md`: MFL's order is never
+ * re-sorted, and the labelled what-if is the one view allowed to.
+ */
+export const LIVE_STANDINGS: LiveStandingsRow[] = [
+  standing(1, '0007', 'Cowboy Up', 'Cowboy Up', 'CU', '', 4, 1, 612.4),
+  standing(2, '0013', 'Nagoya Ninjas', 'Ninjas', 'NN', '/assets/afl/icons/ninjas.png', 3, 2, 588.0),
+  standing(3, '0003', 'The Mariachi Ninjas', 'Mariachi', 'MN', '', 3, 2, 560.3),
+  standing(4, '0001', 'Pacific Pigskins', 'Pigskins', 'PP', '/assets/theleague/icons/pigskins.png', 3, 2, 541.7, true),
+  standing(5, '0004', 'Wascawy Wabbits', 'Wabbits', 'WW', '', 1, 4, 470.9),
+];
+
+/**
+ * Two drives at once: KC inside the 20 WITH down and distance, and SF with it
+ * missing — ESPN omits it often enough that "absent means absent" is a branch,
+ * and a fabricated one would be a claim about a real game.
+ *
+ * Two leagues' players, so the cross-league story's `showLeague` has something
+ * to tell apart.
+ */
+export const RED_ZONE_ALERTS: RedZoneAlert[] = [
+  {
+    team: 'KC',
+    downDistance: '1st & Goal at LV 6',
+    players: [
+      { leagueId: 'tl', leagueName: 'TheLeague', side: 'mine', playerId: 'p3', playerName: 'Mike Washington Jr.', position: 'WR' },
+      { leagueId: 'afl', leagueName: 'AFL', side: 'mine', playerId: 'k9', playerName: 'Travis Kelce', position: 'TE' },
+    ],
+  },
+  {
+    team: 'SF',
+    downDistance: '',
+    players: [
+      { leagueId: 'tl', leagueName: 'TheLeague', side: 'mine', playerId: 'p6', playerName: 'San Francisco 49ers', position: 'DEF' },
+    ],
+  },
+];
+
+/**
+ * Ages for the two ticking captions, chosen for a STABLE snapshot.
+ *
+ * Both components read `Date.now()` on a 1-second interval, so an age measured
+ * in seconds would differ between the build and the capture. Minutes with a
+ * 30-second margin either side cannot: "3m ago" holds from 3:00 to 3:59, and
+ * the capture lands a few seconds after the story module loads.
+ */
+export const minutesAgo = (minutes: number): number => Date.now() - minutes * 60_000;

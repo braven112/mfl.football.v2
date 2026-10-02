@@ -22,7 +22,7 @@ import { resolve } from 'node:path';
  * card".
  */
 const SRC = readFileSync(
-  resolve(__dirname, '../src/components/theleague/PlayerDetailsModal.astro'),
+  resolve(__dirname, '../src/components/shared/PlayerDetailsModal.astro'),
   'utf8',
 );
 

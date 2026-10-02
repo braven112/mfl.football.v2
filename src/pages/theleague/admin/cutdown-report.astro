@@ -23,7 +23,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
-import PlayerCell from '../../../components/theleague/PlayerCell.astro';
+import PlayerCell from '../../../components/shared/PlayerCell.astro';
 import { getAuthUser, isCommissionerOrAdmin, isAuthorizedForLeague } from '../../../utils/auth';
 import { loginUrlForRequest, forbiddenPathFor } from '../../../utils/login-redirect';
 import { getRedis } from '../../../utils/redis-client';

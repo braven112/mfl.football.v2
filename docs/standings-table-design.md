@@ -144,7 +144,7 @@ Seed·Team·Record·PF·PA). Not imported anywhere (verified `grep` across `.ast
 
 ## 3. Proposed unified API
 
-One component: `src/components/theleague/standings/StandingsTable.astro`
+One component: `src/components/shared/standings/StandingsTable.astro`
 (new folder; the old file is replaced). Column set, team-cell mode, tiering,
 and header are all **data**, passed as a resolved config object. Page code keeps
 building `TeamStanding[]` from the existing `standings.ts` producers — the
@@ -153,7 +153,7 @@ refactor is purely presentational.
 ### 3.1 TypeScript prop types
 
 ```ts
-// src/components/theleague/standings/standings-table-config.ts
+// src/components/shared/standings/standings-table-config.ts
 import type { TeamStanding } from '../../../types/standings';
 
 /** Which prebuilt column a config references. Formatter/alignment live here,

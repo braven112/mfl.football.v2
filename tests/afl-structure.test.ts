@@ -490,7 +490,7 @@ describe('AFL pages overlay the season structure', () => {
     // silently dropping the call.
     // The standings page body is the AFL-family component (shared with the demo's keeper slot).
     const files: Record<string, string> = {
-      standings: 'src/components/afl-family/StandingsPage.astro',
+      standings: 'src/components/shared/standings/AflFamilyStandingsPage.astro',
       playoffs: 'src/pages/afl-fantasy/playoffs.astro',
     };
     for (const page of ['standings', 'playoffs']) {

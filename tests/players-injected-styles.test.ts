@@ -223,7 +223,7 @@ describe('WaiverClaimsPanel — injected-row styles', () => {
  */
 describe('Transaction Hub waiver claims — one lockup, shared with the panel', () => {
   const HUB_SCRIPT = 'src/scripts/transaction-hub.ts';
-  const HUB_MODAL = 'src/components/theleague/TransactionHubModal.astro';
+  const HUB_MODAL = 'src/components/shared/TransactionHubModal.astro';
 
   it('builds the claimed player with the shared lockup, not hand-rolled text', () => {
     const src = read(HUB_SCRIPT);

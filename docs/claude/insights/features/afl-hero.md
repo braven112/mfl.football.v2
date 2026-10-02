@@ -3,7 +3,7 @@
 Insights for the AFL homepage hero. Since 2026-09-29 the AFL's hero IS the
 shared league hero: `src/utils/league-hero/` (resolver, views, profiles,
 casting, page plumbing) and `src/components/shared/league-hero/LeagueHero.astro`,
-with the AFL's facts in its profile. `src/components/afl/AflEventHero.astro` is
+with the AFL's facts in its profile. `src/components/shared/AflEventHero.astro` is
 still the branded event card every league's hero falls back to. Entries below
 that name `afl-hero-resolver.ts`, `afl-hero-casting.ts` or `AflHero.astro`
 predate the move — the code they describe now lives in those files.

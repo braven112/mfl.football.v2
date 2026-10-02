@@ -38,12 +38,12 @@
  * disclosure is a native `<details>`. Nothing hydrates, nothing is serialized
  * to the client, and every view is bookmarkable. The repo's own rule — a
  * control whose only job is switching a URL param should be an `<a href>` —
- * is why `components/theleague/YearSelector.astro` is NOT used here: it
+ * is why `components/shared/YearSelector.astro` is NOT used here: it
  * drives navigation from an inline `onchange`, so it dead-ends without script.
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
-import Breadcrumbs from '../../theleague/Breadcrumbs.astro';
-import MetricCard from '../../theleague/MetricCard.astro';
+import Breadcrumbs from '../Breadcrumbs.astro';
+import MetricCard from '../MetricCard.astro';
 import DivisionMatrix from './DivisionMatrix.astro';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { getLeagueBySlug } from '../../../config/leagues';

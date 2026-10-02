@@ -1,4 +1,4 @@
-import PlayerDetailsModal from '../../src/components/theleague/PlayerDetailsModal.astro';
+import PlayerDetailsModal from '../../src/components/shared/PlayerDetailsModal.astro';
 import { themeModes } from '../../.storybook/modes';
 
 /**

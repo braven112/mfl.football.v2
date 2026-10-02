@@ -20,7 +20,7 @@
  *
  * Unlike the NFL swap, college logos appear on only a handful of pages, and
  * the rule set is large (~236 schools). So this is emitted per-page via
- * `src/components/CollegeLogoDarkStyles.astro` on the pages that actually
+ * `src/components/shared/CollegeLogoDarkStyles.astro` on the pages that actually
  * render college logos, rather than globally in the shared layout.
  *
  * Dark-variant source (Aug 2026): self-hosted when possible, mirroring the

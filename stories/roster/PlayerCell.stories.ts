@@ -1,4 +1,4 @@
-import PlayerCell from '../../src/components/theleague/PlayerCell.astro';
+import PlayerCell from '../../src/components/shared/PlayerCell.astro';
 import { themeModes } from '../../.storybook/modes';
 
 /**

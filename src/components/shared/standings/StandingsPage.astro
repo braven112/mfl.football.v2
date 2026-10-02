@@ -14,9 +14,9 @@
  * definition — that is a different competition, not a re-sort of standings.
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
-import UnifiedStandingsTable from '../../theleague/standings/StandingsTable.astro';
-import StandingsViewSelector from '../../theleague/StandingsViewSelector.astro';
-import YearSelector from '../../theleague/YearSelector.astro';
+import UnifiedStandingsTable from './StandingsTable.astro';
+import StandingsViewSelector from '../StandingsViewSelector.astro';
+import YearSelector from '../YearSelector.astro';
 import { getDivisionStandings, getLeagueStandings, getAllPlayStandings } from '../../../utils/standings';
 import type { StandingsFranchise, TeamStanding } from '../../../types/standings';
 import { getLeagueBySlug, type CanonicalLeagueSlug } from '../../../config/leagues';

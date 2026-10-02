@@ -92,7 +92,7 @@ describe('standings pages share one season clock', () => {
   });
 
   it('AFL family: the throwback gate reads the test clock too', () => {
-    const page = read('src/components/afl-family/StandingsPage.astro');
+    const page = read('src/components/shared/standings/AflFamilyStandingsPage.astro');
     expect(page).toMatch(
       /getCurrentSeasonYear\(getTestDateFromSearchParams\(Astro\.url\.searchParams\) \?\? undefined\)/,
     );

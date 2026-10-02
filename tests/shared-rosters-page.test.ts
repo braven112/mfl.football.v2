@@ -205,7 +205,7 @@ describe('the routes are thin wrappers over the one page', () => {
 });
 
 describe('the action sheet follows the page', () => {
-  const modal = read('src/components/afl-fantasy/AFLActionModal.astro');
+  const modal = read('src/components/shared/AFLActionModal.astro');
 
   it("routes Trade to the PAGE's league and hides it where there is no Trade Builder", () => {
     expect(modal).toContain('data-league={leagueSlug}');

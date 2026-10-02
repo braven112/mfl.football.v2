@@ -145,7 +145,7 @@ if (!user || !isAdminFranchise(user.franchiseId)) {
 |---------|--------|-------|
 | Admin gate | `src/pages/theleague/cr.astro` lines 14-27 | Auth + redirect |
 | `isAdminFranchise()` | `src/config/nav-config` | Franchise check |
-| `PlayerCell.astro` | `src/components/theleague/PlayerCell.astro` | Player lockup in alerts & tables |
+| `PlayerCell.astro` | `src/components/shared/PlayerCell.astro` | Player lockup in alerts & tables |
 | Editorial section titles | CLAUDE.md design standard | 0.75rem uppercase + left border |
 | Editorial tables | PlayerDetailsModal pattern | Sticky headers, hover rows, tabular-nums |
 | `formatEntryDate()` | `src/utils/whats-new-helpers.ts` | Date formatting reference |

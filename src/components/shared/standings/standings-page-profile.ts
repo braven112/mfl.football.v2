@@ -12,7 +12,7 @@ import {
   TIERING,
   type StandingsColumn,
   type StandingsTiering,
-} from '../../theleague/standings/standings-table-config';
+} from './standings-table-config';
 import type { CanonicalLeagueSlug, LeagueDefinition } from '../../../config/leagues';
 
 export interface StandingsViewCopy {

@@ -9,7 +9,7 @@ import type {
   TradeSubmissionState,
 } from '../../../types/trade-builder';
 import { formatCurrency } from '../../../utils/formatters';
-import { PlayerCell } from '../PlayerCell';
+import { PlayerCell } from '../../shared/PlayerCell';
 import TradeCompositeStrip, { isCompositableTradePlayer } from './TradeCompositeStrip';
 import '../../../styles/loading.css';
 

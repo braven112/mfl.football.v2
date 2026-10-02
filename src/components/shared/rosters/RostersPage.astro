@@ -21,17 +21,17 @@
  * keeper surfaces are gated on `leagueHasFeature`, never on a league name.
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
-import CollegeLogoDarkStyles from '../../../components/CollegeLogoDarkStyles.astro';
-import PlayerCell from '../../../components/theleague/PlayerCell.astro';
-import PlayerDetailsModal from '../../../components/theleague/PlayerDetailsModal.astro';
-import PlayerInjuryModal from '../../../components/theleague/PlayerInjuryModal.astro';
+import CollegeLogoDarkStyles from '../CollegeLogoDarkStyles.astro';
+import PlayerCell from '../PlayerCell.astro';
+import PlayerDetailsModal from '../PlayerDetailsModal.astro';
+import PlayerInjuryModal from '../PlayerInjuryModal.astro';
 import { loadWeeklyPlayerResults } from '../../../utils/weekly-player-results-feed';
-import AFLActionModal from '../../../components/afl-fantasy/AFLActionModal.astro';
+import AFLActionModal from '../AFLActionModal.astro';
 import SignInModal from '../../../components/shared/SignInModal.astro';
 import KeeperPlanner, {
   type KeeperPlannerPlayer,
   type KeeperPlannerDraftPick,
-} from '../../../components/afl-fantasy/KeeperPlanner.astro';
+} from '../keepers/KeeperPlanner.astro';
 import { spriteUrl } from '../../../utils/sprite-url';
 import { getCurrentWeek } from '../../../utils/current-week';
 import { nflWeekStartInstant } from '../../../utils/nfl-week-starts.mjs';

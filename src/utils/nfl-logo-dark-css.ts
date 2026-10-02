@@ -23,7 +23,7 @@
  * and future — with zero markup changes. Browsers without `content` support on
  * img elements (pre-2023) simply keep the light logo.
  *
- * Consumed by `src/components/NflLogoDarkStyles.astro`, included once in the
+ * Consumed by `src/components/shared/NflLogoDarkStyles.astro`, included once in the
  * shared layout <head>.
  *
  * Dark-variant source (Aug 2026): the swap target is self-hosted when

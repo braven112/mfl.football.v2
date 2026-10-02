@@ -36,7 +36,7 @@ list on `/afl-fantasy/activity` splits that page's count across both rows.
 The name lookup lands on the same asymmetry from the other side.
 `src/data/page-directory.json` stores TheLeague's 77 paths UNPREFIXED and all
 46 AFL paths PREFIXED, and `pageName()` in
-`src/components/theleague/OwnerActivityReport.astro:18` is an exact-match
+`src/components/shared/OwnerActivityReport.astro:18` is an exact-match
 lookup against those. So an AFL visit recorded as `/rosters` resolves to
 **TheLeague's** directory entry, and one recorded as `/afl-fantasy/rosters`
 resolves correctly.

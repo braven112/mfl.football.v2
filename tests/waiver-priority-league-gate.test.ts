@@ -92,7 +92,7 @@ describe('waiver priority is gated on MFL settings', () => {
   });
 
   it('hides the priority row AND the screen, not just the row', () => {
-    const modal = read('src/components/theleague/TransactionHubModal.astro');
+    const modal = read('src/components/shared/TransactionHubModal.astro');
     // Two gates: the hub-home row, and view 5 itself. Hiding only the row
     // leaves a screen reachable by any stray showView call.
     const gates = modal.match(/\{config\.showWaiverPriority && \(/g) ?? [];

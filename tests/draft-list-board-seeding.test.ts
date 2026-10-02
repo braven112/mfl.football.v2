@@ -21,7 +21,7 @@ import { join } from 'node:path';
 const root = join(__dirname, '..');
 const read = (p: string) => readFileSync(join(root, p), 'utf-8');
 
-const ISLAND = 'src/components/theleague/custom-rankings/CustomRankingsPage.tsx';
+const ISLAND = 'src/components/shared/custom-rankings/CustomRankingsPage.tsx';
 const PAGE = 'src/components/shared/custom-rankings/CustomRankingsPage.astro';
 
 describe('My Draft List board seeds its own ranking sources', () => {

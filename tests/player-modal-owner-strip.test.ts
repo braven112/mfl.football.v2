@@ -27,7 +27,7 @@ const read = (p: string) => readFileSync(resolve(__dirname, '..', p), 'utf8');
 
 const playersPage = read('src/pages/theleague/players.astro');
 const aflPlayersPage = read('src/components/shared/free-agents/FreeAgentsPage.astro');
-const modal = read('src/components/theleague/PlayerDetailsModal.astro');
+const modal = read('src/components/shared/PlayerDetailsModal.astro');
 
 const LEAGUE_CONFIGS: Record<string, { teams?: any[] }> = {
   theleague: theleagueConfig as any,

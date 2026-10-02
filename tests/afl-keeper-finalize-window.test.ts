@@ -10,13 +10,13 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 
-const SRC = readFileSync('src/components/afl-fantasy/KeeperPlanner.astro', 'utf-8');
+const SRC = readFileSync('src/components/shared/keepers/KeeperPlanner.astro', 'utf-8');
 
 describe('KeeperPlanner finalize window', () => {
   it('derives the window from the shared calendar helpers, not a re-typed date', () => {
     expect(SRC).toMatch(/newSeasonStartsFor\(/);
     expect(SRC).toMatch(/keeperDeadlineFor\(/);
-    expect(SRC).toMatch(/from '\.\.\/\.\.\/utils\/afl-mock-draft'/);
+    expect(SRC).toMatch(/from '(?:\.\.\/)+utils\/afl-mock-draft'/);
   });
 
   it('honors ?testDate= like the rest of the AFL\'s date-dependent pages', () => {
@@ -42,7 +42,7 @@ describe('KeeperPlanner finalize window', () => {
     // between the deadline and the redraft of the cut players — once that
     // draft has actually happened, the roster is settled and the page
     // should talk about the NEXT keeper class (year + 1), not old news.
-    expect(SRC).toMatch(/from '\.\.\/\.\.\/utils\/draft-utils'/);
+    expect(SRC).toMatch(/from '(?:\.\.\/)+utils\/draft-utils'/);
     expect(SRC).toMatch(/isDraftConducted\(/);
     expect(SRC).toMatch(/draftConducted/);
     expect(SRC).toMatch(/Keeper planning for \$\{year \+ 1\} opens/);

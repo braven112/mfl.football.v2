@@ -49,7 +49,7 @@ describe('banner-crop crests are drawn round', () => {
   it('every hero crest renderer honours the flag', () => {
     expect(readFileSync('src/components/shared/CompositeHero.astro', 'utf8')).toContain("'cmh__crest--round': crest.round");
     for (const f of [
-      'src/components/afl/AflEventHero.astro',
+      'src/components/shared/AflEventHero.astro',
       'src/components/theleague/EventHeroShell.astro',
       'src/components/shared/schedule/SchedulePage.astro',
     ]) {

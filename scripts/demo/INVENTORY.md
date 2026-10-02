@@ -75,7 +75,7 @@ Also RAW_MFL-shaped but orphaned: `src/data/mfl-feeds/theleague/2025/standings.j
 | data/theleague/august-cuts/<yr>-report.json | F admin/cutdown-report.astro:90 | apply-august-cuts.mjs (MFL write, GROUPME) | degrade | yes (`franchiseName`) |
 | src/data/theleague/resolved-events.json | not read by src for theleague (schefter-season-mode reads AFL's) | compute-league-events.mjs | n/a | no |
 | src/data/theleague/nfl-draft-dates-fetched.json | S (via league-year-config.ts:2) | fetch-nfl-draft-date.mjs (`fetch:nfl-draft-date`, ESPN) | BREAK | no — NFL_FACT |
-| src/data/theleague/def-spotlight-players.json (+.ts) | S components/theleague/PlayerDetailsModal.astro:1092 (+5 via .ts) | fetch-def-spotlight-players.mjs (`fetch:def-spotlight`) | BREAK | no — NFL_FACT |
+| src/data/theleague/def-spotlight-players.json (+.ts) | S components/shared/PlayerDetailsModal.astro:1092 (+5 via .ts) | fetch-def-spotlight-players.mjs (`fetch:def-spotlight`) | BREAK | no — NFL_FACT |
 | data/theleague/espn-college-ids.json | S CustomRankingsPage.astro:32, players.astro:34, rosters.astro:33, trade-builder.astro:33, DraftMockResultsPage.astro:20, rookies-2026.astro:25, utils/front-office-planner-data.ts:37 | fetch-espn-college-ids.mjs | BREAK | no — NFL_FACT |
 | data/theleague/rsp-player-ids.json | S rookies-2026.astro:30; F utils/draft-player-enrichment.ts:75 | none (hand) | BREAK | no — NFL_FACT |
 | data/theleague/broadcast-mappings.json | S utils/broadcast-channels.ts:17 | hand (TV channels) | BREAK | no — NFL_FACT |
@@ -193,7 +193,7 @@ Live-code offenders (lines): `src/utils/groupme-storage.ts` 13 (hardcoded **Grou
 franchise map with owner first names**, 16 entries ~l.300), `src/scripts/transaction-hub.ts` 12
 (mock trade offers "Computer Jocks" etc. ~l.1313, also 14 icon-slug hits), `src/pages/api/suggestions/seed.ts` 6
 (seed authors with team names), `src/assets/css/src/_afl.scss` 2,
-`components/theleague/DraftPredictorGrid.astro` 2, and 1 each: schefter/TipPage.astro,
+`components/shared/DraftPredictorGrid.astro` 2, and 1 each: schefter/TipPage.astro,
 brand/FranchiseBrandPage.astro, division-strength/DivisionStrengthPage.astro,
 draft-broadcast/OnTheClock.tsx, schedule/SchedulePage.astro, theleague/insights.astro,
 theleague/rosters.astro, theleague/rules.astro, styles/hero-franchise-backdrop.css, utils/schedule-plan.mjs.

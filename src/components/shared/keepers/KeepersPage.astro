@@ -5,10 +5,10 @@
  * config; a league without a calendar or constitution page (the keeper demo)
  * omits the two rule links that point at them.
  */
-import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
-import FrontOfficeNav from '../../components/shared/front-office-nav/FrontOfficeNav.astro';
-import type { LeagueDefinition } from '../../config/leagues';
-import type { FrontOfficeLeagueSlug } from '../shared/front-office-nav/front-office-pages';
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import FrontOfficeNav from '../front-office-nav/FrontOfficeNav.astro';
+import type { LeagueDefinition } from '../../../config/leagues';
+import type { FrontOfficeLeagueSlug } from '../front-office-nav/front-office-pages';
 
 interface Props {
   league: LeagueDefinition;

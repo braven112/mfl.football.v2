@@ -366,8 +366,7 @@ describe('the call sites', () => {
   const SURFACES = [
     'src/utils/hero-crest.ts',
     'src/components/theleague/season-heroes/RecapCompositeHero.astro',
-    'src/pages/theleague/lineup.astro',
-    'src/components/afl-family/LineupPage.astro',
+    'src/components/shared/lineup/LineupPage.astro',
     'src/pages/theleague/draft/broadcast.astro',
     'src/pages/afl-fantasy/draft/broadcast.astro',
   ];
@@ -399,7 +398,7 @@ describe('the call sites', () => {
     // Without this prop the four AFL crests that still resolve to light art
     // have no way to separate from the panel — the site rings them under
     // `html.dark`, and this surface could not ring them at all.
-    const foc = readFileSync('src/components/theleague/FaceoffComposite.astro', 'utf-8');
+    const foc = readFileSync('src/components/shared/FaceoffComposite.astro', 'utf-8');
     expect(foc).toContain('watermarkFilter');
     const cards = readFileSync('src/utils/lineup-matchup-cards.ts', 'utf-8');
     expect(cards).toContain('watermarkFilter');

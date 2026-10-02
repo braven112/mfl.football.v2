@@ -9,7 +9,7 @@
  * This lives here rather than inline in `TeamIconDarkStyles.astro` because it
  * has two callers that must never disagree:
  *
- *   1. `src/components/TeamIconDarkStyles.astro` — the shared layout <head>.
+ *   1. `src/components/shared/TeamIconDarkStyles.astro` — the shared layout <head>.
  *   2. `.storybook/preview.ts` — stories render without that layout.
  *
  * Storybook previously reproduced the other three head-injected sheets by

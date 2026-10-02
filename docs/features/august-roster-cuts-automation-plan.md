@@ -232,7 +232,7 @@ team. Contents:
    shouldn't have to wait for the deadline. Executes the marked list
    immediately, owner-mode in the browser session, via the proven sequential
    `/api/cut-player` loop (KeeperPlanner pattern:
-   `src/components/afl-fantasy/KeeperPlanner.astro:662-714` — progress bar,
+   `src/components/shared/keepers/KeeperPlanner.astro:662-714` — progress bar,
    409 = already-gone = success, per-player failure collection). Confirmation
    modal shows the same cap math first. Every team that self-serves drops out
    of the deadline job's blast radius; the automation becomes the backstop,
@@ -298,7 +298,7 @@ MFL write job"):
   if the roster read looks degraded/empty (same guard as
   `cut-player.ts:121-151`), and never cut a roster below 22. Treat
   "player already gone" as success (409-tolerant, like the KeeperPlanner batch
-  loop at `src/components/afl-fantasy/KeeperPlanner.astro:662-714`).
+  loop at `src/components/shared/keepers/KeeperPlanner.astro:662-714`).
 - **Cut mechanics:** the same `add_drop` page-handler POST `/api/cut-player`
   uses (form fields at `cut-player.ts:165-174`), owner-mode, **never sending
   `FRANCHISE_ID`** — sending it on an owner request trips the

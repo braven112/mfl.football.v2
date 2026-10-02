@@ -235,7 +235,7 @@ Layered shadows increase rendering load. Avoid animating shadow tokens directly.
 
 All new pages and components must follow the **editorial design language** established by the PlayerDetailsModal and related modal components. This creates a consistent, data-dense, sports-editorial feel across the site.
 
-**Canonical reference:** `src/components/theleague/PlayerDetailsModal.astro`
+**Canonical reference:** `src/components/shared/PlayerDetailsModal.astro`
 **Full pattern catalog:** `docs/claude/insights/domains/design-system.md` (search "Editorial Design Standard")
 
 ### Quick Reference
@@ -298,17 +298,21 @@ When building a new page following the editorial standard:
 
 ```
 src/components/
-├── shared/              # Shared across leagues
-│   ├── Card.astro
-│   ├── Button.astro
-│   └── DataTable.astro
-├── theleague/           # TheLeague-specific
-│   ├── RosterCard.astro
-│   └── StandingsTable.astro
-├── afl-fantasy/         # AFL-specific
-│   └── DraftBoard.astro
-└── AuthContext.tsx      # React context provider
+├── shared/              # Rendered by MORE THAN ONE league (or by a shared
+│   │                    # layout) — site chrome, theme helpers, page bodies
+│   ├── PlayerCell.astro
+│   ├── ThemeToggle.astro
+│   ├── lineup/LineupPage.astro
+│   └── standings/StandingsTable.astro
+├── theleague/           # Rendered by TheLeague ALONE
+├── afl/  afl-fantasy/   # Rendered by the AFL alone
+├── keeper/  best-ball/  bigleague/
+├── nav/  schefter/      # Feature folders
+└── (no loose files)     # tests/components-root-guard.test.ts
 ```
+
+A component moves to `shared/` in the change that gives it a second
+league. Nothing lives loose at the root of `src/components/`.
 
 ## Props Typing
 
@@ -361,7 +365,7 @@ See CLAUDE.md for complete team name display standards.
 All player lists, cards, and tables **must** use the standard Player Lockup pattern.
 See **CLAUDE.md > Player Display** for the full specification.
 
-**Component:** `src/components/theleague/PlayerCell.astro`
+**Component:** `src/components/shared/PlayerCell.astro`
 
 **Quick checklist:**
 - [ ] Using `PlayerCell.astro` (or React equivalent for `.tsx` contexts)?
@@ -371,6 +375,6 @@ See **CLAUDE.md > Player Display** for the full specification.
 
 **Existing implementations for reference:**
 - Roster table: `src/pages/theleague/rosters.astro` (lines ~5890-5894, DEF swap logic)
-- Potential Targets: `src/components/theleague/FreeAgentNeedsCard.astro`
+- Potential Targets: `src/components/shared/FreeAgentNeedsCard.astro`
 - Trade builder: `src/components/theleague/trade-builder/PlayerCard.tsx`
 - Free agents table: `src/pages/theleague/players.astro` (inline p-row pattern)

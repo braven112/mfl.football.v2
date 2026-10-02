@@ -34,7 +34,7 @@ import {
 
 const ROOT = join(__dirname, '..');
 const FETCH_SCRIPT = join(ROOT, 'scripts/fetch-mfl-feeds.mjs');
-const MODAL = join(ROOT, 'src/components/theleague/PlayerDetailsModal.astro');
+const MODAL = join(ROOT, 'src/components/shared/PlayerDetailsModal.astro');
 
 const PLAYERS = {
   players: {

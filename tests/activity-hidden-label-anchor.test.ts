@@ -24,7 +24,7 @@ import path from 'node:path';
  * off the brace walk below. (This file's comments are prose about braces.)
  */
 const SOURCE = readFileSync(
-	path.join(process.cwd(), 'src/components/theleague/OwnerActivityReport.astro'),
+	path.join(process.cwd(), 'src/components/shared/OwnerActivityReport.astro'),
 	'utf8',
 ).replace(/\/\*[\s\S]*?\*\//g, '');
 

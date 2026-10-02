@@ -9,12 +9,12 @@ import { describe, it, expect } from 'vitest';
 
 describe('My Draft List UI modules', () => {
   it('DraftListSync loads', async () => {
-    const mod = await import('../src/components/theleague/custom-rankings/DraftListSync');
+    const mod = await import('../src/components/shared/custom-rankings/DraftListSync');
     expect(typeof mod.default).toBe('function');
   });
 
   it('the board island loads', async () => {
-    const mod = await import('../src/components/theleague/custom-rankings/CustomRankingsPage');
+    const mod = await import('../src/components/shared/custom-rankings/CustomRankingsPage');
     expect(typeof mod.default).toBe('function');
   });
 });

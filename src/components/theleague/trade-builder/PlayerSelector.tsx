@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import type { TradeBuilderTeam, TradeBuilderPlayer } from '../../../types/trade-builder';
 import { formatCurrency } from '../../../utils/formatters';
-import { PlayerCell } from '../PlayerCell';
+import { PlayerCell } from '../../shared/PlayerCell';
 import type { RankingLookup } from '../../../utils/rankings-lookup';
 import { getPlayerRank, COMPOSITE_IMPORT_ID } from '../../../utils/rankings-lookup';
 

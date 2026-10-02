@@ -42,7 +42,7 @@ import { pathHasLeaguePrefix, resolveLeaguePath } from '../src/utils/nav-utils';
 const root = join(__dirname, '..');
 const read = (p: string) => readFileSync(join(root, p), 'utf8');
 
-const MODAL = 'src/components/theleague/PlayerDetailsModal.astro';
+const MODAL = 'src/components/shared/PlayerDetailsModal.astro';
 const CLIENT = 'src/utils/player-claim-client.ts';
 const SERVER = 'src/utils/claim-context.ts';
 

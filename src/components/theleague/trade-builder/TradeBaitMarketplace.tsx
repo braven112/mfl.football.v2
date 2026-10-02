@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import type { TradeBuilderPlayer, TradeBuilderTeam } from '../../../types/trade-builder';
 import { formatCurrency } from '../../../utils/formatters';
-import { PlayerCell } from '../PlayerCell';
+import { PlayerCell } from '../../shared/PlayerCell';
 
 const POSITIONS = ['ALL', 'QB', 'RB', 'WR', 'TE', 'PK', 'DEF'];
 

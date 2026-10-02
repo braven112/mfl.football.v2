@@ -1,9 +1,13 @@
 ---
 /**
- * Submit Lineup page body for the AFL-family leagues — /afl-fantasy/lineup,
- * and the custom-site demo's keeper slot (/keeper/lineup). Each league's route
- * owns its auth gate (Astro.redirect only works from a page) and hands this
- * its registry entry, its config and the signed-in user.
+ * Submit Lineup page body for EVERY league that sets lineups here —
+ * /theleague/lineup, /afl-fantasy/lineup and the custom-site demo's keeper
+ * slot (/keeper/lineup). Each league's route owns its auth gate
+ * (Astro.redirect only works from a page) and hands this its registry entry,
+ * its config and the signed-in user. Until Oct 2026 TheLeague carried its own
+ * ~2,860-line copy of this page; the two had drifted by ~260 lines, every one
+ * of them a league literal or a comment. Do not fork it again — a league
+ * difference belongs in a prop or in utils/lineup-page-keys.ts.
  *
  * SSR page (auth-required). Mobile-first. The page body is hand-rolled DOM,
  * not React — the ONE island is the Owners' Poll ballot strip at the top,
@@ -15,35 +19,38 @@
  * All data rendered comes from MFL API (server-fetched, never user-typed),
  * and follows the same pattern used by buildPlayerCellHTML() across the codebase.
  *
- * AFL starter rules are identical to TheLeague's:
- * QB:1, RB:1-4, WR:1-4, TE:1-4, PK:1, DEF:1 (total 9). Slot layout matches TheLeague.
+ * Every league here starts the same nine:
+ * QB:1, RB:1-4, WR:1-4, TE:1-4, PK:1, DEF:1.
  */
-import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
-import PlayerCell from '../../components/theleague/PlayerCell.astro';
-import { loadInjuryMap, injuryBadgeLabel, injuryBadgeTitle } from '../../utils/mfl-injuries';
-import '../../styles/injury-indicator.css';
-import type { LeagueDefinition } from '../../config/leagues';
-import type { AuthUser } from '../../utils/auth';
-import { findWeekMatchups, resolveRostersPayload, resolveLineupFillState, resolveWeekLineup, resolvePlayerName } from '../../utils/lineup-sources';
-import LineupGameStrip from '../../components/shared/LineupGameStrip.astro';
-import { buildMatchupCards } from '../../utils/lineup-matchup-cards';
-import { crestStrokeIndex, resolveDarkSurfaceCrest } from '../../utils/dark-surface-crest';
-import { resolveThrowbackIdentity } from '../../utils/throwback-identity';
-import { isThrowbackWeekForScope } from '../../utils/throwback-scope';
-import { getAllThrowbackPreferences } from '../../utils/throwback-store';
-import { resolveSubmitButtonState } from '../../utils/lineup-submit-state';
-import { selectBenchPlayers } from '../../utils/lineup-bench';
-import { getCurrentWeekForYear } from '../../utils/current-week';
-import { getLeagueYearForSlug } from '../../utils/league-year';
-import { normalizeTeamCode } from '../../utils/nfl-logo';
-import { getPlayerMap } from '../../utils/player-map';
-import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD, getPlayerHeadshot, nflByeWeeks } from '../../constants/roster-constants';
-import { loadLiveOdds, getFPAStats, parseSpread, processWeeklyScores, computeStreak } from '../../utils/coach-data';
-import '../../styles/loading.css';
-import '../../styles/network-badge.css';
-import { resolveChannel, DEFAULT_COUNTRY } from '../../utils/broadcast-channels';
-import { readViewerClock } from '../../utils/viewer-preferences-page';
-import type { LineupPlayer } from '../../types/lineups';
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import PlayerCell from '../PlayerCell.astro';
+import { DEFAULT_LEAGUE_SLUG } from '../../../config/leagues';
+import { loadInjuryMap, injuryBadgeLabel, injuryBadgeTitle } from '../../../utils/mfl-injuries';
+import '../../../styles/injury-indicator.css';
+import type { LeagueDefinition } from '../../../config/leagues';
+import type { AuthUser } from '../../../utils/auth';
+import { findWeekMatchups, resolveRostersPayload, resolveLineupFillState, resolveWeekLineup, resolvePlayerName } from '../../../utils/lineup-sources';
+import LineupGameStrip from '../LineupGameStrip.astro';
+import { buildMatchupCards } from '../../../utils/lineup-matchup-cards';
+import { crestStrokeIndex, resolveDarkSurfaceCrest } from '../../../utils/dark-surface-crest';
+import { resolveThrowbackIdentity } from '../../../utils/throwback-identity';
+import { isThrowbackWeekForScope, type ThrowbackScope } from '../../../utils/throwback-scope';
+import { getThrowbackFranchiseBrand } from '../../../utils/franchise-brand';
+import { lineupApiPath, lineupDraftStorageKey } from '../../../utils/lineup-page-keys';
+import { getAllThrowbackPreferences } from '../../../utils/throwback-store';
+import { resolveSubmitButtonState } from '../../../utils/lineup-submit-state';
+import { selectBenchPlayers } from '../../../utils/lineup-bench';
+import { getCurrentWeekForYear } from '../../../utils/current-week';
+import { getLeagueYearForSlug } from '../../../utils/league-year';
+import { normalizeTeamCode } from '../../../utils/nfl-logo';
+import { getPlayerMap } from '../../../utils/player-map';
+import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD, getPlayerHeadshot, nflByeWeeks } from '../../../constants/roster-constants';
+import { loadLiveOdds, getFPAStats, parseSpread, processWeeklyScores, computeStreak } from '../../../utils/coach-data';
+import '../../../styles/loading.css';
+import '../../../styles/network-badge.css';
+import { resolveChannel, DEFAULT_COUNTRY } from '../../../utils/broadcast-channels';
+import { readViewerClock } from '../../../utils/viewer-preferences-page';
+import type { LineupPlayer } from '../../../types/lineups';
 
 interface Props {
   league: LeagueDefinition;
@@ -52,9 +59,9 @@ interface Props {
   /** The signed-in owner — the route has already checked it is THIS league's. */
   user: AuthUser & { franchiseId: string };
   /** Throwback Week scope, or null for a league that has none. */
-  throwbackScope: 'afl' | null;
+  throwbackScope: ThrowbackScope | null;
 }
-const { league, config: aflConfig, user, throwbackScope } = Astro.props;
+const { league, config: leagueConfig, user, throwbackScope } = Astro.props;
 
 const MFL_LEAGUE_ID = league.id;
 // Stamped on the page root so the controller below can tell THIS league's
@@ -72,7 +79,8 @@ const lineupInjuries = loadInjuryMap(PAGE_LEAGUE_SLUG);
 // ---------------------------------------------------------------------------
 // Core data loading
 // ---------------------------------------------------------------------------
-// The league's own MFL year clock (the AFL rolls over June 1 — see the registry).
+// The league's own MFL year clock (the AFL rolls over June 1, TheLeague
+// Feb 14 — see the registry).
 const leagueYear = getLeagueYearForSlug(league.slug);
 const currentWeek = getCurrentWeekForYear(leagueYear);
 const requestedWeek = parseInt(Astro.url.searchParams.get('week') || '', 10) || currentWeek;
@@ -112,8 +120,8 @@ const [rostersRes, projRes, weeklyRes, fpaRes, playersRes, liveOdds, weekResults
   // utils/lineup-sources.ts).
   fetch(`${mflBase}?TYPE=weeklyResults&L=${MFL_LEAGUE_ID}&W=${week}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
   fetch(`${mflBase}?TYPE=nflSchedule&W=${week}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
-  // The FANTASY schedule — who we play this week. Plural: the AFL runs
-  // double-header weeks too (three of them in 2026).
+  // The FANTASY schedule — who we play this week. Plural: both leagues run
+  // double-header weeks (TheLeague 1-3 and 13 in 2026, the AFL three).
   fetch(`${mflBase}?TYPE=schedule&L=${MFL_LEAGUE_ID}&W=${week}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
 ]);
 
@@ -181,7 +189,7 @@ const rosterPlayers = franchiseRoster?.player
   ? (Array.isArray(franchiseRoster.player) ? franchiseRoster.player : [franchiseRoster.player])
   : [];
 
-// AFL lineup positions (from league rules — identical to TheLeague: QB:1, RB:1-4, WR:1-4, TE:1-4, PK:1, DEF:1)
+// Lineup positions (from league rules — the same in every league: QB:1, RB:1-4, WR:1-4, TE:1-4, PK:1, DEF:1)
 const SLOT_POSITIONS = ['QB', 'RB', 'WR', 'TE', 'FLEX', 'FLEX', 'FLEX', 'PK', 'DEF'];
 
 // Eligible positions for each slot type
@@ -473,11 +481,10 @@ const fillIsProjected = fillState.fillIsProjected;
 // ---------------------------------------------------------------------------
 // Player-of-the-game faceoff — each of this week's games as a two-player split
 // composite over the two franchises' brand colors and crests, with a projected
-// scoreboard under it. PLURAL: the AFL schedules double-header weeks (three in
-// 2026), where a franchise plays two different opponents off ONE submitted
-// lineup, so the strip carries a card per game and becomes a swipeable
-// carousel when there is more than one. Shared with TheLeague's page — see
-// utils/lineup-matchup-cards.ts.
+// scoreboard under it. PLURAL: both leagues schedule double-header weeks, where
+// a franchise plays two different opponents off ONE submitted lineup, so the
+// strip carries a card per game and becomes a swipeable carousel when there is
+// more than one. See utils/lineup-matchup-cards.ts.
 // ---------------------------------------------------------------------------
 const rawWeeklySched = leagueSchedData?.schedule?.weeklySchedule;
 const schedWeekEntry = Array.isArray(rawWeeklySched)
@@ -500,7 +507,7 @@ const userProjTotal = slots.reduce(
 
 // Each panel wears its FRANCHISE, not the player's NFL team: brand color tint
 // plus the team's crest as the watermark, straight from the league config —
-// or from the franchise's LEGACY era during Throwback Week (Week 8).
+// or from the franchise's LEGACY era during Throwback Week.
 //
 // The DARK cut first, and not gated on the theme: the faceoff panel is a
 // team-color gradient over near-black in BOTH themes, so the site-wide
@@ -511,18 +518,26 @@ const userProjTotal = slots.reduce(
 // could not see, and rings the crests that stay on light artwork — four
 // franchises today (Harambe, Suh girls, Swiftie, the Boondock Saints) that the
 // site strokes under `html.dark` and this panel did not.
-const aflTeams: any[] = (aflConfig as any).teams ?? [];
-const aflTeamsById = new Map<string, any>(aflTeams.map((t: any) => [t.franchiseId, t]));
+const teams: any[] = (leagueConfig as any).teams ?? [];
+const teamsById = new Map<string, any>(teams.map((t: any) => [t.franchiseId, t]));
 
 // Throwback Week. Resolved server-side, once. The picks are read for the
 // WHOLE league, not just the teams this page renders: eras are claimed
 // league-wide, so an opponent's era depends on what everyone else claimed.
-const aflThrowbackActive = throwbackScope !== null && isThrowbackWeekForScope(week, throwbackScope);
-const aflThrowbackOverrides = aflThrowbackActive
-  ? await getAllThrowbackPreferences(aflTeams.map((t: any) => t.franchiseId), throwbackScope!)
+const throwbackActive = throwbackScope !== null && isThrowbackWeekForScope(week, throwbackScope);
+const throwbackOverrides = throwbackActive
+  ? await getAllThrowbackPreferences(teams.map((t: any) => t.franchiseId), throwbackScope!)
   : {};
-// The manifest key is the league SLUG (`afl`), not the route directory.
-const crestStrokes = crestStrokeIndex(league.navSlug, (aflConfig as any).teams ?? []);
+// The manifest key is the league's navSlug (`afl`), not the route directory.
+const crestStrokes = crestStrokeIndex(league.navSlug, teams);
+
+// The default league has a brand registry (utils/franchise-brand.ts) that every
+// other TheLeague surface reads its names, colors and crests through — full
+// franchise names, team-colors.ts palettes, the `groupMe` crest cuts, and an
+// era's own `groupMe` during Throwback Week. Its panels keep reading THAT, so
+// the faceoff looks exactly as it did before the pages were unified; every
+// other league reads its config directly below.
+const usesBrandRegistry = league.slug === DEFAULT_LEAGUE_SLUG;
 
 const matchupCards = buildMatchupCards({
   userFranchiseId: user.franchiseId,
@@ -539,16 +554,25 @@ const matchupCards = buildMatchupCards({
   slotPositions: SLOT_POSITIONS,
   slotEligibility: SLOT_ELIGIBILITY,
   brandFor: (franchiseId) => {
-    const team = aflTeamsById.get(franchiseId);
+    if (usesBrandRegistry) {
+      const brand = getThrowbackFranchiseBrand(franchiseId, throwbackActive, throwbackOverrides[franchiseId], throwbackOverrides);
+      // A throwback brand arrives with its dark cuts already cleared, so an era
+      // crest resolves to the era artwork and is never ringed — see
+      // `getThrowbackFranchiseBrand`.
+      const crest = resolveDarkSurfaceCrest(brand, league.navSlug, crestStrokes);
+      return { name: brand.name, color: brand.color, watermark: crest.src, watermarkFilter: crest.filter };
+    }
+
+    const team = teamsById.get(franchiseId);
     if (!team) return { name: '' };
 
-    if (aflThrowbackActive) {
+    if (throwbackActive) {
       const identity = resolveThrowbackIdentity(
         team,
-        aflThrowbackOverrides[franchiseId],
+        throwbackOverrides[franchiseId],
         throwbackScope!,
-        aflTeams,
-        aflThrowbackOverrides,
+        teams,
+        throwbackOverrides,
       );
       // Only when the franchise ACTUALLY threw back. `resolveThrowbackIdentity`
       // falls through to the current identity for one with no eligible era,
@@ -634,7 +658,13 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
 ---
 
 <TheLeagueLayout title="Set Lineup">
-  <div class="lineup-page" data-league={PAGE_LEAGUE_SLUG} data-controller="afl-family">
+  <div
+    class="lineup-page"
+    data-league={PAGE_LEAGUE_SLUG}
+    data-controller="lineup"
+    data-api={lineupApiPath(league.slug)}
+    data-draft-key={lineupDraftStorageKey(league.slug)}
+  >
     <!-- Header -->
     <header class="lineup-header">
       <h1 class="lineup-title">Set Lineup</h1>
@@ -917,13 +947,13 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
 
   <!-- Client-side lineup manager -->
   <script>
-    import { buildPlayerCellHTML } from '../../utils/player-cell-html';
-    import { injuryBadgeHTML } from '../../utils/mfl-injuries';
-    import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD } from '../../constants/roster-constants';
-    import { resolveSubmitButtonState } from '../../utils/lineup-submit-state';
-    import { selectBenchPlayers, buildBenchRowHTML } from '../../utils/lineup-bench';
-    import { loadLineupRankings, byRank, applyRankChips, onRankingsChanged } from '../../utils/lineup-rankings';
-    import type { LineupPlayer } from '../../types/lineups';
+    import { buildPlayerCellHTML } from '../../../utils/player-cell-html';
+    import { injuryBadgeHTML } from '../../../utils/mfl-injuries';
+    import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD } from '../../../constants/roster-constants';
+    import { resolveSubmitButtonState } from '../../../utils/lineup-submit-state';
+    import { selectBenchPlayers, buildBenchRowHTML } from '../../../utils/lineup-bench';
+    import { loadLineupRankings, byRank, applyRankChips, onRankingsChanged } from '../../../utils/lineup-rankings';
+    import type { LineupPlayer } from '../../../types/lineups';
     /**
      * CLIENTROUTER-SAFE INIT (frontend.md, "Interactive scripts must re-init on
      * astro:page-load"). This module is bundled, so it is evaluated ONCE per
@@ -981,11 +1011,17 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
       //
       // The teardown above still has to run first, so this gate goes here and
       // not earlier.
-      // One controller serves every AFL-family league, so it asks for its own
-      // marker and reads the league off the page it found — never a literal.
-      const pageRoot = document.querySelector<HTMLElement>('.lineup-page[data-controller="afl-family"]');
+      // One controller serves every league, so it asks for its own marker and
+      // reads the league — and everything keyed by it — off the page it found,
+      // never a literal. With one controller there is no departing league's
+      // listener left to bind the arriving league's DOM.
+      const pageRoot = document.querySelector<HTMLElement>('.lineup-page[data-controller="lineup"]');
       if (!pageRoot) return;
-      const leagueSlug = pageRoot.dataset.league ?? 'afl-fantasy';
+      const leagueSlug = pageRoot.dataset.league;
+      const lineupApiAttr = pageRoot.dataset.api;
+      if (!leagueSlug || !lineupApiAttr) return;
+      // Re-bound so the narrowing survives into submitLineup's closure.
+      const lineupApi: string = lineupApiAttr;
       if (!document.getElementById('lineup-slots')) return;
 
       // Re-read per load, never captured beside the imports. The `is:inline`
@@ -1154,8 +1190,9 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
       // ---------------------------------------------------------------------------
       // localStorage draft persistence
       // ---------------------------------------------------------------------------
-      // The AFL keeps its original key so no owner loses a saved draft.
-      const STORAGE_KEY = leagueSlug === 'afl-fantasy' ? 'lineup-draft-afl' : `lineup-draft-${leagueSlug}`;
+      // Each league keeps its original key so no owner loses a saved draft
+      // (utils/lineup-page-keys.ts).
+      const STORAGE_KEY = pageRoot.dataset.draftKey ?? `lineup-draft-${leagueSlug}`;
 
       function saveDraft() {
         // Only real edits are worth persisting. Storing an untouched page also
@@ -1733,7 +1770,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
         submitText.textContent = 'Submitting...';
 
         try {
-          const res = await fetch(`/api/${leagueSlug}/lineup`, {
+          const res = await fetch(lineupApi, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ week: data.week, starters: starterIds }),

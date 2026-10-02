@@ -62,8 +62,7 @@ describe('game odds and weather come from ONE system', () => {
     const pages = {
       'src/pages/theleague/rosters.astro': /loadLiveOddsData\(/,
       'src/components/shared/rosters/RostersPage.astro': /loadLiveOddsData\(/,
-      'src/pages/theleague/lineup.astro': /loadLiveOdds\(/,
-      'src/components/afl-family/LineupPage.astro': /loadLiveOdds\(/,
+      'src/components/shared/lineup/LineupPage.astro': /loadLiveOdds\(/,
     };
     for (const [page, call] of Object.entries(pages)) {
       expect(readFileSync(page, 'utf8'), page).toMatch(call);
