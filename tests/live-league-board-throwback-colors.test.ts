@@ -42,6 +42,8 @@ const today: ConfigTeam[] = [
 
 vi.mock('../src/utils/league-team-brands', () => ({
   getLeagueTeamConfigs: () => today.map((t) => ({ ...t })),
+  // league-board reads the config's structure too; null is "no override".
+  getLeagueConfigStructure: () => null,
 }));
 vi.mock('../src/utils/throwback-live-scoring', () => ({
   applyThrowbackToBoard: vi.fn(),
