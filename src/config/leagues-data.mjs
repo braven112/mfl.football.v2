@@ -30,6 +30,8 @@ export const LEAGUES = {
      */
     archetype: 'dynasty-cap',
     name: 'The League',
+    /** League mark: light cut for light grounds, dark cut for dark ones. */
+    logo: { light: '/assets/logos/theleague-logo.svg', dark: '/assets/logos/theleague-logo-dark.svg' },
     /** MFL server hostname for this league */
     mflHost: 'www49.myfantasyleague.com',
     /** Repo-relative data directory written by the fetch pipelines */
@@ -204,6 +206,7 @@ export const LEAGUES = {
     theme: 'afl',
     archetype: 'deluxe-keeper',
     name: 'AFL',
+    logo: { light: '/assets/logos/afl-logo.svg', dark: '/assets/logos/afl-logo-dark.svg' },
     mflHost: 'www44.myfantasyleague.com',
     dataPath: 'data/afl-fantasy',
     domains: ['afl-fantasy.com', 'www.afl-fantasy.com'],
@@ -369,6 +372,7 @@ export const LEAGUES = {
     theme: 'bb1',
     archetype: 'best-ball',
     name: 'Best Ball #1',
+    logo: { light: '/assets/logos/bestball-logo.svg', dark: '/assets/logos/bestball-logo-dark.svg' },
     mflHost: 'www45.myfantasyleague.com',
     dataPath: 'data/best-ball-1',
     /**
@@ -674,6 +678,7 @@ if (isDemoEnv()) {
      */
     navLinks: KEEPER_NAV_LINKS,
     name: 'The Keeper League',
+    logo: { light: '/assets/logos/keeper-logo.svg', dark: '/assets/logos/keeper-logo-dark.svg' },
     mflHost: LEAGUES['afl-fantasy'].mflHost,
     dataPath: 'data/keeper',
     demoPath: 'keeper',
