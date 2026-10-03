@@ -367,6 +367,12 @@ export interface LeagueDefinition {
   logoOg?: string;
   /** Schefter share-card branding. Absent = derived from name, domain and themeColor. */
   shareCard?: { name: string; domain: string; primary: string };
+  /** Demo banner line, when the archetype's default does not fit. */
+  demoPitch?: string;
+  /** First season of the league's player archive. Absent = not stated on draft results. */
+  playerArchiveStartYear?: number;
+  /** Weekly Schefter article types the league gets. Absent = every type. */
+  articleTypes?: string[];
   /** Push notification icon + Android badge. Absent = the site's PWA art. */
   pushArt?: { icon: string; badge: string };
   /** Optional wordmark shown beside `logo` instead of the text short name. */
