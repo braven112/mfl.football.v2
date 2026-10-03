@@ -50,6 +50,21 @@ and Storybook). Plan and later phases: `docs/plans/league-themes.md`.
   for a light-only override (SplashLayout, css-customization).
 - **A non-league surface** (MFL Live's `data-league="mfl"`) maps to its theme
   in `THEMED_SURFACES` in the generator, never through the registry.
+- **A themed fill carries the theme's text colour, never a hard-coded white.**
+  `background: var(--league-accent)` pairs with `color: var(--on-league-accent,
+  #fff)`; likewise `--color-accent`/`--on-color-accent`,
+  `--btn-primary-bg`/`--btn-primary-text`,
+  `--btn-secondary-bg`/`--btn-secondary-text`, and
+  `--color-primary-fill`/`--on-color-primary` for the primary. Archie's sky
+  blue, the AFL's dark red and Best Ball's dark emerald all carry white at
+  under 4.5:1; 103 rules shipped that way before the sweep.
+- **Heroes read `--hero-*`** (ink, surface, accent, glow, urgent, gradient,
+  anchor, highlight, pills, CTA ink), never TheLeague's navy literals. A theme
+  that leaves `--hero-gradient` and friends null keeps the composite hero's
+  per-variant ramp. **Text selection** reads `--selection-bg` / `-text`.
+- **Every slot in the contract is read somewhere** — a slot no page reads is
+  a colour a league approves and never sees. Nineteen such slots were removed
+  in Oct 2026.
 - Guard: `tests/league-themes.test.ts` — generated CSS fresh, every theme
   complete, every league's theme exists, no themed token in the shared token
   files, no themed token on a weak `:root`/`html` selector.

@@ -160,23 +160,50 @@ describe('league themes', () => {
     expect(offenders).toEqual([]);
   });
 
-  it('a --color-primary FILL under white text reads the fill and on-fill slots', () => {
-    // --color-primary is the TEXT blue; on the AFL's navy dark ground no one
-    // blue carries white AND reads as text. A rule that fills with it under
-    // a hard-coded white must go through --color-primary-fill /
-    // --on-color-primary, which the theme sets where the two jobs split.
+  it('a themed FILL under hard-coded white reads its on-fill slot instead', () => {
+    // A league's fill colour is the theme's, so the text on it must be too:
+    // Archie's sky blue, the AFL's dark red and Best Ball's dark emerald all
+    // carry white at under 4.5:1. The primary fill also goes through
+    // --color-primary-fill, because --color-primary is the TEXT blue.
     const WHITE = /^(#fff|#ffffff|white|var\(--color-white(, ?#fff(fff)?)?\))$/i;
+    const FILLS = /background(?:-color)?\s*:\s*var\(--(color-primary|league-accent|color-accent|btn-primary-bg|btn-secondary-bg)\b/;
     const offenders: string[] = [];
     for (const file of walk(path.join(ROOT, 'src'), ['.css', '.astro', '.tsx'])) {
       if (file.includes('league-themes.generated') || file.includes(`${path.sep}themes${path.sep}`)) continue;
       for (const m of fs.readFileSync(file, 'utf8').matchAll(/\{([^{}]*?)\}/g)) {
         const body = m[1]!;
-        if (!/background(?:-color)?\s*:\s*var\(--color-primary\b/.test(body)) continue;
+        const fill = body.match(FILLS);
+        if (!fill) continue;
         const c = body.match(/(?:^|[;\s{])color\s*:\s*([^;]+?)\s*(?:!important)?\s*;/);
-        if (c && WHITE.test(c[1]!.trim())) offenders.push(path.relative(ROOT, file));
+        if (c && WHITE.test(c[1]!.trim())) offenders.push(`${path.relative(ROOT, file)} (--${fill[1]})`);
       }
     }
     expect(offenders).toEqual([]);
+  });
+
+  it('every themed token is read somewhere — the review page shows nothing no page uses', () => {
+    // Read directly by a component, or through a shared alias / another
+    // theme value that is itself read. A slot nothing reads is a colour a
+    // league approves on its review page and then never sees on the site.
+    const tokenFiles = ['src/styles/tokens.css', 'src/styles/tokens-dark.css'].map((r) => fs.readFileSync(path.join(ROOT, r), 'utf8')).join('\n');
+    const code = [
+      ...walk(path.join(ROOT, 'src'), ['.astro', '.css', '.ts', '.tsx', '.mjs']).filter(
+        (f) => !/league-themes\.generated|[\\/]themes[\\/]|tokens(-dark)?\.css|theme-tokens\.mjs/.test(f),
+      ),
+    ].map((f) => fs.readFileSync(f, 'utf8')).join('\n');
+    const reads = (name: string, text: string) => new RegExp(`var\\(\\s*${name}\\s*[,)]`).test(text);
+    const aliases = (name: string) => {
+      const out = new Set<string>();
+      for (const m of tokenFiles.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)) if (reads(name, m[2]!)) out.add(m[1]!);
+      for (const t of Object.values(themes) as any[]) for (const mode of ['light', 'dark']) for (const [k, v] of Object.entries(t[mode] ?? {})) if (typeof v === 'string' && reads(name, v)) out.add(k);
+      return out;
+    };
+    const reached = (name: string, seen = new Set<string>()): boolean => {
+      if (seen.has(name)) return false;
+      seen.add(name);
+      return reads(name, code) || [...aliases(name)].some((a) => reached(a, seen));
+    };
+    expect(THEMED_TOKENS.filter((t: string) => !reached(t))).toEqual([]);
   });
 
   it('no stylesheet sets a themed token on a selector the theme blocks outrank', () => {

@@ -109,13 +109,13 @@ const summary = isUserChampion
        invalid-at-computed-value-time rule this whole file is now guarding
        against, which is a poor thing to depend on deliberately. */
     --champ-surface: none;
-    background-color: #0f1e2e;
+    background-color: var(--hero-ink, #0f1e2e);
     --champ-ink: #ffffff;
     --champ-ink-soft: rgba(255, 255, 255, 0.72);
     --champ-ink-faint: rgba(255, 255, 255, 0.6);
     --champ-divider: rgba(255, 255, 255, 0.16);
     --champ-cta-bg: #ffffff;
-    --champ-cta-ink: #0f1e2e;
+    --champ-cta-ink: var(--hero-ink, #0f1e2e);
     --champ-glow-alpha: 0.4;
     --champ-accent-ink: var(--color-warning, #f59e0b);
     --champ-logo-opacity: 0.5;

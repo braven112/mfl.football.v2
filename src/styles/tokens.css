@@ -321,6 +321,10 @@
   --color-success: #10b981;
   --color-success-light: #d1fae5;
   --color-success-dark: #059669;
+  /* Success as a FILL under text: #10b981 carries white at only 2.54:1 and
+     #059669 at 3.77:1, both under AA; #047857 is 5.48:1. */
+  --color-success-fill: #047857;
+  --on-color-success-fill: #ffffff;
 
   --color-warning: #f59e0b;
   --color-warning-light: #fef3c7;
@@ -375,8 +379,6 @@
   --primary-link-focus-text-color: var(--link-color-focus);
 
   --inverse-link-default-text-color: var(--link-color-inverse);
-  --inverse-link-hover-text-color: var(--link-color-inverse-hover);
-  --inverse-link-focus-text-color: var(--link-color-inverse-hover);
 
   --accent-link-default-text-color: var(--link-color-accent);
   --accent-link-hover-text-color: var(--link-color-accent-hover);
@@ -397,7 +399,6 @@
   /* Legacy aliases (with typo fix: detault -> default) */
   --primary-btn-default-bg-color: var(--btn-primary-bg);
   --primary-btn-hover-bg-color: var(--btn-primary-bg-hover);
-  --primary-btn-focus-bg-color: var(--btn-primary-bg-focus);
   --primary-btn-default-text-color: var(--btn-primary-text);
   --primary-btn-hover-text-color: var(--btn-primary-text);
   --primary-btn-focus-text-color: var(--btn-primary-text);
@@ -407,17 +408,10 @@
 
   --secondary-btn-default-bg-color: var(--btn-secondary-bg);
   --secondary-btn-hover-bg-color: var(--btn-secondary-bg-hover);
-  --secondary-btn-focus-bg-color: var(--btn-secondary-bg-focus);
   --secondary-btn-default-text-color: var(--btn-secondary-text);
   --secondary-btn-hover-text-color: var(--btn-secondary-text);
   --secondary-btn-focus-text-color: var(--btn-secondary-text);
-  --secondary-btn-default-border-color: var(--btn-secondary-border);
-  --secondary-btn-hover-border-color: var(--btn-secondary-border-hover);
-  --secondary-btn-focus-border-color: var(--btn-secondary-border-hover);
 
-  --inverse-btn-default-bg-color: var(--btn-inverse-bg);
-  --inverse-btn-hover-bg-color: var(--btn-inverse-bg-hover);
-  --inverse-btn-focus-bg-color: var(--btn-inverse-bg-focus);
   --inverse-btn-default-text-color: var(--btn-inverse-text);
   --inverse-btn-hover-text-color: var(--btn-inverse-text-hover);
   --inverse-btn-focus-text-color: var(--btn-inverse-text-hover);
@@ -443,8 +437,6 @@
 
   /* Legacy aliases */
   --inverse-content-bg: var(--inverse-bg);
-  --inverse-accent-bg: var(--inverse-bg-accent);
-  --inverse-content-border-color: var(--inverse-border);
   --inverse-color: var(--inverse-text);
 
   /* ========================================

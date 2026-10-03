@@ -2037,7 +2037,6 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
 
     --lineup-submit-ready: var(--btn-secondary-bg, #2e8743);
     --lineup-submit-error: var(--color-error, #dc2626);
-    --lineup-submit-success: var(--color-success, #10b981);
 
     --lineup-page-px: var(--spacing-md, 1rem);
     --lineup-slot-gap: var(--spacing-sm, 0.5rem);
@@ -2515,8 +2514,8 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
   }
 
   .lineup-submit--success {
-    background: var(--lineup-submit-success);
-    color: var(--btn-secondary-text, #fff);
+    background: var(--color-success-fill);
+    color: var(--on-color-success-fill);
     animation: lineup-submit-success 0.4s ease-out;
   }
 

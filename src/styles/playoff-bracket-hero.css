@@ -21,18 +21,18 @@
   --plhero-ink-faint: var(--color-gray-500, #6b7280);
   --plhero-ink-dim: var(--color-gray-400, #9ca3af);
   --plhero-badge-bg: var(--color-gray-100, #f3f4f6);
-  --plhero-cta-bg: #0f1e2e;
+  --plhero-cta-bg: var(--hero-ink, #0f1e2e);
   --plhero-cta-ink: #ffffff;
   --plhero-you-badge-ink: #ffffff;
   --plhero-radius: var(--radius-lg, 0.75rem);
   --plhero-accent: #d97706;
-  --plhero-user-accent: #2563eb;
+  --plhero-user-accent: var(--hero-accent, #2563eb);
   --plhero-glow: color-mix(in srgb, var(--plhero-accent) 22%, transparent);
   --plhero-icon-size: 24px;
 }
 
 html.dark {
-  --plhero-bg: #0f1e2e;
+  --plhero-bg: var(--hero-ink, #0f1e2e);
   --plhero-border: rgba(255, 255, 255, 0.12);
   --plhero-card-bg: rgba(255, 255, 255, 0.05);
   --plhero-row-border: rgba(255, 255, 255, 0.1);
@@ -42,10 +42,10 @@ html.dark {
   --plhero-ink-dim: rgba(255, 255, 255, 0.45);
   --plhero-badge-bg: rgba(255, 255, 255, 0.1);
   --plhero-cta-bg: #ffffff;
-  --plhero-cta-ink: #0f1e2e;
-  --plhero-you-badge-ink: #0f1e2e;
+  --plhero-cta-ink: var(--hero-ink, #0f1e2e);
+  --plhero-you-badge-ink: var(--hero-ink, #0f1e2e);
   --plhero-accent: #f0a23a;
-  --plhero-user-accent: #60a5fa;
+  --plhero-user-accent: var(--hero-accent, #60a5fa);
   --plhero-glow: color-mix(in srgb, var(--plhero-accent) 28%, transparent);
 }
 

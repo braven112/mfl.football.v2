@@ -49,6 +49,8 @@ html.dark {
   --color-success: #34d399;
   --color-success-light: rgba(16, 185, 129, 0.15);
   --color-success-dark: #6ee7b7;
+  --color-success-fill: #34d399;               /* bright emerald under dark text (9.7:1) */
+  --on-color-success-fill: #121212;
 
   --color-warning: #fbbf24;
   --color-warning-light: rgba(245, 158, 11, 0.15);
@@ -100,8 +102,6 @@ html.dark {
   --primary-link-focus-text-color: var(--link-color-focus);
 
   --inverse-link-default-text-color: var(--link-color-inverse);
-  --inverse-link-hover-text-color: var(--link-color-inverse-hover);
-  --inverse-link-focus-text-color: var(--link-color-inverse-hover);
 
   --accent-link-default-text-color: var(--link-color-accent);
   --accent-link-hover-text-color: var(--link-color-accent-hover);
@@ -121,7 +121,6 @@ html.dark {
   /* Legacy aliases */
   --primary-btn-default-bg-color: var(--btn-primary-bg);
   --primary-btn-hover-bg-color: var(--btn-primary-bg-hover);
-  --primary-btn-focus-bg-color: var(--btn-primary-bg-focus);
   --primary-btn-default-text-color: var(--btn-primary-text);
   --primary-btn-hover-text-color: var(--btn-primary-text);
   --primary-btn-focus-text-color: var(--btn-primary-text);
@@ -131,17 +130,10 @@ html.dark {
 
   --secondary-btn-default-bg-color: var(--btn-secondary-bg);
   --secondary-btn-hover-bg-color: var(--btn-secondary-bg-hover);
-  --secondary-btn-focus-bg-color: var(--btn-secondary-bg-focus);
   --secondary-btn-default-text-color: var(--btn-secondary-text);
   --secondary-btn-hover-text-color: var(--btn-secondary-text);
   --secondary-btn-focus-text-color: var(--btn-secondary-text);
-  --secondary-btn-default-border-color: var(--btn-secondary-border);
-  --secondary-btn-hover-border-color: var(--btn-secondary-border-hover);
-  --secondary-btn-focus-border-color: var(--btn-secondary-border-hover);
 
-  --inverse-btn-default-bg-color: var(--btn-inverse-bg);
-  --inverse-btn-hover-bg-color: var(--btn-inverse-bg-hover);
-  --inverse-btn-focus-bg-color: var(--btn-inverse-bg-focus);
   --inverse-btn-default-text-color: var(--btn-inverse-text);
   --inverse-btn-hover-text-color: var(--btn-inverse-text-hover);
   --inverse-btn-focus-text-color: var(--btn-inverse-text-hover);
@@ -166,8 +158,6 @@ html.dark {
 
   /* Legacy aliases */
   --inverse-content-bg: var(--inverse-bg);
-  --inverse-accent-bg: var(--inverse-bg-accent);
-  --inverse-content-border-color: var(--inverse-border);
   --inverse-color: var(--inverse-text);
 
   /* ========================================

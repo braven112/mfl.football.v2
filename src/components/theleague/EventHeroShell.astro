@@ -189,7 +189,7 @@ const countAriaLabel = hasCount
        deep-navy dark chrome. --ev-surface stays a SOLID color (the player photo
        color-mixes its left feather against it). Deep navy applied under
        html.dark; both themes now share the white-on-dark foreground. */
-    --ev-surface: #1c497c;
+    --ev-surface: var(--hero-surface, #1c497c);
     --ev-ink: #ffffff;
     --ev-ink-soft: rgba(255, 255, 255, 0.72);
     --ev-ink-faint: rgba(255, 255, 255, 0.6);
@@ -198,9 +198,9 @@ const countAriaLabel = hasCount
     --ev-tile-hover-bg: rgba(255, 255, 255, 0.12);
     --ev-tile-hover-border: rgba(255, 255, 255, 0.25);
     --ev-cta-bg: #ffffff;
-    --ev-cta-ink: #0f1e2e;
+    --ev-cta-ink: var(--hero-ink, #0f1e2e);
     --ev-divider: rgba(255, 255, 255, 0.16);
-    --ev-glow-resolved: var(--ev-glow, rgba(28, 73, 124, 0.55));
+    --ev-glow-resolved: var(--ev-glow, var(--hero-glow, rgba(28, 73, 124, 0.55)));
     --ev-border-strength: 55%;
     /* Photo feathers against the dark surface now — the tighter navy-on-navy
        fade stops (same as dark) read cleanly. */
@@ -227,7 +227,7 @@ const countAriaLabel = hasCount
   }
 
   :global(html.dark) .tl-event-hero {
-    --ev-surface: #0f1e2e;
+    --ev-surface: var(--hero-surface, #0f1e2e);
     --ev-ink: #ffffff;
     --ev-ink-soft: rgba(255, 255, 255, 0.72);
     --ev-ink-faint: rgba(255, 255, 255, 0.6);
@@ -236,9 +236,9 @@ const countAriaLabel = hasCount
     --ev-tile-hover-bg: rgba(255, 255, 255, 0.12);
     --ev-tile-hover-border: rgba(255, 255, 255, 0.25);
     --ev-cta-bg: #ffffff;
-    --ev-cta-ink: #0f1e2e;
+    --ev-cta-ink: var(--hero-ink, #0f1e2e);
     --ev-divider: rgba(255, 255, 255, 0.16);
-    --ev-glow-resolved: var(--ev-glow, rgba(28, 73, 124, 0.55));
+    --ev-glow-resolved: var(--ev-glow, var(--hero-glow, rgba(28, 73, 124, 0.55)));
     --ev-border-strength: 55%;
     --ev-fade-left: linear-gradient(
       90deg,

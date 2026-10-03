@@ -16,6 +16,8 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { loadThemes } from '../scripts/generate-league-themes.mjs';
+import { resolveTheme } from '../scripts/lib/theme-resolve.mjs';
 
 const read = (p: string) => readFileSync(resolve(process.cwd(), p), 'utf-8');
 
@@ -29,35 +31,25 @@ const stripComments = (css: string) => css.replace(/\/\*[\s\S]*?\*\//g, '');
 
 const CSS = stripComments(read('src/styles/live-scoring-hero.css'));
 
-interface AccentRule { league: string; dark: boolean; hex: string; selector: string }
+type Mode = 'light' | 'dark';
+const themes = loadThemes() as Record<string, Record<Mode, Record<string, string | null>>>;
 
-/**
- * Every rule that sets --lsh-accent under a [data-league] selector.
- *
- * The dark flag is read from the WHOLE selector rather than from a fixed
- * position, because `html.dark[data-league="afl"]` and
- * `html[data-league="afl"].dark` are both valid at identical specificity and
- * the repo uses the former (tokens-dark.css). A guard that only understood one
- * ordering would read a correct dark override as a second light one and pass
- * a file with no dark value at all.
- *
- * The hex is captured HERE, from the block already matched, so nothing has to
- * rebuild a selector-shaped regex later and re-make the same assumption.
- */
-function accentRules(): AccentRule[] {
-  const out: AccentRule[] = [];
-  const re = /([^{}]*\[data-league=["']([a-z0-9-]+)["'][^{}]*)\{([^}]*)\}/g;
-  for (const m of CSS.matchAll(re)) {
-    const [, selector, league, body] = m;
-    const hex = body.match(/--lsh-accent\s*:\s*(#[0-9a-fA-F]{6})\b/)?.[1];
-    if (!hex) continue;
-    out.push({ league, dark: /\.dark\b/.test(selector), hex, selector: selector.trim() });
+/** Each theme's resolved hero accent and hero ink, per mode. */
+function accents(): { theme: string; mode: Mode; hex: string; ink: string }[] {
+  const out: { theme: string; mode: Mode; hex: string; ink: string }[] = [];
+  for (const [id, theme] of Object.entries(themes)) {
+    for (const mode of ['light', 'dark'] as const) {
+      const r = resolveTheme(theme, mode);
+      out.push({ theme: id, mode, hex: r['--hero-accent']!, ink: r['--hero-ink']! });
+    }
   }
   return out;
 }
 
 const luminance = (hex: string) => {
-  const ch = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+  let h = hex.replace('#', '');
+  if (h.length === 3) h = [...h].map((c) => c + c).join('');
+  const ch = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
   const f = (v: number) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
   return 0.2126 * f(ch[0]) + 0.7152 * f(ch[1]) + 0.0722 * f(ch[2]);
 };
@@ -67,55 +59,41 @@ const contrast = (a: string, b: string) => {
 };
 
 /**
- * The surface the accent is judged against, per theme.
- *
- * It doubles as the badge's INK (--lsh-featured-badge-ink is #ffffff light /
- * #0f1e2e dark — the same two values as --lsh-bg), so one comparison covers
- * both roles, and the binding floor is the stricter of the two: the badge
- * label is 10px, which is WCAG small text at 4.5:1, not the 3:1 the 24px bold
- * score would allow on its own.
+ * The surface the accent is judged against: the white card in light, the
+ * theme's --hero-ink card in dark. It doubles as the badge's INK
+ * (--lsh-featured-badge-ink is #ffffff light / --hero-ink dark), so one
+ * comparison covers both roles, at the 4.5:1 the 10px badge label needs.
  */
-const SURFACE = { light: '#ffffff', dark: '#0f1e2e' } as const;
 const MIN_CONTRAST = 4.5;
 
 describe('per-league live-scoring accent', () => {
-  it('the AFL overrides the accent at all', () => {
-    // Without this the AFL renders TheLeague's #2563eb blue.
-    expect(accentRules().some((r) => r.league === 'afl')).toBe(true);
+  it('the hero reads the theme accent and ink in both modes, not a league name', () => {
+    expect(CSS).toMatch(/--lsh-accent:\s*var\(--hero-accent,/);
+    expect(CSS).toMatch(/--lsh-bg:\s*var\(--hero-ink,/);
+    expect(CSS).toMatch(/--lsh-featured-badge-ink:\s*var\(--hero-ink,/);
+    expect(CSS).not.toMatch(/\[data-league=/);
   });
 
-  it('every league that overrides the accent covers BOTH themes', () => {
-    const byLeague = new Map<string, Set<boolean>>();
-    for (const r of accentRules()) {
-      if (!byLeague.has(r.league)) byLeague.set(r.league, new Set());
-      byLeague.get(r.league)!.add(r.dark);
-    }
-    const halfDone = [...byLeague.entries()]
-      .filter(([, themes]) => themes.size < 2)
-      .map(([league, themes]) => `${league} (only ${[...themes][0] ? 'dark' : 'light'})`);
-    expect(halfDone).toEqual([]);
+  it('every theme sets a hero accent in both modes', () => {
+    const missing = accents().filter((a) => !a.hex || !/^#/.test(a.hex)).map((a) => `${a.theme} ${a.mode}`);
+    expect(missing).toEqual([]);
   });
 
-  it('every override clears AA against the card it sits on, in its own theme', () => {
-    // WCAG thresholds are inclusive, so this is >= rather than >: a value that
-    // lands exactly on 4.5:1 passes the standard and must pass here too.
-    const failures = accentRules()
-      .map((r) => ({ r, ratio: contrast(r.hex, SURFACE[r.dark ? 'dark' : 'light']) }))
+  it('every accent clears AA against the card it sits on, in its own mode', () => {
+    // WCAG thresholds are inclusive, so this is >= rather than >.
+    const failures = accents()
+      .map((a) => ({ a, ratio: contrast(a.hex, a.mode === 'light' ? '#ffffff' : a.ink) }))
       .filter(({ ratio }) => ratio < MIN_CONTRAST)
-      .map(({ r, ratio }) => `${r.selector} → ${r.hex} is ${ratio.toFixed(2)}:1`);
+      .map(({ a, ratio }) => `${a.theme} ${a.mode} → ${a.hex} is ${ratio.toFixed(2)}:1`);
     expect(failures).toEqual([]);
   });
 
-  it('the AFL light accent is DARK and the dark accent is LIGHT', () => {
-    // The direction, not just the ratio — a near-white light accent and a
-    // near-black dark one would both fail the check above, but this states the
-    // intent plainly and fails a straight copy-paste between the two blocks.
-    const afl = Object.fromEntries(
-      accentRules().filter((r) => r.league === 'afl').map((r) => [r.dark ? 'dark' : 'light', r.hex]),
-    );
-    expect(luminance(afl.light)).toBeLessThan(luminance(SURFACE.light));
-    expect(luminance(afl.dark)).toBeGreaterThan(luminance(SURFACE.dark));
-    expect(afl.light).not.toBe(afl.dark);
+  it('the AFL keeps its own navy: DARK in light, LIGHT in dark', () => {
+    const afl = Object.fromEntries(accents().filter((a) => a.theme === 'afl').map((a) => [a.mode, a]));
+    expect(afl.light.hex).toBe('#16324a');
+    expect(luminance(afl.light.hex)).toBeLessThan(luminance('#ffffff'));
+    expect(luminance(afl.dark.hex)).toBeGreaterThan(luminance(afl.dark.ink));
+    expect(afl.light.hex).not.toBe(afl.dark.hex);
   });
 });
 

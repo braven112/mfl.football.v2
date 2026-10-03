@@ -1598,7 +1598,7 @@ button.lv-card:focus-visible {
   padding: 0.05rem 0.3rem;
   border-radius: var(--radius-sm);
   background: var(--league-accent);
-  color: var(--color-white);
+  color: var(--on-league-accent, var(--color-white));
   font-size: 0.6rem;
   font-weight: var(--font-weight-bold);
   letter-spacing: 0.04em;

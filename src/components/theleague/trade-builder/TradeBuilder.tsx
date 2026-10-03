@@ -982,7 +982,7 @@ export default function TradeBuilder({
         }
         .trade-builder__swap {
           background: var(--btn-primary-bg, #1c497c);
-          color: #fff;
+          color: var(--btn-primary-text, #fff);
           border: none;
           border-radius: 50%;
           width: 2.5rem;

@@ -16,50 +16,34 @@
   --tdhero-ink-soft: var(--color-gray-600, #4b5563);
   --tdhero-ink-faint: var(--color-gray-500, #6b7280);
   --tdhero-separator: var(--color-gray-300, #d1d5db);
-  --tdhero-cta-bg: #0f1e2e;
+  --tdhero-cta-bg: var(--hero-ink, #0f1e2e);
   --tdhero-cta-ink: #ffffff;
   --tdhero-radius: var(--radius-lg, 0.75rem);
-  --tdhero-accent: var(--color-error, #dc2626);
-  --tdhero-glow: rgba(220, 38, 38, 0.2);
+  /* Urgency red: the theme's --hero-urgent where a league sets one (the AFL
+     uses its own red), the shared error red otherwise. */
+  --tdhero-accent: var(--hero-urgent, var(--color-error, #dc2626));
+  --tdhero-glow: color-mix(in srgb, var(--tdhero-accent) 20%, transparent);
   --tdhero-countdown-size: 2.5rem;
 }
 
 html.dark {
-  --tdhero-bg: #0f1e2e;
+  --tdhero-bg: var(--hero-ink, #0f1e2e);
   --tdhero-ink: #ffffff;
   --tdhero-ink-soft: rgba(255, 255, 255, 0.72);
   --tdhero-ink-faint: rgba(255, 255, 255, 0.55);
   --tdhero-separator: rgba(255, 255, 255, 0.25);
   --tdhero-cta-bg: #ffffff;
-  --tdhero-cta-ink: #0f1e2e;
-  --tdhero-glow: rgba(220, 38, 38, 0.3);
+  --tdhero-cta-ink: var(--hero-ink, #0f1e2e);
+  --tdhero-glow: color-mix(in srgb, var(--tdhero-accent) 30%, transparent);
 }
 
-/* ── AFL: the league's own red, not the generic error red. ────────────────
-   The accent stays RED for both leagues on purpose. It is an urgency signal,
-   not a brand flourish — this card only renders ON deadline day — and the
-   AFL's own resolver already says so: its DEADLINE treatment is gold until
-   `days === 0`, then flips to `tone: 'red'`. So the league colour for this
-   card is the AFL's red (--league-accent, #c41e3a light / #ef5350 dark),
-   the same one the nav and breadcrumb bar wear.
-
-   NOT `var(--league-accent)` unscoped: TheLeague's resolves to
-   --color-primary #1c497c, so a "use the league accent" rule would paint its
-   deadline hero BLUE and quietly delete the urgency this component exists to
-   convey.
-
-   The glow is set alongside each accent because it is a hardcoded rgba, not
-   derived from the accent — changing one without the other leaves a red wash
-   behind a crimson border. */
-html[data-league="afl"] {
-  --tdhero-accent: #c41e3a;
-  --tdhero-glow: rgba(196, 30, 58, 0.2);
-}
-
-html.dark[data-league="afl"] {
-  --tdhero-accent: #ef5350;
-  --tdhero-glow: rgba(239, 83, 80, 0.3);
-}
+/* ── A league's own urgency red ──────────────────────────────────────────
+   The accent stays RED on purpose: it is an urgency signal, not a brand
+   flourish — this card only renders ON deadline day. A league whose own
+   colour is a red (the AFL) sets --hero-urgent in its theme; never point
+   this at --league-accent unconditionally, because TheLeague's is blue and
+   would quietly delete the urgency the card exists to convey. The glow is
+   derived from the accent, so the two cannot drift apart. */
 
 /* ── Container ── */
 .tdhero {

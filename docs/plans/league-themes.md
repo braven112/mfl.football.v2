@@ -201,3 +201,19 @@ colors); everything after it is additive.
   theme's note). TheLeague and Best Ball dark still fail the same pair at
   3.68:1, and each needs one `--color-primary-fill` value.
 
+## Shared components on the theme — Oct 2026 audit, fixed
+
+- 103 rules filled with a themed colour under hard-coded white; all now read
+  the matching on-fill slot (guarded).
+- Heroes (event shell, composite, live scoring, playoff bracket, trade
+  deadline, champion, calendar card) read the `--hero-*` slots; the AFL-only
+  `[data-league]` hero blocks moved into the AFL theme. Archie's, Best Ball
+  and MFL Live heroes now wear their own colours; TheLeague's and the AFL's
+  are unchanged.
+- Text selection is one rule reading `--selection-bg` / `--selection-text`.
+- 19 slots nothing read were removed with 12 aliases that only fed them; a
+  guard now fails on an unread slot.
+- New shared status pair `--color-success-fill` / `--on-color-success-fill`
+  (Set Lineup's saved state).
+- Every review page passes all 13 readability pairs in both modes.
+

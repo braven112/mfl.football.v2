@@ -23,9 +23,6 @@ export const THEME_TOKEN_GROUPS = [
   {
     label: 'Surfaces',
     tokens: [
-      '--btn-inverse-bg',
-      '--btn-inverse-bg-focus',
-      '--btn-inverse-bg-hover',
       '--card-bg',
       '--card-border',
       '--card-surface',
@@ -36,10 +33,7 @@ export const THEME_TOKEN_GROUPS = [
       '--content-bg-accent',
       '--content-bg-muted',
       '--input-bg',
-      '--input-disabled-bg',
       '--inverse-bg',
-      '--inverse-bg-accent',
-      '--inverse-border',
       '--page-bg',
       '--table-border',
       '--table-header-bg',
@@ -90,7 +84,6 @@ export const THEME_TOKEN_GROUPS = [
     tokens: [
       '--btn-icon-text-focus',
       '--btn-primary-bg',
-      '--btn-primary-bg-focus',
       '--btn-primary-bg-hover',
       '--btn-primary-border',
       '--btn-primary-border-hover',
@@ -117,10 +110,7 @@ export const THEME_TOKEN_GROUPS = [
     label: 'Secondary',
     tokens: [
       '--btn-secondary-bg',
-      '--btn-secondary-bg-focus',
       '--btn-secondary-bg-hover',
-      '--btn-secondary-border',
-      '--btn-secondary-border-hover',
       '--btn-secondary-text',
       '--color-secondary',
       '--color-secondary-dark',
@@ -138,8 +128,8 @@ export const THEME_TOKEN_GROUPS = [
       '--link-color-accent-hover',
       '--link-color-focus',
       '--link-color-hover',
-      '--link-color-inverse-hover',
       '--on-league-accent',
+      '--on-color-accent',
     ],
   },
   {
@@ -156,10 +146,35 @@ export const THEME_TOKEN_GROUPS = [
     ],
   },
   {
+    // The hero vocabulary every shared hero reads. Null --hero-gradient /
+    // --hero-highlight / --hero-pill-* / --hero-cta-ink keep the composite
+    // hero's per-variant defaults (TheLeague's blue ramp).
+    label: 'Heroes',
+    tokens: [
+      '--hero-ink',
+      '--hero-surface',
+      '--hero-accent',
+      '--hero-glow',
+      '--hero-urgent',
+      '--hero-gradient',
+      '--hero-anchor',
+      '--hero-highlight',
+      '--hero-pill-bg',
+      '--hero-pill-border',
+      '--hero-cta-ink',
+    ],
+  },
+  {
+    label: 'Text selection',
+    tokens: [
+      '--selection-bg',
+      '--selection-text',
+    ],
+  },
+  {
     label: 'Side nav',
     tokens: [
       '--nav-active-bg',
-      '--nav-active-border-left',
       '--nav-active-text',
       '--nav-bg',
       '--nav-bg-subtle',
@@ -171,14 +186,9 @@ export const THEME_TOKEN_GROUPS = [
       '--nav-hover-bg',
       '--nav-scrollbar-thumb',
       '--nav-scrollbar-thumb-hover',
-      '--nav-switcher-active-bg',
-      '--nav-switcher-active-text',
       '--nav-switcher-bg',
-      '--nav-switcher-border',
       '--nav-text',
       '--nav-text-muted',
-      '--nav-text-subtle',
-      '--nav-tooltip-bg',
       '--nav-verify-bg',
       '--nav-verify-border',
       '--nav-verify-hover-bg',
@@ -197,9 +207,7 @@ export const THEME_TOKEN_GROUPS = [
     tokens: [
       '--accent-content-bg-color',
       '--accent-content-border-color',
-      '--accent-content-boxshadow-color',
       '--primary-content-boxshadow-color',
-      '--secondary-content-boxshadow-color',
     ],
   },
   {

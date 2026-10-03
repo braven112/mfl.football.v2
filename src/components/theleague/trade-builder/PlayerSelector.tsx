@@ -367,7 +367,7 @@ function PlayerRow({
         }
         .player-row__add {
           background: var(--btn-secondary-bg, #2e8743);
-          color: #fff;
+          color: var(--btn-secondary-text, #fff);
           border: none;
           border-radius: var(--radius-sm, 0.25rem);
           width: 1.5rem;
