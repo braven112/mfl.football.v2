@@ -77,12 +77,17 @@ describe('product pages — public repo, customer-facing copy only', () => {
 		/\bESPN\b/,
 		/\bSchefter\b/,
 		/\bSunday Ticket\b/,
-		/\bNFL\.com\b/,
 		/\bGemini\b/,
 	];
 
 	it.each(FORBIDDEN.map((re) => [re.source, re]))('the product data never says %s', (_label, re) => {
 		expect(dataSource).not.toMatch(re as RegExp);
+	});
+
+	// A plain substring, not a regex: CodeQL reads a pattern like this one as
+	// an unanchored host check.
+	it('the product data never names the NFL club-logo host', () => {
+		expect(dataSource.toLowerCase()).not.toContain('nfl.com');
 	});
 });
 
