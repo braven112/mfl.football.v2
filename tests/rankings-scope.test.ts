@@ -99,18 +99,12 @@ describe('rankings scope', () => {
       }
     });
 
-    it('covers every league in the registry', () => {
-      // A new league added to the registry without a SCOPE_BY_NAV_SLUG entry
-      // silently pools its owners' boards into TheLeague's. Fail here instead.
-      const source = readFileSync('src/utils/rankings-scope.ts', 'utf8');
-      const mapBlock = source.slice(
-        source.indexOf('SCOPE_BY_NAV_SLUG'),
-        source.indexOf('/** Resolve a league'),
-      );
+    it('gives every league in the registry its own bucket', () => {
+      // A league that resolved to the default would silently pool its owners'
+      // boards into TheLeague's. Scopes are derived from the registry now, so
+      // this holds for any new league with no edit to rankings-scope.ts.
       for (const league of Object.values(LEAGUES)) {
-        expect(mapBlock, `navSlug '${league.navSlug}' has no rankings scope`).toContain(
-          `${league.navSlug}:`,
-        );
+        expect(rankingsScopeForNavSlug(league.navSlug), league.slug).toBe(league.navSlug);
       }
     });
   });

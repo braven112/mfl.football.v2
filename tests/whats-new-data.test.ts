@@ -343,6 +343,18 @@ const LEAGUE_TEXT_PATTERNS: Record<string, RegExp> = {
   archies: /\barchie['’]?s\b|\barchies\b/i,
 };
 
+/**
+ * Any registry league without a hand-tuned pattern above (every league the
+ * launcher generates) gets one from its own registry name, short name and
+ * slug, so the cross-league copy check never silently skips it.
+ */
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+for (const l of ALL_LEAGUES as Array<{ navSlug: string; slug: string; name: string; shortName?: string }>) {
+  if (LEAGUE_TEXT_PATTERNS[l.navSlug]) continue;
+  const words = [l.name, l.shortName, l.slug].filter(Boolean).map((w) => escapeRe(String(w)));
+  LEAGUE_TEXT_PATTERNS[l.navSlug] = new RegExp(`\\b(?:${words.join('|')})\\b`, 'i');
+}
+
 /** JSON-cast data may be malformed — coerce so tests fail with assertions, not TypeErrors. */
 function leaguesOf(entry: WhatsNewEntry): string[] {
   return Array.isArray(entry.leagues) ? entry.leagues : [];

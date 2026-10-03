@@ -32,10 +32,14 @@ function routeExists(pathname: string): boolean {
 }
 
 describe('getSearchPath', () => {
-  it('covers every registered league', () => {
-    // A new league added to the registry gets an explicit answer here rather
-    // than silently falling into the "no search" branch.
-    expect(LEAGUES.sort()).toEqual(['afl-fantasy', 'archies', 'best-ball-1', 'theleague']);
+  it('answers for every registered league by whether it HAS a search page', () => {
+    // A league gets a search link exactly when it ships a search route — so a
+    // new league is checked here with no edit, and one that adds search
+    // without wiring getSearchPath (or the reverse) fails.
+    for (const slug of LEAGUES) {
+      const hasPage = routeExists(`/${slug}/search`);
+      expect(Boolean(getSearchPath(slug)), slug).toBe(hasPage);
+    }
   });
 
   for (const slug of LEAGUES) {

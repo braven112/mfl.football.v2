@@ -41,6 +41,7 @@
  */
 
 import { LEAGUES, ensureLeaguePrefix, buildHostToSlugMap } from '../../src/config/leagues-data.mjs';
+import { packageLeagueHasPath } from '../../src/config/package-league-routes.mjs';
 
 /**
  * Hosts this site actually serves, from the registry — every league's apex
@@ -68,35 +69,47 @@ const isOwnHost = (hostname) => OWN_HOSTS.has(String(hostname).toLowerCase());
  * a link is a place in a sentence, not a button.
  */
 const BOTH = ['theleague', 'afl-fantasy'];
-/** A destination that archies (a package league) ALSO ships at launch. */
-const BOTH_AND_ARCHIES = [...BOTH, 'archies'];
+
+/**
+ * Package leagues (opt-in nav, not draft-only): Archie's and every league the
+ * launcher generates. Which of their pages exist is DATA — the package route
+ * table plus each league's features (src/config/package-league-routes.mjs) —
+ * so a new league's links need no edit here.
+ */
+const PACKAGE_LEAGUES = Object.values(LEAGUES).filter((l) => l.optInNav && !l.bestBall);
+
+/** TheLeague, the AFL, and every package league that has the page at `path`. */
+const withPackageLeagues = (path) => [
+  ...BOTH,
+  ...PACKAGE_LEAGUES.filter((l) => packageLeagueHasPath(l, path)).map((l) => l.slug),
+];
 
 export const DESTINATIONS = {
   // ── What articles are usually ABOUT ──
   'schedule-release': { path: '/schedule-release', label: 'the schedule release page', leagues: BOTH },
-  'schedule-strength': { path: '/schedule-strength', label: 'the Gauntlet rankings', leagues: BOTH_AND_ARCHIES },
-  standings: { path: '/standings', label: 'the standings', leagues: BOTH_AND_ARCHIES },
-  rosters: { path: '/rosters', label: 'the rosters', leagues: BOTH_AND_ARCHIES },
-  transactions: { path: '/transactions', label: 'the transaction log', leagues: BOTH_AND_ARCHIES },
+  'schedule-strength': { path: '/schedule-strength', label: 'the Gauntlet rankings', leagues: [...BOTH, 'archies'] },
+  standings: { path: '/standings', label: 'the standings', leagues: withPackageLeagues('/standings') },
+  rosters: { path: '/rosters', label: 'the rosters', leagues: withPackageLeagues('/rosters') },
+  transactions: { path: '/transactions', label: 'the transaction log', leagues: withPackageLeagues('/transactions') },
   players: { path: '/players', label: 'the free agent board', leagues: BOTH },
   playoffs: { path: '/playoffs', label: 'the playoff bracket', leagues: BOTH },
-  'live-scoring': { path: '/live-scoring', label: 'the live scoreboard', leagues: BOTH_AND_ARCHIES },
+  'live-scoring': { path: '/live-scoring', label: 'the live scoreboard', leagues: withPackageLeagues('/live-scoring') },
   'sunday-ticket': { path: '/sunday-ticket', label: 'the Sunday Ticket board', leagues: BOTH },
   lineup: { path: '/lineup', label: 'your lineup', leagues: BOTH },
-  'pecking-order': { path: '/pecking-order', label: 'the pecking order', leagues: BOTH_AND_ARCHIES },
+  'pecking-order': { path: '/pecking-order', label: 'the pecking order', leagues: withPackageLeagues('/pecking-order') },
   rivalries: { path: '/rivalries', label: 'the rivalry pages', leagues: BOTH },
   franchises: { path: '/franchises', label: 'the franchise histories', leagues: BOTH },
   'draft-predictor': { path: '/draft/order', label: 'the draft order', leagues: BOTH },
-  calendar: { path: '/calendar', label: 'the league calendar', leagues: BOTH_AND_ARCHIES },
+  calendar: { path: '/calendar', label: 'the league calendar', leagues: withPackageLeagues('/calendar') },
 
   // ── Site features worth a plug ──
-  'trade-builder': { path: '/front-office/trade-builder', label: 'the trade builder', leagues: BOTH_AND_ARCHIES },
-  'import-rankings': { path: '/import-rankings', label: 'Import Rankings', leagues: BOTH_AND_ARCHIES },
+  'trade-builder': { path: '/front-office/trade-builder', label: 'the trade builder', leagues: withPackageLeagues('/front-office/trade-builder') },
+  'import-rankings': { path: '/import-rankings', label: 'Import Rankings', leagues: withPackageLeagues('/import-rankings') },
   'custom-rankings': { path: '/cr', label: 'your custom rankings board', leagues: BOTH },
   rules: { path: '/rules', label: 'the constitution', leagues: BOTH },
   'rules-chat': { path: '/rules-chat', label: 'Roger, the rules bot', leagues: BOTH },
   'schefter-tip': { path: '/schefter/tip', label: 'the rumor mill tip line', leagues: BOTH },
-  'whats-new': { path: '/whats-new', label: "What's New", leagues: BOTH_AND_ARCHIES },
+  'whats-new': { path: '/whats-new', label: "What's New", leagues: withPackageLeagues('/whats-new') },
   notifications: { path: '/notifications', label: 'push notifications', leagues: BOTH },
 
   // ── TheLeague only (a contract dynasty league; the AFL has no cap) ──
