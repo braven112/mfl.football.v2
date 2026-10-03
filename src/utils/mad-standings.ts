@@ -109,3 +109,16 @@ export function madQualifierTiers(seeds: MadSeed[]): MadQualifierTier[] {
     })
     .filter((t): t is MadQualifierTier => t !== null);
 }
+
+/**
+ * A division's short label for a crest tile: its namesake's last name.
+ * "Barry Sanders Division" → "Sanders". Archie's nine divisions each honour a
+ * player with a distinct last name, so the last name alone identifies one —
+ * the first name does not ("Payton" is both Walter Payton's last name and the
+ * first name in "Payton Manning"). A name without a trailing "Division" just
+ * yields its last word; a blank name yields "".
+ */
+export function divisionShortName(name: string): string {
+  const words = name.replace(/\s+division\s*$/i, '').trim().split(/\s+/);
+  return words[words.length - 1] ?? '';
+}
