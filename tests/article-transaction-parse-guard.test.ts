@@ -42,7 +42,7 @@ describe('waiver article transaction parsing', () => {
     },
   };
 
-  const sheetFor = async (transactions: Array<Record<string, string>>) => {
+  const sheetFor = async (transactions: Array<Record<string, string>>, league = 'theleague') => {
     const now = Math.floor(Date.now() / 1000);
     const { factSheet, enrichment } = await buildFactSheet(
       {
@@ -57,7 +57,7 @@ describe('waiver article transaction parsing', () => {
       1,
       2026,
       ROOT,
-      { league: 'theleague' },
+      { league },
     );
     return { factSheet, enrichment };
   };
@@ -97,7 +97,8 @@ describe('waiver article transaction parsing', () => {
       { type: 'FREE_AGENT', franchise: '0016', transaction: '17668,|' },
     ]);
     expect(factSheet).toContain('Total claims this week: 2');
-    expect(factSheet).toContain('Total spent: $775K');
+    // The FCFS add signs at the $425K league minimum, so it counts too.
+    expect(factSheet).toContain('Total spent: $1.20M');
   });
 
   it('attributes a bid only to the player it bought, never to a free add', async () => {
@@ -106,8 +107,30 @@ describe('waiver article transaction parsing', () => {
       { type: 'FREE_AGENT', franchise: '0016', transaction: '17668,|' },
     ]);
     expect(factSheet).toContain('RB Kendre Miller ($775K)');
-    expect(factSheet).toContain('PK Trey Smack ($0) [FA]');
     expect(factSheet).toContain('Highest single bid: $775K for Kendre Miller');
+  });
+
+  it('prices a TheLeague FCFS add at the league-minimum salary, never $0', async () => {
+    // A FREE_AGENT row carries no price, and the column read that as free:
+    // "snagging Chad Ryland and Xavier Hutchinson off waivers for zero
+    // dollars". In a salary league every add signs at the minimum.
+    const { factSheet } = await sheetFor([
+      { type: 'FREE_AGENT', franchise: '0016', transaction: '17668,|' },
+    ]);
+    expect(factSheet).toContain('PK Trey Smack ($425K) [FCFS');
+    expect(factSheet).toContain('No pickup is free.');
+    expect(factSheet).not.toContain('($0)');
+    // The minimum is a salary, not a bid — it never wins "highest single bid".
+    expect(factSheet).toContain('Highest single bid: none');
+  });
+
+  it('leaves a no-salary league\'s free-agent add unpriced', async () => {
+    const { factSheet } = await sheetFor(
+      [{ type: 'FREE_AGENT', franchise: '0016', transaction: '17668,|' }],
+      'afl-fantasy',
+    );
+    expect(factSheet).toContain('PK Trey Smack ($0) [FA]');
+    expect(factSheet).not.toContain('league-minimum');
   });
 
   it('prices a pre-2017 comma-less BBID claim at its real bid, not $0', async () => {
