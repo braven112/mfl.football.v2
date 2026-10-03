@@ -6,12 +6,13 @@
  * page (`src/data/products.ts`).
  *
  * There is no subscription yet, so today Pro is the INCLUDED kind only: every
- * owner of a full-management league this site runs (TheLeague, the AFL) has
- * it, the way a League Hub or League Package league's owners will. Derived
+ * owner of a full-management league this site runs (TheLeague, the AFL,
+ * Archie's) has it, the way every League Hub or League Package league's
+ * owners do. Derived
  * from the registry rather than a list of slugs, so a new full league gets it
  * the day it is added. A draft-only best-ball league runs no live season and
- * gets nothing here; a pilot league (`MFL_LIVE_PILOT_LEAGUE_IDS`) is not in
- * the registry at all, so its owners are on the free tier.
+ * gets nothing here, and neither does a pilot league
+ * (`MFL_LIVE_PILOT_LEAGUE_IDS`), which is not in the registry at all.
  *
  * Keyed on the SESSION's league: Pro belongs to the person, and covers every
  * league on their board, including ones this site does not run.
