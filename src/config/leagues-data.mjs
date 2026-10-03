@@ -24,6 +24,11 @@ export const LEAGUES = {
      * Compiled by scripts/generate-league-themes.mjs.
      */
     theme: 'theleague',
+    /**
+     * Starting preset for the feature checkboxes (league-archetypes.mjs).
+     * Code reads `features`, never this.
+     */
+    archetype: 'dynasty-cap',
     name: 'The League',
     /** MFL server hostname for this league */
     mflHost: 'www49.myfantasyleague.com',
@@ -197,6 +202,7 @@ export const LEAGUES = {
     slug: 'afl-fantasy',
     navSlug: 'afl',
     theme: 'afl',
+    archetype: 'deluxe-keeper',
     name: 'AFL',
     mflHost: 'www44.myfantasyleague.com',
     dataPath: 'data/afl-fantasy',
@@ -361,6 +367,7 @@ export const LEAGUES = {
     slug: 'best-ball-1',
     navSlug: 'bb1',
     theme: 'bb1',
+    archetype: 'best-ball',
     name: 'Best Ball #1',
     mflHost: 'www45.myfantasyleague.com',
     dataPath: 'data/best-ball-1',
@@ -491,6 +498,7 @@ export const LEAGUES = {
     slug: 'archies',
     navSlug: 'archies',
     theme: 'archies',
+    archetype: 'contest',
     name: "Archie's Fantasy Football League",
     mflHost: 'www48.myfantasyleague.com',
     dataPath: 'data/archies',
@@ -659,6 +667,7 @@ if (isDemoEnv()) {
     navSlug: 'keeper',
     /** Wears the AFL's theme — reuse by naming it, not by sharing a selector. */
     theme: 'afl',
+    archetype: 'deluxe-keeper',
     /**
      * Only these nav links render here — the keeper slot has the AFL's core
      * pages, not all of them, and an untagged link to one it lacks is a 404.
