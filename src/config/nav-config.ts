@@ -20,13 +20,15 @@
  */
 
 import navConfigJson from './nav-config.json';
+import { ALL_LEAGUES } from './leagues-data.mjs';
 import type { NavConfig, NavSection, NavLink, NavFooterLink, LeagueSlug } from '../types/nav';
 
 /**
  * Extended config interface to include verify team URL templates
  */
 interface ExtendedNavConfig extends NavConfig {
-  verifyTeamUrl: Record<LeagueSlug, string>;
+  /** One template for every league: {host}, {year} and {leagueId} are filled per league. */
+  verifyTeamUrl: string;
 }
 
 /**
@@ -72,7 +74,7 @@ export function getLinkById(id: string): NavLink | undefined {
  * the same 4-digit franchise id belongs to different teams in each league.
  */
 export function getAdminFranchiseIds(league: LeagueSlug = 'theleague'): string[] {
-  return navConfig.adminFranchiseIds[league] ?? [];
+  return ALL_LEAGUES.find((l) => l.navSlug === league)?.adminFranchiseIds ?? [];
 }
 
 /**
@@ -103,6 +105,6 @@ export function getRouteEquivalence(): Record<string, string> {
 /**
  * Get verify team URL template for a specific league
  */
-export function getVerifyTeamUrlTemplate(league: LeagueSlug): string {
-  return navConfig.verifyTeamUrl[league] ?? navConfig.verifyTeamUrl.theleague;
+export function getVerifyTeamUrlTemplate(_league?: LeagueSlug): string {
+  return navConfig.verifyTeamUrl;
 }

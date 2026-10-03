@@ -30,6 +30,12 @@ export const LEAGUES = {
      */
     archetype: 'dynasty-cap',
     /**
+     * Franchises that see admin-only nav links and receive ops alerts
+     * (scripts/lib/ops-alert.mjs). League-scoped: the same 4-digit id is a
+     * different team in each league. Navigation and alerts only — never auth.
+     */
+    adminFranchiseIds: ['0001', '0000'],
+    /**
      * Schedule planner policy (src/utils/schedule-plan.mjs). The League ran
      * `simple` while the two modes were compared; constructive was adopted on
      * the numbers — bye spread 17 to 4 and home/away 7-11 to 9-9, neither of
@@ -78,6 +84,8 @@ export const LEAGUES = {
     name: 'The League',
     /** League mark: light cut for light grounds, dark cut for dark ones. */
     logo: { light: '/assets/logos/theleague-logo.svg', dark: '/assets/logos/theleague-logo-dark.svg' },
+    /** Schefter share-card branding (src/utils/schefter-og.ts). Absent = derived from name/domain/themeColor. */
+    shareCard: { name: 'The League', domain: 'theleague.us', primary: '#1c497c' },
     /** MFL server hostname for this league */
     mflHost: 'www49.myfantasyleague.com',
     /** Repo-relative data directory written by the fetch pipelines */
@@ -251,6 +259,7 @@ export const LEAGUES = {
     navSlug: 'afl',
     theme: 'afl',
     archetype: 'deluxe-keeper',
+    adminFranchiseIds: ['0001'],
     /** Schefter scanners — see TheLeague's entry for the shape. */
     schefter: {
       eventsPath: 'data/afl-fantasy/resolved-events.json',
@@ -302,7 +311,14 @@ export const LEAGUES = {
       },
     },
     name: 'AFL',
+    /**
+     * Push notification art (src/utils/push-notify-trade.ts). The badge must
+     * be a white-on-transparent silhouette (Android tints its alpha); see
+     * scripts/generate-notification-icons.mjs. Absent = the site's PWA art.
+     */
+    pushArt: { icon: '/assets/afl/favicons/favicon-192.png', badge: '/assets/afl/favicons/badge-96.png' },
     logo: { light: '/assets/logos/afl-logo.svg', dark: '/assets/logos/afl-logo-dark.svg' },
+    shareCard: { name: 'AFL Fantasy', domain: 'afl-fantasy.com', primary: '#002244' },
     mflHost: 'www44.myfantasyleague.com',
     dataPath: 'data/afl-fantasy',
     domains: ['afl-fantasy.com', 'www.afl-fantasy.com'],
@@ -467,6 +483,7 @@ export const LEAGUES = {
     navSlug: 'bb1',
     theme: 'bb1',
     archetype: 'best-ball',
+    adminFranchiseIds: ['0001', '0000'],
     name: 'Best Ball #1',
     logo: { light: '/assets/logos/bestball-logo.svg', dark: '/assets/logos/bestball-logo-dark.svg' },
     mflHost: 'www45.myfantasyleague.com',
@@ -599,6 +616,7 @@ export const LEAGUES = {
     navSlug: 'archies',
     theme: 'archies',
     archetype: 'contest',
+    adminFranchiseIds: [],
     name: "Archie's Fantasy Football League",
     mflHost: 'www48.myfantasyleague.com',
     dataPath: 'data/archies',
@@ -624,6 +642,9 @@ export const LEAGUES = {
      * league's own MFL skin art in public/mfl/10105/.
      */
     logo: { light: '/assets/logos/archies-head.webp', dark: '/assets/logos/archies-head.webp' },
+    shareCard: { name: "Archie's FFL", domain: 'mfl.football/archies', primary: '#1d3a6e' },
+    /** The share-card mark: the OG renderer reads PNG/SVG only, not WebP. */
+    logoOg: '/assets/logos/archies-head.png',
     /**
      * Wordmark shown beside the mark in the header and homepage hero, in place
      * of the text short name.
@@ -769,6 +790,7 @@ if (isDemoEnv()) {
     /** Wears the AFL's theme — reuse by naming it, not by sharing a selector. */
     theme: 'afl',
     archetype: 'deluxe-keeper',
+    adminFranchiseIds: [],
     /**
      * Only these nav links render here — the keeper slot has the AFL's core
      * pages, not all of them, and an untagged link to one it lacks is a 404.
