@@ -523,7 +523,8 @@ export const LEAGUES = {
     shortName: "Archie's",
     /**
      * The league's mark (Archie's head), read by the shared header and layout.
-     * The art is outlined, so one file serves both themes. Resized from the
+     * The art is outlined, so the light and dark cuts are deliberately the
+     * same file. Both are still set: every league names both. Resized from the
      * league's own MFL skin art in public/mfl/10105/.
      */
     logo: { light: '/assets/logos/archies-head.webp', dark: '/assets/logos/archies-head.webp' },

@@ -9,6 +9,16 @@ import {
   hasLeagueConfig,
 } from '../src/utils/league-config';
 
+describe('registry logos', () => {
+  it('every league names both a light and a dark logo', () => {
+    for (const league of ALL_LEAGUES) {
+      const logo = (league as { logo?: { light?: unknown; dark?: unknown } }).logo;
+      expect(typeof logo?.light === 'string' && logo.light.length > 0, `${league.slug} logo.light`).toBe(true);
+      expect(typeof logo?.dark === 'string' && logo.dark.length > 0, `${league.slug} logo.dark`).toBe(true);
+    }
+  });
+});
+
 describe('league-config loader', () => {
   it('resolves every registry league through its configPath', () => {
     for (const league of ALL_LEAGUES) {
