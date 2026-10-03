@@ -70,6 +70,7 @@ import TeamIconDarkStyles from '../components/shared/TeamIconDarkStyles.astro';
 import { getThemePreference } from '../utils/theme-preference';
 import { getAuthUser } from '../utils/auth';
 import { canViewSiteInsights } from '../utils/site-insights';
+import { canViewProductPages } from '../utils/product-pages-access';
 import { ALL_LEAGUES, leagueUrl, isSharedAppHost } from '../config/leagues';
 // Global utility classes (.visually-hidden, …) — a frontmatter import so the
 // CSS ships unscoped; an @import inside the <style> block would get scoped.
@@ -183,6 +184,7 @@ const leagueLinks = ALL_LEAGUES.filter((league) => !league.bestBall).map((league
 					signInHref={mflLoginUrl(Astro.url.pathname + Astro.url.search)}
 					currentPath={Astro.url.pathname}
 					showAnalytics={canViewSiteInsights(authUser)}
+					showProducts={canViewProductPages(authUser)}
 				/>
 			</div>
 		</header>

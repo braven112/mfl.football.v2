@@ -51,10 +51,19 @@ export interface Props {
 	currentPath: string;
 	/** Site analytics link — only for the one seat `canViewSiteInsights` allows. */
 	showAnalytics?: boolean;
+	/** Product pages link — gated by `canViewProductPages` (one seat until launch). */
+	showProducts?: boolean;
 }
 
-const { leagueLinks, ownerName, signedIn, signInHref, currentPath, showAnalytics = false } =
-	Astro.props as Props;
+const {
+	leagueLinks,
+	ownerName,
+	signedIn,
+	signInHref,
+	currentPath,
+	showAnalytics = false,
+	showProducts = false,
+} = Astro.props as Props;
 
 /**
  * The app's own destinations. Settings is signed-in only — it lists the
@@ -70,6 +79,7 @@ const BOARD_LINKS = [
 const boardLinks: { href: string; label: string; icon: string }[] = [
 	...BOARD_LINKS.filter((link) => signedIn || !link.requiresAuth),
 	...(showAnalytics ? [{ href: '/live/analytics', label: 'Site analytics', icon: 'chart' }] : []),
+	...(showProducts ? [{ href: '/products', label: 'Products', icon: 'tag' }] : []),
 ];
 
 /** Exact match only: `/live` must not light up while you are on `/live/settings`. */
@@ -136,6 +146,11 @@ const showSignIn = !signedIn && !isCurrent(signInHref.split('?')[0]);
 									<path d="M10 20V4" />
 									<path d="M16 20v-7" />
 									<path d="M3 20h18" />
+								</Fragment>
+							) : link.icon === 'tag' ? (
+								<Fragment>
+									<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z" />
+									<circle cx="7.5" cy="7.5" r="1.5" />
 								</Fragment>
 							) : link.icon === 'standings' ? (
 								<Fragment>
