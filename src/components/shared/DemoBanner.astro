@@ -25,14 +25,17 @@ const show = isDemoDeploy();
 // (`/redraft/...`) or, after the middleware's rewrite, the slot's own slug.
 const segment = Astro.url.pathname.split('/')[1] ?? '';
 const slug = demoLeaguePaths()[segment] ?? segment;
-const bestBall = Boolean(getLeagueBySlug(slug)?.bestBall);
-const pitch = bestBall
-	? 'The draft room, board and mock drafts here were built for this league; your site is built around how yours works.'
-	: slug === 'keeper'
-		? 'The keeper planner and every tool here were built for this league; your site is built around how yours works.'
-		: slug === 'afl-fantasy'
-		? 'The conference standings, tier tables and playoff brackets here were built for this league; your site is built around how yours works.'
-		: 'The salary-cap tools here were built for this league; your site is built around how yours works.';
+const league = getLeagueBySlug(slug);
+// What the demo shows off, by league type; a league names its own with
+// `demoPitch` in the registry when its type's line does not fit.
+const PITCH_BY_ARCHETYPE: Record<string, string> = {
+	'best-ball': 'The draft room, board and mock drafts here were built for this league; your site is built around how yours works.',
+	'deluxe-keeper': 'The keeper planner and every tool here were built for this league; your site is built around how yours works.',
+	contest: 'The division standings and weekly rankings here were built for this league; your site is built around how yours works.',
+	'standard-redraft': 'The standings, lineups and league news here were built for this league; your site is built around how yours works.',
+	'dynasty-cap': 'The salary-cap tools here were built for this league; your site is built around how yours works.',
+};
+const pitch = league?.demoPitch ?? PITCH_BY_ARCHETYPE[league?.archetype ?? ''] ?? PITCH_BY_ARCHETYPE['dynasty-cap'];
 ---
 
 {

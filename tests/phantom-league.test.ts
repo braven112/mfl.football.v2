@@ -51,7 +51,7 @@ beforeAll(() => {
   };
   (raw.LEAGUES as Record<string, unknown>)[PHANTOM_SLUG] = phantom;
   (raw.ALL_LEAGUES as unknown[]).push(phantom);
-  if (!typed.ALL_LEAGUES.some((l) => l.slug === PHANTOM_SLUG)) {
+  if (!typed.ALL_LEAGUES.some((l) => (l.slug as string) === PHANTOM_SLUG)) {
     (typed.ALL_LEAGUES as unknown[]).push(phantom);
   }
 });
@@ -99,6 +99,17 @@ describe('a league that exists only in the registry', () => {
     expect(getAdminFranchiseIds(PHANTOM_NAV as never)).toEqual([]);
     expect(leaguePushIcon(PHANTOM_NAV)).toBe('/assets/icons/pwa/icon-192.png');
     expect(leaguePushBadge(PHANTOM_NAV)).not.toMatch(/afl/);
+  });
+
+  it('gets an automatic footer of its own pages (none yet), not a borrowed one', async () => {
+    const { getFooterColumns, autoColumns } = await import('../src/config/footer-config');
+    expect(getFooterColumns(PHANTOM_SLUG as never)).toEqual([]);
+    // The same builder, on a league that HAS directory entries, fills the deck
+    // from its own pages only.
+    const archies = autoColumns('archies');
+    const ids = Object.values(archies).flat().map((l) => (typeof l === 'string' ? l : l?.id));
+    expect(ids.length).toBeGreaterThan(0);
+    expect(ids.every((id) => /archies/.test(String(id)))).toBe(true);
   });
 
   it('is not scheduled or scanned until it opts in', async () => {

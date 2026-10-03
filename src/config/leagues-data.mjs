@@ -83,6 +83,8 @@ export const LEAGUES = {
     },
     name: 'The League',
     /** League mark: light cut for light grounds, dark cut for dark ones. */
+    /** First season of the league's player archive (draft results notes it). */
+    playerArchiveStartYear: 2007,
     logo: { light: '/assets/logos/theleague-logo.svg', dark: '/assets/logos/theleague-logo-dark.svg' },
     /** Schefter share-card branding (src/utils/schefter-og.ts). Absent = derived from name/domain/themeColor. */
     shareCard: { name: 'The League', domain: 'theleague.us', primary: '#1c497c' },
@@ -317,6 +319,9 @@ export const LEAGUES = {
      * scripts/generate-notification-icons.mjs. Absent = the site's PWA art.
      */
     pushArt: { icon: '/assets/afl/favicons/favicon-192.png', badge: '/assets/afl/favicons/badge-96.png' },
+    playerArchiveStartYear: 2011,
+    /** Demo banner line (DemoBanner.astro), where the archetype's default does not fit. */
+    demoPitch: 'The conference standings, tier tables and playoff brackets here were built for this league; your site is built around how yours works.',
     logo: { light: '/assets/logos/afl-logo.svg', dark: '/assets/logos/afl-logo-dark.svg' },
     shareCard: { name: 'AFL Fantasy', domain: 'afl-fantasy.com', primary: '#002244' },
     mflHost: 'www44.myfantasyleague.com',
@@ -645,6 +650,11 @@ export const LEAGUES = {
     shareCard: { name: "Archie's FFL", domain: 'mfl.football/archies', primary: '#1d3a6e' },
     /** The share-card mark: the OG renderer reads PNG/SVG only, not WebP. */
     logoOg: '/assets/logos/archies-head.png',
+    /**
+     * Weekly Schefter article types this league gets (scripts/lib/article-leagues.mjs).
+     * Absent = every type. Archie's has bought The Gauntlet only.
+     */
+    articleTypes: ['schedule-strength'],
     /**
      * Wordmark shown beside the mark in the header and homepage hero, in place
      * of the text short name.
