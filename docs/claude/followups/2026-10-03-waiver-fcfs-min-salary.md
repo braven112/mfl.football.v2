@@ -7,7 +7,7 @@ hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1311
 hotfix_sha: d07ee6c
 followup_issue: 1312
 followup_pr:
-followup_session:
+followup_session: session_01Gkq5jef3JuYN3wCi3ptqGk
 ---
 
 # Follow-up: waiver column called FCFS pickups free
