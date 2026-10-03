@@ -243,7 +243,7 @@ export interface LeagueDefinition {
    * `features` via leagueHasFeature, never on the archetype.
    */
   archetype: LeagueArchetype;
-  /** Franchises that see admin-only nav links and get ops alerts (never auth). */
+  /** Franchises that see admin-only nav links, get ops alerts, and count as commissioners (auth fallback). */
   adminFranchiseIds: string[];
   /**
    * Opts the league into the Schefter scanners (scripts/lib/schefter-leagues.mjs):
