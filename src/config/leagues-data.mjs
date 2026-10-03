@@ -34,9 +34,10 @@ export const LEAGUES = {
      */
     archetype: 'dynasty-cap',
     /**
-     * Franchises that see admin-only nav links and receive ops alerts
-     * (scripts/lib/ops-alert.mjs). League-scoped: the same 4-digit id is a
-     * different team in each league. Navigation and alerts only — never auth.
+     * Franchises that see admin-only nav links, receive ops alerts
+     * (scripts/lib/ops-alert.mjs), and are treated as commissioners when MFL's
+     * login did not say so (isCommissionerOrAdmin's fallback). League-scoped:
+     * the same 4-digit id is a different team in each league.
      */
     adminFranchiseIds: ['0001', '0000'],
     /**

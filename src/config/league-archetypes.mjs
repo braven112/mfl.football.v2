@@ -187,7 +187,7 @@ export function detectArchetype(league) {
  * @typedef {object} FeatureSuggestion
  * @property {boolean} on
  * @property {string} reason
- * @property {'mfl-setting' | 'preset' | 'dependency'} source
+ * @property {'mfl-setting' | 'preset' | 'ai' | 'dependency'} source
  */
 
 /**
@@ -220,14 +220,30 @@ export function suggestLeagueSetup(league, opts = {}) {
         };
   }
 
-  // Switch off anything whose prerequisite is off. Repeat until stable so a
-  // chain (A needs B needs C) settles regardless of catalog order.
+  settleDependencies(features);
+
+  return {
+    archetype,
+    detectedArchetype: detected.archetype,
+    archetypeReason: detected.reason,
+    features,
+  };
+}
+
+/**
+ * Switch off every box whose prerequisite is off, in place, with a reason.
+ * Repeats until stable so a chain (A needs B needs C) settles regardless of
+ * catalog order. Used after the rules AND after any later change (the AI
+ * review, a human override) so a saved selection is always valid.
+ * @param {Record<string, FeatureSuggestion>} features
+ */
+export function settleDependencies(features) {
   let changed = true;
   while (changed) {
     changed = false;
     for (const f of FEATURE_CATALOG) {
-      if (!features[f.key].on) continue;
-      const missing = f.requires.find((r) => !features[r].on);
+      if (!features[f.key]?.on) continue;
+      const missing = f.requires.find((r) => !features[r]?.on);
       if (missing) {
         features[f.key] = {
           on: false,
@@ -238,13 +254,7 @@ export function suggestLeagueSetup(league, opts = {}) {
       }
     }
   }
-
-  return {
-    archetype,
-    detectedArchetype: detected.archetype,
-    archetypeReason: detected.reason,
-    features,
-  };
+  return features;
 }
 
 /**
