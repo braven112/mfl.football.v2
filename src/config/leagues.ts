@@ -313,6 +313,21 @@ export function leagueHasFeature(slug: string, feature: keyof LeagueFeatures): b
 }
 
 /**
+ * A salary league's minimum salary — the floor every roster add signs at, a
+ * first-come-first-served free-agent add included. Throws for a league with no
+ * salaries rather than answering 0: a caller pricing a roster in a league that
+ * has none is a bug, and a silent 0 is how the waiver column once called two
+ * FCFS pickups "free assets for zero dollars" (#1311). The registry is the one
+ * home for the figure; `tests/minimum-salary-literal-guard.test.ts` fails on a
+ * bare copy anywhere else.
+ */
+export function leagueMinimumSalary(slug: string): number {
+  const min = getLeagueBySlug(slug)?.minimumSalary;
+  if (typeof min !== 'number') throw new Error(`League "${slug}" has no minimumSalary`);
+  return min;
+}
+
+/**
  * THE ACCESSOR for a league's official clock. Every surface that prints a
  * league moment — a waiver deadline, a draft start, a poll close, the clock
  * line in the nav drawer — resolves it through here, so the zone is a

@@ -1122,6 +1122,27 @@ one, so the callback would point at a live team that isn't the subject).
 `pickFormerName` excludes both.
 
 
+## A first-come-first-served pickup is never free in a salary league
+
+MFL writes **no price** on a `FREE_AGENT` row, but in TheLeague that player
+still signs at the league minimum. Priced from the row alone, the Week 3 2026
+waiver column called two FCFS adds *"free assets for zero dollars"* (#1311).
+Two layers now hold the line:
+
+- **The fact sheet** prices an FCFS add at `LEAGUES[league].minimumSalary` and
+  keeps it out of "highest single bid" (it is a salary, not a bid) —
+  `tests/article-transaction-parse-guard.test.ts`.
+- **Every article type's system prompt** states the floor, from the registry,
+  in `buildCachedSystem`'s UNCACHED league block (`minimumSalaryRule`), so a
+  cut-watch, recap or ranking whose fact sheet shows an FCFS add cannot call it
+  free either — `tests/article-type-league-option.test.ts`. A league with no
+  salaries (AFL, Best Ball) gets no floor line and must stay unpriced.
+
+The figure itself lives ONLY in the registry (`minimumSalary`), read through
+`leagueMinimumSalary(slug)` in app code; `tests/minimum-salary-literal-guard.test.ts`
+fails on a bare `425000` / `425_000` anywhere else in `src/` or `scripts/`
+(comments quoting MFL's own strings are exempt).
+
 ## A fact sheet parses MFL's transaction string with `parseRosterMove` — never a split
 
 MFL encodes a roster move as a **positional** pipe-delimited string whose add
@@ -1154,7 +1175,8 @@ reads it correctly. `waiver-pickups.mjs` rolled its own
 So: an add side that parses EMPTY is a drop — `continue`, never a claim. Count
 CLAIMS rather than transaction rows, or a week of nothing but drops reports
 pickups it does not have. And a bid buys the one player on the add side; a
-free-agent add is $0, never the previous row's price.
+free-agent add is never the previous row's price — and in a salary league it is
+not $0 either (next section).
 
 A placeholder is not a safe degradation here. It is prose the pipeline will
 publish, so the fact sheet asserts it never contains `Player <digits>` or a

@@ -560,9 +560,9 @@ function inSeasonMoves({ week, rosters, value, f, srng, tx, ts, scoresSoFar, cap
         continue;
       }
       const wanted = Math.round((recent(add) * 40_000) / 25_000) * 25_000;
-      const waiver = srng.chance(0.5) && room > 425_000;
-      const bid = waiver ? String(Math.max(425_000, Math.min(wanted, Math.floor(room / 2 / 25_000) * 25_000))) : null;
-      roster.set(add, { salary: bid ? Number(bid) : 425_000, contractYear: 1, status: 'ROSTER', acquired: 'fa' });
+      const waiver = srng.chance(0.5) && room > LEAGUE_RULES.minSalary;
+      const bid = waiver ? String(Math.max(LEAGUE_RULES.minSalary, Math.min(wanted, Math.floor(room / 2 / 25_000) * 25_000))) : null;
+      roster.set(add, { salary: bid ? Number(bid) : LEAGUE_RULES.minSalary, contractYear: 1, status: 'ROSTER', acquired: 'fa' });
       tx.push(
         waiver
           ? { type: 'BBID_WAIVER', franchise: fid, transaction: `${add},|${bid}|${drop},`, timestamp: String(ts(week, 1, 1)) }

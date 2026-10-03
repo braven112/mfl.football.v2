@@ -13,6 +13,7 @@
  */
 
 import { ROOKIE_SALARIES_2026 } from './draft-pick-cap-impact';
+import { ROOKIE_SALARY_FLOOR } from '../../scripts/lib/rookie-salary-slots.mjs';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -96,7 +97,7 @@ export function getWeightedSalary(round: number, pickNumber: number): {
   if (!slotData) {
     // Round 3+ or unknown slot: use flat-rate minimum
     const fallback = 450_000;
-    return { weightedAvg: fallback, min: 425_000, max: 475_000 };
+    return { weightedAvg: fallback, min: ROOKIE_SALARY_FLOOR, max: 475_000 };
   }
 
   let weightedSum = 0;
@@ -104,7 +105,7 @@ export function getWeightedSalary(round: number, pickNumber: number): {
   let max = -Infinity;
 
   for (const pos of SKILL_POSITIONS) {
-    const salary = slotData[pos] ?? 425_000;
+    const salary = slotData[pos] ?? ROOKIE_SALARY_FLOOR;
     weightedSum += salary * POSITION_WEIGHTS[pos];
     if (salary < min) min = salary;
     if (salary > max) max = salary;

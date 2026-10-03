@@ -9,10 +9,11 @@
  */
 
 import type { TeamCapSituation, ContractEscalation, PlayerValuation } from '../types/auction-predictor';
+import { LEAGUES, leagueMinimumSalary } from '../config/leagues';
 
 const SALARY_CAP = 45_000_000;
 const ANNUAL_ESCALATION = 0.10; // 10% per year
-const LEAGUE_MINIMUM = 425_000;
+const LEAGUE_MINIMUM = leagueMinimumSalary(LEAGUES.theleague.slug);
 const MIN_ROSTER_SIZE = 20;
 const MAX_ROSTER_SIZE = 22;
 

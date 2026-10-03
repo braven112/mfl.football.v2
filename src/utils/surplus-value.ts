@@ -7,6 +7,7 @@
  */
 
 import { parseNumber } from './formatters';
+import { LEAGUES, leagueMinimumSalary } from '../config/leagues';
 import type {
   PositionSalaryBenchmark,
   SurplusValueInput,
@@ -14,7 +15,7 @@ import type {
 } from '../types/surplus-value';
 import historicalSalaryCurves from '../data/theleague/historical-salary-curves.json';
 
-const LEAGUE_MINIMUM = 425_000;
+const LEAGUE_MINIMUM = leagueMinimumSalary(LEAGUES.theleague.slug);
 
 type CurveTier = {
   basePrice: number;

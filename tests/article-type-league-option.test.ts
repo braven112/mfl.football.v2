@@ -163,3 +163,31 @@ describe('the cached preamble stays league-neutral', () => {
     );
   });
 });
+
+/**
+ * #1312 F2. MFL writes no price on a first-come-first-served FREE_AGENT row, so
+ * any article type whose fact sheet lists one could call it free — the waiver
+ * column did ("free assets for zero dollars", #1311). The floor is stated once,
+ * in the shared league block every type receives, from the registry; and never
+ * to a league without salaries, which has no floor to state.
+ */
+describe('every article type is told the salary floor', () => {
+  it('states TheLeague\'s minimum in the uncached league block', async () => {
+    const { buildCachedSystem } = await import('../scripts/article-utils/ai-client.mjs');
+    const blocks = buildCachedSystem('TYPE TEXT', { league: 'theleague' });
+    const leagueBlock = blocks.find((b: { cache_control?: unknown }) => !b.cache_control)!.text;
+    const cached = blocks.find((b: { cache_control?: unknown }) => b.cache_control)!.text;
+    expect(LEAGUES.theleague.minimumSalary).toBe(425_000);
+    expect(leagueBlock).toContain('$425K league-minimum salary');
+    expect(leagueBlock).toMatch(/first-come-first-served/);
+    expect(cached).not.toContain('SALARY FLOOR');
+  });
+
+  it('says nothing about salaries to a league that has none', async () => {
+    const { buildCachedSystem } = await import('../scripts/article-utils/ai-client.mjs');
+    for (const slug of ['afl-fantasy', 'best-ball-1'] as const) {
+      const text = buildCachedSystem('TYPE TEXT', { league: slug }).map((b: { text: string }) => b.text).join('\n');
+      expect(text).not.toContain('SALARY FLOOR');
+    }
+  });
+});

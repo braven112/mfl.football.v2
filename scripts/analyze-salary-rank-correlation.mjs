@@ -8,6 +8,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { LEAGUES } from '../src/config/leagues-data.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -35,7 +36,7 @@ positions.forEach(position => {
   
   // Get players at this position with salary above minimum
   const playersAtPosition = playerSalaries
-    .filter(p => p.position === position && p.salary > 425000) // Exclude league minimum
+    .filter(p => p.position === position && p.salary > LEAGUES.theleague.minimumSalary) // Exclude league minimum
     .sort((a, b) => b.salary - a.salary); // Sort by salary (high to low)
   
   console.log(`\nFound ${playersAtPosition.length} ${position}s with contracts above league minimum\n`);
