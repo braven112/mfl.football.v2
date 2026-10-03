@@ -23,13 +23,13 @@
  *   - groupmeListen:    GroupMe @mention → tip ingestion. TheLeague-only
  *                       until AFL GroupMe message ingestion exists.
  *
- * Scanner-only toggles stay here as code consts (per CLAUDE.md: feature
- * gates live in code, not GitHub Actions vars).
+ * The per-league lane toggles live in each registry entry's `schefter`
+ * block (code, not GitHub Actions vars, per CLAUDE.md).
  */
 
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { getLeagueBySlug, leagueOrigin, leagueUrl } from '../../src/config/leagues-data.mjs';
+import { ALL_LEAGUES, getLeagueBySlug, leagueOrigin, leagueUrl } from '../../src/config/leagues-data.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('../..', import.meta.url)));
 
@@ -88,63 +88,28 @@ export function buildSchefterLeague(registrySlug, overrides) {
   };
 }
 
-export const SCHEFTER_LEAGUES = [
-  buildSchefterLeague('theleague', {
-    eventsPath: path.join(projectRoot, 'src', 'data', 'theleague', 'resolved-events.json'),
-    groupMeSchefterBotId: process.env.GROUPME_SCHEFTER_BOT_ID,
-    groupMeRogerBotId: process.env.GROUPME_ROGER_BOT_ID,
-    // READ credentials — distinct from the BOT_ID above, which only posts.
-    // The unprefixed names are TheLeague's by history: they predate the AFL
-    // and every existing caller (groupme-sync, the Schefter mention listener)
-    // already means TheLeague's group when it reads them.
-    groupMeGroupId: process.env.GROUPME_GROUP_ID,
-    groupMeRogerBotSenderId: process.env.GROUPME_ROGER_BOT_SENDER_ID,
+/**
+ * Every registry league that declares a `schefter` block runs the scanners.
+ * The block (leagues-data.mjs) carries the league's events file, the NAMES of
+ * its GroupMe env vars, and which lanes run; nothing here is per-league, so a
+ * new league opts in from its registry entry alone. A league with the news
+ * feed but no block (Archie's) has a feed page and no scanner.
+ */
+export const SCHEFTER_LEAGUES = ALL_LEAGUES.filter((reg) => reg.schefter).map((reg) => {
+  const { eventsPath, env, lanes } = reg.schefter;
+  return buildSchefterLeague(reg.slug, {
+    eventsPath: path.join(projectRoot, eventsPath),
+    groupMeSchefterBotId: process.env[env.schefterBot],
+    groupMeRogerBotId: process.env[env.rogerBot],
+    // READ credentials — distinct from the bot ids above, which only post.
+    groupMeGroupId: process.env[env.groupId],
+    groupMeRogerBotSenderId: process.env[env.rogerSender],
     features: {
-      rumorMill: getLeagueBySlug('theleague').features.schefterTips,
-      tradeBait: true,
-      eventReminders: true,
-      // TheLeague uses the rumor mill + big-drop flow for GroupMe; no direct posting in scanLeague
-      directGroupMe: false,
-      tradeOfferRumors: true,
-      groupmeListen: true,
-      // Roger's clapback lane. AFL-first by request: the AFL drafts on the
-      // Labor Day weekend, so its autodraft damage is days old and its owners
-      // are the ones currently taking shots at Roger's countdowns. Flip this
-      // on for TheLeague once the AFL has run a season's worth of replies.
-      rogerReplies: false,
+      rumorMill: reg.features.schefterTips,
+      ...lanes,
     },
-  }),
-  buildSchefterLeague('afl-fantasy', {
-    eventsPath: path.join(projectRoot, 'data', 'afl-fantasy', 'resolved-events.json'),
-    groupMeSchefterBotId: process.env.GROUPME_AFL_SCHEFTER_BOT_ID,
-    groupMeRogerBotId: process.env.GROUPME_AFL_ROGER_BOT_ID,
-    // The AFL's own group. NOTE: this secret is new — the AFL has only ever
-    // been POSTED to (GROUPME_AFL_ROGER_BOT_ID), so nothing in this repo has
-    // ever needed its group id before. Roger's reply lane no-ops with a
-    // warning until it is set; his reminders are unaffected either way.
-    groupMeGroupId: process.env.GROUPME_AFL_GROUP_ID,
-    groupMeRogerBotSenderId: process.env.GROUPME_AFL_ROGER_BOT_SENDER_ID,
-    features: {
-      rumorMill: getLeagueBySlug('afl-fantasy').features.schefterTips,
-      // Trade-block listings → rumor-mill tips, same lane as TheLeague. The
-      // scanner builds its tips-queue keys from the league (schefter:afl:…),
-      // so the AFL's tips land in the queue the AFL rumor-scan step drains.
-      tradeBait: true,
-      eventReminders: true,
-      // AFL posts breaking/standard transactions directly to GroupMe from scanLeague
-      directGroupMe: true,
-      // Deferred for AFL — see module doc.
-      tradeOfferRumors: false,
-      groupmeListen: false,
-      // Roger answers the AFL first. Note this is independent of
-      // groupmeListen above: that flag is Schefter's mention→tip ingest, which
-      // is still TheLeague-only (its Redis keys are all TheLeague-scoped).
-      // Roger's lane keys off its own league-scoped prefix, so the two do not
-      // have to be switched on together.
-      rogerReplies: true,
-    },
-  }),
-];
+  });
+});
 
 /**
  * Look up a Schefter league by canonical slug ('theleague' | 'afl-fantasy')

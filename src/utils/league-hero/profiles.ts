@@ -18,7 +18,8 @@
  * that is not here yet belongs here as a new FIELD, never as a slug branch in
  * the resolver or a view.
  */
-import type { CanonicalLeagueSlug } from '../../config/leagues';
+import type { CanonicalLeagueSlug, LeagueDefinition } from '../../config/leagues';
+import { getLeagueConfig } from '../league-config';
 import { LEAGUES, ensureLeaguePrefix, getLeagueBySlug, leagueHasFeature } from '../../config/leagues';
 import type { ResolvedLeagueEvent } from '../../types/league-events';
 import type { CompositeHeroTreatment } from '../../types/composite-hero';
@@ -410,122 +411,156 @@ const aflProfile: LeagueHeroProfile = {
   }),
 };
 
-// ── Archie's ─────────────────────────────────────────────────────────────────
+// ── Package leagues (Archie's, and any new league without its own profile) ──
 //
 // A package league: its calendar is MFL's own export plus the facts every
 // league has (package-league-events.ts), passed in by the page, and every
-// event carries its own `heroRole`. Nine divisions are nine player pools
-// (`duplicatePlayers`), but they draft as ONE league (MFL `draft_kind: live`),
-// so a `draft` event is league-wide. Pages it does not have (a bracket page, a
+// event carries its own `heroRole`. Pages it does not have (a bracket page, a
 // trade builder, a lineup page) point at the nearest page it does, or at MFL.
+//
+// Everything here is read from the registry entry and the league's config
+// (team and division counts), so a new league gets a working hero with no
+// edit to this file. Archie's is this profile with its column's own name.
 
-const ARCHIES = LEAGUES.archies;
+const ONES = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten',
+  'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
+const TENS = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
 
-const archiesProfile: LeagueHeroProfile = {
-  league: 'archies',
-  ladder: CALENDAR_LADDER,
-  scheduleRelease: { priority: 'P3', accentColor: ACCENT_GOLD },
-  whatsNewTag: 'archies' as LeagueSlug,
-  featureSeed: 'archies-feature',
-  eventIdPrefix: 'archies',
-  urgency: {
-    'season-start': 7,
-    'new-league-year': 14,
-    draft: 30,
-    auction: 14,
-    'trade-deadline': 7,
-    'keeper-deadline': 30,
-  },
-  capabilities: {
-    liveScoring: leagueHasFeature('archies', 'liveScoring'),
-    peckingOrderSlot: leagueHasFeature('archies', 'powerRankings'),
-    // The Gauntlet runs every Wednesday in the league's news feed.
-    columnSlot: leagueHasFeature('archies', 'schefterFeed'),
-    bracketHero: false,
-  },
-  facts: {
-    keepers: {
-      count: 0,
-      time: 'the deadline',
-      deadline: 'the deadline',
-      lockLabel: 'the deadline',
-      countLabel: 'Keeper deadline',
-      path: '/rosters',
+/** 0–99 in words ("ninety-nine"); larger numbers stay digits. */
+export function numberWord(n: number): string {
+  if (!Number.isInteger(n) || n < 0 || n > 99) return String(n);
+  if (n < 20) return ONES[n];
+  return TENS[Math.floor(n / 10)] + (n % 10 ? `-${ONES[n % 10]}` : '');
+}
+const capitalize = (w: string) => w.charAt(0).toUpperCase() + w.slice(1);
+
+export interface PackageHeroOptions {
+  /** The league's weekly column, when it runs one under its own name. */
+  columnName?: string;
+}
+
+/** A calendar-driven hero profile built entirely from a registry league. */
+export function buildPackageHeroProfile(
+  def: LeagueDefinition,
+  options: PackageHeroOptions = {},
+): LeagueHeroProfile {
+  const slug = def.slug;
+  const short = def.shortName ?? def.name;
+  const config = getLeagueConfig(slug);
+  const teamCount = config.teams?.length ?? 0;
+  const divisionCount = config.divisions?.length ?? 0;
+  const pools = divisionCount > 1 ? `all ${numberWord(divisionCount)} divisions` : 'the league';
+  const tagline =
+    teamCount > 0 && divisionCount > 1
+      ? `${capitalize(numberWord(teamCount))} teams, ${numberWord(divisionCount)} divisions, one champion. Welcome to ${short}.`
+      : `${teamCount > 0 ? `${capitalize(numberWord(teamCount))} teams, one` : 'One'} champion. Welcome to ${short}.`;
+  return {
+    league: slug,
+    ladder: CALENDAR_LADDER,
+    scheduleRelease: { priority: 'P3', accentColor: ACCENT_GOLD },
+    whatsNewTag: def.navSlug as LeagueSlug,
+    featureSeed: `${def.navSlug}-feature`,
+    eventIdPrefix: def.navSlug,
+    urgency: {
+      'season-start': 7,
+      'new-league-year': 14,
+      draft: 30,
+      auction: 14,
+      'trade-deadline': 7,
+      'keeper-deadline': 30,
     },
-    tradeDeadline: {
-      day: 'deadline',
-      countLabel: 'Trade deadline',
-      leadIn: 'Line up your final moves of the season.',
-      path: '/rosters',
-      linkLabel: 'View Rosters',
+    capabilities: {
+      liveScoring: def.features.liveScoring,
+      peckingOrderSlot: def.features.powerRankings,
+      // The weekly column runs in the league's news feed.
+      columnSlot: def.features.schefterFeed,
+      bracketHero: false,
     },
-    weeks: { finalRegular: 14, playoffStart: 15, championship: 17 },
-    championshipName: 'Championship',
-    // No bracket page yet: the standings carry the seeds.
-    playoffsPath: '/standings',
-    freeAgentsPath: '/free-agents',
-    // Lineups are set on MFL — this site has no lineup page for the league.
-    lineup: {
-      href: (now) =>
-        buildMflOptionUrl({
-          leagueId: ARCHIES.id,
-          // Lineups are set inside a season, which is always its calendar year.
-          year: now.getFullYear(),
-          option: MFL_LINEUP_OPTION,
-          host: `https://${ARCHIES.mflHost}`,
-        }),
-      label: 'Set Lineup',
-      external: true,
+    facts: {
+      keepers: {
+        count: 0,
+        time: 'the deadline',
+        deadline: 'the deadline',
+        lockLabel: 'the deadline',
+        countLabel: 'Keeper deadline',
+        path: '/rosters',
+      },
+      tradeDeadline: {
+        day: 'deadline',
+        countLabel: 'Trade deadline',
+        leadIn: 'Line up your final moves of the season.',
+        path: '/rosters',
+        linkLabel: 'View Rosters',
+      },
+      weeks: { finalRegular: 14, playoffStart: 15, championship: 17 },
+      championshipName: 'Championship',
+      // No bracket page yet: the standings carry the seeds.
+      playoffsPath: '/standings',
+      freeAgentsPath: '/free-agents',
+      // Lineups are set on MFL — this site has no lineup page for the league.
+      lineup: {
+        href: (now) =>
+          buildMflOptionUrl({
+            leagueId: def.id,
+            // Lineups are set inside a season, which is always its calendar year.
+            year: now.getFullYear(),
+            option: MFL_LINEUP_OPTION,
+            host: `https://${def.mflHost}`,
+          }),
+        label: 'Set Lineup',
+        external: true,
+      },
+      draftBoardPath: '/rosters',
+      draftOrderPath: '/rosters',
+      sundayTicket: false,
+      // No Top Players page yet: the standings are where a week's results land.
+      recapPage: { path: '/standings', label: 'See the standings' },
     },
-    draftBoardPath: '/rosters',
-    draftOrderPath: '/rosters',
-    sundayTicket: false,
-    // No Top Players page yet: the standings are where a week's results land.
-    recapPage: { path: '/standings', label: 'See the standings' },
-  },
-  copy: {
-    shortName: "Archie's",
-    aroundThe: 'League',
-    columnName: 'The Gauntlet',
-    scheduleReleaseName: "Archie's",
-    everyPool: 'all nine divisions',
-    poolNames: 'all nine divisions',
-    playoffPicture: 'the playoff picture',
-    recapSummary: 'Top performances, biggest blowouts, and the games that swung the standings.',
-    gameDayChores: 'swap injuries, finalize your pickups',
-    gameDayContent: 'Last call to set starters, swap injured players, and finalize pickups.',
-    deskSummary: 'The desk covers the moves, the matchups, and the storylines shaping all nine division races.',
-    championCrownedSummary: 'The season has wrapped. Savor the result — the new season is already on its way.',
-    playoffs: {
-      title: 'Playoffs',
-      summary: 'The bracket is set. Every game from here is win or go home.',
-      kicker: 'Playoffs',
+    copy: {
+      shortName: short,
+      aroundThe: 'League',
+      columnName: options.columnName ?? 'The Column',
+      scheduleReleaseName: short,
+      everyPool: pools,
+      poolNames: pools,
+      playoffPicture: 'the playoff picture',
+      recapSummary: 'Top performances, biggest blowouts, and the games that swung the standings.',
+      gameDayChores: 'swap injuries, finalize your pickups',
+      gameDayContent: 'Last call to set starters, swap injured players, and finalize pickups.',
+      deskSummary:
+        divisionCount > 1
+          ? `The desk covers the moves, the matchups, and the storylines shaping ${pools.replace(/divisions$/, 'division races')}.`
+          : 'The desk covers the moves, the matchups, and the storylines shaping the league.',
+      championCrownedSummary: 'The season has wrapped. Savor the result — the new season is already on its way.',
+      playoffs: {
+        title: 'Playoffs',
+        summary: 'The bracket is set. Every game from here is win or go home.',
+        kicker: 'Playoffs',
+      },
+      championship: { title: 'Championship Week', summary: 'One game for the title.' },
+      offseason: {
+        title: `${short} Offseason`,
+        summary: 'Quiet stretch on the calendar. Review rosters and get ready for the next draft.',
+      },
+      default: { title: short, summary: tagline, kicker: short },
     },
-    championship: { title: 'Championship Week', summary: 'One game for the title.' },
-    offseason: {
-      title: "Archie's Offseason",
-      summary: 'Quiet stretch on the calendar. Review rosters and get ready for the next draft.',
-    },
-    default: {
-      title: "Archie's",
-      summary: "Ninety-nine teams, nine divisions, one champion. Welcome to Archie's.",
-      kicker: "Archie's",
-    },
-  },
-  defaultView: (now) => ({
-    pill: "ARCHIE'S",
-    headline: 'NINE DIVISIONS.',
-    accentWord: 'ONE.',
-    summary: "Ninety-nine teams, nine divisions, one champion. Welcome to Archie's.",
-    link: ensureLeaguePrefix(ARCHIES, '/standings'),
-    linkLabel: 'VIEW STANDINGS',
-    icon: 'star',
-    composite: { wordmark: "ARCHIE'S", accent: 'navy', tone: null, scope: 'league' },
-    accent: ACCENT_GOLD,
-    glow: GLOW_GOLD,
-    player: randomHeroPlayer(now),
-  }),
-};
+    defaultView: (now) => ({
+      pill: short.toUpperCase(),
+      headline: divisionCount > 1 ? `${numberWord(divisionCount).toUpperCase()} DIVISIONS.` : `${short.toUpperCase()}.`,
+      accentWord: 'ONE.',
+      summary: tagline,
+      link: ensureLeaguePrefix(def, '/standings'),
+      linkLabel: 'VIEW STANDINGS',
+      icon: 'star',
+      composite: { wordmark: short.toUpperCase(), accent: 'navy', tone: null, scope: 'league' },
+      accent: ACCENT_GOLD,
+      glow: GLOW_GOLD,
+      player: randomHeroPlayer(now),
+    }),
+  };
+}
+
+const archiesProfile: LeagueHeroProfile = buildPackageHeroProfile(LEAGUES.archies, { columnName: 'The Gauntlet' });
 
 // ── TheLeague ────────────────────────────────────────────────────────────────
 //
@@ -679,11 +714,25 @@ const PROFILES: Partial<Record<CanonicalLeagueSlug, LeagueHeroProfile>> = {
   archies: archiesProfile,
 };
 
-/** The hero profile for a league. Throws for a league with no hero profile — a page asking is a page that needs one. */
+/** Package profiles built on demand for registry leagues with no profile of their own. */
+const BUILT = new Map<string, LeagueHeroProfile>();
+
+/**
+ * The hero profile for a league: its own profile when it has one, else the
+ * package profile built from its registry entry. Throws only for a slug the
+ * registry does not know.
+ */
 export function getLeagueHeroProfile(league: CanonicalLeagueSlug): LeagueHeroProfile {
-  const profile = PROFILES[league];
-  if (!profile) throw new Error(`No homepage hero profile for league "${league}" (src/utils/league-hero/profiles.ts).`);
-  return profile;
+  const own = PROFILES[league];
+  if (own) return own;
+  const def = getLeagueBySlug(league);
+  if (!def) throw new Error(`No homepage hero profile for unknown league "${league}".`);
+  let built = BUILT.get(league);
+  if (!built) {
+    built = buildPackageHeroProfile(def);
+    BUILT.set(league, built);
+  }
+  return built;
 }
 
 /** Whether a slot is one this league runs, for `slotFor`. */

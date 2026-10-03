@@ -20,12 +20,11 @@
  * this must stay a single exported function rather than something each caller
  * assembles for itself.
  *
- * Both leagues' rules are always emitted, with no league branching: the
- * selectors are exact `src` matches, which can never collide across leagues.
+ * Every registry league's rules are always emitted, with no league branching:
+ * the selectors are exact `src` matches, which can never collide across leagues.
  */
-import theleagueConfig from '../data/theleague.config.json';
-import aflConfig from '../../data/afl-fantasy/afl.config.json';
-import { keeperLeagueConfig } from './keeper-config';
+import { ALL_LEAGUES } from '../config/leagues-data.mjs';
+import { getLeagueTeams } from './league-config';
 import { buildTeamIconDarkCss } from './team-icon-dark-css';
 import { buildCrestDarkStrokeCss, withStrokeColors } from './crest-dark-stroke-css';
 import {
@@ -35,8 +34,8 @@ import {
 } from './era-crest-stroke-css';
 import { buildTvLogoThemeCss } from './tv-logo-theme-css';
 
-const THELEAGUE_ICON_DIR = '/assets/theleague/icons';
-const AFL_ICON_DIR = '/assets/afl/icons';
+/** Each league's franchise icons live at /assets/<navSlug>/icons/<id>.png. */
+const iconDirFor = (navSlug: string) => `/assets/${navSlug}/icons`;
 
 /**
  * Every crest rule for both leagues: the `iconDark` swaps, the white-stroke
@@ -55,23 +54,19 @@ const AFL_ICON_DIR = '/assets/afl/icons';
  * `html.dark` are both wrong for a banner cut.
  */
 export function buildAllTeamIconDarkCss(): string {
+  // Every registry league with teams, in registry order; a league without
+  // dark art, measured strokes or eras contributes nothing.
+  const leagues = ALL_LEAGUES.map((l) => ({ slug: l.navSlug, teams: getLeagueTeams(l.navSlug) })).filter(
+    (l) => l.teams.length > 0,
+  );
   return [
-    buildTeamIconDarkCss(theleagueConfig.teams, { franchiseIconDir: THELEAGUE_ICON_DIR }),
-    buildTeamIconDarkCss(aflConfig.teams, { franchiseIconDir: AFL_ICON_DIR }),
-    // The custom-site demo's keeper league — empty (so no CSS) outside a demo build.
-    buildTeamIconDarkCss(keeperLeagueConfig.teams, { franchiseIconDir: '/assets/keeper/icons' }),
-    buildCrestDarkStrokeCss(withStrokeColors('theleague', theleagueConfig.teams), {
-      franchiseIconDir: THELEAGUE_ICON_DIR,
-    }),
-    buildCrestDarkStrokeCss(withStrokeColors('afl', aflConfig.teams), {
-      franchiseIconDir: AFL_ICON_DIR,
-    }),
-    buildEraCrestStrokeCss(theleagueConfig.teams),
-    buildEraCrestStrokeCss(aflConfig.teams),
-    buildEraCrestShapeCss(theleagueConfig.teams),
-    buildEraCrestShapeCss(aflConfig.teams),
-    buildEraCrestDarkStrokeCss(theleagueConfig.teams),
-    buildEraCrestDarkStrokeCss(aflConfig.teams),
+    ...leagues.map((l) => buildTeamIconDarkCss(l.teams, { franchiseIconDir: iconDirFor(l.slug) })),
+    ...leagues.map((l) =>
+      buildCrestDarkStrokeCss(withStrokeColors(l.slug, l.teams), { franchiseIconDir: iconDirFor(l.slug) }),
+    ),
+    ...leagues.map((l) => buildEraCrestStrokeCss(l.teams)),
+    ...leagues.map((l) => buildEraCrestShapeCss(l.teams)),
+    ...leagues.map((l) => buildEraCrestDarkStrokeCss(l.teams)),
     // TV network marks (Sunday Ticket board): same swap-else-stroke treatment,
     // in both directions — a broadcaster's brand can be pale (Channel 5, Kayo)
     // where a crest never is, so this block carries `html:not(.dark)` rules too.

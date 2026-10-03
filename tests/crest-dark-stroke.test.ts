@@ -5,6 +5,7 @@ import {
   measureAllCrests,
   buildManifest,
   STROKE_THRESHOLD,
+  crestLeagues,
 } from '../scripts/measure-crest-contrast.mjs';
 import {
   buildCrestDarkStrokeCss,
@@ -58,7 +59,7 @@ describe('crest dark-mode stroke manifest', () => {
   });
 
   it('every listed icon resolves to a real team in that league config', () => {
-    const configs: Record<string, any> = { theleague: theleagueConfig, afl: aflConfig };
+    const configs: Record<string, any> = Object.fromEntries(crestLeagues().map((l) => [l.slug, l.config]));
     for (const entry of manifest.needsStroke) {
       const cfg = configs[entry.league];
       expect(cfg, `unknown league ${entry.league}`).toBeTruthy();
@@ -116,7 +117,7 @@ describe('buildCrestDarkStrokeCss', () => {
 });
 
 describe('iconStrokeDark overrides', () => {
-  const configs: Record<string, any> = { theleague: theleagueConfig, afl: aflConfig };
+  const configs: Record<string, any> = Object.fromEntries(crestLeagues().map((l) => [l.slug, l.config]));
 
   it('only opts OUT teams the measurement actually flagged', () => {
     // `false` says "don't stroke this" — on a crest that was never going to be

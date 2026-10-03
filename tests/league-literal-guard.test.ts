@@ -95,12 +95,6 @@ const ALLOWLIST: Array<{ file: string; literals: string[]; reason: string }> = [
     reason:
       "the 'AI Insights Corpus' dev-notes page — its body is prose documentation of engineering learnings for readers, including illustrative file-path examples in <code> tags. Not executable business logic.",
   },
-  {
-    file: 'src/utils/schefter-og.ts',
-    literals: ['data/theleague', 'data/afl-fantasy'],
-    reason:
-      "FEED_PATHS maps league slug to its committed schefter-feed.json location, which is asymmetric — theleague's bundled copy lives under src/data/theleague/ (for static import elsewhere) while afl-fantasy's lives at the data/afl-fantasy/ root — so it isn't derivable from the single dataPath registry field. Not caught by a nearby call-site marker since it's a plain object literal, not a function argument.",
-  },
 ];
 
 // ---------------------------------------------------------------------------

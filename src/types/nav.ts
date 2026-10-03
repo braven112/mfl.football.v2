@@ -9,11 +9,16 @@
  * - src/components/nav/*.astro (nav components)
  * - src/utils/nav-utils.ts (visibility and routing logic)
  */
+import type { LEAGUES as REGISTRY_LEAGUES } from '../config/leagues-data.mjs';
 
 /**
  * Supported league identifiers
  */
-export type LeagueSlug = 'theleague' | 'afl' | 'bb1' | 'keeper' | 'archies';
+export type LeagueSlug =
+  | (typeof REGISTRY_LEAGUES)[keyof typeof REGISTRY_LEAGUES]['navSlug']
+  // The demo-only keeper slot is added to the registry at runtime on a demo
+  // deployment, so its literal is not in the static entries above.
+  | 'keeper';
 
 /**
  * The custom-site demo's keeper league (`keeper`, registered only on a demo
@@ -232,14 +237,6 @@ export interface NavConfig {
 
   /** All navigation sections */
   sections: NavSection[];
-
-  /** Franchise IDs that have admin access */
-  /**
-   * Admin franchise ids, scoped per league. A franchise id is only an admin
-   * within its own league — AFL franchise 0001 must never pass TheLeague's
-   * admin gate (they're different teams that happen to share an id).
-   */
-  adminFranchiseIds: Record<LeagueSlug, string[]>;
 
   /** Footer links (like "Back to MFL") */
   footerLinks: NavFooterLink[];

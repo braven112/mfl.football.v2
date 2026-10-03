@@ -29,9 +29,13 @@
  * `tests/live-surface-grounds.test.ts` pins them against the stylesheets, so a
  * token edit cannot silently drift from this file.
  */
+import { ALL_LEAGUES } from '../../config/leagues-data.mjs';
 
-/** The `data-league` attribute value a surface renders under. */
-export type LiveSurface = 'theleague' | 'afl' | 'bb1' | 'archies' | 'mfl';
+/**
+ * The `data-league` attribute value a surface renders under: a registry
+ * league's `navSlug`, or `mfl` for the shared-host MFL Live app.
+ */
+export type LiveSurface = string;
 
 export interface SurfaceGrounds {
   /** `--card-surface` in the light theme. */
@@ -45,6 +49,9 @@ export interface SurfaceGrounds {
  * Dark is per league, and `bb1` and `archies` deliberately share the bare
  * `html.dark` value because neither overrides `--card-surface`.
  */
+/** The bare `html.dark` card — what a theme that does not override `--card-surface` renders. */
+export const DEFAULT_GROUNDS: SurfaceGrounds = { light: '#ffffff', dark: '#262626' };
+
 export const SURFACE_GROUNDS: Record<LiveSurface, SurfaceGrounds> = {
   theleague: { light: '#ffffff', dark: '#262626' },
   afl: { light: '#ffffff', dark: '#16283c' },
@@ -58,18 +65,15 @@ export const SURFACE_GROUNDS: Record<LiveSurface, SurfaceGrounds> = {
  * is what `TheLeagueLayout` writes into `data-league`. Not the canonical slug:
  * the attribute says `afl`, the slug says `afl-fantasy`.
  */
-const SLUG_TO_SURFACE: Record<string, LiveSurface> = {
-  theleague: 'theleague',
-  'afl-fantasy': 'afl',
-  'best-ball-1': 'bb1',
-  archies: 'archies',
-};
-
-/** The surface a league's own live-scoring page draws on. */
 export function surfaceForLeague(slug: string): LiveSurface {
-  return SLUG_TO_SURFACE[slug] ?? 'theleague';
+  return ALL_LEAGUES.find((l) => l.slug === slug)?.navSlug ?? 'theleague';
 }
 
+/**
+ * A surface's card grounds. A league whose theme does not override
+ * `--card-surface` (any new one, until it does) gets the bare dark card —
+ * never another league's.
+ */
 export function groundsFor(surface: LiveSurface): SurfaceGrounds {
-  return SURFACE_GROUNDS[surface];
+  return SURFACE_GROUNDS[surface] ?? DEFAULT_GROUNDS;
 }

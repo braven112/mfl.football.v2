@@ -30,7 +30,7 @@ import {
 } from './leagues-data.mjs';
 
 /** Canonical slug: the path segment under src/pages/ */
-export type CanonicalLeagueSlug = 'theleague' | 'afl-fantasy' | 'best-ball-1' | 'keeper' | 'archies';
+export type CanonicalLeagueSlug = keyof typeof RAW_LEAGUES | DemoOnlyLeagueSlug;
 
 /**
  * Slots registered only on a custom-site demo deployment (see the `isDemoEnv`
@@ -38,6 +38,9 @@ export type CanonicalLeagueSlug = 'theleague' | 'afl-fantasy' | 'best-ball-1' | 
  * lookup of one must go through `getLeagueBySlug` and handle null.
  */
 export type DemoOnlyLeagueSlug = 'keeper';
+
+/** Starting presets for a league's features — see src/config/league-archetypes.mjs. */
+export type LeagueArchetype = 'dynasty-cap' | 'deluxe-keeper' | 'contest' | 'best-ball' | 'standard-redraft';
 
 export interface LeagueFeatures {
   contracts: boolean;
@@ -211,6 +214,23 @@ export type LeagueChatConfig =
   | { provider: 'groupme'; botEnv: string }
   | { provider: 'slack'; tokenEnv: string; channelEnv: string };
 
+/** Schedule planner policy — see `schedulePolicy` on a registry entry and src/utils/schedule-plan.mjs. */
+export interface SchedulePolicy {
+  mode: 'simple' | 'constructive';
+  startWindow: number[];
+  endWindow: number[];
+  doubleheaderCount: number;
+  keepDivisionFinish: boolean;
+  crossConference: {
+    week: number;
+    anchorYear: number;
+    /** Each entry is a pair of division (or, for rivalries, team) names. */
+    anchorPairing: string[][];
+    alternatePairing: string[][];
+    protectedRivalries: string[][];
+  } | null;
+}
+
 export interface LeagueDefinition {
   id: string;
   slug: CanonicalLeagueSlug;
@@ -218,6 +238,33 @@ export interface LeagueDefinition {
   navSlug: LeagueSlug;
   /** Color theme id — a file in src/themes/ (see scripts/generate-league-themes.mjs). */
   theme: string;
+  /**
+   * The preset this league's feature checkboxes started from
+   * (src/config/league-archetypes.mjs). Informational: code gates on
+   * `features` via leagueHasFeature, never on the archetype.
+   */
+  archetype: LeagueArchetype;
+  /** Franchises that see admin-only nav links, get ops alerts, and count as commissioners (auth fallback). */
+  adminFranchiseIds: string[];
+  /**
+   * Opts the league into the Schefter scanners (scripts/lib/schefter-leagues.mjs):
+   * its events file, the NAMES of its GroupMe env vars, and which lanes run.
+   * Absent = a news feed (if `schefterFeed`) but no scanner.
+   */
+  schefter?: {
+    eventsPath: string;
+    env: { schefterBot: string; rogerBot: string; groupId: string; rogerSender: string };
+    lanes: {
+      tradeBait: boolean;
+      eventReminders: boolean;
+      directGroupMe: boolean;
+      tradeOfferRumors: boolean;
+      groupmeListen: boolean;
+      rogerReplies: boolean;
+    };
+  };
+  /** Opts the league into the schedule planner and reveal. Absent = no planner. */
+  schedulePolicy?: SchedulePolicy;
   name: string;
   mflHost: string;
   dataPath: string;
@@ -307,7 +354,27 @@ export interface LeagueDefinition {
   /** Short display name for tight spaces (the site header). */
   shortName?: string;
   /** The league's mark for the shared header and layout, per theme. */
-  logo?: { light: string; dark: string };
+  /**
+   * The league's mark. BOTH cuts are always set, even when they are the same
+   * file (Archie's): whether the dark cut differs is a per-league choice made
+   * here, never a missing field a component has to guess around.
+   */
+  logo: { light: string; dark: string };
+  /**
+   * The Schefter share card's mark, when `logo.dark` is a format the card
+   * renderer cannot read (it takes PNG or SVG, not WebP). Defaults to logo.dark.
+   */
+  logoOg?: string;
+  /** Schefter share-card branding. Absent = derived from name, domain and themeColor. */
+  shareCard?: { name: string; domain: string; primary: string };
+  /** Demo banner line, when the archetype's default does not fit. */
+  demoPitch?: string;
+  /** First season of the league's player archive. Absent = not stated on draft results. */
+  playerArchiveStartYear?: number;
+  /** Weekly Schefter article types the league gets. Absent = every type. */
+  articleTypes?: string[];
+  /** Push notification icon + Android badge. Absent = the site's PWA art. */
+  pushArt?: { icon: string; badge: string };
   /** Optional wordmark shown beside `logo` instead of the text short name. */
   wordmark?: string;
   /** Browser chrome `theme-color` for a package league. */

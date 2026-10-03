@@ -13,6 +13,7 @@ import { spriteUrl } from '../../../utils/sprite-url';
 import { getSearchPath, resolveLeaguePath, resolveDirectoryHref } from '../../../utils/nav-utils';
 import { getLeagueBySlug, type CanonicalLeagueSlug } from '../../../config/leagues';
 import { pathBelongsToLeague } from '../../../config/footer-config';
+import { isAflFamily } from '../../../types/nav';
 
 interface Props {
   league: CanonicalLeagueSlug;
@@ -34,20 +35,10 @@ const { league: leagueSlug, isAuthenticated } = Astro.props;
 const league = getLeagueBySlug(leagueSlug)!;
 const isAfl = leagueSlug === 'afl-fantasy';
 
-// CSS class prefix — presentational, kept per-league so output stays
-// pixel-identical (the AFL and TheLeague style blocks below reference the
-// matching prefix). Not a registry constant; local to this component.
-const CLASS_PREFIX: Record<CanonicalLeagueSlug, string> = {
-  'afl-fantasy': 'afl-links',
-  theleague: 'hp-links',
-  // Best-ball reuses TheLeague's neutral link styling if this section is
-  // ever rendered there (no bb1 page uses QuickLinks today).
-  'best-ball-1': 'hp-links',
-  keeper: 'afl-links',
-  // Package leagues use the same neutral styling.
-  archies: 'hp-links',
-};
-const cls = CLASS_PREFIX[leagueSlug];
+// CSS class prefix — presentational, so output stays pixel-identical: the
+// AFL-family style block (the AFL and the demo's keeper slot) is `afl-links`,
+// and every other league — a new one included — wears the neutral `hp-links`.
+const cls = isAflFamily(league.navSlug) ? 'afl-links' : 'hp-links';
 
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);

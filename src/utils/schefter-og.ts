@@ -28,24 +28,25 @@ import { getNflTeamColors, hexToRgba } from './nfl-team-colors';
 import { normalizeTeamCode } from './nfl-logo';
 import { isValidSchefterPostId, schefterPostOgText } from './schefter-feed';
 import { isEspnCdnUrl } from './espn-cdn';
+import { ALL_LEAGUES, getLeagueBySlug, type CanonicalLeagueSlug } from '../config/leagues';
 
 export const OG_WIDTH = 1200;
 export const OG_HEIGHT = 630;
 
-export type OgLeague = 'theleague' | 'afl-fantasy' | 'archies';
+/** A league whose Schefter posts get share cards: every league running the feed. */
+export type OgLeague = CanonicalLeagueSlug;
 
-export const OG_LEAGUES: readonly OgLeague[] = ['theleague', 'afl-fantasy', 'archies'];
+export const OG_LEAGUES: readonly OgLeague[] = ALL_LEAGUES.filter((l) => l.features.schefterFeed).map((l) => l.slug);
 
 /** @see isValidSchefterPostId — re-exported for the endpoint. */
 export const isValidPostId = isValidSchefterPostId;
 
 // ── Feed lookup ──────────────────────────────────────────────────────────
 
-const FEED_PATHS: Record<OgLeague, string> = {
-  theleague: 'src/data/theleague/schefter-feed.json',
-  'afl-fantasy': 'data/afl-fantasy/schefter-feed.json',
-  archies: 'data/archies/schefter-feed.json',
-};
+/** The registry's `schefterFeedPath` for a share-card league. */
+function feedPathFor(league: OgLeague): string {
+  return (getLeagueBySlug(league) as { schefterFeedPath?: string } | null)?.schefterFeedPath ?? '';
+}
 
 interface FeedCacheEntry {
   mtimeMs: number;
@@ -57,7 +58,7 @@ interface FeedCacheEntry {
 const feedCache = new Map<OgLeague, FeedCacheEntry>();
 
 function getFeedIndex(league: OgLeague): Map<string, SchefterPost> {
-  const filePath = join(process.cwd(), FEED_PATHS[league]);
+  const filePath = join(process.cwd(), feedPathFor(league));
   const cached = feedCache.get(league);
   // One open handle for both the mtime check and the read, so the bytes parsed
   // are the bytes whose mtime was checked (CodeQL js/file-system-race).
@@ -101,7 +102,7 @@ function getArchiveIndex(league: OgLeague): Map<string, SchefterPost> {
   const cached = archiveCache.get(league);
   if (cached) return cached;
   const byId = new Map<string, SchefterPost>();
-  const dir = join(process.cwd(), dirname(FEED_PATHS[league]), 'schefter-archive');
+  const dir = join(process.cwd(), dirname(feedPathFor(league)), 'schefter-archive');
   try {
     const files = readdirSync(dir).filter((f) => /^\d{4}\.json$/.test(f));
     for (const file of files) {
@@ -186,16 +187,17 @@ function loadFonts() {
 
 const logoCache = new Map<OgLeague, string | null>();
 
-const LEAGUE_LOGO_DARK: Record<OgLeague, string> = {
-  theleague: 'public/assets/logos/theleague-logo-dark.svg',
-  'afl-fantasy': 'public/assets/logos/afl-logo-dark.svg',
-  archies: 'public/assets/logos/archies-head.png',
-};
+/** The card is always dark: the league's OG mark, else its dark logo (repo path under public/). */
+function leagueLogoFile(league: OgLeague): string {
+  const def = getLeagueBySlug(league);
+  const src = def?.logoOg ?? def?.logo.dark ?? '';
+  return src ? `public${src}` : '';
+}
 
 /** League logo (dark-theme variant — the card is always dark) as a data URI. */
 function loadLeagueLogo(league: OgLeague): string | null {
   if (logoCache.has(league)) return logoCache.get(league)!;
-  const file = LEAGUE_LOGO_DARK[league] ?? LEAGUE_LOGO_DARK.theleague;
+  const file = leagueLogoFile(league);
   let uri: string | null = null;
   try {
     const bytes = readFileSync(join(process.cwd(), file));
@@ -264,11 +266,19 @@ function tierBadge(post: SchefterPost): TierBadge {
   return { label: 'LEAGUE WIRE', ghost: 'SCHEFTER', color: '#2563eb' };
 }
 
-const LEAGUE_BRAND: Record<OgLeague, { name: string; domain: string; primary: string }> = {
-  theleague: { name: 'The League', domain: 'theleague.us', primary: '#1c497c' },
-  'afl-fantasy': { name: 'AFL Fantasy', domain: 'afl-fantasy.com', primary: '#002244' },
-  archies: { name: "Archie's FFL", domain: 'mfl.football/archies', primary: '#1d3a6e' },
-};
+/** Card navy when a league names no colour of its own. */
+const DEFAULT_CARD_PRIMARY = '#1c497c';
+
+/** The card's league name, printed address and colour — the registry's `shareCard`, else derived. */
+function leagueBrand(league: OgLeague): { name: string; domain: string; primary: string } {
+  const def = getLeagueBySlug(league);
+  if (def?.shareCard) return def.shareCard;
+  return {
+    name: def?.shortName ?? def?.name ?? league,
+    domain: def?.domains[0] ?? `mfl.football/${league}`,
+    primary: def?.themeColor ?? DEFAULT_CARD_PRIMARY,
+  };
+}
 
 // ── Satori node helpers (object form — no JSX in .ts) ────────────────────
 
@@ -293,7 +303,7 @@ function buildCardTree(opts: {
   headshotUri: string | null;
 }): SatoriNode {
   const { post, league, player, headshotUri } = opts;
-  const brand = LEAGUE_BRAND[league];
+  const brand = leagueBrand(league);
   const badge = tierBadge(post);
   const hasComposite = !!(player && headshotUri);
 

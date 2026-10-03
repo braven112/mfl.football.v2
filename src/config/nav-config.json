@@ -618,21 +618,6 @@
       ]
     }
   ],
-  "adminFranchiseIds": {
-    "theleague": [
-      "0001",
-      "0000"
-    ],
-    "afl": [
-      "0001"
-    ],
-    "bb1": [
-      "0001",
-      "0000"
-    ],
-    "keeper": [],
-    "archies": []
-  },
   "footerLinks": [
     {
       "id": "mfl-home",
@@ -686,11 +671,5 @@
     "/draft/broadcast": "/draft/broadcast",
     "/top-players": "/top-players"
   },
-  "verifyTeamUrl": {
-    "theleague": "https://{host}/{year}/home/{leagueId}?MODULE=MESSAGE20",
-    "afl": "https://{host}/{year}/home/{leagueId}?MODULE=MESSAGE20",
-    "bb1": "https://{host}/{year}/home/{leagueId}?MODULE=MESSAGE20",
-    "keeper": "https://{host}/{year}/home/{leagueId}?MODULE=MESSAGE20",
-    "archies": "https://{host}/{year}/home/{leagueId}?MODULE=MESSAGE20"
-  }
+  "verifyTeamUrl": "https://{host}/{year}/home/{leagueId}?MODULE=MESSAGE20"
 }

@@ -408,6 +408,7 @@
         "tests/hero-casting.test.ts",
         "tests/afl-hero-casting.test.ts",
         "tests/league-hero.test.ts",
+        "tests/league-hero-package-profile.test.ts",
         "tests/hero-resolver.test.ts",
         "tests/offseason-hero-data.test.ts",
         "tests/afl-hero-lead-event-flip.test.ts",
@@ -432,6 +433,8 @@
       "rules": "docs/claude/rules/league-urls.md",
       "paths": [
         "src/config/leagues*",
+        "src/config/league-feature-catalog.mjs",
+        "src/config/league-archetypes.mjs",
         "scripts/lib/schefter-public-url.mjs",
         "src/utils/link-punctuation.mjs",
         "src/utils/mfl-url.ts",
@@ -443,7 +446,9 @@
         "tests/league-literal-guard.test.ts",
         "tests/rankings-scope.test.ts",
         "tests/league-year-for-slug.test.ts",
-        "tests/league-staging-domains.test.ts"
+        "tests/league-staging-domains.test.ts",
+        "tests/league-feature-catalog.test.ts",
+        "tests/phantom-league.test.ts"
       ]
     },
     {
@@ -1351,6 +1356,7 @@
         "src/components/shared/standings/AflFamilyStandingsPage.astro"
       ],
       "tests": [
+        "tests/team-preferences-any-league.test.ts",
         "tests/preferred-team-resolution-guard.test.ts",
         "tests/team-preferences.test.ts"
       ],

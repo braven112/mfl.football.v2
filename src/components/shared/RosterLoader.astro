@@ -11,10 +11,8 @@
  * See docs/claude/loading-standards.md (tier 5 — branded moment).
  */
 import '../../styles/roster-loader.css';
-import theleagueConfig from '../../data/theleague.config.json';
-import aflConfig from '../../../data/afl-fantasy/afl.config.json';
-import bb1Config from '../../../data/best-ball-1/bb1.config.json';
-import archiesConfig from '../../../data/archies/archies.config.json';
+import { ALL_LEAGUES, DEFAULT_LEAGUE_SLUG, LEAGUES } from '../../config/leagues';
+import { getLeagueConfig } from '../../utils/league-config';
 import type { LeagueSlug } from '../../types/nav';
 
 interface Props {
@@ -23,31 +21,17 @@ interface Props {
 }
 
 const { league = 'theleague' } = Astro.props;
-// Keyed by LeagueSlug so a new league is a type error here, not a silent
-// fall-through to TheLeague's logo.
-const LOGOS: Record<LeagueSlug, { light: string; dark: string }> = {
-  theleague: { light: '/assets/logos/theleague-logo.svg', dark: '/assets/logos/theleague-logo-dark.svg' },
-  afl: { light: '/assets/logos/afl-logo.svg', dark: '/assets/logos/afl-logo-dark.svg' },
-  bb1: { light: '/assets/logos/bestball-logo.svg', dark: '/assets/logos/bestball-logo-dark.svg' },
-  archies: { light: '/assets/logos/archies-head.webp', dark: '/assets/logos/archies-head.webp' },
-  keeper: { light: '/assets/logos/keeper-logo.svg', dark: '/assets/logos/keeper-logo-dark.svg' },
-};
-const logoUrl = (LOGOS[league] ?? LOGOS.theleague).light;
-const logoDarkUrl = (LOGOS[league] ?? LOGOS.theleague).dark;
+// Mark and narration come from the registry entry (`logo`, `configPath`), so a
+// new league needs no edit here. An unregistered nav slug renders the default
+// league's mark, as before.
+const leagueDef = ALL_LEAGUES.find((l) => l.navSlug === league) ?? LEAGUES[DEFAULT_LEAGUE_SLUG];
+const logoUrl = leagueDef.logo?.light ?? '';
+const logoDarkUrl = leagueDef.logo?.dark ?? logoUrl;
 
 // Narration comes from the OFFICIAL per-league team data file: general league
 // flavor (`loaderLines`) + one or more quips per team (`loaderQuips`). Baked at
 // SSR for the current league; the leagues are fully independent.
-// The keeper slot's config exists only in a demo build's checkout — a glob, not an import.
-const keeperConfig = Object.values(import.meta.glob('../../../data/keeper/keeper.config.json', { eager: true, import: 'default' }))[0];
-const CONFIGS: Record<LeagueSlug, any> = {
-  theleague: theleagueConfig,
-  afl: aflConfig,
-  bb1: bb1Config,
-  archies: archiesConfig,
-  keeper: keeperConfig ?? { teams: [] },
-};
-const cfg: any = CONFIGS[league] ?? theleagueConfig;
+const cfg: any = getLeagueConfig(leagueDef.slug);
 const loaderLines: string[] = [
   ...(cfg.loaderLines ?? []),
   ...cfg.teams.flatMap((t: any) => t.loaderQuips ?? []),

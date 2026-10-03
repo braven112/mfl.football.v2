@@ -1,7 +1,9 @@
 {
   "$comment": "Ratchet baseline for Storybook coverage of src/components/shared/. `backlog` is every PRESENTATIONAL shared component (not a page body, not data-bound, not a style/script injector — all derived from source by scripts/lib/story-coverage.mjs) that has no story and is not rendered inside one. It may only SHRINK: tests/story-coverage.test.ts fails on a component new to it (ship it with a story) and on an entry that left it (retighten with `node scripts/story-coverage.mjs --write`, which refuses to grow it). `exempt` maps a presentational component that genuinely cannot take a story to the reason why — the only hand-labelled bucket, so it carries words, not a flag.",
   "recordedAt": "2026-10-02",
-  "exempt": {},
+  "exempt": {
+    "src/components/shared/RosterLoader.astro": "Renders with the hidden attribute and is only revealed by the roster page client script mid-fetch, so a static story snapshots a blank frame. It was classed data-bound until its config read moved into src/utils/league-config.ts."
+  },
   "backlog": [
     "src/components/shared/AFLActionModal.astro",
     "src/components/shared/AccountingConsole.astro",

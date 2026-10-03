@@ -5,22 +5,17 @@
  * league's hero needs no branch in the card components.
  */
 import type { CanonicalLeagueSlug } from '../../config/leagues';
-import { LEAGUES, leagueUrl } from '../../config/leagues';
+import { DEFAULT_LEAGUE_SLUG, LEAGUES, leagueUrl } from '../../config/leagues';
 
 /**
  * The dark-ground cut of the league's mark. A hero gradient is dark in BOTH
- * themes, so this is always the dark cut. A league whose registry entry
- * carries its own `logo` uses that; the two founding leagues' marks predate
- * the field and live at their historical paths.
+ * themes, so this is always the dark cut, read from the registry's `logo`.
+ * A slot absent from this build (the demo-only keeper league) gets the
+ * default league's mark rather than a broken image.
  */
-const FOUNDING_MARKS: Partial<Record<CanonicalLeagueSlug, string>> = {
-  theleague: '/assets/logos/theleague-logo-dark.svg',
-  'afl-fantasy': '/assets/logos/afl-logo-dark.svg',
-};
-
 export function heroLeagueMark(league: CanonicalLeagueSlug): string {
-  const entry = LEAGUES[league] as { logo?: { dark?: string } };
-  return entry.logo?.dark ?? FOUNDING_MARKS[league] ?? FOUNDING_MARKS['afl-fantasy']!;
+  const entry = (LEAGUES as Record<string, { logo?: { dark?: string } } | undefined>)[league];
+  return entry?.logo?.dark ?? LEAGUES[DEFAULT_LEAGUE_SLUG].logo?.dark ?? '';
 }
 
 /**

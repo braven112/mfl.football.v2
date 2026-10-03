@@ -6,7 +6,7 @@ import vercel from '@astrojs/vercel';
 import { REMOTE_MARK_HOSTS } from './src/utils/remote-image';
 import react from '@astrojs/react';
 import { archivedFeedFiles } from './scripts/lib/archived-feed-files.mjs';
-import { schefterArchiveIncludeFiles, scheduleReleaseIncludeFiles } from './scripts/lib/schefter-archive.mjs';
+import { schefterArchiveIncludeFiles, schefterOgIncludeFiles, scheduleReleaseIncludeFiles } from './scripts/lib/schefter-archive.mjs';
 import { isDemoEnv } from './src/utils/demo-isolation-core.mjs';
 
 // Local dev: hydrate process.env from .env / .env.local (`pnpm vercel env pull`).
@@ -90,10 +90,8 @@ export default defineConfig({
       'src/assets/fonts/og/UFCSans-Regular.ttf',
       'src/assets/fonts/og/UFCSans-Medium.ttf',
       'src/assets/fonts/og/UFCSans-CondensedBold.ttf',
-      'public/assets/logos/theleague-logo-dark.svg',
-      'public/assets/logos/afl-logo-dark.svg',
-      'src/data/theleague/schefter-feed.json',
-      'data/afl-fantasy/schefter-feed.json',
+      // Each Schefter league's active feed and share-card mark, from the registry.
+      ...schefterOgIncludeFiles(),
       // NFL bye calendar — read with fs by /api/schedule-plan. Small, and the
       // tracer cannot follow a process.cwd() join on its own.
       'data/nfl/bye-weeks.json',

@@ -19,7 +19,7 @@
 import type { NavLink, NavSection, LeagueSlug, NavTeamInfo } from '../types/nav';
 import { NAV_COOKIES, isAflFamily } from '../types/nav';
 import { isDemoEnv } from './demo-isolation-core.mjs';
-import { navConfig, getRouteEquivalence } from '../config/nav-config';
+import { navConfig, getRouteEquivalence, getAdminFranchiseIds } from '../config/nav-config';
 import {
   ALL_LEAGUES,
   getLeagueByNavSlug,
@@ -387,7 +387,7 @@ export function isSectionVisible(
   section: NavSection,
   league: LeagueSlug,
   franchiseId: string | null,
-  adminFranchiseIds: string[] = navConfig.adminFranchiseIds[league] ?? []
+  adminFranchiseIds: string[] = getAdminFranchiseIds(league)
 ): boolean {
   // Check league restriction
   if (section.leagueOnly && !leagueOnlyMatches(section.leagueOnly, league)) {
@@ -431,7 +431,7 @@ export function getVisibleLinks(
   section: NavSection,
   league: LeagueSlug,
   franchiseId: string | null,
-  adminFranchiseIds: string[] = navConfig.adminFranchiseIds[league] ?? []
+  adminFranchiseIds: string[] = getAdminFranchiseIds(league)
 ): NavLink[] {
   return section.links.filter(link => {
     if (!linkMatchesLeague(link, league)) {
@@ -457,7 +457,7 @@ export function getVisibleLinks(
 export function getVisiblePinnedLinks(
   league: LeagueSlug,
   franchiseId: string | null,
-  adminFranchiseIds: string[] = navConfig.adminFranchiseIds[league] ?? []
+  adminFranchiseIds: string[] = getAdminFranchiseIds(league)
 ): NavLink[] {
   return (navConfig.pinnedLinks ?? []).filter(link => {
     if (!linkMatchesLeague(link, league)) {
@@ -478,7 +478,7 @@ export function getVisiblePinnedLinks(
 export function getVisibleSections(
   league: LeagueSlug,
   franchiseId: string | null,
-  adminFranchiseIds: string[] = navConfig.adminFranchiseIds[league] ?? []
+  adminFranchiseIds: string[] = getAdminFranchiseIds(league)
 ): NavSection[] {
   return navConfig.sections
     .filter(section => isSectionVisible(section, league, franchiseId, adminFranchiseIds))
@@ -789,16 +789,21 @@ export function clearMyTeamCookie(): void {
 }
 
 /**
+ * True for a nav slug the registry knows — every league's cookie value is
+ * valid, not a hand-kept list (which had already lost Archie's).
+ */
+function isRegisteredNavSlug(value: string | null | undefined): value is LeagueSlug {
+  return !!value && ALL_LEAGUES.some((l) => l.navSlug === value);
+}
+
+/**
  * Get the myteam league cookie value
  *
  * @returns League slug or null if not set
  */
 export function getMyTeamLeagueCookie(): LeagueSlug | null {
   const value = getCookie(NAV_COOKIES.MY_TEAM_LEAGUE);
-  if (value === 'theleague' || value === 'afl' || value === 'bb1' || value === 'keeper') {
-    return value;
-  }
-  return null;
+  return isRegisteredNavSlug(value) ? value : null;
 }
 
 /**
@@ -838,10 +843,7 @@ export function parseMyTeamFromUrl(url: URL): string | null {
  */
 export function getLastViewedLeague(): LeagueSlug | null {
   const value = getCookie(NAV_COOKIES.NAV_LEAGUE);
-  if (value === 'theleague' || value === 'afl' || value === 'bb1' || value === 'keeper') {
-    return value;
-  }
-  return null;
+  return isRegisteredNavSlug(value) ? value : null;
 }
 
 /**
