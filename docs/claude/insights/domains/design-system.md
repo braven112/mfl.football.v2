@@ -1178,7 +1178,7 @@ token-based (light) and invert via tokens-dark.
 
 **Pattern name:** `HeroBanner` with `variant="editorial"`
 
-**Component:** `src/components/theleague/HeroBanner.astro`
+**Component:** `src/components/shared/HeroBanner.astro`
 
 **Design:** Transparent background (blends into page), large bold title (800 weight, `clamp(1.75rem, 2.5vw + 0.75rem, 2.5rem)`), eyebrow badge + date, summary, two-action row (primary CTA button + text link). Image floats right in a tilted browser-frame when available.
 
