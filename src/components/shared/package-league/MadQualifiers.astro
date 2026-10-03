@@ -70,9 +70,9 @@ const totalTeams = Object.keys(rows).length;
   <p class="mad-q__cut">Playoff cut line · {playoffSize} qualify</p>
 
   {totalTeams > playoffSize && (
-    <a class="mad-q__full" href={fullHref}>
-      See the full standings — seeds {playoffSize + 1}–{totalTeams} →
-    </a>
+    <p class="mad-q__full">
+      <a class="cta-link" href={fullHref}>See the full standings — seeds {playoffSize + 1}–{totalTeams}</a>
+    </p>
   )}
 </div>
 
@@ -144,8 +144,13 @@ const totalTeams = Object.keys(rows).length;
     text-decoration: none;
     transition: background-color var(--transition-fast), transform var(--transition-fast);
   }
+  /* Restates colour + decoration: the layout's global a:hover (0,1,1) would
+     otherwise underline every line of the tile (CTA note, src/styles/cta.css). */
   .mad-q__tile:hover,
+  .mad-q__tile:focus,
   .mad-q__tile:focus-visible {
+    color: inherit;
+    text-decoration: none;
     background: color-mix(in srgb, var(--mad-tier) 18%, transparent);
     transform: translateY(-2px);
   }
@@ -154,6 +159,7 @@ const totalTeams = Object.keys(rows).length;
   @media (prefers-reduced-motion: reduce) {
     .mad-q__tile { transition: none; }
     .mad-q__tile:hover,
+    .mad-q__tile:focus,
     .mad-q__tile:focus-visible { transform: none; }
   }
 
@@ -225,13 +231,8 @@ const totalTeams = Object.keys(rows).length;
     color: var(--mad-cut);
   }
   .mad-q__full {
-    display: block;
-    margin-top: 0.75rem;
+    margin: 0.75rem 0 0;
     text-align: center;
     font-size: var(--font-size-sm);
-    font-weight: 600;
-    color: var(--color-primary);
-    text-decoration: none;
   }
-  .mad-q__full:hover { text-decoration: underline; }
 </style>
