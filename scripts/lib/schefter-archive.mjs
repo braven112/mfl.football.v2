@@ -47,6 +47,26 @@ export function schefterArchiveIncludeFiles() {
 }
 
 /**
+ * The active feed and the share-card mark of every league whose posts get OG
+ * cards (every league with `features.schefterFeed`) — for astro.config.ts's
+ * Vercel `includeFiles`, since src/utils/schefter-og.ts reads both with fs.
+ * Read off the registry so a new league's cards work without a config edit;
+ * the hand list this replaced shipped two leagues and silently not Archie's.
+ * Only files that exist are listed (includeFiles fails the build otherwise).
+ */
+export function schefterOgIncludeFiles() {
+  const files = new Set();
+  for (const league of ALL_LEAGUES) {
+    if (!league.features?.schefterFeed) continue;
+    const mark = league.logoOg ?? league.logo?.dark;
+    for (const f of [league.schefterFeedPath, mark ? `public${mark}` : null]) {
+      if (f && fs.existsSync(f)) files.add(f);
+    }
+  }
+  return [...files].sort();
+}
+
+/**
  * Archive `feed` (parsed schefter-feed.json object) down to `max` active
  * posts. Returns { feed, archivedByYear: Map<year, posts[]>, archivedCount }.
  * Pure — no filesystem access; callers persist the results.

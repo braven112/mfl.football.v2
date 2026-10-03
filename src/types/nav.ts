@@ -233,14 +233,6 @@ export interface NavConfig {
   /** All navigation sections */
   sections: NavSection[];
 
-  /** Franchise IDs that have admin access */
-  /**
-   * Admin franchise ids, scoped per league. A franchise id is only an admin
-   * within its own league — AFL franchise 0001 must never pass TheLeague's
-   * admin gate (they're different teams that happen to share an id).
-   */
-  adminFranchiseIds: Record<LeagueSlug, string[]>;
-
   /** Footer links (like "Back to MFL") */
   footerLinks: NavFooterLink[];
 

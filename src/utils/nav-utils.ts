@@ -19,7 +19,7 @@
 import type { NavLink, NavSection, LeagueSlug, NavTeamInfo } from '../types/nav';
 import { NAV_COOKIES, isAflFamily } from '../types/nav';
 import { isDemoEnv } from './demo-isolation-core.mjs';
-import { navConfig, getRouteEquivalence } from '../config/nav-config';
+import { navConfig, getRouteEquivalence, getAdminFranchiseIds } from '../config/nav-config';
 import {
   ALL_LEAGUES,
   getLeagueByNavSlug,
@@ -387,7 +387,7 @@ export function isSectionVisible(
   section: NavSection,
   league: LeagueSlug,
   franchiseId: string | null,
-  adminFranchiseIds: string[] = navConfig.adminFranchiseIds[league] ?? []
+  adminFranchiseIds: string[] = getAdminFranchiseIds(league)
 ): boolean {
   // Check league restriction
   if (section.leagueOnly && !leagueOnlyMatches(section.leagueOnly, league)) {
@@ -431,7 +431,7 @@ export function getVisibleLinks(
   section: NavSection,
   league: LeagueSlug,
   franchiseId: string | null,
-  adminFranchiseIds: string[] = navConfig.adminFranchiseIds[league] ?? []
+  adminFranchiseIds: string[] = getAdminFranchiseIds(league)
 ): NavLink[] {
   return section.links.filter(link => {
     if (!linkMatchesLeague(link, league)) {
@@ -457,7 +457,7 @@ export function getVisibleLinks(
 export function getVisiblePinnedLinks(
   league: LeagueSlug,
   franchiseId: string | null,
-  adminFranchiseIds: string[] = navConfig.adminFranchiseIds[league] ?? []
+  adminFranchiseIds: string[] = getAdminFranchiseIds(league)
 ): NavLink[] {
   return (navConfig.pinnedLinks ?? []).filter(link => {
     if (!linkMatchesLeague(link, league)) {
@@ -478,7 +478,7 @@ export function getVisiblePinnedLinks(
 export function getVisibleSections(
   league: LeagueSlug,
   franchiseId: string | null,
-  adminFranchiseIds: string[] = navConfig.adminFranchiseIds[league] ?? []
+  adminFranchiseIds: string[] = getAdminFranchiseIds(league)
 ): NavSection[] {
   return navConfig.sections
     .filter(section => isSectionVisible(section, league, franchiseId, adminFranchiseIds))

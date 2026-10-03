@@ -223,9 +223,10 @@ export interface SchedulePolicy {
   crossConference: {
     week: number;
     anchorYear: number;
-    anchorPairing: [string, string][];
-    alternatePairing: [string, string][];
-    protectedRivalries: [string, string][];
+    /** Each entry is a pair of division (or, for rivalries, team) names. */
+    anchorPairing: string[][];
+    alternatePairing: string[][];
+    protectedRivalries: string[][];
   } | null;
 }
 
@@ -242,6 +243,8 @@ export interface LeagueDefinition {
    * `features` via leagueHasFeature, never on the archetype.
    */
   archetype: LeagueArchetype;
+  /** Franchises that see admin-only nav links and get ops alerts (never auth). */
+  adminFranchiseIds: string[];
   /**
    * Opts the league into the Schefter scanners (scripts/lib/schefter-leagues.mjs):
    * its events file, the NAMES of its GroupMe env vars, and which lanes run.
@@ -356,6 +359,15 @@ export interface LeagueDefinition {
    * here, never a missing field a component has to guess around.
    */
   logo: { light: string; dark: string };
+  /**
+   * The Schefter share card's mark, when `logo.dark` is a format the card
+   * renderer cannot read (it takes PNG or SVG, not WebP). Defaults to logo.dark.
+   */
+  logoOg?: string;
+  /** Schefter share-card branding. Absent = derived from name, domain and themeColor. */
+  shareCard?: { name: string; domain: string; primary: string };
+  /** Push notification icon + Android badge. Absent = the site's PWA art. */
+  pushArt?: { icon: string; badge: string };
   /** Optional wordmark shown beside `logo` instead of the text short name. */
   wordmark?: string;
   /** Browser chrome `theme-color` for a package league. */
