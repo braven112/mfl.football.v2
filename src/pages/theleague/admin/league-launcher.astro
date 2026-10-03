@@ -1,0 +1,27 @@
+---
+/**
+ * League Launcher — admin route. Platform admin only: launching a league is a
+ * site-level act, not any one league's commissioner's. The page is
+ * src/components/theleague/league-launcher/LeagueLauncherPage.astro; the gate
+ * stays here because a component cannot redirect (CLAUDE.md).
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import LeagueLauncherPage from '../../../components/theleague/league-launcher/LeagueLauncherPage.astro';
+import { getAuthUser } from '../../../utils/auth';
+import { isPlatformAdmin } from '../../../utils/league-admin';
+import { loginUrlForRequest, forbiddenPathFor } from '../../../utils/login-redirect';
+import { getLeagueBySlug } from '../../../config/leagues';
+import { isDemoDeploy } from '../../../utils/deploy-environment';
+
+export const prerender = false;
+
+const league = getLeagueBySlug('theleague')!;
+if (isDemoDeploy()) return Astro.rewrite('/_not-found');
+const user = getAuthUser(Astro.request);
+if (!user) return Astro.redirect(loginUrlForRequest(Astro, league));
+if (!isPlatformAdmin(user)) return Astro.rewrite(forbiddenPathFor(league));
+---
+
+<TheLeagueLayout title="League Launcher — Admin">
+  <LeagueLauncherPage />
+</TheLeagueLayout>
