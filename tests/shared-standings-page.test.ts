@@ -11,7 +11,7 @@ import {
   resolvePlayoffBadgeStatus,
 } from '../src/components/shared/standings/standings-table-config';
 import type { StandingsFranchise } from '../src/types/standings';
-import { madSeeds, madPlayoffSize } from '../src/utils/mad-standings';
+import { madSeeds, madPlayoffSize, madQualifierTiers } from '../src/utils/mad-standings';
 import { getLeagueBySlug } from '../src/config/leagues';
 
 /**
@@ -295,6 +295,18 @@ describe('MAD POWER 99 on the site matches the league widget', () => {
     expect(divsOf('leader').size).toBe(9);
     expect(divsOf('runnerUp').size).toBe(9);
     expect(madPlayoffSize(seeding)).toBe(30);
+  });
+
+  it('the homepage card shows the qualifiers only, banded by tier in seed order', () => {
+    const seeds = madSeeds(archiesRows(), archiesDivisionOf, seeding);
+    const tiers = madQualifierTiers(seeds);
+    expect(tiers.map((t) => [t.tier, t.from, t.to, t.ids.length])).toEqual([
+      ['leader', 1, 9, 9],
+      ['runnerUp', 10, 18, 9],
+      ['wildCard', 19, 30, 12],
+    ]);
+    expect(tiers.flatMap((t) => t.ids)).toEqual(seeds.slice(0, madPlayoffSize(seeding)).map((s) => s.id));
+    expect(madQualifierTiers([])).toEqual([]);
   });
 
   it('the MAD profile bands and badges follow the seeds', () => {

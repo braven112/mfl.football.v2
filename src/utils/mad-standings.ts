@@ -83,3 +83,29 @@ export function madSeeds(
 export function madPlayoffSize(seeding: MadSeeding): number {
   return seeding.divisionLeaders + seeding.runnersUp + seeding.wildCards;
 }
+
+/** One qualifying tier on the homepage card, seeds contiguous. */
+export interface MadQualifierTier {
+  tier: Exclude<MadTier, 'field'>;
+  /** First and last seed in the tier. */
+  from: number;
+  to: number;
+  ids: string[];
+}
+
+/**
+ * The playoff teams only, banded by tier in seed order — what the homepage
+ * shows (the full field lives on the standings page's MAD tab). A tier with
+ * no teams (week 0, a short league) is dropped rather than rendered empty.
+ */
+export function madQualifierTiers(seeds: MadSeed[]): MadQualifierTier[] {
+  const order: MadQualifierTier['tier'][] = ['leader', 'runnerUp', 'wildCard'];
+  return order
+    .map((tier) => {
+      const inTier = seeds.filter((s) => s.tier === tier);
+      return inTier.length
+        ? { tier, from: inTier[0].seed, to: inTier[inTier.length - 1].seed, ids: inTier.map((s) => s.id) }
+        : null;
+    })
+    .filter((t): t is MadQualifierTier => t !== null);
+}
