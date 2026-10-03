@@ -789,16 +789,21 @@ export function clearMyTeamCookie(): void {
 }
 
 /**
+ * True for a nav slug the registry knows — every league's cookie value is
+ * valid, not a hand-kept list (which had already lost Archie's).
+ */
+function isRegisteredNavSlug(value: string | null | undefined): value is LeagueSlug {
+  return !!value && ALL_LEAGUES.some((l) => l.navSlug === value);
+}
+
+/**
  * Get the myteam league cookie value
  *
  * @returns League slug or null if not set
  */
 export function getMyTeamLeagueCookie(): LeagueSlug | null {
   const value = getCookie(NAV_COOKIES.MY_TEAM_LEAGUE);
-  if (value === 'theleague' || value === 'afl' || value === 'bb1' || value === 'keeper') {
-    return value;
-  }
-  return null;
+  return isRegisteredNavSlug(value) ? value : null;
 }
 
 /**
@@ -838,10 +843,7 @@ export function parseMyTeamFromUrl(url: URL): string | null {
  */
 export function getLastViewedLeague(): LeagueSlug | null {
   const value = getCookie(NAV_COOKIES.NAV_LEAGUE);
-  if (value === 'theleague' || value === 'afl' || value === 'bb1' || value === 'keeper') {
-    return value;
-  }
-  return null;
+  return isRegisteredNavSlug(value) ? value : null;
 }
 
 /**

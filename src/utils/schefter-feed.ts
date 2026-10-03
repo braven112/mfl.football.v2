@@ -8,6 +8,7 @@
  */
 
 import type { SchefterFeed, SchefterMilestoneMeta, SchefterPost } from '../types/schefter';
+import { DEFAULT_LEAGUE_SLUG } from '../config/leagues-data.mjs';
 
 /** Get posts for a league, optionally filtered */
 export function getFeedPosts(
@@ -188,10 +189,10 @@ export function schefterPostOgText(
 export function buildSchefterPostOg(
   post: SchefterPost,
   pageUrl: URL,
-  league: 'theleague' | 'afl-fantasy' | 'archies' = 'theleague'
+  league: string = DEFAULT_LEAGUE_SLUG
 ): { title: string; description?: string; image: string; url: string } {
   const { title, description } = schefterPostOgText(post);
-  const leagueQuery = league === 'theleague' ? '' : `?league=${league}`;
+  const leagueQuery = league === DEFAULT_LEAGUE_SLUG ? '' : `?league=${encodeURIComponent(league)}`;
   return {
     title,
     ...(description && description !== title ? { description } : {}),

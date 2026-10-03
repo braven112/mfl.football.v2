@@ -228,6 +228,12 @@ function theleagueSpotlights(year: number, prefix: string): ChampionSpotlight[] 
  * Falls back one season when the current one hasn't crowned anyone yet — for
  * most of the calendar the "defending" champion is last season's.
  */
+/** Leagues whose champion feeds this module reads. */
+const SPOTLIGHTS_BY_LEAGUE: Partial<Record<CanonicalLeagueSlug, (year: number, prefix: string) => ChampionSpotlight[]>> = {
+  theleague: theleagueSpotlights,
+  'afl-fantasy': aflSpotlights,
+};
+
 export function getFooterChampions(slug: CanonicalLeagueSlug): ChampionSpotlight[] {
   const league = getLeagueBySlug(slug);
   if (!league) return [];
@@ -238,8 +244,12 @@ export function getFooterChampions(slug: CanonicalLeagueSlug): ChampionSpotlight
   const prefix = `/${league.slug}`;
   const year = getCurrentSeasonYear();
 
-  const resolve = (y: number): ChampionSpotlight[] =>
-    slug === 'afl-fantasy' ? aflSpotlights(y, prefix) : theleagueSpotlights(y, prefix);
+  // Each reader is bound to ONE league's bracket and asset feeds. A league
+  // without one gets no champion band content rather than another league's
+  // champion behind its own prefix.
+  const spotlights = SPOTLIGHTS_BY_LEAGUE[slug];
+  if (!spotlights) return [];
+  const resolve = (y: number): ChampionSpotlight[] => spotlights(y, prefix);
 
   const current = resolve(year);
   return current.length ? current : resolve(year - 1);
