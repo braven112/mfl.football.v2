@@ -38,6 +38,9 @@ export type CanonicalLeagueSlug = 'theleague' | 'afl-fantasy' | 'best-ball-1' | 
  */
 export type DemoOnlyLeagueSlug = 'keeper';
 
+/** Starting presets for a league's features — see src/config/league-archetypes.mjs. */
+export type LeagueArchetype = 'dynasty-cap' | 'deluxe-keeper' | 'contest' | 'best-ball' | 'standard-redraft';
+
 export interface LeagueFeatures {
   contracts: boolean;
   salaryCap: boolean;
@@ -217,6 +220,12 @@ export interface LeagueDefinition {
   navSlug: LeagueSlug;
   /** Color theme id — a file in src/themes/ (see scripts/generate-league-themes.mjs). */
   theme: string;
+  /**
+   * The preset this league's feature checkboxes started from
+   * (src/config/league-archetypes.mjs). Informational: code gates on
+   * `features` via leagueHasFeature, never on the archetype.
+   */
+  archetype: LeagueArchetype;
   name: string;
   mflHost: string;
   dataPath: string;

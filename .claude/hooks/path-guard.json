@@ -431,6 +431,8 @@
       "rules": "docs/claude/rules/league-urls.md",
       "paths": [
         "src/config/leagues*",
+        "src/config/league-feature-catalog.mjs",
+        "src/config/league-archetypes.mjs",
         "scripts/lib/schefter-public-url.mjs",
         "src/utils/link-punctuation.mjs",
         "src/utils/mfl-url.ts",
@@ -442,7 +444,8 @@
         "tests/league-literal-guard.test.ts",
         "tests/rankings-scope.test.ts",
         "tests/league-year-for-slug.test.ts",
-        "tests/league-staging-domains.test.ts"
+        "tests/league-staging-domains.test.ts",
+        "tests/league-feature-catalog.test.ts"
       ]
     },
     {
