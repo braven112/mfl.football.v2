@@ -1,0 +1,29 @@
+---
+/**
+ * /products/<slug> — one product's page. Admin-only until launch; see
+ * `src/utils/product-pages-access.ts`. The content is `src/data/products.ts`
+ * (customer-facing only — the repo is public).
+ */
+import MflAppLayout from '../../layouts/MflAppLayout.astro';
+import ProductPage from '../../components/shared/products/ProductPage.astro';
+import { getAuthUser } from '../../utils/auth';
+import { mflLoginUrl } from '../../utils/mfl-login-redirect';
+import { canViewProductPages } from '../../utils/product-pages-access';
+import { findProduct } from '../../data/products';
+
+export const prerender = false;
+
+const slug = Astro.params.slug ?? '';
+const authUser = getAuthUser(Astro.request);
+if (!canViewProductPages(authUser)) {
+	if (!authUser) return Astro.redirect(mflLoginUrl(`/products/${encodeURIComponent(slug)}`));
+	return Astro.rewrite('/_not-found');
+}
+
+const product = findProduct(slug);
+if (!product) return Astro.rewrite('/_not-found');
+---
+
+<MflAppLayout title={product.name} description={product.tagline}>
+	<ProductPage product={product} />
+</MflAppLayout>

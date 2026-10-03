@@ -90,6 +90,7 @@
       "note": "Session JWT only — never re-add unsigned identity sources. Sessions exist only for registry leagues, and an admin action on a fixed league gates with isCommissionerOrAdminForLeague. See CLAUDE.md \"Auth — session JWT only\".",
       "tests": [
         "tests/auth-league-scope.test.ts",
+        "tests/mfl-live-open-sign-in.test.ts",
         "tests/url-guard.test.ts",
         "tests/mfl-cookie-redirect-guard.test.ts",
         "tests/login-rate-limit.test.ts",

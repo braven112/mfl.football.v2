@@ -726,6 +726,22 @@ export const DEFAULT_LEAGUE_ID = LEAGUES[DEFAULT_LEAGUE_SLUG].id;
 export const MFL_LIVE_PILOT_LEAGUE_IDS = [];
 
 /**
+ * OPEN SIGN-IN for MFL Live: when true, an owner of ANY MyFantasyLeague league
+ * may sign in on the shared host's /login, not just owners of the leagues
+ * above. Off until the live data feed is licensed (the business plan's
+ * "Before selling" list) — flipping it is the launch of Owner Suite's free
+ * tier.
+ *
+ * A session for a league outside the registry is MFL-Live-ONLY, and that is
+ * enforced by the league id itself, not by a claim: `getAuthUser` refuses any
+ * league outside the registry and the pilot list, so every endpoint outside
+ * /live treats such a visitor as signed out. Only `getMflLiveUser`
+ * (src/utils/auth.ts), used by the /live pages and their APIs, accepts one —
+ * and always as a plain owner, whatever MFL's commissioner cookie said.
+ */
+export const MFL_LIVE_OPEN_SIGN_IN = false;
+
+/**
  * Every MFL league id whose owners may sign in to MFL Live, in PREFERENCE
  * order: the registry's leagues in registry order, then the pilot leagues.
  *

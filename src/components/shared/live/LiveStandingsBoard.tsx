@@ -18,15 +18,11 @@
  */
 import { useEffect, useRef, useState, type JSX } from 'react';
 import type { LiveStandingsLeague, MflLiveStandings } from '../../../utils/live/mfl-live-standings';
-import {
-  DEFAULT_STANDINGS_MODE,
-  STANDINGS_MODES,
-  STANDINGS_MODE_LABEL,
-  type StandingsMode,
-} from '../../../utils/live/standings-projection';
+import { initialStandingsMode, type StandingsMode } from '../../../utils/live/standings-projection';
 import type { FeedSnapshot } from '../../../utils/live-scoring-view';
 import LvStandings from './LvStandings';
 import LvFeedStatus from './LvFeedStatus';
+import LvStandingsModeTabs from './LvStandingsModeTabs';
 
 const POLL_LIVE_MS = 25_000;
 const POLL_IDLE_MS = 90_000;
@@ -39,6 +35,8 @@ export interface LiveStandingsBoardProps {
   isLive?: boolean;
   /** Where each league's heading links — its full board. A string, since island props are JSON. */
   panelHrefBase?: string;
+  /** No Owner Suite Pro: Live and Projected are locked and every table shows Final. */
+  proLocked?: boolean;
 }
 
 interface HeldTable {
@@ -72,8 +70,9 @@ export default function LiveStandingsBoard({
   pollUrl,
   isLive = false,
   panelHrefBase,
+  proLocked = false,
 }: LiveStandingsBoardProps): JSX.Element {
-  const [mode, setMode] = useState<StandingsMode>(DEFAULT_STANDINGS_MODE);
+  const [mode, setMode] = useState<StandingsMode>(() => initialStandingsMode(proLocked));
   const memory = useRef(new Map<string, { table: LiveStandingsLeague; at: number }>());
   const [tables, setTables] = useState<HeldTable[]>(() => holdLastGood(initial, memory.current, Date.now()));
   const [feed, setFeed] = useState<FeedSnapshot>({ status: 'idle', fetchedAt: 0 });
@@ -131,19 +130,12 @@ export default function LiveStandingsBoard({
         <h1 className="lv-live-standings__title">Standings · Week {initial.week}</h1>
         {pollUrl && <LvFeedStatus feeds={[feed]} anyLive={isLive} gamesLive={0} />}
       </div>
-      <div className="lv-tabs lv-tabs--mode" role="group" aria-label="Standings view, all leagues">
-        {STANDINGS_MODES.map((m) => (
-          <button
-            key={m}
-            type="button"
-            className={`lv-tabs__btn${mode === m ? ' lv-tabs__btn--on' : ''}`}
-            aria-pressed={mode === m}
-            onClick={() => setMode(m)}
-          >
-            {STANDINGS_MODE_LABEL[m]}
-          </button>
-        ))}
-      </div>
+      <LvStandingsModeTabs
+        mode={mode}
+        onChange={setMode}
+        ariaLabel="Standings view, all leagues"
+        proLocked={proLocked}
+      />
 
       <div className="lv-live-standings__grid">
         {tables.map(({ table, heldSince }) => (

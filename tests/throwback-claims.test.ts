@@ -7,6 +7,7 @@
  * kickoff; and a claim is settled atomically under a league-wide lock.
  */
 import { describe, it, expect } from 'vitest';
+import { DEFAULT_LEAGUE_ID } from '../src/config/leagues';
 import tlConfig from '../src/data/theleague.config.json';
 import aflConfig from '../data/afl-fantasy/afl.config.json';
 import {
@@ -277,7 +278,8 @@ describe('the picker view', () => {
   it("the commissioner panel does not count a reserved default as a pick", async () => {
     const { buildThrowbackSettingsView } = await import('../src/utils/throwback-settings-view');
     const view = await buildThrowbackSettingsView(
-      { franchiseId: '0001', leagueId: 'x', role: 'admin' } as any,
+      // A registry league: outside it, no session is ever an admin here.
+      { franchiseId: '0001', leagueId: DEFAULT_LEAGUE_ID, role: 'admin' } as any,
       tlTeams,
       'theleague',
     );

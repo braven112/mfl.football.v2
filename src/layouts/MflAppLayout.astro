@@ -68,8 +68,9 @@ import MflAppMenu from '../components/shared/mfl-live/MflAppMenu.astro';
 import NflLogoDarkStyles from '../components/shared/NflLogoDarkStyles.astro';
 import TeamIconDarkStyles from '../components/shared/TeamIconDarkStyles.astro';
 import { getThemePreference } from '../utils/theme-preference';
-import { getAuthUser } from '../utils/auth';
+import { getMflLiveUser } from '../utils/auth';
 import { canViewSiteInsights } from '../utils/site-insights';
+import { canViewProductPages } from '../utils/product-pages-access';
 import { ALL_LEAGUES, leagueUrl, isSharedAppHost } from '../config/leagues';
 // Global utility classes (.visually-hidden, …) — a frontmatter import so the
 // CSS ships unscoped; an @import inside the <style> block would get scoped.
@@ -99,7 +100,7 @@ const themePref = getThemePreference(Astro.cookies);
 // See the manifest note above.
 const onSharedHost = isSharedAppHost(Astro.url.hostname);
 
-const authUser = getAuthUser(Astro.request);
+const authUser = getMflLiveUser(Astro.request);
 
 // Links out to the league sites this project runs. Absolute, via leagueUrl —
 // never an origin concatenated with a path (docs/claude/rules/league-urls.md),
@@ -183,6 +184,7 @@ const leagueLinks = ALL_LEAGUES.filter((league) => !league.bestBall).map((league
 					signInHref={mflLoginUrl(Astro.url.pathname + Astro.url.search)}
 					currentPath={Astro.url.pathname}
 					showAnalytics={canViewSiteInsights(authUser)}
+					showProducts={canViewProductPages(authUser)}
 				/>
 			</div>
 		</header>

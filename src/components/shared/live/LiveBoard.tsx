@@ -124,6 +124,11 @@ export interface LiveBoardProps {
   hideWeekPicker?: boolean;
   /** Intercept the week change instead of navigating. For a story. */
   onSelectWeek?: (week: number) => void;
+  /**
+   * MFL Live's free tier: the Standings tab opens on Final with Live and
+   * Projected locked (`src/utils/mfl-live-pro.ts`). League sites never pass it.
+   */
+  standingsProLocked?: boolean;
 }
 
 /**
@@ -227,6 +232,7 @@ export default function LiveBoard({
   extraFeeds,
   hideWeekPicker = false,
   onSelectWeek,
+  standingsProLocked = false,
 }: LiveBoardProps): JSX.Element {
   const [board, setBoard] = useState<Board>(initialBoard);
   /**
@@ -673,6 +679,7 @@ export default function LiveBoard({
           rows={soloPanel.standings ?? null}
           leagueName={soloPanel.leagueName}
           matchups={soloPanel.matchups}
+          proLocked={standingsProLocked}
         />
       ) : (
         <>

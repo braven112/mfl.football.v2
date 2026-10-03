@@ -10,7 +10,7 @@
  */
 
 import type { APIRoute } from 'astro';
-import { getAuthUser } from '../../utils/auth';
+import { getMflLiveUser } from '../../utils/auth';
 import { getCurrentNFLWeek } from '../../utils/current-week';
 import { assembleMflLiveBoard } from '../../utils/mfl-live-board';
 import { MFL_LIVE_LEAGUE_COOKIE } from '../../utils/mfl-live-selection';
@@ -23,7 +23,7 @@ const NO_STORE = {
 };
 
 export const GET: APIRoute = async ({ request, url, cookies }) => {
-  const user = getAuthUser(request);
+  const user = getMflLiveUser(request);
   if (!user) {
     return new Response(JSON.stringify({ ok: false, reason: 'unauthenticated' }), {
       status: 401,

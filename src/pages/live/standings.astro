@@ -20,7 +20,8 @@
  */
 import MflAppLayout from '../../layouts/MflAppLayout.astro';
 import LiveStandingsBoard from '../../components/shared/live/LiveStandingsBoard';
-import { getAuthUser } from '../../utils/auth';
+import { getMflLiveUser } from '../../utils/auth';
+import { hasMflLivePro } from '../../utils/mfl-live-pro';
 import { getCurrentNFLWeek } from '../../utils/current-week';
 import { getDailySlot } from '../../utils/hero-resolver';
 import { assembleMflLiveStandings, type MflLiveStandings } from '../../utils/live/mfl-live-standings';
@@ -31,7 +32,7 @@ import '../../styles/live.css';
 // Scores must never be cached, and even the shell reads the session.
 export const prerender = false;
 
-const authUser = getAuthUser(Astro.request);
+const authUser = getMflLiveUser(Astro.request);
 
 // Route-only write, before anything reads the cookie back.
 if (authUser) rememberMflLiveChoice(Astro.url, Astro.cookies);
@@ -104,6 +105,7 @@ if (authUser && week) {
 			pollUrl="/api/live-standings"
 			isLive={isLive}
 			panelHrefBase="/live/league/"
+			proLocked={!hasMflLivePro(authUser)}
 		/>
 	)}
 </MflAppLayout>

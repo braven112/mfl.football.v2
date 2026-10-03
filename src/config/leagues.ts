@@ -24,6 +24,7 @@ import {
   isSharedAppHost,
   leagueHasOwnFrontDoor,
   resolveSharedHostHiddenLeague as rawResolveSharedHostHiddenLeague,
+  MFL_LIVE_OPEN_SIGN_IN,
   MFL_LIVE_PILOT_LEAGUE_IDS,
   mflLiveSignInLeagueIds,
 } from './leagues-data.mjs';
@@ -431,6 +432,7 @@ export {
   SHARED_APP_ORIGIN,
   isSharedAppHost,
   leagueHasOwnFrontDoor,
+  MFL_LIVE_OPEN_SIGN_IN,
   MFL_LIVE_PILOT_LEAGUE_IDS,
   mflLiveSignInLeagueIds,
 };

@@ -25,13 +25,13 @@ import { useMemo, useState, type JSX } from 'react';
 import type { LiveMatchup, LiveStandingsRow } from '../../../types/live';
 import {
   DEFAULT_STANDINGS_MODE,
-  STANDINGS_MODES,
-  STANDINGS_MODE_LABEL,
+  initialStandingsMode,
   projectStandings,
   type ProjectedStandingsRow,
   type StandingsMode,
 } from '../../../utils/live/standings-projection';
 import LvMark from './LvMark';
+import LvStandingsModeTabs from './LvStandingsModeTabs';
 
 export interface LvStandingsProps {
   /** MFL's rows, or null when the read failed. Never an empty array for that. */
@@ -47,6 +47,11 @@ export interface LvStandingsProps {
    * a single switch, and a second switch per table would let them disagree.
    */
   mode?: StandingsMode;
+  /**
+   * MFL Live's free tier: Live and Projected are drawn locked and the table
+   * opens on Final. Only the `/live` surfaces pass it; league sites never do.
+   */
+  proLocked?: boolean;
 }
 
 function caption(mode: StandingsMode, leagueName: string, addsWeek: boolean): string {
@@ -100,8 +105,9 @@ export default function LvStandings({
   matchups = [],
   initialMode = DEFAULT_STANDINGS_MODE,
   mode: controlledMode,
+  proLocked = false,
 }: LvStandingsProps): JSX.Element {
-  const [ownMode, setMode] = useState<StandingsMode>(initialMode);
+  const [ownMode, setMode] = useState<StandingsMode>(() => initialStandingsMode(proLocked, initialMode));
   const mode = controlledMode ?? ownMode;
   const view = useMemo(
     () => (rows === null ? null : projectStandings(rows, matchups, mode)),
@@ -126,19 +132,12 @@ export default function LvStandings({
     <div className="lv-standings-wrap">
       {/* Toggle buttons, the same pattern as Scores / Standings above. */}
       {controlledMode === undefined && (
-        <div className="lv-tabs lv-tabs--mode" role="group" aria-label="Standings view">
-          {STANDINGS_MODES.map((m) => (
-            <button
-              key={m}
-              type="button"
-              className={`lv-tabs__btn${mode === m ? ' lv-tabs__btn--on' : ''}`}
-              aria-pressed={mode === m}
-              onClick={() => setMode(m)}
-            >
-              {STANDINGS_MODE_LABEL[m]}
-            </button>
-          ))}
-        </div>
+        <LvStandingsModeTabs
+          mode={mode}
+          onChange={setMode}
+          ariaLabel="Standings view"
+          proLocked={proLocked}
+        />
       )}
       <div className="lv-standings">
         <table className="lv-standings__table">
