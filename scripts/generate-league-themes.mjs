@@ -105,7 +105,12 @@ export function buildThemeCss(themes, surfaces, tokens) {
 async function main() {
   const { THEMED_TOKENS } = await import('../src/config/theme-tokens.mjs');
   const css = buildThemeCss(loadThemes(), await loadSurfaces(), THEMED_TOKENS);
-  const current = fs.existsSync(OUTPUT) ? fs.readFileSync(OUTPUT, 'utf8') : '';
+  let current = '';
+  try {
+    current = fs.readFileSync(OUTPUT, 'utf8');
+  } catch (err) {
+    if (/** @type {NodeJS.ErrnoException} */ (err).code !== 'ENOENT') throw err;
+  }
   if (process.argv.includes('--check')) {
     if (current !== css) {
       console.error(`${path.relative(ROOT, OUTPUT)} is stale — run node scripts/generate-league-themes.mjs`);
