@@ -98,7 +98,7 @@ export const FEATURES: Feature[] = [
 			'Sign in once with your MyFantasyLeague account; every league on it appears, including leagues we do not host.',
 			'Each matchup is one row: score, players yet to play, projected final and win probability. Tap it for the starters.',
 			'A scoring ticker and a red-zone banner across all your leagues, plus the day’s NFL games.',
-			'Standings for all your leagues stacked on one page, with Live, Projected and Final views.',
+			'Standings for all your leagues stacked on one page. Final for everyone; Live and Projected, which re-rank the table as the games play, with Pro.',
 			'Switch any league off; installs to your home screen; light and dark themes.',
 		],
 	},
@@ -266,7 +266,7 @@ const OWNER_SUITE: Product = {
 	buyer: 'Any owner in any MyFantasyLeague league',
 	summary: [
 		'Owner Suite is for the owner, not the league. Sign in with your MyFantasyLeague account and every league you play in shows up on one board, including leagues that do not use any of our products.',
-		'The free tier covers live scores for all your leagues. Pro adds the game-day extras: the TV broadcast board, close-game alerts, the Game Day Planner and full boards for every league.',
+		'The free tier covers live scores for all your leagues. Pro adds the game-day extras: live and projected standings, the TV broadcast board, close-game alerts, the Game Day Planner and full boards for every league.',
 	],
 	features: ['live-scoreboard', 'league-boards', 'broadcast-board', 'game-day-alerts', 'game-day-planner'],
 	tiers: {
@@ -274,7 +274,8 @@ const OWNER_SUITE: Product = {
 		columns: ['Free', 'Pro'],
 		rows: [
 			{ label: 'Live scores across all your MFL leagues on one screen', values: ['Yes', 'Yes'] },
-			{ label: 'Standings for all your leagues on one page', values: ['Yes', 'Yes'] },
+			{ label: 'Final standings for all your leagues on one page', values: ['Yes', 'Yes'] },
+			{ label: 'Live and projected standings, updating as the games play', values: ['No', 'Yes'] },
 			{ label: 'Full-league boards (every matchup, standings)', values: ['1 league', 'All leagues'] },
 			{ label: 'Broadcast board for the TV', values: ['No', 'Yes'] },
 			{ label: 'Close-game and final-score push alerts', values: ['No', 'Yes'] },

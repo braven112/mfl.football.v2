@@ -27,6 +27,7 @@
 import MflAppLayout from '../../../layouts/MflAppLayout.astro';
 import LiveBoard from '../../../components/shared/live/LiveBoard';
 import { getAuthUser } from '../../../utils/auth';
+import { hasMflLivePro } from '../../../utils/mfl-live-pro';
 import { getCurrentNFLWeek } from '../../../utils/current-week';
 import { getDailySlot } from '../../../utils/hero-resolver';
 import { discoverBoardLeagues } from '../../../utils/cross-league-live';
@@ -144,6 +145,7 @@ if (authUser && leagueId) {
       pollUrl={`/api/league-board?mfl=${encodeURIComponent(leagueId)}`}
       isLive={isLive}
       preSeason={!currentWeek}
+      standingsProLocked={!hasMflLivePro(authUser)}
     />
   )}
 </MflAppLayout>

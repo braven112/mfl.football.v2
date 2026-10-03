@@ -1979,3 +1979,25 @@ button.lv-card:focus-visible {
 }
 
 .lv-sheet__line { font-size: var(--font-size-xs); }
+/* ── Pro-locked standings views (MFL Live free tier) ──────────────────── */
+.lv-tabs__btn--locked {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+.lv-pro-badge {
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: var(--radius-full);
+  border: 1px solid currentColor;
+  color: var(--league-accent);
+  font-size: var(--font-size-3xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+.lv-pro-note {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--content-text-muted);
+}

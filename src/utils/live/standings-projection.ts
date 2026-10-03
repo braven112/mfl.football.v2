@@ -46,6 +46,25 @@ export const STANDINGS_MODE_LABEL: Record<StandingsMode, string> = {
   final: 'Final',
 };
 
+/**
+ * The one view the FREE tier of MFL Live keeps. Live and Projected are Owner
+ * Suite Pro (`src/utils/mfl-live-pro.ts` decides who has it); Final is MFL's
+ * own table, which an owner can already read on MFL, so it is never locked.
+ * The league sites never lock anything — only the `/live` surfaces pass
+ * `proLocked`.
+ */
+export const FREE_STANDINGS_MODE: StandingsMode = 'final';
+
+/** Is this view locked for a viewer without Pro? */
+export function isStandingsModeLocked(mode: StandingsMode, proLocked: boolean): boolean {
+  return proLocked && mode !== FREE_STANDINGS_MODE;
+}
+
+/** The view a table opens on: the default, unless that view is locked. */
+export function initialStandingsMode(proLocked: boolean, preferred: StandingsMode = DEFAULT_STANDINGS_MODE): StandingsMode {
+  return isStandingsModeLocked(preferred, proLocked) ? FREE_STANDINGS_MODE : preferred;
+}
+
 export interface ProjectedStandingsRow extends LiveStandingsRow {
   /** MFL's own position — `rank` becomes the position in THIS view. */
   officialRank: number;

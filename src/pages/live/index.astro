@@ -37,6 +37,7 @@ import MflAppLayout from '../../layouts/MflAppLayout.astro';
 import LiveBoard from '../../components/shared/live/LiveBoard';
 import { fromMflLiveBoard } from '../../utils/live/from-mfl-live';
 import { getAuthUser } from '../../utils/auth';
+import { hasMflLivePro } from '../../utils/mfl-live-pro';
 import { getCurrentNFLWeek } from '../../utils/current-week';
 import { getDailySlot } from '../../utils/hero-resolver';
 import { assembleMflLiveBoard } from '../../utils/mfl-live-board';
@@ -143,6 +144,7 @@ if (authUser && week) {
 			isLive={isLive}
 			viewerFirst
 			panelHrefBase="/live/league/"
+			standingsProLocked={!hasMflLivePro(authUser)}
 		/>
 	)}
 </MflAppLayout>

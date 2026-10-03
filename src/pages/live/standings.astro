@@ -21,6 +21,7 @@
 import MflAppLayout from '../../layouts/MflAppLayout.astro';
 import LiveStandingsBoard from '../../components/shared/live/LiveStandingsBoard';
 import { getAuthUser } from '../../utils/auth';
+import { hasMflLivePro } from '../../utils/mfl-live-pro';
 import { getCurrentNFLWeek } from '../../utils/current-week';
 import { getDailySlot } from '../../utils/hero-resolver';
 import { assembleMflLiveStandings, type MflLiveStandings } from '../../utils/live/mfl-live-standings';
@@ -104,6 +105,7 @@ if (authUser && week) {
 			pollUrl="/api/live-standings"
 			isLive={isLive}
 			panelHrefBase="/live/league/"
+			proLocked={!hasMflLivePro(authUser)}
 		/>
 	)}
 </MflAppLayout>
