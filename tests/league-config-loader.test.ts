@@ -48,9 +48,6 @@ describe('league-config loader', () => {
  */
 const SHARED_DIRS = ['src/utils', 'src/components/shared', 'src/layouts', 'src/components/nav'];
 const ALLOWED: Record<string, string> = {
-  // Emits crest CSS for TheLeague + AFL icon dirs only; generalising it adds
-  // rules for other leagues, a visual change to make on purpose.
-  'src/utils/team-icon-dark-styles.ts': 'per-league icon dirs',
   // Single-league helpers that live in utils/ but serve one league's pages.
   'src/utils/afl-draft-slot.ts': 'AFL only',
   'src/utils/afl-awards.ts': 'AFL only',

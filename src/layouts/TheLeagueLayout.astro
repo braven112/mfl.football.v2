@@ -47,7 +47,7 @@ import { navConfig, getAdminFranchiseIds } from '../config/nav-config';
 import { getVisibleSections, getVisiblePinnedLinks, parseMyTeamFromUrl, buildNavTeamInfo, resolveLeaguePath } from '../utils/nav-utils';
 import type { NavTeamInfo, LeagueSlug } from '../types/nav';
 import { NAV_COOKIES } from '../types/nav';
-import { getAFLPreference, getTheLeaguePreference, getBestBall1Preference } from '../utils/team-preferences';
+import { getAFLPreference, getTheLeaguePreference, getBestBall1Preference, getLeaguePreference } from '../utils/team-preferences';
 import { getAuthUser, isCommissionerOrAdmin } from '../utils/auth';
 import { getLeagueBySlug, getLeagueByNavSlug, isSharedAppHost } from '../config/leagues';
 import { getLeagueTeamConfigs } from '../utils/league-team-brands';
@@ -191,11 +191,12 @@ if (league === 'afl') {
 		teamInfo = buildNavTeamInfo(sessionFranchiseId, keeperConfig.teams, 'keeper' as LeagueSlug);
 	}
 } else if (packageLeague) {
-	// Package league: no preference cookie yet — the signed session only, both
-	// for personalization and for the nav chip.
+	// Package league: its `<navSlug>_team_pref` cookie personalizes; the nav
+	// chip stays the signed session only (the cookie is not auth).
 	const jwtFranchiseId =
 		layoutAuthUser && layoutAuthUser.leagueId === packageLeague.id ? layoutAuthUser.franchiseId : null;
-	myteam = myteamParam || jwtFranchiseId || null;
+	const packagePref = getLeaguePreference(Astro.cookies, league);
+	myteam = myteamParam || packagePref?.franchiseId || jwtFranchiseId || null;
 	sessionFranchiseId = jwtFranchiseId || null;
 	if (jwtFranchiseId) {
 		teamInfo = buildNavTeamInfo(jwtFranchiseId, getLeagueTeamConfigs(packageLeague.slug), league);
