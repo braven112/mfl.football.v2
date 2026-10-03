@@ -51,8 +51,15 @@ const toArray = (v) => (Array.isArray(v) ? v : v ? [v] : []);
  */
 const NOT_AN_ENTRY = /\b(consolation|loser'?s?|toilet)\b/i;
 
+/**
+ * Bracket 1 is the championship entry in every league that does not say
+ * otherwise — TheLeague and any new single-bracket league alike. Only a league
+ * whose title is reached through more than one bracket needs a resolver below.
+ */
+const DEFAULT_RESOLVER = () => ['1'];
+
 const RESOLVERS = {
-  theleague: () => ['1'],
+  // Conference playoffs: the AL and NL brackets are both entries.
   'afl-fantasy': (metas) => {
     const candidates = metas.filter((meta) => {
       const kind = bracketKindFromName(meta?.name, String(meta?.id));
@@ -101,7 +108,7 @@ export function bracketMetas(playoffBrackets) {
 export function hasDeclaredEntryBrackets(leagueSlug, playoffBrackets) {
   const metas = bracketMetas(playoffBrackets);
   if (!metas.length) return false;
-  const resolve = RESOLVERS[leagueSlug] ?? RESOLVERS.theleague;
+  const resolve = RESOLVERS[leagueSlug] ?? DEFAULT_RESOLVER;
   return resolve(metas).length > 0;
 }
 
@@ -112,7 +119,7 @@ export function hasDeclaredEntryBrackets(leagueSlug, playoffBrackets) {
  */
 export function getEntryBracketIds(leagueSlug, playoffBrackets) {
   const metas = bracketMetas(playoffBrackets);
-  const resolve = RESOLVERS[leagueSlug] ?? RESOLVERS.theleague;
+  const resolve = RESOLVERS[leagueSlug] ?? DEFAULT_RESOLVER;
   const ids = metas.length ? resolve(metas).map(String).filter(Boolean) : [];
   // A season whose export carries no metadata at all still has to answer the
   // question, and bracket 1 is right everywhere it is not overridden.
