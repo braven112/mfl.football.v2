@@ -11,7 +11,7 @@
  * MFL's rows. Prize money is not shown: the widget reads it from a block the
  * commissioner types into the MFL module, and the site has no copy of it.
  */
-import type { MadQualifierTier } from '../../../utils/mad-standings';
+import { divisionShortName, type MadQualifierTier } from '../../../utils/mad-standings';
 import type { StandingRow } from '../../../utils/package-league';
 
 export type MadQualifierRow = StandingRow & { divisionName: string; href: string };
@@ -56,7 +56,7 @@ const totalTeams = Object.keys(rows).length;
                   <span class="mad-q__crest mad-q__crest--blank" aria-hidden="true" />
                 )}
                 <span class="mad-q__name">{r.name}</span>
-                <span class="mad-q__div">{r.divisionName}</span>
+                <span class="mad-q__div" title={r.divisionName}>{divisionShortName(r.divisionName)}</span>
                 <span class="mad-q__vp">{r.victoryPoints ?? '—'}<span> VP</span></span>
                 <span class="mad-q__meta">#{t.from + i} · {r.record}</span>
               </a>
@@ -173,8 +173,7 @@ const totalTeams = Object.keys(rows).length;
     border-radius: 6px;
   }
   .mad-q__crest--blank { background: var(--content-bg-muted); }
-  .mad-q__name,
-  .mad-q__div {
+  .mad-q__name {
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -188,8 +187,12 @@ const totalTeams = Object.keys(rows).length;
     color: var(--page-text);
   }
   /* Seeds 1-18 are one team per division, so the division answers "which
-     one" — quiet, so it never competes with the name or the VP. */
+     one" — quiet, so it never competes with the name or the VP. Shown as the
+     namesake's last name (divisionShortName) and never truncated: it wraps
+     rather than ellipsising, so the label is always whole. */
   .mad-q__div {
+    max-width: 100%;
+    overflow-wrap: anywhere;
     margin-top: 0.1rem;
     font-size: var(--font-size-3xs);
     font-weight: 700;

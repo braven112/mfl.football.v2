@@ -11,7 +11,7 @@ import {
   resolvePlayoffBadgeStatus,
 } from '../src/components/shared/standings/standings-table-config';
 import type { StandingsFranchise } from '../src/types/standings';
-import { madSeeds, madPlayoffSize, madQualifierTiers } from '../src/utils/mad-standings';
+import { madSeeds, madPlayoffSize, madQualifierTiers, divisionShortName } from '../src/utils/mad-standings';
 import { getLeagueBySlug } from '../src/config/leagues';
 
 /**
@@ -307,6 +307,16 @@ describe('MAD POWER 99 on the site matches the league widget', () => {
     ]);
     expect(tiers.flatMap((t) => t.ids)).toEqual(seeds.slice(0, madPlayoffSize(seeding)).map((s) => s.id));
     expect(madQualifierTiers([])).toEqual([]);
+  });
+
+  it('labels each division by its namesake\'s last name, unique across the league', () => {
+    const short = archiesConfig.divisions.map((d) => divisionShortName(d.name));
+    expect(short[0]).toBe('Sanders');
+    expect(short).toContain('Manning'); // "Payton Manning" — never the first name
+    expect(short).toContain('Payton'); // Walter Payton
+    expect(new Set(short).size).toBe(archiesConfig.divisions.length);
+    expect(divisionShortName('Central')).toBe('Central');
+    expect(divisionShortName('')).toBe('');
   });
 
   it('the MAD profile bands and badges follow the seeds', () => {
