@@ -3,9 +3,9 @@
  * /archies/theme → the light page. The redirect lives in a PAGE because
  * Astro.redirect() only redirects from one.
  */
-import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { themePath } from '../../../components/shared/theme/theme-mode';
 
 export const prerender = false;
 
-return Astro.redirect(resolveLeaguePath('/archies/theme/light', Astro.locals.hideLeaguePrefix ?? false), 302);
+return Astro.redirect(themePath('archies', 'light', Astro.url, Astro.locals.hideLeaguePrefix ?? false), 302);
 ---

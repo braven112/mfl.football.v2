@@ -3,9 +3,9 @@
  * /best-ball-1/theme → the light page. The redirect lives in a PAGE because
  * Astro.redirect() only redirects from one.
  */
-import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { themePath } from '../../../components/shared/theme/theme-mode';
 
 export const prerender = false;
 
-return Astro.redirect(resolveLeaguePath('/best-ball-1/theme/light', Astro.locals.hideLeaguePrefix ?? false), 302);
+return Astro.redirect(themePath('best-ball-1', 'light', Astro.url, Astro.locals.hideLeaguePrefix ?? false), 302);
 ---

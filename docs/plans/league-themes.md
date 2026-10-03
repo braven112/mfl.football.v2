@@ -65,7 +65,7 @@ There is no `extends` key, and the validator rejects one.
 
 ### 2. The semantic token contract
 
-One list (`src/themes/tokens.ts`) names every token a theme must define:
+One list (`src/config/theme-tokens.mjs`) names every token a theme must define:
 surfaces (page / content / card / overlay), text (primary / muted / inverse),
 borders, primary + hover/active steps, accent, ink (breadcrumb strip, footer,
 resting nav icons), link, focus ring, gold family, nav states, button set,

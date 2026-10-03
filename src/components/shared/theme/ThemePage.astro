@@ -19,11 +19,10 @@ import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import HeroBanner from '../HeroBanner.astro';
 import EmptyState from '../states/EmptyState.astro';
 import ErrorState from '../states/ErrorState.astro';
-import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { getLeagueBySlug } from '../../../config/leagues';
 import type { CanonicalLeagueSlug } from '../../../config/leagues';
 import { THEME_TOKEN_GROUPS } from '../../../config/theme-tokens.mjs';
-import type { ThemeMode } from './theme-mode';
+import { themePath, type ThemeMode } from './theme-mode';
 
 interface Props {
   leagueSlug: CanonicalLeagueSlug;
@@ -49,9 +48,8 @@ const theme = Object.values(themeFiles)
   .find((t) => t.id === league.theme);
 if (!theme) throw new Error(`ThemePage: league ${leagueSlug} names unknown theme ${league.theme}`);
 
-const hide = Astro.locals.hideLeaguePrefix ?? false;
 const otherMode: ThemeMode = mode === 'light' ? 'dark' : 'light';
-const otherHref = resolveLeaguePath(`/${leagueSlug}/theme/${otherMode}`, hide);
+const otherHref = themePath(leagueSlug, otherMode, Astro.url, Astro.locals.hideLeaguePrefix ?? false);
 const modeLabel = mode === 'light' ? 'Light mode' : 'Dark mode';
 
 // The groups this theme actually sets in this mode; a token the theme leaves
