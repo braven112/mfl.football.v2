@@ -36,21 +36,10 @@
  * shared layout <head>.
  */
 
-import theleagueConfig from '../data/theleague.config.json';
-import aflConfig from '../../data/afl-fantasy/afl.config.json';
-import bb1Config from '../../data/best-ball-1/bb1.config.json';
-import { keeperLeagueConfig } from './keeper-config';
-import archiesConfig from '../../data/archies/archies.config.json';
 import type { LeagueSlug } from '../types/nav';
+import { ALL_LEAGUES } from '../config/leagues-data.mjs';
+import { getLeagueTeams } from './league-config';
 import { getTeamAccentPair } from './team-colors';
-
-const CONFIGS: Record<LeagueSlug, { teams: any[] }> = {
-  theleague: theleagueConfig as any,
-  afl: aflConfig as any,
-  bb1: bb1Config as any,
-  keeper: keeperLeagueConfig,
-  archies: archiesConfig as any,
-};
 
 /** The custom property holding a franchise's theme-aware accent. */
 export function teamAccentProperty(franchiseId: string): string {
@@ -83,11 +72,11 @@ const isHexColor = (value: unknown): value is string =>
  * <style> element entirely.
  */
 export function buildTeamAccentCss(league?: LeagueSlug): string {
-  const leagues = league ? [league] : (Object.keys(CONFIGS) as LeagueSlug[]);
+  const leagues = league ? [league] : (ALL_LEAGUES.map((l) => l.navSlug) as LeagueSlug[]);
   const blocks: string[] = [];
 
   for (const slug of leagues) {
-    const teams = (CONFIGS[slug]?.teams ?? []).filter((t) => isSafeFranchiseId(t?.franchiseId));
+    const teams = getLeagueTeams(slug).filter((t) => isSafeFranchiseId(t?.franchiseId));
     if (teams.length === 0) continue;
 
     const light: string[] = [];

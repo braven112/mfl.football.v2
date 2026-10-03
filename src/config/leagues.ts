@@ -315,6 +315,7 @@ export interface LeagueDefinition {
   /** Short display name for tight spaces (the site header). */
   shortName?: string;
   /** The league's mark for the shared header and layout, per theme. */
+  /** The league's mark (light and dark cuts). Every registry league sets it. */
   logo?: { light: string; dark: string };
   /** Optional wordmark shown beside `logo` instead of the text short name. */
   wordmark?: string;

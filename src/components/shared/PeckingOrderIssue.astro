@@ -16,10 +16,8 @@
  * `data-league` rather than resolved here).
  */
 import { getPersonaLabels } from '../../utils/persona-server';
-import theleagueConfig from '../../data/theleague.config.json';
-import aflConfig from '../../../data/afl-fantasy/afl.config.json';
-import archiesConfig from '../../../data/archies/archies.config.json';
-import { getLeagueByNavSlug } from '../../config/leagues';
+import { getLeagueConfig } from '../../utils/league-config';
+import { getLeagueByNavSlug, getLeagueBySlug } from '../../config/leagues';
 import { franchiseSlug } from '../../utils/franchise-marks';
 import type { LeagueSlug } from '../../types/nav';
 import { teamAccentVar } from '../../utils/team-accent-css';
@@ -122,12 +120,6 @@ export interface Props {
   variant?: 'live' | 'sample';
 }
 
-const CONFIGS: Partial<Record<LeagueSlug, { teams: any[] }>> = {
-  theleague: theleagueConfig as any,
-  afl: aflConfig as any,
-  archies: archiesConfig as any,
-};
-
 /**
  * The issue JSON records the league that generated it (canonical slug), so a
  * page that forgets the prop still renders against the right franchise config
@@ -135,21 +127,18 @@ const CONFIGS: Partial<Record<LeagueSlug, { teams: any[] }>> = {
  * franchise ids collide across leagues, so that failure looks like real data.
  * The prop still wins when both are present.
  */
-const ISSUE_SLUG_TO_NAV: Record<string, LeagueSlug> = {
-  theleague: 'theleague',
-  'afl-fantasy': 'afl',
-  archies: 'archies',
-};
+const issueNavSlug = (slug: string | undefined): LeagueSlug | undefined =>
+  slug ? (getLeagueBySlug(slug)?.navSlug as LeagueSlug | undefined) : undefined;
 
 const { issue, league: leagueProp, variant = 'live' } = Astro.props as Props;
 const isSample = variant === 'sample';
 const HeadlineTag = isSample ? 'h2' : 'h1';
 const league: LeagueSlug =
-  leagueProp ?? (issue.league ? ISSUE_SLUG_TO_NAV[issue.league] : undefined) ?? 'theleague';
+  leagueProp ?? issueNavSlug(issue.league) ?? 'theleague';
 
 // Build franchise lookup for icons/colors
 const teams = new Map<string, any>();
-for (const t of (CONFIGS[league] ?? theleagueConfig as any).teams) {
+for (const t of getLeagueConfig(league).teams) {
   teams.set(t.franchiseId, t);
 }
 

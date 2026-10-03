@@ -13,15 +13,13 @@
  * `schefter-league-data.ts`: a third league added to the registry must be
  * wired here deliberately, not silently served TheLeague's crests.
  *
- * Static imports, not an `fs` read through the registry's `configPath`: these
- * compile into the bundle (typed, and traceable by Vercel), whereas a
- * `process.cwd()` join is a path the file tracer cannot follow.
+ * Configs come from `league-config.ts`, which bundles every league's
+ * `configPath` file through an eager glob (typed into the bundle and
+ * traceable by Vercel, like the static imports it replaced), so a new
+ * league is wired by its registry entry alone.
  */
-import theLeagueConfig from '../data/theleague.config.json';
-import aflConfig from '../../data/afl-fantasy/afl.config.json';
-import bb1Config from '../../data/best-ball-1/bb1.config.json';
-import { keeperLeagueConfig } from './keeper-config';
-import archiesConfig from '../../data/archies/archies.config.json';
+import { ALL_LEAGUES } from '../config/leagues-data.mjs';
+import { getLeagueConfig } from './league-config';
 
 /** One franchise's brand, as the matchup UI consumes it. */
 export interface TeamBrand {
@@ -41,17 +39,10 @@ export interface TeamBrand {
   icon: string;
 }
 
-type LeagueConfig = { teams?: any[]; structure?: string };
-
-const CONFIGS: Record<string, LeagueConfig> = {
-  theleague: theLeagueConfig as unknown as LeagueConfig,
-  'afl-fantasy': aflConfig as unknown as LeagueConfig,
-  // Best Ball is on the Sunday Ticket board as one of the owner's leagues, so
-  // its franchises need names here too (wired 2026-09-05).
-  'best-ball-1': bb1Config as unknown as LeagueConfig,
-  keeper: keeperLeagueConfig as unknown as LeagueConfig,
-  archies: archiesConfig as unknown as LeagueConfig,
-};
+/** A registry league's config, or undefined for a slug the registry doesn't know. */
+function configFor(slug: string): { teams?: any[]; structure?: string } | undefined {
+  return ALL_LEAGUES.some((l) => l.slug === slug) ? getLeagueConfig(slug) : undefined;
+}
 
 /**
  * The config's declared `structure` (`'divisions'`, `'two-conference'`), or
@@ -59,7 +50,7 @@ const CONFIGS: Record<string, LeagueConfig> = {
  * get it from `scripts/suggest-league-branding.mjs`.
  */
 export function getLeagueConfigStructure(slug: string): string | null {
-  return CONFIGS[slug]?.structure ?? null;
+  return configFor(slug)?.structure ?? null;
 }
 
 /** Neutral stand-in so a franchise missing from a config renders, never throws. */
@@ -89,7 +80,7 @@ const brandOf = (t: any): TeamBrand => ({
  * and "no" is a normal answer there.
  */
 export function getLeagueTeamConfig(slug: string, franchiseId: string): any | undefined {
-  return CONFIGS[slug]?.teams?.find((t) => t?.franchiseId === franchiseId);
+  return configFor(slug)?.teams?.find((t) => t?.franchiseId === franchiseId);
 }
 
 /**
@@ -102,16 +93,16 @@ export function getLeagueTeamConfig(slug: string, franchiseId: string): any | un
  * accessor's throw.
  */
 export function getLeagueTeamConfigs(slug: string): any[] {
-  return CONFIGS[slug]?.teams ?? [];
+  return configFor(slug)?.teams ?? [];
 }
 
 /**
  * Every franchise's brand in this league, keyed by MFL franchise id.
- * Throws on a league this module doesn't know.
+ * Throws on a slug the registry doesn't know.
  */
 export function getLeagueTeamBrands(slug: string): Record<string, TeamBrand> {
-  const config = CONFIGS[slug];
-  if (!config) throw new Error(`getLeagueTeamBrands: no config wired for league "${slug}"`);
+  const config = configFor(slug);
+  if (!config) throw new Error(`getLeagueTeamBrands: unknown league "${slug}"`);
   const brands: Record<string, TeamBrand> = {};
   for (const t of config.teams ?? []) {
     if (!t?.franchiseId) continue;

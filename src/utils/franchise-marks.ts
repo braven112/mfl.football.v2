@@ -31,9 +31,7 @@
  * that is dark in BOTH themes must resolve its own crest".
  */
 
-import theleagueConfig from '../data/theleague.config.json';
-import aflConfig from '../../data/afl-fantasy/afl.config.json';
-import archiesConfig from '../../data/archies/archies.config.json';
+import { getLeagueTeams } from './league-config';
 import { getLeagueBySlug, type CanonicalLeagueSlug } from '../config/leagues';
 import type { LeagueSlug } from '../types/nav';
 // From the contrast module, NOT `nfl-marks`: that one loads the NFL brand kit
@@ -59,18 +57,10 @@ export { luminance, inkOn };
  *
  * Best Ball is deliberately absent: it is draft-only, its franchises carry no
  * crest art of their own, and `leagueHasFeature` gates it out of the nav
- * everywhere else. A slug-keyed map that returns `[]` rather than throwing
- * keeps a third league from being served TheLeague's crests by accident —
- * the same shape `league-team-brands.ts` uses, minus the throw, because an
- * empty Brand Book renders an honest empty state and a 500 does not.
+ * everywhere else. Teams come from the registry's configPath; a league not
+ * listed here gets `[]` rather than a throw, because an empty Brand Book
+ * renders an honest empty state and a 500 does not.
  */
-const LEAGUE_TEAMS: Partial<Record<CanonicalLeagueSlug, RawTeam[]>> = {
-  theleague: ((theleagueConfig as unknown as { teams?: RawTeam[] }).teams ?? []),
-  'afl-fantasy': ((aflConfig as unknown as { teams?: RawTeam[] }).teams ?? []),
-  archies: ((archiesConfig as unknown as { teams?: RawTeam[] }).teams ?? []),
-};
-
-/** The Brand Book covers exactly these. */
 export const BRAND_BOOK_LEAGUES: CanonicalLeagueSlug[] = ['theleague', 'afl-fantasy', 'archies'];
 
 export function leagueHasBrandBook(slug: string): slug is CanonicalLeagueSlug {
@@ -229,7 +219,7 @@ function navSlugOf(slug: CanonicalLeagueSlug): LeagueSlug {
 }
 
 function teamsOf(slug: CanonicalLeagueSlug): RawTeam[] {
-  return LEAGUE_TEAMS[slug] ?? [];
+  return leagueHasBrandBook(slug) ? (getLeagueTeams(slug) as RawTeam[]) : [];
 }
 
 /** Lowercase, hyphenated, apostrophes dropped rather than hyphenated. */
