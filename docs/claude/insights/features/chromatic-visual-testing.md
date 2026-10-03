@@ -193,3 +193,21 @@ Verified by rendering the built Storybook in Chromium against a local server and
 asserting zero non-localhost requests across four stories — the check the guard
 test cannot make, since the builders' output is only a string until a browser
 resolves it.
+
+## 2026-10-03 — a new story touches FOUR lists, and a cron feed can't be one of its inputs
+
+Adding `MadQualifiers.stories.ts` (archies' homepage MAD card) failed
+`tests/chromatic-path-filter.test.ts` three different ways. The first draft
+imported `data/archies/mfl-feeds/2026/standings.json` to build real tiers. That
+put a cron-written feed in the story closure, which would start a visual build
+on every sync commit. The fix is a frozen fixture in `stories/fixtures/`, not a
+narrower filter. Then the component and its type-only imports
+(`mad-standings.ts`, `package-league.ts`; the deps script follows `import type`)
+had to go into BOTH `paths:` lists in `chromatic.yml`. The 33 crest
+URLs the fixture names also had to be covered: `computeStoryAssetLiterals`
+reads every `/assets/…` literal in story files, so they went into
+`STORY_ASSET_GLOBS` as one directory glob. That glob must ALSO be copied into
+`chromatic.config.json` `externals`, which "matches the generated set exactly".
+Order of work for the next story: fixture first, then run
+`node scripts/chromatic-story-deps.mjs` and sync the workflow and the config
+from its output.
