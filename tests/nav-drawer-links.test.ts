@@ -3,15 +3,14 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import navConfig from '../src/config/nav-config.json';
 import type { LeagueSlug, NavLink } from '../src/types/nav';
+import { ALL_LEAGUES } from '../src/config/leagues-data.mjs';
 
 const REPO_ROOT = process.cwd();
 const PRERENDER_TRUE_EXPORT = /^\s*export const prerender\s*=\s*true\b/m;
-const LEAGUE_PAGE_DIRS: Record<LeagueSlug, string> = {
-  theleague: path.join(REPO_ROOT, 'src/pages/theleague'),
-  afl: path.join(REPO_ROOT, 'src/pages/afl-fantasy'),
-  bb1: path.join(REPO_ROOT, 'src/pages/best-ball-1'),
-  archies: path.join(REPO_ROOT, 'src/pages/archies'),
-};
+/** nav slug → its page directory, from the registry (a new league needs no edit). */
+const LEAGUE_PAGE_DIRS: Record<string, string> = Object.fromEntries(
+  ALL_LEAGUES.map((l) => [l.navSlug, path.join(REPO_ROOT, 'src/pages', l.slug)]),
+);
 
 interface NavLinkEntry {
   link: NavLink;

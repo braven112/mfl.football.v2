@@ -21,7 +21,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { SURFACE_GROUNDS, surfaceForLeague, type LiveSurface } from '../src/utils/live/surface';
+import { SURFACE_GROUNDS, groundsFor, surfaceForLeague, type LiveSurface } from '../src/utils/live/surface';
 import { resolveMatchupColorVars } from '../src/utils/live/model';
 import {
   colorDistance,
@@ -100,10 +100,12 @@ describe('every surface ground is the real token value', () => {
 
 describe('every registry league maps to a surface', () => {
   it.each((ALL_LEAGUES as Array<{ slug: string; navSlug: string }>).map((l) => l.slug))(
-    '%s resolves to a known surface',
+    '%s resolves to its own surface, with grounds',
     (slug) => {
+      // Its nav slug; grounds are its theme's own entry or the bare dark card.
       const surface = surfaceForLeague(slug);
-      expect(Object.keys(SURFACE_GROUNDS)).toContain(surface);
+      expect(surface).toBe((ALL_LEAGUES as Array<{ slug: string; navSlug: string }>).find((l) => l.slug === slug)?.navSlug);
+      expect(groundsFor(surface).dark).toMatch(/^#[0-9a-f]{6}$/i);
     },
   );
 
@@ -157,7 +159,9 @@ describe('a franchise is separable from ITS OWN league’s card, in both themes'
 
   for (const league of leagues) {
     const surface = surfaceForLeague(league.slug);
-    const grounds = SURFACE_GROUNDS[surface];
+    // groundsFor, not SURFACE_GROUNDS[…]: a league whose theme does not
+    // override the card (any new one) is judged on the bare dark card it renders on.
+    const grounds = groundsFor(surface);
     const teams = loadTeams(league.configPath);
 
     for (const theme of ['light', 'dark'] as const) {

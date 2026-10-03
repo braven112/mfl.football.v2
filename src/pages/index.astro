@@ -13,7 +13,9 @@ interface PanelMeta {
 }
 
 // Presentational-only data; ids/slugs/names come from the league registry.
-const PANEL_META: Record<CanonicalLeagueSlug, PanelMeta> = {
+// A league with no entry here (any launched league, until it is advertised and
+// given its own line) gets a panel built from its registry logo: see panelFor.
+const PANEL_META: Partial<Record<CanonicalLeagueSlug, PanelMeta>> = {
   theleague: {
     logo: '/assets/logos/theleague-logo.svg',
     logoDark: '/assets/logos/theleague-logo-dark.svg',
@@ -45,6 +47,17 @@ const PANEL_META: Record<CanonicalLeagueSlug, PanelMeta> = {
     stats: '99 Teams · 9 Divisions · Redraft',
   },
 };
+
+function panelFor(league: (typeof ALL_LEAGUES)[number]): PanelMeta {
+  return (
+    PANEL_META[league.slug] ?? {
+      logo: league.logo.light,
+      logoDark: league.logo.dark,
+      estYear: new Date().getFullYear(),
+      stats: '',
+    }
+  );
+}
 
 const CHIP_LABELS: Record<string, string> = {
   theleague: 'The League',
@@ -141,7 +154,7 @@ const hrefFromHere = (path: string) => crossHostLeagueHref(Astro.url.hostname, p
 
   <section class="hero" aria-label="Choose your league" style={`--panel-count: ${leagueCount}`}>
     {splashLeagues.map((league) => {
-      const meta = PANEL_META[league.slug];
+      const meta = panelFor(league);
       return (
         <a class="panel" data-league={league.navSlug} href={hrefFromHere(`/${league.slug}`)}>
           <img class="watermark" src={meta.logo} alt="" aria-hidden="true" loading="lazy" />
