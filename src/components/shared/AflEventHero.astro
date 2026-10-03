@@ -345,13 +345,13 @@ const countAriaLabel = hasCount
      it), and the bright gold accent / red glow read correctly on navy in both
      themes — so these values are now shared, not theme-split. */
   .afl-event-hero {
-    --ev-surface: #002244;
+    --ev-surface: var(--hero-surface, #002244);
     --ev-ink: #ffffff;
     --ev-ink-soft: rgba(255, 255, 255, 0.72);
     --ev-ink-faint: rgba(255, 255, 255, 0.6);
     --ev-divider: rgba(255, 255, 255, 0.16);
-    --ev-glow-resolved: var(--ev-glow, rgba(196, 30, 58, 0.6));
-    --ev-accent-ink: var(--ev-accent, #c9a94e);
+    --ev-glow-resolved: var(--ev-glow, var(--hero-glow, rgba(196, 30, 58, 0.6)));
+    --ev-accent-ink: var(--ev-accent, var(--hero-highlight, #c9a94e));
     /* Screenshot-frame geometry, read by BOTH the frame and the content
        column that has to stop before it. Two copies of these clamps is how
        the copy ends up under the frame again. */
@@ -390,7 +390,7 @@ const countAriaLabel = hasCount
      The AFL's red corner glow goes too: `.hero-fb__wash` is the wash now, and
      two washes over franchise colour muddied every gradient that was not red. */
   .afl-event-hero--franchise {
-    background: var(--hero-fb-gradient, #002244);
+    background: var(--hero-fb-gradient, var(--hero-surface, #002244));
     /* Team-coloured edge so the card separates from the page. The LIGHT-theme
        tone is the base declaration and the dark one overrides below — never the
        other way round, or a light-theme reader gets the fallback (see

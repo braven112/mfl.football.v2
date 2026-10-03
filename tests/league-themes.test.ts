@@ -155,7 +155,7 @@ describe('league themes', () => {
     // MFL Live's dark accent carries white at 3.49:1; four pages shipped it as
     // a button fill before CTAs read the theme.
     const offenders = walk(path.join(ROOT, 'src'), ['.css', '.astro', '.tsx'])
-      .filter((f) => /--cta-(bg|bg-hover)\s*:\s*var\(--league-accent/.test(fs.readFileSync(f, 'utf8')))
+      .filter((f) => /--cta-(bg|bg-hover)\s*:\s*var\(--league-accent\s*[,)]/.test(fs.readFileSync(f, 'utf8')))
       .map((f) => path.relative(ROOT, f));
     expect(offenders).toEqual([]);
   });

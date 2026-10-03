@@ -129,6 +129,7 @@ export const THEME_TOKEN_GROUPS = [
       '--link-color-focus',
       '--link-color-hover',
       '--on-league-accent',
+      '--league-accent-hover',
       '--on-color-accent',
     ],
   },
@@ -162,6 +163,8 @@ export const THEME_TOKEN_GROUPS = [
       '--hero-pill-bg',
       '--hero-pill-border',
       '--hero-cta-ink',
+      '--hero-action',
+      '--on-hero-action',
     ],
   },
   {

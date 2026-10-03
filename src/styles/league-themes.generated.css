@@ -65,6 +65,7 @@ html[data-league="keeper"] {
   --link-color-focus: var(--color-secondary);
   --link-color-hover: var(--color-secondary);
   --on-league-accent: #ffffff; /* Text ON a --league-accent fill: white where white clears AA on the accent, near-black where it does not (a bright dark-mode accent carries white at under 4.5:1). */
+  --league-accent-hover: color-mix(in srgb, var(--league-accent) 85%, black);
   --on-color-accent: #ffffff;
   --breadcrumb-bar-bg: var(--afl-navy);
   --header-nav-icon-color: var(--afl-navy);
@@ -72,10 +73,17 @@ html[data-league="keeper"] {
   --header-nav-label-color: var(--league-accent);
   --header-nav-label-hover-color: var(--league-accent);
   --hero-ink: #0f1e2e;
-  --hero-surface: #1c497c;
+  --hero-surface: #002244; /* The AFL's hero chrome is its navy #002244 in BOTH modes (the branded event card, the schedule hero), with a red glow and gold highlight. */
   --hero-accent: #16324a;
-  --hero-glow: rgba(28, 73, 124, 0.55);
+  --hero-glow: rgba(196, 30, 58, 0.6);
   --hero-urgent: var(--league-accent);
+  --hero-gradient: linear-gradient(115deg, #16324a 0%, #12283c 55%, #0f1e2e 100%);
+  --hero-highlight: #c9a94e;
+  --hero-pill-bg: rgba(201, 164, 76, 0.16);
+  --hero-pill-border: rgba(201, 164, 76, 0.45);
+  --hero-cta-ink: #0f1e2e;
+  --hero-action: var(--league-accent);
+  --on-hero-action: #ffffff;
   --selection-bg: color-mix(in srgb, var(--color-primary) 28%, transparent);
   --nav-active-bg: rgba(28, 73, 124, 0.1);
   --nav-active-text: var(--color-primary, #1c497c);
@@ -178,6 +186,7 @@ html.dark[data-league="keeper"] {
   --link-color-focus: #ef5350;
   --link-color-hover: #ef5350;
   --on-league-accent: #0b0f16;
+  --league-accent-hover: color-mix(in srgb, var(--league-accent) 85%, white);
   --on-color-accent: #0b0f16;
   --breadcrumb-bar-bg: #0a1622;
   --breadcrumb-bar-border: var(--league-accent, #ef5350);
@@ -188,10 +197,17 @@ html.dark[data-league="keeper"] {
   --logo-name-primary-color: #ffffff;
   --logo-secondary-color: #10b981;
   --hero-ink: #0f1e2e;
-  --hero-surface: #0f1e2e;
+  --hero-surface: #002244;
   --hero-accent: #9dc0dd;
-  --hero-glow: rgba(28, 73, 124, 0.55);
+  --hero-glow: rgba(196, 30, 58, 0.6);
   --hero-urgent: var(--league-accent);
+  --hero-gradient: linear-gradient(115deg, #0b1520 0%, #0f1e2e 52%, #16324a 130%);
+  --hero-highlight: #c9a94e;
+  --hero-pill-bg: rgba(201, 164, 76, 0.16);
+  --hero-pill-border: rgba(201, 164, 76, 0.45);
+  --hero-cta-ink: #0f1e2e;
+  --hero-action: #c41e3a;
+  --on-hero-action: #ffffff;
   --selection-bg: rgba(239, 83, 80, 0.5);
   --selection-text: #ffffff;
   --nav-active-bg: rgba(37, 99, 235, 0.15);
@@ -290,6 +306,7 @@ html[data-league="archies"] {
   --link-color-focus: var(--league-palette-ink);
   --link-color-hover: var(--league-palette-ink);
   --on-league-accent: var(--league-palette-on-accent); /* Text ON a --league-accent fill. */
+  --league-accent-hover: color-mix(in srgb, var(--league-accent) 85%, white);
   --on-color-accent: var(--league-palette-on-accent);
   --breadcrumb-bar-bg: var(--league-palette-ink);
   --header-nav-icon-color: var(--league-palette-ink);
@@ -306,6 +323,8 @@ html[data-league="archies"] {
   --hero-pill-bg: color-mix(in srgb, var(--hero-highlight) 16%, transparent);
   --hero-pill-border: color-mix(in srgb, var(--hero-highlight) 45%, transparent);
   --hero-cta-ink: var(--hero-ink);
+  --hero-action: var(--league-palette-accent);
+  --on-hero-action: var(--league-palette-on-accent);
   --selection-bg: color-mix(in srgb, var(--color-primary) 28%, transparent);
   --nav-active-bg: color-mix(in srgb, var(--league-palette-accent) 18%, transparent);
   --nav-active-text: var(--league-palette-ink);
@@ -414,6 +433,7 @@ html.dark[data-league="archies"] {
   --link-color-focus: var(--league-palette-accent-soft);
   --link-color-hover: var(--league-palette-accent-soft);
   --on-league-accent: var(--league-palette-on-accent);
+  --league-accent-hover: color-mix(in srgb, var(--league-accent) 85%, white);
   --on-color-accent: var(--league-palette-on-accent);
   --breadcrumb-bar-bg: var(--league-palette-ink);
   --breadcrumb-bar-border: var(--league-palette-accent);
@@ -433,6 +453,8 @@ html.dark[data-league="archies"] {
   --hero-pill-bg: color-mix(in srgb, var(--hero-highlight) 16%, transparent);
   --hero-pill-border: color-mix(in srgb, var(--hero-highlight) 45%, transparent);
   --hero-cta-ink: var(--hero-ink);
+  --hero-action: var(--league-palette-accent);
+  --on-hero-action: var(--league-palette-on-accent);
   --selection-bg: color-mix(in srgb, var(--league-palette-accent) 40%, transparent);
   --selection-text: var(--page-text);
   --nav-active-bg: color-mix(in srgb, var(--page-text) 9%, transparent);
@@ -539,6 +561,7 @@ html[data-league="bb1"] {
   --link-color-focus: var(--color-secondary);
   --link-color-hover: var(--color-secondary);
   --on-league-accent: #000000; /* Text ON a --league-accent fill: white where white clears AA on the accent, near-black where it does not (a bright dark-mode accent carries white at under 4.5:1). */
+  --league-accent-hover: color-mix(in srgb, var(--league-accent) 85%, white);
   --on-color-accent: #ffffff;
   --breadcrumb-bar-bg: var(--bb-green);
   --header-nav-icon-color: var(--bb-green);
@@ -555,6 +578,8 @@ html[data-league="bb1"] {
   --hero-pill-bg: color-mix(in srgb, var(--hero-highlight) 16%, transparent);
   --hero-pill-border: color-mix(in srgb, var(--hero-highlight) 45%, transparent);
   --hero-cta-ink: var(--hero-ink);
+  --hero-action: #0b7a54;
+  --on-hero-action: #ffffff;
   --selection-bg: color-mix(in srgb, var(--color-primary) 28%, transparent);
   --nav-active-bg: rgba(28, 73, 124, 0.1);
   --nav-active-text: var(--color-primary, #1c497c);
@@ -652,6 +677,7 @@ html.dark[data-league="bb1"] {
   --link-color-focus: #2563eb;
   --link-color-hover: #2563eb;
   --on-league-accent: #0b0f16;
+  --league-accent-hover: color-mix(in srgb, var(--league-accent) 85%, white);
   --on-color-accent: #0b0f16;
   --breadcrumb-bar-bg: #0a3326;
   --breadcrumb-bar-border: var(--league-accent, #34d399);
@@ -671,6 +697,8 @@ html.dark[data-league="bb1"] {
   --hero-pill-bg: color-mix(in srgb, var(--hero-highlight) 16%, transparent);
   --hero-pill-border: color-mix(in srgb, var(--hero-highlight) 45%, transparent);
   --hero-cta-ink: var(--hero-ink);
+  --hero-action: #34d399;
+  --on-hero-action: #0b0f16;
   --selection-bg: rgba(14, 138, 95, 0.55);
   --selection-text: #ffffff;
   --nav-active-bg: rgba(37, 99, 235, 0.15);
@@ -768,6 +796,7 @@ html[data-league="mfl"] {
   --link-color-focus: var(--color-secondary);
   --link-color-hover: var(--color-secondary);
   --on-league-accent: #ffffff; /* Text ON a --league-accent fill: white where white clears AA on the accent, near-black where it does not (a bright dark-mode accent carries white at under 4.5:1). */
+  --league-accent-hover: color-mix(in srgb, var(--league-accent) 85%, black);
   --on-color-accent: #ffffff;
   --breadcrumb-bar-bg: var(--mfl-ink);
   --header-nav-icon-color: var(--mfl-ink);
@@ -784,6 +813,8 @@ html[data-league="mfl"] {
   --hero-pill-bg: color-mix(in srgb, var(--hero-highlight) 16%, transparent);
   --hero-pill-border: color-mix(in srgb, var(--hero-highlight) 45%, transparent);
   --hero-cta-ink: var(--hero-ink);
+  --hero-action: #c41e3a;
+  --on-hero-action: #ffffff;
   --selection-bg: color-mix(in srgb, var(--color-primary) 28%, transparent);
   --nav-active-bg: rgba(196, 30, 58, 0.1);
   --nav-active-text: var(--color-primary, #1c497c);
@@ -885,6 +916,7 @@ html.dark[data-league="mfl"] {
   --link-color-focus: #ef5350;
   --link-color-hover: #ef5350;
   --on-league-accent: #0b0f16;
+  --league-accent-hover: color-mix(in srgb, var(--league-accent) 85%, white);
   --on-color-accent: #0b0f16;
   --breadcrumb-bar-bg: var(--mfl-ink-deep, #0b0c0f);
   --breadcrumb-bar-border: var(--league-accent, #ef5350);
@@ -904,6 +936,8 @@ html.dark[data-league="mfl"] {
   --hero-pill-bg: color-mix(in srgb, var(--hero-highlight) 16%, transparent);
   --hero-pill-border: color-mix(in srgb, var(--hero-highlight) 45%, transparent);
   --hero-cta-ink: var(--hero-ink);
+  --hero-action: #d81b41;
+  --on-hero-action: #ffffff;
   --selection-bg: rgba(239, 83, 80, 0.5);
   --selection-text: #ffffff;
   --nav-active-bg: rgba(216, 27, 65, 0.15);
@@ -1002,6 +1036,7 @@ html:not([data-league]) {
   --link-color-focus: var(--color-secondary);
   --link-color-hover: var(--color-secondary);
   --on-league-accent: #ffffff; /* Text ON a --league-accent fill: white where white clears AA on the accent, near-black where it does not (a bright dark-mode accent carries white at under 4.5:1). */
+  --league-accent-hover: color-mix(in srgb, var(--league-accent) 85%, black); /* Hover step of a --league-accent fill: darker under white text, lighter under dark text, so hovering never lowers the text's contrast. */
   --on-color-accent: #ffffff;
   --header-nav-icon-color: var(--color-primary);
   --header-nav-icon-hover-color: var(--color-secondary);
@@ -1106,6 +1141,7 @@ html.dark:not([data-league]) {
   --link-color-focus: #2563eb;
   --link-color-hover: #2563eb;
   --on-league-accent: #0b0f16;
+  --league-accent-hover: color-mix(in srgb, var(--league-accent) 85%, white);
   --on-color-accent: #0b0f16;
   --breadcrumb-bar-bg: linear-gradient(0deg, #122e5b 10%, #122e5bad 80%);
   --breadcrumb-bar-border: var(--color-primary, #3b82f6);

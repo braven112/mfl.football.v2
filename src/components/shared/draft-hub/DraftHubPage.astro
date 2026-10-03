@@ -204,7 +204,7 @@ const totalCapital = myCapital.reduce((sum, c) => sum + c.count, 0);
     --dhub-border: var(--content-border, #e5e5e5);
     --dhub-ink: var(--page-text, #1a1a1a);
     --dhub-ink-muted: var(--content-text-muted, #666);
-    --dhub-on-accent: var(--btn-primary-text, #fff);
+    --dhub-on-accent: var(--on-league-accent, #fff);
 
     max-width: 1100px;
     margin: 0 auto;
@@ -282,7 +282,7 @@ const totalCapital = myCapital.reduce((sum, c) => sum + c.count, 0);
     --cta-bg: var(--dhub-accent);
     --cta-ink: var(--dhub-on-accent);
     --cta-border: var(--cta-bg);
-    --cta-bg-hover: color-mix(in srgb, var(--cta-bg) 88%, black);
+    --cta-bg-hover: var(--league-accent-hover, color-mix(in srgb, var(--cta-bg) 88%, black));
     padding: 0.45rem 0.9rem;
     border-radius: 0.4rem;
     font-size: 0.85rem;
