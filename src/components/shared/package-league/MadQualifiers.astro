@@ -1,0 +1,237 @@
+---
+/**
+ * MAD POWER 99 (archies) — the playoff teams only, for the homepage.
+ *
+ * Mirrors the league's own MFL widget (public/mfl/10105/standings.js): a
+ * crest tile per qualifier, banded DIVISION LEADERS / DIVISION RUNNERS-UP /
+ * WILD CARDS in the widget's pink / purple / cyan, then the red cut line. The
+ * field below the line is the standings page's MAD tab, linked from here.
+ *
+ * Seeds come from `madSeeds` (utils/mad-standings.ts), which never re-sorts
+ * MFL's rows. Prize money is not shown: the widget reads it from a block the
+ * commissioner types into the MFL module, and the site has no copy of it.
+ */
+import type { MadQualifierTier } from '../../../utils/mad-standings';
+import type { StandingRow } from '../../../utils/package-league';
+
+export type MadQualifierRow = StandingRow & { divisionName: string; href: string };
+
+interface Props {
+  tiers: MadQualifierTier[];
+  /** Every team in the standings, by franchise id (the count sets the "seeds 31–N" link). */
+  rows: Record<string, MadQualifierRow>;
+  /** How many teams the seeding puts in the playoffs (the cut line). */
+  playoffSize: number;
+  /** The full table — the standings page's MAD tab. */
+  fullHref: string;
+  highlightFranchiseId?: string | null;
+}
+
+const { tiers, rows, playoffSize, fullHref, highlightFranchiseId = null } = Astro.props;
+
+const LABEL: Record<MadQualifierTier['tier'], string> = {
+  leader: 'Division leaders',
+  runnerUp: 'Division runners-up',
+  wildCard: 'Wild cards',
+};
+const totalTeams = Object.keys(rows).length;
+---
+
+<div class="mad-q">
+  {tiers.map((t) => (
+    <section class={`mad-q__tier mad-q__tier--${t.tier}`} aria-label={`${LABEL[t.tier]}, seeds ${t.from} to ${t.to}`}>
+      <h3 class="mad-q__head">
+        {LABEL[t.tier]} <span class="mad-q__count">seeds {t.from}–{t.to}</span>
+      </h3>
+      <ol class="mad-q__grid" start={t.from}>
+        {t.ids.map((id, i) => {
+          const r = rows[id];
+          if (!r) return null;
+          return (
+            <li>
+              <a class:list={['mad-q__tile', { 'is-mine': id === highlightFranchiseId }]} href={r.href}>
+                {r.icon ? (
+                  <img class="mad-q__crest" src={r.icon} alt="" width="128" height="128" loading="lazy" decoding="async" />
+                ) : (
+                  <span class="mad-q__crest mad-q__crest--blank" aria-hidden="true" />
+                )}
+                <span class="mad-q__name">{r.name}</span>
+                <span class="mad-q__div">{r.divisionName}</span>
+                <span class="mad-q__vp">{r.victoryPoints ?? '—'}<span> VP</span></span>
+                <span class="mad-q__meta">#{t.from + i} · {r.record}</span>
+              </a>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  ))}
+
+  <p class="mad-q__cut">Playoff cut line · {playoffSize} qualify</p>
+
+  {totalTeams > playoffSize && (
+    <a class="mad-q__full" href={fullHref}>
+      See the full standings — seeds {playoffSize + 1}–{totalTeams} →
+    </a>
+  )}
+</div>
+
+<style>
+  /* Tier colours are the league's MFL widget's own (widget.css): pink and
+     cyan were already its language, purple was added for the runners-up. They
+     mark the tile's top edge and the heading's swatch only — never text — so
+     they read on a light card as well as a dark one. */
+  .mad-q {
+    --mad-leader: #ff519f;
+    --mad-runner-up: #b284ff;
+    --mad-wild-card: rgb(89, 224, 255);
+    --mad-cut: #e60000;
+    container-type: inline-size;
+  }
+  .mad-q__tier--leader { --mad-tier: var(--mad-leader); }
+  .mad-q__tier--runnerUp { --mad-tier: var(--mad-runner-up); }
+  .mad-q__tier--wildCard { --mad-tier: var(--mad-wild-card); }
+
+  .mad-q__tier + .mad-q__tier { margin-top: 1.1rem; }
+  .mad-q__head {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin: 0 0 0.6rem;
+    font-size: var(--font-size-2xs);
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--page-text);
+  }
+  .mad-q__head::before {
+    content: '';
+    width: 0.65rem;
+    height: 0.65rem;
+    border-radius: 50%;
+    background: var(--mad-tier);
+    flex: none;
+  }
+  .mad-q__count {
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--content-text-muted);
+  }
+
+  .mad-q__grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.6rem;
+  }
+  @container (min-width: 480px) {
+    .mad-q__grid { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); }
+  }
+
+  .mad-q__tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+    padding: 0.55rem 0.45rem 0.65rem;
+    border-radius: 10px;
+    border-top: 3px solid var(--mad-tier);
+    background: color-mix(in srgb, var(--mad-tier) 9%, transparent);
+    color: inherit;
+    text-align: center;
+    text-decoration: none;
+    transition: background-color var(--transition-fast), transform var(--transition-fast);
+  }
+  .mad-q__tile:hover,
+  .mad-q__tile:focus-visible {
+    background: color-mix(in srgb, var(--mad-tier) 18%, transparent);
+    transform: translateY(-2px);
+  }
+  .mad-q__tile:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  .mad-q__tile.is-mine { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+  @media (prefers-reduced-motion: reduce) {
+    .mad-q__tile { transition: none; }
+    .mad-q__tile:hover,
+    .mad-q__tile:focus-visible { transform: none; }
+  }
+
+  .mad-q__crest {
+    display: block;
+    width: 100%;
+    max-width: 96px;
+    height: auto;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    border-radius: 6px;
+  }
+  .mad-q__crest--blank { background: var(--content-bg-muted); }
+  .mad-q__name,
+  .mad-q__div {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .mad-q__name {
+    margin-top: 0.45rem;
+    font-size: var(--font-size-xs);
+    font-weight: 800;
+    line-height: 1.2;
+    color: var(--page-text);
+  }
+  /* Seeds 1-18 are one team per division, so the division answers "which
+     one" — quiet, so it never competes with the name or the VP. */
+  .mad-q__div {
+    margin-top: 0.1rem;
+    font-size: var(--font-size-3xs);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--content-text-muted);
+  }
+  .mad-q__vp {
+    margin-top: 0.2rem;
+    font-size: var(--font-size-xl);
+    font-weight: 800;
+    line-height: 1;
+    color: var(--page-text);
+    font-variant-numeric: tabular-nums;
+  }
+  .mad-q__vp span {
+    font-size: var(--font-size-3xs);
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    color: var(--content-text-muted);
+  }
+  .mad-q__meta {
+    margin-top: 0.25rem;
+    font-size: var(--font-size-2xs);
+    color: var(--content-text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .mad-q__cut {
+    margin: 1.1rem 0 0;
+    padding: 0.7rem 0.5rem;
+    border-top: 2px solid var(--mad-cut);
+    border-bottom: 2px solid var(--mad-cut);
+    text-align: center;
+    font-size: var(--font-size-2xs);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--mad-cut);
+  }
+  .mad-q__full {
+    display: block;
+    margin-top: 0.75rem;
+    text-align: center;
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--color-primary);
+    text-decoration: none;
+  }
+  .mad-q__full:hover { text-decoration: underline; }
+</style>

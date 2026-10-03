@@ -142,6 +142,7 @@ on:
       - 'src/utils/live/standings-projection.ts'
       - 'src/utils/live/surface.ts'
       - 'src/utils/login-redirect.ts'
+      - 'src/utils/mad-standings.ts'
       - 'src/utils/mfl-live-identity.ts'
       - 'src/utils/mfl-live-lineup.ts'
       - 'src/utils/mfl-normalize.ts'
@@ -157,6 +158,7 @@ on:
       - 'src/utils/normalize-position.ts'
       - 'src/utils/offseason-hero-data.ts'
       - 'src/utils/owner-tenures.mjs'
+      - 'src/utils/package-league.ts'
       - 'src/utils/pecking-order-season-window.mjs'
       - 'src/utils/persona-server.ts'
       - 'src/utils/persona.mjs'
@@ -277,6 +279,7 @@ on:
       - 'public/assets/afl/premier-dark.svg'
       - 'public/assets/afl/premier.svg'
       - 'public/assets/nfl-logos/**'
+      - 'public/assets/archies/icons/**'
       - 'public/assets/tv-logos/**'
       - 'public/assets/college-logos/**'
       - 'public/assets/logos/**'
@@ -351,6 +354,7 @@ on:
   # hand (Actions -> Chromatic -> "Run workflow", pick the branch): that is
   # the `workflow_dispatch` trigger, and it runs on any ref. The `visual-check`
   # label CANNOT do this — a PR into `staging` never reaches this workflow.
+      - 'src/components/shared/package-league/MadQualifiers.astro'
   pull_request:
     branches: [main]
     types: [opened, ready_for_review, labeled, synchronize]
@@ -467,6 +471,7 @@ on:
       - 'src/utils/live/standings-projection.ts'
       - 'src/utils/live/surface.ts'
       - 'src/utils/login-redirect.ts'
+      - 'src/utils/mad-standings.ts'
       - 'src/utils/mfl-live-identity.ts'
       - 'src/utils/mfl-live-lineup.ts'
       - 'src/utils/mfl-normalize.ts'
@@ -482,6 +487,7 @@ on:
       - 'src/utils/normalize-position.ts'
       - 'src/utils/offseason-hero-data.ts'
       - 'src/utils/owner-tenures.mjs'
+      - 'src/utils/package-league.ts'
       - 'src/utils/pecking-order-season-window.mjs'
       - 'src/utils/persona-server.ts'
       - 'src/utils/persona.mjs'
@@ -602,6 +608,7 @@ on:
       - 'public/assets/afl/premier-dark.svg'
       - 'public/assets/afl/premier.svg'
       - 'public/assets/nfl-logos/**'
+      - 'public/assets/archies/icons/**'
       - 'public/assets/tv-logos/**'
       - 'public/assets/college-logos/**'
       - 'public/assets/logos/**'
@@ -634,6 +641,7 @@ on:
       - 'src/components/shared/PlayerCell.tsx'
       - 'scripts/lib/rookie-salary-slots.mjs'
 
+      - 'src/components/shared/package-league/MadQualifiers.astro'
   workflow_dispatch:
 
 concurrency:

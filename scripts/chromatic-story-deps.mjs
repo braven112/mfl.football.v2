@@ -115,6 +115,9 @@ export const STORY_ASSET_GLOBS = [
   'public/assets/theleague/icons/pigskins_dark.png',
   'public/assets/theleague/icons/wabbits.png',
   'public/assets/theleague/icons/wabbits_dark.png',
+  // Archie's crests the MadQualifiers stories render (33 of the league's 99,
+  // all the subject; the directory changes only when the league rebrands).
+  'public/assets/archies/icons/**',
   // Channel + Sunday Ticket carrier marks the SundayTicketBoard stories render
   // (18 small PNGs, all of them the subject, so the whole directory).
   'public/assets/tv-logos/**',

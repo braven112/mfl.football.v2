@@ -33,6 +33,7 @@ import QuickLinks from '../../shared/hp-sections/QuickLinks.astro';
 import WhatsNext from '../WhatsNext.astro';
 import WhatsNewRow from '../WhatsNewRow.astro';
 import DivisionStandings from './DivisionStandings.astro';
+import MadQualifiers from './MadQualifiers.astro';
 import LeagueHero from '../league-hero/LeagueHero.astro';
 import PackageTeamSnapshot from './PackageTeamSnapshot.astro';
 import PackagePeckingOrderCard from './PackagePeckingOrderCard.astro';
@@ -40,7 +41,8 @@ import type { PeckingOrderData } from '../PeckingOrderIssue.astro';
 import { getLeagueBySlug, leagueHasFeature, type CanonicalLeagueSlug } from '../../../config/leagues';
 import { buildLiveScoringHeroProps } from '../../../utils/live-scoring-hero-props';
 import { getAuthUser, franchiseIdForLeague } from '../../../utils/auth';
-import { groupStandingsByDivision, rosterPlayerIds, type PackageDivision, type PackageTeam } from '../../../utils/package-league';
+import { groupStandingsByDivision, rosterPlayerIds, standingsRows as feedStandingsRows, type PackageDivision, type PackageTeam } from '../../../utils/package-league';
+import { madPlayoffSize, madQualifierTiers, madSeeds } from '../../../utils/mad-standings';
 import { loadSeasonFeed, resolveSeason, seasonsFromGlob, type LazyFeedGlob } from '../../../utils/mfl-feed-glob';
 import { getCurrentSeasonYear, getLeagueYearForSlug } from '../../../utils/league-year';
 import { loadTransactionsSeason } from '../../../utils/transactions-feeds';
@@ -193,6 +195,25 @@ const whenFmt = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric
 // ── Standings: the viewer's division in full, else every division's top 3 ──
 const myGroup = mine ? groups.find((g) => g.rows.some((row) => row.franchiseId === mine)) ?? null : null;
 
+// A league with its own playoff seeding (archies: MAD POWER 99) shows its
+// qualifiers instead, as the league's MFL homepage does — for every viewer.
+// Seeded from MFL's rows in feed order; nothing is re-sorted.
+const madSeeding = league.standingsSeeding?.kind === 'mad' ? league.standingsSeeding : null;
+const madTiers = madSeeding
+  ? madQualifierTiers(
+      madSeeds(
+        feedStandingsRows(standingsFeed).map((row) => ({ id: String(row.id ?? '') })).filter((row) => row.id),
+        (id) => teamsById[id]?.divisionId,
+        madSeeding,
+      ),
+    )
+  : [];
+const madRows = Object.fromEntries(
+  groups.flatMap((g) =>
+    g.rows.map((row) => [row.franchiseId, { ...row, divisionName: g.division.name, href: teamHref(row.franchiseId) }]),
+  ),
+);
+
 // ── Rail + What's New ───────────────────────────────────────────────────────
 const rail = await resolveSchefterRail({ league, posts, authUser, now });
 const whatsNew = getWhatsNewEntriesForLeague(league.navSlug);
@@ -306,23 +327,43 @@ const heroLiveScoring =
 
         <WhatsNext timeline={timeline} maxCards={2} calendarHref={r(`${base}/calendar`)} />
 
-        <section class:list={['pkg-home__card', { 'pkg-home__standings--one': !!myGroup }]} aria-labelledby="pkg-home-standings">
-          <div class="pkg-home__section-head">
-            <h2 id="pkg-home-standings">{myGroup ? myGroup.division.name : 'Division leaders'}</h2>
-            <a class="pkg-home__more" href={r(`${base}/standings`)}>{myGroup ? 'All divisions →' : 'Full standings →'}</a>
-          </div>
-          {groups.length > 0 ? (
-            <DivisionStandings
-              groups={myGroup ? [myGroup] : groups}
-              compact={myGroup ? undefined : 3}
-              teamHrefBase={r(`${base}/brand`)}
-              teamSlugs={teamSlugs}
-              highlightFranchiseId={mine}
-            />
-          ) : (
-            <p class="pkg-home__empty">Standings appear once the first week is scored.</p>
-          )}
-        </section>
+        {madSeeding ? (
+          <section class="pkg-home__card" aria-labelledby="pkg-home-standings">
+            <div class="pkg-home__section-head">
+              <h2 id="pkg-home-standings">MAD Power 99</h2>
+              <a class="pkg-home__more" href={r(`${base}/standings?view=league`)}>Full standings →</a>
+            </div>
+            {madTiers.length > 0 ? (
+              <MadQualifiers
+                tiers={madTiers}
+                rows={madRows}
+                playoffSize={madPlayoffSize(madSeeding)}
+                fullHref={r(`${base}/standings?view=league`)}
+                highlightFranchiseId={mine}
+              />
+            ) : (
+              <p class="pkg-home__empty">Standings appear once the first week is scored.</p>
+            )}
+          </section>
+        ) : (
+          <section class:list={['pkg-home__card', { 'pkg-home__standings--one': !!myGroup }]} aria-labelledby="pkg-home-standings">
+            <div class="pkg-home__section-head">
+              <h2 id="pkg-home-standings">{myGroup ? myGroup.division.name : 'Division leaders'}</h2>
+              <a class="pkg-home__more" href={r(`${base}/standings`)}>{myGroup ? 'All divisions →' : 'Full standings →'}</a>
+            </div>
+            {groups.length > 0 ? (
+              <DivisionStandings
+                groups={myGroup ? [myGroup] : groups}
+                compact={myGroup ? undefined : 3}
+                teamHrefBase={r(`${base}/brand`)}
+                teamSlugs={teamSlugs}
+                highlightFranchiseId={mine}
+              />
+            ) : (
+              <p class="pkg-home__empty">Standings appear once the first week is scored.</p>
+            )}
+          </section>
+        )}
 
         <section class="pkg-home__card" aria-labelledby="pkg-home-tx">
           <div class="pkg-home__section-head">
