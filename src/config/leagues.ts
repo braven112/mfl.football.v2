@@ -30,7 +30,7 @@ import {
 } from './leagues-data.mjs';
 
 /** Canonical slug: the path segment under src/pages/ */
-export type CanonicalLeagueSlug = 'theleague' | 'afl-fantasy' | 'best-ball-1' | 'keeper' | 'archies';
+export type CanonicalLeagueSlug = keyof typeof RAW_LEAGUES | DemoOnlyLeagueSlug;
 
 /**
  * Slots registered only on a custom-site demo deployment (see the `isDemoEnv`
