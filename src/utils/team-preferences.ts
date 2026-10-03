@@ -8,6 +8,7 @@ import leagueAssets from '../data/theleague.assets.json';
 import aflAssets from '../../data/afl-fantasy/afl.assets.json';
 import bb1Assets from '../../data/best-ball-1/bb1.assets.json';
 import { getActiveTeams } from './league-assets';
+import { getLeagueTeams } from './league-config';
 
 /**
  * TheLeague team preference structure
@@ -85,7 +86,7 @@ function normalizeFranchiseId(franchiseId: string | number | null | undefined): 
 /**
  * Validate franchise ID exists in league
  */
-export function validateFranchiseId(franchiseId: string | number | null | undefined, league: 'theleague' | 'afl' | 'bb1' = 'theleague'): boolean {
+export function validateFranchiseId(franchiseId: string | number | null | undefined, league: TeamSelectionLeague = 'theleague'): boolean {
   if (franchiseId === null || franchiseId === undefined || franchiseId === '') return false;
 
   const normalized = normalizeFranchiseId(franchiseId);
@@ -97,9 +98,13 @@ export function validateFranchiseId(franchiseId: string | number | null | undefi
     return getActiveTeams(leagueAssets).some(team => team.id === normalized);
   } else if (league === 'bb1') {
     return getActiveTeams(bb1Assets).some(team => team.id === normalized);
-  } else {
+  } else if (league === 'afl') {
     return getActiveTeams(aflAssets).some(team => team.id === normalized);
   }
+  // Any other league: its current franchises are the teams in its registry
+  // config. A league with no config yet validates nothing, never another
+  // league's franchise 0001.
+  return getLeagueTeams(league).some((team: { franchiseId?: string }) => team.franchiseId === normalized);
 }
 
 /**
@@ -327,8 +332,12 @@ export function clearBestBall1Preference(cookies: AstroCookies): void {
   });
 }
 
-/** Which league's franchise list a selection is validated against. */
-export type TeamSelectionLeague = 'theleague' | 'afl' | 'bb1';
+/**
+ * Which league's franchise list a selection is validated against: a registry
+ * nav slug. TheLeague, the AFL and Best Ball read their assets files; every
+ * other league reads its registry config.
+ */
+export type TeamSelectionLeague = string;
 
 /**
  * Inputs to "which franchise is this viewer's team", in priority order.
@@ -438,4 +447,69 @@ export function rememberAflTeamChoice(cookies: AstroCookies, franchiseId: string
   const meta = getAFLTeamData(franchiseId);
   if (!meta) return;
   setAFLPreference(cookies, franchiseId, meta.conference, meta.tier);
+}
+
+// ── Any league ───────────────────────────────────────────────────────────────
+//
+// The per-league helpers above predate the registry. A league added since
+// (Archie's, and every new one) uses these: the cookie is `<navSlug>_team_pref`
+// — the same name the three older leagues already use — holding
+// `{ franchiseId, lastUpdated }`. The AFL's cookie also carries conference and
+// tier, so writing it stays with `rememberAflTeamChoice`; READING it here works
+// because it carries the same two fields.
+
+/** The preference cookie's name for a league, by nav slug. */
+export function teamPrefCookieName(navSlug: string): string {
+  return `${navSlug}_team_pref`;
+}
+
+const GENERIC_COOKIE = {
+  maxAge: 365 * 24 * 60 * 60,
+  path: '/',
+  sameSite: 'lax' as const,
+  secure: import.meta.env.PROD,
+  httpOnly: false,
+};
+
+/** A league's saved team, or null. Invalid or corrupt cookies are cleared. */
+export function getLeaguePreference(
+  cookies: AstroCookies,
+  navSlug: string,
+): { franchiseId: string; lastUpdated: string } | null {
+  const name = teamPrefCookieName(navSlug);
+  try {
+    const raw = cookies.get(name)?.value;
+    if (!raw) return null;
+    const pref = JSON.parse(raw) as { franchiseId?: string; lastUpdated?: string };
+    if (!pref.franchiseId || !pref.lastUpdated || !validateFranchiseId(pref.franchiseId, navSlug)) {
+      cookies.delete(name, { path: GENERIC_COOKIE.path });
+      return null;
+    }
+    return { franchiseId: normalizeFranchiseId(pref.franchiseId), lastUpdated: pref.lastUpdated };
+  } catch {
+    cookies.delete(name, { path: GENERIC_COOKIE.path });
+    return null;
+  }
+}
+
+/**
+ * Save a league's team choice. Call from a ROUTE's frontmatter only — a
+ * component's `Astro.cookies.set()` throws once headers are committed.
+ * No-ops for a franchise the league does not have, so a junk `?myteam=`
+ * leaves the existing choice alone.
+ */
+export function rememberLeagueTeamChoice(
+  cookies: AstroCookies,
+  navSlug: string,
+  franchiseId: string | null | undefined,
+): void {
+  if (!franchiseId) return;
+  if (navSlug === 'afl') return rememberAflTeamChoice(cookies, franchiseId);
+  const normalized = normalizeFranchiseId(franchiseId);
+  if (!validateFranchiseId(normalized, navSlug)) return;
+  cookies.set(
+    teamPrefCookieName(navSlug),
+    JSON.stringify({ franchiseId: normalized, lastUpdated: new Date().toISOString() }),
+    GENERIC_COOKIE,
+  );
 }
