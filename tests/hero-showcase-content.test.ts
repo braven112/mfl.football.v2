@@ -133,7 +133,7 @@ describe('hero showcase content', () => {
     // the AFL lacks keep their views in capability-views.ts for this reason.
     const profiles = read('src/utils/league-hero/profiles.ts');
     const aflStart = profiles.indexOf('// ── The AFL');
-    const aflEnd = profiles.indexOf("// ── Archie's");
+    const aflEnd = profiles.indexOf('// ── Package leagues');
     expect(aflStart, 'AFL profile marker moved — re-anchor this scan').toBeGreaterThan(-1);
     expect(aflEnd, "next profile's marker moved — re-anchor this scan").toBeGreaterThan(aflStart);
     const resolver =

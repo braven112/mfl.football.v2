@@ -29,6 +29,52 @@ export const LEAGUES = {
      * Code reads `features`, never this.
      */
     archetype: 'dynasty-cap',
+    /**
+     * Schedule planner policy (src/utils/schedule-plan.mjs). The League ran
+     * `simple` while the two modes were compared; constructive was adopted on
+     * the numbers — bye spread 17 to 4 and home/away 7-11 to 9-9, neither of
+     * which re-timing can reach, since moving rounds between weeks never
+     * changes which side is home. `keepDivisionFinish` no longer applies in
+     * this mode: the constructive week plan ends on division games by
+     * construction. `mode: 'simple'` is still reachable per call for a
+     * minimal in-season repair. A league without this field has no planner.
+     */
+    /**
+     * Schefter scanners (scripts/lib/schefter-leagues.mjs): the events file,
+     * the NAMES of the GroupMe env vars, and which lanes run. A league without
+     * this block has no scanner. The unprefixed env names are TheLeague's by
+     * history: they predate the AFL.
+     */
+    schefter: {
+      eventsPath: 'src/data/theleague/resolved-events.json',
+      env: {
+        schefterBot: 'GROUPME_SCHEFTER_BOT_ID',
+        rogerBot: 'GROUPME_ROGER_BOT_ID',
+        groupId: 'GROUPME_GROUP_ID',
+        rogerSender: 'GROUPME_ROGER_BOT_SENDER_ID',
+      },
+      lanes: {
+        tradeBait: true,
+        eventReminders: true,
+        // Uses the rumor mill + big-drop flow for GroupMe; no direct posting in scanLeague.
+        directGroupMe: false,
+        tradeOfferRumors: true,
+        groupmeListen: true,
+        // Roger's clapback lane. AFL-first by request: the AFL drafts on the
+        // Labor Day weekend, so its autodraft damage is days old and its owners
+        // are the ones currently taking shots at Roger's countdowns. Flip this
+        // on here once the AFL has run a season's worth of replies.
+        rogerReplies: false,
+      },
+    },
+    schedulePolicy: {
+      mode: 'constructive',
+      startWindow: [1, 2, 3, 4],
+      endWindow: [12, 13, 14],
+      doubleheaderCount: 4,
+      keepDivisionFinish: true,
+      crossConference: null,
+    },
     name: 'The League',
     /** League mark: light cut for light grounds, dark cut for dark ones. */
     logo: { light: '/assets/logos/theleague-logo.svg', dark: '/assets/logos/theleague-logo-dark.svg' },
@@ -205,6 +251,56 @@ export const LEAGUES = {
     navSlug: 'afl',
     theme: 'afl',
     archetype: 'deluxe-keeper',
+    /** Schefter scanners — see TheLeague's entry for the shape. */
+    schefter: {
+      eventsPath: 'data/afl-fantasy/resolved-events.json',
+      env: {
+        schefterBot: 'GROUPME_AFL_SCHEFTER_BOT_ID',
+        rogerBot: 'GROUPME_AFL_ROGER_BOT_ID',
+        // The AFL's own group. Roger's reply lane no-ops with a warning until
+        // it is set; his reminders are unaffected either way.
+        groupId: 'GROUPME_AFL_GROUP_ID',
+        rogerSender: 'GROUPME_AFL_ROGER_BOT_SENDER_ID',
+      },
+      lanes: {
+        // Trade-block listings → rumor-mill tips; the scanner builds its
+        // tips-queue keys from the league (schefter:afl:…).
+        tradeBait: true,
+        eventReminders: true,
+        // Posts breaking/standard transactions directly to GroupMe from scanLeague.
+        directGroupMe: true,
+        // Deferred: needs MFL pendingOffer access and the duplicate-players
+        // escalation model re-thought first.
+        tradeOfferRumors: false,
+        // Schefter's mention→tip ingest is still TheLeague-only (its Redis
+        // keys are TheLeague-scoped).
+        groupmeListen: false,
+        // Roger answers the AFL first; independent of groupmeListen, since
+        // Roger's lane keys off its own league-scoped prefix.
+        rogerReplies: true,
+      },
+    },
+    /** Schedule planner policy (src/utils/schedule-plan.mjs). */
+    schedulePolicy: {
+      mode: 'constructive',
+      startWindow: [1, 2, 3, 4],
+      endWindow: [12, 13, 14],
+      doubleheaderCount: 3,
+      keepDivisionFinish: false,
+      crossConference: {
+        week: 1,
+        anchorYear: 2024,
+        anchorPairing: [
+          ['North', 'East'],
+          ['South', 'West'],
+        ],
+        alternatePairing: [
+          ['North', 'West'],
+          ['South', 'East'],
+        ],
+        protectedRivalries: [['Computer Jocks', 'Jewpacabra']],
+      },
+    },
     name: 'AFL',
     logo: { light: '/assets/logos/afl-logo.svg', dark: '/assets/logos/afl-logo-dark.svg' },
     mflHost: 'www44.myfantasyleague.com',

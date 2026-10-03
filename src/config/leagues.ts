@@ -214,6 +214,22 @@ export type LeagueChatConfig =
   | { provider: 'groupme'; botEnv: string }
   | { provider: 'slack'; tokenEnv: string; channelEnv: string };
 
+/** Schedule planner policy — see `schedulePolicy` on a registry entry and src/utils/schedule-plan.mjs. */
+export interface SchedulePolicy {
+  mode: 'simple' | 'constructive';
+  startWindow: number[];
+  endWindow: number[];
+  doubleheaderCount: number;
+  keepDivisionFinish: boolean;
+  crossConference: {
+    week: number;
+    anchorYear: number;
+    anchorPairing: [string, string][];
+    alternatePairing: [string, string][];
+    protectedRivalries: [string, string][];
+  } | null;
+}
+
 export interface LeagueDefinition {
   id: string;
   slug: CanonicalLeagueSlug;
@@ -227,6 +243,25 @@ export interface LeagueDefinition {
    * `features` via leagueHasFeature, never on the archetype.
    */
   archetype: LeagueArchetype;
+  /**
+   * Opts the league into the Schefter scanners (scripts/lib/schefter-leagues.mjs):
+   * its events file, the NAMES of its GroupMe env vars, and which lanes run.
+   * Absent = a news feed (if `schefterFeed`) but no scanner.
+   */
+  schefter?: {
+    eventsPath: string;
+    env: { schefterBot: string; rogerBot: string; groupId: string; rogerSender: string };
+    lanes: {
+      tradeBait: boolean;
+      eventReminders: boolean;
+      directGroupMe: boolean;
+      tradeOfferRumors: boolean;
+      groupmeListen: boolean;
+      rogerReplies: boolean;
+    };
+  };
+  /** Opts the league into the schedule planner and reveal. Absent = no planner. */
+  schedulePolicy?: SchedulePolicy;
   name: string;
   mflHost: string;
   dataPath: string;
