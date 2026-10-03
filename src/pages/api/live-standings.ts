@@ -10,14 +10,14 @@
  * same cookie `/live` reads. Nothing in the query can widen it.
  */
 import type { APIRoute } from 'astro';
-import { getAuthUser } from '../../utils/auth';
+import { getMflLiveUser } from '../../utils/auth';
 import { assembleMflLiveStandings } from '../../utils/live/mfl-live-standings';
 import { MFL_LIVE_LEAGUE_COOKIE } from '../../utils/mfl-live-selection';
 
 export const prerender = false;
 
 export const GET: APIRoute = async ({ url, request, cookies }) => {
-  const user = getAuthUser(request);
+  const user = getMflLiveUser(request);
   if (!user) return json({ ok: false, error: 'unauthenticated' }, 401);
 
   const week = parseInt(url.searchParams.get('week') ?? '', 10);

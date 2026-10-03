@@ -27,6 +27,7 @@ import {
   shouldBlockIndexing,
 } from '../src/utils/deploy-environment';
 import { isCommissionerOrAdmin } from '../src/utils/auth';
+import { DEFAULT_LEAGUE_ID } from '../src/config/leagues';
 import { DEMO_BRANCH as IGNORE_BUILD_DEMO_BRANCH } from '../scripts/vercel-ignore-build.mjs';
 
 const TOUCHED = ['DEMO_PROFILE', 'VERCEL_GIT_COMMIT_REF', 'VERCEL_ENV'] as const;
@@ -87,7 +88,8 @@ describe('outbound guard on the demo', () => {
       id: 'x',
       username: 'x',
       franchiseId: '0001',
-      leagueId: '1',
+      // A registry league: outside it, no session is ever an admin here.
+      leagueId: DEFAULT_LEAGUE_ID,
       role: 'commissioner' as const,
     };
     process.env.DEMO_PROFILE = 'dynasty';

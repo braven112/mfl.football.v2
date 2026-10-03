@@ -220,6 +220,7 @@ export async function authenticateWithMFL(
   password: string,
   leagueIdOrIds?: string | readonly string[],
   year?: number,
+  options: { openFallback?: boolean } = {},
 ): Promise<MFLLoginResponse> {
   const candidates = Array.isArray(leagueIdOrIds) ? leagueIdOrIds : null;
   // The single-league id. A list has none until myleagues says which one.
@@ -466,6 +467,25 @@ export async function authenticateWithMFL(
           };
         }
       }
+      // MFL Live open sign-in (`MFL_LIVE_OPEN_SIGN_IN`): an account in none
+      // of the listed leagues is scoped to its LOWEST-numbered league that
+      // names a franchise. Deterministic on purpose — myleagues' order is not
+      // — and always a plain owner: MFL's commissioner cookie is about a
+      // league this site does not run.
+      if (options.openFallback) {
+        const fallback = pickOpenSignInLeague(leagueList);
+        if (fallback) {
+          console.log('[mfl-login] Open sign-in fallback leagueId:', fallback.leagueId);
+          return {
+            success: true,
+            userId: mflCookie,
+            username,
+            franchiseId: fallback.franchiseId,
+            leagueId: fallback.leagueId,
+            role: 'owner',
+          };
+        }
+      }
       return {
         success: true,
         userId: mflCookie,
@@ -558,4 +578,24 @@ export async function validateMFLSession(
   } catch {
     return false;
   }
+}
+
+/**
+ * The league an MFL Live OPEN sign-in is scoped to when the account is in none
+ * of ours: the lowest numeric league id that names a franchise. Exported for
+ * the test.
+ */
+export function pickOpenSignInLeague(
+  leagueList: readonly any[],
+): { leagueId: string; franchiseId: string } | null {
+  const usable = leagueList
+    .map((l) => ({
+      leagueId: `${l?.id ?? l?.league_id ?? l?.leagueId ?? ''}`.trim(),
+      franchiseId: normalizeFranchise(
+        l?.franchise_id ?? l?.franchiseId ?? l?.FranchiseId ?? l?.team_id ?? l?.teamId ?? l?.team ?? '',
+      ),
+    }))
+    .filter((l) => /^\d+$/.test(l.leagueId) && l.franchiseId);
+  usable.sort((a, b) => Number(a.leagueId) - Number(b.leagueId));
+  return usable[0] ?? null;
 }

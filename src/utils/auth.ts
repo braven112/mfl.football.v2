@@ -10,7 +10,7 @@
 
 import { getSessionTokenFromCookie, validateSessionToken } from './session';
 import { isAdminFranchise } from '../config/nav-config';
-import { getLeagueById, MFL_LIVE_PILOT_LEAGUE_IDS } from '../config/leagues';
+import { getLeagueById, MFL_LIVE_OPEN_SIGN_IN, MFL_LIVE_PILOT_LEAGUE_IDS } from '../config/leagues';
 import { isDemoDeploy } from './deploy-environment';
 
 export interface AuthUser {
@@ -28,30 +28,15 @@ const normalizeFranchise = (value: string | null | undefined): string => {
   return /^\d+$/.test(trimmed) ? trimmed.padStart(4, '0') : trimmed;
 };
 
-/**
- * Get authenticated user from request.
- * The session JWT in the httpOnly cookie is the only accepted identity source.
- */
-export function getAuthUser(request: Request): AuthUser | null {
+/** The signed session, with no opinion yet on which leagues may hold one. */
+function readSession(request: Request): AuthUser | null {
   const cookieHeader = request.headers.get('cookie');
   const sessionToken = getSessionTokenFromCookie(cookieHeader);
   if (!sessionToken) return null;
 
   const sessionData = validateSessionToken(sessionToken);
   if (!sessionData) return null;
-
-  // A session belongs to one of OUR leagues or it is no session at all.
-  // Login now refuses any league outside the registry, but tokens minted
-  // before that (90-day lifetime) could carry any MFL league — and the site
-  // has endpoints that key on franchiseId alone, where a foreign league's
-  // franchise 0001 is indistinguishable from ours. Rejecting here voids those
-  // tokens immediately instead of letting them age out. The invited MFL Live
-  // pilot leagues are the one exception: their owners sign in through the
-  // mfl-live scope only, and the list lives in the registry, never a request.
   if (!sessionData.leagueId) return null;
-  if (!getLeagueById(sessionData.leagueId) && !MFL_LIVE_PILOT_LEAGUE_IDS.includes(sessionData.leagueId)) {
-    return null;
-  }
 
   return {
     id: sessionData.userId,
@@ -60,6 +45,52 @@ export function getAuthUser(request: Request): AuthUser | null {
     leagueId: sessionData.leagueId,
     role: sessionData.role,
   };
+}
+
+/** One of OUR leagues, or an invited MFL Live pilot league. */
+function isSiteSessionLeague(leagueId: string): boolean {
+  return !!getLeagueById(leagueId) || MFL_LIVE_PILOT_LEAGUE_IDS.includes(leagueId);
+}
+
+/**
+ * Get authenticated user from request.
+ * The session JWT in the httpOnly cookie is the only accepted identity source.
+ */
+export function getAuthUser(request: Request): AuthUser | null {
+  // A session belongs to one of OUR leagues or it is no session at all.
+  // Login now refuses any league outside the registry, but tokens minted
+  // before that (90-day lifetime) could carry any MFL league — and the site
+  // has endpoints that key on franchiseId alone, where a foreign league's
+  // franchise 0001 is indistinguishable from ours. Rejecting here voids those
+  // tokens immediately instead of letting them age out. The invited MFL Live
+  // pilot leagues are the one exception: their owners sign in through the
+  // mfl-live scope only, and the list lives in the registry, never a request.
+  // An MFL Live open sign-in (MFL_LIVE_OPEN_SIGN_IN) is refused HERE too: it
+  // is read only by `getMflLiveUser`, which the /live surfaces alone call.
+  const user = readSession(request);
+  if (!user || !isSiteSessionLeague(user.leagueId)) return null;
+  return user;
+}
+
+/**
+ * The session as MFL Live sees it — the ONLY reader that accepts a session for
+ * a league this site does not run, and only while `MFL_LIVE_OPEN_SIGN_IN` is
+ * on. Use it on the /live pages, their APIs and the MFL Live shell, and
+ * NOWHERE else: every other endpoint must keep calling `getAuthUser`, which
+ * refuses such a session, because some of them key on franchiseId alone or
+ * fall back to TheLeague for a league they do not know.
+ *
+ * Every board read on /live uses the owner's own MFL cookie (`user.id`), so a
+ * stranger's session can only ever see the leagues their own MFL account is
+ * in. Such a session is always a plain owner: MFL's commissioner cookie is
+ * about THEIR league, never ours (`tests/auth-league-scope.test.ts`).
+ */
+export function getMflLiveUser(request: Request): AuthUser | null {
+  const user = readSession(request);
+  if (!user) return null;
+  if (isSiteSessionLeague(user.leagueId)) return user;
+  if (!MFL_LIVE_OPEN_SIGN_IN || !/^\d+$/.test(user.leagueId)) return null;
+  return { ...user, role: 'owner' };
 }
 
 /**
@@ -90,6 +121,11 @@ export function isCommissionerOrAdmin(user: AuthUser): boolean {
   // role came from a league this site does not run, and a role check with no
   // league attached would otherwise open every admin surface to it.
   if (MFL_LIVE_PILOT_LEAGUE_IDS.includes(user.leagueId)) return false;
+  // The same goes for ANY league outside the registry (an MFL Live open
+  // sign-in, or a token from before login refused them): its role was set by
+  // a league this site does not run. Checked BEFORE the role, which trusts a
+  // flag that carries no league.
+  if (!getLeagueById(user.leagueId)) return false;
 
   if (user.role === 'commissioner' || user.role === 'admin') return true;
 

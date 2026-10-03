@@ -34,7 +34,7 @@
  */
 import MflAppLayout from '../layouts/MflAppLayout.astro';
 import LoginForm from '../components/shared/LoginForm.astro';
-import { getAuthUser } from '../utils/auth';
+import { getMflLiveUser } from '../utils/auth';
 import { buildHostToSlugMap, getLeagueBySlug } from '../config/leagues';
 import { loginPathFor } from '../utils/login-redirect';
 import { getCurrentLeagueYear } from '../utils/league-year';
@@ -60,7 +60,7 @@ const target = resolveMflLoginRedirect(
 // Already signed in? Go where you were going. The franchise check keeps a
 // franchise-less JWT on the form rather than bouncing it to a board that
 // cannot resolve a team for it.
-const authUser = getAuthUser(Astro.request);
+const authUser = getMflLiveUser(Astro.request);
 if (authUser?.franchiseId) {
   return Astro.redirect(target);
 }

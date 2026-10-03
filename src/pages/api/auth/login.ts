@@ -3,7 +3,7 @@ import { authenticateWithMFL } from '../../../utils/mfl-login';
 import { createSessionToken, createSessionCookie, createMFLCookies } from '../../../utils/session';
 import { setTheLeaguePreference, setAFLPreference, setBestBall1Preference, getAFLTeamData } from '../../../utils/team-preferences';
 import { json } from '../../../utils/api-response';
-import { getLeagueById, getLeagueBySlug, mflLiveSignInLeagueIds } from '../../../config/leagues';
+import { getLeagueById, getLeagueBySlug, MFL_LIVE_OPEN_SIGN_IN, mflLiveSignInLeagueIds } from '../../../config/leagues';
 import { captureCredential } from '../../../utils/autocut-storage';
 import { checkRateLimit } from '../../../utils/rate-limit';
 import { getClientIdentity } from '../../../utils/client-ip';
@@ -118,7 +118,12 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     // list comes from the registry here, never from the request body: a
     // client-supplied list would let anyone name their own league in.
     const leagueTarget = scope === 'mfl-live' ? mflLiveSignInLeagueIds() : leagueId;
-    const mflResponse = await authenticateWithMFL(username, password, leagueTarget, seasonYear);
+    // With MFL_LIVE_OPEN_SIGN_IN on, an account in none of those leagues
+    // still signs in to MFL Live, scoped to a league of its own.
+    const openSignIn = scope === 'mfl-live' && MFL_LIVE_OPEN_SIGN_IN;
+    const mflResponse = await authenticateWithMFL(username, password, leagueTarget, seasonYear, {
+      openFallback: openSignIn,
+    });
 
     if (!mflResponse.success) {
       return json(
@@ -151,7 +156,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     // the listed leagues, or there is no session.
     const sessionLeagueId: string =
       scope === 'mfl-live' ? String(mflResponse.leagueId ?? '') : String(leagueId);
-    if (!mflLiveSignInLeagueIds().includes(sessionLeagueId)) {
+    const listedLeague = mflLiveSignInLeagueIds().includes(sessionLeagueId);
+    const openLeague = openSignIn && !listedLeague && /^\d+$/.test(sessionLeagueId);
+    if (!listedLeague && !openLeague) {
       return json({ success: false, message: 'MFL Live is invite-only for now.' }, 403);
     }
 
@@ -161,7 +168,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       username,
       franchiseId: mflResponse.franchiseId,
       leagueId: sessionLeagueId,
-      role: (mflResponse.role as 'owner' | 'commissioner' | 'admin') || 'owner',
+      // An open sign-in's session is MFL-Live-only and never a commissioner
+      // here, whatever MFL said about the owner's own league.
+      role: openLeague ? 'owner' : (mflResponse.role as 'owner' | 'commissioner' | 'admin') || 'owner',
     });
 
     // Set session cookie
@@ -188,7 +197,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const setCookieHeaders = [sessionCookie];
     if (mflResponse.userId) {
       setCookieHeaders.push(
-        ...createMFLCookies(mflResponse.userId, mflResponse.commishCookie, isDev),
+        // No commissioner cookie for an open sign-in: it names a league this
+        // site does not run.
+        ...createMFLCookies(mflResponse.userId, openLeague ? undefined : mflResponse.commishCookie, isDev),
       );
     }
 
@@ -228,7 +239,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
           username,
           franchiseId: mflResponse.franchiseId,
           leagueId: sessionLeagueId,
-          role: mflResponse.role || 'owner',
+          role: openLeague ? 'owner' : mflResponse.role || 'owner',
         },
       }),
       { status: 200, headers },

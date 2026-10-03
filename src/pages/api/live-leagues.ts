@@ -16,7 +16,7 @@
  */
 
 import type { APIRoute } from 'astro';
-import { getAuthUser } from '../../utils/auth';
+import { getMflLiveUser } from '../../utils/auth';
 import {
   MFL_LIVE_LEAGUE_COOKIE,
   MFL_LIVE_LEAGUE_MAX_AGE,
@@ -55,7 +55,7 @@ function normalize(raw: unknown): string | null {
 }
 
 export const POST: APIRoute = async ({ request, cookies }) => {
-  const user = getAuthUser(request);
+  const user = getMflLiveUser(request);
   if (!user) {
     return new Response(JSON.stringify({ ok: false, reason: 'unauthenticated' }), {
       status: 401,
