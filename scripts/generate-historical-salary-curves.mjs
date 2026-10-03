@@ -19,6 +19,7 @@ import path from 'path';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 
 const THELEAGUE_DATA_PATH = getLeagueBySlug('theleague').dataPath;
+const LEAGUE_MINIMUM = getLeagueBySlug('theleague').minimumSalary;
 
 const YEARS = [2020, 2021, 2022, 2023, 2024];
 const POSITIONS = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'];
@@ -80,7 +81,7 @@ const curveParameters = {};
 const fitCurve = (points) => {
     // points: { x, y }
     // Filter out low/zero values to avoid log(0)
-    const validPoints = points.filter(p => p.y > 425000); 
+    const validPoints = points.filter(p => p.y > LEAGUE_MINIMUM);
     
     if (validPoints.length < 2) return { basePrice: 1000000, decayRate: -0.1 };
 

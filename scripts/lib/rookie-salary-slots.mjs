@@ -9,6 +9,16 @@
  * round 2: 18-35). Round 3+ uses ROUND_3_FLAT_RATE.
  */
 
+import { LEAGUES } from '../../src/config/leagues-data.mjs';
+
+/**
+ * What a slot lookup falls back to when the table has no answer (an unknown
+ * position, a pick past the table). It is the league minimum — no player signs
+ * below it — read from the registry rather than copied. The table rows below
+ * are slot DATA that happens to bottom out at the same figure, and stay literal.
+ */
+export const ROOKIE_SALARY_FLOOR = LEAGUES.theleague.minimumSalary;
+
 export const ROOKIE_SALARIES_2026 = {
   // Round 1
   1: {
@@ -82,7 +92,7 @@ export function getRookieSlotSalary(round, overallPick, position) {
 
   if (round === 1 || round === 2) {
     const row = ROOKIE_SALARIES_2026[round]?.[overallPick];
-    if (row) return row[basePos] ?? row.WR ?? 425000;
+    if (row) return row[basePos] ?? row.WR ?? ROOKIE_SALARY_FLOOR;
   }
-  return ROUND_3_FLAT_RATE[basePos] ?? 425000;
+  return ROUND_3_FLAT_RATE[basePos] ?? ROOKIE_SALARY_FLOOR;
 }

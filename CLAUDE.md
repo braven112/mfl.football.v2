@@ -109,7 +109,10 @@ flags. Do not write `'13522'`,
 `'19621'`, `'data/theleague'`, etc. inline — import from the registry.
 App code imports `../config/leagues`; node scripts import
 `src/config/leagues-data.mjs` directly. Gate league-specific UI with
-`leagueHasFeature(slug, 'contracts' | 'keepers' | ...)`. Adding a league or
+`leagueHasFeature(slug, 'contracts' | 'keepers' | ...)`. The league-minimum
+salary is a registry value too (`minimumSalary`, read with
+`leagueMinimumSalary(slug)`) — never a bare `425000`
+(`tests/minimum-salary-literal-guard.test.ts`). Adding a league or
 domain is a one-entry change in `leagues-data.mjs`.
 `tests/league-literal-guard.test.ts` enforces this — it scans src/, scripts/,
 and .github/workflows/ for the forbidden literals and fails the build if one

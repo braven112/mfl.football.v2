@@ -2,6 +2,7 @@ import type { TeamCapSituation } from '../types/auction-predictor';
 import {
   ROOKIE_SALARIES_2026 as SHARED_ROOKIE_SALARIES_2026,
   ROUND_3_FLAT_RATE as SHARED_ROUND_3_FLAT_RATE,
+  ROOKIE_SALARY_FLOOR,
 } from '../../scripts/lib/rookie-salary-slots.mjs';
 
 // 2026 Rookie Slot Salaries — single source of truth lives in
@@ -77,20 +78,20 @@ export function calculateDraftPickSalary(round: number, pick: number, position: 
   const pos = position.toUpperCase();
   
   if (round === 3 || pick >= 36) {
-    return ROUND_3_FLAT_RATE[pos as keyof typeof ROUND_3_FLAT_RATE] || 425000;
+    return ROUND_3_FLAT_RATE[pos as keyof typeof ROUND_3_FLAT_RATE] || ROOKIE_SALARY_FLOOR;
   }
   
   const roundSalaries = ROOKIE_SALARIES_2026[round];
-  if (!roundSalaries) return 425000;
+  if (!roundSalaries) return ROOKIE_SALARY_FLOOR;
   
   // Find the specific pick
   // Note: rules.astro defines pick 17, 34, 35 explicitly, which we mapped above
   const salaryRow = roundSalaries[pick];
   if (salaryRow) {
-    return salaryRow[pos as keyof typeof ROUND_3_FLAT_RATE] || 425000;
+    return salaryRow[pos as keyof typeof ROUND_3_FLAT_RATE] || ROOKIE_SALARY_FLOOR;
   }
   
-  return 425000;
+  return ROOKIE_SALARY_FLOOR;
 }
 
 /**
