@@ -116,7 +116,7 @@ const cardClasses = [
     --cat-preseason: #2563eb;
     --cat-free-agency: #2e8743;
     --cat-draft: #7c3aed;
-    --cat-regular-season: #1c497c;
+    --cat-regular-season: var(--league-phase-regular-season, #1c497c);
   }
 
   /* ── Mini-hero shell ──
@@ -138,9 +138,9 @@ const cardClasses = [
     --card-link-bg: var(--color-gray-50, #f9fafb);
     --card-link-border: var(--color-gray-200, #e5e7eb);
     --card-link-ink: var(--color-gray-700, #374151);
-    --card-link-hover-bg: #0f1e2e;
+    --card-link-hover-bg: var(--hero-ink, #0f1e2e);
     --card-link-hover-ink: #ffffff;
-    --card-link-hover-border: #0f1e2e;
+    --card-link-hover-border: var(--hero-ink, #0f1e2e);
     --card-pill-muted-bg: var(--color-gray-100, #f3f4f6);
     --card-pill-muted-ink: var(--color-gray-500, #6b7280);
     --card-chip-multicolor-bg: var(--color-gray-100, #f3f4f6);
@@ -161,7 +161,7 @@ const cardClasses = [
   :global(html.dark) .calendar-card {
     --card-glow-strength: 52%;
     --card-border-strength: 55%;
-    --card-surface: #0f1e2e;
+    --card-surface: var(--hero-ink, #0f1e2e);
     --card-ink: #ffffff;
     --card-ink-soft: rgba(255, 255, 255, 0.72);
     --card-ink-faint: rgba(255, 255, 255, 0.55);
@@ -174,7 +174,7 @@ const cardClasses = [
     --card-link-border: rgba(255, 255, 255, 0.14);
     --card-link-ink: rgba(255, 255, 255, 0.88);
     --card-link-hover-bg: #ffffff;
-    --card-link-hover-ink: #0f1e2e;
+    --card-link-hover-ink: var(--hero-ink, #0f1e2e);
     --card-link-hover-border: #ffffff;
     --card-pill-muted-bg: rgba(255, 255, 255, 0.12);
     --card-pill-muted-ink: rgba(255, 255, 255, 0.7);

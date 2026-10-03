@@ -12,6 +12,8 @@
  *   toggles the `dark` class on <html>, updates <meta name="theme-color">,
  *   and dispatches a `theme-change` CustomEvent.
  * - Apply the theme immediately (pre-paint).
+ * - Honour <html data-theme-lock="light|dark">: a page that pins its mode
+ *   (the theme review pages) renders that mode whatever the preference.
  * - Register (once) a prefers-color-scheme change listener (only re-applies
  *   when the current cookie pref is 'auto') and an astro:after-swap listener
  *   (ClientRouter replaces <html> attributes on soft navigation, wiping the
@@ -74,6 +76,12 @@
 				pref = readCookiePref();
 			}
 			var resolved = pref === 'auto' ? (systemPrefersDark() ? 'dark' : 'light') : pref;
+			// A page that pins its mode (the theme review pages) wins over every
+			// preference: <html data-theme-lock="light|dark">.
+			try {
+				var lock = document.documentElement.getAttribute('data-theme-lock');
+				if (lock === 'light' || lock === 'dark') resolved = lock;
+			} catch (e) {}
 			try {
 				var root = document.documentElement;
 				if (resolved === 'dark') root.classList.add('dark');

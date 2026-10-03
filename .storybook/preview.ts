@@ -10,6 +10,7 @@ import { STORYBOOK_NFL_DARK_BASE_PATH, STORYBOOK_NFL_DARK_CODES } from './nfl-da
 // everything else resolves var(--*) against them.
 import '../src/styles/tokens.css';
 import '../src/styles/tokens-dark.css';
+import '../src/styles/league-themes.generated.css';
 import '../src/styles/utilities.css';
 import '../src/styles/polish.css';
 import '../src/styles/states.css';
@@ -69,7 +70,7 @@ import '../src/styles/draft-room.css';
  * Theme and league are BOTH pure CSS in this codebase:
  *
  *   - light/dark  -> `html.dark`                 (src/styles/tokens-dark.css)
- *   - league skin -> `html[data-league="..."]`   (src/styles/tokens.css:703)
+ *   - league skin -> `html[data-league="..."]`   (src/styles/league-themes.generated.css)
  *
  * Nothing is decided in frontmatter, which is why a story pre-rendered once
  * still re-skins correctly across all four combinations — and why these map

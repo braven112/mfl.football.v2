@@ -13,6 +13,8 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { componentOpeningTag } from './helpers/scan-guard';
 import { resolve } from 'node:path';
+import { loadThemes } from '../scripts/generate-league-themes.mjs';
+import { resolveTheme } from '../scripts/lib/theme-resolve.mjs';
 
 const read = (p: string) => readFileSync(resolve(process.cwd(), p), 'utf-8');
 const stripComments = (s: string) =>
@@ -74,40 +76,42 @@ describe('the shared trade deadline hero', () => {
 });
 
 describe('the deadline accent stays an URGENCY signal', () => {
-  const aflBlocks = [...CSS.matchAll(
-    /([^{}]*\[data-league=["']afl["'][^{}]*)\{([^}]*)\}/g,
-  )].map((m) => ({ selector: m[1].trim(), body: m[2], dark: /\.dark\b/.test(m[1]) }));
+  const themes = loadThemes() as Record<string, Record<'light' | 'dark', Record<string, string | null>>>;
+  const urgent = Object.entries(themes).flatMap(([id, t]) =>
+    (['light', 'dark'] as const).map((mode) => ({ id, mode, value: resolveTheme(t, mode)['--hero-urgent'] })),
+  );
 
-  it('the AFL overrides the accent in BOTH themes', () => {
-    const withAccent = aflBlocks.filter((b) => /--tdhero-accent\s*:/.test(b.body));
-    expect(withAccent.map((b) => b.dark).sort()).toEqual([false, true]);
+  it('the accent comes from the theme, falling back to the shared error red', () => {
+    expect(CSS).toMatch(/--tdhero-accent\s*:\s*var\(--hero-urgent,\s*var\(--color-error/);
+    expect(CSS).not.toMatch(/\[data-league=/);
   });
 
-  it('sets the glow alongside every accent it overrides', () => {
-    // --tdhero-glow is a hardcoded rgba, NOT derived from the accent. Changing
-    // one without the other leaves a red wash behind a crimson border.
-    const missing = aflBlocks
-      .filter((b) => /--tdhero-accent\s*:/.test(b.body) && !/--tdhero-glow\s*:/.test(b.body))
-      .map((b) => b.selector);
-    expect(missing).toEqual([]);
+  it('the AFL sets its own red in BOTH themes', () => {
+    expect(urgent.filter((u) => u.id === 'afl' && u.value).map((u) => u.mode).sort()).toEqual(['dark', 'light']);
+  });
+
+  it('the glow is derived from the accent, so the two cannot drift apart', () => {
+    const glows = [...CSS.matchAll(/--tdhero-glow\s*:\s*([^;]+);/g)].map((m) => m[1]!);
+    expect(glows.length).toBeGreaterThan(0);
+    expect(glows.every((g) => /color-mix\(in srgb, var\(--tdhero-accent\)/.test(g))).toBe(true);
   });
 
   it('never wires the accent to the bare league accent token', () => {
-    // TheLeague's --league-accent resolves to --color-primary #1c497c. A
-    // "just use the league accent" rule would paint its deadline hero BLUE
-    // and delete the urgency this component exists to convey.
+    // TheLeague's --league-accent is its blue. A "just use the league accent"
+    // rule would paint its deadline hero BLUE and delete the urgency.
     expect(CSS).not.toMatch(/--tdhero-accent\s*:\s*var\(\s*--league-accent/);
   });
 
-  it('every accent it does set is a red, not a brand colour of another hue', () => {
+  it('every urgency colour a theme sets is a red, not a brand colour of another hue', () => {
     // Cheap hue check: red channel dominant. Catches a well-meaning swap to
     // navy or gold, which would read as "no deadline today".
-    const hexes = [...CSS.matchAll(/--tdhero-accent\s*:\s*(#[0-9a-fA-F]{6})/g)].map((m) => m[1]);
-    expect(hexes.length).toBeGreaterThan(0);
-    const notRed = hexes.filter((h) => {
-      const [r, g, b] = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+    const set = urgent.filter((u) => u.value);
+    expect(set.length).toBeGreaterThan(0);
+    const notRed = set.filter(({ value }) => {
+      const h = value!.replace('#', '');
+      const [r, g, b] = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16));
       return !(r > g + 40 && r > b + 40);
-    });
+    }).map((u) => `${u.id} ${u.mode} ${u.value}`);
     expect(notRed).toEqual([]);
   });
 });

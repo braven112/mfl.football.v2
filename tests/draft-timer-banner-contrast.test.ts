@@ -12,14 +12,15 @@
  * banner in every state side by side, which is how it was seen at all.
  *
  * The `other` state stays on the league's --color-primary, darkened in dark
- * mode by a color-mix toward black. Those primaries are read from the token
- * sheets here rather than listed, so a league added (or re-coloured) later is
- * checked without anyone remembering this file.
+ * mode by a color-mix toward black. Those primaries are read from every theme
+ * file here rather than listed.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { contrastRatio } from '../src/utils/team-color-contrast';
+import { loadThemes } from '../scripts/generate-league-themes.mjs';
+import { resolveTheme } from '../scripts/lib/theme-resolve.mjs';
 
 const ROOT = join(__dirname, '..');
 const read = (p: string) => readFileSync(join(ROOT, p), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
@@ -44,22 +45,17 @@ const LIGHT = decls(block(CSS, '.draft-room'));
 const DARK = decls(block(CSS, 'html.dark .draft-room'));
 const FILLS = [...LIGHT.keys()].filter((k) => k.startsWith('--dr-timer-bg-'));
 
-/** Every `--color-primary` a token sheet declares, resolved to a hex. */
-function primaries(sheet: string): string[] {
-  const css = read(sheet);
+/**
+ * Every theme's `--color-primary` in one mode, resolved to a hex. The themes
+ * (src/themes/*.json) are the only source of a league's palette, so a theme
+ * added (or re-coloured) later is checked without anyone remembering this file.
+ */
+function primaries(mode: 'light' | 'dark'): string[] {
   const out = new Set<string>();
-  for (const m of css.matchAll(/--color-primary\s*:\s*([^;]+);/g)) {
-    const v = m[1].trim();
-    const ref = v.match(/^var\((--[\w-]+)/);
-    if (ref) {
-      // A palette indirection (Archie's) — resolve it from any block in the
-      // same sheet that declares it.
-      const hits = [...css.matchAll(new RegExp(`${ref[1]}\\s*:\\s*(#[0-9a-fA-F]{6})`, 'g'))].map((h) => h[1]);
-      expect(hits.length, `${sheet}: ${ref[1]} has no hex declaration to resolve`).toBeGreaterThan(0);
-      hits.forEach((h) => out.add(h.toLowerCase()));
-      continue;
-    }
-    if (/^#[0-9a-fA-F]{6}$/.test(v)) out.add(v.toLowerCase());
+  for (const theme of Object.values(loadThemes()) as any[]) {
+    const hex = resolveTheme(theme, mode)['--color-primary'];
+    expect(hex, `${theme.id} ${mode} --color-primary does not resolve to a hex`).toMatch(/^#[0-9a-fA-F]{6}$/);
+    out.add(hex!.toLowerCase());
   }
   return [...out];
 }
@@ -103,7 +99,7 @@ describe('draft timer banner fills', () => {
 
   it('the light "other" fill is the league colour, and every light primary carries white', () => {
     expect(LIGHT.get('--dr-timer-bg-other')).toMatch(/^var\(--color-primary\b/);
-    const light = primaries('src/styles/tokens.css');
+    const light = primaries('light');
     expect(light.length).toBeGreaterThanOrEqual(2);
     for (const hex of light) {
       expect(contrastRatio(hex, '#ffffff'), `light --color-primary ${hex} under white`).toBeGreaterThanOrEqual(MIN);
@@ -115,7 +111,7 @@ describe('draft timer banner fills', () => {
     const m = value?.match(/^color-mix\(in srgb,\s*var\(--color-primary[^)]*\)\s*(\d+)%,\s*#000000\)$/);
     expect(m, `html.dark .draft-room must set --dr-timer-bg-other to a mix of --color-primary with black; got ${value}`).toBeTruthy();
     const pct = Number(m![1]);
-    const dark = primaries('src/styles/tokens-dark.css');
+    const dark = primaries('dark');
     expect(dark.length).toBeGreaterThanOrEqual(2);
     for (const hex of dark) {
       const mixed = mixWithBlack(hex, pct);

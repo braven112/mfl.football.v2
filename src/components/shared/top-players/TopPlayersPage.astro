@@ -410,7 +410,7 @@ const COLUMNS: { key: SortKey; label: string; title: string }[] = isWeek
   .tp-chip.is-active {
     background: var(--league-accent);
     border-color: var(--league-accent);
-    color: #fff;
+    color: var(--on-league-accent, #fff);
     font-weight: 600;
   }
   .tp-chip--po::after {

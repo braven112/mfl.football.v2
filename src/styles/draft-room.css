@@ -580,8 +580,8 @@ html.dark .dr-side-panel {
   color: var(--color-gray-900, #111827);
 }
 .dr-round-pill[aria-pressed="true"] {
-  background: var(--color-primary, #1c497c);
-  color: #ffffff;
+  background: var(--color-primary-fill, var(--color-primary, #1c497c));
+  color: var(--on-color-primary, #ffffff);
 }
 
 /* ── Board Column Header (team lockup) ── */
@@ -794,8 +794,8 @@ html.dark .dr-side-panel {
 .dr-rookies-toggle[aria-pressed="true"] {
   border-style: solid;
   border-color: var(--color-primary, #1c497c);
-  background: var(--color-primary, #1c497c);
-  color: #ffffff;
+  background: var(--color-primary-fill, var(--color-primary, #1c497c));
+  color: var(--on-color-primary, #ffffff);
 }
 .dr-rookies-toggle__count {
   display: inline-flex;
@@ -840,8 +840,8 @@ html.dark .dr-side-panel {
   color: var(--color-gray-900, #111827);
 }
 .dr-pos-filter[aria-checked="true"] {
-  background: var(--color-primary, #1c497c);
-  color: #ffffff;
+  background: var(--color-primary-fill, var(--color-primary, #1c497c));
+  color: var(--on-color-primary, #ffffff);
 }
 
 /* Player rows */
@@ -918,8 +918,8 @@ html.dark .dr-side-panel {
 .dr-add-queue-btn[aria-pressed="true"],
 .dr-add-queue-btn:disabled {
   border-color: var(--color-primary, #1c497c);
-  background: var(--color-primary, #1c497c);
-  color: #ffffff;
+  background: var(--color-primary-fill, var(--color-primary, #1c497c));
+  color: var(--on-color-primary, #ffffff);
   cursor: default;
 }
 
@@ -1013,8 +1013,8 @@ html.dark .dr-side-panel {
   height: 1.25rem;
   padding: 0 0.25rem;
   border-radius: var(--radius-full, 9999px);
-  background: var(--color-primary, #1c497c);
-  color: #ffffff;
+  background: var(--color-primary-fill, var(--color-primary, #1c497c));
+  color: var(--on-color-primary, #ffffff);
   font-size: var(--font-size-3xs);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -1508,8 +1508,8 @@ html.dark .dr-side-panel {
   transition: background 0.15s var(--dr-easing-ease), color 0.15s var(--dr-easing-ease);
 }
 .dr-gif-btn[aria-pressed="true"] {
-  background: var(--color-primary, #1c497c);
-  color: #ffffff;
+  background: var(--color-primary-fill, var(--color-primary, #1c497c));
+  color: var(--on-color-primary, #ffffff);
   border-color: var(--color-primary, #1c497c);
 }
 .dr-send-btn {
@@ -1517,8 +1517,8 @@ html.dark .dr-side-panel {
   padding: 0.375rem 0.625rem;
   border: none;
   border-radius: var(--radius-sm, 0.25rem);
-  background: var(--color-primary, #1c497c);
-  color: #ffffff;
+  background: var(--color-primary-fill, var(--color-primary, #1c497c));
+  color: var(--on-color-primary, #ffffff);
   font-size: 0.8125rem;
   font-weight: 600;
   cursor: pointer;
@@ -2164,8 +2164,8 @@ html.dark .dr-side-panel {
   padding: 0.5rem 1rem;
   border: none;
   border-radius: 0.375rem;
-  background: var(--color-primary, #1c497c);
-  color: #fff;
+  background: var(--color-primary-fill, var(--color-primary, #1c497c));
+  color: var(--on-color-primary, #fff);
   font-size: 0.8125rem;
   font-weight: 600;
   cursor: pointer;
@@ -2243,9 +2243,9 @@ html.dark .dr-side-panel {
   border-color: var(--color-gray-300, #d1d5db);
 }
 .dr-settings-chip[aria-pressed="true"] {
-  background: var(--color-primary, #1c497c);
+  background: var(--color-primary-fill, var(--color-primary, #1c497c));
   border-color: var(--color-primary, #1c497c);
-  color: #fff;
+  color: var(--on-color-primary, #fff);
 }
 .dr-settings-teams {
   list-style: none;
@@ -2294,8 +2294,8 @@ html.dark .dr-side-panel {
   letter-spacing: 0.04em;
   padding: 0.125rem 0.375rem;
   border-radius: 999px;
-  background: var(--color-primary, #1c497c);
-  color: #fff;
+  background: var(--color-primary-fill, var(--color-primary, #1c497c));
+  color: var(--on-color-primary, #fff);
 }
 /* Two-option segmented switch: Manual | Auto */
 .dr-settings-toggle {
@@ -2316,8 +2316,8 @@ html.dark .dr-side-panel {
 }
 .dr-settings-toggle[data-auto="true"] .dr-settings-toggle__option:last-child,
 .dr-settings-toggle[data-auto="false"] .dr-settings-toggle__option:first-child {
-  background: var(--color-primary, #1c497c);
-  color: #fff;
+  background: var(--color-primary-fill, var(--color-primary, #1c497c));
+  color: var(--on-color-primary, #fff);
 }
 
 @keyframes dr-confirm-fade-in {

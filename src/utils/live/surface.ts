@@ -15,7 +15,7 @@
  *     make a colour visible. That is `ensureFieldOn`'s job, and it needs the
  *     ground.
  *  2. **League.** The dark card is a different colour per league, because
- *     `--card-surface` is overridden per `data-league` in `tokens-dark.css`.
+ *     `--card-surface` is set per league by its theme (src/themes/<id>.json).
  *     TheLeague's is `#262626`, the AFL's `#16283c`, MFL Live's `#1e2126`.
  *
  * And the ground is the SURFACE's, never the matchup's league: a TheLeague
@@ -23,7 +23,7 @@
  * cross-league board resolves every one of its leagues against its own single
  * ground, and a league board resolves against that league's.
  *
- * These values are LITERALS mirroring `tokens.css` / `tokens-dark.css` because
+ * These values are LITERALS mirroring the theme files (src/themes/) because
  * this runs on the server, and with `theme_pref: auto` the server never learns
  * the resolved theme — it has to answer for both and let CSS pick.
  * `tests/live-surface-grounds.test.ts` pins them against the stylesheets, so a

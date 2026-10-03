@@ -1454,11 +1454,11 @@ const pageConfig = {
        are for the Send-proposal form button, which stays a plain button. */
     .tb-btn--primary:not(.cta) {
       background: var(--league-accent, #c41e3a);
-      color: #fff;
+      color: var(--on-league-accent, #fff);
     }
 
     .tb-btn--primary:not(.cta):hover:not(:disabled) {
-      background: color-mix(in srgb, var(--league-accent, #c41e3a) 85%, black);
+      background: var(--league-accent-hover, color-mix(in srgb, var(--league-accent, #c41e3a) 85%, black));
     }
 
     .tb-submit-hint {

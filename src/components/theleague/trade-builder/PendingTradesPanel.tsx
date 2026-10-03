@@ -569,7 +569,7 @@ export default function PendingTradesPanel({
         }
         .ptp-retry-btn {
           background: var(--btn-primary-bg, #1c497c);
-          color: #fff;
+          color: var(--btn-primary-text, #fff);
           border: none;
           border-radius: var(--radius-sm, 0.25rem);
           padding: 0.5rem 1rem;
@@ -690,7 +690,7 @@ export default function PendingTradesPanel({
         }
         .ptp-draft-btn--load {
           background: var(--btn-primary-bg, #1c497c);
-          color: #fff;
+          color: var(--btn-primary-text, #fff);
           border-color: var(--btn-primary-bg, #1c497c);
         }
         .ptp-draft-btn--load:hover {

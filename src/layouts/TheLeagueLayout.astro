@@ -72,9 +72,14 @@ export interface Props {
 		image?: string;
 		url?: string;
 	};
+	/** Pin the page to one mode whatever the viewer's preference — the theme
+	    review pages (/<league>/theme/light|dark). ThemeScript honours the
+	    `data-theme-lock` attribute this writes, so neither the theme toggle nor
+	    a prefers-color-scheme change can flip it. */
+	themeLock?: 'light' | 'dark';
 }
 
-const { title, host, leagueId, year, staticHost, hideMobileNavIcons, og } = Astro.props as Props;
+const { title, host, leagueId, year, staticHost, hideMobileNavIcons, og, themeLock } = Astro.props as Props;
 const navOpenCookie = Astro.cookies.get(NAV_COOKIES.NAV_OPEN);
 const shouldOpenOnDesktop = navOpenCookie?.value === 'true';
 
@@ -345,7 +350,7 @@ import DemoTour from '../components/shared/DemoTour.astro';
 ---
 
 <!DOCTYPE html>
-<html lang="en" data-league={league} class:list={[{ dark: themePref === 'dark' }]}>
+<html lang="en" data-league={league} data-theme-lock={themeLock} class:list={[{ dark: themeLock ? themeLock === 'dark' : themePref === 'dark' }]}>
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -736,6 +741,8 @@ import DemoTour from '../components/shared/DemoTour.astro';
 	@import '../styles/tokens.css';
 	/* Dark-mode token overrides (scoped under html.dark) — must come after tokens.css */
 	@import '../styles/tokens-dark.css';
+	/* Per-league theme palettes (generated from src/themes/*.json) */
+	@import '../styles/league-themes.generated.css';
 
 	/* Navigation progress bar */
 	#nav-progress {

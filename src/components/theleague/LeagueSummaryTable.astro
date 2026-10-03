@@ -483,8 +483,8 @@ const serializedData = JSON.stringify({ teams, years, categories });
   }
 
   :global(.league-summary__pill--active) {
-    background: var(--color-primary, #1c497c);
-    color: var(--color-white, #ffffff);
+    background: var(--color-primary-fill, var(--color-primary, #1c497c));
+    color: var(--on-color-primary, var(--color-white, #ffffff));
     border-color: var(--color-primary-dark, #164066);
   }
 

@@ -220,7 +220,7 @@ const leagueSlug = getLeagueByNavSlug(navSlug)?.slug ?? '';
     color: var(--page-text);
     cursor: pointer;
   }
-  .persona__btn--primary { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
+  .persona__btn--primary { background: var(--color-primary-fill, var(--color-primary)); border-color: var(--color-primary); color: var(--on-color-primary, #fff); }
   .persona__btn:disabled { opacity: 0.6; cursor: progress; }
   .persona__status { font-size: var(--font-size-xs); color: var(--content-text-muted); }
   .persona__status[data-kind='ok'] { color: var(--color-success-dark); }

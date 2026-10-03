@@ -311,7 +311,7 @@ const nlOrder = draftOrders.find(order => order.conference === 'National League'
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: #fff;
+    color: var(--on-league-accent, #fff);
     background: var(--league-accent, #c41e3a);
     box-shadow: var(--shadow-sm, 0.5px 1px 1px rgba(0, 0, 0, 0.09));
   }
@@ -356,7 +356,7 @@ const nlOrder = draftOrders.find(order => order.conference === 'National League'
 
   .conference-tab.active {
     background: var(--league-accent, #c41e3a);
-    color: #fff;
+    color: var(--on-league-accent, #fff);
     box-shadow: 0 2px 4px rgba(196, 30, 58, 0.2);
   }
 

@@ -54,20 +54,23 @@
   --cmh-model-opacity-mobile: 0.4;
 
   /* ── Accent tokens. The `blue` family is the default; the modifiers below
-        override only what actually differs. ─────────────────────────────── */
-  --cmh-surface: linear-gradient(115deg, #2563eb 0%, #1c497c 55%, #0f3057 100%);
+        override only what actually differs. Every blue-family value reads a
+        --hero-* theme slot first, so a league with its own hero colours
+        (src/themes/<id>.json) gets them; a theme that leaves the slot null
+        keeps the blue ramp written here. ──────────────────────────────── */
+  --cmh-surface: var(--hero-gradient, linear-gradient(115deg, #2563eb 0%, #1c497c 55%, #0f3057 100%));
   --cmh-ink: #ffffff;
   --cmh-body: rgba(255, 255, 255, 0.82);
   --cmh-date: rgba(255, 255, 255, 0.6);
   --cmh-ghost: rgba(255, 255, 255, 0.035);
-  --cmh-glow: var(--cmh-glow-dark, rgba(96, 165, 250, 0.34));
+  --cmh-glow: var(--cmh-glow-dark, var(--hero-pill-border, rgba(96, 165, 250, 0.34)));
   --cmh-shadow: rgba(9, 21, 38, 0.4);
-  --cmh-accent: #a9ccff;
+  --cmh-accent: var(--hero-highlight, #a9ccff);
   --cmh-cta-bg: #ffffff;
-  --cmh-cta-ink: #12325a;
-  --cmh-pill-bg: rgba(255, 255, 255, 0.16);
-  --cmh-pill-border: rgba(255, 255, 255, 0.4);
-  --cmh-pill-ink: #dcebff;
+  --cmh-cta-ink: var(--hero-cta-ink, #12325a);
+  --cmh-pill-bg: var(--hero-pill-bg, rgba(255, 255, 255, 0.16));
+  --cmh-pill-border: var(--hero-pill-border, rgba(255, 255, 255, 0.4));
+  --cmh-pill-ink: var(--hero-highlight, #dcebff);
   --cmh-chip-bg: rgba(255, 255, 255, 0.06);
   --cmh-chip-border: rgba(255, 255, 255, 0.2);
   --cmh-chip-ink: rgba(255, 255, 255, 0.8);
@@ -108,38 +111,38 @@
 /* ── feature — the What's New card (the base above). ─────────────────────── */
 html.dark .cmh--feature,
 .cmh--feature.cmh--force-dark {
-  --cmh-surface: linear-gradient(115deg, #0d1b2c 0%, #16395e 52%, var(--color-primary, #1c497c) 100%);
+  --cmh-surface: var(--hero-gradient, linear-gradient(115deg, #0d1b2c 0%, #16395e 52%, var(--color-primary, #1c497c) 100%));
   background-color: #16395e;
   --cmh-body: rgba(255, 255, 255, 0.78);
   --cmh-date: rgba(255, 255, 255, 0.55);
   --cmh-ghost: rgba(255, 255, 255, 0.025);
-  --cmh-glow: var(--cmh-glow-dark, rgba(96, 165, 250, 0.3));
+  --cmh-glow: var(--cmh-glow-dark, var(--hero-pill-border, rgba(96, 165, 250, 0.3)));
   --cmh-shadow: rgba(0, 0, 0, 0.5);
-  --cmh-cta-ink: #0f1e2e;
-  --cmh-pill-bg: rgba(96, 165, 250, 0.18);
-  --cmh-pill-border: rgba(96, 165, 250, 0.45);
-  --cmh-pill-ink: #a8cdf8;
+  --cmh-cta-ink: var(--hero-cta-ink, #0f1e2e);
+  --cmh-pill-bg: var(--hero-pill-bg, rgba(96, 165, 250, 0.18));
+  --cmh-pill-border: var(--hero-pill-border, rgba(96, 165, 250, 0.45));
+  --cmh-pill-ink: var(--hero-highlight, #a8cdf8);
   --cmh-border: rgba(255, 255, 255, 0.1);
 }
 
 /* ── recap — the Tuesday top-scorer card. Tinted by the ROSTERING FRANCHISE,
       so its dark glow is the league navy rather than a sky blue. ─────────── */
 .cmh--recap {
-  --cmh-accent: #a9ccff;
+  --cmh-accent: var(--hero-highlight, #a9ccff);
 }
 
 html.dark .cmh--recap {
-  --cmh-surface: linear-gradient(115deg, #0b1017 0%, #101a26 46%, #14263a 130%);
+  --cmh-surface: var(--hero-gradient, linear-gradient(115deg, #0b1017 0%, #101a26 46%, #14263a 130%));
   background-color: #101a26;
   --cmh-body: rgba(255, 255, 255, 0.78);
   --cmh-ghost: rgba(255, 255, 255, 0.028);
-  --cmh-glow: var(--cmh-glow-dark, rgba(28, 73, 124, 0.4));
+  --cmh-glow: var(--cmh-glow-dark, var(--hero-pill-border, rgba(28, 73, 124, 0.4)));
   --cmh-shadow: rgba(0, 0, 0, 0.5);
-  --cmh-accent: #7cb2ff;
-  --cmh-pill-bg: rgba(124, 178, 255, 0.16);
-  --cmh-pill-border: rgba(124, 178, 255, 0.45);
-  --cmh-pill-ink: #a9ccff;
-  --cmh-cta-ink: #0b1017;
+  --cmh-accent: var(--hero-highlight, #7cb2ff);
+  --cmh-pill-bg: var(--hero-pill-bg, rgba(124, 178, 255, 0.16));
+  --cmh-pill-border: var(--hero-pill-border, rgba(124, 178, 255, 0.45));
+  --cmh-pill-ink: var(--hero-highlight, #a9ccff);
+  --cmh-cta-ink: var(--hero-cta-ink, #0b1017);
   --cmh-border: rgba(255, 255, 255, 0.1);
 }
 
@@ -147,18 +150,18 @@ html.dark .cmh--recap {
 .cmh--kickoff {
   --cmh-body: rgba(255, 255, 255, 0.78);
   --cmh-ghost: rgba(255, 255, 255, 0.028);
-  --cmh-glow: var(--cmh-glow-dark, rgba(96, 165, 250, 0.35));
+  --cmh-glow: var(--cmh-glow-dark, var(--hero-pill-border, rgba(96, 165, 250, 0.35)));
   --cmh-shadow: rgba(0, 0, 0, 0.5);
-  --cmh-accent: #a8cdf8;
-  --cmh-cta-ink: #0f1e2e;
-  --cmh-pill-bg: rgba(96, 165, 250, 0.18);
-  --cmh-pill-border: rgba(96, 165, 250, 0.45);
-  --cmh-pill-ink: #a8cdf8;
+  --cmh-accent: var(--hero-highlight, #a8cdf8);
+  --cmh-cta-ink: var(--hero-cta-ink, #0f1e2e);
+  --cmh-pill-bg: var(--hero-pill-bg, rgba(96, 165, 250, 0.18));
+  --cmh-pill-border: var(--hero-pill-border, rgba(96, 165, 250, 0.45));
+  --cmh-pill-ink: var(--hero-highlight, #a8cdf8);
   --cmh-border: rgba(255, 255, 255, 0.1);
 }
 
 html.dark .cmh--kickoff {
-  --cmh-surface: linear-gradient(115deg, #0d1420 0%, #12233b 52%, #1c497c 130%);
+  --cmh-surface: var(--hero-gradient, linear-gradient(115deg, #0d1420 0%, #12233b 52%, #1c497c 130%));
   background-color: #12233b;
 }
 
@@ -167,18 +170,18 @@ html.dark .cmh--kickoff {
 .cmh--roster {
   --cmh-body: rgba(255, 255, 255, 0.78);
   --cmh-ghost: rgba(255, 255, 255, 0.028);
-  --cmh-glow: var(--cmh-glow-dark, rgba(59, 130, 246, 0.35));
+  --cmh-glow: var(--cmh-glow-dark, var(--hero-pill-border, rgba(59, 130, 246, 0.35)));
   --cmh-shadow: rgba(0, 0, 0, 0.5);
-  --cmh-accent: #93c5fd;
-  --cmh-cta-ink: #0f1e2e;
-  --cmh-pill-bg: rgba(147, 197, 253, 0.16);
-  --cmh-pill-border: rgba(147, 197, 253, 0.45);
-  --cmh-pill-ink: #bfdbfe;
+  --cmh-accent: var(--hero-highlight, #93c5fd);
+  --cmh-cta-ink: var(--hero-cta-ink, #0f1e2e);
+  --cmh-pill-bg: var(--hero-pill-bg, rgba(147, 197, 253, 0.16));
+  --cmh-pill-border: var(--hero-pill-border, rgba(147, 197, 253, 0.45));
+  --cmh-pill-ink: var(--hero-highlight, #bfdbfe);
   --cmh-border: rgba(255, 255, 255, 0.1);
 }
 
 html.dark .cmh--roster {
-  --cmh-surface: linear-gradient(115deg, #0d1420 0%, #12233b 52%, #1a3a63 130%);
+  --cmh-surface: var(--hero-gradient, linear-gradient(115deg, #0d1420 0%, #12233b 52%, #1a3a63 130%));
   background-color: #12233b;
 }
 
@@ -205,28 +208,30 @@ html.dark .cmh--auction {
 
 /* ── navy — the AFL's ground (--afl-navy), deep in both themes. ─────────── */
 .cmh--navy {
-  --cmh-surface: linear-gradient(115deg, #16324a 0%, #12283c 55%, #0f1e2e 100%);
+  /* The league's own hero (drafts, the schedule, the league wordmark): reads
+     the theme's --hero-* slots; a theme that leaves them null keeps the navy. */
+  --cmh-surface: var(--hero-gradient, linear-gradient(115deg, #16324a 0%, #12283c 55%, #0f1e2e 100%));
   background-color: #12283c;
   --cmh-body: rgba(255, 255, 255, 0.78);
   --cmh-ghost: rgba(255, 255, 255, 0.03);
-  --cmh-glow: var(--cmh-glow-dark, rgba(201, 164, 76, 0.32));
+  --cmh-glow: var(--cmh-glow-dark, var(--hero-pill-border, rgba(201, 164, 76, 0.32)));
   --cmh-shadow: rgba(0, 0, 0, 0.5);
-  --cmh-accent: #e6c976;
-  --cmh-cta-ink: #0f1e2e;
-  --cmh-pill-bg: rgba(201, 164, 76, 0.16);
-  --cmh-pill-border: rgba(201, 164, 76, 0.45);
-  --cmh-pill-ink: #e6c976;
+  --cmh-accent: var(--hero-highlight, #e6c976);
+  --cmh-cta-ink: var(--hero-cta-ink, #0f1e2e);
+  --cmh-pill-bg: var(--hero-pill-bg, rgba(201, 164, 76, 0.16));
+  --cmh-pill-border: var(--hero-pill-border, rgba(201, 164, 76, 0.45));
+  --cmh-pill-ink: var(--hero-highlight, #e6c976);
   --cmh-border: rgba(255, 255, 255, 0.12);
 }
 
 html.dark .cmh--navy {
-  --cmh-surface: linear-gradient(115deg, #0b1520 0%, #0f1e2e 52%, #16324a 130%);
+  --cmh-surface: var(--hero-gradient, linear-gradient(115deg, #0b1520 0%, #0f1e2e 52%, #16324a 130%));
   background-color: #0f1e2e;
 }
 
 /* ── gold — the AFL keeper window (trophy gold over navy). ──────────────── */
 .cmh--gold {
-  --cmh-surface: linear-gradient(115deg, #8a6d2f 0%, #4a3a1a 55%, #16324a 100%);
+  --cmh-surface: linear-gradient(115deg, #8a6d2f 0%, #4a3a1a 55%, var(--hero-anchor, #16324a) 100%);
   background-color: #4a3a1a;
   --cmh-body: rgba(255, 255, 255, 0.78);
   --cmh-ghost: rgba(255, 255, 255, 0.03);
@@ -241,7 +246,7 @@ html.dark .cmh--navy {
 }
 
 html.dark .cmh--gold {
-  --cmh-surface: linear-gradient(115deg, #14100a 0%, #2a2113 46%, #16324a 130%);
+  --cmh-surface: linear-gradient(115deg, #14100a 0%, #2a2113 46%, var(--hero-anchor, #16324a) 130%);
   background-color: #2a2113;
 }
 

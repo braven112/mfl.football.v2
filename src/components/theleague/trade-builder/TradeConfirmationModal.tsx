@@ -653,7 +653,7 @@ export default function TradeConfirmationModal({
         .tcm-btn-submit {
           flex: 1;
           background: var(--btn-primary-bg, #1c497c);
-          color: #fff;
+          color: var(--btn-primary-text, #fff);
           border: none;
           border-radius: var(--radius-md, 0.5rem);
           padding: 0.75rem 1.25rem;

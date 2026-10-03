@@ -1603,7 +1603,7 @@ const personaName = resolvePersona(personaLeague ?? null, personaStored).name;
 
   .ops-header__actions { display: flex; align-items: center; gap: 0.75rem; }
   .ops-btn {
-    background: var(--color-primary, #0ea5e9); color: white; border: 0;
+    background: var(--color-primary-fill, var(--color-primary, #0ea5e9)); color: var(--on-color-primary, white); border: 0;
     padding: 0.5rem 0.9rem; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: var(--font-size-sm);
   }
   .ops-btn:hover { filter: brightness(1.05); }

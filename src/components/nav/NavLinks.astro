@@ -546,14 +546,14 @@ const sectionRenderInfo = visibleSections.map((section) => {
   }
 
   .nav-links__link--active {
-    background: var(--color-primary, #1c497c);
-    color: #ffffff;
+    background: var(--color-primary-fill, var(--color-primary, #1c497c));
+    color: var(--on-color-primary, #ffffff);
     font-weight: 600;
   }
 
   .nav-links__link--active:hover {
-    background: var(--color-primary, #1c497c);
-    color: #ffffff;
+    background: var(--color-primary-fill, var(--color-primary, #1c497c));
+    color: var(--on-color-primary, #ffffff);
   }
 
   .nav-links__link--active .nav-links__icon :global(svg) {

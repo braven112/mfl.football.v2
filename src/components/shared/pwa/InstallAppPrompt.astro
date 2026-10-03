@@ -431,8 +431,8 @@ const isBanner = variant === 'banner';
   }
 
   .install-prompt__btn--primary {
-    background: var(--color-primary);
-    color: #fff;
+    background: var(--color-primary-fill, var(--color-primary));
+    color: var(--on-color-primary, #fff);
   }
 
   .install-prompt__btn--ghost {

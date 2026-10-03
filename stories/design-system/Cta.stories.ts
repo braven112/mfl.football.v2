@@ -16,9 +16,9 @@ export default {
 };
 
 /**
- * Snapshotted across leagues: the primary fill reads --btn-primary-bg, which
- * the AFL skin re-points to its red, so the AFL is a real shipping
- * combination — a league diff here is the skin working, not a regression.
+ * Snapshotted across leagues: the primary fill is the league theme's
+ * --cta-fill (src/themes/<id>.json), so each league renders its own colour —
+ * a league diff here is the theme working, not a regression.
  */
 export const Gallery = {
   args: { mode: 'gallery' },

@@ -65,7 +65,7 @@ blockquote {
    league block remaps it (the MFL app's red); the AFL deliberately keeps the
    blue primary and speaks through --league-accent instead. */
 ::selection {
-  background-color: color-mix(in srgb, var(--color-primary) 28%, transparent);
+  background-color: var(--selection-bg, color-mix(in srgb, var(--color-primary) 28%, transparent));
 }
 
 :root {
@@ -160,28 +160,10 @@ textarea:focus-visible,
    white text on a strong primary-tinted highlight.
    ======================================== */
 html.dark ::selection {
-  background: rgba(59, 130, 246, 0.55);
-  color: #ffffff;
-}
-
-html.dark:is([data-league="afl"], [data-league="keeper"]) ::selection {
-  background: rgba(239, 83, 80, 0.5);
-  color: #ffffff;
-}
-
-html.dark[data-league="mfl"] ::selection {
-  background: rgba(239, 83, 80, 0.5);
-  color: #ffffff;
-}
-
-html.dark[data-league="bb1"] ::selection {
-  background: rgba(14, 138, 95, 0.55);
-  color: #ffffff;
-}
-
-html.dark[data-league="archies"] ::selection {
-  background: color-mix(in srgb, var(--league-palette-accent) 40%, transparent);
-  color: var(--page-text);
+  /* Each league's highlight comes from its theme (--selection-bg / -text):
+     white on a strong tint of the league's colour. */
+  background: var(--selection-bg, rgba(59, 130, 246, 0.55));
+  color: var(--selection-text, #ffffff);
 }
 
 /* html.dark's focus outline is TheLeague's #3b82f6 literal. */

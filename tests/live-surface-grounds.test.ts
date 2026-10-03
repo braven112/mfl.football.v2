@@ -30,6 +30,8 @@ import {
 } from '../src/utils/team-color-contrast';
 import type { FranchiseColorClaim } from '../src/utils/mfl-live-identity';
 import { ALL_LEAGUES } from '../src/config/leagues-data.mjs';
+import { loadThemes, loadSurfaces } from '../scripts/generate-league-themes.mjs';
+import { resolveTheme } from '../scripts/lib/theme-resolve.mjs';
 
 /** Every franchise in one league's config, as a colour claim. */
 function loadTeams(configPath: string): Array<{ franchiseId: string; name: string; claim: FranchiseColorClaim }> {
@@ -48,73 +50,33 @@ function loadTeams(configPath: string): Array<{ franchiseId: string; name: strin
 }
 
 /**
- * Comments are stripped FIRST. A scan guard that reads raw CSS is satisfied by
- * a commented-out block, which makes it worse than no guard at all — it reads
- * as coverage while asserting about prose.
+ * Each surface's `--card-surface`, read from the theme it wears — the theme
+ * files (src/themes/<id>.json) are the only place a league's palette is
+ * declared, and loadSurfaces() is the same data-league → theme map the
+ * generated CSS is built from.
  */
-const read = (p: string) =>
-  readFileSync(resolve(process.cwd(), p), 'utf-8').replace(/\/\*[\s\S]*?\*\//g, '');
-
-const LIGHT = read('src/styles/tokens.css');
-const DARK = read('src/styles/tokens-dark.css');
-
-/**
- * The value `--card-surface` resolves to under `selector`, following one level
- * of `var()` indirection (light declares it as `var(--color-white)`).
- *
- * Reads the LAST matching declaration in file order, not the first: one
- * stylesheet can declare the same property in several blocks and the last one
- * wins. A first-match regex asserts about the block it happened to find rather
- * than the block that is live — the mistake `live-broadcast.css`'s own guard
- * had to be rewritten to avoid.
- */
-function cardSurfaceUnder(css: string, selector: string): string | null {
-  const blocks = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)];
-  let found: string | null = null;
-  for (const [, sel, body] of blocks) {
-    if (sel.trim() !== selector) continue;
-    const m = [...body.matchAll(/--card-surface\s*:\s*([^;]+);/g)].pop();
-    if (m) found = m[1].trim();
-  }
-  if (!found) return null;
-  const indirect = found.match(/^var\(\s*(--[\w-]+)\s*\)$/);
-  if (!indirect) return found;
-  const varName = indirect[1].replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
-  const resolved = [
-    ...css.matchAll(new RegExp(`${varName}\\s*:\\s*([^;]+);`, 'g')),
-  ].pop();
-  return resolved ? resolved[1].trim() : null;
-}
-
-/** The `data-league` value each surface renders under, and its dark selector. */
-const DARK_SELECTOR: Record<LiveSurface, string> = {
-  // Best Ball's own block does not override --card-surface, so it inherits the
-  // bare `html.dark` value. That is deliberate and is asserted below.
-  theleague: 'html.dark',
-  bb1: 'html.dark',
-  // Same as Best Ball: no block of its own, so the bare html.dark value.
-  archies: 'html.dark',
-  // The AFL's dark block also serves the custom-site demo's keeper slot.
-  afl: 'html.dark:is([data-league="afl"], [data-league="keeper"])',
-  mfl: 'html.dark[data-league="mfl"]',
+const themes = loadThemes() as Record<string, Record<'light' | 'dark', Record<string, string | null>>>;
+const surfaceThemes = (await loadSurfaces()) as Record<string, string>;
+const cardSurface = (surface: LiveSurface, mode: 'light' | 'dark'): string | null => {
+  const theme = themes[surfaceThemes[surface]];
+  return theme ? (resolveTheme(theme, mode)['--card-surface'] ?? null) : null;
 };
 
 describe('every surface ground is the real token value', () => {
-  it('light is one value for every surface, and it is --card-surface on :root', () => {
-    const rootLight = cardSurfaceUnder(LIGHT, ':root');
-    expect(rootLight).toBeTruthy();
-    for (const [surface, grounds] of Object.entries(SURFACE_GROUNDS)) {
-      expect(grounds.light.toLowerCase(), `${surface} light ground`).toBe(
-        rootLight!.toLowerCase(),
-      );
-    }
-  });
+  it.each(Object.keys(SURFACE_GROUNDS) as LiveSurface[])(
+    '%s light ground matches its theme',
+    (surface) => {
+      const declared = cardSurface(surface, 'light');
+      expect(declared, `no light --card-surface for ${surface}`).toBeTruthy();
+      expect(SURFACE_GROUNDS[surface].light.toLowerCase()).toBe(declared!.toLowerCase());
+    },
+  );
 
   it.each(Object.keys(SURFACE_GROUNDS) as LiveSurface[])(
-    '%s dark ground matches its own tokens-dark.css block',
+    '%s dark ground matches its theme',
     (surface) => {
-      const declared = cardSurfaceUnder(DARK, DARK_SELECTOR[surface]);
-      expect(declared, `no --card-surface under ${DARK_SELECTOR[surface]}`).toBeTruthy();
+      const declared = cardSurface(surface, 'dark');
+      expect(declared, `no dark --card-surface for ${surface}`).toBeTruthy();
       expect(SURFACE_GROUNDS[surface].dark.toLowerCase()).toBe(declared!.toLowerCase());
     },
   );
@@ -128,10 +90,10 @@ describe('every surface ground is the real token value', () => {
     );
   });
 
-  it('Best Ball shares the default dark ground BECAUSE it declares none of its own', () => {
-    // If someone gives bb1 its own --card-surface, this fails and the
-    // SURFACE_GROUNDS entry has to be updated with it.
-    expect(cardSurfaceUnder(DARK, 'html.dark[data-league="bb1"]')).toBeNull();
+  it('Best Ball wears the neutral dark ground — its theme keeps the default card', () => {
+    // If bb1's theme gets its own --card-surface, the per-surface check above
+    // fails and the SURFACE_GROUNDS entry has to be updated with it.
+    expect(cardSurface('bb1', 'dark')).toBe(cardSurface('theleague', 'dark'));
     expect(SURFACE_GROUNDS.bb1.dark).toBe(SURFACE_GROUNDS.theleague.dark);
   });
 });

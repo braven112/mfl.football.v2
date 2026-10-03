@@ -3655,9 +3655,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     background: color-mix(in srgb, var(--content-bg, #fff) 72%, transparent);
   }
   .pos-pill.active {
-    background: var(--color-primary, #1c497c);
+    background: var(--color-primary-fill, var(--color-primary, #1c497c));
     border-color: var(--color-primary, #1c497c);
-    color: white;
+    color: var(--on-color-primary, white);
   }
   .pos-pill__count {
     font-size: 0.7rem;
@@ -3760,9 +3760,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     color: var(--color-primary, #1c497c);
   }
   .col-group-btn.active {
-    background: var(--color-primary, #1c497c);
+    background: var(--color-primary-fill, var(--color-primary, #1c497c));
     border-color: var(--color-primary, #1c497c);
-    color: white;
+    color: var(--on-color-primary, white);
   }
   .col-group-btn--watch {
     display: inline-flex;
@@ -3848,8 +3848,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     height: 18px;
     padding: 0 5px;
     border-radius: 9px;
-    background: var(--color-primary, #1c497c);
-    color: white;
+    background: var(--color-primary-fill, var(--color-primary, #1c497c));
+    color: var(--on-color-primary, white);
     font-size: var(--font-size-2xs);
     font-weight: 700;
     line-height: 1;
@@ -4020,8 +4020,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   }
   .show-more-btn:hover {
     border-color: var(--color-primary, #1c497c);
-    background: var(--color-primary, #1c497c);
-    color: white;
+    background: var(--color-primary-fill, var(--color-primary, #1c497c));
+    color: var(--on-color-primary, white);
     box-shadow: var(--shadow-md);
   }
 

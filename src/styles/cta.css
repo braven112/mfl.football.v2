@@ -38,9 +38,12 @@
 
 /* ── Base + primary ─────────────────────────────────────────────────────── */
 :where(.cta) {
-  --cta-bg: var(--btn-primary-bg);
-  --cta-bg-hover: var(--btn-primary-bg-hover);
-  --cta-ink: var(--btn-primary-text);
+  /* The league's CTA fill comes from its theme (src/themes/<id>.json:
+     --cta-fill / --cta-fill-hover / --on-cta-fill), so every league's CTAs
+     wear its own colour without a per-component override. */
+  --cta-bg: var(--cta-fill);
+  --cta-bg-hover: var(--cta-fill-hover);
+  --cta-ink: var(--on-cta-fill);
   --cta-ink-hover: var(--cta-ink);
   /* The border follows the fill, so a component that re-points only
      --cta-bg never wears a ring in the default primary colour. */

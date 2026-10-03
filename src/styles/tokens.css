@@ -221,8 +221,6 @@
 
   /* Component-specific shadows */
   --shadow-card: var(--shadow-md);
-  --shadow-btn-hover: 0 10px 30px rgba(37, 99, 235, 0.35);
-  --shadow-focus-ring: 0 0 0 3px rgba(28, 73, 124, 0.25);
 
   /* Legacy shadow aliases */
   --box-shadow-sm: var(--shadow-sm);
@@ -285,17 +283,6 @@
      Colors - TheLeague Theme
      ======================================== */
 
-  /* Brand Colors */
-  --color-primary: #1c497c;          /* TheLeague Blue */
-  --color-primary-dark: #164066;
-  --color-primary-light: #2563eb;
-
-  --color-secondary: #2e8743;        /* TheLeague Green */
-  --color-secondary-dark: #26743a;
-  --color-secondary-light: #3c9950;
-
-  --color-accent: #2e8743;           /* Same as secondary for TheLeague */
-
   /* What's New category palette — one definition, both themes.
      Lived page-locally in three components until Aug 2026; only one of them
      ever had a dark override, so two of the three shipped these light values
@@ -320,35 +307,24 @@
   --wn-fresh-bg: #0f172a;
   --wn-fresh-ink: #ffffff;
 
-  /* Per-league brand accent — single token, value resolved by league.
-     TheLeague = blue (default); AFL overrides to red in html[data-league="afl"].
-     Used by homepage section icons, CTAs, and section-title left borders. */
-  --league-accent: var(--color-primary);
-
-  /* Header nav-icon strip — per-league. TheLeague = blue → green hover (default);
-     AFL overrides to red → navy hover in html[data-league="afl"]. */
-  --header-nav-icon-color: var(--color-primary);
-  --header-nav-icon-hover-color: var(--color-secondary);
+  /* League palette — the colors each league's theme owns (surfaces, text,
+     borders, the gray ramp, primary, secondary, accent, links, header
+     chrome, nav) are NOT declared here. They live in src/themes/<id>.json,
+     compiled to src/styles/league-themes.generated.css; the list is
+     src/config/theme-tokens.mjs. This file holds only the shared defaults. */
 
   /* Neutral Colors */
   --color-white: #ffffff;
   --color-black: #000000;
 
-  --color-gray-50: #f9fafb;
-  --color-gray-100: #f3f4f6;
-  --color-gray-200: #dddedf;
-  --color-gray-300: #d1d5db;
-  --color-gray-400: #9ca3af;
-  --color-gray-500: #6b7280;
-  --color-gray-600: #4b5563;
-  --color-gray-700: #374151;
-  --color-gray-800: #1f2937;
-  --color-gray-900: #111827;
-
   /* Semantic Colors */
   --color-success: #10b981;
   --color-success-light: #d1fae5;
   --color-success-dark: #059669;
+  /* Success as a FILL under text: #10b981 carries white at only 2.54:1 and
+     #059669 at 3.77:1, both under AA; #047857 is 5.48:1. */
+  --color-success-fill: #047857;
+  --on-color-success-fill: #ffffff;
 
   --color-warning: #f59e0b;
   --color-warning-light: #fef3c7;
@@ -369,21 +345,9 @@
   --color-error-border: #fecaca;
 
   /* ========================================
-     Component Tokens - Page
-     ======================================== */
-  --page-bg: #e0e0e0;
-  --page-text: var(--color-gray-900);
-
-  /* ========================================
      Component Tokens - Content Areas
      ======================================== */
-  --content-bg: var(--color-white);
-  --content-border: #e2e8f0;
   --content-shadow: var(--shadow-card);
-
-  --content-bg-muted: #eeeeee;
-  --content-bg-accent: #66abea;
-  --content-text-muted: var(--color-gray-500);
 
   /* Draft pick tiles (draft order / predictor grids) */
   --draft-pick-bg: var(--content-bg-muted);
@@ -397,11 +361,6 @@
   /* ========================================
      Component Tokens - Cards
      ======================================== */
-  --card-bg: var(--color-white);
-  /* Solid twin of --card-bg for contexts where a gradient is invalid
-     (color-mix, background-color). Dark mode overrides both. */
-  --card-surface: var(--color-white);
-  --card-border: var(--content-border);
   --card-shadow: var(--shadow-card);
   --card-radius: var(--radius-md);
 
@@ -411,15 +370,8 @@
   /* ========================================
      Component Tokens - Links
      ======================================== */
-  --link-color: var(--color-gray-900);
-  --link-color-hover: var(--color-secondary);
-  --link-color-focus: var(--color-secondary);
 
   --link-color-inverse: #e2e8f0;
-  --link-color-inverse-hover: var(--color-secondary);
-
-  --link-color-accent: var(--color-primary-light);
-  --link-color-accent-hover: var(--color-secondary);
 
   /* Legacy aliases */
   --primary-link-default-text-color: var(--link-color);
@@ -427,8 +379,6 @@
   --primary-link-focus-text-color: var(--link-color-focus);
 
   --inverse-link-default-text-color: var(--link-color-inverse);
-  --inverse-link-hover-text-color: var(--link-color-inverse-hover);
-  --inverse-link-focus-text-color: var(--link-color-inverse-hover);
 
   --accent-link-default-text-color: var(--link-color-accent);
   --accent-link-hover-text-color: var(--link-color-accent-hover);
@@ -438,38 +388,17 @@
      Component Tokens - Buttons
      ======================================== */
 
-  /* Primary Button */
-  --btn-primary-bg: var(--color-primary);
-  --btn-primary-bg-hover: var(--color-primary-dark);
-  --btn-primary-bg-focus: var(--color-primary-dark);
-  --btn-primary-text: var(--color-white);
-  --btn-primary-border: var(--color-primary);
-  --btn-primary-border-hover: var(--color-secondary);
-
-  /* Secondary Button */
-  --btn-secondary-bg: var(--color-secondary);
-  --btn-secondary-bg-hover: var(--color-secondary-dark);
-  --btn-secondary-bg-focus: #22663a;
-  --btn-secondary-text: var(--color-white);
-  --btn-secondary-border: var(--color-secondary);
-  --btn-secondary-border-hover: var(--color-primary);
-
   /* Inverse Button */
-  --btn-inverse-bg: #e2e8f0;
-  --btn-inverse-bg-hover: var(--color-primary);
-  --btn-inverse-bg-focus: var(--color-primary);
   --btn-inverse-text: var(--color-gray-800);
   --btn-inverse-text-hover: var(--color-white);
 
   /* Icon Button */
   --btn-icon-text: var(--color-gray-500);
-  --btn-icon-text-focus: var(--color-info);
   --icon-btn-default-size: 30px;
 
   /* Legacy aliases (with typo fix: detault -> default) */
   --primary-btn-default-bg-color: var(--btn-primary-bg);
   --primary-btn-hover-bg-color: var(--btn-primary-bg-hover);
-  --primary-btn-focus-bg-color: var(--btn-primary-bg-focus);
   --primary-btn-default-text-color: var(--btn-primary-text);
   --primary-btn-hover-text-color: var(--btn-primary-text);
   --primary-btn-focus-text-color: var(--btn-primary-text);
@@ -479,17 +408,10 @@
 
   --secondary-btn-default-bg-color: var(--btn-secondary-bg);
   --secondary-btn-hover-bg-color: var(--btn-secondary-bg-hover);
-  --secondary-btn-focus-bg-color: var(--btn-secondary-bg-focus);
   --secondary-btn-default-text-color: var(--btn-secondary-text);
   --secondary-btn-hover-text-color: var(--btn-secondary-text);
   --secondary-btn-focus-text-color: var(--btn-secondary-text);
-  --secondary-btn-default-border-color: var(--btn-secondary-border);
-  --secondary-btn-hover-border-color: var(--btn-secondary-border-hover);
-  --secondary-btn-focus-border-color: var(--btn-secondary-border-hover);
 
-  --inverse-btn-default-bg-color: var(--btn-inverse-bg);
-  --inverse-btn-hover-bg-color: var(--btn-inverse-bg-hover);
-  --inverse-btn-focus-bg-color: var(--btn-inverse-bg-focus);
   --inverse-btn-default-text-color: var(--btn-inverse-text);
   --inverse-btn-hover-text-color: var(--btn-inverse-text-hover);
   --inverse-btn-focus-text-color: var(--btn-inverse-text-hover);
@@ -500,12 +422,7 @@
   /* ========================================
      Component Tokens - Tables
      ======================================== */
-  --table-header-bg: var(--color-gray-50);
   --table-header-text: var(--color-gray-400);
-  --table-row-bg: var(--color-white);
-  --table-row-bg-alt: #ececec;
-  --table-row-bg-hover: var(--color-gray-50);
-  --table-border: var(--content-border);
   --table-cell-font-size: 0.9rem;
 
   /* Legacy aliases */
@@ -516,15 +433,10 @@
   /* ========================================
      Component Tokens - Inverse (Dark Sections)
      ======================================== */
-  --inverse-bg: var(--color-primary);
-  --inverse-bg-accent: var(--color-secondary);
-  --inverse-border: #164066;
   --inverse-text: var(--color-white);
 
   /* Legacy aliases */
   --inverse-content-bg: var(--inverse-bg);
-  --inverse-accent-bg: var(--inverse-bg-accent);
-  --inverse-content-border-color: var(--inverse-border);
   --inverse-color: var(--inverse-text);
 
   /* ========================================
@@ -560,24 +472,6 @@
   --trophy-gold-ink: #14100a;
 
   /* ========================================
-     Component Tokens - Accent Content
-     ======================================== */
-  --accent-content-bg-color: #66abea;
-  --accent-content-border-color: #d6e3f0;
-  --accent-content-text-color: var(--color-white);
-  --accent-content-boxshadow-color: #1c497c35;
-
-  /* ========================================
-     Component Tokens - Forms
-     ======================================== */
-  --input-bg: var(--color-white);
-  --input-border: var(--color-gray-300);
-  --input-border-focus: var(--color-primary);
-  --input-text: var(--color-gray-900);
-  --input-placeholder: var(--color-gray-400);
-  --input-disabled-bg: var(--color-gray-100);
-
-  /* ========================================
      Component Tokens - Badges/Status
      ======================================== */
   --badge-success-bg: var(--color-success-light);
@@ -586,8 +480,6 @@
   --badge-warning-text: var(--color-warning-dark);
   --badge-error-bg: var(--color-error-light);
   --badge-error-text: var(--color-error-dark);
-  --badge-info-bg: var(--color-info-light);
-  --badge-info-text: var(--color-info-dark);
 
   /* Position colours — the ONE site palette: QB red #c41e3a, RB blue
      #2563eb, WR green #16a34a, TE purple #9333ea, PK orange #ea580c, DEF
@@ -638,12 +530,9 @@
   --primary-page-bg: var(--page-bg);
   --primary-content-bg-color: var(--content-bg);
   --primary-content-border-color: var(--content-border);
-  --primary-content-boxshadow-color: #1c497c28;
   --primary-content-boxshadow-size: var(--shadow-card);
   --secondary-content-bg-color: var(--content-bg);
   --secondary-content-border-color: var(--content-border);
-  --secondary-content-boxshadow-color: #1c497c28;
-  --content-border-color: #e2e2e2;
   --gallery-content-bg: var(--content-bg-muted);
 
   /* ========================================
@@ -690,31 +579,13 @@
   --nav-z-header: 960;
   --nav-z-close-btn: 970;
 
-  /* Background colors */
-  --nav-bg: var(--content-bg, #ffffff);
-  --nav-bg-subtle: #f9fafb;
-
-  /* Text colors */
-  --nav-text: #333333;
-  --nav-text-muted: #6b7280;
-  --nav-text-subtle: #9ca3af;
-
-  /* Border colors */
-  --nav-border: #d0d2d6;
-  --nav-border-subtle: #f3f4f6;
-
   /* Interactive states */
-  --nav-hover-bg: #f3f4f6;
   --nav-hover-text: var(--nav-text);
 
   /* Active/selected link */
-  --nav-active-bg: rgba(28, 73, 124, 0.1);
-  --nav-active-text: var(--color-primary, #1c497c);
-  --nav-active-border-left: var(--color-primary, #1c497c);
   --nav-active-border-width: 3px;
 
   /* Focus state */
-  --nav-focus-ring: 0 0 0 2px var(--color-primary, #1c497c);
   --nav-focus-ring-offset: 2px;
 
   /* Section styling */
@@ -726,8 +597,6 @@
   --nav-section-margin-bottom: var(--nav-spacing-md);
 
   /* Footer styling */
-  --nav-footer-bg: #f9fafb;
-  --nav-footer-border: #e5e7eb;
   --nav-footer-text: var(--nav-text);
   --nav-footer-text-muted: var(--nav-text-muted);
 
@@ -735,12 +604,6 @@
   --nav-team-logo-size: 40px;
   --nav-team-name-size: 0.9375rem;
   --nav-owner-name-size: 0.8125rem;
-
-  /* Verify team prompt */
-  --nav-verify-bg: rgba(28, 73, 124, 0.05);
-  --nav-verify-border: var(--color-primary, #1c497c);
-  --nav-verify-text: var(--color-primary, #1c497c);
-  --nav-verify-hover-bg: rgba(28, 73, 124, 0.1);
 
   /* Overlay */
   --nav-overlay-bg: rgba(0, 0, 0, 0.5);
@@ -753,14 +616,9 @@
   --nav-badge-font-weight: 600;
 
   /* League switcher */
-  --nav-switcher-bg: #f3f4f6;
-  --nav-switcher-border: #e5e7eb;
-  --nav-switcher-active-bg: var(--color-primary, #1c497c);
-  --nav-switcher-active-text: #ffffff;
   --nav-switcher-inactive-text: var(--nav-text-muted);
 
   /* Tooltip */
-  --nav-tooltip-bg: #1f2937;
   --nav-tooltip-text: #ffffff;
   --nav-tooltip-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 
@@ -771,259 +629,4 @@
   /* Scrollbar */
   --nav-scrollbar-width: 6px;
   --nav-scrollbar-track: transparent;
-  --nav-scrollbar-thumb: #d1d5db;
-  --nav-scrollbar-thumb-hover: #9ca3af;
-}
-
-/* ========================================
-   AFL Fantasy — per-league theme overrides
-   AFL-only palette: deep navy (#0f1e2e, the EventHeroShell hero palette) for
-   the top breadcrumb bar, footer, and resting nav icons; red (#c41e3a) for the
-   brand accent and nav-icon hover. The brand blue (--color-primary) is
-   intentionally left untouched so links, headings, nav active states, and
-   table headers keep their blue.
-   ======================================== */
-html:is([data-league="afl"], [data-league="keeper"]) {
-  --afl-navy: #0f1e2e;                         /* design-system deep navy (EventHeroShell palette) */
-  --afl-gold: #d97706;                         /* AFL amber accent (championship hero tint/border). NOT the badge gold — use --afl-trophy-gold to match award art. */
-  --afl-trophy-gold: #c9a44c;                  /* metallic badge gold — matches the award SVG art (#c9a44c) */
-  --afl-gold-text: #b45309;                    /* AFL gold as FOREGROUND. --afl-gold is 3.2:1 on a white card and --afl-trophy-gold 2.4:1 — both fail AA for text. This is the same amber family at 5.0:1, and tokens-dark.css flips it to --afl-trophy-gold (6.3:1 on the navy card), so a call site needs one line, not a theme override. */
-  --afl-trophy-gold-light: #e6c976;            /* lighter badge-gold highlight (#e6c976) */
-  --breadcrumb-bar-bg: var(--afl-navy);        /* top "Back to MFL" strip */
-  --inverse-bg: var(--afl-navy);               /* footer (via --inverse-content-bg) */
-  --league-accent: #c41e3a;                    /* AFL accent — red */
-  --header-nav-icon-color: var(--afl-navy);           /* nav icons — deep navy */
-  --header-nav-icon-hover-color: var(--league-accent); /* nav icons hover — red */
-  --header-nav-label-color: var(--league-accent);     /* nav labels — red */
-  --header-nav-label-hover-color: var(--league-accent); /* nav labels hover — red */
-}
-
-/* ========================================
-   Best Ball League #1 — per-league theme overrides
-   Emerald identity: deep green for the breadcrumb strip / footer / resting
-   nav icons, brighter green for the accent + hovers. Shares TheLeague's
-   neutral surfaces otherwise — best-ball leagues are deliberately
-   light-footprint (draft-only), so the theme stays a small accent layer.
-   Sister best-ball leagues (bb2, …) should copy this block verbatim with
-   their own accent hue.
-   ======================================== */
-html[data-league="bb1"] {
-  --bb-green: #0b3d2e;                          /* deep best-ball green */
-  --breadcrumb-bar-bg: var(--bb-green);         /* top "Back to MFL" strip */
-  --inverse-bg: var(--bb-green);                /* footer (via --inverse-content-bg) */
-  --league-accent: #0e8a5f;                     /* best-ball accent — emerald */
-  --header-nav-icon-color: var(--bb-green);            /* nav icons — deep green */
-  --header-nav-icon-hover-color: var(--league-accent); /* nav icons hover — emerald */
-  --header-nav-label-color: var(--league-accent);      /* nav labels — emerald */
-  --header-nav-label-hover-color: var(--league-accent);
-}
-
-/* ========================================
-   Archie's Fantasy Football League — per-league theme overrides
-   TWO LAYERS, on purpose, so the scheme can become any colour later:
-     1. PALETTE (--league-palette-*): the only raw colour values. Today:
-        BLACK for the chrome and for anything that must read as text, and
-        the sky blue of the league's wordmark (public/assets/logos/
-        archies-wordmark.webp, #44aaff / #55ccff) as the one accent.
-        No navy and no dark blue anywhere — the owner's call (Sep 2026).
-     2. SEMANTIC tokens (--color-primary, --breadcrumb-bar-bg, --nav-*, ...):
-        every one is a var() of the palette, never a literal. Components read
-        only the semantic tokens.
-   Recolouring the league = editing the palette values here and their dark
-   twins in tokens-dark.css. Nothing else.
-   How the two colours split, and the contrast that forces it:
-     --league-palette-accent  #44aaff is only 2.5:1 on white, so in LIGHT
-                              mode it is never text on a light surface. It
-                              is a FILL (buttons, pills, active nav) with
-                              --league-palette-on-accent (black) on top
-                              (8.4:1), a rule/underline/active bar, or text
-                              on the black chrome (8.4:1).
-     --league-palette-ink     black: the breadcrumb strip, footer, hero card,
-                              resting nav icons, and every "brand-coloured"
-                              text token (links, nav labels) — so
-                              --color-primary is ink, not the blue, because
-                              components use it as both text AND a fill
-                              under white text, and only black passes both.
-   Paired with html.dark[data-league="archies"].
-   ======================================== */
-html[data-league="archies"] {
-  /* ── 1. Palette ── */
-  --league-palette-accent: #44aaff;            /* wordmark sky blue: fills, rules, marks, text on black */
-  --league-palette-accent-soft: #55ccff;       /* wordmark cyan: hover step of the accent fill */
-  --league-palette-on-accent: #000000;         /* text on an accent fill (8.4:1) */
-  --league-palette-ink: #000000;               /* chrome + brand-voice text */
-  --league-palette-ink-raised: #262626;        /* hover step of an ink fill, and hairlines on the chrome */
-  --league-palette-on-ink: #ffffff;            /* text on an ink fill */
-  --league-palette-text-muted: #525252;        /* secondary text: 5.9:1 on the #e0e0e0 page, where the shared #6b7280 is 3.7:1 */
-  --league-palette-text-faint: #5f5f5f;        /* tertiary text: 4.8:1 on the page, 6.3:1 on white (the shared #9ca3af is 2.5:1) */
-
-  /* ── 2. Semantic tokens → palette ── */
-  --color-primary: var(--league-palette-ink);
-  --color-primary-dark: var(--league-palette-ink);
-  --color-primary-light: var(--league-palette-ink);
-  --color-secondary: var(--league-palette-ink);            /* hovers stay black, never TheLeague green */
-  --color-secondary-dark: var(--league-palette-ink);
-  --color-secondary-light: var(--league-palette-ink);
-  --color-accent: var(--league-palette-accent);
-  --league-accent: var(--league-palette-accent);
-  /* Shared components read --league-accent (and --color-primary) as BOTH a
-     fill under white text and as text on the page. These say which: each is
-     read as `var(--league-accent-fg, var(--league-accent, …))` /
-     `var(--on-league-accent, #fff)`, so a league that does not define them
-     renders exactly what it did before. */
-  --league-accent-fg: var(--league-palette-ink);           /* accent as TEXT on a light surface */
-  --on-league-accent: var(--league-palette-on-accent);     /* text ON a --league-accent fill */
-  --on-color-primary: var(--league-palette-on-ink);        /* text ON a --color-primary fill */
-  --content-text-muted: var(--league-palette-text-muted);
-  /* Shared cards with a navy literal, repainted (each read with its original
-     literal as fallback): the What's Next in-season card, the roster age stats. */
-  --league-phase-regular-season: var(--league-palette-ink);
-  --league-stat-fill: var(--league-palette-ink);
-  --on-league-stat-fill: var(--league-palette-on-ink);
-  /* ~650 shared rules read these two grey steps directly as secondary text
-     (breadcrumbs, table heads, counts). Neutral, and dark enough for AA. */
-  --color-gray-500: var(--league-palette-text-muted);
-  --color-gray-400: var(--league-palette-text-faint);
-  --badge-info-bg: color-mix(in srgb, var(--league-palette-accent) 22%, transparent);
-  --badge-info-text: var(--league-palette-ink);            /* TheLeague's #2563eb on #dbeafe is 4.2:1 */
-
-  --btn-primary-bg: var(--league-palette-accent);
-  --btn-primary-bg-hover: var(--league-palette-accent-soft);
-  --btn-primary-bg-focus: var(--league-palette-accent-soft);
-  --btn-primary-text: var(--league-palette-on-accent);
-  --btn-primary-border: var(--league-palette-accent);
-  --btn-primary-border-hover: var(--league-palette-ink);
-  --btn-secondary-bg: var(--league-palette-ink);
-  --btn-secondary-bg-hover: var(--league-palette-ink-raised);
-  --btn-secondary-bg-focus: var(--league-palette-ink-raised);
-  --btn-secondary-border: var(--league-palette-ink);
-  --btn-secondary-border-hover: var(--league-palette-accent);
-  --btn-icon-text-focus: var(--league-palette-ink);
-
-  --link-color-hover: var(--league-palette-ink);
-  --link-color-focus: var(--league-palette-ink);
-  --link-color-accent: var(--league-palette-ink);
-  --link-color-accent-hover: var(--league-palette-ink);
-  --link-color-inverse-hover: var(--league-palette-accent);
-
-  --breadcrumb-bar-bg: var(--league-palette-ink);
-  --inverse-bg: var(--league-palette-ink);                 /* footer, hero card (via --inverse-content-bg) */
-  --inverse-bg-accent: var(--league-palette-accent);
-  --inverse-border: var(--league-palette-ink-raised);
-
-  --content-bg-accent: var(--league-palette-accent);
-  --accent-content-bg-color: var(--league-palette-accent);
-  --accent-content-text-color: var(--league-palette-on-accent);
-  --accent-content-border-color: color-mix(in srgb, var(--league-palette-accent) 35%, transparent);
-  --accent-content-boxshadow-color: color-mix(in srgb, var(--league-palette-accent) 21%, transparent);
-  --primary-content-boxshadow-color: color-mix(in srgb, var(--league-palette-accent) 16%, transparent);
-  --secondary-content-boxshadow-color: color-mix(in srgb, var(--league-palette-accent) 16%, transparent);
-
-  --shadow-focus-ring: 0 0 0 3px color-mix(in srgb, var(--league-palette-accent) 45%, transparent);
-  --shadow-btn-hover: 0 10px 30px color-mix(in srgb, var(--league-palette-accent) 35%, transparent);
-  --input-border-focus: var(--league-palette-accent);
-
-  --header-nav-icon-color: var(--league-palette-ink);
-  --header-nav-icon-hover-color: var(--league-palette-accent);
-  --header-nav-label-color: var(--league-palette-ink);
-  --header-nav-label-hover-color: var(--league-palette-ink);
-  --nav-active-bg: color-mix(in srgb, var(--league-palette-accent) 18%, transparent);
-  --nav-active-text: var(--league-palette-ink);
-  --nav-active-border-left: var(--league-palette-accent);
-  --nav-focus-ring: 0 0 0 2px var(--league-palette-accent);
-  --nav-verify-bg: color-mix(in srgb, var(--league-palette-accent) 8%, transparent);
-  --nav-verify-hover-bg: color-mix(in srgb, var(--league-palette-accent) 18%, transparent);
-  --nav-verify-border: var(--league-palette-accent);
-  --nav-verify-text: var(--league-palette-ink);
-  --nav-switcher-active-bg: var(--league-palette-accent);
-  --nav-switcher-active-text: var(--league-palette-on-accent);
-}
-
-/* ========================================
-   MFL Live — the league-neutral app on the shared host
-   The AFL's design language with the navy family replaced by neutral
-   near-black: black is to this surface what --afl-navy is to the AFL's. The
-   red accent and the gold family are deliberately KEPT, because "match the
-   AFL, but black instead of the blue" is the brief — this is a sibling of
-   that theme, not a new identity.
-
-   Why a data-league value for a host that belongs to no league: the token
-   system keys every per-league palette off this attribute, and mfl.football
-   needs a palette. It is NOT a registry league and must never appear in
-   HOST_TO_SLUG or leagues-data.mjs — see MflAppLayout.astro, which sets the
-   attribute directly rather than deriving it from a league lookup.
-
-   Paired with html.dark[data-league="mfl"] in tokens-dark.css, which carries
-   the surface elevation ramp. Both blocks are complete on purpose: a
-   var(--x) defined in only one of them renders its fallback in the other,
-   which is how a theme ships looking perfect in light and white-on-black in
-   dark (docs/claude/rules/theming-and-assets.md).
-   ======================================== */
-html[data-league="mfl"] {
-  --mfl-ink: #14161a;                          /* the brand near-black — this theme's --afl-navy */
-  --mfl-ink-deep: #0b0c0f;                     /* deeper still: footer, breadcrumb strip */
-  --afl-gold: #d97706;                         /* shared amber accent — same values as the AFL block, redeclared because that block is scoped to its own data-league and resolves to nothing here */
-  --afl-trophy-gold: #c9a44c;                  /* metallic badge gold */
-  --afl-gold-text: #b45309;                    /* gold as FOREGROUND — 5.0:1 on a white card, where the other two fail AA */
-  --afl-trophy-gold-light: #e6c976;
-  --breadcrumb-bar-bg: var(--mfl-ink);         /* top strip */
-  --inverse-bg: var(--mfl-ink);                /* footer (via --inverse-content-bg) */
-  --league-accent: #c41e3a;                    /* accent — the AFL's red */
-  --header-nav-icon-color: var(--mfl-ink);            /* nav icons — near-black */
-  --header-nav-icon-hover-color: var(--league-accent); /* nav icons hover — red */
-  --header-nav-label-color: var(--league-accent);
-  --header-nav-label-hover-color: var(--league-accent);
-
-  /* ── Primary = the league accent, not TheLeague blue ──
-     `--color-primary` is TheLeague's #1c497c on bare :root, and almost every
-     button, input-focus and nav-active token is declared as
-     `var(--color-primary)` there. Both that declaration and this block sit on
-     <html>, so re-pointing the ONE variable re-points all of them — a red
-     Sign In button, red focus rings, a red nav pill — without restating the
-     component tokens. Undefined here, they render TheLeague blue on the black
-     board in BOTH themes, which is the classic missing-token trap.
-
-     #c41e3a is the same red already used for --league-accent above, so the
-     accent and the fills are one colour rather than two nearly-equal ones.
-     White on it is 5.84:1 (AA). */
-  --color-primary: #c41e3a;
-  --color-primary-dark: #a8172c;               /* hover/active step — white 7.44:1 */
-  /* Deliberately DARKER than --color-primary, despite the name. It feeds
-     --link-color-accent, which is TEXT on a white card: the lighter step this
-     name implies (#e04a60) is 3.95:1 and fails AA. Same call, and the same
-     reason, as --afl-gold-text. */
-  --color-primary-light: #a8172c;
-
-  /* The rgba() literals the base :root hardcodes off TheLeague blue. These
-     carry no var(), so the re-point above cannot reach them. */
-  --shadow-focus-ring: 0 0 0 3px rgba(196, 30, 58, 0.25);
-  --nav-active-bg: rgba(196, 30, 58, 0.1);
-  --nav-verify-bg: rgba(196, 30, 58, 0.05);
-  --nav-verify-hover-bg: rgba(196, 30, 58, 0.1);
-  --accent-content-boxshadow-color: #c41e3a35;
-  --primary-content-boxshadow-color: #c41e3a28;
-  --secondary-content-boxshadow-color: #c41e3a28;
-
-  /* ── Tokens html.dark defines and bare :root does NOT ──
-     `mfl-live.css` reads these 20 times with no fallback. Defined only in
-     tokens-dark.css, they resolve to nothing in LIGHT, and CSS does not fail
-     quietly in the same way for each kind:
-
-       color:        invalid at computed-value time -> INHERITS, so every
-                     "secondary" string rendered at full body colour and the
-                     board had no text hierarchy at all in light mode.
-       background:   -> transparent, which is why the position chip was a chip
-                     in dark and bare text in light.
-       border-color: -> currentColor, so a hairline separator drew at TEXT
-                     colour instead of a faint rule.
-
-     This is the "a var(--x) with no definition renders its fallback in BOTH
-     themes" trap from CLAUDE.md, in its nastier form: there was no fallback,
-     and light was the theme that lost. Defined here rather than patched at
-     each call site so one place answers for all twenty. */
-  --color-text-primary: #111827;               /* 17.7:1 on a white card */
-  --color-text-secondary: #646b76;             /* 5.4:1 on white, and 4.6:1 on the chip fill below — the chip is 0.62rem bold, too small for the large-text exemption */
-  --color-surface-3: #eceef1;                  /* elevated: the position chip, raised off the white card */
-  --color-border-subtle: #e8eaed;              /* hairline row separators */
-  --color-border-default: #dfe3e8;             /* the slightly stronger rule above the bench */
 }

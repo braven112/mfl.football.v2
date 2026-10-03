@@ -211,7 +211,71 @@
       "summary": "The draft room's countdown banner is readable in every state again, light and dark — its white text no longer sits on pale amber, green or grey.",
       "impact": "user",
       "area": "draft",
+        "league": "bb1"
+    },
+    {
+      "date": "2026-10-02",
+      "type": "style-tweak",
+      "summary": "Buttons now wear the AFL red instead of the shared blue, in light and dark mode.",
+      "impact": "user",
+      "area": "design-system",
+      "league": "afl"
+    },
+    {
+      "date": "2026-10-02",
+      "type": "style-tweak",
+      "summary": "Buttons now wear the Best Ball emerald instead of the shared blue, in light and dark mode.",
+      "impact": "user",
+      "area": "design-system",
       "league": "bb1"
+    },
+    {
+      "date": "2026-10-02",
+      "type": "bug-fix",
+      "summary": "In dark mode, blue pills, tags and highlighted tabs are a deeper blue, so their white text is easy to read.",
+      "impact": "user",
+      "area": "design-system",
+      "league": "afl"
+    },
+    {
+      "date": "2026-10-02",
+      "type": "bug-fix",
+      "summary": "In dark mode, sky-blue pills, tags and highlighted tabs now carry black text instead of hard-to-read white.",
+      "impact": "user",
+      "area": "design-system",
+      "league": "archies"
+    },
+    {
+      "date": "2026-10-03",
+      "type": "style-tweak",
+      "summary": "Homepage heroes now wear Archie's black and sky blue instead of navy.",
+      "impact": "user",
+      "area": "design-system",
+      "league": "archies"
+    },
+    {
+      "date": "2026-10-03",
+      "type": "style-tweak",
+      "summary": "Heroes and buttons now wear Best Ball's emerald, with text that stays readable in dark mode.",
+      "impact": "user",
+      "area": "design-system",
+      "league": "bb1"
+    },
+    {
+      "date": "2026-10-03",
+      "type": "bug-fix",
+      "summary": "In dark mode, buttons and tags in the league colour now use dark text where white was hard to read.",
+      "impact": "user",
+      "area": "design-system",
+      "league": "both"
+    },
+    {
+      "date": "2026-10-03",
+      "type": "bug-fix",
+      "summary": "The Set Lineup button turns a deeper green once your lineup is saved, so its text is easy to read.",
+      "impact": "user",
+      "area": "design-system",
+      "league": "both"
     }
   ]
 }

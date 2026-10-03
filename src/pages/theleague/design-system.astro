@@ -1,7 +1,7 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import PlayerCell from '../../components/shared/PlayerCell.astro';
-import HeroBanner from '../../components/theleague/HeroBanner.astro';
+import HeroBanner from '../../components/shared/HeroBanner.astro';
 import Spinner from '../../components/shared/loading/Spinner.astro';
 import Skeleton from '../../components/shared/loading/Skeleton.astro';
 import ThinkingDots from '../../components/shared/loading/ThinkingDots.astro';
@@ -1398,8 +1398,8 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
   }
 
   .ds-preview-switcher__option[aria-checked='true'] {
-    background: var(--color-primary, #1c497c);
-    color: #fff;
+    background: var(--color-primary-fill, var(--color-primary, #1c497c));
+    color: var(--on-color-primary, #fff);
   }
 
   .ds-preview-switcher__option:focus-visible {
@@ -2396,8 +2396,8 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
   }
 
   .ds-anim-trigger:hover {
-    background: var(--color-primary, #1c497c);
-    color: #fff;
+    background: var(--color-primary-fill, var(--color-primary, #1c497c));
+    color: var(--on-color-primary, #fff);
   }
 
   .ds-anim-stage {
@@ -2419,8 +2419,8 @@ const defPlayer = { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', hea
   .ds-anim-box {
     width: 48px;
     height: 32px;
-    background: var(--color-primary, #1c497c);
-    color: #fff;
+    background: var(--color-primary-fill, var(--color-primary, #1c497c));
+    color: var(--on-color-primary, #fff);
     font-size: 0.5625rem;
     font-weight: 700;
     text-transform: uppercase;

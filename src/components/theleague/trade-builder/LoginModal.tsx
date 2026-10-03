@@ -411,8 +411,8 @@ export default function LoginModal({ onClose, onLoginSuccess, leagueId = DEFAULT
         .lm-submit {
           appearance: none;
           border: none;
-          background: var(--color-primary, #1c497c);
-          color: #fff;
+          background: var(--color-primary-fill, var(--color-primary, #1c497c));
+          color: var(--on-color-primary, #fff);
           border-radius: var(--radius-md, 0.5rem);
           padding: 0.75rem 1.25rem;
           font-size: var(--font-size-sm);

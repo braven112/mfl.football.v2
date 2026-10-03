@@ -12,22 +12,14 @@
 html.dark {
   /* Native form controls, scrollbars follow the theme */
   color-scheme: dark;
+
+  /* League palette (surfaces, text, borders, the gray ramp, primary, accent,
+     links, header chrome, nav) is NOT declared here — each league's theme
+     owns its dark values in src/themes/<id>.json, compiled to
+     src/styles/league-themes.generated.css. See src/config/theme-tokens.mjs. */
   /* ========================================
      Colors - Dark Mode Theme
      ======================================== */
-
-  /* Brand Colors — Bright blue from hero section for maximum visibility in dark mode.
-     --league-accent (tokens.css) resolves to --color-primary, so this
-     matches the bright accent from the light mode hero. */
-  --color-primary: #3b82f6;          /* Bright blue for dark mode */
-  --color-primary-dark: #2563eb;     /* darker step (borders, hover-dark) */
-  --color-primary-light: #60a5fa;    /* brighter step (accent links, active nav) */
-
-  --color-secondary: #10b981;        /* Emerald — matches the logo green */
-  --color-secondary-dark: #2e8743;
-  --color-secondary-light: #4ade80;
-
-  --color-accent: #4ade80;           /* Green accent for dark mode (mirrors light: accent = secondary family) */
 
   /* What's New category palette — dark half of the pair in tokens.css.
      Accents lift so they read against the dark page; the pill ink flips to
@@ -45,35 +37,20 @@ html.dark {
   --wn-fresh-bg: #e2e8f0;
   --wn-fresh-ink: #0b0f16;
 
-  /* Header nav-icon strip — white icons on the dark header; hover stays
-     green via --header-nav-icon-hover-color → --color-secondary (tokens.css). */
-  --header-nav-icon-color: #ffffff;
-
   /* Logo Text Colors (Header component) */
-  --logo-name-primary-color: #10b981;    /* Green "League" text matches logo green */
   --logo-name-secondary-color: #ffffff;  /* White "The" and ".us" text */
   --logo-main-color: #ffffff;            /* White elements in logo */
-  --logo-secondary-color: #10b981;       /* Green elements in logo */
 
   /* Neutral Colors (inverted scale) */
   --color-white: #ffffff;
   --color-black: #000000;
 
-  --color-gray-50: #181818;
-  --color-gray-100: #1e1e1e;
-  --color-gray-200: #2a2a2a;
-  --color-gray-300: #3a3a3a;
-  --color-gray-400: #6b6b6b;
-  --color-gray-500: #8a8a8a;
-  --color-gray-600: #a0a0a0;
-  --color-gray-700: #c0c0c0;
-  --color-gray-800: #d8d8d8;
-  --color-gray-900: #ededed;
-
   /* Semantic Colors */
   --color-success: #34d399;
   --color-success-light: rgba(16, 185, 129, 0.15);
   --color-success-dark: #6ee7b7;
+  --color-success-fill: #34d399;               /* bright emerald under dark text (9.7:1) */
+  --on-color-success-fill: #121212;
 
   --color-warning: #fbbf24;
   --color-warning-light: rgba(245, 158, 11, 0.15);
@@ -93,31 +70,12 @@ html.dark {
   /* ========================================
      Dark Mode Surface Elevation System
      ======================================== */
-  --color-surface-1: #121212;         /* Lowest: page background */
-  --color-surface-2: #1e1e1e;         /* Mid: cards, panels */
-  --color-surface-3: #313131;         /* Highest: dropdowns, tooltips — a visible step above the #262626 card, since in dark mode lightness (not shadow) is what reads as elevation */
-  --color-border-default: #5f6885;    /* Standard borders (slate-tinted) */
-  --color-border-subtle: #2e2e2e;     /* Faint dividers */
-  --color-text-primary: #e0e0e0;      /* Body copy */
-  --color-text-secondary: #9a9a9a;    /* Labels, captions — 5.4:1 on the #262626 card, 4.7:1 on surface-3 (#8a8a8a was 4.4:1 / under AA) */
   --color-text-disabled: #5a5a5a;     /* Disabled text */
-
-  /* ========================================
-     Component Tokens - Page
-     ======================================== */
-  --page-bg: #121212;
-  --page-text: #ededed;
 
   /* ========================================
      Component Tokens - Content Areas
      ======================================== */
-  --content-bg: #1e1e1e;
-  --content-border: #5f6885;   /* slate-tinted to match the card glow */
   --content-shadow: var(--shadow-card);
-
-  --content-bg-muted: #181818;
-  --content-bg-accent: var(--color-surface-3);
-  --content-text-muted: #9a9a9a;
 
   /* Draft pick tiles: translucent washes so the card gradient shows
      through (values dialed in via DevTools). */
@@ -127,12 +85,6 @@ html.dark {
   /* ========================================
      Component Tokens - Cards
      ======================================== */
-  /* Card surface: slate glow from the top-left corner fading to #333.
-     --card-bg is a GRADIENT — only valid in `background:` shorthand.
-     Use --card-surface (solid) for color-mix / background-color. */
-  --card-bg: radial-gradient(92% 96% at 2% -6%, rgb(74 83 121 / 50%), #262626 62%);
-  --card-surface: #262626;
-  --card-border: var(--color-border-default, #5f6885);
   --card-shadow: var(--shadow-card);
 
   /* Legacy alias */
@@ -141,15 +93,8 @@ html.dark {
   /* ========================================
      Component Tokens - Links
      ======================================== */
-  --link-color: #60a5fa;
-  --link-color-hover: #2563eb;
-  --link-color-focus: #2563eb;
 
   --link-color-inverse: #e2e2e2;
-  --link-color-inverse-hover: #3b82f6;
-
-  --link-color-accent: #60a5fa;
-  --link-color-accent-hover: #3b82f6;
 
   /* Legacy aliases */
   --primary-link-default-text-color: var(--link-color);
@@ -157,8 +102,6 @@ html.dark {
   --primary-link-focus-text-color: var(--link-color-focus);
 
   --inverse-link-default-text-color: var(--link-color-inverse);
-  --inverse-link-hover-text-color: var(--link-color-inverse-hover);
-  --inverse-link-focus-text-color: var(--link-color-inverse-hover);
 
   --accent-link-default-text-color: var(--link-color-accent);
   --accent-link-hover-text-color: var(--link-color-accent-hover);
@@ -168,39 +111,16 @@ html.dark {
      Component Tokens - Buttons
      ======================================== */
 
-  /* Primary Button — bright blue bg + white text */
-  --btn-primary-bg: #2563eb;
-  --btn-primary-bg-hover: #1d4ed8;
-  --btn-primary-bg-focus: #1d4ed8;
-  --btn-primary-text: #ffffff;
-  --btn-primary-border: #1d4ed8;
-  --btn-primary-border-hover: #3b82f6;
-
-  /* Secondary Button — logo-green emerald with near-black text (white on
-     #10b981 is only ~3:1; #121212 is ~6.4:1, same treatment as the dark
-     primary button). */
-  --btn-secondary-bg: #10b981;
-  --btn-secondary-bg-hover: #34d399;
-  --btn-secondary-bg-focus: #34d399;
-  --btn-secondary-text: #121212;
-  --btn-secondary-border: #10b981;
-  --btn-secondary-border-hover: #2563eb;
-
   /* Inverse Button */
-  --btn-inverse-bg: #2a2a2a;
-  --btn-inverse-bg-hover: #3a3a3a;
-  --btn-inverse-bg-focus: #3a3a3a;
   --btn-inverse-text: #d8d8d8;
   --btn-inverse-text-hover: #ffffff;
 
   /* Icon Button */
   --btn-icon-text: #8a8a8a;
-  --btn-icon-text-focus: #60a5fa;
 
   /* Legacy aliases */
   --primary-btn-default-bg-color: var(--btn-primary-bg);
   --primary-btn-hover-bg-color: var(--btn-primary-bg-hover);
-  --primary-btn-focus-bg-color: var(--btn-primary-bg-focus);
   --primary-btn-default-text-color: var(--btn-primary-text);
   --primary-btn-hover-text-color: var(--btn-primary-text);
   --primary-btn-focus-text-color: var(--btn-primary-text);
@@ -210,17 +130,10 @@ html.dark {
 
   --secondary-btn-default-bg-color: var(--btn-secondary-bg);
   --secondary-btn-hover-bg-color: var(--btn-secondary-bg-hover);
-  --secondary-btn-focus-bg-color: var(--btn-secondary-bg-focus);
   --secondary-btn-default-text-color: var(--btn-secondary-text);
   --secondary-btn-hover-text-color: var(--btn-secondary-text);
   --secondary-btn-focus-text-color: var(--btn-secondary-text);
-  --secondary-btn-default-border-color: var(--btn-secondary-border);
-  --secondary-btn-hover-border-color: var(--btn-secondary-border-hover);
-  --secondary-btn-focus-border-color: var(--btn-secondary-border-hover);
 
-  --inverse-btn-default-bg-color: var(--btn-inverse-bg);
-  --inverse-btn-hover-bg-color: var(--btn-inverse-bg-hover);
-  --inverse-btn-focus-bg-color: var(--btn-inverse-bg-focus);
   --inverse-btn-default-text-color: var(--btn-inverse-text);
   --inverse-btn-hover-text-color: var(--btn-inverse-text-hover);
   --inverse-btn-focus-text-color: var(--btn-inverse-text-hover);
@@ -231,12 +144,7 @@ html.dark {
   /* ========================================
      Component Tokens - Tables
      ======================================== */
-  --table-header-bg: #181818;
   --table-header-text: #8a8a8a;
-  --table-row-bg: #1e1e1e;
-  --table-row-bg-alt: #232323;
-  --table-row-bg-hover: #2a2a2a;
-  --table-border: #3a3a3a;
 
   /* Legacy aliases */
   --table-header-text-color: var(--table-header-text);
@@ -246,34 +154,11 @@ html.dark {
   /* ========================================
      Component Tokens - Inverse (Dark Sections)
      ======================================== */
-  --inverse-bg: #101010;
-  --inverse-bg-accent: #2563eb;      /* bright blue accent strip */
-  --inverse-border: #1a1a1a;
   --inverse-text: #e0e0e0;
 
   /* Legacy aliases */
   --inverse-content-bg: var(--inverse-bg);
-  --inverse-accent-bg: var(--inverse-bg-accent);
-  --inverse-content-border-color: var(--inverse-border);
   --inverse-color: var(--inverse-text);
-
-  /* ========================================
-     Component Tokens - Accent Content
-     ======================================== */
-  --accent-content-bg-color: var(--color-surface-3);
-  --accent-content-border-color: #3a3a3a;
-  --accent-content-text-color: #e0e0e0;
-  --accent-content-boxshadow-color: rgba(0, 0, 0, 0.3);
-
-  /* ========================================
-     Component Tokens - Forms
-     ======================================== */
-  --input-bg: #181818;
-  --input-border: #3a3a3a;
-  --input-border-focus: #3b82f6;
-  --input-text: #e0e0e0;
-  --input-placeholder: #6b6b6b;
-  --input-disabled-bg: #151515;
 
   /* ========================================
      Component Tokens - Badges/Status
@@ -284,9 +169,6 @@ html.dark {
   --badge-warning-text: #fcd34d;
   --badge-error-bg: rgba(220, 38, 38, 0.15);
   --badge-error-text: #fca5a5;
-  --badge-info-bg: rgba(59, 130, 246, 0.15);
-  --badge-info-text: #93bbfd;
-
 
   /* Legacy status colors */
   --error-color: #f87171;
@@ -314,11 +196,8 @@ html.dark {
   --primary-page-bg: var(--page-bg);
   --primary-content-bg-color: var(--content-bg);
   --primary-content-border-color: var(--content-border);
-  --primary-content-boxshadow-color: rgba(0, 0, 0, 0.25);
   --secondary-content-bg-color: var(--content-bg);
   --secondary-content-border-color: var(--content-border);
-  --secondary-content-boxshadow-color: rgba(0, 0, 0, 0.25);
-  --content-border-color: #5f6885;
   --gallery-content-bg: var(--content-bg-muted);
 
   /* ========================================
@@ -364,8 +243,6 @@ html.dark {
   --surface-overlay: var(--color-surface-3);
 
   --shadow-card: var(--shadow-md);
-  --shadow-btn-hover: 0 10px 30px rgba(59, 130, 246, 0.3);
-  --shadow-focus-ring: 0 0 0 3px rgba(59, 130, 246, 0.4);
 
   /* Legacy shadow aliases */
   --box-shadow-sm: var(--shadow-sm);
@@ -378,45 +255,15 @@ html.dark {
      Navigation Drawer Tokens (Dark)
      ======================================== */
 
-  /* Background colors */
-  --nav-bg: #1e1e1e;
-  --nav-bg-subtle: #181818;
-
-  /* Text colors */
-  --nav-text: #d8d8d8;
-  --nav-text-muted: #8a8a8a;
-  --nav-text-subtle: #6b6b6b;
-
-  /* Border colors */
-  --nav-border: #3a3a3a;
-  --nav-border-subtle: #2e2e2e;
-
   /* Interactive states */
-  --nav-hover-bg: #2a2a2a;
   --nav-hover-text: var(--nav-text);
-
-  /* Active/selected link */
-  --nav-active-bg: rgba(37, 99, 235, 0.15);
-  --nav-active-text: #3b82f6;
-  --nav-active-border-left: #3b82f6;
-
-  /* Focus state */
-  --nav-focus-ring: 0 0 0 2px #3b82f6;
 
   /* Section styling */
   --nav-section-color: #8a8a8a;
 
   /* Footer styling */
-  --nav-footer-bg: #151515;
-  --nav-footer-border: #2a2a2a;
   --nav-footer-text: var(--nav-text);
   --nav-footer-text-muted: #6b6b6b;
-
-  /* Verify team prompt */
-  --nav-verify-bg: rgba(37, 99, 235, 0.08);
-  --nav-verify-border: #2563eb;
-  --nav-verify-text: #2563eb;
-  --nav-verify-hover-bg: rgba(37, 99, 235, 0.15);
 
   /* Overlay */
   --nav-overlay-bg: rgba(0, 0, 0, 0.7);
@@ -426,415 +273,13 @@ html.dark {
   --nav-badge-text: #ffffff;
 
   /* League switcher */
-  --nav-switcher-bg: #181818;
-  --nav-switcher-border: #3a3a3a;
-  --nav-switcher-active-bg: #2563eb;
-  --nav-switcher-active-text: #ffffff;
   --nav-switcher-inactive-text: #6b6b6b;
 
   /* Tooltip */
-  --nav-tooltip-bg: var(--color-surface-3);
   --nav-tooltip-text: #e0e0e0;
   --nav-tooltip-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 
   /* Shadows */
   --nav-shadow: -4px 0 24px rgba(0, 0, 0, 0.5);
   --nav-shadow-sm: -2px 0 8px rgba(0, 0, 0, 0.3);
-
-  /* Scrollbar */
-  --nav-scrollbar-thumb: #3a3a3a;
-  --nav-scrollbar-thumb-hover: #5a5a5a;
-
-  /* Breadcrumb "Back to MFL" strip — deep-blue glow rising from the accent
-     edge, fading to a translucent tint (not fully transparent) toward the
-     top so it blends into the near-black page instead of cutting off in a
-     visible seam. GRADIENT: only valid in `background:` shorthand. Without
-     this pin it would fall back to --color-primary (bright blue bar glaring
-     against #121212). Also feeds the dark-mode footer bg (Footer.astro) —
-     AFL re-asserts navy below (this html.dark rule loads after the light
-     AFL block and would otherwise win the cascade). */
-  --breadcrumb-bar-bg: linear-gradient(0deg, #122e5b 10%, #122e5bad 80%);
-  /* Brand accent edge under the near-black strip. */
-  --breadcrumb-bar-border: var(--color-primary, #3b82f6);
-}
-
-/* ========================================
-   AFL Fantasy — dark-mode per-league overrides
-   AFL's dark mode is NAVY-based, not neutral-gray: the whole surface
-   elevation ramp derives from --afl-navy #0f1e2e (page bg), stepping
-   lighter for cards → elevated surfaces, with blue-tinted borders and
-   text grays so everything stays in the navy family. Red identity is
-   preserved via the brightened accent #ef5350 (5.4:1 on the navy page).
-   --afl-trophy-gold* are left untouched (they match the award SVG art). */
-html.dark:is([data-league="afl"], [data-league="keeper"]) {
-  --league-accent: #ef5350;                            /* AFL accent — brightened red for dark */
-  --afl-gold-text: var(--afl-trophy-gold, #c9a44c);    /* gold as foreground: the light amber muddies on navy, so text gold becomes the metallic badge gold here (6.3:1 on --card-bg) */
-
-  /* Headings + plain anchors: the layout colors h1–h4 and bare <a> via
-     --primary-link-default-text-color → --link-color, which html.dark
-     pins to TheLeague blue #60a5fa. AFL dark goes white with a red
-     hover so red stays the accent, not the body voice.
-     NOTE: --color-primary is deliberately NOT remapped here — it feeds
-     FILLS (nav active pill, buttons, focus rings) where a white value
-     produces white-on-white. Blue fills are acceptable shared chrome. */
-  --link-color: #e8eef4;
-  --link-color-hover: #ef5350;
-  --link-color-focus: #ef5350;
-  --link-color-accent: #ef5350;
-  --link-color-accent-hover: #ff8a80;
-  --header-nav-icon-color: #ffffff;                    /* resting nav icons — white (navy would vanish on dark) */
-  --header-nav-icon-hover-color: var(--league-accent); /* nav icons hover — red */
-  --header-nav-label-color: var(--league-accent);      /* nav labels — red */
-  --header-nav-label-hover-color: var(--league-accent);/* nav labels hover — red */
-  --logo-name-primary-color: #ffffff;                  /* "AFL" wordmark — white (html.dark's green is TheLeague's logo green) */
-
-  /* ── Navy surface elevation ramp (from --afl-navy #0f1e2e) ── */
-  --page-bg: var(--afl-navy, #0f1e2e);                 /* page floor = brand navy */
-  --color-surface-1: var(--afl-navy, #0f1e2e);
-  --content-bg: #16283c;                               /* cards / panels — one step up */
-  --card-bg: #16283c;
-  --card-surface: #16283c;
-  --color-surface-2: #16283c;
-  --nav-bg: #16283c;
-  --table-row-bg: #16283c;
-  --content-bg-muted: #122132;                         /* recessed */
-  --table-header-bg: #122132;
-  --input-bg: #122132;
-  --nav-bg-subtle: #122132;
-  --nav-switcher-bg: #122132;
-  --table-row-bg-alt: #182b40;
-  --color-surface-3: #1d3349;                          /* elevated: dropdowns, tooltips, hover */
-  --table-row-bg-hover: #1d3349;
-  --nav-hover-bg: #1d3349;
-  --content-bg-accent: #1d3349;
-  --accent-content-bg-color: #1d3349;
-  --nav-tooltip-bg: #1d3349;
-  --btn-inverse-bg: #1d3349;
-  --btn-inverse-bg-hover: #27405c;
-  --btn-inverse-bg-focus: #27405c;
-  --inverse-bg: #0a1622;                               /* footer — deepest navy */
-  --inverse-border: #16283c;
-  --nav-footer-bg: #0d1a28;
-  --input-disabled-bg: #0d1a28;
-
-  /* ── Borders (blue-tinted, visible against the navy ramp) ── */
-  --content-border: #2e4560;
-  --card-border: #2e4560;
-  --table-border: #2e4560;
-  --color-border-default: #2e4560;
-  --content-border-color: #2e4560;
-  --input-border: #2e4560;
-  --nav-border: #2e4560;
-  --nav-switcher-border: #2e4560;
-  --nav-footer-border: #24374d;
-  --color-border-subtle: #24374d;
-  --nav-border-subtle: #24374d;
-  --accent-content-border-color: #2e4560;
-
-  /* ── Inverted gray scale, navy-tinted ──
-     50–300 are surfaces/borders in dark; 400+ are text grays. */
-  --color-gray-50: #122132;
-  --color-gray-100: #16283c;
-  --color-gray-200: #1d3349;
-  --color-gray-300: #2e4560;
-  --color-gray-400: #64788c;
-  --color-gray-500: #8fa0b3;
-  --color-gray-600: #9dadbe;
-  --color-gray-700: #b9c5d2;
-  --color-gray-800: #d3dce5;
-  --color-gray-900: #e8eef4;
-
-  /* ── Text ── */
-  --page-text: #e8eef4;
-  --color-text-primary: #dbe4ec;
-  --color-text-secondary: #8fa0b3;
-  --content-text-muted: #8fa0b3;
-  --input-placeholder: #64788c;
-  --input-text: #dbe4ec;
-  --nav-text: #d3dce5;
-  --nav-text-muted: #8fa0b3;
-  --nav-text-subtle: #64788c;
-  --nav-scrollbar-thumb: #2e4560;
-  --nav-scrollbar-thumb-hover: #3d587a;
-
-  /* ── Breadcrumb strip — deeper than the navy page so it still reads
-     as its own band, with the red accent edge. ── */
-  --breadcrumb-bar-bg: #0a1622;
-  --breadcrumb-bar-border: var(--league-accent, #ef5350);
-}
-
-/* ========================================
-   MFL Live — dark-mode overrides for the shared-host app
-   The AFL's dark block with the navy family swapped for a NEUTRAL near-black
-   ramp: same structure, same step count, same reasoning — see the AFL block
-   above for why each group exists. Page floor is the brand --mfl-ink, cards
-   step lighter, borders are neutral-gray rather than blue-tinted, and the red
-   identity survives as the brightened #ef5350.
-
-   Complete on purpose, and it must stay that way: a token declared in
-   tokens.css's html[data-league="mfl"] block but omitted here falls back to
-   TheLeague's default dark value, which is a light-on-blue palette this
-   surface never intends.
-   ======================================== */
-html.dark[data-league="mfl"] {
-  --league-accent: #ef5350;                            /* accent — brightened red for dark (7.3:1 on the page floor) */
-  --afl-gold-text: var(--afl-trophy-gold, #c9a44c);    /* gold as foreground: the light amber muddies on near-black, so text gold becomes the metallic badge gold */
-
-  /* Headings + plain anchors go white with a red hover, so red stays the
-     accent rather than the body voice — same call the AFL block makes, and
-     for the same reason. --color-primary is deliberately NOT remapped: it
-     feeds FILLS (nav active pill, buttons, focus rings) where a white value
-     produces white-on-white. */
-  --link-color: #eef0f2;
-  --link-color-hover: #ef5350;
-  --link-color-focus: #ef5350;
-  --link-color-accent: #ef5350;
-  --link-color-accent-hover: #ff8a80;
-  --header-nav-icon-color: #ffffff;                    /* resting nav icons — white (near-black would vanish) */
-  --header-nav-icon-hover-color: var(--league-accent);
-  --header-nav-label-color: var(--league-accent);
-  --header-nav-label-hover-color: var(--league-accent);
-  --logo-name-primary-color: #ffffff;                  /* wordmark — white (html.dark's green is TheLeague's logo green) */
-
-  /* ── Neutral surface elevation ramp (from --mfl-ink #14161a) ── */
-  --page-bg: var(--mfl-ink, #14161a);                  /* page floor = brand near-black */
-  --color-surface-1: var(--mfl-ink, #14161a);
-  --content-bg: #1e2126;                               /* cards / panels — one step up */
-  --card-bg: #1e2126;
-  --card-surface: #1e2126;
-  --color-surface-2: #1e2126;
-  --nav-bg: #1e2126;
-  --table-row-bg: #1e2126;
-  --content-bg-muted: #17191e;                         /* recessed */
-  --table-header-bg: #17191e;
-  --input-bg: #17191e;
-  --nav-bg-subtle: #17191e;
-  --nav-switcher-bg: #17191e;
-  --table-row-bg-alt: #212429;
-  --color-surface-3: #282c33;                          /* elevated: dropdowns, tooltips, hover */
-  --table-row-bg-hover: #282c33;
-  --nav-hover-bg: #282c33;
-  --content-bg-accent: #282c33;
-  --accent-content-bg-color: #282c33;
-  --nav-tooltip-bg: #282c33;
-  --btn-inverse-bg: #282c33;
-  --btn-inverse-bg-hover: #333840;
-  --btn-inverse-bg-focus: #333840;
-  --inverse-bg: var(--mfl-ink-deep, #0b0c0f);          /* footer — deepest */
-  --inverse-border: #1e2126;
-  --nav-footer-bg: #0f1114;
-  --input-disabled-bg: #0f1114;
-
-  /* ── Borders (neutral, visible against the black ramp) ── */
-  --content-border: #3a3f47;
-  --card-border: #3a3f47;
-  --table-border: #3a3f47;
-  --color-border-default: #3a3f47;
-  --content-border-color: #3a3f47;
-  --input-border: #3a3f47;
-  --nav-border: #3a3f47;
-  --nav-switcher-border: #3a3f47;
-  --nav-footer-border: #2d323a;
-  --color-border-subtle: #2d323a;
-  --nav-border-subtle: #2d323a;
-  --accent-content-border-color: #3a3f47;
-
-  /* ── Inverted gray scale, neutral ──
-     50–300 are surfaces/borders in dark; 400+ are text grays. */
-  --color-gray-50: #17191e;
-  --color-gray-100: #1e2126;
-  --color-gray-200: #282c33;
-  --color-gray-300: #3a3f47;
-  --color-gray-400: #767b85;
-  --color-gray-500: #9aa0a9;
-  --color-gray-600: #a8aeb6;
-  --color-gray-700: #c2c7cd;
-  --color-gray-800: #dadde1;
-  --color-gray-900: #eef0f2;
-
-  /* ── Text ── */
-  --page-text: #eef0f2;
-  --color-text-primary: #e2e5e9;
-  --color-text-secondary: #9aa0a9;
-  --content-text-muted: #9aa0a9;
-  --input-placeholder: #767b85;
-  --input-text: #e2e5e9;
-  --nav-text: #dadde1;
-  --nav-text-muted: #9aa0a9;
-  --nav-text-subtle: #767b85;
-  --nav-scrollbar-thumb: #3a3f47;
-  --nav-scrollbar-thumb-hover: #4b515b;
-
-  /* ── Top strip — deeper than the page so it still reads as its own band,
-     with the red accent edge. ── */
-  --breadcrumb-bar-bg: var(--mfl-ink-deep, #0b0c0f);
-  --breadcrumb-bar-border: var(--league-accent, #ef5350);
-
-  /* ── Primary = red, restated as literals ──
-     The light block re-points ONE variable and the component tokens follow,
-     because bare :root declares them as var(--color-primary). html.dark does
-     NOT: it hardcodes #2563eb / #3b82f6 / rgba(59,130,246,…) into each one.
-     So every fill, ring and active state has to be named here or the black
-     board ships bright-blue buttons in dark mode.
-
-     TWO reds, because one cannot do both jobs on this ramp:
-
-       FILL  #d81b41 — white text 5.06:1 (AA) AND 3.19:1 against the #1e2126
-             card, so the button reads as a button. The obvious choice, the
-             light theme's #c41e3a, is only 2.76:1 against that card and
-             sinks into it.
-       TEXT  #ef5350 — the --league-accent above, 4.63:1 on the card. As a
-             FILL it carries white at just 3.49:1 and fails AA, which is
-             exactly why it is not the button. */
-  --color-primary: #d81b41;
-  --color-primary-dark: #c41e3a;
-  --color-primary-light: #ef5350;              /* accent links / brighter step */
-
-  --btn-primary-bg: #d81b41;
-  --btn-primary-bg-hover: #e02a4d;             /* brighter on hover, as the rest of this ramp does */
-  --btn-primary-bg-focus: #e02a4d;
-  --btn-primary-border: #d81b41;
-  --btn-primary-border-hover: #ef5350;
-
-  --input-border-focus: #ef5350;
-  --shadow-focus-ring: 0 0 0 3px rgba(239, 83, 80, 0.4);
-  --shadow-btn-hover: 0 10px 30px rgba(216, 27, 65, 0.3);
-  --btn-icon-text-focus: #ef5350;
-
-  --nav-active-bg: rgba(216, 27, 65, 0.15);
-  --nav-active-text: #ef5350;
-  --nav-active-border-left: #ef5350;
-  --nav-focus-ring: 0 0 0 2px #ef5350;
-  --nav-verify-border: #d81b41;
-  --nav-verify-text: #ef5350;                  /* TEXT, so the text red — not the fill */
-  --nav-switcher-active-bg: #d81b41;           /* FILL behind white, so the fill red */
-  --inverse-bg-accent: #d81b41;
-
-  /* --color-info and the info badge/alert stay BLUE on purpose: they are the
-     semantic "information" colour, not the brand, and turning them red would
-     collide with --color-error. */
-}
-
-/* ========================================
-   Best Ball League #1 — dark-mode per-league overrides
-   Unlike AFL, bb1 keeps the neutral dark surface ramp and only swaps the
-   accent voice to emerald — the draft-only league doesn't carry enough
-   chrome to justify its own elevation ramp.
-   ======================================== */
-html.dark[data-league="bb1"] {
-  --league-accent: #34d399;                            /* emerald brightened for dark */
-  /* ── Breadcrumb strip + footer. REQUIRED: the generic html.dark block sets
-     --breadcrumb-bar-bg to TheLeague's blue gradient and loads after the
-     light per-league block, so without re-asserting it here best-ball's dark
-     breadcrumb bar and footer both render TheLeague blue. AFL re-asserts its
-     navy the same way. ── */
-  --breadcrumb-bar-bg: #0a3326;                        /* deeper than the light --bb-green */
-  --breadcrumb-bar-border: var(--league-accent, #34d399);
-  --logo-name-primary-color: #ffffff;                  /* "Best Ball" wordmark — white (html.dark's green is TheLeague's logo green) */
-  --link-color-accent: #34d399;
-  --link-color-accent-hover: #6ee7b7;
-  --header-nav-icon-color: #ffffff;                    /* resting nav icons — white */
-  --header-nav-icon-hover-color: var(--league-accent);
-  --header-nav-label-color: var(--league-accent);
-  --header-nav-label-hover-color: var(--league-accent);
-}
-
-/* ========================================
-   Archie's — dark-mode per-league overrides
-   Same two layers as the light block in tokens.css: the palette holds the
-   only colour values, every semantic token is a var() of it. Keeps the
-   neutral dark surface ramp (like Best Ball); the chrome is black and the
-   wordmark's sky blue is the one accent — no navy, no dark blue.
-   Every semantic token is RE-ASSERTED here even where the light block sets
-   the same var(): the generic html.dark block loads after the light
-   per-league block and pins TheLeague's dark blues and greens, so anything
-   not repeated here renders TheLeague on an Archie's page.
-   On dark the sky blue IS the brand voice for text too:
-     --league-palette-accent      on the card #262626   6.1:1   (AA text)
-     --league-palette-accent-soft on the card #262626   8.4:1   (hover text)
-     --league-palette-on-accent   on the accent fill    8.4:1   (button text)
-   White on the accent is 2.5:1, so a fill never carries white text.
-   ======================================== */
-html.dark[data-league="archies"] {
-  /* ── 1. Palette ── */
-  --league-palette-accent: #44aaff;
-  --league-palette-accent-soft: #77ccff;       /* hover step, for text and fills */
-  --league-palette-on-accent: #000000;
-  --league-palette-ink: #000000;               /* breadcrumb strip, footer, hero card */
-  --league-palette-text-muted: #9a9a9a;        /* secondary text: 4.9:1 even on an accent-tinted card */
-  --league-palette-line: #4a4a4a;              /* card + content borders: neutral, not html.dark's slate */
-
-  /* ── 2. Semantic tokens → palette ── */
-  --color-primary: var(--league-palette-accent);
-  --color-primary-dark: var(--league-palette-accent);
-  --color-primary-light: var(--league-palette-accent-soft);
-  --color-secondary: var(--league-palette-accent-soft);
-  --color-secondary-dark: var(--league-palette-accent);
-  --color-secondary-light: var(--league-palette-accent-soft);
-  --color-accent: var(--league-palette-accent);
-  --league-accent: var(--league-palette-accent);
-  --league-accent-fg: var(--league-palette-accent);        /* on dark the accent IS readable text */
-  --on-league-accent: var(--league-palette-on-accent);
-  --on-color-primary: var(--league-palette-on-accent);     /* --color-primary is the accent here */
-  --content-text-muted: var(--league-palette-text-muted);
-  --league-phase-regular-season: var(--league-palette-accent);   /* black would vanish on a dark card */
-  --on-league-phase-regular-season: var(--league-palette-on-accent);
-  --league-mini-hero-surface: var(--league-palette-ink);         /* html.dark's What's Next card is navy #0f1e2e */
-  --league-selected-fill: color-mix(in srgb, var(--page-text) 9%, var(--content-bg));   /* a selected tab: a sky tint over a dark card reads navy */
-  --color-gray-400: var(--color-gray-500);                 /* html.dark's #6b6b6b is 3.3:1 as table-head text */
-
-  --btn-primary-bg: var(--league-palette-accent);
-  --btn-primary-bg-hover: var(--league-palette-accent-soft);
-  --btn-primary-bg-focus: var(--league-palette-accent-soft);
-  --btn-primary-text: var(--league-palette-on-accent);
-  --btn-primary-border: var(--league-palette-accent);
-  --btn-primary-border-hover: var(--league-palette-accent-soft);
-  --btn-secondary-bg: var(--league-palette-accent-soft);   /* not TheLeague's emerald */
-  --btn-secondary-bg-hover: var(--league-palette-accent);
-  --btn-secondary-bg-focus: var(--league-palette-accent);
-  --btn-secondary-text: var(--league-palette-on-accent);
-  --btn-secondary-border: var(--league-palette-accent-soft);
-  --btn-secondary-border-hover: var(--league-palette-accent);
-  --btn-icon-text-focus: var(--league-palette-accent);
-
-  --link-color: var(--league-palette-accent);
-  --link-color-hover: var(--league-palette-accent-soft);   /* TheLeague's #2563eb is dark blue on a dark card */
-  --link-color-focus: var(--league-palette-accent-soft);
-  --link-color-accent: var(--league-palette-accent);
-  --link-color-accent-hover: var(--league-palette-accent-soft);
-  --link-color-inverse-hover: var(--league-palette-accent);
-
-  --breadcrumb-bar-bg: var(--league-palette-ink);
-  --breadcrumb-bar-border: var(--league-palette-accent);
-  --inverse-bg: var(--league-palette-ink);
-
-  /* html.dark's cards glow slate-blue from the top-left and wear slate
-     borders; here the glow is the neutral text colour and the lines grey. */
-  --card-bg: radial-gradient(92% 96% at 2% -6%, color-mix(in srgb, var(--page-text) 13%, transparent), var(--card-surface) 62%);
-  --color-border-default: var(--league-palette-line);
-  --content-border: var(--league-palette-line);
-  --content-border-color: var(--league-palette-line);
-  --inverse-bg-accent: var(--league-palette-accent);
-
-  --shadow-focus-ring: 0 0 0 3px color-mix(in srgb, var(--league-palette-accent) 40%, transparent);
-  --shadow-btn-hover: 0 10px 30px color-mix(in srgb, var(--league-palette-accent) 30%, transparent);
-  --input-border-focus: var(--league-palette-accent);
-
-  --logo-name-primary-color: var(--league-palette-accent);  /* html.dark's is TheLeague's logo green */
-  --logo-secondary-color: var(--league-palette-accent);
-
-  --header-nav-icon-color: #ffffff;            /* resting nav icons: white on the dark header, not a brand colour */
-  --header-nav-icon-hover-color: var(--league-palette-accent);
-  --header-nav-label-color: var(--league-palette-accent);
-  --header-nav-label-hover-color: var(--league-palette-accent-soft);
-  --nav-active-bg: color-mix(in srgb, var(--page-text) 9%, transparent);   /* a blue tint over black reads navy */
-  --nav-active-text: var(--league-palette-accent);
-  --nav-active-border-left: var(--league-palette-accent);
-  --nav-focus-ring: 0 0 0 2px var(--league-palette-accent);
-  --nav-verify-bg: color-mix(in srgb, var(--league-palette-accent) 8%, transparent);
-  --nav-verify-hover-bg: color-mix(in srgb, var(--league-palette-accent) 15%, transparent);
-  --nav-verify-border: var(--league-palette-accent);
-  --nav-verify-text: var(--league-palette-accent);
-  --nav-switcher-active-bg: var(--league-palette-accent);
-  --nav-switcher-active-text: var(--league-palette-on-accent);
 }

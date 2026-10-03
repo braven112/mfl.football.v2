@@ -50,8 +50,8 @@ import type {
 /**
  * Which card a colour is judged against — a SURFACE name, not a pair of hexes.
  *
- * `live/surface.ts` turns it into `--card-bg` in each theme, from `tokens.css`
- * / `tokens-dark.css` under `[data-league="mfl"]`, and
+ * `live/surface.ts` turns it into `--card-bg` in each theme, from the theme
+ * files in src/themes/ (`mfl-live.json` for MFL Live), and
  * `tests/live-surface-grounds.test.ts` pins that lookup against the real
  * stylesheets, which two literals here could never be.
  *

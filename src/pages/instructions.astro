@@ -289,7 +289,7 @@ const iconIds = [...fs.readFileSync(spritePath, 'utf-8').matchAll(/<symbol id="(
 		border: 0;
 		border-radius: 0.4rem;
 		background: var(--league-accent);
-		color: #ffffff;
+		color: var(--on-league-accent, #ffffff);
 		font-weight: 600;
 		cursor: pointer;
 	}
