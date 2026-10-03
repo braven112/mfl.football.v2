@@ -316,8 +316,12 @@ export interface LeagueDefinition {
   /** Short display name for tight spaces (the site header). */
   shortName?: string;
   /** The league's mark for the shared header and layout, per theme. */
-  /** The league's mark (light and dark cuts). Every registry league sets it. */
-  logo?: { light: string; dark: string };
+  /**
+   * The league's mark. BOTH cuts are always set, even when they are the same
+   * file (Archie's): whether the dark cut differs is a per-league choice made
+   * here, never a missing field a component has to guess around.
+   */
+  logo: { light: string; dark: string };
   /** Optional wordmark shown beside `logo` instead of the text short name. */
   wordmark?: string;
   /** Browser chrome `theme-color` for a package league. */
