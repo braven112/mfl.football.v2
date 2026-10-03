@@ -16,8 +16,12 @@ export const LEAGUES = {
     id: '13522',
     /** Canonical slug: path segment under src/pages/ and in URLs */
     slug: 'theleague',
-    /** Short slug used by nav config / styles (LeagueSlug type) */
-    navSlug: 'theleague',
+    /**
+     * Short slug used by nav config / styles. Every entry's navSlug carries a
+     * JSDoc `const` cast so TypeScript reads the literal: `LeagueSlug`
+     * (src/types/nav.ts) is DERIVED from these, so a new league needs no type edit.
+     */
+    navSlug: /** @type {const} */ ('theleague'),
     /**
      * Color theme — a file in src/themes/. Any league may name any theme;
      * a theme is complete on its own and never inherits from another.
@@ -258,7 +262,7 @@ export const LEAGUES = {
   'afl-fantasy': {
     id: '19621',
     slug: 'afl-fantasy',
-    navSlug: 'afl',
+    navSlug: /** @type {const} */ ('afl'),
     theme: 'afl',
     archetype: 'deluxe-keeper',
     adminFranchiseIds: ['0001'],
@@ -485,7 +489,7 @@ export const LEAGUES = {
   'best-ball-1': {
     id: '37610',
     slug: 'best-ball-1',
-    navSlug: 'bb1',
+    navSlug: /** @type {const} */ ('bb1'),
     theme: 'bb1',
     archetype: 'best-ball',
     adminFranchiseIds: ['0001', '0000'],
@@ -618,7 +622,7 @@ export const LEAGUES = {
   archies: {
     id: '10105',
     slug: 'archies',
-    navSlug: 'archies',
+    navSlug: /** @type {const} */ ('archies'),
     theme: 'archies',
     archetype: 'contest',
     adminFranchiseIds: [],
@@ -796,7 +800,7 @@ if (isDemoEnv()) {
   LEAGUES.keeper = {
     id: '99002',
     slug: 'keeper',
-    navSlug: 'keeper',
+    navSlug: /** @type {const} */ ('keeper'),
     /** Wears the AFL's theme — reuse by naming it, not by sharing a selector. */
     theme: 'afl',
     archetype: 'deluxe-keeper',
