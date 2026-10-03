@@ -45,51 +45,31 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { ALL_LEAGUES, LEAGUES } from '../src/config/leagues-data.mjs';
-import { ARCHETYPES, ARCHETYPE_KEYS } from '../src/config/league-archetypes.mjs';
-import { FEATURE_KEYS, featureDependencyErrors } from '../src/config/league-feature-catalog.mjs';
+import { LEAGUES } from '../src/config/leagues-data.mjs';
+import { ARCHETYPES } from '../src/config/league-archetypes.mjs';
+import { FEATURE_KEYS } from '../src/config/league-feature-catalog.mjs';
 import { PACKAGE_ROUTES, packageRouteForPath, packageRoutesFor } from '../src/config/package-league-routes.mjs';
+import { specErrors as baseSpecErrors } from '../src/config/launch-spec.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const TEMPLATE = 'archies';
 const TEMPLATE_DIR = path.join(ROOT, 'src/pages', TEMPLATE);
 export const PLACEHOLDER_LOGO = '/assets/logos/league-placeholder.svg';
 
-const SLUG_RE = /^[a-z][a-z0-9]{1,23}$/;
-const SAFE_TEXT_RE = /^[^"`\\<>{}$]+$/;
 
 // ── Spec ─────────────────────────────────────────────────────────────────────
 
-/** Every problem with a spec, as readable strings. Empty = valid. */
+/**
+ * Every problem with a spec: the shared checks (src/config/launch-spec.mjs,
+ * the same ones the Launcher page runs) plus this checkout's filesystem.
+ */
 export function specErrors(spec) {
-  const errors = [];
-  if (!spec || typeof spec !== 'object') return ['spec must be a JSON object'];
-  if (!/^\d{3,6}$/.test(String(spec.mflId ?? ''))) errors.push('mflId must be a 3–6 digit MFL league id');
-  if (!SLUG_RE.test(String(spec.slug ?? ''))) {
-    errors.push('slug must be 2–24 lowercase letters/digits, starting with a letter (it is also the nav slug)');
-  }
-  for (const key of ['name', 'shortName']) {
-    if (key === 'shortName' && spec.shortName === undefined) continue;
-    if (typeof spec[key] !== 'string' || !spec[key].trim() || !SAFE_TEXT_RE.test(spec[key])) {
-      errors.push(`${key} must be plain text (no quotes, backticks, braces or angle brackets)`);
-    }
-  }
-  if (!/^www\d+\.myfantasyleague\.com$/.test(String(spec.mflHost ?? ''))) {
-    errors.push('mflHost must be the league\'s MFL server, e.g. wwwNN.myfantasyleague.com');
-  }
-  if (!ARCHETYPE_KEYS.includes(spec.archetype)) errors.push(`archetype must be one of ${ARCHETYPE_KEYS.join(', ')}`);
-  const features = spec.features ?? {};
-  const keys = Object.keys(features).sort();
-  if (keys.join() !== [...FEATURE_KEYS].sort().join()) errors.push(`features must set exactly: ${FEATURE_KEYS.join(', ')}`);
-  for (const [k, v] of Object.entries(features)) if (typeof v !== 'boolean') errors.push(`features.${k} must be true/false`);
-  errors.push(...featureDependencyErrors(features));
-  for (const id of spec.adminFranchiseIds ?? []) if (!/^\d{4}$/.test(id)) errors.push(`admin franchise id ${id} is not 4 digits`);
+  const errors = baseSpecErrors(spec);
+  if (errors.length) return errors;
   if (spec.theme !== undefined && !fs.existsSync(path.join(ROOT, 'src/themes', `${spec.theme}.json`))) {
     errors.push(`theme ${spec.theme} has no src/themes/${spec.theme}.json`);
   }
-  const clash = ALL_LEAGUES.find((l) => l.slug === spec.slug || l.navSlug === spec.slug || l.id === String(spec.mflId));
-  if (clash) errors.push(`league ${clash.slug} already uses that slug or MFL id`);
-  if (spec.slug && fs.existsSync(path.join(ROOT, 'src/pages', spec.slug))) errors.push(`src/pages/${spec.slug} already exists`);
+  if (fs.existsSync(path.join(ROOT, 'src/pages', spec.slug))) errors.push(`src/pages/${spec.slug} already exists`);
   return errors;
 }
 

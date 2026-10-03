@@ -1,0 +1,356 @@
+---
+/**
+ * League Launcher — paste an MFL league id, review the pre-ticked feature
+ * checkboxes (MFL settings → Claude's review → the league-type preset), change
+ * anything, then Launch: the site dispatches a workflow that generates the
+ * league on a `launch/<slug>` branch, and this page links the PR to staging.
+ *
+ * Catalog and presets are handed to the script as data, so re-picking the
+ * league type re-presets the boxes in the browser exactly as the server would.
+ * The route owns the gate (a component cannot redirect — CLAUDE.md).
+ */
+import { FEATURE_CATALOG, FEATURE_GROUPS } from '../../../config/league-feature-catalog.mjs';
+import { ARCHETYPES, ARCHETYPE_KEYS } from '../../../config/league-archetypes.mjs';
+
+const catalog = FEATURE_CATALOG.map(({ key, label, description, group, requires }) => ({ key, label, description, group, requires }));
+const archetypes = ARCHETYPE_KEYS.map((k) => ({ key: k, label: ARCHETYPES[k].label, features: ARCHETYPES[k].features }));
+const groups = Object.entries(FEATURE_GROUPS).map(([id, label]) => ({
+  id,
+  label,
+  features: catalog.filter((f) => f.group === id),
+}));
+---
+
+<section class="launcher" data-league-launcher data-league="theleague">
+  <script type="application/json" data-launcher-data set:html={JSON.stringify({ catalog, archetypes }).replace(/</g, '\\u003c')} />
+
+  <header class="launcher__head">
+    <h1>League Launcher</h1>
+    <p>
+      Enter an MFL league id. The boxes are pre-ticked from the league's MFL settings, then reviewed by Claude; change
+      anything before you launch. Launching builds the league on its own branch, so nothing goes live until you merge
+      the PR.
+    </p>
+  </header>
+
+  <form class="launcher__find" data-launcher-find>
+    <label>
+      <span>MFL league id</span>
+      <input name="mflId" inputmode="numeric" pattern="[0-9]{3,6}" required placeholder="12345" autocomplete="off" />
+    </label>
+    <button type="submit" class="cta cta--primary">Analyze</button>
+  </form>
+  <p class="launcher__status" data-launcher-status role="status" aria-live="polite"></p>
+
+  <form class="launcher__review" data-launcher-review hidden>
+    <fieldset class="launcher__card">
+      <legend>League</legend>
+      <label><span>Name</span><input name="name" required maxlength="80" /></label>
+      <label><span>Short name <em>(optional)</em></span><input name="shortName" maxlength="80" /></label>
+      <label>
+        <span>Slug <em>(its path: mfl.football/&lt;slug&gt;)</em></span>
+        <input name="slug" required pattern="[a-z][a-z0-9]{1,23}" maxlength="24" />
+      </label>
+      <p class="launcher__facts" data-launcher-facts></p>
+    </fieldset>
+
+    <fieldset class="launcher__card">
+      <legend>League type</legend>
+      <select name="archetype" data-launcher-archetype>
+        {archetypes.map((a) => <option value={a.key}>{a.label}</option>)}
+      </select>
+      <p class="launcher__reason" data-launcher-archetype-reason></p>
+      <p class="launcher__notes" data-launcher-notes hidden></p>
+    </fieldset>
+
+    {
+      groups.map((g) => (
+        <fieldset class="launcher__card">
+          <legend>{g.label}</legend>
+          {g.features.map((f) => (
+            <label class="launcher__feature">
+              <input type="checkbox" name={`f:${f.key}`} data-feature={f.key} />
+              <span class="launcher__feature-text">
+                <strong>{f.label}</strong>
+                <span class="launcher__desc">{f.description}</span>
+                <span class="launcher__why" data-why={f.key}></span>
+              </span>
+            </label>
+          ))}
+        </fieldset>
+      ))
+    }
+
+    <div class="launcher__actions">
+      <button type="submit" class="cta cta--primary" data-launcher-go>Launch</button>
+      <p class="launcher__result" data-launcher-result role="status" aria-live="polite"></p>
+    </div>
+  </form>
+</section>
+
+<script>
+  type Choice = { on: boolean; reason: string; source: string };
+  type Draft = {
+    mflId: string; name: string; shortName?: string; slug: string; mflHost: string | null;
+    teamCount: number; divisionCount: number; duplicatePlayers: boolean;
+    archetype: string; archetypeReason: string; features: Record<string, Choice>;
+    notes?: string; reviewSkipped?: string;
+  };
+  type Data = {
+    catalog: Array<{ key: string; label: string; requires: string[] }>;
+    archetypes: Array<{ key: string; label: string; features: Record<string, boolean> }>;
+  };
+
+  const SOURCE_LABEL: Record<string, string> = {
+    'mfl-setting': 'MFL setting',
+    ai: 'Claude',
+    preset: 'League type',
+    dependency: 'Needs another box',
+    you: 'You',
+  };
+
+  function initLeagueLauncher() {
+    // Gate on a node the router swaps, naming its league (CLAUDE.md).
+    const root = document.querySelector<HTMLElement>('[data-league-launcher][data-league="theleague"]');
+    if (!root || root.dataset.bound === '1') return;
+    root.dataset.bound = '1';
+
+    const data = JSON.parse(root.querySelector('[data-launcher-data]')?.textContent || '{}') as Data;
+    const find = root.querySelector<HTMLFormElement>('[data-launcher-find]')!;
+    const review = root.querySelector<HTMLFormElement>('[data-launcher-review]')!;
+    const status = root.querySelector<HTMLElement>('[data-launcher-status]')!;
+    const result = root.querySelector<HTMLElement>('[data-launcher-result]')!;
+    const archetypeSel = root.querySelector<HTMLSelectElement>('[data-launcher-archetype]')!;
+    const box = (key: string) => review.querySelector<HTMLInputElement>(`[data-feature="${key}"]`)!;
+    const why = (key: string) => review.querySelector<HTMLElement>(`[data-why="${key}"]`)!;
+    let draft: Draft | null = null;
+    const choices: Record<string, Choice> = {};
+
+    const say = (el: HTMLElement, msg: string, kind = 'muted') => {
+      el.textContent = msg;
+      el.dataset.kind = kind;
+    };
+
+    /** Prerequisites gate their dependents: a box whose prerequisite is off is off and disabled. */
+    function settle() {
+      for (const f of data.catalog) {
+        const missing = f.requires.find((r) => !box(r).checked);
+        const input = box(f.key);
+        input.disabled = Boolean(missing);
+        if (missing && input.checked) {
+          input.checked = false;
+          const label = data.catalog.find((c) => c.key === missing)?.label ?? missing;
+          choices[f.key] = { on: false, reason: `Needs ${label}, which is off.`, source: 'dependency' };
+        }
+        const c = choices[f.key];
+        why(f.key).textContent = c ? `${SOURCE_LABEL[c.source] ?? c.source}: ${c.reason}` : '';
+        why(f.key).dataset.source = c?.source ?? '';
+      }
+    }
+
+    function paint(d: Draft) {
+      (review.elements.namedItem('name') as HTMLInputElement).value = d.name;
+      (review.elements.namedItem('shortName') as HTMLInputElement).value = d.shortName ?? '';
+      (review.elements.namedItem('slug') as HTMLInputElement).value = d.slug;
+      root!.querySelector('[data-launcher-facts]')!.textContent =
+        `MFL ${d.mflId} · ${d.teamCount} teams · ${d.divisionCount} divisions · ${d.mflHost ?? 'MFL server unknown'}` +
+        (d.duplicatePlayers ? ' · players owned once per division/conference' : '');
+      archetypeSel.value = d.archetype;
+      root!.querySelector('[data-launcher-archetype-reason]')!.textContent = d.archetypeReason;
+      const notes = root!.querySelector<HTMLElement>('[data-launcher-notes]')!;
+      notes.textContent = d.notes || d.reviewSkipped || '';
+      notes.hidden = !notes.textContent;
+      for (const f of data.catalog) {
+        const c = d.features[f.key];
+        choices[f.key] = c;
+        box(f.key).checked = Boolean(c?.on);
+      }
+      settle();
+      review.hidden = false;
+    }
+
+    find.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const mflId = (find.elements.namedItem('mflId') as HTMLInputElement).value.trim();
+      say(status, 'Reading MFL settings and asking Claude to review… (up to a minute)');
+      review.hidden = true;
+      result.textContent = '';
+      try {
+        const res = await fetch('/api/admin/league-launcher/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mflId }),
+        });
+        const body = await res.json();
+        if (!res.ok || !body.ok) return say(status, body.error ?? `Analyze failed (HTTP ${res.status}).`, 'bad');
+        draft = body.draft as Draft;
+        say(status, draft.reviewSkipped ? draft.reviewSkipped : 'Reviewed. Change anything, then launch.', draft.reviewSkipped ? 'warn' : 'ok');
+        paint(draft);
+      } catch {
+        say(status, 'Could not reach the server.', 'bad');
+      }
+    });
+
+    review.addEventListener('change', (e) => {
+      const t = e.target as HTMLElement;
+      if (t instanceof HTMLInputElement && t.dataset.feature) {
+        choices[t.dataset.feature] = { on: t.checked, reason: t.checked ? 'Ticked by you.' : 'Unticked by you.', source: 'you' };
+        settle();
+      }
+    });
+
+    // Re-picking the league type re-presets every box MFL did not decide.
+    archetypeSel.addEventListener('change', () => {
+      const preset = data.archetypes.find((a) => a.key === archetypeSel.value);
+      if (!preset) return;
+      for (const f of data.catalog) {
+        if (choices[f.key]?.source === 'mfl-setting') continue;
+        box(f.key).checked = preset.features[f.key];
+        choices[f.key] = { on: preset.features[f.key], reason: `${preset.label} default.`, source: 'preset' };
+      }
+      root!.querySelector('[data-launcher-archetype-reason]')!.textContent = 'Picked by you.';
+      settle();
+    });
+
+    review.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!draft) return;
+      const field = (n: string) => (review.elements.namedItem(n) as HTMLInputElement).value.trim();
+      const features = Object.fromEntries(data.catalog.map((f) => [f.key, box(f.key).checked]));
+      const spec = {
+        mflId: draft.mflId,
+        slug: field('slug'),
+        name: field('name'),
+        shortName: field('shortName') || undefined,
+        mflHost: draft.mflHost,
+        archetype: archetypeSel.value,
+        duplicatePlayers: draft.duplicatePlayers,
+        features,
+      };
+      const go = review.querySelector<HTMLButtonElement>('[data-launcher-go]')!;
+      go.disabled = true;
+      say(result, 'Starting the launch…');
+      try {
+        const res = await fetch('/api/admin/league-launcher/launch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ spec }),
+        });
+        const body = await res.json();
+        if (!res.ok || !body.ok) {
+          go.disabled = false;
+          return say(result, (body.errors ?? [`Launch failed (HTTP ${res.status}).`]).join(' '), 'bad');
+        }
+        result.dataset.kind = 'ok';
+        result.textContent = `${body.message} `;
+        const a = document.createElement('a');
+        a.href = body.prUrl;
+        a.textContent = 'Open PR to staging';
+        a.className = 'cta-link';
+        a.target = '_blank';
+        a.rel = 'noopener';
+        result.append(a);
+      } catch {
+        go.disabled = false;
+        say(result, 'Could not reach the server.', 'bad');
+      }
+    });
+  }
+
+  document.addEventListener('astro:page-load', initLeagueLauncher);
+</script>
+
+<style>
+  .launcher {
+    max-width: 52rem;
+    margin: 0 auto;
+    padding: 1.5rem 1rem 3rem;
+    color: var(--page-text);
+  }
+  .launcher__head p,
+  .launcher__desc,
+  .launcher__reason,
+  .launcher__facts {
+    color: var(--content-text-muted);
+  }
+  .launcher__find {
+    display: flex;
+    gap: 0.75rem;
+    align-items: end;
+    flex-wrap: wrap;
+    margin: 1rem 0 0.5rem;
+  }
+  .launcher label > span {
+    display: block;
+    font-size: var(--font-size-sm);
+    margin-bottom: 0.25rem;
+  }
+  .launcher input:not([type='checkbox']),
+  .launcher select {
+    width: 100%;
+    max-width: 24rem;
+    padding: 0.5rem 0.6rem;
+    border: 1px solid var(--content-border);
+    border-radius: 6px;
+    background: var(--content-bg);
+    color: var(--page-text);
+  }
+  .launcher__card {
+    border: 1px solid var(--content-border);
+    border-radius: 10px;
+    background: var(--card-bg);
+    padding: 0.75rem 1rem 1rem;
+    margin: 1rem 0;
+    display: grid;
+    gap: 0.6rem;
+  }
+  .launcher__card legend {
+    font-weight: 700;
+    padding: 0 0.25rem;
+  }
+  .launcher__feature {
+    display: flex;
+    gap: 0.6rem;
+    align-items: start;
+  }
+  .launcher__feature input {
+    margin-top: 0.25rem;
+    accent-color: var(--color-primary-fill, var(--color-primary));
+  }
+  .launcher__feature-text {
+    display: grid;
+    gap: 0.1rem;
+  }
+  .launcher__desc,
+  .launcher__why {
+    font-size: var(--font-size-sm);
+  }
+  .launcher__why {
+    color: var(--content-text-muted);
+  }
+  .launcher__why[data-source='ai'] {
+    color: var(--color-primary);
+  }
+  .launcher__why[data-source='dependency'] {
+    color: var(--color-error-dark);
+  }
+  .launcher__notes {
+    background: var(--content-bg-muted);
+    border-radius: 6px;
+    padding: 0.5rem 0.75rem;
+    font-size: var(--font-size-sm);
+  }
+  .launcher__status[data-kind='bad'],
+  .launcher__result[data-kind='bad'] {
+    color: var(--color-error-dark);
+  }
+  .launcher__status[data-kind='ok'],
+  .launcher__result[data-kind='ok'] {
+    color: var(--color-success-dark);
+  }
+  .launcher__actions {
+    display: grid;
+    gap: 0.5rem;
+    justify-items: start;
+  }
+</style>

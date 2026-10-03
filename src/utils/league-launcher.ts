@@ -267,3 +267,10 @@ export async function reviewWithClaude(
     return { ...draft, reviewSkipped: `The review could not run (${(err as Error).message}); the rules-only boxes stand.` };
   }
 }
+
+/** The repo's compare page for a launch branch — one click to open the PR to staging. */
+export function launchPrUrl(slug: string): string {
+  const owner = process.env.GH_REPO_OWNER ?? 'braven112';
+  const repo = process.env.GH_REPO_NAME ?? 'mfl.football.v2';
+  return `https://github.com/${owner}/${repo}/compare/staging...launch/${encodeURIComponent(slug)}?expand=1`;
+}
