@@ -10,6 +10,7 @@ import { getAuthUser } from '../../utils/auth';
 import { mflLoginUrl } from '../../utils/mfl-login-redirect';
 import { canViewProductPages } from '../../utils/product-pages-access';
 import { PRODUCTS, productHref } from '../../data/products';
+import ProductShot from '../../components/shared/products/ProductShot.astro';
 import '../../styles/products.css';
 
 export const prerender = false;
@@ -46,6 +47,7 @@ const KIND_LABELS = {
 			{PRODUCTS.map((product) => (
 				<li>
 					<a class="prd__card" href={productHref(product.slug)}>
+						{product.screenshot && <ProductShot shot={product.screenshot} variant="card" />}
 						<span class="prd__card-kind">{KIND_LABELS[product.kind]}</span>
 						<span class="prd__card-top">
 							<span class="prd__card-name">{product.name}</span>

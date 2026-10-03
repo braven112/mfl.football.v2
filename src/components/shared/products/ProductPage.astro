@@ -16,6 +16,7 @@ import {
 	featureHref,
 	type Product,
 } from '../../../data/products';
+import ProductShot from './ProductShot.astro';
 import '../../../styles/products.css';
 
 interface Props {
@@ -40,6 +41,8 @@ const features = (product.features ?? []).map((id) => getFeature(id));
 		<p class="prd__lede">{product.tagline}</p>
 		<p class="prd__buyer"><strong>For:</strong> {product.buyer}</p>
 	</header>
+
+	{product.screenshot && <ProductShot shot={product.screenshot} variant="hero" />}
 
 	{buildsOn.length > 0 && (
 		<section class="prd__section" aria-labelledby="prd-builds-on">
@@ -95,9 +98,10 @@ const features = (product.features ?? []).map((id) => getFeature(id));
 			<h2 class="prd__h2" id="prd-features">Platform features included</h2>
 			<ul class="prd__features">
 				{features.map((feature) => (
-					<li class="prd__feature">
-						<a href={featureHref(feature.id)}>{feature.name}</a>
-						<span>{feature.summary}</span>
+					<li class:list={['prd__feature', { 'prd__feature--shot': feature.screenshot }]}>
+						{feature.screenshot && <ProductShot shot={feature.screenshot} variant="thumb" />}
+						<a class="prd__feature-name" href={featureHref(feature.id)}>{feature.name}</a>
+						<span class="prd__feature-summary">{feature.summary}</span>
 					</li>
 				))}
 			</ul>

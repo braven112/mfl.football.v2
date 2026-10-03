@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { PRODUCTS, FEATURES, findProduct, productsIncluding } from '../src/data/products';
 import { PRODUCT_PAGES_PUBLIC, canViewProductPages } from '../src/utils/product-pages-access';
@@ -51,6 +51,18 @@ describe('product pages — structure', () => {
 	it('includes every catalog feature in at least one product', () => {
 		for (const feature of FEATURES) {
 			expect(productsIncluding(feature.id).length, feature.id).toBeGreaterThan(0);
+		}
+	});
+
+	it('points every screenshot at a file that exists, with alt text', () => {
+		const shots = [...PRODUCTS, ...FEATURES].flatMap((item) => (item.screenshot ? [item.screenshot] : []));
+		expect(shots.length).toBeGreaterThan(0);
+		for (const shot of shots) {
+			for (const src of [shot.src, shot.darkSrc].filter((s): s is string => Boolean(s))) {
+				expect(src.startsWith('/'), src).toBe(true);
+				expect(existsSync(join(ROOT, 'public', src)), src).toBe(true);
+			}
+			expect(shot.alt.trim().length, shot.src).toBeGreaterThan(0);
 		}
 	});
 
