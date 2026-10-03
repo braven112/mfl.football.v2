@@ -122,6 +122,14 @@ export const LEAGUES = {
      * hero-resolver's copy so the two cannot silently disagree.
      */
     tradeDeadline: { kind: 'fixed', month: 11, day: 13 },
+    /**
+     * League-minimum salary. Every player added to a roster carries at least
+     * this — a first-come-first-served free-agent add included, which MFL
+     * records with NO price on the transaction row. Read by anything that
+     * prices a pickup (the waiver-pickups column once called two FCFS adds
+     * "free assets for zero dollars"). Absent for a league with no salaries.
+     */
+    minimumSalary: 425_000,
     features: {
       contracts: true,
       salaryCap: true,

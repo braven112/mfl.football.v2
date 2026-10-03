@@ -270,6 +270,11 @@ export interface LeagueDefinition {
    * when you have a slug in hand.
    */
   officialClock: LeagueClock;
+  /**
+   * League-minimum salary — what any roster add costs, FCFS free-agent adds
+   * included. Absent for a league without salaries.
+   */
+  minimumSalary?: number;
   features: LeagueFeatures;
 }
 
