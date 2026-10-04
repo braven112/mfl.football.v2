@@ -28,13 +28,7 @@ import {
 } from './throwback-scope';
 import { getCurrentNFLWeek } from './current-week';
 import { hexToRgba, mixHex } from './nfl-team-colors';
-import theleagueConfig from '../data/theleague.config.json';
-import aflConfig from '../../data/afl-fantasy/afl.config.json';
-
-const TEAMS_BY_SCOPE: Record<string, any[]> = {
-  theleague: (theleagueConfig as any).teams ?? [],
-  afl: (aflConfig as any).teams ?? [],
-};
+import { getLeagueTeams } from './league-config';
 
 /** `'08–'11`, or `'08` for a one-season era. */
 export function formatThrowbackEraYears(yearStart: number, yearEnd?: number): string {
@@ -87,7 +81,7 @@ export function buildThrowbackWelcome(input: ThrowbackWelcomeInput): ThrowbackWe
 
   // The years come from the same league-wide assignment the band map resolves
   // through; they are only trusted when that era IS what the band shows.
-  const era = resolveThrowbackAssignments(TEAMS_BY_SCOPE[scope] ?? [], overrides, scope).eras.get(franchiseId);
+  const era = resolveThrowbackAssignments(getLeagueTeams(scope), overrides, scope).eras.get(franchiseId);
   const years = era && era.name === brand.name ? formatThrowbackEraYears(era.yearStart, era.yearEnd) : '';
 
   // NFL season year: Jan–Aug belongs to the previous season (current-week.ts).

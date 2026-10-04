@@ -276,7 +276,10 @@ const transactionHubConfig = buildTransactionHubConfig(
 // the same memoized read FranchiseBandBrands makes.
 const throwbackPickerHref = resolveLeaguePath(`/${leagueContext.slug}/throwback-settings`, hideLeaguePrefix);
 let throwbackWelcome: ThrowbackWelcome | null = null;
-if (sessionFranchiseId && Astro.url.pathname !== throwbackPickerHref) {
+// Not on the two pages that already host the era picker. Matched on the tail:
+// an apex host may see the path with or without its league prefix.
+const onThrowbackPicker = /\/(throwback-settings|preferences)\/?$/.test(Astro.url.pathname);
+if (sessionFranchiseId && !onThrowbackPicker) {
 	const realWeekUrl = new URL(Astro.url);
 	realWeekUrl.searchParams.delete('week');
 	const { throwbackActive, throwbackOverrides } = await resolveThrowbackRequestState(league, realWeekUrl);
