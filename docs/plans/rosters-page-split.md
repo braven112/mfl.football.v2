@@ -620,6 +620,12 @@ config; screenshots pixel-identical in light, dark and mobile; this harness
 identical on TheLeague (the shared header changed). `rosters.astro` stays in the
 fork baseline only because TheLeague's copy is still 10k lines.
 
+**2026-10-04 — TheLeague's copy is custom by design.** The owner's call: TheLeague's
+rosters page is its own and stays a separate copy; the AFL's shared page is the
+one every other league repeats. So TheLeague's `rosters.astro` is not a target
+for unification, and the Phase 9 goal of sharing its core is closed
+(`customByDesign` in `tests/fixtures/page-fork-baseline.json`).
+
 Only after the phases above. TheLeague, the AFL, and best-ball each render a roster; today
 they share `PlayerCell`, `roster-constants`, and college logos, and re-implement
 the rest. Once the table, cap math, and row rendering are modules rather than
