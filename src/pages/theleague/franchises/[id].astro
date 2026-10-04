@@ -4,7 +4,7 @@ import Breadcrumbs from '../../../components/theleague/Breadcrumbs.astro';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import franchiseHistory from '../../../../data/theleague/derived/franchise-history.json';
 import leagueConfig from '../../../data/theleague.config.json';
-import { formatTradeAsset } from '../../../utils/franchise-trade-asset';
+import { formatTradeAsset, franchiseEraInYear } from '../../../utils/franchise-trade-asset';
 import { franchiseSlug } from '../../../utils/franchise-marks';
 import { buildFranchiseEras, type FranchiseEra as Era } from '../../../utils/franchise-eras';
 import EraSeasonTable from '../../../components/shared/franchises/EraSeasonTable.astro';
@@ -188,6 +188,7 @@ type FranchiseTrade = {
   received: string[];
   comments: string;
   bothAttributed: boolean;
+  partnerSourceId?: string | null;
 };
 const allTrades: FranchiseTrade[] = ((fr.trades as FranchiseTrade[]) || []).filter(
   (t) => t.partnerId !== id
@@ -480,9 +481,14 @@ const formatBid = (n: number): string => {
             <ul class="trade-list">
               {group.trades.map((t) => {
                 const partnerMeta = opponentMeta[t.partnerId];
+                // The partner as it was named THAT season, not today.
+                const partnerEra = franchiseEraInYear(
+                  (leagueConfig.teams as any[]).find((x) => x.franchiseId === (t.partnerSourceId ?? t.partnerId)),
+                  t.year
+                );
                 const partnerName =
-                  partnerMeta?.nameShort ?? partnerMeta?.nameMedium ?? partnerMeta?.name ?? t.partnerId;
-                const partnerIcon = partnerMeta?.icon ?? `/assets/theleague/icons/${t.partnerId}.png`;
+                  partnerEra?.name ?? partnerMeta?.nameShort ?? partnerMeta?.nameMedium ?? partnerMeta?.name ?? t.partnerId;
+                const partnerIcon = partnerEra?.icon ?? partnerMeta?.icon ?? `/assets/theleague/icons/${t.partnerId}.png`;
                 const rivalryHref = resolveLeaguePath(
                   `/theleague/rivalries/${canonicalRivalryPair(id!, t.partnerId)}`,
                   hideLeaguePrefix
