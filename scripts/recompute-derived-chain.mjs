@@ -51,6 +51,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ALL_LEAGUES } from '../src/config/leagues-data.mjs';
 import { EMIT_MILESTONE_POSTS_FLAG } from './lib/franchise-milestone-posts.mjs';
+import { leaguesFor } from './lib/league-jobs.mjs';
 
 const ROOT = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 
@@ -106,12 +107,18 @@ export const CHAIN_GUARD_TESTS = [
 ];
 
 /**
- * Leagues that run the pipeline: the ones with a committed franchise history.
- * Same structural skip every consumer uses, which is how best-ball-1 stays out.
+ * Leagues that run the pipeline: the ones with a committed franchise history,
+ * plus a package league whose Franchise pages box was just ticked and whose
+ * feeds are synced — without that second clause its first history could never
+ * be produced. Same structural skip every consumer uses, which is how
+ * best-ball-1 stays out.
  */
+const historyJobSlugs = new Set(leaguesFor('franchise-history').map((l) => l.slug));
 export const chainLeagues = (root = ROOT) =>
-  ALL_LEAGUES.filter((league) =>
-    fs.existsSync(path.join(root, league.dataPath, 'derived', 'franchise-history.json'))
+  ALL_LEAGUES.filter(
+    (league) =>
+      fs.existsSync(path.join(root, league.dataPath, 'derived', 'franchise-history.json')) ||
+      (historyJobSlugs.has(league.slug) && fs.existsSync(path.join(root, league.dataPath, 'mfl-feeds')))
   );
 
 export const chainSteps = ({ emitMilestonePosts = false, root = ROOT } = {}) => [
@@ -127,9 +134,17 @@ export const chainSteps = ({ emitMilestonePosts = false, root = ROOT } = {}) => 
 
 const derivedPath = (league, file) => path.posix.join(league.dataPath, 'derived', file);
 
-/** Repo-relative derived files, every league × every chain file. */
+/**
+ * The chain files one league gets: all of them, less the division-strength
+ * report for a league with no page for it (league-jobs `division-strength`).
+ */
+const divisionStrengthSlugs = new Set(leaguesFor('division-strength').map((l) => l.slug));
+export const chainFilesFor = (league) =>
+  CHAIN_FILES.filter((file) => file !== 'division-strength.json' || divisionStrengthSlugs.has(league.slug));
+
+/** Repo-relative derived files, every chain league × its chain files. */
 export const chainDerivedFiles = (root = ROOT) =>
-  chainLeagues(root).flatMap((league) => CHAIN_FILES.map((file) => derivedPath(league, file)));
+  chainLeagues(root).flatMap((league) => chainFilesFor(league).map((file) => derivedPath(league, file)));
 
 /**
  * Everything a lane commits: the derived files plus each chain league's

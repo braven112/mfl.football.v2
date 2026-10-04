@@ -23,6 +23,7 @@ import {
   CHAIN_FILES,
   CHAIN_GUARD_TESTS,
   chainDerivedFiles,
+  chainFilesFor,
   chainLeagues,
   chainOutputs,
   chainSteps,
@@ -68,9 +69,12 @@ describe('the chain script', () => {
 
   it('lists every chain file of every league, and each one exists', () => {
     const files = chainDerivedFiles();
-    expect(files).toHaveLength(chainLeagues().length * CHAIN_FILES.length);
+    expect(files).toHaveLength((chainLeagues() as any[]).reduce((n, l) => n + chainFilesFor(l).length, 0));
     for (const league of chainLeagues() as any[]) {
-      for (const file of CHAIN_FILES) {
+      // Every league gets the history, ledger and owners; the division report
+      // only where its page exists.
+      expect(chainFilesFor(league).slice(0, 3)).toEqual(CHAIN_FILES.slice(0, 3));
+      for (const file of chainFilesFor(league)) {
         const rel = path.posix.join(league.dataPath, 'derived', file);
         expect(files).toContain(rel);
         expect(existsSync(path.join(ROOT, rel)), rel).toBe(true);

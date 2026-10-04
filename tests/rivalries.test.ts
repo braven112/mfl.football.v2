@@ -219,8 +219,22 @@ describe('describeCoverageGap', () => {
       { year: 2003, seasonStarted: true, weeksWithGames: 0, weeksInFeed: 17 },
       { year: 2007, seasonStarted: true, weeksWithGames: 4, weeksInFeed: 17 },
       { year: 2012, seasonStarted: true, weeksWithGames: 14, weeksInFeed: 17 },
+      { year: 2025, seasonStarted: true, weeksWithGames: 17, weeksInFeed: 17 },
     ])!;
     expect(note).toContain(', and 2012 is missing its opening weeks');
     expect(note).not.toContain(', and 2007');
+  });
+
+  it('never calls the season being played a gap', () => {
+    // Two weeks into 2026, its sixteen unplayed weeks are not missing from
+    // MFL's archive — the note used to say 2026 "retains only its postseason
+    // weeks" on every franchise page.
+    const coverage = [
+      { year: 2003, seasonStarted: true, weeksWithGames: 0, weeksInFeed: 17 },
+      { year: 2025, seasonStarted: true, weeksWithGames: 17, weeksInFeed: 17 },
+      { year: 2026, seasonStarted: true, weeksWithGames: 2, weeksInFeed: 18 },
+    ];
+    expect(describeCoverageGap(coverage)).not.toContain('2026');
+    expect(describeCoverageGap(coverage.slice(1))).toBeNull();
   });
 });

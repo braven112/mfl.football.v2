@@ -1,5 +1,24 @@
 # Franchise History Pages — Insights
 
+## 2026-10-04 — the AFL's franchise pages are the shared ones
+
+`src/components/shared/franchises/FranchisePage.astro` and
+`FranchisesIndexPage.astro` now render the AFL's franchise pages and, next,
+package leagues' (TheLeague's stay its own, by the owner's call). The shared
+page reads the league's `franchise-history.json` and `owner-tenures.json` as
+props; the AFL's own competition comes in through slots and a component prop:
+its tier pill, trophy summary and trophy wall (`afl-fantasy/AflFranchiseTrophies`)
+and its card title badges (`afl-fantasy/AflFranchiseCardBadges`). The identity
+lineage (`nameEras`) is built in the route, because the AFL's comes from its
+ownerHistory claims and award attribution. Moved with SSR output identical
+(five franchises + index) and screenshots pixel-identical.
+
+Trap found on the way: an HTML comment (`<!-- -->`) inside a JSX expression
+compiles, then fails the TypeScript transform, and the dev server answers the
+route with a silent 404 — no error in the log. Check a moved component by
+compiling it with `@astrojs/compiler` and running the output through esbuild.
+
+
 ## 2026-09-29 - A data test that replays the LIVE season races the roster sync
 
 **Context:** Main went red on `tests/division-strength-data.test.ts` ("builds a season that is under way"). Roster sync had committed 2026 `schedule.json` with 6 games played, while the committed `season-ledger.json` still held 4. Hotfix #1269 carried a chain recompute to get green; follow-up #1270 F2 asked which lane should own it.

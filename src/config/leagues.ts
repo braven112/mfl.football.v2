@@ -51,6 +51,8 @@ export interface LeagueFeatures {
   rulesQa: boolean;
   /** Playoffs page — shown once MFL has the league's real brackets (src/utils/playoff-bracket-index.mjs). */
   playoffs: boolean;
+  /** Franchise pages (detail + index) from the league's MFL history (scripts/compute-franchise-history.mjs). */
+  franchisePages: boolean;
   liveLineups: boolean;
   schefterFeed: boolean;
   /**

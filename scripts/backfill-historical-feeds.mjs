@@ -30,7 +30,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { LEAGUES } from '../src/config/leagues-data.mjs';
+import { LEAGUES, getLeagueBySlug } from '../src/config/leagues-data.mjs';
+import { isPackageLeague } from '../src/config/package-league-routes.mjs';
 import { normalizeWeeklyResults } from './lib/normalize-weekly-results.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -47,9 +48,37 @@ const BACKFILL_LEAGUES = {
 const args = process.argv.slice(2);
 const LEAGUE_KEY = (args.find((a) => a.startsWith('--league=')) ?? '--league=theleague')
   .slice('--league='.length);
-const LEAGUE = BACKFILL_LEAGUES[LEAGUE_KEY];
+// Any package league (Archie's, Launcher-built leagues) by its registry slug.
+// Its history source is the newest committed league.json that carries MFL's
+// history block — the sync writes the current year's, which lists every
+// season MFL holds for the league.
+const packageBackfill = (slug) => {
+  const registry = getLeagueBySlug(slug);
+  if (!registry || !isPackageLeague(registry)) return null;
+  const dir = path.join(ROOT, registry.dataPath, 'mfl-feeds');
+  let years = [];
+  try {
+    years = fs.readdirSync(dir).filter((d) => /^\d{4}$/.test(d)).sort().reverse();
+  } catch {
+    return null;
+  }
+  const historySourceYear = years.find((y) => {
+    try {
+      const league = JSON.parse(fs.readFileSync(path.join(dir, y, 'league.json'), 'utf8')).league;
+      return String(league?.id) === registry.id && league?.history?.league;
+    } catch {
+      return false;
+    }
+  });
+  return historySourceYear ? { registry, historySourceYear } : null;
+};
+
+const LEAGUE = BACKFILL_LEAGUES[LEAGUE_KEY] ?? packageBackfill(LEAGUE_KEY);
 if (!LEAGUE) {
-  console.error(`Unknown --league=${LEAGUE_KEY} (expected: ${Object.keys(BACKFILL_LEAGUES).join(' | ')})`);
+  console.error(
+    `Unknown --league=${LEAGUE_KEY} (expected: ${Object.keys(BACKFILL_LEAGUES).join(' | ')}, ` +
+      'or a package league slug with a synced league.json)'
+  );
   process.exit(1);
 }
 
@@ -293,9 +322,22 @@ async function repairScheduleByWeek(host, year, leagueId, dest, maxWeek = 17) {
   return { written: true, recovered, weeks: missing.length };
 }
 
-// Fetch all 17 weeks of weekly results and produce both raw and normalized
+// The season's last week, from that year's league.json (fetched first, as the
+// first SIMPLE_ENDPOINT). 17 for the AFL and TheLeague's archives; a league
+// that plays through week 18 (Archie's) would otherwise lose its final week.
+// Capped at 18, the last NFL week: MFL reports `endWeek` 22 for a league whose
+// season runs to the end of the NFL calendar, counting the NFL's own playoff
+// weeks, where no fantasy game is played.
+const LAST_NFL_WEEK = 18;
+function seasonWeeks(yearDir) {
+  const endWeek = Number(readJson(path.join(yearDir, 'league.json'))?.league?.endWeek);
+  return Number.isInteger(endWeek) && endWeek >= 1 ? Math.min(endWeek, LAST_NFL_WEEK) : 17;
+}
+
+// Fetch every week of weekly results and produce both raw and normalized
 // outputs, matching the format produced by scripts/fetch-mfl-feeds.mjs.
 async function fetchWeeklyResults(host, year, leagueId, yearDir) {
+  const lastWeek = seasonWeeks(yearDir);
   const rawPath = path.join(yearDir, 'weekly-results-raw.json');
   const normPath = path.join(yearDir, 'weekly-results.json');
 
@@ -315,11 +357,11 @@ async function fetchWeeklyResults(host, year, leagueId, yearDir) {
   }
 
   if (DRY_RUN) {
-    return { dryRun: true, weeksToFetch: 17 };
+    return { dryRun: true, weeksToFetch: lastWeek };
   }
 
   const rawWeeks = [];
-  for (let week = 1; week <= 17; week++) {
+  for (let week = 1; week <= lastWeek; week++) {
     const url = buildUrl(host, year, leagueId, 'weeklyResults', `W=${week}`);
     try {
       const result = await fetchJson(url);
@@ -417,7 +459,7 @@ for (const entry of yearList) {
     // chance, week by week. These are the head-to-head pairings the rivalry
     // pages are built from, and nothing else can supply them.
     if (type === 'schedule') {
-      const repair = await repairScheduleByWeek(entry.host, entry.year, entry.leagueId, dest);
+      const repair = await repairScheduleByWeek(entry.host, entry.year, entry.leagueId, dest, seasonWeeks(yearDir));
       if (repair.written) {
         console.log(`  ✓ schedule (per-week) → recovered ${repair.recovered} matchups across ${repair.weeks} week(s)`);
         totalWritten++;
@@ -431,7 +473,7 @@ for (const entry of yearList) {
     }
   }
 
-  // Weekly results: special-cased because it needs 17 separate fetches.
+  // Weekly results: special-cased because it needs one fetch per week.
   const wkOutcome = await fetchWeeklyResults(entry.host, entry.year, entry.leagueId, yearDir);
   if (wkOutcome.skipped) { console.log(`  ◦ weekly-results — ${wkOutcome.reason}`); totalSkipped++; }
   else if (wkOutcome.dryRun) { console.log(`  [dry-run] would fetch ${wkOutcome.weeksToFetch} weeks of weeklyResults`); totalDryRun++; }
