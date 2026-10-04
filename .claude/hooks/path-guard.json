@@ -1364,6 +1364,26 @@
         "tests/team-preferences.test.ts"
       ],
       "note": "Both leagues have a franchise 0001, so a wrong preferred team is a real team, not a blank. The resolver must be able to answer \"nobody\", and the session belongs in authUserFranchise."
+    },
+    {
+      "name": "package-league-kit",
+      "paths": [
+        "templates/package-league/**",
+        "src/pages/archies/**",
+        "scripts/lib/package-kit.mjs",
+        "scripts/sync-league-routes.mjs",
+        "scripts/update-league-features.mjs",
+        "scripts/new-league.mjs",
+        "src/config/package-league-routes.mjs",
+        "src/config/launch-spec.mjs"
+      ],
+      "note": "A package league's route files are OUTPUT of templates/package-league: edit the template, then `node scripts/sync-league-routes.mjs --all`. Each route exists iff its feature is ticked; its search entries and nav links follow.",
+      "tests": [
+        "tests/package-league-routes.test.ts",
+        "tests/new-league-generator.test.ts",
+        "tests/league-launcher-launch.test.ts"
+      ],
+      "rules": "docs/claude/rules/package-leagues.md"
     }
   ]
 }

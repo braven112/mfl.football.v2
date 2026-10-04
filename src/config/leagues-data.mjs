@@ -644,6 +644,8 @@ export const LEAGUES = {
      * this league does not have yet.
      */
     optInNav: true,
+    /** Pages come from the package-league set, entitled by `features` (package-league-routes.mjs). */
+    pageKit: 'package',
     /** Short display name for the site header (the full name is too long there). */
     shortName: "Archie's",
     /**

@@ -1,0 +1,44 @@
+---
+/**
+ * __LEAGUE_SHORT__ Live Scoring Broadcast — thin route wrapper.
+ *
+ * The board itself is CROSS-LEAGUE: it watches every league the signed-in
+ * owner plays in, so every league's route renders the identical component and
+ * none passes a league of its own. This one exists so the board is reachable
+ * from __LEAGUE_SHORT__ nav, and so an unauthenticated visitor is sent to __LEAGUE_SHORT__ OWN
+ * login — a correct href still bounces a user cross-league if the gate
+ * redirects to another league's sign-in. __LEAGUE_SHORT__ is a home league to the
+ * board (registered, not best-ball), so it is on by default.
+ *
+ * The gates and the cookie write all live HERE, and must: `Astro.redirect()`
+ * only redirects from a PAGE (from a component it merely stops rendering and
+ * ships a blank 200), and `Astro.cookies.set()` from a component runs after
+ * the headers are committed and throws.
+ */
+import LiveBroadcastPage from '../../components/shared/live-broadcast/LiveBroadcastPage.astro';
+import { loginUrlForRequest } from '../../utils/login-redirect';
+import { getLeagueBySlug, leagueHasFeature } from '../../config/leagues';
+import { getAuthUser } from '../../utils/auth';
+import { rememberBroadcastChoices } from '../../utils/broadcast-cookies';
+
+export const prerender = false;
+
+// The league's live-scoring switch covers its broadcast route too.
+if (!leagueHasFeature('__LEAGUE_SLUG__', 'liveScoring')) {
+  return Astro.redirect('/__LEAGUE_SLUG__');
+}
+
+rememberBroadcastChoices(Astro.url, Astro.cookies);
+
+// Owner-scoped from end to end — there is nothing to show an anonymous
+// visitor, so this never renders a shell to one.
+const user = getAuthUser(Astro.request);
+if (!user) {
+  return Astro.redirect(
+    loginUrlForRequest(Astro, getLeagueBySlug('__LEAGUE_SLUG__')!),
+    302,
+  );
+}
+---
+
+<LiveBroadcastPage user={user} />

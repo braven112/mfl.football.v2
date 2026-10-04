@@ -1,0 +1,74 @@
+---
+/**
+ * The Pecking Order (__LEAGUE_SHORT__) — historical permalink:
+ * /__LEAGUE_SLUG__/pecking-order/[year]/[week].
+ *
+ * Pre-rendered via getStaticPaths for every issue we have on disk. Thin
+ * wrapper over the shared permalink component (archive note, issue, sibling
+ * nav) — only the glob and the breadcrumbs are league-specific.
+ */
+export const prerender = true;
+
+import TheLeagueLayout from '../../../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../../../../components/shared/Breadcrumbs.astro';
+import PeckingOrderPermalink from '../../../../components/shared/PeckingOrderPermalink.astro';
+import { type PeckingOrderData } from '../../../../components/shared/PeckingOrderIssue.astro';
+
+interface Entry { year: number; week: number; data: PeckingOrderData }
+
+const parseIssues = (files: Record<string, PeckingOrderData>): Entry[] =>
+  Object.entries(files)
+    .map(([file, data]) => {
+      const m = file.match(/(\d{4})-(\d{1,2})\.json$/);
+      if (!m) return null;
+      return { year: parseInt(m[1], 10), week: parseInt(m[2], 10), data: data as PeckingOrderData };
+    })
+    .filter((x): x is Entry => x !== null);
+
+const allIssues: Entry[] = parseIssues(
+  import.meta.glob<PeckingOrderData>(
+    '../../../../../data/__LEAGUE_SLUG__/pecking-order/*.json',
+    { eager: true, import: 'default' }
+  )
+);
+
+export async function getStaticPaths() {
+  const files = import.meta.glob<PeckingOrderData>(
+    '../../../../../data/__LEAGUE_SLUG__/pecking-order/*.json',
+    { eager: true, import: 'default' }
+  );
+  return Object.entries(files)
+    .map(([file, data]) => {
+      const m = file.match(/(\d{4})-(\d{1,2})\.json$/);
+      if (!m) return null;
+      return {
+        params: { year: m[1], week: String(parseInt(m[2], 10)) },
+        props: { issue: data as PeckingOrderData },
+      };
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null);
+}
+
+const { issue } = Astro.props as { issue: PeckingOrderData };
+---
+
+<TheLeagueLayout title={`${issue.headline} · The Pecking Order · Week ${issue.week}`}>
+  <div class="pr-page">
+    <Breadcrumbs items={[
+      { label: "__LEAGUE_SHORT__", href: '/__LEAGUE_SLUG__' },
+      { label: 'The Pecking Order', href: '/__LEAGUE_SLUG__/pecking-order' },
+      { label: `Week ${issue.week} · ${issue.year}` },
+    ]} />
+
+    <PeckingOrderPermalink
+      issue={issue}
+      issues={allIssues}
+      league="__LEAGUE_SLUG__"
+      basePath="/__LEAGUE_SLUG__/pecking-order"
+    />
+  </div>
+</TheLeagueLayout>
+
+<style>
+.pr-page { min-height: 60vh; }
+</style>

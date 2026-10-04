@@ -268,9 +268,14 @@ export async function reviewWithClaude(
   }
 }
 
-/** The repo's compare page for a launch branch — one click to open the PR to staging. */
-export function launchPrUrl(slug: string): string {
+/** The repo's compare page for a branch — one click to open the PR to staging. */
+export function branchPrUrl(branch: string): string {
   const owner = process.env.GH_REPO_OWNER ?? 'braven112';
   const repo = process.env.GH_REPO_NAME ?? 'mfl.football.v2';
-  return `https://github.com/${owner}/${repo}/compare/staging...launch/${encodeURIComponent(slug)}?expand=1`;
+  return `https://github.com/${owner}/${repo}/compare/staging...${branch.split('/').map(encodeURIComponent).join('/')}?expand=1`;
+}
+
+/** The compare page for a launch branch (`launch/<slug>`). */
+export function launchPrUrl(slug: string): string {
+  return branchPrUrl(`launch/${slug}`);
 }

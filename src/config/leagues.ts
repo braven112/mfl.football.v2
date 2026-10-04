@@ -351,6 +351,14 @@ export interface LeagueDefinition {
    * as it always has for best-ball. Absent → the default link set.
    */
   optInNav?: boolean;
+  /**
+   * `'package'`: the league's pages are the package-league set
+   * (src/config/package-league-routes.mjs), entitled by its features — each
+   * route exists iff its feature is ticked, and a nav link to a route it is
+   * not entitled to is hidden. Archie's and every league scripts/new-league.mjs
+   * launches. Absent: hand-built pages (TheLeague, the AFL, best ball).
+   */
+  pageKit?: 'package';
   /** Short display name for tight spaces (the site header). */
   shortName?: string;
   /** The league's mark for the shared header and layout, per theme. */

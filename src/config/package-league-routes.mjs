@@ -57,6 +57,11 @@ export function packageRouteForPath(p) {
   );
 }
 
+/** Whether a registry entry's pages are the package set (registry `pageKit`). */
+export function isPackageLeague(league) {
+  return league?.pageKit === 'package';
+}
+
 /** Whether a package league (registry entry) has the page at an unprefixed path. */
 export function packageLeagueHasPath(league, p) {
   const route = packageRouteForPath(p);
