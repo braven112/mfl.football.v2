@@ -1,0 +1,1612 @@
+---
+/**
+ * The shared Playoffs page: every league's playoff brackets, rendered from
+ * MFL's committed bracket feed. Moved whole out of the AFL's page — the
+ * repeatable one (the owner's call, Oct 2026; TheLeague's playoffs page stays
+ * its own). The AFL and every package league with the Playoffs box ticked
+ * render it.
+ *
+ * What a league hands in, and why it is not decided here:
+ *   - `brackets`: already built (src/utils/playoff-bracket-views.ts) through
+ *     the league's OWN seeding resolver, and already filtered to `tabView`.
+ *     Seeding is league-specific (the AFL seeds per conference and runs an NIT;
+ *     a package league takes MFL's resolved franchises as they are).
+ *   - `tabs`: the league's views. One tab hides the selector.
+ *   - `customView`: the current tab is the league's own competition (the AFL's
+ *     Prizes), rendered into the default slot — the shared page never learns
+ *     its rules (CLAUDE.md, "Share the standard views; a league's own competition stays its own").
+ * The year redirect and any cookie write stay in the route: `Astro.redirect()`
+ * only redirects from a PAGE, and `Astro.cookies.set()` from a component
+ * throws after the headers commit.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import YearSelector from '../YearSelector.astro';
+import EmptyState from '../states/EmptyState.astro';
+import '../../../styles/loading.css';
+import { spriteUrl } from '../../../utils/sprite-url';
+import { getLeagueBySlug } from '../../../config/leagues';
+import type { BracketView } from '../../../utils/playoff-bracket-views';
+
+export interface PlayoffTab {
+  view: string;
+  title: string;
+  /** Sprite symbol id, e.g. `icon-trophy`. */
+  icon: string;
+}
+
+interface Props {
+  leagueSlug: string;
+  availableYears: number[];
+  selectedYear: number;
+  /** The current tab's brackets, built and filtered by the route. */
+  brackets: BracketView[];
+  /** Every week the season's brackets play — polled for live scores. */
+  liveWeeks: number[];
+  tabs: PlayoffTab[];
+  tabView: string;
+  /** True when the current tab is the league's own view, passed as the default slot. */
+  customView?: boolean;
+  usedReconstructedBracket?: boolean;
+}
+
+const {
+  leagueSlug,
+  availableYears,
+  selectedYear,
+  brackets,
+  liveWeeks,
+  tabs,
+  tabView,
+  customView = false,
+  usedReconstructedBracket = false,
+} = Astro.props;
+
+// The league's own MFL host and id — never TheLeague's env-scoped globals
+// (that bug once pointed every AFL live-scoring link at TheLeague).
+const league = getLeagueBySlug(leagueSlug)!;
+const envHost = `https://${league.mflHost}`;
+const envLeagueId = league.id;
+const hasBrackets = brackets.length > 0;
+---
+
+<TheLeagueLayout title="Playoff Brackets">
+  <section class="playoff-page" data-league={leagueSlug}>
+    <header class="playoff-hero">
+      <div>
+        <h1 class="hero-title">Playoff Brackets</h1>
+        {usedReconstructedBracket && (
+          <p class="hero-note">
+            Rebuilt from the season schedule — MFL never recorded brackets this far back.
+          </p>
+        )}
+      </div>
+      {tabs.length > 1 && (
+        <div class="view-selector">
+          {tabs.map(tab => (
+            <button class={`view-tab ${tabView === tab.view ? 'active' : ''}`} data-view={tab.view} title={tab.title}>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
+                <use href={`${spriteUrl}#${tab.icon}`}></use>
+              </svg>
+            </button>
+          ))}
+        </div>
+      )}
+    </header>
+
+    <div class="season-row">
+      <div class="filter-item">
+        <span class="filter-label">Season:</span>
+        <YearSelector currentYear={selectedYear} availableYears={availableYears} />
+      </div>
+    </div>
+
+    {!customView && !hasBrackets && (
+      <EmptyState
+        title="No brackets yet"
+        body="This season's brackets appear once playoff seeds are set."
+      />
+    )}
+
+    {customView ? (
+      <slot />
+    ) : hasBrackets && (
+      <div class="brackets-grid">
+        {brackets.map(bracket => (
+          <article
+            class={`bracket-card ${bracket.emphasis ? 'bracket-card--championship' : ''} ${bracket.rounds?.length > 1 ? 'bracket-card--full' : ''}`}
+            id={`bracket-${bracket.id}`}
+          >
+            <div class="bracket-header">
+              <div>
+                <p class="bracket-label">{bracket.emphasis ? 'Championship' : 'Bracket'}</p>
+                <h2 class="bracket-title">{bracket.name || `Bracket ${bracket.id}`}</h2>
+                <p class="bracket-meta">
+                  Starts week {bracket.startWeek || '?'} · {bracket.teamsInvolved ?? '?'} teams
+                </p>
+              </div>
+              <div class="bracket-pill">
+                {bracket.emphasis ? 'Primary' : 'Side bracket'}
+              </div>
+            </div>
+
+            {bracket.roundsView.length === 0 ? (
+              <div class="bracket-missing">Bracket data not available for this season.</div>
+            ) : (
+              <>
+                {/* Earlier rounds (or all rounds if less than 4) */}
+                <div class="bracket-scroll" data-bracket-id={bracket.id} aria-label={`${bracket.name || 'Bracket'} rounds`}>
+                  {(bracket.roundsView.length >= 4
+                    ? bracket.roundsView.slice(0, -1)
+                    : bracket.roundsView
+                  ).map((round, roundIdx) => (
+                    <div class="bracket-round" data-week={bracket.rounds[roundIdx]?.week ?? roundIdx + 1}>
+                      <p class="round-label">Week {bracket.rounds[roundIdx]?.week ?? roundIdx + 1}</p>
+                      {round.map(game => {
+                      const homeId = game.home.team?.id || '';
+                      const liveScoreUrl = homeId
+                        ? `${envHost}/${selectedYear}/ajax_ls?L=${envLeagueId}&W=${game.week}&FRANCHISE=${homeId}`
+                        : `${envHost}/${selectedYear}/ajax_ls?L=${envLeagueId}&W=${game.week}`;
+                      return (
+                      <a
+                        href={liveScoreUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="matchup-card-link"
+                      >
+                        <div class="matchup-card" data-status={game.status}>
+                        <div class="team-row">
+                          <div class="team-info">
+                            <span class="seed-badge">{game.home.seedLabel || '—'}</span>
+                            {game.home.icon ? (
+                              <img
+                                src={game.home.icon}
+                                alt={`${game.home.label} logo`}
+                                class="team-icon"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div class="team-icon team-icon--placeholder" aria-hidden="true"></div>
+                            )}
+                            <div class="team-text">
+                              <div class="team-name">{game.home.label}</div>
+                              {game.home.record && <div class="team-record">{game.home.record}</div>}
+                            </div>
+                          </div>
+                          <div
+                            class="score"
+                            data-live-week={game.week}
+                            data-live-team={game.home.team?.id || ''}
+                          >
+                            {typeof game.scores.home === 'number' ? game.scores.home.toFixed(2) : '—'}
+                          </div>
+                        </div>
+
+                        <div class="team-row">
+                          <div class="team-info">
+                            <span class="seed-badge">{game.away.seedLabel || '—'}</span>
+                            {game.away.icon ? (
+                              <img
+                                src={game.away.icon}
+                                alt={`${game.away.label} logo`}
+                                class="team-icon"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div class="team-icon team-icon--placeholder" aria-hidden="true"></div>
+                            )}
+                            <div class="team-text">
+                              <div class="team-name">{game.away.label}</div>
+                              {game.away.record && <div class="team-record">{game.away.record}</div>}
+                            </div>
+                          </div>
+                          <div
+                            class="score"
+                            data-live-week={game.week}
+                            data-live-team={game.away.team?.id || ''}
+                          >
+                            {typeof game.scores.away === 'number' ? game.scores.away.toFixed(2) : '—'}
+                          </div>
+                        </div>
+
+                        <div class="matchup-status">
+                          <div class="status-left">
+                            <span class={`status-pill status-${game.status}`}>
+                              {game.status === 'live' && 'Live'}
+                              {game.status === 'final' && 'Final'}
+                              {game.status === 'scheduled' && 'Scheduled'}
+                            </span>
+                            <div class="matchup-refresh-progress">
+                              <div class="refresh-progress-container">
+                                <div class="refresh-progress-bar" data-week={game.week}></div>
+                              </div>
+                            </div>
+                          </div>
+                          {game.winnerId && (
+                            <span class="winner-flag">
+                              Winner:{' '}
+                              {game.winnerId === game.home.team?.id
+                                ? game.home.label
+                                : game.away.label}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      </a>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+              <div class="scroll-indicators" data-bracket-id={bracket.id}>
+                {(bracket.roundsView.length >= 4
+                  ? bracket.roundsView.slice(0, -1)
+                  : bracket.roundsView
+                ).map((_, roundIdx) => (
+                  <button
+                    class="scroll-indicator"
+                    data-round-index={roundIdx}
+                    aria-label={`Go to week ${bracket.rounds[roundIdx]?.week ?? roundIdx + 1}`}
+                  />
+                ))}
+              </div>
+
+              {/* Championship game below earlier rounds (if 4+ rounds) */}
+              {bracket.roundsView.length >= 4 && (
+                <div class="championship-highlight">
+                  {/* Title and week come from the bracket, not a constant: this
+                      block used to say "NIT Championship / Week 18" for any
+                      4-round bracket, which is wrong for 2003-2006 (the bracket
+                      is named just "NIT") and for every reconstructed season
+                      (their finals are week 17). */}
+                  <h2 class="bracket-title">{bracket.name || `Bracket ${bracket.id}`}</h2>
+                  <p class="round-label">
+                    Week {bracket.rounds[bracket.rounds.length - 1]?.week ?? '?'}
+                  </p>
+                  <div class="championship-game">
+                    {bracket.roundsView[bracket.roundsView.length - 1].map(game => {
+                      const homeId = game.home.team?.id || '';
+                      const liveScoreUrl = homeId
+                        ? `${envHost}/${selectedYear}/ajax_ls?L=${envLeagueId}&W=${game.week}&FRANCHISE=${homeId}`
+                        : `${envHost}/${selectedYear}/ajax_ls?L=${envLeagueId}&W=${game.week}`;
+                      return (
+                      <a
+                        href={liveScoreUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="matchup-card-link"
+                      >
+                        <div class="matchup-card" data-status={game.status}>
+                          <div class="team-row">
+                          <div class="team-info">
+                            <span class="seed-badge">{game.home.seedLabel || '—'}</span>
+                            {game.home.icon ? (
+                              <img
+                                src={game.home.icon}
+                                alt={`${game.home.label} logo`}
+                                class="team-icon"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div class="team-icon team-icon--placeholder" aria-hidden="true"></div>
+                            )}
+                            <div class="team-text">
+                              <div class="team-name">{game.home.label}</div>
+                              {game.home.record && <div class="team-record">{game.home.record}</div>}
+                            </div>
+                          </div>
+                          <div
+                            class={`score ${game.status === 'final' && typeof game.scores.home === 'number' && typeof game.scores.away === 'number' && game.scores.home < game.scores.away ? 'score-losing' : ''}`}
+                            data-live-week={game.week}
+                            data-live-team={game.home.team?.id || ''}
+                          >
+                            {typeof game.scores.home === 'number' ? game.scores.home.toFixed(2) : '—'}
+                          </div>
+                        </div>
+
+                        <div class="team-row">
+                          <div class="team-info">
+                            <span class="seed-badge">{game.away.seedLabel || '—'}</span>
+                            {game.away.icon ? (
+                              <img
+                                src={game.away.icon}
+                                alt={`${game.away.label} logo`}
+                                class="team-icon"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div class="team-icon team-icon--placeholder" aria-hidden="true"></div>
+                            )}
+                            <div class="team-text">
+                              <div class="team-name">{game.away.label}</div>
+                              {game.away.record && <div class="team-record">{game.away.record}</div>}
+                            </div>
+                          </div>
+                          <div
+                            class={`score ${game.status === 'final' && typeof game.scores.home === 'number' && typeof game.scores.away === 'number' && game.scores.away < game.scores.home ? 'score-losing' : ''}`}
+                            data-live-week={game.week}
+                            data-live-team={game.away.team?.id || ''}
+                          >
+                            {typeof game.scores.away === 'number' ? game.scores.away.toFixed(2) : '—'}
+                          </div>
+                        </div>
+
+                        <div class="matchup-status">
+                          <div class="status-left">
+                            <span class={`status-pill status-${game.status}`}>
+                              {game.status === 'live' && 'Live'}
+                              {game.status === 'final' && 'Final'}
+                              {game.status === 'scheduled' && 'Scheduled'}
+                            </span>
+                            <div class="matchup-refresh-progress">
+                              <div class="refresh-progress-container">
+                                <div class="refresh-progress-bar" data-week={game.week}></div>
+                              </div>
+                            </div>
+                          </div>
+                          {game.winnerId && (
+                            <span class="winner-flag">
+                              Winner:{' '}
+                              {game.winnerId === game.home.team?.id
+                                ? game.home.label
+                                : game.away.label}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      </a>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              </>
+            )}
+          </article>
+        ))}
+      </div>
+    )}
+
+    <div class="mfl-link-footer">
+      <p>
+        <a href={`${envHost}/${selectedYear}/options?L=${envLeagueId}&O=79`} target="_blank" rel="noopener noreferrer" class="mfl-link">
+          View MFL Playoff Bracket →
+        </a>
+      </p>
+      {hasBrackets && (
+        <p class="data-disclaimer" id="live-scores-timestamp">
+          Scores updated: <span id="last-updated-time"><span class="loading-skeleton loading-skeleton--text" style="width: 4.5rem; display: inline-block; vertical-align: middle;" role="status" aria-busy="true" aria-live="polite" aria-label="Loading update time"></span></span>
+        </p>
+      )}
+    </div>
+  </section>
+</TheLeagueLayout>
+
+<style>
+  .playoff-page {
+    color: var(--page-text, #0f172a);
+  }
+
+  .playoff-hero {
+    display: flex;
+    justify-content: space-between;
+    gap: 1.5rem;
+    align-items: center;
+    padding: clamp(1.25rem, 2vw, 1.75rem);
+    background: var(--card-bg, #ffffff);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: 20px;
+    box-shadow: var(--box-shadow-lg);
+    margin-bottom: 1rem;
+  }
+
+  .hero-title {
+    margin: 0;
+    font-size: clamp(1.8rem, 2vw, 2.2rem);
+    color: var(--page-text, #0f172a);
+  }
+
+  .hero-subtitle {
+    margin: 0.35rem 0 0;
+    color: var(--content-text-muted, #475569);
+    max-width: 720px;
+    font-size: 0.98rem;
+  }
+
+  /* Shown only when a bracket came from the schedule reconstruction rather
+     than MFL's own export — an inference should never be silently presented
+     as the league's record. */
+  .hero-note {
+    margin: 0.35rem 0 0;
+    color: var(--content-text-muted, #475569);
+    max-width: 720px;
+    font-size: 0.85rem;
+    font-style: italic;
+  }
+
+  .season-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: var(--card-bg, #ffffff);
+    padding: 0.9rem 1.1rem;
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: 16px;
+    box-shadow: var(--box-shadow-lg);
+    margin-bottom: 1rem;
+  }
+
+  .filter-item {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    align-items: flex-start;
+  }
+
+  .filter-label {
+    font-size: 0.85rem;
+    color: var(--content-text-muted, #475569);
+  }
+
+  .view-selector {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .view-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    padding: 0.5rem .7rem;
+    border: 2px solid transparent;
+    border-radius: 0.5rem;
+    background: var(--content-bg-muted, #f8fafc);
+    cursor: pointer;
+    transition: all var(--transition-base);
+    position: relative;
+    min-width: 69px;
+  }
+  @media (min-width: 640px) {
+    .view-tab {
+    padding: 0.75rem;
+    }
+  }
+
+  .view-tab:hover {
+    background: var(--table-row-bg-hover, #e2e8f0);
+    border-color: var(--content-border, #cbd5e1);
+  }
+
+  .view-tab.active {
+    background: color-mix(in srgb, var(--color-primary, #3b82f6) 18%, var(--content-bg, #fff));
+    border-color: var(--color-primary, #3b82f6);
+  }
+
+  .view-tab__icon {
+    max-width: var(--icon-btn-default-size, 30px);
+    max-height: var(--icon-btn-default-size, 30px);
+    width: 100%;
+    height: 100%;
+    fill: var(--icon-btn-default-text-color);
+    color: var(--icon-btn-default-text-color);
+  }
+
+  .view-tab[data-active="true"] .view-tab__icon {
+    fill: var(--icon-btn-default-focus-color);
+    color: var(--icon-btn-default-focus-color);
+  }
+
+  .brackets-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+    padding: 1.25rem;
+    background: var(--card-bg, #fff);
+    border-radius: 1rem;
+     box-shadow: var(--box-shadow-lg);
+  }
+
+  :global(html.dark) .brackets-grid {
+    box-shadow:
+      0 0 0 1px var(--content-border, #555555),
+      var(--box-shadow-lg);
+  }
+
+
+
+  /* No box-shadow here. A bracket-card is a bare grid nested INSIDE the
+     .brackets-grid card, so it has no background and no border-radius of its
+     own — an elevation shadow on it draws a hard square-cornered halo against
+     the card it already sits on. That's the double shadow, and it reads worst
+     in dark mode: tokens-dark.css sets --shadow-color to pure black and raises
+     the per-layer alphas, so the same --shadow-lg lands roughly six times
+     heavier at night than in light. The card surface and its elevation belong
+     to .brackets-grid; TheLeague's copy of this page has always been
+     shadow-free here. */
+  .bracket-card {
+    display: grid;
+  }
+
+
+  .bracket-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  /* AFL gold, not --color-secondary (that token is TheLeague's brand green and
+     the AFL theme never overrides it). Same light/dark split as the standings
+     champion subtitle. --afl-gold-text carries the light/dark pair — amber on
+     the white card, trophy gold on the navy one — so this needs one line. */
+  .bracket-label {
+    margin: 0;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--afl-gold-text, #b45309);
+    letter-spacing: 0.04em;
+  }
+
+  .bracket-title {
+    margin: 0.1rem 0;
+    font-size: 1.35rem;
+    color: var(--page-text, #0f172a);
+  }
+
+  .bracket-meta {
+    margin: 0;
+    color: var(--content-text-muted, #475569);
+    font-size: 0.9rem;
+  }
+
+  .bracket-pill {
+    padding: 0.45rem 0.75rem;
+    background: var(--content-bg-muted, #eef2ff);
+    color: var(--page-text, #312e81);
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    white-space: nowrap;
+  }
+
+  /* Championship highlight section */
+  .championship-highlight {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border: 2px solid #0ea5e9;
+    border-radius: 12px;
+  }
+
+  .championship-label {
+    margin: 0 0 0.75rem 0;
+    font-size: 1rem;
+    font-weight: 800;
+    color: #0c4a6e;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  :global(html.dark) .championship-highlight {
+    background: linear-gradient(135deg, rgba(14, 165, 233, 0.15) 0%, rgba(14, 165, 233, 0.08) 100%);
+    border-color: #0ea5e9;
+  }
+
+  :global(html.dark) .championship-label {
+    color: #7dd3fc;
+  }
+
+
+  .bracket-scroll {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(260px, 1fr);
+    gap: 0.9rem;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+  }
+
+  /* Mobile snap scrolling */
+  @media (max-width: 768px) {
+    .bracket-scroll {
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none; /* Firefox */
+      gap: 0;
+      grid-auto-columns: 100%;
+      padding-bottom: 3rem; /* Space for scroll indicators */
+    }
+
+    .bracket-scroll::-webkit-scrollbar {
+      display: none; /* Chrome, Safari */
+    }
+
+    .bracket-round {
+      scroll-snap-align: start;
+      scroll-snap-stop: always;
+      margin: 0 0.5rem;
+    }
+  }
+
+  .bracket-round {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    justify-content: center;
+  }
+
+  .round-label {
+    font-weight: 800;
+    font-size: 0.95rem;
+    color: var(--color-primary, #1c497c);
+    margin: 0 0 0.35rem 0.25rem;
+  }
+
+  .matchup-card-link {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  }
+
+  .matchup-card-link:hover {
+    transform: translateY(-2px);
+  }
+
+  .matchup-card-link:hover .matchup-card {
+    box-shadow: var(--shadow-lg);
+  }
+
+  .matchup-card-link:active {
+    transform: translateY(0);
+  }
+
+  .matchup-card {
+    background: var(--content-bg-muted, #f8fafc);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: 12px;
+    padding: 0.75rem;
+    position: relative;
+    display: grid;
+    row-gap: 0.6rem;
+  }
+
+  .matchup-card[data-status='live'] {
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.12);
+  }
+
+  .matchup-card[data-status='final'] {
+    border-color: rgba(28, 73, 124, 0.35);
+  }
+
+  /* Dark mode: final cards use the standard card border (AFL resolves to its
+     navy-tinted --content-border). */
+  :global(html.dark) .matchup-card[data-status='final'] {
+    border-color: var(--content-border, #555555);
+  }
+
+  .matchup-card[data-status='scheduled'] {
+    border-style: dashed;
+  }
+
+  .team-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .team-info {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-width: 0;
+  }
+
+  .team-text {
+    min-width: 0;
+  }
+
+  .team-name {
+    margin: 0;
+    font-weight: 800;
+    font-size: var(--font-size-xs);
+    color: var(--page-text, #0f172a);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .team-record {
+    margin: 0.15rem 0 0;
+    font-size: 0.82rem;
+    color: var(--content-text-muted, #475569);
+  }
+
+  .team-icon {
+    width: 2rem;
+    height: 2rem;
+    object-fit: contain;
+  }
+
+  .team-icon--placeholder {
+    background: var(--content-bg-accent, #e2e8f0);
+    border-radius: 10px;
+    border: 1px solid var(--content-border, #e2e8f0);
+  }
+
+  .seed-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    background: var(--content-bg-accent, #e2e8f0);
+    color: var(--page-text, #0f172a);
+    font-weight: 700;
+    font-size: 0.65rem;
+    min-width: 1rem;
+  }
+
+  .score {
+    font-weight: 800;
+    font-size: 1.05rem;
+    color: var(--page-text, #0f172a);
+    min-width: 3.4rem;
+    text-align: right;
+  }
+
+  .score-live {
+    font-weight: 800;
+  }
+
+  .score-losing {
+    font-weight: 300;
+  }
+
+  .score-updated {
+    animation: scoreFlash 0.6s ease-out;
+  }
+
+  .score-checked {
+    animation: scoreFlicker 0.3s ease-in-out;
+  }
+
+  @keyframes scoreFlash {
+    0%, 100% {
+      background-color: transparent;
+      transform: scale(1);
+    }
+    50% {
+      background-color: rgba(46, 135, 67, 0.2);
+      transform: scale(1.05);
+    }
+  }
+
+  @keyframes scoreFlicker {
+    0% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+
+  .matchup-status {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.35rem;
+    font-size: 0.82rem;
+    color: var(--content-text-muted, #475569);
+  }
+
+  .status-pill {
+    padding: 0.25rem 0.55rem;
+    border-radius: 999px;
+    border: 1px solid var(--content-border, #e2e8f0);
+    font-weight: 700;
+  }
+
+  .status-live {
+    background: #fff7ed;
+    color: #c2410c;
+    border-color: rgba(194, 65, 12, 0.25);
+  }
+
+  .status-final {
+    background: #ecfeff;
+    color: #0e7490;
+    border-color: rgba(14, 116, 144, 0.25);
+  }
+
+  .status-scheduled {
+    background: #eef2ff;
+    color: #312e81;
+    border-color: rgba(49, 46, 129, 0.25);
+  }
+
+  :global(html.dark) .status-live {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+  }
+
+  :global(html.dark) .status-final {
+    background: rgba(34, 211, 238, 0.15);
+    color: #67e8f9;
+  }
+
+  :global(html.dark) .status-scheduled {
+    background: rgba(165, 180, 252, 0.15);
+    color: #a5b4fc;
+  }
+
+  .winner-flag {
+    font-weight: 700;
+    color: var(--color-primary, #1c497c);
+  }
+
+  .status-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1;
+  }
+
+  /* Matchup refresh progress bar */
+  .matchup-refresh-progress {
+    display: none;
+    align-items: center;
+    flex: 1;
+    max-width: 150px;
+  }
+
+  /* Only show progress bar on live cards */
+  .matchup-card[data-status='live'] .matchup-refresh-progress {
+    display: flex;
+  }
+
+  /* Recessed surface, not --content-bg-accent: that token is a saturated mid
+     blue (#66abea) in light, which no bar color clears 3:1 against — the old
+     TheLeague-green end managed 1.84:1 on it. --content-bg-muted is the
+     semantically right token for a track and is near-white / deep navy. */
+  .refresh-progress-container {
+    flex: 1;
+    height: 5px;
+    background: var(--content-bg-muted, #eeeeee);
+    border-radius: 3px;
+    overflow: hidden;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+  }
+
+  /* AFL red -> amber. This was TheLeague's brand pair (#1c497c blue -> #2e8743
+     green) hardcoded, and it only renders on [data-status='live'] cards, so it
+     survived every screenshot of a finished season.
+
+     Far end is --afl-gold-text, not --afl-gold: the brighter amber is only
+     2.75:1 on the light track, under the 3:1 floor for a non-text UI mark. */
+  .refresh-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--league-accent, #c41e3a), var(--afl-gold-text, #b45309));
+    border-radius: 3px;
+    transition: width 1s linear;
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .refresh-progress-bar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.3) 50%,
+      transparent 100%
+    );
+    animation: shimmer 2s infinite;
+  }
+
+  @keyframes shimmer {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  /* Respect reduced-motion: stop the live-refresh shimmer and score flash/flicker */
+  @media (prefers-reduced-motion: reduce) {
+    .refresh-progress-bar::after,
+    .score-updated,
+    .score-checked {
+      animation: none;
+    }
+
+    /* The countdown bar's width is updated every second from JS; drop the
+       smooth transition so it steps instantly instead of animating. */
+    .refresh-progress-bar {
+      transition: none;
+    }
+  }
+
+  .bracket-missing {
+    border: 1px dashed var(--content-border, #cbd5e1);
+    border-radius: 10px;
+    padding: 1rem;
+    color: var(--content-text-muted, #475569);
+    background: var(--content-bg-muted, #f8fafc);
+    text-align: center;
+    font-weight: 600;
+  }
+
+  .mfl-link-footer {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background: var(--card-bg, #ffffff);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: 12px;
+    text-align: center;
+     box-shadow: var(--box-shadow-lg);
+  }
+
+  .mfl-link-footer p {
+    margin: 0;
+  }
+
+  .mfl-link {
+    color: var(--color-primary, #1c497c);
+    text-decoration: none;
+    font-weight: 600;
+    transition: color var(--transition-base);
+  }
+
+  /* Hover to the AFL accent (red), not TheLeague's brand green. Dark remaps
+     --league-accent to #ef5350, which is only 4.29:1 on the card — under AA
+     for 16px text — so dark takes --link-color-accent-hover (#ff8a80, 6.6:1),
+     the token the AFL dark theme already defines for exactly this.
+
+     Do NOT collapse these two rules into one --link-color-accent-hover: only
+     html.dark[data-league="afl"] pins that token to red. In AFL LIGHT it is
+     still TheLeague's #2e8743, so the "simplification" reintroduces the very
+     green this file was fixing. */
+  .mfl-link:hover {
+    color: var(--league-accent, #c41e3a);
+    text-decoration: underline;
+  }
+
+  :global(html.dark) .mfl-link:hover {
+    color: var(--link-color-accent-hover, #ff8a80);
+  }
+
+  @media (max-width: 1024px) {
+    .playoff-hero {
+      flex-direction: column;
+    }
+
+    .controls-row {
+      width: 100%;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+
+    .bracket-card--championship,
+    .bracket-card--full {
+      grid-column: span 1;
+    }
+  }
+
+  /* Matchup card mobile adjustments - 768px */
+  @media (max-width: 768px) {
+
+    .team-row {
+      gap: 0.5rem;
+    }
+
+    .team-info {
+      gap: 0.4rem;
+    }
+
+    .team-icon {
+      width: 1.5rem;
+      height: 1.5rem;
+    }
+
+    .seed-badge {
+      padding: 0.15rem 0.4rem;
+      font-size: 0.7rem;
+      min-width: 0.8rem;
+    }
+
+    .team-name {
+      font-size: 0.85rem;
+      max-width: 120px;
+    }
+
+    .team-record {
+      font-size: 0.7rem;
+    }
+
+    .score {
+      font-size: 0.9rem;
+      min-width: 2.8rem;
+    }
+
+    .matchup-status {
+      margin-top: 0.25rem;
+      font-size: 0.7rem;
+    }
+
+    .status-pill {
+      padding: 0.2rem 0.4rem;
+      font-size: 0.7rem;
+    }
+  }
+
+  /* Scroll indicators */
+  .scroll-indicators {
+    display: none;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem 0 0.5rem;
+    position: sticky;
+    bottom: 0;
+    background: linear-gradient(to top, var(--card-bg, rgba(255, 255, 255, 0.95)) 70%, transparent);
+    z-index: 10;
+  }
+
+  @media (max-width: 768px) {
+    .scroll-indicators {
+      display: flex;
+    }
+  }
+
+  .scroll-indicator {
+    width: 8px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--content-bg-accent, #cbd5e1);
+    transition: all var(--transition-slow);
+    cursor: pointer;
+  }
+
+  .scroll-indicator.active {
+    background: var(--color-primary, #1c497c);
+    width: 24px;
+    border-radius: 4px;
+  }
+
+  @media (max-width: 767px) {
+
+    .bracket-scroll {
+      grid-auto-columns: minmax(300px, 1fr);
+    }
+
+    .view-tabs {
+      width: 100%;
+      justify-content: flex-start;
+      flex-wrap: wrap;
+    }
+  }
+
+  /* Other mobile adjustments */
+  @media (max-width: 768px) {
+    .round-label {
+      font-size: 0.85rem;
+      margin: 0 0 0.25rem 0.15rem;
+    }
+
+    .bracket-title {
+      font-size: 1.1rem;
+    }
+
+    .bracket-meta {
+      font-size: 0.8rem;
+    }
+  }
+
+  /* Conference Standings Section */
+  .conference-standings-section {
+    margin: 2rem 0;
+  }
+
+  .section-heading {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin: 0 0 1.5rem 0;
+    color: var(--page-text, #1e293b);
+    text-align: center;
+  }
+
+  .conferences-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 500px), 1fr));
+    gap: 2rem;
+  }
+
+  @media (max-width: 767px) {
+    .conferences-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .section-heading {
+      font-size: 1.5rem;
+    }
+  }
+</style>
+<script>
+  function setupPlayoffSelectors() {
+    const updateParam = (key: string, value: string) => {
+      const url = new URL(window.location.href);
+      url.searchParams.set(key, value);
+      window.location.href = url.toString();
+    };
+
+    document.querySelectorAll<HTMLElement>('.view-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const view = btn.dataset.view || 'winners';
+        updateParam('view', view);
+      });
+    });
+
+  }
+
+  // ClientRouter: init on astro:page-load (the first load included), gated on
+  // a node the swap replaced that marks THIS shared page — TheLeague's own
+  // playoffs page uses the same class names, and a listener on `document`
+  // survives every navigation (CLAUDE.md, "NAME ITS LEAGUE in its gate").
+  document.addEventListener('astro:page-load', () => {
+    if (document.querySelector('.playoff-page[data-league]')) setupPlayoffSelectors();
+  });
+</script>
+
+<script>
+  // Mobile snap scrolling and auto-scroll to current week
+  function setupMobileScrolling() {
+    const bracketScrolls = document.querySelectorAll('.bracket-scroll');
+    if (!bracketScrolls.length) return;
+
+    // Get current week (you can adjust this logic based on your needs)
+    const getCurrentWeek = () => {
+      // Simple logic: return current NFL week (roughly December = week 15-17)
+      const now = new Date();
+      const month = now.getMonth(); // 0-11
+      const day = now.getDate();
+
+      // Rough estimate: September = week 1, increase ~1 week per week
+      // This is a simple approximation
+      let estimatedWeek = 1;
+      if (month === 11) { // December
+        if (day < 8) estimatedWeek = 14;
+        else if (day < 15) estimatedWeek = 15;
+        else if (day < 22) estimatedWeek = 16;
+        else estimatedWeek = 17;
+      }
+
+      return estimatedWeek;
+    };
+
+    const currentWeek = getCurrentWeek();
+
+    bracketScrolls.forEach(scrollContainer => {
+      const rounds = Array.from(scrollContainer.querySelectorAll('.bracket-round')) as HTMLElement[];
+      const bracketId = (scrollContainer as HTMLElement).dataset.bracketId;
+      const indicators = Array.from(
+        document.querySelectorAll(
+          `.scroll-indicators[data-bracket-id="${bracketId}"] .scroll-indicator`
+        )
+      ) as HTMLElement[];
+
+      if (!rounds.length) return;
+
+      // Find the round to scroll to
+      let targetRoundIndex = 0;
+      const firstWeek = parseInt(rounds[0]?.dataset.week || '1') || 1;
+
+      // If current week is >= first playoff week, find the matching week
+      if (currentWeek >= firstWeek) {
+        const matchingRound = rounds.findIndex(
+          round => parseInt(round.dataset.week || '0') === currentWeek
+        );
+        targetRoundIndex = matchingRound >= 0 ? matchingRound : 0;
+      }
+      // Otherwise default to first week (index 0)
+
+      // Update indicators
+      const updateIndicators = () => {
+        const scrollLeft = scrollContainer.scrollLeft;
+        const roundWidth = rounds[0]?.offsetWidth || 0;
+        const activeIndex = Math.round(scrollLeft / roundWidth);
+
+        indicators.forEach((indicator, idx) => {
+          indicator.classList.toggle('active', idx === activeIndex);
+        });
+      };
+
+      // Scroll to target round on load
+      setTimeout(() => {
+        const targetRound = rounds[targetRoundIndex];
+        if (targetRound) {
+          targetRound.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
+        }
+        updateIndicators();
+      }, 100);
+
+      // Update indicators on scroll
+      scrollContainer.addEventListener('scroll', updateIndicators, { passive: true });
+
+      // Handle indicator clicks
+      indicators.forEach((indicator, idx) => {
+        indicator.addEventListener('click', () => {
+          const targetRound = rounds[idx];
+          if (targetRound) {
+            targetRound.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
+          }
+        });
+      });
+    });
+  }
+
+  // ClientRouter: init on astro:page-load (the first load included), gated on
+  // a node the swap replaced that marks THIS shared page — TheLeague's own
+  // playoffs page uses the same class names, and a listener on `document`
+  // survives every navigation (CLAUDE.md, "NAME ITS LEAGUE in its gate").
+  document.addEventListener('astro:page-load', () => {
+    if (document.querySelector('.playoff-page[data-league]')) setupMobileScrolling();
+  });
+</script>
+
+{hasBrackets && (
+  <script define:vars={{ liveWeeks, leagueId: envLeagueId, host: envHost, year: selectedYear }}>
+    (() => {
+      const scoreNodes = Array.from(document.querySelectorAll('[data-live-week][data-live-team]'));
+      if (!scoreNodes.length || !leagueId || !host || !year || !Array.isArray(liveWeeks)) return;
+
+      let countdownInterval = null;
+      let secondsRemaining = 60;
+
+      const updateTimestamp = () => {
+        const timestampEl = document.getElementById('last-updated-time');
+        if (timestampEl) {
+          const now = new Date();
+          timestampEl.textContent = now.toLocaleString(undefined, {
+            dateStyle: 'medium',
+            timeStyle: 'short'
+          });
+        }
+      };
+
+      const startCountdown = () => {
+        // Clear any existing countdown
+        if (countdownInterval) {
+          clearInterval(countdownInterval);
+        }
+
+        secondsRemaining = 60;
+        const progressBars = Array.from(document.querySelectorAll('.refresh-progress-bar'));
+
+        if (progressBars.length === 0) return;
+
+        // Update immediately
+        progressBars.forEach(bar => {
+          bar.style.width = '100%';
+        });
+
+        countdownInterval = setInterval(() => {
+          secondsRemaining--;
+
+          if (secondsRemaining <= 0) {
+            secondsRemaining = 60;
+          }
+
+          const percentage = (secondsRemaining / 60) * 100;
+
+          // Update all progress bars
+          const currentBars = Array.from(document.querySelectorAll('.refresh-progress-bar'));
+          currentBars.forEach(bar => {
+            bar.style.width = `${percentage}%`;
+          });
+        }, 1000);
+      };
+
+      const updateScores = (liveData) => {
+        liveData.forEach(({ week, scores, remaining }) => {
+          scoreNodes.forEach(node => {
+            const nodeWeek = Number(node.getAttribute('data-live-week'));
+            const teamId = node.getAttribute('data-live-team');
+            if (nodeWeek !== week || !teamId) return;
+            const val = scores[teamId];
+            if (typeof val === 'number') {
+              const oldValue = node.textContent;
+              const newValue = val.toFixed(2);
+
+              // Update the text if it changed
+              if (oldValue !== newValue) {
+                node.textContent = newValue;
+              }
+
+              // Always show that the score was checked with opacity fade
+              node.classList.add('score-checked');
+              setTimeout(() => {
+                node.classList.remove('score-checked');
+              }, 300);
+            }
+          });
+
+          // Update status badges for this week's matchups
+          if (remaining) {
+            const matchupCards = Array.from(document.querySelectorAll('.matchup-card'));
+            matchupCards.forEach(card => {
+              // Find score nodes within this matchup card
+              const cardScores = Array.from(card.querySelectorAll('[data-live-week][data-live-team]'));
+              if (cardScores.length === 0) return;
+
+              // Check if this card has scores for the current week
+              const cardWeek = Number(cardScores[0]?.getAttribute('data-live-week'));
+              if (cardWeek !== week) return;
+
+              // Check if any team in this matchup has time remaining
+              const hasTimeRemaining = cardScores.some(scoreNode => {
+                const teamId = scoreNode.getAttribute('data-live-team');
+                return teamId && remaining[teamId] > 0;
+              });
+
+              // Check if both teams have scores
+              const hasScores = cardScores.every(scoreNode => {
+                const teamId = scoreNode.getAttribute('data-live-team');
+                return teamId && teamId in scores && typeof scores[teamId] === 'number';
+              });
+
+              // Update status
+              const statusPill = card.querySelector('.status-pill');
+              if (hasTimeRemaining && hasScores) {
+                card.setAttribute('data-status', 'live');
+                if (statusPill) {
+                  statusPill.className = 'status-pill status-live';
+                  statusPill.textContent = 'Live';
+                }
+                // Live games: both scores bold
+                cardScores.forEach(scoreNode => {
+                  console.log('Adding score-live class to:', scoreNode);
+                  scoreNode.classList.add('score-live');
+                  scoreNode.classList.remove('score-losing');
+                });
+              } else if (!hasTimeRemaining && hasScores) {
+                card.setAttribute('data-status', 'final');
+                if (statusPill) {
+                  statusPill.className = 'status-pill status-final';
+                  statusPill.textContent = 'Final';
+                }
+                // Final games: losing score lighter
+                if (cardScores.length === 2) {
+                  const team1Id = cardScores[0].getAttribute('data-live-team');
+                  const team2Id = cardScores[1].getAttribute('data-live-team');
+                  const team1Score = team1Id ? scores[team1Id] : 0;
+                  const team2Score = team2Id ? scores[team2Id] : 0;
+
+                  // Remove live class from both
+                  cardScores.forEach(scoreNode => scoreNode.classList.remove('score-live'));
+
+                  console.log('Final game - Team1:', team1Score, 'Team2:', team2Score);
+                  if (team1Score > team2Score) {
+                    console.log('Adding score-losing to team 2');
+                    cardScores[1].classList.add('score-losing'); // Losing team
+                    cardScores[0].classList.remove('score-losing'); // Winner
+                  } else if (team2Score > team1Score) {
+                    console.log('Adding score-losing to team 1');
+                    cardScores[0].classList.add('score-losing'); // Losing team
+                    cardScores[1].classList.remove('score-losing'); // Winner
+                  } else {
+                    // Tie - remove losing class from both
+                    cardScores.forEach(scoreNode => scoreNode.classList.remove('score-losing'));
+                  }
+                }
+              }
+            });
+          }
+        });
+        updateTimestamp();
+      };
+
+      const delay = (ms) => new Promise(res => setTimeout(res, ms));
+
+      const fetchLiveWeek = async (week) => {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 5000);
+        try {
+          // `L` ALONE — never a `host` param. The route resolves a known
+          // league id to its registry host outright, and a `host=<hostname>`
+          // param on a public URL reads like SSRF to a WAF (2026-09-03).
+          const url = `/api/live-scoring?week=${week}&year=${year}&L=${leagueId}`;
+          const res = await fetch(url, { signal: controller.signal });
+          if (!res.ok) throw new Error(`liveScoring ${week} ${res.status}`);
+          const data = await res.json();
+          // `res.ok` is not "the data is good": the route answers 200 with
+          // `ok: false` and EMPTY collections when the upstream MFL read
+          // failed. Returning that as a result is worse than returning
+          // nothing — with no scores and no game seconds it reads as "all
+          // games are final" and `run()` below permanently clears the
+          // refresh interval, so one blip during a live playoff week kills
+          // auto-refresh until the page is reloaded. A failed read is null.
+          if (data.ok === false || data.error) throw new Error(`liveScoring ${week} upstream`);
+          return { week: data.week, scores: data.scores, remaining: data.remaining || {} };
+        } catch (_err) {
+          return null;
+        } finally {
+          clearTimeout(timer);
+        }
+      };
+
+      const isNFLGameTime = () => {
+        const now = new Date();
+        const day = now.getDay(); // 0=Sun, 1=Mon, 4=Thu, 6=Sat
+        const hour = now.getHours();
+
+        // NFL games typically:
+        // Thursday: 8pm ET (20:00-23:59)
+        // Saturday (playoffs): 1pm-11pm ET (13:00-23:59)
+        // Sunday: 1pm-11pm ET (13:00-23:59)
+        // Monday: 8pm ET (20:00-23:59)
+
+        if (day === 0) return hour >= 13 && hour <= 23; // Sunday
+        if (day === 1) return hour >= 20 && hour <= 23; // Monday
+        if (day === 4) return hour >= 20 && hour <= 23; // Thursday
+        if (day === 6) return hour >= 13 && hour <= 23; // Saturday (playoffs)
+
+        return false;
+      };
+
+      let pollInterval = null;
+      let consecutiveNoUpdates = 0;
+
+      const run = async () => {
+        const results = [];
+        for (const wk of liveWeeks) {
+          const res = await fetchLiveWeek(wk);
+          if (res) results.push(res);
+          await delay(750);
+        }
+
+        if (results.length) {
+          const hadUpdates = results.some(r => Object.keys(r.scores).length > 0);
+
+          // Check if any games have time remaining (are actually in progress)
+          const hasGamesInProgress = results.some(r =>
+            r.remaining && Object.values(r.remaining).some(seconds => seconds > 0)
+          );
+
+          if (hadUpdates) {
+            consecutiveNoUpdates = 0;
+            updateScores(results);
+          } else {
+            consecutiveNoUpdates++;
+          }
+
+          // Stop polling if no games are in progress
+          if (!hasGamesInProgress && pollInterval) {
+            console.log('Stopping auto-refresh: all games are final');
+            clearInterval(pollInterval);
+            pollInterval = null;
+            if (countdownInterval) {
+              clearInterval(countdownInterval);
+              countdownInterval = null;
+            }
+            return;
+          }
+        } else {
+          consecutiveNoUpdates++;
+          updateTimestamp();
+        }
+
+        // Restart countdown after each refresh (only if still polling)
+        if (pollInterval) {
+          startCountdown();
+        }
+
+        // Stop polling if no updates for 3 consecutive polls (games likely over)
+        if (consecutiveNoUpdates >= 3 && pollInterval) {
+          console.log('Stopping auto-refresh: no score updates detected');
+          clearInterval(pollInterval);
+          pollInterval = null;
+          if (countdownInterval) {
+            clearInterval(countdownInterval);
+            countdownInterval = null;
+          }
+        }
+      };
+
+      const startPolling = async () => {
+        // Clear any existing interval
+        if (pollInterval) {
+          clearInterval(pollInterval);
+        }
+
+        // Initial fetch to check game status
+        const results = [];
+        for (const wk of liveWeeks) {
+          const res = await fetchLiveWeek(wk);
+          if (res) results.push(res);
+          await delay(750);
+        }
+
+        // Check if any games are in progress
+        const hasGamesInProgress = results.some(r =>
+          r.remaining && Object.values(r.remaining).some(seconds => seconds > 0)
+        );
+
+        // Update scores with initial data
+        if (results.length) {
+          updateScores(results);
+        } else {
+          updateTimestamp();
+        }
+
+        // Only start polling if games are in progress
+        if (!hasGamesInProgress) {
+          console.log('All games are final - no auto-refresh needed');
+          return;
+        }
+
+        // Only auto-poll during NFL game times
+        if (isNFLGameTime()) {
+          console.log('Starting auto-refresh (games in progress detected)');
+          startCountdown();
+          pollInterval = setInterval(() => {
+            if (!document.hidden) {
+              run();
+            }
+          }, 60000); // Poll every 60 seconds
+        } else {
+          console.log('Outside NFL game hours - manual refresh only');
+        }
+      };
+
+      // Stop polling when page becomes hidden (tab switched away)
+      const onVisibility = () => {
+        if (document.hidden && pollInterval) {
+          console.log('Pausing auto-refresh (tab hidden)');
+          clearInterval(pollInterval);
+          pollInterval = null;
+          if (countdownInterval) {
+            clearInterval(countdownInterval);
+            countdownInterval = null;
+          }
+        } else if (!document.hidden && !pollInterval) {
+          console.log('Resuming auto-refresh (tab visible)');
+          startPolling();
+        }
+      };
+      document.addEventListener('visibilitychange', onVisibility);
+
+      // An inline script runs again on every visit to this page, a ClientRouter
+      // swap included, and the markup above it is already parsed — so it starts
+      // its own poller here and tears it down when the page is swapped away,
+      // rather than leaving document listeners that stack per visit.
+      startPolling();
+      document.addEventListener(
+        'astro:before-swap',
+        () => {
+          if (pollInterval) clearInterval(pollInterval);
+          if (countdownInterval) clearInterval(countdownInterval);
+          pollInterval = null;
+          countdownInterval = null;
+          document.removeEventListener('visibilitychange', onVisibility);
+        },
+        { once: true }
+      );
+
+      // Expose manual refresh function for testing
+      window.refreshPlayoffScores = run;
+    })();
+  </script>
+)}

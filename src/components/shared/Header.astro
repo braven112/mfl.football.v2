@@ -20,6 +20,7 @@ import { spriteUrl } from '../../utils/sprite-url';
 import { isDemoDeploy } from '../../utils/deploy-environment';
 import NavToggleButton from '../nav/NavToggleButton.astro';
 import navConfig from '../../config/nav-config.json';
+import { packageLinkVisible } from '../../config/package-league-routes.mjs';
 
 interface Props {
   host?: string;
@@ -59,6 +60,9 @@ const pkgLinks = pkg
   ? navConfig.sections
       .filter((s: any) => s.leagueOnly === pkg.navSlug)
       .flatMap((s: any) => s.links)
+      // A page its features or data do not entitle yet (Playoffs before MFL
+      // has brackets) is not linked — package-league-routes.mjs.
+      .filter((l: any) => l.external || packageLinkVisible(pkg, l.path))
       .slice(0, 5)
   : [];
 

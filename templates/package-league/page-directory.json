@@ -47,8 +47,7 @@
       "99 teams",
       "main page",
       "__LEAGUE_SLUG__",
-      "archie's",
-      "affl",
+      "__LEAGUE_SHORT__",
       "__LEAGUE_SLUG__ league"
     ],
     "visibility": "all",
@@ -74,12 +73,36 @@
       "rankings",
       "leaderboard",
       "__LEAGUE_SLUG__",
-      "archie's",
-      "affl",
+      "__LEAGUE_SHORT__",
       "__LEAGUE_SLUG__ league"
     ],
     "visibility": "all",
     "popularity": 55
+  },
+  {
+    "id": "__LEAGUE_SLUG__-playoffs",
+    "title": "Playoffs (__LEAGUE_SHORT__)",
+    "description": "__LEAGUE_SHORT__ playoff brackets — every matchup, seed and score, live during the playoffs",
+    "path": "/__LEAGUE_SLUG__/playoffs",
+    "icon": "trophy",
+    "category": "popular",
+    "tags": [
+      "playoffs",
+      "playoff bracket",
+      "brackets",
+      "postseason",
+      "championship",
+      "title game",
+      "seeds",
+      "matchups",
+      "consolation bracket",
+      "toilet bowl",
+      "live scores",
+      "__LEAGUE_SLUG__",
+      "__LEAGUE_SHORT__"
+    ],
+    "visibility": "all",
+    "popularity": 60
   },
   {
     "id": "__LEAGUE_SLUG__-rosters",
@@ -100,8 +123,7 @@
       "ownership",
       "squad",
       "__LEAGUE_SLUG__",
-      "archie's",
-      "affl",
+      "__LEAGUE_SHORT__",
       "__LEAGUE_SLUG__ league"
     ],
     "visibility": "all",
@@ -127,8 +149,7 @@
       "activity",
       "ledger",
       "__LEAGUE_SLUG__",
-      "archie's",
-      "affl",
+      "__LEAGUE_SHORT__",
       "__LEAGUE_SLUG__ league"
     ],
     "visibility": "all",
@@ -153,7 +174,7 @@
       "division",
       "fa",
       "__LEAGUE_SLUG__",
-      "archie's"
+      "__LEAGUE_SHORT__"
     ],
     "visibility": "all",
     "popularity": 60
@@ -171,7 +192,7 @@
       "scoreboard",
       "scores",
       "__LEAGUE_SLUG__",
-      "archie's",
+      "__LEAGUE_SHORT__",
       "matchup",
       "matchups",
       "division",
@@ -225,7 +246,7 @@
       "my players",
       "opponent",
       "__LEAGUE_SLUG__",
-      "archie's"
+      "__LEAGUE_SHORT__"
     ],
     "visibility": "all",
     "popularity": 45
@@ -249,8 +270,7 @@
       "headlines",
       "writer",
       "__LEAGUE_SLUG__",
-      "archie's",
-      "affl",
+      "__LEAGUE_SHORT__",
       "__LEAGUE_SLUG__ league"
     ],
     "visibility": "all",
@@ -279,7 +299,7 @@
       "all-play",
       "divisions",
       "__LEAGUE_SLUG__",
-      "archie's"
+      "__LEAGUE_SHORT__"
     ],
     "visibility": "all",
     "popularity": 45
@@ -304,8 +324,7 @@
       "team names",
       "identity",
       "__LEAGUE_SLUG__",
-      "archie's",
-      "affl",
+      "__LEAGUE_SHORT__",
       "__LEAGUE_SLUG__ league"
     ],
     "visibility": "all",
@@ -332,7 +351,7 @@
       "kickoff",
       "new season",
       "__LEAGUE_SLUG__",
-      "archie's"
+      "__LEAGUE_SHORT__"
     ],
     "visibility": "all",
     "popularity": 35
@@ -356,7 +375,7 @@
       "fixes",
       "platform",
       "__LEAGUE_SLUG__",
-      "archie's"
+      "__LEAGUE_SHORT__"
     ],
     "visibility": "all",
     "popularity": 25
@@ -381,8 +400,7 @@
       "settings",
       "pipeline",
       "__LEAGUE_SLUG__",
-      "archie's",
-      "affl",
+      "__LEAGUE_SHORT__",
       "__LEAGUE_SLUG__ league"
     ],
     "visibility": "admin",
@@ -409,7 +427,7 @@
       "commissioner",
       "admin",
       "__LEAGUE_SLUG__",
-      "archie's"
+      "__LEAGUE_SHORT__"
     ],
     "visibility": "admin",
     "popularity": 8

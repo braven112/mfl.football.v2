@@ -987,7 +987,10 @@
         "src/components/shared/standings/*",
         "src/components/shared/PlayoffBadge.astro",
         "src/pages/*/standings.astro",
-        "src/components/shared/standings/AflFamilyStandingsPage.astro"
+        "src/components/shared/standings/AflFamilyStandingsPage.astro",
+        "src/components/shared/playoffs/*",
+        "src/components/afl-fantasy/AflPlayoffPrizes.astro",
+        "src/pages/*/playoffs.astro"
       ],
       "tests": [
         "tests/shared-standings-page.test.ts",
@@ -995,7 +998,8 @@
         "tests/afl-bracket-kind.test.ts",
         "tests/draft-order-phase.test.ts",
         "tests/playoff-round-data.test.ts",
-        "tests/playoff-badge-seeding.test.ts"
+        "tests/playoff-badge-seeding.test.ts",
+        "tests/playoff-bracket-index.test.ts"
       ]
     },
     {
@@ -1389,7 +1393,8 @@
         "tests/package-league-routes.test.ts",
         "tests/new-league-generator.test.ts",
         "tests/league-launcher-launch.test.ts",
-        "tests/launch-check.test.ts"
+        "tests/launch-check.test.ts",
+        "tests/playoff-bracket-index.test.ts"
       ],
       "rules": "docs/claude/rules/package-leagues.md"
     }

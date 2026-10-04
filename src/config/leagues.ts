@@ -49,6 +49,8 @@ export interface LeagueFeatures {
   powerRankings: boolean;
   /** Rules page + Ask Roger (src/utils/league-rulebook.ts for package leagues). */
   rulesQa: boolean;
+  /** Playoffs page — shown once MFL has the league's real brackets (src/utils/playoff-bracket-index.mjs). */
+  playoffs: boolean;
   liveLineups: boolean;
   schefterFeed: boolean;
   /**

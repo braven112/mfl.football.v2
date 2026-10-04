@@ -37,6 +37,7 @@ import { fetchWithRetry } from './lib/fetch-retry.mjs';
 import { mflFetch } from './lib/mfl-api.mjs';
 import { getNonEmpty } from './lib/env.mjs';
 import { getLeagueById, DEFAULT_LEAGUE_SLUG } from '../src/config/leagues-data.mjs';
+import { BRACKET_INDEX_PATH, isRealBracketFeed, recordBracketLeague } from '../src/utils/playoff-bracket-index.mjs';
 import { writeJsonIfChanged, jsonEquivalent } from './lib/canonical-json.mjs';
 import { isSeasonWindowOpen } from '../src/utils/pecking-order-season-window.mjs';
 import { isKeeperWindowDate } from './lib/retention-policy.mjs';
@@ -1345,6 +1346,17 @@ const run = async () => {
         Object.keys(existing.brackets).length > 0
     );
   const writePredictedBracketsIfSafe = (reason) => {
+    // The prediction is TheLeague's bracket shape (7-team championship, the
+    // Toilet Bowl, its weeks), so it is only ever a prediction for TheLeague.
+    // Written for another league it read as that league's real playoff setup:
+    // Archie's calendar announced TheLeague's playoff and championship weeks.
+    // Every other league has no bracket file until MFL has real brackets, which
+    // is also what keeps a package league's Playoffs page hidden until then
+    // (src/utils/playoff-bracket-index.mjs).
+    if (leagueName !== DEFAULT_LEAGUE_SLUG) {
+      console.log(`${reason} — no predicted brackets for ${leagueName} (the prediction is ${DEFAULT_LEAGUE_SLUG}'s format).`);
+      return;
+    }
     const existing = readExistingPlayoffBrackets();
     if (hasRealBracketData(existing)) {
       console.log(`${reason} — keeping existing real MFL bracket data instead of predictions.`);
@@ -1432,6 +1444,11 @@ const run = async () => {
       };
       writeOut('playoff-brackets', consolidated);
       console.log('Updated playoff bracket data with fresh MFL data');
+      // First real brackets for this league → its Playoffs page and nav link
+      // appear (src/utils/playoff-bracket-index.mjs).
+      if (isRealBracketFeed(consolidated) && recordBracketLeague(process.cwd(), leagueName)) {
+        console.log(`Recorded ${leagueName} in ${BRACKET_INDEX_PATH}`);
+      }
     } else {
       writePredictedBracketsIfSafe('No playoff brackets from MFL yet');
     }

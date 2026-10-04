@@ -80,6 +80,8 @@ interface Bracket {
 
 /** The main bracket: the one with the most teams (MFL's championship). */
 function championshipWeeks(playoffBrackets: unknown): { start: number; final: number } | null {
+  // A predicted file is a guess in another league's format, never this league's setup.
+  if ((playoffBrackets as { predicted?: boolean } | null)?.predicted) return null;
   const raw = (playoffBrackets as { playoffBrackets?: { playoffBracket?: Bracket | Bracket[] } } | null)?.playoffBrackets?.playoffBracket;
   const list = Array.isArray(raw) ? raw : raw ? [raw] : [];
   let best: { start: number; teams: number } | null = null;

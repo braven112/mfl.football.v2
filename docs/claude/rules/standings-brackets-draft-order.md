@@ -176,6 +176,18 @@ tiebreaker at all. Full evidence in
 `docs/claude/insights/features/playoff-performance.md`.
 
 
+## One Playoffs page for every league but TheLeague
+
+The AFL's playoffs page is the shared one (Oct 2026): the bracket engine is
+`src/utils/playoff-bracket-views.ts`, the page `components/shared/playoffs/`.
+TheLeague's page stays its own by the owner's call. What a league hands in is
+its SEEDING (a `TeamResolver`) and its tabs; everything below about the AFL —
+bracket kinds, the NIT, reconstructed seasons — stays in the AFL's route, and
+its Prizes tab is its own component (`AflPlayoffPrizes`). Moved with the SSR
+output identical for six seasons × three tabs and pixel-identical screenshots.
+A package league's page is gated on real MFL brackets
+(docs/claude/rules/package-leagues.md § "Playoffs").
+
 ## AFL playoff brackets — reconstructed games, and ids that lie
 
 MFL's `playoffBracket` export carries seeds only for 2003-2023 — no franchise

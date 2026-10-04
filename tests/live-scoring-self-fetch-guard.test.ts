@@ -152,7 +152,7 @@ describe('the game-day hint sets cadence, it does not gate polling', () => {
       'src/components/shared/LiveScoringHero.tsx',
       'src/hooks/useLiveScoringFeed.ts',
       'src/pages/theleague/playoffs.astro',
-      'src/pages/afl-fantasy/playoffs.astro',
+      'src/components/shared/playoffs/PlayoffsPage.astro',
     ];
     // Either spelling READS the flag, which is the whole rule. The kit's
     // island writes `data.ok !== false` because it is deciding whether to
