@@ -17,7 +17,7 @@ import {
 } from '../../../utils/afl-awards';
 import { stampBadgeYear } from '../../../utils/afl-badge';
 import franchiseHistory from '../../../../data/afl-fantasy/derived/franchise-history.json';
-import { formatTradeAsset } from '../../../utils/franchise-trade-asset';
+import { formatTradeAsset, franchiseEraInYear } from '../../../utils/franchise-trade-asset';
 import {
   computeRivalEntries,
   canonicalRivalryPair,
@@ -370,7 +370,13 @@ const playerNames = ((franchiseHistory as any).playerNames ?? {}) as Record<
   string,
   { name: string; position?: string; team?: string }
 >;
-const formatAsset = (code: string) => formatTradeAsset(code, playerNames, franchiseShortName);
+// A future pick's "via" team is named as it was in the trade's season.
+const formatAsset = (code: string, year: number) =>
+  formatTradeAsset(
+    code,
+    playerNames,
+    (fid) => franchiseEraInYear((aflConfig.teams as any[]).find((x) => x.franchiseId === fid), year)?.name ?? franchiseShortName(fid)
+  );
 
 type FranchiseTrade = {
   year: number;
@@ -379,6 +385,18 @@ type FranchiseTrade = {
   gaveUp: string[];
   received: string[];
   comments: string;
+  partnerSourceId?: string | null;
+};
+// The partner as it was named THAT season, not today — see franchiseEraInYear.
+const tradePartner = (t: FranchiseTrade): { name: string; icon?: string } => {
+  const slot = t.partnerSourceId ?? t.partnerId;
+  const team = (aflConfig.teams as any[]).find((x) => x.franchiseId === slot);
+  return (
+    franchiseEraInYear(team, t.year) ?? {
+      name: opponentName(t.partnerId),
+      icon: opponentMeta[t.partnerId]?.icon,
+    }
+  );
 };
 const allTrades: FranchiseTrade[] = (((fr?.trades ?? []) as FranchiseTrade[]) || []).filter(
   (t) => t.partnerId !== id
@@ -708,18 +726,18 @@ const hasHighlights = Boolean(
               {group.year} <span class="trade-year__count">({group.trades.length})</span>
             </summary>
             <ul class="trade-list">
-              {group.trades.map((t) => (
+              {group.trades.map((t) => { const partner = tradePartner(t); return (
                 <li class="trade">
                   <div class="trade__head">
                     <a
                       class="trade-partner"
                       href={`/afl-fantasy/rivalries/${canonicalRivalryPair(id!, t.partnerId)}`}
-                      title={`Rivalry vs ${opponentName(t.partnerId)}`}
+                      title={`Rivalry vs ${partner.name}`}
                     >
-                      {opponentMeta[t.partnerId]?.icon ? (
-                        <img src={opponentMeta[t.partnerId].icon} alt="" class="trade-partner__icon" loading="lazy" />
+                      {partner.icon ? (
+                        <img src={partner.icon} alt="" class="trade-partner__icon" loading="lazy" />
                       ) : null}
-                      {opponentName(t.partnerId)}
+                      {partner.name}
                     </a>
                     <span class="trade__date">{tradeDateLabel(t)}</span>
                   </div>
@@ -728,7 +746,7 @@ const hasHighlights = Boolean(
                       <span class="trade__side-label">Sent</span>
                       <ul>
                         {t.gaveUp.length
-                          ? t.gaveUp.map((c) => <li>{formatAsset(c)}</li>)
+                          ? t.gaveUp.map((c) => <li>{formatAsset(c, t.year)}</li>)
                           : <li class="trade__empty">—</li>}
                       </ul>
                     </div>
@@ -736,14 +754,14 @@ const hasHighlights = Boolean(
                       <span class="trade__side-label">Received</span>
                       <ul>
                         {t.received.length
-                          ? t.received.map((c) => <li>{formatAsset(c)}</li>)
+                          ? t.received.map((c) => <li>{formatAsset(c, t.year)}</li>)
                           : <li class="trade__empty">—</li>}
                       </ul>
                     </div>
                   </div>
                   {t.comments ? <p class="trade__comment">{t.comments}</p> : null}
                 </li>
-              ))}
+              ); })}
             </ul>
           </details>
         ))}

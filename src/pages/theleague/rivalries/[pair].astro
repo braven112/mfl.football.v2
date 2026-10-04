@@ -4,7 +4,7 @@ import Breadcrumbs from '../../../components/theleague/Breadcrumbs.astro';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import franchiseHistory from '../../../../data/theleague/derived/franchise-history.json';
 import leagueConfig from '../../../data/theleague.config.json';
-import { formatTradeAsset } from '../../../utils/franchise-trade-asset';
+import { formatTradeAsset, franchiseEraInYear } from '../../../utils/franchise-trade-asset';
 import EmptyState from '../../../components/shared/states/EmptyState.astro';
 
 export const prerender = false;
@@ -122,7 +122,16 @@ type Trade = {
   received: string[];
   comments: string;
   bothAttributed: boolean;
+  sourceFranchiseId?: string | null;
+  partnerSourceId?: string | null;
 };
+
+// Each side as it was named THAT season, not today (franchiseEraInYear). The
+// RAW MFL slot matters: ownerHistory attribution can file a trade under a
+// franchise id whose own name history never covered that year.
+const tradeSideName = (slot: string, year: number, current: string): string =>
+  franchiseEraInYear(teamLookup[slot], year)?.name ?? current;
+
 
 const tradesBetween: Trade[] = ((frA.trades as Trade[]) || [])
   .filter((t) => t.partnerId === bigger && t.bothAttributed)
@@ -132,7 +141,13 @@ function franchiseShortName(fid: string): string {
   const t = teamLookup[fid];
   return t?.nameShort ?? t?.nameMedium ?? t?.name ?? fid;
 }
-const formatAsset = (code: string) => formatTradeAsset(code, playerNames, franchiseShortName);
+// A future pick's "via" team is named as it was in the trade's season.
+const formatAsset = (code: string, year: number) =>
+  formatTradeAsset(
+    code,
+    playerNames,
+    (fid) => franchiseEraInYear(teamLookup[fid], year)?.name ?? franchiseShortName(fid)
+  );
 
 function tradeDateLabel(t: Trade): string {
   if (!t.timestamp) return String(t.year);
@@ -394,15 +409,15 @@ const titleB = frB.currentNameMedium || frB.currentName;
               </div>
               <div class="trade-cols">
                 <div class="trade-col">
-                  <div class="t-name">{frA.currentNameShort || frA.currentNameMedium} {t.partnerId === bigger ? 'sent' : 'received'}</div>
+                  <div class="t-name">{tradeSideName(t.sourceFranchiseId ?? smaller, t.year, frA.currentNameShort || frA.currentNameMedium)} {t.partnerId === bigger ? 'sent' : 'received'}</div>
                   <ul>
-                    {t.gaveUp.map((c) => <li>{formatAsset(c)}</li>)}
+                    {t.gaveUp.map((c) => <li>{formatAsset(c, t.year)}</li>)}
                   </ul>
                 </div>
                 <div class="trade-col">
-                  <div class="t-name">{frB.currentNameShort || frB.currentNameMedium} {t.partnerId === bigger ? 'sent' : 'received'}</div>
+                  <div class="t-name">{tradeSideName(t.partnerSourceId ?? bigger, t.year, frB.currentNameShort || frB.currentNameMedium)} {t.partnerId === bigger ? 'sent' : 'received'}</div>
                   <ul>
-                    {t.received.map((c) => <li>{formatAsset(c)}</li>)}
+                    {t.received.map((c) => <li>{formatAsset(c, t.year)}</li>)}
                   </ul>
                 </div>
               </div>
