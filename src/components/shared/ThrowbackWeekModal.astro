@@ -1,0 +1,329 @@
+---
+import '../../styles/player-modal-band.css';
+/**
+ * ThrowbackWeekModal — "This week you're the …" popup, once per device per
+ * throwback week.
+ *
+ * Mounted by the league layout for a signed-in owner while their league's
+ * throwback week is on (`buildThrowbackWelcome`, src/utils/throwback-welcome.ts).
+ * Shows the era crest and name they are wearing; before the week's first
+ * kickoff it links to the era picker, after it says picks are locked.
+ *
+ * Same shell as the player card (PlayerDetailsModal): frosted scrim, a
+ * composite team-colour band (`.pmb`) over a card body, centred on desktop and
+ * a bottom sheet at ≤640px. A native <dialog> rather than the player card's
+ * hand-rolled one, so focus trapping and Esc come from the platform.
+ *
+ * The seen-flag is written when the popup OPENS, not when it closes —
+ * navigating away without dismissing it still counts as having seen it.
+ */
+import type { ThrowbackWelcome } from '../../utils/throwback-welcome';
+
+interface Props {
+  welcome: ThrowbackWelcome;
+  /** Registry slug of the league this page belongs to (ClientRouter gate). */
+  leagueSlug: string;
+  /** League-resolved path to the era picker. */
+  pickerHref: string;
+  /** Stories only: render already open (non-modal), since a closed dialog draws nothing. */
+  previewOpen?: boolean;
+}
+
+const { welcome, leagueSlug, pickerHref, previewOpen = false } = Astro.props;
+// The measured stroke rides inline (it must beat the global html.dark rule);
+// restate the lift with it, since an inline `filter` replaces the class's.
+const CREST_LIFT = 'drop-shadow(0 6px 16px rgba(0, 0, 0, 0.35))';
+const bandStyle = `--pmb-g1:${welcome.bandStart};--pmb-g2:${welcome.bandEnd};--pmb-glow:${welcome.bandGlow}`;
+---
+
+<dialog
+  class="twm"
+  id="throwback-week-modal"
+  data-league={leagueSlug}
+  data-storage-key={welcome.storageKey}
+  aria-labelledby="twm-title"
+  open={previewOpen}
+  tabindex="-1"
+>
+  <button type="button" class="twm__close" data-twm-close aria-label="Close">
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+      <path d="M14 4L4 14M4 4l10 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+    </svg>
+  </button>
+
+  <div class="twm__band pmb pmb--no-cutout" style={bandStyle}>
+    <span class="pmb__ghost" aria-hidden="true">Throwback</span>
+    <div class="pmb__glow" aria-hidden="true"></div>
+    {welcome.crest && (
+      <img
+        class="twm__crest"
+        src={welcome.crest}
+        alt=""
+        width="112"
+        height="112"
+        style={welcome.crestFilter ? `filter:${welcome.crestFilter} ${CREST_LIFT}` : undefined}
+      />
+    )}
+  </div>
+
+  <div class="twm__body">
+    <p class="twm__eyebrow">Throwback Week &middot; Week {welcome.week}</p>
+    <h2 class="twm__title" id="twm-title">
+      <span class="twm__lead">This week you&rsquo;re playing as</span>
+      <span class="twm__name">
+        {welcome.years && <span class="twm__years">{welcome.years}</span>}
+        {welcome.name}
+      </span>
+    </h2>
+    {welcome.locked ? (
+      <p class="twm__note">Picks are locked now that games have kicked off. Enjoy the throwback.</p>
+    ) : (
+      <p class="twm__note">Want a different look? Pick your era before the week&rsquo;s first kickoff.</p>
+    )}
+    <div class="twm__actions">
+      {!welcome.locked && (
+        <a class="cta cta--primary twm__btn" href={pickerHref}>Choose your throwback</a>
+      )}
+      <button type="button" class:list={['cta', welcome.locked ? 'cta--primary' : 'cta--ghost', 'twm__btn']} data-twm-close>
+        {welcome.locked ? 'Let’s go' : 'Keep this look'}
+      </button>
+    </div>
+  </div>
+</dialog>
+
+<script>
+  /**
+   * CLIENTROUTER-SAFE INIT: re-run on every astro:page-load and look the
+   * dialog up fresh — it lives in the swapped body, so whichever one is in the
+   * DOM belongs to the page now showing, and the bound flag sits on that node.
+   * There is one shared script (not a forked pair), so no other league's
+   * listener can act on it. No document listeners beyond the page-load hook —
+   * the dialog's own handlers go with it on the next swap.
+   */
+  const readSeen = (key: string): boolean => {
+    try {
+      return localStorage.getItem(key) === '1';
+    } catch {
+      // Storage blocked (private mode, policy) — show it rather than never.
+      return false;
+    }
+  };
+  const markSeen = (key: string) => {
+    try {
+      localStorage.setItem(key, '1');
+    } catch {
+      /* nothing to remember with */
+    }
+  };
+
+  function init() {
+    const dlg = document.querySelector<HTMLDialogElement>('dialog#throwback-week-modal[data-league]');
+    if (!dlg || dlg.dataset.bound === '1') return;
+    dlg.dataset.bound = '1';
+    const key = dlg.dataset.storageKey;
+    if (!key || dlg.open || readSeen(key) || typeof dlg.showModal !== 'function') return;
+
+    dlg.querySelectorAll('[data-twm-close]').forEach((btn) => {
+      btn.addEventListener('click', () => dlg.close());
+    });
+    // Click on the backdrop (the dialog box itself, outside the panel content).
+    dlg.addEventListener('click', (e) => {
+      if (e.target === dlg) dlg.close();
+    });
+
+    markSeen(key);
+    dlg.showModal();
+    // Land on the dialog, not its first button — the close X opening with a
+    // focus ring reads as if it were the default action.
+    dlg.focus();
+  }
+
+  document.addEventListener('astro:page-load', init);
+</script>
+
+<style>
+  .twm {
+    padding: 0;
+    border: none;
+    background: var(--card-bg, #fff);
+    color: var(--color-text-primary);
+    border-radius: var(--radius-lg, 1rem);
+    box-shadow: var(--shadow-xl);
+    width: calc(100% - 2rem);
+    max-width: 440px;
+    max-height: 88vh;
+    overflow: hidden auto;
+    animation: twm-enter 0.22s ease-out;
+  }
+
+  .twm::backdrop {
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(2px);
+  }
+
+  :global(html.dark) .twm {
+    box-shadow:
+      var(--shadow-xl),
+      0 0 0 1px var(--content-border, #3a3a3a);
+  }
+
+  :global(html.dark) .twm::backdrop {
+    background: rgba(0, 0, 0, 0.6);
+  }
+
+  .twm:focus {
+    outline: none;
+  }
+
+  @keyframes twm-enter {
+    from {
+      opacity: 0;
+      transform: scale(0.97) translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  /* Frosted chip over the band — same as the player card's close button. */
+  .twm__close {
+    position: absolute;
+    top: 0.875rem;
+    right: 0.875rem;
+    z-index: 3;
+    background: rgba(6, 9, 13, 0.4);
+    backdrop-filter: blur(2px);
+    border: none;
+    border-radius: var(--radius-full, 9999px);
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.85);
+    cursor: pointer;
+    transition: background var(--transition-fast), color var(--transition-fast);
+  }
+
+  .twm__close:hover {
+    background: rgba(6, 9, 13, 0.65);
+    color: #fff;
+  }
+
+  .twm__band {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 168px;
+    padding: 1.5rem 1rem;
+  }
+
+  /* The crest is the subject here, not a watermark — full opacity, centred.
+     Round slot + cover, like every crest slot on the site; a free-standing
+     era mark is un-clipped by the global `iconFreeform` rule keyed on its src. */
+  .twm__crest {
+    position: relative;
+    z-index: 1;
+    width: 112px;
+    height: 112px;
+    border-radius: 50%;
+    object-fit: cover;
+    filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.35));
+  }
+
+  .twm__body {
+    padding: 1.25rem 1.5rem 1.5rem;
+    text-align: center;
+  }
+
+  .twm__eyebrow {
+    margin: 0 0 0.5rem;
+    font-size: var(--font-size-xs, 0.75rem);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-primary);
+  }
+
+  .twm__title {
+    margin: 0 0 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .twm__lead {
+    font-size: var(--font-size-sm, 0.875rem);
+    font-weight: 500;
+    color: var(--color-text-secondary);
+  }
+
+  .twm__name {
+    font-size: var(--font-size-xl);
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    color: var(--color-text-primary);
+  }
+
+  .twm__years {
+    color: var(--color-text-secondary);
+    font-weight: 700;
+    margin-right: 0.3em;
+  }
+
+  .twm__note {
+    margin: 0 0 1.25rem;
+    font-size: var(--font-size-sm, 0.875rem);
+    color: var(--color-text-secondary);
+  }
+
+  .twm__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  /* Shape only — colours, hover and focus come from the shared CTA pattern
+     (src/styles/cta.css), which every base layout imports. */
+  .twm__btn {
+    /* <a> and <button> differ here — only the button defaults to border-box,
+       so without this the link's padding pushes it past the card. */
+    box-sizing: border-box;
+    width: 100%;
+    min-height: var(--touch-target-min);
+    font-size: var(--font-size-base);
+  }
+
+  /* Bottom sheet on a phone — the player card's mobile shape. */
+  @media (max-width: 640px) {
+    .twm {
+      width: 100%;
+      max-width: 100%;
+      max-height: 92vh;
+      margin: auto 0 0;
+      border-radius: var(--radius-lg, 1rem) var(--radius-lg, 1rem) 0 0;
+      animation-name: twm-sheet-enter;
+    }
+
+    .twm__body {
+      padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+    }
+  }
+
+  @keyframes twm-sheet-enter {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .twm {
+      animation: none;
+    }
+  }
+</style>
