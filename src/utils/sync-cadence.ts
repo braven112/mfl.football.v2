@@ -160,3 +160,65 @@ export function syncCadenceDecision(
     reason: dispatch ? reason : `${reason} This tick is between dispatches.`,
   };
 }
+
+// ── The pre-kickoff lineup check ────────────────────────────────────────────
+//
+// A different question from the tiers above: not "how often", but "is a game
+// about to lock players". The lineup warning (scripts/schefter-lineup-check.mjs)
+// is useless once a flagged player's game has started — MFL locks him at his
+// own kickoff — so it has to run ahead of EVERY kickoff slot, read from the
+// real schedule: a Thursday opener, a 6:30am PT London game, the Sunday 10am
+// slate, the late window, SNF, MNF. It used to be one Sunday 9:15am PT GitHub
+// schedule, which GitHub delivered at 11:44, 12:44 and 12:34 PT on three
+// straight Sundays — after every early kickoff, so it warned about players who
+// were already locked (2026-10-04: a London game's WR flagged six hours late).
+
+/** How far ahead of a kickoff the check is dispatched. Leaves room for the
+ * workflow's ~7-minute run and still lands after most inactives are known. */
+export const LINEUP_CHECK_LEAD_MINUTES = 75;
+
+/**
+ * Width of the dispatch band ending at the lead mark. Two ticks rather than
+ * one so a single dropped Vercel tick cannot skip a kickoff; the script only
+ * alerts problems it has not alerted this week, so the second run is quiet.
+ */
+export const LINEUP_CHECK_BAND_MINUTES = 10;
+
+export interface LineupCheckDecision {
+  dispatch: boolean;
+  /** The kickoff (epoch seconds) this dispatch is ahead of, when dispatching. */
+  kickoff?: number;
+  reason: string;
+}
+
+/**
+ * Should THIS tick dispatch the lineup check? Yes when some kickoff starts
+ * between LEAD and LEAD-BAND minutes from now. Stateless, like the tiers: the
+ * schedule plus the clock decide.
+ */
+export function lineupCheckDecision(
+  now: Date = new Date(),
+  kickoffs: (string | number)[] = []
+): LineupCheckDecision {
+  const t = now.getTime();
+  const leadMs = LINEUP_CHECK_LEAD_MINUTES * 60 * 1000;
+  const bandMs = LINEUP_CHECK_BAND_MINUTES * 60 * 1000;
+  let best: number | undefined;
+  for (const raw of kickoffs) {
+    // Epoch SECONDS, same rejection as inGameWindow.
+    const seconds = Number(raw);
+    if (!Number.isFinite(seconds) || seconds <= 0) continue;
+    const until = seconds * 1000 - t;
+    if (until <= leadMs && until > leadMs - bandMs && (best === undefined || seconds < best)) {
+      best = seconds;
+    }
+  }
+  if (best === undefined) {
+    return { dispatch: false, reason: `No kickoff ${LINEUP_CHECK_LEAD_MINUTES} minutes out.` };
+  }
+  return {
+    dispatch: true,
+    kickoff: best,
+    reason: `Kickoff at ${new Date(best * 1000).toISOString()} — check lineups before it locks.`,
+  };
+}

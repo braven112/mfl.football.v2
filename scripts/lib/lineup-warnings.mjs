@@ -1,5 +1,5 @@
 /**
- * Pure lineup-warning logic for the Sunday pre-kickoff Schefter lineup check
+ * Pure lineup-warning logic for the pre-kickoff Schefter lineup check
  * (scripts/schefter-lineup-check.mjs).
  *
  * Everything in this module is a pure function of already-fetched JSON —
@@ -278,6 +278,120 @@ export function buildLineupWarnings({
   return warnings;
 }
 
+// ── Kickoff awareness: never warn about a player who is already locked ──────
+//
+// MFL locks each player at his OWN game's kickoff. A warning about a player
+// whose game has started is not a warning — nobody can act on it — and it is
+// what the old Sunday-noon delivery posted (2026-10-04: a London-game WR and a
+// 10am TE flagged at 12:35 PT). These helpers run after buildLineupWarnings.
+
+/**
+ * Team code → kickoff (epoch MILLISECONDS) for one week, from an MFL
+ * nflSchedule export (`{nflSchedule: {matchup: [{kickoff, team: [{id}]}]}}`).
+ * MFL reports kickoff in epoch SECONDS.
+ *
+ * @returns {Map<string, number>}
+ */
+export function parseKickoffsByTeam(nflScheduleJson) {
+  const map = new Map();
+  for (const matchup of asArray(nflScheduleJson?.nflSchedule?.matchup)) {
+    const seconds = Number(matchup?.kickoff);
+    if (!Number.isFinite(seconds) || seconds <= 0) continue;
+    for (const team of asArray(matchup?.team)) {
+      if (team?.id) map.set(String(team.id), seconds * 1000);
+    }
+  }
+  return map;
+}
+
+/**
+ * Drop everything nobody can act on any more, silently.
+ *
+ *  - A player problem whose team's game has kicked off is locked → dropped.
+ *    A player with no game this week (bye, free agent, unknown team) never
+ *    locks, so it stays — an owner can always swap him out.
+ *  - "No lineup" / empty slots stay only while some game has not kicked off;
+ *    once the last one has, there is nobody left to put in.
+ *
+ * @param {ReturnType<typeof buildLineupWarnings>} warnings
+ * @param {Map<string, number>} kickoffsByTeam  team → kickoff ms
+ * @param {Date} [now]
+ */
+export function dropLockedProblems(warnings, kickoffsByTeam, now = new Date()) {
+  const t = now.getTime();
+  const isLocked = (team) => {
+    const at = team ? kickoffsByTeam?.get?.(team) : undefined;
+    return at != null && at <= t;
+  };
+  const anyGameAhead = [...(kickoffsByTeam?.values?.() ?? [])].some((at) => at > t);
+
+  const out = [];
+  for (const w of warnings ?? []) {
+    const problems = w.problems.filter((p) => !isLocked(p.team));
+    const noLineup = w.noLineup && anyGameAhead;
+    const emptySlots = anyGameAhead ? w.emptySlots : 0;
+    if (problems.length > 0 || noLineup || emptySlots > 0) {
+      out.push({ ...w, problems, noLineup, emptySlots });
+    }
+  }
+  return out;
+}
+
+/**
+ * Stable keys for each thing a warning alerts about — the per-week dedup unit.
+ * A player key carries the status, so OUT → IR is a new alert; the team-level
+ * states are one key each, so they are raised once per week, not per run.
+ *
+ * @returns {string[]}
+ */
+export function warningAlertKeys(warning) {
+  const fid = warning.franchiseId;
+  const keys = warning.problems.map((p) => `${fid}:${p.playerId}:${p.type}`);
+  if (warning.noLineup) keys.push(`${fid}:nolineup`);
+  else if (warning.emptySlots > 0) keys.push(`${fid}:empty`);
+  return keys;
+}
+
+/**
+ * Reduce warnings to what has NOT been alerted yet this week. The check runs
+ * ahead of every kickoff slot, so without this an OUT player in the late game
+ * would be re-announced before the London game, the 10am slate and the 1pm.
+ *
+ * @param {ReturnType<typeof buildLineupWarnings>} warnings
+ * @param {Set<string>} alerted  keys from warningAlertKeys, already sent
+ */
+export function filterUnalerted(warnings, alerted) {
+  const seen = alerted ?? new Set();
+  const out = [];
+  for (const w of warnings ?? []) {
+    const fid = w.franchiseId;
+    const problems = w.problems.filter((p) => !seen.has(`${fid}:${p.playerId}:${p.type}`));
+    const noLineup = w.noLineup && !seen.has(`${fid}:nolineup`);
+    const emptySlots = w.emptySlots > 0 && !seen.has(`${fid}:empty`) ? w.emptySlots : 0;
+    if (problems.length > 0 || noLineup || emptySlots > 0) {
+      out.push({ ...w, problems, noLineup, emptySlots });
+    }
+  }
+  return out;
+}
+
+/**
+ * The earliest kickoff (ms) a warning is racing: its players' own games, or —
+ * for "no lineup" / empty slots, which any game can fix — the next kickoff of
+ * the week. null when nothing it names has a game ahead.
+ */
+export function warningDeadline(warning, kickoffsByTeam, now = new Date()) {
+  const t = now.getTime();
+  const ahead = (at) => at != null && at > t;
+  const times = warning.problems
+    .map((p) => (p.team ? kickoffsByTeam?.get?.(p.team) : undefined))
+    .filter(ahead);
+  if (warning.noLineup || warning.emptySlots > 0) {
+    times.push(...[...(kickoffsByTeam?.values?.() ?? [])].filter(ahead));
+  }
+  return times.length ? Math.min(...times) : null;
+}
+
 const TYPE_LABELS = {
   OUT: 'OUT',
   IR: 'on IR',
@@ -347,9 +461,9 @@ export function fallbackIntro({ week, teamCount }) {
   const teams = `${teamCount} team${teamCount === 1 ? '' : 's'}`;
   const templates = [
     `Sources say kickoff waits for no one. Week ${week} lineup alert — ${teams} flagged:`,
-    `Filing this before the early games: Week ${week} lineup check turned up ${teams} with problems:`,
-    `My phone says it's Sunday and my spreadsheet says ${teams} have lineup trouble in Week ${week}:`,
-    `Pre-kickoff wire, Week ${week}: ${teams} starting players who will not be playing football today:`,
+    `Filing this before kickoff: Week ${week} lineup check turned up ${teams} with problems:`,
+    `My phone says it's game day and my spreadsheet says ${teams} have lineup trouble in Week ${week}:`,
+    `Pre-kickoff wire, Week ${week}: ${teams} starting players who will not be playing football this week:`,
   ];
   const idx = Number.isFinite(Number(week)) ? Math.abs(Number(week)) % templates.length : 0;
   return templates[idx];

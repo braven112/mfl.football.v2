@@ -68,6 +68,7 @@ const SCHEDULED_BRIDGES = [
   'src/pages/api/cron/roster-sync.ts',
   'src/pages/api/cron/schefter-scan.ts',
   'src/pages/api/cron/groupme-sync.ts',
+  'src/pages/api/cron/lineup-check.ts',
 ];
 
 /**
@@ -324,6 +325,7 @@ describe('every bridged workflow', () => {
       'roster-sync.yml': true,
       'schefter-scan.yml': true,
       'groupme-sync.yml': false,
+      'lineup-reminders.yml': true,
     });
   });
 

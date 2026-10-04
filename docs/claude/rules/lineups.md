@@ -194,10 +194,41 @@ comes out 0.0 on any week MFL hasn't recorded starters for.
   0.34-opacity watermark in light mode.
 
 
-## The Sunday lineup warning — push-first, and gated on real kickoff
+## The pre-kickoff lineup warning — push-first, and gated on real kickoff
 
 `scripts/schefter-lineup-check.mjs` is the pre-kickoff "your lineup is broken"
-alert. Two rules, both bugs that shipped:
+alert. Every rule below is a bug that shipped:
+
+- **It runs ahead of EVERY kickoff slot, never on a fixed day.** It used to be
+  one GitHub `schedule` at Sunday 9:15am PT. GitHub delivered it at 11:44,
+  12:44 and 12:34 PT on three straight Sundays, so on 2026-10-04 it posted
+  Keenan Allen (IND, 6:30am PT London game) and Colby Parkinson (LAR, 10am)
+  as OUT around 12:35 PT — both locked for hours. A fixed Sunday time was
+  wrong even when delivered: London games and Thursday openers lock earlier.
+  The trigger is now the Vercel cron bridge `api/cron/lineup-check.ts`, which
+  dispatches ~75 minutes before each distinct kickoff in the committed
+  `nflSchedule-full.json` (`lineupCheckDecision`, `sync-cadence.ts`). The
+  workflow has no `schedule:` and must not grow one back.
+- **A locked player is dropped silently.** MFL locks each starter at his own
+  game's kickoff, so `dropLockedProblems` removes any problem whose team has
+  kicked off, and drops no-lineup / empty-slot warnings once no game is left.
+  The post does not mention locked players at all — that was the owner's
+  call. A player with no game (bye, unknown team) never locks.
+- **Each problem is alerted once per week.** Several runs a week would
+  otherwise repeat the same OUT player before every slot. A per-week Redis set
+  (`lineup_check:alerted:<year>:w<week>`) records the keys from
+  `warningAlertKeys`, written only for warnings a channel actually CARRIED —
+  a push that landed, or a chat post that went out. A held chat post leaves
+  them unmarked so the next slot's run retries.
+- **Quiet hours yield only to a deadline inside them.** The chat fallback
+  still holds 11pm–7am PT, except for warnings whose own deadline
+  (`warningDeadline`) falls inside that window — a 6:30am PT London game. In
+  quiet hours the post carries ONLY those; the rest wait for the next run.
+  Push is never held.
+- **Push tag and feed-post id carry the kickoff slot.** A per-franchise-only
+  tag let a later slot's alert replace an earlier unread one, and
+  `assistantPostId` is per week, so a second run's post was a duplicate id
+  that silently never wrote.
 
 - **Web push is the channel; the GroupMe post is a fallback.** Every flagged
   owner gets a private push. The chat post carries the warning only for the
