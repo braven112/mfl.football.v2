@@ -13,6 +13,7 @@ import { spriteUrl } from '../../../utils/sprite-url';
 import { getSearchPath, resolveLeaguePath, resolveDirectoryHref } from '../../../utils/nav-utils';
 import { getLeagueBySlug, type CanonicalLeagueSlug } from '../../../config/leagues';
 import { pathBelongsToLeague } from '../../../config/footer-config';
+import { packageLinkVisible } from '../../../config/package-league-routes.mjs';
 import { isAflFamily } from '../../../types/nav';
 
 interface Props {
@@ -62,6 +63,9 @@ if (isAfl) {
   // TheLeague's homepage grid (and vice versa for best-ball).
   const visible = allPages
     .filter(p => pathBelongsToLeague(p.path, leagueSlug))
+    // A package page its features or data do not entitle yet (Playoffs before
+    // MFL has brackets) is not linked — package-league-routes.mjs.
+    .filter(p => packageLinkVisible(league, p.path))
     .filter(p => p.visibility === 'all' && p.id !== 'homepage' && p.id !== 'new-hp')
     // The league's own homepage is where this grid renders; never link to it.
     .filter(p => p.path !== `/${league.slug}`);

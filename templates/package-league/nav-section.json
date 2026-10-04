@@ -18,6 +18,15 @@
       "description": "Division standings, victory points first"
     },
     {
+      "id": "__LEAGUE_SLUG__-playoffs",
+      "label": "Playoffs",
+      "icon": "trophy",
+      "path": "/playoffs",
+      "external": false,
+      "leagueOnly": "__LEAGUE_SLUG__",
+      "description": "Playoff brackets with live scores"
+    },
+    {
       "id": "__LEAGUE_SLUG__-rosters",
       "label": "Rosters",
       "icon": "users",
@@ -88,6 +97,24 @@
       "external": false,
       "leagueOnly": "__LEAGUE_SLUG__",
       "description": "Every team's name, colours and marks"
+    },
+    {
+      "id": "__LEAGUE_SLUG__-rules",
+      "label": "Rules",
+      "icon": "gavel",
+      "path": "/rules",
+      "external": false,
+      "leagueOnly": "__LEAGUE_SLUG__",
+      "description": "The rulebook and the league's MFL settings"
+    },
+    {
+      "id": "__LEAGUE_SLUG__-ask-roger",
+      "label": "Ask Roger",
+      "icon": "whistle",
+      "path": "/rules-chat",
+      "external": false,
+      "leagueOnly": "__LEAGUE_SLUG__",
+      "description": "Ask the AI rules expert a rules question"
     }
   ]
 }

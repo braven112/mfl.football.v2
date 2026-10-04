@@ -806,7 +806,11 @@
         "src/data/theleague/league-year-config.ts",
         "src/data/theleague/nfl-draft-dates-fetched.json",
         "src/pages/api/cron/push-fanout.ts",
-        "tests/roger-reminder-window.test.ts"
+        "tests/roger-reminder-window.test.ts",
+        "src/utils/league-rulebook.ts",
+        "src/utils/mfl-settings-digest.mjs",
+        "scripts/compute-mfl-settings-digest.mjs",
+        "src/pages/api/rules-qa/[[]league[]].ts"
       ],
       "tests": [
         "tests/reminder-digest.test.ts",
@@ -814,7 +818,8 @@
         "tests/reminder-push-first.test.ts",
         "tests/roger-afl-mapping.test.ts",
         "tests/roger-reminder-window.test.ts",
-        "tests/cron-commit-churn.test.ts"
+        "tests/cron-commit-churn.test.ts",
+        "tests/league-rulebook.test.ts"
       ]
     },
     {
@@ -982,7 +987,10 @@
         "src/components/shared/standings/*",
         "src/components/shared/PlayoffBadge.astro",
         "src/pages/*/standings.astro",
-        "src/components/shared/standings/AflFamilyStandingsPage.astro"
+        "src/components/shared/standings/AflFamilyStandingsPage.astro",
+        "src/components/shared/playoffs/*",
+        "src/components/afl-fantasy/AflPlayoffPrizes.astro",
+        "src/pages/*/playoffs.astro"
       ],
       "tests": [
         "tests/shared-standings-page.test.ts",
@@ -990,7 +998,8 @@
         "tests/afl-bracket-kind.test.ts",
         "tests/draft-order-phase.test.ts",
         "tests/playoff-round-data.test.ts",
-        "tests/playoff-badge-seeding.test.ts"
+        "tests/playoff-badge-seeding.test.ts",
+        "tests/playoff-bracket-index.test.ts"
       ]
     },
     {
@@ -1384,7 +1393,8 @@
         "tests/package-league-routes.test.ts",
         "tests/new-league-generator.test.ts",
         "tests/league-launcher-launch.test.ts",
-        "tests/launch-check.test.ts"
+        "tests/launch-check.test.ts",
+        "tests/playoff-bracket-index.test.ts"
       ],
       "rules": "docs/claude/rules/package-leagues.md"
     }

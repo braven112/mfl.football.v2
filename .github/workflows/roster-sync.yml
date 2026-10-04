@@ -158,6 +158,12 @@ jobs:
           for SLUG in $TOP; do
             pnpm run compute:top-players --league="$SLUG"
           done
+          # Rules as configured on MFL (Ask Roger's fallback), for every syncing
+          # league. Written only when a setting changed, so it costs no commit.
+          DIGEST=$(node ./scripts/league-jobs.mjs mfl-settings-digest)
+          for SLUG in $DIGEST; do
+            pnpm run compute:mfl-settings-digest --league="$SLUG"
+          done
 
       # Note: draft-pick contract sync runs in its own workflow
       # (sync-draft-pick-contracts.yml), May-only cron, since the rookie

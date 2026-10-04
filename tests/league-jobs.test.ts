@@ -29,6 +29,8 @@ describe('today’s leagues per job', () => {
     // Archie's joined: the player modal that reads it is shared by every league.
     'fantasy-points-allowed': ['theleague', 'afl-fantasy', 'archies'],
     'player-identity-union': ['theleague', 'afl-fantasy', 'archies'],
+    // Rules as configured on MFL — Ask Roger's fallback (src/utils/league-rulebook.ts).
+    'mfl-settings-digest': ['theleague', 'afl-fantasy', 'archies'],
     'top-players': ['theleague', 'afl-fantasy'],
     'schedule-draw': ['theleague', 'afl-fantasy'],
     'pecking-order': ['theleague', 'afl-fantasy', 'archies'],

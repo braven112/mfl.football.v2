@@ -37,6 +37,7 @@ import { fetchWithRetry } from './lib/fetch-retry.mjs';
 import { mflFetch } from './lib/mfl-api.mjs';
 import { getNonEmpty } from './lib/env.mjs';
 import { getLeagueById, DEFAULT_LEAGUE_SLUG } from '../src/config/leagues-data.mjs';
+import { BRACKET_INDEX_PATH, isRealBracketFeed, recordBracketLeague } from '../src/utils/playoff-bracket-index.mjs';
 import { writeJsonIfChanged, jsonEquivalent } from './lib/canonical-json.mjs';
 import { isSeasonWindowOpen } from '../src/utils/pecking-order-season-window.mjs';
 import { isKeeperWindowDate } from './lib/retention-policy.mjs';
@@ -571,6 +572,15 @@ const endpoints = [
     parser: (t) => JSON.parse(t),
   },
   {
+    // The league's scoring rules, as configured on MFL. Ask Roger falls back
+    // to these (with league.json's roster, waiver and lineup settings) where a
+    // league's written rulebook is silent or absent (src/utils/mfl-settings-digest.ts).
+    // Public, and it changes rarely — daily-only.
+    key: 'rules',
+    url: `${host}/${year}/export?TYPE=rules&L=${leagueId}&JSON=1`,
+    parser: (t) => JSON.parse(t),
+  },
+  {
     // ALL=1 returns every standings column regardless of what that league-YEAR
     // had configured for display. Current years already return the full set, so
     // this is a no-op for the routine sync; it matters for archive years pulled
@@ -957,7 +967,7 @@ const run = async () => {
   // the day; everything else (rosters, transactions, standings, brackets, …)
   // stays near-real-time on the 5-minute cadence. Roster/free-agent
   // freshness is unaffected — free agency is derived from rosters.
-  const dailyOnlyKeys = new Set(['players', 'nflSchedule', 'nflSchedule-full', 'assets']);
+  const dailyOnlyKeys = new Set(['players', 'nflSchedule', 'nflSchedule-full', 'assets', 'rules']);
 
   // Check if historical data is already cached (skip to avoid rate limits).
   // --refresh-live deliberately does NOT bypass this (unlike --force).
@@ -1336,6 +1346,17 @@ const run = async () => {
         Object.keys(existing.brackets).length > 0
     );
   const writePredictedBracketsIfSafe = (reason) => {
+    // The prediction is TheLeague's bracket shape (7-team championship, the
+    // Toilet Bowl, its weeks), so it is only ever a prediction for TheLeague.
+    // Written for another league it read as that league's real playoff setup:
+    // Archie's calendar announced TheLeague's playoff and championship weeks.
+    // Every other league has no bracket file until MFL has real brackets, which
+    // is also what keeps a package league's Playoffs page hidden until then
+    // (src/utils/playoff-bracket-index.mjs).
+    if (leagueName !== DEFAULT_LEAGUE_SLUG) {
+      console.log(`${reason} — no predicted brackets for ${leagueName} (the prediction is ${DEFAULT_LEAGUE_SLUG}'s format).`);
+      return;
+    }
     const existing = readExistingPlayoffBrackets();
     if (hasRealBracketData(existing)) {
       console.log(`${reason} — keeping existing real MFL bracket data instead of predictions.`);
@@ -1423,6 +1444,11 @@ const run = async () => {
       };
       writeOut('playoff-brackets', consolidated);
       console.log('Updated playoff bracket data with fresh MFL data');
+      // First real brackets for this league → its Playoffs page and nav link
+      // appear (src/utils/playoff-bracket-index.mjs).
+      if (isRealBracketFeed(consolidated) && recordBracketLeague(process.cwd(), leagueName)) {
+        console.log(`Recorded ${leagueName} in ${BRACKET_INDEX_PATH}`);
+      }
     } else {
       writePredictedBracketsIfSafe('No playoff brackets from MFL yet');
     }

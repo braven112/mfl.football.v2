@@ -17,13 +17,21 @@
  */
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import brackets from '../data/archies/mfl-feeds/2026/playoff-brackets.json';
 import { getLeagueBySlug, leagueHasFeature } from '../src/config/leagues';
 import { buildPackageLeagueEvents } from '../src/utils/package-league-events';
 import { resolveLeagueHeroState } from '../src/utils/league-hero/resolver';
 import { getLeagueHeroProfile } from '../src/utils/league-hero/profiles';
 import type { LeagueHeroResolverInput, LeagueHeroState } from '../src/utils/league-hero/types';
 import type { SchefterPost } from '../src/types/schefter';
+
+// A package league's bracket metadata, as MFL exports it once the commissioner
+// sets brackets up: a 7-team championship opening in week 15. Inline, not
+// Archie's feed: Archie's has no brackets on MFL, and the file it used to carry
+// was TheLeague's predicted shape written there by mistake.
+const brackets = {
+  playoffBrackets: { playoffBracket: [{ id: '1', name: 'Championship', startWeek: '15', teamsInvolved: '7' }] },
+  brackets: { 1: {} },
+};
 
 const archies = getLeagueBySlug('archies')!;
 

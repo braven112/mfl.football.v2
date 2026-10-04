@@ -1,0 +1,78 @@
+---
+/**
+ * Playoffs (__LEAGUE_SLUG__) — thin route over the SAME shared Playoffs page the
+ * AFL renders (src/components/shared/playoffs/PlayoffsPage.astro).
+ *
+ * __LEAGUE_SHORT__ has no seeding rules of its own here, so its brackets show
+ * MFL's resolved franchises as they are (`franchiseResolver`), every bracket on
+ * one view. The page exists only once MFL has the league's real brackets
+ * (src/utils/playoff-bracket-index.mjs); until then it is a 404 and its nav
+ * link is hidden.
+ *
+ * Kept in the route: the globs (a static import specifier cannot be a runtime
+ * variable) and the year redirect (`Astro.redirect()` only redirects from a page).
+ */
+import PlayoffsPage from '../../components/shared/playoffs/PlayoffsPage.astro';
+import config from '../../../data/__LEAGUE_SLUG__/__LEAGUE_SLUG__.config.json';
+import { getLeagueBySlug } from '../../config/leagues';
+import { packageRouteHasData } from '../../config/package-league-routes.mjs';
+import { loadSeasonFeed } from '../../utils/mfl-feed-glob';
+import { resolveLeaguePath } from '../../utils/nav-utils';
+import {
+  bracketWeeks,
+  buildBracketViews,
+  franchiseResolver,
+  isRealBracketFeed,
+  loadSeasonBrackets,
+  weeklyScoresFor,
+} from '../../utils/playoff-bracket-views';
+
+export const prerender = false;
+
+const league = getLeagueBySlug('__LEAGUE_SLUG__')!;
+if (!packageRouteHasData(league, 'playoffs.astro')) return Astro.rewrite('/_not-found');
+
+const bracketFeeds = import.meta.glob('../../../data/__LEAGUE_SLUG__/mfl-feeds/*/playoff-brackets.json');
+const standingsFeeds = import.meta.glob('../../../data/__LEAGUE_SLUG__/mfl-feeds/*/standings.json');
+const weeklyResultsFeeds = import.meta.glob('../../../data/__LEAGUE_SLUG__/mfl-feeds/*/weekly-results.json');
+
+// Seasons with real MFL brackets, newest first.
+const candidateYears = Object.keys(bracketFeeds)
+  .map((p) => Number(p.match(/mfl-feeds\/(\d{4})\//)?.[1]))
+  .filter(Boolean)
+  .sort((a, b) => b - a);
+const feedsByYear = new Map<number, any>();
+for (const y of candidateYears) {
+  const feed = await loadSeasonFeed(bracketFeeds, y);
+  if (isRealBracketFeed(feed)) feedsByYear.set(y, feed);
+}
+const availableYears = [...feedsByYear.keys()];
+if (availableYears.length === 0) return Astro.rewrite('/_not-found');
+
+const requested = Number(Astro.url.searchParams.get('year'));
+if (Astro.url.searchParams.has('year') && !feedsByYear.has(requested)) {
+  return Astro.redirect(resolveLeaguePath(`/${league.slug}/playoffs?year=${availableYears[0]}`, Astro.locals.hideLeaguePrefix ?? false));
+}
+const selectedYear = feedsByYear.has(requested) ? requested : availableYears[0];
+
+const { brackets, usedReconstructed } = loadSeasonBrackets(feedsByYear.get(selectedYear));
+const standings = ((await loadSeasonFeed(standingsFeeds, selectedYear)) as any)?.leagueStandings?.franchise ?? [];
+const liveWeeks = bracketWeeks(brackets);
+const views = buildBracketViews({
+  brackets,
+  mode: 'projected',
+  resolveTeam: franchiseResolver({ standings: Array.isArray(standings) ? standings : [standings], teams: config.teams }),
+  weeklyScores: weeklyScoresFor(await loadSeasonFeed(weeklyResultsFeeds, selectedYear), liveWeeks),
+});
+---
+
+<PlayoffsPage
+  leagueSlug={league.slug}
+  availableYears={availableYears}
+  selectedYear={selectedYear}
+  brackets={views}
+  liveWeeks={liveWeeks}
+  tabs={[{ view: 'all', title: 'Brackets', icon: 'icon-trophy' }]}
+  tabView="all"
+  usedReconstructedBracket={usedReconstructed}
+/>

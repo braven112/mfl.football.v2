@@ -210,6 +210,8 @@ export const LEAGUES = {
       salaryCap: true,
       keepers: false,
       powerRankings: true,
+      rulesQa: true,
+      playoffs: true,
       liveLineups: true,
       schefterFeed: true,
       schefterTips: true,
@@ -422,6 +424,8 @@ export const LEAGUES = {
       keepers: true,
       /** The Pecking Order — published weekly (scripts/lib/league-jobs.mjs reads this). */
       powerRankings: true,
+      rulesQa: true,
+      playoffs: true,
       liveLineups: false,
       schefterFeed: true,
       schefterTips: true,
@@ -576,6 +580,8 @@ export const LEAGUES = {
       salaryCap: false,
       keepers: false,
       powerRankings: false,
+      rulesQa: false,
+      playoffs: false,
       liveLineups: false,
       schefterFeed: false,
       schefterTips: false,
@@ -731,6 +737,8 @@ export const LEAGUES = {
       keepers: false,
       /** The Pecking Order, Tuesdays (top 25 + divisions; announced in Slack). */
       powerRankings: true,
+      rulesQa: false,
+      playoffs: false,
       liveLineups: false,
       /** The news feed carries The Gauntlet. */
       schefterFeed: true,

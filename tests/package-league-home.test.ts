@@ -7,13 +7,21 @@
 import { describe, expect, it } from 'vitest';
 import schedule from '../data/archies/mfl-feeds/2026/schedule.json';
 import standings from '../data/archies/mfl-feeds/2026/standings.json';
-import brackets from '../data/archies/mfl-feeds/2026/playoff-brackets.json';
 import config from '../data/archies/archies.config.json';
 import { buildTeamSnapshot, weekInTheBooks } from '../src/utils/package-league-home';
 import { buildPackageLeagueEvents, packageWhatsNext } from '../src/utils/package-league-events';
 import { groupStandingsByDivision } from '../src/utils/package-league';
 import { parseWeeklySchedule } from '../src/utils/schedule-data.mjs';
 import { getLeagueBySlug } from '../src/config/leagues';
+
+// A package league's bracket metadata, as MFL exports it once the commissioner
+// sets brackets up: a 7-team championship opening in week 15. Inline, not
+// Archie's feed: Archie's has no brackets on MFL, and the file it used to carry
+// was TheLeague's predicted shape written there by mistake.
+const brackets = {
+  playoffBrackets: { playoffBracket: [{ id: '1', name: 'Championship', startWeek: '15', teamsInvolved: '7' }] },
+  brackets: { 1: {} },
+};
 
 const league = getLeagueBySlug('archies')!;
 const groups = groupStandingsByDivision(standings, config.teams as any, (config as any).divisions ?? []);

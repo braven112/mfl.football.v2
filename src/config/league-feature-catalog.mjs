@@ -130,6 +130,14 @@ export const FEATURE_CATALOG = [
     requires: ['pushNotifications'],
   },
   {
+    key: 'playoffs',
+    label: 'Playoffs',
+    description:
+      "Playoff brackets with live scores. The page and its nav link appear once the league's brackets are set up on MFL.",
+    group: 'live',
+    requires: [],
+  },
+  {
     key: 'liveScoring',
     label: 'Live scoring',
     description: 'The live scoreboard and broadcast board.',
@@ -168,6 +176,14 @@ export const FEATURE_CATALOG = [
     description: 'Anonymous tips and the rumor mill. Needs a GroupMe chat listener.',
     group: 'news',
     requires: ['schefterFeed'],
+  },
+  {
+    key: 'rulesQa',
+    label: 'Ask Roger (rules Q&A)',
+    description:
+      "A Rules page and Roger, the AI rules chatbot. Answers from the league's rulebook, falling back to its MFL settings.",
+    group: 'news',
+    requires: [],
   },
   {
     key: 'viewerPreferences',

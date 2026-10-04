@@ -48,6 +48,8 @@ export const LEAGUE_JOBS = {
   'fantasy-points-allowed': syncs,
   /** prebuild: the per-league player identity table. */
   'player-identity-union': syncs,
+  /** prebuild + roster-sync.yml: the league's rules as configured on MFL, for Ask Roger and the Rules page. */
+  'mfl-settings-digest': syncs,
   /** prebuild + roster-sync.yml: the Top Players leaderboard — for leagues that HAVE the page. */
   'top-players': (l) => syncs(l) && hasPage(l, 'top-players.astro'),
 

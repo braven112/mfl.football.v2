@@ -1,0 +1,754 @@
+---
+/**
+ * The AFL's Prizes tab on the shared Playoffs page
+ * (src/components/shared/playoffs/PlayoffsPage.astro renders it into its slot).
+ * A league's own competition stays its own component — the payouts, the
+ * Premier League / D-League tiers and the NIT are AFL rules the shared page
+ * never learns (CLAUDE.md, "Share the standard views; a league's own competition stays its own").
+ *
+ * Bracket meaning comes from `bracketKind`, never an id: ids 2 and 3 are the
+ * AL/NL brackets only from 2018 on (src/utils/afl-bracket-kind.mjs).
+ */
+import { getTierAllPlayStandings } from '../../utils/standings';
+import { getCurrentWeekForYear } from '../../utils/current-week';
+import { isNitTitleBracket } from '../../utils/afl-bracket-kind.mjs';
+import { findFinalGame, type BracketView } from '../../utils/playoff-bracket-views';
+
+type BracketKind = 'al' | 'nl' | 'nit' | 'cup' | 'championship';
+
+interface Props {
+  selectedYear: number;
+  franchises: any[];
+  yearResolvedConfig: any;
+  /** Every bracket of the season, unfiltered by tab. */
+  bracketViews: BracketView[];
+  bracketIdsToFetch: string[];
+  bracketKind: (id: string) => BracketKind | string | undefined;
+  bracketNameById: Map<string, string>;
+  conferenceAStandings: any;
+  conferenceBStandings: any;
+}
+
+const {
+  selectedYear,
+  franchises,
+  yearResolvedConfig,
+  bracketViews,
+  bracketIdsToFetch,
+  bracketKind,
+  bracketNameById,
+  conferenceAStandings,
+  conferenceBStandings,
+} = Astro.props;
+
+const assetMap = new Map<string, any>(
+  (yearResolvedConfig?.teams ?? []).map((team: any) => [
+    team.franchiseId,
+    { icon: team.icon, banner: team.banner, aliases: team.aliases || [], name: team.name },
+  ])
+);
+
+// AFL Payout Structure (different from The League)
+const aflPayouts = {
+  leagueChampionship: 300,
+  conferenceChampionship: 150,
+  divisionChampionship: 150, // per division
+  wildCard: 100, // per wild card
+  premierChampion: 225,
+  premier2nd: 150,
+  premier3rd: 100,
+  premier4th: 50,
+  dLeagueChampion: 50,
+  nitChampion: 50,
+};
+
+const franchiseLookup = new Map<string, any>(
+  franchises.map((f: any) => [String((f as any).id ?? (f as any).franchise_id ?? ''), f])
+);
+
+const getTeamDisplay = (franchiseId?: string) => {
+  if (!franchiseId) return undefined;
+  const id = String(franchiseId);
+  const asset = assetMap.get(id);
+  const franchise = franchiseLookup.get(id);
+  return {
+    id,
+    name: asset?.name || franchise?.name || franchise?.franchise_name || `Franchise ${id}`,
+    icon: asset?.icon,
+    tier: asset?.tier,
+  };
+};
+
+
+// Get Premier League and D-League standings
+const tierAllPlayStandings = getTierAllPlayStandings(franchises, yearResolvedConfig, undefined, undefined, {
+  preserveFeedOrder: true,
+});
+const premierLeague = tierAllPlayStandings.find(t => t.tier === 'Premier League');
+const dLeague = tierAllPlayStandings.find(t => t.tier === 'D-League');
+
+type PrizeLine = {
+  label: string;
+  amount: number;
+  teamId?: string;
+  category?: 'playoff' | 'premier' | 'other';
+  isOfficial?: boolean;
+};
+
+// Determine what's official based on current state
+// Division/Wild Card are official after Week 14 (when playoffs start)
+// Premier/D-League are official after Week 17
+// Bracket-based prizes are official when the bracket game is complete
+
+// Use centralized week utility based on NFL calendar
+const currentWeek = getCurrentWeekForYear(selectedYear);
+const isDivisionWildCardOfficial = currentWeek >= 14; // After Week 14 ends
+const isPremierDLeagueOfficial = currentWeek >= 17; // After Week 17 ends
+const isTrulyFinal = currentWeek >= 18; // All prizes are final after Week 18 (end of season)
+
+// Calculate playoff-based prizes
+const playoffPrizes: PrizeLine[] = [];
+
+// League Championship (Bracket 1 winner)
+const leagueChampGame = findFinalGame(bracketViews, '1');
+if (leagueChampGame?.winnerId) {
+  playoffPrizes.push({
+    label: 'League Championship',
+    amount: aflPayouts.leagueChampionship,
+    teamId: leagueChampGame.winnerId,
+    category: 'playoff',
+    isOfficial: true, // Official when winner exists
+  });
+}
+
+// Conference Championships. Resolved by bracket KIND, never by id: ids 2 and 3
+// are the AL/NL brackets only from 2018 on. Before that they are the AFL
+// Consolation/Losers bracket and the 5th-place game (or, in 2005, the NIT) —
+// which have no conference meaning at all, and which only became reachable
+// here once the reconstruction started populating those ids. Read as ids, 2015
+// paid a "AL Conference Championship" to its 3rd-place consolation winner.
+const conferenceFinal = (kind: BracketKind) => {
+  const id = bracketIdsToFetch.find((b: string) => bracketKind(b) === kind);
+  return id ? findFinalGame(bracketViews, id) : undefined;
+};
+const alChampGame = conferenceFinal('al');
+const nlChampGame = conferenceFinal('nl');
+if (alChampGame?.winnerId) {
+  playoffPrizes.push({
+    label: 'AL Conference Championship',
+    amount: aflPayouts.conferenceChampionship,
+    teamId: alChampGame.winnerId,
+    category: 'playoff',
+    isOfficial: true, // Official when winner exists
+  });
+}
+if (nlChampGame?.winnerId) {
+  playoffPrizes.push({
+    label: 'NL Conference Championship',
+    amount: aflPayouts.conferenceChampionship,
+    teamId: nlChampGame.winnerId,
+    category: 'playoff',
+    isOfficial: true, // Official when winner exists
+  });
+}
+
+// Division Championships (4 divisions)
+// AL Conference divisions
+conferenceAStandings.divisionWinners.forEach((winner: any) => {
+  playoffPrizes.push({
+    label: `AL ${winner.division} Division Championship`,
+    amount: aflPayouts.divisionChampionship,
+    teamId: winner.id,
+    category: 'playoff',
+    isOfficial: isDivisionWildCardOfficial,
+  });
+});
+
+// NL Conference divisions
+conferenceBStandings.divisionWinners.forEach((winner: any) => {
+  playoffPrizes.push({
+    label: `NL ${winner.division} Division Championship`,
+    amount: aflPayouts.divisionChampionship,
+    teamId: winner.id,
+    category: 'playoff',
+    isOfficial: isDivisionWildCardOfficial,
+  });
+});
+
+// Wild Cards (2 per conference)
+const wildCards = [
+  ...conferenceAStandings.wildCards,
+  ...conferenceBStandings.wildCards,
+];
+wildCards.forEach(wildCard => {
+  playoffPrizes.push({
+    label: 'Wild Card',
+    amount: aflPayouts.wildCard,
+    teamId: wildCard.id,
+    category: 'playoff',
+    isOfficial: isDivisionWildCardOfficial,
+  });
+});
+
+// NIT Champion (find which NIT bracket has a winner). The title bracket is
+// named "NIT" (2003-2006) or "NIT Championship" (2007+); the rest are
+// consolation/placement rounds, so sort the real one to the front before the
+// first-winner-wins loop below.
+const nitBrackets = bracketIdsToFetch
+  .filter((id: string) => bracketKind(id) === 'nit')
+  .sort((a: string, b: string) => {
+    const rank = (id: string) => (isNitTitleBracket(bracketNameById.get(String(id))) ? 0 : 1);
+    return rank(a) - rank(b) || Number(a) - Number(b);
+  });
+let nitChampionId: string | undefined;
+let nitFinalists: string[] = []; // Track teams still competing for NIT
+for (const bracketId of nitBrackets) {
+  const nitChampGame = findFinalGame(bracketViews, bracketId);
+  if (nitChampGame?.winnerId) {
+    nitChampionId = nitChampGame.winnerId;
+    break;
+  } else if (nitChampGame?.game) {
+    // Game exists but no winner yet - these teams are still competing
+    const homeId = nitChampGame.game.home.team?.id;
+    const awayId = nitChampGame.game.away.team?.id;
+    if (homeId) nitFinalists.push(homeId);
+    if (awayId) nitFinalists.push(awayId);
+    break; // Only track finalists from the first unfinished championship game
+  }
+}
+if (nitChampionId) {
+  playoffPrizes.push({
+    label: 'NIT Champion',
+    amount: aflPayouts.nitChampion,
+    teamId: nitChampionId,
+    category: 'other',
+    isOfficial: true, // Official when winner exists
+  });
+}
+
+// Premier League prizes
+const premierPrizes: PrizeLine[] = [];
+if (premierLeague?.teams) {
+  if (premierLeague.teams[0]) {
+    premierPrizes.push({
+      label: 'Premier League Champion',
+      amount: aflPayouts.premierChampion,
+      teamId: premierLeague.teams[0].id,
+      category: 'premier',
+      isOfficial: isPremierDLeagueOfficial,
+    });
+  }
+  if (premierLeague.teams[1]) {
+    premierPrizes.push({
+      label: 'Premier League 2nd Place',
+      amount: aflPayouts.premier2nd,
+      teamId: premierLeague.teams[1].id,
+      category: 'premier',
+      isOfficial: isPremierDLeagueOfficial,
+    });
+  }
+  if (premierLeague.teams[2]) {
+    premierPrizes.push({
+      label: 'Premier League 3rd Place',
+      amount: aflPayouts.premier3rd,
+      teamId: premierLeague.teams[2].id,
+      category: 'premier',
+      isOfficial: isPremierDLeagueOfficial,
+    });
+  }
+  if (premierLeague.teams[3]) {
+    premierPrizes.push({
+      label: 'Premier League 4th Place',
+      amount: aflPayouts.premier4th,
+      teamId: premierLeague.teams[3].id,
+      category: 'premier',
+      isOfficial: isPremierDLeagueOfficial,
+    });
+  }
+}
+
+// D-League Champion
+if (dLeague?.teams?.[0]) {
+  premierPrizes.push({
+    label: 'D-League Champion',
+    amount: aflPayouts.dLeagueChampion,
+    teamId: dLeague.teams[0].id,
+    category: 'premier',
+    isOfficial: isPremierDLeagueOfficial,
+  });
+}
+
+// Combine all prizes
+const allPrizes = [...playoffPrizes, ...premierPrizes];
+
+// Calculate team totals
+const prizeTotalsByTeam = new Map<
+  string,
+  {
+    team: ReturnType<typeof getTeamDisplay>;
+    titles: Array<{ label: string; isOfficial: boolean }>;
+    total: number;
+  }
+>();
+
+const addPrize = (teamId: string | undefined, amount: number, title: string, isOfficial: boolean) => {
+  if (!teamId) return;
+  const id = String(teamId);
+  const entry = prizeTotalsByTeam.get(id) || {
+    team: getTeamDisplay(id),
+    titles: [],
+    total: 0,
+  };
+  entry.titles.push({ label: title, isOfficial });
+  entry.total += amount;
+  prizeTotalsByTeam.set(id, entry);
+};
+
+allPrizes.forEach(prize => addPrize(prize.teamId, prize.amount, prize.label, prize.isOfficial ?? true));
+
+const prizeSummary = Array.from(prizeTotalsByTeam.values()).sort((a, b) => b.total - a.total);
+const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
+---
+
+  <div class="prizes-card">
+    <div class="prizes-header">
+      <div>
+        <h2>Prizes</h2>
+        <p class="prizes-subtitle">
+          {isTrulyFinal ? 'Final prize money' : 'Projected prize money — some results not yet final'}
+        </p>
+      </div>
+      <div class="prizes-total">
+        <span>Total</span>
+        <strong>${grandTotal}</strong>
+      </div>
+    </div>
+    <div class="prizes-body">
+      <section class="prize-section--totals">
+        <ul class="team-total-list">
+          {prizeSummary.length === 0 ? (
+            <li class="prize-row">No payouts calculated yet.</li>
+          ) : (
+            prizeSummary.map(entry => {
+              // Mark team as projected ONLY if they're in NIT finals or have any non-official prizes
+              // Don't use isTrulyFinal here - that's for the page-level heading only
+              const hasNonOfficialPrize = entry.titles.some(t => !t.isOfficial);
+              const isNITFinalist = entry.team?.id ? nitFinalists.includes(entry.team.id) : false;
+              const isProjected = hasNonOfficialPrize || isNITFinalist;
+
+              return (
+                <li class={`prize-row${isProjected ? ' prize-row--projected' : ''}`}>
+                  <div class="prize-row__left">
+                    <div class="icon-thumb">
+                      {entry.team?.icon ? (
+                        <img src={entry.team.icon} alt={`${entry.team?.name} icon`} loading="lazy" />
+                      ) : (
+                        <div class="icon-thumb--placeholder" aria-hidden="true"></div>
+                      )}
+                    </div>
+                    <div class="prize-row__info">
+                      <p class="prize-team">{entry.team?.name ?? 'TBD'}</p>
+                      <p class="prize-titles">
+                        {entry.titles.length === 0 ? '—' : entry.titles.map((title, idx) => (
+                          <>
+                            <span class={title.isOfficial ? '' : 'title-projected'}>{title.label}</span>
+                            {idx < entry.titles.length - 1 && <span class="title-separator"> · </span>}
+                          </>
+                        ))}
+                      </p>
+                    </div>
+                  </div>
+                  <div class="prize-row__amount">
+                    <span>${entry.total}</span>
+                  </div>
+                </li>
+              );
+            })
+          )}
+        </ul>
+      </section>
+
+      <div class="prizes-grid-top">
+        <section class="prize-section">
+          <header class="prize-section__header">
+            <h3>Playoff & Conference Payouts</h3>
+            <span class="section-total">${playoffPrizes.reduce((sum, p) => sum + p.amount, 0)}</span>
+          </header>
+          <ul class="prize-list">
+            {playoffPrizes.map(line => {
+              const team = getTeamDisplay(line.teamId);
+              return (
+                <li class={`prize-row ${!line.isOfficial ? 'prize-row--projected' : ''}`}>
+                  <div class="prize-row__left">
+                    <div class="icon-thumb">
+                      {team?.icon ? (
+                        <img src={team.icon} alt={`${team.name} icon`} loading="lazy" />
+                      ) : (
+                        <div class="icon-thumb--placeholder" aria-hidden="true"></div>
+                      )}
+                    </div>
+                    <div class="prize-row__info">
+                      <p class="prize-label">{line.label}</p>
+                      <p class="prize-team">{team?.name ?? 'TBD'}</p>
+                    </div>
+                  </div>
+                  <div class="prize-row__amount">
+                    <span>${line.amount}</span>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+
+        <section class="prize-section">
+          <header class="prize-section__header">
+            <h3>Premier League / D-League</h3>
+            <span class="section-total">${premierPrizes.reduce((sum, p) => sum + p.amount, 0)}</span>
+          </header>
+          <ul class="prize-list">
+            {premierPrizes.map(line => {
+              const team = getTeamDisplay(line.teamId);
+              return (
+                <li class={`prize-row ${!line.isOfficial ? 'prize-row--projected' : ''}`}>
+                  <div class="prize-row__left">
+                    <div class="icon-thumb">
+                      {team?.icon ? (
+                        <img src={team.icon} alt={`${team.name} icon`} loading="lazy" />
+                      ) : (
+                        <div class="icon-thumb--placeholder" aria-hidden="true"></div>
+                      )}
+                    </div>
+                    <div class="prize-row__info">
+                      <p class="prize-label">{line.label}</p>
+                      <p class="prize-team">{team?.name ?? 'TBD'}</p>
+                    </div>
+                  </div>
+                  <div class="prize-row__amount">
+                    <span>${line.amount}</span>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      </div>
+
+      <div class="prizes-legend">
+        <p class="legend-item">
+          <span class="legend-marker legend-marker--final"></span>
+          <span class="legend-text"><strong>Regular text</strong> = Final results</span>
+        </p>
+        <p class="legend-item">
+          <span class="legend-marker legend-marker--projected"></span>
+          <span class="legend-text"><em>Italic text with dashed border</em> = Projected (not yet final)</span>
+        </p>
+      </div>
+    </div>
+  </div>
+
+<style>
+  .prizes-card {
+    background: var(--card-bg, #ffffff);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: 16px;
+    padding: 1.25rem;
+    box-shadow: var(--box-shadow-lg);
+
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .prizes-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .prizes-subtitle {
+    margin: 0.25rem 0 0;
+    color: var(--content-text-muted, #475569);
+  }
+
+  .prizes-total {
+    background: var(--accent-content-bg-color);
+    border: 1px solid var(--accent-content-border-color);
+    color: var(--accent-content-text-color);
+    padding: 0.65rem 0.9rem;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 110px;
+  }
+
+  .prizes-total strong {
+    font-size: 1.3rem;
+  }
+
+  .prizes-body {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .prizes-grid-top {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1rem;
+  }
+
+  @media (max-width: 768px) {
+    .prizes-grid-top {
+      grid-template-columns: 1fr;
+      gap: 0.5rem;
+    }
+
+    .prizes-card {
+      padding: 0.75rem;
+    }
+
+    .prize-section {
+      padding: 0 !important;
+      background: transparent !important;
+      border: none !important;
+      border-radius: 0 !important;
+    }
+
+    .prize-section__header {
+      margin-bottom: 0.5rem;
+      padding: 0 0.25rem;
+    }
+
+    .prize-section__header h3 {
+      font-size: 0.95rem;
+    }
+
+    .section-total {
+      font-size: 0.9rem;
+    }
+
+    .prize-row {
+      padding: 0.5rem;
+      gap: 0.5rem;
+    }
+
+    .icon-thumb,
+    .icon-thumb--placeholder {
+      width: 40px;
+      height: 40px;
+    }
+
+    .prize-label {
+      font-size: 0.9rem;
+    }
+
+    .prize-team {
+      font-size: 0.85rem;
+    }
+  }
+
+  .prize-section {
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: 12px;
+    padding: 0.75rem;
+    background: var(--content-bg-muted, #f8fafc);
+  }
+
+  .prize-section__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+  }
+
+  .prize-section__header h3 {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--page-text, #0f172a);
+  }
+
+  .section-total {
+    font-weight: 700;
+    color: var(--page-text, #0f172a);
+    background: var(--content-bg-accent, #e2e8f0);
+    padding: 0.2rem 0.6rem;
+    border-radius: 6px;
+  }
+
+  .prize-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+
+  .prize-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    justify-items: start;
+    gap: 0.75rem;
+    padding: 0.65rem 0.5rem;
+    border-radius: 10px;
+    background: var(--card-bg, #fff);
+    border: 1px solid var(--content-border, #e2e8f0);
+  }
+
+  .prize-row--projected {
+    opacity: 0.8;
+    border-style: dashed;
+  }
+
+  .prize-row--projected .prize-label,
+  .prize-row--projected .prize-team,
+  .prize-row--projected .prize-row__amount {
+    font-style: italic;
+  }
+
+  .prizes-legend {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background: var(--content-bg-muted, #f8fafc);
+    border-radius: 8px;
+    border: 1px solid var(--content-border, #e2e8f0);
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0.5rem 0;
+  }
+
+  .legend-item:first-child {
+    padding-top: 0;
+  }
+
+  .legend-item:last-child {
+    padding-bottom: 0;
+  }
+
+  .legend-marker {
+    display: inline-block;
+    width: 60px;
+    height: 20px;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+
+  .legend-marker--final {
+    border: 1px solid var(--content-border, #e2e8f0);
+    background: var(--card-bg, #fff);
+  }
+
+  .legend-marker--projected {
+    border: 1px dashed var(--content-border, #cbd5e1);
+    background: var(--card-bg, #fff);
+    opacity: 0.8;
+  }
+
+  .legend-text {
+    font-size: 0.9rem;
+    color: var(--content-text-muted, #475569);
+  }
+
+  .prize-row__left {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 0.65rem;
+  }
+
+  .prize-row__info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+
+  .prize-label {
+    margin: 0;
+    font-weight: 700;
+    color: var(--page-text, #0f172a);
+  }
+
+  .prize-team {
+    margin: 0;
+    color: var(--content-text-muted, #475569);
+    font-size: 0.95rem;
+  }
+
+  .prize-score {
+    color: var(--page-text, #0f172a);
+    font-weight: 600;
+  }
+
+  .prize-row__amount {
+    font-weight: 700;
+    color: var(--page-text, #0f172a);
+    white-space: nowrap;
+  }
+
+  .icon-thumb {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--content-bg-muted, #e2e8f0);
+    display: grid;
+    place-items: center;
+  }
+
+  .icon-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .icon-thumb--placeholder {
+    width: 48px;
+    height: 48px;
+    background: var(--content-bg-accent, #cbd5e1);
+    border-radius: 12px;
+  }
+
+  .week-badge {
+    background: var(--content-bg-accent, #e2e8f0);
+    color: var(--page-text, #0f172a);
+    padding: 0.35rem 0.55rem;
+    border-radius: 8px;
+    font-weight: 700;
+    min-width: 48px;
+    text-align: center;
+  }
+
+  .prize-titles {
+    margin: 0;
+    color: var(--content-text-muted, #64748b);
+    font-size: 0.9rem;
+  }
+
+  .title-projected {
+    font-style: italic;
+  }
+
+  .title-separator {
+    font-style: normal;
+  }
+
+  .team-total-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+</style>
