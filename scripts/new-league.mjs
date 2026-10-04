@@ -50,7 +50,7 @@ import { LEAGUES } from '../src/config/leagues-data.mjs';
 import { ARCHETYPES } from '../src/config/league-archetypes.mjs';
 import { FEATURE_KEYS } from '../src/config/league-feature-catalog.mjs';
 import { packageRoutesFor } from '../src/config/package-league-routes.mjs';
-import { specErrors as baseSpecErrors } from '../src/config/launch-spec.mjs';
+import { SLUG_RE, specErrors as baseSpecErrors } from '../src/config/launch-spec.mjs';
 import { applyChanges, syncPlan } from './lib/package-kit.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -148,20 +148,30 @@ export function insertRegistryEntry(source, entry) {
  * Set an existing entry's `features` values in the registry source, keeping
  * every comment and the key order — only the `true`/`false` literals change.
  * A key the block lacks is appended before its closing brace.
+ *
+ * Plain string matching, never a RegExp built from the slug or a key: both can
+ * arrive from the command line, and the slug and keys are checked against
+ * their fixed shapes first anyway.
  */
 export function setRegistryFeatures(source, slug, features) {
-  const start = source.search(new RegExp(`\\n  (?:'${slug}'|${slug}): \\{\\n`));
+  if (!SLUG_RE.test(String(slug))) throw new Error(`not a league slug: ${slug}`);
+  for (const key of Object.keys(features)) {
+    if (!FEATURE_KEYS.includes(key)) throw new Error(`not a feature key: ${key}`);
+  }
+  const heads = [`\n  ${slug}: {\n`, `\n  '${slug}': {\n`];
+  const start = Math.max(...heads.map((h) => source.indexOf(h)));
   if (start < 0) throw new Error(`registry entry ${slug} not found`);
   const open = source.indexOf('\n    features: {\n', start);
   const next = source.slice(start + 1).search(/\n  [\w'-]+: \{\n/);
   if (open < 0 || (next >= 0 && open > start + 1 + next)) throw new Error(`${slug} has no features block`);
   const close = source.indexOf('\n    },', open);
-  let block = source.slice(open, close);
+  const lines = source.slice(open, close).split('\n');
   for (const [key, on] of Object.entries(features)) {
-    const re = new RegExp(`(\\n      ${key}: )(true|false)(,)`);
-    block = re.test(block) ? block.replace(re, `$1${on}$3`) : `${block}\n      ${key}: ${on},`;
+    const at = lines.findIndex((l) => l === `      ${key}: true,` || l === `      ${key}: false,`);
+    if (at >= 0) lines[at] = `      ${key}: ${Boolean(on)},`;
+    else lines.push(`      ${key}: ${Boolean(on)},`);
   }
-  return source.slice(0, open) + block + source.slice(close);
+  return source.slice(0, open) + lines.join('\n') + source.slice(close);
 }
 
 // ── Plan ─────────────────────────────────────────────────────────────────────
