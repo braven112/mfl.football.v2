@@ -17,7 +17,7 @@ import type { SchefterPost } from '../../types/schefter';
 import { stripTags } from '../../utils/whats-new-links';
 import { getAuthor, getAuthorAvatar } from '../../types/schefter';
 import { getPersonaLabels, postByline } from '../../utils/persona-server';
-import { formatRelativeTime, getMilestoneLabel, isRumorLikePost } from '../../utils/schefter-feed';
+import { formatRelativeTime, getMilestoneLabel, isRumorLikePost, postLinkHref } from '../../utils/schefter-feed';
 import type { GroupMePostMeta } from '../../utils/groupme-storage';
 import SchefterReactionBar from './SchefterReactionBar.tsx';
 import SchefterReplyThread from './SchefterReplyThread.tsx';
@@ -226,7 +226,7 @@ const whisperLoginHref = (league: string | undefined) =>
     ) : (
       <>
         {isArticle && post.image && (
-          <a href={post.link} class="sf-post__image-link">
+          <a href={postLinkHref(post)} class="sf-post__image-link">
             <img
               class="sf-post__image"
               src={`/assets/schefter/${post.image}`}
@@ -266,7 +266,7 @@ const whisperLoginHref = (league: string | undefined) =>
 
         {post.link && (
           <a
-            href={post.link}
+            href={postLinkHref(post)}
             class={`sf-post__link${isExternal ? ' sf-post__link--external' : ''}${typeof post.link === 'string' && post.link.includes('?target=') ? ' sf-post__link--directed' : ''}`}
             {...(isExternal ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
           >

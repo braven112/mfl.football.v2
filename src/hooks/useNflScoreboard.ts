@@ -16,7 +16,7 @@
 
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import type { EspnSlotInfo, NflGame, NflScoreboardResponse } from '../types/live-scoring';
-import { createSharedPoller, type PollStatus } from '../utils/live-poll-store';
+import { createSharedPoller, type PollStatus, serverPollState } from '../utils/live-poll-store';
 import { espnOverrideKey } from '../utils/espn-scoreboard-url';
 
 export const POLL_LIVE = 60_000;
@@ -192,7 +192,8 @@ export function useNflScoreboard(
       [enabled, params, liveNow],
     ),
     () => poller.getState(params),
-    () => poller.getState(params),
+    // Hydrate with what the server rendered, not what another island fetched.
+    serverPollState,
   );
 
   return useMemo(() => {

@@ -27,7 +27,7 @@
  */
 
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
-import { createSharedPoller, type PollStatus } from '../utils/live-poll-store';
+import { createSharedPoller, type PollStatus, serverPollState } from '../utils/live-poll-store';
 import { POLL_LIVE, POLL_STALE } from './useNflScoreboard';
 import type { LivePlayerRow, MatchupPairing } from '../types/live-scoring';
 import { hasLiveSignal } from '../utils/live-scoring-snapshot';
@@ -132,7 +132,8 @@ export function useLiveScoringFeed(
       [enabled, params, liveNow],
     ),
     () => poller.getState(params),
-    () => poller.getState(params),
+    // Hydrate with what the server rendered, not what another island fetched.
+    serverPollState,
   );
 
   return useMemo(() => {

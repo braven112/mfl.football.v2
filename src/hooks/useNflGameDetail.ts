@@ -17,7 +17,7 @@ import type {
   NflGameDetailResponse,
   PlayerBoxScore,
 } from '../types/live-scoring';
-import { createSharedPoller, type PollStatus } from '../utils/live-poll-store';
+import { createSharedPoller, type PollStatus, serverPollState } from '../utils/live-poll-store';
 import { espnOverrideKey } from '../utils/espn-scoreboard-url';
 import { POLL_LIVE, POLL_STALE } from './useNflScoreboard';
 
@@ -105,7 +105,8 @@ export function useNflGameDetail(
       [enabled, params, anyLive],
     ),
     () => poller.getState(params),
-    () => poller.getState(params),
+    // Hydrate with what the server rendered, not what another island fetched.
+    serverPollState,
   );
 
   return useMemo(() => {
