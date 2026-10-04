@@ -657,3 +657,26 @@ Three things worth knowing before the next surface copies it:
   conference view's `.v-conf .team-info` did not wrap, so today's name squeezed
   in beside the banner there and nowhere else. Only a reviewer noticed. When a
   table has variants, render each one before calling a layout change done.
+
+
+---
+
+## The Throwback Week welcome popup (October 2026)
+
+`ThrowbackWeekModal` (layout-mounted, signed-in owners only) shows the crest,
+`’08–’11` years and name the owner is wearing, once per device per throwback
+week (`throwback-welcome:<scope>:<season>:w<week>` in localStorage, written on
+OPEN). It links to `/throwback-settings` until `isThrowbackPickLocked`, then
+only announces.
+
+- **It reads the band map, not its own era.** `buildThrowbackWelcome` takes
+  name and crest from `buildFranchiseBandBrands`, so the popup cannot disagree
+  with the player-modal bands on the same page. The YEARS come from
+  `resolveThrowbackAssignments` and are only shown when that era's name matches
+  the band's, so a fall-through to the current look shows no years rather than
+  a wrong range.
+- **It ignores `?week=`.** The layout strips it before resolving state:
+  `/live-scoring?week=4` in December is history, not the start of the week.
+  `?testDate=` still works for previewing (`?testDate=2026-09-30` opens it).
+
+Guard: `tests/throwback-welcome.test.ts`.

@@ -40,9 +40,12 @@ import FranchiseBandBrands from '../components/shared/FranchiseBandBrands.astro'
 import ThemeScript from '../components/shared/ThemeScript.astro';
 import { getThemePreference } from '../utils/theme-preference';
 import TransactionHubModal from '../components/shared/TransactionHubModal.astro';
+import ThrowbackWeekModal from '../components/shared/ThrowbackWeekModal.astro';
+import { buildThrowbackWelcome, type ThrowbackWelcome } from '../utils/throwback-welcome';
+import { resolveThrowbackRequestState } from '../utils/throwback-request-state';
 import RosterLoader from '../components/shared/RosterLoader.astro';
 import { getLeagueContext } from '../utils/league-context';
-import { getLeagueYearForSlug } from '../utils/league-year';
+import { getLeagueYearForSlug, getTestDateFromSearchParams } from '../utils/league-year';
 import { navConfig, getAdminFranchiseIds } from '../config/nav-config';
 import { getVisibleSections, getVisiblePinnedLinks, parseMyTeamFromUrl, buildNavTeamInfo, resolveLeaguePath } from '../utils/nav-utils';
 import type { NavTeamInfo, LeagueSlug } from '../types/nav';
@@ -265,6 +268,27 @@ const transactionHubConfig = buildTransactionHubConfig(
 	// system is read off the LEAGUE year's feed, not the season year's.
 	Number(getLeagueYearForSlug(leagueContext.slug as LeagueSlug)),
 );
+
+// Throwback Week welcome — signed-in owners only (the SESSION franchise, never
+// the preference cookie). Keyed off the real week: `?week=` is stripped so a
+// page reading an old throwback week's history does not announce a new one.
+// The store read is gated inside on the week being a throwback week, and is
+// the same memoized read FranchiseBandBrands makes.
+const throwbackPickerHref = resolveLeaguePath(`/${leagueContext.slug}/throwback-settings`, hideLeaguePrefix);
+let throwbackWelcome: ThrowbackWelcome | null = null;
+if (sessionFranchiseId && Astro.url.pathname !== throwbackPickerHref) {
+	const realWeekUrl = new URL(Astro.url);
+	realWeekUrl.searchParams.delete('week');
+	const { throwbackActive, throwbackOverrides } = await resolveThrowbackRequestState(league, realWeekUrl);
+	if (throwbackActive) {
+		throwbackWelcome = buildThrowbackWelcome({
+			league,
+			franchiseId: sessionFranchiseId,
+			now: getTestDateFromSearchParams(Astro.url.searchParams) ?? new Date(),
+			overrides: throwbackOverrides,
+		});
+	}
+}
 
 // Get admin franchise IDs
 const adminFranchiseIds = getAdminFranchiseIds(league);
@@ -652,6 +676,11 @@ import DemoTour from '../components/shared/DemoTour.astro';
 		<!-- Transaction Hub — global bell: trade offers, waiver claims, waiver order -->
 		{!isBestBallLeague && (
 			<TransactionHubModal hideLeaguePrefix={hideLeaguePrefix} config={transactionHubConfig} />
+		)}
+
+		<!-- Throwback Week welcome — once per device, the week it begins -->
+		{throwbackWelcome && (
+			<ThrowbackWeekModal welcome={throwbackWelcome} leagueSlug={leagueContext.slug} pickerHref={throwbackPickerHref} />
 		)}
 		<script src="../scripts/transaction-hub.ts"></script>
 
