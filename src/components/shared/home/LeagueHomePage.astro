@@ -1,0 +1,218 @@
+---
+/**
+ * The shared league homepage: the AFL's homepage made shared (the owner's call,
+ * Oct 2026 — the AFL's pages are the repeatable ones; TheLeague's homepage
+ * stays its own). The AFL and every package league render it.
+ *
+ * The page owns the shell every league shares:
+ *   install banner     the app prompt, for a signed-in owner of THIS league
+ *   hero               LeagueHero (or the preseason live-scoring test drive)
+ *   Owners' Poll       when the league runs one and its window is open
+ *   quick links        the league's pages from the page directory
+ *   What's New         platform updates, minus the one the hero features
+ *   debug strip        under ?testDate
+ *   rail               the league's news desk (SchefterFeedCompact)
+ *
+ * A league's own cards come in through slots, in this order: `snapshot` (its
+ * team card), `after-snapshot`, `whats-next`, `standings`, `extras`. They are
+ * the league's own — the AFL's conference and tier cards, a package league's
+ * division standings, MAD qualifiers, Pecking Order and transactions — and
+ * the shared page never learns their rules (CLAUDE.md, "Share the standard
+ * views; a league's own competition stays its own").
+ *
+ * Every value is resolved by the route (or a league's adapter) and handed in:
+ * globs are literal per route, and the `?myteam` cookie WRITE must happen in a
+ * page (`Astro.cookies.set()` from a component throws after the headers
+ * commit). This component only lays the page out.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import SchefterFeedCompact from '../SchefterFeedCompact.astro';
+import LeagueHero from '../league-hero/LeagueHero.astro';
+import OwnersPollHomeCard from '../owners-poll/OwnersPollHomeCard.astro';
+import LiveScoringTestDrive from '../LiveScoringTestDrive.astro';
+import QuickLinks from '../hp-sections/QuickLinks.astro';
+import WhatsNewRow from '../WhatsNewRow.astro';
+import InstallAppPrompt from '../pwa/InstallAppPrompt.astro';
+import { getLeagueTeamBrands } from '../../../utils/league-team-brands';
+import type { SchefterPost } from '../../../types/schefter';
+import type { CanonicalLeagueSlug } from '../../../config/leagues';
+
+import '../../../styles/schefter-feed.css';
+import '../../../styles/schefter-feed-compact.css';
+
+interface Props {
+  leagueSlug: CanonicalLeagueSlug;
+  /** The document title. */
+  title: string;
+  /** The app-install banner's league name, or null to show no banner. */
+  installBanner: { leagueName: string } | null;
+  effectiveDate: Date;
+  /** The preseason live-scoring test drive replaces the hero while it runs. */
+  testDriveHero: boolean;
+  hero: {
+    state: any;
+    liveScoring?: any;
+    backdrop?: any;
+    /** Optional inputs some heroes read (the AFL's tier/standings slots). */
+    config?: any;
+    standings?: any[];
+    userFranchiseId?: string;
+  };
+  /** The Owners' Poll card, or null when the league shows none now. */
+  ownersPoll: { issue: any; ballotHref: string } | null;
+  /** Passed to QuickLinks; undefined leaves its default. */
+  quickLinksAuthenticated?: boolean;
+  /** WhatsNewRow's props, less `count` (always two). */
+  whatsNew: Record<string, unknown>;
+  testMode: boolean;
+  rail: {
+    label: string;
+    posts: SchefterPost[];
+    isAuthenticated: boolean;
+    userFranchiseId?: string;
+    personalized?: any;
+    forYouIds?: any;
+    watching?: any;
+    emptyText?: string;
+  };
+}
+
+const {
+  leagueSlug,
+  title,
+  installBanner,
+  effectiveDate,
+  testDriveHero,
+  hero,
+  ownersPoll,
+  quickLinksAuthenticated,
+  whatsNew,
+  testMode,
+  rail,
+} = Astro.props;
+---
+
+<TheLeagueLayout title={title}>
+  <div class="league-hp">
+    {installBanner && <InstallAppPrompt variant="banner" leagueName={installBanner.leagueName} leagueSlug={leagueSlug} />}
+    <section class="league-hp__main" aria-labelledby="league-hp-hero-heading">
+      <h2 id="league-hp-hero-heading" class="visually-hidden">League Overview</h2>
+
+      {testDriveHero ? (
+        <LiveScoringTestDrive slug={leagueSlug} referenceDate={effectiveDate} />
+      ) : (
+        <LeagueHero
+          league={leagueSlug}
+          state={hero.state}
+          liveScoring={hero.liveScoring}
+          config={hero.config}
+          standings={hero.standings}
+          userFranchiseId={hero.userFranchiseId}
+          backdrop={hero.backdrop}
+        />
+      )}
+
+      {ownersPoll && (
+        <OwnersPollHomeCard
+          issue={ownersPoll.issue}
+          teams={getLeagueTeamBrands(leagueSlug)}
+          leagueSlug={leagueSlug}
+          ballotHref={ownersPoll.ballotHref}
+        />
+      )}
+
+      <slot name="snapshot" />
+      <slot name="after-snapshot" />
+      <slot name="whats-next" />
+      <slot name="standings" />
+      <slot name="extras" />
+
+      <QuickLinks league={leagueSlug} isAuthenticated={quickLinksAuthenticated} />
+
+      <WhatsNewRow {...(whatsNew as any)} count={2} />
+
+      {testMode && (
+        <div class="league-hp__debug" id="league-hp-debug">
+          <div class="league-hp__debug-phase">
+            <code>Hero: {hero.state.kind} · priority {hero.state.priority} · ref {effectiveDate.toISOString()}</code>
+          </div>
+        </div>
+      )}
+    </section>
+
+    <aside class="league-hp__sidebar" aria-label={rail.label} tabindex="0">
+      <SchefterFeedCompact
+        posts={rail.posts}
+        isAuthenticated={rail.isAuthenticated}
+        userFranchiseId={rail.userFranchiseId}
+        personalized={rail.personalized}
+        forYouIds={rail.forYouIds}
+        watching={rail.watching}
+        emptyText={rail.emptyText}
+      />
+    </aside>
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .league-hp {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 1.5rem;
+    align-items: start;
+  }
+
+  .league-hp__main {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .league-hp__sidebar {
+    min-width: 0;
+    position: sticky;
+    top: 2rem;
+    max-height: calc(100dvh - var(--header-height, 3.5rem) - 2rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--sf-border, #e5e7eb) transparent;
+    border-radius: var(--radius-lg, 0.75rem);
+  }
+
+  .league-hp__debug {
+    margin-top: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px dashed var(--content-border, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    font-size: var(--font-size-2xs);
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  @container (max-width: 1024px) {
+    .league-hp {
+      grid-template-columns: 1fr 320px;
+      gap: 1rem;
+    }
+  }
+
+  @container (max-width: 880px) {
+    .league-hp {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+
+    .league-hp__sidebar {
+      position: static;
+      max-height: none;
+      overflow-y: visible;
+      /* Restore the breathing room above the sidebar once it stacks below the
+         main column. The desktop margin-top was removed because it offset the
+         two columns; in single-column flow there's no alignment to preserve, so
+         the extra separation is purely visual and worth keeping. */
+      margin-top: 2rem;
+    }
+  }
+</style>
