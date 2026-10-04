@@ -2,7 +2,7 @@
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import aflConfig from '../../../../data/afl-fantasy/afl.config.json';
 import franchiseHistory from '../../../../data/afl-fantasy/derived/franchise-history.json';
-import { formatTradeAsset } from '../../../utils/franchise-trade-asset';
+import { formatTradeAsset, franchiseEraInYear } from '../../../utils/franchise-trade-asset';
 import EmptyState from '../../../components/shared/states/EmptyState.astro';
 import {
   currentOwnerMeetings,
@@ -113,7 +113,15 @@ type Trade = {
   gaveUp: string[];
   received: string[];
   comments: string;
+  sourceFranchiseId?: string | null;
+  partnerSourceId?: string | null;
 };
+
+// Each side as it was named THAT season, not today (franchiseEraInYear). The
+// RAW MFL slot matters: ownerHistory attribution can file a trade under a
+// franchise id whose own name history never covered that year.
+const tradeSideName = (slot: string, year: number, current: string): string =>
+  franchiseEraInYear(teamLookup[slot], year)?.name ?? current;
 const tradesBetween: Trade[] = (((frA.trades ?? []) as Trade[]) || [])
   .filter((t) => t.partnerId === bigger)
   .sort((x, y) => y.timestamp - x.timestamp);
@@ -301,7 +309,7 @@ const shortB = frB.currentNameShort || nameB;
                   <div class="rivalry-trade__date">{tradeDateLabel(t)}</div>
                   <div class="rivalry-trade__sides">
                     <div>
-                      <span class="rivalry-trade__label">{shortA} sent</span>
+                      <span class="rivalry-trade__label">{tradeSideName(t.sourceFranchiseId ?? smaller, t.year, shortA)} sent</span>
                       <ul>
                         {t.gaveUp.length
                           ? t.gaveUp.map((c) => <li>{formatAsset(c)}</li>)
@@ -309,7 +317,7 @@ const shortB = frB.currentNameShort || nameB;
                       </ul>
                     </div>
                     <div>
-                      <span class="rivalry-trade__label">{shortB} sent</span>
+                      <span class="rivalry-trade__label">{tradeSideName(t.partnerSourceId ?? bigger, t.year, shortB)} sent</span>
                       <ul>
                         {t.received.length
                           ? t.received.map((c) => <li>{formatAsset(c)}</li>)
