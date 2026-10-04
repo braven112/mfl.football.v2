@@ -141,7 +141,13 @@ function franchiseShortName(fid: string): string {
   const t = teamLookup[fid];
   return t?.nameShort ?? t?.nameMedium ?? t?.name ?? fid;
 }
-const formatAsset = (code: string) => formatTradeAsset(code, playerNames, franchiseShortName);
+// A future pick's "via" team is named as it was in the trade's season.
+const formatAsset = (code: string, year: number) =>
+  formatTradeAsset(
+    code,
+    playerNames,
+    (fid) => franchiseEraInYear(teamLookup[fid], year)?.name ?? franchiseShortName(fid)
+  );
 
 function tradeDateLabel(t: Trade): string {
   if (!t.timestamp) return String(t.year);
@@ -405,13 +411,13 @@ const titleB = frB.currentNameMedium || frB.currentName;
                 <div class="trade-col">
                   <div class="t-name">{tradeSideName(t.sourceFranchiseId ?? smaller, t.year, frA.currentNameShort || frA.currentNameMedium)} {t.partnerId === bigger ? 'sent' : 'received'}</div>
                   <ul>
-                    {t.gaveUp.map((c) => <li>{formatAsset(c)}</li>)}
+                    {t.gaveUp.map((c) => <li>{formatAsset(c, t.year)}</li>)}
                   </ul>
                 </div>
                 <div class="trade-col">
                   <div class="t-name">{tradeSideName(t.partnerSourceId ?? bigger, t.year, frB.currentNameShort || frB.currentNameMedium)} {t.partnerId === bigger ? 'sent' : 'received'}</div>
                   <ul>
-                    {t.received.map((c) => <li>{formatAsset(c)}</li>)}
+                    {t.received.map((c) => <li>{formatAsset(c, t.year)}</li>)}
                   </ul>
                 </div>
               </div>

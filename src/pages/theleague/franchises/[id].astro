@@ -178,7 +178,13 @@ const franchiseShortName = (fid: string): string => {
   const meta = opponentMeta[fid];
   return meta?.nameShort ?? meta?.nameMedium ?? meta?.name ?? fid;
 };
-const formatAsset = (code: string) => formatTradeAsset(code, playerNames, franchiseShortName);
+// A future pick's "via" team is named as it was in the trade's season.
+const formatAsset = (code: string, year: number) =>
+  formatTradeAsset(
+    code,
+    playerNames,
+    (fid) => franchiseEraInYear((leagueConfig.teams as any[]).find((x) => x.franchiseId === fid), year)?.name ?? franchiseShortName(fid)
+  );
 
 type FranchiseTrade = {
   year: number;
@@ -506,7 +512,7 @@ const formatBid = (n: number): string => {
                       <div class="trade-col">
                         <div class="t-name">Sent</div>
                         {t.gaveUp.length > 0 ? (
-                          <ul>{t.gaveUp.map((c) => <li>{formatAsset(c)}</li>)}</ul>
+                          <ul>{t.gaveUp.map((c) => <li>{formatAsset(c, t.year)}</li>)}</ul>
                         ) : (
                           <p class="dim small">—</p>
                         )}
@@ -514,7 +520,7 @@ const formatBid = (n: number): string => {
                       <div class="trade-col">
                         <div class="t-name">Received</div>
                         {t.received.length > 0 ? (
-                          <ul>{t.received.map((c) => <li>{formatAsset(c)}</li>)}</ul>
+                          <ul>{t.received.map((c) => <li>{formatAsset(c, t.year)}</li>)}</ul>
                         ) : (
                           <p class="dim small">—</p>
                         )}

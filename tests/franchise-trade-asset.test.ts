@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { franchiseEraInYear } from '../src/utils/franchise-trade-asset';
+import { formatTradeAsset, franchiseEraInYear } from '../src/utils/franchise-trade-asset';
 import aflConfig from '../data/afl-fantasy/afl.config.json';
 import aflHistory from '../data/afl-fantasy/derived/franchise-history.json';
 import theleagueHistory from '../data/theleague/derived/franchise-history.json';
@@ -14,6 +14,15 @@ describe('franchiseEraInYear', () => {
     // The June 2007 trade card read "Computer Jocks"; the slot was 420 All-Stars.
     expect(franchiseEraInYear(slot0005, 2007)?.name).toBe('420 All-Stars');
     expect(franchiseEraInYear(slot0005, 2007)?.icon).toMatch(/420_all_stars/);
+  });
+
+  it('labels a future pick by its origin team as named in the trade season', () => {
+    const label = formatTradeAsset(
+      'FP_0005_2008_1',
+      {},
+      (fid) => franchiseEraInYear((aflConfig.teams as any[]).find((t) => t.franchiseId === fid), 2007)?.name ?? fid
+    );
+    expect(label).toBe('2008 R1 pick (via 420 All-Stars)');
   });
 
   it('returns null inside the current identity so the caller keeps its label', () => {

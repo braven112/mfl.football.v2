@@ -370,7 +370,13 @@ const playerNames = ((franchiseHistory as any).playerNames ?? {}) as Record<
   string,
   { name: string; position?: string; team?: string }
 >;
-const formatAsset = (code: string) => formatTradeAsset(code, playerNames, franchiseShortName);
+// A future pick's "via" team is named as it was in the trade's season.
+const formatAsset = (code: string, year: number) =>
+  formatTradeAsset(
+    code,
+    playerNames,
+    (fid) => franchiseEraInYear((aflConfig.teams as any[]).find((x) => x.franchiseId === fid), year)?.name ?? franchiseShortName(fid)
+  );
 
 type FranchiseTrade = {
   year: number;
@@ -726,7 +732,7 @@ const hasHighlights = Boolean(
                     <a
                       class="trade-partner"
                       href={`/afl-fantasy/rivalries/${canonicalRivalryPair(id!, t.partnerId)}`}
-                      title={`Rivalry vs ${opponentName(t.partnerId)}`}
+                      title={`Rivalry vs ${partner.name}`}
                     >
                       {partner.icon ? (
                         <img src={partner.icon} alt="" class="trade-partner__icon" loading="lazy" />
@@ -740,7 +746,7 @@ const hasHighlights = Boolean(
                       <span class="trade__side-label">Sent</span>
                       <ul>
                         {t.gaveUp.length
-                          ? t.gaveUp.map((c) => <li>{formatAsset(c)}</li>)
+                          ? t.gaveUp.map((c) => <li>{formatAsset(c, t.year)}</li>)
                           : <li class="trade__empty">—</li>}
                       </ul>
                     </div>
@@ -748,7 +754,7 @@ const hasHighlights = Boolean(
                       <span class="trade__side-label">Received</span>
                       <ul>
                         {t.received.length
-                          ? t.received.map((c) => <li>{formatAsset(c)}</li>)
+                          ? t.received.map((c) => <li>{formatAsset(c, t.year)}</li>)
                           : <li class="trade__empty">—</li>}
                       </ul>
                     </div>
