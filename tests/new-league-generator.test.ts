@@ -97,14 +97,17 @@ describe('the plan', () => {
     for (const p of pages) expect(byPath.get(p), p).not.toMatch(/\barchies\b|Archie/);
   });
 
-  it('adds directory entries, a nav section, the roster sync and Chromatic paths', () => {
+  it('adds directory entries, a nav section and Chromatic paths — and touches no job workflow', () => {
     const dir = JSON.parse(byPath.get('src/data/page-directory.json')!) as Array<{ path: string; tags: string[] }>;
     const own = dir.filter((e) => e.path === '/smith' || e.path.startsWith('/smith/'));
     expect(own.length).toBe(plan.directoryEntries);
     for (const e of own) expect(e.tags.length).toBeGreaterThanOrEqual(10);
     const nav = JSON.parse(byPath.get('src/config/nav-config.json')!);
     expect(nav.sections.some((s: { id: string }) => s.id === 'smith')).toBe(true);
-    expect(byPath.get('.github/workflows/roster-sync.yml')).toContain('"smith:70707:false"');
+    // Scheduled jobs read the registry (scripts/lib/league-jobs.mjs); the only
+    // workflow a launch may write is Chromatic's path filter.
+    const workflows = [...byPath.keys()].filter((p) => p.startsWith('.github/workflows/'));
+    expect(workflows).toEqual(['.github/workflows/chromatic.yml']);
     expect(byPath.get('.github/workflows/chromatic.yml')!.match(/data\/smith\/smith\.config\.json/g)?.length).toBe(2);
   });
 });

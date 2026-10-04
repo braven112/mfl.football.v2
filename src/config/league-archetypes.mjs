@@ -58,7 +58,7 @@ export const ARCHETYPES = {
       contracts: false,
       salaryCap: false,
       keepers: true,
-      powerRankings: false,
+      powerRankings: true,
       liveLineups: false,
       schefterFeed: true,
       schefterTips: true,

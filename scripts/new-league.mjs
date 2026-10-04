@@ -30,7 +30,8 @@
  *   - one thin route per page the ticked features entitle, generated from
  *     Archie's routes (the package-league template) with the slug swapped;
  *   - page-directory entries and a nav section for those routes;
- *   - the league's line in roster-sync.yml and its config in chromatic.yml;
+ *   - its config in chromatic.yml (the scheduled jobs read the registry —
+ *     scripts/lib/league-jobs.mjs — so no workflow lists the league);
  *   - the regenerated theme stylesheet (it selects every league).
  * Then, unless `--offline`: fetches the league's MFL feeds, suggests its
  * branding, and computes its free-agent board.
@@ -254,16 +255,6 @@ export function planLaunch(spec) {
     nav.sections.splice(at, 0, section);
     files.push({ path: navPath, content: `${JSON.stringify(nav, null, 2)}\n` });
   }
-
-  // Roster sync.
-  const syncPath = '.github/workflows/roster-sync.yml';
-  const sync = read(syncPath);
-  const anchor = sync.match(/^(\s+)"archies:\d+:false"\n/m);
-  if (!anchor) throw new Error('roster-sync.yml LEAGUES array anchor not found');
-  files.push({
-    path: syncPath,
-    content: sync.replace(anchor[0], `${anchor[0]}${anchor[1]}"${spec.slug}:${spec.mflId}:false"\n`),
-  });
 
   // Chromatic: every league's config renders into a story (the shared
   // league-config loader globs them all), so each one is a trigger path.

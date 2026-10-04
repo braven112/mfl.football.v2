@@ -420,7 +420,8 @@ export const LEAGUES = {
       contracts: false,
       salaryCap: false,
       keepers: true,
-      powerRankings: false,
+      /** The Pecking Order — published weekly (scripts/lib/league-jobs.mjs reads this). */
+      powerRankings: true,
       liveLineups: false,
       schefterFeed: true,
       schefterTips: true,

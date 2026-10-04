@@ -239,16 +239,13 @@ describe('the roster sync recomputes what it invalidates', () => {
     'utf-8',
   );
 
-  it('runs both leagues’ Top Players computation', () => {
-    // Anchored to the END of the line, not `\b`. A word boundary matches
-    // between `players` and the `:` in `compute:top-players:afl`, so the AFL
-    // command alone satisfied a `\b` form of the first assertion — delete
-    // TheLeague's line and the guard stays green while the workflow only
-    // recomputes one of the two leagues. Caught in review on this PR.
+  it('runs every Top Players league’s computation, from the registry', () => {
+    // The league list is the registry's (scripts/lib/league-jobs.mjs
+    // `top-players`), looped — not one hand-written line per league, which is
+    // how a league could lose its leaderboard by being left off a list.
+    expect(WORKFLOW).toMatch(/league-jobs\.mjs top-players\b/);
     expect(WORKFLOW, 'the sync commits rosters.json; it must recompute what derives from it')
-      .toMatch(/^\s*pnpm run compute:top-players$/m);
-    expect(WORKFLOW, 'the AFL has its own leaderboard and its own week range')
-      .toMatch(/^\s*pnpm run compute:top-players:afl$/m);
+      .toMatch(/^\s*pnpm run compute:top-players --league="\$SLUG"$/m);
   });
 
   it('runs it through the package scripts prebuild uses, not a second invocation', () => {

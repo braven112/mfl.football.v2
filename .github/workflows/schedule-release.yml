@@ -91,7 +91,10 @@ jobs:
         # summary and a plan that would be REFUSED at lock time fails here —
         # two weeks early — rather than on release day with nothing to be done.
         run: |
-          for L in theleague afl-fantasy; do
+          # Every league whose schedule this site draws — a registry
+          # schedulePolicy (scripts/lib/league-jobs.mjs `schedule-draw`).
+          DRAW=$(node scripts/league-jobs.mjs schedule-draw)
+          for L in $DRAW; do
             PLAN="data/$L/schedule-plan/$(date -u +%Y)-schedule.json"
             if [ -f "$PLAN" ]; then
               echo "$L: reusing $PLAN"
