@@ -56,7 +56,9 @@ cross-cutting, add a line here. Keep this file short.
   memory: `/guard-test` (turn a rule into a scan guard), `/ratchet`
   (re-measure every baseline), `/rebase` (conflicts by class, correct
   ours/theirs), `/new-page` and `/new-cron` (scaffolds with the rules baked
-  in), `/rollover-check` (render a page at both clock boundaries). Agents
+  in), `/rollover-check` (render a page at both clock boundaries),
+  `/launch-check` (every page of a league, light and dark, before a launch
+  or features PR merges). Agents
   `sibling-drift-checker`, `guard-gap-auditor`,
   `clientrouter-lifecycle-auditor` and `mfl-fixture-recorder` each run a
   script first and judge second. `docs/claude/insights/features/deterministic-tooling.md`

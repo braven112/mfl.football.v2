@@ -8,7 +8,7 @@
  */
 
 import type { SchefterFeed, SchefterMilestoneMeta, SchefterPost } from '../types/schefter';
-import { DEFAULT_LEAGUE_SLUG } from '../config/leagues-data.mjs';
+import { ALL_LEAGUES, DEFAULT_LEAGUE_SLUG, ensureLeaguePrefix } from '../config/leagues-data.mjs';
 
 /** Get posts for a league, optionally filtered */
 export function getFeedPosts(
@@ -199,4 +199,21 @@ export function buildSchefterPostOg(
     image: `${pageUrl.origin}/api/og/schefter/${encodeURIComponent(post.id)}.png${leagueQuery}`,
     url: `${pageUrl.origin}${pageUrl.pathname}?post=${encodeURIComponent(post.id)}`,
   };
+}
+
+/**
+ * A post's `link`, ready for an href. An internal link stored league-neutral
+ * (`/pecking-order/2026/3`) gets its post's league prefix: on a league's own
+ * domain either form resolves, but on the shared host (mfl.football/<slug>)
+ * the bare path 404s. Older Owners' Poll posts were written bare, which is how
+ * TheLeague's news page carried two dead links (found by scripts/launch-check.mjs).
+ * Absolute URLs, protocol-relative ones and already-prefixed paths pass through.
+ */
+export function postLinkHref(post: Pick<SchefterPost, 'link'> & { league?: string }): string | undefined {
+  const link = post.link;
+  if (typeof link !== 'string' || !link.startsWith('/') || link.startsWith('//')) return link ?? undefined;
+  const league =
+    ALL_LEAGUES.find((l) => l.slug === post.league || l.navSlug === post.league) ??
+    ALL_LEAGUES.find((l) => l.slug === DEFAULT_LEAGUE_SLUG);
+  return league ? ensureLeaguePrefix(league, link) : link;
 }

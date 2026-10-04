@@ -58,6 +58,20 @@ export interface SharedPoller<P, T> {
 
 const IDLE: PollState<never> = { data: null, status: 'idle', fetchedAt: 0 };
 
+/**
+ * The state every key has on the server, where nothing ever polls: the
+ * `getServerSnapshot` for every `useSyncExternalStore` over a shared poller.
+ * Passing `getState` there instead hydrates with whatever ANOTHER island on
+ * the page already fetched — the board's pill then rendered "Tracking" over
+ * the server's "Connecting" and React threw away the tree (hydration
+ * mismatch, every league's live-scoring page, intermittently).
+ */
+export function serverPollState(): PollState<never> {
+  // `never` data (always null) fits every poller's state type, so this can be
+  // passed by reference without dragging the hook's inference to `unknown`.
+  return IDLE;
+}
+
 let subscriberSeq = 0;
 
 export function createSharedPoller<P, T>(

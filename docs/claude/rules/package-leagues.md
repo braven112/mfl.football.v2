@@ -35,6 +35,15 @@ every package league, a feature key is "only while that box is ticked".
 - **The nav never links a page the features do not entitle**, even before a
   sync has run: `linkMatchesLeague` asks `packageLeagueHasPath`.
 
+## Review every launch and features PR with `/launch-check`
+
+`node scripts/launch-check.mjs <slug>` loads each of the league's pages in
+light and dark against a running server and reports non-2xx pages, script
+errors, leftover placeholders, dead body links and another league's name or
+links, with a screenshot of each (`.claude/skills/launch-check/SKILL.md`).
+A finding that also shows on an established league is a shared-component bug:
+fix it at the source.
+
 ## Not covered yet
 
 TheLeague and the AFL have hand-built pages; their features cannot be changed
