@@ -54,3 +54,24 @@ export const SEED_DIR = 'src/data';
 
 /** Every league that has an Ask Roger surface, as [slug, keys] pairs. */
 export const ALL_RULES_QA_LEAGUES = Object.entries(RULES_QA_KEYS);
+
+/**
+ * Keys for any league's Ask Roger: its fixed entry above when it has one
+ * (TheLeague, the AFL — byte-identical, they hold every stored answer), else
+ * `rules-qa:<slug>:…` for a package league (src/pages/api/rules-qa/[league].ts).
+ * Package leagues are not in RULES_QA_KEYS, so the weekly improvement notifier
+ * does not read them yet.
+ * @param {string} slug
+ * @returns {RulesQAKeys}
+ */
+export function rulesQaKeysFor(slug) {
+  return (
+    RULES_QA_KEYS[slug] ?? {
+      answers: `rules-qa:${slug}:all`,
+      rateLimit: `rules-qa:${slug}:rate`,
+      flags: `rules-qa:${slug}:flags`,
+      label: slug,
+      seedFile: '',
+    }
+  );
+}

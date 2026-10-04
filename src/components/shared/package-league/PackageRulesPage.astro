@@ -1,0 +1,126 @@
+---
+/**
+ * A package league's Rules page: the commissioner's written rulebook when the
+ * league has one (data/<slug>/constitution.md), and always the league's
+ * settings as configured on MFL (data/<slug>/derived/rules-from-mfl.md,
+ * written by scripts/compute-mfl-settings-digest.mjs on every sync).
+ *
+ * The same two sources, in the same order, are what Ask Roger answers from
+ * (src/utils/league-rulebook.ts) — his answers link the anchors below, so the
+ * ids are pinned by RULES_PAGE_ANCHORS.
+ *
+ * Both are .md, so Astro renders them as components; nothing here parses
+ * markdown by hand.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import { getLeagueBySlug } from '../../../config/leagues';
+import { RULES_PAGE_ANCHORS } from '../../../utils/league-rulebook';
+
+interface Props {
+  leagueSlug: string;
+}
+
+type MdModule = { Content: (props: Record<string, unknown>) => unknown };
+const CONSTITUTIONS = import.meta.glob<MdModule>('../../../../data/*/constitution.md', { eager: true });
+const SETTINGS = import.meta.glob<MdModule>('../../../../data/*/derived/rules-from-mfl.md', { eager: true });
+
+const { leagueSlug } = Astro.props;
+const league = getLeagueBySlug(leagueSlug)!;
+// Either file may be absent (no written rulebook; no sync yet), so type the lookups as optional.
+const Constitution: MdModule['Content'] | undefined = (
+  CONSTITUTIONS as Record<string, MdModule | undefined>
+)[`../../../../${league.dataPath}/constitution.md`]?.Content;
+const Settings: MdModule['Content'] | undefined = (
+  SETTINGS as Record<string, MdModule | undefined>
+)[`../../../../${league.dataPath}/derived/rules-from-mfl.md`]?.Content;
+const short = league.shortName ?? league.name;
+const askHref = league.features?.rulesQa ? `/${league.slug}/rules-chat` : null;
+---
+
+<TheLeagueLayout title={`Rules — ${short}`}>
+  <div class="rules" data-league={league.slug}>
+    <header class="rules__head">
+      <h1>Rules</h1>
+      <p>
+        {Constitution
+          ? `${short}'s rulebook, then the league's settings as configured on MFL.`
+          : `${short} hasn't published a written rulebook yet, so these are the league's settings as configured on MFL — the system that enforces them.`}
+      </p>
+      {askHref && <a href={askHref} class="cta cta--primary">Ask Roger a rules question</a>}
+    </header>
+
+    {
+      Constitution && (
+        <section class="rules__card" id={RULES_PAGE_ANCHORS.rulebook} aria-labelledby="rules-book">
+          <h2 id="rules-book">League rulebook</h2>
+          <div class="rules__prose">
+            <Constitution />
+          </div>
+        </section>
+      )
+    }
+
+    <section class="rules__card" id={RULES_PAGE_ANCHORS.mflSettings} aria-labelledby="rules-mfl">
+      <h2 id="rules-mfl">League settings on MFL</h2>
+      {
+        Settings ? (
+          <div class="rules__prose">
+            <Settings />
+          </div>
+        ) : (
+          <p class="rules__empty">The league's MFL settings appear here after its first sync.</p>
+        )
+      }
+    </section>
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .rules {
+    max-width: 52rem;
+    margin: 0 auto;
+    padding: 1.5rem 1rem 3rem;
+    color: var(--page-text);
+  }
+  .rules__head {
+    display: grid;
+    gap: 0.5rem;
+    justify-items: start;
+    margin-bottom: 1rem;
+  }
+  .rules__head h1 {
+    margin: 0;
+  }
+  .rules__head p,
+  .rules__empty {
+    color: var(--content-text-muted);
+    margin: 0;
+  }
+  .rules__card {
+    border: 1px solid var(--content-border);
+    border-radius: 10px;
+    background: var(--card-bg);
+    padding: 1rem 1.25rem 1.25rem;
+    margin: 1rem 0;
+    scroll-margin-top: 5rem;
+  }
+  .rules__card h2 {
+    margin: 0 0 0.5rem;
+    font-size: var(--font-size-lg);
+  }
+  .rules__prose :global(h3) {
+    margin: 1.25rem 0 0.4rem;
+    font-size: var(--font-size-base);
+  }
+  .rules__prose :global(ul) {
+    margin: 0.25rem 0 0.75rem;
+    padding-left: 1.25rem;
+  }
+  .rules__prose :global(li) {
+    margin: 0.15rem 0;
+    line-height: 1.5;
+  }
+  .rules__prose :global(p) {
+    line-height: 1.55;
+  }
+</style>

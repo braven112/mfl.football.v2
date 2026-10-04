@@ -1,0 +1,38 @@
+---
+/**
+ * Ask Roger — __LEAGUE_NAME__. Thin route over the shared page
+ * (src/components/shared/rules-chat/RulesChatPage.astro). Roger answers from
+ * the league's rulebook first and its MFL settings where the rulebook is
+ * silent (src/utils/league-rulebook.ts, /api/rules-qa/__LEAGUE_SLUG__).
+ */
+export const prerender = false;
+
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import RulesChatPage from '../../components/shared/rules-chat/RulesChatPage.astro';
+import { getAuthUser, isCommissionerOrAdmin } from '../../utils/auth';
+import { getLeagueBySlug } from '../../config/leagues';
+import { getLeagueTeams } from '../../utils/league-config';
+import { loadLeagueRulebook } from '../../utils/league-rulebook';
+
+const league = getLeagueBySlug('__LEAGUE_SLUG__')!;
+const book = loadLeagueRulebook(league);
+const authUser = getAuthUser(Astro.request);
+const teamIcons = getLeagueTeams(league.slug).map((t: { franchiseId: string; icon?: string }) => ({
+  franchiseId: t.franchiseId,
+  icon: t.icon ?? '',
+}));
+---
+
+<TheLeagueLayout title="Ask Roger">
+  <RulesChatPage
+    league={league}
+    seedData={book.seeds}
+    isAuthenticated={!!authUser}
+    isAdmin={authUser ? isCommissionerOrAdmin(authUser) : false}
+    teamIcons={teamIcons}
+    apiEndpoint="/api/rules-qa/__LEAGUE_SLUG__"
+    rulesHref="/__LEAGUE_SLUG__/rules"
+    rulebookName={book.constitution ? 'the league rulebook' : "the league's MFL settings"}
+    bio="He's read every rule this league has written down and every setting it has on MFL — and he'll tell you which one he's quoting."
+  />
+</TheLeagueLayout>

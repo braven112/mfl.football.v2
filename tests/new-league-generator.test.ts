@@ -48,9 +48,9 @@ describe('the spec', () => {
 });
 
 describe('the template', () => {
-  it("every package route exists in Archie's pages (the template it copies)", () => {
+  it('every package route has a template in the page kit (templates/package-league)', () => {
     for (const route of Object.keys(PACKAGE_ROUTES)) {
-      expect(existsSync(path.join('src/pages/archies', route)), route).toBe(true);
+      expect(existsSync(path.join('templates/package-league', `${route}.tmpl`)), route).toBe(true);
     }
   });
 

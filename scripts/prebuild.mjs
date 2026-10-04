@@ -89,6 +89,9 @@ const SEQUENTIAL = [
   // default league's is the fallback for the rest (MFL player ids are global,
   // so the two compose).
   ...perLeague('player-identity-union', 'compute:player-identity-union'),
+  // Each syncing league's rules as configured on MFL, in words — Ask Roger's
+  // fallback where a league's written rulebook is silent (src/utils/league-rulebook.ts).
+  ...perLeague('mfl-settings-digest', 'compute:mfl-settings-digest'),
   // Rebuilds the frozen roster payloads for every HISTORICAL TheLeague season
   // (current league/season years stay live on the page). Runs after the
   // identity union for the same reason as it: the committed feeds it reads

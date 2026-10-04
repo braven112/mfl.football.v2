@@ -36,6 +36,8 @@ export const PACKAGE_ROUTES = {
   'pecking-order/index.astro': 'powerRankings',
   'pecking-order/[year]/[week].astro': 'powerRankings',
   'admin/branding.astro': 'brandingEditor',
+  'rules.astro': 'rulesQa',
+  'rules-chat.astro': 'rulesQa',
 };
 
 /** The routes a features object entitles, relative to the league's page dir. */

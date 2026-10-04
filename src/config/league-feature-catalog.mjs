@@ -170,6 +170,14 @@ export const FEATURE_CATALOG = [
     requires: ['schefterFeed'],
   },
   {
+    key: 'rulesQa',
+    label: 'Ask Roger (rules Q&A)',
+    description:
+      "A Rules page and Roger, the AI rules chatbot. Answers from the league's rulebook, falling back to its MFL settings.",
+    group: 'news',
+    requires: [],
+  },
+  {
     key: 'viewerPreferences',
     label: 'Viewer preferences',
     description: 'The /preferences page: country and clock per viewer.',

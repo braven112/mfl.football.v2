@@ -137,6 +137,34 @@ one week away, when it was sixteen days out.
 `tests/roger-afl-draft-reminder.test.ts` locks both in.
 
 
+## Ask Roger for package leagues — two sources, rulebook first
+
+Package leagues (Archie's, Launcher-built leagues) with the **Ask Roger** box
+ticked get a THIRD Roger prompt, built per league by `buildRulesQaPrompt`
+(`src/utils/league-rulebook.ts`) and served by `/api/rules-qa/<slug>`. It is
+NOT TheLeague's or the AFL's prompt, and a fix to either of those does not
+reach it.
+
+- **Source order is the rule** (the owner's, Oct 2026): the league's written
+  rulebook (`data/<slug>/constitution.md`, the commissioner's own text) first;
+  where it is silent, the league's settings as configured on MFL
+  (`data/<slug>/derived/rules-from-mfl.md`); where both are silent, "I don't
+  know". A disagreement between the two is reported to the owner, never
+  resolved by Roger. Each answer links the section it used.
+- **The MFL digest is generated, never edited.**
+  `scripts/compute-mfl-settings-digest.mjs` writes it from that league's
+  `league.json` + `rules.json` on every sync (league-jobs `mfl-settings-digest`),
+  and it ends with an explicit list of what MFL cannot answer (playoff format,
+  payouts, deadlines) so Roger refuses those rather than guessing. Scoring codes
+  are worded from `src/data/mfl-scoring-codes.json`
+  (`scripts/fetch-mfl-rule-codes.mjs`).
+- **TheLeague and the AFL are deliberately unchanged** — their prompts carry
+  full constitutions and changing them needs `pnpm eval:roger` first. Package
+  leagues have no eval fixture yet; the improvement notifier
+  (`ALL_RULES_QA_LEAGUES`) does not read their keys (`rules-qa:<slug>:*`,
+  `rulesQaKeysFor`).
+- Guard: `tests/league-rulebook.test.ts`.
+
 ## Ask Roger eval — run before prompt/model/constitution changes
 
 `pnpm eval:roger` grades the live TheLeague Q&A pipeline against

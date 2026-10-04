@@ -35,6 +35,17 @@ every package league, a feature key is "only while that box is ticked".
 - **The nav never links a page the features do not entitle**, even before a
   sync has run: `linkMatchesLeague` asks `packageLeagueHasPath`.
 
+## Rules and Ask Roger
+
+The **Ask Roger** box (`rulesQa`) gives a package league a Rules page and the
+Roger chatbot. Both read two sources: the commissioner's written rulebook,
+dropped in as `data/<slug>/constitution.md` (optional), and the league's MFL
+settings digest, regenerated on every sync. A league with no written rulebook
+still gets a working Rules page and Roger, answering from its MFL settings.
+To add a commissioner's rulebook later, commit `constitution.md` — no code
+change. Roger's rules: `docs/claude/rules/roger.md` § "Ask Roger for package
+leagues".
+
 ## Review every launch and features PR with `/launch-check`
 
 `node scripts/launch-check.mjs <slug>` loads each of the league's pages in

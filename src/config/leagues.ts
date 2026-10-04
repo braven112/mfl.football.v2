@@ -47,6 +47,8 @@ export interface LeagueFeatures {
   salaryCap: boolean;
   keepers: boolean;
   powerRankings: boolean;
+  /** Rules page + Ask Roger (src/utils/league-rulebook.ts for package leagues). */
+  rulesQa: boolean;
   liveLineups: boolean;
   schefterFeed: boolean;
   /**

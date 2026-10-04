@@ -37,6 +37,7 @@
     "compute:player-identity-union:afl": "node scripts/compute-player-identity-union.mjs --league=afl-fantasy",
     "compute:player-identity-union:archies": "node scripts/compute-player-identity-union.mjs --league=archies",
     "compute:top-players": "node scripts/compute-top-players.mjs",
+    "compute:mfl-settings-digest": "node scripts/compute-mfl-settings-digest.mjs",
     "compute:top-players:afl": "node scripts/compute-top-players.mjs --league=afl-fantasy",
     "compute:roster-payloads": "node scripts/compute-roster-season-payloads.mjs",
     "compute:afl-franchise-history": "node scripts/compute-franchise-history.mjs --league=afl",

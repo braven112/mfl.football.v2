@@ -571,6 +571,15 @@ const endpoints = [
     parser: (t) => JSON.parse(t),
   },
   {
+    // The league's scoring rules, as configured on MFL. Ask Roger falls back
+    // to these (with league.json's roster, waiver and lineup settings) where a
+    // league's written rulebook is silent or absent (src/utils/mfl-settings-digest.ts).
+    // Public, and it changes rarely — daily-only.
+    key: 'rules',
+    url: `${host}/${year}/export?TYPE=rules&L=${leagueId}&JSON=1`,
+    parser: (t) => JSON.parse(t),
+  },
+  {
     // ALL=1 returns every standings column regardless of what that league-YEAR
     // had configured for display. Current years already return the full set, so
     // this is a no-op for the routine sync; it matters for archive years pulled
@@ -957,7 +966,7 @@ const run = async () => {
   // the day; everything else (rosters, transactions, standings, brackets, …)
   // stays near-real-time on the 5-minute cadence. Roster/free-agent
   // freshness is unaffected — free agency is derived from rosters.
-  const dailyOnlyKeys = new Set(['players', 'nflSchedule', 'nflSchedule-full', 'assets']);
+  const dailyOnlyKeys = new Set(['players', 'nflSchedule', 'nflSchedule-full', 'assets', 'rules']);
 
   // Check if historical data is already cached (skip to avoid rate limits).
   // --refresh-live deliberately does NOT bypass this (unlike --force).

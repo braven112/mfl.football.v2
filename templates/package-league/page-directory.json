@@ -413,5 +413,56 @@
     ],
     "visibility": "admin",
     "popularity": 8
+  },
+  {
+    "id": "__LEAGUE_SLUG__-rules",
+    "title": "Rules",
+    "description": "__LEAGUE_SHORT__'s rulebook and the league's settings on MFL: roster limits, lineups, waivers, trades, draft and scoring.",
+    "path": "/__LEAGUE_SLUG__/rules",
+    "icon": "gavel",
+    "category": "info",
+    "tags": [
+      "__LEAGUE_SLUG__",
+      "rules",
+      "rulebook",
+      "constitution",
+      "bylaws",
+      "settings",
+      "scoring",
+      "roster limits",
+      "lineup",
+      "waivers",
+      "faab",
+      "trades",
+      "draft",
+      "league settings"
+    ],
+    "visibility": "all",
+    "popularity": 40
+  },
+  {
+    "id": "__LEAGUE_SLUG__-rules-chat",
+    "title": "Ask Roger",
+    "description": "Ask Roger, the AI rules expert, any __LEAGUE_SHORT__ rules question — he answers from the rulebook first and the league's MFL settings where it is silent.",
+    "path": "/__LEAGUE_SLUG__/rules-chat",
+    "icon": "gavel",
+    "category": "info",
+    "tags": [
+      "__LEAGUE_SLUG__",
+      "roger",
+      "ask roger",
+      "rules",
+      "rules question",
+      "chatbot",
+      "ai",
+      "help",
+      "q&a",
+      "faq",
+      "rulebook",
+      "commissioner",
+      "how does"
+    ],
+    "visibility": "all",
+    "popularity": 35
   }
 ]
