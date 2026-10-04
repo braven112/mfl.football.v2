@@ -222,6 +222,11 @@ async function main() {
   process.exit(failed ? 1 : 0);
 }
 
+/** Page text inside a markdown table cell: backslashes first, then the pipes that would split the row. */
+export function mdCell(text) {
+  return String(text).replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/\r?\n/g, ' ');
+}
+
 function renderReport({ league, base, results, deadLinks, unreached }) {
   const lines = [
     `# Launch check — ${league.name}`,
@@ -234,7 +239,7 @@ function renderReport({ league, base, results, deadLinks, unreached }) {
   for (const r of results) {
     const problems = [...r.errors.map((e) => `✗ ${e}`), ...r.warnings.map((w) => `! ${w}`)].join('<br>') || '✓';
     const shot = (t) => (r.shots[t] ? `[${r.status[t]}](${r.shots[t]})` : String(r.status[t] ?? '—'));
-    lines.push(`| \`${r.path}\` | ${shot('light')} | ${shot('dark')} | ${problems.replace(/\|/g, '\\|')} |`);
+    lines.push(`| \`${r.path}\` | ${shot('light')} | ${shot('dark')} | ${mdCell(problems)} |`);
   }
   if (deadLinks.length) {
     lines.push('', '## Dead links in page bodies', '');

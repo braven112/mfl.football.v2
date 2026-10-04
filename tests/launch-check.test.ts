@@ -9,6 +9,7 @@ import {
   dynamicRouteFor,
   inspectBody,
   leakNeedles,
+  mdCell,
   routePath,
   startingPages,
 } from '../scripts/launch-check.mjs';
@@ -61,5 +62,9 @@ describe('launch check', () => {
     const needles = leakNeedles(LEAGUES.archies);
     expect(needles.names).not.toContain("Archie's");
     expect(inspectBody({ text: "Archie's Fantasy Football League", hrefs: [] }, needles)).toEqual({ errors: [], warnings: [] });
+  });
+
+  it('escapes page text for a report table cell — backslashes before pipes', () => {
+    expect(mdCell('a\\|b|c\nd')).toBe('a\\\\\\|b\\|c d');
   });
 });
