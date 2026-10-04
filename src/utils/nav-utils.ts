@@ -29,6 +29,7 @@ import {
   type CanonicalLeagueSlug,
 } from '../config/leagues';
 import type { LeagueDefinition } from '../config/leagues';
+import { isPackageLeague, packageLeagueHasPath, packageRouteForPath } from '../config/package-league-routes.mjs';
 
 /**
  * navSlugs whose nav is OPT-IN: only links explicitly tagged
@@ -47,10 +48,22 @@ const BEST_BALL_NAV_SLUGS = new Set<LeagueSlug>(
  * tagged for them.
  */
 function linkMatchesLeague(link: NavLink, league: LeagueSlug): boolean {
-  const allowlist = ALL_LEAGUES.find((l) => l.navSlug === league)?.navLinks;
-  if (allowlist) return allowlist.includes(link.id);
-  if (link.leagueOnly) return leagueOnlyMatches(link.leagueOnly, league);
-  return !BEST_BALL_NAV_SLUGS.has(league);
+  const entry = ALL_LEAGUES.find((l) => l.navSlug === league);
+  if (entry?.navLinks) return entry.navLinks.includes(link.id);
+  const tagged = link.leagueOnly ? leagueOnlyMatches(link.leagueOnly, league) : !BEST_BALL_NAV_SLUGS.has(league);
+  return tagged && packageLinkEntitled(link, entry);
+}
+
+/**
+ * A package league's link to a package route shows only while the feature
+ * that entitles the route is ticked — the route and its link come and go
+ * together, so unticking a box can never leave a nav link to a page that was
+ * removed with it. Links to anything else (a league's own competition page,
+ * an external link) are unaffected.
+ */
+function packageLinkEntitled(link: NavLink, entry: LeagueDefinition | undefined): boolean {
+  if (!entry || !isPackageLeague(entry) || link.external || !link.path) return true;
+  return !packageRouteForPath(link.path) || packageLeagueHasPath(entry, link.path);
 }
 
 /** An AFL-tagged link or section also belongs to an AFL-family league. */

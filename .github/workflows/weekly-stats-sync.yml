@@ -42,7 +42,10 @@ jobs:
         run: |
           FAILED=()
           OK=()
-          for SLUG in theleague afl; do
+          # Every league that syncs from MFL (scripts/lib/league-jobs.mjs) —
+          # the player modal that reads this file is shared by all of them.
+          SLUGS=$(node ./scripts/league-jobs.mjs fantasy-points-allowed)
+          for SLUG in $SLUGS; do
             echo "::group::Fantasy points allowed ($SLUG)"
             if node ./scripts/fetch-fantasy-points-allowed.mjs --league="$SLUG"; then
               OK+=("$SLUG")

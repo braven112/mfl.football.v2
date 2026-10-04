@@ -1,0 +1,81 @@
+name: Update League Features
+
+# Changes an existing package league's features (the League Launcher's
+# "Change features" mode): sets them in the registry and adds or removes the
+# league's pages, site-search entries and nav links to match. Pushed to its
+# own branch cut from `staging`; nothing merges by itself — the Launcher links
+# "Open PR to staging" and the PR's preview build is the review. Dispatched by
+# /api/admin/league-launcher/update; scripts/update-league-features.mjs
+# re-validates the spec because this can also be run by hand.
+on:
+  workflow_dispatch:
+    inputs:
+      spec:
+        description: 'Update spec JSON: {"slug": "...", "features": {...}}'
+        required: true
+        type: string
+      branch:
+        description: "Branch to push, features/<slug>-<yyyymmddhhmm>"
+        required: true
+        type: string
+      requested_by:
+        description: "Who asked (for the commit message)"
+        required: false
+        type: string
+
+concurrency:
+  # Shares the Launcher's group: a launch and an update both edit the
+  # registry, the page directory and the nav config.
+  group: launch-league
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout staging
+        uses: actions/checkout@v6
+        with:
+          # Deploy key, so the branch push starts CI (tests/workflow-push-triggers-ci.test.ts).
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+          ref: staging
+          fetch-depth: 1
+
+      - name: Setup pnpm + Node + install
+        uses: ./.github/actions/setup
+
+      - name: Check the branch name
+        id: branch
+        env:
+          # Inputs travel as env vars, never interpolated into a script.
+          BRANCH: ${{ inputs.branch }}
+        run: |
+          if ! [[ "$BRANCH" =~ ^features/[a-z][a-z0-9]{1,23}-[0-9]{12}$ ]]; then
+            echo "::error::branch must be features/<slug>-<yyyymmddhhmm>"
+            exit 1
+          fi
+          echo "name=$BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Update the league
+        env:
+          UPDATE_SPEC: ${{ inputs.spec }}
+        run: node scripts/update-league-features.mjs
+
+      - name: Commit and push ${{ steps.branch.outputs.name }}
+        uses: ./.github/actions/commit-push
+        with:
+          add-paths: src
+          commit-message: "feat: change league features (League Launcher${{ inputs.requested_by && format(', by {0}', inputs.requested_by) || '' }})"
+          no-changes-message: "The update wrote nothing — check the log above."
+          push-ref: ${{ steps.branch.outputs.name }}
+
+      - name: Link the PR
+        env:
+          BRANCH: ${{ steps.branch.outputs.name }}
+        run: |
+          echo "### Open the PR" >> "$GITHUB_STEP_SUMMARY"
+          echo "https://github.com/${{ github.repository }}/compare/staging...${BRANCH}?expand=1" >> "$GITHUB_STEP_SUMMARY"

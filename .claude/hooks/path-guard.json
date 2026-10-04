@@ -356,7 +356,9 @@
         "src/pages/api/cron/*.ts",
         "src/utils/workflow-dispatch.ts",
         "src/utils/sync-cadence.ts",
-        "scripts/check-sync-freshness.mjs"
+        "scripts/check-sync-freshness.mjs",
+        "scripts/lib/league-jobs.mjs",
+        "scripts/league-jobs.mjs"
       ],
       "note": "No new vars.* feature gates (comment out cron: to disable a job; gate with a const in the script); league ids/hosts come from the registry; a weekly job needs isSeasonWindowOpen, not \"the feeds have a completed week\". Dependencies install ONLY via `uses: ./.github/actions/setup` — never npm (it ignores pnpm-lock.yaml and re-resolves peers, which killed five crons for four days), and never a raw pnpm/action-setup (it installs nothing). The pnpm version lives only in package.json#packageManager. A workflow MAY skip the install, but only while every `node scripts/…` it runs is dependency-free all the way down — an empty node_modules fails silently (dynamic import in a try/catch → exit 0, green check). See CLAUDE.md \"Feature flags — code, not GitHub Actions variables\" and docs/claude/rules/storage-and-build.md § \"CI installs with pnpm, never npm\". GitHub does NOT deliver a high-frequency schedule on this repo (measured: 5-8 runs/day against the 288 that */5 asks for, since 2026-08-27) — the PRIMARY trigger for the roster sync is the Vercel cron in vercel.json, whose bridge route must stay CRON_SECRET-gated and whose cadence is a Vercel BUILD SPEND decision, since every sync commit to main is a production build. See docs/claude/rules/storage-and-build.md § \"GitHub’s `schedule` is not a cadence\".",
       "tests": [
@@ -370,7 +372,8 @@
         "tests/sync-cadence.test.ts",
         "tests/block-comment-terminators.test.ts",
         "tests/cron-commit-churn.test.ts",
-        "tests/workflow-dispatch.test.ts"
+        "tests/workflow-dispatch.test.ts",
+        "tests/league-jobs.test.ts"
       ]
     },
     {
@@ -1361,6 +1364,26 @@
         "tests/team-preferences.test.ts"
       ],
       "note": "Both leagues have a franchise 0001, so a wrong preferred team is a real team, not a blank. The resolver must be able to answer \"nobody\", and the session belongs in authUserFranchise."
+    },
+    {
+      "name": "package-league-kit",
+      "paths": [
+        "templates/package-league/**",
+        "src/pages/archies/**",
+        "scripts/lib/package-kit.mjs",
+        "scripts/sync-league-routes.mjs",
+        "scripts/update-league-features.mjs",
+        "scripts/new-league.mjs",
+        "src/config/package-league-routes.mjs",
+        "src/config/launch-spec.mjs"
+      ],
+      "note": "A package league's route files are OUTPUT of templates/package-league: edit the template, then `node scripts/sync-league-routes.mjs --all`. Each route exists iff its feature is ticked; its search entries and nav links follow.",
+      "tests": [
+        "tests/package-league-routes.test.ts",
+        "tests/new-league-generator.test.ts",
+        "tests/league-launcher-launch.test.ts"
+      ],
+      "rules": "docs/claude/rules/package-leagues.md"
     }
   ]
 }

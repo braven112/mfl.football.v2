@@ -68,3 +68,44 @@ export function cleanSpec(spec) {
   if (spec.theme) out.theme = spec.theme;
   return out;
 }
+
+// ── Updating an existing league's features ──────────────────────────────────
+
+/**
+ * Every problem with an update spec ({ slug, features }): the league must be a
+ * package league (its pages follow its features), the features complete and
+ * consistent, and different from what it has — a no-op update would open an
+ * empty PR.
+ */
+export function updateSpecErrors(spec) {
+  if (!spec || typeof spec !== 'object') return ['spec must be a JSON object'];
+  const league = ALL_LEAGUES.find((l) => l.slug === spec.slug);
+  if (!league) return [`no league ${spec.slug}`];
+  if (league.pageKit !== 'package') {
+    return [`${league.slug}'s pages are hand-built, so its features cannot be changed here yet`];
+  }
+  const errors = [];
+  const features = spec.features ?? {};
+  const keys = Object.keys(features).sort();
+  if (keys.join() !== [...FEATURE_KEYS].sort().join()) errors.push(`features must set exactly: ${FEATURE_KEYS.join(', ')}`);
+  for (const [k, v] of Object.entries(features)) if (typeof v !== 'boolean') errors.push(`features.${k} must be true/false`);
+  errors.push(...featureDependencyErrors(features));
+  if (!errors.length && FEATURE_KEYS.every((k) => Boolean(league.features?.[k]) === features[k])) {
+    errors.push('nothing to change: those are already its features');
+  }
+  return errors;
+}
+
+/** Only the fields an update spec may carry. */
+export function cleanUpdateSpec(spec) {
+  return {
+    slug: spec.slug,
+    features: Object.fromEntries(FEATURE_KEYS.map((k) => [k, Boolean(spec.features[k])])),
+  };
+}
+
+/** The branch an update is pushed to: unique per request, so an unmerged one never blocks the next. */
+export function updateBranch(slug, now = new Date()) {
+  return `features/${slug}-${now.toISOString().slice(0, 16).replace(/\D/g, '')}`;
+}
+export const UPDATE_BRANCH_RE = /^features\/[a-z][a-z0-9]{1,23}-\d{12}$/;

@@ -354,6 +354,31 @@ both-leagues union and the DST wall-clock recurrence.
 rather than 2.5 minutes into CI. All three are routed by the `github-workflows`
 domain.
 
+## A job's league list comes from the registry, never the workflow
+
+Every recurring job that runs once per league asks
+`scripts/lib/league-jobs.mjs` which leagues — `node scripts/league-jobs.mjs
+<job> [--format '{navSlug}:{id}'] [--join ,]` in a workflow, `leaguesFor(job)`
+in a script or prebuild. A hand-kept `for SLUG in theleague afl` leaves a
+launched league with no data sync and nothing failing to say so — Archie's
+was missing from the fantasy-points-allowed loop until this module existed.
+
+- **Data jobs run for every league that syncs; AI/column jobs only by
+  checkbox** (the owner's rule, Oct 2026). Ticking Power rankings IS the
+  opt-in to the Pecking Order's Claude cost. A new column that would widen to
+  more leagues is a predicate change in that module, made on purpose — the
+  other weekly columns stay default-league-only (`article:weekly`) for exactly
+  that reason.
+- **Read the list into a variable, then loop it.** `for x in $(…)` and
+  `< <(…)` both lose the command's exit code under `bash -e`, so a broken
+  lookup syncs nothing and the step still passes.
+- **Not covered:** the Schefter GroupMe scanners. Each league posts through
+  its own bot secret, and a step can only receive secrets it names, so a new
+  GroupMe league there is a secrets edit regardless.
+
+`tests/league-jobs.test.ts` pins each job's leagues and fails a converted
+workflow that grows a literal league loop again.
+
 ## Astro 7 — strict Rust compiler, pinned compressHTML
 
 Upgraded to Astro 7 (Vite 8/Rolldown, @astrojs/vercel 11) in July 2026.

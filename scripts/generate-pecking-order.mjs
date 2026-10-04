@@ -32,7 +32,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { LEAGUES, leagueUrl } from '../src/config/leagues-data.mjs';
+import { ALL_LEAGUES, LEAGUES, leagueUrl } from '../src/config/leagues-data.mjs';
 import { callAnthropic } from './article-utils/ai-client.mjs';
 import { getCompletedWeek } from './article-utils/week-resolver.mjs';
 import { currentSeasonYear } from './lib/schefter-recurrence-ledger.mjs';
@@ -74,25 +74,30 @@ import { num, int } from './lib/team-strength.mjs';
 // Announcements are QUEUED here and sent by scripts/schefter-announce-pending.mjs
 // after the commit, once the issue is live. See scripts/lib/await-published.mjs.
 import { enqueueAnnounce } from './lib/announce-queue.mjs';
+import { leaguesFor } from './lib/league-jobs.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 
 const COLUMN_NAME = 'The Pecking Order';
 
-/** Leagues that publish the column. Best-ball drafts no games, so no rankings. */
-const VALID_LEAGUES = ['theleague', 'afl-fantasy', 'archies'];
+/**
+ * Leagues that publish the column: the Power rankings box, by registry
+ * (scripts/lib/league-jobs.mjs `pecking-order`). Best ball never qualifies —
+ * it drafts no games, so there is nothing to rank.
+ */
+const VALID_LEAGUES = leaguesFor('pecking-order').map((l) => l.slug);
 
 /**
- * Per-league Schefter GroupMe bot. Roger's bots are never a fallback — he owns
- * deadlines, Schefter owns the column (same split as the article generator).
- * A Slack league (archies) has no entry on purpose: the queued announcement's
- * `botEnv` is then undefined, and the drainer (schefter-announce-pending.mjs)
- * routes it through chatConfigFor → Slack.
+ * Per-league Schefter GroupMe bot, from the registry's `chat` block. Roger's
+ * bots are never a fallback — he owns deadlines, Schefter owns the column
+ * (same split as the article generator). A Slack league has no entry on
+ * purpose: the queued announcement's `botEnv` is then undefined, and the
+ * drainer (schefter-announce-pending.mjs) routes it through chatConfigFor →
+ * Slack.
  */
-const GROUPME_BOT_ENV = {
-  theleague: 'GROUPME_SCHEFTER_BOT_ID',
-  'afl-fantasy': 'GROUPME_AFL_SCHEFTER_BOT_ID',
-};
+const GROUPME_BOT_ENV = Object.fromEntries(
+  ALL_LEAGUES.filter((l) => l.chat?.provider === 'groupme' && l.chat.botEnv).map((l) => [l.slug, l.chat.botEnv]),
+);
 
 // ─── CLI ───────────────────────────────────────────────────────────
 

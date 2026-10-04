@@ -66,12 +66,12 @@ jobs:
       # commit+push covering every league's output. Two matrix jobs racing to
       # commit/push at the end of a high-frequency cron is exactly the kind of
       # non-fast-forward push failure this refactor should avoid introducing
-      # — so the fetch stays one job with a loop. Adding a league is still a
-      # one-entry change: add a "slug:id:hasSalarySync" tuple to LEAGUES
-      # below. hasSalarySync mirrors leagueHasFeature(slug, 'salaryCap') from
-      # the league registry (src/config/leagues-data.mjs) — AFL doesn't have
-      # contracts/salary cap, so its entry is "false" here exactly as the
-      # pre-refactor workflow only ran "Update salary averages" for theleague.
+      # — so the fetch stays one job with a loop.
+      #
+      # The league list comes from the registry (scripts/lib/league-jobs.mjs,
+      # jobs `mfl-sync` and `salary-sync`): every league that syncs from MFL,
+      # with salary averages only where the salaryCap feature is on. A
+      # launched league joins on its registry entry alone — no edit here.
       - name: Fetch MFL data for all leagues
         env:
           MFL_HOST: ${{ vars.MFL_HOST }}
@@ -86,21 +86,23 @@ jobs:
           # commissioner-visible response carries owner emails and addresses
           # that this job would then commit.
           MFL_USER_ID: ${{ secrets.MFL_USER_ID }}
-          # fetch-mfl-feeds.mjs requires a non-empty MFL_LEAGUE_ID (no
-          # registry fallback — see scripts/fetch-mfl-feeds.mjs), so the ids
-          # below are literals by necessity: workflow YAML can't import
-          # src/config/leagues-data.mjs. Keep both in sync with LEAGUES.*.id
-          # there. vars.MFL_LEAGUE_ID overrides theleague's id only — AFL has
-          # no vars.* override today since it hasn't needed one.
-          THELEAGUE_MFL_LEAGUE_ID: ${{ vars.MFL_LEAGUE_ID || '13522' }}
+          # vars.MFL_LEAGUE_ID overrides the DEFAULT league's id only (a legacy
+          # override; every other id comes from the registry).
+          DEFAULT_LEAGUE_ID_OVERRIDE: ${{ vars.MFL_LEAGUE_ID }}
         run: |
-          LEAGUES=(
-            "theleague:${THELEAGUE_MFL_LEAGUE_ID}:true"
-            "afl:19621:false"
-            "archies:10105:false"
-          )
-          for entry in "${LEAGUES[@]}"; do
-            IFS=':' read -r SLUG ID HAS_SALARY_SYNC <<< "$entry"
+          # navSlug, not slug: the feed + salary scripts key their data dirs by it.
+          # Plain assignments, not `< <(…)`: a process substitution's exit code
+          # is lost, so a broken lookup would sync nothing and still pass.
+          LEAGUES=$(node ./scripts/league-jobs.mjs mfl-sync --format '{navSlug}:{id}:{default}')
+          SALARY=$(node ./scripts/league-jobs.mjs salary-sync --format '{navSlug}')
+          [ -n "$LEAGUES" ] || { echo "::error::league-jobs listed no leagues to sync"; exit 1; }
+          for entry in $LEAGUES; do
+            IFS=':' read -r SLUG ID IS_DEFAULT <<< "$entry"
+            if [ "$IS_DEFAULT" = "true" ] && [ -n "$DEFAULT_LEAGUE_ID_OVERRIDE" ]; then
+              ID="$DEFAULT_LEAGUE_ID_OVERRIDE"
+            fi
+            HAS_SALARY_SYNC=false
+            for s in $SALARY; do if [ "$s" = "$SLUG" ]; then HAS_SALARY_SYNC=true; fi; done
 
             echo "::group::Fetch MFL data ($SLUG)"
             # --refresh-live (not --force): rosters/transactions/standings/
@@ -149,10 +151,13 @@ jobs:
       #
       # Through the package scripts, not a raw node invocation, so there is one
       # definition of how this runs and prebuild cannot drift from the cron.
+      # Every league with a Top Players page (league-jobs `top-players`).
       - name: Recompute Top Players leaderboards
         run: |
-          pnpm run compute:top-players
-          pnpm run compute:top-players:afl
+          TOP=$(node ./scripts/league-jobs.mjs top-players)
+          for SLUG in $TOP; do
+            pnpm run compute:top-players --league="$SLUG"
+          done
 
       # Note: draft-pick contract sync runs in its own workflow
       # (sync-draft-pick-contracts.yml), May-only cron, since the rookie

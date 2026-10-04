@@ -72,16 +72,10 @@ const REGISTRY_FILE = 'src/config/leagues-data.mjs';
  */
 const ALLOWLIST: Array<{ file: string; literals: string[]; reason: string }> = [
   {
-    file: '.github/workflows/roster-sync.yml',
-    literals: ['13522', '19621', '10105'],
-    reason:
-      "fetch-mfl-feeds.mjs requires a non-empty MFL_LEAGUE_ID with no registry fallback (unlike apply-pending-contracts.mjs / sync-draft-pick-contracts.mjs, which do fall back to DEFAULT_LEAGUE_ID). Workflow YAML can't import src/config/leagues-data.mjs, so literal ids are the one documented exception here — theleague's ('13522') via vars.MFL_LEAGUE_ID override, AFL's ('19621') and Archie's ('10105') bare in the per-league bash array — kept in sync with LEAGUES.*.id by convention (see inline workflow comment).",
-  },
-  {
     file: '.github/workflows/schefter-trade-speculation.yml',
     literals: ['13522'],
     reason:
-      "fetch-trade-bait.mjs requires a non-empty MFL_LEAGUE_ID with no registry fallback, same reasoning as roster-sync.yml above.",
+      "fetch-trade-bait.mjs requires a non-empty MFL_LEAGUE_ID with no registry fallback, and workflow YAML cannot import src/config/leagues-data.mjs (roster-sync.yml, the other such job, now reads ids through scripts/league-jobs.mjs).",
   },
   {
     file: 'scripts/backfill-afl-championship-history.mjs',

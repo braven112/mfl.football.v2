@@ -11,6 +11,8 @@
  */
 import { FEATURE_CATALOG, FEATURE_GROUPS } from '../../../config/league-feature-catalog.mjs';
 import { ARCHETYPES, ARCHETYPE_KEYS } from '../../../config/league-archetypes.mjs';
+import { ALL_LEAGUES } from '../../../config/leagues-data.mjs';
+import { PACKAGE_ROUTES, isPackageLeague } from '../../../config/package-league-routes.mjs';
 
 const catalog = FEATURE_CATALOG.map(({ key, label, description, group, requires }) => ({ key, label, description, group, requires }));
 const archetypes = ARCHETYPE_KEYS.map((k) => ({ key: k, label: ARCHETYPES[k].label, features: ARCHETYPES[k].features }));
@@ -19,10 +21,18 @@ const groups = Object.entries(FEATURE_GROUPS).map(([id, label]) => ({
   label,
   features: catalog.filter((f) => f.group === id),
 }));
+/** Leagues whose pages follow their features — the only ones "Change features" can edit. */
+const packageLeagues = ALL_LEAGUES.filter(isPackageLeague).map((l) => ({
+  slug: l.slug,
+  name: l.name,
+  features: Object.fromEntries(catalog.map((f) => [f.key, Boolean((l.features as Record<string, boolean>)[f.key])])),
+}));
+/** Route → the feature that entitles it, so the page can say which pages a change adds or removes. */
+const routes = PACKAGE_ROUTES;
 ---
 
 <section class="launcher" data-league-launcher data-league="theleague">
-  <script type="application/json" data-launcher-data set:html={JSON.stringify({ catalog, archetypes }).replace(/</g, '\\u003c')} />
+  <script type="application/json" data-launcher-data set:html={JSON.stringify({ catalog, archetypes, packageLeagues, routes }).replace(/</g, '\\u003c')} />
 
   <header class="launcher__head">
     <h1>League Launcher</h1>
@@ -86,6 +96,48 @@ const groups = Object.entries(FEATURE_GROUPS).map(([id, label]) => ({
       <p class="launcher__result" data-launcher-result role="status" aria-live="polite"></p>
     </div>
   </form>
+
+  <section class="launcher__edit" aria-labelledby="launcher-edit-title">
+    <h2 id="launcher-edit-title">Change a league's features</h2>
+    <p>
+      For Archie's and every league the Launcher built. Ticking or unticking a box adds or removes its pages,
+      site-search entries and nav links, and its scheduled jobs follow. It opens a PR, so nothing changes until you
+      merge it.
+    </p>
+    <form data-launcher-edit>
+      <label>
+        <span>League</span>
+        <select name="league" data-edit-league>
+          <option value="">Choose a league…</option>
+          {packageLeagues.map((l) => <option value={l.slug}>{l.name}</option>)}
+        </select>
+      </label>
+      <div data-edit-boxes hidden>
+        {
+          groups.map((g) => (
+            <fieldset class="launcher__card">
+              <legend>{g.label}</legend>
+              {g.features.map((f) => (
+                <label class="launcher__feature">
+                  <input type="checkbox" data-edit-feature={f.key} />
+                  <span class="launcher__feature-text">
+                    <strong>{f.label}</strong>
+                    <span class="launcher__desc">{f.description}</span>
+                    <span class="launcher__why" data-edit-why={f.key}></span>
+                  </span>
+                </label>
+              ))}
+            </fieldset>
+          ))
+        }
+        <p class="launcher__summary" data-edit-summary role="status" aria-live="polite"></p>
+        <div class="launcher__actions">
+          <button type="submit" class="cta cta--primary" data-edit-go disabled>Open PR with these features</button>
+          <p class="launcher__result" data-edit-result role="status" aria-live="polite"></p>
+        </div>
+      </div>
+    </form>
+  </section>
 </section>
 
 <script>
@@ -99,7 +151,61 @@ const groups = Object.entries(FEATURE_GROUPS).map(([id, label]) => ({
   type Data = {
     catalog: Array<{ key: string; label: string; requires: string[] }>;
     archetypes: Array<{ key: string; label: string; features: Record<string, boolean> }>;
+    packageLeagues: Array<{ slug: string; name: string; features: Record<string, boolean> }>;
+    routes: Record<string, string | null>;
   };
+
+  /** Off-and-disabled for every box whose prerequisite is off; returns the keys it switched off. */
+  function settleBoxes(data: Data, box: (key: string) => HTMLInputElement): string[] {
+    const switched: string[] = [];
+    for (const f of data.catalog) {
+      const missing = f.requires.find((r) => !box(r).checked);
+      const input = box(f.key);
+      input.disabled = Boolean(missing);
+      if (missing && input.checked) {
+        input.checked = false;
+        switched.push(f.key);
+      }
+    }
+    return switched;
+  }
+
+  /** `pecking-order/[year]/[week].astro` → `/pecking-order/[year]/[week]` for display. */
+  const routePath = (route: string) => `/${route.replace(/\.astro$/, '').replace(/\/?index$/, '')}`;
+
+  /** Posts a spec, then shows the message and the PR link — or the errors. */
+  async function submitSpec(url: string, spec: unknown, go: HTMLButtonElement, out: HTMLElement) {
+    go.disabled = true;
+    out.dataset.kind = 'muted';
+    out.textContent = 'Starting…';
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ spec }),
+      });
+      const body = await res.json();
+      if (!res.ok || !body.ok) {
+        go.disabled = false;
+        out.dataset.kind = 'bad';
+        out.textContent = (body.errors ?? [`Failed (HTTP ${res.status}).`]).join(' ');
+        return;
+      }
+      out.dataset.kind = 'ok';
+      out.textContent = `${body.message} `;
+      const a = document.createElement('a');
+      a.href = body.prUrl;
+      a.textContent = 'Open PR to staging';
+      a.className = 'cta-link';
+      a.target = '_blank';
+      a.rel = 'noopener';
+      out.append(a);
+    } catch {
+      go.disabled = false;
+      out.dataset.kind = 'bad';
+      out.textContent = 'Could not reach the server.';
+    }
+  }
 
   const SOURCE_LABEL: Record<string, string> = {
     'mfl-setting': 'MFL setting',
@@ -133,15 +239,12 @@ const groups = Object.entries(FEATURE_GROUPS).map(([id, label]) => ({
 
     /** Prerequisites gate their dependents: a box whose prerequisite is off is off and disabled. */
     function settle() {
+      for (const key of settleBoxes(data, box)) {
+        const missing = data.catalog.find((c) => c.key === key)!.requires.find((r) => !box(r).checked)!;
+        const label = data.catalog.find((c) => c.key === missing)?.label ?? missing;
+        choices[key] = { on: false, reason: `Needs ${label}, which is off.`, source: 'dependency' };
+      }
       for (const f of data.catalog) {
-        const missing = f.requires.find((r) => !box(r).checked);
-        const input = box(f.key);
-        input.disabled = Boolean(missing);
-        if (missing && input.checked) {
-          input.checked = false;
-          const label = data.catalog.find((c) => c.key === missing)?.label ?? missing;
-          choices[f.key] = { on: false, reason: `Needs ${label}, which is off.`, source: 'dependency' };
-        }
         const c = choices[f.key];
         why(f.key).textContent = c ? `${SOURCE_LABEL[c.source] ?? c.source}: ${c.reason}` : '';
         why(f.key).dataset.source = c?.source ?? '';
@@ -227,33 +330,65 @@ const groups = Object.entries(FEATURE_GROUPS).map(([id, label]) => ({
         duplicatePlayers: draft.duplicatePlayers,
         features,
       };
-      const go = review.querySelector<HTMLButtonElement>('[data-launcher-go]')!;
-      go.disabled = true;
-      say(result, 'Starting the launch…');
-      try {
-        const res = await fetch('/api/admin/league-launcher/launch', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ spec }),
-        });
-        const body = await res.json();
-        if (!res.ok || !body.ok) {
-          go.disabled = false;
-          return say(result, (body.errors ?? [`Launch failed (HTTP ${res.status}).`]).join(' '), 'bad');
-        }
-        result.dataset.kind = 'ok';
-        result.textContent = `${body.message} `;
-        const a = document.createElement('a');
-        a.href = body.prUrl;
-        a.textContent = 'Open PR to staging';
-        a.className = 'cta-link';
-        a.target = '_blank';
-        a.rel = 'noopener';
-        result.append(a);
-      } catch {
-        go.disabled = false;
-        say(result, 'Could not reach the server.', 'bad');
+      await submitSpec('/api/admin/league-launcher/launch', spec, review.querySelector<HTMLButtonElement>('[data-launcher-go]')!, result);
+    });
+
+    // ── Change an existing league's features ─────────────────────────────
+    const edit = root.querySelector<HTMLFormElement>('[data-launcher-edit]')!;
+    const editLeague = edit.querySelector<HTMLSelectElement>('[data-edit-league]')!;
+    const editBoxes = edit.querySelector<HTMLElement>('[data-edit-boxes]')!;
+    const editGo = edit.querySelector<HTMLButtonElement>('[data-edit-go]')!;
+    const editSummary = edit.querySelector<HTMLElement>('[data-edit-summary]')!;
+    const editResult = edit.querySelector<HTMLElement>('[data-edit-result]')!;
+    const editBox = (key: string) => edit.querySelector<HTMLInputElement>(`[data-edit-feature="${key}"]`)!;
+    const current = () => data.packageLeagues.find((l) => l.slug === editLeague.value);
+
+    /** Mark each changed box, list the pages that come and go, and enable the button only for a real change. */
+    function paintEdit() {
+      const league = current();
+      if (!league) return;
+      settleBoxes(data, editBox);
+      const now = Object.fromEntries(data.catalog.map((f) => [f.key, editBox(f.key).checked]));
+      for (const f of data.catalog) {
+        const was = league.features[f.key];
+        const why = edit.querySelector<HTMLElement>(`[data-edit-why="${f.key}"]`)!;
+        why.textContent = now[f.key] === was ? '' : now[f.key] ? 'Turns on with this PR.' : 'Turns off with this PR.';
+        why.dataset.source = now[f.key] === was ? '' : 'ai';
       }
+      const pages = (features: Record<string, boolean>) =>
+        new Set(Object.entries(data.routes).filter(([, f]) => f === null || features[f]).map(([r]) => routePath(r)));
+      const before = pages(league.features);
+      const after = pages(now);
+      const added = [...after].filter((p) => !before.has(p));
+      const removed = [...before].filter((p) => !after.has(p));
+      const changed = data.catalog.some((f) => now[f.key] !== league.features[f.key]);
+      editSummary.textContent = !changed
+        ? 'No changes yet.'
+        : [
+            added.length ? `Adds ${added.join(', ')}.` : '',
+            removed.length ? `Removes ${removed.join(', ')}.` : '',
+            !added.length && !removed.length ? 'No pages change; its scheduled jobs follow the new boxes.' : '',
+          ].filter(Boolean).join(' ');
+      editGo.disabled = !changed;
+    }
+
+    editLeague.addEventListener('change', () => {
+      const league = current();
+      editBoxes.hidden = !league;
+      editResult.textContent = '';
+      if (!league) return;
+      for (const f of data.catalog) editBox(f.key).checked = league.features[f.key];
+      paintEdit();
+    });
+    edit.addEventListener('change', (e) => {
+      if ((e.target as HTMLElement).dataset.editFeature !== undefined) paintEdit();
+    });
+    edit.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const league = current();
+      if (!league) return;
+      const features = Object.fromEntries(data.catalog.map((f) => [f.key, editBox(f.key).checked]));
+      await submitSpec('/api/admin/league-launcher/update', { slug: league.slug, features }, editGo, editResult);
     });
   }
 
@@ -350,6 +485,15 @@ const groups = Object.entries(FEATURE_GROUPS).map(([id, label]) => ({
   .launcher__status[data-kind='ok'],
   .launcher__result[data-kind='ok'] {
     color: var(--color-success-dark);
+  }
+  .launcher__edit {
+    margin-top: 2.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--content-border);
+  }
+  .launcher__edit > p,
+  .launcher__summary {
+    color: var(--content-text-muted);
   }
   .launcher__actions {
     display: grid;
