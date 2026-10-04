@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-10-04T00:05:12.913Z"
+    "fetchedAt": "2026-10-04T01:01:33.755Z"
   },
   "players": [
     {
@@ -1536,12 +1536,12 @@
       "gamesPlayed": 3,
       "depthChartAhead": [
         {
-          "id": "14109",
-          "name": "McLaurin, Terry"
-        },
-        {
           "id": "12186",
           "name": "Diggs, Stefon"
+        },
+        {
+          "id": "14109",
+          "name": "McLaurin, Terry"
         }
       ]
     },
@@ -5125,7 +5125,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 7,
+        "depthChartOrder": 6,
         "fantasyPositions": [
           "WR"
         ],
@@ -5155,20 +5155,16 @@
       "gamesPlayed": 1,
       "depthChartAhead": [
         {
-          "id": "14109",
-          "name": "McLaurin, Terry"
-        },
-        {
           "id": "12186",
           "name": "Diggs, Stefon"
         },
         {
-          "id": "17512",
-          "name": "Williams, Antonio"
+          "id": "14109",
+          "name": "McLaurin, Terry"
         },
         {
-          "id": "17184",
-          "name": "Lane, Jaylin"
+          "id": "17512",
+          "name": "Williams, Antonio"
         }
       ]
     },
@@ -7337,7 +7333,12 @@
         ]
       },
       "gamesPlayed": 2,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "11247",
+          "name": "Ertz, Zach"
+        }
+      ]
     },
     {
       "id": "13303",
@@ -17388,7 +17389,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 4,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "RB"
         ],
@@ -17506,6 +17507,10 @@
       "nflverse": null,
       "gamesPlayed": null,
       "depthChartAhead": [
+        {
+          "id": "11247",
+          "name": "Ertz, Zach"
+        },
         {
           "id": "13674",
           "name": "Goedert, Dallas"
@@ -18166,7 +18171,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 2,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "WR"
         ],
@@ -18196,12 +18201,7 @@
         ]
       },
       "gamesPlayed": 3,
-      "depthChartAhead": [
-        {
-          "id": "14109",
-          "name": "McLaurin, Terry"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "17075",
@@ -18305,8 +18305,8 @@
         "status": "Active",
         "active": true,
         "position": "TE",
-        "depthChartPosition": null,
-        "depthChartOrder": null,
+        "depthChartPosition": "TE",
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "TE"
         ],
@@ -22694,7 +22694,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 1,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "WR"
         ],
@@ -22724,7 +22724,12 @@
         ]
       },
       "gamesPlayed": 3,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "12186",
+          "name": "Diggs, Stefon"
+        }
+      ]
     },
     {
       "id": "0504",
@@ -23729,7 +23734,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": null,
-        "depthChartOrder": 7,
+        "depthChartOrder": 8,
         "fantasyPositions": [
           "WR"
         ],
@@ -24657,7 +24662,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 6,
+        "depthChartOrder": 7,
         "fantasyPositions": [
           "WR"
         ],
@@ -24689,16 +24694,20 @@
       "gamesPlayed": 3,
       "depthChartAhead": [
         {
-          "id": "14109",
-          "name": "McLaurin, Terry"
-        },
-        {
           "id": "12186",
           "name": "Diggs, Stefon"
         },
         {
+          "id": "14109",
+          "name": "McLaurin, Terry"
+        },
+        {
           "id": "17512",
           "name": "Williams, Antonio"
+        },
+        {
+          "id": "16635",
+          "name": "McCaffrey, Luke"
         }
       ]
     },
