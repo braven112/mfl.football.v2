@@ -1,0 +1,93 @@
+---
+/**
+ * The admin's fix for one season's champion, under that season's row.
+ * Rendered only for `canFixLeagueHistory` (the route decides); the endpoint
+ * re-checks. Posts to /api/league-history/mfl/override and reloads.
+ *
+ * Options are the franchises MFL listed for that season, so a fix cannot
+ * invent a team. "No champion" records a season that crowned nobody.
+ */
+import type { SeasonFranchise } from '../../../utils/league-history/mfl-champions';
+
+interface Props {
+	leagueId: string;
+	year: number;
+	franchises: SeasonFranchise[];
+	championId: string | null;
+	runnerUpId: string | null;
+	hasOverride: boolean;
+}
+const { leagueId, year, franchises, championId, runnerUpId, hasOverride } = Astro.props as Props;
+const sorted = [...franchises].sort((a, b) => a.name.localeCompare(b.name));
+---
+
+<details class="lh__fix" data-lh-fix data-league-id={leagueId} data-year={year}>
+	<summary>{hasOverride ? 'Fixed by admin: edit' : 'Fix'}</summary>
+	{sorted.length === 0 ? (
+		<p class="lh__muted">MFL listed no teams for this season, so there is nothing to pick from.</p>
+	) : (
+		<form class="lh__fix-form" data-lh-fix-form>
+			<label class="lh__label">
+				Champion
+				<select class="lh__select" name="championId">
+					<option value="" selected={!championId}>No champion</option>
+					{sorted.map((f) => <option value={f.id} selected={f.id === championId}>{f.name}</option>)}
+				</select>
+			</label>
+			<label class="lh__label">
+				Runner-up
+				<select class="lh__select" name="runnerUpId">
+					<option value="" selected={!runnerUpId}>None</option>
+					{sorted.map((f) => <option value={f.id} selected={f.id === runnerUpId}>{f.name}</option>)}
+				</select>
+			</label>
+			<div class="lh__fix-actions">
+				<button class="cta cta--primary" type="submit">Save</button>
+				{hasOverride && <button class="cta cta--ghost" type="button" data-lh-fix-clear>Use MFL's answer</button>}
+				<span class="lh__status" role="status" data-lh-fix-status></span>
+			</div>
+		</form>
+	)}
+</details>
+
+<script>
+	async function send(root: HTMLElement, body: Record<string, unknown>): Promise<void> {
+		const status = root.querySelector<HTMLElement>('[data-lh-fix-status]');
+		if (status) status.textContent = 'Saving…';
+		try {
+			const res = await fetch('/api/league-history/mfl/override', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+				credentials: 'include',
+				body: JSON.stringify({ leagueId: root.dataset.leagueId, year: Number(root.dataset.year), ...body }),
+			});
+			const data = (await res.json().catch(() => ({}))) as { ok?: boolean; message?: string };
+			if (data.ok === true) {
+				window.location.reload();
+				return;
+			}
+			if (status) status.textContent = data.message ?? 'Could not save.';
+		} catch {
+			if (status) status.textContent = 'Could not save.';
+		}
+	}
+
+	function init() {
+		for (const root of Array.from(document.querySelectorAll<HTMLElement>('[data-lh-fix]'))) {
+			if (root.dataset.init) continue;
+			root.dataset.init = 'true';
+			const form = root.querySelector<HTMLFormElement>('[data-lh-fix-form]');
+			form?.addEventListener('submit', (event) => {
+				event.preventDefault();
+				const data = new FormData(form);
+				void send(root, {
+					championId: String(data.get('championId') ?? '') || null,
+					runnerUpId: String(data.get('runnerUpId') ?? '') || null,
+				});
+			});
+			root.querySelector('[data-lh-fix-clear]')?.addEventListener('click', () => void send(root, { clear: true }));
+		}
+	}
+
+	document.addEventListener('astro:page-load', init);
+</script>

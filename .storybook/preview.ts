@@ -66,6 +66,7 @@ import '../src/styles/live.css';
 // stories would otherwise get correct DOM and no rules. Every selector in it
 // is scoped to `.draft-room` / `.dr-*`, so it cannot restyle another story.
 import '../src/styles/draft-room.css';
+import '../src/styles/league-history.css';
 
 /**
  * Theme and league are BOTH pure CSS in this codebase:
