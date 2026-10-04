@@ -68,7 +68,6 @@ function fakeMfl(opts: { throttleOnCall?: number } = {}) {
 const deps = (fetchExport: unknown, now = Date.parse('2026-10-04T12:00:00Z')) => ({
 	fetchExport: fetchExport as never,
 	leagueYear: 2026,
-	seasonInProgress: 2026,
 	now: () => now,
 });
 

@@ -109,7 +109,7 @@ export type AdvanceResult =
  */
 export async function advanceMflHistory(
 	leagueId: string,
-	deps: { fetchExport: FetchExport; leagueYear: number; seasonInProgress: number; now?: () => number },
+	deps: { fetchExport: FetchExport; leagueYear: number; now?: () => number },
 ): Promise<AdvanceResult> {
 	const redis = await getRedis();
 	if (!redis) return { status: 'no-storage', message: 'History storage is unavailable right now.' };
@@ -152,7 +152,7 @@ export async function advanceMflHistory(
 		const todo = seasonsToCrawl(record, now()).slice(0, SEASONS_PER_STEP);
 		for (const ref of todo) {
 			try {
-				const { result, franchises } = await crawlMflSeason(ref, deps.fetchExport, deps.seasonInProgress);
+				const { result, franchises } = await crawlMflSeason(ref, deps.fetchExport);
 				record.seasons[String(ref.year)] = { ...result, franchises, crawledAt: new Date(now()).toISOString() };
 			} catch (err) {
 				if (!(err instanceof MflRetryLater)) throw err;
@@ -234,6 +234,6 @@ export function effectiveSeasons(
 		.sort((a, b) => b.year - a.year);
 }
 
-export function trophyCase(record: StoredLeagueHistory, seasons: EffectiveSeason[]): ChampionTally[] {
-	return tallyChampions(seasons, new Map(Object.entries(record.latestNames)));
+export function trophyCase(seasons: EffectiveSeason[]): ChampionTally[] {
+	return tallyChampions(seasons);
 }

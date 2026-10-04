@@ -38,9 +38,10 @@ export const GET: APIRoute = async ({ params, request }) => {
 	const season = seasons.find((s) => s.year === year);
 	if (!season?.champion) return notFound();
 
-	const titles = trophyCase(record, seasons).find((t) => t.franchiseId === season.champion!.id)?.titles ?? [];
+	// Counted under the name the title was won under: the same name as this
+	// card, never merged with another name the team slot wore.
+	const titles = trophyCase(seasons).find((t) => t.name === season.champion!.name.trim())?.titles ?? [];
 	const titleNumber = titles.filter((y) => y <= year).length;
-	const viaStandings = season.method === 'standings' || season.crawled?.method === 'standings';
 
 	try {
 		const png = await renderChampionCardPng({
@@ -49,7 +50,9 @@ export const GET: APIRoute = async ({ params, request }) => {
 			champion: season.champion.name,
 			runnerUp: season.runnerUp?.name ?? null,
 			titleNumber: Math.max(titleNumber, 1),
-			decidedBy: viaStandings ? 'standings' : 'final',
+			// Only MFL's own bracket result says a final was played; an admin's
+			// fix does not say how the title was won.
+			decidedBy: season.method === 'bracket' ? 'final' : 'set',
 		});
 		return new Response(new Uint8Array(png), {
 			headers: { 'Content-Type': 'image/png', 'Cache-Control': 'private, max-age=300' },

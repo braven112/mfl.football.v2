@@ -44,8 +44,11 @@ export interface ChampionCardInput {
 	runnerUp: string | null;
 	/** How many titles the champion's franchise has on record, this one included. */
 	titleNumber: number;
-	/** A final was played ('final') or the title went to first place ('standings'). */
-	decidedBy: 'final' | 'standings';
+	/**
+	 * 'final': MFL's bracket recorded the final. 'set': the admin set the
+	 * champion, so how the title was won is not on record.
+	 */
+	decidedBy: 'final' | 'set';
 }
 
 const INK = '#0f1115';
@@ -111,7 +114,7 @@ export function buildChampionCardTree(input: ChampionCardInput): Node {
 							? ' '
 							: input.decidedBy === 'final'
 								? `Beat ${clip(input.runnerUp, 40)} in the final`
-								: `Finished ahead of ${clip(input.runnerUp, 40)}`,
+								: `Runner-up: ${clip(input.runnerUp, 40)}`,
 					),
 				]),
 				el('div', { fontSize: 24, color: MUTED, letterSpacing: '0.06em' }, 'LEAGUE HISTORY'),

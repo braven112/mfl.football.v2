@@ -14,7 +14,7 @@ import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../../../utils/auth';
 import { getClientIdentity } from '../../../../utils/client-ip';
 import { checkRateLimit } from '../../../../utils/rate-limit';
-import { getCurrentLeagueYear, getCurrentSeasonYear } from '../../../../utils/league-year';
+import { getCurrentLeagueYear } from '../../../../utils/league-year';
 import { canViewLeagueHistory } from '../../../../utils/league-history/access';
 import { mflExportFetcher } from '../../../../utils/league-history/mfl-crawl';
 import { advanceMflHistory, isMflLeagueId, readMflHistory } from '../../../../utils/league-history/store';
@@ -51,7 +51,6 @@ export const POST: APIRoute = async ({ request }) => {
 	const result = await advanceMflHistory(leagueId, {
 		fetchExport: mflExportFetcher,
 		leagueYear: getCurrentLeagueYear(),
-		seasonInProgress: getCurrentSeasonYear(),
 	});
 	const status = result.status === 'not-found' ? 404 : result.status === 'no-storage' ? 503 : 200;
 	return json({ leagueId, ...result }, status);

@@ -19,18 +19,17 @@
  *                   The championship bracket is the one whose title or name
  *                   says champion; our own convention (bracket id '1') is
  *                   only the tiebreak, because other leagues number freely.
- *  2. 'standings' — ONLY for a season with no playoff brackets at all: MFL's
- *                   standings order is the league's own result (its
- *                   tiebreakers applied — never re-sorted; see
- *                   docs/claude/rules/standings-brackets-draft-order.md).
- *  3. 'unknown'   — anything else. A season whose bracket exists but cannot
- *                   name a winner (unplayed, tied, missing ids) is NOT
- *                   guessed from standings: the regular-season leader is not
- *                   the champion of a league that holds playoffs.
+ *  2. 'unknown'   — anything else, and never guessed. A season whose bracket
+ *                   cannot name a winner (unplayed, tied, missing ids) is
+ *                   unknown, and so is a season with NO brackets: a league
+ *                   can crown its champion in ways MFL does not record
+ *                   (Archie's runs its own playoff structure), so first in
+ *                   the standings is not assumed to be the champion. The
+ *                   admin sets those seasons with an override.
  * An admin override ('override') beats all three; see store.ts.
  */
 
-export type ChampionMethod = 'bracket' | 'standings' | 'override' | 'unknown';
+export type ChampionMethod = 'bracket' | 'override' | 'unknown';
 
 /** One season of the league, as `history.league[]` names it. */
 export interface MflSeasonRef {
@@ -227,18 +226,6 @@ export function finalFromBracket(
 	return hp > ap ? { winnerId: homeId, loserId: awayId } : { winnerId: awayId, loserId: homeId };
 }
 
-/** First and second place from `TYPE=leagueStandings`, in MFL's own order. */
-export function topTwoFromStandings(standingsExport: unknown): [string, string | null] | null {
-	const rows = asArray(
-		(standingsExport as { leagueStandings?: { franchise?: unknown } })?.leagueStandings?.franchise as {
-			id?: string;
-		}[],
-	);
-	const ids = rows.map((r) => String(r?.id ?? '')).filter(Boolean);
-	if (ids.length === 0) return null;
-	return [ids[0], ids[1] ?? null];
-}
-
 const side = (franchises: Map<string, string>, id: string | null): SeasonFranchise | null =>
 	id ? { id, name: franchises.get(id) ?? `Franchise ${id}` } : null;
 
@@ -260,55 +247,40 @@ export function championFromBracket(
 	};
 }
 
-/** A season with no brackets, decided by MFL's standings order. */
-export function championFromStandings(
-	year: number,
-	standingsExport: unknown,
-	franchises: Map<string, string>,
-): SeasonChampion {
-	const top = topTwoFromStandings(standingsExport);
-	if (!top) {
-		return { year, method: 'unknown', champion: null, runnerUp: null, note: 'no brackets and no standings' };
-	}
-	return { year, method: 'standings', champion: side(franchises, top[0]), runnerUp: side(franchises, top[1]) };
-}
-
 export interface ChampionTally {
-	franchiseId: string;
-	/** The name the franchise wore in its MOST RECENT season on record. */
+	/** The team name the titles were won under, exactly as MFL recorded it that season. */
 	name: string;
 	titles: number[];
 	runnerUps: number[];
-	/** Year → the name it won under, only where that differs from `name`. */
-	titledAs: Record<number, string>;
 }
 
 /**
- * The trophy case: titles per franchise, keyed by MFL franchise id (a slot
- * that keeps its id when it changes name or owner). Most titles first, then
- * most recent title. A franchise with only runner-up finishes is listed after
- * every champion.
+ * The trophy case: titles grouped by the NAME each was won under. Nothing is
+ * merged across names or MFL team slots: a slot can change hands, and a
+ * renamed team may or may not be the same owner, so the free page does not
+ * guess. Linking names to people is Full History's owners-and-eras work.
+ *
+ * Names match exactly after trimming, so case is kept as recorded. Most titles
+ * first, then most recent title; a name with only runner-up finishes comes
+ * after every champion.
  */
-export function tallyChampions(seasons: SeasonChampion[], latestNames: Map<string, string>): ChampionTally[] {
-	const byId = new Map<string, ChampionTally>();
+export function tallyChampions(seasons: SeasonChampion[]): ChampionTally[] {
+	const byName = new Map<string, ChampionTally>();
 	const get = (f: SeasonFranchise) => {
-		let row = byId.get(f.id);
+		const name = f.name.trim();
+		let row = byName.get(name);
 		if (!row) {
-			row = { franchiseId: f.id, name: latestNames.get(f.id) ?? f.name, titles: [], runnerUps: [], titledAs: {} };
-			byId.set(f.id, row);
+			row = { name, titles: [], runnerUps: [] };
+			byName.set(name, row);
 		}
 		return row;
 	};
 	for (const s of seasons) {
-		if (s.champion) {
-			const row = get(s.champion);
-			row.titles.push(s.year);
-			if (s.champion.name !== row.name) row.titledAs[s.year] = s.champion.name;
-		}
+		if (s.champion) get(s.champion).titles.push(s.year);
 		if (s.runnerUp) get(s.runnerUp).runnerUps.push(s.year);
 	}
 	const latest = (years: number[]) => (years.length ? Math.max(...years) : 0);
-	return [...byId.values()].sort(
+	return [...byName.values()].sort(
 		(a, b) =>
 			b.titles.length - a.titles.length ||
 			latest(b.titles) - latest(a.titles) ||

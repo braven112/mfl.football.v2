@@ -3,7 +3,6 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
 	championFromBracket,
-	championFromStandings,
 	finalFromBracket,
 	isMflHost,
 	mflErrorText,
@@ -29,7 +28,6 @@ import { crawlMflSeason, exportUrl, planMflLeague, type ExportRequest } from '..
  *  - afl-2016-brackets: a 16-team "NIT Championship" finishes after the
  *    real title game; the latest-finishing championship is the NIT's.
  *  - theleague-2026-bracket-1-unplayed: a final with no teams yet.
- *  - archies-2025-standings-top5: a league with no brackets at all.
  * Live, the crawler matched both hand-checked champion files: TheLeague
  * 19/19 seasons and the AFL 22/22 (2026-10-04).
  */
@@ -151,31 +149,22 @@ describe('the final', () => {
 	});
 });
 
-describe('standings fallback', () => {
-	it('takes MFL’s own first and second place, unsorted', () => {
-		const season = championFromStandings(2025, fixture('archies-2025-standings-top5'), new Map());
-		expect(season.method).toBe('standings');
-		expect(season.champion?.id).toBe(fixture('archies-2025-standings-top5').leagueStandings.franchise[0].id);
-	});
-});
-
 describe('crawlMflSeason', () => {
 	const ref = { year: 2025, leagueId: '10105', host: 'www44.myfantasyleague.com' };
-	const noBrackets = async (req: ExportRequest) => {
-		if (req.type === 'league') return { league: { franchises: { franchise: [] } } };
-		if (req.type === 'playoffBrackets') return { playoffBrackets: {} };
-		if (req.type === 'leagueStandings') return fixture('archies-2025-standings-top5');
-		throw new Error(`unexpected ${req.type}`);
-	};
 
-	it('decides a finished no-bracket season by standings', async () => {
-		expect((await crawlMflSeason(ref, noBrackets, 2026)).result.method).toBe('standings');
-	});
-
-	it('never names a champion from standings while the season is being played', async () => {
-		const { result } = await crawlMflSeason({ ...ref, year: 2026 }, noBrackets, 2026);
-		expect(result.method).toBe('unknown');
-		expect(result.note).toMatch(/still being played/);
+	it('never guesses a season with no playoff brackets: it is unknown, standings are not read', async () => {
+		// Archie's runs its own playoff structure, so first place is not assumed
+		// to be the champion; the admin sets those seasons.
+		const asked: string[] = [];
+		const { result, franchises } = await crawlMflSeason(ref, async (req) => {
+			asked.push(req.type);
+			if (req.type === 'league') return { league: { franchises: { franchise: [{ id: '0001', name: 'Croc' }] } } };
+			if (req.type === 'playoffBrackets') return { playoffBrackets: {} };
+			throw new Error(`unexpected ${req.type}`);
+		});
+		expect(result).toMatchObject({ method: 'unknown', champion: null, note: 'MFL has no playoff bracket for this season' });
+		expect(asked).toEqual(['league', 'playoffBrackets']);
+		expect(franchises).toEqual([{ id: '0001', name: 'Croc' }]);
 	});
 });
 
@@ -206,24 +195,25 @@ describe('exportUrl', () => {
 });
 
 describe('tallyChampions', () => {
-	const s = (year: number, champ: string, ru: string): SeasonChampion => ({
+	const s = (year: number, champ: string, ru: string, champId = champ, ruId = ru): SeasonChampion => ({
 		year,
 		method: 'bracket',
-		champion: { id: champ, name: `old ${champ}` },
-		runnerUp: { id: ru, name: `old ${ru}` },
+		champion: { id: champId, name: champ },
+		runnerUp: { id: ruId, name: ru },
 	});
 
-	it('counts titles per franchise id, most first, using today’s names', () => {
-		const tally = tallyChampions([s(2020, 'A', 'B'), s(2021, 'B', 'A'), s(2022, 'B', 'C')], new Map([['B', 'New B']]));
-		expect(tally.map((t) => [t.franchiseId, t.titles.length])).toEqual([
-			['B', 2],
-			['A', 1],
-			['C', 0],
+	it('groups titles by the name they were won under, most first', () => {
+		const tally = tallyChampions([s(2020, 'Croc', 'Ducks'), s(2021, 'Ducks', 'Croc'), s(2022, 'Ducks', 'Kings')]);
+		expect(tally.map((t) => [t.name, t.titles])).toEqual([
+			['Ducks', [2021, 2022]],
+			['Croc', [2020]],
+			['Kings', []],
 		]);
-		expect(tally[0].name).toBe('New B');
-		expect(tally[1].name).toBe('old A');
-		// A title won under an earlier name says so; one under today's name does not.
-		expect(tally[0].titledAs).toEqual({ 2021: 'old B', 2022: 'old B' });
-		expect(tally[1].titledAs).toEqual({});
+	});
+
+	it('never merges two names, even when MFL kept the same team slot', () => {
+		// Slot 0001 won as Croc, then as Barracudas: possibly a new owner, so two entries.
+		const tally = tallyChampions([s(2024, 'Croc', 'Ducks', '0001'), s(2025, 'Barracudas', 'Ducks', '0001')]);
+		expect(tally.filter((t) => t.titles.length).map((t) => t.name).sort()).toEqual(['Barracudas', 'Croc']);
 	});
 });

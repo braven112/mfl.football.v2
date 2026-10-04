@@ -16,7 +16,6 @@
  */
 import {
 	championFromBracket,
-	championFromStandings,
 	isMflHost,
 	mflErrorText,
 	parseFranchises,
@@ -34,7 +33,7 @@ export interface CrawledSeason {
 	franchises: SeasonFranchise[];
 }
 
-export const MFL_EXPORT_TYPES = ['league', 'playoffBrackets', 'playoffBracket', 'leagueStandings'] as const;
+export const MFL_EXPORT_TYPES = ['league', 'playoffBrackets', 'playoffBracket'] as const;
 export type MflExportType = (typeof MFL_EXPORT_TYPES)[number];
 
 export interface ExportRequest {
@@ -127,22 +126,12 @@ export async function planMflLeague(leagueId: string, year: number, fetchExport:
 }
 
 /**
- * One season's champion. Three requests for a league with playoffs (league,
- * brackets, the championship bracket), three for one without (league,
- * brackets, standings).
+ * One season's champion: the league export (for that season's teams), its
+ * brackets, and the championship bracket. A season with no brackets is
+ * unknown; nothing else is inferred (mfl-champions.ts, "HOW A CHAMPION IS
+ * DECIDED").
  */
-export async function crawlMflSeason(
-	ref: MflSeasonRef,
-	fetchExport: FetchExport,
-	/**
-	 * The season being played now (`getCurrentSeasonYear()`). Standings name a
-	 * leader every week, so a no-bracket season this year or later is never
-	 * decided by them: its "champion" would just be this week's leader. A
-	 * bracket needs no such guard, since an unplayed final already reads as
-	 * undecided.
-	 */
-	seasonInProgress: number,
-): Promise<CrawledSeason> {
+export async function crawlMflSeason(ref: MflSeasonRef, fetchExport: FetchExport): Promise<CrawledSeason> {
 	const base = { host: ref.host, year: ref.year, leagueId: ref.leagueId };
 	const leagueBody = await fetchExport({ ...base, type: 'league' });
 	const leagueErr = mflErrorText(leagueBody);
@@ -165,12 +154,11 @@ export async function crawlMflSeason(
 		return done(championFromBracket(ref.year, bracket, franchises));
 	}
 
-	if (ref.year >= seasonInProgress) {
-		return done({ year: ref.year, method: 'unknown', champion: null, runnerUp: null, note: 'the season is still being played' });
-	}
-	const standings = await fetchExport({ ...base, type: 'leagueStandings' });
-	if (mflErrorText(standings)) {
-		return done({ year: ref.year, method: 'unknown', champion: null, runnerUp: null, note: 'no brackets, standings unavailable' });
-	}
-	return done(championFromStandings(ref.year, standings, franchises));
+	return done({
+		year: ref.year,
+		method: 'unknown',
+		champion: null,
+		runnerUp: null,
+		note: 'MFL has no playoff bracket for this season',
+	});
 }

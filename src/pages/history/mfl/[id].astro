@@ -42,14 +42,14 @@ const canFix = canFixLeagueHistory(authUser);
 const record = await readMflHistory(leagueId);
 const overrides = record ? await readOverrides(leagueId) : {};
 const seasons = record ? effectiveSeasons(record, overrides) : [];
-const trophies = record ? trophyCase(record, seasons).filter((t) => t.titles.length > 0) : [];
+const trophies = record ? trophyCase(seasons).filter((t) => t.titles.length > 0) : [];
 const unfinished = record ? seasonsToCrawl(record, Date.now()).length > 0 : true;
 const decided = seasons.filter((s) => s.champion).length;
 const firstYear = record ? Math.min(...record.chain.map((s) => s.year)) : null;
 const inProgress = getCurrentSeasonYear();
 
 const methodTag = (method: string) =>
-	method === 'standings' ? 'by standings' : method === 'override' ? 'corrected' : null;
+	method === 'override' ? 'set by admin' : null;
 
 const LOCKED = [
 	{ title: 'Season-by-season standings', body: 'Every season’s final table and playoff results.' },
@@ -79,7 +79,7 @@ const LOCKED = [
 					<p class="lh__eyebrow">League History</p>
 					<h1 class="lh__title">{record.name}</h1>
 					<p class="lh__lede">
-						{record.chain.length} seasons since {firstYear}, {decided} champions crowned.
+						{record.chain.length} seasons since {firstYear}; {decided} of {record.chain.length} champions on record.
 					</p>
 					{unfinished && (
 						<Fragment>
@@ -152,15 +152,15 @@ const LOCKED = [
 									</span>
 									<span class="lh__cups">
 										{[...t.titles].sort((a, b) => b - a).map((y) => (
-											<span class="lh__cup">{t.titledAs[y] ? `${y} as ${t.titledAs[y]}` : y}</span>
+											<span class="lh__cup">{y}</span>
 										))}
 									</span>
 								</li>
 							))}
 						</ul>
 						<p class="lh__muted">
-							Titles are counted by MFL team, under the name each team uses today. A title won under
-							an earlier name says so.
+							Titles are grouped by the team name they were won under. A team that changed its name
+							shows under each name.
 						</p>
 					</section>
 				)}

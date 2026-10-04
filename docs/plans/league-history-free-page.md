@@ -35,12 +35,23 @@ shareable champion card per season, and locked previews of what Full History
    - the AFL's AL and NL "Championship" brackets feed its AFL Championship.
 3. **The final.** The last round must hold one game with both teams and both
    scores, and the scores must differ. Otherwise the season is unknown.
-4. **Standings** decide a season only when it has no brackets at all, and
-   never the season being played (a weekly leader is not a champion).
+4. **Nothing else is inferred.** A season with no playoff bracket on MFL is
+   unknown. First in the standings is never assumed to be the champion:
+   leagues crown champions in ways MFL does not record (Archie's runs its own
+   playoff structure). The admin sets those seasons.
 
 Checked live on 2026-10-04 against both hand-kept champion files: TheLeague
 19/19 and the AFL 22/22 seasons, champion and runner-up. The AFL's 2003
-reads unknown, matching its file's own gap note.
+reads unknown, matching its file's own gap note. Archie's league has no MFL
+brackets, so every season reads unknown until set.
+
+## The trophy case groups by name, never by owner
+
+Titles are grouped by the team NAME each was won under (`tallyChampions`).
+Nothing is merged across names or MFL team slots: a slot can change hands,
+and a renamed team may or may not be the same owner, so the free page does
+not guess. A team that renamed shows under each name. Linking names to people
+is Full History's owners-and-eras work.
 
 ## Storage and the build
 
