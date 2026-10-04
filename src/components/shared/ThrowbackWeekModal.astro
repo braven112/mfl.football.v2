@@ -30,6 +30,9 @@ interface Props {
 }
 
 const { welcome, leagueSlug, pickerHref, previewOpen = false } = Astro.props;
+// The measured stroke rides inline (it must beat the global html.dark rule);
+// restate the lift with it, since an inline `filter` replaces the class's.
+const CREST_LIFT = 'drop-shadow(0 6px 16px rgba(0, 0, 0, 0.35))';
 const bandStyle = `--pmb-g1:${welcome.bandStart};--pmb-g2:${welcome.bandEnd};--pmb-glow:${welcome.bandGlow}`;
 ---
 
@@ -58,7 +61,7 @@ const bandStyle = `--pmb-g1:${welcome.bandStart};--pmb-g2:${welcome.bandEnd};--p
         alt=""
         width="112"
         height="112"
-        style={welcome.crestFilter ? `filter:${welcome.crestFilter}` : undefined}
+        style={welcome.crestFilter ? `filter:${welcome.crestFilter} ${CREST_LIFT}` : undefined}
       />
     )}
   </div>
@@ -91,9 +94,10 @@ const bandStyle = `--pmb-g1:${welcome.bandStart};--pmb-g2:${welcome.bandEnd};--p
 <script>
   /**
    * CLIENTROUTER-SAFE INIT: re-run on every astro:page-load and look the
-   * dialog up fresh — it lives in the swapped body. The gate names the league
-   * (`data-league`), never a bare id: a cross-league navigation is a swap, so
-   * an id alone would match the other league's copy. No document listeners —
+   * dialog up fresh — it lives in the swapped body, so whichever one is in the
+   * DOM belongs to the page now showing, and the bound flag sits on that node.
+   * There is one shared script (not a forked pair), so no other league's
+   * listener can act on it. No document listeners beyond the page-load hook —
    * the dialog's own handlers go with it on the next swap.
    */
   const readSeen = (key: string): boolean => {
