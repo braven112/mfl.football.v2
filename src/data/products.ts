@@ -43,9 +43,29 @@ export type FeatureId =
 	| 'contracts-cap'
 	| 'league-books';
 
+/**
+ * A screenshot of the real site, reused from the What's New library
+ * (`public/assets/whats-new/`). `darkSrc` is the dark-theme capture; both
+ * render and CSS shows the one matching the theme (`ThemeImage`).
+ * `tests/product-pages.test.ts` fails on a path that does not exist.
+ */
+export interface Screenshot {
+	src: string;
+	darkSrc?: string;
+	alt: string;
+}
+
+/** A What's New screenshot; `dark: false` for the few captured in light only. */
+const shot = (file: string, alt: string, { dark = true } = {}): Screenshot => {
+	const src = `/assets/whats-new/${file}`;
+	return { src, darkSrc: dark ? src.replace(/\.(webp|jpg)$/, '-dark.$1') : undefined, alt };
+};
+
 export interface Feature {
 	id: FeatureId;
 	name: string;
+	/** Shown in the catalog and as a thumbnail on every product page that includes it. */
+	screenshot?: Screenshot;
 	/** One line, shown on every product page that includes it. */
 	summary: string;
 	/** The detail, shown once, in the catalog. */
@@ -81,6 +101,8 @@ export interface Product {
 	price: string;
 	tagline: string;
 	buyer: string;
+	/** The product page's hero image and the thumbnail on its index card. */
+	screenshot?: Screenshot;
 	summary: string[];
 	/** Earlier products this one includes or extends — linked, never restated. */
 	buildsOn?: ProductSlug[];
@@ -93,6 +115,7 @@ export const FEATURES: Feature[] = [
 	{
 		id: 'live-scoreboard',
 		name: 'Live scoreboard across every league',
+		screenshot: shot('live-scoring.webp', 'Live scoreboard: your matchup on top, your other leagues’ games below, each with score, projection and players yet to play.'),
 		summary: 'Every matchup you have, in every MFL league you play in, on one phone screen.',
 		details: [
 			'Sign in once with your MyFantasyLeague account; every league on it appears, including leagues we do not host.',
@@ -105,6 +128,7 @@ export const FEATURES: Feature[] = [
 	{
 		id: 'league-boards',
 		name: 'Full-league boards',
+		screenshot: shot('throwback-week.webp', 'A full-league live scoring board showing every matchup of the week.'),
 		summary: 'Every matchup and the standings for a whole league, not just your own game.',
 		details: [
 			'All of a league’s matchups on one page, with the top teams and top performances of the week.',
@@ -126,6 +150,7 @@ export const FEATURES: Feature[] = [
 	{
 		id: 'game-day-alerts',
 		name: 'Game-day push alerts',
+		screenshot: shot('notification-command-center.webp', 'Alert settings, with each push category switched on or off per owner.'),
 		summary: 'A push when a matchup changes hands late, and your final score when it’s over.',
 		details: [
 			'Close-game swings: a push when the lead in your matchup changes hands late in the week.',
@@ -147,6 +172,7 @@ export const FEATURES: Feature[] = [
 	{
 		id: 'branded-site',
 		name: 'Your own league site',
+		screenshot: shot('afl-hero-unified.webp', 'A league homepage wearing the league’s own crest, colors and hero banner.'),
 		summary: 'Your domain, your logos and colors, light and dark themes, built for phones first.',
 		details: [
 			'A site on your own domain, wearing your league’s name, crest and colors.',
@@ -158,6 +184,7 @@ export const FEATURES: Feature[] = [
 	{
 		id: 'draft-hub',
 		name: 'Draft hub',
+		screenshot: shot('draft-broadcast-clock-timer.webp', 'The draft-day broadcast board: the team on the clock, recent picks and who is up next.'),
 		summary: 'Draft order, a live draft room, mock drafts, a draft-day broadcast and full results history.',
 		details: [
 			'Draft order with every traded pick shown.',
@@ -179,6 +206,7 @@ export const FEATURES: Feature[] = [
 	{
 		id: 'rules-assistant',
 		name: 'Rules assistant',
+		screenshot: shot('rules-chat-report-answer.webp', 'A rules question answered from the league’s own constitution, with a link to the full rule.'),
 		summary: 'Ask a question about your league’s rules and get the answer from your own constitution.',
 		details: [
 			'Answers come from your league’s rulebook, not general fantasy advice.',
@@ -198,6 +226,7 @@ export const FEATURES: Feature[] = [
 	{
 		id: 'push-notifications',
 		name: 'Push notifications',
+		screenshot: shot('deadline-reminders-push-first.webp', 'Push notification settings: trade offers, lineup problems, deadlines and player news.'),
 		summary: 'Trade offers, lineup problems, deadlines and news on your players, pushed to your phone.',
 		details: [
 			'Trade offers, and lineup problems before kickoff.',
@@ -209,6 +238,7 @@ export const FEATURES: Feature[] = [
 	{
 		id: 'owner-moves',
 		name: 'Lineups, trades and roster moves',
+		screenshot: shot('trade-builder.webp', 'The trade builder, with both rosters side by side and the cap impact of the deal.'),
 		summary: 'Set lineups, build and answer trades, claim, cut and watch players without leaving the site.',
 		details: [
 			'Set your lineup; the change goes straight to MyFantasyLeague.',
@@ -219,6 +249,7 @@ export const FEATURES: Feature[] = [
 	{
 		id: 'power-rankings',
 		name: 'Power rankings and owners’ poll',
+		screenshot: shot('owners-poll.webp', 'The owners’ poll ballot: each owner ranks the league’s top teams.'),
 		summary: 'A weekly power-rankings column, with a ballot every owner votes on.',
 		details: [
 			'A weekly power-rankings column.',
@@ -228,6 +259,7 @@ export const FEATURES: Feature[] = [
 	{
 		id: 'custom-rankings',
 		name: 'Custom player rankings',
+		screenshot: shot('built-in-rankings.webp', 'Ranking sources ticked and weighted into one composite board.'),
 		summary: 'Import rankings from the sources you trust and blend them into your own board.',
 		details: [
 			'Six ranking sources built in; import your own on top.',
@@ -237,6 +269,7 @@ export const FEATURES: Feature[] = [
 	{
 		id: 'contracts-cap',
 		name: 'Contracts and salary cap',
+		screenshot: shot('salary-analytics.webp', 'Salary analytics: contract spending by position across the league.'),
 		summary: 'Contracts, extensions, franchise tags, dead money and cap projections for dynasty leagues.',
 		details: [
 			'Every contract in the league, with extensions and franchise tags.',
@@ -264,6 +297,7 @@ const OWNER_SUITE: Product = {
 	price: 'Free · Pro $24/season',
 	tagline: 'All your MFL leagues on one live screen.',
 	buyer: 'Any owner in any MyFantasyLeague league',
+	screenshot: shot('live-scoring.webp', 'Live scoreboard: every matchup across your leagues on one screen.'),
 	summary: [
 		'Owner Suite is for the owner, not the league. Sign in with your MyFantasyLeague account and every league you play in shows up on one board, including leagues that do not use any of our products.',
 		'The free tier covers live scores for all your leagues. Pro adds the game-day extras: live and projected standings, the TV broadcast board, close-game alerts, the Game Day Planner and full boards for every league.',
@@ -311,6 +345,7 @@ const LEAGUE_HISTORY: Product = {
 	price: 'Free · Full History $149/year',
 	tagline: 'Every season your league has played, in one place that never forgets.',
 	buyer: 'Any MFL, Sleeper or Yahoo league that wants its history kept',
+	screenshot: shot('afl-trophy-wall.webp', 'A franchise trophy wall: championships, division titles and other honors by season.'),
 	summary: [
 		'League History is a complete record of your league back to its first season: champions, standings, playoffs, rivalries, records and a trophy case for every franchise.',
 		'It is the low-cost way in for a league that is not ready for a full site. It is included in League Hub and League Package at no extra cost, so nothing is lost when a league moves up.',
@@ -384,6 +419,7 @@ const ADD_ONS: Product = {
 	price: '$500–$2,000 each',
 	tagline: 'The extras a league adds to its site: side games, custom standings, prizes and dynasty tools.',
 	buyer: 'A League Hub or League Package league',
+	screenshot: shot('dead-money-awards.webp', 'The Dead Money Awards: the season’s costliest cuts, ranked team by team.'),
 	summary: [
 		'Add-ons are features a league adds to League Hub. League Package includes about $4,000 of them; anything not on this menu is quoted to order.',
 		'Every add-on is built once and offered to every league, so a feature one league asked for is on this menu for the next.',
@@ -460,6 +496,7 @@ const LARGE_LEAGUE: Product = {
 	price: '$1,500–$3,000 add-on',
 	tagline: 'A site that still works on a phone when your league has 100 teams.',
 	buyer: 'A league over 32 teams, or one that drafts in several separate groups',
+	screenshot: shot('standings-mobile-no-sideways-scroll.webp', 'Standings for a large league on a phone screen, with no sideways scrolling.', { dark: false }),
 	summary: [
 		'Most league sites assume 10 to 14 teams. A 99-team league in nine divisions breaks every one of those screens. Large-league support rebuilds them around your divisions first, so every owner sees their own corner of the league before the whole of it.',
 		'It is an add-on to League Hub and is priced by the league’s size and how many separate drafts it runs. It is also the engine behind the Contest Package, which applies the same idea across many leagues.',
@@ -507,6 +544,7 @@ const LEAGUE_HUB: Product = {
 	price: '$2,000/year',
 	tagline: 'A branded site for your league, built from everything the platform already does.',
 	buyer: 'A commissioner who wants a branded site, with no custom work',
+	screenshot: shot('theleague-branded-hero.webp', 'A branded league homepage: featured story, deadlines, standings and the news feed.'),
 	summary: [
 		'League Hub is a complete league site on your own domain, set up in about two weeks. It uses only features that already exist, which keeps the price fixed and the launch fast.',
 		'It includes League History (Full) and Owner Suite Pro for every owner, plus every platform feature below. Leagues that want something built for them step up to League Package.',
@@ -619,6 +657,7 @@ const LEAGUE_PACKAGE: Product = {
 	price: '$10,000 first year',
 	tagline: 'The full suite: your league’s site, with features built for how your league plays.',
 	buyer: 'A league that wants custom features built',
+	screenshot: shot('front-office-hub.jpg', 'The front office hub: contracts, cap tools and roster planning in one place.'),
 	summary: [
 		'League Package is everything on the platform, set up for your league, plus about $4,000 of features chosen for it. It is League Hub with custom work and priority support on top.',
 		'Each product before this one is part of it. Every owner gets Owner Suite Pro, the league gets Full History, and the custom budget comes from the add-on menu or is quoted to order. Large leagues get large-league support.',

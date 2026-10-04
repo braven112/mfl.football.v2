@@ -175,13 +175,13 @@
   background: var(--surface-raised);
 }
 
-.prd__feature a {
+.prd__feature-name {
   font-weight: 700;
   color: var(--league-accent);
   text-decoration: none;
 }
 
-.prd__feature span {
+.prd__feature-summary {
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
 }
@@ -362,4 +362,61 @@
 .prd__buyer a {
   color: var(--league-accent);
   font-weight: 600;
+}
+
+/* ── Screenshots ── */
+.prd-shot {
+  display: block;
+  overflow: hidden;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+}
+
+.prd-shot__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* Contain, never cover: the captures are not all 16:9 (a phone-width
+     standings shot, a wide scoreboard), and cover crops names off the edge. */
+  object-fit: contain;
+}
+
+a.prd-shot:hover {
+  border-color: var(--league-accent);
+}
+
+.prd-shot--hero {
+  aspect-ratio: 16 / 9;
+  margin-bottom: 1.5rem;
+}
+
+.prd-shot--catalog {
+  aspect-ratio: 16 / 9;
+  margin: 0.25rem 0 0.75rem;
+}
+
+/* Inside the card's padding; the card's own border is the frame's edge. */
+.prd-shot--card {
+  aspect-ratio: 16 / 9;
+  margin-bottom: 0.4rem;
+}
+
+.prd-shot--thumb {
+  grid-row: 1 / span 2;
+  width: 6.5rem;
+  aspect-ratio: 16 / 10;
+  border-radius: var(--radius-sm);
+}
+
+.prd__feature--shot {
+  grid-template-columns: auto 1fr;
+  column-gap: 0.85rem;
+  align-items: start;
+}
+
+@media (max-width: 30rem) {
+  .prd-shot--thumb {
+    width: 5rem;
+  }
 }

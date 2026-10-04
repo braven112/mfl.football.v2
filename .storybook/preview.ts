@@ -56,6 +56,7 @@ import '../src/styles/network-badge.css';
 import '../src/styles/composite-hero.css';
 import '../src/styles/hero-franchise-backdrop.css';
 import '../src/styles/whats-new-hero-shot.css';
+import '../src/styles/products.css';
 // The shared live-scoring kit's sheet. Its components never import it — the
 // route does — so without this line every Live story renders correct DOM with
 // no rules, which on a stylesheet REWRITE is the worst possible false negative.

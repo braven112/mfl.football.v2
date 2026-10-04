@@ -1,0 +1,34 @@
+---
+/**
+ * One product-page screenshot (`Screenshot` in src/data/products.ts), in
+ * whichever theme the reader is in. `variant` sets the frame: `hero` and
+ * `catalog` open the full-size capture in a new tab, `card` and `thumb` are
+ * decorative inside a link that already names the thing.
+ */
+import ThemeImage from '../ThemeImage.astro';
+import type { Screenshot } from '../../../data/products';
+
+interface Props {
+	shot: Screenshot;
+	variant: 'hero' | 'catalog' | 'card' | 'thumb';
+}
+
+const { shot, variant } = Astro.props as Props;
+const decorative = variant === 'card' || variant === 'thumb';
+const alt = decorative ? '' : shot.alt;
+const imgClass = 'prd-shot__img';
+---
+
+{decorative ? (
+	<span class={`prd-shot prd-shot--${variant}`}>
+		{shot.darkSrc
+			? <ThemeImage src={shot.src} darkSrc={shot.darkSrc} alt={alt} class={imgClass} />
+			: <img src={shot.src} alt={alt} class={imgClass} loading="lazy" decoding="async" />}
+	</span>
+) : (
+	<a class={`prd-shot prd-shot--${variant}`} href={shot.src} target="_blank" rel="noopener">
+		{shot.darkSrc
+			? <ThemeImage src={shot.src} darkSrc={shot.darkSrc} alt={alt} class={imgClass} loading={variant === 'hero' ? 'eager' : 'lazy'} />
+			: <img src={shot.src} alt={alt} class={imgClass} loading={variant === 'hero' ? 'eager' : 'lazy'} decoding="async" />}
+	</a>
+)}

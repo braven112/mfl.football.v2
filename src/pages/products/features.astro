@@ -9,6 +9,7 @@ import { getAuthUser } from '../../utils/auth';
 import { mflLoginUrl } from '../../utils/mfl-login-redirect';
 import { canViewProductPages } from '../../utils/product-pages-access';
 import { FEATURES, productsIncluding, productHref } from '../../data/products';
+import ProductShot from '../../components/shared/products/ProductShot.astro';
 import '../../styles/products.css';
 
 export const prerender = false;
@@ -38,6 +39,7 @@ if (!canViewProductPages(authUser)) {
 				return (
 					<section class="prd__catalog-item" id={feature.id} aria-labelledby={`f-${feature.id}`}>
 						<h2 id={`f-${feature.id}`}>{feature.name}</h2>
+						{feature.screenshot && <ProductShot shot={feature.screenshot} variant="catalog" />}
 						<p>{feature.summary}</p>
 						<ul>
 							{feature.details.map((detail) => <li>{detail}</li>)}

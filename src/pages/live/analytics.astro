@@ -164,6 +164,19 @@ const sectionChips = [
 			</p>
 		</header>
 
+		{/* The product pages live here rather than in the menu: they are this
+		    seat's alone until launch (canViewProductPages), the same as this
+		    page. When PRODUCT_PAGES_PUBLIC flips they get page-directory
+		    entries; this link can stay. */}
+		<aside class="ins__products" aria-labelledby="ins-products">
+			<h2 class="ins__products-title" id="ins-products">Products</h2>
+			<p class="ins__muted">The product lineup and its feature catalog. Hidden from everyone else until launch.</p>
+			<div class="ins__products-links">
+				<a class="cta cta--ghost" href="/products">Product lineup</a>
+				<a class="cta-link" href="/products/features">Feature catalog</a>
+			</div>
+		</aside>
+
 		<nav class="ins__filters" aria-label="Filters">
 			<div class="ins__chips" role="group" aria-label="Date range">
 				{INSIGHTS_RANGES.map((d) => (
@@ -482,6 +495,23 @@ const sectionChips = [
 	.ins__lede {
 		margin-top: 0.25rem;
 		font-size: 0.95rem;
+	}
+	.ins__products {
+		display: grid;
+		gap: 0.5rem;
+		padding: 0.85rem 1rem;
+		border: 1px solid var(--color-border-subtle);
+		border-radius: 0.5rem;
+	}
+	.ins__products-title {
+		margin: 0;
+		font-size: var(--font-size-base);
+	}
+	.ins__products-links {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.75rem;
+		align-items: center;
 	}
 	.ins__empty {
 		padding: 1rem;
