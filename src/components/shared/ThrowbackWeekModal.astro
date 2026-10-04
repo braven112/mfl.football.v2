@@ -25,9 +25,11 @@ interface Props {
   leagueSlug: string;
   /** League-resolved path to the era picker. */
   pickerHref: string;
+  /** Stories only: render already open (non-modal), since a closed dialog draws nothing. */
+  previewOpen?: boolean;
 }
 
-const { welcome, leagueSlug, pickerHref } = Astro.props;
+const { welcome, leagueSlug, pickerHref, previewOpen = false } = Astro.props;
 const bandStyle = `--pmb-g1:${welcome.bandStart};--pmb-g2:${welcome.bandEnd};--pmb-glow:${welcome.bandGlow}`;
 ---
 
@@ -37,6 +39,7 @@ const bandStyle = `--pmb-g1:${welcome.bandStart};--pmb-g2:${welcome.bandEnd};--p
   data-league={leagueSlug}
   data-storage-key={welcome.storageKey}
   aria-labelledby="twm-title"
+  open={previewOpen}
   tabindex="-1"
 >
   <button type="button" class="twm__close" data-twm-close aria-label="Close">
@@ -76,9 +79,9 @@ const bandStyle = `--pmb-g1:${welcome.bandStart};--pmb-g2:${welcome.bandEnd};--p
     )}
     <div class="twm__actions">
       {!welcome.locked && (
-        <a class="twm__btn twm__btn--primary" href={pickerHref}>Choose your throwback</a>
+        <a class="cta cta--primary twm__btn" href={pickerHref}>Choose your throwback</a>
       )}
-      <button type="button" class:list={['twm__btn', welcome.locked ? 'twm__btn--primary' : 'twm__btn--ghost']} data-twm-close>
+      <button type="button" class:list={['cta', welcome.locked ? 'cta--primary' : 'cta--ghost', 'twm__btn']} data-twm-close>
         {welcome.locked ? 'Let’s go' : 'Keep this look'}
       </button>
     </div>
@@ -114,7 +117,7 @@ const bandStyle = `--pmb-g1:${welcome.bandStart};--pmb-g2:${welcome.bandEnd};--p
     if (!dlg || dlg.dataset.bound === '1') return;
     dlg.dataset.bound = '1';
     const key = dlg.dataset.storageKey;
-    if (!key || readSeen(key) || typeof dlg.showModal !== 'function') return;
+    if (!key || dlg.open || readSeen(key) || typeof dlg.showModal !== 'function') return;
 
     dlg.querySelectorAll('[data-twm-close]').forEach((btn) => {
       btn.addEventListener('click', () => dlg.close());
@@ -278,38 +281,15 @@ const bandStyle = `--pmb-g1:${welcome.bandStart};--pmb-g2:${welcome.bandEnd};--p
     gap: 0.5rem;
   }
 
+  /* Shape only — colours, hover and focus come from the shared CTA pattern
+     (src/styles/cta.css), which every base layout imports. */
   .twm__btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    /* <a> and <button> differ here — only the button defaults to border-box,
+       so without this the link's padding pushes it past the card. */
+    box-sizing: border-box;
+    width: 100%;
     min-height: var(--touch-target-min);
-    padding: 0.625rem 1rem;
-    border-radius: var(--radius-md, 0.5rem);
-    font: inherit;
-    font-weight: 600;
-    text-decoration: none;
-    cursor: pointer;
-    transition: background var(--transition-fast), border-color var(--transition-fast);
-  }
-
-  .twm__btn--primary {
-    background: var(--color-primary);
-    color: var(--color-white, #fff);
-    border: 1px solid var(--color-primary);
-  }
-
-  .twm__btn--primary:hover {
-    background: color-mix(in srgb, var(--color-primary) 88%, #000);
-  }
-
-  .twm__btn--ghost {
-    background: transparent;
-    color: var(--color-text-primary);
-    border: 1px solid var(--content-border, #d1d5db);
-  }
-
-  .twm__btn--ghost:hover {
-    background: color-mix(in srgb, var(--color-text-primary) 6%, transparent);
+    font-size: var(--font-size-base);
   }
 
   /* Bottom sheet on a phone — the player card's mobile shape. */
