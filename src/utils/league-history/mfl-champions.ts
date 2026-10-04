@@ -279,6 +279,8 @@ export interface ChampionTally {
 	name: string;
 	titles: number[];
 	runnerUps: number[];
+	/** Year → the name it won under, only where that differs from `name`. */
+	titledAs: Record<number, string>;
 }
 
 /**
@@ -292,13 +294,17 @@ export function tallyChampions(seasons: SeasonChampion[], latestNames: Map<strin
 	const get = (f: SeasonFranchise) => {
 		let row = byId.get(f.id);
 		if (!row) {
-			row = { franchiseId: f.id, name: latestNames.get(f.id) ?? f.name, titles: [], runnerUps: [] };
+			row = { franchiseId: f.id, name: latestNames.get(f.id) ?? f.name, titles: [], runnerUps: [], titledAs: {} };
 			byId.set(f.id, row);
 		}
 		return row;
 	};
 	for (const s of seasons) {
-		if (s.champion) get(s.champion).titles.push(s.year);
+		if (s.champion) {
+			const row = get(s.champion);
+			row.titles.push(s.year);
+			if (s.champion.name !== row.name) row.titledAs[s.year] = s.champion.name;
+		}
 		if (s.runnerUp) get(s.runnerUp).runnerUps.push(s.year);
 	}
 	const latest = (years: number[]) => (years.length ? Math.max(...years) : 0);

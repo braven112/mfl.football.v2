@@ -1,0 +1,151 @@
+---
+/**
+ * Builds a league's History page: posts build steps to
+ * /api/league-history/mfl/build until the league is done, showing progress,
+ * then opens the page. A build is steps because one MFL league can need ~60
+ * requests (src/utils/league-history/store.ts).
+ *
+ * Two modes:
+ *  - no `leagueId`: a form where anyone pastes an MFL league id (the setup
+ *    form on /history);
+ *  - `leagueId`: resumes that league's build on load (a league page whose
+ *    build is unfinished).
+ *
+ * The script follows the ClientRouter rules: init on `astro:page-load`, find
+ * nodes inside init, gate on a node the swap replaces, and bind listeners to
+ * those fresh nodes only (docs/claude/insights/domains/frontend.md).
+ */
+interface Props {
+	leagueId?: string;
+}
+const { leagueId } = Astro.props as Props;
+---
+
+<div class="lh-builder" data-lh-builder data-league-id={leagueId ?? ''}>
+	{!leagueId && (
+		<form class="lh__form" data-lh-form novalidate>
+			<div class="lh__field">
+				<label class="lh__label" for="lh-league-id">MFL league id</label>
+				<input
+					class="lh__input"
+					id="lh-league-id"
+					name="leagueId"
+					inputmode="numeric"
+					autocomplete="off"
+					pattern="[0-9]{3,7}"
+					placeholder="e.g. 54321"
+					required
+				/>
+			</div>
+			<button class="cta cta--primary" type="submit">Build the page</button>
+		</form>
+	)}
+	<p class="lh__status" role="status" aria-live="polite" data-lh-status></p>
+	<progress class="lh__progress" data-lh-progress hidden max="1" value="0"></progress>
+</div>
+
+<script>
+	type Step = {
+		status: string;
+		message?: string;
+		name?: string;
+		built?: number;
+		total?: number;
+	};
+
+	const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+	/** The id from a pasted id or a pasted MFL league url (…/home/13522). */
+	function readLeagueId(raw: string): string {
+		const trimmed = raw.trim();
+		const fromUrl = /\/home\/(\d{3,7})/.exec(trimmed);
+		const id = fromUrl ? fromUrl[1] : trimmed;
+		return /^\d{3,7}$/.test(id) ? id : '';
+	}
+
+	async function build(root: HTMLElement, leagueId: string): Promise<void> {
+		const status = root.querySelector<HTMLElement>('[data-lh-status]');
+		const bar = root.querySelector<HTMLProgressElement>('[data-lh-progress]');
+		const say = (text: string, tone: 'info' | 'error' = 'info') => {
+			if (!status) return;
+			status.textContent = text;
+			status.dataset.tone = tone;
+		};
+		root.dataset.busy = 'true';
+		say('Finding the league on MFL…');
+		let waits = 0;
+		try {
+			for (let i = 0; i < 200; i++) {
+				// Stop if the visitor navigated away: this root is no longer in the page.
+				if (!root.isConnected) return;
+				const res = await fetch('/api/league-history/mfl/build', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+					credentials: 'include',
+					body: JSON.stringify({ leagueId }),
+				});
+				const step = (await res.json().catch(() => ({ status: 'error' }))) as Step;
+				if (step.total && bar) {
+					bar.hidden = false;
+					bar.max = step.total;
+					bar.value = step.built ?? 0;
+				}
+				if (step.status === 'done') {
+					say(`Done: ${step.name ?? 'the league'} is ready.`);
+					window.location.assign(`/history/mfl/${leagueId}`);
+					return;
+				}
+				if (step.status === 'progress') {
+					waits = 0;
+					say(`Reading seasons: ${step.built} of ${step.total}…`);
+					await sleep(400);
+					continue;
+				}
+				if (step.status === 'busy' || step.status === 'retry-later') {
+					waits++;
+					say(step.message ?? 'MFL is busy. Trying again shortly…');
+					await sleep(Math.min(2000 * waits, 15000));
+					continue;
+				}
+				say(step.message ?? 'Something went wrong building that league.', 'error');
+				return;
+			}
+			say('This is taking longer than expected. Reload the page to keep going.', 'error');
+		} catch {
+			say('Lost the connection. Reload the page to keep going.', 'error');
+		} finally {
+			delete root.dataset.busy;
+		}
+	}
+
+	function init() {
+		for (const root of Array.from(document.querySelectorAll<HTMLElement>('[data-lh-builder]'))) {
+			if (root.dataset.init) continue;
+			root.dataset.init = 'true';
+
+			const resumeId = root.dataset.leagueId ?? '';
+			if (resumeId) {
+				void build(root, resumeId);
+				continue;
+			}
+			const form = root.querySelector<HTMLFormElement>('[data-lh-form]');
+			form?.addEventListener('submit', (event) => {
+				event.preventDefault();
+				if (root.dataset.busy) return;
+				const input = form.querySelector<HTMLInputElement>('input[name="leagueId"]');
+				const id = readLeagueId(input?.value ?? '');
+				const status = root.querySelector<HTMLElement>('[data-lh-status]');
+				if (!id) {
+					if (status) {
+						status.textContent = 'Paste an MFL league id (3 to 7 digits) or your league’s MFL address.';
+						status.dataset.tone = 'error';
+					}
+					return;
+				}
+				void build(root, id);
+			});
+		}
+	}
+
+	document.addEventListener('astro:page-load', init);
+</script>

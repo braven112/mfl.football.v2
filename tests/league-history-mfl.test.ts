@@ -222,5 +222,8 @@ describe('tallyChampions', () => {
 		]);
 		expect(tally[0].name).toBe('New B');
 		expect(tally[1].name).toBe('old A');
+		// A title won under an earlier name says so; one under today's name does not.
+		expect(tally[0].titledAs).toEqual({ 2021: 'old B', 2022: 'old B' });
+		expect(tally[1].titledAs).toEqual({});
 	});
 });

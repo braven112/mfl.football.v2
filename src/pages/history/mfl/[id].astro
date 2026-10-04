@@ -1,0 +1,180 @@
+---
+/**
+ * /history/mfl/<leagueId> — a league's free History page: every season's
+ * champion and runner-up, each franchise's trophy case, a champion card per
+ * season, and locked previews of what Full History adds.
+ *
+ * Data: src/utils/league-history/store.ts (Redis), admin fixes applied.
+ * Plan: docs/plans/league-history-free-page.md.
+ *
+ * Gated by `canViewLeagueHistory` (one seat until launch). An unknown league
+ * shows the builder rather than a 404, so a link shared before the build ran
+ * still lands somewhere useful.
+ */
+import MflAppLayout from '../../../layouts/MflAppLayout.astro';
+import HistoryBuilder from '../../../components/shared/league-history/HistoryBuilder.astro';
+import HistoryFixForm from '../../../components/shared/league-history/HistoryFixForm.astro';
+import { getAuthUser } from '../../../utils/auth';
+import { mflLoginUrl } from '../../../utils/mfl-login-redirect';
+import { getCurrentSeasonYear } from '../../../utils/league-year';
+import { canFixLeagueHistory, canViewLeagueHistory } from '../../../utils/league-history/access';
+import {
+	effectiveSeasons,
+	isMflLeagueId,
+	readMflHistory,
+	readOverrides,
+	seasonsToCrawl,
+	trophyCase,
+} from '../../../utils/league-history/store';
+import '../../../styles/league-history.css';
+
+export const prerender = false;
+
+const leagueId = Astro.params.id ?? '';
+const authUser = getAuthUser(Astro.request);
+if (!canViewLeagueHistory(authUser)) {
+	if (!authUser) return Astro.redirect(mflLoginUrl(`/history/mfl/${encodeURIComponent(leagueId)}`));
+	return Astro.rewrite('/_not-found');
+}
+if (!isMflLeagueId(leagueId)) return Astro.rewrite('/_not-found');
+
+const canFix = canFixLeagueHistory(authUser);
+const record = await readMflHistory(leagueId);
+const overrides = record ? await readOverrides(leagueId) : {};
+const seasons = record ? effectiveSeasons(record, overrides) : [];
+const trophies = record ? trophyCase(record, seasons).filter((t) => t.titles.length > 0) : [];
+const unfinished = record ? seasonsToCrawl(record, Date.now()).length > 0 : true;
+const decided = seasons.filter((s) => s.champion).length;
+const firstYear = record ? Math.min(...record.chain.map((s) => s.year)) : null;
+const inProgress = getCurrentSeasonYear();
+
+const methodTag = (method: string) =>
+	method === 'standings' ? 'by standings' : method === 'override' ? 'corrected' : null;
+
+const LOCKED = [
+	{ title: 'Season-by-season standings', body: 'Every season’s final table and playoff results.' },
+	{ title: 'Records', body: 'All-time records, highest scores, longest streaks.' },
+	{ title: 'Rivalries', body: 'Every head-to-head game between any two teams.' },
+	{ title: 'Owners and eras', body: 'Each owner across every team they ran; every name and logo a team wore.' },
+];
+---
+
+<MflAppLayout
+	title={record ? `${record.name} — League History` : 'League History'}
+	description={record ? `Every ${record.name} champion since ${firstYear}.` : 'Every champion your league has crowned.'}
+>
+	<div class="lh">
+		<a class="lh__back" href="/history">&larr; League History</a>
+
+		{!record ? (
+			<section class="lh__section">
+				<p class="lh__eyebrow">League History</p>
+				<h1 class="lh__title">Building league {leagueId}</h1>
+				<p class="lh__lede">Reading every season from MFL. This takes about a minute.</p>
+				<HistoryBuilder leagueId={leagueId} />
+			</section>
+		) : (
+			<Fragment>
+				<header class="lh__section">
+					<p class="lh__eyebrow">League History</p>
+					<h1 class="lh__title">{record.name}</h1>
+					<p class="lh__lede">
+						{record.chain.length} seasons since {firstYear}, {decided} champions crowned.
+					</p>
+					{unfinished && (
+						<Fragment>
+							<p class="lh__muted">Still reading some seasons from MFL; this page fills in as it goes.</p>
+							<HistoryBuilder leagueId={leagueId} />
+						</Fragment>
+					)}
+				</header>
+
+				<section class="lh__section" aria-labelledby="lh-champions">
+					<h2 class="lh__h2" id="lh-champions">Champions</h2>
+					<div class="lh__table-wrap">
+						<table class="lh__table">
+							<thead>
+								<tr>
+									<th scope="col">Season</th>
+									<th scope="col">Champion</th>
+									<th scope="col" class="lh__card-col">Card</th>
+								</tr>
+							</thead>
+							<tbody>
+								{seasons.map((s) => (
+									<tr>
+										<th scope="row" class="lh__year">{s.year}</th>
+										<td>
+											{s.champion ? (
+												<span class="lh__champ">{s.champion.name}</span>
+											) : (
+												<span class="lh__undecided">
+													{s.year >= inProgress ? 'In progress' : 'Not on record'}
+												</span>
+											)}
+											{methodTag(s.method) && <span class="lh__tag">{methodTag(s.method)}</span>}
+											{s.runnerUp && <span class="lh__runner">Runner-up: {s.runnerUp.name}</span>}
+											{canFix && s.note && s.year < inProgress && <p class="lh__muted">MFL: {s.note}</p>}
+											{canFix && (
+												<HistoryFixForm
+													leagueId={leagueId}
+													year={s.year}
+													franchises={s.franchises}
+													championId={s.champion?.id ?? null}
+													runnerUpId={s.runnerUp?.id ?? null}
+													hasOverride={s.method === 'override'}
+												/>
+											)}
+										</td>
+										<td class="lh__card-col">
+											{s.champion && (
+												<a class="cta-link" href={`/api/og/league-history/mfl/${leagueId}/${s.year}.png`}>
+													Card
+												</a>
+											)}
+										</td>
+									</tr>
+								))}
+							</tbody>
+						</table>
+					</div>
+				</section>
+
+				{trophies.length > 0 && (
+					<section class="lh__section" aria-labelledby="lh-trophies">
+						<h2 class="lh__h2" id="lh-trophies">Trophy case</h2>
+						<ul class="lh__trophies">
+							{trophies.map((t) => (
+								<li class="lh__trophy">
+									<span class="lh__trophy-name">{t.name}</span>
+									<span class="lh__trophy-count">
+										{t.titles.length} {t.titles.length === 1 ? 'title' : 'titles'}
+									</span>
+									<span class="lh__cups">
+										{[...t.titles].sort((a, b) => b - a).map((y) => (
+											<span class="lh__cup">{t.titledAs[y] ? `${y} as ${t.titledAs[y]}` : y}</span>
+										))}
+									</span>
+								</li>
+							))}
+						</ul>
+						<p class="lh__muted">
+							Titles are counted by MFL team, under the name each team uses today. A title won under
+							an earlier name says so.
+						</p>
+					</section>
+				)}
+
+				<section class="lh__section" aria-labelledby="lh-full">
+					<h2 class="lh__h2" id="lh-full">Full History</h2>
+					<p class="lh__muted">The rest of your league's record, with Full History.</p>
+					<ul class="lh__locked">
+						{LOCKED.map((l) => (
+							<li class="lh__locked-item"><strong>{l.title}</strong>{l.body}</li>
+						))}
+					</ul>
+				</section>
+			</Fragment>
+		)}
+	</div>
+</MflAppLayout>
