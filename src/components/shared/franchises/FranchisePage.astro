@@ -53,6 +53,23 @@ interface Props {
   keeperPlanner: boolean;
   /** Whether the league has rivalry pages to link rivals and trade partners to. */
   rivalriesPage: boolean;
+  /**
+   * The career strip's Playoff apps cell. Off for a league whose playoffs are
+   * not played on MFL — the count would be 0 for everyone.
+   */
+  showPlayoffApps?: boolean;
+  /**
+   * A Titles cell in the career strip, for a league with no trophy wall of its
+   * own (the AFL's comes in through `before-career`). Champions come from MFL's
+   * brackets, or the league's hand-entered championship-history.json.
+   */
+  showTitles?: boolean;
+  /**
+   * Average weekly score, shown as "Per week" in place of points per game. For
+   * a league that plays more than one game a week on one weekly score
+   * (Archie's plays two), points ÷ games halves the real figure.
+   */
+  pointsPerWeek?: number | null;
 }
 
 const {
@@ -67,6 +84,9 @@ const {
   isOwner,
   keeperPlanner,
   rivalriesPage,
+  showPlayoffApps = true,
+  showTitles = false,
+  pointsPerWeek = null,
 } = Astro.props;
 const id: string = team.franchiseId;
 
@@ -326,13 +346,23 @@ const hasHighlights = Boolean(
             <dd>{Math.round(fr.careerPointsFor).toLocaleString()}</dd>
           </div>
           <div class="career-stat">
-            <dt>Per game</dt>
-            <dd>{ppg}</dd>
+            <dt>{pointsPerWeek != null ? 'Per week' : 'Per game'}</dt>
+            <dd>{pointsPerWeek != null ? pointsPerWeek.toFixed(1) : ppg}</dd>
           </div>
-          <div class="career-stat">
-            <dt>Playoff apps</dt>
-            <dd>{fr.playoffAppearances}</dd>
-          </div>
+          {showPlayoffApps && (
+            <div class="career-stat">
+              <dt>Playoff apps</dt>
+              <dd>{fr.playoffAppearances}</dd>
+            </div>
+          )}
+          {showTitles && (
+            <div class="career-stat">
+              <dt>Titles</dt>
+              <dd title={fr.championships?.length ? `Champion ${fr.championships.join(', ')}` : undefined}>
+                {fr.championships?.length ?? 0}
+              </dd>
+            </div>
+          )}
         </dl>
       </section>
     )}

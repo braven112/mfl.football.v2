@@ -21,6 +21,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ALL_LEAGUES, DEFAULT_LEAGUE_SLUG } from '../../src/config/leagues-data.mjs';
+import { isPackageLeague } from '../../src/config/package-league-routes.mjs';
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 
@@ -50,6 +51,14 @@ export const LEAGUE_JOBS = {
   'player-identity-union': syncs,
   /** prebuild + roster-sync.yml: the league's rules as configured on MFL, for Ask Roger and the Rules page. */
   'mfl-settings-digest': syncs,
+  // The franchise-history chain (scripts/recompute-derived-chain.mjs): every
+  // full league, and a package league once its Franchise pages box is ticked.
+  'franchise-history': (l) => syncs(l) && (!isPackageLeague(l) || Boolean(l.features?.franchisePages)),
+  // The division-strength report: only a league with the page that reads it.
+  // It replays every season's schedule against the ledger and refuses a league
+  // whose MFL schedule runs past its standings (Archie's 2021), so a league
+  // with no report must not be made to pass it.
+  'division-strength': (l) => syncs(l) && hasPage(l, 'division-strength.astro'),
   /** prebuild + roster-sync.yml: the Top Players leaderboard — for leagues that HAVE the page. */
   'top-players': (l) => syncs(l) && hasPage(l, 'top-players.astro'),
 

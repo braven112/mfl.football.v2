@@ -98,7 +98,7 @@ export const DESTINATIONS = {
   lineup: { path: '/lineup', label: 'your lineup', leagues: BOTH },
   'pecking-order': { path: '/pecking-order', label: 'the pecking order', leagues: withPackageLeagues('/pecking-order') },
   rivalries: { path: '/rivalries', label: 'the rivalry pages', leagues: BOTH },
-  franchises: { path: '/franchises', label: 'the franchise histories', leagues: BOTH },
+  franchises: { path: '/franchises', label: 'the franchise histories', leagues: withPackageLeagues('/franchises') },
   'draft-predictor': { path: '/draft/order', label: 'the draft order', leagues: BOTH },
   calendar: { path: '/calendar', label: 'the league calendar', leagues: withPackageLeagues('/calendar') },
 

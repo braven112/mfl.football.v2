@@ -31,6 +31,11 @@ describe('today’s leagues per job', () => {
     'player-identity-union': ['theleague', 'afl-fantasy', 'archies'],
     // Rules as configured on MFL — Ask Roger's fallback (src/utils/league-rulebook.ts).
     'mfl-settings-digest': ['theleague', 'afl-fantasy', 'archies'],
+    // The franchise-history chain: a package league joins once its Franchise
+    // pages box is ticked.
+    'franchise-history': ['theleague', 'afl-fantasy', 'archies'],
+    // Only where the division-strength page exists.
+    'division-strength': ['theleague', 'afl-fantasy'],
     'top-players': ['theleague', 'afl-fantasy'],
     'schedule-draw': ['theleague', 'afl-fantasy'],
     'pecking-order': ['theleague', 'afl-fantasy', 'archies'],

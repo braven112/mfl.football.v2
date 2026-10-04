@@ -36,6 +36,15 @@
       "description": "Every team's roster, one team at a time"
     },
     {
+      "id": "__LEAGUE_SLUG__-franchises",
+      "label": "Franchises",
+      "icon": "users",
+      "path": "/franchises",
+      "external": false,
+      "leagueOnly": "__LEAGUE_SLUG__",
+      "description": "Every club's all-time record, rivals and trades"
+    },
+    {
       "id": "__LEAGUE_SLUG__-transactions",
       "label": "Transactions",
       "icon": "activity",

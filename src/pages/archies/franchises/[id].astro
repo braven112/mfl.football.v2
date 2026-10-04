@@ -1,0 +1,69 @@
+---
+/**
+ * Franchise page (archies) — thin route over the SAME shared franchise page
+ * the AFL renders (src/components/shared/franchises/FranchisePage.astro).
+ *
+ * Built from every season MFL holds for Archie's (the franchise-history chain,
+ * scripts/recompute-derived-chain.mjs). The name history is the club's own
+ * season names; titles come from MFL's brackets or the hand-entered
+ * data/archies/championship-history.json. No owner section yet: package
+ * leagues get owner names only where the site has commissioner access.
+ *
+ * `banner` is dropped: a package league's config carries MFL's square team
+ * logo there, not a wide banner, and the hero hides the name behind a banner.
+ *
+ * The history is read through a glob, not a static import: the route exists
+ * from the moment the Franchise pages box is ticked, before the first sync has
+ * built the file. The redirect stays here (`Astro.redirect()` only redirects
+ * from a page).
+ */
+import FranchisePage from '../../../components/shared/franchises/FranchisePage.astro';
+import config from '../../../../data/archies/archies.config.json';
+import { getLeagueBySlug, leagueHasFeature } from '../../../config/leagues';
+import { getAuthUser, franchiseIdForLeague } from '../../../utils/auth';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { nameErasFromSeasons } from '../../../utils/franchise-name-eras';
+
+export const prerender = false;
+
+const league = getLeagueBySlug('archies')!;
+const r = (p: string) => resolveLeaguePath(p, Astro.locals.hideLeaguePrefix ?? false);
+const history: any = Object.values(
+  import.meta.glob('../../../../data/archies/derived/franchise-history.json', { eager: true, import: 'default' }),
+)[0];
+
+const teams = config.teams as any[];
+const team = teams.find((t) => t.franchiseId === Astro.params.id);
+if (!team) return Astro.redirect(r(`/${league.slug}/franchises`));
+
+const fr = history?.franchises?.[team.franchiseId];
+const division = (config.divisions as Array<{ id: string; name: string }>).find((d) => d.id === team.divisionId);
+const anyPlayoffs = Object.values(history?.franchises ?? {}).some((f: any) => f.playoffAppearances > 0);
+
+// Weeks this club scored in, season by season — the divisor for a weekly
+// average, since a league may play several games a week on one score.
+const weeklyFeeds = import.meta.glob('../../../../data/archies/mfl-feeds/*/weekly-results.json', { import: 'default' });
+let weeksScored = 0;
+for (const load of Object.values(weeklyFeeds)) {
+  const feed: any = await load();
+  for (const week of feed?.weeks ?? []) if (week.scores?.[team.franchiseId] != null) weeksScored += 1;
+}
+const pointsPerWeek = fr && weeksScored ? fr.careerPointsFor / weeksScored : null;
+---
+
+<FranchisePage
+  leagueSlug={league.slug}
+  team={{ ...team, banner: null }}
+  teams={teams}
+  history={history ?? { franchises: {} }}
+  ownerTenures={null}
+  nameEras={nameErasFromSeasons(fr?.yearByYear ?? [], team)}
+  divisionLabel={division?.name ?? team.division ?? ''}
+  titleSuffix={`${league.shortName ?? league.name} Franchise`}
+  isOwner={franchiseIdForLeague(getAuthUser(Astro.request), league.id) === team.franchiseId}
+  keeperPlanner={leagueHasFeature(league.slug, 'keepers')}
+  rivalriesPage={false}
+  showPlayoffApps={anyPlayoffs}
+  showTitles={true}
+  pointsPerWeek={pointsPerWeek}
+/>

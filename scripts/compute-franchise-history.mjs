@@ -56,6 +56,7 @@ import {
   hasDeclaredEntryBrackets,
 } from '../src/utils/playoff-entry-brackets.mjs';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
+import { isPackageLeague } from '../src/config/package-league-routes.mjs';
 import { buildAttributor } from '../src/utils/owner-tenures.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -109,10 +110,35 @@ const leagueArg = args.find((a) => a.startsWith('--league='))?.slice('--league='
 // the registry slug is `afl-fantasy`. Take both rather than making the caller
 // remember which script wants which.
 const LEAGUE_SLUG = leagueArg === 'afl' ? 'afl-fantasy' : leagueArg || 'theleague';
-const TARGET = LEAGUE_TARGETS[LEAGUE_SLUG];
+// A package league (Archie's, Launcher-built leagues) with the Franchise pages
+// box ticked gets the default target, read off its registry entry. No salary
+// awards or badges (TheLeague's), and no milestone posts: the first run would
+// otherwise backdate one post per past award into the league's news feed.
+const packageTarget = (league) =>
+  isPackageLeague(league) && league.features?.franchisePages
+    ? {
+        configPath: league.configPath,
+        schefterFeedPath: league.schefterFeedPath,
+        salaryAwards: false,
+        badges: false,
+        milestonePosts: false,
+        // A package league's standings export may carry no `pf` column (Archie's
+        // has only `avgpf`); its points are then the sum of its regular-season
+        // weekly scores. Package leagues only: an AFL season with no `pf` (2003)
+        // has no game scores either, and must keep reading as unknown.
+        pointsFromWeeklyResults: true,
+        // No playoff appearance a season's MFL bracket does not declare: a
+        // league whose playoffs run outside MFL (Archie's MAD POWER 99) would
+        // otherwise credit every division winner with one that never happened.
+        // Its champions come from championship-history.json, entered by hand.
+        playoffsOnlyFromDeclaredBrackets: true,
+      }
+    : null;
+const TARGET = LEAGUE_TARGETS[LEAGUE_SLUG] ?? packageTarget(getLeagueBySlug(LEAGUE_SLUG));
 if (!TARGET) {
   console.error(
-    `Unknown --league=${LEAGUE_SLUG}. Known: ${Object.keys(LEAGUE_TARGETS).join(', ')} (or the alias 'afl').`
+    `Unknown --league=${LEAGUE_SLUG}. Known: ${Object.keys(LEAGUE_TARGETS).join(', ')} (or the alias 'afl'), ` +
+      'or a package league with the Franchise pages box ticked.'
   );
   process.exit(1);
 }
@@ -723,6 +749,19 @@ for (const year of years) {
     });
   }
 
+  // Points for, summed from the regular season's weekly scores — only for a
+  // target that asks for it, and only used where the standings row has no `pf`.
+  const weeklyPointsFor = new Map();
+  if (TARGET.pointsFromWeeklyResults && weeklyResults?.weeks) {
+    const lastRegular = parseNum(leagueJson?.league?.lastRegularSeasonWeek) || Infinity;
+    for (const week of weeklyResults.weeks) {
+      if (parseNum(week.week) > lastRegular) continue;
+      for (const [id, score] of Object.entries(week.scores ?? {})) {
+        weeklyPointsFor.set(id, (weeklyPointsFor.get(id) ?? 0) + parseNum(score));
+      }
+    }
+  }
+
   // Build standings rows. IMPORTANT: this array stays in MFL's feed order —
   // see the division-titles block below, which depends on it.
   const standingsRows = toArray(standings.leagueStandings.franchise).map((f) => {
@@ -734,7 +773,7 @@ for (const year of years) {
       wins: w,
       losses: l,
       ties: t,
-      pointsFor: parseNum(f.pf),
+      pointsFor: f.pf == null && weeklyPointsFor.has(f.id) ? Math.round(weeklyPointsFor.get(f.id) * 100) / 100 : parseNum(f.pf),
       h2hPct: parseNum(f.h2hpct),
       allPlayPct: parseNum(f.all_play_pct),
       divisionId: divisionMap.get(f.id),
@@ -938,8 +977,11 @@ for (const year of years) {
   // Belt-and-suspenders: even when MFL did emit franchise IDs, make sure
   // every division winner and the recorded champion / runner-up / third
   // place are credited as playoff participants.
-  for (const champId of divisionTitleHolders.values()) {
-    if (champId) playoffParticipants.add(champId);
+  const seasonDeclaresPlayoffs = getChampionshipBracketSize(playoffBrackets) > 0;
+  if (!TARGET.playoffsOnlyFromDeclaredBrackets || seasonDeclaresPlayoffs) {
+    for (const champId of divisionTitleHolders.values()) {
+      if (champId) playoffParticipants.add(champId);
+    }
   }
   if (champResult?.champion) playoffParticipants.add(champResult.champion);
   if (champResult?.runnerUp) playoffParticipants.add(champResult.runnerUp);

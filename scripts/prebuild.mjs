@@ -66,14 +66,12 @@ const SEQUENTIAL = [
   // from these `pnpm run` names, so hiding them behind one wrapper would let an
   // edit to a producer preview against the stale committed file. A guard in that
   // test fails if a chain producer stops appearing in this list.
-  { name: 'compute:franchise-history', cmd: 'pnpm run compute:franchise-history', previewSkip: true },
+  // One per league that runs the history chain (league-jobs `franchise-history`):
+  // TheLeague, the AFL, and a package league once its Franchise pages box is
+  // ticked. It used to be two hardcoded steps — TheLeague's by default, the
+  // AFL's added later after its copy went stale between backfill runs.
+  ...perLeague('franchise-history', 'compute:franchise-history'),
   { name: 'compute:free-agents', cmd: 'pnpm run compute:free-agents', previewSkip: true },
-  // compute:franchise-history above defaults to TheLeague, so the AFL's copy
-  // was only ever refreshed by hand or by the backfill workflow — it went stale
-  // against its own committed feeds between runs. Adding the record book to
-  // this list without this made that asymmetry worse, since the book would
-  // rebuild every deploy while the history it sits beside did not.
-  { name: 'compute:afl-franchise-history', cmd: 'pnpm run compute:afl-franchise-history', previewSkip: true },
   // Reads the same committed feeds as the history step; the record book is a
   // small top-N slice written to its own derived file.
   { name: 'compute:afl-record-book', cmd: 'pnpm run compute:afl-record-book', previewSkip: true },

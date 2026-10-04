@@ -348,7 +348,7 @@ describe('feed envelope and ordering', () => {
  * This is what catches a shape no hand-written case anticipated.
  */
 describe('the committed archive', () => {
-  const seasons: { slug: string; year: string; feed: unknown }[] = [];
+  const seasons: { slug: string; year: string; feed: unknown; faabBudget: number | null }[] = [];
   for (const league of ALL_LEAGUES) {
     const base = join(process.cwd(), league.dataPath, 'mfl-feeds');
     if (!existsSync(base)) continue;
@@ -356,7 +356,16 @@ describe('the committed archive', () => {
       const file = join(base, year, 'transactions.json');
       if (!existsSync(file)) continue;
       try {
-        seasons.push({ slug: league.slug, year, feed: JSON.parse(readFileSync(file, 'utf-8')) });
+        // The season's own blind-bid budget: Archie's was $1,000 through 2025
+        // and $100 from 2026, so one number per league cannot bound both.
+        let faabBudget: number | null = null;
+        try {
+          const limit = Number(JSON.parse(readFileSync(join(base, year, 'league.json'), 'utf-8')).league?.bbidSeasonLimit);
+          if (limit > 0) faabBudget = limit;
+        } catch {
+          // no league.json for this season
+        }
+        seasons.push({ slug: league.slug, year, feed: JSON.parse(readFileSync(file, 'utf-8')), faabBudget });
       } catch {
         // A corrupt feed is a sync problem, not a parser problem.
       }
@@ -399,7 +408,7 @@ describe('the committed archive', () => {
         // prices moves in plain dollars, so its plausible range is 0..budget
         // rather than "at or above a six-figure league minimum".
         if (row.amount !== null) {
-          const faab = FAAB_BUDGET[season.slug];
+          const faab = FAAB_BUDGET[season.slug] ? (season.faabBudget ?? FAAB_BUDGET[season.slug]) : undefined;
           const bad = !Number.isFinite(row.amount) || (faab ? row.amount < 0 || row.amount > faab : row.amount < 1000);
           if (bad) problems.push(`${where}: implausible amount ${row.amount}`);
         }

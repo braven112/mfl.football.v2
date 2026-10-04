@@ -1,0 +1,67 @@
+---
+/**
+ * Franchises (archies) — thin route over the SAME shared franchises index the
+ * AFL renders (src/components/shared/franchises/FranchisesIndexPage.astro).
+ *
+ * Archie's's clubs, grouped by division, with career records from every season
+ * MFL holds for the league (the franchise-history chain). The history is read
+ * through a glob: until the first sync after the Franchise pages box is ticked
+ * has built it, every card reads 0-0 and the lede says the history is coming.
+ */
+import FranchisesIndexPage, { type FranchiseCardRow } from '../../../components/shared/franchises/FranchisesIndexPage.astro';
+import config from '../../../../data/archies/archies.config.json';
+import { getLeagueBySlug } from '../../../config/leagues';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+
+export const prerender = false;
+
+const league = getLeagueBySlug('archies')!;
+const short = league.shortName ?? league.name;
+const r = (p: string) => resolveLeaguePath(p, Astro.locals.hideLeaguePrefix ?? false);
+const history: any = Object.values(
+  import.meta.glob('../../../../data/archies/derived/franchise-history.json', { eager: true, import: 'default' }),
+)[0];
+
+const card = (team: any): FranchiseCardRow & { wins: number } => {
+  const fr = history?.franchises?.[team.franchiseId];
+  const w = fr?.careerWins ?? 0;
+  const l = fr?.careerLosses ?? 0;
+  const t = fr?.careerTies ?? 0;
+  const games = w + l + t;
+  const titles = fr?.championships?.length ?? 0;
+  return {
+    team,
+    wins: w,
+    record: t > 0 ? `${w}-${l}-${t}` : `${w}-${l}`,
+    pct: games ? ((w + t * 0.5) / games).toFixed(3).replace(/^0/, '') : '.000',
+    seasons: (fr?.yearByYear ?? []).filter((y: any) => y.wins + y.losses + y.ties > 0).length,
+    points: fr?.careerPointsFor ?? 0,
+    subtitle: titles ? `${titles} ${titles === 1 ? 'title' : 'titles'}` : (team.division ?? ''),
+  };
+};
+
+const groups = (config.divisions as Array<{ id: string; name: string }>).map((d) => ({
+  name: d.name,
+  rows: (config.teams as any[])
+    .filter((t) => t.divisionId === d.id)
+    .map(card)
+    .sort((a, b) => b.wins - a.wins),
+}));
+
+const years: number[] = history?.yearsCovered ?? [];
+const span = years.length ? `${Math.min(...years)}–${Math.max(...years)}` : null;
+---
+
+<FranchisesIndexPage
+  leagueSlug={league.slug}
+  title={`Franchises | ${short}`}
+  heading={`${short} Franchises`}
+  breadcrumbs={[{ label: 'Home', href: r(`/${league.slug}`) }, { label: 'Franchises' }]}
+  lede={span
+    ? `Career records for all ${config.teams.length} clubs across ${span}. Click a card for the full franchise page.`
+    : `Career records for all ${config.teams.length} clubs appear after the league's next sync.`}
+  notes={[]}
+  groups={groups}
+  historicalIdentities={[]}
+  identityHref={() => ''}
+/>

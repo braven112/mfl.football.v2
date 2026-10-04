@@ -41,6 +41,8 @@ export const PACKAGE_ROUTES = {
   'rules.astro': 'rulesQa',
   'rules-chat.astro': 'rulesQa',
   'playoffs.astro': 'playoffs',
+  'franchises/index.astro': 'franchisePages',
+  'franchises/[id].astro': 'franchisePages',
 };
 
 /**

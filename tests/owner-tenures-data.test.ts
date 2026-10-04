@@ -277,7 +277,11 @@ describe.each(leagues)('$league.slug owner tenures', ({ league, ownersPath, ledg
         checked += 1;
       }
     }
-    expect(checked).toBeGreaterThan(0);
+    // The scan must have found something wherever the league has a title on
+    // record. A league whose playoffs run outside MFL (Archie's) has none until
+    // its commissioner enters champions in championship-history.json.
+    const titledYears = history.yearSummaries.filter((y: any) => y.champion).length;
+    if (titledYears > 0) expect(checked).toBeGreaterThan(0);
   });
 
   it('lands every division title on exactly one owner', () => {
@@ -294,7 +298,11 @@ describe.each(leagues)('$league.slug owner tenures', ({ league, ownersPath, ledg
         checked += 1;
       }
     }
-    expect(checked).toBeGreaterThan(0);
+    // The scan must have found something wherever the league has a title on
+    // record. A league whose playoffs run outside MFL (Archie's) has none until
+    // its commissioner enters champions in championship-history.json.
+    const titledYears = history.yearSummaries.filter((y: any) => y.champion).length;
+    if (titledYears > 0) expect(checked).toBeGreaterThan(0);
   });
 
   /**
@@ -568,6 +576,14 @@ describe('no duplicate team name across owner records', () => {
     'afl-fantasy': {
       // A real handover where the incoming owner kept the outgoing team name.
       'cska sofia': 'Evo Tchilin (2016) handed CSKA Sofia to the next owner in 2017',
+    },
+    archies: {
+      // UNCONFIRMED, kept apart on purpose (Oct 2026): SeaBirds was franchise
+      // 0100 in 2023-24 and 0048 from 2025, when the league shrank to 99 clubs.
+      // Probably one owner moving slots, but Archie's carries no owner names
+      // yet. Revisit — and merge into the earlier record if it is one person —
+      // once owner names arrive through commissioner access.
+      seabirds: 'unconfirmed: 0100 (2023-24) and 0048 (2025-) — revisit with owner names',
     },
   };
 

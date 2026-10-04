@@ -71,6 +71,36 @@ brackets up never sees an empty page.
   prediction is TheLeague's format; it was written for Archie's too, and
   Archie's calendar announced TheLeague's playoff weeks as its own.
 
+## Franchise pages — the league's whole MFL history
+
+The **Franchise pages** box (`franchisePages`) gives a package league the
+shared franchise index and detail pages (`components/shared/franchises/`, the
+AFL's pages made shared; TheLeague's stay its own), built from every season
+MFL holds for the league.
+
+- **Backfill first.** `node scripts/backfill-historical-feeds.mjs --league=<slug>`
+  fetches every past season listed in the league's synced `league.json`
+  (or the "Backfill historical MFL feeds" workflow — add the slug to its
+  choice list). It reads each season's last week from MFL, capped at 18:
+  MFL reports `endWeek` 22 for a season that runs to the end of the NFL
+  calendar.
+- **The chain picks the league up on its own** once the box is ticked
+  (league-jobs `franchise-history`; prebuild runs one history step per league).
+  A package league gets the default target in
+  `compute-franchise-history.mjs`: no salary awards, badges or milestone posts
+  (the first run would backdate a post per past award); points summed from
+  weekly scores where the standings export has no `pf` column; and no playoff
+  appearance a season's MFL bracket does not declare.
+- **Champions a league plays outside MFL** go in
+  `data/<slug>/championship-history.json` by hand; they show as Titles.
+- **No division-strength report** for a league without that page
+  (league-jobs `division-strength`): it replays schedules against the ledger,
+  and Archie's 2021 schedule runs past its standings.
+- **No owner section yet.** Owner names come only with commissioner access;
+  where the site has none, owners stay anonymous and the section is hidden.
+- **Several games a week on one score** (Archie's plays two): the page shows
+  points per week, not per game.
+
 ## Review every launch and features PR with `/launch-check`
 
 `node scripts/launch-check.mjs <slug>` loads each of the league's pages in
@@ -83,7 +113,8 @@ fix it at the source.
 ## Not covered yet
 
 TheLeague and the AFL have hand-built pages; their features cannot be changed
-this way until those pages are unforked into shared components (roadmap step 6).
+this way until those pages are unforked into shared components (roadmap step 6
+— rosters, players, playoffs and franchise pages are shared now).
 A removed page can still be linked from shared components that do not ask
 `packageLeagueHasPath` (Schefter article links already do) — check the PR's
 preview for dead links after unticking a box.

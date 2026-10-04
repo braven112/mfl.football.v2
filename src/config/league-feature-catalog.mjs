@@ -138,6 +138,18 @@ export const FEATURE_CATALOG = [
     requires: [],
   },
   {
+    key: 'franchisePages',
+    label: 'Franchise pages',
+    description:
+      "A page per club: all-time record, single-game highlights, rivals, trade ledger and name history, built from every season MFL holds for the league.",
+    group: 'community',
+    requires: [],
+    detect: (l) =>
+      mflSeasonCount(l) > 1
+        ? { on: true, reason: `MFL holds ${mflSeasonCount(l)} seasons of this league's history.` }
+        : { on: true, reason: 'History builds up from this season on.' },
+  },
+  {
     key: 'liveScoring',
     label: 'Live scoring',
     description: 'The live scoreboard and broadcast board.',

@@ -108,8 +108,14 @@ export type CoverageSeason = {
 
 /** Seasons whose head-to-head the archives only partly cover. */
 export function incompleteCoverageSeasons(coverage: CoverageSeason[]): CoverageSeason[] {
+  // The newest season is still being played: its missing weeks are the ones
+  // not reached yet, not a hole in MFL's archive. Read as a gap, a season two
+  // weeks in told every franchise page that it "retains only its postseason
+  // weeks".
+  const newest = Math.max(...(coverage ?? []).map((c) => c.year));
   return (coverage ?? []).filter(
     (c) =>
+      c.year !== newest &&
       c.seasonStarted &&
       c.weeksInFeed &&
       (c.weeksWithGames ?? 0) > 0 &&
