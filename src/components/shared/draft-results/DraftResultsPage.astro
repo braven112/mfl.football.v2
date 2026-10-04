@@ -33,6 +33,13 @@ import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { getLeagueBySlug } from '../../../config/leagues';
 import type { DraftLeagueSlug } from '../draft-nav/draft-pages';
 import type { DraftResultsView } from '../../../utils/draft-results-view';
+import { nflLogoUrl } from '../../../utils/live/nfl-logo-url';
+import {
+  resolveHeadshotSrc,
+  buildHeadshotOnerror,
+  NFL_LOGO_ONERROR,
+  NFL_LOGO_ONLOAD,
+} from '../../../constants/roster-constants';
 
 interface Props {
   /** Draft Results exists only for the two full-format leagues, and
@@ -75,6 +82,26 @@ const showNflTeam = view.year === view.years[0];
 
 /** 'NFL' and 'FA' are the union's placeholders for "no team" — not teams. */
 const isRealNflTeam = (code: string) => !!code && code !== 'NFL' && code !== 'FA';
+
+/**
+ * The avatar for a pick. A defense is a team, not a person: MFL has no photo
+ * for it, so it gets the club's logo (the local mark — the html.dark swap
+ * serves the dark cut on a dark theme). Everyone else gets their headshot with
+ * the shared fallback, because the MFL photo URL a player without an ESPN id
+ * resolves to 404s for anyone retired, and a bare <img> rendered that as a
+ * broken-image icon on every pre-2011 board.
+ */
+const avatarFor = (p: DraftResultsView['picks'][number]) => {
+  const logo = p.position === 'DEF' ? nflLogoUrl(p.nflTeam) : '';
+  if (logo) return { src: logo, onerror: NFL_LOGO_ONERROR, onload: NFL_LOGO_ONLOAD, isLogo: true };
+  const team = isRealNflTeam(p.nflTeam) ? p.nflTeam : '';
+  return {
+    src: resolveHeadshotSrc(p.headshot, team),
+    onerror: buildHeadshotOnerror(undefined, undefined, team),
+    onload: undefined,
+    isLogo: false,
+  };
+};
 
 const selectedTeam = view.teams.find((t) => t.id === view.team);
 const heading = `${view.year} Draft Results`;
@@ -188,7 +215,7 @@ const subtitle = selectedTeam
         ) : view.unnamed > 0 && (
           <p class="dr__notice">
             {view.unnamed} of these picks can't be named:
-            the league's player archive begins in {leagueSlug === 'afl-fantasy' ? 2011 : 2007},
+            the league's player archive begins in {leagueSlug === 'afl-fantasy' ? 2003 : 2007},
             so a player drafted before then who left before it starts has no record to match.
           </p>
         )}
@@ -221,9 +248,21 @@ const subtitle = selectedTeam
                 <td>
                   {p.playerName ? (
                     <span class="dr__player">
-                      {p.headshot && (
-                        <img src={p.headshot} alt="" class="dr__headshot" loading="lazy" width="32" height="32" />
-                      )}
+                      {(() => {
+                        const a = avatarFor(p);
+                        return (
+                          <img
+                            src={a.src}
+                            alt=""
+                            class:list={['dr__headshot', { 'dr__headshot--logo': a.isLogo }]}
+                            loading="lazy"
+                            width="32"
+                            height="32"
+                            onerror={a.onerror}
+                            onload={a.onload}
+                          />
+                        );
+                      })()}
                       <span class="dr__player-meta">
                         <span class="dr__player-name">{p.playerName}</span>
                         <span class="dr__player-sub">
@@ -439,6 +478,12 @@ const subtitle = selectedTeam
     object-fit: cover;
     background: var(--dres-surface-muted);
     flex: 0 0 auto;
+  }
+
+  /* A club logo is a mark, not a face: show all of it, never cropped. */
+  .dr__headshot--logo {
+    object-fit: contain;
+    padding: 2px;
   }
 
   .dr__player-meta {
