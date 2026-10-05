@@ -1,29 +1,74 @@
 ---
 /**
- * The custom-site demo's keeper league home — thin route wrapper around
- * components/keeper/KeeperHomePage. Off the demo this slot does not exist
- * (middleware 404).
+ * The custom-site demo's keeper league home — the same shared homepage a
+ * package league renders (PackageLeagueHome over LeagueHomePage, the AFL's
+ * made shared), so the demo shows a prospect exactly what a keeper league
+ * launched from the kit gets. Its news rail is the demo build's fiction
+ * (scripts/demo/lib/schefter-fiction.mjs).
+ *
+ * The slot is not a package league, so it names the pages it has; a card
+ * never links one it lacks (calendar, transactions). Off the demo this slot
+ * does not exist (middleware 404). Feeds are globs: its data exists only in a
+ * demo build's checkout, and a static import of a missing file fails every
+ * other build.
  */
-import KeeperHomePage from '../../components/keeper/KeeperHomePage.astro';
-import { feedsByYear } from '../../utils/afl-family-standings';
+import PackageLeagueHome from '../../components/shared/package-league/PackageLeagueHome.astro';
 import { keeperConfig, keeperLeague } from '../../utils/keeper-slot';
-import { getAuthUser, franchiseIdForLeague } from '../../utils/auth';
+import { KEEPER_LIMIT } from '../../utils/afl-keeper-constants';
+import type { SchefterFeed } from '../../types/schefter';
 
 export const prerender = false;
 
 const league = keeperLeague();
 if (!league) return Astro.rewrite('/_not-found');
-const standings = feedsByYear(import.meta.glob('../../../data/keeper/mfl-feeds/*/standings.json', { eager: true }));
-const leagueFeeds = feedsByYear(import.meta.glob('../../../data/keeper/mfl-feeds/*/league.json', { eager: true }));
-// The newest season the league has standings for.
-const year = Math.max(...standings.keys(), 0);
+
+const standingsFeeds = import.meta.glob('../../../data/keeper/mfl-feeds/*/standings.json');
+const transactionFeeds = import.meta.glob('../../../data/keeper/mfl-feeds/*/transactions.json');
+const leagueFeeds = import.meta.glob('../../../data/keeper/mfl-feeds/*/league.json');
+const scheduleFeeds = import.meta.glob('../../../data/keeper/mfl-feeds/*/schedule.json');
+const rosterFeeds = import.meta.glob('../../../data/keeper/mfl-feeds/*/rosters.json');
+const calendarFeeds = import.meta.glob('../../../data/keeper/mfl-feeds/*/calendar.json');
+const playoffFeeds = import.meta.glob('../../../data/keeper/mfl-feeds/*/playoff-brackets.json');
+const feed = Object.values(
+  import.meta.glob<SchefterFeed>('../../../data/keeper/schefter-feed.json', { eager: true, import: 'default' }),
+)[0];
+
+// The package shape: the slot's config names its divisions bare ("Lakes"), and
+// its teams by that name.
+const config = keeperConfig();
+const packageConfig = {
+  teams: (config.teams ?? []).map((t: any) => ({ ...t, divisionId: t.division })),
+  divisions: (config.divisions ?? []).map((name: string) => ({ id: name, name })),
+};
+
+// The keeper slot's pages (src/pages/keeper/), by unprefixed path.
+const PAGES = new Set(['/', '/standings', '/rosters', '/players', '/lineup', '/keepers', '/front-office', '/news']);
+const hasPage = (p: string) => PAGES.has(p.split(/[?#]/)[0].replace(/\/+$/, '') || '/');
+
+// Its Explore cards: the slot is demo-only, so its pages are not in
+// page-directory.json (production search would list 404s).
+const base = `/${league.slug}`;
+const quickLinks = [
+  { id: 'keeper-planner', title: 'Keeper Planner', description: `Pick the ${KEEPER_LIMIT} you keep; the rest go back to the draft pool.`, path: `${base}/rosters?view=planner`, icon: 'bookmark' },
+  { id: 'keeper-lineup', title: 'Set Lineup', description: 'Tap a slot, choose a starter, submit.', path: `${base}/lineup`, icon: 'clipboard' },
+  { id: 'keeper-players', title: 'Free Agents', description: 'Research the pool and file a waiver claim.', path: `${base}/players`, icon: 'binoculars' },
+  { id: 'keeper-trade-builder', title: 'Trade Builder', description: 'Build an offer and send it.', path: `${base}/front-office/trade-builder`, icon: 'transactions-2' },
+  { id: 'keeper-front-office', title: 'Front Office', description: 'Your roster at a glance: ages, positions, picks.', path: `${base}/front-office`, icon: 'wallet' },
+  { id: 'keeper-standings', title: 'Standings', description: 'Divisions, playoff seeding, every past season.', path: `${base}/standings`, icon: 'trophy' },
+];
 ---
 
-<KeeperHomePage
-  league={league}
-  config={keeperConfig()}
-  year={year}
-  standingsFeed={standings.get(year)}
-  leagueFeed={leagueFeeds.get(year)}
-  franchiseId={franchiseIdForLeague(getAuthUser(Astro.request), league.id)}
+<PackageLeagueHome
+  leagueSlug={league.slug}
+  config={packageConfig}
+  standingsFeeds={standingsFeeds}
+  transactionFeeds={transactionFeeds}
+  leagueFeeds={leagueFeeds}
+  scheduleFeeds={scheduleFeeds}
+  rosterFeeds={rosterFeeds}
+  calendarFeeds={calendarFeeds}
+  playoffFeeds={playoffFeeds}
+  posts={feed?.posts ?? []}
+  hasPage={hasPage}
+  quickLinks={quickLinks}
 />

@@ -65,18 +65,18 @@ const PLACES = [
 
 /** 96 invented team nicknames — one per team. */
 const NICKNAMES = [
-  'Badgers', 'Beacons', 'Bison', 'Blizzards', 'Bobcats', 'Bombers', 'Boulders', 'Privateers',
-  'Caribou', 'Chargers', 'Comets', 'Condors', 'Cougars', 'Coyotes', 'Cyclones', 'Dragons',
+  'Puffins', 'Beacons', 'Bison', 'Blizzards', 'Bobcats', 'Bluebirds', 'Boulders', 'Privateers',
+  'Caribou', 'Chargers', 'Comets', 'Condors', 'Cougars', 'Coyotes', 'Cyclones', 'Wyverns',
   'Drifters', 'Kestrels', 'Engineers', 'Express', 'Falcons', 'Ferrets', 'Firebirds', 'Foxes',
-  'Gators', 'Geysers', 'Gladiators', 'Grizzlies', 'Hammers', 'Harriers', 'Hawks', 'Herons',
+  'Gators', 'Geysers', 'Centurions', 'Grizzlies', 'Hammers', 'Harriers', 'Hawks', 'Herons',
   'Hornets', 'Huskies', 'Ibex', 'Jackals', 'Ocelots', 'Javelins', 'Kodiaks', 'Lancers',
-  'Lynx', 'Mammoths', 'Mariners', 'Marlins', 'Muskies', 'Meteors', 'Monarchs', 'Mustangs',
+  'Lynx', 'Narwhals', 'Mariners', 'Marlins', 'Muskies', 'Meteors', 'Monarchs', 'Mustangs',
   'Navigators', 'Nighthawks', 'Oilers', 'Orcas', 'Ospreys', 'Otters', 'Owls', 'Leopards',
   'Pelicans', 'Pilots', 'Pioneers', 'Prowlers', 'Pumas', 'Quakes', 'Rockslides', 'Rangers',
   'Rattlers', 'Crows', 'Riptide', 'Rockets', 'Sabres', 'Scorpions', 'Sentinels', 'Sharks',
   'Skippers', 'Sparrows', 'Stallions', 'Stingrays', 'Storm', 'Summit', 'Tempest', 'Thunder',
   'Timberwolves', 'Titans', 'Tornadoes', 'Trailblazers', 'Tritons', 'Vanguard', 'Vipers', 'Voyagers',
-  'Walruses', 'Warhawks', 'Wildcats', 'Wolverines', 'Wranglers', 'Yetis', 'Gusts', 'Stags',
+  'Walruses', 'Warhawks', 'Wildcats', 'Minks', 'Wranglers', 'Yetis', 'Gusts', 'Stags',
 ];
 
 const FIRST = [

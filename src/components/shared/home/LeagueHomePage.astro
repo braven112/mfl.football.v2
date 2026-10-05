@@ -30,7 +30,7 @@ import SchefterFeedCompact from '../SchefterFeedCompact.astro';
 import LeagueHero from '../league-hero/LeagueHero.astro';
 import OwnersPollHomeCard from '../owners-poll/OwnersPollHomeCard.astro';
 import LiveScoringTestDrive from '../LiveScoringTestDrive.astro';
-import QuickLinks from '../hp-sections/QuickLinks.astro';
+import QuickLinks, { type QuickLinkPage } from '../hp-sections/QuickLinks.astro';
 import WhatsNewRow from '../WhatsNewRow.astro';
 import InstallAppPrompt from '../pwa/InstallAppPrompt.astro';
 import { getLeagueTeamBrands } from '../../../utils/league-team-brands';
@@ -62,8 +62,10 @@ interface Props {
   ownersPoll: { issue: any; ballotHref: string } | null;
   /** Passed to QuickLinks; undefined leaves its default. */
   quickLinksAuthenticated?: boolean;
-  /** WhatsNewRow's props, less `count` (always two). */
-  whatsNew: Record<string, unknown>;
+  /** QuickLinks' cards, for a league with no page-directory entries; omit to read the directory. */
+  quickLinks?: QuickLinkPage[];
+  /** WhatsNewRow's props, less `count` (always two); null for a league with no What's New page. */
+  whatsNew: Record<string, unknown> | null;
   testMode: boolean;
   rail: {
     label: string;
@@ -86,6 +88,7 @@ const {
   hero,
   ownersPoll,
   quickLinksAuthenticated,
+  quickLinks,
   whatsNew,
   testMode,
   rail,
@@ -127,9 +130,9 @@ const {
       <slot name="standings" />
       <slot name="extras" />
 
-      <QuickLinks league={leagueSlug} isAuthenticated={quickLinksAuthenticated} />
+      <QuickLinks league={leagueSlug} isAuthenticated={quickLinksAuthenticated} pages={quickLinks} />
 
-      <WhatsNewRow {...(whatsNew as any)} count={2} />
+      {whatsNew && <WhatsNewRow {...(whatsNew as any)} count={2} />}
 
       {testMode && (
         <div class="league-hp__debug" id="league-hp-debug">

@@ -28,7 +28,7 @@ const RAW = [
   ['0008', 'Robust Rovers', 'Rovers', 'RBR', '#374151', '#e5e7eb'],
   ['0009', 'Tight End Titans', 'Titans', 'TET', '#7c2d12', '#fcd34d'],
   ['0010', 'Correlation Crew', 'Crew', 'COC', '#be185d', '#fbcfe8'],
-  ['0011', 'Bye Week Bandits', 'Bandits', 'BWB', '#4d7c0f', '#d9f99d'],
+  ['0011', 'Bye Week Rustlers', 'Rustlers', 'BWR', '#4d7c0f', '#d9f99d'],
   ['0012', 'Playoff Stackers', 'Stackers', 'PLS', '#1d4ed8', '#e0e7ff'],
 ];
 

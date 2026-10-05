@@ -1,12 +1,21 @@
 {
   "$comment": "Ratchet baseline for hand-typed design values the tokens replace: literal transition durations, literal font-size, literal box-shadow, per file under src/ (src/assets/, the MFL-hosted skin, excluded). Totals per kind may only SHRINK (the per-file map is for diagnosis, so moving CSS between files is free): tests/design-polish.test.ts fails when a total rises (use --transition-*, --font-size-*, --shadow-*) and when it falls (retighten with node scripts/ratchet.mjs --write). Rule: docs/claude/rules/theming-and-assets.md, The polish layer.",
-  "recordedAt": "2026-10-04",
+  "recordedAt": "2026-10-05",
   "totals": {
     "transition": 202,
-    "fontSize": 2075,
+    "fontSize": 2072,
     "shadow": 235
   },
   "files": {
+    "src/components/afl-fantasy/AflFranchiseCardBadges.astro": {
+      "shadow": 1
+    },
+    "src/components/afl-fantasy/AflFranchiseTrophies.astro": {
+      "fontSize": 3
+    },
+    "src/components/afl-fantasy/AflPlayoffPrizes.astro": {
+      "fontSize": 9
+    },
     "src/components/afl-fantasy/KeeperAnalysisCard.astro": {
       "fontSize": 8
     },
@@ -31,9 +40,6 @@
     },
     "src/components/bigleague/BigLeaguePlayoffsPage.astro": {
       "fontSize": 10
-    },
-    "src/components/keeper/KeeperHomePage.astro": {
-      "fontSize": 3
     },
     "src/components/nav/NavDrawer.astro": {
       "transition": 2
@@ -172,6 +178,14 @@
     },
     "src/components/shared/franchises/EraSeasonTable.astro": {
       "fontSize": 1,
+      "shadow": 1
+    },
+    "src/components/shared/franchises/FranchisePage.astro": {
+      "transition": 1,
+      "fontSize": 20
+    },
+    "src/components/shared/franchises/FranchisesIndexPage.astro": {
+      "fontSize": 7,
       "shadow": 1
     },
     "src/components/shared/franchises/PreviousOwners.astro": {
@@ -325,6 +339,11 @@
     },
     "src/components/shared/PlayoffBadge.astro": {
       "fontSize": 1,
+      "shadow": 2
+    },
+    "src/components/shared/playoffs/PlayoffsPage.astro": {
+      "transition": 1,
+      "fontSize": 24,
       "shadow": 2
     },
     "src/components/shared/preferences/PreferencesPage.astro": {
@@ -694,25 +713,12 @@
       "fontSize": 8,
       "shadow": 1
     },
-    "src/pages/afl-fantasy/franchises/[id].astro": {
-      "transition": 1,
-      "fontSize": 23
-    },
-    "src/pages/afl-fantasy/franchises/index.astro": {
-      "fontSize": 7,
-      "shadow": 2
-    },
     "src/pages/afl-fantasy/icons.astro": {
       "transition": 4,
       "fontSize": 6
     },
     "src/pages/afl-fantasy/keeper-analysis.astro": {
       "fontSize": 8
-    },
-    "src/pages/afl-fantasy/playoffs.astro": {
-      "transition": 1,
-      "fontSize": 33,
-      "shadow": 2
     },
     "src/pages/afl-fantasy/records.astro": {
       "fontSize": 10
