@@ -8,8 +8,8 @@
  * Data is loaded at build time from MFL feed JSON files.
  */
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
-import CollegeLogoDarkStyles from '../../components/CollegeLogoDarkStyles.astro';
-import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.astro';
+import CollegeLogoDarkStyles from '../../components/shared/CollegeLogoDarkStyles.astro';
+import PlayerDetailsModal from '../../components/shared/PlayerDetailsModal.astro';
 import { resolveLeaguePath } from '../../utils/nav-utils';
 import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD, COLLEGE_LOGO_ONERROR, COLLEGE_LOGO_ONLOAD, positionOrder } from '../../constants/roster-constants';
 import { getCurrentLeagueYear, getTestDateFromSearchParams } from '../../utils/league-year';
@@ -38,7 +38,8 @@ import { byeWeeksByTeam } from '../../utils/nfl-bye-lookup';
 import leagueConfig from '../../data/theleague.config.json';
 import { getLeagueBySlug, leagueClock } from '../../config/leagues';
 import { getCachedRosters } from '../../utils/mfl-roster-cache';
-import { fetchLockedPlayers } from '../../utils/mfl-locked-players';
+import { fetchDropLocks } from '../../utils/mfl-locked-players';
+import { waiverEventsLiveFirst } from '../../utils/live-waiver-calendar';
 import { resolveAuctionWindow } from '../../utils/auction-window';
 import { NO_HEADSHOT_SILHOUETTE, getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark, getPlayerAvatarStyleMaps } from '../../utils/nfl-team-colors';
 import { isDraftComplete } from '../../utils/draft-utils';
@@ -316,13 +317,34 @@ if (projectedScoresData?.projectedScores?.playerScore) {
 // and the precise failure the fallback exists to prevent. A live league always
 // has rostered players, so an empty map means "no usable answer", never
 // "nobody is rostered".
-// MFL's lock list (recently dropped players) rides along — see
-// src/utils/mfl-locked-players.ts. Null (MFL unreachable) just means no lock
-// icons; the claim route re-checks before it writes.
-const [cachedRosterPlayers, lockedPlayers] = await Promise.all([
+// Which waiver window is live comes from MFL's own calendar, read LIVE with the
+// viewer's cookie (the export is owner-gated) and falling back to the copy
+// synced by scripts/fetch-mfl-feeds.mjs — a lagging sync must not show the
+// wrong window's locks while the claim route, which reads live, decides
+// differently. `currentWaiverType` is the league's SYSTEM, not the state.
+const calendarModules = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/calendar.json',
+  { eager: true }
+);
+const committedCalendarEvents =
+  (Object.entries(calendarModules).find(([p]) => p.includes(`/${currentYear}/`))?.[1] as any)?.default ?? [];
+// Admin gate + claim context below read the same session.
+const authUser = getAuthUser(Astro.request);
+const [cachedRosterPlayers, calendarEvents] = await Promise.all([
   getCachedRosters(String(currentYear), mflLeagueId),
-  fetchLockedPlayers(mflLeagueId, currentYear),
+  waiverEventsLiveFirst(
+    currentYear,
+    mflLeagueId,
+    franchiseIdForLeague(authUser, mflLeagueId) ? authUser?.id : null,
+    committedCalendarEvents,
+  ),
 ]);
+const waiverWindow = resolveWaiverWindow(calendarEvents, new Date(), leagueClock(theLeagueDef.slug).zone);
+// MFL's lock list (recently dropped players) — see
+// src/utils/mfl-locked-players.ts. Only an FCFS window reads it; null (waiver
+// window, or MFL unreachable) just means no lock icons, and the claim route
+// re-checks before it writes.
+const lockedPlayers = await fetchDropLocks(mflLeagueId, currentYear, waiverWindow.mode);
 
 const rosteredPlayers = new Map<string, { salary: number | null; contractYrs: number | null; franchiseId: string }>();
 if (cachedRosterPlayers && Object.keys(cachedRosterPlayers).length > 0) {
@@ -765,6 +787,8 @@ for (const p of playerList) {
 }
 const nflTeamsList = [...nflTeamsSet].sort();
 
+// Auction season has its own Bid flow on MFL; claims are the rest of the year.
+// (`waiverWindow` is resolved above, beside the lock read it gates.)
 // `locked` only on the few locked free agents, so the rest ship nothing extra.
 // Single-pool league: MFL's one LEAGUE unit is keyed ''.
 const lockedIds = lockedPlayers?.[''];
@@ -801,7 +825,6 @@ const nflAvatarRingDarkJson = JSON.stringify(nflAvatarRingDark);
 const noHeadshot = NO_HEADSHOT_SILHOUETTE;
 
 // Admin gate: Value view is only visible to admin franchises (same auth as nav sidebar)
-const authUser = getAuthUser(Astro.request);
 const isAdmin = !!authUser && isCommissionerOrAdmin(authUser);
 
 // ── Waiver claim context ────────────────────────────────────────────────────
@@ -829,17 +852,6 @@ const myRoster = claimFranchiseId
       .map(([id]) => ({ id, name: claimNameById.get(id) ?? `Player ${id}` }))
       .sort((a, b) => a.name.localeCompare(b.name))
   : [];
-// Auction season has its own Bid flow on MFL; claims are the rest of the year.
-// Which waiver window is live comes from MFL's own calendar (synced by
-// scripts/fetch-mfl-feeds.mjs — the export is owner-gated, so it cannot be read
-// from the browser). `currentWaiverType` is the league's SYSTEM, not the state.
-const calendarModules = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/calendar.json',
-  { eager: true }
-);
-const calendarEvents =
-  (Object.entries(calendarModules).find(([p]) => p.includes(`/${currentYear}/`))?.[1] as any)?.default ?? [];
-const waiverWindow = resolveWaiverWindow(calendarEvents, new Date(), leagueClock(theLeagueDef.slug).zone);
 // The deadline in the header line, on the viewer's own clock when they have
 // named one (PT alone until then). Read-only: a page render must never write a
 // preference cookie, and only /preferences and the Sunday Ticket chips do.
@@ -3498,7 +3510,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     color: #fff;
   }
   .hero-spotlight__meta {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 500;
     color: #4b5563;
     font-variant-numeric: tabular-nums;
@@ -3558,7 +3570,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     line-height: 1.2;
   }
   .hero-count {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 500;
     color: var(--color-gray-400, #9ca3af);
     text-transform: uppercase;
@@ -3643,9 +3655,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     background: color-mix(in srgb, var(--content-bg, #fff) 72%, transparent);
   }
   .pos-pill.active {
-    background: var(--color-primary, #1c497c);
+    background: var(--color-primary-fill, var(--color-primary, #1c497c));
     border-color: var(--color-primary, #1c497c);
-    color: white;
+    color: var(--on-color-primary, white);
   }
   .pos-pill__count {
     font-size: 0.7rem;
@@ -3691,7 +3703,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
   /* ── Section Title (editorial signature) ── */
   .players-section-title {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -3704,7 +3716,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   }
 
   .showing-count {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--color-gray-400, #9ca3af);
     font-weight: 500;
     font-variant-numeric: tabular-nums;
@@ -3748,9 +3760,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     color: var(--color-primary, #1c497c);
   }
   .col-group-btn.active {
-    background: var(--color-primary, #1c497c);
+    background: var(--color-primary-fill, var(--color-primary, #1c497c));
     border-color: var(--color-primary, #1c497c);
-    color: white;
+    color: var(--on-color-primary, white);
   }
   .col-group-btn--watch {
     display: inline-flex;
@@ -3795,7 +3807,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   .watch-scope-btn.active {
     background: var(--content-bg, #fff);
     color: var(--color-primary, #1c497c);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+    box-shadow: var(--shadow-sm);
   }
 
   /* ── Filter Toggle Button ── */
@@ -3836,9 +3848,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     height: 18px;
     padding: 0 5px;
     border-radius: 9px;
-    background: var(--color-primary, #1c497c);
-    color: white;
-    font-size: 0.6875rem;
+    background: var(--color-primary-fill, var(--color-primary, #1c497c));
+    color: var(--on-color-primary, white);
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     line-height: 1;
   }
@@ -3879,7 +3891,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
   /* Filter panel section title */
   .filters-panel-title {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -3901,7 +3913,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     gap: 0.3rem;
   }
   .filter-label {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     color: var(--color-gray-400, #9ca3af);
     text-transform: uppercase;
@@ -3927,7 +3939,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   }
   .filter-range__sep {
     color: var(--color-gray-400, #9ca3af);
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
   }
   .filter-input-num {
     width: 70px;
@@ -3997,7 +4009,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     border-radius: var(--radius-md, 0.5rem);
     background: var(--content-bg, #fff);
     color: var(--color-primary, #1c497c);
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
@@ -4008,8 +4020,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   }
   .show-more-btn:hover {
     border-color: var(--color-primary, #1c497c);
-    background: var(--color-primary, #1c497c);
-    color: white;
+    background: var(--color-primary-fill, var(--color-primary, #1c497c));
+    color: var(--on-color-primary, white);
     box-shadow: var(--shadow-md);
   }
 
@@ -4031,7 +4043,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   .players-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
   }
   .players-table thead {
     background: var(--color-gray-50, #f9fafb);
@@ -4048,7 +4060,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     text-align: left;
     font-weight: 600;
     white-space: nowrap;
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--color-gray-400, #9ca3af);
@@ -4154,7 +4166,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   :global(.cell-rank) {
     text-align: center;
     color: var(--color-gray-400, #9ca3af);
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     font-variant-numeric: tabular-nums;
   }
@@ -4200,7 +4212,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   }
   :global(.fa-tag) {
     color: var(--color-gray-400, #94a3b8);
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
   }
   :global(.cell-sm) {
     text-align: center;
@@ -4419,7 +4431,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   :global(td.col-value-bid) {
     font-variant-numeric: tabular-nums;
     position: relative;
-    transition: background-color 0.3s ease;
+    transition: background-color var(--transition-slow);
     white-space: nowrap;
   }
 
@@ -4571,7 +4583,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
   /* ── Auction Countdown ── */
   .auction-countdown {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 500;
     color: var(--color-gray-500, #6b7280);
     white-space: nowrap;
@@ -4605,7 +4617,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
   /* ── Auction Freshness (button) ── */
   .auction-freshness {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 500;
     color: var(--color-gray-500, #6b7280);
     white-space: nowrap;
@@ -4655,7 +4667,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     align-items: center;
     gap: 0.5rem;
     padding: 0.375rem 0.5rem;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 500;
     color: var(--color-gray-500, #6b7280);
     border-bottom: 1px solid var(--color-gray-100, #f3f4f6);
@@ -4668,7 +4680,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: var(--color-gray-400, #9ca3af);
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
   }
   .bid-legend__item {
     display: inline-flex;
@@ -4731,7 +4743,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     .bid-legend {
       gap: 0.375rem;
       padding: 0.25rem 0.375rem;
-      font-size: 0.625rem;
+      font-size: var(--font-size-3xs);
     }
   }
 
@@ -4741,7 +4753,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   :global(td.col-auction-bid) {
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     padding-left: 0.75rem;
     padding-right: 0.75rem;
     width: 1%;
@@ -4751,7 +4763,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   :global(th.col-auction-rank),
   :global(td.col-auction-rank) {
     font-variant-numeric: tabular-nums;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--color-gray-500, #6b7280);
     padding-left: 0.75rem;
     padding-right: 0.75rem;
@@ -4760,7 +4772,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
   :global(th.col-auction-bidder),
   :global(td.col-auction-bidder) {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--color-gray-700, #374151);
     white-space: nowrap;
     overflow: hidden;
@@ -4779,7 +4791,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   :global(th.col-auction-lastbid),
   :global(td.col-auction-started),
   :global(td.col-auction-lastbid) {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-variant-numeric: tabular-nums;
     color: var(--color-gray-500, #6b7280);
     white-space: nowrap;
@@ -4790,9 +4802,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   :global(td.col-auction-timeleft) {
     font-variant-numeric: tabular-nums;
     font-weight: 600;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     white-space: nowrap;
-    transition: color 0.3s ease;
+    transition: color var(--transition-slow);
     width: 1%;
   }
 
@@ -4841,7 +4853,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     padding: 0.2rem 0.55rem;
     border-radius: var(--radius-full, 999px);
     border: 1px solid currentColor;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.03em;
@@ -4880,7 +4892,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     align-items: center;
     gap: 0.35rem;
     padding: 0.2rem 0.55rem;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.03em;
@@ -4899,7 +4911,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   }
   .waiver-window-line__chevron {
     flex: none;
-    transition: transform 0.15s ease;
+    transition: transform var(--transition-fast);
   }
   .waiver-window-line[open] .waiver-window-line__chevron {
     transform: rotate(180deg);
@@ -4908,7 +4920,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     margin: 0;
     padding: 0 0.6rem 0.5rem;
     max-width: 260px;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 500;
     text-transform: none;
     letter-spacing: normal;

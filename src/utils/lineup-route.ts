@@ -23,6 +23,7 @@
 
 import type { APIRoute } from 'astro';
 import { getAuthUser } from './auth';
+import { recordInsightAction } from './site-insights';
 import { mflFetch, describeMflFailure } from './mfl-fetch';
 import { getLeagueYearForSlug } from './league-year';
 import { invalidateAppBadge } from './app-badge-cache';
@@ -83,6 +84,7 @@ export function createLineupRoute(slug: CanonicalLeagueSlug): { GET: APIRoute; P
         // numbers on their app icon. Fire-and-forget: a stale badge must never
         // fail a lineup MFL has already accepted.
         void invalidateAppBadge(league.id, user.franchiseId);
+        await recordInsightAction(user, 'lineup_submit');
         return json({ success: true, message: 'Lineup submitted successfully.' });
       }
 

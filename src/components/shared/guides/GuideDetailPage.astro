@@ -13,7 +13,7 @@
  * /assets/guides/, not the changelog's directory.
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
-import Breadcrumbs from '../../theleague/Breadcrumbs.astro';
+import Breadcrumbs from '../Breadcrumbs.astro';
 import type { GuideEntry } from '../../../types/guides';
 import type {
   DescriptionImageBlock,
@@ -98,7 +98,7 @@ const updatedDisplay = new Date(`${guide.updated}T12:00:00`).toLocaleDateString(
 
       {guide.featurePath && (
         <div class="guide__cta">
-          <a href={r(guide.featurePath)} class="guide__cta-link">
+          <a href={r(guide.featurePath)} class="cta cta--primary guide__cta-link">
             {guide.featureLabel ?? 'Open it'}
           </a>
         </div>
@@ -147,7 +147,7 @@ const updatedDisplay = new Date(`${guide.updated}T12:00:00`).toLocaleDateString(
   }
 
   .guide__updated {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: var(--color-gray-500, #6b7280);
@@ -237,19 +237,13 @@ const updatedDisplay = new Date(`${guide.updated}T12:00:00`).toLocaleDateString(
   }
 
   .guide__cta-link {
-    display: inline-block;
     padding: 0.5rem 1rem;
-    border-radius: var(--radius-md);
-    background: var(--color-primary, #1c497c);
-    color: #ffffff;
-    font-size: 0.875rem;
     font-weight: 600;
-    text-decoration: none;
   }
 
   .guide__back {
     margin: var(--spacing-md, 1rem) 0 0;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
   }
 
   .guide__back a {

@@ -7,6 +7,7 @@
  */
 export const prerender = false;
 
+import { getPersonaLabels } from '../../utils/persona-server';
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import SchefterFeedCompact from '../../components/shared/SchefterFeedCompact.astro';
 import SeasonDailyHero from '../../components/theleague/SeasonDailyHero.astro';
@@ -18,14 +19,14 @@ import OwnersPollHomeCard from '../../components/shared/owners-poll/OwnersPollHo
 // with src/utils/live-scoring-test-drive.ts.
 import LiveScoringTestDrive from '../../components/shared/LiveScoringTestDrive.astro';
 import { showTestDriveHero } from '../../utils/live-scoring-test-drive';
-import WhatsNext from '../../components/theleague/WhatsNext.astro';
+import WhatsNext from '../../components/shared/WhatsNext.astro';
 import HpTeamSnapshot from '../../components/theleague/hp-sections/HpTeamSnapshot.astro';
 import HpStandingsCompact from '../../components/theleague/hp-sections/HpStandingsCompact.astro';
 import HpUnsignedFaCard from '../../components/theleague/hp-sections/HpUnsignedFaCard.astro';
 import HpAuctionsCard from '../../components/theleague/hp-sections/HpAuctionsCard.astro';
 import HpQuickLinks from '../../components/theleague/hp-sections/HpQuickLinks.astro';
-import WhatsNewRow from '../../components/theleague/WhatsNewRow.astro';
-import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.astro';
+import WhatsNewRow from '../../components/shared/WhatsNewRow.astro';
+import PlayerDetailsModal from '../../components/shared/PlayerDetailsModal.astro';
 import { getAuthUser } from '../../utils/auth';
 import InstallAppPrompt from '../../components/shared/pwa/InstallAppPrompt.astro';
 import { readViewerClock } from '../../utils/viewer-preferences-page';
@@ -35,7 +36,8 @@ import { getLeagueBySlug, leagueClock } from '../../config/leagues';
 import { readInstallState } from '../../utils/app-install-state';
 import { resolveSchefterRail } from '../../utils/schefter-rail-view';
 import { resolveHeroFranchiseBackdrop } from '../../utils/hero-franchise-backdrop';
-import { resolveHeroState, parseTestDate, isAuctionStripPeriod, isEntryInHeroWindow } from '../../utils/hero-resolver';
+import { parseTestDate, isAuctionStripPeriod, isEntryInHeroWindow } from '../../utils/hero-resolver';
+import { resolveHeroState } from '../../utils/league-hero/season-state';
 import { getRelease } from '../../utils/schedule-release-store';
 import { getThrowbackPreference } from '../../utils/throwback-store';
 import { enrichHeroState, isDraftComplete, getRosteredPlayerIds, getAdpRankedIds, getFranchiseHeadliners, getFranchiseCompositableHeadliners, getKickoffGame, getWeekGameCandidates, selectBreakingStory } from '../../utils/offseason-hero-data';
@@ -872,6 +874,8 @@ if ((heroState.phase === 'playoffs' || heroState.phase === 'championship') && he
     }
   } catch { /* bracket data is best-effort */ }
 }
+// Owner-facing copy follows the league's persona (src/utils/persona.mjs).
+const labels = await getPersonaLabels('theleague');
 ---
 
 <TheLeagueLayout title="Home">
@@ -911,8 +915,7 @@ if ((heroState.phase === 'playoffs' || heroState.phase === 'championship') && he
           issue={ownersPollIssue ? { year: ownersPollIssue.year, week: ownersPollIssue.week, ownersPoll: ownersPollIssue.data.ownersPoll } : null}
           teams={getLeagueTeamBrands(THELEAGUE.slug)}
           leagueSlug={THELEAGUE.slug}
-          ballotHref={r('/theleague/pecking-order/ballot')}
-          columnHref={r('/theleague/pecking-order')}
+          ballotHref={r('/theleague/owners-poll')}
         />
       )}
 
@@ -978,7 +981,7 @@ if ((heroState.phase === 'playoffs' || heroState.phase === 'championship') && he
       )}
     </section>
 
-    <aside class="hp2__sidebar" aria-label="Schefter Report feed" tabindex="0">
+    <aside class="hp2__sidebar" aria-label={`${labels.reportShort} feed`} tabindex="0">
       <SchefterFeedCompact
         posts={rail.posts}
         isAuthenticated={isAuthenticated}
@@ -1015,7 +1018,7 @@ if ((heroState.phase === 'playoffs' || heroState.phase === 'championship') && he
     background: var(--color-gray-50, #f9fafb);
     border: 1px dashed var(--content-border, #e2e8f0);
     border-radius: var(--radius-md, 0.5rem);
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     color: var(--color-gray-500, #6b7280);
   }
 
@@ -1035,15 +1038,15 @@ if ((heroState.phase === 'playoffs' || heroState.phase === 'championship') && he
     border-radius: var(--radius-sm, 0.25rem);
     background: var(--card-surface, #fff);
     color: var(--color-gray-700, #374151);
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 600;
     cursor: pointer;
     white-space: nowrap;
   }
 
   .hp2__debug-btn:hover {
-    background: var(--color-primary, #1c497c);
-    color: #fff;
+    background: var(--color-primary-fill, var(--color-primary, #1c497c));
+    color: var(--on-color-primary, #fff);
     border-color: var(--color-primary, #1c497c);
   }
 

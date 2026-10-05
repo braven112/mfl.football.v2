@@ -15,7 +15,7 @@
  *     make a colour visible. That is `ensureFieldOn`'s job, and it needs the
  *     ground.
  *  2. **League.** The dark card is a different colour per league, because
- *     `--card-surface` is overridden per `data-league` in `tokens-dark.css`.
+ *     `--card-surface` is set per league by its theme (src/themes/<id>.json).
  *     TheLeague's is `#262626`, the AFL's `#16283c`, MFL Live's `#1e2126`.
  *
  * And the ground is the SURFACE's, never the matchup's league: a TheLeague
@@ -23,15 +23,19 @@
  * cross-league board resolves every one of its leagues against its own single
  * ground, and a league board resolves against that league's.
  *
- * These values are LITERALS mirroring `tokens.css` / `tokens-dark.css` because
+ * These values are LITERALS mirroring the theme files (src/themes/) because
  * this runs on the server, and with `theme_pref: auto` the server never learns
  * the resolved theme — it has to answer for both and let CSS pick.
  * `tests/live-surface-grounds.test.ts` pins them against the stylesheets, so a
  * token edit cannot silently drift from this file.
  */
+import { ALL_LEAGUES } from '../../config/leagues-data.mjs';
 
-/** The `data-league` attribute value a surface renders under. */
-export type LiveSurface = 'theleague' | 'afl' | 'bb1' | 'mfl';
+/**
+ * The `data-league` attribute value a surface renders under: a registry
+ * league's `navSlug`, or `mfl` for the shared-host MFL Live app.
+ */
+export type LiveSurface = string;
 
 export interface SurfaceGrounds {
   /** `--card-surface` in the light theme. */
@@ -42,13 +46,17 @@ export interface SurfaceGrounds {
 
 /**
  * Light is `--color-white` for every league — no league overrides it.
- * Dark is per league, and `bb1` deliberately shares the bare `html.dark`
- * value because its own block does not override `--card-surface`.
+ * Dark is per league, and `bb1` and `archies` deliberately share the bare
+ * `html.dark` value because neither overrides `--card-surface`.
  */
+/** The bare `html.dark` card — what a theme that does not override `--card-surface` renders. */
+export const DEFAULT_GROUNDS: SurfaceGrounds = { light: '#ffffff', dark: '#262626' };
+
 export const SURFACE_GROUNDS: Record<LiveSurface, SurfaceGrounds> = {
   theleague: { light: '#ffffff', dark: '#262626' },
   afl: { light: '#ffffff', dark: '#16283c' },
   bb1: { light: '#ffffff', dark: '#262626' },
+  archies: { light: '#ffffff', dark: '#262626' },
   mfl: { light: '#ffffff', dark: '#1e2126' },
 };
 
@@ -57,17 +65,15 @@ export const SURFACE_GROUNDS: Record<LiveSurface, SurfaceGrounds> = {
  * is what `TheLeagueLayout` writes into `data-league`. Not the canonical slug:
  * the attribute says `afl`, the slug says `afl-fantasy`.
  */
-const SLUG_TO_SURFACE: Record<string, LiveSurface> = {
-  theleague: 'theleague',
-  'afl-fantasy': 'afl',
-  'best-ball-1': 'bb1',
-};
-
-/** The surface a league's own live-scoring page draws on. */
 export function surfaceForLeague(slug: string): LiveSurface {
-  return SLUG_TO_SURFACE[slug] ?? 'theleague';
+  return ALL_LEAGUES.find((l) => l.slug === slug)?.navSlug ?? 'theleague';
 }
 
+/**
+ * A surface's card grounds. A league whose theme does not override
+ * `--card-surface` (any new one, until it does) gets the bare dark card —
+ * never another league's.
+ */
 export function groundsFor(surface: LiveSurface): SurfaceGrounds {
-  return SURFACE_GROUNDS[surface];
+  return SURFACE_GROUNDS[surface] ?? DEFAULT_GROUNDS;
 }

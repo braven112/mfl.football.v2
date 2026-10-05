@@ -14,8 +14,10 @@
  * never from user input. The allowed tags are: <strong>, <em>, <span>, <br>.
  */
 import type { SchefterPost } from '../../types/schefter';
+import { stripTags } from '../../utils/whats-new-links';
 import { getAuthor, getAuthorAvatar } from '../../types/schefter';
-import { formatRelativeTime, getMilestoneLabel, isRumorLikePost } from '../../utils/schefter-feed';
+import { getPersonaLabels, postByline } from '../../utils/persona-server';
+import { formatRelativeTime, getMilestoneLabel, isRumorLikePost, postLinkHref } from '../../utils/schefter-feed';
 import type { GroupMePostMeta } from '../../utils/groupme-storage';
 import SchefterReactionBar from './SchefterReactionBar.tsx';
 import SchefterReplyThread from './SchefterReplyThread.tsx';
@@ -50,9 +52,12 @@ const relTime = formatRelativeTime(post.timestamp, now);
 const isGroupMe = post.type === 'groupme';
 const gmMeta = isGroupMe ? (post as SchefterPost & { _groupMe: GroupMePostMeta })._groupMe : null;
 const author = isGroupMe ? null : getAuthor(post.authorId);
-const avatarSrc = isGroupMe ? (gmMeta?.avatar ?? '') : getAuthorAvatar(author!);
-const displayName = isGroupMe ? (gmMeta?.name ?? 'Unknown') : author!.name;
-const displayHandle = isGroupMe ? 'via GroupMe' : author!.handle;
+// The league's persona renames its own byline (src/utils/persona-server.ts).
+const byline = isGroupMe ? null : await postByline(post, author!, getAuthorAvatar(author!));
+const postLabels = await getPersonaLabels(post.league);
+const avatarSrc = isGroupMe ? (gmMeta?.avatar ?? '') : byline!.avatar;
+const displayName = isGroupMe ? (gmMeta?.name ?? 'Unknown') : byline!.name;
+const displayHandle = isGroupMe ? 'via GroupMe' : byline!.handle;
 const isArticle = post.type === 'article';
 const isExternal = post.type === 'external';
 // Rumor-mill is the legacy tip-driven lane (whisper-back + thread links
@@ -108,7 +113,7 @@ const whisperLoginHref = (league: string | undefined) =>
   loginUrlForRequest(Astro, getLeagueBySlug(league === 'afl' ? 'afl-fantasy' : 'theleague')!);
 ---
 
-<article id={`post-${post.id}`} class={tierClass} data-post-id={post.id} data-tier={post.tier} data-post-type={post.transactionSubType ?? post.type} data-author={post.authorId ?? 'claude'} data-rumor-impression={isRumorLike ? 'true' : undefined} data-watching={isWatching ? 'true' : undefined} aria-label={`${displayName}: ${post.headline || post.body?.replace(/<[^>]+>/g, '').slice(0, 80) || 'Post'}`}>
+<article id={`post-${post.id}`} class={tierClass} data-post-id={post.id} data-tier={post.tier} data-post-type={post.transactionSubType ?? post.type} data-author={post.authorId ?? 'claude'} data-rumor-impression={isRumorLike ? 'true' : undefined} data-watching={isWatching ? 'true' : undefined} aria-label={`${displayName}: ${post.headline || (post.body ? stripTags(post.body).slice(0, 80) : '') || 'Post'}`}>
   <img class={`sf-avatar${isGroupMe ? ' sf-avatar--groupme' : ''}`} src={avatarSrc} alt="" aria-hidden="true" width="40" height="40" loading="lazy" />
 
   <div class="sf-post__content">
@@ -198,6 +203,7 @@ const whisperLoginHref = (league: string | undefined) =>
 
         <div class="sfc-post__actions">
           <SchefterReplyThread
+            personaName={postLabels.name}
             client:idle
             postId={post.id}
             postHeadline={gmMeta?.name ?? 'GroupMe'}
@@ -220,7 +226,7 @@ const whisperLoginHref = (league: string | undefined) =>
     ) : (
       <>
         {isArticle && post.image && (
-          <a href={post.link} class="sf-post__image-link">
+          <a href={postLinkHref(post)} class="sf-post__image-link">
             <img
               class="sf-post__image"
               src={`/assets/schefter/${post.image}`}
@@ -253,14 +259,14 @@ const whisperLoginHref = (league: string | undefined) =>
 
         {post.analysis && (
           <div class="sf-post__analysis">
-            <div class="sf-post__analysis-label">Schefter's Take</div>
+            <div class="sf-post__analysis-label">{postLabels.surname}'s Take</div>
             <Fragment set:html={post.analysis} />
           </div>
         )}
 
         {post.link && (
           <a
-            href={post.link}
+            href={postLinkHref(post)}
             class={`sf-post__link${isExternal ? ' sf-post__link--external' : ''}${typeof post.link === 'string' && post.link.includes('?target=') ? ' sf-post__link--directed' : ''}`}
             {...(isExternal ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
           >
@@ -277,6 +283,7 @@ const whisperLoginHref = (league: string | undefined) =>
 
         <div class="sfc-post__actions">
           <SchefterReplyThread
+            personaName={postLabels.name}
             client:idle
             postId={post.id}
             postHeadline={post.headline}
@@ -296,6 +303,7 @@ const whisperLoginHref = (league: string | undefined) =>
           />
           {isTipRumor && (
             <SchefterWhisperBack
+              personaSurname={postLabels.surname}
               loginHref={whisperLoginHref(post.league)}
               client:idle
               postId={post.id}

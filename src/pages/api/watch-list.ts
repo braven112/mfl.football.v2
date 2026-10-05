@@ -21,6 +21,7 @@
 
 import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../utils/auth';
+import { recordInsightAction } from '../../utils/site-insights';
 import { getLeagueById } from '../../config/leagues';
 import { getLeagueYearForSlug } from '../../utils/league-year';
 import { rankingsScopeForLeagueId } from '../../utils/rankings-scope';
@@ -175,10 +176,12 @@ export const POST: APIRoute = async ({ request }) => {
     // Best effort for the response only. A stale mirror keeps its old
     // syncedAt so the next GET re-reads MFL instead of trusting it.
     const playerIds = applyDelta(mirror?.playerIds ?? []);
+    await recordInsightAction(ctx.user, 'watch_list');
     return json({ ok: true, playerIds, added: add, removed: remove, mirrored: false, reconciled: false });
   }
 
   const playerIds = applyDelta(baseIds);
   const mirrored = await writeWatchListMirror(ctx.league.slug, ctx.franchiseId, playerIds);
+  await recordInsightAction(ctx.user, 'watch_list');
   return json({ ok: true, playerIds, added: add, removed: remove, mirrored, reconciled: true });
 };

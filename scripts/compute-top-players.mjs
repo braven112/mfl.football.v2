@@ -11,7 +11,7 @@
  * shared `_render` serverless function, which already runs near Vercel's 250 MB
  * limit. So the heavy read happens HERE, at build time, in a node script whose
  * fs reads are not traced into that function, and the page imports one finished
- * file. Same reasoning, same shape, as scripts/compute-afl-free-agents.mjs.
+ * file. Same reasoning, same shape, as scripts/compute-free-agents.mjs.
  *
  * The source is `player-scores-weekly.json`, NOT `weekly-results-raw.json`.
  * The latter records a player's score only for weeks he sat on some roster, so

@@ -27,9 +27,9 @@
  * hidden" — the same weekly numbers are one click away in PlayerDetailsModal.
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
-import Breadcrumbs from '../../theleague/Breadcrumbs.astro';
-import PlayerDetailsModal from '../../theleague/PlayerDetailsModal.astro';
-import TeamIconCell from '../../TeamIconCell.astro';
+import Breadcrumbs from '../Breadcrumbs.astro';
+import PlayerDetailsModal from '../PlayerDetailsModal.astro';
+import TeamIconCell from '../TeamIconCell.astro';
 import { getLeagueBySlug } from '../../../config/leagues';
 import type { CanonicalLeagueSlug } from '../../../config/leagues';
 import type { TopPlayersFile, TopPlayerRow } from '../../../types/top-players';
@@ -182,7 +182,7 @@ const COLUMNS: { key: SortKey; label: string; title: string }[] = isWeek
             {view.mode === 'leaders' && (
               <h2 class="tp-section__title">
                 {section.position}
-                <a class="tp-section__more" href={viewHref(basePath, view, { mode: 'position', position: section.position })}>
+                <a class="cta-link tp-section__more" href={viewHref(basePath, view, { mode: 'position', position: section.position })}>
                   All {section.position}
                 </a>
               </h2>
@@ -381,7 +381,7 @@ const COLUMNS: { key: SortKey; label: string; title: string }[] = isWeek
     flex-wrap: wrap;
   }
   .tp-controls__label {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     text-transform: uppercase;
     letter-spacing: 0.06em;
     color: var(--content-text-muted);
@@ -410,7 +410,7 @@ const COLUMNS: { key: SortKey; label: string; title: string }[] = isWeek
   .tp-chip.is-active {
     background: var(--league-accent);
     border-color: var(--league-accent);
-    color: #fff;
+    color: var(--on-league-accent, #fff);
     font-weight: 600;
   }
   .tp-chip--po::after {
@@ -431,13 +431,9 @@ const COLUMNS: { key: SortKey; label: string; title: string }[] = isWeek
     color: var(--page-text);
   }
   .tp-section__more {
+    --cta-link-ink: var(--league-accent);
     font-size: 0.8rem;
     font-weight: 400;
-    color: var(--league-accent);
-    text-decoration: none;
-  }
-  .tp-section__more:hover {
-    text-decoration: underline;
   }
 
   /* The table is the one thing that can overflow a phone; scroll it rather

@@ -108,7 +108,7 @@ describe('Brand Book — franchise and club namespaces', () => {
   }
 
   it('covers exactly the full-management leagues', () => {
-    expect(BRAND_BOOK_LEAGUES).toEqual(['theleague', 'afl-fantasy']);
+    expect(BRAND_BOOK_LEAGUES).toEqual(['theleague', 'afl-fantasy', 'archies']);
     // Best Ball is draft-only and carries no crest art. An empty book renders
     // the NFL half alone rather than throwing, which is why this is a flag
     // rather than a lookup that can fail.
@@ -184,17 +184,20 @@ describe('Brand Book — routes', () => {
      * the league config silently changes it. This walks the same derivation
      * the pages use and proves every id still lands on a real page.
      */
-    for (const [league, file] of [
-      ['theleague', 'src/pages/theleague/franchises/[id].astro'],
-      ['afl-fantasy', 'src/pages/afl-fantasy/franchises/[id].astro'],
+    // The AFL's page is the shared franchise page (package leagues render it
+    // too), so its link is written once, prefixed with the league it renders for.
+    expect(read('src/pages/afl-fantasy/franchises/[id].astro')).toContain('<FranchisePage');
+    for (const [league, file, prefix] of [
+      ['theleague', 'src/pages/theleague/franchises/[id].astro', '/theleague'],
+      ['afl-fantasy', 'src/components/shared/franchises/FranchisePage.astro', '/${leagueSlug}'],
     ] as const) {
       const src = read(file);
-      expect(src, `${file} must link the Brand Book`).toContain(`/${league}/brand/`);
+      expect(src, `${file} must link the Brand Book`).toContain(`${prefix}/brand/`);
       // Derived from the config entry, never hard-coded per team.
       expect(src).toContain('franchiseSlug(team)');
       // Resolved through the league-path helper, so it is correct on the
       // league's own apex where the prefix is hidden.
-      expect(src).toMatch(/resolveLeaguePath\(`\/[a-z-]+\/brand\//);
+      expect(src).toMatch(/resolveLeaguePath\(`\/(\$\{leagueSlug\}|[a-z-]+)\/brand\//);
 
       for (const b of allFranchiseBrands(league)) {
         expect(franchiseIdFromSlug(league, b.slug), `${b.name} link target`).toBe(b.franchiseId);

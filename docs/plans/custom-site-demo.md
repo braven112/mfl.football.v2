@@ -87,13 +87,18 @@ with `astro build` and driven in Chromium against `scripts/demo/mock-upstash.mjs
   moved into `src/components/afl-family/*Page.astro`, and `/afl-fantasy/*` is
   now a thin route wrapper around each — AFL HTML parity checked before and
   after every move (only the new `data-controller="afl-family"` marker
-  differs). The Front Office hub was already shared. The keeper home is its own
-  small component (`components/keeper/KeeperHomePage.astro`): the AFL's home is
-  built around AFL-only machinery (hero calendar, tiers, conference drafts).
+  differs). The Front Office hub was already shared. The keeper home is the
+  shared package-league homepage (`PackageLeagueHome` over `LeagueHomePage`,
+  the AFL's home made shared, Oct 2026) — the page a keeper league launched
+  from the kit gets. The slot is not a package league, so its route names the
+  pages it has (`hasPage`: no calendar, transactions or What's New links) and
+  its Explore cards (`quickLinks`: it has no page-directory entries, which
+  would list 404s in production search). Its news rail is the build's fiction
+  (trades and weekly recaps; `/keeper/news` and `/keeper/news/[id]`).
 - League-aware helpers take the league with an AFL default, so no existing
   caller changed: `afl-conference` (`AflFamilySlug`), the AFL scoring/planner
   loaders (a `dataPath`), the Front Office keeper loader, the live free-agent
-  roster cache (keyed by league), `compute-afl-free-agents.mjs --league`.
+  roster cache (keyed by league), `compute-free-agents.mjs --league`.
 - Nav: its own `navSlug` (`keeper`), an allowlist of the nav links it has
   (`navLinks`), and `isAflFamily()` for AFL-tagged links. The demo's league
   switcher lists only slots with a `demoPath`.
@@ -157,10 +162,15 @@ The art is embedded in the crest SVGs the demo already writes, so no asset path
 changed. The redraft demo now has crests at all (the real best-ball league has
 none yet). Guard: `tests/demo-art-mix.test.ts`.
 
-### "Try these" tour card
+### "Try these" popup
 
-Each demo's HOME carries a closable card (`components/shared/DemoTour.astro`,
-mounted in TheLeagueLayout, demo-only) pointing at three things a prospect
+A popup (`components/shared/DemoTour.astro`, a native `<dialog>` in the
+Throwback Week modal's shell, mounted in TheLeagueLayout, demo-only) opens by
+itself ONCE PER DEVICE on the first demo league home a prospect lands on
+(`localStorage` `demoTourSeen`, written when it opens); after that the demo
+banner's "Tips" button reopens it on any page. Its band is the league's own
+dark logo on a gradient into its primary colour. It was a closable card at the
+top of each home until Oct 2026 (the owner's call). It points at three things a prospect
 would never find by clicking around: a live Light/Auto/Dark switch (the site's
 own ThemeToggle), Preferences (country and clocks: US, Canada, Mexico, UK,
 Australia) and Sunday Ticket, whose channels follow the country. Both pages now
@@ -190,8 +200,16 @@ league id from them, so `/redraft/live-scoring` has a board. Guard:
   names swapped.
 - The Big League has no Schefter feed, rules, draft room or keeper pages;
   its nav offers only what it has.
-- The keeper slot has no Schefter feed, rules, calendar, playoffs or live
-  scoring pages; its nav and header offer only what it has.
+- The keeper slot has no rules, calendar, playoffs, transactions, What's New
+  or live scoring pages; its nav and header offer only what it has. Its news
+  is the build's fiction, read on its homepage rail and `/keeper/news`.
+- A demo club may not contain any real league's scrubbed name, even as part
+  of a word: the scrub matches substrings, so Archie's "Lumberjacks" and
+  "Mammoth" shipped as "Northshore Guest Club 158" and "Ravenmoor Guest Club
+  NNs" (`tests/demo-generator.test.ts`, every registry league's config).
+- The demo build runs the site's own scripts by path, on demo deploys only —
+  the free-agents rename (Sep 2026) failed every demo build with nothing else
+  red. A test now checks each path exists.
 
 ## Goal
 

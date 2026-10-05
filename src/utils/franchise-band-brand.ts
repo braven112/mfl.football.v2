@@ -50,10 +50,7 @@
  * ```
  */
 
-import theleagueConfig from '../data/theleague.config.json';
-import aflConfig from '../../data/afl-fantasy/afl.config.json';
-import bb1Config from '../../data/best-ball-1/bb1.config.json';
-import { keeperLeagueConfig } from './keeper-config';
+import { getLeagueTeams } from './league-config';
 import type { LeagueSlug } from '../types/nav';
 import { getTeamColorPrimary, getTeamColorSecondary } from './team-colors';
 import { mixHex } from './nfl-team-colors';
@@ -125,13 +122,6 @@ export interface BuildFranchiseBandBrandsOptions {
   /** franchiseId -> owner-chosen era `yearStart`, from the throwback store. */
   throwbackOverrides?: Record<string, ThrowbackPick | number>;
 }
-
-const LEAGUE_TEAMS: Record<LeagueSlug, any[]> = {
-  theleague: (theleagueConfig as any).teams ?? [],
-  afl: (aflConfig as any).teams ?? [],
-  bb1: (bb1Config as any).teams ?? [],
-  keeper: keeperLeagueConfig.teams,
-};
 
 /**
  * Stroke color per franchise for the crests that need one, keyed by the LIGHT
@@ -280,7 +270,7 @@ export function buildFranchiseBandBrands(
   league: LeagueSlug,
   options: BuildFranchiseBandBrandsOptions = {}
 ): FranchiseBandBrandMap {
-  const teams = LEAGUE_TEAMS[league] ?? [];
+  const teams = getLeagueTeams(league);
   const scope = strictThrowbackScopeForNavSlug(league);
   const throwback = !!options.throwbackActive && scope !== null;
   const overrides = options.throwbackOverrides ?? {};
@@ -325,7 +315,7 @@ export function buildFranchiseBandBrands(
     let crestFilter = team.iconDark ? undefined : strokes[franchiseId];
 
     if (throwback && scope) {
-      const identity = resolveThrowbackIdentity(team, overrides[franchiseId], scope, teams);
+      const identity = resolveThrowbackIdentity(team, overrides[franchiseId], scope, teams, overrides);
       name = identity.name;
       // Same treatment as the current identity above — a few eras are
       // monochrome (the palette sampler falls back to a dark neutral for

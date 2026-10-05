@@ -392,9 +392,9 @@ describe('buildFranchiseBandBrands', () => {
 
 describe('band wiring', () => {
   const MODALS = [
-    'src/components/theleague/PlayerDetailsModal.astro',
+    'src/components/shared/PlayerDetailsModal.astro',
     'src/components/theleague/PlayerNewsModal.astro',
-    'src/components/theleague/PlayerInjuryModal.astro',
+    'src/components/shared/PlayerInjuryModal.astro',
     'src/components/theleague/ContractDeclarationModal.astro',
   ];
 
@@ -410,7 +410,7 @@ describe('band wiring', () => {
     expect(layout).toContain('<FranchiseBandBrands league={league} />');
 
     // A second emitter would duplicate the element id and the payload.
-    const emitters = ['src/components/FranchiseBandBrands.astro'];
+    const emitters = ['src/components/shared/FranchiseBandBrands.astro'];
     for (const file of MODALS) {
       expect(read(file), file).not.toContain('franchise-band-brands');
     }

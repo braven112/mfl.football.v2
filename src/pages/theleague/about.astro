@@ -660,20 +660,20 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
             </p>
           </div>
           <div class="about-closing__ctas">
-            <a href="/theleague/rosters" class="about-btn about-btn--primary">
+            <a href="/theleague/rosters" class="cta cta--primary about-btn">
               Explore the Roster Hub
               <span class="about-btn__arrow">→</span>
             </a>
-            <a href="/theleague/front-office/trade-builder" class="about-btn about-btn--ghost">
+            <a href="/theleague/front-office/trade-builder" class="cta cta--ghost about-btn">
               Try the Trade Builder
               <span class="about-btn__arrow">→</span>
             </a>
-            <a href="/theleague/whats-new" class="about-btn about-btn--ghost">
+            <a href="/theleague/whats-new" class="cta cta--ghost about-btn">
               What's New
               <span class="about-btn__arrow">→</span>
             </a>
             <!-- The "so which site is real?" question this page doesn't answer. -->
-            <a href="/theleague/faq" class="about-btn about-btn--ghost">
+            <a href="/theleague/faq" class="cta cta--ghost about-btn">
               This site vs. MFL
               <span class="about-btn__arrow">→</span>
             </a>
@@ -713,7 +713,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 
   .about-tag {
     display: inline-block;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -725,11 +725,11 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 
   .about-dot {
     color: var(--color-gray-400, #9ca3af);
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
   }
 
   .about-hero__date {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--color-gray-500, #6b7280);
     font-weight: 500;
   }
@@ -766,7 +766,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 
   .about-stack-dot {
     color: var(--color-gray-300, #d1d5db);
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
   }
 
   /* ===========================
@@ -796,7 +796,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
   }
 
   .about-stats__label {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--color-gray-500, #6b7280);
     line-height: 1.4;
   }
@@ -827,7 +827,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 
   .about-section-num {
     flex-shrink: 0;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     color: var(--color-primary, #1c497c);
     opacity: 0.5;
@@ -838,7 +838,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 
   .about-section-title {
     margin: 0;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -917,7 +917,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
   }
 
   .about-domain-type__label {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -950,7 +950,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 
   .about-domain-type__verdict {
     display: inline-block;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     padding: 0.2rem 0.6rem;
     border-radius: 9999px;
@@ -1003,7 +1003,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
   }
 
   .about-arch__layer-badge {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 600;
     padding: 0.15rem 0.5rem;
     border-radius: 9999px;
@@ -1042,14 +1042,14 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
   }
 
   .about-arch__module-desc {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     line-height: 1.45;
     color: var(--color-gray-500, #6b7280);
   }
 
   .about-arch__module-desc code {
     font-family: ui-monospace, 'Cascadia Code', monospace;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     background: var(--color-gray-100, #f3f4f6);
     padding: 0.1rem 0.3rem;
     border-radius: 3px;
@@ -1067,7 +1067,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
   }
 
   .about-arch__bridge-label {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -1131,25 +1131,25 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
     flex-shrink: 0;
     width: 1.75rem;
     height: 1.75rem;
-    background: var(--color-primary, #1c497c);
-    color: #fff;
+    background: var(--color-primary-fill, var(--color-primary, #1c497c));
+    color: var(--on-color-primary, #fff);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
   }
 
   .about-scaffold__title {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 700;
     color: var(--color-gray-900, #111827);
     margin-bottom: 0.4rem;
   }
 
   .about-scaffold__body {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     line-height: 1.65;
     color: var(--color-gray-600, #4b5563);
   }
@@ -1165,7 +1165,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
   }
 
   .about-insights-header {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -1197,14 +1197,14 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
   .about-insights-node--write { border-left: 3px solid #d97706; }
 
   .about-insights-arrow {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     color: var(--color-gray-400, #9ca3af);
     padding-left: 0.75rem;
   }
 
   .about-insights-arrow--loop {
     color: var(--color-primary, #1c497c);
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
   }
 
@@ -1217,7 +1217,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
   }
 
   .about-insights-file {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-family: ui-monospace, 'Cascadia Code', monospace;
     color: var(--color-gray-500, #6b7280);
     padding: 0.2rem 0;
@@ -1241,7 +1241,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
   }
 
   .about-reliability-card__eyebrow {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -1251,7 +1251,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
   }
 
   .about-reliability-card__title {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 700;
     color: var(--color-gray-900, #111827);
     margin-bottom: 0.625rem;
@@ -1260,7 +1260,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 
   .about-reliability-card__body p {
     margin: 0;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     line-height: 1.65;
     color: var(--color-gray-600, #4b5563);
   }
@@ -1298,7 +1298,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
   }
 
   .about-timeline__label {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -1341,7 +1341,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 
   .about-predictor-box__title {
     padding: 0.75rem 1.25rem;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -1365,14 +1365,14 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
   }
 
   .about-predictor-input__label {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     color: var(--color-gray-900, #111827);
     margin-bottom: 0.3rem;
   }
 
   .about-predictor-input__desc {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     line-height: 1.5;
     color: var(--color-gray-600, #4b5563);
   }
@@ -1385,7 +1385,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
   }
 
   .about-predictor-box__output-label {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -1394,7 +1394,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
   }
 
   .about-predictor-box__output-val {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     color: var(--color-gray-700, #374151);
     font-style: italic;
   }
@@ -1420,7 +1420,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
   }
 
   .about-cs-card__discipline {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     color: var(--color-gray-900, #111827);
     line-height: 1.2;
@@ -1434,7 +1434,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
   }
 
   .about-cs-card__artifact {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-family: ui-monospace, 'Cascadia Code', monospace;
     color: var(--color-primary, #1c497c);
     opacity: 0.75;
@@ -1459,7 +1459,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
   }
 
   .about-closing__title {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -1493,44 +1493,10 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
   /* ===========================
      Buttons
   =========================== */
+  /* Shape, colour and hover come from the shared .cta pattern
+     (src/styles/cta.css); these run a touch smaller than the default. */
   .about-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
     font-size: 0.8125rem;
-    font-weight: 600;
-    padding: 0.625rem 1.25rem;
-    border-radius: 8px;
-    text-decoration: none;
-    transition: background 0.15s ease, border-color 0.15s ease;
-  }
-
-  .about-btn--primary {
-    background: var(--btn-primary-bg, #1c497c);
-    color: #fff;
-    border: 1px solid transparent;
-  }
-
-  .about-btn--primary:hover {
-    background: var(--btn-primary-bg-hover, #164066);
-  }
-
-  .about-btn--ghost {
-    background: transparent;
-    color: var(--color-primary, #1c497c);
-    border: 1px solid color-mix(in srgb, var(--color-primary, #1c497c) 35%, transparent);
-  }
-
-  .about-btn--ghost:hover {
-    background: color-mix(in srgb, var(--color-primary, #1c497c) 6%, transparent);
-  }
-
-  .about-btn__arrow {
-    transition: transform 0.15s ease;
-  }
-
-  .about-btn:hover .about-btn__arrow {
-    transform: translateX(3px);
   }
 
   /* ===========================
@@ -1622,10 +1588,6 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 
     .about-closing__ctas {
       flex-direction: column;
-    }
-
-    .about-btn {
-      justify-content: center;
     }
 
     .about-quote {

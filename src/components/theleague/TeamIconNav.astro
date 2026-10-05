@@ -115,7 +115,7 @@ const teamsByDivision = divisionOrder.map((division) => ({
   }
 
   .division-label {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -137,7 +137,7 @@ const teamsByDivision = divisionOrder.map((division) => ({
     border: 2px solid var(--border-color, #e5e7eb);
     border-radius: 8px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all var(--transition-base);
     display: flex;
     align-items: center;
     justify-content: center;

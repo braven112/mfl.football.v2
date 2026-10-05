@@ -52,8 +52,7 @@ const accent = (fid: string) =>
 const pct = (x: number | null) => (x == null ? '—' : `${Math.round(x * 100)}%`);
 const num = (x: number | null, digits = 1) => (x == null ? '—' : x.toFixed(digits));
 
-const columnHref = ensureLeaguePrefix(league, '/pecking-order');
-const ballotHref = ensureLeaguePrefix(league, '/pecking-order/ballot');
+const ballotHref = ensureLeaguePrefix(league, '/owners-poll');
 
 // Before about week 6 there are too few pairs for the ordering to mean much —
 // say so rather than letting an early leader look established.
@@ -65,7 +64,7 @@ const hasPolls = season.weeks.length > 0;
 <TheLeagueLayout title={`The Owners’ Poll — Voters | ${league.name}`}>
   <div class="opv-page">
     <nav class="opv-crumbs" aria-label="Breadcrumb">
-      <a href={columnHref}>The Pecking Order</a>
+      <a href={ballotHref}>The Owners’ Poll</a>
       <span aria-hidden="true">›</span>
       <span>Voters</span>
     </nav>

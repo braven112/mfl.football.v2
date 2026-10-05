@@ -7,7 +7,8 @@
  * resolved from the league's feed JSON (fast path); the Redis registry
  * powers cross-scan lookups when posts don't have `threadId` stamped yet.
  */
-import Breadcrumbs from '../theleague/Breadcrumbs.astro';
+import { getPersonaLabels } from '../../utils/persona-server';
+import Breadcrumbs from '../shared/Breadcrumbs.astro';
 import type { SchefterFeed, SchefterPost } from '../../types/schefter';
 import '../../styles/schefter-feed.css';
 
@@ -23,6 +24,7 @@ interface Props {
 }
 
 const { navSlug, base, leagueName, feed, threadId } = Astro.props;
+const labels = await getPersonaLabels(navSlug);
 
 const threadPosts: SchefterPost[] = feed.posts
   .filter((p) => p.threadId === threadId && p.transactionSubType === 'rumor_mill')
@@ -36,7 +38,7 @@ const threadPosts: SchefterPost[] = feed.posts
 <div class="sf-thread">
   <Breadcrumbs items={[
     { label: leagueName, href: base },
-    { label: 'The Schefter Report', href: `${base}/news?source=${navSlug}` },
+    { label: labels.report, href: `${base}/news?source=${navSlug}` },
     { label: 'Rumor Thread' },
   ]} />
 
@@ -70,7 +72,7 @@ const threadPosts: SchefterPost[] = feed.posts
 
   <div class="sf-thread__footer">
     <a href={`${base}/schefter/tip`} class="sf-thread__tip-link">
-      Got something to add? Tip Schefter →
+      Got something to add? {labels.tip} →
     </a>
   </div>
 </div>
@@ -90,7 +92,7 @@ const threadPosts: SchefterPost[] = feed.posts
     margin-bottom: 1rem;
   }
   .sf-thread__eyebrow {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -128,7 +130,7 @@ const threadPosts: SchefterPost[] = feed.posts
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: var(--color-gray-500, #6b7280);
@@ -151,7 +153,7 @@ const threadPosts: SchefterPost[] = feed.posts
     border: 1px dashed var(--color-gray-200, #e5e7eb);
     border-radius: 0.75rem;
     color: var(--color-gray-600, #4b5563);
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     text-align: center;
   }
   .sf-thread__footer {
@@ -159,7 +161,7 @@ const threadPosts: SchefterPost[] = feed.posts
     text-align: center;
   }
   .sf-thread__tip-link {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 600;
     color: var(--color-primary, #1c497c);
     text-decoration: none;

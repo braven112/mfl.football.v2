@@ -12,8 +12,10 @@
  * Anonymity contract unchanged: tips are hashed server-side; this page never
  * sees another owner's identity.
  */
+import { getPersonaLabels } from '../../utils/persona-server';
+import { stripTags } from '../../utils/whats-new-links';
 import { composeSharedTip, readSharedPayload } from '../../utils/share-target';
-import Breadcrumbs from '../theleague/Breadcrumbs.astro';
+import Breadcrumbs from '../shared/Breadcrumbs.astro';
 import { chooseTeamName } from '../../utils/team-names';
 import { getAuthor, getAuthorAvatar } from '../../types/schefter';
 import { getTipTopics } from '../../config/schefter-topics.mjs';
@@ -43,6 +45,8 @@ interface Props {
 }
 
 const { navSlug, base, leagueName, feed, teams: rawTeams } = Astro.props;
+// Every "Schefter" on this page is the league's persona (src/utils/persona.mjs).
+const labels = await getPersonaLabels(navSlug);
 
 // Public (unauthenticated) API endpoints need an explicit league param for
 // non-default leagues; authed endpoints resolve the league from the JWT.
@@ -60,7 +64,7 @@ const lastRumor = feed.posts
 
 const lastRumorSnippet = (() => {
   if (!lastRumor) return null;
-  const raw = String(lastRumor.body ?? '').replace(/<[^>]+>/g, '').trim();
+  const raw = stripTags(String(lastRumor.body ?? '')).trim();
   if (!raw) return null;
   const match = raw.match(/^[^.!?]+[.!?]/);
   const sentence = match ? match[0] : raw;
@@ -110,7 +114,7 @@ const recentRumors = feed.posts
   .map((p: any) => ({
     id: p.id,
     label: (() => {
-      const raw = String(p.headline || p.body || '').replace(/<[^>]+>/g, '').trim();
+      const raw = stripTags(String(p.headline || p.body || '')).trim();
       const when = new Date(p.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       const text = raw.length > 64 ? raw.slice(0, 61).trimEnd() + '…' : raw;
       return `${when} — ${text}`;
@@ -148,20 +152,20 @@ const preselectTeam = (() => {
   };
 })();
 ---
-  <div class="tip-page">
+  <div class="tip-page" data-persona-surname={labels.surname}>
     <div class="tip-main">
       <header class="tip-hero tip-hero--persona">
         <Breadcrumbs items={[
           { label: leagueName, href: base },
-          { label: 'The Schefter Report', href: `${base}/news` },
-          { label: 'Tip Schefter' },
+          { label: labels.report, href: `${base}/news` },
+          { label: labels.tip },
         ]} />
-        <p class="tip-hero__eyebrow">Schefter Rumor Mill</p>
+        <p class="tip-hero__eyebrow">{labels.surname} Rumor Mill</p>
         <div class="sf-page-header tip-hero__persona-card">
           <div class="sf-page-header__persona">
             <img
               class="sf-page-header__avatar"
-              src={schefterAvatar}
+              src={labels.avatar === '/assets/claude-schefter-avatar.webp' ? schefterAvatar : labels.avatar}
               alt=""
               aria-hidden="true"
               width="48"
@@ -169,15 +173,15 @@ const preselectTeam = (() => {
               loading="eager"
             />
             <div>
-              <h1 class="sf-page-header__name">{schefterAuthor?.name ?? 'Claude Schefter'}</h1>
-              <div class="sf-page-header__handle">{schefterAuthor?.handle ?? '@ClaudeSchefter'}</div>
+              <h1 class="sf-page-header__name">{labels.name}</h1>
+              <div class="sf-page-header__handle">{labels.surname === 'Schefter' ? (schefterAuthor?.handle ?? '@ClaudeSchefter') : `@${labels.surname.toLowerCase()}`}</div>
             </div>
           </div>
-          <p class="sf-page-header__bio">{schefterAuthor?.bio}</p>
+          <p class="sf-page-header__bio">{labels.surname === 'Schefter' ? schefterAuthor?.bio : `${leagueName}'s league insider.`}</p>
         </div>
         <p class="tip-hero__lede">
           Got a hunch, a grievance, a leak, or a straight-up personal shot at another owner?
-          Schefter's listening. <strong>Go ahead — be as mean as you can think of.</strong> Every tip gets
+          {labels.surname}'s listening. <strong>Go ahead — be as mean as you can think of.</strong> Every tip gets
           filtered through the beat-reporter desk before it's printed. Only innuendo, rumor, and
           feeling survive the edit. Nobody sees what you actually wrote.
         </p>
@@ -277,7 +281,7 @@ const preselectTeam = (() => {
             ))}
           </select>
           <p class="tip-field__help">
-            Whisper back on a recent rumor and Schefter threads your tip into that storyline.
+            Whisper back on a recent rumor and {labels.surname} threads your tip into that storyline.
           </p>
         </div>
       )}
@@ -291,7 +295,7 @@ const preselectTeam = (() => {
       </div>
 
       <div class="tip-confirm" id="tip-confirm" hidden aria-live="polite">
-        <p class="tip-confirm__headline" id="tip-confirm-headline">Schefter's got it.</p>
+        <p class="tip-confirm__headline" id="tip-confirm-headline">{labels.surname}'s got it.</p>
         <p class="tip-confirm__detail" id="tip-confirm-detail"></p>
         <div class="tip-confirm__actions">
           <button type="button" class="tip-confirm__undo" id="tip-undo">
@@ -325,14 +329,14 @@ const preselectTeam = (() => {
 
       <details class="tip-rail-card tip-rail-examples">
         <summary class="tip-rail-examples__summary">
-          <span class="tip-rail-examples__label">Good tip vs. what Schefter prints</span>
+          <span class="tip-rail-examples__label">Good tip vs. what {labels.surname} prints</span>
           <svg class="tip-rail-examples__chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M6 9l6 6 6-6"/>
           </svg>
         </summary>
         <div class="tip-rail-examples__body">
           <p class="tip-rail-examples__intro">
-            Schefter fuzzes every tip. Name a team and he'll generalize to the division — unless multiple
+            {labels.surname} fuzzes every tip. Name a team and he'll generalize to the division — unless multiple
             owners whisper the same thing.
           </p>
           <div class="tip-rail-example">
@@ -343,7 +347,7 @@ const preselectTeam = (() => {
                 <span class="tip-rail-example__row-text">"The Magicians are shopping their 1.03 for a WR."</span>
               </div>
               <div class="tip-rail-example__row tip-rail-example__row--print">
-                <span class="tip-rail-example__row-label">Schefter prints</span>
+                <span class="tip-rail-example__row-label">{labels.surname} prints</span>
                 <span class="tip-rail-example__row-text">"Sources tell me a team in the East is dangling a top rookie pick for WR help. Developing."</span>
               </div>
             </div>
@@ -356,7 +360,7 @@ const preselectTeam = (() => {
                 <span class="tip-rail-example__row-text">"The Magicians are shopping their 1.03."</span>
               </div>
               <div class="tip-rail-example__row tip-rail-example__row--print">
-                <span class="tip-rail-example__row-label">Schefter prints</span>
+                <span class="tip-rail-example__row-label">{labels.surname} prints</span>
                 <span class="tip-rail-example__row-text">"League sources tell me multiple owners are talking about the Dark Magicians. Worth watching."</span>
               </div>
             </div>
@@ -369,7 +373,7 @@ const preselectTeam = (() => {
                 <span class="tip-rail-example__row-text">"The Commish is sandbagging the trade review window."</span>
               </div>
               <div class="tip-rail-example__row tip-rail-example__row--print">
-                <span class="tip-rail-example__row-label">Schefter prints</span>
+                <span class="tip-rail-example__row-label">{labels.surname} prints</span>
                 <span class="tip-rail-example__row-text">"Word around the league is the commissioner's office is drawing some static. Developing."</span>
               </div>
             </div>
@@ -382,7 +386,7 @@ const preselectTeam = (() => {
                 <span class="tip-rail-example__row-text">"Brandon plays baseball like a girl."</span>
               </div>
               <div class="tip-rail-example__row tip-rail-example__row--print">
-                <span class="tip-rail-example__row-label">Schefter prints</span>
+                <span class="tip-rail-example__row-label">{labels.surname} prints</span>
                 <span class="tip-rail-example__row-text">"Hearing a hissy fit from an owner in the Southwest towards the league office. Every shot tells us something about the shooter. Developing."</span>
               </div>
             </div>
@@ -395,7 +399,7 @@ const preselectTeam = (() => {
                 <span class="tip-rail-example__row-text">"[Owner] is a bald loser who smells bad."</span>
               </div>
               <div class="tip-rail-example__row tip-rail-example__row--print">
-                <span class="tip-rail-example__row-label">Schefter prints</span>
+                <span class="tip-rail-example__row-label">{labels.surname} prints</span>
                 <span class="tip-rail-example__row-text">"One of the league's desks is worked up about another this week. Usually tells you more about the accuser than the accused. Developing."</span>
               </div>
             </div>
@@ -414,7 +418,7 @@ const preselectTeam = (() => {
             <p class="tip-rail-rule__text">
               The editorial filter is the feature. Pure shots, personal jabs, crude jokes — they all
               get translated into innuendo and feeling before the post goes out. When a tip's just
-              personal, Schefter files on <em>you</em> having a hissy fit instead of on the target —
+              personal, {labels.surname} files on <em>you</em> having a hissy fit instead of on the target —
               every accusation's a confession, after all. Go for it.
             </p>
           </li>
@@ -428,14 +432,14 @@ const preselectTeam = (() => {
           <li class="tip-rail-rule">
             <span class="tip-rail-rule__label">Rate</span>
             <p class="tip-rail-rule__text">
-              At most <strong>3 rumor-mill posts per day</strong>. Schefter sits on every tip for an
+              At most <strong>3 rumor-mill posts per day</strong>. {labels.surname} sits on every tip for an
               hour before saying anything.
             </p>
           </li>
           <li class="tip-rail-rule">
             <span class="tip-rail-rule__label">Fuzz</span>
             <p class="tip-rail-rule__text">
-              Name a team and Schefter may generalize to the division unless multiple owners are
+              Name a team and {labels.surname} may generalize to the division unless multiple owners are
               whispering about the same franchise.
             </p>
           </li>
@@ -470,7 +474,7 @@ const preselectTeam = (() => {
 
       <section class="tip-rail-card tip-rail-cooker" aria-labelledby="cooker-title" data-cooker-status>
         <div class="section-header">
-          <h2 class="section-header__title" id="cooker-title">Schefter's kitchen</h2>
+          <h2 class="section-header__title" id="cooker-title">{labels.surname}'s kitchen</h2>
           <p class="section-header__sub" data-cooker-sub>Checking on the pot…</p>
         </div>
         <div class="tip-rail-cooker__heat" data-cooker-heat hidden>
@@ -479,7 +483,7 @@ const preselectTeam = (() => {
         </div>
         <p class="tip-rail-cooker__body" data-cooker-body>Loading…</p>
         <p class="tip-rail-cooker__hint" data-cooker-hint hidden>
-          Schefter's slammed — tips coming in faster than he can file. Yours
+          {labels.surname}'s slammed — tips coming in faster than he can file. Yours
           may marinate longer than usual before it surfaces.
         </p>
       </section>
@@ -515,8 +519,8 @@ const preselectTeam = (() => {
       </section>
 
       {schefterArticles.length > 0 && (
-        <section class="tip-rail-section" aria-label="Featured articles from Claude Schefter">
-          <h2 class="tip-rail-section__title">From the Schefter Report</h2>
+        <section class="tip-rail-section" aria-label={`Featured articles from ${labels.name}`}>
+          <h2 class="tip-rail-section__title">From the {labels.reportShort}</h2>
           <ul class="tip-rail-articles">
             {schefterArticles.map((article: any) => (
               <li class="tip-rail-articles__item">
@@ -605,7 +609,7 @@ const preselectTeam = (() => {
     border-bottom: none;
   }
   .tip-hero__eyebrow {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -634,7 +638,7 @@ const preselectTeam = (() => {
     display: flex;
     flex-direction: column;
     gap: 1rem;
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    box-shadow: var(--shadow-sm);
   }
 
   /* Dark: raised-card ring — gray-100 inverts to near-black so the
@@ -655,7 +659,7 @@ const preselectTeam = (() => {
     border-left: 2px solid var(--color-primary, #1c497c);
   }
   .section-header__title {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -680,7 +684,7 @@ const preselectTeam = (() => {
     gap: 1rem;
     padding: 0.625rem 0;
     border-bottom: 1px solid var(--color-gray-50, #f9fafb);
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     line-height: 1.4;
   }
   .tip-detail-row:last-child {
@@ -688,7 +692,7 @@ const preselectTeam = (() => {
   }
   .tip-detail-row__label {
     flex: 0 0 5rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -715,7 +719,7 @@ const preselectTeam = (() => {
     gap: 0.375rem;
   }
   .tip-field__label {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -733,7 +737,7 @@ const preselectTeam = (() => {
   }
   .tip-preselect__eyebrow {
     display: block;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -742,7 +746,7 @@ const preselectTeam = (() => {
   }
   .tip-preselect__body {
     margin: 0;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     line-height: 1.4;
     color: var(--color-gray-800, #1f2937);
   }
@@ -764,7 +768,7 @@ const preselectTeam = (() => {
      picking a team unlocks direct naming on the resulting Schefter post. */
   .tip-field__help {
     margin: 0.375rem 0 0;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     line-height: 1.35;
     color: var(--color-gray-500, #6b7280); /* WCAG AA on white at 0.75rem */
   }
@@ -814,7 +818,7 @@ const preselectTeam = (() => {
     justify-content: flex-end;
   }
   .tip-field__counter {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--color-gray-500, #6b7280);
     font-variant-numeric: tabular-nums;
   }
@@ -843,7 +847,7 @@ const preselectTeam = (() => {
     }
     .tip-submit {
       width: 100%;
-      min-height: 44px;
+      min-height: var(--touch-target-min);
     }
   }
 
@@ -862,7 +866,7 @@ const preselectTeam = (() => {
     gap: 0.375rem;
     padding: 0.25rem 0.625rem;
     border-radius: 999px;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     color: var(--color-gray-600, #4b5563);
     background: var(--color-gray-50, #f9fafb);
@@ -879,15 +883,15 @@ const preselectTeam = (() => {
   }
   .tip-submit {
     font: inherit;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 600;
-    color: var(--color-white, #ffffff);
-    background: var(--color-primary, #1c497c);
+    color: var(--on-color-primary, var(--color-white, #ffffff));
+    background: var(--color-primary-fill, var(--color-primary, #1c497c));
     border: 1px solid var(--color-primary, #1c497c);
     border-radius: 0.5rem;
     padding: 0.625rem 1.25rem;
     cursor: pointer;
-    transition: opacity 0.15s ease, background 0.15s ease;
+    transition: opacity var(--transition-fast), background var(--transition-fast);
   }
   .tip-submit:hover:not(:disabled) {
     opacity: 0.9;
@@ -987,7 +991,7 @@ const preselectTeam = (() => {
     display: flex;
     flex-direction: column;
     gap: 0.875rem;
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    box-shadow: var(--shadow-sm);
   }
   .tip-rail-rules {
     list-style: none;
@@ -1009,7 +1013,7 @@ const preselectTeam = (() => {
     padding-bottom: 0;
   }
   .tip-rail-rule__label {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -1056,7 +1060,7 @@ const preselectTeam = (() => {
     display: inline-flex;
     align-items: center;
     gap: 0.25rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     color: var(--color-primary, #1c497c);
     text-transform: uppercase;
@@ -1098,7 +1102,7 @@ const preselectTeam = (() => {
     gap: 0.375rem;
     padding: 0.1875rem 0.625rem;
     border-radius: 999px;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -1146,7 +1150,7 @@ const preselectTeam = (() => {
   }
   .tip-rail-cooker__hint {
     margin: 0;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     line-height: 1.4;
     font-style: italic;
     color: var(--color-gray-600, #4b5563);
@@ -1166,7 +1170,7 @@ const preselectTeam = (() => {
   }
   .tip-rail-hot__loading,
   :global(.tip-rail-hot__empty) {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-style: italic;
     color: var(--color-gray-500, #6b7280);
   }
@@ -1178,7 +1182,7 @@ const preselectTeam = (() => {
     border-radius: 999px;
     background: var(--color-gray-50, #f9fafb);
     border: 1px solid var(--color-gray-100, #f3f4f6);
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--color-gray-700, #374151);
     font-variant-numeric: tabular-nums;
   }
@@ -1258,7 +1262,7 @@ const preselectTeam = (() => {
     align-items: center;
     gap: 0.25rem;
     padding: 0.125rem 0.5rem;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 600;
     color: var(--badge-warning-text, #d97706);
     background: var(--badge-warning-bg, #fef3c7);
@@ -1282,7 +1286,7 @@ const preselectTeam = (() => {
   :global(.tip-rail-receipt) {
     margin: 0.5rem 0 0;
     padding: 0.5rem 0.625rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     line-height: 1.45;
     color: var(--color-gray-700, #374151);
     background: var(--color-gray-50, #f9fafb);
@@ -1328,7 +1332,7 @@ const preselectTeam = (() => {
   :global(.tip-rail-leaderboard__row::before) {
     content: counter(tipster-rank);
     flex: 0 0 1.5rem;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     color: var(--color-gray-500, #6b7280);
     text-align: right;
@@ -1370,7 +1374,7 @@ const preselectTeam = (() => {
     justify-content: space-between;
     gap: 0.5rem;
     padding: 0.875rem 1rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -1397,7 +1401,7 @@ const preselectTeam = (() => {
   }
   .tip-rail-examples__intro {
     margin: 0;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     line-height: 1.45;
     color: var(--color-gray-600, #4b5563);
   }
@@ -1407,7 +1411,7 @@ const preselectTeam = (() => {
     gap: 0.375rem;
   }
   .tip-rail-example__label {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -1427,7 +1431,7 @@ const preselectTeam = (() => {
     padding: 0.25rem 0;
   }
   .tip-rail-example__row-label {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 600;
     color: var(--color-gray-500, #6b7280);
   }
@@ -1448,7 +1452,7 @@ const preselectTeam = (() => {
     gap: 0.5rem;
   }
   .tip-rail-section__title {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -1478,7 +1482,7 @@ const preselectTeam = (() => {
   }
   .tip-rail-article-card:hover {
     border-color: var(--color-gray-200, #e5e7eb);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    box-shadow: var(--shadow-md);
     transform: translateY(-1px);
   }
   /* Dark: gray-100/200 borders invert to near-black — translucent edge
@@ -1503,7 +1507,7 @@ const preselectTeam = (() => {
     gap: 0.25rem;
   }
   .tip-rail-article-card__meta {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     color: var(--color-gray-500, #6b7280);
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -1525,7 +1529,7 @@ const preselectTeam = (() => {
     gap: 0.25rem;
     align-self: flex-start;
     margin-top: 0.25rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     color: var(--color-primary, #1c497c);
     text-decoration: none;
@@ -1543,6 +1547,10 @@ const preselectTeam = (() => {
 })} />
 
 <script>
+  // The league's persona, rendered by the server (src/utils/persona.mjs). Read
+  // at use, not load: this module outlives a ClientRouter swap between leagues.
+  const personaSurname = () =>
+    document.querySelector('.tip-page')?.getAttribute('data-persona-surname') || 'Schefter';
   import { handleAuthExpiry, takeParkedForSignIn } from '../../utils/signin-resume';
 
   /**
@@ -1703,7 +1711,7 @@ const preselectTeam = (() => {
       return `<p class="tip-rail-receipt tip-rail-receipt--published">✅ Your last tip made the wire.${link}${suffix}</p>`;
     }
     if (receipt.status === 'spiked') {
-      return `<p class="tip-rail-receipt tip-rail-receipt--spiked">🗞️ Your last tip didn't make the wire — Schefter couldn't find an angle he could print. Tips with a name, a number, or a deadline in them clear the bar far more often.${suffix}</p>`;
+      return `<p class="tip-rail-receipt tip-rail-receipt--spiked">🗞️ Your last tip didn't make the wire — ${escapeHtml(personaSurname())} couldn't find an angle he could print. Tips with a name, a number, or a deadline in them clear the bar far more often.${suffix}</p>`;
     }
     return `<p class="tip-rail-receipt tip-rail-receipt--expired">🕰️ Your last tip aged out before it found a slot. Nothing wrong with it — the wire was just quiet.${suffix}</p>`;
   }
@@ -1860,7 +1868,7 @@ const preselectTeam = (() => {
       if (dailyCapHit) {
         cookerRoot.setAttribute('data-state', 'capped');
         if (cookerSub) cookerSub.textContent = 'Daily cap reached';
-        cookerBody.innerHTML = `Schefter's filed ${postsToday} of ${dailyCap} today. Next batch drops tomorrow — keep tipping.`;
+        cookerBody.innerHTML = `${escapeHtml(personaSurname())}'s filed ${postsToday} of ${dailyCap} today. Next batch drops tomorrow — keep tipping.`;
         return;
       }
 
@@ -1876,11 +1884,11 @@ const preselectTeam = (() => {
       const countdownMs = nextEarliestPostAt !== null ? nextEarliestPostAt - Date.now() : null;
       const tipWord = queueDepth === 1 ? 'tip' : 'tips';
       if (countdownMs === null) {
-        cookerBody.innerHTML = `Schefter is marinating <strong>${queueDepth}</strong> ${tipWord}.`;
+        cookerBody.innerHTML = `${escapeHtml(personaSurname())} is marinating <strong>${queueDepth}</strong> ${tipWord}.`;
       } else if (countdownMs <= 0) {
-        cookerBody.innerHTML = `Schefter is marinating <strong>${queueDepth}</strong> ${tipWord}. <span class="tip-rail-cooker__countdown">Any minute now</span>`;
+        cookerBody.innerHTML = `${escapeHtml(personaSurname())} is marinating <strong>${queueDepth}</strong> ${tipWord}. <span class="tip-rail-cooker__countdown">Any minute now</span>`;
       } else {
-        cookerBody.innerHTML = `Schefter is marinating <strong>${queueDepth}</strong> ${tipWord}. Next rumor drops in <span class="tip-rail-cooker__countdown">${formatCountdown(countdownMs)}</span>`;
+        cookerBody.innerHTML = `${escapeHtml(personaSurname())} is marinating <strong>${queueDepth}</strong> ${tipWord}. Next rumor drops in <span class="tip-rail-cooker__countdown">${formatCountdown(countdownMs)}</span>`;
       }
     } catch {
       cookerRoot.setAttribute('data-state', 'empty');
@@ -1966,7 +1974,7 @@ const preselectTeam = (() => {
     const codename = typeof data.codename === 'string' && data.codename ? data.codename : null;
     confirmHeadline.textContent = codename
       ? `Filed. You're on the record as “${codename}.”`
-      : "Schefter's got it.";
+      : `${personaSurname()}'s got it.`;
     confirmDetail.textContent = "In the marinade — he'll use it when the time is right. Nobody sees what you actually wrote.";
     confirmPanel.hidden = false;
 

@@ -18,7 +18,7 @@
  * happens when the page never emitted a brand map.
  *
  * The brand map is server-rendered once per page by
- * `src/components/FranchiseBandBrands.astro` and is already Throwback
+ * `src/components/shared/FranchiseBandBrands.astro` and is already Throwback
  * Week-resolved, so the band throws back with everything else and needs no
  * date logic of its own.
  *

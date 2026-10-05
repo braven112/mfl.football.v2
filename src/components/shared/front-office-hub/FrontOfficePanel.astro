@@ -29,13 +29,13 @@
  * declare / extend actions, and that is when client-side recomputation
  * comes back — see docs/plans/front-office-hub.md.
  */
-import ChartCard from '../../theleague/ChartCard.astro';
-import MetricCard from '../../theleague/MetricCard.astro';
-import FranchiseOptions from '../../theleague/FranchiseOptions.astro';
-import VeteranExtensionCandidates from '../../theleague/VeteranExtensionCandidates.astro';
-import FreeAgentNeedsCard from '../../theleague/FreeAgentNeedsCard.astro';
-import KeeperPlanner from '../../afl-fantasy/KeeperPlanner.astro';
-import AFLActionModal from '../../afl-fantasy/AFLActionModal.astro';
+import ChartCard from '../ChartCard.astro';
+import MetricCard from '../MetricCard.astro';
+import FranchiseOptions from '../FranchiseOptions.astro';
+import VeteranExtensionCandidates from '../VeteranExtensionCandidates.astro';
+import FreeAgentNeedsCard from '../FreeAgentNeedsCard.astro';
+import KeeperPlanner from '../keepers/KeeperPlanner.astro';
+import AFLActionModal from '../AFLActionModal.astro';
 import CapProjectionTable from './CapProjectionTable.astro';
 import ScenarioBar from './ScenarioBar.astro';
 import CutCandidatesCard from './CutCandidatesCard.astro';
@@ -43,7 +43,7 @@ import FrontOfficeActions from './FrontOfficeActions.astro';
 import DraftAssetChips from './DraftAssetChips.astro';
 import RosterAnalyticsPanel from './RosterAnalyticsPanel.astro';
 import NflCollegeStacks from './NflCollegeStacks.astro';
-import PlayerDetailsModal from '../../theleague/PlayerDetailsModal.astro';
+import PlayerDetailsModal from '../PlayerDetailsModal.astro';
 import WatchListBridge from '../WatchListBridge.astro';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { loginUrlFor } from '../../../utils/login-redirect';
@@ -207,7 +207,7 @@ const clientConfig = {
             : 'The keeper planner is private to each team owner.'}
         </p>
         {!signedIn && (
-          <p><a class="fo-private__cta" href={signInHref}>Sign in to {league.name} →</a></p>
+          <p><a class="cta cta--primary fo-private__cta" href={signInHref}>Sign in to {league.name} →</a></p>
         )}
       </div>
     </div>
@@ -429,7 +429,7 @@ const clientConfig = {
 
   .planner-section__title {
     margin: 0 0 0.75rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -473,7 +473,7 @@ const clientConfig = {
     border-radius: 0.75rem;
     padding: 2rem 1.5rem;
     text-align: center;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    box-shadow: var(--shadow-md);
     color: var(--content-text-muted, #6b7280);
   }
 
@@ -488,26 +488,12 @@ const clientConfig = {
   }
 
   .fo-private__cta {
-    display: inline-flex;
-    align-items: center;
     gap: 0.375rem;
     margin-top: 0.5rem;
     padding: 0.5rem 1rem;
-    background: var(--league-accent, #c41e3a);
-    color: #fff;
     font-weight: 600;
     font-size: 0.9375rem;
     border-radius: 8px;
-    text-decoration: none;
-  }
-
-  .fo-private__cta:hover {
-    filter: brightness(0.92);
-  }
-
-  .fo-private__cta:focus-visible {
-    outline: 2px solid var(--league-accent, #c41e3a);
-    outline-offset: 2px;
   }
 
   .planner-section__lede {

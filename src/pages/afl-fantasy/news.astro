@@ -38,7 +38,7 @@ const view = await resolveSchefterNewsView({
 });
 ---
 
-<TheLeagueLayout title="The Schefter Report" og={view.og}>
+<TheLeagueLayout title={view.labels.report} og={view.og}>
   <SchefterNewsPage
     view={view}
     isAuthenticated={!!authUser}

@@ -1,7 +1,7 @@
 ---
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import DraftNav from '../../../components/shared/draft-nav/DraftNav.astro';
-import DraftPredictorGrid from '../../../components/theleague/DraftPredictorGrid.astro';
+import DraftPredictorGrid from '../../../components/shared/DraftPredictorGrid.astro';
 import aflConfig from '../../../../data/afl-fantasy/afl.config.json';
 import { calculateAFLDraftOrder, parseConferenceChampions, parseNITResults, buildHeadToHeadFromRaw, isDraftOrderFinal } from '../../../utils/afl-draft-utils';
 import {
@@ -275,7 +275,7 @@ const nlOrder = draftOrders.find(order => order.conference === 'National League'
     padding: 2rem;
     background: var(--card-bg, #fff);
     border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-md);
   }
 
   :global(html.dark) .draft-predictor-header {
@@ -307,11 +307,11 @@ const nlOrder = draftOrders.find(order => order.conference === 'National League'
     display: inline-block;
     padding: var(--spacing-xs, 0.25rem) var(--spacing-sm, 0.5rem);
     border-radius: var(--radius-full, 9999px);
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: #fff;
+    color: var(--on-league-accent, #fff);
     background: var(--league-accent, #c41e3a);
     box-shadow: var(--shadow-sm, 0.5px 1px 1px rgba(0, 0, 0, 0.09));
   }
@@ -345,7 +345,7 @@ const nlOrder = draftOrders.find(order => order.conference === 'National League'
     text-decoration: none;
     color: var(--content-text-muted, #64748b);
     background: transparent;
-    transition: all 0.2s ease;
+    transition: all var(--transition-base);
     white-space: nowrap;
   }
 
@@ -356,7 +356,7 @@ const nlOrder = draftOrders.find(order => order.conference === 'National League'
 
   .conference-tab.active {
     background: var(--league-accent, #c41e3a);
-    color: #fff;
+    color: var(--on-league-accent, #fff);
     box-shadow: 0 2px 4px rgba(196, 30, 58, 0.2);
   }
 
@@ -445,7 +445,7 @@ const nlOrder = draftOrders.find(order => order.conference === 'National League'
       flex: 1;
       text-align: center;
       padding: 0.75rem 1rem;
-      font-size: 0.875rem;
+      font-size: var(--font-size-sm);
     }
 
     .draft-predictor-info {

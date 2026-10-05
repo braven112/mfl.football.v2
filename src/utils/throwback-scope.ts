@@ -20,10 +20,11 @@
  * of 0001–0016.
  */
 
-import { getLeagueBySlug, getLeagueById } from '../config/leagues';
+import { ALL_LEAGUES, getLeagueBySlug, getLeagueById } from '../config/leagues';
 import {
   DEFAULT_THROWBACK_ERA,
   THROWBACK_ASSET_CONFLICTS,
+  THROWBACK_ERA_GRANTS,
   THROWBACK_WEEKS,
 } from '../data/theleague/throwback-config';
 import {
@@ -34,6 +35,7 @@ import {
   AFL_THROWBACK_WEEKS_LIST,
 } from '../data/afl-fantasy/throwback-config';
 import type { FranchiseHistoryEntry } from './team-names';
+import { nflWeekFor, nflWeekStartInstant } from './nfl-week-starts.mjs';
 
 /** The buckets throwback data can live in. Add one per league that runs it. */
 export type ThrowbackScope = 'theleague' | 'afl';
@@ -57,6 +59,11 @@ export interface ThrowbackRules {
   defaults: Record<string, number | string>;
   /** Eras excluded from eligibility (art or name claimed elsewhere). */
   conflicts: { franchiseId: string; yearStart: number }[];
+  /**
+   * Eras lent to a franchise from another franchise's `history[]` — a
+   * commissioner exception. Resolved against the league's team list.
+   */
+  grants: { franchiseId: string; sourceFranchiseId: string; yearStart: number }[];
   /**
    * The Throwback Rebrand, when the league runs one: a franchise serving a
    * last-place rename wears a shame identity borrowed from another
@@ -88,6 +95,7 @@ const RULES: Record<ThrowbackScope, ThrowbackRules> = {
     weeks: THROWBACK_WEEKS,
     defaults: DEFAULT_THROWBACK_ERA,
     conflicts: THROWBACK_ASSET_CONFLICTS,
+    grants: THROWBACK_ERA_GRANTS,
     // TheLeague has no last-place rename, so nothing to impose.
     rebrand: null,
   },
@@ -95,6 +103,7 @@ const RULES: Record<ThrowbackScope, ThrowbackRules> = {
     weeks: AFL_THROWBACK_WEEKS_LIST,
     defaults: AFL_DEFAULT_THROWBACK_ERA,
     conflicts: AFL_THROWBACK_ASSET_CONFLICTS,
+    grants: [],
     rebrand: toRebrandRule(AFL_THROWBACK_REBRAND, AFL_THROWBACK_REBRAND_ERA),
   },
 };
@@ -175,6 +184,16 @@ export function strictThrowbackScopeForLeagueSlug(
   return SCOPE_BY_NAV_SLUG[navSlug] ?? null;
 }
 
+/**
+ * The registry league slug (`src/config/leagues-data.mjs`) a scope stands
+ * for — what `owners-registry.json` claims are keyed by. Null for a scope no
+ * registry league maps to.
+ */
+export function throwbackRegistryLeagueSlug(scope: ThrowbackScope): string | null {
+  const navSlug = Object.keys(SCOPE_BY_NAV_SLUG).find((n) => SCOPE_BY_NAV_SLUG[n] === scope);
+  return ALL_LEAGUES.find((l) => l.navSlug === navSlug)?.slug ?? null;
+}
+
 /** The era rules for a scope. */
 export function throwbackRules(scope: ThrowbackScope): ThrowbackRules {
   return RULES[scope] ?? RULES[DEFAULT_THROWBACK_SCOPE];
@@ -193,4 +212,24 @@ export function scopedThrowbackKey(franchiseId: string, scope: ThrowbackScope): 
   return scope === DEFAULT_THROWBACK_SCOPE
     ? `throwback:${franchiseId}`
     : `throwback:${scope}:${franchiseId}`;
+}
+
+/**
+ * True while this league's throwback week is being played: from the week's
+ * FIRST kickoff until the NFL moves on to the next week. Era picks lock for
+ * that window — once games are on, the scoreboard is the record, and letting
+ * an owner swap eras (or grab one another owner just released) mid-week would
+ * change a matchup's look while it is being played.
+ *
+ * Kickoff comes from `nfl-week-starts.mjs`, never a derivation: 2026 opened on
+ * a Wednesday.
+ */
+export function isThrowbackPickLocked(scope: ThrowbackScope, now: Date = new Date()): boolean {
+  // The NFL calendar is kept on the Pacific clock (see nfl-week-starts.mjs).
+  const year = Number(
+    new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', year: 'numeric' }).format(now),
+  );
+  const week = nflWeekFor(year, now);
+  if (!throwbackRules(scope).weeks.includes(week)) return false;
+  return now >= nflWeekStartInstant(year, week);
 }

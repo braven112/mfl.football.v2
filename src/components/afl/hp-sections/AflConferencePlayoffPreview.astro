@@ -19,8 +19,8 @@ import {
 } from '../../../utils/afl-conference';
 import { stripBadgeYear, namespaceBadgeIds } from '../../../utils/afl-badge';
 import { formatPoints } from '../../../utils/formatters';
-import ThemeImage from '../../ThemeImage.astro';
-import TeamIconCell from '../../TeamIconCell.astro';
+import ThemeImage from '../../shared/ThemeImage.astro';
+import TeamIconCell from '../../shared/TeamIconCell.astro';
 
 // Division-title badge art. Inlined rather than <img>-linked because the year
 // stamp has to come off (see below), which means editing the SVG — an <img>
@@ -170,11 +170,8 @@ const visible = rows.slice(0, 6);
           <p class="afl-conf__sub">Top {playoffSlots} clinch playoff seeds. Division winners take seeds 1–2.</p>
         </div>
       </div>
-      <a href="/afl-fantasy/standings?view=league" class="afl-conf__cta">
+      <a href="/afl-fantasy/standings?view=league" class="cta-link afl-conf__cta">
         Full bracket
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
-          <path d="M5 12h14M12 5l7 7-7 7"/>
-        </svg>
       </a>
     </div>
 
@@ -286,19 +283,8 @@ const visible = rows.slice(0, 6);
   }
 
   .afl-conf__cta {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--afl-accent);
-    text-decoration: none;
-    transition: gap 0.15s ease;
-    white-space: nowrap;
-  }
-
-  .afl-conf__cta:hover {
-    gap: 0.5rem;
+    --cta-link-ink: var(--afl-accent);
+    font-size: var(--font-size-xs);
   }
 
   .afl-conf__table {
@@ -308,7 +294,7 @@ const visible = rows.slice(0, 6);
   }
 
   .afl-conf__th {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -375,7 +361,7 @@ const visible = rows.slice(0, 6);
     border-radius: 999px;
     background: var(--color-gray-100, #f3f4f6);
     color: var(--color-gray-500, #6b7280);
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
   }
 
@@ -450,7 +436,7 @@ const visible = rows.slice(0, 6);
   .afl-conf__td--div {
     text-align: center;
     color: var(--color-gray-500, #6b7280);
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
   }
 
   .afl-conf__td--record,
@@ -513,7 +499,7 @@ const visible = rows.slice(0, 6);
     /* Shrink the table a touch and tighten cell padding so the auto-layout
        table fits inside the card down to ~320px without clipping. */
     .afl-conf__table {
-      font-size: 0.75rem;
+      font-size: var(--font-size-xs);
     }
 
     .afl-conf__th,

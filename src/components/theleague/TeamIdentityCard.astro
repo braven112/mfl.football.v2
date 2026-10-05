@@ -67,7 +67,7 @@ const { icon, name, division, label, class: className } = Astro.props;
   }
 
   .team-identity-card__label {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     color: var(--content-text-muted, #64748b);
     font-weight: 500;
     margin: 0;
@@ -84,7 +84,7 @@ const { icon, name, division, label, class: className } = Astro.props;
   }
 
   .team-identity-card__division {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     color: var(--content-text-muted, #64748b);
     margin: 0;
   }

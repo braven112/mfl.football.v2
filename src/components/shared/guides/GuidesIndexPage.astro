@@ -12,7 +12,7 @@
  * hydration for a list you can read in a glance.
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
-import Breadcrumbs from '../../theleague/Breadcrumbs.astro';
+import Breadcrumbs from '../Breadcrumbs.astro';
 import { spriteUrl } from '../../../utils/sprite-url';
 import { getVisibleGuides } from '../../../utils/guides';
 import { resolveDirectoryHref, resolveLeaguePath } from '../../../utils/nav-utils';
@@ -136,8 +136,8 @@ const formatUpdated = (date: string) =>
     background: var(--card-bg);
     text-decoration: none;
     transition:
-      border-color 0.15s ease,
-      transform 0.15s ease;
+      border-color var(--transition-fast),
+      transform var(--transition-fast);
   }
 
   .guide-card:hover {
@@ -152,8 +152,8 @@ const formatUpdated = (date: string) =>
     width: 2.25rem;
     height: 2.25rem;
     border-radius: var(--radius-md);
-    background: var(--color-primary, #1c497c);
-    color: #ffffff;
+    background: var(--color-primary-fill, var(--color-primary, #1c497c));
+    color: var(--on-color-primary, #ffffff);
   }
 
   .guide-card__body {
@@ -176,7 +176,7 @@ const formatUpdated = (date: string) =>
   }
 
   .guide-card__meta {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: var(--color-gray-500, #6b7280);

@@ -213,7 +213,7 @@ export default function RookieExtensionModal({
             color: var(--muted-text-color, #6b7280);
           }
           .rookie-modal__subtitle {
-            font-size: 0.75rem;
+            font-size: var(--font-size-xs);
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.05em;
@@ -224,7 +224,7 @@ export default function RookieExtensionModal({
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 0.875rem;
+            font-size: var(--font-size-sm);
             padding: 0.25rem 0;
           }
           .rookie-modal__row--highlight {
@@ -241,13 +241,13 @@ export default function RookieExtensionModal({
             display: flex;
             align-items: center;
             gap: 0.75rem;
-            font-size: 0.875rem;
+            font-size: var(--font-size-sm);
           }
           .rookie-modal__years-select select {
             padding: 0.375rem 0.625rem;
             border: 1px solid var(--primary-content-border-color, #e2e8f0);
             border-radius: 0.375rem;
-            font-size: 0.875rem;
+            font-size: var(--font-size-sm);
             background: var(--primary-content-bg-color, #fff);
           }
           .rookie-modal__formula {
@@ -258,7 +258,7 @@ export default function RookieExtensionModal({
             border: 1px solid var(--primary-content-border-color, #e2e8f0);
           }
           .rookie-modal__formula-label {
-            font-size: 0.6875rem;
+            font-size: var(--font-size-2xs);
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.05em;
@@ -275,7 +275,7 @@ export default function RookieExtensionModal({
             margin-top: 0.5rem;
           }
           .rookie-modal__cap-label {
-            font-size: 0.6875rem;
+            font-size: var(--font-size-2xs);
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.05em;
@@ -299,7 +299,7 @@ export default function RookieExtensionModal({
             min-width: 4rem;
           }
           .rookie-modal__cap-yr-label {
-            font-size: 0.625rem;
+            font-size: var(--font-size-3xs);
             font-weight: 600;
             color: var(--muted-text-color, #6b7280);
             text-transform: uppercase;
@@ -319,11 +319,11 @@ export default function RookieExtensionModal({
           .rookie-modal__btn {
             padding: 0.5rem 1rem;
             border-radius: 0.5rem;
-            font-size: 0.875rem;
+            font-size: var(--font-size-sm);
             font-weight: 600;
             cursor: pointer;
             border: 1px solid transparent;
-            transition: all 0.15s ease;
+            transition: all var(--transition-fast);
           }
           .rookie-modal__btn--cancel {
             background: var(--primary-content-bg-color, #fff);

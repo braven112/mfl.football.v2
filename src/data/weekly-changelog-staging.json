@@ -1,162 +1,369 @@
 {
-  "weekOf": "2026-09-28",
+  "weekOf": "2026-10-05",
   "changes": [
     {
-      "date": "2026-09-23",
+      "date": "2026-09-30",
+      "type": "bug-fix",
+      "summary": "Waiver claims work again during the waiver window — every claim was being refused as \"player locked\", and <a href=\"/players\">Free Agents</a> offers Add on every free agent again.",
+      "impact": "user",
+      "area": "free-agents",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-29",
+      "type": "bug-fix",
+      "summary": "Free Agents no longer offers a claim on a player you're viewing in the other conference — claims always file into your own.",
+      "impact": "user",
+      "area": "free-agents",
+      "league": "afl"
+    },
+    {
+      "date": "2026-09-29",
       "type": "enhancement",
-      "summary": "<a href=\"/rosters\">Rosters</a> now open in your team's colours, with your last result, next game and season so far — every dot opens that week on the <a href=\"/schedule\">schedule</a>.",
+      "summary": "The homepage hero now runs the same weekly rotation as the other leagues: game day, the Tuesday recap, the Pecking Order, waivers and The Gauntlet, cast with your own players.",
+      "impact": "user",
+      "area": "homepage",
+      "league": "archies"
+    },
+    {
+      "date": "2026-09-29",
+      "type": "enhancement",
+      "summary": "<a href=\"/rosters\">Rosters</a> are now the full roster page: this week's matchup, opponent rank, season points and projection for every player, plus Release, IR and trade-block actions on your own team.",
       "impact": "user",
       "area": "rosters",
-      "league": "both",
+      "league": "archies"
+    },
+    {
+      "date": "2026-09-29",
+      "type": "bug-fix",
+      "summary": "The ⋮ player menu on <a href=\"/rosters\">Rosters</a> opens again after you switch to another team from the crest row, instead of going dead until you reload.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "afl"
+    },
+    {
+      "date": "2026-09-29",
+      "type": "new-page",
+      "summary": "<a href=\"/live-scoring\">Live Scoring</a> is here: both of your games first, then every matchup by division, with win odds, box scores and a scoring ticker.",
+      "impact": "user",
+      "area": "live-scoring",
+      "league": "archies",
       "featured": true,
-      "headline": "Rosters open in your team's colours",
-      "lede": "The roster page leads with your club now — its colour, its crest, your record, rank and points — then last week's result, this week's game and every week of the season as a row you can click straight into the schedule. One header, both leagues.",
-      "image": "roster-header.webp",
-      "imageAlt": "TheLeague's roster page with the new header: the club nameplate in its own colour, last result and next game, the season rail, and every club's crest in a row below"
+      "headline": "Live Scoring comes to Archie's",
+      "lede": "Your two games up top, then every matchup in all nine divisions — live win odds, box scores and a scoring ticker, all on one page.",
+      "image": "archies-live-scoring.webp",
+      "imageAlt": "Archie's Live Scoring page: division filter pills above a featured matchup card with projections and a win-odds bar, and smaller matchup cards below."
     },
     {
-      "date": "2026-09-24",
+      "date": "2026-09-29",
+      "type": "enhancement",
+      "summary": "Standings now has three tabs: Division, MAD (the MAD Power 99 playoff race, 30 teams in) and All-Play, plus PA, streak and division records.",
+      "impact": "user",
+      "area": "standings",
+      "league": "archies"
+    },
+    {
+      "date": "2026-09-29",
+      "type": "enhancement",
+      "summary": "Archie's has a new look: black header and footer, the wordmark's sky blue as the accent, and sharper text contrast in light and dark.",
+      "impact": "user",
+      "area": "design-system",
+      "league": "archies"
+    },
+    {
+      "date": "2026-09-29",
+      "type": "new-page",
+      "summary": "New: the <a href=\"/front-office/trade-builder\">Trade Builder</a>. Pick players from your roster and a division rival's, check the value balance, and send the offer, or start one from the ⋮ menu on Rosters.",
+      "impact": "user",
+      "area": "trade-builder",
+      "league": "archies"
+    },
+    {
+      "date": "2026-10-01",
       "type": "bug-fix",
-      "summary": "The <a href=\"/rosters\">roster</a> header's cap space now includes dead money and updates as you simulate cuts, trades and extensions.",
+      "summary": "Maverick's 2016–2024 seasons show their original Mel Gibson art again instead of today's logo, and it's now Maverick's default Throwback Week look.",
+      "impact": "user",
+      "area": "franchises",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-10-01",
+      "type": "bug-fix",
+      "summary": "The player card's Season Results table is readable again — upcoming weeks and byes no longer vanish in dark mode, and it fits a phone without scrolling sideways.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "both"
+    },
+    {
+      "date": "2026-10-01",
+      "type": "bug-fix",
+      "summary": "Declaring a contract works again — it was failing with \"Cannot read properties of undefined (reading 'cancelled')\" and never filed.",
       "impact": "user",
       "area": "rosters",
       "league": "theleague"
     },
     {
-      "date": "2026-09-24",
-      "type": "enhancement",
-      "summary": "<a href=\"/players\">Free Agents</a> now shows a lock next to recently dropped players MFL won't let you add yet, and claiming one explains why instead of failing with HTTP 502.",
+      "date": "2026-10-01",
+      "type": "bug-fix",
+      "summary": "The rest of the player card's faded labels (stats, details, section titles, \"Rostered by\") are now easy to read in both light and dark mode.",
       "impact": "user",
-      "area": "free-agents",
+      "area": "rosters",
       "league": "both"
     },
     {
-      "date": "2026-09-24",
+      "date": "2026-10-01",
       "type": "bug-fix",
-      "summary": "When a waiver claim or first-come add fails, the claim window now shows MFL's reason and a link to its add/drop page instead of a bare HTTP error.",
+      "summary": "On a phone, Coach view roster cards keep the matchup and the stats line on one line each — a 10:00 kickoff or a two-digit rank no longer bumps the rank or the average onto a line of its own.",
       "impact": "user",
-      "area": "free-agents",
+      "area": "rosters",
       "league": "both"
     },
     {
-      "date": "2026-09-25",
-      "type": "enhancement",
-      "summary": "Free Agents on your phone is now a clean list — player, points and projection — and tapping anywhere on a row opens his full card, with Claim/Bid and Watch inside.",
-      "impact": "user",
-      "area": "free-agents",
-      "league": "both"
-    },
-    {
-      "date": "2026-09-25",
+      "date": "2026-10-02",
       "type": "bug-fix",
-      "summary": "TheLeague's Free Agents PPG column is now points per NFL game played, so free agents finally show a rate — and it matches the Per Game on his player card.",
-      "impact": "user",
-      "area": "free-agents",
-      "league": "theleague"
-    },
-    {
-      "date": "2026-09-25",
-      "type": "bug-fix",
-      "summary": "Set Lineup and Rosters now mark the right NFL bye weeks — they were reading last season's calendar, and Washington and Jacksonville byes never showed at all.",
-      "impact": "user",
-      "area": "lineups",
-      "league": "both"
-    },
-    {
-      "date": "2026-09-25",
-      "type": "bug-fix",
-      "summary": "The Installation Guide link on the CSS Customization page now opens the new MFL template install guide instead of a page that didn't exist.",
-      "impact": "admin",
-      "area": "design-system",
-      "league": "theleague"
-    },
-    {
-      "date": "2026-09-25",
-      "type": "bug-fix",
-      "summary": "Live Scoring's win-probability bar now reads in the same order as the scoreboard: the team on the left gets the left share of the bar, in its own colour.",
+      "summary": "Live Scoring: Throwback teams now wear their era colours, and when two teams share a colour your own team keeps it.",
       "impact": "user",
       "area": "live-scoring",
       "league": "both"
     },
     {
-      "date": "2026-09-25",
-      "type": "enhancement",
-      "summary": "Tap a player on Rosters for a new Salary tab: every contract year, what a cut would cost, his tag and extension prices, and a one-tap Simulate cut you can undo right there.",
+      "date": "2026-10-02",
+      "type": "style-tweak",
+      "summary": "The Owners' Poll has its own page: vote, then see the full owners' rankings. Claude's results post links there, and Pecking Order no longer mixes in poll results.",
       "impact": "user",
-      "area": "rosters",
-      "league": "theleague"
-    },
-    {
-      "date": "2026-09-25",
-      "type": "enhancement",
-      "summary": "Rosters on your phone are now cards — salary and contract in GM, matchup and projection in Coach — with a cap bar, sort chips for the tab you're on, and a bar that keeps simulated moves in view.",
-      "impact": "user",
-      "area": "rosters",
-      "league": "theleague"
-    },
-    {
-      "date": "2026-09-26",
-      "type": "enhancement",
-      "summary": "On phones, the Rosters header tucks last week's result and the next game behind a Last & next game toggle beside the Full schedule link.",
-      "impact": "user",
-      "area": "rosters",
+      "area": "schefter",
       "league": "both"
     },
     {
-      "date": "2026-09-26",
+      "date": "2026-10-02",
+      "type": "bug-fix",
+      "summary": "Prime Video games now show the new Thursday Night Football shield (white in dark mode); on Set Lineup, square network logos like NBC, ABC and FOX draw a little larger.",
+      "impact": "user",
+      "area": "live-scoring",
+      "league": "both"
+    },
+    {
+      "date": "2026-10-02",
+      "type": "new-feature",
+      "summary": "Tap any player in a Live Scoring matchup to see every stat and the points it earned under your league's scoring.",
+      "impact": "user",
+      "area": "live-scoring",
+      "league": "theleague",
+      "featured": true,
+      "headline": "See exactly where every point came from",
+      "lede": "Live Scoring now breaks each player's score down stat by stat. Tap a player in any matchup and a sheet shows his passing, rushing, receiving and kicking line with the points each one earned under your league's own scoring rules, adding up to the official total.",
+      "image": "live-stat-sheet.webp",
+      "imageAlt": "A Live Scoring matchup with Josh Allen's stat sheet open, listing passing yards, interceptions, rushing yards, rushing touchdowns and fumbles with the points for each and a 16.46 total."
+    },
+    {
+      "date": "2026-10-02",
+      "type": "new-feature",
+      "summary": "Tap any player in a Live Scoring matchup to see every stat and the points it earned under your league's scoring.",
+      "impact": "user",
+      "area": "live-scoring",
+      "league": "afl",
+      "featured": true,
+      "headline": "See exactly where every point came from",
+      "lede": "Live Scoring now breaks each player's score down stat by stat. Tap a player in any matchup and a sheet shows his passing, rushing, receiving and kicking line with the points each one earned under your league's own scoring rules, adding up to the official total.",
+      "image": "live-stat-sheet.webp",
+      "imageAlt": "A Live Scoring matchup with Josh Allen's stat sheet open, listing passing yards, interceptions, rushing yards, rushing touchdowns and fumbles with the points for each and a 16.46 total."
+    },
+    {
+      "date": "2026-10-02",
       "type": "enhancement",
-      "summary": "Positions now wear the same colors everywhere: QB red, RB blue, WR green, TE purple, PK orange, DEF cyan across rosters, charts and the draft room.",
+      "summary": "In Live Scoring, tap any player to see every stat and the points it earned under your league's scoring.",
+      "impact": "user",
+      "area": "live-scoring",
+      "league": "archies"
+    },
+    {
+      "date": "2026-10-02",
+      "type": "enhancement",
+      "summary": "In Live Scoring, tap any player to see every stat behind his score.",
+      "impact": "user",
+      "area": "live-scoring",
+      "league": "bb1",
+      "featured": true,
+      "headline": "Every stat behind every score",
+      "lede": "Live Scoring now opens a stat sheet for any player you tap: his full line for the week, stat by stat, under the official score.",
+      "image": "live-stat-sheet.webp",
+      "imageAlt": "A Live Scoring matchup with a player's stat sheet open, listing his passing, rushing and fumble stats above the official total."
+    },
+    {
+      "date": "2026-10-02",
+      "type": "style-tweak",
+      "summary": "Buttons and \"see more\" links now look and behave the same on every page, and no longer turn red and underlined when you hover them.",
       "impact": "user",
       "area": "design-system",
       "league": "both"
     },
     {
-      "date": "2026-09-26",
+      "date": "2026-10-02",
       "type": "bug-fix",
-      "summary": "AFL rosters now show game weather and the over/under, from the same source TheLeague uses, so one game reads the same in both leagues.",
+      "summary": "The draft room's countdown banner is readable in every state again, light and dark — its white text no longer sits on pale amber, green or grey.",
       "impact": "user",
-      "area": "rosters",
+      "area": "draft",
+      "league": "both"
+    },
+    {
+      "date": "2026-10-02",
+      "type": "bug-fix",
+      "summary": "The draft room's countdown banner is readable in every state again, light and dark — its white text no longer sits on pale amber, green or grey.",
+      "impact": "user",
+      "area": "draft",
+      "league": "bb1"
+    },
+    {
+      "date": "2026-10-02",
+      "type": "style-tweak",
+      "summary": "Buttons now wear the AFL red instead of the shared blue, in light and dark mode.",
+      "impact": "user",
+      "area": "design-system",
       "league": "afl"
     },
     {
-      "date": "2026-09-26",
-      "type": "enhancement",
-      "summary": "AFL rosters on your phone are now cards like TheLeague's: kickoff, opponent and rank, then weather, spread, O/U and last-3, with the projection up top.",
+      "date": "2026-10-02",
+      "type": "style-tweak",
+      "summary": "Buttons now wear the Best Ball emerald instead of the shared blue, in light and dark mode.",
       "impact": "user",
-      "area": "rosters",
+      "area": "design-system",
+      "league": "bb1"
+    },
+    {
+      "date": "2026-10-02",
+      "type": "bug-fix",
+      "summary": "In dark mode, blue pills, tags and highlighted tabs are a deeper blue, so their white text is easy to read.",
+      "impact": "user",
+      "area": "design-system",
       "league": "afl"
     },
     {
-      "date": "2026-09-26",
-      "type": "enhancement",
-      "summary": "Tap an AFL roster player for Summary and Game log tabs, this week's matchup, and your trade block, IR, trade and cut options.",
-      "impact": "user",
-      "area": "rosters",
-      "league": "afl"
-    },
-    {
-      "date": "2026-09-26",
-      "type": "enhancement",
-      "summary": "Simulate a cut, trade, tag or extension on any team's player from their player card, not just your own; Submit still files only your own team's tags and extensions.",
-      "impact": "user",
-      "area": "rosters",
-      "league": "theleague"
-    },
-    {
-      "date": "2026-09-26",
+      "date": "2026-10-02",
       "type": "bug-fix",
-      "summary": "A contract's total remaining now includes each year's 10% raise, matching the salary table, instead of this year's salary times the years left.",
+      "summary": "In dark mode, sky-blue pills, tags and highlighted tabs now carry black text instead of hard-to-read white.",
       "impact": "user",
-      "area": "rosters",
-      "league": "theleague"
+      "area": "design-system",
+      "league": "archies"
     },
     {
-      "date": "2026-09-26",
+      "date": "2026-10-03",
+      "type": "style-tweak",
+      "summary": "Homepage heroes now wear Archie's black and sky blue instead of navy.",
+      "impact": "user",
+      "area": "design-system",
+      "league": "archies"
+    },
+    {
+      "date": "2026-10-03",
+      "type": "style-tweak",
+      "summary": "Heroes and buttons now wear Best Ball's emerald, with text that stays readable in dark mode.",
+      "impact": "user",
+      "area": "design-system",
+      "league": "bb1"
+    },
+    {
+      "date": "2026-10-03",
       "type": "bug-fix",
-      "summary": "Player cards open from the keyboard (Tab to a name, press Enter), keep focus inside while open, and return you to the player's name when closed.",
+      "summary": "In dark mode, buttons and tags in the league colour now use dark text where white was hard to read.",
       "impact": "user",
       "area": "design-system",
       "league": "both"
+    },
+    {
+      "date": "2026-10-03",
+      "type": "bug-fix",
+      "summary": "The Set Lineup button turns a deeper green once your lineup is saved, so its text is easy to read.",
+      "impact": "user",
+      "area": "design-system",
+      "league": "both"
+    },
+    {
+      "date": "2026-10-03",
+      "type": "enhancement",
+      "summary": "The homepage now shows the MAD Power 99 playoff race: all 30 qualifiers as crest tiles by tier, with a link to the <a href=\"/standings?view=league\">full standings</a>.",
+      "impact": "user",
+      "area": "homepage",
+      "league": "archies"
+    },
+    {
+      "date": "2026-10-04",
+      "type": "enhancement",
+      "summary": "Team crests that were hard to see in dark mode now get a thin white outline, so every team stays easy to spot.",
+      "impact": "user",
+      "area": "design-system",
+      "league": "archies"
+    },
+    {
+      "date": "2026-10-04",
+      "type": "bug-fix",
+      "summary": "Shared Schefter posts now show their preview image with the league logo when posted to chat or social apps.",
+      "impact": "user",
+      "area": "schefter",
+      "league": "archies"
+    },
+    {
+      "date": "2026-10-04",
+      "type": "bug-fix",
+      "summary": "The Pecking Order now shows your own league's team names and logos.",
+      "impact": "user",
+      "area": "standings",
+      "league": "bb1"
+    },
+    {
+      "date": "2026-10-04",
+      "type": "bug-fix",
+      "summary": "Owners' Poll posts in League News now open the right page instead of a not-found page when you browse the league at mfl.football.",
+      "impact": "user",
+      "area": "schefter",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-10-04",
+      "type": "bug-fix",
+      "summary": "The Read the Rulebook button on Ask Roger is easier to read in dark mode.",
+      "impact": "user",
+      "area": "rules",
+      "league": "afl"
+    },
+    {
+      "date": "2026-10-04",
+      "type": "bug-fix",
+      "summary": "The calendar and homepage no longer show playoff and championship weeks before the league's playoffs are set up on MFL.",
+      "impact": "user",
+      "area": "calendar",
+      "league": "archies"
+    },
+    {
+      "date": "2026-10-04",
+      "type": "new-page",
+      "summary": "New: <a href=\"/franchises\">Franchise pages</a> — every club's all-time record, weekly highlights, rivals and trades across 2021–2026.",
+      "impact": "user",
+      "area": "franchises",
+      "league": "archies"
+    },
+    {
+      "date": "2026-10-04",
+      "type": "bug-fix",
+      "summary": "Franchise and rivalry pages no longer call the season in progress an incomplete archive.",
+      "impact": "user",
+      "area": "franchises",
+      "league": "afl"
+    },
+    {
+      "date": "2026-10-04",
+      "type": "enhancement",
+      "summary": "When Throwback Week starts, a popup shows the crest, name and years you're playing as, with a link to pick a different era until the first kickoff.",
+      "impact": "user",
+      "area": "franchises",
+      "league": "both"
+    },
+    {
+      "date": "2026-10-05",
+      "type": "bug-fix",
+      "summary": "The Roster link on your homepage team card opens your own roster again.",
+      "impact": "user",
+      "area": "homepage",
+      "league": "archies"
     }
   ]
 }

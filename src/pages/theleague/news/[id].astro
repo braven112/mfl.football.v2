@@ -9,10 +9,13 @@
  */
 
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
-import Breadcrumbs from '../../../components/theleague/Breadcrumbs.astro';
+import Breadcrumbs from '../../../components/shared/Breadcrumbs.astro';
 import SchefterReactionBar from '../../../components/shared/SchefterReactionBar.tsx';
 import { formatRelativeTime } from '../../../utils/schefter-feed';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { getAuthor, getAuthorAvatar } from '../../../types/schefter';
+import { getLeaguePersona, postByline } from '../../../utils/persona-server';
+import { personaLabels } from '../../../utils/persona.mjs';
 import feedData from '../../../data/theleague/schefter-feed.json';
 import type { SchefterFeed, SchefterPost, AuctionGrade } from '../../../types/schefter';
 import '../../../styles/schefter-feed.css';
@@ -60,6 +63,10 @@ if (!post) {
 if (!post) {
   return Astro.redirect('/theleague/news');
 }
+// Masthead and byline follow the league's persona (src/utils/persona.mjs).
+const labels = personaLabels(await getLeaguePersona('theleague'));
+const byAuthor = getAuthor(post.authorId);
+const byline = await postByline({ league: 'theleague' }, byAuthor, getAuthorAvatar(byAuthor));
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 const imagePath = post.image ? `/assets/schefter/${post.image}` : null;
@@ -79,12 +86,12 @@ function gradeColor(grade: string): string {
 }
 ---
 
-<TheLeagueLayout title={`${post.headline} — The Schefter Report`}>
+<TheLeagueLayout title={`${post.headline} — ${labels.report}`}>
   <div class="sf-article">
 
     <Breadcrumbs items={[
       { label: 'The League', href: '/theleague' },
-      { label: 'The Schefter Report', href: '/theleague/news' },
+      { label: labels.report, href: '/theleague/news' },
       { label: post.headline },
     ]} />
 
@@ -113,10 +120,10 @@ function gradeColor(grade: string): string {
 
         <!-- Author row -->
         <div class="sf-article__author">
-          <img class="sf-article__author-avatar" src="/assets/claude-schefter-avatar.webp" alt="" aria-hidden="true" width="32" height="32" />
+          <img class="sf-article__author-avatar" src={byline.avatar} alt="" aria-hidden="true" width="32" height="32" />
           <div>
-            <span class="sf-article__author-name">Claude Schefter</span>
-            <span class="sf-article__author-handle">@schefter</span>
+            <span class="sf-article__author-name">{byline.name}</span>
+            <span class="sf-article__author-handle">{byline.handle}</span>
           </div>
         </div>
       </div>
@@ -217,7 +224,7 @@ function gradeColor(grade: string): string {
       <!-- Back to feed -->
       <div class="sf-article__footer">
         <a href={r('/theleague/news')} class="sf-article__footer-link">
-          ← More from The Schefter Report
+          ← More from {labels.report}
         </a>
       </div>
     </div>
@@ -266,7 +273,7 @@ function gradeColor(grade: string): string {
     border-radius: 999px;
     background: color-mix(in srgb, var(--color-secondary, #2e8743) 12%, transparent);
     color: var(--color-secondary, #2e8743);
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -308,7 +315,7 @@ function gradeColor(grade: string): string {
   }
 
   .sf-article__author-name {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 700;
     color: var(--sf-text-primary, #0f1419);
   }
@@ -437,7 +444,7 @@ function gradeColor(grade: string): string {
 
   .sf-grade-card__body {
     padding: 0.625rem 1rem;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     line-height: 1.55;
     color: var(--sf-text-body, #1f2937);
   }
@@ -471,14 +478,14 @@ function gradeColor(grade: string): string {
   }
 
   .sf-grade-card__stat-value {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     color: var(--sf-text-primary, #0f1419);
   }
 
   .sf-grade-card__stat-label {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -491,7 +498,7 @@ function gradeColor(grade: string): string {
 
   .sf-grade-card__pickups-title {
     display: block;
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -516,7 +523,7 @@ function gradeColor(grade: string): string {
   .sf-grade-card__pickup-pos {
     flex-shrink: 0;
     width: 2rem;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     text-transform: uppercase;
     color: var(--color-gray-400, #9ca3af);
@@ -538,7 +545,7 @@ function gradeColor(grade: string): string {
 
   .sf-grade-card__holes {
     padding: 0.5rem 1rem 0.75rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     color: var(--color-warning, #d97706);
     border-top: 1px solid var(--sf-border, #e5e7eb);

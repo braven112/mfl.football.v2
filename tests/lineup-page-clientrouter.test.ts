@@ -19,14 +19,13 @@ import path from 'node:path';
 import { stripComments } from './helpers/js-source';
 
 /**
- * [label, file, the init's own-page gate]. TheLeague's names its league; the
- * AFL's is the AFL-FAMILY page component (shared with the custom-site demo's
- * keeper slot), whose one controller finds its own marker first and bails on
- * that — see tests/cross-league-init-gate.test.ts for why both are safe.
+ * [label, file, the init's own-page gate]. Every league renders ONE shared
+ * page component, whose one controller finds its own marker first and bails
+ * on that. Until Oct 2026 TheLeague carried a forked copy with its own
+ * controller; see the last describe below for what keeps it from coming back.
  */
 const PAGES = [
-  ['TheLeague', 'src/pages/theleague/lineup.astro', `if (!document.querySelector('.lineup-page[data-league="theleague"]')) return;`],
-  ['the AFL', 'src/components/afl-family/LineupPage.astro', `if (!pageRoot) return;`],
+  ['the shared', 'src/components/shared/lineup/LineupPage.astro', `if (!pageRoot) return;`],
 ] as const;
 
 /** The whole page file, markup and styles included. */
@@ -158,24 +157,27 @@ describe.each(PAGES)('%s lineup page survives an in-site navigation', (_league, 
 
 });
 
-describe('the two lineup pages stay siblings', () => {
-  it('applies the identical ClientRouter shape to both', () => {
-    // These pages are near-line-identical (docs/claude/rules/lineups.md); a fix
-    // that lands in one and not the other is how they drifted before.
-    //
-    // The league slug is the one thing that is SUPPOSED to differ — the whole
-    // point of the cross-league gate — so it is normalised out before the
-    // comparison. Everything else still has to match line for line.
-    const shapeOf = (s: string) =>
-      s
-        .split('\n')
-        .filter((l) =>
-          /init\(\)|astro:page-load|onDeviceMotion|onMotionPermissionClick|stopRankingsWatch|data-league="[^"]+"\]'\)\) return|if \(!pageRoot\) return;|getElementById\('lineup-slots'\)\) return/.test(l),
-        )
-        // The own-page gate is SUPPOSED to differ in form (see PAGES); it is
-        // compared by position, not by text.
-        .map((l) => (PAGES.some(([, , g]) => l.includes(g)) ? '<own-page gate>' : l));
-    const [a, b] = PAGES.map(([, file]) => controllerScript(file));
-    expect(shapeOf(a)).toEqual(shapeOf(b));
+describe('every league renders the ONE lineup page', () => {
+  // The pages used to be two near-identical forks whose controllers drifted —
+  // the ClientRouter fix above had to be landed twice and was compared line by
+  // line here. Now every league's route is a thin wrapper over the shared
+  // component, so a fix lands once. This keeps it that way: a route that grows
+  // its own body (or stops rendering the component) is a fork coming back.
+  const routes = fs
+    .readdirSync(path.join(process.cwd(), 'src/pages'), { withFileTypes: true })
+    .filter((d) => d.isDirectory() && d.name !== 'api')
+    .map((d) => `src/pages/${d.name}/lineup.astro`)
+    .filter((f) => fs.existsSync(path.join(process.cwd(), f)));
+
+  it('finds the league routes', () => {
+    expect(routes).toContain('src/pages/theleague/lineup.astro');
+    expect(routes).toContain('src/pages/afl-fantasy/lineup.astro');
+  });
+
+  it.each(routes)('%s is a thin wrapper over the shared component', (route) => {
+    const src = pageSource(route);
+    expect(src, `${route} must render the shared lineup page`).toContain("components/shared/lineup/LineupPage.astro'");
+    expect(src, `${route} must not carry its own controller`).not.toContain('<script');
+    expect(src.split('\n').length, `${route} has grown a body — put it in the shared component`).toBeLessThanOrEqual(80);
   });
 });

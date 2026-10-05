@@ -29,7 +29,7 @@ const ROOT = process.cwd();
  * refactor fixed (wrong host fallback, id-based ternaries) was one of these
  * four literals, so they stay strict.
  */
-const ID_HOST_LITERALS = ['13522', '19621', '37610', 'www49.myfantasyleague', 'www44.myfantasyleague', 'www45.myfantasyleague'];
+const ID_HOST_LITERALS = ['13522', '19621', '37610', '10105', 'www49.myfantasyleague', 'www44.myfantasyleague', 'www45.myfantasyleague', 'www48.myfantasyleague'];
 
 /**
  * League data-directory literals. Checked only in src/ + scripts/ (not
@@ -72,16 +72,10 @@ const REGISTRY_FILE = 'src/config/leagues-data.mjs';
  */
 const ALLOWLIST: Array<{ file: string; literals: string[]; reason: string }> = [
   {
-    file: '.github/workflows/roster-sync.yml',
-    literals: ['13522', '19621'],
-    reason:
-      "fetch-mfl-feeds.mjs requires a non-empty MFL_LEAGUE_ID with no registry fallback (unlike apply-pending-contracts.mjs / sync-draft-pick-contracts.mjs, which do fall back to DEFAULT_LEAGUE_ID). Workflow YAML can't import src/config/leagues-data.mjs, so literal ids are the one documented exception here — theleague's ('13522') via vars.MFL_LEAGUE_ID override, AFL's ('19621') bare in the per-league bash array — kept in sync with LEAGUES.*.id by convention (see inline workflow comment).",
-  },
-  {
     file: '.github/workflows/schefter-trade-speculation.yml',
     literals: ['13522'],
     reason:
-      "fetch-trade-bait.mjs requires a non-empty MFL_LEAGUE_ID with no registry fallback, same reasoning as roster-sync.yml above.",
+      "fetch-trade-bait.mjs requires a non-empty MFL_LEAGUE_ID with no registry fallback, and workflow YAML cannot import src/config/leagues-data.mjs (roster-sync.yml, the other such job, now reads ids through scripts/league-jobs.mjs).",
   },
   {
     file: 'scripts/backfill-afl-championship-history.mjs',
@@ -94,12 +88,6 @@ const ALLOWLIST: Array<{ file: string; literals: string[]; reason: string }> = [
     literals: ['data/theleague'],
     reason:
       "the 'AI Insights Corpus' dev-notes page — its body is prose documentation of engineering learnings for readers, including illustrative file-path examples in <code> tags. Not executable business logic.",
-  },
-  {
-    file: 'src/utils/schefter-og.ts',
-    literals: ['data/theleague', 'data/afl-fantasy'],
-    reason:
-      "FEED_PATHS maps league slug to its committed schefter-feed.json location, which is asymmetric — theleague's bundled copy lives under src/data/theleague/ (for static import elsewhere) while afl-fantasy's lives at the data/afl-fantasy/ root — so it isn't derivable from the single dataPath registry field. Not caught by a nearby call-site marker since it's a plain object literal, not a function argument.",
   },
 ];
 
@@ -381,7 +369,9 @@ function stripAstroComments(content: string): string {
     const closeIdx = content.indexOf('\n---', 3);
     if (closeIdx !== -1) regions.push([0, closeIdx + 4]);
   }
-  const scriptRe = /<script[^>]*>[\s\S]*?<\/script>/g;
+  // The close tag tolerates whitespace/attributes (`</script >`), as a browser
+  // does (CodeQL js/bad-tag-filter).
+  const scriptRe = /<script\b[^>]*>[\s\S]*?<\/script\b[^>]*>/gi;
   let m: RegExpExecArray | null;
   while ((m = scriptRe.exec(content))) {
     regions.push([m.index, m.index + m[0].length]);

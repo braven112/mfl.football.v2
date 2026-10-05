@@ -1,0 +1,130 @@
+---
+/**
+ * "My team" at a glance for a package league's homepage: division place,
+ * record, points, roster count, last and next week. Signed out (or not an
+ * owner in this league), it invites a sign-in instead — the homepage never
+ * picks a team for a stranger (docs/claude/rules/preferred-team.md).
+ *
+ * Semantic tokens only, so it follows the league's palette.
+ */
+import type { TeamSnapshot } from '../../../utils/package-league-home';
+import { gameResultLine } from '../../../utils/package-league-home';
+import type { PackageTeam } from '../../../utils/package-league';
+
+interface Props {
+  snapshot: TeamSnapshot | null;
+  teams: Record<string, PackageTeam>;
+  teamHref: (franchiseId: string) => string;
+  rosterHref: string;
+  standingsHref: string;
+  signInHref: string;
+  isAuthenticated: boolean;
+  /** MFL `rosterSize` from the league feed, when known. */
+  rosterSize: number | null;
+}
+
+const { snapshot, teams, teamHref, rosterHref, standingsHref, signInHref, isAuthenticated, rosterSize } = Astro.props;
+const name = (id: string) => teams[id]?.name ?? `Team ${id}`;
+const ordinal = (n: number) => {
+  const s = ['th', 'st', 'nd', 'rd'];
+  const v = n % 100;
+  return `${n}${s[(v - 20) % 10] ?? s[v] ?? s[0]}`;
+};
+const team = snapshot ? teams[snapshot.franchiseId] : null;
+---
+
+<section class="pkg-snap" aria-labelledby="pkg-snap-title">
+  {snapshot && team ? (
+    <>
+      <header class="pkg-snap__head">
+        {team.icon && <img src={team.icon} alt="" width="56" height="56" class="pkg-snap__icon" />}
+        <div>
+          <h2 id="pkg-snap-title" class="pkg-snap__name"><a href={teamHref(snapshot.franchiseId)}>{team.name}</a></h2>
+          <p class="pkg-snap__div">
+            {ordinal(snapshot.row.place)} of {snapshot.divisionSize} · {snapshot.division.name}
+          </p>
+        </div>
+      </header>
+      <dl class="pkg-snap__stats">
+        <div><dt>Record</dt><dd>{snapshot.row.record}</dd></div>
+        {snapshot.row.victoryPoints != null && <div><dt>VP</dt><dd>{snapshot.row.victoryPoints}</dd></div>}
+        <div><dt>Points for</dt><dd>{snapshot.row.pointsFor.toFixed(2)}</dd></div>
+        {snapshot.rosterCount != null && (
+          <div><dt>Roster</dt><dd>{snapshot.rosterCount}{rosterSize ? `/${rosterSize}` : ''}</dd></div>
+        )}
+      </dl>
+      <ul class="pkg-snap__weeks">
+        {snapshot.games.last && (
+          <li>
+            <span class="pkg-snap__wk">Week {snapshot.games.last.week}</span>
+            {snapshot.games.last.games.map((g) => `${gameResultLine(g)} vs ${name(g.opponentId)}`).join(' · ')}
+          </li>
+        )}
+        {snapshot.games.next && (
+          <li>
+            <span class="pkg-snap__wk">Week {snapshot.games.next.week}</span>
+            {snapshot.games.next.games.map((g) => `${g.isHome ? 'vs' : '@'} ${name(g.opponentId)}`).join(' · ')}
+          </li>
+        )}
+      </ul>
+      <div class="pkg-snap__links">
+        <a href={rosterHref}>Roster →</a>
+        <a href={standingsHref}>Standings →</a>
+      </div>
+    </>
+  ) : (
+    <>
+      <h2 id="pkg-snap-title" class="pkg-snap__name">Your team</h2>
+      <p class="pkg-snap__empty">
+        {isAuthenticated
+          ? 'This account is not an owner in this league.'
+          : 'Sign in with your MFL account to see your record, division place and this week’s games.'}
+      </p>
+      {!isAuthenticated && <a class="cta cta--primary pkg-snap__btn" href={signInHref}>Sign in</a>}
+    </>
+  )}
+</section>
+
+<style>
+  .pkg-snap {
+    background: var(--card-bg);
+    border: 1px solid var(--content-border);
+    border-radius: var(--radius-lg);
+    padding: 1rem 1.25rem;
+    color: var(--page-text);
+  }
+  .pkg-snap__head { display: flex; align-items: center; gap: 0.85rem; }
+  .pkg-snap__icon { border-radius: var(--radius-md); flex: none; }
+  .pkg-snap__name { margin: 0; font-size: 1.25rem; }
+  .pkg-snap__name a { color: inherit; text-decoration: none; }
+  .pkg-snap__name a:hover { color: var(--color-primary); }
+  .pkg-snap__div { margin: 0.1rem 0 0; color: var(--content-text-muted); font-size: var(--font-size-sm); }
+  .pkg-snap__stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(6rem, 1fr));
+    gap: 0.5rem;
+    margin: 1rem 0 0.75rem;
+  }
+  .pkg-snap__stats div {
+    padding: 0.5rem 0.65rem;
+    border-radius: var(--radius-md);
+    background: var(--nav-active-bg);
+  }
+  .pkg-snap__stats dt {
+    font-size: var(--font-size-2xs);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: color-mix(in srgb, var(--page-text) 72%, transparent);   /* sits on the nav-active tint, where --content-text-muted drops under 4.5:1 */
+  }
+  .pkg-snap__stats dd { margin: 0.1rem 0 0; font-weight: 700; font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+  .pkg-snap__weeks { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.35rem; font-size: var(--font-size-sm); }
+  .pkg-snap__wk { display: inline-block; min-width: 4.5rem; font-weight: 700; color: var(--color-primary); }
+  .pkg-snap__links { display: flex; gap: 1rem; margin-top: 0.75rem; font-weight: 600; }
+  .pkg-snap__links a { color: var(--color-primary-light); }
+  .pkg-snap__empty { margin: 0.35rem 0 0.75rem; color: var(--content-text-muted); }
+  /* Shared CTA (src/styles/cta.css); only the pill shape is local. */
+  .pkg-snap__btn {
+    padding: 0.45rem 1rem;
+    border-radius: var(--radius-full);
+  }
+</style>

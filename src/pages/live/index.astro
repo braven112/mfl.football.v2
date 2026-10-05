@@ -36,7 +36,8 @@
 import MflAppLayout from '../../layouts/MflAppLayout.astro';
 import LiveBoard from '../../components/shared/live/LiveBoard';
 import { fromMflLiveBoard } from '../../utils/live/from-mfl-live';
-import { getAuthUser } from '../../utils/auth';
+import { getMflLiveUser } from '../../utils/auth';
+import { hasMflLivePro } from '../../utils/mfl-live-pro';
 import { getCurrentNFLWeek } from '../../utils/current-week';
 import { getDailySlot } from '../../utils/hero-resolver';
 import { assembleMflLiveBoard } from '../../utils/mfl-live-board';
@@ -61,7 +62,7 @@ import '../../styles/live.css';
 // Scores must never be cached, and even the shell reads the session.
 export const prerender = false;
 
-const authUser = getAuthUser(Astro.request);
+const authUser = getMflLiveUser(Astro.request);
 
 // Route-only write, before anything reads the cookie back — so a link that
 // carries a league set sticks for next time. `Astro.cookies.set()` from an
@@ -115,7 +116,7 @@ if (authUser && week) {
 				Every matchup from every league your MyFantasyLeague account is in, scoring
 				live on one screen.
 			</p>
-			<a class="mfl-live-intro__cta" href="/login">Sign in with MyFantasyLeague</a>
+			<a class="cta cta--primary mfl-live-intro__cta" href="/login">Sign in with MyFantasyLeague</a>
 		</section>
 	) : !week ? (
 		<section class="mfl-live-intro">
@@ -132,7 +133,7 @@ if (authUser && week) {
 				Something went wrong reading MyFantasyLeague. Refreshing usually sorts it; if
 				it doesn&rsquo;t, your MFL sign-in may have expired.
 			</p>
-			<a class="mfl-live-intro__cta" href="/login">Sign in again</a>
+			<a class="cta cta--primary mfl-live-intro__cta" href="/login">Sign in again</a>
 		</section>
 	) : (
 		<LiveBoard
@@ -143,6 +144,7 @@ if (authUser && week) {
 			isLive={isLive}
 			viewerFirst
 			panelHrefBase="/live/league/"
+			standingsProLocked={!hasMflLivePro(authUser)}
 		/>
 	)}
 </MflAppLayout>
@@ -165,17 +167,8 @@ if (authUser && week) {
 		color: var(--color-text-secondary);
 	}
 
+	/* The fill is the mfl-live theme's --cta-fill (src/themes/mfl-live.json). */
 	.mfl-live-intro__cta {
-		display: inline-block;
 		padding: 0.7rem 1.15rem;
-		border-radius: 0.5rem;
-		background: var(--league-accent);
-		color: #ffffff;
-		font-weight: 600;
-		text-decoration: none;
-	}
-	.mfl-live-intro__cta:hover,
-	.mfl-live-intro__cta:focus-visible {
-		filter: brightness(1.08);
 	}
 </style>

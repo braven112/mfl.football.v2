@@ -13,8 +13,8 @@
 import { chooseTeamName } from '../../../utils/team-names';
 import { getTierLogo, getTierLogoDark } from '../../../utils/afl-tier-logo';
 import { formatPoints } from '../../../utils/formatters';
-import ThemeImage from '../../ThemeImage.astro';
-import TeamIconCell from '../../TeamIconCell.astro';
+import ThemeImage from '../../shared/ThemeImage.astro';
+import TeamIconCell from '../../shared/TeamIconCell.astro';
 
 interface Team {
   franchiseId: string;
@@ -184,11 +184,8 @@ if (userRow) {
         <p class="afl-tiers__sub">{subtitle}</p>
       </div>
     </div>
-    <a href="/afl-fantasy/standings?view=all_play" class="afl-tiers__cta">
+    <a href="/afl-fantasy/standings?view=all_play" class="cta-link afl-tiers__cta">
       Full standings
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
-        <path d="M5 12h14M12 5l7 7-7 7"/>
-      </svg>
     </a>
   </div>
 
@@ -284,19 +281,8 @@ if (userRow) {
   }
 
   .afl-tiers__cta {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--afl-accent);
-    text-decoration: none;
-    transition: gap 0.15s ease;
-    white-space: nowrap;
-  }
-
-  .afl-tiers__cta:hover {
-    gap: 0.5rem;
+    --cta-link-ink: var(--afl-accent);
+    font-size: var(--font-size-xs);
   }
 
   .afl-tiers__table {
@@ -306,7 +292,7 @@ if (userRow) {
   }
 
   .afl-tiers__th {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -350,7 +336,7 @@ if (userRow) {
   .afl-tiers__td--rank {
     text-align: center;
     color: var(--color-gray-400, #9ca3af);
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 600;
   }
 
@@ -373,7 +359,7 @@ if (userRow) {
 
   .afl-tiers__ap-record {
     display: block;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 700;
     color: var(--color-gray-800, #1f2937);
     font-variant-numeric: tabular-nums;
@@ -382,7 +368,7 @@ if (userRow) {
   .afl-tiers__ap-pct {
     display: block;
     margin-top: 0.0625rem;
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     color: var(--color-gray-400, #9ca3af);
     font-variant-numeric: tabular-nums;
   }
@@ -439,7 +425,7 @@ if (userRow) {
     /* Shrink the table a touch and tighten cell padding so the auto-layout
        table fits inside the card down to ~320px without clipping. */
     .afl-tiers__table {
-      font-size: 0.75rem;
+      font-size: var(--font-size-xs);
     }
 
     .afl-tiers__th,

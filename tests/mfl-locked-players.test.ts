@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseLockedPlayers, isPlayerLocked, lockedUnitKey } from '../src/utils/mfl-locked-players';
+import { parseLockedPlayers, isPlayerLocked, lockedUnitKey, dropLocksIn } from '../src/utils/mfl-locked-players';
 
 // Shapes captured from MFL's live `export?TYPE=freeAgents` (2026-09-24): the
 // AFL answers one leagueUnit per conference, TheLeague a single LEAGUE unit
@@ -49,4 +49,21 @@ describe('mfl-locked-players', () => {
     expect(parseLockedPlayers(null)).toBeNull();
     expect(isPlayerLocked(null, '0530', '00')).toBe(false);
   });
+
+  it('a lock only refuses in an FCFS window — in the waiver window MFL locks the whole pool', () => {
+    // 2026-09-30: every AFL and TheLeague free agent read `locked` mid-week,
+    // and refusing on it turned down every waiver claim in both leagues.
+    const locked = parseLockedPlayers(AFL);
+    expect(dropLocksIn(locked, 'waiver')).toBeNull();
+    expect(dropLocksIn(locked, 'unknown')).toBeNull();
+    expect(isPlayerLocked(dropLocksIn(locked, 'fcfs'), '0530', '00')).toBe(true);
+  });
 });
+
+// Every page or route that reads MFL's lock list must gate it on the FCFS
+// window. The shared Free Agents page was extracted while the hotfix landed on
+// its predecessor, and a copy that reads the raw list refuses every waiver
+// claim in the league (#1280).
+// The call-site guard ("every lock reader gates on the waiver window") lives in
+// tests/mfl-locks-window-gate.test.ts: the raw reader is private now, and every
+// consumer must read through fetchDropLocks.

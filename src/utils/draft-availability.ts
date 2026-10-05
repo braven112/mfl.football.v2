@@ -31,7 +31,7 @@
  */
 
 import {
-  buildConferenceStructure,
+  buildPoolStructure,
   buildRosteredByConf,
   confsForPlayer,
 } from './afl-conference-rosters.mjs';
@@ -90,10 +90,11 @@ export function resolveDraftAvailability({
   if (!league) return null;
   const pool: DraftPlayerPool = (league.draftPlayerPool as string) || 'Both';
 
-  // buildConferenceStructure is typed from JSDoc in a .mjs, so its
+  // The league's POOLS (conferences for the AFL, divisions for archies —
+  // buildPoolStructure). It is typed from JSDoc in a .mjs, so its
   // franchiseConferences widens to `{}` here; name the shape we rely on
   // rather than indexing an untyped object.
-  const structure = buildConferenceStructure(leagueJson) as
+  const structure = buildPoolStructure(leagueJson) as
     | { ids: string[]; franchiseConferences: Record<string, string> }
     | null;
 

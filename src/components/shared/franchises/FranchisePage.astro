@@ -1,0 +1,1155 @@
+---
+/**
+ * The shared franchise page: one club's identity, career record, single-game
+ * highlights, rivals, trade ledger and name history. Moved whole out of the
+ * AFL's page — the repeatable one (the owner's call, Oct 2026; TheLeague's
+ * franchise pages stay its own). The AFL and package leagues with the
+ * Franchise pages box render it.
+ *
+ * What a league hands in, and why it is not decided here:
+ *   - `history` / `ownerTenures`: the league's derived files (a static import
+ *     specifier cannot be a runtime variable). `ownerTenures` is null for a
+ *     league with no owner record — the owner section then hides.
+ *   - `nameEras`: the current owner's identity lineage. The AFL builds it from
+ *     its ownerHistory claims and award attribution; another league from its
+ *     config history.
+ *   - Its own competition, through slots: `hero-tags` (the AFL's tier pill),
+ *     `lockup-extra` (its trophy summary) and `before-career` (its trophy
+ *     wall). The shared page never learns their rules (CLAUDE.md, "Share the
+ *     standard views; a league's own competition stays its own").
+ * The unknown-franchise redirect stays in the route: `Astro.redirect()` only
+ * redirects from a PAGE.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import { formatTradeAsset } from '../../../utils/franchise-trade-asset';
+import {
+  computeRivalEntries,
+  canonicalRivalryPair,
+  formatRivalryRecord,
+  describeCoverageGap,
+} from '../../../utils/rivalries';
+import type { NameEra } from '../../../utils/afl-name-history';
+import PreviousOwners from './PreviousOwners.astro';
+import type { OwnerTenuresFile } from '../../../types/owner-tenures';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { franchiseSlug } from '../../../utils/franchise-marks';
+
+interface Props {
+  leagueSlug: string;
+  /** The franchise's config entry. */
+  team: any;
+  /** Every franchise in the league's config (opponent names, rebrand links). */
+  teams: any[];
+  /** data/<league>/derived/franchise-history.json. */
+  history: any;
+  ownerTenures: OwnerTenuresFile | null;
+  nameEras: NameEra[];
+  /** Shown beside the name, e.g. "American League North". */
+  divisionLabel: string;
+  /** Page title suffix, e.g. "AFL Franchise". */
+  titleSuffix: string;
+  isOwner: boolean;
+  /** Owner CTA to the keeper planner — only a league with keepers has one. */
+  keeperPlanner: boolean;
+  /** Whether the league has rivalry pages to link rivals and trade partners to. */
+  rivalriesPage: boolean;
+  /**
+   * The career strip's Playoff apps cell. Off for a league whose playoffs are
+   * not played on MFL — the count would be 0 for everyone.
+   */
+  showPlayoffApps?: boolean;
+  /**
+   * A Titles cell in the career strip, for a league with no trophy wall of its
+   * own (the AFL's comes in through `before-career`). Champions come from MFL's
+   * brackets, or the league's hand-entered championship-history.json.
+   */
+  showTitles?: boolean;
+  /**
+   * Average weekly score, shown as "Per week" in place of points per game. For
+   * a league that plays more than one game a week on one weekly score
+   * (Archie's plays two), points ÷ games halves the real figure.
+   */
+  pointsPerWeek?: number | null;
+}
+
+const {
+  leagueSlug,
+  team,
+  teams,
+  history: franchiseHistory,
+  ownerTenures,
+  nameEras,
+  divisionLabel,
+  titleSuffix,
+  isOwner,
+  keeperPlanner,
+  rivalriesPage,
+  showPlayoffApps = true,
+  showTitles = false,
+  pointsPerWeek = null,
+} = Astro.props;
+const id: string = team.franchiseId;
+
+/**
+ * How many PREVIOUS owners this slot has — read from the owners file, which is
+ * the reconciled record, rather than re-deriving the boundary here for the
+ * sixth time. Only used to decide whether the name-history section renders at
+ * all; PreviousOwners below does its own filtering and hides itself when empty.
+ */
+const priorOwnerCount = (ownerTenures?.bySlot as Record<string, string[]> | undefined)?.[id!]?.filter(
+  (slug) => {
+    const owner = (ownerTenures!.owners as any[]).find((o) => o.slug === slug);
+    return owner && !(owner.isCurrent && owner.currentFranchiseId === id);
+  }
+).length ?? 0;
+
+// Other franchises whose history shares one of this franchise's rebrand
+// groups — surfaced as "same owner, different franchise ID" cross-links.
+const rebrandGroups = new Set(nameEras.map((e) => e.rebrandGroup).filter(Boolean));
+const relatedRebrands: Array<{ franchiseId: string; teamName: string; eraName: string; group: string }> = [];
+const seenRelated = new Set<string>();
+const pushRelated = (r: { franchiseId: string; teamName: string; eraName: string; group: string }) => {
+  const key = `${r.franchiseId}:${r.eraName}`;
+  if (seenRelated.has(key)) return;
+  seenRelated.add(key);
+  relatedRebrands.push(r);
+};
+if (rebrandGroups.size > 0) {
+  for (const t of teams) {
+    if (t.franchiseId === id) continue;
+    if (t.currentRebrand?.group && rebrandGroups.has(t.currentRebrand.group)) {
+      pushRelated({ franchiseId: t.franchiseId, teamName: t.name, eraName: t.name, group: t.currentRebrand.group });
+    }
+    if (Array.isArray(t.history)) {
+      for (const h of t.history) {
+        if (h.rebrand?.group && rebrandGroups.has(h.rebrand.group)) {
+          pushRelated({ franchiseId: t.franchiseId, teamName: t.name, eraName: h.name, group: h.rebrand.group });
+        }
+      }
+    }
+  }
+}
+
+// This franchise ID's years may have been claimed by a DIFFERENT current
+// franchise via that team's ownerHistory (e.g. Highclimbers/0011's 2003-04
+// now lives on 0004's page). Surface a forward link so this page still
+// points at where that owner's stats actually ended up.
+const claimedBy: Array<{ franchiseId: string; teamName: string }> = [];
+for (const t of teams) {
+  if (t.franchiseId === id) continue;
+  if (Array.isArray(t.ownerHistory) && t.ownerHistory.some((o: any) => o.franchiseId === id)) {
+    claimedBy.push({ franchiseId: t.franchiseId, teamName: t.name });
+  }
+}
+
+// --- Career history (record strip, highlights, rivals, trade ledger) ---
+// All four read the same derived file, built by
+// `scripts/compute-franchise-history.mjs`. It is optional on purpose: a checkout
+// that has not run the aggregator (or a fresh league with no seasons yet)
+// renders the page exactly as it did before rather than 500ing.
+const fr: any = (franchiseHistory.franchises as any)?.[id!] ?? null;
+
+const totalGames = fr ? fr.careerWins + fr.careerLosses + fr.careerTies : 0;
+const careerRecord = fr
+  ? formatRivalryRecord(fr.careerWins, fr.careerLosses, fr.careerTies)
+  : null;
+const winPct = totalGames
+  ? ((fr.careerWins + fr.careerTies * 0.5) / totalGames).toFixed(3).replace(/^0/, '')
+  : null;
+const ppg = totalGames ? (fr.careerPointsFor / totalGames).toFixed(1) : null;
+
+// Seasons actually played — yearByYear carries a row for the in-progress
+// season before a snap is taken, and counting it makes a 23-season franchise
+// claim 24.
+const seasonsPlayed = fr
+  ? fr.yearByYear.filter((y: any) => y.wins + y.losses + y.ties > 0).length
+  : 0;
+
+const topRivals = fr ? computeRivalEntries(fr.matchupHistory, id!).slice(0, 5) : [];
+
+// The gap between the rivalry records and the career record above, stated so an
+// owner who notices it is told why rather than concluding the site is broken.
+//
+// No fraction here on purpose. "X of Y career games" compares two different
+// accounting systems: the career record comes from the standings feed (regular
+// season, owner-attributed), while the meeting log counts every archived
+// meeting including the AFL Cup and games whose opponent is unattributed. It
+// read "462 of 389" before, and after narrowing the numerator to regular-season
+// meetings it still read "312 of 311" for four of the 24 franchises. A ratio
+// that cannot be made true is worse than no ratio; the coverage note says the
+// useful part.
+const coverage: Array<any> = ((franchiseHistory as any).h2hCoverage ?? []) as any[];
+const coverageNote = describeCoverageGap(coverage);
+
+const opponentMeta: Record<string, any> = Object.fromEntries(
+  teams.map((t) => [
+    t.franchiseId,
+    {
+      name: t.name,
+      nameMedium: t.nameMedium ?? t.name,
+      nameShort: t.nameShort ?? t.nameMedium ?? t.name,
+      icon: t.icon,
+    },
+  ])
+);
+
+const opponentName = (fid: string): string =>
+  opponentMeta[fid]?.nameMedium ?? opponentMeta[fid]?.name ?? fid;
+const franchiseShortName = (fid: string): string =>
+  opponentMeta[fid]?.nameShort ?? opponentMeta[fid]?.nameMedium ?? opponentMeta[fid]?.name ?? fid;
+
+// Trade ledger, newest year first. Self-trades (a partner id equal to ours)
+// are ownerHistory cross-attribution artifacts, not real deals.
+const playerNames = ((franchiseHistory as any).playerNames ?? {}) as Record<
+  string,
+  { name: string; position?: string; team?: string }
+>;
+const formatAsset = (code: string) => formatTradeAsset(code, playerNames, franchiseShortName);
+
+type FranchiseTrade = {
+  year: number;
+  timestamp: number;
+  partnerId: string;
+  gaveUp: string[];
+  received: string[];
+  comments: string;
+};
+const allTrades: FranchiseTrade[] = (((fr?.trades ?? []) as FranchiseTrade[]) || []).filter(
+  (t) => t.partnerId !== id
+);
+const tradesByYear = new Map<number, FranchiseTrade[]>();
+for (const t of allTrades) {
+  if (!tradesByYear.has(t.year)) tradesByYear.set(t.year, []);
+  tradesByYear.get(t.year)!.push(t);
+}
+const tradeYearGroups = Array.from(tradesByYear.entries())
+  .map(([year, trades]) => ({
+    year,
+    trades: trades.slice().sort((a, b) => b.timestamp - a.timestamp),
+  }))
+  .sort((a, b) => b.year - a.year);
+
+const tradeDateLabel = (t: FranchiseTrade): string =>
+  t.timestamp
+    ? new Date(t.timestamp * 1000).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      })
+    : String(t.year);
+
+const hl = fr?.highlights ?? null;
+const hasHighlights = Boolean(
+  hl && (hl.highestSingleGame || hl.lowestSingleGame || hl.biggestBlowoutWin || hl.biggestBlowoutLoss)
+);
+---
+
+<TheLeagueLayout title={`${team.name} | ${titleSuffix}`}>
+  <div class="franchise-detail">
+    <header class="franchise-hero">
+      <a class="franchise-hero__back" href={`/${leagueSlug}/franchises`}>
+        ← All franchises
+      </a>
+
+      <!-- Single header lockup: banner + identity + actions as one unit. -->
+      <div class="franchise-lockup">
+        {team.banner ? (
+          <img class="franchise-lockup__banner" src={team.banner} alt="" loading="lazy" />
+        ) : null}
+
+        <div class="franchise-lockup__bar">
+          <div class="franchise-lockup__meta">
+            <h1 class="franchise-lockup__name" data-visual={team.banner ? 'hidden' : 'shown'}>
+              {team.name}
+            </h1>
+            <slot name="hero-tags" />
+            <span class="franchise-hero__div">{divisionLabel}</span>
+            {team.aliases?.length ? (
+              <span class="franchise-lockup__aliases">aka {team.aliases.join(', ')}</span>
+            ) : null}
+          </div>
+
+          <!-- Action bar: owner-only CTAs + universal roster link -->
+          <div class="franchise-actions">
+        <a class="franchise-action franchise-action--primary" href={`/${leagueSlug}/rosters?franchise=${id}`}>
+          <span class="franchise-action__icon" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path d="M9 5H5a2 2 0 00-2 2v12a2 2 0 002 2h14a2 2 0 002-2V7a2 2 0 00-2-2h-4M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </span>
+          View roster
+        </a>
+        {/*
+          `resolveLeaguePath`, unlike its neighbours in this action bar: on a
+          league's own apex domain `hideLeaguePrefix` is true and a prefixed
+          href is wrong — the other links here predate that and are a
+          separate fix.
+        */}
+        <a
+          class="franchise-action"
+          href={resolveLeaguePath(`/${leagueSlug}/brand/${franchiseSlug(team)}`, Astro.locals.hideLeaguePrefix ?? false)}
+        >
+          <span class="franchise-action__icon" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path d="M12 3l7 4v5c0 4.42-3 8.44-7 9-4-.56-7-4.58-7-9V7l7-4z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </span>
+          Brand &amp; logos
+        </a>
+        {isOwner && (
+          <>
+            {keeperPlanner && <a class="franchise-action" href={`/${leagueSlug}/rosters?franchise=${id}&view=planner`}>
+              <span class="franchise-action__icon" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </span>
+              Keeper planner
+            </a>}
+            <a class="franchise-action" href={`/${leagueSlug}/front-office/trade-builder?from=${id}`}>
+              <span class="franchise-action__icon" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M7 17l-4-4m0 0l4-4m-4 4h18m-4-4l4 4m0 0l-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </span>
+              Open trade builder
+            </a>
+          </>
+        )}
+          </div>
+
+          <slot name="lockup-extra" />
+        </div>
+      </div>
+    </header>
+
+    <slot name="before-career" />
+
+    {fr && totalGames > 0 && (
+      <section class="franchise-section career-strip" id="career-record">
+        <h2 class="sr-only">All-time record</h2>
+        <dl class="career-stats">
+          <div class="career-stat">
+            <dt>All-time</dt>
+            <dd>{careerRecord}</dd>
+          </div>
+          <div class="career-stat">
+            <dt>Win pct</dt>
+            <dd>{winPct}</dd>
+          </div>
+          <div class="career-stat">
+            <dt>Seasons</dt>
+            <dd>{seasonsPlayed}</dd>
+          </div>
+          <div class="career-stat">
+            <dt>Points for</dt>
+            <dd>{Math.round(fr.careerPointsFor).toLocaleString()}</dd>
+          </div>
+          <div class="career-stat">
+            <dt>{pointsPerWeek != null ? 'Per week' : 'Per game'}</dt>
+            <dd>{pointsPerWeek != null ? pointsPerWeek.toFixed(1) : ppg}</dd>
+          </div>
+          {showPlayoffApps && (
+            <div class="career-stat">
+              <dt>Playoff apps</dt>
+              <dd>{fr.playoffAppearances}</dd>
+            </div>
+          )}
+          {showTitles && (
+            <div class="career-stat">
+              <dt>Titles</dt>
+              <dd title={fr.championships?.length ? `Champion ${fr.championships.join(', ')}` : undefined}>
+                {fr.championships?.length ?? 0}
+              </dd>
+            </div>
+          )}
+        </dl>
+      </section>
+    )}
+
+    {hasHighlights && (
+      <section class="franchise-section highlights" id="highlights">
+        <h2>Single-Game Highlights</h2>
+        <div class="highlight-grid">
+          {hl.highestSingleGame && (
+            <div class="highlight">
+              <div class="hl-label">Highest score</div>
+              <div class="hl-value">{hl.highestSingleGame.score.toFixed(2)}</div>
+              <div class="hl-context">Week {hl.highestSingleGame.week}, {hl.highestSingleGame.year}</div>
+            </div>
+          )}
+          {hl.lowestSingleGame && (
+            <div class="highlight">
+              <div class="hl-label">Lowest score</div>
+              <div class="hl-value">{hl.lowestSingleGame.score.toFixed(2)}</div>
+              <div class="hl-context">Week {hl.lowestSingleGame.week}, {hl.lowestSingleGame.year}</div>
+            </div>
+          )}
+          {hl.biggestBlowoutWin && (
+            <div class="highlight highlight--win">
+              <div class="hl-label">Biggest blowout win</div>
+              <div class="hl-value">+{hl.biggestBlowoutWin.margin.toFixed(2)}</div>
+              <div class="hl-context">
+                {hl.biggestBlowoutWin.score.toFixed(1)}–{hl.biggestBlowoutWin.opponentScore.toFixed(1)} vs{' '}
+                {opponentName(hl.biggestBlowoutWin.opponentFranchiseId)}
+                <br />Week {hl.biggestBlowoutWin.week}, {hl.biggestBlowoutWin.year}
+              </div>
+            </div>
+          )}
+          {hl.biggestBlowoutLoss && (
+            <div class="highlight highlight--loss">
+              <div class="hl-label">Biggest blowout loss</div>
+              <div class="hl-value">−{hl.biggestBlowoutLoss.margin.toFixed(2)}</div>
+              <div class="hl-context">
+                {hl.biggestBlowoutLoss.score.toFixed(1)}–{hl.biggestBlowoutLoss.opponentScore.toFixed(1)} vs{' '}
+                {opponentName(hl.biggestBlowoutLoss.opponentFranchiseId)}
+                <br />Week {hl.biggestBlowoutLoss.week}, {hl.biggestBlowoutLoss.year}
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
+    )}
+
+    {topRivals.length > 0 && (
+      <section class="franchise-section rivals" id="rivals">
+        <h2>Top Rivals</h2>
+        <p class="rivals-sub">
+          Most-intense shared history under the current owners — closeness, total
+          meetings, and playoff stakes weighted.
+        </p>
+        <ul class="rivals-list">
+          {topRivals.map((r) => {
+            const meta = opponentMeta[r.opponentId];
+            return (
+              <li>
+                <a
+                  class="rival-card"
+                  href={rivalriesPage ? `/${leagueSlug}/rivalries/${canonicalRivalryPair(id!, r.opponentId)}` : undefined}
+                >
+                  {meta?.icon ? (
+                    <img src={meta.icon} alt="" class="rival-icon" loading="lazy" />
+                  ) : null}
+                  <div class="rival-text">
+                    <div class="rival-name">{opponentName(r.opponentId)}</div>
+                    <div class="rival-record">
+                      {formatRivalryRecord(r.wins, r.losses, r.ties)} · {r.games} games
+                    </div>
+                  </div>
+                  {r.playoffGames > 0 && (
+                    <div class="rival-playoff">🔥 {r.playoffGames} playoff</div>
+                  )}
+                </a>
+              </li>
+            );
+          })}
+        </ul>
+        {coverageNote && (
+          <p class="rivals-caveat">{coverageNote}</p>
+        )}
+        {rivalriesPage && <a class="cta-link rivals-more" href={`/${leagueSlug}/rivalries`}>See full rivalry matrix</a>}
+      </section>
+    )}
+
+    {allTrades.length > 0 && (
+      <section class="franchise-section trades" id="trade-ledger">
+        <h2>Trade Ledger ({allTrades.length})</h2>
+        {tradeYearGroups.map((group, gi) => (
+          <details class="trade-year" open={gi === 0}>
+            <summary class="trade-year__summary">
+              {group.year} <span class="trade-year__count">({group.trades.length})</span>
+            </summary>
+            <ul class="trade-list">
+              {group.trades.map((t) => (
+                <li class="trade">
+                  <div class="trade__head">
+                    <a
+                      class="trade-partner"
+                      href={rivalriesPage ? `/${leagueSlug}/rivalries/${canonicalRivalryPair(id!, t.partnerId)}` : undefined}
+                      title={`Rivalry vs ${opponentName(t.partnerId)}`}
+                    >
+                      {opponentMeta[t.partnerId]?.icon ? (
+                        <img src={opponentMeta[t.partnerId].icon} alt="" class="trade-partner__icon" loading="lazy" />
+                      ) : null}
+                      {opponentName(t.partnerId)}
+                    </a>
+                    <span class="trade__date">{tradeDateLabel(t)}</span>
+                  </div>
+                  <div class="trade__sides">
+                    <div class="trade__side">
+                      <span class="trade__side-label">Sent</span>
+                      <ul>
+                        {t.gaveUp.length
+                          ? t.gaveUp.map((c) => <li>{formatAsset(c)}</li>)
+                          : <li class="trade__empty">—</li>}
+                      </ul>
+                    </div>
+                    <div class="trade__side">
+                      <span class="trade__side-label">Received</span>
+                      <ul>
+                        {t.received.length
+                          ? t.received.map((c) => <li>{formatAsset(c)}</li>)
+                          : <li class="trade__empty">—</li>}
+                      </ul>
+                    </div>
+                  </div>
+                  {t.comments ? <p class="trade__comment">{t.comments}</p> : null}
+                </li>
+              ))}
+            </ul>
+          </details>
+        ))}
+      </section>
+    )}
+
+    {(nameEras.length > 1 || priorOwnerCount > 0) && (
+      <section class="franchise-section name-history" id="name-history">
+        <h2>Team Name History</h2>
+        <ul class="name-history__list">
+          {nameEras.slice().reverse().map((era) => (
+            <li class:list={['name-history__item', era.rebrandGroup && 'name-history__item--rebrand']}>
+              {era.icon ? (
+                <img class="name-history__icon" src={era.icon} alt="" loading="lazy" />
+              ) : null}
+              <div class="name-history__meta">
+                <span class="name-history__name">
+                  {era.name}
+                  {era.isCurrent && <span class="current-tag">Current</span>}
+                  {era.sourceFranchiseId && (
+                    <span class="prior-franchise-tag">as franchise {era.sourceFranchiseId}</span>
+                  )}
+                  {era.rebrandGroup && <span class="rebrand-tag" title="Punitive last-place rename">💀 Last-Place Rebrand</span>}
+                </span>
+                <span class="name-history__years">
+                  {era.yearStart}–{era.yearEnd >= 9999 ? 'present' : era.yearEnd}
+                </span>
+              </div>
+            </li>
+          ))}
+        </ul>
+        {relatedRebrands.length > 0 && (
+          <p class="name-history__related">
+            Same owner, different franchise ID:{' '}
+            {relatedRebrands.map((r, i) => (
+              <>
+                <a href={`/${leagueSlug}/franchises/${r.franchiseId}`}>{r.eraName}</a>
+                {i < relatedRebrands.length - 1 ? ', ' : ''}
+              </>
+            ))}
+          </p>
+        )}
+        {claimedBy.length > 0 && (
+          <p class="name-history__related">
+            Some of this slot's past seasons are credited to:{' '}
+            {claimedBy.map((c, i) => (
+              <>
+                <a href={`/${leagueSlug}/franchises/${c.franchiseId}`}>{c.teamName}</a>
+                {i < claimedBy.length - 1 ? ', ' : ''}
+              </>
+            ))}
+          </p>
+        )}
+        {/* Was a flat, unlinked list of NAMES built from this page's own
+            boundary pass — which grouped by rebrand rather than by person, and
+            silently dropped slots' earliest owners (franchise 0004 showed 5 of
+            its 8; 0007's Avenging Amish years were missing entirely). The
+            owners file is the reconciled record, so read it instead. Verified
+            a superset: every name the old list rendered still appears. */}
+        {ownerTenures && (
+          <PreviousOwners
+            leagueSlug={leagueSlug}
+            franchiseId={id as string}
+            data={ownerTenures}
+            headingLevel="h3"
+          />
+        )}
+      </section>
+    )}
+
+    <section class="franchise-section">
+      <h2>Quick links</h2>
+      <div class="quick-links">
+        <a class="quick-link" href={`/${leagueSlug}/standings?myteam=${id}`}>
+          📊 Standings (highlight this team)
+        </a>
+      </div>
+    </section>
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .franchise-detail {
+    padding: var(--spacing-xl, 32px) var(--spacing-md, 16px);
+  }
+
+  .franchise-hero {
+    margin-bottom: var(--spacing-xl, 32px);
+  }
+
+  .franchise-hero__back {
+    display: inline-block;
+    margin-bottom: var(--spacing-md, 16px);
+    color: var(--content-text-muted, #6b7280);
+    text-decoration: none;
+    font-size: var(--font-size-sm);
+  }
+
+  .franchise-hero__back:hover {
+    color: var(--page-text, #1a1a1a);
+    text-decoration: underline;
+  }
+
+  /* One header lockup: banner anchors the top, identity + actions share the
+     attached bar below — a single bordered unit, not stacked blocks. */
+  .franchise-lockup {
+    border: 1px solid var(--content-border, #e5e7eb);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--card-bg, #ffffff);
+    margin-bottom: var(--spacing-lg, 24px);
+  }
+
+  .franchise-lockup__banner {
+    display: block;
+    width: 100%;
+    max-height: 220px;
+    object-fit: contain;
+    background: var(--content-bg-muted, #f3f4f6);
+  }
+
+  .franchise-lockup__bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-md, 16px);
+    flex-wrap: wrap;
+    padding: var(--spacing-md, 16px);
+  }
+
+  .franchise-lockup__meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm, 8px);
+    min-width: 0;
+  }
+
+  .franchise-lockup__name {
+    font-size: 1.35rem;
+    margin: 0;
+    line-height: 1.2;
+  }
+
+  .franchise-lockup__name[data-visual='hidden'] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .franchise-lockup__aliases {
+    font-size: 0.8125rem;
+    color: var(--content-text-muted, #6b7280);
+  }
+
+  .franchise-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0;
+  }
+
+  .franchise-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.875rem;
+    background: var(--card-bg, #fff);
+    color: var(--color-primary, #c41e3a);
+    border: 1px solid var(--color-primary, #c41e3a);
+    border-radius: 0.5rem;
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    text-decoration: none;
+    transition: background-color 120ms ease, color 120ms ease;
+  }
+
+  .franchise-action:hover {
+    background: var(--color-primary-fill, var(--color-primary, #c41e3a));
+    color: var(--on-color-primary, #fff);
+  }
+
+  .franchise-action--primary {
+    background: var(--color-primary-fill, var(--color-primary, #c41e3a));
+    color: var(--on-color-primary, #fff);
+  }
+
+  .franchise-action--primary:hover {
+    background: color-mix(in srgb, var(--color-primary, #c41e3a) 80%, black);
+    border-color: color-mix(in srgb, var(--color-primary, #c41e3a) 80%, black);
+  }
+
+  .franchise-action__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .franchise-hero__div {
+    font-size: 0.8125rem;
+    color: var(--content-text-muted, #6b7280);
+    align-self: center;
+  }
+
+  .franchise-hero__name {
+    font-size: 2rem;
+    margin: 0 0 4px 0;
+  }
+
+  .franchise-hero__aliases {
+    color: var(--content-text-muted, #6b7280);
+    font-size: var(--font-size-sm);
+    margin: 0;
+  }
+
+  .franchise-section {
+    margin-bottom: var(--spacing-xl, 32px);
+  }
+
+  .franchise-section h2 {
+    font-size: 1.25rem;
+    margin-bottom: var(--spacing-md, 16px);
+  }
+
+  /* --- Career record strip --- */
+  .career-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: var(--spacing-sm, 8px);
+    margin: 0;
+    padding: 0;
+  }
+
+  .career-stat {
+    background: var(--card-bg);
+    border: 1px solid var(--content-border);
+    border-radius: 10px;
+    padding: 0.7rem 0.85rem;
+    text-align: center;
+  }
+
+  .career-stat dt {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--content-text-muted);
+  }
+
+  .career-stat dd {
+    margin: 0.25rem 0 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--page-text);
+  }
+
+  /* --- Single-game highlights --- */
+  .highlight-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: var(--spacing-sm, 8px);
+  }
+
+  .highlight {
+    background: var(--card-bg);
+    border: 1px solid var(--content-border);
+    border-left: 3px solid var(--league-accent);
+    border-radius: 10px;
+    padding: 0.85rem;
+  }
+
+  .highlight--win {
+    border-left-color: var(--afl-gold);
+  }
+
+  .highlight--loss {
+    border-left-color: var(--color-gray-400);
+  }
+
+  .hl-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--content-text-muted);
+  }
+
+  .hl-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--page-text);
+    margin: 0.15rem 0 0.3rem;
+  }
+
+  .hl-context {
+    font-size: 0.8rem;
+    line-height: 1.4;
+    color: var(--content-text-muted);
+  }
+
+  /* --- Top rivals --- */
+  .rivals-sub,
+  .rivals-caveat {
+    font-size: 0.85rem;
+    color: var(--content-text-muted);
+    margin: -0.5rem 0 var(--spacing-md, 16px);
+    max-width: 60ch;
+  }
+
+  .rivals-caveat {
+    margin: var(--spacing-sm, 8px) 0 0;
+    font-size: 0.78rem;
+  }
+
+  .rivals-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .rival-card {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0.85rem;
+    background: var(--card-bg);
+    border: 1px solid var(--content-border);
+    border-radius: 10px;
+    text-decoration: none;
+    color: inherit;
+    transition: border-color var(--transition-fast), transform var(--transition-fast);
+  }
+
+  .rival-card:hover {
+    border-color: var(--league-accent);
+    transform: translateX(2px);
+  }
+
+  .rival-icon {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+
+  .rival-text {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .rival-name {
+    font-weight: 600;
+    color: var(--page-text);
+  }
+
+  .rival-record {
+    font-size: 0.8rem;
+    color: var(--content-text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .rival-playoff {
+    font-size: var(--font-size-xs);
+    white-space: nowrap;
+    color: var(--content-text-muted);
+  }
+
+  .rivals-more {
+    --cta-link-ink: var(--league-accent);
+    margin-top: var(--spacing-md, 16px);
+    font-size: 0.85rem;
+  }
+
+  /* --- Trade ledger --- */
+  .trade-year {
+    border: 1px solid var(--content-border);
+    border-radius: 10px;
+    background: var(--card-bg);
+    margin-bottom: 0.5rem;
+  }
+
+  .trade-year__summary {
+    cursor: pointer;
+    padding: 0.6rem 0.85rem;
+    font-weight: 600;
+    color: var(--page-text);
+  }
+
+  .trade-year__count {
+    color: var(--content-text-muted);
+    font-weight: 400;
+  }
+
+  .trade-list {
+    list-style: none;
+    margin: 0;
+    padding: 0 0.85rem 0.85rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .trade {
+    border-top: 1px solid var(--content-border);
+    padding-top: 0.75rem;
+  }
+
+  .trade__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .trade-partner {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-weight: 600;
+    color: var(--page-text);
+    text-decoration: none;
+  }
+
+  .trade-partner:hover {
+    color: var(--league-accent);
+    text-decoration: underline;
+  }
+
+  .trade-partner__icon {
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+  }
+
+  .trade__date {
+    font-size: 0.78rem;
+    color: var(--content-text-muted);
+  }
+
+  .trade__sides {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  .trade__side ul {
+    list-style: none;
+    margin: 0.2rem 0 0;
+    padding: 0;
+    font-size: 0.85rem;
+    color: var(--page-text);
+  }
+
+  .trade__side-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--content-text-muted);
+  }
+
+  .trade__empty {
+    color: var(--content-text-muted);
+  }
+
+  .trade__comment {
+    margin: 0.5rem 0 0;
+    font-size: 0.82rem;
+    font-style: italic;
+    color: var(--content-text-muted);
+    border-left: 2px solid var(--content-border);
+    padding-left: 0.6rem;
+  }
+
+  .name-history__list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .name-history__item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.625rem 0.875rem;
+    border: 1px solid var(--content-border, #e5e7eb);
+    border-radius: 0.5rem;
+    background: var(--card-bg, #ffffff);
+  }
+
+  .name-history__item--rebrand {
+    border-color: var(--league-accent, #1c497c);
+    background: color-mix(in srgb, var(--league-accent, #1c497c) 6%, var(--card-surface, #ffffff));
+  }
+
+  .name-history__icon {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    border-radius: 0.375rem;
+    background: var(--card-bg, #fff);
+    flex-shrink: 0;
+  }
+
+  .name-history__meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+  }
+
+  .name-history__name {
+    font-weight: 600;
+    font-size: 0.9375rem;
+  }
+
+  .name-history__years {
+    font-size: var(--font-size-xs);
+    color: var(--content-text-muted, #6b7280);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .current-tag {
+    display: inline-block;
+    margin-left: 0.5rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 999px;
+    background: var(--league-accent, #1c497c);
+    color: var(--on-league-accent, #fff);
+    font-size: var(--font-size-2xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    vertical-align: middle;
+  }
+
+  .prior-franchise-tag {
+    display: inline-block;
+    margin-left: 0.5rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 999px;
+    background: var(--content-bg-muted, #f0f0f0);
+    color: var(--content-text-muted, #555);
+    font-size: var(--font-size-2xs);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    vertical-align: middle;
+  }
+
+  .rebrand-tag {
+    display: inline-block;
+    margin-left: 0.5rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 999px;
+    background: #7c2d12;
+    color: #fff;
+    font-size: var(--font-size-2xs);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    vertical-align: middle;
+  }
+
+  .name-history__subheading {
+    margin: 1.25rem 0 0.625rem;
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--league-accent, #1c497c);
+    color: var(--content-text-muted, #6b7280);
+  }
+
+  .name-history__list--prior .name-history__item {
+    opacity: 0.75;
+  }
+
+  .name-history__related {
+    margin: 0.75rem 0 0;
+    font-size: 0.8125rem;
+    color: var(--content-text-muted, #6b7280);
+  }
+
+  .name-history__related a {
+    color: var(--league-accent, #1c497c);
+    font-weight: 600;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+
+  .champ-list {
+    list-style: none;
+    padding: 0;
+  }
+
+  .champ-list li {
+    padding: var(--spacing-sm, 8px) 0;
+    border-bottom: 1px solid var(--content-border, #e5e7eb);
+  }
+
+  .champ-list__year {
+    font-weight: 700;
+    margin-right: var(--spacing-sm, 8px);
+  }
+
+  .champ-list__win .champ-list__verb {
+    color: var(--afl-gold, #d97706);
+  }
+
+  .champ-list__loss .champ-list__verb {
+    color: var(--content-text-muted, #6b7280);
+  }
+
+  .quick-links {
+    display: flex;
+    gap: var(--spacing-md, 16px);
+    flex-wrap: wrap;
+  }
+
+  .quick-link {
+    padding: var(--spacing-sm, 8px) var(--spacing-md, 16px);
+    background: var(--card-bg, #ffffff);
+    border: 1px solid var(--content-border, #e5e7eb);
+    border-radius: 8px;
+    text-decoration: none;
+    color: var(--page-text, #1a1a1a);
+    font-weight: 500;
+  }
+
+  .quick-link:hover {
+    background: var(--content-bg-muted, #f3f4f6);
+  }
+</style>

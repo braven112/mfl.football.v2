@@ -1,11 +1,16 @@
 ---
 /**
- * The Owners' Poll ballot — shared implementation.
+ * The Owners' Poll page — shared implementation.
  *
  * Every league that runs the poll renders this through a thin route wrapper
- * (see src/pages/theleague/pecking-order/ballot.astro). The auth gate is NOT
+ * (see src/pages/theleague/owners-poll/index.astro). The auth gate is NOT
  * here: `Astro.redirect()` only redirects from a page, so the routes own it
  * and hand the resolved session down.
+ *
+ * The flow is vote → see the results. The latest owner rankings render here,
+ * and only for an owner with a ballot on file (`resultsUnlocked`); everyone
+ * else gets the ballot and a locked card saying what voting unlocks. Every
+ * Claude post about the poll links to this page for exactly that reason.
  *
  * Team cards are ordered ALPHABETICALLY, never by the Pecking Order composite.
  * The column already published the machine's ranking, and re-sorting the
@@ -16,6 +21,7 @@
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import BallotBuilder from './BallotBuilder';
 import PollWindowAdmin from './PollWindowAdmin';
+import OwnersPollResults, { type OwnersPollBlock } from './OwnersPollResults.astro';
 import { getLeagueTeamBrands } from '../../../utils/league-team-brands';
 import { ensureLeaguePrefix, leagueClock, type LeagueDefinition } from '../../../config/leagues';
 import { isCommissionerOrAdmin } from '../../../utils/auth';
@@ -40,9 +46,15 @@ interface Props {
    * Empty is fine — the cards just lose their record line.
    */
   standings: BallotStandingsRow[];
+  /** The newest closed week with a consensus, or null before the first one. */
+  result: { week: number; poll: OwnersPollBlock } | null;
+  /** Franchise config by id — names and crests for the results table. */
+  teamConfigs: Map<string, any>;
+  /** False only when the viewer positively has no ballot in an open poll. */
+  resultsUnlocked: boolean;
 }
 
-const { league, user, standings } = Astro.props as Props;
+const { league, user, standings, result, teamConfigs, resultsUnlocked } = Astro.props as Props;
 
 const poll = league.ownersPoll;
 const brands = getLeagueTeamBrands(league.slug);
@@ -67,6 +79,9 @@ const teams = Object.values(brands)
   .sort((a, b) => a.nameShort.localeCompare(b.nameShort));
 
 const columnHref = ensureLeaguePrefix(league, '/pecking-order');
+const votersHref = ensureLeaguePrefix(league, '/owners-poll/voters');
+const showResults = Boolean(result) && resultsUnlocked;
+const locked = Boolean(result) && !resultsUnlocked;
 
 // The panel renders for a commissioner only. Gated on the SERVER as well as
 // inside the island: shipping the control markup to every owner and hiding it
@@ -78,22 +93,31 @@ const isCommish = isCommissionerOrAdmin(user);
 const vapidPublicKey = (import.meta.env.PUBLIC_VAPID_PUBLIC_KEY as string | undefined) ?? '';
 ---
 
-<TheLeagueLayout title={`The Owners’ Poll — Cast Your Ballot | ${league.name}`}>
+<TheLeagueLayout title={`The Owners’ Poll | ${league.name}`}>
   <div class="op-page">
-    <nav class="op-crumbs" aria-label="Breadcrumb">
-      <a href={columnHref}>The Pecking Order</a>
-      <span aria-hidden="true">›</span>
-      <span>The Owners’ Poll</span>
-    </nav>
-
     <header class="op-hero">
       <h1 class="op-hero__title">The Owners’ Poll</h1>
       <p class="op-hero__lede">
-        The column ranks the league by the numbers. This is where the room gets
-        a say. Rank your top {poll.slots} — your own team included, if you
-        think you belong there.
+        The computer ranks the league by the numbers. This is where the owners
+        get a say. Rank your top {poll.slots} — your own team included, if you
+        think you belong there — and see how the whole room voted.
       </p>
     </header>
+
+    {showResults && result && (
+      <OwnersPollResults poll={result.poll} teams={teamConfigs} week={result.week} />
+    )}
+
+    {locked && (
+      <aside class="op-callout op-locked" aria-label="The owners' rankings are locked">
+        <strong>🔒 Vote to see the owners’ rankings</strong>
+        <p>
+          The full Week {result!.week} owners’ rankings — every team’s points,
+          first-place votes and how far the room sits from the computer — unlock
+          as soon as your ballot is in.
+        </p>
+      </aside>
+    )}
 
     {isCommish && (
       <PollWindowAdmin
@@ -110,6 +134,7 @@ const vapidPublicKey = (import.meta.env.PUBLIC_VAPID_PUBLIC_KEY as string | unde
       leagueParam={league.navSlug}
       ownFranchiseId={user.franchiseId}
       columnHref={columnHref}
+      revealOnSave={locked}
       vapidPublicKey={vapidPublicKey}
       officialClock={leagueClock(league.slug)}
     />
@@ -127,8 +152,8 @@ const vapidPublicKey = (import.meta.env.PUBLIC_VAPID_PUBLIC_KEY as string | unde
         applies to the following one.
       </p>
       <p>
-        Ballots stay private until the count is taken, then publish with the
-        column.
+        Ballots stay private until the count is taken, then publish on the{' '}
+        <a href={votersHref}>voters page</a>.
       </p>
     </footer>
   </div>

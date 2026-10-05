@@ -1,0 +1,45 @@
+---
+/**
+ * Archie's Fantasy Football League — home. Thin route wrapper over the shared
+ * package-league homepage. Globs and the feed import live here: a static
+ * import specifier cannot be a runtime variable, and cron-written feeds must
+ * never be static imports (docs/claude/rules/storage-and-build.md).
+ */
+import PackageLeagueHome from '../../components/shared/package-league/PackageLeagueHome.astro';
+import config from '../../../data/archies/archies.config.json';
+import type { SchefterFeed } from '../../types/schefter';
+
+export const prerender = false;
+
+const standingsFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/standings.json');
+const transactionFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/transactions.json');
+const leagueFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/league.json');
+const scheduleFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/schedule.json');
+const rosterFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/rosters.json');
+// Absent until the sync account belongs to the league (the export is
+// owner/commissioner-gated); the calendar falls back to derived dates.
+const calendarFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/calendar.json');
+const playoffFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/playoff-brackets.json');
+const peckingOrderIssues = import.meta.glob<any>('../../../data/archies/pecking-order/*.json', { eager: true, import: 'default' });
+
+let posts: SchefterFeed['posts'] = [];
+try {
+  posts = ((await import('../../../data/archies/schefter-feed.json')).default as unknown as SchefterFeed).posts ?? [];
+} catch {
+  // Feed not yet populated
+}
+---
+
+<PackageLeagueHome
+  leagueSlug="archies"
+  config={config}
+  standingsFeeds={standingsFeeds}
+  transactionFeeds={transactionFeeds}
+  leagueFeeds={leagueFeeds}
+  scheduleFeeds={scheduleFeeds}
+  rosterFeeds={rosterFeeds}
+  calendarFeeds={calendarFeeds}
+  playoffFeeds={playoffFeeds}
+  peckingOrderIssues={peckingOrderIssues}
+  posts={posts}
+/>

@@ -1,0 +1,14 @@
+---
+/**
+ * __LEAGUE_SHORT__ — full calendar. Thin route wrapper: the literal globs live here
+ * (static import specifiers cannot be runtime variables).
+ */
+import PackageCalendarPage from '../../components/shared/package-league/PackageCalendarPage.astro';
+
+export const prerender = false;
+
+const calendarFeeds = import.meta.glob('../../../data/__LEAGUE_SLUG__/mfl-feeds/*/calendar.json');
+const playoffFeeds = import.meta.glob('../../../data/__LEAGUE_SLUG__/mfl-feeds/*/playoff-brackets.json');
+---
+
+<PackageCalendarPage leagueSlug="__LEAGUE_SLUG__" calendarFeeds={calendarFeeds} playoffFeeds={playoffFeeds} />

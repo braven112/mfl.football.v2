@@ -137,6 +137,19 @@ numbers. For SVG ink use an alpha bounding box over rendered pixels: `getBBox()`
 excludes stroke, and the halo on every `-dark` badge *is* a stroke.
 <!-- /CURATED-HEAD -->
 
+## 2026-09-29 - A Global Stylesheet @imported In A Layout <style> Is Not Global (scoped-@import)
+
+Astro scopes rules that a component `<style>` block pulls in with `@import`,
+exactly like its own rules: every selector gains the layout's
+`[data-astro-cid-*]`, so it matches the header, nav and footer and nothing a
+page renders. Custom properties survive (they inherit from `:root`), which is
+why the token files always "worked" — and why the site-wide `:focus-visible`
+ring and dark `::selection` rules sitting in those same files silently never
+reached page content until Sep 2026. Tell: the rule works on the nav and not
+on a button two inches below it. Global STYLING is a frontmatter
+`import '../styles/x.css'` (see `polish.css`); the token files are guarded to
+hold custom properties only (`tests/design-polish.test.ts`).
+
 ## 2026-09-23 - A Contrast Floor Is Only Real Against The Ink You Actually Paint
 
 **Context:** The roster header's plate went from a gradient to one flat club
@@ -640,7 +653,7 @@ already documented — this is a second instance of it, not a new finding.)
 passes on it. It should not feel like it does: `--cat-regular-season` has no
 value in `tokens.css` or `tokens-dark.css`, and is declared in exactly two
 places in the repo — the scoped `<style>` blocks of
-`src/components/theleague/WhatsNextCard.astro` and `CalendarEventCard.astro`.
+`src/components/shared/WhatsNextCard.astro` and `CalendarEventCard.astro`.
 Neither declaration is an ancestor of the AFL card, so that `var()` renders
 its `#1c497c` fallback, in both themes, forever.
 
@@ -1165,7 +1178,7 @@ token-based (light) and invert via tokens-dark.
 
 **Pattern name:** `HeroBanner` with `variant="editorial"`
 
-**Component:** `src/components/theleague/HeroBanner.astro`
+**Component:** `src/components/shared/HeroBanner.astro`
 
 **Design:** Transparent background (blends into page), large bold title (800 weight, `clamp(1.75rem, 2.5vw + 0.75rem, 2.5rem)`), eyebrow badge + date, summary, two-action row (primary CTA button + text link). Image floats right in a tilted browser-frame when available.
 
@@ -1226,7 +1239,7 @@ token-based (light) and invert via tokens-dark.
 
 **Insight:** The codebase uses `--shadow-md` and similar tokens for consistent shadows.
 
-**Evidence:** `src/components/theleague/Header.astro:247` uses `box-shadow: var(--shadow-md);`
+**Evidence:** `src/components/shared/Header.astro:247` uses `box-shadow: var(--shadow-md);`
 
 **Recommendation:** Use shadow tokens rather than hardcoded values:
 ```css
@@ -2238,7 +2251,7 @@ window.addEventListener('resize', handler, { signal: ac.signal });
 
 **Gotcha:** the multicolor NFL sprite (`MULTICOLOR_ICONS = ['nfl']`) must NOT be tinted — give it a `--chip--multicolor` modifier that sets the chip bg to neutral `rgba(255,255,255,.1)` and the icon `fill: none`, otherwise the accent recolors the league logo.
 
-**Evidence:** `src/components/theleague/CalendarEventCard.astro`, `src/components/theleague/WhatsNextCard.astro`, mirrors `src/components/theleague/EventHeroShell.astro`.
+**Evidence:** `src/components/theleague/CalendarEventCard.astro`, `src/components/shared/WhatsNextCard.astro`, mirrors `src/components/theleague/EventHeroShell.astro`.
 
 ## 2026-06-24 - Per-League Theming via `html[data-league]` + Single-Value-Per-League Tokens
 
@@ -2731,7 +2744,7 @@ defined *anywhere*) but renders its fallback in light mode. Dark-only tokens are
 safe *only* inside a `:global(html.dark)` block. Check which theme file a token
 lives in before using it in a theme-agnostic rule.
 
-**Evidence:** `src/components/afl-fantasy/AFLActionModal.astro` — light rules
+**Evidence:** `src/components/shared/AFLActionModal.astro` — light rules
 unchanged, all dark behavior in `:global(html.dark)` blocks. Verified with
 `getComputedStyle` on the running page: panel `rgb(22,40,60)`, rows
 `rgb(29,51,73)`, borders `rgb(46,69,96)`.

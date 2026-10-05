@@ -24,10 +24,13 @@ import {
   isSharedAppHost,
   leagueHasOwnFrontDoor,
   resolveSharedHostHiddenLeague as rawResolveSharedHostHiddenLeague,
+  MFL_LIVE_OPEN_SIGN_IN,
+  MFL_LIVE_PILOT_LEAGUE_IDS,
+  mflLiveSignInLeagueIds,
 } from './leagues-data.mjs';
 
 /** Canonical slug: the path segment under src/pages/ */
-export type CanonicalLeagueSlug = 'theleague' | 'afl-fantasy' | 'best-ball-1' | 'keeper';
+export type CanonicalLeagueSlug = keyof typeof RAW_LEAGUES | DemoOnlyLeagueSlug;
 
 /**
  * Slots registered only on a custom-site demo deployment (see the `isDemoEnv`
@@ -36,11 +39,20 @@ export type CanonicalLeagueSlug = 'theleague' | 'afl-fantasy' | 'best-ball-1' | 
  */
 export type DemoOnlyLeagueSlug = 'keeper';
 
+/** Starting presets for a league's features — see src/config/league-archetypes.mjs. */
+export type LeagueArchetype = 'dynasty-cap' | 'deluxe-keeper' | 'contest' | 'best-ball' | 'standard-redraft';
+
 export interface LeagueFeatures {
   contracts: boolean;
   salaryCap: boolean;
   keepers: boolean;
   powerRankings: boolean;
+  /** Rules page + Ask Roger (src/utils/league-rulebook.ts for package leagues). */
+  rulesQa: boolean;
+  /** Playoffs page — shown once MFL has the league's real brackets (src/utils/playoff-bracket-index.mjs). */
+  playoffs: boolean;
+  /** Franchise pages (detail + index) from the league's MFL history (scripts/compute-franchise-history.mjs). */
+  franchisePages: boolean;
   liveLineups: boolean;
   schefterFeed: boolean;
   /**
@@ -98,6 +110,8 @@ export interface LeagueFeatures {
    * Same reason: the account menu links it only where the page exists.
    */
   pushNotifications: boolean;
+  /** Commissioner branding editor (names, colours, uploaded marks). */
+  brandingEditor: boolean;
 }
 
 /**
@@ -202,11 +216,61 @@ export interface LeagueClock {
   equivalents?: readonly string[];
 }
 
+export type LeagueChatConfig =
+  | { provider: 'groupme'; botEnv: string }
+  | { provider: 'slack'; tokenEnv: string; channelEnv: string };
+
+/** Schedule planner policy — see `schedulePolicy` on a registry entry and src/utils/schedule-plan.mjs. */
+export interface SchedulePolicy {
+  mode: 'simple' | 'constructive';
+  startWindow: number[];
+  endWindow: number[];
+  doubleheaderCount: number;
+  keepDivisionFinish: boolean;
+  crossConference: {
+    week: number;
+    anchorYear: number;
+    /** Each entry is a pair of division (or, for rivalries, team) names. */
+    anchorPairing: string[][];
+    alternatePairing: string[][];
+    protectedRivalries: string[][];
+  } | null;
+}
+
 export interface LeagueDefinition {
   id: string;
   slug: CanonicalLeagueSlug;
   /** Short slug used by nav config / styles */
   navSlug: LeagueSlug;
+  /** Color theme id — a file in src/themes/ (see scripts/generate-league-themes.mjs). */
+  theme: string;
+  /**
+   * The preset this league's feature checkboxes started from
+   * (src/config/league-archetypes.mjs). Informational: code gates on
+   * `features` via leagueHasFeature, never on the archetype.
+   */
+  archetype: LeagueArchetype;
+  /** Franchises that see admin-only nav links, get ops alerts, and count as commissioners (auth fallback). */
+  adminFranchiseIds: string[];
+  /**
+   * Opts the league into the Schefter scanners (scripts/lib/schefter-leagues.mjs):
+   * its events file, the NAMES of its GroupMe env vars, and which lanes run.
+   * Absent = a news feed (if `schefterFeed`) but no scanner.
+   */
+  schefter?: {
+    eventsPath: string;
+    env: { schefterBot: string; rogerBot: string; groupId: string; rogerSender: string };
+    lanes: {
+      tradeBait: boolean;
+      eventReminders: boolean;
+      directGroupMe: boolean;
+      tradeOfferRumors: boolean;
+      groupmeListen: boolean;
+      rogerReplies: boolean;
+    };
+  };
+  /** Opts the league into the schedule planner and reveal. Absent = no planner. */
+  schedulePolicy?: SchedulePolicy;
   name: string;
   mflHost: string;
   dataPath: string;
@@ -262,12 +326,83 @@ export interface LeagueDefinition {
    */
   ownersPoll: OwnersPollConfig;
   /**
+   * Pecking Order options for a big league. `topN`: write up only the top N
+   * teams (the rest are ranked and shown in their division lists). Absent →
+   * every team gets a blurb, as TheLeague and the AFL always have.
+   */
+  peckingOrder?: { topN?: number };
+  /**
+   * The league's own playoff seeding, when it is not TheLeague's "division
+   * winners, then wild cards" ladder. `mad` is Archie's MAD POWER 99: each
+   * division's first `divisionLeaders` rows, then its second rows
+   * (`runnersUp`), then `wildCards` more — each tier in MFL's row order. Read
+   * by the shared standings page and the league's MFL widget
+   * (public/mfl/10105/standings.js). Absent → the default ladder.
+   */
+  standingsSeeding?: { kind: 'mad'; divisionLeaders: number; runnersUp: number; wildCards: number };
+  /**
    * The zone this league keeps its own time in — see `officialClock` in
    * leagues-data.mjs. Always present; read it with `leagueClock(slug)` rather
    * than reaching into the entry, and never fall back to a hardcoded Pacific
    * when you have a slug in hand.
    */
   officialClock: LeagueClock;
+  /**
+   * `false` keeps the league off the mfl.football front door (src/pages/index.astro)
+   * while it stays served at its own path. Absent → listed.
+   */
+  advertiseOnSharedHost?: boolean;
+  /**
+   * Nav renders only links tagged `leagueOnly: <navSlug>` (src/utils/nav-utils.ts),
+   * as it always has for best-ball. Absent → the default link set.
+   */
+  optInNav?: boolean;
+  /**
+   * `'package'`: the league's pages are the package-league set
+   * (src/config/package-league-routes.mjs), entitled by its features — each
+   * route exists iff its feature is ticked, and a nav link to a route it is
+   * not entitled to is hidden. Archie's and every league scripts/new-league.mjs
+   * launches. Absent: hand-built pages (TheLeague, the AFL, best ball).
+   */
+  pageKit?: 'package';
+  /** Short display name for tight spaces (the site header). */
+  shortName?: string;
+  /** The league's mark for the shared header and layout, per theme. */
+  /**
+   * The league's mark. BOTH cuts are always set, even when they are the same
+   * file (Archie's): whether the dark cut differs is a per-league choice made
+   * here, never a missing field a component has to guess around.
+   */
+  logo: { light: string; dark: string };
+  /**
+   * The Schefter share card's mark, when `logo.dark` is a format the card
+   * renderer cannot read (it takes PNG or SVG, not WebP). Defaults to logo.dark.
+   */
+  logoOg?: string;
+  /** Schefter share-card branding. Absent = derived from name, domain and themeColor. */
+  shareCard?: { name: string; domain: string; primary: string };
+  /** Demo banner line, when the archetype's default does not fit. */
+  demoPitch?: string;
+  /** First season of the league's player archive. Absent = not stated on draft results. */
+  playerArchiveStartYear?: number;
+  /** Weekly Schefter article types the league gets. Absent = every type. */
+  articleTypes?: string[];
+  /** Push notification icon + Android badge. Absent = the site's PWA art. */
+  pushArt?: { icon: string; badge: string };
+  /** Optional wordmark shown beside `logo` instead of the text short name. */
+  wordmark?: string;
+  /** Browser chrome `theme-color` for a package league. */
+  themeColor?: string;
+  /**
+   * The chat the league's news persona posts into (scripts/lib/chat.mjs).
+   * Env var NAMES only. Absent → the league has no chat.
+   */
+  chat?: LeagueChatConfig;
+  /**
+   * The league's default news persona, used until the commissioner saves one
+   * (src/utils/persona.mjs). Absent → Claude Schefter.
+   */
+  persona?: { name?: string; avatarUrl?: string; voice?: string };
   features: LeagueFeatures;
 }
 
@@ -372,7 +507,16 @@ export function ensureLeaguePrefix(league: LeagueDefinition, path: string): stri
   return rawEnsureLeaguePrefix(league, path) as string;
 }
 
-export { buildHostToSlugMap, defaultMflWriteHost, SHARED_APP_ORIGIN, isSharedAppHost, leagueHasOwnFrontDoor };
+export {
+  buildHostToSlugMap,
+  defaultMflWriteHost,
+  SHARED_APP_ORIGIN,
+  isSharedAppHost,
+  leagueHasOwnFrontDoor,
+  MFL_LIVE_OPEN_SIGN_IN,
+  MFL_LIVE_PILOT_LEAGUE_IDS,
+  mflLiveSignInLeagueIds,
+};
 
 /**
  * An href for a league-prefixed path that actually WORKS from this hostname.

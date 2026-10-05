@@ -16,31 +16,44 @@
  */
 
 import { ClientRouter } from 'astro:transitions';
-import TransitionNoiseGuard from '../components/TransitionNoiseGuard.astro';
+import TransitionNoiseGuard from '../components/shared/TransitionNoiseGuard.astro';
 import { Font } from 'astro:assets';
 // Global utility classes (.visually-hidden, etc.) — frontmatter import so the
 // CSS ships unscoped; @import inside the <style> block below would get scoped.
 import '../styles/utilities.css';
-import TheLeagueHeader from '../components/theleague/Header.astro';
-import TheLeagueFooter from '../components/theleague/Footer.astro';
+// Global polish layer + shared empty/error states. Imported here, NOT via
+// @import in the <style> block below: Astro scopes @imported rules to this
+// layout's own markup, so they would never reach a page's content.
+import '../styles/polish.css';
+import '../styles/states.css';
+// The one CTA pattern (.cta / .cta-link). Also a frontmatter import: its
+// state rules must out-rank this layout's global a:hover, which a scoped copy
+// could not reach. docs/claude/rules/theming-and-assets.md § "CTAs".
+import '../styles/cta.css';
+import TheLeagueHeader from '../components/shared/Header.astro';
+import TheLeagueFooter from '../components/shared/Footer.astro';
 import NavDrawer from '../components/nav/NavDrawer.astro';
-import TeamIconDarkStyles from '../components/TeamIconDarkStyles.astro';
-import NflLogoDarkStyles from '../components/NflLogoDarkStyles.astro';
-import TeamAccentStyles from '../components/TeamAccentStyles.astro';
-import FranchiseBandBrands from '../components/FranchiseBandBrands.astro';
-import ThemeScript from '../components/ThemeScript.astro';
+import TeamIconDarkStyles from '../components/shared/TeamIconDarkStyles.astro';
+import NflLogoDarkStyles from '../components/shared/NflLogoDarkStyles.astro';
+import TeamAccentStyles from '../components/shared/TeamAccentStyles.astro';
+import FranchiseBandBrands from '../components/shared/FranchiseBandBrands.astro';
+import ThemeScript from '../components/shared/ThemeScript.astro';
 import { getThemePreference } from '../utils/theme-preference';
-import TransactionHubModal from '../components/theleague/TransactionHubModal.astro';
-import RosterLoader from '../components/theleague/RosterLoader.astro';
+import TransactionHubModal from '../components/shared/TransactionHubModal.astro';
+import ThrowbackWeekModal from '../components/shared/ThrowbackWeekModal.astro';
+import { buildThrowbackWelcome, type ThrowbackWelcome } from '../utils/throwback-welcome';
+import { resolveThrowbackRequestState } from '../utils/throwback-request-state';
+import RosterLoader from '../components/shared/RosterLoader.astro';
 import { getLeagueContext } from '../utils/league-context';
-import { getLeagueYearForSlug } from '../utils/league-year';
+import { getLeagueYearForSlug, getTestDateFromSearchParams } from '../utils/league-year';
 import { navConfig, getAdminFranchiseIds } from '../config/nav-config';
 import { getVisibleSections, getVisiblePinnedLinks, parseMyTeamFromUrl, buildNavTeamInfo, resolveLeaguePath } from '../utils/nav-utils';
 import type { NavTeamInfo, LeagueSlug } from '../types/nav';
 import { NAV_COOKIES } from '../types/nav';
-import { getAFLPreference, getTheLeaguePreference, getBestBall1Preference } from '../utils/team-preferences';
+import { getAFLPreference, getTheLeaguePreference, getBestBall1Preference, getLeaguePreference } from '../utils/team-preferences';
 import { getAuthUser, isCommissionerOrAdmin } from '../utils/auth';
 import { getLeagueBySlug, getLeagueByNavSlug, isSharedAppHost } from '../config/leagues';
+import { getLeagueTeamConfigs } from '../utils/league-team-brands';
 import { HOST_TO_SLUG } from '../utils/league-host-map';
 import { loginPathFor } from '../utils/login-redirect';
 import { buildTransactionHubConfig } from '../utils/transaction-hub-config';
@@ -62,9 +75,14 @@ export interface Props {
 		image?: string;
 		url?: string;
 	};
+	/** Pin the page to one mode whatever the viewer's preference — the theme
+	    review pages (/<league>/theme/light|dark). ThemeScript honours the
+	    `data-theme-lock` attribute this writes, so neither the theme toggle nor
+	    a prefers-color-scheme change can flip it. */
+	themeLock?: 'light' | 'dark';
 }
 
-const { title, host, leagueId, year, staticHost, hideMobileNavIcons, og } = Astro.props as Props;
+const { title, host, leagueId, year, staticHost, hideMobileNavIcons, og, themeLock } = Astro.props as Props;
 const navOpenCookie = Astro.cookies.get(NAV_COOKIES.NAV_OPEN);
 const shouldOpenOnDesktop = navOpenCookie?.value === 'true';
 
@@ -93,6 +111,12 @@ const league: LeagueSlug =
 // Draft-only best-ball leagues have no trades — management chrome like the
 // Transaction Hub must not render (its links would point cross-league).
 const isBestBallLeague = !!getLeagueBySlug(leagueContext.slug)?.bestBall;
+// A package league (archies): opt-in nav, its own mark in the registry. Read
+// from the registry so the layout needs no new branch for the next one.
+const packageLeague = (() => {
+	const def = getLeagueBySlug(leagueContext.slug);
+	return def && def.optInNav && !def.bestBall && def.logo ? def : null;
+})();
 
 // Check for myteam in URL and set cookie if present
 const myteamParam = parseMyTeamFromUrl(Astro.url);
@@ -121,7 +145,7 @@ const aflMflId = getLeagueBySlug('afl-fantasy')?.id;
 const theLeagueMflId = getLeagueBySlug('theleague')?.id;
 const bb1MflId = getLeagueBySlug('best-ball-1')?.id;
 const currentLeagueMflId =
-	league === 'afl' ? aflMflId : league === 'bb1' ? bb1MflId : league === 'keeper' ? getLeagueBySlug('keeper')?.id : theLeagueMflId;
+	packageLeague?.id ?? (league === 'afl' ? aflMflId : league === 'bb1' ? bb1MflId : league === 'keeper' ? getLeagueBySlug('keeper')?.id : theLeagueMflId);
 
 // Get team preference based on current league context
 let myteam: string | null = null;
@@ -168,6 +192,17 @@ if (league === 'afl') {
 	)[0];
 	if (sessionFranchiseId && keeperConfig) {
 		teamInfo = buildNavTeamInfo(sessionFranchiseId, keeperConfig.teams, 'keeper' as LeagueSlug);
+	}
+} else if (packageLeague) {
+	// Package league: its `<navSlug>_team_pref` cookie personalizes; the nav
+	// chip stays the signed session only (the cookie is not auth).
+	const jwtFranchiseId =
+		layoutAuthUser && layoutAuthUser.leagueId === packageLeague.id ? layoutAuthUser.franchiseId : null;
+	const packagePref = getLeaguePreference(Astro.cookies, league);
+	myteam = myteamParam || packagePref?.franchiseId || jwtFranchiseId || null;
+	sessionFranchiseId = jwtFranchiseId || null;
+	if (jwtFranchiseId) {
+		teamInfo = buildNavTeamInfo(jwtFranchiseId, getLeagueTeamConfigs(packageLeague.slug), league);
 	}
 } else if (league === 'bb1') {
 	// Best Ball League #1: same simple shape as TheLeague (no conference/tier)
@@ -221,13 +256,42 @@ const transactionHubConfig = buildTransactionHubConfig(
 	leagueContext.slug,
 	layoutAuthUser,
 	resolveLeaguePath(
-		leagueContext.slug === 'afl-fantasy' || leagueContext.slug === 'keeper' ? `/${leagueContext.slug}/players` : '/theleague/players',
+		// A package league's pool page is Free Agents; the AFL family's is Players.
+		packageLeague
+			? `/${packageLeague.slug}/free-agents`
+			: leagueContext.slug === 'afl-fantasy' || leagueContext.slug === 'keeper'
+				? `/${leagueContext.slug}/players`
+				: '/theleague/players',
 		hideLeaguePrefix,
 	),
 	// Roster-management clock: waivers are a roster action, so the waiver
 	// system is read off the LEAGUE year's feed, not the season year's.
 	Number(getLeagueYearForSlug(leagueContext.slug as LeagueSlug)),
 );
+
+// Throwback Week welcome — signed-in owners only (the SESSION franchise, never
+// the preference cookie). Keyed off the real week: `?week=` is stripped so a
+// page reading an old throwback week's history does not announce a new one.
+// The store read is gated inside on the week being a throwback week, and is
+// the same memoized read FranchiseBandBrands makes.
+const throwbackPickerHref = resolveLeaguePath(`/${leagueContext.slug}/throwback-settings`, hideLeaguePrefix);
+let throwbackWelcome: ThrowbackWelcome | null = null;
+// Not on the two pages that already host the era picker. Matched on the tail:
+// an apex host may see the path with or without its league prefix.
+const onThrowbackPicker = /\/(throwback-settings|preferences)\/?$/.test(Astro.url.pathname);
+if (sessionFranchiseId && !onThrowbackPicker) {
+	const realWeekUrl = new URL(Astro.url);
+	realWeekUrl.searchParams.delete('week');
+	const { throwbackActive, throwbackOverrides } = await resolveThrowbackRequestState(league, realWeekUrl);
+	if (throwbackActive) {
+		throwbackWelcome = buildThrowbackWelcome({
+			league,
+			franchiseId: sessionFranchiseId,
+			now: getTestDateFromSearchParams(Astro.url.searchParams) ?? new Date(),
+			overrides: throwbackOverrides,
+		});
+	}
+}
 
 // Get admin franchise IDs
 const adminFranchiseIds = getAdminFranchiseIds(league);
@@ -314,7 +378,7 @@ import DemoTour from '../components/shared/DemoTour.astro';
 ---
 
 <!DOCTYPE html>
-<html lang="en" data-league={league} class:list={[{ dark: themePref === 'dark' }]}>
+<html lang="en" data-league={league} data-theme-lock={themeLock} class:list={[{ dark: themeLock ? themeLock === 'dark' : themePref === 'dark' }]}>
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -338,6 +402,14 @@ import DemoTour from '../components/shared/DemoTour.astro';
 				<link rel="icon" type="image/svg+xml" href="/assets/logos/keeper-logo.svg" />
 				<meta name="theme-color" content="#1f3a5f" data-theme-color-light="#1f3a5f" />
 				<meta name="apple-mobile-web-app-title" content="Keeper League" />
+			</>
+		) : packageLeague ? (
+			<>
+				<link rel="icon" type={packageLeague.logo!.light.endsWith('.svg') ? 'image/svg+xml' : packageLeague.logo!.light.endsWith('.webp') ? 'image/webp' : 'image/png'} href={packageLeague.logo!.light} />
+				<meta name="theme-color" content={packageLeague.themeColor ?? '#1c497c'} data-theme-color-light={packageLeague.themeColor ?? '#1c497c'} />
+				<meta name="mobile-web-app-capable" content="yes" />
+				<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+				<meta name="apple-mobile-web-app-title" content={packageLeague.shortName ?? packageLeague.name} />
 			</>
 		) : league === 'bb1' ? (
 			<>
@@ -396,6 +468,7 @@ import DemoTour from '../components/shared/DemoTour.astro';
 	<body>
 		<StagingBanner />
 		<DemoBanner />
+		<DemoTour base={`/${leagueContext.slug}`} />
 		<!-- Navigation progress bar — shows instantly on internal link clicks -->
 		<div id="nav-progress" aria-hidden="true"></div>
 
@@ -416,7 +489,6 @@ import DemoTour from '../components/shared/DemoTour.astro';
 				hideMobileNavIcons={hideMobileNavIcons}
 			/>
 			<main>
-				<DemoTour base={`/${leagueContext.slug}`} />
 				<slot />
 			</main>
 			<TheLeagueFooter hideLeaguePrefix={hideLeaguePrefix} franchiseId={sessionFranchiseId} />
@@ -584,89 +656,9 @@ import DemoTour from '../components/shared/DemoTour.astro';
 			</script>
 		)}
 
-		<!-- Visit tracker — fire-and-forget beacon.
-		     Signed in it records last-seen + page popularity; signed out the
-		     server keeps only the anonymous PWA-vs-browser count. -->
-		<script>
-			const DEBOUNCE_KEY = 'mfl:lastTrackVisit';
-			const DEBOUNCE_MS = 60_000;
-
-			/**
-			 * Installed app or browser tab? Only the CLIENT can answer this —
-			 * both send identical requests — so the beacon carries the answer.
-			 * `display-mode: standalone` covers Android/desktop installs and
-			 * `minimal-ui` an installed app whose manifest asks for it;
-			 * `navigator.standalone` is iOS Safari's older, non-standard flag,
-			 * still the only signal for a home-screen app there.
-			 *
-			 * `fullscreen` is deliberately NOT in that list even though a
-			 * manifest can request it: an ordinary tab pushed to fullscreen
-			 * with F11 matches `(display-mode: fullscreen)` too, so counting it
-			 * would file every desktop browser visitor as an app install. If
-			 * the manifest ever moves to fullscreen, gate that mode on
-			 * something that separates the two rather than adding it back here.
-			 */
-			function detectSurface() {
-				try {
-					const installed = ['standalone', 'minimal-ui'].some(
-						(mode) => window.matchMedia(`(display-mode: ${mode})`).matches,
-					);
-					return installed || (navigator as any).standalone === true ? 'pwa' : 'browser';
-				} catch (_) {
-					return 'browser';
-				}
-			}
-
-			/**
-			 * Coarse platform bucket. iPadOS reports itself as a Macintosh, so
-			 * the touch-point check is what keeps an installed iPad app out of
-			 * the desktop bucket.
-			 */
-			function detectPlatform() {
-				try {
-					const ua = navigator.userAgent || '';
-					if (/android/i.test(ua)) return 'android';
-					if (/iPhone|iPad|iPod/i.test(ua)) return 'ios';
-					if (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1) return 'ios';
-					if (/Windows|Macintosh|Linux|CrOS/i.test(ua)) return 'desktop';
-					return 'other';
-				} catch (_) {
-					return 'other';
-				}
-			}
-
-			function trackVisit() {
-				try {
-					const last = Number(sessionStorage.getItem(DEBOUNCE_KEY) || '0');
-					if (Date.now() - last < DEBOUNCE_MS) return;
-					sessionStorage.setItem(DEBOUNCE_KEY, Date.now().toString());
-					const page = location.pathname.replace(/^\/theleague/, '') || '/';
-					// `league` is only read on the logged-out path — the signed-in
-					// one takes the league from the session — and the server
-					// validates it against the registry either way.
-					const league = document.documentElement.dataset.league || '';
-					const params = new URLSearchParams({
-						page,
-						surface: detectSurface(),
-						platform: detectPlatform(),
-						league,
-					});
-					// The JSON body is load-bearing, not payload (the endpoint reads
-					// only the query string). Astro's origin check 403s any POST
-					// that has NO content-type unless its Origin header matches
-					// exactly, and a body-less beacon has none — so every browser
-					// that omits or nulls Origin had its visits silently thrown
-					// away (five AFL owners read as "never visited" in Sep 2026).
-					// A JSON-typed body is exempt from that check.
-					// Guard: tests/origin-check-content-type.test.ts.
-					navigator.sendBeacon(
-						`/api/track-visit?${params}`,
-						new Blob(['{}'], { type: 'application/json' }),
-					);
-				} catch (_) {}
-			}
-			document.addEventListener('astro:page-load', trackVisit);
-		</script>
+		<!-- Visit tracker — fire-and-forget beacon, shared with the MFL Live and
+		     splash layouts. Feeds /activity and the site-wide /live/analytics. -->
+		<script src="../scripts/visit-beacon.ts"></script>
 
 		<!-- Navigation Drawer - outside page-wrapper for overlay behavior -->
 		<NavDrawer
@@ -687,6 +679,11 @@ import DemoTour from '../components/shared/DemoTour.astro';
 		<!-- Transaction Hub — global bell: trade offers, waiver claims, waiver order -->
 		{!isBestBallLeague && (
 			<TransactionHubModal hideLeaguePrefix={hideLeaguePrefix} config={transactionHubConfig} />
+		)}
+
+		<!-- Throwback Week welcome — once per device, the week it begins -->
+		{throwbackWelcome && (
+			<ThrowbackWeekModal welcome={throwbackWelcome} leagueSlug={leagueContext.slug} pickerHref={throwbackPickerHref} />
 		)}
 		<script src="../scripts/transaction-hub.ts"></script>
 
@@ -777,6 +774,8 @@ import DemoTour from '../components/shared/DemoTour.astro';
 	@import '../styles/tokens.css';
 	/* Dark-mode token overrides (scoped under html.dark) — must come after tokens.css */
 	@import '../styles/tokens-dark.css';
+	/* Per-league theme palettes (generated from src/themes/*.json) */
+	@import '../styles/league-themes.generated.css';
 
 	/* Navigation progress bar */
 	#nav-progress {

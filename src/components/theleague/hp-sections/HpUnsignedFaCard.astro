@@ -3,7 +3,7 @@
  * HpUnsignedFaCard — Homepage action card for recent pickups
  * that are still on the default 1-year contract.
  */
-import PlayerCell from '../PlayerCell.astro';
+import PlayerCell from '../../shared/PlayerCell.astro';
 import ContractDeclarationModal from '../ContractDeclarationModal.astro';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { formatCompactNumber } from '../../../utils/formatters';
@@ -97,11 +97,8 @@ function getPickupLabel(type: UnsignedFaAlert['acquisitionType']): string {
         <h3 class="hp-fa__title">Unsigned FA Adds</h3>
         <p class="hp-fa__sub">Recent pickups still sitting on the default 1-year deal.</p>
       </div>
-      <a href={r('/theleague/front-office/contracts')} class="hp-fa__cta">
+      <a href={r('/theleague/front-office/contracts')} class="cta-link hp-fa__cta">
         Manage contracts
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
-          <path d="M5 12h14M12 5l7 7-7 7"/>
-        </svg>
       </a>
     </div>
 
@@ -237,7 +234,7 @@ function getPickupLabel(type: UnsignedFaAlert['acquisitionType']): string {
       <h3 class="hp-fa__guest-title">Unsigned FA Adds</h3>
       <p class="hp-fa__guest-desc">Log in to see recent pickups that still need contract years declared.</p>
     </div>
-    <a href={loginHref} class="hp-fa__guest-btn">Log in</a>
+    <a href={loginHref} class="cta cta--primary hp-fa__guest-btn">Log in</a>
   </section>
 )}
 
@@ -269,7 +266,7 @@ function getPickupLabel(type: UnsignedFaAlert['acquisitionType']): string {
   .hp-fa__title,
   .hp-fa__guest-title {
     margin: 0;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -284,56 +281,17 @@ function getPickupLabel(type: UnsignedFaAlert['acquisitionType']): string {
   }
 
   .hp-fa__cta {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--dh-accent);
-    text-decoration: none;
-    white-space: nowrap;
-    transition: gap 0.15s ease;
+    font-size: var(--font-size-xs);
   }
 
-  .hp-fa__cta:hover,
-  .hp-fa__cta:focus-visible {
-    gap: 0.5rem;
-  }
-
-  .hp-fa__cta:focus-visible {
-    outline: 2px solid var(--dh-accent);
-    outline-offset: 2px;
-    border-radius: var(--radius-sm, 0.25rem);
-  }
-
-  /* Filled primary button — matches design-system btn.primary spec:
-     12px font, 600 weight, 7px 14px padding, 8px radius, --shadow-sm,
-     darkened-bg hover (no opacity-hover, per README). */
+  /* Compact primary button — matches design-system btn.primary spec:
+     12px font, 600 weight, 7px 14px padding, --shadow-sm. */
   .hp-fa__guest-btn {
     flex-shrink: 0;
-    display: inline-flex;
-    align-items: center;
     padding: 0.4375rem 0.875rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
-    color: var(--btn-primary-text, #fff);
-    background: var(--btn-primary-bg, var(--dh-accent));
-    border: 1px solid var(--btn-primary-border, var(--dh-accent));
-    border-radius: var(--radius-md, 0.5rem);
     box-shadow: var(--shadow-sm);
-    text-decoration: none;
-    white-space: nowrap;
-    transition: background 0.15s ease, border-color 0.15s ease;
-  }
-
-  .hp-fa__guest-btn:hover {
-    background: var(--btn-primary-bg-hover, var(--color-primary-dark, #164066));
-    border-color: var(--btn-primary-bg-hover, var(--color-primary-dark, #164066));
-  }
-
-  .hp-fa__guest-btn:focus-visible {
-    outline: 2px solid var(--dh-accent);
-    outline-offset: 2px;
   }
 
   .hp-fa__summary,
@@ -341,7 +299,7 @@ function getPickupLabel(type: UnsignedFaAlert['acquisitionType']): string {
   .hp-fa__empty,
   .hp-fa__guest-desc {
     margin: 0;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     color: var(--color-gray-600, #4b5563);
   }
 
@@ -393,7 +351,7 @@ function getPickupLabel(type: UnsignedFaAlert['acquisitionType']): string {
     border-radius: 999px;
     background: var(--color-gray-100, #f3f4f6);
     color: var(--color-gray-500, #6b7280);
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 700;
     letter-spacing: 0.05em;
     text-transform: uppercase;
@@ -428,7 +386,7 @@ function getPickupLabel(type: UnsignedFaAlert['acquisitionType']): string {
 
   .hp-fa__meta-line {
     margin: 0;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--color-gray-500, #6b7280);
     font-variant-numeric: tabular-nums;
   }
@@ -448,14 +406,14 @@ function getPickupLabel(type: UnsignedFaAlert['acquisitionType']): string {
     display: inline-flex;
     align-items: center;
     padding: 0.3rem 0.625rem;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     color: var(--btn-primary-text, #fff);
     background: var(--btn-primary-bg, var(--dh-accent));
     border: 1px solid var(--btn-primary-border, var(--dh-accent));
     border-radius: var(--radius-sm, 0.25rem);
     cursor: pointer;
-    transition: background 0.15s ease, border-color 0.15s ease;
+    transition: background var(--transition-fast), border-color var(--transition-fast);
   }
 
   .hp-fa__set-years:hover {
@@ -480,7 +438,7 @@ function getPickupLabel(type: UnsignedFaAlert['acquisitionType']): string {
 
   .hp-fa__declared-label {
     margin: 0 0 0.75rem;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -498,7 +456,7 @@ function getPickupLabel(type: UnsignedFaAlert['acquisitionType']): string {
     border-radius: 999px;
     background: var(--color-gray-100, #f3f4f6);
     color: var(--color-gray-500, #6b7280);
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 700;
     letter-spacing: 0.05em;
     text-transform: uppercase;

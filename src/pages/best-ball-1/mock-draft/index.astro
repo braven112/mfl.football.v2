@@ -234,7 +234,7 @@ const STATUS_LABELS: Record<string, string> = {
 
   .bb-mock__create button {
     background: var(--league-accent, #0e8a5f);
-    color: #ffffff;
+    color: var(--on-league-accent, #ffffff);
     font-weight: 700;
     border: none;
     border-radius: var(--radius-sm, 4px);
@@ -300,7 +300,7 @@ const STATUS_LABELS: Record<string, string> = {
 
   .bb-mock__status--active {
     background: var(--league-accent, #0e8a5f);
-    color: #ffffff;
+    color: var(--on-league-accent, #ffffff);
   }
 
   .bb-mock__status--lobby {
@@ -315,7 +315,7 @@ const STATUS_LABELS: Record<string, string> = {
 
   .bb-mock__date {
     flex-shrink: 0;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--color-text-secondary, #9ca3af);
     font-variant-numeric: tabular-nums;
   }

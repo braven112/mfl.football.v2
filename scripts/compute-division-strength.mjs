@@ -93,6 +93,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { LEAGUES } from '../src/config/leagues-data.mjs';
+import { leaguesFor } from './lib/league-jobs.mjs';
 import { writeJsonIfChanged } from './lib/canonical-json.mjs';
 import { LEAGUE_SLUGS, resolveLeagueArg } from './lib/owner-tenure-inputs.mjs';
 import {
@@ -998,7 +999,9 @@ async function runLeague(slug, opts) {
 
 async function main() {
   const opts = parseArgs();
-  const slugs = opts.league ? [opts.league] : LEAGUE_SLUGS;
+  // Every league with the report's page (league-jobs `division-strength`).
+  const withReport = new Set(leaguesFor('division-strength').map((l) => l.slug));
+  const slugs = opts.league ? [opts.league] : LEAGUE_SLUGS.filter((slug) => withReport.has(slug));
   console.log(`\n🏟️  Division strength — ${slugs.join(', ')}\n`);
   // Leagues touch disjoint files — run them concurrently.
   await Promise.all(slugs.map((slug) => runLeague(slug, opts)));

@@ -1,0 +1,12 @@
+---
+/**
+ * __LEAGUE_SHORT__ — Rules. Thin route over the shared page
+ * (src/components/shared/package-league/PackageRulesPage.astro): the league's
+ * written rulebook when it has one, and its settings as configured on MFL.
+ */
+import PackageRulesPage from '../../components/shared/package-league/PackageRulesPage.astro';
+
+export const prerender = false;
+---
+
+<PackageRulesPage leagueSlug="__LEAGUE_SLUG__" />

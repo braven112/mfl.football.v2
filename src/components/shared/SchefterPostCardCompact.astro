@@ -6,8 +6,10 @@
  * Renders reactions + reply thread toggle.
  */
 import type { SchefterPost } from '../../types/schefter';
+import { stripTags } from '../../utils/whats-new-links';
 import { getAuthor, getAuthorAvatar } from '../../types/schefter';
-import { formatRelativeTime, getMilestoneLabel } from '../../utils/schefter-feed';
+import { getPersonaLabels, postByline } from '../../utils/persona-server';
+import { formatRelativeTime, getMilestoneLabel, postLinkHref } from '../../utils/schefter-feed';
 import type { GroupMePostMeta } from '../../utils/groupme-storage';
 import SchefterReactionBar from './SchefterReactionBar.tsx';
 import SchefterReplyThread from './SchefterReplyThread.tsx';
@@ -46,9 +48,12 @@ const relTime = formatRelativeTime(post.timestamp, now);
 const isGroupMe = post.type === 'groupme';
 const gmMeta = isGroupMe ? (post as SchefterPost & { _groupMe: GroupMePostMeta })._groupMe : null;
 const author = isGroupMe ? null : getAuthor(post.authorId);
-const avatarSrc = isGroupMe ? (gmMeta?.avatar ?? '') : getAuthorAvatar(author!);
-const displayName = isGroupMe ? (gmMeta?.name ?? 'Unknown') : author!.name;
-const displayHandle = isGroupMe ? 'via GroupMe' : author!.handle;
+// The league's persona renames its own byline (src/utils/persona-server.ts).
+const byline = isGroupMe ? null : await postByline(post, author!, getAuthorAvatar(author!));
+const postLabels = await getPersonaLabels(post.league);
+const avatarSrc = isGroupMe ? (gmMeta?.avatar ?? '') : byline!.avatar;
+const displayName = isGroupMe ? (gmMeta?.name ?? 'Unknown') : byline!.name;
+const displayHandle = isGroupMe ? 'via GroupMe' : byline!.handle;
 const isExternal = post.type === 'external';
 const tierClass = `sfc-post${post.tier === 'breaking' ? ' sfc-post--breaking' : ''}${isGroupMe ? ' sfc-post--groupme' : ''}${watchHit ? ' sfc-post--watching' : ''}`;
 
@@ -89,7 +94,7 @@ if (firstEmbedUrl) {
 }
 ---
 
-<article id={`post-${post.id}`} class={tierClass} data-post-id={post.id} aria-label={`${displayName}: ${post.headline ?? post.body?.replace(/<[^>]+>/g, '').slice(0, 80) ?? 'Post'}`}>
+<article id={`post-${post.id}`} class={tierClass} data-post-id={post.id} aria-label={`${displayName}: ${post.headline ?? (post.body ? stripTags(post.body).slice(0, 80) : 'Post')}`}>
   <img class={`sfc-avatar${isGroupMe ? ' sfc-avatar--groupme' : ''}`} src={avatarSrc} alt="" aria-hidden="true" width="32" height="32" loading="lazy" />
 
   <div class="sfc-post__content">
@@ -145,7 +150,7 @@ if (firstEmbedUrl) {
 
     {post.link && (
       <a
-        href={post.link}
+        href={postLinkHref(post)}
         class={`sfc-post__link${typeof post.link === 'string' && post.link.includes('?target=') ? ' sfc-post__link--directed' : ''}`}
         {...(isExternal ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
       >
@@ -162,6 +167,7 @@ if (firstEmbedUrl) {
 
     <div class="sfc-post__actions">
       <SchefterReplyThread
+      personaName={postLabels.name}
         client:idle
         postId={post.id}
         postHeadline={isGroupMe ? (gmMeta?.name ?? 'GroupMe') : post.headline}

@@ -9,22 +9,28 @@ import { getAuthor, getAuthorAvatar } from '../../types/schefter';
 import { formatRelativeTime } from '../../utils/schefter-feed';
 import '../../styles/schefter-feed.css';
 
+import type { LeagueSlug } from '../../types/nav';
+import { getPostPersona } from '../../utils/persona-server';
+import { personaByline } from '../../utils/persona.mjs';
+
 interface Props {
   posts: SchefterPost[];
-  /** bb1 is accepted for type soundness (its feed is empty, so callers
-      never actually render the widget there today). */
-  league: 'theleague' | 'afl' | 'bb1';
+  /** Any league's nav slug. bb1's feed is empty, so callers never render
+      the widget there today; archies' feed carries The Gauntlet. */
+  league: LeagueSlug;
   allNewsLink: string;
 }
 
-const { posts, allNewsLink } = Astro.props;
+const { posts, allNewsLink, league } = Astro.props;
+// The league's persona supplies its own avatar (src/utils/persona-server.ts).
+const persona = await getPostPersona(league);
 const now = new Date();
 ---
 
 <section class="sf-widget" aria-labelledby="sf-widget-title">
   <div class="sf-widget__header">
     <h2 class="sf-widget__title" id="sf-widget-title">League News</h2>
-    <a href={allNewsLink} class="sf-widget__view-all">View all →</a>
+    <a href={allNewsLink} class="cta-link sf-widget__view-all">View all</a>
   </div>
 
   {posts.length === 0 ? (
@@ -35,7 +41,7 @@ const now = new Date();
     <div class="sf-widget__list">
       {posts.map(post => {
         const author = getAuthor(post.authorId);
-        const avatarSrc = getAuthorAvatar(author);
+        const avatarSrc = personaByline(author, getAuthorAvatar(author), persona).avatar;
         return (
           <div class="sf-widget__item">
             <img class="sf-widget__avatar" src={avatarSrc} alt="" aria-hidden="true" width="18" height="18" loading="lazy" />

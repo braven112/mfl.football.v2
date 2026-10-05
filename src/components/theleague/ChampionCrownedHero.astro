@@ -55,7 +55,7 @@ const summary = isUserChampion
         <span class="champ-hero__count-label">Final · vs {loserName}</span>
       </div>
       <span class="champ-hero__divider" aria-hidden="true"></span>
-      <a href={r('/theleague/playoffs')} class="champ-hero__cta">
+      <a href={r('/theleague/playoffs')} class="cta cta--primary champ-hero__cta">
         Championship Recap <span class="champ-hero__cta-arrow" aria-hidden="true">→</span>
       </a>
     </div>
@@ -109,13 +109,13 @@ const summary = isUserChampion
        invalid-at-computed-value-time rule this whole file is now guarding
        against, which is a poor thing to depend on deliberately. */
     --champ-surface: none;
-    background-color: #0f1e2e;
+    background-color: var(--hero-ink, #0f1e2e);
     --champ-ink: #ffffff;
     --champ-ink-soft: rgba(255, 255, 255, 0.72);
     --champ-ink-faint: rgba(255, 255, 255, 0.6);
     --champ-divider: rgba(255, 255, 255, 0.16);
     --champ-cta-bg: #ffffff;
-    --champ-cta-ink: #0f1e2e;
+    --champ-cta-ink: var(--hero-ink, #0f1e2e);
     --champ-glow-alpha: 0.4;
     --champ-accent-ink: var(--color-warning, #f59e0b);
     --champ-logo-opacity: 0.5;
@@ -228,7 +228,7 @@ const summary = isUserChampion
     margin-top: 0.3rem;
     font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', 'Oswald', sans-serif);
     font-weight: 700;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--champ-ink-faint);
@@ -241,42 +241,22 @@ const summary = isUserChampion
   }
 
   .champ-hero__cta {
-    display: inline-flex;
-    align-items: center;
+    --cta-bg: var(--champ-cta-bg);
+    --cta-bg-hover: color-mix(in srgb, var(--champ-cta-bg) 88%, black);
+    --cta-ink: var(--champ-cta-ink);
+    --cta-border: var(--champ-cta-bg);
+    --cta-focus-ring: var(--color-warning, #f59e0b);
     gap: 0.5rem;
     height: 50px;
     padding: 0 1.5rem;
-    border-radius: var(--radius-md, 0.5rem);
-    background: var(--champ-cta-bg);
-    color: var(--champ-cta-ink);
     font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', 'Oswald', sans-serif);
-    font-weight: 700;
     font-size: 1.0625rem;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    text-decoration: none;
-    white-space: nowrap;
-    transition: filter 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
-  }
-
-  .champ-hero__cta:hover {
-    filter: brightness(0.92);
-    transform: translateY(-1px);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
-  }
-
-  .champ-hero__cta:focus-visible {
-    outline: 3px solid var(--color-warning, #f59e0b);
-    outline-offset: 3px;
   }
 
   .champ-hero__cta-arrow {
     font-size: 1.1rem;
-    transition: transform 0.15s ease;
-  }
-
-  .champ-hero__cta:hover .champ-hero__cta-arrow {
-    transform: translateX(2px);
   }
 
   @media (max-width: 640px) {
@@ -295,13 +275,6 @@ const summary = isUserChampion
   @media (max-width: 40em) {
     .champ-hero__divider {
       display: none;
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .champ-hero__cta,
-    .champ-hero__cta-arrow {
-      transition: none;
     }
   }
 </style>

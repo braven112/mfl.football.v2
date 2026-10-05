@@ -56,7 +56,26 @@ export interface TransactionFilters {
   kindsExplicit: boolean;
   /** True when `?mine=1` resolved to a real franchise for the signed-in user. */
   mine: boolean;
+  /**
+   * Division id, or null. Only ever set in a league whose divisions are its
+   * player pools (archies) — `parseFilters` drops an id it was not offered,
+   * so the param is inert everywhere else.
+   */
+  division: string | null;
+  /**
+   * True when `division` came from the viewer's own division rather than the
+   * URL. The page OPENS there, so it is still the default view (no Reset).
+   */
+  divisionDefaulted: boolean;
 }
+
+/**
+ * The `?division=` value meaning "every division". Explicit rather than an
+ * absent param, because absent now means "the viewer's own division" — and
+ * the filter form drops empty fields from the querystring, so an empty value
+ * could never say "all".
+ */
+export const ALL_DIVISIONS = 'all';
 
 const isKind = (v: string): v is TransactionKind =>
   (ALL_KINDS as readonly string[]).includes(v);
@@ -78,6 +97,17 @@ export interface ParseFiltersInput {
    * filtering the AFL by TheLeague's franchise 0001.
    */
   myFranchiseId: string | null;
+  /**
+   * The division ids this league's ledger can filter by — empty (the default)
+   * for every league whose divisions are not player pools.
+   */
+  divisionIds?: readonly string[];
+  /**
+   * Franchise id → division id. With it, a chosen team pulls the division to
+   * its own: the form always submits the division select, so without this a
+   * team picked from another division filtered to nothing.
+   */
+  divisionOf?: (franchiseId: string) => string | undefined;
 }
 
 /**
@@ -85,7 +115,7 @@ export interface ParseFiltersInput {
  * these are query params, so a hand-edited one is expected, not exceptional.
  */
 export function parseFilters(input: ParseFiltersInput): TransactionFilters {
-  const { params, year, myFranchiseId } = input;
+  const { params, year, myFranchiseId, divisionIds = [], divisionOf } = input;
 
   // BOTH shapes, because both occur. A checkbox group posts one `types=` param
   // PER BOX (`?types=free-agent&types=auction`), so `params.get` would read the
@@ -109,6 +139,24 @@ export function parseFilters(input: ParseFiltersInput): TransactionFilters {
   const mine = params.get('mine') === '1' && Boolean(myFranchiseId);
   const team = mine ? myFranchiseId : (params.get('team') || null);
 
+  // Division, in order: a chosen team's own division; an explicit id or
+  // `all` from the URL; else the viewer's own division — the ledger OPENS on
+  // the viewer's player pool, like the Free Agents page. Every branch is
+  // gated on `divisionIds`, so a league without division pools gets null.
+  const divisionRaw = params.get('division');
+  const teamDivision = team ? divisionOf?.(team) : undefined;
+  const ownDivision = myFranchiseId ? divisionOf?.(myFranchiseId) : undefined;
+  let division: string | null = null;
+  let divisionDefaulted = false;
+  if (teamDivision && divisionIds.includes(teamDivision)) {
+    division = teamDivision;
+  } else if (divisionRaw && divisionIds.includes(divisionRaw)) {
+    division = divisionRaw;
+  } else if (divisionRaw !== ALL_DIVISIONS && !team && ownDivision && divisionIds.includes(ownDivision)) {
+    division = ownDivision;
+    divisionDefaulted = true;
+  }
+
   return {
     year,
     team,
@@ -119,6 +167,8 @@ export function parseFilters(input: ParseFiltersInput): TransactionFilters {
     kinds,
     kindsExplicit,
     mine,
+    division,
+    divisionDefaulted,
   };
 }
 
@@ -148,6 +198,7 @@ export function kindsPresentIn(
 export function isDefaultView(filters: TransactionFilters): boolean {
   return (
     !filters.team &&
+    (!filters.division || filters.divisionDefaulted) &&
     !filters.query &&
     filters.week === null &&
     filters.from === null &&
@@ -187,13 +238,19 @@ export interface ApplyFiltersInput {
   filters: TransactionFilters;
   /** MFL player id → display name, for the search box. */
   nameOf: (playerId: string) => string | undefined;
+  /**
+   * Franchise id → division id, for `filters.division`. A trade matches when
+   * EITHER side is in the division, the same rule the team filter uses.
+   */
+  divisionOf?: (franchiseId: string) => string | undefined;
 }
 
 export function applyFilters(input: ApplyFiltersInput): TransactionRow[] {
-  const { rows, filters, nameOf } = input;
+  const { rows, filters, nameOf, divisionOf } = input;
   return rows.filter((row) => {
     if (!filters.kinds.has(row.kind)) return false;
     if (filters.team && !franchisesInRow(row).includes(filters.team)) return false;
+    if (filters.division && !franchisesInRow(row).some((id) => divisionOf?.(id) === filters.division)) return false;
     if (filters.from !== null && row.at < filters.from) return false;
     if (filters.to !== null && row.at > filters.to) return false;
     if (filters.week !== null && weekOf(row, filters.year) !== filters.week) return false;

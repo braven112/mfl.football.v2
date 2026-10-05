@@ -92,3 +92,38 @@ solid symbol, and the rest/hover look is CSS on the sprite glyphs
 `drop-shadow`s — two 1px for an edge, 6px + 18px for the glow). Stroke-based
 outlines are not an option on sprite glyphs: each symbol has its own viewBox,
 so one `stroke-width` renders a different weight on every icon.
+
+## 2026-09-27 — Archie's transactions report on phones: MFL's DOM, not ours
+
+**Context:** owners reported player names on the Transactions report
+(`options?O=03`) breaking letter by letter on a phone.
+
+**Why:** the page has no `#transactions` wrapper, so `_transactions.scss`
+(written for TheLeague's page) never applies to it — the report is a bare
+`table.report` in `.mobile-wrap`, body id `body_options_03`. Its five columns
+left the Transaction cell ~95px, where mflscripts' headshot block (injected by
+`popups/players/scriptV2.js`) had no room.
+
+**Fix (`_archies.scss`, <640px):** `table.report:has(th.transaction)` rows are
+CSS grids — banner (240px, centred), then `# · type · date`, then players.
+Two things that looked like layout bugs were specificity/markup:
+
+- `#withmenus li { overflow-wrap: anywhere }` (the phone safety net) outranks
+  any class-scoped override; beat it with a `#withmenus …` selector.
+- mflscripts' `.playerLastName` is a `flex-wrap: wrap` row whose `::after` is
+  the 30px news icon, and `.teamPositionCircleTxt` has a ~10px box, so "QB"
+  stacks. Both need overriding wherever that headshot block renders narrow.
+
+**Verify on the live page, not a mock:** Playwright can't reach MFL through the
+sandbox proxy's CA, so route every request through `curl` and fulfil
+`archies_main.css` from the local build — that renders the real page, headshots
+included, with the branch's CSS.
+
+**Follow-up — trade lines.** A trade side is one run of bare text (`[banner]
+gave up A; B; C; $100.00 blind bidding dollars`); dollars and draft picks are
+bare text too, so the `;` can't be hidden by CSS without hiding them. Trade
+`li`s flow as a sentence instead (players `inline-block`, connecting text
+dimmed). mflscripts also injects `#options_03 li a[data-pimg-processed]
+{ display: block }`, so any rule changing a player link's display there needs
+an id in its selector (`#withmenus …`). Owner chose CSS-only over a header
+script that would rebuild the lines.

@@ -15,9 +15,9 @@ import {
 } from '../src/utils/rosters/afl-phone-sheet';
 import type { SheetActionApi } from '../src/utils/player-modal-trigger';
 
-const page = readFileSync('src/components/afl-family/RostersPage.astro', 'utf8');
+const page = readFileSync('src/components/shared/rosters/RostersPage.astro', 'utf8');
 const css = readFileSync('src/styles/rosters-mobile.css', 'utf8');
-const modal = readFileSync('src/components/afl-fantasy/AFLActionModal.astro', 'utf8');
+const modal = readFileSync('src/components/shared/AFLActionModal.astro', 'utf8');
 
 describe('teamSpread signs the line the way TheLeague’s badge does', () => {
   it('favoured team reads +, the underdog -', () => {
@@ -114,7 +114,7 @@ describe('the page wiring', () => {
 
   it('imports the shared phone stylesheet from the frontmatter', () => {
     const frontmatter = page.split('\n---')[0];
-    expect(frontmatter).toContain("import '../../styles/rosters-mobile.css';");
+    expect(frontmatter).toContain("import '../../../styles/rosters-mobile.css';");
   });
 
   it('names the AFL table beside TheLeague’s in the card rules, not in a copy', () => {

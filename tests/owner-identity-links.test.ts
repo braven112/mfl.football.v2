@@ -21,6 +21,7 @@ import path from 'node:path';
 import { foldForFilter, ownerSlugForIdentity } from '../src/utils/owner-links';
 import { buildHistoricalIdentities } from '../src/utils/franchise-eras';
 import { LEAGUES } from '../src/config/leagues-data.mjs';
+import { isPackageLeague } from '../src/config/package-league-routes.mjs';
 
 const REPO_ROOT = process.cwd();
 const readJson = (p: string) =>
@@ -41,6 +42,10 @@ for (const league of Object.values(LEAGUES) as any[]) {
   // Leagues that don't run the franchise-history pipeline have no owners file.
   // Structural skip, exactly as the other owners suites do it.
   if (!tenures) continue;
+  // A package league's franchises index renders no Former Identities strip:
+  // its config keeps no identity history, and its owners are anonymous until
+  // commissioner access names them.
+  if (isPackageLeague(league)) continue;
   const config = readJson(path.join(REPO_ROOT, league.configPath));
   const teams = Array.isArray(config.teams)
     ? config.teams

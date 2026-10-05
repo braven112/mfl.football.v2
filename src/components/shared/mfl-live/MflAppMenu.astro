@@ -37,7 +37,7 @@
  * takes every link inside out of the tab order, so a closed drawer cannot be
  * tabbed into from the page behind it.
  */
-import ThemeToggle from '../../ThemeToggle.astro';
+import ThemeToggle from '../ThemeToggle.astro';
 
 export interface Props {
 	/** The league sites this project runs. Absolute URLs, built by `leagueUrl`. */
@@ -49,9 +49,21 @@ export interface Props {
 	signInHref: string;
 	/** `Astro.url.pathname`, for `aria-current`. */
 	currentPath: string;
+	/** Site analytics link — only for the one seat `canViewSiteInsights` allows. */
+	showAnalytics?: boolean;
+	/** Product pages link — gated by `canViewProductPages` (one seat until launch). */
+	showProducts?: boolean;
 }
 
-const { leagueLinks, ownerName, signedIn, signInHref, currentPath } = Astro.props as Props;
+const {
+	leagueLinks,
+	ownerName,
+	signedIn,
+	signInHref,
+	currentPath,
+	showAnalytics = false,
+	showProducts = false,
+} = Astro.props as Props;
 
 /**
  * The app's own destinations. Settings is signed-in only — it lists the
@@ -60,10 +72,15 @@ const { leagueLinks, ownerName, signedIn, signInHref, currentPath } = Astro.prop
  */
 const BOARD_LINKS = [
 	{ href: '/live', label: 'Live board', icon: 'board', requiresAuth: false },
+	{ href: '/live/standings', label: 'Live standings', icon: 'standings', requiresAuth: false },
 	{ href: '/live/settings', label: 'Leagues & settings', icon: 'gear', requiresAuth: true },
 ] as const;
 
-const boardLinks = BOARD_LINKS.filter((link) => signedIn || !link.requiresAuth);
+const boardLinks: { href: string; label: string; icon: string }[] = [
+	...BOARD_LINKS.filter((link) => signedIn || !link.requiresAuth),
+	...(showAnalytics ? [{ href: '/live/analytics', label: 'Site analytics', icon: 'chart' }] : []),
+	...(showProducts ? [{ href: '/products', label: 'Products', icon: 'tag' }] : []),
+];
 
 /** Exact match only: `/live` must not light up while you are on `/live/settings`. */
 const isCurrent = (href: string) => currentPath === href || currentPath === `${href}/`;
@@ -122,6 +139,27 @@ const showSignIn = !signedIn && !isCurrent(signInHref.split('?')[0]);
 									<rect x="3" y="4" width="18" height="16" rx="2" />
 									<path d="M3 10h18" />
 									<path d="M12 10v10" />
+								</Fragment>
+							) : link.icon === 'chart' ? (
+								<Fragment>
+									<path d="M4 20V10" />
+									<path d="M10 20V4" />
+									<path d="M16 20v-7" />
+									<path d="M3 20h18" />
+								</Fragment>
+							) : link.icon === 'tag' ? (
+								<Fragment>
+									<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z" />
+									<circle cx="7.5" cy="7.5" r="1.5" />
+								</Fragment>
+							) : link.icon === 'standings' ? (
+								<Fragment>
+									<path d="M8 6h13" />
+									<path d="M8 12h13" />
+									<path d="M8 18h13" />
+									<path d="M3 6h1" />
+									<path d="M3 12h1" />
+									<path d="M3 18h1" />
 								</Fragment>
 							) : (
 								<Fragment>
@@ -431,7 +469,7 @@ const showSignIn = !signedIn && !isCurrent(signInHref.split('?')[0]);
 		   of the tab order while closed. */
 		visibility: hidden;
 		/* ── visibility is STEPPED, and the step has to land on OPEN ──
-		   `transition: … visibility 200ms ease` looks equivalent and is not:
+		   `transition: … visibility var(--transition-base)` looks equivalent and is not:
 		   visibility interpolates discretely, so it stays `hidden` for the first
 		   instant of the open transition. The script focuses the close button in
 		   that instant, `.focus()` on a still-invisible element is a silent
@@ -439,12 +477,12 @@ const showSignIn = !signedIn && !isCurrent(signInHref.split('?')[0]);
 		   one Tab from the page behind it. Measured, not theorised.
 		   So: `0s` with a DELAY, flipping visible immediately on open (delay 0
 		   below) and waiting out the slide on close (delay 200ms here). */
-		transition: transform 200ms ease, visibility 0s linear 200ms;
+		transition: transform var(--transition-base), visibility 0s linear 200ms;
 	}
 	:global(html.mfl-menu-open) .mfl-menu__panel {
 		transform: translateX(0);
 		visibility: visible;
-		transition: transform 200ms ease, visibility 0s linear 0s;
+		transition: transform var(--transition-base), visibility 0s linear 0s;
 	}
 
 	/* The open-state rules below are `html.mfl-menu-open .mfl-menu__panel`, which
@@ -627,7 +665,7 @@ const showSignIn = !signedIn && !isCurrent(signInHref.split('?')[0]);
 		padding: 0.6rem 0.8rem;
 		border-radius: 0.5rem;
 		background: var(--league-accent);
-		color: #ffffff;
+		color: var(--on-league-accent, #ffffff);
 		font-size: 0.9rem;
 		font-weight: 600;
 		text-align: center;

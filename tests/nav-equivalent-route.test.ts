@@ -195,12 +195,15 @@ describe('getLeagueSwitchUrl', () => {
 // league flips the header to dropdown mode, and these generic assertions
 // must keep holding for every league pair without edits.
 describe('getLeagueSwitchTargets', () => {
-  it('lists every league except the current one, for each league', () => {
+  it('lists every public league except the current one, for each league', () => {
     for (const current of ALL_LEAGUES) {
       const targets = getLeagueSwitchTargets(current.navSlug, `/${current.slug}/rosters`, false, 'localhost');
+      // A package league (a client's private site) is never offered from
+      // another league's switcher; its own switcher is not rendered at all.
       expect(targets.map((t) => t.navSlug)).toEqual(
-        ALL_LEAGUES.filter((l) => l.navSlug !== current.navSlug).map((l) => l.navSlug)
+        ALL_LEAGUES.filter((l) => l.navSlug !== current.navSlug && l.advertiseOnSharedHost !== false).map((l) => l.navSlug)
       );
+      expect(targets.some((t) => t.navSlug === 'archies'), 'the private package league is never a switch target').toBe(false);
       // Registry display names label the menu entries
       for (const t of targets) {
         const def = ALL_LEAGUES.find((l) => l.navSlug === t.navSlug)!;

@@ -34,7 +34,12 @@ import { hasLiveSignal, type LiveSnapshot } from '../live-scoring-snapshot';
 import { computeTeamTotals } from '../live-scoring-view';
 import { getPlayerMap } from '../player-map';
 import { getLeagueTeamBrands } from '../league-team-brands';
-import { franchiseInitials, resolveFranchiseIdentity } from '../mfl-live-identity';
+import {
+  franchiseInitials,
+  leagueHasUploadedMarks,
+  resolveFranchiseIdentity,
+  type FranchiseColorClaim,
+} from '../mfl-live-identity';
 import type { PlayerMeta } from '../../types/live-scoring';
 import type {
   LiveBoard,
@@ -46,6 +51,15 @@ import type {
 import { loadLeagueWeekProjections } from './projections';
 import { buildLiveMatchup, buildLiveTeam } from './model';
 import { surfaceForLeague, type LiveSurface } from './surface';
+
+/** A Throwback Week era, laid over a franchise's present-day identity. */
+export interface LiveIdentityOverride {
+  name?: string;
+  nameShort?: string;
+  icon?: string;
+  /** The era's own palette. Absent when the era defines none. */
+  colors?: FranchiseColorClaim;
+}
 
 export interface ReadLeagueLiveInput {
   slug: CanonicalLeagueSlug;
@@ -76,11 +90,14 @@ export interface ReadLeagueLiveInput {
    * page's `configTeams`, and the board must show that rather than the club's
    * present-day mark — the whole feature is invisible otherwise.
    *
-   * Only name, short name and icon. COLOURS are deliberately not overridable:
-   * the pair is resolved against this surface's card ground, and an era's
-   * palette has not been through that check. Throwback swaps art, not colour.
+   * Name, short name, icon — and COLOURS when the era defines its own
+   * palette. An era palette is safe to hand over: `resolveMatchupColorVars`
+   * runs every claim through the ground check (ΔE, then AA ink) whatever its
+   * source. Leaving it out was a bug, not a safeguard: Cowboy Up wearing the
+   * green Degenerates crest still claimed Cowboy Up's dark-mode red, won the
+   * clash with the Pigskins' red, and pushed the Pigskins to grey.
    */
-  identityOverrides?: Record<string, { name?: string; nameShort?: string; icon?: string }>;
+  identityOverrides?: Record<string, LiveIdentityOverride>;
 }
 
 /** Which of the four honest states this league is in. */
@@ -254,7 +271,15 @@ export interface BuildBoardInput {
    * one, and the brands carry colours and a crest that a name cannot.
    */
   franchiseNames?: Record<string, string>;
-  identityOverrides?: Record<string, { name?: string; nameShort?: string; icon?: string }>;
+  /**
+   * Each franchise's OWN uploaded mark, for a league with no committed brands
+   * — from the same `readCrossLeagueLive` read as `franchiseNames`. Without it
+   * an outside league skips the ladder's uploaded-mark rung entirely, which is
+   * how Archie's league showed a Chicago Bears logo and initials instead of
+   * its own crests.
+   */
+  franchiseIcons?: Record<string, string>;
+  identityOverrides?: Record<string, LiveIdentityOverride>;
   /**
    * Player identity, when the caller already has it.
    *
@@ -356,6 +381,8 @@ export function buildBoardFromSnapshot(input: BuildBoardInput): LiveBoard {
   }
 
   const overrides = input.identityOverrides ?? {};
+  const icons = input.franchiseIcons ?? {};
+  const leagueHasMarks = leagueHasUploadedMarks(icons);
 
   const teamFor = (franchiseId: string) => {
     const franchiseName = names[franchiseId] ?? `Franchise ${franchiseId}`;
@@ -369,6 +396,8 @@ export function buildBoardFromSnapshot(input: BuildBoardInput): LiveBoard {
       // club match and then to text — exactly the marks MFL Live already shows
       // for it, so the two views cannot disagree about who a franchise is.
       leagueSlug: slug ?? undefined,
+      mflIcon: icons[franchiseId],
+      leagueHasMarks,
     });
     // Throwback art, when the caller supplied any. `initials` are RE-DERIVED
     // from the era name rather than carried over — they are the text rung's
@@ -382,6 +411,7 @@ export function buildBoardFromSnapshot(input: BuildBoardInput): LiveBoard {
           nameShort: over.nameShort ?? over.name ?? resolved.nameShort,
           initials: franchiseInitials(over.name ?? resolved.name),
           icon: over.icon ?? resolved.icon,
+          colors: over.colors ?? resolved.colors,
         }
       : resolved;
     // STARTERS only. The bench lives in its own map precisely so nothing can

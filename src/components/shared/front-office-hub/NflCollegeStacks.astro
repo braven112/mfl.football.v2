@@ -16,8 +16,8 @@
  * delegated listener rather than relying on the host's. The host must mount a
  * PlayerDetailsModal somewhere on the page; both hub panels already do.
  */
-import PlayerCell from '../../theleague/PlayerCell.astro';
-import CollegeLogoDarkStyles from '../../CollegeLogoDarkStyles.astro';
+import PlayerCell from '../PlayerCell.astro';
+import CollegeLogoDarkStyles from '../CollegeLogoDarkStyles.astro';
 import { getNFLTeamName, getNFLTeamLogo } from '../../../utils/nfl-logo';
 import { COLLEGE_LOGO_ONERROR, COLLEGE_LOGO_ONLOAD } from '../../../constants/roster-constants';
 import collegeLogos from '../../../data/college-logos.json';
@@ -254,7 +254,7 @@ const getCollegeAssets = (collegeName?: string | null) => {
     background: var(--content-bg, #fff);
     border-radius: 0.75rem;
     padding: 1.25rem;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    box-shadow: var(--shadow-md);
   }
 
   :global(html.dark) .chart-card {

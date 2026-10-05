@@ -9,9 +9,10 @@
  * keeper era began with the 2024→2025 transition; earlier seasons were
  * full redraft and are not offered.
  */
+import { getPersonaLabels } from '../../utils/persona-server';
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import FrontOfficeNav from '../../components/shared/front-office-nav/FrontOfficeNav.astro';
-import YearSelector from '../../components/theleague/YearSelector.astro';
+import YearSelector from '../../components/shared/YearSelector.astro';
 import KeeperAnalysisCard from '../../components/afl-fantasy/KeeperAnalysisCard.astro';
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 import { getLeagueContext, getLeagueBaseUrl } from '../../utils/league-context';
@@ -182,6 +183,8 @@ const worst = analysis.franchises[analysis.franchises.length - 1];
 const fmtPts = (n: number) =>
   n.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const fmtEff = (n: number) => `${Math.round(n * 100)}%`;
+// Owner-facing copy follows the league's persona (src/utils/persona.mjs).
+const labels = await getPersonaLabels('afl-fantasy');
 ---
 
 <TheLeagueLayout title={`Keeper Report Card ${selectedYear} | AFL`}>
@@ -192,11 +195,11 @@ const fmtEff = (n: number) => `${Math.round(n * 100)}%`;
         <div class="ka-hero__byline">
           <img
             class="ka-hero__avatar"
-            src="/assets/claude-schefter-avatar.webp"
-            alt="Claude Schefter"
+            src={labels.avatar}
+            alt={labels.name}
             loading="eager"
           />
-          <span class="ka-hero__eyebrow">A Claude Schefter Report</span>
+          <span class="ka-hero__eyebrow">{labels.column.replace(/ weekly column$/, ' Report')}</span>
         </div>
         <h1>Keeper Report Card</h1>
         <p class="ka-hero__sub">
@@ -363,7 +366,7 @@ const fmtEff = (n: number) => `${Math.round(n * 100)}%`;
         </li>
         <li>
           Numbers come straight from the season's MFL feeds; the judgment is
-          Claude Schefter's. Per source: the source is the box score.
+          {labels.name}'s. Per source: the source is the box score.
         </li>
       </ul>
     </footer>
@@ -402,7 +405,7 @@ const fmtEff = (n: number) => `${Math.round(n * 100)}%`;
   }
 
   .ka-hero__eyebrow {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     letter-spacing: 0.14em;
     text-transform: uppercase;
     font-weight: 600;

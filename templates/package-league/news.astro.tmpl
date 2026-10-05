@@ -1,0 +1,49 @@
+---
+/**
+ * League news — __LEAGUE_NAME__.
+ *
+ * Thin route wrapper over the shared page body
+ * (src/components/shared/SchefterNewsPage.astro). Only the feed import lives
+ * here: a static import specifier cannot be a runtime variable.
+ *
+ * No tips lane (`schefterTips` is off), so the tip link is not offered; the
+ * league's chat is Slack, so there is no Group Chat tab either. The feed's
+ * weekly column is The Gauntlet.
+ */
+export const prerender = false;
+
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import SchefterNewsPage from '../../components/shared/SchefterNewsPage.astro';
+import { getAuthUser } from '../../utils/auth';
+import { getLeagueBySlug } from '../../config/leagues';
+import { resolveSchefterNewsView } from '../../utils/schefter-news-view';
+import type { SchefterFeed as FeedType } from '../../types/schefter';
+
+let feed: FeedType = { lastScanTimestamp: '', lastProcessedMflTimestamp: '0', posts: [] };
+try {
+  const raw = await import('../../../data/__LEAGUE_SLUG__/schefter-feed.json');
+  feed = raw.default as unknown as FeedType;
+} catch {
+  // Feed not yet populated
+}
+
+const authUser = getAuthUser(Astro.request);
+const league = getLeagueBySlug('__LEAGUE_SLUG__')!;
+
+const view = await resolveSchefterNewsView({
+  league,
+  feed,
+  authUser,
+  url: Astro.url,
+});
+---
+
+<TheLeagueLayout title="League News" og={view.og}>
+  <SchefterNewsPage
+    view={view}
+    isAuthenticated={!!authUser}
+    userId={authUser?.id}
+    schefterArticles={view.featuredArticles}
+    articleBasePath="/__LEAGUE_SLUG__/news"
+  />
+</TheLeagueLayout>

@@ -10,9 +10,9 @@
  * (a glob cannot take a variable).
  */
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
-import ThemeImage from '../ThemeImage.astro';
-import UnifiedStandingsTable from '../theleague/standings/StandingsTable.astro';
-import { COLUMNS, TIERING } from '../theleague/standings/standings-table-config';
+import ThemeImage from '../shared/ThemeImage.astro';
+import UnifiedStandingsTable from '../shared/standings/StandingsTable.astro';
+import { COLUMNS, TIERING } from '../shared/standings/standings-table-config';
 import { getConferenceStandings } from '../../utils/standings';
 import { resolveConfigForYear } from '../../utils/team-names';
 import { extractSeasonStructure, applySeasonStructure } from '../../utils/afl-structure';
@@ -104,7 +104,7 @@ const tools = [
             <span>{myTier}</span>
           </div>
         )}
-        <a class="blh__team-cta" href={`${prefix}/rosters?franchise=${team.franchiseId}`}>Your roster →</a>
+        <a class="cta-link blh__team-cta" href={`${prefix}/rosters?franchise=${team.franchiseId}`}>Your roster</a>
       </section>
     )}
 
@@ -157,7 +157,7 @@ const tools = [
               {t.myRank > 3 && <p class="blh__mine-rank">You: #{t.myRank} of {t.size}</p>}
             </div>
           ))}
-          <a class="blh__more" href={`${prefix}/standings?view=all_play`}>Full tier tables →</a>
+          <a class="cta-link blh__more" href={`${prefix}/standings?view=all_play`}>Full tier tables</a>
         </section>
 
         <section class="blh__card" aria-label="How the league works">
@@ -233,10 +233,6 @@ const tools = [
     width: 28px;
     height: 28px;
   }
-  .blh__team-cta {
-    font-weight: 600;
-    white-space: nowrap;
-  }
   .blh__tools {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -259,7 +255,7 @@ const tools = [
     font-weight: 700;
   }
   .blh__tool-blurb {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     color: var(--content-text-muted);
   }
   .blh__columns {

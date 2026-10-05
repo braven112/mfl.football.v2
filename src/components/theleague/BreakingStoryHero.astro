@@ -11,6 +11,7 @@
  * The router only mounts this when a compositable breaking story exists, so
  * there is no in-component fallback: no story, no hero.
  */
+import { getPersonaLabels } from '../../utils/persona-server';
 import type { HeroModel } from '../../utils/hero-casting';
 import type { BreakingStory } from '../../utils/offseason-hero-data';
 import { getNflTeamColors, getNflTeamNickname, hexToRgba } from '../../utils/nfl-team-colors';
@@ -58,6 +59,8 @@ const safeExternal =
 const ctaHref = rosterHref ?? safeExternal ?? r('/theleague/news');
 const ctaExternal = !rosterHref && !!safeExternal;
 const ctaLabel = rosterHref ? 'See the roster' : safeExternal ? 'Read the full story' : 'See the latest';
+// Owner-facing copy follows the league's persona (src/utils/persona.mjs).
+const labels = await getPersonaLabels('theleague');
 ---
 
 <section
@@ -83,13 +86,13 @@ const ctaLabel = rosterHref ? 'See the roster' : safeExternal ? 'Read the full s
 
   <div class="bsh__content">
     <p class="bsh__eyebrow">
-      <span class="bsh__tag">Schefter Report · Breaking</span>
+      <span class="bsh__tag">{labels.reportShort} · Breaking</span>
       <time class="bsh__time">{timeAgo}</time>
     </p>
     <h2 class="bsh__title">{story.headline}</h2>
     {summary && <p class="bsh__summary">{summary}</p>}
     <a
-      class="bsh__cta"
+      class="cta cta--primary bsh__cta"
       href={ctaHref}
       target={ctaExternal ? '_blank' : undefined}
       rel={ctaExternal ? 'noopener noreferrer' : undefined}
@@ -263,7 +266,7 @@ const ctaLabel = rosterHref ? 'See the roster' : safeExternal ? 'Read the full s
   }
 
   .bsh__summary {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     line-height: 1.5;
     color: var(--bsh-body);
     max-width: 48ch;
@@ -271,36 +274,13 @@ const ctaLabel = rosterHref ? 'See the roster' : safeExternal ? 'Read the full s
   }
 
   .bsh__cta {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    background: var(--bsh-cta-bg);
-    color: var(--bsh-cta-ink);
+    --cta-bg: var(--bsh-cta-bg);
+    --cta-bg-hover: color-mix(in srgb, var(--bsh-cta-bg) 88%, black);
+    --cta-ink: var(--bsh-cta-ink);
+    --cta-border: var(--bsh-cta-bg);
+    --cta-focus-ring: var(--bsh-tag-bg);
     font-size: 0.8125rem;
-    font-weight: 700;
     padding: 0.6rem 1.05rem;
-    border-radius: var(--radius-md, 0.5rem);
-    text-decoration: none;
-    transition: transform 120ms ease;
-  }
-
-  .bsh__cta:hover {
-    transform: translateY(-1px);
-  }
-
-  .bsh__cta:focus-visible {
-    outline: 2px solid var(--bsh-tag-bg);
-    outline-offset: 2px;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .bsh__cta {
-      transition: none;
-    }
-
-    .bsh__cta:hover {
-      transform: none;
-    }
   }
 
   @media (max-width: 640px) {

@@ -60,7 +60,7 @@ html.dark .hc-page {
 
 .hc-tag {
   display: inline-block;
-  font-size: 0.6875rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -70,10 +70,10 @@ html.dark .hc-page {
   border-radius: 9999px;
 }
 
-.hc-dot { color: var(--color-gray-400, #9ca3af); font-size: 0.75rem; }
+.hc-dot { color: var(--color-gray-400, #9ca3af); font-size: var(--font-size-xs); }
 
 .hc-hero__date {
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   color: var(--color-gray-500, #6b7280);
   font-weight: 500;
 }
@@ -105,7 +105,7 @@ html.dark .hc-page {
 }
 
 .hc-stack-item { font-size: 0.8125rem; font-weight: 500; color: var(--color-gray-600, #4b5563); }
-.hc-stack-dot { color: var(--color-gray-300, #d1d5db); font-size: 0.75rem; }
+.hc-stack-dot { color: var(--color-gray-300, #d1d5db); font-size: var(--font-size-xs); }
 
 /* ===========================
    Gallery — reproduced .fch treatment
@@ -164,7 +164,7 @@ html.dark .hc-shot__scope { color: var(--color-gray-300, #d1d5db); }
 .hc-shot__scope--team { background: color-mix(in srgb, currentColor 12%, transparent); }
 
 .hc-shot__component {
-  font-size: 0.625rem;
+  font-size: var(--font-size-3xs);
   font-weight: 600;
   letter-spacing: 0.02em;
   font-family: ui-monospace, 'Cascadia Code', monospace;
@@ -176,14 +176,14 @@ html.dark .hc-shot__scope { color: var(--color-gray-300, #d1d5db); }
 /* The club a team-scoped shot is dressed in. Derived from the registry, never
    authored — a rebrand should move this text without anyone editing the page. */
 .hc-shot__club {
-  font-size: 0.625rem;
+  font-size: var(--font-size-3xs);
   font-weight: 700;
   letter-spacing: 0.04em;
   color: var(--hcp-accent);
 }
 
 .hc-gallery__note {
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   line-height: 1.55;
   color: var(--color-gray-500, #6b7280);
   max-width: 62ch;
@@ -200,7 +200,7 @@ html.dark .hc-shot__scope { color: var(--color-gray-300, #d1d5db); }
 
 .hc-section-num {
   flex-shrink: 0;
-  font-size: 0.6875rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   color: var(--hcp-accent);
   opacity: 0.5;
@@ -211,7 +211,7 @@ html.dark .hc-shot__scope { color: var(--color-gray-300, #d1d5db); }
 
 .hc-section-title {
   margin: 0;
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -267,7 +267,7 @@ html.dark .hc-shot__scope { color: var(--color-gray-300, #d1d5db); }
 }
 .hc-quote strong { font-style: normal; }
 .hc-quote__label {
-  font-size: 0.625rem;
+  font-size: var(--font-size-3xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -293,7 +293,7 @@ html.dark .hc-shot__scope { color: var(--color-gray-300, #d1d5db); }
   gap: 0.5rem;
 }
 .hc-layer__z {
-  font-size: 0.625rem;
+  font-size: var(--font-size-3xs);
   font-weight: 700;
   letter-spacing: 0.06em;
   color: var(--hcp-accent);
@@ -301,7 +301,7 @@ html.dark .hc-shot__scope { color: var(--color-gray-300, #d1d5db); }
   opacity: 0.8;
 }
 .hc-layer__name { font-size: 0.8125rem; font-weight: 700; color: var(--color-gray-900, #111827); line-height: 1.25; }
-.hc-layer__desc { font-size: 0.75rem; line-height: 1.5; color: var(--color-gray-600, #4b5563); }
+.hc-layer__desc { font-size: var(--font-size-xs); line-height: 1.5; color: var(--color-gray-600, #4b5563); }
 
 /* Code blocks */
 .hc-code {
@@ -312,7 +312,7 @@ html.dark .hc-shot__scope { color: var(--color-gray-300, #d1d5db); }
   background: var(--color-gray-50, #f9fafb);
 }
 .hc-code__cap {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -328,7 +328,7 @@ html.dark .hc-shot__scope { color: var(--color-gray-300, #d1d5db); }
 }
 .hc-code__pre code {
   font-family: ui-monospace, 'Cascadia Code', monospace;
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   line-height: 1.6;
   color: var(--color-gray-800, #1f2937);
   white-space: pre;
@@ -337,7 +337,7 @@ html.dark .hc-shot__scope { color: var(--color-gray-300, #d1d5db); }
 /* Chips */
 .hc-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .hc-chip {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   color: var(--color-gray-700, #374151);
   background: var(--color-gray-100, #f3f4f6);
@@ -359,10 +359,10 @@ html.dark .hc-shot__scope { color: var(--color-gray-300, #d1d5db); }
   flex-direction: column;
   gap: 0.6rem;
 }
-.hc-brand-card__head { font-size: 0.875rem; font-weight: 700; color: var(--color-gray-900, #111827); }
+.hc-brand-card__head { font-size: var(--font-size-sm); font-weight: 700; color: var(--color-gray-900, #111827); }
 .hc-brand-card__body { margin: 0; font-size: 0.8125rem; line-height: 1.6; color: var(--color-gray-600, #4b5563); }
 .hc-brand-card__tag {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-2xs);
   font-family: ui-monospace, 'Cascadia Code', monospace;
   color: var(--hcp-accent);
   opacity: 0.8;
@@ -376,7 +376,7 @@ html.dark .hc-shot__scope { color: var(--color-gray-300, #d1d5db); }
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--color-gray-700, #374151);
   background: var(--color-gray-50, #f9fafb);
@@ -399,7 +399,7 @@ html.dark .hc-shot__scope { color: var(--color-gray-300, #d1d5db); }
   gap: 0.5rem;
 }
 .hc-persona__who {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -423,14 +423,14 @@ html.dark .hc-shot__scope { color: var(--color-gray-300, #d1d5db); }
   flex-direction: column;
   gap: 0.5rem;
 }
-.hc-cat__type { font-size: 0.6875rem; font-family: ui-monospace, 'Cascadia Code', monospace; color: var(--color-gray-500, #6b7280); }
+.hc-cat__type { font-size: var(--font-size-2xs); font-family: ui-monospace, 'Cascadia Code', monospace; color: var(--color-gray-500, #6b7280); }
 .hc-cat__cast {
   font-size: 0.9375rem;
   font-weight: 800;
   color: var(--hcp-accent);
   line-height: 1.1;
 }
-.hc-cat__desc { font-size: 0.75rem; line-height: 1.5; color: var(--color-gray-600, #4b5563); }
+.hc-cat__desc { font-size: var(--font-size-xs); line-height: 1.5; color: var(--color-gray-600, #4b5563); }
 
 /* Table */
 .hc-table-wrap { overflow-x: auto; border: 1px solid var(--content-border, #e2e8f0); border-radius: var(--radius-md, 0.5rem); max-width: 56rem; }
@@ -439,7 +439,7 @@ html.dark .hc-shot__scope { color: var(--color-gray-300, #d1d5db); }
   position: sticky;
   top: 0;
   text-align: left;
-  font-size: 0.625rem;
+  font-size: var(--font-size-3xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -476,19 +476,19 @@ html.dark .hc-shot__scope { color: var(--color-gray-300, #d1d5db); }
   border-color: color-mix(in srgb, var(--hcp-accent) 30%, transparent);
 }
 .hc-phase__i {
-  font-size: 0.625rem;
+  font-size: var(--font-size-3xs);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--hcp-accent);
   opacity: 0.6;
   font-family: ui-monospace, 'Cascadia Code', monospace;
 }
-.hc-phase__name { font-size: 0.75rem; font-weight: 700; color: var(--color-gray-900, #111827); font-family: ui-monospace, 'Cascadia Code', monospace; }
-.hc-phase__window { font-size: 0.6875rem; color: var(--color-gray-500, #6b7280); line-height: 1.35; margin-top: 0.15rem; }
+.hc-phase__name { font-size: var(--font-size-xs); font-weight: 700; color: var(--color-gray-900, #111827); font-family: ui-monospace, 'Cascadia Code', monospace; }
+.hc-phase__window { font-size: var(--font-size-2xs); color: var(--color-gray-500, #6b7280); line-height: 1.35; margin-top: 0.15rem; }
 
 .hc-slots { margin-top: 0.25rem; max-width: 56rem; }
 .hc-slots__label {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -505,10 +505,10 @@ html.dark .hc-shot__scope { color: var(--color-gray-300, #d1d5db); }
   border-radius: 6px;
   padding: 0.45rem 0.7rem;
 }
-.hc-slot__name { font-size: 0.6875rem; font-weight: 700; color: var(--color-gray-800, #1f2937); font-family: ui-monospace, 'Cascadia Code', monospace; }
-.hc-slot__when { font-size: 0.625rem; color: var(--color-gray-500, #6b7280); }
+.hc-slot__name { font-size: var(--font-size-2xs); font-weight: 700; color: var(--color-gray-800, #1f2937); font-family: ui-monospace, 'Cascadia Code', monospace; }
+.hc-slot__when { font-size: var(--font-size-3xs); color: var(--color-gray-500, #6b7280); }
 
-.hc-phase-legend { display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; color: var(--color-gray-500, #6b7280); margin: 0; }
+.hc-phase-legend { display: flex; align-items: center; gap: 0.5rem; font-size: var(--font-size-xs); color: var(--color-gray-500, #6b7280); margin: 0; }
 .hc-legend-swatch {
   width: 0.85rem; height: 0.85rem; border-radius: 3px;
   background: color-mix(in srgb, var(--hcp-accent) 6%, var(--content-bg, white));
@@ -529,7 +529,7 @@ html.dark .hc-shot__scope { color: var(--color-gray-300, #d1d5db); }
 }
 .hc-ship--muted { border-top-color: var(--color-gray-300, #d1d5db); }
 .hc-ship__name { font-size: 0.8125rem; font-weight: 700; color: var(--color-gray-900, #111827); font-family: ui-monospace, 'Cascadia Code', monospace; }
-.hc-ship__cast { font-size: 0.6875rem; color: var(--hcp-accent); font-family: ui-monospace, 'Cascadia Code', monospace; opacity: 0.85; }
+.hc-ship__cast { font-size: var(--font-size-2xs); color: var(--hcp-accent); font-family: ui-monospace, 'Cascadia Code', monospace; opacity: 0.85; }
 .hc-ship--muted .hc-ship__cast { color: var(--color-gray-500, #6b7280); }
 .hc-ship__desc { margin: 0.15rem 0 0; font-size: 0.8125rem; line-height: 1.6; color: var(--color-gray-600, #4b5563); }
 .hc-ship__desc em { font-style: italic; }
@@ -539,7 +539,7 @@ html.dark .hc-shot__scope { color: var(--color-gray-300, #d1d5db); }
 .hc-closing__inner { display: grid; grid-template-columns: 1.4fr 1fr; gap: 2rem 3rem; align-items: start; }
 .hc-closing__title {
   grid-column: 1 / -1;
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -558,7 +558,7 @@ html.dark .hc-shot__scope { color: var(--color-gray-300, #d1d5db); }
   padding: 1rem 1.2rem;
 }
 .hc-closing__meta-label {
-  font-size: 0.625rem;
+  font-size: var(--font-size-3xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -566,26 +566,22 @@ html.dark .hc-shot__scope { color: var(--color-gray-300, #d1d5db); }
   margin-bottom: 0.6rem;
 }
 .hc-closing__files { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.35rem; }
-.hc-closing__files li { font-size: 0.75rem; font-family: ui-monospace, 'Cascadia Code', monospace; color: var(--color-gray-600, #4b5563); }
+.hc-closing__files li { font-size: var(--font-size-xs); font-family: ui-monospace, 'Cascadia Code', monospace; color: var(--color-gray-600, #4b5563); }
 .hc-closing__ctas { grid-column: 1 / -1; display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 0.5rem; }
 
 .hc-btn {
-  display: inline-flex;
-  align-items: center;
   gap: 0.5rem;
   font-size: 0.8125rem;
   font-weight: 600;
-  padding: 0.625rem 1.25rem;
   border-radius: 8px;
-  text-decoration: none;
-  transition: background 0.15s ease, border-color 0.15s ease;
 }
-.hc-btn--primary { background: var(--btn-primary-bg, #1c497c); color: #fff; border: 1px solid transparent; }
-.hc-btn--primary:hover { background: var(--btn-primary-bg-hover, #164066); }
-.hc-btn--ghost { background: transparent; color: var(--hcp-accent); border: 1px solid color-mix(in srgb, var(--hcp-accent) 35%, transparent); }
-.hc-btn--ghost:hover { background: color-mix(in srgb, var(--hcp-accent) 6%, transparent); }
-.hc-btn__arrow { transition: transform 0.15s ease; }
-.hc-btn:hover .hc-btn__arrow { transform: translateX(3px); }
+/* The ghost wears the showcase's own accent, not the site link colour. */
+.hc-btn--ghost {
+  --cta-ink: var(--hcp-accent);
+  --cta-border: color-mix(in srgb, var(--hcp-accent) 35%, transparent);
+  --cta-border-hover: var(--cta-border);
+  --cta-bg-hover: color-mix(in srgb, var(--hcp-accent) 6%, transparent);
+}
 
 /* ===========================
    Responsive
@@ -607,7 +603,3 @@ html.dark .hc-shot__scope { color: var(--color-gray-300, #d1d5db); }
   .hc-layers, .hc-cat-grid, .hc-phase-grid, .hc-ship-grid { grid-template-columns: 1fr; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .hc-btn, .hc-btn__arrow { transition: none; }
-  .hc-btn:hover .hc-btn__arrow { transform: none; }
-}

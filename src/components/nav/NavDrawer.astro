@@ -1,4 +1,5 @@
 ---
+import { getLeagueByNavSlug } from '../../config/leagues';
 /**
  * NavDrawer Component
  *
@@ -86,13 +87,18 @@ const navOpenCookie = Astro.cookies.get(NAV_COOKIES.NAV_OPEN);
 const shouldOpenOnDesktop = navOpenCookie?.value === 'true';
 
 // Determine logo URL based on league
-const logoUrl = league === 'afl'
-  ? '/assets/logos/afl-logo.svg'
-  : league === 'keeper'
-    ? '/assets/logos/keeper-logo.svg'
-  : league === 'bb1'
-    ? '/assets/logos/bestball-logo.svg'
-    : '/assets/logos/theleague-logo.svg';
+// A package league (registry `logo`) brings its own mark; the rest keep their
+// long-standing files.
+const drawerLeagueDef = getLeagueByNavSlug(league);
+const logoUrl = drawerLeagueDef.optInNav && drawerLeagueDef.logo
+  ? drawerLeagueDef.logo.light
+  : league === 'afl'
+    ? '/assets/logos/afl-logo.svg'
+    : league === 'keeper'
+      ? '/assets/logos/keeper-logo.svg'
+    : league === 'bb1'
+      ? '/assets/logos/bestball-logo.svg'
+      : '/assets/logos/theleague-logo.svg';
 
 // Get franchise ID from team info for visibility checks
 const franchiseId = teamInfo?.franchiseId;

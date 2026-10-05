@@ -14,6 +14,7 @@ import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { LEAGUES } from '../src/config/leagues-data.mjs';
+import { isPackageLeague } from '../src/config/package-league-routes.mjs';
 
 const ROOT = path.resolve(__dirname, '..');
 const REGISTRY_PATH = path.join(ROOT, 'src/data/owners-registry.json');
@@ -252,6 +253,11 @@ describe('owners-registry.json', () => {
         expect(leaguesClaimed.has(slug), `${slug} has no franchise history but has claims`).toBe(
           false
         );
+      } else if (isPackageLeague(league)) {
+        // A package league runs the history chain before it has any owner
+        // names: those come only with commissioner access, so its owners stay
+        // anonymous (inferred by slot) until someone enters claims for it.
+        continue;
       } else {
         expect(leaguesClaimed.has(slug), `${slug} runs the pipeline but has no owners`).toBe(true);
       }

@@ -10,7 +10,7 @@
 export const prerender = false;
 
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
-import Breadcrumbs from '../../components/theleague/Breadcrumbs.astro';
+import Breadcrumbs from '../../components/shared/Breadcrumbs.astro';
 import SchefterNewsPage from '../../components/shared/SchefterNewsPage.astro';
 import HottestDesksWidget from '../../components/theleague/HottestDesksWidget.astro';
 import { getAuthUser } from '../../utils/auth';
@@ -65,7 +65,7 @@ const brand = view.userFranchiseId ? getFranchiseBrand(view.userFranchiseId) : n
   >
     <Breadcrumbs slot="breadcrumbs" items={[
       { label: 'The League', href: '/theleague' },
-      { label: 'The Schefter Report' },
+      { label: view.labels.report },
     ]} />
     <HottestDesksWidget slot="rail" desks={hottestDesks} windowLabel="this week" />
   </SchefterNewsPage>

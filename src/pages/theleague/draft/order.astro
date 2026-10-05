@@ -7,7 +7,7 @@
 
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import DraftNav from '../../../components/shared/draft-nav/DraftNav.astro';
-import DraftPredictorGrid from '../../../components/theleague/DraftPredictorGrid.astro';
+import DraftPredictorGrid from '../../../components/shared/DraftPredictorGrid.astro';
 import DraftViewSelector from '../../../components/theleague/DraftViewSelector.astro';
 import leagueConfigData from '../../../data/theleague.config.json';
 import { calculateDraftOrder, buildActualDraftPicks, convertActualPicksToPredictions, isLeagueDraftOrderFinal, isDraftConducted } from '../../../utils/draft-utils';
@@ -353,7 +353,7 @@ const selectedTeamId = resolveTeamSelection({
     padding: 2rem;
     background: var(--card-bg, #fff);
     border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-md);
   }
 
   :global(html.dark) .draft-predictor-header {
@@ -385,7 +385,7 @@ const selectedTeamId = resolveTeamSelection({
     display: inline-block;
     padding: var(--spacing-xs, 0.25rem) var(--spacing-sm, 0.5rem);
     border-radius: var(--radius-full, 9999px);
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;

@@ -12,7 +12,7 @@
  * The route hands in the season's feeds (a glob cannot take a variable).
  */
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
-import ThemeImage from '../ThemeImage.astro';
+import ThemeImage from '../shared/ThemeImage.astro';
 import { getConferenceStandings } from '../../utils/standings';
 import { resolveConfigForYear } from '../../utils/team-names';
 import { extractSeasonStructure, applySeasonStructure } from '../../utils/afl-structure';
@@ -272,12 +272,12 @@ const mine = (id?: string) => !!franchiseId && id === franchiseId;
     color: inherit;
     text-decoration: none;
     font-weight: 600;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
   }
   .blp__year--on {
     background: var(--league-accent);
     border-color: var(--league-accent);
-    color: #fff;
+    color: var(--on-league-accent, #fff);
   }
   .blp__champion {
     display: flex;
@@ -414,7 +414,7 @@ const mine = (id?: string) => !!franchiseId && id === franchiseId;
   }
   .blp__conf-champ {
     margin: 0;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
   }
   .blp__seeds {
     list-style: none;
@@ -430,7 +430,7 @@ const mine = (id?: string) => !!franchiseId && id === franchiseId;
     align-items: center;
     padding: 0.3rem 0.4rem;
     border-radius: 6px;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
   }
   .blp__seed-row a {
     text-decoration: none;

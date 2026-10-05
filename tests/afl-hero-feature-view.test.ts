@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveAflHeroState } from '../src/utils/afl-hero-resolver';
+import { resolveAflHeroState } from './helpers/afl-hero';
 import type { WhatsNewEntry } from '../src/types/whats-new';
 
 /**

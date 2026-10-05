@@ -11,6 +11,7 @@
  * so a cut-watch column or a schedule breakdown would render under "Weekly
  * Recap" with a "Read full recap" button pointing at it.
  */
+import { postByline } from '../../../utils/persona-server';
 import type { HeroState } from '../../../types/hero-state';
 import type { SchefterFeed, SchefterPost } from '../../../types/schefter';
 import { getAuthor, getAuthorAvatar } from '../../../types/schefter';
@@ -36,7 +37,9 @@ const completedWeek = getWeekInTheBooks(seasonYear, 'theleague', state.metadata.
 const recap: SchefterPost | null = findWeeklyRecapPost(feed.posts, seasonYear, completedWeek);
 
 const author = recap ? getAuthor(recap.authorId) : null;
-const avatarUrl = author ? getAuthorAvatar(author) : null;
+// Persona byline (src/utils/persona.mjs).
+const byline = author ? await postByline({ league: 'theleague' }, author, getAuthorAvatar(author)) : null;
+const avatarUrl = byline?.avatar ?? null;
 
 const formattedDate = recap
   ? new Date(recap.timestamp).toLocaleDateString('en-US', {
@@ -74,15 +77,12 @@ const excerpt = recap?.body
           {author && avatarUrl && (
             <div class="recap-hero__author">
               <img src={avatarUrl} alt="" class="recap-hero__avatar" width="24" height="24" />
-              <span class="recap-hero__author-name">{author.name}</span>
+              <span class="recap-hero__author-name">{byline?.name}</span>
             </div>
           )}
           {recap.link && (
-            <a href={recap.link} class="recap-hero__cta">
+            <a href={recap.link} class="cta-link recap-hero__cta">
               Read full recap
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
-                <path d="M5 12h14M12 5l7 7-7 7"/>
-              </svg>
             </a>
           )}
         </div>
@@ -109,7 +109,7 @@ const excerpt = recap?.body
   }
 
   .recap-hero__section-title {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -121,7 +121,7 @@ const excerpt = recap?.body
   }
 
   .recap-hero__date {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     color: var(--color-gray-400, #9ca3af);
     font-weight: 500;
   }
@@ -162,7 +162,7 @@ const excerpt = recap?.body
   }
 
   .recap-hero__excerpt {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     line-height: 1.6;
     color: var(--color-gray-600, #4b5563);
     margin: 0;
@@ -184,7 +184,7 @@ const excerpt = recap?.body
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--color-gray-500, #6b7280);
   }
 
@@ -198,18 +198,7 @@ const excerpt = recap?.body
   }
 
   .recap-hero__cta {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
     font-size: 0.8125rem;
-    font-weight: 600;
-    color: var(--color-primary, #1c497c);
-    text-decoration: none;
-    transition: gap 0.15s ease;
-  }
-
-  .recap-hero__cta:hover {
-    gap: 0.5rem;
   }
 
   .recap-hero__layout:not(:has(.recap-hero__image-wrap)) {

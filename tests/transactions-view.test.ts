@@ -16,6 +16,7 @@ import {
   DEFAULT_KINDS,
   ALL_KINDS,
   kindsPresentIn,
+  ALL_DIVISIONS,
 } from '../src/utils/transactions-view';
 import type { TransactionRow, TransactionKind } from '../src/utils/mfl-transactions';
 
@@ -284,5 +285,102 @@ describe('the types param arrives in two shapes', () => {
   it('reads a mix of both', () => {
     const f = filters('types=free-agent,auction&types=trade');
     expect([...f.kinds].sort()).toEqual(['auction', 'free-agent', 'trade']);
+  });
+});
+
+describe('division filter (division-pool leagues only)', () => {
+  const divisionIds = ['00', '01'];
+  const divisionOf = (id: string) => ({ '0001': '00', '0002': '00', '0003': '01' } as Record<string, string>)[id];
+  const base = (qs: string, ids: readonly string[] = divisionIds) =>
+    parseFilters({ params: new URLSearchParams(qs), year: 2026, myFranchiseId: null, divisionIds: ids });
+
+  it('parses an offered division and ignores one that is not', () => {
+    expect(base('division=01').division).toBe('01');
+    expect(base('division=99').division).toBeNull();
+  });
+
+  it('is inert in a league with no division pools', () => {
+    // TheLeague and the AFL pass no divisionIds: a hand-typed ?division= must
+    // narrow nothing there, or their ledgers silently empty.
+    const f = parseFilters({ params: new URLSearchParams('division=00'), year: 2026, myFranchiseId: null });
+    expect(f.division).toBeNull();
+    expect(isDefaultView(f)).toBe(true);
+  });
+
+  it('counts as a non-default view', () => {
+    expect(isDefaultView(base('division=00'))).toBe(false);
+  });
+
+  it('keeps rows in the division, and a trade when either side is in it', () => {
+    const rows = [
+      row({ id: 'a', franchiseId: '0001' }),
+      row({ id: 'b', franchiseId: '0003' }),
+      row({
+        id: 't',
+        kind: 'trade',
+        franchiseId: '0003',
+        trade: {
+          sides: [
+            { franchiseId: '0003', players: ['1'], picks: [] },
+            { franchiseId: '0002', players: ['2'], picks: [] },
+          ],
+          comments: '',
+        } as TransactionRow['trade'],
+      }),
+    ];
+    const f = base('division=00&types=free-agent,trade');
+    expect(applyFilters({ rows, filters: f, nameOf: () => undefined, divisionOf }).map((r) => r.id)).toEqual(['a', 't']);
+  });
+});
+
+describe("opening on the viewer's own division", () => {
+  const divisionIds = ['00', '01'];
+  const divisionOf = (id: string) => ({ '0001': '00', '0002': '00', '0003': '01' } as Record<string, string>)[id];
+  const parse = (qs: string, me: string | null = '0001', ids: readonly string[] = divisionIds) =>
+    parseFilters({ params: new URLSearchParams(qs), year: 2026, myFranchiseId: me, divisionIds: ids, divisionOf });
+
+  it('opens on the signed-in owner’s division, and that is still the default view', () => {
+    const f = parse('');
+    expect(f.division).toBe('00');
+    expect(f.divisionDefaulted).toBe(true);
+    expect(isDefaultView(f)).toBe(true);
+  });
+
+  it('opens on every division for a signed-out visitor', () => {
+    expect(parse('', null).division).toBeNull();
+  });
+
+  it(`?division=${ALL_DIVISIONS} shows every division`, () => {
+    const f = parse(`division=${ALL_DIVISIONS}`);
+    expect(f.division).toBeNull();
+    expect(isDefaultView(f)).toBe(true); // null division + default kinds: nothing narrows
+  });
+
+  it('an explicit division beats the viewer’s own', () => {
+    const f = parse('division=01');
+    expect(f.division).toBe('01');
+    expect(f.divisionDefaulted).toBe(false);
+    expect(isDefaultView(f)).toBe(false);
+  });
+
+  it('a chosen team pulls the division to its own, even against the submitted division', () => {
+    // The form always submits the division select, so picking a team in
+    // another division arrives as ?division=00&team=0003 — which, honoured
+    // literally, filters to nothing.
+    const f = parse('division=00&team=0003');
+    expect(f.team).toBe('0003');
+    expect(f.division).toBe('01');
+  });
+
+  it('a team with no division pool does not default a division', () => {
+    expect(parse('team=9999').division).toBeNull();
+  });
+
+  it('never defaults in a league without division pools (TheLeague, the AFL)', () => {
+    // A TheLeague owner is signed in and has a franchise; with no divisionIds
+    // the ledger must open exactly as it always has.
+    const f = parseFilters({ params: new URLSearchParams(''), year: 2026, myFranchiseId: '0001', divisionOf });
+    expect(f.division).toBeNull();
+    expect(f.divisionDefaulted).toBe(false);
   });
 });

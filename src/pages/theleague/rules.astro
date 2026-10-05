@@ -1150,7 +1150,7 @@ const sectionLinks = [
     font-weight: 600;
     color: var(--color-primary, #1c497c);
     text-decoration: none;
-    transition: gap 0.15s ease;
+    transition: gap var(--transition-fast);
   }
   .rules-chat-link:hover {
     gap: 0.625rem;
@@ -1197,7 +1197,7 @@ const sectionLinks = [
     font-weight: 700;
     color: var(--page-text, #1a1a1a);
     scroll-margin-top: 2rem;
-    transition: color 0.2s ease;
+    transition: color var(--transition-base);
   }
 
   .constitution-wrapper h2:first-child {
@@ -1218,7 +1218,7 @@ const sectionLinks = [
     font-size: 1.35rem;
     font-weight: 600;
     scroll-margin-top: 2rem;
-    transition: color 0.2s ease, border-bottom-color 0.2s ease;
+    transition: color var(--transition-base), border-bottom-color var(--transition-base);
   }
 
   .constitution-wrapper h3:target {
@@ -1244,7 +1244,7 @@ const sectionLinks = [
 
   .fine-print {
     color: var(--content-text-muted, #666);
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
   }
 
   .unstyled {

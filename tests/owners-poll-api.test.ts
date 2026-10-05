@@ -514,8 +514,8 @@ describe('resolveOwnersPollAccess (page gate)', () => {
 
   it('admits an owner to their own league\'s ballot page', () => {
     const access = resolveOwnersPollAccess(
-      authed('/theleague/pecking-order/ballot', sessionCookie()),
-      url('/theleague/pecking-order/ballot'),
+      authed('/theleague/owners-poll', sessionCookie()),
+      url('/theleague/owners-poll'),
     );
     expect(access?.user.franchiseId).toBe('0003');
     expect(access?.league.slug).toBe('theleague');
@@ -524,8 +524,8 @@ describe('resolveOwnersPollAccess (page gate)', () => {
   it('refuses an unauthenticated visitor, so the route can redirect', () => {
     expect(
       resolveOwnersPollAccess(
-        authed('/theleague/pecking-order/ballot', null),
-        url('/theleague/pecking-order/ballot'),
+        authed('/theleague/owners-poll', null),
+        url('/theleague/owners-poll'),
       ),
     ).toBeNull();
   });
@@ -535,8 +535,8 @@ describe('resolveOwnersPollAccess (page gate)', () => {
     // ballot would be voting as a different team.
     expect(
       resolveOwnersPollAccess(
-        authed('/theleague/pecking-order/ballot', sessionCookie('0001', AFL.id)),
-        url('/theleague/pecking-order/ballot'),
+        authed('/theleague/owners-poll', sessionCookie('0001', AFL.id)),
+        url('/theleague/owners-poll'),
       ),
     ).toBeNull();
   });
@@ -544,8 +544,8 @@ describe('resolveOwnersPollAccess (page gate)', () => {
   it('refuses a session with no franchise', () => {
     expect(
       resolveOwnersPollAccess(
-        authed('/theleague/pecking-order/ballot', sessionCookie('')),
-        url('/theleague/pecking-order/ballot'),
+        authed('/theleague/owners-poll', sessionCookie('')),
+        url('/theleague/owners-poll'),
       ),
     ).toBeNull();
   });
@@ -569,8 +569,8 @@ describe('resolveOwnersPollAccess (page gate)', () => {
     ];
     for (const [cookie, expected] of cases) {
       const page = resolveOwnersPollAccess(
-        authed('/theleague/pecking-order/ballot', cookie),
-        url('/theleague/pecking-order/ballot'),
+        authed('/theleague/owners-poll', cookie),
+        url('/theleague/owners-poll'),
       );
       const api = resolveOwnersPollCaller(
         authed(`/api/owners-poll/ballot?league=${THELEAGUE.navSlug}`, cookie),
@@ -582,8 +582,8 @@ describe('resolveOwnersPollAccess (page gate)', () => {
 
   it('admits an AFL owner to the AFL ballot page, on the AFL scope', () => {
     const access = resolveOwnersPollAccess(
-      authed('/afl-fantasy/pecking-order/ballot', sessionCookie('0003', AFL.id)),
-      url('/afl-fantasy/pecking-order/ballot'),
+      authed('/afl-fantasy/owners-poll', sessionCookie('0003', AFL.id)),
+      url('/afl-fantasy/owners-poll'),
     );
     expect(access?.league.slug).toBe('afl-fantasy');
     expect(access?.league.navSlug).toBe('afl');

@@ -95,7 +95,7 @@ pick page. So a wrong preferred team is a display defect.
 
 The one place the id is an actor identity is the mock draft, where
 `userTeamId` becomes `franchiseId` on the PartyKit messages in
-`src/components/theleague/draft-room/DraftRoom.tsx`. `party/draft-room.ts`
+`src/components/shared/draft-room/DraftRoom.tsx`. `party/draft-room.ts`
 trusts that field with no authentication — but that is a property of an
 unauthenticated websocket, not of this resolver: any client can send any id
 regardless of what the page rendered, and the mock routes are behind a

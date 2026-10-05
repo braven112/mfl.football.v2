@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { extname, join } from 'node:path';
-import { castAflHeroModel, type AflCastingInput } from '../src/utils/afl-hero-casting';
-import { resolveAflHeroState, type AflHeroState, type EventHeroView } from '../src/utils/afl-hero-resolver';
+import { resolveAflHeroState, castAflHeroModel, aflEventRole, type AflCastingInput } from './helpers/afl-hero';
+import type { LeagueHeroState as AflHeroState, EventHeroView } from '../src/utils/league-hero/types';
 import type { WhatsNewEntry } from '../src/types/whats-new';
 import type { HeroContent } from '../src/types/whats-new';
 import { castBestScoredModel, castRandomStarterModel, castsFor, isCompositable } from '../src/utils/hero-casting';
@@ -38,7 +38,7 @@ const input = (overrides: Partial<AflCastingInput> = {}): AflCastingInput => ({
 });
 
 const calendarEvent = (eventId: string): AflHeroState =>
-  ({ kind: 'calendar-event', priority: 'P0', eventId, content: stubContent, view: stubView }) as AflHeroState;
+  ({ kind: 'calendar-event', priority: 'P0', eventId, role: aflEventRole(eventId), content: stubContent, view: stubView }) as AflHeroState;
 
 const seasonSlot = (slot: string): AflHeroState =>
   ({

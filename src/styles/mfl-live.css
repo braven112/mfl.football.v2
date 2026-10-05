@@ -75,14 +75,9 @@
     font-size: 0.9rem;
     color: var(--color-text-secondary);
   }
+  /* The fill is the mfl-live theme's --cta-fill (src/themes/mfl-live.json). */
   .mls__cta {
-    display: inline-block;
     padding: 0.7rem 1.15rem;
-    border-radius: 0.5rem;
-    background: var(--league-accent);
-    color: #ffffff;
-    font-weight: 600;
-    text-decoration: none;
   }
 
   .mls__list {

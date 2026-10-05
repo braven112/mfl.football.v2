@@ -41,6 +41,7 @@ import {
   MIN_REMATCH_GAP,
   searchSeason,
 } from './schedule-builder.mjs';
+import { LEAGUES } from '../config/leagues-data.mjs';
 import { starterByeExposure } from './starter-exposure.mjs';
 import {
   buildSlots,
@@ -51,49 +52,20 @@ import {
 } from './schedule-coloring.mjs';
 
 /**
- * Per-league policy. `mode` is the league's own decision about how much
- * disruption it wants, not a capability difference:
+ * Per-league scheduling policy, keyed by registry slug. The policy itself is
+ * the league's registry entry (`schedulePolicy` in leagues-data.mjs), so a new
+ * league opts into the planner there; a league without one is refused by the
+ * planner, the reveal and the scripts alike. `mode` is the league's own
+ * decision about how much disruption it wants, not a capability difference:
  *
  *   simple        move the doubleheader off the bye week, touch nothing else
  *   constructive  rebuild the season from the format's round structure
  */
-export const SCHEDULE_POLICY = {
-  theleague: {
-    // Both leagues now build constructively. The League ran `simple` while the
-    // two were being compared; it was adopted on the numbers — bye spread 17 to
-    // 4 and home/away 7-11 to 9-9, neither of which re-timing can reach, since
-    // moving rounds between weeks never changes which side is home.
-    // `keepDivisionFinish` no longer applies in this mode: the constructive
-    // week plan ends on division games by construction. `mode: 'simple'` is
-    // still reachable per call for a minimal in-season repair.
-    mode: 'constructive',
-    startWindow: [1, 2, 3, 4],
-    endWindow: [12, 13, 14],
-    doubleheaderCount: 4,
-    keepDivisionFinish: true,
-    crossConference: null,
-  },
-  'afl-fantasy': {
-    mode: 'constructive',
-    startWindow: [1, 2, 3, 4],
-    endWindow: [12, 13, 14],
-    doubleheaderCount: 3,
-    keepDivisionFinish: false,
-    crossConference: {
-      week: 1,
-      anchorYear: 2024,
-      anchorPairing: [
-        ['North', 'East'],
-        ['South', 'West'],
-      ],
-      alternatePairing: [
-        ['North', 'West'],
-        ['South', 'East'],
-      ],
-      protectedRivalries: [['Computer Jocks', 'Jewpacabra']],
-    },
-  },
-};
+export const SCHEDULE_POLICY = Object.fromEntries(
+  Object.values(LEAGUES)
+    .filter((l) => l.schedulePolicy)
+    .map((l) => [l.slug, l.schedulePolicy]),
+);
 
 /** Franchise/division/conference shape for one season. */
 /**

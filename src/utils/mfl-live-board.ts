@@ -29,7 +29,12 @@ import { fetchNflScoreboard } from './nfl-scoreboard-source';
 import { resolveMflLiveLeagues } from './mfl-live-selection';
 import { orderLineupRows } from './mfl-live-lineup';
 import { attachRowProjections } from './live-scoring-view';
-import { resolveFranchiseIdentity, identityIconAlt, type FranchiseColorClaim } from './mfl-live-identity';
+import {
+  resolveFranchiseIdentity,
+  identityIconAlt,
+  leagueHasUploadedMarks,
+  type FranchiseColorClaim,
+} from './mfl-live-identity';
 import { resolveMatchupColorVars } from './live/model';
 import { getPlayerMap } from './player-map';
 import { getLeagueTeamBrands } from './league-team-brands';
@@ -45,8 +50,8 @@ import type {
 /**
  * Which card a colour is judged against — a SURFACE name, not a pair of hexes.
  *
- * `live/surface.ts` turns it into `--card-bg` in each theme, from `tokens.css`
- * / `tokens-dark.css` under `[data-league="mfl"]`, and
+ * `live/surface.ts` turns it into `--card-bg` in each theme, from the theme
+ * files in src/themes/ (`mfl-live.json` for MFL Live), and
  * `tests/live-surface-grounds.test.ts` pins that lookup against the real
  * stylesheets, which two literals here could never be.
  *
@@ -259,6 +264,7 @@ export async function assembleMflLiveBoard(
     );
 
     const names = franchiseNamesFor(slug, read.franchiseNames);
+    const leagueHasMarks = leagueHasUploadedMarks(read.franchiseIcons);
     const identityFor = (fid: string, fallbackName: string) =>
       resolveFranchiseIdentity({
         franchiseId: fid,
@@ -270,6 +276,7 @@ export async function assembleMflLiveBoard(
         // not run. A registered league answers on rung 1 with its committed
         // crest and never reaches this.
         mflIcon: read.franchiseIcons?.[fid],
+        leagueHasMarks,
       });
 
     const toTeam = (fid: string, fallbackName: string): MflLiveTeam => {

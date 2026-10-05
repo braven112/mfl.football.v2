@@ -15,6 +15,7 @@
 import { getLeagueBySlug, type CanonicalLeagueSlug } from '../config/leagues';
 import { getCurrentSeasonYear } from './league-year';
 import { loadLiveScoringPayload } from './live-scoring-source';
+import { hasLiveSignal } from './live-scoring-snapshot';
 import type { LiveScoringHeroProps, MatchupPairing, TeamInfo } from '../types/live-scoring';
 
 /** The brand fields a teams map needs, as both leagues' configs already carry them. */
@@ -84,6 +85,15 @@ export async function buildLiveScoringHeroProps(
     // returns undefined so the homepage keeps its normal hero; a genuinely
     // empty week renders the hero with nothing in it, which is correct.
     if (data.ok === false) return undefined;
+
+    // An UNPLAYED week: MFL answers one with every franchise at 0.00 and no
+    // starters (docs/claude/rules/live-scoring.md), and so does the
+    // custom-site demo's stand-in once the calendar has moved past the week
+    // its data stops at. Drawn, that is a board of 0.00 marked FINAL; the
+    // normal hero is the honest answer, the same one an outage gets.
+    // `hasLiveSignal` is the shared test. An empty week (no pairings at all)
+    // keeps its empty board, as before.
+    if (data.matchups.length > 0 && !hasLiveSignal(data)) return undefined;
 
     const teamsMap: Record<string, TeamInfo> = {};
     for (const t of teams) {

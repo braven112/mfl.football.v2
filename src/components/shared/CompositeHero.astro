@@ -64,7 +64,7 @@ export interface Props {
    */
   wordmark?: string;
   /** Centred crest watermark — resolve it with `resolveHeroCrest`. */
-  crest?: { src: string; filter?: string } | null;
+  crest?: { src: string; filter?: string; round?: boolean } | null;
   /**
    * The club's colours, for a hero that is about a TEAM rather than about the
    * league — your cuts, your keeper class, the franchise that rostered the
@@ -197,7 +197,7 @@ const loading = eager ? 'eager' : 'lazy';
       both the wordmark and the copy read over it. */}
   {crest && (
     <img
-      class="cmh__crest"
+      class:list={['cmh__crest', { 'cmh__crest--round': crest.round }]}
       src={crest.src}
       style={crest.filter ? `filter: ${crest.filter};` : undefined}
       alt=""
@@ -252,7 +252,7 @@ const loading = eager ? 'eager' : 'lazy';
     )}
     {summary && <p class="cmh__summary">{summary}</p>}
     {ctaLabel && ctaHref && (
-      <a class="cmh__cta" href={ctaHref}>
+      <a class="cta cta--primary cmh__cta" href={ctaHref}>
         {ctaLabel}
         <span class="cmh__cta-arrow" aria-hidden="true">→</span>
       </a>

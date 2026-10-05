@@ -23,6 +23,11 @@
  *   by a salted HASH of the caller's IP with a 60-second TTL — the raw address
  *   is never stored, and the key is gone a minute later.
  *
+ * SITE INSIGHTS. Every beacon — including MFL Live's and the shared host's,
+ * which carry no `league` — is also counted in the admin-only, site-wide
+ * insights (`/live/analytics`), with the same signed-out bound: an anonymous
+ * page is named only when it is a known route.
+ *
  * The `league` param exists only for that second path. A logged-out beacon
  * posts to `/api/track-visit`, a path with no league prefix, so on a preview
  * domain (where both leagues share a host) the request carries no other clue
@@ -43,6 +48,14 @@ import {
 	type LeagueDefinition,
 } from '../../config/leagues';
 import { getClientIdentity } from '../../utils/client-ip';
+import { recordInsightVisit, type InsightVisit } from '../../utils/site-insights';
+import {
+	classifyLandingSource,
+	isKnownAppPath,
+	normalizeInsightPath,
+	parseInsightDevice,
+	resolveSection,
+} from '../../utils/site-insights-model';
 
 /**
  * Per-caller cap on the anonymous path. The client debounces to one beacon per
@@ -110,33 +123,88 @@ export const POST: APIRoute = async ({ request, url }) => {
 
 	const rawPage = url.searchParams.get('page');
 
+	// The league whose pages sent this beacon — only TheLeagueLayout names one.
+	// MFL Live and the shared host's own pages send none, and so never touch
+	// the per-league `/activity` counters below; they are counted only in the
+	// site-wide insights (see src/utils/site-insights.ts).
+	const league = resolveAnonymousLeague(url.searchParams.get('league'));
+	const surface = visit?.surface ?? null;
+
 	const user = getAuthUser(request);
 	if (!user?.franchiseId || !user?.leagueId) {
 		// A beacon that reports neither a surface nor a page has nothing to
 		// count, and this endpoint needs no session — so it does no work.
 		if (!visit && !rawPage) return new Response(null, { status: 204 });
 
-		const league = resolveAnonymousLeague(url.searchParams.get('league'));
-		if (!league) return new Response(null, { status: 204 });
-
-		// Only a path the directory recognizes may name a page (see the header).
-		// Checked BEFORE canonicalizing — `isDirectoryPath` canonicalizes to
-		// answer, so an unknown path on this unauthenticated, uncapped route
-		// costs one pass instead of two.
-		const page =
-			rawPage && isDirectoryPath(rawPage, league.slug)
-				? canonicalPath(rawPage, league.slug)
-				: null;
-
-		const { limited } = await recordAnonymousVisit(league.id, { visit, page }, {
+		const limit = {
 			callerKey: callerKey(request),
 			max: ANON_MAX_PER_MINUTE,
 			windowSeconds: ANON_WINDOW_SECONDS,
+		};
+
+		if (league) {
+			// Only a path the directory recognizes may name a page (see the
+			// header). Checked BEFORE canonicalizing — `isDirectoryPath`
+			// canonicalizes to answer, so an unknown path on this
+			// unauthenticated, uncapped route costs one pass instead of two.
+			const known = Boolean(rawPage && isDirectoryPath(rawPage, league.slug));
+			const page = known ? canonicalPath(rawPage!, league.slug) : null;
+
+			const { limited } = await recordAnonymousVisit(league.id, { visit, page }, limit);
+			if (limited) return new Response(null, { status: 429 });
+			// Already rate-limited by the script above, so no second limit here.
+			// `page` is already canonical, or null for a path it may not name.
+			await recordInsightVisit({ ...describeInsightVisit(url, league, page, surface), user: null });
+			return new Response(null, { status: 204 });
+		}
+
+		// No league: MFL Live or the shared host's own pages. The path is only
+		// normalized (a bounded regex pass, no directory walk) before the
+		// allowlist decides whether it may be named.
+		const insight = describeInsightVisit(url, null, rawPage || '/', surface);
+		const { limited } = await recordInsightVisit({
+			...insight,
+			page: insight.page && isKnownAppPath(insight.page) ? insight.page : null,
+			user: null,
+			rateLimit: limit,
 		});
 		return new Response(null, { status: limited ? 429 : 204 });
 	}
 
-	const page = rawPage || '/';
-	await recordVisit(user.leagueId, user.franchiseId, page, visit);
+	if (league) await recordVisit(user.leagueId, user.franchiseId, rawPage || '/', visit);
+	const signedInPage = league && rawPage ? canonicalPath(rawPage, league.slug) : rawPage || '/';
+	await recordInsightVisit({
+		...describeInsightVisit(url, league, signedInPage, surface),
+		user: { leagueId: user.leagueId, franchiseId: user.franchiseId, username: user.name ?? '' },
+	});
 	return new Response(null, { status: 204 });
 };
+
+/**
+ * The site-insights half of a beacon: section, page, device and — on a tab's
+ * first beacon only (`landing=1`) — where the visit came from. Every value is
+ * validated against a fixed vocabulary in `site-insights-model.ts`.
+ */
+function describeInsightVisit(
+	url: URL,
+	league: LeagueDefinition | null,
+	/** Already canonical for a league page; null when the page may not be named. */
+	canonicalPage: string | null,
+	surface: string | null,
+): Omit<InsightVisit, 'user'> {
+	const page = normalizeInsightPath(canonicalPage);
+	const landing = url.searchParams.get('landing') === '1';
+	return {
+		section: resolveSection(league?.slug ?? null, page ?? ''),
+		page,
+		device: parseInsightDevice(url.searchParams.get('device')),
+		source: landing
+			? classifyLandingSource({
+					refHost: url.searchParams.get('ref'),
+					requestHost: url.hostname,
+					srcTag: url.searchParams.get('src'),
+					surface,
+				})
+			: null,
+	};
+}

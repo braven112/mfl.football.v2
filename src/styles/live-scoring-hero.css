@@ -25,7 +25,7 @@
   --lsh-live-color: #f04848;
   --lsh-final-color: #15803d;
   --lsh-next-color: var(--color-gray-500, #6b7280);
-  --lsh-accent: #2563eb;
+  --lsh-accent: var(--hero-accent, #2563eb);
   --lsh-amber: #d97706;
   --lsh-glow-strength: 22%;
   --lsh-featured-badge-ink: #ffffff;
@@ -38,7 +38,7 @@
 }
 
 html.dark {
-  --lsh-bg: #0f1e2e;
+  --lsh-bg: var(--hero-ink, #0f1e2e);
   --lsh-border: rgba(255, 255, 255, 0.12);
   --lsh-card-bg: rgba(255, 255, 255, 0.05);
   --lsh-row-border: rgba(255, 255, 255, 0.1);
@@ -49,43 +49,18 @@ html.dark {
   --lsh-next-bg: rgba(255, 255, 255, 0.1);
   --lsh-final-color: #22c55e;
   --lsh-next-color: rgba(255, 255, 255, 0.6);
-  --lsh-accent: #60a5fa;
+  --lsh-accent: var(--hero-accent, #60a5fa);
   --lsh-amber: #f0a23a;
   --lsh-glow-strength: 28%;
-  --lsh-featured-badge-ink: #0f1e2e;
+  --lsh-featured-badge-ink: var(--hero-ink, #0f1e2e);
 }
 
-/* ── AFL: the accent is the league's navy, not TheLeague's blue. ──────────
-   The accent is not decoration here — it is the leading score's TEXT color,
-   the featured card's border, and the "YOUR GAME" badge's FILL (whose ink is
-   --lsh-featured-badge-ink). So it has to clear contrast against the card in
-   BOTH themes, and the two themes need opposite answers:
-
-   LIGHT — white card, white badge ink, so the accent must be dark. It is the
-   lifted navy from the composite hero's own ramp (.cmh--navy's top stop),
-   NOT the flat --afl-navy #0f1e2e: that value sits a hair off --lsh-ink
-   (#111827), so a border painted in it reads as black rather than as navy.
-   13.2:1 on white.
-
-   DARK — the card IS --afl-navy (--lsh-bg: #0f1e2e) and the badge ink is
-   navy too, so a navy accent would be invisible against both. It lifts to a
-   pale tint of the same hue, keeping the navy family while staying legible:
-   8.9:1 on the navy card, and the same ratio for the badge's navy ink on it.
-
-   Defining only the light value would render the fallback in both themes —
-   light perfect, dark a navy score on a navy card.
-
-   Selector order is `html.dark[data-league=...]`, matching tokens-dark.css
-   rather than the reverse — both are valid CSS at identical specificity, but
-   the repo has settled on this one and a lone outlier is what makes a scan
-   guard brittle. */
-html[data-league="afl"] {
-  --lsh-accent: #16324a;
-}
-
-html.dark[data-league="afl"] {
-  --lsh-accent: #9dc0dd;
-}
+/* ── The accent is the league's hero accent (--hero-accent) ─────────────
+   It is the leading score's TEXT colour, the featured card's border, and the
+   "YOUR GAME" badge's FILL (whose ink is --lsh-featured-badge-ink), so each
+   theme picks it to clear contrast against the white card in light AND the
+   --hero-ink card in dark. The AFL's is its lifted navy (#16324a light,
+   #9dc0dd dark), not TheLeague's blue. */
 
 /* ── Container ── */
 .lsh {
@@ -130,7 +105,7 @@ html.dark[data-league="afl"] {
 }
 
 .lsh__title {
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -146,7 +121,7 @@ html.dark[data-league="afl"] {
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
-  font-size: 0.6875rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -197,7 +172,7 @@ html.dark[data-league="afl"] {
 
 /* ── Game Window Label ── */
 .lsh__window {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -225,7 +200,7 @@ html.dark[data-league="afl"] {
   position: absolute;
   top: -0.5rem;
   right: 0.75rem;
-  font-size: 0.625rem;
+  font-size: var(--font-size-3xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -292,7 +267,7 @@ html.dark[data-league="afl"] {
 }
 
 .lsh__team-name {
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--lsh-ink-soft);
   overflow: hidden;
@@ -330,7 +305,7 @@ html.dark[data-league="afl"] {
 
 /* ── VS separator ── */
 .lsh__vs {
-  font-size: 0.625rem;
+  font-size: var(--font-size-3xs);
   font-weight: 600;
   text-transform: uppercase;
   color: var(--lsh-ink-dim);
@@ -366,7 +341,7 @@ html.dark[data-league="afl"] {
 }
 
 .lsh__champ-name {
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   color: var(--lsh-ink);
   overflow: hidden;
@@ -387,7 +362,7 @@ html.dark[data-league="afl"] {
 }
 
 .lsh__champ-vs {
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   text-transform: uppercase;
   color: var(--lsh-ink-dim);
@@ -396,7 +371,7 @@ html.dark[data-league="afl"] {
 }
 
 .lsh__champ-label {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;

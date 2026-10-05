@@ -1,0 +1,143 @@
+/* ==========================================================================
+   Empty and error states — the shared look.
+
+   GLOBAL on purpose (imported by every base layout): the same classes are
+   emitted by EmptyState.astro / ErrorState.astro, by the React twins in
+   states-react.tsx, and by the string builders in src/utils/state-html.ts for
+   markup a <script> creates. Astro scoped CSS never reaches JS-built
+   elements, so a scoped copy of these rules would style only half of them.
+
+   Copy rules (docs/claude/rules/theming-and-assets.md § "Empty and error
+   states"): an empty state says what is missing, why that is fine or when it
+   fills, and offers the next step; an error says what failed, whether it is
+   missing-vs-zero, and how to recover. Action labels are verb + object.
+   ========================================================================== */
+
+.ui-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+  max-width: 36rem;
+  margin: var(--spacing-lg) auto;
+  padding: var(--spacing-xl) var(--spacing-lg);
+  border: 1px dashed var(--content-border);
+  border-radius: var(--radius-md);
+  background: var(--content-bg-muted);
+  color: var(--content-text-muted);
+  text-align: center;
+}
+
+.ui-state__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin-bottom: var(--spacing-xs);
+  color: var(--content-text-muted);
+}
+
+.ui-state__icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.ui-state__title {
+  margin: 0;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  color: var(--page-text);
+  text-wrap-style: balance;
+}
+
+.ui-state__body {
+  margin: 0;
+  max-width: 60ch;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-base);
+  text-wrap-style: pretty;
+}
+
+.ui-state__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-sm);
+}
+
+.ui-state__action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--touch-target-min);
+  padding: 0 var(--spacing-md);
+  border: 1px solid var(--content-border);
+  border-radius: var(--radius-sm);
+  background: var(--card-surface);
+  color: var(--page-text);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+/* An <a>: restate colour and decoration on hover/focus, or the layouts'
+   global a:hover turns it red and underlined (tests/cta-pattern.test.ts). */
+.ui-state__action:is(:hover, :focus) {
+  color: var(--page-text);
+  text-decoration: none;
+}
+
+.ui-state__action:hover {
+  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 8%, var(--card-surface));
+}
+
+/* Compact: inside a card or a table cell, where a dashed panel would be a
+   card within a card. Just the words, left-aligned with their neighbours. */
+.ui-state--compact {
+  align-items: flex-start;
+  max-width: none;
+  margin: 0;
+  padding: var(--spacing-sm) 0;
+  border: 0;
+  background: none;
+  text-align: left;
+}
+
+.ui-state--compact .ui-state__title {
+  font-size: var(--font-size-sm);
+}
+
+.ui-state--compact .ui-state__actions {
+  justify-content: flex-start;
+  margin-top: 0;
+}
+
+/* Error: the tone must differ from empty at a glance — "we could not read
+   it" and "there is nothing" are different facts (see LvEmptyState.tsx). */
+.ui-state--error {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--color-error) 45%, var(--content-border));
+  background: color-mix(in srgb, var(--color-error) 6%, var(--content-bg-muted));
+}
+
+.ui-state--error .ui-state__icon {
+  color: var(--color-error);
+}
+
+.ui-state--error.ui-state--compact {
+  border: 0;
+  background: none;
+}
+
+.ui-state--error.ui-state--compact .ui-state__title {
+  color: var(--color-error);
+}

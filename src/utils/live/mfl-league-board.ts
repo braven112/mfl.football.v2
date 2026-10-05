@@ -35,7 +35,20 @@ import { readCrossLeagueLive } from '../cross-league-live';
 import { emptyLiveSnapshot } from '../live-scoring-snapshot';
 import { buildBoardFromSnapshot } from './read';
 import { buildLeaders } from './leaders';
-import { decorateStandings, readLeagueStandings } from './standings';
+import { decorateStandings, markWeekCounted, readLeagueStandings } from './standings';
+import { readLeaguePriorGameCounts } from '../mfl-schedule-pairings';
+
+/** The schedule read may never hold the board longer than this. */
+const PRIOR_GAMES_DEADLINE_MS = 6_000;
+
+/** Resolve `null` if `promise` has not settled in `ms`, or if it rejects. */
+function withDeadline<T>(promise: Promise<T | null>, ms: number): Promise<T | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<null>((resolve) => {
+    timer = setTimeout(() => resolve(null), ms);
+  });
+  return Promise.race([promise.catch(() => null), deadline]).finally(() => clearTimeout(timer));
+}
 
 export interface AssembleMflLeagueBoardInput {
   user: AuthUser;
@@ -93,7 +106,7 @@ export async function assembleMflLeagueBoard(
   // SCORES: it is the secondary tab, it is on its own cache, and a league
   // whose standings export is unhappy still has a board worth rendering. Hence
   // `allSettled` semantics via a catch on the one that is allowed to fail.
-  const [reads, rawStandings] = await Promise.all([
+  const [reads, rawStandings, priorGames] = await Promise.all([
     readCrossLeagueLive({
       user,
       leagues: [league],
@@ -113,6 +126,13 @@ export async function assembleMflLeagueBoard(
       mflUserCookie: user.id,
       viewerFranchiseId,
     }).catch((): LiveStandingsRow[] | null => null),
+    // What lets the Live and Projected standings views add this week without
+    // ever adding it twice — see `markWeekCounted`. Same failure posture as
+    // the standings: it may not cost the scores.
+    // Raced against a hard cap too: `mflFetch`'s timeout is per redirect HOP,
+    // so a stalled endpoint could otherwise hold the scores for several of
+    // them. Losing the race is the same as a failed read — `null`.
+    withDeadline(readLeaguePriorGameCounts(league, year, week, user.id), PRIOR_GAMES_DEADLINE_MS),
   ]);
 
   const read = reads[0];
@@ -129,12 +149,13 @@ export async function assembleMflLeagueBoard(
   const standings =
     rawStandings === null
       ? null
-      : decorateStandings(rawStandings, {
+      : decorateStandings(markWeekCounted(rawStandings, priorGames), {
           league,
           year,
           mflUserCookie: user.id,
           viewerFranchiseId,
           franchiseNames: read?.franchiseNames ?? {},
+          franchiseIcons: read?.franchiseIcons ?? {},
         });
 
   // The read failed outright. `ok: false` with an empty snapshot is what makes
@@ -166,6 +187,7 @@ export async function assembleMflLeagueBoard(
     snapshot: read.snapshot ?? emptyLiveSnapshot(),
     projections: read.projections,
     franchiseNames: read.franchiseNames,
+    franchiseIcons: read.franchiseIcons,
     viewerFranchiseId,
     // ALWAYS MFL Live's ground, registered league or not: this renders on MFL
     // Live's card, and a colour pair resolved against the wrong ground is a

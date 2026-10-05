@@ -74,10 +74,12 @@ Signature: HMAC-SHA256(header.payload, JWT_SECRET)
 ### UI Components
 - **[src/pages/login.astro](src/pages/login.astro)** - Login page layout
 - **[src/components/LoginForm.tsx](src/components/LoginForm.tsx)** - Login form component (username/password input)
-- **[src/components/AuthContext.tsx](src/components/AuthContext.tsx)** - React context for auth state across components
+- **[src/components/AuthContext.tsx](src/components/AuthContext.tsx)** - (deleted Oct 2026) React context for auth state across components
 
 ### Protected Routes
 - **[src/pages/theleague.astro](src/pages/theleague.astro)** - Updated to require authentication
+
+> **Oct 2026:** `src/components/AuthContext.tsx` was deleted — nothing ever imported it. Server code reads the session with `getAuthUser()` (`src/utils/auth.ts`); restore the context from git history if a React-heavy surface needs one.
 
 ### Updated Files
 - **[src/utils/auth.ts](src/utils/auth.ts)** - Updated to check JWT cookies first (highest priority)

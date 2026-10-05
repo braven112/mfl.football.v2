@@ -19,7 +19,7 @@
  * is rendered only when the selected team is the viewer's own. Showing it
  * otherwise would offer a button the server is going to refuse.
  */
-import PlayerCell from '../../theleague/PlayerCell.astro';
+import PlayerCell from '../PlayerCell.astro';
 import { calculateCutPenalty } from '../../../utils/salary-calculations';
 import { currencyFormatter } from '../../../utils/formatters';
 
@@ -128,7 +128,7 @@ const rows = players
     background: var(--content-bg, #fff);
     border-radius: 0.75rem;
     padding: 1rem;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    box-shadow: var(--shadow-md);
   }
 
   :global(html.dark) .fo-cuts {
@@ -145,20 +145,20 @@ const rows = players
 
   .fo-cuts__title {
     margin: 0 0 0.125rem;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 700;
     color: var(--page-text, #1a1a1a);
   }
 
   .fo-cuts__sub {
     margin: 0;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--content-text-muted, #6b7280);
   }
 
   .fo-cuts__count {
     flex: 0 0 auto;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     color: var(--content-text-muted, #6b7280);
   }
@@ -189,13 +189,13 @@ const rows = players
     flex-direction: column;
     align-items: flex-end;
     gap: 0.1rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     white-space: nowrap;
   }
 
   .fo-cuts__salary { color: var(--page-text, #1a1a1a); font-weight: 600; }
   .fo-cuts__x { color: var(--content-text-muted, #6b7280); }
-  .fo-cuts__dead { color: var(--content-text-muted, #6b7280); font-size: 0.6875rem; }
+  .fo-cuts__dead { color: var(--content-text-muted, #6b7280); font-size: var(--font-size-2xs); }
 
   .fo-cuts__net {
     font-weight: 700;
@@ -213,7 +213,7 @@ const rows = players
     border-radius: 0.375rem;
     background: transparent;
     color: #dc2626;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     cursor: pointer;
   }
@@ -231,14 +231,14 @@ const rows = players
     border-radius: 0.375rem;
     background: transparent;
     color: var(--league-accent, #1c497c);
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     cursor: pointer;
   }
 
   .fo-cuts__empty {
     margin: 0;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--content-text-muted, #6b7280);
   }
 </style>

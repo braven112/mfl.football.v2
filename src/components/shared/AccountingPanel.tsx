@@ -329,7 +329,7 @@ function LedgerView({
           {/* A plain link, not a scripted download: the server already builds
               the CSV, and an anchor keeps it working with the response's
               Content-Disposition. */}
-          <a className="acct__btn" href={csvHref}>
+          <a className="cta cta--ghost acct__btn" href={csvHref}>
             Export CSV
           </a>
         </div>

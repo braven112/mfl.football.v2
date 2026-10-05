@@ -35,7 +35,25 @@ export const THROWBACK_WEEKS: number[] = WEEKS;
 export const THROWBACK_ASSET_CONFLICTS: { franchiseId: string; yearStart: number }[] = [
   { franchiseId: '0002', yearStart: 2007 }, // Sabertooths — exclusive to Gridiron Geeks (0013)
   { franchiseId: '0010', yearStart: 2011 }, // Midwestside Connection — belongs to franchise 0011
+  { franchiseId: '0002', yearStart: 2008 }, // Degenerates — granted to Cowboy Up (0014), see below
 ];
+
+/**
+ * Eras lent to a franchise that never wore them — a commissioner exception to
+ * "a franchise only throws back to its own past". The granted era keeps its
+ * source slot (`sourceFranchiseId`), so its pick key is `"<source>:<year>"`,
+ * the same shape an inherited era uses. Pair every grant with an
+ * ASSET_CONFLICTS entry on the source, or two teams can wear it on one
+ * scoreboard.
+ *
+ * - Cowboy Up (0014) wears Da Dangsters' (0002) 2008-2014 "Degenerates"
+ *   (commissioner call, Sept 2026). Exclusive — Da Dangsters lose it.
+ */
+export const THROWBACK_ERA_GRANTS: {
+  franchiseId: string;
+  sourceFranchiseId: string;
+  yearStart: number;
+}[] = [{ franchiseId: '0014', sourceFranchiseId: '0002', yearStart: 2008 }];
 
 /**
  * Commissioner-picked starting default per franchise (`franchiseId` ->
@@ -47,10 +65,10 @@ export const THROWBACK_ASSET_CONFLICTS: { franchiseId: string; yearStart: number
  * of these; owners can still self-service override via
  * /theleague/throwback-settings.
  */
-export const DEFAULT_THROWBACK_ERA: Record<string, number> = {
+export const DEFAULT_THROWBACK_ERA: Record<string, number | string> = {
   '0001': 2013, // Pacific Pigskins (2013 razorback-head — most recent old look; 2007 black is the alt)
   '0002': 2015, // Da Dangsters (vintage 2015-2024 icon)
-  '0003': 2012, // Poker in the Rear — "The smooch" era (commissioner pick over the 2015 "Lucky sevens" look)
+  '0003': 2016, // Maverick — "The gunslinger" era, the 2016-2024 Mel Gibson art (commissioner pick, Oct 2026; 2012 "The smooch" is the alt)
   '0004': 2019, // Drunk Indians (commissioner pick, July 2026 — over the more recent Heavy Chevy)
   '0005': 2007, // The Executioners (full rebrand beats the 2016 round-badge Ninjas look)
   '0006': 2007, // LBer-DeCleaters (only prior era)
@@ -63,7 +81,7 @@ export const DEFAULT_THROWBACK_ERA: Record<string, number> = {
   '0011': 2019, // Midwestside Connection (older icon variant)
   '0012': 2007, // BOYZ II MEN (only prior era)
   '0013': 2009, // Sabertooths (full rebrand beats the 2014 white-facemask Geeks look)
-  '0014': 2007, // Devil Dogs (only prior era)
+  '0014': '0002:2008', // Degenerates — granted from Da Dangsters (see THROWBACK_ERA_GRANTS); 2007 Devil Dogs is the alt
   '0015': 2015, // Dark Magicians of Chaos (2015-2024 icon)
   '0016': 2011, // Treasure Coast Swamp Bandits
 };

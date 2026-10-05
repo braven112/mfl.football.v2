@@ -146,7 +146,7 @@ export function getConferenceLogo(id: ConferenceId, league: AflFamilySlug = 'afl
 /**
  * Resolve the dark-mode conference logo path. Convention: same path + `-dark`
  * suffix (see /public/assets/afl/conferences/al-dark.svg, nl-dark.svg).
- * Pair with ThemeImage (src/components/ThemeImage.astro) for the CSS swap —
+ * Pair with ThemeImage (src/components/shared/ThemeImage.astro) for the CSS swap —
  * SSR can never know the resolved theme, so both variants must render and
  * the swap happens client-side via html.dark.
  */

@@ -55,7 +55,6 @@ const {
   readTurnout,
   describeTurnoutFailure,
   buildRevealMessage,
-  buildOpenLine,
   normalizeFranchiseIds,
 } = await import('../scripts/lib/owners-poll-pass.mjs');
 const { buildNagPushes } = await import('../scripts/lib/owners-poll-posts.mjs');
@@ -468,27 +467,12 @@ describe('chat copy', () => {
     expect(mod.buildNagMessage).toBeUndefined();
   });
 
-  it('open line leads with the disagreement and STATES when the result lands', () => {
-    // "I don't understand when a poll starts or ends" was the complaint that
-    // started this. Every surface now names the result time.
-    const text = buildOpenLine(
-      {
-        ownersPoll: { status: 'open', slots: 7, closesAt: '2026-09-10T23:00:00.000Z' },
-        rankings: [{ franchiseId: '0001' }, { franchiseId: '0016' }],
-      },
-      teams,
-      LEAGUE,
-    )!;
-    expect(text).toContain('Team 1');
-    expect(text).toContain('Team 16');
-    expect(text).toMatch(/always open/i);
-    expect(text).toMatch(/stands until you change it/i);
-    expect(text).toMatch(/Thursday/);
-    expect(text).toContain('/pecking-order/ballot');
-  });
-
-  it('open line is null when no ballot opened', () => {
-    expect(buildOpenLine({ rankings: [{ franchiseId: '0001' }] }, teams, LEAGUE)).toBeNull();
+  it('no longer offers an open line for the Pecking Order post', async () => {
+    // The poll is its own feature. Folding its invite into the column's
+    // Tuesday post is what made the two read as one; the poll's chat presence
+    // is the results post, which carries the vote link.
+    const mod: Record<string, unknown> = await import('../scripts/lib/owners-poll-pass.mjs');
+    expect(mod.buildOpenLine).toBeUndefined();
   });
 
   it('posts NOTHING for a week nobody voted in', () => {
@@ -529,6 +513,10 @@ describe('chat copy', () => {
     expect(text).toContain('4/16');
     expect(text).toMatch(/^1\./m);
     expect(text).not.toMatch(/quorum|no consensus/i);
+    // The reveal drives turnout: it links the POLL page (where the full
+    // rankings unlock after a vote), never The Pecking Order.
+    expect(text).toMatch(/\/owners-poll$/);
+    expect(text).not.toContain('pecking-order');
   });
 
   it('reveal leads with the top 3 and the biggest split', () => {

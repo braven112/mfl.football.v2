@@ -27,7 +27,7 @@
  *   `/rosters?view=planner` renders them at.
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
-import Breadcrumbs from '../../theleague/Breadcrumbs.astro';
+import Breadcrumbs from '../Breadcrumbs.astro';
 import FrontOfficeToolRail from './FrontOfficeToolRail.astro';
 import { getLeagueBySlug } from '../../../config/leagues';
 import type { FrontOfficeLeagueSlug } from '../front-office-nav/front-office-pages';
@@ -128,7 +128,7 @@ const subtitle =
   .fo__sub {
     margin: 0.35rem 0 0;
     color: var(--fo-ink-muted);
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
   }
 
   .fo__layout {

@@ -35,7 +35,7 @@ export function getTierLogo(tierName: string): string {
 /**
  * Resolve the dark-mode tier logo path. Convention: same path + `-dark`
  * suffix (see /public/assets/afl/premier-dark.svg, dleague-dark.svg).
- * Pair with ThemeImage (src/components/ThemeImage.astro) for the CSS swap —
+ * Pair with ThemeImage (src/components/shared/ThemeImage.astro) for the CSS swap —
  * SSR can never know the resolved theme, so both variants must render and
  * the swap happens client-side via html.dark.
  */

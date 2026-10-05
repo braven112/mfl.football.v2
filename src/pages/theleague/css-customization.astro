@@ -299,8 +299,8 @@ for (const group of groups) {
         Override any variable using a <code>&lt;style&gt;</code> block in an MFL Homepage Message.
       </p>
       <div class="cta-row">
-        <a class="cta-link" href="/theleague/icons">Browse Icons</a>
-        <a class="cta-link secondary" href={instructionsUrl}>Installation Guide</a>
+        <a class="cc-pill" href="/theleague/icons">Browse Icons</a>
+        <a class="cc-pill secondary" href={instructionsUrl}>Installation Guide</a>
       </div>
     </section>
 
@@ -795,9 +795,15 @@ git push -u origin add-icon-my-icon-name</code></pre>
 </TheLeagueLayout>
 
 <style>
-  :root {
+  /* --card-bg / --card-border are THEMED tokens (src/config/theme-tokens.mjs),
+     set on html[data-league] at 0,1,1 — a bare :root loses to that.
+     :root:not(.dark) wins in light and leaves dark mode to the theme. */
+  :root:not(.dark) {
     --card-bg: rgba(255, 255, 255, 0.92);
     --card-border: rgba(37, 99, 235, 0.2);
+  }
+
+  :root {
     --card-shadow: 0 15px 45px -25px rgba(15, 23, 42, 0.45);
   }
 
@@ -835,7 +841,7 @@ git push -u origin add-icon-my-icon-name</code></pre>
     gap: 0.75rem;
   }
 
-  .cta-link {
+  .cc-pill {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
@@ -850,8 +856,8 @@ git push -u origin add-icon-my-icon-name</code></pre>
     transition: all 0.2s;
   }
 
-  .cta-link.secondary { background: rgba(15, 23, 42, 0.55); }
-  .cta-link:hover { background: rgba(255, 255, 255, 0.3); transform: translateY(-1px); }
+  .cc-pill.secondary { background: rgba(15, 23, 42, 0.55); }
+  .cc-pill:hover { background: rgba(255, 255, 255, 0.3); transform: translateY(-1px); }
 
   /* ── Two-column layout ── */
   .guide-layout {

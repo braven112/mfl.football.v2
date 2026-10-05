@@ -52,7 +52,7 @@ const board = isTestDriveWindow(referenceDate) ? testDriveBoard(slug) : null;
       tonight&rsquo;s <strong>preseason</strong> slate.
     </p>
 
-    <a class="ls-td__cta" href={board.path}>Watch the preseason games live &rarr;</a>
+    <a class="cta cta--primary ls-td__cta" href={board.path}>Watch the preseason games live &rarr;</a>
 
     <p class="ls-td__note">
       Fantasy totals will all read <strong>0.0</strong> — MFL doesn&rsquo;t switch
@@ -114,20 +114,10 @@ const board = isTestDriveWindow(referenceDate) ? testDriveBoard(slug) : null;
   .ls-td__lede strong, .ls-td__note strong { color: var(--page-text); }
 
   .ls-td__cta {
-    display: inline-flex;
-    align-items: center;
     padding: 0.75rem 1.4rem;
-    border: 1px solid var(--league-accent);
-    border-radius: var(--radius-md);
-    background: var(--league-accent);
-    color: #fff;
     font-family: var(--font-display);
-    font-weight: var(--font-weight-bold);
     font-size: var(--font-size-base);
-    text-decoration: none;
   }
-  .ls-td__cta:hover { text-decoration: none; opacity: 0.9; }
-  .ls-td__cta:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 
   .ls-td__note {
     margin: var(--spacing-lg) 0 0;
@@ -142,6 +132,6 @@ const board = isTestDriveWindow(referenceDate) ? testDriveBoard(slug) : null;
     .ls-td__title { max-width: none; }
     .ls-td__lede { font-size: var(--font-size-base); }
     /* Full-width tap target — this hero is aimed at a phone during a game. */
-    .ls-td__cta { display: flex; justify-content: center; }
+    .ls-td__cta { display: flex; }
   }
 </style>

@@ -9,18 +9,18 @@
  *
  * The AFL now has the same shape — `EventHeroView.composite` is a presentation
  * decision made in the resolver and honored by a routing condition in
- * `AflHero.astro` — so it can rot the same way. These tests pin both halves:
+ * `LeagueHero.astro` (was AflHero.astro) — so it can rot the same way. These tests pin both halves:
  *
  *  1. The resolver really does attach a treatment on the phases that are meant
  *     to be composites, with the tone flipping on the day that matters.
- *  2. `AflHero` really does route on it, and really does fall back to
+ *  2. `LeagueHero` really does route on it, and really does fall back to
  *     `AflEventHero` when there is no treatment or no cast model — a missing
  *     feed must degrade to the card that always worked, never to an empty flank.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { gameDayPreviewSlotView, resolveAflHeroState } from '../src/utils/afl-hero-resolver';
+import { gameDayPreviewSlotView, resolveAflHeroState } from './helpers/afl-hero';
 
 const at = (iso: string) =>
   resolveAflHeroState({ referenceDate: new Date(iso), rng: () => 0 } as any) as any;
@@ -167,10 +167,8 @@ describe('AFL composite hero routing', () => {
     // its ACCEPTED ART may grow. The screenshot arm exists for What's New,
     // where the feature's own capture is the art and a player is cast only
     // when the entry names one.
-    const hero = readFileSync(join(__dirname, '../src/components/afl/AflHero.astro'), 'utf8');
-    expect(hero).toMatch(
-      /'view' in state && state\.view\.composite && \(state\.view\.model \|\| state\.view\.screenshot\)/,
-    );
+    const hero = readFileSync(join(__dirname, '../src/components/shared/league-hero/LeagueHero.astro'), 'utf8');
+    expect(hero).toMatch(/view && view\.composite && \(view\.model \|\| view\.screenshot\)/);
     // The fallback must still exist after the composite branch.
     const composite = hero.indexOf('<LeagueCompositeHero');
     const fallback = hero.indexOf('<AflEventHero');
@@ -182,7 +180,7 @@ describe('AFL composite hero routing', () => {
     // Both paint "whose story this is": the backdrop repaints the whole card in
     // the viewer's colours, the composite's glow already says it. Stacking them
     // floats the cast player on a second team's gradient.
-    const hero = readFileSync(join(__dirname, '../src/components/afl/AflHero.astro'), 'utf8');
+    const hero = readFileSync(join(__dirname, '../src/components/shared/league-hero/LeagueHero.astro'), 'utf8');
     const block = hero.slice(hero.indexOf('<LeagueCompositeHero'), hero.indexOf('<AflEventHero'));
     expect(block).not.toContain('backdrop');
   });

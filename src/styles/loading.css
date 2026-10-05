@@ -10,7 +10,7 @@
  * Both render the SAME class names so this stylesheet applies in either path.
  *
  * Skin: every accent reads `var(--league-accent)`, which resolves to
- * TheLeague blue or AFL red via `html[data-league]` in tokens.css. Loaders
+ * TheLeague blue or AFL red via each league's theme (src/themes/). Loaders
  * never branch on league in code.
  *
  * Size/variant: controlled via CSS custom properties on each root class, so
@@ -227,7 +227,7 @@
 }
 
 .loading-branded__narration {
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   font-style: italic;
   color: var(--color-gray-500, #6b7280);
   min-height: 1.2em;

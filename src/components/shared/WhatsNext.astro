@@ -1,0 +1,182 @@
+---
+/**
+ * WhatsNext - League events timeline container.
+ * Shows the current, next, and upcoming league events at the top of the homepage.
+ *
+ * Renders at build time with current date, and re-evaluates client-side
+ * when ?testDate= parameter is present.
+ *
+ * @prop excludeEventId - Optional event ID to hide (when already shown in the hero banner)
+ */
+import WhatsNextCard from './WhatsNextCard.astro';
+import { getWhatsNextTimeline, getWhatsNextTimelineExcluding } from '../../utils/league-event-resolver';
+import { resolveLeaguePath } from '../../utils/nav-utils';
+import type { WhatsNextTimeline } from '../../types/league-events';
+
+interface Props {
+  /** Event ID to exclude from the timeline (already shown in hero) */
+  excludeEventId?: string;
+  /** Override date for demo/testing purposes */
+  demoDate?: Date;
+  /** Maximum number of event cards to show (default: 3) */
+  maxCards?: number;
+  /**
+   * A timeline built by the caller. Another league passes its own (e.g. a
+   * package league's, src/utils/package-league-events.ts); omitted, the
+   * component resolves TheLeague's as it always has.
+   */
+  timeline?: WhatsNextTimeline;
+  /** "Full calendar" link. Defaults to TheLeague's; `null` hides the link. */
+  calendarHref?: string | null;
+}
+
+const { excludeEventId, demoDate, maxCards = 3, timeline: given, calendarHref } = Astro.props;
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+
+const timeline =
+  given ??
+  (excludeEventId
+    ? getWhatsNextTimelineExcluding(excludeEventId, demoDate)
+    : getWhatsNextTimeline(demoDate));
+const calendarLink =
+  calendarHref === null ? null : calendarHref ?? resolveLeaguePath('/theleague/calendar', hideLeaguePrefix);
+const hasEvents = timeline.current || timeline.next || timeline.upcoming;
+
+// Forward-looking labels: only lead with "Happening Now" when an event is
+// genuinely live, otherwise the slots read Up Next / Coming Soon / Later.
+const leadActive = timeline.current?.isActive ?? false;
+const labels = leadActive
+  ? { current: 'Happening Now', next: 'Up Next', upcoming: 'Coming Soon' }
+  : { current: 'Up Next', next: 'Coming Soon', upcoming: 'Later' };
+---
+
+{hasEvents && (
+  <section class="whats-next" aria-label="Upcoming league events">
+    <div class="whats-next__header">
+      <h2 class="whats-next__heading">What's Next</h2>
+      {calendarLink && (
+        <a href={calendarLink} class="whats-next__calendar-link">
+          Full calendar
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </a>
+      )}
+    </div>
+    <div class:list={['whats-next__grid', { 'whats-next__grid--2col': maxCards === 2 }]}>
+      {timeline.current && <WhatsNextCard event={timeline.current} position="current" label={labels.current} />}
+      {maxCards >= 2 && timeline.next && <WhatsNextCard event={timeline.next} position="next" label={labels.next} />}
+      {maxCards >= 3 && timeline.upcoming && <WhatsNextCard event={timeline.upcoming} position="upcoming" label={labels.upcoming} />}
+    </div>
+  </section>
+)}
+
+<script>
+  /**
+   * Resolve {franchiseId} placeholders in What's Next event links.
+   * Reads from theleague_team_pref cookie or ?myteam URL param.
+   */
+  function resolveWhatsNextLinks() {
+    const myTeamParam = new URLSearchParams(window.location.search).get('myteam');
+
+    let franchiseId = myTeamParam;
+    if (!franchiseId) {
+      try {
+        const cookie = document.cookie
+          .split('; ')
+          .find((row) => row.startsWith('theleague_team_pref='));
+        if (cookie) {
+          const pref = JSON.parse(decodeURIComponent(cookie.split('=')[1]));
+          franchiseId = pref?.franchiseId || null;
+        }
+      } catch {
+        // Cookie parse failed — leave links as-is
+      }
+    }
+
+    if (!franchiseId) return;
+
+    // Normalize to 4-digit zero-padded format
+    franchiseId = /^\d+$/.test(franchiseId) ? franchiseId.padStart(4, '0') : franchiseId;
+
+    // Type at the query: a JSDoc cast is inert in an .astro script block
+    // (it is TypeScript, not JS), so `link` stayed `Element` and every
+    // `.href` read below it failed to compile.
+    const links = document.querySelectorAll<HTMLAnchorElement>('.whats-next-card__link');
+    links.forEach((anchor) => {
+      if (anchor.href.includes('%7BfranchiseId%7D') || anchor.href.includes('{franchiseId}')) {
+        anchor.href = anchor.href
+          .replace(/%7BfranchiseId%7D/g, franchiseId)
+          .replace(/\{franchiseId\}/g, franchiseId);
+      }
+    });
+  }
+
+  // Run after DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', resolveWhatsNextLinks);
+  } else {
+    resolveWhatsNextLinks();
+  }
+</script>
+
+<style>
+  .whats-next {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .whats-next__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  /* Editorial section-title pattern — uppercase, 0.06em tracking,
+     2px primary left-border accent. The signature visual pattern. */
+  .whats-next__heading {
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--color-primary, #1c497c);
+    margin: 0;
+    line-height: 1;
+    color: var(--color-gray-700, #374151);
+  }
+
+  .whats-next__calendar-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    color: var(--color-primary, #1c497c);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: gap var(--transition-fast);
+  }
+
+  .whats-next__calendar-link:hover {
+    gap: 0.5rem;
+  }
+
+  .whats-next__grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+
+  .whats-next__grid--2col {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (max-width: 768px) {
+    .whats-next__grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

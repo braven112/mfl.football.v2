@@ -170,7 +170,7 @@ const cell = (n: number) => ({ full: money(n), short: moneyShort(n) });
     background: var(--content-bg, #fff);
     border-radius: 0.75rem;
     padding: 1rem;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    box-shadow: var(--shadow-md);
   }
 
   :global(html.dark) .fo-proj { box-shadow: 0 0 0 1px var(--content-border, #555555); }
@@ -185,7 +185,7 @@ const cell = (n: number) => ({ full: money(n), short: moneyShort(n) });
 
   .fo-proj__title {
     margin: 0 0 0.125rem;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 700;
     color: var(--page-text, #1a1a1a);
   }
@@ -193,7 +193,7 @@ const cell = (n: number) => ({ full: money(n), short: moneyShort(n) });
   .fo-proj__sub {
     margin: 0;
     max-width: 46ch;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--content-text-muted, #6b7280);
   }
 
@@ -269,7 +269,7 @@ const cell = (n: number) => ({ full: money(n), short: moneyShort(n) });
   /* Over the cap must not read like being exactly at it. */
   .fo-proj__space--negative { color: #dc2626; }
 
-  .fo-proj__delta { font-size: 0.75rem; color: var(--content-text-muted, #6b7280); }
+  .fo-proj__delta { font-size: var(--font-size-xs); color: var(--content-text-muted, #6b7280); }
   .fo-proj__delta[data-sign='up'] { color: #16a34a; }
   .fo-proj__delta[data-sign='down'] { color: #dc2626; }
 
@@ -321,7 +321,7 @@ const cell = (n: number) => ({ full: money(n), short: moneyShort(n) });
   .fo-move__btn[aria-pressed='true'] {
     background: var(--league-accent, #1c497c);
     border-color: var(--league-accent, #1c497c);
-    color: #fff;
+    color: var(--on-league-accent, #fff);
   }
 
   .fo-move__btn:focus-visible {

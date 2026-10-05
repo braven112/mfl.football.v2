@@ -189,7 +189,7 @@ function MyComponent() {
 **Evidence:**
 - `src/utils/rankings-lookup.ts` — composite computation in `buildRankingLookup()`
 - `src/utils/rankings-storage.ts` — composite config CRUD
-- `src/components/theleague/rankings-import/ManageImportsSection.tsx` — checkbox + weight picker UI
+- `src/components/shared/rankings-import/ManageImportsSection.tsx` — checkbox + weight picker UI
 - `src/pages/theleague/players.astro` — auto-sort and CSS classes
 
 **Recommendation:**

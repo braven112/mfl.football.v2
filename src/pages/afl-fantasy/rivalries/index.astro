@@ -282,7 +282,7 @@ const coverageNote = describeCoverageGap(coverage);
     border-radius: 10px;
     text-decoration: none;
     color: inherit;
-    transition: border-color 0.15s ease, transform 0.15s ease;
+    transition: border-color var(--transition-fast), transform var(--transition-fast);
   }
 
   .hot-card:hover {
@@ -307,7 +307,7 @@ const coverageNote = describeCoverageGap(coverage);
   .hot-card__vs,
   .dim {
     color: var(--content-text-muted);
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
   }
 
   .hot-card__names {

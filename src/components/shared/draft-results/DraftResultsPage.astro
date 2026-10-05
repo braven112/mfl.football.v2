@@ -83,6 +83,8 @@ const subtitle = selectedTeam
   : view.shape.badge
     ? `${view.shape.picks} picks over ${view.shape.rounds} rounds`
     : `${view.shape.picks} picks over ${view.shape.rounds} rounds`;
+// First season of the league's player archive (registry `playerArchiveStartYear`).
+const archiveStart = league.playerArchiveStartYear ?? null;
 ---
 
 <TheLeagueLayout title={`${league.name} — ${heading}`}>
@@ -188,8 +190,9 @@ const subtitle = selectedTeam
         ) : view.unnamed > 0 && (
           <p class="dr__notice">
             {view.unnamed} of these picks can't be named:
-            the league's player archive begins in {leagueSlug === 'afl-fantasy' ? 2011 : 2007},
-            so a player drafted before then who left before it starts has no record to match.
+            {archiveStart
+              ? `the league's player archive begins in ${archiveStart}, so a player drafted before then who left before it starts has no record to match.`
+              : "the league's player archive does not reach back to them, so they have no record to match."}
           </p>
         )}
         <table class="dr__table">
@@ -289,7 +292,7 @@ const subtitle = selectedTeam
   .dr__badge {
     padding: 0.2rem 0.6rem;
     border-radius: 999px;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.04em;

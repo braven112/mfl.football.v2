@@ -34,6 +34,7 @@ export interface LvBenchProps {
   gamesByTeam?: Record<string, NflGame>;
   boxScore?: Record<string, PlayerBoxScore>;
   detailStatus?: 'ok' | 'error' | 'pending';
+  onOpenPlayer?: (row: LivePlayerRow, side: 0 | 1) => void;
 }
 
 export default function LvBench({
@@ -45,6 +46,7 @@ export default function LvBench({
   gamesByTeam,
   boxScore,
   detailStatus,
+  onOpenPlayer,
 }: LvBenchProps): JSX.Element | null {
   const [open, setOpen] = useState(false);
 
@@ -82,6 +84,7 @@ export default function LvBench({
               gamesByTeam={gamesByTeam}
               boxScore={boxScore}
               detailStatus={detailStatus}
+              onOpenPlayer={onOpenPlayer}
             />
           ) : (
             <div className="lv-bench__none">No bench players</div>

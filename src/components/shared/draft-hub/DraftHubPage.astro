@@ -94,7 +94,7 @@ const totalCapital = myCapital.reduce((sum, c) => sum + c.count, 0);
                 {dateFmt.format(status.startsAt)} at {formatForViewer(status.startsAt, clock)}
               </span>
             </span>
-            <a class="dh__status-cta" href={r('/draft/order')}>See the order</a>
+            <a class="cta cta--primary dh__status-cta" href={r('/draft/order')}>See the order</a>
           </>
         )}
         {status.kind === 'live' && (
@@ -104,7 +104,7 @@ const totalCapital = myCapital.reduce((sum, c) => sum + c.count, 0);
               <strong class="dh__status-line">picks in — the {status.year} draft is live</strong>
               <span class="dh__status-sub">{status.slots - status.made} still on the board</span>
             </span>
-            <a class="dh__status-cta" href={r('/draft/broadcast')}>Open the board</a>
+            <a class="cta cta--primary dh__status-cta" href={r('/draft/broadcast')}>Open the board</a>
           </>
         )}
         {status.kind === 'complete' && (
@@ -114,7 +114,7 @@ const totalCapital = myCapital.reduce((sum, c) => sum + c.count, 0);
               <strong class="dh__status-line">picks — the {status.year} draft is done</strong>
               <span class="dh__status-sub">Every selection is in the archive</span>
             </span>
-            <a class="dh__status-cta" href={r(`/draft/results?year=${status.year}`)}>See the results</a>
+            <a class="cta cta--primary dh__status-cta" href={r(`/draft/results?year=${status.year}`)}>See the results</a>
           </>
         )}
       </section>
@@ -175,7 +175,7 @@ const totalCapital = myCapital.reduce((sum, c) => sum + c.count, 0);
       <section class="dh__recap" aria-labelledby="dh-recap">
         <div class="dh__recap-head">
           <h2 class="dh__h2" id="dh-recap">How the {recapYear} draft opened</h2>
-          <a class="dh__recap-all" href={r(`/draft/results?year=${recapYear}`)}>All picks →</a>
+          <a class="cta-link dh__recap-all" href={r(`/draft/results?year=${recapYear}`)}>All picks</a>
         </div>
         <ol class="dh__recap-list">
           {recap.map((p) => (
@@ -204,7 +204,7 @@ const totalCapital = myCapital.reduce((sum, c) => sum + c.count, 0);
     --dhub-border: var(--content-border, #e5e5e5);
     --dhub-ink: var(--page-text, #1a1a1a);
     --dhub-ink-muted: var(--content-text-muted, #666);
-    --dhub-on-accent: var(--btn-primary-text, #fff);
+    --dhub-on-accent: var(--on-league-accent, #fff);
 
     max-width: 1100px;
     margin: 0 auto;
@@ -277,15 +277,15 @@ const totalCapital = myCapital.reduce((sum, c) => sum + c.count, 0);
     font-size: 0.8rem;
   }
 
+  /* The hub's own palette, not the site accent. */
   .dh__status-cta {
+    --cta-bg: var(--dhub-accent);
+    --cta-ink: var(--dhub-on-accent);
+    --cta-border: var(--cta-bg);
+    --cta-bg-hover: var(--league-accent-hover, color-mix(in srgb, var(--cta-bg) 88%, black));
     padding: 0.45rem 0.9rem;
     border-radius: 0.4rem;
-    background: var(--dhub-accent);
-    color: var(--dhub-on-accent);
     font-size: 0.85rem;
-    font-weight: 700;
-    text-decoration: none;
-    white-space: nowrap;
   }
 
   /* ── Capital ─────────────────────────────────────────────────────────── */
@@ -402,10 +402,8 @@ const totalCapital = myCapital.reduce((sum, c) => sum + c.count, 0);
   }
 
   .dh__recap-all {
+    --cta-link-ink: var(--dhub-accent);
     font-size: 0.82rem;
-    font-weight: 600;
-    color: var(--dhub-accent);
-    text-decoration: none;
   }
 
   .dh__recap-list {

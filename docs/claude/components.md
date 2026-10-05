@@ -235,30 +235,37 @@ Layered shadows increase rendering load. Avoid animating shadow tokens directly.
 
 All new pages and components must follow the **editorial design language** established by the PlayerDetailsModal and related modal components. This creates a consistent, data-dense, sports-editorial feel across the site.
 
-**Canonical reference:** `src/components/theleague/PlayerDetailsModal.astro`
+**Canonical reference:** `src/components/shared/PlayerDetailsModal.astro`
 **Full pattern catalog:** `docs/claude/insights/domains/design-system.md` (search "Editorial Design Standard")
 
 ### Quick Reference
 
 **Section titles** — The signature editorial element:
 ```css
-font-size: 0.75rem;
+font-size: var(--font-size-xs);
 font-weight: 700;
 text-transform: uppercase;
-letter-spacing: 0.06em;
+letter-spacing: var(--tracking-caps);
 padding-left: 0.625rem;
 border-left: 2px solid var(--color-primary, #1c497c);
 ```
+
+The 2px left stripe is a DELIBERATE house-style exception. Impeccable's design
+guidance (and much "AI slop" critique) bans coloured side-stripe borders; this
+repo keeps it on editorial section titles only, by decision (Sep 2026). Don't
+spread it to cards, callouts or list items.
 
 **Typography scale** (most commonly used):
 | Role | Size | Weight |
 |------|------|--------|
 | Page/hero title | 1.35rem | 700 |
-| Section title | 0.75rem | 700, uppercase |
-| Body text | 0.875rem | 400–500 |
-| Detail label | 0.75rem | 600, uppercase, gray-400 |
-| Micro label | 0.6875rem | 600, uppercase |
-| Table header | 0.625rem | 600, uppercase, gray-400 |
+| Section title | `--font-size-xs` (0.75rem) | 700, uppercase |
+| Body text | `--font-size-sm` (0.875rem) | 400–500 |
+| Detail label | `--font-size-xs` (0.75rem) | 600, uppercase, gray-400 |
+| Micro label | `--font-size-2xs` (0.6875rem) | 600, uppercase |
+| Table header | `--font-size-3xs` (0.625rem) | 600, uppercase, gray-400 |
+
+Every uppercase role above also takes `letter-spacing: var(--tracking-caps)`.
 
 **Key metrics** — 3-column grid with gray-50 background cards, tabular-nums values
 
@@ -291,17 +298,21 @@ When building a new page following the editorial standard:
 
 ```
 src/components/
-├── shared/              # Shared across leagues
-│   ├── Card.astro
-│   ├── Button.astro
-│   └── DataTable.astro
-├── theleague/           # TheLeague-specific
-│   ├── RosterCard.astro
-│   └── StandingsTable.astro
-├── afl-fantasy/         # AFL-specific
-│   └── DraftBoard.astro
-└── AuthContext.tsx      # React context provider
+├── shared/              # Rendered by MORE THAN ONE league (or by a shared
+│   │                    # layout) — site chrome, theme helpers, page bodies
+│   ├── PlayerCell.astro
+│   ├── ThemeToggle.astro
+│   ├── lineup/LineupPage.astro
+│   └── standings/StandingsTable.astro
+├── theleague/           # Rendered by TheLeague ALONE
+├── afl/  afl-fantasy/   # Rendered by the AFL alone
+├── keeper/  best-ball/  bigleague/
+├── nav/  schefter/      # Feature folders
+└── (no loose files)     # tests/components-root-guard.test.ts
 ```
+
+A component moves to `shared/` in the change that gives it a second
+league. Nothing lives loose at the root of `src/components/`.
 
 ## Props Typing
 
@@ -354,7 +365,7 @@ See CLAUDE.md for complete team name display standards.
 All player lists, cards, and tables **must** use the standard Player Lockup pattern.
 See **CLAUDE.md > Player Display** for the full specification.
 
-**Component:** `src/components/theleague/PlayerCell.astro`
+**Component:** `src/components/shared/PlayerCell.astro`
 
 **Quick checklist:**
 - [ ] Using `PlayerCell.astro` (or React equivalent for `.tsx` contexts)?
@@ -364,6 +375,6 @@ See **CLAUDE.md > Player Display** for the full specification.
 
 **Existing implementations for reference:**
 - Roster table: `src/pages/theleague/rosters.astro` (lines ~5890-5894, DEF swap logic)
-- Potential Targets: `src/components/theleague/FreeAgentNeedsCard.astro`
+- Potential Targets: `src/components/shared/FreeAgentNeedsCard.astro`
 - Trade builder: `src/components/theleague/trade-builder/PlayerCard.tsx`
 - Free agents table: `src/pages/theleague/players.astro` (inline p-row pattern)

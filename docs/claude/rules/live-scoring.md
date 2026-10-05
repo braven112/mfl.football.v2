@@ -292,6 +292,29 @@ which is exactly why the split exists — verify parsing offline against
   the fallback exists to remove; and an empty answer is never cached, for the
   reason every other never-cache-a-failure rule here exists. Guard:
   `tests/live-schedule-pairings.test.ts`.
+  **The fallback now lives in `loadLiveScoringPayload` too (2026-09-29),
+  and that is the copy that matters for a league we run.** The one above sits
+  in `cross-league-live.ts`, so only MFL Live got it; the league board, the
+  homepage live hero (`buildLiveScoringHeroProps`) and `/broadcast` all read
+  through `loadLiveScoringPayload` and would have told Archie's 99 owners they
+  had no game the moment `features.liveScoring` was flipped. A REGISTERED
+  league needs no owner cookie: `readRegisteredSchedulePairings` reads the
+  committed `mfl-feeds/<year>/schedule.json` first and a public
+  `TYPE=schedule&W=` only when the disk copy lacks the week. Same gates
+  (`ok`, `hasLiveSignal`, no pairings yet), same week check. The pairings ride
+  inside the 20s payload cache, so a poll costs nothing extra, and MFL Live's
+  cookie read no longer fires for a registered league (it arrives paired).
+  Guard: `tests/archies-live-scoring.test.ts`.
+- **A 99-matchup board gets a division picker; every other board is
+  unchanged.** `buildPanelGroups` (`utils/live/board-groups.ts`) stamps
+  `LivePanel.groups` only for a league whose config declares
+  `structure: 'divisions'` (Archie's). The stamp happens in
+  `assembleLeagueBoard`, which serves BOTH the page and the poll route. The
+  island replaces its board wholesale on every poll, so groups added at SSR
+  only would vanish on the first tick. The viewer's own games stay above the
+  chips and are never filtered. A division shows every game with a team FROM
+  it (a third of Archie's games cross divisions), and a stale or unknown pick
+  shows All rather than nothing.
 - **Every failed MFL read now says why, and one league-week is read once per
   20s.** Before that, timeout, refused connection, HTTP error, HTML-under-a-200
   and an MFL `error` key all collapsed into the same silent `ok: false` — the
@@ -394,6 +417,34 @@ which is exactly why the split exists — verify parsing offline against
   side 1. `tests/live-win-prob-caller-order.test.ts` renders both callers in all
   four viewer/order cases against the header they sit under;
   `tests/live-kit-leaves.test.ts` pins the bar on its own.
+
+- **The stat sheet's total is MFL's; its lines are ours, and the gap is said
+  out loud.** Tapping a row in the matchup detail opens `LvStatSheet` (bottom
+  sheet on a phone, dialog from 640px): each stat with the points it earned
+  under that LEAGUE's rules. MFL publishes no per-stat breakdown, so it is
+  re-derived: `boxScoreToMflStats` turns ESPN's box score into MFL's own rule
+  codes (`PY`, `#P`, `CC`, …) server-side, league-neutral, on
+  `PlayerBoxScore.stats`; `/api/live-scoring-rules?L=` reads `TYPE=rules` for
+  ANY league id (registry host, else `api.myfantasyleague.com`, which
+  redirects — the host is never read from the request); `scorePlayerStats`
+  applies them in the browser. Three things it took to match MFL exactly on
+  the 2026 W3 census (TheLeague 500/500, AFL 326/326):
+  - a combined event (`UY+KY`) is known when ANY part is — requiring both
+    dropped every kick returner's yards;
+  - two-point conversions exist only in the TD play's PROSE ("X Pass to Y for
+    Two-Point Conversion"), credited by exact, unique name against that GAME's
+    box score (`parseTwoPointConversion`);
+  - each field goal is scored by its own length (`fgLengths`, from the
+    scoring plays) — the box score carries only the longest.
+  What it must keep: a rule whose stat ESPN does not report is SKIPPED, never
+  scored at zero (a "0 first downs" penalty would be charged to a player who
+  had six), and the bottom line is the row's own `live`, with
+  `total − itemized` on one "Not itemized" line. A league like Archie's that
+  scores first downs and 20-yard plays matches less often, by design, and the
+  sheet still adds up. DEF gets no breakdown for the same reason it gets no
+  stat line. A league with no published rules ("No League Scoring Rules") is
+  an ANSWER, cached; a failed read never is. Guard:
+  `tests/live-stat-sheet.test.ts`.
 
 ## Game odds and weather — one system for every league
 

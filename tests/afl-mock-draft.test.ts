@@ -459,7 +459,7 @@ describe('a mock’s chat channel', () => {
    */
   const roomSrc = readFileSync(join(process.cwd(), 'party/draft-room.ts'), 'utf-8');
   const drSrc = readFileSync(
-    join(process.cwd(), 'src/components/theleague/draft-room/DraftRoom.tsx'),
+    join(process.cwd(), 'src/components/shared/draft-room/DraftRoom.tsx'),
     'utf-8'
   );
 

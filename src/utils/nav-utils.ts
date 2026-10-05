@@ -19,7 +19,7 @@
 import type { NavLink, NavSection, LeagueSlug, NavTeamInfo } from '../types/nav';
 import { NAV_COOKIES, isAflFamily } from '../types/nav';
 import { isDemoEnv } from './demo-isolation-core.mjs';
-import { navConfig, getRouteEquivalence } from '../config/nav-config';
+import { navConfig, getRouteEquivalence, getAdminFranchiseIds } from '../config/nav-config';
 import {
   ALL_LEAGUES,
   getLeagueByNavSlug,
@@ -29,15 +29,17 @@ import {
   type CanonicalLeagueSlug,
 } from '../config/leagues';
 import type { LeagueDefinition } from '../config/leagues';
+import { isPackageLeague, packageLeagueHasPath, packageRouteForPath } from '../config/package-league-routes.mjs';
 
 /**
- * navSlugs of draft-only best-ball leagues. Their nav is OPT-IN: only links
- * explicitly tagged `leagueOnly: <navSlug>` render, because the untagged
- * default link set (rosters, lineups, trades, …) is management UI those
- * leagues deliberately don't have — every untagged link would be a 404.
+ * navSlugs whose nav is OPT-IN: only links explicitly tagged
+ * `leagueOnly: <navSlug>` render, because the untagged default link set
+ * (rosters, lineups, trades, …) is UI those leagues don't have — every
+ * untagged link would be a 404. Draft-only best-ball leagues, and package
+ * leagues (`optInNav` in the registry) that launch with a chosen page set.
  */
 const BEST_BALL_NAV_SLUGS = new Set<LeagueSlug>(
-  ALL_LEAGUES.filter((l) => l.bestBall).map((l) => l.navSlug),
+  ALL_LEAGUES.filter((l) => l.bestBall || l.optInNav).map((l) => l.navSlug),
 );
 
 /**
@@ -46,10 +48,22 @@ const BEST_BALL_NAV_SLUGS = new Set<LeagueSlug>(
  * tagged for them.
  */
 function linkMatchesLeague(link: NavLink, league: LeagueSlug): boolean {
-  const allowlist = ALL_LEAGUES.find((l) => l.navSlug === league)?.navLinks;
-  if (allowlist) return allowlist.includes(link.id);
-  if (link.leagueOnly) return leagueOnlyMatches(link.leagueOnly, league);
-  return !BEST_BALL_NAV_SLUGS.has(league);
+  const entry = ALL_LEAGUES.find((l) => l.navSlug === league);
+  if (entry?.navLinks) return entry.navLinks.includes(link.id);
+  const tagged = link.leagueOnly ? leagueOnlyMatches(link.leagueOnly, league) : !BEST_BALL_NAV_SLUGS.has(league);
+  return tagged && packageLinkEntitled(link, entry);
+}
+
+/**
+ * A package league's link to a package route shows only while the feature
+ * that entitles the route is ticked — the route and its link come and go
+ * together, so unticking a box can never leave a nav link to a page that was
+ * removed with it. Links to anything else (a league's own competition page,
+ * an external link) are unaffected.
+ */
+function packageLinkEntitled(link: NavLink, entry: LeagueDefinition | undefined): boolean {
+  if (!entry || !isPackageLeague(entry) || link.external || !link.path) return true;
+  return !packageRouteForPath(link.path) || packageLeagueHasPath(entry, link.path);
 }
 
 /** An AFL-tagged link or section also belongs to an AFL-family league. */
@@ -386,7 +400,7 @@ export function isSectionVisible(
   section: NavSection,
   league: LeagueSlug,
   franchiseId: string | null,
-  adminFranchiseIds: string[] = navConfig.adminFranchiseIds[league] ?? []
+  adminFranchiseIds: string[] = getAdminFranchiseIds(league)
 ): boolean {
   // Check league restriction
   if (section.leagueOnly && !leagueOnlyMatches(section.leagueOnly, league)) {
@@ -430,7 +444,7 @@ export function getVisibleLinks(
   section: NavSection,
   league: LeagueSlug,
   franchiseId: string | null,
-  adminFranchiseIds: string[] = navConfig.adminFranchiseIds[league] ?? []
+  adminFranchiseIds: string[] = getAdminFranchiseIds(league)
 ): NavLink[] {
   return section.links.filter(link => {
     if (!linkMatchesLeague(link, league)) {
@@ -456,7 +470,7 @@ export function getVisibleLinks(
 export function getVisiblePinnedLinks(
   league: LeagueSlug,
   franchiseId: string | null,
-  adminFranchiseIds: string[] = navConfig.adminFranchiseIds[league] ?? []
+  adminFranchiseIds: string[] = getAdminFranchiseIds(league)
 ): NavLink[] {
   return (navConfig.pinnedLinks ?? []).filter(link => {
     if (!linkMatchesLeague(link, league)) {
@@ -477,7 +491,7 @@ export function getVisiblePinnedLinks(
 export function getVisibleSections(
   league: LeagueSlug,
   franchiseId: string | null,
-  adminFranchiseIds: string[] = navConfig.adminFranchiseIds[league] ?? []
+  adminFranchiseIds: string[] = getAdminFranchiseIds(league)
 ): NavSection[] {
   return navConfig.sections
     .filter(section => isSectionVisible(section, league, franchiseId, adminFranchiseIds))
@@ -643,7 +657,9 @@ export function getLeagueSwitchTargets(
   // A custom-site demo deployment serves only the slots with a demo path —
   // switching to any other league would land on a refused route.
   const demo = isDemoEnv();
-  return ALL_LEAGUES.filter((l) => l.navSlug !== currentLeague && (!demo || !!l.demoPath)).map((l) => ({
+  // A package league (a client's private site, `advertiseOnSharedHost: false`)
+  // is never offered from another league's switcher.
+  return ALL_LEAGUES.filter((l) => l.navSlug !== currentLeague && (!demo || !!l.demoPath) && l.advertiseOnSharedHost !== false).map((l) => ({
     navSlug: l.navSlug,
     name: l.name,
     href: buildSwitchUrl(currentPath, l, hideLeaguePrefix, hostname),
@@ -786,16 +802,21 @@ export function clearMyTeamCookie(): void {
 }
 
 /**
+ * True for a nav slug the registry knows — every league's cookie value is
+ * valid, not a hand-kept list (which had already lost Archie's).
+ */
+function isRegisteredNavSlug(value: string | null | undefined): value is LeagueSlug {
+  return !!value && ALL_LEAGUES.some((l) => l.navSlug === value);
+}
+
+/**
  * Get the myteam league cookie value
  *
  * @returns League slug or null if not set
  */
 export function getMyTeamLeagueCookie(): LeagueSlug | null {
   const value = getCookie(NAV_COOKIES.MY_TEAM_LEAGUE);
-  if (value === 'theleague' || value === 'afl' || value === 'bb1' || value === 'keeper') {
-    return value;
-  }
-  return null;
+  return isRegisteredNavSlug(value) ? value : null;
 }
 
 /**
@@ -835,10 +856,7 @@ export function parseMyTeamFromUrl(url: URL): string | null {
  */
 export function getLastViewedLeague(): LeagueSlug | null {
   const value = getCookie(NAV_COOKIES.NAV_LEAGUE);
-  if (value === 'theleague' || value === 'afl' || value === 'bb1' || value === 'keeper') {
-    return value;
-  }
-  return null;
+  return isRegisteredNavSlug(value) ? value : null;
 }
 
 /**

@@ -579,6 +579,10 @@ self.addEventListener('notificationclick', (event) => {
 
       // Prefer a tab already showing the target URL, else any tab.
       const target = new URL(url, self.location.origin);
+      // Tags the landing for site analytics (/live/analytics counts it as a
+      // push-notification visit). The page's beacon reads it and strips it
+      // from the address bar; only same-origin targets get it.
+      if (target.origin === self.location.origin) target.searchParams.set('src', 'push');
       const exact = windowClients.find((c) => {
         try {
           return new URL(c.url).pathname === target.pathname;

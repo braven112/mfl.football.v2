@@ -1,9 +1,22 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { resolveTheme } from '../scripts/lib/theme-resolve.mjs';
 
 const ROOT = join(__dirname, '..');
 const read = (rel: string) => readFileSync(join(ROOT, rel), 'utf8');
+
+/**
+ * A theme's RESOLVED values in one mode (var() substituted), as CSS text, so `declares()` can scan a
+ * token sheet and a theme together. A null value is a token the theme leaves
+ * unset, so it is not declared. The league palette lives in the theme files
+ * (src/themes/<id>.json), not in tokens.css / tokens-dark.css.
+ */
+const themeSheet = (id: string, mode: 'light' | 'dark') =>
+  Object.entries(resolveTheme(JSON.parse(read(`src/themes/${id}.json`)), mode) as Record<string, string | null>)
+    .filter(([, v]) => v != null)
+    .map(([k, v]) => `${k}: ${v};`)
+    .join('\n');
 
 /**
  * Every custom property MFL Live's stylesheet reads must resolve in BOTH
@@ -72,8 +85,8 @@ function declares(sheet: string, token: string): boolean {
 
 describe('mfl-live.css resolves in both themes', () => {
   const css = read('src/styles/mfl-live.css');
-  const light = read('src/styles/tokens.css');
-  const dark = read('src/styles/tokens-dark.css');
+  const light = read('src/styles/tokens.css') + themeSheet('mfl-live', 'light');
+  const dark = read('src/styles/tokens-dark.css') + themeSheet('mfl-live', 'dark');
 
   const candidates = [...tokenUses(css).values()].filter(
     (u) => !RUNTIME_TOKENS.includes(u.name) && !declares(css, u.name),
@@ -114,19 +127,17 @@ describe('mfl-live.css resolves in both themes', () => {
     '--color-border-subtle',
     '--color-border-default',
   ])('%s is defined for light, not only for dark', (token) => {
-    expect(declares(light, token), `${token} must be declared in tokens.css`).toBe(true);
+    expect(declares(light, token), `${token} must be declared for light (tokens.css or the mfl-live theme)`).toBe(true);
   });
 });
 
 /**
- * The MFL theme's own block has to answer for the tokens the base light sheet
- * does not carry, since that block is what makes `data-league="mfl"` a theme
- * rather than TheLeague's palette with a black header.
+ * The MFL Live theme has to re-point the primary ramp itself, since that is
+ * what makes `data-league="mfl"` a theme rather than TheLeague's palette with
+ * a black header.
  */
-describe('the light MFL block re-points the primary ramp', () => {
-  const light = read('src/styles/tokens.css');
-  const block = light.slice(light.indexOf('html[data-league="mfl"]'));
-  const mflBlock = block.slice(0, block.indexOf('\n}'));
+describe('the light MFL theme re-points the primary ramp', () => {
+  const mflBlock = themeSheet('mfl-live', 'light');
 
   it.each(['--color-primary', '--color-primary-dark', '--shadow-focus-ring'])(
     '%s is overridden for MFL, so buttons are not TheLeague blue',
@@ -136,9 +147,7 @@ describe('the light MFL block re-points the primary ramp', () => {
   );
 
   it('does not leave TheLeague blue in any MFL DECLARATION', () => {
-    // Comments are stripped first: the block's own commentary explains the fix
-    // by naming the colour it replaced, and prose is not a declaration.
-    const declarations = mflBlock.replace(/\/\*[\s\S]*?\*\//g, '');
+    const declarations = mflBlock;
     expect(declarations).not.toMatch(/#1c497c/i);
     expect(declarations).not.toMatch(/rgba\(\s*28\s*,\s*73\s*,\s*124/);
   });
@@ -167,8 +176,10 @@ describe('the light MFL block re-points the primary ramp', () => {
  */
 describe('live.css resolves in both themes', () => {
   const css = read('src/styles/live.css');
-  const light = read('src/styles/tokens.css');
-  const dark = read('src/styles/tokens-dark.css');
+  // live.css draws on every league's surface, and every theme is complete
+  // over the same tokens, so the default theme stands in for all of them.
+  const light = read('src/styles/tokens.css') + themeSheet('theleague', 'light');
+  const dark = read('src/styles/tokens-dark.css') + themeSheet('theleague', 'dark');
 
   /** Set at runtime by the assembler or inline per element, not in a sheet. */
   const KIT_RUNTIME_TOKENS = [

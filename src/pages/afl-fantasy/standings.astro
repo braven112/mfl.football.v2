@@ -1,14 +1,14 @@
 ---
 /**
  * Standings (AFL) — thin route wrapper around the AFL-family standings page
- * (components/afl-family/StandingsPage), shared with the custom-site demo's
+ * (components/shared/standings/AflFamilyStandingsPage), shared with the custom-site demo's
  * keeper slot.
  *
  * Kept HERE: the feed globs (a glob specifier cannot be a runtime variable),
  * the season redirects (`Astro.redirect()` only redirects from a page), and
  * the team-preference cookie (a component cannot set one).
  */
-import StandingsPage from '../../components/afl-family/StandingsPage.astro';
+import StandingsPage from '../../components/shared/standings/AflFamilyStandingsPage.astro';
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 import { feedsByYear, resolveStandingsRoute } from '../../utils/afl-family-standings';
 import { getAFLPreference, setAFLPreference, getAFLTeamData, resolveAFLTeamSelection } from '../../utils/team-preferences';

@@ -27,12 +27,15 @@ on:
   workflow_dispatch:
     inputs:
       league:
+        # A choice, not free text: the value reaches shell steps below. A
+        # package league is listed by its registry slug once it is launched.
         description: 'Which league to backfill'
         required: true
         type: choice
         options:
           - afl
           - theleague
+          - archies
         default: afl
       force:
         description: 'Refetch every year, even ones already cached as valid'
@@ -138,13 +141,19 @@ jobs:
       # posts land in — so the commit never carries half a chain.
       - name: Resolve paths to commit
         id: paths
+        env:
+          LEAGUE: ${{ inputs.league }}
         run: |
           CHAIN="$(node ./scripts/recompute-derived-chain.mjs --print-outputs --sep=' ')"
-          if [ "${{ inputs.league }}" = "theleague" ]; then
-            echo "add=data/theleague/mfl-feeds/ data/theleague/derived/ $CHAIN" >> "$GITHUB_OUTPUT"
-          else
-            echo "add=data/afl-fantasy/mfl-feeds/ data/afl-fantasy/derived/ $CHAIN" >> "$GITHUB_OUTPUT"
-          fi
+          # The league's data dir from the registry (`afl` is the AFL's alias).
+          DATA="$(node --input-type=module -e "
+            const { getLeagueBySlug } = await import('./src/config/leagues-data.mjs');
+            const slug = process.env.LEAGUE === 'afl' ? 'afl-fantasy' : process.env.LEAGUE;
+            const league = getLeagueBySlug(slug);
+            if (!league) { console.error('Unknown league ' + slug); process.exit(1); }
+            console.log(league.dataPath);
+          ")"
+          echo "add=$DATA/mfl-feeds/ $DATA/derived/ $CHAIN" >> "$GITHUB_OUTPUT"
 
       - name: Commit and push
         uses: ./.github/actions/commit-push

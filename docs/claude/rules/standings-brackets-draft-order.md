@@ -30,6 +30,70 @@ teams with identical 4-2-0 division records, where MFL credited the team with
 LOWER all-play and LOWER points because it swept the season series.
 `divisionTiebreaker` in standings.ts now has no production callers.
 
+**1b. One standings page, many leagues.** `/theleague/standings` and
+`/archies/standings` render the same `src/components/shared/standings/StandingsPage.astro`
+(the AFL's is still its own). Per-league differences are data in
+`standings-page-profile.ts`, never a slug branch in the page. A league whose
+export lacks columns (archies: no all-play, PA, streak or division record)
+gets them from `utils/standings-derived.ts`, which only FILLS blanks and never
+moves a row. That league must read the committed snapshot, not the live
+refresh (`liveRefresh: false`): derived columns come from committed weekly
+scores, so live rows would sit beside derived ones a week older.
+A league with its own playoff seeding declares it in the registry
+(`standingsSeeding`); Archie's MAD POWER 99 (`utils/mad-standings.ts`) takes
+each tier in MFL's row order and never re-sorts, which is only correct while
+the league's MFL sort is Victory Points then points — the test fails the day
+that stops being true, and it also pins the site's seeds to the league's own
+MFL widget (`public/mfl/10105/standings.js`) team for team.
+`tests/shared-standings-page.test.ts`.
+
+**1c. Three tabs: shared standard views, league-owned custom ones.** The
+owner's model (2026-09-29). Each league shows three standings tabs. The
+common set is Division / Playoffs / All-Play, and a league may REPLACE any
+one of them with a view of its own:
+
+| League | Tab 1 | Tab 2 | Tab 3 |
+|---|---|---|---|
+| TheLeague | Division | Playoffs | All-Play |
+| Archie's | Division | MAD (its playoffs) | All-Play (skins may replace it one day) |
+| AFL | Division | Playoffs (per conference) | Tiers |
+
+- The **standard views** (Division, Playoffs, All-Play) live in the shared
+  page and differ only by profile data: columns, seeding (e.g. MAD), labels.
+  A league's PLAYOFF format is a standard view with its own seeding, not a
+  custom tab — MAD is `standingsSeeding`, not an Archie's component.
+- A **custom view** is a side competition that is one-of-one: the AFL's tier
+  competition (all-play split into tiers, prizes, promotion / relegation),
+  Archie's skins game. It is that league's own component. The shared page
+  owns the tab bar, `?view=`, season picker, theming and mobile layout; the
+  league's route renders the custom component into the tab's slot. Its rules
+  never enter `standings-page-profile.ts` or the shared page.
+- Do not generalise a custom view for reuse. Another client may be shown it
+  for ideas; theirs is built to their own rules.
+
+Status: the slot mechanism is NOT built yet — today's tabs are fixed
+(Division / league-wide / All-Play, with a configurable middle label).
+Build it when the AFL moves onto the shared page: its Division and Playoffs
+tabs are standard views, and Tiers becomes its custom tab. Do not build the
+slot before a league needs it.
+
+**1a. The one sanctioned re-rank: MFL Live's Live / Projected standings.**
+The Standings tab on `/live/league/<id>` defaults to **Live** (this week's
+scores added to each record) and offers **Projected** (projected finals added)
+and **Final** (MFL's rows, untouched). Live and Projected re-rank by win %,
+then PF, then MFL's position — the owner's explicit call (Sep 2026). That is
+allowed ONLY because the view is captioned as a what-if and every moved row
+shows its official rank; it must never feed a division title, seed, award or
+draft slot. If a what-if has nothing to add (no game started, week already
+counted) it returns MFL's order rather than re-ranking unchanged records.
+The trap is double-counting: the board sits on a week until the next kickoff,
+and MFL folds the finished week into its standings in between. Each row is
+stamped `weekGamesCounted` — its games played minus the schedule's games BEFORE
+that week (`readLeaguePriorGameCounts`, doubleheaders and byes included) — and
+only the rest are added, per matchup, so a half-counted doubleheader is
+half-added. When the schedule read fails, only unfinished matchups are added.
+`src/utils/live/standings-projection.ts`; `tests/live-standings-projection.test.ts`.
+
 **2. "Most Points Allowed" benefits the team — in BOTH directions.** The team
 that gave up more points wins that tiebreaker step, meaning it gets both the
 better standing and the better (earlier) draft pick. Those are opposite ends of
@@ -111,6 +175,18 @@ not exist before 2025 and evaluates to `NaN`, and wild cards are sorted with no
 tiebreaker at all. Full evidence in
 `docs/claude/insights/features/playoff-performance.md`.
 
+
+## One Playoffs page for every league but TheLeague
+
+The AFL's playoffs page is the shared one (Oct 2026): the bracket engine is
+`src/utils/playoff-bracket-views.ts`, the page `components/shared/playoffs/`.
+TheLeague's page stays its own by the owner's call. What a league hands in is
+its SEEDING (a `TeamResolver`) and its tabs; everything below about the AFL —
+bracket kinds, the NIT, reconstructed seasons — stays in the AFL's route, and
+its Prizes tab is its own component (`AflPlayoffPrizes`). Moved with the SSR
+output identical for six seasons × three tabs and pixel-identical screenshots.
+A package league's page is gated on real MFL brackets
+(docs/claude/rules/package-leagues.md § "Playoffs").
 
 ## AFL playoff brackets — reconstructed games, and ids that lie
 
@@ -263,7 +339,7 @@ result can't be resolved):
   later pick trades.
 
 Surfaces that only ever render in one phase can hardcode that phase's
-framing: the AL/NL draft heroes (`afl-hero-resolver.ts`) and the NFL-draft /
+framing: the AL/NL draft heroes (`league-hero/views.ts`, the AFL profile's pools) and the NFL-draft /
 rookie-draft heroes (`league-event-hero-view.ts`) only appear in offseason
 windows where the order is official, so they say "View Draft Order", never
 "predictor". Static copy (nav, page directory, Roger's prompt/seeds) should

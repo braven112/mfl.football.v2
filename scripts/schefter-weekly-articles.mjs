@@ -31,6 +31,8 @@ import { getSeasonYear, getCurrentNFLWeek, getCompletedWeek } from './article-ut
 import { callAnthropic } from './article-utils/ai-client.mjs';
 import { isDuplicate, appendToFeed } from './article-utils/feed-writer.mjs';
 import { enqueueAnnounce } from './lib/announce-queue.mjs';
+import { loadLeaguePersona } from './lib/persona-store.mjs';
+import { VALID_LEAGUES, leagueWritesType } from './lib/article-leagues.mjs';
 import { withLinkDirective, applyArticleLinks } from './article-utils/article-links.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
@@ -50,7 +52,9 @@ const VALID_TYPES = [
   'schedule-release',
 ];
 
-const VALID_LEAGUES = ['theleague', 'afl-fantasy'];
+// Which leagues, and which types per league: scripts/lib/article-leagues.mjs.
+// archies (a package league) is The Gauntlet only, and its chat is Slack, so
+// it has no GroupMe bot below.
 
 // Per-league Schefter GroupMe bot env vars. Roger's bots are never a
 // fallback — if the Schefter bot id is unset, the promo is skipped.
@@ -83,6 +87,11 @@ function parseArgs() {
 
   if (!VALID_LEAGUES.includes(opts.league)) {
     console.error(`Unknown --league ${opts.league}. Valid leagues: ${VALID_LEAGUES.join(', ')}`);
+    process.exit(1);
+  }
+
+  if (!leagueWritesType(opts.league, opts.type)) {
+    console.error(`${opts.league} does not get "${opts.type}" articles (scripts/lib/article-leagues.mjs).`);
     process.exit(1);
   }
 
@@ -242,8 +251,11 @@ async function main() {
   const links = mod.relatedLinks(enrichment, { league }) ?? [];
   console.log(`  Links: ${links.map((l) => l.href).join(', ') || 'none'}`);
 
-  console.log('  Generating Schefter article...');
-  const systemPrompt = mod.getSystemPrompt({ league });
+  // The commissioner may have renamed the writer (src/utils/persona.mjs).
+  // An unset or unreadable setting resolves to Schefter, byte-for-byte.
+  const persona = await loadLeaguePersona(league);
+  console.log(`  Generating article as ${persona.name} (${persona.source})...`);
+  const systemPrompt = mod.getSystemPrompt({ league, persona });
   const userPrompt = mod.getUserPrompt(withLinkDirective(factSheet, links));
   const aiOutput = await callAnthropic(systemPrompt, userPrompt, mod.config.maxTokens);
   console.log(`  Headline: ${aiOutput.headline}`);

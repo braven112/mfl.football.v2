@@ -161,7 +161,7 @@ describe('the kebab menu stays on screen (placeSheetMenu)', () => {
   });
 
   it('the modal measures on open, and the CSS fallback opens rightwards', () => {
-    const modal = readFileSync('src/components/theleague/PlayerDetailsModal.astro', 'utf8');
+    const modal = readFileSync('src/components/shared/PlayerDetailsModal.astro', 'utf8');
     const open = modal.slice(modal.indexOf('const openSheetMenu'), modal.indexOf('const closeSheetMenu'));
     expect(open).toMatch(/list\.hidden = false;\s*positionSheetMenu\(btn, list\);/);
     const rule = modal.slice(modal.indexOf('.pdm-quick :global(.pdm-kebab__menu) {'));
@@ -174,7 +174,7 @@ describe('the kebab menu stays on screen (placeSheetMenu)', () => {
   it('re-measures when the hero row reflows under an open menu', () => {
     // Watch and "Trade for him" repaint when their server context lands, after
     // the menu may already be open — it once sat where the ⋮ used to be.
-    const modal = readFileSync('src/components/theleague/PlayerDetailsModal.astro', 'utf8');
+    const modal = readFileSync('src/components/shared/PlayerDetailsModal.astro', 'utf8');
     const paintBody = (name: string) => {
       const from = modal.indexOf(`const ${name} = () => {`);
       return modal.slice(from, modal.indexOf('\n    };', from));
@@ -246,7 +246,7 @@ describe('rendering', () => {
 });
 
 describe('the modal wiring', () => {
-  const modal = readFileSync('src/components/theleague/PlayerDetailsModal.astro', 'utf8');
+  const modal = readFileSync('src/components/shared/PlayerDetailsModal.astro', 'utf8');
 
   it('binds tabs and actions inside the per-init path, not on document', () => {
     const init = modal.slice(modal.indexOf('function initPlayerDetailsModal()'));

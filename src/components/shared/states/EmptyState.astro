@@ -1,0 +1,22 @@
+---
+/**
+ * "There is nothing here" — and why that is fine, or when it fills.
+ *
+ * Pass `compact` inside a card or cell. Renders UiState.astro.
+ */
+import UiState from './UiState.astro';
+import type { StateAction } from '../../../utils/state-html';
+
+interface Props {
+  title: string;
+  body?: string;
+  actions?: StateAction[];
+  compact?: boolean;
+  class?: string;
+}
+
+// The slot is forwarded only when the caller gave one: UiState treats ANY
+// default slot as a replacement body line, even an empty one.
+const hasSlot = Astro.slots.has('default');
+---
+{hasSlot ? <UiState kind="empty" {...Astro.props}><slot /></UiState> : <UiState kind="empty" {...Astro.props} />}

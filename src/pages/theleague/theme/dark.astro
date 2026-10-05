@@ -1,0 +1,12 @@
+---
+/**
+ * League Theme, dark mode (theleague) — thin route wrapper. Shared implementation
+ * lives in components/shared/theme/ThemePage; /theleague/theme redirects to the
+ * light page.
+ */
+import ThemePage from '../../../components/shared/theme/ThemePage.astro';
+
+export const prerender = false;
+---
+
+<ThemePage leagueSlug="theleague" mode="dark" />

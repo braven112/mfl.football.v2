@@ -13,10 +13,27 @@ import { spriteUrl } from '../../../utils/sprite-url';
 import { getSearchPath, resolveLeaguePath, resolveDirectoryHref } from '../../../utils/nav-utils';
 import { getLeagueBySlug, type CanonicalLeagueSlug } from '../../../config/leagues';
 import { pathBelongsToLeague } from '../../../config/footer-config';
+import { packageLinkVisible } from '../../../config/package-league-routes.mjs';
+import { isAflFamily } from '../../../types/nav';
 
 interface Props {
   league: CanonicalLeagueSlug;
   isAuthenticated?: boolean;
+  /**
+   * The cards, for a league whose pages are not in page-directory.json (the
+   * demo's keeper slot, registered only on a demo deployment — a directory
+   * entry would surface its 404ing paths in production search). Each `path`
+   * is league-prefixed.
+   */
+  pages?: QuickLinkPage[];
+}
+
+export interface QuickLinkPage {
+  id: string;
+  title: string;
+  description: string;
+  path: string;
+  icon: string;
 }
 
 interface PageEntry {
@@ -30,22 +47,14 @@ interface PageEntry {
   popularity: number;
 }
 
-const { league: leagueSlug, isAuthenticated } = Astro.props;
+const { league: leagueSlug, isAuthenticated, pages: givenPages } = Astro.props;
 const league = getLeagueBySlug(leagueSlug)!;
 const isAfl = leagueSlug === 'afl-fantasy';
 
-// CSS class prefix — presentational, kept per-league so output stays
-// pixel-identical (the AFL and TheLeague style blocks below reference the
-// matching prefix). Not a registry constant; local to this component.
-const CLASS_PREFIX: Record<CanonicalLeagueSlug, string> = {
-  'afl-fantasy': 'afl-links',
-  theleague: 'hp-links',
-  // Best-ball reuses TheLeague's neutral link styling if this section is
-  // ever rendered there (no bb1 page uses QuickLinks today).
-  'best-ball-1': 'hp-links',
-  keeper: 'afl-links',
-};
-const cls = CLASS_PREFIX[leagueSlug];
+// CSS class prefix — presentational, so output stays pixel-identical: the
+// AFL-family style block (the AFL and the demo's keeper slot) is `afl-links`,
+// and every other league — a new one included — wears the neutral `hp-links`.
+const cls = isAflFamily(league.navSlug) ? 'afl-links' : 'hp-links';
 
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
@@ -53,8 +62,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 import pageDirectory from '../../../data/page-directory.json';
 const allPages: PageEntry[] = pageDirectory as PageEntry[];
 
-let pages: PageEntry[];
-if (isAfl) {
+let pages: QuickLinkPage[];
+if (givenPages) {
+  pages = givenPages.slice(0, 8);
+} else if (isAfl) {
   // Filter to this league's routes only and exclude the homepage itself +
   // admin pages, then sort by popularity and take up to 8.
   const leaguePages = allPages
@@ -69,7 +80,12 @@ if (isAfl) {
   // TheLeague's homepage grid (and vice versa for best-ball).
   const visible = allPages
     .filter(p => pathBelongsToLeague(p.path, leagueSlug))
-    .filter(p => p.visibility === 'all' && p.id !== 'homepage' && p.id !== 'new-hp');
+    // A package page its features or data do not entitle yet (Playoffs before
+    // MFL has brackets) is not linked — package-league-routes.mjs.
+    .filter(p => packageLinkVisible(league, p.path))
+    .filter(p => p.visibility === 'all' && p.id !== 'homepage' && p.id !== 'new-hp')
+    // The league's own homepage is where this grid renders; never link to it.
+    .filter(p => p.path !== `/${league.slug}`);
 
   // Sort: logged-in users get "my-team" tools first, then by popularity
   const sorted = [...visible].sort((a, b) => {
@@ -92,25 +108,19 @@ if (isAfl) {
 
 // "All pages" goes to the league's search page. The AFL used to fall back to
 // its own homepage here because it had no search route — it does now, so the
-// CTA finally lands somewhere that lists more than eight cards. Any league
-// without a search page keeps the league-home fallback.
+// CTA finally lands somewhere that lists more than eight cards. A league
+// without a search page shows no CTA: the fallback was its own homepage, the
+// page this grid is on.
 const searchPath = getSearchPath(leagueSlug);
-const ctaHref = searchPath
-  ? r(resolveDirectoryHref(searchPath, league.navSlug))
-  : r(`/${league.slug}`);
-const cardHref = (page: PageEntry) =>
-  isAfl ? page.path : r(resolveDirectoryHref(page.path, league.navSlug));
+const ctaHref = searchPath ? r(resolveDirectoryHref(searchPath, league.navSlug)) : null;
+const cardHref = (page: QuickLinkPage) =>
+  givenPages ? r(page.path) : isAfl ? page.path : r(resolveDirectoryHref(page.path, league.navSlug));
 ---
 
 <section class={cls} aria-label="Quick links">
   <div class={`${cls}__header`}>
     <h3 class={`${cls}__title`}>Explore</h3>
-    <a href={ctaHref} class={`${cls}__cta`}>
-      All pages
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
-        <path d="M5 12h14M12 5l7 7-7 7"/>
-      </svg>
-    </a>
+    {ctaHref && <a href={ctaHref} class={`cta-link ${cls}__cta`}>All pages</a>}
   </div>
   {isAfl && pages.length === 0 ? (
     <p class={`${cls}__empty`}>No AFL pages registered in the directory yet.</p>
@@ -162,18 +172,8 @@ const cardHref = (page: PageEntry) =>
   }
 
   .afl-links__cta {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--afl-accent);
-    text-decoration: none;
-    transition: gap 0.15s ease;
-  }
-
-  .afl-links__cta:hover {
-    gap: 0.5rem;
+    --cta-link-ink: var(--afl-accent);
+    font-size: var(--font-size-xs);
   }
 
   .afl-links__empty {
@@ -196,7 +196,7 @@ const cardHref = (page: PageEntry) =>
     border-radius: var(--radius-md, 0.5rem);
     background: var(--color-gray-50, #f9fafb);
     text-decoration: none;
-    transition: background 0.15s ease, transform 0.15s ease;
+    transition: background var(--transition-fast), transform var(--transition-fast);
   }
 
   .afl-links__card:hover {
@@ -238,7 +238,7 @@ const cardHref = (page: PageEntry) =>
   }
 
   .afl-links__desc {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     color: var(--color-gray-500, #6b7280);
     line-height: 1.4;
     display: -webkit-box;
@@ -275,7 +275,7 @@ const cardHref = (page: PageEntry) =>
   }
 
   .hp-links__title {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -287,18 +287,8 @@ const cardHref = (page: PageEntry) =>
   }
 
   .hp-links__cta {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--dh-accent);
-    text-decoration: none;
-    transition: gap 0.15s ease;
-  }
-
-  .hp-links__cta:hover {
-    gap: 0.5rem;
+    --cta-link-ink: var(--league-accent-fg, var(--dh-accent));
+    font-size: var(--font-size-xs);
   }
 
   .hp-links__grid {
@@ -315,7 +305,7 @@ const cardHref = (page: PageEntry) =>
     border-radius: var(--radius-md, 0.5rem);
     background: var(--color-gray-50, #f9fafb);
     text-decoration: none;
-    transition: background 0.15s ease, transform 0.15s ease;
+    transition: background var(--transition-fast), transform var(--transition-fast);
   }
 
   .hp-links__card:hover {
@@ -357,7 +347,7 @@ const cardHref = (page: PageEntry) =>
   }
 
   .hp-links__desc {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     color: var(--color-gray-500, #6b7280);
     line-height: 1.4;
     display: -webkit-box;

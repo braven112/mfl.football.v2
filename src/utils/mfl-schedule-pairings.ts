@@ -29,7 +29,10 @@
  * cookie, from the host `myleagues` named for it.
  */
 
+import fs from 'node:fs';
+import path from 'node:path';
 import type { MatchupPairing } from '../types/live-scoring';
+import type { LeagueDefinition } from '../config/leagues';
 import type { BoardLeague } from './sunday-ticket-selection';
 import { buildMflExportUrl } from './mfl-url';
 import { mflFetch } from './mfl-fetch';
@@ -205,6 +208,201 @@ export async function readLeagueSchedulePairings(
     cache.set(key, { at: Date.now(), pairings });
     // Bounded: one entry per league-week, and an owner in 40 leagues is
     // already an outlier.
+    if (cache.size > 64) {
+      const oldest = [...cache.entries()].sort((a, b) => a[1].at - b[1].at)[0];
+      if (oldest) cache.delete(oldest[0]);
+    }
+    return pairings;
+  } catch (err) {
+    note(err instanceof Error ? `${err.name}: ${err.message}` : String(err));
+    return [];
+  }
+}
+
+/**
+ * How many games each franchise is scheduled to have played BEFORE `week`,
+ * from a full-season `schedule` export (no `W`).
+ *
+ * This is what tells the Standings tab whether MFL has already folded the
+ * board's week into a record: a row showing more games than this has counted
+ * it, a row showing exactly this has not. Counted per franchise and per
+ * matchup, so a doubleheader week (the AFL plays them) adds two, and a bye —
+ * MFL writes one as a one-sided entry — adds none.
+ *
+ * Returns `null` when the export has no weeks at all, which is a read that
+ * failed rather than a season with no games — `{}` would let every row read
+ * as "nothing played yet" and double-count the week.
+ */
+export function parsePriorGameCounts(payload: unknown, week: number): Record<string, number> | null {
+  const weeks = asArray<any>((payload as any)?.schedule?.weeklySchedule);
+  if (weeks.length === 0) return null;
+
+  const counts: Record<string, number> = {};
+  for (const w of weeks) {
+    const n = Number(w?.week);
+    if (!Number.isFinite(n) || n >= week) continue;
+    for (const matchup of asArray<any>(w?.matchup)) {
+      const ids = asArray<ScheduleFranchise>(matchup?.franchise)
+        .map((f) => franchiseId(f?.id))
+        .filter(Boolean);
+      if (ids.length < 2) continue;
+      for (const id of ids) counts[id] = (counts[id] ?? 0) + 1;
+    }
+  }
+  return counts;
+}
+
+/** Same budget as the standings read (`utils/live/standings.ts`). */
+const PRIOR_GAMES_TIMEOUT_MS = 6_000;
+
+const priorGamesCache = (): Map<string, { at: number; counts: Record<string, number> }> => {
+  const g = globalThis as {
+    __mflPriorGamesCache?: Map<string, { at: number; counts: Record<string, number> }>;
+  };
+  if (!g.__mflPriorGamesCache) g.__mflPriorGamesCache = new Map();
+  return g.__mflPriorGamesCache;
+};
+
+/** Drop every cached league-week. Test seam. */
+export function clearPriorGamesCache(): void {
+  priorGamesCache().clear();
+}
+
+/**
+ * `parsePriorGameCounts` for one league, read with the owner's own MFL cookie.
+ * Same host rule as `readLeagueSchedulePairings` above, same hour-long cache
+ * (a published schedule does not move while a week is played).
+ *
+ * Never throws: every failure is `null`, and a failure is not cached.
+ */
+export async function readLeaguePriorGameCounts(
+  league: BoardLeague,
+  year: number,
+  week: number,
+  mflUserCookie: string,
+): Promise<Record<string, number> | null> {
+  const host = league.registered ? `https://${league.registered.mflHost}` : league.host;
+  if (!mflUserCookie || !host || !week) return null;
+
+  const key = `${league.id}:${host}:${year}:${week}`;
+  const cache = priorGamesCache();
+  const hit = cache.get(key);
+  if (hit && Date.now() - hit.at < SCHEDULE_TTL_MS) return hit.counts;
+
+  try {
+    const url = buildMflExportUrl({ type: 'schedule', leagueId: league.id, year, host });
+    // Bounded, like the standings read beside it: the board awaits this before
+    // it returns, and the scores do not depend on it.
+    const response = await mflFetch({
+      url,
+      method: 'GET',
+      mflUserCookie,
+      timeoutMs: PRIOR_GAMES_TIMEOUT_MS,
+    });
+    if (!response.ok) return null;
+    // A 200 is not "the data is good" — MFL errors and throttle pages both
+    // arrive under one. The parser returns null for anything without weeks.
+    const body = await response.json().catch(() => null);
+    if (body === null || (body as { error?: unknown })?.error) return null;
+
+    const counts = parsePriorGameCounts(body, week);
+    if (counts === null) return null;
+
+    cache.set(key, { at: Date.now(), counts });
+    if (cache.size > 64) {
+      const oldest = [...cache.entries()].sort((a, b) => a[1].at - b[1].at)[0];
+      if (oldest) cache.delete(oldest[0]);
+    }
+    return counts;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Pairings for a league THIS SITE RUNS, read without anybody's cookie.
+ *
+ * `readLeagueSchedulePairings` above serves MFL Live, which boards leagues we
+ * know nothing about and so has to borrow the owner's session. A registered
+ * league needs neither: its full-season `schedule` export is already
+ * committed by the roster sync (`data/<league>/mfl-feeds/<year>/schedule.json`),
+ * and a published schedule does not move while a week is played. So this is
+ * disk first — free, and no request against a host that throttles noisy
+ * clients — and a public `TYPE=schedule&W=` read only when the committed copy
+ * is missing or does not carry the week (a season whose first sync has not
+ * landed yet).
+ *
+ * It exists because `loadLiveScoringPayload` is the ONE read behind the league
+ * board, the homepage live hero, `/broadcast` and MFL Live, and only the last
+ * of those had a pairing fallback. Archie's (10105) serves the flat
+ * `liveScoring` shape, so its own league board and hero would have told all 99
+ * owners they had no game while `/live` showed the same week paired.
+ *
+ * `year` is the MFL year of the LIVE read, which is also the feed directory's
+ * name: MFL's `YEAR` param is the year the league was created in, the same
+ * key the sync writes under.
+ *
+ * Never throws: every failure is `[]`, and the caller keeps its unpaired
+ * snapshot — visibly less, never wrong.
+ */
+export async function readRegisteredSchedulePairings(
+  league: Pick<LeagueDefinition, 'id' | 'mflHost' | 'dataPath'>,
+  year: number,
+  week: number,
+  deps: {
+    readCommitted?: (file: string) => unknown;
+    fetchImpl?: typeof fetch;
+  } = {},
+): Promise<MatchupPairing[]> {
+  if (!week || week <= 0) return [];
+
+  const readCommitted =
+    deps.readCommitted ??
+    ((file: string) => {
+      try {
+        const p = path.join(process.cwd(), league.dataPath, 'mfl-feeds', String(year), file);
+        return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : null;
+      } catch {
+        return null;
+      }
+    });
+
+  const committed = parseSchedulePairings(readCommitted('schedule.json'), week);
+  if (committed.length > 0) return committed;
+
+  const host = `https://${league.mflHost}`;
+  const key = `registered:${league.id}:${host}:${year}:${week}`;
+  const cache = schedulePairingsCache();
+  const hit = cache.get(key);
+  if (hit && Date.now() - hit.at < (hit.pairings.length > 0 ? SCHEDULE_TTL_MS : SCHEDULE_EMPTY_TTL_MS)) {
+    return hit.pairings;
+  }
+
+  const note = (reason: string) =>
+    console.warn(`[live-scoring] schedule fallback ${league.id} week ${week}: ${reason}`);
+
+  try {
+    const url = buildMflExportUrl({ type: 'schedule', leagueId: league.id, year, params: { W: week }, host });
+    const response = await (deps.fetchImpl ?? fetch)(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; FantasyLeague/1.0)' },
+      signal: AbortSignal.timeout(PRIOR_GAMES_TIMEOUT_MS),
+    });
+    if (!response.ok) {
+      note(`HTTP ${response.status}`);
+      return [];
+    }
+    // A 200 is not "the data is good": MFL errors and throttle pages both
+    // arrive under one.
+    const body = await response.json().catch(() => null);
+    if (body === null || (body as { error?: unknown })?.error) {
+      note(body === null ? 'body did not parse as JSON (HTML under a 200?)' : 'MFL error');
+      return [];
+    }
+    const pairings = parseSchedulePairings(body, week);
+    if (pairings.length === 0) note('schedule carried no pairings for this week');
+    // Briefly-cached when empty, for the poll-storm reason on
+    // `SCHEDULE_EMPTY_TTL_MS`.
+    cache.set(key, { at: Date.now(), pairings });
     if (cache.size > 64) {
       const oldest = [...cache.entries()].sort((a, b) => a[1].at - b[1].at)[0];
       if (oldest) cache.delete(oldest[0]);

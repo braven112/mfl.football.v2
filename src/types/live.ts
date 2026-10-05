@@ -188,6 +188,23 @@ export interface LivePanel {
    * nothing rather than as a row of zeros.
    */
   leaders?: LiveLeaders | null;
+  /**
+   * The league's divisions, for the board's division picker.
+   *
+   * Only a league whose matchup count outgrows one scroll carries these
+   * (`panelGroupsFor` — today Archie's, 99 franchises in nine divisions and 99
+   * games a week). `undefined` everywhere else, and a board without them
+   * renders exactly as it did before the picker existed. Static per league,
+   * so it rides the league board's own assembly rather than a second read.
+   */
+  groups?: LivePanelGroup[];
+}
+
+/** One division on a league board: a label and the franchises in it. */
+export interface LivePanelGroup {
+  id: string;
+  name: string;
+  franchiseIds: string[];
 }
 
 /**
@@ -260,6 +277,15 @@ export interface LiveStandingsRow {
   pointsFor: number;
   /** The viewer's own franchise in this league. */
   isViewer: boolean;
+  /**
+   * How many of the board's week's games MFL has already folded into this
+   * record: games played minus the schedule's games BEFORE that week, floored
+   * at 0. A NUMBER, not a flag, because an AFL doubleheader can be half
+   * counted. `null` when the schedule could not be read. The Live and
+   * Projected views add only the games not yet counted, so a finished game is
+   * never added twice. See `utils/live/standings-projection`.
+   */
+  weekGamesCounted?: number | null;
 }
 
 /**
@@ -282,6 +308,13 @@ export interface LiveLeaderTeam {
   yetToPlay: number;
 }
 
+/** One franchise starting a player on the top-scorers strip. */
+export interface LiveLeaderOwner {
+  franchiseId: string;
+  /** Short form — the strip lists every owner on one line. */
+  franchiseName: string;
+}
+
 /**
  * One individual performance on the week's top-scorers strip.
  *
@@ -290,16 +323,17 @@ export interface LiveLeaderTeam {
  * here is a second thing to keep in step, and the one that drifts is the one
  * nobody is looking at.
  *
- * `franchiseId` is NOT a unique key for a performance. In the AFL a player is
- * routinely rostered — and started — in both conferences, and both sides of
- * one matchup can start him; each of those is a different owner's points and
- * a legitimately separate row. The key is the PAIR.
+ * ONE row per player, carrying EVERY franchise that started him. In the AFL a
+ * player is routinely rostered — and started — in both conferences, and both
+ * sides of one matchup can start him. Listing him once per owner filled the
+ * strip with the same name twice; listing him once with one owner would drop
+ * the credit from every other roster. So the row is the player and `owners`
+ * is the full list — never empty, never truncated.
  */
 export interface LiveLeaderPlayer {
   playerId: string;
-  franchiseId: string;
-  /** Who is starting him, short form — the strip has one line per row. */
-  franchiseName: string;
+  /** Every franchise starting him, ordered by franchise id. */
+  owners: LiveLeaderOwner[];
   points: number;
   /** 0 when his game is over. Drives the "final" vs "still playing" mark. */
   secondsRemaining: number;

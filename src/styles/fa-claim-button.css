@@ -29,11 +29,11 @@
 .place-bid-link {
   display: inline-block;
   padding: 0.2rem 0.5rem;
-  font-size: 0.6875rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  color: var(--league-accent, var(--color-primary, #1c497c));
+  color: var(--league-accent-fg, var(--league-accent, var(--color-primary, #1c497c)));
   border: 1px solid var(--league-accent, var(--color-primary, #1c497c));
   border-radius: var(--radius-full, 999px);
   text-decoration: none;
@@ -43,7 +43,9 @@
 
 .place-bid-link:hover {
   background: var(--league-accent, var(--color-primary, #1c497c));
-  color: #fff;
+  color: var(--on-league-accent, #fff);
+  /* An <a>: the layouts' global a:hover would otherwise underline it. */
+  text-decoration: none;
 }
 
 /* Only the properties a <button> does NOT inherit are reset — border, padding,

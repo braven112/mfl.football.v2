@@ -14,13 +14,17 @@
  * 3. `isCommissionerOrAdmin` trusts a role that carries no league, so an AFL
  *    commissioner session passed the gate on endpoints that write TheLeague's
  *    contracts. Those endpoints use `isCommissionerOrAdminForLeague`.
+ *
+ * The one exception is MFL Live's invited pilot leagues
+ * (`MFL_LIVE_PILOT_LEAGUE_IDS`): reachable only through the mfl-live sign-in
+ * scope, kept by getAuthUser, and never a commissioner on this site.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from 'vitest';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { createSessionToken } from '../src/utils/session';
-import { getAuthUser, isCommissionerOrAdminForLeague, type AuthUser } from '../src/utils/auth';
-import { getLeagueBySlug } from '../src/config/leagues';
+import { getAuthUser, isCommissionerOrAdmin, isCommissionerOrAdminForLeague, type AuthUser } from '../src/utils/auth';
+import { getLeagueBySlug, MFL_LIVE_PILOT_LEAGUE_IDS } from '../src/config/leagues';
 
 const ROOT = join(__dirname, '..');
 const read = (p: string) => readFileSync(join(ROOT, p), 'utf8');
@@ -28,6 +32,18 @@ const read = (p: string) => readFileSync(join(ROOT, p), 'utf8');
 const THELEAGUE_ID = getLeagueBySlug('theleague')!.id;
 const AFL_ID = getLeagueBySlug('afl-fantasy')!.id;
 const FOREIGN_ID = '99999';
+
+// The pilot list can be empty (10105 left it when it became `archies`), and
+// the exception must keep working for the next invited league — so when there
+// is none, stand one in for the duration. The code reads the list per call.
+const STAND_IN_PILOT = '88888';
+const standIn = MFL_LIVE_PILOT_LEAGUE_IDS.length === 0;
+beforeAll(() => {
+  if (standIn) (MFL_LIVE_PILOT_LEAGUE_IDS as string[]).push(STAND_IN_PILOT);
+});
+afterAll(() => {
+  if (standIn) (MFL_LIVE_PILOT_LEAGUE_IDS as string[]).splice(0);
+});
 
 const requestWith = (leagueId: string) =>
   new Request('https://example.test/', {
@@ -50,6 +66,23 @@ describe('getAuthUser — registry leagues only', () => {
 
   it('voids a validly signed session for a league outside the registry', () => {
     expect(getAuthUser(requestWith(FOREIGN_ID))).toBeNull();
+  });
+
+  it('keeps a session for an invited MFL Live pilot league', () => {
+    const pilot = MFL_LIVE_PILOT_LEAGUE_IDS[0];
+    expect(getAuthUser(requestWith(pilot))?.leagueId).toBe(pilot);
+  });
+
+  it('never treats a pilot-league commissioner as a commissioner here', () => {
+    expect(
+      isCommissionerOrAdmin({
+        id: 'u1',
+        name: 'c',
+        franchiseId: '0001',
+        leagueId: MFL_LIVE_PILOT_LEAGUE_IDS[0],
+        role: 'commissioner',
+      }),
+    ).toBe(false);
   });
 
   it('voids a session with no league at all', () => {
@@ -88,6 +121,11 @@ describe('/api/auth/login — refuses leagues outside the registry', () => {
   });
 
   const post = async (body: Record<string, unknown>) => {
+    // resetModules gave the handler a fresh registry: stand the pilot in there too.
+    const fresh = await import('../src/config/leagues-data.mjs');
+    if (standIn && !fresh.MFL_LIVE_PILOT_LEAGUE_IDS.includes(STAND_IN_PILOT)) {
+      (fresh.MFL_LIVE_PILOT_LEAGUE_IDS as string[]).push(STAND_IN_PILOT);
+    }
     const { POST } = await import('../src/pages/api/auth/login');
     return POST({
       request: new Request('https://example.test/api/auth/login', {
@@ -123,6 +161,32 @@ describe('/api/auth/login — refuses leagues outside the registry', () => {
     expect(res.status).toBe(200);
     expect(authenticateWithMFL.mock.calls[0][2]).toBe(AFL_ID);
     expect((await res.json()).user.leagueId).toBe(AFL_ID);
+  });
+
+  it('MFL Live signs a pilot-league owner in, scoped to the pilot league', async () => {
+    const pilot = MFL_LIVE_PILOT_LEAGUE_IDS[0];
+    authenticateWithMFL.mockResolvedValue({
+      success: true,
+      userId: 'cookie',
+      franchiseId: '0004',
+      leagueId: pilot,
+      role: 'owner',
+    });
+    const res = await post({ scope: 'mfl-live' });
+    expect(res.status).toBe(200);
+    expect((await res.json()).user.leagueId).toBe(pilot);
+  });
+
+  it('MFL Live refuses a session for a league outside the sign-in list', async () => {
+    authenticateWithMFL.mockResolvedValue({
+      success: true,
+      userId: 'cookie',
+      franchiseId: '0001',
+      leagueId: FOREIGN_ID,
+      role: 'owner',
+    });
+    const res = await post({ scope: 'mfl-live' });
+    expect(res.status).toBe(403);
   });
 });
 
@@ -184,4 +248,35 @@ describe('AI endpoints key their rate limit by league AND franchise', () => {
       expect(read(file)).toMatch(/checkRateLimit\([^)]*\$\{user\.leagueId\}:\$\{user\.franchiseId\}/);
     });
   }
+});
+
+describe('/api/admin/schefter-announce — a commissioner announces only into their own league', () => {
+  const ARCHIES_ID = getLeagueBySlug('archies')!.id;
+  const announce = async (leagueId: string, leagues: string, name = 'commish') => {
+    // Same module graph for signer and verifier: an earlier describe reset the
+    // module registry, and a fresh session module may sign with a fresh secret.
+    vi.resetModules();
+    const { POST } = await import('../src/pages/api/admin/schefter-announce');
+    const { createSessionToken: sign } = await import('../src/utils/session');
+    const token = sign({ userId: 'u1', username: name, franchiseId: '0001', leagueId, role: 'commissioner' });
+    return POST({
+      request: new Request('https://example.test/api/admin/schefter-announce', {
+        method: 'POST',
+        headers: { cookie: `session_token=${token}` },
+        body: JSON.stringify({ action: 'preview', slug: 'hello', headline: 'Hello', body: 'Body text.', leagues }),
+      }),
+    } as never);
+  };
+
+  it("refuses another league's commissioner (Archie's → TheLeague)", async () => {
+    expect((await announce(ARCHIES_ID, 'theleague')).status).toBe(403);
+  });
+
+  it("refuses a TheLeague commissioner announcing into the AFL", async () => {
+    expect((await announce(THELEAGUE_ID, 'both')).status).toBe(403);
+  });
+
+  it("lets a commissioner preview into their own league", async () => {
+    expect((await announce(THELEAGUE_ID, 'theleague')).status).not.toBe(403);
+  });
 });

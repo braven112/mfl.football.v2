@@ -50,12 +50,12 @@ A `sourceCompositeHash` (derived from composite config member IDs + player count
 | `src/utils/tier-detection.ts` | `detectTierBreaks()`, `extractImportedTiers()`, `mergeTierBreaks()` |
 | `src/pages/api/cr.ts` | GET/POST with auth + Upstash Redis |
 | `src/pages/theleague/cr.astro` | SSR page: auth gate, MFL player loading, React hydration |
-| `src/components/theleague/custom-rankings/CustomRankingsPage.tsx` | Main orchestrator |
-| `src/components/theleague/custom-rankings/RankingList.tsx` | @dnd-kit sortable list with tier dividers |
-| `src/components/theleague/custom-rankings/PlayerRow.tsx` | Draggable player row (mirrors PlayerCell.astro) |
-| `src/components/theleague/custom-rankings/TierDivider.tsx` | Tier break with move/rename/remove controls |
-| `src/components/theleague/custom-rankings/PositionFilter.tsx` | ALL/QB/RB/WR/TE/DEF filter chips |
-| `src/components/theleague/custom-rankings/SaveIndicator.tsx` | Save status display |
+| `src/components/shared/custom-rankings/CustomRankingsPage.tsx` | Main orchestrator |
+| `src/components/shared/custom-rankings/RankingList.tsx` | @dnd-kit sortable list with tier dividers |
+| `src/components/shared/custom-rankings/PlayerRow.tsx` | Draggable player row (mirrors PlayerCell.astro) |
+| `src/components/shared/custom-rankings/TierDivider.tsx` | Tier break with move/rename/remove controls |
+| `src/components/shared/custom-rankings/PositionFilter.tsx` | ALL/QB/RB/WR/TE/DEF filter chips |
+| `src/components/shared/custom-rankings/SaveIndicator.tsx` | Save status display |
 | `src/styles/custom-rankings.css` | All feature styles (`cr-` prefix) |
 | `tests/custom-rankings-seeding.test.ts` | 14 tests for seeding/merge |
 | `tests/tier-detection.test.ts` | 16 tests for tier detection |
@@ -66,7 +66,7 @@ A `sourceCompositeHash` (derived from composite config member IDs + player count
 | `package.json` | Added `@upstash/redis` |
 | `src/config/nav-config.json` | Added Custom Rankings nav link (admin visibility) |
 | `src/pages/theleague/import-rankings.astro` | Added admin-only cross-link to `/cr` |
-| `src/components/theleague/rankings-import/RankingsImportPage.tsx` | Added `isAdmin` prop for cross-link |
+| `src/components/shared/rankings-import/RankingsImportPage.tsx` | Added `isAdmin` prop for cross-link |
 
 ---
 

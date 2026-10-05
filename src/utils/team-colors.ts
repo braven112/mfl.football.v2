@@ -17,11 +17,8 @@
  * sensible.
  */
 
-import theleagueConfig from '../data/theleague.config.json';
-import aflConfig from '../../data/afl-fantasy/afl.config.json';
-import bb1Config from '../../data/best-ball-1/bb1.config.json';
-import { keeperLeagueConfig } from './keeper-config';
 import type { LeagueSlug } from '../types/nav';
+import { getLeagueTeams } from './league-config';
 import { ensureContrastOn, AA_LARGE_TEXT_RATIO } from './team-color-contrast';
 
 // Re-exported for existing importers; the union itself lives in types/nav.
@@ -56,15 +53,16 @@ function buildMap(teams: any[]): Record<string, TeamColors> {
   return map;
 }
 
-const MAPS: Record<LeagueSlug, Record<string, TeamColors>> = {
-  theleague: buildMap(theleagueConfig.teams),
-  afl: buildMap(aflConfig.teams),
-  bb1: buildMap(bb1Config.teams),
-  keeper: buildMap(keeperLeagueConfig.teams),
-};
+/** Per-league color maps, built on first use from the registry's configPath. */
+const MAPS = new Map<string, Record<string, TeamColors>>();
 
 function entry(franchiseId: string, league: LeagueSlug): TeamColors {
-  return MAPS[league]?.[franchiseId] ?? {};
+  let map = MAPS.get(league);
+  if (!map) {
+    map = buildMap(getLeagueTeams(league));
+    MAPS.set(league, map);
+  }
+  return map[franchiseId] ?? {};
 }
 
 /**
@@ -123,12 +121,12 @@ export function getTeamColorQuaternary(
 /**
  * Card surface each league's `--card-bg` token resolves to in dark mode
  * (tokens-dark.css). TheLeague's is a gradient — its base color is used.
- * best-ball inherits the generic dark card.
+ * Only a league whose dark card is NOT the generic #262626 needs an entry;
+ * every other league (a new one included) gets the generic surface.
  */
-const DARK_CARD_SURFACE: Record<LeagueSlug, string> = {
-  theleague: '#262626',
+const DEFAULT_DARK_CARD_SURFACE = '#262626';
+const DARK_CARD_SURFACE: Partial<Record<LeagueSlug, string>> = {
   afl: '#16283c',
-  bb1: '#262626',
 };
 /** Light `--card-bg` is white for every league (tokens.css). */
 const LIGHT_CARD_SURFACE = '#ffffff';
@@ -164,7 +162,7 @@ export function getTeamAccentPair(
   const baseDark = e.primaryDark ?? base;
   return {
     light: ensureContrastOn(base, LIGHT_CARD_SURFACE, minRatio),
-    dark: ensureContrastOn(baseDark, DARK_CARD_SURFACE[league] ?? '#262626', minRatio),
+    dark: ensureContrastOn(baseDark, DARK_CARD_SURFACE[league] ?? DEFAULT_DARK_CARD_SURFACE, minRatio),
   };
 }
 

@@ -21,7 +21,15 @@ function playerName(players, pid) {
   return first ? `${first} ${last}` : last;
 }
 
-export function fictionalSchefterPosts({ season, franchises, rng, league = 'theleague' }) {
+/**
+ * `links` points each story at a page the league HAS — the keeper slot has no
+ * transactions page, so its trades link the trade partner's roster instead.
+ * `waivers: false` drops the waiver-bid stories, whose copy is about cap
+ * dollars, for a league with no salaries.
+ */
+export function fictionalSchefterPosts({ season, franchises, rng, league = 'theleague', links = {}, waivers = true }) {
+  const tradeLink = links.trade ?? (() => `/${league}/transactions`);
+  const waiverLink = links.waiver ?? (() => `/${league}/transactions`);
   const team = new Map(franchises.map((f) => [f.id, f]));
   const name = (fid) => team.get(fid)?.name ?? 'a rival front office';
   const posts = [];
@@ -44,7 +52,7 @@ export function fictionalSchefterPosts({ season, franchises, rng, league = 'thel
       franchiseIds: [t.franchise, t.franchise2],
       playerIds: [...gaveA, ...gaveB].filter((id) => !id.startsWith('FP_')),
       league,
-      link: `/${league}/transactions`,
+      link: tradeLink(t),
       linkLabel: 'See the deal',
     });
   }
@@ -57,7 +65,7 @@ export function fictionalSchefterPosts({ season, franchises, rng, league = 'thel
       return { ...x, add: add.replace(/,$/, ''), bid: Number(bid) };
     })
     .sort((a, b) => b.bid - a.bid)
-    .slice(0, 6);
+    .slice(0, waivers ? 6 : 0);
   for (const c of claims) {
     posts.push({
       id: `demo_waiver_${c.timestamp}_${c.franchise}`,
@@ -71,7 +79,7 @@ export function fictionalSchefterPosts({ season, franchises, rng, league = 'thel
       franchiseIds: [c.franchise],
       playerIds: [c.add],
       league,
-      link: `/${league}/transactions`,
+      link: waiverLink(c),
       linkLabel: 'All transactions',
     });
   }

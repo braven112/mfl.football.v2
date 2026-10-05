@@ -98,7 +98,7 @@
 
 .mre__subtitle {
   margin: 0.2rem 0 0;
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   color: var(--content-text-muted, #64748b);
 }
 
@@ -179,7 +179,7 @@
 }
 
 .mre__source-meta {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-2xs);
   color: var(--content-text-muted, #64748b);
   font-variant-numeric: tabular-nums;
 }
@@ -189,7 +189,7 @@
   display: flex;
   align-items: center;
   gap: 0.2rem;
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   color: var(--content-text-muted, #64748b);
 }
 
@@ -219,7 +219,7 @@
 /* The composite normalizes by total weight, so a source's real influence is
    weight/Σweight. Only rendered when it disagrees with the typed number. */
 .mre__weight-effective {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   color: var(--color-primary, #1c497c);
   font-variant-numeric: tabular-nums;
@@ -257,7 +257,7 @@ html.dark .mre__link {
 }
 
 .mre__link {
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--color-primary, #1c497c);
   text-decoration: none;
@@ -269,8 +269,8 @@ html.dark .mre__link {
   padding: 0.45rem 1.1rem;
   border: 0;
   border-radius: var(--radius-full, 999px);
-  background: var(--color-primary, #1c497c);
-  color: #fff;
+  background: var(--color-primary-fill, var(--color-primary, #1c497c));
+  color: var(--on-color-primary, #fff);
   font-size: 0.8125rem;
   font-weight: 700;
   cursor: pointer;

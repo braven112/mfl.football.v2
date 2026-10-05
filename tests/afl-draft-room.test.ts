@@ -160,7 +160,7 @@ describe('the chat channel is scoped by conference too', () => {
   // more quietly: leagueId and leagueYear are identical for the AL and the
   // NL, so the draft unit is the only thing that can separate their rooms.
   const roomIdFrom = readFileSync(
-    'src/components/theleague/draft-room/DraftRoom.tsx',
+    'src/components/shared/draft-room/DraftRoom.tsx',
     'utf-8'
   );
 
@@ -266,7 +266,7 @@ describe('the draft queue is scoped per board', () => {
   });
 
   it('the room actually scopes its queue by the polled unit', () => {
-    const src = readFileSync('src/components/theleague/draft-room/DraftRoom.tsx', 'utf-8');
+    const src = readFileSync('src/components/shared/draft-room/DraftRoom.tsx', 'utf-8');
     expect(src).toContain('queueScope(data.leagueId, data.pollUnit)');
     // and never reverts to the unscoped id for queue reads/writes
     expect(src).not.toMatch(/(saveQueue|getQueue)\(state\.leagueId/);

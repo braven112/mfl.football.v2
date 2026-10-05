@@ -24,11 +24,12 @@ import { getLeagueBySlug } from '../../config/leagues';
 import type { LiveBoard } from '../../types/live';
 import type { NflGame } from '../../types/live-scoring';
 import type { ThrowbackScope } from '../throwback-scope';
-import { getLeagueTeamConfigs } from '../league-team-brands';
+import { getLeagueConfigStructure, getLeagueTeamConfigs } from '../league-team-brands';
+import { buildPanelGroups } from './board-groups';
 import { getLeagueYearForSlug } from '../league-year';
 import { applyThrowbackToBoard, type ThrowbackPreview } from '../throwback-live-scoring';
 import { getCurrentRosterSample, getLiveScoringSample } from '../../data/live-scoring-sample';
-import { buildBoardFromSnapshot, readLeagueLive } from './read';
+import { buildBoardFromSnapshot, readLeagueLive, type LiveIdentityOverride } from './read';
 import type { ConfigTeam } from '../live-scoring-data';
 
 export interface AssembleLeagueBoardInput {
@@ -81,6 +82,31 @@ export interface AssembledLeagueBoard {
 export async function assembleLeagueBoard(
   input: AssembleLeagueBoardInput,
 ): Promise<AssembledLeagueBoard> {
+  const assembled = await assembleUngrouped(input);
+  /**
+   * The division picker's data, stamped HERE so the page's first paint and
+   * every poll carry it alike — the island replaces its board wholesale on
+   * each poll, so groups added only at SSR would vanish on the first tick.
+   * `undefined` for every league but a declared-divisions one (see
+   * `board-groups.ts`), which leaves their payloads byte-identical.
+   */
+  const groups = buildPanelGroups(
+    getLeagueConfigStructure(input.slug),
+    getLeagueTeamConfigs(input.slug),
+  );
+  if (!groups) return assembled;
+  return {
+    ...assembled,
+    board: {
+      ...assembled.board,
+      panels: assembled.board.panels.map((p) => ({ ...p, groups })),
+    },
+  };
+}
+
+async function assembleUngrouped(
+  input: AssembleLeagueBoardInput,
+): Promise<AssembledLeagueBoard> {
   const { slug, leagueId, week, year, authUser, searchParams, throwbackScope, sample = false } = input;
 
   // League-scoped, in ONE place, for every league. See the header.
@@ -106,15 +132,41 @@ export async function assembleLeagueBoard(
    *
    * `readLeagueLive` resolves identity from the registry, so without this the
    * board keeps every club's present-day mark and Throwback Week is invisible.
-   * Name, short name and icon only — colours are resolved against the surface's
-   * card ground and an era's palette has not been through that check.
+   * Colours ride along only when the era defines its own palette. Detected
+   * over the WHOLE claim, not the primary alone: `applyThrowbackOverrides`
+   * clears the present-day `*Dark` variants whenever an era brings colours,
+   * and Da Dangsters' 2015 era shares today's primary — a primary-only compare
+   * missed it and let the modern dark-mode colours back over the era. A
+   * franchise wearing today's colours keeps the registry's claim untouched.
    */
-  const identityOverrides = throwback
+  const CLAIM_KEYS = [
+    'color',
+    'colorPrimary',
+    'colorSecondary',
+    'colorPrimaryDark',
+    'colorSecondaryDark',
+  ] as const;
+  const present = new Map(
+    (getLeagueTeamConfigs(slug) as ConfigTeam[]).map((t) => [t.franchiseId, t]),
+  );
+  const identityOverrides: Record<string, LiveIdentityOverride> | undefined = throwback
     ? Object.fromEntries(
-        throwback.configTeams.map((t) => [
-          t.franchiseId,
-          { name: t.name, nameShort: t.nameShort, icon: t.icon },
-        ]),
+        throwback.configTeams.map((t) => {
+          const today = present.get(t.franchiseId);
+          const changed = !!today && CLAIM_KEYS.some((k) => t[k] !== today[k]);
+          const eraColors =
+            changed && t.colorPrimary
+              ? {
+                  color: t.colorPrimary,
+                  colorPrimary: t.colorPrimary,
+                  colorSecondary: t.colorSecondary,
+                }
+              : undefined;
+          return [
+            t.franchiseId,
+            { name: t.name, nameShort: t.nameShort, icon: t.icon, colors: eraColors },
+          ];
+        }),
       )
     : undefined;
 

@@ -368,7 +368,7 @@ const is = <K extends ShowcaseBlock['kind']>(b: ShowcaseBlock, k: K): b is Extra
         </div>
         <div class="hc-closing__ctas">
           {content.closing.ctas.map((c) => (
-            <a href={c.href} class:list={['hc-btn', c.primary ? 'hc-btn--primary' : 'hc-btn--ghost']}>
+            <a href={c.href} class:list={['cta', c.primary ? 'cta--primary' : 'cta--ghost', 'hc-btn', c.primary ? 'hc-btn--primary' : 'hc-btn--ghost']}>
               {c.label} <span class="hc-btn__arrow">→</span>
             </a>
           ))}

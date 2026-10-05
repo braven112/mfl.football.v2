@@ -14,7 +14,7 @@
 
 **Insight:** The draft room has four distinct contexts that users need at different moments: the board (always visible for situational awareness), the player pool (for browsing and searching), the queue (pre-ranking targets before your pick), and chat (live social layer). On desktop these can coexist as side-by-side panels. On mobile they must be tabs, but the timer and current-pick indicator must always be visible — that's what the `DraftTimerBanner` component handles as a sticky top bar across all mobile tabs.
 
-**Evidence:** `src/components/theleague/draft-room/DraftRoom.tsx` implements the panel grid with CSS custom properties for responsive column widths. `MobileTabBar.tsx` manages tab state. `DraftTimerBanner.tsx` is always rendered regardless of active tab.
+**Evidence:** `src/components/shared/draft-room/DraftRoom.tsx` implements the panel grid with CSS custom properties for responsive column widths. `MobileTabBar.tsx` manages tab state. `DraftTimerBanner.tsx` is always rendered regardless of active tab.
 
 **Recommendation:** When adding new draft room panels or widgets, prefer placing contextually-dependent content behind a tab on mobile (not always-visible), and reserve the sticky banner area for time-critical information only (clock, current pick, on-the-clock indicator).
 
@@ -34,6 +34,6 @@
 
 **Insight:** MFL doesn't provide a WebSocket feed for draft events, so the draft board must be polled. The polling interval during active draft is 15 seconds, balanced between freshness and API rate-limit courtesy. Picks submitted through our own UI are optimistically applied immediately (via reducer dispatch) then confirmed on the next poll cycle. If the poll result contradicts the optimistic state (e.g., pick was rejected), the reducer reconciles to the MFL-authoritative state.
 
-**Evidence:** `src/components/theleague/draft-room/DraftBoardPanel.tsx` and the draft room's `useEffect` interval handle the polling. The `BOARD_SYNC` action replaces the full board state on each successful poll.
+**Evidence:** `src/components/shared/draft-room/DraftBoardPanel.tsx` and the draft room's `useEffect` interval handle the polling. The `BOARD_SYNC` action replaces the full board state on each successful poll.
 
 **Recommendation:** If MFL ever introduces webhooks or SSE for draft events, the board sync can be upgraded from polling to push without changing the reducer — only the data source for `BOARD_SYNC` dispatch changes. Keep the optimistic-then-reconcile pattern as it gives the UI instant feedback regardless of polling frequency.

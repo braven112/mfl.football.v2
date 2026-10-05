@@ -33,12 +33,12 @@ import { join } from 'node:path';
 const root = join(__dirname, '..');
 const read = (p: string) => readFileSync(join(root, p), 'utf8');
 
-const MODAL = 'src/components/theleague/PlayerDetailsModal.astro';
+const MODAL = 'src/components/shared/PlayerDetailsModal.astro';
 const FORM = 'src/components/shared/WaiverClaimModal.astro';
 const CLIENT = 'src/utils/player-claim-client.ts';
 const SERVER = 'src/utils/claim-context.ts';
 const ENDPOINT = 'src/pages/api/claim-context.ts';
-const PAGES = ['src/pages/theleague/players.astro', 'src/components/afl-family/PlayersPage.astro'];
+const PAGES = ['src/pages/theleague/players.astro', 'src/components/shared/free-agents/FreeAgentsPage.astro'];
 
 describe('the claim form travels with the player modal', () => {
   it('PlayerDetailsModal mounts it', () => {

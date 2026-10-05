@@ -1,0 +1,63 @@
+---
+/**
+ * The Owners' Poll (AFL) — thin route wrapper.
+ *
+ * Its own feature, not a section of The Pecking Order: vote here, then see
+ * the owners' rankings here. Shared implementation lives in
+ * components/shared/owners-poll/OwnersPollBallotPage.
+ *
+ * Two things live HERE and must:
+ *  - the auth gate, because `Astro.redirect()` only redirects from a page;
+ *  - the issue glob, because Vite requires a literal glob pattern — the
+ *    tallied results are still written into the weekly issue files.
+ */
+import OwnersPollBallotPage, {
+  type BallotStandingsRow,
+} from '../../../components/shared/owners-poll/OwnersPollBallotPage.astro';
+import { resolveOwnersPollAccess } from '../../../utils/owners-poll-access';
+import { latestPollResult, resolveResultsUnlocked } from '../../../utils/owners-poll-results';
+import { getLeagueTeamConfigs } from '../../../utils/league-team-brands';
+
+export const prerender = false;
+
+const access = resolveOwnersPollAccess(Astro.request, Astro.url);
+if (!access) {
+  return Astro.redirect('/afl-fantasy');
+}
+
+const issueFiles = import.meta.glob<any>('../../../../data/afl-fantasy/pecking-order/*.json', {
+  eager: true,
+  import: 'default',
+});
+
+const issues = Object.entries(issueFiles)
+  .map(([file, data]) => {
+    const m = file.match(/(\d{4})-(\d{1,2})\.json$/);
+    return m ? { ...data, year: Number(m[1]), week: Number(m[2]) } : null;
+  })
+  .filter((x): x is any => x !== null)
+  .sort((a, b) => b.year - a.year || b.week - a.week);
+
+// Records/PPG on each card come from the newest issue — cosmetic context only.
+const standings: BallotStandingsRow[] = (issues[0]?.standings?.divisions ?? []).flatMap(
+  (division: { teams?: BallotStandingsRow[] }) => division.teams ?? [],
+);
+
+const latest = latestPollResult(issues);
+const result = latest ? { week: latest.week, poll: latest.ownersPoll } : null;
+const resultsUnlocked = result
+  ? await resolveResultsUnlocked(access.league, access.user.franchiseId)
+  : false;
+const teamConfigs = new Map(
+  getLeagueTeamConfigs(access.league.slug).map((t: any) => [t.franchiseId, t]),
+);
+---
+
+<OwnersPollBallotPage
+  league={access.league}
+  user={access.user}
+  standings={standings}
+  result={result}
+  teamConfigs={teamConfigs}
+  resultsUnlocked={resultsUnlocked}
+/>

@@ -126,8 +126,20 @@ describe('hero showcase content', () => {
   });
 
   it('every AFL composite treatment has a card, and the gallery invents none', () => {
-    // Source of truth: the `composite: { … }` literals in the AFL resolver.
-    const resolver = read('src/utils/afl-hero-resolver.ts');
+    // Source of truth: the `composite: { … }` literals the AFL's hero renders —
+    // the shared league hero's views and resolver, plus the AFL's own profile
+    // (its pool drafts and default card). Only the AFL's SECTION of the
+    // profiles file: other leagues' cards are not the AFL's, and capabilities
+    // the AFL lacks keep their views in capability-views.ts for this reason.
+    const profiles = read('src/utils/league-hero/profiles.ts');
+    const aflStart = profiles.indexOf('// ── The AFL');
+    const aflEnd = profiles.indexOf('// ── Package leagues');
+    expect(aflStart, 'AFL profile marker moved — re-anchor this scan').toBeGreaterThan(-1);
+    expect(aflEnd, "next profile's marker moved — re-anchor this scan").toBeGreaterThan(aflStart);
+    const resolver =
+      read('src/utils/league-hero/views.ts') +
+      read('src/utils/league-hero/resolver.ts') +
+      profiles.slice(aflStart, aflEnd);
     // EITHER quote style. The wordmark that broke this was "WHAT'S NEW" —
     // double-quoted because it contains an apostrophe — and a single-quote-only
     // pattern did not merely miss it: it made the treatment invisible to the

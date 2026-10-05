@@ -170,8 +170,8 @@ describe('white ring for dark-bodied marks (NFL_DARK_STROKE_CODES)', () => {
       return css.slice(i, css.indexOf('}', i));
     };
     expect(block(read('src/styles/draft-broadcast.css'), '.dbc-reveal__origin-logo {')).toContain(compose);
-    expect(block(read('src/components/theleague/PlayerDetailsModal.astro'), '.pdm-hero__team-logo {')).toContain(compose);
-    for (const page of ['src/pages/theleague/players.astro', 'src/components/afl-family/PlayersPage.astro']) {
+    expect(block(read('src/components/shared/PlayerDetailsModal.astro'), '.pdm-hero__team-logo {')).toContain(compose);
+    for (const page of ['src/pages/theleague/players.astro', 'src/components/shared/free-agents/FreeAgentsPage.astro']) {
       const b = block(read(page), '.hero-spotlight__logo {');
       expect(b).toContain('filter:');
       expect(b).not.toContain(NFL_LOGO_RING_VAR);

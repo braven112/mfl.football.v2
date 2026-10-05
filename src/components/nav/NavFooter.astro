@@ -17,7 +17,7 @@
 import type { NavFooterProps, NavFooterLink, LeagueSlug } from '../../types/nav';
 import { spriteUrl } from '../../utils/sprite-url';
 import leagueConfigData from '../../data/theleague.config.json';
-import ThemeToggle from '../ThemeToggle.astro';
+import ThemeToggle from '../shared/ThemeToggle.astro';
 import { getLeaguePrefix, resolveLeaguePath } from '../../utils/nav-utils';
 import { loginUrlFor } from '../../utils/login-redirect';
 import { getLeagueByNavSlug, leagueClock } from '../../config/leagues';
@@ -705,7 +705,7 @@ const spotlightAccountMenu = showAccountMenu && isSpotlightActive(SPOTLIGHT_ID, 
     padding: var(--nav-spacing-sm, 8px);
     margin: calc(-1 * var(--nav-spacing-sm, 8px));
     border-radius: var(--nav-border-radius-md, 8px);
-    transition: var(--nav-hover-transition, background-color 0.15s ease);
+    transition: var(--nav-hover-transition, background-color var(--transition-fast));
   }
 
   .nav-footer__team:hover {
@@ -798,7 +798,7 @@ const spotlightAccountMenu = showAccountMenu && isSpotlightActive(SPOTLIGHT_ID, 
     padding: 0;
     flex-shrink: 0;
     position: relative;
-    transition: var(--nav-hover-transition, background-color 0.15s ease);
+    transition: var(--nav-hover-transition, background-color var(--transition-fast));
   }
 
   /* Expand tap area to 44px minimum (WCAG 2.5.8) */
@@ -806,8 +806,8 @@ const spotlightAccountMenu = showAccountMenu && isSpotlightActive(SPOTLIGHT_ID, 
     content: '';
     position: absolute;
     inset: -8px;
-    min-width: 44px;
-    min-height: 44px;
+    min-width: var(--touch-target-min);
+    min-height: var(--touch-target-min);
   }
 
   .nav-footer__account-toggle:hover {
@@ -828,7 +828,7 @@ const spotlightAccountMenu = showAccountMenu && isSpotlightActive(SPOTLIGHT_ID, 
 
   /* Crossfade transition on swappable content */
   [data-commish-swap] {
-    transition: opacity 0.2s ease;
+    transition: opacity var(--transition-base);
   }
 
   :global([data-commish-swap].is-fading) {
@@ -849,7 +849,7 @@ const spotlightAccountMenu = showAccountMenu && isSpotlightActive(SPOTLIGHT_ID, 
     border: 1px dashed var(--nav-verify-border, #1c497c);
     border-radius: var(--nav-border-radius-md, 8px);
     text-decoration: none;
-    transition: var(--nav-hover-transition, background-color 0.15s ease, color 0.15s ease);
+    transition: var(--nav-hover-transition, background-color var(--transition-fast), color var(--transition-fast));
     position: relative;
     min-height: var(--nav-touch-target-min, 44px);
   }
@@ -908,7 +908,7 @@ const spotlightAccountMenu = showAccountMenu && isSpotlightActive(SPOTLIGHT_ID, 
     width: 20px;
     height: 20px;
     color: var(--nav-verify-text, #1c497c);
-    transition: transform 0.15s ease;
+    transition: transform var(--transition-fast);
   }
 
   .nav-footer__verify:hover .nav-footer__verify-arrow {
@@ -950,7 +950,7 @@ const spotlightAccountMenu = showAccountMenu && isSpotlightActive(SPOTLIGHT_ID, 
     text-decoration: none;
     font: inherit;
     cursor: pointer;
-    transition: var(--nav-hover-transition, background-color 0.15s ease);
+    transition: var(--nav-hover-transition, background-color var(--transition-fast));
   }
 
   .nav-footer__account-row:hover,
@@ -987,7 +987,7 @@ const spotlightAccountMenu = showAccountMenu && isSpotlightActive(SPOTLIGHT_ID, 
     gap: 1px;
     flex: 1;
     min-width: 0;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 600;
     line-height: 1.3;
   }
@@ -996,7 +996,7 @@ const spotlightAccountMenu = showAccountMenu && isSpotlightActive(SPOTLIGHT_ID, 
     display: flex;
     align-items: center;
     gap: 4px;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 400;
     color: var(--nav-footer-text-muted, #6b7280);
     white-space: nowrap;
@@ -1018,7 +1018,7 @@ const spotlightAccountMenu = showAccountMenu && isSpotlightActive(SPOTLIGHT_ID, 
 
   .nav-footer__account-state {
     flex-shrink: 0;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -1063,7 +1063,7 @@ const spotlightAccountMenu = showAccountMenu && isSpotlightActive(SPOTLIGHT_ID, 
   }
 
   .nav-footer__account-toggle svg {
-    transition: transform 0.15s ease;
+    transition: transform var(--transition-fast);
   }
 
   /* ==============================================
@@ -1079,7 +1079,7 @@ const spotlightAccountMenu = showAccountMenu && isSpotlightActive(SPOTLIGHT_ID, 
   }
 
   .nav-footer__theme-label {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -1105,7 +1105,7 @@ const spotlightAccountMenu = showAccountMenu && isSpotlightActive(SPOTLIGHT_ID, 
     color: var(--nav-footer-text-muted, #6b7280);
     text-decoration: none;
     font-size: 0.8125rem;
-    transition: var(--nav-hover-transition, background-color 0.15s ease, color 0.15s ease);
+    transition: var(--nav-hover-transition, background-color var(--transition-fast), color var(--transition-fast));
   }
 
   .nav-footer__link:hover,

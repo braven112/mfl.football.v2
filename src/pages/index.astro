@@ -13,7 +13,9 @@ interface PanelMeta {
 }
 
 // Presentational-only data; ids/slugs/names come from the league registry.
-const PANEL_META: Record<CanonicalLeagueSlug, PanelMeta> = {
+// A league with no entry here (any launched league, until it is advertised and
+// given its own line) gets a panel built from its registry logo: see panelFor.
+const PANEL_META: Partial<Record<CanonicalLeagueSlug, PanelMeta>> = {
   theleague: {
     logo: '/assets/logos/theleague-logo.svg',
     logoDark: '/assets/logos/theleague-logo-dark.svg',
@@ -38,12 +40,30 @@ const PANEL_META: Record<CanonicalLeagueSlug, PanelMeta> = {
     estYear: 2020,
     stats: '12 Teams · Keepers · No Salary Cap',
   },
+  archies: {
+    logo: '/assets/logos/archies-head.webp',
+    logoDark: '/assets/logos/archies-head.webp',
+    estYear: 2021,
+    stats: '99 Teams · 9 Divisions · Redraft',
+  },
 };
+
+function panelFor(league: (typeof ALL_LEAGUES)[number]): PanelMeta {
+  return (
+    PANEL_META[league.slug] ?? {
+      logo: league.logo.light,
+      logoDark: league.logo.dark,
+      estYear: new Date().getFullYear(),
+      stats: '',
+    }
+  );
+}
 
 const CHIP_LABELS: Record<string, string> = {
   theleague: 'The League',
   afl: 'AFL',
   bb1: 'Best Ball #1',
+  archies: "Archie's",
 };
 
 /**
@@ -73,7 +93,13 @@ const CHIP_LABELS: Record<string, string> = {
  * filter and nothing else. Pruning them would make it a multi-file change that
  * silently ships an unstyled chip.
  */
-const splashLeagues = ALL_LEAGUES.filter((league) => !league.bestBall);
+// A package league (archies) is listed only once its owner says so — a client
+// league is not automatically an advertisement for the site. The registry's
+// `advertiseOnSharedHost: false` keeps it off the splash; it is still served
+// at its own path.
+const splashLeagues = ALL_LEAGUES.filter(
+  (league) => !league.bestBall && league.advertiseOnSharedHost !== false,
+);
 const advertisedNavSlugs = new Set(splashLeagues.map((league) => league.navSlug));
 
 const leagueCount = splashLeagues.length;
@@ -128,7 +154,7 @@ const hrefFromHere = (path: string) => crossHostLeagueHref(Astro.url.hostname, p
 
   <section class="hero" aria-label="Choose your league" style={`--panel-count: ${leagueCount}`}>
     {splashLeagues.map((league) => {
-      const meta = PANEL_META[league.slug];
+      const meta = panelFor(league);
       return (
         <a class="panel" data-league={league.navSlug} href={hrefFromHere(`/${league.slug}`)}>
           <img class="watermark" src={meta.logo} alt="" aria-hidden="true" loading="lazy" />
@@ -138,7 +164,7 @@ const hrefFromHere = (path: string) => crossHostLeagueHref(Astro.url.hostname, p
             <span class="lockup-name">{league.name}</span>
           </span>
           <p class="stats">{meta.stats}</p>
-          <span class="cta">Enter {league.name} →</span>
+          <span class="panel__enter">Enter {league.name} →</span>
         </a>
       );
     })}
@@ -172,7 +198,7 @@ const hrefFromHere = (path: string) => crossHostLeagueHref(Astro.url.hostname, p
   }
 
   .eyebrow {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.18em;
@@ -293,7 +319,7 @@ const hrefFromHere = (path: string) => crossHostLeagueHref(Astro.url.hostname, p
     gap: 0.6rem;
     color: var(--color-white, #ffffff);
     text-decoration: none;
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
   }
 
   .panel:hover {
@@ -373,7 +399,7 @@ const hrefFromHere = (path: string) => crossHostLeagueHref(Astro.url.hostname, p
     margin: 0;
   }
 
-  .cta {
+  .panel__enter {
     align-self: flex-start;
     margin-top: 0.4rem;
     font-size: 0.8rem;
@@ -393,7 +419,7 @@ const hrefFromHere = (path: string) => crossHostLeagueHref(Astro.url.hostname, p
   }
 
   .section-title {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -426,7 +452,7 @@ const hrefFromHere = (path: string) => crossHostLeagueHref(Astro.url.hostname, p
     padding: 1.1rem 1.1rem 1.3rem;
     text-decoration: none;
     color: inherit;
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
   }
 
   .wn-card:hover {
@@ -467,6 +493,9 @@ const hrefFromHere = (path: string) => crossHostLeagueHref(Astro.url.hostname, p
 
   .chip--bb1 {
     background: #0e8a5f;
+  }
+  .chip--archies {
+    background: #1d3a6e;
   }
 
   .wn-card h3 {

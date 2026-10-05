@@ -6,6 +6,7 @@
  *   - tests/fixtures/typecheck-baseline.json         (`astro check` error total)
  *   - tests/fixtures/page-fork-baseline.json         (forked sibling routes)
  *   - tests/fixtures/clientrouter-init-baseline.json (DOMContentLoaded-only client init)
+ *   - tests/fixtures/design-literal-baseline.json    (hand-typed transitions / font sizes / shadows, per file)
  *
  * Each has a test that fails when the count moves in EITHER direction, so
  * that progress retightens the baseline instead of leaving slack. Until now
@@ -32,6 +33,7 @@ import { ALL_LEAGUES } from '../src/config/leagues-data.mjs';
 import {
   clearedClassRegressions,
   collectClientRouterOffenders,
+  collectDesignLiterals,
   collectSiblings,
   decolour,
   describeRoute,
@@ -40,12 +42,14 @@ import {
   parseDiagnostics,
   parseErrorTotal,
   runAstroCheck,
+  totalDesignLiterals,
 } from './lib/ratchet-measures.mjs';
 
 const ROOT = process.cwd();
 const TYPECHECK_BASELINE = 'tests/fixtures/typecheck-baseline.json';
 const FORK_BASELINE = 'tests/fixtures/page-fork-baseline.json';
 const CLIENTROUTER_BASELINE = 'tests/fixtures/clientrouter-init-baseline.json';
+const DESIGN_LITERAL_BASELINE = 'tests/fixtures/design-literal-baseline.json';
 
 const args = new Set(process.argv.slice(2));
 const write = args.has('--write');
@@ -124,6 +128,43 @@ let regressions = false;
     }
   }
   if (!added.length && !stale.length) console.log('  at baseline');
+}
+
+// ---------------------------------------------------------------------------
+// Design literals (pinned per kind on the TOTAL; per-file map for diagnosis)
+// ---------------------------------------------------------------------------
+{
+  const KINDS = ['transition', 'fontSize', 'shadow'];
+  const baseline = readJson(DESIGN_LITERAL_BASELINE);
+  const now = collectDesignLiterals(join(ROOT, 'src'));
+  const totals = Object.fromEntries(KINDS.map((k) => [k, totalDesignLiterals(now, k)]));
+  const rose = KINDS.filter((k) => totals[k] > baseline.totals[k]);
+  const fell = KINDS.filter((k) => totals[k] < baseline.totals[k]);
+  console.log(`design literals: ${KINDS.map((k) => `${k} ${totals[k]} (baseline ${baseline.totals[k]})`).join(', ')}`);
+  if (rose.length) {
+    regressions = true;
+    for (const k of rose) {
+      console.log(`  ${k} ROSE (a regression — use the tokens instead). Files that grew:`);
+      for (const [f, c] of Object.entries(now)) {
+        const was = baseline.files[f]?.[k] ?? 0;
+        if ((c[k] ?? 0) > was) console.log(`    ${f}: ${was} → ${c[k]}`);
+      }
+    }
+  }
+  if (fell.length) {
+    drift = true;
+    console.log(`  fell since recorded: ${fell.join(', ')} (${write && !rose.length ? 'retightening' : 'run --write to retighten'})`);
+    // Only ever tightens: with any kind risen, nothing is written, so --write
+    // cannot launder a regression into the baseline.
+    if (write && !rose.length) {
+      baseline.files = now;
+      baseline.totals = totals;
+      baseline.recordedAt = today;
+      writeJson(DESIGN_LITERAL_BASELINE, baseline);
+      console.log(`  wrote ${DESIGN_LITERAL_BASELINE}`);
+    }
+  }
+  if (!rose.length && !fell.length) console.log('  at baseline');
 }
 
 // ---------------------------------------------------------------------------

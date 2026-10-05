@@ -582,11 +582,11 @@ button.lv-card:focus-visible {
 }
 
 /**
- * The back button and the freshness pill share the top row, so the pill is on
- * screen before an owner scrolls — on a phone the detail header IS the first
- * screen. The row's inline inset lives HERE, not on the button, so that when
- * the row wraps (which it does on a phone) the pill starts at the same x as
- * the button above it.
+ * The back button's row. It carries NO freshness pill: the board header above
+ * (Week picker + pill) stays on screen while a matchup is open, and a second
+ * copy here printed "Tracking · updated 17s ago" twice, one line apart. The
+ * row's inline inset lives HERE, not on the button, so anything added to the
+ * row and wrapped on a phone starts at the same x as the button above it.
  */
 .lv-detail__top {
   display: flex;
@@ -982,6 +982,18 @@ button.lv-card:focus-visible {
   background: color-mix(in srgb, var(--color-error) 7%, transparent);
 }
 
+/* A row that opens its stat sheet. The hover/focus wash is the only cue a
+   row is tappable; the red-zone tint keeps priority when both apply. */
+.lv-prow--open { cursor: pointer; }
+.lv-prow--open:hover:not(.lv-prow--redzone),
+.lv-prow--open:focus-visible:not(.lv-prow--redzone) {
+  background: color-mix(in srgb, var(--content-text-muted) 9%, transparent);
+}
+.lv-prow--open:focus-visible {
+  outline: 2px solid var(--color-primary, currentColor);
+  outline-offset: -2px;
+}
+
 /* ── the bench ───────────────────────────────────────────────────────────── */
 
 /**
@@ -1032,7 +1044,7 @@ button.lv-card:focus-visible {
   font-weight: var(--font-weight-bold);
   letter-spacing: 0.02em;
   cursor: pointer;
-  transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+  transition: color var(--transition-fast), border-color var(--transition-fast), background-color var(--transition-fast);
 }
 .lv-bench__toggle:hover {
   color: var(--page-text);
@@ -1333,23 +1345,11 @@ button.lv-card:focus-visible {
     box-shadow: none;
   }
 
-  /* Cancels `.lv-page`'s own `padding-top: var(--spacing-lg)` — the SAME token
-     it is declared with, so the two cannot drift apart. Behind a rounded, inset
-     card that padding read as the margin around it; behind a full-bleed one only
-     its top edge survives, as a band of page background with nothing beside it
-     to explain what it is (plain in light mode, invisible in dark). It is also
-     24px of the lineup on a screen this view is trying to give back.
-
-     Gated on the Throwback preview bar's ABSENCE: `.ls-tb-preview` is a sibling
-     of the island inside `.lv-page` and carries a `margin-bottom` of this very
-     token, so during Throwback Week the pull-up would eat the gap under the bar
-     and sit the card flush against it. Written as `:not(:has(…))` so a browser
-     without `:has()` drops the rule and keeps the band — the harmless half of
-     the two outcomes. The bar keeps its own `.ls-` class because the component
-     is unchanged; renaming it here would silently un-gate this. */
-  .lv-page:not(:has(.ls-tb-preview)) .lv-detail {
-    margin-top: calc(var(--spacing-lg) * -1);
-  }
+  /* NO pull-up here. The card is not the first thing in `.lv-page` — the
+     board's own header (title, Week picker, freshness pill) renders above it
+     in BOTH states — so a negative `margin-top` does not cancel the page's
+     padding, it cancels `.lv`'s flex `gap` and seats the card's top border
+     flush under the Week dropdown. */
 
   /* Stack each team vertically (name above the big score) so the three columns
      stay narrow enough to fit a phone without overflowing. */
@@ -1433,7 +1433,70 @@ button.lv-card:focus-visible {
   box-shadow: var(--shadow-sm, 0 1px 2px rgb(0 0 0 / 12%));
 }
 
+/* ── Division picker (a league board too long for one scroll) ────────────
+   Chips scroll sideways rather than wrap: nine divisions wrapped into three
+   rows of chips would push the games they filter below the fold on a phone.
+   The scroller owns its own overflow, so the PAGE never scrolls sideways. */
+.lv-groups {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  padding-block: 0.15rem;
+  max-width: 100%;
+}
+.lv-groups::-webkit-scrollbar {
+  display: none;
+}
+.lv-groups__chip {
+  appearance: none;
+  flex: 0 0 auto;
+  min-height: 2.75rem;
+  padding: 0.35rem 0.95rem;
+  border: 1px solid var(--content-border);
+  border-radius: 999px;
+  background: var(--content-bg-muted);
+  color: var(--content-text-muted);
+  font-family: var(--font-display);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.lv-groups__chip:focus-visible {
+  outline: 2px solid var(--league-accent);
+  outline-offset: 1px;
+}
+/* Selected is not carried by colour alone: raised surface, full-strength ink
+   and the accent border, the same recipe as .lv-tabs__btn--on. */
+.lv-groups__chip--on {
+  background: var(--card-surface);
+  color: var(--page-text);
+  border-color: var(--league-accent);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgb(0 0 0 / 12%));
+}
+
 /* ── Standings ────────────────────────────────────────────────────────── */
+.lv-standings-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.lv-standings__move {
+  display: block;
+  font-size: 0.6rem;
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
+  white-space: nowrap;
+}
+/* Arrow AND colour, so the direction survives a monochrome render. */
+.lv-standings__move--up {
+  color: var(--color-success);
+}
+.lv-standings__move--down {
+  color: var(--color-error);
+}
 .lv-standings {
   border: 1px solid var(--content-border);
   border-radius: var(--radius-md);
@@ -1535,7 +1598,7 @@ button.lv-card:focus-visible {
   padding: 0.05rem 0.3rem;
   border-radius: var(--radius-sm);
   background: var(--league-accent);
-  color: var(--color-white);
+  color: var(--on-league-accent, var(--color-white));
   font-size: 0.6rem;
   font-weight: var(--font-weight-bold);
   letter-spacing: 0.04em;
@@ -1631,6 +1694,22 @@ button.lv-card:focus-visible {
   font-size: var(--font-size-sm);
   color: var(--page-text);
 }
+/* Player rows stack name over owners, so the owner list gets the full width
+   and wraps rather than truncating — every owner is someone's credit. */
+.lv-leaders__who {
+  min-width: 0;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+.lv-leaders__who .lv-leaders__name {
+  flex: none;
+}
+.lv-leaders__owners {
+  color: var(--content-text-muted);
+  font-size: var(--font-size-xs);
+  overflow-wrap: anywhere;
+}
 .lv-leaders__meta {
   margin-left: 0.35rem;
   color: var(--content-text-muted);
@@ -1650,4 +1729,275 @@ button.lv-card:focus-visible {
   font-variant-numeric: tabular-nums;
   font-weight: var(--font-weight-bold);
   color: var(--page-text);
+}
+
+/* ── /live/standings — every watched league's table under one switch ── */
+
+.lv-live-standings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.lv-live-standings__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+}
+
+.lv-live-standings__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--page-text);
+}
+
+/* One column on a phone, two once each table has room for its four columns. */
+.lv-live-standings__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--spacing-lg);
+}
+
+@media (min-width: 900px) {
+  .lv-live-standings__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.lv-live-standings__held {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--content-text-muted);
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   THE STAT SHEET — one player's scoring, stat by stat (`LvStatSheet.tsx`).
+   Bottom sheet on a phone, centred dialog from 640px up: the same shape as
+   the My Rank editor (`my-rank-editor.css`), and capped against `dvh` for the
+   same reason — see docs/claude/rules/theming-and-assets.md § "Overlays on a
+   phone". Portaled to <body>, so nothing here may depend on `.lv` ancestry.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.lv-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.55);
+  /* Every overlay in this codebase blurs its backdrop. */
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  animation: lv-sheet-fade 160ms ease;
+}
+
+.lv-sheet__panel {
+  width: 100%;
+  /* `vh` first as the fallback; `dvh` is the visible viewport on a phone. */
+  max-height: 88vh;
+  max-height: 88dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--card-surface);
+  color: var(--page-text);
+  border: 1px solid var(--card-border);
+  border-bottom: 0;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  box-shadow: var(--shadow-xl);
+  outline: none;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  animation: lv-sheet-rise 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes lv-sheet-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes lv-sheet-rise {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lv-sheet, .lv-sheet__panel { animation: none; }
+}
+
+@media (min-width: 640px) {
+  .lv-sheet {
+    align-items: center;
+    padding: var(--spacing-lg);
+  }
+  .lv-sheet__panel {
+    max-width: 440px;
+    max-height: 80vh;
+    max-height: 80dvh;
+    border-bottom: 1px solid var(--card-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    animation: lv-sheet-fade 160ms ease;
+  }
+}
+
+/* Header and footer hold their height; the body is the part that scrolls. */
+.lv-sheet__header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: 1rem 1rem 0.75rem;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.lv-sheet__who {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.lv-sheet__title {
+  margin: 0;
+  /* Stated, not inherited: the site's global heading rule colours an <h2>
+     with the league accent, which read as a link in dark mode. */
+  color: var(--page-text);
+  font-family: var(--font-display);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lv-sheet__sub {
+  margin: 0.15rem 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--content-text-muted);
+}
+
+.lv-sheet__total {
+  flex: 0 0 auto;
+  font-family: var(--font-display);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.lv-sheet__pts {
+  margin-left: 0.2rem;
+  font-size: var(--font-size-xs);
+  font-weight: normal;
+  color: var(--content-text-muted);
+}
+
+.lv-sheet__close {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid var(--card-border);
+  background: var(--card-surface);
+  color: var(--content-text-muted);
+  font-size: var(--font-size-lg);
+  line-height: 1;
+  cursor: pointer;
+}
+.lv-sheet__close:hover,
+.lv-sheet__close:focus-visible { color: var(--page-text); }
+
+.lv-sheet__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0.5rem 1rem 1rem;
+}
+
+.lv-sheet__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.lv-sheet__table th,
+.lv-sheet__table td {
+  padding: 0.5rem 0;
+  text-align: left;
+  font-weight: normal;
+  border-bottom: 1px solid color-mix(in srgb, var(--card-border) 70%, transparent);
+}
+
+.lv-sheet__table thead th {
+  padding-top: 0.25rem;
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--content-text-muted);
+}
+
+.lv-sheet__table .lv-sheet__num {
+  text-align: right;
+  padding-left: var(--spacing-sm);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.lv-sheet__pt { font-weight: var(--font-weight-bold); }
+.lv-sheet__pt--neg { color: var(--color-error); }
+
+.lv-sheet__other th { color: var(--content-text-muted); }
+
+.lv-sheet__hint {
+  display: block;
+  font-size: var(--font-size-xs);
+  color: var(--content-text-muted);
+}
+
+.lv-sheet__table tfoot th,
+.lv-sheet__table tfoot td {
+  border-bottom: 0;
+  padding-top: 0.65rem;
+  font-weight: var(--font-weight-bold);
+}
+
+.lv-sheet__none,
+.lv-sheet__empty,
+.lv-sheet__note,
+.lv-sheet__line {
+  margin: 0.5rem 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--content-text-muted);
+}
+
+.lv-sheet__line { font-size: var(--font-size-xs); }
+/* ── Pro-locked standings views (MFL Live free tier) ──────────────────── */
+.lv-tabs__btn--locked {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+.lv-pro-badge {
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: var(--radius-full);
+  border: 1px solid currentColor;
+  color: var(--league-accent);
+  font-size: var(--font-size-3xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+.lv-pro-note {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--content-text-muted);
 }

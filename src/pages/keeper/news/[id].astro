@@ -1,0 +1,26 @@
+---
+/**
+ * One news article (the custom-site demo's keeper league) — thin route over
+ * the shared article page; redirects to the news index when the post is
+ * missing (`Astro.redirect()` only works from a page). No weekly column here,
+ * so no schedule-strength files.
+ */
+import SchefterArticlePage from '../../../components/shared/SchefterArticlePage.astro';
+import { keeperConfig, keeperLeague } from '../../../utils/keeper-slot';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import type { SchefterFeed, SchefterPost } from '../../../types/schefter';
+
+export const prerender = false;
+
+const league = keeperLeague();
+if (!league) return Astro.rewrite('/_not-found');
+
+const feed = Object.values(
+  import.meta.glob<SchefterFeed>('../../../../data/keeper/schefter-feed.json', { eager: true, import: 'default' }),
+)[0];
+const { id } = Astro.params;
+const post = (feed?.posts ?? []).find((p: SchefterPost) => p.type === 'article' && p.id === id && !!p.content);
+if (!post) return Astro.redirect(resolveLeaguePath(`/${league.slug}/news`, Astro.locals.hideLeaguePrefix ?? false));
+---
+
+<SchefterArticlePage leagueSlug={league.slug} post={post} gauntletFiles={{}} teams={keeperConfig().teams} />

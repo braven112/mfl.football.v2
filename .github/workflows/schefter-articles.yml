@@ -155,6 +155,26 @@ jobs:
             WEEK_ARG="--week $WEEK_OVERRIDE"
           fi
           echo "Generating: $ARTICLE_TYPE"
+          # Runs `$@ --league <slug>` for every league a job lists
+          # (scripts/lib/league-jobs.mjs — the registry, by checkbox). The
+          # default league's failure fails the step; any other league's is
+          # logged and skipped, so one league's bad week never costs another
+          # its column.
+          each_league() {
+            local job="$1"; shift
+            local slugs default
+            slugs=$(node scripts/league-jobs.mjs "$job")
+            default=$(node scripts/league-jobs.mjs "$job" --format '{default}')
+            local i=0
+            for L in $slugs; do
+              i=$((i + 1))
+              if [ "$(echo "$default" | sed -n "${i}p")" = "true" ]; then
+                "$@" --league "$L"
+              else
+                "$@" --league "$L" || echo "::warning::$job failed for $L (non-fatal)"
+              fi
+            done
+          }
           if [ "$ARTICLE_TYPE" = "pecking-order" ]; then
             # The Pecking Order writes a standalone JSON issue (not a feed
             # post) and posts its own GroupMe announcement on a fresh write.
@@ -169,23 +189,24 @@ jobs:
             # One league per invocation, sequential: each league has its own
             # season clock, its own completed week and its own Schefter bot, and
             # a failure on one must not cost the other its issue.
-            node scripts/generate-pecking-order.mjs --league theleague --publish $WEEK_ARG
-            node scripts/generate-pecking-order.mjs --league afl-fantasy --publish $WEEK_ARG || echo "AFL pecking order failed (non-fatal)"
+            #
+            # Every league with the Power rankings box ticked. A large league
+            # writes up only its registry peckingOrder.topN (Archie's: 25);
+            # a Slack league is announced by the drainer below.
+            each_league pecking-order node scripts/generate-pecking-order.mjs --publish $WEEK_ARG
           elif [ "$ARTICLE_TYPE" = "owners-poll-nag" ]; then
             # Count-only turnout reminder. NO @-mentions and no names — that is
             # a product decision (docs/plans/owners-poll.md), not chat styling.
             # Writes nothing to disk, so the commit step is skipped below.
             # Fails loudly on missing credentials rather than reporting a quiet
             # week, so a broken deployment cannot hide for a season.
-            node scripts/generate-pecking-order.mjs --nag-poll --publish --league theleague
-            node scripts/generate-pecking-order.mjs --nag-poll --publish --league afl-fantasy || echo "AFL poll nag failed (non-fatal)"
+            each_league owners-poll node scripts/generate-pecking-order.mjs --nag-poll --publish
           elif [ "$ARTICLE_TYPE" = "owners-poll-close" ]; then
             # Amends Tuesday's ALREADY-PUBLISHED issue with the tally. The AI is
             # never called on this path: rewriting the headline and blurbs
             # owners read on Tuesday would change the column underneath them.
             # A league with no open ballot is a clean no-op.
-            node scripts/generate-pecking-order.mjs --close-poll --publish --league theleague
-            node scripts/generate-pecking-order.mjs --close-poll --publish --league afl-fantasy || echo "AFL poll close failed (non-fatal)"
+            each_league owners-poll node scripts/generate-pecking-order.mjs --close-poll --publish
           elif [ "$ARTICLE_TYPE" = "schedule-strength" ]; then
             # The Gauntlet runs for BOTH leagues: compute fresh derived data
             # first (the article reads the derived JSON, never raw feeds), then
@@ -202,16 +223,17 @@ jobs:
               COMPUTE_WEEK_ARG="--week $((WEEK_OVERRIDE + 1))"
             fi
             node scripts/compute-schedule-strength.mjs $COMPUTE_WEEK_ARG
-            node scripts/schefter-weekly-articles.mjs --type "$ARTICLE_TYPE" --league theleague $WEEK_ARG
-            node scripts/schefter-weekly-articles.mjs --type "$ARTICLE_TYPE" --league afl-fantasy $WEEK_ARG || echo "AFL generation failed (non-fatal)"
+            # Every league whose feed is on and whose articleTypes allow it
+            # (Archie's: The Gauntlet only; its chat is Slack, and the
+            # announce step routes it there).
+            each_league article:schedule-strength node scripts/schefter-weekly-articles.mjs --type "$ARTICLE_TYPE" $WEEK_ARG
           elif [ "$ARTICLE_TYPE" = "schedule-release" ]; then
             # Release-day column, one per league per season. The article type
             # self-skips until BOTH the reveal is locked and the commissioner's
             # paste is live in MFL and matches it, so this daily cron is a
             # no-op on every other day of the year. Each league announces when
             # ITS paste lands — there is no second date to keep in sync.
-            node scripts/schefter-weekly-articles.mjs --type "$ARTICLE_TYPE" --league theleague
-            node scripts/schefter-weekly-articles.mjs --type "$ARTICLE_TYPE" --league afl-fantasy || echo "AFL generation failed (non-fatal)"
+            each_league article:schedule-release node scripts/schefter-weekly-articles.mjs --type "$ARTICLE_TYPE"
           else
             node scripts/schefter-weekly-articles.mjs --type "$ARTICLE_TYPE" $WEEK_ARG
           fi
@@ -237,17 +259,22 @@ jobs:
           # is guarded inside the script.
           git config user.name "Schefter Bot"
           git config user.email "actions@users.noreply.github.com"
-          FILES="src/data/theleague/schefter-feed.json"
+          # The paths each type writes, for the leagues it ran for — read from
+          # the same registry jobs the generate step looped over. Any other
+          # type ran for the default league only (league-jobs `article:weekly`).
+          jobfiles() { node scripts/league-jobs.mjs "$1" --format "$2" --join ,; }
           if [ "$ARTICLE_TYPE" = "schedule-strength" ]; then
-            FILES="$FILES,data/afl-fantasy/schefter-feed.json,data/theleague/derived,data/afl-fantasy/derived"
+            FILES="$(jobfiles article:schedule-strength '{schefterFeedPath}'),$(jobfiles article:schedule-strength '{dataPath}/derived')"
           elif [ "$ARTICLE_TYPE" = "schedule-release" ]; then
-            FILES="$FILES,data/afl-fantasy/schefter-feed.json"
+            FILES="$(jobfiles article:schedule-release '{schefterFeedPath}')"
           elif [ "$ARTICLE_TYPE" = "pecking-order" ]; then
-            FILES="data/theleague/pecking-order,data/afl-fantasy/pecking-order"
+            FILES="$(jobfiles pecking-order '{dataPath}/pecking-order')"
           elif [ "$ARTICLE_TYPE" = "owners-poll-close" ]; then
             # The close pass amends the issue AND writes the reveal into each
             # league's Schefter feed, so both have to be committed.
-            FILES="data/theleague/pecking-order,data/afl-fantasy/pecking-order,src/data/theleague/schefter-feed.json,data/afl-fantasy/schefter-feed.json"
+            FILES="$(jobfiles owners-poll '{dataPath}/pecking-order'),$(jobfiles owners-poll '{schefterFeedPath}')"
+          else
+            FILES="$(jobfiles article:weekly '{schefterFeedPath}')"
           fi
           node scripts/commit-feed-and-push.mjs \
             --branch main \
@@ -275,6 +302,10 @@ jobs:
           SCHEFTER_ANNOUNCE_QUEUE: ${{ runner.temp }}/schefter-announce-queue.json
           GROUPME_SCHEFTER_BOT_ID: ${{ secrets.GROUPME_SCHEFTER_BOT_ID }}
           GROUPME_AFL_SCHEFTER_BOT_ID: ${{ secrets.GROUPME_AFL_SCHEFTER_BOT_ID }}
+          # Archie's chat is Slack (registry `chat` block). Unset secrets make
+          # the Slack sender skip cleanly, the same as a missing GroupMe bot.
+          SLACK_ARCHIES_BOT_TOKEN: ${{ secrets.SLACK_ARCHIES_BOT_TOKEN }}
+          SLACK_ARCHIES_CHANNEL_ID: ${{ secrets.SLACK_ARCHIES_CHANNEL_ID }}
           # The day-cap claim (Redis) and the push fan-out (which POSTs back to
           # the site) both moved here with the senders.
           UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}

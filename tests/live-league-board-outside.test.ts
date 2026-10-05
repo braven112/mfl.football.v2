@@ -23,6 +23,7 @@ import { describe, it, expect } from 'vitest';
 
 import { buildBoardFromSnapshot } from '../src/utils/live/read';
 import { buildLeaders } from '../src/utils/live/leaders';
+import { decorateStandings } from '../src/utils/live/standings';
 import { getLeagueBySlug } from '../src/config/leagues';
 import type { LivePanel } from '../src/types/live';
 
@@ -114,6 +115,58 @@ describe('an OUTSIDE league gets a real board', () => {
   });
 });
 
+describe("an OUTSIDE league wears its OWN uploaded marks (Archie's regression)", () => {
+  // The drill-down board once took the fetched names but not the icons, so
+  // every franchise skipped the uploaded-mark rung: "Bears" wore Chicago's
+  // logo and the rest fell to initials, in a league with a crest for all 99.
+  const icons = {
+    '0001': 'https://example.com/a.png',
+    '0002': 'https://example.com/b.png',
+    '0003': 'https://example.com/c.png',
+  };
+  const board = () =>
+    build({
+      franchiseNames: { '0001': 'Rhinos', '0002': 'Waves', '0003': 'Yetis', '0004': 'Bears' },
+      franchiseIcons: icons,
+    }).panels[0];
+  const side = (fid: string) =>
+    board().matchups.flatMap((m) => m.sides).find((s) => s.franchiseId === fid)!;
+
+  it('renders an uploaded mark on the croppable rung', () => {
+    expect(side('0001').rung).toBe('mfl');
+    expect(side('0001').icon).toContain('example.com');
+  });
+
+  it('never lends an NFL logo in a league that uploaded marks', () => {
+    expect(side('0004').rung).toBe('text');
+    expect(side('0004').icon).toBe('');
+  });
+
+  it('still lends one in a league with no marks at all', () => {
+    const panel = build({ franchiseNames: { '0004': 'Bears' } }).panels[0];
+    const bears = panel.matchups.flatMap((m) => m.sides).find((s) => s.franchiseId === '0004')!;
+    expect(bears.rung).toBe('nfl');
+  });
+});
+
+describe('the Standings tab wears the same uploaded marks', () => {
+  const base = { rank: 1, name: '', nameShort: '', initials: '', icon: '', iconAlt: '', rung: 'text' as const, wins: 0, losses: 0, ties: 0, pointsFor: 0, isViewer: false };
+  const rows = [
+    { ...base, franchiseId: '0001', name: 'Rhinos' },
+    { ...base, franchiseId: '0004', name: 'Bears' },
+  ];
+  it('uses the icons and keeps NFL logos out of a league with its own art', () => {
+    const out = decorateStandings(rows, {
+      league: { id: '99999', name: 'x', registered: null, host: 'www45.myfantasyleague.com', franchiseId: '0001' } as never,
+      year: YEAR,
+      mflUserCookie: 'c',
+      franchiseIcons: { '0001': 'https://example.com/a.png' },
+    });
+    expect(out[0].rung).toBe('mfl');
+    expect(out[1].rung).toBe('text');
+  });
+});
+
 describe('a viewer owns at most one side of at most some cards', () => {
   it('leaves every matchup viewer-less when the viewer is in none of them', () => {
     const panel = build().panels[0];
@@ -140,7 +193,8 @@ describe('the top-scorers strips', () => {
 
   it('ranks individual performances across the whole league', () => {
     const { players } = buildLeaders(panelOf());
-    expect(players[0]).toMatchObject({ playerId: 'p5', franchiseId: '0004', points: 120 });
+    expect(players[0]).toMatchObject({ playerId: 'p5', points: 120 });
+    expect(players[0].owners.map((o) => o.franchiseId)).toEqual(['0004']);
     expect(players.map((p) => p.playerId)).toEqual(['p5', 'p3', 'p4', 'p1', 'p2']);
   });
 
@@ -173,23 +227,39 @@ describe('the top-scorers strips', () => {
     expect(leaders.players).toEqual([]);
   });
 
-  it('keeps the SAME player started by two owners as two rows', () => {
+  it('lists the SAME player started by two owners ONCE, naming both owners', () => {
     // In the AFL a player is routinely rostered in both conferences, and both
-    // sides of one matchup can start him. Those are different owners' points;
-    // collapsing them drops the credit from every roster but one.
+    // sides of one matchup can start him. One row per owner put the same name
+    // on the strip twice; one row with one owner would drop the other's credit.
     const shared = panelOf({
       snapshot: snapshot({
         players: {
-          '0001': [row('star', 50)],
           '0002': [row('star', 50)],
+          '0001': [row('star', 50)],
           '0003': [row('p4', 10)],
           '0004': [row('p5', 10)],
         },
       }) as never,
     });
     const rows = buildLeaders(shared).players.filter((p) => p.playerId === 'star');
-    expect(rows).toHaveLength(2);
-    expect(new Set(rows.map((r) => r.franchiseId))).toEqual(new Set(['0001', '0002']));
+    expect(rows).toHaveLength(1);
+    expect(rows[0].points).toBe(50);
+    expect(rows[0].owners.map((o) => o.franchiseId)).toEqual(['0001', '0002']);
+  });
+
+  it('caps the strip by PLAYERS, not by starts', () => {
+    const shared = panelOf({
+      snapshot: snapshot({
+        players: {
+          '0001': [row('star', 50), row('p1', 40)],
+          '0002': [row('star', 50), row('p3', 30)],
+          '0003': [row('p4', 20)],
+          '0004': [row('p5', 10)],
+        },
+      }) as never,
+    });
+    const { players } = buildLeaders(shared, { playerLimit: 3 });
+    expect(players.map((p) => p.playerId)).toEqual(['star', 'p1', 'p3']);
   });
 
   it('does not reshuffle a tie between two polls', () => {
@@ -224,8 +294,13 @@ describe('the top-scorers strips', () => {
     const { teams, players } = buildLeaders(doubleheader);
 
     expect(teams.map((t) => t.franchiseId)).toEqual([...new Set(teams.map((t) => t.franchiseId))]);
-    const keys = players.map((p) => `${p.franchiseId}:${p.playerId}`);
+    const keys = players.map((p) => p.playerId);
     expect(keys).toEqual([...new Set(keys)]);
+    // Nor is a franchise named twice as the owner of one player.
+    for (const p of players) {
+      const ids = p.owners.map((o) => o.franchiseId);
+      expect(ids).toEqual([...new Set(ids)]);
+    }
     // And nothing was lost to the de-duplication: every franchise still ranks.
     expect(teams).toHaveLength(4);
     expect(players).toHaveLength(5);

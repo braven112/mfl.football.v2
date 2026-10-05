@@ -120,6 +120,75 @@ export function collectClientRouterOffenders(srcRoot) {
 }
 
 // ---------------------------------------------------------------------------
+// Design literals (the polish layer)
+// ---------------------------------------------------------------------------
+
+/**
+ * The three kinds of hand-typed value the design tokens exist to replace.
+ * Each pattern is judged per LINE, which is how they are written in practice;
+ * a multi-line `transition:` is counted once per line that carries a literal
+ * duration, continuation lines included.
+ *
+ *  - transition: a literal duration (`0.2s`, `150ms`) in a transition — use
+ *    `var(--transition-fast|base|slow)` or `--duration-*` + `--ease-*`.
+ *  - fontSize:   a literal `font-size` in px/rem/em — use `--font-size-*`.
+ *  - shadow:     a literal `box-shadow` (not none/inherit, not var()) — use
+ *    `--shadow-*`.
+ *
+ * src/assets/ is the MyFantasyLeague-hosted skin: it compiles to a stylesheet
+ * MFL serves, where our tokens do not exist, so it is out of scope.
+ */
+export const DESIGN_LITERAL_EXTENSIONS = ['.astro', '.css', '.scss', '.tsx'];
+
+const LITERAL_TIME = String.raw`(?<![\w.-])\d*\.?\d+m?s\b`;
+const FONT_SIZE_RE = /\bfont-size\s*:\s*-?\d*\.?\d+(?:px|rem|em)\b/g;
+const SHADOW_RE = /\bbox-shadow\s*:\s*([^;{}]+)/g;
+
+function countLiteralTransitions(line, inTransitionBlock) {
+  if (/\btransition(?:-duration)?\s*:/.test(line)) {
+    const value = line.slice(line.search(/\btransition(?:-duration)?\s*:/));
+    return new RegExp(LITERAL_TIME).test(value.replace(/var\([^)]*\)/g, '')) ? 1 : 0;
+  }
+  // continuation line of a multi-line `transition:` value
+  if (inTransitionBlock && new RegExp(LITERAL_TIME).test(line.replace(/var\([^)]*\)/g, ''))) return 1;
+  return 0;
+}
+
+/** repo-relative file → { transition, fontSize, shadow } counts (zeros omitted). */
+export function collectDesignLiterals(srcRoot) {
+  const out = {};
+  const files = walkFiles(srcRoot, { extensions: DESIGN_LITERAL_EXTENSIONS });
+  for (const file of files) {
+    const rel = relative(join(srcRoot, '..'), file).split('\\').join('/');
+    if (rel.startsWith('src/assets/')) continue;
+    const counts = { transition: 0, fontSize: 0, shadow: 0 };
+    let inTransition = false;
+    for (const line of readFileSync(file, 'utf8').split('\n')) {
+      counts.transition += countLiteralTransitions(line, inTransition);
+      // A `transition:` that does not end its declaration on this line
+      // continues onto the next ones — whether it broke right after the colon
+      // or after its first value (`transition: a 0.2s ease,`).
+      if (/\btransition(?:-duration)?\s*:/.test(line)) inTransition = !/[;}]/.test(line);
+      else if (/[;}]/.test(line)) inTransition = false;
+      counts.fontSize += (line.match(FONT_SIZE_RE) ?? []).length;
+      for (const m of line.matchAll(SHADOW_RE)) {
+        const v = m[1].trim().replace(/\s*!important$/, '');
+        if (!v || /^(none|inherit|initial|unset|revert)$/.test(v) || v.startsWith('var(')) continue;
+        counts.shadow += 1;
+      }
+    }
+    const nonZero = Object.fromEntries(Object.entries(counts).filter(([, n]) => n > 0));
+    if (Object.keys(nonZero).length) out[rel] = nonZero;
+  }
+  return Object.fromEntries(Object.entries(out).sort(([a], [b]) => a.localeCompare(b)));
+}
+
+/** Sum one kind across every file. */
+export function totalDesignLiterals(byFile, kind) {
+  return Object.values(byFile).reduce((sum, c) => sum + (c[kind] ?? 0), 0);
+}
+
+// ---------------------------------------------------------------------------
 // astro check
 // ---------------------------------------------------------------------------
 

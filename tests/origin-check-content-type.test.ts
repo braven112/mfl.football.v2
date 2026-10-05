@@ -45,7 +45,7 @@ const ALLOWLIST: { file: string; count: number; reason: string }[] = [
 		reason: 'server-to-MFL requests; Astro only checks requests it RECEIVES',
 	},
 	{
-		file: 'src/components/theleague/suggestions/ImageUploader.tsx',
+		file: 'src/components/shared/suggestions/ImageUploader.tsx',
 		count: 1,
 		reason:
 			'multipart image upload cannot be JSON; still exposed to the check in browsers that drop Origin — moving it off FormData is a separate change',
@@ -95,7 +95,7 @@ const oneLine = (s: string) => s.replace(/\s+/g, ' ').trim().slice(0, 160);
 
 describe('origin check — browser requests carry a JSON content type', () => {
 	it('finds the visit beacon (the scan is not vacuous)', () => {
-		expect(beacons.some((c) => c.file === 'src/layouts/TheLeagueLayout.astro' && c.args.includes('/api/track-visit'))).toBe(true);
+		expect(beacons.some((c) => c.file === 'src/scripts/visit-beacon.ts' && c.args.includes('/api/track-visit'))).toBe(true);
 	});
 
 	it('every sendBeacon call sends a JSON-typed body', () => {

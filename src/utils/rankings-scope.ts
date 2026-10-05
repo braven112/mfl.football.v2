@@ -21,15 +21,18 @@
  * Every league has its own bucket, best-ball included — see BEST_BALL below.
  */
 
-import { getLeagueBySlug, getLeagueById } from '../config/leagues';
+import { ALL_LEAGUES, getLeagueBySlug, getLeagueById } from '../config/leagues';
+import type { LeagueSlug } from '../types/nav';
 
-/** The buckets rankings can live in. Add one per league that needs its own. */
-export type RankingsScope = 'theleague' | 'afl' | 'bb1';
+/** The buckets rankings can live in: one per registry league, named by its nav slug. */
+export type RankingsScope = LeagueSlug;
 
 export const DEFAULT_RANKINGS_SCOPE: RankingsScope = 'theleague';
 
 /**
- * navSlug → scope. Every league gets its own bucket.
+ * navSlug → scope: every registry league is its own bucket, named by its nav
+ * slug — so a new league gets one without an edit here, and an unknown slug
+ * (never a real league) falls back to TheLeague's.
  *
  * BEST_BALL: bb1 previously shared TheLeague's bucket so an owner's imports fed
  * both draft queues. That is no longer wanted — a best-ball board is its own
@@ -38,18 +41,16 @@ export const DEFAULT_RANKINGS_SCOPE: RankingsScope = 'theleague';
  * sources (src/utils/rankings-storage.ts#syncBuiltinImports) now seed a
  * working composite on first load, so a fresh bucket starts populated instead.
  */
-const SCOPE_BY_NAV_SLUG: Record<string, RankingsScope> = {
-  theleague: 'theleague',
-  bb1: 'bb1',
-  afl: 'afl',
-};
+function registeredScope(navSlug: string): RankingsScope | null {
+  return ALL_LEAGUES.find((l) => l.navSlug === navSlug)?.navSlug ?? null;
+}
 
 /** Resolve a league's nav slug to its rankings scope. Unknown → TheLeague. */
 export function rankingsScopeForNavSlug(
   navSlug: string | null | undefined,
 ): RankingsScope {
   if (!navSlug) return DEFAULT_RANKINGS_SCOPE;
-  return SCOPE_BY_NAV_SLUG[navSlug] ?? DEFAULT_RANKINGS_SCOPE;
+  return registeredScope(navSlug) ?? DEFAULT_RANKINGS_SCOPE;
 }
 
 /** Resolve a registry league slug (e.g. 'afl-fantasy') to its scope. */

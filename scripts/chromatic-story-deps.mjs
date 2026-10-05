@@ -115,6 +115,9 @@ export const STORY_ASSET_GLOBS = [
   'public/assets/theleague/icons/pigskins_dark.png',
   'public/assets/theleague/icons/wabbits.png',
   'public/assets/theleague/icons/wabbits_dark.png',
+  // Archie's crests the MadQualifiers stories render (33 of the league's 99,
+  // all the subject; the directory changes only when the league rebrands).
+  'public/assets/archies/icons/**',
   // Channel + Sunday Ticket carrier marks the SundayTicketBoard stories render
   // (18 small PNGs, all of them the subject, so the whole directory).
   'public/assets/tv-logos/**',
@@ -240,6 +243,23 @@ export function computeStoryAssetPrefixes() {
  */
 export const STORYBOOK_EXTERNAL_GLOBS = ['.storybook/**/*.css', '.storybook/static/**'];
 
+/**
+ * Files matched by the relative patterns of every `import.meta.glob(...)` call
+ * in `text`. Negated (`!`) and bare-module patterns are skipped.
+ */
+function globEdges(fromFile, text) {
+  const out = [];
+  for (const call of text.matchAll(/import\.meta\.glob(?:<[^>]*>)?\(\s*(\[[^\]]*\]|['"][^'"]+['"])/g)) {
+    for (const pat of call[1].matchAll(/['"]([^'"]+)['"]/g)) {
+      if (!pat[1].startsWith('.')) continue;
+      for (const hit of globSync(normalize(join(dirname(fromFile), pat[1])))) {
+        if (statSync(hit).isFile()) out.push(hit);
+      }
+    }
+  }
+  return out;
+}
+
 function resolveSpec(fromFile, spec) {
   if (!spec.startsWith('.')) return null;
   const base = normalize(join(dirname(fromFile), spec));
@@ -286,6 +306,11 @@ export function computeStoryDeps() {
     for (const m of text.matchAll(/(?:from|import)\s*\(?\s*['"]([^'"]+)['"]/g)) {
       const resolved = resolveSpec(file, m[1]);
       if (resolved && !seen.has(resolved)) stack.push(resolved);
+    }    // `import.meta.glob(...)` edges: the shared league-config loader reads
+    // every league's config through one, so a static-import-only walk would
+    // lose every brand file it serves.
+    for (const file2 of globEdges(file, text)) {
+      if (!seen.has(file2)) stack.push(file2);
     }
   }
   return [...seen].filter((f) => !SEED_DIRS.some((d) => f.startsWith(d))).sort();

@@ -1,0 +1,2221 @@
+---
+/**
+ * KeeperPlanner — AFL offseason scratchpad.
+ *
+ * Owners can drag (or click-arrow) players above/below "the line".
+ * Above the line = the 7 keepers they intend to protect. Below the
+ * line = everyone who's going to get cut. Plan auto-saves to the
+ * server (debounced) so it persists across devices — that part works
+ * year-round, on purpose: an owner should be able to sketch their plan
+ * whenever they think of it.
+ *
+ * The "Finalize keepers" CTA runs sequential POSTs to /api/cut-player
+ * to actually drop the non-keepers from the MFL roster — that part is
+ * NOT year-round. It's only rendered between the AFL's new season
+ * starting and the keeper deadline (newSeasonStartsFor / keeperDeadlineFor,
+ * src/utils/afl-mock-draft.ts) — the CTA that actually cuts real rosters
+ * shouldn't exist on the page the other ~10 months of the year, however
+ * disabled. AFL has no formal keeper construct on MFL, so the "keepers"
+ * themselves are implicit — they're just whoever's left after the bulk cut.
+ *
+ * Renders inert (no script wiring) on non-owner pages. The roster page
+ * gates inclusion on isOwner, so unauthorized owners never see this UI.
+ */
+
+import { getLeagueBySlug } from '../../../config/leagues';
+import fs from 'node:fs';
+import path from 'node:path';
+import PlayerCell from '../PlayerCell.astro';
+// The ⋮ kebab's styles. Imported here rather than left to the host: the
+// free-agent pages get this via WatchListBridge, but the Front Office panel
+// mounts AFLActionModal instead, which carries no stylesheet of its own.
+import '../../../styles/player-action-button.css';
+import { KEEPER_LIMIT } from '../../../utils/afl-keepers-storage';
+import { keeperDeadlineFor, newSeasonStartsFor } from '../../../utils/afl-mock-draft';
+import { getTestDateFromSearchParams } from '../../../utils/league-year';
+import { isDraftConducted } from '../../../utils/draft-utils';
+
+export interface KeeperPlannerPlayer {
+  id: string;
+  name: string;
+  position: string;
+  team: string;
+  age: string;
+  espnId?: string;
+  status: string;
+  /** Unix-seconds birthdate (MFL format) — drives the action sheet's age pill. */
+  birthdate?: number | null;
+  /** Already on the owner's MFL trade block, so the sheet offers Remove not Add. */
+  isOnTradeBait?: boolean;
+  /** Last season's points per game, when weekly-results data exists for this year. */
+  ppg?: number | null;
+  /** Last season's games with a recorded score. */
+  gamesPlayed?: number;
+  /** 1-based rank at this position among everyone leaguewide who scored, e.g. 9 → "WR9". */
+  positionalFinish?: number | null;
+  /** Dynasty ADP rank (lower = valued higher). Only populated for years the AFL's ADP feed covers (2025+). */
+  dynastyAdpRank?: number | null;
+  /** Redraft ADP rank, same feed family as dynastyAdpRank. */
+  redraftAdpRank?: number | null;
+}
+
+export interface KeeperPlannerDraftPick {
+  year: string;
+  round: string;
+  originalPickFor: string;
+  originalPickForName?: string;
+  isTraded: boolean;
+}
+
+export interface Props {
+  franchiseId: string;
+  year: number;
+  /** All players on the franchise's current roster, ordered however the caller likes. */
+  roster: KeeperPlannerPlayer[];
+  /** Future draft picks the franchise currently owns for this year. */
+  draftPicks?: KeeperPlannerDraftPick[];
+  /**
+   * Render a ⋮ kebab on every card/slot that opens AFLActionModal (Watch,
+   * Move to IR / Activate, Cut, Trade block, Trade), and self-wire the
+   * player-details modal trigger on this component's own root.
+   *
+   * OFF by default: rosters.astro's `?view=planner` tab renders this same
+   * component but already wires the details-modal trigger itself at the PAGE
+   * level (`.roster-page` container), so turning this on unconditionally
+   * would double-open that modal there — two delegated listeners, one click.
+   * The Front Office hub panel is the one caller that needs this component
+   * fully self-sufficient. A host that sets this must also mount
+   * <AFLActionModal />; without it the kebab is inert rather than broken.
+   */
+  showActions?: boolean;
+  /** The league's registry dataPath — the AFL's by default (the demo's keeper slot passes its own). */
+  dataPath?: string;
+}
+
+const { franchiseId, year, roster, draftPicks = [], showActions = false, dataPath = getLeagueBySlug('afl-fantasy')!.dataPath } = Astro.props;
+
+// Position group order for the cut pool sort
+const POSITION_ORDER = ['QB', 'RB', 'WR', 'TE', 'PK', 'Def', 'DEF'];
+const positionRank = (pos: string) => {
+  const idx = POSITION_ORDER.indexOf(pos);
+  return idx === -1 ? POSITION_ORDER.length : idx;
+};
+
+// Sort roster: by position group, then name. Initial render is "everyone in the cut pool".
+const sortedRoster = [...roster].sort((a, b) => {
+  const r = positionRank(a.position) - positionRank(b.position);
+  return r !== 0 ? r : a.name.localeCompare(b.name);
+});
+
+const buildModalData = (p: KeeperPlannerPlayer) => ({
+  id: p.id,
+  espnId: p.espnId,
+  name: p.name,
+  position: p.position,
+  nflTeam: p.team,
+  status: p.status,
+  franchiseId,
+});
+
+// A big gap between a player's dynasty ADP and his redraft ADP is the
+// cheapest available signal for "is the market pricing him above or below
+// his current-season output" — both ranks come from feeds already fetched
+// for the site's rankings pages. Small gaps are noise, not signal, so only
+// deltas past the threshold render a badge at all.
+const ADP_TREND_THRESHOLD = 15;
+type AdpTrend = { label: string; dir: 'up' | 'down' };
+const adpTrendFor = (p: KeeperPlannerPlayer): AdpTrend | null => {
+  if (p.dynastyAdpRank == null || p.redraftAdpRank == null) return null;
+  const delta = p.redraftAdpRank - p.dynastyAdpRank;
+  if (Math.abs(delta) < ADP_TREND_THRESHOLD) return null;
+  return delta > 0 ? { label: 'Ascending', dir: 'up' } : { label: 'Fading', dir: 'down' };
+};
+
+const cardsData = sortedRoster.map((player) => ({ player, trend: adpTrendFor(player) }));
+
+// Round labels (1st / 2nd / 3rd / 4th / Nth)
+const roundLabel = (round: string) => {
+  const n = parseInt(round, 10);
+  if (!Number.isFinite(n)) return round;
+  const tens = n % 100;
+  if (tens >= 11 && tens <= 13) return `${n}th`;
+  const ones = n % 10;
+  if (ones === 1) return `${n}st`;
+  if (ones === 2) return `${n}nd`;
+  if (ones === 3) return `${n}rd`;
+  return `${n}th`;
+};
+
+// Finalize window: [new season starts, keeper deadline). Saving the plan
+// works any time — only the destructive "cut the roster" step is gated.
+// Honors ?testDate= like the rest of the AFL's date-dependent pages.
+//
+// Both bounds are FIXED dates that always fall in the same calendar year
+// (June 1 -> July 15), so this uses the plain calendar year of `now` —
+// NOT getAflLeagueYear(), whose June-1 flip answers a different question
+// ("which season's rosters are we managing") and reads a date in, say,
+// March as still belonging to the PRIOR calendar year's (already-closed)
+// window, misreporting "deadline passed" for what is actually "window
+// hasn't opened yet".
+const now = getTestDateFromSearchParams(Astro.url.searchParams) ?? new Date();
+const finalizeWindowStart = newSeasonStartsFor(now.getFullYear());
+const finalizeWindowEnd = keeperDeadlineFor(now.getFullYear());
+const canFinalize =
+  !!finalizeWindowStart && !!finalizeWindowEnd && now >= finalizeWindowStart && now < finalizeWindowEnd;
+const beforeFinalizeWindow = !!finalizeWindowStart && now < finalizeWindowStart;
+
+// "The keeper deadline has passed" only reads right for the narrow window
+// between the deadline and the AL's redraft of the cut players. Once that
+// draft has actually run, `year`'s roster is settled and being played —
+// the page should talk about the NEXT keeper decision (year + 1) instead of
+// dwelling on a deadline that's now old news. isDraftConducted flips true at
+// the first made pick (src/utils/draft-utils.ts), same signal the draft
+// pages already use to tell "upcoming order" from "history".
+const draftResultsPath = path.resolve(process.cwd(), `${dataPath}/mfl-feeds/${year}/draftResults.json`);
+let draftConducted = false;
+try {
+  if (fs.existsSync(draftResultsPath)) {
+    draftConducted = isDraftConducted(JSON.parse(fs.readFileSync(draftResultsPath, 'utf8')));
+  }
+} catch {
+  // Missing/malformed feed — treat as not yet drafted (pre-draft framing).
+}
+---
+
+<section
+  class="keeper-planner"
+  data-keeper-planner
+  data-franchise-id={franchiseId}
+  data-year={year}
+  data-keeper-limit={KEEPER_LIMIT}
+  data-show-actions={showActions ? 'true' : 'false'}
+>
+  <header class="kp-intro">
+    <h2 class="kp-intro__title">Keeper planner</h2>
+    <p class="kp-intro__copy">
+      Drag (or use the arrow buttons) to move up to {KEEPER_LIMIT} players above the line.
+      {canFinalize
+        ? 'Everyone below the line gets cut when you finalize. Plan saves automatically.'
+        : 'Plan saves automatically — finalizing (which actually cuts your roster) opens once the new season starts and closes at the keeper deadline.'}
+    </p>
+  </header>
+
+  <!-- Filters / sort — act on the cut-pool list below, not the keeper slots -->
+  <div class="kp-toolbar" data-toolbar>
+    <label class="kp-toolbar__control">
+      <span class="kp-toolbar__label">Hide players over</span>
+      <input type="range" class="kp-age-slider" data-age-filter min="21" max="45" step="1" value="45" />
+      <span class="kp-toolbar__value" data-age-filter-value>All ages</span>
+    </label>
+    <label class="kp-toolbar__control kp-toolbar__control--checkbox">
+      <input type="checkbox" data-sort-my-rank />
+      <span>Sort by My Rank</span>
+    </label>
+  </div>
+
+  <!-- Above-the-line: keepers -->
+  <div
+    class="kp-zone kp-zone--keepers"
+    data-zone="keepers"
+    aria-label={`Keepers — drag here to keep (max ${KEEPER_LIMIT})`}
+  >
+    <header class="kp-zone__header">
+      <div class="kp-zone__title-group">
+        <span class="kp-zone__icon kp-zone__icon--keep" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <path d="M5 15l7-7 7 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </span>
+        <h3 class="kp-zone__title">Above the line — keepers</h3>
+      </div>
+      <span class="kp-counter" data-counter="keepers">
+        <span data-count="keepers">0</span><span class="kp-counter__sep"> / </span><span>{KEEPER_LIMIT}</span>
+      </span>
+    </header>
+
+    <div class="kp-lineup-meter" data-lineup-meter aria-label="Starting lineup coverage from your keepers">
+      <span class="kp-lineup-meter__group" data-lineup-group="QB">QB <strong data-lineup-count>0</strong>/1</span>
+      <span class="kp-lineup-meter__group" data-lineup-group="FLEX">FLEX <strong data-lineup-count>0</strong>/6</span>
+      <span class="kp-lineup-meter__group" data-lineup-group="PK">PK <strong data-lineup-count>0</strong>/1</span>
+      <span class="kp-lineup-meter__group" data-lineup-group="Def">DEF <strong data-lineup-count>0</strong>/1</span>
+    </div>
+
+    <div class="kp-slots" data-slots>
+      {Array.from({ length: KEEPER_LIMIT }).map((_, i) => (
+        <div class="kp-slot kp-slot--empty" data-slot-index={i} aria-label="Empty keeper slot">
+          <span class="kp-slot__num">{i + 1}</span>
+          <span class="kp-slot__hint">Drag a player here</span>
+        </div>
+      ))}
+    </div>
+  </div>
+
+  <!-- Status bar / actions -->
+  <div class="kp-statusbar">
+    <div class="kp-status" data-status>Ready</div>
+    <div class="kp-actions">
+      <button type="button" class="kp-btn kp-btn--ghost" data-action="reset">Reset</button>
+      {canFinalize ? (
+        <button type="button" class="kp-btn kp-btn--primary" data-action="finalize" disabled>
+          Finalize keepers
+        </button>
+      ) : (
+        <span class="kp-finalize-note">
+          {beforeFinalizeWindow
+            ? 'Finalizing opens when the new season starts.'
+            : draftConducted
+              ? `Keeper planning for ${year + 1} opens when the next season starts.`
+              : 'The keeper deadline has passed for this season.'}
+        </span>
+      )}
+    </div>
+  </div>
+
+  <!-- Below-the-line: will be cut -->
+  <div
+    class="kp-zone kp-zone--cuts"
+    data-zone="cuts"
+    aria-label="Players that will be cut on finalize"
+  >
+    <header class="kp-zone__header">
+      <div class="kp-zone__title-group">
+        <span class="kp-zone__icon kp-zone__icon--cut" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <path d="M19 9l-7 7-7-7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </span>
+        <h3 class="kp-zone__title">Below the line — will be cut</h3>
+      </div>
+      <span class="kp-counter" data-counter="cuts">
+        <span data-count="cuts">{roster.length}</span> players
+      </span>
+    </header>
+
+    <ul class="kp-cards" data-cards>
+      {cardsData.map(({ player, trend }) => (
+        <li
+          class="kp-card"
+          data-card
+          data-player-id={player.id}
+          data-age={player.age}
+          data-team={player.team}
+          data-espn={player.espnId ?? ''}
+          data-status={player.status}
+          data-bait={player.isOnTradeBait ? 'true' : 'false'}
+          data-birthdate={player.birthdate ?? ''}
+          draggable="true"
+          tabindex="0"
+        >
+          <div class="kp-card__player">
+            <PlayerCell
+              name={player.name}
+              position={player.position}
+              nflTeam={player.team}
+              mflId={player.id}
+              espnId={player.espnId}
+              playerData={buildModalData(player)}
+            />
+          </div>
+          {(player.positionalFinish != null || player.ppg != null || trend) && (
+            <div class="kp-card__stats">
+              {(player.positionalFinish != null || player.ppg != null) && (
+                <span class="kp-card__stat-line">
+                  {player.positionalFinish != null && `${player.position}${player.positionalFinish}`}
+                  {player.ppg != null && ` · ${player.ppg.toFixed(1)} PPG`}
+                  {player.gamesPlayed ? ` · ${player.gamesPlayed} GP` : ''}
+                </span>
+              )}
+              {trend && (
+                <span
+                  class:list={['kp-card__trend', `kp-card__trend--${trend.dir}`]}
+                  title={`Dynasty ADP #${player.dynastyAdpRank} vs redraft ADP #${player.redraftAdpRank}`}
+                >
+                  {trend.dir === 'up' ? '▲' : '▼'} {trend.label}
+                </span>
+              )}
+            </div>
+          )}
+          <div class="kp-card__meta">
+            <span class="kp-card__age" title="Age">{player.age}</span>
+            {player.status === 'INJURED_RESERVE' && <span class="kp-card__ir-pill">IR</span>}
+          </div>
+          <button
+            type="button"
+            class="kp-arrow kp-arrow--up"
+            data-move="up"
+            aria-label={`Keep ${player.name}`}
+            title="Move to keepers"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M5 15l7-7 7 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+          {showActions && (
+            <button
+              type="button"
+              class="pa-kebab"
+              data-kp-action
+              data-kp-id={player.id}
+              data-kp-name={player.name}
+              data-kp-status={player.status}
+              data-kp-pos={player.position}
+              data-kp-team={player.team}
+              data-kp-bait={player.isOnTradeBait ? 'true' : 'false'}
+              data-kp-birthdate={player.birthdate ?? ''}
+              aria-label={`Manage ${player.name}`}
+              title="Manage player"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="5" r="2"></circle>
+                <circle cx="12" cy="12" r="2"></circle>
+                <circle cx="12" cy="19" r="2"></circle>
+              </svg>
+            </button>
+          )}
+        </li>
+      ))}
+    </ul>
+  </div>
+
+  {draftPicks.length > 0 && (
+    <div class="kp-picks">
+      <header class="kp-picks__header">
+        <h3 class="kp-picks__title">{year + 1} draft assets</h3>
+        <span class="kp-picks__count">{draftPicks.length} picks</span>
+      </header>
+      <ul class="kp-picks__list">
+        {draftPicks.map((pick) => (
+          <li class="kp-picks__pick">
+            <span class="kp-picks__round">{roundLabel(pick.round)} round</span>
+            {pick.isTraded ? (
+              <span class="kp-picks__via">
+                via {pick.originalPickForName ?? pick.originalPickFor}
+              </span>
+            ) : (
+              <span class="kp-picks__via">Original</span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  )}
+</section>
+
+<!-- Finalize confirmation modal -->
+<div class="kp-finalize" id="kp-finalize" role="dialog" aria-modal="true" aria-labelledby="kp-finalize-title" hidden>
+  <div class="kp-finalize__overlay" data-finalize-close></div>
+  <div class="kp-finalize__content">
+    <button type="button" class="kp-finalize__close" data-finalize-close aria-label="Close">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <path d="M14 4L4 14M4 4l10 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+      </svg>
+    </button>
+    <h3 class="kp-finalize__title" id="kp-finalize-title">Finalize keepers</h3>
+    <p class="kp-finalize__copy" id="kp-finalize-copy">
+      &mdash;
+    </p>
+
+    <div class="kp-finalize__lists">
+      <div class="kp-finalize__col">
+        <h4>Keeping</h4>
+        <ul id="kp-finalize-keep"></ul>
+      </div>
+      <div class="kp-finalize__col">
+        <h4>Cutting</h4>
+        <ul id="kp-finalize-cut"></ul>
+      </div>
+    </div>
+
+    <div class="kp-finalize__progress" id="kp-finalize-progress" hidden>
+      <div class="kp-finalize__bar"><span id="kp-finalize-bar-fill"></span></div>
+      <p class="kp-finalize__progress-label" id="kp-finalize-progress-label">&mdash;</p>
+    </div>
+
+    <div class="kp-finalize__error" id="kp-finalize-error" hidden></div>
+
+    <div class="kp-finalize__actions">
+      <button type="button" class="kp-btn kp-btn--ghost" data-finalize-cancel>Back</button>
+      <button type="button" class="kp-btn kp-btn--danger" id="kp-finalize-confirm">
+        Cut everyone below the line
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  import { LINEUP_SLOTS, BENCH_CREDIT, slotGroupFor, type SlotGroup } from '../../../utils/afl-keeper-analysis';
+  import { buildRankingLookup, onRankingsChanged, COMPOSITE_IMPORT_ID } from '../../../utils/rankings-lookup';
+  import { initPlayerModalTrigger } from '../../../utils/player-modal-trigger';
+
+  interface PlayerLookup {
+    id: string;
+    name: string;
+    position: string;
+    age: number | null;
+  }
+
+  // Module-scoped guard so the document-level Escape handler binds exactly
+  // once, not once per ClientRouter navigation.
+  let kpKeydownBound = false;
+  // Module-scoped so re-initializing after a ClientRouter navigation
+  // replaces the previous DOM's rankings-change subscription instead of
+  // stacking another one on top of it.
+  let unsubscribeRankingsListener: (() => void) | null = null;
+  // Same reason as the two above: this one listens on `document` (the sheet
+  // is a sibling, not a descendant), so a ClientRouter navigation would stack
+  // a second handler still closing over the PREVIOUS board's keeperIds.
+  let aflActionDoneHandler: ((e: Event) => void) | null = null;
+
+  // Runs on first load AND after every ClientRouter navigation. Astro
+  // evaluates this script module only once, so without re-running on
+  // `astro:page-load` the planner stays unwired when you reach the owner
+  // roster page via client-side navigation (a hard refresh worked, SPA
+  // navigation didn't — that was the "drag stops working" bug).
+  function initKeeperPlanner() {
+    const rootEl = document.querySelector<HTMLElement>('[data-keeper-planner]');
+    if (!rootEl) return; // planner not on this page (non-owner) — bail silently
+    const root: HTMLElement = rootEl;
+    // Idempotent per rendered DOM: re-wire a fresh planner on each swap, but
+    // skip a repeat call for the same DOM so element-scoped listeners (drag,
+    // arrows) don't stack when astro:page-load and the first-load fallback
+    // both fire.
+    if (root.dataset.kpInit === '1') return;
+    root.dataset.kpInit = '1';
+    const franchiseId = root.dataset.franchiseId || '';
+    const year = Number(root.dataset.year || '0');
+    const KEEPER_LIMIT = Number(root.dataset.keeperLimit || '7');
+    const showActions = root.dataset.showActions === 'true';
+    // The Front Office hub panel (the one caller that sets showActions) does
+    // not wire this itself the way rosters.astro's page-level script does
+    // for its own `.roster-page` container — see the Props comment.
+    if (showActions) initPlayerModalTrigger(root);
+
+    const slotsEl = root.querySelector<HTMLElement>('[data-slots]');
+    const cardsEl = root.querySelector<HTMLElement>('[data-cards]');
+    const counterKeepers = root.querySelector<HTMLElement>('[data-count="keepers"]');
+    const counterCuts = root.querySelector<HTMLElement>('[data-count="cuts"]');
+    const statusEl = root.querySelector<HTMLElement>('[data-status]');
+    const resetBtn = root.querySelector<HTMLButtonElement>('[data-action="reset"]');
+    const finalizeBtn = root.querySelector<HTMLButtonElement>('[data-action="finalize"]');
+    const ageSlider = root.querySelector<HTMLInputElement>('[data-age-filter]');
+    const ageFilterValueEl = root.querySelector<HTMLElement>('[data-age-filter-value]');
+    const sortMyRankToggle = root.querySelector<HTMLInputElement>('[data-sort-my-rank]');
+    const lineupMeterGroups = new Map<SlotGroup, HTMLElement>();
+    root.querySelectorAll<HTMLElement>('[data-lineup-group]').forEach((el) => {
+      const group = el.dataset.lineupGroup as SlotGroup | undefined;
+      if (group) lineupMeterGroups.set(group, el);
+    });
+
+    // Collect every card's data for fast lookup
+    const cardData = new Map<string, PlayerLookup>();
+    const initialCardsByPos = new Map<string, HTMLLIElement[]>();
+    cardsEl?.querySelectorAll<HTMLLIElement>('[data-card]').forEach((card) => {
+      const id = card.dataset.playerId || '';
+      const nameEl = card.querySelector('.player-cell__name');
+      const posEl = card.querySelector('.player-meta__pos');
+      const name = nameEl?.textContent?.trim() || `Player ${id}`;
+      // Position label may include "QB - RC" style suffix; strip suffix.
+      const positionRaw = posEl?.textContent?.trim().split('-')[0]?.trim() || '';
+      const parsedAge = Number(card.dataset.age);
+      cardData.set(id, { id, name, position: positionRaw, age: Number.isFinite(parsedAge) ? parsedAge : null });
+      const list = initialCardsByPos.get(positionRaw) || [];
+      list.push(card);
+      initialCardsByPos.set(positionRaw, list);
+    });
+
+    // Snapshot the server-rendered order (position, then name) so the My
+    // Rank sort toggle has something to restore when switched back off.
+    const initialOrderIds: string[] = [...cardData.keys()];
+
+    // Local state — single source of truth, mirrored into the DOM each render.
+    const keeperIds: string[] = [];
+
+    let saveTimer: number | null = null;
+    let isSaving = false;
+    let pendingSavePayload: string[] | null = null;
+    const STATUS_RESET_MS = 1800;
+
+    function setStatus(text: string, kind?: 'ok' | 'err' | 'work') {
+      if (!statusEl) return;
+      statusEl.textContent = text;
+      statusEl.dataset.kind = kind || '';
+    }
+
+    function flashStatus(text: string, kind: 'ok' | 'err') {
+      setStatus(text, kind);
+      window.setTimeout(() => {
+        if (statusEl?.textContent === text) setStatus(keeperIds.length === KEEPER_LIMIT ? 'Roster locked in.' : 'Ready');
+      }, STATUS_RESET_MS);
+    }
+
+    async function flushSave() {
+      if (!pendingSavePayload) return;
+      const payload = pendingSavePayload;
+      pendingSavePayload = null;
+      isSaving = true;
+      setStatus('Saving…', 'work');
+      try {
+        const res = await fetch('/api/afl-keepers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ franchise: franchiseId, year, keepers: payload }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data?.success) {
+          throw new Error(data?.message || `Save failed (${res.status})`);
+        }
+        flashStatus('Saved.', 'ok');
+      } catch (err: any) {
+        flashStatus(err?.message || 'Save failed.', 'err');
+      } finally {
+        isSaving = false;
+        if (pendingSavePayload) void flushSave();
+      }
+    }
+
+    function scheduleSave() {
+      pendingSavePayload = keeperIds.slice();
+      if (isSaving) return;
+      if (saveTimer != null) window.clearTimeout(saveTimer);
+      saveTimer = window.setTimeout(() => {
+        saveTimer = null;
+        void flushSave();
+      }, 600);
+    }
+
+    function updateCounters() {
+      if (counterKeepers) counterKeepers.textContent = String(keeperIds.length);
+      if (counterCuts) counterCuts.textContent = String(cardData.size - keeperIds.length);
+      const keepZone = root.querySelector('[data-zone="keepers"]');
+      if (keepZone) keepZone.classList.toggle('kp-zone--full', keeperIds.length >= KEEPER_LIMIT);
+      if (finalizeBtn) finalizeBtn.disabled = keeperIds.length !== KEEPER_LIMIT;
+      updateLineupMeter();
+    }
+
+    // How many of your keepers start vs. back up each lineup group (1 QB /
+    // 1 PK / 1 Def / 6 flex). A group over its starter count still banks
+    // points as bench cover — see BENCH_CREDIT — just far less than a
+    // starter, and it's the single most common structural keeper mistake
+    // (a second QB or a kicker) that the rest of this board doesn't surface.
+    function updateLineupMeter() {
+      const counts: Record<SlotGroup, number> = { QB: 0, PK: 0, Def: 0, FLEX: 0 };
+      for (const id of keeperIds) {
+        const info = cardData.get(id);
+        const group = info ? slotGroupFor(info.position) : null;
+        if (group) counts[group] += 1;
+      }
+      for (const [group, el] of lineupMeterGroups) {
+        const countEl = el.querySelector('[data-lineup-count]');
+        if (countEl) countEl.textContent = String(counts[group]);
+        const over = counts[group] > LINEUP_SLOTS[group];
+        el.classList.toggle('kp-lineup-meter__group--over', over);
+        el.title = over
+          ? `Only ${LINEUP_SLOTS[group]} ${group} start${LINEUP_SLOTS[group] === 1 ? 's' : ''} a week — the extra keeper here banks about ${Math.round(BENCH_CREDIT[group] * 100)}% of a starter's points as bench cover.`
+          : '';
+      }
+    }
+
+    function findCard(playerId: string): HTMLLIElement | null {
+      return root.querySelector<HTMLLIElement>(`[data-card][data-player-id="${playerId}"]`);
+    }
+
+    function renderSlots() {
+      if (!slotsEl) return;
+      slotsEl.querySelectorAll<HTMLElement>('[data-slot-index]').forEach((slot) => {
+        const idx = Number(slot.dataset.slotIndex);
+        const playerId = keeperIds[idx];
+        if (playerId) {
+          const info = cardData.get(playerId);
+          slot.classList.remove('kp-slot--empty');
+          slot.classList.add('kp-slot--filled');
+          slot.innerHTML = '';
+
+          const num = document.createElement('span');
+          num.className = 'kp-slot__num';
+          num.textContent = String(idx + 1);
+          slot.appendChild(num);
+
+          // Reuse the full PlayerCell lockup from the matching cut card so the
+          // slot picks up the avatar, NFL logo, position pill, and — critically —
+          // the `data-player-modal` attribute that wires the player-details modal
+          // trigger. Falls back to bare name text when the source card isn't
+          // available (defensive; shouldn't happen in practice).
+          const card = findCard(playerId);
+          const sourceCell = card?.querySelector('.kp-card__player');
+          const wrapper = document.createElement('div');
+          wrapper.className = 'kp-slot__player';
+          if (sourceCell) {
+            wrapper.innerHTML = sourceCell.innerHTML;
+          } else {
+            wrapper.textContent = info?.name || playerId;
+          }
+          slot.appendChild(wrapper);
+
+          const arrow = document.createElement('button');
+          arrow.type = 'button';
+          arrow.className = 'kp-arrow kp-arrow--down';
+          arrow.dataset.move = 'down';
+          arrow.dataset.slotPlayerId = playerId;
+          arrow.setAttribute('aria-label', `Remove ${info?.name || playerId} from keepers`);
+          arrow.title = 'Send back to cut pool';
+          arrow.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19 9l-7 7-7-7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /></svg>';
+          slot.appendChild(arrow);
+
+          if (showActions) {
+            // Mirrors the cut-pool card's kebab. The source card is the one
+            // place this data lives client-side, so a kept player's sheet
+            // carries the same payload as the same player's sheet below the
+            // line — including trade-block state, which a stale copy would
+            // get backwards (offering Add for someone already on the block).
+            const kebab = document.createElement('button');
+            kebab.type = 'button';
+            kebab.className = 'pa-kebab';
+            kebab.dataset.kpAction = '';
+            kebab.dataset.kpId = playerId;
+            kebab.dataset.kpName = info?.name || playerId;
+            kebab.dataset.kpStatus = card?.dataset.status || 'ROSTER';
+            kebab.dataset.kpPos = info?.position || '';
+            kebab.dataset.kpTeam = card?.dataset.team || '';
+            kebab.dataset.kpBait = card?.dataset.bait || 'false';
+            kebab.dataset.kpBirthdate = card?.dataset.birthdate || '';
+            kebab.setAttribute('aria-label', `Manage ${info?.name || playerId}`);
+            kebab.title = 'Manage player';
+            kebab.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
+            slot.appendChild(kebab);
+          }
+
+          slot.draggable = true;
+          slot.dataset.playerId = playerId;
+        } else {
+          slot.classList.add('kp-slot--empty');
+          slot.classList.remove('kp-slot--filled');
+          slot.innerHTML = `<span class="kp-slot__num">${idx + 1}</span><span class="kp-slot__hint">Drag a player here</span>`;
+          slot.draggable = false;
+          delete slot.dataset.playerId;
+        }
+      });
+      // renderSlots() rebuilds every slot's DOM from scratch, which would
+      // silently drop any previously-applied age-filter styling — reapply
+      // it so a kept player over the threshold stays visually filtered
+      // across keeper moves, not just on the cut-pool list.
+      applyAgeFilter();
+    }
+
+    function setCardVisibility(playerId: string, hidden: boolean) {
+      const card = findCard(playerId);
+      if (card) card.hidden = hidden;
+    }
+
+    function moveToKeepers(playerId: string): boolean {
+      if (keeperIds.includes(playerId)) return false;
+      if (keeperIds.length >= KEEPER_LIMIT) {
+        flashStatus(`Limit is ${KEEPER_LIMIT}. Bump someone else first.`, 'err');
+        return false;
+      }
+      keeperIds.push(playerId);
+      setCardVisibility(playerId, true);
+      renderSlots();
+      updateCounters();
+      scheduleSave();
+      return true;
+    }
+
+    function moveToCuts(playerId: string): boolean {
+      const idx = keeperIds.indexOf(playerId);
+      if (idx === -1) return false;
+      keeperIds.splice(idx, 1);
+      setCardVisibility(playerId, false);
+      renderSlots();
+      updateCounters();
+      scheduleSave();
+      return true;
+    }
+
+    // ── Arrow buttons (click-based, mobile-friendly) ──
+    root.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      const moveBtn = target.closest('[data-move]') as HTMLButtonElement | null;
+      if (!moveBtn) return;
+      e.stopPropagation();
+      const direction = moveBtn.dataset.move;
+      const card = moveBtn.closest('[data-card]') as HTMLElement | null;
+      const slotPlayerId = moveBtn.dataset.slotPlayerId;
+      const playerId = card?.dataset.playerId || slotPlayerId;
+      if (!playerId) return;
+      if (direction === 'up') moveToKeepers(playerId);
+      else if (direction === 'down') moveToCuts(playerId);
+    });
+
+    // ── ⋮ kebab → AFLActionModal (IR / Cut / Trade block / Watch) ──
+    // Only bound when the host turned actions on, and only useful when that
+    // host also mounted <AFLActionModal />; a missing opener is a no-op
+    // rather than a thrown error, so a caller that renders the kebab without
+    // the sheet degrades to an inert button instead of a broken page.
+    if (showActions) {
+      root.addEventListener('click', (e) => {
+        const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-kp-action]');
+        if (!btn) return;
+        e.stopPropagation();
+        const opener = (window as any).openAFLActionModal as ((p: Record<string, unknown>) => void) | undefined;
+        if (typeof opener !== 'function') return;
+        const d = btn.dataset;
+        const id = d.kpId || '';
+        if (!id) return;
+        // The avatar the PlayerCell actually resolved (NFL photo, college
+        // photo or the team-colour placeholder) — same source the roster
+        // page's sheet reads, so the hero matches what the row shows.
+        const host = btn.closest('[data-card], [data-slot-index]');
+        const headshot =
+          (host?.querySelector('.player-cell__avatar img') as HTMLImageElement | null)?.src || undefined;
+        const birthdate = Number(d.kpBirthdate);
+        opener({
+          playerId: id,
+          playerName: d.kpName || id,
+          status: d.kpStatus || 'ROSTER',
+          isOnTradeBait: d.kpBait === 'true',
+          franchiseId,
+          headshot,
+          position: d.kpPos || undefined,
+          nflTeam: d.kpTeam || undefined,
+          birthdate: Number.isFinite(birthdate) && birthdate > 0 ? birthdate : null,
+          isOwner: true,
+          signedIn: true,
+        });
+      });
+
+      // The sheet's own optimistic updates edit roster <tr>s and no-op here,
+      // so the board reconciles itself: a cut player leaves entirely (card,
+      // keeper slot and saved plan), and the other writes just restamp the
+      // state the next sheet opens with.
+      if (aflActionDoneHandler) document.removeEventListener('afl-action:done', aflActionDoneHandler);
+      aflActionDoneHandler = (e: Event) => {
+        const detail = (e as CustomEvent<{ action?: string; playerId?: string }>).detail;
+        const playerId = detail?.playerId;
+        if (!playerId) return;
+        const card = findCard(playerId);
+        if (!card) return; // a different AFL surface on the page — not ours
+        if (detail?.action === 'cut') {
+          const keptIdx = keeperIds.indexOf(playerId);
+          if (keptIdx !== -1) keeperIds.splice(keptIdx, 1);
+          card.remove();
+          renderSlots();
+          updateCounters();
+          scheduleSave();
+          return;
+        }
+        if (detail?.action === 'ir-to') card.dataset.status = 'INJURED_RESERVE';
+        if (detail?.action === 'ir-from') card.dataset.status = 'ROSTER';
+        if (detail?.action === 'trade-bait-add') card.dataset.bait = 'true';
+        if (detail?.action === 'trade-bait-remove') card.dataset.bait = 'false';
+        const cardKebab = card.querySelector<HTMLElement>('[data-kp-action]');
+        if (cardKebab) {
+          cardKebab.dataset.kpStatus = card.dataset.status || 'ROSTER';
+          cardKebab.dataset.kpBait = card.dataset.bait || 'false';
+        }
+        renderSlots();
+      };
+      document.addEventListener('afl-action:done', aflActionDoneHandler);
+    }
+
+    // ── Drag and drop ──
+    let dragId: string | null = null;
+
+    root.addEventListener('dragstart', (e) => {
+      const card = (e.target as HTMLElement).closest<HTMLElement>('[data-card], [data-slot-index]');
+      if (!card) return;
+      const id = card.dataset.playerId;
+      if (!id) return;
+      dragId = id;
+      try {
+        e.dataTransfer?.setData('text/plain', id);
+        if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
+      } catch {}
+      card.classList.add('is-dragging');
+    });
+
+    root.addEventListener('dragend', (e) => {
+      const card = (e.target as HTMLElement).closest<HTMLElement>('[data-card], [data-slot-index]');
+      card?.classList.remove('is-dragging');
+      dragId = null;
+      root.querySelectorAll('.is-drop-target').forEach((el) => el.classList.remove('is-drop-target'));
+    });
+
+    root.addEventListener('dragover', (e) => {
+      const zone = (e.target as HTMLElement).closest<HTMLElement>('[data-zone]');
+      if (!zone) return;
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+      zone.classList.add('is-drop-target');
+    });
+
+    root.addEventListener('dragleave', (e) => {
+      const zone = (e.target as HTMLElement).closest<HTMLElement>('[data-zone]');
+      if (!zone) return;
+      // Only remove highlight when leaving the zone entirely
+      const next = e.relatedTarget as Node | null;
+      if (!next || !zone.contains(next)) {
+        zone.classList.remove('is-drop-target');
+      }
+    });
+
+    root.addEventListener('drop', (e) => {
+      const zone = (e.target as HTMLElement).closest<HTMLElement>('[data-zone]');
+      if (!zone) return;
+      e.preventDefault();
+      zone.classList.remove('is-drop-target');
+      const id = dragId || e.dataTransfer?.getData('text/plain') || '';
+      if (!id) return;
+      if (zone.dataset.zone === 'keepers') moveToKeepers(id);
+      else if (zone.dataset.zone === 'cuts') moveToCuts(id);
+    });
+
+    // ── Reset ──
+    resetBtn?.addEventListener('click', async () => {
+      if (!keeperIds.length) return;
+      if (!confirm('Clear all keepers from the planner?')) return;
+      while (keeperIds.length) {
+        const id = keeperIds.pop();
+        if (id) setCardVisibility(id, false);
+      }
+      renderSlots();
+      updateCounters();
+      try {
+        setStatus('Resetting…', 'work');
+        const res = await fetch(`/api/afl-keepers?franchise=${franchiseId}&year=${year}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        if (!res.ok) throw new Error('Reset failed.');
+        flashStatus('Cleared.', 'ok');
+      } catch (err: any) {
+        flashStatus(err?.message || 'Reset failed.', 'err');
+      }
+    });
+
+    // ── Finalize ──
+    const finalizeModal = document.getElementById('kp-finalize') as HTMLDivElement | null;
+    // Set once the cuts have all gone through on MFL — from then on the
+    // modal is a success screen and its button just reloads the page.
+    let finalized = false;
+    // After a partial failure, the next confirm click retries ONLY the
+    // failed players (each already-done player would cost a full MFL roster
+    // fetch server-side just to produce its 409).
+    let retryIds: string[] | null = null;
+
+    const finalizeOpen = () => {
+      if (!finalizeModal) return;
+      if (finalized) {
+        // Cuts already happened and the saved plan is gone — reopening the
+        // confirm flow would be lying. Show the fresh roster instead.
+        window.location.reload();
+        return;
+      }
+      // Opening the modal starts a fresh confirm session against the CURRENT
+      // keeper selection. A retry subset from an earlier partial failure must
+      // not survive — the user may have moved a failed player into keepers
+      // since, and cutting from the stale list would be irreversible.
+      // (The in-modal "Retry failed cuts" click doesn't come through here,
+      // so retry-only-failures still works within a session.)
+      retryIds = null;
+      const keepList = finalizeModal.querySelector<HTMLUListElement>('#kp-finalize-keep');
+      const cutList = finalizeModal.querySelector<HTMLUListElement>('#kp-finalize-cut');
+      const copy = finalizeModal.querySelector<HTMLParagraphElement>('#kp-finalize-copy');
+      const cutIds: string[] = [];
+      for (const id of cardData.keys()) {
+        if (!keeperIds.includes(id)) cutIds.push(id);
+      }
+      if (keepList) {
+        keepList.innerHTML = keeperIds
+          .map((id) => `<li>${cardData.get(id)?.name ?? id}</li>`)
+          .join('');
+      }
+      if (cutList) {
+        cutList.innerHTML = cutIds
+          .map((id) => `<li>${cardData.get(id)?.name ?? id}</li>`)
+          .join('');
+      }
+      if (copy) {
+        copy.textContent = `Confirming will cut ${cutIds.length} players from your roster on MFL. The ${keeperIds.length} above stay. This cannot be undone here.`;
+      }
+      const progress = finalizeModal.querySelector<HTMLElement>('#kp-finalize-progress');
+      const error = finalizeModal.querySelector<HTMLElement>('#kp-finalize-error');
+      const confirm = finalizeModal.querySelector<HTMLButtonElement>('#kp-finalize-confirm');
+      if (progress) progress.hidden = true;
+      if (error) error.hidden = true;
+      if (confirm) {
+        confirm.disabled = false;
+        confirm.textContent = 'Cut everyone below the line';
+      }
+      finalizeModal.hidden = false;
+      document.body.style.overflow = 'hidden';
+    };
+
+    const finalizeClose = () => {
+      if (!finalizeModal) return;
+      finalizeModal.hidden = true;
+      document.body.style.overflow = '';
+    };
+
+    finalizeBtn?.addEventListener('click', () => {
+      if (keeperIds.length !== KEEPER_LIMIT) return;
+      finalizeOpen();
+    });
+    finalizeModal?.querySelectorAll('[data-finalize-close]').forEach((el) => {
+      el.addEventListener('click', finalizeClose);
+    });
+    finalizeModal?.querySelectorAll('[data-finalize-cancel]').forEach((el) => {
+      el.addEventListener('click', finalizeClose);
+    });
+    if (!kpKeydownBound) {
+      kpKeydownBound = true;
+      // Bound once at the document level; re-query the modal on each press so
+      // it always acts on the current page's planner.
+      document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        const modal = document.getElementById('kp-finalize') as HTMLDivElement | null;
+        if (modal && !modal.hidden) {
+          modal.hidden = true;
+          document.body.style.overflow = '';
+        }
+      });
+    }
+
+    const confirmBtn = finalizeModal?.querySelector<HTMLButtonElement>('#kp-finalize-confirm');
+    confirmBtn?.addEventListener('click', async () => {
+      if (!finalizeModal) return;
+      if (finalized) {
+        window.location.reload();
+        return;
+      }
+      const progress = finalizeModal.querySelector<HTMLElement>('#kp-finalize-progress');
+      const bar = finalizeModal.querySelector<HTMLElement>('#kp-finalize-bar-fill');
+      const label = finalizeModal.querySelector<HTMLElement>('#kp-finalize-progress-label');
+      const error = finalizeModal.querySelector<HTMLElement>('#kp-finalize-error');
+      if (error) error.hidden = true;
+
+      const allCutIds: string[] = [];
+      for (const id of cardData.keys()) {
+        if (!keeperIds.includes(id)) allCutIds.push(id);
+      }
+      // Defensive intersect: never cut anything that isn't in the current
+      // cut list, even if a stale retry subset somehow survives.
+      const cutIds = (retryIds ?? allCutIds).filter((id) => allCutIds.includes(id));
+
+      if (cutIds.length === 0) {
+        finalizeClose();
+        return;
+      }
+
+      if (progress) progress.hidden = false;
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = 'Cutting…';
+
+      let done = 0;
+      const failures: Array<{ id: string; name: string; message: string }> = [];
+      for (const id of cutIds) {
+        try {
+          const res = await fetch('/api/cut-player', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            // year lets the server reject cuts when this page was rendered
+            // for a different league year than the one cuts would hit.
+            // (undefined is dropped by JSON.stringify, so a missing
+            // data-year attr degrades to the old no-check behavior.)
+            body: JSON.stringify({ playerId: id, year: year > 0 ? year : undefined }),
+          });
+          const data = await res.json().catch(() => ({}));
+          // 409 = player is already off the roster on MFL (e.g. a previous
+          // finalize pass landed but this page was rendered from a stale
+          // feed). The desired end state is already true — count it as done
+          // so retries converge instead of re-failing forever.
+          if (res.status !== 409 && (!res.ok || !data?.success)) {
+            failures.push({
+              id,
+              name: cardData.get(id)?.name || id,
+              message: data?.message || `HTTP ${res.status}`,
+            });
+          }
+        } catch (err: any) {
+          failures.push({
+            id,
+            name: cardData.get(id)?.name || id,
+            message: err?.message || 'Network error',
+          });
+        }
+        done += 1;
+        if (label) label.textContent = `Cut ${done} of ${cutIds.length}…`;
+        if (bar) bar.style.width = `${Math.round((done / cutIds.length) * 100)}%`;
+      }
+
+      if (failures.length === 0) {
+        retryIds = null;
+        // Clear the saved plan since cuts are now permanent.
+        try {
+          await fetch(`/api/afl-keepers?franchise=${franchiseId}&year=${year}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' } });
+        } catch {}
+        // Land on an explicit success state instead of silently reloading —
+        // a keeper cutdown is a big, irreversible action and deserves clear
+        // confirmation. The reload behind the "Show my new roster" button
+        // renders live data (the cut API busts the Redis roster cache), so
+        // the updated roster is what the owner actually sees.
+        finalized = true;
+        if (label) label.textContent = `All ${cutIds.length} cuts processed on MFL.`;
+        const copyEl = finalizeModal.querySelector<HTMLParagraphElement>('#kp-finalize-copy');
+        if (copyEl) {
+          copyEl.textContent =
+            'Done — your keepers are locked in and the cuts went through on MFL.';
+        }
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = 'Show my new roster';
+      } else {
+        retryIds = failures.map((f) => f.id);
+        if (error) {
+          error.hidden = false;
+          error.innerHTML =
+            `<strong>${failures.length} of ${cutIds.length} cuts failed.</strong><br/>` +
+            failures.map((f) => `${f.name}: ${f.message}`).join('<br/>') +
+            '<br/><br/>Any successful cuts went through. Retry runs only the failed players.';
+        }
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = 'Retry failed cuts';
+      }
+    });
+
+    // ── Initial load from server ──
+    async function loadPlan() {
+      try {
+        const res = await fetch(`/api/afl-keepers?franchise=${franchiseId}&year=${year}`, {
+          headers: { 'Accept': 'application/json' },
+        });
+        if (!res.ok) return; // user might not be the owner — fine
+        const data = await res.json().catch(() => null);
+        const savedKeepers: string[] = data?.plan?.keepers ?? [];
+        for (const id of savedKeepers) {
+          if (cardData.has(id) && keeperIds.length < KEEPER_LIMIT && !keeperIds.includes(id)) {
+            keeperIds.push(id);
+            setCardVisibility(id, true);
+          }
+        }
+        renderSlots();
+        updateCounters();
+      } catch (err) {
+        console.warn('[keeper-planner] load failed:', err);
+      }
+    }
+
+    // ── Age filter — hides cards above a chosen age, cut pool AND keeper
+    // slots alike, so an owner can quickly narrow in on who's aging out of
+    // the keeper window regardless of which side of the line they're on
+    // right now. A filtered SLOT keeps its number and stays a real keeper
+    // (nothing here touches keeperIds) — it just visually stands in for
+    // "you can't see this one at the current age cutoff", the same as a
+    // filtered cut-pool card.
+    const AGE_FILTER_MAX = Number(ageSlider?.max ?? 45);
+    function applyAgeFilter() {
+      const threshold = ageSlider ? Number(ageSlider.value) : AGE_FILTER_MAX;
+      const noFilter = threshold >= AGE_FILTER_MAX;
+      root.querySelectorAll<HTMLLIElement>('[data-card]').forEach((card) => {
+        const age = Number(card.dataset.age);
+        const overAge = !noFilter && Number.isFinite(age) && age > threshold;
+        card.classList.toggle('kp-card--filtered', overAge);
+      });
+      slotsEl?.querySelectorAll<HTMLElement>('.kp-slot--filled').forEach((slot) => {
+        const age = cardData.get(slot.dataset.playerId ?? '')?.age ?? null;
+        const overAge = !noFilter && age != null && age > threshold;
+        slot.classList.toggle('kp-slot--age-filtered', overAge);
+      });
+      if (ageFilterValueEl) {
+        ageFilterValueEl.textContent = noFilter ? 'All ages' : `Hiding > ${threshold}`;
+      }
+    }
+    ageSlider?.addEventListener('input', applyAgeFilter);
+
+    // ── Sort by My Rank — reorders the cut-pool list by the owner's
+    // composite ranking (rankings-lookup.ts), auto-scoped to the AFL bucket
+    // by activeRankingsScope(). No composite yet (fewer than 2 rankings
+    // imported) → falls back to the original position/name order.
+    function applyCardOrder() {
+      if (!cardsEl) return;
+      let orderIds = initialOrderIds;
+      if (sortMyRankToggle?.checked) {
+        const lookup = buildRankingLookup();
+        const compositeMap = lookup.byImport.get(COMPOSITE_IMPORT_ID);
+        if (compositeMap && compositeMap.size > 0) {
+          orderIds = [...initialOrderIds].sort((a, b) => {
+            const ra = compositeMap.get(a);
+            const rb = compositeMap.get(b);
+            if (ra == null && rb == null) return 0;
+            if (ra == null) return 1;
+            if (rb == null) return -1;
+            return ra - rb;
+          });
+        }
+      }
+      for (const id of orderIds) {
+        const card = findCard(id);
+        if (card) cardsEl.appendChild(card);
+      }
+    }
+    sortMyRankToggle?.addEventListener('change', applyCardOrder);
+    // Re-sort live if the owner imports/edits rankings in another tab while
+    // this page is open. Module-scoped guard mirrors kpKeydownBound: a fresh
+    // planner DOM re-subscribes on every ClientRouter navigation, so the
+    // PREVIOUS instance's listener (closing over now-detached elements) must
+    // be torn down first rather than left to stack.
+    unsubscribeRankingsListener?.();
+    unsubscribeRankingsListener = onRankingsChanged(() => {
+      if (sortMyRankToggle?.checked) applyCardOrder();
+    });
+
+    applyAgeFilter();
+    applyCardOrder();
+    renderSlots();
+    updateCounters();
+    void loadPlan();
+  }
+
+  document.addEventListener('astro:page-load', initKeeperPlanner);
+  // First-load fallback for pages served without View Transitions (mirrors
+  // src/components/nav/NavLinks.astro); the per-DOM guard prevents double-wiring.
+  if (document.readyState !== 'loading') initKeeperPlanner();
+  else document.addEventListener('DOMContentLoaded', initKeeperPlanner);
+</script>
+
+<!-- is:global is required: renderSlots() rebuilds keeper-slot contents (arrows,
+     slot numbers, hints) with document.createElement/innerHTML, and those nodes
+     never receive Astro's scoped-style class. Safe to expose globally because
+     every selector is anchored under this component's namespace — the
+     .keeper-planner / .kp-finalize roots and kp-* classes (descendant
+     references like `.kp-slot__player .player-cell` stay anchored on kp-*). -->
+<style is:global>
+  .keeper-planner {
+    display: grid;
+    gap: 1rem;
+    /* This panel is laid out at widths the viewport does not predict: the
+       front-office hub reserves a 220px sidebar beside it, /rosters gives it
+       the full content column, and the draft order page narrower still. Every
+       breakpoint below therefore asks THIS element's width, not the window's.
+       inline-size is safe here — the width still comes from the parent, only
+       the height keeps depending on content. */
+    container-type: inline-size;
+    container-name: kp-panel;
+  }
+
+  .kp-intro {
+    background: #fff;
+    border-radius: 0.75rem;
+    padding: 1rem 1.25rem;
+    box-shadow: var(--shadow-md);
+  }
+
+  .kp-intro__title {
+    margin: 0 0 0.25rem;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .kp-intro__copy {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    color: #4b5563;
+    line-height: 1.5;
+  }
+
+  /* Toolbar — filters/sort acting on the cut-pool list below */
+  .kp-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem;
+    background: #fff;
+    border-radius: 0.75rem;
+    padding: 0.75rem 1rem;
+    box-shadow: var(--shadow-md);
+    font-size: 0.8125rem;
+  }
+
+  .kp-toolbar__control {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #374151;
+  }
+
+  .kp-toolbar__label {
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .kp-age-slider {
+    width: 120px;
+  }
+
+  .kp-toolbar__value {
+    color: #6b7280;
+    white-space: nowrap;
+    min-width: 6.5rem;
+  }
+
+  .kp-toolbar__control--checkbox {
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  /* Lineup-slot fit meter — how many keepers start vs. back up each group */
+  .kp-lineup-meter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .kp-lineup-meter__group {
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    color: #4b5563;
+    background: #f3f4f6;
+    border-radius: 0.375rem;
+    padding: 0.1875rem 0.5rem;
+  }
+
+  .kp-lineup-meter__group strong {
+    color: #111827;
+  }
+
+  .kp-lineup-meter__group--over {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  .kp-lineup-meter__group--over strong {
+    color: #92400e;
+  }
+
+  /* Zones */
+  .kp-zone {
+    background: #fff;
+    border-radius: 0.75rem;
+    padding: 1rem;
+    box-shadow: var(--shadow-md);
+    transition: outline 120ms ease;
+    outline: 2px dashed transparent;
+    outline-offset: -2px;
+  }
+
+  .kp-zone.is-drop-target {
+    outline-color: #c41e3a;
+  }
+
+  .kp-zone--full {
+    background: #f0fdf4;
+  }
+
+  .kp-zone__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .kp-zone__title-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .kp-zone__icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .kp-zone__icon--keep {
+    background: #dcfce7;
+    color: #166534;
+  }
+
+  .kp-zone__icon--cut {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+
+  .kp-zone__title {
+    margin: 0;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #374151;
+  }
+
+  .kp-counter {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: #6b7280;
+  }
+
+  .kp-counter__sep {
+    color: #d1d5db;
+  }
+
+  /* Slots */
+  .kp-slots {
+    display: grid;
+    /* The track minimum is what decides the column COUNT, and every fixed
+       part of a row (rank badge, avatar, position line, the two buttons)
+       is flex-shrink: 0 — so the name is the only thing that gives. A track
+       merely "wide enough to lay out" therefore ellipsises most of the
+       roster rather than dropping a column.
+
+       380px is measured, not guessed. The front-office hub gives this panel
+       a ~870px content column; at the 220px minimum that column auto-filled
+       to three 285px tracks and five names in a nine-player cut pool
+       ellipsised. 340px fixes 870px but still lets a 1040-1147px container
+       land on three 341px tracks, which truncates two — 380px is the first
+       minimum that skips that state, so the hub gets two readable cards and
+       a third column only appears once there is real room for it.
+
+       min() keeps the track from overflowing a container narrower than it. */
+    grid-template-columns: repeat(auto-fill, minmax(min(380px, 100%), 1fr));
+    gap: 0.5rem;
+  }
+
+  .kp-slot {
+    /* A grid item's automatic min-width is its own min-content, not 0 — a
+       long player name deep inside (even truncated via .kp-slot__player's
+       own min-width: 0) can still blow this item past its track and the
+       page past the viewport unless it's zeroed here too. */
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 0.75rem;
+    border: 2px dashed #e5e7eb;
+    border-radius: 0.5rem;
+    min-height: 56px;
+  }
+
+  .kp-slot--empty .kp-slot__hint {
+    color: #9ca3af;
+    font-size: var(--font-size-xs);
+  }
+
+  .kp-slot--filled {
+    background: #ecfdf5;
+    border-style: solid;
+    border-color: #a7f3d0;
+    cursor: grab;
+  }
+
+  .kp-slot--filled.is-dragging {
+    opacity: 0.5;
+  }
+
+  /* Age-filtered keeper — same idea as .kp-card--filtered, but a numbered
+     slot can't just disappear (it would look like an unfilled slot, which
+     is a lie: the player is still kept). Dim the real content and overlay
+     a label instead; pointer-events:none on the label keeps drag/click
+     working on the slot underneath. */
+  .kp-slot--age-filtered {
+    position: relative;
+  }
+
+  .kp-slot--age-filtered .kp-slot__player {
+    opacity: 0.15;
+  }
+
+  .kp-slot--age-filtered::after {
+    content: 'Filtered by age';
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-2xs);
+    font-weight: 700;
+    color: #6b7280;
+    pointer-events: none;
+  }
+
+  .kp-slot__num {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    color: #6b7280;
+    border-radius: 50%;
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    border: 1px solid #e5e7eb;
+  }
+
+  .kp-slot--filled .kp-slot__num {
+    background: #166534;
+    color: #fff;
+    border-color: #166534;
+  }
+
+  /* Wrapper for the cloned PlayerCell lockup. Flex so the cell stretches
+     to fill the row while the arrow stays anchored on the right. */
+  .kp-slot__player {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+  }
+
+  .kp-slot__player .player-cell {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* Legacy fallback text styles — used only when the PlayerCell clone
+     fails (defensive path inside renderSlots). */
+  .kp-slot__name {
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: #0f172a;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .kp-slot__pos {
+    font-size: var(--font-size-2xs);
+    color: #6b7280;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  /* Status bar */
+  .kp-statusbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    background: #fff;
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    box-shadow: var(--shadow-md);
+  }
+
+  .kp-status {
+    font-size: 0.8125rem;
+    color: #4b5563;
+  }
+
+  .kp-status[data-kind="work"] {
+    color: #6b7280;
+    font-style: italic;
+  }
+
+  .kp-status[data-kind="ok"] {
+    color: #166534;
+  }
+
+  .kp-status[data-kind="err"] {
+    color: #991b1b;
+  }
+
+  .kp-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .kp-finalize-note {
+    font-size: 0.8125rem;
+    color: #6b7280;
+    font-style: italic;
+  }
+
+  .kp-btn {
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    border: 1px solid transparent;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .kp-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .kp-btn--ghost {
+    background: transparent;
+    color: #4b5563;
+    border-color: #d1d5db;
+  }
+
+  .kp-btn--ghost:hover:not(:disabled) {
+    background: #f3f4f6;
+  }
+
+  .kp-btn--primary {
+    background: #166534;
+    color: #fff;
+  }
+
+  .kp-btn--primary:hover:not(:disabled) {
+    background: #14532d;
+  }
+
+  .kp-btn--danger {
+    background: #991b1b;
+    color: #fff;
+  }
+
+  .kp-btn--danger:hover:not(:disabled) {
+    background: #7f1d1d;
+  }
+
+  /* Cards (cut pool) */
+  .kp-cards {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    /* Same reasoning as .kp-slots above — plus the cut pool carries a stat
+       line and a trend badge between the name and the buttons, so it needs
+       at least as much room per card, never less. */
+    grid-template-columns: repeat(auto-fill, minmax(min(380px, 100%), 1fr));
+    gap: 0.5rem;
+  }
+
+  .kp-card {
+    /* Same fix as .kp-slot above: this is a grid item of .kp-cards, and its
+       automatic min-width defaults to its own min-content — the stat-line/
+       trend badge next to the name is flex-shrink: 0 by design, so without
+       this the row (and the page) can only get as narrow as that content
+       demands, not as narrow as .kp-card__player's own min-width: 0 allows. */
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.625rem;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    cursor: grab;
+    transition: border-color 120ms ease, box-shadow 120ms ease;
+  }
+
+  .kp-card:hover {
+    border-color: #c41e3a;
+  }
+
+  .kp-card.is-dragging {
+    opacity: 0.5;
+  }
+
+  .kp-card[hidden] {
+    display: none;
+  }
+
+  /* Age-filtered out — same "not here right now" treatment as [hidden]. */
+  .kp-card.kp-card--filtered {
+    display: none;
+  }
+
+  .kp-card__player {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .kp-card__stats {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.125rem;
+    flex-shrink: 0;
+    margin-right: 0.25rem;
+  }
+
+  .kp-card__stat-line {
+    font-size: var(--font-size-2xs);
+    color: #6b7280;
+    white-space: nowrap;
+  }
+
+  .kp-card__trend {
+    font-size: var(--font-size-3xs);
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .kp-card__trend--up {
+    color: var(--color-success-dark, #059669);
+  }
+
+  .kp-card__trend--down {
+    color: var(--color-error-dark, #991b1b);
+  }
+
+  .kp-card__meta {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  .kp-card__age {
+    font-size: var(--font-size-xs);
+    color: #6b7280;
+    font-weight: 600;
+  }
+
+  .kp-card__ir-pill {
+    display: inline-block;
+    padding: 0 0.375rem;
+    font-size: var(--font-size-3xs);
+    font-weight: 800;
+    background: #fee2e2;
+    color: #991b1b;
+    border-radius: 0.25rem;
+  }
+
+  /* Promote / demote arrow — same icon-button shape as ufa-action-btn on the
+     roster page so the design system reads consistently across both AFL
+     surfaces. Carries a subtle semantic tint via the SVG color (green to
+     promote, red to demote) without painting the whole button. */
+  .kp-arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid var(--color-gray-200, #d1d5db);
+    background: var(--content-bg, var(--color-white, #fff));
+    border-radius: var(--radius-sm, 4px);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background-color 0.18s ease, border-color 0.18s ease,
+      box-shadow 0.18s ease, color 0.18s ease;
+  }
+
+  /* Pin the inline SVG to a consistent visual size — keeps the down arrow
+     from rendering as an empty box when the upstream <svg width=14> attrs
+     get nuked by some browser stylesheets, and matches what we did on the
+     AFLActionModal action tiles. */
+  .kp-arrow svg {
+    width: 14px;
+    height: 14px;
+    display: block;
+  }
+
+  .kp-arrow:hover {
+    border-color: var(--color-gray-300, #9ca3af);
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* .pa-kebab's shared stylesheet (player-action-button.css, loaded by
+     whichever host mounts WatchListBridge) has no flex-shrink of its own —
+     pin it here so it holds its size next to .kp-arrow instead of getting
+     squeezed as the row's real slack, .kp-card__player, absorbs the squeeze. */
+  .keeper-planner .pa-kebab {
+    flex-shrink: 0;
+  }
+
+  .kp-arrow:focus-visible {
+    outline: 2px solid var(--color-primary, #1c497c);
+    outline-offset: 1px;
+  }
+
+  .kp-arrow--up {
+    color: var(--color-success-dark, #059669);
+  }
+
+  .kp-arrow--up:hover {
+    background: var(--color-success-light, #d1fae5);
+    color: var(--color-success-dark, #047857);
+  }
+
+  /* Down arrow ("send back to cut pool") — keep the same icon-button shape
+     as the up arrow, but in a neutral-dark tone instead of green so the two
+     buttons don't fight for attention. gray-500 was too faint on phone
+     screens — it rendered as a visually-empty box. gray-700 reads cleanly
+     against white at the same weight as the up-arrow chevron. */
+  .kp-arrow--down {
+    color: var(--color-gray-700, #374151);
+  }
+
+  .kp-arrow--down:hover {
+    background: var(--color-gray-50, #f9fafb);
+    color: var(--color-gray-900, #111827);
+  }
+
+  /* Draft picks */
+  .kp-picks {
+    background: #fff;
+    border-radius: 0.75rem;
+    padding: 1rem;
+    box-shadow: var(--shadow-md);
+  }
+
+  .kp-picks__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+  }
+
+  .kp-picks__title {
+    margin: 0;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #374151;
+  }
+
+  .kp-picks__count {
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    color: #6b7280;
+  }
+
+  .kp-picks__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+  }
+
+  .kp-picks__pick {
+    background: #f3f4f6;
+    border-radius: 0.375rem;
+    padding: 0.25rem 0.625rem;
+    font-size: var(--font-size-xs);
+    color: #374151;
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+  }
+
+  .kp-picks__round {
+    font-weight: 700;
+  }
+
+  .kp-picks__via {
+    color: #6b7280;
+    font-size: var(--font-size-2xs);
+  }
+
+  /* Finalize modal */
+  .kp-finalize {
+    position: fixed;
+    inset: 0;
+    z-index: 1100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+
+  .kp-finalize[hidden] {
+    display: none;
+  }
+
+  .kp-finalize__overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(2px);
+  }
+
+  .kp-finalize__content {
+    position: relative;
+    width: 100%;
+    max-width: 560px;
+    max-height: 90vh;
+    overflow-y: auto;
+    background: #fff;
+    border-radius: 0.75rem;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+    padding: 1.5rem;
+  }
+
+  .kp-finalize__close {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    width: 32px;
+    height: 32px;
+    border: 0;
+    background: transparent;
+    color: #6b7280;
+    border-radius: 0.375rem;
+    cursor: pointer;
+  }
+
+  .kp-finalize__close:hover {
+    background: #f3f4f6;
+  }
+
+  .kp-finalize__title {
+    margin: 0 2rem 0.5rem 0;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .kp-finalize__copy {
+    margin: 0 0 1rem;
+    font-size: var(--font-size-sm);
+    color: #4b5563;
+    line-height: 1.5;
+  }
+
+  .kp-finalize__lists {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .kp-finalize__col h4 {
+    margin: 0 0 0.5rem;
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #6b7280;
+  }
+
+  .kp-finalize__col ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-size: 0.8125rem;
+    color: #111827;
+    max-height: 180px;
+    overflow-y: auto;
+  }
+
+  .kp-finalize__col li {
+    padding: 0.125rem 0;
+  }
+
+  .kp-finalize__progress {
+    margin-bottom: 0.75rem;
+  }
+
+  .kp-finalize__bar {
+    height: 8px;
+    background: #f3f4f6;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .kp-finalize__bar span {
+    display: block;
+    height: 100%;
+    width: 0;
+    background: #166534;
+    transition: width var(--transition-base);
+  }
+
+  .kp-finalize__progress-label {
+    margin: 0.375rem 0 0;
+    font-size: var(--font-size-xs);
+    color: #6b7280;
+  }
+
+  .kp-finalize__error {
+    margin-bottom: 0.75rem;
+    padding: 0.75rem;
+    background: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+    border-radius: 0.375rem;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+  }
+
+  .kp-finalize__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+
+  /* ──────────────────────────────────────────────────────────────
+     Dark mode
+     Everything above is light-only (hardcoded hex). These overrides
+     re-skin every surface for html.dark. Structural surfaces pull the
+     themed tokens (AFL resolves them to its navy ramp); the green
+     "keep" / red "cut" semantics get explicit dark tints since no
+     single token carries them. Plain `html.dark` — NOT :global() —
+     because this whole block is already `is:global`, where :global()
+     ships as dead literal CSS.
+     ────────────────────────────────────────────────────────────── */
+  html.dark .kp-intro,
+  html.dark .kp-toolbar,
+  html.dark .kp-zone,
+  html.dark .kp-statusbar,
+  html.dark .kp-picks {
+    background: var(--card-bg, #1e1e1e);
+    box-shadow: 0 0 0 1px var(--content-border, #5f6885);
+  }
+
+  html.dark .kp-intro__title {
+    color: var(--page-text, #ededed);
+  }
+
+  html.dark .kp-intro__copy,
+  html.dark .kp-status,
+  html.dark .kp-counter,
+  html.dark .kp-picks__count {
+    color: var(--content-text-muted, #8a8a8a);
+  }
+
+  html.dark .kp-toolbar__control,
+  html.dark .kp-toolbar__value {
+    color: var(--content-text-muted, #8a8a8a);
+  }
+
+  html.dark .kp-lineup-meter__group {
+    background: var(--content-bg-muted, #181818);
+    color: var(--content-text-muted, #8a8a8a);
+  }
+
+  html.dark .kp-lineup-meter__group strong {
+    color: var(--page-text, #ededed);
+  }
+
+  html.dark .kp-lineup-meter__group--over {
+    background: color-mix(in srgb, #f59e0b 20%, var(--card-surface, #16283c));
+    color: #fcd34d;
+  }
+
+  html.dark .kp-lineup-meter__group--over strong {
+    color: #fcd34d;
+  }
+
+  html.dark .kp-card__stat-line {
+    color: var(--content-text-muted, #8a8a8a);
+  }
+
+  html.dark .kp-card__trend--up {
+    color: var(--color-success, #34d399);
+  }
+
+  html.dark .kp-card__trend--down {
+    color: var(--color-error, #f87171);
+  }
+
+  html.dark .kp-zone__title,
+  html.dark .kp-picks__title {
+    color: var(--color-gray-700, #c0c0c0);
+  }
+
+  html.dark .kp-counter__sep {
+    color: var(--content-border, #5f6885);
+  }
+
+  html.dark .kp-zone.is-drop-target {
+    outline-color: var(--league-accent, #ef5350);
+  }
+
+  /* Keeper zone at capacity — soft green wash, not the light mint. */
+  html.dark .kp-zone--full {
+    background: color-mix(in srgb, var(--color-success, #34d399) 12%, var(--card-surface, #16283c));
+  }
+
+  html.dark .kp-zone__icon--keep {
+    background: color-mix(in srgb, var(--color-success, #34d399) 20%, transparent);
+    color: var(--color-success-dark, #6ee7b7);
+  }
+
+  html.dark .kp-zone__icon--cut {
+    background: color-mix(in srgb, var(--color-error, #f87171) 20%, transparent);
+    color: var(--color-error-dark, #fca5a5);
+  }
+
+  /* Slots */
+  html.dark .kp-slot {
+    border-color: var(--content-border, #5f6885);
+  }
+
+  html.dark .kp-slot--empty .kp-slot__hint {
+    color: var(--content-text-muted, #8a8a8a);
+  }
+
+  html.dark .kp-slot__num {
+    background: var(--content-bg-muted, #181818);
+    color: var(--content-text-muted, #8a8a8a);
+    border-color: var(--content-border, #5f6885);
+  }
+
+  html.dark .kp-slot--filled {
+    background: color-mix(in srgb, var(--color-success, #34d399) 14%, var(--card-surface, #16283c));
+    border-color: color-mix(in srgb, var(--color-success, #34d399) 45%, transparent);
+  }
+
+  /* Green here is the "filled / confirmed" affordance, not a brand color —
+     so it reads from --color-success, not TheLeague's --color-secondary. */
+  html.dark .kp-slot--filled .kp-slot__num {
+    background: var(--color-success, #34d399);
+    color: #06281c;
+    border-color: var(--color-success, #34d399);
+  }
+
+  html.dark .kp-slot--age-filtered::after {
+    color: var(--content-text-muted, #8a8a8a);
+  }
+
+  html.dark .kp-slot__name {
+    color: var(--page-text, #ededed);
+  }
+
+  html.dark .kp-slot__pos,
+  html.dark .kp-card__age {
+    color: var(--content-text-muted, #8a8a8a);
+  }
+
+  /* Status kinds */
+  html.dark .kp-status[data-kind="work"] {
+    color: var(--content-text-muted, #8a8a8a);
+  }
+
+  html.dark .kp-status[data-kind="ok"] {
+    color: var(--color-success, #34d399);
+  }
+
+  html.dark .kp-status[data-kind="err"] {
+    color: var(--color-error, #f87171);
+  }
+
+  /* Action buttons */
+  html.dark .kp-btn--ghost {
+    color: var(--content-text-muted, #8a8a8a);
+    border-color: var(--content-border, #5f6885);
+  }
+
+  html.dark .kp-btn--ghost:hover:not(:disabled) {
+    background: var(--content-bg-accent, #2a2a2a);
+  }
+
+  html.dark .kp-btn--primary {
+    background: var(--color-success, #34d399);
+    color: #06281c;
+  }
+
+  html.dark .kp-btn--primary:hover:not(:disabled) {
+    background: var(--color-success-dark, #6ee7b7);
+  }
+
+  html.dark .kp-btn--danger {
+    background: var(--color-error, #f87171);
+    color: #2a0808;
+  }
+
+  html.dark .kp-btn--danger:hover:not(:disabled) {
+    background: var(--color-error-dark, #fca5a5);
+  }
+
+  /* Cut-pool cards */
+  html.dark .kp-card {
+    background: var(--card-surface, #16283c);
+    border-color: var(--content-border, #5f6885);
+  }
+
+  html.dark .kp-card:hover {
+    border-color: var(--league-accent, #ef5350);
+  }
+
+  html.dark .kp-card__ir-pill {
+    background: color-mix(in srgb, var(--color-error, #f87171) 20%, transparent);
+    color: var(--color-error-dark, #fca5a5);
+  }
+
+  /* Draft-pick tiles */
+  html.dark .kp-picks__pick {
+    background: var(--content-bg-muted, #181818);
+    color: var(--color-gray-800, #d8d8d8);
+  }
+
+  html.dark .kp-picks__via {
+    color: var(--content-text-muted, #8a8a8a);
+  }
+
+  /* Finalize modal */
+  html.dark .kp-finalize__content {
+    background: var(--card-surface, #16283c);
+    box-shadow: 0 0 0 1px var(--content-border, #5f6885), 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+  }
+
+  html.dark .kp-finalize__title {
+    color: var(--page-text, #ededed);
+  }
+
+  html.dark .kp-finalize__copy,
+  html.dark .kp-finalize__col h4,
+  html.dark .kp-finalize__progress-label {
+    color: var(--content-text-muted, #8a8a8a);
+  }
+
+  html.dark .kp-finalize__col ul {
+    color: var(--page-text, #ededed);
+  }
+
+  html.dark .kp-finalize__close {
+    color: var(--content-text-muted, #8a8a8a);
+  }
+
+  html.dark .kp-finalize__close:hover {
+    background: var(--content-bg-accent, #2a2a2a);
+  }
+
+  html.dark .kp-finalize__bar {
+    background: var(--content-bg-muted, #181818);
+  }
+
+  html.dark .kp-finalize__bar span {
+    background: var(--color-success, #34d399);
+  }
+
+  html.dark .kp-finalize__error {
+    background: color-mix(in srgb, var(--color-error, #f87171) 12%, transparent);
+    color: var(--color-error-dark, #fca5a5);
+    border-color: color-mix(in srgb, var(--color-error, #f87171) 35%, transparent);
+  }
+
+  /* .kp-slots and .kp-cards used to be forced to a single column here. They
+     no longer need a breakpoint at all: repeat(auto-fill, minmax(min(380px,
+     100%), 1fr)) already measures the grid's own box, so it collapses to one
+     column below a 768px panel and never overflows a narrower one. */
+  @container kp-panel (max-width: 560px) {
+    /* Below this the slider and the checkbox can no longer share a row
+       without the slider being squeezed to a stub. */
+    .kp-toolbar {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .kp-age-slider {
+      width: 100%;
+    }
+  }
+
+  /* .kp-finalize is position: fixed and a SIBLING of .keeper-planner — it sits
+     outside the container above, and is sized by the window, so this one stays
+     a viewport query on purpose. */
+  @media (max-width: 720px) {
+    .kp-finalize__lists {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

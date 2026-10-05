@@ -8,7 +8,7 @@ import {
   resolveAllPlayRecord,
   calculateGamesBack,
   formatGamesBack,
-} from '../src/components/theleague/standings/standings-cells';
+} from '../src/components/shared/standings/standings-cells';
 
 describe('parseWLT', () => {
   it('parses a full W-L-T triple', () => {

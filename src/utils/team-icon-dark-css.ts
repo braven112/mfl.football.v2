@@ -17,7 +17,7 @@
  * render identically in both themes. Browsers without `content` support on
  * img elements (pre-2023) simply keep the light icon.
  *
- * Consumed by `src/components/TeamIconDarkStyles.astro`, which is included
+ * Consumed by `src/components/shared/TeamIconDarkStyles.astro`, which is included
  * once in the shared layout <head>.
  */
 

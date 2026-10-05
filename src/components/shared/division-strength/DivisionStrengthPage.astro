@@ -38,12 +38,12 @@
  * disclosure is a native `<details>`. Nothing hydrates, nothing is serialized
  * to the client, and every view is bookmarkable. The repo's own rule — a
  * control whose only job is switching a URL param should be an `<a href>` —
- * is why `components/theleague/YearSelector.astro` is NOT used here: it
+ * is why `components/shared/YearSelector.astro` is NOT used here: it
  * drives navigation from an inline `onchange`, so it dead-ends without script.
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
-import Breadcrumbs from '../../theleague/Breadcrumbs.astro';
-import MetricCard from '../../theleague/MetricCard.astro';
+import Breadcrumbs from '../Breadcrumbs.astro';
+import MetricCard from '../MetricCard.astro';
 import DivisionMatrix from './DivisionMatrix.astro';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { getLeagueBySlug } from '../../../config/leagues';
@@ -1530,14 +1530,14 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
   .season-chip {
     display: inline-flex;
     align-items: center;
-    min-height: 44px;
+    min-height: var(--touch-target-min);
     padding: 0 0.75rem;
     border: 1px solid var(--ds-border);
     border-radius: var(--radius-full, 999px);
     background: var(--ds-surface);
     color: var(--ds-ink);
     text-decoration: none;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
     scroll-snap-align: start;
@@ -1589,7 +1589,7 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
     flex-wrap: wrap;
     gap: 0.25rem 1rem;
     margin: 0 0 1.5rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--ds-ink-muted);
   }
   .rail-legend__key { display: inline-flex; align-items: center; gap: 0.375rem; }
@@ -1638,7 +1638,7 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
   }
   .verdict-list li:last-child { border-bottom: none; }
   .verdict-rank {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     color: var(--ds-ink-muted);
     min-width: 1rem;
@@ -1689,7 +1689,7 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
   .era-board .verdict-value { text-align: right; }
   .era-board__inter {
     display: block;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     color: var(--ds-ink-muted);
   }
@@ -1722,7 +1722,7 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
     display: inline-block;
     padding: 0.0625rem 0.4375rem;
     border-radius: var(--radius-full, 999px);
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     line-height: 1.5;
     white-space: nowrap;
@@ -1762,7 +1762,7 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
   .season-team-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-variant-numeric: tabular-nums;
     position: relative;
   }
@@ -1780,7 +1780,7 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
     z-index: 1;
     background: var(--ds-surface);
     box-shadow: inset 0 -1px 0 var(--ds-border);
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -1821,7 +1821,7 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
     display: inline-flex;
     align-items: center;
     gap: 0.25rem;
-    min-height: 44px;
+    min-height: var(--touch-target-min);
     color: inherit;
     text-decoration: none;
   }
@@ -1849,7 +1849,7 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
   .name-link:hover { text-decoration: underline; }
   .span-text {
     display: block;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--ds-ink-muted);
     font-variant-numeric: tabular-nums;
     margin-top: 0.125rem;
@@ -1858,9 +1858,9 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
   .strength-row--retired .name-link { font-weight: 600; }
 
   .rec { display: block; font-weight: 600; }
-  .pct { display: block; font-size: 0.75rem; color: var(--ds-ink-muted); }
+  .pct { display: block; font-size: var(--font-size-xs); color: var(--ds-ink-muted); }
   .metric-col { min-width: 7rem; }
-  .unit { font-weight: 400; font-size: 0.75rem; color: var(--ds-ink-muted); }
+  .unit { font-weight: 400; font-size: var(--font-size-xs); color: var(--ds-ink-muted); }
 
   /* ── Current-lineup table ──────────────────────────────────────────────── */
   /* Both tables now carry a crest column, so the floor applies to both. The
@@ -1907,7 +1907,7 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
     background: color-mix(in srgb, var(--ds-accent) 14%, transparent);
     border: 1px solid color-mix(in srgb, var(--ds-accent) 35%, transparent);
     color: var(--ds-accent);
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     white-space: nowrap;
   }
@@ -1923,7 +1923,7 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
   }
   .whats-changed__kicker {
     margin: 0 0 0.5rem;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.09em;
@@ -1936,7 +1936,7 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
     flex-wrap: wrap;
     gap: 0.5rem;
     padding: 0.25rem 0;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
   }
   .whats-changed__div {
     font-weight: 700;
@@ -1950,7 +1950,7 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
   .whats-changed__item a { color: inherit; }
   .whats-changed__note {
     margin: 0.5rem 0 0;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     line-height: 1.5;
     color: var(--ds-ink-muted);
   }
@@ -1972,7 +1972,7 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
     gap: 0.5rem;
     padding: 0.4375rem 0;
     border-bottom: 1px solid var(--ds-border);
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
   }
   .preview-member:last-child { border-bottom: none; }
   .preview-member img { width: 26px; height: 26px; object-fit: contain; flex: 0 0 auto; }
@@ -1998,7 +1998,7 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
   /* Why the era before this one ended — a takeover keeps the crests, so
      without it two rows can look identical. */
   .era-change {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     color: var(--ds-ink-muted);
     border: 1px solid var(--ds-border);
     border-radius: 999px;
@@ -2019,7 +2019,7 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
     background: var(--ds-surface-muted);
     border: 1px solid var(--ds-border);
     color: var(--ds-ink-muted);
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     text-align: center;
     vertical-align: 1px;
@@ -2052,7 +2052,7 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
   }
   .verdict-banner__kicker {
     margin: 0;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.1em;
@@ -2185,8 +2185,8 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
     align-items: center;
     gap: 0.5rem;
     cursor: pointer;
-    min-height: 44px;
-    font-size: 0.875rem;
+    min-height: var(--touch-target-min);
+    font-size: var(--font-size-sm);
     list-style: none;
   }
   .owner-eras__summary::-webkit-details-marker { display: none; }
@@ -2202,7 +2202,7 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
     border-right: 2px solid var(--ds-ink-muted);
     border-bottom: 2px solid var(--ds-ink-muted);
     transform: rotate(-45deg);
-    transition: transform var(--transition-base, 0.2s ease);
+    transition: transform var(--transition-base);
   }
   .owner-eras[open] .owner-eras__caret { transform: rotate(45deg); }
   .owner-eras__faces { display: inline-flex; }
@@ -2248,7 +2248,7 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
   :global(html.dark) .owner-era-table thead th { background: var(--color-surface-3); }
   .table-note {
     margin: 0.625rem 0 0.5rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--ds-ink-muted);
     line-height: 1.5;
   }
@@ -2315,14 +2315,14 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
     border: 1px solid var(--ds-border);
     border-left: 3px solid var(--ds-ink-muted);
     border-radius: var(--radius-md, 0.5rem);
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     line-height: 1.55;
     color: var(--ds-ink);
   }
   .footnote {
     margin: 2.5rem 0 0;
     max-width: 70ch;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     line-height: 1.6;
     color: var(--ds-ink-muted);
   }

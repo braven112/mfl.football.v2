@@ -1,0 +1,127 @@
+---
+/**
+ * Full calendar for a package league: every event the homepage's What's Next
+ * picks from (src/utils/package-league-events.ts) — the league's MFL calendar
+ * plus derived season dates — split into coming up and already past.
+ *
+ * Shared by every package league; the route hands in its literal globs.
+ * Semantic tokens only.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import { getLeagueBySlug, type CanonicalLeagueSlug } from '../../../config/leagues';
+import { loadSeasonFeed, type LazyFeedGlob } from '../../../utils/mfl-feed-glob';
+import { getCurrentSeasonYear } from '../../../utils/league-year';
+import { parseTestDate } from '../../../utils/hero-resolver';
+import { buildPackageLeagueEvents, type MflCalendarEvent } from '../../../utils/package-league-events';
+import { spriteUrl } from '../../../utils/sprite-url';
+import { CATEGORY_LABELS, type ResolvedLeagueEvent } from '../../../types/league-events';
+
+interface Props {
+  leagueSlug: CanonicalLeagueSlug;
+  calendarFeeds: LazyFeedGlob;
+  playoffFeeds: LazyFeedGlob;
+}
+
+const { leagueSlug, calendarFeeds, playoffFeeds } = Astro.props;
+const league = getLeagueBySlug(leagueSlug)!;
+const now = parseTestDate(Astro.url.searchParams.get('testDate')) ?? new Date();
+const seasonYear = getCurrentSeasonYear(now);
+
+const seasons = await Promise.all(
+  [seasonYear, seasonYear + 1].map(async (y) => ({
+    seasonYear: y,
+    calendar: ((await loadSeasonFeed(calendarFeeds, y)) as MflCalendarEvent[] | null) ?? null,
+    playoffBrackets: await loadSeasonFeed(playoffFeeds, y),
+  })),
+);
+const events = buildPackageLeagueEvents({ league, seasons, referenceDate: now });
+const upcoming = events.filter((e) => !e.isPast);
+const past = events.filter((e) => e.isPast).reverse();
+const hasMflCalendar = seasons.some((s) => (s.calendar?.length ?? 0) > 0);
+
+const dateFmt = new Intl.DateTimeFormat('en-US', {
+  weekday: 'short',
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+  timeZone: 'America/Los_Angeles',
+});
+const until = (e: ResolvedLeagueEvent) => {
+  if (e.isActive) return 'Happening now';
+  const d = e.daysUntilStartCalendar;
+  if (d === 0) return 'Today';
+  if (d === 1) return 'Tomorrow';
+  if (d > 0) return `In ${d} days`;
+  return '';
+};
+---
+
+<TheLeagueLayout title={`Calendar | ${league.name}`}>
+  <div class="pkg-cal">
+    <header class="pkg-cal__head">
+      <h1>{league.shortName ?? league.name} Calendar</h1>
+      <p>
+        The league's dates from its MFL calendar, plus kickoff, playoffs and the new league year.
+        {!hasMflCalendar && ' The commissioner’s MFL calendar will appear here once it syncs.'}
+      </p>
+    </header>
+
+    {[{ title: 'Coming up', list: upcoming }, { title: 'Earlier', list: past }].map(({ title, list }) =>
+      list.length > 0 && (
+        <section class="pkg-cal__section">
+          <h2>{title}</h2>
+          <ul class="pkg-cal__list">
+            {list.map((e) => (
+              <li class:list={['pkg-cal__event', { 'pkg-cal__event--active': e.isActive, 'pkg-cal__event--past': e.isPast }]}>
+                {e.definition.icon && (
+                  <svg class="pkg-cal__icon" width="22" height="22" aria-hidden="true">
+                    <use href={`${spriteUrl}#icon-${e.definition.icon}`} />
+                  </svg>
+                )}
+                <div class="pkg-cal__text">
+                  <span class="pkg-cal__cat">{CATEGORY_LABELS[e.definition.category]}</span>
+                  <h3>{e.definition.name}</h3>
+                  <p>{e.definition.description}</p>
+                </div>
+                <div class="pkg-cal__when">
+                  <span>{dateFmt.format(e.startDate)}</span>
+                  {until(e) && <span class="pkg-cal__until">{until(e)}</span>}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ),
+    )}
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .pkg-cal { max-width: 900px; margin: 0 auto; padding: 1.5rem 1rem 3rem; color: var(--page-text); }
+  .pkg-cal__head h1 { margin: 0 0 0.35rem; }
+  .pkg-cal__head p { margin: 0 0 1.5rem; color: var(--content-text-muted); }
+  .pkg-cal__section h2 { font-size: 1.1rem; color: var(--league-accent-fg, var(--league-accent)); margin: 1.5rem 0 0.75rem; }
+  .pkg-cal__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.6rem; }
+  .pkg-cal__event {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 0.85rem;
+    align-items: center;
+    padding: 0.85rem 1rem;
+    background: var(--card-bg);
+    border: 1px solid var(--content-border);
+    border-radius: var(--radius-lg);
+  }
+  .pkg-cal__event--active { border-color: var(--color-primary); outline: 1px solid var(--color-primary); }
+  .pkg-cal__event--past { opacity: 0.7; }
+  .pkg-cal__icon { color: var(--color-primary); }
+  .pkg-cal__cat { font-size: var(--font-size-2xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--content-text-muted); }
+  .pkg-cal__text h3 { margin: 0.1rem 0; font-size: var(--font-size-base); }
+  .pkg-cal__text p { margin: 0; font-size: var(--font-size-sm); color: var(--content-text-muted); }
+  .pkg-cal__when { display: grid; justify-items: end; gap: 0.15rem; font-size: var(--font-size-sm); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .pkg-cal__until { font-weight: 700; color: var(--color-primary-light); }
+  @media (max-width: 600px) {
+    .pkg-cal__event { grid-template-columns: auto 1fr; }
+    .pkg-cal__when { grid-column: 2; justify-items: start; }
+  }
+</style>

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { resolve } from 'path';
 import { LEAGUES } from '../src/config/leagues-data.mjs';
 
@@ -60,11 +60,12 @@ interface TopPlayersPayload {
 const ROOT = resolve(__dirname, '..');
 const readJson = (p: string) => JSON.parse(readFileSync(resolve(ROOT, p), 'utf-8'));
 
-// Every league that runs full management gets the page. Best Ball is
-// draft-only with no live MFL syncing, so it has no scoring data behind a
-// leaderboard (docs/claude/rules/best-ball.md).
+// Every league that SHIPS the page gets the payload. Best Ball is draft-only
+// with no live MFL syncing, so it has no scoring data behind a leaderboard
+// (docs/claude/rules/best-ball.md); a package league (archies) launches
+// without the page and gets the payload when it turns the page on.
 const SCORING_LEAGUES = Object.values(LEAGUES as Record<string, { slug: string; dataPath: string; bestBall?: boolean }>)
-  .filter((l) => !l.bestBall)
+  .filter((l) => !l.bestBall && existsSync(resolve(ROOT, 'src/pages', l.slug, 'top-players.astro')))
   .map((l) => ({ slug: l.slug, dataPath: l.dataPath }));
 
 describe('top-players derived payload', () => {
@@ -238,16 +239,13 @@ describe('the roster sync recomputes what it invalidates', () => {
     'utf-8',
   );
 
-  it('runs both leagues’ Top Players computation', () => {
-    // Anchored to the END of the line, not `\b`. A word boundary matches
-    // between `players` and the `:` in `compute:top-players:afl`, so the AFL
-    // command alone satisfied a `\b` form of the first assertion — delete
-    // TheLeague's line and the guard stays green while the workflow only
-    // recomputes one of the two leagues. Caught in review on this PR.
+  it('runs every Top Players league’s computation, from the registry', () => {
+    // The league list is the registry's (scripts/lib/league-jobs.mjs
+    // `top-players`), looped — not one hand-written line per league, which is
+    // how a league could lose its leaderboard by being left off a list.
+    expect(WORKFLOW).toMatch(/league-jobs\.mjs top-players\b/);
     expect(WORKFLOW, 'the sync commits rosters.json; it must recompute what derives from it')
-      .toMatch(/^\s*pnpm run compute:top-players$/m);
-    expect(WORKFLOW, 'the AFL has its own leaderboard and its own week range')
-      .toMatch(/^\s*pnpm run compute:top-players:afl$/m);
+      .toMatch(/^\s*pnpm run compute:top-players --league="\$SLUG"$/m);
   });
 
   it('runs it through the package scripts prebuild uses, not a second invocation', () => {

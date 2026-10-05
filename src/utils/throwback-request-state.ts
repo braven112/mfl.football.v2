@@ -24,18 +24,12 @@ import { getAllThrowbackPreferences } from './throwback-store';
 import type { ThrowbackPick } from './throwback-identity';
 import { getCurrentNFLWeek } from './current-week';
 import { getTestDateFromSearchParams } from './league-year';
-import theleagueConfig from '../data/theleague.config.json';
-import aflConfig from '../../data/afl-fantasy/afl.config.json';
+import { getLeagueTeams } from './league-config';
 
 export interface ThrowbackRequestState {
   throwbackActive: boolean;
   throwbackOverrides: Record<string, ThrowbackPick>;
 }
-
-const TEAMS_BY_SCOPE: Record<string, any[]> = {
-  theleague: (theleagueConfig as any).teams ?? [],
-  afl: (aflConfig as any).teams ?? [],
-};
 
 /**
  * Module-scope, so it is shared across requests on a warm instance. That is
@@ -57,7 +51,7 @@ async function cachedThrowbackOverrides(scope: string): Promise<Record<string, T
   if (hit && nowMs - hit.at < THROWBACK_CACHE_TTL_MS) return hit.value;
 
   const value = await getAllThrowbackPreferences(
-    (TEAMS_BY_SCOPE[scope] ?? []).map((t: any) => t.franchiseId),
+    getLeagueTeams(scope).map((t: any) => t.franchiseId),
     scope as Parameters<typeof getAllThrowbackPreferences>[1]
   );
   throwbackCache.set(scope, { at: nowMs, value });

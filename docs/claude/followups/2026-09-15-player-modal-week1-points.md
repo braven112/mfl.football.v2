@@ -52,7 +52,7 @@ Forward fix, no revert.
 - `src/pages/theleague/{players,projected-free-agents,rosters}.astro` — prefer
   `nflSchedule-full.json`, fall back to `nflSchedule.json` (older seasons were
   synced in the offseason and carry the full shape there).
-- `src/components/theleague/PlayerDetailsModal.astro` — "1 Game", not "1 Games".
+- `src/components/shared/PlayerDetailsModal.astro` — "1 Game", not "1 Games".
 - Both leagues' 2026 feeds re-synced so the fix landed with the deploy.
 - `tests/weekly-player-results-schedule.test.ts` shipped **with** the fix, wired
   into `path-guard.json` for `mfl-weekly-results` and `storage-and-build`.
@@ -83,7 +83,7 @@ Forward fix, no revert.
 
 - [ ] **F2 — `window._weeklyPlayerData` is cached across ClientRouter navigations and never keyed by league**
   - Source: Claude review, cross-league lens
-  - Where: `src/components/theleague/PlayerDetailsModal.astro:1779-1787` —
+  - Where: `src/components/shared/PlayerDetailsModal.astro:1779-1787` —
     `if (!window._weeklyPlayerData) { … }` caches on first open and never
     re-reads
   - Why deferred: a genuine cross-league data leak but not the reported symptom,

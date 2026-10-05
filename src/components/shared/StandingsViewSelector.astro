@@ -1,0 +1,158 @@
+---
+import { spriteUrl } from '../../utils/sprite-url';
+
+export interface Props {
+  activeView: 'division' | 'league' | 'all_play';
+  /**
+   * Hide the All-Play tab for seasons that predate the side competition
+   * (AFL: before 2017 — see TIER_COMPETITION_FIRST_SEASON in afl-tier.ts).
+   */
+  showAllPlay?: boolean;
+  /**
+   * Label of the league-wide tab. 'Playoff' where that view is the playoff
+   * ladder (TheLeague, the AFL); a league whose playoff seeding we do not
+   * model shows its plain league table as 'League' (archies).
+   */
+  leagueLabel?: string;
+}
+
+const { activeView, showAllPlay = true, leagueLabel = 'Playoff' } = Astro.props;
+
+const ALL_VIEWS = [
+  { key: 'division', label: 'Division', icon: 'icon-numberone', aria: 'Division Standings' },
+  { key: 'league', label: leagueLabel, icon: 'icon-trophy', aria: `${leagueLabel} Standings` },
+  { key: 'all_play', label: 'All-Play', icon: 'icon-line-chart', aria: 'All-Play Standings' },
+] as const;
+
+const VIEWS = ALL_VIEWS.filter((v) => v.key !== 'all_play' || showAllPlay);
+
+// Build each tab's href from the current URL so other params (e.g. ?year=)
+// are preserved. Real <a> links work without JS and survive view transitions,
+// unlike the previous button + click-handler approach (the handler never bound
+// under the ClientRouter, leaving the tabs dead).
+function viewHref(view: string): string {
+  const url = new URL(Astro.url.href);
+  url.searchParams.set('view', view);
+  return url.pathname + url.search;
+}
+---
+
+<div class="view-selector">
+  {VIEWS.map((v) => (
+    <a
+      href={viewHref(v.key)}
+      class={`view-tab ${activeView === v.key ? 'active' : ''}`}
+      data-active={activeView === v.key ? 'true' : 'false'}
+      aria-label={v.aria}
+      aria-current={activeView === v.key ? 'page' : undefined}
+      title={v.aria}
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="view-tab__icon">
+        <use href={`${spriteUrl}#${v.icon}`}></use>
+      </svg>
+      <span class="view-tab__label">{v.label}</span>
+    </a>
+  ))}
+</div>
+
+<style>
+  .view-selector {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .view-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    padding: 0.5rem .7rem;
+    border: 2px solid transparent;
+    border-radius: 0.5rem;
+    background: var(--content-bg-muted, #f8fafc);
+    cursor: pointer;
+    transition: all var(--transition-base);
+    position: relative;
+    min-width: 69px;
+    text-decoration: none;
+    color: inherit;
+  }
+  @media (min-width: 640px) {
+    .view-tab {
+    padding: 0.75rem;
+    }
+  }
+
+  .view-tab:hover {
+    background: var(--table-row-bg-hover, #e2e8f0);
+    border-color: var(--content-border, #cbd5e1);
+  }
+
+  .view-tab[data-active="true"] {
+    background: var(--league-selected-fill, color-mix(in srgb, var(--color-primary, #3b82f6) 18%, var(--content-bg, #fff)));
+    border-color: var(--color-primary, #3b82f6);
+  }
+
+  .view-tab__icon {
+    max-width: var(--icon-btn-default-size, 30px);
+    max-height: var(--icon-btn-default-size, 30px);
+    width: 100%;
+    height: 100%;
+    fill: var(--icon-btn-default-text-color);
+    color: var(--icon-btn-default-text-color);
+  }
+
+  .view-tab[data-active="true"] .view-tab__icon {
+    fill: var(--icon-btn-default-focus-color);
+    color: var(--icon-btn-default-focus-color);
+  }
+
+  .view-tab__label {
+    position: absolute;
+    bottom: -1.75rem;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: var(--font-size-xs);
+    font-weight: 500;
+    color: var(--content-text-muted, #64748b);
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--transition-base);
+  }
+
+  .view-tab:hover .view-tab__label,
+  .view-tab:focus .view-tab__label {
+    opacity: 1;
+  }
+
+  .view-tab[data-active="true"] .view-tab__label {
+    color: var(--color-primary, #3b82f6);
+  }
+
+  @media (max-width: 640px) {
+    /* Keep all tabs on a single row on narrow screens — let them share the
+       available width and shrink instead of wrapping the last tab below. */
+    .view-selector {
+      flex-wrap: nowrap;
+      width: 100%;
+      justify-content: center;
+    }
+
+    .view-tab {
+      flex: 1 1 0;
+      min-width: 0;
+      padding: 0.5rem 0.35rem;
+    }
+
+    .view-tab__label {
+      position: static;
+      transform: none;
+      opacity: 1;
+      font-size: 0.7rem;
+      margin-top: 0.25rem;
+    }
+  }
+</style>

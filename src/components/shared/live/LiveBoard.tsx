@@ -30,7 +30,14 @@ import LvFeedStatus from './LvFeedStatus';
 import LvStaleNotice from './LvStaleNotice';
 import LvWeekPicker from './LvWeekPicker';
 import LvStandings from './LvStandings';
+import { isMatchupFinal } from '../../../utils/live/standings-projection';
 import LvLeaders from './LvLeaders';
+import LvGroupPicker from './LvGroupPicker';
+import {
+  ALL_GROUPS,
+  filterMatchupsByGroup,
+  viewerGroupId as groupOfViewer,
+} from '../../../utils/live/board-groups';
 import {
   nextHoldExpiry,
   resolvePanelViews,
@@ -117,18 +124,11 @@ export interface LiveBoardProps {
   hideWeekPicker?: boolean;
   /** Intercept the week change instead of navigating. For a story. */
   onSelectWeek?: (week: number) => void;
-}
-
-/**
- * Every starter on both sides has no game-time left.
- *
- * Derived from the ROWS rather than from a flag, so it cannot disagree with
- * the numbers beside it — and `yetToPlay` alone is not enough, since a player
- * whose game is in progress has already started but has not finished.
- */
-function isMatchupFinal(matchup: LiveMatchup): boolean {
-  const rows = [...matchup.sides[0].players, ...matchup.sides[1].players];
-  return rows.length > 0 && rows.every((r) => r.secondsRemaining <= 0);
+  /**
+   * MFL Live's free tier: the Standings tab opens on Final with Live and
+   * Projected locked (`src/utils/mfl-live-pro.ts`). League sites never pass it.
+   */
+  standingsProLocked?: boolean;
 }
 
 /**
@@ -145,6 +145,11 @@ function PanelCards({
   panel: LivePanel;
   card: (panel: LivePanel, matchup: LiveMatchup, lead: boolean) => JSX.Element;
 }): JSX.Element {
+  // A panel with divisions (Archie's) gets the picker; every other board
+  // renders exactly as it always has.
+  if (panel.groups && panel.groups.length > 1) {
+    return <GroupedPanelCards panel={panel} groups={panel.groups} card={card} />;
+  }
   const ordered = orderPanelMatchups(panel.matchups);
   return (
     <>
@@ -156,6 +161,59 @@ function PanelCards({
       {ordered.rest.length > 0 && (
         <div className="lv-cards">{ordered.rest.map((m) => card(panel, m, false))}</div>
       )}
+    </>
+  );
+}
+
+/**
+ * A board too long for one scroll, cut by division.
+ *
+ * The viewer's own games stay ABOVE the chips and are never filtered: they
+ * are the reason anyone opened the page, and a division pick that hid them
+ * would be a way to lose your own score. The rest follow the pick, still in
+ * the board's usual closest-first order. Signed in, the pick starts on the
+ * viewer's division; signed out there is no division to start on, so it
+ * starts on All.
+ *
+ * The choice is component state, keyed by the panel's league like the
+ * section around it, so a poll (which replaces the board wholesale) keeps it.
+ */
+function GroupedPanelCards({
+  panel,
+  groups,
+  card,
+}: {
+  panel: LivePanel;
+  groups: NonNullable<LivePanel['groups']>;
+  card: (panel: LivePanel, matchup: LiveMatchup, lead: boolean) => JSX.Element;
+}): JSX.Element {
+  const mine = groupOfViewer(groups, panel.viewerFranchiseId);
+  const [pick, setPick] = useState<string>(mine ?? ALL_GROUPS);
+
+  const ordered = orderPanelMatchups(panel.matchups);
+  const yours = ordered.hasYours ? ordered.featured : [];
+  const others = orderPanelMatchups(
+    filterMatchupsByGroup(
+      panel.matchups.filter((m) => !yours.includes(m)),
+      groups,
+      pick,
+    ),
+  );
+  // With no games of the viewer's own, the closest game in the pick leads, as
+  // on every other board.
+  const rest = ordered.hasYours ? [...others.featured, ...others.rest] : others.rest;
+  const lead = ordered.hasYours ? yours : others.featured;
+
+  return (
+    <>
+      {ordered.hasYours && lead.length > 0 && (
+        <div className="lv-cards lv-cards--lead">{lead.map((m) => card(panel, m, true))}</div>
+      )}
+      <LvGroupPicker groups={groups} viewerGroupId={mine} value={pick} onChange={setPick} />
+      {!ordered.hasYours && lead.length > 0 && (
+        <div className="lv-cards lv-cards--lead">{lead.map((m) => card(panel, m, true))}</div>
+      )}
+      {rest.length > 0 && <div className="lv-cards">{rest.map((m) => card(panel, m, false))}</div>}
     </>
   );
 }
@@ -174,6 +232,7 @@ export default function LiveBoard({
   extraFeeds,
   hideWeekPicker = false,
   onSelectWeek,
+  standingsProLocked = false,
 }: LiveBoardProps): JSX.Element {
   const [board, setBoard] = useState<Board>(initialBoard);
   /**
@@ -608,19 +667,20 @@ export default function LiveBoard({
           momentPartial={detail.partial}
           viewerFirst={viewerFirst}
           isFinal={isMatchupFinal(open.matchup)}
-          status={
-            <LvFeedStatus
-              feeds={feeds}
-              anyLive={gamesLive > 0}
-              gamesLive={gamesLive}
-              compact
-            />
-          }
+          // Only on a LIVE board: the bundled sample has no box scores to
+          // itemize, so every sheet there would read "Loading stats…" forever.
+          leagueId={demoLabel || !pollUrl ? undefined : open.panel.leagueId}
+          year={board.year}
           onBack={() => setSelected(null)}
         />
         </>
       ) : activeTab === 'standings' && soloPanel ? (
-        <LvStandings rows={soloPanel.standings ?? null} leagueName={soloPanel.leagueName} />
+        <LvStandings
+          rows={soloPanel.standings ?? null}
+          leagueName={soloPanel.leagueName}
+          matchups={soloPanel.matchups}
+          proLocked={standingsProLocked}
+        />
       ) : (
         <>
           {panelViews.map(({ panel, heldSince: panelHeld }) => (

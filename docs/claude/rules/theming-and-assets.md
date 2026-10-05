@@ -25,6 +25,208 @@ matches what was rendering — otherwise keep the light literal and override
 only under `html.dark` (see the admin-hub gate pills for the pattern).
 
 
+## League themes — a league's palette lives in ONE file
+
+Each league's colors are a theme file, `src/themes/<id>.json`, named by the
+league's `theme` in the registry (`leagues-data.mjs`). Any league may name any
+theme; a theme is complete on its own and never inherits from another.
+`scripts/generate-league-themes.mjs` compiles them into
+`src/styles/league-themes.generated.css` (committed; imported by every layout
+and Storybook). Plan and later phases: `docs/plans/league-themes.md`.
+
+- **Edit the theme file, then run the generator.** Never hand-edit the
+  generated CSS, and never add a `html[data-league="…"]` block to
+  `tokens.css` / `tokens-dark.css` — those hold only the shared defaults.
+- **The contract is `src/config/theme-tokens.mjs`.** Every theme names every
+  token there, in `light` AND `dark`; `null` means "deliberately unset". A
+  value may be a `var()` of one of the theme's own tokens or of a shared
+  default — never of another theme. That
+  completeness is what makes the missing-dark-token trap above impossible for
+  league colors. A token in that list is declared ONLY by the generated CSS.
+- **Themed tokens outrank `:root`.** The theme blocks sit at
+  `html[data-league]` (0,1,1) and `html.dark[data-league]` (0,2,1), and the
+  default theme also covers `html:not([data-league])`. A page that overrides a
+  themed token on a bare `:root {}` silently loses — use `:root:not(.dark)`
+  for a light-only override (SplashLayout, css-customization).
+- **A non-league surface** (MFL Live's `data-league="mfl"`) maps to its theme
+  in `THEMED_SURFACES` in the generator, never through the registry.
+- **A themed fill carries the theme's text colour, never a hard-coded white.**
+  `background: var(--league-accent)` pairs with `color: var(--on-league-accent,
+  #fff)`; likewise `--color-accent`/`--on-color-accent`,
+  `--btn-primary-bg`/`--btn-primary-text`,
+  `--btn-secondary-bg`/`--btn-secondary-text`, and
+  `--color-primary-fill`/`--on-color-primary` for the primary. Archie's sky
+  blue, the AFL's dark red and Best Ball's dark emerald all carry white at
+  under 4.5:1; 103 rules shipped that way before the sweep.
+- **Heroes read `--hero-*`** (ink, surface, accent, glow, urgent, gradient,
+  anchor, highlight, pills, CTA ink), never TheLeague's navy literals. A theme
+  that leaves `--hero-gradient` and friends null keeps the composite hero's
+  per-variant ramp. **Text selection** reads `--selection-bg` / `-text`.
+- **Every slot in the contract is read somewhere** — a slot no page reads is
+  a colour a league approves and never sees. Nineteen such slots were removed
+  in Oct 2026.
+- Guard: `tests/league-themes.test.ts` — generated CSS fresh, every theme
+  complete, every league's theme exists, no themed token in the shared token
+  files, no themed token on a weak `:root`/`html` selector.
+
+## The polish layer — motion, type, states, touch, surfaces
+
+Adopted Sep 2026 from the Impeccable design guidance (pbakaus/impeccable),
+filtered to what fits a stats-dense league site. The tokens live in
+`tokens.css` / `tokens-dark.css`; the site-wide rules in `src/styles/polish.css`;
+the shared states in `src/styles/states.css`. Both stylesheets are imported by
+all four base layouts and by Storybook's preview. Guard:
+`tests/design-polish.test.ts`, which also ratchets the legacy literals below
+against `tests/fixtures/design-literal-baseline.json` (retighten with
+`node scripts/ratchet.mjs --write`).
+
+- **A stylesheet `@import`ed inside a layout's `<style>` block is SCOPED.**
+  Astro rewrites its selectors to require the layout's `data-astro-cid-*`, so
+  its rules match only the layout's own markup (header, nav, footer). Custom
+  properties survive because they inherit, which is why the token files work
+  and why nobody noticed that the site-wide `:focus-visible` ring and the
+  dark-mode `::selection` colours in them never reached page content. Global
+  STYLING goes in `polish.css` / `states.css`, imported from the layout's
+  FRONTMATTER; the token files may declare only custom properties (and
+  `@font-face`). The test enforces both.
+- **Motion: never plain `ease`.** Its slow start makes a UI feel laggy. Use
+  `var(--transition-fast|base|slow)` (150/200/300ms on `--ease-out`, expo-out),
+  or pair `--duration-*` with `--ease-out` (entering, responding),
+  `--ease-in` (leaving; run exits at ~75% of the entrance), or `--ease-in-out`
+  (toggles). No bounce/elastic curves; don't animate width/height/top/left.
+  471 hand-typed `0.15s/0.2s/0.3s ease` transitions were swept onto the tokens
+  when this landed; the rest (other durations, explicit curves) are ratcheted.
+- **Reduced motion has a global floor**: `polish.css` collapses every
+  transition and smooth scroll under `prefers-reduced-motion`. It deliberately
+  does NOT zero animations — a spinner frozen mid-sweep reads as "stuck", so
+  each loader owns its static state (`loading.css`). The test pins that.
+- **Type**: sizes come from `--font-size-*`. `--font-size-2xs` (0.6875rem) and
+  `--font-size-3xs` (0.625rem) exist for the editorial micro/table labels in
+  `docs/claude/components.md`; every exact-equal literal (0.625/0.6875/0.75/
+  0.875rem) was swept onto its token. All-caps text takes
+  `letter-spacing: var(--tracking-caps)`. Headings get
+  `text-wrap-style: balance` and prose `pretty` globally — the LONGHAND,
+  because the `text-wrap` shorthand also sets `text-wrap-mode`, the property
+  `white-space: nowrap` sets, and would fight every one-line heading.
+- **Fonts swap without reflow.** The self-hosted UFC Sans families have
+  metric-matched local-Arial fallbacks (`UFC Sans Condensed Fallback`,
+  `UFC Sans Fallback`) second in `--font-display` / `--font-numeric`. The
+  percentages are Astro's fallback formula over the woff2 metrics — re-derive
+  them if a font file changes. Vend Sans gets the same from Astro's font API.
+- **Dark mode shows elevation by lightness, not shadow.** Page `#121212` →
+  content `#1e1e1e` → card `#262626` → overlay `#313131`
+  (`--color-surface-3`, `--surface-overlay`). Dark shadows were halved: on a
+  near-black ground a shadow is mostly invisible and the visible part is murk.
+  Anything that floats (menu, popover, modal) should sit on
+  `--surface-overlay`. Dark muted text moved `#8a8a8a` → `#9a9a9a` in the same
+  change, because the old value was 4.4:1 on the card (under AA).
+- **Dark-mode text compensation**: `html.dark body` gets `letter-spacing:
+  0.01em` — light-on-dark text reads tighter. Letter-spacing only, so no
+  layout's height moves; components that set their own tracking keep it.
+- **Browser surfaces** are branded in `polish.css`: `::selection`,
+  `caret-color`, `accent-color` (native checkboxes/radios/ranges),
+  `scrollbar-color`, and `text-underline-offset` on links. All read
+  `--color-primary`, so they follow the league and the theme.
+- **Touch targets**: `--touch-target-min` (44px) replaces every hardcoded
+  `min-height/min-width: 44px` (the test forbids the literal). For a small
+  icon button, add `.hit-area` to grow its tap area without changing its box.
+- **Shadows**: use `--shadow-sm|md|lg|xl`. The common neutral literals were
+  mapped onto them; literal shadows are ratcheted.
+
+### Empty and error states
+
+`EmptyState.astro` / `ErrorState.astro` (`src/components/shared/states/`),
+their React twins in `states-react.tsx`, and `buildEmptyStateHTML` /
+`buildErrorStateHTML` (`src/utils/state-html.ts`) for markup a script builds.
+The CSS is GLOBAL on purpose — a scoped copy would miss JS-built states (see
+the next section). Gallery: `/theleague/design-system`.
+
+- **Empty**: say what is missing, why that is fine or when it fills, and the
+  next step. "No brackets yet — they appear once playoff seeds are set."
+- **Error**: only for "we could not read it", never for a well-formed empty
+  answer — missing and zero are different facts (`LvEmptyState.tsx`). Say
+  what failed, that the data is missing rather than zero, and how to recover.
+- **Action labels are verb + object** ("See the standings", "Try again"),
+  never "OK" / "Submit".
+- Inside a card or a table cell pass `compact`: no dashed panel, so no card
+  inside a card.
+
+### What was deliberately NOT adopted
+
+Impeccable bans several things this site keeps on purpose: the 2px coloured
+left border on editorial section titles (house style; see components.md),
+sparklines/progress rings and big-number stat tiles (on a stats site they ARE
+the content), and em dashes. OKLCH was not adopted: ~10k hex values sit under
+contrast guards, and the migration risk outweighs the gain — use OKLCH for a
+new palette if you like, but don't convert the existing ones.
+
+## CTAs — one pattern, `.cta` / `.cta-link`
+
+Every call-to-action link or button is the shared pattern in
+`src/styles/cta.css`, loaded by all four base layouts and Storybook:
+
+| Shape | Markup | Hover |
+|---|---|---|
+| Primary (filled) | `class="cta cta--primary"` | background steps to the theme's `--cta-fill-hover`, lifts 1px; text never changes, never underlines |
+| Ghost (outlined) | `class="cta cta--ghost"` | same, on a 10% tint of its ink |
+| Arrow link | `class="cta-link"` | link-hover colour, the arrow nudges right, no underline |
+
+`.cta-link` draws its own `›` — never type an arrow into its label.
+Gallery: `/theleague/design-system`.
+
+**Why it exists.** Every base layout has a global `a:hover` / `a:focus`
+(link colour + underline) at specificity (0,1,1). A CTA class in UNSCOPED CSS
+— `src/styles/*.css`, `<style is:global>`, `:global(...)`, and every `.tsx`
+component's stylesheet — is (0,1,0), so any such CTA that did not restate
+colour AND decoration in its own `:hover` wore the link hover: the Owners'
+Poll's blue "Change your vote" (`owners-poll-card.css`) turned red and
+underlined (Oct 2026). A class in an Astro SCOPED `<style>` compiles to
+`.x[data-astro-cid-…]` (0,2,0) and already won — which is why the bug lived in
+the shared stylesheets, and why a scoped `color:` on a CTA's own class TIES
+with the state rules below (order-dependent) instead of losing cleanly. About
+a hundred hand-rolled `__cta` / `__btn` classes each had their own hover —
+opacity, brightness, lift, underline. `cta.css` states the rules once at
+(0,2,0).
+
+**A link that is not a CTA** (a chip, a tile, a toolbar button) and is styled
+from unscoped CSS must still restate `color` and `text-decoration` under
+`:is(:hover, :focus)` — `.ui-state__action`, `.cb__dl`, `.tl-hero-panel__link`
+and the bookmarklet chips do. The guard below only sees CTA-SHAPED class
+names, so this one is on you.
+
+**Customising.** Keep the component's BEM class next to `cta` for layout:
+the base rules sit inside `:where()` (zero specificity), so `padding`,
+`font-size`, `width`, `margin` on the component's own class always win,
+whatever the stylesheet order. COLOURS go through variables —
+`--cta-bg`, `--cta-bg-hover`, `--cta-ink`, `--cta-border`,
+`--cta-border-hover`, `--cta-focus-ring` (`--cta-link-ink[-hover]` for the
+arrow link). Never set `background` / `color` on the BEM class directly: the
+hover rule reads the variables and would replace a hard-coded value. A white
+pill on a team-colour hero is `--cta-bg: #fff; --cta-ink: <team>`; the
+league's own colour is the default and needs nothing.
+
+**The default fill is the league's, from its theme.** `--cta-bg` /
+`--cta-bg-hover` / `--cta-ink` default to the theme slots `--cta-fill` /
+`--cta-fill-hover` / `--on-cta-fill` (`src/themes/<id>.json`), set to each
+league's accent at an AA-passing step: AFL red, Best Ball emerald, Archie's sky
+blue, MFL Live red, TheLeague blue. Never re-point a CTA to `--league-accent`
+to "get the league colour" — the accent is often too light to carry white
+text in dark (MFL Live's `#ef5350` is 3.49:1, which four pages shipped), and
+the theme's fill already accounts for that.
+
+Guard: `tests/cta-pattern.test.ts` fails on any `<a>` carrying a CTA-shaped
+class (`block__cta`, `block__elem-btn`, `block-btn`, `…__button`, bare `btn`
+or a `btn-…` prefix) without `cta` or `cta-link`, on a layout that stops importing the file, and on a base rule that
+gains specificity. A link that genuinely is not a CTA (a toolbar toggle, a
+broadcast-bar chip) goes in its `ALLOWED` map with the reason. It cannot see a
+class name assembled at runtime (`` class={`${cls}__cta`} ``) or markup built
+in a `.ts` string — write those with the shared class from the start.
+
+Never reuse `cta` or `cta-link` as a page-local class name: the global rules
+apply to it (the splash page's `<span class="cta">` and the CSS-customization
+page's `.cta-link` pills both inherited a border, an arrow and a hover before
+they were renamed).
+
 ## Astro scoped CSS never reaches an element JS created
 
 A `<style>` block in a `.astro` file compiles to selectors that require the
@@ -509,6 +711,25 @@ that letterboxes to about 18×11 in an 18×18 slot. That is how it already
 renders in the header; it is not a bug, but do not expect it to fill a square
 next to icons that do.
 
+## Muted text in the player card
+
+Muted TEXT anywhere in `PlayerDetailsModal.astro` (unplayed weeks, byes,
+table headers, week numbers, status, and the card's labels, section titles and
+descriptions) uses
+`--content-text-muted`, never `--color-gray-300`/`400`/`500` and never
+`opacity`. (`--color-gray-600` and darker are body-strength text, not muted
+— 7.6:1 light, 5.8:1 on the default dark card — and stay legal.) Dark
+themes remap the gray scale: `--color-gray-300` becomes a navy one shade off
+the card, which made the whole upcoming schedule vanish in Oct 2026, and even
+`--color-gray-500` is only 4.4:1 on the default dark card. The semantic token
+clears AA in every theme. On a phone the long half of each header ("…onent",
+" vs QB") is visually hidden, not `display: none`, so a screen reader still
+hears the full header. The rest of the card used raw `--color-gray-400` for
+its labels until #1289 — 2.5:1 on the LIGHT card, so this is not a dark-only
+trap: measure a muted colour against white too. Guard:
+`tests/player-modal-season-results-contrast.test.ts` (table rules + a
+modal-wide scan).
+
 ## Overlays on a phone — size against `dvh`, never bare `vh`
 
 `vh` is the LARGE viewport: the page as it would be with the browser chrome
@@ -582,6 +803,14 @@ sibling pipeline rather than the crest one:
   YouTube TV's) SWAPS under `html.dark` and is never stroked; a mark below the
   threshold takes the same four-shadow ring as a crest
   (`src/utils/tv-logo-theme-css.ts`, keyed on exact `src`).
+- **Square marks get a size hook, not a size.** Every surface sizes the marks
+  by HEIGHT, so a mark at or below 1.2 width:height (`SQUARE_ASPECT_MAX`: NBC,
+  ABC, FOX, DAZN, Channel 5, the Prime/TNF shield) carries a fraction of a
+  wordmark's ink and reads as the small one. The manifest lists them as
+  `squareMarks` and the theme CSS sets `--tv-logo-scale` on each by `src` —
+  but only a surface that multiplies its height by that variable grows. Today
+  that is the two Set Lineup pages' opponent badge, by request; Sunday Ticket
+  and the shared `.net-badge` deliberately do not read it.
 - **The marks stroke in BOTH directions, and the crests do not.** A crest is
   league artwork and skews dark; a network mark is whoever holds the rights,
   and two of them are pale by brand — Channel 5's yellow 5 and Kayo's light
@@ -601,3 +830,17 @@ sibling pipeline rather than the crest one:
 draws the mark's bounding box, which on a transparent PNG is a white rectangle
 on a dark card — the exact thing the crest ring exists to avoid.
 
+
+## A package league's colour scheme is PALETTE → SEMANTIC, never literals
+
+A package league (registry `optInNav` + `logo`, e.g. `archies`) gets its scheme
+from its theme file (`src/themes/<theme>.json`, see "League themes" above).
+Wherever that theme departs from the default theme, the only colour literals
+live on `--league-palette-*` tokens; every semantic token (`--color-primary`,
+`--breadcrumb-bar-bg`, `--nav-*`, `--btn-primary-*`, …) is a `var()` of the
+palette, and tints come from `color-mix()` of it. The owner asked for this so
+the league can be recoloured to anything by editing the palette alone.
+Components read semantic tokens only. Both `light` and `dark` must hold every
+token (the theme contract), so the old trap — the generic `html.dark` block
+pinning TheLeague's dark blues over a light-only league block — cannot
+recur. Guard: `tests/league-palette-tokens.test.ts`.

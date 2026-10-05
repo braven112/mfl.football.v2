@@ -17,8 +17,8 @@ import { join } from 'node:path';
 const root = join(__dirname, '..');
 
 const FILES = [
-  'src/components/theleague/custom-rankings/DraftListSync.tsx',
-  'src/components/theleague/custom-rankings/CustomRankingsPage.tsx',
+  'src/components/shared/custom-rankings/DraftListSync.tsx',
+  'src/components/shared/custom-rankings/CustomRankingsPage.tsx',
 ];
 
 /** Strip comments so the explanatory notes naming confirm() don't self-trip. */

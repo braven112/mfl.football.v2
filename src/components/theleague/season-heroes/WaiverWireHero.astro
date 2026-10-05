@@ -36,10 +36,10 @@ import { getCurrentLeagueYear, getCurrentSeasonYear } from '../../../utils/leagu
 import { castTopFreeAgentModel } from '../../../utils/hero-casting';
 import { getAdpRankedIds, getRosteredPlayerIds } from '../../../utils/offseason-hero-data';
 import { unknownWaiverCopy, waiverClaimsHeroView } from '../../../utils/waiver-claims-hero';
-import type { EventHeroView } from '../../../utils/afl-hero-resolver';
+import type { EventHeroView } from '../../../utils/league-hero/types';
 import LeagueCompositeHero from '../../shared/LeagueCompositeHero.astro';
 import { getPlayerMap as getUnifiedPlayerMap } from '../../../utils/player-map';
-import PlayerCell from '../PlayerCell.astro';
+import PlayerCell from '../../shared/PlayerCell.astro';
 import WaiverWireHeroStub from '../hero-stubs/WaiverWireHeroStub.astro';
 
 export interface Props {
@@ -218,11 +218,8 @@ const week = projData?.projectedScores?.week ?? projData?.default?.projectedScor
     </ol>
 
     <div class="ww-hero__footer">
-      <a href={r('/theleague/players')} class="ww-hero__cta">
+      <a href={r('/theleague/players')} class="cta-link ww-hero__cta">
         See All Free Agents
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
-          <path d="M5 12h14M12 5l7 7-7 7"/>
-        </svg>
       </a>
     </div>
   </section>
@@ -273,7 +270,7 @@ const week = projData?.projectedScores?.week ?? projData?.default?.projectedScor
   }
 
   .ww-hero__section-title {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -285,7 +282,7 @@ const week = projData?.projectedScores?.week ?? projData?.default?.projectedScor
   }
 
   .ww-hero__week-badge {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -302,7 +299,7 @@ const week = projData?.projectedScores?.week ?? projData?.default?.projectedScor
   }
 
   .ww-hero__countdown-label {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -326,14 +323,14 @@ const week = projData?.projectedScores?.week ?? projData?.default?.projectedScor
   }
 
   .ww-hero__deadline {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 600;
     color: var(--dh-accent);
     letter-spacing: 0.02em;
   }
 
   .ww-hero__subhead-text {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     color: var(--color-gray-400, #9ca3af);
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -364,7 +361,7 @@ const week = projData?.projectedScores?.week ?? projData?.default?.projectedScor
   .ww-hero__rank {
     width: 1.5rem;
     text-align: center;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     color: var(--color-gray-300, #d1d5db);
     flex-shrink: 0;
@@ -392,18 +389,8 @@ const week = projData?.projectedScores?.week ?? projData?.default?.projectedScor
   }
 
   .ww-hero__cta {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
+    --cta-link-ink: var(--dh-accent);
     font-size: 0.8125rem;
-    font-weight: 600;
-    color: var(--dh-accent);
-    text-decoration: none;
-    transition: gap 0.15s ease;
-  }
-
-  .ww-hero__cta:hover {
-    gap: 0.5rem;
   }
 
   @media (max-width: 640px) {

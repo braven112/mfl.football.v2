@@ -238,6 +238,14 @@ export interface FranchiseHistoryEntry {
    * same slot-year — a bug this repo has already shipped once.
    */
   sourceFranchiseId?: string;
+  /**
+   * Set at RUNTIME alongside `sourceFranchiseId` when the era was LENT by the
+   * commissioner (`ThrowbackRules.grants`) rather than inherited: the lending
+   * franchise's current name. An inherited era is this team's own past worn
+   * under another slot; a granted one never was, so the picker must not say
+   * "as franchise 0002" for it. See `throwbackEraProvenance`.
+   */
+  grantedBy?: string;
 }
 
 /**

@@ -6,7 +6,7 @@ import {
   getDeepCuts,
   pathBelongsToLeague,
 } from "../src/config/footer-config";
-import { getFooterChampions } from "../src/utils/footer-champions";
+import { getFooterChampions, leagueHasChampionBand } from "../src/utils/footer-champions";
 import { getSearchPath, resolveDirectoryHref } from "../src/utils/nav-utils";
 import type { CanonicalLeagueSlug } from "../src/config/leagues";
 import type { LeagueSlug } from "../src/types/nav";
@@ -37,6 +37,7 @@ const NAV_SLUG: Record<CanonicalLeagueSlug, LeagueSlug> = {
   theleague: "theleague",
   "afl-fantasy": "afl",
   "best-ball-1": "bb1",
+  archies: "archies",
 };
 
 const LEAGUES = Object.keys(NAV_SLUG) as CanonicalLeagueSlug[];
@@ -86,15 +87,17 @@ function renderedHrefs(
       href: resolveDirectoryHref(cut.path!, nav),
     });
   }
-  // Trophy Case + champion cards, which build hrefs outside the config.
-  if (slug !== "best-ball-1") {
+  // Trophy Case + champion cards, which build hrefs outside the config. The
+  // footer renders both only where `leagueHasChampionBand` says so (not
+  // best-ball, not an opt-in-nav package league), so the test asks the same.
+  if (leagueHasChampionBand(slug)) {
     out.push({
       label: "Trophy Case",
       href: resolveDirectoryHref("/franchises", nav),
     });
-  }
-  for (const champ of getFooterChampions(slug)) {
-    out.push({ label: `Champion › ${champ.team}`, href: champ.href });
+    for (const champ of getFooterChampions(slug)) {
+      out.push({ label: `Champion › ${champ.team}`, href: champ.href });
+    }
   }
   const searchPath = getSearchPath(slug);
   if (searchPath) {

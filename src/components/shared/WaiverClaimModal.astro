@@ -210,7 +210,10 @@ const windowLabel = config?.windowLabel ?? '';
     /** Sub-line under the player name; set below once the mode is known. */
     let subLine = '';
     const isBid = cfg.system === 'bbid' && !immediate;
-    const money = (n: number) => '$' + Number(n).toLocaleString();
+    // A cents league shows cents ("$99.45 left"); whole-dollar leagues unchanged.
+    const cents = !Number.isInteger(cfg.rules.increment);
+    const money = (n: number) =>
+      '$' + Number(n).toLocaleString(undefined, cents ? { minimumFractionDigits: 2, maximumFractionDigits: 2 } : undefined);
 
     // The window line is SSR-empty on every page that has no SSR config, so it
     // is written here rather than left to the template — otherwise the form
@@ -224,6 +227,8 @@ const windowLabel = config?.windowLabel ?? '';
     if (isBid) {
       bidInput.min = String(cfg.rules.minimum);
       bidInput.step = String(cfg.rules.increment);
+      // A cents league (archies: $0.01) needs the decimal key on mobile.
+      bidInput.inputMode = Number.isInteger(cfg.rules.increment) ? 'numeric' : 'decimal';
       bidHint.textContent =
         `Minimum ${money(cfg.rules.minimum)}, in ${money(cfg.rules.increment)} steps.` +
         (cfg.balance != null ? ` You have ${money(cfg.balance)} left.` : '');
@@ -439,7 +444,11 @@ const windowLabel = config?.windowLabel ?? '';
         if (!Number.isFinite(bid!) || bid! < cfg.rules.minimum) {
           return showError(`Bid must be at least ${money(cfg.rules.minimum)}.`);
         }
-        if (bid! % cfg.rules.increment !== 0) {
+        // Count increments rather than `%`: with a $0.01 increment floating
+        // point made 1 % 0.01 ≈ 0.0099 and refused almost every bid
+        // (the server does the same: isBidMultiple in waiver-claim.ts).
+        const steps = bid! / cfg.rules.increment;
+        if (Math.abs(steps - Math.round(steps)) > 1e-6) {
           return showError(`Bid must be a multiple of ${money(cfg.rules.increment)}.`);
         }
       }
@@ -652,7 +661,7 @@ const windowLabel = config?.windowLabel ?? '';
   .wcm-field + .wcm-field { margin-top: 0.85rem; }
   .wcm-field label {
     display: block;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.03em;
@@ -674,7 +683,7 @@ const windowLabel = config?.windowLabel ?? '';
     border-radius: var(--radius-sm, 0.375rem);
     background: var(--color-gray-100, #f3f4f6);
     color: var(--content-text-muted, #6b7280);
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
   }
   .wcm-hint { margin: 0.3rem 0 0; font-size: 0.72rem; color: var(--content-text-muted, #6b7280); }
@@ -697,8 +706,8 @@ const windowLabel = config?.windowLabel ?? '';
     padding: 0.45rem 0.9rem;
     border-radius: var(--radius-sm, 0.375rem);
     border: 1px solid transparent;
-    background: var(--color-primary, #1c497c);
-    color: #fff;
+    background: var(--color-primary-fill, var(--color-primary, #1c497c));
+    color: var(--on-color-primary, #fff);
     font-weight: 600;
     cursor: pointer;
   }

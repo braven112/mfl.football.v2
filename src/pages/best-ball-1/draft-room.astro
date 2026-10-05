@@ -17,7 +17,7 @@
  */
 
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
-import DraftRoomIsland from '../../components/theleague/draft-room/DraftRoom';
+import DraftRoomIsland from '../../components/shared/draft-room/DraftRoom';
 import bb1Config from '../../../data/best-ball-1/bb1.config.json';
 import { getLeagueBySlug } from '../../config/leagues';
 import { getLeagueYearForSlug, getCurrentLeagueYear } from '../../utils/league-year';
@@ -250,7 +250,7 @@ if (session) {
   .bb-draft-setup__card button {
     align-self: flex-start;
     background: var(--league-accent, #0e8a5f);
-    color: #ffffff;
+    color: var(--on-league-accent, #ffffff);
     font-weight: 700;
     border: none;
     border-radius: var(--radius-sm, 4px);

@@ -259,6 +259,28 @@ describe('prices MFL writes in exponent notation', () => {
   });
 });
 
+describe('cents FAAB bids (archies: bbidIncrement 0.01)', () => {
+  it.each([
+    ['15.01', 15.01],
+    ['5.01', 5.01],
+    ['11.06', 11.06],
+    ['0.67', 0.67],
+    ['1.00', 1],
+  ])('keeps %s to the cent', (raw, expected) => {
+    // Whole-dollar rounding printed a $15.01 claim as $15 — the penny that
+    // decided the claim, erased.
+    const row = one({ type: 'BBID_WAIVER', franchise: '0073', timestamp: '1790172000', transaction: `15721,|${raw}|16604,` });
+    expect(row?.amount).toBe(expected);
+  });
+
+  it('two claims a penny apart get different ids', () => {
+    const at = { type: 'BBID_WAIVER', franchise: '0073', timestamp: '1790172000' };
+    const a = one({ ...at, transaction: '15721,|15.01|' });
+    const b = one({ ...at, transaction: '15721,|15|' });
+    expect(a?.id).not.toBe(b?.id);
+  });
+});
+
 describe("MFL's 0000 'nothing on this side' sentinel", () => {
   it('is not treated as a dropped player', () => {
     // 404 rows carry it in the drop slot of a claim that needed no cut. It is
@@ -326,7 +348,7 @@ describe('feed envelope and ordering', () => {
  * This is what catches a shape no hand-written case anticipated.
  */
 describe('the committed archive', () => {
-  const seasons: { slug: string; year: string; feed: unknown }[] = [];
+  const seasons: { slug: string; year: string; feed: unknown; faabBudget: number | null }[] = [];
   for (const league of ALL_LEAGUES) {
     const base = join(process.cwd(), league.dataPath, 'mfl-feeds');
     if (!existsSync(base)) continue;
@@ -334,7 +356,16 @@ describe('the committed archive', () => {
       const file = join(base, year, 'transactions.json');
       if (!existsSync(file)) continue;
       try {
-        seasons.push({ slug: league.slug, year, feed: JSON.parse(readFileSync(file, 'utf-8')) });
+        // The season's own blind-bid budget: Archie's was $1,000 through 2025
+        // and $100 from 2026, so one number per league cannot bound both.
+        let faabBudget: number | null = null;
+        try {
+          const limit = Number(JSON.parse(readFileSync(join(base, year, 'league.json'), 'utf-8')).league?.bbidSeasonLimit);
+          if (limit > 0) faabBudget = limit;
+        } catch {
+          // no league.json for this season
+        }
+        seasons.push({ slug: league.slug, year, feed: JSON.parse(readFileSync(file, 'utf-8')), faabBudget });
       } catch {
         // A corrupt feed is a sync problem, not a parser problem.
       }
@@ -346,8 +377,12 @@ describe('the committed archive', () => {
     expect(new Set(seasons.map((s) => s.slug)).size).toBeGreaterThan(1);
   });
 
+  /** Leagues whose bids are FAAB dollars, with the season budget (MFL `bbidSeasonLimit`). */
+  const FAAB_BUDGET: Record<string, number> = { archies: 100 };
+
+  // A FAAB league's first-come pickups are free, not priced at a salary minimum.
   const rowsFor = (s: (typeof seasons)[number]) =>
-    normalizeTransactions(s.feed, { freeAgentPrice: 425000 });
+    normalizeTransactions(s.feed, { freeAgentPrice: FAAB_BUDGET[s.slug] ? null : 425000 });
 
   it('normalizes every season without throwing, and produces rows', () => {
     let total = 0;
@@ -369,7 +404,14 @@ describe('the committed archive', () => {
         // priced move in either league is at or above the league minimum, and
         // the smallest minimum the archive has ever carried is 100k — so a
         // three-figure price is a parse failure, not a bargain.
-        if (row.amount !== null && (!Number.isFinite(row.amount) || row.amount < 1000)) problems.push(`${where}: implausible amount ${row.amount}`);
+        // A FAAB league (archies: a $100 blind-bid budget, cent increments)
+        // prices moves in plain dollars, so its plausible range is 0..budget
+        // rather than "at or above a six-figure league minimum".
+        if (row.amount !== null) {
+          const faab = FAAB_BUDGET[season.slug] ? (season.faabBudget ?? FAAB_BUDGET[season.slug]) : undefined;
+          const bad = !Number.isFinite(row.amount) || (faab ? row.amount < 0 || row.amount > faab : row.amount < 1000);
+          if (bad) problems.push(`${where}: implausible amount ${row.amount}`);
+        }
         if (playerIdsInRow(row).includes('0000')) problems.push(`${where}: 0000 sentinel leaked as a player id`);
         if (row.kind === 'trade' && row.trade === null) problems.push(`${where}: trade row with no trade detail`);
         if (row.kind !== 'trade' && row.trade !== null) problems.push(`${where}: non-trade row carrying trade detail`);
@@ -379,6 +421,30 @@ describe('the committed archive', () => {
       }
     }
     expect(problems.slice(0, 20)).toEqual([]);
+  });
+
+  it('prices every non-FAAB league in whole dollars, so cent rounding changed none of their rows', () => {
+    // The parser rounds to the CENT so a cents league keeps its pennies. For
+    // that to leave TheLeague's contract math and every row id untouched, each
+    // amount those leagues have ever carried must already be a whole number.
+    const fractional: string[] = [];
+    for (const season of seasons) {
+      if (FAAB_BUDGET[season.slug]) continue;
+      for (const row of rowsFor(season)) {
+        if (row.amount !== null && !Number.isInteger(row.amount)) {
+          fractional.push(`${season.slug}/${season.year} ${row.rawType} ${row.amount}`);
+        }
+      }
+    }
+    expect(fractional.slice(0, 20)).toEqual([]);
+  });
+
+  it('keeps cents in the FAAB league archive', () => {
+    const cents = seasons
+      .filter((s) => FAAB_BUDGET[s.slug])
+      .flatMap((s) => rowsFor(s))
+      .filter((r) => r.amount !== null && !Number.isInteger(r.amount));
+    expect(cents.length).toBeGreaterThan(0);
   });
 
   it('never emits a player id that is really a draft-pick token', () => {

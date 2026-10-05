@@ -1,0 +1,77 @@
+name: Launch League
+
+# Builds a new league from a League Launcher spec and pushes it to its own
+# branch, `launch/<slug>`, cut from `staging`. Nothing merges by itself: the
+# Launcher page links "Open PR to staging", and the PR's preview build is the
+# review. Dispatched by /api/admin/league-launcher/launch; can also be run by
+# hand with a spec, which is why scripts/new-league.mjs re-validates it.
+on:
+  workflow_dispatch:
+    inputs:
+      spec:
+        description: "Launch spec JSON (see scripts/new-league.mjs)"
+        required: true
+        type: string
+      requested_by:
+        description: "Who asked (for the commit message)"
+        required: false
+        type: string
+
+concurrency:
+  # One launch at a time: each edits the registry, the page directory and the
+  # nav config, so two in parallel would race on the same files.
+  group: launch-league
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  launch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout staging
+        uses: actions/checkout@v6
+        with:
+          # Deploy key, so the branch push starts CI (tests/workflow-push-triggers-ci.test.ts).
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+          ref: staging
+          fetch-depth: 1
+
+      - name: Setup pnpm + Node + install
+        uses: ./.github/actions/setup
+
+      - name: Read the slug
+        id: slug
+        env:
+          # Inputs travel as env vars, never interpolated into a script.
+          LAUNCH_SPEC: ${{ inputs.spec }}
+        run: |
+          SLUG="$(node -e 'const s=JSON.parse(process.env.LAUNCH_SPEC); if(!/^[a-z][a-z0-9]{1,23}$/.test(s.slug)) process.exit(1); process.stdout.write(s.slug)')"
+          echo "slug=$SLUG" >> "$GITHUB_OUTPUT"
+
+      - name: Generate the league
+        env:
+          LAUNCH_SPEC: ${{ inputs.spec }}
+          # The same MFL credentials the roster sync uses: most feeds are
+          # public, and these let the member-gated ones (calendar) through
+          # when the sync account belongs to the league.
+          MFL_USERNAME: ${{ secrets.MFL_USERNAME }}
+          MFL_PASSWORD: ${{ secrets.MFL_PASSWORD }}
+          MFL_API_KEY: ${{ secrets.MFL_API_KEY }}
+          MFL_USER_ID: ${{ secrets.MFL_USER_ID }}
+        run: node scripts/new-league.mjs
+
+      - name: Commit and push launch/${{ steps.slug.outputs.slug }}
+        uses: ./.github/actions/commit-push
+        with:
+          add-paths: data src public .github/workflows/chromatic.yml
+          commit-message: "feat: launch league ${{ steps.slug.outputs.slug }} (League Launcher${{ inputs.requested_by && format(', by {0}', inputs.requested_by) || '' }})"
+          no-changes-message: "The generator wrote nothing — check the log above."
+          push-ref: launch/${{ steps.slug.outputs.slug }}
+
+      - name: Link the PR
+        run: |
+          echo "### Open the PR" >> "$GITHUB_STEP_SUMMARY"
+          echo "https://github.com/${{ github.repository }}/compare/staging...launch/${{ steps.slug.outputs.slug }}?expand=1" >> "$GITHUB_STEP_SUMMARY"

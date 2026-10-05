@@ -28,7 +28,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.85rem 1rem;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   line-height: 1.5;
   color: var(--color-warning-dark, #d97706);
   background: var(--color-warning-light, #fef3c7);
@@ -133,7 +133,7 @@
 .acct__note,
 .acct__hint {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   line-height: 1.5;
 }
 
@@ -197,7 +197,7 @@
 .acct__field textarea {
   min-height: 9rem;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   resize: vertical;
 }
 
@@ -214,6 +214,17 @@
   background: var(--color-surface-1, #fff);
   border: 1px solid var(--color-border-default, #cbd5e1);
   border-radius: 8px;
+}
+
+/* Export CSV is an <a>, so it is a shared `.cta` (src/styles/cta.css) to beat
+   the layout's global a:hover; these variables keep it identical to the
+   neutral Refresh button beside it. */
+.acct__btn.cta {
+  --cta-bg: var(--color-surface-1, #fff);
+  --cta-bg-hover: color-mix(in srgb, var(--color-surface-1, #fff) 92%, var(--color-text-primary, #0f172a));
+  --cta-ink: var(--color-text-primary, #0f172a);
+  --cta-border: var(--color-border-default, #cbd5e1);
+  --cta-border-hover: var(--color-border-default, #cbd5e1);
 }
 
 .acct__btn--primary {
@@ -253,7 +264,7 @@
 }
 
 .acct__table th {
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary, #475569);
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -303,7 +314,7 @@
   display: flex;
   gap: 0.7rem;
   align-items: flex-start;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   line-height: 1.5;
   color: var(--color-text-secondary, #475569);
 }
@@ -377,7 +388,7 @@
 }
 
 .acct__totals dt {
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--color-text-secondary, #475569);
   text-transform: uppercase;
@@ -403,7 +414,7 @@
 .acct__warn {
   margin: 0;
   padding: 0.75rem 0.9rem;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   line-height: 1.5;
   border: 1px solid;
   border-radius: 8px;
@@ -430,7 +441,7 @@
 .acct__results {
   margin: 0.5rem 0 0;
   padding-left: 1.1rem;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   line-height: 1.6;
 }
 

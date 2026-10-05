@@ -191,7 +191,7 @@ export default function TradeCompositeStrip({
           text-align: right;
         }
         .tcs__player strong {
-          font-size: 0.75rem;
+          font-size: var(--font-size-xs);
           font-weight: 800;
           line-height: 1.15;
           white-space: nowrap;

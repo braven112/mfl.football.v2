@@ -35,6 +35,12 @@ const APPROVED = new Set(APPROVED_REAL_NAMES.map((s) => s.toLowerCase()));
 
 const MIN_LENGTH = 6;
 
+/** Whether the scrub replaces this real name wherever it appears (tests ask it too). */
+export function isScrubbedTerm(t) {
+  const lower = String(t).toLowerCase();
+  return lower.length >= MIN_LENGTH && !GENERIC.has(lower) && !APPROVED.has(lower);
+}
+
 function readJsonSafe(file) {
   try {
     return JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -105,7 +111,7 @@ export function collectDenylist({ root, league, realConfig, realRegistry, otherC
   walk(tenures);
 
   const terms = [...raw]
-    .filter((t) => t.length >= MIN_LENGTH && !GENERIC.has(t.toLowerCase()) && !APPROVED.has(t.toLowerCase()))
+    .filter(isScrubbedTerm)
     .sort((a, b) => b.length - a.length);
   return { league, collectedAt: new Date().toISOString(), terms };
 }

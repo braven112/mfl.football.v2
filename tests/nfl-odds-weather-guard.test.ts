@@ -61,9 +61,8 @@ describe('game odds and weather come from ONE system', () => {
   it('both leagues’ roster and lineup pages load odds through it', () => {
     const pages = {
       'src/pages/theleague/rosters.astro': /loadLiveOddsData\(/,
-      'src/components/afl-family/RostersPage.astro': /loadLiveOddsData\(/,
-      'src/pages/theleague/lineup.astro': /loadLiveOdds\(/,
-      'src/components/afl-family/LineupPage.astro': /loadLiveOdds\(/,
+      'src/components/shared/rosters/RostersPage.astro': /loadLiveOddsData\(/,
+      'src/components/shared/lineup/LineupPage.astro': /loadLiveOdds\(/,
     };
     for (const [page, call] of Object.entries(pages)) {
       expect(readFileSync(page, 'utf8'), page).toMatch(call);

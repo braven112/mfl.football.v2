@@ -34,6 +34,7 @@ import { hasLiveSignal, type LiveSnapshot } from './live-scoring-snapshot';
 import { readLeagueSchedulePairings } from './mfl-schedule-pairings';
 import type { MatchupPairing } from '../types/live-scoring';
 import { mapWithConcurrency } from './fan-out';
+import { leagueHasUploadedMarks } from './mfl-live-identity';
 
 /**
  * How many leagues are read at once.
@@ -246,6 +247,14 @@ export async function readCrossLeagueLive(
 }
 
 /**
+ * The viewer's own mark in a league, plus whether ANY franchise there uploaded
+ * one — the identity ladder only lends an NFL logo to a league with no art.
+ */
+export interface ViewerFranchiseMark extends FranchiseMark {
+  leagueHasMarks: boolean;
+}
+
+/**
  * Each league's OWN franchise name for the viewer, for surfaces that list
  * leagues without reading their scores (`/live/settings`).
  *
@@ -269,7 +278,7 @@ export async function readViewerFranchiseNames(
   leagues: readonly BoardLeague[],
   year: number = getCurrentSeasonYear(),
   concurrency: number = CROSS_LEAGUE_FAN_OUT_LIMIT,
-): Promise<Record<string, FranchiseMark>> {
+): Promise<Record<string, ViewerFranchiseMark>> {
   const targets = leagues.filter((l) => !l.registered && l.host);
   if (targets.length === 0) return {};
 
@@ -277,14 +286,20 @@ export async function readViewerFranchiseNames(
     const marks = await readLeagueFranchiseMarks(league, year, user.id).catch(
       (): Record<string, FranchiseMark> => ({}),
     );
-    return { id: league.id, mark: marks[league.franchiseId] };
+    return {
+      id: league.id,
+      mark: marks[league.franchiseId],
+      leagueHasMarks: leagueHasUploadedMarks(
+        Object.fromEntries(Object.entries(marks).map(([fid, m]) => [fid, m.icon])),
+      ),
+    };
   });
 
-  const out: Record<string, FranchiseMark> = {};
+  const out: Record<string, ViewerFranchiseMark> = {};
   for (const outcome of settled) {
     if (outcome.status !== 'fulfilled') continue;
-    const { id, mark } = outcome.value;
-    if (mark?.name) out[id] = mark;
+    const { id, mark, leagueHasMarks } = outcome.value;
+    if (mark?.name) out[id] = { ...mark, leagueHasMarks };
   }
   return out;
 }

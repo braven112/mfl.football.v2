@@ -180,10 +180,10 @@ const serializedConfig = JSON.stringify({
             <option value="season">Season Total</option>
           </select>
         </label>
-        <button type="button" id="exportXlsxBtn" class="toolbar-btn toolbar-btn--primary">
+        <button type="button" id="exportXlsxBtn" class="cta cta--primary toolbar-btn">
           Export to Excel
         </button>
-        <a id="archiveSheetLink" class="toolbar-btn toolbar-btn--ghost" href="#" target="_blank" rel="noopener noreferrer" style="display: none;">
+        <a id="archiveSheetLink" class="cta cta--ghost toolbar-btn toolbar-btn--ghost" href="#" target="_blank" rel="noopener noreferrer" style="display: none;">
           Original Spreadsheet
         </a>
       </div>
@@ -322,7 +322,7 @@ const serializedConfig = JSON.stringify({
   }
 
   .page-hero__desc {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 400;
     line-height: 1.5;
     color: var(--color-gray-600, #4b5563);
@@ -354,7 +354,7 @@ const serializedConfig = JSON.stringify({
   }
 
   .section-title {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -373,7 +373,7 @@ const serializedConfig = JSON.stringify({
   }
 
   .toolbar-select__label {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -395,43 +395,21 @@ const serializedConfig = JSON.stringify({
     outline-offset: 2px;
   }
 
+  /* Shape, colour and hover come from the shared .cta pattern
+     (src/styles/cta.css); the toolbar runs them compact. The ghost is the
+     toolbar's neutral grey rather than link-blue. */
   .toolbar-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     padding: 0.4375rem 0.875rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     border-radius: var(--radius-sm, 0.25rem);
-    cursor: pointer;
-    white-space: nowrap;
-    transition: background 0.15s ease;
-    text-decoration: none;
-    border: none;
-  }
-
-  .toolbar-btn:focus-visible {
-    outline: 2px solid var(--color-primary, #1c497c);
-    outline-offset: 2px;
-  }
-
-  .toolbar-btn--primary {
-    background: var(--btn-primary-bg, #1c497c);
-    color: var(--btn-primary-text, #ffffff);
-  }
-
-  .toolbar-btn--primary:hover {
-    background: var(--btn-primary-bg-hover, #164066);
   }
 
   .toolbar-btn--ghost {
-    background: transparent;
-    color: var(--color-gray-600, #4b5563);
-    border: 1px solid var(--content-border, #e2e8f0);
-  }
-
-  .toolbar-btn--ghost:hover {
-    background: var(--color-gray-50, #f9fafb);
+    --cta-ink: var(--color-gray-600, #4b5563);
+    --cta-border: var(--content-border, #e2e8f0);
+    --cta-border-hover: var(--content-border, #e2e8f0);
+    --cta-bg-hover: var(--color-gray-50, #f9fafb);
   }
 
   /* ── Position Card Grid ── */
@@ -461,7 +439,7 @@ const serializedConfig = JSON.stringify({
   }
 
   .position-card__badge {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 500;
     color: var(--color-gray-500, #6b7280);
     font-variant-numeric: tabular-nums;
@@ -534,7 +512,7 @@ const serializedConfig = JSON.stringify({
   }
 
   .detail-label {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -543,7 +521,7 @@ const serializedConfig = JSON.stringify({
   }
 
   .detail-value {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 600;
     font-variant-numeric: tabular-nums;
     color: var(--color-gray-700, #374151);
@@ -559,7 +537,7 @@ const serializedConfig = JSON.stringify({
 
   .section-header__title {
     margin: 0;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -593,7 +571,7 @@ const serializedConfig = JSON.stringify({
 
   .editorial-table th {
     padding: 0.4rem 0.5rem;
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -662,12 +640,12 @@ const serializedConfig = JSON.stringify({
     border-radius: var(--radius-full, 9999px);
     background: transparent;
     cursor: pointer;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: var(--color-gray-500, #6b7280);
-    transition: background 0.15s ease, color 0.15s ease;
+    transition: background var(--transition-fast), color var(--transition-fast);
   }
 
   :global(.show-more-btn:hover) {
@@ -682,7 +660,7 @@ const serializedConfig = JSON.stringify({
 
   /* ── Empty State ── */
   .position-card__empty {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     color: var(--color-gray-500, #6b7280);
     margin: 0;
     text-align: center;
@@ -731,7 +709,6 @@ const serializedConfig = JSON.stringify({
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .toolbar-btn,
     :global(.show-more-btn) {
       transition: none;
     }

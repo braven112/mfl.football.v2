@@ -151,8 +151,8 @@ export function calculateAllVORP(
 | File | Change |
 |------|--------|
 | `src/pages/theleague/cr.astro` | Add projected scores glob import, calculate VORP map, pass as `vorpMap` prop to React component |
-| `src/components/theleague/custom-rankings/CustomRankingsPage.tsx` | Accept `vorpMap` prop, add "VORP" toggle button in toolbar, pass down to child components |
-| `src/components/theleague/custom-rankings/PlayerRow.tsx` | Render VORP chip when enabled (green for positive, gray/red for negative) |
+| `src/components/shared/custom-rankings/CustomRankingsPage.tsx` | Accept `vorpMap` prop, add "VORP" toggle button in toolbar, pass down to child components |
+| `src/components/shared/custom-rankings/PlayerRow.tsx` | Render VORP chip when enabled (green for positive, gray/red for negative) |
 | `src/styles/custom-rankings.css` | Add `.cr-vorp-chip` styles (green/red badge) |
 
 ---

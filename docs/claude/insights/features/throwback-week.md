@@ -4,6 +4,12 @@ Feature: every NFL Week 4 (`THROWBACK_WEEKS` in `src/data/theleague/throwback-co
 the weekly surfaces (live scoring, matchups, submit lineup) swap every team to a
 legacy identity — name, icon, banner, AND colors. Built July 2026 on PR #428.
 
+## 2026-09-29 - A granted era is not an inherited one, even though they share a pick key
+
+**Context:** Hotfix #1269 added `THROWBACK_ERA_GRANTS` so Cowboy Up (0014) could wear Da Dangsters' (0002) "Degenerates". A granted era carries `sourceFranchiseId`, which makes its pick key `0002:2008`, the same shape as an era inherited from a former slot. The picker read `sourceFranchiseId` alone and labelled it "· as franchise 0002 — Your team wore this under an earlier franchise slot", which is false.
+
+**Insight:** `sourceFranchiseId` answers "which `history[]` is this from", not "did this team wear it". Those are different claims, so a runtime `grantedBy` (the lender's current name) now rides beside it, set only in `getGrantedThrowbackEras`. `throwbackEraProvenance(era)` is the one place that turns an era into its note: "on loan from Da Dangsters", "as franchise 0007", or nothing. `tests/throwback-identity.test.ts` pins both labels and scans the picker to make sure it goes through the helper.
+
 ## 2026-07-13 - Architecture: two chokepoints, one resolver
 
 **Context:** Throwback identity had to reach three surfaces (live scoring, matchups, lineup) plus previews, without touching each renderer.
@@ -32,6 +38,8 @@ Eligibility (`getEligibleThrowbackEras`) = `history[]` minus `THROWBACK_ASSET_CO
 
 **Context:** Most legacy art URLs (`theleague.us/images/team_banners/…`, `dynastytheleague.com/…`) are dead; recovery went through the Wayback Machine.
 
+**Update (Oct 2026):** the `theleague.us/images/team_banners/` folder is NOT gone — `https://mfl.football/images/team_banners/<file>` rehosts it, same filenames. It needs a browser User-Agent (curl's default gets a 406). Checked for `maverick`, `computer_jocks` and `cowboy_up`; Maverick's 2016–2024 banner was recovered from it. Try it before the Wayback Machine. Computer Jocks 2016 and Cowboy Up 2018 were deliberately left on today's art: Cowboy Up's old file is pixel-identical, Computer Jocks' only a darker green.
+
 **Insight:** `data/theleague/mfl-feeds/{year}/option07.json` is NOT JSON — it's saved HTML of MFL's per-year icon/banner setup page, listing the exact art file URL for every team that year. Grep it to learn what filenames existed and when they changed (e.g. `executioners.png` vs `executioners1.png` = a mid-era redesign; DMOC's icon was `dark_magicians_of_chaos_ico.png` — `_ico`, not `_icon`). Cross-check `league.json` per year for name-change years. MFL's own `fflnetdynamic{year}/13522_franchise_icon{id}` pattern has NO files for this league — art was always custom-URL, so MFL hosted no copies. Some "lost" TheLeague art survives in `public/assets/afl/history/` (shared owners uploaded variants to the AFL league) — but beware league-specific variants (the AFL Da Dangsters banner carries an "NL" conference mark; the TheLeague version differs).
 
 Old MFL "icons" are 300×50 strips (mini-banners) at exactly the 6:1 ratio of the site's 950×158 banners — some recovered `*_icon.png` files ARE the missing banners, just small (LBer-DeCleaters, Devil Dogs).
@@ -40,6 +48,8 @@ Old MFL "icons" are 300×50 strips (mini-banners) at exactly the 6:1 ratio of th
 
 **Insight:** Palettes were derived by sampling era art (hue-bucketed, saturation-filtered, icon pixels double-weighted, dark-neutral fallback for monochrome art) — good enough for ~90% of eras, but character-heavy art skews toward flesh/wood tones (Executioners sampled brick-brown off a red banner). Ship auto-derived values, then present swatches next to the art for human correction; corrections landed as one-line hex edits.
 
+
+**Update (Oct 2026):** `scripts/derive-era-palettes.mjs` now takes `--league <slug>` (registry `configPath`, default the AFL), and masks the AL/NL badge corner only for the AFL. TheLeague's palettes are still hand-set — run `--league theleague` for a report, not `--write`, and correct by eye. `tests/era-palette-provenance.test.ts` now holds both leagues' palettes to their own art; its one pre-existing TheLeague orphan (Mistakes Were Made 2007 secondary `#012c0b`, a green darker than anything in the banner) was repainted to the derived `#d3ebdc`, so `KNOWN_ORPHANS` is empty and may only stay that way. Maverick 2016 derived `#be1320 / #ab7744` against the hand-picked `#b80d1a / #e8a848`: same red, the hand pick takes the brighter gold of the edging rather than the bucket mean, and both are in the art.
 ## 2026-07-13 - Editing theleague.config.json programmatically
 
 **Insight:** Never `JSON.parse` → mutate → `JSON.stringify(…, null, 2)` this file — it reformats single-line arrays (`loaderQuips`) onto multiple lines and produces a 90-line diff for a 2-line change. Insert/edit lines surgically (the era color insertion used a line-walker keyed on 8/10-space indentation). `git checkout` the file and redo surgically if a rewrite sneaks in.
@@ -516,3 +526,157 @@ router replaces, and the endpoint takes its scope from the session.
 `tests/era-banner-style.test.ts` now resolves each banner rule in whichever of
 the two components defines it and fails if one is defined in both — the guard
 against the fork this split exists to avoid.
+
+
+---
+
+## The league-wide era pool: claim any departed owner's look (September 2026)
+
+Owner-directed rule: an owner may wear ANY era in their league, except an era
+worn by an owner who is still in the league — that one is theirs alone ("nobody
+else can take the Pigskins' old looks but me; an owner who has left can have
+his banner taken"). An open era goes to ONE franchise, first come first served;
+a team's default is reserved to it until its owner picks a different era
+(see "A default is reserved" below — the hotfix shipped the opposite); picks lock from the
+throwback week's first kickoff until the week is over (`isThrowbackPickLocked`,
+kickoff from `nfl-week-starts.mjs`). Both leagues; the AFL pool spans all 24
+teams, not one conference.
+
+What makes it work, and what to keep true:
+
+- **Ownership is not re-derived.** `throwbackEraOwner`
+  (`src/utils/throwback-era-owner.ts`) asks the owners registry first, then
+  `buildAttributor` — the one boundary implementation. The registry matters:
+  AFL Computer Jocks 2014 (slot 0018) is Jomar Marinio's, who runs 0005 today;
+  the attributor alone calls it a former owner's and would have put it up for
+  grabs.
+- **Two lists, on purpose.** `getEligibleThrowbackEras` is still the team's
+  OWN eras and the only pool a DEFAULT is chosen from — nobody is defaulted
+  into another club's past. `getPickableThrowbackEras` adds the open pool and
+  any registry-reserved era under another slot; it is what the picker offers
+  and what the API validates against.
+- **One team's pick cannot resolve one team any more.** Whether a pick holds,
+  and what a default lands on, depends on the whole league's picks, so every
+  surface passes all of them: `resolveThrowbackIdentity(..., leaguePicks)` →
+  `resolveThrowbackAssignments`. Both lineup pages used to read picks for the
+  viewer and opponents only; they now read the league. A new surface that
+  passes a single pick gets the old per-team answer, which can show two teams
+  in one era.
+- **Claim order is `claimedAt`** on the stored pick. A pick saved before this
+  existed has none and ranks first; re-saving the same era keeps your
+  timestamp. The API resolves the league WITH every saved pick, the caller's
+  included, and 409s when anyone else holds the era — see "Claiming is
+  atomic" below for why both halves of that sentence matter.
+- **The asset-conflict lists still apply to the pool.** A conflicted era is out
+  for everybody (Degenerates stays Cowboy Up's grant; the Sabertooths 2007 stays
+  the Geeks'). Every era the new "reserved to another current owner" filter
+  removes from a slot's own list was already conflicted by hand — the filter
+  changed no team's own list when it landed; it exists so the next move needs
+  no hand entry.
+
+Guard: `tests/throwback-claims.test.ts` (a real-config sweep that no current
+owner's era is offered to anyone else, plus the claim, default and lock rules).
+
+### A default is reserved until its owner picks something else (follow-up #1276)
+
+The hotfix let a claim bump an unpicked team off its default ("a default steps
+aside"), and called the fallback — a team with every own era claimed wears its
+CURRENT look — unreachable. It was one click away: 23 of the 40 teams' seeded
+defaults are a departed owner's era of their own slot, so every one of them was
+in the open pool, and TheLeague's 0010 and 0012 have exactly one eligible era.
+
+Owner-directed rule: a team's seeded default (`pickDefaultThrowbackEra` over
+its own eligible list, no claims applied — `defaultErasByFranchise`) is ITS
+while it has no saved pick, or its saved pick IS that default. Saving any other
+era releases it to the pool. Released stays released: the switch back is
+refused if somebody claimed it meanwhile, because the resolver sees the
+owner's CURRENT pick, which is what released it. The picker labels a reserved
+default "X's default", not "Claimed by X" (`reservedDefaults` on
+`ThrowbackAssignments`).
+
+The pickable LIST is deliberately unchanged — every team is still offered
+every open era, reserved or not, and the reservation is applied at resolve
+time. Filtering the list instead would make "what may I pick" depend on other
+owners' picks, and every caller of `getPickableThrowbackEras` would need the
+league's picks to answer it.
+
+### Claiming is atomic, under one league-wide lock (follow-up #1276)
+
+The hotfix read the league, checked the era, then wrote — two Redis calls, so
+two owners saving one open era at the same moment were both told "Saved." Two
+more holes sat in the same lines, found by Copilot after the merge:
+`getAllThrowbackPreferences` returns `{}` when `mget` fails, which the check
+read as "every era is free"; and resolving WITHOUT the caller's pick made an
+outbid record look like the holder, so the rightful winner of an old tie got a
+409 re-saving its own era.
+
+`withThrowbackClaimLock` (`throwback-store.ts`) wraps read-check-write in a
+`SET NX EX 5` lock on `throwback:lock:<scope>`, released by a compare-and-delete
+script so a request never frees another's lock. A per-era claim key was the
+brief's idea and was rejected: it is a second record to keep in step with the
+picks (a failed release leaves a stale claim), and existing picks have none.
+Saves are rare, so the league simply takes turns. The claim path reads through
+`loadAllThrowbackPreferences`, which returns null on failure (→ 503, nothing
+written); render paths keep the degrading `{}`.
+
+Guard: `tests/throwback-preference-api.test.ts` drives the real POST handler
+against an in-memory Redis whose every call yields, so two saves genuinely
+interleave. With the lock bypassed the race test fails.
+
+---
+
+## Standings is a throwback consumer, and it has one clock (September 2026)
+
+Throwback Week reached the standings pages through the fast lane (#1273): the
+current season's rows wear each club's era art, with today's name on a second
+line (`.team-today-name`). `applyThrowbackToStandingsConfig`
+(`src/utils/throwback-standings.ts`) wraps `applyThrowbackOverrides`, so
+standings resolves eras through the same chokepoint as every other surface.
+Guard: `tests/throwback-standings.test.ts`.
+
+Three things worth knowing before the next surface copies it:
+
+- **Archived seasons keep their own year's identity.** The helper only throws
+  back when `isCurrentSeason` is true. A 2019 table already shows 2019's names
+  and art through `resolveConfigForYear`. Swapping in an era there would show a
+  mark that season never wore, next to a "today" name that was not that
+  season's name either.
+- **The throwback gate and the default year must read the SAME clock.** The
+  hotfix first gated on the real clock's season while `resolveThrowbackRequestState`
+  read `?testDate=`, so a date preview across Labor Day disagreed with itself
+  (Copilot caught it). The follow-up (#1274) finished the job:
+  `currentSeasonYear` itself now comes from `?testDate=` — in TheLeague's page,
+  and in `resolveStandingsRoute` (`src/utils/afl-family-standings.ts`) for the
+  AFL family, whose `StandingsPage` gates on the same test clock — and the
+  fallback redirects carry `testDate` along. So
+  `?testDate=2025-09-28` alone renders 2025's table in throwback, and
+  `/rollover-check` can drive both pages by date. The guard pins all three
+  (no bare `getCurrentSeasonYear()` on either page).
+- **A new second-line element needs `flex-wrap` in EVERY table variant.**
+  `flex-basis: 100%` only starts a new line when the container wraps. The AFL
+  conference view's `.v-conf .team-info` did not wrap, so today's name squeezed
+  in beside the banner there and nowhere else. Only a reviewer noticed. When a
+  table has variants, render each one before calling a layout change done.
+
+
+---
+
+## The Throwback Week welcome popup (October 2026)
+
+`ThrowbackWeekModal` (layout-mounted, signed-in owners only) shows the crest,
+`’08–’11` years and name the owner is wearing, once per device per throwback
+week (`throwback-welcome:<scope>:<season>:w<week>` in localStorage, written on
+OPEN). It links to `/throwback-settings` until `isThrowbackPickLocked`, then
+only announces.
+
+- **It reads the band map, not its own era.** `buildThrowbackWelcome` takes
+  name and crest from `buildFranchiseBandBrands`, so the popup cannot disagree
+  with the player-modal bands on the same page. The YEARS come from
+  `resolveThrowbackAssignments` and are only shown when that era's name matches
+  the band's, so a fall-through to the current look shows no years rather than
+  a wrong range.
+- **It ignores `?week=`.** The layout strips it before resolving state:
+  `/live-scoring?week=4` in December is history, not the start of the week.
+  `?testDate=` still works for previewing (`?testDate=2026-09-30` opens it).
+
+Guard: `tests/throwback-welcome.test.ts`.

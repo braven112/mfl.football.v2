@@ -18,7 +18,7 @@
  * page renders, so the two can never drift.
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
-import Breadcrumbs from '../../theleague/Breadcrumbs.astro';
+import Breadcrumbs from '../Breadcrumbs.astro';
 import EraSeasonTable from '../franchises/EraSeasonTable.astro';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { getLeagueBySlug } from '../../../config/leagues';
@@ -340,7 +340,7 @@ const pageTitle = `${owner.title} — ${league.name} owner history`;
     display: inline-block;
     padding: 0.15rem 0.55rem;
     border-radius: 999px;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -361,7 +361,7 @@ const pageTitle = `${owner.title} — ${league.name} owner history`;
   }
   .co-owners {
     margin: 0.4rem 0 0;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     color: var(--content-text-muted, #666);
     max-width: 56ch;
   }
@@ -401,9 +401,9 @@ const pageTitle = `${owner.title} — ${league.name} owner history`;
     gap: 1rem;
   }
   .cross-league li { display: flex; flex-direction: column; }
-  .cross-league-league { font-weight: 600; font-size: 0.875rem; }
+  .cross-league-league { font-weight: 600; font-size: var(--font-size-sm); }
   .cross-league-years {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--content-text-muted, #777);
     font-variant-numeric: tabular-nums;
   }
@@ -435,7 +435,7 @@ const pageTitle = `${owner.title} — ${league.name} owner history`;
   }
   .career-stats div { min-width: 0; }
   .career-stats dt {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: var(--content-text-muted, #888);
@@ -456,7 +456,7 @@ const pageTitle = `${owner.title} — ${league.name} owner history`;
   /* Same chip language as the era tables — this component's copy, since
      Astro scoped CSS does not cross the component boundary. */
   .era-award {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     padding: 0.125rem 0.5rem;
     border-radius: 999px;
     background: var(--content-bg-muted, #f5f5f5);
@@ -491,7 +491,7 @@ const pageTitle = `${owner.title} — ${league.name} owner history`;
   }
   .succession-slot {
     margin: 0 0 0.5rem;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 600;
   }
   .succession-chain {
@@ -499,7 +499,7 @@ const pageTitle = `${owner.title} — ${league.name} owner history`;
     flex-wrap: wrap;
     align-items: center;
     gap: 0.5rem 0.875rem;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
   }
   .succession-link {
     color: var(--link-color, var(--accent));
@@ -529,7 +529,7 @@ const pageTitle = `${owner.title} — ${league.name} owner history`;
   .footnote {
     margin-top: 2.5rem;
     text-align: center;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
   }
   .dim { color: var(--content-text-muted, #888); }
 

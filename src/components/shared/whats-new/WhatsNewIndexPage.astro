@@ -13,7 +13,7 @@
  * so the wrappers stay behavior-identical to the pre-refactor pages.
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
-import WhatsNewListing from '../../theleague/whats-new/WhatsNewListing';
+import WhatsNewListing from './WhatsNewListing';
 import { spriteUrl } from '../../../utils/sprite-url';
 // Full-history access on purpose: the archive index lists every entry ever
 // published, including those rolled out of the capped active file.
@@ -192,7 +192,7 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
     border: 1px solid var(--color-gray-200, #e5e7eb);
     border-radius: 9999px;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: all var(--transition-fast);
   }
 
   .wn-filters__tab:hover:not(.wn-filters__tab--active) {
@@ -279,7 +279,7 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
     text-decoration: none;
     color: inherit;
     overflow: hidden;
-    transition: box-shadow 0.2s ease, transform 0.2s ease;
+    transition: box-shadow var(--transition-base), transform var(--transition-base);
   }
 
   a.wn-card,
@@ -346,7 +346,7 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
     display: flex;
     flex-direction: column;
     border-radius: 0.5rem;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-lg);
     transform: rotate(-7deg);
     min-height: 0;
   }
@@ -387,7 +387,7 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
     background: var(--color-gray-200, #e5e7eb);
     border-radius: 0.5rem;
     overflow: hidden;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-lg);
   }
 
   .wn-card__thumbnail-img {
@@ -544,7 +544,7 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
   }
 
   .wn-card__date {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: var(--font-weight-semibold, 600);
     color: var(--muted-text-color, #6b7280);
   }
@@ -561,11 +561,11 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
   }
 
   .wn-card__read-more {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: var(--font-weight-semibold, 600);
     color: var(--color-primary, #1c497c);
     margin-top: var(--spacing-xs, 0.25rem);
-    transition: color 0.15s ease;
+    transition: color var(--transition-fast);
   }
 
   .wn-card:hover .wn-card__read-more {
@@ -618,14 +618,14 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
     cursor: pointer;
     text-align: left;
     width: 100%;
-    transition: color 0.15s ease;
+    transition: color var(--transition-fast);
   }
 
   .wn-timeline__label {
     font-size: 0.8rem;
     font-weight: var(--font-weight-semibold, 600);
     color: var(--color-gray-600, #4b5563);
-    transition: color 0.15s ease;
+    transition: color var(--transition-fast);
   }
 
   .wn-timeline__link--active .wn-timeline__label {

@@ -10,7 +10,7 @@ import { getCurrentSeasonYear } from '../../../utils/league-year';
 import { getContextualRows } from '../../../utils/homepage-dashboard';
 import { getLeagueStandings } from '../../../utils/standings';
 import type { TeamSummary } from '../../../utils/league-summary-utils';
-import TeamIconCell from '../../TeamIconCell.astro';
+import TeamIconCell from '../../shared/TeamIconCell.astro';
 import config from '../../../data/theleague.config.json';
 
 interface Props {
@@ -185,11 +185,8 @@ const formatCap = (v: number) => {
       </h3>
       <p class="hp-standings__sub">{subtitle}</p>
     </div>
-    <a href={r(ctaHref)} class="hp-standings__cta">
+    <a href={r(ctaHref)} class="cta-link hp-standings__cta">
       {ctaLabel}
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
-        <path d="M5 12h14M12 5l7 7-7 7"/>
-      </svg>
     </a>
   </div>
 
@@ -262,7 +259,7 @@ const formatCap = (v: number) => {
   }
 
   .hp-standings__section-title {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -278,18 +275,7 @@ const formatCap = (v: number) => {
   }
 
   .hp-standings__cta {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--dh-accent);
-    text-decoration: none;
-    transition: gap 0.15s ease;
-  }
-
-  .hp-standings__cta:hover {
-    gap: 0.5rem;
+    font-size: var(--font-size-xs);
   }
 
   .hp-standings__table-wrap {
@@ -303,7 +289,7 @@ const formatCap = (v: number) => {
   }
 
   .hp-standings__th {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -352,7 +338,7 @@ const formatCap = (v: number) => {
   .hp-standings__td--rank {
     text-align: center;
     color: var(--color-gray-400, #9ca3af);
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 600;
     width: 2rem;
   }
@@ -378,7 +364,7 @@ const formatCap = (v: number) => {
   .hp-standings__td--cap {
     text-align: right;
     color: var(--color-gray-600, #4b5563);
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
   }
 
   .hp-standings__td--cap-negative {

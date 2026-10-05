@@ -113,7 +113,7 @@ const chips = [
       <span class="cmh__count-label" aria-hidden="true">{live ? 'Bidding now' : 'Days to auction · 7AM PT'}</span>
     </div>
     <span class="cmh__divider" aria-hidden="true"></span>
-    <a class="cmh__cta" href={`${mflBase}&O=43`} target="_blank" rel="noopener noreferrer">
+    <a class="cta cta--primary cmh__cta" href={`${mflBase}&O=43`} target="_blank" rel="noopener noreferrer">
       Place auction bid
       <span aria-hidden="true">→</span>
     </a>
@@ -138,7 +138,7 @@ const chips = [
   /* Auction-only extras: the high-bid line inside the frosted caption, and the
      quick-link row's spacing under the footer. Everything else is the shell. */
   .ach__caption-bid {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 800;
     color: #fcd34d;
     font-variant-numeric: tabular-nums;

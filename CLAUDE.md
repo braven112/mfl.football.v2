@@ -56,7 +56,9 @@ cross-cutting, add a line here. Keep this file short.
   memory: `/guard-test` (turn a rule into a scan guard), `/ratchet`
   (re-measure every baseline), `/rebase` (conflicts by class, correct
   ours/theirs), `/new-page` and `/new-cron` (scaffolds with the rules baked
-  in), `/rollover-check` (render a page at both clock boundaries). Agents
+  in), `/rollover-check` (render a page at both clock boundaries),
+  `/launch-check` (every page of a league, light and dark, before a launch
+  or features PR merges). Agents
   `sibling-drift-checker`, `guard-gap-auditor`,
   `clientrouter-lifecycle-auditor` and `mfl-fixture-recorder` each run a
   script first and judge second. `docs/claude/insights/features/deterministic-tooling.md`
@@ -75,10 +77,11 @@ cross-cutting, add a line here. Keep this file short.
 | Franchise history, owner attribution, `ownerHistory`, owner pages | `docs/claude/insights/features/franchise-history.md` + `docs/plans/owners-feature.md` | Owner-scoping drops a third of all franchise-seasons off franchise pages; `/owners` is now where they live, so every such season must land on exactly one HOLDING — one owner, or a declared set of co-owners — or it vanishes again. `tests/owner-tenures-data.test.ts` pins that over sets, plus a separate check that only declared co-owners share a season. The ownership boundary has ONE implementation — `buildAttributor` in `src/utils/owner-tenures.mjs` — and `tests/owner-boundary-parity.test.ts` fails on any file that re-grows its own walk-back; five copies once existed and two silently disagreed, so never inline one "just for this page". And the derived chain (history + ledger → owner tenures → division strength) is committed WHOLE, only through `scripts/recompute-derived-chain.mjs`: its data tests demand row-for-row agreement, and three lanes each committing a part left main one in-season run from red (`tests/derived-chain-lane.test.ts`). |
 | Error pages, the 404/500 boundary, "the page is 404ing" triage | `docs/claude/rules/error-pages.md` | Astro finds its error page by the EXACT route `/500`, so without `src/pages/500.astro` the lookup falls through to `[...path].astro` and every SSR crash on the site renders as the styled 404 page — which is how a total outage got triaged as a deleted route for hours. |
 | Brand Book — which cut a club or franchise draws in light, dark or on its own colour | `docs/plans/nfl-mark-assignments.md` (clubs) + `docs/plans/brand-book-franchise-half.md` (franchises) | There are THREE grounds, not two: white, a dark card, and the club's own colour. A club-colour band is a dark ground for almost every club, so it wants the DARK mark even while the page around it is in light theme — and its slot is DERIVED from the club colour's luminance, never stored. NFL.com publishes exactly ONE cut per club and for CHI/NYG/NYJ that cut is the dark one, which is a fact about grounds rather than a defect. A surface that is dark in BOTH themes (the broadcast boards, the Sunday Ticket grid) cannot use the `html.dark` swap at all — it asks `nflLogoUrl(code, 'dark')` for the cut directly, or a light-theme viewer gets the light mark on a near-black tile. And the Brand Book (`/<league>/brand`) is the one surface that opts OUT of that swap entirely (`content: normal !important`) — it shows the cuts side by side, so the swap would render the dark mark inside the LIGHT pane and print one mark twice; its FRANCHISE half covers the 40 league clubs on the same template, where an era wearing today's name is a retired cut of the same mark rather than a former identity, and the ring reset is scoped to LIGHT grounds only because `nfl-logo-dark-css.ts` emits `--nfl-logo-ring` UNGUARDED for stroked clubs' dark cuts. |
-| Colors, tokens, logos, headshots, service worker | `docs/claude/rules/theming-and-assets.md` | A `var(--x)` with no definition renders its fallback in *both* themes — light looks perfect, dark ships white-on-black. |
+| Colors, tokens, logos, headshots, service worker, buttons/CTAs | `docs/claude/rules/theming-and-assets.md` | A `var(--x)` with no definition renders its fallback in *both* themes — light looks perfect, dark ships white-on-black. And every CTA is `cta cta--primary` / `cta--ghost` / `cta-link` (`src/styles/cta.css`), never a one-off class — the layouts' global `a:hover` turns a one-off button's text red and underlined (`tests/cta-pattern.test.ts`). |
 | Feed writers, globs, `.git` size, Astro 7 compiler | `docs/claude/rules/storage-and-build.md` | MFL returns arrays in nondeterministic order — a plain `writeFileSync` + byte diff regrows a 7 GB `.git`. |
 | Cron cadence, "the site is showing stale data", `vercel.json` crons | `docs/claude/rules/storage-and-build.md` § "GitHub's `schedule` is not a cadence" | GitHub DROPS this repo's scheduled events in bulk — a five-minute cron delivered 5-8 runs a day since 2026-08-27, not 288 — and a surface with no live overlay cannot move until a sync commit redeploys it. Check WHICH surface before blaming the cron: rosters and transactions read live MFL through `mfl-roster-cache` / `mfl-transactions-cache` (~2 min, Redis), so a stale roster page usually means Redis, not the sync; Schefter, `activity` and standings are genuinely build-baked and are what the cadence protects. The ONLY scheduled trigger is the Vercel cron in `vercel.json` — for all THREE bridged workflows (roster sync, Schefter scan, GroupMe poll); a second one cannot be offset clear of it and collides with a job that pushes. Which ticks actually dispatch is decided in `src/utils/sync-cadence.ts`, from MFL's real waiver calendar and real kickoff times rather than a day-of-week cron, because that cadence is a BUILD SPEND decision — every sync commit to `main` is a production build, which is also why a run that found nothing must commit nothing (`writeJsonIfChanged`, run clock in `ignoreKeys`). |
 | Absolute URLs, GroupMe message text | `docs/claude/rules/league-urls.md` | Never concatenate origin + path; and GroupMe autolinks the period after a URL, 404ing it for every owner. |
+| Package leagues (Archie's, Launcher-built leagues), `templates/package-league`, `src/pages/archies/**` | `docs/claude/rules/package-leagues.md` | A package league's route files are OUTPUT of `templates/package-league` — edit the template and run `node scripts/sync-league-routes.mjs --all`, never the league's copy; each route exists iff its feature is ticked, and its search entries and nav links move with it (`tests/package-league-routes.test.ts`). |
 | Best-ball leagues | `docs/claude/rules/best-ball.md` | Draft-only: nav is opt-in, ADP is redraft, no live MFL syncing. |
 | AFL waiver order (`waiverSortOrder`, `import?TYPE=franchises`) | `docs/claude/afl-rules.md` § Setting the waiver order | MFL drops waiver priority at every league-year rollover and the AFL is rolling-priority, so the default reverse-franchise-id order IS a live wrong waiver order — but NO import type can set it back: the franchises import answers `<status>OK</status>` and ignores the field. |
 | Anything that asks when an NFL week starts (kickoff, deadlines, playoff/championship windows, current week) | `docs/claude/rules/schedule-optimization.md` § The NFL kickoff is not a derivation | Kickoff is NOT "the Thursday after Labor Day" — 2026 opened on a Wednesday, moved week 12 to Thanksgiving Wednesday and ran week 18 on a Sunday, so read `src/utils/nfl-week-starts.mjs` and express dates as a WEEK, never as days counted from kickoff. |
@@ -88,7 +91,7 @@ cross-cutting, add a line here. Keep this file short.
 | Draft pages (hub, results, order, broadcast, room, mock) | `docs/plans/draft-hub-and-results.md` | Draft rounds are NOT uniform — TheLeague's three rounds are 16/17/18 picks — so any overall pick number must sum each round's real size; and `draftUnit` is an object for TheLeague but an array for the AFL, whose 2003/2004 feeds carry an EMPTY second conference; and the AFL's two conferences draft DIFFERENTLY (AL live, NL email) in a way MFL's league-wide `draft_kind` cannot express, so anything conference-scoped must scope its POLL URL too or `/api/draft/status` serves everyone the AL's picks. | And the AFL's mock drafts from the pool its KEEPERS left: availability is per-CONFERENCE (60 of the AL's 84 keepers are kept in the NL too), its draft is a straight repeat rather than a snake, and it stays shut until the rosters — not the calendar — say the cuts have landed.
 | `rosters.astro` — anything at all | `docs/plans/rosters-page-split.md` | Run `scripts/roster-parity-check.mjs` before AND after; it is the only test of a 12k-line page whose output 7k lines of imperative script produce after hydration. Never pre-resolve into the client config anything already keyed under `seasons`. |
 | The Owners' Poll (ballot, tally, voters page, Pecking Order poll section) | `docs/plans/owners-poll.md` | Both leagues run it now, so a test that names one of them as "the league with no poll" is testing nothing — use Best Ball, which is disabled by design. And the AFL runs ONE 24-team ballot: the conference split that governs everything else here deliberately does not apply, because the column the poll publishes inside ranks all 24 in a single list. |
-| Homepage heroes — which player models one (composite casting) | `docs/claude/insights/features/player-composites.md` | The starter slots (kickoff, game day, live) cast the signed-in owner's OWN roster and never widen back to the league; "prefer your team, else the league" is the exact shape that put a rival's player on your own homepage. And ownership is a LIST — an AFL player is routinely rostered in both conferences, so `getOwnersByPlayer`/`castsFor`, never a `franchiseId ===` compare. |
+| Homepage heroes — which hero shows (every league), which player models one (composite casting) | `docs/claude/insights/features/afl-hero.md` (top entry) + `docs/claude/insights/features/player-composites.md` | Every league's hero is ONE ladder (`src/utils/league-hero/`): a hero is a rung a league's PROFILE lists, so a new league or capability is a profile field, never a slug branch in the resolver or views (`tests/league-hero.test.ts`). The starter slots (kickoff, game day, live) cast the signed-in owner's OWN roster and never widen back to the league; "prefer your team, else the league" is the exact shape that put a rival's player on your own homepage. And ownership is a LIST — an AFL player is routinely rostered in both conferences, so `getOwnersByPlayer`/`castsFor`, never a `franchiseId ===` compare. |
 | The viewer's preferred team (row highlighting, which roster/bracket opens, `resolveTeamSelection`, `resolveAFLTeamSelection`) | `docs/claude/rules/preferred-team.md` | "No preference" is a real answer and the resolver must be able to say it: both resolvers used to end in a literal `return '0001'`, so the three pages asking for "highlight nobody" showed a signed-out stranger Pacific Pigskins or Smokane FC as their own team — and the two that appended `|| undefined` to opt out could not, because `'0001'` is truthy. Pass a `defaultTeam` only where the surface cannot render without a team, and name it at the CALL SITE. The session belongs in `authUserFranchise`, never smuggled through `cookiePreference` (where it outranks a real cookie) or `defaultTeam` (where it loses to one), and always via `franchiseIdForLeague` — both leagues have a franchise 0001, so every one of these resolves to a real, wrong team instead of an obvious blank. |
 | Viewer preferences (country, clocks, `/preferences`, anything printing a time or naming a TV channel) | `docs/claude/rules/viewer-preferences.md` | RESOLVING the preference writes a cookie, so it belongs to the ROUTE — `Astro.cookies.set()` from a component throws after the headers are committed and blanks the page (READING via `readViewerClock` is side-effect free and fine anywhere); the league's PT is APPENDED to the viewer's one chosen clock, never picked, so it must not print twice to someone already on Pacific; and there are TWO floors that must not be merged — Sunday Ticket defaults to the COUNTRY's clock, every league surface to the LEAGUE's own (`officialClock`, a registry setting) — which both answer PT today only because the US default was deliberately moved ET → PT in Sep 2026, the one place the "a viewer who has chosen nothing sees exactly what that surface showed before" rule was overridden on purpose. |
 | My Watch List (watch toggles, `/api/watch-list`, Schefter Watching tab, `watch-list-news` push) | `docs/claude/insights/features/watch-list.md` | MFL's `myWatchList` is owner-cookie-only and INCREMENTAL, so a click writes straight through — never copy the draft list's pull/push buttons; and the Redis mirror is the ONLY server-side view of the list, keyed by registry slug because both leagues have a franchise 0001. |
@@ -172,7 +175,13 @@ The old `X-User-Context` / `X-Auth-User` header fallbacks were removed in
 June 2026 — they allowed full auth bypass. Never re-add unsigned identity
 sources. A session exists only for a REGISTRY league: login refuses any other
 `leagueId` and `getAuthUser` voids a token naming one, because a stranger's
-league has a franchise 0001 too. `isCommissionerOrAdmin` trusts a role that
+league has a franchise 0001 too. The only exception is MFL Live's invited
+pilot leagues (`MFL_LIVE_PILOT_LEAGUE_IDS`), reachable solely through the
+`mfl-live` sign-in scope and never a commissioner here. `MFL_LIVE_OPEN_SIGN_IN` (off
+until launch) widens that to any MFL league, but such a session is
+MFL-Live-ONLY: `getAuthUser` still refuses it, and only the /live surfaces
+call `getMflLiveUser`, which accepts it as a plain owner
+(`tests/mfl-live-open-sign-in.test.ts` pins the allowlist). `isCommissionerOrAdmin` trusts a role that
 carries no league, so an endpoint acting on a FIXED league (contracts,
 autocut, TheLeague's GroupMe) gates with `isCommissionerOrAdminForLeague`, and
 MFL writes use the caller's own cookie, never the server's env credentials
@@ -365,6 +374,37 @@ tags generously (synonyms, data types, actions, slang a user might type).
 tells you to add the entry in the first place — you have to remember.
 
 ## Second league's copy of a page — build a component, not a second page
+
+**Custom (standard-package) leagues get the REAL page, never a lite version.**
+The owner's rule (Sep 2026): a package league such as `archies` renders the
+same shared component TheLeague and the AFL render — extract the full-league
+page into a shared component (generalising conferences to N player pools,
+gating contract/salary features on `leagueHasFeature`) and move the existing
+league onto it too. A slimmer look-alike built just for the new league is the
+"cheap knock-off" to avoid; the first Archie's pages were exactly that and are
+being replaced (docs/plans/league-chat-and-persona.md, Phase 7).
+
+**Share the standard views; a league's own competition stays its own.** The
+owner's model (Sep 2026), standings first: a league shows THREE standings
+tabs, by default Division / Playoffs / All-Play, and may replace any one with
+something of its own (the AFL's Tiers; one day Archie's skins game). The
+standard views are shared and configured per league as data (columns,
+seeding, labels). A league's own competition — tiers, relegation, skins —
+is one-of-one: build it as that league's component in a slot the shared page
+renders, and never generalise its rules into the shared profile "in case"
+another league wants it. Another client may be SHOWN it for ideas; theirs is
+built to their own rules. Details: `docs/claude/rules/standings-brackets-draft-order.md` rule 1c.
+
+**Where a component lives: `src/components/shared/` if more than one league
+renders it; a league folder (`theleague/`, `afl/`, …) only for a component
+that league alone uses.** A component that started in one league's folder and
+gained a second caller moves to `shared/` in the change that adds the caller
+(the lineup page and `PlayerCell` moved that way in Oct 2026, then a sweep
+moved every other multi-league component — the whole `afl-family/` folder
+included, since the AFL and the keeper slot both render it). Nothing lives
+loose at the root of `src/components/`. Guard:
+`tests/components-root-guard.test.ts` — it walks the import graph and fails on
+a league folder's component imported from outside that league.
 
 A route that exists under two league directories in `src/pages/` is a
 **sibling**. Copying one league's page file into the next league and editing it

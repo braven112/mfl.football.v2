@@ -10,7 +10,7 @@ platform bucket, and `/activity` renders the split for both leagues.
 | Storage + readers | `src/utils/owner-activity.ts` (`recordVisit`, `recordAnonymousVisit`, `getSurfaceSection`) |
 | Endpoint | `src/pages/api/track-visit.ts` |
 | Detection | `src/layouts/TheLeagueLayout.astro` (visit tracker script) |
-| UI | `src/components/theleague/OwnerActivityReport.astro`, both `activity.astro` routes |
+| UI | `src/components/shared/OwnerActivityReport.astro`, both `activity.astro` routes |
 | Guard | `tests/visit-surface.test.ts`, `tests/origin-check-content-type.test.ts` (every browser POST/DELETE/beacon, not just this one) |
 
 Since 2026-09-10 the anonymous path counts more than the surface split — see
@@ -157,3 +157,34 @@ Upstash bills `EVAL` as a single command regardless of how many `redis.call`
 lines it contains. Guarding the optional surface writes INSIDE the script
 (`if ARGV[5] ~= '' then`) keeps the KEYS list a fixed length whether or not the
 client reported a surface, which is what lets one script serve both cases.
+
+## Site Insights — `/live/analytics` (Sep 2026)
+
+A second, admin-only set of counters rides the same beacon. The beacon itself
+moved out of `TheLeagueLayout.astro` into `src/scripts/visit-beacon.ts`, which
+MflAppLayout and SplashLayout load too, so MFL Live, `/login` and the splash
+are now counted (in insights only — they never touch the per-league
+`/activity` counters, because only a beacon naming a registry league does).
+
+- **One viewer.** `canViewSiteInsights` = TheLeague session + franchise 0001 +
+  commissioner/admin. The AFL's 0001 is a different owner; the test pins it.
+- **Debounce is per path now.** One beacon per minute per TAB undercounted
+  page rankings (five pages in a minute registered one). A repeat of the same
+  path within a minute is still dropped. `/activity`'s numbers rose with it.
+- **Every field is bounded** (`site-insights-model.ts`): device, source,
+  section, action are fixed vocabularies; an anonymous page is named only if
+  it is in the directory (league) or `KNOWN_APP_PATHS` (app sections).
+- **Actions are counted at the endpoint's success point**, never on click, via
+  `recordInsightAction`. Schefter tips are in `ANONYMOUS_INSIGHT_ACTIONS` —
+  count only, never the owner, because the tip endpoint promises anonymity.
+- **Push attribution**: `sw.js` adds `?src=push` to a notification click's
+  target; the beacon reports it and strips it from the address bar. The
+  GroupMe mobile app sends no referrer, so its links land as `direct`.
+  A click whose target an open tab already shows is only FOCUSED by the
+  worker, never navigated, so it sends no beacon and is not counted as push.
+- **Cost**: two EVALs per beacon (the `/activity` counters + insights), and
+  the per-path debounce sends more beacons than the old per-tab one. Measured
+  against a ~70-owner site this is thousands of Upstash commands a day, not
+  hundreds — the price of accurate page rankings, chosen deliberately.
+- Daily keys (`insights:d:<date>:*`) expire after 90 days; dates and hours are
+  on the default league's official clock.

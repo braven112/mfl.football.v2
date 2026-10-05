@@ -250,7 +250,7 @@ export default function LoginModal({ onClose, onLoginSuccess, leagueId = DEFAULT
           justify-content: center;
           cursor: pointer;
           color: var(--color-gray-500, #6b7280);
-          transition: background 0.15s ease, color 0.15s ease;
+          transition: background var(--transition-fast), color var(--transition-fast);
         }
         .lm-close:hover {
           background: var(--color-gray-200, #dddedf);
@@ -310,7 +310,7 @@ export default function LoginModal({ onClose, onLoginSuccess, leagueId = DEFAULT
           margin-bottom: -0.25rem;
         }
         .lm-section-title {
-          font-size: 0.75rem;
+          font-size: var(--font-size-xs);
           font-weight: 700;
           text-transform: uppercase;
           letter-spacing: 0.06em;
@@ -323,7 +323,7 @@ export default function LoginModal({ onClose, onLoginSuccess, leagueId = DEFAULT
           gap: 0.375rem;
         }
         .lm-label {
-          font-size: 0.75rem;
+          font-size: var(--font-size-xs);
           font-weight: 600;
           text-transform: uppercase;
           letter-spacing: 0.04em;
@@ -331,7 +331,7 @@ export default function LoginModal({ onClose, onLoginSuccess, leagueId = DEFAULT
         }
         .lm-input {
           padding: 0.75rem;
-          font-size: 0.875rem;
+          font-size: var(--font-size-sm);
           font-family: inherit;
           color: var(--input-text, #1f2937);
           background: var(--input-bg, #f9fafb);
@@ -375,7 +375,7 @@ export default function LoginModal({ onClose, onLoginSuccess, leagueId = DEFAULT
           margin-top: 0.5rem;
         }
         .lm-security {
-          font-size: 0.6875rem;
+          font-size: var(--font-size-2xs);
           color: var(--color-gray-400, #9ca3af);
           text-align: center;
           margin: 0 0 1rem 0;
@@ -395,7 +395,7 @@ export default function LoginModal({ onClose, onLoginSuccess, leagueId = DEFAULT
           font-weight: 600;
           cursor: pointer;
           padding: 0.625rem 0;
-          transition: color 0.15s ease;
+          transition: color var(--transition-fast);
         }
         .lm-btn-cancel:hover {
           color: var(--color-gray-800, #1f2937);
@@ -411,14 +411,14 @@ export default function LoginModal({ onClose, onLoginSuccess, leagueId = DEFAULT
         .lm-submit {
           appearance: none;
           border: none;
-          background: var(--color-primary, #1c497c);
-          color: #fff;
+          background: var(--color-primary-fill, var(--color-primary, #1c497c));
+          color: var(--on-color-primary, #fff);
           border-radius: var(--radius-md, 0.5rem);
           padding: 0.75rem 1.25rem;
-          font-size: 0.875rem;
+          font-size: var(--font-size-sm);
           font-weight: 600;
           cursor: pointer;
-          transition: background 0.15s ease, opacity 0.15s ease;
+          transition: background var(--transition-fast), opacity var(--transition-fast);
           flex: 1;
         }
         .lm-submit:hover:not(:disabled) {

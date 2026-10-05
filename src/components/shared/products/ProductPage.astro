@@ -1,0 +1,157 @@
+---
+/**
+ * One product's page — `/products/<slug>`. Pure rendering over
+ * `src/data/products.ts`; the route owns the access gate.
+ *
+ * Reading order is cheapest-first on purpose: a product that builds on
+ * another links to it ("Builds on") instead of restating it, and the
+ * features every product shares are linked into the catalog
+ * (`/products/features#<id>`) rather than re-described per page.
+ */
+import {
+	PRODUCTS,
+	getProduct,
+	getFeature,
+	productHref,
+	featureHref,
+	type Product,
+} from '../../../data/products';
+import ProductShot from './ProductShot.astro';
+import '../../../styles/products.css';
+
+interface Props {
+	product: Product;
+}
+
+const { product } = Astro.props as Props;
+
+const index = PRODUCTS.findIndex((p) => p.slug === product.slug);
+const previous = index > 0 ? PRODUCTS[index - 1] : null;
+const next = index < PRODUCTS.length - 1 ? PRODUCTS[index + 1] : null;
+const buildsOn = (product.buildsOn ?? []).map((slug) => getProduct(slug));
+const features = (product.features ?? []).map((id) => getFeature(id));
+---
+
+<article class="prd">
+	<a class="prd__back" href="/products">&larr; All products</a>
+
+	<header class="prd__head">
+		<p class="prd__eyebrow">{product.price}</p>
+		<h1 class="prd__title">{product.name}</h1>
+		<p class="prd__lede">{product.tagline}</p>
+		<p class="prd__buyer"><strong>For:</strong> {product.buyer}</p>
+	</header>
+
+	{product.screenshot && <ProductShot shot={product.screenshot} variant="hero" />}
+
+	{buildsOn.length > 0 && (
+		<section class="prd__section" aria-labelledby="prd-builds-on">
+			<h2 class="prd__h2" id="prd-builds-on">Builds on</h2>
+			<ul class="prd__chips">
+				{buildsOn.map((p) => (
+					<li>
+						<a class="prd__chip" href={productHref(p.slug)}>
+							<span>{p.name}</span>
+							<span class="prd__chip-price">{p.price}</span>
+						</a>
+					</li>
+				))}
+			</ul>
+		</section>
+	)}
+
+	<section class="prd__section">
+		{product.summary.map((paragraph) => <p class="prd__p">{paragraph}</p>)}
+	</section>
+
+	{product.tiers && (
+		<section class="prd__section" aria-labelledby="prd-tiers">
+			<h2 class="prd__h2" id="prd-tiers">{product.tiers.heading}</h2>
+			<div class="prd__table-wrap">
+				<table class="prd__table">
+					<thead>
+						<tr>
+							<th scope="col"><span class="visually-hidden">Feature</span></th>
+							{product.tiers.columns.map((column) => <th scope="col">{column}</th>)}
+						</tr>
+					</thead>
+					<tbody>
+						{product.tiers.rows.map((row) => (
+							<tr>
+								<th scope="row">{row.label}</th>
+								{row.values.map((value) => (
+									<td class={value === 'No' ? 'prd__no' : value === 'Yes' ? 'prd__yes' : undefined}>
+										{value}
+									</td>
+								))}
+							</tr>
+						))}
+					</tbody>
+				</table>
+			</div>
+			{product.tiers.note && <p class="prd__note">{product.tiers.note}</p>}
+		</section>
+	)}
+
+	{features.length > 0 && (
+		<section class="prd__section" aria-labelledby="prd-features">
+			<h2 class="prd__h2" id="prd-features">Platform features included</h2>
+			<ul class="prd__features">
+				{features.map((feature) => (
+					<li class:list={['prd__feature', { 'prd__feature--shot': feature.screenshot }]}>
+						{feature.screenshot && <ProductShot shot={feature.screenshot} variant="thumb" />}
+						<a class="prd__feature-name" href={featureHref(feature.id)}>{feature.name}</a>
+						<span class="prd__feature-summary">{feature.summary}</span>
+					</li>
+				))}
+			</ul>
+		</section>
+	)}
+
+	{product.sections.map((section, i) => (
+		<section class="prd__section" aria-labelledby={`prd-s${i}`}>
+			<h2 class="prd__h2" id={`prd-s${i}`}>{section.heading}</h2>
+			{section.body && <p class="prd__p">{section.body}</p>}
+			{section.items && (
+				<dl class="prd__items">
+					{section.items.map((item) => (
+						<div class="prd__item">
+							<dt>
+								{item.title}
+								{item.price && <span class="prd__item-price">{item.price}</span>}
+							</dt>
+							<dd>
+								<p>{item.body}</p>
+								{item.bullets && (
+									<ul>
+										{item.bullets.map((bullet) => <li>{bullet}</li>)}
+									</ul>
+								)}
+							</dd>
+						</div>
+					))}
+				</dl>
+			)}
+			{section.bullets && (
+				<ul class="prd__bullets">
+					{section.bullets.map((bullet) => <li>{bullet}</li>)}
+				</ul>
+			)}
+		</section>
+	))}
+
+	<nav class="prd__pager" aria-label="Other products">
+		{previous ? (
+			<a class="prd__pager-link" href={productHref(previous.slug)}>
+				<span class="prd__pager-dir">&larr; Previous</span>
+				<span>{previous.name}</span>
+			</a>
+		) : <span />}
+		{next && (
+			<a class="prd__pager-link prd__pager-link--next" href={productHref(next.slug)}>
+				<span class="prd__pager-dir">Next &rarr;</span>
+				<span>{next.name}</span>
+			</a>
+		)}
+	</nav>
+</article>

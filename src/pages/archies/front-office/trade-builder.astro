@@ -1,0 +1,52 @@
+---
+/**
+ * Trade Builder (archies) — thin route wrapper over the SAME shared trade
+ * builder the AFL renders (src/components/shared/trade-builder/). Archie's
+ * player pools are its nine divisions (`playerLimitUnit: DIVISION`), so trades
+ * stay inside the viewer's division. It sits under /front-office/ because that
+ * is the path the roster action sheet's Trade option opens; Archie's has no
+ * Front Office hub, so the breadcrumbs skip it.
+ */
+import TradeBuilderPage from '../../../components/shared/trade-builder/TradeBuilderPage.astro';
+import Breadcrumbs from '../../../components/shared/Breadcrumbs.astro';
+import { getLeagueBySlug } from '../../../config/leagues';
+import { getLeagueYearForSlug } from '../../../utils/league-year';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import config from '../../../../data/archies/archies.config.json';
+
+export const prerender = false;
+
+const league = getLeagueBySlug('archies')!;
+const r = (p: string) => resolveLeaguePath(p, Astro.locals.hideLeaguePrefix ?? false);
+
+const feeds = {
+  rosters: import.meta.glob('../../../../data/archies/mfl-feeds/*/rosters.json', { eager: true }),
+  players: import.meta.glob('../../../../data/archies/mfl-feeds/20{2[5-9],[3-9][0-9]}/players.json', { eager: true }),
+  // A redraft league values players on the REDRAFT board.
+  adp: import.meta.glob('../../../../data/archies/mfl-feeds/*/adp-redraft.json', { eager: true }),
+  adpFile: 'adp-redraft.json',
+  picks: import.meta.glob('../../../../data/archies/mfl-feeds/*/futureDraftPicks.json', { eager: true }),
+  tradeBait: import.meta.glob('../../../../data/archies/mfl-feeds/*/tradeBait.json', { eager: true }),
+  tradeBaitByFranchise: import.meta.glob('../../../../data/archies/mfl-feeds/*/tradeBait-by-franchise.json', { eager: true }),
+};
+
+// "Payton Manning Division" → "Payton Manning": the short label for the locked
+// rows and the "same-division trades only" line.
+const poolShort = Object.fromEntries(config.divisions.map((d) => [d.id, d.name.replace(/\s+Division$/i, '')]));
+---
+
+<TradeBuilderPage
+  leagueSlug={league.slug}
+  leagueLabel={league.shortName ?? league.name}
+  feeds={feeds}
+  fallbackYear={getLeagueYearForSlug(league.slug)}
+  teams={config.teams}
+  divisions={config.divisions}
+  poolShort={poolShort}
+  poolNoun="division"
+>
+  <Breadcrumbs
+    slot="breadcrumbs"
+    items={[{ label: 'Home', href: r(`/${league.slug}`) }, { label: 'Rosters', href: r(`/${league.slug}/rosters`) }, { label: 'Trade Builder' }]}
+  />
+</TradeBuilderPage>

@@ -1,0 +1,40 @@
+---
+/**
+ * The one body behind EmptyState.astro and ErrorState.astro — use those.
+ *
+ * Class list, role and icon come from src/utils/state-html.ts (shared with the
+ * React twin and client scripts); styles from the global src/styles/states.css.
+ * A default slot, when given, replaces the `body` line (copy that needs a link
+ * or <code>). Copy rules: docs/claude/rules/theming-and-assets.md
+ * § "Empty and error states".
+ */
+import { STATE_ICONS, stateClassName, stateRole, type StateAction, type StateKind } from '../../../utils/state-html';
+
+interface Props {
+  kind: StateKind;
+  title: string;
+  body?: string;
+  actions?: StateAction[];
+  compact?: boolean;
+  class?: string;
+}
+
+const { kind, title, body, actions = [], compact = false, class: className } = Astro.props;
+const hasSlot = Astro.slots.has('default');
+---
+<div class={stateClassName(kind, { compact, class: className })} role={stateRole(kind)}>
+  {!compact && <span class="ui-state__icon" set:html={STATE_ICONS[kind]} />}
+  <p class="ui-state__title">{title}</p>
+  {hasSlot ? <p class="ui-state__body"><slot /></p> : body && <p class="ui-state__body">{body}</p>}
+  {actions.length > 0 && (
+    <div class="ui-state__actions">
+      {actions.map((a) =>
+        a.href ? (
+          <a class="ui-state__action" href={a.href}>{a.label}</a>
+        ) : (
+          <button type="button" class="ui-state__action" data-state-action={a.id}>{a.label}</button>
+        ),
+      )}
+    </div>
+  )}
+</div>

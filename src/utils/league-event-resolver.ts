@@ -15,7 +15,7 @@ import type {
 } from '../types/league-events';
 import { THE_LEAGUE_EVENTS } from '../data/theleague/league-events';
 import { LEAGUE_YEAR_OVERRIDES } from '../data/theleague/league-year-config';
-import { getCurrentLeagueYear, getLaborDayForYear } from './league-year';
+import { getCurrentLeagueYear, getLaborDayForYear, getLeagueYearForSlug } from './league-year';
 import { nflWeekStart } from './nfl-week-starts.mjs';
 import {
   CHAMPIONSHIP_WEEK,
@@ -323,46 +323,63 @@ export function resolveAllEvents(
           endDate.setHours(20, 45, 0, 0);
         }
       }
-
-      const now = referenceDate.getTime();
-      const startMs = startDate.getTime();
-      const endMs = endDate.getTime();
-
-      const isActive = now >= startMs && now <= endMs;
-      const isPast = now > endMs;
-      const daysUntilStart = Math.ceil((startMs - now) / (1000 * 60 * 60 * 24));
-      const startMidnight = new Date(startDate);
-      startMidnight.setHours(0, 0, 0, 0);
-      const refMidnight = new Date(referenceDate);
-      refMidnight.setHours(0, 0, 0, 0);
-      const daysUntilStartCalendar = Math.round(
-        (startMidnight.getTime() - refMidnight.getTime()) / (1000 * 60 * 60 * 24),
-      );
-      const isUrgent =
-        !isPast &&
-        !isActive &&
-        def.urgencyDays != null &&
-        daysUntilStart <= def.urgencyDays &&
-        daysUntilStart > 0;
-
-      return {
-        definition: def,
-        startDate,
-        endDate,
-        isActive,
-        isPast,
-        isUrgent,
-        daysUntilStart,
-        daysUntilStartCalendar,
-        actionLinks: resolveLinks(def.actionLinks, linkVars),
-        resultLinks: resolveLinks(def.resultLinks, linkVars),
-      };
+      return resolveConcreteEvent(def, startDate, endDate, referenceDate, linkVars);
     })
-    .sort((a, b) => {
-      const timeDiff = a.startDate.getTime() - b.startDate.getTime();
-      if (timeDiff !== 0) return timeDiff;
-      return a.definition.sortOrder - b.definition.sortOrder;
-    });
+    .sort(compareResolved);
+}
+
+/** Start date, then the definition's sortOrder. */
+export function compareResolved(a: ResolvedLeagueEvent, b: ResolvedLeagueEvent): number {
+  const timeDiff = a.startDate.getTime() - b.startDate.getTime();
+  if (timeDiff !== 0) return timeDiff;
+  return a.definition.sortOrder - b.definition.sortOrder;
+}
+
+/**
+ * One event whose dates are already known (e.g. read from MFL's calendar feed
+ * rather than derived from a rule), with the same active/past/urgent
+ * bookkeeping every other event gets.
+ */
+export function resolveConcreteEvent(
+  def: LeagueEventDefinition,
+  startDate: Date,
+  endDate: Date,
+  referenceDate: Date,
+  linkVars: LinkTemplateVars,
+): ResolvedLeagueEvent {
+  const now = referenceDate.getTime();
+  const startMs = startDate.getTime();
+  const endMs = endDate.getTime();
+
+  const isActive = now >= startMs && now <= endMs;
+  const isPast = now > endMs;
+  const daysUntilStart = Math.ceil((startMs - now) / (1000 * 60 * 60 * 24));
+  const startMidnight = new Date(startDate);
+  startMidnight.setHours(0, 0, 0, 0);
+  const refMidnight = new Date(referenceDate);
+  refMidnight.setHours(0, 0, 0, 0);
+  const daysUntilStartCalendar = Math.round(
+    (startMidnight.getTime() - refMidnight.getTime()) / (1000 * 60 * 60 * 24),
+  );
+  const isUrgent =
+    !isPast &&
+    !isActive &&
+    def.urgencyDays != null &&
+    daysUntilStart <= def.urgencyDays &&
+    daysUntilStart > 0;
+
+  return {
+    definition: def,
+    startDate,
+    endDate,
+    isActive,
+    isPast,
+    isUrgent,
+    daysUntilStart,
+    daysUntilStartCalendar,
+    actionLinks: resolveLinks(def.actionLinks, linkVars),
+    resultLinks: resolveLinks(def.resultLinks, linkVars),
+  };
 }
 
 /**
@@ -503,13 +520,23 @@ const AFL_LINK_VARS_DEFAULT = {
 };
 
 /**
+ * The AFL's league year, on the AFL's OWN clock: it rolls on June 1
+ * (`leagueYearRollover` in the registry), not on TheLeague's Feb 14.
+ * `getCurrentLeagueYear` is TheLeague's clock — using it here put the AFL a
+ * year ahead from Feb 14 to May 31. tests/afl-event-league-year.test.ts.
+ */
+function aflLeagueYear(now: Date): number {
+  return getLeagueYearForSlug(AFL_LEAGUE.slug, now);
+}
+
+/**
  * Get the AFL Fantasy "What's Next" timeline.
- * Spans current + next league year so the transition period (~Feb 14) still
+ * Spans current + next league year so the run-up to the June 1 rollover still
  * surfaces the upcoming year's events.
  */
 export function getAflWhatsNextTimeline(referenceDate?: Date): WhatsNextTimeline {
   const now = referenceDate || new Date();
-  const leagueYear = getCurrentLeagueYear(now);
+  const leagueYear = aflLeagueYear(now);
   const nextLeagueYear = leagueYear + 1;
 
   const makeVars = (year: number): LinkTemplateVars => ({
@@ -539,7 +566,7 @@ export function getAllResolvedAflEvents(options?: {
   referenceDate?: Date;
 }): ResolvedLeagueEvent[] {
   const now = options?.referenceDate || new Date();
-  const year = options?.leagueYear || getCurrentLeagueYear(now);
+  const year = options?.leagueYear || aflLeagueYear(now);
   const vars: LinkTemplateVars = {
     ...AFL_LINK_VARS_DEFAULT,
     year: year.toString(),

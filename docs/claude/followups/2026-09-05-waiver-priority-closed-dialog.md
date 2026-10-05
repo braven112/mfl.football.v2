@@ -51,7 +51,7 @@ Staging changelog entry added (`bug-fix`, `afl`).
     `src/components/shared/**`)
   - Where: `tests/dialog-closed-display.test.ts:32` (`nativeDialogs`)
   - Why deferred: the React dialogs
-    (`src/components/theleague/rankings-import/ImportDetailModal.tsx`,
+    (`src/components/shared/rankings-import/ImportDetailModal.tsx`,
     `ConfirmDeleteModal.tsx`, `className="ri-modal"`, styled in
     `src/components/shared/rankings-import/ImportRankingsPage.astro`) are clean
     today but unguarded; walk `src/components/**` and `src/pages/**` and match

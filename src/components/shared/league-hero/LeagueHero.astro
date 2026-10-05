@@ -1,0 +1,162 @@
+---
+/**
+ * LeagueHero — every league's homepage hero, rendered from a LeagueHeroState
+ * (src/utils/league-hero/resolver.ts). One router for all leagues: which
+ * heroes a league reaches is its PROFILE's business (auction, draft, pools,
+ * live scoring, power rankings…), never a branch in here.
+ *
+ * The branded event card (`AflEventHero`, historically the AFL's) renders
+ * EVERY promo state — calendar events, the in-season daily slot rotation,
+ * fresh What's New entries, and the default fallback. Each state carries a
+ * `view: EventHeroView` the resolver builds. Only calendar-driven events get
+ * the gold border (`bordered` prop).
+ *
+ * High-stakes interactive phases keep their bespoke components for the day-of
+ * / active week, because the promo hero can't replace what they do:
+ *   - trade-deadline day      → TradeDeadlineHero (live countdown)
+ *   - championship week       → AflChampionshipHero (a pool-vs-pool matchup card)
+ *   - pool playoffs           → AflPlayoffsHero (bracket)
+ * The last two only for a league with a bracket hero (the resolver leaves the
+ * state without a `view`); every other league keeps its slot rotation — and
+ * therefore its composite — through the title game.
+ *
+ * Phases with an identity of their own render as COMPOSITES instead
+ * (`LeagueCompositeHero`), on the shared shell TheLeague's heroes use. That
+ * routing is deliberately conservative and lives here rather than in the
+ * resolver: a state whose view carries no `composite` treatment, or for which
+ * neither a player nor a feature screenshot could be found, falls through to
+ * the event card exactly as before. A missing feed therefore degrades to the
+ * card that always worked.
+ *
+ * Only the What's New and news states pass `clampSummary`, and the decision
+ * lives here because this is the one place that knows which state is being
+ * rendered: that copy is an ENTRY DESCRIPTION or an ARTICLE EXCERPT written
+ * for an article page. Every other composite's summary is resolver-written and
+ * short — clamping those would cut an instruction rather than trim a paragraph.
+ *
+ * The composite deliberately does NOT take `backdrop`. The franchise backdrop
+ * paints the viewer's colours behind the whole card; a composite already says
+ * whose story it is through its glow (see hero-franchise-accent.ts), and
+ * stacking both leaves the cast player floating on a second team's gradient.
+ */
+import TradeDeadlineHero from '../TradeDeadlineHero';
+import { getLeagueBySlug, ensureLeaguePrefix, type CanonicalLeagueSlug } from '../../../config/leagues';
+import AflPlayoffsHero from '../AflPlayoffsHero.astro';
+import AflChampionshipHero from '../AflChampionshipHero.astro';
+import AflEventHero from '../AflEventHero.astro';
+import LeagueCompositeHero from '../LeagueCompositeHero.astro';
+import LiveScoringHero from '../LiveScoringHero';
+import '../../../styles/live-scoring-hero.css';
+import '../../../styles/trade-deadline-hero.css';
+import type { LeagueHeroState } from '../../../utils/league-hero/types';
+import { getLeagueHeroProfile } from '../../../utils/league-hero/profiles';
+import type { HeroFranchiseBackdrop } from '../../../utils/hero-franchise-backdrop';
+import type { BuiltLiveScoringProps } from '../../../utils/live-scoring-hero-props';
+
+/** Region label per state — gives screen-reader users a meaningful landmark cue. */
+const REGION_LABEL: Record<string, string> = {
+  'calendar-event': 'Featured league event',
+  'regular-season': 'In-season hero',
+  feature: "Fresh on the site",
+};
+
+interface Props {
+  /** Whose hero this is. */
+  league: CanonicalLeagueSlug;
+  state: LeagueHeroState;
+  /** League config — required when rendering the bracket heroes (a league with pools that play off). */
+  config?: any;
+  /** Standings data from the league's feed — same. */
+  standings?: any[];
+  /** User's franchise id, for highlighting in playoff brackets. */
+  userFranchiseId?: string;
+  /**
+   * The signed-in owner's colours + crest for the promo hero's card. Only
+   * AflEventHero takes it — the trade-deadline, playoff and championship heroes
+   * are ABOUT specific franchises (a countdown, a bracket, a matchup), so
+   * painting the viewer's own colours behind them would claim a card that
+   * belongs to whoever is in it.
+   */
+  backdrop?: HeroFranchiseBackdrop | null;
+  /**
+   * Live scores, when the page could read them. Absent means the feed did not
+   * answer, and the branded event card takes the slot — a scoreboard with no
+   * scores is worse than the card it replaced.
+   */
+  liveScoring?: BuiltLiveScoringProps;
+}
+
+const { league, state, config, standings, userFranchiseId, backdrop = null, liveScoring} = Astro.props;
+
+const profile = getLeagueHeroProfile(league);
+// Built from the registry, never written as a literal — the path belongs to
+// the league entry.
+const TRADE_BUILDER = ensureLeaguePrefix(getLeagueBySlug(league)!, profile.facts.tradeDeadline.path);
+/** The landmark label when no state names one — "AFL hero", "Archie's hero". */
+const DEFAULT_REGION = `${profile.copy.shortName} hero`;
+/** The state's view, when it carries one (the bracket phases of a bracket league do not). */
+const view = 'view' in state ? state.view : undefined;
+/** The slot rotation's live window — regular season, or a slot-rotation league's playoffs. */
+const slot = 'slot' in state ? state.slot : undefined;
+/**
+ * Two states clamp their summary to two lines, and for the same reason: their
+ * copy is not resolver-written. The feature card's is a What's New entry
+ * description; the news card's is an ARTICLE EXCERPT. At the width the copy
+ * column keeps beside the cutout an excerpt runs four lines and pushes the card
+ * past its own min-height. Every other state's summary is short by
+ * construction, and the one thing worse than a tall card is a keeper deadline
+ * whose instruction stops mid-sentence.
+ */
+const clampsSummary = state.kind === 'feature' || slot === 'article' || slot === 'column';
+
+---
+
+{/* Live scoring outranks the composite during game windows: while games are
+    being played the hero's job is a SCOREBOARD, not a portrait. Same call
+    TheLeague's SeasonDailyHero makes, and the reason `slot:live-scoring`
+    deliberately carries no composite treatment. */}
+{slot === 'live-scoring' && liveScoring && 'gameWindow' in state ? (
+  <LiveScoringHero
+    client:load
+    {...liveScoring}
+    phase="regular-season"
+    gameWindow={state.gameWindow ?? null}
+    isLive={state.isLive ?? false}
+  />
+) : state.kind === 'trade-deadline' ? (
+  <TradeDeadlineHero
+    client:idle
+    deadlineMidnightPT={state.deadlineMidnightPT}
+    referenceNowISO={state.referenceNowISO}
+    tradeBuilderHref={TRADE_BUILDER}
+  />
+) : state.kind === 'playoffs' && !view && config && standings ? (
+  <AflPlayoffsHero
+    teams={config.teams}
+    standings={standings}
+    config={config}
+    userFranchiseId={userFranchiseId}
+  />
+) : state.kind === 'championship' && !view && config && standings ? (
+  <AflChampionshipHero
+    teams={config.teams}
+    standings={standings}
+    config={config}
+    userFranchiseId={userFranchiseId}
+  />
+) : view && view.composite && (view.model || view.screenshot) ? (
+  <LeagueCompositeHero
+    view={view}
+    league={league}
+    regionLabel={REGION_LABEL[state.kind] ?? DEFAULT_REGION}
+    clampSummary={clampsSummary}
+  />
+) : (
+  <AflEventHero
+    {...view}
+    league={league}
+    bordered={state.kind === 'calendar-event'}
+    regionLabel={REGION_LABEL[state.kind] ?? DEFAULT_REGION}
+    backdrop={backdrop}
+  />
+)}

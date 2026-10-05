@@ -50,7 +50,7 @@
   padding: 0.75rem 1rem;
   background: var(--sf-bg);
   border-bottom: 1px solid var(--sf-border);
-  transition: background 0.15s ease;
+  transition: background var(--transition-fast);
 }
 
 /* Last visible post shouldn't have a border against the card bottom */
@@ -163,7 +163,7 @@
 
 .sf-post--article .sf-post__body {
   color: var(--sf-text-secondary);
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
 }
 
 .sf-post--article .sf-post__link {
@@ -177,14 +177,14 @@
   background: var(--sf-analysis-bg);
   border-left: 2px solid var(--sf-accent);
   border-radius: 0 0.25rem 0.25rem 0;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   line-height: 1.45;
   color: var(--sf-text-body);
   font-style: italic;
 }
 
 .sf-post__analysis-label {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -198,7 +198,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.3125rem;
-  font-size: 0.6875rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -223,9 +223,9 @@
   margin-bottom: 0.3rem;
   padding: 0.1rem 0.55rem 0.1rem 0.4rem;
   border-radius: 9999px;
-  font-size: 0.6875rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
-  color: var(--league-accent, var(--color-primary, #1c497c));
+  color: var(--league-accent-fg, var(--league-accent, var(--color-primary, #1c497c)));
   background: color-mix(in srgb, var(--league-accent, var(--color-primary, #1c497c)) 12%, transparent);
 }
 
@@ -273,7 +273,7 @@
 
 .sf-post__link--external::after {
   content: '↗';
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
 }
 
 /* ── External post (ESPN etc.) ── */
@@ -305,7 +305,7 @@ html[data-league='afl'] .sf-post--external {
 }
 
 html[data-league='afl'] .sf-post__link--external {
-  color: var(--league-accent, #c41e3a);
+  color: var(--league-accent-fg, var(--league-accent, #c41e3a));
 }
 
 html.dark[data-league='afl'] .sf-post__link--external {
@@ -378,7 +378,7 @@ html.dark[data-league='afl'] .sf-post__link--external {
 }
 
 .sf-reaction-like__count {
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
@@ -416,7 +416,7 @@ html.dark[data-league='afl'] .sf-post__link--external {
 }
 
 .sf-reaction-pill__count {
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   color: var(--sf-text-secondary);
@@ -543,7 +543,7 @@ html.dark[data-league='afl'] .sf-post__link--external {
 
 .sf-page-header--feed .sf-page-header__bio {
   margin-top: 0.25rem;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   color: var(--sf-text-secondary);
 }
 
@@ -601,7 +601,7 @@ html.dark[data-league='afl'] .sf-post__link--external {
 }
 
 .sf-widget__title {
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -611,14 +611,9 @@ html.dark[data-league='afl'] .sf-post__link--external {
 }
 
 .sf-widget__view-all {
-  font-size: 0.75rem;
+  --cta-link-ink: var(--sf-link-color);
+  font-size: var(--font-size-xs);
   font-weight: 500;
-  color: var(--sf-link-color);
-  text-decoration: none;
-}
-
-.sf-widget__view-all:hover {
-  text-decoration: underline;
 }
 
 .sf-widget__list {
@@ -657,7 +652,7 @@ html.dark[data-league='afl'] .sf-post__link--external {
 .sf-widget__item-time {
   grid-row: 2;
   grid-column: 2 / -1;
-  font-size: 0.6875rem;
+  font-size: var(--font-size-2xs);
   color: var(--sf-text-secondary);
   font-variant-numeric: tabular-nums;
   text-align: left;
@@ -676,7 +671,7 @@ html.dark[data-league='afl'] .sf-post__link--external {
 }
 
 .sf-empty__text {
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   color: var(--sf-text-secondary);
 }
 
@@ -717,11 +712,11 @@ html.dark[data-league='afl'] .sf-post__link--external {
   }
 
   .sf-post__name {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
   }
 
   .sf-post__body {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
   }
 
   .sf-page-header__avatar {
@@ -744,7 +739,7 @@ html.dark[data-league='afl'] .sf-post__link--external {
 
   .sf-source-tab {
     padding: 0.5rem 0.75rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
   }
 }
 
@@ -769,7 +764,7 @@ html.dark[data-league='afl'] .sf-post__link--external {
 
 .sf-post__handle--groupme {
   color: var(--color-gray-400, #9ca3af);
-  font-size: 0.6875rem;
+  font-size: var(--font-size-2xs);
 }
 
 .sf-post__body--groupme {
@@ -800,7 +795,7 @@ html.dark[data-league='afl'] .sf-post__link--external {
   max-height: 20rem;
   object-fit: cover;
   border-radius: var(--radius-lg, 0.75rem);
-  transition: opacity 0.15s ease;
+  transition: opacity var(--transition-fast);
 }
 
 .sf-post__gm-images--grid .sf-post__gm-image {
@@ -818,7 +813,7 @@ html.dark[data-league='afl'] .sf-post__link--external {
   border: 1px solid var(--sf-border);
   border-radius: var(--radius-lg, 0.75rem);
   overflow: hidden;
-  transition: background 0.15s ease;
+  transition: background var(--transition-fast);
 }
 
 .sf-post__embed-card:hover {
@@ -868,7 +863,7 @@ html.dark[data-league='afl'] .sf-post__link--external {
 }
 
 .sf-post__embed-cta {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-2xs);
   color: var(--sf-text-secondary);
 }
 
@@ -882,7 +877,7 @@ html.dark[data-league='afl'] .sf-post__link--external {
   overflow: hidden;
   text-decoration: none;
   color: inherit;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
 }
 
 .sf-post__og-card:hover {
@@ -912,7 +907,7 @@ html.dark[data-league='afl'] .sf-post__link--external {
 }
 
 .sf-post__og-domain {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-2xs);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--sf-text-secondary);
@@ -920,7 +915,7 @@ html.dark[data-league='afl'] .sf-post__link--external {
 }
 
 .sf-post__og-title {
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--sf-text-primary);
   line-height: 1.3;
@@ -965,7 +960,7 @@ html.dark[data-league='afl'] .sf-post__link--external {
   text-decoration: none;
   color: inherit;
   background: var(--sf-bg);
-  transition: background 0.15s ease;
+  transition: background var(--transition-fast);
 }
 
 .social-embed__fallback:hover {
@@ -1003,7 +998,7 @@ html.dark[data-league='afl'] .sf-post__link--external {
 }
 
 .social-embed__fallback-cta {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-2xs);
   color: var(--sf-text-secondary);
 }
 
@@ -1033,7 +1028,7 @@ html.dark[data-league='afl'] .sf-post__link--external {
   align-items: center;
   gap: 0.25rem;
   padding: 0.25rem 0.625rem;
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--sf-accent, #1c497c);
   background: transparent;
@@ -1042,6 +1037,13 @@ html.dark[data-league='afl'] .sf-post__link--external {
   cursor: pointer;
   text-decoration: none;
   transition: background 0.15s, border-color 0.15s;
+}
+
+/* An <a>: restate colour and decoration on hover/focus, or the layouts'
+   global a:hover turns it red and underlined (tests/cta-pattern.test.ts). */
+.sfc-whisper__signin:is(:hover, :focus) {
+  color: var(--sf-accent, #1c497c);
+  text-decoration: none;
 }
 
 .sfc-whisper__trigger:hover,
@@ -1086,7 +1088,7 @@ html.dark[data-league='afl'] .sf-post__link--external {
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   color: var(--sf-text-secondary, #6b7280);
 }
 
@@ -1094,7 +1096,7 @@ html.dark[data-league='afl'] .sf-post__link--external {
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
-  font-size: 0.6875rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -1103,7 +1105,7 @@ html.dark[data-league='afl'] .sf-post__link--external {
 
 .sfc-whisper__topic {
   font: inherit;
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   padding: 0.125rem 0.375rem;
   border: 1px solid var(--sf-border, #e5e7eb);
   border-radius: 0.25rem;
@@ -1124,7 +1126,7 @@ html.dark[data-league='afl'] .sf-post__link--external {
 .sfc-whisper__cancel,
 .sfc-whisper__submit {
   font: inherit;
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   padding: 0.3125rem 0.75rem;
   border-radius: 0.375rem;
@@ -1152,7 +1154,7 @@ html.dark[data-league='afl'] .sf-post__link--external {
 
 .sfc-whisper__status {
   margin: 0;
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
 }
 
 .sfc-whisper__status--success {
@@ -1166,7 +1168,7 @@ html.dark[data-league='afl'] .sf-post__link--external {
 .sfc-post__thread-link {
   display: inline-block;
   margin-top: 0.5rem;
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--sf-accent, #1c497c);
   text-decoration: none;

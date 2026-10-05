@@ -360,7 +360,7 @@ const whereLabel: Record<'mfl' | 'here' | 'both', string> = {
       </ol>
 
       <div class="faq__cta">
-        <a class="faq__cta-btn" href={path('/suggestions')}>Post an idea on The Board</a>
+        <a class="cta cta--primary faq__cta-btn" href={path('/suggestions')}>Post an idea on The Board</a>
         <p class="faq__cta-note">
           Rule changes still need a 75% vote per the <a href={path('/rules')}>constitution</a> —
           The Board is where they get pitched, not where they get ratified. Anything about
@@ -398,7 +398,7 @@ const whereLabel: Record<'mfl' | 'here' | 'both', string> = {
   }
   .faq__eyebrow {
     margin: 0 0 0.5rem;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -429,7 +429,7 @@ const whereLabel: Record<'mfl' | 'here' | 'both', string> = {
   }
   .faq__tldr-title {
     margin: 0 0 0.75rem;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -451,7 +451,7 @@ const whereLabel: Record<'mfl' | 'here' | 'both', string> = {
   .faq__section-title {
     margin: 0 0 0.5rem;
     padding-left: 0.5rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -495,7 +495,7 @@ const whereLabel: Record<'mfl' | 'here' | 'both', string> = {
     border-right: 2px solid var(--content-text-muted, #6b7280);
     border-bottom: 2px solid var(--content-text-muted, #6b7280);
     transform: rotate(45deg);
-    transition: transform 0.15s ease;
+    transition: transform var(--transition-fast);
   }
   .faq__item[open] > .faq__q::after {
     transform: rotate(-135deg);
@@ -522,7 +522,7 @@ const whereLabel: Record<'mfl' | 'here' | 'both', string> = {
   .faq__table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
   }
   .faq__table th,
   .faq__table td {
@@ -532,7 +532,7 @@ const whereLabel: Record<'mfl' | 'here' | 'both', string> = {
     border-bottom: 1px solid var(--content-border, #e2e8f0);
   }
   .faq__table thead th {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -554,7 +554,7 @@ const whereLabel: Record<'mfl' | 'here' | 'both', string> = {
   .faq__pill {
     display: inline-block;
     padding: 0.15rem 0.5rem;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 600;
     white-space: nowrap;
     border-radius: 999px;
@@ -600,9 +600,9 @@ const whereLabel: Record<'mfl' | 'here' | 'both', string> = {
     width: 1.6rem;
     height: 1.6rem;
     border-radius: 999px;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
-    color: var(--color-white, #fff);
+    color: var(--on-league-accent, var(--color-white, #fff));
     background: var(--league-accent, #1c497c);
   }
   .faq__cta {
@@ -613,16 +613,11 @@ const whereLabel: Record<'mfl' | 'here' | 'both', string> = {
     border-radius: var(--radius-md, 0.5rem);
   }
   .faq__cta-btn {
-    display: inline-block;
     padding: 0.6rem 1.15rem;
     font-weight: 600;
     font-size: 0.9375rem;
-    color: var(--color-white, #fff);
-    background: var(--league-accent, #1c497c);
     border-radius: var(--radius-sm, 0.25rem);
-    text-decoration: none;
   }
-  .faq__cta-btn:hover { opacity: 0.9; }
   .faq__cta-note {
     margin: 0.85rem 0 0;
     font-size: 0.8125rem;

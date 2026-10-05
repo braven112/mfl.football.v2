@@ -1,0 +1,16 @@
+---
+/**
+ * What's New (__LEAGUE_SHORT__) — thin route wrapper.
+ * Shared implementation lives in components/shared/whats-new/WhatsNewIndexPage.
+ */
+import WhatsNewIndexPage from '../../../components/shared/whats-new/WhatsNewIndexPage.astro';
+
+export const prerender = false;
+---
+
+<WhatsNewIndexPage
+  leagueSlug="__LEAGUE_SLUG__"
+  title="What's New — __LEAGUE_SHORT__"
+  subtitle="New features, improvements, and updates for __LEAGUE_NAME__."
+  emptyStateText="New features land here as they ship. Updates post every Monday."
+/>

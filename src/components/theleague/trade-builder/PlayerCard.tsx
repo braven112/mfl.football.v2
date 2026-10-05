@@ -1,7 +1,7 @@
 import React from 'react';
 import type { TradeBuilderPlayer, RookieExtensionSim } from '../../../types/trade-builder';
 import { formatCurrency } from '../../../utils/formatters';
-import { PlayerCell } from '../PlayerCell';
+import { PlayerCell } from '../../shared/PlayerCell';
 
 
 interface Props {
@@ -145,12 +145,12 @@ export default function PlayerCard({
           padding: 0.0625rem 0.25rem;
           background: var(--color-warning-light, #fef3c7);
           color: var(--color-warning-dark, #d97706);
-          font-size: 0.625rem;
+          font-size: var(--font-size-3xs);
           font-weight: 700;
           border-radius: 0.1875rem;
         }
         .player-card__trade-bait {
-          font-size: 0.75rem;
+          font-size: var(--font-size-xs);
           cursor: default;
         }
         .player-card__remove {
@@ -179,7 +179,7 @@ export default function PlayerCard({
           gap: 0.0625rem;
         }
         .player-card__detail-label {
-          font-size: 0.625rem;
+          font-size: var(--font-size-3xs);
           font-weight: 600;
           text-transform: uppercase;
           letter-spacing: 0.06em;
@@ -192,7 +192,7 @@ export default function PlayerCard({
           font-variant-numeric: tabular-nums;
         }
         .player-card__detail-value--muted {
-          font-size: 0.75rem;
+          font-size: var(--font-size-xs);
           color: var(--color-gray-500, #6b7280);
           font-weight: 500;
         }
@@ -209,18 +209,18 @@ export default function PlayerCard({
           border-radius: var(--radius-sm, 0.25rem);
         }
         .player-card__rookie-badge {
-          font-size: 0.6875rem;
+          font-size: var(--font-size-2xs);
           font-weight: 700;
           color: var(--color-warning-dark, #d97706);
         }
         .player-card__rookie-text {
-          font-size: 0.6875rem;
+          font-size: var(--font-size-2xs);
           color: var(--color-warning-dark, #d97706);
           flex: 1;
         }
         .player-card__ext-btn {
           padding: 0.25rem 0.5rem;
-          font-size: 0.6875rem;
+          font-size: var(--font-size-2xs);
           font-weight: 600;
           border: 1px solid var(--color-warning-dark, #d97706);
           border-radius: var(--radius-sm, 0.25rem);
@@ -255,13 +255,13 @@ export default function PlayerCard({
           border-radius: var(--radius-sm, 0.25rem);
         }
         .player-card__ext-badge {
-          font-size: 0.6875rem;
+          font-size: var(--font-size-2xs);
           font-weight: 700;
           color: var(--color-success-dark, #059669);
           flex: 1;
         }
         .player-card__tag-badge {
-          font-size: 0.6875rem;
+          font-size: var(--font-size-2xs);
           font-weight: 700;
           color: var(--color-franchise-tag, #7c3aed);
           background: var(--color-franchise-tag-light, #ede9fe);

@@ -42,6 +42,17 @@
   user-select: none;
 }
 
+/* A banner CROP (`crestRound`) is a square picture, not a drawn mark: shown as
+   a circle, height-driven so it always fits the card. Two classes, so it wins
+   over the mobile width override without depending on order. */
+.hero-fb__crest.hero-fb__crest--round {
+  width: auto;
+  height: 86%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
 /*
  * The broadcast reveal's wash, with a deeper left ramp.
  *

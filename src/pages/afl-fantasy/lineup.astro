@@ -1,7 +1,7 @@
 ---
 /**
  * Set Lineup (AFL) — thin route wrapper around the AFL-family lineup page
- * (components/afl-family/LineupPage), which the custom-site demo's keeper
+ * (components/shared/lineup/LineupPage), which the custom-site demo's keeper
  * slot shares.
  *
  * The auth gate stays HERE: `Astro.redirect()` only redirects from a page.
@@ -10,7 +10,7 @@
  * the AFL's league (wrong roster, and a franchise the user doesn't own). The
  * login keeps the requested path + query (e.g. ?week=12).
  */
-import LineupPage from '../../components/afl-family/LineupPage.astro';
+import LineupPage from '../../components/shared/lineup/LineupPage.astro';
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 import { getAuthUser } from '../../utils/auth';
 import { loginUrlForRequest } from '../../utils/login-redirect';

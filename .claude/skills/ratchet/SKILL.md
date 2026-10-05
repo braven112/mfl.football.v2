@@ -1,6 +1,6 @@
 ---
 name: ratchet
-description: Re-measure and retighten the repo's ratchet baselines (astro check type-error total, forked sibling pages, ClientRouter init offenders) in one command. Use after a rebase, after unforking a page, after a type-cleanup pass, or whenever tests/typecheck-baseline.typecheck.ts or tests/page-fork-ratchet.test.ts fails saying the count DROPPED. Trigger on /ratchet, "retighten the baseline", "baseline is stale", "typecheck baseline moved".
+description: Re-measure and retighten the repo's ratchet baselines (astro check type-error total, forked sibling pages, ClientRouter init offenders, hand-typed design literals) in one command. Use after a rebase, after unforking a page, after a type-cleanup pass, or whenever tests/typecheck-baseline.typecheck.ts or tests/page-fork-ratchet.test.ts fails saying the count DROPPED. Trigger on /ratchet, "retighten the baseline", "baseline is stale", "typecheck baseline moved".
 ---
 
 # /ratchet — re-measure the baselines
@@ -13,8 +13,9 @@ directions so progress gets recorded instead of leaving slack:
 | `tests/fixtures/typecheck-baseline.json` | `pnpm test:types` | `astro check` error total (~2.5 min) |
 | `tests/fixtures/page-fork-baseline.json` | `tests/page-fork-ratchet.test.ts` | sibling routes over 80 lines |
 | `tests/fixtures/clientrouter-init-baseline.json` | `tests/clientrouter-init-ratchet.test.ts` | client scripts that init only on DOMContentLoaded |
+| `tests/fixtures/design-literal-baseline.json` | `tests/design-polish.test.ts` | literal transition / font-size / box-shadow values, per file |
 
-`scripts/ratchet.mjs` measures all three with the SAME code the tests use.
+`scripts/ratchet.mjs` measures all four with the SAME code the tests use.
 
 ## Procedure
 

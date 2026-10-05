@@ -92,7 +92,7 @@ describe('waiver priority is gated on MFL settings', () => {
   });
 
   it('hides the priority row AND the screen, not just the row', () => {
-    const modal = read('src/components/theleague/TransactionHubModal.astro');
+    const modal = read('src/components/shared/TransactionHubModal.astro');
     // Two gates: the hub-home row, and view 5 itself. Hiding only the row
     // leaves a screen reachable by any stray showView call.
     const gates = modal.match(/\{config\.showWaiverPriority && \(/g) ?? [];
@@ -250,5 +250,18 @@ describe('the hub does not cache the waiver order across navigations', () => {
 
   it('and thmPoll is what astro:page-load calls', () => {
     expect(script).toMatch(/addEventListener\('astro:page-load', thmPoll\)/);
+  });
+});
+
+describe('the transaction hub lists the SESSION league’s own teams', () => {
+  it('an Archie’s owner sees Archie’s franchises, never TheLeague’s', async () => {
+    const { buildTransactionHubConfig } = await import('../src/utils/transaction-hub-config');
+    const { getLeagueBySlug } = await import('../src/config/leagues');
+    const archies = getLeagueBySlug('archies')!;
+    const config = buildTransactionHubConfig('archies', { franchiseId: '0001', leagueId: archies.id }, '/archies/free-agents', 2026);
+    const archiesConfig = (await import('../data/archies/archies.config.json')).default as { teams: { franchiseId: string; name: string }[] };
+    expect(config.signedIn).toBe(true);
+    expect(config.teams.length).toBe(archiesConfig.teams.length);
+    expect(config.teams.map((t) => t.franchiseId)).toEqual(archiesConfig.teams.map((t) => t.franchiseId));
   });
 });

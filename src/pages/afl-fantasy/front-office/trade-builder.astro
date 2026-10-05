@@ -1,40 +1,47 @@
 ---
 /**
- * Trade Builder (AFL) — thin route wrapper around the AFL-family trade builder
- * (components/afl-family/TradeBuilderPage), shared with the custom-site demo's
- * keeper slot. The feed globs stay HERE: a specifier cannot be a runtime
- * variable.
+ * Trade Builder (AFL) — thin route wrapper over the shared trade builder
+ * (src/components/shared/trade-builder/TradeBuilderPage.astro), which Archie's
+ * renders too. The literal globs stay here: a static import specifier cannot
+ * be a runtime variable.
  */
-import TradeBuilderPage from '../../../components/afl-family/TradeBuilderPage.astro';
-import { feedsByYear } from '../../../utils/afl-family-standings';
+import TradeBuilderPage from '../../../components/shared/trade-builder/TradeBuilderPage.astro';
+import FrontOfficeNav from '../../../components/shared/front-office-nav/FrontOfficeNav.astro';
 import { getLeagueBySlug } from '../../../config/leagues';
+import { getAllTeams, getConferenceShort, type ConferenceId } from '../../../utils/afl-conference';
+import aflLeagueConfig from '../../../../data/afl-fantasy/afl.config.json';
 
 export const prerender = false;
 
-const FALLBACK_YEAR = 2025;
+const league = getLeagueBySlug('afl-fantasy')!;
 
 const feeds = {
-  rosters: feedsByYear(import.meta.glob('../../../../data/afl-fantasy/mfl-feeds/*/rosters.json', { eager: true })),
+  rosters: import.meta.glob('../../../../data/afl-fantasy/mfl-feeds/*/rosters.json', { eager: true }),
   // Year-filtered (2025+): the bare glob baked ~22 MB of historical
-  // players.json into the server chunk. tests/current-era-feed-globs.test.ts
-  // guards it.
-  players: feedsByYear(
-    import.meta.glob('../../../../data/afl-fantasy/mfl-feeds/20{2[5-9],[3-9][0-9]}/players.json', { eager: true }),
-  ),
-  adp: feedsByYear(import.meta.glob('../../../../data/afl-fantasy/mfl-feeds/*/adp-dynasty.json', { eager: true })),
-  picks: feedsByYear(import.meta.glob('../../../../data/afl-fantasy/mfl-feeds/*/futureDraftPicks.json', { eager: true })),
-  tradeBait: feedsByYear(import.meta.glob('../../../../data/afl-fantasy/mfl-feeds/*/tradeBait.json', { eager: true })),
-  tradeBaitByFranchise: feedsByYear(
-    import.meta.glob('../../../../data/afl-fantasy/mfl-feeds/*/tradeBait-by-franchise.json', { eager: true }),
-  ),
+  // players.json into the server chunk (tests/current-era-feed-globs.test.ts).
+  players: import.meta.glob('../../../../data/afl-fantasy/mfl-feeds/20{2[5-9],[3-9][0-9]}/players.json', { eager: true }),
+  // A keeper league values players on the DYNASTY board.
+  adp: import.meta.glob('../../../../data/afl-fantasy/mfl-feeds/*/adp-dynasty.json', { eager: true }),
+  adpFile: 'adp-dynasty.json',
+  picks: import.meta.glob('../../../../data/afl-fantasy/mfl-feeds/*/futureDraftPicks.json', { eager: true }),
+  tradeBait: import.meta.glob('../../../../data/afl-fantasy/mfl-feeds/*/tradeBait.json', { eager: true }),
+  tradeBaitByFranchise: import.meta.glob('../../../../data/afl-fantasy/mfl-feeds/*/tradeBait-by-franchise.json', { eager: true }),
 };
-const moduleData = (mod: any) => (mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod);
-// The newest season with real rosters.
-const selectedYear =
-  [...feeds.rosters.entries()]
-    .filter(([, mod]) => moduleData(mod)?.rosters?.franchise)
-    .map(([year]) => year)
-    .sort((a, b) => b - a)[0] ?? FALLBACK_YEAR;
+
+const poolShort = Object.fromEntries(
+  aflLeagueConfig.conferences.map((c) => [c.code, getConferenceShort(c.code as ConferenceId)])
+);
 ---
 
-<TradeBuilderPage league={getLeagueBySlug('afl-fantasy')!} selectedYear={selectedYear} feeds={feeds} />
+<TradeBuilderPage
+  leagueSlug={league.slug}
+  leagueLabel="AFL"
+  feeds={feeds}
+  fallbackYear={2025}
+  teams={getAllTeams()}
+  conferences={aflLeagueConfig.conferences}
+  poolShort={poolShort}
+  poolNoun="conference"
+>
+  <FrontOfficeNav slot="breadcrumbs" leagueSlug="afl-fantasy" current="trade-builder" crumb="Trade Builder" />
+</TradeBuilderPage>

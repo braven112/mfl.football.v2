@@ -729,11 +729,11 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
             </p>
           </div>
           <div class="insights-closing__ctas">
-            <a href="/theleague/about" class="insights-btn insights-btn--primary">
+            <a href="/theleague/about" class="cta cta--primary">
               Read the Full Case Study
               <span class="insights-btn__arrow">→</span>
             </a>
-            <a href="/theleague/whats-new" class="insights-btn insights-btn--ghost">
+            <a href="/theleague/whats-new" class="cta cta--ghost">
               What's New
               <span class="insights-btn__arrow">→</span>
             </a>
@@ -773,7 +773,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 
   .insights-tag {
     display: inline-block;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -785,11 +785,11 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 
   .insights-dot {
     color: var(--color-gray-400, #9ca3af);
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
   }
 
   .insights-hero__date {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--color-gray-500, #6b7280);
     font-weight: 500;
   }
@@ -826,7 +826,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 
   .insights-stack-dot {
     color: var(--color-gray-300, #d1d5db);
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
   }
 
   /* ===========================
@@ -856,7 +856,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
   }
 
   .insights-stats__label {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--color-gray-500, #6b7280);
     line-height: 1.4;
   }
@@ -887,7 +887,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 
   .insights-section-num {
     flex-shrink: 0;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     color: var(--color-primary, #1c497c);
     opacity: 0.5;
@@ -898,7 +898,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 
   .insights-section-title {
     margin: 0;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -975,7 +975,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
   }
 
   .insights-flow__arrow {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     color: var(--color-gray-400, #9ca3af);
     font-weight: 600;
   }
@@ -983,7 +983,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
   .insights-flow__loop {
     width: 100%;
     margin-top: 0.5rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--color-primary, #1c497c);
     font-weight: 600;
     letter-spacing: 0.03em;
@@ -1023,7 +1023,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
   }
 
   .insights-card__date {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 600;
     color: var(--color-gray-400, #9ca3af);
     letter-spacing: 0.03em;
@@ -1031,7 +1031,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
   }
 
   .insights-card__domain {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.07em;
@@ -1043,7 +1043,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 
   .insights-card__title {
     margin: 0;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 700;
     color: var(--color-gray-900, #111827);
     line-height: 1.35;
@@ -1071,7 +1071,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
     color: #e5e7eb;
     border-radius: var(--radius-sm, 0.25rem);
     padding: 0.625rem 0.875rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     line-height: 1.6;
     font-family: 'Menlo', 'Monaco', 'Cascadia Code', monospace;
     overflow-x: auto;
@@ -1090,7 +1090,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
     border-left: 2px solid var(--color-primary, #1c497c);
     border-radius: 0 var(--radius-sm, 0.25rem) var(--radius-sm, 0.25rem) 0;
     padding: 0.5rem 0.75rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     line-height: 1.6;
     color: var(--color-gray-700, #374151);
   }
@@ -1129,8 +1129,8 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--color-primary, #1c497c);
-    color: white;
+    background: var(--color-primary-fill, var(--color-primary, #1c497c));
+    color: var(--on-color-primary, white);
     font-size: 0.8125rem;
     font-weight: 700;
     border-radius: 50%;
@@ -1145,7 +1145,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
   }
 
   .insights-pattern-card__title {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 700;
     color: var(--color-gray-900, #111827);
     margin: 0;
@@ -1153,7 +1153,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 
   .insights-pattern-card__body {
     margin: 0;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     line-height: 1.7;
     color: var(--color-gray-700, #374151);
   }
@@ -1229,39 +1229,8 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
   /* ===========================
      Buttons
   =========================== */
-  .insights-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.625rem 1.25rem;
-    border-radius: 0.5rem;
-    font-size: 0.875rem;
-    font-weight: 600;
-    text-decoration: none;
-    transition: all 0.15s ease;
-    white-space: nowrap;
-  }
-
-  .insights-btn--primary {
-    background: var(--color-primary, #1c497c);
-    color: white;
-  }
-
-  .insights-btn--primary:hover {
-    background: var(--btn-primary-bg-hover, #164066);
-  }
-
-  .insights-btn--ghost {
-    background: transparent;
-    color: var(--color-gray-600, #4b5563);
-    border: 1px solid var(--content-border, #e2e8f0);
-  }
-
-  .insights-btn--ghost:hover {
-    border-color: var(--color-gray-400, #9ca3af);
-    color: var(--color-gray-900, #111827);
-  }
-
+  /* Shape, colour and hover come from the shared .cta pattern
+     (src/styles/cta.css). */
   .insights-btn__arrow {
     opacity: 0.7;
   }

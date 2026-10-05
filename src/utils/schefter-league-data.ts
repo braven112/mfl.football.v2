@@ -1,24 +1,21 @@
 /**
  * Schefter league DATA accessors — feed + team-config selection.
  *
- * Split from schefter-league.ts on purpose: these static JSON imports pull
+ * Split from schefter-league.ts on purpose: these eager JSON globs pull
  * ~1.3MB of feed data into the importing module's graph. Routes that only
  * need league RESOLUTION (tips-remaining, cooker-status, hot-topics, …)
  * import schefter-league.ts and never touch this file; only the routes that
  * actually read a feed/config (tip submit, thread, rumor-impression,
  * most-named, admin stats) pay for the JSON.
  *
- * Selection is a slug-keyed map that THROWS on an unknown league — matching
- * the repo's fail-loudly convention (schefter-leagues.mjs, per-league lore).
- * A third league added to the registry must be added here explicitly, not
- * silently served TheLeague's data.
+ * Selection goes through the registry (`schefterFeedPath`, `configPath`) and
+ * THROWS for a league without the `schefterFeed` feature — matching the
+ * repo's fail-loudly convention, so a league is never silently served
+ * TheLeague's data. A new league is wired by its registry entry alone.
  */
 
 import type { LeagueDefinition } from '../config/leagues';
-import theLeagueConfig from '../data/theleague.config.json';
-import aflConfig from '../../data/afl-fantasy/afl.config.json';
-import theLeagueFeed from '../data/theleague/schefter-feed.json';
-import aflFeed from '../../data/afl-fantasy/schefter-feed.json';
+import { getLeagueConfig } from './league-config';
 import type { SchefterFeed } from '../types/schefter';
 
 export interface LeagueTeamConfig {
@@ -36,28 +33,37 @@ export interface SchefterLeagueConfig {
   teams: LeagueTeamConfig[];
 }
 
-const FEEDS: Record<string, SchefterFeed> = {
-  theleague: theLeagueFeed as unknown as SchefterFeed,
-  'afl-fantasy': aflFeed as unknown as SchefterFeed,
-};
+/** Every league's feed, keyed by the registry's `schefterFeedPath`. */
+const FEED_FILES = import.meta.glob<SchefterFeed>(
+  ['../../data/*/schefter-feed.json', '../data/*/schefter-feed.json'],
+  { eager: true, import: 'default' },
+);
+const FEEDS_BY_PATH = new Map(
+  Object.entries(FEED_FILES).map(([k, v]) => [
+    k.startsWith('../../') ? k.slice('../../'.length) : `src/${k.slice('../'.length)}`,
+    v,
+  ]),
+);
 
-const CONFIGS: Record<string, SchefterLeagueConfig> = {
-  theleague: theLeagueConfig as unknown as SchefterLeagueConfig,
-  'afl-fantasy': aflConfig as unknown as SchefterLeagueConfig,
-};
+/** A league is wired here exactly when it runs the Schefter feed. */
+function assertSchefterLeague(league: LeagueDefinition, fn: string): void {
+  if (!league.features?.schefterFeed) {
+    throw new Error(`${fn}: league "${league.slug}" does not run the Schefter feed`);
+  }
+}
 
-/** The league's Schefter feed. Throws on a league this module doesn't know. */
+/** The league's Schefter feed. Throws for a league without the schefterFeed feature. */
 export function getSchefterFeed(league: LeagueDefinition): SchefterFeed {
-  const feed = FEEDS[league.slug];
-  if (!feed) throw new Error(`getSchefterFeed: no feed wired for league "${league.slug}"`);
+  assertSchefterLeague(league, 'getSchefterFeed');
+  const feed = FEEDS_BY_PATH.get((league as { schefterFeedPath?: string }).schefterFeedPath ?? '');
+  if (!feed) throw new Error(`getSchefterFeed: no feed file for league "${league.slug}"`);
   return feed;
 }
 
-/** The league's team config. Throws on a league this module doesn't know. */
+/** The league's team config. Throws for a league without the schefterFeed feature. */
 export function getSchefterLeagueConfig(league: LeagueDefinition): SchefterLeagueConfig {
-  const config = CONFIGS[league.slug];
-  if (!config) throw new Error(`getSchefterLeagueConfig: no config wired for league "${league.slug}"`);
-  return config;
+  assertSchefterLeague(league, 'getSchefterLeagueConfig');
+  return getLeagueConfig(league.slug) as unknown as SchefterLeagueConfig;
 }
 
 /** Find a team by 4-digit franchise id in the league's config. */

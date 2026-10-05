@@ -1,0 +1,586 @@
+---
+/**
+ * League Theme — the review page a league approves its theme on.
+ *
+ * One page per mode: /<league>/theme/light and /<league>/theme/dark. The
+ * layout pins the page to that mode (`themeLock`), so the viewer's own
+ * light/dark preference cannot change what is being reviewed.
+ *
+ * Everything below renders through the LIVE tokens — the swatches, the hero,
+ * the buttons — so the page shows exactly what the site renders, not a copy
+ * of the theme file. Resolved values and contrast ratios are read in the
+ * browser (getComputedStyle), because only the browser knows the final value
+ * of a var() chain.
+ *
+ * Thin route wrappers under src/pages/<league>/theme/[...mode].astro own the
+ * redirect; this component owns the markup. Plan: docs/plans/league-themes.md.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import HeroBanner from '../HeroBanner.astro';
+import EmptyState from '../states/EmptyState.astro';
+import ErrorState from '../states/ErrorState.astro';
+import { getLeagueBySlug } from '../../../config/leagues';
+import type { CanonicalLeagueSlug } from '../../../config/leagues';
+import { THEME_TOKEN_GROUPS } from '../../../config/theme-tokens.mjs';
+import { themePath, type ThemeMode } from './theme-mode';
+
+interface Props {
+  leagueSlug: CanonicalLeagueSlug;
+  mode: ThemeMode;
+}
+
+interface ThemeFile {
+  id: string;
+  name: string;
+  description: string;
+  light: Record<string, string | null>;
+  dark: Record<string, string | null>;
+}
+
+const { leagueSlug, mode } = Astro.props;
+const league = getLeagueBySlug(leagueSlug);
+if (!league) throw new Error(`ThemePage: unknown league ${leagueSlug}`);
+
+// Five small JSON files; the registry says which one this league wears.
+const themeFiles = import.meta.glob<{ default: ThemeFile }>('../../../themes/*.json', { eager: true });
+const theme = Object.values(themeFiles)
+  .map((m) => m.default)
+  .find((t) => t.id === league.theme);
+if (!theme) throw new Error(`ThemePage: league ${leagueSlug} names unknown theme ${league.theme}`);
+
+const otherMode: ThemeMode = mode === 'light' ? 'dark' : 'light';
+const otherHref = themePath(leagueSlug, otherMode, Astro.url, Astro.locals.hideLeaguePrefix ?? false);
+const modeLabel = mode === 'light' ? 'Light mode' : 'Dark mode';
+
+// The groups this theme actually sets in this mode; a token the theme leaves
+// unset (null) is counted, not drawn.
+const values = theme[mode];
+const groups = THEME_TOKEN_GROUPS.map((g) => ({
+  label: g.label,
+  tokens: g.tokens.filter((t) => values[t] != null),
+})).filter((g) => g.tokens.length > 0);
+const unsetCount = Object.values(values).filter((v) => v == null).length;
+
+/**
+ * Text-on-ground pairs a reader actually meets. `fg` / `bg` are CSS values
+ * (a var() chain is fine); the browser resolves both and scores them.
+ */
+const pairs = [
+  { label: 'Body text on the page', fg: 'var(--page-text)', bg: 'var(--page-bg)', min: 4.5 },
+  { label: 'Body text on a card', fg: 'var(--page-text)', bg: 'var(--card-surface)', min: 4.5 },
+  { label: 'Muted text on a card', fg: 'var(--content-text-muted)', bg: 'var(--card-surface)', min: 4.5 },
+  { label: 'Link on a card', fg: 'var(--link-color)', bg: 'var(--card-surface)', min: 4.5 },
+  { label: 'Accent as text on a card', fg: 'var(--league-accent-fg, var(--league-accent))', bg: 'var(--card-surface)', min: 3 },
+  { label: 'Button text on the button', fg: 'var(--on-cta-fill)', bg: 'var(--cta-fill)', min: 4.5 },
+  { label: 'Button text on hover', fg: 'var(--on-cta-fill)', bg: 'var(--cta-fill-hover)', min: 4.5 },
+  { label: 'Text on a primary fill', fg: 'var(--on-color-primary, #ffffff)', bg: 'var(--color-primary-fill, var(--color-primary))', min: 4.5 },
+  { label: 'Text on an accent fill', fg: 'var(--on-league-accent, #ffffff)', bg: 'var(--league-accent)', min: 4.5 },
+  { label: 'Text on a hovered accent fill', fg: 'var(--on-league-accent, #ffffff)', bg: 'var(--league-accent-hover)', min: 4.5 },
+  { label: 'Text on a hero button', fg: 'var(--on-hero-action, #ffffff)', bg: 'var(--hero-action, #1d4ed8)', min: 4.5 },
+  { label: 'Text on a secondary button', fg: 'var(--btn-secondary-text)', bg: 'var(--btn-secondary-bg)', min: 4.5 },
+  { label: 'Text on a success fill', fg: 'var(--on-color-success-fill)', bg: 'var(--color-success-fill)', min: 4.5 },
+  { label: 'Primary as text on a card', fg: 'var(--color-primary)', bg: 'var(--card-surface)', min: 3 },
+  { label: 'Footer text on the footer', fg: 'var(--inverse-text)', bg: 'var(--inverse-bg)', min: 4.5 },
+];
+
+const fonts = [
+  { label: 'Display — headlines and hero titles', token: '--font-display', sample: 'Week 6 Power Rankings' },
+  { label: 'Body — everything you read', token: '--font-family-base', sample: 'The trade deadline is Thursday at 4pm. Set your lineup before kickoff.' },
+  { label: 'Numbers — scores, stats, salaries', token: '--font-numeric', sample: '127.45  ·  $4,250,000  ·  12–4' },
+];
+---
+
+<TheLeagueLayout title={`${modeLabel} Theme | ${league.name}`} themeLock={mode}>
+  <main class="theme-review" data-theme-review data-mode={mode}>
+    <header class="theme-review__header">
+      <p class="theme-review__eyebrow">{league.name} · {modeLabel}</p>
+      <h1 class="theme-review__title">{theme.name} theme</h1>
+      <p class="theme-review__lede">{theme.description}</p>
+      <p class="theme-review__meta">
+        This page always shows {mode} mode, whatever your own setting.
+        <a class="cta-link" href={otherHref}>See {otherMode} mode</a>
+      </p>
+    </header>
+
+    <section class="theme-review__section">
+      <h2 class="theme-review__section-title">Readability</h2>
+      <p class="theme-review__note">Every pair a reader meets, scored against WCAG AA: 4.5:1 for text, 3:1 for large or decorative text.</p>
+      <ul class="theme-review__pairs">
+        {pairs.map((p) => (
+          <li class="theme-review__pair" data-fg={p.fg} data-bg={p.bg} data-min={p.min}>
+            <span class="theme-review__pair-sample" style={`color:${p.fg};background:${p.bg}`}>Aa</span>
+            <span class="theme-review__pair-label">{p.label}</span>
+            <span class="theme-review__pair-ratio" data-ratio>—</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+
+    <section class="theme-review__section">
+      <h2 class="theme-review__section-title">Heroes</h2>
+      <HeroBanner
+        variant="editorial"
+        kicker="New Feature"
+        kickerDate="Oct 2"
+        title="Every Stat Behind Every Score"
+        summary="Live Scoring now opens a stat sheet for any player you tap: his full line for the week, stat by stat, under the official score."
+        link="#"
+        linkLabel="Open Live Scoring"
+        allNewsLink="#"
+        allNewsLabel="All releases"
+      />
+      <HeroBanner
+        variant="event"
+        title="Trade Deadline"
+        summary="Deals must be accepted before the deadline. Pending offers expire with it."
+        dateDisplay="Thu, Nov 13 · 4:00 PM"
+        statusText="3 days left"
+        isActive={true}
+        link="#"
+        linkLabel="Open the trade builder"
+      />
+    </section>
+
+    <section class="theme-review__section">
+      <h2 class="theme-review__section-title">Buttons and links</h2>
+      <div class="theme-review__card">
+        <div class="theme-review__row">
+          <a class="cta cta--primary" href="#">Change your vote</a>
+          <a class="cta cta--ghost" href="#">Maybe later</a>
+          <a class="cta-link" href="#">The Pecking Order</a>
+        </div>
+        <div class="theme-review__row">
+          <button class="cta cta--primary" type="button">Set your lineup</button>
+          <button class="cta cta--ghost" type="button">Cancel</button>
+          <button class="cta cta--primary" type="button" disabled>Submitted</button>
+        </div>
+        <p class="theme-review__prose">
+          Body copy with <a href="#">an inline link</a> and
+          <span class="theme-review__muted">muted secondary text</span>.
+        </p>
+      </div>
+    </section>
+
+    <section class="theme-review__section">
+      <h2 class="theme-review__section-title">Cards, tables and badges</h2>
+      <div class="theme-review__card">
+        <h3 class="theme-review__card-title">Standings</h3>
+        <table class="theme-review__table">
+          <thead>
+            <tr><th>Team</th><th class="theme-review__num">W-L</th><th class="theme-review__num">PF</th><th>Status</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Pacific Pigskins</td><td class="theme-review__num">5-1</td><td class="theme-review__num">812.4</td><td><span class="theme-review__badge theme-review__badge--success">Clinched</span></td></tr>
+            <tr><td>Midwest Marauders</td><td class="theme-review__num">4-2</td><td class="theme-review__num">776.9</td><td><span class="theme-review__badge theme-review__badge--info">In the hunt</span></td></tr>
+            <tr><td>Bayside Brawlers</td><td class="theme-review__num">3-3</td><td class="theme-review__num">701.2</td><td><span class="theme-review__badge theme-review__badge--warning">Bubble</span></td></tr>
+            <tr><td>Northern Lights</td><td class="theme-review__num">1-5</td><td class="theme-review__num">598.0</td><td><span class="theme-review__badge theme-review__badge--error">Eliminated</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="theme-review__section">
+      <h2 class="theme-review__section-title">Empty and error states</h2>
+      <div class="theme-review__states">
+        <EmptyState title="No trades yet this week" body="They appear here the moment one is accepted." actions={[{ label: 'Open the trade builder', href: '#' }]} />
+        <ErrorState title="We couldn't load the standings" body="The numbers are missing, not zero. Try again in a minute." actions={[{ label: 'Try again', href: '#' }]} />
+      </div>
+    </section>
+
+    <section class="theme-review__section">
+      <h2 class="theme-review__section-title">Type</h2>
+      <div class="theme-review__fonts">
+        {fonts.map((f) => (
+          <div class="theme-review__font">
+            <p class="theme-review__font-label">{f.label} <code data-font-token={f.token}></code></p>
+            <p class="theme-review__font-sample" style={`font-family:var(${f.token})`}>{f.sample}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <section class="theme-review__section">
+      <h2 class="theme-review__section-title">Color system</h2>
+      <p class="theme-review__note">
+        Every color this theme sets in {mode} mode, as the site renders it.
+        {unsetCount > 0 && <> {unsetCount} slots are left to the shared defaults.</>}
+      </p>
+      {groups.map((g) => (
+        <div class="theme-review__group">
+          <h3 class="theme-review__group-title">{g.label}</h3>
+          <ul class="theme-review__swatches">
+            {g.tokens.map((t) => (
+              <li class="theme-review__swatch" data-token={t}>
+                <span class="theme-review__chip" style={`background:var(${t})`}></span>
+                <span class="theme-review__token">{t.replace(/^--/, '')}</span>
+                <code class="theme-review__value" data-value></code>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </section>
+  </main>
+</TheLeagueLayout>
+
+<style>
+  .theme-review {
+    max-width: var(--container-max-width, 1100px);
+    margin: 0 auto;
+    padding: var(--spacing-lg) var(--spacing-md) var(--spacing-2xl);
+    display: grid;
+    gap: var(--spacing-2xl);
+    color: var(--page-text);
+  }
+
+  .theme-review__eyebrow {
+    margin: 0 0 var(--spacing-xs);
+    font-size: var(--font-size-2xs);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: var(--tracking-caps);
+    text-transform: uppercase;
+    color: var(--content-text-muted);
+  }
+
+  .theme-review__title {
+    margin: 0 0 var(--spacing-sm);
+    font-family: var(--font-display);
+    font-size: var(--font-size-2xl);
+  }
+
+  .theme-review__lede {
+    margin: 0 0 var(--spacing-sm);
+    max-width: 70ch;
+  }
+
+  .theme-review__meta,
+  .theme-review__note {
+    margin: 0;
+    color: var(--content-text-muted);
+    font-size: var(--font-size-sm);
+  }
+
+  .theme-review__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+    align-items: baseline;
+  }
+
+  .theme-review__section {
+    display: grid;
+    gap: var(--spacing-md);
+  }
+
+  .theme-review__section-title {
+    margin: 0;
+    padding-left: var(--spacing-sm);
+    border-left: 2px solid var(--league-accent);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: var(--tracking-caps);
+    text-transform: uppercase;
+  }
+
+  .theme-review__card {
+    display: grid;
+    gap: var(--spacing-md);
+    padding: var(--spacing-lg);
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--card-shadow);
+  }
+
+  .theme-review__card-title {
+    margin: 0;
+    font-size: var(--font-size-base);
+  }
+
+  .theme-review__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+    align-items: center;
+  }
+
+  .theme-review__prose {
+    margin: 0;
+  }
+
+  .theme-review__muted {
+    color: var(--content-text-muted);
+  }
+
+  /* Readability pairs */
+  .theme-review__pairs {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: var(--spacing-xs);
+  }
+
+  .theme-review__pair {
+    display: grid;
+    grid-template-columns: 3rem 1fr auto;
+    gap: var(--spacing-md);
+    align-items: center;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background: var(--card-surface);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-sm);
+  }
+
+  .theme-review__pair-sample {
+    display: grid;
+    place-items: center;
+    height: 2rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--content-border);
+    font-weight: var(--font-weight-bold);
+  }
+
+  .theme-review__pair-ratio {
+    font-family: var(--font-numeric);
+    font-variant-numeric: tabular-nums;
+    font-weight: var(--font-weight-bold);
+  }
+
+  .theme-review__pair-ratio[data-pass='false'] {
+    color: var(--color-error);
+  }
+
+  /* Table + badges */
+  .theme-review__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--font-size-sm);
+  }
+
+  .theme-review__table th {
+    text-align: left;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background: var(--table-header-bg);
+    color: var(--table-header-text);
+    font-size: var(--font-size-2xs);
+    letter-spacing: var(--tracking-caps);
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--table-border);
+  }
+
+  .theme-review__table td {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background: var(--table-row-bg);
+    border-bottom: 1px solid var(--table-border);
+  }
+
+  .theme-review__table tbody tr:nth-child(even) td {
+    background: var(--table-row-bg-alt);
+  }
+
+  .theme-review__table tbody tr:hover td {
+    background: var(--table-row-bg-hover);
+  }
+
+  .theme-review__num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .theme-review__table th.theme-review__num {
+    text-align: right;
+  }
+
+  .theme-review__badge {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-2xs);
+    font-weight: var(--font-weight-bold);
+  }
+
+  .theme-review__badge--success {
+    background: var(--badge-success-bg);
+    color: var(--badge-success-text);
+  }
+
+  .theme-review__badge--info {
+    background: var(--badge-info-bg);
+    color: var(--badge-info-text);
+  }
+
+  .theme-review__badge--warning {
+    background: var(--badge-warning-bg);
+    color: var(--badge-warning-text);
+  }
+
+  .theme-review__badge--error {
+    background: var(--badge-error-bg);
+    color: var(--badge-error-text);
+  }
+
+  .theme-review__states {
+    display: grid;
+    gap: var(--spacing-md);
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  }
+
+  /* Type */
+  .theme-review__fonts {
+    display: grid;
+    gap: var(--spacing-md);
+  }
+
+  .theme-review__font {
+    padding: var(--spacing-md);
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-md);
+  }
+
+  .theme-review__font-label {
+    margin: 0 0 var(--spacing-xs);
+    font-size: var(--font-size-xs);
+    color: var(--content-text-muted);
+  }
+
+  .theme-review__font-label code {
+    font-size: var(--font-size-3xs);
+  }
+
+  .theme-review__font-sample {
+    margin: 0;
+    font-size: var(--font-size-xl);
+    overflow-wrap: anywhere;
+  }
+
+  /* Color system */
+  .theme-review__group {
+    display: grid;
+    gap: var(--spacing-sm);
+  }
+
+  .theme-review__group-title {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    color: var(--content-text-muted);
+  }
+
+  .theme-review__swatches {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: var(--spacing-sm);
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+  }
+
+  .theme-review__swatch {
+    display: grid;
+    grid-template-columns: 2.5rem 1fr;
+    grid-template-rows: auto auto;
+    column-gap: var(--spacing-sm);
+    align-items: center;
+    padding: var(--spacing-xs);
+    background: var(--card-surface);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-sm);
+    min-width: 0;
+  }
+
+  .theme-review__chip {
+    grid-row: span 2;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--content-border);
+  }
+
+  .theme-review__token {
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    overflow-wrap: anywhere;
+  }
+
+  .theme-review__value {
+    font-size: var(--font-size-3xs);
+    color: var(--content-text-muted);
+    overflow-wrap: anywhere;
+  }
+</style>
+
+<script>
+  /**
+   * Fill in what only the browser knows: each swatch's final value, and each
+   * readability pair's contrast ratio. Re-runs on every astro:page-load, and
+   * re-reads everything from the page it finds, so a ClientRouter swap
+   * between the light and dark page scores the right mode.
+   */
+  type Rgb = [number, number, number];
+
+  function toRgb(cssColor: string, probe: HTMLElement): Rgb | null {
+    probe.style.color = '';
+    probe.style.color = cssColor;
+    const m = getComputedStyle(probe).color.match(/rgba?\(([^)]+)\)/);
+    if (!m) return null;
+    const [r, g, b] = m[1]!.split(/[ ,/]+/).map(Number);
+    return [r!, g!, b!];
+  }
+
+  function luminance([r, g, b]: Rgb): number {
+    const c = [r, g, b].map((v) => {
+      const s = v / 255;
+      return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * c[0]! + 0.7152 * c[1]! + 0.0722 * c[2]!;
+  }
+
+  function contrast(a: Rgb, b: Rgb): number {
+    const [x, y] = [luminance(a), luminance(b)].sort((p, q) => q - p);
+    return (x! + 0.05) / (y! + 0.05);
+  }
+
+  function initThemeReview(): void {
+    const root = document.querySelector<HTMLElement>('[data-theme-review]');
+    if (!root) return;
+    const probe = document.createElement('span');
+    probe.hidden = true;
+    root.append(probe);
+
+    const html = getComputedStyle(document.documentElement);
+    root.querySelectorAll<HTMLElement>('.theme-review__swatch').forEach((el) => {
+      const token = el.dataset.token!;
+      const value = html.getPropertyValue(token).trim();
+      const out = el.querySelector<HTMLElement>('[data-value]');
+      if (out) out.textContent = value;
+      // A shadow is not a colour: draw it as a shadow on a plain chip.
+      if (/\dpx/.test(value) && !/gradient/.test(value)) {
+        const chip = el.querySelector<HTMLElement>('.theme-review__chip');
+        if (chip) {
+          chip.style.background = 'var(--card-surface)';
+          chip.style.boxShadow = value;
+        }
+      }
+    });
+
+    root.querySelectorAll<HTMLElement>('[data-font-token]').forEach((el) => {
+      el.textContent = html.getPropertyValue(el.dataset.fontToken!).split(',')[0]!.trim();
+    });
+
+    root.querySelectorAll<HTMLElement>('.theme-review__pair').forEach((el) => {
+      const fg = toRgb(el.dataset.fg!, probe);
+      const bg = toRgb(el.dataset.bg!, probe);
+      const out = el.querySelector<HTMLElement>('[data-ratio]');
+      if (!out || !fg || !bg) return;
+      const ratio = contrast(fg, bg);
+      const pass = ratio >= Number(el.dataset.min);
+      out.textContent = `${ratio.toFixed(2)}:1 ${pass ? 'pass' : 'fail'}`;
+      out.dataset.pass = String(pass);
+    });
+
+    probe.remove();
+  }
+
+  document.addEventListener('astro:page-load', initThemeReview);
+</script>

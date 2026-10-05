@@ -32,7 +32,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { LEAGUES, leagueUrl } from '../src/config/leagues-data.mjs';
+import { ALL_LEAGUES, LEAGUES, leagueUrl } from '../src/config/leagues-data.mjs';
 import { callAnthropic } from './article-utils/ai-client.mjs';
 import { getCompletedWeek } from './article-utils/week-resolver.mjs';
 import { currentSeasonYear } from './lib/schefter-recurrence-ledger.mjs';
@@ -43,7 +43,6 @@ import {
   SYNTHETIC_POLL_SOURCE,
   readTurnout,
   describeTurnoutFailure,
-  buildOpenLine,
   buildRevealMessage,
   normalizeFranchiseIds,
 } from './lib/owners-poll-pass.mjs';
@@ -67,27 +66,38 @@ import {
   attachTrend,
   parseStreak,
   describeMethodology,
+  enrichStandingsFromResults,
+  buildPairings,
 } from './lib/pecking-order-math.mjs';
+import { loadLeaguePersona } from './lib/persona-store.mjs';
 import { num, int } from './lib/team-strength.mjs';
 // Announcements are QUEUED here and sent by scripts/schefter-announce-pending.mjs
 // after the commit, once the issue is live. See scripts/lib/await-published.mjs.
 import { enqueueAnnounce } from './lib/announce-queue.mjs';
+import { leaguesFor } from './lib/league-jobs.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 
 const COLUMN_NAME = 'The Pecking Order';
 
-/** Leagues that publish the column. Best-ball drafts no games, so no rankings. */
-const VALID_LEAGUES = ['theleague', 'afl-fantasy'];
+/**
+ * Leagues that publish the column: the Power rankings box, by registry
+ * (scripts/lib/league-jobs.mjs `pecking-order`). Best ball never qualifies —
+ * it drafts no games, so there is nothing to rank.
+ */
+const VALID_LEAGUES = leaguesFor('pecking-order').map((l) => l.slug);
 
 /**
- * Per-league Schefter GroupMe bot. Roger's bots are never a fallback — he owns
- * deadlines, Schefter owns the column (same split as the article generator).
+ * Per-league Schefter GroupMe bot, from the registry's `chat` block. Roger's
+ * bots are never a fallback — he owns deadlines, Schefter owns the column
+ * (same split as the article generator). A Slack league has no entry on
+ * purpose: the queued announcement's `botEnv` is then undefined, and the
+ * drainer (schefter-announce-pending.mjs) routes it through chatConfigFor →
+ * Slack.
  */
-const GROUPME_BOT_ENV = {
-  theleague: 'GROUPME_SCHEFTER_BOT_ID',
-  'afl-fantasy': 'GROUPME_AFL_SCHEFTER_BOT_ID',
-};
+const GROUPME_BOT_ENV = Object.fromEntries(
+  ALL_LEAGUES.filter((l) => l.chat?.provider === 'groupme' && l.chat.botEnv).map((l) => [l.slug, l.chat.botEnv]),
+);
 
 // ─── CLI ───────────────────────────────────────────────────────────
 
@@ -189,7 +199,9 @@ async function loadTeamsConfig(league) {
   }
   return {
     teams,
-    divisions: cfg.divisions,
+    // TheLeague/AFL list division NAMES; a package league lists
+    // { id, name } objects (its teams carry the name in `division`).
+    divisions: (cfg.divisions || []).map((d) => (typeof d === 'string' ? d : d?.name)).filter(Boolean),
     conferenceOfDivision: (name) => divisionToConference.get(name) ?? null,
   };
 }
@@ -217,37 +229,9 @@ function issueFilePath(league, year, week) {
  */
 const asArray = (x) => (Array.isArray(x) ? x : x == null ? [] : [x]);
 
-/**
- * Every week's H2H pairings, keyed by week: Map<week, Array<{ id, isHome }[]>>.
- *
- * Two sources, because neither covers both jobs. schedule.json is the only
- * forward-looking one — it has next week's matchup, which is what Matchup of
- * the Week previews. weekly-results-raw.json only has weeks already played,
- * but it exists for every league-year on disk, including the AFL seasons that
- * predate schedule.json being fetched for that league. Schedule wins where
- * both have a week; raw fills the rest.
- */
-export function buildPairings(schedule, rawWeekly) {
-  const byWeek = new Map();
-  const pairingsOf = (matchup) =>
-    asArray(matchup)
-      .map(m => asArray(m?.franchise).map(f => ({ id: f.id, isHome: f.isHome })))
-      .filter(g => g.length === 2);
-
-  for (const entry of asArray(rawWeekly)) {
-    const wk = int(entry?.weeklyResults?.week);
-    if (!wk) continue;
-    const games = pairingsOf(entry.weeklyResults.matchup);
-    if (games.length) byWeek.set(wk, games);
-  }
-  for (const w of asArray(schedule?.schedule?.weeklySchedule)) {
-    const wk = int(w?.week);
-    if (!wk) continue;
-    const games = pairingsOf(w.matchup);
-    if (games.length) byWeek.set(wk, games);
-  }
-  return byWeek;
-}
+// buildPairings moved to lib/pecking-order-math.mjs so the standings page can
+// share it; re-exported here for existing importers.
+export { buildPairings };
 
 /**
  * Record over the last N weeks this franchise played: { wins, losses, ties }.
@@ -535,10 +519,17 @@ export async function generatePeckingOrder({ league, year, week, useAI = false }
 
   const pairings = buildPairings(schedule, rawWeekly);
 
-  const standingsByFid = new Map();
+  let standingsByFid = new Map();
   for (const f of asArray(standings?.leagueStandings?.franchise)) {
     standingsByFid.set(f.id, f);
   }
+  // Fill all-play / streak / PA where the league's export lacks them (archies);
+  // a no-op for a league whose MFL standings already carry them.
+  standingsByFid = enrichStandingsFromResults(standingsByFid, weeklyResults, pairings, week);
+
+  // A big league writes up only its top N (registry `peckingOrder.topN`); the
+  // rest are still ranked, and shown in their division lists.
+  const topN = league.peckingOrder?.topN ?? null;
 
   // Composite rankings (pure math — lib/pecking-order-math.mjs)
   const rawRankings = computePeckingOrder({
@@ -628,26 +619,39 @@ export async function generatePeckingOrder({ league, year, week, useAI = false }
     rankings,
     awards,
     standings: standingsSnapshot,
+    ...(topN ? { topN } : {}),
   };
 
   if (useAI) {
-    issue = await applySchefterVoice(issue, teamsConfig.teams, league);
+    issue = await applySchefterVoice(issue, teamsConfig.teams, league, topN);
   }
 
-  // Strip transient fact-bag from output rows
-  issue.rankings = issue.rankings.map(({ factsForBlurb, ...rest }) => rest);
+  // Strip transient fact-bag from output rows; below a top-N cut a row keeps
+  // its rank and metrics but carries no blurb (nothing renders one).
+  issue.rankings = issue.rankings.map(({ factsForBlurb, ...rest }) => {
+    if (topN && rest.rank > topN) {
+      const { blurb, ...noBlurb } = rest;
+      return noBlurb;
+    }
+    return rest;
+  });
 
   return { issue, teams: teamsConfig.teams };
 }
 
-async function applySchefterVoice(issue, teams, league) {
-  const factSheet = buildFactSheet({ issue, teams, leagueName: league.name });
-  console.log('  Calling Claude for Schefter voice…');
+async function applySchefterVoice(issue, teams, league, topN = null) {
+  // The league's own writer (commissioner-editable); the default persona
+  // leaves every prompt byte-identical to before.
+  const persona = await loadLeaguePersona(league.slug);
+  const leagueKind = league.features?.contracts || league.features?.keepers ? 'dynasty' : 'redraft';
+  const factSheet = buildFactSheet({ issue, teams, leagueName: league.name, leagueKind, voiceName: persona.name, topN });
+  const voicedRows = topN ? issue.rankings.filter((r) => r.rank <= topN) : issue.rankings;
+  console.log(`  Calling Claude for ${persona.name}'s voice…`);
   let aiOutput;
   try {
     aiOutput = await callAnthropic(
-      getSystemPrompt(league.name),
-      getUserPrompt(factSheet, issue.rankings.length),
+      getSystemPrompt(league.name, { persona, topN }),
+      getUserPrompt(factSheet, voicedRows.length),
       4000,
     );
   } catch (err) {
@@ -655,7 +659,11 @@ async function applySchefterVoice(issue, teams, league) {
     return issue;
   }
 
-  const { issue: voiced, report } = applyAIVoice(issue, aiOutput, teams);
+  // Voice only the rows the sheet carried; the rest ride through untouched.
+  const { issue: voicedTop, report } = applyAIVoice({ ...issue, rankings: voicedRows }, aiOutput, teams);
+  const voiced = topN
+    ? { ...voicedTop, rankings: [...voicedTop.rankings, ...issue.rankings.filter((r) => r.rank > topN)] }
+    : voicedTop;
 
   const blurbsApplied = report.blurbs.applied;
   const blurbsTotal = blurbsApplied + report.blurbs.fallback;
@@ -698,11 +706,10 @@ export function buildGroupMeAnnouncement(issue, teams, league) {
   // redirect hop or 404s.
   lines.push(`Full rankings, awards, and standings ▸ ${leagueUrl(league, '/pecking-order')}`);
 
-  // The ballot invite rides along with the column rather than as its own post:
-  // one Tuesday message, not two. buildOpenLine returns null when no ballot
-  // opened, so the announcement is unchanged for a league without the poll.
-  const openLine = buildOpenLine(issue, teams, league);
-  if (openLine) lines.push('', openLine);
+  // No Owners' Poll line. The poll is its own feature with its own page, and
+  // folding its invite into the column is what made the two read as one. The
+  // poll's chat presence is Claude's results post later in the week, which
+  // carries the vote link (buildRevealMessage).
 
   return lines.join('\n');
 }

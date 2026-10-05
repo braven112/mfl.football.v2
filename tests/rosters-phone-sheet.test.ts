@@ -190,9 +190,23 @@ describe('contract-options kebab (the table’s ⋮, as a menu)', () => {
   it('own team, standard 3-year deal: the CDM list in its order, cut / trade flattened, no Watch', () => {
     expect(ids(facts())).toEqual([
       'extension', 'move-to-ir',
-      'cut-simulate', 'release',
-      'trade-simulate', 'trade-block', 'trade-builder',
+      'release',
+      'trade-simulate', 'trade-builder',
     ]);
+  });
+
+  it('never repeats a button the hero already shows (user, 2026-09-27)', () => {
+    for (const f of [
+      facts(),
+      facts({ activeActionType: 'cut' }),
+      facts({ activeActionType: 'trade' }),
+      facts({ player: { tradeBait: true } as never }),
+      facts({ viewer: { signedIn: true, isOwnTeam: false } }),
+    ]) {
+      const hero = buildQuickActions(f).filter((a) => !a.menu).map((a) => a.id);
+      const menu = ids(f);
+      for (const id of hero) expect(menu, id).not.toContain(id);
+    }
   });
 
   it('carries every CDM step-1 action but Watch (the hero has the built-in one)', () => {
@@ -200,7 +214,7 @@ describe('contract-options kebab (the table’s ⋮, as a menu)', () => {
     const menu = new Set(ids(f));
     for (const d of f.descriptors) {
       if (d.id === 'watch') expect(menu.has('watch')).toBe(false);
-      else if (d.id === 'cut') expect(menu.has('cut-simulate')).toBe(true);
+      else if (d.id === 'cut') expect(menu.has('release')).toBe(true);
       else if (d.id === 'trade') expect(menu.has('trade-simulate')).toBe(true);
       else expect(menu.has(d.id), d.id).toBe(true);
     }
@@ -212,13 +226,13 @@ describe('contract-options kebab (the table’s ⋮, as a menu)', () => {
 
   it('another team: no roster moves, no Release, no trade block', () => {
     expect(ids(facts({ viewer: { signedIn: true, isOwnTeam: false } }))).toEqual([
-      'extension', 'cut-simulate', 'trade-simulate', 'trade-builder',
+      'extension', 'trade-simulate', 'trade-builder',
     ]);
   });
 
-  it('an active simulation offers ONE Undo in place of both Simulate entries', () => {
+  it('an active simulation leaves Undo to the hero and offers no Simulate entry', () => {
     const menu = ids(facts({ activeActionType: 'trade' }));
-    expect(menu.filter((id) => id === 'undo-simulation')).toHaveLength(1);
+    expect(menu).not.toContain('undo-simulation');
     expect(menu).not.toContain('cut-simulate');
     expect(menu).not.toContain('trade-simulate');
   });
@@ -259,7 +273,7 @@ describe('the "Rostered by" strip (user, 2026-09-26)', () => {
     expect(buildRosterSheetFields(facts(), pricing).hideOwnerStrip).toBe(true);
   });
   it('the modal hides the strip only when an opener sends the flag', () => {
-    const modal = readFileSync('src/components/theleague/PlayerDetailsModal.astro', 'utf8');
+    const modal = readFileSync('src/components/shared/PlayerDetailsModal.astro', 'utf8');
     expect(modal).toContain('if (ownerBrand && !playerData.hideOwnerStrip) {');
   });
   it('no opener but the two roster pages sends it', () => {
@@ -267,7 +281,7 @@ describe('the "Rostered by" strip (user, 2026-09-26)', () => {
     // reason: its header names the club and wears its crest (PR C).
     const hits = execSync("git grep -l hideOwnerStrip -- src", { encoding: 'utf8' }).trim().split('\n').sort();
     expect(hits).toEqual([
-      'src/components/theleague/PlayerDetailsModal.astro',
+      'src/components/shared/PlayerDetailsModal.astro',
       'src/utils/player-modal-trigger.ts',
       'src/utils/rosters/afl-phone-sheet.ts',
       'src/utils/rosters/phone-sheet.ts',

@@ -10,7 +10,7 @@
  * a directory entry (which CLAUDE.md already requires), then list its id here.
  */
 
-import { getLeagueBySlug, type CanonicalLeagueSlug } from './leagues';
+import { ALL_LEAGUES, DEFAULT_LEAGUE_SLUG, getLeagueBySlug, type CanonicalLeagueSlug } from './leagues';
 import pageDirectory from '../data/page-directory.json';
 import { getCurrentTierMembership, D_LEAGUE, PREMIER_LEAGUE } from '../utils/afl-tier';
 import { getSearchPath } from '../utils/nav-utils';
@@ -80,9 +80,13 @@ export function pathBelongsToLeague(
   path: string,
   slug: CanonicalLeagueSlug
 ): boolean {
-  if (path.startsWith('/afl-fantasy')) return slug === 'afl-fantasy';
-  if (path.startsWith('/best-ball-1')) return slug === 'best-ball-1';
-  return slug === 'theleague';
+  // Every non-default league's entries carry its own prefix; derived from the
+  // registry so a new league is recognised without editing this function.
+  for (const league of ALL_LEAGUES) {
+    if (league.slug === DEFAULT_LEAGUE_SLUG) continue;
+    if (path === `/${league.slug}` || path.startsWith(`/${league.slug}/`)) return slug === league.slug;
+  }
+  return slug === DEFAULT_LEAGUE_SLUG;
 }
 
 /**
@@ -301,11 +305,36 @@ export function isDemoBigLeague(slug: CanonicalLeagueSlug): boolean {
   return slug === 'afl-fantasy' && Boolean(getLeagueBySlug('afl-fantasy')?.demoPath);
 }
 
-const BY_LEAGUE: Record<CanonicalLeagueSlug, ColumnMap> = {
+/**
+ * Archie's (a package league) — only the launch surfaces. An id with no
+ * page-directory entry would render nothing, so add the entry first.
+ */
+const ARCHIES_COLUMNS: ColumnMap = {
+  League: [
+    { id: 'archies-standings', label: 'Standings' },
+    { id: 'archies-rosters', label: 'Rosters' },
+    { id: 'archies-transactions', label: 'Transactions' },
+    { id: 'archies-free-agents', label: 'Free Agents' },
+  ],
+  News: [
+    { id: 'archies-news', label: 'League News' },
+    { id: 'archies-gauntlet', label: 'The Gauntlet' },
+    { id: 'archies-pecking-order', label: 'The Pecking Order' },
+    { id: 'archies-calendar', label: 'Calendar' },
+    { id: 'archies-brand', label: 'Team Brands' },
+  ],
+};
+
+/**
+ * Hand-picked footers. A league absent here (any new league) gets one built
+ * from its own page-directory entries by `autoColumns` — see below.
+ */
+const BY_LEAGUE: Partial<Record<CanonicalLeagueSlug, ColumnMap>> = {
   theleague: THELEAGUE_COLUMNS,
   'afl-fantasy': AFL_COLUMNS,
   'best-ball-1': BEST_BALL_COLUMNS,
   keeper: KEEPER_COLUMNS,
+  archies: ARCHIES_COLUMNS,
 };
 
 export interface DirectoryEntry {
@@ -314,10 +343,45 @@ export interface DirectoryEntry {
   path: string;
   visibility: string;
   popularity: number;
+  category?: string;
 }
 
 const DIRECTORY = pageDirectory as DirectoryEntry[];
 const DIR_BY_ID = new Map(DIRECTORY.map((e) => [e.id, e]));
+
+/** Page-directory category → the deck column it fills in an automatic footer. */
+const CATEGORY_COLUMN: Record<string, DeckColumn> = {
+  'my-team': 'My Team',
+  popular: 'This Week',
+  tools: 'Data',
+  reports: 'Record Book',
+  info: 'League Office',
+};
+
+/** Links per column in an automatic footer — the hand-picked decks run 4–10. */
+const AUTO_COLUMN_LIMIT = 8;
+
+/**
+ * A footer for a league with no hand-picked deck: every public page-directory
+ * entry under the league's own prefix, placed in its category's column, most
+ * popular first. A page added to the directory for that league shows up here
+ * with no footer edit; a league with no entries yet gets an empty footer
+ * rather than another league's.
+ */
+export function autoColumns(slug: CanonicalLeagueSlug): ColumnMap {
+  if (slug === DEFAULT_LEAGUE_SLUG) return {};
+  const map: Record<string, FooterLink[]> = {};
+  const own = DIRECTORY.filter(
+    (e) => e.visibility === 'all' && (e.path === `/${slug}` || e.path.startsWith(`/${slug}/`)),
+  ).sort((a, b) => b.popularity - a.popularity || a.title.localeCompare(b.title));
+  for (const e of own) {
+    const column = CATEGORY_COLUMN[e.category ?? ''];
+    if (!column) continue;
+    const list = (map[column] ??= []);
+    if (list.length < AUTO_COLUMN_LIMIT) list.push({ id: e.id });
+  }
+  return map;
+}
 
 /** A resolved footer link, ready to render. */
 export interface ResolvedFooterLink {
@@ -344,7 +408,7 @@ export function getFooterColumns(
   slug: CanonicalLeagueSlug,
   franchiseId: string | null = null
 ): FooterColumn[] {
-  const map = (isDemoBigLeague(slug) ? BIGLEAGUE_COLUMNS : BY_LEAGUE[slug]) ?? {};
+  const map = (isDemoBigLeague(slug) ? BIGLEAGUE_COLUMNS : BY_LEAGUE[slug]) ?? autoColumns(slug);
   const declared = Object.keys(map);
 
   // Canonical order first, then anything a league declares that isn't one of

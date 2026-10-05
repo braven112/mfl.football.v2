@@ -72,11 +72,8 @@ function formatName(name: string): string {
 <section class="hp-intel" aria-label="Contract intelligence" data-component="hp-intel">
   <div class="hp-intel__header">
     <h3 class="hp-intel__section-title">Contract Intel</h3>
-    <a href={r('/theleague/mvp')} class="hp-intel__cta">
+    <a href={r('/theleague/mvp')} class="cta-link hp-intel__cta">
       Full MVPs
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
-        <path d="M5 12h14M12 5l7 7-7 7"/>
-      </svg>
     </a>
   </div>
 
@@ -206,7 +203,7 @@ function formatName(name: string): string {
   }
 
   .hp-intel__section-title {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -218,18 +215,7 @@ function formatName(name: string): string {
   }
 
   .hp-intel__cta {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--dh-accent);
-    text-decoration: none;
-    transition: gap 0.15s ease;
-  }
-
-  .hp-intel__cta:hover {
-    gap: 0.5rem;
+    font-size: var(--font-size-xs);
   }
 
   .hp-intel__tabs {
@@ -242,7 +228,7 @@ function formatName(name: string): string {
 
   .hp-intel__tab {
     padding: 0.375rem 0.75rem;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -251,7 +237,7 @@ function formatName(name: string): string {
     border: none;
     border-bottom: 2px solid transparent;
     cursor: pointer;
-    transition: color 0.15s ease, border-color 0.15s ease;
+    transition: color var(--transition-fast), border-color var(--transition-fast);
     margin-bottom: -1px;
   }
 
@@ -279,7 +265,7 @@ function formatName(name: string): string {
   }
 
   .hp-intel__th {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -325,7 +311,7 @@ function formatName(name: string): string {
   }
 
   .hp-intel__player-pos {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 600;
     text-transform: uppercase;
     color: var(--color-gray-400, #9ca3af);
@@ -333,7 +319,7 @@ function formatName(name: string): string {
 
   .hp-intel__td--team {
     text-align: right;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 600;
     color: var(--color-gray-500, #6b7280);
   }

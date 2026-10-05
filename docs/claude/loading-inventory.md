@@ -15,9 +15,9 @@ Four/five distinct inline CSS spinners. At audit time each was defined per-file 
 | File | Class / mechanism | Notes | Target |
 |---|---|---|---|
 | [src/components/theleague/PlayerNewsModal.astro](../../src/components/theleague/PlayerNewsModal.astro) | `.spinner` div, `border-top: 3px solid #3b82f6` | **Hardcoded hex** — the token-contract anti-pattern. Paired with "Fetching latest news…" | `Spinner` + `var(--league-accent)` |
-| [src/components/theleague/LoginForm.astro](../../src/components/theleague/LoginForm.astro) | `.login-form__spinner` span, class toggle + `aria-busy` | Also referenced in `Header.astro` nav login (text-only there) | `Spinner` in button-loading |
+| [src/components/shared/LoginForm.astro](../../src/components/shared/LoginForm.astro) | `.login-form__spinner` span, class toggle + `aria-busy` | Also referenced in `Header.astro` nav login (text-only there) | `Spinner` in button-loading |
 | [src/styles/loading.css](../../src/styles/loading.css) | `.loading-btn.is-loading::after` pseudo, `color: transparent` text trick | **The canonical button loader** — already extracted to the shared stylesheet; use this, don't re-inline it | done |
-| [GifPicker.tsx](../../src/components/theleague/suggestions/GifPicker.tsx) / [ImageUploader.tsx](../../src/components/theleague/suggestions/ImageUploader.tsx) / [IdeaComposer.tsx](../../src/components/theleague/suggestions/IdeaComposer.tsx) | `.sb-spinner`, CSS in [suggestions.astro](../../src/pages/theleague/suggestions.astro) | Shared across 3 components but CSS lives in the page; has reduced-motion guard | `Spinner` |
+| [GifPicker.tsx](../../src/components/shared/suggestions/GifPicker.tsx) / [ImageUploader.tsx](../../src/components/shared/suggestions/ImageUploader.tsx) / [IdeaComposer.tsx](../../src/components/shared/suggestions/IdeaComposer.tsx) | `.sb-spinner`, CSS in [suggestions.astro](../../src/pages/theleague/suggestions.astro) | Shared across 3 components but CSS lives in the page; has reduced-motion guard | `Spinner` |
 | [AskInput.tsx](../../src/components/shared/rules-chat/AskInput.tsx) | `.rqa-input__spinner`, CSS duplicated in both [theleague/rules-chat.astro](../../src/pages/theleague/rules-chat.astro) + [afl-fantasy/rules-chat.astro](../../src/pages/afl-fantasy/rules-chat.astro) | Driven by `isLoading` prop | `Spinner` (+ tier 5 for the AI wait) |
 
 ---
@@ -40,21 +40,21 @@ Four/five distinct inline CSS spinners. At audit time each was defined per-file 
 |---|---|---|
 | [trade-builder/LoginModal.tsx](../../src/components/theleague/trade-builder/LoginModal.tsx) | "Signing in…" | button-loading |
 | [trade-builder/TradeConfirmationModal.tsx](../../src/components/theleague/trade-builder/TradeConfirmationModal.tsx) | "Sending…" | button-loading |
-| [suggestions/IdeaComposer.tsx](../../src/components/theleague/suggestions/IdeaComposer.tsx) | "Posting…" | button-loading |
-| [suggestions/CommentComposer.tsx](../../src/components/theleague/suggestions/CommentComposer.tsx) | "Posting…" | button-loading |
-| [suggestions/PollCreator.tsx](../../src/components/theleague/suggestions/PollCreator.tsx) | "Creating…" | button-loading |
+| [suggestions/IdeaComposer.tsx](../../src/components/shared/suggestions/IdeaComposer.tsx) | "Posting…" | button-loading |
+| [suggestions/CommentComposer.tsx](../../src/components/shared/suggestions/CommentComposer.tsx) | "Posting…" | button-loading |
+| [suggestions/PollCreator.tsx](../../src/components/shared/suggestions/PollCreator.tsx) | "Creating…" | button-loading |
 | [shared/SchefterReplyThread.tsx](../../src/components/shared/SchefterReplyThread.tsx) | "…" | button-loading |
-| [draft-room/DraftQueuePanel.tsx](../../src/components/theleague/draft-room/DraftQueuePanel.tsx) | "Submitting…" | button-loading |
-| [custom-rankings/SaveIndicator.tsx](../../src/components/theleague/custom-rankings/SaveIndicator.tsx) | "Saving…" | keep; align to standard |
+| [draft-room/DraftQueuePanel.tsx](../../src/components/shared/draft-room/DraftQueuePanel.tsx) | "Submitting…" | button-loading |
+| [custom-rankings/SaveIndicator.tsx](../../src/components/shared/custom-rankings/SaveIndicator.tsx) | "Saving…" | keep; align to standard |
 | [Header.astro](../../src/components/Header.astro) | "Signing in…" (JS textContent) | button-loading |
 | [theleague/lineup.astro](../../src/pages/theleague/lineup.astro) | "Submitting…" | button-loading |
 | [theleague/rosters.astro](../../src/pages/theleague/rosters.astro) | "Submitting…" (×2) | button-loading |
 | [theleague/playoffs.astro](../../src/pages/theleague/playoffs.astro) / [afl-fantasy/playoffs.astro](../../src/pages/afl-fantasy/playoffs.astro) | "Loading…" timestamp | optimistic / skeleton |
 | [schefter/tip.astro](../../src/pages/theleague/schefter/tip.astro) | "Loading the board…", "Checking the Rolodex…" | skeleton / tier 5 |
 | [shared/SocialEmbed.tsx](../../src/components/shared/SocialEmbed.tsx) | "Loading tweet/post…" | skeleton |
-| [suggestions/SuggestionBox.tsx](../../src/components/theleague/suggestions/SuggestionBox.tsx) | "Loading ideas…" | skeleton |
-| [custom-rankings/CustomRankingsPage.tsx](../../src/components/theleague/custom-rankings/CustomRankingsPage.tsx) | "Loading rankings…" | skeleton |
-| [draft-room/DraftRoom.tsx](../../src/components/theleague/draft-room/DraftRoom.tsx) | Suspense fallback "Loading queue…" | skeleton |
+| [suggestions/SuggestionBox.tsx](../../src/components/shared/suggestions/SuggestionBox.tsx) | "Loading ideas…" | skeleton |
+| [custom-rankings/CustomRankingsPage.tsx](../../src/components/shared/custom-rankings/CustomRankingsPage.tsx) | "Loading rankings…" | skeleton |
+| [draft-room/DraftRoom.tsx](../../src/components/shared/draft-room/DraftRoom.tsx) | Suspense fallback "Loading queue…" | skeleton |
 
 ---
 

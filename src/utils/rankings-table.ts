@@ -9,7 +9,7 @@
  * This module is the importable half.
  *
  * It lives here rather than in either page because `theleague/players.astro`
- * and `afl-fantasy/players.astro` are near-identical siblings, and a ranking
+ * and `shared/free-agents/FreeAgentsPage.astro` (AFL + custom leagues) are near-identical siblings, and a ranking
  * fix landing in one and not the other is a recurring bug class in this repo.
  *
  * Deliberately does NOT read localStorage itself: `buildRankingLookup()`

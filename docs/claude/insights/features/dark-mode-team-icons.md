@@ -1,7 +1,7 @@
 # Dark-Mode Team Icons
 
 Insights for the per-team dark-mode icon variant system
-(`src/utils/team-icon-dark-css.ts`, `src/components/TeamIconDarkStyles.astro`,
+(`src/utils/team-icon-dark-css.ts`, `src/components/shared/TeamIconDarkStyles.astro`,
 `iconDark` field in the league configs).
 
 ---
@@ -127,7 +127,7 @@ serving a stale build regardless; a directly-launched `pnpm exec astro dev
 
 **Branch prereq gotcha (2026-07-07 dark-mode branch):** the committed
 `claude/stoic-gauss-85d450` Header imports `utils/theme-preference` and
-`components/ThemeToggle.astro`, which were UNCOMMITTED in that worktree — the
+`components/shared/ThemeToggle.astro`, which were UNCOMMITTED in that worktree — the
 branch alone didn't build. That branch carries copies of `theme-preference.ts`,
 `ThemeToggle.astro`, and `ThemeScript.astro` (plus the `class:list` dark wiring
 in `TheLeagueLayout`) so the theme system is coherent; expect these to
@@ -619,7 +619,7 @@ any reader cares about; count the axis the entry is claiming.
 **Files:** `src/utils/dark-surface-crest.ts` (the general rule),
 `src/utils/broadcast-crest.ts` (now only the 68vh exception),
 `src/utils/franchise-brand.ts` (`eraCrestOverrides`),
-`src/components/theleague/FaceoffComposite.astro` (`watermarkFilter`),
+`src/components/shared/FaceoffComposite.astro` (`watermarkFilter`),
 `tests/dark-surface-crest.test.ts`. Rule lives in
 `docs/claude/rules/theming-and-assets.md`.
 

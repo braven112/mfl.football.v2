@@ -1,6 +1,6 @@
 ---
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
-import Breadcrumbs from '../../../components/theleague/Breadcrumbs.astro';
+import Breadcrumbs from '../../../components/shared/Breadcrumbs.astro';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import franchiseHistory from '../../../../data/theleague/derived/franchise-history.json';
 import leagueConfig from '../../../data/theleague.config.json';
@@ -286,14 +286,14 @@ const identityHref = (h: (typeof historicalIdentities)[number]): string => {
     flex-direction: column;
     gap: 0.625rem;
     flex: 1;
-    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
   }
   :global(html.dark) .card-body {
     box-shadow: 0 0 0 1px var(--content-border, #555);
   }
   .franchise-card:hover .card-body {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+    box-shadow: var(--shadow-lg);
     border-color: var(--accent);
   }
 
@@ -304,7 +304,7 @@ const identityHref = (h: (typeof historicalIdentities)[number]): string => {
   }
   .division {
     margin: 0;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: var(--content-text-muted, #888);
@@ -322,7 +322,7 @@ const identityHref = (h: (typeof historicalIdentities)[number]): string => {
     gap: 0.125rem;
   }
   .stats dt {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: var(--content-text-muted, #888);
@@ -355,12 +355,12 @@ const identityHref = (h: (typeof historicalIdentities)[number]): string => {
     gap: 0.25rem;
     padding: 0.25rem 0.5rem;
     border-radius: 999px;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     background: var(--content-bg-muted, #f5f5f5);
     color: var(--content-text-muted, #555);
   }
-  .badge .icon { font-size: 0.875rem; line-height: 1; }
+  .badge .icon { font-size: var(--font-size-sm); line-height: 1; }
   .badge--championship { background: #fff3c4; color: #7a5b00; }
   .badge--division { background: #d6e4ff; color: #1a3d7c; }
   .badge--mvp { background: #e6f7e6; color: #1f5d2d; }
@@ -406,7 +406,7 @@ const identityHref = (h: (typeof historicalIdentities)[number]): string => {
     background: var(--content-bg-muted, #f5f5f5);
     text-decoration: none;
     color: inherit;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
   }
   .identity-list a strong { flex: 1; min-width: 0; overflow-wrap: anywhere; }
   .identity-list a .dim { flex-shrink: 0; }

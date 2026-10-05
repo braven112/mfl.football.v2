@@ -27,7 +27,7 @@
   background: var(--table-row-bg-hover, #f3f4f6);
   color: var(--color-gray-700, #374151);
   border-color: var(--color-gray-400, #9ca3af);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-sm);
 }
 
 .pa-kebab:focus-visible {
@@ -37,7 +37,7 @@
 
 /* A watched player's kebab wears the accent so the list state shows at a glance. */
 .pa-kebab.is-watched {
-  color: var(--league-accent, var(--color-primary, #1c497c));
+  color: var(--league-accent-fg, var(--league-accent, var(--color-primary, #1c497c)));
   border-color: color-mix(in srgb, var(--league-accent, var(--color-primary, #1c497c)) 55%, transparent);
   background: color-mix(in srgb, var(--league-accent, var(--color-primary, #1c497c)) 10%, var(--content-bg, #fff));
 }
@@ -56,10 +56,10 @@
   margin-left: 0.35rem;
   padding: 0.05rem 0.4rem;
   border-radius: 9999px;
-  font-size: 0.6875rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   letter-spacing: 0.02em;
-  color: var(--league-accent, var(--color-primary, #1c497c));
+  color: var(--league-accent-fg, var(--league-accent, var(--color-primary, #1c497c)));
   background: color-mix(in srgb, var(--league-accent, var(--color-primary, #1c497c)) 12%, transparent);
   vertical-align: middle;
   white-space: nowrap;
@@ -86,6 +86,6 @@
 .watch-empty {
   padding: 1.5rem 1rem !important;
   text-align: center;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   color: var(--content-text-muted, #64748b);
 }

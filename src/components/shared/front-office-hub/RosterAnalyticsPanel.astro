@@ -424,7 +424,7 @@ const rosterCount = cap
     background: var(--content-bg, #fff);
     border-radius: 0.75rem;
     padding: 1.25rem;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    box-shadow: var(--shadow-md);
   }
 
   :global(html.dark) .chart-card {
@@ -437,14 +437,14 @@ const rosterCount = cap
 
   .chart-card__title {
     margin: 0 0 0.125rem;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 700;
     color: var(--page-text, #1a1a1a);
   }
 
   .chart-card__subtitle {
     margin: 0;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--content-text-muted, #6b7280);
   }
 
@@ -486,7 +486,7 @@ const rosterCount = cap
     display: flex;
     flex-direction: column;
     gap: 0.375rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
   }
 
   .donut-legend li {
@@ -548,7 +548,7 @@ const rosterCount = cap
   }
 
   .age-stats__label {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--content-text-muted, #6b7280);
   }
 
@@ -609,7 +609,7 @@ const rosterCount = cap
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
   }
 
   .bar-row__label {

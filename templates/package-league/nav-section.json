@@ -1,0 +1,129 @@
+{
+  "id": "__LEAGUE_SLUG__",
+  "label": "League",
+  "leagueOnly": "__LEAGUE_SLUG__",
+  "phaseOrder": {
+    "inSeason": 1,
+    "offSeason": 1
+  },
+  "defaultOpen": "always",
+  "links": [
+    {
+      "id": "__LEAGUE_SLUG__-standings",
+      "label": "Standings",
+      "icon": "standings",
+      "path": "/standings",
+      "external": false,
+      "leagueOnly": "__LEAGUE_SLUG__",
+      "description": "Division standings, victory points first"
+    },
+    {
+      "id": "__LEAGUE_SLUG__-playoffs",
+      "label": "Playoffs",
+      "icon": "trophy",
+      "path": "/playoffs",
+      "external": false,
+      "leagueOnly": "__LEAGUE_SLUG__",
+      "description": "Playoff brackets with live scores"
+    },
+    {
+      "id": "__LEAGUE_SLUG__-rosters",
+      "label": "Rosters",
+      "icon": "users",
+      "path": "/rosters",
+      "external": false,
+      "leagueOnly": "__LEAGUE_SLUG__",
+      "description": "Every team's roster, one team at a time"
+    },
+    {
+      "id": "__LEAGUE_SLUG__-franchises",
+      "label": "Franchises",
+      "icon": "users",
+      "path": "/franchises",
+      "external": false,
+      "leagueOnly": "__LEAGUE_SLUG__",
+      "description": "Every club's all-time record, rivals and trades"
+    },
+    {
+      "id": "__LEAGUE_SLUG__-transactions",
+      "label": "Transactions",
+      "icon": "activity",
+      "path": "/transactions",
+      "external": false,
+      "leagueOnly": "__LEAGUE_SLUG__",
+      "description": "Every add, drop and trade this season"
+    },
+    {
+      "id": "__LEAGUE_SLUG__-live-scoring",
+      "label": "Live Scoring",
+      "icon": "goals",
+      "path": "/live-scoring",
+      "external": false,
+      "leagueOnly": "__LEAGUE_SLUG__",
+      "description": "Your two games first, then every matchup by division"
+    },
+    {
+      "id": "__LEAGUE_SLUG__-news",
+      "label": "League News",
+      "icon": "news",
+      "path": "/news",
+      "external": false,
+      "leagueOnly": "__LEAGUE_SLUG__",
+      "description": "The league's news feed"
+    },
+    {
+      "id": "__LEAGUE_SLUG__-pecking-order",
+      "label": "The Pecking Order",
+      "icon": "rank",
+      "path": "/pecking-order",
+      "external": false,
+      "leagueOnly": "__LEAGUE_SLUG__",
+      "description": "Weekly power rankings, every Tuesday"
+    },
+    {
+      "id": "__LEAGUE_SLUG__-free-agents",
+      "label": "Free Agents",
+      "icon": "user-plus",
+      "path": "/free-agents",
+      "external": false,
+      "leagueOnly": "__LEAGUE_SLUG__",
+      "description": "Who is available in your division"
+    },
+    {
+      "id": "__LEAGUE_SLUG__-import-rankings",
+      "label": "Import Rankings",
+      "icon": "clipboard",
+      "path": "/import-rankings",
+      "external": false,
+      "leagueOnly": "__LEAGUE_SLUG__",
+      "description": "Build your own player rankings for the Free Agents page"
+    },
+    {
+      "id": "__LEAGUE_SLUG__-brand",
+      "label": "Team Brands",
+      "icon": "star",
+      "path": "/brand",
+      "external": false,
+      "leagueOnly": "__LEAGUE_SLUG__",
+      "description": "Every team's name, colours and marks"
+    },
+    {
+      "id": "__LEAGUE_SLUG__-rules",
+      "label": "Rules",
+      "icon": "gavel",
+      "path": "/rules",
+      "external": false,
+      "leagueOnly": "__LEAGUE_SLUG__",
+      "description": "The rulebook and the league's MFL settings"
+    },
+    {
+      "id": "__LEAGUE_SLUG__-ask-roger",
+      "label": "Ask Roger",
+      "icon": "whistle",
+      "path": "/rules-chat",
+      "external": false,
+      "leagueOnly": "__LEAGUE_SLUG__",
+      "description": "Ask the AI rules expert a rules question"
+    }
+  ]
+}

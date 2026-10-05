@@ -3,10 +3,11 @@ import { authenticateWithMFL } from '../../../utils/mfl-login';
 import { createSessionToken, createSessionCookie, createMFLCookies } from '../../../utils/session';
 import { setTheLeaguePreference, setAFLPreference, setBestBall1Preference, getAFLTeamData } from '../../../utils/team-preferences';
 import { json } from '../../../utils/api-response';
-import { getLeagueById, getLeagueBySlug } from '../../../config/leagues';
+import { getLeagueById, getLeagueBySlug, MFL_LIVE_OPEN_SIGN_IN, mflLiveSignInLeagueIds } from '../../../config/leagues';
 import { captureCredential } from '../../../utils/autocut-storage';
 import { checkRateLimit } from '../../../utils/rate-limit';
 import { getClientIdentity } from '../../../utils/client-ip';
+import { recordInsightLogin } from '../../../utils/site-insights';
 
 const AFL_LEAGUE_ID = getLeagueBySlug('afl-fantasy')!.id;
 const THELEAGUE_ID = getLeagueBySlug('theleague')!.id;
@@ -42,7 +43,7 @@ const USERNAME_KEY_MAX = 64;
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
     const body = await request.json();
-    const { username, password, leagueId, year } = body;
+    const { username, password, leagueId, year, scope } = body;
 
     // Validate inputs
     if (!username || !password) {
@@ -55,9 +56,11 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     // and every endpoint keyed on franchiseId alone could not tell their 0001
     // from ours. Every sign-in form sends its own registry league, so this
     // only ever refuses a hand-built request. Checked BEFORE the MFL call so a
-    // refused league never relays a credential guess.
-    const league = typeof leagueId === 'string' ? getLeagueById(leagueId) : null;
-    if (!league) {
+    // refused league never relays a credential guess. The one exception is
+    // MFL Live's shared /login (the mfl-live scope), which signs in against
+    // the registry's own list plus the invited pilot leagues — never a list
+    // from the request body.
+    if (scope !== 'mfl-live' && !(typeof leagueId === 'string' && getLeagueById(leagueId))) {
       return json({ success: false, message: 'Sign in from one of the league sites.' }, 400);
     }
 
@@ -110,7 +113,17 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     // Authenticate with MFL — year override lets AFL pass 2025 because
     // the AFL 2026 league hasn't been created on MFL yet.
     const seasonYear = Number.isInteger(Number(year)) ? Number(year) : undefined;
-    const mflResponse = await authenticateWithMFL(username, password, league.id, seasonYear);
+    // MFL Live (the shared host's /login) accepts an owner of ANY registered
+    // league, or of an invited pilot league, rather than one named league. The
+    // list comes from the registry here, never from the request body: a
+    // client-supplied list would let anyone name their own league in.
+    const leagueTarget = scope === 'mfl-live' ? mflLiveSignInLeagueIds() : leagueId;
+    // With MFL_LIVE_OPEN_SIGN_IN on, an account in none of those leagues
+    // still signs in to MFL Live, scoped to a league of its own.
+    const openSignIn = scope === 'mfl-live' && MFL_LIVE_OPEN_SIGN_IN;
+    const mflResponse = await authenticateWithMFL(username, password, leagueTarget, seasonYear, {
+      openFallback: openSignIn,
+    });
 
     if (!mflResponse.success) {
       return json(
@@ -137,13 +150,27 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       );
     }
 
+    // The league the session is scoped to. A scalar sign-in names the registry
+    // league it asked for, whatever MFL echoes back. An MFL Live sign-in takes
+    // the first listed league the account is in — and must still be one of
+    // the listed leagues, or there is no session.
+    const sessionLeagueId: string =
+      scope === 'mfl-live' ? String(mflResponse.leagueId ?? '') : String(leagueId);
+    const listedLeague = mflLiveSignInLeagueIds().includes(sessionLeagueId);
+    const openLeague = openSignIn && !listedLeague && /^\d+$/.test(sessionLeagueId);
+    if (!listedLeague && !openLeague) {
+      return json({ success: false, message: 'MFL Live is invite-only for now.' }, 403);
+    }
+
     // Create JWT session
     const sessionToken = createSessionToken({
       userId: mflResponse.userId || username,
       username,
       franchiseId: mflResponse.franchiseId,
-      leagueId: league.id,
-      role: (mflResponse.role as 'owner' | 'commissioner' | 'admin') || 'owner',
+      leagueId: sessionLeagueId,
+      // An open sign-in's session is MFL-Live-only and never a commissioner
+      // here, whatever MFL said about the owner's own league.
+      role: openLeague ? 'owner' : (mflResponse.role as 'owner' | 'commissioner' | 'admin') || 'owner',
     });
 
     // Set session cookie
@@ -151,7 +178,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const sessionCookie = createSessionCookie(sessionToken, isDev);
 
     // Set team preference cookie for the league the user logged into
-    const resolvedLeagueId = league.id;
+    const resolvedLeagueId = sessionLeagueId;
     if (resolvedLeagueId === AFL_LEAGUE_ID) {
       const teamData = getAFLTeamData(mflResponse.franchiseId);
       if (teamData) {
@@ -159,15 +186,20 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       }
     } else if (resolvedLeagueId === BB1_LEAGUE_ID) {
       setBestBall1Preference(cookies, mflResponse.franchiseId);
-    } else {
+    } else if (resolvedLeagueId === THELEAGUE_ID) {
       setTheLeaguePreference(cookies, mflResponse.franchiseId);
     }
+    // Any other league (an MFL Live pilot league) has no team-preference
+    // cookie. It used to fall through to TheLeague's, which would have
+    // highlighted a stranger's franchise id as "your team" on TheLeague.
 
     // Build all Set-Cookie headers: session + MFL credentials
     const setCookieHeaders = [sessionCookie];
     if (mflResponse.userId) {
       setCookieHeaders.push(
-        ...createMFLCookies(mflResponse.userId, mflResponse.commishCookie, isDev),
+        // No commissioner cookie for an open sign-in: it names a league this
+        // site does not run.
+        ...createMFLCookies(mflResponse.userId, openLeague ? undefined : mflResponse.commishCookie, isDev),
       );
     }
 
@@ -191,6 +223,14 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       }
     }
 
+    // Site insights (/live/analytics): who signed in, and when. Awaited for
+    // the same freeze reason as above; recordInsightLogin never throws.
+    await recordInsightLogin({
+      leagueId: resolvedLeagueId,
+      franchiseId: mflResponse.franchiseId,
+      username: String(username),
+    });
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -198,8 +238,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
           userId: mflResponse.userId || username,
           username,
           franchiseId: mflResponse.franchiseId,
-          leagueId: league.id,
-          role: mflResponse.role || 'owner',
+          leagueId: sessionLeagueId,
+          role: openLeague ? 'owner' : mflResponse.role || 'owner',
         },
       }),
       { status: 200, headers },

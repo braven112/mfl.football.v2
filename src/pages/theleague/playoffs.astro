@@ -1,6 +1,6 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
-import YearSelector from '../../components/theleague/YearSelector.astro';
+import YearSelector from '../../components/shared/YearSelector.astro';
 import { getLeagueStandings } from '../../utils/standings';
 import '../../styles/loading.css';
 import {
@@ -26,6 +26,7 @@ import {
 import { getCurrentSeasonYear } from '../../utils/league-year';
 import { spriteUrl } from '../../utils/sprite-url';
 import { getLeagueBySlug } from '../../config/leagues';
+import EmptyState from '../../components/shared/states/EmptyState.astro';
 
 export const prerender = false;
 
@@ -633,9 +634,10 @@ const grandTotal =
     </div>
 
     {tabView !== 'prizes' && !hasBrackets && (
-      <div class="empty-state">
-        <p>Brackets are not available for this season yet. Check back once playoff seeds are set.</p>
-      </div>
+      <EmptyState
+        title="No brackets yet"
+        body="This season's brackets appear once playoff seeds are set."
+      />
     )}
 
     {tabView === 'prizes' ? (
@@ -973,7 +975,7 @@ const grandTotal =
     border-radius: 0.5rem;
     background: var(--content-bg-muted, #f8fafc);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all var(--transition-base);
     position: relative;
     min-width: 69px;
   }
@@ -1318,7 +1320,7 @@ const grandTotal =
     height: 16px;
     border-radius: 50%;
     background: var(--content-bg-accent, #cbd5e1);
-    transition: all 0.3s ease;
+    transition: all var(--transition-slow);
     cursor: pointer;
   }
 
@@ -1344,7 +1346,7 @@ const grandTotal =
     display: block;
     text-decoration: none;
     color: inherit;
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
   }
 
   .matchup-card-link:hover {
@@ -1352,7 +1354,7 @@ const grandTotal =
   }
 
   .matchup-card-link:hover .matchup-card {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-lg);
   }
 
   .matchup-card-link:active {
@@ -1366,7 +1368,7 @@ const grandTotal =
     border-radius: 12px;
     padding: 0.75rem;
     padding-right: 1rem;
-    transition: box-shadow 0.15s ease;
+    transition: box-shadow var(--transition-fast);
     position: relative;
     display: block;
     padding-right: 1rem;
@@ -1412,7 +1414,7 @@ const grandTotal =
   .team-name {
     margin: 0;
     font-weight: 800;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--page-text, #0f172a);
     white-space: nowrap;
     overflow: hidden;
@@ -1601,15 +1603,6 @@ const grandTotal =
 
   /* ======================================== */
 
-  .empty-state {
-    background: var(--card-bg, #fff);
-    border: 1px dashed var(--content-border, #e2e8f0);
-    border-radius: 14px;
-    padding: 1.5rem;
-    text-align: center;
-    color: var(--content-text-muted, #475569);
-  }
-
   .bracket-missing {
     border: 1px dashed var(--content-border, #cbd5e1);
     border-radius: 10px;
@@ -1642,7 +1635,7 @@ const grandTotal =
     color: var(--color-primary, #1c497c);
     text-decoration: none;
     font-weight: 600;
-    transition: color 0.2s ease;
+    transition: color var(--transition-base);
   }
 
   .mfl-link:hover {

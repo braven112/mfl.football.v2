@@ -49,13 +49,13 @@ interface Props {
   } | null;
   teams: Map<string, any> | Record<string, any>;
   leagueSlug: CanonicalLeagueSlug;
+  /** The poll page — where the ballot AND the full owners' rankings live. */
   ballotHref: string;
-  columnHref: string;
   /** How many rows to show. The card is a teaser, not the column. */
   limit?: number;
 }
 
-const { issue, teams, leagueSlug, ballotHref, columnHref, limit = 5 } = Astro.props as Props;
+const { issue, teams, leagueSlug, ballotHref, limit = 5 } = Astro.props as Props;
 
 const league = getLeagueBySlug(leagueSlug)!;
 const teamMap = teams instanceof Map ? teams : new Map(Object.entries(teams ?? {}));
@@ -126,7 +126,9 @@ const recruiting = ranked.length === 0;
   />
 
   <p class="ophc__links">
-    <a class="ophc__button" href={ballotHref}>{recruiting ? 'Cast your ballot' : 'Change your vote'}</a>
-    <a class="ophc__more" href={columnHref}>The Pecking Order &rsaquo;</a>
+    <a class="cta cta--primary" href={ballotHref}>{recruiting ? 'Cast your ballot' : 'Change your vote'}</a>
+    {/* The card is the top of the list; the rest sits behind a vote on the
+        poll page, which is the point of linking there rather than the column. */}
+    {!recruiting && <a class="cta-link" href={ballotHref}>Full owners’ rankings</a>}
   </p>
 </section>

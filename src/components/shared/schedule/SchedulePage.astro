@@ -27,7 +27,7 @@
  * not a literal 15/16/17.
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
-import Breadcrumbs from '../../theleague/Breadcrumbs.astro';
+import Breadcrumbs from '../Breadcrumbs.astro';
 import { getLeagueBySlug } from '../../../config/leagues';
 import type { CanonicalLeagueSlug } from '../../../config/leagues';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
@@ -329,7 +329,7 @@ const heroSkin =
               SITE theme is dark. */}
           {heroSkin.crest && (
             <img
-              class="hero-fb__crest"
+              class:list={['hero-fb__crest', { 'hero-fb__crest--round': heroSkin.crestRound }]}
               src={heroSkin.crest}
               style={heroSkin.crestFilter ? `filter: ${heroSkin.crestFilter};` : undefined}
               alt=""
@@ -450,8 +450,8 @@ const heroSkin =
             </div>
             <p class="sch-next__when">{weekDate(nextGame.week).long} · lineup locks at kickoff</p>
             <div class="sch-next__actions">
-              <a href={r(`/${leagueSlug}/lineup`)} class="sch-btn">Set lineup</a>
-              <a href={r(`/${leagueSlug}/live-scoring`)} class="sch-btn sch-btn--ghost">Live scoring</a>
+              <a href={r(`/${leagueSlug}/lineup`)} class="cta cta--primary sch-btn">Set lineup</a>
+              <a href={r(`/${leagueSlug}/live-scoring`)} class="cta cta--ghost sch-btn sch-btn--ghost">Live scoring</a>
             </div>
           </aside>
         ) : !viewerFranchiseId ? (
@@ -463,7 +463,7 @@ const heroSkin =
               Sign in with your MFL account to see your own season, your next opponent and your results.
             </p>
             <div class="sch-next__actions">
-              <a href={loginHref} class="sch-btn">Log in</a>
+              <a href={loginHref} class="cta cta--primary sch-btn">Log in</a>
             </div>
           </aside>
         ) : null}
@@ -705,14 +705,19 @@ const heroSkin =
      TheLeague deepens. Hence literal values here rather than surface tokens —
      these ARE the brand chrome, not the page surface. */
   .sch {
-    --sch-hero: #1c497c;
-    /* AA at 13px in both directions: white on this is 6.4:1 (the pill, the
-       CTA) and this on the page ground is 6.0:1 (the active tab). #3b82f6 was
-       3.7:1 and 3.0:1 — the reason this is a darker blue than the hero's. */
-    --sch-accent: #1d4ed8;
-    --sch-accent-ink: #93bbfd;
-    --sch-glow: rgba(28, 73, 124, 0.55);
-    --sch-accent-soft: rgba(59, 130, 246, 0.08);
+    /* Each value reads the league's hero slots (src/themes/<id>.json) first;
+       the literals are TheLeague's, kept for a theme that leaves a slot null.
+       #1d4ed8 is AA at 13px both ways: white on it 6.4:1 (the pill, the CTA),
+       it on the page ground 6.0:1 (the active tab). */
+    --sch-hero: var(--hero-surface, #1c497c);
+    --sch-accent: var(--hero-action, #1d4ed8);
+    --sch-on-accent: var(--on-hero-action, #ffffff);
+    --sch-accent-ink: var(--hero-highlight, #93bbfd);
+    --sch-glow: var(--hero-glow, rgba(28, 73, 124, 0.55));
+    --sch-accent-soft: color-mix(in srgb, var(--hero-action, #3b82f6) 8%, transparent);
+    /* The accent as TEXT on the page ground (active tab, current week). A
+       theme whose accent is too light for that names a darker step. */
+    --sch-accent-text: var(--league-accent-fg, var(--sch-accent));
     --sch-ink-soft: rgba(255, 255, 255, 0.72);
     --sch-ink-faint: rgba(255, 255, 255, 0.6);
     --sch-divider: rgba(255, 255, 255, 0.16);
@@ -722,16 +727,7 @@ const heroSkin =
     padding: 0 var(--spacing-md, 1rem) var(--spacing-2xl, 3rem);
   }
   :global(html.dark) .sch {
-    --sch-hero: #0f1e2e;
-  }
-  /* Same specificity as the dark rule and later in source, so the AFL navy
-     survives in dark mode too — the league's chrome, not a light-mode look. */
-  :global(html[data-league='afl']) .sch {
-    --sch-hero: #002244;
-    --sch-accent: #c41e3a;
-    --sch-accent-ink: #c9a94e;
-    --sch-glow: rgba(196, 30, 58, 0.6);
-    --sch-accent-soft: rgba(196, 30, 58, 0.07);
+    --sch-hero: var(--hero-surface, #0f1e2e);
   }
 
   /* ── Hero ── */
@@ -789,15 +785,19 @@ const heroSkin =
   .sch-hero--franchise .sch-next__dot { background: var(--hero-fb-accent-panel); }
   .sch-hero--franchise .sch-next__kicker { color: var(--hero-fb-accent-panel); }
   .sch-hero--franchise .sch-btn {
-    background: var(--hero-fb-pill-bg);
-    color: var(--hero-fb-pill-ink);
+    --cta-bg: var(--hero-fb-pill-bg);
+    --cta-ink: var(--hero-fb-pill-ink);
+    --cta-border: var(--cta-bg);
+    --cta-bg-hover: color-mix(in srgb, var(--cta-bg) 88%, black);
   }
-  .sch-hero--franchise .sch-btn:hover { color: var(--hero-fb-pill-ink); }
   /* The ghost button is a translucent white on the card, so it keeps the
      white ink the franchise fill does not apply to. */
   .sch-hero--franchise .sch-btn--ghost {
-    background: var(--sch-raised);
-    color: var(--color-white, #fff);
+    --cta-bg: var(--sch-raised);
+    --cta-ink: var(--color-white, #fff);
+    --cta-border: var(--sch-divider);
+    --cta-border-hover: var(--cta-border);
+    --cta-bg-hover: rgba(255, 255, 255, 0.14);
   }
 
   .sch-hero__inner {
@@ -829,7 +829,7 @@ const heroSkin =
     padding: 0.375rem 0.875rem;
     border-radius: var(--radius-full, 999px);
     background: var(--sch-accent);
-    color: var(--color-white, #fff);
+    color: var(--sch-on-accent);
   }
   .sch-hero__meta {
     font-size: var(--font-size-xs, 0.75rem);
@@ -896,7 +896,7 @@ const heroSkin =
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     letter-spacing: 0.09em;
     text-transform: uppercase;
     color: var(--sch-ink-faint);
@@ -921,7 +921,7 @@ const heroSkin =
   .sch-stat__value--sm { font-size: 1.4rem; line-height: 1.15; }
   .sch-stat__label {
     font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', sans-serif);
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: var(--font-weight-semibold, 600);
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -947,7 +947,7 @@ const heroSkin =
   .sch-next__dot { width: 7px; height: 7px; border-radius: 50%; background: var(--sch-accent-ink); }
   .sch-next__kicker {
     font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', sans-serif);
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: var(--font-weight-semibold, 600);
     letter-spacing: 0.11em;
     text-transform: uppercase;
@@ -973,32 +973,27 @@ const heroSkin =
     color: var(--sch-ink-soft);
   }
   .sch-next__actions { display: flex; gap: 0.5rem; margin-top: auto; }
+  /* The hero's own palette: an accent fill on a dark card, display face. */
   .sch-btn {
+    --cta-bg: var(--sch-accent);
+    --cta-ink: var(--sch-on-accent);
+    --cta-border: var(--cta-bg);
+    --cta-bg-hover: color-mix(in srgb, var(--cta-bg) 88%, var(--sch-hero));
     flex: 1;
     box-sizing: border-box;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     height: 44px;
     padding: 0 1rem;
-    border-radius: var(--radius-md, 0.5rem);
-    background: var(--sch-accent);
-    color: var(--color-white, #fff);
     font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', sans-serif);
-    font-weight: var(--font-weight-bold, 700);
     font-size: 0.9375rem;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    text-decoration: none;
-    white-space: nowrap;
-    transition: filter var(--transition-fast, 150ms ease);
   }
-  .sch-btn:hover { filter: brightness(0.92); color: var(--color-white, #fff); }
   .sch-btn--ghost {
-    background: var(--sch-raised);
-    border: 1px solid var(--sch-divider);
+    --cta-bg: var(--sch-raised);
+    --cta-border: var(--sch-divider);
+    --cta-border-hover: var(--cta-border);
+    --cta-bg-hover: rgba(255, 255, 255, 0.14);
   }
-  .sch-btn--ghost:hover { background: rgba(255, 255, 255, 0.14); filter: none; }
 
   /* ── Tabs ── */
   .sch-tabs {
@@ -1021,7 +1016,7 @@ const heroSkin =
     border-bottom: 2px solid transparent;
   }
   .sch-tab.is-active {
-    color: var(--sch-accent);
+    color: var(--sch-accent-text);
     border-bottom-color: var(--sch-accent);
     font-weight: var(--font-weight-bold, 700);
   }
@@ -1059,7 +1054,7 @@ const heroSkin =
     color: var(--color-gray-700, #374151);
   }
   .sch-month__rule { flex: 1; height: 1px; background: var(--table-border, #e2e8f0); }
-  .sch-month__meta { font-size: 0.6875rem; color: var(--content-text-muted, #6b7280); }
+  .sch-month__meta { font-size: var(--font-size-2xs); color: var(--content-text-muted, #6b7280); }
 
   /* An anchored row must not land under the site's sticky header. Both deep
      link targets carry it; 96px clears the header at every breakpoint. */
@@ -1089,10 +1084,10 @@ const heroSkin =
     line-height: 1;
     color: var(--color-gray-700, #374151);
   }
-  .sch-row.is-now .sch-row__weeknum { color: var(--sch-accent); }
+  .sch-row.is-now .sch-row__weeknum { color: var(--sch-accent-text); }
   .sch-row__date {
     display: block;
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--content-text-muted, #6b7280);
@@ -1112,7 +1107,7 @@ const heroSkin =
   .sch-chip.is-win { background: var(--badge-success-bg); color: var(--badge-success-text); }
   .sch-chip.is-loss { background: var(--badge-error-bg); color: var(--badge-error-text); }
   .sch-chip.is-tie { background: var(--color-gray-100, #f3f4f6); color: var(--color-gray-600, #4b5563); }
-  .sch-chip.is-now { background: var(--sch-accent); color: var(--color-white, #fff); }
+  .sch-chip.is-now { background: var(--sch-accent); color: var(--sch-on-accent); }
   .sch-row__crest { width: 34px; height: 34px; object-fit: contain; flex-shrink: 0; }
   .sch-row__team { flex: 1; min-width: 0; }
   .sch-row__nameline { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
@@ -1132,10 +1127,10 @@ const heroSkin =
     background: var(--color-gray-100, #f3f4f6);
     color: var(--content-text-muted, #6b7280);
   }
-  .sch-tag--now { background: var(--sch-accent); color: var(--color-white, #fff); }
+  .sch-tag--now { background: var(--sch-accent); color: var(--sch-on-accent); }
   .sch-row__sub {
     display: block;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     color: var(--content-text-muted, #6b7280);
     margin-top: 0.1875rem;
   }
@@ -1150,7 +1145,7 @@ const heroSkin =
   .sch-row__points--pending { color: var(--content-text-muted, #6b7280); font-weight: var(--font-weight-semibold, 600); }
   .sch-row__margin {
     display: block;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-variant-numeric: tabular-nums;
     color: var(--content-text-muted, #6b7280);
     margin-top: 0.125rem;
@@ -1179,7 +1174,7 @@ const heroSkin =
   thead .sch-grid__club {
     z-index: 2;
     padding: 0.75rem 1rem 0.625rem;
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: var(--font-weight-bold, 700);
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -1196,7 +1191,7 @@ const heroSkin =
   .sch-grid__rank {
     flex-shrink: 0;
     width: 16px;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: var(--font-weight-semibold, 600);
     font-variant-numeric: tabular-nums;
     color: var(--content-text-muted, #6b7280);
@@ -1213,7 +1208,7 @@ const heroSkin =
   }
   .sch-grid__record {
     flex-shrink: 0;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: var(--font-weight-semibold, 600);
     font-variant-numeric: tabular-nums;
     color: var(--color-gray-700, #374151);
@@ -1222,7 +1217,7 @@ const heroSkin =
     text-align: left;
     padding: 0.5rem 1rem;
     font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', sans-serif);
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--content-text-muted, #6b7280);
@@ -1296,7 +1291,7 @@ const heroSkin =
   .sch-tile__opp { display: block; }
   .sch-tile__score {
     display: block;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: var(--font-weight-medium, 500);
     font-variant-numeric: tabular-nums;
     opacity: 0.75;
@@ -1313,7 +1308,7 @@ const heroSkin =
   }
   .sch-seasons { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
   .sch-seasons__label {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     text-transform: uppercase;
     letter-spacing: 0.06em;
     color: var(--content-text-muted, #6b7280);
@@ -1350,9 +1345,9 @@ const heroSkin =
     color: var(--content-text-muted, #6b7280);
     background: var(--card-bg, #fff);
   }
-  .sch-season:hover { border-color: var(--sch-accent); color: var(--sch-accent); }
+  .sch-season:hover { border-color: var(--sch-accent); color: var(--sch-accent-text); }
   .sch-season.is-active {
-    color: var(--color-white, #fff);
+    color: var(--sch-on-accent);
     background: var(--sch-accent);
     border-color: var(--sch-accent);
     font-weight: var(--font-weight-semibold, 600);
@@ -1366,7 +1361,7 @@ const heroSkin =
     list-style: none;
     margin: var(--spacing-md, 1rem) 0 0;
     padding: 0;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     color: var(--content-text-muted, #6b7280);
   }
   .sch-legend li { display: inline-flex; align-items: center; gap: 0.4375rem; }

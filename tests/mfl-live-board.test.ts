@@ -23,6 +23,17 @@ vi.mock('../src/utils/cross-league-live', () => ({
   CROSS_LEAGUE_FAN_OUT_LIMIT: 8,
 }));
 
+// The board also fetches ESPN's scoreboard and game detail. Nothing here reads
+// them, and left real they made every run a live network call: a slow ESPN
+// timed the first test out at 5s in CI. Stub them to the "no games" answer the
+// board already survives.
+vi.mock('../src/utils/nfl-scoreboard-source', () => ({
+  fetchNflScoreboard: async ({ week }: { week: number }) => ({ ok: false, week, games: [] }),
+}));
+vi.mock('../src/utils/nfl-game-detail-source', () => ({
+  loadNflGameDetail: async () => null,
+}));
+
 const { assembleMflLiveBoard } = await import('../src/utils/mfl-live-board');
 const { fromMflLiveBoard } = await import('../src/utils/live/from-mfl-live');
 const { resolveMatchupColorVars } = await import('../src/utils/live/model');

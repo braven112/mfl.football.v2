@@ -1,0 +1,63 @@
+---
+/**
+ * /products — the product lineup, cheapest first. Admin-only until launch:
+ * see `src/utils/product-pages-access.ts` for the gate and the one flag that
+ * opens it. Not in the page directory while gated (search would list a page
+ * the reader cannot open).
+ */
+import MflAppLayout from '../../layouts/MflAppLayout.astro';
+import { getAuthUser } from '../../utils/auth';
+import { mflLoginUrl } from '../../utils/mfl-login-redirect';
+import { canViewProductPages } from '../../utils/product-pages-access';
+import { PRODUCTS, productHref } from '../../data/products';
+import ProductShot from '../../components/shared/products/ProductShot.astro';
+import '../../styles/products.css';
+
+export const prerender = false;
+
+const authUser = getAuthUser(Astro.request);
+if (!canViewProductPages(authUser)) {
+	if (!authUser) return Astro.redirect(mflLoginUrl('/products'));
+	return Astro.rewrite('/_not-found');
+}
+
+const KIND_LABELS = {
+	owner: 'For owners',
+	league: 'For leagues',
+	addon: 'Add-ons',
+	contest: 'For contest organizers',
+} as const;
+---
+
+<MflAppLayout title="Products" description="The product lineup, from free owner tools to a fully custom league site.">
+	<div class="prd">
+		<header class="prd__head">
+			<p class="prd__eyebrow">Product lineup</p>
+			<h1 class="prd__title">From one owner to a whole league</h1>
+			<p class="prd__lede">
+				Every product runs on the same platform, so a feature built for one league becomes
+				available to all of them. Each page builds on the ones before it.
+			</p>
+			<p class="prd__buyer">
+				Shared features are described once, in the <a href="/products/features">feature catalog</a>.
+			</p>
+		</header>
+
+		<ol class="prd__cards">
+			{PRODUCTS.map((product) => (
+				<li>
+					<a class="prd__card" href={productHref(product.slug)}>
+						{product.screenshot && <ProductShot shot={product.screenshot} variant="card" />}
+						<span class="prd__card-kind">{KIND_LABELS[product.kind]}</span>
+						<span class="prd__card-top">
+							<span class="prd__card-name">{product.name}</span>
+							<span class="prd__card-price">{product.price}</span>
+						</span>
+						<span>{product.tagline}</span>
+						<span class="prd__card-buyer">For: {product.buyer}</span>
+					</a>
+				</li>
+			))}
+		</ol>
+	</div>
+</MflAppLayout>

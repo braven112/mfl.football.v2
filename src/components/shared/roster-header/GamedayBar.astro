@@ -56,8 +56,13 @@ interface Props {
   nameOf: (franchiseId: string) => string;
   iconOf: (franchiseId: string) => string | null;
   recordOf: (franchiseId: string) => string | null;
-  /** Week-anchored schedule href; omit the week for the page itself. */
-  scheduleHref: (week?: number) => string;
+  /**
+   * Week-anchored schedule href; omit the week for the page itself. Null for
+   * a league with no schedule page: the tiles and dots render as plain,
+   * un-linked marks and the "Full schedule" link is dropped, rather than
+   * pointing at a route that 404s.
+   */
+  scheduleHref?: ((week?: number) => string) | null;
   /**
    * When the coming week's lineups LOCK, already in the viewer's clock — or
    * null when there is nothing to warn about (the week has started, or this
@@ -137,7 +142,7 @@ const railMarks = rail.flatMap((entry) =>
     when the rail (and so the toggle) renders; desktop always shows both. */}
 <div class="rhdr-bar" data-weeks={railMarks.length > 0 ? 'collapsed' : undefined}>
   {lastPlayed ? (
-    <a class:list={['rhdr-tile', { 'rhdr-tile--multi': lastPlayed.games.length > 1 }]} href={scheduleHref(lastPlayed.week)}>
+    <a class:list={['rhdr-tile', { 'rhdr-tile--multi': lastPlayed.games.length > 1 }]} href={scheduleHref ? scheduleHref(lastPlayed.week) : undefined}>
       {lastPlayed.games.length === 1 ? (
         <Fragment>
           {iconOf(lastPlayed.games[0].opponentId) && (
@@ -205,7 +210,7 @@ const railMarks = rail.flatMap((entry) =>
   )}
 
   {upNext ? (
-    <a class:list={['rhdr-tile', { 'rhdr-tile--multi': upNext.games.length > 1 }]} href={scheduleHref(upNext.week)}>
+    <a class:list={['rhdr-tile', { 'rhdr-tile--multi': upNext.games.length > 1 }]} href={scheduleHref ? scheduleHref(upNext.week) : undefined}>
       {upNext.games.length === 1 ? (
         <Fragment>
           {iconOf(upNext.games[0].opponentId) && (
@@ -270,7 +275,7 @@ const railMarks = rail.flatMap((entry) =>
           <button type="button" class="rhdr-rail__weeks" data-rhdr-weeks-toggle aria-expanded="false">
             Last &amp; next game <span class="rhdr-rail__chev" aria-hidden="true">▾</span>
           </button>
-          <a class="rhdr-rail__cta" href={scheduleHref()}>Full schedule &amp; scores →</a>
+          {scheduleHref && <a class="cta-link rhdr-rail__cta" href={scheduleHref()}>Full schedule &amp; scores</a>}
         </span>
       </div>
       <div class="rhdr-rail__dots">
@@ -284,7 +289,8 @@ const railMarks = rail.flatMap((entry) =>
               'is-now': !game?.played && entry.isCurrent,
               'is-future': !game?.played && !entry.isCurrent,
             }]}
-            href={scheduleHref(entry.week)}
+            href={scheduleHref ? scheduleHref(entry.week) : undefined}
+            role={scheduleHref ? undefined : 'img'}
             aria-label={railLabel(entry, game)}
           ><span class="rhdr-rail__mark" aria-hidden="true"></span></a>
         ))}
@@ -335,7 +341,7 @@ const railMarks = rail.flatMap((entry) =>
   .rhdr-tile__body { display: flex; flex-direction: column; min-width: 0; }
 
   .rhdr-tile__kicker {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 600;
     letter-spacing: 0.12em;
     text-transform: uppercase;
@@ -444,22 +450,18 @@ const railMarks = rail.flatMap((entry) =>
     gap: 0.6rem;
   }
   .rhdr-rail__title {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 600;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--content-text-muted);
   }
   .rhdr-rail__cta {
-    font-size: 0.6875rem;
-    font-weight: 600;
+    font-size: var(--font-size-2xs);
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    white-space: nowrap;
-    color: var(--color-accent, #1c497c);
-    text-decoration: none;
+    --cta-link-ink: var(--color-accent, #1c497c);
   }
-  .rhdr-rail__cta:hover { text-decoration: underline; }
 
   /* The phone-only week toggle. Hidden on wider screens, where both tiles
      always show. */
@@ -482,13 +484,13 @@ const railMarks = rail.flatMap((entry) =>
       display: inline-flex;
       align-items: center;
       gap: 0.25rem;
-      min-height: 44px;
+      min-height: var(--touch-target-min);
       margin: -0.75rem 0;
       padding: 0;
       border: 0;
       background: none;
       font: inherit;
-      font-size: 0.6875rem;
+      font-size: var(--font-size-2xs);
       font-weight: 600;
       letter-spacing: 0.06em;
       text-transform: uppercase;
@@ -501,7 +503,7 @@ const railMarks = rail.flatMap((entry) =>
       outline-offset: 2px;
       border-radius: 4px;
     }
-    .rhdr-rail__chev { display: inline-block; transition: transform 0.15s ease; }
+    .rhdr-rail__chev { display: inline-block; transition: transform var(--transition-fast); }
     .rhdr-rail__weeks[aria-expanded='true'] .rhdr-rail__chev { transform: rotate(180deg); }
   }
 
@@ -581,7 +583,7 @@ const railMarks = rail.flatMap((entry) =>
     text-transform: uppercase;
     color: var(--content-text-muted);
   }
-  .rhdr-rail__now { color: var(--color-accent, #1c497c); font-weight: 600; }
+  .rhdr-rail__now { color: var(--league-accent-fg, var(--color-accent, #1c497c)); font-weight: 600; }
 
   @media (prefers-reduced-motion: reduce) {
     .rhdr-rail__chev { transition: none; }
@@ -592,17 +594,27 @@ const railMarks = rail.flatMap((entry) =>
 </style>
 
 <script>
-  // One delegated listener for the phone week toggle. A module script runs
-  // once per document, and `document` survives ClientRouter swaps, so this
-  // never stacks and needs no per-page init; each swapped-in header arrives
-  // collapsed from the server.
-  document.addEventListener('click', (event) => {
-    const toggle = (event.target as Element | null)?.closest?.('[data-rhdr-weeks-toggle]');
-    if (!(toggle instanceof HTMLButtonElement)) return;
-    const bar = toggle.closest<HTMLElement>('.rhdr-bar[data-weeks]');
-    if (!bar) return;
-    const expand = bar.dataset.weeks === 'collapsed';
-    bar.dataset.weeks = expand ? 'expanded' : 'collapsed';
-    toggle.setAttribute('aria-expanded', String(expand));
-  });
+  // One delegated listener for the phone week toggle. `document` survives
+  // ClientRouter swaps, so it needs no per-page init; each swapped-in header
+  // arrives collapsed from the server.
+  //
+  // It must bind ONCE, and the flag is what guarantees it: this script is
+  // small enough that the build INLINES it, once per rendered header — and
+  // the rosters page renders one header per team (16 in TheLeague). Sixteen
+  // listeners flipped the toggle sixteen times per tap, back to where it
+  // started, so the button did nothing in production while dev (which loads
+  // one deduped module) worked.
+  const w = window as Window & { __rhdrWeeksBound?: boolean };
+  if (!w.__rhdrWeeksBound) {
+    w.__rhdrWeeksBound = true;
+    document.addEventListener('click', (event) => {
+      const toggle = (event.target as Element | null)?.closest?.('[data-rhdr-weeks-toggle]');
+      if (!(toggle instanceof HTMLButtonElement)) return;
+      const bar = toggle.closest<HTMLElement>('.rhdr-bar[data-weeks]');
+      if (!bar) return;
+      const expand = bar.dataset.weeks === 'collapsed';
+      bar.dataset.weeks = expand ? 'expanded' : 'collapsed';
+      toggle.setAttribute('aria-expanded', String(expand));
+    });
+  }
 </script>

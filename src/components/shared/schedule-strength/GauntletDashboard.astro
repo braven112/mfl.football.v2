@@ -26,6 +26,8 @@ export interface YearOption {
 
 export interface Props {
   columnName: string;
+  /** "A <persona> weekly column" — from the league's persona (src/utils/persona.mjs). */
+  byline?: string;
   week: number;
   year: number;
   runIn: StrengthRow[];
@@ -40,14 +42,14 @@ export interface Props {
 }
 
 const {
-  columnName, week, year, runIn, played, scheduleLuck,
+  columnName, byline = 'A Claude Schefter Weekly Column', week, year, runIn, played, scheduleLuck,
   heatMapFranchises, heatMapWeeks, trapWeeks, yearOptions, seasonComplete,
 } = Astro.props;
 ---
 
 <div class="gauntlet gauntlet-theme">
   <header class="gauntlet__hero">
-    <span class="gauntlet__eyebrow">A Claude Schefter Weekly Column</span>
+    <span class="gauntlet__eyebrow">{byline}</span>
     <h1 class="gauntlet__title">
       {columnName}
       <span class="gauntlet__meta">· {seasonComplete ? `Final · ${year}` : `Week ${week} · ${year}`}</span>
@@ -140,7 +142,7 @@ const {
 
   .gauntlet__hero { display: flex; flex-direction: column; gap: 0.35rem; }
   .gauntlet__eyebrow {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--gnt-ink-faint);
@@ -170,9 +172,9 @@ const {
   }
   .gauntlet__years a:focus-visible { outline: 2px solid var(--gnt-focus); outline-offset: 2px; }
   .gauntlet__years a[aria-current] {
-    background: var(--color-primary, #1c497c);
+    background: var(--color-primary-fill, var(--color-primary, #1c497c));
     border-color: var(--color-primary, #1c497c);
-    color: #ffffff;
+    color: var(--on-color-primary, #ffffff);
     font-weight: 600;
   }
 
@@ -190,7 +192,7 @@ const {
   }
   .gauntlet__stitle p {
     margin: 0.15rem 0 0;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     color: var(--gnt-ink-soft);
   }
 

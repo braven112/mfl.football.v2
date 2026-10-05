@@ -30,6 +30,8 @@ import {
   validateAnnounceInput,
 } from '../../../utils/schefter-announce-core.mjs';
 import { outboundAllowed } from '../../../utils/deploy-environment';
+import { canAdministerLeague } from '../../../utils/league-admin';
+import { getLeagueBySlug } from '../../../config/leagues';
 
 export const prerender = false;
 
@@ -57,6 +59,9 @@ const json = (data: unknown, status = 200) =>
     status,
     headers: { 'Content-Type': 'application/json' },
   });
+
+/** The registry league each announce target publishes into. */
+const TARGET_REGISTRY_SLUG = { theleague: 'theleague', afl: 'afl-fantasy' } as const;
 
 /** Map the resolved league list back to the workflow's choice input. */
 function dispatchLeaguesValue(leagues: string[]): 'theleague' | 'afl' | 'both' {
@@ -100,6 +105,15 @@ export const POST: APIRoute = async ({ request }) => {
     sendGroupMe: boolean;
     link: string;
   };
+
+  // A commissioner announces only into the league they administer: the role on
+  // the session carries no league, so without this any league's commissioner
+  // (Archie's included, via its News Ops page) could publish into TheLeague or
+  // the AFL. A platform admin passes for every league.
+  const foreign = leagues.filter((key) => !canAdministerLeague(user, getLeagueBySlug(TARGET_REGISTRY_SLUG[key])));
+  if (foreign.length) {
+    return json({ ok: false, error: 'forbidden', message: `Not a commissioner of: ${foreign.join(', ')}` }, 403);
+  }
 
   // ── Preview: compute exactly what would ship; dispatch nothing. ──────────
   if (action === 'preview') {
@@ -205,7 +219,9 @@ export const POST: APIRoute = async ({ request }) => {
     );
   } catch (err) {
     console.error('[announce] dispatch failed:', err);
-    return json({ ok: false, error: 'dispatch failed', detail: err instanceof Error ? err.message : String(err) }, 200);
+    // The cause goes to the runtime log, never the response (CodeQL
+    // js/stack-trace-exposure); the UI shows the generic error.
+    return json({ ok: false, error: 'dispatch failed', detail: 'See the server log for the cause.' }, 200);
   }
   console.log('[announce] send: dispatch response', res.status);
 
@@ -232,9 +248,9 @@ export const POST: APIRoute = async ({ request }) => {
       'Announcement dispatched. The feed post lands after the run commits and the site redeploys (~1–2 min); GroupMe fires during the run.',
   });
  } catch (err) {
-  // Never leak a bare platform 502 — always return a readable JSON error so the
-  // admin UI can show the cause (and log it so it lands in the runtime logs).
+  // Never leak a bare platform 502 — always return a readable JSON error, and
+  // log the cause so it lands in the runtime logs (not in the response).
   console.error('[announce] unhandled error:', err);
-  return json({ ok: false, error: 'server error', detail: err instanceof Error ? err.message : String(err) }, 200);
+  return json({ ok: false, error: 'server error', detail: 'See the server log for the cause.' }, 200);
  }
 };

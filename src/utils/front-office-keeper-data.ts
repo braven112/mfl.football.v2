@@ -41,7 +41,7 @@ import {
   type RosterAnalytics,
   type RosterGroup,
 } from './roster-analytics';
-import type { KeeperPlannerPlayer, KeeperPlannerDraftPick } from '../components/afl-fantasy/KeeperPlanner.astro';
+import type { KeeperPlannerPlayer, KeeperPlannerDraftPick } from '../components/shared/keepers/KeeperPlanner.astro';
 
 const loadFeedJson = (leagueYearStr: string, filename: string, dataPath: string): any => {
   const feedPath = path.resolve(process.cwd(), `${dataPath}/mfl-feeds/${leagueYearStr}/${filename}`);

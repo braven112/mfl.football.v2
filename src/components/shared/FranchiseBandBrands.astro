@@ -1,0 +1,54 @@
+---
+/**
+ * Franchise band brands — the per-league crest + hue map the player modals'
+ * header band reads.
+ *
+ * Emitted ONCE per page from the shared layout <head>, beside
+ * `TeamIconDarkStyles` / `TeamAccentStyles`, for the same reason those live
+ * there: the band is painted by client JS in ~4 different modals, and a
+ * per-modal copy would collide on the element id and duplicate the payload.
+ *
+ * It is a JSON island rather than CSS custom properties because the band needs
+ * a crest URL and a display name, not just colors.
+ *
+ * THROWBACK WEEK is resolved here so no client code has to know the date:
+ * during a throwback week every franchise's legacy identity is baked into the
+ * map, and every modal on the page throws back with it. The store read is
+ * gated on the week actually being one — outside that week this component
+ * costs a config walk and nothing else.
+ *
+ * Inside that week it is memoized, because this sits in the layout and would
+ * otherwise put a blocking Redis round trip in the `<head>` of EVERY page —
+ * including the ones with no player modal on them at all. `/live-scoring` and
+ * `/lineup` each read the same store, but each renders throwback content that
+ * pays for it. Owner picks change a handful of times a season, so a short TTL
+ * costs nothing real: the worst case is one owner seeing their own era swap
+ * take up to a minute to reach a modal band, on pages where the SCOREBOARD —
+ * which is not memoized — already shows the new one.
+ */
+import type { LeagueSlug } from '../../types/nav';
+import { buildFranchiseBandBrands } from '../../utils/franchise-band-brand';
+import { resolveThrowbackRequestState } from '../../utils/throwback-request-state';
+
+export interface Props {
+  league: LeagueSlug;
+}
+
+const { league } = Astro.props;
+
+// Week, scope and every owner's pick — including the TTL cache that keeps this
+// layout-level component from putting a Redis round trip in the <head> of
+// every page. `throwback-request-state.ts` owns all of it; the roster header
+// reads the same helper, so the two cannot disagree about what week it is.
+const { throwbackActive, throwbackOverrides } = await resolveThrowbackRequestState(
+  league,
+  Astro.url,
+);
+
+const brands = buildFranchiseBandBrands(league, { throwbackActive, throwbackOverrides });
+// `</script>` can't appear in a crest path or a hex, but escaping `<` is the
+// cheap way to guarantee a config edit can never break out of the tag.
+const payload = JSON.stringify(brands).replace(/</g, '\\u003c');
+---
+
+<script type="application/json" id="franchise-band-brands" is:inline set:html={payload}></script>

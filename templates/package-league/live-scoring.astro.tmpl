@@ -1,0 +1,40 @@
+---
+/**
+ * __LEAGUE_SHORT__ — Live Scoring (/__LEAGUE_SLUG__/live-scoring)
+ *
+ * The REAL board, the one TheLeague, the AFL and Best Ball render — never a
+ * lite copy (CLAUDE.md, "Custom (standard-package) leagues get the REAL page").
+ * Three __LEAGUE_SHORT__ facts shape what it shows, and all three are handled below
+ * this page rather than here:
+ *
+ *  - **MFL serves this league's `liveScoring` FLAT** — scores and starters
+ *    with no pairings. `loadLiveScoringPayload` pairs it from the league's
+ *    own schedule, which is what keeps 99 owners from being told they have
+ *    no game while they are being scored.
+ *  - **99 matchups a week** (99 franchises, two games each). The board leads
+ *    with the viewer's own games and then offers a division picker, because
+ *    the league config declares `structure: 'divisions'`
+ *    (`utils/live/board-groups.ts`).
+ *  - **`duplicatePlayers`.** The same NFL player sits on up to nine rosters
+ *    (one per division), so every player → franchise map downstream is a
+ *    LIST — `buildLiveMoments` keys owners playerId → franchises.
+ *
+ * What stays here is what cannot move into a component: the feature gate's
+ * `Astro.redirect()`, which from an imported component only stops rendering it
+ * and ships a blank 200.
+ */
+import LiveBoardPage from '../../components/shared/live/LiveBoardPage.astro';
+import { getLeagueContext } from '../../utils/league-context';
+import { leagueHasFeature } from '../../config/leagues';
+
+// Live-fetch on every request — scores must never be cached.
+export const prerender = false;
+
+const league = getLeagueContext(Astro.url);
+
+if (!leagueHasFeature(league.slug, 'liveScoring')) {
+  return Astro.redirect('/__LEAGUE_SLUG__');
+}
+---
+
+<LiveBoardPage title="Live Scoring | __LEAGUE_SHORT__" />

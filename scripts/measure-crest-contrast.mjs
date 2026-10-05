@@ -22,10 +22,11 @@
  * icon, or after adding an `iconDark`; `tests/crest-dark-stroke.test.ts` fails
  * if the committed manifest drifts from what the current assets measure.
  */
-import { readFileSync, writeFileSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import sharp from 'sharp';
+import { ALL_LEAGUES } from '../src/config/leagues-data.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -103,11 +104,20 @@ export function iconToPublicPath(icon) {
   return path.join(ROOT, 'public', pathname);
 }
 
+/**
+ * Every registry league whose config file is present, keyed by its nav slug
+ * (the key the stroke CSS and the manifest use). A league with no crest art
+ * contributes nothing, so this is safe to run over all of them.
+ */
+export function crestLeagues() {
+  return ALL_LEAGUES.filter((l) => l.configPath && existsSync(path.join(ROOT, l.configPath))).map((l) => ({
+    slug: l.navSlug,
+    config: JSON.parse(readFileSync(path.join(ROOT, l.configPath), 'utf8')),
+  }));
+}
+
 export async function measureAllCrests() {
-  const leagues = [
-    { slug: 'theleague', config: JSON.parse(readFileSync(path.join(ROOT, 'src/data/theleague.config.json'), 'utf8')) },
-    { slug: 'afl', config: JSON.parse(readFileSync(path.join(ROOT, 'data/afl-fantasy/afl.config.json'), 'utf8')) },
-  ];
+  const leagues = crestLeagues();
 
   const results = [];
   for (const { slug, config } of leagues) {
@@ -154,7 +164,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   const results = await measureAllCrests();
 
   if (reportOnly) {
-    for (const league of ['theleague', 'afl']) {
+    for (const league of crestLeagues().map((l) => l.slug)) {
       console.log(`\n===== ${league} — crest legibility on ${'#262626'} =====`);
       const rows = results.filter((r) => r.league === league)
         .sort((a, b) => (a.legible ?? 2) - (b.legible ?? 2));

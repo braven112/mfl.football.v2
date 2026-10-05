@@ -15,7 +15,8 @@
  *
  * ── WHY data-league="mfl" ON A HOST THAT BELONGS TO NO LEAGUE ─────────────
  * The token system keys every palette off this attribute, and this app needs
- * a palette (tokens.css + tokens-dark.css both carry an `mfl` block). The
+ * a palette (the `mfl-live` theme, src/themes/mfl-live.json, mapped to `mfl`
+ * by THEMED_SURFACES in scripts/generate-league-themes.mjs). The
  * value is a THEME KEY, not a league: "mfl" is not in the registry, has no
  * MFL id, and must never appear in HOST_TO_SLUG — which is exactly why it is
  * written as a literal here rather than derived from a league lookup. There
@@ -62,16 +63,27 @@
 import { Font } from 'astro:assets';
 import { mflLoginUrl } from '../utils/mfl-login-redirect';
 import { ClientRouter } from 'astro:transitions';
-import ThemeScript from '../components/ThemeScript.astro';
+import ThemeScript from '../components/shared/ThemeScript.astro';
 import MflAppMenu from '../components/shared/mfl-live/MflAppMenu.astro';
-import NflLogoDarkStyles from '../components/NflLogoDarkStyles.astro';
-import TeamIconDarkStyles from '../components/TeamIconDarkStyles.astro';
+import NflLogoDarkStyles from '../components/shared/NflLogoDarkStyles.astro';
+import TeamIconDarkStyles from '../components/shared/TeamIconDarkStyles.astro';
 import { getThemePreference } from '../utils/theme-preference';
-import { getAuthUser } from '../utils/auth';
+import { getMflLiveUser } from '../utils/auth';
+import { canViewSiteInsights } from '../utils/site-insights';
+import { canViewProductPages } from '../utils/product-pages-access';
 import { ALL_LEAGUES, leagueUrl, isSharedAppHost } from '../config/leagues';
 // Global utility classes (.visually-hidden, …) — a frontmatter import so the
 // CSS ships unscoped; an @import inside the <style> block would get scoped.
 import '../styles/utilities.css';
+// Global polish layer + shared empty/error states. Imported here, NOT via
+// @import in the <style> block below: Astro scopes @imported rules to this
+// layout's own markup, so they would never reach a page's content.
+import '../styles/polish.css';
+import '../styles/states.css';
+// The one CTA pattern (.cta / .cta-link). Also a frontmatter import: its
+// state rules must out-rank this layout's global a:hover, which a scoped copy
+// could not reach. docs/claude/rules/theming-and-assets.md § "CTAs".
+import '../styles/cta.css';
 
 export interface Props {
 	title: string;
@@ -88,7 +100,7 @@ const themePref = getThemePreference(Astro.cookies);
 // See the manifest note above.
 const onSharedHost = isSharedAppHost(Astro.url.hostname);
 
-const authUser = getAuthUser(Astro.request);
+const authUser = getMflLiveUser(Astro.request);
 
 // Links out to the league sites this project runs. Absolute, via leagueUrl —
 // never an origin concatenated with a path (docs/claude/rules/league-urls.md),
@@ -171,6 +183,8 @@ const leagueLinks = ALL_LEAGUES.filter((league) => !league.bestBall).map((league
 					signedIn={Boolean(authUser)}
 					signInHref={mflLoginUrl(Astro.url.pathname + Astro.url.search)}
 					currentPath={Astro.url.pathname}
+					showAnalytics={canViewSiteInsights(authUser)}
+					showProducts={canViewProductPages(authUser)}
 				/>
 			</div>
 		</header>
@@ -204,6 +218,9 @@ const leagueLinks = ALL_LEAGUES.filter((league) => !league.bestBall).map((league
 			})();
 		</script>
 
+		{/* Visit beacon — the same one the league sites send; feeds /live/analytics. */}
+		<script src="../scripts/visit-beacon.ts"></script>
+
 		<main id="mfl-main" class="mfl-main">
 			<slot />
 		</main>
@@ -214,6 +231,8 @@ const leagueLinks = ALL_LEAGUES.filter((league) => !league.bestBall).map((league
 	@import '../styles/tokens.css';
 	/* Dark-mode token overrides (scoped under html.dark) — must come after tokens.css */
 	@import '../styles/tokens-dark.css';
+	/* Per-league theme palettes (generated from src/themes/*.json) */
+	@import '../styles/league-themes.generated.css';
 
 	:global(html) {
 		background: var(--page-bg);

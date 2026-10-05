@@ -15,20 +15,14 @@
  * picks the recipients, the server decides what may reach them — so a bug in
  * this file can silence an alert but can never broadcast one to the league.
  *
- * The admin list is `adminFranchiseIds` in src/config/nav-config.json, read
- * directly rather than through src/config/nav-config.ts: that module is
- * TypeScript with a JSON import assertion and a node script cannot load it.
- * The JSON is the same source of truth either way, which is the point — a
- * second hardcoded list of admin franchises is how one league's admin ends up
- * receiving the other league's alerts.
+ * The admin list is the registry's `adminFranchiseIds` (leagues-data.mjs),
+ * the same source the nav reads — a second hardcoded list of admin
+ * franchises is how one league's admin ends up receiving the other league's
+ * alerts.
  */
 
-import { createRequire } from 'node:module';
-
+import { ALL_LEAGUES } from '../../src/config/leagues-data.mjs';
 import { sendPushFanout } from './push-fanout.mjs';
-
-const require = createRequire(import.meta.url);
-const navConfig = require('../../src/config/nav-config.json');
 
 /**
  * The admin franchise ids for a league, by its NAV slug.
@@ -45,7 +39,7 @@ const navConfig = require('../../src/config/nav-config.json');
 export function adminFranchiseIds(league) {
   const slug = league?.navSlug;
   if (!slug) return [];
-  const ids = navConfig?.adminFranchiseIds?.[slug];
+  const ids = ALL_LEAGUES.find((l) => l.navSlug === slug)?.adminFranchiseIds;
   return Array.isArray(ids) ? ids.filter((id) => typeof id === 'string' && id.length > 0) : [];
 }
 

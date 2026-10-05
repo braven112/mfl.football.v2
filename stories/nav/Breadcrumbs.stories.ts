@@ -1,4 +1,4 @@
-import Breadcrumbs from '../../src/components/theleague/Breadcrumbs.astro';
+import Breadcrumbs from '../../src/components/shared/Breadcrumbs.astro';
 import { themeModes } from '../../.storybook/modes';
 
 /**

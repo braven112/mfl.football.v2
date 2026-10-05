@@ -9,7 +9,7 @@
  * and "FBG ®" wrapped onto two lines while every static header stayed on one.
  *
  * Global on purpose. It mirrors the scoped header typography in
- * `theleague/players.astro` and `afl-fantasy/players.astro`; if that changes,
+ * `theleague/players.astro` and `shared/free-agents/FreeAgentsPage.astro` (AFL + custom leagues); if that changes,
  * change it here too. Matched on `[data-ranking-col]`, which only the injected
  * headers carry, so nothing else in the table is in range.
  *
@@ -21,7 +21,7 @@ th[data-ranking-col] {
   padding: 0.5rem 0.375rem;
   text-align: right;
   font-weight: 600;
-  font-size: 0.625rem;
+  font-size: var(--font-size-3xs);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   white-space: nowrap;

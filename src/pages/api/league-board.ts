@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getAuthUser } from '../../utils/auth';
+import { getAuthUser, getMflLiveUser } from '../../utils/auth';
 import { getCurrentSeasonYear } from '../../utils/league-year';
 import { getLeagueBySlug, leagueHasFeature, type CanonicalLeagueSlug } from '../../config/leagues';
 import { assembleLeagueBoard } from '../../utils/live/league-board';
@@ -116,7 +116,9 @@ async function mflLeagueBoard(input: {
 
   // Unauthenticated is a 401, not an empty board: every read on this path uses
   // the owner's own MFL cookie, and there is nothing to serve without one.
-  const user = getAuthUser(request);
+  // MFL Live's reader: this path serves /live/league/<id>, where an open
+  // sign-in (a league this site does not run) is a valid session.
+  const user = getMflLiveUser(request);
   if (!user) return json({ ok: false, error: 'unauthenticated' }, 401);
 
   if (!Number.isInteger(week) || week < 1 || week > 25) {

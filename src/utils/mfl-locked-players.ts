@@ -18,13 +18,18 @@
  */
 import { buildMflExportUrl } from './mfl-url';
 import { fetchWithTimeout } from './fetch-with-timeout';
+import type { WaiverMode } from './waiver-window';
 
 /** `{ [unitKey]: Set<playerId> }` — '' for a single-pool league, else the conference id. */
 export type LockedPlayersByUnit = Record<string, Set<string>>;
 
-/** Unit key for a `leagueUnit.unit` label: `CONFERENCE00` → '00', `LEAGUE` → ''. */
+/**
+ * Unit key for a `leagueUnit.unit` label: `CONFERENCE00` → '00',
+ * `DIVISION03` → '03' (a DIVISION-pooled league, archies), `LEAGUE` → ''.
+ * The key is the same pool id poolOfFranchise returns.
+ */
 export function lockedUnitKey(unit: unknown): string {
-  const m = /^CONFERENCE(\w+)$/i.exec(String(unit ?? ''));
+  const m = /^(?:CONFERENCE|DIVISION)(\w+)$/i.exec(String(unit ?? ''));
   return m ? m[1] : '';
 }
 
@@ -59,20 +64,42 @@ export function isPlayerLocked(
   return locked[conferenceId ?? '']?.has(String(playerId)) ?? false;
 }
 
+/**
+ * The locks that mean "recently dropped" — which only exist in an FCFS window.
+ *
+ * MFL's `locked` flag means "cannot be added INSTANTLY", and it has two causes
+ * the export does not tell apart: a drop lock on one player, and the weekly
+ * waiver lock on the whole pool (every free agent in both leagues read
+ * `locked` on 2026-09-30). In the WAIVER window a claim is exactly how a
+ * locked player is added, so a lock says nothing there; refusing on it turned
+ * down every claim in both leagues. Which window is live is MFL's own calendar
+ * (`resolveWaiverWindow`), never a guess from the flag.
+ */
+export function dropLocksIn(
+  locked: LockedPlayersByUnit | null,
+  mode: WaiverMode,
+): LockedPlayersByUnit | null {
+  return mode === 'fcfs' ? locked : null;
+}
+
 // One MFL read per league per warm instance per minute — the lock list only
 // moves on a drop or at the lock's expiry, and the claim route re-reads fresh.
 const TTL_MS = 60_000;
 const cache = new Map<string, { at: number; value: LockedPlayersByUnit | null }>();
 
 /**
- * Fetch the league's locked free agents. Returns null on any failure — callers
+ * Fetch the league's locked free agents, regardless of window. PRIVATE on
+ * purpose: read raw, the flag refuses every waiver claim in both leagues (the
+ * 2026-09-30 outage). Callers go through `fetchDropLocks`.
+ *
+ * Returns null on any failure — callers
  * must treat that as "unknown" and carry on (the page shows no lock icons, the
  * claim route lets MFL decide), never as a reason to refuse.
  *
  * `fresh` skips the cache: the claim route is about to write, and a lock that
  * lifted (or landed) in the last minute should not decide it.
  */
-export async function fetchLockedPlayers(
+async function fetchLockedPlayers(
   leagueId: string,
   year: number | string,
   { fresh = false }: { fresh?: boolean } = {},
@@ -96,4 +123,21 @@ export async function fetchLockedPlayers(
   // Only a successful read is cached for the full TTL; a failure retries next call.
   if (value) cache.set(key, { at: Date.now(), value });
   return value;
+}
+
+/**
+ * The locks that mean "recently dropped" for the window MFL's calendar says is
+ * live — THE way into the lock list. Outside FCFS the answer is null without
+ * an MFL read at all (`dropLocksIn`: the whole pool reads locked there and a
+ * queued claim is how those players get added). Null is "nothing to refuse
+ * on", exactly like a failed read.
+ */
+export async function fetchDropLocks(
+  leagueId: string,
+  year: number | string,
+  mode: WaiverMode,
+  opts: { fresh?: boolean } = {},
+): Promise<LockedPlayersByUnit | null> {
+  if (mode !== 'fcfs') return null;
+  return dropLocksIn(await fetchLockedPlayers(leagueId, year, opts), mode);
 }

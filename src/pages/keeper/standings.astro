@@ -4,7 +4,7 @@
  * the AFL-family standings page, without the AFL's side competitions. Off the
  * demo this slot does not exist: the middleware answers 404 before this runs.
  */
-import StandingsPage from '../../components/afl-family/StandingsPage.astro';
+import StandingsPage from '../../components/shared/standings/AflFamilyStandingsPage.astro';
 import { feedsByYear, resolveStandingsRoute } from '../../utils/afl-family-standings';
 import { keeperConfig, keeperLeague } from '../../utils/keeper-slot';
 import { getAuthUser, franchiseIdForLeague } from '../../utils/auth';

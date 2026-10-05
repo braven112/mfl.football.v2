@@ -937,11 +937,11 @@ export default function TradeBuilder({
         .btn {
           padding: 0.5rem 1rem;
           border-radius: var(--radius-md, 0.5rem);
-          font-size: 0.875rem;
+          font-size: var(--font-size-sm);
           font-weight: 600;
           cursor: pointer;
           border: 1px solid var(--content-border, #e2e8f0);
-          transition: all 0.15s ease;
+          transition: all var(--transition-fast);
         }
         .btn:disabled {
           opacity: 0.4;
@@ -982,7 +982,7 @@ export default function TradeBuilder({
         }
         .trade-builder__swap {
           background: var(--btn-primary-bg, #1c497c);
-          color: #fff;
+          color: var(--btn-primary-text, #fff);
           border: none;
           border-radius: 50%;
           width: 2.5rem;
@@ -992,7 +992,7 @@ export default function TradeBuilder({
           display: flex;
           align-items: center;
           justify-content: center;
-          transition: transform 0.2s ease;
+          transition: transform var(--transition-base);
         }
         .trade-builder__swap:hover {
           transform: scale(1.1);

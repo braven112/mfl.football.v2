@@ -16,9 +16,83 @@ export const LEAGUES = {
     id: '13522',
     /** Canonical slug: path segment under src/pages/ and in URLs */
     slug: 'theleague',
-    /** Short slug used by nav config / styles (LeagueSlug type) */
-    navSlug: 'theleague',
+    /**
+     * Short slug used by nav config / styles. Every entry's navSlug carries a
+     * JSDoc `const` cast so TypeScript reads the literal: `LeagueSlug`
+     * (src/types/nav.ts) is DERIVED from these, so a new league needs no type edit.
+     */
+    navSlug: /** @type {const} */ ('theleague'),
+    /**
+     * Color theme — a file in src/themes/. Any league may name any theme;
+     * a theme is complete on its own and never inherits from another.
+     * Compiled by scripts/generate-league-themes.mjs.
+     */
+    theme: 'theleague',
+    /**
+     * Starting preset for the feature checkboxes (league-archetypes.mjs).
+     * Code reads `features`, never this.
+     */
+    archetype: 'dynasty-cap',
+    /**
+     * Franchises that see admin-only nav links, receive ops alerts
+     * (scripts/lib/ops-alert.mjs), and are treated as commissioners when MFL's
+     * login did not say so (isCommissionerOrAdmin's fallback). League-scoped:
+     * the same 4-digit id is a different team in each league.
+     */
+    adminFranchiseIds: ['0001', '0000'],
+    /**
+     * Schedule planner policy (src/utils/schedule-plan.mjs). The League ran
+     * `simple` while the two modes were compared; constructive was adopted on
+     * the numbers — bye spread 17 to 4 and home/away 7-11 to 9-9, neither of
+     * which re-timing can reach, since moving rounds between weeks never
+     * changes which side is home. `keepDivisionFinish` no longer applies in
+     * this mode: the constructive week plan ends on division games by
+     * construction. `mode: 'simple'` is still reachable per call for a
+     * minimal in-season repair. A league without this field has no planner.
+     */
+    /**
+     * Schefter scanners (scripts/lib/schefter-leagues.mjs): the events file,
+     * the NAMES of the GroupMe env vars, and which lanes run. A league without
+     * this block has no scanner. The unprefixed env names are TheLeague's by
+     * history: they predate the AFL.
+     */
+    schefter: {
+      eventsPath: 'src/data/theleague/resolved-events.json',
+      env: {
+        schefterBot: 'GROUPME_SCHEFTER_BOT_ID',
+        rogerBot: 'GROUPME_ROGER_BOT_ID',
+        groupId: 'GROUPME_GROUP_ID',
+        rogerSender: 'GROUPME_ROGER_BOT_SENDER_ID',
+      },
+      lanes: {
+        tradeBait: true,
+        eventReminders: true,
+        // Uses the rumor mill + big-drop flow for GroupMe; no direct posting in scanLeague.
+        directGroupMe: false,
+        tradeOfferRumors: true,
+        groupmeListen: true,
+        // Roger's clapback lane. AFL-first by request: the AFL drafts on the
+        // Labor Day weekend, so its autodraft damage is days old and its owners
+        // are the ones currently taking shots at Roger's countdowns. Flip this
+        // on here once the AFL has run a season's worth of replies.
+        rogerReplies: false,
+      },
+    },
+    schedulePolicy: {
+      mode: 'constructive',
+      startWindow: [1, 2, 3, 4],
+      endWindow: [12, 13, 14],
+      doubleheaderCount: 4,
+      keepDivisionFinish: true,
+      crossConference: null,
+    },
     name: 'The League',
+    /** League mark: light cut for light grounds, dark cut for dark ones. */
+    /** First season of the league's player archive (draft results notes it). */
+    playerArchiveStartYear: 2007,
+    logo: { light: '/assets/logos/theleague-logo.svg', dark: '/assets/logos/theleague-logo-dark.svg' },
+    /** Schefter share-card branding (src/utils/schefter-og.ts). Absent = derived from name/domain/themeColor. */
+    shareCard: { name: 'The League', domain: 'theleague.us', primary: '#1c497c' },
     /** MFL server hostname for this league */
     mflHost: 'www49.myfantasyleague.com',
     /** Repo-relative data directory written by the fetch pipelines */
@@ -121,12 +195,24 @@ export const LEAGUES = {
      * `tests/schefter-rumor-cadence.test.ts` pins the registry against
      * hero-resolver's copy so the two cannot silently disagree.
      */
+    /**
+     * The league chat the news persona posts into — see `chatConfigFor` in
+     * scripts/lib/chat.mjs. Only env var NAMES live here, never a token.
+     *   groupme: { provider, botEnv }                 bot id per league
+     *   slack:   { provider, tokenEnv, channelEnv }   bot token + channel id
+     * A league with no `chat` has no chat: its columns publish to the site and
+     * push, and nothing is posted anywhere else.
+     */
+    chat: { provider: 'groupme', botEnv: 'GROUPME_SCHEFTER_BOT_ID' },
     tradeDeadline: { kind: 'fixed', month: 11, day: 13 },
     features: {
       contracts: true,
       salaryCap: true,
       keepers: false,
       powerRankings: true,
+      rulesQa: true,
+      playoffs: true,
+      franchisePages: true,
       liveLineups: true,
       schefterFeed: true,
       schefterTips: true,
@@ -138,6 +224,8 @@ export const LEAGUES = {
       accounting: true,
       viewerPreferences: true,
       pushNotifications: true,
+      /** Branding is hand-curated here; the editor stays off until chosen. */
+      brandingEditor: false,
     },
     /**
      * Prize table for the commissioner's accounting page, straight from the
@@ -178,8 +266,72 @@ export const LEAGUES = {
   'afl-fantasy': {
     id: '19621',
     slug: 'afl-fantasy',
-    navSlug: 'afl',
+    navSlug: /** @type {const} */ ('afl'),
+    theme: 'afl',
+    archetype: 'deluxe-keeper',
+    adminFranchiseIds: ['0001'],
+    /** Schefter scanners — see TheLeague's entry for the shape. */
+    schefter: {
+      eventsPath: 'data/afl-fantasy/resolved-events.json',
+      env: {
+        schefterBot: 'GROUPME_AFL_SCHEFTER_BOT_ID',
+        rogerBot: 'GROUPME_AFL_ROGER_BOT_ID',
+        // The AFL's own group. Roger's reply lane no-ops with a warning until
+        // it is set; his reminders are unaffected either way.
+        groupId: 'GROUPME_AFL_GROUP_ID',
+        rogerSender: 'GROUPME_AFL_ROGER_BOT_SENDER_ID',
+      },
+      lanes: {
+        // Trade-block listings → rumor-mill tips; the scanner builds its
+        // tips-queue keys from the league (schefter:afl:…).
+        tradeBait: true,
+        eventReminders: true,
+        // Posts breaking/standard transactions directly to GroupMe from scanLeague.
+        directGroupMe: true,
+        // Deferred: needs MFL pendingOffer access and the duplicate-players
+        // escalation model re-thought first.
+        tradeOfferRumors: false,
+        // Schefter's mention→tip ingest is still TheLeague-only (its Redis
+        // keys are TheLeague-scoped).
+        groupmeListen: false,
+        // Roger answers the AFL first; independent of groupmeListen, since
+        // Roger's lane keys off its own league-scoped prefix.
+        rogerReplies: true,
+      },
+    },
+    /** Schedule planner policy (src/utils/schedule-plan.mjs). */
+    schedulePolicy: {
+      mode: 'constructive',
+      startWindow: [1, 2, 3, 4],
+      endWindow: [12, 13, 14],
+      doubleheaderCount: 3,
+      keepDivisionFinish: false,
+      crossConference: {
+        week: 1,
+        anchorYear: 2024,
+        anchorPairing: [
+          ['North', 'East'],
+          ['South', 'West'],
+        ],
+        alternatePairing: [
+          ['North', 'West'],
+          ['South', 'East'],
+        ],
+        protectedRivalries: [['Computer Jocks', 'Jewpacabra']],
+      },
+    },
     name: 'AFL',
+    /**
+     * Push notification art (src/utils/push-notify-trade.ts). The badge must
+     * be a white-on-transparent silhouette (Android tints its alpha); see
+     * scripts/generate-notification-icons.mjs. Absent = the site's PWA art.
+     */
+    pushArt: { icon: '/assets/afl/favicons/favicon-192.png', badge: '/assets/afl/favicons/badge-96.png' },
+    playerArchiveStartYear: 2011,
+    /** Demo banner line (DemoBanner.astro), where the archetype's default does not fit. */
+    demoPitch: 'The conference standings, tier tables and playoff brackets here were built for this league; your site is built around how yours works.',
+    logo: { light: '/assets/logos/afl-logo.svg', dark: '/assets/logos/afl-logo-dark.svg' },
+    shareCard: { name: 'AFL Fantasy', domain: 'afl-fantasy.com', primary: '#002244' },
     mflHost: 'www44.myfantasyleague.com',
     dataPath: 'data/afl-fantasy',
     domains: ['afl-fantasy.com', 'www.afl-fantasy.com'],
@@ -264,12 +416,18 @@ export const LEAGUES = {
      * `src/data/afl-fantasy/league-events.json`, and
      * `tests/schefter-rumor-cadence.test.ts` pins the two against each other.
      */
+    /** League chat — see TheLeague's entry for the shape. */
+    chat: { provider: 'groupme', botEnv: 'GROUPME_AFL_SCHEFTER_BOT_ID' },
     tradeDeadline: { kind: 'computed', rule: 'wednesday-between-week-10-and-11' },
     features: {
       contracts: false,
       salaryCap: false,
       keepers: true,
-      powerRankings: false,
+      /** The Pecking Order — published weekly (scripts/lib/league-jobs.mjs reads this). */
+      powerRankings: true,
+      rulesQa: true,
+      playoffs: true,
+      franchisePages: true,
       liveLineups: false,
       schefterFeed: true,
       schefterTips: true,
@@ -281,6 +439,8 @@ export const LEAGUES = {
       accounting: true,
       viewerPreferences: true,
       pushNotifications: true,
+      /** Branding is hand-curated here; the editor stays off until chosen. */
+      brandingEditor: false,
     },
     /**
      * AFL prize table (constitution PAYOUTS). The AFL pays for WINNING, and
@@ -337,8 +497,12 @@ export const LEAGUES = {
   'best-ball-1': {
     id: '37610',
     slug: 'best-ball-1',
-    navSlug: 'bb1',
+    navSlug: /** @type {const} */ ('bb1'),
+    theme: 'bb1',
+    archetype: 'best-ball',
+    adminFranchiseIds: ['0001', '0000'],
     name: 'Best Ball #1',
+    logo: { light: '/assets/logos/bestball-logo.svg', dark: '/assets/logos/bestball-logo-dark.svg' },
     mflHost: 'www45.myfantasyleague.com',
     dataPath: 'data/best-ball-1',
     /**
@@ -418,6 +582,9 @@ export const LEAGUES = {
       salaryCap: false,
       keepers: false,
       powerRankings: false,
+      rulesQa: false,
+      playoffs: false,
+      franchisePages: false,
       liveLineups: false,
       schefterFeed: false,
       schefterTips: false,
@@ -444,9 +611,167 @@ export const LEAGUES = {
       accounting: false,
       viewerPreferences: false,
       pushNotifications: false,
+      /** Branding is hand-curated here; the editor stays off until chosen. */
+      brandingEditor: false,
     },
     // Redraft best-ball: one season, no keepers, no contracts — straight
     // redraft ADP is exactly the right opening board.
+    defaultRankingSources: ['mfl-adp', 'espn', 'sharks'],
+  },
+  /**
+   * Archie's Fantasy Football League — the first league on the standard custom
+   * package (docs/plans/league-chat-and-persona.md). 99 franchises in 9
+   * divisions, and every division is its OWN player pool
+   * (`playerLimitUnit: DIVISION`): the same player can be rostered once per
+   * division. Anything roster-, free-agent- or ownership-shaped must be keyed
+   * by division, the AFL's two-conference split generalized to N pools.
+   *
+   * Redraft (no salaries, contracts or keepers), head-to-head with victory
+   * points. Its chat is Slack, and the only thing posted there is the weekly
+   * strength-of-schedule column, The Gauntlet.
+   */
+  archies: {
+    id: '10105',
+    slug: 'archies',
+    navSlug: /** @type {const} */ ('archies'),
+    theme: 'archies',
+    archetype: 'contest',
+    adminFranchiseIds: [],
+    name: "Archie's Fantasy Football League",
+    mflHost: 'www48.myfantasyleague.com',
+    dataPath: 'data/archies',
+    /** Path-only on the shared host (mfl.football/archies), like Best Ball #1. */
+    domains: [],
+    /**
+     * Served at /archies but NOT listed on the mfl.football front door until
+     * the site owner decides a client league should be advertised there.
+     */
+    advertiseOnSharedHost: false,
+    /**
+     * Nav is OPT-IN, like Best Ball's: only links tagged `leagueOnly: archies`
+     * render (src/utils/nav-utils.ts), because the default link set is pages
+     * this league does not have yet.
+     */
+    optInNav: true,
+    /** Pages come from the package-league set, entitled by `features` (package-league-routes.mjs). */
+    pageKit: 'package',
+    /** Short display name for the site header (the full name is too long there). */
+    shortName: "Archie's",
+    /**
+     * The league's mark (Archie's head), read by the shared header and layout.
+     * The art is outlined, so the light and dark cuts are deliberately the
+     * same file. Both are still set: every league names both. Resized from the
+     * league's own MFL skin art in public/mfl/10105/.
+     */
+    logo: { light: '/assets/logos/archies-head.webp', dark: '/assets/logos/archies-head.webp' },
+    shareCard: { name: "Archie's FFL", domain: 'mfl.football/archies', primary: '#1d3a6e' },
+    /** The share-card mark: the OG renderer reads PNG/SVG only, not WebP. */
+    logoOg: '/assets/logos/archies-head.png',
+    /**
+     * Weekly Schefter article types this league gets (scripts/lib/article-leagues.mjs).
+     * Absent = every type. Archie's has bought The Gauntlet only.
+     */
+    articleTypes: ['schedule-strength'],
+    /**
+     * Wordmark shown beside the mark in the header and homepage hero, in place
+     * of the text short name.
+     */
+    wordmark: '/assets/logos/archies-wordmark.webp',
+    /** Browser chrome colour (the mark's navy). */
+    themeColor: '#1d3a6e',
+    /** Empty for the same reason as Best Ball #1's — see that entry. */
+    stagingDomains: [],
+    configPath: 'data/archies/archies.config.json',
+    schefterFeedPath: 'data/archies/schefter-feed.json',
+    /** Redraft league re-created on MFL over the summer — the AFL's clock. */
+    leagueYearRollover: { month: 6, day: 1 },
+    /** No poll at launch; the shape is present so shared code never branches on undefined. */
+    ownersPoll: { enabled: false, slots: 0, closeWeekday: 4, closeHourPT: 16 },
+    /**
+     * The Pecking Order at 99 teams: every team is ranked, but the column
+     * writes up only the top 25; the rest show in their division lists
+     * (scripts/generate-pecking-order.mjs, PeckingOrderIssue.astro).
+     */
+    peckingOrder: { topN: 25 },
+    /**
+     * MAD POWER 99 — the league's playoff seeding (bylaws: 9 division
+     * champions + 21 wild cards, 30 in). The 21 are each division's
+     * runner-up plus 12 more, as the league's own MFL widget seeds them
+     * (public/mfl/10105/standings.js, DECISIONS.md D2-D6). Every tier is in
+     * MFL's row order, which the league sorts on Victory Points, then points,
+     * then head-to-head.
+     */
+    standingsSeeding: { kind: 'mad', divisionLeaders: 9, runnersUp: 9, wildCards: 12 },
+    /**
+     * MFL `playerLimitUnit: DIVISION`: each of the nine divisions is its own
+     * player pool, so the same player is routinely on up to nine rosters at
+     * once. "On another roster" proves nothing here (cut-player's preflight),
+     * and pool-aware code keys by division (buildPoolStructure,
+     * poolOfFranchise).
+     */
+    duplicatePlayers: true,
+    /**
+     * TODO(commissioner): the league's own time zone is not confirmed yet.
+     * Pacific is the site default and changes nothing for a viewer who has
+     * picked their own clock.
+     */
+    officialClock: {
+      id: 'PT',
+      zone: 'America/Los_Angeles',
+      label: 'PT',
+      name: "The league's clock (Pacific)",
+      equivalents: ['America/Vancouver', 'America/Tijuana'],
+    },
+    /** Slack only. Secrets are set per environment; see the plan doc's setup section. */
+    chat: { provider: 'slack', tokenEnv: 'SLACK_ARCHIES_BOT_TOKEN', channelEnv: 'SLACK_ARCHIES_CHANNEL_ID' },
+    /**
+     * TODO(commissioner): the trade deadline is not confirmed. `null` means
+     * "no deadline known" — callers already handle it, and inventing a date
+     * would put a wrong one in front of 99 owners.
+     */
+    tradeDeadline: null,
+    /**
+     * Every flag set on purpose. Launch surfaces: homepage (with
+     * transactions), news + The Gauntlet, standings, rosters + team pages.
+     */
+    features: {
+      contracts: false,
+      salaryCap: false,
+      keepers: false,
+      /** The Pecking Order, Tuesdays (top 25 + divisions; announced in Slack). */
+      powerRankings: true,
+      rulesQa: false,
+      playoffs: false,
+      franchisePages: true,
+      liveLineups: false,
+      /** The news feed carries The Gauntlet. */
+      schefterFeed: true,
+      /** No tips / rumor mill: that lane is built on the GroupMe listener. */
+      schefterTips: false,
+      /**
+       * The shared board (/archies/live-scoring) and /archies/broadcast. MFL
+       * serves this league's liveScoring in the FLAT shape (no pairings), so
+       * `loadLiveScoringPayload` pairs it from the committed schedule; 99
+       * matchups a week is why the board grows a division picker here.
+       */
+      liveScoring: true,
+      /**
+       * No offseason replay: the bundled sample is another league's teams,
+       * and the board's own empty state is the honest answer out of season
+       * (Best Ball #1's reasoning).
+       */
+      liveScoringSample: false,
+      taxiSquad: false,
+      offseasonAuction: false,
+      accounting: false,
+      viewerPreferences: false,
+      pushNotifications: false,
+      /**
+       * Commissioner branding editor (/archies/admin/branding): names, colours
+       * and uploaded marks, published through .github/workflows/branding-edit.yml.
+       */
+      brandingEditor: true,
+    },
     defaultRankingSources: ['mfl-adp', 'espn', 'sharks'],
   },
 };
@@ -491,13 +816,18 @@ if (isDemoEnv()) {
   LEAGUES.keeper = {
     id: '99002',
     slug: 'keeper',
-    navSlug: 'keeper',
+    navSlug: /** @type {const} */ ('keeper'),
+    /** Wears the AFL's theme — reuse by naming it, not by sharing a selector. */
+    theme: 'afl',
+    archetype: 'deluxe-keeper',
+    adminFranchiseIds: [],
     /**
      * Only these nav links render here — the keeper slot has the AFL's core
      * pages, not all of them, and an untagged link to one it lacks is a 404.
      */
     navLinks: KEEPER_NAV_LINKS,
     name: 'The Keeper League',
+    logo: { light: '/assets/logos/keeper-logo.svg', dark: '/assets/logos/keeper-logo-dark.svg' },
     mflHost: LEAGUES['afl-fantasy'].mflHost,
     dataPath: 'data/keeper',
     demoPath: 'keeper',
@@ -513,6 +843,9 @@ if (isDemoEnv()) {
       ...LEAGUES['afl-fantasy'].features,
       schefterFeed: false,
       schefterTips: false,
+      // No live scoring page in this slot: on, the homepage hero's game-day
+      // card linked one that 404s.
+      liveScoring: false,
       liveScoringSample: false,
       accounting: false,
       pushNotifications: false,
@@ -544,6 +877,51 @@ export const ALL_LEAGUES = Object.values(LEAGUES);
 
 /** MFL numeric id of the default league. Use instead of hardcoding '13522'. */
 export const DEFAULT_LEAGUE_ID = LEAGUES[DEFAULT_LEAGUE_SLUG].id;
+
+/**
+ * MFL leagues that are NOT registered here but whose owners may still sign in
+ * to MFL Live on the shared host, as invited testers.
+ *
+ * Deliberately NOT registry entries. They have no pages, no data directory and
+ * no feature flags. The only thing being added is permission to sign in to
+ * `/live`, and a registry entry would give a league the whole site.
+ *
+ * 10105 tested the board here from Sep 2026 until it became a registered
+ * league (`archies`), whose owners sign in as any registered league's do.
+ */
+export const MFL_LIVE_PILOT_LEAGUE_IDS = [];
+
+/**
+ * OPEN SIGN-IN for MFL Live: when true, an owner of ANY MyFantasyLeague league
+ * may sign in on the shared host's /login, not just owners of the leagues
+ * above. Off until the live data feed is licensed (the business plan's
+ * "Before selling" list) — flipping it is the launch of Owner Suite's free
+ * tier.
+ *
+ * A session for a league outside the registry is MFL-Live-ONLY, and that is
+ * enforced by the league id itself, not by a claim: `getAuthUser` refuses any
+ * league outside the registry and the pilot list, so every endpoint outside
+ * /live treats such a visitor as signed out. Only `getMflLiveUser`
+ * (src/utils/auth.ts), used by the /live pages and their APIs, accepts one —
+ * and always as a plain owner, whatever MFL's commissioner cookie said.
+ */
+export const MFL_LIVE_OPEN_SIGN_IN = false;
+
+/**
+ * Every MFL league id whose owners may sign in to MFL Live, in PREFERENCE
+ * order: the registry's leagues in registry order, then the pilot leagues.
+ *
+ * The order matters. An account in several of these gets a session scoped to
+ * the FIRST one it belongs to, so an owner of TheLeague keeps the TheLeague
+ * session they had before this list existed, and a pilot league is only ever
+ * the session's league for someone in no registered league. The board reads
+ * every league from `myleagues` whichever league the session names.
+ *
+ * @returns {string[]}
+ */
+export function mflLiveSignInLeagueIds() {
+  return [...ALL_LEAGUES.map((l) => l.id), ...MFL_LIVE_PILOT_LEAGUE_IDS];
+}
 
 /** @param {string} slug Canonical slug ('theleague' | 'afl-fantasy') */
 export function getLeagueBySlug(slug) {

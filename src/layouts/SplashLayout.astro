@@ -12,11 +12,20 @@
  */
 import { Font } from 'astro:assets';
 import { getThemePreference } from '../utils/theme-preference';
-import ThemeScript from '../components/ThemeScript.astro';
+import ThemeScript from '../components/shared/ThemeScript.astro';
 import { isSharedAppHost } from '../config/leagues';
 // Global utility classes (.visually-hidden, etc.) — frontmatter import so the
 // CSS ships unscoped; @import inside the <style> block below would get scoped.
 import '../styles/utilities.css';
+// Global polish layer + shared empty/error states. Imported here, NOT via
+// @import in the <style> block below: Astro scopes @imported rules to this
+// layout's own markup, so they would never reach a page's content.
+import '../styles/polish.css';
+import '../styles/states.css';
+// The one CTA pattern (.cta / .cta-link). Also a frontmatter import: its
+// state rules must out-rank this layout's global a:hover, which a scoped copy
+// could not reach. docs/claude/rules/theming-and-assets.md § "CTAs".
+import '../styles/cta.css';
 
 export interface Props {
 	title: string;
@@ -90,12 +99,28 @@ import StagingBanner from '../components/shared/StagingBanner.astro';
 		<main>
 			<slot />
 		</main>
+		<script src="../scripts/visit-beacon.ts"></script>
 	</body>
 </html>
 <style>
 	@import '../styles/tokens.css';
 	/* Dark-mode token overrides (scoped under html.dark) — must come after tokens.css */
 	@import '../styles/tokens-dark.css';
+	/* Per-league theme palettes (generated from src/themes/*.json) */
+	@import '../styles/league-themes.generated.css';
+
+	/* Splash overrides of THEMED tokens (src/config/theme-tokens.mjs). The
+	   default theme sets these on html:not([data-league]) at 0,1,1, which a
+	   bare :root (0,1,0) loses to; :root:not(.dark) wins in light and, as
+	   before, leaves dark mode to the theme. */
+	:root:not(.dark) {
+		--primary-content-boxshadow-color: #11111128;
+		--secondary-content-boxshadow-color: #11111128;
+		--accent-content-bg-color: #eeeeee;
+		--accent-content-border-color: #ff000035;
+		--accent-content-boxshadow-color: #ff000035;
+		--accent-content-text-color: #222222;
+	}
 
 	:root {
 		--font-size-base: clamp(1rem, 0.34vw + 0.91rem, 1.19rem);
@@ -113,18 +138,12 @@ import StagingBanner from '../components/shared/StagingBanner.astro';
 
 		--primary-content-bg-color: #ffffff;
 		--primary-content-border-color: #dddddd;
-		--primary-content-boxshadow-color: #11111128;
 		--primary-content-boxshadow-size: 0 0 2px 0;
 
 		--secondary-content-bg-color: #ffffff;
 		--secondary-content-border-color: #dddddd;
-		--secondary-content-boxshadow-color: #11111128;
 		--secondary-content-boxshadow-size: 0 0 2px 0;
 
-		--accent-content-bg-color: #eeeeee;
-		--accent-content-border-color: #ff000035;
-		--accent-content-text-color: #222222;
-		--accent-content-boxshadow-color: #ff000035;
 		--accent-content-boxshadow-size: 0 0 2px 0;
 
 		--inverse-content-bg: #111111;

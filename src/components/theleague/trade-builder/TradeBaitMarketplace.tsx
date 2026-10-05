@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import type { TradeBuilderPlayer, TradeBuilderTeam } from '../../../types/trade-builder';
 import { formatCurrency } from '../../../utils/formatters';
-import { PlayerCell } from '../PlayerCell';
+import { PlayerCell } from '../../shared/PlayerCell';
 
 const POSITIONS = ['ALL', 'QB', 'RB', 'WR', 'TE', 'PK', 'DEF'];
 
@@ -77,7 +77,7 @@ export default function TradeBaitMarketplace({ teams, leagueYear, onStartTrade }
           </p>
           <a
             href="/theleague/rosters"
-            className="marketplace__cta-btn"
+            className="cta cta--primary marketplace__cta-btn"
           >
             Manage Your Trade Bait
           </a>
@@ -189,7 +189,7 @@ export default function TradeBaitMarketplace({ teams, leagueYear, onStartTrade }
           <div className="marketplace__footer">
             <a
               href="/theleague/rosters"
-              className="marketplace__cta-btn"
+              className="cta cta--primary marketplace__cta-btn"
             >
               Manage Your Trade Bait
             </a>
@@ -247,7 +247,7 @@ const marketplaceStyles = `
   .marketplace__collapse-btn {
     background: none;
     border: none;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--muted-text-color, #6b7280);
     cursor: pointer;
     padding: 0.25rem;
@@ -267,7 +267,7 @@ const marketplaceStyles = `
     border: 1px solid var(--primary-content-border-color, #e2e8f0);
     border-radius: 1rem;
     background: transparent;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     cursor: pointer;
     color: var(--muted-text-color, #6b7280);
@@ -287,7 +287,7 @@ const marketplaceStyles = `
     border-color: #d97706;
   }
   .marketplace__filter-count {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     opacity: 0.8;
   }
   .marketplace__grid {
@@ -375,13 +375,13 @@ const marketplaceStyles = `
     flex-shrink: 0;
   }
   .marketplace__player-salary {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     color: var(--muted-text-color, #6b7280);
     white-space: nowrap;
   }
   .marketplace__player-years {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     color: var(--muted-text-color, #6b7280);
     white-space: nowrap;
   }
@@ -392,7 +392,7 @@ const marketplaceStyles = `
     color: #f59e0b;
     opacity: 0;
     transform: translateX(-4px);
-    transition: all 0.15s ease;
+    transition: all var(--transition-fast);
   }
   .marketplace__footer {
     display: flex;
@@ -403,29 +403,20 @@ const marketplaceStyles = `
     border-top: 1px solid #fde68a;
     flex-wrap: wrap;
   }
+  /* The marketplace's amber branding, not the site accent. */
   .marketplace__cta-btn {
-    display: inline-flex;
-    align-items: center;
+    --cta-bg: #f59e0b;
+    --cta-bg-hover: #d97706;
+    --cta-ink: #fff;
+    --cta-border: var(--cta-bg);
     gap: 0.375rem;
     padding: 0.5rem 1rem;
-    background: #f59e0b;
-    color: #fff;
-    border: none;
     border-radius: 0.5rem;
     font-size: 0.8125rem;
-    font-weight: 700;
-    text-decoration: none;
-    cursor: pointer;
-    transition: background 0.15s ease;
-    white-space: nowrap;
     flex-shrink: 0;
   }
-  .marketplace__cta-btn:hover {
-    background: #d97706;
-    color: #fff;
-  }
   .marketplace__footer-hint {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: #92400e;
     flex: 1;
     min-width: 200px;
@@ -448,7 +439,7 @@ const marketplaceStyles = `
     margin: 0;
   }
   .marketplace__empty-text {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     color: var(--muted-text-color, #6b7280);
     margin: 0;
     max-width: 400px;
@@ -484,9 +475,6 @@ const marketplaceStyles = `
       flex-direction: column;
       align-items: stretch;
       text-align: center;
-    }
-    .marketplace__cta-btn {
-      justify-content: center;
     }
   }
 

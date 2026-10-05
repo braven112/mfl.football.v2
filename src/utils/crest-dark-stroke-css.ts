@@ -39,7 +39,7 @@
  * the registry needs no change here — add it to `measureAllCrests()` in
  * `scripts/measure-crest-contrast.mjs` and re-run the script.
  *
- * Consumed by `src/components/TeamIconDarkStyles.astro`, which is already in
+ * Consumed by `src/components/shared/TeamIconDarkStyles.astro`, which is already in
  * the shared layout <head> — one stylesheet, no per-instance duplication.
  */
 

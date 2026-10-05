@@ -21,16 +21,20 @@
  * apex" is the honest test, and it is what makes previews and localhost
  * behave like the shared host.
  *
- * ── WHICH LEAGUE THE CREDENTIALS GO TO ────────────────────────────────────
- * TheLeague, via the registry default. MFL's own login is account-wide, and
- * the board discovers every league from `myleagues` afterwards, so this only
- * decides which league the SESSION is scoped to. The league-less variant
- * (`loginToMFL` already falls back to the account's first league) is the
- * planned follow-up — see docs/plans/mfl-live-app.md.
+ * ── WHO MAY SIGN IN HERE ──────────────────────────────────────────────────
+ * An owner in ANY registered league, or in an invited pilot league
+ * (`mflLiveSignInLeagueIds` in the registry). The form sends
+ * `scope: 'mfl-live'` and no league. The server takes the list from the
+ * registry and scopes the session to the first listed league the account is
+ * in. MFL's own login is account-wide, and the board discovers every league
+ * from `myleagues` afterwards, so this decides only who gets in and which
+ * league the SESSION names. An MFL account in none of those leagues is
+ * refused. Opening sign-in to every MFL owner means making that refusal go
+ * away. See docs/plans/mfl-live-app.md.
  */
 import MflAppLayout from '../layouts/MflAppLayout.astro';
-import LoginForm from '../components/theleague/LoginForm.astro';
-import { getAuthUser } from '../utils/auth';
+import LoginForm from '../components/shared/LoginForm.astro';
+import { getMflLiveUser } from '../utils/auth';
 import { buildHostToSlugMap, getLeagueBySlug } from '../config/leagues';
 import { loginPathFor } from '../utils/login-redirect';
 import { getCurrentLeagueYear } from '../utils/league-year';
@@ -56,7 +60,7 @@ const target = resolveMflLoginRedirect(
 // Already signed in? Go where you were going. The franchise check keeps a
 // franchise-less JWT on the form rather than bouncing it to a board that
 // cannot resolve a team for it.
-const authUser = getAuthUser(Astro.request);
+const authUser = getMflLiveUser(Astro.request);
 if (authUser?.franchiseId) {
   return Astro.redirect(target);
 }
@@ -67,6 +71,7 @@ const seasonYear = getCurrentLeagueYear();
 <MflAppLayout title="Sign in — MFL" description="Sign in with your MyFantasyLeague account.">
 	<section class="mfl-login">
 		<LoginForm
+			scope="mfl-live"
 			redirectUrl={target}
 			fallbackRedirect={MFL_LOGIN_DEFAULT_REDIRECT}
 			formLabel="Sign in to MFL"

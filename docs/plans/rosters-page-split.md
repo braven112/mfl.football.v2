@@ -86,7 +86,7 @@ lines of imperative DOM mutation after hydration — had **no test at all**.
 | 6 — Extract the rest of the client script | not started | |
 | 7 — Extract the server frontmatter | not started | |
 | 8 — Extract the styles | not started | |
-| 9 — Share the roster core across leagues | not started | |
+| 9 — Share the roster core across leagues | **partly done** | the AFL + custom leagues render one component (below); TheLeague's page is still its own |
 
 **Net so far, all verified render-identical across 64 (season, team) pairs:**
 
@@ -604,6 +604,27 @@ and some is genuinely scoped. The harness does not check pixels — pair this
 phase with screenshots.
 
 ## Phase 9 — Share the roster core across leagues
+
+**2026-09-29 — the AFL half is done.** The AFL's page moved whole into
+`src/components/shared/rosters/RostersPage.astro`; `src/pages/afl-fantasy/rosters.astro`
+and `src/pages/archies/rosters.astro` are thin routes over it (globs, the
+empty-year redirect and the `?myteam` cookie write stay in the route). Pools
+generalise via `src/utils/rosters/roster-pools.ts`: two or more conferences are
+the pools (AFL), else the divisions are (Archie's, `playerLimitUnit: DIVISION`).
+Keeper planner is gated on `leagueHasFeature(…, 'keepers')`; Trade Builder,
+Import Rankings, schedule and Front Office links are route props, because a
+custom league may not have those pages yet. Proven: every AFL team × roster /
+analytics / planner × signed-in / out (+ 2023) SSR-identical before and after,
+modulo two new attributes on the action sheet and `leagueSlug` in the page
+config; screenshots pixel-identical in light, dark and mobile; this harness
+identical on TheLeague (the shared header changed). `rosters.astro` stays in the
+fork baseline only because TheLeague's copy is still 10k lines.
+
+**2026-10-04 — TheLeague's copy is custom by design.** The owner's call: TheLeague's
+rosters page is its own and stays a separate copy; the AFL's shared page is the
+one every other league repeats. So TheLeague's `rosters.astro` is not a target
+for unification, and the Phase 9 goal of sharing its core is closed
+(`customByDesign` in `tests/fixtures/page-fork-baseline.json`).
 
 Only after the phases above. TheLeague, the AFL, and best-ball each render a roster; today
 they share `PlayerCell`, `roster-constants`, and college logos, and re-implement

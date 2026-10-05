@@ -25,14 +25,17 @@ const show = isDemoDeploy();
 // (`/redraft/...`) or, after the middleware's rewrite, the slot's own slug.
 const segment = Astro.url.pathname.split('/')[1] ?? '';
 const slug = demoLeaguePaths()[segment] ?? segment;
-const bestBall = Boolean(getLeagueBySlug(slug)?.bestBall);
-const pitch = bestBall
-	? 'The draft room, board and mock drafts here were built for this league; your site is built around how yours works.'
-	: slug === 'keeper'
-		? 'The keeper planner and every tool here were built for this league; your site is built around how yours works.'
-		: slug === 'afl-fantasy'
-		? 'The conference standings, tier tables and playoff brackets here were built for this league; your site is built around how yours works.'
-		: 'The salary-cap tools here were built for this league; your site is built around how yours works.';
+const league = getLeagueBySlug(slug);
+// What the demo shows off, by league type; a league names its own with
+// `demoPitch` in the registry when its type's line does not fit.
+const PITCH_BY_ARCHETYPE: Record<string, string> = {
+	'best-ball': 'The draft room, board and mock drafts here were built for this league; your site is built around how yours works.',
+	'deluxe-keeper': 'The keeper planner and every tool here were built for this league; your site is built around how yours works.',
+	contest: 'The division standings and weekly rankings here were built for this league; your site is built around how yours works.',
+	'standard-redraft': 'The standings, lineups and league news here were built for this league; your site is built around how yours works.',
+	'dynasty-cap': 'The salary-cap tools here were built for this league; your site is built around how yours works.',
+};
+const pitch = league?.demoPitch ?? PITCH_BY_ARCHETYPE[league?.archetype ?? ''] ?? PITCH_BY_ARCHETYPE['dynasty-cap'];
 ---
 
 {
@@ -42,6 +45,8 @@ const pitch = bestBall
 			<span class="demo-banner__detail">
 				A fictional league — nothing is sent to MyFantasyLeague. {pitch}
 			</span>
+			{/* Reopens the "Try these" popup (DemoTour), which opens by itself only once per device. */}
+			<button type="button" class="demo-banner__tips" data-demo-tour-open>Tips</button>
 			<button type="button" class="demo-banner__close" data-demo-banner-close aria-label="Dismiss the demo notice">
 				<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
 			</button>
@@ -78,6 +83,27 @@ const pitch = bestBall
 
 	.demo-banner__detail {
 		max-width: 60rem;
+	}
+
+	.demo-banner__tips {
+		padding: 0.1rem 0.6rem;
+		border: 1px solid rgba(248, 250, 252, 0.45);
+		border-radius: 999px;
+		background: transparent;
+		color: inherit;
+		font: inherit;
+		font-weight: 700;
+		cursor: pointer;
+	}
+
+	.demo-banner__tips:hover,
+	.demo-banner__tips:focus-visible {
+		background: rgba(255, 255, 255, 0.15);
+	}
+
+	.demo-banner__tips:focus-visible {
+		outline: 2px solid #fca311;
+		outline-offset: 1px;
 	}
 
 	.demo-banner__close {

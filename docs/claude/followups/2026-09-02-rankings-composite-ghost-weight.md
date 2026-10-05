@@ -113,7 +113,7 @@ version; the fifth pins that a deliberate `70/30` split is left untouched.
   - Source: design observation, hotfix step 5
   - Where: `src/utils/rankings-storage.ts:559`+, called from
     `src/components/shared/rankings/MyRankEditor.tsx:59` and
-    `src/components/theleague/rankings-import/ManageImportsSection.tsx:64`
+    `src/components/shared/rankings-import/ManageImportsSection.tsx:64`
   - Why deferred: it works and is idempotent, and reshaping it mid-hotfix was a
     bigger diff than the bug warranted
   - Note: the cleaner shape is reconciling once at mount alongside

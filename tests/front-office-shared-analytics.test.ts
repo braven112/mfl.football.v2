@@ -299,8 +299,8 @@ describe('Phase D — the hub can act, but only where the server will let it', (
     // That page has its own Contract Decision Modal flow and its own bulk
     // submit; a second button wired to neither would be live and wrong.
     for (const f of [
-      'src/components/theleague/VeteranExtensionCandidates.astro',
-      'src/components/theleague/FranchiseOptions.astro',
+      'src/components/shared/VeteranExtensionCandidates.astro',
+      'src/components/shared/FranchiseOptions.astro',
     ]) {
       expect(readFileSync(f, 'utf-8')).toMatch(/showActions = false/);
     }
@@ -313,8 +313,8 @@ describe('Phase D — the hub can act, but only where the server will let it', (
     // These cards re-render themselves in JS on every team switch. A button
     // added only to the Astro pass disappears the first time you switch.
     for (const f of [
-      'src/components/theleague/VeteranExtensionCandidates.astro',
-      'src/components/theleague/FranchiseOptions.astro',
+      'src/components/shared/VeteranExtensionCandidates.astro',
+      'src/components/shared/FranchiseOptions.astro',
     ]) {
       const src = readFileSync(f, 'utf-8');
       expect(src).toMatch(/\{showActions && \(/); // Astro pass
@@ -412,7 +412,7 @@ describe('the candidate tables stack rather than clip on a phone', () => {
 
   it('both cards carry the stacked media query', () => {
     for (const [name, root] of CARDS) {
-      const src = readFileSync(`src/components/theleague/${name}.astro`, 'utf-8');
+      const src = readFileSync(`src/components/shared/${name}.astro`, 'utf-8');
       expect(src, `${name} lost its stacked mode`).toMatch(/@media \(max-width: 560px\)/);
       expect(src).toMatch(new RegExp(`\\${root} \\.eligibility-table thead`));
       expect(src).toMatch(/content: attr\(data-label\)/);
@@ -425,7 +425,7 @@ describe('the candidate tables stack rather than clip on a phone', () => {
     // present only in the Astro pass means the labels vanish the first
     // time you switch teams on a phone.
     for (const [name] of CARDS) {
-      const src = readFileSync(`src/components/theleague/${name}.astro`, 'utf-8');
+      const src = readFileSync(`src/components/shared/${name}.astro`, 'utf-8');
       const astroLabels = (src.match(/<td data-label=/g) ?? []).length;
       const clientLabels = (src.match(/<td data-label=\\?"/g) ?? []).length;
       expect(astroLabels, `${name}: no data-labels in the Astro pass`).toBeGreaterThan(0);
@@ -437,11 +437,11 @@ describe('the candidate tables stack rather than clip on a phone', () => {
     // A grid item's automatic min-width is its min-content, not 0, so
     // `overflow-x: auto` never engages without every link in the chain.
     // Measured at 533px inside a 412px viewport before this was fixed.
-    const chart = readFileSync('src/components/theleague/ChartCard.astro', 'utf-8');
+    const chart = readFileSync('src/components/shared/ChartCard.astro', 'utf-8');
     expect(chart).toMatch(/\.chart-card \{[\s\S]*?min-width: 0/);
     expect(chart).toMatch(/\.chart-card__body \{[\s\S]*?min-width: 0/);
     for (const [name, root] of CARDS) {
-      const src = readFileSync(`src/components/theleague/${name}.astro`, 'utf-8');
+      const src = readFileSync(`src/components/shared/${name}.astro`, 'utf-8');
       expect(src, `${name}: wrapper has no overflow-x`).toMatch(
         new RegExp(`\\${root} \\.table-wrapper \\{[\\s\\S]*?overflow-x: auto`),
       );

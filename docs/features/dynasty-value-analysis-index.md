@@ -65,7 +65,7 @@ const currentYear = getCurrentLeagueYear();
 | `SALARY_CAP`, `ESCALATION_RATE` | `src/utils/salary-calculations.ts` | All features |
 | `formatCurrency()` | `src/utils/formatters.ts` | All features with dollar display |
 | `buildPlayerCellHTML()` | `src/utils/player-cell-html.ts` | Features 2, 7 (Free Agents page) |
-| `PlayerCell.astro` | `src/components/theleague/PlayerCell.astro` | Features 5, 6 (Roster page) |
+| `PlayerCell.astro` | `src/components/shared/PlayerCell.astro` | Features 5, 6 (Roster page) |
 | `calculateCapCharges()` | `src/utils/salary-calculations.ts` | Features 5, 6 |
 | `calculateAllSurplusValues()` | `src/utils/surplus-value.ts` | Features 2, 3, 4 (after Phase 1) |
 
@@ -139,8 +139,8 @@ These features complement the [Auction Price Predictor](auction-predictor-design
 | `src/pages/theleague/cr.astro` | VORP Rankings, Positional Scarcity |
 | `src/pages/theleague/trade-builder.astro` | Trade Value Analyzer, Draft Pick Valuation |
 | `src/pages/theleague/rosters.astro` | Cap Opportunity Cost, Roster Construction Optimizer |
-| `src/components/theleague/custom-rankings/CustomRankingsPage.tsx` | VORP Rankings, Positional Scarcity |
-| `src/components/theleague/custom-rankings/PlayerRow.tsx` | VORP Rankings, Positional Scarcity |
+| `src/components/shared/custom-rankings/CustomRankingsPage.tsx` | VORP Rankings, Positional Scarcity |
+| `src/components/shared/custom-rankings/PlayerRow.tsx` | VORP Rankings, Positional Scarcity |
 | `src/components/theleague/trade-builder/TradeBuilder.tsx` | Trade Value Analyzer, Draft Pick Valuation |
 | `src/styles/custom-rankings.css` | VORP Rankings, Positional Scarcity |
 | `src/types/trade-builder.ts` | Trade Value Analyzer, Draft Pick Valuation |

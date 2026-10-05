@@ -22,7 +22,7 @@
  *
  * Verified before marking any step: running the compute steps against a clean
  * tree reproduced the committed files byte-for-byte apart from their
- * `generatedAt` stamp. The one genuine difference is compute:afl-free-agents,
+ * `generatedAt` stamp. The one genuine difference is compute:free-agents,
  * whose input is live — a preview showing free agents from the last production
  * build is the accepted trade, not a bug.
  *
@@ -38,6 +38,20 @@ import { exec, execSync } from 'child_process';
 import { readFileSync } from 'fs';
 import { pathToFileURL } from 'url';
 import { isDemoEnv } from '../src/utils/demo-isolation-core.mjs';
+import { leaguesFor } from './lib/league-jobs.mjs';
+
+/**
+ * One previewSkip step per league a registry job lists, each through the SAME
+ * package script (`pnpm run <task> --league=<slug>`), so pipelineScripts()
+ * below still resolves the producer and a launched league needs no edit here.
+ */
+function perLeague(job, task) {
+  return leaguesFor(job).map((l) => ({
+    name: `${task}:${l.slug}`,
+    cmd: `pnpm run ${task} --league=${l.slug}`,
+    previewSkip: true,
+  }));
+}
 
 const SEQUENTIAL = [
   { name: 'build:styles', cmd: 'pnpm run build:styles' },
@@ -52,14 +66,12 @@ const SEQUENTIAL = [
   // from these `pnpm run` names, so hiding them behind one wrapper would let an
   // edit to a producer preview against the stale committed file. A guard in that
   // test fails if a chain producer stops appearing in this list.
-  { name: 'compute:franchise-history', cmd: 'pnpm run compute:franchise-history', previewSkip: true },
-  { name: 'compute:afl-free-agents', cmd: 'pnpm run compute:afl-free-agents', previewSkip: true },
-  // compute:franchise-history above defaults to TheLeague, so the AFL's copy
-  // was only ever refreshed by hand or by the backfill workflow — it went stale
-  // against its own committed feeds between runs. Adding the record book to
-  // this list without this made that asymmetry worse, since the book would
-  // rebuild every deploy while the history it sits beside did not.
-  { name: 'compute:afl-franchise-history', cmd: 'pnpm run compute:afl-franchise-history', previewSkip: true },
+  // One per league that runs the history chain (league-jobs `franchise-history`):
+  // TheLeague, the AFL, and a package league once its Franchise pages box is
+  // ticked. It used to be two hardcoded steps — TheLeague's by default, the
+  // AFL's added later after its copy went stale between backfill runs.
+  ...perLeague('franchise-history', 'compute:franchise-history'),
+  { name: 'compute:free-agents', cmd: 'pnpm run compute:free-agents', previewSkip: true },
   // Reads the same committed feeds as the history step; the record book is a
   // small top-N slice written to its own derived file.
   { name: 'compute:afl-record-book', cmd: 'pnpm run compute:afl-record-book', previewSkip: true },
@@ -68,12 +80,16 @@ const SEQUENTIAL = [
   // never change. getGlobalPlayerMap() reads only this file — see the note
   // there on why deriving it at request time was costing 23.5 MB per cold
   // start and dragging all of data/ into the serverless bundle.
-  { name: 'compute:player-identity-union', cmd: 'pnpm run compute:player-identity-union', previewSkip: true },
-  // Same artifact for the AFL. Its Draft Results page reaches back to 2003,
-  // but AFL players.json only exists from 2011 — so this union is the AFL
-  // half of the lookup and TheLeague's is the fallback for the rest (MFL
-  // player ids are global, so the two compose).
-  { name: 'compute:player-identity-union:afl', cmd: 'pnpm run compute:player-identity-union:afl', previewSkip: true },
+  //
+  // One per league that syncs (scripts/lib/league-jobs.mjs), from the registry.
+  // The AFL's Draft Results page reaches back to 2003 but its players.json only
+  // from 2011, so each league's union is its own half of the lookup and the
+  // default league's is the fallback for the rest (MFL player ids are global,
+  // so the two compose).
+  ...perLeague('player-identity-union', 'compute:player-identity-union'),
+  // Each syncing league's rules as configured on MFL, in words — Ask Roger's
+  // fallback where a league's written rulebook is silent (src/utils/league-rulebook.ts).
+  ...perLeague('mfl-settings-digest', 'compute:mfl-settings-digest'),
   // Rebuilds the frozen roster payloads for every HISTORICAL TheLeague season
   // (current league/season years stay live on the page). Runs after the
   // identity union for the same reason as it: the committed feeds it reads
@@ -85,8 +101,8 @@ const SEQUENTIAL = [
   // only for weeks a player sat on some roster), joins players/rosters/league,
   // and emits one finished file per league. previewSkip because the result is
   // committed: preview builds read the artifact, same as every step here.
-  { name: 'compute:top-players', cmd: 'pnpm run compute:top-players', previewSkip: true },
-  { name: 'compute:top-players:afl', cmd: 'pnpm run compute:top-players:afl', previewSkip: true },
+  // One per league with a Top Players page.
+  ...perLeague('top-players', 'compute:top-players'),
 ];
 
 const PARALLEL = [

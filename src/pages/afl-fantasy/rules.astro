@@ -152,7 +152,7 @@ const sectionLinks = [
   }
 
   .afl-rules-page__toc-title {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     text-transform: uppercase;
     letter-spacing: 0.1em;
     color: var(--content-text-muted, #6b7280);
@@ -172,7 +172,7 @@ const sectionLinks = [
   .afl-rules-page__toc-list a {
     color: var(--page-text, #1a1a1a);
     text-decoration: none;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
   }
 
   .afl-rules-page__toc-list a:hover {
@@ -205,12 +205,12 @@ const sectionLinks = [
     margin-top: 1rem;
     padding: 0.5rem 0.875rem;
     background: var(--league-accent, #c41e3a);
-    color: #fff;
+    color: var(--on-league-accent, #fff);
     border-radius: var(--radius-md, 0.5rem);
     font-size: 0.8125rem;
     font-weight: 600;
     text-decoration: none;
-    transition: background 0.15s ease;
+    transition: background var(--transition-fast);
   }
   .afl-rules-chat-link:hover {
     background: color-mix(in srgb, var(--color-primary, #c41e3a) 80%, black);

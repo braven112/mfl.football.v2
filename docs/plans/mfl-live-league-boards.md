@@ -195,9 +195,11 @@ goes wrong:
   screenshot, not by a test: Josh Allen at #1 *and* #2 of the same league's
   top performances, same owner, same score. The unit fixture had every
   franchise in exactly one matchup, so it could not see it.
-- **A performance is keyed by franchise AND player.** The same player started
-  by two different franchises is two owners' points and two legitimate rows —
-  routine in the AFL, whose rosters duplicate players.
+- **One row per player, naming every owner.** The same player started by two
+  different franchises is two owners' credit — routine in the AFL, whose
+  rosters duplicate players. It was first shipped as two rows (the same name
+  at #1 and #2 of the strip); since 2026-09-27 it is one row with a
+  comma-separated owner list on its second line, and the cap counts players.
 - **Zero is never a leader.** An unplayed week is a payload of zeros, and an
   unfiltered strip invents a leaderboard for a week nobody has played.
 

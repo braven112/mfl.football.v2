@@ -5,6 +5,7 @@
  * Shows 10 posts initially with "Show more" pagination.
  * Section header with editorial left-border accent.
  */
+import { getPersonaLabels } from '../../utils/persona-server';
 import type { SchefterPost } from '../../types/schefter';
 import type { SchefterReactionResponse } from '../../types/schefter';
 import { getBatchReactions } from '../../utils/schefter-reactions';
@@ -44,7 +45,7 @@ const {
   personalized = false,
   forYouIds = [],
   watching = {},
-  emptyText = 'No news yet. Schefter is on assignment.',
+  emptyText: emptyTextProp,
 } = Astro.props;
 
 const forYou = new Set(forYouIds);
@@ -53,22 +54,25 @@ const activeTab = personalized ? 'foryou' : 'all';
 
 // Keep the "View all" link inside the current league's news page, honoring
 // clean-domain prefix stripping (e.g. /theleague/news → /news on theleague.us).
-const newsHref = resolveLeaguePath(
-  getLeagueContext(Astro.url).slug === 'afl-fantasy' ? '/afl-fantasy/news' : '/theleague/news',
-  Astro.locals.hideLeaguePrefix ?? false
-);
+// Registry-derived: every league's news page is /<slug>/news.
+const contextSlug = getLeagueContext(Astro.url).slug;
+const newsHref = resolveLeaguePath(`/${contextSlug}/news`, Astro.locals.hideLeaguePrefix ?? false);
 
 const now = new Date();
 
 // Batch-fetch all reactions server-side (1 Redis pipeline call instead of N client fetches)
 const postIds = posts.map(p => p.id);
 const allReactions = await getBatchReactions(postIds, userFranchiseId);
+// Owner-facing copy follows the league's persona (src/utils/persona.mjs).
+// With no posts yet, the page's own league names the persona (not the default).
+const labels = await getPersonaLabels(posts[0]?.league ?? contextSlug);
+const emptyText = emptyTextProp ?? `No news yet. ${labels.surname} is on assignment.`;
 ---
 
 <section class="sfc-feed" aria-label="Latest league news" data-sfc-active-tab={activeTab}>
   <div class="sfc-feed__header">
-    <h2 class="sfc-feed__title">Schefter Report</h2>
-    <a href={newsHref} class="sfc-feed__view-all">View all <span aria-hidden="true">→</span></a>
+    <h2 class="sfc-feed__title">{labels.reportShort}</h2>
+    <a href={newsHref} class="cta-link sfc-feed__view-all">View all</a>
   </div>
 
   {personalized && (

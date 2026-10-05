@@ -107,7 +107,7 @@ describe('the shared host does not serve a league that has its own domain', () =
   });
 
   it('leaves the app’s own surfaces alone', () => {
-    for (const p of ['/', '/live', '/live/settings', '/login', '/api/live-board', '/404']) {
+    for (const p of ['/', '/live', '/live/settings', '/live/standings', '/login', '/api/live-board', '/404']) {
       expect(resolveSharedHostHiddenLeague('v2.mfl.football', p), p).toBeNull();
     }
   });
@@ -242,7 +242,13 @@ describe('the nav switcher does not offer a link the current host refuses', () =
           resolveSharedHostHiddenLeague(host, t.href),
           `${host} switcher offers ${t.href}, which 404s there`,
         ).toBeNull();
-        expect(t.href.startsWith('http'), `${t.name} must leave the shared host`).toBe(true);
+        // A league with its own domain must be linked there; a path-only
+        // league (archies) lives on this same host, so a relative link is
+        // the right one and is what the resolver above just accepted.
+        const target = ALL_LEAGUES.find((l) => l.name === t.name);
+        if (target && leagueHasOwnFrontDoor(target)) {
+          expect(t.href.startsWith('http'), `${t.name} must leave the shared host`).toBe(true);
+        }
       }
     }
   });
@@ -286,11 +292,13 @@ describe('the splash advertises only the full-management leagues', () => {
     expect(ALL_LEAGUES.some((l) => !l.bestBall), 'a full-management league exists').toBe(true);
   });
 
-  it('derives the advertised set from `bestBall` rather than listing slugs', () => {
+  it('derives the advertised set from registry flags rather than listing slugs', () => {
     // Same derivation BOTH_LEAGUES uses for the changelog. A slug list reads
     // identically today and diverges the day a league is added — the failure
     // this file's opening docblock describes, arrived at from a new direction.
-    expect(src).toContain('ALL_LEAGUES.filter((league) => !league.bestBall)');
+    // `advertiseOnSharedHost: false` keeps a package league (archies) off the
+    // splash until the site owner lists it.
+    expect(src).toMatch(/ALL_LEAGUES\.filter\(\s*\(league\) => !league\.bestBall && league\.advertiseOnSharedHost !== false/);
   });
 
   it('renders the panels from that set, not from ALL_LEAGUES', () => {

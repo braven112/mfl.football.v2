@@ -80,7 +80,7 @@ const hero = HERO_COPY[phase];
       <h1>{hero.title}</h1>
       <p class="bb-home__body">{hero.body}</p>
       <div class="bb-home__actions">
-        <a class="bb-home__cta" href={hero.ctaHref}>{hero.cta} →</a>
+        <a class="cta cta--primary bb-home__cta" href={hero.ctaHref}>{hero.cta} →</a>
         {!isSignedIn && <a class="bb-home__signin" href={loginHref}>Sign in</a>}
       </div>
     </section>
@@ -168,16 +168,17 @@ const hero = HERO_COPY[phase];
     gap: 1rem;
   }
 
+  /* A white pill on the green hero — the hero's own palette, not the accent. */
   .bb-home__cta {
-    background: #ffffff;
-    color: #0b3d2e;
-    font-weight: 700;
+    --cta-bg: #ffffff;
+    --cta-bg-hover: color-mix(in srgb, #ffffff 88%, #0b3d2e);
+    --cta-border: #ffffff;
+    --cta-ink: #0b3d2e;
     text-transform: uppercase;
     font-size: 0.8rem;
     letter-spacing: 0.05em;
     padding: 0.65rem 1.4rem;
     border-radius: var(--radius-sm, 4px);
-    text-decoration: none;
   }
 
   .bb-home__signin {
@@ -200,7 +201,7 @@ const hero = HERO_COPY[phase];
     padding: 1.1rem 1.2rem;
     text-decoration: none;
     color: inherit;
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
   }
 
   .bb-home__card:hover {

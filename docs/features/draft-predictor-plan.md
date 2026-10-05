@@ -18,7 +18,7 @@ Create a draft pick predictor feature with two main components:
 - `/src/utils/standings.ts` - Standings and tiebreaker logic
 - `/src/pages/rosters.astro` - Where 2026 at a glance section lives (line 1216)
 - `/src/components/theleague/DraftCapitalTable.astro` - Existing draft capital structure
-- `/src/components/theleague/ChartCard.astro` - Card wrapper component
+- `/src/components/shared/ChartCard.astro` - Card wrapper component
 - `/src/data/mfl-feeds/2025/standings.json` - Standings data structure
 - `/src/data/mfl-feeds/2025/draftResults.json` - Draft results with trade comments
 
@@ -154,7 +154,7 @@ const actualPicks = getActualDraftResults(year)  // After draft date
 - Call to DraftPredictorGrid component
 - Legend explaining pick colors (special picks, league winner, etc.)
 
-### 3.3 Create `/src/components/theleague/DraftPredictorGrid.astro`
+### 3.3 Create `/src/components/shared/DraftPredictorGrid.astro`
 **Purpose:** Grid display of all 51 picks
 
 **Structure:**

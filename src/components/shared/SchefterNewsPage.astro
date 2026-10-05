@@ -30,7 +30,11 @@ interface Props {
   schefterArticles?: SchefterPost[];
   /** Fallback permalink base for a rail article with no explicit link. */
   articleBasePath: string;
-  tipHref: string;
+  /**
+   * The tip form. Omitted for a league with no tips lane (`schefterTips`
+   * off), which drops the "Got a tip?" promo rather than linking a 404.
+   */
+  tipHref?: string;
 }
 
 const {
@@ -90,6 +94,7 @@ const pollGroupMe = isGroupMeTab && isAuthenticated;
 
     {isGroupMeTab && isAuthenticated && view.userFranchiseId && (
       <GroupMeChatPanel
+        personaSurname={view.labels.surname}
         client:visible
         teamName={userTeamName ?? 'My Team'}
         teamIcon={userTeamIcon ?? ''}
@@ -112,35 +117,37 @@ const pollGroupMe = isGroupMeTab && isAuthenticated;
         userTeamIcon={userTeamIcon}
         initialLimit={25}
         watching={view.watchingByPost}
-        emptyText={isWatchingTab ? view.emptyText : undefined}
+        emptyText={isWatchingTab ? view.emptyText : `No news yet. ${view.labels.surname} is on assignment.`}
       />
     </div>
   </div>
 
   <aside class="sf-news-rail" aria-label="Tip the beat reporter">
-    <a href={tipHref} class="sf-rail-promo">
-      <img
-        src="/assets/claude-schefter-avatar.webp"
-        alt=""
-        class="sf-rail-promo__avatar"
-        width="40"
-        height="40"
-        loading="lazy"
-      />
-      <div class="sf-rail-promo__body">
-        <div class="sf-rail-promo__title">Got a tip?</div>
-        <p class="sf-rail-promo__text">Drop anonymous intel to Claude Schefter. Rumors, roster gripes, bold predictions — he'll fold it in without naming names.</p>
-      </div>
-      <svg class="sf-rail-promo__arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <path d="M9 18l6-6-6-6"/>
-      </svg>
-    </a>
+    {tipHref && (
+      <a href={tipHref} class="sf-rail-promo">
+        <img
+          src={view.labels.avatar}
+          alt=""
+          class="sf-rail-promo__avatar"
+          width="40"
+          height="40"
+          loading="lazy"
+        />
+        <div class="sf-rail-promo__body">
+          <div class="sf-rail-promo__title">Got a tip?</div>
+          <p class="sf-rail-promo__text">Drop anonymous intel to {view.labels.name}. Rumors, roster gripes, bold predictions — {view.labels.surname} folds it in without naming names.</p>
+        </div>
+        <svg class="sf-rail-promo__arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M9 18l6-6-6-6"/>
+        </svg>
+      </a>
+    )}
 
     <slot name="rail" />
 
     {schefterArticles.length > 0 && (
-      <section class="sf-rail-section" aria-label="Featured articles from Claude Schefter">
-        <h2 class="sf-rail-section__title">From the Schefter Report</h2>
+      <section class="sf-rail-section" aria-label={`Featured articles from ${view.labels.name}`}>
+        <h2 class="sf-rail-section__title">From the {view.labels.reportShort}</h2>
         <ul class="sf-rail-articles">
           {schefterArticles.map((article: any) => (
             <li class="sf-rail-articles__item">
@@ -212,7 +219,7 @@ const pollGroupMe = isGroupMeTab && isAuthenticated;
   }
   .sf-rail-promo:hover {
     border-color: var(--color-gray-200, #e5e7eb);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    box-shadow: var(--shadow-sm);
   }
   .sf-rail-promo__avatar {
     width: 40px;
@@ -226,13 +233,13 @@ const pollGroupMe = isGroupMeTab && isAuthenticated;
     min-width: 0;
   }
   .sf-rail-promo__title {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     color: var(--color-gray-800, #1f2937);
     line-height: 1.3;
   }
   .sf-rail-promo__text {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     color: var(--color-gray-500, #6b7280);
     line-height: 1.4;
     margin: 0.125rem 0 0;
@@ -247,7 +254,7 @@ const pollGroupMe = isGroupMeTab && isAuthenticated;
   }
 
   .sf-rail-section__title {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -283,7 +290,7 @@ const pollGroupMe = isGroupMeTab && isAuthenticated;
   }
   .sf-rail-article-card:hover {
     border-color: var(--color-gray-200, #e5e7eb);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    box-shadow: var(--shadow-md);
     transform: translateY(-1px);
   }
   .sf-rail-article-card__image {
@@ -300,7 +307,7 @@ const pollGroupMe = isGroupMeTab && isAuthenticated;
     gap: 0.25rem;
   }
   .sf-rail-article-card__meta {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     color: var(--color-gray-500, #6b7280);
     text-transform: uppercase;
     letter-spacing: 0.06em;

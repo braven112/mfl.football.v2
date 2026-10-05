@@ -20,7 +20,7 @@
  * board's ideas — and one owner's unread badge — from landing on the other.
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
-import SuggestionBox from '../../theleague/suggestions/SuggestionBox';
+import SuggestionBox from './SuggestionBox';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import type { CanonicalLeagueSlug } from '../../../config/leagues';
 import '../../../styles/loading.css';
@@ -176,7 +176,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     fill: currentColor;
   }
   .sb-section-title {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -185,7 +185,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     color: var(--color-gray-900, #111827);
   }
   .sb-hero__sub {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     color: var(--color-gray-500, #6b7280);
     margin: 0.25rem 0 0 0;
     padding-left: 0.625rem;
@@ -247,7 +247,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     line-height: 1;
   }
   .sb-about-card__text {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     line-height: 1.5;
     color: var(--color-gray-400, #9ca3af);
     margin: 0.75rem 0 0 0;
@@ -264,7 +264,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     box-shadow: 0 0 0 1px var(--content-border, #555), var(--shadow-lg);
   }
   .sb-sidebar__label {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -280,7 +280,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     color: var(--color-gray-600, #a0a0a0);
   }
   .sb-sidebar__steps {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     line-height: 1.55;
     color: var(--color-gray-500, #6b7280);
     margin: 0;
@@ -297,7 +297,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     text-decoration: underline;
   }
   .sb-sidebar__tip-text {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     line-height: 1.55;
     color: var(--color-gray-500, #6b7280);
     margin: 0;
@@ -332,13 +332,13 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     min-width: 0;
   }
   .sb-promo__title {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 700;
     color: var(--color-gray-800, #1f2937);
     line-height: 1.3;
   }
   .sb-promo__text {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     color: var(--color-gray-500, #6b7280);
     line-height: 1.4;
     margin: 0.125rem 0 0;
@@ -397,7 +397,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     .sb-hero__icon {
       width: 44px;
       height: 44px;
-      min-width: 44px;
+      min-width: var(--touch-target-min);
     }
     .sb-body {
       padding: 1rem;
@@ -457,13 +457,13 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     text-align: center;
     padding: 2rem 1rem;
     color: var(--color-gray-400, #9ca3af);
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
   }
 
   .sb-count {
     text-align: center;
     padding-top: 1rem;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     color: var(--color-gray-400, #9ca3af);
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -511,7 +511,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     width: 100%;
     padding: 0.75rem;
     padding-right: 4rem;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-family: inherit;
     color: var(--input-text, #1f2937);
     background: var(--color-gray-50, #f9fafb);
@@ -539,7 +539,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     position: absolute;
     right: 0.75rem;
     bottom: 0.5rem;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     color: var(--color-gray-400, #9ca3af);
     font-variant-numeric: tabular-nums;
   }
@@ -565,15 +565,15 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     justify-content: center;
     gap: 0.5rem;
     padding: 0.625rem 1rem;
-    background: var(--color-primary, #1c497c);
-    color: #fff;
+    background: var(--color-primary-fill, var(--color-primary, #1c497c));
+    color: var(--on-color-primary, #fff);
     border: none;
     border-radius: var(--radius-md, 0.5rem);
     font-size: 0.8125rem;
     font-weight: 600;
     font-family: inherit;
     cursor: pointer;
-    transition: background 0.15s ease, opacity 0.15s ease;
+    transition: background var(--transition-fast), opacity var(--transition-fast);
   }
   .sb-composer__submit:hover:not(:disabled) {
     background: var(--color-primary-dark, #164066);
@@ -597,7 +597,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     border-bottom: 1px solid var(--color-gray-100, #f3f4f6);
     cursor: pointer;
     border-radius: var(--radius-sm, 0.25rem);
-    transition: background 0.15s ease;
+    transition: background var(--transition-fast);
   }
   .sb-card:hover {
     background: var(--color-gray-50, #f9fafb);
@@ -623,12 +623,12 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     height: 28px;
     min-width: 28px;
     border-radius: var(--radius-full, 9999px);
-    background: var(--color-primary, #1c497c);
-    color: #fff;
+    background: var(--color-primary-fill, var(--color-primary, #1c497c));
+    color: var(--on-color-primary, #fff);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 700;
     letter-spacing: 0.02em;
   }
@@ -649,17 +649,17 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     min-width: 0;
   }
   .sb-card__author {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     color: var(--color-gray-700, #374151);
   }
   .sb-card__time {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     color: var(--color-gray-400, #9ca3af);
     font-variant-numeric: tabular-nums;
   }
   .sb-card__edited {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     color: var(--color-gray-400, #9ca3af);
     font-style: italic;
   }
@@ -680,7 +680,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     color: var(--color-gray-400, #9ca3af);
     cursor: pointer;
     opacity: 0;
-    transition: opacity 0.15s ease, color 0.15s ease;
+    transition: opacity var(--transition-fast), color var(--transition-fast);
   }
   .sb-card:hover .sb-card__delete { opacity: 1; }
   .sb-card__delete:hover {
@@ -724,7 +724,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     height: 48px;
     background: var(--color-gray-100, #f3f4f6);
     border-radius: var(--radius-sm, 0.25rem);
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 600;
     color: var(--color-gray-400, #9ca3af);
   }
@@ -737,7 +737,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     display: flex;
     align-items: center;
     gap: 0.25rem;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     color: var(--color-gray-400, #9ca3af);
     font-variant-numeric: tabular-nums;
   }
@@ -749,7 +749,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
   .sb-status {
     display: inline-block;
     padding: 0.125rem 0.5rem;
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -787,7 +787,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     align-items: center;
     gap: 0.25rem;
     padding: 0.125rem 0.5rem;
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -850,7 +850,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     align-items: center;
     gap: 0.25rem;
     padding: 0.375rem 0.75rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 500;
     font-family: inherit;
     background: var(--color-gray-50, #f9fafb);
@@ -858,7 +858,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     border-radius: var(--radius-full, 9999px);
     cursor: pointer;
     color: var(--color-gray-600, #4b5563);
-    transition: border-color 0.15s ease, background 0.15s ease;
+    transition: border-color var(--transition-fast), background var(--transition-fast);
   }
   .sb-category-pill:hover {
     border-color: var(--color-gray-300, #d1d5db);
@@ -889,7 +889,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     gap: 0.25rem;
   }
   .sb-ws-form__label {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -898,7 +898,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
   .sb-ws-form__input {
     width: 100%;
     padding: 0.625rem 0.75rem;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-family: inherit;
     color: var(--input-text, #1f2937);
     background: var(--color-gray-50, #f9fafb);
@@ -951,7 +951,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     align-items: center;
     gap: 0.25rem;
     padding: 0.375rem 0.75rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 500;
     font-family: inherit;
     background: var(--color-gray-50, #f9fafb);
@@ -959,7 +959,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     border-radius: var(--radius-sm, 0.25rem);
     cursor: pointer;
     color: var(--color-gray-500, #6b7280);
-    transition: border-color 0.15s ease, background 0.15s ease;
+    transition: border-color var(--transition-fast), background var(--transition-fast);
   }
   .sb-ws-toggle--active.sb-ws-toggle--bug {
     border-color: var(--color-error, #f87171);
@@ -988,7 +988,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     align-items: center;
     gap: 0.25rem;
     padding: 0.25rem 0.625rem;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 500;
     font-family: inherit;
     background: var(--color-gray-50, #f9fafb);
@@ -996,7 +996,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     border-radius: var(--radius-full, 9999px);
     cursor: pointer;
     color: var(--color-gray-500, #6b7280);
-    transition: border-color 0.15s ease, background 0.15s ease;
+    transition: border-color var(--transition-fast), background var(--transition-fast);
   }
   .sb-filter__pill:hover {
     border-color: var(--color-gray-300, #d1d5db);
@@ -1050,14 +1050,14 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     gap: 0.25rem;
   }
   .sb-detail__ws-label {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
     color: var(--color-gray-400, #9ca3af);
   }
   .sb-detail__ws-value {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     color: var(--color-gray-700, #374151);
     line-height: 1.6;
   }
@@ -1095,7 +1095,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     margin: 0 0 0.75rem 0;
   }
   .sb-detail__body {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     color: var(--color-gray-600, #4b5563);
     line-height: 1.7;
     margin-bottom: 1.5rem;
@@ -1125,7 +1125,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     padding: 0.0625rem 0.375rem;
     background: var(--color-gray-100, #f3f4f6);
     border-radius: var(--radius-full, 9999px);
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 600;
     color: var(--color-gray-500, #6b7280);
     font-variant-numeric: tabular-nums;
@@ -1139,7 +1139,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     background: var(--color-gray-50, #f9fafb);
     border: 1px solid var(--content-border, #e2e8f0);
     border-radius: var(--radius-sm, 0.25rem);
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--color-gray-500, #6b7280);
     margin-bottom: 1rem;
   }
@@ -1177,8 +1177,8 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     height: 24px;
     min-width: 24px;
     border-radius: var(--radius-full, 9999px);
-    background: var(--color-primary, #1c497c);
-    color: #fff;
+    background: var(--color-primary-fill, var(--color-primary, #1c497c));
+    color: var(--on-color-primary, #fff);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1195,12 +1195,12 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     border-radius: 50%;
   }
   .sb-thread__author {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 600;
     color: var(--color-gray-700, #374151);
   }
   .sb-thread__time {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     color: var(--color-gray-400, #9ca3af);
     font-variant-numeric: tabular-nums;
   }
@@ -1225,13 +1225,13 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     padding: 0.125rem 0.375rem;
     background: none;
     border: none;
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 600;
     font-family: inherit;
     color: var(--color-gray-400, #9ca3af);
     cursor: pointer;
     border-radius: var(--radius-sm, 0.25rem);
-    transition: color 0.15s ease, background 0.15s ease;
+    transition: color var(--transition-fast), background var(--transition-fast);
   }
   .sb-thread__action:hover {
     color: var(--color-gray-700, #374151);
@@ -1257,7 +1257,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     border-radius: var(--radius-sm, 0.25rem);
     box-sizing: border-box;
     resize: vertical;
-    min-height: 44px;
+    min-height: var(--touch-target-min);
     max-height: 160px;
   }
   .sb-thread__edit-input:focus-visible {
@@ -1274,20 +1274,20 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
   /* ── Buttons ── */
   .sb-btn {
     padding: 0.375rem 0.75rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 600;
     font-family: inherit;
     border-radius: var(--radius-sm, 0.25rem);
     cursor: pointer;
-    transition: background 0.15s ease, opacity 0.15s ease;
+    transition: background var(--transition-fast), opacity var(--transition-fast);
   }
   .sb-btn--small {
     padding: 0.25rem 0.5rem;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
   }
   .sb-btn--primary {
-    background: var(--color-primary, #1c497c);
-    color: #fff;
+    background: var(--color-primary-fill, var(--color-primary, #1c497c));
+    color: var(--on-color-primary, #fff);
     border: none;
   }
   .sb-btn--primary:hover:not(:disabled) {
@@ -1366,8 +1366,8 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     border-radius: var(--radius-full, 9999px);
     cursor: pointer;
     font-family: inherit;
-    font-size: 0.75rem;
-    transition: border-color 0.15s ease, background 0.15s ease;
+    font-size: var(--font-size-xs);
+    transition: border-color var(--transition-fast), background var(--transition-fast);
   }
   .sb-reaction-pill:hover {
     border-color: var(--color-gray-300, #d1d5db);
@@ -1378,11 +1378,11 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     background: color-mix(in srgb, var(--color-primary, #1c497c) 6%, transparent);
   }
   .sb-reaction-pill__emoji {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     line-height: 1;
   }
   .sb-reaction-pill__count {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 600;
     color: var(--color-gray-500, #6b7280);
     font-variant-numeric: tabular-nums;
@@ -1407,7 +1407,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     border-radius: var(--radius-full, 9999px);
     cursor: pointer;
     color: var(--color-gray-400, #9ca3af);
-    transition: border-color 0.15s ease, color 0.15s ease;
+    transition: border-color var(--transition-fast), color var(--transition-fast);
   }
   .sb-reaction-add:hover {
     border-color: var(--color-gray-400, #9ca3af);
@@ -1473,7 +1473,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     border-radius: var(--radius-sm, 0.25rem);
     cursor: pointer;
     color: var(--color-gray-400, #9ca3af);
-    transition: border-color 0.15s ease, color 0.15s ease;
+    transition: border-color var(--transition-fast), color var(--transition-fast);
   }
   .sb-uploader__btn:hover {
     border-color: var(--color-gray-400, #9ca3af);
@@ -1484,7 +1484,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     cursor: not-allowed;
   }
   .sb-uploader__error {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     color: var(--color-error, #dc2626);
   }
 
@@ -1504,10 +1504,10 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     border-radius: var(--radius-sm, 0.25rem);
     cursor: pointer;
     color: var(--color-gray-400, #9ca3af);
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 700;
     letter-spacing: 0.02em;
-    transition: border-color 0.15s ease, color 0.15s ease;
+    transition: border-color var(--transition-fast), color var(--transition-fast);
   }
   .sb-gif-btn:hover {
     border-color: var(--color-gray-400, #9ca3af);
@@ -1583,7 +1583,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     justify-content: center;
     gap: 0.375rem;
     padding: 1.5rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--color-gray-400, #9ca3af);
   }
   .sb-gif-error {
@@ -1615,7 +1615,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     width: 250px;
     height: auto;
     cursor: pointer;
-    transition: opacity 0.15s ease;
+    transition: opacity var(--transition-fast);
   }
   .sb-gallery__img:hover {
     opacity: 0.85;
@@ -1635,7 +1635,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     color: #fff;
     cursor: pointer;
     opacity: 0;
-    transition: opacity 0.15s ease;
+    transition: opacity var(--transition-fast);
   }
   .sb-gallery__item:hover .sb-gallery__remove {
     opacity: 1;
@@ -1674,7 +1674,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     border-radius: var(--radius-full, 9999px);
     color: #fff;
     cursor: pointer;
-    transition: background 0.15s ease;
+    transition: background var(--transition-fast);
   }
   .sb-lightbox__close:hover {
     background: rgba(0, 0, 0, 0.7);
@@ -1696,7 +1696,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     color: var(--color-gray-500, #6b7280);
   }
   .sb-poll__title {
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -1717,7 +1717,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
   }
   .sb-poll__vote-count {
     margin-left: auto;
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-variant-numeric: tabular-nums;
   }
   .sb-poll__options {
@@ -1739,7 +1739,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     font-size: 0.8125rem;
     color: var(--color-gray-700, #374151);
     overflow: hidden;
-    transition: border-color 0.15s ease;
+    transition: border-color var(--transition-fast);
     text-align: left;
   }
   .sb-poll__option:hover:not(:disabled) {
@@ -1759,7 +1759,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     bottom: 0;
     background: color-mix(in srgb, var(--color-primary, #1c497c) 8%, transparent);
     border-radius: var(--radius-sm, 0.25rem);
-    transition: width 0.3s ease;
+    transition: width var(--transition-slow);
   }
   .sb-poll__label {
     position: relative;
@@ -1769,7 +1769,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
   .sb-poll__pct {
     position: relative;
     z-index: 1;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 600;
     font-variant-numeric: tabular-nums;
     color: var(--color-gray-400, #9ca3af);
@@ -1789,7 +1789,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
   .sb-poll__voter-row {
     display: flex;
     gap: 0.375rem;
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     color: var(--color-gray-400, #9ca3af);
     margin-bottom: 0.125rem;
   }
@@ -1807,7 +1807,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     border-radius: var(--radius-sm, 0.25rem);
   }
   .sb-poll-creator__label {
-    font-size: 0.625rem;
+    font-size: var(--font-size-3xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -1866,7 +1866,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
   }
   .sb-poll-creator__add {
     padding: 0.25rem 0.5rem;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-family: inherit;
     background: none;
     border: none;
@@ -1881,7 +1881,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     display: flex;
     align-items: center;
     gap: 0.375rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     color: var(--color-gray-500, #6b7280);
     margin: 0.5rem 0;
     cursor: pointer;
@@ -1921,7 +1921,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     align-items: center;
     gap: 0.25rem;
     padding: 0.3125rem 0.625rem;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     font-weight: 500;
     font-family: inherit;
     background: var(--card-bg, #fff);
@@ -1929,11 +1929,17 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     border-radius: var(--radius-sm, 0.25rem);
     cursor: pointer;
     color: var(--color-gray-600, #4b5563);
-    transition: border-color 0.15s ease, background 0.15s ease;
+    transition: border-color var(--transition-fast), background var(--transition-fast);
   }
-  .sb-admin__btn:hover {
+  /* The "Issue #N" chip is an <a>: restate colour and decoration, or the
+     layout's global a:hover turns it red and underlined. A toolbar chip, not
+     a CTA — see the ALLOWED map in tests/cta-pattern.test.ts. */
+  .sb-admin__btn:hover,
+  .sb-admin__btn:focus {
     border-color: var(--color-gray-300, #d1d5db);
     background: var(--card-bg, #fff);
+    color: var(--color-gray-600, #4b5563);
+    text-decoration: none;
   }
   .sb-admin__btn--active {
     border-color: var(--color-primary, #1c497c);
@@ -1949,7 +1955,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
   .sb-admin__error {
     margin-top: 0.5rem;
     padding: 0.375rem 0.5rem;
-    font-size: 0.6875rem;
+    font-size: var(--font-size-2xs);
     color: var(--color-error, #dc2626);
     background: var(--color-error-light, #fef2f2);
     border: 1px solid var(--color-error-border, #fecaca);
@@ -1994,7 +2000,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
     gap: 0.375rem;
     width: 100%;
     padding: 0.375rem 0.5rem;
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-family: inherit;
     background: none;
     border: none;
@@ -2026,7 +2032,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
       padding: 1rem 0.25rem;
     }
     .sb-card__title {
-      font-size: 0.875rem;
+      font-size: var(--font-size-sm);
     }
     .sb-detail__title {
       font-size: 1.1rem;

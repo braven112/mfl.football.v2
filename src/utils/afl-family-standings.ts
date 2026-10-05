@@ -1,6 +1,6 @@
 /**
- * The route half of the AFL-family standings page (components/afl-family/
- * StandingsPage), shared by /afl-fantasy/standings and the custom-site demo's
+ * The route half of the AFL-family standings page (components/shared/standings/
+ * AflFamilyStandingsPage), shared by /afl-fantasy/standings and the custom-site demo's
  * /keeper/standings.
  *
  * It lives outside the component because two of its answers are REDIRECTS,
@@ -8,7 +8,7 @@
  * the route too: a glob specifier cannot be a runtime variable.
  */
 import type { LeagueDefinition } from '../config/leagues';
-import { getCurrentSeasonYear } from './league-year';
+import { getCurrentSeasonYear, getTestDateFromSearchParams } from './league-year';
 import { getStandingsFeedWithLiveRefresh, type StandingsFeed } from './live-standings';
 
 /** Re-key an eager feed glob (`…/mfl-feeds/2025/standings.json`) by season. */
@@ -49,11 +49,16 @@ export async function resolveStandingsRoute(
   feeds: StandingsFeeds,
 ): Promise<StandingsRoute> {
   const availableYears = [...feeds.standings.keys()].sort((a, b) => b - a);
-  const currentSeasonYear = getCurrentSeasonYear();
+  // The default follows ?testDate= — the same clock StandingsPage's throwback
+  // gate reads — so /rollover-check can drive this page by date alone.
+  const testDate = getTestDateFromSearchParams(url.searchParams);
+  const currentSeasonYear = getCurrentSeasonYear(testDate ?? undefined);
   const defaultYear = availableYears.includes(currentSeasonYear) ? currentSeasonYear : availableYears[0] || currentSeasonYear;
   const requestedYear = url.searchParams.get('year');
   const selectedYear = requestedYear ? parseInt(requestedYear, 10) : defaultYear;
-  if (!availableYears.includes(selectedYear)) return { redirect: `${baseUrl}/standings?year=${defaultYear}` };
+  // A fallback redirect keeps the test clock, or the preview lands on the real year.
+  const testDateQuery = testDate ? `&testDate=${encodeURIComponent(url.searchParams.get('testDate')!)}` : '';
+  if (!availableYears.includes(selectedYear)) return { redirect: `${baseUrl}/standings?year=${defaultYear}${testDateQuery}` };
 
   const { feed, live, fetchedAt } = await getStandingsFeedWithLiveRefresh({
     league,
@@ -61,7 +66,7 @@ export async function resolveStandingsRoute(
     committedFeed: feeds.standings.get(selectedYear),
   });
   if (!feed || !feed.leagueStandings || (feed as { error?: unknown }).error) {
-    return { redirect: `${baseUrl}/standings?year=${defaultYear}` };
+    return { redirect: `${baseUrl}/standings?year=${defaultYear}${testDateQuery}` };
   }
   // "Last updated": the live fetch time when live data is in play, otherwise
   // the committed snapshot's fetch timestamp.
