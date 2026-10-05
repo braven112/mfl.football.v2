@@ -130,6 +130,10 @@ const showFeatureComposite =
 
 const phase = state.phase;
 const slot = state.slot;
+// The live slot with no scoreboard to draw — an MFL outage, or an unplayed
+// week (live-scoring-hero-props.ts) — shows the standings card rather than
+// nothing at all: it is the rotation's own card, and it needs no live data.
+const shownSlot = slot === 'live-scoring' && !liveScoring ? 'standings' : slot;
 const fallback = state.fallbackHero;
 
 // Article slot disambiguation: Friday → weekend preview, else → waiver pickup report
@@ -198,10 +202,10 @@ const isFridayArticle = ptWeekday === 'Fri';
 )}
 {/* Playoff round hero (wild card / semifinals / championship) — the composite
     round view when resolved, else the legacy bracket list, else standings. */}
-{slot === 'standings' && (phase === 'playoffs' || phase === 'championship') && state.playoffProps?.roundView && (
+{shownSlot === 'standings' && (phase === 'playoffs' || phase === 'championship') && state.playoffProps?.roundView && (
   <PlayoffRoundHero view={state.playoffProps.roundView} r={resolveLeaguePath} />
 )}
-{slot === 'standings' && (phase === 'playoffs' || phase === 'championship') && state.playoffProps && !state.playoffProps.roundView && (
+{shownSlot === 'standings' && (phase === 'playoffs' || phase === 'championship') && state.playoffProps && !state.playoffProps.roundView && (
   <PlayoffBracketHero
     client:idle
     leagueYear={state.playoffProps.leagueYear}
@@ -210,7 +214,7 @@ const isFridayArticle = ptWeekday === 'Fri';
     bracketSummary={state.playoffProps.bracketSummary}
   />
 )}
-{slot === 'standings' && ((phase !== 'playoffs' && phase !== 'championship') || !state.playoffProps) && (
+{shownSlot === 'standings' && ((phase !== 'playoffs' && phase !== 'championship') || !state.playoffProps) && (
   <StandingsHero state={state} resolveLeaguePath={resolveLeaguePath} userFranchiseId={userFranchiseId} />
 )}
 {slot === 'recap' && <RecapCompositeHero state={state} resolveLeaguePath={resolveLeaguePath} />}

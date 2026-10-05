@@ -843,6 +843,9 @@ if (isDemoEnv()) {
       ...LEAGUES['afl-fantasy'].features,
       schefterFeed: false,
       schefterTips: false,
+      // No live scoring page in this slot: on, the homepage hero's game-day
+      // card linked one that 404s.
+      liveScoring: false,
       liveScoringSample: false,
       accounting: false,
       pushNotifications: false,
