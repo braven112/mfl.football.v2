@@ -468,6 +468,7 @@ import DemoTour from '../components/shared/DemoTour.astro';
 	<body>
 		<StagingBanner />
 		<DemoBanner />
+		<DemoTour base={`/${leagueContext.slug}`} />
 		<!-- Navigation progress bar — shows instantly on internal link clicks -->
 		<div id="nav-progress" aria-hidden="true"></div>
 
@@ -488,7 +489,6 @@ import DemoTour from '../components/shared/DemoTour.astro';
 				hideMobileNavIcons={hideMobileNavIcons}
 			/>
 			<main>
-				<DemoTour base={`/${leagueContext.slug}`} />
 				<slot />
 			</main>
 			<TheLeagueFooter hideLeaguePrefix={hideLeaguePrefix} franchiseId={sessionFranchiseId} />

@@ -45,6 +45,8 @@ const pitch = league?.demoPitch ?? PITCH_BY_ARCHETYPE[league?.archetype ?? ''] ?
 			<span class="demo-banner__detail">
 				A fictional league — nothing is sent to MyFantasyLeague. {pitch}
 			</span>
+			{/* Reopens the "Try these" popup (DemoTour), which opens by itself only once per device. */}
+			<button type="button" class="demo-banner__tips" data-demo-tour-open>Tips</button>
 			<button type="button" class="demo-banner__close" data-demo-banner-close aria-label="Dismiss the demo notice">
 				<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
 			</button>
@@ -81,6 +83,27 @@ const pitch = league?.demoPitch ?? PITCH_BY_ARCHETYPE[league?.archetype ?? ''] ?
 
 	.demo-banner__detail {
 		max-width: 60rem;
+	}
+
+	.demo-banner__tips {
+		padding: 0.1rem 0.6rem;
+		border: 1px solid rgba(248, 250, 252, 0.45);
+		border-radius: 999px;
+		background: transparent;
+		color: inherit;
+		font: inherit;
+		font-weight: 700;
+		cursor: pointer;
+	}
+
+	.demo-banner__tips:hover,
+	.demo-banner__tips:focus-visible {
+		background: rgba(255, 255, 255, 0.15);
+	}
+
+	.demo-banner__tips:focus-visible {
+		outline: 2px solid #fca311;
+		outline-offset: 1px;
 	}
 
 	.demo-banner__close {

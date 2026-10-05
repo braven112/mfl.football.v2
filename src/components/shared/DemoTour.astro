@@ -1,13 +1,22 @@
 ---
+import '../../styles/player-modal-band.css';
 /**
- * The custom-site demo's "Try these" card (docs/plans/custom-site-demo.md):
- * shown on each demo league's HOME only, and nowhere off the demo.
+ * The custom-site demo's "Try these" popup (docs/plans/custom-site-demo.md):
+ * three things every owner gets that a prospect won't find by clicking around
+ * — the light/dark skin (a live switch, the site's own ThemeToggle), the
+ * Preferences page (country and clocks) and the Sunday Ticket board, whose
+ * channels follow the country. Nowhere off the demo.
  *
- * It points a prospect at three things that never show up by clicking around
- * a league page: the light/dark skin (a live switch, the site's own
- * ThemeToggle), the Preferences page (country and clocks) and the Sunday
- * Ticket board, whose channels follow the country. Closable for the visit,
- * like the demo banner.
+ * It opens by itself ONCE PER DEVICE, on the first demo league home a
+ * prospect lands on; after that only the demo banner's "Tips" button opens it,
+ * on any page. It used to be a card at the top of each home, closable for the
+ * visit — the owner's call (Oct 2026) was a popup like Throwback Week's.
+ *
+ * Same shell as ThrowbackWeekModal: a native <dialog> (focus trap and Esc from
+ * the platform), a band over a card body, centred on desktop and a bottom
+ * sheet at ≤640px. The band is the league's own: its dark logo on a gradient
+ * into its primary colour, with a ghost "Demo" word — the band is dark in
+ * both themes, like every `.pmb`.
  *
  * Links name the route SLOT (`/theleague/...`); the demo's HTML pass rewrites
  * them to the demo path (`/dynasty/...`).
@@ -15,156 +24,332 @@
 import ThemeToggle from './ThemeToggle.astro';
 import { isDemoDeploy } from '../../utils/deploy-environment';
 import { demoLeaguePaths } from '../../config/leagues-data.mjs';
+import { getLeagueBySlug } from '../../config/leagues';
 
 interface Props {
   /** The route slot's path prefix, e.g. '/theleague'. */
   base: string;
+  /** Stories only: render already open (non-modal), since a closed dialog draws nothing. */
+  previewOpen?: boolean;
 }
 
-const { base } = Astro.props;
+const { base, previewOpen = false } = Astro.props;
 
 // Home = the slot root, under its own name or its demo path.
 const demoPaths = demoLeaguePaths();
 const shownBase = Object.entries(demoPaths).find(([, slug]) => `/${slug}` === base)?.[0];
 const here = Astro.url.pathname.replace(/\/+$/, '') || '/';
 const isHome = here === base || (shownBase !== undefined && here === `/${shownBase}`);
-const show = isDemoDeploy() && isHome;
+const show = isDemoDeploy() || previewOpen;
+const league = getLeagueBySlug(base.replace(/^\//, ''));
+const logo = league?.logo?.dark ?? league?.logo?.light ?? null;
 ---
 
 {
   show && (
-    <section class="demo-tour" aria-labelledby="demo-tour-title" data-demo-tour>
-      <div class="demo-tour__head">
-        <h2 id="demo-tour-title" class="demo-tour__title">Try these</h2>
-        <p class="demo-tour__lede">Three things every owner gets that you won't find by clicking around.</p>
-        <button type="button" class="demo-tour__close" data-demo-tour-close aria-label="Hide these tips">
-          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
-        </button>
+    <dialog
+      class="dtm"
+      id="demo-tour-modal"
+      data-home={isHome ? '1' : undefined}
+      aria-labelledby="dtm-title"
+      open={previewOpen}
+      tabindex="-1"
+    >
+      <button type="button" class="dtm__close" data-dtm-close aria-label="Close">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+          <path d="M14 4L4 14M4 4l10 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+        </svg>
+      </button>
+
+      <div class="dtm__band pmb pmb--no-cutout">
+        <span class="pmb__ghost" aria-hidden="true">Demo</span>
+        <div class="pmb__glow" aria-hidden="true"></div>
+        {logo && <img class="dtm__logo" src={logo} alt="" width="72" height="72" />}
       </div>
-      <ol class="demo-tour__list">
-        <li class="demo-tour__item">
-          <h3>Light or dark, your call</h3>
-          <p>Every page, crest and chart has its own dark skin, not a filter. Flip it here and look around.</p>
-          <ThemeToggle class="demo-tour__toggle" />
-        </li>
-        <li class="demo-tour__item">
-          <h3>Set your country</h3>
-          <p>US, Canada, Mexico, the UK or Australia: kickoff times read in your clocks, and TV listings follow where you watch.</p>
-          <a class="demo-tour__link" href={`${base}/preferences`}>Open Preferences →</a>
-        </li>
-        <li class="demo-tour__item">
-          <h3>Sunday Ticket, by country</h3>
-          <p>Every game this week with the channel it's on. Switch the country and watch the channels change.</p>
-          <a class="demo-tour__link" href={`${base}/sunday-ticket`}>Open Sunday Ticket →</a>
-        </li>
-      </ol>
-    </section>
+
+      <div class="dtm__body">
+        <p class="dtm__eyebrow">{league?.name ?? 'Demo league'}</p>
+        <h2 class="dtm__title" id="dtm-title">Try these</h2>
+        <p class="dtm__lede">Three things every owner gets that you won't find by clicking around.</p>
+        <ol class="dtm__list">
+          <li class="dtm__item">
+            <h3>Light or dark, your call</h3>
+            <p>Every page, crest and chart has its own dark skin, not a filter. Flip it here and look around.</p>
+            <ThemeToggle class="dtm__toggle" />
+          </li>
+          <li class="dtm__item">
+            <h3>Set your country</h3>
+            <p>US, Canada, Mexico, the UK or Australia: kickoff times read in your clocks, and TV listings follow where you watch.</p>
+            <a class="cta-link dtm__link" href={`${base}/preferences`}>Open Preferences</a>
+          </li>
+          <li class="dtm__item">
+            <h3>Sunday Ticket, by country</h3>
+            <p>Every game this week with the channel it's on. Switch the country and watch the channels change.</p>
+            <a class="cta-link dtm__link" href={`${base}/sunday-ticket`}>Open Sunday Ticket</a>
+          </li>
+        </ol>
+        <button type="button" class="cta cta--primary dtm__btn" data-dtm-close>Start exploring</button>
+      </div>
+    </dialog>
   )
 }
 
+<script>
+  /**
+   * CLIENTROUTER-SAFE INIT: re-run on every astro:page-load and look the
+   * dialog up fresh — it lives in the swapped body, so the bound flag sits on
+   * the node now showing. One shared script, so no other league's listener can
+   * act on it. The banner's "Tips" button is bound the same way, per node.
+   *
+   * The seen-flag is written when the popup OPENS, not when it closes —
+   * navigating away without dismissing it still counts as having seen it.
+   */
+  const KEY = 'demoTourSeen';
+  const readSeen = (): boolean => {
+    try {
+      return localStorage.getItem(KEY) === '1';
+    } catch {
+      // Storage blocked (private mode, policy) — show it rather than never.
+      return false;
+    }
+  };
+  const markSeen = () => {
+    try {
+      localStorage.setItem(KEY, '1');
+    } catch {
+      /* nothing to remember with */
+    }
+  };
+
+  function open(dlg: HTMLDialogElement) {
+    if (dlg.open || typeof dlg.showModal !== 'function') return;
+    markSeen();
+    dlg.showModal();
+    // Land on the dialog, not its first control — the close X opening with a
+    // focus ring reads as if it were the default action.
+    dlg.focus();
+  }
+
+  function init() {
+    const dlg = document.querySelector<HTMLDialogElement>('dialog#demo-tour-modal');
+    if (!dlg) return;
+    if (dlg.dataset.bound !== '1') {
+      dlg.dataset.bound = '1';
+      dlg.querySelectorAll('[data-dtm-close]').forEach((btn) => {
+        btn.addEventListener('click', () => dlg.close());
+      });
+      // A click on the backdrop (the dialog box itself, outside the panel).
+      dlg.addEventListener('click', (e) => {
+        if (e.target === dlg) dlg.close();
+      });
+    }
+    document.querySelectorAll<HTMLButtonElement>('[data-demo-tour-open]').forEach((btn) => {
+      if (btn.dataset.bound === '1') return;
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', () => {
+        const current = document.querySelector<HTMLDialogElement>('dialog#demo-tour-modal');
+        if (current) open(current);
+      });
+    });
+    if (dlg.dataset.home === '1' && !readSeen()) open(dlg);
+  }
+
+  document.addEventListener('astro:page-load', init);
+</script>
+
 <style>
-  .demo-tour {
-    position: relative;
-    max-width: 1200px;
-    margin: 1rem auto 0;
-    padding: 1rem 1.25rem 1.25rem;
-    border-radius: var(--radius-lg, 16px);
-    background: var(--card-surface);
-    border: 1px solid var(--content-border);
-    border-top: 4px solid #fca311;
-  }
-  @media (max-width: 1232px) {
-    .demo-tour { margin-inline: 16px; }
-  }
-  .demo-tour__head {
-    padding-right: 2.5rem;
-  }
-  .demo-tour__title {
-    margin: 0;
-    font-size: 1.125rem;
-  }
-  .demo-tour__lede {
-    margin: 0.2rem 0 0;
-    color: var(--content-text-muted);
-    font-size: var(--font-size-sm);
-  }
-  .demo-tour__close {
-    position: absolute;
-    top: 0.75rem;
-    right: 0.75rem;
-    display: grid;
-    place-items: center;
-    width: 2rem;
-    height: 2rem;
+  .dtm {
     padding: 0;
-    border: 0;
-    border-radius: 999px;
-    background: transparent;
-    color: var(--content-text-muted);
+    border: none;
+    background: var(--card-bg, #fff);
+    color: var(--color-text-primary);
+    border-radius: var(--radius-lg, 1rem);
+    box-shadow: var(--shadow-xl);
+    width: calc(100% - 2rem);
+    max-width: 560px;
+    max-height: 92vh;
+    overflow: hidden auto;
+    animation: dtm-enter 0.22s ease-out;
+  }
+
+  .dtm::backdrop {
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(2px);
+  }
+
+  :global(html.dark) .dtm {
+    box-shadow:
+      var(--shadow-xl),
+      0 0 0 1px var(--content-border, #3a3a3a);
+  }
+
+  :global(html.dark) .dtm::backdrop {
+    background: rgba(0, 0, 0, 0.6);
+  }
+
+  .dtm:focus {
+    outline: none;
+  }
+
+  @keyframes dtm-enter {
+    from {
+      opacity: 0;
+      transform: scale(0.97) translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  /* Frosted chip over the band — same as the Throwback and player cards. */
+  .dtm__close {
+    position: absolute;
+    top: 0.875rem;
+    right: 0.875rem;
+    z-index: 3;
+    background: rgba(6, 9, 13, 0.4);
+    backdrop-filter: blur(2px);
+    border: none;
+    border-radius: var(--radius-full, 9999px);
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.85);
     cursor: pointer;
+    transition: background var(--transition-fast), color var(--transition-fast);
   }
-  .demo-tour__close:hover,
-  .demo-tour__close:focus-visible {
-    background: var(--content-bg-muted);
-    color: var(--page-text);
+
+  .dtm__close:hover {
+    background: rgba(6, 9, 13, 0.65);
+    color: #fff;
   }
-  .demo-tour__list {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
-    gap: 0.75rem;
-    margin: 0.85rem 0 0;
+
+  /* The league's own band: ink into its primary colour. Dark in both themes,
+     so the logo is always the league's DARK-ground cut. */
+  .dtm__band {
+    --pmb-g1: #0b1220;
+    --pmb-g2: var(--color-primary, #1c497c);
+    --pmb-glow: rgba(255, 255, 255, 0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 96px;
+    padding: 0.75rem 1rem;
+  }
+
+  .dtm__logo {
+    position: relative;
+    z-index: 1;
+    width: 72px;
+    height: 72px;
+    object-fit: contain;
+    filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.35));
+  }
+
+  .dtm__body {
+    padding: 1rem 1.5rem 1.25rem;
+  }
+
+  .dtm__eyebrow {
+    margin: 0 0 0.35rem;
+    font-size: var(--font-size-xs, 0.75rem);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-primary);
+    text-align: center;
+  }
+
+  .dtm__title {
+    margin: 0;
+    font-size: var(--font-size-xl);
+    font-weight: 800;
+    line-height: 1.15;
+    text-align: center;
+    /* Pinned: some league skins colour headings, and this card is neutral. */
+    color: var(--color-text-primary);
+  }
+
+  .dtm__lede {
+    margin: 0.25rem 0 0.875rem;
+    font-size: var(--font-size-sm, 0.875rem);
+    color: var(--color-text-secondary);
+    text-align: center;
+  }
+
+  .dtm__list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin: 0 0 1rem;
     padding: 0;
     list-style: none;
   }
-  .demo-tour__item {
+
+  .dtm__item {
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
-    padding: 0.85rem;
+    gap: 0.3rem;
+    padding: 0.625rem 0.875rem;
     border-radius: var(--radius-md, 10px);
     background: var(--content-bg-muted);
   }
-  .demo-tour__item h3 {
-    margin: 0;
-    font-size: 0.95rem;
-  }
-  .demo-tour__item p {
-    margin: 0;
-    flex: 1;
-    font-size: 0.85rem;
-    color: var(--content-text-muted);
-  }
-  .demo-tour__link {
-    font-weight: 700;
-    font-size: var(--font-size-sm);
-    color: var(--league-accent);
-    text-decoration: none;
-  }
-  .demo-tour__link:hover { text-decoration: underline; }
 
-  :global(html.demo-tour-dismissed) .demo-tour { display: none; }
+  .dtm__item h3 {
+    margin: 0;
+    font-size: var(--font-size-base);
+    color: var(--color-text-primary);
+  }
+
+  .dtm__item p {
+    margin: 0;
+    font-size: var(--font-size-sm, 0.875rem);
+    color: var(--color-text-secondary);
+  }
+
+  .dtm__link {
+    align-self: flex-start;
+    font-size: var(--font-size-sm, 0.875rem);
+  }
+
+  .dtm__btn {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: var(--touch-target-min);
+    font-size: var(--font-size-base);
+  }
+
+  /* Bottom sheet on a phone — the player card's mobile shape. */
+  @media (max-width: 640px) {
+    .dtm {
+      width: 100%;
+      max-width: 100%;
+      max-height: 92vh;
+      margin: auto 0 0;
+      border-radius: var(--radius-lg, 1rem) var(--radius-lg, 1rem) 0 0;
+      animation-name: dtm-sheet-enter;
+    }
+
+    .dtm__body {
+      padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+    }
+  }
+
+  @keyframes dtm-sheet-enter {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .dtm {
+      animation: none;
+    }
+  }
 </style>
-
-<script>
-  // Same pattern as DemoBanner: hidden for the rest of the visit once closed,
-  // re-asserted on every page load and swap (the router replaces <html>'s class).
-  const KEY = 'demoTourDismissed';
-  function dismissed() {
-    try { return sessionStorage.getItem(KEY) === '1'; } catch { return false; }
-  }
-  function apply() {
-    if (dismissed()) document.documentElement.classList.add('demo-tour-dismissed');
-  }
-  function init() {
-    apply();
-    const close = document.querySelector<HTMLButtonElement>('[data-demo-tour-close]');
-    if (!close || close.dataset.bound) return;
-    close.dataset.bound = '1';
-    close.addEventListener('click', () => {
-      document.documentElement.classList.add('demo-tour-dismissed');
-      try { sessionStorage.setItem(KEY, '1'); } catch {}
-    });
-  }
-  document.addEventListener('astro:page-load', init);
-  document.addEventListener('astro:after-swap', apply);
-</script>
