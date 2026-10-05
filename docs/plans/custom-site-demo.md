@@ -162,10 +162,15 @@ The art is embedded in the crest SVGs the demo already writes, so no asset path
 changed. The redraft demo now has crests at all (the real best-ball league has
 none yet). Guard: `tests/demo-art-mix.test.ts`.
 
-### "Try these" tour card
+### "Try these" popup
 
-Each demo's HOME carries a closable card (`components/shared/DemoTour.astro`,
-mounted in TheLeagueLayout, demo-only) pointing at three things a prospect
+A popup (`components/shared/DemoTour.astro`, a native `<dialog>` in the
+Throwback Week modal's shell, mounted in TheLeagueLayout, demo-only) opens by
+itself ONCE PER DEVICE on the first demo league home a prospect lands on
+(`localStorage` `demoTourSeen`, written when it opens); after that the demo
+banner's "Tips" button reopens it on any page. Its band is the league's own
+dark logo on a gradient into its primary colour. It was a closable card at the
+top of each home until Oct 2026 (the owner's call). It points at three things a prospect
 would never find by clicking around: a live Light/Auto/Dark switch (the site's
 own ThemeToggle), Preferences (country and clocks: US, Canada, Mexico, UK,
 Australia) and Sunday Ticket, whose channels follow the country. Both pages now
