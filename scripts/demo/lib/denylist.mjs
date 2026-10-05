@@ -21,6 +21,9 @@ const GENERIC = new Set(
     'Maverick', 'Mavericks', 'The Dream', 'Cowboy Up', 'Bring The Pain', 'Pain', 'Thunder', 'Lightning',
     'Outlaws', 'Rangers', 'Falcons', 'Raptors', 'Vipers', 'Keepers', 'Herons', 'Millers', 'Anvils',
     'Coyotes', 'Barracudas', 'Tritons', 'Scorpions', 'Bison', 'Chaos', 'Mafia', 'Connection',
+    // Archie's clubs whose names are words third-party code carries: "Apache"
+    // in every Apache-2.0 package.json, "Terminator" in parser error strings.
+    'Apache', 'Terminator',
     // NFL club names and places a real alias happens to share.
     'Cowboy', 'Cowboys', 'Midwest', 'Music City', 'Under Siege', 'Magician', 'Magicians', 'Franchise',
     // Every NFL nickname. A real franchise sharing one ("The Boondock Saints")
