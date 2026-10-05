@@ -449,7 +449,8 @@ export function buildPackageHeroProfile(
   const config = getLeagueConfig(slug);
   const teamCount = config.teams?.length ?? 0;
   const divisionCount = config.divisions?.length ?? 0;
-  const pools = divisionCount > 1 ? `all ${numberWord(divisionCount)} divisions` : 'the league';
+  const pools =
+    divisionCount === 2 ? 'both divisions' : divisionCount > 2 ? `all ${numberWord(divisionCount)} divisions` : 'the league';
   const tagline =
     teamCount > 0 && divisionCount > 1
       ? `${capitalize(numberWord(teamCount))} teams, ${numberWord(divisionCount)} divisions, one champion. Welcome to ${short}.`
