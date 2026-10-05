@@ -64,6 +64,7 @@
  * for 7am. Push is never held.
  */
 
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -125,6 +126,9 @@ const warn = (...a) => console.warn(...a);
 // leagueYearFor lives in scripts/lib/schefter-league-year.mjs (shared with the
 // trade-bait lane); re-exported below so existing importers keep working.
 
+/** How far ahead of the opener the season gate admits a run (dispatch lead + slack). */
+const SEASON_GATE_LEAD_MS = 3 * 60 * 60 * 1000;
+
 /**
  * Lineup warnings only make sense while NFL games are being played. The
  * cron already only fires Sep–Jan; this guard makes an off-season
@@ -144,7 +148,12 @@ function isInSeason(now = new Date()) {
   // year keeps January correct without re-porting the rollover pivot — see
   // the same note on isChatBusySeason in schefter-scan.mjs.
   const year = now.getUTCFullYear();
-  return isSeasonWindowOpen(year, now) || isSeasonWindowOpen(year - 1, now);
+  const open = (at) => isSeasonWindowOpen(year, at) || isSeasonWindowOpen(year - 1, at);
+  // The check is dispatched AHEAD of kickoff, and the shared window opens AT
+  // the opener's kickoff — so both pre-opener dispatches would land outside
+  // it and check nothing. Asking about `now + lead` admits exactly that lead
+  // window, while a July dispatch still sees the offseason.
+  return open(now) || open(new Date(now.getTime() + SEASON_GATE_LEAD_MS));
 }
 
 // ── Fetch + feed helpers ────────────────────────────────────────────────────
@@ -446,10 +455,15 @@ async function checkLeague(league, now = new Date()) {
     }
   };
 
-  // Which kickoff slot this run is ahead of — keeps one run's push and feed
-  // post from replacing an earlier run's for the same owner in the same week.
-  const upcoming = [...kickoffsByTeam.values()].filter((at) => at > now.getTime());
-  const slot = upcoming.length ? Math.floor(Math.min(...upcoming) / 1000) : Math.floor(now.getTime() / 1000);
+  // Identity of THIS alert for one owner: a short hash of the problems it
+  // carries. Keeps a later run's push and feed post from replacing (tag) or
+  // colliding with (post id) an earlier one in the same week. Not "the next
+  // kickoff": before a 1:25pm game the 1:05pm game is still upcoming, so two
+  // slots' runs would share that identity. Since every run carries only
+  // problems not yet alerted, distinct runs carry distinct key sets; a re-run
+  // of the SAME set hashes identically and replaces, which is what we want.
+  const slotFor = (w) =>
+    createHash('sha1').update(warningAlertKeys(w).join('|')).digest('hex').slice(0, 10);
 
   // PUSH FIRST, AND TO EVERY FLAGGED OWNER. This is the real channel now: it
   // tells one owner about their own lineup, which is more useful and far less
@@ -465,7 +479,7 @@ async function checkLeague(league, now = new Date()) {
       url: '/lineup',
       // Per franchise and per kickoff slot: a re-run for the same slot
       // replaces, while a later slot's new problem does not erase this one.
-      tag: `lineup-check-${w.franchiseId}-${slot}`,
+      tag: `lineup-check-${w.franchiseId}-${slotFor(w)}`,
     })),
     log: { log, warn },
   });
@@ -491,7 +505,7 @@ async function checkLeague(league, now = new Date()) {
           franchiseId: w.franchiseId,
           // The slot keeps a later run's NEW problem from colliding with this
           // week's earlier post id (a duplicate id is silently not written).
-          kind: `lineup-${slot}`,
+          kind: `lineup-${slotFor(w)}`,
           year,
           week,
           headline: w.noLineup ? 'No lineup submitted' : 'Check your lineup',
@@ -619,7 +633,14 @@ async function checkLeague(league, now = new Date()) {
     return 'skipped';
   }
 
-  await recordDelivery({ delivered: [...reached, ...chatBatch], consumedChatSlot: true });
+  // Only the owners the post actually NAMED. buildFallbackPost sheds names to
+  // fit GroupMe's length cap ("…and N more"); an owner it dropped was reached
+  // by neither channel and must stay unmarked so the next run retries them.
+  const named = new Set(post.named ?? []);
+  await recordDelivery({
+    delivered: [...reached, ...chatBatch.filter((w) => named.has(w.franchiseId))],
+    consumedChatSlot: true,
+  });
   return 'posted';
 }
 

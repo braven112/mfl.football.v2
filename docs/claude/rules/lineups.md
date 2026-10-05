@@ -225,10 +225,18 @@ alert. Every rule below is a bug that shipped:
   (`warningDeadline`) falls inside that window — a 6:30am PT London game. In
   quiet hours the post carries ONLY those; the rest wait for the next run.
   Push is never held.
-- **Push tag and feed-post id carry the kickoff slot.** A per-franchise-only
-  tag let a later slot's alert replace an earlier unread one, and
-  `assistantPostId` is per week, so a second run's post was a duplicate id
-  that silently never wrote.
+- **Push tag and feed-post id carry a hash of the alert's problem keys.** A
+  per-franchise-only tag let a later run's alert replace an earlier unread
+  one, and `assistantPostId` is per week, so a second run's post was a
+  duplicate id that silently never wrote. Not "the next kickoff" either:
+  before a 1:25pm game the 1:05pm game is still upcoming, so two slots' runs
+  would share it.
+- **Only owners a channel actually named are marked.** `buildFallbackPost`
+  sheds names past GroupMe's length cap; record `post.named`, never the whole
+  batch, or a dropped owner is silenced for the week.
+- **The season gate looks ahead by the dispatch lead.** `isSeasonWindowOpen`
+  opens AT the opener's kickoff, so a gate on `now` alone would make both
+  pre-opener runs check nothing. `isInSeason` also asks about `now + 3h`.
 
 - **Web push is the channel; the GroupMe post is a fallback.** Every flagged
   owner gets a private push. The chat post carries the warning only for the

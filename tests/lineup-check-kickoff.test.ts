@@ -207,3 +207,27 @@ describe('lineupCheckDecision — dispatch ahead of every kickoff slot', () => {
     expect(first!).toBeLessThan(LONDON * 1000);
   });
 });
+
+describe('the season gate admits the pre-opener dispatches', () => {
+  // isSeasonWindowOpen opens AT the opener's kickoff; the check is dispatched
+  // ~75 minutes before it, so a gate on `now` alone checked nothing for Week 1.
+  it('opens for a run 75 minutes before the opener, and stays shut a day out', async () => {
+    const { isInSeason } = await import('../scripts/schefter-lineup-check.mjs');
+    const { nflWeekOneKickoff } = await import('../src/utils/pecking-order-season-window.mjs');
+    const opener = nflWeekOneKickoff(2026).getTime();
+    expect(isInSeason(new Date(opener - LINEUP_CHECK_LEAD_MINUTES * 60_000))).toBe(true);
+    expect(isInSeason(new Date(opener - 24 * 60 * 60_000))).toBe(false);
+    expect(isInSeason(new Date(Date.UTC(2026, 6, 15)))).toBe(false);
+  });
+});
+
+describe('delivery is recorded only for owners a channel actually named', () => {
+  it('marks the chat batch through buildFallbackPost().named, not the whole batch', async () => {
+    const { readFileSync } = await import('node:fs');
+    const src = readFileSync(new URL('../scripts/schefter-lineup-check.mjs', import.meta.url), 'utf8');
+    // buildFallbackPost sheds names past GroupMe's length cap; an owner it
+    // dropped heard nothing and must be retried by the next run.
+    expect(src).toMatch(/new Set\(post\.named/);
+    expect(src).not.toMatch(/delivered:\s*\[\.\.\.reached,\s*\.\.\.chatBatch\]/);
+  });
+});
