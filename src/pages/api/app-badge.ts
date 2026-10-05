@@ -51,7 +51,9 @@ import {
 import {
   buildLineupWarnings,
   buildPlayerIndex,
+  dropLockedProblems,
   parseByeTeams,
+  parseKickoffsByTeam,
   parseInjuries,
   parseRequiredStarters,
   parseStartingLineups,
@@ -189,7 +191,13 @@ async function countLineup(
     byeTeams: parseByeTeams(byeWeeks ?? {}, week),
     requiredStarters: parseRequiredStarters(leagueJson),
   });
-  return ownerLineupNeedsAttention(warnings, franchiseId);
+  // A starter whose game has kicked off is locked by MFL — badging him (a
+  // Thursday OUT player still lighting the icon on Sunday) asks for a fix
+  // nobody can make. Same rule as the pre-kickoff lineup check.
+  return ownerLineupNeedsAttention(
+    dropLockedProblems(warnings, parseKickoffsByTeam(nflSchedule)),
+    franchiseId,
+  );
 }
 
 /** How close to the result a missing ballot starts badging. */

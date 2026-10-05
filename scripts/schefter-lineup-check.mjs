@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Schefter pre-kickoff lineup check — Sunday-morning warnings.
+ * Schefter pre-kickoff lineup check — runs ahead of EVERY kickoff slot.
  *
  * Scans every franchise's submitted starting lineup in each lineup-playing
  * league (registry leagues without `bestBall: true`) and flags teams starting
@@ -39,18 +39,32 @@
  *   GROUPME_SERVICE_TOKEN        resolves the group's member list so unreached
  *                                owners can be @-mentioned. Absent = they are
  *                                named in plain text instead.
- *   UPSTASH_REDIS_REST_URL/_TOKEN (or KV_/STORAGE_ pairs) — once-per-day
- *                                guard, shared GroupMe daily budget, and the
- *                                franchise↔GroupMe owner map. Absent = no
- *                                guard (warn, still posts: the cron runs once
- *                                per Sunday) and no @-mentions.
+ *   UPSTASH_REDIS_REST_URL/_TOKEN (or KV_/STORAGE_ pairs) — per-week
+ *                                alerted set, shared GroupMe daily budget, and
+ *                                the franchise↔GroupMe owner map. Absent = no
+ *                                dedup (warn; every run re-alerts every still-
+ *                                fixable problem) and no @-mentions.
  *
- * Scheduling: .github/workflows/lineup-reminders.yml — Sundays ~9:15am PT,
- * September through January, plus workflow_dispatch. The cron is deliberately
- * wider than the season: the script's own isInSeason() gate is what keeps the
- * Sundays between September 1st and the Thursday opener quiet.
+ * Scheduling: .github/workflows/lineup-reminders.yml, dispatched ONLY by the
+ * Vercel cron bridge src/pages/api/cron/lineup-check.ts, ~75 minutes ahead of
+ * every distinct kickoff in the NFL schedule (Thursday, a London morning game,
+ * the Sunday slates, SNF, MNF). It used to be one GitHub schedule at Sunday
+ * 9:15am PT, which GitHub delivered after noon three Sundays running.
+ *
+ * Because it now runs several times a week, two rules keep it honest:
+ *  - LOCKED PLAYERS ARE DROPPED SILENTLY. A starter whose game has kicked off
+ *    cannot be swapped, so naming him helps nobody (dropLockedProblems).
+ *  - EACH PROBLEM IS ALERTED ONCE PER WEEK. A per-week Redis set records what
+ *    was delivered; later runs only carry what is new — a late inactive, a
+ *    status change (filterUnalerted). A problem is marked only once a channel
+ *    actually carried it, so a held chat post is retried by the next run.
+ *
+ * Quiet hours (11pm–7am PT) still hold the chat post, EXCEPT for a warning
+ * whose own deadline falls inside them — a 6:30am PT London game cannot wait
+ * for 7am. Push is never held.
  */
 
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -66,7 +80,6 @@ import { resolveFranchiseMentions } from './lib/groupme-mentions.mjs';
 import { buildFallbackPost } from './lib/reminder-fallback.mjs';
 import { buildAssistantPost, publishAssistantPosts } from './lib/schefter-assistant-post.mjs';
 import { fetchWithRetry } from './lib/fetch-retry.mjs';
-import { getPtDateString } from './lib/pt-date.mjs';
 import { isSeasonWindowOpen } from '../src/utils/pecking-order-season-window.mjs';
 import { isQuietHours, consumeDailyPost } from './lib/schefter-groupme-budget.mjs';
 import {
@@ -79,6 +92,11 @@ import {
   parseInjuries,
   parseRequiredStarters,
   parseStartingLineups,
+  parseKickoffsByTeam,
+  dropLockedProblems,
+  filterUnalerted,
+  warningAlertKeys,
+  warningDeadline,
 } from './lib/lineup-warnings.mjs';
 import { leagueYearFor } from './lib/schefter-league-year.mjs';
 
@@ -108,6 +126,9 @@ const warn = (...a) => console.warn(...a);
 // leagueYearFor lives in scripts/lib/schefter-league-year.mjs (shared with the
 // trade-bait lane); re-exported below so existing importers keep working.
 
+/** How far ahead of the opener the season gate admits a run (dispatch lead + slack). */
+const SEASON_GATE_LEAD_MS = 3 * 60 * 60 * 1000;
+
 /**
  * Lineup warnings only make sense while NFL games are being played. The
  * cron already only fires Sep–Jan; this guard makes an off-season
@@ -127,7 +148,12 @@ function isInSeason(now = new Date()) {
   // year keeps January correct without re-porting the rollover pivot — see
   // the same note on isChatBusySeason in schefter-scan.mjs.
   const year = now.getUTCFullYear();
-  return isSeasonWindowOpen(year, now) || isSeasonWindowOpen(year - 1, now);
+  const open = (at) => isSeasonWindowOpen(year, at) || isSeasonWindowOpen(year - 1, at);
+  // The check is dispatched AHEAD of kickoff, and the shared window opens AT
+  // the opener's kickoff — so both pre-opener dispatches would land outside
+  // it and check nothing. Asking about `now + lead` admits exactly that lead
+  // window, while a July dispatch still sees the offseason.
+  return open(now) || open(new Date(now.getTime() + SEASON_GATE_LEAD_MS));
 }
 
 // ── Fetch + feed helpers ────────────────────────────────────────────────────
@@ -190,7 +216,7 @@ async function generateLineupWarningIntro({ leagueName, week, teamCount, persona
     ? `\n\nPERSONA NOTES (voice reference only — never quote them):\n${personaExcerpt}`
     : '';
 
-  const system = `You are Claude Schefter — ${leagueName}'s AI beat reporter. It is Sunday morning, shortly before NFL kickoff. You are filing a pre-kickoff LINEUP WARNING to the league's GroupMe: some owners are starting players who are OUT, on IR, suspended, or on bye — or left starting slots empty.
+  const system = `You are Claude Schefter — ${leagueName}'s AI beat reporter. It is shortly before an NFL kickoff. You are filing a pre-kickoff LINEUP WARNING to the league's GroupMe: some owners are starting players who are OUT, on IR, suspended, or on bye — or left starting slots empty.
 
 Your output is ONLY the short intro line. A factual team-by-team list is appended after your intro by the system — do not write the list yourself.
 
@@ -240,7 +266,7 @@ HARD RULES (all of them, every time):
   }
 }
 
-// ── Redis (optional — once-per-day guard + shared GroupMe budget) ───────────
+// ── Redis (optional — per-week alerted set + shared GroupMe budget) ─────────
 
 let redisMemo;
 async function getRedis() {
@@ -259,7 +285,7 @@ async function getRedis() {
   return redisMemo;
 }
 
-const GUARD_TTL_SECONDS = 7 * 24 * 3600; // self-cleans; only today's value matters
+const ALERTED_TTL_SECONDS = 10 * 24 * 3600; // outlives its week, then self-cleans
 
 // ── Per-league check ────────────────────────────────────────────────────────
 
@@ -286,35 +312,69 @@ async function checkLeague(league, now = new Date()) {
     warn(`  [config] ${league.slug} has no Schefter league config — no GroupMe bot`);
   }
 
-  // Resolve the current NFL week (MFL's own clock, not local math).
+  // Resolve the current NFL week (MFL's own clock, not local math), and that
+  // week's kickoffs — what decides which starters are already locked.
   let week = WEEK_OVERRIDE;
+  let weekScheduleJson = null;
   if (!week) {
-    const schedule = await fetchJson(
+    weekScheduleJson = await fetchJson(
       `https://${MFL_API_HOST}/${year}/export?TYPE=nflSchedule&JSON=1`,
       'nflSchedule',
     );
-    week = parseInt(schedule?.nflSchedule?.week, 10);
+    week = parseInt(weekScheduleJson?.nflSchedule?.week, 10);
   }
   if (!Number.isFinite(week) || week < 1 || week > 18) {
     log(`  [skip] no valid regular-season NFL week (got ${week})`);
     return 'skipped';
   }
+  if (!weekScheduleJson) {
+    weekScheduleJson = await fetchJson(
+      `https://${MFL_API_HOST}/${year}/export?TYPE=nflSchedule&W=${week}&JSON=1`,
+      'nflSchedule week',
+    );
+  }
+  let kickoffsByTeam = parseKickoffsByTeam(weekScheduleJson);
+  // This run was dispatched AHEAD of a kickoff. If every game in MFL's
+  // "current" week is already behind us, MFL has not moved its week pointer
+  // yet (a Thursday opener) — the kickoff we are racing is next week's.
+  // Without this, every starter would read as locked and the run would go
+  // silent before exactly the game it was dispatched for.
+  const nowMs = now.getTime();
+  if (!WEEK_OVERRIDE && week < 18 && kickoffsByTeam.size > 0 &&
+      ![...kickoffsByTeam.values()].some((at) => at > nowMs)) {
+    week += 1;
+    log(`  [week] every MFL-current-week game has kicked off — checking Week ${week}`);
+    weekScheduleJson = await fetchJson(
+      `https://${MFL_API_HOST}/${year}/export?TYPE=nflSchedule&W=${week}&JSON=1`,
+      'nflSchedule next week',
+    );
+    kickoffsByTeam = parseKickoffsByTeam(weekScheduleJson);
+  }
+  if (kickoffsByTeam.size === 0) {
+    // Fail toward warning: without kickoffs nothing is treated as locked,
+    // which is the old behavior, never a silenced league.
+    warn('  [schedule] no kickoffs for this week — cannot drop locked players');
+  }
   log(`  Year ${year}, NFL Week ${week}`);
 
-  // Once-per-PT-day guard (skipped in dry-run; posting is the mutation).
-  const todayPt = getPtDateString(now);
-  const guardKey = schefterKey(league.navSlug, 'lineup_check:last_post_date');
+  // Per-week record of what has already been alerted (skipped in dry-run:
+  // posting is the mutation, and a preview should show the full picture).
+  // Scoped by league year AND week so a new week starts clean.
+  const alertedKey = schefterKey(league.navSlug, `lineup_check:alerted:${year}:w${week}`);
   let redis = null;
+  let alerted = new Set();
   if (!DRY_RUN) {
     redis = await getRedis();
     if (redis) {
-      const lastPosted = await redis.get(guardKey).catch(() => null);
-      if (lastPosted === todayPt) {
-        log(`  [skip] already posted today (${todayPt})`);
-        return 'skipped';
+      const raw = await redis.get(alertedKey).catch(() => null);
+      try {
+        const list = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        if (Array.isArray(list)) alerted = new Set(list.map(String));
+      } catch {
+        warn('  [redis] unreadable alerted set — treating as empty');
       }
     } else {
-      warn('  [redis] unavailable — once-per-day guard inactive');
+      warn('  [redis] unavailable — per-week dedup inactive, every run re-alerts');
     }
   }
 
@@ -348,7 +408,7 @@ async function checkLeague(league, now = new Date()) {
     ),
   ]);
 
-  const warnings = buildLineupWarnings({
+  const allWarnings = buildLineupWarnings({
     lineups,
     players: buildPlayerIndex(playersJson),
     injuries: parseInjuries(injuriesJson),
@@ -356,34 +416,54 @@ async function checkLeague(league, now = new Date()) {
     franchiseNames: parseFranchiseNames(leagueJson),
     requiredStarters: parseRequiredStarters(leagueJson),
   });
+  const actionable = dropLockedProblems(allWarnings, kickoffsByTeam, now);
+  const warnings = filterUnalerted(actionable, alerted);
 
   if (warnings.length === 0) {
-    log(`  ✅ All ${lineups.length} lineups clean — no post (silence is the good outcome)`);
+    log(
+      `  ✅ Nothing new to alert — ${allWarnings.length} flagged, ` +
+        `${allWarnings.length - actionable.length} locked by kickoff, ` +
+        `${actionable.length} already alerted this week — no post`,
+    );
     return 'clean';
   }
 
   log(`  ⚠️  ${warnings.length}/${lineups.length} franchises flagged`);
   for (const w of warnings) log(`     ${formatWarningLine(w)}`);
 
-  // Marks this league done for the day, whichever channel carried the warning.
+  // Marks the warnings a channel actually carried as alerted for the week.
   //
-  // `consumedChatSlot` is the load-bearing argument. The once-per-day guard
-  // should advance either way — the owners were warned, and a re-run must not
-  // warn them twice. The SHARED Schefter chat budget must not: it counts chat
-  // posts, is spent by the rumor and speculation lanes too, and stamping it
-  // also starts their 4-hour spacing hold. Burning a slot for a warning that
+  // Only DELIVERED warnings: an owner reached by push is done; an unreached
+  // owner is done only once the chat post lands. A chat post held for quiet
+  // hours therefore leaves them unmarked, and the next kickoff's run tries
+  // again — if their player is still unlocked by then.
+  //
+  // `consumedChatSlot` is load-bearing: the SHARED Schefter chat budget counts
+  // chat posts, is spent by the rumor and speculation lanes too, and stamping
+  // it also starts their 4-hour spacing hold. Burning a slot for a warning that
   // went out purely over push would silence a trade rumor for a post the chat
   // never saw.
-  const recordDelivery = async ({ consumedChatSlot }) => {
+  const recordDelivery = async ({ delivered, consumedChatSlot }) => {
     if (!redis) return;
     try {
-      await redis.set(guardKey, todayPt);
-      await redis.expire(guardKey, GUARD_TTL_SECONDS);
+      for (const w of delivered) for (const k of warningAlertKeys(w)) alerted.add(k);
+      await redis.set(alertedKey, JSON.stringify([...alerted].sort()));
+      await redis.expire(alertedKey, ALERTED_TTL_SECONDS);
       if (consumedChatSlot) await consumeDailyPost(redis, now, league.navSlug);
     } catch (err) {
       warn(`  [redis] failed to record delivery: ${err.message}`);
     }
   };
+
+  // Identity of THIS alert for one owner: a short hash of the problems it
+  // carries. Keeps a later run's push and feed post from replacing (tag) or
+  // colliding with (post id) an earlier one in the same week. Not "the next
+  // kickoff": before a 1:25pm game the 1:05pm game is still upcoming, so two
+  // slots' runs would share that identity. Since every run carries only
+  // problems not yet alerted, distinct runs carry distinct key sets; a re-run
+  // of the SAME set hashes identically and replaces, which is what we want.
+  const slotFor = (w) =>
+    createHash('sha1').update(warningAlertKeys(w).join('|')).digest('hex').slice(0, 10);
 
   // PUSH FIRST, AND TO EVERY FLAGGED OWNER. This is the real channel now: it
   // tells one owner about their own lineup, which is more useful and far less
@@ -397,8 +477,9 @@ async function checkLeague(league, now = new Date()) {
       title: w.noLineup ? 'No lineup submitted' : 'Check your lineup',
       body: formatWarningLine(w),
       url: '/lineup',
-      // Per franchise and per week, so a re-run replaces rather than stacks.
-      tag: `lineup-check-${w.franchiseId}`,
+      // Per franchise and per kickoff slot: a re-run for the same slot
+      // replaces, while a later slot's new problem does not erase this one.
+      tag: `lineup-check-${w.franchiseId}-${slotFor(w)}`,
     })),
     log: { log, warn },
   });
@@ -422,7 +503,9 @@ async function checkLeague(league, now = new Date()) {
         buildAssistantPost({
           league: schefterLeague,
           franchiseId: w.franchiseId,
-          kind: 'lineup',
+          // The slot keeps a later run's NEW problem from colliding with this
+          // week's earlier post id (a duplicate id is silently not written).
+          kind: `lineup-${slotFor(w)}`,
           year,
           week,
           headline: w.noLineup ? 'No lineup submitted' : 'Check your lineup',
@@ -454,21 +537,45 @@ async function checkLeague(league, now = new Date()) {
   // problem must never turn into a league that was not warned.
   const unreachedIds = new Set(push.undelivered ?? warnings.map((w) => w.franchiseId));
   const unreached = warnings.filter((w) => unreachedIds.has(w.franchiseId));
+  const reached = warnings.filter((w) => !unreachedIds.has(w.franchiseId));
 
   if (unreached.length === 0) {
     log(`  ✅ All ${warnings.length} flagged owners reached by push — no chat post.`);
-    // The push IS the delivery now, so it takes the once-per-day guard the
-    // chat post used to. Without this a second dispatch re-pushes an alert
-    // every owner has already acted on. No chat slot is spent: nothing posted.
-    await recordDelivery({ consumedChatSlot: false });
+    // The push IS the delivery, so it marks the week's alerted set. Without
+    // this the next slot's dispatch re-pushes an alert the owner already has.
+    // No chat slot is spent: nothing posted.
+    await recordDelivery({ delivered: reached, consumedChatSlot: false });
     return 'pushed';
   }
   log(`  ${unreached.length}/${warnings.length} flagged owners unreached by push — chat fallback`);
 
+  // Overnight quiet window (11pm–7am PT) still holds the chat post, with ONE
+  // exception: a warning whose own deadline falls INSIDE the quiet window — a
+  // 6:30am PT London game. Holding that until 7am means posting after the
+  // player is locked, which is the bug this lane was rebuilt to stop. During
+  // quiet hours the post therefore carries only those urgent warnings; the
+  // rest stay unmarked and ride the next kickoff slot's run, after 7am.
+  const quiet = isQuietHours(now);
+  const chatBatch = quiet
+    ? unreached.filter((w) => {
+        const deadline = warningDeadline(w, kickoffsByTeam, now);
+        return deadline != null && isQuietHours(new Date(deadline));
+      })
+    : unreached;
+
+  if (chatBatch.length === 0) {
+    warn('  [groupme] quiet hours (11pm–7am PT), nothing kicks off inside them — holding post; push already sent');
+    if (!DRY_RUN) await recordDelivery({ delivered: reached, consumedChatSlot: false });
+    return 'skipped';
+  }
+  if (chatBatch.length < unreached.length) {
+    log(`  [groupme] quiet hours — posting only the ${chatBatch.length} warning(s) whose game kicks off before 7am PT`);
+  }
+
   const intro = await generateLineupWarningIntro({
     leagueName: league.name,
     week,
-    teamCount: unreached.length,
+    teamCount: chatBatch.length,
     personaExcerpt: readPersonaExcerpt(league.navSlug),
   });
 
@@ -484,7 +591,7 @@ async function checkLeague(league, now = new Date()) {
 
   const post = buildFallbackPost({
     headline: intro,
-    unreached: unreached.map((w) => ({
+    unreached: chatBatch.map((w) => ({
       franchiseId: w.franchiseId,
       name: w.franchiseName,
       detail: formatWarningLine(w).replace(/^•\s*/, '').replace(`${w.franchiseName}: `, ''),
@@ -501,15 +608,6 @@ async function checkLeague(league, now = new Date()) {
         `${attachments.length > 0 ? attachments[0].user_ids.length : 0} mention(s)):\n---\n${text}\n---`,
     );
     return 'posted';
-  }
-
-  // Overnight quiet window still holds (a 3am manual dispatch shouldn't buzz
-  // phones); the spacing + daily-cap gates deliberately do NOT — a lineup
-  // warning is deadline-critical and useless after kickoff. We still consume
-  // a shared daily budget slot below so the afternoon scanners see it.
-  if (isQuietHours(now)) {
-    warn('  [groupme] quiet hours (11pm–7am PT) — holding post');
-    return 'skipped';
   }
 
   // EXEMPT from the daily cap, deliberately. This file's own note above calls
@@ -530,9 +628,19 @@ async function checkLeague(league, now = new Date()) {
     onFetchError: (err) => warn(`  [groupme] fetch failed: ${err.message}`),
   });
 
-  if (!result.posted) return 'skipped';
+  if (!result.posted) {
+    await recordDelivery({ delivered: reached, consumedChatSlot: false });
+    return 'skipped';
+  }
 
-  await recordDelivery({ consumedChatSlot: true });
+  // Only the owners the post actually NAMED. buildFallbackPost sheds names to
+  // fit GroupMe's length cap ("…and N more"); an owner it dropped was reached
+  // by neither channel and must stay unmarked so the next run retries them.
+  const named = new Set(post.named ?? []);
+  await recordDelivery({
+    delivered: [...reached, ...chatBatch.filter((w) => named.has(w.franchiseId))],
+    consumedChatSlot: true,
+  });
   return 'posted';
 }
 
