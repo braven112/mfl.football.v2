@@ -110,6 +110,9 @@ describe('dropLockedProblems — the 2026-10-04 post', () => {
   it('treats nothing as locked when the schedule is unavailable — fail toward warning', () => {
     const out = dropLockedProblems(posted, new Map(), at('2026-10-04T19:34:00Z'));
     expect(out.map((w) => w.franchiseId)).toEqual(['0003', '0007']);
+    // Team-level warnings too: an empty schedule is "unknown", not "week over".
+    const team = [warning('0002', [], { noLineup: true }), warning('0004', [], { emptySlots: 2 })];
+    expect(dropLockedProblems(team, new Map(), at('2026-10-04T19:34:00Z'))).toHaveLength(2);
   });
 });
 

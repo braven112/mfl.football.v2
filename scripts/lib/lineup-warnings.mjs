@@ -323,7 +323,10 @@ export function dropLockedProblems(warnings, kickoffsByTeam, now = new Date()) {
     const at = team ? kickoffsByTeam?.get?.(team) : undefined;
     return at != null && at <= t;
   };
-  const anyGameAhead = [...(kickoffsByTeam?.values?.() ?? [])].some((at) => at > t);
+  const all = [...(kickoffsByTeam?.values?.() ?? [])];
+  // No schedule at all means we cannot tell, not that the week is over —
+  // fail toward warning, as for the players above.
+  const anyGameAhead = all.length === 0 || all.some((at) => at > t);
 
   const out = [];
   for (const w of warnings ?? []) {
