@@ -1,20 +1,16 @@
 ---
 /**
- * Homepage for a package league (the first is archies).
+ * Homepage for a package league (the first is archies) — the SHARED league
+ * homepage (../home/LeagueHomePage.astro, the AFL's made shared), with this
+ * package's own cards in its slots:
  *
- * The same shape as TheLeague's and the AFL's homepages — a main column and
- * the league's news rail — built only from sections that work for any league:
- *
- *   hero              LeagueHero — the SAME hero TheLeague and the AFL render,
- *                     driven by this league's hero profile (league-hero/)
- *   Owners' Poll      only when the registry turns the poll on
- *   team snapshot     the signed-in owner's team
- *   What's Next       the league's MFL calendar + derived season dates
- *   standings         the viewer's division, or every division's top three
- *   transactions      the latest moves (site only; never posted to chat)
- *   quick links       the league's pages from the page directory
- *   What's New        platform updates, always present at the foot
- *   rail              the league's news desk (SchefterFeedCompact)
+ *   snapshot          the signed-in owner's team (session only — a package
+ *                     league never picks a team for a stranger)
+ *   after-snapshot    the Pecking Order card
+ *   whats-next        the league's MFL calendar + derived season dates
+ *   standings         the viewer's division, every division's top three, or
+ *                     the league's own seeding (archies: MAD POWER 99)
+ *   extras            the latest transactions (site only; never posted to chat)
  *
  * Every section reads data the route hands in (globs must be literal per
  * route), so a new package league is a thin route file and a registry entry.
@@ -22,19 +18,10 @@
  *
  * No client script: nothing here needs to re-init under the ClientRouter.
  */
-import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
-import SchefterFeedCompact from '../../shared/SchefterFeedCompact.astro';
-// The rail's styles: TheLeague's and the AFL's homepages import these at page
-// level, so SchefterFeedCompact does not — without them the rail renders raw.
-import '../../../styles/schefter-feed.css';
-import '../../../styles/schefter-feed-compact.css';
-import OwnersPollHomeCard from '../../shared/owners-poll/OwnersPollHomeCard.astro';
-import QuickLinks from '../../shared/hp-sections/QuickLinks.astro';
+import LeagueHomePage from '../home/LeagueHomePage.astro';
 import WhatsNext from '../WhatsNext.astro';
-import WhatsNewRow from '../WhatsNewRow.astro';
 import DivisionStandings from './DivisionStandings.astro';
 import MadQualifiers from './MadQualifiers.astro';
-import LeagueHero from '../league-hero/LeagueHero.astro';
 import PackageTeamSnapshot from './PackageTeamSnapshot.astro';
 import PackagePeckingOrderCard from './PackagePeckingOrderCard.astro';
 import type { PeckingOrderData } from '../PeckingOrderIssue.astro';
@@ -59,9 +46,10 @@ import { buildPackageLeagueEvents, packageWhatsNext, type MflCalendarEvent } fro
 import { resolveSchefterRail } from '../../../utils/schefter-rail-view';
 import { getWhatsNewEntriesForLeague } from '../../../utils/whats-new-entries';
 import { isSeasonWindowOpen } from '../../../utils/pecking-order-season-window.mjs';
-import { getLeagueTeamBrands } from '../../../utils/league-team-brands';
 import { getPersonaLabels } from '../../../utils/persona-server';
 import { loginUrlForRequest } from '../../../utils/login-redirect';
+import { readInstallState } from '../../../utils/app-install-state';
+import { showTestDriveHero } from '../../../utils/live-scoring-test-drive';
 import type { SchefterPost } from '../../../types/schefter';
 
 interface Props {
@@ -282,181 +270,146 @@ const heroLiveScoring =
           : {}),
       })
     : undefined;
+
+// The app-install banner: for a signed-in owner of THIS league who has not
+// installed the app, and only when the league sends notifications — the
+// banner exists to make them reachable (the same rule as the AFL's).
+const showInstallBanner =
+  !!mine && leagueHasFeature(league.slug, 'pushNotifications') && !(await readInstallState(league.id, mine));
+const testMode = !!Astro.url.searchParams.get('testDate');
 ---
 
-<TheLeagueLayout title={league.name}>
-  <div class="pkg-home">
-    <h1 class="pkg-home__sr">{league.name}</h1>
-    <div class="pkg-home__layout">
-      <div class="pkg-home__main">
-        <LeagueHero
-          league={league.slug}
-          state={heroState}
-          userFranchiseId={mine ?? undefined}
-          backdrop={heroBackdrop}
-          liveScoring={heroLiveScoring}
-        />
+<LeagueHomePage
+  leagueSlug={league.slug}
+  title={league.name}
+  installBanner={showInstallBanner ? { leagueName: league.shortName ?? league.name } : null}
+  effectiveDate={now}
+  testDriveHero={showTestDriveHero(league.slug, now)}
+  hero={{
+    state: heroState,
+    liveScoring: heroLiveScoring,
+    userFranchiseId: mine ?? undefined,
+    backdrop: heroBackdrop,
+  }}
+  ownersPoll={showOwnersPoll
+    ? {
+        issue: pollIssue ? { year: pollIssue.year, week: pollIssue.week, ...pollIssue.data } : null,
+        ballotHref: r(`${base}/owners-poll`),
+      }
+    : null}
+  quickLinksAuthenticated={!!authUser}
+  whatsNew={{
+    entries: whatsNew,
+    basePath: hide ? '' : base,
+    allReleasesLink: r(`${base}/whats-new`),
+    urlHost: `mfl.football${base}`,
+    lastVisitDate: Astro.cookies.get('whats_new_last_visit')?.value ?? null,
+    emptyText: 'New features for the league land here as they ship. Updates post every Monday.',
+    excludeId: heroState.content?.heroEntryId,
+  }}
+  testMode={testMode}
+  rail={{
+    label: `${labels.reportShort} feed`,
+    posts: rail.posts,
+    isAuthenticated: !!authUser,
+    userFranchiseId: mine ?? undefined,
+    personalized: rail.personalized,
+    forYouIds: rail.forYouIds,
+    watching: rail.watchingByPost,
+    emptyText: rail.emptyText ?? `Nothing on the wire yet. The Gauntlet lands every Wednesday.`,
+  }}
+>
+  <PackageTeamSnapshot
+    slot="snapshot"
+    snapshot={snapshot}
+    teams={teamsById}
+    teamHref={teamHref}
+    rosterHref={r(`${base}/rosters${mine ? `?team=${mine}` : ''}`)}
+    standingsHref={r(`${base}/standings`)}
+    signInHref={signInHref}
+    isAuthenticated={!!authUser}
+    rosterSize={rosterSize}
+  />
 
-        {showOwnersPoll && (
-          <OwnersPollHomeCard
-            issue={pollIssue ? { year: pollIssue.year, week: pollIssue.week, ...pollIssue.data } : null}
-            teams={getLeagueTeamBrands(league.slug)}
-            leagueSlug={league.slug}
-            ballotHref={r(`${base}/owners-poll`)}
-          />
-        )}
+  <PackagePeckingOrderCard
+    slot="after-snapshot"
+    issue={latestIssue}
+    teams={teamsById}
+    teamHref={teamHref}
+    columnHref={r(`${base}/pecking-order`)}
+    mine={mine}
+  />
 
-        <PackageTeamSnapshot
-          snapshot={snapshot}
-          teams={teamsById}
-          teamHref={teamHref}
-          rosterHref={r(`${base}/rosters${mine ? `?team=${mine}` : ''}`)}
-          standingsHref={r(`${base}/standings`)}
-          signInHref={signInHref}
-          isAuthenticated={!!authUser}
-          rosterSize={rosterSize}
-        />
+  <WhatsNext slot="whats-next" timeline={timeline} maxCards={2} calendarHref={r(`${base}/calendar`)} />
 
-        <PackagePeckingOrderCard
-          issue={latestIssue}
-          teams={teamsById}
-          teamHref={teamHref}
-          columnHref={r(`${base}/pecking-order`)}
-          mine={mine}
-        />
-
-        <WhatsNext timeline={timeline} maxCards={2} calendarHref={r(`${base}/calendar`)} />
-
-        {madSeeding ? (
-          <section class="pkg-home__card" aria-labelledby="pkg-home-standings">
-            <div class="pkg-home__section-head">
-              <h2 id="pkg-home-standings">MAD Power 99</h2>
-              <a class="pkg-home__more" href={r(`${base}/standings?view=league`)}>Full standings →</a>
-            </div>
-            {madTiers.length > 0 ? (
-              <MadQualifiers
-                tiers={madTiers}
-                rows={madRows}
-                playoffSize={madPlayoffSize(madSeeding)}
-                fullHref={r(`${base}/standings?view=league`)}
-                highlightFranchiseId={mine}
-              />
-            ) : (
-              <p class="pkg-home__empty">Standings appear once the first week is scored.</p>
-            )}
-          </section>
-        ) : (
-          <section class:list={['pkg-home__card', { 'pkg-home__standings--one': !!myGroup }]} aria-labelledby="pkg-home-standings">
-            <div class="pkg-home__section-head">
-              <h2 id="pkg-home-standings">{myGroup ? myGroup.division.name : 'Division leaders'}</h2>
-              <a class="pkg-home__more" href={r(`${base}/standings`)}>{myGroup ? 'All divisions →' : 'Full standings →'}</a>
-            </div>
-            {groups.length > 0 ? (
-              <DivisionStandings
-                groups={myGroup ? [myGroup] : groups}
-                compact={myGroup ? undefined : 3}
-                teamHrefBase={r(`${base}/brand`)}
-                teamSlugs={teamSlugs}
-                highlightFranchiseId={mine}
-              />
-            ) : (
-              <p class="pkg-home__empty">Standings appear once the first week is scored.</p>
-            )}
-          </section>
-        )}
-
-        <section class="pkg-home__card" aria-labelledby="pkg-home-tx">
-          <div class="pkg-home__section-head">
-            <h2 id="pkg-home-tx">Recent transactions</h2>
-            <a class="pkg-home__more" href={r(`${base}/transactions`)}>All transactions →</a>
-          </div>
-          {txRows.length > 0 ? (
-            <ul class="pkg-home__tx">
-              {txRows.map((t) => {
-                const team = teamsById[t.franchiseId];
-                return (
-                  <li>
-                    <span class="pkg-home__tx-when">{whenFmt.format(new Date(t.at))}</span>
-                    <span class="pkg-home__tx-body">
-                      <strong>{team?.name ?? `Team ${t.franchiseId}`}</strong>
-                      {' '}
-                      <span class="pkg-home__tx-kind">{KIND_LABEL[t.kind] ?? t.rawType}</span>
-                      {t.added.length > 0 && <span> · added {t.added.map(playerName).join(', ')}</span>}
-                      {t.dropped.length > 0 && <span> · dropped {t.dropped.map(playerName).join(', ')}</span>}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : (
-            <p class="pkg-home__empty">No transactions yet this season.</p>
-          )}
-        </section>
-
-        <QuickLinks league={league.slug} isAuthenticated={!!authUser} />
-
-        <WhatsNewRow
-          entries={whatsNew}
-          count={2}
-          basePath={hide ? '' : base}
-          allReleasesLink={r(`${base}/whats-new`)}
-          urlHost={`mfl.football${base}`}
-          lastVisitDate={Astro.cookies.get('whats_new_last_visit')?.value ?? null}
-          emptyText="New features for the league land here as they ship. Updates post every Monday."
-        />
+  {madSeeding ? (
+    <section slot="standings" class="pkg-home__card" aria-labelledby="pkg-home-standings">
+      <div class="pkg-home__section-head">
+        <h2 id="pkg-home-standings">MAD Power 99</h2>
+        <a class="pkg-home__more" href={r(`${base}/standings?view=league`)}>Full standings →</a>
       </div>
-
-      <aside class="pkg-home__rail" aria-label={`${labels.reportShort} feed`} tabindex="0">
-        <SchefterFeedCompact
-          posts={rail.posts}
-          isAuthenticated={!!authUser}
-          userFranchiseId={mine ?? undefined}
-          personalized={rail.personalized}
-          forYouIds={rail.forYouIds}
-          watching={rail.watchingByPost}
-          emptyText={rail.emptyText ?? `Nothing on the wire yet. The Gauntlet lands every Wednesday.`}
+      {madTiers.length > 0 ? (
+        <MadQualifiers
+          tiers={madTiers}
+          rows={madRows}
+          playoffSize={madPlayoffSize(madSeeding)}
+          fullHref={r(`${base}/standings?view=league`)}
+          highlightFranchiseId={mine}
         />
-      </aside>
+      ) : (
+        <p class="pkg-home__empty">Standings appear once the first week is scored.</p>
+      )}
+    </section>
+  ) : (
+    <section slot="standings" class:list={['pkg-home__card', { 'pkg-home__standings--one': !!myGroup }]} aria-labelledby="pkg-home-standings">
+      <div class="pkg-home__section-head">
+        <h2 id="pkg-home-standings">{myGroup ? myGroup.division.name : 'Division leaders'}</h2>
+        <a class="pkg-home__more" href={r(`${base}/standings`)}>{myGroup ? 'All divisions →' : 'Full standings →'}</a>
+      </div>
+      {groups.length > 0 ? (
+        <DivisionStandings
+          groups={myGroup ? [myGroup] : groups}
+          compact={myGroup ? undefined : 3}
+          teamHrefBase={r(`${base}/brand`)}
+          teamSlugs={teamSlugs}
+          highlightFranchiseId={mine}
+        />
+      ) : (
+        <p class="pkg-home__empty">Standings appear once the first week is scored.</p>
+      )}
+    </section>
+  )}
+
+  <section slot="extras" class="pkg-home__card" aria-labelledby="pkg-home-tx">
+    <div class="pkg-home__section-head">
+      <h2 id="pkg-home-tx">Recent transactions</h2>
+      <a class="pkg-home__more" href={r(`${base}/transactions`)}>All transactions →</a>
     </div>
-  </div>
-</TheLeagueLayout>
+    {txRows.length > 0 ? (
+      <ul class="pkg-home__tx">
+        {txRows.map((t) => {
+          const team = teamsById[t.franchiseId];
+          return (
+            <li>
+              <span class="pkg-home__tx-when">{whenFmt.format(new Date(t.at))}</span>
+              <span class="pkg-home__tx-body">
+                <strong>{team?.name ?? `Team ${t.franchiseId}`}</strong>
+                {' '}
+                <span class="pkg-home__tx-kind">{KIND_LABEL[t.kind] ?? t.rawType}</span>
+                {t.added.length > 0 && <span> · added {t.added.map(playerName).join(', ')}</span>}
+                {t.dropped.length > 0 && <span> · dropped {t.dropped.map(playerName).join(', ')}</span>}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    ) : (
+      <p class="pkg-home__empty">No transactions yet this season.</p>
+    )}
+  </section>
+</LeagueHomePage>
 
 <style>
-  .pkg-home { max-width: 1400px; margin: 0 auto; padding: 1.25rem 1rem 3rem; color: var(--page-text); container-type: inline-size; }
-  .pkg-home__sr {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
-  }
-  /* The TheLeague/AFL homepage grid: a main column and the news rail. */
-  .pkg-home__layout {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 380px;
-    gap: 1.5rem;
-    align-items: start;
-  }
-  .pkg-home__main { min-width: 0; display: flex; flex-direction: column; gap: 1.5rem; }
-  .pkg-home__main > :global(*) { margin-bottom: 0; }
-  .pkg-home__rail {
-    min-width: 0;
-    position: sticky;
-    top: 2rem;
-    max-height: calc(100dvh - var(--header-height, 3.5rem) - 2rem);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    scrollbar-width: thin;
-    border-radius: var(--radius-lg);
-  }
-  @container (max-width: 1024px) {
-    .pkg-home__layout { grid-template-columns: minmax(0, 1fr) 320px; gap: 1rem; }
-  }
-  @container (max-width: 880px) {
-    .pkg-home__layout { grid-template-columns: 1fr; }
-    .pkg-home__rail { position: static; max-height: none; overflow-y: visible; }
-  }
   .pkg-home__card {
     background: var(--card-bg);
     border: 1px solid var(--content-border);

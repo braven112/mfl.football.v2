@@ -1,5 +1,22 @@
 # AFL Homepage Hero
 
+## 2026-10-04 — the AFL's homepage is the shared one
+
+`src/components/shared/home/LeagueHomePage.astro` lays out the homepage the
+AFL and every package league render (TheLeague's stays its own): install
+banner, hero (or the preseason test drive), Owners' Poll, quick links, What's
+New minus the hero's entry, the `?testDate` debug strip, and the news rail.
+A league's own cards go in its slots — `snapshot`, `after-snapshot`,
+`whats-next`, `standings`, `extras`: the AFL's team snapshot, What's Next,
+conference preview and tiered standings; a package league's session-only
+snapshot, Pecking Order card, calendar timeline, division/MAD standings and
+transactions (PackageLeagueHome). Everything is resolved by the route and
+handed in; the `?myteam` cookie write stays in the AFL's route. The AFL moved
+with SSR output identical at six dates and screenshots pixel-identical. The
+keeper demo slot is still on its own KeeperHomePage — moving it needs a
+disposable demo build to verify.
+
+
 Insights for the AFL homepage hero. Since 2026-09-29 the AFL's hero IS the
 shared league hero: `src/utils/league-hero/` (resolver, views, profiles,
 casting, page plumbing) and `src/components/shared/league-hero/LeagueHero.astro`,

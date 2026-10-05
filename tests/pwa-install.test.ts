@@ -304,7 +304,9 @@ describe('the banner is a strip, not a column', () => {
 
   it.each([
     ['src/pages/theleague/index.astro', '.hp2'],
-    ['src/pages/afl-fantasy/index.astro', '.afl-hp'],
+    // The AFL's homepage is the shared league homepage now (package leagues
+    // render it too), so its grid lives in the shared component.
+    ['src/components/shared/home/LeagueHomePage.astro', '.league-hp'],
   ])('%s still places it inside a multi-column grid', (file, container) => {
     // If a homepage ever stops being a grid the rule above is harmless, but
     // while it IS one, this is the arrangement the rule exists for.
@@ -324,16 +326,28 @@ describe('owners who already have the app are not pitched it', () => {
    * installable — so the local 60-day dismissal is a banner to swipe away
    * again in every browser, forever. The fact belongs to the account.
    */
+  // The pages that decide whether to show it. The AFL's and package leagues'
+  // homepages hand that decision to the shared league homepage, which renders
+  // the banner only when given one.
   const pages = [
     'src/pages/theleague/index.astro',
     'src/pages/afl-fantasy/index.astro',
+    'src/components/shared/package-league/PackageLeagueHome.astro',
   ] as const;
 
   it.each(pages)('%s gates the banner on the stored record, not just auth', (file) => {
     const page = fs.readFileSync(path.resolve(__dirname, '..', file), 'utf8');
-    const banner = /\{([^}]*)<InstallAppPrompt variant="banner"/.exec(page)?.[1] ?? '';
+    const banner =
+      /\{([^}]*)<InstallAppPrompt variant="banner"/.exec(page)?.[1] ??
+      /installBanner=\{([^}]*)\{/.exec(page)?.[1] ??
+      '';
     expect(banner, 'banner render guard').toContain('showInstallBanner');
     expect(page, 'reads the account record').toContain('readInstallState');
+  });
+
+  it('the shared league homepage shows the banner only when a route hands it one', () => {
+    const shared = fs.readFileSync(path.resolve(__dirname, '../src/components/shared/home/LeagueHomePage.astro'), 'utf8');
+    expect(shared).toMatch(/\{installBanner && <InstallAppPrompt variant="banner"/);
   });
 
   it.each(pages)('%s scopes the record to its own league', (file) => {
@@ -343,7 +357,7 @@ describe('owners who already have the app are not pitched it', () => {
     // all, which must read as "not installed" rather than as someone else's.
     const guard = /const showInstallBanner =([\s\S]*?);\n/.exec(page)?.[1] ?? '';
     expect(guard, 'showInstallBanner').not.toBe('');
-    expect(guard).toMatch(/theLeagueFranchiseId|authAflFranchiseId/);
+    expect(guard).toMatch(/theLeagueFranchiseId|authAflFranchiseId|readInstallState\(league\.id, mine\)/);
   });
 
   it.each(pages)('%s takes a SAME-LEAGUE session, not merely a signed-in one', (file) => {

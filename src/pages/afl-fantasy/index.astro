@@ -1,6 +1,12 @@
 ---
 /**
- * AFL Homepage
+ * AFL Homepage — route over the shared league homepage
+ * (src/components/shared/home/LeagueHomePage.astro), which package leagues
+ * render too. What stays here is the AFL's own: its team preference
+ * (`?myteam` cookie write — a page-only operation), its conference-scoped
+ * hero and live scoring, and its cards (team snapshot with the spotlight
+ * tile, What's Next, conference playoff preview, tiered standings), passed
+ * into the page's slots.
  *
  * 2-column layout mirroring TheLeague's homepage:
  *   Left  — rotating hero (calendar-driven), team snapshot, conference-draft
@@ -16,24 +22,18 @@
  */
 export const prerender = false;
 
+import LeagueHomePage from '../../components/shared/home/LeagueHomePage.astro';
+
 import { getPersonaLabels } from '../../utils/persona-server';
-import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
-import SchefterFeedCompact from '../../components/shared/SchefterFeedCompact.astro';
-import LeagueHero from '../../components/shared/league-hero/LeagueHero.astro';
-import OwnersPollHomeCard from '../../components/shared/owners-poll/OwnersPollHomeCard.astro';
 // TEMPORARY (2026-08-20 → 08-23): for this preseason weekend the hero IS the
-// live-scoring test drive — it REPLACES AflHero rather than stacking above it.
-// Both halves gate on the same showTestDriveHero() call so the page can never
-// render two heroes or none. Removes itself past the window; delete with
+// live-scoring test drive — the shared page renders it INSTEAD of the hero,
+// gated on the one showTestDriveHero() call below. Delete with
 // src/utils/live-scoring-test-drive.ts.
-import LiveScoringTestDrive from '../../components/shared/LiveScoringTestDrive.astro';
 import { showTestDriveHero } from '../../utils/live-scoring-test-drive';
 import AflTeamSnapshot from '../../components/afl/hp-sections/AflTeamSnapshot.astro';
 import AflStandingsCompact from '../../components/afl/hp-sections/AflStandingsCompact.astro';
 import AflConferencePlayoffPreview from '../../components/afl/hp-sections/AflConferencePlayoffPreview.astro';
 import AflWhatsNext from '../../components/afl/hp-sections/AflWhatsNext.astro';
-import AflQuickLinks from '../../components/afl/hp-sections/AflQuickLinks.astro';
-import WhatsNewRow from '../../components/shared/WhatsNewRow.astro';
 
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 import feedData from '../../../data/afl-fantasy/schefter-feed.json';
@@ -50,7 +50,6 @@ import {
 import { getAflWhatsNextTimeline } from '../../utils/league-event-resolver';
 import { getAflLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
 import { isSeasonWindowOpen } from '../../utils/pecking-order-season-window.mjs';
-import { getLeagueTeamBrands } from '../../utils/league-team-brands';
 import { ensureLeaguePrefix } from '../../config/leagues';
 import { getCurrentNFLWeek } from '../../utils/current-week';
 import { findNextGame, franchiseSchedule, parseWeeklySchedule } from '../../utils/schedule-data.mjs';
@@ -65,14 +64,10 @@ import {
   resolveAFLTeamSelection,
 } from '../../utils/team-preferences';
 import { getAuthUser, franchiseIdForLeague } from '../../utils/auth';
-import InstallAppPrompt from '../../components/shared/pwa/InstallAppPrompt.astro';
 import { spriteUrl } from '../../utils/sprite-url';
 import { getLeagueBySlug } from '../../config/leagues';
 import { readInstallState } from '../../utils/app-install-state';
 import { resolveSchefterRail } from '../../utils/schefter-rail-view';
-
-import '../../styles/schefter-feed.css';
-import '../../styles/schefter-feed-compact.css';
 
 // ── Team preference resolution ──────────────────────────────────────────────
 const myTeamParam = Astro.url.searchParams.get('myteam');
@@ -410,167 +405,85 @@ if (heroState.kind === 'regular-season' && heroState.slot === 'live-scoring' && 
 const labels = await getPersonaLabels('afl-fantasy');
 ---
 
-<TheLeagueLayout title="AFL — American Football League">
-  <div class="afl-hp">
-    {showInstallBanner && <InstallAppPrompt variant="banner" leagueName="AFL Fantasy" leagueSlug="afl-fantasy" />}
-    <section class="afl-hp__main" aria-labelledby="afl-hp-hero-heading">
-      <h2 id="afl-hp-hero-heading" class="visually-hidden">League Overview</h2>
+<LeagueHomePage
+  leagueSlug={AFL.slug}
+  title="AFL — American Football League"
+  installBanner={showInstallBanner ? { leagueName: 'AFL Fantasy' } : null}
+  effectiveDate={effectiveDate}
+  testDriveHero={testDriveHero}
+  hero={{
+    state: heroState,
+    liveScoring: aflLiveScoring,
+    config: aflConfig,
+    standings: standingsFranchises,
+    userFranchiseId,
+    backdrop: heroBackdrop,
+  }}
+  ownersPoll={showOwnersPollCard
+    ? {
+        issue: ownersPollIssue ? { year: ownersPollIssue.year, week: ownersPollIssue.week, ownersPoll: ownersPollIssue.data.ownersPoll } : null,
+        ballotHref: ensureLeaguePrefix(AFL, '/owners-poll'),
+      }
+    : null}
+  whatsNew={{
+    entries: aflWhatsNew,
+    basePath: '/afl-fantasy',
+    allReleasesLink: '/afl-fantasy/whats-new',
+    spriteUrl,
+    lastVisitDate,
+    urlHost: 'afl-fantasy.com',
+    excludeId: heroWhatsNewId,
+  }}
+  testMode={testMode}
+  rail={{
+    label: `${labels.reportShort} feed`,
+    posts: rail.posts,
+    isAuthenticated: !!authUser,
+    userFranchiseId: authAflFranchiseId ?? undefined,
+    personalized: rail.personalized,
+    forYouIds: rail.forYouIds,
+    watching: rail.watchingByPost,
+    emptyText: rail.emptyText,
+  }}
+>
+  <AflTeamSnapshot
+    slot="snapshot"
+    userTeam={userTeam}
+    userConferenceName={userConferenceName}
+    record={record}
+    nextOpponent={nextOpponent}
+    rosterCount={rosterCount}
+    rosterYear={rosterYear === aflLeagueYear ? undefined : rosterYear}
+    rosterLimit={28}
+    spotlight={spotlight}
+    variant={inSeasonVariant ? 'in-season' : 'offseason'}
+  />
 
-      {testDriveHero ? (
-        <LiveScoringTestDrive slug={AFL.slug} referenceDate={effectiveDate} />
-      ) : (
-        <LeagueHero
-          league={AFL.slug}
-          state={heroState}
-          liveScoring={aflLiveScoring}
-          config={aflConfig}
-          standings={standingsFranchises}
-          userFranchiseId={userFranchiseId}
-          backdrop={heroBackdrop}
-        />
-      )}
+  <AflWhatsNext
+    slot="whats-next"
+    demoDate={effectiveDate}
+    maxCards={2}
+    excludeEventId={heroIsDraft ? undefined : heroEventId}
+  />
 
-      {showOwnersPollCard && (
-        <OwnersPollHomeCard
-          issue={ownersPollIssue ? { year: ownersPollIssue.year, week: ownersPollIssue.week, ownersPoll: ownersPollIssue.data.ownersPoll } : null}
-          teams={getLeagueTeamBrands(AFL.slug)}
-          leagueSlug={AFL.slug}
-          ballotHref={ensureLeaguePrefix(AFL, '/owners-poll')}
-        />
-      )}
+  {standingsFranchises.length > 0 && (
+    <AflConferencePlayoffPreview
+      slot="standings"
+      teams={aflConfig.teams}
+      standings={standingsFranchises}
+      config={aflConfig}
+      userFranchiseId={userFranchiseId}
+      conferenceCode={userConferenceId ?? '00'}
+    />
+  )}
 
-      <AflTeamSnapshot
-        userTeam={userTeam}
-        userConferenceName={userConferenceName}
-        record={record}
-        nextOpponent={nextOpponent}
-        rosterCount={rosterCount}
-        rosterYear={rosterYear === aflLeagueYear ? undefined : rosterYear}
-        rosterLimit={28}
-        spotlight={spotlight}
-        variant={inSeasonVariant ? 'in-season' : 'offseason'}
-      />
-
-      <AflWhatsNext
-        demoDate={effectiveDate}
-        maxCards={2}
-        excludeEventId={heroIsDraft ? undefined : heroEventId}
-      />
-
-      {standingsFranchises.length > 0 && (
-        <AflConferencePlayoffPreview
-          teams={aflConfig.teams}
-          standings={standingsFranchises}
-          config={aflConfig}
-          userFranchiseId={userFranchiseId}
-          conferenceCode={userConferenceId ?? '00'}
-        />
-      )}
-
-      {standingsFranchises.length > 0 && (
-        <AflStandingsCompact
-          teams={aflConfig.teams}
-          standings={standingsFranchises}
-          userFranchiseId={userFranchiseId}
-          relegationCount={4}
-        />
-      )}
-
-      <AflQuickLinks />
-
-      <WhatsNewRow
-        entries={aflWhatsNew}
-        count={2}
-        basePath="/afl-fantasy"
-        allReleasesLink="/afl-fantasy/whats-new"
-        spriteUrl={spriteUrl}
-        lastVisitDate={lastVisitDate}
-        urlHost="afl-fantasy.com"
-        excludeId={heroWhatsNewId}
-      />
-
-      {testMode && (
-        <div class="afl-hp__debug" id="afl-demo-nav">
-          <div class="afl-hp__debug-phase">
-            <code>Hero: {heroState.kind} · priority {heroState.priority} · ref {effectiveDate.toISOString()}</code>
-          </div>
-        </div>
-      )}
-    </section>
-
-    <aside class="afl-hp__sidebar" aria-label={`${labels.reportShort} feed`} tabindex="0">
-      <SchefterFeedCompact
-        posts={rail.posts}
-        isAuthenticated={!!authUser}
-        userFranchiseId={authAflFranchiseId ?? undefined}
-        personalized={rail.personalized}
-        forYouIds={rail.forYouIds}
-        watching={rail.watchingByPost}
-        emptyText={rail.emptyText}
-      />
-    </aside>
-  </div>
-</TheLeagueLayout>
-
-<style>
-  .afl-hp {
-    display: grid;
-    grid-template-columns: 1fr 380px;
-    gap: 1.5rem;
-    align-items: start;
-  }
-
-  .afl-hp__main {
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 2rem;
-  }
-
-  .afl-hp__sidebar {
-    min-width: 0;
-    position: sticky;
-    top: 2rem;
-    max-height: calc(100dvh - var(--header-height, 3.5rem) - 2rem);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    scrollbar-width: thin;
-    scrollbar-color: var(--sf-border, #e5e7eb) transparent;
-    border-radius: var(--radius-lg, 0.75rem);
-  }
-
-  .afl-hp__debug {
-    margin-top: 0.5rem;
-    padding: 0.5rem 0.75rem;
-    background: var(--color-gray-50, #f9fafb);
-    border: 1px dashed var(--content-border, #e2e8f0);
-    border-radius: var(--radius-md, 0.5rem);
-    font-size: var(--font-size-2xs);
-    color: var(--color-gray-500, #6b7280);
-  }
-
-  @container (max-width: 1024px) {
-    .afl-hp {
-      grid-template-columns: 1fr 320px;
-      gap: 1rem;
-    }
-  }
-
-  @container (max-width: 880px) {
-    .afl-hp {
-      grid-template-columns: 1fr;
-      gap: 1rem;
-    }
-
-    .afl-hp__sidebar {
-      position: static;
-      max-height: none;
-      overflow-y: visible;
-      /* Restore the breathing room above the sidebar once it stacks below the
-         main column. The desktop margin-top was removed because it offset the
-         two columns; in single-column flow there's no alignment to preserve, so
-         the extra separation is purely visual and worth keeping. */
-      margin-top: 2rem;
-    }
-  }
-</style>
+  {standingsFranchises.length > 0 && (
+    <AflStandingsCompact
+      slot="standings"
+      teams={aflConfig.teams}
+      standings={standingsFranchises}
+      userFranchiseId={userFranchiseId}
+      relegationCount={4}
+    />
+  )}
+</LeagueHomePage>
