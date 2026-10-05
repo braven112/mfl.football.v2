@@ -1,0 +1,36 @@
+---
+/**
+ * League news (the custom-site demo's keeper league) — thin route over the
+ * shared news page. Its posts are the demo build's fiction. Off the demo this
+ * slot does not exist (middleware 404); the feed is a glob for the same reason
+ * as the slot's other data.
+ */
+export const prerender = false;
+
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import SchefterNewsPage from '../../components/shared/SchefterNewsPage.astro';
+import { getAuthUser } from '../../utils/auth';
+import { keeperLeague } from '../../utils/keeper-slot';
+import { resolveSchefterNewsView } from '../../utils/schefter-news-view';
+import type { SchefterFeed } from '../../types/schefter';
+
+const league = keeperLeague();
+if (!league) return Astro.rewrite('/_not-found');
+
+const feed: SchefterFeed = Object.values(
+  import.meta.glob<SchefterFeed>('../../../data/keeper/schefter-feed.json', { eager: true, import: 'default' }),
+)[0] ?? { lastScanTimestamp: '', lastProcessedMflTimestamp: '0', posts: [] };
+
+const authUser = getAuthUser(Astro.request);
+const view = await resolveSchefterNewsView({ league, feed, authUser, url: Astro.url });
+---
+
+<TheLeagueLayout title="League News" og={view.og}>
+  <SchefterNewsPage
+    view={view}
+    isAuthenticated={!!authUser}
+    userId={authUser?.id}
+    schefterArticles={view.featuredArticles}
+    articleBasePath={`/${league.slug}/news`}
+  />
+</TheLeagueLayout>

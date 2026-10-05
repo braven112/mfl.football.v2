@@ -9,7 +9,9 @@
 
 import { describe, expect, it } from 'vitest';
 import { execFileSync } from 'child_process';
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
+import { LEAGUES } from '../src/config/leagues-data.mjs';
+import { isScrubbedTerm } from '../scripts/demo/lib/denylist.mjs';
 import path from 'path';
 import { loadSeasonFacts } from '../scripts/demo/lib/nfl-facts.mjs';
 import { simulateLeague, LEAGUE_RULES } from '../scripts/demo/lib/simulate.mjs';
@@ -99,18 +101,42 @@ describe('demo league generator', () => {
   });
 });
 
+/** Every registry league's config — the real leagues (no demo slot is registered here). */
+const REAL_LEAGUE_CONFIGS = Object.values(LEAGUES as Record<string, { configPath?: string }>)
+  .map((l) => l.configPath)
+  .filter((p): p is string => !!p && existsSync(p));
+
 describe('demo identities', () => {
   const real = JSON.parse(readFileSync('src/data/theleague.config.json', 'utf8'));
   const registry = JSON.parse(readFileSync('src/data/owners-registry.json', 'utf8'));
+  const configTeams = (file: string) => JSON.parse(readFileSync(file, 'utf8')).teams ?? [];
+  /**
+   * Real club names, every era. TheLeague's and the AFL's in full; every later
+   * league's only where the scrub would replace them: it denies them all, and
+   * Archie's "Lumberjacks" turned the keeper demo's Northshore Lumberjacks into
+   * "Northshore Guest Club 158" on every page. A later league's short or
+   * generic word ("Goats", "Scorpions") is one the scrub leaves alone, so a
+   * demo club may wear it.
+   */
+  const realClubNames = (fields: string[]) => {
+    const names: string[] = [];
+    for (const file of REAL_LEAGUE_CONFIGS) {
+      const strict = /theleague|afl-fantasy/.test(file);
+      for (const t of configTeams(file)) {
+        for (const era of [t, ...(t.history ?? [])]) {
+          for (const f of fields) {
+            const n = era[f];
+            if (typeof n === 'string' && n && (strict || isScrubbedTerm(n))) names.push(n);
+          }
+        }
+      }
+    }
+    return names;
+  };
 
   it('shares no franchise or owner name with any real league', () => {
     const realNames = new Set<string>();
-    const afl = JSON.parse(readFileSync('data/afl-fantasy/afl.config.json', 'utf8'));
-    for (const t of [...real.teams, ...afl.teams]) {
-      for (const era of [t, ...(t.history ?? [])]) {
-        for (const n of [era.name, era.nameMedium, era.nameShort, era.abbrev]) if (n) realNames.add(n.toLowerCase());
-      }
-    }
+    for (const n of realClubNames(['name', 'nameMedium', 'nameShort', 'abbrev'])) realNames.add(n.toLowerCase());
     for (const p of registry.people) realNames.add(String(p.displayName).toLowerCase());
     // The owner's explicit exceptions, and NFL nicknames an NFL-art club wears.
     for (const n of [...APPROVED_REAL_NAMES, ...NFL_NICKNAMES]) realNames.delete(n.toLowerCase());
@@ -123,24 +149,38 @@ describe('demo identities', () => {
     }
   });
 
-  it('uses no real name even as one word of a big-league club or owner', () => {
+  it('uses no real name even as one word of a demo club or owner', () => {
     // The build's scrub replaces real names word by word, so a club named
     // after a real one's WORD ships mangled ("Zephyr Point Stags" came out
     // "Guest Club 231 Point Stags").
     const words = new Set<string>();
-    const afl = JSON.parse(readFileSync('data/afl-fantasy/afl.config.json', 'utf8'));
-    for (const t of [...real.teams, ...afl.teams]) {
-      for (const era of [t, ...(t.history ?? [])]) {
-        for (const n of [era.name, era.nameMedium, era.nameShort]) if (n && !/\s/.test(n) && n.length >= 4) words.add(n.toLowerCase());
-      }
-    }
+    for (const n of realClubNames(['name', 'nameMedium', 'nameShort'])) if (!/\s/.test(n) && n.length >= 4) words.add(n.toLowerCase());
     for (const n of [...APPROVED_REAL_NAMES, ...NFL_NICKNAMES]) {
       for (const w of n.toLowerCase().split(/\s+/)) words.delete(w);
     }
-    for (const f of BIGLEAGUE_FRANCHISES) {
-      for (const w of `${f.name} ${f.owner}`.toLowerCase().split(/\s+/)) {
-        expect(words.has(w.replace(/s$/, '')) || words.has(w), `${f.name} / ${f.owner}: "${w}" is a real name`).toBe(false);
+    for (const f of [...DEMO_FRANCHISES, ...BESTBALL_FRANCHISES, ...KEEPER_FRANCHISES, ...BIGLEAGUE_FRANCHISES]) {
+      const owner = (f as { owner?: string }).owner ?? '';
+      for (const w of `${f.name} ${owner}`.toLowerCase().split(/\s+/).filter(Boolean)) {
+        expect(words.has(w.replace(/s$/, '')) || words.has(w), `${f.name} / ${owner}: "${w}" is a real name`).toBe(false);
       }
+    }
+  });
+
+  it('names no demo club with text the scrub would replace', () => {
+    // The scrub's own rule: every real league's scrubbed term, matched as a
+    // case-sensitive SUBSTRING (replaceTerms has no word boundary), so
+    // Archie's "Mammoth" mangled the big league's "Ravenmoor Mammoths" too.
+    const terms = new Set<string>();
+    for (const file of REAL_LEAGUE_CONFIGS) {
+      for (const t of configTeams(file)) {
+        for (const era of [t, ...(t.history ?? [])]) {
+          for (const n of [era.name, era.nameMedium, era.nameShort]) if (typeof n === 'string' && isScrubbedTerm(n)) terms.add(n);
+        }
+      }
+    }
+    for (const f of [...DEMO_FRANCHISES, ...BESTBALL_FRANCHISES, ...KEEPER_FRANCHISES, ...BIGLEAGUE_FRANCHISES]) {
+      const text = [f.name, f.nameShort, (f as { nameMedium?: string }).nameMedium].filter(Boolean).join(' | ');
+      for (const term of terms) expect(text.includes(term), `${f.name}: contains "${term}"`).toBe(false);
     }
   });
 
@@ -193,6 +233,16 @@ describe('demo build isolation', () => {
       failed = String((err as { stderr?: string }).stderr);
     }
     expect(failed).toContain('DELETES the real league data');
+  });
+
+  // The demo build runs the site's own scripts by path, and only on a demo
+  // deploy — so a rename elsewhere breaks it with nothing else red. The
+  // free-agents rename (Sep 2026) failed every demo build that way.
+  it('every site script the demo build runs exists', () => {
+    for (const file of ['scripts/demo/build-demo-data.mjs', 'scripts/demo/postbuild.mjs']) {
+      const scripts = [...readFileSync(file, 'utf8').matchAll(/'(scripts\/[\w/.-]+\.mjs)'/g)].map((m) => m[1]);
+      for (const script of scripts) expect(existsSync(script), `${file} runs ${script}`).toBe(true);
+    }
   });
 });
 

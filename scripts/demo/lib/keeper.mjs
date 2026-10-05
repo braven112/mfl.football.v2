@@ -23,7 +23,7 @@ export const KEEPER_CONFERENCE = { code: '00', name: 'The Keeper League', short:
 
 /** id, name, short name, abbrev, owner, division index, primary, secondary. */
 const RAW = [
-  ['0001', 'Northshore Lumberjacks', 'Lumberjacks', 'NSL', 'Wren Calloway', 0, '#355e3b', '#e8d8b0'],
+  ['0001', 'Northshore Loggers', 'Loggers', 'NSL', 'Wren Calloway', 0, '#355e3b', '#e8d8b0'],
   ['0002', 'Pinecrest Owls', 'Owls', 'PCO', 'Dmitri Hale', 0, '#4b3f72', '#f2c14e'],
   ['0003', 'Stillwater Otters', 'Otters', 'SWO', 'Jo Ramsdell', 0, '#1f6f8b', '#d9eef2'],
   ['0004', 'Birchwood Beavers', 'Beavers', 'BWB', 'Cal Petrakis', 0, '#8c5a2b', '#f4e1c1'],

@@ -14,6 +14,8 @@ interface Props {
   teamHrefBase?: string;
   /** Map franchiseId → brand-page slug, required with `teamHrefBase`. */
   teamSlugs?: Record<string, string>;
+  /** A team's link, for a league whose teams have no brand page; wins over `teamHrefBase`. */
+  teamHref?: (franchiseId: string) => string | null;
   /** Show only this many rows per division. */
   compact?: number;
   /** The viewer's franchise, highlighted when present. */
@@ -26,13 +28,14 @@ const {
   groups,
   teamHrefBase,
   teamSlugs = {},
+  teamHref,
   compact,
   highlightFranchiseId = null,
   showVictoryPoints = true,
 } = Astro.props;
 
 const hrefFor = (id: string) =>
-  teamHrefBase && teamSlugs[id] ? `${teamHrefBase}/${teamSlugs[id]}` : null;
+  teamHref ? teamHref(id) : teamHrefBase && teamSlugs[id] ? `${teamHrefBase}/${teamSlugs[id]}` : null;
 const fmt = (n: number) => n.toFixed(2).replace(/\.00$/, '');
 ---
 

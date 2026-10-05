@@ -19,6 +19,7 @@
  * No client script: nothing here needs to re-init under the ClientRouter.
  */
 import LeagueHomePage from '../home/LeagueHomePage.astro';
+import type { QuickLinkPage } from '../hp-sections/QuickLinks.astro';
 import WhatsNext from '../WhatsNext.astro';
 import DivisionStandings from './DivisionStandings.astro';
 import MadQualifiers from './MadQualifiers.astro';
@@ -26,6 +27,7 @@ import PackageTeamSnapshot from './PackageTeamSnapshot.astro';
 import PackagePeckingOrderCard from './PackagePeckingOrderCard.astro';
 import type { PeckingOrderData } from '../PeckingOrderIssue.astro';
 import { getLeagueBySlug, leagueHasFeature, type CanonicalLeagueSlug } from '../../../config/leagues';
+import { packageLeagueHasPath } from '../../../config/package-league-routes.mjs';
 import { buildLiveScoringHeroProps } from '../../../utils/live-scoring-hero-props';
 import { getAuthUser, franchiseIdForLeague } from '../../../utils/auth';
 import { groupStandingsByDivision, rosterPlayerIds, standingsRows as feedStandingsRows, type PackageDivision, type PackageTeam } from '../../../utils/package-league';
@@ -69,6 +71,15 @@ interface Props {
    */
   peckingOrderIssues?: Record<string, any>;
   posts: SchefterPost[];
+  /**
+   * Whether the league has a page at an unprefixed path (`/calendar`), so no
+   * card links a page that is not there. A package league's routes come from
+   * its features (the default); the demo's keeper slot, which renders this
+   * page without being a package league, names its own.
+   */
+  hasPage?: (path: string) => boolean;
+  /** The Explore cards, for a league with no page-directory entries (the keeper slot). */
+  quickLinks?: QuickLinkPage[];
 }
 
 const {
@@ -83,8 +94,11 @@ const {
   playoffFeeds,
   peckingOrderIssues = {},
   posts,
+  hasPage: hasPageProp,
+  quickLinks,
 } = Astro.props;
 const league = getLeagueBySlug(leagueSlug)!;
+const hasPage = hasPageProp ?? ((p: string) => packageLeagueHasPath(league, p));
 const hide = Astro.locals.hideLeaguePrefix ?? false;
 const r = (p: string) => resolveLeaguePath(p, hide);
 const base = `/${league.slug}`;
@@ -97,7 +111,7 @@ const mine = franchiseIdForLeague(authUser, league.id);
 const teamsById: Record<string, PackageTeam> = Object.fromEntries(config.teams.map((t) => [t.franchiseId, t]));
 const teamSlugs = Object.fromEntries(config.teams.map((t) => [t.franchiseId, franchiseSlug(t)]));
 const teamHref = (id: string) =>
-  leagueHasBrandBook(league.slug) && teamSlugs[id] ? r(`${base}/brand/${teamSlugs[id]}`) : r(`${base}/rosters?team=${id}`);
+  leagueHasBrandBook(league.slug) && teamSlugs[id] ? r(`${base}/brand/${teamSlugs[id]}`) : r(`${base}/rosters?franchise=${id}`);
 const signInHref = loginUrlForRequest(Astro, league);
 
 // ── Results-shaped data: the SEASON year ─────────────────────────────────────
@@ -112,7 +126,9 @@ const scheduleFeed = scheduleYear ? await loadSeasonFeed(scheduleFeeds, schedule
 const leagueYear = getLeagueYearForSlug(league.slug, now);
 const rosterYear = resolveSeason(null, seasonsFromGlob(rosterFeeds), leagueYear);
 const rostersFeed = rosterYear ? await loadSeasonFeed(rosterFeeds, rosterYear) : null;
-const leagueFeed = (rosterYear ? await loadSeasonFeed(leagueFeeds, rosterYear) : null) as { league?: { rosterSize?: string } } | null;
+const leagueFeed = (rosterYear ? await loadSeasonFeed(leagueFeeds, rosterYear) : null) as
+  | { league?: { rosterSize?: string; playerLimitUnit?: string } }
+  | null;
 const rosterSize = Number(leagueFeed?.league?.rosterSize) || null;
 
 // ── Team snapshot ───────────────────────────────────────────────────────────
@@ -207,10 +223,13 @@ const rail = await resolveSchefterRail({ league, posts, authUser, now });
 const whatsNew = getWhatsNewEntriesForLeague(league.navSlug);
 
 // ── The hero: the shared league hero, from this league's feeds ─────────────
-// Each division is a player POOL (MFL `playerLimitUnit: DIVISION`): the same
-// player is on up to nine rosters, so the glow's franchise is scoped to the
-// viewer's own division — see hero-franchise-accent.ts.
+// Where each division is a player POOL (MFL `playerLimitUnit: DIVISION`, as in
+// Archie's) the same player is on up to nine rosters, so the glow's franchise
+// is scoped to the viewer's own division — see hero-franchise-accent.ts. A
+// league-wide pool (`LEAGUE`, the keeper demo) has no such scope.
 const divisionOf = (franchiseId: string) => teamsById[franchiseId]?.divisionId ?? null;
+const poolOf = (franchiseId: string) =>
+  leagueFeed?.league?.playerLimitUnit === 'DIVISION' ? divisionOf(franchiseId) : null;
 // The Pecking Order slot promotes THIS week's issue only — the one about the
 // week in the books. Last week's issue on this Tuesday would be old news
 // under a "power rankings are out" headline.
@@ -227,8 +246,8 @@ const heroState = await resolveLeagueHomeHero({
   authUser,
   authFranchiseId: mine,
   castFranchiseId: mine ?? undefined,
-  userPoolId: mine ? divisionOf(mine) ?? undefined : undefined,
-  poolOf: divisionOf,
+  userPoolId: mine ? poolOf(mine) ?? undefined : undefined,
+  poolOf,
   posts,
   waiverCalendar: ((await loadSeasonFeed(calendarFeeds, leagueYear)) as unknown[] | null) ?? [],
   leagueYear,
@@ -265,8 +284,8 @@ const heroLiveScoring =
         origin: Astro.url,
         teams: config.teams as any,
         userFranchiseId: mine ?? undefined,
-        ...(mine && divisionOf(mine)
-          ? { scopeFranchiseIds: config.teams.filter((t) => t.divisionId === divisionOf(mine)).map((t) => t.franchiseId) }
+        ...(mine && poolOf(mine)
+          ? { scopeFranchiseIds: config.teams.filter((t) => t.divisionId === poolOf(mine)).map((t) => t.franchiseId) }
           : {}),
       })
     : undefined;
@@ -298,7 +317,8 @@ const testMode = !!Astro.url.searchParams.get('testDate');
       }
     : null}
   quickLinksAuthenticated={!!authUser}
-  whatsNew={{
+  quickLinks={quickLinks}
+  whatsNew={hasPage('/whats-new') ? {
     entries: whatsNew,
     basePath: hide ? '' : base,
     allReleasesLink: r(`${base}/whats-new`),
@@ -306,7 +326,7 @@ const testMode = !!Astro.url.searchParams.get('testDate');
     lastVisitDate: Astro.cookies.get('whats_new_last_visit')?.value ?? null,
     emptyText: 'New features for the league land here as they ship. Updates post every Monday.',
     excludeId: heroState.content?.heroEntryId,
-  }}
+  } : null}
   testMode={testMode}
   rail={{
     label: `${labels.reportShort} feed`,
@@ -324,7 +344,7 @@ const testMode = !!Astro.url.searchParams.get('testDate');
     snapshot={snapshot}
     teams={teamsById}
     teamHref={teamHref}
-    rosterHref={r(`${base}/rosters${mine ? `?team=${mine}` : ''}`)}
+    rosterHref={r(`${base}/rosters${mine ? `?franchise=${mine}` : ''}`)}
     standingsHref={r(`${base}/standings`)}
     signInHref={signInHref}
     isAuthenticated={!!authUser}
@@ -340,7 +360,7 @@ const testMode = !!Astro.url.searchParams.get('testDate');
     mine={mine}
   />
 
-  <WhatsNext slot="whats-next" timeline={timeline} maxCards={2} calendarHref={r(`${base}/calendar`)} />
+  <WhatsNext slot="whats-next" timeline={timeline} maxCards={2} calendarHref={hasPage('/calendar') ? r(`${base}/calendar`) : null} />
 
   {madSeeding ? (
     <section slot="standings" class="pkg-home__card" aria-labelledby="pkg-home-standings">
@@ -370,8 +390,8 @@ const testMode = !!Astro.url.searchParams.get('testDate');
         <DivisionStandings
           groups={myGroup ? [myGroup] : groups}
           compact={myGroup ? undefined : 3}
-          teamHrefBase={r(`${base}/brand`)}
-          teamSlugs={teamSlugs}
+          teamHref={teamHref}
+          showVictoryPoints={groups.some((g) => g.rows.some((row) => row.victoryPoints != null))}
           highlightFranchiseId={mine}
         />
       ) : (
@@ -383,7 +403,7 @@ const testMode = !!Astro.url.searchParams.get('testDate');
   <section slot="extras" class="pkg-home__card" aria-labelledby="pkg-home-tx">
     <div class="pkg-home__section-head">
       <h2 id="pkg-home-tx">Recent transactions</h2>
-      <a class="pkg-home__more" href={r(`${base}/transactions`)}>All transactions →</a>
+      {hasPage('/transactions') && <a class="pkg-home__more" href={r(`${base}/transactions`)}>All transactions →</a>}
     </div>
     {txRows.length > 0 ? (
       <ul class="pkg-home__tx">

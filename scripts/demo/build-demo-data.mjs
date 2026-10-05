@@ -38,6 +38,7 @@ import { collectDenylist } from './lib/denylist.mjs';
 import { bestBallArtFiles, bestBallAssets, bestBallConfig, bestBallDraft, bestBallSeason, BESTBALL_FRANCHISES } from './lib/bestball.mjs';
 import { WAR_PAINT_PALETTES, warPaintFiles } from './lib/war-paint.mjs';
 import { primeArt } from './lib/art-mix.mjs';
+import { fictionalSchefterPosts } from './lib/schefter-fiction.mjs';
 import { KEEPER_DIVISIONS, KEEPER_FRANCHISES, KEEPER_LEAGUE_NAME, keeperArtFiles, keeperConfig, keeperLeagueFeed } from './lib/keeper.mjs';
 import { scrubIdentity } from './lib/scrub.mjs';
 import {
@@ -318,10 +319,31 @@ function writeKeeper({ years, facts, currentYear, currentWeek, nflFacts, generat
     }
   }
   writeJson(path.join(ROOT, league.configPath), keeperConfig({ leagueId: league.id }));
-  writeJson(path.join(ROOT, league.schefterFeedPath), { posts: [] });
+  // Its own desk: last season's and this season's trades and weekly recaps, so
+  // the homepage's news rail reads like a live league's. No waiver stories —
+  // their copy is about cap dollars, and this league has none.
+  const rng = createRng(`${SEED}/keeper-schefter`);
+  const posts = seasons
+    .filter((s) => s.year >= currentYear - 1)
+    .flatMap((season) =>
+      fictionalSchefterPosts({
+        season,
+        franchises: KEEPER_FRANCHISES,
+        rng,
+        league: league.slug,
+        links: { trade: (t) => `/${league.slug}/rosters?franchise=${t.franchise2}` },
+        waivers: false,
+      }),
+    )
+    .sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+  writeJson(path.join(ROOT, league.schefterFeedPath), {
+    lastScanTimestamp: generatedAt,
+    lastProcessedMflTimestamp: '0',
+    posts,
+  });
   for (const [rel, contents] of keeperArtFiles()) writeText(path.join(PUBLIC, rel), contents);
-  runNode('scripts/compute-afl-free-agents.mjs', ['--league', 'keeper']);
-  log(`keeper league: ${seasons.length} seasons, ${KEEPER_FRANCHISES.length} teams written`);
+  runNode('scripts/compute-free-agents.mjs', ['--league', 'keeper']);
+  log(`keeper league: ${seasons.length} seasons, ${KEEPER_FRANCHISES.length} teams, ${posts.length} news posts written`);
 }
 
 /**
@@ -374,7 +396,7 @@ function writeBigLeague({ years, facts, currentYear, currentWeek, nflFacts, gene
   writeJson(path.join(dir, 'awards-history.json'), bigLeagueAwards(seasons, tierHistory));
   writeJson(path.join(ROOT, league.schefterFeedPath), { posts: [] });
   for (const [rel, contents] of bigLeagueArtFiles()) writeText(path.join(PUBLIC, rel), contents);
-  runNode('scripts/compute-afl-free-agents.mjs', []);
+  runNode('scripts/compute-free-agents.mjs', ['--league', 'afl-fantasy']);
   log(`big league: ${seasons.length} seasons, ${BIGLEAGUE_FRANCHISES.length} teams written`);
 }
 
