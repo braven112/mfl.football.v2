@@ -301,6 +301,8 @@ export interface HeaderPlayer {
   name: string;
   position: string;
   headshot: string | null;
+  /** The player's NFL club code, for the spotlight's logo watermark. */
+  nflTeam: string | null;
   /** The one number the card prints — "$7.2M", or "WR3". */
   statValue: string;
   /** What that number is. */
@@ -312,6 +314,7 @@ interface CandidatePlayer {
   name?: string;
   position?: string;
   headshot?: string | null;
+  nflTeam?: string | null;
   salary?: string | number | null;
   points?: string | number | null;
   [key: string]: any;
@@ -322,6 +325,7 @@ const toPlayer = (p: CandidatePlayer, statValue: string, statLabel: string): Hea
   name: String(p.name ?? 'Unknown'),
   position: String(p.position ?? ''),
   headshot: p.headshot ? String(p.headshot) : null,
+  nflTeam: p.nflTeam ? String(p.nflTeam) : null,
   statValue,
   statLabel,
 });
