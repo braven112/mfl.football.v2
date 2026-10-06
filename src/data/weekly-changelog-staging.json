@@ -100,7 +100,7 @@
     {
       "date": "2026-10-05",
       "type": "style-tweak",
-      "summary": "The featured player on every roster header now gets the Free Agents spotlight treatment: a big headshot over his NFL team's logo.",
+      "summary": "The featured player on every roster header now gets the Free Agents spotlight treatment: a big headshot over his NFL team's logo in white.",
       "impact": "user",
       "area": "rosters",
       "league": "both"
@@ -149,6 +149,14 @@
       "impact": "user",
       "area": "standings",
       "league": "both"
+    },
+    {
+      "date": "2026-10-05",
+      "type": "bug-fix",
+      "summary": "After switching teams from the roster header's crest row, the browser's Back button now returns to the team you came from instead of the one the page first opened on.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "theleague"
     }
   ]
 }

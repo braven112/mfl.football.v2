@@ -33,7 +33,7 @@ import { resolveRosterHeaderSkin, ROSTER_PLATE_INK } from '../../../utils/roster
 import type { BuildFranchiseBandBrandsOptions } from '../../../utils/franchise-band-brand';
 import type { CanonicalLeagueSlug } from '../../../config/leagues';
 import type { RailWeek, HeaderPlayer } from '../../../utils/roster-header-data';
-import { nflLogoUrl } from '../../../utils/live/nfl-logo-url';
+import { nflWhiteLogoUrl } from '../../../utils/live/nfl-logo-url';
 import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD } from '../../../constants/roster-constants';
 import type { StandingsSummary } from '../../../utils/standings-summary';
 
@@ -153,10 +153,11 @@ const skin = resolveRosterHeaderSkin(franchiseId, leagueSlug, throwback);
 const plateName = skin?.name || teamName;
 
 /* The featured player's NFL club mark, behind his headshot — the Free Agents
-   hero's spotlight. The DARK cut, asked for directly: the plate is a dark club
-   colour in BOTH themes, so the html.dark swap never fires for a light-theme
-   viewer and the light mark would dissolve into the band. */
-const featureLogo = featuredPlayer?.nflTeam ? nflLogoUrl(featuredPlayer.nflTeam, 'dark') : '';
+   hero's spotlight. The WHITE KNOCKOUT, asked for directly: the plate is a
+   dark club colour in BOTH themes, so the html.dark swap never fires for a
+   light-theme viewer, and a full-colour cut puts the NFL club's palette in a
+   fight with the franchise's band. One white ink reads on every band. */
+const featureLogo = featuredPlayer?.nflTeam ? nflWhiteLogoUrl(featuredPlayer.nflTeam) : '';
 /* The Free Agents hero's headshot fallback: an ESPN NFL 404 tries the same
    id's college headshot, then hides — never a low-res MFL photo standing
    that large. Hiding sets an inline style, so a later swap that changes the

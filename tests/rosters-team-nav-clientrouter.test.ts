@@ -201,3 +201,41 @@ describe('the roster page never captures the header markup it swaps', () => {
     expect(PAGE).toMatch(/rosterHeader\.querySelectorAll\('\.rhdr-teams__crest'\)/);
   });
 });
+
+/**
+ * Back after an in-page crest switch.
+ *
+ * A crest click repaints in place and pushes a history entry. Back onto that
+ * entry is a ClientRouter SWAP — the server renders the entry's `?franchise=`
+ * correctly — and then `astro:page-load` re-ran initRosterPage, which read
+ * `defaultTeamId` from a `config` parsed ONCE per session at module scope and
+ * repainted the team the session had opened on. Header said 0003, URL said
+ * 0001. Meanwhile every init stacked another `window` popstate listener, each
+ * holding its own stale `currentTeam`.
+ */
+describe('the roster page follows Back/Forward across a ClientRouter swap', () => {
+  it('re-reads #roster-config at the top of every init', () => {
+    expect(PAGE).toMatch(/const refreshConfigFromDom = \(\) => \{/);
+    expectCalledFromInit('refreshConfigFromDom');
+    // Behaviour is exercised in tests/rosters-config-refresh.test.ts.
+    expect(PAGE).toContain('refreshConfigFromElement(config, configEl,');
+  });
+
+  it('keeps ONE popstate handler, replaced per init rather than stacked', () => {
+    expect(INIT_BODY).toContain("window.removeEventListener('popstate', rosterPopstateHandler);");
+    expect(INIT_BODY).toContain("window.addEventListener('popstate', rosterPopstateHandler);");
+    expect(INIT_BODY, 'an anonymous window popstate listener can never be removed')
+      .not.toMatch(/window\.addEventListener\('popstate',\s*\(/);
+  });
+
+  it('ignores a popstate onto a different route', () => {
+    expect(INIT_BODY).toContain('if (window.location.pathname !== rosterPath) return;');
+  });
+
+  it("pushes entries in the router's own state shape, never null", () => {
+    // Null makes the router ignore popstate onto the entry even from ANOTHER
+    // page, stranding that page's DOM under a roster URL.
+    expect(INIT_BODY).not.toMatch(/history\.pushState\(\s*null/);
+    expect(INIT_BODY).toMatch(/history\.pushState\(\s*\{ index: /);
+  });
+});

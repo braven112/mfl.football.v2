@@ -28,7 +28,7 @@
  * free, because `resolveNflDarkLogoUrl` is where that already resolves
  * (docs/plans/nfl-mark-assignments.md).
  */
-import { normalizeTeamCode } from '../nfl-logo';
+import { getAllNFLTeamCodes, normalizeTeamCode } from '../nfl-logo';
 import { resolveNflDarkLogoUrl } from '../nfl-logo-dark-css';
 
 /** Which ground the mark will be drawn on — NOT which theme the page is in. */
@@ -48,4 +48,21 @@ export function nflLogoUrl(team: string, ground: NflMarkGround = 'light'): strin
   // module exists to avoid. The light mark on a dark ground is the behaviour
   // these surfaces have today, so falling back to it is never a regression.
   return dark && dark.startsWith('/') ? dark : light;
+}
+
+/**
+ * The club's WHITE KNOCKOUT mark (brand kit `whiteKnockout`, ESPN's
+ * `primary_logo_white`), committed same-origin at 512px by
+ * `scripts/download-nfl-white-logos.mjs`.
+ *
+ * For a watermark on a coloured band that is dark in both themes, where the
+ * club's own colours would fight the band's: one ink, every club. No theme
+ * swap is keyed on this src, and none is wanted — white is the point.
+ */
+export function nflWhiteLogoUrl(team: string): string {
+  if (!team) return '';
+  const code = normalizeTeamCode(team);
+  // Only the 32 clubs have a file: a free agent normalizes to `NFL`, which
+  // has a light shield but no white knockout. Empty means "draw no mark".
+  return code && getAllNFLTeamCodes().includes(code) ? `/assets/nfl-logos/white/${code}.png` : '';
 }
