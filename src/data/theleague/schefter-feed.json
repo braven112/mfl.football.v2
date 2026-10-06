@@ -1,7 +1,47 @@
 {
-  "lastScanTimestamp": "2026-10-06T23:09:03.387Z",
+  "lastScanTimestamp": "2026-10-06T23:49:54.685Z",
   "lastProcessedMflTimestamp": "1791133200",
   "posts": [
+    {
+      "id": "sf_speculation_1791330597220_7bbc6467",
+      "timestamp": "2026-10-06T23:49:54.685Z",
+      "type": "transaction",
+      "transactionSubType": "trade_speculation",
+      "tier": "rumor",
+      "headline": "Schefter speculating…",
+      "body": "🟡 The talk-radio crowd in Midwestside-country has been kicking around a wild hypothetical: what if the Pigskins moved Lamar Jackson, 29, to a division rival desperate for QB stability, in exchange for young WR assets like Chris Bell, 22, and Elijah Sarratt, 23? It's fan-board chatter born out of frustration and roster-construction curiosity — neither front office has acknowledged any conversation, and this isn't coming from the building. Still, the speculation won't die on social media.",
+      "authorId": "claude",
+      "franchiseIds": [
+        "0001",
+        "0011"
+      ],
+      "league": "theleague",
+      "link": "/theleague/front-office/trade-builder?b=0001",
+      "linkLabel": "Open in Trade Builder →",
+      "speculation": {
+        "seller": "0001",
+        "buyer": "0011",
+        "marquee": {
+          "id": "13593",
+          "name": "Jackson, Lamar",
+          "position": "QB"
+        },
+        "returnPkg": [
+          {
+            "id": "17506",
+            "name": "Bell, Chris",
+            "position": "WR"
+          },
+          {
+            "id": "17505",
+            "name": "Sarratt, Elijah",
+            "position": "WR"
+          }
+        ],
+        "score": 115,
+        "capRelief": false
+      }
+    },
     {
       "id": "wire_50119780",
       "timestamp": "2026-10-06T22:49:31Z",
