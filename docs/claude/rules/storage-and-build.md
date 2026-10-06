@@ -221,7 +221,7 @@ So the schedule lives in **`vercel.json` → `crons`**, which fires
 `/api/cron/roster-sync`, which `workflow_dispatch`es the workflow. That cron is
 now the sync's ONLY scheduled trigger — the workflow has no `schedule:` at all.
 
-**Three workflows ride the bridge now**, all three with no `schedule:` of their
+**Four workflows ride the bridge now**, all four with no `schedule:` of their
 own, all three dispatching through `src/utils/workflow-dispatch.ts` (the single
 door that holds the `outboundAllowed()` check, because staging and every PR
 preview carry production's `GH_PAT`):
@@ -231,6 +231,7 @@ preview carry production's `GH_PAT`):
 | `/api/cron/roster-sync` | `roster-sync.yml` | tiered | rosters, standings, the feeds |
 | `/api/cron/schefter-scan` | `schefter-scan.yml` | tiered | Roger's deadline reminders + the news feed |
 | `/api/cron/groupme-sync` | `groupme-sync.yml` | every tick | the chat mirror — commits nothing |
+| `/api/cron/lineup-check` | `lineup-reminders.yml` | ahead of each kickoff | the pre-kickoff lineup warning (`lineupCheckDecision`) — see `lineups.md` |
 
 `schefter-scan` is the one with owner-facing lateness: Roger's deadline
 reminders are push-first and held through quiet hours, so the first tick after

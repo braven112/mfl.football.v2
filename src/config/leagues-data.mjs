@@ -205,6 +205,14 @@ export const LEAGUES = {
      */
     chat: { provider: 'groupme', botEnv: 'GROUPME_SCHEFTER_BOT_ID' },
     tradeDeadline: { kind: 'fixed', month: 11, day: 13 },
+    /**
+     * League-minimum salary. Every player added to a roster carries at least
+     * this — a first-come-first-served free-agent add included, which MFL
+     * records with NO price on the transaction row. Read by anything that
+     * prices a pickup (the waiver-pickups column once called two FCFS adds
+     * "free assets for zero dollars"). Absent for a league with no salaries.
+     */
+    minimumSalary: 425_000,
     features: {
       contracts: true,
       salaryCap: true,
@@ -327,7 +335,7 @@ export const LEAGUES = {
      * scripts/generate-notification-icons.mjs. Absent = the site's PWA art.
      */
     pushArt: { icon: '/assets/afl/favicons/favicon-192.png', badge: '/assets/afl/favicons/badge-96.png' },
-    playerArchiveStartYear: 2011,
+    playerArchiveStartYear: 2003,
     /** Demo banner line (DemoBanner.astro), where the archetype's default does not fit. */
     demoPitch: 'The conference standings, tier tables and playoff brackets here were built for this league; your site is built around how yours works.',
     logo: { light: '/assets/logos/afl-logo.svg', dark: '/assets/logos/afl-logo-dark.svg' },

@@ -72,6 +72,20 @@ export default function LvMatchupDetail({
   const a: LiveTeam = matchup.sides[first];
   const b: LiveTeam = matchup.sides[second];
   const pFirst = winProbabilityFor(matchup, first);
+  // The header is top-aligned, so the "today's name" line is all-or-nothing:
+  // when only one side's Throwback era renamed its club, the other side holds
+  // an empty placeholder line or its score sits one line higher.
+  const holdsCurrentLine = Boolean(a.currentName || b.currentName);
+  const currentLine = (t: LiveTeam) =>
+    t.currentName ? (
+      <div className="lv-scorehead__current">{t.currentName}</div>
+    ) : (
+      holdsCurrentLine && (
+        <div className="lv-scorehead__current lv-scorehead__current--empty" aria-hidden="true">
+          {'\u00a0'}
+        </div>
+      )
+    );
 
   /**
    * The open stat sheet, as an IDENTITY — matchup side + player id — and the
@@ -111,6 +125,7 @@ export default function LvMatchupDetail({
       <div className="lv-scorehead">
         <div className="lv-scorehead__side">
           <div className="lv-scorehead__name">{a.nameShort || a.name}</div>
+          {currentLine(a)}
           <div className="lv-scorehead__score" style={{ color: `var(--t${first}-ink)` }}>
             {fmt(a.live)}
           </div>
@@ -118,6 +133,7 @@ export default function LvMatchupDetail({
         <span className="lv-scorehead__at">@</span>
         <div className="lv-scorehead__side lv-scorehead__side--right">
           <div className="lv-scorehead__name">{b.nameShort || b.name}</div>
+          {currentLine(b)}
           <div className="lv-scorehead__score" style={{ color: `var(--t${second}-ink)` }}>
             {fmt(b.live)}
           </div>

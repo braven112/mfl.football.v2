@@ -91,6 +91,7 @@ describe('always-dark surfaces do not depend on the theme', () => {
     'src/components/shared/live-broadcast/BroadcastPlayerStrip.tsx',
     'src/components/shared/sunday-ticket/SundayTicketBox.astro',
     'src/components/shared/sunday-ticket/SundayTicketBoard.astro',
+    'src/components/shared/roster-header/RosterNameplate.astro',
   ];
 
   it.each(ALWAYS_DARK)('%s asks for the dark ground, not the light src', (file) => {

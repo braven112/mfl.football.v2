@@ -33,6 +33,7 @@
     "fetch:nfl-week-starts": "node scripts/fetch-nfl-week-starts.mjs",
     "generate:vapid": "node scripts/generate-vapid-keys.mjs",
     "compute:franchise-history": "node scripts/compute-franchise-history.mjs",
+    "fetch:historical-players": "node scripts/fetch-historical-players.mjs",
     "compute:player-identity-union": "node scripts/compute-player-identity-union.mjs",
     "compute:player-identity-union:afl": "node scripts/compute-player-identity-union.mjs --league=afl-fantasy",
     "compute:player-identity-union:archies": "node scripts/compute-player-identity-union.mjs --league=archies",

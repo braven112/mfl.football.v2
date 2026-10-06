@@ -39,3 +39,22 @@ export function formatTradeAsset(
   }
   return code;
 }
+
+type HistoryEntry = { name: string; yearStart: number; yearEnd: number; icon?: string };
+
+/**
+ * The retired identity a franchise slot carried in a given season, or null
+ * when that season falls under its current identity (the caller then keeps
+ * its usual current-name label). The trade ledgers used to print the slot's
+ * CURRENT name on every trade, so a 2007 deal with the AFL's 420 All-Stars
+ * read "Computer Jocks" — a name that slot only took years later. Pass the
+ * trade's RAW MFL franchise id (`partnerSourceId ?? partnerId`): `history` is
+ * keyed by slot, and ownerHistory attribution can point `partnerId` elsewhere.
+ */
+export function franchiseEraInYear(
+  team: { icon?: string; history?: HistoryEntry[] } | undefined,
+  year: number
+): { name: string; icon?: string } | null {
+  const era = team?.history?.find((h) => year >= h.yearStart && year <= h.yearEnd);
+  return era ? { name: era.name, icon: era.icon ?? team?.icon } : null;
+}

@@ -414,6 +414,11 @@ export function buildBoardFromSnapshot(input: BuildBoardInput): LiveBoard {
           colors: over.colors ?? resolved.colors,
         }
       : resolved;
+    // Today's name, kept for the board to print under an era that RENAMED the
+    // club. An era wearing today's name has nothing to add, so it carries none.
+    const sameName = (x: string, y: string) => x.trim().toLowerCase() === y.trim().toLowerCase();
+    const currentName =
+      over?.name && !sameName(over.name, resolved.name) ? resolved.name : undefined;
     // STARTERS only. The bench lives in its own map precisely so nothing can
     // sum it by accident — a bench row here inflates the projected final and
     // the win-probability bar with points that cannot be scored.
@@ -427,6 +432,7 @@ export function buildBoardFromSnapshot(input: BuildBoardInput): LiveBoard {
       identity: who,
       team: buildLiveTeam({
         identity: who,
+        currentName,
         totals,
         players: starters,
         bench: snapshot.bench?.[franchiseId] ?? [],

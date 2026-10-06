@@ -403,6 +403,11 @@ export interface LeagueDefinition {
    * (src/utils/persona.mjs). Absent → Claude Schefter.
    */
   persona?: { name?: string; avatarUrl?: string; voice?: string };
+  /**
+   * League-minimum salary — what any roster add costs, FCFS free-agent adds
+   * included. Absent for a league without salaries.
+   */
+  minimumSalary?: number;
   features: LeagueFeatures;
 }
 
@@ -438,6 +443,21 @@ export function getLeagueByPath(pathname: string): LeagueDefinition {
 /** Whether a feature is enabled for the given league slug. */
 export function leagueHasFeature(slug: string, feature: keyof LeagueFeatures): boolean {
   return getLeagueBySlug(slug)?.features[feature] ?? false;
+}
+
+/**
+ * A salary league's minimum salary — the floor every roster add signs at, a
+ * first-come-first-served free-agent add included. Throws for a league with no
+ * salaries rather than answering 0: a caller pricing a roster in a league that
+ * has none is a bug, and a silent 0 is how the waiver column once called two
+ * FCFS pickups "free assets for zero dollars" (#1311). The registry is the one
+ * home for the figure; `tests/minimum-salary-literal-guard.test.ts` fails on a
+ * bare copy anywhere else.
+ */
+export function leagueMinimumSalary(slug: string): number {
+  const min = getLeagueBySlug(slug)?.minimumSalary;
+  if (typeof min !== 'number') throw new Error(`League "${slug}" has no minimumSalary`);
+  return min;
 }
 
 /**

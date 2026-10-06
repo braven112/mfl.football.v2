@@ -56,6 +56,12 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
   // invisible, because both leagues have a franchise 0001 (#1086 F4).
   const teams = await loadTeams(projectRoot, league);
 
+  // A first-come-first-served add is not free in a salary league: the player
+  // still signs at the league minimum. MFL writes no price on a FREE_AGENT row,
+  // so pricing it from the row alone told the column two FCFS adds were "free
+  // assets for zero dollars". Absent for a league without salaries.
+  const minimumSalary = LEAGUES[league].minimumSalary ?? 0;
+
   // Filter BBID_WAIVER and FREE_AGENT transactions from the past 7 days
   const now = Date.now() / 1000; // Unix seconds
   const sevenDaysAgo = now - (7 * 24 * 60 * 60);
@@ -107,9 +113,11 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
     if (!claimsByTeam[fid]) claimsByTeam[fid] = { name: teamName, claims: [] };
 
     for (const playerId of addedIds) {
-      // A BBID bid buys the one player on the add side; a free-agent add costs
-      // nothing. Only the BBID segment is ever a price.
-      const bidAmount = addedIds.length === 1 && Number.isFinite(bbidAmount) ? bbidAmount : 0;
+      // A BBID bid buys the one player on the add side; a free-agent add signs
+      // at the league minimum (0 where the league has no salaries).
+      const bidAmount = txn.type === 'FREE_AGENT'
+        ? minimumSalary
+        : addedIds.length === 1 && Number.isFinite(bbidAmount) ? bbidAmount : 0;
       const playerInfo = players.get(playerId);
 
       const claim = {
@@ -125,7 +133,7 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
       totalSpent += bidAmount;
       heroCandidates.push({ id: playerId, score: bidAmount });
 
-      if (bidAmount > highestBid.amount) {
+      if (txn.type === 'BBID_WAIVER' && bidAmount > highestBid.amount) {
         highestBid = { amount: bidAmount, player: claim.player, team: teamName };
       }
     }
@@ -135,6 +143,9 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
   lines.push(`WEEK ${week} WAIVER PICKUPS — ${LEAGUES[league].name} (${year} Season)`);
   lines.push(`Total claims this week: ${claimCount}`);
   lines.push(`Total spent: ${formatSalary(totalSpent)}`);
+  if (minimumSalary > 0) {
+    lines.push(`League rule: every pickup, waiver bid or first-come-first-served, costs at least the ${formatSalary(minimumSalary)} league-minimum salary. No pickup is free.`);
+  }
   lines.push('');
 
   // Counts CLAIMS, not rows: a week of nothing but drops has txns but no pickups.
@@ -151,7 +162,11 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = D
     const teamSpend = teamData.claims.reduce((s, c) => s + c.bid, 0);
     lines.push(`── ${teamData.name} (${countOf(teamData.claims.length, 'claim')}, ${formatSalary(teamSpend)} spent) ──`);
     for (const c of teamData.claims.sort((a, b) => b.bid - a.bid)) {
-      const typeLabel = c.type === 'FREE_AGENT' ? ' [FA]' : '';
+      const typeLabel = c.type !== 'FREE_AGENT'
+        ? ''
+        : minimumSalary > 0
+          ? ' [FCFS free-agent add — signs at the league-minimum salary, NOT free]'
+          : ' [FA]';
       lines.push(`  - ${c.position} ${c.player} (${c.bidDisplay})${typeLabel}`);
     }
     lines.push('');

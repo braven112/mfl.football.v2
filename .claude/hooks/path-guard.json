@@ -468,6 +468,7 @@
       ],
       "tests": [
         "tests/lineup-bench-sync.test.ts",
+        "tests/lineup-check-kickoff.test.ts",
         "tests/lineup-page-clientrouter.test.ts",
         "tests/lineup-route-merge.test.ts",
         "tests/lineup-sources.test.ts",
@@ -563,6 +564,7 @@
         "tests/live-projections-week.test.ts",
         "tests/live-model.test.ts",
         "tests/live-read-league.test.ts",
+        "tests/live-matchup-card-current-line.test.ts",
         "tests/live-surface-grounds.test.ts",
         "tests/live-ground-literals.test.ts",
         "tests/live-kit-leaves.test.ts",
@@ -940,6 +942,24 @@
         "tests/article-links.test.ts",
         "tests/schefter-once-per-season-dedupe.test.ts",
         "tests/article-transaction-parse-guard.test.ts"
+      ]
+    },
+    {
+      "name": "league-minimum-salary",
+      "paths": [
+        "src/config/leagues*",
+        "src/utils/surplus-value.ts",
+        "src/utils/cap-space-calculator.ts",
+        "src/utils/draft-pick-*.ts",
+        "src/utils/demo-mfl-standin.ts",
+        "scripts/lib/rookie-salary-slots.mjs",
+        "scripts/article-types/*.mjs",
+        "scripts/article-utils/*.mjs",
+        "scripts/demo/**"
+      ],
+      "note": "TheLeague's minimum salary lives only in the registry (`minimumSalary`), read with `leagueMinimumSalary(slug)`. A first-come-first-served add signs at it — MFL writes no price on the row, and pricing it from the row called two pickups free (#1311).",
+      "tests": [
+        "tests/minimum-salary-literal-guard.test.ts"
       ]
     },
     {

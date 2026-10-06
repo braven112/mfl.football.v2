@@ -4,7 +4,7 @@ import Breadcrumbs from '../../../components/shared/Breadcrumbs.astro';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import franchiseHistory from '../../../../data/theleague/derived/franchise-history.json';
 import leagueConfig from '../../../data/theleague.config.json';
-import { formatTradeAsset } from '../../../utils/franchise-trade-asset';
+import { formatTradeAsset, franchiseEraInYear } from '../../../utils/franchise-trade-asset';
 import { franchiseSlug } from '../../../utils/franchise-marks';
 import { buildFranchiseEras, type FranchiseEra as Era } from '../../../utils/franchise-eras';
 import EraSeasonTable from '../../../components/shared/franchises/EraSeasonTable.astro';
@@ -178,7 +178,13 @@ const franchiseShortName = (fid: string): string => {
   const meta = opponentMeta[fid];
   return meta?.nameShort ?? meta?.nameMedium ?? meta?.name ?? fid;
 };
-const formatAsset = (code: string) => formatTradeAsset(code, playerNames, franchiseShortName);
+// A future pick's "via" team is named as it was in the trade's season.
+const formatAsset = (code: string, year: number) =>
+  formatTradeAsset(
+    code,
+    playerNames,
+    (fid) => franchiseEraInYear((leagueConfig.teams as any[]).find((x) => x.franchiseId === fid), year)?.name ?? franchiseShortName(fid)
+  );
 
 type FranchiseTrade = {
   year: number;
@@ -188,6 +194,7 @@ type FranchiseTrade = {
   received: string[];
   comments: string;
   bothAttributed: boolean;
+  partnerSourceId?: string | null;
 };
 const allTrades: FranchiseTrade[] = ((fr.trades as FranchiseTrade[]) || []).filter(
   (t) => t.partnerId !== id
@@ -480,9 +487,14 @@ const formatBid = (n: number): string => {
             <ul class="trade-list">
               {group.trades.map((t) => {
                 const partnerMeta = opponentMeta[t.partnerId];
+                // The partner as it was named THAT season, not today.
+                const partnerEra = franchiseEraInYear(
+                  (leagueConfig.teams as any[]).find((x) => x.franchiseId === (t.partnerSourceId ?? t.partnerId)),
+                  t.year
+                );
                 const partnerName =
-                  partnerMeta?.nameShort ?? partnerMeta?.nameMedium ?? partnerMeta?.name ?? t.partnerId;
-                const partnerIcon = partnerMeta?.icon ?? `/assets/theleague/icons/${t.partnerId}.png`;
+                  partnerEra?.name ?? partnerMeta?.nameShort ?? partnerMeta?.nameMedium ?? partnerMeta?.name ?? t.partnerId;
+                const partnerIcon = partnerEra?.icon ?? partnerMeta?.icon ?? `/assets/theleague/icons/${t.partnerId}.png`;
                 const rivalryHref = resolveLeaguePath(
                   `/theleague/rivalries/${canonicalRivalryPair(id!, t.partnerId)}`,
                   hideLeaguePrefix
@@ -500,7 +512,7 @@ const formatBid = (n: number): string => {
                       <div class="trade-col">
                         <div class="t-name">Sent</div>
                         {t.gaveUp.length > 0 ? (
-                          <ul>{t.gaveUp.map((c) => <li>{formatAsset(c)}</li>)}</ul>
+                          <ul>{t.gaveUp.map((c) => <li>{formatAsset(c, t.year)}</li>)}</ul>
                         ) : (
                           <p class="dim small">—</p>
                         )}
@@ -508,7 +520,7 @@ const formatBid = (n: number): string => {
                       <div class="trade-col">
                         <div class="t-name">Received</div>
                         {t.received.length > 0 ? (
-                          <ul>{t.received.map((c) => <li>{formatAsset(c)}</li>)}</ul>
+                          <ul>{t.received.map((c) => <li>{formatAsset(c, t.year)}</li>)}</ul>
                         ) : (
                           <p class="dim small">—</p>
                         )}

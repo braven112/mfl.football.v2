@@ -33,6 +33,8 @@ import { resolveRosterHeaderSkin, ROSTER_PLATE_INK } from '../../../utils/roster
 import type { BuildFranchiseBandBrandsOptions } from '../../../utils/franchise-band-brand';
 import type { CanonicalLeagueSlug } from '../../../config/leagues';
 import type { RailWeek, HeaderPlayer } from '../../../utils/roster-header-data';
+import { nflLogoUrl } from '../../../utils/live/nfl-logo-url';
+import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD } from '../../../constants/roster-constants';
 import type { StandingsSummary } from '../../../utils/standings-summary';
 
 interface HeaderGame {
@@ -151,6 +153,22 @@ const skin = resolveRosterHeaderSkin(franchiseId, leagueSlug, throwback);
    nothing on the plate would say it had thrown back. */
 const plateName = skin?.name || teamName;
 
+/* The featured player's NFL club mark, behind his headshot — the Free Agents
+   hero's spotlight. The DARK cut, asked for directly: the plate is a dark club
+   colour in BOTH themes, so the html.dark swap never fires for a light-theme
+   viewer and the light mark would dissolve into the band. */
+const featureLogo = featuredPlayer?.nflTeam ? nflLogoUrl(featuredPlayer.nflTeam, 'dark') : '';
+/* The Free Agents hero's headshot fallback: an ESPN NFL 404 tries the same
+   id's college headshot, then hides — never a low-res MFL photo standing
+   that large. Hiding sets an inline style, so a later swap that changes the
+   src clears it with the attribute. */
+const featureShotEspnId = featuredPlayer?.headshot?.match(
+  /^https:\/\/a\.espncdn\.com\/i\/headshots\/nfl\/players\/full\/(\d+)\.png$/,
+)?.[1];
+const featureShotOnerror = featureShotEspnId
+  ? `this.onerror=function(){this.onerror=null;this.style.visibility='hidden'};this.src='https://a.espncdn.com/i/headshots/college-football/players/full/${featureShotEspnId}.png'`
+  : "this.onerror=null;this.style.visibility='hidden'";
+
 const ordinal = (n: number) => {
   const rest = n % 100;
   if (rest >= 11 && rest <= 13) return `${n}th`;
@@ -254,29 +272,38 @@ const stats: Array<{ value: string; label: string; key?: string }> = [
     </div>
     </div>
     {featuredPlayer && (
+      /* The Free Agents hero's spotlight, on the plate: a diagonal-cut panel
+         with the player's NFL mark as a watermark, his headshot standing on
+         the band's bottom edge, and the caption in the corner. */
       <aside class="rhdr__feature" aria-label={featuredPlayer.statLabel}>
-        <span class="rhdr__feature-kicker">{featuredPlayer.statLabel}</span>
-        <span class="rhdr__feature-body">
-          {featuredPlayer.headshot ? (
+        <span class="rhdr__feature-panel" aria-hidden="true">
+          {featureLogo && (
+            <img
+              class="rhdr__feature-logo"
+              src={featureLogo}
+              alt=""
+              loading="eager"
+              decoding="async"
+              onerror={NFL_LOGO_ONERROR}
+              onload={NFL_LOGO_ONLOAD}
+            />
+          )}
+          {featuredPlayer.headshot && (
             <img
               class="rhdr__feature-shot"
               src={featuredPlayer.headshot}
               alt=""
-              width="46"
-              height="46"
-              loading="lazy"
+              loading="eager"
               decoding="async"
+              onerror={featureShotOnerror}
             />
-          ) : (
-            <span class="rhdr__feature-shot rhdr__feature-shot--blank" aria-hidden="true">
-              {featuredPlayer.position}
-            </span>
           )}
-          <span class="rhdr__feature-text">
-            <span class="rhdr__feature-name">{featuredPlayer.name}</span>
-            <span class="rhdr__feature-stat">
-              {featuredPlayer.position} · {featuredPlayer.statValue}
-            </span>
+        </span>
+        <span class="rhdr__feature-caption">
+          <span class="rhdr__feature-kicker">{featuredPlayer.statLabel}</span>
+          <span class="rhdr__feature-name">{featuredPlayer.name}</span>
+          <span class="rhdr__feature-stat">
+            {featuredPlayer.position} · {featuredPlayer.statValue}
           </span>
         </span>
       </aside>
@@ -446,65 +473,115 @@ const stats: Array<{ value: string; label: string; key?: string }> = [
   .rhdr__sep { opacity: 0.36; }
 
   /* ── The featured player, desktop only ────────────────────────────────
-     Sits where the crest watermark already was, so it needs its own quiet
-     surface to stay readable over the brightest part of the gradient. */
+     The Free Agents hero's spotlight (theleague/players.astro `.hero-spotlight`)
+     carried onto the plate: a diagonal-cut panel pinned to the band's right
+     edge, the NFL mark faint behind, the headshot contained and standing on
+     the bottom edge, the caption in the lower-right corner. Always the FA
+     hero's DARK treatment, since the plate is dark in both themes. */
   .rhdr__feature {
-    flex: none;
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 2;
+    width: clamp(15rem, 34%, 24rem);
+    pointer-events: none;
+  }
+  .rhdr__feature-panel {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    clip-path: polygon(20% 0, 100% 0, 100% 100%, 0% 100%);
+    background: radial-gradient(120% 120% at 80% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 60%),
+      rgba(0, 0, 0, 0.3);
+  }
+  /* The diagonal accent stripe on the cut edge. */
+  .rhdr__feature-panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    background: rgba(255, 255, 255, 0.28);
+    clip-path: polygon(20% 0, 21.5% 0, 1.5% 100%, 0% 100%);
+  }
+  .rhdr__feature-logo {
+    position: absolute;
+    top: 50%;
+    left: 60%;
+    transform: translate(-50%, -50%);
+    width: 70%;
+    max-height: 150%;
+    object-fit: contain;
+    opacity: 0.18;
+    z-index: 1;
+  }
+  .rhdr__feature-shot {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    padding-top: 0.5rem;
+    object-fit: contain;
+    object-position: 60% 100%;
+    filter: brightness(1.02) contrast(1.05) saturate(1.1) drop-shadow(0 4px 10px rgba(0, 0, 0, 0.35));
+    z-index: 2;
+  }
+  .rhdr__feature-caption {
+    position: absolute;
+    right: 0.85rem;
+    bottom: 0.75rem;
+    z-index: 4;
     display: flex;
     flex-direction: column;
-    gap: 0.3rem;
-    max-width: 16rem;
-    padding: 0.55rem 0.8rem;
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    border-radius: 10px;
-    background: rgba(0, 0, 0, 0.26);
+    align-items: flex-end;
+    gap: 0.05rem;
+    max-width: 70%;
+    padding: 0.4rem 0.65rem 0.45rem 1.75rem;
+    text-align: right;
+    background: radial-gradient(130% 150% at 100% 100%, rgba(0, 0, 0, 0.62) 0%, rgba(0, 0, 0, 0.3) 48%, transparent 78%);
+    text-shadow: 0 1px 5px rgba(0, 0, 0, 0.6);
   }
   .rhdr__feature-kicker {
-    font-size: var(--font-size-3xs);
-    font-weight: 600;
-    letter-spacing: 0.13em;
-    text-transform: uppercase;
-    color: rgba(242, 245, 248, 0.66);
-  }
-  .rhdr__feature-body { display: flex; align-items: center; gap: 0.6rem; min-width: 0; }
-  .rhdr__feature-shot {
-    flex: none;
-    width: 46px;
-    height: 46px;
-    border-radius: 50%;
-    object-fit: cover;
-    object-position: top center;
-    background: rgba(255, 255, 255, 0.12);
-  }
-  .rhdr__feature-shot--blank {
-    display: grid;
-    place-items: center;
-    font-size: 0.7rem;
+    font-size: 0.5625rem;
     font-weight: 700;
-    letter-spacing: 0.06em;
-    color: rgba(242, 245, 248, 0.8);
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.75);
   }
-  .rhdr__feature-text { display: flex; flex-direction: column; min-width: 0; }
   .rhdr__feature-name {
-    font-size: 0.9rem;
-    font-weight: 600;
-    line-height: 1.2;
+    max-width: 100%;
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
     color: #fff;
-    /* A long name shortens rather than widening the plate. */
+    /* A long name shortens rather than widening the panel. */
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
   .rhdr__feature-stat {
-    margin-top: 0.1rem;
-    font-size: 0.78rem;
+    font-size: var(--font-size-2xs);
+    font-weight: 500;
     font-variant-numeric: tabular-nums;
-    color: var(--rhdr-plate-ink, #f2f5f8);
+    color: rgba(255, 255, 255, 0.85);
+  }
+  /* Desktop only, like the panel itself: the identity column must not run
+     under it, and the club crest moves left of it rather than showing
+     through. Scoped by width so neither outranks the centred-crest rule
+     below 900px. */
+  @media (min-width: 901px) {
+    .rhdr__plate:has(.rhdr__feature) .rhdr__inner {
+      padding-right: calc(clamp(15rem, 34%, 24rem) + 1rem);
+    }
+    .rhdr__plate:has(.rhdr__feature) .rhdr__watermark {
+      right: clamp(15rem, 36%, 26rem);
+    }
   }
   /* No franchise accent here any more. `accent-panel` existed because a
      gradient has two ends and "a colour readable on one is invisible on the
      other by construction" — a flat fill has one, and this card sits on its
-     own `rgba(0,0,0,0.26)` panel over it, so the plate's ink already clears.
+     own `rgba(0,0,0,0.3)` panel over it, so the plate's ink already clears.
      One surface, one ink.
   */
 

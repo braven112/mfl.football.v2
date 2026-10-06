@@ -551,6 +551,15 @@ button.lv-card:focus-visible {
   font-weight: var(--font-weight-semibold);
 }
 
+.lv-side__current {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-normal);
+  color: var(--content-text-muted);
+}
+
 .lv-side--lead .lv-side__name { color: var(--page-text); }
 .lv-side:not(.lv-side--lead) .lv-side__name { color: var(--content-text-muted); }
 
@@ -614,7 +623,10 @@ button.lv-card:focus-visible {
 .lv-scorehead {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  align-items: center;
+  /* Top-aligned so both names start on the same line. When only one side
+     carries a Throwback "today's name" line, the other side renders an empty
+     placeholder line (LvMatchupDetail), so the scores still line up. */
+  align-items: start;
   gap: var(--spacing-sm);
   padding: 0 0.6rem 0.6rem;
 }
@@ -633,6 +645,17 @@ button.lv-card:focus-visible {
   font-weight: var(--font-weight-semibold);
 }
 
+/* Today's name under a Throwback Week era that renamed the club. Quiet on
+   purpose: the era is the headline, this is only the "who is that?" answer. */
+.lv-scorehead__current {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--font-size-xs);
+  color: var(--content-text-muted);
+}
+
 .lv-scorehead__score {
   font-family: var(--font-display);
   font-size: var(--font-size-2xl);
@@ -641,6 +664,7 @@ button.lv-card:focus-visible {
 }
 
 .lv-scorehead__at {
+  align-self: center;
   color: var(--content-text-muted);
   font-size: var(--font-size-sm);
 }
@@ -1356,7 +1380,7 @@ button.lv-card:focus-visible {
   .lv-scorehead {
     gap: 0.4rem;
     padding: 0.55rem 0.6rem;
-    align-items: center;
+    align-items: start;
   }
   .lv-scorehead__name { overflow-wrap: anywhere; }
 }

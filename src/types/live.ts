@@ -59,6 +59,13 @@ export interface LiveTeam {
   icon: string;
   iconAlt: string;
   rung: IdentityRung;
+  /**
+   * The franchise's PRESENT-DAY name, set only while Throwback Week dresses it
+   * in an era whose name differs from today's — the board prints it under the
+   * era name so an owner can still tell who is who. Absent otherwise,
+   * including for an era that kept today's name.
+   */
+  currentName?: string;
 
   /** Live fantasy points. */
   live: number;

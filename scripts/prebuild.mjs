@@ -66,6 +66,11 @@ const SEQUENTIAL = [
   // from these `pnpm run` names, so hiding them behind one wrapper would let an
   // edit to a producer preview against the stale committed file. A guard in that
   // test fails if a chain producer stops appearing in this list.
+  // Backfills players.json for any season directory without one (TheLeague
+  // 2007-2010, AFL 2003-2010 predate the sync fetching players). Past seasons
+  // never change, so once the files are committed this makes no request. Runs
+  // before the history and identity-union steps that read those files.
+  { name: 'fetch:historical-players', cmd: 'pnpm run fetch:historical-players', previewSkip: true },
   // One per league that runs the history chain (league-jobs `franchise-history`):
   // TheLeague, the AFL, and a package league once its Franchise pages box is
   // ticked. It used to be two hardcoded steps — TheLeague's by default, the

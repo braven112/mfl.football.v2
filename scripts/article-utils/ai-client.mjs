@@ -4,6 +4,7 @@
  */
 import { LEAGUES } from '../../src/config/leagues-data.mjs';
 import { isDefaultPersona } from '../../src/utils/persona.mjs';
+import { formatSalary } from './data-loaders.mjs';
 
 const MODEL = 'claude-haiku-4-5-20251001';
 const API_URL = 'https://api.anthropic.com/v1/messages';
@@ -118,6 +119,19 @@ export async function callAnthropic(systemPrompt, userPrompt, maxTokens = 4000) 
 }
 
 /**
+ * A salary league's pricing floor, stated once for every article type. MFL
+ * writes no price on a first-come-first-served FREE_AGENT row, so any fact
+ * sheet that lists one can look like a $0 signing — the waiver column read it
+ * that way and called two FCFS adds "free assets for zero dollars" (#1311).
+ * Rides the uncached block because it is league-specific; empty for a league
+ * without salaries, which must never be told its pickups cost money.
+ */
+function minimumSalaryRule(registry) {
+  if (!registry.minimumSalary) return '';
+  return ` SALARY FLOOR: every player added to a roster — waiver bid or first-come-first-served free-agent pickup — signs at no less than the ${formatSalary(registry.minimumSalary)} league-minimum salary. No pickup is ever free; never call one free, a zero-dollar move, or a no-cost add.`;
+}
+
+/**
  * Build a cacheable system-prompt array: the stable BASE_SYSTEM_PROMPT is
  * marked ephemeral so repeated article generations within the cache window
  * skip re-tokenizing the shared voice/rules preamble.
@@ -158,7 +172,7 @@ export function buildCachedSystem(typeSpecificText, { league, persona } = {}) {
   const registry = league ? LEAGUES[league] : null;
   if (league && !registry) throw new Error(`Unknown league: ${league}`);
   const leagueLine = registry
-    ? `\n\nLEAGUE: this column covers ${registry.name}. Never name any other league, and never state a league size or structure that is not in the fact sheet.`
+    ? `\n\nLEAGUE: this column covers ${registry.name}. Never name any other league, and never state a league size or structure that is not in the fact sheet.${minimumSalaryRule(registry)}`
     : '';
   if (isDefaultPersona(persona)) {
     return [

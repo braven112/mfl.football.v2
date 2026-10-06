@@ -664,6 +664,7 @@ const headerFeaturedPlayer = bestPlayerByPositionRank(
     name: formatMflName(player.name),
     position: player.position,
     headshot: getPlayerHeadshot(player.id, player.espn_id, player.team),
+    nflTeam: player.team,
   })),
   (playerId) => leaguePositionRanks.get(playerId) ?? null
 );
