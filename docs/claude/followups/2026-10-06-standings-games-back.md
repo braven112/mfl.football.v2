@@ -5,7 +5,7 @@ severity: P1
 opened: 2026-10-06
 hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1338
 hotfix_sha: 5e7691f
-followup_issue:
+followup_issue: 1339
 followup_pr:
 followup_session:
 ---
