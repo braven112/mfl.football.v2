@@ -38,6 +38,12 @@ async function main() {
       failures.push(`${code}: no whiteKnockout in the brand kit`);
       continue;
     }
+    // Only ESPN's CDN: the URL comes from a committed JSON catalog, and this
+    // script has no business fetching anywhere else.
+    if (new URL(url).origin !== 'https://a.espncdn.com') {
+      failures.push(`${code}: refusing non-ESPN url ${url}`);
+      continue;
+    }
     try {
       const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);

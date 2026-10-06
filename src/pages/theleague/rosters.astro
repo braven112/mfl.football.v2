@@ -4690,6 +4690,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
   } from '../../utils/rosters/sim-summary';
   import type { SimActions, SimRow } from '../../utils/rosters/sim-summary';
   import { createCdmWizard } from '../../utils/cdm-wizard';
+  import { refreshConfigFromElement, replaceContents } from '../../utils/rosters/config-refresh';
   import { toggleWatch, loadWatchList } from '../../utils/watch-list-client';
   import { requestSignIn } from '../../utils/player-actions';
   // Same selection function the deadline job runs — the Cutdown Plan preview
@@ -4741,37 +4742,14 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
   let configEl = document.getElementById('roster-config');
   const config = JSON.parse(configEl.textContent);
 
-  /**
-   * Re-read `#roster-config` when the ClientRouter has swapped in a new one.
-   *
-   * This script is BUNDLED, so it evaluates once per session while the DOM is
-   * swapped underneath it. Parsed only up here, `config` kept the FIRST
-   * load's `defaultTeamId` forever: Back from an in-page crest switch is a
-   * ClientRouter swap, the server renders `?franchise=0001`, and initRosterPage then
-   * repainted the header and table with whatever team the session opened on.
-   * Any later arrival on `?franchise=…` did the same.
-   *
-   * Keyed on the NODE, not on every call: initRosterPage runs twice on the
-   * same DOM at first load, and a 10 MB parse is not free. Seasons merge
-   * rather than replace, so a frozen season fetched on demand stays cached;
-   * the new page's live seasons win.
-   */
+  /** Re-read `#roster-config` after a swap — see utils/rosters/config-refresh.ts. */
   const refreshConfigFromDom = () => {
-    const el = document.getElementById('roster-config');
-    if (!el || el === configEl) return;
-    let fresh;
-    try { fresh = JSON.parse(el.textContent || '{}'); } catch { return; }
-    configEl = el;
-    const seasons = { ...config.seasons, ...(fresh.seasons ?? {}) };
-    for (const key of Object.keys(config)) delete config[key];
-    Object.assign(config, fresh, { seasons });
+    const result = refreshConfigFromElement(config, configEl, document.getElementById('roster-config'));
+    if (!result.refreshed) return;
+    configEl = result.el;
     currentSeason = config.defaultSeason;
     replaceContents(eligibilityByTeam, config.eligibilityByTeam ?? {});
     replaceContents(declarationsByPlayer, config.declarationsByPlayer ?? {});
-  };
-  const replaceContents = (target, source) => {
-    for (const key of Object.keys(target)) delete target[key];
-    Object.assign(target, source);
   };
 
   // ================================================================

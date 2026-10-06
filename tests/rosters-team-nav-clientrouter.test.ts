@@ -217,8 +217,8 @@ describe('the roster page follows Back/Forward across a ClientRouter swap', () =
   it('re-reads #roster-config at the top of every init', () => {
     expect(PAGE).toMatch(/const refreshConfigFromDom = \(\) => \{/);
     expectCalledFromInit('refreshConfigFromDom');
-    // Keyed on the node: init runs twice on the first load's same DOM.
-    expect(PAGE).toMatch(/if \(!el \|\| el === configEl\) return;/);
+    // Behaviour is exercised in tests/rosters-config-refresh.test.ts.
+    expect(PAGE).toContain('refreshConfigFromElement(config, configEl,');
   });
 
   it('keeps ONE popstate handler, replaced per init rather than stacked', () => {
