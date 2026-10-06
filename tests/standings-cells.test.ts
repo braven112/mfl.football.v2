@@ -121,10 +121,14 @@ describe('calculateGamesBack / formatGamesBack', () => {
     ];
     expect(formatGamesBack(calculateGamesBack(group[1], group))).toBe('1.0');
   });
-  it('finds the leader by W-L margin, not raw wins', () => {
-    const group = [{ h2hwlt: '5-1-0' }, { h2hwlt: '6-3-0' }];
+  it('measures from the first row (MFL feed order), never a re-derived leader', () => {
+    // MFL ranked the tiebreak winner first; same record means zero back.
+    const tied = [{ h2hwlt: '4-2-0' }, { h2hwlt: '4-2-0' }];
+    expect(calculateGamesBack(tied[1], tied)).toBe(0);
+    // The feed's leader stays the reference even if another row has a
+    // bigger W-L margin, so the leader is never shown behind anyone.
+    const group = [{ h2hwlt: '5-1-0' }, { h2hwlt: '7-2-0' }];
     expect(calculateGamesBack(group[0], group)).toBe(0);
-    expect(calculateGamesBack(group[1], group)).toBe(0.5);
   });
   it('is zero for an empty group', () => {
     expect(calculateGamesBack({ h2hwlt: '1-1-0' }, [])).toBe(0);

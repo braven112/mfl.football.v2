@@ -84,18 +84,19 @@ export function resolveAllPlayRecord(
  * read the division-only record, so a 4-2 team showed 2.0 GB behind a 5-1
  * leader because their division splits differed, while the row read one game.
  * GB = ((leaderW - teamW) + (teamL - leaderL)) / 2; ties count for neither.
+ *
+ * The leader is the group's FIRST row, never re-derived: callers pass MFL's
+ * feed order (`preserveFeedOrder`), which already applies the constitution's
+ * tiebreakers — see docs/claude/rules/standings-brackets-draft-order.md.
  */
 export function calculateGamesBack(
   team: { h2hwlt?: string },
   allTeamsInGroup: Array<{ h2hwlt?: string }>
 ): number {
   if (allTeamsInGroup.length === 0) return 0;
-  const margin = (wlt: string | undefined) => {
-    const r = parseWLT(wlt);
-    return r.w - r.l;
-  };
-  const best = Math.max(...allTeamsInGroup.map((t) => margin(t.h2hwlt)));
-  return (best - margin(team.h2hwlt)) / 2;
+  const leader = parseWLT(allTeamsInGroup[0].h2hwlt);
+  const r = parseWLT(team.h2hwlt);
+  return (leader.w - r.w + (r.l - leader.l)) / 2;
 }
 
 /** Games-back cell text: an em-dash for the leader(s), one decimal otherwise. */
