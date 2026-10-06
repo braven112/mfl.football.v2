@@ -59,4 +59,8 @@ async function main() {
   }
 }
 
-main();
+// Importable without side effects: a bare main() would re-download and
+// overwrite the committed PNGs on any import.
+if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+  main();
+}

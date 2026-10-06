@@ -129,6 +129,8 @@ describe('always-dark surfaces do not depend on the theme', () => {
     // MFL's legacy codes resolve to the canonical file.
     expect(nflWhiteLogoUrl('GBP')).toBe('/assets/nfl-logos/white/GB.png');
     expect(nflWhiteLogoUrl('')).toBe('');
+    // A free agent normalizes to the NFL shield, which has no white cut.
+    expect(nflWhiteLogoUrl('FA')).toBe('');
   });
 
   it('keeps the dark resolver same-origin so a snapshot never fetches a CDN', async () => {

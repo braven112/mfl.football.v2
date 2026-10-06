@@ -28,7 +28,7 @@
  * free, because `resolveNflDarkLogoUrl` is where that already resolves
  * (docs/plans/nfl-mark-assignments.md).
  */
-import { normalizeTeamCode } from '../nfl-logo';
+import { getAllNFLTeamCodes, normalizeTeamCode } from '../nfl-logo';
 import { resolveNflDarkLogoUrl } from '../nfl-logo-dark-css';
 
 /** Which ground the mark will be drawn on — NOT which theme the page is in. */
@@ -62,5 +62,7 @@ export function nflLogoUrl(team: string, ground: NflMarkGround = 'light'): strin
 export function nflWhiteLogoUrl(team: string): string {
   if (!team) return '';
   const code = normalizeTeamCode(team);
-  return code ? `/assets/nfl-logos/white/${code}.png` : '';
+  // Only the 32 clubs have a file: a free agent normalizes to `NFL`, which
+  // has a light shield but no white knockout. Empty means "draw no mark".
+  return code && getAllNFLTeamCodes().includes(code) ? `/assets/nfl-logos/white/${code}.png` : '';
 }
