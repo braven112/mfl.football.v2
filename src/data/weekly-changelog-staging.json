@@ -143,6 +143,14 @@
       "league": "theleague"
     },
     {
+      "date": "2026-10-06",
+      "type": "bug-fix",
+      "summary": "Standings: games back now counts from the overall record shown beside it, so 4-2 behind 5-1 reads 1.0, not 2.0.",
+      "impact": "user",
+      "area": "standings",
+      "league": "both"
+    },
+    {
       "date": "2026-10-05",
       "type": "bug-fix",
       "summary": "After switching teams from the roster header's crest row, the browser's Back button now returns to the team you came from instead of the one the page first opened on.",
