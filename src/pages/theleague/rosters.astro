@@ -10148,6 +10148,9 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       // transition animating in the wrong direction on a later Back.
       try {
         const prev = window.history.state;
+        // Save where the viewer was on the entry being left, as the router
+        // does before its own pushes, so Back restores that scroll.
+        if (prev) window.history.replaceState({ ...prev, scrollX: window.scrollX, scrollY: window.scrollY }, '');
         window.history.pushState(
           { index: (Number(prev?.index) || 0) + 1, scrollX: window.scrollX, scrollY: window.scrollY },
           '',
@@ -10164,7 +10167,12 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     // added listener per init piled up instances, each repainting with its
     // own stale `currentTeam` closure.
     window.removeEventListener('popstate', rosterPopstateHandler);
+    const rosterPath = window.location.pathname;
     rosterPopstateHandler = () => {
+      // Back to a DIFFERENT route: its missing ?franchise= is not "the
+      // server's team", and repainting the outgoing roster before the
+      // router swaps it away is wasted, visible work.
+      if (window.location.pathname !== rosterPath) return;
       // The last roster init's handler outlives the page: on any OTHER page
       // its header is detached, and it must not act there. (On this page the
       // router's swap starts first but is async, so this still repaints.)

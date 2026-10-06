@@ -228,6 +228,10 @@ describe('the roster page follows Back/Forward across a ClientRouter swap', () =
       .not.toMatch(/window\.addEventListener\('popstate',\s*\(/);
   });
 
+  it('ignores a popstate onto a different route', () => {
+    expect(INIT_BODY).toContain('if (window.location.pathname !== rosterPath) return;');
+  });
+
   it("pushes entries in the router's own state shape, never null", () => {
     // Null makes the router ignore popstate onto the entry even from ANOTHER
     // page, stranding that page's DOM under a roster URL.
