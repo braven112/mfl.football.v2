@@ -174,35 +174,9 @@
     background: var(--table-row-bg-hover, #f3f4f6);
   }
 
-  /* Group headers take the place of the tier divider rows: the first active
-     row, and the first row of the practice squad and IR. Generated content is
-     announced, so a screen reader hears the group change too. */
-  .roster-page[data-league='theleague'] #rosterTableBody > tr.roster-row--active:first-child::before,
-  .roster-page[data-league='theleague'] #rosterTableBody > tr.roster-row--tier-divider::before {
-    order: -1;
-    flex: 0 0 calc(100% + var(--rr-avatar) + 2rem);
-    margin: -0.625rem -0.75rem 0.375rem calc(-1 * (var(--rr-avatar) + 1.25rem));
-    padding: 0.375rem 0.75rem;
-    font-size: var(--font-size-2xs);
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--color-gray-700, #374151);
-    background: var(--content-bg-muted, #f3f4f6);
-    border-bottom: 1px solid var(--content-border, #e2e8f0);
-  }
-
-  .roster-page[data-league='theleague'] #rosterTableBody > tr.roster-row--active:first-child::before {
-    content: 'Active roster';
-  }
-
-  .roster-page[data-league='theleague'] #rosterTableBody > tr.roster-row--practice.roster-row--tier-divider::before {
-    content: 'Practice squad';
-  }
-
-  .roster-page[data-league='theleague'] #rosterTableBody > tr.roster-row--injured.roster-row--tier-divider::before {
-    content: 'Injured reserve';
-  }
+  /* Group headers: real band rows now (roster-position-groups.css), one per
+     position plus Practice squad and IR, so the old generated "Active
+     roster" / tier labels on the first row of each tier are gone. */
 
   /* The player cell dissolves so its pieces can take their own lines. */
   .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody td[data-column='player'],
@@ -225,11 +199,6 @@
     left: 0.625rem;
     width: var(--rr-avatar);
     height: var(--rr-avatar);
-  }
-
-  .roster-page[data-league='theleague'] #rosterTableBody > tr.roster-row--tier-divider .player-cell__avatar,
-  .roster-page[data-league='theleague'] #rosterTableBody > tr.roster-row--active:first-child .player-cell__avatar {
-    top: calc(0.625rem + 1.75rem);
   }
 
   /* Line 1: the name and every after-name badge, wrapping rather than
@@ -985,6 +954,15 @@
   .rr-chip__dir {
     font-size: 1rem;
     line-height: 1;
+  }
+
+  /* The nameplate's cap-space stat repeats the cap card right below it
+     (user, 2026-10-05), so on a phone the card alone carries the number —
+     with the "/" separator that led into it. The value is still written on
+     every simulation (updateView), just not shown. */
+  .roster-page[data-league='theleague']:has(.rcap) .rhdr__stat:has([data-rhdr-stat='cap-space']),
+  .roster-page[data-league='theleague']:has(.rcap) .rhdr__sep:has(+ .rhdr__stat [data-rhdr-stat='cap-space']) {
+    display: none;
   }
 
   /* ── The cap card ─────────────────────────────────────────────────────── */

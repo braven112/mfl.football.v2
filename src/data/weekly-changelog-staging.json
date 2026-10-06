@@ -104,6 +104,43 @@
       "impact": "user",
       "area": "rosters",
       "league": "both"
+    },
+    {
+      "date": "2026-10-05",
+      "type": "enhancement",
+      "summary": "Rosters: each position group now has its own band with a running total that follows your sort, and All players ranks your whole roster by any column.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "both",
+      "featured": true,
+      "headline": "Rosters, sorted your way",
+      "lede": "Position bands make every group easy to scan, and any column now sorts — inside each group, or across your whole roster with All players.",
+      "image": "/assets/whats-new/roster-position-groups.webp",
+      "imageAlt": "The Rosters table with a Quarterbacks band and a Running backs band, each showing its projected-points total, under a Grouped / All players toggle"
+    },
+    {
+      "date": "2026-10-05",
+      "type": "bug-fix",
+      "summary": "Rosters: switching from Coach back to GM no longer leaves the Coach columns showing until you toggle twice.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-10-05",
+      "type": "bug-fix",
+      "summary": "Rosters: sorting right after switching teams no longer swaps in the previous team's players.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-10-05",
+      "type": "bug-fix",
+      "summary": "Rosters: the table no longer scrolls sideways on narrower desktop windows when every column fits.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "theleague"
     }
   ]
 }
