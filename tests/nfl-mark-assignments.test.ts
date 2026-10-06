@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { getAllNFLTeamCodes } from '../src/utils/nfl-logo';
 import { buildNflLogoDarkCss, resolveNflDarkLogoUrl } from '../src/utils/nfl-logo-dark-css';
@@ -91,7 +91,6 @@ describe('always-dark surfaces do not depend on the theme', () => {
     'src/components/shared/live-broadcast/BroadcastPlayerStrip.tsx',
     'src/components/shared/sunday-ticket/SundayTicketBox.astro',
     'src/components/shared/sunday-ticket/SundayTicketBoard.astro',
-    'src/components/shared/roster-header/RosterNameplate.astro',
   ];
 
   it.each(ALWAYS_DARK)('%s asks for the dark ground, not the light src', (file) => {
@@ -104,6 +103,32 @@ describe('always-dark surfaces do not depend on the theme', () => {
       /`\/assets\/nfl-logos\/\$\{[^}]+\}\.svg`/.test(src),
       `${file}: builds a light /assets/nfl-logos/*.svg path by hand`,
     ).toBe(false);
+  });
+
+  /**
+   * Always-dark surfaces that draw the club mark as a WATERMARK in one white
+   * ink instead: the roster nameplate's featured-player spotlight sits on the
+   * franchise's own colour band, where a full-colour NFL cut fights it. Still
+   * theme-independent — the white knockout has no html.dark swap at all.
+   */
+  const ALWAYS_WHITE = ['src/components/shared/roster-header/RosterNameplate.astro'];
+
+  it.each(ALWAYS_WHITE)('%s asks for the white knockout, not a theme-swapped src', (file) => {
+    const src = readFileSync(join(ROOT, file), 'utf-8');
+    expect(src).toMatch(/nflWhiteLogoUrl\(/);
+    expect(src, 'a light src would depend on the html.dark swap').not.toMatch(/nflLogoUrl\(/);
+  });
+
+  it('commits a same-origin white knockout for every club', async () => {
+    const { nflWhiteLogoUrl } = await import('../src/utils/live/nfl-logo-url');
+    for (const code of getAllNFLTeamCodes()) {
+      const url = nflWhiteLogoUrl(code);
+      expect(url).toBe(`/assets/nfl-logos/white/${code}.png`);
+      expect(existsSync(join(ROOT, 'public', url)), `${code}: run scripts/download-nfl-white-logos.mjs`).toBe(true);
+    }
+    // MFL's legacy codes resolve to the canonical file.
+    expect(nflWhiteLogoUrl('GBP')).toBe('/assets/nfl-logos/white/GB.png');
+    expect(nflWhiteLogoUrl('')).toBe('');
   });
 
   it('keeps the dark resolver same-origin so a snapshot never fetches a CDN', async () => {
