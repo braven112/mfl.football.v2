@@ -4738,9 +4738,41 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     getAgeDistributionColors as getAgeDistributionColorsCore,
   } from '../../utils/age-utils';
 
-  const config = JSON.parse(
-    document.getElementById('roster-config').textContent
-  );
+  let configEl = document.getElementById('roster-config');
+  const config = JSON.parse(configEl.textContent);
+
+  /**
+   * Re-read `#roster-config` when the ClientRouter has swapped in a new one.
+   *
+   * This script is BUNDLED, so it evaluates once per session while the DOM is
+   * swapped underneath it. Parsed only up here, `config` kept the FIRST
+   * load's `defaultTeamId` forever: Back from an in-page crest switch is a
+   * ClientRouter swap, the server renders `?franchise=0001`, and initRosterPage then
+   * repainted the header and table with whatever team the session opened on.
+   * Any later arrival on `?franchise=…` did the same.
+   *
+   * Keyed on the NODE, not on every call: initRosterPage runs twice on the
+   * same DOM at first load, and a 10 MB parse is not free. Seasons merge
+   * rather than replace, so a frozen season fetched on demand stays cached;
+   * the new page's live seasons win.
+   */
+  const refreshConfigFromDom = () => {
+    const el = document.getElementById('roster-config');
+    if (!el || el === configEl) return;
+    let fresh;
+    try { fresh = JSON.parse(el.textContent || '{}'); } catch { return; }
+    configEl = el;
+    const seasons = { ...config.seasons, ...(fresh.seasons ?? {}) };
+    for (const key of Object.keys(config)) delete config[key];
+    Object.assign(config, fresh, { seasons });
+    currentSeason = config.defaultSeason;
+    replaceContents(eligibilityByTeam, config.eligibilityByTeam ?? {});
+    replaceContents(declarationsByPlayer, config.declarationsByPlayer ?? {});
+  };
+  const replaceContents = (target, source) => {
+    for (const key of Object.keys(target)) delete target[key];
+    Object.assign(target, source);
+  };
 
   // ================================================================
   //  On-demand seasons
@@ -5390,6 +5422,9 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     initSimSurfaces();
   };
 
+  /** The live init's Back/Forward handler — see its assignment in initRosterPage. */
+  let rosterPopstateHandler: () => void = () => {};
+
   const initRosterPage = () => {
     /* Only on THIS league's rosters page.
        `document` is one of the two nodes the ClientRouter does not replace, so
@@ -5400,6 +5435,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
        Guard: tests/cross-league-init-gate.test.ts. */
     if (!document.querySelector('.roster-page[data-league="theleague"]')) return;
     if (!document.getElementById('roster-config')) return;
+    refreshConfigFromDom();
     // Warm My Watch List so the action sheet opens in the right state. The
     // store caches per league and no-ops on a repeat call.
     try {
@@ -10101,8 +10137,20 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       updateView();
       // The URL is the record of what is on screen — the old switcher's
       // omission is why a roster could not be linked to.
+      // The ClientRouter's own state shape. It treats Back/Forward onto any
+      // non-null entry as a navigation and SWAPS the document (the server
+      // renders that entry's ?franchise=, and refreshConfigFromDom makes the
+      // re-init follow it). A foreign shape left its index undefined, and a
+      // null state is worse: the router ignores popstate onto a null entry
+      // even when arriving from ANOTHER page, stranding that page's DOM under
+      // a roster URL.
       try {
-        window.history.pushState({ rosterTeam: teamId }, '', link.getAttribute('href'));
+        const prev = window.history.state;
+        window.history.pushState(
+          { index: (Number(prev?.index) || 0) + 1, scrollX: window.scrollX, scrollY: window.scrollY },
+          '',
+          link.getAttribute('href'),
+        );
       } catch { /* a blocked history write must not break the swap */ }
     });
 
@@ -10110,7 +10158,12 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     // The entry URL carries no ?franchise=, so "no param" means the club the
     // SERVER chose — falling back to `defaultTeamId` rather than returning
     // early, which left the header on the club the viewer had just left.
-    window.addEventListener('popstate', () => {
+    // ONE handler, replaced per init: `window` survives every swap, so an
+    // added listener per init piled up instances, each repainting with its
+    // own stale `currentTeam` closure.
+    window.removeEventListener('popstate', rosterPopstateHandler);
+    rosterPopstateHandler = () => {
+      if (!rosterHeader?.isConnected) return;  // a swap is replacing this DOM
       const param = new URL(window.location.href).searchParams.get('franchise');
       const wanted = param || defaultTeamId;
       if (!wanted || wanted === currentTeam) return;
@@ -10119,7 +10172,8 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       if (teamSelect) teamSelect.value = wanted;
       currentTeam = wanted;
       updateView();
-    });
+    };
+    window.addEventListener('popstate', rosterPopstateHandler);
 
     applyHiddenColumns();
     const urlViewParam = new URL(window.location.href).searchParams.get('view');
