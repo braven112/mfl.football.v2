@@ -74,7 +74,7 @@ fields they render, how they seed/tier, and how they render the team cell.
 - Props: `teams, view, showDivisionHeader?, divisionName?, conferenceId?, defendingChampion?, defendingChampionYear?, defendingChampionLogo?, divisionBadge?, year?, preferredTeamId?, rosterBaseUrl?, franchiseBaseUrl?`.
 - Team cell: **banner** image (`teamBanner`), with text fallback when banner is the historical placeholder. Link target = `franchiseBaseUrl/{id}` OR `rosterBaseUrl?franchise={id}`.
 - Columns by view:
-  - `division`: Seed(PlayoffBadge) · Team · Overall(h2hwlt) · PCT(h2hpct) · **GB(computed)** · **Strk** · Div(divwlt) · PF · PA
+  - `division`: Seed(PlayoffBadge) · Team · Overall(h2hwlt) · PCT(h2hpct) · **GB(computed from the overall h2hwlt record, measured from the group's first row — MFL's official leader under `preserveFeedOrder`)** · **Strk** · Div(divwlt) · PF · PA
   - `all_play`: Seed(PlayoffBadge) · Team · Record(all_play_wlt/derived) · PCT(all_play_pct) · PF · PA · PWR · VP
   - `league`: gray seed pill · Team · Record · PCT · PF · PA · PWR · VP
 - Two header styles: branded compass-badge header (`divisionBadge` set) and plain division header (conference logo + name). Defending-champion sub-line.
@@ -177,7 +177,8 @@ export type StandingsColumnKey =
   | 'divPct'         // divpct (3dp)
   | 'allPlayRecord'  // all_play_wlt or derived — see `omitZeroTies` below
   | 'allPlayPct'     // all_play_pct (3dp)
-  | 'gamesBack'      // computed within-group GB (division only)
+  | 'gamesBack'      // GB on the OVERALL record (h2hwlt) from the group's first
+                     //   row (MFL's leader); never divwlt. Division view only
   | 'streak'         // strk
   | 'pf' | 'pa' | 'pwr' | 'vp'
   | 'prize';         // AFL tier prize + promo/reg arrow

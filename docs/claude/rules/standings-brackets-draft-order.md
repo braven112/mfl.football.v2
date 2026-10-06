@@ -30,6 +30,13 @@ teams with identical 4-2-0 division records, where MFL credited the team with
 LOWER all-play and LOWER points because it swept the season series.
 `divisionTiebreaker` in standings.ts now has no production callers.
 
+A DERIVED column counts as re-deriving the order. Games back
+(`calculateGamesBack`, `standings-cells.ts`) is measured from `group[0]` on the
+OVERALL record it sits beside, never from a leader picked by W-L margin and
+never from `divwlt`. Both shipped (Oct 2026): the division-record version showed
+5-1 / 4-2 / 4-2 as "—" / 2.0 / 2.0, and the margin version re-ranked MFL's
+leader. `tests/standings-cells.test.ts`.
+
 **1b. One standings page, many leagues.** `/theleague/standings` and
 `/archies/standings` render the same `src/components/shared/standings/StandingsPage.astro`
 (the AFL's is still its own). Per-league differences are data in
