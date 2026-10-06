@@ -79,22 +79,23 @@ export function resolveAllPlayRecord(
 }
 
 /**
- * Within-division games-back, computed off the best divisional record in the
- * supplied group. Matches the legacy division-view math exactly.
+ * Games-back within the supplied group (the division card), measured on the
+ * OVERALL record — the same `h2hwlt` the table prints beside it. It used to
+ * read the division-only record, so a 4-2 team showed 2.0 GB behind a 5-1
+ * leader because their division splits differed, while the row read one game.
+ * GB = ((leaderW - teamW) + (teamL - leaderL)) / 2; ties count for neither.
  */
 export function calculateGamesBack(
-  team: { divw: string; divl: string },
-  allTeamsInGroup: Array<{ divw: string; divl: string }>
+  team: { h2hwlt?: string },
+  allTeamsInGroup: Array<{ h2hwlt?: string }>
 ): number {
   if (allTeamsInGroup.length === 0) return 0;
-  const best = allTeamsInGroup.reduce((prev, current) =>
-    parseInt(current.divw) > parseInt(prev.divw) ? current : prev
-  );
-  const bestWins = parseInt(best.divw);
-  const bestLosses = parseInt(best.divl);
-  const teamWins = parseInt(team.divw);
-  const teamLosses = parseInt(team.divl);
-  return (bestWins - teamWins + (teamLosses - bestLosses)) / 2;
+  const margin = (wlt: string | undefined) => {
+    const r = parseWLT(wlt);
+    return r.w - r.l;
+  };
+  const best = Math.max(...allTeamsInGroup.map((t) => margin(t.h2hwlt)));
+  return (best - margin(team.h2hwlt)) / 2;
 }
 
 /** Games-back cell text: an em-dash for the leader(s), one decimal otherwise. */
