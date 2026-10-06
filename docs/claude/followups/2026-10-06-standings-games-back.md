@@ -7,7 +7,7 @@ hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1338
 hotfix_sha: 5e7691f
 followup_issue: 1339
 followup_pr:
-followup_session:
+followup_session: session_01NBaVX84vAzUmCr1E2EPfMe
 ---
 
 # Follow-up: standings GB measured on the division record
