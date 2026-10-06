@@ -34,6 +34,7 @@ import type { BuildFranchiseBandBrandsOptions } from '../../../utils/franchise-b
 import type { CanonicalLeagueSlug } from '../../../config/leagues';
 import type { RailWeek, HeaderPlayer } from '../../../utils/roster-header-data';
 import { nflLogoUrl } from '../../../utils/live/nfl-logo-url';
+import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD } from '../../../constants/roster-constants';
 import type { StandingsSummary } from '../../../utils/standings-summary';
 
 interface HeaderGame {
@@ -156,6 +157,16 @@ const plateName = skin?.name || teamName;
    colour in BOTH themes, so the html.dark swap never fires for a light-theme
    viewer and the light mark would dissolve into the band. */
 const featureLogo = featuredPlayer?.nflTeam ? nflLogoUrl(featuredPlayer.nflTeam, 'dark') : '';
+/* The Free Agents hero's headshot fallback: an ESPN NFL 404 tries the same
+   id's college headshot, then hides — never a low-res MFL photo standing
+   that large. Hiding sets an inline style, so a later swap that changes the
+   src clears it with the attribute. */
+const featureShotEspnId = featuredPlayer?.headshot?.match(
+  /^https:\/\/a\.espncdn\.com\/i\/headshots\/nfl\/players\/full\/(\d+)\.png$/,
+)?.[1];
+const featureShotOnerror = featureShotEspnId
+  ? `this.onerror=function(){this.onerror=null;this.style.visibility='hidden'};this.src='https://a.espncdn.com/i/headshots/college-football/players/full/${featureShotEspnId}.png'`
+  : "this.onerror=null;this.style.visibility='hidden'";
 
 const ordinal = (n: number) => {
   const rest = n % 100;
@@ -266,7 +277,15 @@ const stats: Array<{ value: string; label: string; key?: string }> = [
       <aside class="rhdr__feature" aria-label={featuredPlayer.statLabel}>
         <span class="rhdr__feature-panel" aria-hidden="true">
           {featureLogo && (
-            <img class="rhdr__feature-logo" src={featureLogo} alt="" loading="eager" decoding="async" />
+            <img
+              class="rhdr__feature-logo"
+              src={featureLogo}
+              alt=""
+              loading="eager"
+              decoding="async"
+              onerror={NFL_LOGO_ONERROR}
+              onload={NFL_LOGO_ONLOAD}
+            />
           )}
           {featuredPlayer.headshot && (
             <img
@@ -275,7 +294,7 @@ const stats: Array<{ value: string; label: string; key?: string }> = [
               alt=""
               loading="eager"
               decoding="async"
-              onerror="this.onerror=null;this.style.visibility='hidden'"
+              onerror={featureShotOnerror}
             />
           )}
         </span>
