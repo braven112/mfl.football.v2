@@ -45,6 +45,7 @@ export const SORT_CHIP_LABELS: Readonly<Record<string, string>> = {
   projectedPoints: 'Proj',
   oppRank: 'Opp rank',
   avgSeason: 'Avg',
+  totalSeason: 'Pts',
   avgRecent: 'Last 3',
   oppAvg: 'Opp avg',
   spreadAmount: 'Spread',
@@ -59,11 +60,34 @@ export const SORT_CHIP_LABELS: Readonly<Record<string, string>> = {
  */
 export const SORT_CHIP_LEAD: Readonly<Record<RosterViewMode, readonly string[]>> = {
   gm: ['position', 'salary_0', 'contractYears', 'topRanking'],
-  coach: ['projectedPoints', 'oppRank', 'avgSeason'],
+  // The user's order (2026-10-05): the player's own numbers first, then the
+  // matchup, then the game conditions.
+  coach: [
+    'projectedPoints',
+    'totalSeason',
+    'avgSeason',
+    'avgRecent',
+    'oppAvg',
+    'oppRank',
+    'temperature',
+    'spreadAmount',
+    'overUnder',
+  ],
 };
 const SORT_CHIP_LAST: Readonly<Record<RosterViewMode, readonly string[]>> = {
   gm: [],
-  coach: ['position'],
+  coach: [],
+};
+
+/**
+ * Keys with no chip in a mode. Coach drops Pos (user, 2026-10-05): the
+ * default order is the position bands themselves, and a third tap on the
+ * active chip returns to it (`nextChipSort`), so a Pos chip at the end of the
+ * row was only noise. GM keeps Pos first — it is GM's default view.
+ */
+const SORT_CHIP_OMIT: Readonly<Record<RosterViewMode, readonly string[]>> = {
+  gm: [],
+  coach: [DEFAULT_SORT_KEY],
 };
 
 /** A header's mode, from the classes setMode() already toggles. */
@@ -87,6 +111,7 @@ export function buildSortChips(headers: readonly SortHeader[], mode: RosterViewM
   const own = headers.filter((h) => {
     if (h.available === false) return false;
     if (h.mode !== 'both' && h.mode !== mode) return false;
+    if (SORT_CHIP_OMIT[mode].includes(h.key)) return false;
     if (seen.has(h.key)) return false;
     seen.add(h.key);
     return true;
@@ -115,6 +140,20 @@ export function nextSort(key: string, current: SortState): SortState {
   if (key === DEFAULT_SORT_KEY) return { key: DEFAULT_SORT_KEY, dir: 'asc' };
   if (key === current.key) return { key, dir: current.dir === 'desc' ? 'asc' : 'desc' };
   return { key, dir: key === 'topRanking' ? 'asc' : 'desc' };
+}
+
+/**
+ * What a tap on a phone CHIP does: `nextSort`, plus a third tap on the active
+ * chip clears the sort back to the default (the position bands). Coach has no
+ * Pos chip, so this is its only way home; GM gets it too, for one rule.
+ * Headers keep `nextSort` — a desktop header click still only flips.
+ */
+export function nextChipSort(key: string, current: SortState): SortState {
+  if (key !== DEFAULT_SORT_KEY && key === current.key) {
+    const first = nextSort(key, { key: DEFAULT_SORT_KEY, dir: 'asc' }).dir;
+    if (current.dir !== first) return { key: DEFAULT_SORT_KEY, dir: 'asc' };
+  }
+  return nextSort(key, current);
 }
 
 /**

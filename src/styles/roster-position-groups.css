@@ -1,0 +1,494 @@
+/*
+ * Position-group bands + the Grouped | All players toggle on the Rosters
+ * table (src/utils/rosters/position-groups.ts).
+ *
+ * Global, imported from the page frontmatter: the band rows are innerHTML,
+ * so a scoped rule would never reach them (theming-and-assets.md, "Astro
+ * scoped CSS never reaches an element JS created").
+ *
+ * The position colours match the draft room's (draft-room.css --dr-pos-*), so
+ * a position reads the same colour across the site.
+ */
+.roster-page {
+  --rpg-pos-qb: #c41e3a;
+  --rpg-pos-rb: #2563eb;
+  --rpg-pos-wr: #16a34a;
+  --rpg-pos-te: #9333ea;
+  --rpg-pos-pk: #d97706;
+  --rpg-pos-def: #0891b2;
+  --rpg-pos-other: var(--content-text-muted);
+  --rpg-pos-ps: var(--content-text-muted);
+  --rpg-pos-ir: #dc2626;
+}
+
+html.dark .roster-page {
+  --rpg-pos-qb: #fca5a5;
+  --rpg-pos-rb: #93c5fd;
+  --rpg-pos-wr: #86efac;
+  --rpg-pos-te: #d8b4fe;
+  --rpg-pos-pk: #fcd34d;
+  --rpg-pos-def: #67e8f9;
+  --rpg-pos-ir: #fca5a5;
+}
+
+/* ── The band row ───────────────────────────────────────────────────────── */
+.roster-group-row > .roster-group-row__cell {
+  padding: 0;
+  text-align: left;
+  background: var(--content-bg-muted);
+  border-top: 1px solid var(--content-border);
+  border-bottom: 1px solid var(--content-border);
+}
+
+/* Air between groups: the band after the first one sits below a gap, so the
+   eye finds the group boundary without reading a single label. */
+.roster-group-row:not(:first-child) > .roster-group-row__cell {
+  border-top-width: 0.75rem;
+  border-top-color: var(--content-bg);
+}
+
+.roster-group-row__toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.5rem 0.75rem;
+  font: inherit;
+  font-size: var(--font-size-sm);
+  color: var(--page-text);
+  text-align: left;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.roster-group-row__toggle:hover {
+  background: var(--table-row-bg-hover);
+}
+
+.roster-group-row__toggle:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
+/* A CSS chevron: down when open, right when collapsed. */
+.roster-group-row__chev {
+  flex: none;
+  width: 0.45rem;
+  height: 0.45rem;
+  margin: 0 0.15rem 0.15rem 0.1rem;
+  border-right: 2px solid var(--content-text-muted);
+  border-bottom: 2px solid var(--content-text-muted);
+  transform: rotate(45deg);
+  transition: transform var(--transition-fast);
+}
+
+.roster-group-row__toggle[aria-expanded='false'] .roster-group-row__chev {
+  margin-bottom: 0;
+  transform: rotate(-45deg);
+}
+
+.roster-group-row__dot {
+  flex: none;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--rpg-pos-other);
+}
+
+.roster-group-row[data-group-header='QB'] .roster-group-row__dot { background: var(--rpg-pos-qb); }
+.roster-group-row[data-group-header='RB'] .roster-group-row__dot { background: var(--rpg-pos-rb); }
+.roster-group-row[data-group-header='WR'] .roster-group-row__dot { background: var(--rpg-pos-wr); }
+.roster-group-row[data-group-header='TE'] .roster-group-row__dot { background: var(--rpg-pos-te); }
+.roster-group-row[data-group-header='PK'] .roster-group-row__dot { background: var(--rpg-pos-pk); }
+.roster-group-row[data-group-header='DEF'] .roster-group-row__dot { background: var(--rpg-pos-def); }
+.roster-group-row[data-group-header='PS'] .roster-group-row__dot { background: var(--rpg-pos-ps); }
+.roster-group-row[data-group-header='IR'] .roster-group-row__dot { background: var(--rpg-pos-ir); }
+
+.roster-group-row__label {
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.roster-group-row__count {
+  color: var(--content-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.roster-group-row__stat {
+  margin-left: auto;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.roster-group-row__stat-label {
+  font-weight: 400;
+  font-size: var(--font-size-xs);
+  color: var(--content-text-muted);
+}
+
+.roster-group-row__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* A collapsed group's rows. `!important` because the phone layout makes every
+   row `display: flex !important` (rosters-mobile.css), and the `:is()` carries
+   an id so this outranks that rule in both leagues. */
+.roster-page :is(#rosterTableBody, .roster-table--afl > tbody)[data-collapsed-groups~='QB'] > tr.roster-row[data-group='QB'],
+.roster-page :is(#rosterTableBody, .roster-table--afl > tbody)[data-collapsed-groups~='RB'] > tr.roster-row[data-group='RB'],
+.roster-page :is(#rosterTableBody, .roster-table--afl > tbody)[data-collapsed-groups~='WR'] > tr.roster-row[data-group='WR'],
+.roster-page :is(#rosterTableBody, .roster-table--afl > tbody)[data-collapsed-groups~='TE'] > tr.roster-row[data-group='TE'],
+.roster-page :is(#rosterTableBody, .roster-table--afl > tbody)[data-collapsed-groups~='PK'] > tr.roster-row[data-group='PK'],
+.roster-page :is(#rosterTableBody, .roster-table--afl > tbody)[data-collapsed-groups~='DEF'] > tr.roster-row[data-group='DEF'],
+.roster-page :is(#rosterTableBody, .roster-table--afl > tbody)[data-collapsed-groups~='OTHER'] > tr.roster-row[data-group='OTHER'],
+.roster-page :is(#rosterTableBody, .roster-table--afl > tbody)[data-collapsed-groups~='PS'] > tr.roster-row[data-group='PS'],
+.roster-page :is(#rosterTableBody, .roster-table--afl > tbody)[data-collapsed-groups~='IR'] > tr.roster-row[data-group='IR'] {
+  display: none !important;
+}
+
+/* All players: one ranking, so each row's position pill carries the group. */
+.roster-page[data-league='theleague'] #rosterTableBody[data-grouping='all'] .player-meta__pos {
+  font-weight: 700;
+}
+
+/* ── Grouped | All players ──────────────────────────────────────────────── */
+/* Beside My Rank on the left of the controls row (both order -1; the page
+   gives My Rank the auto margin that pushes GM | Coach right). */
+.roster-page .roster-grouping {
+  order: -1;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-self: center;
+  padding: 3px;
+  gap: 2px;
+  background: var(--content-bg-muted);
+  border: 1px solid var(--content-border);
+  border-radius: var(--radius-md);
+}
+
+.roster-grouping__btn {
+  min-height: 2rem;
+  padding: 0 0.75rem;
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--content-text-muted);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: calc(var(--radius-md) - 2px);
+  cursor: pointer;
+}
+
+/* The same "on" treatment as the phone sort chips (.rr-chip--on). */
+.roster-grouping__btn[aria-pressed='true'] {
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 12%, var(--content-bg));
+  border-color: var(--color-primary);
+}
+
+html.dark .roster-grouping__btn[aria-pressed='true'] {
+  color: var(--color-primary-light);
+}
+
+.roster-grouping__btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+/* The page turns .roster-controls into a column at 640px; centre it there. */
+@media (max-width: 640px) {
+  .roster-page .roster-grouping {
+    order: 2;
+    align-self: center;
+  }
+}
+
+/* ── Phone ──────────────────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  /* Grouped | All players folds into the sort-chip row as one pinned toggle
+     chip (user, 2026-10-05: three rows of buttons was too many), so the
+     segmented switch is desktop-only. The chip clicks it, so it stays in the
+     DOM. */
+  .roster-page .roster-grouping {
+    display: none;
+  }
+
+  .roster-page .rr-chips {
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .roster-page[data-league] .rr-chips:not([hidden]) {
+    display: flex;
+  }
+
+  .roster-page .rr-chips .rr-chips__row {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .roster-page .rr-chip--toggle {
+    flex: none;
+  }
+
+  .roster-page .rr-chip--toggle[aria-pressed='true'] {
+    color: var(--color-primary);
+    background: color-mix(in srgb, var(--color-primary) 12%, var(--content-bg));
+    border-color: var(--color-primary);
+  }
+
+  html.dark .roster-page .rr-chip--toggle[aria-pressed='true'] {
+    color: var(--color-primary-light);
+  }
+
+  .rr-chips__divider {
+    flex: none;
+    width: 1px;
+    align-self: stretch;
+    margin: 0.5rem 0;
+    background: var(--content-border);
+  }
+
+  /* The phone layout turns the tbody into a block of cards; the band is a
+     block too, full width, with the gap above it as a margin. */
+  .roster-page[data-league='theleague'] #rosterTableBody > tr.roster-group-row,
+  .roster-page[data-league='theleague'] #rosterTableBody > tr.roster-group-row > .roster-group-row__cell {
+    display: block;
+  }
+
+  .roster-page[data-league='theleague'] #rosterTableBody > tr.roster-group-row:not(:first-child) > .roster-group-row__cell {
+    border-top-width: 1px;
+    border-top-color: var(--content-border);
+    margin-top: 0.75rem;
+  }
+
+  .roster-page[data-league='theleague'] .roster-group-row__toggle {
+    min-height: var(--touch-target-min);
+  }
+}
+
+/* ── AFL-family: sortable headers + its controls bar ────────────────────── */
+/* TheLeague's page carries these rules in its own style block, which ships
+   with that page only; the AFL-family table gets the same look here. */
+.roster-page[data-controller='afl-family'] .roster-table--afl th[data-sortable] {
+  cursor: pointer;
+  user-select: none;
+}
+
+.roster-page[data-controller='afl-family'] .roster-table--afl th[data-sortable]:hover,
+.roster-page[data-controller='afl-family'] .roster-table--afl th[data-sortable].sort-active {
+  color: var(--color-primary);
+}
+
+html.dark .roster-page[data-controller='afl-family'] .roster-table--afl th[data-sortable]:hover,
+html.dark .roster-page[data-controller='afl-family'] .roster-table--afl th[data-sortable].sort-active {
+  color: var(--color-primary-light);
+}
+
+.roster-page[data-controller='afl-family'] .roster-table--afl th[data-sortable]:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
+.roster-page[data-controller='afl-family'] .roster-table--afl .sort-arrow {
+  display: inline-block;
+  margin-left: 2px;
+  font-size: var(--font-size-2xs);
+  vertical-align: middle;
+  opacity: 0;
+}
+
+.roster-page[data-controller='afl-family'] .roster-table--afl th[data-sortable]:hover .sort-arrow {
+  opacity: 0.4;
+}
+
+.roster-page[data-controller='afl-family'] .roster-table--afl th[data-sortable]:hover .sort-arrow::after,
+.roster-page[data-controller='afl-family'] .roster-table--afl th[data-sortable].sort-desc .sort-arrow::after {
+  content: '▼';
+}
+
+.roster-page[data-controller='afl-family'] .roster-table--afl th[data-sortable].sort-asc .sort-arrow::after {
+  content: '▲';
+}
+
+.roster-page[data-controller='afl-family'] .roster-table--afl th[data-sortable].sort-active .sort-arrow {
+  opacity: 1;
+}
+
+/* In the AFL's one-row controls bar the toggle sits after My Rank. */
+.roster-page[data-controller='afl-family'] .roster-controls-bar .roster-grouping {
+  order: 0;
+}
+
+@media (max-width: 767px) {
+  .roster-page[data-controller='afl-family'] .rr-chips {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  /* The chips' spoken direction (", sorted descending") is visually hidden;
+     rosters-mobile.css scopes that rule to TheLeague only. */
+  .roster-page[data-controller='afl-family'] .rr-chip__sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .roster-page[data-controller='afl-family'] .roster-table--afl > tbody > tr.roster-group-row,
+  .roster-page[data-controller='afl-family'] .roster-table--afl > tbody > tr.roster-group-row > .roster-group-row__cell {
+    display: block;
+  }
+
+  .roster-page[data-controller='afl-family'] .roster-table--afl > tbody > tr.roster-group-row:not(:first-child) > .roster-group-row__cell {
+    border-top-width: 1px;
+    border-top-color: var(--content-border);
+    margin-top: 0.75rem;
+  }
+
+  .roster-page[data-controller='afl-family'] .roster-group-row__toggle {
+    min-height: var(--touch-target-min);
+  }
+}
+
+/* Sorted by a salary year a player has no contract for: he is off the team
+   that year, so his row is greyed — on the phone card and the desktop table
+   alike (user, 2026-10-05). The year's column still prints UFA / —. */
+.roster-page[data-league='theleague'] #rosterTableBody > tr.roster-row--off-contract {
+  opacity: 0.45;
+}
+
+.roster-page[data-league='theleague'] #rosterTableBody > tr.roster-row--off-contract .player-cell__avatar {
+  filter: grayscale(1);
+}
+
+/* Sorted by a future salary year: the card's right-hand salary is THAT year's
+   column (escalated), labelled with its year, so it matches the band total
+   that sums the same year. The page sets data-salary-year on the tbody. */
+@media (max-width: 767px) {
+  .roster-page[data-league='theleague']:not(.coach-mode) #rosterTableBody[data-salary-year='2'] td[data-column='year1'] {
+    display: none !important;
+  }
+
+  .roster-page[data-league='theleague']:not(.coach-mode) #rosterTableBody[data-salary-year='2'] td[data-column='year2'] {
+    display: block !important;
+  }
+
+  .roster-page[data-league='theleague']:not(.coach-mode) #rosterTableBody[data-salary-year='3'] td[data-column='year1'] {
+    display: none !important;
+  }
+
+  .roster-page[data-league='theleague']:not(.coach-mode) #rosterTableBody[data-salary-year='3'] td[data-column='year3'] {
+    display: block !important;
+  }
+
+  .roster-page[data-league='theleague']:not(.coach-mode) #rosterTableBody[data-salary-year='4'] td[data-column='year1'] {
+    display: none !important;
+  }
+
+  .roster-page[data-league='theleague']:not(.coach-mode) #rosterTableBody[data-salary-year='4'] td[data-column='year4'] {
+    display: block !important;
+  }
+
+  .roster-page[data-league='theleague']:not(.coach-mode) #rosterTableBody[data-salary-year='5'] td[data-column='year1'] {
+    display: none !important;
+  }
+
+  .roster-page[data-league='theleague']:not(.coach-mode) #rosterTableBody[data-salary-year='5'] td[data-column='year5'] {
+    display: block !important;
+  }
+
+  .roster-page[data-league='theleague']:not(.coach-mode) #rosterTableBody[data-salary-year='6'] td[data-column='year1'] {
+    display: none !important;
+  }
+
+  .roster-page[data-league='theleague']:not(.coach-mode) #rosterTableBody[data-salary-year='6'] td[data-column='year6'] {
+    display: block !important;
+  }
+
+  .roster-page[data-league='theleague'] #rosterTableBody[data-salary-year] td[data-column^='year'] {
+    order: 11;
+    flex: 0 0 auto;
+    position: relative;
+    text-align: right !important;
+    /* Size comes from the phone layout's shared td rule. */
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .roster-page[data-league='theleague'] #rosterTableBody[data-salary-year] td[data-column^='year']::after {
+    content: ' ' attr(data-label);
+    font-size: var(--font-size-xs);
+    font-weight: 400;
+    color: var(--content-text-muted);
+  }
+}
+
+/* Coach (and the AFL table): the card's corner — the projection — swaps to
+   the stat the table is sorted by, labelled (sort-value-slot.ts). The spans
+   ride inside the projection cell and stay hidden everywhere else. */
+.rr-sortval {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody[data-sort-col] td[data-column='projected'] .proj-points,
+  .roster-page[data-controller='afl-family'] .roster-table--afl > tbody[data-sort-col] td[data-column='projected'] .num-cell {
+    display: none;
+  }
+
+  /* The visually-hidden name said "Projected"; the corner is now the label. */
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody[data-sort-col] td[data-column='projected']::before,
+  .roster-page[data-controller='afl-family'] .roster-table--afl > tbody[data-sort-col] td[data-column='projected']::before {
+    content: '';
+  }
+
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody[data-sort-col='avgSeason'] td[data-column='projected'] .rr-sortval[data-sort-slot='avgSeason'],
+  .roster-page[data-controller='afl-family'] .roster-table--afl > tbody[data-sort-col='avgSeason'] td[data-column='projected'] .rr-sortval[data-sort-slot='avgSeason'],
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody[data-sort-col='avgRecent'] td[data-column='projected'] .rr-sortval[data-sort-slot='avgRecent'],
+  .roster-page[data-controller='afl-family'] .roster-table--afl > tbody[data-sort-col='avgRecent'] td[data-column='projected'] .rr-sortval[data-sort-slot='avgRecent'],
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody[data-sort-col='totalSeason'] td[data-column='projected'] .rr-sortval[data-sort-slot='totalSeason'],
+  .roster-page[data-controller='afl-family'] .roster-table--afl > tbody[data-sort-col='totalSeason'] td[data-column='projected'] .rr-sortval[data-sort-slot='totalSeason'],
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody[data-sort-col='oppAvg'] td[data-column='projected'] .rr-sortval[data-sort-slot='oppAvg'],
+  .roster-page[data-controller='afl-family'] .roster-table--afl > tbody[data-sort-col='oppAvg'] td[data-column='projected'] .rr-sortval[data-sort-slot='oppAvg'],
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody[data-sort-col='oppRank'] td[data-column='projected'] .rr-sortval[data-sort-slot='oppRank'],
+  .roster-page[data-controller='afl-family'] .roster-table--afl > tbody[data-sort-col='oppRank'] td[data-column='projected'] .rr-sortval[data-sort-slot='oppRank'],
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody[data-sort-col='overUnder'] td[data-column='projected'] .rr-sortval[data-sort-slot='overUnder'],
+  .roster-page[data-controller='afl-family'] .roster-table--afl > tbody[data-sort-col='overUnder'] td[data-column='projected'] .rr-sortval[data-sort-slot='overUnder'],
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody[data-sort-col='spreadAmount'] td[data-column='projected'] .rr-sortval[data-sort-slot='spreadAmount'],
+  .roster-page[data-controller='afl-family'] .roster-table--afl > tbody[data-sort-col='spreadAmount'] td[data-column='projected'] .rr-sortval[data-sort-slot='spreadAmount'],
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody[data-sort-col='temperature'] td[data-column='projected'] .rr-sortval[data-sort-slot='temperature'],
+  .roster-page[data-controller='afl-family'] .roster-table--afl > tbody[data-sort-col='temperature'] td[data-column='projected'] .rr-sortval[data-sort-slot='temperature'] {
+    display: inline;
+  }
+
+  /* The default corner says what it is too: "25.2 proj", like every swapped
+     stat ("16.8 avg"). Alt-empty: the cell's hidden "Projected" name already
+     tells a screen reader. */
+  .roster-page[data-league='theleague'].coach-mode #rosterTableBody td[data-column='projected'] .proj-points::after,
+  .roster-page[data-controller='afl-family'] .roster-table--afl > tbody td[data-column='projected'] .num-cell::after {
+    content: ' proj';
+    content: ' proj' / '';
+    font-size: var(--font-size-xs);
+    font-weight: 400;
+    color: var(--content-text-muted);
+  }
+
+  .rr-sortval::after {
+    content: ' ' attr(data-l);
+    font-size: var(--font-size-xs);
+    font-weight: 400;
+    color: var(--content-text-muted);
+  }
+}

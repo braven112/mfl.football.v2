@@ -24,6 +24,7 @@ import {
   buildSortChips,
   headerMode,
   keepValidSort,
+  nextChipSort,
   nextSort,
   renderSortChips,
   type SortHeader,
@@ -186,16 +187,20 @@ describe('the phone sort chips (idea B)', () => {
   it('every sortable header has a chip in its own mode, and only there', () => {
     for (const h of headers) {
       if (h.mode !== 'coach') expect(gm, `${h.key} missing from the GM chips`).toContain(h.key);
-      if (h.mode !== 'gm') expect(coach, `${h.key} missing from the Coach chips`).toContain(h.key);
+      // Coach has no Pos chip (user, 2026-10-05) — a third tap clears instead.
+      if (h.mode !== 'gm' && h.key !== 'position') expect(coach, `${h.key} missing from the Coach chips`).toContain(h.key);
       if (h.mode === 'gm') expect(coach).not.toContain(h.key);
       if (h.mode === 'coach') expect(gm).not.toContain(h.key);
     }
   });
 
-  it('leads with the mockup’s order: GM Pos · Salary · Years · My Rank; Coach Proj · Opp rank · Avg … Pos', () => {
+  it('leads with the set order: GM Pos · Salary · Years · My Rank; Coach Proj · Pts · Avg · Last 3 · Opp avg · Opp rank · Weather · Spread · O/U, and no Pos', () => {
     expect(gm.slice(0, 4)).toEqual(['position', 'salary_0', 'contractYears', 'topRanking']);
-    expect(coach.slice(0, 3)).toEqual(['projectedPoints', 'oppRank', 'avgSeason']);
-    expect(coach[coach.length - 1]).toBe('position');
+    expect(coach).toEqual([
+      'projectedPoints', 'totalSeason', 'avgSeason', 'avgRecent', 'oppAvg',
+      'oppRank', 'temperature', 'spreadAmount', 'overUnder',
+    ]);
+    expect(coach).not.toContain('position');
     const labels = buildSortChips(headers, 'gm').map((c) => c.label);
     expect(labels.slice(0, 4)).toEqual(['Pos', 'Salary', 'Years', 'My Rank']);
     expect(labels).toContain('2027 salary');
@@ -216,12 +221,14 @@ describe('the phone sort chips (idea B)', () => {
     expect(PAGE).toContain('buildSortChips(readSortHeaders(), phoneSortMode())');
     expect(PAGE).not.toContain('data-rr-sort-select');
     expect(PAGE).not.toContain('data-rr-sort-dir');
-    // The markup ships an empty group; only the renderer writes chips.
-    expect(PAGE).toMatch(/<div class="rr-chips" data-rr-sort>\s*<div class="rr-chips__row" role="group" aria-label="Sort the roster by" data-rr-chips><\/div>/);
+    // The markup ships an empty group; only the renderer writes chips. The
+    // one fixed control ahead of it is the pinned Grouped | All players
+    // toggle chip (position-groups.ts), outside the scrolling group.
+    expect(PAGE).toMatch(/<div class="rr-chips" data-rr-sort>[\s\S]*?data-rr-grouping-toggle[\s\S]*?<div class="rr-chips__row" role="group" aria-label="Sort the roster by" data-rr-chips><\/div>/);
   });
 
   it('a chip tap IS a header click, and the header uses the shared nextSort rule', () => {
-    expect(PAGE).toMatch(/th\[data-sortable\]\[data-sort-key="\$\{CSS\.escape\(key\)\}"\]`\)\s*\?\.click\(\)/);
+    expect(PAGE).toMatch(/th\[data-sortable\]\[data-sort-key="\$\{CSS\.escape\(target\)\}"\]`\)\s*\?\.click\(\)/);
     expect(PAGE).toContain('const next = nextSort(sortKey,');
     // A mode switch swaps the set.
     expect(PAGE).toMatch(/setMode\(mode\) \{[\s\S]*?syncPhoneSortChipsForMode\(mode\);/);
@@ -232,6 +239,26 @@ describe('the phone sort chips (idea B)', () => {
     expect(nextSort('salary_0', { key: 'position', dir: 'asc' })).toEqual({ key: 'salary_0', dir: 'desc' });
     expect(nextSort('salary_0', { key: 'salary_0', dir: 'desc' })).toEqual({ key: 'salary_0', dir: 'asc' });
     expect(nextSort('topRanking', { key: 'position', dir: 'asc' })).toEqual({ key: 'topRanking', dir: 'asc' });
+  });
+
+  it('a chip: first tap sorts, second flips, third clears back to the bands', () => {
+    const home = { key: 'position', dir: 'asc' } as const;
+    const one = nextChipSort('avgSeason', home);
+    expect(one).toEqual({ key: 'avgSeason', dir: 'desc' });
+    const two = nextChipSort('avgSeason', one);
+    expect(two).toEqual({ key: 'avgSeason', dir: 'asc' });
+    expect(nextChipSort('avgSeason', two)).toEqual(home);
+    // My Rank starts ascending, so ITS third tap is from descending.
+    const r2 = nextChipSort('topRanking', nextChipSort('topRanking', home));
+    expect(r2).toEqual({ key: 'topRanking', dir: 'desc' });
+    expect(nextChipSort('topRanking', r2)).toEqual(home);
+    // Another chip mid-cycle starts fresh; a header click (nextSort) only flips.
+    expect(nextChipSort('oppRank', two)).toEqual({ key: 'oppRank', dir: 'desc' });
+    expect(nextSort('avgSeason', two)).toEqual({ key: 'avgSeason', dir: 'desc' });
+  });
+
+  it('the page routes a chip through nextChipSort, resetting via the Player header', () => {
+    expect(PAGE).toContain("nextChipSort(key, shared).key === 'position' ? 'position' : key");
   });
 
   it('a mode switch keeps a sort only if its chip is still offered', () => {
