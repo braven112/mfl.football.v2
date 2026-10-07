@@ -63,10 +63,13 @@ import {
   recentScoreAverage,
 } from '../../../utils/afl-player-scoring';
 import { buildPhoneLineSpans, phonePosKey, teamSpread } from '../../../utils/rosters/phone-row';
+import { rosterGroupKey, countGroups, groupHeaderRowHtml } from '../../../utils/rosters/position-groups';
+import { sortSlotSpansHtml } from '../../../utils/rosters/sort-value-slot';
 // The phone layout, shared with TheLeague (docs/plans/rosters-mobile-layout.md
 // § 8). Imported here, in the frontmatter: the rules reach rows a scoped
 // <style> would not.
 import '../../../styles/rosters-mobile.css';
+import '../../../styles/roster-position-groups.css';
 import { resolveStatsSeasonYear, parseYtdPlayerScores } from '../../../utils/stats-season.mjs';
 import { getAuthUser, franchiseIdForLeague } from '../../../utils/auth';
 import { resolveOwnerPresence } from '../../../utils/rosters/owner-presence';
@@ -524,6 +527,24 @@ const irRosterPlayers: RosterEntry[] = roster
   .filter((p) => p.status === 'INJURED_RESERVE')
   .sort(byPositionThenName);
 const sortedTableRoster: RosterEntry[] = [...activeRosterPlayers, ...irRosterPlayers];
+
+// Position-group bands on the active roster table (position-groups.ts). The
+// figure is left for the client to fill: it follows the sort.
+const AFL_TABLE_COLUMNS = 11;
+const activeGroupCounts = countGroups(activeRosterPlayers.map((p) => ({ position: p.position })));
+const activeGroupHeaderAt = new Map<number, string>();
+activeRosterPlayers.forEach((p, i) => {
+  const key = rosterGroupKey({ position: p.position });
+  if (i === 0 || rosterGroupKey({ position: activeRosterPlayers[i - 1].position }) !== key) {
+    activeGroupHeaderAt.set(
+      i,
+      groupHeaderRowHtml({ key, count: activeGroupCounts.get(key) ?? 0, colspan: AFL_TABLE_COLUMNS, collapsed: false }),
+    );
+  }
+});
+/** A sort value as a data attribute: absent when there is none. */
+const sv = (v: number | null | undefined): string | undefined =>
+  v != null && Number.isFinite(v) ? String(v) : undefined;
 
 // ── Coach-mode matchup data (matches TheLeague's roster Coach tab) ──
 //
@@ -1091,6 +1112,17 @@ const pageConfig = {
         </select>
       </div>
       {rankingsPage && <MyRankEditor league={league.navSlug} />}
+      {/* Grouped | All players (position-groups.ts) and, on a phone, the
+          sort chips built from the table's own sortable headers. */}
+      <div class="roster-grouping" role="group" aria-label="Show the roster" data-rr-grouping>
+        <button type="button" class="roster-grouping__btn" data-grouping-value="grouped" aria-pressed="true">Grouped</button>
+        <button type="button" class="roster-grouping__btn" data-grouping-value="all" aria-pressed="false">All players</button>
+      </div>
+      <div class="rr-chips" data-rr-sort>
+        <button type="button" class="rr-chip rr-chip--toggle" data-rr-grouping-toggle aria-pressed="false">All players</button>
+        <span class="rr-chips__divider" aria-hidden="true"></span>
+        <div class="rr-chips__row" role="group" aria-label="Sort the roster by" data-rr-chips></div>
+      </div>
       {selectedFranchiseLink && (
         <a class="roster-controls-bar__profile" href={selectedFranchiseLink.href}>
           {selectedFranchiseLink.label}
@@ -1131,24 +1163,28 @@ const pageConfig = {
                   <table class="roster-table roster-table--afl">
                     <thead>
                       <tr>
-                        <th data-column="player">Player</th>
+                        <th data-column="player" data-sortable data-sort-key="position" tabindex="0">Player <span class="sort-arrow"></span></th>
                         <th data-column="actions" aria-label="Actions"></th>
                         {/* Rankings column — starts hidden and is revealed by the
                             rankings script only when the owner has a board loaded,
                             so an owner without one never sees an empty column. */}
-                        <th data-column="rank" class="ranking-col" id="aflRankColHeader" style="display:none">Rank</th>
-                        <th data-column="oppRank">Opp #</th>
-                        <th data-column="opponent">Opponent</th>
-                        <th data-column="ou">O/U</th>
-                        <th data-column="weather">Weather</th>
-                        <th data-column="oppAvg" title={`Fantasy points the opponent allows to this position per game, ${nflYear} season`}>Opp Avg</th>
-                        <th data-column="total" title={`Total fantasy points scored in ${selectedYear}`}>Total</th>
-                        <th data-column="avg" title={`${selectedYear} points per game played`}>Avg</th>
-                        <th data-column="projected">Proj</th>
+                        <th data-column="rank" class="ranking-col" id="aflRankColHeader" style="display:none" data-sortable data-sort-key="topRanking" tabindex="0">Rank</th>
+                        <th data-column="oppRank" data-sortable data-sort-key="oppRank" tabindex="0">Opp # <span class="sort-arrow"></span></th>
+                        <th data-column="opponent" data-sortable data-sort-key="spreadAmount" tabindex="0">Opponent <span class="sort-arrow"></span></th>
+                        <th data-column="ou" data-sortable data-sort-key="overUnder" tabindex="0">O/U <span class="sort-arrow"></span></th>
+                        <th data-column="weather" data-sortable data-sort-key="temperature" tabindex="0">Weather <span class="sort-arrow"></span></th>
+                        <th data-column="oppAvg" data-sortable data-sort-key="oppAvg" tabindex="0" title={`Fantasy points the opponent allows to this position per game, ${nflYear} season`}>Opp Avg <span class="sort-arrow"></span></th>
+                        <th data-column="total" data-sortable data-sort-key="totalSeason" tabindex="0" title={`Total fantasy points scored in ${selectedYear}`}>Total <span class="sort-arrow"></span></th>
+                        <th data-column="avg" data-sortable data-sort-key="avgSeason" tabindex="0" title={`${selectedYear} points per game played`}>Avg <span class="sort-arrow"></span></th>
+                        <th data-column="projected" data-sortable data-sort-key="projectedPoints" tabindex="0">Proj <span class="sort-arrow"></span></th>
                       </tr>
                     </thead>
-                    <tbody>
-                      {group.players.map((player) => {
+                    <tbody
+                      data-grouping={group.statusClass === 'active' ? 'grouped' : undefined}
+                      data-collapsed-groups={group.statusClass === 'active' ? '' : undefined}
+                      data-banded={group.statusClass === 'active' ? 'true' : undefined}
+                    >
+                      {group.players.map((player, rowIndex) => {
                   const m = matchupByPlayerId.get(player.id);
                   const matchup = m?.matchup ?? null;
                   const oppCode = m?.oppCode ?? null;
@@ -1160,10 +1196,24 @@ const pageConfig = {
                   const projected = m?.projected ?? null;
                   const tier = oppRank != null ? fpaTier(oppRank) : null;
                   const recent = m?.recentAverage ?? null;
+                  const spreadFor = matchup ? teamSpread(matchup.spread, player.team, normalizeTeamCode) : null;
+                  const bandHtml = group.statusClass === 'active' ? activeGroupHeaderAt.get(rowIndex) : undefined;
                   return (
+                    <Fragment>
+                    {bandHtml && <Fragment set:html={bandHtml} />}
                     <tr
                       class="roster-row"
                       data-pos={phonePosKey(player.position) || undefined}
+                      data-group={rosterGroupKey({ position: player.position })}
+                      data-order={rowIndex}
+                      data-sv-opp-rank={sv(oppRank)}
+                      data-sv-spread-amount={sv(spreadFor ? Number.parseFloat(spreadFor.text) : null)}
+                      data-sv-over-under={sv(Number.parseFloat(String(matchup?.overUnder ?? '')))}
+                      data-sv-temperature={sv(typeof matchup?.weather?.temperature === 'number' ? matchup.weather.temperature : null)}
+                      data-sv-opp-avg={sv(oppAvg)}
+                      data-sv-total-season={sv(total)}
+                      data-sv-avg-season={sv(avg)}
+                      data-sv-projected-points={sv(projected)}
                       data-player-id={player.id}
                       data-player-status={player.status}
                       data-player-name={player.name}
@@ -1216,7 +1266,7 @@ const pageConfig = {
                           kickoffZone: rowKickoffClock.zone,
                           kickoffLabel: rowKickoffClock.label,
                           opponent: oppCode,
-                          spread: matchup ? teamSpread(matchup.spread, player.team, normalizeTeamCode) : null,
+                          spread: spreadFor,
                           lastThree: recent != null ? recent.toFixed(1) : null,
                           weather: phoneWeather(matchup),
                           overUnder: formatOverUnder(matchup) === '—' ? null : formatOverUnder(matchup),
@@ -1285,8 +1335,19 @@ const pageConfig = {
                       </td>
                       <td data-column="projected">
                         <span class="num-cell num-cell--strong">{formatPoints(projected)}</span>
+                        {/* The phone corner follows the sort (sort-value-slot.ts). */}
+                        <Fragment set:html={sortSlotSpansHtml({
+                          avgSeason: avg != null ? formatPoints(avg) : null,
+                          totalSeason: total != null ? formatPoints(total) : null,
+                          oppAvg: oppAvg != null ? formatPoints(oppAvg) : null,
+                          oppRank: oppRank != null ? `#${oppRank}` : null,
+                          overUnder: formatOverUnder(matchup) === '—' ? null : formatOverUnder(matchup),
+                          spreadAmount: spreadFor?.text ?? null,
+                          temperature: typeof matchup?.weather?.temperature === 'number' ? `${Math.round(matchup.weather.temperature)}°` : null,
+                        })} />
                       </td>
                     </tr>
+                    </Fragment>
                   );
                 })}
                     </tbody>
@@ -1901,6 +1962,7 @@ const pageConfig = {
 
   <script>
     import { initPlayerModalTrigger } from '../../../utils/player-modal-trigger';
+    import { initDomRosterGroups } from '../../../utils/rosters/dom-roster-groups';
     import {
       buildAflSheetFields,
       createAflSheetActionHandler,
@@ -2040,6 +2102,13 @@ const pageConfig = {
         : null;
       if (!pageRoot || pageRoot.dataset.aflInit === '1') return;
       pageRoot.dataset.aflInit = '1';
+
+      // ── Sorting + position-group bands (dom-roster-groups.ts) ──
+      initDomRosterGroups({
+        root: pageRoot,
+        tables: Array.from(pageRoot.querySelectorAll<HTMLTableElement>('table.roster-table--afl')),
+        bandedTbody: pageRoot.querySelector<HTMLTableSectionElement>('table.roster-table--afl tbody[data-banded]'),
+      });
 
       // ── Injury badge → injury modal ──
       // Delegated on pageRoot, NOT on document. The two roster siblings both

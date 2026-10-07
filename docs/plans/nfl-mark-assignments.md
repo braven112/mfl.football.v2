@@ -98,6 +98,15 @@ ESPN publishes no SVG at any path (verified: every variant 404s), so `nflcom` is
 the only vector option beyond the committed primary. That is why two clubs chose
 it for dark.
 
+**`whiteKnockout` is also committed, for watermarks.** ESPN ships it at 4096px
+(~190 KB a club), so `scripts/download-nfl-white-logos.mjs` (run by hand) trims
+it to 512px into `public/assets/nfl-logos/white/{CODE}.png` (12–37 KB each), and
+`nflWhiteLogoUrl()` (`src/utils/live/nfl-logo-url.ts`) resolves it. It is not a
+GROUND assignment: it is for a faint watermark on a club-colour band that is dark
+in both themes (the roster nameplate's featured-player spotlight, Oct 2026),
+where a full-colour NFL cut fights the franchise's own band. No `html.dark`
+swap is keyed on it. Guard: `tests/nfl-mark-assignments.test.ts` (ALWAYS_WHITE).
+
 ## Derived marks — the reversed cut
 
 Broadcast graphics use a **reversed** mark on dark grounds: the body knocked out

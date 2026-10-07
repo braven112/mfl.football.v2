@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-10-06T05:01:28.880Z"
+    "fetchedAt": "2026-10-07T00:05:22.417Z"
   },
   "players": [
     {
@@ -191,7 +191,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 1,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "RB"
         ],
@@ -1588,8 +1588,8 @@
           "K"
         ],
         "experience": 7,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Questionable",
+        "injuryBodyPart": "Groin",
         "gsisId": " 00-0035358"
       },
       "nflverse": {
@@ -2606,7 +2606,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 2,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "WR"
         ],
@@ -2637,12 +2637,7 @@
         ]
       },
       "gamesPlayed": 4,
-      "depthChartAhead": [
-        {
-          "id": "15281",
-          "name": "Chase, Ja'Marr"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "12140",
@@ -3663,7 +3658,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 4,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "WR"
         ],
@@ -3702,10 +3697,6 @@
         {
           "id": "13630",
           "name": "Sutton, Courtland"
-        },
-        {
-          "id": "17082",
-          "name": "Bryant, Pat"
         }
       ]
     },
@@ -3790,7 +3781,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 3,
+        "depthChartOrder": 7,
         "fantasyPositions": [
           "WR"
         ],
@@ -3829,6 +3820,10 @@
         {
           "id": "13630",
           "name": "Sutton, Courtland"
+        },
+        {
+          "id": "16619",
+          "name": "Franklin, Troy"
         }
       ]
     },
@@ -4969,7 +4964,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 2,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "WR"
         ],
@@ -5000,12 +4995,7 @@
         ]
       },
       "gamesPlayed": 4,
-      "depthChartAhead": [
-        {
-          "id": "16627",
-          "name": "McConkey, Ladd"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "13132",
@@ -5050,25 +5040,26 @@
         "gsisId": "00-0033906"
       },
       "nflverse": {
-        "week": 3,
+        "week": 4,
         "season": "2026",
         "player": "Alvin Kamara",
         "team": "NO",
         "position": "RB",
-        "offenseSnaps": 24,
-        "offenseSnapPct": 0.32,
+        "offenseSnaps": 28,
+        "offenseSnapPct": 0.38,
         "defenseSnaps": 0,
         "defenseSnapPct": 0,
         "stSnaps": 0,
         "stSnapPct": 0,
         "pfrPlayerId": "KamaAl00",
-        "gamesPlayed": 2,
+        "gamesPlayed": 3,
         "gamesPlayedWeeks": [
           2,
-          3
+          3,
+          4
         ]
       },
-      "gamesPlayed": 2,
+      "gamesPlayed": 3,
       "depthChartAhead": null
     },
     {
@@ -5236,7 +5227,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 8,
+        "depthChartOrder": 7,
         "fantasyPositions": [
           "WR"
         ],
@@ -5272,10 +5263,6 @@
         {
           "id": "17512",
           "name": "Williams, Antonio"
-        },
-        {
-          "id": "17184",
-          "name": "Lane, Jaylin"
         },
         {
           "id": "14109",
@@ -5607,26 +5594,27 @@
         "gsisId": null
       },
       "nflverse": {
-        "week": 3,
+        "week": 4,
         "season": "2026",
         "player": "Devaughn Vele",
         "team": "NO",
         "position": "WR",
-        "offenseSnaps": 65,
-        "offenseSnapPct": 0.88,
+        "offenseSnaps": 66,
+        "offenseSnapPct": 0.89,
         "defenseSnaps": 0,
         "defenseSnapPct": 0,
         "stSnaps": 0,
         "stSnapPct": 0,
         "pfrPlayerId": "VeleDe00",
-        "gamesPlayed": 3,
+        "gamesPlayed": 4,
         "gamesPlayedWeeks": [
           1,
           2,
-          3
+          3,
+          4
         ]
       },
-      "gamesPlayed": 3,
+      "gamesPlayed": 4,
       "depthChartAhead": [
         {
           "id": "15754",
@@ -5667,13 +5655,13 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 2,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "RB"
         ],
         "experience": 3,
-        "injuryStatus": "Out",
-        "injuryBodyPart": "Lower Body",
+        "injuryStatus": "IR",
+        "injuryBodyPart": "Abdomen",
         "gsisId": null
       },
       "nflverse": {
@@ -6704,7 +6692,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 1,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "WR"
         ],
@@ -6735,7 +6723,12 @@
         ]
       },
       "gamesPlayed": 4,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "16188",
+          "name": "Johnston, Quentin"
+        }
+      ]
     },
     {
       "id": "16684",
@@ -8858,26 +8851,27 @@
         "gsisId": null
       },
       "nflverse": {
-        "week": 3,
+        "week": 4,
         "season": "2026",
         "player": "Kyle Pitts",
         "team": "ATL",
         "position": "TE",
-        "offenseSnaps": 42,
-        "offenseSnapPct": 0.59,
+        "offenseSnaps": 29,
+        "offenseSnapPct": 0.51,
         "defenseSnaps": 0,
         "defenseSnapPct": 0,
         "stSnaps": 0,
         "stSnapPct": 0,
         "pfrPlayerId": "PittKy00",
-        "gamesPlayed": 3,
+        "gamesPlayed": 4,
         "gamesPlayedWeeks": [
           1,
           2,
-          3
+          3,
+          4
         ]
       },
-      "gamesPlayed": 3,
+      "gamesPlayed": 4,
       "depthChartAhead": null
     },
     {
@@ -9132,7 +9126,7 @@
         "gsisId": "00-0025565"
       },
       "nflverse": {
-        "week": 3,
+        "week": 4,
         "season": "2026",
         "player": "Nick Folk",
         "team": "ATL",
@@ -9141,17 +9135,18 @@
         "offenseSnapPct": 0,
         "defenseSnaps": 0,
         "defenseSnapPct": 0,
-        "stSnaps": 12,
+        "stSnaps": 15,
         "stSnapPct": 0.48,
         "pfrPlayerId": "FolkNi20",
-        "gamesPlayed": 3,
+        "gamesPlayed": 4,
         "gamesPlayedWeeks": [
           1,
           2,
-          3
+          3,
+          4
         ]
       },
-      "gamesPlayed": 3,
+      "gamesPlayed": 4,
       "depthChartAhead": null
     },
     {
@@ -9187,7 +9182,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 8,
+        "depthChartOrder": 9,
         "fantasyPositions": [
           "RB"
         ],
@@ -9585,12 +9580,12 @@
       "gamesPlayed": 2,
       "depthChartAhead": [
         {
-          "id": "15281",
-          "name": "Chase, Ja'Marr"
-        },
-        {
           "id": "14835",
           "name": "Higgins, Tee"
+        },
+        {
+          "id": "15281",
+          "name": "Chase, Ja'Marr"
         }
       ]
     },
@@ -9761,26 +9756,27 @@
         "gsisId": null
       },
       "nflverse": {
-        "week": 3,
+        "week": 4,
         "season": "2026",
         "player": "Drake London",
         "team": "ATL",
         "position": "WR",
-        "offenseSnaps": 66,
-        "offenseSnapPct": 0.93,
+        "offenseSnaps": 51,
+        "offenseSnapPct": 0.89,
         "defenseSnaps": 0,
         "defenseSnapPct": 0,
         "stSnaps": 0,
         "stSnapPct": 0,
         "pfrPlayerId": "LondDr00",
-        "gamesPlayed": 3,
+        "gamesPlayed": 4,
         "gamesPlayedWeeks": [
           1,
           2,
-          3
+          3,
+          4
         ]
       },
-      "gamesPlayed": 3,
+      "gamesPlayed": 4,
       "depthChartAhead": null
     },
     {
@@ -10510,7 +10506,7 @@
         "gsisId": null
       },
       "nflverse": {
-        "week": 3,
+        "week": 4,
         "season": "2026",
         "player": "Tyler Shough",
         "team": "NO",
@@ -10522,14 +10518,15 @@
         "stSnaps": 0,
         "stSnapPct": 0,
         "pfrPlayerId": "ShouTy00",
-        "gamesPlayed": 3,
+        "gamesPlayed": 4,
         "gamesPlayedWeeks": [
           1,
           2,
-          3
+          3,
+          4
         ]
       },
-      "gamesPlayed": 3,
+      "gamesPlayed": 4,
       "depthChartAhead": null
     },
     {
@@ -10696,26 +10693,27 @@
         "gsisId": null
       },
       "nflverse": {
-        "week": 3,
+        "week": 4,
         "season": "2026",
         "player": "Juwan Johnson",
         "team": "NO",
         "position": "TE",
-        "offenseSnaps": 46,
-        "offenseSnapPct": 0.62,
+        "offenseSnaps": 58,
+        "offenseSnapPct": 0.78,
         "defenseSnaps": 0,
         "defenseSnapPct": 0,
-        "stSnaps": 4,
-        "stSnapPct": 0.15,
+        "stSnaps": 0,
+        "stSnapPct": 0,
         "pfrPlayerId": "JohnJu02",
-        "gamesPlayed": 3,
+        "gamesPlayed": 4,
         "gamesPlayedWeeks": [
           1,
           2,
-          3
+          3,
+          4
         ]
       },
-      "gamesPlayed": 3,
+      "gamesPlayed": 4,
       "depthChartAhead": null
     },
     {
@@ -12792,7 +12790,7 @@
         "gsisId": "00-0034161"
       },
       "nflverse": {
-        "week": 3,
+        "week": 4,
         "season": "2026",
         "player": "Daniel Carlson",
         "team": "NO",
@@ -12801,17 +12799,18 @@
         "offenseSnapPct": 0,
         "defenseSnaps": 0,
         "defenseSnapPct": 0,
-        "stSnaps": 8,
-        "stSnapPct": 0.3,
+        "stSnaps": 10,
+        "stSnapPct": 0.32,
         "pfrPlayerId": "CarlDa00",
-        "gamesPlayed": 3,
+        "gamesPlayed": 4,
         "gamesPlayedWeeks": [
           1,
           2,
-          3
+          3,
+          4
         ]
       },
-      "gamesPlayed": 3,
+      "gamesPlayed": 4,
       "depthChartAhead": null
     },
     {
@@ -13016,25 +13015,26 @@
         "gsisId": null
       },
       "nflverse": {
-        "week": 3,
+        "week": 4,
         "season": "2026",
         "player": "Oscar Delp",
         "team": "NO",
         "position": "TE",
-        "offenseSnaps": 14,
-        "offenseSnapPct": 0.19,
+        "offenseSnaps": 24,
+        "offenseSnapPct": 0.32,
         "defenseSnaps": 0,
         "defenseSnapPct": 0,
-        "stSnaps": 12,
-        "stSnapPct": 0.44,
+        "stSnaps": 14,
+        "stSnapPct": 0.45,
         "pfrPlayerId": "DelpOs01",
-        "gamesPlayed": 2,
+        "gamesPlayed": 3,
         "gamesPlayedWeeks": [
           2,
-          3
+          3,
+          4
         ]
       },
-      "gamesPlayed": 2,
+      "gamesPlayed": 3,
       "depthChartAhead": [
         {
           "id": "14861",
@@ -13075,7 +13075,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 5,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "WR"
         ],
@@ -14803,12 +14803,12 @@
       "gamesPlayed": 2,
       "depthChartAhead": [
         {
-          "id": "16627",
-          "name": "McConkey, Ladd"
-        },
-        {
           "id": "16188",
           "name": "Johnston, Quentin"
+        },
+        {
+          "id": "16627",
+          "name": "McConkey, Ladd"
         }
       ]
     },
@@ -14921,26 +14921,27 @@
         "gsisId": null
       },
       "nflverse": {
-        "week": 3,
+        "week": 4,
         "season": "2026",
         "player": "Bijan Robinson",
         "team": "ATL",
         "position": "RB",
-        "offenseSnaps": 51,
-        "offenseSnapPct": 0.72,
+        "offenseSnaps": 34,
+        "offenseSnapPct": 0.6,
         "defenseSnaps": 0,
         "defenseSnapPct": 0,
         "stSnaps": 0,
         "stSnapPct": 0,
         "pfrPlayerId": "RobiBi01",
-        "gamesPlayed": 3,
+        "gamesPlayed": 4,
         "gamesPlayedWeeks": [
           1,
           2,
-          3
+          3,
+          4
         ]
       },
-      "gamesPlayed": 3,
+      "gamesPlayed": 4,
       "depthChartAhead": null
     },
     {
@@ -17347,26 +17348,27 @@
         "gsisId": null
       },
       "nflverse": {
-        "week": 3,
+        "week": 4,
         "season": "2026",
         "player": "Zachariah Branch",
         "team": "ATL",
         "position": "WR",
         "offenseSnaps": 13,
-        "offenseSnapPct": 0.18,
+        "offenseSnapPct": 0.23,
         "defenseSnaps": 0,
         "defenseSnapPct": 0,
-        "stSnaps": 5,
-        "stSnapPct": 0.2,
+        "stSnaps": 8,
+        "stSnapPct": 0.26,
         "pfrPlayerId": "BranZa00",
-        "gamesPlayed": 3,
+        "gamesPlayed": 4,
         "gamesPlayedWeeks": [
           1,
           2,
-          3
+          3,
+          4
         ]
       },
-      "gamesPlayed": 3,
+      "gamesPlayed": 4,
       "depthChartAhead": [
         {
           "id": "15751",
@@ -17776,7 +17778,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 5,
+        "depthChartOrder": 6,
         "fantasyPositions": [
           "RB"
         ],
@@ -18077,26 +18079,27 @@
         "gsisId": null
       },
       "nflverse": {
-        "week": 3,
+        "week": 4,
         "season": "2026",
         "player": "Chris Olave",
         "team": "NO",
         "position": "WR",
-        "offenseSnaps": 62,
-        "offenseSnapPct": 0.84,
+        "offenseSnaps": 64,
+        "offenseSnapPct": 0.86,
         "defenseSnaps": 0,
         "defenseSnapPct": 0,
         "stSnaps": 0,
         "stSnapPct": 0,
         "pfrPlayerId": "OlavCh00",
-        "gamesPlayed": 3,
+        "gamesPlayed": 4,
         "gamesPlayedWeeks": [
           1,
           2,
-          3
+          3,
+          4
         ]
       },
-      "gamesPlayed": 3,
+      "gamesPlayed": 4,
       "depthChartAhead": null
     },
     {
@@ -20329,7 +20332,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 1,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "WR"
         ],
@@ -20360,7 +20363,12 @@
         ]
       },
       "gamesPlayed": 4,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "14835",
+          "name": "Higgins, Tee"
+        }
+      ]
     },
     {
       "id": "11244",
@@ -20861,26 +20869,27 @@
         "gsisId": null
       },
       "nflverse": {
-        "week": 3,
+        "week": 4,
         "season": "2026",
         "player": "Bryce Lance",
         "team": "NO",
         "position": "WR",
-        "offenseSnaps": 53,
-        "offenseSnapPct": 0.72,
+        "offenseSnaps": 63,
+        "offenseSnapPct": 0.85,
         "defenseSnaps": 0,
         "defenseSnapPct": 0,
         "stSnaps": 0,
         "stSnapPct": 0,
         "pfrPlayerId": "LancBr00",
-        "gamesPlayed": 3,
+        "gamesPlayed": 4,
         "gamesPlayedWeeks": [
           1,
           2,
-          3
+          3,
+          4
         ]
       },
-      "gamesPlayed": 3,
+      "gamesPlayed": 4,
       "depthChartAhead": [
         {
           "id": "15754",
@@ -23125,7 +23134,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 6,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "WR"
         ],
@@ -23163,10 +23172,6 @@
         {
           "id": "17512",
           "name": "Williams, Antonio"
-        },
-        {
-          "id": "17184",
-          "name": "Lane, Jaylin"
         }
       ]
     },
@@ -23726,26 +23731,27 @@
         "gsisId": null
       },
       "nflverse": {
-        "week": 3,
+        "week": 4,
         "season": "2026",
         "player": "Bijan Robinson",
         "team": "ATL",
         "position": "RB",
-        "offenseSnaps": 51,
-        "offenseSnapPct": 0.72,
+        "offenseSnaps": 34,
+        "offenseSnapPct": 0.6,
         "defenseSnaps": 0,
         "defenseSnapPct": 0,
         "stSnaps": 0,
         "stSnapPct": 0,
         "pfrPlayerId": "RobiBi01",
-        "gamesPlayed": 3,
+        "gamesPlayed": 4,
         "gamesPlayedWeeks": [
           1,
           2,
-          3
+          3,
+          4
         ]
       },
-      "gamesPlayed": 3,
+      "gamesPlayed": 4,
       "depthChartAhead": [
         {
           "id": "16161",
@@ -23994,25 +24000,26 @@
         "gsisId": null
       },
       "nflverse": {
-        "week": 3,
+        "week": 4,
         "season": "2026",
         "player": "Kendre Miller",
         "team": "NO",
         "position": "RB",
-        "offenseSnaps": 14,
-        "offenseSnapPct": 0.19,
+        "offenseSnaps": 19,
+        "offenseSnapPct": 0.26,
         "defenseSnaps": 0,
         "defenseSnapPct": 0,
-        "stSnaps": 3,
-        "stSnapPct": 0.11,
+        "stSnaps": 0,
+        "stSnapPct": 0,
         "pfrPlayerId": "MillKe01",
-        "gamesPlayed": 2,
+        "gamesPlayed": 3,
         "gamesPlayedWeeks": [
           1,
-          3
+          3,
+          4
         ]
       },
-      "gamesPlayed": 2,
+      "gamesPlayed": 3,
       "depthChartAhead": [
         {
           "id": "13132",
@@ -25118,16 +25125,16 @@
         "number": 83,
         "college": "Virginia Tech",
         "birthDate": "2002-05-01",
-        "status": "Active",
+        "status": "Inactive",
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 5,
+        "depthChartOrder": 8,
         "fantasyPositions": [
           "WR"
         ],
         "experience": 1,
-        "injuryStatus": "Out",
+        "injuryStatus": "IR",
         "injuryBodyPart": "Ankle",
         "gsisId": null
       },
@@ -25161,6 +25168,14 @@
         {
           "id": "17512",
           "name": "Williams, Antonio"
+        },
+        {
+          "id": "14109",
+          "name": "McLaurin, Terry"
+        },
+        {
+          "id": "16635",
+          "name": "McCaffrey, Luke"
         }
       ]
     },

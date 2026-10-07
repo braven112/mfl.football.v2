@@ -119,9 +119,11 @@ import '../../styles/injury-indicator.css';
 // The phone layout (docs/plans/rosters-mobile-layout.md). Imported here, in
 // the frontmatter, so it ships unscoped: the rows are innerHTML.
 import '../../styles/rosters-mobile.css';
+import '../../styles/roster-position-groups.css';
 import RosterCapStrip from '../../components/theleague/RosterCapStrip.astro';
 import RosterSimTray from '../../components/theleague/RosterSimTray.astro';
 import { buildPhoneLineSpans, phonePosKey } from '../../utils/rosters/phone-row';
+import { rosterGroupKey, countGroups, groupHeaderRowHtml } from '../../utils/rosters/position-groups';
 // Canonical row shaping, shared with the inline client script below.
 // src/utils/roster-utils.ts already held every one of these; this page used to
 // carry its own copy in the frontmatter AND another in the client script.
@@ -915,6 +917,23 @@ const calculateYearTotals = (
   );
 
 const initialRosterRows = buildDisplayRows(initialTeamData);
+// Position-group bands (src/utils/rosters/position-groups.ts). The server
+// paints the headers without a figure — which figure depends on the GM | Coach
+// mode, a localStorage choice — and the client's first render fills it in.
+// colspan counts EVERY thead column, hidden ones included, so one value holds
+// in both modes.
+const groupHeaderColspan = 13 + trendWeeks.length + SALARY_YEARS.length;
+const initialGroupCounts = countGroups(initialRosterRows);
+const initialGroupHeaderAt = new Map<number, string>();
+initialRosterRows.forEach((player, index) => {
+  const key = rosterGroupKey(player);
+  if (index === 0 || rosterGroupKey(initialRosterRows[index - 1]) !== key) {
+    initialGroupHeaderAt.set(
+      index,
+      groupHeaderRowHtml({ key, count: initialGroupCounts.get(key) ?? 0, colspan: groupHeaderColspan, collapsed: false }),
+    );
+  }
+});
 const initialYearTotals = calculateYearTotals(initialRosterRows);
 const initialCapCharges = calculateCapCharges(initialRosterRows);
 const initialDeadMoney = aggregateDeadMoneyFromSeasonData(initialSeasonData, defaultTeamId);
@@ -1881,6 +1900,13 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
             </button>
           </div>
 
+          {/* Grouped | All players (src/utils/rosters/position-groups.ts):
+              position bands, or one ranking across the whole roster. */}
+          <div class="roster-grouping" role="group" aria-label="Show the roster" data-rr-grouping>
+            <button type="button" class="roster-grouping__btn" data-grouping-value="grouped" aria-pressed="true">Grouped</button>
+            <button type="button" class="roster-grouping__btn" data-grouping-value="all" aria-pressed="false">All players</button>
+          </div>
+
           {/* Below the mode toggle, not above it: .mode-toggle has a negative
               top margin so it can ride up beside the team card, which means it
               covers anything stacked above it in this column. */}
@@ -1895,6 +1921,12 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
               column always has a chip, and they drive the same sort state and
               applySort() as a header click. */}
           <div class="rr-chips" data-rr-sort>
+            {/* Phone: Grouped | All players folds into this row as one
+                pinned toggle chip (user, 2026-10-05: three rows of buttons
+                was too many). It drives the same control as the desktop
+                segmented switch, which the phone hides. */}
+            <button type="button" class="rr-chip rr-chip--toggle" data-rr-grouping-toggle aria-pressed="false">All players</button>
+            <span class="rr-chips__divider" aria-hidden="true"></span>
             <div class="rr-chips__row" role="group" aria-label="Sort the roster by" data-rr-chips></div>
           </div>
         </div>
@@ -1920,7 +1952,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
                 </button>
                 <span>Trend</span> <span class="sort-arrow"></span>
               </th>
-              <th scope="col" data-column="totalSeason" class="coach-col" style="display:none; text-align: right;" data-sortable data-sort-key="totalSeason" title={`Total fantasy points, ${statsSeasonYear} season`}>{statsSeasonYear} Pts <span class="sort-arrow"></span></th>
+              <th scope="col" data-column="totalSeason" class="coach-col" style="display:none; text-align: right;" data-sortable data-sort-key="totalSeason" title={`Total fantasy points, ${statsSeasonYear} season`}>Pts <span class="sort-arrow"></span></th>
               <th scope="col" data-column="avgSeason" class="coach-col" style="display:none; text-align: right;" data-sortable data-sort-key="avgSeason" title="Points per game played">Avg <span class="sort-arrow"></span></th>
               <th scope="col" data-column="oppAvg" class="coach-col" style="display:none" data-sortable data-sort-key="oppAvg">Opp Avg <span class="sort-arrow"></span></th>
               <th scope="col" data-column="projected" class="coach-col" style="display:none; text-align: right;" data-sortable data-sort-key="projectedPoints">Proj <span class="sort-arrow"></span></th>
@@ -1987,11 +2019,14 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
               ))}
             </tr>
           </tfoot>
-          <tbody id="rosterTableBody">
+          <tbody id="rosterTableBody" data-grouping="grouped" data-collapsed-groups="">
           {initialRosterRows.length ? (
-            initialRosterRows.map((player) => (
+            initialRosterRows.map((player, rowIndex) => (
+              <Fragment>
+              {initialGroupHeaderAt.has(rowIndex) && <Fragment set:html={initialGroupHeaderAt.get(rowIndex)} />}
               <tr
                 data-player-id={player.id}
+                data-group={rosterGroupKey(player)}
                 data-birthdate={player.birthdate ?? ''}
                 data-pos={phonePosKey(player.position)}
                 class={`roster-row roster-row--${player.displayTag ?? 'active'}${player.positionDivider ? ' roster-row--position-divider' : ''}${player.positionDividerEnd ? ' roster-row--position-divider-end' : ''}${player.tierDivider ? ' roster-row--tier-divider' : ''}${player.activeStripe ? ' roster-row--active-alt' : ''}${(player as any).isMock ? ' roster-row--mock' : ''}`}
@@ -2257,6 +2292,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
                   );
                 })}
               </tr>
+              </Fragment>
             ))
           ) : (
             <tr>
@@ -3038,9 +3074,13 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     background: transparent;
   }
 
+  /* As wide as its columns need, never a fixed floor: a hard 980px made a
+     1024px window scroll the card sideways while the GM table only needs
+     ~890px and Coach ~865px (user, 2026-10-05: "there is side scroll on
+     desktop"). Below 900px the rule further down still lets it squeeze. */
   .roster-table {
     width: 100%;
-    min-width: 980px;
+    min-width: max-content;
     border-collapse: collapse;
   }
 
@@ -4620,9 +4660,21 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
   // line data, shared with the SSR loop above, and the sim surfaces.
   import { buildPhoneLineSpans, phonePosKey } from '../../utils/rosters/phone-row';
   import {
+    rosterGroupKey,
+    countGroups,
+    groupHeaderRowHtml,
+    groupStatSpec,
+    formatGroupStat,
+    readGrouping,
+    readCollapsedGroups,
+    toggleCollapsedGroup,
+  } from '../../utils/rosters/position-groups';
+  import { sortSlotSpansHtml, sortSlotColumn, slotNumber } from '../../utils/rosters/sort-value-slot';
+  import {
     buildSortChips,
     headerMode,
     keepValidSort,
+    nextChipSort,
     nextSort,
     renderSortChips,
     type RosterViewMode,
@@ -4638,6 +4690,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
   } from '../../utils/rosters/sim-summary';
   import type { SimActions, SimRow } from '../../utils/rosters/sim-summary';
   import { createCdmWizard } from '../../utils/cdm-wizard';
+  import { refreshConfigFromElement, replaceContents } from '../../utils/rosters/config-refresh';
   import { toggleWatch, loadWatchList } from '../../utils/watch-list-client';
   import { requestSignIn } from '../../utils/player-actions';
   // Same selection function the deadline job runs — the Cutdown Plan preview
@@ -4686,9 +4739,18 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     getAgeDistributionColors as getAgeDistributionColorsCore,
   } from '../../utils/age-utils';
 
-  const config = JSON.parse(
-    document.getElementById('roster-config').textContent
-  );
+  let configEl: Element | null = document.getElementById('roster-config');
+  const config = JSON.parse(configEl.textContent);
+
+  /** Re-read `#roster-config` after a swap — see utils/rosters/config-refresh.ts. */
+  const refreshConfigFromDom = () => {
+    const result = refreshConfigFromElement(config, configEl, document.getElementById('roster-config'));
+    if (!result.refreshed) return;
+    configEl = result.el;
+    currentSeason = config.defaultSeason;
+    replaceContents(eligibilityByTeam, config.eligibilityByTeam ?? {});
+    replaceContents(declarationsByPlayer, config.declarationsByPlayer ?? {});
+  };
 
   // ================================================================
   //  On-demand seasons
@@ -5338,6 +5400,9 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     initSimSurfaces();
   };
 
+  /** The live init's Back/Forward handler — see its assignment in initRosterPage. */
+  let rosterPopstateHandler: () => void = () => {};
+
   const initRosterPage = () => {
     /* Only on THIS league's rosters page.
        `document` is one of the two nodes the ClientRouter does not replace, so
@@ -5348,6 +5413,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
        Guard: tests/cross-league-init-gate.test.ts. */
     if (!document.querySelector('.roster-page[data-league="theleague"]')) return;
     if (!document.getElementById('roster-config')) return;
+    refreshConfigFromDom();
     // Warm My Watch List so the action sheet opens in the right state. The
     // store caches per league and no-ops on a repeat call.
     try {
@@ -5414,10 +5480,20 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       }
     }
 
+    /** The mode ON SCREEN: the page's class, which setMode() sets first. The
+        stored preference is only the fallback before the first setMode() —
+        another tab can rewrite it at any time. */
+    function screenMode(): 'gm' | 'coach' {
+      const page = document.querySelector('.roster-page[data-league="theleague"]');
+      if (page?.classList.contains('coach-mode')) return 'coach';
+      if (page?.classList.contains('gm-mode')) return 'gm';
+      return localStorage.getItem('rosterViewMode') === 'coach' ? 'coach' : 'gm';
+    }
+
     function toggleTrendWeeks() {
       trendWeeksExpanded = !trendWeeksExpanded;
       localStorage.setItem('trendWeeksExpanded', trendWeeksExpanded.toString());
-      const currentMode = localStorage.getItem('rosterViewMode') || 'gm';
+      const currentMode = screenMode();
       updateTrendWeeksVisibility(currentMode);
     }
 
@@ -5440,12 +5516,16 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       gmCols.forEach(col => col.style.display = mode === 'gm' ? 'table-cell' : 'none');
       gmRows.forEach(row => row.style.display = mode === 'gm' ? 'table-row' : 'none');
 
+      // Save preference — before the chip sync, which can re-render.
+      localStorage.setItem('rosterViewMode', mode);
+
       // Handle trend weeks visibility separately
       updateTrendWeeksVisibility(mode);
       syncPhoneSortChipsForMode(mode);
 
-      // Save preference
-      localStorage.setItem('rosterViewMode', mode);
+      // The default sort's band figure is the mode's headline number (salary
+      // in GM, projection in Coach), so a mode switch repaints the bands.
+      if (currentSortKey === 'position') applySort();
     }
 
     // Init Mode - demo and view params take precedence over saved mode
@@ -5528,7 +5608,36 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       }
     };
 
+    /** Grouped | All players, read from the tbody every instance shares. */
+    const currentGrouping = () => readGrouping(document.getElementById('rosterTableBody')?.dataset.grouping);
+
+    /* Sentinel values (Infinity, MAX_SAFE_INTEGER, MAX_SAFE_INTEGER-1) sort
+       last in either direction; UFA before dash. */
+    const compareSortValues = (sortKey: string, direction: string) => {
+      const multiplier = direction === 'desc' ? -1 : 1;
+      const SENTINEL = Number.MAX_SAFE_INTEGER - 1;
+      return (a: any, b: any) => {
+        const aVal = getSortValue(a, sortKey);
+        const bVal = getSortValue(b, sortKey);
+        const aIsSentinel = aVal >= SENTINEL || aVal === Infinity;
+        const bIsSentinel = bVal >= SENTINEL || bVal === Infinity;
+        if (aIsSentinel && bIsSentinel) return aVal - bVal;
+        if (aIsSentinel) return 1;
+        if (bIsSentinel) return -1;
+        return (aVal - bVal) * multiplier;
+      };
+    };
+
     const sortWithinGroups = (rows, sortKey, direction) => {
+      // All players: one ranking across every position and the practice
+      // squad / IR, with no group dividers (there are no groups to divide).
+      if (sortKey !== 'position' && currentGrouping() === 'all') {
+        const flat = rows
+          .map((player: any) => ({ ...player, positionDivider: false, positionDividerEnd: false, tierDivider: false }))
+          .sort(compareSortValues(sortKey, direction));
+        return annotateActiveStriping(flat);
+      }
+
       // Default sort: re-sort by position then salary (original order)
       if (sortKey === 'position') {
         const tierOrder = ['active', 'practice', 'injured'];
@@ -5561,14 +5670,16 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
 
       rows.forEach(player => {
         const tier = player.displayTag ?? 'active';
-        const pos = (player.position ?? '').toUpperCase();
+        // The practice squad and IR are ONE band each (position-groups.ts),
+        // so a sort ranks them as one list, not position by position.
+        const pos = tier === 'active' ? (player.position ?? '').toUpperCase() : '';
         if (!tiers[tier]) tiers[tier] = {};
         if (!tiers[tier][pos]) tiers[tier][pos] = [];
         tiers[tier][pos].push(player);
       });
 
       // Sort within each position group
-      const multiplier = direction === 'desc' ? -1 : 1;
+      const compare = compareSortValues(sortKey, direction);
       const sorted = [];
 
       tierOrder.forEach(tier => {
@@ -5577,18 +5688,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
           getPositionRank(a) - getPositionRank(b)
         );
         positions.forEach(pos => {
-          tiers[tier][pos].sort((a, b) => {
-            const aVal = getSortValue(a, sortKey);
-            const bVal = getSortValue(b, sortKey);
-            // Push sentinel values (Infinity, MAX_SAFE_INTEGER, MAX_SAFE_INTEGER-1) to end always
-            const SENTINEL = Number.MAX_SAFE_INTEGER - 1;
-            const aIsSentinel = aVal >= SENTINEL || aVal === Infinity;
-            const bIsSentinel = bVal >= SENTINEL || bVal === Infinity;
-            if (aIsSentinel && bIsSentinel) return aVal - bVal; // UFA before dash
-            if (aIsSentinel) return 1;
-            if (bIsSentinel) return -1;
-            return (aVal - bVal) * multiplier;
-          });
+          tiers[tier][pos].sort(compare);
           sorted.push(...tiers[tier][pos]);
         });
       });
@@ -5675,13 +5775,13 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       syncPhoneSortControl(currentSortKey, currentSortDir);
     }
 
+    /* Re-hide the other mode's cells after a re-render. The mode on screen is
+       the page's own class, set first thing by setMode() — NOT localStorage:
+       setMode() can re-render (a phone sort reset) before it saves, and
+       another tab can rewrite the key at any time. Reading the stored value
+       here painted Coach columns into GM until a second Coach → GM round. */
     const reapplyModeVisibility = () => {
-      const currentMode = localStorage.getItem('rosterViewMode') || 'gm';
-      const rosterPageEl = document.querySelector('.roster-page');
-      if (rosterPageEl) {
-        rosterPageEl.classList.toggle('coach-mode', currentMode === 'coach');
-        rosterPageEl.classList.toggle('gm-mode', currentMode === 'gm');
-      }
+      const currentMode = screenMode();
       document.querySelectorAll<HTMLElement>('.coach-col:not(.trend-week-col)').forEach(col =>
         col.style.display = currentMode === 'coach' ? 'table-cell' : 'none');
       document.querySelectorAll<HTMLElement>('.gm-col').forEach(col =>
@@ -5701,8 +5801,70 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     const resetSort = () => {
       currentSortKey = 'position';
       currentSortDir = 'asc';
+      // The default sort IS the grouped view: All players needs a ranking.
+      const tbody = document.getElementById('rosterTableBody');
+      if (tbody) tbody.dataset.grouping = 'grouped';
+      syncGroupingControl();
       updateSortIndicators('position', 'asc');
     };
+
+    /* Grouped | All players (position-groups.ts). The state lives on the
+       tbody, which every init instance shares; the control only mirrors it. */
+    const groupingControl = () =>
+      document.querySelector<HTMLElement>('.roster-page[data-league="theleague"] [data-rr-grouping]');
+
+    function syncGroupingControl() {
+      const value = currentGrouping();
+      groupingControl()?.querySelectorAll<HTMLElement>('[data-grouping-value]').forEach((btn) => {
+        btn.setAttribute('aria-pressed', String(btn.dataset.groupingValue === value));
+      });
+      groupingChip()?.setAttribute('aria-pressed', String(value === 'all'));
+    }
+
+    /** The phone's pinned "All players" chip, at the head of the sort chips. */
+    const groupingChip = () =>
+      document.querySelector<HTMLElement>('.roster-page[data-league="theleague"] [data-rr-grouping-toggle]');
+
+    const groupingCtl = groupingControl();
+    if (groupingCtl) {
+      // Assigned, not added: init can run twice on one load, and one toggle
+      // must flip the state once.
+      groupingCtl.onclick = (e) => {
+        const btn = (e.target as HTMLElement | null)?.closest<HTMLElement>('[data-grouping-value]');
+        const tbody = document.getElementById('rosterTableBody');
+        if (!btn || !tbody) return;
+        const value = readGrouping(btn.dataset.groupingValue);
+        if (value === currentGrouping()) return;
+        tbody.dataset.grouping = value;
+        syncGroupingControl();
+        const activeTh = document.querySelector<HTMLElement>('.roster-page[data-league="theleague"] .roster-table thead th.sort-active');
+        if (value === 'all' && !activeTh) {
+          // All players needs a ranking: the mode's headline column, sorted
+          // by a header click so every init instance follows it.
+          const coach = rosterPage?.classList.contains('coach-mode');
+          document
+            .querySelector<HTMLElement>(`.roster-page[data-league="theleague"] .roster-table thead th[data-sort-key="${coach ? 'projectedPoints' : 'salary_0'}"]`)
+            ?.click();
+          return;
+        }
+        if (value === 'grouped' && !activeTh) {
+          resetSort();
+        }
+        tbody.dispatchEvent(new CustomEvent('rr:grouping-changed'));
+      };
+      syncGroupingControl();
+    }
+
+    // The chip flips the segmented switch (hidden on a phone, still in the
+    // DOM), so both run one code path. Assigned: init can run twice.
+    const groupingChipEl = groupingChip();
+    if (groupingChipEl) {
+      groupingChipEl.onclick = () => {
+        const next = currentGrouping() === 'all' ? 'grouped' : 'all';
+        groupingControl()?.querySelector<HTMLElement>(`[data-grouping-value="${next}"]`)?.click();
+      };
+      syncGroupingControl();
+    }
 
     // Attach click handlers to sortable headers
     document.querySelectorAll<HTMLElement>('th[data-sortable]').forEach(th => {
@@ -5747,8 +5909,17 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
         const key = chip?.dataset.rrChip;
         if (!chip || !key) return;
         chip.focus();
+        // A third tap on the active chip clears the sort (nextChipSort): Coach
+        // has no Pos chip, so that is its way back to the bands. The reset is
+        // the Player header's click, so every instance follows it too.
+        const activeTh = document.querySelector<HTMLElement>('.roster-page[data-league="theleague"] .roster-table thead th.sort-active');
+        const shared = {
+          key: activeTh?.dataset.sortKey ?? 'position',
+          dir: (activeTh?.classList.contains('sort-desc') ? 'desc' : 'asc') as 'asc' | 'desc',
+        };
+        const target = nextChipSort(key, shared).key === 'position' ? 'position' : key;
         document
-          .querySelector<HTMLElement>(`.roster-page[data-league="theleague"] .roster-table thead th[data-sortable][data-sort-key="${CSS.escape(key)}"]`)
+          .querySelector<HTMLElement>(`.roster-page[data-league="theleague"] .roster-table thead th[data-sortable][data-sort-key="${CSS.escape(target)}"]`)
           ?.click();
       };
       // The rankings script says when My Rank gains or loses its board. The
@@ -5824,6 +5995,25 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
        Guard: tests/rosters-team-nav-clientrouter.test.ts. */
     const rosterTable = document.querySelector<HTMLElement>('.roster-table');
     const rosterTableBody = document.getElementById('rosterTableBody');
+
+    // Grouped | All players re-renders in every init instance (each holds
+    // its own lastRenderedRows). The tbody is replaced on a ClientRouter swap,
+    // so these listeners go with it.
+    rosterTableBody?.addEventListener('rr:grouping-changed', () => applySort());
+
+    // A band header collapses its group. CSS hides the rows from the tbody's
+    // `data-collapsed-groups`, so a re-render keeps the choice. Bound once:
+    // two instances would toggle it twice.
+    if (rosterTableBody && !rosterTableBody.dataset.rrGroupBound) {
+      rosterTableBody.dataset.rrGroupBound = '1';
+      rosterTableBody.addEventListener('click', (e) => {
+        const btn = (e.target as HTMLElement | null)?.closest<HTMLElement>('[data-group-toggle]');
+        const key = btn?.dataset.groupToggle;
+        if (!btn || !key) return;
+        rosterTableBody.dataset.collapsedGroups = toggleCollapsedGroup(rosterTableBody.dataset.collapsedGroups, key);
+        btn.setAttribute('aria-expanded', String(!readCollapsedGroups(rosterTableBody.dataset.collapsedGroups).has(key)));
+      });
+    }
     const rosterMetadata = document.getElementById('rosterMetadata');
     const rosterCountLabel = document.getElementById('rosterCountLabel');
     const columnToggles = document.querySelectorAll('[data-column-toggle]');
@@ -6466,6 +6656,39 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       };
     };
 
+    /** Every thead column, hidden ones included, so one colspan holds in both modes. */
+    const groupHeaderColspan = () =>
+      document.querySelectorAll('.roster-page[data-league="theleague"] .roster-table thead tr:first-child > th').length || 1;
+
+    /** A salary_N band figure is labelled with its column's year. */
+    const salaryColumnLabel = (key: string) => {
+      const th = document.querySelector<HTMLElement>(
+        `.roster-page[data-league="theleague"] .roster-table thead th[data-sort-key="${CSS.escape(key)}"]`,
+      );
+      const year = (th?.textContent ?? '').trim();
+      return year ? `${year} salary` : 'salary';
+    };
+
+    /** The header row (or '') to print ahead of row `index`, in Grouped. */
+    const buildGroupHeaders = (rows: any[]) => {
+      const counts = countGroups(rows);
+      const collapsed = readCollapsedGroups(rosterTableBody?.dataset.collapsedGroups);
+      const mode = rosterPage?.classList.contains('coach-mode') ? 'coach' : 'gm';
+      const spec = groupStatSpec(currentSortKey, mode, salaryColumnLabel);
+      const colspan = groupHeaderColspan();
+      return (index: number) => {
+        const key = rosterGroupKey(rows[index]);
+        if (index > 0 && rosterGroupKey(rows[index - 1]) === key) return '';
+        let stat = null;
+        if (spec) {
+          const values = rows.filter((r: any) => rosterGroupKey(r) === key).map((r: any) => getSortValue(r, spec.key));
+          const value = formatGroupStat(values, spec);
+          stat = value ? { value, label: spec.label } : null;
+        }
+        return groupHeaderRowHtml({ key, count: counts.get(key) ?? 0, colspan, collapsed: collapsed.has(key), stat });
+      };
+    };
+
     const renderTableRows = (rows = []) => {
       if (!rosterTableBody) return;
       if (!rows.length) {
@@ -6477,8 +6700,26 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       // it for every row's badge instead of recomputing selectAutoCuts per row.
       const autocutBadgeMap = isAutocutOwnView() ? buildAutocutBadgeMap() : null;
 
+      // Position-group bands (src/utils/rosters/position-groups.ts): one
+      // header row ahead of each group, in Grouped only. Its figure follows
+      // the active sort.
+      const grouped = readGrouping(rosterTableBody.dataset.grouping) === 'grouped';
+      const groupHeaderFor = grouped ? buildGroupHeaders(rows) : () => '';
+      const isSalaryYearSort = /^salary_\d+$/.test(currentSortKey);
+      // Sorted by a FUTURE salary year: the phone card's right-hand salary
+      // shows that year (its column, escalated), not this year's — otherwise
+      // the card disagrees with its band total, which sums that year.
+      // CSS keys on the tbody attribute (roster-position-groups.css).
+      const salaryYearIndex = isSalaryYearSort ? Number(currentSortKey.slice('salary_'.length)) : 0;
+      if (salaryYearIndex > 0) rosterTableBody.dataset.salaryYear = String(salaryYearIndex + 1);
+      else delete rosterTableBody.dataset.salaryYear;
+      // Coach's corner (Proj) follows a stat sort the same way.
+      const slotCol = sortSlotColumn(currentSortKey);
+      if (slotCol) rosterTableBody.dataset.sortCol = slotCol;
+      else delete rosterTableBody.dataset.sortCol;
+
       rosterTableBody.innerHTML = rows
-        .map((player) => {
+        .map((player, rowIndex) => {
           // Apply contract action if exists
           const action = contractActions[player.id];
           let displaySalary = player.salary;
@@ -6674,9 +6915,23 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
             </td>
           `;
 
+          // The phone card's corner follows the sort (sort-value-slot.ts):
+          // hidden spans, one per sortable stat; CSS picks one on a phone.
+          const slotRow = player as any;
+          const temperature = slotRow.gameOdds?.weather?.temperature;
+          const sortSlots = sortSlotSpansHtml({
+            avgSeason: slotNumber(slotRow.avgSeason),
+            avgRecent: slotNumber(slotRow.avgRecent),
+            totalSeason: slotNumber(slotRow.totalSeason),
+            oppAvg: slotNumber(slotRow.oppStats?.avg),
+            oppRank: slotRow.oppStats?.rank != null ? `#${slotRow.oppStats.rank}` : null,
+            overUnder: slotNumber(slotRow.gameOdds?.overUnder),
+            spreadAmount: hasSpread ? spreadDisplay : null,
+            temperature: typeof temperature === 'number' ? `${Math.round(temperature)}°` : null,
+          });
           const projectedCell = `
             <td data-label="Projected" data-column="projected" class="coach-col" style="display:none; text-align: right;">
-              <span class="proj-points">${player.projectedPoints || '-'}</span>
+              <span class="proj-points">${player.projectedPoints || '-'}</span>${sortSlots}
             </td>
           `;
 
@@ -6753,6 +7008,12 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
           if (player.isMock) {
             rowClasses.push('roster-row--mock');
           }
+          // Sorted by a salary year he has no contract for (UFA or "—"): he is
+          // off the team that year. Greyed at every width (phone and desktop);
+          // the band figure already skips him (a sentinel).
+          if (isSalaryYearSort && getSortValue(player, currentSortKey) >= Number.MAX_SAFE_INTEGER - 1) {
+            rowClasses.push('roster-row--off-contract');
+          }
 
           // Add contract action indicator
           if (action) {
@@ -6827,7 +7088,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
             opponent: phoneRow.opponent !== 'BYE' ? phoneRow.gameOdds?.opponent : null,
           });
 
-          return `<tr data-player-id="${player.id}" data-birthdate="${player.birthdate ?? ''}" data-pos="${phonePosKey(phoneRow.position)}" class="${rowClasses.join(' ')}">
+          return `${groupHeaderFor(rowIndex)}<tr data-player-id="${player.id}" data-birthdate="${player.birthdate ?? ''}" data-pos="${phonePosKey(phoneRow.position)}" data-group="${rosterGroupKey(player)}" class="${rowClasses.join(' ')}">
             <td data-label="Player" data-column="player">
               ${playerCellHtml}${actionBadge}${phoneLineSpans}
             </td>
@@ -9666,7 +9927,9 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
         if (headerCapCell) headerCapCell.textContent = _capSpaceFmt.format(capLimitForSeason - capCharge);
       }
       lastRenderedRows = rows;
-      renderTableRows(rows);
+      // Keep the active sort (and All players) across a team switch or a
+      // simulated move; `rows` arrive in the default order.
+      renderTableRows(currentSortKey === 'position' ? rows : sortWithinGroups(rows, currentSortKey, currentSortDir));
 
       // The phone cap card, sim bar and Cap by year sheet (hidden on desktop).
       // Painted from THIS pass's numbers plus an unsimulated baseline computed
@@ -9708,8 +9971,9 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       // move, demo enter/exit) — it hides itself off the owner's own team.
       renderCutdownPanel();
 
-      // Re-apply view mode logic after rendering
-      const currentMode = localStorage.getItem('rosterViewMode') || 'gm';
+      // Re-apply view mode logic after rendering (the mode on screen — see
+      // screenMode()).
+      const currentMode = screenMode();
       const rosterPageEl = document.querySelector('.roster-page');
 
       // Update container class
@@ -9818,6 +10082,21 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     });
 
     rosterHeader?.addEventListener('click', (event) => {
+      // initRosterPage runs twice on the first load and BOTH instances listen
+      // here. The first one to handle a crest click tags the event; the other
+      // must still follow it to that team. It used to bail on
+      // `defaultPrevented` instead and kept the OLD team's rows in its
+      // closure, so the next sort — which runs in every instance — repainted
+      // the previous club's roster under the new club's header.
+      const handledTeam = (event as MouseEvent & { rrTeamSwitch?: string }).rrTeamSwitch;
+      if (handledTeam) {
+        if (handledTeam !== currentTeam) {
+          if (teamSelect) teamSelect.value = handledTeam;
+          currentTeam = handledTeam;
+          updateView();
+        }
+        return;
+      }
       // Never swallow a modifier-click or a middle-click: those mean "open
       // this somewhere else", and the href is what serves them.
       if (event.defaultPrevented || event.button !== 0) return;
@@ -9829,14 +10108,32 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       if (!teamId || !seasons[currentSeason]?.teams?.[teamId]) return;  // let it navigate
 
       event.preventDefault();
+      (event as MouseEvent & { rrTeamSwitch?: string }).rrTeamSwitch = teamId;
       applyRosterHeader(teamId);
       if (teamSelect) teamSelect.value = teamId;
       currentTeam = teamId;
       updateView();
       // The URL is the record of what is on screen — the old switcher's
       // omission is why a roster could not be linked to.
+      // The ClientRouter's own state shape. It treats Back/Forward onto any
+      // non-null entry as a navigation and SWAPS the document (the server
+      // renders that entry's ?franchise=, and refreshConfigFromDom makes the
+      // re-init follow it). A foreign shape left its index undefined, and a
+      // null state is worse: the router ignores popstate onto a null entry
+      // even when arriving from ANOTHER page, stranding that page's DOM under
+      // a roster URL. The router's private history counter does not see this
+      // push, so a later router push can reuse an index; the only effect is a
+      // transition animating in the wrong direction on a later Back.
       try {
-        window.history.pushState({ rosterTeam: teamId }, '', link.getAttribute('href'));
+        const prev = window.history.state;
+        // Save where the viewer was on the entry being left, as the router
+        // does before its own pushes, so Back restores that scroll.
+        if (prev) window.history.replaceState({ ...prev, scrollX: window.scrollX, scrollY: window.scrollY }, '');
+        window.history.pushState(
+          { index: (Number(prev?.index) || 0) + 1, scrollX: window.scrollX, scrollY: window.scrollY },
+          '',
+          link.getAttribute('href'),
+        );
       } catch { /* a blocked history write must not break the swap */ }
     });
 
@@ -9844,7 +10141,20 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     // The entry URL carries no ?franchise=, so "no param" means the club the
     // SERVER chose — falling back to `defaultTeamId` rather than returning
     // early, which left the header on the club the viewer had just left.
-    window.addEventListener('popstate', () => {
+    // ONE handler, replaced per init: `window` survives every swap, so an
+    // added listener per init piled up instances, each repainting with its
+    // own stale `currentTeam` closure.
+    window.removeEventListener('popstate', rosterPopstateHandler);
+    const rosterPath = window.location.pathname;
+    rosterPopstateHandler = () => {
+      // Back to a DIFFERENT route: its missing ?franchise= is not "the
+      // server's team", and repainting the outgoing roster before the
+      // router swaps it away is wasted, visible work.
+      if (window.location.pathname !== rosterPath) return;
+      // The last roster init's handler outlives the page: on any OTHER page
+      // its header is detached, and it must not act there. (On this page the
+      // router's swap starts first but is async, so this still repaints.)
+      if (!rosterHeader?.isConnected) return;
       const param = new URL(window.location.href).searchParams.get('franchise');
       const wanted = param || defaultTeamId;
       if (!wanted || wanted === currentTeam) return;
@@ -9853,7 +10163,8 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       if (teamSelect) teamSelect.value = wanted;
       currentTeam = wanted;
       updateView();
-    });
+    };
+    window.addEventListener('popstate', rosterPopstateHandler);
 
     applyHiddenColumns();
     const urlViewParam = new URL(window.location.href).searchParams.get('view');
@@ -9887,7 +10198,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
     };
 
     const rosterViewMode = () => {
-      try { return localStorage.getItem('rosterViewMode') === 'coach' ? 'coach' : 'gm'; } catch { return 'gm'; }
+      try { return screenMode(); } catch { return 'gm'; }
     };
 
     /** The row and ⋮ button for a player, looked up NOW — the tbody re-renders. */
@@ -10524,7 +10835,11 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
         ?.dispatchEvent(new CustomEvent('rr:sort-headers-changed'));
       // Rank is a GM-mode column — never let it reappear in Coach mode.
       if (!hasColumn) return;
-      const mode = localStorage.getItem('rosterViewMode') || 'gm';
+      // The mode on screen (the page class), not the stored preference.
+      const page = document.querySelector('.roster-page[data-league="theleague"]');
+      const mode = page?.classList.contains('coach-mode') ? 'coach'
+        : page?.classList.contains('gm-mode') ? 'gm'
+        : (localStorage.getItem('rosterViewMode') || 'gm');
       document.querySelectorAll('.roster-table:not(.roster-table--afl) .ranking-col').forEach((el) => {
         (el as HTMLElement).style.display = mode === 'gm' ? 'table-cell' : 'none';
       });

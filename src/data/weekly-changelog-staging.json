@@ -408,10 +408,58 @@
     {
       "date": "2026-10-05",
       "type": "style-tweak",
-      "summary": "The featured player on every roster header now gets the Free Agents spotlight treatment: a big headshot over his NFL team's logo.",
+      "summary": "The featured player on every roster header now gets the Free Agents spotlight treatment: a big headshot over his NFL team's logo in white.",
       "impact": "user",
       "area": "rosters",
       "league": "both"
+    },
+    {
+      "date": "2026-10-05",
+      "type": "enhancement",
+      "summary": "Rosters: each position group now has its own band with a running total that follows your sort, and All players ranks your whole roster by any column.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "both"
+    },
+    {
+      "date": "2026-10-05",
+      "type": "bug-fix",
+      "summary": "Rosters: switching from Coach back to GM no longer leaves the Coach columns showing until you toggle twice.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-10-05",
+      "type": "bug-fix",
+      "summary": "Rosters: sorting right after switching teams no longer swaps in the previous team's players.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-10-05",
+      "type": "bug-fix",
+      "summary": "Rosters: the table no longer scrolls sideways on narrower desktop windows when every column fits.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-10-06",
+      "type": "bug-fix",
+      "summary": "Standings: games back now counts from the overall record shown beside it, so 4-2 behind 5-1 reads 1.0, not 2.0.",
+      "impact": "user",
+      "area": "standings",
+      "league": "both"
+    },
+    {
+      "date": "2026-10-05",
+      "type": "bug-fix",
+      "summary": "After switching teams from the roster header's crest row, the browser's Back button now returns to the team you came from instead of the one the page first opened on.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "theleague"
     }
   ]
 }

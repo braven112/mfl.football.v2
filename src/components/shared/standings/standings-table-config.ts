@@ -25,7 +25,7 @@ export type StandingsColumnKey =
   | 'divPct' // divpct (3dp)
   | 'allPlayRecord' // all_play_wlt or derived
   | 'allPlayPct' // all_play_pct (3dp)
-  | 'gamesBack' // computed within-group GB (division only)
+  | 'gamesBack' // GB on the overall record, within the division card
   | 'streak' // strk
   | 'pf'
   | 'pa'

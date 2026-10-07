@@ -99,9 +99,9 @@ describe('safeParseFloat / safeParseInt', () => {
 
 describe('calculateGamesBack / formatGamesBack', () => {
   const teams = [
-    { divw: '10', divl: '2' },
-    { divw: '8', divl: '4' },
-    { divw: '6', divl: '6' },
+    { h2hwlt: '10-2-0' },
+    { h2hwlt: '8-4-0' },
+    { h2hwlt: '6-6-0' },
   ];
   it('is zero for the division leader', () => {
     expect(calculateGamesBack(teams[0], teams)).toBe(0);
@@ -112,7 +112,25 @@ describe('calculateGamesBack / formatGamesBack', () => {
     expect(formatGamesBack(2)).toBe('2.0');
     expect(calculateGamesBack(teams[2], teams)).toBe(4);
   });
+  it('reads the overall record, not the division split', () => {
+    // The reported case: 5-1 vs 4-2 is one game back, whatever the division
+    // records say (they used to drive this and printed 2.0).
+    const group = [
+      { h2hwlt: '5-1-0', divwlt: '3-0-0' },
+      { h2hwlt: '4-2-0', divwlt: '1-2-0' },
+    ];
+    expect(formatGamesBack(calculateGamesBack(group[1], group))).toBe('1.0');
+  });
+  it('measures from the first row (MFL feed order), never a re-derived leader', () => {
+    // MFL ranked the tiebreak winner first; same record means zero back.
+    const tied = [{ h2hwlt: '4-2-0' }, { h2hwlt: '4-2-0' }];
+    expect(calculateGamesBack(tied[1], tied)).toBe(0);
+    // The feed's leader stays the reference even if another row has a
+    // bigger W-L margin, so the leader is never shown behind anyone.
+    const group = [{ h2hwlt: '5-1-0' }, { h2hwlt: '7-2-0' }];
+    expect(calculateGamesBack(group[0], group)).toBe(0);
+  });
   it('is zero for an empty group', () => {
-    expect(calculateGamesBack({ divw: '1', divl: '1' }, [])).toBe(0);
+    expect(calculateGamesBack({ h2hwlt: '1-1-0' }, [])).toBe(0);
   });
 });

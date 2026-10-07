@@ -4074,3 +4074,39 @@ author `display` on anything toggled with `hidden` needs a matching
 `[hidden] { display: none }`.
 
 **Evidence:** `tests/rosters-phone-row.test.ts` ("the phone sort chips").
+
+## 2026-10-06 - A bundled script's module-scope config is a SESSION snapshot; and never `pushState(null)` under ClientRouter
+
+**Context:** TheLeague rosters page. Crest switch 0001 → 0005, then Back: after
+`astro:page-load` the header showed the session's FIRST team while the URL said
+0001. Measured: `after-swap` header was right (the server rendered
+`?franchise=0001`), `page-load` was wrong.
+
+**Root cause:** the page's bundled `<script>` parsed `#roster-config` at MODULE
+scope. A bundled script evaluates once per session, so every later
+`initRosterPage` (re-run on `astro:page-load`) destructured the first load's
+`defaultTeamId` and repainted over the correct SSR. Not the stacked popstate
+listeners (they were a leak too, but painted the right team). Same bug for any
+later arrival on `rosters?franchise=X` in the session.
+
+**Fix pattern:** `refreshConfigFromDom()` at the top of init, keyed on the
+config NODE (`el === configEl` → skip), because init runs twice on first load's
+same DOM and the payload is megabytes. Mutate the module object in place
+(`Object.assign`) so module-level helpers holding `config` see it, merge
+on-demand caches (`seasons`) rather than drop them, and re-sync any module
+`const` derived from config (`eligibilityByTeam`, …). Rule: any module-scope
+`JSON.parse(getElementById(...))` in a bundled page script is a session
+snapshot — re-read it per page-load.
+
+**ClientRouter history trap (Astro 6 `router.js` `onPopState`):** it returns
+early on `ev.state === null` (that is its native-hash path) and SWAPS on any
+other entry. A null-state `pushState` looks like a way to keep in-page Back
+cheap, but popstate onto that entry from ANOTHER page is also ignored, leaving
+the other page's DOM under the roster URL. Push the router's own shape
+(`{ index, scrollX, scrollY }`) and accept the swap; a foreign shape
+(`{rosterTeam}`) leaves the router's index `undefined`/`NaN`. Also: a `window`
+popstate listener added per init stacks forever (`window` survives swaps) —
+keep one module-level handler slot and remove/re-add it each init.
+
+**Evidence:** `tests/rosters-team-nav-clientrouter.test.ts` ("follows
+Back/Forward across a ClientRouter swap").
