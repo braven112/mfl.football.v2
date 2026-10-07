@@ -54,6 +54,13 @@
   function**, and the Vercel function ships `data/` TWICE — one copy being the
   whole tree. `excludeFiles` is what keeps archived feeds out. (2026-07-07,
   2026-08-16)
+- **The fallback also copies files no `fs` reader names, even in kept
+  seasons.** `roster-history/` (glob-only) and all of `derived/` but two
+  `player-map.ts` files were ~42 MB of a 225 MB staging function; they are now
+  excluded by ALLOWLIST, so a new `fs` reader of an excluded file ENOENTs on
+  Vercel only — `tests/archived-feed-files.test.ts` scans src/ for exactly
+  that. The third 250 MB breach (2026-10-07, the Archies) came from a
+  hardcoded league list in the same module. (2026-10-07)
 - **Build CPU was 91% of the bill; bandwidth was 1.9%.** Optimize builds, not
   transfer. Whether a build step is skippable is an EMPIRICAL question, and
   `generatedAt` is the only honest diff. (2026-09-06)

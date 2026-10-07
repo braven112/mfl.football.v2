@@ -26,6 +26,18 @@
  *
  * Excluding a file here can only affect `fs` reads — anything a glob pulls in
  * is compiled into `dist/` and unaffected.
+ *
+ * The same fallback also copies the parts of `data/` that NO `fs` reader names,
+ * even in the kept seasons (2026-10-07, ~42 MB of a 225 MB function):
+ *
+ *   - `roster-history/` snapshots — reached only through `import.meta.glob`
+ *     (keeper-analysis), ~20 MB once a season has run a few months.
+ *   - `derived/` — every file but `FS_READ_DERIVED` is a static `import` or a
+ *     glob, so it is already compiled into `dist/`.
+ *
+ * Those two lists are allowlists of what `fs` may read, so a new `fs` reader
+ * of a file outside them ENOENTs in production only.
+ * `tests/archived-feed-files.test.ts` scans src/ and fails first.
  */
 
 import { readdirSync, statSync } from 'node:fs';
@@ -40,6 +52,18 @@ export const SEASONS_KEPT = 3;
  * nothing in src/ references them by any path — static, dynamic or glob.
  */
 export const NEVER_SHIPPED_FEEDS = ['option07.json'];
+
+/**
+ * Per-season subdirectories no `fs` reader touches in ANY season — the only
+ * readers are `import.meta.glob`s, compiled into `dist/`.
+ */
+export const GLOB_ONLY_FEED_DIRS = ['roster-history'];
+
+/**
+ * The only `data/<league>/derived/` files read off disk at request time
+ * (both by src/utils/player-map.ts). Every other derived file is excluded.
+ */
+export const FS_READ_DERIVED = ['player-identity-union.json', 'espn-nfl-id-backfill.json'];
 
 /**
  * Every registry league's directory under `data/`, derived rather than listed.
@@ -72,6 +96,19 @@ export function archivedFeedFiles(opts = {}) {
   const excluded = [];
 
   for (const league of leagues) {
+    // derived/: keep only what fs reads (see FS_READ_DERIVED).
+    const derivedDir = join(root, 'data', league, 'derived');
+    const derived = [];
+    try {
+      walkFiles(derivedDir, derived);
+    } catch {
+      // league has no derived/ directory
+    }
+    for (const p of derived) {
+      const rel = p.slice(derivedDir.length + 1);
+      if (!FS_READ_DERIVED.includes(rel)) excluded.push(p);
+    }
+
     const feedsDir = join(root, 'data', league, 'mfl-feeds');
     let years;
     try {
@@ -93,6 +130,14 @@ export function archivedFeedFiles(opts = {}) {
     }
 
     for (const year of years.slice(0, seasonsKept)) {
+      for (const dir of GLOB_ONLY_FEED_DIRS) {
+        const p = join(feedsDir, year, dir);
+        try {
+          if (statSync(p).isDirectory()) walkFiles(p, excluded);
+        } catch {
+          // not every season has one
+        }
+      }
       for (const name of NEVER_SHIPPED_FEEDS) {
         const p = join(feedsDir, year, name);
         try {

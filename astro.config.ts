@@ -108,7 +108,8 @@ export default defineConfig({
       ...scheduleReleaseIncludeFiles(),
     ],
     // Keeps the file tracer's unresolvable-path fallback from shipping 20
-    // years of archived feeds in every request's function. See the module for
+    // years of archived feeds — plus roster-history snapshots and the derived/
+    // files only globs read — in every request's function. See the module for
     // why this is safe and why it counts seasons instead of naming a year.
     excludeFiles: archivedFeedFiles(),
   }),

@@ -1,11 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   archivedFeedFiles,
   SEASONS_KEPT,
   NEVER_SHIPPED_FEEDS,
+  GLOB_ONLY_FEED_DIRS,
+  FS_READ_DERIVED,
   LEAGUE_DIRS,
 } from '../scripts/lib/archived-feed-files.mjs';
 import { ALL_LEAGUES } from '../src/config/leagues-data.mjs';
@@ -97,14 +99,92 @@ describe('archivedFeedFiles', () => {
     expect(archivedFeedFiles({ root, leagues: ['theleague', 'afl-fantasy'] })).toEqual([]);
   });
 
-  it('never excludes a feed nothing else can supply', () => {
-    // The pages that render historical seasons reach them through
-    // import.meta.glob, which compiles into dist/. Exclusion is only safe
-    // because of that, so the config must not exclude anything outside
-    // mfl-feeds — derived/ files are read straight off disk.
+  it('drops glob-only roster-history snapshots from the kept seasons', () => {
+    const root = makeFixture({ 2026: ['players.json'], 2025: ['players.json'] });
+    const histDir = join(root, 'data/theleague/mfl-feeds/2026/roster-history');
+    mkdirSync(histDir);
+    writeFileSync(join(histDir, 'rosters-2026-07-20.json'), '{}');
+
+    const excluded = archivedFeedFiles({ root, ...OPTS });
+    expect(excluded).toContain(join(histDir, 'rosters-2026-07-20.json'));
+    expect(excluded).not.toContain(join(root, 'data/theleague/mfl-feeds/2026/players.json'));
+  });
+
+  it('drops every derived/ file except the ones fs reads', () => {
+    const root = makeFixture({ 2026: ['players.json'] });
+    const derivedDir = join(root, 'data/theleague/derived');
+    mkdirSync(derivedDir);
+    for (const f of [...FS_READ_DERIVED, 'franchise-history.json']) {
+      writeFileSync(join(derivedDir, f), '{}');
+    }
+
+    const excluded = archivedFeedFiles({ root, ...OPTS });
+    expect(excluded).toContain(join(derivedDir, 'franchise-history.json'));
+    for (const f of FS_READ_DERIVED) expect(excluded).not.toContain(join(derivedDir, f));
+  });
+
+  it('trims derived/ even for a league with no feed archive', () => {
+    const root = mkdtempSync(join(tmpdir(), 'derived-only-'));
+    const derivedDir = join(root, 'data/theleague/derived');
+    mkdirSync(derivedDir, { recursive: true });
+    writeFileSync(join(derivedDir, 'franchise-history.json'), '{}');
+    expect(archivedFeedFiles({ root, ...OPTS })).toEqual([join(derivedDir, 'franchise-history.json')]);
+  });
+
+  it('only ever excludes mfl-feeds and derived/ paths', () => {
+    // Everything else under data/ (schefter archives, schedule releases,
+    // awards, configs) is read off disk by name and must stay.
     const excluded = archivedFeedFiles();
-    expect(excluded.every((p) => p.includes(join('mfl-feeds', '')))).toBe(true);
-    expect(excluded.some((p) => p.includes('derived'))).toBe(false);
+    expect(
+      excluded.every((p) => p.includes(join('mfl-feeds', '')) || p.includes(join('derived', ''))),
+    ).toBe(true);
+  });
+
+  it('excludes nothing an fs reader in src/ names', () => {
+    // GLOB_ONLY_FEED_DIRS and FS_READ_DERIVED are allowlists of what fs may
+    // read. An fs reader of anything outside them works locally and in tests
+    // and ENOENTs only on Vercel, so the check has to be here. A file counts
+    // as an fs reader if it imports fs; static `import x from '…json'` lines,
+    // import.meta.glob patterns and comments compile into dist/ and are skipped.
+    const srcRoot = join(__dirname, '..', 'src');
+    const offenders: string[] = [];
+    const derivedNames = new Set<string>();
+    for (const league of LEAGUE_DIRS) {
+      try {
+        for (const f of readdirSync(join(__dirname, '..', 'data', league, 'derived'))) derivedNames.add(f);
+      } catch {
+        // no derived/ for this league
+      }
+    }
+    const excludedDerived = [...derivedNames].filter((f) => !FS_READ_DERIVED.includes(f));
+    expect(excludedDerived.length).toBeGreaterThan(0);
+
+    const walk = (dir: string) => {
+      for (const e of readdirSync(dir, { withFileTypes: true })) {
+        const p = join(dir, e.name);
+        if (e.isDirectory()) walk(p);
+        else if (/\.(ts|tsx|mts|mjs|js|astro)$/.test(e.name) && !/\.test\./.test(e.name)) check(p);
+      }
+    };
+    const check = (file: string) => {
+      const text = readFileSync(file, 'utf-8');
+      if (!/from\s+['"](node:)?fs(\/promises)?['"]|require\(['"](node:)?fs/.test(text)) return;
+      const code = text
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/import\.meta\.glob\([\s\S]*?\)/g, '')
+        .split('\n')
+        .filter((l) => !/^\s*(\/\/|import\s)/.test(l))
+        .join('\n');
+      for (const dir of GLOB_ONLY_FEED_DIRS) {
+        if (code.includes(dir)) offenders.push(`${file}: ${dir}/`);
+      }
+      for (const name of excludedDerived) {
+        if (code.includes(name)) offenders.push(`${file}: derived/${name}`);
+      }
+      if (/derived\/\$\{/.test(code)) offenders.push(`${file}: dynamic derived/ filename`);
+    };
+    walk(srcRoot);
+    expect(offenders).toEqual([]);
   });
 
   it('is wired into the Vercel adapter', () => {
