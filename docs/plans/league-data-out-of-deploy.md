@@ -60,7 +60,7 @@ on every production build.
   - `leagues/<slug>/feeds/<year>/<type>.<hash>.json`, holding raw MFL feeds.
   - `leagues/<slug>/derived/<name>.<hash>.json`, holding franchise history, owner tenures, division strength and roster payloads.
   - **Hash in the filename**: every object is immutable and can be cached forever at the edge and in memory. A changed file gets a new name, so no cache ever goes stale.
-- **`leagues/<slug>/manifest.json`**: maps each `(year, type)` or `name` to its current hashed URL. It's the only mutable object, and it's small. Readers cache it for about 60 s.
+- **`leagues/<slug>/manifest.json`**: maps each `(year, type)` or `name` to its current hashed URL. It's the only mutable object, and it's small. Readers fetch the pointer from Redis on every request (see "Freshness"); only past-season objects are cached long.
 - **Redis**: unchanged role. It stays the live overlay for the current season, and it also stores the manifest pointer, so manifest reads cost one Redis GET instead of a Blob fetch.
 
 ### The read module: `src/utils/league-data-store.ts`
@@ -93,6 +93,26 @@ Concurrent writers to one manifest take a Redis lock per league. Today the
 Schefter feed lanes rely on `commit-feed-and-push.mjs` unioning posts by id
 when two runs race. That union moves into the writer, done under the lock.
 
+### Freshness: nothing current gets staler
+
+Owners make roster moves all day, and the app must reflect them as close to
+instantly as possible. Data falls into three freshness tiers, and the caching
+rules differ per tier:
+
+| Tier | Data | Target | How |
+|---|---|---|---|
+| **Live** | Rosters, recent transactions, trade bait, live standings | ≤2 min after a change on MFL; **instant** after a change made through our app | Unchanged: `mfl-roster-cache` / `mfl-transactions-cache` (Redis, 2-min stale TTL, synchronous refresh). Our write routes (`cut-player`, `waiver-claim`, `contracts/approve`) call `bustRosterCaches`. Any new write route must too. |
+| **Current season, synced** | Schefter feed, activity, current standings, derived artifacts | Visible on the **next request** after a sync writes | Readers fetch the manifest pointer from **Redis on every request** (one GET), so the hashed Blob URL changes the moment the writer flips it. **No `s-maxage`** on pages that render current-season data. Faster than today, because the build wait (~2 min) and the commit cadence lag are gone. |
+| **History** | Past seasons, archives | Changes rarely | Long edge cache and in-memory memo. Safe because hashed objects are immutable. |
+
+Rule: **edge caching is allowed only on pages that render history-tier data
+alone.** A ratchet and guard test should pin this, so a history-page cache
+header can't get copied onto a live page.
+
+Options not yet adopted, both decisions for the owner:
+- Lower the live tier's stale TTL from 2 min to 30–60 s. This costs more MFL calls; watch MFL rate limits.
+- Client-side refresh of open roster pages by polling a light endpoint every 30–60 s.
+
 ## Phases
 
 Each phase ships on its own, leaves the site working, and is measured with
@@ -122,7 +142,7 @@ Each phase ships on its own, leaves the site working, and is measured with
 ### Phase 4: syncs write to Blob/Redis, not git
 - `roster-sync`, `schefter-scan`, the rumor scan, articles, the derived chain, owner-last-visit, ranking sources and the weekly stat syncs call `writeLeagueData` instead of `commit-push`.
 - Prebuild's derived steps become cron steps that run after the sync that changes their inputs, the way the 2026-09-18 insight already recommends. Examples: franchise history, owner tenures, division strength, schedule strength, playoff performance, player identity union and roster payloads.
-- Build-baked surfaces (the Schefter feed, `activity`, standings) now read at request time. Each page sets `Cache-Control: s-maxage`/`stale-while-revalidate`, so the CDN absorbs traffic.
+- Build-baked surfaces (the Schefter feed, `activity`, standings) now read at request time. They are current-season data, so they get NO edge cache (see "Freshness"). The per-request cost is one Redis GET plus a memoized Blob read.
 - **Result:** a data change no longer builds. Production builds happen only for code changes.
 
 ### Phase 5: new-league onboarding
@@ -134,7 +154,7 @@ Each phase ships on its own, leaves the site working, and is measured with
 
 | Risk | Mitigation |
 |---|---|
-| **Latency.** A page now awaits Blob reads instead of having data in memory. | Hashed objects are immutable, so they're memoized per instance and edge-cached. History pages get `s-maxage`. Measure p95 on the Phase 1 pages before going wider. |
+| **Latency.** A page now awaits Blob reads instead of having data in memory. | Hashed objects are immutable, so they're memoized per instance and edge-cached. Only history-tier pages get `s-maxage`; current-season pages never do. Measure p95 on the Phase 1 pages before going wider. |
 | **The page component gets heavier.** Async reads in `.astro` frontmatter are fine, but some helpers are synchronous today. | Migrate helper by helper. The ratchet stops any new synchronous data import. |
 | **Tests read `data/` directly.** Many of the ~228 guards (derived-chain agreement, owner tenures and others) assert over committed data. | The `fs` backend keeps `data/` readable for tests. Whether `data/` stays in git is open question 1. |
 | **Writer races.** Today git push retry plus the feed union protect concurrent writers. | A Redis lock per league manifest, and the feed union moves into the writer. Port `merge-schefter-feed.mjs` unchanged. |
