@@ -6,7 +6,9 @@ import {
   archivedFeedFiles,
   SEASONS_KEPT,
   NEVER_SHIPPED_FEEDS,
+  LEAGUE_DIRS,
 } from '../scripts/lib/archived-feed-files.mjs';
+import { ALL_LEAGUES } from '../src/config/leagues-data.mjs';
 
 /**
  * The Vercel function has a hard 250 MB uncompressed limit and this repo has
@@ -110,5 +112,16 @@ describe('archivedFeedFiles', () => {
     // saving is in astro.config.ts passing it to excludeFiles.
     const config = readFileSync(join(__dirname, '..', 'astro.config.ts'), 'utf-8');
     expect(config).toMatch(/excludeFiles:\s*archivedFeedFiles\(\)/);
+  });
+});
+
+describe('LEAGUE_DIRS', () => {
+  it('covers every registry league with a data directory', () => {
+    // Hardcoding two leagues let a third league's whole archive ride into the
+    // function and fail the deploy at 254 MB.
+    for (const league of ALL_LEAGUES) {
+      if (!league.dataPath?.startsWith('data/')) continue;
+      expect(LEAGUE_DIRS).toContain(league.dataPath.slice('data/'.length));
+    }
   });
 });
