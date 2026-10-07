@@ -77,6 +77,7 @@ import { createUpstashClient } from './lib/redis-client.mjs';
 import { sendPushFanout, broadcast } from './lib/push-fanout.mjs';
 import { getLeagueBySlug, leagueOrigin } from '../src/config/leagues-data.mjs';
 import { getPtHour, secondsUntilPtMidnight } from './lib/pt-date.mjs';
+import { sharesDivision, vetSpeculationCopy } from './lib/speculation-copy.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const DRY_RUN = process.argv.includes('--dry-run');
@@ -312,7 +313,7 @@ function templateBlurb({ marquee, returnPkg, sellerName, buyerName, capRelief })
   return lines.join(' ');
 }
 
-async function generateBlurbWithClaude({ marquee, returnPkg, sellerName, buyerName, capRelief }) {
+async function generateBlurbWithClaude({ marquee, returnPkg, sellerName, buyerName, capRelief, sameDivision }) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey || DRY_RUN) {
     return null;
@@ -330,6 +331,8 @@ HARD RULES (self-enforce):
 - 1–3 sentences total. Tight, beat-reporter cadence.
 - Lead with the marquee piece moving from seller → buyer in the fan/media speculation. Use the franchise nameMedium values exactly as given.
 - Do NOT invent any player names beyond the marquee + return-package list. If a name isn't in the input, it doesn't exist.
+- Do NOT describe how the two franchises relate beyond the input. Call them division rivals, or mention a division at all, ONLY when "sameDivision" is true. When it is false, never use the word "division".
+- Do NOT characterize either franchise's situation or mood (e.g. "desperate", "frustrated", "rebuilding", "contending") — the input carries no standings or roster context to support it.
 - Do NOT name the dollar amount of any salary; you may say "the cap fit makes sense" or "cap relief" only when the input flag says so.
 - No emojis (the post is prefixed with a tier emoji separately).
 - No hashtags, no @-mentions, no meta-commentary about the speculation engine, no markdown.
@@ -345,6 +348,7 @@ ${JSON.stringify(
     marquee: { name: normalizeName(marquee.name), position: marquee.position, age: marquee.age ?? null, onTradeBait: marquee.onTradeBait },
     returnPackage: returnPkg.map((p) => ({ name: normalizeName(p.name), position: p.position, age: p.age ?? null })),
     capReliefAngle: capRelief,
+    sameDivision,
   },
   null,
   2,
@@ -371,7 +375,10 @@ ${JSON.stringify(
     }
     const data = await res.json();
     const text = (data.content?.[0]?.text ?? '').trim();
-    return parseAiResponse(text);
+    const parsed = parseAiResponse(text);
+    const vetted = vetSpeculationCopy(parsed, { sameDivision });
+    if (parsed && !vetted) warn('[speculation AI] copy mentions a division the two teams do not share — using template');
+    return vetted;
   } catch (err) {
     warn(`[speculation AI] ${err.message} — using template`);
     return null;
@@ -574,6 +581,7 @@ async function main() {
     sellerName: sellerTeam?.nameMedium ?? `Franchise ${winner.seller}`,
     buyerName: buyerTeam?.nameMedium ?? `Franchise ${winner.buyer}`,
     capRelief: winner.capRelief,
+    sameDivision: sharesDivision(sellerTeam, buyerTeam),
   };
   let body = await generateBlurbWithClaude(blurbInput);
   if (!body) body = templateBlurb(blurbInput);
