@@ -7,7 +7,7 @@ hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/1346
 hotfix_sha: 4a3dcb6
 followup_issue: 1347
 followup_pr:
-followup_session:
+followup_session: session_01LPzMj7fS5DU3VcoScp3Egn
 ---
 
 # Follow-up: AFL phone roster headers and sort chips lost their styles
