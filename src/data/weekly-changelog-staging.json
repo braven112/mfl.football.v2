@@ -1,4 +1,13 @@
 {
   "weekOf": "2026-10-12",
-  "changes": []
+  "changes": [
+    {
+      "date": "2026-10-07",
+      "type": "bug-fix",
+      "summary": "AFL Rosters on a phone: the position headers (Quarterbacks, Running backs…) now run the full width of the card, and the sort chips scroll inside their card and read like TheLeague's — 'Pts ↓', no spelled-out 'sorted descending'.",
+      "impact": "The AFL roster page's phone layout had lost every AFL-specific rule it was styled with, so the headers shrank to their label and the chips spilled off the right edge.",
+      "area": "Rosters",
+      "league": "afl"
+    }
+  ]
 }
