@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   countGroups,
@@ -109,5 +110,24 @@ describe('groupHeaderRowHtml', () => {
     expect(html).toContain('aria-expanded="false"');
     expect(html).not.toContain('"><x');
     expect(html).toContain(' player</span>');
+  });
+});
+
+describe('AFL-family roster styles reach the page', () => {
+  // Every AFL-family rule in roster-position-groups.css is scoped to
+  // [data-controller='afl-family']; with the attribute missing, the phone band
+  // shrink-wrapped and the sort chips spilled out of their card (2026-10-07).
+  const css = readFileSync('src/styles/roster-position-groups.css', 'utf8');
+  const page = readFileSync('src/components/shared/rosters/RostersPage.astro', 'utf8');
+
+  it('the shared roster page sets the controller the CSS is scoped to', () => {
+    expect(css).toContain("[data-controller='afl-family']");
+    expect(page).toMatch(/<section class="roster-page"[^>]*data-controller="afl-family"/);
+  });
+
+  it('the AFL phone band is a full-width block', () => {
+    // The row AND its cell: a block cell inside a table-row still shrink-wraps.
+    const row = ".roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody > tr.roster-group-row";
+    expect(css).toContain(`${row},\n  ${row} > .roster-group-row__cell {\n    display: block;`);
   });
 });

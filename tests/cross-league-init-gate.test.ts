@@ -144,7 +144,7 @@ const PAIRS: Record<string, GuardedPage[]> = {
       // TheLeague's rosters page after an AFL -> TheLeague swap and bound a
       // second player-modal trigger onto it, reading the wrong league's data.
       forbidden: `const pageRoot = document.querySelector<HTMLElement>('.roster-page');`,
-      marker: '<section class="roster-page" data-league={PAGE_LEAGUE_SLUG} data-initial-view={initialView}>',
+      marker: '<section class="roster-page" data-league={PAGE_LEAGUE_SLUG} data-controller="afl-family" data-initial-view={initialView}>',
       // Bound to the registry entry of the league the ROUTE passed in, and the
       // client gate reads the same value back out of the page config.
       markerBinding: `const PAGE_LEAGUE_SLUG = league.slug;`,
