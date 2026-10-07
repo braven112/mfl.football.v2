@@ -30,6 +30,7 @@
 
 import { readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { ALL_LEAGUES } from '../../src/config/leagues-data.mjs';
 
 /** Seasons per league whose raw feeds stay reachable at request time. */
 export const SEASONS_KEPT = 3;
@@ -40,7 +41,19 @@ export const SEASONS_KEPT = 3;
  */
 export const NEVER_SHIPPED_FEEDS = ['option07.json'];
 
-const LEAGUE_DIRS = ['theleague', 'afl-fantasy'];
+/**
+ * Every registry league's directory under `data/`, derived rather than listed.
+ * This was a hardcoded `['theleague', 'afl-fantasy']`, so adding a third
+ * league with a feed archive (the Archies, ~59 MB) shipped ALL of its seasons
+ * and pushed `_render` back over 250 MB.
+ */
+export const LEAGUE_DIRS = [
+  ...new Set(
+    ALL_LEAGUES.map((l) => l.dataPath)
+      .filter((p) => typeof p === 'string' && p.startsWith('data/'))
+      .map((p) => p.slice('data/'.length)),
+  ),
+];
 
 function walkFiles(dir, out) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
