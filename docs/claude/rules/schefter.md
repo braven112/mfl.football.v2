@@ -461,14 +461,18 @@ Pigskins (Northwest) and Midwestside Connection (Southwest) went out as
 "division rivals", the buyer "desperate for QB stability". Neither was true and
 neither was in the input.
 
-- **A fact the copy may state must be IN the prompt input.** `sameDivision`
-  (`sharesDivision` in `scripts/lib/speculation-copy.mjs`) is passed so the
-  model can say "division rival" when it is true; the prompt forbids the word
-  otherwise, and forbids characterising either team's situation or mood.
-- **The prompt is not the guard.** `vetSpeculationCopy` rejects any post that
-  mentions a division when the pair does not share one, and the lane falls
-  back to the template. Adding a new relationship the copy may describe means
-  passing it in AND checking it after. `tests/speculation-copy.test.ts`.
+- **A fact the copy may state must be IN the prompt input.** The shared
+  division's NAME (`sharedDivision` in `scripts/lib/speculation-copy.mjs`, null
+  when the pair differ) is passed so the model can say "division rival" when it
+  is true — a boolean would let it name the wrong division. The prompt forbids
+  any division talk otherwise, and forbids characterising either team's
+  situation or mood.
+- **The prompt is not the guard.** `vetSpeculationCopy` rejects a post that
+  mentions a division when the pair share none, names any division other than
+  the shared one, or uses a team-situation word (`desperate`, `rebuilding`,
+  `contender`, …); the lane falls back to the template. Adding a new fact the
+  copy may describe means passing it in AND checking it after.
+  `tests/speculation-copy.test.ts`.
 
 ### A speculation post's CTA goes to the Trade Builder
 
