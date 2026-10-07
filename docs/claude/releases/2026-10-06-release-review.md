@@ -88,3 +88,25 @@ Staging Vercel builds failed after Archie's landed: its feed archive pushed `_re
 Hotfix #1343 (`6c51060516`) derives the archived-feed exclusions from the registry. Staging `89dffd102e` builds
 READY on Vercel; `tests/archived-feed-files.test.ts` passes (8/8); `PREBUILD_FULL=1 pnpm prebuild` on that tip
 exits 0 with the same two known warnings (ESPN 2028 draft date, MFL ADP/FantasySharks 404s). Verdict unchanged: **GO**.
+
+## Promotion — 2026-10-06 23:20 PT
+
+**Shipped:** `674bd01384..0a7f3c07b6` fast-forwarded to `main` (78 non-merge commits), after:
+
+- Merge-down healthy, fast-forward OK, blackout clear (Tuesday PT).
+- CI green and Vercel staging build READY on the exact SHA `0a7f3c07b6`. That SHA also carries #1345
+  (glob-only feeds and `derived/` kept out of `_render`), which landed after the review.
+- **Chromatic was not a real check this week.** Build 578 ran LIMITED because the monthly snapshot quota is exhausted:
+  45 of 356 tests ran, with no UI review. In its place, 26 signed-in staging screenshots (TheLeague and AFL home, lineup,
+  rosters, standings, free agents and playoffs, plus Archie's home, each in light and dark) were reviewed by the
+  owner before promotion. All pages returned 200 with no page script errors.
+
+**Production:** deployment `dpl_7jJpYeUqSDYknxwLMa6X7JnmHmC4` READY and aliased to theleague.us, afl-fantasy.com
+and v2.mfl.football. A signed-out smoke test of 14 pages returned 200 with correct titles; `/lineup` redirects to
+sign-in as expected. Vercel reported no runtime errors in the 30 minutes after the deploy.
+
+**Announced:** `weekly-changelog-rollup.yml` run 37581946007 published `weekly-rollup-2026-10-05` for
+theleague, afl, bb1 and archies (commit `0c248dcfa3`), waited for the permalink, and sent the site-update push.
+
+**Left open:** Archie's franchise `0100` (2023) config gap; the first live cents bid; Chromatic quota/TurboSnap
+(build 578 says TurboSnap was disabled by a changed static file, so every story bills at full price).
