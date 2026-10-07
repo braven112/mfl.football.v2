@@ -71,8 +71,9 @@ page loaded won for the session, and both leagues have a franchise 0001).
 
 ## Deferred items
 
-Re-validated 2026-09-17 against `main` at `da30b4d`. **Two worked, three still
-open** — see the verdicts below. The issue stays open; do not close it.
+Re-validated 2026-09-17 against `main` at `da30b4d`, and F3 again on
+2026-09-18. **Three worked (F1, F3, F5), three still open (F2, F4, F6)** — see
+the verdicts below. The issue stays open; do not close it.
 
 - [x] **F1 — `mergeWeek` accepts a truncated response for a finished week** — WORKED
   - Verdict: **still true.** The code was unchanged and Copilot independently
@@ -112,29 +113,34 @@ open** — see the verdicts below. The issue stays open; do not close it.
   - Next action: dispatch `weekly-stats-sync.yml` on `main` (it is
     `workflow_dispatch`-enabled and takes no inputs), or wait for Tuesday.
     Then check the file exists with 30+ teams.
-- [ ] **F3 — Confirm the by-week feed filled weeks 1–18, and drop the hand seed** — STILL OPEN, cause identified
-  - Verdict: **still true.** Both files still carry the week-1 hand seed only —
-    `{ weeks: { "1": 484 rows } }` for TheLeague and for the AFL.
-  - Cause, which the brief guessed at and is now measured: the 18-week loop
-    lives behind `skipDailyFeeds`, and `isFreshToday()` reads the committed
-    `fetch.meta.json` stamp — `2026-09-17T01:21:52Z` for TheLeague,
-    `01:22:46Z` for the AFL. The daily set had **already run today** when the
-    hotfix merged at 07:38 UTC, so the loop's first real pass is the first
-    roster-sync run after 2026-09-18T00:00Z. The Vercel cron ping IS being
-    delivered (runs at 07:00/07:15/07:30 today, all green), so nothing is
-    wrong with the trigger — this is just the daily gate doing its job.
-  - It is not frozen in the meantime: the `--refresh-live` path still merges
-    whatever week `playerScores.json` names on every sync, so the CURRENT week
-    lands continuously. Only weeks 2..N-1 are waiting on the backfill.
-  - Recorded as a rule: `docs/claude/rules/storage-and-build.md` §
-    "A daily-gated feed does not backfill on the day it ships".
-  - Next action: after 2026-09-18T01:00Z, confirm both files carry every played
-    week, then this item closes on its own — there is no hand seed to delete,
-    only to be grown past.
-  - While checking it, also settle the one open question under F5 below: with
-    weeks 5+ present, measure whether MFL emits a score for a player whose NFL
-    team was on bye. If it does, a true bye would count toward the modal's
-    Games / PPG denominator.
+  - Re-checked 2026-09-18T01:15Z: still absent, as expected — the workflow has
+    not run since 2026-09-15.
+- [x] **F3 — Confirm the by-week feed carries EVERY PLAYED WEEK, and drop the hand seed** — DONE 2026-09-18
+  - Retitled: it was filed as "filled weeks 1–18", which is not the bar and is
+    what sent the first verification pass looking for a partial that was not one.
+  - **The item was framed wrong, mine included.** "Weeks 1–18" was never the bar
+    on 2026-09-17: the 2026 season had played ONE week. Week 2 kicked off
+    `2026-09-17T17:15-07:00` = 2026-09-18T00:15Z (`src/data/nfl/week-starts.mjs`),
+    and MFL's W-less `playerScores.json` still names **week 1** — which is MFL
+    itself saying so, per the "a W-less request asks MFL to name its own week"
+    rule the fetch loop already follows. The bar is EVERY PLAYED WEEK, and a
+    file holding week 1 alone was already meeting it.
+  - Verified 2026-09-18T01:15Z on `main`: the daily set ran (`fetch.meta.json`
+    stamped `00:03:48Z` for TheLeague, `00:06:16Z` for the AFL — so
+    `skipDailyFeeds` was false and the 18-week loop DID run), and both files
+    carry `weeks: { "1": 487 }`. Weeks 2–18 are unplayed, so MFL answers them
+    with its blank placeholder, `reduceWeekScores` reduces that to `{}`, and
+    `weekMergeDecision` refuses it as `empty`. Working exactly as designed.
+  - **The hand seed is gone** — not deleted, outgrown. It was 484 rows; the
+    pipeline's own week 1 is 487, written by the live path at
+    2026-09-17T08:16Z (`0f41b30`) and left alone by today's daily pass. Nothing
+    committed by hand survives in that file.
+  - One thing NOT verified: the run log itself. The Actions log host
+    (`results-receiver.actions.githubusercontent.com`) is blocked by this
+    session's egress proxy, so "weeks 2–18 came back as placeholders" is
+    inferred from the committed result plus the daily set completing, not read
+    from the log. If you ever want it confirmed directly, the lines to look for
+    are `playerScores week N came back empty`.
 
 - [ ] **F4 — Decide whether the payload belongs in the page at all** — STILL OPEN, needs a human call
   - Verdict: **still true**, and deliberately not decided here. It is the one
@@ -207,6 +213,13 @@ open** — see the verdicts below. The issue stays open; do not close it.
     be changed without the other.
   - It is a judgement call with a user-visible answer, so it wants the `/live`
     bar and a human, not a follow-up commit. Left open deliberately.
+  - **The measurable half cannot be measured before 2026-10-13.** The question
+    "does MFL emit a score for a player on his real bye" needs a scored bye
+    week, and 2026's FIRST bye is **week 5** (`nflSchedule-full.json`: 30 teams
+    in week 5, 32 in weeks 1–4). Week 5 kicks off 2026-10-08, so the earliest
+    honest answer is the daily pass after it finishes. Until then only the
+    derived-bye half of F6 is decidable, and that half does not need data — a
+    traded player's bye label is wrong on the face of it.
 
 ## Context to start cold
 
