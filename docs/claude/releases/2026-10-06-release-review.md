@@ -81,3 +81,10 @@ blackout script: clear Tue 10-06 and Wed 10-07, CI on `141103d501` (success).
 1. Dispatch `chromatic.yml` on `staging` and accept or reject the week's visual diffs before the fast-forward.
 2. Manual smoke on staging: a TheLeague lineup submit, an AFL lineup submit, a TheLeague bid, an AFL priority claim.
 3. Fast-forward `main`, confirm production on each apex host, then dispatch `weekly-changelog-rollup.yml`.
+
+## Addendum — 2026-10-07, after hotfix #1343
+
+Staging Vercel builds failed after Archie's landed: its feed archive pushed `_render` to 254.55 MB (limit 250).
+Hotfix #1343 (`6c51060516`) derives the archived-feed exclusions from the registry. Staging `89dffd102e` builds
+READY on Vercel; `tests/archived-feed-files.test.ts` passes (8/8); `PREBUILD_FULL=1 pnpm prebuild` on that tip
+exits 0 with the same two known warnings (ESPN 2028 draft date, MFL ADP/FantasySharks 404s). Verdict unchanged: **GO**.
