@@ -8,7 +8,7 @@
 - Each NFL player can be rostered once in the whole league
 
 ### Rosters and lineups
-- Roster size: 90
+- Roster size: 22
 - Injured reserve slots: 50
 - Taxi squad slots: 3
 - Roster limits by position: QB 0, RB 0, WR 0, TE 0, PK 0, Def 0
