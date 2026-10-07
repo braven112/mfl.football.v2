@@ -3,9 +3,9 @@
  * Drift detector: is the AFL's live waiver order still the constitutional one?
  *
  * WHY THIS EXISTS: MFL does not carry `waiverSortOrder` across a league-year
- * rollover, and no API can set it back (2026-08-31 — see the mfl-api insights
- * entry), so every June the order silently reverts to MFL's reverse-franchise-id
- * default until a human re-enters it on `csetup?C=WAIVORD`. In 2026 nobody
+ * rollover, and no API import can set it back (2026-08-31 — see the mfl-api
+ * insights entry), so every June the order silently reverts to MFL's
+ * reverse-franchise-id default. In 2026 nobody
  * noticed until ten days before Week 1. A wrong waiver order is invisible: MFL
  * shows *an* order, it just is not the league's. Forgetting is the real failure
  * mode here, not the typing.
@@ -25,24 +25,29 @@
  *     compare against, so it reports "not yet computable" and stops.
  * Neither is a failure. Only a genuine mismatch inside the pre-season window is.
  *
+ * WHAT IT DOES ABOUT IT (Oct 2026, the owner's call: fully automatic): runs
+ * `set-afl-waiver-order.ts --live`, which writes the order through MFL's own
+ * WAIVORD form and verifies it by re-reading. `--dry-run` never writes.
+ *
  * WHO HEARS ABOUT IT: the league's admins, by push, under the `ops-league-setup`
- * category — not the group chat. Re-entering the waiver order is a job exactly
- * one person can do (it is a hand edit on MFL's csetup page), so posting it to
- * everyone spent the chat's one daily automated post telling eleven owners
- * about a task none of them can action.
+ * category — not the group chat: either "it was reset, nothing to do" or "the
+ * reset failed, fix it by hand on csetup", and both are for the one person who
+ * can act on them.
  *
  * Env:
- *   CRON_SECRET   required to push; unset logs the summary and sends nothing
+ *   CRON_SECRET                    required to push; unset logs and sends nothing
+ *   MFL_USER_ID, MFL_IS_COMMISH    an AFL commissioner, for the automatic write
  *
  * Usage:
  *   pnpm exec tsx scripts/check-afl-waiver-order.ts
- *   pnpm exec tsx scripts/check-afl-waiver-order.ts --dry-run   # never posts
+ *   pnpm exec tsx scripts/check-afl-waiver-order.ts --dry-run   # never writes or posts
  */
 
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 import { getAflLeagueYear } from '../src/utils/league-year';
 import { computeAflWaiverOrder } from '../src/utils/afl-waiver-order-source';
 import { compareAflWaiverOrder } from '../src/utils/afl-waiver-order';
+import { spawnSync } from 'node:child_process';
 import { sendOpsAlert } from './lib/ops-alert.mjs';
 
 const argv = process.argv.slice(2);
@@ -142,41 +147,62 @@ if (problems.length === 0) {
   process.exit(0);
 }
 
-const summary =
-  `AFL waiver order drift — ${targetYear}\n\n` +
-  problems.join('\n') +
-  `\n\nMFL does not carry waiver order across the June rollover and no API can set it. ` +
-  `Fix by hand: ${league.mflHost}/${targetYear}/csetup?L=${league.id}&C=WAIVORD`;
+const handFixUrl = `${league.mflHost}/${targetYear}/csetup?L=${league.id}&C=WAIVORD`;
+console.error(`\nAFL waiver order drift — ${targetYear}\n\n${problems.join('\n')}`);
 
-console.error(`\n${summary}`);
-// The push carries the headline; the full per-franchise diff stays in the
-// Actions log above, which is where the fix gets made from anyway. A
-// notification body long enough to hold 24 rows is unreadable on a lock screen
-// and truncated by the OS regardless.
+// ── Fix it ───────────────────────────────────────────────────────────────────
+// The owner's call (Oct 2026): fully automatic. The writer is still the one
+// script, run as a child so its own guards stay the only guards — it refuses
+// once any waiver transaction exists, harvests a fresh nonce, prints a restore
+// body, and judges success by RE-READING the live order. A non-zero exit means
+// it did not verify, whatever MFL answered.
+let fixed = false;
+if (DRY_RUN) {
+  console.log('\nDRY RUN — not writing. A scheduled run would now set the order.');
+} else {
+  console.log('\nSetting the constitutional order on MFL…\n');
+  const run = spawnSync(
+    'pnpm',
+    [
+      'exec', 'tsx', 'scripts/set-afl-waiver-order.ts', '--live',
+      '--year', String(targetYear), '--standings-year', String(standingsYear),
+    ],
+    { stdio: 'inherit', cwd: root },
+  );
+  fixed = run.status === 0;
+  if (!fixed) console.error(`\nThe writer did not verify (exit ${run.status ?? run.signal}).`);
+}
+
 const count = driftedFranchises.size;
+const franchisesText = `${count} franchise${count === 1 ? '' : 's'}`;
+// The push carries the headline; the full per-franchise diff stays in the
+// Actions log above. A notification body long enough to hold 24 rows is
+// unreadable on a lock screen and truncated by the OS regardless.
 const alert = await sendOpsAlert({
   league,
   category: 'ops-league-setup',
-  title: 'AFL waiver order has drifted',
-  body:
-    `${count} franchise${count === 1 ? '' : 's'} out of constitutional order `
-    + `for ${targetYear}. MFL drops waiver priority at the rollover and no API can set it back — `
-    + 'it needs a hand fix on csetup.',
+  title: fixed ? 'AFL waiver order reset automatically' : 'AFL waiver order has drifted',
+  body: fixed
+    ? `${franchisesText} were out of constitutional order for ${targetYear}. ` +
+      'The order was rewritten on MFL and verified by re-reading it. Nothing to do.'
+    : `${franchisesText} out of constitutional order for ${targetYear}, and the automatic ` +
+      `reset ${DRY_RUN ? 'was skipped (dry run)' : 'did not verify — see the Actions log'}. ` +
+      `Fix by hand: ${handFixUrl}`,
   tag: `ops-waiver-order-${targetYear}`,
   dryRun: DRY_RUN,
 });
 
-// Exit 0 when the alert actually went out. This used to exit 1 unconditionally,
-// which was right when the red X was the only durable signal — but the failure
-// watch now turns any failed scheduled run into its own push, so a deliberate
-// exit(1) here produced a SECOND, misleading alert ("AFL Waiver Order Check
-// failed") next to the accurate one, every week until the order was fixed.
-// A check that detected drift and reported it did its job.
-//
-// A failed SEND is the opposite case: then the red X is the only signal left,
-// and the watcher reporting it is exactly what should happen.
 if (alert?.skipped && !DRY_RUN) {
-  console.error(`\nDrift alert was NOT delivered (${alert.skipped}) — failing so the run is visible.`);
+  // A failed SEND: the red X is the only signal left.
+  console.error(`\nAlert was NOT delivered (${alert.skipped}) — failing so the run is visible.`);
   process.exit(1);
 }
+if (!fixed && !DRY_RUN) {
+  // A write that did not verify is a real failure, and the failure watch
+  // turning this red X into its own push is exactly right.
+  process.exit(1);
+}
+// Fixed and reported (or a dry run): a job done. This used to exit 1 on every
+// drift, which the failure watch turned into a SECOND, misleading alert next
+// to the accurate one, every week until the order was fixed by hand.
 process.exit(0);

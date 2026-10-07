@@ -172,18 +172,16 @@ capture of a real successful save.
 `scripts/set-afl-waiver-order.ts` computes the order and writes it through that
 form (`--dry-run` by default; success is judged by RE-READING the live order,
 never by MFL's response, because a silent no-op is this endpoint's real failure
-mode). **`scripts/check-afl-waiver-order.ts` (weekly, `AFL Waiver Order
-Check`) is the safety net**: it recomputes the order and compares it to the live
-league, pushing an `ops-league-setup` alert to the league's admins on drift
-(it posted to GroupMe until Sep 2026 — re-entering the order is a hand edit
-exactly one person can make, so it was noise for everyone else). It goes quiet once the season's first waiver
-transaction lands, because a rolling order is *supposed* to move after that —
-forgetting to set the order, not mistyping it, is what actually went wrong in
-2026. Unblocking it means replacing the transport with a replay of MFL's
-own commissioner waiver-order form POST (under `options?L=<id>&O=<number>`),
-the way `src/pages/api/cut-player.ts` replays `add_drop` for exactly this
-reason. Until then the order is set by hand in MFL's UI, once per league year,
-after the NIT wraps and before Week 1 waivers process.
+mode). **`scripts/check-afl-waiver-order.ts` (daily, `AFL Waiver Order
+Check`) sets it automatically** (the owner's call, Oct 2026): it recomputes the
+order, compares it to the live league, and on drift runs the writer with
+`--live`. Admins get an `ops-league-setup` push either way — "reset and
+verified, nothing to do", or "the reset did not verify, fix by hand" with the
+run going red. It goes quiet once the season's first waiver transaction lands,
+because a rolling order is *supposed* to move after that, and the writer refuses
+to write then without `--force` (which only the manual workflow can pass). The
+write needs `MFL_USER_ID` / `MFL_IS_COMMISH` to be an AFL commissioner; a Guest
+render is reported as exactly that.
 
 Three things about it are load-bearing:
 

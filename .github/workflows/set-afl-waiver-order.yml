@@ -9,10 +9,12 @@ name: Set AFL Waiver Order
 # The AFL uses WAIVERS_FCFS, so that value IS the waiver order, not a
 # tiebreaker.
 #
-# MANUAL DISPATCH ONLY — no cron. This sets the INITIAL order and the AFL's
-# waiver system is rolling, so a scheduled re-run would refund priority to
-# teams that had already spent it. Run it once per league year, after the
-# previous season's NIT wraps and before Week 1 waivers process.
+# MANUAL DISPATCH — the AUTOMATIC path is afl-waiver-order-check.yml, which
+# runs this same script with --live whenever it finds drift in the pre-season
+# window (Oct 2026). This workflow stays for a hand-run with a dry run first,
+# or a deliberate --force reset. No cron here: this sets the INITIAL order and
+# the AFL's system is rolling, so a blind re-run after claims would refund
+# priority teams had already spent (the script refuses without --force).
 #
 # dry_run is checked by default: the run prints the full before/after diff and
 # writes nothing. Read that diff, then re-dispatch with dry_run unchecked.
