@@ -31,6 +31,8 @@ import {
   setAflWaiverOrderUrl,
   compareAflWaiverOrder,
   isMflDefaultWaiverOrder,
+  aflWaiverOrderWriteWindow,
+  checkAflWaiverOrderWrite,
   buildWaiverOrderFormBody,
   parseInputExpires,
   waiverOrderPageUrl,
@@ -335,5 +337,47 @@ describe('isMflDefaultWaiverOrder — the only order the automatic writer replac
 
   it('refuses an empty read rather than treating it as the default', () => {
     expect(isMflDefaultWaiverOrder(new Map())).toBe(false);
+  });
+});
+
+describe('checkAflWaiverOrderWrite — two checks, both required, no override', () => {
+  const ids = Array.from({ length: 24 }, (_, i) => String(i + 1).padStart(4, '0'));
+  const rolloverDefault = () => new Map(ids.map((id) => [id, 25 - Number(id)]));
+  const window = aflWaiverOrderWriteWindow(2027, { month: 6, day: 1 });
+
+  it('opens at the June rollover and closes at the Week 1 kickoff', () => {
+    expect(window.opensAt.toISOString()).toBe('2027-06-01T07:00:00.000Z');
+    expect(window.closesAt.getUTCMonth()).toBe(8); // September
+    expect(window.closesAt > window.opensAt).toBe(true);
+  });
+
+  it('allows a write only at the beginning of the year over MFL\'s default', () => {
+    const now = new Date('2027-06-02T15:00:00Z');
+    expect(checkAflWaiverOrderWrite({ now, window, liveSlot: rolloverDefault() }).ok).toBe(true);
+  });
+
+  it('refuses outside the window even over the default', () => {
+    for (const when of ['2027-05-31T15:00:00Z', '2027-10-07T15:00:00Z']) {
+      const r = checkAflWaiverOrderWrite({ now: new Date(when), window, liveSlot: rolloverDefault() });
+      expect(r.ok).toBe(false);
+      expect(r.reasons).toHaveLength(1);
+    }
+  });
+
+  it('refuses inside the window once the order has been set', () => {
+    const set = rolloverDefault();
+    set.set('0024', 2);
+    set.set('0023', 1);
+    const r = checkAflWaiverOrderWrite({ now: new Date('2027-06-02T15:00:00Z'), window, liveSlot: set });
+    expect(r.ok).toBe(false);
+    expect(r.reasons).toHaveLength(1);
+  });
+
+  it('the writer runs the gate before any write, and no flag skips it', () => {
+    const src = fs.readFileSync(path.join(process.cwd(), 'scripts/set-afl-waiver-order.ts'), 'utf8');
+    const gateAt = src.indexOf('if (!gate.ok)');
+    expect(gateAt).toBeGreaterThan(-1);
+    expect(gateAt).toBeLessThan(src.indexOf("method: 'POST'"));
+    expect(src.slice(gateAt - 200, gateAt + 200)).not.toMatch(/FORCE/);
   });
 });

@@ -31,6 +31,8 @@
  * express it. Do not reintroduce it.
  */
 
+import { nflWeekStartInstant } from './nfl-week-starts.mjs';
+
 /** One franchise's slot in a conference's base draft order. */
 export interface ConferenceBaseOrder {
   /** MFL conference code — '00' (American) or '01' (National). */
@@ -169,6 +171,56 @@ export interface ConferenceDriftResult {
   /** Franchises the live league had no slot for at all. */
   missing: string[];
   ok: boolean;
+}
+
+/**
+ * The beginning of the AFL year: from the league-year rollover (midnight PT on
+ * the registry's `leagueYearRollover`, June 1) until the first kickoff of NFL
+ * Week 1 of that same year. The waiver order may only be written inside it.
+ *
+ * @param year The AFL league year being written.
+ * @param rollover The registry's `leagueYearRollover` for the AFL.
+ */
+export function aflWaiverOrderWriteWindow(
+  year: number,
+  rollover: { month: number; day: number },
+): { opensAt: Date; closesAt: Date } {
+  // Midnight PT; the AFL's June rollover always falls in PDT (UTC-7), the same
+  // assumption getRolloverLeagueYear makes.
+  const opensAt = new Date(Date.UTC(year, rollover.month - 1, rollover.day, 7, 0, 0, 0));
+  return { opensAt, closesAt: nflWeekStartInstant(year, 1) };
+}
+
+/**
+ * THE gate on writing the AFL waiver order. Both checks must pass, and neither
+ * has an override (the owner's rule, Oct 2026):
+ *
+ *   1. It is the beginning of the year — inside {@link aflWaiverOrderWriteWindow}.
+ *   2. The live order is still MFL's rollover default — see
+ *      {@link isMflDefaultWaiverOrder}. That makes it once a year: after the
+ *      first write the order is no longer the default.
+ *
+ * Returns every failed check, so a refusal names all of its reasons.
+ */
+export function checkAflWaiverOrderWrite(args: {
+  now: Date;
+  window: { opensAt: Date; closesAt: Date };
+  liveSlot: Map<string, number>;
+}): { ok: boolean; reasons: string[] } {
+  const { now, window, liveSlot } = args;
+  const reasons: string[] = [];
+  if (now < window.opensAt || now >= window.closesAt) {
+    reasons.push(
+      `it is not the beginning of the year — the order may only be set between ` +
+        `${window.opensAt.toISOString()} (league rollover) and ${window.closesAt.toISOString()} (Week 1 kickoff)`,
+    );
+  }
+  if (!isMflDefaultWaiverOrder(liveSlot)) {
+    reasons.push(
+      "the live order is not MFL's rollover default (reverse franchise id), so it has already been set this year",
+    );
+  }
+  return { ok: reasons.length === 0, reasons };
 }
 
 /**

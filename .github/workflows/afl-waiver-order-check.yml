@@ -1,20 +1,22 @@
 name: AFL Waiver Order Check
 
-# Daily drift check AND fix: is the AFL's live waiver order still the
+# Once-a-year set AND drift check: is the AFL's live waiver order still the
 # constitutional one? MFL does not carry waiverSortOrder across the June
 # league-year rollover and no API import can set it back (2026-08-31 — see
 # docs/claude/insights/domains/mfl-api.md), so it silently reverts to
 # reverse-franchise-id. In 2026 that went unnoticed until ten days before Week 1.
 #
 # The order is set ONCE per league year, at the start (the owner's rule,
-# Oct 2026). So it writes only when the live order is still MFL's rollover
-# default (reverse franchise id): it runs scripts/set-afl-waiver-order.ts
+# Oct 2026). Every write must pass TWO checks, with no override: it is the
+# beginning of the year (June 1 rollover → Week 1 kickoff), AND the live order
+# is still MFL's rollover default (reverse franchise id). The writer enforces
+# both itself, so a manual run obeys them too. It runs scripts/set-afl-waiver-order.ts
 # --live, which writes through MFL's own WAIVORD form and verifies by
 # re-reading. After that the order is no longer the default, so it is never
 # written again that year; any later mismatch is only reported. Admins get a
 # push either way, and a write that did not verify turns the run red.
 #
-# Self-guarding, so a year-round daily cron is safe:
+# Self-guarding:
 #   - Once any waiver transaction exists for the year, the AFL's ROLLING order
 #     is supposed to have moved; the check reports that and exits 0.
 #   - Before the previous season's NIT resolves there is no final base order to
@@ -22,14 +24,16 @@ name: AFL Waiver Order Check
 # Only the rollover default inside the pre-season window is written, and the
 # writer itself refuses once a waiver claim has processed.
 #
-# Daily 8am PT (15:00 UTC in PDT, 7am in PST — an hour early in winter is
-# fine, so this stays one line rather than two). Daily rather than weekly
-# because the write now closes the window itself: the sooner after the June
-# rollover it lands, the less time owners spend looking at the wrong order.
+# Runs in June only — the order is set once a year, right after the June 1
+# rollover — on four days, 8am PT (15:00 UTC). The first run that finds MFL on
+# its default writes the order; the rest find it set and write nothing. The
+# repeats are there because GitHub drops scheduled runs (see CLAUDE.md,
+# "GitHub's `schedule` is not a cadence"), and one dropped run must not mean
+# a season on the wrong order. Run it by hand any time from the Actions tab.
 
 on:
   schedule:
-    - cron: "0 15 * * *"
+    - cron: "0 15 2,9,16,23 6 *"
   workflow_dispatch:
     inputs:
       dry_run:

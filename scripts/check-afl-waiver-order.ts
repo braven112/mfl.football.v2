@@ -26,7 +26,8 @@
  * Neither is a failure. Only a genuine mismatch inside the pre-season window is.
  *
  * WHAT IT DOES ABOUT IT (Oct 2026, the owner's call: fully automatic, ONCE a
- * year): if the live order is still MFL's rollover default it runs
+ * year): if it is the beginning of the year (rollover → Week 1 kickoff) AND the
+ * live order is still MFL's rollover default, it runs
  * `set-afl-waiver-order.ts --live`, which writes the order through MFL's own
  * WAIVORD form and verifies it by re-reading. Any other mismatch was already
  * set this year and is only reported. `--dry-run` never writes.
@@ -48,7 +49,11 @@
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 import { getAflLeagueYear } from '../src/utils/league-year';
 import { computeAflWaiverOrder } from '../src/utils/afl-waiver-order-source';
-import { compareAflWaiverOrder, isMflDefaultWaiverOrder } from '../src/utils/afl-waiver-order';
+import {
+  aflWaiverOrderWriteWindow,
+  checkAflWaiverOrderWrite,
+  compareAflWaiverOrder,
+} from '../src/utils/afl-waiver-order';
 import { spawnSync } from 'node:child_process';
 import { sendOpsAlert } from './lib/ops-alert.mjs';
 
@@ -152,24 +157,27 @@ if (problems.length === 0) {
 const handFixUrl = `${league.mflHost}/${targetYear}/csetup?L=${league.id}&C=WAIVORD`;
 console.error(`\nAFL waiver order drift — ${targetYear}\n\n${problems.join('\n')}`);
 
-// ── Fix it — ONCE, at the start of the year ─────────────────────────────────
-// The owner's rule (Oct 2026): the order is set once per league year, at the
-// beginning, and never again. So the automatic write replaces exactly one
-// state — MFL's rollover default (reverse franchise id), which is what a new
-// AFL year starts with. Any other mismatch means someone already set it, by
-// hand or by an earlier run, and it is reported for a person to judge, never
-// overwritten.
+// ── Fix it — only at the beginning of the year, only over MFL's default ─────
+// The owner's rule (Oct 2026). Two checks, both required, no override
+// (`checkAflWaiverOrderWrite`, which the writer re-runs itself):
+//   1. it is the beginning of the year — league rollover → Week 1 kickoff;
+//   2. the live order is still MFL's rollover default (reverse franchise id).
+// The second makes it once a year: after the first write the order is no
+// longer the default. Any mismatch that fails a check is reported for a person
+// to judge, never overwritten.
 //
 // The writer runs as a child so its own guards stay the only guards: it
-// refuses once any waiver transaction exists, harvests a fresh nonce, and
-// judges success by RE-READING the live order. Non-zero exit = not verified.
-const isRolloverDefault = isMflDefaultWaiverOrder(liveSlot);
+// re-checks both of these, refuses once any waiver transaction exists,
+// harvests a fresh nonce, and judges success by RE-READING the live order.
+const gate = checkAflWaiverOrderWrite({
+  now: new Date(),
+  window: aflWaiverOrderWriteWindow(targetYear, league.leagueYearRollover ?? { month: 6, day: 1 }),
+  liveSlot,
+});
 let fixed = false;
-if (!isRolloverDefault) {
-  console.log(
-    '\nThe live order is not MFL\'s rollover default, so it was already set this year. ' +
-      'The waiver order is set once per year — not rewriting it.',
-  );
+if (!gate.ok) {
+  console.log('\nNot writing — the waiver order may not be set now:');
+  for (const r of gate.reasons) console.log(`  - ${r}`);
 } else if (DRY_RUN) {
   console.log('\nDRY RUN — not writing. A scheduled run would now set the order.');
 } else {
@@ -198,9 +206,9 @@ const alert = await sendOpsAlert({
   body: fixed
     ? `${franchisesText} were out of constitutional order for ${targetYear}. ` +
       'The order was rewritten on MFL and verified by re-reading it. Nothing to do.'
-    : !isRolloverDefault
-      ? `${franchisesText} out of constitutional order for ${targetYear}. It was already set ` +
-        `this year, so it was NOT rewritten (the order is set once per year). Check it: ${handFixUrl}`
+    : !gate.ok
+      ? `${franchisesText} out of constitutional order for ${targetYear}. NOT rewritten — ` +
+        `${gate.reasons.join('; ')}. Check it: ${handFixUrl}`
       : `${franchisesText} out of constitutional order for ${targetYear}, and the automatic ` +
         `reset ${DRY_RUN ? 'was skipped (dry run)' : 'did not verify — see the Actions log'}. ` +
         `Fix by hand: ${handFixUrl}`,
@@ -213,7 +221,7 @@ if (alert?.skipped && !DRY_RUN) {
   console.error(`\nAlert was NOT delivered (${alert.skipped}) — failing so the run is visible.`);
   process.exit(1);
 }
-if (isRolloverDefault && !fixed && !DRY_RUN) {
+if (gate.ok && !fixed && !DRY_RUN) {
   // A write that did not verify is a real failure, and the failure watch
   // turning this red X into its own push is exactly right.
   process.exit(1);

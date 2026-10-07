@@ -172,12 +172,13 @@ capture of a real successful save.
 `scripts/set-afl-waiver-order.ts` computes the order and writes it through that
 form (`--dry-run` by default; success is judged by RE-READING the live order,
 never by MFL's response, because a silent no-op is this endpoint's real failure
-mode). **`scripts/check-afl-waiver-order.ts` (daily, `AFL Waiver Order
-Check`) sets it automatically, ONCE a year** (the owner's rule, Oct 2026: the
-order is set once, at the beginning of the year). It recomputes the order and
-compares it to the live league, and runs the writer with `--live` only when the
-live order is still MFL's rollover default (reverse franchise id,
-`isMflDefaultWaiverOrder`). Once set, the order is no longer the default, so it
+mode). **`scripts/check-afl-waiver-order.ts` (`AFL Waiver Order Check`, June 2/9/16/23)
+sets it automatically, ONCE a year** (the owner's rule, Oct 2026: the
+order is set once, at the beginning of the year). Every write must pass TWO checks,
+with no override (`checkAflWaiverOrderWrite`, enforced inside the writer itself
+so a manual run obeys them too): it is the beginning of the year (league
+rollover → Week 1 kickoff), and the live order is still MFL's rollover default
+(reverse franchise id). Once set, the order is no longer the default, so it
 is never rewritten that year; any later mismatch is reported, not fixed. Admins get an `ops-league-setup` push either way — "reset and
 verified, nothing to do", or "the reset did not verify, fix by hand" with the
 run going red. It goes quiet once the season's first waiver transaction lands,

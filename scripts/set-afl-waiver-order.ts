@@ -22,8 +22,11 @@
  * WHAT IT SETS: the INITIAL order. The AFL's waiver system is rolling, so MFL
  * mutates this all season as claims are awarded. Run it ONCE per league year,
  * after the previous season's NIT wraps and before Week 1 waivers process.
- * `--force` is required once any waiver transaction exists, because rewriting
- * mid-season refunds priority teams have already spent.
+ * TWO CHECKS GATE EVERY WRITE, and no flag overrides them (the owner's rule,
+ * Oct 2026 — `checkAflWaiverOrderWrite`): it must be the beginning of the year
+ * (league rollover → Week 1 kickoff), and the live order must still be MFL's
+ * rollover default (reverse franchise id). The second makes it once a year.
+ * `--force` only relaxes the separate waiver-transaction guard.
  *
  * SAFETY:
  *   --dry-run is the DEFAULT; it prints the diff and the exact body it would
@@ -45,6 +48,8 @@ import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 import { getAflLeagueYear } from '../src/utils/league-year';
 import { computeAflWaiverOrder } from '../src/utils/afl-waiver-order-source';
 import {
+  aflWaiverOrderWriteWindow,
+  checkAflWaiverOrderWrite,
   buildWaiverOrderFormBody,
   compareAflWaiverOrder,
   parseInputExpires,
@@ -143,6 +148,18 @@ function restoreBody(expires: number): string {
 
 const pageUrl = waiverOrderPageUrl(league.mflHost, targetYear, league.id);
 
+// ── The two checks — no flag overrides either ───────────────────────────────
+// The owner's rule (Oct 2026): the waiver order is set ONLY at the beginning of
+// the year, and ONLY over MFL's rollover default. `--force` does not reach
+// these; it only relaxes the waiver-transaction guard further down.
+const window = aflWaiverOrderWriteWindow(
+  targetYear,
+  league.leagueYearRollover ?? { month: 6, day: 1 },
+);
+const gate = checkAflWaiverOrderWrite({ now: new Date(), window, liveSlot: before });
+console.log(`\nWrite gate: ${gate.ok ? 'OPEN' : 'CLOSED'}`);
+for (const r of gate.reasons) console.log(`  - ${r}`);
+
 if (!LIVE) {
   console.log(`\nDRY RUN — nothing written.`);
   console.log(`Would POST to: ${pageUrl}`);
@@ -152,6 +169,10 @@ if (!LIVE) {
 }
 
 // ── 4. Guards ────────────────────────────────────────────────────────────────
+if (!gate.ok) {
+  throw new Error(`Refusing to write the waiver order: ${gate.reasons.join('; ')}.`);
+}
+
 const userId = process.env.MFL_USER_ID || '';
 const commish = process.env.MFL_IS_COMMISH || '';
 if (!userId || !commish) {
