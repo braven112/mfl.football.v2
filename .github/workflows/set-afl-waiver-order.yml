@@ -10,8 +10,8 @@ name: Set AFL Waiver Order
 # tiebreaker.
 #
 # MANUAL DISPATCH — the AUTOMATIC path is afl-waiver-order-check.yml, which
-# runs this same script with --live whenever it finds drift in the pre-season
-# window (Oct 2026). This workflow stays for a hand-run with a dry run first,
+# runs this same script with --live once a year, when it finds MFL still on its
+# rollover default (Oct 2026). This workflow stays for a hand-run with a dry run first,
 # or a deliberate --force reset. No cron here: this sets the INITIAL order and
 # the AFL's system is rolling, so a blind re-run after claims would refund
 # priority teams had already spent (the script refuses without --force).

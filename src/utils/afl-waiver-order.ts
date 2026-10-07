@@ -172,6 +172,24 @@ export interface ConferenceDriftResult {
 }
 
 /**
+ * Is the live order MFL's ROLLOVER DEFAULT — reverse franchise id, the highest
+ * id at slot 1?
+ *
+ * That is the state a new AFL league year starts in, because MFL does not
+ * carry `waiverSortOrder` across the June rollover. It is also the ONLY state
+ * the automatic writer may overwrite: the order is set once, at the start of
+ * the year (the owner's rule, Oct 2026). Any other mismatch was set by a person
+ * or has already rolled, so it is reported, never rewritten.
+ *
+ * @param liveSlot Franchise id → the `waiverSortOrder` MFL currently reports.
+ */
+export function isMflDefaultWaiverOrder(liveSlot: Map<string, number>): boolean {
+  if (liveSlot.size === 0) return false;
+  const ids = [...liveSlot.keys()].sort((a, b) => Number(b) - Number(a));
+  return ids.every((id, i) => liveSlot.get(id) === i + 1);
+}
+
+/**
  * Compare a computed waiver order against the live league, PER CONFERENCE.
  *
  * Rank within a conference is the only thing that affects an outcome in this

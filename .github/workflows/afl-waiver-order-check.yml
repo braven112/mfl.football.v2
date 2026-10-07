@@ -6,17 +6,20 @@ name: AFL Waiver Order Check
 # docs/claude/insights/domains/mfl-api.md), so it silently reverts to
 # reverse-franchise-id. In 2026 that went unnoticed until ten days before Week 1.
 #
-# On drift it runs scripts/set-afl-waiver-order.ts --live (the owner's call,
-# Oct 2026: fully automatic), which writes through MFL's own WAIVORD form and
-# verifies by re-reading. Admins get a push either way: "reset, nothing to do"
-# or "the reset did not verify, fix by hand" (and the run goes red).
+# The order is set ONCE per league year, at the start (the owner's rule,
+# Oct 2026). So it writes only when the live order is still MFL's rollover
+# default (reverse franchise id): it runs scripts/set-afl-waiver-order.ts
+# --live, which writes through MFL's own WAIVORD form and verifies by
+# re-reading. After that the order is no longer the default, so it is never
+# written again that year; any later mismatch is only reported. Admins get a
+# push either way, and a write that did not verify turns the run red.
 #
 # Self-guarding, so a year-round daily cron is safe:
 #   - Once any waiver transaction exists for the year, the AFL's ROLLING order
 #     is supposed to have moved; the check reports that and exits 0.
 #   - Before the previous season's NIT resolves there is no final base order to
 #     compare against; it exits 0.
-# Only a real mismatch inside the pre-season window writes anything, and the
+# Only the rollover default inside the pre-season window is written, and the
 # writer itself refuses once a waiver claim has processed.
 #
 # Daily 8am PT (15:00 UTC in PDT, 7am in PST — an hour early in winter is

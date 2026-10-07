@@ -30,6 +30,7 @@ import {
   buildFranchisesWaiverXml,
   setAflWaiverOrderUrl,
   compareAflWaiverOrder,
+  isMflDefaultWaiverOrder,
   buildWaiverOrderFormBody,
   parseInputExpires,
   waiverOrderPageUrl,
@@ -313,5 +314,26 @@ describe("MFL's Custom Waiver Order form", () => {
       .toBe('https://www44.myfantasyleague.com/2026/csetup?L=19621&C=WAIVORD');
     expect(waiverOrderPageUrl('https://www44.myfantasyleague.com', 2026, '19621'))
       .toBe('https://www44.myfantasyleague.com/2026/csetup?L=19621&C=WAIVORD');
+  });
+});
+
+describe('isMflDefaultWaiverOrder — the only order the automatic writer replaces', () => {
+  const ids = Array.from({ length: 24 }, (_, i) => String(i + 1).padStart(4, '0'));
+
+  it('recognises the rollover default: reverse franchise id', () => {
+    const live = new Map(ids.map((id) => [id, 25 - Number(id)]));
+    expect(isMflDefaultWaiverOrder(live)).toBe(true);
+  });
+
+  it('refuses an order a person set, or one that has rolled', () => {
+    const live = new Map(ids.map((id) => [id, 25 - Number(id)]));
+    live.set('0024', 2);
+    live.set('0023', 1);
+    expect(isMflDefaultWaiverOrder(live)).toBe(false);
+    expect(isMflDefaultWaiverOrder(new Map(ids.map((id) => [id, Number(id)])))).toBe(false);
+  });
+
+  it('refuses an empty read rather than treating it as the default', () => {
+    expect(isMflDefaultWaiverOrder(new Map())).toBe(false);
   });
 });

@@ -173,9 +173,12 @@ capture of a real successful save.
 form (`--dry-run` by default; success is judged by RE-READING the live order,
 never by MFL's response, because a silent no-op is this endpoint's real failure
 mode). **`scripts/check-afl-waiver-order.ts` (daily, `AFL Waiver Order
-Check`) sets it automatically** (the owner's call, Oct 2026): it recomputes the
-order, compares it to the live league, and on drift runs the writer with
-`--live`. Admins get an `ops-league-setup` push either way — "reset and
+Check`) sets it automatically, ONCE a year** (the owner's rule, Oct 2026: the
+order is set once, at the beginning of the year). It recomputes the order and
+compares it to the live league, and runs the writer with `--live` only when the
+live order is still MFL's rollover default (reverse franchise id,
+`isMflDefaultWaiverOrder`). Once set, the order is no longer the default, so it
+is never rewritten that year; any later mismatch is reported, not fixed. Admins get an `ops-league-setup` push either way — "reset and
 verified, nothing to do", or "the reset did not verify, fix by hand" with the
 run going red. It goes quiet once the season's first waiver transaction lands,
 because a rolling order is *supposed* to move after that, and the writer refuses
