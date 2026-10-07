@@ -1,5 +1,50 @@
 [
   {
+    "id": "afl-search",
+    "date": "2026-09-04",
+    "category": "new-page",
+    "icon": "search",
+    "leagues": [
+      "afl"
+    ],
+    "excludeFromHero": true,
+    "title": "The AFL Can Finally Find Its Own Stuff",
+    "link": "/search",
+    "linkLabel": "Search the AFL",
+    "summary": "There are 42 pages on the AFL site and, until today, exactly one way to reach most of them: remember they exist. The magnifying glass in the header now opens a searchable index of every one — type \"bracket\", \"keeper\", \"who owns\" and it surfaces.",
+    "description": [
+      "The League has had a search page for a year. The AFL has had a nav drawer and a good memory. That was fine when there were a dozen pages; there are now 42, and the honest truth is that some of the best ones — the <a href=\"/pecking-order\">pecking order</a>, the <a href=\"/schedule-strength\">schedule strength</a> report, the <a href=\"/rivalries\">head-to-head rivalries</a> — were effectively invisible unless someone linked you.",
+      "So the magnifying glass is now in the AFL header too, on every page, right where it is on the other site. It opens a card for every page the AFL has, each with its own description and tags. Type a word and it filters as you go — by title, by description, by tag, by category — and it sorts what is left by how much people actually use it. You do not have to know what a page is called. \"Money\", \"bracket\", \"trade\", \"who won in 2014\" all land somewhere sensible.",
+      "The five chips across the top — Popular, My Team, Reports, Tools, Info — filter without typing anything, which is the better move when you are browsing rather than hunting. And the “All pages” link on the AFL homepage now goes here instead of bouncing you back to the homepage you were already on.",
+      "One thing it will never do is show you TheLeague's pages. The page index is a single shared list across both sites, so the AFL's copy is scoped to AFL routes only — no contracts, no salary cap, no dead money, none of the things this league does not have. What you see is what you can click."
+    ],
+    "image": "afl-search.webp",
+    "imageAlt": "The AFL Search page. A heading reads Search with “42 pages” beside it and the subtitle “Find any page on the site by name, category, or keyword.” Below it a search box reads “Search pages... (e.g. money, bracket, trade)”, then a row of category chips — Popular, My Team, Reports, Tools, Info. Under those, a three-column grid of cards, each with an icon, a page title, a one-line description and a row of tags: AFL Throwback Week Settings, AFL Notification Settings, AFL Live Scoring, Record Book, Search, Rosters, Free Agents, Standings, Set Lineup, Keepers, Keeper Report Card, Playoffs, Schefter Report, Trade Builder and Draft Order."
+  },
+  {
+    "id": "afl-mock-draft",
+    "date": "2026-09-04",
+    "category": "new-page",
+    "icon": "draft-podium",
+    "leagues": [
+      "afl"
+    ],
+    "title": "The AFL Mock Draft Knows Who You Kept",
+    "link": "/draft/mock",
+    "linkLabel": "Open the mock draft",
+    "summary": "Nine rounds against the clock, drafting from the players your conference actually left unkept — not a generic board, not last year's names. It opens when the keeper cuts land in July and closes when the real draft starts, because those are the only weeks it tells you anything true.",
+    "description": [
+      "The League has had a mock draft for a while. Running the same thing for the AFL would have been a morning's work and completely useless, because the AFL doesn't draft rookies off a fixed board — it drafts whoever twelve owners decided not to keep. A mock that doesn't know that is just a list of famous people.",
+      "So this one starts from your <a href=\"/keepers\">keepers</a> and works backwards. Every draftable player, minus the seven each of your conference's twelve teams held onto. What's left is the board — and this year that's a little over eleven hundred names in the American League, which is a real number rather than a round one.",
+      "The part that took the longest is the part nobody will notice. MyFantasyLeague lets a player sit on one roster <em>per conference</em>, and the AFL leans on that hard: of the eighty-four men the AL kept this July, sixty are also kept in the National League. The same guy went first overall in <a href=\"/draft/results\">both drafts</a>. So the pool subtracts your conference's rosters and only yours — do it league-wide and you quietly delete twenty-four players the AL is perfectly free to draft, and the board still looks fine, which is the worst kind of wrong.",
+      "It also drafts in the right shape. Nine rounds, and the same order every round — no snake, because the AFL doesn't snake — pulled straight from MFL's own slots so traded picks land where they really land. The bots pick off redraft ADP, or dynasty, or your own <a href=\"/cr\">draft list</a>, or pure chaos if you want to see what happens when the room loses its mind. You pick your conference at the top, the same way <a href=\"/draft/room\">the draft room</a> does.",
+      "And it tells you when it's not worth running. Before the cuts, the board is still holding a hundred players who are about to be released, so it stays shut and names the teams it's waiting on. Once the real draft starts, it shuts again and points you at <a href=\"/draft/broadcast\">the big board</a>. The window is roughly mid-July to draft weekend — which, if you were wondering why it's closed today, is the honest answer. It's sitting with the rest of the tools on the <a href=\"/draft\">draft hub</a>, next to the <a href=\"/draft/order\">order</a>, one click away."
+    ],
+    "image": "afl-mock-draft.webp",
+    "imageAlt": "The AFL Mock Draft room, opened on the American League. Breadcrumbs read Home / Draft / Mock Draft / Session, above a row of draft tabs — Draft, Order, Results, Broadcast, Room, Mock, Rankings, My List — with Mock highlighted in red. A note beneath reads that the board is drafting from the American League's available pool and that players kept in the NL are still draftable here. A dark banner says “Waiting for draft to begin…” with Go Back, Pause and Reset Draft buttons. Under it the draft board offers nine round tabs, Rd 1 through Rd 9, with Rd 1 selected, and tabs for Players, Queue and Chat. The Players pane is headed AVAILABLE with a count of 1109, a search box, position filters, and a list of available players led by C.J. Stroud, Sam Darnold and Malik Willis.",
+    "excludeFromHero": true
+  },
+  {
     "id": "schefter-tip-receipts",
     "date": "2026-09-03",
     "category": "enhancement",
@@ -43,6 +88,50 @@
     "image": "afl-draft-room.webp",
     "imageAlt": "The AFL Draft Room showing the National League's draft. Across the top, tabs for Draft, Order, Results, Broadcast, Room, Rankings and My List, with Room selected. Below them a Conference row offers two chips — “American League / live draft” and “National League / email draft” — with the National League one highlighted. Two notices follow: “You're watching the National League's draft. You don't pick in this one — switch above for your own conference.” and an explanation that the NL drafts by email over several days so the clock counts in hours. A blue banner reads “ON THE CLOCK · 6.07 — Swiftie 4 Life” with “9h 22m” at the right. Under it the round-6 board shows picks 6.01 through 6.06 already made — Malik Washington, Emmett Johnson, Kenyon Sadiq, Chigoziem Okonkwo, Matthew Golden and Brock Purdy — with 6.07 marked “On the clock”. The player pool beneath lists 1,235 available players led by Jahmyr Gibbs, Bijan Robinson and Ja'Marr Chase.",
     "excludeFromHero": true
+  },
+  {
+    "id": "waiver-priority-modal",
+    "date": "2026-09-03",
+    "category": "new-feature",
+    "icon": "rank",
+    "leagues": [
+      "afl"
+    ],
+    "excludeFromHero": true,
+    "title": "Know Where You Are In Line",
+    "link": "/players",
+    "linkLabel": "Check your priority",
+    "summary": "The AFL runs rolling waiver priority, which means every claim you file is really a bet on how many teams pick before you do. That number was on MyFantasyLeague and nowhere else. Now it's a button on Free Agents — your conference's order, live, with your team outlined and everyone ahead of you named.",
+    "description": [
+      "Priority waivers are a queue, and a queue you can't see is just a rumour. You'd put in for a running back on <a href=\"/players\">Free Agents</a>, feel reasonably good about it, and find out Monday night that four teams ahead of you felt reasonably good about him too. The number that decided all of it — where you sit in the order — lived on MyFantasyLeague, behind a login, on a page nobody opens on purpose.",
+      "So there's a <strong>Waiver priority</strong> button at the top of Free Agents now. It reads the order straight out of MyFantasyLeague when you open it, not from something we cached last Tuesday, because priority is rolling — win a claim and you drop to the back, which is rather the point of the system. Your team is outlined in the list. Everyone ahead of you is named.",
+      "It shows <em>your</em> conference and only your conference, and that's deliberate rather than lazy. The American and National leagues each roster their own copy of every player, so an American owner has never once competed with a National owner for a claim. MyFantasyLeague stores the two orders as one long list of 24, which means the National team sitting at number 13 is actually first in line — show anyone that raw number and you've told them a lie about their own odds.",
+      "Count the names above yours and you have your answer: that many players can be gone before your turn comes round, so line up at least one more target than that. Then file them from the same page — the <a href=\"/players\">Claim</a> button is right there in every row, and the claims you've already filed sit just above the table."
+    ],
+    "image": "waiver-priority.webp",
+    "imageAlt": "The Waiver priority modal over the AFL Free Agents page, listing the twelve American League teams in claim order with Smokane FC outlined and badged YOU at number 10"
+  },
+  {
+    "id": "sign-in-to-bid",
+    "date": "2026-09-03",
+    "category": "enhancement",
+    "icon": "link",
+    "leagues": [
+      "theleague",
+      "afl"
+    ],
+    "excludeFromHero": true,
+    "title": "The Last Trip To MFL, Cancelled",
+    "link": "/players",
+    "linkLabel": "Go bid on somebody",
+    "summary": "Land on Free Agents without signing in and the acquire button used to fling you at MyFantasyLeague in a new tab, which is a strange thing for a site built to replace MyFantasyLeague to do. Now it opens a sign-in right there, and drops you back on the same page — on the same player — ready to bid.",
+    "description": [
+      "There was one door left open to the old building. Every row on <a href=\"/players\">Free Agents</a> carries a button to go get the player, and if you weren't signed in, that button was a deep link to MyFantasyLeague's add/drop page. New tab, second login, different UI, and your afternoon's research left behind in a tab you'd stopped looking at. Signed-in owners have been bidding in place since the start of the month; everyone else was still being shown the exit.",
+      "Now the button opens our own sign-in, right on top of the page you're already reading. Same MyFantasyLeague credentials — they go straight to MFL and we never keep your password — but you stay here. When it clears, the page comes back exactly where you left it, filters and all, and the bid form opens on <em>the player you clicked in the first place</em>. No hunting back through 600 free agents for the tight end you'd talked yourself into.",
+      "One thing still points at MyFantasyLeague on purpose: bidding during the offseason auction. That's MFL's own live auction, and signing in here wouldn't get you into it — so during auction season the link stays a link, and says so."
+    ],
+    "image": "sign-in-to-bid.webp",
+    "imageAlt": "The sign-in modal open over TheLeague's Free Agents page in dark mode, asking for MFL username and password with the note that credentials are validated directly with MyFantasyLeague"
   },
   {
     "id": "draft-section",

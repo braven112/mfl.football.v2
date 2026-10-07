@@ -1,5 +1,214 @@
 [
   {
+    "id": "weekly-rollup-2026-10-05",
+    "date": "2026-10-05",
+    "title": "See exactly where every point came from",
+    "summary": "Live Scoring now breaks each player's score down stat by stat. Tap a player in any matchup and a sheet shows his passing, rushing, receiving and kicking line with the points each one earned under your league's own scoring rules, adding up to the official total.",
+    "description": [
+      {
+        "type": "list",
+        "heading": "New this week",
+        "items": [
+          "Tap any player in a Live Scoring matchup to see every stat and the points it earned under your league's scoring.",
+          "When Throwback Week starts, a popup shows the crest, name and years you're playing as, with a link to pick a different era until the first kickoff.",
+          "Rosters: each position group now has its own band with a running total that follows your sort, and All players ranks your whole roster by any column."
+        ]
+      },
+      {
+        "type": "list",
+        "heading": "Fixes & polish",
+        "items": [
+          "<strong>Free Agents</strong> — Waiver claims work again during the waiver window — every claim was being refused as \"player locked\", and <a href=\"/players\">Free Agents</a> offers Add on every free agent again.",
+          "<strong>Franchise Pages</strong> — Maverick's 2016–2024 seasons show their original Mel Gibson art again instead of today's logo, and it's now Maverick's default Throwback Week look.",
+          "<strong>Franchise Pages</strong> — Franchise and rivalry trade ledgers: pre-2011 trades now name every player instead of \"Player #6955\", and each team appears under the name it had that season.",
+          "<strong>Rosters</strong> — The player card's Season Results table is readable again — upcoming weeks and byes no longer vanish in dark mode, and it fits a phone without scrolling sideways.",
+          "<strong>Rosters</strong> — Declaring a contract works again — it was failing with \"Cannot read properties of undefined (reading 'cancelled')\" and never filed.",
+          "<strong>Rosters</strong> — The rest of the player card's faded labels (stats, details, section titles, \"Rostered by\") are now easy to read in both light and dark mode.",
+          "<strong>Rosters</strong> — On a phone, Coach view roster cards keep the matchup and the stats line on one line each — a 10:00 kickoff or a two-digit rank no longer bumps the rank or the average onto a line of its own.",
+          "<strong>Rosters</strong> — The featured player on every roster header now gets the Free Agents spotlight treatment: a big headshot over his NFL team's logo in white.",
+          "<strong>Rosters</strong> — Rosters: switching from Coach back to GM no longer leaves the Coach columns showing until you toggle twice.",
+          "<strong>Rosters</strong> — Rosters: sorting right after switching teams no longer swaps in the previous team's players.",
+          "<strong>Rosters</strong> — Rosters: the table no longer scrolls sideways on narrower desktop windows when every column fits.",
+          "<strong>Rosters</strong> — After switching teams from the roster header's crest row, the browser's Back button now returns to the team you came from instead of the one the page first opened on.",
+          "<strong>Live Scoring</strong> — Live Scoring: Throwback teams now wear their era colours, and when two teams share a colour your own team keeps it.",
+          "<strong>Live Scoring</strong> — Prime Video games now show the new Thursday Night Football shield (white in dark mode); on Set Lineup, square network logos like NBC, ABC and FOX draw a little larger.",
+          "<strong>Live Scoring</strong> — Live Scoring: during Throwback Week, a team wearing an old name shows its current name in small print underneath, so you can still tell who's who.",
+          "<strong>Schefter Report</strong> — The Owners' Poll has its own page: vote, then see the full owners' rankings. Claude's results post links there, and Pecking Order no longer mixes in poll results.",
+          "<strong>Schefter Report</strong> — Owners' Poll posts in League News now open the right page instead of a not-found page when you browse the league at mfl.football.",
+          "<strong>Schefter Report</strong> — Schefter: the weekly waiver column now knows a first-come free-agent pickup still signs at the $425K league minimum — it is never \"free\".",
+          "<strong>Design System & Theming</strong> — Buttons and \"see more\" links now look and behave the same on every page, and no longer turn red and underlined when you hover them.",
+          "<strong>Design System & Theming</strong> — In dark mode, buttons and tags in the league colour now use dark text where white was hard to read.",
+          "<strong>Design System & Theming</strong> — The Set Lineup button turns a deeper green once your lineup is saved, so its text is easy to read.",
+          "<strong>Draft</strong> — The draft room's countdown banner is readable in every state again, light and dark — its white text no longer sits on pale amber, green or grey.",
+          "<strong>Draft</strong> — Draft Results: defenses show their NFL team logo, and players with no photo get a silhouette instead of a broken image.",
+          "<strong>Set Lineup</strong> — Lineup alerts now go out before every kickoff, London and Thursday games included, and never name a player whose game has already started.",
+          "<strong>Standings</strong> — Standings: games back now counts from the overall record shown beside it, so 4-2 behind 5-1 reads 1.0, not 2.0."
+        ]
+      },
+      "Everything above shipped in the week of Sep 30-Oct 6. Older weeks are in <a href=\"/whats-new\">the archive</a>, and the how-to pages for each feature live in <a href=\"/guides\">the guides</a>."
+    ],
+    "category": "weekly",
+    "icon": "news",
+    "excludeFromHero": true,
+    "leagues": [
+      "theleague"
+    ],
+    "image": "live-stat-sheet.webp",
+    "imageAlt": "A Live Scoring matchup with Josh Allen's stat sheet open, listing passing yards, interceptions, rushing yards, rushing touchdowns and fumbles with the points for each and a 16.46 total."
+  },
+  {
+    "id": "weekly-rollup-2026-10-05-afl",
+    "date": "2026-10-05",
+    "title": "See exactly where every point came from",
+    "summary": "Live Scoring now breaks each player's score down stat by stat. Tap a player in any matchup and a sheet shows his passing, rushing, receiving and kicking line with the points each one earned under your league's own scoring rules, adding up to the official total.",
+    "description": [
+      {
+        "type": "list",
+        "heading": "New this week",
+        "items": [
+          "Tap any player in a Live Scoring matchup to see every stat and the points it earned under your league's scoring.",
+          "When Throwback Week starts, a popup shows the crest, name and years you're playing as, with a link to pick a different era until the first kickoff.",
+          "Rosters: each position group now has its own band with a running total that follows your sort, and All players ranks your whole roster by any column."
+        ]
+      },
+      {
+        "type": "list",
+        "heading": "Fixes & polish",
+        "items": [
+          "<strong>Free Agents</strong> — Waiver claims work again during the waiver window — every claim was being refused as \"player locked\", and <a href=\"/players\">Free Agents</a> offers Add on every free agent again.",
+          "<strong>Free Agents</strong> — Free Agents no longer offers a claim on a player you're viewing in the other conference — claims always file into your own.",
+          "<strong>Rosters</strong> — The ⋮ player menu on <a href=\"/rosters\">Rosters</a> opens again after you switch to another team from the crest row, instead of going dead until you reload.",
+          "<strong>Rosters</strong> — The player card's Season Results table is readable again — upcoming weeks and byes no longer vanish in dark mode, and it fits a phone without scrolling sideways.",
+          "<strong>Rosters</strong> — The rest of the player card's faded labels (stats, details, section titles, \"Rostered by\") are now easy to read in both light and dark mode.",
+          "<strong>Rosters</strong> — On a phone, Coach view roster cards keep the matchup and the stats line on one line each — a 10:00 kickoff or a two-digit rank no longer bumps the rank or the average onto a line of its own.",
+          "<strong>Rosters</strong> — The featured player on every roster header now gets the Free Agents spotlight treatment: a big headshot over his NFL team's logo in white.",
+          "<strong>Live Scoring</strong> — Live Scoring: Throwback teams now wear their era colours, and when two teams share a colour your own team keeps it.",
+          "<strong>Live Scoring</strong> — Prime Video games now show the new Thursday Night Football shield (white in dark mode); on Set Lineup, square network logos like NBC, ABC and FOX draw a little larger.",
+          "<strong>Live Scoring</strong> — Live Scoring: during Throwback Week, a team wearing an old name shows its current name in small print underneath, so you can still tell who's who.",
+          "<strong>Schefter Report</strong> — The Owners' Poll has its own page: vote, then see the full owners' rankings. Claude's results post links there, and Pecking Order no longer mixes in poll results.",
+          "<strong>Design System & Theming</strong> — Buttons and \"see more\" links now look and behave the same on every page, and no longer turn red and underlined when you hover them.",
+          "<strong>Design System & Theming</strong> — Buttons now wear the AFL red instead of the shared blue, in light and dark mode.",
+          "<strong>Design System & Theming</strong> — In dark mode, blue pills, tags and highlighted tabs are a deeper blue, so their white text is easy to read.",
+          "<strong>Design System & Theming</strong> — In dark mode, buttons and tags in the league colour now use dark text where white was hard to read.",
+          "<strong>Design System & Theming</strong> — The Set Lineup button turns a deeper green once your lineup is saved, so its text is easy to read.",
+          "<strong>Draft</strong> — The draft room's countdown banner is readable in every state again, light and dark — its white text no longer sits on pale amber, green or grey.",
+          "<strong>Draft</strong> — Draft Results: defenses show their NFL team logo, and players with no photo get a silhouette instead of a broken image.",
+          "<strong>Rules</strong> — The Read the Rulebook button on Ask Roger is easier to read in dark mode.",
+          "<strong>Franchise Pages</strong> — Franchise and rivalry pages no longer call the season in progress an incomplete archive.",
+          "<strong>Franchise Pages</strong> — Franchise and rivalry trade ledgers: pre-2011 trades now name every player instead of \"Player #6955\", and each team appears under the name it had that season.",
+          "<strong>Set Lineup</strong> — Lineup alerts now go out before every kickoff, London and Thursday games included, and never name a player whose game has already started.",
+          "<strong>Standings</strong> — Standings: games back now counts from the overall record shown beside it, so 4-2 behind 5-1 reads 1.0, not 2.0."
+        ]
+      },
+      "Everything above shipped in the week of Sep 29-Oct 6. Older weeks are in <a href=\"/whats-new\">the archive</a>, and the how-to pages for each feature live in <a href=\"/guides\">the guides</a>."
+    ],
+    "category": "weekly",
+    "icon": "news",
+    "excludeFromHero": true,
+    "leagues": [
+      "afl"
+    ],
+    "image": "live-stat-sheet.webp",
+    "imageAlt": "A Live Scoring matchup with Josh Allen's stat sheet open, listing passing yards, interceptions, rushing yards, rushing touchdowns and fumbles with the points for each and a 16.46 total."
+  },
+  {
+    "id": "weekly-rollup-2026-10-05-bb1",
+    "date": "2026-10-05",
+    "title": "Every stat behind every score",
+    "summary": "Live Scoring now opens a stat sheet for any player you tap: his full line for the week, stat by stat, under the official score.",
+    "description": [
+      {
+        "type": "list",
+        "heading": "New this week",
+        "items": [
+          "In Live Scoring, tap any player to see every stat behind his score."
+        ]
+      },
+      {
+        "type": "list",
+        "heading": "Fixes & polish",
+        "items": [
+          "<strong>Draft</strong> — The draft room's countdown banner is readable in every state again, light and dark — its white text no longer sits on pale amber, green or grey.",
+          "<strong>Design System & Theming</strong> — Buttons now wear the Best Ball emerald instead of the shared blue, in light and dark mode.",
+          "<strong>Design System & Theming</strong> — Heroes and buttons now wear Best Ball's emerald, with text that stays readable in dark mode.",
+          "<strong>Standings</strong> — The Pecking Order now shows your own league's team names and logos."
+        ]
+      },
+      "Everything above shipped in the week of Oct 2-4. Older weeks are in <a href=\"/whats-new\">the archive</a>, and the how-to pages for each feature live in <a href=\"/guides\">the guides</a>."
+    ],
+    "category": "weekly",
+    "icon": "news",
+    "excludeFromHero": true,
+    "leagues": [
+      "bb1"
+    ],
+    "image": "live-stat-sheet.webp",
+    "imageAlt": "A Live Scoring matchup with a player's stat sheet open, listing his passing, rushing and fumble stats above the official total."
+  },
+  {
+    "id": "weekly-rollup-2026-10-05-archies",
+    "date": "2026-10-05",
+    "title": "Live Scoring comes to Archie's",
+    "summary": "Your two games up top, then every matchup in all nine divisions — live win odds, box scores and a scoring ticker, all on one page.",
+    "description": [
+      {
+        "type": "list",
+        "heading": "New this week",
+        "items": [
+          "The homepage hero now runs the same weekly rotation as the other leagues: game day, the Tuesday recap, the Pecking Order, waivers and The Gauntlet, cast with your own players.",
+          "<a href=\"/rosters\">Rosters</a> are now the full roster page: this week's matchup, opponent rank, season points and projection for every player, plus Release, IR and trade-block actions on your own team.",
+          "<a href=\"/live-scoring\">Live Scoring</a> is here: both of your games first, then every matchup by division, with win odds, box scores and a scoring ticker.",
+          "Standings now has three tabs: Division, MAD (the MAD Power 99 playoff race, 30 teams in) and All-Play, plus PA, streak and division records.",
+          "Archie's has a new look: black header and footer, the wordmark's sky blue as the accent, and sharper text contrast in light and dark.",
+          "New: the <a href=\"/front-office/trade-builder\">Trade Builder</a>. Pick players from your roster and a division rival's, check the value balance, and send the offer, or start one from the ⋮ menu on Rosters.",
+          "In Live Scoring, tap any player to see every stat and the points it earned under your league's scoring.",
+          "The homepage now shows the MAD Power 99 playoff race: all 30 qualifiers as crest tiles by tier, with a link to the <a href=\"/standings?view=league\">full standings</a>.",
+          "Team crests that were hard to see in dark mode now get a thin white outline, so every team stays easy to spot.",
+          "New: <a href=\"/franchises\">Franchise pages</a> — every club's all-time record, weekly highlights, rivals and trades across 2021–2026.",
+          "When Throwback Week starts, a popup shows the crest, name and years you're playing as, with a link to pick a different era until the first kickoff.",
+          "Rosters: each position group now has its own band with a running total that follows your sort, and All players ranks your whole roster by any column."
+        ]
+      },
+      {
+        "type": "list",
+        "heading": "Fixes & polish",
+        "items": [
+          "<strong>Free Agents</strong> — Waiver claims work again during the waiver window — every claim was being refused as \"player locked\", and <a href=\"/players\">Free Agents</a> offers Add on every free agent again.",
+          "<strong>Rosters</strong> — The player card's Season Results table is readable again — upcoming weeks and byes no longer vanish in dark mode, and it fits a phone without scrolling sideways.",
+          "<strong>Rosters</strong> — The rest of the player card's faded labels (stats, details, section titles, \"Rostered by\") are now easy to read in both light and dark mode.",
+          "<strong>Rosters</strong> — On a phone, Coach view roster cards keep the matchup and the stats line on one line each — a 10:00 kickoff or a two-digit rank no longer bumps the rank or the average onto a line of its own.",
+          "<strong>Rosters</strong> — The featured player on every roster header now gets the Free Agents spotlight treatment: a big headshot over his NFL team's logo in white.",
+          "<strong>Live Scoring</strong> — Live Scoring: Throwback teams now wear their era colours, and when two teams share a colour your own team keeps it.",
+          "<strong>Live Scoring</strong> — Prime Video games now show the new Thursday Night Football shield (white in dark mode); on Set Lineup, square network logos like NBC, ABC and FOX draw a little larger.",
+          "<strong>Live Scoring</strong> — Live Scoring: during Throwback Week, a team wearing an old name shows its current name in small print underneath, so you can still tell who's who.",
+          "<strong>Schefter Report</strong> — The Owners' Poll has its own page: vote, then see the full owners' rankings. Claude's results post links there, and Pecking Order no longer mixes in poll results.",
+          "<strong>Schefter Report</strong> — Shared Schefter posts now show their preview image with the league logo when posted to chat or social apps.",
+          "<strong>Design System & Theming</strong> — Buttons and \"see more\" links now look and behave the same on every page, and no longer turn red and underlined when you hover them.",
+          "<strong>Design System & Theming</strong> — In dark mode, sky-blue pills, tags and highlighted tabs now carry black text instead of hard-to-read white.",
+          "<strong>Design System & Theming</strong> — Homepage heroes now wear Archie's black and sky blue instead of navy.",
+          "<strong>Design System & Theming</strong> — In dark mode, buttons and tags in the league colour now use dark text where white was hard to read.",
+          "<strong>Design System & Theming</strong> — The Set Lineup button turns a deeper green once your lineup is saved, so its text is easy to read.",
+          "<strong>Draft</strong> — The draft room's countdown banner is readable in every state again, light and dark — its white text no longer sits on pale amber, green or grey.",
+          "<strong>Draft</strong> — Draft Results: defenses show their NFL team logo, and players with no photo get a silhouette instead of a broken image.",
+          "<strong>Calendar</strong> — The calendar and homepage no longer show playoff and championship weeks before the league's playoffs are set up on MFL.",
+          "<strong>Homepage</strong> — The Roster link on your homepage team card opens your own roster again.",
+          "<strong>Franchise Pages</strong> — Franchise and rivalry trade ledgers: pre-2011 trades now name every player instead of \"Player #6955\", and each team appears under the name it had that season.",
+          "<strong>Set Lineup</strong> — Lineup alerts now go out before every kickoff, London and Thursday games included, and never name a player whose game has already started.",
+          "<strong>Standings</strong> — Standings: games back now counts from the overall record shown beside it, so 4-2 behind 5-1 reads 1.0, not 2.0."
+        ]
+      },
+      "Everything above shipped in the week of Sep 29-Oct 6. Older weeks are in <a href=\"/whats-new\">the archive</a>, and the how-to pages for each feature live in <a href=\"/guides\">the guides</a>."
+    ],
+    "category": "weekly",
+    "icon": "news",
+    "excludeFromHero": true,
+    "leagues": [
+      "archies"
+    ],
+    "image": "archies-live-scoring.webp",
+    "imageAlt": "Archie's Live Scoring page: division filter pills above a featured matchup card with projections and a win-odds bar, and smaller matchup cards below."
+  },
+  {
     "id": "weekly-rollup-2026-09-28",
     "date": "2026-09-28",
     "title": "Rosters open in your team's colours",
@@ -1169,94 +1378,5 @@
     ],
     "image": "notification-command-center.webp",
     "imageAlt": "The Notifications command center on The League, headed \"Choose your alerts\" and reading \"4 of 14 on\". The \"Your team\" group is expanded with Turn all on beside it: Trade offers, Lineup problems before kickoff and League deadlines are switched on and badged ON BY DEFAULT, and News on your players is switched off. The Owners' Poll group begins below."
-  },
-  {
-    "id": "afl-search",
-    "date": "2026-09-04",
-    "category": "new-page",
-    "icon": "search",
-    "leagues": [
-      "afl"
-    ],
-    "excludeFromHero": true,
-    "title": "The AFL Can Finally Find Its Own Stuff",
-    "link": "/search",
-    "linkLabel": "Search the AFL",
-    "summary": "There are 42 pages on the AFL site and, until today, exactly one way to reach most of them: remember they exist. The magnifying glass in the header now opens a searchable index of every one — type \"bracket\", \"keeper\", \"who owns\" and it surfaces.",
-    "description": [
-      "The League has had a search page for a year. The AFL has had a nav drawer and a good memory. That was fine when there were a dozen pages; there are now 42, and the honest truth is that some of the best ones — the <a href=\"/pecking-order\">pecking order</a>, the <a href=\"/schedule-strength\">schedule strength</a> report, the <a href=\"/rivalries\">head-to-head rivalries</a> — were effectively invisible unless someone linked you.",
-      "So the magnifying glass is now in the AFL header too, on every page, right where it is on the other site. It opens a card for every page the AFL has, each with its own description and tags. Type a word and it filters as you go — by title, by description, by tag, by category — and it sorts what is left by how much people actually use it. You do not have to know what a page is called. \"Money\", \"bracket\", \"trade\", \"who won in 2014\" all land somewhere sensible.",
-      "The five chips across the top — Popular, My Team, Reports, Tools, Info — filter without typing anything, which is the better move when you are browsing rather than hunting. And the “All pages” link on the AFL homepage now goes here instead of bouncing you back to the homepage you were already on.",
-      "One thing it will never do is show you TheLeague's pages. The page index is a single shared list across both sites, so the AFL's copy is scoped to AFL routes only — no contracts, no salary cap, no dead money, none of the things this league does not have. What you see is what you can click."
-    ],
-    "image": "afl-search.webp",
-    "imageAlt": "The AFL Search page. A heading reads Search with “42 pages” beside it and the subtitle “Find any page on the site by name, category, or keyword.” Below it a search box reads “Search pages... (e.g. money, bracket, trade)”, then a row of category chips — Popular, My Team, Reports, Tools, Info. Under those, a three-column grid of cards, each with an icon, a page title, a one-line description and a row of tags: AFL Throwback Week Settings, AFL Notification Settings, AFL Live Scoring, Record Book, Search, Rosters, Free Agents, Standings, Set Lineup, Keepers, Keeper Report Card, Playoffs, Schefter Report, Trade Builder and Draft Order."
-  },
-  {
-    "id": "afl-mock-draft",
-    "date": "2026-09-04",
-    "category": "new-page",
-    "icon": "draft-podium",
-    "leagues": [
-      "afl"
-    ],
-    "title": "The AFL Mock Draft Knows Who You Kept",
-    "link": "/draft/mock",
-    "linkLabel": "Open the mock draft",
-    "summary": "Nine rounds against the clock, drafting from the players your conference actually left unkept — not a generic board, not last year's names. It opens when the keeper cuts land in July and closes when the real draft starts, because those are the only weeks it tells you anything true.",
-    "description": [
-      "The League has had a mock draft for a while. Running the same thing for the AFL would have been a morning's work and completely useless, because the AFL doesn't draft rookies off a fixed board — it drafts whoever twelve owners decided not to keep. A mock that doesn't know that is just a list of famous people.",
-      "So this one starts from your <a href=\"/keepers\">keepers</a> and works backwards. Every draftable player, minus the seven each of your conference's twelve teams held onto. What's left is the board — and this year that's a little over eleven hundred names in the American League, which is a real number rather than a round one.",
-      "The part that took the longest is the part nobody will notice. MyFantasyLeague lets a player sit on one roster <em>per conference</em>, and the AFL leans on that hard: of the eighty-four men the AL kept this July, sixty are also kept in the National League. The same guy went first overall in <a href=\"/draft/results\">both drafts</a>. So the pool subtracts your conference's rosters and only yours — do it league-wide and you quietly delete twenty-four players the AL is perfectly free to draft, and the board still looks fine, which is the worst kind of wrong.",
-      "It also drafts in the right shape. Nine rounds, and the same order every round — no snake, because the AFL doesn't snake — pulled straight from MFL's own slots so traded picks land where they really land. The bots pick off redraft ADP, or dynasty, or your own <a href=\"/cr\">draft list</a>, or pure chaos if you want to see what happens when the room loses its mind. You pick your conference at the top, the same way <a href=\"/draft/room\">the draft room</a> does.",
-      "And it tells you when it's not worth running. Before the cuts, the board is still holding a hundred players who are about to be released, so it stays shut and names the teams it's waiting on. Once the real draft starts, it shuts again and points you at <a href=\"/draft/broadcast\">the big board</a>. The window is roughly mid-July to draft weekend — which, if you were wondering why it's closed today, is the honest answer. It's sitting with the rest of the tools on the <a href=\"/draft\">draft hub</a>, next to the <a href=\"/draft/order\">order</a>, one click away."
-    ],
-    "image": "afl-mock-draft.webp",
-    "imageAlt": "The AFL Mock Draft room, opened on the American League. Breadcrumbs read Home / Draft / Mock Draft / Session, above a row of draft tabs — Draft, Order, Results, Broadcast, Room, Mock, Rankings, My List — with Mock highlighted in red. A note beneath reads that the board is drafting from the American League's available pool and that players kept in the NL are still draftable here. A dark banner says “Waiting for draft to begin…” with Go Back, Pause and Reset Draft buttons. Under it the draft board offers nine round tabs, Rd 1 through Rd 9, with Rd 1 selected, and tabs for Players, Queue and Chat. The Players pane is headed AVAILABLE with a count of 1109, a search box, position filters, and a list of available players led by C.J. Stroud, Sam Darnold and Malik Willis.",
-    "excludeFromHero": true
-  },
-  {
-    "id": "waiver-priority-modal",
-    "date": "2026-09-03",
-    "category": "new-feature",
-    "icon": "rank",
-    "leagues": [
-      "afl"
-    ],
-    "excludeFromHero": true,
-    "title": "Know Where You Are In Line",
-    "link": "/players",
-    "linkLabel": "Check your priority",
-    "summary": "The AFL runs rolling waiver priority, which means every claim you file is really a bet on how many teams pick before you do. That number was on MyFantasyLeague and nowhere else. Now it's a button on Free Agents — your conference's order, live, with your team outlined and everyone ahead of you named.",
-    "description": [
-      "Priority waivers are a queue, and a queue you can't see is just a rumour. You'd put in for a running back on <a href=\"/players\">Free Agents</a>, feel reasonably good about it, and find out Monday night that four teams ahead of you felt reasonably good about him too. The number that decided all of it — where you sit in the order — lived on MyFantasyLeague, behind a login, on a page nobody opens on purpose.",
-      "So there's a <strong>Waiver priority</strong> button at the top of Free Agents now. It reads the order straight out of MyFantasyLeague when you open it, not from something we cached last Tuesday, because priority is rolling — win a claim and you drop to the back, which is rather the point of the system. Your team is outlined in the list. Everyone ahead of you is named.",
-      "It shows <em>your</em> conference and only your conference, and that's deliberate rather than lazy. The American and National leagues each roster their own copy of every player, so an American owner has never once competed with a National owner for a claim. MyFantasyLeague stores the two orders as one long list of 24, which means the National team sitting at number 13 is actually first in line — show anyone that raw number and you've told them a lie about their own odds.",
-      "Count the names above yours and you have your answer: that many players can be gone before your turn comes round, so line up at least one more target than that. Then file them from the same page — the <a href=\"/players\">Claim</a> button is right there in every row, and the claims you've already filed sit just above the table."
-    ],
-    "image": "waiver-priority.webp",
-    "imageAlt": "The Waiver priority modal over the AFL Free Agents page, listing the twelve American League teams in claim order with Smokane FC outlined and badged YOU at number 10"
-  },
-  {
-    "id": "sign-in-to-bid",
-    "date": "2026-09-03",
-    "category": "enhancement",
-    "icon": "link",
-    "leagues": [
-      "theleague",
-      "afl"
-    ],
-    "excludeFromHero": true,
-    "title": "The Last Trip To MFL, Cancelled",
-    "link": "/players",
-    "linkLabel": "Go bid on somebody",
-    "summary": "Land on Free Agents without signing in and the acquire button used to fling you at MyFantasyLeague in a new tab, which is a strange thing for a site built to replace MyFantasyLeague to do. Now it opens a sign-in right there, and drops you back on the same page — on the same player — ready to bid.",
-    "description": [
-      "There was one door left open to the old building. Every row on <a href=\"/players\">Free Agents</a> carries a button to go get the player, and if you weren't signed in, that button was a deep link to MyFantasyLeague's add/drop page. New tab, second login, different UI, and your afternoon's research left behind in a tab you'd stopped looking at. Signed-in owners have been bidding in place since the start of the month; everyone else was still being shown the exit.",
-      "Now the button opens our own sign-in, right on top of the page you're already reading. Same MyFantasyLeague credentials — they go straight to MFL and we never keep your password — but you stay here. When it clears, the page comes back exactly where you left it, filters and all, and the bid form opens on <em>the player you clicked in the first place</em>. No hunting back through 600 free agents for the tight end you'd talked yourself into.",
-      "One thing still points at MyFantasyLeague on purpose: bidding during the offseason auction. That's MFL's own live auction, and signing in here wouldn't get you into it — so during auction season the link stays a link, and says so."
-    ],
-    "image": "sign-in-to-bid.webp",
-    "imageAlt": "The sign-in modal open over TheLeague's Free Agents page in dark mode, asking for MFL username and password with the note that credentials are validated directly with MyFantasyLeague"
   }
 ]
