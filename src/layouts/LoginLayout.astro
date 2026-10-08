@@ -1,5 +1,6 @@
 ---
 import { Font } from 'astro:assets';
+import SpeedInsights from '@vercel/speed-insights/astro';
 // Global polish layer + shared empty/error states. Imported here, NOT via
 // @import in the <style> block below: Astro scopes @imported rules to this
 // layout's own markup, so they would never reach a page's content.
@@ -41,6 +42,7 @@ import StagingBanner from '../components/shared/StagingBanner.astro';
 		<meta name="generator" content={Astro.generator} />
 		<Font cssVariable="--font-vend-sans" />
 		<title>{title}</title>
+		<SpeedInsights />
 	</head>
 	<body>
 		<StagingBanner />

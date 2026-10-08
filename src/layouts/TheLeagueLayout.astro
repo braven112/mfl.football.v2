@@ -18,6 +18,7 @@
 import { ClientRouter } from 'astro:transitions';
 import TransitionNoiseGuard from '../components/shared/TransitionNoiseGuard.astro';
 import { Font } from 'astro:assets';
+import SpeedInsights from '@vercel/speed-insights/astro';
 // Global utility classes (.visually-hidden, etc.) — frontmatter import so the
 // CSS ships unscoped; @import inside the <style> block below would get scoped.
 import '../styles/utilities.css';
@@ -464,6 +465,7 @@ import DemoTour from '../components/shared/DemoTour.astro';
 		    the `defaultPrevented` it sets. */}
 		<TransitionNoiseGuard />
 		<ClientRouter />
+		<SpeedInsights />
 	</head>
 	<body>
 		<StagingBanner />
