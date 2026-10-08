@@ -29,17 +29,33 @@ name: Fetch Owner Names from MFL
 # reads a whitelist of name fields only, and throws if anything email- or
 # URL-shaped would reach the registry. Nothing raw is cached or logged. Keep the
 # dry run as your first step so you can read what it proposes before it writes.
+#
+# TASK owner-history (a second job, below): for a league that RENUMBERS its
+# franchises season to season (Archie's), derive each current team's
+# `ownerHistory` in the league config from who owned each franchise id that
+# season. Names are an in-memory join key only — that job prints and commits
+# franchise ids and years, never a name, because such a league may keep its
+# owners anonymous. See scripts/derive-owner-history.mjs.
 on:
   workflow_dispatch:
     inputs:
+      task:
+        description: 'owner-names: name owners in the registry. owner-history: derive config ownerHistory for a renumbering league (ids only, no names).'
+        required: true
+        type: choice
+        options:
+          - owner-names
+          - owner-history
+        default: owner-names
       league:
-        description: 'Which league to name owners for'
+        description: 'Which league (owner-history needs a single league)'
         required: true
         type: choice
         options:
           - both
           - theleague
           - afl
+          - archies
         default: both
       write:
         description: 'Actually write the registry (leave off for a dry run first)'
@@ -63,6 +79,7 @@ permissions:
 
 jobs:
   fetch-owner-names:
+    if: inputs.task == 'owner-names'
     runs-on: ubuntu-latest
     # ~44 league-years across both leagues at 600ms apiece, plus login and the
     # recompute. Generous so a slow MFL doesn't kill a half-finished sweep.
@@ -181,3 +198,79 @@ jobs:
               echo "Read the conflicts above before writing: a tenure MFL reports two owners for is one this repo's inference merged and should probably SPLIT. Fix those in \`src/data/owners-registry.json\` first, then re-run with **write** ticked."
             } >> "$GITHUB_STEP_SUMMARY"
           fi
+
+  derive-owner-history:
+    if: inputs.task == 'owner-history'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout (current branch)
+        uses: actions/checkout@v6
+        with:
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+          ref: ${{ github.ref }}
+
+      - name: Setup pnpm + Node + install
+        uses: ./.github/actions/setup
+
+      - name: Require a single league
+        run: |
+          if [ "${{ inputs.league }}" = "both" ]; then
+            echo "::error::owner-history derives one league's config — pick a league, not 'both'."
+            exit 1
+          fi
+
+      # Output is franchise ids, years and counts only — the script never
+      # prints a name — so it is safe for the step summary.
+      - name: Dry run — the proposed ownerHistory
+        env:
+          MFL_USER_ID: ${{ secrets.MFL_USER_ID }}
+          MFL_IS_COMMISH: ${{ secrets.MFL_IS_COMMISH }}
+          MFL_USERNAME: ${{ secrets.MFL_USERNAME }}
+          MFL_PASSWORD: ${{ secrets.MFL_PASSWORD }}
+        run: |
+          set -o pipefail
+          node ./scripts/derive-owner-history.mjs --league=${{ inputs.league }} 2>&1 | tee /tmp/owner-history-dry.txt
+
+      - name: Summarise the dry run
+        if: always()
+        run: |
+          {
+            echo "## ownerHistory — ${{ inputs.league }}"
+            echo ""
+            echo '```'
+            cat /tmp/owner-history-dry.txt || echo "(no output)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Write ownerHistory to the league config
+        if: inputs.write
+        env:
+          MFL_USER_ID: ${{ secrets.MFL_USER_ID }}
+          MFL_IS_COMMISH: ${{ secrets.MFL_IS_COMMISH }}
+          MFL_USERNAME: ${{ secrets.MFL_USERNAME }}
+          MFL_PASSWORD: ${{ secrets.MFL_PASSWORD }}
+        run: node ./scripts/derive-owner-history.mjs --league=${{ inputs.league }} --write
+
+      # ownerHistory moves seasons between franchises, so the whole chain is
+      # rebuilt and gated exactly as the owner-names job does it.
+      - name: Recompute the derived history chain
+        if: inputs.write
+        run: node ./scripts/recompute-derived-chain.mjs --emit-milestone-posts
+
+      - name: Verify derived data
+        if: inputs.write
+        run: pnpm vitest run tests/derive-owner-history.test.ts $(node ./scripts/recompute-derived-chain.mjs --print-guard-tests)
+
+      - name: Commit and push
+        if: inputs.write
+        env:
+          TARGET_BRANCH: ${{ github.ref_name }}
+        run: |
+          git config user.name "Owner History Bot"
+          git config user.email "actions@users.noreply.github.com"
+          CONFIG=$(node -e "import('./src/config/leagues-data.mjs').then((m) => console.log(m.LEAGUES['${{ inputs.league }}'].configPath))")
+          node ./scripts/commit-feed-and-push.mjs \
+            --branch "$TARGET_BRANCH" \
+            --message "chore: derive ownerHistory from MFL owners (${{ inputs.league }})" \
+            --files "$CONFIG,$(node ./scripts/recompute-derived-chain.mjs --print-outputs)"
