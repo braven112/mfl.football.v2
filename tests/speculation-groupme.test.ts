@@ -215,19 +215,21 @@ describe('postSpeculationToGroupMe — live', () => {
 });
 
 describe('the day-plan gate', () => {
-  it('is allowed by the calendar, because a trade lane skips it', async () => {
-    // trade-speculation is in OWN_BUDGET_KINDS, so isPlannedToday says yes on
-    // any weekday. The 3/day + 4h budget is NOT checked here: the calling
-    // script gates on it at step 3 and CONSUMES the slot at step 9, both
-    // before this runs. A second look at those keys from here sees a
-    // millisecond-old last_post_ts and refuses on spacing every single time.
+  it('is held by default — trade-speculation is push-only', async () => {
+    // Owner's call, Oct 2026: the trade lanes live in the news feed and
+    // opt-in push, never the chat. The 3/day + 4h budget is still NOT checked
+    // here (the calling script charges it before this runs).
+    const fetcher = vi.fn().mockResolvedValue({ status: 202 });
     const result = await postSpeculationToGroupMe({
       post: { id: 'sp_1', body: 'Sources say something is brewing.' },
       ctaUrl: 'https://www.theleague.us/trade-builder?b=0004',
       env: { GROUPME_SCHEFTER_BOT_ID: 'bot' },
-      fetcher: vi.fn().mockResolvedValue({ status: 202 }),
+      fetcher,
     });
-    expect(result.posted).toBe(true);
+    expect(result.posted).toBe(false);
+    expect(result.reason).toBe('daily-cap');
+    expect(result.why).toMatch(/push-only/);
+    expect(fetcher).not.toHaveBeenCalled();
   });
 
   it('holds when the day plan refuses', async () => {

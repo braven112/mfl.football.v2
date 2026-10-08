@@ -687,31 +687,26 @@ function round2(x) {
 
 // ─── GroupMe announcement ──────────────────────────────────────────
 
+/**
+ * One sentence and a link. The column does the talking; the chat post only
+ * says who is on top and where to read the rest (owner's call, Oct 2026 — the
+ * old multi-line post with the #1 blurb and both awards was the column
+ * re-told in the chat).
+ */
 export function buildGroupMeAnnouncement(issue, teams, league) {
   const top = issue.rankings[0];
-  const topTeam = teams.get(top.franchiseId);
-  const arrow = top.previousRank == null || top.previousRank === top.rank
-    ? ''
-    : top.previousRank > top.rank
-      ? ` (↑${top.previousRank - top.rank})`
-      : ` (↓${top.rank - top.previousRank})`;
-  const lines = [
-    `🐔 THE PECKING ORDER — Week ${issue.week}`,
-    `#1 ${topTeam?.nameMedium ?? top.franchiseId}${arrow} — "${top.blurb}"`,
-  ];
-  if (issue.awards?.statOfWeek) lines.push(`🏆 ${issue.awards.statOfWeek.blurb}`);
-  if (issue.awards?.benchBlunder) lines.push(`🪑 ${issue.awards.benchBlunder.blurb}`);
+  const name = teams.get(top.franchiseId)?.nameMedium ?? top.franchiseId;
+  const hook = top.previousRank == null || top.previousRank === top.rank
+    ? `${name} holds #1`
+    : `${name} climbs to #1`;
   // leagueUrl is total in both directions: it strips the prefix on a league's
   // own apex host and adds one on the shared host, so the link never burns a
-  // redirect hop or 404s.
-  lines.push(`Full rankings, awards, and standings ▸ ${leagueUrl(league, '/pecking-order')}`);
-
-  // No Owners' Poll line. The poll is its own feature with its own page, and
-  // folding its invite into the column is what made the two read as one. The
-  // poll's chat presence is Claude's results post later in the week, which
-  // carries the vote link (buildRevealMessage).
-
-  return lines.join('\n');
+  // redirect hop or 404s. The URL ends the message — GroupMe autolinks a
+  // trailing period into the href.
+  //
+  // No Owners' Poll line. The poll's chat presence is Claude's results post
+  // later in the week, which carries the vote link (buildRevealMessage).
+  return `🐔 Week ${issue.week} Pecking Order: ${hook} ▸ ${leagueUrl(league, '/pecking-order')}`;
 }
 
 /**

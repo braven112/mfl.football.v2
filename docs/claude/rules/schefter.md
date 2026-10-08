@@ -1586,3 +1586,14 @@ option is optional rather than required.
 Guard: `tests/article-type-league-option.test.ts` pins all three places, derived
 from the directory rather than a list, plus that the cached block stays
 byte-identical between the two leagues and asserts no `\d+-team` size anywhere.
+
+### The trade lanes never post to GroupMe (Oct 2026)
+
+Owner's call: rumors, trade bait, trade-offer leaks and algorithmic
+speculation live in the website news feed and reach phones only through the
+opt-in `rumor` push category. `rumor` and `trade-speculation` are in
+`PUSH_ONLY_KINDS` (`scripts/lib/groupme-day-plan.mjs`); `OWN_BUDGET_KINDS` is
+empty. The 3/day + 4h budget still paces the FEED. Re-opening chat for these
+is a set change plus `tests/reminder-push-first.test.ts`, and needs the
+owner's yes. The weekly columns' chat posts are ONE sentence and a link
+(`tests/groupme-one-sentence-promos.test.ts`) — the column does the talking.

@@ -91,39 +91,33 @@ export const EXEMPT_KINDS = new Set([
  *
  * `transaction` is the firehose that started all of this: every add, drop and
  * waiver claim, scanned every 15 minutes. It stays here.
+ *
+ * `rumor` and `trade-speculation` joined it in Oct 2026, on the owner's call:
+ * the trade lanes (rumor mill, trade bait, trade-offer leaks, algorithmic
+ * speculation) live in the website news feed and reach phones through the
+ * opt-in `rumor` push category, and stay out of the chat. They used to post
+ * to chat under their own 3/day + 4h budget (OWN_BUDGET_KINDS below); that
+ * budget still paces the FEED, it just no longer opens a door to GroupMe.
  */
 export const PUSH_ONLY_KINDS = new Set([
   'transaction',
   'waiver-pickups',
+  'rumor',             // the rumor mill, which carries trade-bait listings
+  'trade-speculation',
 ]);
 
 /**
  * Kinds that skip the day cap because they already have a STRICTER budget of
  * their own — not because they are urgent.
  *
- * The trade lanes (rumor mill, trade bait, algorithmic speculation) exist to
- * get owners trading, and that only works in the room where trades get talked
- * about. They are not reminders competing with the league's chatter; they are
- * the chatter. So they post to chat, governed by the budget the rumor mill has
- * always carried in scripts/lib/schefter-groupme-budget.mjs:
- *
- *   - at most MAX_POSTS_PER_DAY (3) per Pacific day, shared across the lanes
- *   - at least MIN_SPACING_MS (4 hours) between them
- *   - a one-hour marinate window before a fresh tip may post
- *   - quiet hours, and an LLM quality gate on top
- *
- * That is tighter than the one-a-day calendar in practice and far better
- * targeted, because it can tell a real tip from filler. Routing these through
- * the weekday calendar instead would have meant a trade rumor waiting until
- * its assigned weekday, which is worthless — a rumor is news or it is nothing.
+ * Empty since Oct 2026: its only members were the trade lanes, which are now
+ * push-only (see PUSH_ONLY_KINDS). Kept as the one place such a kind would be
+ * declared, so the gates in groupme-capped.mjs keep their shape.
  *
  * The bar for adding a kind here is a real, enforced budget somewhere else.
  * Absent that, this set is just a hole in the cap.
  */
-export const OWN_BUDGET_KINDS = new Set([
-  'rumor',            // the rumor mill, which carries trade-bait listings
-  'trade-speculation',
-]);
+export const OWN_BUDGET_KINDS = new Set([]);
 
 /** Does this kind skip the one-post-a-day cap, and why does it get to? */
 export function bypassesDayCap(kind) {
