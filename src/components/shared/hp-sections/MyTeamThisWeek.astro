@@ -1,0 +1,376 @@
+---
+/**
+ * MyTeamThisWeek — the homepage My Team card while the season is being played,
+ * for every league.
+ *
+ * Each league's own snapshot (HpTeamSnapshot, AflTeamSnapshot) renders this
+ * in season and keeps its offseason card. The question it answers is "what do
+ * I need to do this week?": lineup status first (the signed-in owner only),
+ * then record / next opponent / roster plus one league-specific tile, then
+ * one-tap links to the four pages owners actually open — Set Lineup, Free
+ * Agents, Trade Builder, My Roster (Owner Activity, Oct 2026).
+ *
+ * Data comes from `loadMyTeamWeek` (src/utils/my-team-week.ts). A lineup the
+ * live read could not establish (`unknown`) shows no status line at all — the
+ * card never says "not set" on a failed read (docs/claude/rules/lineups.md).
+ */
+import { spriteUrl } from '../../../utils/sprite-url';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { ensureLeaguePrefix, getLeagueBySlug } from '../../../config/leagues';
+import { getLeagueTeamBrands } from '../../../utils/league-team-brands';
+import type { MyTeamWeek, LineupProblem } from '../../../utils/my-team-week';
+import ThemeImage from '../ThemeImage.astro';
+
+export interface MyTeamTile {
+  label: string;
+  value: string;
+  sub: string;
+  href: string;
+  icon?: string;
+  alert?: boolean;
+  /** Branded mark in place of the text headline (AFL tier). Needs `logoDark`. */
+  logo?: string;
+  logoDark?: string;
+  logoAlt?: string;
+}
+
+interface Props {
+  leagueSlug: string;
+  teamName: string;
+  teamIcon?: string;
+  data: MyTeamWeek;
+  rosterCount?: number;
+  rosterLimit?: number;
+  /** One league-specific tile (TheLeague: cap space; AFL: tier). */
+  extraTile?: MyTeamTile;
+}
+
+const { leagueSlug, teamName, teamIcon, data, rosterCount, rosterLimit, extraTile } = Astro.props;
+const league = getLeagueBySlug(leagueSlug)!;
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+const href = (path: string) => resolveLeaguePath(ensureLeaguePrefix(league, path), hideLeaguePrefix);
+
+const brands = getLeagueTeamBrands(leagueSlug);
+const opponentNames = data.games.map((g) => brands[g.opponentId]?.nameShort ?? `Team ${g.opponentId}`);
+const firstGame = data.games[0];
+
+const recordText = data.record
+  ? `${data.record.wins}-${data.record.losses}${data.record.ties ? `-${data.record.ties}` : ''}`
+  : '—';
+
+const tiles: MyTeamTile[] = [
+  {
+    label: 'Record',
+    value: recordText,
+    sub: data.pointsFor != null ? `${data.pointsFor.toFixed(1)} pts for` : 'this season',
+    href: href('/standings'),
+    icon: 'standings',
+  },
+  {
+    label: `Week ${data.week}`,
+    value: firstGame ? (firstGame.isHome ? 'vs.' : 'at') : 'TBD',
+    sub: opponentNames.length ? opponentNames.join(' & ') : 'see the schedule',
+    href: href('/schedule'),
+    icon: 'exchange',
+  },
+  {
+    label: 'Roster',
+    value: rosterCount != null ? `${rosterCount}` : '—',
+    sub: rosterLimit ? `of ${rosterLimit} slots` : 'players',
+    href: href('/rosters'),
+    icon: 'users',
+    alert: rosterLimit != null && rosterCount != null && rosterCount > rosterLimit,
+  },
+  ...(extraTile ? [extraTile] : []),
+];
+
+const lineup = data.lineup;
+const problemCount = (lineup?.problems.length ?? 0) + (lineup?.emptySlots ?? 0);
+const lineupNeedsWork = lineup?.state === 'not-set' || problemCount > 0;
+
+const PROBLEM_COPY: Record<LineupProblem['type'], string> = {
+  OUT: 'out',
+  IR: 'on IR',
+  SUSPENDED: 'suspended',
+  RETIRED: 'retired',
+  HOLDOUT: 'holding out',
+  BYE: 'on bye',
+};
+const MAX_LISTED = 3;
+const listed = lineup?.problems.slice(0, MAX_LISTED) ?? [];
+const unlisted = (lineup?.problems.length ?? 0) - listed.length;
+
+const actions = [
+  { label: 'Set Lineup', href: href('/lineup'), icon: 'lineup', primary: lineupNeedsWork },
+  { label: 'Free Agents', href: href('/players'), icon: 'user-plus', primary: false },
+  { label: 'Trade Builder', href: href('/front-office/trade-builder'), icon: 'exchange', primary: false },
+  { label: 'My Roster', href: href('/rosters'), icon: 'users', primary: false },
+];
+---
+
+<section class="mtw" aria-label="My team this week">
+  <div class="mtw__header">
+    <div class="mtw__team">
+      {teamIcon && <img src={teamIcon} alt="" class="mtw__team-icon" width="28" height="28" loading="lazy" />}
+      <div class="mtw__name">
+        <h3 class="mtw__title">My Team</h3>
+        <p class="mtw__sub">{teamName}</p>
+      </div>
+    </div>
+  </div>
+
+  {lineup && lineup.state !== 'unknown' && (
+    <div
+      class:list={['mtw__lineup', lineupNeedsWork ? 'mtw__lineup--warn' : 'mtw__lineup--ok']}
+      role="status"
+    >
+      <svg class="mtw__lineup-icon" width="16" height="16" aria-hidden="true">
+        <use href={`${spriteUrl}#icon-${lineupNeedsWork ? 'info' : 'check'}`} />
+      </svg>
+      <div class="mtw__lineup-text">
+        {lineup.state === 'not-set' ? (
+          <p class="mtw__lineup-head">Week {data.week} lineup not set yet</p>
+        ) : problemCount === 0 ? (
+          <p class="mtw__lineup-head">Week {data.week} lineup is set</p>
+        ) : (
+          <Fragment>
+            <p class="mtw__lineup-head">
+              Week {data.week} lineup is set, but {problemCount === 1 ? '1 spot needs' : `${problemCount} spots need`} attention
+            </p>
+            <ul class="mtw__problems">
+              {listed.map((p) => (
+                <li>{p.name} <span class="mtw__problem-meta">({p.position}) — {PROBLEM_COPY[p.type]}</span></li>
+              ))}
+              {unlisted > 0 && <li>+{unlisted} more</li>}
+              {lineup.emptySlots > 0 && (
+                <li>{lineup.emptySlots === 1 ? '1 empty starting slot' : `${lineup.emptySlots} empty starting slots`}</li>
+              )}
+            </ul>
+          </Fragment>
+        )}
+      </div>
+    </div>
+  )}
+
+  <div class="mtw__grid">
+    {tiles.map((t) => (
+      <a href={t.href} class="mtw__tile">
+        {t.logo && t.logoDark ? (
+          <span class="mtw__tile-headline">
+            <ThemeImage src={t.logo} darkSrc={t.logoDark} alt={t.logoAlt ?? t.value} class="mtw__tile-logo" loading="eager" decoding="async" />
+          </span>
+        ) : (
+          <span class:list={['mtw__tile-value', { 'mtw__tile-value--alert': t.alert }]}>{t.value}</span>
+        )}
+        <span class="mtw__tile-label">{t.label}</span>
+        <span class="mtw__tile-sub">{t.sub}</span>
+      </a>
+    ))}
+  </div>
+
+  <nav class="mtw__actions" aria-label="Team shortcuts">
+    {actions.map((a) => (
+      <a href={a.href} class:list={['cta', a.primary ? 'cta--primary' : 'cta--ghost', 'mtw__action']}>
+        <svg width="14" height="14" aria-hidden="true"><use href={`${spriteUrl}#icon-${a.icon}`} /></svg>
+        {a.label}
+      </a>
+    ))}
+  </nav>
+</section>
+
+<style>
+  .mtw {
+    --mtw-accent: var(--league-accent, var(--color-primary));
+    background: var(--card-bg);
+    border: 1px solid var(--content-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .mtw__team {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  /* A crest is not a portrait: show it whole, never cropped. */
+  .mtw__team-icon {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+  }
+
+  .mtw__title {
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--mtw-accent);
+    margin: 0;
+    line-height: 1;
+    color: var(--color-gray-700);
+  }
+
+  .mtw__sub {
+    margin: 0.25rem 0 0;
+    padding-left: 0.75rem;
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--color-gray-800);
+  }
+
+  .mtw__lineup {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    padding: 0.75rem 0.875rem;
+    border-radius: var(--radius-md);
+    border: 1px solid transparent;
+  }
+
+  .mtw__lineup--ok {
+    background: var(--color-success-light);
+    border-color: var(--color-success);
+  }
+
+  .mtw__lineup--warn {
+    background: var(--color-warning-light);
+    border-color: var(--color-warning);
+  }
+
+  .mtw__lineup-icon {
+    flex-shrink: 0;
+    margin-top: 0.125rem;
+    fill: currentColor;
+  }
+
+  .mtw__lineup--ok .mtw__lineup-icon { color: var(--color-success-dark); }
+  .mtw__lineup--warn .mtw__lineup-icon { color: var(--color-warning-dark); }
+
+  .mtw__lineup-head {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--color-gray-800);
+  }
+
+  .mtw__problems {
+    margin: 0.375rem 0 0;
+    padding-left: 1.125rem;
+    font-size: var(--font-size-xs);
+    color: var(--color-gray-700);
+  }
+
+  .mtw__problem-meta {
+    color: var(--color-gray-500);
+  }
+
+  .mtw__grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+  }
+
+  .mtw__tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.125rem;
+    padding: 0.875rem 0.5rem;
+    background: var(--color-gray-50);
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    text-align: center;
+    min-width: 0;
+    transition: background var(--transition-fast);
+  }
+
+  .mtw__tile:hover {
+    background: var(--color-gray-100);
+    text-decoration: none;
+  }
+
+  .mtw__tile-value {
+    font-size: var(--font-size-lg);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-gray-800);
+    line-height: 1.2;
+  }
+
+  .mtw__tile-value--alert {
+    color: var(--color-error);
+  }
+
+  /* Same box as a text value (1.25rem × 1.2 line-height), so a branded tile
+     lines up with the text tiles beside it. The logo needs a definite HEIGHT,
+     not a max-height: the tier SVGs carry no intrinsic size, and with
+     width:auto + max-height alone they collapse to 0. Sizing follows
+     AflTeamSnapshot's `.afl-snapshot__card-logo`. */
+  .mtw__tile-headline {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: calc(1.25rem * 1.2);
+    max-width: 100%;
+  }
+
+  .mtw__tile-headline :global(.mtw__tile-logo) {
+    height: 100%;
+    width: auto;
+    max-width: 3.25rem;
+    object-fit: contain;
+  }
+
+  .mtw__tile-label {
+    font-size: var(--font-size-3xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-500);
+  }
+
+  .mtw__tile-sub {
+    font-size: var(--font-size-2xs);
+    color: var(--color-gray-500);
+    font-variant-numeric: tabular-nums;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mtw__actions {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+  }
+
+  .mtw__action {
+    padding: 0.5rem 0.625rem;
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .mtw__action svg {
+    fill: currentColor;
+    flex-shrink: 0;
+  }
+
+  @media (max-width: 640px) {
+    .mtw {
+      padding: 1.25rem;
+    }
+
+    .mtw__grid,
+    .mtw__actions {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+</style>

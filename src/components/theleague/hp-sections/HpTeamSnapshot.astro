@@ -11,6 +11,8 @@ import { getLeagueBySlug } from '../../../config/leagues';
 import { formatCompactNumber } from '../../../utils/formatters';
 import { SALARY_CAP, TARGET_ACTIVE_COUNT } from '../../../utils/salary-calculations';
 import type { TeamSummary } from '../../../utils/league-summary-utils';
+import type { MyTeamWeek } from '../../../utils/my-team-week';
+import MyTeamThisWeek from '../../shared/hp-sections/MyTeamThisWeek.astro';
 
 interface Props {
   isAuthenticated: boolean;
@@ -20,9 +22,11 @@ interface Props {
   userTeamIcon?: string;
   /** Active + taxi roster count (excludes IR players) */
   activeRosterCount?: number;
+  /** In season: the shared this-week card replaces the offseason metrics. */
+  thisWeek?: MyTeamWeek | null;
 }
 
-const { isAuthenticated, userFranchiseId, teamSummaries, userTeamName, userTeamIcon, activeRosterCount } = Astro.props;
+const { isAuthenticated, userFranchiseId, teamSummaries, userTeamName, userTeamIcon, activeRosterCount, thisWeek } = Astro.props;
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 // Sign-in returns to THIS page. loginUrlForRequest already applies the
@@ -87,7 +91,17 @@ const metrics: MetricDef[] = [
 ];
 ---
 
-{isAuthenticated && userSummary ? (
+{isAuthenticated && userSummary && thisWeek ? (
+  <MyTeamThisWeek
+    leagueSlug="theleague"
+    teamName={userTeamName ?? 'My Team'}
+    teamIcon={userTeamIcon}
+    data={thisWeek}
+    rosterCount={rosterCount}
+    rosterLimit={TARGET_ACTIVE_COUNT}
+    extraTile={{ ...metrics[0], alert: isOverCap }}
+  />
+) : isAuthenticated && userSummary ? (
   <section class="hp-snapshot" aria-label="My team snapshot">
     <div class="hp-snapshot__header">
       <div class="hp-snapshot__team">

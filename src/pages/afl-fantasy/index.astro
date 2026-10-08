@@ -53,6 +53,7 @@ import { isSeasonWindowOpen } from '../../utils/pecking-order-season-window.mjs'
 import { ensureLeaguePrefix } from '../../config/leagues';
 import { getCurrentNFLWeek } from '../../utils/current-week';
 import { findNextGame, franchiseSchedule, parseWeeklySchedule } from '../../utils/schedule-data.mjs';
+import { loadMyTeamWeek } from '../../utils/my-team-week';
 import { chooseTeamName } from '../../utils/team-names';
 import { loadAflDraftSlot } from '../../utils/afl-draft-slot';
 import { resolveAflTeamSpotlight } from '../../utils/afl-team-spotlight';
@@ -336,6 +337,21 @@ const heroState = await resolveLeagueHomeHero({
 
 const inSeasonVariant = heroState.kind === 'regular-season' || heroState.kind === 'playoffs' || heroState.kind === 'championship';
 
+// In season the My Team card becomes "this week" (shared with TheLeague —
+// src/utils/my-team-week.ts). It follows the BROWSED team like the rest of the
+// card, but lineup status is the signed-in owner's alone.
+const myTeamWeek = inSeasonVariant && userFranchiseId
+  ? await loadMyTeamWeek({
+      league: AFL,
+      franchiseId: userFranchiseId,
+      isOwner: !!authAflFranchiseId && authAflFranchiseId === userFranchiseId,
+      leagueYear: aflLeagueYear,
+      seasonYear: getCurrentSeasonYear(effectiveDate),
+      currentNflWeek: getCurrentNFLWeek(effectiveDate, getCurrentSeasonYear(effectiveDate)),
+      now: effectiveDate,
+    })
+  : null;
+
 // ── Team snapshot spotlight (offseason fourth tile) ─────────────────────────
 // Replaces the old "Keepers — X of 7 protected" tile, which could only ever
 // render "—": AFL has no MFL keeper construct, so there was no count to pass.
@@ -457,6 +473,7 @@ const labels = await getPersonaLabels('afl-fantasy');
     rosterLimit={28}
     spotlight={spotlight}
     variant={inSeasonVariant ? 'in-season' : 'offseason'}
+    thisWeek={myTeamWeek}
   />
 
   <AflWhatsNext
