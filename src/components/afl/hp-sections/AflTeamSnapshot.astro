@@ -10,6 +10,7 @@
  */
 import { spriteUrl } from '../../../utils/sprite-url';
 import { loginUrlForRequest } from '../../../utils/login-redirect';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { getLeagueBySlug } from '../../../config/leagues';
 import ThemeImage from '../../shared/ThemeImage.astro';
 import { getTierLogo, getTierLogoDark, PREMIER_LEAGUE, D_LEAGUE } from '../../../utils/afl-tier-logo';
@@ -229,7 +230,8 @@ const metrics: MetricDef[] = inferredVariant === 'in-season'
       label: 'Tier',
       value: tierName === PREMIER_LEAGUE ? 'Premier' : tierName === D_LEAGUE ? 'D-League' : '—',
       sub: userConferenceName ? `${userConferenceName} conf.` : 'this season',
-      href: '/afl-fantasy/standings?view=tier',
+      // Resolved for the host: a bare `/afl-fantasy/…` costs a 301 on afl-fantasy.com.
+      href: resolveLeaguePath('/afl-fantasy/standings?view=tier', Astro.locals.hideLeaguePrefix ?? false),
       ...tierLogo,
     }}
   />
