@@ -17,9 +17,10 @@ function expectOneSentenceThenLink(text: string) {
   // period into the href (docs/claude/rules/league-urls.md).
   const urls = text.match(/https?:\/\/\S+/g) ?? [];
   expect(urls).toHaveLength(1);
-  expect(text.endsWith(urls[0])).toBe(true);
+  const url = urls[0] ?? '';
+  expect(text.endsWith(url)).toBe(true);
   // One sentence before the link.
-  const lead = text.slice(0, text.indexOf(urls[0]));
+  const lead = text.slice(0, text.indexOf(url));
   expect(lead.match(/[.!?](\s|$)/g) ?? []).toHaveLength(0);
 }
 

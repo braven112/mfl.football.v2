@@ -117,7 +117,8 @@ export const PUSH_ONLY_KINDS = new Set([
  * The bar for adding a kind here is a real, enforced budget somewhere else.
  * Absent that, this set is just a hole in the cap.
  */
-export const OWN_BUDGET_KINDS = new Set([]);
+/** @type {Set<string>} — declared, or an empty literal infers Set<never>. */
+export const OWN_BUDGET_KINDS = new Set();
 
 /** Does this kind skip the one-post-a-day cap, and why does it get to? */
 export function bypassesDayCap(kind) {
