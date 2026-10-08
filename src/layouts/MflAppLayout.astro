@@ -61,6 +61,7 @@
  * tests/push-notification-icons.test.ts.
  */
 import { Font } from 'astro:assets';
+import SpeedInsights from '@vercel/speed-insights/astro';
 import { mflLoginUrl } from '../utils/mfl-login-redirect';
 import { ClientRouter } from 'astro:transitions';
 import ThemeScript from '../components/shared/ThemeScript.astro';
@@ -153,6 +154,7 @@ const leagueLinks = ALL_LEAGUES.filter((league) => !league.bestBall).map((league
 		<TeamIconDarkStyles />
 		<ClientRouter />
 		<title>{title}</title>
+		<SpeedInsights />
 	</head>
 	<body>
 		<a class="mfl-skip" href="#mfl-main">Skip to content</a>

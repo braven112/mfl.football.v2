@@ -11,6 +11,7 @@
  * splash renders identically to the pre-refactor page.
  */
 import { Font } from 'astro:assets';
+import SpeedInsights from '@vercel/speed-insights/astro';
 import { getThemePreference } from '../utils/theme-preference';
 import ThemeScript from '../components/shared/ThemeScript.astro';
 import { isSharedAppHost } from '../config/leagues';
@@ -93,6 +94,7 @@ import StagingBanner from '../components/shared/StagingBanner.astro';
 		<meta name="generator" content={Astro.generator} />
 		<Font cssVariable="--font-vend-sans" />
 		<title>{title}</title>
+		<SpeedInsights />
 	</head>
 	<body>
 		<StagingBanner />
