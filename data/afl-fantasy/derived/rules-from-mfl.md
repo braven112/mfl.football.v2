@@ -29,6 +29,85 @@
 - Keepers: none
 - Salaries / contracts: none
 
+### Scoring
+
+**TE**
+
+- Receptions (CC): 1.5 per [range 0-99]
+
+**WR, RB**
+
+- Receptions (CC): 1 per [range 0-99]
+
+**QB, RB, WR, TE, PK**
+
+- Extra Points (EP): 1 per [range 0-10]
+- Fumbles Lost (to Opponent) (FL): -2 per [range 0-10]
+- Length of Field Goal Made (FG): 0.1 per [range 31-99]
+- Length of Field Goal Made (FG): 3 [range 0-30]
+- Number of Kickoff Return TDs (#KT): 6 per [range 0-10]
+- Number of Offensive Fumble Recovery TDs (#FR): 6 per [range 0-10]
+- Number of Passing TDs (#P): 6 per [range 0-99]
+- Number of Punt Return TDs (#UT): 6 per [range 0-10]
+- Number of Receiving TDs (#C): 6 per [range 0-10]
+- Number of Rushing TDs (#R): 6 per [range 0-10]
+- Pass Interceptions Thrown (IN): -2 per [range 0-10]
+- Passing 2 Pointers (P2): 2 per [range 0-10]
+- Passing Yards (PY): 0.04 per [range -50-999]
+- Receiving 2 Pointers (C2): 2 per [range 0-10]
+- Receiving Yards (CY): 0.1 per [range -50-999]
+- Rushing 2 Pointers (R2): 2 per [range 0-10]
+- Rushing Yards (RY): 0.1 per [range -50-999]
+
+**Def**
+
+- Blocked Extra Points (BLE): 2 per [range 0-10]
+- Blocked Field Goals (BLF): 2 per [range 0-10]
+- Blocked Punts (BLP): 2 per [range 0-10]
+- Fumble Recoveries (from Opponent) (FC): 2 per [range 0-10]
+- Interceptions Caught (IC): 2 per [range 0-10]
+- Number of Defensive & Special Teams TDs (#T): 6 per [range 0-10]
+- Offensive Points Against (OPA): -0.01 per [range 36-1000]
+- Offensive Points Against (OPA): -0.13 [range 23-23]
+- Offensive Points Against (OPA): -0.5 [range 24-24]
+- Offensive Points Against (OPA): -0.88 [range 25-25]
+- Offensive Points Against (OPA): -1.25 [range 26-26]
+- Offensive Points Against (OPA): -1.63 [range 27-27]
+- Offensive Points Against (OPA): -2 [range 28-28]
+- Offensive Points Against (OPA): -2.57 [range 29-29]
+- Offensive Points Against (OPA): -3.14 [range 30-30]
+- Offensive Points Against (OPA): -3.71 [range 31-31]
+- Offensive Points Against (OPA): -4.29 [range 32-32]
+- Offensive Points Against (OPA): -4.86 [range 33-33]
+- Offensive Points Against (OPA): -5.43 [range 34-34]
+- Offensive Points Against (OPA): -6 [range 35-35]
+- Offensive Points Against (OPA): -6 [range 36-1000]
+- Offensive Points Against (OPA): 0.25 [range 22-22]
+- Offensive Points Against (OPA): 0.63 [range 21-21]
+- Offensive Points Against (OPA): 1 [range 20-20]
+- Offensive Points Against (OPA): 1.71 [range 19-19]
+- Offensive Points Against (OPA): 10 [range 6-6]
+- Offensive Points Against (OPA): 10.83 [range 5-5]
+- Offensive Points Against (OPA): 11.67 [range 4-4]
+- Offensive Points Against (OPA): 12.5 [range 3-3]
+- Offensive Points Against (OPA): 13.33 [range 2-2]
+- Offensive Points Against (OPA): 14.17 [range 1-1]
+- Offensive Points Against (OPA): 15 [range 0-0]
+- Offensive Points Against (OPA): 2.43 [range 18-18]
+- Offensive Points Against (OPA): 3.14 [range 17-17]
+- Offensive Points Against (OPA): 3.86 [range 16-16]
+- Offensive Points Against (OPA): 4.57 [range 15-15]
+- Offensive Points Against (OPA): 5.29 [range 14-14]
+- Offensive Points Against (OPA): 6 [range 13-13]
+- Offensive Points Against (OPA): 6.58 [range 12-12]
+- Offensive Points Against (OPA): 7.15 [range 11-11]
+- Offensive Points Against (OPA): 7.72 [range 10-10]
+- Offensive Points Against (OPA): 8.29 [range 9-9]
+- Offensive Points Against (OPA): 8.86 [range 8-8]
+- Offensive Points Against (OPA): 9.43 [range 7-7]
+- Sacked a QB (SK): 1 per [range 0-99]
+- Safeties (SF): 2 per [range 0-10]
+
 ### Not in the MFL settings
 
 Only the league rulebook or the commissioner can answer these: playoff format and seeding, entry fees and payouts, trade deadline and review policy, tiebreakers beyond the standings order, keeper/contract deadlines, and any league custom.

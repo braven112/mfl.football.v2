@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-10-07T23:01:36.138Z"
+    "fetchedAt": "2026-10-08T01:05:30.484Z"
   },
   "players": [
     {
@@ -1146,7 +1146,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 4,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "RB"
         ],
@@ -1215,7 +1215,7 @@
         "active": true,
         "position": "QB",
         "depthChartPosition": "QB",
-        "depthChartOrder": 1,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "QB"
         ],
@@ -1512,7 +1512,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 2,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "WR"
         ],
@@ -1544,6 +1544,10 @@
       },
       "gamesPlayed": 4,
       "depthChartAhead": [
+        {
+          "id": "14109",
+          "name": "McLaurin, Terry"
+        },
         {
           "id": "12186",
           "name": "Diggs, Stefon"
@@ -1781,7 +1785,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 5,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "RB"
         ],
@@ -2374,7 +2378,7 @@
       "id": "16608",
       "name": "Holani, George",
       "position": "RB",
-      "salary": 450000,
+      "salary": 425000,
       "franchiseId": "0002",
       "status": "ROSTER",
       "contractYear": "1",
@@ -2408,8 +2412,8 @@
           "RB"
         ],
         "experience": 2,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Questionable",
+        "injuryBodyPart": "Ribs",
         "gsisId": null
       },
       "nflverse": {
@@ -3372,16 +3376,16 @@
           "name": "Downs, Josh"
         },
         {
-          "id": "17510",
-          "name": "Burks, Deion"
-        },
-        {
           "id": "11222",
           "name": "Allen, Keenan"
         },
         {
           "id": "14122",
           "name": "Slayton, Darius"
+        },
+        {
+          "id": "17510",
+          "name": "Burks, Deion"
         }
       ]
     },
@@ -4230,7 +4234,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 4,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "TE"
         ],
@@ -4264,14 +4268,6 @@
         {
           "id": "12678",
           "name": "Higbee, Tyler"
-        },
-        {
-          "id": "16219",
-          "name": "Allen, Davis"
-        },
-        {
-          "id": "17547",
-          "name": "Klare, Max"
         }
       ]
     },
@@ -4650,7 +4646,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 3,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "TE"
         ],
@@ -4684,6 +4680,10 @@
         {
           "id": "12678",
           "name": "Higbee, Tyler"
+        },
+        {
+          "id": "14871",
+          "name": "Parkinson, Colby"
         },
         {
           "id": "16219",
@@ -4829,7 +4829,7 @@
         "active": true,
         "position": "QB",
         "depthChartPosition": "QB",
-        "depthChartOrder": 3,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "QB"
         ],
@@ -4858,12 +4858,7 @@
         ]
       },
       "gamesPlayed": 2,
-      "depthChartAhead": [
-        {
-          "id": "10948",
-          "name": "Keenum, Case"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "13354",
@@ -4964,13 +4959,13 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 1,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "WR"
         ],
         "experience": 3,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Questionable",
+        "injuryBodyPart": "Chest",
         "gsisId": null
       },
       "nflverse": {
@@ -4995,7 +4990,12 @@
         ]
       },
       "gamesPlayed": 4,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "16627",
+          "name": "McConkey, Ladd"
+        }
+      ]
     },
     {
       "id": "13132",
@@ -5095,7 +5095,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 1,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "WR"
         ],
@@ -5126,7 +5126,12 @@
         ]
       },
       "gamesPlayed": 4,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "14836",
+          "name": "Jefferson, Justin"
+        }
+      ]
     },
     {
       "id": "13672",
@@ -5227,7 +5232,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 7,
+        "depthChartOrder": 6,
         "fantasyPositions": [
           "WR"
         ],
@@ -5257,16 +5262,16 @@
       "gamesPlayed": 1,
       "depthChartAhead": [
         {
+          "id": "14109",
+          "name": "McLaurin, Terry"
+        },
+        {
           "id": "12186",
           "name": "Diggs, Stefon"
         },
         {
           "id": "17512",
           "name": "Williams, Antonio"
-        },
-        {
-          "id": "14109",
-          "name": "McLaurin, Terry"
         }
       ]
     },
@@ -5655,7 +5660,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 3,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "RB"
         ],
@@ -5801,7 +5806,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 5,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "RB"
         ],
@@ -5838,10 +5843,6 @@
         {
           "id": "15254",
           "name": "Harris, Najee"
-        },
-        {
-          "id": "16747",
-          "name": "Tracy, Tyrone"
         }
       ]
     },
@@ -5878,7 +5879,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 7,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "WR"
         ],
@@ -5893,10 +5894,6 @@
         {
           "id": "16187",
           "name": "Downs, Josh"
-        },
-        {
-          "id": "17510",
-          "name": "Burks, Deion"
         },
         {
           "id": "11222",
@@ -6188,7 +6185,7 @@
         "active": true,
         "position": "QB",
         "depthChartPosition": "QB",
-        "depthChartOrder": 2,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "QB"
         ],
@@ -6217,7 +6214,12 @@
         ]
       },
       "gamesPlayed": 2,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "16579",
+          "name": "Williams, Caleb"
+        }
+      ]
     },
     {
       "id": "15738",
@@ -6252,7 +6254,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 4,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "RB"
         ],
@@ -6692,7 +6694,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 2,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "WR"
         ],
@@ -6723,12 +6725,7 @@
         ]
       },
       "gamesPlayed": 4,
-      "depthChartAhead": [
-        {
-          "id": "16188",
-          "name": "Johnston, Quentin"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "16684",
@@ -7322,7 +7319,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 5,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "WR"
         ],
@@ -7364,10 +7361,6 @@
         {
           "id": "16342",
           "name": "Douglas, Demario"
-        },
-        {
-          "id": "17134",
-          "name": "Williams, Kyle"
         }
       ]
     },
@@ -7450,7 +7443,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 4,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "TE"
         ],
@@ -7986,7 +7979,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 6,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "TE"
         ],
@@ -8441,7 +8434,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 6,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "WR"
         ],
@@ -8477,6 +8470,10 @@
         {
           "id": "17499",
           "name": "Lemon, Makai"
+        },
+        {
+          "id": "15282",
+          "name": "Smith, DeVonta"
         }
       ]
     },
@@ -9038,7 +9035,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 7,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "WR"
         ],
@@ -9076,10 +9073,6 @@
         {
           "id": "17499",
           "name": "Lemon, Makai"
-        },
-        {
-          "id": "14105",
-          "name": "Brown, Marquise"
         }
       ]
     },
@@ -9549,7 +9542,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 5,
+        "depthChartOrder": 6,
         "fantasyPositions": [
           "WR"
         ],
@@ -9673,7 +9666,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 6,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "RB"
         ],
@@ -9812,7 +9805,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 6,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "RB"
         ],
@@ -9846,10 +9839,6 @@
         {
           "id": "17256",
           "name": "Croskey-Merritt, Jacory"
-        },
-        {
-          "id": "17478",
-          "name": "Allen, Kaytron"
         }
       ]
     },
@@ -10284,7 +10273,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 3,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "WR"
         ],
@@ -10323,6 +10312,10 @@
         {
           "id": "16201",
           "name": "Hutchinson, Xavier"
+        },
+        {
+          "id": "17080",
+          "name": "Noel, Jaylin"
         }
       ]
     },
@@ -10562,7 +10555,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 6,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "RB"
         ],
@@ -10599,10 +10592,6 @@
         {
           "id": "17485",
           "name": "Black, Kaelon"
-        },
-        {
-          "id": "16688",
-          "name": "Guerendo, Isaac"
         }
       ]
     },
@@ -10861,7 +10850,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 2,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "WR"
         ],
@@ -10892,6 +10881,10 @@
       },
       "gamesPlayed": 3,
       "depthChartAhead": [
+        {
+          "id": "14836",
+          "name": "Jefferson, Justin"
+        },
         {
           "id": "16186",
           "name": "Addison, Jordan"
@@ -11158,7 +11151,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 3,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "RB"
         ],
@@ -11228,7 +11221,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 4,
+        "depthChartOrder": 6,
         "fantasyPositions": [
           "WR"
         ],
@@ -11263,6 +11256,14 @@
         {
           "id": "16187",
           "name": "Downs, Josh"
+        },
+        {
+          "id": "11222",
+          "name": "Allen, Keenan"
+        },
+        {
+          "id": "14122",
+          "name": "Slayton, Darius"
         }
       ]
     },
@@ -11741,7 +11742,7 @@
         "id": "11625",
         "fullName": "Adonai Mitchell",
         "team": "NYJ",
-        "age": 23,
+        "age": 24,
         "height": "74",
         "weight": "205",
         "number": 15,
@@ -11751,7 +11752,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 7,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "WR"
         ],
@@ -12143,16 +12144,16 @@
           "name": "Higbee, Tyler"
         },
         {
+          "id": "14871",
+          "name": "Parkinson, Colby"
+        },
+        {
           "id": "16219",
           "name": "Allen, Davis"
         },
         {
           "id": "17547",
           "name": "Klare, Max"
-        },
-        {
-          "id": "14871",
-          "name": "Parkinson, Colby"
         }
       ]
     },
@@ -12400,7 +12401,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 1,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "RB"
         ],
@@ -12888,12 +12889,12 @@
           "name": "Douglas, Demario"
         },
         {
-          "id": "17134",
-          "name": "Williams, Kyle"
-        },
-        {
           "id": "17269",
           "name": "Chism, Efton"
+        },
+        {
+          "id": "17134",
+          "name": "Williams, Kyle"
         }
       ]
     },
@@ -13005,7 +13006,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 2,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "TE"
         ],
@@ -13039,6 +13040,10 @@
         {
           "id": "14861",
           "name": "Johnson, Juwan"
+        },
+        {
+          "id": "14137",
+          "name": "Fant, Noah"
         }
       ]
     },
@@ -13872,7 +13877,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 4,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "WR"
         ],
@@ -13915,6 +13920,10 @@
         {
           "id": "16342",
           "name": "Douglas, Demario"
+        },
+        {
+          "id": "17269",
+          "name": "Chism, Efton"
         }
       ]
     },
@@ -14017,7 +14026,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 5,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "WR"
         ],
@@ -14047,20 +14056,7 @@
         ]
       },
       "gamesPlayed": 3,
-      "depthChartAhead": [
-        {
-          "id": "16186",
-          "name": "Addison, Jordan"
-        },
-        {
-          "id": "14860",
-          "name": "Jennings, Jauan"
-        },
-        {
-          "id": "17097",
-          "name": "Felton, Tai"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "14102",
@@ -14293,7 +14289,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 4,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "TE"
         ],
@@ -14326,10 +14322,6 @@
         {
           "id": "17099",
           "name": "Gadsden, Oronde"
-        },
-        {
-          "id": "13192",
-          "name": "Njoku, David"
         }
       ]
     },
@@ -14772,7 +14764,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 9,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "WR"
         ],
@@ -14803,12 +14795,12 @@
       "gamesPlayed": 2,
       "depthChartAhead": [
         {
-          "id": "16188",
-          "name": "Johnston, Quentin"
-        },
-        {
           "id": "16627",
           "name": "McConkey, Ladd"
+        },
+        {
+          "id": "16188",
+          "name": "Johnston, Quentin"
         }
       ]
     },
@@ -15043,7 +15035,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 3,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "RB"
         ],
@@ -15082,6 +15074,10 @@
         {
           "id": "15254",
           "name": "Harris, Najee"
+        },
+        {
+          "id": "14080",
+          "name": "Singletary, Devin"
         }
       ]
     },
@@ -15381,7 +15377,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 2,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "WR"
         ],
@@ -15847,7 +15843,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 2,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "TE"
         ],
@@ -15984,7 +15980,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 3,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "TE"
         ],
@@ -16371,7 +16367,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 6,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "TE"
         ],
@@ -17475,7 +17471,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 5,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "WR"
         ],
@@ -17547,7 +17543,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 9,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "WR"
         ],
@@ -17588,10 +17584,6 @@
         {
           "id": "17528",
           "name": "Coleman, Kevin"
-        },
-        {
-          "id": "15788",
-          "name": "Tolbert, Jalen"
         }
       ]
     },
@@ -17778,7 +17770,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 5,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "RB"
         ],
@@ -17833,7 +17825,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 5,
+        "depthChartOrder": 6,
         "fantasyPositions": [
           "RB"
         ],
@@ -18561,7 +18553,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 1,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "WR"
         ],
@@ -18592,7 +18584,12 @@
         ]
       },
       "gamesPlayed": 4,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "14109",
+          "name": "McLaurin, Terry"
+        }
+      ]
     },
     {
       "id": "17075",
@@ -19972,7 +19969,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 4,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "WR"
         ],
@@ -20011,10 +20008,6 @@
         {
           "id": "16201",
           "name": "Hutchinson, Xavier"
-        },
-        {
-          "id": "16193",
-          "name": "Boutte, Kayshon"
         }
       ]
     },
@@ -20934,7 +20927,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 3,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "RB"
         ],
@@ -20969,6 +20962,10 @@
         {
           "id": "17256",
           "name": "Croskey-Merritt, Jacory"
+        },
+        {
+          "id": "15721",
+          "name": "White, Rachaad"
         }
       ]
     },
@@ -21576,7 +21573,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 6,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "WR"
         ],
@@ -21610,10 +21607,6 @@
         {
           "id": "16187",
           "name": "Downs, Josh"
-        },
-        {
-          "id": "17510",
-          "name": "Burks, Deion"
         }
       ]
     },
@@ -21948,7 +21941,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 2,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "TE"
         ],
@@ -21983,6 +21976,10 @@
         {
           "id": "12678",
           "name": "Higbee, Tyler"
+        },
+        {
+          "id": "14871",
+          "name": "Parkinson, Colby"
         }
       ]
     },
@@ -22507,7 +22504,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 9,
+        "depthChartOrder": 6,
         "fantasyPositions": [
           "WR"
         ],
@@ -22562,7 +22559,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 8,
+        "depthChartOrder": 6,
         "fantasyPositions": [
           "WR"
         ],
@@ -22933,7 +22930,7 @@
         "active": true,
         "position": "QB",
         "depthChartPosition": "QB",
-        "depthChartOrder": 2,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "QB"
         ],
@@ -22962,12 +22959,7 @@
         ]
       },
       "gamesPlayed": 2,
-      "depthChartAhead": [
-        {
-          "id": "12141",
-          "name": "Mariota, Marcus"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "16644",
@@ -23134,7 +23126,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 5,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "WR"
         ],
@@ -23164,16 +23156,7 @@
         ]
       },
       "gamesPlayed": 3,
-      "depthChartAhead": [
-        {
-          "id": "12186",
-          "name": "Diggs, Stefon"
-        },
-        {
-          "id": "17512",
-          "name": "Williams, Antonio"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "0504",
@@ -23323,7 +23306,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 4,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "TE"
         ],
@@ -23656,7 +23639,7 @@
         "active": true,
         "position": "QB",
         "depthChartPosition": "QB",
-        "depthChartOrder": 1,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "QB"
         ],
@@ -23686,7 +23669,12 @@
         ]
       },
       "gamesPlayed": 3,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "16581",
+          "name": "Daniels, Jayden"
+        }
+      ]
     },
     {
       "id": "15716",
@@ -24147,12 +24135,12 @@
           "name": "Hutchinson, Xavier"
         },
         {
-          "id": "16193",
-          "name": "Boutte, Kayshon"
-        },
-        {
           "id": "17080",
           "name": "Noel, Jaylin"
+        },
+        {
+          "id": "16193",
+          "name": "Boutte, Kayshon"
         }
       ]
     },
@@ -24683,6 +24671,10 @@
         {
           "id": "17528",
           "name": "Coleman, Kevin"
+        },
+        {
+          "id": "17599",
+          "name": "Douglas, Caleb"
         }
       ]
     },
@@ -25054,7 +25046,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 3,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "WR"
         ],
@@ -25086,6 +25078,10 @@
       },
       "gamesPlayed": 4,
       "depthChartAhead": [
+        {
+          "id": "14836",
+          "name": "Jefferson, Justin"
+        },
         {
           "id": "16186",
           "name": "Addison, Jordan"
@@ -25371,7 +25367,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 3,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "TE"
         ],
@@ -25404,6 +25400,10 @@
         {
           "id": "17099",
           "name": "Gadsden, Oronde"
+        },
+        {
+          "id": "15795",
+          "name": "Kolar, Charlie"
         }
       ]
     },
@@ -25562,7 +25562,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 3,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "TE"
         ],
@@ -25596,10 +25596,6 @@
         {
           "id": "14861",
           "name": "Johnson, Juwan"
-        },
-        {
-          "id": "17567",
-          "name": "Delp, Oscar"
         }
       ]
     },
@@ -25702,7 +25698,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 5,
+        "depthChartOrder": 6,
         "fantasyPositions": [
           "RB"
         ],
@@ -25721,6 +25717,10 @@
         {
           "id": "17485",
           "name": "Black, Kaelon"
+        },
+        {
+          "id": "17055",
+          "name": "James, Jordan"
         }
       ]
     },
@@ -25808,7 +25808,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 5,
+        "depthChartOrder": 6,
         "fantasyPositions": [
           "RB"
         ],
@@ -26009,7 +26009,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 2,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "WR"
         ],

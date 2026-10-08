@@ -30,6 +30,59 @@
 - Keepers: dynasty
 - Salaries / contracts: yes
 
+### Scoring
+
+**WR**
+
+- Receptions (CC): 0.5 per [range 0-99]
+
+**RB**
+
+- Receptions (CC): 0.25 per [range 0-99]
+
+**Def**
+
+- Blocked Extra Points (BLE): 2 per [range 0-10]
+- Blocked Field Goals (BLF): 2 per [range 0-10]
+- Blocked Punts (BLP): 2 per [range 0-10]
+- Defensive Conversion Returns (D2): 2 per [range 0-10]
+- Fumble Recoveries (from Opponent) (FC): 2 per [range 0-10]
+- Interceptions Caught (IC): 2 per [range 0-10]
+- Number of Defensive & Special Teams TDs (#T): 6 per [range 0-10]
+- Offensive Points Against (OPA): -0.01 per [range 36-999]
+- Offensive Points Against (OPA): -0.6 per [range 1-35]
+- Offensive Points Against (OPA): -6 [range 36-999]
+- Offensive Points Against (OPA): 15 [range 0-35]
+- Sacked a QB (SK): 1 per [range 0-99]
+- Safeties (SF): 2 per [range 0-10]
+- Safeties for 1 Point (SF1): 1 per [range 0-10]
+
+**QB, RB, WR, TE, PK**
+
+- Extra Points (EP): 1 per [range 0-10]
+- Fumbles Lost (to Opponent) (FL): -2 per [range 1-10]
+- Length of Field Goal Made (FG): 0.1 per [range 31-99]
+- Length of Field Goal Made (FG): 3 [range 0-30]
+- Number of Kickoff Return TDs (#KT): 6 per [range 0-10]
+- Number of Missed Field Goal Return TDs (#MF): 6 per [range 0-10]
+- Number of Offensive Fumble Recovery TDs (#FR): 6 per [range 0-10]
+- Number of Passing TDs (#P): 6 per [range 0-99]
+- Number of Punt Return TDs (#UT): 6 per [range 0-10]
+- Number of Receiving TDs (#C): 6 per [range 0-10]
+- Number of Rushing TDs (#R): 6 per [range 0-10]
+- Pass Interceptions Thrown (IN): -2 per [range 0-10]
+- Passing 2 Pointers (P2): 2 per [range 0-10]
+- Passing Yards (PY): 0.04 per [range -50-999]
+- Receiving 2 Pointers (C2): 2 per [range 0-10]
+- Receiving Yards (CY): 0.1 per [range -50-999]
+- Rushing 2 Pointers (R2): 2 per [range 0-10]
+- Rushing Yards (RY): 0.1 per [range -50-999]
+- UY+KY (UY+KY): 0.03 per [range 1-999]
+
+**TE**
+
+- Receptions (CC): 1 per [range 0-99]
+
 ### Not in the MFL settings
 
 Only the league rulebook or the commissioner can answer these: playoff format and seeding, entry fees and payouts, trade deadline and review policy, tiebreakers beyond the standings order, keeper/contract deadlines, and any league custom.
