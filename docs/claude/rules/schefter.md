@@ -1482,20 +1482,17 @@ the response payload. Don't change that without re-litigating the
 correlation argument from option B above.
 
 
-## The trade lanes post to chat — on their own budget, not the calendar
+## The trade lanes never post to chat (Oct 2026) — feed and opt-in push only
 
-The rumor mill (which carries **trade-bait** listings), and the daily trade
-**speculation** lane, are in `OWN_BUDGET_KINDS`, not `PUSH_ONLY_KINDS`. They
-exist to get owners trading, and that only works in the room where trades get
-talked about — they are not reminders competing with the league's chatter, they
-are the chatter, and every one of those posts already ends in a Trade Builder
-CTA.
+The rumor mill (which carries **trade-bait** listings and trade-offer leaks)
+and the daily trade **speculation** lane are in `PUSH_ONLY_KINDS`;
+`OWN_BUDGET_KINDS` is empty. Owner's call, Oct 2026: these live in the website
+news feed and reach phones through the opt-in `rumor` push category, and stay
+out of GroupMe. Re-opening chat for them is a set change plus
+`tests/reminder-push-first.test.ts`, and needs the owner's yes.
 
-They skip the one-post-a-day weekday calendar because a rumor held until its
-assigned weekday is not a rumor any more. What governs them instead is the
-budget the rumor mill has always carried
-(`scripts/lib/schefter-groupme-budget.mjs`), which is tighter in practice and
-far better targeted:
+Until then they posted to chat on their own budget, which still paces the FEED
+(`scripts/lib/schefter-groupme-budget.mjs`):
 
 - `MAX_POSTS_PER_DAY` (3) per Pacific day, **shared across both lanes**
 - `MIN_SPACING_MS` (4 hours) between any two
@@ -1587,13 +1584,8 @@ Guard: `tests/article-type-league-option.test.ts` pins all three places, derived
 from the directory rather than a list, plus that the cached block stays
 byte-identical between the two leagues and asserts no `\d+-team` size anywhere.
 
-### The trade lanes never post to GroupMe (Oct 2026)
+### Weekly-column chat posts are one sentence and a link (Oct 2026)
 
-Owner's call: rumors, trade bait, trade-offer leaks and algorithmic
-speculation live in the website news feed and reach phones only through the
-opt-in `rumor` push category. `rumor` and `trade-speculation` are in
-`PUSH_ONLY_KINDS` (`scripts/lib/groupme-day-plan.mjs`); `OWN_BUDGET_KINDS` is
-empty. The 3/day + 4h budget still paces the FEED. Re-opening chat for these
-is a set change plus `tests/reminder-push-first.test.ts`, and needs the
-owner's yes. The weekly columns' chat posts are ONE sentence and a link
-(`tests/groupme-one-sentence-promos.test.ts`) — the column does the talking.
+The Pecking Order and Gauntlet GroupMe posts name one hook and link the
+column; the column does the talking. Never re-tell the column in the chat
+(`tests/groupme-one-sentence-promos.test.ts`).
