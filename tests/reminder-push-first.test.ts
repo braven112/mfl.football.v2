@@ -258,18 +258,18 @@ describe('the chat lanes ask who was unreached before they post', () => {
     expect(src).not.toMatch(/touchId === '14d'|touchId === '2d'/);
   });
 
-  it('the trade lanes reach the chat, governed by their own budget', () => {
-    // These promote trading, which only works in the room where trades get
-    // talked about. They are not reminders competing with the league's
-    // chatter — they are the chatter.
-    expect(PUSH_ONLY_KINDS.has('rumor')).toBe(false);
-    expect(PUSH_ONLY_KINDS.has('trade-speculation')).toBe(false);
-    expect(OWN_BUDGET_KINDS.has('rumor')).toBe(true);
-    expect(OWN_BUDGET_KINDS.has('trade-speculation')).toBe(true);
-    // They skip the weekday calendar — a rumor held until its assigned day is
-    // not a rumor any more.
-    expect(bypassesDayCap('rumor')).toBe(true);
-    expect(isPlannedToday('rumor', new Date('2026-11-16T18:00:00Z'))).toBe(true);
+  it('the trade lanes stay out of the chat — feed and opt-in push only', () => {
+    // Owner's call, Oct 2026: rumors, trade bait and speculation live in the
+    // website news feed and reach phones through the opt-in `rumor` push
+    // category. Neither may post to GroupMe on any day.
+    for (const kind of ['rumor', 'trade-speculation']) {
+      expect(PUSH_ONLY_KINDS.has(kind), kind).toBe(true);
+      expect(OWN_BUDGET_KINDS.has(kind), kind).toBe(false);
+      expect(bypassesDayCap(kind), kind).toBe(false);
+      for (let d = 0; d <= 6; d += 1) {
+        expect(isPlannedToday(kind, new Date(Date.UTC(2026, 10, 15 + d, 18))), kind).toBe(false);
+      }
+    }
   });
 
   it('the transaction firehose stays out of the chat', () => {

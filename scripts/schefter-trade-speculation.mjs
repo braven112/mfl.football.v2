@@ -656,9 +656,10 @@ async function main() {
     }
   }
 
-  // 10. GroupMe — Phase 2. Best-effort: feed + ledger + counter are already
-  // persisted, so a GroupMe failure must not throw. The helper swallows all
-  // errors and returns a status object we can log.
+  // 10. GroupMe — held. trade-speculation is push-only since Oct 2026 (see
+  // PUSH_ONLY_KINDS in scripts/lib/groupme-day-plan.mjs), so the helper's
+  // day-plan gate refuses and logs why. The call stays so the refusal is
+  // logged per run and re-opening the lane is a one-line set change.
   await postSpeculationToGroupMe({
     post,
     ctaUrl: publicUrl(post.link),

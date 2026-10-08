@@ -244,9 +244,11 @@ export function buildGroupMePromo(post, enrichment, { league = 'theleague' } = {
   const meta = leagueMeta(league);
   const { hardest, easiest, week } = enrichment;
   if (!hardest || !easiest) return null;
+  // One sentence and a link — the column does the talking (owner's call,
+  // Oct 2026). `easiest` stays a precondition: an edition without both ends
+  // of the table is not a finished column.
   return (
-    `🚨 THE GAUNTLET — Week ${week}. Nobody has a rougher road ahead than ` +
-    `${hardest.name} (difficulty ${hardest.difficulty}/100). ${easiest.name} gets the cupcake run. ` +
-    `Full rankings + week-by-week heat map:\n${meta.publicUrl(post.link)}`
+    `🚨 The Gauntlet, Week ${week}: nobody has a rougher road ahead than ` +
+    `${hardest.name} (${hardest.difficulty}/100) ▸ ${meta.publicUrl(post.link)}`
   );
 }

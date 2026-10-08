@@ -152,7 +152,7 @@ export async function postSpeculationToGroupMe({
   fetcher = globalThis.fetch,
   dryRun = false,
   // Injected like `fetcher` and `env` above. The default asks the DAY PLAN
-  // only. It must not re-check the shared trade budget: the calling script
+  // only — which refuses today: trade-speculation is push-only (Oct 2026). It must not re-check the shared trade budget: the calling script
   // increments posts_today and stamps last_post_ts at its step 9, BEFORE this
   // runs, so a second look at those keys sees a millisecond-old timestamp and
   // refuses on 4-hour spacing — every single time. That bug made this lane
