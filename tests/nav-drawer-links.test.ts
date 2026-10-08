@@ -24,7 +24,8 @@ interface NavLinkEntry {
  * pinned link to a missing or prerendered page breaks the drawer the same way.
  */
 function getAllNavLinks(): NavLinkEntry[] {
-  const entries: NavLinkEntry[] = (navConfig.pinnedLinks ?? []).map((link: NavLink) => ({ link }));
+  // JSON infers `leagueOnly` as a plain string; the config is NavLink-shaped.
+  const entries: NavLinkEntry[] = ((navConfig.pinnedLinks ?? []) as NavLink[]).map((link) => ({ link }));
   for (const section of navConfig.sections) {
     for (const link of section.links) {
       entries.push({ link, leagueOnly: section.leagueOnly as LeagueSlug | undefined });

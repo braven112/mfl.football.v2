@@ -185,6 +185,7 @@ export const INSIGHT_LINK_AREAS = {
 	nav: 'Nav menu',
 	header: 'Header icons & search',
 	quick: 'Quick links',
+	related: 'Related-page cards',
 } as const;
 export type InsightLinkArea = keyof typeof INSIGHT_LINK_AREAS;
 

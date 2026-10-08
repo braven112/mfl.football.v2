@@ -322,6 +322,7 @@ html.dark .lv-matchup {
 /* The NFL games rail sits below the board and OUTSIDE the island, so opening a
    matchup cannot take it off screen. */
 .lv-page__strip { margin-top: var(--spacing-2xl); }
+.lv-page__related { margin-top: var(--spacing-2xl); }
 
 /* ── the card grid ───────────────────────────────────────────────────────── */
 
