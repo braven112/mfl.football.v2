@@ -430,6 +430,33 @@ const sectionChips = [
 					</section>
 				)}
 
+				<section class="ins__card" aria-labelledby="ins-links">
+					<h2 class="ins__h2" id="ins-links">How people get around</h2>
+					<p class="ins__note">
+						Pages reached by clicking a link in each part of the site, counted when the page loads.
+						Owners counts distinct signed-in owners. Started Oct 2026; links typed or bookmarked are not counted.
+					</p>
+					<div class="ins__scroll">
+					<table class="ins__table">
+						<thead><tr><th>Clicked from</th><th class="num">Clicks</th><th class="num">Owners</th><th>Top destinations</th></tr></thead>
+						<tbody>
+							{report.links.map((l) => (
+								<tr>
+									<td>{l.label}</td>
+									<td class="num">{n(l.clicks)}</td>
+									<td class="num">{l.owners}</td>
+									<td class="ins__muted">
+										{l.destinations.length === 0
+											? '—'
+											: l.destinations.slice(0, 4).map((d) => `${pageLabel(d.section, d.page)} (${n(d.clicks)})`).join(' · ')}
+									</td>
+								</tr>
+							))}
+						</tbody>
+					</table>
+					</div>
+				</section>
+
 				<section class="ins__card" aria-labelledby="ins-actions">
 					<h2 class="ins__h2" id="ins-actions">Actions</h2>
 					<p class="ins__note">Counted only when the action succeeded. Schefter tips are anonymous, so no owner count.</p>

@@ -14,6 +14,9 @@
  * - `insights:d:<date>:actions`      `<section>|<action>` → count
  * - `insights:d:<date>:useractions`  `<visitor>|<action>` → count
  * - `insights:d:<date>:logins`       `<visitor>` → sign-ins
+ * - `insights:d:<date>:links`        `<section>|<area>|<page>` → arrivals by an
+ *                                    in-site link (`-` = page not nameable)
+ * - `insights:d:<date>:userlinks`    `<visitor>|<section>|<area>` → arrivals
  * - `insights:lastseen` / `insights:lastlogin`  `<visitor>` → epoch ms
  * - `insights:names`                 `<visitor>` → MFL username
  *
@@ -50,6 +53,7 @@ import {
 	type InsightAction,
 	type InsightDayRaw,
 	type InsightDevice,
+	type InsightLinkArea,
 	type InsightPerson,
 	type InsightSource,
 } from './site-insights-model';
@@ -71,6 +75,8 @@ const DAY_HASHES = [
 	'actions',
 	'useractions',
 	'logins',
+	'links',
+	'userlinks',
 ] as const;
 
 function clockNow(now = new Date()) {
@@ -111,6 +117,7 @@ function sectionForUser(user: InsightActor): string {
  * ARGV[4] visitor ('' = anonymous)    ARGV[5] now ms   ARGV[6] username
  * ARGV[7] hour     ARGV[8] device ('' = skip)   ARGV[9] source ('' = skip)
  * ARGV[10] rate max ('0' = no limit)  ARGV[11] rate window seconds
+ * KEYS[11] links  KEYS[12] userlinks   ARGV[12] link area ('' = skip)
  *
  * Returns 0 when rate-limited (nothing written), else 1.
  */
@@ -137,6 +144,12 @@ end
 bump(KEYS[5], s .. '|' .. ARGV[7])
 if ARGV[8] ~= '' then bump(KEYS[6], s .. '|' .. ARGV[8]) end
 if ARGV[9] ~= '' then bump(KEYS[7], s .. '|' .. ARGV[9]) end
+if ARGV[12] ~= '' then
+  local p = ARGV[3]
+  if p == '' then p = '-' end
+  bump(KEYS[11], s .. '|' .. ARGV[12] .. '|' .. p)
+  if ARGV[4] ~= '' then bump(KEYS[12], ARGV[4] .. '|' .. s .. '|' .. ARGV[12]) end
+end
 return 1
 `;
 
@@ -149,6 +162,8 @@ export interface InsightVisit {
 	device: InsightDevice | null;
 	/** Only on a tab's landing beacon. */
 	source: InsightSource | null;
+	/** The tagged area of the in-site link that brought the visitor here. */
+	via?: InsightLinkArea | null;
 	/** Anonymous callers only: an opaque per-caller key and its cap. */
 	rateLimit?: { callerKey: string; max: number; windowSeconds: number };
 }
@@ -172,6 +187,8 @@ export async function recordInsightVisit(
 			LAST_SEEN,
 			NAMES,
 			`rate:insights-anon:${visit.rateLimit?.callerKey ?? 'none'}`,
+			dayKey(date, 'links'),
+			dayKey(date, 'userlinks'),
 		];
 		const result = await redis.eval<number>(VISIT_SCRIPT, keys, [
 			INSIGHTS_TTL_SECONDS,
@@ -185,6 +202,7 @@ export async function recordInsightVisit(
 			visit.source ?? '',
 			String(visit.rateLimit?.max ?? 0),
 			String(visit.rateLimit?.windowSeconds ?? 60),
+			visit.via ?? '',
 		]);
 		return { limited: Number(result) === 0 };
 	} catch (err) {
@@ -317,6 +335,8 @@ export async function readInsightDays(count: number, now = new Date()): Promise<
 			actions: at(7),
 			userActions: at(8),
 			logins: at(9),
+			links: at(10),
+			userLinks: at(11),
 		};
 	});
 }

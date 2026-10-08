@@ -54,6 +54,7 @@ import {
 	isKnownAppPath,
 	normalizeInsightPath,
 	parseInsightDevice,
+	parseInsightLinkArea,
 	resolveSection,
 } from '../../utils/site-insights-model';
 
@@ -206,5 +207,8 @@ function describeInsightVisit(
 					surface,
 				})
 			: null,
+		// Which tagged area's link brought the visitor here (fixed vocabulary;
+		// anything else is dropped, never stored).
+		via: parseInsightLinkArea(url.searchParams.get('via')),
 	};
 }

@@ -15,6 +15,7 @@ import {
 	parseInsightsRange,
 	resolveSection,
 	isKnownAppPath,
+	parseInsightLinkArea,
 	type InsightDayRaw,
 } from '../src/utils/site-insights-model';
 import { getLeagueBySlug } from '../src/config/leagues';
@@ -35,6 +36,8 @@ function day(date: string, partial: Partial<InsightDayRaw> = {}): InsightDayRaw 
 		userActions: {},
 		logins: {},
 		userSections: {},
+		links: {},
+		userLinks: {},
 		...partial,
 	};
 }
@@ -174,6 +177,50 @@ describe('buildInsightsReport', () => {
 		const r = buildInsightsReport({ days, people: [ghost], section: null });
 		expect(r.people.map((p) => p.key)).toContain(ghost.key);
 		expect(r.people.find((p) => p.key === a)!.topPages[0]).toEqual({ section: 'theleague', page: '/rosters', views: 3 });
+	});
+});
+
+describe('link areas — how people get around', () => {
+	it('accepts only the fixed areas', () => {
+		expect(parseInsightLinkArea('mtw')).toBe('mtw');
+		expect(parseInsightLinkArea('nav')).toBe('nav');
+		expect(parseInsightLinkArea('header')).toBe('header');
+		expect(parseInsightLinkArea('quick')).toBe('quick');
+		expect(parseInsightLinkArea('evil|field')).toBeNull();
+		expect(parseInsightLinkArea('constructor')).toBeNull();
+		expect(parseInsightLinkArea(null)).toBeNull();
+	});
+
+	it('counts clicks, distinct owners and destinations per area, and honours the section filter', () => {
+		const days = [
+			day('2026-10-07', {
+				links: {
+					'theleague|mtw|/lineup': 3,
+					'theleague|mtw|/players': 1,
+					'afl-fantasy|mtw|/lineup': 2,
+					'theleague|nav|-': 4,
+				},
+				userLinks: {
+					'13522:0001|theleague|mtw': 3,
+					'13522:0002|theleague|mtw': 1,
+					'19621:0001|afl-fantasy|mtw': 2,
+				},
+			}),
+		];
+		const all = buildInsightsReport({ days, people: [], section: null });
+		const mtw = all.links.find((l) => l.area === 'mtw')!;
+		expect(mtw.clicks).toBe(6);
+		expect(mtw.owners).toBe(3);
+		expect(mtw.destinations[0]).toEqual({ section: 'theleague', page: '/lineup', clicks: 3 });
+		// An unnameable page still counts as a click but never as a destination.
+		const nav = all.links.find((l) => l.area === 'nav')!;
+		expect(nav.clicks).toBe(4);
+		expect(nav.destinations).toEqual([]);
+		// Every area is listed, even at zero.
+		expect(all.links.find((l) => l.area === 'quick')?.clicks).toBe(0);
+
+		const tl = buildInsightsReport({ days, people: [], section: 'theleague' });
+		expect(tl.links.find((l) => l.area === 'mtw')).toMatchObject({ clicks: 4, owners: 2 });
 	});
 });
 

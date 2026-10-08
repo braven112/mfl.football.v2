@@ -169,6 +169,29 @@ export function isInsightAction(raw: string): raw is InsightAction {
 	return Object.prototype.hasOwnProperty.call(INSIGHT_ACTIONS, raw);
 }
 
+// ── Link areas ──────────────────────────────────────────────────────────────
+
+/**
+ * Which part of the site an in-site click came from. A page view says where
+ * an owner WENT; this says how they got there, so a navigation change can be
+ * measured (Oct 2026: the homepage My Team card shortcuts vs the nav menu,
+ * the header icons and the quick links). The client tags a click by the nearest `data-track-via`
+ * ancestor and the NEXT page's beacon carries it, so only clicks that
+ * actually arrived are counted. Adding an area: add it here and put
+ * `data-track-via="<key>"` on its root element.
+ */
+export const INSIGHT_LINK_AREAS = {
+	mtw: 'My Team card',
+	nav: 'Nav menu',
+	header: 'Header icons & search',
+	quick: 'Quick links',
+} as const;
+export type InsightLinkArea = keyof typeof INSIGHT_LINK_AREAS;
+
+export function parseInsightLinkArea(raw: string | null | undefined): InsightLinkArea | null {
+	return raw && Object.prototype.hasOwnProperty.call(INSIGHT_LINK_AREAS, raw) ? (raw as InsightLinkArea) : null;
+}
+
 // ── Paths ───────────────────────────────────────────────────────────────────
 
 const MAX_PATH_LENGTH = 100;
@@ -288,6 +311,10 @@ export interface InsightDayRaw {
 	logins: Record<string, number>;
 	/** `<visitorKey>|<section>` → views (which sections each owner used) */
 	userSections: Record<string, number>;
+	/** `<section>|<area>|<page>` → arrivals by an in-site link (page `-` = unnamed) */
+	links: Record<string, number>;
+	/** `<visitorKey>|<section>|<area>` → arrivals */
+	userLinks: Record<string, number>;
 }
 
 export interface InsightPerson {
@@ -344,6 +371,16 @@ export interface ActionInsightRow {
 	owners: number | null;
 }
 
+export interface LinkAreaInsightRow {
+	area: InsightLinkArea;
+	label: string;
+	clicks: number;
+	/** Distinct signed-in owners who used it. */
+	owners: number;
+	/** Where those clicks went, most first. */
+	destinations: { section: string; page: string; clicks: number }[];
+}
+
 export interface InsightsReport {
 	totals: {
 		views: number;
@@ -364,6 +401,7 @@ export interface InsightsReport {
 	/** [weekday 0-6][hour 0-23] → views */
 	heatmap: number[][];
 	actions: ActionInsightRow[];
+	links: LinkAreaInsightRow[];
 	people: PersonInsightRow[];
 }
 
@@ -391,6 +429,9 @@ export function buildInsightsReport(input: InsightsInput): InsightsReport {
 	const actionCounts = new Map<string, number>();
 	const actionOwners = new Map<string, Set<string>>();
 	const heatmap = Array.from({ length: 7 }, () => Array<number>(24).fill(0));
+	const linkClicks = new Map<string, number>();
+	const linkPages = new Map<string, Map<string, number>>();
+	const linkOwners = new Map<string, Set<string>>();
 
 	const personViews = new Map<string, number>();
 	const personLogins = new Map<string, number>();
@@ -492,6 +533,23 @@ export function buildInsightsReport(input: InsightsInput): InsightsReport {
 			if (section === null) add(personActions, parts[0], n);
 		}
 
+		for (const [field, n] of Object.entries(day.links ?? {})) {
+			const parts = splitField(field, 3);
+			if (!parts || !inSection(parts[0])) continue;
+			add(linkClicks, parts[1], n);
+			if (parts[2] === '-') continue;
+			let pagesFor = linkPages.get(parts[1]);
+			if (!pagesFor) linkPages.set(parts[1], (pagesFor = new Map()));
+			add(pagesFor, `${parts[0]}|${parts[2]}`, n);
+		}
+		for (const field of Object.keys(day.userLinks ?? {})) {
+			const parts = splitField(field, 3);
+			if (!parts || !inSection(parts[1])) continue;
+			let set = linkOwners.get(parts[2]);
+			if (!set) linkOwners.set(parts[2], (set = new Set()));
+			set.add(parts[0]);
+		}
+
 		days.push({ date: day.date, views, anonymousViews, activeOwners: dayOwners.size, logins });
 	});
 
@@ -519,6 +577,24 @@ export function buildInsightsReport(input: InsightsInput): InsightsReport {
 			owners: ANONYMOUS_INSIGHT_ACTIONS.has(action) ? null : (actionOwners.get(action)?.size ?? 0),
 		}))
 		.sort((a, b) => b.count - a.count);
+
+	// Every area is listed, even at zero: "nobody used the card" is the answer
+	// the section exists to give.
+	const links: LinkAreaInsightRow[] = (Object.keys(INSIGHT_LINK_AREAS) as InsightLinkArea[])
+		.map((area) => ({
+			area,
+			label: INSIGHT_LINK_AREAS[area],
+			clicks: linkClicks.get(area) ?? 0,
+			owners: linkOwners.get(area)?.size ?? 0,
+			destinations: [...(linkPages.get(area) ?? new Map<string, number>()).entries()]
+				.sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+				.slice(0, 8)
+				.map(([field, clicks]) => {
+					const [s, page] = field.split('|');
+					return { section: s, page, clicks };
+				}),
+		}))
+		.sort((a, b) => b.clicks - a.clicks);
 
 	// Every person the counters know, plus anyone active in the window.
 	const byKey = new Map(input.people.map((p) => [p.key, p]));
@@ -574,6 +650,7 @@ export function buildInsightsReport(input: InsightsInput): InsightsReport {
 		sources: toRows(sourceViews, (k) => SOURCE_LABELS[k as InsightSource] ?? k),
 		heatmap,
 		actions,
+		links,
 		people,
 	};
 }
@@ -598,6 +675,8 @@ export function mockInsights(
 ): { days: InsightDayRaw[]; people: InsightPerson[] } {
 	let seed = 42;
 	const rand = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
+	let linkSeed = 7;
+	const linkRand = () => ((linkSeed = (linkSeed * 16807) % 2147483647) - 1) / 2147483646;
 	const pages = ['/', '/rosters', '/standings', '/lineup', '/players', '/trade-builder', '/schefter'];
 	const now = Date.now();
 	const days: InsightDayRaw[] = dates.map((date) => {
@@ -613,6 +692,8 @@ export function mockInsights(
 			userActions: {},
 			logins: {},
 			userSections: {},
+			links: {},
+			userLinks: {},
 		};
 		const bump = (map: Record<string, number>, k: string, n = 1) => (map[k] = (map[k] ?? 0) + n);
 		const sunday = weekdayOf(date) === 0;
@@ -640,6 +721,15 @@ export function mockInsights(
 			}
 		});
 		bump(day.visitors, `anon|${owners[0]?.section ?? 'site'}`, Math.floor(rand() * 12));
+		// Link areas draw from their OWN generator so adding them left every
+		// other mock number exactly where it was.
+		owners.forEach((o) => {
+			if (linkRand() > 0.5) return;
+			const area = (Object.keys(INSIGHT_LINK_AREAS) as InsightLinkArea[])[Math.floor(linkRand() ** 1.5 * 4)];
+			const page = pages[1 + Math.floor(linkRand() * (pages.length - 1))];
+			bump(day.links, `${o.section}|${area}|${page}`);
+			bump(day.userLinks, `${o.key}|${o.section}|${area}`);
+		});
 		return day;
 	});
 	const people: InsightPerson[] = owners.map((o, i) => {
