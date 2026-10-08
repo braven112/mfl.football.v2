@@ -30,6 +30,7 @@ import { getVisibleLinks, getLinkLabel } from '../src/utils/nav-utils';
  */
 
 const navLinks = navConfig.sections.flatMap((s: any) => s.links ?? []);
+const pinnedNavLinks = ((navConfig as any).pinnedLinks ?? []) as any[];
 const directory = pageDirectory as {
   id: string;
   title: string;
@@ -313,34 +314,41 @@ describe('nav', () => {
   });
 
   it('drops the old per-page nav links', () => {
-    // `rosters` is deliberately NOT in this list — see below. These three
-    // moved into the hub's tool rail and have no nav entry of their own.
-    for (const id of ['contracts', 'trade-builder', 'projected-free-agents']) {
+    // These two moved into the hub's tool rail and have no nav entry of their
+    // own. Trade Builder used to be on this list too; since Oct 2026 it is a
+    // PINNED link (owner decision, from Owner Activity data: it had no nav
+    // entry at all), so it is checked in nav-pinned-links.test.ts instead.
+    for (const id of ['contracts', 'projected-free-agents']) {
       expect(navLinks.find((l: any) => l.id === id)).toBeUndefined();
+      expect(pinnedNavLinks.find((l: any) => l.id === id)).toBeUndefined();
     }
   });
 
-  it('opens Offseason War Room with Front Office, then Rosters', () => {
+  it('opens Offseason War Room with Front Office; Rosters is pinned above every section', () => {
     // "Front Office" is the name of this page everywhere now — nav, footer and
     // site search — because the rosters planner tabs it used to share the name
     // "League Planner" with are on their way out.
     expect(warRoom.links[0].id).toBe('front-office');
     expect(warRoom.links[0].label).toBe('Front Office');
     expect(warRoom.links[0].path).toBe('/front-office');
-    expect(warRoom.links[1].id).toBe('rosters');
-    expect(warRoom.links[1].path).toBe('/rosters');
+    // Rosters, the most-visited page, sat second in this section — fifth of
+    // seven in season. It is pinned now (Oct 2026) and must not be here too.
+    expect(warRoom.links.find((l: any) => l.id === 'rosters')).toBeUndefined();
+    expect(pinnedNavLinks.find((l: any) => l.id === 'rosters')?.path).toBe('/rosters');
   });
 
   it('serves both full-format leagues from one untagged entry each', () => {
     // nav-utils reads an untagged link as "every full-format league" and
     // best-ball is opt-in, so one entry covers TheLeague and the AFL while
-    // Best Ball keeps its own tagged Rosters and gains no duplicate. Each
-    // carries an AFL label because the AFL calls both of these something else.
-    for (const link of warRoom.links.slice(0, 2)) {
+    // Best Ball keeps its own tagged Rosters and gains no duplicate.
+    const rosters = pinnedNavLinks.find((l: any) => l.id === 'rosters');
+    for (const link of [warRoom.links[0], rosters]) {
       expect(link.leagueOnly, `${link.id} should not be league-tagged`).toBeUndefined();
     }
-    // Rosters carries an AFL label because the AFL drops the "/Salary" half.
-    expect(warRoom.links[1].labelAFL).toBe('Rosters');
+    // TheLeague says "Roster" (Oct 2026, was "Roster/Salary"); the AFL keeps
+    // its own plural label.
+    expect(rosters.label).toBe('Roster');
+    expect(rosters.labelAFL).toBe('Rosters');
     // League Planner deliberately does NOT: an AFL label of "Keeper Planner"
     // would collide with the existing /keepers entry of that name.
     expect(warRoom.links[0].labelAFL).toBeUndefined();

@@ -78,7 +78,7 @@ export const routePathOf = (path: string): string => path.split('?')[0];
 export const FRONT_OFFICE_PAGES: FrontOfficePage[] = [
   {
     key: 'rosters',
-    label: 'Roster / Salary',
+    label: 'Roster',
     shortLabel: 'Roster',
     path: '/rosters',
     icon: 'icon-banknote',

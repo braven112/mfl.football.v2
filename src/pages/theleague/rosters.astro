@@ -1788,7 +1788,7 @@ const ownerSeenFor = await resolveOwnerPresence(THELEAGUE_ID);
 // Marks which Front Office strip item is current — presentational only,
 // independent of the client-side view-tab switching below.
 const frontOfficeCurrent = Astro.url.searchParams.get('view') === 'planner' ? 'league-planner' : 'rosters';
-const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Planner' : 'Roster / Salary';
+const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Planner' : 'Roster';
 ---
 
 <TheLeagueLayout title="Team Rosters">

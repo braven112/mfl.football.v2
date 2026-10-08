@@ -277,11 +277,11 @@ const labels = await getPersonaLabels(league.slug);
               <span class="nav-label">{labels.tip}</span>
             </a>
           )}
-          <a href={resolveLeaguePath(isAFL || isKeeper ? `${aflFamilyPrefix}/rosters` : "/theleague/rosters", hideLeaguePrefix)} class="nav-icon-link" title={isAFL || isKeeper ? "Rosters" : "Roster/Salary"}>
+          <a href={resolveLeaguePath(isAFL || isKeeper ? `${aflFamilyPrefix}/rosters` : "/theleague/rosters", hideLeaguePrefix)} class="nav-icon-link" title={isAFL || isKeeper ? "Rosters" : "Roster"}>
             <svg class="nav-icon" aria-hidden="true">
               <use href={`${spriteUrl}#icon-${isAFL || isKeeper ? "helmet" : "banknote"}`}></use>
             </svg>
-            <span class="nav-label">{isAFL || isKeeper ? "Rosters" : "Roster/Salary"}</span>
+            <span class="nav-label">{isAFL || isKeeper ? "Rosters" : "Roster"}</span>
           </a>
           <a href={submitLineupUrl} class="nav-icon-link" title="Set Lineup">
             <svg class="nav-icon" aria-hidden="true">

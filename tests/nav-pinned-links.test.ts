@@ -12,14 +12,18 @@ import type { NavLink } from '../src/types/nav';
  * live inside a section. `nav-config.json#pinnedLinks` renders flat above every
  * section for exactly that case.
  *
- * Nothing is pinned today. Notifications and Preferences were the two, and
- * they moved into the nav FOOTER's account menu (`NavFooter.astro`, under the
- * team name) in Sep 2026: a viewer's own settings belong with their identity,
- * not competing with league navigation, and carrying both places meant the
- * drawer said the same two words twice. The mechanism stays because the reason
- * for it does — a future must-be-first link goes here, not into a section.
+ * Since Oct 2026 the pins are the pages owners actually use. Owner Activity
+ * showed ~85% of traffic on six pages, yet Rosters sat in "Offseason War Room"
+ * — fifth of seven sections in season — and Trade Builder was not in the nav
+ * at all. The core pages now sit flat at the top in both phases.
  *
- * What this suite still guards:
+ * Notifications and Preferences were pinned before that and moved into the nav
+ * FOOTER's account menu (`NavFooter.astro`, under the team name) in Sep 2026:
+ * a viewer's own settings belong with their identity, not competing with
+ * league navigation.
+ *
+ * What this suite guards:
+ * - the core pages stay pinned, in this order, with Rosters first
  * - a link is never pinned AND in a section (it would render twice)
  * - the pinned list renders before the sections, so pinning still means first
  * - the two moved links keep a home in the footer instead
@@ -53,6 +57,22 @@ describe('Nav pinned links', () => {
       footer,
       'A signed-out visitor has no account menu; /preferences still needs a row'
     ).toMatch(/nav-footer__account--signed-out/);
+  });
+
+  it('pins the core pages, Rosters first', () => {
+    // Live Scoring and Free Agents carry one link per league (leagueOnly), so
+    // both ids appear; each league's drawer shows one of each.
+    expect(pinnedLinks.map((link) => link.id)).toEqual([
+      'rosters',
+      'submit-lineup',
+      'live-scoring',
+      'afl-live-scoring',
+      'players',
+      'afl-players',
+      'standings',
+      'trade-builder',
+      'tip-schefter',
+    ]);
   });
 
   it('keeps pinned links out of the sections that reorder by phase', () => {
