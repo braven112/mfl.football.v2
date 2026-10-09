@@ -121,7 +121,8 @@ export function liftThisWeek(row: ParentNode): ThisWeekData | null {
     .map((td) => {
       const wk = td.dataset.column?.replace('trend-', '') ?? '';
       const score = (td.textContent ?? '').replace(/[↑↓]/g, '').replace(/\s+/g, ' ').trim();
-      return score ? `W${wk} ${score}` : '';
+      // A week he did not score in prints a dash — leave it out, not "W2 -".
+      return score && score !== '-' && score !== '—' ? `W${wk} ${score}` : '';
     })
     .filter(Boolean);
   push('Recent weeks', weeks.join(' · '));

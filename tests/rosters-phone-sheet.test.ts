@@ -394,6 +394,15 @@ describe('lifting reads the row at click time', () => {
     expect(liftThisWeek(row)?.rows.find((r) => r.label === 'Projected')).toBeUndefined();
   });
 
+  it('Recent weeks leaves out a week with no score', () => {
+    const wk = (n: string, text: string) => ({ dataset: { column: `trend-${n}` }, textContent: text });
+    const row = {
+      querySelector: (sel: string) => (sel === '[data-column="opponent"]' ? { querySelector: () => null } : null),
+      querySelectorAll: () => [wk('2', ' - '), wk('3', '35.66 ↑'), wk('4', '—'), wk('5', '17.32')],
+    } as unknown as ParentNode;
+    expect(liftThisWeek(row)?.rows.find((r) => r.label === 'Recent weeks')?.value).toBe('W3 35.66 · W5 17.32');
+  });
+
   it('the page passes the builder a row it looked up at click time', () => {
     const page = readFileSync('src/pages/theleague/rosters.astro', 'utf8');
     expect(page).toMatch(/initPlayerModalTrigger\(rosterTbody, \{[\s\S]*?enrich:/);
