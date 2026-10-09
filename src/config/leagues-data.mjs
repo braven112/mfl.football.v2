@@ -693,6 +693,14 @@ export const LEAGUES = {
     schefterFeedPath: 'data/archies/schefter-feed.json',
     /** Redraft league re-created on MFL over the summer — the AFL's clock. */
     leagueYearRollover: { month: 6, day: 1 },
+    /**
+     * MFL reassigns this league's franchise ids between seasons (33 of 99
+     * current teams moved between 2021 and 2026), so an id is not an identity.
+     * Current teams follow themselves through `ownerHistory` (derived by
+     * scripts/derive-owner-history.mjs); departed teams' seasons are grouped
+     * by team NAME across ids in owner-tenures rather than per id.
+     */
+    renumbersFranchises: true,
     /** No poll at launch; the shape is present so shared code never branches on undefined. */
     ownersPoll: { enabled: false, slots: 0, closeWeekday: 4, closeHourPT: 16 },
     /**

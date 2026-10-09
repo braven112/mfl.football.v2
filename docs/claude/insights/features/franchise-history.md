@@ -1,5 +1,33 @@
 # Franchise History Pages — Insights
 
+## 2026-10-09 — A franchise id is not an identity in a league that renumbers
+
+**Context:** The derived chain warned "standings name franchise 0100, which is
+not in the league config" for Archie's. The fix looked like one config entry.
+
+**Insight:** 0100 was the SeaBirds in 2023–2024; they are 0048 from 2025, and
+0048 was the Mavericks 2022–2024. MFL renumbered 33 of Archie's 99 current
+teams across 2021–2026, so `buildAttributor` — which credits a season to the
+id it was played under unless `ownerHistory` says otherwise — was mixing teams
+on every franchise page, and the warning was the one visible symptom. Two
+further id-shaped assumptions surfaced behind it: a claimed or unclaimed
+season was LABELLED with whoever holds the id today (the Assassins' 2021 read
+"Chickens"), and owner-tenures grouped unclaimed seasons per id, so one
+departed team that moved ids split in two while one id's seasons from three
+different departed teams merged into one "former owner".
+
+**Resolution:** `scripts/derive-owner-history.mjs` writes each current team's
+`ownerHistory` (by MFL owner when commissioner access covers every season,
+else by exact team name); a season's label falls back to MFL's own name for it
+only where no config era exists, so TheLeague and the AFL are byte-identical;
+the registry's `renumbersFranchises` groups departed teams by name. Archie's
+2026 co-commissioner login names 2026 owners only, so the shipped answer is
+the conservative name join: 138 of 467 seasons stay unattributed rather than
+guessed.
+
+**Rule:** before trusting a new league's history, survey the feeds' names per
+id; see `docs/claude/rules/package-leagues.md` § Franchise pages.
+
 ## 2026-10-04 — the AFL's franchise pages are the shared ones
 
 `src/components/shared/franchises/FranchisePage.astro` and
