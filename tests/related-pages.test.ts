@@ -39,6 +39,12 @@ describe('related pages', () => {
     expect(relatedPagesFor('/live-scoring', 'afl-fantasy', true)!.pages[0].href).toBe('/sunday-ticket');
   });
 
+  it('leads Free Agents with Transactions in every league that has it', () => {
+    for (const slug of ['theleague', 'afl-fantasy', 'archies']) {
+      expect(relatedPagesFor('/players', slug, false)!.pages[0].path).toBe('/transactions');
+    }
+  });
+
   it('shows best-ball leagues nothing — they have none of these pages', () => {
     const bestBall = ALL_LEAGUES.find((l) => l.bestBall);
     if (bestBall) expect(relatedPagesFor('/live-scoring', bestBall.slug, false)).toBeNull();

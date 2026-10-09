@@ -74,8 +74,9 @@ export const RELATED_PAGES: Record<string, RelatedPagesSpot> = {
     ],
   },
   '/players': {
-    heading: 'Sharpen your board',
+    heading: 'More on the wire',
     pages: [
+      { path: '/transactions', title: 'Transactions', blurb: "Every signing, waiver claim and drop around the league — see who's been grabbed before you bid.", icon: 'transactions-2', cta: 'See the moves' },
       { path: '/import-rankings', title: 'Import Rankings', blurb: 'Bring in rankings from the sites you trust; they become a column on this page.', icon: 'clipboard', cta: 'Import rankings' },
     ],
   },
