@@ -30,6 +30,6 @@ const data = (twoOwners: boolean) => ({
 
 // The live banner picks a position at random per view; stories pin it so the
 // snapshot is stable.
-export const TopScorer = { args: { leagueSlug: 'theleague', data: data(false), position: 'QB' } };
-export const PositionLeader = { args: { leagueSlug: 'theleague', data: data(false), position: 'RB' } };
-export const AflLeague = { args: { leagueSlug: 'afl-fantasy', data: data(true), position: 'QB' } };
+export const TopScorer = { args: { leagueSlug: 'theleague', data: data(false), position: 'QB', referenceDate: '2026-10-08' } };
+export const PositionLeader = { args: { leagueSlug: 'theleague', data: data(false), position: 'RB', referenceDate: '2026-10-08' } };
+export const AflLeague = { args: { leagueSlug: 'afl-fantasy', data: data(true), position: 'QB', referenceDate: '2026-10-08' } };

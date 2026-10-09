@@ -8,7 +8,7 @@
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 import fs from 'node:fs';
-import { lineupStatusFromStarters, loadMyTeamWeek } from '../src/utils/my-team-week';
+import { lineupStatusFromStarters, loadMyTeamWeek, starterPlayerIndex } from '../src/utils/my-team-week';
 import { clearLineupSubmittedCache } from '../src/utils/lineup-submitted';
 import { getLeagueBySlug } from '../src/config/leagues';
 
@@ -65,6 +65,13 @@ describe('lineupStatusFromStarters', () => {
     expect(s.problems).toEqual([]);
   });
 
+  it('says nothing about an empty lineup once every game has kicked off', () => {
+    const past = new Map([['BUF', base.now.getTime() - 1000]]);
+    expect(lineupStatusFromStarters({ ...base, starters: [], kickoffsByTeam: past }).state).toBe('unknown');
+    const ahead = new Map([['BUF', base.now.getTime() + 1000]]);
+    expect(lineupStatusFromStarters({ ...base, starters: [], kickoffsByTeam: ahead }).state).toBe('not-set');
+  });
+
   it('counts empty starting slots', () => {
     expect(lineupStatusFromStarters({ ...base, starters: ['1', '2'] }).emptySlots).toBe(1);
   });
@@ -102,5 +109,18 @@ describe('loadMyTeamWeek', () => {
       currentNflWeek: 6, now: inSeason, fetchImpl,
     });
     if (out) expect(out.lineup?.state).not.toBe('not-set');
+  });
+});
+
+describe('starterPlayerIndex', () => {
+  const league = getLeagueBySlug('theleague')!;
+  const hasPlayers = fs.existsSync(`${league.dataPath}/mfl-feeds/2026/players.json`);
+  it.skipIf(!hasPlayers)('keeps MFL team codes, which the bye calendar and kickoffs are keyed by', () => {
+    // getPlayerMap normalizes to ESPN codes (KC, SF…) and silently missed
+    // byes for nine clubs; the index must speak the bye calendar's language.
+    const teams = new Set([...starterPlayerIndex(league, 2026).values()].map((p) => p.team));
+    expect(teams.has('KCC')).toBe(true);
+    expect(teams.has('KC')).toBe(false);
+    expect(teams.has('SFO')).toBe(true);
   });
 });

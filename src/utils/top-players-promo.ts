@@ -6,6 +6,7 @@
  * so the promo can never disagree with the page it sells.
  */
 import type { TopPlayerRow, TopPlayersFile } from '../types/top-players';
+import { isSeasonWindowOpen } from './pecking-order-season-window.mjs';
 
 /** The poster's lineup, left to right. Kickers and defenses don't sell a page. */
 export const PROMO_POSITIONS = ['QB', 'RB', 'WR', 'TE'] as const;
@@ -23,10 +24,17 @@ export interface TopPlayersPromo {
 /**
  * The best-ranked player at each poster position who has an ESPN photo (the
  * poster is pictures; a missing face is a hole in it). Null until a week has
- * been played, or when fewer than three positions can be filled.
+ * been played, outside the season window, or when fewer than three positions
+ * can be filled.
  */
-export function pickTopPlayersPromo(data: TopPlayersFile | null | undefined): TopPlayersPromo | null {
+export function pickTopPlayersPromo(
+  data: TopPlayersFile | null | undefined,
+  now: Date = new Date(),
+): TopPlayersPromo | null {
   if (!data?.completedWeeks?.length || !data.players?.length) return null;
+  // In season only: from February to kickoff the file still holds LAST
+  // season, and its leader is not "running the league" any more.
+  if (!isSeasonWindowOpen(data.seasonYear, now)) return null;
   const players: TopPlayerRow[] = [];
   for (const pos of PROMO_POSITIONS) {
     const best = data.players

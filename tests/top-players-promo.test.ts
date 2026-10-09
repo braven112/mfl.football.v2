@@ -11,6 +11,8 @@ const row = (id: string, position: string, posRank: number, total: number, espnI
   id, name: `Player ${id}`, position, team: 'BUF', espnId, owners: [], weeks: {}, total, avg: 0, games: 4, best: 0, rank: 0, posRank,
 });
 
+const NOW = new Date('2026-10-08T12:00:00Z');
+
 const file = (players: TopPlayerRow[], completedWeeks = [1, 2, 3, 4]): TopPlayersFile => ({
   seasonYear: 2026, startWeek: 1, endWeek: 17, lastRegularSeasonWeek: 14, completedWeeks, positions: [], players,
 });
@@ -34,9 +36,14 @@ describe('pickTopPlayersPromo', () => {
   });
 
   it('shows nothing before a week is played, or with too few faces', () => {
-    expect(pickTopPlayersPromo(file([row('1', 'QB', 1, 1)], []))).toBeNull();
-    expect(pickTopPlayersPromo(file([row('1', 'QB', 1, 1), row('2', 'RB', 1, 1)]))).toBeNull();
-    expect(pickTopPlayersPromo(null)).toBeNull();
+    expect(pickTopPlayersPromo(file([row('1', 'QB', 1, 1)], []), NOW)).toBeNull();
+    expect(pickTopPlayersPromo(file([row('1', 'QB', 1, 1), row('2', 'RB', 1, 1)]), NOW)).toBeNull();
+    expect(pickTopPlayersPromo(null, NOW)).toBeNull();
+  });
+
+  it("hides last season's leader in the offseason", () => {
+    const data = file([row('1', 'QB', 1, 1), row('2', 'RB', 1, 1), row('3', 'WR', 1, 1)]);
+    expect(pickTopPlayersPromo(data, new Date('2027-06-01T12:00:00Z'))).toBeNull();
   });
 });
 

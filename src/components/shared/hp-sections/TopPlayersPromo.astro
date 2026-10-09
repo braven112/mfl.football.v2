@@ -26,11 +26,13 @@ interface Props {
   data: TopPlayersFile | null | undefined;
   /** Pin the pick to one position (stories/snapshots); random when omitted. */
   position?: string;
+  /** ISO date standing in for "now" (stories, ?testDate=); the season gate reads it. */
+  referenceDate?: string;
 }
 
-const { leagueSlug, data, position } = Astro.props;
+const { leagueSlug, data, position, referenceDate } = Astro.props;
 const league = getLeagueBySlug(leagueSlug);
-const promo = league ? pickTopPlayersPromo(data) : null;
+const promo = league ? pickTopPlayersPromo(data, referenceDate ? new Date(referenceDate) : new Date()) : null;
 const href = league
   ? resolveLeaguePath(ensureLeaguePrefix(league, '/top-players'), Astro.locals.hideLeaguePrefix ?? false)
   : '#';

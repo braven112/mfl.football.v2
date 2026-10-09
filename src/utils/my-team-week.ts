@@ -25,11 +25,12 @@ import type { LeagueDefinition } from '../config/leagues';
 import { findNextGame, franchiseSchedule, parseWeeklySchedule } from './schedule-data.mjs';
 import { extractLineupStarters, findWeekResultsEntry, franchiseAppearsIn, loadWeeklyResultsFeedFromDisk } from './lineup-sources';
 import { readLiveWeekResults } from './lineup-submitted';
-import { getPlayerMap } from './player-map';
 import { byeWeeksForSeason } from './nfl-bye-weeks';
 import { isSeasonWindowOpen } from './pecking-order-season-window.mjs';
+import { asArray } from './mfl-normalize';
 import {
   buildLineupWarnings,
+  buildPlayerIndex,
   dropLockedProblems,
   formatPlayerName,
   parseInjuries,
@@ -107,7 +108,12 @@ export function lineupStatusFromStarters(args: {
   );
   const w = warnings[0];
   if (starters.length === 0) {
-    return { state: 'not-set', problems: [], emptySlots: 0 };
+    // Once every game has kicked off there is nothing left to set: say
+    // nothing rather than a warning with an armed Set Lineup button.
+    const t = args.now.getTime();
+    const kickoffs = [...args.kickoffsByTeam.values()];
+    const anyGameAhead = kickoffs.length === 0 || kickoffs.some((at) => at > t);
+    return anyGameAhead ? { state: 'not-set', problems: [], emptySlots: 0 } : { state: 'unknown', problems: [], emptySlots: 0 };
   }
   return {
     state: 'set',
@@ -121,6 +127,11 @@ export function lineupStatusFromStarters(args: {
   };
 }
 
+/**
+ * One committed feed under data/<league>/mfl-feeds/<year>/, or null. Same as
+ * sunday-ticket-sources' readLeagueFeed, kept local so the homepage does not
+ * import that module's live-scoring/Redis graph for five lines.
+ */
 function readFeed(league: LeagueDefinition, year: number, file: string): any | null {
   try {
     const p = path.join(process.cwd(), league.dataPath, 'mfl-feeds', String(year), file);
@@ -130,9 +141,17 @@ function readFeed(league: LeagueDefinition, year: number, file: string): any | n
   }
 }
 
-function asArray<T>(v: T | T[] | null | undefined): T[] {
-  if (v == null) return [];
-  return Array.isArray(v) ? v : [v];
+const playerIndexCache = new Map<string, Map<string, PlayerLike>>();
+
+/** MFL player id → {name, position, team} with MFL's own team codes. Cached per league-year. */
+export function starterPlayerIndex(league: LeagueDefinition, leagueYear: number): Map<string, PlayerLike> {
+  const key = `${league.slug}:${leagueYear}`;
+  let index = playerIndexCache.get(key);
+  if (!index) {
+    index = buildPlayerIndex(readFeed(league, leagueYear, 'players.json')) as Map<string, PlayerLike>;
+    playerIndexCache.set(key, index);
+  }
+  return index;
 }
 
 /**
@@ -197,13 +216,11 @@ export async function loadMyTeamWeek(input: {
       if (fromDisk.length > 0) starters = fromDisk;
     }
 
-    // Only the starters are ever looked up, so map just those.
-    const identities = getPlayerMap(leagueYear);
-    const players = new Map<string, PlayerLike>();
-    for (const id of starters ?? []) {
-      const p = identities.get(id);
-      if (p) players.set(id, { name: p.name, position: p.position, team: p.nflTeam });
-    }
+    // Raw MFL team codes (KCC, SFO, NEP…), exactly as the GroupMe check reads
+    // them: the bye calendar and the kickoff map are keyed by MFL codes, and
+    // `getPlayerMap` normalizes to ESPN codes (KC, SF, NE), which silently
+    // missed byes and locks for nine clubs.
+    const players = starterPlayerIndex(league, leagueYear);
     const byes = byeWeeksForSeason(seasonYear) ?? {};
     const byeTeams = new Set(Object.entries(byes).filter(([, w]) => w === week).map(([team]) => team));
     const fullSchedule = readFeed(league, leagueYear, 'nflSchedule-full.json');
