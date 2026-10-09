@@ -830,7 +830,13 @@
       "position": "QB",
       "team": "CLE",
       "espnId": "3122840",
-      "owners": [],
+      "owners": [
+        {
+          "id": "0005",
+          "name": "Computer Jocks",
+          "icon": "/assets/afl/icons/computer_jocks.png"
+        }
+      ],
       "weeks": {
         "1": 16,
         "2": 23.72,
@@ -3635,13 +3641,7 @@
       "position": "DEF",
       "team": "CHI",
       "espnId": null,
-      "owners": [
-        {
-          "id": "0005",
-          "name": "Computer Jocks",
-          "icon": "/assets/afl/icons/computer_jocks.png"
-        }
-      ],
+      "owners": [],
       "weeks": {
         "1": 3.63,
         "2": 11.29,
@@ -5325,11 +5325,6 @@
       "espnId": "4373626",
       "owners": [
         {
-          "id": "0005",
-          "name": "Computer Jocks",
-          "icon": "/assets/afl/icons/computer_jocks.png"
-        },
-        {
           "id": "0021",
           "name": "Chatmaster",
           "icon": "/assets/afl/icons/chat.png"
@@ -6212,6 +6207,11 @@
       "team": "DEN",
       "espnId": null,
       "owners": [
+        {
+          "id": "0005",
+          "name": "Computer Jocks",
+          "icon": "/assets/afl/icons/computer_jocks.png"
+        },
         {
           "id": "0021",
           "name": "Chatmaster",
