@@ -1235,23 +1235,25 @@ const labels = await getPersonaLabels('theleague');
     border-color: var(--league-accent, var(--color-primary, #1c497c));
   }
 
-  /* The kebab's menu: under the ⋮, opening from its LEFT edge and extending
-     right. It used to be right-aligned, and since the ⋮ sits near the start
-     of the hero row it ran off the left of a phone (user, 2026-09-26). The
-     script then measures and clamps it into the sheet ∩ the viewport with a
-     12px gutter (`placeSheetMenu`); this CSS is the unmeasured fallback, and
-     its max-width alone keeps it on a 320px screen. Themed surface tokens,
-     so both themes follow. */
+  /* The ⋮ sits at the far RIGHT of the hero row (user, 2026-10-09), so its
+     menu opens under it from its RIGHT edge and extends left. (It once ran
+     off the left of a phone when the ⋮ sat near the row's start and the menu
+     was right-aligned, 2026-09-26.) The script measures and clamps it into
+     the sheet ∩ the viewport with a 12px gutter (`placeSheetMenu`, which
+     flips to the right edge on its own); this CSS is the unmeasured
+     fallback, and its max-width alone keeps it on a 320px screen. Themed
+     surface tokens, so both themes follow. */
   .pdm-quick :global(.pdm-kebab) {
     position: relative;
     order: 1;
     display: inline-flex;
+    margin-left: auto;
   }
   .pdm-quick :global(.pdm-kebab__menu) {
     position: absolute;
     top: calc(100% + 0.375rem);
-    left: 0;
-    right: auto;
+    left: auto;
+    right: 0;
     z-index: 5;
     min-width: min(16rem, calc(100vw - 1.5rem));
     max-width: min(20rem, calc(100vw - 1.5rem));

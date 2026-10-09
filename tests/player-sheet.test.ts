@@ -160,14 +160,18 @@ describe('the kebab menu stays on screen (placeSheetMenu)', () => {
     expect(900 + p.left + p.width).toBeLessThanOrEqual(948);
   });
 
-  it('the modal measures on open, and the CSS fallback opens rightwards', () => {
+  it('the modal measures on open; the ⋮ sits right and its CSS fallback opens leftwards', () => {
     const modal = readFileSync('src/components/shared/PlayerDetailsModal.astro', 'utf8');
     const open = modal.slice(modal.indexOf('const openSheetMenu'), modal.indexOf('const closeSheetMenu'));
     expect(open).toMatch(/list\.hidden = false;\s*positionSheetMenu\(btn, list\);/);
     const rule = modal.slice(modal.indexOf('.pdm-quick :global(.pdm-kebab__menu) {'));
     const body = rule.slice(0, rule.indexOf('}'));
-    expect(body).toMatch(/left: 0;/);
-    expect(body).not.toMatch(/(^|[^-])right: 0;/m);
+    // The ⋮ is the hero row's last control, pushed to its right edge
+    // (user, 2026-10-09), so the unmeasured menu hangs from its right edge.
+    expect(body).toMatch(/(^|[^-])right: 0;/m);
+    expect(body).not.toMatch(/left: 0;/);
+    const kebab = modal.slice(modal.indexOf('.pdm-quick :global(.pdm-kebab) {'));
+    expect(kebab.slice(0, kebab.indexOf('}'))).toMatch(/margin-left: auto;/);
     expect(body).toMatch(/max-width: min\([^;]*100vw/);
   });
 
