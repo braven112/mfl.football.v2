@@ -80,14 +80,6 @@ export const RELATED_PAGES: Record<string, RelatedPagesSpot> = {
       { path: '/import-rankings', title: 'Import Rankings', blurb: 'Bring in rankings from the sites you trust; they become a column on this page.', icon: 'clipboard', cta: 'Import rankings' },
     ],
   },
-  '/': {
-    heading: 'Around the league',
-    pages: [
-      { path: '/top-players', title: 'Top Players', blurb: "Every player's weekly scores, season total and rank at his position, free agents included.", icon: 'bar-chart', cta: 'See the leaders' },
-      { path: '/pecking-order', title: 'The Pecking Order', blurb: "Schefter's weekly power rankings, with trend arrows and awards.", icon: 'pecking-order', cta: 'Read this week' },
-      { path: '/calendar', title: 'League Calendar', blurb: 'Deadlines, drafts and every date that matters this season.', icon: 'calendar', cta: 'See the dates' },
-    ],
-  },
   '/franchises': {
     heading: 'League history',
     pages: [

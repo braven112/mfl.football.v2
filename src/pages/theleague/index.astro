@@ -80,7 +80,9 @@ import leagueConfig from '../../data/theleague.config.json';
 import { getRecentMessages, toSchefterPosts, loadTeamConfig } from '../../utils/groupme-storage';
 import '../../styles/schefter-feed.css';
 import '../../styles/schefter-feed-compact.css';
-import RelatedPagesCard from '../../components/shared/RelatedPagesCard.astro';
+import TopPlayersPromo from '../../components/shared/hp-sections/TopPlayersPromo.astro';
+import topPlayersData from '../../../data/theleague/derived/top-players.json';
+import type { TopPlayersFile } from '../../types/top-players';
 
 const THELEAGUE = getLeagueBySlug('theleague')!;
 
@@ -967,15 +969,17 @@ const labels = await getPersonaLabels('theleague');
         referenceDate={now}
       />
 
-      <WhatsNext demoDate={effectiveDate} maxCards={2} />
-
       <HpStandingsCompact
         userFranchiseId={userFranchiseId}
         teamSummaries={teamSummaries}
         referenceDate={effectiveDate}
       />
 
+      <TopPlayersPromo leagueSlug={THELEAGUE.slug} data={topPlayersData as unknown as TopPlayersFile} />
+
       <HpQuickLinks isAuthenticated={isAuthenticated} />
+
+      <WhatsNext demoDate={effectiveDate} maxCards={2} />
 
       <WhatsNewRow
         entries={whatsNewEntries}
@@ -987,7 +991,7 @@ const labels = await getPersonaLabels('theleague');
         excludeId={heroFeatureId}
       />
 
-      <RelatedPagesCard hostPath="/" leagueSlug="theleague" />
+
 
       {testMode && (
         <div class="hp2__debug" id="demo-nav">

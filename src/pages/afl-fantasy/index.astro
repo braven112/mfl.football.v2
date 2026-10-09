@@ -69,6 +69,8 @@ import { spriteUrl } from '../../utils/sprite-url';
 import { getLeagueBySlug } from '../../config/leagues';
 import { readInstallState } from '../../utils/app-install-state';
 import { resolveSchefterRail } from '../../utils/schefter-rail-view';
+import aflTopPlayers from '../../../data/afl-fantasy/derived/top-players.json';
+import type { TopPlayersFile } from '../../types/top-players';
 
 // ── Team preference resolution ──────────────────────────────────────────────
 const myTeamParam = Astro.url.searchParams.get('myteam');
@@ -423,6 +425,7 @@ const labels = await getPersonaLabels('afl-fantasy');
 
 <LeagueHomePage
   leagueSlug={AFL.slug}
+  topPlayers={aflTopPlayers as unknown as TopPlayersFile}
   title="AFL — American Football League"
   installBanner={showInstallBanner ? { leagueName: 'AFL Fantasy' } : null}
   effectiveDate={effectiveDate}
