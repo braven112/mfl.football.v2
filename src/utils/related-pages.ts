@@ -59,9 +59,9 @@ export const RELATED_PAGES: Record<string, RelatedPagesSpot> = {
       { path: '/schedule', title: 'Schedule', blurb: "Who you've played, who's left, and every week's results across the league.", icon: 'scoreboard-2', cta: 'See the schedule' },
       { path: '/playoffs', title: 'Playoffs', blurb: 'The bracket, the matchups and the road to the title.', icon: 'champ', cta: 'View the bracket' },
       { path: '/standings?view=all_play', title: 'Premier League', blurb: 'All-play standings: your record if you played every team every week.', icon: 'premier-league', cta: 'See all-play', only: ['afl-fantasy'] },
-      { path: '/pecking-order', title: 'The Pecking Order', blurb: "Schefter's weekly power rankings, with trend arrows and awards.", icon: 'rank', cta: 'Read this week' },
-      { path: '/division-strength', title: 'Division Strength', blurb: 'Which divisions have really been the gauntlet, season by season.', icon: 'rank', cta: 'Compare divisions' },
-      { path: '/rivalries', title: 'Rivalries', blurb: 'Head-to-head records between every pair of teams, hottest rivalries first.', icon: 'scoreboard-2', cta: 'See the rivalries' },
+      { path: '/pecking-order', title: 'The Pecking Order', blurb: "Schefter's weekly power rankings, with trend arrows and awards.", icon: 'pecking-order', cta: 'Read this week' },
+      { path: '/division-strength', title: 'Division Strength', blurb: 'Which divisions have really been the gauntlet, season by season.', icon: 'power', cta: 'Compare divisions' },
+      { path: '/rivalries', title: 'Rivalries', blurb: 'Head-to-head records between every pair of teams, hottest rivalries first.', icon: 'rivalry', cta: 'See the rivalries' },
     ],
   },
   '/rosters': {
@@ -84,7 +84,7 @@ export const RELATED_PAGES: Record<string, RelatedPagesSpot> = {
     heading: 'Around the league',
     pages: [
       { path: '/top-players', title: 'Top Players', blurb: "Every player's weekly scores, season total and rank at his position, free agents included.", icon: 'bar-chart', cta: 'See the leaders' },
-      { path: '/pecking-order', title: 'The Pecking Order', blurb: "Schefter's weekly power rankings, with trend arrows and awards.", icon: 'rank', cta: 'Read this week' },
+      { path: '/pecking-order', title: 'The Pecking Order', blurb: "Schefter's weekly power rankings, with trend arrows and awards.", icon: 'pecking-order', cta: 'Read this week' },
       { path: '/calendar', title: 'League Calendar', blurb: 'Deadlines, drafts and every date that matters this season.', icon: 'calendar', cta: 'See the dates' },
     ],
   },
@@ -92,7 +92,7 @@ export const RELATED_PAGES: Record<string, RelatedPagesSpot> = {
     heading: 'League history',
     pages: [
       { path: '/records', title: 'Record Book', blurb: 'All-time records: biggest scores, blowouts, streaks and more.', icon: 'trophy', cta: 'Open the record book', only: ['afl-fantasy'] },
-      { path: '/rivalries', title: 'Rivalries', blurb: 'Head-to-head records between every pair of teams, hottest rivalries first.', icon: 'scoreboard-2', cta: 'See the rivalries' },
+      { path: '/rivalries', title: 'Rivalries', blurb: 'Head-to-head records between every pair of teams, hottest rivalries first.', icon: 'rivalry', cta: 'See the rivalries' },
       { path: '/activity', title: 'Owner Activity', blurb: 'Who visits the site, how often, and which pages get used.', icon: 'activity', cta: 'See the activity' },
     ],
   },
