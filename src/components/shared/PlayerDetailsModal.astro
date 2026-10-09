@@ -184,8 +184,8 @@ const labels = await getPersonaLabels('theleague');
            itself independently (see the script), and the row hides when both
            do — a bare 1rem gap is otherwise all that is left. -->
       <div class:list={['pdm-actions', previewQuick && 'pdm-actions--hero']} id="pdm-actions" hidden={!previewQuick}>
-        <!-- The opener's quick actions (roster pages only: Simulate cut, trade
-             block, and the ⋮ contract-options menu). `display: contents` when shown, so they sit in THIS
+        <!-- The opener's quick actions (roster pages only: Simulate cut and the
+             ⋮ contract-options menu, which holds Trade block). `display: contents` when shown, so they sit in THIS
              row beside the built-in Watch / Trade cards — the row becomes the
              sheet's hero actions rather than a second row, and Watch is never
              offered twice. Empty and hidden for every other opener. -->
@@ -1301,6 +1301,10 @@ const labels = await getPersonaLabels('theleague');
     color: var(--league-accent, var(--color-primary, #1c497c));
   }
   .pdm-quick :global(.pdm-kebab__icon svg) { width: 16px; height: 16px; fill: currentColor; }
+  .pdm-quick :global(.pdm-kebab__item--on .pdm-kebab__label)::after {
+    content: ' \2713';
+    color: var(--league-accent, var(--color-primary, #1c497c));
+  }
   .pdm-quick :global(.pdm-kebab__item--danger),
   .pdm-quick :global(.pdm-kebab__item--danger .pdm-kebab__icon) { color: var(--color-error-dark, #b91c1c); }
   .pdm-quick :global(.pdm-kebab__text) { display: flex; flex-direction: column; min-width: 0; }

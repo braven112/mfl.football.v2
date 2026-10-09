@@ -162,8 +162,8 @@ describe('cap delta', () => {
 });
 
 describe('hero quick actions (Q7)', () => {
-  it('own team: Simulate cut, trade block, then the contract-options kebab', () => {
-    expect(buildQuickActions(facts()).map((a) => a.id)).toEqual(['cut-simulate', 'trade-block', 'contract-menu']);
+  it('own team: Simulate cut, then the contract-options kebab — Trade block lives in the kebab', () => {
+    expect(buildQuickActions(facts()).map((a) => a.id)).toEqual(['cut-simulate', 'contract-menu']);
   });
   it('the kebab is the ONLY overflow entry point — no separate More button', () => {
     const ids = buildQuickActions(facts()).map((a) => a.id);
@@ -175,8 +175,11 @@ describe('hero quick actions (Q7)', () => {
     expect(first).toMatchObject({ id: 'undo-simulation', label: 'Simulated · Undo', state: 'on' });
   });
   it('trade block shows its state', () => {
-    const tb = buildQuickActions(facts({ player: { tradeBait: true } as never })).find((a) => a.id === 'trade-block');
-    expect(tb).toMatchObject({ state: 'on', label: 'On trade block' });
+    const tb = buildContractMenu(facts({ player: { tradeBait: true } as never })).find((a) => a.id === 'trade-block');
+    expect(tb).toMatchObject({ state: 'on', label: 'On trade block', icon: 'icon-transactions-2' });
+    const off = buildContractMenu(facts()).find((a) => a.id === 'trade-block');
+    expect(off).toMatchObject({ label: 'Add to trade block' });
+    expect(off?.state).toBeUndefined();
   });
   it('another owner’s player: Simulate cut + the kebab — simulations are for every club; trade block, IR and Release stay the owner’s', () => {
     // User, 2026-09-26. Trade for him and Watch are the sheet's built-ins.
@@ -191,7 +194,7 @@ describe('contract-options kebab (the table’s ⋮, as a menu)', () => {
     expect(ids(facts())).toEqual([
       'extension', 'move-to-ir',
       'release',
-      'trade-simulate', 'trade-builder',
+      'trade-simulate', 'trade-block', 'trade-builder',
     ]);
   });
 
