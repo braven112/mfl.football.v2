@@ -861,6 +861,43 @@ export const buildOwnerTenures = ({
   }
 
   // ── Inferred former owners ───────────────────────────────────────────────
+  // A league that renumbers its franchises (registry `renumbersFranchises`,
+  // Archie's) cannot group by slot: one id's unclaimed seasons belong to
+  // several departed teams, and one departed team spans several ids. Group by
+  // the season's own team NAME instead — the same conservative join that
+  // derived its current teams' ownerHistory — and build each group's per-id
+  // tenures the way a current owner's are built.
+  if (league?.renumbersFranchises) {
+    const orphanRowsByName = new Map();
+    for (const rows of orphanRowsBySlot.values()) {
+      for (const row of rows) {
+        const key = normalizeIdentity(row.name ?? '') || `slot:${row.franchiseId}`;
+        if (!orphanRowsByName.has(key)) orphanRowsByName.set(key, []);
+        orphanRowsByName.get(key).push(row);
+      }
+    }
+    orphanRowsBySlot.clear();
+    for (const rows of orphanRowsByName.values()) {
+      const tenures = buildTenuresFromRows(rows);
+      if (tenures.length === 0) continue;
+      const dominant = dominantIdentity(tenures.flatMap((t) => t.identities));
+      const first = tenures[0];
+      owners.push(
+        finalizeOwner({
+          ownerId: `auto:${league.slug}:${first.franchiseId}:${first.yearStart}`,
+          slug: `${kebab(dominant?.name ?? first.franchiseId)}-${first.yearStart}`,
+          previousSlugs: [],
+          displayName: null,
+          source: 'inferred',
+          tenures,
+          isCurrent: false,
+          currentFranchiseId: null,
+          notes: null,
+          crossLeague: [],
+        })
+      );
+    }
+  }
   for (const [franchiseId, rows] of orphanRowsBySlot) {
     const team = teamById.get(franchiseId) ?? { franchiseId, history: [] };
     const years = rows.map((r) => r.year);

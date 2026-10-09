@@ -287,7 +287,13 @@ const { attributeSeason: attributeYear, currentOwnerSinceMap } = buildAttributor
 // would vanish from franchise-history.json without a trace. Say so — an
 // expansion slot missing from the config, or a stale id in an old feed, is
 // a config fix, not a silent drop.
-const knownFranchiseIds = new Set(currentTeams.map((t) => t.franchiseId));
+// An id a current team claims through `ownerHistory` (a renumbered franchise:
+// Archie's SeaBirds were 0100 before becoming 0048) is known too — its seasons
+// are attributed, so warning about it would send someone to "fix" a config
+// that is already right.
+const knownFranchiseIds = new Set(
+  currentTeams.flatMap((t) => [t.franchiseId, ...(t.ownerHistory ?? []).map((h) => h.franchiseId)])
+);
 const warnedUnknownFranchiseIds = new Set();
 const warnIfUnknownFranchise = (franchiseId, year) => {
   if (knownFranchiseIds.has(franchiseId) || warnedUnknownFranchiseIds.has(franchiseId)) return;
@@ -997,7 +1003,25 @@ for (const year of years) {
   for (const row of standingsRows) {
     warnIfUnknownFranchise(row.franchiseId, year);
     const targetId = attributeYear(row.franchiseId, year);
-    const identity = getIdentityForYear(row.franchiseId, year);
+    // The slot's identity is right only for a season its CURRENT team owns or
+    // that a config era names. A season claimed from another id (a renumbered
+    // franchise: Archie's SeaBirds as 0100) belongs to the claimant, and an
+    // unclaimed one to nobody here — so neither may fall back to whoever holds
+    // the slot today, which labelled the SeaBirds' 2023 "0100" and the
+    // Assassins' 2021 "Chickens". MFL's own name for that season is the truth.
+    // A config era for the slot (TheLeague's and the AFL's `history`) is a
+    // deliberate identity and always wins; this only replaces the CURRENT-name
+    // fallback, which is what a league with no eras (Archie's) gets.
+    const slotIdentity = getIdentityForYear(row.franchiseId, year);
+    const crossSlot = targetId !== null && targetId !== row.franchiseId;
+    const identity =
+      slotIdentity.isHistorical || targetId === row.franchiseId || !row.historicalName
+        ? slotIdentity
+        : {
+            ...(crossSlot ? getIdentityForYear(targetId, year) : slotIdentity),
+            name: row.historicalName,
+            nameMedium: row.historicalName,
+          };
 
     // Suppress preseason placeholder standings: when a season has zero
     // games played AND zero points scored, MFL's standings still report

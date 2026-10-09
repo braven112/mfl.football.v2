@@ -19,9 +19,12 @@
  * join key. Everything it prints or writes is franchise ids and years. Names
  * are never logged, never written, never put in an error message.
  *
- * Usage (needs the same credentials as fetch-owner-names.mjs):
+ * Usage (owner mode needs the same credentials as fetch-owner-names.mjs):
  *   node scripts/derive-owner-history.mjs --league=archies          # dry run
  *   node scripts/derive-owner-history.mjs --league=archies --write  # set ownerHistory in the config
+ *   node scripts/derive-owner-history.mjs --league=archies --by=team-name [--write]
+ *     # no credentials: join on each season's public MFL team name instead.
+ *     # Conservative — a renamed team's earlier seasons stay unattributed.
  *
  * A dry run prints the proposal and every case it would NOT decide: an owner
  * holding two franchises in one season, a current team whose owner MFL does
@@ -39,9 +42,12 @@ const ROOT = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const OPEN_END = 9999; // the existing ownerHistory convention for "to date"
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-/** The join key: case, spacing and punctuation never split one owner in two. */
+/**
+ * The join key: case, spacing and punctuation never split one owner (or, in
+ * team-name mode, one team) in two — "Salty Dogs" and "SaltyDogs" are one key.
+ */
 export const ownerKey = (name) =>
-  typeof name === 'string' ? name.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim() || null : null;
+  typeof name === 'string' ? name.toLowerCase().replace(/[^a-z0-9]+/g, '') || null : null;
 
 /**
  * Pure derivation — no network, no names out.
@@ -132,12 +138,14 @@ const fmt = (ranges) =>
 async function main() {
   let slug = null;
   let write = false;
+  let by = 'owner';
   for (const arg of process.argv.slice(2)) {
     if (arg === '--write') write = true;
     else if (arg.startsWith('--league=')) slug = resolveLeagueArg(arg.slice('--league='.length));
+    else if (arg.startsWith('--by=')) by = arg.slice('--by='.length);
   }
-  if (!slug) {
-    console.error('Usage: node scripts/derive-owner-history.mjs --league=<slug> [--write]');
+  if (!slug || !['owner', 'team-name'].includes(by)) {
+    console.error('Usage: node scripts/derive-owner-history.mjs --league=<slug> [--by=owner|team-name] [--write]');
     process.exit(1);
   }
   const league = LEAGUES[slug];
@@ -151,10 +159,23 @@ async function main() {
     .filter(Number.isFinite)
     .sort((a, b) => a - b);
 
-  const cookies = await resolveCookies();
   const ownersByYear = new Map();
   let anonymous = 0;
-  for (const year of years) {
+  if (by === 'team-name') {
+    // The conservative fallback when MFL will not name a league-year's owners
+    // (Archie's: the co-commissioner login reaches 2026 only). The join key is
+    // each season's MFL TEAM name from the committed feed — public data, no
+    // network. A season counts only where the current team's own current
+    // name appears exactly once that year, so a rename leaves the season
+    // unattributed rather than credited to whoever sat in the slot.
+    for (const year of years) {
+      const feed = JSON.parse(fs.readFileSync(path.join(feedsDir, String(year), 'league.json'), 'utf8'));
+      const list = [].concat(feed?.league?.franchises?.franchise ?? []);
+      ownersByYear.set(year, new Map(list.filter((f) => f?.id && f?.name).map((f) => [f.id, f.name])));
+    }
+  }
+  const cookies = by === 'owner' ? await resolveCookies() : null;
+  for (const year of by === 'owner' ? years : []) {
     const { byFranchise, franchiseCount, leagueId } = await fetchOwnersForYear(league, year, cookies);
     // Counts only — never a name.
     console.log(`  ${year}: L=${leagueId} ${byFranchise.size}/${franchiseCount} franchises carry an owner name`);
@@ -185,6 +206,16 @@ async function main() {
   if (!write) {
     console.log('\n  DRY RUN — nothing written. Re-run with --write.\n');
     return;
+  }
+  // An anonymous season makes every team look like it started after it, so a
+  // write would strip those seasons from every franchise. Archie's 2026
+  // co-commissioner login named 2026 only and proposed exactly that.
+  if (anonymous > 0) {
+    console.error(
+      `\n  Refusing to write: ${anonymous} season(s) carried no owner names, and writing would\n` +
+        '  drop them from every franchise. Get commissioner access to those league-years first.\n'
+    );
+    process.exit(1);
   }
   for (const team of teams) {
     const ranges = histories[team.franchiseId];

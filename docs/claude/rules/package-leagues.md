@@ -98,6 +98,21 @@ MFL holds for the league.
   and Archie's 2021 schedule runs past its standings.
 - **No owner section yet.** Owner names come only with commissioner access;
   where the site has none, owners stay anonymous and the section is hidden.
+- **Check whether MFL renumbers the league's franchises.** History is credited
+  by franchise id, which is only an identity if ids are stable. Archie's
+  reshuffled 33 of 99 teams between 2021 and 2026 (the SeaBirds were 0100,
+  then 0048 — while 0048 had been the Mavericks), so every 0048 season went to
+  the SeaBirds and their own two vanished. Survey the feeds' names per id
+  before trusting a new league's history. If ids move: set the registry's
+  `renumbersFranchises: true` (departed teams group by NAME in owner-tenures),
+  and give every current team an `ownerHistory` with
+  `node scripts/derive-owner-history.mjs --league=<slug> [--by=team-name] --write`,
+  then rerun the chain. `--by=owner` (the default, or the "Fetch Owner Names"
+  workflow with task=owner-history) is exact but needs commissioner access to
+  EVERY league-year — Archie's 2026 co-commissioner login named 2026 only, and
+  the script refuses to write a partial answer. `--by=team-name` is the
+  conservative fallback: a renamed team's earlier seasons stay unattributed
+  (Archie's: 138 of 467), never credited to whoever held the id.
 - **Several games a week on one score** (Archie's plays two): the page shows
   points per week, not per game.
 

@@ -365,6 +365,12 @@ export interface LeagueDefinition {
    * launches. Absent: hand-built pages (TheLeague, the AFL, best ball).
    */
   pageKit?: 'package';
+  /**
+   * MFL reassigns this league's franchise ids between seasons, so a departed
+   * team's seasons are grouped by team name across ids (owner-tenures), not
+   * per id. Current teams are followed by `ownerHistory` in the config.
+   */
+  renumbersFranchises?: boolean;
   /** Short display name for tight spaces (the site header). */
   shortName?: string;
   /** The league's mark for the shared header and layout, per theme. */
