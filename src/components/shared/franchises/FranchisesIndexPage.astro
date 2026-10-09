@@ -14,6 +14,7 @@
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import Breadcrumbs from '../Breadcrumbs.astro';
 import { teamAccentVar } from '../../../utils/team-accent-css';
+import RelatedPagesCard from '../RelatedPagesCard.astro';
 
 export interface FranchiseCardRow {
   team: { franchiseId: string; name: string; nameMedium?: string; icon?: string };
@@ -125,6 +126,8 @@ const { leagueSlug, title, heading, breadcrumbs, lede, notes, groups, CardBadges
         </ul>
       </section>
     )}
+
+    <RelatedPagesCard hostPath="/franchises" leagueSlug={leagueSlug} />
   </div>
 </TheLeagueLayout>
 

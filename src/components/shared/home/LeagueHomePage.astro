@@ -39,6 +39,7 @@ import type { CanonicalLeagueSlug } from '../../../config/leagues';
 
 import '../../../styles/schefter-feed.css';
 import '../../../styles/schefter-feed-compact.css';
+import RelatedPagesCard from '../RelatedPagesCard.astro';
 
 interface Props {
   leagueSlug: CanonicalLeagueSlug;
@@ -133,6 +134,8 @@ const {
       <QuickLinks league={leagueSlug} isAuthenticated={quickLinksAuthenticated} pages={quickLinks} />
 
       {whatsNew && <WhatsNewRow {...(whatsNew as any)} count={2} />}
+
+      <RelatedPagesCard hostPath="/" leagueSlug={leagueSlug} />
 
       {testMode && (
         <div class="league-hp__debug" id="league-hp-debug">

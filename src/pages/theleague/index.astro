@@ -80,6 +80,7 @@ import leagueConfig from '../../data/theleague.config.json';
 import { getRecentMessages, toSchefterPosts, loadTeamConfig } from '../../utils/groupme-storage';
 import '../../styles/schefter-feed.css';
 import '../../styles/schefter-feed-compact.css';
+import RelatedPagesCard from '../../components/shared/RelatedPagesCard.astro';
 
 const THELEAGUE = getLeagueBySlug('theleague')!;
 
@@ -985,6 +986,8 @@ const labels = await getPersonaLabels('theleague');
         lastVisitDate={lastVisitDate}
         excludeId={heroFeatureId}
       />
+
+      <RelatedPagesCard hostPath="/" leagueSlug="theleague" />
 
       {testMode && (
         <div class="hp2__debug" id="demo-nav">

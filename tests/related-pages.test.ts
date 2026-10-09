@@ -13,7 +13,9 @@ import { RELATED_PAGES, leagueHasRelatedPage, relatedPagesFor } from '../src/uti
 import { ALL_LEAGUES } from '../src/config/leagues';
 
 const routeExists = (slug: string, p: string) => {
-  const base = path.join(process.cwd(), 'src/pages', slug, p.replace(/^\//, ''));
+  const bare = p.split('?')[0].replace(/^\//, '');
+  if (!bare) return fs.existsSync(path.join(process.cwd(), 'src/pages', slug, 'index.astro'));
+  const base = path.join(process.cwd(), 'src/pages', slug, bare);
   return fs.existsSync(`${base}.astro`) || fs.existsSync(path.join(base, 'index.astro'));
 };
 
@@ -23,7 +25,7 @@ describe('related pages', () => {
       for (const league of ALL_LEAGUES) {
         if (!routeExists(league.slug, host)) continue;
         for (const page of spot.pages) {
-          if (!leagueHasRelatedPage(league.slug, page.path)) continue;
+          if (!leagueHasRelatedPage(league.slug, page)) continue;
           expect(routeExists(league.slug, page.path), `${league.slug}${host} promotes ${page.path}, which ${league.slug} does not have`).toBe(true);
         }
       }

@@ -192,8 +192,6 @@ const settingsPath = resolveLeaguePath(
 
     <!-- Game-day companions promoted here rather than in the nav
          (src/utils/related-pages.ts). Renders nothing for a league without them. -->
-    <div class="lv-page__related">
-      <RelatedPagesCard hostPath="/live-scoring" leagueSlug={slug} />
-    </div>
+    <RelatedPagesCard hostPath="/live-scoring" leagueSlug={slug} />
   </div>
 </TheLeagueLayout>

@@ -140,6 +140,7 @@ import {
 import derivedRosterSeasonPayloads from '../../../data/theleague/derived/roster-season-payloads.json';
 import { buildSeasonPayload as buildSeasonPayloadShared } from '../../../scripts/lib/roster-season-payload.mjs';
 import MyRankEditor from '../../components/shared/rankings/MyRankEditor.astro';
+import RelatedPagesCard from '../../components/shared/RelatedPagesCard.astro';
 
 // MFL host/id from the league registry — never hardcode these (CLAUDE.md).
 // Used throughout this page (server frontmatter and inline client scripts)
@@ -2658,6 +2659,8 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
         Data as of {lastFetched.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
       </p>
     )}
+
+    <RelatedPagesCard hostPath="/rosters" leagueSlug="theleague" />
   </section>
 </TheLeagueLayout>
 

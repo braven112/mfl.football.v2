@@ -100,6 +100,7 @@ import {
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { feedForYear, type EagerFeedGlob } from '../../../utils/rosters/roster-page-feeds';
 import { rosterPools, teamPoolLabel, viewerFirstDivisionNames } from '../../../utils/rosters/roster-pools';
+import RelatedPagesCard from '../RelatedPagesCard.astro';
 
 
 /** One club, as the page needs it. AFL teams and a package league's config teams both fit. */
@@ -1948,6 +1949,7 @@ const pageConfig = {
       )}
     </section>
     )}
+    <RelatedPagesCard hostPath="/rosters" leagueSlug={leagueSlug} />
   </section>
 
   <PlayerDetailsModal hideContract />

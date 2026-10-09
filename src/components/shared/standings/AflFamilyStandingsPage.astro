@@ -45,6 +45,7 @@ import type { LeagueSlug } from '../../../types/nav';
 import type { StandingsFeed } from '../../../utils/live-standings';
 import type { AflFamilySlug, ConferenceId } from '../../../utils/afl-conference';
 import { leagueConferenceIds } from '../../../utils/afl-conference';
+import RelatedPagesCard from '../RelatedPagesCard.astro';
 
 interface Props {
   league: LeagueDefinition;
@@ -576,6 +577,8 @@ function divisionHeader(name: string, confId?: string) {
           Data as of {lastFetched.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
         </p>
       )}
+
+      <RelatedPagesCard hostPath="/standings" leagueSlug={leagueSlug} />
     </div>
 
   </div>
