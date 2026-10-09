@@ -76,8 +76,22 @@ const photo = star ? `https://a.espncdn.com/i/headshots/nfl/players/full/${star.
     border-radius: var(--radius-lg);
     color: #f8fafc;
     text-decoration: none;
+    --tpp-cut: 15rem;
+    /* Two team colours: a primary slab behind the player, cut on the diagonal
+       and edged in the secondary, with a faint secondary glow on the copy. */
     background:
-      radial-gradient(60% 120% at 90% 100%, color-mix(in srgb, var(--tpp-primary) 75%, transparent), transparent 70%),
+      linear-gradient(
+        105deg,
+        transparent 0 calc(100% - var(--tpp-cut)),
+        var(--tpp-secondary) calc(100% - var(--tpp-cut)) calc(100% - var(--tpp-cut) + 0.4rem),
+        transparent calc(100% - var(--tpp-cut) + 0.4rem)
+      ),
+      linear-gradient(
+        105deg,
+        transparent 0 calc(100% - var(--tpp-cut) + 0.4rem),
+        color-mix(in srgb, var(--tpp-primary) 80%, #060a12) calc(100% - var(--tpp-cut) + 0.4rem)
+      ),
+      radial-gradient(55% 140% at 0% 0%, color-mix(in srgb, var(--tpp-secondary) 30%, transparent), transparent 70%),
       repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.025) 0 2px, transparent 2px 14px),
       linear-gradient(160deg, #0b1220 0%, #111a2e 55%, #060a12 100%);
     box-shadow: var(--shadow-lg);
@@ -191,6 +205,7 @@ const photo = star ? `https://a.espncdn.com/i/headshots/nfl/players/full/${star.
 
   @media (max-width: 480px) {
     .tpp {
+      --tpp-cut: 10rem;
       grid-template-columns: minmax(0, 1fr) 8.5rem;
       height: 130px;
     }
