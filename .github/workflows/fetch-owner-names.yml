@@ -94,10 +94,19 @@ jobs:
       - name: Setup pnpm + Node + install
         uses: ./.github/actions/setup
 
+      # Archie's keeps its owners anonymous on the site, and this job prints
+      # names into the step summary and can write them to the registry. Its
+      # only task here is owner-history, which never prints a name.
+      - name: Refuse to name Archie's owners
+        if: inputs.league == 'archies'
+        run: |
+          echo "::error::Archie's owners stay anonymous — use task=owner-history (ids and years only)."
+          exit 1
+
       - name: Resolve script arguments
         id: args
         run: |
-          ARGS=""
+          ARGS="
           if [ "${{ inputs.league }}" != "both" ]; then
             ARGS="$ARGS --league=${{ inputs.league }}"
           fi

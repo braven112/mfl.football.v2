@@ -1014,14 +1014,17 @@ for (const year of years) {
     // fallback, which is what a league with no eras (Archie's) gets.
     const slotIdentity = getIdentityForYear(row.franchiseId, year);
     const crossSlot = targetId !== null && targetId !== row.franchiseId;
+    const claimantIdentity = crossSlot ? getIdentityForYear(targetId, year) : null;
     const identity =
       slotIdentity.isHistorical || targetId === row.franchiseId || !row.historicalName
         ? slotIdentity
-        : {
-            ...(crossSlot ? getIdentityForYear(targetId, year) : slotIdentity),
-            name: row.historicalName,
-            nameMedium: row.historicalName,
-          };
+        : claimantIdentity?.isHistorical
+          ? claimantIdentity // the claimant's own config era names the season
+          : {
+              ...(claimantIdentity ?? slotIdentity),
+              name: row.historicalName,
+              nameMedium: row.historicalName,
+            };
 
     // Suppress preseason placeholder standings: when a season has zero
     // games played AND zero points scored, MFL's standings still report
