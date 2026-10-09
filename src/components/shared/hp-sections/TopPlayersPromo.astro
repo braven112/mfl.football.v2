@@ -161,6 +161,8 @@ const photo = star ? `https://a.espncdn.com/i/headshots/nfl/players/full/${star.
   .tpp__pts {
     color: #fde68a;
     font-variant-numeric: tabular-nums;
+    /* "123.5 pts" is one value: never strand the unit on its own line. */
+    white-space: nowrap;
   }
 
   .tpp__cta {
