@@ -61,7 +61,16 @@ export function liftYearCells(row: ParentNode, count: number): Array<LiftedYearC
 /** Collapse a cell's whitespace, and treat the table's placeholders as empty. */
 function cellText(row: ParentNode, column: string): string {
   const cell = row.querySelector<HTMLElement>(`[data-column="${column}"]`);
-  const text = (cell?.textContent ?? '').replace(/\s+/g, ' ').trim();
+  if (!cell) return '';
+  // The Projected cell also carries the phone corner's sort-value spans
+  // (sort-value-slot.ts) — seven other stats as text. Read the cell without
+  // them, or "Projected" becomes every stat run together.
+  let source: HTMLElement = cell;
+  if (cell.querySelector('.rr-sortval')) {
+    source = cell.cloneNode(true) as HTMLElement;
+    source.querySelectorAll('.rr-sortval').forEach((n) => n.remove());
+  }
+  const text = (source.textContent ?? '').replace(/\s+/g, ' ').trim();
   return text === '-' || text === '—' ? '' : text;
 }
 

@@ -19,6 +19,7 @@ import {
   simulatedCapDelta,
   formatDeadline,
   liftYearCells,
+  liftThisWeek,
   CDM_ROUTES,
   type RosterSheetFacts,
   type RosterSheetPricing,
@@ -369,6 +370,28 @@ describe('lifting reads the row at click time', () => {
       { text: 'UFA', classes: ['salary-cell', 'salary-cell--ufa'] },
       null,
     ]);
+  });
+
+  it('Projected reads its own value, not the sort-value spans sharing its cell', () => {
+    // The cell is "22.7" plus sort-value-slot.ts's spans; textContent alone
+    // ran them together ("— 22.7— 90.6 20.9 #22 …", 2026-10-09).
+    const fakeCell = (own: string, slots: string[]) => {
+      const make = (kids: string[]) => ({
+        get textContent() { return own + kids.join(''); },
+        querySelector: (sel: string) => (sel === '.rr-sortval' && kids.length ? {} : null),
+        querySelectorAll: (sel: string) => (sel === '.rr-sortval' ? kids.map((_, i) => ({ remove: () => kids.splice(kids.length - 1 - i, 1) })) : []),
+      });
+      return { ...make(slots), cloneNode: () => make([...slots]) };
+    };
+    const cells: Record<string, unknown> = {
+      '[data-column="opponent"]': { querySelector: () => null },
+      '[data-column="projected"]': fakeCell('22.7', ['20.9', '90.6', '#22', '42.5']),
+    };
+    const row = { querySelector: (sel: string) => cells[sel] ?? null, querySelectorAll: () => [] } as unknown as ParentNode;
+    expect(liftThisWeek(row)?.rows.find((r) => r.label === 'Projected')?.value).toBe('22.7');
+
+    cells['[data-column="projected"]'] = fakeCell('—', ['20.9', '90.6']);
+    expect(liftThisWeek(row)?.rows.find((r) => r.label === 'Projected')).toBeUndefined();
   });
 
   it('the page passes the builder a row it looked up at click time', () => {
