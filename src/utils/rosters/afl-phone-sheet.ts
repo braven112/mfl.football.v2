@@ -47,23 +47,25 @@ function rosterMoves(facts: AflSheetFacts): SheetAction[] {
 }
 
 /**
- * The hero row. For the owner: the trade-block toggle and a ⋮ menu with the
+ * The hero row. For the owner: a ⋮ menu with the trade-block toggle and the
  * roster moves (TheLeague's "Contract options" kebab; the AFL has no
- * contracts, so it is "Player options"). Everyone gets the sheet's built-in
- * Watch; a non-owner has nothing else to do here.
+ * contracts, so it is "Player options"). Trade block was a hero button wearing
+ * icon-bookmark (drawn as a mortarboard) until it read as "does nothing"
+ * (user, 2026-10-09); in the menu it carries its label, the nav's trade icon
+ * and its state. Everyone gets the sheet's built-in Watch; a non-owner has
+ * nothing else to do here.
  */
 export function buildAflQuickActions(facts: AflSheetFacts): SheetAction[] {
   if (!facts.isOwner) return [];
-  return [
-    {
-      id: facts.onTradeBait ? 'trade-bait-remove' : 'trade-bait-add',
-      label: facts.onTradeBait ? 'On trade block' : 'Trade block',
-      icon: 'icon-bookmark',
-      state: facts.onTradeBait ? 'on' : undefined,
-      desc: facts.onTradeBait ? 'Take him off your trade block' : 'Tell other owners he is available',
-    },
-    { id: 'player-menu', label: 'Player options', icon: 'icon-menu', menu: rosterMoves(facts) },
-  ];
+  const [ir, ...rest] = rosterMoves(facts);
+  const tradeBlock: SheetAction = {
+    id: facts.onTradeBait ? 'trade-bait-remove' : 'trade-bait-add',
+    label: facts.onTradeBait ? 'On trade block' : 'Add to trade block',
+    icon: 'icon-transactions-2',
+    state: facts.onTradeBait ? 'on' : undefined,
+    desc: facts.onTradeBait ? 'Tap to take him off your trade block' : 'Tell other owners he is available',
+  };
+  return [{ id: 'player-menu', label: 'Player options', icon: 'icon-menu', menu: [ir, tradeBlock, ...rest] }];
 }
 
 /** Summary › More actions: the same roster moves, as TheLeague's sheet lists its own. */
