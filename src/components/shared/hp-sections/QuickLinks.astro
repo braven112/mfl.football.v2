@@ -117,7 +117,7 @@ const cardHref = (page: QuickLinkPage) =>
   givenPages ? r(page.path) : isAfl ? page.path : r(resolveDirectoryHref(page.path, league.navSlug));
 ---
 
-<section class={cls} aria-label="Quick links">
+<section class={cls} aria-label="Quick links" data-track-via="quick">
   <div class={`${cls}__header`}>
     <h3 class={`${cls}__title`}>Explore</h3>
     {ctaHref && <a href={ctaHref} class={`cta-link ${cls}__cta`}>All pages</a>}

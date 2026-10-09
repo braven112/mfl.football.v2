@@ -64,6 +64,7 @@ import ThemeImage from '../ThemeImage.astro';
 // by NFL team code, so the shared theleague-sourced file works directly here.
 import { DEF_SPOTLIGHT_PLAYERS, getDefSpotlightPlayer } from '../../../data/theleague/def-spotlight-players';
 import MyRankEditor from '../../../components/shared/rankings/MyRankEditor.astro';
+import RelatedPagesCard from '../RelatedPagesCard.astro';
 
 /** A pool's crest for the switcher; a pool without one shows its name. */
 export interface PoolLogo {
@@ -783,6 +784,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     <div class="no-data" id="no-data" style="display: none;">
       <p>No player data available yet.</p>
     </div>
+    <RelatedPagesCard hostPath="/players" leagueSlug={leagueSlug} />
   </div>
   <PlayerDetailsModal hideContract={true} />
 

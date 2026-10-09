@@ -7,6 +7,7 @@ import leagueConfig from '../../../data/theleague.config.json';
 import aggregatedAssets from '../../../data/theleague.assets.json';
 import ownerTenures from '../../../../data/theleague/derived/owner-tenures.json';
 import { ownerSlugForIdentity } from '../../../utils/owner-links';
+import RelatedPagesCard from '../../../components/shared/RelatedPagesCard.astro';
 import {
   buildHistoricalIdentities,
   normalizeIdentity,
@@ -226,6 +227,8 @@ const identityHref = (h: (typeof historicalIdentities)[number]): string => {
         </ul>
       </section>
     )}
+
+    <RelatedPagesCard hostPath="/franchises" leagueSlug="theleague" />
   </section>
 </TheLeagueLayout>
 

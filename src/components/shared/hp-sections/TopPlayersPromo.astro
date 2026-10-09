@@ -1,0 +1,231 @@
+---
+/**
+ * TopPlayersPromo — the homepage's poster for the Top Players page.
+ *
+ * Replaced the homepage's related-pages card (Oct 2026, owner's call): one
+ * page sold properly beats three listed. A slim banner (150px max, the owner's
+ * call): one of the season's No. 1 QB/RB/WR/TE, at random per view, as an
+ * ESPN cut-out on their team colours,
+ * one line of pitch to the left, and the whole banner is the link. Casting is `pickTopPlayersPromo` (pure, tested); the data is
+ * the Top Players page's own derived file, so the poster can't disagree with
+ * the page it links to.
+ *
+ * Dark in BOTH themes, like the broadcast boards, so every NFL mark is asked
+ * for in its dark cut directly (`nflLogoUrl(code, 'dark')`) — the html.dark
+ * swap would hand a light-theme viewer the light mark on a dark tile.
+ */
+import { ensureLeaguePrefix, getLeagueBySlug } from '../../../config/leagues';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { getNflTeamColors } from '../../../utils/nfl-team-colors';
+import { nflLogoUrl } from '../../../utils/live/nfl-logo-url';
+import { pickBannerPlayer, pickTopPlayersPromo } from '../../../utils/top-players-promo';
+import type { TopPlayersFile } from '../../../types/top-players';
+
+interface Props {
+  leagueSlug: string;
+  data: TopPlayersFile | null | undefined;
+  /** Pin the pick to one position (stories/snapshots); random when omitted. */
+  position?: string;
+  /** ISO date standing in for "now" (stories, ?testDate=); the season gate reads it. */
+  referenceDate?: string;
+}
+
+const { leagueSlug, data, position, referenceDate } = Astro.props;
+const league = getLeagueBySlug(leagueSlug);
+const promo = league ? pickTopPlayersPromo(data, referenceDate ? new Date(referenceDate) : new Date()) : null;
+const href = league
+  ? resolveLeaguePath(ensureLeaguePrefix(league, '/top-players'), Astro.locals.hideLeaguePrefix ?? false)
+  : '#';
+const pts = (n: number) => n.toFixed(1);
+
+// One player per view: any of the No. 1s at QB/RB/WR/TE, picked at random.
+// The page is SSR, so each visit can land on a different position.
+const pinned = position && promo ? promo.players.findIndex((p) => p.position === position) : -1;
+const pick = promo
+  ? pickBannerPlayer(promo, pinned >= 0 ? () => pinned / promo.players.length : Math.random)
+  : null;
+const star = pick?.player;
+const colors = getNflTeamColors(star?.team ?? '');
+const logo = star?.team ? nflLogoUrl(star.team, 'dark') : '';
+const photo = star ? `https://a.espncdn.com/i/headshots/nfl/players/full/${star.espnId}.png` : '';
+---
+
+{promo && star && (
+  <a
+    class="tpp"
+    href={href}
+    aria-label={`Top Players: ${star.name} ${pick?.tagline}, ${pts(star.total)} points. See every leader`}
+    style={`--tpp-primary:${colors.primary};--tpp-secondary:${colors.secondary}`}
+  >
+    <span class="tpp__copy">
+      <span class="tpp__kicker">Top Players · Week {promo.throughWeek}</span>
+      <span class="tpp__name">{star.name}</span>
+      <span class="tpp__line">
+        {pick?.tagline} · <strong class="tpp__pts">{pts(star.total)} pts</strong>
+      </span>
+      <span class="tpp__cta">See every leader <span aria-hidden="true">→</span></span>
+    </span>
+    <span class="tpp__stage" aria-hidden="true">
+      {logo && <img class="tpp__logo" src={logo} alt="" loading="lazy" decoding="async" />}
+      <img class="tpp__photo" src={photo} alt="" loading="lazy" decoding="async" onerror="this.style.visibility='hidden'" />
+    </span>
+  </a>
+)}
+
+<style>
+  /* Dark in both themes on purpose (see header), so its colours are literals
+     rather than theme tokens. */
+  .tpp {
+    position: relative;
+    overflow: hidden;
+    /* No top margin: the homepage column spaces its own sections. */
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 11rem;
+    height: 150px;
+    max-height: 150px;
+    border-radius: var(--radius-lg);
+    color: #f8fafc;
+    text-decoration: none;
+    --tpp-cut: 15rem;
+    /* Two team colours: a primary slab behind the player, cut on the diagonal
+       and edged in the secondary, with a faint secondary glow on the copy. */
+    background:
+      linear-gradient(
+        105deg,
+        transparent 0 calc(100% - var(--tpp-cut)),
+        var(--tpp-secondary) calc(100% - var(--tpp-cut)) calc(100% - var(--tpp-cut) + 0.4rem),
+        transparent calc(100% - var(--tpp-cut) + 0.4rem)
+      ),
+      linear-gradient(
+        105deg,
+        transparent 0 calc(100% - var(--tpp-cut) + 0.4rem),
+        color-mix(in srgb, var(--tpp-primary) 80%, #060a12) calc(100% - var(--tpp-cut) + 0.4rem)
+      ),
+      radial-gradient(55% 140% at 0% 0%, color-mix(in srgb, var(--tpp-secondary) 30%, transparent), transparent 70%),
+      repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.025) 0 2px, transparent 2px 14px),
+      linear-gradient(160deg, #0b1220 0%, #111a2e 55%, #060a12 100%);
+    box-shadow: var(--shadow-lg);
+    isolation: isolate;
+  }
+
+  .tpp:hover,
+  .tpp:focus-visible {
+    color: #f8fafc;
+    text-decoration: none;
+  }
+
+  .tpp::after {
+    /* team-colour stripe along the base */
+    content: '';
+    position: absolute;
+    inset: auto 0 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--tpp-primary), var(--tpp-secondary));
+  }
+
+  .tpp__copy {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.2rem;
+    min-width: 0;
+    padding: 0 1.25rem 0 1.5rem;
+  }
+
+  .tpp__kicker {
+    font-family: var(--font-display);
+    font-size: var(--font-size-3xs);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #93c5fd;
+  }
+
+  .tpp__name {
+    font-family: var(--font-display);
+    font-size: var(--font-size-2xl);
+    line-height: 1;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    background: linear-gradient(90deg, #ffffff, #bfdbfe 60%, #7dd3fc);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .tpp__line {
+    font-size: var(--font-size-sm);
+    color: #cbd5e1;
+  }
+
+  .tpp__pts {
+    color: #fde68a;
+    font-variant-numeric: tabular-nums;
+    /* "123.5 pts" is one value: never strand the unit on its own line. */
+    white-space: nowrap;
+  }
+
+  .tpp__cta {
+    margin-top: 0.25rem;
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    color: #ffffff;
+  }
+
+  .tpp:hover .tpp__cta {
+    text-decoration: underline;
+  }
+
+  .tpp__stage {
+    position: relative;
+    display: block;
+    height: 100%;
+  }
+
+  .tpp__logo {
+    position: absolute;
+    top: 50%;
+    right: 0.5rem;
+    width: 90%;
+    transform: translateY(-50%);
+    opacity: 0.14;
+  }
+
+  .tpp__photo {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    height: 100%;
+    width: auto;
+    max-width: none;
+    filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.55));
+    transition: transform var(--transition-slow);
+    transform-origin: bottom center;
+  }
+
+  .tpp:hover .tpp__photo {
+    transform: scale(1.04);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tpp__photo {
+      transition: none;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .tpp {
+      --tpp-cut: 10rem;
+      grid-template-columns: minmax(0, 1fr) 8.5rem;
+      height: 130px;
+    }
+    .tpp__copy {
+      padding: 0 0.5rem 0 1rem;
+    }
+    .tpp__name {
+      font-size: var(--font-size-xl);
+    }
+  }
+</style>

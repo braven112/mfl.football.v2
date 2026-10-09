@@ -23,6 +23,7 @@ import { getLeagueBySlug, type CanonicalLeagueSlug } from '../../../config/leagu
 import { madSeeds } from '../../../utils/mad-standings';
 import type { DefendingChampion, StandingsView } from '../../../utils/standings-page';
 import { standingsPageProfile } from './standings-page-profile';
+import RelatedPagesCard from '../RelatedPagesCard.astro';
 
 interface Props {
   leagueSlug: CanonicalLeagueSlug;
@@ -187,6 +188,7 @@ const shared = {
           Data as of {lastFetched.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
         </p>
       )}
+      <RelatedPagesCard hostPath="/standings" leagueSlug={leagueSlug} />
     </div>
   </div>
 </TheLeagueLayout>

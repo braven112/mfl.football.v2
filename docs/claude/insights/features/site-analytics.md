@@ -192,3 +192,23 @@ later cleanup reads it as dead weight.
   evidence. It also found three others that still overflow:
   `/league-comparison`, `/design-system`, and `/assets` in both leagues.
 
+
+---
+
+## 2026-10-08 — "How did they get there?" rides the NEXT page's beacon, never the click
+
+**Context:** Measuring whether the homepage My Team card, the pinned nav and
+the related-page cards actually get used needed the *source* of an in-site
+navigation, which page views alone cannot say.
+
+**Insight:** Tag the area, not the link: `data-track-via="<area>"` on the root
+of the card, the nav drawer, the header, the quick links and the related-page
+cards. A capture-phase click listener (registered once at module scope in
+`visit-beacon.ts` — `document` survives every ClientRouter swap) stores
+`{area, destination path, time}` in sessionStorage, and the destination page's
+existing beacon sends it as `via=` only if the path matches and it is under
+30 s old. So there is no extra request, a click that never arrived counts
+nothing, and a stale tag cannot ride a later visit. The server accepts only
+`INSIGHT_LINK_AREAS` (fixed vocabulary, same bounded-field rule as every other
+insights hash) and writes `links` / `userlinks` inside the same single EVAL.
+Back-button and typed-URL visits carry no tag by construction.

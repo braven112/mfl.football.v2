@@ -59,6 +59,15 @@ export interface HasSubmittedLineupInput {
   fetchImpl?: typeof fetch;
 }
 
+/**
+ * The week's live weeklyResults payload, or null when MFL could not answer.
+ * Shared with the homepage's My Team card (`my-team-week.ts`), which reads the
+ * starters themselves — same cache, so the two never cost two MFL calls.
+ */
+export async function readLiveWeekResults(input: HasSubmittedLineupInput): Promise<any | null> {
+  return readLive(input);
+}
+
 async function readLive(input: HasSubmittedLineupInput): Promise<any | null> {
   const { league, week, leagueYear, timeoutMs = 3000 } = input;
   const key = `${league.id}:${leagueYear}:w${week}`;

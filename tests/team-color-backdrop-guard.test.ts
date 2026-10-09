@@ -49,6 +49,9 @@ const ALLOWLIST: Record<string, string> = {
   // team tint the board does — same deep-ink family, same white text over it.
   'src/components/shared/hero-showcase/ShowcasePage.astro': 'reproduces the composite panel board',
   'src/components/theleague/FeatureCompositeHero.astro': 'composite hero',
+  // The homepage Top Players poster: one full-bleed dark panel, white text,
+  // the team tint over a fixed deep-ink base (same family as the heroes).
+  'src/components/shared/hp-sections/TopPlayersPromo.astro': 'homepage Top Players poster (composite family)',
   'src/components/theleague/AuctionCompositeHero.astro': 'composite hero',
   'src/components/theleague/BreakingStoryHero.astro': 'composite hero',
   'src/components/theleague/CutWatchCompositeHero.astro': 'composite hero',

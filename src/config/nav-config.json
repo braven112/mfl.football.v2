@@ -1,5 +1,84 @@
 {
-  "pinnedLinks": [],
+  "pinnedLinks": [
+    {
+      "id": "rosters",
+      "label": "Roster",
+      "labelAFL": "Rosters",
+      "icon": "banknote",
+      "iconAFL": "helmet",
+      "path": "/rosters",
+      "external": false,
+      "description": "View all team rosters and salary cap details"
+    },
+    {
+      "id": "submit-lineup",
+      "label": "Set Lineup",
+      "icon": "lineup",
+      "path": "/lineup",
+      "external": false,
+      "description": "Set your starting lineup"
+    },
+    {
+      "id": "live-scoring",
+      "label": "Live Scoring",
+      "icon": "goals",
+      "path": "/live-scoring",
+      "external": false,
+      "leagueOnly": "theleague",
+      "description": "Real-time scores, projections & win probability"
+    },
+    {
+      "id": "afl-live-scoring",
+      "label": "Live Scoring",
+      "icon": "goals",
+      "path": "/live-scoring",
+      "external": false,
+      "leagueOnly": "afl",
+      "description": "Real-time scores, NFL box scores & win probability"
+    },
+    {
+      "id": "players",
+      "label": "Free Agents",
+      "icon": "binoculars",
+      "path": "/players",
+      "external": false,
+      "leagueOnly": "theleague",
+      "description": "Browse available free agents with ADP and points data"
+    },
+    {
+      "id": "afl-players",
+      "label": "Free Agents",
+      "icon": "binoculars",
+      "path": "/players",
+      "external": false,
+      "leagueOnly": "afl",
+      "description": "Browse available AFL free agents with ADP and projected points"
+    },
+    {
+      "id": "standings",
+      "label": "Standings",
+      "icon": "shield",
+      "path": "/standings",
+      "external": false,
+      "description": "Current league standings"
+    },
+    {
+      "id": "trade-builder",
+      "label": "Trade Builder",
+      "icon": "exchange",
+      "path": "/front-office/trade-builder",
+      "external": false,
+      "description": "Build and send trade offers, with cap impact for both teams"
+    },
+    {
+      "id": "tip-schefter",
+      "label": "Tip Schefter",
+      "icon": "user-secret",
+      "path": "/schefter/tip",
+      "external": false,
+      "description": "Drop an anonymous tip into the Schefter Rumor Mill"
+    }
+  ],
   "sections": [
     {
       "id": "best-ball",
@@ -161,7 +240,7 @@
         {
           "id": "archies-pecking-order",
           "label": "The Pecking Order",
-          "icon": "rank",
+          "icon": "pecking-order",
           "path": "/pecking-order",
           "external": false,
           "leagueOnly": "archies",
@@ -216,18 +295,10 @@
         {
           "id": "pecking-order",
           "label": "The Pecking Order",
-          "icon": "rank",
+          "icon": "pecking-order",
           "path": "/pecking-order",
           "external": false,
           "description": "Tuesday-morning power rankings, weekly awards, and standings"
-        },
-        {
-          "id": "tip-schefter",
-          "label": "Tip Schefter",
-          "icon": "user-secret",
-          "path": "/schefter/tip",
-          "external": false,
-          "description": "Drop an anonymous tip into the Schefter Rumor Mill"
         },
         {
           "id": "league-calendar",
@@ -257,14 +328,6 @@
       "defaultOpen": "in-season",
       "links": [
         {
-          "id": "submit-lineup",
-          "label": "Set Lineup",
-          "icon": "lineup",
-          "path": "/lineup",
-          "external": false,
-          "description": "Set your starting lineup"
-        },
-        {
           "id": "coach-tab",
           "label": "Coach Tab",
           "icon": "submit",
@@ -272,24 +335,6 @@
           "external": false,
           "leagueOnly": "theleague",
           "description": "Coach mode with matchups & odds"
-        },
-        {
-          "id": "live-scoring",
-          "label": "Live Scoring",
-          "icon": "goals",
-          "path": "/live-scoring",
-          "external": false,
-          "leagueOnly": "theleague",
-          "description": "Real-time scores, projections & win probability"
-        },
-        {
-          "id": "afl-live-scoring",
-          "label": "Live Scoring",
-          "icon": "goals",
-          "path": "/live-scoring",
-          "external": false,
-          "leagueOnly": "afl",
-          "description": "Real-time scores, NFL box scores & win probability"
         },
         {
           "id": "sunday-ticket",
@@ -317,14 +362,6 @@
           "description": "Your season week by week, and the full league grid"
         },
         {
-          "id": "standings",
-          "label": "Standings",
-          "icon": "shield",
-          "path": "/standings",
-          "external": false,
-          "description": "Current league standings"
-        },
-        {
           "id": "premier-league",
           "label": "Premier League",
           "icon": "premier-league",
@@ -340,24 +377,6 @@
           "path": "/playoffs",
           "external": false,
           "description": "Playoff bracket and results"
-        },
-        {
-          "id": "players",
-          "label": "Free Agents",
-          "icon": "binoculars",
-          "path": "/players",
-          "external": false,
-          "leagueOnly": "theleague",
-          "description": "Browse available free agents with ADP and points data"
-        },
-        {
-          "id": "afl-players",
-          "label": "Free Agents",
-          "icon": "binoculars",
-          "path": "/players",
-          "external": false,
-          "leagueOnly": "afl",
-          "description": "Browse available AFL free agents with ADP and projected points"
         },
         {
           "id": "top-players",
@@ -385,16 +404,6 @@
           "path": "/front-office",
           "external": false,
           "description": "Next season's plan plus every contract, cap and salary tool — one door"
-        },
-        {
-          "id": "rosters",
-          "label": "Roster/Salary",
-          "labelAFL": "Rosters",
-          "icon": "banknote",
-          "iconAFL": "helmet",
-          "path": "/rosters",
-          "external": false,
-          "description": "View all team rosters and salary cap details"
         },
         {
           "id": "schedule-release",
@@ -526,7 +535,7 @@
         {
           "id": "rivalries",
           "label": "Rivalries",
-          "icon": "trophy",
+          "icon": "rivalry",
           "path": "/rivalries",
           "external": false,
           "description": "Head-to-head records, playoff meetings, and trade history between every pair of franchises"
@@ -534,7 +543,7 @@
         {
           "id": "division-strength",
           "label": "Division Strength",
-          "icon": "rank",
+          "icon": "power",
           "path": "/division-strength",
           "external": false,
           "description": "Which divisions have been the gauntlet — current lineups, interdivisional records, and the owners behind each one"

@@ -1164,3 +1164,23 @@ deliberate `theleague`/`afl` pair (This Week has two "Live Scoring" and two
 "Free Agents", exactly one of each rendering). The invariant is that no single
 league sees a repeated name — filter by `leagueOnly` first, resolve `labelAFL`,
 then compare. `tests/front-office-section.test.ts` pins it.
+
+## 2026-10-08 - The pinned row holds the pages owners actually use
+
+**Context:** Owner Activity showed ~85% of page views on six pages, while the
+most-visited one (Rosters) sat second in "Offseason War Room" — the fifth of
+seven sections in season — and Trade Builder had no nav entry at all.
+
+**Change:** `pinnedLinks` now carries Roster, Set Lineup, Live Scoring, Free
+Agents, Standings, Trade Builder and Tip Schefter, in that order, and each was
+REMOVED from its section (a link pinned and in a section renders twice —
+`tests/nav-pinned-links.test.ts` fails on that and pins the order). Live
+Scoring and Free Agents keep one `leagueOnly` entry per league, so the pinned
+list holds nine ids for seven visible rows. TheLeague's label is "Roster"
+(was "Roster/Salary") in the nav, header icon, site search and the Front
+Office tab; the "salary" search tags stay.
+
+**Measuring it:** the drawer carries `data-track-via="nav"`, so
+`/live/analytics` → "How people get around" shows nav clicks and their
+destinations from this change on (see `site-insights-model.ts`
+`INSIGHT_LINK_AREAS`).

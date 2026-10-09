@@ -21,6 +21,49 @@ const DEBOUNCE_KEY = 'mfl:lastTrackVisit';
 const DEBOUNCE_MS = 60_000;
 /** Set once per tab: the first beacon of a tab session carries its source. */
 const LANDED_KEY = 'mfl:insightsLanded';
+/** The tagged area of the last in-site link clicked, read by the next beacon. */
+const VIA_KEY = 'mfl:insightsVia';
+/** A click older than this is not what brought the visitor to this page. */
+const VIA_MAX_AGE_MS = 30_000;
+
+const trimSlash = (p: string) => (p.length > 1 ? p.replace(/\/+$/, '') : p);
+
+/**
+ * LINK AREAS. A click on a same-origin link inside an element carrying
+ * `data-track-via` (the My Team card, the nav drawer, the quick links) is
+ * remembered for the page it leads to; that page's beacon then reports
+ * `via=<area>`. Nothing is sent on the click itself, so a link that never
+ * arrives (a modifier-click into a new tab, a cancelled navigation) costs
+ * nothing and counts nothing. The server accepts only its fixed list of
+ * areas (`INSIGHT_LINK_AREAS`).
+ *
+ * Registered once, at module scope: `document` survives every ClientRouter
+ * swap and this module runs once per document, so it never stacks.
+ */
+function rememberLinkArea(event: MouseEvent) {
+	try {
+		const target = event.target as Element | null;
+		const link = target?.closest?.('a[href]') as HTMLAnchorElement | null;
+		if (!link || link.origin !== location.origin) return;
+		const area = (link.closest('[data-track-via]') as HTMLElement | null)?.dataset.trackVia;
+		if (!area) return;
+		sessionStorage.setItem(VIA_KEY, JSON.stringify({ a: area, p: trimSlash(link.pathname), t: Date.now() }));
+	} catch (_) {}
+}
+
+/** The area that brought the visitor to THIS page, consumed on read. */
+function takeLinkArea(): string | null {
+	try {
+		const raw = sessionStorage.getItem(VIA_KEY);
+		if (!raw) return null;
+		sessionStorage.removeItem(VIA_KEY);
+		const via = JSON.parse(raw);
+		if (Date.now() - Number(via?.t) > VIA_MAX_AGE_MS) return null;
+		return via?.p === trimSlash(location.pathname) ? String(via.a || '') || null : null;
+	} catch (_) {
+		return null;
+	}
+}
 
 /**
  * Installed app or browser tab? Only the CLIENT can answer this — both send
@@ -113,6 +156,9 @@ function landingParams(): Record<string, string> | null {
 function trackVisit() {
 	try {
 		const page = location.pathname.replace(/^\/theleague/, '') || '/';
+		// Read (and clear) before the debounce, so a stale tag can never ride
+		// a later beacon.
+		const via = takeLinkArea();
 		const last = JSON.parse(sessionStorage.getItem(DEBOUNCE_KEY) || 'null');
 		if (last && last.p === page && Date.now() - Number(last.t) < DEBOUNCE_MS) return;
 		sessionStorage.setItem(DEBOUNCE_KEY, JSON.stringify({ p: page, t: Date.now() }));
@@ -126,6 +172,7 @@ function trackVisit() {
 			platform: detectPlatform(),
 			device: detectDevice(),
 			league,
+			...(via ? { via } : {}),
 			...(landingParams() ?? {}),
 		});
 		// The JSON body is load-bearing, not payload (the endpoint reads only
@@ -141,6 +188,8 @@ function trackVisit() {
 		);
 	} catch (_) {}
 }
+
+document.addEventListener('click', rememberLinkArea, { capture: true });
 
 if (document.querySelector('[name="astro-view-transitions-enabled"]')) {
 	document.addEventListener('astro:page-load', trackVisit);

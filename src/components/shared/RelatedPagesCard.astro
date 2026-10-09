@@ -1,0 +1,119 @@
+---
+/**
+ * RelatedPagesCard — promotes less-used pages at the bottom of the popular
+ * page they belong with (src/utils/related-pages.ts holds the map and the
+ * per-league availability). Renders nothing when the league has none of them.
+ *
+ * Carries `data-track-via="related"`, so /live/analytics counts the clicks it
+ * sends (INSIGHT_LINK_AREAS).
+ */
+import { spriteUrl } from '../../utils/sprite-url';
+import { relatedPagesFor } from '../../utils/related-pages';
+
+interface Props {
+  /** The host page's unprefixed path, e.g. `/live-scoring`. */
+  hostPath: string;
+  leagueSlug: string;
+}
+
+const { hostPath, leagueSlug } = Astro.props;
+const spot = relatedPagesFor(hostPath, leagueSlug, Astro.locals.hideLeaguePrefix ?? false);
+const headingId = `related-${hostPath.replace(/[^a-z0-9]+/gi, '-')}`;
+---
+
+{spot && (
+  <section class="rpc" aria-labelledby={headingId} data-track-via="related">
+    <h2 class="rpc__heading" id={headingId}>{spot.heading}</h2>
+    <div class="rpc__grid">
+      {spot.pages.map((p) => (
+        <a class="rpc__item" href={p.href}>
+          <span class="rpc__icon" aria-hidden="true">
+            <svg width="28" height="28"><use href={`${spriteUrl}#icon-${p.icon}`} /></svg>
+          </span>
+          <span class="rpc__body">
+            <span class="rpc__title">{p.title}</span>
+            <span class="rpc__blurb">{p.blurb}</span>
+            <span class="rpc__cta">{p.cta} <span aria-hidden="true">→</span></span>
+          </span>
+        </a>
+      ))}
+    </div>
+  </section>
+)}
+
+<style>
+  .rpc {
+    margin-top: var(--spacing-2xl);
+    background: var(--card-bg);
+    border: 1px solid var(--content-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+    padding: 1.25rem 1.5rem;
+  }
+
+  .rpc__heading {
+    margin: 0 0 0.875rem;
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gray-700);
+  }
+
+  .rpc__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    gap: 0.75rem;
+  }
+
+  .rpc__item {
+    display: flex;
+    gap: 0.875rem;
+    padding: 1rem;
+    border-radius: var(--radius-md);
+    background: var(--color-gray-50);
+    text-decoration: none;
+    transition: background var(--transition-fast);
+  }
+
+  .rpc__item:hover,
+  .rpc__item:focus-visible {
+    background: var(--color-gray-100);
+    text-decoration: none;
+  }
+
+  .rpc__icon {
+    flex-shrink: 0;
+    color: var(--color-primary);
+  }
+
+  .rpc__icon svg {
+    fill: currentColor;
+  }
+
+  .rpc__body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+  }
+
+  .rpc__title {
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    color: var(--color-gray-800);
+  }
+
+  .rpc__blurb {
+    font-size: var(--font-size-xs);
+    color: var(--color-gray-500);
+    line-height: 1.45;
+  }
+
+  .rpc__cta {
+    margin-top: 0.25rem;
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    color: var(--color-primary);
+  }
+</style>

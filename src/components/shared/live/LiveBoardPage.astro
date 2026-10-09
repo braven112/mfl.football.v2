@@ -29,6 +29,7 @@ import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import LiveBoard from './LiveBoard';
 import NflGamesStrip from '../NflGamesStrip';
 import ThrowbackPreviewBar from '../ThrowbackPreviewBar.astro';
+import RelatedPagesCard from '../RelatedPagesCard.astro';
 import { getAuthUser } from '../../../utils/auth';
 import { readViewerClock } from '../../../utils/viewer-preferences-page';
 import { getLeagueContext } from '../../../utils/league-context';
@@ -188,5 +189,9 @@ const settingsPath = resolveLeaguePath(
         country={viewerCountry}
       />
     </div>
+
+    <!-- Game-day companions promoted here rather than in the nav
+         (src/utils/related-pages.ts). Renders nothing for a league without them. -->
+    <RelatedPagesCard hostPath="/live-scoring" leagueSlug={slug} />
   </div>
 </TheLeagueLayout>

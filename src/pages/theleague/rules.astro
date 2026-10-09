@@ -3,6 +3,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import AnchorNav from '../../components/theleague/AnchorNav.astro';
 import { getCurrentLeagueYear } from '../../utils/league-year';
 import { getLeagueBySlug } from '../../config/leagues';
+import RelatedPagesCard from '../../components/shared/RelatedPagesCard.astro';
 
 const mflYear = getCurrentLeagueYear();
 const THELEAGUE = getLeagueBySlug('theleague')!;
@@ -1087,6 +1088,8 @@ const sectionLinks = [
         <li>Any unforeseen rule situation not specifically covered in the constitution will be determined by the league
           commish.</li>
       </ul>
+
+      <RelatedPagesCard hostPath="/rules" leagueSlug="theleague" />
     </div>
 
     <!-- Anchor Navigation -->

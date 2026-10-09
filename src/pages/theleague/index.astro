@@ -27,7 +27,7 @@ import HpAuctionsCard from '../../components/theleague/hp-sections/HpAuctionsCar
 import HpQuickLinks from '../../components/theleague/hp-sections/HpQuickLinks.astro';
 import WhatsNewRow from '../../components/shared/WhatsNewRow.astro';
 import PlayerDetailsModal from '../../components/shared/PlayerDetailsModal.astro';
-import { getAuthUser } from '../../utils/auth';
+import { getAuthUser, franchiseIdForLeague } from '../../utils/auth';
 import InstallAppPrompt from '../../components/shared/pwa/InstallAppPrompt.astro';
 import { readViewerClock } from '../../utils/viewer-preferences-page';
 import { resolveWaiverWindow } from '../../utils/waiver-window';
@@ -48,6 +48,7 @@ import { getLeagueTeamBrands } from '../../utils/league-team-brands';
 import { getCurrentNFLWeek as heroNflWeek } from '../../utils/current-week';
 import { isSaturdayEveningPT } from '../../utils/sunday-ticket-window';
 import { hasSubmittedLineup } from '../../utils/lineup-submitted';
+import { loadMyTeamWeek } from '../../utils/my-team-week';
 import { getPlayerMap } from '../../utils/player-map';
 import { chooseTeamName } from '../../utils/team-names';
 import { castFeaturedModel, castTopFreeAgentModel, castRosterModel, castRandomStarterModel, castClosingAuctionModel, castRookiesOnBoard, castStoryModel, castShowcasePanels, castsFor } from '../../utils/hero-casting';
@@ -79,6 +80,9 @@ import leagueConfig from '../../data/theleague.config.json';
 import { getRecentMessages, toSchefterPosts, loadTeamConfig } from '../../utils/groupme-storage';
 import '../../styles/schefter-feed.css';
 import '../../styles/schefter-feed-compact.css';
+import TopPlayersPromo from '../../components/shared/hp-sections/TopPlayersPromo.astro';
+import topPlayersData from '../../../data/theleague/derived/top-players.json';
+import type { TopPlayersFile } from '../../types/top-players';
 
 const THELEAGUE = getLeagueBySlug('theleague')!;
 
@@ -274,6 +278,23 @@ const lineupSubmitted =
       })
     : null;
 const testDriveHero = showTestDriveHero(THELEAGUE.slug, heroReferenceDate);
+
+// In season the My Team card becomes "this week": lineup status, record, next
+// opponent and shortcuts (shared with the AFL — src/utils/my-team-week.ts).
+// Scoped with franchiseIdForLeague: both leagues have a franchise 0001, so an
+// AFL session must not read as a TheLeague owner here.
+const myTeamFranchiseId = franchiseIdForLeague(authUser, THELEAGUE.id);
+const myTeamWeek = myTeamFranchiseId
+  ? await loadMyTeamWeek({
+      league: THELEAGUE,
+      franchiseId: myTeamFranchiseId,
+      isOwner: true,
+      leagueYear: getLeagueYearForSlug(THELEAGUE.slug, heroReferenceDate),
+      seasonYear: getCurrentSeasonYear(heroReferenceDate),
+      currentNflWeek: heroNflWeek(heroReferenceDate),
+      now: heroReferenceDate,
+    })
+  : null;
 
 // Whether this season's reveal is already locked — read here rather than in
 // the resolver so that stays synchronous and side-effect free. Reads
@@ -936,6 +957,7 @@ const labels = await getPersonaLabels('theleague');
         userTeamName={userTeamName}
         userTeamIcon={userTeamIcon}
         activeRosterCount={activeRosterCount}
+        thisWeek={myTeamWeek}
       />
 
       <HpUnsignedFaCard
@@ -947,15 +969,17 @@ const labels = await getPersonaLabels('theleague');
         referenceDate={now}
       />
 
-      <WhatsNext demoDate={effectiveDate} maxCards={2} />
-
       <HpStandingsCompact
         userFranchiseId={userFranchiseId}
         teamSummaries={teamSummaries}
         referenceDate={effectiveDate}
       />
 
+      <TopPlayersPromo leagueSlug={THELEAGUE.slug} data={topPlayersData as unknown as TopPlayersFile} />
+
       <HpQuickLinks isAuthenticated={isAuthenticated} />
+
+      <WhatsNext demoDate={effectiveDate} maxCards={2} />
 
       <WhatsNewRow
         entries={whatsNewEntries}
@@ -966,6 +990,8 @@ const labels = await getPersonaLabels('theleague');
         lastVisitDate={lastVisitDate}
         excludeId={heroFeatureId}
       />
+
+
 
       {testMode && (
         <div class="hp2__debug" id="demo-nav">
