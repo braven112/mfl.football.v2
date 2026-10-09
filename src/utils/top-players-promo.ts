@@ -43,3 +43,19 @@ export function pickTopPlayersPromo(data: TopPlayersFile | null | undefined): To
     players,
   };
 }
+
+/**
+ * The one player the banner shows on this view: any of the four No. 1s, at
+ * random (owner's call, Oct 2026 — the poster rotates rather than always
+ * naming the QB). The tagline follows the pick: only the season's top scorer
+ * "is running the league"; the others lead their position.
+ */
+export function pickBannerPlayer(
+  promo: TopPlayersPromo,
+  random: () => number = Math.random,
+): { player: TopPlayerRow; tagline: string } {
+  const i = Math.min(promo.players.length - 1, Math.floor(random() * promo.players.length));
+  const player = promo.players[i];
+  const tagline = player.id === promo.leader.id ? 'is running the league' : `is the No. 1 ${player.position}`;
+  return { player, tagline };
+}

@@ -4,7 +4,7 @@
  * casting rules, not the data.
  */
 import { describe, it, expect } from 'vitest';
-import { pickTopPlayersPromo } from '../src/utils/top-players-promo';
+import { pickBannerPlayer, pickTopPlayersPromo } from '../src/utils/top-players-promo';
 import type { TopPlayerRow, TopPlayersFile } from '../src/types/top-players';
 
 const row = (id: string, position: string, posRank: number, total: number, espnId: string | null = id): TopPlayerRow => ({
@@ -37,5 +37,22 @@ describe('pickTopPlayersPromo', () => {
     expect(pickTopPlayersPromo(file([row('1', 'QB', 1, 1)], []))).toBeNull();
     expect(pickTopPlayersPromo(file([row('1', 'QB', 1, 1), row('2', 'RB', 1, 1)]))).toBeNull();
     expect(pickTopPlayersPromo(null)).toBeNull();
+  });
+});
+
+describe('pickBannerPlayer', () => {
+  const promo = pickTopPlayersPromo(file([
+    row('1', 'QB', 1, 123), row('2', 'RB', 1, 101), row('3', 'WR', 1, 100), row('4', 'TE', 1, 69),
+  ]))!;
+
+  it('can land on any of the four, and only the top scorer is "running the league"', () => {
+    const seen = [0, 0.3, 0.6, 0.99].map((r) => pickBannerPlayer(promo, () => r));
+    expect(seen.map((s) => s.player.position)).toEqual(['QB', 'RB', 'WR', 'TE']);
+    expect(seen[0].tagline).toBe('is running the league');
+    expect(seen[1].tagline).toBe('is the No. 1 RB');
+  });
+
+  it('never indexes past the end, even if random() returns 1', () => {
+    expect(pickBannerPlayer(promo, () => 1).player.position).toBe('TE');
   });
 });

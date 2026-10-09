@@ -6,8 +6,6 @@ import { themeModes } from '../../.storybook/modes';
  * as an ESPN cut-out, the pitch to the left. Dark in BOTH themes by design, so the theme
  * modes should render it identically. A fixed sample, NOT the derived file:
  * that file changes with every data sync and would re-trigger the snapshot.
- * The second story pins the two-owner caption (the AFL rosters one NFL
- * player once per conference).
  */
 export default {
   title: 'Shared/TopPlayersPromo',
@@ -30,5 +28,8 @@ const data = (twoOwners: boolean) => ({
   ],
 });
 
-export const OneOwnerEach = { args: { leagueSlug: 'theleague', data: data(false) } };
-export const SharedOwners = { args: { leagueSlug: 'afl-fantasy', data: data(true) } };
+// The live banner picks a position at random per view; stories pin it so the
+// snapshot is stable.
+export const TopScorer = { args: { leagueSlug: 'theleague', data: data(false), position: 'QB' } };
+export const PositionLeader = { args: { leagueSlug: 'theleague', data: data(false), position: 'RB' } };
+export const AflLeague = { args: { leagueSlug: 'afl-fantasy', data: data(true), position: 'QB' } };

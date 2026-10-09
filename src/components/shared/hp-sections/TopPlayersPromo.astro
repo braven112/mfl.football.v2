@@ -4,7 +4,8 @@
  *
  * Replaced the homepage's related-pages card (Oct 2026, owner's call): one
  * page sold properly beats three listed. A slim banner (150px max, the owner's
- * call): the season's leading scorer as an ESPN cut-out on their team colour,
+ * call): one of the season's No. 1 QB/RB/WR/TE, at random per view, as an
+ * ESPN cut-out on their team colours,
  * one line of pitch to the left, and the whole banner is the link. Casting is `pickTopPlayersPromo` (pure, tested); the data is
  * the Top Players page's own derived file, so the poster can't disagree with
  * the page it links to.
@@ -17,15 +18,17 @@ import { ensureLeaguePrefix, getLeagueBySlug } from '../../../config/leagues';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { getNflTeamColors } from '../../../utils/nfl-team-colors';
 import { nflLogoUrl } from '../../../utils/live/nfl-logo-url';
-import { pickTopPlayersPromo } from '../../../utils/top-players-promo';
+import { pickBannerPlayer, pickTopPlayersPromo } from '../../../utils/top-players-promo';
 import type { TopPlayersFile } from '../../../types/top-players';
 
 interface Props {
   leagueSlug: string;
   data: TopPlayersFile | null | undefined;
+  /** Pin the pick to one position (stories/snapshots); random when omitted. */
+  position?: string;
 }
 
-const { leagueSlug, data } = Astro.props;
+const { leagueSlug, data, position } = Astro.props;
 const league = getLeagueBySlug(leagueSlug);
 const promo = league ? pickTopPlayersPromo(data) : null;
 const href = league
@@ -33,8 +36,13 @@ const href = league
   : '#';
 const pts = (n: number) => n.toFixed(1);
 
-// One player: the season's leading scorer among the No. 1s at QB/RB/WR/TE.
-const star = promo?.leader;
+// One player per view: any of the No. 1s at QB/RB/WR/TE, picked at random.
+// The page is SSR, so each visit can land on a different position.
+const pinned = position && promo ? promo.players.findIndex((p) => p.position === position) : -1;
+const pick = promo
+  ? pickBannerPlayer(promo, pinned >= 0 ? () => pinned / promo.players.length : Math.random)
+  : null;
+const star = pick?.player;
 const colors = getNflTeamColors(star?.team ?? '');
 const logo = star?.team ? nflLogoUrl(star.team, 'dark') : '';
 const photo = star ? `https://a.espncdn.com/i/headshots/nfl/players/full/${star.espnId}.png` : '';
@@ -44,14 +52,14 @@ const photo = star ? `https://a.espncdn.com/i/headshots/nfl/players/full/${star.
   <a
     class="tpp"
     href={href}
-    aria-label={`Top Players: ${star.name} leads with ${pts(star.total)} points. See every leader`}
+    aria-label={`Top Players: ${star.name} ${pick?.tagline}, ${pts(star.total)} points. See every leader`}
     style={`--tpp-primary:${colors.primary};--tpp-secondary:${colors.secondary}`}
   >
     <span class="tpp__copy">
       <span class="tpp__kicker">Top Players · Week {promo.throughWeek}</span>
       <span class="tpp__name">{star.name}</span>
       <span class="tpp__line">
-        is running the league · <strong class="tpp__pts">{pts(star.total)} pts</strong>
+        {pick?.tagline} · <strong class="tpp__pts">{pts(star.total)} pts</strong>
       </span>
       <span class="tpp__cta">See every leader <span aria-hidden="true">→</span></span>
     </span>
