@@ -1141,9 +1141,11 @@ const labels = await getPersonaLabels('theleague');
   .pdm-quick { display: contents; }
   .pdm-quick[hidden] { display: none; }
 
+  /* The whole hero row hugs the RIGHT edge, the ⋮ last (user, 2026-10-09). */
   .pdm-actions--hero {
     flex-direction: row;
     flex-wrap: wrap;
+    justify-content: flex-end;
   }
   /* In the hero row the built-in cards shrink to the same chip as the quick
      actions; their descriptions go, the label says it. */
@@ -1235,7 +1237,7 @@ const labels = await getPersonaLabels('theleague');
     border-color: var(--league-accent, var(--color-primary, #1c497c));
   }
 
-  /* The ⋮ sits at the far RIGHT of the hero row (user, 2026-10-09), so its
+  /* The ⋮ ends the right-aligned hero row (user, 2026-10-09), so its
      menu opens under it from its RIGHT edge and extends left. (It once ran
      off the left of a phone when the ⋮ sat near the row's start and the menu
      was right-aligned, 2026-09-26.) The script measures and clamps it into
@@ -1247,7 +1249,6 @@ const labels = await getPersonaLabels('theleague');
     position: relative;
     order: 1;
     display: inline-flex;
-    margin-left: auto;
   }
   .pdm-quick :global(.pdm-kebab__menu) {
     position: absolute;
