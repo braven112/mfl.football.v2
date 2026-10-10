@@ -152,7 +152,13 @@ function main() {
       mkdirSync(dirname(c.path), { recursive: true });
       if (isMergeable(c.path)) {
         // Reconcile append-only feeds by post id against origin's version.
-        const theirsText = existsSync(c.path) ? readFileSync(c.path, 'utf8') : '';
+        // One read, no exists-then-read: a missing file is just "no theirs".
+        let theirsText = '';
+        try {
+          theirsText = readFileSync(c.path, 'utf8');
+        } catch (err) {
+          if (err?.code !== 'ENOENT') throw err;
+        }
         const merged = theirsText
           ? mergeByPath(c.path, theirsText, oursBuf.toString('utf8'))
           : oursBuf.toString('utf8');
