@@ -221,3 +221,23 @@ describe('the action sheet follows the page', () => {
     expect(modal).toContain("document.removeEventListener('keydown', escapeHandler)");
   });
 });
+
+describe('the page fits a phone: the roster table scrolls, the page does not', () => {
+  // A grid track's default minimum is its content's min-content width, so the
+  // table's 740px min-width widened the whole page instead of scrolling inside
+  // .roster-table-wrapper (Archie's Rosters, Oct 2026: 785px on a 390px phone).
+  const src = read(COMPONENT);
+  const rule = (sel: string) => {
+    const m = src.match(new RegExp(`\\n\\s*\\${sel} \\{([^}]*)\\}`));
+    expect(m, `${sel} rule`).toBeTruthy();
+    return m![1];
+  };
+
+  it.each(['.roster-page', '.roster-section'])('%s caps its grid track at minmax(0, 1fr)', (sel) => {
+    expect(rule(sel)).toMatch(/grid-template-columns:\s*minmax\(0,\s*1fr\)/);
+  });
+
+  it('the table still scrolls inside its wrapper', () => {
+    expect(rule('.roster-table-wrapper')).toMatch(/overflow-x:\s*auto/);
+  });
+});
