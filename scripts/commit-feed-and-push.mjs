@@ -28,6 +28,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync, existsSync, mkdirSync, rmSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { mergeByPath } from './lib/merge-schefter-feed.mjs';
+import { leagueForFeedPath, scrubFeedText } from '../src/utils/league-name-guard.mjs';
 
 const MAX_ATTEMPTS = 5;
 
@@ -96,6 +97,25 @@ function collectChanges(entries) {
   return changes;
 }
 
+/**
+ * The last gate before a feed reaches the site: every Schefter feed commits
+ * through here (tests/league-name-guard.test.ts pins that), so a post naming
+ * another league is rewritten to this league's own name whichever lane wrote
+ * it. Unchanged text is returned as-is, so a clean feed stays byte-identical.
+ */
+function guardLeagueNames(repoPath, text) {
+  const league = leagueForFeedPath(repoPath);
+  if (!league) return text;
+  try {
+    const { text: out, fixed } = scrubFeedText(text, league);
+    if (fixed.length) console.warn(`  [league-name] ${repoPath}: rewrote another league's name in ${fixed.join(', ')}`);
+    return out;
+  } catch (err) {
+    console.warn(`  [league-name] ${repoPath}: could not parse for the name check (${err.message}) — committing as-is.`);
+    return text;
+  }
+}
+
 function main() {
   const { branch, message, files } = parseArgs(process.argv.slice(2));
   if (!branch || !message || !files) {
@@ -132,11 +152,17 @@ function main() {
       mkdirSync(dirname(c.path), { recursive: true });
       if (isMergeable(c.path)) {
         // Reconcile append-only feeds by post id against origin's version.
-        const theirsText = existsSync(c.path) ? readFileSync(c.path, 'utf8') : '';
+        // One read, no exists-then-read: a missing file is just "no theirs".
+        let theirsText = '';
+        try {
+          theirsText = readFileSync(c.path, 'utf8');
+        } catch (err) {
+          if (err?.code !== 'ENOENT') throw err;
+        }
         const merged = theirsText
           ? mergeByPath(c.path, theirsText, oursBuf.toString('utf8'))
           : oursBuf.toString('utf8');
-        writeFileSync(c.path, merged);
+        writeFileSync(c.path, guardLeagueNames(c.path, merged));
       } else {
         // Everything else (derived snapshots, raw mfl-feeds): take ours.
         writeFileSync(c.path, oursBuf);
