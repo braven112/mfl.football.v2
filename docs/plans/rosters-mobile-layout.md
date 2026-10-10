@@ -419,14 +419,27 @@ math.
 
 | Viewer | Quick actions |
 |---|---|
-| Owner, own team (TheLeague) | Simulate cut (becomes "Simulated cut · Undo" when active) · Trade block toggle · Watch · ⋮ contract options |
-| Owner, own team (AFL) | Trade block toggle · Watch · ⋮ contract options |
+| Owner, own team (TheLeague) | Simulate cut (becomes "Simulated cut · Undo" when active) · Watch · ⋮ contract options (Trade block is inside the ⋮) |
+| Owner, own team (AFL) | Watch · ⋮ player options (Trade block is inside the ⋮) |
 | Signed in, another team | the existing **Trade for him** (`#pdm-trade`) · Watch · ⋮ contract options (Simulate trade lives in the TheLeague Salary tab) |
 | Signed out | Watch (hands to sign-in, as it does today) · ⋮ contract options |
 
 The existing `#pdm-actions` row (Watch / Claim / Trade for him / MFL bid)
 **becomes** the hero row when `quickActions` is present. It is not duplicated,
 so Watch is never offered twice.
+
+**The row hugs the RIGHT edge, the ⋮ last (user, 2026-10-09):**
+`.pdm-actions--hero { justify-content: flex-end }`. The ⋮'s unmeasured menu
+therefore hangs from the ⋮'s right edge (`right: 0`); `placeSheetMenu` lands
+it there anyway once it measures.
+
+**Trade block moved into the ⋮ (user, 2026-10-09).** It was a hero icon
+button wearing `icon-bookmark`, which the sprite draws as a mortarboard; its
+on-state was a 12% accent tint and its result went only to the screen-reader
+live region, so an owner read a tap as "does nothing". It is now a labelled
+menu entry in both leagues — "Add to trade block" / "On trade block ✓", with
+the nav's trade icon (`icon-transactions-2`) — between Simulate trade and Add
+to Trade Builder (TheLeague) or after Move to IR (AFL).
 
 **The ⋮ is a menu, not a "More" button (user, 2026-09-26).** The first build
 put a "More" button last in the hero that reopened the CDM on top of the
@@ -441,12 +454,11 @@ sheet. It is now a kebab icon button (a WAI-ARIA menu button:
   and the auto-cut toggle (own team);
 - the CDM's two sub-steps flattened into their entries, so one tap does the
   thing: **Cut Player** → Release… (own team; the CDM's cut review),
-  **Trade Player** → Simulate trade · Add to Trade Builder. Simulate trade is
-  hidden while any simulation is active;
+  **Trade Player** → Simulate trade · Trade block (own team) · Add to Trade
+  Builder. Simulate trade is hidden while any simulation is active;
 - **nothing the hero already shows as a button** (user, 2026-09-27: the
   common action sits outside the kebab and is never repeated inside it).
-  Simulate cut / its Undo and the trade-block toggle are hero buttons, so the
-  menu leaves them out;
+  Simulate cut / its Undo is the hero's button, so the menu leaves it out;
 - **not Watch**: the hero already carries the sheet's built-in Watch.
 
 Every item is a `data-sheet-action` and routes through `onAction` exactly as
@@ -460,8 +472,10 @@ the ⋮; one that hands off to the CDM closes the sheet. Screenshots:
 
 **The menu stays on screen (user, 2026-09-26).** It was right-aligned to the
 ⋮, and for another owner's player the hero row is only Watch · Trade for him ·
-⋮, so the ⋮ sits left of centre and the menu ran off the phone's left edge.
-It now opens from the ⋮'s LEFT edge and extends right; the script measures it
+⋮, so the ⋮ sat left of centre and the menu ran off the phone's left edge.
+It then opened from the ⋮'s LEFT edge and extended right (superseded
+2026-10-09: the row is right-aligned now, so the fallback is right-anchored
+again — see above); the script measures it
 on open (`placeSheetMenu`, `src/utils/player-sheet.ts`) and clamps it into the
 sheet ∩ the viewport with a 12px gutter, right-aligning to the ⋮ when extending
 right would overflow and shrinking when neither fits. Watch and Trade for him
@@ -688,12 +702,12 @@ Every element of the desktop roster, and where it lives below 768px.
 | Submit Tags/Extensions button (Nov 14 – Feb 15) | TL | Review sheet (`data-sim-submit`); original hidden on phone |
 | GM / Coach toggle, My Rank editor | TL / both | Row 1: segmented GM \| Coach, My Rank as a sliders icon ("My Rank sources") |
 | Legend (Active / Practice / IR / Trade Block) | TL | Unchanged below the rows; the group headers restate it |
-| Cutdown Plan panel (Aug auto-cut) | TL | Unchanged position. **Must be checked at 390px under `?testDate=` inside the June–August window**; the window is closed now, so this capture could not include it |
+| Cutdown Plan panel (Aug auto-cut) | TL | Unchanged position. **Checked 2026-10-09** at 390 and 360px, light and dark, under `?testDate=2026-08-01`: the panel fits (no child past the viewport, no document scroll). Only its at-the-limit state was available to render. Its countdown reads the real clock, so a past-window preview says "deadline passed" |
 | Cap Subtotals card | TL | Unchanged (already fits, see `current-theleague-panels.png`); summarised by the cap bar |
 | Cap Hits / Dead Money table (720px) | TL | Same card treatment: line 1 player/adjustment, right = current year, line 2 = every other year as `2027 $x · 2028 $y` (the cells get `data-label` if the client builder lacks it). No sheet needed |
 | Analytics and League Planner views | TL | **Out of scope, untouched.** Separate `data-view-content` containers; audit separately |
 | Year select, "Franchise history" link, roster summary cards, IR section table | AFL | Unchanged; the IR table gets the same card rows |
-| Contract demo overlay (`?demo=true`) | TL | Its tips say to tap ⋮; on a phone the copy must say "tap the player". Its mock rows reuse `.yrs-chip` / `.ufa-action-btn` styles |
+| Contract demo overlay (`?demo=true`) | TL | Its tips say to tap ⋮; on a phone the copy must say "tap the player". **Moot as of 2026-10-09:** `ContractDemoOverlay.astro` is rendered by no page (the roster script still looks up its ids and finds none), so there is no live copy to fix |
 
 ---
 
@@ -786,7 +800,9 @@ Where the build differs from sections 2, 3 and 6, and why:
   `tests/position-pill-tokens.test.ts` measures the pill pairs in both themes.
 
 Not in PR B: the contract-demo overlay's "tap ⋮" copy (section 7), the
-Cutdown Plan check at 390px inside the June-August window, and the AFL.
+Cutdown Plan check at 390px inside the June-August window, and the AFL. All
+three are now closed: the AFL shipped in PR C, the Cutdown Plan was checked
+on 2026-10-09, and the demo overlay turned out to be mounted nowhere (section 7).
 
 ---
 
@@ -807,8 +823,9 @@ The AFL card is TheLeague's Coach card, and nothing in it is a copy:
   reads the same in both leagues.
 - **Sheet:** `afl-phone-sheet.ts` sends `tabbed: true` (Summary and Game log,
   no Salary tab), This week (`liftThisWeek` reads the AFL's spans and its
-  `total` / `avg` columns as fallbacks), and for the owner a Trade block toggle
-  plus a ⋮ **Player options** menu (IR, Trade, Cut). Each action closes the
+  `total` / `avg` columns as fallbacks), and for the owner a ⋮ **Player
+  options** menu (IR, Trade block, Trade, Cut; Trade block was a hero toggle
+  until 2026-10-09). Each action closes the
   sheet and opens `AFLActionModal` on that action's confirm step
   (`payload.action`), so the modal keeps the confirmation and the write. It
   honours only an action the viewer is shown.

@@ -61,7 +61,16 @@ export function liftYearCells(row: ParentNode, count: number): Array<LiftedYearC
 /** Collapse a cell's whitespace, and treat the table's placeholders as empty. */
 function cellText(row: ParentNode, column: string): string {
   const cell = row.querySelector<HTMLElement>(`[data-column="${column}"]`);
-  const text = (cell?.textContent ?? '').replace(/\s+/g, ' ').trim();
+  if (!cell) return '';
+  // The Projected cell also carries the phone corner's sort-value spans
+  // (sort-value-slot.ts) — seven other stats as text. Read the cell without
+  // them, or "Projected" becomes every stat run together.
+  let source: HTMLElement = cell;
+  if (cell.querySelector('.rr-sortval')) {
+    source = cell.cloneNode(true) as HTMLElement;
+    source.querySelectorAll('.rr-sortval').forEach((n) => n.remove());
+  }
+  const text = (source.textContent ?? '').replace(/\s+/g, ' ').trim();
   return text === '-' || text === '—' ? '' : text;
 }
 
@@ -112,7 +121,8 @@ export function liftThisWeek(row: ParentNode): ThisWeekData | null {
     .map((td) => {
       const wk = td.dataset.column?.replace('trend-', '') ?? '';
       const score = (td.textContent ?? '').replace(/[↑↓]/g, '').replace(/\s+/g, ' ').trim();
-      return score ? `W${wk} ${score}` : '';
+      // A week he did not score in prints a dash — leave it out, not "W2 -".
+      return score && score !== '-' && score !== '—' ? `W${wk} ${score}` : '';
     })
     .filter(Boolean);
   push('Recent weeks', weeks.join(' · '));
@@ -414,15 +424,6 @@ export function buildQuickActions(facts: RosterSheetFacts): SheetAction[] {
         desc: 'Remove this simulation',
       }
     : { id: 'cut-simulate', label: 'Simulate cut', icon: 'icon-bar-chart', desc: 'Track the cap impact locally — no roster change' });
-  if (facts.viewer.isOwnTeam) {
-    out.push({
-      id: 'trade-block',
-      label: facts.player.tradeBait ? 'On trade block' : 'Trade block',
-      icon: 'icon-bookmark',
-      state: facts.player.tradeBait ? 'on' : undefined,
-      desc: facts.player.tradeBait ? 'Take him off your trade block' : 'Tell other owners he is available',
-    });
-  }
   // The kebab: the table's ⋮ list, as a menu. The ONE overflow entry point in
   // the hero (it replaced a "More" button that reopened the CDM on top).
   const menu = buildContractMenu(facts);
@@ -442,8 +443,11 @@ export function buildQuickActions(facts: RosterSheetFacts): SheetAction[] {
  *   - Cut Player   → Release… (own team; the CDM's cut REVIEW, never the bare
  *                    button). Simulate cut / Undo is the hero's button.
  *   - Trade Player → Simulate trade (hidden while any simulation is active —
- *                    the hero's Undo owns that state) · Add to Trade Builder.
- *                    Trade block is the hero's button.
+ *                    the hero's Undo owns that state) · Trade block (own
+ *                    team) · Add to Trade Builder. Trade block was a hero
+ *                    icon button until its unlabelled circle read as "does
+ *                    nothing" (user, 2026-10-09); here it carries its label
+ *                    and its state.
  *
  * Watch is left out too: the hero carries the sheet's built-in Watch. Every
  * entry routes through `onAction` — CDM_ROUTES or the local simulate handler —
@@ -462,6 +466,15 @@ export function buildContractMenu(facts: RosterSheetFacts): SheetAction[] {
     if (d.id === 'trade') {
       if (!facts.activeActionType) {
         out.push({ id: 'trade-simulate', label: 'Simulate trade', desc: 'Track the cap impact locally — no roster change', icon: 'icon-bar-chart' });
+      }
+      if (facts.viewer.isOwnTeam) {
+        out.push({
+          id: 'trade-block',
+          label: facts.player.tradeBait ? 'On trade block' : 'Add to trade block',
+          desc: facts.player.tradeBait ? 'Tap to take him off your trade block' : 'Tell other owners he is available',
+          icon: 'icon-transactions-2',
+          state: facts.player.tradeBait ? 'on' : undefined,
+        });
       }
       out.push({ id: 'trade-builder', label: 'Add to Trade Builder', desc: 'Open the Trade Builder with him pre-loaded', icon: 'icon-transactions-2' });
       continue;

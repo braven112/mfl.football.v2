@@ -71,11 +71,13 @@ describe('recentScoreAverage', () => {
 describe('the AFL sheet offers AFLActionModal’s own actions', () => {
   const owner = { isOwner: true, status: 'ROSTER', onTradeBait: false };
 
-  it('owner: trade block + a ⋮ menu of roster moves', () => {
+  it('owner: one ⋮ menu — trade block sits inside it with the roster moves', () => {
     const quick = buildAflQuickActions(owner);
-    expect(quick.map((a) => a.id)).toEqual(['trade-bait-add', 'player-menu']);
-    expect(quick[1].menu?.map((a) => a.id)).toEqual(['ir-to', 'trade', 'cut']);
-    expect(buildAflQuickActions({ ...owner, onTradeBait: true })[0]).toMatchObject({ id: 'trade-bait-remove', state: 'on' });
+    expect(quick.map((a) => a.id)).toEqual(['player-menu']);
+    expect(quick[0].menu?.map((a) => a.id)).toEqual(['ir-to', 'trade-bait-add', 'trade', 'cut']);
+    expect(quick[0].menu?.[1]).toMatchObject({ label: 'Add to trade block', icon: 'icon-transactions-2' });
+    expect(buildAflQuickActions({ ...owner, onTradeBait: true })[0].menu?.[1])
+      .toMatchObject({ id: 'trade-bait-remove', state: 'on', label: 'On trade block' });
     expect(buildAflMoreActions({ ...owner, status: 'INJURED_RESERVE' })[0].id).toBe('ir-from');
   });
 

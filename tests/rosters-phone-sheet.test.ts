@@ -19,6 +19,7 @@ import {
   simulatedCapDelta,
   formatDeadline,
   liftYearCells,
+  liftThisWeek,
   CDM_ROUTES,
   type RosterSheetFacts,
   type RosterSheetPricing,
@@ -162,8 +163,8 @@ describe('cap delta', () => {
 });
 
 describe('hero quick actions (Q7)', () => {
-  it('own team: Simulate cut, trade block, then the contract-options kebab', () => {
-    expect(buildQuickActions(facts()).map((a) => a.id)).toEqual(['cut-simulate', 'trade-block', 'contract-menu']);
+  it('own team: Simulate cut, then the contract-options kebab — Trade block lives in the kebab', () => {
+    expect(buildQuickActions(facts()).map((a) => a.id)).toEqual(['cut-simulate', 'contract-menu']);
   });
   it('the kebab is the ONLY overflow entry point — no separate More button', () => {
     const ids = buildQuickActions(facts()).map((a) => a.id);
@@ -175,8 +176,11 @@ describe('hero quick actions (Q7)', () => {
     expect(first).toMatchObject({ id: 'undo-simulation', label: 'Simulated · Undo', state: 'on' });
   });
   it('trade block shows its state', () => {
-    const tb = buildQuickActions(facts({ player: { tradeBait: true } as never })).find((a) => a.id === 'trade-block');
-    expect(tb).toMatchObject({ state: 'on', label: 'On trade block' });
+    const tb = buildContractMenu(facts({ player: { tradeBait: true } as never })).find((a) => a.id === 'trade-block');
+    expect(tb).toMatchObject({ state: 'on', label: 'On trade block', icon: 'icon-transactions-2' });
+    const off = buildContractMenu(facts()).find((a) => a.id === 'trade-block');
+    expect(off).toMatchObject({ label: 'Add to trade block' });
+    expect(off?.state).toBeUndefined();
   });
   it('another owner’s player: Simulate cut + the kebab — simulations are for every club; trade block, IR and Release stay the owner’s', () => {
     // User, 2026-09-26. Trade for him and Watch are the sheet's built-ins.
@@ -191,7 +195,7 @@ describe('contract-options kebab (the table’s ⋮, as a menu)', () => {
     expect(ids(facts())).toEqual([
       'extension', 'move-to-ir',
       'release',
-      'trade-simulate', 'trade-builder',
+      'trade-simulate', 'trade-block', 'trade-builder',
     ]);
   });
 
@@ -366,6 +370,37 @@ describe('lifting reads the row at click time', () => {
       { text: 'UFA', classes: ['salary-cell', 'salary-cell--ufa'] },
       null,
     ]);
+  });
+
+  it('Projected reads its own value, not the sort-value spans sharing its cell', () => {
+    // The cell is "22.7" plus sort-value-slot.ts's spans; textContent alone
+    // ran them together ("— 22.7— 90.6 20.9 #22 …", 2026-10-09).
+    const fakeCell = (own: string, slots: string[]) => {
+      const make = (kids: string[]) => ({
+        get textContent() { return own + kids.join(''); },
+        querySelector: (sel: string) => (sel === '.rr-sortval' && kids.length ? {} : null),
+        querySelectorAll: (sel: string) => (sel === '.rr-sortval' ? kids.map((_, i) => ({ remove: () => kids.splice(kids.length - 1 - i, 1) })) : []),
+      });
+      return { ...make(slots), cloneNode: () => make([...slots]) };
+    };
+    const cells: Record<string, unknown> = {
+      '[data-column="opponent"]': { querySelector: () => null },
+      '[data-column="projected"]': fakeCell('22.7', ['20.9', '90.6', '#22', '42.5']),
+    };
+    const row = { querySelector: (sel: string) => cells[sel] ?? null, querySelectorAll: () => [] } as unknown as ParentNode;
+    expect(liftThisWeek(row)?.rows.find((r) => r.label === 'Projected')?.value).toBe('22.7');
+
+    cells['[data-column="projected"]'] = fakeCell('—', ['20.9', '90.6']);
+    expect(liftThisWeek(row)?.rows.find((r) => r.label === 'Projected')).toBeUndefined();
+  });
+
+  it('Recent weeks leaves out a week with no score', () => {
+    const wk = (n: string, text: string) => ({ dataset: { column: `trend-${n}` }, textContent: text });
+    const row = {
+      querySelector: (sel: string) => (sel === '[data-column="opponent"]' ? { querySelector: () => null } : null),
+      querySelectorAll: () => [wk('2', ' - '), wk('3', '35.66 ↑'), wk('4', '—'), wk('5', '17.32')],
+    } as unknown as ParentNode;
+    expect(liftThisWeek(row)?.rows.find((r) => r.label === 'Recent weeks')?.value).toBe('W3 35.66 · W5 17.32');
   });
 
   it('the page passes the builder a row it looked up at click time', () => {

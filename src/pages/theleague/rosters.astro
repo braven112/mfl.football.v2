@@ -8753,7 +8753,12 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       if (!isAutocutOwnView()) return;
       const el = document.getElementById('cdp-status-countdown');
       if (!el || !autocutCfg) return;
-      const ms = new Date(autocutCfg.deadline).getTime() - Date.now();
+      // Honour ?testDate= as the server's window check does (autocutRefDate),
+      // or a preview inside the June-August window reads "deadline passed".
+      const testDateStr = new URLSearchParams(window.location.search).get('testDate');
+      const testNow = testDateStr ? new Date(testDateStr).getTime() : NaN;
+      const nowMs = Number.isFinite(testNow) ? testNow : Date.now();
+      const ms = new Date(autocutCfg.deadline).getTime() - nowMs;
       if (ms <= 0) {
         el.textContent = 'deadline passed';
         return;
