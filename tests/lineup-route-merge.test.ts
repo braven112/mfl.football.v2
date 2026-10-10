@@ -29,9 +29,11 @@ vi.mock('../src/utils/mfl-fetch', () => ({
 
 import { GET as lineupGET, POST as lineupPOST } from '../src/pages/api/lineup';
 import { GET as aflGET, POST as aflPOST } from '../src/pages/api/afl-fantasy/lineup';
+import { GET as pkgGET, POST as pkgPOST } from '../src/pages/api/[league]/lineup';
 
 const THELEAGUE = getLeagueBySlug('theleague')!;
 const AFL = getLeagueBySlug('afl-fantasy')!;
+const ARCHIES = getLeagueBySlug('archies')!;
 
 function makeContext(request: Request) {
   return {
@@ -178,6 +180,50 @@ describe('lineup routes — league pinned per route path', () => {
       makeContext(new Request('http://test.invalid/api/lineup?week=3', { headers: { cookie } }))
     );
     expect(res.status).toBe(401);
+    expect(mflFetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('/api/[league]/lineup — package leagues only, pinned to the URL slug', () => {
+  beforeEach(() => {
+    mflFetchMock.mockReset();
+    mflFetchMock.mockResolvedValue({
+      json: async () => ({}),
+      text: async () => '<status>OK</status>',
+    } as Response);
+  });
+
+  const pkgContext = (slug: string, init: RequestInit = {}) => {
+    const ctx = makeContext(new Request(`http://test.invalid/api/${slug}/lineup?week=3`, init));
+    ctx.params = { league: slug };
+    return ctx;
+  };
+
+  it("GET /api/archies/lineup targets Archie's league", async () => {
+    const res = await pkgGET(pkgContext('archies', { headers: { cookie: sessionCookieFor(ARCHIES.id) } }));
+    expect(res.status).toBe(200);
+    expect(String(mflFetchMock.mock.calls[0][0].url)).toContain(`L=${ARCHIES.id}`);
+  });
+
+  it("POST /api/archies/lineup submits to Archie's league", async () => {
+    const starters = Array.from({ length: 9 }, (_, i) => String(10000 + i));
+    const res = await pkgPOST(
+      pkgContext('archies', {
+        method: 'POST',
+        headers: { cookie: sessionCookieFor(ARCHIES.id) },
+        body: JSON.stringify({ week: 3, starters }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(String(mflFetchMock.mock.calls[0][0].body)).toContain(`L=${ARCHIES.id}`);
+  });
+
+  it.each(['theleague', 'afl-fantasy', 'not-a-league'])('%s is a 404 here, and MFL is never called', async (slug) => {
+    const cookie = sessionCookieFor(THELEAGUE.id);
+    expect((await pkgGET(pkgContext(slug, { headers: { cookie } }))).status).toBe(404);
+    expect(
+      (await pkgPOST(pkgContext(slug, { method: 'POST', headers: { cookie }, body: '{}' }))).status,
+    ).toBe(404);
     expect(mflFetchMock).not.toHaveBeenCalled();
   });
 });

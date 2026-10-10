@@ -95,7 +95,7 @@ export const DESTINATIONS = {
   playoffs: { path: '/playoffs', label: 'the playoff bracket', leagues: BOTH },
   'live-scoring': { path: '/live-scoring', label: 'the live scoreboard', leagues: withPackageLeagues('/live-scoring') },
   'sunday-ticket': { path: '/sunday-ticket', label: 'the Sunday Ticket board', leagues: BOTH },
-  lineup: { path: '/lineup', label: 'your lineup', leagues: BOTH },
+  lineup: { path: '/lineup', label: 'your lineup', leagues: withPackageLeagues('/lineup') },
   'pecking-order': { path: '/pecking-order', label: 'the pecking order', leagues: withPackageLeagues('/pecking-order') },
   rivalries: { path: '/rivalries', label: 'the rivalry pages', leagues: BOTH },
   franchises: { path: '/franchises', label: 'the franchise histories', leagues: withPackageLeagues('/franchises') },

@@ -30,6 +30,7 @@ export const PACKAGE_ROUTES = {
   'whats-new/[id].astro': null,
   'import-rankings.astro': null,
   'front-office/trade-builder.astro': null,
+  'lineup.astro': null,
   'live-scoring.astro': 'liveScoring',
   'broadcast.astro': 'liveScoring',
   'news.astro': 'schefterFeed',
