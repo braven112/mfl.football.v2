@@ -10,6 +10,8 @@
 
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
+import { LEAGUES } from '../../src/config/leagues-data.mjs';
+import { scrubPostLeagueNames } from '../../src/utils/league-name-guard.mjs';
 
 /**
  * Memoized per feed path, for the life of the process. The archive is written
@@ -114,12 +116,29 @@ export async function isDuplicate(feedPath, articleId) {
  * That guarantee is only as good as the archive half of the check: before it,
  * a re-run after rotation both re-wrote the post and re-buzzed the chat.
  */
+function leagueForFeedFile(feedPath) {
+  const norm = feedPath.split(path.sep).join('/');
+  for (const [slug, reg] of Object.entries(LEAGUES)) {
+    if (reg?.schefterFeedPath && norm.endsWith(`/${reg.schefterFeedPath}`)) return slug;
+    if (reg?.schefterFeedPath && norm === reg.schefterFeedPath) return slug;
+  }
+  return null;
+}
+
 export async function appendToFeed(feedPath, post) {
   const feed = JSON.parse(await fs.readFile(feedPath, 'utf8'));
 
   if (await isPublished(feedPath, post.id, feed)) {
     console.log(`  [skip] Post ${post.id} already published (feed or archive)`);
     return false;
+  }
+
+  // Another league's name never reaches a feed (src/utils/league-name-guard.mjs).
+  // The league is the post's own, else the one whose registry feed path this is.
+  const league = LEAGUES[post.league] ? post.league : leagueForFeedFile(feedPath);
+  if (league) {
+    const fixed = scrubPostLeagueNames(post, league);
+    if (fixed.length) console.warn(`  [league-name] ${post.id}: rewrote another league's name in ${fixed.join(', ')}`);
   }
 
   feed.posts = [post, ...feed.posts];

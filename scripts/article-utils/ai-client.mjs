@@ -5,18 +5,19 @@
 import { LEAGUES } from '../../src/config/leagues-data.mjs';
 import { isDefaultPersona } from '../../src/utils/persona.mjs';
 import { formatSalary } from './data-loaders.mjs';
-import { foreignNames, ownLeagueLabel } from './league-name-scrub.mjs';
+import { foreignLeagueNames, ownLeagueLabel } from '../../src/utils/league-name-guard.mjs';
 
 /**
  * Another league's name can read as a plain phrase ("the league"), so the
  * model writes it without thinking it named anything. The rule never spells
  * that name out — an AFL prompt must not contain TheLeague's name at all
  * (tests/article-type-league-option.test.ts) — it just steers the model off
- * using the bare word as a name. league-name-scrub.mjs rewrites what slips.
+ * using the bare word as a name. src/utils/league-name-guard.mjs catches what slips.
  */
 function foreignNameRule(league) {
   // A league whose own name ends in "League" capitalises it legitimately.
-  if (!foreignNames(league).length || /\bLeague\b/.test(LEAGUES[league].name)) return '';
+  const phraseName = foreignLeagueNames(league).some((n) => /^The\s/.test(n));
+  if (!phraseName || /\bLeague\b/.test(LEAGUES[league].name)) return '';
   return ` Call this league ${ownLeagueLabel(league)}, and never capitalise the word "league" as if it were a name (a different league is named that), in a headline or anywhere else.`;
 }
 

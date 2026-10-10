@@ -4,6 +4,32 @@
 > carries the one-line rule and points here; this file is the authority on the
 > reasoning. Every rule below is load-bearing — each one is a bug that shipped.
 
+## No league publishes another league's name
+
+TheLeague's registry name, "The League", is also an ordinary phrase. The model
+wrote it as one in the AFL's Week 5 Gauntlet (Oct 2026), title-cased it, and
+the AFL home page read "The League Hits the Gauntlet". The prompt already said
+"never name any other league"; the model did not think it was naming one. The
+owner's rule is that this must be impossible, so it is mechanical:
+
+- **One check, from the registry** — `src/utils/league-name-guard.mjs`. Every
+  other league's `name`, share-card name and domains (plus the run-together
+  "TheLeague") is a foreign name; nothing is hand-typed, so a new league is
+  covered with no edit. A league's `shortName` is deliberately NOT a token
+  ("Archie's" is also a possessive).
+- **Policy: retry once, then fix** (owner's call). The AI article lane
+  (`schefter-weekly-articles.mjs`) regenerates once with the slip named, then
+  rewrites any survivor to this league's own name. Every other door rewrites.
+- **Every door runs it**: `appendToFeed`, `commit-feed-and-push.mjs` (merged
+  feeds), the `commit-push` action (`guard-feed-league-names.mjs` before
+  `git add`), both GroupMe bot senders (league read from the bot id, mention
+  offsets re-based), `push-sender.ts`, AI comment replies and Ask Roger
+  answers. Owner-typed GroupMe text (`postAsBot`) is theirs and is exempt.
+- **A new door must call it.** `tests/league-name-guard.test.ts` fails on a
+  workflow that `git add`s a feed outside the two committers, on a GroupMe
+  `bots/post` sender that does not scrub, and on any feed or archive post on
+  disk that names another league.
+
 ## Schefter multi-league (tips + rumor mill run for BOTH leagues)
 
 The tips → rumor-mill system is multi-tenant since July 2026. Load-bearing

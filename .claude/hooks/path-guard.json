@@ -883,6 +883,9 @@
         "scripts/schefter-*.mjs",
         "scripts/lib/redact-trade-offer.mjs",
         "scripts/lib/merge-schefter-feed.mjs",
+        "src/utils/league-name-guard.mjs",
+        "scripts/guard-feed-league-names.mjs",
+        "scripts/commit-feed-and-push.mjs",
         "scripts/lib/speculation-budget.mjs",
         "scripts/lib/speculation-cadence.mjs",
         "src/utils/owner-trade-reports.ts",
@@ -918,6 +921,7 @@
         "tests/speculation-copy.test.ts",
         "tests/schefter-once-per-season-dedupe.test.ts",
         "tests/merge-schefter-feed.test.ts",
+        "tests/league-name-guard.test.ts",
         "tests/cron-commit-churn.test.ts"
       ]
     },
