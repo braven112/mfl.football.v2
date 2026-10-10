@@ -398,7 +398,7 @@ const aflProfile: LeagueHeroProfile = {
   defaultView: (now) => ({
     pill: 'AFL',
     headline: 'TWO CONFERENCES.',
-    accentWord: 'ONE.',
+    accentWord: 'ONE CHAMP.',
     summary: 'Two conferences, 24 teams, one champion. Welcome to the AFL.',
     link: '/afl-fantasy/standings',
     linkLabel: 'VIEW STANDINGS',
@@ -548,7 +548,7 @@ export function buildPackageHeroProfile(
     defaultView: (now) => ({
       pill: short.toUpperCase(),
       headline: divisionCount > 1 ? `${numberWord(divisionCount).toUpperCase()} DIVISIONS.` : `${short.toUpperCase()}.`,
-      accentWord: 'ONE.',
+      accentWord: 'ONE CHAMP.',
       summary: tagline,
       link: ensureLeaguePrefix(def, '/standings'),
       linkLabel: 'VIEW STANDINGS',
