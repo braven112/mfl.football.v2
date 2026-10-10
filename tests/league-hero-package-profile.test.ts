@@ -43,6 +43,9 @@ describe('homepage hero profile for any registry league', () => {
     const view = p.defaultView(new Date('2026-10-04T18:00:00Z'));
     expect(view.pill).toBe('SMITH LEAGUE');
     expect(view.summary).toBe('One champion. Welcome to Smith League.');
+    // The accent word finishes the headline ("NINE DIVISIONS. ONE CHAMP."); a bare
+    // "ONE." read as an unfinished sentence.
+    expect(view.accentWord).toBe('ONE CHAMP.');
   });
 
   it('spells numbers the way the copy needs', () => {
