@@ -57,7 +57,7 @@ describe('homepage hero profile for any registry league', () => {
   });
 
   it('finishes the AFL headline the same way', () => {
-    const view = getLeagueHeroProfile('afl').defaultView(new Date('2026-10-04T18:00:00Z'));
+    const view = getLeagueHeroProfile('afl-fantasy').defaultView(new Date('2026-10-04T18:00:00Z'));
     expect(`${view.headline} ${view.accentWord}`).toBe('TWO CONFERENCES. ONE CHAMP.');
   });
 });
