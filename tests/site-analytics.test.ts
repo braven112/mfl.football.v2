@@ -131,6 +131,30 @@ describe('canonicalPath', () => {
 			canonicalPath('/rosters', 'theleague'),
 		);
 	});
+
+	// Draft Room moved from /draft-room to /draft/room; its old all-time count
+	// sat on /activity as a popular row while the new address was listed as
+	// never opened. vercel.json's 301s say where every retired address went.
+	it('follows a retired address to the page it moved to, in either host form', () => {
+		expect(canonicalPath('/draft-room', 'theleague')).toBe(canonicalPath('/draft/room', 'theleague'));
+		expect(canonicalPath('/theleague/draft-room', 'theleague')).toBe(
+			canonicalPath('/draft/room', 'theleague'),
+		);
+		expect(canonicalPath('/mock-draft', 'theleague')).toBe(canonicalPath('/draft/mock', 'theleague'));
+		expect(canonicalPath('/afl-fantasy/draft-predictor', 'afl-fantasy')).toBe(
+			canonicalPath('/afl-fantasy/draft/order', 'afl-fantasy'),
+		);
+	});
+
+	it('carries the rest of the path through a moved prefix', () => {
+		expect(canonicalPath('/mock-draft/abc123', 'theleague')).toBe(
+			canonicalPath('/draft/mock/abc123', 'theleague'),
+		);
+	});
+
+	it('leaves a page that never moved alone', () => {
+		expect(canonicalPath('/standings', 'theleague')).toBe('/theleague/standings');
+	});
 });
 
 describe('isDirectoryPath', () => {
@@ -184,6 +208,39 @@ describe('buildPageInsights', () => {
 	it('keeps signed-out views separate from the owners', () => {
 		const standings = insights().pages.find((p) => p.path.endsWith('/standings'));
 		expect(standings).toMatchObject({ signedIn: 30, anonymous: 45, views: 75 });
+	});
+
+	it('reports a moved page once, and not as never opened', () => {
+		const out = buildPageInsights({
+			league: 'theleague',
+			globalPages: [
+				{ page: '/draft-room', count: 82 },
+				{ page: '/draft/room', count: 3 },
+			],
+			ownerPages: {},
+		});
+		const rows = out.pages.filter((p) => p.path === canonicalPath('/draft/room', 'theleague'));
+		expect(rows).toHaveLength(1);
+		expect(rows[0].views).toBe(85);
+		expect(out.quiet.some((q) => q.title === rows[0].title)).toBe(false);
+	});
+
+	it('asks titleFor for a page the directory cannot name, and only then', () => {
+		const asked: string[] = [];
+		const out = buildPageInsights({
+			league: 'theleague',
+			globalPages: [
+				{ page: '/franchises/0008', count: 5 },
+				{ page: '/standings', count: 5 },
+			],
+			ownerPages: {},
+			titleFor: (path) => {
+				asked.push(path);
+				return path.endsWith('/0008') ? 'Franchise: Test Team' : null;
+			},
+		});
+		expect(out.pages.find((p) => p.path.endsWith('/0008'))?.title).toBe('Franchise: Test Team');
+		expect(asked).toEqual([canonicalPath('/franchises/0008', 'theleague')]);
 	});
 
 	it('names pages from the directory rather than the raw path', () => {

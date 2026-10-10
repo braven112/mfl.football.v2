@@ -35,7 +35,8 @@ import {
 	sectionLabel,
 	visitorKey,
 } from '../../utils/site-insights-model';
-import { directoryTitle } from '../../utils/site-analytics';
+import { canonicalPath, directoryTitle } from '../../utils/site-analytics';
+import { recordedPageTitle } from '../../utils/recorded-page-title';
 import { formatLastSeen } from '../../utils/owner-activity';
 import { getLeagueTeamConfig, getLeagueTeamConfigs } from '../../utils/league-team-brands';
 import {
@@ -99,7 +100,10 @@ function ownerLabel(leagueId: string, franchiseId: string): { team: string; leag
 
 function pageLabel(s: string, page: string): string {
 	const league = getLeagueBySlug(s);
-	if (league) return directoryTitle(page, league.slug as CanonicalLeagueSlug) ?? page;
+	if (league) {
+		const slug = league.slug as CanonicalLeagueSlug;
+		return directoryTitle(page, slug) ?? recordedPageTitle(canonicalPath(page, slug), slug) ?? page;
+	}
 	if (page === '/live') return 'Live board';
 	if (page === '/live/league/:id') return 'Live — one league';
 	if (page === '/live/settings') return 'Leagues & settings';

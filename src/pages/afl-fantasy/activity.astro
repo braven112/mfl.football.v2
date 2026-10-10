@@ -25,6 +25,7 @@ import {
 	sortEngagement,
 	summarizeTraffic,
 } from '../../utils/site-analytics';
+import { recordedPageTitle } from '../../utils/recorded-page-title';
 import {
 	getAdoptionSection,
 	mockAdoptionSection,
@@ -324,6 +325,7 @@ const pageInsights = buildPageInsights({
 	globalPages,
 	anonPages,
 	ownerPages,
+	titleFor: (path) => recordedPageTitle(path, leagueDef.slug),
 });
 ---
 

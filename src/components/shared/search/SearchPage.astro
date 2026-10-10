@@ -22,6 +22,8 @@ import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
 import { pathBelongsToLeague } from '../../../config/footer-config';
 import { resolveDirectoryHref, resolveLeaguePath } from '../../../utils/nav-utils';
 import { getLeagueBySlug, type CanonicalLeagueSlug } from '../../../config/leagues';
+import { getPageUsage } from '../../../utils/page-usage';
+import { canonicalPath } from '../../../utils/site-analytics';
 
 interface Props {
   leagueSlug: CanonicalLeagueSlug;
@@ -50,6 +52,19 @@ const searchData: Record<string, string> = {};
 for (const page of pages) {
   searchData[page.id] = [page.title, page.description, ...page.tags, page.category].join(' ').toLowerCase();
 }
+
+// Search results rank by REAL use: owners' visits (the commissioner's
+// excluded) plus signed-out views, from the same counters /activity reads.
+// The hand-set `popularity` only breaks ties, which in practice orders the
+// pages nobody has opened yet — a brand-new page, or any page while the
+// counters are unreachable. See src/utils/page-usage.ts.
+const usage = await getPageUsage(leagueSlug);
+const views = (path: string) => usage.get(canonicalPath(path, leagueSlug)) ?? 0;
+const searchRank = new Map(
+  [...pages]
+    .sort((a, b) => views(b.path) - views(a.path) || b.popularity - a.popularity)
+    .map((page, index) => [page.id, index]),
+);
 
 const categories = [
   { id: 'popular', label: 'Popular' },
@@ -99,7 +114,7 @@ const categories = [
         class="directory__card"
         data-search={searchData[page.id]}
         data-category={page.category}
-        data-popularity={page.popularity}
+        data-rank={searchRank.get(page.id)}
       >
         <div class="directory__card-icon">
           <svg viewBox="0 0 512 512" aria-hidden="true">
@@ -409,15 +424,15 @@ const categories = [
       if (show) visible++;
     });
 
-    // When searching, sort visible cards by popularity (descending)
+    // When searching, sort visible cards by real use (rank 0 = most used)
     // When not searching, restore original order
     if (query) {
       const sorted = cards
         .filter(c => !c.hidden)
         .sort((a, b) => {
-          const popA = parseInt(a.dataset.popularity || '0', 10);
-          const popB = parseInt(b.dataset.popularity || '0', 10);
-          return popB - popA;
+          const rankA = parseInt(a.dataset.rank || '0', 10);
+          const rankB = parseInt(b.dataset.rank || '0', 10);
+          return rankA - rankB;
         });
 
       sorted.forEach(card => grid.appendChild(card));
