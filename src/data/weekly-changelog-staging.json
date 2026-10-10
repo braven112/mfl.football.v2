@@ -2,6 +2,14 @@
   "weekOf": "2026-10-12",
   "changes": [
     {
+      "date": "2026-10-09",
+      "type": "bug-fix",
+      "summary": "Schefter's trade speculation no longer calls two teams division rivals unless they actually share a division.",
+      "impact": "user",
+      "area": "schefter",
+      "league": "theleague"
+    },
+    {
       "date": "2026-10-07",
       "type": "bug-fix",
       "summary": "AFL Rosters on a phone: position headers span the full card again, and the sort chips scroll inside it and read like TheLeague's (\"Pts ↓\").",
