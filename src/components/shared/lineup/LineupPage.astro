@@ -51,6 +51,7 @@ import '../../../styles/network-badge.css';
 import { resolveChannel, DEFAULT_COUNTRY } from '../../../utils/broadcast-channels';
 import { readViewerClock } from '../../../utils/viewer-preferences-page';
 import type { LineupPlayer } from '../../../types/lineups';
+import { DEFAULT_LINEUP_SLOTS, eligibleSlotsFor, exceedsPositionMax, type LineupSlotLayout } from '../../../utils/lineup-slots';
 
 interface Props {
   league: LeagueDefinition;
@@ -60,8 +61,13 @@ interface Props {
   user: AuthUser & { franchiseId: string };
   /** Throwback Week scope, or null for a league that has none. */
   throwbackScope: ThrowbackScope | null;
+  /**
+   * The league's starting slots, from its MFL starter rules
+   * (`deriveLineupSlots`). Omitted = TheLeague's and the AFL's layout.
+   */
+  slotLayout?: LineupSlotLayout;
 }
-const { league, config: leagueConfig, user, throwbackScope } = Astro.props;
+const { league, config: leagueConfig, user, throwbackScope, slotLayout = DEFAULT_LINEUP_SLOTS } = Astro.props;
 
 const MFL_LEAGUE_ID = league.id;
 // Stamped on the page root so the controller below can tell THIS league's
@@ -189,19 +195,14 @@ const rosterPlayers = franchiseRoster?.player
   ? (Array.isArray(franchiseRoster.player) ? franchiseRoster.player : [franchiseRoster.player])
   : [];
 
-// Lineup positions (from league rules — the same in every league: QB:1, RB:1-4, WR:1-4, TE:1-4, PK:1, DEF:1)
-const SLOT_POSITIONS = ['QB', 'RB', 'WR', 'TE', 'FLEX', 'FLEX', 'FLEX', 'PK', 'DEF'];
-
+// Lineup positions, from the league's own starter rules (utils/lineup-slots.ts).
+// TheLeague and the AFL: QB, RB, WR, TE, three FLEX, PK, DEF. Archie's has no
+// kicker and lets a FLEX take a second QB.
+const SLOT_POSITIONS = slotLayout.positions;
 // Eligible positions for each slot type
-const SLOT_ELIGIBILITY: Record<string, string[]> = {
-  QB: ['QB'],
-  RB: ['RB'],
-  WR: ['WR'],
-  TE: ['TE'],
-  FLEX: ['RB', 'WR', 'TE'],
-  PK: ['PK'],
-  DEF: ['DEF'],
-};
+const SLOT_ELIGIBILITY = slotLayout.eligibility;
+// The most of each position that may start, across every slot.
+const POSITION_MAX = slotLayout.positionMax;
 
 // Player identity map — provides ESPN IDs, headshots, and team data from synced MFL feed
 const lineupPlayerIdentityMap = getPlayerMap(leagueYear);
@@ -324,9 +325,7 @@ const roster: LineupPlayer[] = rosterPlayers.map((rp: any) => {
   const proj = projMap.get(rp.id) ?? null;
   const isBye = nflByeWeeks[nflTeam] === week;
 
-  const eligibleSlots: string[] = [];
-  if (SLOT_ELIGIBILITY[position]) eligibleSlots.push(position);
-  if (['RB', 'WR', 'TE'].includes(position)) eligibleSlots.push('FLEX');
+  const eligibleSlots = eligibleSlotsFor(position, slotLayout);
 
   // Scores
   const weeklyScores = playerScoresMap.get(rp.id) || {};
@@ -435,11 +434,16 @@ for (let i = 0; i < slots.length; i++) {
   }
 }
 
-// Pass 2: Fill FLEX slots with best remaining RB/WR/TE
+// Pass 2: Fill FLEX slots with the best remaining flex-eligible players, never
+// starting more of a position than the league allows (a FLEX may take a
+// second QB in Archie's, never a third).
 for (let i = 0; i < slots.length; i++) {
   if (slots[i].position !== 'FLEX') continue;
+  const seated = slots
+    .filter((s) => s.playerId)
+    .map((s) => roster.find((p) => p.id === s.playerId)?.position ?? '');
   const assignedPlayer = candidatePool.find(p =>
-    ['RB', 'WR', 'TE'].includes(p.position) && !usedPlayerIds.has(p.id)
+    p.eligibleSlots.includes('FLEX') && !usedPlayerIds.has(p.id) && !exceedsPositionMax(p.position, seated, POSITION_MAX)
   ) || null;
   if (assignedPlayer) {
     usedPlayerIds.add(assignedPlayer.id);
@@ -553,6 +557,7 @@ const matchupCards = buildMatchupCards({
   identityMap: lineupPlayerIdentityMap,
   slotPositions: SLOT_POSITIONS,
   slotEligibility: SLOT_ELIGIBILITY,
+  positionMax: POSITION_MAX,
   brandFor: (franchiseId) => {
     if (usesBrandRegistry) {
       const brand = getThrowbackFranchiseBrand(franchiseId, throwbackActive, throwbackOverrides[franchiseId], throwbackOverrides);
@@ -621,6 +626,8 @@ const lineupPayload = {
   franchiseId: user.franchiseId,
   slots,
   roster,
+  // The most of each position that may start (see utils/lineup-slots.ts).
+  positionMax: POSITION_MAX,
   schedule,
   lastSubmitted: null,
   // Whether MFL actually holds a lineup for this week. When it doesn't, the
@@ -954,6 +961,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     import { selectBenchPlayers, buildBenchRowHTML } from '../../../utils/lineup-bench';
     import { loadLineupRankings, byRank, applyRankChips, onRankingsChanged } from '../../../utils/lineup-rankings';
     import type { LineupPlayer } from '../../../types/lineups';
+    import { exceedsPositionMax } from '../../../utils/lineup-slots';
     /**
      * CLIENTROUTER-SAFE INIT (frontend.md, "Interactive scripts must re-init on
      * astro:page-load"). This module is bundled, so it is evaluated ONCE per
@@ -1421,6 +1429,13 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
        * the sort toggle can re-order the list in place without re-opening the
        * sheet. Returns how many candidates there are.
        */
+      /** The positions of every filled slot except `skip` — for the per-position cap. */
+      function seatedPositionsExcept(slotList: { playerId: string | null }[], skip: number): string[] {
+        return slotList
+          .filter((s, i) => i !== skip && s.playerId)
+          .map((s) => data.roster.find((p: any) => p.id === s.playerId)?.position ?? '');
+      }
+
       function renderCdmList(slotIndex: number): number {
         const slot = currentSlots[slotIndex];
 
@@ -1436,7 +1451,10 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
           // submit and MFL rejected the POST with a raw error.
           if (p.rosterStatus !== 'ROSTER') return false;
           if (p.gameLocked) return false;
-          return p.eligibleSlots.includes(slot.position);
+          if (!p.eligibleSlots.includes(slot.position)) return false;
+          // Never more of a position than the league starts (a third QB in
+          // Archie's, where a FLEX may take a second).
+          return !exceedsPositionMax(p.position, seatedPositionsExcept(currentSlots, slotIndex), data.positionMax ?? {});
         });
 
         if (eligible.length === 0) {
@@ -1680,8 +1698,10 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
 
         for (let i = 0; i < newSlots.length; i++) {
           if (newSlots[i].locked || newSlots[i].position !== 'FLEX') continue;
+          const seated = seatedPositionsExcept(newSlots, i);
           const best = available
-            .filter((p: any) => !used.has(p.id) && p.eligibleSlots.includes('FLEX'))
+            .filter((p: any) => !used.has(p.id) && p.eligibleSlots.includes('FLEX')
+              && !exceedsPositionMax(p.position, seated, data.positionMax ?? {}))
             .sort((a: any, b: any) => getScore(b) - getScore(a))[0];
           if (best) {
             newSlots[i].playerId = best.id;
