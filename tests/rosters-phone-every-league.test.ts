@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
-import { LEAGUES } from '../src/config/leagues-data.mjs';
 
 /**
  * The phone roster card reaches EVERY league that renders the shared rosters
@@ -28,11 +27,20 @@ const TEMPLATE = 'templates/package-league/rosters.astro.tmpl';
 // the shared page and must never be named by slug in a roster stylesheet.
 const OWN_PAGE_LEAGUES = new Set(['theleague']);
 
+// Listed, not derived from the registry: `keeper` is registered only on the
+// demo deployment, and a derived list would silently drop a deleted route.
+const SHARED_PAGE_ROUTES = [
+  'src/pages/afl-fantasy/rosters.astro',
+  'src/pages/archies/rosters.astro',
+  'src/pages/keeper/rosters.astro',
+];
+
+const stripCssComments = (css: string) => css.replace(/\/\*[\s\S]*?\*\//g, '');
+
 const rosterStylesheets = fs
   .readdirSync(path.join(ROOT, STYLES_DIR))
-  .filter((f) => f.endsWith('.css'))
-  .map((f) => `${STYLES_DIR}/${f}`)
-  .filter((f) => read(f).includes('.roster-page'));
+  .filter((f) => /^rosters?[-.].*\.css$/.test(f))
+  .map((f) => `${STYLES_DIR}/${f}`);
 
 describe('roster stylesheets scope the shared page by page, not by league', () => {
   it('finds the phone stylesheets it guards', () => {
@@ -40,8 +48,9 @@ describe('roster stylesheets scope the shared page by page, not by league', () =
     expect(rosterStylesheets).toContain('src/styles/roster-position-groups.css');
   });
 
-  it.each(rosterStylesheets)('%s names no shared-page league by slug', (file) => {
-    const slugs = [...read(file).matchAll(/\.roster-page\[data-league=['"]?([\w-]+)/g)].map((m) => m[1]);
+  it.each(rosterStylesheets)('%s names no league but TheLeague by slug', (file) => {
+    // Any `data-league` selector, in any position in the selector.
+    const slugs = [...stripCssComments(read(file)).matchAll(/\[data-league\s*=\s*['"]?([\w-]+)/g)].map((m) => m[1]);
     const offenders = [...new Set(slugs)].filter((s) => !OWN_PAGE_LEAGUES.has(s));
     expect(offenders, `scope these rules with [data-controller='afl-family'] instead`).toEqual([]);
   });
@@ -53,21 +62,16 @@ describe('roster stylesheets scope the shared page by page, not by league', () =
 });
 
 describe('every league with a full roster page renders the shared component', () => {
-  const routeFor = (slug: string) => `src/pages/${slug}/rosters.astro`;
-  const leagues = Object.values(LEAGUES).filter(
-    (l: { slug: string; bestBall?: boolean }) =>
-      !l.bestBall && !OWN_PAGE_LEAGUES.has(l.slug) && fs.existsSync(path.join(ROOT, routeFor(l.slug)))
-  );
+  const rendersSharedPage = (src: string) => {
+    expect(src).toContain("import RostersPage from '../../components/shared/rosters/RostersPage.astro'");
+    expect(src).toMatch(/<RostersPage[\s>]/);
+  };
 
-  it('covers more than one league', () => {
-    expect(leagues.length).toBeGreaterThan(1);
+  it.each(SHARED_PAGE_ROUTES)('%s renders <RostersPage>', (route) => {
+    rendersSharedPage(read(route));
   });
 
-  it.each(leagues.map((l: { slug: string }) => l.slug))('%s renders RostersPage', (slug) => {
-    expect(read(routeFor(slug))).toMatch(/import RostersPage from '\.\.\/\.\.\/components\/shared\/rosters\/RostersPage\.astro'/);
-  });
-
-  it('the package-league template renders RostersPage too', () => {
-    expect(read(TEMPLATE)).toContain("import RostersPage from '../../components/shared/rosters/RostersPage.astro'");
+  it('the package-league template renders <RostersPage> too', () => {
+    rendersSharedPage(read(TEMPLATE));
   });
 });

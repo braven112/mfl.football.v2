@@ -345,9 +345,10 @@ html.dark .roster-page[data-controller='afl-family'] .roster-table--afl th[data-
     white-space: nowrap;
   }
 
-  /* The band goes block only where rosters-mobile.css cards the tbody (the
-     AFL itself); Keeper and Archies keep a phone table, where a block row
-     would shrink-wrap to its label. */
+  /* The band goes block because rosters-mobile.css cards the shared page's
+     tbody on a phone, in every league that renders it (the AFL, Archie's,
+     the keeper league). Scoped to the same controller as those card rules,
+     so the two can never disagree about which pages are cards. */
   .roster-page[data-controller='afl-family'] .roster-table--afl > tbody > tr.roster-group-row,
   .roster-page[data-controller='afl-family'] .roster-table--afl > tbody > tr.roster-group-row > .roster-group-row__cell {
     display: block;
