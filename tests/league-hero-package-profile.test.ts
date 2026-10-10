@@ -55,4 +55,9 @@ describe('homepage hero profile for any registry league', () => {
     expect(numberWord(99)).toBe('ninety-nine');
     expect(numberWord(120)).toBe('120');
   });
+
+  it('finishes the AFL headline the same way', () => {
+    const view = getLeagueHeroProfile('afl').defaultView(new Date('2026-10-04T18:00:00Z'));
+    expect(`${view.headline} ${view.accentWord}`).toBe('TWO CONFERENCES. ONE CHAMP.');
+  });
 });

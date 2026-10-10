@@ -398,7 +398,7 @@ const aflProfile: LeagueHeroProfile = {
   defaultView: (now) => ({
     pill: 'AFL',
     headline: 'TWO CONFERENCES.',
-    accentWord: 'ONE.',
+    accentWord: 'ONE CHAMP.',
     summary: 'Two conferences, 24 teams, one champion. Welcome to the AFL.',
     link: '/afl-fantasy/standings',
     linkLabel: 'VIEW STANDINGS',
