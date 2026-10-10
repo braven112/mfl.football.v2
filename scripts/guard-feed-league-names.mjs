@@ -12,20 +12,21 @@
  * A clean feed is left byte-identical (no write), so this never makes a
  * commit on its own. Dependency-free: node built-ins plus the registry.
  */
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { LEAGUES } from '../src/config/leagues-data.mjs';
 import { scrubFeedText } from '../src/utils/league-name-guard.mjs';
 
 let fixedTotal = 0;
 for (const [slug, reg] of Object.entries(LEAGUES)) {
   const feedPath = reg?.schefterFeedPath;
-  if (!feedPath || !existsSync(feedPath)) continue;
-  const before = readFileSync(feedPath, 'utf8');
+  if (!feedPath) continue;
   let result;
   try {
-    result = scrubFeedText(before, slug);
+    // Read once and act on what was read — no exists-then-read window.
+    result = scrubFeedText(readFileSync(feedPath, 'utf8'), slug);
   } catch (err) {
-    console.warn(`[league-name] ${feedPath}: could not parse (${err.message}) — left as-is.`);
+    if (err?.code === 'ENOENT') continue; // a league with no feed yet
+    console.warn(`[league-name] ${feedPath}: could not read or parse (${err.message}) — left as-is.`);
     continue;
   }
   if (result.fixed.length) {
