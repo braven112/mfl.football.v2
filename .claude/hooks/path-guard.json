@@ -837,7 +837,8 @@
         "src/utils/throwback-request-state.ts",
         "src/utils/rosters/*.ts",
         "src/components/shared/rosters/*.astro",
-        "src/components/shared/AFLActionModal.astro"
+        "src/components/shared/AFLActionModal.astro",
+        "src/styles/roster*.css"
       ],
       "tests": [
         "tests/shared-rosters-page.test.ts",
@@ -859,6 +860,7 @@
         "tests/rosters-sim-summary.test.ts",
         "tests/rosters-phone-inventory.test.ts",
         "tests/afl-rosters-phone.test.ts",
+        "tests/rosters-phone-every-league.test.ts",
         "tests/nfl-odds-weather-guard.test.ts"
       ]
     },

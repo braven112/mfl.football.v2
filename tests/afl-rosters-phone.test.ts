@@ -118,7 +118,7 @@ describe('the page wiring', () => {
   });
 
   it('names the AFL table beside TheLeague’s in the card rules, not in a copy', () => {
-    expect(css).toContain(".roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody > tr.roster-row,\n  .roster-page[data-league='theleague'] #rosterTableBody > tr.roster-row {");
-    expect(css).toContain(".roster-page[data-league='afl-fantasy'],\n  .roster-page[data-league='theleague'] {\n    grid-template-columns: minmax(0, 1fr);");
+    expect(css).toContain(".roster-page[data-controller='afl-family'] .roster-table--afl > tbody > tr.roster-row,\n  .roster-page[data-league='theleague'] #rosterTableBody > tr.roster-row {");
+    expect(css).toContain(".roster-page[data-controller='afl-family'],\n  .roster-page[data-league='theleague'] {\n    grid-template-columns: minmax(0, 1fr);");
   });
 });

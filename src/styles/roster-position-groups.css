@@ -348,12 +348,12 @@ html.dark .roster-page[data-controller='afl-family'] .roster-table--afl th[data-
   /* The band goes block only where rosters-mobile.css cards the tbody (the
      AFL itself); Keeper and Archies keep a phone table, where a block row
      would shrink-wrap to its label. */
-  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody > tr.roster-group-row,
-  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody > tr.roster-group-row > .roster-group-row__cell {
+  .roster-page[data-controller='afl-family'] .roster-table--afl > tbody > tr.roster-group-row,
+  .roster-page[data-controller='afl-family'] .roster-table--afl > tbody > tr.roster-group-row > .roster-group-row__cell {
     display: block;
   }
 
-  .roster-page[data-league='afl-fantasy'] .roster-table--afl > tbody > tr.roster-group-row:not(:first-child) > .roster-group-row__cell {
+  .roster-page[data-controller='afl-family'] .roster-table--afl > tbody > tr.roster-group-row:not(:first-child) > .roster-group-row__cell {
     border-top-width: 1px;
     border-top-color: var(--content-border);
     margin-top: 0.75rem;
