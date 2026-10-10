@@ -2261,6 +2261,10 @@ const pageConfig = {
       margin: 0 auto;
       padding: var(--padding-md, 1rem) var(--padding-md, 1rem) var(--spacing-2xl, 3rem);
       display: grid;
+      /* minmax(0, …): a grid track's default minimum is its content's
+         min-content width, so the 740px roster table would widen the whole
+         page on a phone instead of scrolling inside .roster-table-wrapper. */
+      grid-template-columns: minmax(0, 1fr);
       gap: var(--padding-md, 1rem);
     }
 
@@ -2316,6 +2320,7 @@ const pageConfig = {
     /* ── Roster section header ── */
     .roster-section {
       display: grid;
+      grid-template-columns: minmax(0, 1fr); /* same reason as .roster-page */
       gap: var(--padding-md, 1rem);
     }
 
