@@ -93,6 +93,22 @@
       "impact": "user",
       "area": "rosters",
       "league": "theleague"
+    },
+    {
+      "date": "2026-10-10",
+      "type": "enhancement",
+      "summary": "Search: results now rank by what owners actually open, so Tip Schefter and Set Lineup come up before rarely used pages.",
+      "impact": "user",
+      "area": "navigation",
+      "league": "both"
+    },
+    {
+      "date": "2026-10-10",
+      "type": "bug-fix",
+      "summary": "Owner Activity: moved pages like Draft Room are no longer listed as never opened, and articles and franchise pages show their names.",
+      "impact": "user",
+      "area": "admin",
+      "league": "both"
     }
   ]
 }
