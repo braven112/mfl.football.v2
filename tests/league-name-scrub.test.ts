@@ -38,6 +38,26 @@ describe('league-name scrub', () => {
     );
   });
 
+  it('keeps mid-sentence casing across inline tags, and resets at block tags', () => {
+    expect(scrubLeagueNames(`<p>Nobody in <strong>${PHRASE}</strong> is safe</p>`, ACRONYM_LEAGUE)).toBe(
+      `<p>Nobody in <strong>the ${ACRONYM}</strong> is safe</p>`,
+    );
+    expect(scrubLeagueNames(`<p>Done here</p><p>${PHRASE} rolls</p>`, ACRONYM_LEAGUE)).toBe(
+      `<p>Done here</p><p>The ${ACRONYM} rolls</p>`,
+    );
+  });
+
+  it('scrubs the grade-card shape too (intro + per-grade headline/body)', () => {
+    const post = {
+      headline: 'Grades',
+      intro: [`<p>${PHRASE} graded.</p>`],
+      grades: [{ franchiseId: '0001', grade: 'A', headline: `Best in ${PHRASE}`, body: '<p>ok</p>' }],
+    };
+    expect(scrubPostLeagueNames(post, ACRONYM_LEAGUE)).toEqual(['intro', 'grades']);
+    expect(post.intro[0]).toBe(`<p>The ${ACRONYM} graded.</p>`);
+    expect(post.grades[0].headline).toBe(`Best in the ${ACRONYM}`);
+  });
+
   it('never rewrites a league\'s own name, nor lower-case "the league"', () => {
     expect(scrubLeagueNames(`${PHRASE} Hits the Gauntlet`, PHRASE_LEAGUE)).toBe(`${PHRASE} Hits the Gauntlet`);
     expect(scrubLeagueNames('the league-wide wall', ACRONYM_LEAGUE)).toBe('the league-wide wall');

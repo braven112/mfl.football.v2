@@ -44,21 +44,34 @@ export function ownLeagueLabel(league, { sentenceStart = false } = {}) {
   return name;
 }
 
-/** Rewrite one string. Markup is left alone: only text between tags changes. */
+// A block tag ends whatever sentence came before it; an inline one does not.
+const BLOCK_TAG = /^<\/?(?:p|div|li|ul|ol|h[1-6]|br|blockquote|tr|td|th)\b/i;
+
+/**
+ * Rewrite one string. Markup is left alone: only text between tags changes.
+ * Whether the name opens a sentence is judged on the VISIBLE text, carried
+ * across inline tags, so "in <strong>The League</strong>" stays mid-sentence.
+ */
 export function scrubLeagueNames(text, league) {
   if (typeof text !== 'string' || !text) return text;
   const names = foreignNames(league);
   if (!names.length) return text;
   const re = new RegExp(`\\b(?:${names.map(escapeRe).join('|')})\\b`, 'g');
+  let visible = '';
   return text
     .split(/(<[^>]*>)/)
     .map((part) => {
-      if (part.startsWith('<')) return part;
-      return part.replace(re, (_m, offset, whole) => {
-        const before = whole.slice(0, offset);
+      if (part.startsWith('<')) {
+        if (BLOCK_TAG.test(part)) visible = '';
+        return part;
+      }
+      const out = part.replace(re, (_m, offset, whole) => {
+        const before = visible + whole.slice(0, offset);
         const sentenceStart = before.trim() === '' || /[.!?:—–-]\s*$/.test(before);
         return ownLeagueLabel(league, { sentenceStart });
       });
+      visible += part;
+      return out;
     })
     .join('');
 }
@@ -77,12 +90,28 @@ export function scrubPostLeagueNames(post, league) {
       changed.push(key);
     }
   }
-  if (Array.isArray(post.content)) {
-    const next = post.content.map((p) => scrubLeagueNames(p, league));
-    if (next.some((p, i) => p !== post.content[i])) {
-      post.content = next;
-      changed.push('content');
+  // `content` is the flat shape; the grade-card types (draft-grades,
+  // team-grades) put their prose in `intro` plus a headline/body per grade.
+  for (const key of ['content', 'intro']) {
+    if (!Array.isArray(post[key])) continue;
+    const next = post[key].map((p) => scrubLeagueNames(p, league));
+    if (next.some((p, i) => p !== post[key][i])) {
+      post[key] = next;
+      changed.push(key);
     }
+  }
+  if (Array.isArray(post.grades)) {
+    let touched = false;
+    post.grades = post.grades.map((g) => {
+      if (!g || typeof g !== 'object') return g;
+      const out = { ...g };
+      for (const key of ['headline', 'body']) {
+        const next = scrubLeagueNames(g[key], league);
+        if (next !== g[key]) { out[key] = next; touched = true; }
+      }
+      return out;
+    });
+    if (touched) changed.push('grades');
   }
   return changed;
 }
