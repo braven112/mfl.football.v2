@@ -1,7 +1,7 @@
 /**
  * MFL Roster Cache — Cache-with-TTL via Upstash Redis
  *
- * Serves roster data from Redis cache when fresh (< 2 min old).
+ * Serves roster data from Redis cache when fresh (< 60 s old).
  * When stale or missing, fetches live data from MFL API synchronously
  * and updates the cache before returning.
  *
@@ -10,14 +10,14 @@
  * All refreshes are therefore awaited inline.
  *
  * Redis key: mfl:rosters:{leagueId}:{season}
- * TTL: 2 minutes before a synchronous refresh is triggered
+ * TTL: 60 seconds before a synchronous refresh is triggered
  * Fallback: returns null when Redis is unavailable (caller uses static files)
  */
 
 import { getRedis, type RedisClient } from './redis-client';
 import { buildMflExportUrl } from './mfl-url';
 
-const STALE_TTL_MS = 2 * 60 * 1000; // 2 minutes
+const STALE_TTL_MS = 60 * 1000; // 60 s (owner decision, docs/plans/league-data-out-of-deploy.md)
 
 function cacheKey(leagueId: string, season: string): string {
   return `mfl:rosters:${leagueId}:${season}`;
@@ -140,7 +140,7 @@ export async function invalidateRosterCache(season: string, leagueId: string): P
 // pages that render per-franchise rosters can swap the feed for live data.
 //
 // Redis key: mfl:rosters-franchise:{leagueId}:{season}. Same freshness model
-// as above: data older than 2 min triggers a BLOCKING inline re-fetch (not
+// as above: data older than 60 s triggers a BLOCKING inline re-fetch (not
 // true stale-while-revalidate — Vercel kills background work post-response),
 // with a 1-hour hard expiry as the safety net.
 
@@ -161,7 +161,7 @@ function franchiseCacheKey(leagueId: string, season: string): string {
 const refreshingFranchise = new Map<string, Promise<CachedFranchiseRoster[] | null>>();
 
 /**
- * Get the franchise-shaped roster list from Redis cache (fresh < 2 min),
+ * Get the franchise-shaped roster list from Redis cache (fresh < 60 s),
  * refreshing synchronously from MFL when stale or missing.
  * Returns null when Redis is unavailable (caller falls back to static feed).
  */
@@ -231,7 +231,7 @@ function bustEpochKey(leagueId: string, season: string): string {
 // Known residual races: the GET here and the caller's subsequent SET are not
 // atomic, and the two timestamps come from different instances' wall clocks.
 // Both windows are ~one RTT and any bad write self-heals within STALE_TTL_MS
-// (2 min) — accepted rather than paying for a Lua/INCR epoch scheme.
+// (60 s) — accepted rather than paying for a Lua/INCR epoch scheme.
 async function wasBustedSince(redis: RedisClient, leagueId: string, season: string, fetchStartedAt: number): Promise<boolean> {
   try {
     const bustedAt = await redis.get<number>(bustEpochKey(leagueId, season));
