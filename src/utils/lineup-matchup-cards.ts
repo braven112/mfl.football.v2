@@ -78,6 +78,8 @@ export interface BuildMatchupCardsInput {
   identityMap: Map<string, PlayerIdentity>;
   slotPositions: readonly string[];
   slotEligibility: Record<string, readonly string[]>;
+  /** The most of each position that may start; omitted = no cap beyond the slots. */
+  positionMax?: Readonly<Record<string, number>>;
   /** Franchise name / tint / crest. Never called for a franchise off the strip. */
   brandFor: (franchiseId: string) => MatchupCardBrand;
 }
@@ -91,7 +93,7 @@ export function buildMatchupCards(input: BuildMatchupCardsInput): MatchupCard[] 
   const {
     userFranchiseId, matchups, week, weekIsPast, userSideIds, userProjTotal,
     franchiseList, resultsWeekEntry, projMap, playerScoresMap, identityMap,
-    slotPositions, slotEligibility, brandFor,
+    slotPositions, slotEligibility, positionMax = {}, brandFor,
   } = input;
 
   const franchises = asArray<any>(franchiseList);
@@ -145,12 +147,20 @@ export function buildMatchupCards(input: BuildMatchupCardsInput): MatchupCard[] 
     }
 
     const flexSlots = slotPositions.filter((p) => p === 'FLEX').length;
+    const flexEligible = slotEligibility.FLEX ?? ['RB', 'WR', 'TE'];
     const flexPicks = cands
-      .filter((c) => !used.has(c.id) && ['RB', 'WR', 'TE'].includes(c.position))
+      .filter((c) => !used.has(c.id) && flexEligible.includes(c.position))
       .sort((a, b) => b.proj - a.proj);
-    for (let i = 0; i < flexSlots && i < flexPicks.length; i++) {
-      used.add(flexPicks[i].id);
-      total += flexPicks[i].proj;
+    const seated = cands.filter((c) => used.has(c.id)).map((c) => c.position);
+    let filled = 0;
+    for (const pick of flexPicks) {
+      if (filled >= flexSlots) break;
+      const max = positionMax[pick.position];
+      if (max !== undefined && seated.filter((p) => p === pick.position).length >= max) continue;
+      used.add(pick.id);
+      seated.push(pick.position);
+      total += pick.proj;
+      filled++;
     }
     return total;
   }

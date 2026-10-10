@@ -63,6 +63,15 @@
       "description": "Your two games first, then every matchup by division"
     },
     {
+      "id": "__LEAGUE_SLUG__-lineup",
+      "label": "Set Lineup",
+      "icon": "lineup",
+      "path": "/lineup",
+      "external": false,
+      "leagueOnly": "__LEAGUE_SLUG__",
+      "description": "Set your starting lineup"
+    },
+    {
       "id": "__LEAGUE_SLUG__-news",
       "label": "League News",
       "icon": "news",
