@@ -101,7 +101,7 @@ rules differ per tier:
 
 | Tier | Data | Target | How |
 |---|---|---|---|
-| **Live** | Rosters, recent transactions, trade bait, live standings | ≤2 min after a change on MFL; **instant** after a change made through our app | Unchanged: `mfl-roster-cache` / `mfl-transactions-cache` (Redis, 2-min stale TTL, synchronous refresh). Our write routes (`cut-player`, `waiver-claim`, `contracts/approve`) call `bustRosterCaches`. Any new write route must too. |
+| **Live** | Rosters, recent transactions, trade bait, live standings | ≤60 s after a change on MFL (trade bait ≤2 min); **instant** after a change made through our app | Existing: `mfl-roster-cache` / `mfl-transactions-cache` (Redis, 60 s stale TTL, trade bait 2 min, synchronous refresh). Our write routes (`cut-player`, `waiver-claim`, `contracts/approve`) call `bustRosterCaches`. Any new write route must too. |
 | **Current season, synced** | Schefter feed, activity, current standings, derived artifacts | Visible on the **next request** after a sync writes | Readers fetch the manifest pointer from **Redis on every request** (one GET), so the hashed Blob URL changes the moment the writer flips it. **No `s-maxage`** on pages that render current-season data. Faster than today, because the build wait (~2 min) and the commit cadence lag are gone. |
 | **History** | Past seasons, archives | Changes rarely | Long edge cache and in-memory memo. Safe because hashed objects are immutable. |
 
