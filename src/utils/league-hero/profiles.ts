@@ -548,7 +548,7 @@ export function buildPackageHeroProfile(
     defaultView: (now) => ({
       pill: short.toUpperCase(),
       headline: divisionCount > 1 ? `${numberWord(divisionCount).toUpperCase()} DIVISIONS.` : `${short.toUpperCase()}.`,
-      accentWord: 'ONE.',
+      accentWord: 'ONE CHAMP.',
       summary: tagline,
       link: ensureLeaguePrefix(def, '/standings'),
       linkLabel: 'VIEW STANDINGS',
