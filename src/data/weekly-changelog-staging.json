@@ -2,6 +2,14 @@
   "weekOf": "2026-10-12",
   "changes": [
     {
+      "date": "2026-10-10",
+      "type": "bug-fix",
+      "summary": "Schefter's AFL columns no longer call the AFL \"The League\", which is the other league's name; the Week 5 Gauntlet headline is corrected.",
+      "impact": "user",
+      "area": "schefter",
+      "league": "afl"
+    },
+    {
       "date": "2026-10-09",
       "type": "bug-fix",
       "summary": "Schefter's trade speculation no longer calls two teams division rivals unless they actually share a division.",

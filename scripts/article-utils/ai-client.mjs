@@ -5,6 +5,19 @@
 import { LEAGUES } from '../../src/config/leagues-data.mjs';
 import { isDefaultPersona } from '../../src/utils/persona.mjs';
 import { formatSalary } from './data-loaders.mjs';
+import { foreignNames, ownLeagueLabel } from './league-name-scrub.mjs';
+
+/**
+ * "The League" is another league's NAME, but reads as a phrase, so the model
+ * writes it without thinking it named anything. Say so; league-name-scrub.mjs
+ * rewrites whatever slips through.
+ */
+function foreignNameRule(league) {
+  const names = foreignNames(league).filter((n) => /\s/.test(n));
+  if (!names.length) return '';
+  const quoted = names.map((n) => `"${n}"`).join(' or ');
+  return ` ${quoted} is the name of a different league, so never write it, even as a phrase or in a headline; call this one ${ownLeagueLabel(league)}.`;
+}
 
 const MODEL = 'claude-haiku-4-5-20251001';
 const API_URL = 'https://api.anthropic.com/v1/messages';
@@ -172,7 +185,7 @@ export function buildCachedSystem(typeSpecificText, { league, persona } = {}) {
   const registry = league ? LEAGUES[league] : null;
   if (league && !registry) throw new Error(`Unknown league: ${league}`);
   const leagueLine = registry
-    ? `\n\nLEAGUE: this column covers ${registry.name}. Never name any other league, and never state a league size or structure that is not in the fact sheet.${minimumSalaryRule(registry)}`
+    ? `\n\nLEAGUE: this column covers ${registry.name}. Never name any other league, and never state a league size or structure that is not in the fact sheet.${foreignNameRule(league)}${minimumSalaryRule(registry)}`
     : '';
   if (isDefaultPersona(persona)) {
     return [
