@@ -9,10 +9,13 @@ import { LEAGUES } from '../src/config/leagues-data.mjs';
 
 // Resolved from the registry, never a slug literal: the league whose name is
 // an ordinary English phrase, and one that is not it.
-const PHRASE_LEAGUE = Object.keys(LEAGUES).find((s) => /^The\s/.test(LEAGUES[s].name))!;
-const PHRASE = LEAGUES[PHRASE_LEAGUE].name;
-const ACRONYM_LEAGUE = Object.keys(LEAGUES).find((s) => /^[A-Z]{2,}$/.test(LEAGUES[s].name))!;
-const ACRONYM = LEAGUES[ACRONYM_LEAGUE].name;
+const NAMES: Record<string, string> = Object.fromEntries(
+  Object.entries(LEAGUES).map(([slug, reg]) => [slug, reg.name]),
+);
+const PHRASE_LEAGUE = Object.keys(NAMES).find((s) => /^The\s/.test(NAMES[s]))!;
+const PHRASE = NAMES[PHRASE_LEAGUE];
+const ACRONYM_LEAGUE = Object.keys(NAMES).find((s) => /^[A-Z]{2,}$/.test(NAMES[s]))!;
+const ACRONYM = NAMES[ACRONYM_LEAGUE];
 
 describe('league-name scrub', () => {
   it("rewrites the AFL's Week 5 Gauntlet headline that shipped", () => {
