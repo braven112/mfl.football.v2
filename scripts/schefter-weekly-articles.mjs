@@ -30,6 +30,7 @@ import { loadJSON, resolveDataDir, getFeedPath, loadTeams } from './article-util
 import { getSeasonYear, getCurrentNFLWeek, getCompletedWeek } from './article-utils/week-resolver.mjs';
 import { callAnthropic } from './article-utils/ai-client.mjs';
 import { isDuplicate, appendToFeed } from './article-utils/feed-writer.mjs';
+import { scrubPostLeagueNames } from './article-utils/league-name-scrub.mjs';
 import { enqueueAnnounce } from './lib/announce-queue.mjs';
 import { loadLeaguePersona } from './lib/persona-store.mjs';
 import { VALID_LEAGUES, leagueWritesType } from './lib/article-leagues.mjs';
@@ -278,6 +279,11 @@ async function main() {
   // prompt is losing to the model and the directive needs rewording.
   const { notices } = applyArticleLinks(post, links, { league });
   for (const notice of notices) console.warn(`  [links] ${notice}`);
+
+  // "The League" is TheLeague's name AND an ordinary phrase; on any other
+  // league's site the model's generic use of it reads as the wrong league.
+  const scrubbed = scrubPostLeagueNames(post, league);
+  if (scrubbed.length) console.warn(`  [league-name] Rewrote another league's name in: ${scrubbed.join(', ')}`);
 
   const written = await appendToFeed(feedPath, post);
   if (written) {
