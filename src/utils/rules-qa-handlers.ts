@@ -14,6 +14,8 @@ import {
   type AuthUser,
 } from './auth';
 import { findBestMatch } from './rules-qa-matching';
+import { getLeagueById } from '../config/leagues';
+import { scrubLeagueNames } from './league-name-guard.mjs';
 import type {
   RulesQA,
   RulesQAWithFlags,
@@ -258,6 +260,10 @@ export function createRulesQAHandlers(config: RulesQAConfig): {
       console.error(`[${config.logTag}] Haiku call failed:`, e);
       return jsonResponse({ error: 'Roger is temporarily unavailable. Try again in a moment.' }, 503);
     }
+    // Another league's name never publishes (league-name-guard.mjs); the
+    // answer is stored and shown to the whole league.
+    const answerLeague = getLeagueById(config.leagueId);
+    if (answerLeague) answer = scrubLeagueNames(answer, answerLeague.slug);
 
     const teamName = (await config.resolveTeamName(user.franchiseId)) ?? user.name ?? 'Unknown';
 

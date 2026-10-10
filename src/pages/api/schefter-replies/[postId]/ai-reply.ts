@@ -25,6 +25,7 @@ import type { SchefterPost } from '../../../../types/schefter';
 import { getLeagueById, type LeagueDefinition } from '../../../../config/leagues';
 import { getLeaguePersona } from '../../../../utils/persona-server';
 import { isDefaultPersona, personaByline } from '../../../../utils/persona.mjs';
+import { scrubLeagueNames } from '../../../../utils/league-name-guard.mjs';
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -204,7 +205,8 @@ export const POST: APIRoute = async ({ params, request }) => {
       id: generateReplyId(),
       postId,
       parentId: userReply.id,
-      body: aiText,
+      // Another league's name never publishes (utils/league-name-guard.mjs).
+      body: scrubLeagueNames(aiText, league.slug),
       author: {
         type: 'ai',
         name: byline.name,
