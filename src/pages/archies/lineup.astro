@@ -17,7 +17,7 @@ import { loginUrlForRequest } from '../../utils/login-redirect';
 import { getLeagueBySlug } from '../../config/leagues';
 import { getLeagueYearForSlug } from '../../utils/league-year';
 import { feedForYear } from '../../utils/rosters/roster-page-feeds';
-import { deriveLineupSlots } from '../../utils/lineup-slots';
+import { lineupSlotsFor } from '../../utils/lineup-slots';
 import config from '../../../data/archies/archies.config.json';
 
 export const prerender = false;
@@ -29,8 +29,14 @@ if (!user?.franchiseId || user.leagueId !== league.id) {
 }
 
 const leagueFeeds = import.meta.glob('../../../data/archies/mfl-feeds/*/league.json', { eager: true });
-const leagueFeed = feedForYear(leagueFeeds, getLeagueYearForSlug(league.slug), 'league.json');
-const slotLayout = deriveLineupSlots(leagueFeed?.league?.starters);
+// Just after the league-year rollover the new year's league.json may not be
+// synced yet, so fall back to last year's rules rather than to another
+// league's layout. Rules the page cannot offer (not nine starters) are a 404.
+const leagueYear = getLeagueYearForSlug(league.slug);
+const slotLayout = [leagueYear, leagueYear - 1]
+  .map((year) => lineupSlotsFor(feedForYear(leagueFeeds, year, 'league.json')?.league?.starters))
+  .find(Boolean);
+if (!slotLayout) return Astro.rewrite('/_not-found');
 ---
 
 <LineupPage league={league} config={config} user={{ ...user, franchiseId: user.franchiseId }} throwbackScope={null} slotLayout={slotLayout} />

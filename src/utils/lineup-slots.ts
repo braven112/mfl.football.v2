@@ -61,26 +61,27 @@ function parseRange(limit: string | number | undefined): [number, number] | null
 }
 
 /**
- * The slot layout for a league's starter rules. Falls back to
- * DEFAULT_LINEUP_SLOTS for missing or unreadable rules, and for any rules that
- * do not total exactly 9 starters — the lineup API takes nine, so a layout of
- * any other size could not be submitted.
+ * The slot layout for a league's starter rules, or null when the page cannot
+ * offer one: missing or unreadable rules, or rules that do not total exactly 9
+ * starters — the lineup API takes nine, so a layout of any other size could
+ * not be submitted. A package league's route 404s on null rather than show
+ * a layout its league would reject.
  */
-export function deriveLineupSlots(rules: MflStarterRules | null | undefined): LineupSlotLayout {
-  if (!rules?.position) return DEFAULT_LINEUP_SLOTS;
+export function lineupSlotsFor(rules: MflStarterRules | null | undefined): LineupSlotLayout | null {
+  if (!rules?.position) return null;
   const list = Array.isArray(rules.position) ? rules.position : [rules.position];
   const count = parseRange(rules.count);
-  if (!count) return DEFAULT_LINEUP_SLOTS;
+  if (!count) return null;
   // A ranged count ("1-9") is a cap: the page always seats the maximum.
   const total = count[1];
-  if (total !== 9) return DEFAULT_LINEUP_SLOTS;
+  if (total !== 9) return null;
 
   const ranges = new Map<string, [number, number]>();
   for (const p of list) {
     const range = parseRange(p?.limit);
-    if (!p?.name || !range) return DEFAULT_LINEUP_SLOTS;
+    if (!p?.name || !range) return null;
     const pos = normalizeLineupPosition(p.name);
-    if (!ORDER.includes(pos) || pos === 'FLEX') return DEFAULT_LINEUP_SLOTS;
+    if (!ORDER.includes(pos) || pos === 'FLEX') return null;
     ranges.set(pos, range);
   }
 
@@ -90,7 +91,7 @@ export function deriveLineupSlots(rules: MflStarterRules | null | undefined): Li
     const r = ranges.get(pos);
     return r !== undefined && r[1] > r[0];
   });
-  if (flexCount < 0 || (flexCount > 0 && flexEligible.length === 0)) return DEFAULT_LINEUP_SLOTS;
+  if (flexCount < 0 || (flexCount > 0 && flexEligible.length === 0)) return null;
 
   const positions = [...fixed, ...Array<string>(flexCount).fill('FLEX')].sort(
     (a, b) => ORDER.indexOf(a) - ORDER.indexOf(b),
@@ -101,6 +102,11 @@ export function deriveLineupSlots(rules: MflStarterRules | null | undefined): Li
   const positionMax: Record<string, number> = {};
   for (const [pos, [, hi]] of ranges) positionMax[pos] = hi;
   return { positions, eligibility, positionMax };
+}
+
+/** As lineupSlotsFor, falling back to TheLeague's and the AFL's layout. */
+export function deriveLineupSlots(rules: MflStarterRules | null | undefined): LineupSlotLayout {
+  return lineupSlotsFor(rules) ?? DEFAULT_LINEUP_SLOTS;
 }
 
 /** The slot types a player of `position` may fill under `layout`. */

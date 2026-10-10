@@ -5,6 +5,7 @@ import {
   deriveLineupSlots,
   eligibleSlotsFor,
   exceedsPositionMax,
+  lineupSlotsFor,
 } from '../src/utils/lineup-slots';
 
 /**
@@ -29,7 +30,13 @@ describe('deriveLineupSlots', () => {
     expect(layout.positionMax.QB).toBe(2);
   });
 
-  it('falls back to the default for missing, unreadable or non-nine-starter rules', () => {
+  it('has no layout for missing, unreadable or non-nine-starter rules', () => {
+    expect(lineupSlotsFor(undefined)).toBeNull();
+    expect(lineupSlotsFor({ count: '10', position: [{ name: 'QB', limit: '1-3' }] })).toBeNull();
+    expect(lineupSlotsFor({ count: '9', position: [{ name: 'LB', limit: '1-3' }] })).toBeNull();
+  });
+
+  it('deriveLineupSlots falls back to the default for those same rules', () => {
     expect(deriveLineupSlots(undefined)).toBe(DEFAULT_LINEUP_SLOTS);
     expect(deriveLineupSlots({ count: 'x', position: [] })).toBe(DEFAULT_LINEUP_SLOTS);
     expect(
