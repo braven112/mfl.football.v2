@@ -56,9 +56,10 @@ describe('league-name scrub', () => {
     expect(post.content[0]).toBe(`<p>The ${ACRONYM} is tough.</p>`);
   });
 
-  it("tells the model the other league's name is off limits, only off its own league", () => {
+  it("steers the model off the bare word as a name, only off its own league", () => {
     const text = (slug: string) => buildCachedSystem('X', { league: slug }).at(-1)!.text;
-    expect(text(ACRONYM_LEAGUE)).toContain(`"${PHRASE}" is the name of a different league`);
-    expect(text(PHRASE_LEAGUE)).not.toContain('is the name of a different league');
+    expect(text(ACRONYM_LEAGUE)).toContain('never capitalise the word "league"');
+    expect(text(ACRONYM_LEAGUE)).not.toContain(PHRASE);
+    expect(text(PHRASE_LEAGUE)).not.toContain('never capitalise the word "league"');
   });
 });
