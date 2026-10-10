@@ -121,11 +121,12 @@ Owner decisions on the live tier (2026-10-09):
     (falling back to the stale copy).
   - This only shortens the lag for moves made on MFL's own site. Moves made
     through our app are already instant via `bustRosterCaches`.
-- **Client-side refresh of open roster pages: still open.** Proposed shape,
-  if adopted: poll a light endpoint every 60 s only while the tab is visible,
-  and show a "Rosters changed, tap to refresh" banner rather than swapping
-  data in place, since `rosters.astro` cannot safely re-render under an owner
-  mid-task (trade builder, contracts).
+- **Client-side refresh of open roster pages: skipped (2026-10-10).** The
+  proposal was to poll a light endpoint every 60 s while the tab is visible
+  and show a "Rosters changed, tap to refresh" banner (never swapping data in
+  place, since `rosters.astro` cannot safely re-render under an owner
+  mid-task). The owner judged it a nice-to-have and passed; an open page
+  shows fresh data on the next load or reload.
 
 ## Phases
 
