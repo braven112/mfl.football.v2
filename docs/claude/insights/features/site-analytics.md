@@ -10,11 +10,44 @@ adoption.
 | Layer | Files |
 |---|---|
 | Pure derivations (traffic, engagement, pages, quiet list, categories) | `src/utils/site-analytics.ts` |
+| Names for record pages; search ranking by use | `src/utils/recorded-page-title.ts`, `src/utils/page-usage.ts` |
 | Install + notification adoption (Redis) | `src/utils/site-adoption.ts` |
 | Counters + readers | `src/utils/owner-activity.ts` |
 | Endpoint | `src/pages/api/track-visit.ts` |
 | UI | `src/components/shared/OwnerActivityReport.astro`, both `activity.astro` routes |
 | Guards | `tests/site-analytics.test.ts`, `tests/site-adoption.test.ts`, `tests/redis-command-reductions.test.ts` |
+
+---
+
+## 2026-10-10 — The counters are all-time, so a page that MOVES is reported twice: popular under its old address, "never opened" under its new one
+
+**Context:** TheLeague's `/activity` listed Draft Room (82 views) and Mock
+Draft (41) as popular AND in "never been opened". Both moved in Sep 2026
+(`/draft-room` → `/draft/room`, `/mock-draft` → `/draft/mock`); every visit
+before the move stays on the old key forever, while the directory names only
+the new one.
+
+**Insight:** `canonicalPath` now follows `vercel.json`'s permanent,
+host-independent redirects (exact sources and `/:path*` prefixes, in both the
+prefixed and the bare form), so a retired address folds into the page it went
+to. There is deliberately no second list: a future move only needs its 301,
+which it needs anyway. The same pass names the record pages the directory
+cannot (`src/utils/recorded-page-title.ts`): an article by headline (archive
+included), a franchise by current name, a shared mock draft generically.
+
+**Search ranks by these counters now** (`src/utils/page-usage.ts`): owners'
+all-time views minus `adminFranchiseIds` (the commissioner was ~half of
+TheLeague's signed-in views), plus signed-out views. The hand-set
+`popularity` only breaks ties.
+
+**"Dropped visits" were mostly NOT dropped.** Checked 2026-10-10 against
+production: 38% of TheLeague's 30-day views (738 of 1,942 visits) were signed
+out, and Top Players had 76 of 79 views signed out. In a 16-owner private
+league that is owners browsing without a session on that browser (GroupMe's
+in-app browser keeps its own cookies; a session on one host is not one on
+another), so their visits count, just not against their name. An owner with
+"MFL: 1h ago, Site: 5mo ago" may be exactly that. The 403'd-beacon bug from
+2026-09-15 remains the other cause to rule out (see visit-surface-tracking.md).
 
 ---
 

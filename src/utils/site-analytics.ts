@@ -18,15 +18,24 @@
  * path and every directory path is pushed through it before anything is
  * summed — otherwise one page reads as two or three unrelated rows.
  *
+ * RETIRED ADDRESSES FOLLOW THEIR 301. A page that moved (Draft Room went from
+ * `/draft-room` to `/draft/room` in Sep 2026) keeps its old counts under the
+ * old path forever — the counters are all-time hashes. Left alone, the old
+ * path is a popular row with a prettified title AND the new path sits in the
+ * "never opened" list: one page, reported as both. `vercel.json`'s permanent
+ * redirects already say where every retired address went, so canonicalizing
+ * follows them rather than keeping a second list here.
+ *
  * page-directory.json is ONE list shared by every league, so it is scoped with
  * `pathBelongsToLeague` before it is used for titles, categories or the quiet
  * list (see tests/stats-hub-links.test.ts's CONSUMERS registry).
  */
 
 import pageDirectory from '../data/page-directory.json';
+import vercelConfig from '../../vercel.json';
 import { pathBelongsToLeague } from '../config/footer-config';
 import { resolveDirectoryHref } from './nav-utils';
-import { getLeagueBySlug, type CanonicalLeagueSlug } from '../config/leagues';
+import { getLeagueBySlug, stripLeaguePrefix, type CanonicalLeagueSlug } from '../config/leagues';
 import type { LeagueSlug } from '../types/nav';
 
 /**
@@ -320,7 +329,57 @@ function directoryFor(league: CanonicalLeagueSlug): DirectoryEntry[] {
  */
 export function canonicalPath(path: string, league: CanonicalLeagueSlug): string {
 	const bare = path.split('#')[0].split('?')[0].replace(/\/+$/, '') || '/';
-	return resolveDirectoryHref(bare, navSlugFor(league));
+	const navSlug = navSlugFor(league);
+	const def = getLeagueBySlug(league);
+	let canonical = resolveDirectoryHref(bare, navSlug);
+	// Bounded, in case two redirects ever chain into each other. A rule may be
+	// written in either form — prefixed for the shared host, bare for the
+	// league's apex domain — so both are asked.
+	for (let hop = 0; hop < 3; hop++) {
+		const moved =
+			followRedirect(canonical) ?? (def ? followRedirect(stripLeaguePrefix(def, canonical) || '/') : null);
+		if (!moved || moved === canonical) break;
+		canonical = resolveDirectoryHref(moved, navSlug);
+	}
+	return canonical;
+}
+
+interface RedirectRule {
+	source: string;
+	destination: string;
+	statusCode?: number;
+	has?: unknown;
+}
+
+/**
+ * `vercel.json`'s permanent, host-independent redirects, split into exact
+ * sources and `/:path*` prefixes — the only two shapes it uses. Host-scoped
+ * rules (`has`) are the apex domains dropping their league prefix, which
+ * `resolveDirectoryHref` already handles; temporary ones are not a move.
+ */
+const REDIRECTS = (() => {
+	const exact = new Map<string, string>();
+	const prefixes: { from: string; to: string }[] = [];
+	for (const rule of (vercelConfig.redirects ?? []) as RedirectRule[]) {
+		if (rule.has || (rule.statusCode !== 301 && rule.statusCode !== 308)) continue;
+		const wildcard = rule.source.endsWith('/:path*') && rule.destination.endsWith('/:path*');
+		if (wildcard) {
+			prefixes.push({ from: rule.source.slice(0, -'/:path*'.length), to: rule.destination.slice(0, -'/:path*'.length) });
+		} else if (!rule.source.includes(':') && !rule.destination.includes(':')) {
+			exact.set(rule.source, rule.destination);
+		}
+	}
+	return { exact, prefixes };
+})();
+
+/** Where a retired address went, or null when it never moved. */
+function followRedirect(path: string): string | null {
+	const exact = REDIRECTS.exact.get(path);
+	if (exact) return exact;
+	for (const { from, to } of REDIRECTS.prefixes) {
+		if (path.startsWith(`${from}/`)) return `${to}${path.slice(from.length)}`;
+	}
+	return null;
 }
 
 /**
@@ -381,8 +440,15 @@ export function buildPageInsights(input: {
 	globalPages: readonly PageCount[];
 	anonPages?: readonly PageCount[];
 	ownerPages: Record<string, readonly PageCount[]>;
+	/**
+	 * Name for a recorded page the directory has no entry for (an article, a
+	 * franchise), given its canonical path. Server callers pass
+	 * `recordedPageTitle`; this module stays free of I/O. Without one, or when
+	 * it returns null, the last path segment is prettified.
+	 */
+	titleFor?: (path: string) => string | null;
 }): PageInsights {
-	const { league } = input;
+	const { league, titleFor } = input;
 	const navSlug = navSlugFor(league);
 	const entries = directoryFor(league);
 
@@ -410,7 +476,7 @@ export function buildPageInsights(input: {
 			row = {
 				path,
 				href: path,
-				title: entry?.title ?? titleFromPath(path),
+				title: entry?.title ?? titleFor?.(path) ?? titleFromPath(path),
 				category: entry?.category ?? 'other',
 				views: 0,
 				signedIn: 0,
