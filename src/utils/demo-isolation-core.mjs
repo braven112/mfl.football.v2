@@ -50,6 +50,7 @@ export const DEMO_FORBIDDEN_ENV_PATTERNS = [
   /^SCHEFTER_/,
   /^ANTHROPIC_/, // LLM spend on the real account; the demo ships Roger/Schefter off
   /^JWT_SECRET$/, // production's session key — replaced by DEMO_JWT_SECRET below
+  /^KIT_/, // the newsletter's Kit account — the demo must never touch the real list
 ];
 
 /**
