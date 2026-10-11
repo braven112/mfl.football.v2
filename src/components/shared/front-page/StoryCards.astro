@@ -12,6 +12,7 @@ interface Props {
   title: string;
   stories: FrontStory[];
   teams: Record<string, FrontTeamArt>;
+  /** The league's dark-ground mark, for a story about no team. */
   leagueMark: string;
   /** Per-story overlay text for the art (a rivalry's series record). */
   overlays?: Record<string, { text: string; label?: string }>;

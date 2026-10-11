@@ -45,7 +45,10 @@ import {
 import { loadSeasonFeed, unwrapFeedModule, type LazyFeedGlob } from '../../../utils/mfl-feed-glob';
 import { resolveHeroFranchiseBackdrop } from '../../../utils/hero-franchise-backdrop';
 import { crestLeagueKey } from '../../../utils/dark-surface-crest';
-import { getPlayerAvatarBackground } from '../../../utils/nfl-team-colors';
+import { readViewerClock } from '../../../utils/viewer-preferences-page';
+import { formatForViewer, formatMomentZones } from '../../../utils/viewer-clock';
+import { eventZonesFor } from '../../../utils/viewer-preferences';
+import { getAuthUser } from '../../../utils/auth';
 import type { PlayerIdentity } from '../../../utils/player-map';
 import type { SchefterPost } from '../../../types/schefter';
 
@@ -222,7 +225,7 @@ const race: RaceEntry[] = top3
       place: i + 1,
       team: teams[t.id],
       line: [at?.row.record, at ? `${at.row.pointsFor.toFixed(1)} pts` : null].filter(Boolean).join(' · '),
-      star: star?.headshot ? { name: star.name, headshot: star.headshot, background: getPlayerAvatarBackground(star.nflTeam) } : null,
+      star: star?.headshot ? { name: star.name, headshot: star.headshot } : null,
     };
   });
 
@@ -246,6 +249,18 @@ const band: TeamBandModel | null =
       }
     : null;
 
+// Story times in the viewer's own clock (the league's PT until they choose
+// one). READING the clock is side-effect free; only the route may write it.
+const clock = await readViewerClock(Astro.cookies, getAuthUser(Astro.request), league.slug);
+const times: FrontPageModel['times'] = {};
+for (const s of [lead, ...headlines].filter((x): x is FrontStory => !!x?.at)) {
+  const at = new Date(s.at!);
+  times[s.id] = {
+    line: formatForViewer(at, clock, { weekday: true }),
+    day: formatMomentZones(at, eventZonesFor(clock), { time: false })[0]?.day ?? '',
+  };
+}
+
 const model: FrontPageModel = {
   leagueName,
   strip,
@@ -260,7 +275,8 @@ const model: FrontPageModel = {
   raceHref: r(`${base}/standings`),
   wire: buildWire(posts, new Set(mine && rostersFeed ? rosterPlayerIds(rostersFeed, mine).map((p) => p.id) : [])),
   teams,
-  leagueMark: league.logo.light,
+  leagueMark: league.logo,
+  times,
 };
 ---
 

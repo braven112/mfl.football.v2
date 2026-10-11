@@ -187,4 +187,36 @@ describe('teams a story names', () => {
   it('returns nothing for a story about no team', () => {
     expect(teamsMentioned('The hardest schedules left', teams)).toEqual([]);
   });
+  it('finds a short name but never inside another word', () => {
+    const withFox = [...teams, { franchiseId: '0004', name: 'Fox' }];
+    expect(teamsMentioned('Fox stun the field', withFox)).toEqual(['0004']);
+    expect(teamsMentioned('New programs for foxes', withFox)).toEqual([]);
+  });
+});
+
+describe('a trade as a story', () => {
+  it('names both sides and what each received, with both crests', () => {
+    const story = buildTransactionStory(
+      {
+        franchiseId: '0001',
+        at: Date.UTC(2026, 9, 10),
+        kind: 'trade',
+        added: [],
+        dropped: [],
+        trade: {
+          sides: [
+            { franchiseId: '0001', players: ['p1'], picks: [] },
+            { franchiseId: '0002', players: ['p2'], picks: [{}] },
+          ],
+        },
+      },
+      (id) => ({ '0001': 'Rhinos', '0002': 'Freeze' })[id] ?? id,
+      (id) => ({ p1: 'Player One', p2: 'Player Two' })[id] ?? id,
+      '/archies/transactions',
+    );
+    expect(story?.headline).toBe('Rhinos and Freeze trade: Player Two, a pick for Player One');
+    expect(story?.franchiseIds).toEqual(['0001', '0002']);
+    expect(story?.kicker).toBe('Trade');
+    expect(story?.at).toBe('2026-10-10T00:00:00.000Z');
+  });
 });

@@ -26,9 +26,8 @@ export interface FrontTeamArt {
 
 export interface FrontPlayerArt {
   name: string;
+  /** ESPN's transparent cut-out, drawn straight on the franchise's colours. */
   headshot: string;
-  /** CSS background for the headshot (the player's NFL colours). */
-  background: string;
 }
 
 export interface TeamBandModel {
@@ -62,6 +61,15 @@ export interface FrontPageModel {
   raceHref: string;
   wire: WireItem[];
   teams: Record<string, FrontTeamArt>;
-  /** The league's own mark, for a story about no team in particular. */
-  leagueMark: string;
+  /**
+   * The league's own mark, for a story about no team in particular: `light`
+   * for a theme-following card, `dark` for the story art (dark in both themes).
+   */
+  leagueMark: { light: string; dark: string };
+  /**
+   * When each story was written, in the viewer's clock (`formatForViewer`):
+   * `line` for the lead ("Wed 2:07 PM PT"), `day` for a headline ("Wed").
+   * Keyed by story id; resolved by the adapter, which can read the viewer.
+   */
+  times: Record<string, { line: string; day: string }>;
 }

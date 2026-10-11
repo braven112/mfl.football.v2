@@ -12,14 +12,14 @@ import type { FrontTeamArt } from './types';
 interface Props {
   story: FrontStory;
   teams: Record<string, FrontTeamArt>;
+  /** The league's dark-ground mark, for a story about no team. */
   leagueMark: string;
+  /** When it was written, already in the viewer's clock ("Wed 2:07 PM PT"). */
+  when?: string;
 }
 
-const { story, teams, leagueMark } = Astro.props;
+const { story, teams, leagueMark, when } = Astro.props;
 const storyTeams = story.franchiseIds.map((id) => teams[id]).filter(Boolean);
-const when = story.at
-  ? new Intl.DateTimeFormat('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'America/Los_Angeles' }).format(new Date(story.at))
-  : null;
 ---
 
 <article class="fp-lead">
@@ -32,7 +32,7 @@ const when = story.at
     </h2>
     {story.dek && <p class="fp-lead__dek">{story.dek}</p>}
     <div class="fp-lead__foot">
-      {when && <span class="fp-lead__when">{when} PT</span>}
+      {when && <span class="fp-lead__when">{when}</span>}
       {story.href && <a class="cta-link" href={story.href}>Read the story</a>}
     </div>
   </div>

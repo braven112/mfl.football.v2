@@ -291,18 +291,27 @@ export function storiesFromPosts(posts: SchefterPost[], limit = 8): FrontStory[]
 
 /**
  * The teams a story names, for a post that arrived without `franchiseIds`
- * (Archie's first Gauntlet did). Longest names first, so "Dallas Cowboys II"
- * is not also read as "Dallas Cowboys"; order is where each name first appears.
+ * (Archie's first Gauntlet did). Whole words only, so a short name (Archie's
+ * "Fox") is found while "Rams" is never read out of "programs". Longest names
+ * first, so "Dallas Cowboys II" is not also read as "Dallas Cowboys"; order
+ * is where each name first appears.
  */
 export function teamsMentioned(text: string, teams: FrontTeam[], limit = 2): string[] {
-  const hay = text.toLowerCase();
   const taken: Array<[number, number]> = [];
   const hits: Array<{ id: string; at: number }> = [];
+  const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   for (const t of [...teams].sort((a, b) => b.name.length - a.name.length)) {
-    const name = t.name.trim().toLowerCase();
-    if (name.length < 4) continue;
-    let at = hay.indexOf(name);
-    while (at !== -1 && taken.some(([s, e]) => at < e && at + name.length > s)) at = hay.indexOf(name, at + 1);
+    const name = t.name.trim();
+    if (!name) continue;
+    const re = new RegExp(`(?<![\\p{L}\\p{N}])${escape(name)}(?![\\p{L}\\p{N}])`, 'giu');
+    let at = -1;
+    for (const m of text.matchAll(re)) {
+      const start = m.index ?? 0;
+      if (!taken.some(([s, e]) => start < e && start + name.length > s)) {
+        at = start;
+        break;
+      }
+    }
     if (at === -1) continue;
     taken.push([at, at + name.length]);
     hits.push({ id: t.franchiseId, at });
@@ -376,6 +385,8 @@ export interface MoveInput {
   added: string[];
   dropped: string[];
   kind: string;
+  /** A trade's two sides; a trade carries its players here, never in `added`. */
+  trade?: { sides: Array<{ franchiseId: string; players: string[]; picks: unknown[] }> } | null;
 }
 
 export function buildTransactionStory(
@@ -388,17 +399,30 @@ export function buildTransactionStory(
   const added = move.added.map(playerName);
   const dropped = move.dropped.map(playerName);
   let headline: string;
-  if (move.kind === 'trade') headline = `${team} trade for ${added.join(', ') || 'future considerations'}`;
-  else if (added.length && dropped.length) headline = `${team} add ${added.join(', ')} and drop ${dropped.join(', ')}`;
+  let franchiseIds = [move.franchiseId];
+  if (move.kind === 'trade') {
+    const sides = move.trade?.sides;
+    if (!sides || sides.length !== 2) return null;
+    // Each side lists what it GAVE UP, so a team receives the other side's assets.
+    const got = (i: 0 | 1) => {
+      const other = sides[1 - i];
+      const names = other.players.map(playerName);
+      const picks = other.picks.length;
+      if (picks) names.push(picks === 1 ? 'a pick' : `${picks} picks`);
+      return names.join(', ') || 'nothing listed';
+    };
+    headline = `${nameOf(sides[0].franchiseId)} and ${nameOf(sides[1].franchiseId)} trade: ${got(0)} for ${got(1)}`;
+    franchiseIds = [sides[0].franchiseId, sides[1].franchiseId];
+  } else if (added.length && dropped.length) headline = `${team} add ${added.join(', ')} and drop ${dropped.join(', ')}`;
   else if (added.length) headline = `${team} add ${added.join(', ')}`;
   else if (dropped.length) headline = `${team} drop ${dropped.join(', ')}`;
   else return null;
   return {
     id: `move-${move.franchiseId}-${move.at}`,
     kind: 'transaction',
-    kicker: 'Transaction',
+    kicker: move.kind === 'trade' ? 'Trade' : 'Transaction',
     headline,
-    franchiseIds: [move.franchiseId],
+    franchiseIds,
     at: new Date(move.at).toISOString(),
     ...(officialHref ? { action: { label: 'Official move', href: officialHref } } : {}),
   };

@@ -5,17 +5,20 @@
  * the viewer's weekly rivalry, two in a doubleheader — sit first, tinted.
  * A move carries a second link to its official record.
  */
+import ThemeImage from '../ThemeImage.astro';
 import type { FrontStory } from '../../../utils/front-page';
 import type { FrontTeamArt } from './types';
 
 interface Props {
   stories: FrontStory[];
   teams: Record<string, FrontTeamArt>;
-  leagueMark: string;
+  /** The league's mark in both cuts: the list's card follows the theme. */
+  leagueMark: { light: string; dark: string };
+  /** Each story's day, already in the viewer's clock. */
+  times: Record<string, { day: string }>;
 }
 
-const { stories, teams, leagueMark } = Astro.props;
-const day = new Intl.DateTimeFormat('en-US', { weekday: 'short', timeZone: 'America/Los_Angeles' });
+const { stories, teams, leagueMark, times } = Astro.props;
 ---
 
 <section class="fp-heads" aria-labelledby="fp-heads-title">
@@ -32,14 +35,14 @@ const day = new Intl.DateTimeFormat('en-US', { weekday: 'short', timeZone: 'Amer
               {marks.length > 0 ? (
                 marks.map((t) => <img class:list={['fp-heads__mark', { 'fp-heads__mark--round': t.round }]} src={t.icon} alt="" width="28" height="28" loading="lazy" decoding="async" />)
               ) : (
-                <img class="fp-heads__mark" src={leagueMark} alt="" width="28" height="28" loading="lazy" decoding="async" />
+                <ThemeImage class="fp-heads__mark" src={leagueMark.light} darkSrc={leagueMark.dark} alt="" width="28" height="28" />
               )}
             </span>
             <span class="fp-heads__body">
               {s.href ? <a class="fp-heads__headline" href={s.href}>{s.headline}</a> : <span class="fp-heads__headline">{s.headline}</span>}
               <span class="fp-heads__meta">
                 <span class="fp-heads__kicker">{s.kicker}</span>
-                {s.at && <span> · {day.format(new Date(s.at))}</span>}
+                {times[s.id] && <span> · {times[s.id].day}</span>}
                 {s.action && <a class="fp-heads__action" href={s.action.href}>{s.action.label} ▸</a>}
               </span>
             </span>

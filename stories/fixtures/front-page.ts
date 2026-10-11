@@ -117,8 +117,8 @@ export const signedInModel: FrontPageModel = {
     },
   ],
   race: [
-    { place: 1, team: frontTeams['0005'], line: '8-0 · 729.3 pts', star: { name: 'CeeDee Lamb', headshot: headshot('4241389'), background: '#041e42' } },
-    { place: 2, team: frontTeams['0004'], line: '7-1 · 669.2 pts', star: { name: 'Jahmyr Gibbs', headshot: headshot('4429795'), background: '#0076b6' } },
+    { place: 1, team: frontTeams['0005'], line: '8-0 · 729.3 pts', star: { name: 'CeeDee Lamb', headshot: headshot('4241389') } },
+    { place: 2, team: frontTeams['0004'], line: '7-1 · 669.2 pts', star: { name: 'Jahmyr Gibbs', headshot: headshot('4429795') } },
     { place: 3, team: frontTeams['0006'], line: '5-3 · 645.3 pts', star: null },
   ],
   raceTitle: 'The race',
@@ -128,7 +128,11 @@ export const signedInModel: FrontPageModel = {
     { id: 'w2', headline: 'Jahmyr Gibbs set for a bigger workload', href: '#wire', at: '2026-10-10T16:00:00Z', source: 'NFL.com', onMyRoster: false },
   ],
   teams: frontTeams,
-  leagueMark: '/assets/logos/archies-head.webp',
+  leagueMark: { light: '/assets/logos/archies-head.webp', dark: '/assets/logos/archies-head.webp' },
+  times: {
+    'post-1': { line: 'Wed 2:07 PM PT', day: 'Wed' },
+    'move-1': { line: 'Sat 11:00 AM PT', day: 'Sat' },
+  },
 };
 
 /** A visitor: no band, a sign-in prompt, the league's top games, no rivalries. */

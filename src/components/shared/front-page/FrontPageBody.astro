@@ -46,14 +46,14 @@ const { model, cardsTitle, overlays, wireHref } = Astro.props;
 
   <div class="fp__top">
     {model.lead ? (
-      <LeadStory story={model.lead} teams={model.teams} leagueMark={model.leagueMark} />
+      <LeadStory story={model.lead} teams={model.teams} leagueMark={model.leagueMark.dark} when={model.times[model.lead.id]?.line} />
     ) : (
       <p class="fp__empty">The week's lead story lands here once it is written.</p>
     )}
-    <HeadlineList stories={model.headlines} teams={model.teams} leagueMark={model.leagueMark} />
+    <HeadlineList stories={model.headlines} teams={model.teams} leagueMark={model.leagueMark} times={model.times} />
   </div>
 
-  <StoryCards title={cardsTitle} stories={model.cards} teams={model.teams} leagueMark={model.leagueMark} overlays={overlays} />
+  <StoryCards title={cardsTitle} stories={model.cards} teams={model.teams} leagueMark={model.leagueMark.dark} overlays={overlays} />
 
   <div class:list={['fp__bottom', { 'fp__bottom--solo': model.wire.length === 0 }]}>
     <RaceCards title={model.raceTitle} entries={model.race} moreHref={model.raceHref} />
