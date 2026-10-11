@@ -11,7 +11,7 @@ import {
   toBoardTeam,
   type BoardTeam,
 } from '../src/utils/standings-board';
-import { buildProRelRows, buildTierRows } from '../src/utils/tier-board';
+import { buildNitRows, buildProRelRows, buildTierRows } from '../src/utils/tier-board';
 import { TIERING } from '../src/components/shared/standings/standings-table-config';
 import { parseSiteTheme, resolveSiteTheme, resolveThemePreview } from '../src/utils/site-theme';
 import { leagueSiteTheme } from '../src/config/leagues';
@@ -141,6 +141,16 @@ describe('buildProRelRows (the promotion/relegation playoff)', () => {
     expect(rows.map((r) => r.zone)).toEqual(['up', 'up', 'down', 'down']);
     expect(rows.map((r) => r.zoneLabel?.text)).toEqual(['Premier League', undefined, 'D-League', undefined]);
     expect(rows.map((r) => r.team.id)).toEqual(four.map((t) => t.id));
+  });
+});
+
+describe('buildNitRows (the NIT)', () => {
+  it('keeps the producer order and shows the conference seed and power rank', () => {
+    const two = ['0007', '0003'].map((id) => toBoardTeam(standing(id), opts));
+    const rows = buildNitRows([{ team: two[0], seed: 6, pwr: '41.2' }, { team: two[1], pwr: '' }]);
+    expect(rows.map((r) => r.team.id)).toEqual(['0007', '0003']);
+    expect(rows[0].cells.map((c) => c.text)).toEqual(['6', '4-2', '41.20']);
+    expect(rows[1].cells[0].text).toBe('—');
   });
 });
 

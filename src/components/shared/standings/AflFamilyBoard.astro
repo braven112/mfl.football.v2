@@ -21,7 +21,7 @@ import {
   type BoardTeamConfig,
   type GroupRow,
 } from '../../../utils/standings-board';
-import { buildProRelRows, buildTierRows, type TierMovement } from '../../../utils/tier-board';
+import { buildNitRows, buildProRelRows, buildTierRows, type TierMovement } from '../../../utils/tier-board';
 import ThemeImage from '../ThemeImage.astro';
 import LeaderStrip from './board/LeaderStrip.astro';
 import SeedKey from './board/SeedKey.astro';
@@ -46,9 +46,11 @@ interface Props {
   tiers: Array<{ tier: string; teams: TeamStanding[]; movement?: TierMovement; promotionCutoff?: number; logo?: Logo }>;
   /** The promotion/relegation playoff (Premier League 9-10, D-League 3-4), ranked on all-play. */
   proRel?: { teams: TeamStanding[]; logo?: Logo };
+  /** The NIT (conference seeds 5-12), ranked by power rank. */
+  nit?: TeamStanding[];
 }
 
-const { theme, view, leagueSlug, teams, preferredTeamId, hrefFor, divisions, conferences, tiers, proRel } = Astro.props;
+const { theme, view, leagueSlug, teams, preferredTeamId, hrefFor, divisions, conferences, tiers, proRel, nit = [] } = Astro.props;
 
 const configById = new Map(teams.map((t) => [t.franchiseId, t]));
 const board = (t: TeamStanding, badgeSeeding?: StandingsTiering): BoardTeam =>
@@ -85,6 +87,7 @@ const boardTiers = tiers.map((t) => {
   const list = t.teams.map((team) => board(team));
   return { ...t, rows: buildTierRows(list, { tier: t.tier, movement: t.movement, promotionCutoff: t.promotionCutoff, leagueSlug }) };
 });
+const nitRows = buildNitRows(nit.map((t) => ({ team: board(t), seed: t.conferenceSeed, pwr: t.pwr ?? '0' })));
 const proRelRows = proRel?.teams.length ? buildProRelRows(proRel.teams.map((t) => board(t))) : [];
 ---
 
@@ -138,6 +141,19 @@ const proRelRows = proRel?.teams.length ? buildProRelRows(proRel.teams.map((t) =
         />
       </section>
     ))}
+
+  {view === 'league' && nitRows.length > 0 && (
+    <div class="stb-groups stb-groups--2 stb-groups--wide-last">
+      <GroupCard
+        theme={theme}
+        title="NIT"
+        meta={`${nitRows.length} teams · by power rank`}
+        labels={[{ text: 'Seed', hideSm: true }, { text: 'W-L' }, { text: 'Power' }]}
+        rows={nitRows}
+        rankLabel="#"
+      />
+    </div>
+  )}
 
   {view === 'all_play' && (
     <div class:list={['stb-groups', 'stb-groups--2', { 'stb-groups--wide-last': boardTiers.length > 2 }]}>

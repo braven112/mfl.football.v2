@@ -123,3 +123,19 @@ export function buildProRelRows(teams: BoardTeam[]): GroupRow[] {
     } satisfies GroupRow;
   });
 }
+
+/**
+ * The NIT, the AFL's consolation tournament for conference seeds 5-12, ranked
+ * by power rank. Rows arrive already ranked by the producer.
+ */
+export function buildNitRows(teams: Array<{ team: BoardTeam; seed?: number; pwr: string }>): GroupRow[] {
+  return teams.map(({ team, seed, pwr }, i) => ({
+    team,
+    rank: { kind: 'num', n: i + 1 },
+    cells: [
+      { text: seed ? String(seed) : '—', hideSm: true },
+      { text: team.record },
+      { text: Number(pwr || 0).toFixed(2), strong: true },
+    ],
+  }) satisfies GroupRow);
+}
