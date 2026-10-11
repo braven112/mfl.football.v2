@@ -36,4 +36,13 @@ describe('sync writers skip timestamp-only changes', () => {
     expect(block).not.toMatch(/fs\.writeFile/);
     expect(block).not.toMatch(/lastScanTimestamp\s*=/);
   });
+
+  it('stores trade-bait state through setTradeBaitState, which stamps only a change', () => {
+    // mergeFeed picks the trade-bait state by tradeBaitStateAt, so every write
+    // must go through the helper that maintains it.
+    const scan = read('scripts/schefter-scan.mjs');
+    // The one direct assignment allowed is inside the helper itself.
+    expect(scan.match(/feed\.tradeBaitState\s*=(?!=)/g)?.length).toBe(1);
+    expect(scan.match(/(?<!function )setTradeBaitState\(feed, nextState\)/g)?.length).toBe(2);
+  });
 });

@@ -1734,6 +1734,19 @@ function buildTradeBaitTip({
   };
 }
 
+/**
+ * Store the trade-bait state, stamping `tradeBaitStateAt` only when its content
+ * changed. mergeFeed (scripts/lib/merge-schefter-feed.mjs) keeps whichever
+ * side's state carries the newer stamp, so an unchanged state must not move it:
+ * a stamp on every run would rewrite the feed on every quiet scan.
+ */
+function setTradeBaitState(feed, nextState) {
+  if (JSON.stringify(feed.tradeBaitState ?? null) !== JSON.stringify(nextState)) {
+    feed.tradeBaitStateAt = new Date().toISOString();
+  }
+  feed.tradeBaitState = nextState;
+}
+
 async function scanTradeBait(league) {
   if (!process.env.SCHEFTER_RUMOR_MILL_ENABLED ||
       process.env.SCHEFTER_RUMOR_MILL_ENABLED === '0' ||
@@ -1823,7 +1836,7 @@ async function scanTradeBait(league) {
     }
     // Always persist state even on no-op so seed + no-change advances
     // drop the drift timers and committed blocks stay current.
-    feed.tradeBaitState = nextState;
+    setTradeBaitState(feed, nextState);
     await fs.writeFile(league.feedPath, JSON.stringify(feed, null, 2) + '\n');
     return 0;
   }
@@ -1885,7 +1898,7 @@ async function scanTradeBait(league) {
   // Only after the push succeeds do we advance committedBlock. If any part
   // of the push failed above, the early return kept committedBlock on the
   // prior value so the next cycle retries cleanly.
-  feed.tradeBaitState = nextState;
+  setTradeBaitState(feed, nextState);
   await fs.writeFile(league.feedPath, JSON.stringify(feed, null, 2) + '\n');
 
   return tips.length;
