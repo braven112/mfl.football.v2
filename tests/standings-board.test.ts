@@ -11,7 +11,7 @@ import {
   toBoardTeam,
   type BoardTeam,
 } from '../src/utils/standings-board';
-import { buildTierRows } from '../src/utils/tier-board';
+import { buildProRelRows, buildTierRows } from '../src/utils/tier-board';
 import { TIERING } from '../src/components/shared/standings/standings-table-config';
 import { parseSiteTheme, resolveSiteTheme, resolveThemePreview } from '../src/utils/site-theme';
 import { leagueSiteTheme } from '../src/config/leagues';
@@ -131,6 +131,16 @@ describe('buildTierRows (the AFL tier competition)', () => {
   it('prices ranks from the league payout table', () => {
     const rows = buildTierRows(twelve, { tier: 'Premier League', leagueSlug: 'afl-fantasy' });
     expect(rows[0].cells.at(-1)?.prize).toMatch(/^\$\d+/);
+  });
+});
+
+describe('buildProRelRows (the promotion/relegation playoff)', () => {
+  it('top two play in the Premier League next season, bottom two in the D-League', () => {
+    const four = Array.from({ length: 4 }, (_, i) => toBoardTeam(standing(String(i + 1).padStart(4, '0')), opts));
+    const rows = buildProRelRows(four);
+    expect(rows.map((r) => r.zone)).toEqual(['up', 'up', 'down', 'down']);
+    expect(rows.map((r) => r.zoneLabel?.text)).toEqual(['Premier League', undefined, 'D-League', undefined]);
+    expect(rows.map((r) => r.team.id)).toEqual(four.map((t) => t.id));
   });
 });
 

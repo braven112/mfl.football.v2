@@ -21,7 +21,7 @@ import {
   type BoardTeamConfig,
   type GroupRow,
 } from '../../../utils/standings-board';
-import { buildTierRows, type TierMovement } from '../../../utils/tier-board';
+import { buildProRelRows, buildTierRows, type TierMovement } from '../../../utils/tier-board';
 import ThemeImage from '../ThemeImage.astro';
 import LeaderStrip from './board/LeaderStrip.astro';
 import SeedKey from './board/SeedKey.astro';
@@ -44,9 +44,11 @@ interface Props {
   divisions: Array<{ name: string; teams: TeamStanding[]; seeding: StandingsTiering; logo?: Logo }>;
   conferences: Array<{ id: string; name: string; teams: TeamStanding[]; seeding: StandingsTiering; logo?: Logo }>;
   tiers: Array<{ tier: string; teams: TeamStanding[]; movement?: TierMovement; promotionCutoff?: number; logo?: Logo }>;
+  /** The promotion/relegation playoff (Premier League 9-10, D-League 3-4), ranked on all-play. */
+  proRel?: { teams: TeamStanding[]; logo?: Logo };
 }
 
-const { theme, view, leagueSlug, teams, preferredTeamId, hrefFor, divisions, conferences, tiers } = Astro.props;
+const { theme, view, leagueSlug, teams, preferredTeamId, hrefFor, divisions, conferences, tiers, proRel } = Astro.props;
 
 const configById = new Map(teams.map((t) => [t.franchiseId, t]));
 const board = (t: TeamStanding, badgeSeeding?: StandingsTiering): BoardTeam =>
@@ -83,6 +85,7 @@ const boardTiers = tiers.map((t) => {
   const list = t.teams.map((team) => board(team));
   return { ...t, rows: buildTierRows(list, { tier: t.tier, movement: t.movement, promotionCutoff: t.promotionCutoff, leagueSlug }) };
 });
+const proRelRows = proRel?.teams.length ? buildProRelRows(proRel.teams.map((t) => board(t))) : [];
 ---
 
 <div class="stb">
@@ -150,6 +153,21 @@ const boardTiers = tiers.map((t) => {
           {t.logo && <ThemeImage slot="logo" src={t.logo.src} darkSrc={t.logo.darkSrc ?? t.logo.src} alt="" />}
         </GroupCard>
       ))}
+    </div>
+  )}
+
+  {view === 'all_play' && proRelRows.length > 0 && (
+    <div class="stb-groups stb-groups--2">
+      <GroupCard
+        theme={theme}
+        title="Pro/Rel playoff"
+        meta={`${proRelRows.length} teams`}
+        labels={[{ text: 'All-play' }, { text: 'Pct', hideSm: true }, { text: '' }]}
+        rows={proRelRows}
+        rankLabel="#"
+      >
+        {proRel?.logo && <ThemeImage slot="logo" src={proRel.logo.src} darkSrc={proRel.logo.darkSrc ?? proRel.logo.src} alt="" />}
+      </GroupCard>
     </div>
   )}
 </div>

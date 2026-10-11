@@ -36,7 +36,6 @@ import {
   type TeamConfig,
 } from '../../../utils/team-names';
 import { extractSeasonStructure, applySeasonStructure } from '../../../utils/afl-structure';
-import ThemeImage from '../ThemeImage.astro';
 import { getCurrentSeasonYear, getTestDateFromSearchParams } from '../../../utils/league-year';
 import { resolveThrowbackRequestState } from '../../../utils/throwback-request-state';
 import { applyThrowbackToStandingsConfig } from '../../../utils/throwback-standings';
@@ -355,6 +354,7 @@ const boardTiers = hasTierRecord
         divisions={boardDivisions}
         conferences={boardConferences}
         tiers={boardTiers}
+        proRel={promoRegTeams.length === 4 ? { teams: promoRegTeams, logo: { src: '/assets/afl/premier.svg', darkSrc: '/assets/afl/premier-dark.svg' } } : undefined}
       />
 
       {view === 'league' && (
@@ -424,63 +424,6 @@ const boardTiers = hasTierRecord
               </div>
             </div>
           )}
-        </div>
-      )}
-
-      {view === 'all_play' && promoRegTeams.length === 4 && (
-        <div class="promo-reg-section">
-          <div class="promo-reg-header">
-            <ThemeImage src="/assets/afl/premier.svg" darkSrc="/assets/afl/premier-dark.svg" alt="Premier League Logo" class="promo-reg-logo" />
-            <div class="promo-reg-text">
-              <h2 class="promo-reg-title">Promotion/Relegation cutoff</h2>
-              <p class="promo-reg-subtitle">Final all-play standings cut — top 2 are in Premier League next season, bottom 2 in D-League.</p>
-            </div>
-          </div>
-
-          <div class="promo-reg-table-wrapper">
-            <table class="promo-reg-table">
-              <thead>
-                <tr>
-                  <th class="col-rank">Rank</th>
-                  <th class="col-team">Team</th>
-                  <th class="col-record">W</th>
-                  <th class="col-record">L</th>
-                  <th class="col-prize">Prize</th>
-                </tr>
-              </thead>
-              <tbody>
-                {promoRegTeams.map((team, index) => (
-                  <tr class={index + 1 <= 2 ? 'promoted' : 'relegated'}>
-                    <td class="col-rank">
-                      <span class="rank-badge">{index + 1}</span>
-                    </td>
-                    <td class="col-team">
-                      <a
-                        href={`${baseUrl}/rosters?franchise=${team.id}`}
-                        class="team-info team-info-link"
-                        aria-label={`View ${team.teamName} roster`}
-                      >
-                        {team.teamIcon && (
-                          <img
-                            src={team.teamIcon}
-                            alt={team.teamName}
-                            class="team-icon"
-                            loading="lazy"
-                          />
-                        )}
-                        <span class="team-name">{team.teamName}</span>
-                      </a>
-                    </td>
-                    <td class="col-record">{team.all_play_wlt?.split('-')[0] || '0'}</td>
-                    <td class="col-record">{team.all_play_wlt?.split('-')[1] || '0'}</td>
-                    <td class="col-prize">
-                      <span class="prize-icon">{index + 1 <= 2 ? '⬆' : '⬇'}</span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
         </div>
       )}
 
@@ -760,193 +703,6 @@ const boardTiers = hasTierRecord
     margin-bottom: 0.75rem !important;
   }
 
-  /* Promotion/Relegation Section */
-  .promo-reg-section {
-    margin-top: 2rem;
-    background: var(--card-bg, #fff);
-    border-radius: 1rem;
-    box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
-    overflow: hidden;
-  }
-
-  :global(html.dark) .promo-reg-section {
-    box-shadow:
-      0 0 0 1px var(--content-border, #555555),
-      var(--box-shadow-lg);
-  }
-
-  .promo-reg-header {
-    padding: 1.5rem 2rem;
-    background: #c41e3a;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-  }
-
-  :global(.promo-reg-logo) {
-    height: 50px;
-    width: auto;
-    object-fit: contain;
-  }
-
-  .promo-reg-text {
-    flex: 1;
-  }
-
-  .promo-reg-title {
-    margin: 0;
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #fff;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  .promo-reg-subtitle {
-    margin: 0.5rem 0 0;
-    font-size: 0.95rem;
-    color: rgba(255, 255, 255, 0.9);
-  }
-
-  .promo-reg-table-wrapper {
-    overflow-x: auto;
-  }
-
-  .promo-reg-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.9rem;
-  }
-
-  .promo-reg-table thead {
-    background: var(--table-header-bg, #f8f9fa);
-    border-bottom: 2px solid var(--table-border, #dee2e6);
-  }
-
-  .promo-reg-table th {
-    padding: 0.75rem 1rem;
-    text-align: left;
-    font-weight: 700;
-    color: var(--table-header-text, #111827);
-    text-transform: uppercase;
-    font-size: var(--font-size-xs);
-    letter-spacing: 0.05em;
-  }
-
-  .promo-reg-table .col-rank {
-    width: 80px;
-    text-align: center;
-  }
-
-  .promo-reg-table .col-team {
-    min-width: 200px;
-  }
-
-  .promo-reg-table .col-record {
-    width: 80px;
-    text-align: center;
-  }
-
-  .promo-reg-table .col-prize {
-    width: 100px;
-    text-align: center;
-  }
-
-  .promo-reg-table tbody tr {
-    border-bottom: 1px solid var(--table-border, #e5e7eb);
-    transition: background-color var(--transition-fast);
-  }
-
-  .promo-reg-table tbody tr:last-child {
-    border-bottom: none;
-  }
-
-  .promo-reg-table tbody tr.promoted {
-    background: linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(34, 197, 94, 0.1) 100%);
-  }
-
-  .promo-reg-table tbody tr.relegated {
-    background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(239, 68, 68, 0.1) 100%);
-  }
-
-  .promo-reg-table td {
-    padding: 1rem;
-  }
-
-  .promo-reg-table .rank-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    font-weight: 700;
-    font-size: var(--font-size-sm);
-  }
-
-  .promo-reg-table tr.promoted .rank-badge {
-    background: #22c55e;
-    color: #fff;
-  }
-
-  .promo-reg-table tr.relegated .rank-badge {
-    background: #ef4444;
-    color: #fff;
-  }
-
-  .promo-reg-table .team-info {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-
-  a.team-info-link {
-    color: inherit;
-    text-decoration: none;
-    border-radius: 4px;
-    transition: opacity var(--transition-fast), transform var(--transition-fast);
-  }
-
-  a.team-info-link:hover,
-  a.team-info-link:focus-visible {
-    opacity: 0.85;
-    transform: translateY(-1px);
-  }
-
-  a.team-info-link:focus-visible {
-    outline: 2px solid var(--color-primary-light, #2563eb);
-    outline-offset: 2px;
-  }
-
-  .promo-reg-table .team-icon {
-    width: 40px;
-    height: 40px;
-    object-fit: contain;
-    flex-shrink: 0;
-  }
-
-  .promo-reg-table .team-name {
-    font-weight: 600;
-    color: var(--page-text, #111827);
-  }
-
-  .promo-reg-table .col-record td {
-    font-weight: 600;
-    font-family: var(--font-family-mono);
-  }
-
-  .promo-reg-table .prize-icon {
-    font-size: 1.5rem;
-  }
-
-  .promo-reg-table tr.promoted .prize-icon {
-    color: #22c55e;
-  }
-
-  .promo-reg-table tr.relegated .prize-icon {
-    color: #ef4444;
-  }
-
   /* NIT Section */
   .nit-section {
     margin-top: 2rem;
@@ -1103,17 +859,6 @@ const boardTiers = hasTierRecord
 
     .standings-info {
       padding: 1rem;
-    }
-
-    .promo-reg-table .team-icon {
-      width: 32px;
-      height: 32px;
-    }
-
-    .promo-reg-table .rank-badge {
-      width: 28px;
-      height: 28px;
-      font-size: var(--font-size-xs);
     }
 
     .nit-table .team-icon {

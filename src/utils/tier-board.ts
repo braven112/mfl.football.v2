@@ -100,3 +100,26 @@ export function buildTierRows(teams: BoardTeam[], opts: TierBoardOptions): Group
     } satisfies GroupRow;
   });
 }
+
+/**
+ * The promotion/relegation playoff: Premier League 9-10 against D-League 3-4,
+ * cut on all-play. The top two play in the Premier League next season, the
+ * bottom two in the D-League. Rows arrive already ranked by the producer.
+ */
+export function buildProRelRows(teams: BoardTeam[]): GroupRow[] {
+  return teams.map((team, i) => {
+    const up = i < 2;
+    const ap = team.allPlay;
+    return {
+      team,
+      zone: up ? 'up' : 'down',
+      zoneLabel: i === 0 ? { tone: 'up', text: PREMIER_LEAGUE_NAME } : i === 2 ? { tone: 'down', text: D_LEAGUE_NAME } : undefined,
+      rank: { kind: 'num', n: i + 1 },
+      cells: [
+        { text: formatRecord(ap.wins, ap.losses, ap.ties), strong: true },
+        { text: ap.pct.toFixed(3).replace(/^0/, ''), hideSm: true },
+        { arrow: up ? 'up' : 'down' },
+      ],
+    } satisfies GroupRow;
+  });
+}
