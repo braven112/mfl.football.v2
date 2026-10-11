@@ -1,8 +1,9 @@
 ---
 /**
  * The thin score strip across the top of the front page: this week's games as
- * crest + name + score pairs. Dark in both themes (the league's hero ink), so
- * its crests are the dark-surface cuts resolved server-side.
+ * crest + name + score pairs. It follows the theme (white in light, the card
+ * surface in dark), so it draws each team's theme-following icon, which the
+ * site-wide dark swap (TeamIconDarkStyles) turns to its dark cut.
  *
  * A signed-in owner sees their own division's games, their own first; anyone
  * else sees the games between the best records (src/utils/front-page.ts).
@@ -39,12 +40,11 @@ const scopeLabel = strip.scope === 'division' ? 'Your division' : 'Top games';
             {g.sides.map((s, i) => {
               const t = teams[s.franchiseId];
               return (
-                <a class:list={['fp-strip__side', { 'fp-strip__side--lead': i === leader }]} href={t?.href}>
-                  {t?.crest ? (
+                <a class:list={['fp-strip__side', { 'fp-strip__side--lead': i === leader, 'fp-strip__side--trail': leader !== -1 && i !== leader }]} href={t?.href}>
+                  {t?.icon || t?.crest ? (
                     <img
                       class:list={['fp-strip__crest', { 'fp-strip__crest--round': t.round }]}
-                      src={t.crest}
-                      style={t.crestFilter ? `filter:${t.crestFilter}` : undefined}
+                      src={t.icon || t.crest}
                       alt=""
                       width="20"
                       height="20"
@@ -71,12 +71,13 @@ const scopeLabel = strip.scope === 'division' ? 'Your division' : 'Top games';
 
 <style>
   .fp-strip {
-    background: var(--hero-ink);
-    color: var(--color-white);
+    background: var(--content-bg);
+    color: var(--page-text);
+    border: 1px solid var(--content-border);
     border-radius: var(--radius-lg);
     overflow: hidden;
   }
-  .fp-strip--bar { border-radius: 0; }
+  .fp-strip--bar { border-radius: 0; border-width: 0 0 1px; }
   .fp-strip--bar .fp-strip__inner { max-width: 1180px; margin: 0 auto; }
   .fp-strip__inner {
     display: flex;
@@ -91,7 +92,7 @@ const scopeLabel = strip.scope === 'division' ? 'Your division' : 'Top games';
     align-content: center;
     gap: 0.1rem;
     padding: 0.5rem 0.9rem;
-    border-right: 1px solid rgb(255 255 255 / 0.14);
+    border-right: 1px solid var(--content-border);
   }
   .fp-strip__week strong {
     font-family: var(--font-display);
@@ -118,20 +119,21 @@ const scopeLabel = strip.scope === 'division' ? 'Your division' : 'Top games';
     gap: 0.15rem;
     min-width: 9rem;
     padding: 0.45rem 0.8rem;
-    border-right: 1px solid rgb(255 255 255 / 0.14);
+    border-right: 1px solid var(--content-border);
   }
-  .fp-strip__game--mine { background: rgb(255 255 255 / 0.1); }
+  .fp-strip__game--mine { background: var(--content-bg-muted); }
   .fp-strip__side {
     display: grid;
     grid-template-columns: 1.25rem 1fr auto;
     gap: 0.4rem;
     align-items: center;
-    color: rgb(255 255 255 / 0.78);
+    color: var(--page-text);
     text-decoration: none;
     font-size: var(--font-size-xs);
   }
-  .fp-strip__side:hover { color: var(--color-white); }
-  .fp-strip__side--lead { color: var(--color-white); font-weight: var(--font-weight-bold); }
+  .fp-strip__side:hover { color: var(--page-text); text-decoration: none; }
+  .fp-strip__side--lead { font-weight: var(--font-weight-bold); }
+  .fp-strip__side--trail { color: var(--content-text-muted); }
   .fp-strip__crest { width: 1.25rem; height: 1.25rem; object-fit: contain; }
   .fp-strip__crest--round { border-radius: var(--radius-full); object-fit: cover; }
   .fp-strip__name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 7rem; }
@@ -142,11 +144,11 @@ const scopeLabel = strip.scope === 'division' ? 'Your division' : 'Top games';
     place-items: center;
     padding: 0 0.9rem;
     margin-left: auto;
-    color: var(--color-white);
+    color: var(--page-text);
     font-size: var(--font-size-xs);
     font-weight: var(--font-weight-semibold);
     white-space: nowrap;
     text-decoration: none;
   }
-  .fp-strip__all:hover { text-decoration: underline; }
+  .fp-strip__all:hover { color: var(--page-text); text-decoration: underline; }
 </style>
