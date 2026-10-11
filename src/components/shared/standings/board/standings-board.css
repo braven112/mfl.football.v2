@@ -160,10 +160,14 @@ html.dark [data-site-theme='editorial'] .stb-leader { box-shadow: var(--stb-ring
 .stb-team small { font-size: var(--font-size-2xs); color: var(--stb-muted); line-height: 1.2; }
 .stb-row--lead { padding-block: 0.6rem; }
 .stb-row--lead .stb-crest { width: 2.1rem; height: 2.1rem; }
-[data-site-theme='primetime'] .stb-row--lead { color: #fff; border-top: 0; }
-[data-site-theme='primetime'] .stb-row--lead b { font-family: var(--font-display); font-size: var(--font-size-base); font-weight: 700; text-transform: uppercase; font-style: italic; }
-[data-site-theme='primetime'] .stb-row--lead small,
-[data-site-theme='primetime'] .stb-row--lead .stb-rank { color: rgb(255 255 255 / 0.9); }
+/* A division's leader is painted in its team colours, name in the display face. */
+.stb-row--painted { color: #fff; border-top: 0; }
+.stb-row--painted b { font-family: var(--font-display); font-size: var(--font-size-base); font-weight: 700; letter-spacing: 0.01em; }
+[data-site-theme='primetime'] .stb-row--painted b { text-transform: uppercase; font-style: italic; }
+.stb-row--painted small,
+.stb-row--painted .stb-rank,
+.stb-row--painted .stb-c { color: rgb(255 255 255 / 0.92); }
+.stb-row--painted .stb-v { color: #fff; }
 [data-site-theme='editorial'] .stb-gcard .stb-row:not(.stb-row--head):nth-child(odd) { background: var(--table-row-bg-alt); }
 .stb-row--mine:not(.stb-row--lead) { box-shadow: var(--stb-mine-edge); background: color-mix(in srgb, var(--stb-accent) 12%, transparent) !important; }
 .stb-row--cut { border-top: 2px dashed var(--stb-muted); }
@@ -199,7 +203,7 @@ html.dark [data-site-theme='editorial'] .stb-leader { box-shadow: var(--stb-ring
 .stb-dot--division_winner { background: var(--stb-accent); }
 .stb-dot--runner_up { background: var(--stb-text); }
 .stb-dot--wild_card { border: 2px solid var(--stb-text); width: 0.6rem; height: 0.6rem; }
-[data-site-theme='primetime'] .stb-row--lead .stb-dot--division_winner { background: #fff; }
+[data-site-theme='primetime'] .stb-row--painted .stb-dot--division_winner { background: #fff; }
 [data-site-theme='editorial'] .stb-only-primetime { display: none !important; }
 [data-site-theme='primetime'] .stb-only-editorial { display: none !important; }
 
@@ -367,10 +371,9 @@ html.dark [data-site-theme='editorial'] .stb-leader { box-shadow: var(--stb-ring
 [data-site-theme='primetime'] :is(.stb-leader, .stb-tile) { --stb-link-color: #fff; }
 .stb :is(a.stb-leader, a.stb-tile, a.stb-chip) { transition: transform var(--transition-fast), outline-color var(--transition-fast); outline: 2px solid transparent; outline-offset: 2px; }
 .stb :is(a.stb-leader, a.stb-tile, a.stb-chip):is(:hover, :focus-visible) { transform: translateY(-2px); outline-color: var(--stb-accent); }
-.stb-row:has(a.stb-team:is(:hover, :focus-visible)):not(.stb-row--lead),
+.stb-row:has(a.stb-team:is(:hover, :focus-visible)):not(.stb-row--painted),
 .stb-table tr:has(a.stb-team:is(:hover, :focus-visible)) td { background: color-mix(in srgb, var(--stb-accent) 10%, transparent); }
-[data-site-theme='primetime'] .stb-row--lead:has(a.stb-team:hover) { filter: brightness(1.12); }
-[data-site-theme='editorial'] .stb-row--lead:has(a.stb-team:is(:hover, :focus-visible)) { background: color-mix(in srgb, var(--stb-accent) 10%, var(--stb-card-2)) !important; }
+.stb-row--painted:has(a.stb-team:is(:hover, :focus-visible)) { filter: brightness(1.12); }
 
 /* Phones: leader cards stack the crest above the text, so four fit across. */
 @media (max-width: 767px) {
@@ -413,3 +416,8 @@ html.dark [data-site-theme='editorial'] .stb-leader { box-shadow: var(--stb-ring
   font-weight: 600;
 }
 .stb-season select.year-select:is(:hover, :focus-visible) { border-color: var(--content-border); color: var(--page-text); box-shadow: none; }
+
+/* Last season's division winner, in the division card's header. */
+.stb-champ { display: inline-flex; align-items: center; gap: 0.4rem; margin-left: auto; text-align: right; line-height: 1.15; font-size: var(--font-size-xs); color: var(--content-text-muted); }
+.stb-champ img { width: 1.75rem; height: 1.75rem; object-fit: contain; flex: none; order: 2; }
+.stb-champ small { display: block; font-size: var(--font-size-3xs); text-transform: uppercase; letter-spacing: 0.06em; }

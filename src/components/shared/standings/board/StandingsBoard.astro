@@ -40,9 +40,13 @@ interface Props {
   teams: BoardTeamConfig[];
   preferredTeamId?: string;
   hrefFor: (id: string) => string | undefined;
+  /** Last season's division winners, keyed by division name. */
+  defendingChampions?: Record<string, { name: string; icon: string; id?: string }>;
+  /** The season those champions won. */
+  championYear?: number;
 }
 
-const { theme, view, leagueSlug, profile, divisions, league, allPlay, teams, preferredTeamId, hrefFor } = Astro.props;
+const { theme, view, leagueSlug, profile, divisions, league, allPlay, teams, preferredTeamId, hrefFor, defendingChampions, championYear } = Astro.props;
 
 const configById = new Map(teams.map((t) => [t.franchiseId, t]));
 const usesVictoryPoints = profile.columns.division.some((c) => c.key === 'vp');
@@ -56,6 +60,18 @@ const board = (t: TeamStanding) =>
     hrefFor,
     configFor: (id) => configById.get(id),
   });
+
+// A division's defending champion, cropped the way that club's crest is cropped.
+type Champion = { name: string; icon: string; year: number; round?: boolean };
+const roundById = new Map<string, boolean>();
+for (const division of divisions) {
+  for (const team of division.teams) roundById.set(team.id, Boolean(board(team).round));
+}
+const championFor = (division: string): Champion | undefined => {
+  const c = defendingChampions?.[division];
+  if (!c?.icon || !championYear) return undefined;
+  return { name: c.name, icon: c.icon, year: championYear, round: c.id ? roundById.get(c.id) : undefined };
+};
 
 // ---- Division board ----
 const qualifiers = divisionQualifiers(badgeSeeding);
@@ -123,6 +139,7 @@ const allPlayRows = buildAllPlayRows(allPlay.map(board));
             showSeed={profile.badgeShowsSeed}
             labels={[{ text: 'W-L' }, { text: scoreLabel }, { text: 'Strk', hideSm: true }]}
             rows={divisionRows(d.teams)}
+            champion={championFor(d.name)}
           />
         ))}
       </div>

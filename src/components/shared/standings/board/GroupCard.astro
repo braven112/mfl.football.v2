@@ -2,7 +2,7 @@
 /**
  * One group of teams — a division, or an AFL tier. Rows arrive in the order
  * the standings producer gave them; the card only draws them. The first row
- * can be the group's leader, painted in team colours under Primetime; zones
+ * can be the group's leader, painted in team colours in both themes; zones
  * (promotion, relegation, a playoff line) are tinted bands with a labelled cut.
  */
 import type { SiteTheme } from '../../../../config/leagues';
@@ -21,9 +21,11 @@ interface Props {
   pills?: boolean;
   showSeed?: boolean;
   rankLabel?: string;
+  /** Last season's winner of this group, shown in the header in place of `meta`. */
+  champion?: { name: string; icon: string; year: number; round?: boolean };
 }
 
-const { theme, title, meta, labels, rows, pills = false, showSeed = true, rankLabel = '' } = Astro.props;
+const { theme, title, meta, labels, rows, pills = false, showSeed = true, rankLabel = '', champion } = Astro.props;
 const ncells = labels.filter((l) => !l.hideSm).length;
 const ncellsAll = labels.length;
 const primetime = theme === 'primetime';
@@ -33,7 +35,14 @@ const primetime = theme === 'primetime';
   <div class="stb-gcard__head">
     <slot name="logo" />
     <h3>{title}</h3>
-    {meta && <span>{meta}</span>}
+    {champion ? (
+      <span class="stb-champ" title={`${champion.name}, ${champion.year} division champion`}>
+        <img class:list={{ 'stb-round': champion.round }} src={champion.icon} alt="" loading="lazy" decoding="async" width="28" height="28" />
+        <span><small>Defending</small> {champion.year} champ</span>
+      </span>
+    ) : (
+      meta && <span>{meta}</span>
+    )}
   </div>
   <div class="stb-row stb-row--head">
     <span>{pills && !primetime ? 'Seed' : rankLabel}</span>
@@ -41,7 +50,7 @@ const primetime = theme === 'primetime';
     {labels.map((l) => <span class:list={{ 'stb-hide-sm': l.hideSm }}>{l.text}</span>)}
   </div>
   {rows.map((r) => {
-    const painted = primetime && r.lead;
+    const painted = Boolean(r.lead);
     return (
       <>
         {r.zoneLabel && <div class={`stb-zone-label stb-zone-label--${r.zoneLabel.tone}`}>{r.zoneLabel.text}</div>}
@@ -50,6 +59,7 @@ const primetime = theme === 'primetime';
             'stb-row',
             {
               'stb-row--lead': r.lead,
+              'stb-row--painted': painted,
               'stb-row--mine': r.team.mine,
               [`stb-row--cut${r.cut === 'plain' ? '' : `-${r.cut}`}`]: Boolean(r.cut),
               [`stb-row--zone-${r.zone}`]: Boolean(r.zone),

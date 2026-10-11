@@ -26,6 +26,7 @@ import {
   getTierAllPlayStandings,
   getAllPlayStandings,
   calculateAllPlayFromWeekly,
+  getDivisionChampionDetails,
   type WeeklyResultsData,
 } from '../../../utils/standings';
 import { getTierMembership, TIER_COMPETITION_FIRST_SEASON, AFL_CUP } from '../../../utils/afl-tier';
@@ -62,6 +63,9 @@ interface Props {
   preferredTeamId: string | null | undefined;
   /** The AFL's side competitions (tiers, AFL Cup, NIT, promotion/relegation). */
   competitions: boolean;
+  /** Last season's standings and league feeds: its division winners are this season's defending champions. */
+  previousFeed?: StandingsFeed;
+  previousLeagueFeed?: unknown;
 }
 const {
   league: leagueDef,
@@ -74,6 +78,8 @@ const {
   weeklyResultsFeed,
   preferredTeamId,
   competitions,
+  previousFeed,
+  previousLeagueFeed,
 } = Astro.props;
 const leagueSlug = leagueDef.slug as AflFamilySlug;
 const baseUrl = `/${leagueDef.slug}`;
@@ -249,6 +255,21 @@ function divisionBadgeSeeding(divisionName: string) {
   return conference ? TIERING.conferenceSeed(conference.divisionWinners.length) : TIERING.none;
 }
 
+// DEFENDING champions: last season's division winners, under last season's own
+// alignment and identities, keyed by the division they won.
+const previousYear = selectedYear - 1;
+const previousRows = previousFeed?.leagueStandings?.franchise;
+const defendingChampions = previousRows
+  ? getDivisionChampionDetails(
+      previousRows,
+      applySeasonStructure(
+        resolveConfigForYear(aflConfig as unknown as typeof aflConfig & { teams: TeamConfig[] }, previousYear),
+        extractSeasonStructure(previousLeagueFeed as any)
+      ),
+      { preserveFeedOrder: true }
+    )
+  : {};
+
 // The conference logo heads each division card on the board.
 const divisionToConf = seasonConfig.divisionToConference as Record<string, '00' | '01'>;
 
@@ -262,6 +283,9 @@ const boardDivisions = divisionStandings.map((d) => ({
   teams: d.teams,
   seeding: divisionBadgeSeeding(d.name),
   logo: logoFor(divisionToConf[d.name]),
+  champion: defendingChampions[d.name]?.icon
+    ? { name: defendingChampions[d.name].name, icon: defendingChampions[d.name].icon, year: previousYear }
+    : undefined,
 }));
 const boardConferences = conferenceLadders.map(({ id, standings }) => ({
   id,
