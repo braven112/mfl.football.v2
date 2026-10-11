@@ -11,6 +11,26 @@ who picked up whom, what it cost, and who got dropped to make room. Primarily
 an in-season tool (the AFL ran 215 free-agent moves in 2026 alone), but built
 against the full committed archive so it works year-round.
 
+## Oct 2026 rework — Schefter's wire
+
+Brandon's call (Oct 2026): the page is Schefter reporting the season, not a
+ledger. What changed, and what supersedes the table below:
+
+- **Each move leads with Schefter's story**; MFL's record sits behind "See
+  details" (`TransactionRecord.astro`). Stories join to rows by MFL timestamp +
+  franchise, narrowed by player (`src/utils/transaction-stories.ts`). Only real
+  stories join: `storyVersion` posts and trades. A bare template shows the
+  record instead, because it says the same thing less precisely.
+- **Every pickup, claim, auction win and cut gets a model-written story**
+  (`scripts/lib/schefter-move-story.mjs`), one call per move, add and drop
+  together. The scanner writes them as moves arrive;
+  `scripts/schefter-backfill-move-stories.mjs` (manual workflow) caught up the
+  season so far. The merge keeps the higher `storyVersion` on an id clash so a
+  stale scan cannot revert a backfilled story.
+- **Trades are in the default view** now; Pickups and Trades are chips.
+- **Past seasons are a small menu** in the header, not a wall of year buttons;
+  the intro paragraph is gone; search/team/week sit in a closed disclosure.
+
 ## Decisions taken (Sept 2026)
 
 | Question | Answer |

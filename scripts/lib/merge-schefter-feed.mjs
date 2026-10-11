@@ -65,7 +65,13 @@ function mergePostArrays(theirs, ours) {
   const add = (p, oursSide) => {
     if (!p || typeof p !== 'object') return;
     if (typeof p.id === 'string' && p.id) {
-      // ours added second so it overwrites theirs for the same id
+      // ours added second so it overwrites theirs for the same id — UNLESS
+      // theirs carries a newer Schefter move story. The one-off backfill
+      // (scripts/schefter-backfill-move-stories.mjs) rewrites posts that
+      // already exist, so a scan that checked out before it landed would
+      // otherwise push the old template text straight back over the story.
+      const prior = byId.get(p.id);
+      if (prior && (Number(prior.storyVersion) || 0) > (Number(p.storyVersion) || 0)) return;
       byId.set(p.id, p);
       return;
     }
@@ -190,7 +196,11 @@ export function mergeHistory(theirs, ours) {
 export function mergeByPath(filePath, theirsText, oursText) {
   const isHistory = /post-history\.json$/.test(filePath);
   const isFeed = /schefter-feed\.json$/.test(filePath);
-  if (!isHistory && !isFeed) return oursText; // take ours verbatim
+  // Season archives are plain post arrays written by two lanes — the weekly
+  // archive job appends, the move-story backfill rewrites in place — so a
+  // verbatim copy would let whichever pushed second erase the other's work.
+  const isArchive = /schefter-archive\/\d{4}\.json$/.test(filePath);
+  if (!isHistory && !isFeed && !isArchive) return oursText; // take ours verbatim
 
   let theirs;
   let ours;
@@ -206,6 +216,10 @@ export function mergeByPath(filePath, theirsText, oursText) {
   }
   if (theirs === null) return oursText;
 
+  if (isArchive) {
+    if (!Array.isArray(theirs) || !Array.isArray(ours)) return oursText;
+    return JSON.stringify(mergePostArrays(theirs, ours), null, 2) + '\n';
+  }
   const merged = isHistory ? mergeHistory(theirs, ours) : mergeFeed(theirs, ours);
   return JSON.stringify(merged, null, 2) + '\n';
 }

@@ -318,6 +318,14 @@ export interface SchefterPost {
   authorId?: string;
   /** MFL transaction timestamp (Unix epoch string, for dedup) */
   sourceTimestamp?: string;
+  /**
+   * Set when Schefter wrote this move's story (scripts/lib/schefter-move-story.mjs)
+   * rather than a template. The Transactions page leads only with these.
+   */
+  storyVersion?: number;
+  /** The move's players, stamped with the story — the Transactions page's join key. */
+  addedIds?: string[];
+  droppedIds?: string[];
   /** MFL pending-trade offer ID (rumor posts only) */
   offerId?: string;
   /** Stable trade dedup key — sorted franchise pair + sorted asset IDs.

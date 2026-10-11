@@ -85,3 +85,18 @@ export function parseRosterMove(txnStr) {
   droppedIds.push(...idsIn(parts[1]));
   return { addedIds, droppedIds, bbidAmount };
 }
+
+/**
+ * The positional move string for a raw MFL row, whichever shape it arrived
+ * in. Most rows carry `transaction`; the AFL's plain `WAIVER` rows carry
+ * `added` / `dropped` fields instead and no `transaction` at all, so a caller
+ * reading only `raw.transaction` silently skips every one of them. Rebuilt as
+ * "added|dropped" — the FREE_AGENT shape — so `parseRosterMove` reads both.
+ * @param {object} raw MFL transaction row
+ * @returns {string}
+ */
+export function rosterMoveString(raw) {
+  if (typeof raw?.transaction === 'string' && raw.transaction.trim()) return raw.transaction;
+  if (raw?.added == null && raw?.dropped == null) return '';
+  return `${raw.added ?? ''}|${raw.dropped ?? ''}`;
+}

@@ -1,0 +1,169 @@
+---
+/**
+ * MFL's official record of one move — who came and went, what it cost, and
+ * whether the commissioner made it. Rendered under "See details" on a
+ * Schefter story card, and as the whole card for a move with no story.
+ */
+import PlayerCell from '../PlayerCell.astro';
+import type { PlayerIdentity } from '../../../utils/player-map';
+
+type PlayerCells = { id: string; player: PlayerIdentity | undefined }[];
+
+interface Props {
+  kind: string;
+  kindLabel: string;
+  added: PlayerCells;
+  dropped: PlayerCells;
+  tradeSides: { name: string; players: PlayerCells; picks: string[] }[] | null;
+  /** null = show a dash; undefined = this league prints no amounts. */
+  amount: string | null | undefined;
+  dashTitle: string;
+  byCommish: boolean;
+}
+
+const { kind, kindLabel, added, dropped, tradeSides, amount, dashTitle, byCommish } = Astro.props;
+---
+
+<div class="txr">
+  <div class="txr__meta">
+    <span class="txr__badge" data-kind={kind}>{kindLabel}</span>
+    {amount !== undefined && (
+      <span class="txr__amount">{amount ?? <span class="txr__dash" title={dashTitle}>—</span>}</span>
+    )}
+    {/* Trades are excluded: MFL stamps by_commish on everything its trade
+        system processes (485 of 502 TheLeague trades), so it says nothing
+        there. On signings it is rare and worth seeing. */}
+    {byCommish && kind !== 'trade' && (
+      <span class="txr__commish" title="Executed by the commissioner">COMM</span>
+    )}
+  </div>
+
+  {tradeSides ? (
+    <div class="txr__trade">
+      {tradeSides.map((side) => (
+        <div class="txr__trade-side">
+          <span class="txr__trade-team">{side.name} sent</span>
+          <div class="txr__players">
+            {side.players.map((p) => (
+              <PlayerCell
+                name={p.player?.name ?? `Player ${p.id}`}
+                headshot={p.player?.headshot}
+                position={p.player?.position}
+                nflTeam={p.player?.nflTeam}
+                mflId={p.id}
+                espnId={p.player?.espnId ?? undefined}
+                size="compact"
+              />
+            ))}
+            {side.picks.map((pick) => <span class="txr__pick">{pick}</span>)}
+            {side.players.length === 0 && side.picks.length === 0 && <span class="txr__pick">nothing</span>}
+          </div>
+        </div>
+      ))}
+    </div>
+  ) : (
+    <>
+      {added.length > 0 && (
+        <div class="txr__side txr__side--in">
+          <span class="txr__sign" aria-hidden="true">+</span>
+          <span class="txr__sr">Added</span>
+          <div class="txr__players">
+            {added.map((p) => (
+              <PlayerCell
+                name={p.player?.name ?? `Player ${p.id}`}
+                headshot={p.player?.headshot}
+                position={p.player?.position}
+                nflTeam={p.player?.nflTeam}
+                mflId={p.id}
+                espnId={p.player?.espnId ?? undefined}
+                size="compact"
+              />
+            ))}
+          </div>
+        </div>
+      )}
+      {dropped.length > 0 && (
+        <div class="txr__side txr__side--out">
+          <span class="txr__sign" aria-hidden="true">−</span>
+          <span class="txr__sr">Dropped</span>
+          <div class="txr__players">
+            {dropped.map((p) => (
+              <PlayerCell
+                name={p.player?.name ?? `Player ${p.id}`}
+                headshot={p.player?.headshot}
+                position={p.player?.position}
+                nflTeam={p.player?.nflTeam}
+                mflId={p.id}
+                espnId={p.player?.espnId ?? undefined}
+                size="compact"
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </>
+  )}
+</div>
+
+<style>
+  .txr { display: flex; flex-direction: column; gap: 0.45rem; min-width: 0; }
+  .txr__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+  .txr__badge {
+    padding: 0.1rem 0.5rem;
+    border: 1px solid var(--content-border, #e5e5e5);
+    border-radius: var(--radius-full, 999px);
+    font-size: var(--font-size-xs, 0.75rem);
+    color: var(--content-text-muted, #666);
+    white-space: nowrap;
+  }
+  .txr__badge[data-kind='blind-bid'],
+  .txr__badge[data-kind='auction'],
+  .txr__badge[data-kind='trade'] {
+    color: var(--page-text, #1a1a1a);
+    border-color: var(--league-accent, #1c497c);
+  }
+  .txr__amount {
+    font-variant-numeric: tabular-nums;
+    font-size: var(--font-size-sm, 0.875rem);
+    font-weight: 600;
+  }
+  .txr__dash { color: var(--content-text-muted, #666); font-weight: 400; }
+  .txr__commish {
+    padding: 0.05rem 0.35rem;
+    border-radius: var(--radius-sm, 4px);
+    background: var(--badge-info-bg, #e7f0fb);
+    color: var(--badge-info-text, #1c497c);
+    font-size: var(--font-size-xs, 0.75rem);
+    letter-spacing: 0.04em;
+  }
+  .txr__side { display: flex; align-items: flex-start; gap: 0.4rem; min-width: 0; }
+  .txr__sign { font-weight: 700; line-height: 1.4; color: var(--alert-success-text, #157347); }
+  .txr__side--out .txr__sign { color: var(--alert-warning-text, #8a6100); }
+  .txr__players { display: flex; flex-wrap: wrap; gap: 0.25rem 0.75rem; min-width: 0; }
+  .txr__trade { display: flex; flex-direction: column; gap: 0.45rem; }
+  .txr__trade-side { display: flex; flex-direction: column; gap: 0.25rem; }
+  .txr__trade-team {
+    font-size: var(--font-size-xs, 0.75rem);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--content-text-muted, #666);
+  }
+  .txr__pick {
+    padding: 0.1rem 0.4rem;
+    border: 1px dashed var(--content-border, #e5e5e5);
+    border-radius: var(--radius-sm, 4px);
+    font-size: var(--font-size-sm, 0.875rem);
+    color: var(--content-text-muted, #666);
+  }
+  .txr__sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
+</style>

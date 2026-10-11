@@ -115,6 +115,15 @@ describe('mergeByPath', () => {
     expect(JSON.parse(out).posts.map((p: any) => p.id)).toEqual(['b', 'a']);
   });
 
+  it('unions season archives by id, keeping the backfilled story', () => {
+    const story = { ...post('a', '2026-05-23T09:00:00Z'), headline: 'story', storyVersion: 2 };
+    const theirs = JSON.stringify([story]);
+    const ours = JSON.stringify([post('b', '2026-05-23T10:00:00Z'), post('a', '2026-05-23T09:00:00Z')]);
+    const out = JSON.parse(mergeByPath('data/afl-fantasy/schefter-archive/2026.json', theirs, ours));
+    expect(out.map((p: any) => p.id)).toEqual(['b', 'a']);
+    expect(out[1].headline).toBe('story');
+  });
+
   it('takes ours verbatim for non-feed files (e.g. resolved-events.json)', () => {
     const out = mergeByPath('src/data/theleague/resolved-events.json', '{"old":true}', '{"new":true}');
     expect(out).toBe('{"new":true}');

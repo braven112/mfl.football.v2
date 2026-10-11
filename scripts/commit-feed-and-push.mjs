@@ -10,7 +10,8 @@
  *
  * Instead we reconcile by content: snapshot what this run wrote, hard-reset to
  * the freshly fetched origin tip, re-apply our changes (feeds/history union by
- * post id via scripts/lib/merge-schefter-feed.mjs; every other path is taken
+ * post id via scripts/lib/merge-schefter-feed.mjs, as do season archive files;
+ * every other path is taken
  * verbatim), commit, and push — retrying the whole cycle if origin advances
  * again under us. Nothing either side wrote is lost, regardless of timing.
  *

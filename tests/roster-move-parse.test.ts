@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseRosterMove } from '../scripts/lib/roster-move-parse.mjs';
+import { parseRosterMove, rosterMoveString } from '../scripts/lib/roster-move-parse.mjs';
 
 describe('parseRosterMove — MFL roster-move transaction parsing', () => {
   it('treats a leading-pipe transaction as a pure drop, never an add', () => {
@@ -98,5 +98,14 @@ describe('parseRosterMove — MFL roster-move transaction parsing', () => {
     expect(parseRosterMove('   ')).toEqual({ addedIds: [], droppedIds: [], bbidAmount: undefined });
     // @ts-expect-error — defensive: undefined input
     expect(parseRosterMove(undefined)).toEqual({ addedIds: [], droppedIds: [], bbidAmount: undefined });
+  });
+});
+
+describe('rosterMoveString', () => {
+  it("rebuilds the AFL's field-form WAIVER row into the positional string", () => {
+    expect(parseRosterMove(rosterMoveString({ added: '16432,', dropped: '14056,' }))).toMatchObject({ addedIds: ['16432'], droppedIds: ['14056'] });
+    expect(parseRosterMove(rosterMoveString({ added: '', dropped: '14056,' }))).toMatchObject({ addedIds: [], droppedIds: ['14056'] });
+    expect(rosterMoveString({ transaction: '1,|2,', added: '9,' })).toBe('1,|2,');
+    expect(rosterMoveString({ type: 'IR' })).toBe('');
   });
 });
