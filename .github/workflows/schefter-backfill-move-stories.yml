@@ -13,7 +13,7 @@ name: Schefter Move Story Backfill
 on:
   # PREVIEW ONLY — remove before merge. Writes ten stories per league onto the
   # PR branch so its preview shows real ones; `paths` keeps the bot's own feed
-  # commit from re-triggering it.
+  # commit from re-triggering it. (Re-run: prompt v3.)
   push:
     branches: [claude/project-thread-c4gubg]
     paths: [.github/workflows/schefter-backfill-move-stories.yml]

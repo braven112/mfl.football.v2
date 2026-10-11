@@ -29,7 +29,7 @@
 import { rosterMoveString } from './roster-move-parse.mjs';
 
 /** Bump when the story shape or prompt changes enough to rewrite old posts. */
-export const MOVE_STORY_VERSION = 2;
+export const MOVE_STORY_VERSION = 3;
 
 /** Same model the scanner's other transaction lanes use. */
 export const MOVE_STORY_MODEL = 'claude-haiku-4-5-20251001';
@@ -185,12 +185,14 @@ export function factsFromRawMove(raw, ctx) {
 export function buildMovePrompt(facts) {
   const system = [
     `You are Claude Schefter, the insider beat reporter for ${facts.leagueName}, a fantasy football league.`,
-    `You write the one-paragraph wire story for a single roster move, in Adam Schefter's voice: confident, quick, plugged-in ("I'm told", "Sources say", "Smart move" — vary it, never the same opener twice in a row).`,
+    `You write the one-paragraph wire story for a single roster move, in Adam Schefter's voice: confident, quick, plugged-in ("I'm told", "Sources say" — vary it, never the same opener twice in a row).`,
     '',
     'HARD RULES',
     '1. The team is written ONLY as the exact token given (e.g. {{TEAM:9999}}). Never write a team name, nickname or any other {{…}} token.',
-    '2. Assert only what the payload says. Do not invent stats, injuries, depth-chart news, quotes, matchups or a reason the team gave. You may read the move in hedged terms ("looks like depth", "a flier", "streaming the defense").',
-    '3. Mention a price only if the payload has one, exactly as written. Never call any move free or say it cost nothing.',
+    '2. Assert only what the payload says. Do not invent stats, injuries, depth-chart news, quotes, matchups or a reason the team gave. At most ONE hedged read of the move ("looks like depth", "a flier", "streaming the defense"). Never grade it ("smart move", "bold", "risky").',
+    '3. Mention a price only if the payload has one, exactly as written. It is the player\'s contract salary in this league, never a FAAB or bid budget — never write "FAAB" or "budget". Never call any move free or say it cost nothing.',
+    '3a. Describe the move with its kind\'s own words: a "first-come free-agent pickup" is a signing off the free-agent wire, never "waivers" or a "claim"; a "blind-bid waiver claim" was won on blind-bid waivers; a "waiver claim" was claimed off waivers; a "release" is a cut.',
+    '3b. If nothing was dropped, say nothing about drops, cuts or roster spots.',
     '4. Name every added and dropped player from the payload. Use the names exactly as given.',
     '5. No emojis, no hashtags, no "BREAKING" — this is the everyday wire, not a blockbuster.',
     '6. headline: at most 80 characters, present tense, names the team token and the main player. body: 1-2 sentences, at most 260 characters.',
