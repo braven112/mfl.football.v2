@@ -1,5 +1,5 @@
 /**
- * MFL Recent-Transactions Cache — Redis, 2-minute TTL
+ * MFL Recent-Transactions Cache — Redis, 60-second TTL
  *
  * Contract declaration windows are SHORT — 24 hours in season, 48 in the
  * offseason — and eligibility for one is derived entirely from the
@@ -27,7 +27,7 @@ import { getRedis } from './redis-client';
 import { buildMflExportUrl } from './mfl-url';
 import type { MFLRawTransaction } from '../types/contract-eligibility';
 
-const STALE_TTL_MS = 2 * 60 * 1000; // 2 minutes, matching the roster cache
+const STALE_TTL_MS = 60 * 1000; // 60 s, matching the roster cache
 
 /**
  * How far back to ask MFL for. The longest declaration window is 48 hours
@@ -121,7 +121,7 @@ const refreshing = new Map<string, Promise<MFLRawTransaction[] | null>>();
 
 /**
  * Get the last `RECENT_TRANSACTION_DAYS` of transactions from Redis, fetching
- * synchronously from MFL when the cache is missing or older than 2 minutes.
+ * synchronously from MFL when the cache is missing or older than 60 seconds.
  *
  * The refresh is awaited inline rather than backgrounded: Vercel terminates
  * the function once the response is sent, so fire-and-forget never completes
