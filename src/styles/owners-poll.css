@@ -115,7 +115,8 @@
   color: var(--content-text-muted);
 }
 .op-slot__crest { width: 1.5rem; height: 1.5rem; object-fit: contain; }
-.op-slot__name { font-weight: 600; flex: 1; min-width: 0; }
+.op-slot__body { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.op-slot__name { font-weight: 600; }
 .op-slot__placeholder { color: var(--content-text-muted); font-size: 0.9rem; }
 .op-slot__actions { display: flex; gap: 0.25rem; }
 
@@ -233,6 +234,8 @@
   color: var(--content-text-muted);
   font-variant-numeric: tabular-nums;
 }
+.op-card__stat { white-space: nowrap; }
+.op-card__meta abbr { text-decoration: none; cursor: help; }
 
 /* --- callouts ----------------------------------------------------------- */
 

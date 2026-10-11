@@ -15,7 +15,7 @@
  * Team cards are ordered ALPHABETICALLY, never by the Pecking Order composite.
  * The column already published the machine's ranking, and re-sorting the
  * ballot by it would anchor every owner to that order — which is precisely the
- * thing the poll exists to disagree with. Records and PPG are shown as neutral
+ * thing the poll exists to disagree with. Record, points for and all-play are shown as neutral
  * context; the composite rank is deliberately absent from the card.
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
@@ -35,6 +35,8 @@ export interface BallotStandingsRow {
   losses?: number;
   ties?: number;
   ppg?: number;
+  pf?: number;
+  allPlayWLT?: string;
 }
 
 interface Props {
@@ -73,6 +75,9 @@ const teams = Object.values(brands)
           ? `${wins}-${losses}${ties ? `-${ties}` : ''}`
           : null,
       ppg: row?.ppg ?? null,
+      pf: row?.pf ?? null,
+      // "48-12-0" → "48-12": a zero tie column is noise on a phone-width row.
+      allPlay: row?.allPlayWLT ? row.allPlayWLT.replace(/-0$/, '') : null,
     };
   })
   // Alphabetical — see the anchoring note above.

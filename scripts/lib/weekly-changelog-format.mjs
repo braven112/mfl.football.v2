@@ -101,6 +101,7 @@ export const AREA_LABELS = {
   'owners': 'Owner Pages',
   'notifications': 'Notifications',
   'sunday-ticket': 'Sunday Ticket',
+  'owners-poll': "Owners' Poll",
   'other': 'Other',
 };
 
