@@ -1,0 +1,132 @@
+---
+/**
+ * A story's picture, drawn from the teams it is about rather than a stock
+ * photo: one team fills the frame in its colours with its crest; two teams
+ * split it face to face (a matchup, a rivalry); a story about no team in
+ * particular shows the league's own mark. Dark in both themes, so the crests
+ * are the dark-surface cuts the adapter resolved.
+ */
+import type { FrontTeamArt } from './types';
+
+interface Props {
+  teams: FrontTeamArt[];
+  /** The league's mark for a DARK ground (the art is dark in both themes). */
+  leagueMark: string;
+  /** `lead` is the big front-page picture; `card` is a story card's. */
+  size?: 'lead' | 'card';
+  /** Small label in the top corner ("Your rivalry", "The Gauntlet"). */
+  flag?: string;
+  /** Big centred text over a two-team split ("4–1"). */
+  overlay?: string;
+  overlayLabel?: string;
+}
+
+const { teams, leagueMark, size = 'card', flag, overlay, overlayLabel } = Astro.props;
+const shown = teams.slice(0, 2);
+---
+
+<div class:list={['fp-art', `fp-art--${size}`, { 'fp-art--split': shown.length === 2 }]}>
+  {shown.length === 0 ? (
+    <div class="fp-art__side fp-art__side--league">
+      <img class="fp-art__crest" src={leagueMark} alt="" loading="lazy" decoding="async" />
+    </div>
+  ) : (
+    shown.map((t, i) => (
+      <div class="fp-art__side" style={`background:${t.gradient}`}>
+        {t.crest && (
+          <img
+            class:list={['fp-art__crest', { 'fp-art__crest--round': t.round }]}
+            src={t.crest}
+            style={t.crestFilter ? `filter:${t.crestFilter}` : undefined}
+            alt=""
+            loading={size === 'lead' ? 'eager' : 'lazy'}
+            decoding="async"
+          />
+        )}
+        {shown.length === 2 && <span class:list={['fp-art__name', { 'fp-art__name--end': i === 1 }]}>{t.name}</span>}
+      </div>
+    ))
+  )}
+  {shown.length === 2 && !overlay && <span class="fp-art__vs" aria-hidden="true">VS</span>}
+  {overlay && (
+    <span class="fp-art__overlay">
+      <b>{overlay}</b>
+      {overlayLabel && <small>{overlayLabel}</small>}
+    </span>
+  )}
+  {flag && <span class="fp-art__flag">{flag}</span>}
+</div>
+
+<style>
+  .fp-art {
+    position: relative;
+    display: grid;
+    overflow: hidden;
+    background: var(--hero-ink);
+    color: var(--color-white);
+  }
+  .fp-art--lead { aspect-ratio: 16 / 8; }
+  .fp-art--card { aspect-ratio: 16 / 9; }
+  .fp-art--split { grid-template-columns: 1fr 1fr; }
+  .fp-art__side {
+    position: relative;
+    display: grid;
+    place-items: center;
+    min-width: 0;
+  }
+  .fp-art__side--league { background: var(--hero-ink); }
+  .fp-art__crest { width: 42%; max-width: 12rem; aspect-ratio: 1; object-fit: contain; }
+  .fp-art--split .fp-art__crest { width: 52%; margin-bottom: 1.5rem; }
+  .fp-art__crest--round { border-radius: var(--radius-full); object-fit: cover; }
+  .fp-art__name {
+    position: absolute;
+    left: 0.75rem;
+    bottom: 0.6rem;
+    font-family: var(--font-display);
+    font-size: var(--font-size-lg);
+    line-height: 1;
+    text-transform: uppercase;
+  }
+  .fp-art--card .fp-art__name { font-size: var(--font-size-sm); }
+  .fp-art__name--end { left: auto; right: 0.75rem; text-align: right; }
+  .fp-art__vs {
+    position: absolute;
+    left: 50%;
+    top: 46%;
+    transform: translate(-50%, -50%) skewX(-10deg);
+    padding: 0.1rem 0.6rem;
+    background: var(--color-white);
+    color: var(--hero-ink);
+    font-family: var(--font-display);
+    font-size: var(--font-size-lg);
+    line-height: 1.2;
+    box-shadow: var(--shadow-md);
+  }
+  .fp-art--card .fp-art__vs { font-size: var(--font-size-sm); }
+  .fp-art__overlay {
+    position: absolute;
+    left: 50%;
+    bottom: 0.6rem;
+    transform: translateX(-50%);
+    display: grid;
+    justify-items: center;
+    padding: 0.2rem 0.75rem;
+    border-radius: var(--radius-sm);
+    background: var(--hero-ink);
+    white-space: nowrap;
+  }
+  .fp-art__overlay b { font-family: var(--font-display); font-size: var(--font-size-xl); line-height: 1; }
+  .fp-art__overlay small { font-size: var(--font-size-3xs); letter-spacing: var(--tracking-caps); text-transform: uppercase; opacity: 0.8; }
+  .fp-art__flag {
+    position: absolute;
+    left: 0;
+    top: 0;
+    padding: 0.25rem 0.7rem;
+    background: var(--league-accent);
+    color: var(--on-league-accent, var(--color-white));
+    font-family: var(--font-display);
+    font-size: var(--font-size-xs);
+    letter-spacing: var(--tracking-caps);
+    text-transform: uppercase;
+  }
+</style>

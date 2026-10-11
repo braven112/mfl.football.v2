@@ -663,6 +663,12 @@ export const LEAGUES = {
     optInNav: true,
     /** Pages come from the package-league set, entitled by `features` (package-league-routes.mjs). */
     pageKit: 'package',
+    /**
+     * The news-led front page (src/components/shared/front-page/). Archie's is
+     * the test league for the style (owner's call, Oct 2026); every other
+     * league stays on the classic hero-led homepage.
+     */
+    homeStyle: 'front-page',
     /** Short display name for the site header (the full name is too long there). */
     shortName: "Archie's",
     /**

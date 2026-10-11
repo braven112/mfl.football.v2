@@ -1,0 +1,65 @@
+---
+/**
+ * "Around the NFL": the newest NFL wire items, a line each, flagged when the
+ * news is about a player on the viewer's own roster. The league's own stories
+ * lead the page; the wire is the second read, as on ESPN's rail.
+ */
+import type { WireItem } from '../../../utils/front-page';
+
+interface Props {
+  items: WireItem[];
+  moreHref: string | null;
+}
+
+const { items, moreHref } = Astro.props;
+const ago = (iso: string) => {
+  const mins = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 60000));
+  if (mins < 60) return `${mins}m`;
+  const hours = Math.round(mins / 60);
+  return hours < 48 ? `${hours}h` : `${Math.round(hours / 24)}d`;
+};
+---
+
+{items.length > 0 && (
+  <section class="fp-wire" aria-labelledby="fp-wire-title">
+    <h2 id="fp-wire-title" class="fp-section-title">Around the NFL</h2>
+    <ul class="fp-wire__list">
+      {items.map((w) => (
+        <li class="fp-wire__item">
+          {w.href ? <a class="fp-wire__headline" href={w.href} rel="noopener" target="_blank">{w.headline}</a> : <span class="fp-wire__headline">{w.headline}</span>}
+          <span class="fp-wire__meta">
+            {w.onMyRoster && <span class="fp-wire__mine">Your player</span>}
+            {w.source && <span>{w.source} · </span>}
+            <span>{ago(w.at)}</span>
+          </span>
+        </li>
+      ))}
+    </ul>
+    {moreHref && <a class="cta-link" href={moreHref}>All the news</a>}
+  </section>
+)}
+
+<style>
+  .fp-wire {
+    background: var(--card-bg);
+    border: 1px solid var(--content-border);
+    border-radius: var(--radius-lg);
+    padding: 1rem;
+    min-width: 0;
+  }
+  .fp-wire__list { list-style: none; margin: 0 0 0.6rem; padding: 0; }
+  .fp-wire__item { display: grid; gap: 0.2rem; padding: 0.6rem 0; border-top: 1px solid var(--content-border); }
+  .fp-wire__item:first-child { border-top: 0; }
+  .fp-wire__headline { font-weight: var(--font-weight-semibold); font-size: var(--font-size-sm); color: var(--page-text); text-decoration: none; }
+  a.fp-wire__headline:hover { color: var(--page-text); text-decoration: underline; }
+  .fp-wire__meta { font-size: var(--font-size-3xs); letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--content-text-muted); }
+  .fp-wire__mine {
+    display: inline-block;
+    margin-right: 0.4rem;
+    padding: 0 0.4rem;
+    border-radius: var(--radius-full);
+    background: var(--league-accent);
+    color: var(--on-league-accent, var(--color-white));
+    font-weight: var(--font-weight-bold);
+  }
+</style>

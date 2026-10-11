@@ -19,6 +19,7 @@
  * No client script: nothing here needs to re-init under the ClientRouter.
  */
 import LeagueHomePage from '../home/LeagueHomePage.astro';
+import PackageFrontPage from './PackageFrontPage.astro';
 import type { QuickLinkPage } from '../hp-sections/QuickLinks.astro';
 import WhatsNext from '../WhatsNext.astro';
 import DivisionStandings from './DivisionStandings.astro';
@@ -26,7 +27,7 @@ import MadQualifiers from './MadQualifiers.astro';
 import PackageTeamSnapshot from './PackageTeamSnapshot.astro';
 import PackagePeckingOrderCard from './PackagePeckingOrderCard.astro';
 import type { PeckingOrderData } from '../PeckingOrderIssue.astro';
-import { getLeagueBySlug, leagueHasFeature, type CanonicalLeagueSlug } from '../../../config/leagues';
+import { getLeagueBySlug, leagueHasFeature, leagueHomeStyle, type CanonicalLeagueSlug } from '../../../config/leagues';
 import { packageLeagueHasPath } from '../../../config/package-league-routes.mjs';
 import { buildLiveScoringHeroProps } from '../../../utils/live-scoring-hero-props';
 import { getAuthUser, franchiseIdForLeague } from '../../../utils/auth';
@@ -80,6 +81,13 @@ interface Props {
   hasPage?: (path: string) => boolean;
   /** The Explore cards, for a league with no page-directory entries (the keeper slot). */
   quickLinks?: QuickLinkPage[];
+  /**
+   * The front-page style's extra reads (registry `homeStyle: 'front-page'`):
+   * franchise history for the weekly rivalry story, YTD player scores for the
+   * race's star. Optional, so a classic-style caller passes neither.
+   */
+  historyFeeds?: LazyFeedGlob;
+  ytdScoreFeeds?: LazyFeedGlob;
 }
 
 const {
@@ -96,6 +104,8 @@ const {
   posts,
   hasPage: hasPageProp,
   quickLinks,
+  historyFeeds,
+  ytdScoreFeeds,
 } = Astro.props;
 const league = getLeagueBySlug(leagueSlug)!;
 const hasPage = hasPageProp ?? ((p: string) => packageLeagueHasPath(league, p));
@@ -113,6 +123,9 @@ const teamSlugs = Object.fromEntries(config.teams.map((t) => [t.franchiseId, fra
 const teamHref = (id: string) =>
   leagueHasBrandBook(league.slug) && teamSlugs[id] ? r(`${base}/brand/${teamSlugs[id]}`) : r(`${base}/rosters?franchise=${id}`);
 const signInHref = loginUrlForRequest(Astro, league);
+// The homepage style the registry picks for this league: the classic shared
+// page, or the news-led front page (PackageFrontPage).
+const frontPage = leagueHomeStyle(league.slug) === 'front-page';
 
 // ── Results-shaped data: the SEASON year ─────────────────────────────────────
 const seasonYear = getCurrentSeasonYear(now);
@@ -277,6 +290,7 @@ const heroBackdrop = resolveHeroFranchiseBackdrop(mine ? (teamsById[mine] as any
 // games are mostly strangers'). Off, the hero's live window keeps its
 // no-scoreboard card.
 const heroLiveScoring =
+  !frontPage &&
   leagueHasFeature(league.slug, 'liveScoring') && 'slot' in heroState && heroState.slot === 'live-scoring' && heroState.week
     ? await buildLiveScoringHeroProps({
         league: league.slug,
@@ -298,6 +312,29 @@ const showInstallBanner =
 const testMode = !!Astro.url.searchParams.get('testDate');
 ---
 
+{frontPage ? (
+  <PackageFrontPage
+    league={league}
+    teamsById={teamsById}
+    groups={groups}
+    standingsFeed={standingsFeed}
+    scheduleFeed={scheduleFeed}
+    rostersFeed={rostersFeed}
+    mine={mine}
+    teamHref={teamHref}
+    r={r}
+    hasPage={hasPage}
+    signInHref={signInHref}
+    posts={posts}
+    latestIssue={seasonIssues[0] ? { year: seasonIssues[0].year, week: seasonIssues[0].week, ...seasonIssues[0].data } : null}
+    moves={txRows}
+    players={players}
+    playerName={playerName}
+    historyFeeds={historyFeeds}
+    ytdScoreFeeds={ytdScoreFeeds}
+    seasonYear={seasonYear}
+  />
+) : (
 <LeagueHomePage
   leagueSlug={league.slug}
   title={league.name}
@@ -428,6 +465,7 @@ const testMode = !!Astro.url.searchParams.get('testDate');
     )}
   </section>
 </LeagueHomePage>
+)}
 
 <style>
   .pkg-home__card {

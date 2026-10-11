@@ -31,6 +31,19 @@ on:
     branches: [main]
     paths:
       # Components a story renders.
+      - 'src/components/shared/front-page/FrontPageBody.astro'
+      - 'src/components/shared/front-page/HeadlineList.astro'
+      - 'src/components/shared/front-page/LeadStory.astro'
+      - 'src/components/shared/front-page/NflWire.astro'
+      - 'src/components/shared/front-page/RaceCards.astro'
+      - 'src/components/shared/front-page/ScoreStrip.astro'
+      - 'src/components/shared/front-page/StoryArt.astro'
+      - 'src/components/shared/front-page/StoryCards.astro'
+      - 'src/components/shared/front-page/TeamBand.astro'
+      - 'src/components/shared/front-page/types.ts'
+      - 'src/utils/front-page.ts'
+      - 'src/utils/package-league-home.ts'
+      - 'src/utils/schedule-data.mjs'
       - 'src/components/shared/TeamIconCell.astro'
       - 'src/components/shared/ThemeImage.astro'
       - 'src/components/shared/ThrowbackWeekModal.astro'
@@ -384,6 +397,19 @@ on:
     types: [opened, ready_for_review, labeled, synchronize]
     paths:
       # Components a story renders.
+      - 'src/components/shared/front-page/FrontPageBody.astro'
+      - 'src/components/shared/front-page/HeadlineList.astro'
+      - 'src/components/shared/front-page/LeadStory.astro'
+      - 'src/components/shared/front-page/NflWire.astro'
+      - 'src/components/shared/front-page/RaceCards.astro'
+      - 'src/components/shared/front-page/ScoreStrip.astro'
+      - 'src/components/shared/front-page/StoryArt.astro'
+      - 'src/components/shared/front-page/StoryCards.astro'
+      - 'src/components/shared/front-page/TeamBand.astro'
+      - 'src/components/shared/front-page/types.ts'
+      - 'src/utils/front-page.ts'
+      - 'src/utils/package-league-home.ts'
+      - 'src/utils/schedule-data.mjs'
       - 'src/components/shared/TeamIconCell.astro'
       - 'src/components/shared/ThemeImage.astro'
       - 'src/components/shared/ThrowbackWeekModal.astro'

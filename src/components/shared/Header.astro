@@ -13,12 +13,13 @@
 
 import { getPersonaLabels } from '../../utils/persona-server';
 import { getLeagueContext } from '../../utils/league-context';
-import { getLeagueBySlug, leagueHasFeature, type CanonicalLeagueSlug } from '../../config/leagues';
+import { getLeagueBySlug, leagueHasFeature, leagueHomeStyle, type CanonicalLeagueSlug } from '../../config/leagues';
 import { getLeagueYearForSlug } from '../../utils/league-year';
 import { getSearchPath, resolveDirectoryHref, resolveLeaguePath } from '../../utils/nav-utils';
 import { spriteUrl } from '../../utils/sprite-url';
 import { isDemoDeploy } from '../../utils/deploy-environment';
 import NavToggleButton from '../nav/NavToggleButton.astro';
+import HeaderScoreStrip from './front-page/HeaderScoreStrip.astro';
 import navConfig from '../../config/nav-config.json';
 import { packageLinkVisible } from '../../config/package-league-routes.mjs';
 
@@ -102,7 +103,16 @@ const searchHref = searchPath
 const isDemo = isDemoDeploy();
 // Owner-facing copy follows the league's persona (src/utils/persona.mjs).
 const labels = await getPersonaLabels(league.slug);
+
+// The front-page style (registry `homeStyle`) has its own header on every
+// page: the league's score strip across the very top, then the logo with the
+// menu on the right. No icon row, and "Back to MFL" lives in the drawer
+// (NavDrawer's footer), so there is no breadcrumb bar.
+const frontStyle = leagueHomeStyle(league.slug) === 'front-page';
 ---
+
+{frontStyle && <HeaderScoreStrip leagueSlug={league.slug} hideLeaguePrefix={hideLeaguePrefix} />}
+{!frontStyle && (
 
 <div class="breadcrumb-bar" data-track-via="header">
   <div class="breadcrumb-container">
@@ -143,8 +153,9 @@ const labels = await getPersonaLabels(league.slug);
     </div>
   </div>
 </div>
+)}
 
-<div class="container-header theleague-header" data-track-via="header">
+<div class:list={['container-header', 'theleague-header', { 'theleague-header--front': frontStyle }]} data-track-via="header">
   <div class="container">
     <div class="row">
       <div class="col left">
@@ -223,6 +234,25 @@ const labels = await getPersonaLabels(league.slug);
         </a>
         <div class="clearfix"></div>
       </div>
+      {frontStyle ? (
+      <div class="col right header-actions">
+        <button class="breadcrumb-bell" id="nav-trade-bell" aria-label="Transaction hub" type="button">
+          <svg viewBox="0 0 128 128" aria-hidden="true">
+            <use href={`${spriteUrl}#icon-transactions-2`}></use>
+          </svg>
+          <span class="breadcrumb-bell__badge" id="nav-trade-bell-badge" style="display: none;">0</span>
+          <span class="breadcrumb-bell__dot" id="nav-trade-bell-dot" style="display: none;" aria-hidden="true"></span>
+        </button>
+        {searchHref && (
+          <a href={searchHref} class="breadcrumb-search-link" aria-label="Search all pages">
+            <svg viewBox="0 0 512 512" aria-hidden="true">
+              <use href={`${spriteUrl}#icon-search`}></use>
+            </svg>
+          </a>
+        )}
+        <NavToggleButton ariaLabel="Toggle navigation menu" controlsId="nav-drawer" />
+      </div>
+      ) : (
       <div class="col right">
         <!-- Desktop Navigation Icons -->
         <nav class:list={["desktop-nav", { "desktop-nav--hide-mobile": hideMobileNavIcons }]} aria-label="Main navigation">
@@ -329,11 +359,30 @@ const labels = await getPersonaLabels(league.slug);
           )}
         </nav>
       </div>
+      )}
     </div>
   </div>
 </div>
 
 <style>
+  /* ── Front-page style header: logo left, actions right, one row. ── */
+  /* Doubled class: these must out-rank the base .theleague-header rules below,
+     which stack the columns on a phone. */
+  .theleague-header.theleague-header--front { padding: 0.6rem 0; }
+  .theleague-header.theleague-header--front .row { flex-wrap: nowrap; justify-content: space-between; }
+  .theleague-header.theleague-header--front .col.left { flex: 1 1 auto; }
+  .theleague-header.theleague-header--front .col.right.header-actions {
+    flex: 0 0 auto;
+    justify-content: flex-end;
+    gap: 0.25rem;
+    overflow: visible;
+  }
+  /* The actions sit on the page surface here, not the coloured bar. */
+  .header-actions .breadcrumb-bell,
+  .header-actions .breadcrumb-search-link { color: var(--content-text-muted); }
+  .header-actions .breadcrumb-bell:hover,
+  .header-actions .breadcrumb-search-link:hover { color: var(--page-text); background: var(--content-bg-muted); }
+
   /* Breadcrumb Styles */
   .breadcrumb-bar {
     background: var(--breadcrumb-bar-bg, var(--color-primary, #1c497c));
