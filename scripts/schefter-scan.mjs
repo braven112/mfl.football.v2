@@ -757,8 +757,11 @@ async function scanLeague(league) {
 
   console.log(`  New transactions: ${newTxns.length}`);
   if (newTxns.length === 0) {
-    feed.lastScanTimestamp = now.toISOString();
-    await fs.writeFile(league.feedPath, JSON.stringify(feed, null, 2) + '\n');
+    // Nothing new: leave the feed byte-untouched. Bumping lastScanTimestamp
+    // alone committed the feed — and so redeployed production — on every
+    // quiet scan. The watermark is lastProcessedMflTimestamp, which a quiet
+    // scan never moves, so skipping this write changes no later scan.
+    // (lastScanTimestamp now reads "last scan that found a move".)
     // Still drain any big-drop pings held back by quiet hours / spacing.
     await flushPendingBigDrops(now);
     return 0;
