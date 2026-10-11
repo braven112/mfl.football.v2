@@ -123,6 +123,13 @@ describe('buildTierRows (the AFL tier competition)', () => {
     expect(rows.slice(0, 4).map((r) => r.zone)).toEqual(['up', 'up', 'danger', 'danger']);
   });
 
+  it('D-League: last place gets the name-change band, and only last place', () => {
+    const rows = buildTierRows(twelve, { tier: 'D-League', leagueSlug: 'afl-fantasy' });
+    expect(rows.filter((r) => r.zone === 'rename')).toEqual([rows[11]]);
+    expect(rows[11].zoneLabel).toEqual({ tone: 'rename', text: 'Name change' });
+    expect(rows[11].cells.at(-1)?.arrow).toBeUndefined();
+  });
+
   it('a declared movement wins over the AFL defaults', () => {
     const rows = buildTierRows(twelve, { tier: 'Premier League', leagueSlug: 'afl-fantasy', movement: { promote: 0, relegate: 3 } });
     expect(rows.filter((r) => r.zone === 'down')).toHaveLength(3);

@@ -63,6 +63,8 @@ function zoneFor(rank: number, count: number, opts: TierBoardOptions): Zone | nu
   } else if (tier === D_LEAGUE_NAME) {
     if (rank <= 2) return { zone: 'up', label: 'Promoted' };
     if (rank === 3 || rank === 4) return { zone: 'danger', label: 'Promotion playoff' };
+    // The D-League's last-place team has its name changed for next season.
+    if (rank === count) return { zone: 'rename', label: 'Name change' };
   } else if (promotionCutoff !== undefined && rank <= promotionCutoff) {
     return { zone: 'up', label: `Top ${promotionCutoff} formed the next Premier League` };
   }

@@ -141,7 +141,7 @@ export function toBoardTeam(team: TeamStanding, opts: BoardTeamOptions): BoardTe
 // Group cards (a division, or an AFL tier)
 // ---------------------------------------------------------------------------
 
-export type Tone = 'up' | 'danger' | 'down' | 'plain';
+export type Tone = 'up' | 'danger' | 'down' | 'rename' | 'plain';
 
 export interface GroupCell {
   text?: string;

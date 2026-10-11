@@ -29,6 +29,8 @@
   --stb-up: var(--color-success);
   --stb-down: var(--color-error);
   --stb-danger: var(--color-warning);
+  /* The D-League's last-place team, whose name is changed: the old board's brown. */
+  --stb-rename: #9a5b22;
   --stb-radius: 0.75rem;
   /* Rings and stripes (not elevation, so not --shadow-*): a hairline ring, a
      team-colour top stripe (declared on the striped element itself, where
@@ -36,6 +38,7 @@
   --stb-ring: 0 0 0 1px var(--stb-line);
   --stb-mine-edge: inset 4px 0 0 var(--stb-accent);
   --stb-mine-ring: inset 0 0 0 2px var(--stb-accent);
+  --stb-rename-edge: inset 4px 0 0 var(--stb-rename);
   --stb-badge-ring: 0 0 0 2px var(--stb-card-2);
   display: grid;
   gap: 1.5rem;
@@ -61,6 +64,7 @@
   min-width: 0;
 }
 [data-site-theme='editorial'] .stb-card { border-radius: 8px; box-shadow: var(--shadow-card); }
+html.dark .stb { --stb-rename: #d0965c; }
 html.dark [data-site-theme='editorial'] .stb-card { box-shadow: var(--stb-ring); }
 
 /* ---------- section title ---------- */
@@ -177,10 +181,12 @@ html.dark [data-site-theme='editorial'] .stb-leader { box-shadow: var(--stb-ring
 .stb-row--zone-up:not(.stb-row--painted) { background: color-mix(in srgb, var(--stb-up) 12%, transparent) !important; }
 .stb-row--zone-danger:not(.stb-row--painted) { background: color-mix(in srgb, var(--stb-danger) 13%, transparent) !important; }
 .stb-row--zone-down:not(.stb-row--painted) { background: color-mix(in srgb, var(--stb-down) 11%, transparent) !important; }
+.stb-row--zone-rename:not(.stb-row--painted) { background: color-mix(in srgb, var(--stb-rename) 24%, transparent) !important; box-shadow: var(--stb-rename-edge); }
 .stb-zone-label { padding: 0.3rem 1rem 0.1rem; font-size: var(--font-size-3xs); font-weight: 700; letter-spacing: var(--tracking-caps); text-transform: uppercase; }
 .stb-zone-label--up { color: var(--stb-up); }
 .stb-zone-label--danger { color: var(--stb-danger); }
 .stb-zone-label--down { color: var(--stb-down); }
+.stb-zone-label--rename { color: var(--stb-rename); }
 .stb-zone-label--plain { color: var(--stb-muted); }
 [data-site-theme='editorial'] .stb-gcard--pills .stb-row { --stb-cols: 2.2rem minmax(0, 1fr) repeat(var(--stb-ncells, 3), minmax(2.4rem, auto)); padding-left: 0.6rem; }
 
