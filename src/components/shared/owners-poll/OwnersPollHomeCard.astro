@@ -32,14 +32,6 @@ import type { CanonicalLeagueSlug } from '../../../config/leagues';
 import OwnersPollHomeCardPrompt from './OwnersPollHomeCardPrompt';
 import OwnersPollPopup from './OwnersPollPopup';
 import { buildBallotTeams, type BallotStandingsRow } from '../../../utils/owners-poll-ballot-teams';
-import { getAuthUser, isCommissionerOrAdminForLeague } from '../../../utils/auth';
-
-/**
- * TEMPORARY (Oct 2026): a commissioner sees the pop-up on EVERY homepage visit,
- * whatever their ballot, so the sheet can be reviewed live. Flip to false (or
- * delete) once it has been signed off; owners are unaffected either way.
- */
-const ALWAYS_SHOW_FOR_COMMISSIONERS = true;
 import '../../../styles/owners-poll-card.css';
 // The pop-up renders the poll page's BallotBuilder, so it needs that page's styles.
 import '../../../styles/owners-poll.css';
@@ -77,9 +69,6 @@ const ballotTeams = buildBallotTeams(leagueSlug, ballotStandings);
 const vapidPublicKey = (import.meta.env.PUBLIC_VAPID_PUBLIC_KEY as string | undefined) ?? '';
 
 const league = getLeagueBySlug(leagueSlug)!;
-const viewer = getAuthUser(Astro.request);
-const alwaysShow =
-  ALWAYS_SHOW_FOR_COMMISSIONERS && !!viewer && isCommissionerOrAdminForLeague(viewer, league.id);
 const teamMap = teams instanceof Map ? teams : new Map(Object.entries(teams ?? {}));
 const name = (fid: string) =>
   teamMap.get(fid)?.nameShort ?? teamMap.get(fid)?.nameMedium ?? teamMap.get(fid)?.name ?? fid;
@@ -161,7 +150,6 @@ const recruiting = ranked.length === 0;
     columnHref={ensureLeaguePrefix(league, '/pecking-order')}
     officialClock={leagueClock(league.slug)}
     vapidPublicKey={vapidPublicKey}
-    alwaysShow={alwaysShow}
   />
 
   <p class="ophc__links">

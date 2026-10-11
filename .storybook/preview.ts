@@ -67,6 +67,9 @@ import '../src/styles/live.css';
 // is scoped to `.draft-room` / `.dr-*`, so it cannot restyle another story.
 import '../src/styles/draft-room.css';
 import '../src/styles/league-history.css';
+// The Owners' Poll homepage card imports its own sheet from frontmatter,
+// which never reaches the canvas (Trap 2). Every selector is `.ophc*`.
+import '../src/styles/owners-poll-card.css';
 
 /**
  * Theme and league are BOTH pure CSS in this codebase:
