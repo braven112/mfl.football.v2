@@ -293,8 +293,9 @@ html.dark [data-site-theme='editorial'] .stb-leader { box-shadow: var(--stb-ring
 @media (max-width: 767px) {
   .stb-groups, .stb-groups--2, [data-site-theme='editorial'] .stb-groups { grid-template-columns: 1fr; }
   [data-site-theme='primetime'] .stb-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .stb-tiles--wide, [data-site-theme='primetime'] .stb-tiles--wide { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   [data-site-theme='editorial'] .stb-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  /* Four or fewer (the division winners) sit two by two. */
+  .stb-tiles--wide, [data-site-theme] .stb-tiles--wide { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .stb-chips { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.4rem; }
   .stb-chip { grid-template-columns: 1.9rem minmax(0, 1fr); gap: 0.05rem 0.45rem; padding: 0.45rem 0.5rem; }
   .stb-chip__crest { width: 1.9rem; height: 1.9rem; }
