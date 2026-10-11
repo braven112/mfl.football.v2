@@ -30,6 +30,11 @@ import { loadJSON, resolveDataDir, getFeedPath, loadTeams } from './article-util
 import { getSeasonYear, getCurrentNFLWeek, getCompletedWeek } from './article-utils/week-resolver.mjs';
 import { callAnthropic } from './article-utils/ai-client.mjs';
 import { isDuplicate, appendToFeed } from './article-utils/feed-writer.mjs';
+import {
+  findForeignLeagueNamesInPost,
+  scrubPostLeagueNames,
+  ownLeagueLabel,
+} from '../src/utils/league-name-guard.mjs';
 import { enqueueAnnounce } from './lib/announce-queue.mjs';
 import { loadLeaguePersona } from './lib/persona-store.mjs';
 import { VALID_LEAGUES, leagueWritesType } from './lib/article-leagues.mjs';
@@ -257,27 +262,49 @@ async function main() {
   console.log(`  Generating article as ${persona.name} (${persona.source})...`);
   const systemPrompt = mod.getSystemPrompt({ league, persona });
   const userPrompt = mod.getUserPrompt(withLinkDirective(factSheet, links));
-  const aiOutput = await callAnthropic(systemPrompt, userPrompt, mod.config.maxTokens);
-  console.log(`  Headline: ${aiOutput.headline}`);
+  // Generate → validate → build → link. Wrapped so the league-name check below
+  // can run it a second time with a correction note.
+  const generate = async (prompt) => {
+    const aiOutput = await callAnthropic(systemPrompt, prompt, mod.config.maxTokens);
+    console.log(`  Headline: ${aiOutput.headline}`);
 
-  // Step 9: Validate
-  const errors = mod.validate(aiOutput);
-  if (errors.length > 0) {
-    console.warn('  Validation warnings:', errors);
-  } else {
-    console.log('  Validation passed');
+    // Step 9: Validate
+    const errors = mod.validate(aiOutput);
+    if (errors.length > 0) {
+      console.warn('  Validation warnings:', errors);
+    } else {
+      console.log('  Validation passed');
+    }
+
+    // Step 10: Build post
+    const post = mod.buildPost(aiOutput, enrichment, articleId, { league });
+
+    // The model was asked for links in step 8; this is what makes them true.
+    // Invented hrefs are unwrapped and a dropped primary link is injected, so a
+    // linkless (or 404-carrying) article cannot reach the feed. Notices are
+    // logged rather than swallowed — a run that keeps injecting means the
+    // prompt is losing to the model and the directive needs rewording.
+    const { notices } = applyArticleLinks(post, links, { league });
+    for (const notice of notices) console.warn(`  [links] ${notice}`);
+    return post;
+  };
+
+  let post = await generate(userPrompt);
+
+  // Another league's name never publishes (src/utils/league-name-guard.mjs).
+  // The owner's rule: regenerate ONCE with the slip named, then — if the
+  // model does it again — rewrite the name to this league's own. Either way
+  // the post that reaches the feed is clean.
+  const foreign = findForeignLeagueNamesInPost(post, league);
+  if (foreign.length) {
+    console.warn(`  [league-name] Draft named another league (${foreign.join(', ')}) — regenerating once.`);
+    post = await generate(
+      `${userPrompt}\n\nCORRECTION: your previous draft named a different league (${foreign.map((n) => `"${n}"`).join(', ')}). ` +
+        `Rewrite it without that name, and call this league ${ownLeagueLabel(league)}.`,
+    );
   }
-
-  // Step 10: Build post and append to feed
-  const post = mod.buildPost(aiOutput, enrichment, articleId, { league });
-
-  // The model was asked for links in step 8; this is what makes them true.
-  // Invented hrefs are unwrapped and a dropped primary link is injected, so a
-  // linkless (or 404-carrying) article cannot reach the feed. Notices are
-  // logged rather than swallowed — a run that keeps injecting means the
-  // prompt is losing to the model and the directive needs rewording.
-  const { notices } = applyArticleLinks(post, links, { league });
-  for (const notice of notices) console.warn(`  [links] ${notice}`);
+  const scrubbed = scrubPostLeagueNames(post, league);
+  if (scrubbed.length) console.warn(`  [league-name] Rewrote another league's name in: ${scrubbed.join(', ')}`);
 
   const written = await appendToFeed(feedPath, post);
   if (written) {

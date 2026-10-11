@@ -37,6 +37,7 @@
  */
 
 import { stripLinkAdjacentPunctuation } from '../../src/utils/link-punctuation.mjs';
+import { leagueForGroupMeBot, scrubChatText } from '../../src/utils/league-name-guard.mjs';
 
 import { isPlannedToday, describeRefusal } from './groupme-day-plan.mjs';
 
@@ -200,24 +201,28 @@ export async function postSpeculationToGroupMe({
     return { posted: false, reason: 'no-fetch' };
   }
 
+  // Another league's name never reaches a chat (src/utils/league-name-guard.mjs).
+  const chatLeague = leagueForGroupMeBot(botId, env);
+  const sendText = chatLeague ? scrubChatText(text, chatLeague).text : text;
+
   try {
     const res = await fetcher(GROUPME_POST_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bot_id: botId, text }),
+      body: JSON.stringify({ bot_id: botId, text: sendText }),
     });
     // GroupMe returns 202 on success. Anything else is a soft failure —
     // the post is already on the feed, so we just log and move on.
     const status = typeof res?.status === 'number' ? res.status : 0;
     if (status >= 200 && status < 300) {
       log('  [GroupMe] Posted speculation');
-      return { posted: true, text };
+      return { posted: true, text: sendText };
     }
     warn(`  [GroupMe] Speculation post failed: HTTP ${status}`);
-    return { posted: false, reason: `http-${status}`, text };
+    return { posted: false, reason: `http-${status}`, text: sendText };
   } catch (err) {
     warn(`  [GroupMe] Speculation post error: ${err?.message ?? err}`);
-    return { posted: false, reason: 'fetch-error', error: err, text };
+    return { posted: false, reason: 'fetch-error', error: err, text: sendText };
   }
 }
 

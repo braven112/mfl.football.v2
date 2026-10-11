@@ -5,6 +5,21 @@
 import { LEAGUES } from '../../src/config/leagues-data.mjs';
 import { isDefaultPersona } from '../../src/utils/persona.mjs';
 import { formatSalary } from './data-loaders.mjs';
+import { foreignLeagueNames, ownLeagueLabel } from '../../src/utils/league-name-guard.mjs';
+
+/**
+ * Another league's name can read as a plain phrase ("the league"), so the
+ * model writes it without thinking it named anything. The rule never spells
+ * that name out — an AFL prompt must not contain TheLeague's name at all
+ * (tests/article-type-league-option.test.ts) — it just steers the model off
+ * using the bare word as a name. src/utils/league-name-guard.mjs catches what slips.
+ */
+function foreignNameRule(league) {
+  // A league whose own name ends in "League" capitalises it legitimately.
+  const phraseName = foreignLeagueNames(league).some((n) => /^The\s/.test(n));
+  if (!phraseName || /\bLeague\b/.test(LEAGUES[league].name)) return '';
+  return ` Call this league ${ownLeagueLabel(league)}, and never capitalise the word "league" as if it were a name (a different league is named that), in a headline or anywhere else.`;
+}
 
 const MODEL = 'claude-haiku-4-5-20251001';
 const API_URL = 'https://api.anthropic.com/v1/messages';
@@ -172,7 +187,7 @@ export function buildCachedSystem(typeSpecificText, { league, persona } = {}) {
   const registry = league ? LEAGUES[league] : null;
   if (league && !registry) throw new Error(`Unknown league: ${league}`);
   const leagueLine = registry
-    ? `\n\nLEAGUE: this column covers ${registry.name}. Never name any other league, and never state a league size or structure that is not in the fact sheet.${minimumSalaryRule(registry)}`
+    ? `\n\nLEAGUE: this column covers ${registry.name}. Never name any other league, and never state a league size or structure that is not in the fact sheet.${foreignNameRule(league)}${minimumSalaryRule(registry)}`
     : '';
   if (isDefaultPersona(persona)) {
     return [
