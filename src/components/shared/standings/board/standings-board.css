@@ -1,0 +1,347 @@
+/*
+ * The standings board — one set of components, two site themes.
+ *
+ * Every rule here keys off the nearest `[data-site-theme]` ancestor
+ * (StandingsPage / the AFL page set it from src/utils/site-theme.ts):
+ *   editorial — the site's long-standing look: white cards, the 2px-stripe
+ *               section title, grey column heads, zebra rows, DIV/2ND/WC pills.
+ *   primetime — the broadcast look: team-coloured paint, the condensed display
+ *               face in italic caps, the league accent on lines and badges.
+ * The markup is identical in both; only these rules differ.
+ *
+ * Team colour as a FILL (Primetime paint) is the franchise's broadcast
+ * gradient, dark in both themes, so its crest is the dark-surface cut. Team
+ * colour as a STRIPE (Editorial) is the franchise accent token, which clears
+ * 3:1 on the card in each theme — a raw #181818 primary vanished on dark cards.
+ */
+
+.stb {
+  --stb-card: var(--card-bg);
+  --stb-card-2: var(--content-bg-muted);
+  --stb-text: var(--page-text);
+  --stb-muted: var(--content-text-muted);
+  --stb-line: var(--content-border);
+  --stb-accent: var(--league-accent);
+  --stb-on-accent: var(--on-league-accent);
+  --stb-gold: #f5c400;
+  --stb-silver: #b8bec7;
+  --stb-bronze: #c9853f;
+  --stb-up: var(--color-success);
+  --stb-down: var(--color-error);
+  --stb-danger: var(--color-warning);
+  --stb-radius: 0.75rem;
+  /* Rings and stripes (not elevation, so not --shadow-*): a hairline ring, a
+     team-colour top stripe (declared on the striped element itself, where
+     --stb-team is set), the viewer's own-row edge and an inset outline. */
+  --stb-ring: 0 0 0 1px var(--stb-line);
+  --stb-mine-edge: inset 4px 0 0 var(--stb-accent);
+  --stb-mine-ring: inset 0 0 0 2px var(--stb-accent);
+  --stb-badge-ring: 0 0 0 2px var(--stb-card-2);
+  display: grid;
+  gap: 1.5rem;
+  min-width: 0;
+}
+.stb * { box-sizing: border-box; }
+/* Grid items default to min-width: auto, which lets the scrolling leader strip
+   widen the whole page instead of scrolling inside itself. */
+.stb > *, .stb section { min-width: 0; }
+.stb-num { font-variant-numeric: tabular-nums; }
+
+/* Names: the full MFL name on wide screens, the league's medium/short name on phones. */
+.stb-nm-alt { display: none; }
+@media (max-width: 767px) {
+  .stb-nm-full { display: none; }
+  .stb-nm-alt { display: inline; }
+  .stb-hide-sm { display: none !important; }
+}
+
+.stb-card {
+  background: var(--stb-card);
+  border-radius: var(--stb-radius);
+  min-width: 0;
+}
+[data-site-theme='editorial'] .stb-card { border-radius: 8px; box-shadow: var(--shadow-card); }
+html.dark [data-site-theme='editorial'] .stb-card { box-shadow: var(--stb-ring); }
+
+/* ---------- section title ---------- */
+.stb-sec {
+  margin: 0 0 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--stb-text);
+  line-height: 1.1;
+}
+.stb-sec small { margin-left: auto; font-size: var(--font-size-xs); color: var(--stb-muted); font-weight: 400; letter-spacing: 0; text-transform: none; font-style: normal; font-family: var(--font-family-base); }
+[data-site-theme='editorial'] .stb-sec {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  padding-left: 0.625rem;
+  border-left: 2px solid var(--color-primary);
+}
+[data-site-theme='primetime'] .stb-sec {
+  font-family: var(--font-display);
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  font-style: italic;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+[data-site-theme='primetime'] .stb-sec::before {
+  content: '';
+  flex: none;
+  width: 0.3rem;
+  height: 1.1em;
+  border-radius: 999px;
+  background: var(--stb-accent);
+}
+
+/* ---------- crests ---------- */
+.stb-crest { width: 1.75rem; height: 1.75rem; border-radius: 50%; object-fit: cover; flex: none; display: block; }
+
+/* ---------- LeaderStrip ---------- */
+.stb-leaders { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(10.5rem, 1fr); gap: 0.6rem; overflow-x: auto; padding-bottom: 0.25rem; }
+.stb-leader {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.8rem;
+  padding: 0.75rem;
+  min-height: 6.6rem;
+  display: grid;
+  align-content: end;
+  gap: 0.1rem;
+  color: inherit;
+  text-decoration: none;
+}
+.stb-leader img { position: absolute; top: 0.55rem; right: 0.55rem; width: 2.6rem; height: 2.6rem; border-radius: 50%; object-fit: cover; }
+.stb-leader__div { font-size: var(--font-size-3xs); letter-spacing: var(--tracking-caps); text-transform: uppercase; opacity: 0.9; padding-right: 3rem; }
+.stb-leader__name { font-family: var(--font-display); font-size: var(--font-size-lg); font-weight: 700; line-height: 1; }
+.stb-leader__rec { font-size: var(--font-size-xs); }
+[data-site-theme='primetime'] .stb-leader { color: #fff; }
+[data-site-theme='primetime'] .stb-leader__name { text-transform: uppercase; font-style: italic; }
+[data-site-theme='editorial'] .stb-leader { --stb-stripe: inset 0 5px 0 var(--stb-team); background: var(--stb-card); box-shadow: var(--shadow-card), var(--stb-stripe); padding-top: 1rem; }
+html.dark [data-site-theme='editorial'] .stb-leader { box-shadow: var(--stb-ring), var(--stb-stripe); }
+[data-site-theme='editorial'] .stb-leader__div, [data-site-theme='editorial'] .stb-leader__rec { color: var(--stb-muted); }
+
+/* ---------- GroupCard (a division, or an AFL tier) ---------- */
+.stb-groups { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; align-items: start; }
+.stb-groups--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+[data-site-theme='editorial'] .stb-groups { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.stb-gcard { overflow: hidden; }
+.stb-gcard__head { display: flex; align-items: center; gap: 0.6rem; padding: 0.85rem 1rem 0.5rem; }
+.stb-gcard__head img { width: 2.4rem; height: 2.4rem; object-fit: contain; }
+.stb-gcard__head h3 { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: var(--font-size-base); color: var(--stb-text); }
+[data-site-theme='primetime'] .stb-gcard__head h3 { font-style: italic; text-transform: uppercase; letter-spacing: 0.02em; font-size: var(--font-size-lg); }
+.stb-gcard__head > span { margin-left: auto; font-size: var(--font-size-2xs); color: var(--stb-muted); text-align: right; }
+
+.stb-row {
+  --stb-cols: 1.6rem minmax(0, 1fr) repeat(var(--stb-ncells, 3), minmax(2.4rem, auto));
+  display: grid;
+  grid-template-columns: var(--stb-cols);
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.45rem 1rem;
+  font-size: var(--font-size-sm);
+  border-top: 1px solid var(--stb-line);
+  color: var(--stb-text);
+}
+.stb-row--head { font-size: var(--font-size-3xs); color: var(--stb-muted); font-weight: 600; border-top: 0; padding-block: 0.35rem; }
+.stb-row--head > span:nth-child(n + 3) { text-align: right; }
+[data-site-theme='primetime'] .stb-row--head { text-transform: uppercase; letter-spacing: var(--tracking-caps); }
+[data-site-theme='editorial'] .stb-row--head { font-size: var(--font-size-xs); color: var(--table-header-text); border-bottom: 2px solid var(--stb-line); padding-block: 0.55rem; }
+.stb-row .stb-c { text-align: right; white-space: nowrap; }
+.stb-row .stb-v { text-align: right; font-weight: 700; }
+.stb-rank { color: var(--stb-muted); font-size: var(--font-size-xs); text-align: center; }
+.stb-team { display: flex; align-items: center; gap: 0.5rem; min-width: 0; color: inherit; text-decoration: none; }
+.stb-team > div { min-width: 0; display: grid; }
+.stb-team b { font-weight: 600; line-height: 1.2; overflow-wrap: normal; word-break: normal; }
+.stb-team small { font-size: var(--font-size-2xs); color: var(--stb-muted); line-height: 1.2; }
+.stb-row--lead { padding-block: 0.6rem; }
+.stb-row--lead .stb-crest { width: 2.1rem; height: 2.1rem; }
+[data-site-theme='primetime'] .stb-row--lead { color: #fff; border-top: 0; }
+[data-site-theme='primetime'] .stb-row--lead b { font-family: var(--font-display); font-size: var(--font-size-base); font-weight: 700; text-transform: uppercase; font-style: italic; }
+[data-site-theme='primetime'] .stb-row--lead small,
+[data-site-theme='primetime'] .stb-row--lead .stb-rank { color: rgb(255 255 255 / 0.9); }
+[data-site-theme='editorial'] .stb-gcard .stb-row:not(.stb-row--head):nth-child(odd) { background: var(--table-row-bg-alt); }
+.stb-row--mine:not(.stb-row--lead) { box-shadow: var(--stb-mine-edge); background: color-mix(in srgb, var(--stb-accent) 12%, transparent) !important; }
+.stb-row--cut { border-top: 2px dashed var(--stb-muted); }
+.stb-row--cut-up { border-top: 2px solid var(--stb-up); }
+.stb-row--cut-danger { border-top: 2px dashed var(--stb-danger); }
+.stb-row--cut-down { border-top: 2px solid var(--stb-down); }
+.stb-row--zone-up { background: color-mix(in srgb, var(--stb-up) 12%, transparent) !important; }
+.stb-row--zone-danger { background: color-mix(in srgb, var(--stb-danger) 13%, transparent) !important; }
+.stb-row--zone-down { background: color-mix(in srgb, var(--stb-down) 11%, transparent) !important; }
+.stb-zone-label { padding: 0.3rem 1rem 0.1rem; font-size: var(--font-size-3xs); font-weight: 700; letter-spacing: var(--tracking-caps); text-transform: uppercase; }
+.stb-zone-label--up { color: var(--stb-up); }
+.stb-zone-label--danger { color: var(--stb-danger); }
+.stb-zone-label--down { color: var(--stb-down); }
+.stb-zone-label--plain { color: var(--stb-muted); }
+[data-site-theme='editorial'] .stb-gcard--pills .stb-row { --stb-cols: 3.9rem minmax(0, 1fr) repeat(var(--stb-ncells, 3), minmax(2.4rem, auto)); padding-left: 0.6rem; }
+
+/* Seed marks. Primetime: a dot plus "Seed n" under the name. Editorial: the DIV/2ND/WC pill (PlayoffBadge). */
+.stb-seedline { display: inline-flex; align-items: center; gap: 0.3rem; font-weight: 600; white-space: nowrap; }
+.stb-dot { width: 0.55rem; height: 0.55rem; border-radius: 50%; flex: none; display: inline-block; }
+.stb-dot--division_winner { background: var(--stb-accent); }
+.stb-dot--runner_up { background: var(--stb-text); }
+.stb-dot--wild_card { border: 2px solid var(--stb-text); width: 0.6rem; height: 0.6rem; }
+[data-site-theme='primetime'] .stb-row--lead .stb-dot--division_winner { background: #fff; }
+[data-site-theme='editorial'] .stb-only-primetime { display: none !important; }
+[data-site-theme='primetime'] .stb-only-editorial { display: none !important; }
+
+/* Medal ranks (tiers). */
+.stb-medal { width: 1.5rem; height: 1.5rem; border-radius: 50%; display: grid; place-items: center; font-size: var(--font-size-2xs); font-weight: 700; background: var(--stb-card-2); color: var(--stb-text); justify-self: center; }
+.stb-medal--1 { background: var(--stb-gold); color: #111; }
+.stb-medal--2 { background: var(--stb-silver); color: #111; }
+.stb-medal--3 { background: var(--stb-bronze); color: #111; }
+.stb-prize { display: inline-block; font-size: var(--font-size-2xs); font-weight: 700; padding: 0.12rem 0.45rem; border-radius: 999px; background: var(--stb-gold); color: #111; }
+.stb-up { color: var(--stb-up); font-weight: 700; }
+.stb-down { color: var(--stb-down); font-weight: 700; }
+
+/* ---------- SeedField: the playoff picture ---------- */
+.stb-field { padding: 1.25rem; display: grid; gap: 1.25rem; }
+.stb-field__intro p { margin: 0.3rem 0 0; color: var(--stb-muted); font-size: var(--font-size-sm); max-width: 75ch; }
+.stb-field__intro .stb-sec { margin: 0; }
+.stb-band-label { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.5rem; margin-bottom: 0.5rem; font-size: var(--font-size-2xs); letter-spacing: var(--tracking-caps); text-transform: uppercase; font-weight: 700; color: var(--stb-muted); }
+.stb-band-label b { color: var(--stb-text); }
+
+.stb-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: 0.5rem; }
+.stb-tiles--wide { grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)); }
+.stb-tile { position: relative; overflow: hidden; border-radius: 0.75rem; display: grid; align-content: end; padding: 0.6rem; color: inherit; text-decoration: none; min-width: 0; }
+.stb-tile > span { position: relative; z-index: 1; }
+.stb-tile__seed { position: absolute !important; top: 0.4rem; left: 0.55rem; font-family: var(--font-display); font-weight: 700; font-size: var(--font-size-lg); line-height: 1; }
+.stb-tile__tag { position: absolute !important; top: 0.45rem; right: 0.5rem; font-size: var(--font-size-3xs); font-weight: 700; letter-spacing: var(--tracking-caps); text-transform: uppercase; padding: 0.1rem 0.4rem; border-radius: 999px; background: var(--stb-accent); color: var(--stb-on-accent); }
+.stb-tile__name { font-family: var(--font-display); font-weight: 700; font-size: var(--font-size-base); line-height: 1.05; overflow-wrap: normal; word-break: normal; }
+.stb-tile__rec { font-size: var(--font-size-2xs); opacity: 0.92; line-height: 1.3; }
+.stb-tile img { display: block; border-radius: 50%; object-fit: cover; aspect-ratio: 1; }
+/* Primetime: the crest floats on the team's paint; the name sits at the foot. */
+[data-site-theme='primetime'] .stb-tile { aspect-ratio: 3 / 4; color: #fff; }
+[data-site-theme='primetime'] .stb-tiles--wide .stb-tile { aspect-ratio: 4 / 3; }
+[data-site-theme='primetime'] .stb-tile::after { content: ''; position: absolute; inset: 0; background: linear-gradient(0deg, rgb(0 0 0 / 0.6), rgb(0 0 0 / 0) 60%); }
+[data-site-theme='primetime'] .stb-tile img { position: absolute; top: 14%; left: 50%; translate: -50% 0; width: 62%; }
+[data-site-theme='primetime'] .stb-tiles--wide .stb-tile img { width: 42%; top: 10%; }
+[data-site-theme='primetime'] .stb-tile__seed { font-style: italic; }
+[data-site-theme='primetime'] .stb-tile__name { text-transform: uppercase; font-style: italic; }
+/* Editorial: a white card under the team's accent stripe, crest in flow. */
+[data-site-theme='editorial'] .stb-tile { --stb-stripe: inset 0 5px 0 var(--stb-team); background: var(--stb-card); box-shadow: var(--stb-ring), var(--stb-stripe); align-content: start; padding: 0.85rem 0.8rem 0.85rem; }
+[data-site-theme='editorial'] .stb-tile__seed { top: 0.85rem; left: 0.8rem; }
+[data-site-theme='editorial'] .stb-tile__tag { top: 0.9rem; right: 0.75rem; }
+[data-site-theme='editorial'] .stb-tile img { width: 56%; max-width: 6.5rem; margin: 1.6rem auto 0.6rem; }
+[data-site-theme='editorial'] .stb-tile__rec { color: var(--stb-muted); }
+
+.stb-chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); gap: 0.5rem; }
+.stb-chip { display: grid; grid-template-columns: 2.1rem minmax(0, 1fr); gap: 0.05rem 0.55rem; align-items: center; padding: 0.45rem 0.7rem 0.45rem 0.5rem; border-radius: 0.7rem; background: var(--stb-card-2); font-size: var(--font-size-sm); min-width: 0; color: inherit; text-decoration: none; }
+.stb-chip__crest { grid-row: span 2; position: relative; width: 2.1rem; height: 2.1rem; }
+.stb-chip__crest img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
+/* The seed rides on the crest's corner: it costs no width, so the name never wraps. */
+.stb-chip__seed { position: absolute; top: -0.3rem; left: -0.35rem; min-width: 1.05rem; height: 1.05rem; padding: 0 0.2rem; border-radius: 0.55rem; display: grid; place-items: center; font-family: var(--font-display); font-weight: 700; font-size: var(--font-size-3xs); line-height: 1; box-shadow: var(--stb-badge-ring); }
+[data-site-theme='primetime'] .stb-chip__seed { background: var(--stb-accent); color: var(--stb-on-accent); }
+[data-site-theme='editorial'] .stb-chip__seed { background: var(--stb-silver); color: #111; border-radius: 0.25rem; }
+.stb-chip__name { white-space: nowrap; overflow: hidden; font-weight: 600; min-width: 0; }
+.stb-chip small { white-space: nowrap; overflow: hidden; color: var(--stb-muted); font-size: var(--font-size-2xs); min-width: 0; }
+.stb-chip--chase { background: transparent; border: 1px dashed var(--stb-line); }
+.stb-chip--mine { box-shadow: var(--stb-mine-ring); }
+
+.stb-cutline { display: flex; align-items: center; gap: 0.6rem; padding: 0.4rem 0.75rem; border-radius: 0.5rem; font-family: var(--font-display); font-weight: 700; letter-spacing: var(--tracking-caps); text-transform: uppercase; font-size: var(--font-size-sm); }
+.stb-cutline span { margin-left: auto; font-family: var(--font-family-base); font-weight: 600; font-size: var(--font-size-2xs); letter-spacing: 0; text-transform: none; }
+[data-site-theme='primetime'] .stb-cutline { background: var(--stb-accent); color: var(--stb-on-accent); font-style: italic; }
+[data-site-theme='editorial'] .stb-cutline { border-top: 3px solid var(--stb-gold); border-radius: 0; padding-inline: 0; color: var(--stb-text); }
+[data-site-theme='editorial'] .stb-cutline span { font-style: normal; }
+
+/* ---------- tables (full field, all-play) ---------- */
+.stb-tbl-wrap { overflow-x: auto; }
+.stb-table { width: 100%; border-collapse: collapse; font-size: var(--font-size-sm); color: var(--stb-text); }
+.stb-table th { text-align: right; font-size: var(--font-size-3xs); color: var(--stb-muted); font-weight: 600; padding: 0.55rem 0.6rem; border-bottom: 1px solid var(--stb-line); white-space: nowrap; }
+.stb-table th:first-child { text-align: center; }
+.stb-table td { text-align: right; padding: 0.45rem 0.6rem; border-bottom: 1px solid var(--stb-line); white-space: nowrap; }
+.stb-table .stb-l { text-align: left; }
+.stb-table td.stb-teamcell { white-space: normal; }
+.stb-table .stb-rk { text-align: center; width: 2.4rem; font-weight: 700; }
+.stb-table--seeded .stb-rk { width: 4.4rem; }
+.stb-table tr.stb-mine td { background: color-mix(in srgb, var(--stb-accent) 12%, transparent); }
+.stb-table tr.stb-mine td:first-child { box-shadow: var(--stb-mine-edge); }
+.stb-table tr.stb-band td { background: var(--stb-card-2); text-align: left; font-size: var(--font-size-3xs); letter-spacing: var(--tracking-caps); text-transform: uppercase; font-weight: 700; color: var(--stb-muted); padding: 0.35rem 0.75rem; }
+[data-site-theme='primetime'] .stb-table th { text-transform: uppercase; letter-spacing: var(--tracking-caps); }
+[data-site-theme='primetime'] .stb-table .stb-rk { font-family: var(--font-display); font-size: var(--font-size-base); }
+[data-site-theme='editorial'] .stb-table th { font-size: var(--font-size-xs); color: var(--table-header-text); border-bottom-width: 2px; }
+[data-site-theme='editorial'] .stb-table tbody tr:nth-child(even):not(.stb-band):not(.stb-mine) td { background: var(--table-row-bg-alt); }
+.stb-rec-inline { display: none; font-weight: 400; color: var(--stb-muted); white-space: nowrap; }
+.stb-bar { display: inline-block; vertical-align: middle; width: 4.5rem; height: 0.4rem; margin-left: 0.5rem; border-radius: 999px; background: var(--stb-card-2); overflow: hidden; }
+.stb-bar i { display: block; height: 100%; background: var(--stb-accent); }
+.stb-luck-pos { color: var(--stb-up); font-weight: 700; }
+.stb-luck-neg { color: var(--stb-down); font-weight: 700; }
+.stb-details summary { cursor: pointer; padding: 0.85rem 1rem; font-weight: 600; color: var(--stb-text); }
+.stb-legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.2rem; font-size: var(--font-size-2xs); color: var(--stb-muted); }
+
+@media (max-width: 1100px) {
+  .stb-groups { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 767px) {
+  .stb-groups, .stb-groups--2, [data-site-theme='editorial'] .stb-groups { grid-template-columns: 1fr; }
+  [data-site-theme='primetime'] .stb-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .stb-tiles--wide, [data-site-theme='primetime'] .stb-tiles--wide { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  [data-site-theme='editorial'] .stb-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .stb-chips { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.4rem; }
+  .stb-chip { grid-template-columns: 1.9rem minmax(0, 1fr); gap: 0.05rem 0.45rem; padding: 0.45rem 0.5rem; }
+  .stb-chip__crest { width: 1.9rem; height: 1.9rem; }
+  .stb-row { --stb-ncells: var(--stb-ncells-sm); padding-inline: 0.75rem; gap: 0.4rem; }
+  .stb-rec-inline { display: inline; }
+  .stb-rec-col { display: none; }
+  .stb-table th, .stb-table td { padding-inline: 0.45rem; }
+}
+
+/* ---------- the page header under Primetime ----------
+ * Editorial keeps the standings page's own header card (the view selector's
+ * icon tabs and the season card). Primetime drops the card for a big italic
+ * headline and turns the same view links into a pill bar. */
+.standings-page[data-site-theme='primetime'] .standings-hero,
+.standings-page[data-site-theme='primetime'] .standings-filters {
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0;
+}
+.standings-page[data-site-theme='primetime'] .standings-hero h1 {
+  font-family: var(--font-display);
+  font-style: italic;
+  text-transform: uppercase;
+  font-size: var(--font-size-3xl);
+  line-height: 0.95;
+}
+.standings-page[data-site-theme='primetime'] .view-selector {
+  flex-wrap: nowrap;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border-radius: 999px;
+  background: var(--card-bg);
+  border: 1px solid var(--content-border);
+  max-width: 100%;
+  overflow-x: auto;
+}
+.standings-page[data-site-theme='primetime'] .view-selector .view-tab {
+  flex: 0 0 auto;
+  flex-direction: row;
+  min-width: 0;
+  padding: 0.45rem 0.95rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+}
+.standings-page[data-site-theme='primetime'] .view-selector .view-tab__icon { display: none; }
+.standings-page[data-site-theme='primetime'] .view-selector .view-tab__label {
+  position: static;
+  transform: none;
+  opacity: 1;
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--page-text);
+}
+.standings-page[data-site-theme='primetime'] .view-selector .view-tab[data-active='true'] { background: var(--page-text) !important; border-color: var(--page-text) !important; }
+.standings-page[data-site-theme='primetime'] .view-selector .view-tab[data-active='true'] .view-tab__label { color: var(--content-bg) !important; }
+
+/* AFL family: a conference heading carries its logo; a third tier spans the row. */
+.stb-conference { display: grid; gap: 1rem; min-width: 0; }
+.stb-sec--logo { display: flex; align-items: center; gap: 0.5rem; }
+.stb-sec__logo { width: 2rem; height: 2rem; object-fit: contain; }
+.stb-groups--wide-last > :last-child:nth-child(odd) { grid-column: 1 / -1; }

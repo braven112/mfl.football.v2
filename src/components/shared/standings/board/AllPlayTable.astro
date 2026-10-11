@@ -1,0 +1,56 @@
+---
+/**
+ * All-play: every week's score against every other team's, in all-play order
+ * (a separate competition, so its own ranking). Luck is actual wins minus the
+ * wins the all-play rate predicts. On phones the record rides in brackets after
+ * the name and only All-play and Luck keep columns.
+ */
+import type { SiteTheme } from '../../../../config/leagues';
+import { formatRecord, type AllPlayRow } from '../../../../utils/standings-board';
+import TeamCell from './TeamCell.astro';
+
+interface Props {
+  theme: SiteTheme;
+  rows: AllPlayRow[];
+}
+
+const { rows } = Astro.props;
+const luckClass = (l: number) => (l >= 0.5 ? 'stb-luck-pos' : l <= -0.5 ? 'stb-luck-neg' : '');
+---
+
+<div class="stb-card">
+  <div class="stb-tbl-wrap">
+    <table class="stb-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th class="stb-l">Team</th>
+          <th>All-play</th>
+          <th class="stb-hide-sm">Win %</th>
+          <th class="stb-rec-col">Record</th>
+          <th>Luck</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map(({ rank, team, luck }) => (
+          <tr class:list={{ 'stb-mine': team.mine }}>
+            <td class="stb-rk">{rank}</td>
+            <td class="stb-l stb-teamcell">
+              <TeamCell team={team}>
+                <span slot="after-name" class="stb-rec-inline"> ({team.record})</span>
+                <small>{team.division}</small>
+              </TeamCell>
+            </td>
+            <td class="stb-num">{formatRecord(team.allPlay.wins, team.allPlay.losses, team.allPlay.ties)}</td>
+            <td class="stb-num stb-hide-sm">
+              {(team.allPlay.pct * 100).toFixed(1)}%
+              <span class="stb-bar" aria-hidden="true"><i style={`width:${(team.allPlay.pct * 100).toFixed(1)}%`}></i></span>
+            </td>
+            <td class="stb-num stb-rec-col">{team.record}</td>
+            <td class:list={['stb-num', luckClass(luck)]}>{luck > 0 ? '+' : ''}{luck.toFixed(1)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+</div>

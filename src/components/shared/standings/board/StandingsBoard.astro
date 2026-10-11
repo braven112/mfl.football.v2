@@ -1,0 +1,149 @@
+---
+/**
+ * The standings board for the shared standings page (TheLeague, Archie's and
+ * the other package leagues): the division board, the playoff picture and
+ * all-play, in the request's site theme.
+ *
+ * Takes the page's already-produced rows — divisions and seeds in MFL's
+ * order, all-play in all-play order — and never re-sorts them
+ * (docs/claude/rules/standings-brackets-draft-order.md).
+ */
+import './standings-board.css';
+import type { SiteTheme } from '../../../../config/leagues';
+import type { DivisionStandings, TeamStanding } from '../../../../types/standings';
+import type { StandingsView } from '../../../../utils/standings-page';
+import type { StandingsPageProfile } from '../standings-page-profile';
+import {
+  buildAllPlayRows,
+  buildSeedField,
+  divisionQualifiers,
+  toBoardTeam,
+  type BoardTeamConfig,
+  type GroupRow,
+} from '../../../../utils/standings-board';
+import LeaderStrip from './LeaderStrip.astro';
+import GroupCard from './GroupCard.astro';
+import SeedField from './SeedField.astro';
+import FieldTable from './FieldTable.astro';
+import AllPlayTable from './AllPlayTable.astro';
+
+interface Props {
+  theme: SiteTheme;
+  view: StandingsView;
+  leagueSlug: string;
+  profile: StandingsPageProfile;
+  divisions: DivisionStandings[];
+  /** League view rows, in seed order (or feed order where the league has no seeding). */
+  league: TeamStanding[];
+  allPlay: TeamStanding[];
+  teams: BoardTeamConfig[];
+  preferredTeamId?: string;
+  hrefFor: (id: string) => string | undefined;
+}
+
+const { theme, view, leagueSlug, profile, divisions, league, allPlay, teams, preferredTeamId, hrefFor } = Astro.props;
+
+const configById = new Map(teams.map((t) => [t.franchiseId, t]));
+const usesVictoryPoints = profile.columns.division.some((c) => c.key === 'vp');
+const badgeSeeding = profile.leagueTiering ?? profile.badgeSeeding;
+const board = (t: TeamStanding) =>
+  toBoardTeam(t, {
+    leagueSlug,
+    badgeSeeding,
+    usesVictoryPoints,
+    preferredTeamId,
+    hrefFor,
+    configFor: (id) => configById.get(id),
+  });
+
+// ---- Division board ----
+const qualifiers = divisionQualifiers(badgeSeeding);
+const boardDivisions = divisions.map((d) => ({ name: d.name, teams: d.teams.map(board) }));
+const scoreLabel = usesVictoryPoints ? 'VP' : 'PF';
+const divisionRows = (teamsInDivision: ReturnType<typeof board>[]): GroupRow[] =>
+  teamsInDivision.map((team, i) => ({
+    team,
+    lead: i === 0,
+    cut: i === qualifiers ? 'plain' : undefined,
+    rank: { kind: 'seed', n: i + 1 },
+    cells: [
+      { text: team.record },
+      { text: usesVictoryPoints ? String(team.vp ?? 0) : team.pf.toFixed(1), strong: true },
+      { text: team.streak, hideSm: true },
+    ],
+  }));
+
+// ---- Playoff picture ----
+const leagueTeams = league.map(board);
+const tiering = profile.leagueTiering;
+const groups = tiering
+  ? buildSeedField(leagueTeams, tiering, {
+      leaderLabel: profile.board?.leaderLabel,
+      chaseLimit: profile.board?.chaseLimit,
+    })
+  : [];
+const fieldSize = groups
+  .filter((g) => g.kind === 'tiles' || g.kind === 'chips')
+  .reduce((n, g) => n + g.teams.length, 0);
+
+// ---- All-play ----
+const allPlayRows = buildAllPlayRows(allPlay.map(board));
+---
+
+<div class="stb">
+  {view === 'division' && (
+    <>
+      <section>
+        <h2 class="stb-sec">
+          Division leaders
+          {badgeSeeding && boardDivisions.length > 0 && <small>Each division's first row, in MFL's order</small>}
+        </h2>
+        <LeaderStrip
+          theme={theme}
+          items={boardDivisions
+            .filter((d) => d.teams.length)
+            .map((d) => ({
+              team: d.teams[0],
+              top: d.name,
+              line: [d.teams[0].record, d.teams[0].vp !== null ? `${d.teams[0].vp} VP` : null, d.teams[0].seed && profile.badgeShowsSeed ? `seed ${d.teams[0].seed}` : null]
+                .filter(Boolean)
+                .join(' · '),
+            }))}
+        />
+      </section>
+      <div class="stb-groups">
+        {boardDivisions.map((d) => (
+          <GroupCard
+            theme={theme}
+            title={d.name}
+            meta={`${d.teams.length} teams`}
+            pills={Boolean(badgeSeeding)}
+            showSeed={profile.badgeShowsSeed}
+            labels={[{ text: 'W-L' }, { text: scoreLabel }, { text: 'Strk', hideSm: true }]}
+            rows={divisionRows(d.teams)}
+          />
+        ))}
+      </div>
+    </>
+  )}
+
+  {view === 'league' && (
+    <>
+      {groups.length > 0 && (
+        <SeedField
+          theme={theme}
+          groups={groups}
+          topSeedTag={profile.board?.topSeedTag}
+        />
+      )}
+      <FieldTable
+        theme={theme}
+        teams={leagueTeams}
+        groups={groups}
+        summary={groups.length ? `Full table · all ${leagueTeams.length} teams${fieldSize ? ` · ${fieldSize} in the field` : ''}` : undefined}
+      />
+    </>
+  )}
+
+  {view === 'all_play' && <AllPlayTable theme={theme} rows={allPlayRows} />}
+</div>

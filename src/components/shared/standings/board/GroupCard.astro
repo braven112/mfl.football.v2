@@ -1,0 +1,89 @@
+---
+/**
+ * One group of teams — a division, or an AFL tier. Rows arrive in the order
+ * the standings producer gave them; the card only draws them. The first row
+ * can be the group's leader, painted in team colours under Primetime; zones
+ * (promotion, relegation, a playoff line) are tinted bands with a labelled cut.
+ */
+import type { SiteTheme } from '../../../../config/leagues';
+import type { GroupRow } from '../../../../utils/standings-board';
+import TeamCell from './TeamCell.astro';
+import SeedMark from './SeedMark.astro';
+
+interface Props {
+  theme: SiteTheme;
+  title: string;
+  meta?: string;
+  /** Column heads after Rank and Team. */
+  labels: Array<{ text: string; hideSm?: boolean }>;
+  rows: GroupRow[];
+  /** Editorial draws seed pills in the rank column, which needs room. */
+  pills?: boolean;
+  showSeed?: boolean;
+  rankLabel?: string;
+}
+
+const { theme, title, meta, labels, rows, pills = false, showSeed = true, rankLabel = '' } = Astro.props;
+const ncells = labels.filter((l) => !l.hideSm).length;
+const ncellsAll = labels.length;
+const primetime = theme === 'primetime';
+---
+
+<article class:list={['stb-card', 'stb-gcard', { 'stb-gcard--pills': pills }]} style={`--stb-ncells:${ncellsAll};--stb-ncells-sm:${ncells}`}>
+  <div class="stb-gcard__head">
+    <slot name="logo" />
+    <h3>{title}</h3>
+    {meta && <span>{meta}</span>}
+  </div>
+  <div class="stb-row stb-row--head">
+    <span>{pills && !primetime ? 'Seed' : rankLabel}</span>
+    <span>Team</span>
+    {labels.map((l) => <span class:list={{ 'stb-hide-sm': l.hideSm }}>{l.text}</span>)}
+  </div>
+  {rows.map((r) => {
+    const painted = primetime && r.lead;
+    return (
+      <>
+        {r.zoneLabel && <div class={`stb-zone-label stb-zone-label--${r.zoneLabel.tone}`}>{r.zoneLabel.text}</div>}
+        <div
+          class:list={[
+            'stb-row',
+            {
+              'stb-row--lead': r.lead,
+              'stb-row--mine': r.team.mine,
+              [`stb-row--cut${r.cut === 'plain' ? '' : `-${r.cut}`}`]: Boolean(r.cut),
+              [`stb-row--zone-${r.zone}`]: Boolean(r.zone),
+            },
+          ]}
+          style={painted ? `background:${r.team.gradient}` : undefined}
+        >
+          {r.rank.kind === 'num' && <span class="stb-rank">{r.rank.n}</span>}
+          {r.rank.kind === 'medal' && (
+            <span class:list={['stb-medal', { [`stb-medal--${r.rank.n}`]: r.rank.n <= (r.rank.medals ?? 3) }]}>{r.rank.n}</span>
+          )}
+          {r.rank.kind === 'seed' && (
+            <span class="stb-rank">
+              {primetime ? r.rank.n : <SeedMark team={r.team} theme={theme} showSeed={showSeed} />}
+            </span>
+          )}
+          <TeamCell team={r.team} painted={painted}>
+            {(r.sub || (primetime && r.rank.kind === 'seed' && r.team.badge)) && (
+              <small>
+                {primetime && r.rank.kind === 'seed' && r.team.badge ? <SeedMark team={r.team} theme={theme} showSeed={showSeed} /> : r.sub}
+              </small>
+            )}
+          </TeamCell>
+          {r.cells.map((c) => (
+            <span class:list={['stb-c', 'stb-num', { 'stb-v': c.strong, 'stb-hide-sm': c.hideSm }]}>
+              {c.prize && <span class="stb-prize">{c.prize}</span>}
+              {c.prize && c.arrow && ' '}
+              {c.arrow === 'up' && <span class="stb-up" aria-label="moves up">▲</span>}
+              {c.arrow === 'down' && <span class="stb-down" aria-label="moves down">▼</span>}
+              {c.text}
+            </span>
+          ))}
+        </div>
+      </>
+    );
+  })}
+</article>

@@ -18,6 +18,10 @@
  *    `.` and 404. See src/utils/link-punctuation.mjs for the full story and
  *    the outgoing half of the fix.
  *
+ * 4. Theme preview: `?theme=primetime|editorial` previews the other site
+ *    theme for the browser session; `?theme=default` ends it. See
+ *    src/utils/site-theme.ts.
+ *
  * Vercel 301 redirects in vercel.json still handle catching leaked /<slug>/*
  * links at the edge before this middleware runs.
  *
@@ -40,6 +44,7 @@ import { demoLeaguePaths } from './config/leagues-data.mjs';
 import { DEMO_START_PATH } from './utils/demo-access-core.mjs';
 import type { MiddlewareHandler } from 'astro';
 import { getAuthUser } from './utils/auth';
+import { resolveThemePreview, THEME_PREVIEW_COOKIE, THEME_PREVIEW_PARAM } from './utils/site-theme';
 import { demoTokenFromUserId, lookupDemoLink } from './utils/demo-access';
 import { demoRequestContext } from './utils/demo-request-context';
 import { setDemoMflAnswer } from './utils/demo-isolation';
@@ -157,6 +162,22 @@ const handle: MiddlewareHandler = async (context, next) => {
   const isLeagueHost = Boolean(HOST_TO_SLUG[hostname]);
 
   context.locals.hideLeaguePrefix = isLeagueHost;
+
+  // `?theme=` previews the other site theme for the rest of the browser
+  // session (src/utils/site-theme.ts). Read once here so components only see
+  // `locals.siteThemePreview`; a prerendered page has no request to read.
+  if (!context.isPrerendered) {
+    const preview = resolveThemePreview(
+      context.url.searchParams.get(THEME_PREVIEW_PARAM),
+      context.cookies.get(THEME_PREVIEW_COOKIE)?.value
+    );
+    if (preview.kind === 'set') {
+      context.cookies.set(THEME_PREVIEW_COOKIE, preview.theme, { path: '/', sameSite: 'lax' });
+    } else if (preview.kind === 'clear') {
+      context.cookies.delete(THEME_PREVIEW_COOKIE, { path: '/' });
+    }
+    context.locals.siteThemePreview = preview.kind === 'clear' ? null : preview.theme;
+  }
 
   // The shared app host is not a second front door for a league that has its
   // own. TheLeague and the AFL are served at theleague.us and afl-fantasy.com;

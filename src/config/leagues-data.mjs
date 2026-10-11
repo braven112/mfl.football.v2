@@ -669,6 +669,8 @@ export const LEAGUES = {
      * league stays on the classic hero-led homepage.
      */
     homeStyle: 'front-page',
+    /** Primetime: the broadcast site theme, first worn by Archie's (owner's call, Oct 2026). */
+    siteTheme: 'primetime',
     /** Short display name for the site header (the full name is too long there). */
     shortName: "Archie's",
     /**

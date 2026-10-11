@@ -1,0 +1,102 @@
+---
+/**
+ * The playoff picture for any seeding rule, drawn from `buildSeedField`'s
+ * groups: tiles for the top of the field, chips (seed on the crest's corner)
+ * for the rest of it, the playoff line, then the teams chasing it.
+ */
+import type { SiteTheme } from '../../../../config/leagues';
+import { shortDivision, type SeedGroup } from '../../../../utils/standings-board';
+import TeamName from './TeamName.astro';
+
+interface Props {
+  theme: SiteTheme;
+  /** A heading of its own, where the page's hero does not already name the field. */
+  title?: string;
+  blurb?: string;
+  groups: SeedGroup[];
+  /** Tag on the top seed's tile (TheLeague: "Bye"). */
+  topSeedTag?: string;
+}
+
+const { theme, title, blurb, groups, topSeedTag } = Astro.props;
+const primetime = theme === 'primetime';
+// A division name's phone form inside a line: "6-1 · Lawrence Taylor" → "6-1 · Taylor".
+const phoneLine = (line: string, division: string) =>
+  line.endsWith(division) ? line.slice(0, line.length - division.length) + shortDivision(division) : line;
+---
+
+<section class="stb-card stb-field">
+  {title && (
+    <div class="stb-field__intro">
+      <h2 class="stb-sec">{title}</h2>
+      {blurb && <p>{blurb}</p>}
+    </div>
+  )}
+  {groups.map((g) => {
+    if (g.kind === 'line') {
+      return <div class="stb-cutline">{g.label}<span>{g.note}</span></div>;
+    }
+    const head = (
+      <div class="stb-band-label"><b>{g.label}</b> {g.range}</div>
+    );
+    if (g.kind === 'tiles') {
+      return (
+        <div>
+          {head}
+          <div class:list={['stb-tiles', { 'stb-tiles--wide': g.teams.length <= 4 }]}>
+            {g.teams.map(({ team, line }) => {
+              const Tag = team.href ? 'a' : 'div';
+              const alt = phoneLine(line, team.division);
+              return (
+                <Tag
+                  class="stb-tile"
+                  href={team.href}
+                  style={primetime ? `background:${team.gradient}` : `--stb-team:${team.accent}`}
+                >
+                  <img
+                    src={primetime ? team.crest : team.icon}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    width="96"
+                    height="96"
+                    style={primetime && team.crestFilter ? `filter:${team.crestFilter}` : undefined}
+                  />
+                  <span class="stb-tile__seed">{team.seed}</span>
+                  {topSeedTag && team.seed === 1 && <span class="stb-tile__tag">{topSeedTag}</span>}
+                  <span class="stb-tile__name"><TeamName team={team} size="short" /></span>
+                  <span class="stb-tile__rec stb-num">
+                    {alt === line ? line : <><span class="stb-nm-full">{line}</span><span class="stb-nm-alt">{alt}</span></>}
+                  </span>
+                </Tag>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div>
+        {head}
+        <div class="stb-chips">
+          {g.teams.map(({ team, line }) => {
+            const Tag = team.href ? 'a' : 'div';
+            const alt = phoneLine(line, team.division);
+            return (
+              <Tag class:list={['stb-chip', { 'stb-chip--chase': g.kind === 'chase', 'stb-chip--mine': team.mine }]} href={team.href}>
+                <span class="stb-chip__crest">
+                  <img src={team.icon} alt="" loading="lazy" decoding="async" width="34" height="34" />
+                  {g.kind === 'chips' && <i class="stb-chip__seed">{team.seed}</i>}
+                </span>
+                <span class="stb-chip__name"><TeamName team={team} size="short" /></span>
+                <small class="stb-num">
+                  {alt === line ? line : <><span class="stb-nm-full">{line}</span><span class="stb-nm-alt">{alt}</span></>}
+                </small>
+              </Tag>
+            );
+          })}
+        </div>
+      </div>
+    );
+  })}
+</section>

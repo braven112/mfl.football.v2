@@ -1,0 +1,38 @@
+---
+/**
+ * Crest + name (+ an optional second line), linked to the team's page when it
+ * has one. The crest follows the site theme (the light/dark icon swap); the
+ * board's painted surfaces pass `painted` to draw the dark-surface cut instead.
+ */
+import type { BoardTeam } from '../../../../utils/standings-board';
+import TeamName from './TeamName.astro';
+
+interface Props {
+  team: BoardTeam;
+  size?: 'medium' | 'short';
+  painted?: boolean;
+}
+
+const { team, size = 'medium', painted = false } = Astro.props;
+const Tag = team.href ? 'a' : 'span';
+const src = painted ? team.crest : team.icon;
+---
+
+<Tag class="stb-team" href={team.href}>
+  {src && (
+    <img
+      class="stb-crest"
+      src={src}
+      alt=""
+      loading="lazy"
+      decoding="async"
+      width="28"
+      height="28"
+      style={painted && team.crestFilter ? `filter:${team.crestFilter}` : undefined}
+    />
+  )}
+  <div>
+    <b><TeamName team={team} size={size} /><slot name="after-name" /></b>
+    <slot />
+  </div>
+</Tag>
