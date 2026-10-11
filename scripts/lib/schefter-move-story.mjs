@@ -228,68 +228,80 @@ export function resolveMoveTokens(text, facts, teams) {
 }
 
 /**
- * Parse and check a model reply. Null unless it is JSON with both fields, in
- * bounds, token-clean, and names the move's main player.
+ * Check a model reply: `{ story }` when it is JSON with both fields, in
+ * bounds, token-clean and true to the move, else `{ reason }` — said the way
+ * the retry tells the model what to fix.
  */
-export function parseMoveStory(text, facts, teams) {
+export function checkMoveStory(text, facts, teams) {
   const match = typeof text === 'string' ? text.match(/\{[\s\S]*\}/) : null;
-  if (!match) return null;
+  if (!match) return { reason: 'Reply with the JSON object only.' };
   let parsed;
   try {
     parsed = JSON.parse(match[0]);
   } catch {
-    return null;
+    return { reason: 'The reply was not valid JSON.' };
   }
   const headline = resolveMoveTokens(String(parsed?.headline ?? '').trim(), facts, teams);
   const body = resolveMoveTokens(String(parsed?.body ?? '').trim(), facts, teams);
-  if (!headline || !body) return null;
-  if (headline.length < 10 || headline.length > 120) return null;
-  if (body.length < 20 || body.length > 420) return null;
+  if (!headline || !body) return { reason: 'Write the team only as its exact {{TEAM:…}} token, and fill both fields.' };
+  if (headline.length < 10 || headline.length > 120) return { reason: 'The headline must be 10-80 characters.' };
+  if (body.length < 20 || body.length > 420) return { reason: 'The body must be 1-2 sentences, at most 260 characters.' };
   // The move is the add AND every drop: a story that leaves one out is a
   // different move. Anchors are lowercase; the placeholder check is not.
   const story = `${headline} ${body}`;
   const lower = story.toLowerCase();
-  for (const p of [...facts.added, ...facts.dropped]) {
-    if (p.anchor && !lower.includes(p.anchor)) return null;
-  }
-  if (/\bPlayer \d+\b/i.test(story)) return null;
+  const missing = [...facts.added, ...facts.dropped].filter((p) => p.anchor && !lower.includes(p.anchor));
+  if (missing.length) return { reason: `Name every player in the move: ${missing.map((p) => p.name).join(', ')} is missing.` };
+  if (/\bPlayer \d+\b/i.test(story)) return { reason: 'Use the player names exactly as given.' };
   // The model's two habits the prompt alone did not break: calling a
   // first-come pickup "waivers", and narrating a drop that did not happen.
-  if (facts.kind === KIND_LABEL.FREE_AGENT && /waiver/i.test(story)) return null;
-  if (facts.dropped.length === 0 && /\b(drop|dropp|cut|releas|roster (spot|space|move)|make room)/i.test(story)) return null;
-  return { headline, body };
+  if (facts.kind === KIND_LABEL.FREE_AGENT && /waiver/i.test(story)) {
+    return { reason: 'This was a first-come free-agent signing. Do not use the word "waiver" anywhere.' };
+  }
+  if (facts.dropped.length === 0 && /\b(drop|dropp|cut|releas|roster (spot|space|move)|make room)/i.test(story)) {
+    return { reason: 'Nothing was dropped. Do not mention drops, cuts, releases, roster spots or making room at all, not even to say there were none.' };
+  }
+  return { story: { headline, body } };
+}
+
+/** The checked story, or null. */
+export function parseMoveStory(text, facts, teams) {
+  return checkMoveStory(text, facts, teams).story ?? null;
 }
 
 /**
- * Ask the model for the story. Null on any failure — the caller keeps its
- * template post.
+ * Ask the model for the story, and once more with the reason when the first
+ * reply fails its check. Null on any failure — the caller keeps its template
+ * post.
  */
 export async function writeMoveStory({ facts, teams, apiKey, fetchImpl = fetch }) {
   if (!facts || !apiKey) return null;
   const { system, user } = buildMovePrompt(facts);
+  const messages = [{ role: 'user', content: user }];
   try {
-    const res = await fetchImpl('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: MOVE_STORY_MODEL,
-        max_tokens: 300,
-        system,
-        messages: [{ role: 'user', content: user }],
-      }),
-    });
-    if (!res.ok) {
-      console.warn(`  [move-story] API returned ${res.status} — keeping template`);
-      return null;
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+      const res = await fetchImpl('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({ model: MOVE_STORY_MODEL, max_tokens: 300, system, messages }),
+      });
+      if (!res.ok) {
+        console.warn(`  [move-story] API returned ${res.status} — keeping template`);
+        return null;
+      }
+      const data = await res.json();
+      const text = data?.content?.[0]?.text ?? '';
+      const { story, reason } = checkMoveStory(text, facts, teams);
+      if (story) return story;
+      console.warn(`  [move-story] attempt ${attempt} failed: ${reason}`);
+      messages.push({ role: 'assistant', content: text || '{}' }, { role: 'user', content: `Rejected: ${reason} Rewrite it.` });
     }
-    const data = await res.json();
-    const story = parseMoveStory(data?.content?.[0]?.text ?? '', facts, teams);
-    if (!story) console.warn('  [move-story] Reply failed validation — keeping template');
-    return story;
+    console.warn('  [move-story] Reply failed validation — keeping template');
+    return null;
   } catch (err) {
     console.warn(`  [move-story] ${err.message} — keeping template`);
     return null;
