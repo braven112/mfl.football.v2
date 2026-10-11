@@ -34,6 +34,14 @@ describe('owners poll homepage pop-up', () => {
     expect(popupReason({ ...base, lastShownAt: 'garbage' })).toBe('no-ballot');
   });
 
+  it('?pollPopup= previews a sheet for an owner whose ballot is current', () => {
+    const current = { ...base, hasBallot: true, stale: false, lastShownAt: now.toISOString() };
+    expect(popupReason({ ...current, force: 'new' })).toBe('no-ballot');
+    expect(popupReason({ ...current, force: 'stale' })).toBe('stale');
+    expect(popupReason({ ...current, force: 'nonsense' })).toBeNull();
+    expect(popupReason({ ...current, status: 'paused', force: 'new' })).toBeNull();
+  });
+
   it('keeps each league on its own schedule', () => {
     expect(popupStorageKey('theleague')).not.toBe(popupStorageKey('afl-fantasy'));
   });

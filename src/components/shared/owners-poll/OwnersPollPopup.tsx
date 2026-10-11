@@ -31,6 +31,12 @@ interface Props {
   columnHref: string;
   officialClock?: LeagueClock;
   vapidPublicKey?: string;
+  /**
+   * Show on every visit regardless of ballot or the weekly cap (a commissioner
+   * reviewing the sheet — see OwnersPollHomeCard). A current ballot gets the
+   * "still right?" sheet, since that is the one with something to keep.
+   */
+  alwaysShow?: boolean;
 }
 
 function readStamp(key: string): string | null {
@@ -59,6 +65,7 @@ export default function OwnersPollPopup({
   columnHref,
   officialClock,
   vapidPublicKey,
+  alwaysShow = false,
 }: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [reason, setReason] = useState<PopupReason | null>(null);
@@ -85,6 +92,9 @@ export default function OwnersPollPopup({
           stale: Boolean(data?.stale),
           lastShownAt: readStamp(key),
           now: new Date(),
+          force:
+            new URLSearchParams(window.location.search).get('pollPopup') ??
+            (alwaysShow ? (data?.ballot ? 'stale' : 'new') : null),
         });
         if (!next) return;
         // Another homepage dialog (Throwback Week's welcome) already has the
@@ -106,7 +116,7 @@ export default function OwnersPollPopup({
     return () => {
       cancelled = true;
     };
-  }, [leagueParam, leagueSlug]);
+  }, [leagueParam, leagueSlug, alwaysShow]);
 
   useEffect(() => {
     const dialog = dialogRef.current;
