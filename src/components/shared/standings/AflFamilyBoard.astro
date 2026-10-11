@@ -24,6 +24,7 @@ import {
 import { buildTierRows, type TierMovement } from '../../../utils/tier-board';
 import ThemeImage from '../ThemeImage.astro';
 import LeaderStrip from './board/LeaderStrip.astro';
+import SeedKey from './board/SeedKey.astro';
 import GroupCard from './board/GroupCard.astro';
 import SeedField from './board/SeedField.astro';
 import FieldTable from './board/FieldTable.astro';
@@ -99,6 +100,7 @@ const boardTiers = tiers.map((t) => {
               line: [d.rows[0].record, d.rows[0].seed ? `seed ${d.rows[0].seed}` : null].filter(Boolean).join(' · '),
             }))}
         />
+        <SeedKey theme={theme} badges={boardDivisions.flatMap((d) => d.rows.map((t) => t.badge))} />
       </section>
       <div class="stb-groups stb-groups--2">
         {boardDivisions.map((d) => (

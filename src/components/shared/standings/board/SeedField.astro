@@ -54,6 +54,7 @@ const phoneLine = (line: string, division: string) =>
                   style={primetime ? `background:${team.gradient}` : `--stb-team:${team.accent}`}
                 >
                   <img
+                    class:list={{ 'stb-round': team.round }}
                     src={primetime ? team.crest : team.icon}
                     alt=""
                     loading="lazy"
@@ -85,7 +86,7 @@ const phoneLine = (line: string, division: string) =>
             return (
               <Tag class:list={['stb-chip', { 'stb-chip--chase': g.kind === 'chase', 'stb-chip--mine': team.mine }]} href={team.href}>
                 <span class="stb-chip__crest">
-                  <img src={team.icon} alt="" loading="lazy" decoding="async" width="34" height="34" />
+                  <img class:list={{ 'stb-round': team.round }} src={team.icon} alt="" loading="lazy" decoding="async" width="34" height="34" />
                   {g.kind === 'chips' && <i class="stb-chip__seed">{team.seed}</i>}
                 </span>
                 <span class="stb-chip__name"><TeamName team={team} size="short" /></span>

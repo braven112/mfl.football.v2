@@ -32,13 +32,13 @@ on:
     paths:
       # Components a story renders.
       # Standings board stories (stories/standings/).
-      - 'src/components/shared/PlayoffBadge.astro'
       - 'src/components/shared/standings/AflFamilyBoard.astro'
       - 'src/components/shared/standings/board/AllPlayTable.astro'
       - 'src/components/shared/standings/board/FieldTable.astro'
       - 'src/components/shared/standings/board/GroupCard.astro'
       - 'src/components/shared/standings/board/LeaderStrip.astro'
       - 'src/components/shared/standings/board/SeedField.astro'
+      - 'src/components/shared/standings/board/SeedKey.astro'
       - 'src/components/shared/standings/board/SeedMark.astro'
       - 'src/components/shared/standings/board/StandingsBoard.astro'
       - 'src/components/shared/standings/board/TeamCell.astro'
@@ -423,13 +423,13 @@ on:
     paths:
       # Components a story renders.
       # Standings board stories (stories/standings/).
-      - 'src/components/shared/PlayoffBadge.astro'
       - 'src/components/shared/standings/AflFamilyBoard.astro'
       - 'src/components/shared/standings/board/AllPlayTable.astro'
       - 'src/components/shared/standings/board/FieldTable.astro'
       - 'src/components/shared/standings/board/GroupCard.astro'
       - 'src/components/shared/standings/board/LeaderStrip.astro'
       - 'src/components/shared/standings/board/SeedField.astro'
+      - 'src/components/shared/standings/board/SeedKey.astro'
       - 'src/components/shared/standings/board/SeedMark.astro'
       - 'src/components/shared/standings/board/StandingsBoard.astro'
       - 'src/components/shared/standings/board/TeamCell.astro'

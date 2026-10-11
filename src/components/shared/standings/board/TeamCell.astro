@@ -21,7 +21,7 @@ const src = painted ? team.crest : team.icon;
 <Tag class="stb-team" href={team.href}>
   {src && (
     <img
-      class="stb-crest"
+      class:list={['stb-crest', { 'stb-round': team.round }]}
       src={src}
       alt=""
       loading="lazy"

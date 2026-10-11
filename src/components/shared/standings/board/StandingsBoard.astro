@@ -22,6 +22,7 @@ import {
   type GroupRow,
 } from '../../../../utils/standings-board';
 import LeaderStrip from './LeaderStrip.astro';
+import SeedKey from './SeedKey.astro';
 import GroupCard from './GroupCard.astro';
 import SeedField from './SeedField.astro';
 import FieldTable from './FieldTable.astro';
@@ -110,6 +111,7 @@ const allPlayRows = buildAllPlayRows(allPlay.map(board));
                 .join(' · '),
             }))}
         />
+        <SeedKey theme={theme} badges={boardDivisions.flatMap((d) => d.teams.map((t) => t.badge))} />
       </section>
       <div class="stb-groups">
         {boardDivisions.map((d) => (

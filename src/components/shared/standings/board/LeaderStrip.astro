@@ -27,6 +27,7 @@ const primetime = theme === 'primetime';
         style={primetime ? `background:${team.gradient}` : `--stb-team:${team.accent}`}
       >
         <img
+          class:list={{ 'stb-round': team.round }}
           src={primetime ? team.crest : team.icon}
           alt=""
           loading="lazy"

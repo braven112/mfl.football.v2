@@ -99,10 +99,10 @@ html.dark [data-site-theme='editorial'] .stb-card { box-shadow: var(--stb-ring);
 }
 
 /* ---------- crests ---------- */
-.stb-crest { width: 1.75rem; height: 1.75rem; border-radius: 50%; object-fit: cover; flex: none; display: block; }
+.stb-crest { width: 1.75rem; height: 1.75rem; object-fit: contain; flex: none; display: block; }
 
 /* ---------- LeaderStrip ---------- */
-.stb-leaders { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(10.5rem, 1fr); gap: 0.6rem; overflow-x: auto; padding-bottom: 0.25rem; }
+.stb-leaders { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(10.5rem, 1fr); gap: 0.6rem; overflow-x: auto; padding: 0.3rem 0.25rem 0.35rem; margin: -0.3rem -0.25rem 0; }
 .stb-leader {
   position: relative;
   overflow: hidden;
@@ -115,7 +115,7 @@ html.dark [data-site-theme='editorial'] .stb-card { box-shadow: var(--stb-ring);
   color: inherit;
   text-decoration: none;
 }
-.stb-leader img { position: absolute; top: 0.55rem; right: 0.55rem; width: 2.6rem; height: 2.6rem; border-radius: 50%; object-fit: cover; }
+.stb-leader img { position: absolute; top: 0.55rem; right: 0.55rem; width: 2.6rem; height: 2.6rem; object-fit: contain; }
 .stb-leader__div { font-size: var(--font-size-3xs); letter-spacing: var(--tracking-caps); text-transform: uppercase; opacity: 0.9; padding-right: 3rem; }
 .stb-leader__name { font-family: var(--font-display); font-size: var(--font-size-lg); font-weight: 700; line-height: 1; }
 .stb-leader__rec { font-size: var(--font-size-xs); }
@@ -178,10 +178,23 @@ html.dark [data-site-theme='editorial'] .stb-leader { box-shadow: var(--stb-ring
 .stb-zone-label--danger { color: var(--stb-danger); }
 .stb-zone-label--down { color: var(--stb-down); }
 .stb-zone-label--plain { color: var(--stb-muted); }
-[data-site-theme='editorial'] .stb-gcard--pills .stb-row { --stb-cols: 3.9rem minmax(0, 1fr) repeat(var(--stb-ncells, 3), minmax(2.4rem, auto)); padding-left: 0.6rem; }
+[data-site-theme='editorial'] .stb-gcard--pills .stb-row { --stb-cols: 2.2rem minmax(0, 1fr) repeat(var(--stb-ncells, 3), minmax(2.4rem, auto)); padding-left: 0.6rem; }
 
 /* Seed marks. Primetime: a dot plus "Seed n" under the name. Editorial: the DIV/2ND/WC pill (PlayoffBadge). */
 .stb-seedline { display: inline-flex; align-items: center; gap: 0.3rem; font-weight: 600; white-space: nowrap; }
+/* Editorial seed chip: the seed number on the band's colour (PlayoffBadge's
+   gold / accent / silver), with the band named for screen readers. */
+.stb-seedchip { display: inline-grid; place-items: center; min-width: 1.6rem; height: 1.6rem; padding: 0 0.3rem; border-radius: 0.4rem; font-family: var(--font-display); font-weight: 700; font-size: var(--font-size-sm); line-height: 1; justify-self: center; }
+.stb-seedchip--division_winner { background: var(--stb-gold); color: #111; }
+.stb-seedchip--runner_up { background: color-mix(in srgb, var(--color-primary) 30%, transparent); outline: 1px solid var(--color-primary); color: var(--stb-text); }
+.stb-seedchip--wild_card { background: var(--stb-silver); color: #111; }
+.stb-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.stb-key { display: flex; flex-wrap: wrap; gap: 0.35rem 0.9rem; margin: 0.4rem 0 0; font-size: var(--font-size-xs); color: var(--stb-muted); }
+.stb-key span { display: inline-flex; align-items: center; gap: 0.35rem; }
+.stb-key .stb-seedchip { min-width: 0.9rem; height: 0.9rem; padding: 0; border-radius: 0.2rem; }
+/* Crests are shown whole (a mascot cut-out) unless the league's art is a
+   circle crop (front-page-art `round`, Archie's), which is clipped round. */
+.stb .stb-round { border-radius: 50%; object-fit: cover; }
 .stb-dot { width: 0.55rem; height: 0.55rem; border-radius: 50%; flex: none; display: inline-block; }
 .stb-dot--division_winner { background: var(--stb-accent); }
 .stb-dot--runner_up { background: var(--stb-text); }
@@ -214,7 +227,7 @@ html.dark [data-site-theme='editorial'] .stb-leader { box-shadow: var(--stb-ring
 .stb-tile__tag { position: absolute !important; top: 0.45rem; right: 0.5rem; font-size: var(--font-size-3xs); font-weight: 700; letter-spacing: var(--tracking-caps); text-transform: uppercase; padding: 0.1rem 0.4rem; border-radius: 999px; background: var(--stb-accent); color: var(--stb-on-accent); }
 .stb-tile__name { font-family: var(--font-display); font-weight: 700; font-size: var(--font-size-base); line-height: 1.05; overflow-wrap: normal; word-break: normal; }
 .stb-tile__rec { font-size: var(--font-size-2xs); opacity: 0.92; line-height: 1.3; }
-.stb-tile img { display: block; border-radius: 50%; object-fit: cover; aspect-ratio: 1; }
+.stb-tile img { display: block; height: auto; object-fit: contain; aspect-ratio: 1; }
 /* Primetime: the crest floats on the team's paint; the name sits at the foot. */
 [data-site-theme='primetime'] .stb-tile { aspect-ratio: 3 / 4; color: #fff; }
 [data-site-theme='primetime'] .stb-tiles--wide .stb-tile { aspect-ratio: 4 / 3; }
@@ -233,7 +246,7 @@ html.dark [data-site-theme='editorial'] .stb-leader { box-shadow: var(--stb-ring
 .stb-chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); gap: 0.5rem; }
 .stb-chip { display: grid; grid-template-columns: 2.1rem minmax(0, 1fr); gap: 0.05rem 0.55rem; align-items: center; padding: 0.45rem 0.7rem 0.45rem 0.5rem; border-radius: 0.7rem; background: var(--stb-card-2); font-size: var(--font-size-sm); min-width: 0; color: inherit; text-decoration: none; }
 .stb-chip__crest { grid-row: span 2; position: relative; width: 2.1rem; height: 2.1rem; }
-.stb-chip__crest img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
+.stb-chip__crest img { width: 100%; height: 100%; object-fit: contain; display: block; }
 /* The seed rides on the crest's corner: it costs no width, so the name never wraps. */
 .stb-chip__seed { position: absolute; top: -0.3rem; left: -0.35rem; min-width: 1.05rem; height: 1.05rem; padding: 0 0.2rem; border-radius: 0.55rem; display: grid; place-items: center; font-family: var(--font-display); font-weight: 700; font-size: var(--font-size-3xs); line-height: 1; box-shadow: var(--stb-badge-ring); }
 [data-site-theme='primetime'] .stb-chip__seed { background: var(--stb-accent); color: var(--stb-on-accent); }
@@ -258,7 +271,7 @@ html.dark [data-site-theme='editorial'] .stb-leader { box-shadow: var(--stb-ring
 .stb-table .stb-l { text-align: left; }
 .stb-table td.stb-teamcell { white-space: normal; }
 .stb-table .stb-rk { text-align: center; width: 2.4rem; font-weight: 700; }
-.stb-table--seeded .stb-rk { width: 4.4rem; }
+.stb-table--seeded .stb-rk { width: 2.8rem; }
 .stb-table tr.stb-mine td { background: color-mix(in srgb, var(--stb-accent) 12%, transparent); }
 .stb-table tr.stb-mine td:first-child { box-shadow: var(--stb-mine-edge); }
 .stb-table tr.stb-band td { background: var(--stb-card-2); text-align: left; font-size: var(--font-size-3xs); letter-spacing: var(--tracking-caps); text-transform: uppercase; font-weight: 700; color: var(--stb-muted); padding: 0.35rem 0.75rem; }
@@ -345,3 +358,26 @@ html.dark [data-site-theme='editorial'] .stb-leader { box-shadow: var(--stb-ring
 .stb-sec--logo { display: flex; align-items: center; gap: 0.5rem; }
 .stb-sec__logo { width: 2rem; height: 2rem; object-fit: contain; }
 .stb-groups--wide-last > :last-child:nth-child(odd) { grid-column: 1 / -1; }
+
+/* Links: the layouts' global a:hover underlines and recolours every link
+   (0,1,1). The board's links are whole cards and rows, so hover is shown on
+   the card or row instead, and the text keeps its own colour. */
+.stb a:is(:hover, :focus) { text-decoration: none; color: var(--stb-link-color, inherit); }
+[data-site-theme='primetime'] :is(.stb-leader, .stb-tile) { --stb-link-color: #fff; }
+.stb :is(a.stb-leader, a.stb-tile, a.stb-chip) { transition: transform var(--transition-fast), outline-color var(--transition-fast); outline: 2px solid transparent; outline-offset: 2px; }
+.stb :is(a.stb-leader, a.stb-tile, a.stb-chip):is(:hover, :focus-visible) { transform: translateY(-2px); outline-color: var(--stb-accent); }
+.stb-row:has(a.stb-team:is(:hover, :focus-visible)):not(.stb-row--lead),
+.stb-table tr:has(a.stb-team:is(:hover, :focus-visible)) td { background: color-mix(in srgb, var(--stb-accent) 10%, transparent); }
+[data-site-theme='primetime'] .stb-row--lead:has(a.stb-team:hover) { filter: brightness(1.12); }
+[data-site-theme='editorial'] .stb-row--lead:has(a.stb-team:is(:hover, :focus-visible)) { background: color-mix(in srgb, var(--stb-accent) 10%, var(--stb-card-2)) !important; }
+
+/* Phones: leader cards stack the crest above the text, so four fit across. */
+@media (max-width: 767px) {
+  .stb-leaders { grid-auto-columns: minmax(5.25rem, 1fr); gap: 0.45rem; }
+  .stb-leader { justify-items: center; text-align: center; padding: 0.6rem 0.4rem 0.55rem; gap: 0.15rem; }
+  [data-site-theme='editorial'] .stb-leader { padding-top: 0.8rem; }
+  .stb-leader img { position: static; width: 2.2rem; height: 2.2rem; margin-bottom: 0.25rem; }
+  .stb-leader__div { padding-right: 0; font-size: var(--font-size-3xs); }
+  .stb-leader__name { font-size: var(--font-size-sm); }
+  .stb-leader__rec { font-size: var(--font-size-2xs); }
+}

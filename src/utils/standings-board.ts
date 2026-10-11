@@ -35,6 +35,8 @@ export interface BoardTeam {
   /** Crest drawn on that fill — the dark-surface cut. */
   crest: string;
   crestFilter?: string;
+  /** The league's crests are circle crops (Archie's), so frames clip them round; otherwise shown whole. */
+  round: boolean;
   /** The franchise accent token, for a team colour used as a stripe or numeral. */
   accent: string;
   division: string;
@@ -114,6 +116,7 @@ export function toBoardTeam(team: TeamStanding, opts: BoardTeamOptions): BoardTe
     gradient: art.gradient,
     crest: art.crest || team.teamIcon,
     crestFilter: art.crestFilter,
+    round: art.round,
     accent: teamAccentVar(team.id),
     division: team.division,
     record: formatRecord(wins, losses, ties),
