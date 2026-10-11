@@ -63,6 +63,14 @@ interface Props {
    * back to the site's own clock.
    */
   officialClock?: LeagueClock;
+  /** Called after every successful save — the homepage pop-up uses it. */
+  onSaved?: () => void;
+  /**
+   * The homepage pop-up's layout: no intro line (the sheet has its own), and
+   * only the NEXT empty slot instead of all of them, so the team list starts
+   * on the first screen of a phone rather than below seven blank rows.
+   */
+  compact?: boolean;
 }
 
 /**
@@ -90,6 +98,8 @@ export default function BallotBuilder({
   revealOnSave = false,
   vapidPublicKey = '',
   officialClock,
+  onSaved,
+  compact = false,
 }: Props) {
   const [load, setLoad] = useState<LoadState>('loading');
   const [status, setStatus] = useState<WindowStatus>('none');
@@ -167,6 +177,7 @@ export default function BallotBuilder({
       setFromPrefill(false);
       setJustSaved(true);
       if (data?.turnout) setTurnout(data.turnout);
+      onSaved?.();
       if (revealOnSave) {
         // The rankings are server-rendered behind the ballot check, so the
         // only way to show them is a fresh render. Land on them, not the top.
@@ -178,7 +189,7 @@ export default function BallotBuilder({
     } finally {
       setSaving(false);
     }
-  }, [endpoint, selection, revealOnSave]);
+  }, [endpoint, selection, revealOnSave, onSaved]);
 
   const complete = isComplete(selection, slots);
   const dirty =
@@ -223,9 +234,11 @@ export default function BallotBuilder({
             Rank your top {slots}
             {window_ ? ` · Week ${window_.week}` : ''}
           </h2>
-          <p className="op-builder__sub">
-            Tap teams in the order you rate them. You can rank your own team.
-          </p>
+          {!compact && (
+            <p className="op-builder__sub">
+              Tap teams in the order you rate them. You can rank your own team.
+            </p>
+          )}
         </div>
         {turnout && (
           <p className="op-turnout" aria-live="polite">
@@ -251,13 +264,15 @@ export default function BallotBuilder({
       )}
 
       <ol className="op-slots" aria-label={`Your top ${slots}`}>
-        {Array.from({ length: slots }, (_, i) => {
+        {Array.from({ length: compact ? Math.min(slots, selectedInOrder.length + 1) : slots }, (_, i) => {
           const team = selectedInOrder[i];
           if (!team) {
             return (
               <li key={`empty-${i}`} className="op-slot op-slot--empty">
                 <span className="op-slot__rank">{i + 1}</span>
-                <span className="op-slot__placeholder">Tap a team below</span>
+                <span className="op-slot__placeholder">
+                  {compact && i > 0 ? `Tap a team below for #${i + 1}` : 'Tap a team below'}
+                </span>
               </li>
             );
           }

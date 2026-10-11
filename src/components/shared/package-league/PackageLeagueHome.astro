@@ -48,6 +48,7 @@ import { buildPackageLeagueEvents, packageWhatsNext, type MflCalendarEvent } fro
 import { resolveSchefterRail } from '../../../utils/schefter-rail-view';
 import { getWhatsNewEntriesForLeague } from '../../../utils/whats-new-entries';
 import { isSeasonWindowOpen } from '../../../utils/pecking-order-season-window.mjs';
+import { newestIssueStandings } from '../../../utils/owners-poll-ballot-teams';
 import { getPersonaLabels } from '../../../utils/persona-server';
 import { loginUrlForRequest } from '../../../utils/login-redirect';
 import { readInstallState } from '../../../utils/app-install-state';
@@ -314,6 +315,7 @@ const testMode = !!Astro.url.searchParams.get('testDate');
     ? {
         issue: pollIssue ? { year: pollIssue.year, week: pollIssue.week, ...pollIssue.data } : null,
         ballotHref: r(`${base}/owners-poll`),
+        ballotStandings: newestIssueStandings(seasonIssues.map((x) => ({ ...x.data, year: x.year, week: x.week }))),
       }
     : null}
   quickLinksAuthenticated={!!authUser}
