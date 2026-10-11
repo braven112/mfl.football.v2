@@ -44,6 +44,13 @@ import { schefterKey } from './lib/schefter-keys.mjs';
 import { SCHEFTER_LEAGUES, getSchefterLeague } from './lib/schefter-leagues.mjs';
 import { LEAGUES as REGISTRY_LEAGUES } from '../src/config/leagues-data.mjs';
 import { buildDropAdjustmentMap, resolveDropSalary } from './lib/drop-salary.mjs';
+import {
+  MOVE_STORY_SUBTYPES,
+  applyMoveStory,
+  factsFromRawMove,
+  formatSalary,
+  writeMoveStory,
+} from './lib/schefter-move-story.mjs';
 
 import { getRedisConfig } from './lib/redis.mjs';
 import { createUpstashClient } from './lib/redis-client.mjs';
@@ -93,12 +100,8 @@ const BIG_DROP_PENDING_KEY = schefterKey('theleague', 'bigdrop:pending_groupme')
 
 // ── Helpers ──
 
-function formatSalary(cents) {
-  if (!Number.isFinite(cents) || cents === 0) return '$0';
-  if (cents >= 1_000_000) return `$${(cents / 1_000_000).toFixed(2)}M`;
-  if (cents >= 1_000) return `$${(cents / 1_000).toFixed(0)}K`;
-  return `$${cents.toLocaleString()}`;
-}
+// formatSalary lives in ./lib/schefter-move-story.mjs so the move-story
+// writer prints a price exactly the way the templates do.
 
 function generatePostId(timestamp) {
   const hash = Math.random().toString(36).slice(2, 6);
@@ -798,6 +801,21 @@ async function scanLeague(league) {
       if (removed > 0) {
         console.log(`  [dedup] Removed ${removed} pending-trade rumor post(s) superseded by completed TRADE`);
       }
+    }
+
+    // Schefter's own write-up of the move — the Transactions page leads with
+    // it. Null on any failure, and the template post above stands.
+    if (MOVE_STORY_SUBTYPES.has(post.transactionSubType) && !DRY_RUN) {
+      const registry = registryLeague(league);
+      const facts = factsFromRawMove(txn, {
+        players,
+        parseRosterMove,
+        leagueName: registry?.name ?? league.slug,
+        hasSalaries: !!registry?.features?.salaryCap,
+        dropSalary: post.bigDrop ? formatSalary(post.bigDrop.salary) : null,
+      });
+      const story = await writeMoveStory({ facts, teams, apiKey: process.env.ANTHROPIC_API_KEY });
+      if (story) applyMoveStory(post, story, facts);
     }
 
     // Generate AI commentary for breaking-tier posts

@@ -65,7 +65,13 @@ function mergePostArrays(theirs, ours) {
   const add = (p, oursSide) => {
     if (!p || typeof p !== 'object') return;
     if (typeof p.id === 'string' && p.id) {
-      // ours added second so it overwrites theirs for the same id
+      // ours added second so it overwrites theirs for the same id — UNLESS
+      // theirs carries a newer Schefter move story. The one-off backfill
+      // (scripts/schefter-backfill-move-stories.mjs) rewrites posts that
+      // already exist, so a scan that checked out before it landed would
+      // otherwise push the old template text straight back over the story.
+      const prior = byId.get(p.id);
+      if (prior && (Number(prior.storyVersion) || 0) > (Number(p.storyVersion) || 0)) return;
       byId.set(p.id, p);
       return;
     }

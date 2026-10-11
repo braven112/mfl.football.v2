@@ -12,6 +12,7 @@ import {
   groupByDay,
   filterHref,
   isDefaultView,
+  activeKindChip,
   weekOf,
   DEFAULT_KINDS,
   ALL_KINDS,
@@ -39,13 +40,21 @@ const filters = (qs: string, myFranchiseId: string | null = null, year = 2026) =
   parseFilters({ params: new URLSearchParams(qs), year, myFranchiseId });
 
 describe('default view', () => {
-  it('shows signings and hides trades until asked', () => {
+  it('shows every move, trades included', () => {
     expect([...filters('').kinds].sort()).toEqual([...DEFAULT_KINDS].sort());
-    expect(filters('').kinds.has('trade')).toBe(false);
+    // Trades are the biggest story on Schefter's wire, so the default shows them.
+    expect(filters('').kinds.has('trade')).toBe(true);
   });
 
-  it('turns trades on when requested', () => {
-    expect(filters('types=trade').kinds.has('trade')).toBe(true);
+  it('narrows to trades alone when requested', () => {
+    expect([...filters('types=trade').kinds]).toEqual(['trade']);
+  });
+
+  it('names the chip a view matches', () => {
+    expect(activeKindChip(filters(''))).toBe('all');
+    expect(activeKindChip(filters('types=free-agent,waiver,blind-bid,auction'))).toBe('pickups');
+    expect(activeKindChip(filters('types=trade'))).toBe('trades');
+    expect(activeKindChip(filters('types=auction'))).toBeNull();
   });
 
   it('ignores unknown kinds rather than emptying the ledger', () => {
@@ -143,7 +152,7 @@ describe('applying filters', () => {
   });
 
   it('filters by date range', () => {
-    expect(run('from=2026-09-07&to=2026-09-07')).toEqual(['a', 'b']);
+    expect(run('from=2026-09-07&to=2026-09-07')).toEqual(['a', 'b', 'c']);
     expect(run('from=2026-09-08')).toEqual([]);
   });
 

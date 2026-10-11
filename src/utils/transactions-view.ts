@@ -21,18 +21,24 @@ export const ALL_KINDS: readonly TransactionKind[] = [
 ];
 
 /**
- * What the page shows before anyone touches a filter: the signings.
- *
- * Trades are excluded by DEFAULT rather than by omission — they are in the
- * data and one checkbox away. The page is a roster-move ledger whose opening
- * view answers "who got picked up", which is the in-season question.
+ * The signings: every kind but a trade. The "Pickups" chip.
  */
-export const DEFAULT_KINDS: readonly TransactionKind[] = [
+export const PICKUP_KINDS: readonly TransactionKind[] = [
   'free-agent',
   'waiver',
   'blind-bid',
   'auction',
 ];
+
+/**
+ * What the page shows before anyone touches a filter: EVERY move.
+ *
+ * Trades used to be excluded by default, back when the page was a roster-move
+ * ledger answering "who got picked up". It now reads as Schefter's wire, and a
+ * trade is the biggest story on it — leaving it one checkbox away buried the
+ * lede. "Pickups" is one chip away instead.
+ */
+export const DEFAULT_KINDS: readonly TransactionKind[] = ALL_KINDS;
 
 export interface TransactionFilters {
   year: number;
@@ -192,6 +198,20 @@ export function kindsPresentIn(
   const present = new Set<TransactionKind>(keep);
   for (const row of rows) present.add(row.kind);
   return ALL_KINDS.filter((kind) => present.has(kind));
+}
+
+/**
+ * Which kind chip the current filters match — "all" (the default), "pickups"
+ * (every signing kind, no trades), "trades" — or null for a hand-picked mix
+ * that no chip represents (a `?types=` link from before the chips).
+ */
+export function activeKindChip(filters: TransactionFilters): 'all' | 'pickups' | 'trades' | null {
+  const same = (kinds: readonly TransactionKind[]) =>
+    filters.kinds.size === kinds.length && kinds.every((k) => filters.kinds.has(k));
+  if (same(ALL_KINDS)) return 'all';
+  if (same(PICKUP_KINDS)) return 'pickups';
+  if (same(['trade'])) return 'trades';
+  return null;
 }
 
 /** True when no filter is narrowing the ledger beyond the default kinds. */
