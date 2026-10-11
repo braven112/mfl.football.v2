@@ -6,6 +6,7 @@ import { LEAGUES } from '../../src/config/leagues-data.mjs';
 import { isDefaultPersona } from '../../src/utils/persona.mjs';
 import { formatSalary } from './data-loaders.mjs';
 import { foreignLeagueNames, ownLeagueLabel } from '../../src/utils/league-name-guard.mjs';
+import { HAIKU_MODEL, HAIKU_THINKING, responseText } from '../../src/utils/claude-models.mjs';
 
 /**
  * Another league's name can read as a plain phrase ("the league"), so the
@@ -21,7 +22,7 @@ function foreignNameRule(league) {
   return ` Call this league ${ownLeagueLabel(league)}, and never capitalise the word "league" as if it were a name (a different league is named that), in a headline or anywhere else.`;
 }
 
-const MODEL = 'claude-haiku-4-5-20251001';
+const MODEL = HAIKU_MODEL;
 const API_URL = 'https://api.anthropic.com/v1/messages';
 
 /**
@@ -91,6 +92,7 @@ export async function callAnthropic(systemPrompt, userPrompt, maxTokens = 4000) 
       },
       body: JSON.stringify({
         model: MODEL,
+        thinking: HAIKU_THINKING,
         max_tokens: maxTokens,
         system: systemPrompt,
         messages: [{ role: 'user', content: userPrompt }],
@@ -103,7 +105,7 @@ export async function callAnthropic(systemPrompt, userPrompt, maxTokens = 4000) 
     }
 
     const resData = await res.json();
-    const text = resData.content?.[0]?.text ?? '';
+    const text = responseText(resData);
 
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {

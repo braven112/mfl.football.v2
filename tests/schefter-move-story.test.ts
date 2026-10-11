@@ -109,7 +109,7 @@ describe('parsing the model reply', () => {
     const bodies: any[] = [];
     const fetchImpl = vi.fn(async (_url: string, init: any) => {
       bodies.push(JSON.parse(init.body));
-      return new Response(JSON.stringify({ content: [{ text: JSON.stringify(replies[bodies.length - 1]) }] }));
+      return new Response(JSON.stringify({ content: [{ type: 'text', text: JSON.stringify(replies[bodies.length - 1]) }] }));
     });
     const story = await writeMoveStory({ facts: fcfs, teams, apiKey: 'k', fetchImpl: fetchImpl as any });
     expect(story?.body).toContain('free-agent wire');

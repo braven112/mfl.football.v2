@@ -27,6 +27,7 @@ import { getLeaguePersona } from '../../../../utils/persona-server';
 import { isDefaultPersona, personaByline } from '../../../../utils/persona.mjs';
 import { scrubLeagueNames } from '../../../../utils/league-name-guard.mjs';
 import { getSchefterFeedIfAny } from '../../../../utils/schefter-league-data';
+import { HAIKU_MODEL, HAIKU_THINKING } from '../../../../utils/claude-models.mjs';
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -172,9 +173,9 @@ export const POST: APIRoute = async ({ params, request }) => {
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
     const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 100,
-      temperature: 0.8,
+      model: HAIKU_MODEL,
+      thinking: HAIKU_THINKING,
+      max_tokens: 130,
       system: systemPrompt,
       messages: [{ role: 'user', content: userMessage }],
     });

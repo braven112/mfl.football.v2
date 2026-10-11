@@ -10,7 +10,7 @@
  *
  * Env:
  *   ANTHROPIC_API_KEY - required to call Claude
- *   MODEL_NAME        - optional override (default: claude-haiku-4-5-20251001)
+ *   MODEL_NAME        - optional override (default: HAIKU_MODEL in src/utils/claude-models.mjs)
  *   SCHEDULE_PATH     - optional path to nfl-cache file (default: data/theleague/nfl-cache/week15-2024.json)
  *   PLAYERS_PATH      - optional path to players.json (default: data/theleague/mfl-feeds/2025/players.json)
  *   PROJECTIONS_PATH  - optional path to projectedScores.json (default: data/theleague/mfl-feeds/2025/projectedScores.json)
@@ -22,6 +22,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Anthropic } from '@anthropic-ai/sdk';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
+import { HAIKU_MODEL, HAIKU_THINKING } from '../src/utils/claude-models.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -43,7 +44,7 @@ const paths = {
   output: path.join(root, process.env.OUTPUT_PATH || defaults.output)
 };
 
-const modelName = process.env.MODEL_NAME || 'claude-haiku-4-5-20251001';
+const modelName = process.env.MODEL_NAME || HAIKU_MODEL;
 
 function loadJson(p) {
   return JSON.parse(fs.readFileSync(p, 'utf8'));
@@ -189,6 +190,7 @@ async function callModel(systemPrompt, userPrompt) {
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const resp = await client.messages.create({
     model: modelName,
+    ...(modelName === HAIKU_MODEL ? { thinking: HAIKU_THINKING } : {}),
     max_tokens: 2000,
     system: systemPrompt,
     messages: [{ role: 'user', content: userPrompt }]

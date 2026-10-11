@@ -4,7 +4,7 @@
  *
  * Run with `pnpm eval:roger` (requires ANTHROPIC_API_KEY — `pnpm dlx vercel
  * env pull` locally). Never runs in `pnpm test:unit`: it costs real API money
- * and answers are sampled at temperature 0.3, so results are advisory rather
+ * and answers are sampled (not deterministic), so results are advisory rather
  * than perfectly reproducible.
  *
  * Two grading layers per case:
@@ -28,6 +28,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import fixture from '../fixtures/roger-eval-cases.json';
 import { generateRulesAnswer } from '../../src/utils/rules-qa-handlers';
+import { HAIKU_MODEL } from '../../src/utils/claude-models.mjs';
 import {
   THELEAGUE_RULES_QA_SYSTEM_PROMPT,
   THELEAGUE_RULES_QA_DATE_SUFFIX,
@@ -229,7 +230,7 @@ if (!process.env.ANTHROPIC_API_KEY) {
         JSON.stringify(
           {
             generatedAt: new Date().toISOString(),
-            model: 'claude-haiku-4-5-20251001',
+            model: HAIKU_MODEL,
             judgeModel: JUDGE_MODEL,
             overall: { pass: overall, total: cases.length, unreported },
             categories: Object.fromEntries(byCategory),

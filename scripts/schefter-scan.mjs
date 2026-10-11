@@ -67,6 +67,7 @@ import { sendPushFanout, broadcast } from './lib/push-fanout.mjs';
 import { scanRogerReplies } from './roger-groupme-reply.mjs';
 import { parsePickToken, formatPickLabel } from '../src/utils/mfl-pick-tokens.mjs';
 import { nflWeekFor } from '../src/utils/nfl-week-starts.mjs';
+import { HAIKU_MODEL, HAIKU_THINKING, responseText } from '../src/utils/claude-models.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const MFL_HOST = process.env.MFL_HOST || 'api.myfantasyleague.com';
@@ -526,8 +527,9 @@ async function generateBreakingCommentary(post, raw) {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 300,
+        model: HAIKU_MODEL,
+        thinking: HAIKU_THINKING,
+        max_tokens: 400,
         system: `You are Claude Schefter, a beat reporter for a dynasty fantasy football league. Channel Adam Schefter's energy. Use phrases like "I'm told...", "League sources tell me...", "Boom!". Grade trades A+ to F. Be opinionated and confident. Never break character. Keep it to 2-3 sentences for the body and 1-2 sentences for the analysis/take.`,
         messages: [
           {
@@ -544,7 +546,7 @@ async function generateBreakingCommentary(post, raw) {
     }
 
     const data = await res.json();
-    const text = data.content?.[0]?.text ?? '';
+    const text = responseText(data);
 
     // Try to parse JSON from the response
     const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -1327,8 +1329,9 @@ async function generatePendingTradeAiBody(templateBody, trade, players, teams, {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 220,
+        model: HAIKU_MODEL,
+        thinking: HAIKU_THINKING,
+        max_tokens: 290,
         system,
         messages: [{ role: 'user', content: userContent }],
       }),
@@ -1338,7 +1341,7 @@ async function generatePendingTradeAiBody(templateBody, trade, players, teams, {
       return null;
     }
     const data = await res.json();
-    const text = (data.content?.[0]?.text ?? '').trim();
+    const text = responseText(data).trim();
     return text || null;
   } catch (err) {
     console.log(`  [rumor-mill AI] error: ${err.message} — using template`);
