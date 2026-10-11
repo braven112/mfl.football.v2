@@ -100,6 +100,22 @@ describe('parsing the model reply', () => {
     expect(parseMoveStory(reply('{{TEAM:0007}} signed Roschon Johnson off the free-agent wire.'), fcfs, teams)).not.toBeNull();
   });
 
+  it('retries once with the reason, and keeps the second reply when it passes', async () => {
+    const fcfs = factsFromRawMove({ type: 'FREE_AGENT', franchise: '0007', transaction: '15001,|' }, ctx)!;
+    const replies = [
+      { headline: '{{TEAM:0007}} sign Roschon Johnson', body: '{{TEAM:0007}} added Roschon Johnson, no drop needed.' },
+      { headline: '{{TEAM:0007}} sign Roschon Johnson', body: '{{TEAM:0007}} signed Roschon Johnson off the free-agent wire.' },
+    ];
+    const bodies: any[] = [];
+    const fetchImpl = vi.fn(async (_url: string, init: any) => {
+      bodies.push(JSON.parse(init.body));
+      return new Response(JSON.stringify({ content: [{ text: JSON.stringify(replies[bodies.length - 1]) }] }));
+    });
+    const story = await writeMoveStory({ facts: fcfs, teams, apiKey: 'k', fetchImpl: fetchImpl as any });
+    expect(story?.body).toContain('free-agent wire');
+    expect(bodies[1].messages.at(-1).content).toMatch(/Nothing was dropped/);
+  });
+
   it('keeps the template when the call fails', async () => {
     const fetchImpl = vi.fn(async () => new Response('nope', { status: 529 }));
     expect(await writeMoveStory({ facts, teams, apiKey: 'k', fetchImpl })).toBeNull();
