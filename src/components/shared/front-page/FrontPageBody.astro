@@ -1,0 +1,121 @@
+---
+/**
+ * The front-page homepage style (registry `homeStyle: 'front-page'`): a
+ * news-led page in the shape ESPN and NFL.com use. Scores ride a thin strip,
+ * the viewer's team sits in one band, one story leads with the headline list
+ * beside it, then the week's story cards, the race and the NFL wire.
+ *
+ * The page's body, without the site layout (FrontHomePage wraps it), so the
+ * whole style renders in Storybook from a fixture model.
+ *
+ * It renders a `FrontPageModel` (./types.ts) and nothing else: a league's
+ * adapter resolves every value (PackageLeagueHome builds Archie's), so any
+ * league can switch to this style by building one model. The classic page
+ * (../home/LeagueHomePage.astro) is untouched; the registry picks between them.
+ *
+ * No client script: nothing here re-inits under the ClientRouter.
+ */
+import ScoreStrip from './ScoreStrip.astro';
+import TeamBand from './TeamBand.astro';
+import LeadStory from './LeadStory.astro';
+import HeadlineList from './HeadlineList.astro';
+import StoryCards from './StoryCards.astro';
+import RaceCards from './RaceCards.astro';
+import NflWire from './NflWire.astro';
+import type { FrontPageModel } from './types';
+
+interface Props {
+  model: FrontPageModel;
+  /** Shown above the story cards ("This week in Archie's"). */
+  cardsTitle: string;
+  /** Series records over each rivalry card's art, keyed by story id. */
+  overlays?: Record<string, { text: string; label?: string }>;
+  wireHref: string | null;
+}
+
+const { model, cardsTitle, overlays, wireHref } = Astro.props;
+---
+
+<div class="fp">
+  <h1 class="visually-hidden">{model.leagueName}</h1>
+  {model.strip && model.strip.games.length > 0 && (
+    <ScoreStrip strip={model.strip} teams={model.teams} allHref={model.stripHref} />
+  )}
+
+  <TeamBand band={model.band} signInHref={model.signInHref} leagueName={model.leagueName} />
+
+  <div class="fp__top">
+    {model.lead ? (
+      <LeadStory story={model.lead} teams={model.teams} leagueMark={model.leagueMark} />
+    ) : (
+      <p class="fp__empty">The week's lead story lands here once it is written.</p>
+    )}
+    <HeadlineList stories={model.headlines} teams={model.teams} leagueMark={model.leagueMark} />
+  </div>
+
+  <StoryCards title={cardsTitle} stories={model.cards} teams={model.teams} leagueMark={model.leagueMark} overlays={overlays} />
+
+  <div class:list={['fp__bottom', { 'fp__bottom--solo': model.wire.length === 0 }]}>
+    <RaceCards title={model.raceTitle} entries={model.race} moreHref={model.raceHref} />
+    <NflWire items={model.wire} moreHref={wireHref} />
+  </div>
+</div>
+
+<style>
+  .fp {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    min-width: 0;
+  }
+  .fp__top,
+  .fp__bottom {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 1.25rem;
+    align-items: start;
+  }
+  /* No wire (a league with no NFL news feed): the race takes the full width. */
+  .fp__bottom--solo { grid-template-columns: 1fr; }
+  .fp__empty {
+    margin: 0;
+    padding: 2rem 1.25rem;
+    background: var(--card-bg);
+    border: 1px dashed var(--content-border);
+    border-radius: var(--radius-lg);
+    color: var(--content-text-muted);
+  }
+
+  /* Every section title on the page: the display face, slanted, with a short
+     accent bar — the broadcast idiom, in this league's colours. */
+  .fp :global(.fp-section-title) {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 0.75rem;
+    font-family: var(--font-display);
+    font-size: var(--font-size-lg);
+    font-style: italic;
+    letter-spacing: var(--tracking-caps);
+    line-height: 1;
+    text-transform: uppercase;
+    color: var(--page-text);
+  }
+  .fp :global(.fp-section-title)::before {
+    content: '';
+    flex: none;
+    width: 0.3rem;
+    height: 1.1em;
+    border-radius: var(--radius-full);
+    background: var(--league-accent);
+  }
+
+  @container (max-width: 1024px) {
+    .fp__top,
+    .fp__bottom:not(.fp__bottom--solo) { grid-template-columns: minmax(0, 1fr) 300px; }
+  }
+  @container (max-width: 880px) {
+    .fp__top,
+    .fp__bottom { grid-template-columns: 1fr; }
+  }
+</style>

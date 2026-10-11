@@ -1,0 +1,152 @@
+---
+/**
+ * The viewer's team, as one band in its own colours: crest, record and place,
+ * this week's opponent(s) and the pages an owner opens most. A band, not the
+ * page: the front page belongs to the league's news, and "my team" rides it
+ * the way NFL.com's "My Team" tab and a team site's next-game card do.
+ *
+ * The band is the franchise's gradient in both themes, so its crests are the
+ * dark-surface cuts and its ink is white. Signed out, it is a sign-in prompt.
+ */
+import type { TeamBandModel } from './types';
+
+interface Props {
+  band: TeamBandModel | null;
+  signInHref: string | null;
+  leagueName: string;
+}
+
+const { band, signInHref, leagueName } = Astro.props;
+---
+
+{band ? (
+  <section class="fp-band" style={`background:${band.team.gradient}`} aria-label={`${band.team.name}, your team`}>
+    <div class="fp-band__team">
+      {band.team.crest && (
+        <img
+          class:list={['fp-band__crest', { 'fp-band__crest--round': band.team.round }]}
+          src={band.team.crest}
+          style={band.team.crestFilter ? `filter:${band.team.crestFilter}` : undefined}
+          alt=""
+          width="64"
+          height="64"
+        />
+      )}
+      <div class="fp-band__id">
+        <span class="fp-band__eyebrow">Your team</span>
+        <a class="fp-band__name" href={band.team.href}>{band.team.name}</a>
+        <span class="fp-band__meta">{band.team.record} · {band.standing}</span>
+      </div>
+    </div>
+
+    {band.opponents.length > 0 && (
+      <div class="fp-band__next">
+        <span class="fp-band__eyebrow">Week {band.week} {band.opponents.length > 1 ? 'doubleheader' : 'opponent'}</span>
+        <ul class="fp-band__opps">
+          {band.opponents.map((o) => (
+            <li>
+              <a href={o.href}>
+                {o.crest && (
+                  <img
+                    class:list={['fp-band__opp-crest', { 'fp-band__crest--round': o.round }]}
+                    src={o.crest}
+                    style={o.crestFilter ? `filter:${o.crestFilter}` : undefined}
+                    alt=""
+                    width="32"
+                    height="32"
+                  />
+                )}
+                <span>vs {o.name}</span>
+                {o.record && <small>{o.record}</small>}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+
+    <nav class="fp-band__links" aria-label="Your team">
+      {band.links.map((l) => <a class="fp-band__chip" href={l.href}>{l.label}</a>)}
+    </nav>
+  </section>
+) : signInHref ? (
+  <section class="fp-band fp-band--guest" aria-label="Sign in">
+    <p>Sign in to see your team, your opponent and your rivalry with them, every week.</p>
+    <a class="cta cta--primary" href={signInHref}>Sign in to {leagueName}</a>
+  </section>
+) : null}
+
+<style>
+  .fp-band {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 1rem 1.5rem;
+    align-items: center;
+    padding: 0.9rem 1.25rem;
+    border-radius: var(--radius-lg);
+    color: var(--color-white);
+  }
+  .fp-band--guest {
+    grid-template-columns: 1fr auto;
+    background: var(--card-bg);
+    color: var(--page-text);
+    border: 1px solid var(--content-border);
+  }
+  .fp-band--guest p { margin: 0; color: var(--content-text-muted); }
+  .fp-band__team { display: flex; align-items: center; gap: 0.85rem; min-width: 0; }
+  .fp-band__crest { width: 4rem; height: 4rem; object-fit: contain; flex: none; }
+  .fp-band__crest--round { border-radius: var(--radius-full); object-fit: cover; }
+  .fp-band__id { display: grid; gap: 0.1rem; min-width: 0; }
+  .fp-band__eyebrow {
+    font-size: var(--font-size-3xs);
+    letter-spacing: var(--tracking-caps);
+    text-transform: uppercase;
+    opacity: 0.8;
+  }
+  .fp-band__name {
+    font-family: var(--font-display);
+    font-size: var(--font-size-xl);
+    line-height: 1;
+    text-transform: uppercase;
+    color: inherit;
+    text-decoration: none;
+  }
+  .fp-band__meta { font-size: var(--font-size-sm); opacity: 0.9; }
+  .fp-band__next { display: grid; gap: 0.3rem; min-width: 0; }
+  .fp-band__opps { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; list-style: none; margin: 0; padding: 0; }
+  .fp-band__opps a {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    color: inherit;
+    text-decoration: none;
+    font-family: var(--font-display);
+    font-size: var(--font-size-lg);
+    text-transform: uppercase;
+    line-height: 1;
+  }
+  .fp-band__opps small { font-family: var(--font-family-base); font-size: var(--font-size-xs); opacity: 0.8; text-transform: none; }
+  .fp-band__opp-crest { width: 2rem; height: 2rem; object-fit: contain; }
+  .fp-band__links { display: flex; flex-wrap: wrap; gap: 0.4rem; justify-content: flex-end; }
+  .fp-band__chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2rem;
+    padding: 0 0.8rem;
+    border-radius: var(--radius-full);
+    border: 1px solid rgb(255 255 255 / 0.35);
+    background: rgb(255 255 255 / 0.12);
+    color: var(--color-white);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .fp-band__chip:hover { background: rgb(255 255 255 / 0.22); color: var(--color-white); text-decoration: none; }
+  .fp-band__name:hover, .fp-band__opps a:hover { color: inherit; text-decoration: underline; }
+
+  @container (max-width: 880px) {
+    .fp-band, .fp-band--guest { grid-template-columns: 1fr; }
+    .fp-band__links { justify-content: flex-start; }
+  }
+</style>

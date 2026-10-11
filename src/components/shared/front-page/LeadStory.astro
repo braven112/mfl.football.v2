@@ -1,0 +1,63 @@
+---
+/**
+ * The one story that leads the front page: big art from the teams it is
+ * about, a display headline, the opening of the story and a link to the rest.
+ * Chosen by `arrangeStories` (src/utils/front-page.ts): the newest column,
+ * article or week-in-the-books, never the viewer's own rivalry.
+ */
+import StoryArt from './StoryArt.astro';
+import type { FrontStory } from '../../../utils/front-page';
+import type { FrontTeamArt } from './types';
+
+interface Props {
+  story: FrontStory;
+  teams: Record<string, FrontTeamArt>;
+  leagueMark: string;
+}
+
+const { story, teams, leagueMark } = Astro.props;
+const storyTeams = story.franchiseIds.map((id) => teams[id]).filter(Boolean);
+const when = story.at
+  ? new Intl.DateTimeFormat('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'America/Los_Angeles' }).format(new Date(story.at))
+  : null;
+---
+
+<article class="fp-lead">
+  <a class="fp-lead__art" href={story.href} tabindex="-1" aria-hidden="true">
+    <StoryArt teams={storyTeams} leagueMark={leagueMark} size="lead" flag={story.kicker} />
+  </a>
+  <div class="fp-lead__text">
+    <h2 class="fp-lead__headline">
+      {story.href ? <a href={story.href}>{story.headline}</a> : story.headline}
+    </h2>
+    {story.dek && <p class="fp-lead__dek">{story.dek}</p>}
+    <div class="fp-lead__foot">
+      {when && <span class="fp-lead__when">{when} PT</span>}
+      {story.href && <a class="cta-link" href={story.href}>Read the story</a>}
+    </div>
+  </div>
+</article>
+
+<style>
+  .fp-lead {
+    background: var(--card-bg);
+    border: 1px solid var(--content-border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    min-width: 0;
+  }
+  .fp-lead__art { display: block; }
+  .fp-lead__text { display: grid; gap: 0.6rem; padding: 1rem 1.25rem 1.25rem; }
+  .fp-lead__headline {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--font-size-2xl);
+    line-height: 1.02;
+    text-wrap: balance;
+  }
+  .fp-lead__headline a { color: var(--page-text); text-decoration: none; }
+  .fp-lead__headline a:hover { color: var(--page-text); text-decoration: underline; }
+  .fp-lead__dek { margin: 0; color: var(--content-text-muted); font-size: var(--font-size-base); max-width: 62ch; }
+  .fp-lead__foot { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; font-size: var(--font-size-sm); }
+  .fp-lead__when { color: var(--content-text-muted); }
+</style>

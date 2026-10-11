@@ -1,0 +1,25 @@
+---
+/**
+ * The front-page homepage style as a page: the site layout around
+ * FrontPageBody. A league's adapter (PackageFrontPage for Archie's) builds the
+ * model; the registry's `homeStyle` decides whether a league renders this or
+ * the classic shared homepage (../home/LeagueHomePage.astro).
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import FrontPageBody from './FrontPageBody.astro';
+import type { FrontPageModel } from './types';
+
+interface Props {
+  title: string;
+  model: FrontPageModel;
+  cardsTitle: string;
+  overlays?: Record<string, { text: string; label?: string }>;
+  wireHref: string | null;
+}
+
+const { title, ...body } = Astro.props;
+---
+
+<TheLeagueLayout title={title}>
+  <FrontPageBody {...body} />
+</TheLeagueLayout>

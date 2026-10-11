@@ -40,6 +40,9 @@ export type CanonicalLeagueSlug = keyof typeof RAW_LEAGUES | DemoOnlyLeagueSlug;
 export type DemoOnlyLeagueSlug = 'keeper';
 
 /** Starting presets for a league's features — see src/config/league-archetypes.mjs. */
+/** A league's homepage layout — see `homeStyle` on the registry entry. */
+export type HomeStyle = 'classic' | 'front-page';
+
 export type LeagueArchetype = 'dynasty-cap' | 'deluxe-keeper' | 'contest' | 'best-ball' | 'standard-redraft';
 
 export interface LeagueFeatures {
@@ -371,6 +374,15 @@ export interface LeagueDefinition {
    * per id. Current teams are followed by `ownerHistory` in the config.
    */
   renumbersFranchises?: boolean;
+  /**
+   * Which homepage layout the league renders. `'classic'` (absent) is the
+   * hero-led page every league has had; `'front-page'` is the news-led front
+   * page (src/components/shared/front-page/): a score strip, the viewer's team
+   * band, one lead story beside a headline list, then story cards, the race and
+   * the NFL wire. Styles are interchangeable — every league keeps working on
+   * either — so a league (or a prospective client) can be shown both.
+   */
+  homeStyle?: HomeStyle;
   /** Short display name for tight spaces (the site header). */
   shortName?: string;
   /** The league's mark for the shared header and layout, per theme. */
@@ -449,6 +461,11 @@ export function getLeagueByPath(pathname: string): LeagueDefinition {
 /** Whether a feature is enabled for the given league slug. */
 export function leagueHasFeature(slug: string, feature: keyof LeagueFeatures): boolean {
   return getLeagueBySlug(slug)?.features[feature] ?? false;
+}
+
+/** The league's homepage layout; `'classic'` for any league that names none. */
+export function leagueHomeStyle(slug: string): HomeStyle {
+  return getLeagueBySlug(slug)?.homeStyle ?? 'classic';
 }
 
 /**

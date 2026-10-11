@@ -1,0 +1,87 @@
+---
+/**
+ * "This week in <league>": a row of story cards under the lead — the columns,
+ * recaps and articles that did not lead, plus the viewer's rivalry, each drawn
+ * from its teams (StoryArt). A rivalry card shows the series over the split.
+ */
+import StoryArt from './StoryArt.astro';
+import type { FrontStory } from '../../../utils/front-page';
+import type { FrontTeamArt } from './types';
+
+interface Props {
+  title: string;
+  stories: FrontStory[];
+  teams: Record<string, FrontTeamArt>;
+  leagueMark: string;
+  /** Per-story overlay text for the art (a rivalry's series record). */
+  overlays?: Record<string, { text: string; label?: string }>;
+}
+
+const { title, stories, teams, leagueMark, overlays = {} } = Astro.props;
+---
+
+{stories.length > 0 && (
+  <section class="fp-cards" aria-labelledby="fp-cards-title">
+    <h2 id="fp-cards-title" class="fp-section-title">{title}</h2>
+    <ul class="fp-cards__grid">
+      {stories.map((s) => (
+        <li class="fp-cards__card">
+          <a class="fp-cards__link" href={s.href ?? '#'}>
+            <StoryArt
+              teams={s.franchiseIds.map((id) => teams[id]).filter(Boolean)}
+              leagueMark={leagueMark}
+              overlay={overlays[s.id]?.text}
+              overlayLabel={overlays[s.id]?.label}
+            />
+            <span class="fp-cards__text">
+              <span class="fp-cards__kicker">{s.kicker}</span>
+              <span class="fp-cards__headline">{s.headline}</span>
+              {s.dek && <span class="fp-cards__dek">{s.dek}</span>}
+            </span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </section>
+)}
+
+<style>
+  .fp-cards__grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+  }
+  .fp-cards__card {
+    background: var(--card-bg);
+    border: 1px solid var(--content-border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    min-width: 0;
+  }
+  .fp-cards__link { display: grid; color: inherit; text-decoration: none; height: 100%; grid-template-rows: auto 1fr; }
+  .fp-cards__link:hover { color: inherit; text-decoration: none; }
+  .fp-cards__link:hover .fp-cards__headline { text-decoration: underline; }
+  .fp-cards__text { display: grid; gap: 0.35rem; align-content: start; padding: 0.75rem 0.9rem 0.9rem; }
+  .fp-cards__kicker {
+    font-size: var(--font-size-3xs);
+    letter-spacing: var(--tracking-caps);
+    text-transform: uppercase;
+    color: var(--league-accent-fg, var(--league-accent));
+    font-weight: var(--font-weight-semibold);
+  }
+  .fp-cards__headline {
+    font-family: var(--font-display);
+    font-size: var(--font-size-lg);
+    line-height: 1.05;
+    color: var(--page-text);
+    text-wrap: balance;
+  }
+  .fp-cards__dek { font-size: var(--font-size-sm); color: var(--content-text-muted); }
+
+  @container (max-width: 880px) {
+    .fp-cards__grid { grid-template-columns: 1fr; }
+  }
+</style>

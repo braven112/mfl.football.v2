@@ -1,0 +1,273 @@
+---
+/**
+ * A package league's homepage in the FRONT-PAGE style (registry `homeStyle:
+ * 'front-page'`; Archie's is the first). The adapter between the feeds
+ * PackageLeagueHome already loaded and the style's view model
+ * (../front-page/types.ts): it writes the stories from the league's own data,
+ * resolves each team's art once, and hands FrontHomePage a finished model.
+ *
+ * Every story comes from data the league already has, so the page is never
+ * empty in season:
+ *   rivalry       the viewer's opponent(s) this week, from franchise history
+ *                 (two in a doubleheader week), pinned to the headlines
+ *   gauntlet      Schefter's columns and articles
+ *   pecking-order the latest issue
+ *   recap         the week in the books
+ *   transaction   the latest moves, each linking its official record
+ */
+import FrontHomePage from '../front-page/FrontHomePage.astro';
+import type { FrontPageModel, FrontTeamArt, RaceEntry, TeamBandModel } from '../front-page/types';
+import type { LeagueDefinition } from '../../../config/leagues';
+import type { DivisionStandings, PackageTeam } from '../../../utils/package-league';
+import { rosterPlayerIds, standingsRows as feedStandingsRows } from '../../../utils/package-league';
+import { parseWeeklySchedule } from '../../../utils/schedule-data.mjs';
+import { weekInTheBooks } from '../../../utils/package-league-home';
+import {
+  arrangeStories,
+  buildPeckingOrderStory,
+  buildRecapStory,
+  buildRivalryStory,
+  buildScoreStrip,
+  buildTransactionStory,
+  buildWire,
+  opponentsInWeek,
+  podium,
+  rivalryFacts,
+  storiesFromPosts,
+  stripWeek,
+  teamsMentioned,
+  topScorer,
+  type FrontStory,
+  type Meeting,
+  type MoveInput,
+  type ParsedWeek,
+} from '../../../utils/front-page';
+import { loadSeasonFeed, unwrapFeedModule, type LazyFeedGlob } from '../../../utils/mfl-feed-glob';
+import { resolveHeroFranchiseBackdrop } from '../../../utils/hero-franchise-backdrop';
+import { crestLeagueKey } from '../../../utils/dark-surface-crest';
+import { getPlayerAvatarBackground } from '../../../utils/nfl-team-colors';
+import type { PlayerIdentity } from '../../../utils/player-map';
+import type { SchefterPost } from '../../../types/schefter';
+
+interface Props {
+  league: LeagueDefinition;
+  teamsById: Record<string, PackageTeam>;
+  groups: DivisionStandings[];
+  standingsFeed: unknown;
+  scheduleFeed: unknown;
+  rostersFeed: unknown;
+  mine: string | null;
+  teamHref: (franchiseId: string) => string;
+  /** Resolves a league path for this host (prefix or not). */
+  r: (path: string) => string;
+  hasPage: (path: string) => boolean;
+  signInHref: string | null;
+  posts: SchefterPost[];
+  latestIssue: (Record<string, any> & { year: number; week: number }) | null;
+  moves: MoveInput[];
+  players: Map<string, PlayerIdentity>;
+  playerName: (id: string) => string;
+  /** Lazy glob of data/<league>/derived/franchise-history.json (one file). */
+  historyFeeds?: LazyFeedGlob;
+  /** Lazy glob of data/<league>/mfl-feeds/<year>/playerScores-ytd.json. */
+  ytdScoreFeeds?: LazyFeedGlob;
+  seasonYear: number;
+}
+
+const {
+  league,
+  teamsById,
+  groups,
+  standingsFeed,
+  scheduleFeed,
+  rostersFeed,
+  mine,
+  teamHref,
+  r,
+  hasPage,
+  signInHref,
+  posts,
+  latestIssue,
+  moves,
+  players,
+  playerName,
+  historyFeeds = {},
+  ytdScoreFeeds = {},
+  seasonYear,
+} = Astro.props;
+const base = `/${league.slug}`;
+const leagueName = league.shortName ?? league.name;
+const nameOf = (id: string) => teamsById[id]?.name ?? `Team ${id}`;
+
+// ── Standings rows by team (MFL order inside each division) ────────────────
+const rowOf = new Map(groups.flatMap((g) => g.rows.map((row) => [row.franchiseId, { row, division: g.division }] as const)));
+const recordOf = (id: string) => rowOf.get(id)?.row.record;
+const ordinal = (n: number) => {
+  const s = ['th', 'st', 'nd', 'rd'];
+  const v = n % 100;
+  return `${n}${s[(v - 20) % 10] ?? s[v] ?? s[0]}`;
+};
+
+// ── The schedule ────────────────────────────────────────────────────────────
+const weeks = parseWeeklySchedule(scheduleFeed) as ParsedWeek[];
+const strip = buildScoreStrip({
+  weeks,
+  mine,
+  divisionOf: (id) => teamsById[id]?.divisionId,
+  winsOf: (id) => rowOf.get(id)?.row.wins ?? 0,
+});
+const current = stripWeek(weeks);
+const thisWeek = current?.state === 'upcoming' ? current.week : undefined;
+const opponents = opponentsInWeek(thisWeek, mine);
+
+// ── Stories ─────────────────────────────────────────────────────────────────
+const historyModule = Object.values(historyFeeds)[0];
+const franchiseHistory = (historyModule ? unwrapFeedModule(await historyModule().catch(() => null)) : null) as {
+  franchises?: Record<string, { matchupHistory?: Record<string, Meeting[]> }>;
+} | null;
+
+const stories: FrontStory[] = [];
+/** The series over a rivalry card's art: the viewer's all-time record, or "first meeting". */
+const overlays: Record<string, { text: string; label?: string }> = {};
+if (mine && teamsById[mine] && thisWeek) {
+  for (const opp of opponents) {
+    if (!teamsById[opp]) continue;
+    const meetings = franchiseHistory?.franchises?.[mine]?.matchupHistory?.[opp];
+    const f = rivalryFacts(meetings);
+    overlays[`rivalry-${thisWeek.week}-${opp}`] =
+      f.meetings === 0
+        ? { text: 'New', label: 'First meeting' }
+        : { text: f.ties ? `${f.wins}–${f.losses}–${f.ties}` : `${f.wins}–${f.losses}`, label: 'All-time' };
+    stories.push(
+      buildRivalryStory({
+        mine: teamsById[mine],
+        opponent: teamsById[opp],
+        week: thisWeek.week,
+        meetings,
+        opponentRecord: recordOf(opp),
+        href: teamHref(opp),
+      }),
+    );
+  }
+}
+const teamList = Object.values(teamsById);
+for (const s of storiesFromPosts(posts)) {
+  stories.push(s.franchiseIds.length ? s : { ...s, franchiseIds: teamsMentioned(`${s.headline} ${s.dek ?? ''}`, teamList) });
+}
+if (latestIssue) {
+  const po = buildPeckingOrderStory(
+    latestIssue as Parameters<typeof buildPeckingOrderStory>[0],
+    r(`${base}/pecking-order/${latestIssue.year}/${latestIssue.week}`),
+  );
+  if (po) stories.push(po);
+}
+const recap = buildRecapStory(weekInTheBooks(weeks as any), nameOf, hasPage('/standings') ? r(`${base}/standings`) : undefined);
+if (recap) stories.push(recap);
+const officialMoves = hasPage('/transactions') ? r(`${base}/transactions`) : undefined;
+for (const m of moves.slice(0, 6)) {
+  const s = buildTransactionStory(m, nameOf, playerName, officialMoves);
+  if (s) stories.push(s);
+}
+const { lead, headlines, cards } = arrangeStories(stories);
+
+// ── The race: the top three in MFL's own order, each with its best scorer ───
+const ytdYear = Object.keys(ytdScoreFeeds).length ? seasonYear : null;
+const ytdFeed = ytdYear ? ((await loadSeasonFeed(ytdScoreFeeds, ytdYear)) as { playerScores?: { playerScore?: unknown } } | null) : null;
+const ytdRows = ([] as Array<{ id: string; score: string }>).concat((ytdFeed?.playerScores?.playerScore as any) ?? []);
+const top3 = podium(feedStandingsRows(standingsFeed).map((row) => ({ id: String(row.id ?? '') })).filter((row) => row.id));
+
+// ── Art, resolved once for every team the page draws ───────────────────────
+const crestKey = crestLeagueKey(league.slug);
+const artFor = (id: string): FrontTeamArt | null => {
+  const team = teamsById[id];
+  if (!team) return null;
+  const backdrop = resolveHeroFranchiseBackdrop(team as any, crestKey);
+  return {
+    franchiseId: id,
+    name: team.name,
+    icon: team.icon ?? '',
+    gradient: backdrop?.gradient ?? 'var(--hero-ink)',
+    crest: backdrop?.crest ?? team.icon ?? '',
+    crestFilter: backdrop?.crestFilter,
+    round: backdrop?.crestRound ?? false,
+    href: teamHref(id),
+    record: recordOf(id),
+  };
+};
+const wanted = new Set<string>([
+  ...(mine ? [mine] : []),
+  ...opponents,
+  ...(strip?.games.flatMap((g) => g.sides.map((s) => s.franchiseId)) ?? []),
+  ...stories.flatMap((s) => s.franchiseIds),
+  ...top3.map((t) => t.id),
+]);
+const teams: Record<string, FrontTeamArt> = {};
+for (const id of wanted) {
+  const art = artFor(id);
+  if (art) teams[id] = art;
+}
+
+// Where each division is its own player pool the same star is on several
+// rosters, so each podium card takes the best scorer not already shown.
+const shownStars = new Set<string>();
+const race: RaceEntry[] = top3
+  .filter((t) => teams[t.id])
+  .map((t, i) => {
+    const roster = rostersFeed ? rosterPlayerIds(rostersFeed, t.id).map((p) => p.id).filter((id) => !shownStars.has(id)) : [];
+    const starId = topScorer(roster, ytdRows);
+    if (starId) shownStars.add(starId);
+    const star = starId ? players.get(starId) : undefined;
+    const at = rowOf.get(t.id);
+    return {
+      place: i + 1,
+      team: teams[t.id],
+      line: [at?.row.record, at ? `${at.row.pointsFor.toFixed(1)} pts` : null].filter(Boolean).join(' · '),
+      star: star?.headshot ? { name: star.name, headshot: star.headshot, background: getPlayerAvatarBackground(star.nflTeam) } : null,
+    };
+  });
+
+// ── The viewer's band ───────────────────────────────────────────────────────
+const mineAt = mine ? rowOf.get(mine) : undefined;
+const band: TeamBandModel | null =
+  mine && mineAt && teams[mine]
+    ? {
+        team: teams[mine],
+        standing: `${ordinal(mineAt.row.place)} in the ${mineAt.division.name}`,
+        week: thisWeek?.week ?? null,
+        opponents: opponents.map((id) => teams[id]).filter(Boolean),
+        links: [
+          { label: 'Roster', href: r(`${base}/rosters?franchise=${mine}`), page: '/rosters' },
+          { label: 'Lineup', href: r(`${base}/lineup`), page: '/lineup' },
+          { label: 'Standings', href: r(`${base}/standings`), page: '/standings' },
+          { label: 'Free agents', href: r(`${base}/free-agents`), page: '/free-agents' },
+        ]
+          .filter((l) => hasPage(l.page))
+          .map(({ label, href }) => ({ label, href })),
+      }
+    : null;
+
+const model: FrontPageModel = {
+  leagueName,
+  strip,
+  stripHref: hasPage('/live-scoring') ? r(`${base}/live-scoring`) : hasPage('/standings') ? r(`${base}/standings`) : null,
+  band,
+  signInHref: mine ? null : signInHref,
+  lead,
+  headlines,
+  cards,
+  race,
+  raceTitle: league.standingsSeeding?.kind === 'mad' ? 'The race for MAD Power 99' : 'The race',
+  raceHref: r(`${base}/standings`),
+  wire: buildWire(posts, new Set(mine && rostersFeed ? rosterPlayerIds(rostersFeed, mine).map((p) => p.id) : [])),
+  teams,
+  leagueMark: league.logo.light,
+};
+---
+
+<FrontHomePage
+  title={league.name}
+  model={model}
+  cardsTitle={`This week in ${leagueName}`}
+  overlays={overlays}
+  wireHref={hasPage('/news') ? r(`${base}/news`) : null}
+/>

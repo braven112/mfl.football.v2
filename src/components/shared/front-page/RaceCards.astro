@@ -1,0 +1,99 @@
+---
+/**
+ * "The race": the top three in the standings, in MFL's own order (never
+ * re-sorted), as podium cards in each franchise's colours with the team's
+ * best scorer standing on it — F1's standings podium, in this league's art.
+ * The leader's card is raised; on a phone it comes first.
+ */
+import type { RaceEntry } from './types';
+
+interface Props {
+  title: string;
+  entries: RaceEntry[];
+  moreHref: string;
+}
+
+const { title, entries, moreHref } = Astro.props;
+// Podium order on a wide screen: 2nd, 1st, 3rd.
+const order = (place: number) => (place === 1 ? 2 : place === 2 ? 1 : 3);
+---
+
+{entries.length > 0 && (
+  <section class="fp-race" aria-labelledby="fp-race-title">
+    <h2 id="fp-race-title" class="fp-section-title">{title}</h2>
+    <ol class="fp-race__podium">
+      {entries.map((e) => (
+        <li
+          class:list={['fp-race__card', { 'fp-race__card--first': e.place === 1 }]}
+          style={`background:${e.team.gradient};--fp-order:${order(e.place)}`}
+        >
+          <a class="fp-race__link" href={e.team.href}>
+            {e.star && (
+              <img class="fp-race__star" src={e.star.headshot} alt={e.star.name} loading="lazy" decoding="async" />
+            )}
+            {e.team.crest && (
+              <img
+                class:list={['fp-race__crest', { 'fp-race__crest--round': e.team.round }]}
+                src={e.team.crest}
+                style={e.team.crestFilter ? `filter:${e.team.crestFilter}` : undefined}
+                alt=""
+                loading="lazy"
+                decoding="async"
+              />
+            )}
+            <span class="fp-race__text">
+              <span class="fp-race__place">{e.place}</span>
+              <span class="fp-race__name">{e.team.name}</span>
+              <span class="fp-race__line">{e.line}{e.star ? ` · ${e.star.name}` : ''}</span>
+            </span>
+          </a>
+        </li>
+      ))}
+    </ol>
+    <a class="cta-link fp-race__more" href={moreHref}>See the full standings</a>
+  </section>
+)}
+
+<style>
+  .fp-race__podium {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+    align-items: end;
+  }
+  .fp-race__card {
+    order: var(--fp-order);
+    position: relative;
+    min-height: 12rem;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    color: var(--color-white);
+  }
+  .fp-race__card--first { min-height: 14.5rem; }
+  .fp-race__card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgb(0 0 0 / 0.5), rgb(0 0 0 / 0) 60%);
+    pointer-events: none;
+  }
+  .fp-race__link { position: absolute; inset: 0; color: inherit; text-decoration: none; }
+  .fp-race__link:hover { color: inherit; text-decoration: none; }
+  .fp-race__star { position: absolute; right: 0; bottom: 0; height: 88%; width: auto; max-width: 70%; object-fit: contain; object-position: bottom right; }
+  .fp-race__crest { position: absolute; top: 0.75rem; right: 0.75rem; width: 3.25rem; height: 3.25rem; object-fit: contain; z-index: 2; }
+  .fp-race__crest--round { border-radius: var(--radius-full); object-fit: cover; }
+  .fp-race__text { position: absolute; left: 0.9rem; bottom: 0.9rem; right: 40%; display: grid; gap: 0.15rem; z-index: 1; }
+  .fp-race__place { font-family: var(--font-display); font-size: var(--font-size-3xl); line-height: 0.85; font-style: italic; }
+  .fp-race__name { font-family: var(--font-display); font-size: var(--font-size-lg); line-height: 1; text-transform: uppercase; }
+  .fp-race__line { font-size: var(--font-size-xs); opacity: 0.9; }
+  .fp-race__more { display: inline-block; margin-top: 0.75rem; }
+
+  @container (max-width: 760px) {
+    .fp-race__podium { grid-template-columns: 1fr; }
+    .fp-race__card { order: 0; }
+    .fp-race__card--first { order: -1; }
+  }
+</style>
