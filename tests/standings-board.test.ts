@@ -110,6 +110,7 @@ describe('buildTierRows (the AFL tier competition)', () => {
   it('Premier League: medals 1-3, relegation playoff 9-10, relegated 11-12', () => {
     const rows = buildTierRows(twelve, { tier: 'Premier League', leagueSlug: 'afl-fantasy' });
     expect(rows[0].rank).toEqual({ kind: 'medal', n: 1, medals: 3 });
+    expect(rows.map((r) => Boolean(r.lead))).toEqual([true, ...Array(11).fill(false)]);
     expect(rows[8].zone).toBe('danger');
     expect(rows[8].zoneLabel?.text).toBe('Relegation playoff');
     expect(rows[9].zoneLabel).toBeUndefined();

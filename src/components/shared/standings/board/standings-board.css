@@ -174,9 +174,9 @@ html.dark [data-site-theme='editorial'] .stb-leader { box-shadow: var(--stb-ring
 .stb-row--cut-up { border-top: 2px solid var(--stb-up); }
 .stb-row--cut-danger { border-top: 2px dashed var(--stb-danger); }
 .stb-row--cut-down { border-top: 2px solid var(--stb-down); }
-.stb-row--zone-up { background: color-mix(in srgb, var(--stb-up) 12%, transparent) !important; }
-.stb-row--zone-danger { background: color-mix(in srgb, var(--stb-danger) 13%, transparent) !important; }
-.stb-row--zone-down { background: color-mix(in srgb, var(--stb-down) 11%, transparent) !important; }
+.stb-row--zone-up:not(.stb-row--painted) { background: color-mix(in srgb, var(--stb-up) 12%, transparent) !important; }
+.stb-row--zone-danger:not(.stb-row--painted) { background: color-mix(in srgb, var(--stb-danger) 13%, transparent) !important; }
+.stb-row--zone-down:not(.stb-row--painted) { background: color-mix(in srgb, var(--stb-down) 11%, transparent) !important; }
 .stb-zone-label { padding: 0.3rem 1rem 0.1rem; font-size: var(--font-size-3xs); font-weight: 700; letter-spacing: var(--tracking-caps); text-transform: uppercase; }
 .stb-zone-label--up { color: var(--stb-up); }
 .stb-zone-label--danger { color: var(--stb-danger); }

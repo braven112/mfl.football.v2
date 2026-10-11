@@ -89,6 +89,8 @@ export function buildTierRows(teams: BoardTeam[], opts: TierBoardOptions): Group
     const ap = team.allPlay;
     return {
       team,
+      // The tier's leader is painted in team colours, like a division leader.
+      lead: i === 0,
       zone: zone?.zone,
       zoneLabel: startsZone ? { tone: zone.zone, text: zone.label } : undefined,
       rank: medalCount ? { kind: 'medal', n: rank, medals: medalCount } : { kind: 'num', n: rank },
