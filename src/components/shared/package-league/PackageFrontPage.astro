@@ -27,7 +27,6 @@ import {
   buildPeckingOrderStory,
   buildRecapStory,
   buildRivalryStory,
-  buildScoreStrip,
   buildTransactionStory,
   buildWire,
   opponentsInWeek,
@@ -43,8 +42,7 @@ import {
   type ParsedWeek,
 } from '../../../utils/front-page';
 import { loadSeasonFeed, unwrapFeedModule, type LazyFeedGlob } from '../../../utils/mfl-feed-glob';
-import { resolveHeroFranchiseBackdrop } from '../../../utils/hero-franchise-backdrop';
-import { crestLeagueKey } from '../../../utils/dark-surface-crest';
+import { frontTeamArt } from '../../../utils/front-page-art';
 import { readViewerClock } from '../../../utils/viewer-preferences-page';
 import { formatForViewer, formatMomentZones } from '../../../utils/viewer-clock';
 import { eventZonesFor } from '../../../utils/viewer-preferences';
@@ -113,12 +111,6 @@ const ordinal = (n: number) => {
 
 // ── The schedule ────────────────────────────────────────────────────────────
 const weeks = parseWeeklySchedule(scheduleFeed) as ParsedWeek[];
-const strip = buildScoreStrip({
-  weeks,
-  mine,
-  divisionOf: (id) => teamsById[id]?.divisionId,
-  winsOf: (id) => rowOf.get(id)?.row.wins ?? 0,
-});
 const current = stripWeek(weeks);
 const thisWeek = current?.state === 'upcoming' ? current.week : undefined;
 const opponents = opponentsInWeek(thisWeek, mine);
@@ -180,27 +172,11 @@ const ytdRows = ([] as Array<{ id: string; score: string }>).concat((ytdFeed?.pl
 const top3 = podium(feedStandingsRows(standingsFeed).map((row) => ({ id: String(row.id ?? '') })).filter((row) => row.id));
 
 // ── Art, resolved once for every team the page draws ───────────────────────
-const crestKey = crestLeagueKey(league.slug);
-const artFor = (id: string): FrontTeamArt | null => {
-  const team = teamsById[id];
-  if (!team) return null;
-  const backdrop = resolveHeroFranchiseBackdrop(team as any, crestKey);
-  return {
-    franchiseId: id,
-    name: team.name,
-    icon: team.icon ?? '',
-    gradient: backdrop?.gradient ?? 'var(--hero-ink)',
-    crest: backdrop?.crest ?? team.icon ?? '',
-    crestFilter: backdrop?.crestFilter,
-    round: backdrop?.crestRound ?? false,
-    href: teamHref(id),
-    record: recordOf(id),
-  };
-};
+const artFor = (id: string): FrontTeamArt | null =>
+  teamsById[id] ? frontTeamArt(teamsById[id], league.slug, teamHref(id), recordOf(id)) : null;
 const wanted = new Set<string>([
   ...(mine ? [mine] : []),
   ...opponents,
-  ...(strip?.games.flatMap((g) => g.sides.map((s) => s.franchiseId)) ?? []),
   ...stories.flatMap((s) => s.franchiseIds),
   ...top3.map((t) => t.id),
 ]);
@@ -263,8 +239,10 @@ for (const s of [lead, ...headlines].filter((x): x is FrontStory => !!x?.at)) {
 
 const model: FrontPageModel = {
   leagueName,
-  strip,
-  stripHref: hasPage('/live-scoring') ? r(`${base}/live-scoring`) : hasPage('/standings') ? r(`${base}/standings`) : null,
+  // The score strip rides the site header on every page of this style
+  // (HeaderScoreStrip), so the homepage does not draw a second one.
+  strip: null,
+  stripHref: null,
   band,
   signInHref: mine ? null : signInHref,
   lead,

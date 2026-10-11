@@ -14,15 +14,17 @@ interface Props {
   strip: Strip;
   teams: Record<string, FrontTeamArt>;
   allHref: string | null;
+  /** `card` sits in a page's content; `bar` runs edge to edge atop the site header. */
+  variant?: 'card' | 'bar';
 }
 
-const { strip, teams, allHref } = Astro.props;
+const { strip, teams, allHref, variant = 'card' } = Astro.props;
 const fmt = (n: number | null) => (n == null ? '' : n.toFixed(1));
 const label = strip.state === 'upcoming' ? 'This week' : 'Final';
 const scopeLabel = strip.scope === 'division' ? 'Your division' : 'Top games';
 ---
 
-<nav class="fp-strip" aria-label={`Week ${strip.week} scores`}>
+<nav class:list={['fp-strip', `fp-strip--${variant}`]} aria-label={`Week ${strip.week} scores`}>
   <div class="fp-strip__inner">
     <div class="fp-strip__week">
       <strong>Week {strip.week}</strong>
@@ -74,6 +76,8 @@ const scopeLabel = strip.scope === 'division' ? 'Your division' : 'Top games';
     border-radius: var(--radius-lg);
     overflow: hidden;
   }
+  .fp-strip--bar { border-radius: 0; }
+  .fp-strip--bar .fp-strip__inner { max-width: 1180px; margin: 0 auto; }
   .fp-strip__inner {
     display: flex;
     align-items: stretch;
