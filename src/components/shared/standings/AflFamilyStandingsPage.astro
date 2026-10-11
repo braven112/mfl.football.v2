@@ -285,6 +285,10 @@ const boardTiers = hasTierRecord
 <TheLeagueLayout title={`${leagueDef.name} Standings`} year={selectedYear}>
   <div class="standings-page" data-site-theme={siteTheme}>
     <header class="standings-hero">
+      <div class="stb-season">
+        <label for="year-select">Season</label>
+        <YearSelector currentYear={selectedYear} availableYears={availableYears} />
+      </div>
       <div class="standings-hero__text">
         {view === 'division' && (
           <>
@@ -330,13 +334,6 @@ const boardTiers = hasTierRecord
       </div>
     </header>
 
-    <div class="standings-filters">
-      <div class="filter-item">
-        <span class="filter-label">Season:</span>
-        <YearSelector currentYear={selectedYear} availableYears={availableYears} />
-      </div>
-    </div>
-
     <div class="standings-content">
       {view === 'all_play' && hasTierRecord && declaredMovement && (
         <DemoSideCompetition
@@ -377,6 +374,7 @@ const boardTiers = hasTierRecord
   }
 
   .standings-hero {
+    position: relative;
     display: grid;
     justify-content: center;
     align-items: center;
@@ -419,30 +417,6 @@ const boardTiers = hasTierRecord
     .standings-hero__actions {
       width: 100%;
     }
-  }
-
-  .standings-filters {
-    background: var(--card-bg, #fff);
-    border-radius: 1rem;
-    box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
-    padding: 1rem 1.5rem;
-    display: flex;
-    gap: 1.5rem;
-    align-items: center;
-  }
-
-  :global(html.dark) .standings-filters {
-    box-shadow:
-      0 0 0 1px var(--content-border, #555555),
-      var(--box-shadow-lg);
-  }
-
-  .filter-item {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    font-weight: 700;
-    color: var(--page-text, #111827);
   }
 
   .card {

@@ -382,3 +382,34 @@ html.dark [data-site-theme='editorial'] .stb-leader { box-shadow: var(--stb-ring
   .stb-leader__name { font-size: var(--font-size-sm); }
   .stb-leader__rec { font-size: var(--font-size-2xs); }
 }
+
+/* The season picker: a quiet control on its own line at the top-right of the
+   hero. Almost every visit wants the current season, so it stays out of the
+   way (and out of the title's line, which runs full width on phones). */
+.stb-season {
+  grid-column: 1 / -1;
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  margin: -1.25rem -1rem -1rem 0;
+  font-size: var(--font-size-xs);
+  color: var(--content-text-muted);
+}
+[data-site-theme='primetime'] .stb-season { margin: 0 0 -0.75rem; }
+/* Editorial's hero card has room in its corner beside the view tabs, so
+   there it takes no row. Primetime has no card: its tabs sit at the top. */
+@media (min-width: 600px) {
+  [data-site-theme='editorial'] .stb-season { position: absolute; top: 0.6rem; right: 0.9rem; margin: 0; }
+}
+.stb-season label { font-weight: 500; }
+.stb-season select.year-select {
+  padding: 0.1rem 0.25rem;
+  border: 1px solid transparent;
+  border-radius: 0.35rem;
+  background: transparent;
+  color: inherit;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+}
+.stb-season select.year-select:is(:hover, :focus-visible) { border-color: var(--content-border); color: var(--page-text); box-shadow: none; }
