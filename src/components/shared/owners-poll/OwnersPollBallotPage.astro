@@ -15,27 +15,18 @@
  * Team cards are ordered ALPHABETICALLY, never by the Pecking Order composite.
  * The column already published the machine's ranking, and re-sorting the
  * ballot by it would anchor every owner to that order — which is precisely the
- * thing the poll exists to disagree with. Records and PPG are shown as neutral
+ * thing the poll exists to disagree with. Record, points for and all-play are shown as neutral
  * context; the composite rank is deliberately absent from the card.
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import BallotBuilder from './BallotBuilder';
 import PollWindowAdmin from './PollWindowAdmin';
 import OwnersPollResults, { type OwnersPollBlock } from './OwnersPollResults.astro';
-import { getLeagueTeamBrands } from '../../../utils/league-team-brands';
+import { buildBallotTeams, type BallotStandingsRow } from '../../../utils/owners-poll-ballot-teams';
 import { ensureLeaguePrefix, leagueClock, type LeagueDefinition } from '../../../config/leagues';
 import { isCommissionerOrAdmin } from '../../../utils/auth';
 import '../../../styles/owners-poll.css';
 import type { AuthUser } from '../../../utils/auth';
-
-/** The slice of a Pecking Order issue this page reads for card context. */
-export interface BallotStandingsRow {
-  franchiseId: string;
-  wins?: number;
-  losses?: number;
-  ties?: number;
-  ppg?: number;
-}
 
 interface Props {
   league: LeagueDefinition;
@@ -57,26 +48,8 @@ interface Props {
 const { league, user, standings, result, teamConfigs, resultsUnlocked } = Astro.props as Props;
 
 const poll = league.ownersPoll;
-const brands = getLeagueTeamBrands(league.slug);
-const byFranchise = new Map(standings.map((row) => [row.franchiseId, row]));
-
-const teams = Object.values(brands)
-  .map((brand) => {
-    const row = byFranchise.get(brand.franchiseId);
-    const wins = row?.wins;
-    const losses = row?.losses;
-    const ties = row?.ties;
-    return {
-      ...brand,
-      record:
-        wins != null && losses != null
-          ? `${wins}-${losses}${ties ? `-${ties}` : ''}`
-          : null,
-      ppg: row?.ppg ?? null,
-    };
-  })
-  // Alphabetical — see the anchoring note above.
-  .sort((a, b) => a.nameShort.localeCompare(b.nameShort));
+// Alphabetical, with record · points · all-play — see owners-poll-ballot-teams.
+const teams = buildBallotTeams(league.slug, standings);
 
 const columnHref = ensureLeaguePrefix(league, '/pecking-order');
 const votersHref = ensureLeaguePrefix(league, '/owners-poll/voters');

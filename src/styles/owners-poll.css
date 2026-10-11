@@ -115,7 +115,8 @@
   color: var(--content-text-muted);
 }
 .op-slot__crest { width: 1.5rem; height: 1.5rem; object-fit: contain; }
-.op-slot__name { font-weight: 600; flex: 1; min-width: 0; }
+.op-slot__body { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.op-slot__name { font-weight: 600; }
 .op-slot__placeholder { color: var(--content-text-muted); font-size: 0.9rem; }
 .op-slot__actions { display: flex; gap: 0.25rem; }
 
@@ -233,6 +234,8 @@
   color: var(--content-text-muted);
   font-variant-numeric: tabular-nums;
 }
+.op-card__stat { white-space: nowrap; }
+.op-card__meta abbr { text-decoration: none; cursor: help; }
 
 /* --- callouts ----------------------------------------------------------- */
 
@@ -423,3 +426,93 @@
   background: var(--content-bg);
   border-radius: var(--radius-md, 8px);
 }
+
+/* --- homepage pop-up (OwnersPollPopup) ------------------------------------
+ * A native <dialog> so focus trapping and Esc come from the platform. Centred
+ * on desktop, a bottom sheet on a phone. The ballot inside is the same
+ * BallotBuilder as the poll page; its card chrome is dropped here because the
+ * dialog already is the card. */
+.op-popup {
+  padding: 0;
+  border: none;
+  background: var(--content-bg);
+  color: var(--page-text);
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: var(--shadow-xl);
+  width: calc(100% - 2rem);
+  max-width: 34rem;
+  max-height: 88vh;
+  overflow: hidden;
+  display: none;
+  flex-direction: column;
+}
+.op-popup[open] { display: flex; }
+.op-popup::backdrop {
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(2px);
+}
+.op-popup__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem 1.1rem 0.5rem;
+}
+.op-popup__eyebrow {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--content-text-muted);
+}
+.op-popup__title { margin: 0.15rem 0 0; font-size: var(--font-size-lg); }
+.op-popup__close {
+  border: 1px solid var(--content-border);
+  background: var(--content-bg);
+  color: var(--page-text);
+  border-radius: var(--radius-full, 9999px);
+  width: 2rem;
+  height: 2rem;
+  font-size: var(--font-size-base);
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.op-popup__body {
+  overflow-y: auto;
+  padding: 0 1.1rem 0.5rem;
+  overscroll-behavior: contain;
+}
+.op-popup__lede { margin: 0 0 0.75rem; color: var(--content-text-muted); font-size: var(--font-size-sm); }
+.op-popup__actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0 0 0.75rem; }
+.op-popup__done p { margin: 0 0 0.75rem; }
+.op-popup__foot {
+  border-top: 1px solid var(--content-border);
+  padding: 0.6rem 1.1rem;
+  text-align: right;
+}
+.op-popup__foot .cta-link {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+}
+.op-popup .op-builder {
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  background: transparent;
+}
+@media (max-width: 40rem) {
+  .op-popup {
+    width: 100%;
+    max-width: none;
+    max-height: 92vh;
+    margin: auto 0 0;
+    border-radius: var(--radius-lg, 12px) var(--radius-lg, 12px) 0 0;
+  }
+}
+/* The layouts theme by `html.dark` (TheLeagueLayout), same as the Throwback modal. */
+html.dark .op-popup::backdrop { background: rgba(0, 0, 0, 0.6); }
+html.dark .op-popup { box-shadow: var(--shadow-xl), 0 0 0 1px var(--content-border); }

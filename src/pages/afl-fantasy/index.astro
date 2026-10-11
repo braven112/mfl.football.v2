@@ -51,6 +51,7 @@ import { getAflWhatsNextTimeline } from '../../utils/league-event-resolver';
 import { getAflLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
 import { isSeasonWindowOpen } from '../../utils/pecking-order-season-window.mjs';
 import { ensureLeaguePrefix } from '../../config/leagues';
+import { newestIssueStandings } from '../../utils/owners-poll-ballot-teams';
 import { getCurrentNFLWeek } from '../../utils/current-week';
 import { findNextGame, franchiseSchedule, parseWeeklySchedule } from '../../utils/schedule-data.mjs';
 import { chooseTeamName } from '../../utils/team-names';
@@ -176,6 +177,16 @@ const ownersPollIssue = Object.entries(ownersPollIssues)
   .filter((x) => x.year === getCurrentSeasonYear(effectiveDate))
   .filter((x) => (x.data?.ownersPoll?.ranked?.length ?? 0) > 0)
   .sort((a, b) => b.year - a.year || b.week - a.week)[0] ?? null;
+
+// Stats for the pop-up's ballot cards — newest issue of THIS season, as TheLeague.
+const ownersPollStandings = newestIssueStandings(
+  Object.entries(ownersPollIssues)
+    .map(([file, data]) => {
+      const m = file.match(/(\d{4})-(\d{1,2})\.json$/);
+      return m ? { ...data, year: Number(m[1]), week: Number(m[2]) } : null;
+    })
+    .filter((x): x is any => !!x && x.year === getCurrentSeasonYear(effectiveDate)),
+);
 
 const showOwnersPollCard =
   AFL.ownersPoll?.enabled &&
@@ -423,6 +434,7 @@ const labels = await getPersonaLabels('afl-fantasy');
     ? {
         issue: ownersPollIssue ? { year: ownersPollIssue.year, week: ownersPollIssue.week, ownersPoll: ownersPollIssue.data.ownersPoll } : null,
         ballotHref: ensureLeaguePrefix(AFL, '/owners-poll'),
+        ballotStandings: ownersPollStandings,
       }
     : null}
   whatsNew={{
