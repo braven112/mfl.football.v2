@@ -72,6 +72,18 @@ export function indexMoveStories(posts: SchefterPost[]): StoryIndex {
 }
 
 /**
+ * The same glob with its active-feed entry answered by `loadLiveFeed` instead
+ * of the committed file. The active feed lives in Redis and git holds only a
+ * daily snapshot, so a story posted since this morning is only in the live
+ * copy; the archive files are committed and stay as they are.
+ */
+export function withLiveFeed(glob: LazyFeedGlob, loadLiveFeed: () => Promise<unknown>): LazyFeedGlob {
+  return Object.fromEntries(
+    Object.entries(glob).map(([path, load]) => [path, /schefter-feed\.json$/.test(path) ? loadLiveFeed : load]),
+  );
+}
+
+/**
  * Every post that could hold a story for `year`'s moves: the active feed and
  * the archive files for that calendar year and the next (a league year spans
  * two calendar years). Never throws — no stories is a page of plain records.

@@ -42,6 +42,17 @@ jobs:
           ssh-key: ${{ secrets.DEPLOY_KEY }}
           fetch-depth: 0
 
+      # The Schefter feeds live in Redis; git holds a daily snapshot. Start from
+      # the live copy so this job's scripts never write on top of a day-old
+      # feed (scripts/lib/schefter-feed-store.mjs).
+      - name: Pull the live Schefter feeds from Redis
+        env:
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
+          KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
+        run: node scripts/schefter-feed-sync.mjs pull
+
       # This job ran for months WITHOUT this step, and nothing failed loudly:
       # every consumer of `@upstash/redis` here imports it dynamically and
       # degrades on error, so a missing package logged "Redis import failed"
@@ -127,6 +138,11 @@ jobs:
         run: node scripts/push-watch-list-news.mjs
 
       - name: Commit and push feed updates
+        env:
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
+          KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
         run: |
           # The feed files are append-only and written by several workflows on
           # overlapping crons; a plain `git pull --rebase` collides on the
@@ -140,6 +156,27 @@ jobs:
             --branch main \
             --message "chore: schefter scan — new transaction posts" \
             --files "src/data/theleague/schefter-feed.json,data/afl-fantasy/schefter-feed.json,src/data/theleague/resolved-events.json,data/afl-fantasy/resolved-events.json,data/schefter/theleague/post-history.json,data/schefter/groupme-suppressions.json"
+
+      # Once a day, commit the live feeds back to git: the backup if Redis is
+      # ever wiped, and the copy the site falls back to when Redis is down.
+      # Rides this job because the Vercel cron dispatches it at least hourly
+      # (src/utils/sync-cadence.ts); a GitHub `schedule:` of its own would be
+      # dropped like the others. Costs one production build a day.
+      - name: Daily Schefter feed snapshot
+        env:
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
+          KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
+        run: |
+          if node scripts/schefter-feed-sync.mjs snapshot-due; then
+            node scripts/schefter-feed-sync.mjs pull
+            node scripts/commit-feed-and-push.mjs \
+              --branch main \
+              --message "chore: daily Schefter feed snapshot" \
+              --files "$(node scripts/schefter-feed-sync.mjs paths)" \
+              --snapshot
+          fi
 
       - name: File issue for suppressed GroupMe sends
         if: always()

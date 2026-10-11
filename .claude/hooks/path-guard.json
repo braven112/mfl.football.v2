@@ -924,7 +924,8 @@
         "tests/schefter-once-per-season-dedupe.test.ts",
         "tests/merge-schefter-feed.test.ts",
         "tests/league-name-guard.test.ts",
-        "tests/cron-commit-churn.test.ts"
+        "tests/cron-commit-churn.test.ts",
+        "tests/schefter-live-feed-reader.test.ts"
       ]
     },
     {
@@ -1050,7 +1051,9 @@
         "tests/derived-chain-lane.test.ts",
         "tests/weekly-player-results-schedule.test.ts",
         "tests/weekly-player-results-full-pool.test.ts",
-        "tests/cron-commit-churn.test.ts"
+        "tests/cron-commit-churn.test.ts",
+        "tests/schefter-feed-store.test.ts",
+        "tests/schefter-feed-redis-workflows.test.ts"
       ]
     },
     {

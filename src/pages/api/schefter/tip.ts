@@ -167,7 +167,7 @@ export const POST: APIRoute = async ({ request }) => {
     if (typeof repliesToPostId !== 'string') {
       return errorResponse('bad_reply', 'repliesToPostId must be a string.', 400);
     }
-    const feed = getSchefterFeed(league);
+    const feed = await getSchefterFeed(league);
     const parent = feed.posts.find((p) => p.id === repliesToPostId);
     if (!parent) {
       return errorResponse('reply_not_found', 'That rumor is not in the feed.', 404);

@@ -33,8 +33,8 @@ function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), { status, headers: JSON_HEADERS });
 }
 
-function isRumorPostId(postId: string, league: LeagueDefinition): boolean {
-  const feed = getSchefterFeed(league);
+async function isRumorPostId(postId: string, league: LeagueDefinition): Promise<boolean> {
+  const feed = await getSchefterFeed(league);
   return feed.posts.some(
     (p) => p.id === postId && p.transactionSubType === 'rumor_mill',
   );
@@ -63,7 +63,7 @@ export const POST: APIRoute = async ({ request }) => {
     return json({ error: 'bad_post_id' }, 400);
   }
 
-  if (!isRumorPostId(postId, league)) {
+  if (!(await isRumorPostId(postId, league))) {
     // Unknown id — don't write. The feed is the authoritative registry of
     // live rumor posts.
     return json({ ok: true, recorded: false });

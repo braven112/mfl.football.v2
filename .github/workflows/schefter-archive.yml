@@ -29,6 +29,17 @@ jobs:
           ssh-key: ${{ secrets.DEPLOY_KEY }}
           fetch-depth: 1
 
+      # The Schefter feeds live in Redis; git holds a daily snapshot. Start from
+      # the live copy so this job's scripts never write on top of a day-old
+      # feed (scripts/lib/schefter-feed-store.mjs).
+      - name: Pull the live Schefter feeds from Redis
+        env:
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
+          KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
+        run: node scripts/schefter-feed-sync.mjs pull
+
       - name: Setup pnpm + Node + install
         uses: ./.github/actions/setup
 
@@ -36,6 +47,11 @@ jobs:
         run: node scripts/archive-schefter-feed.mjs
 
       - name: Commit and push
+        env:
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
+          KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
         run: |
           git config user.name "Schefter Bot"
           git config user.email "actions@users.noreply.github.com"
