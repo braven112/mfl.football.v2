@@ -29,7 +29,7 @@
 import { rosterMoveString } from './roster-move-parse.mjs';
 
 /** Bump when the story shape or prompt changes enough to rewrite old posts. */
-export const MOVE_STORY_VERSION = 3;
+export const MOVE_STORY_VERSION = 4;
 
 /** Same model the scanner's other transaction lanes use. */
 export const MOVE_STORY_MODEL = 'claude-haiku-4-5-20251001';
@@ -253,6 +253,10 @@ export function parseMoveStory(text, facts, teams) {
     if (p.anchor && !lower.includes(p.anchor)) return null;
   }
   if (/\bPlayer \d+\b/i.test(story)) return null;
+  // The model's two habits the prompt alone did not break: calling a
+  // first-come pickup "waivers", and narrating a drop that did not happen.
+  if (facts.kind === KIND_LABEL.FREE_AGENT && /waiver/i.test(story)) return null;
+  if (facts.dropped.length === 0 && /\b(drop|dropp|cut|releas|roster (spot|space|move)|make room)/i.test(story)) return null;
   return { headline, body };
 }
 

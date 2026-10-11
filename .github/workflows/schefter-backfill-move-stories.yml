@@ -11,12 +11,6 @@ name: Schefter Move Story Backfill
 # id collision (scripts/lib/merge-schefter-feed.mjs).
 
 on:
-  # PREVIEW ONLY — remove before merge. Writes ten stories per league onto the
-  # PR branch so its preview shows real ones; `paths` keeps the bot's own feed
-  # commit from re-triggering it. (Re-run: prompt v3.)
-  push:
-    branches: [claude/project-thread-c4gubg]
-    paths: [.github/workflows/schefter-backfill-move-stories.yml]
   workflow_dispatch:
     inputs:
       league:
@@ -53,7 +47,7 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           MFL_HOST: ${{ vars.MFL_HOST }}
           LEAGUE: ${{ inputs.league }}
-          LIMIT: ${{ github.event_name == 'push' && '10' || inputs.limit }}
+          LIMIT: ${{ inputs.limit }}
         run: |
           ARGS=()
           if [ -n "$LEAGUE" ]; then ARGS+=(--league "$LEAGUE"); fi

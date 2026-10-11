@@ -92,6 +92,14 @@ describe('parsing the model reply', () => {
     expect(parseMoveStory(reply('Roschon Johnson in, Darnell Washington out.'), swap, teams)).not.toBeNull();
   });
 
+  it("fails on a first-come pickup called waivers, or a drop that did not happen", () => {
+    const fcfs = factsFromRawMove({ type: 'FREE_AGENT', franchise: '0007', transaction: '15001,|' }, ctx)!;
+    const reply = (body: string) => JSON.stringify({ headline: '{{TEAM:0007}} sign Roschon Johnson', body });
+    expect(parseMoveStory(reply('{{TEAM:0007}} grabbed Roschon Johnson off waivers.'), fcfs, teams)).toBeNull();
+    expect(parseMoveStory(reply('{{TEAM:0007}} added Roschon Johnson with no drops needed.'), fcfs, teams)).toBeNull();
+    expect(parseMoveStory(reply('{{TEAM:0007}} signed Roschon Johnson off the free-agent wire.'), fcfs, teams)).not.toBeNull();
+  });
+
   it('keeps the template when the call fails', async () => {
     const fetchImpl = vi.fn(async () => new Response('nope', { status: 529 }));
     expect(await writeMoveStory({ facts, teams, apiKey: 'k', fetchImpl })).toBeNull();
