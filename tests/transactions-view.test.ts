@@ -55,6 +55,8 @@ describe('default view', () => {
     expect(activeKindChip(filters('types=free-agent,waiver,blind-bid,auction'))).toBe('pickups');
     expect(activeKindChip(filters('types=trade'))).toBe('trades');
     expect(activeKindChip(filters('types=auction'))).toBeNull();
+    // A season with no auctions or blind bids: the chip's link carries only what is offered.
+    expect(activeKindChip(filters('types=free-agent,waiver'), ['free-agent', 'waiver', 'trade'])).toBe('pickups');
   });
 
   it('ignores unknown kinds rather than emptying the ledger', () => {

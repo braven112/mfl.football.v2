@@ -36,7 +36,7 @@ import { readViewerClock } from '../../../utils/viewer-preferences-page';
 import { chosenZone } from '../../../utils/viewer-preferences';
 import { loadTransactionsSeason, loadLedgerLeagueContext, seasonsFromGlob, type LazyFeedGlob } from '../../../utils/transactions-feeds';
 import { resolveSeason } from '../../../utils/mfl-feed-glob';
-import { getCurrentLeagueYear } from '../../../utils/league-year';
+import { getLeagueYearForSlug } from '../../../utils/league-year';
 import { formatPickLabel } from '../../../utils/mfl-pick-tokens.mjs';
 import {
   parseFilters,
@@ -67,6 +67,8 @@ interface Props {
 const { leagueSlug, transactionFeeds, leagueFeeds, schefterPosts } = Astro.props;
 const league = getLeagueBySlug(leagueSlug);
 if (!league) throw new Error(`TransactionsPage: unknown league ${leagueSlug}`);
+// The AFL and package leagues roll June 1, not Feb 14: their own clock.
+const leagueYear = getLeagueYearForSlug(leagueSlug);
 
 const basePath = resolveLeaguePath(`/${leagueSlug}/transactions`, Astro.locals.hideLeaguePrefix ?? false);
 const params = Astro.url.searchParams;
@@ -75,7 +77,7 @@ const params = Astro.url.searchParams;
 // signings happen all offseason and the ledger for "this year" means the
 // current MFL league, which turns over on Feb 14 (CLAUDE.md "Year rollover").
 const availableYears = seasonsFromGlob(transactionFeeds);
-const year = resolveSeason(params.get('year'), availableYears, getCurrentLeagueYear()) ?? getCurrentLeagueYear();
+const year = resolveSeason(params.get('year'), availableYears, leagueYear) ?? leagueYear;
 
 const hasSalaryCap = leagueHasFeature(leagueSlug, 'salaryCap');
 const [rows, ledger, storyPosts] = await Promise.all([
@@ -86,7 +88,7 @@ const [rows, ledger, storyPosts] = await Promise.all([
     hasSalaryCap,
     leagueId: league.id,
     // Only the current league year can gain rows since the last sync.
-    isCurrentSeason: year === getCurrentLeagueYear(),
+    isCurrentSeason: year === leagueYear,
   }),
   // Per SEASON, from that season's league.json — a league can change its bid
   // rules or its divisions between years.
@@ -242,12 +244,12 @@ const byline = [...renderRows.values()].some((r) => r.story)
 
 // The season menu: the current league year first, then the archive, newest
 // first. Deliberately small — past seasons are the rare visit.
-const currentYear = getCurrentLeagueYear();
+const currentYear = leagueYear;
 const pastYears = [...availableYears].reverse().filter((y) => y !== year);
 
 // Kind chips are links, not a form — each is a real, shareable URL. Choosing
 // one keeps every other filter but drops `types`, then sets its own.
-const kindChip = activeKindChip(filters);
+const kindChip = activeKindChip(filters, offeredKinds);
 const chipHref = (types: string | null, extra: Record<string, string | null> = {}) =>
   filterHref(basePath, params, { types, ...extra });
 const showTradeChip = offeredKinds.includes('trade');

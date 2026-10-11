@@ -11,6 +11,12 @@ name: Schefter Move Story Backfill
 # id collision (scripts/lib/merge-schefter-feed.mjs).
 
 on:
+  # PREVIEW ONLY — remove before merge. Writes ten stories per league onto the
+  # PR branch so its preview shows real ones; `paths` keeps the bot's own feed
+  # commit from re-triggering it.
+  push:
+    branches: [claude/project-thread-c4gubg]
+    paths: [.github/workflows/schefter-backfill-move-stories.yml]
   workflow_dispatch:
     inputs:
       league:
@@ -47,7 +53,7 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           MFL_HOST: ${{ vars.MFL_HOST }}
           LEAGUE: ${{ inputs.league }}
-          LIMIT: ${{ inputs.limit }}
+          LIMIT: ${{ github.event_name == 'push' && '10' || inputs.limit }}
         run: |
           ARGS=()
           if [ -n "$LEAGUE" ]; then ARGS+=(--league "$LEAGUE"); fi
@@ -55,10 +61,12 @@ jobs:
           node scripts/schefter-backfill-move-stories.mjs "${ARGS[@]}"
 
       - name: Commit and push
+        env:
+          BRANCH: ${{ github.ref_name }}
         run: |
           git config user.name "Schefter Bot"
           git config user.email "actions@users.noreply.github.com"
           node scripts/commit-feed-and-push.mjs \
-            --branch main \
+            --branch "$BRANCH" \
             --message "chore: schefter move stories — backfill this season's transaction posts" \
             --files "src/data/theleague/schefter-feed.json,data/afl-fantasy/schefter-feed.json,src/data/theleague/schefter-archive,data/afl-fantasy/schefter-archive"

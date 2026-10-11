@@ -57,9 +57,11 @@ export function indexMoveStories(posts: SchefterPost[]): StoryIndex {
       const candidates = (byKey.get(keyOf(seconds, row.franchiseId)) ?? []).filter(
         (p) => (p.transactionSubType === 'TRADE') === isTrade,
       );
-      if (candidates.length <= 1) return candidates[0] ?? null;
-      // Several of one team's moves on one second: the post must name this
-      // row's players. Ambiguity shows the record, never a guess.
+      // A trade is one row per second per team. A pickup story must name this
+      // row's players even when it is the only candidate: two same-second
+      // claims where one story failed would otherwise share the survivor.
+      // Ambiguity shows the record, never a guess.
+      if (isTrade && candidates.length <= 1) return candidates[0] ?? null;
       const rowPlayers = new Set([...row.added, ...row.dropped]);
       const hits = candidates.filter((p) =>
         [...(p.addedIds ?? []), ...(p.droppedIds ?? []), ...(p.playerIds ?? [])].some((id) => rowPlayers.has(id)),

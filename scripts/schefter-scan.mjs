@@ -33,7 +33,7 @@ import {
 } from './lib/throwback-reminder.mjs';
 import { detectTradeBaitChanges } from './lib/trade-bait-detector.mjs';
 import { checkGroupMeQuality } from './lib/schefter-quality-gate.mjs';
-import { parseRosterMove } from './lib/roster-move-parse.mjs';
+import { parseRosterMove, rosterMoveString } from './lib/roster-move-parse.mjs';
 import { writeJsonIfChanged } from './lib/canonical-json.mjs';
 import {
   evaluatePingWindow,
@@ -457,7 +457,7 @@ function describePlayer(playerId, players) {
 
 function generateFreeAgentPost(raw, players, teams, leagueSlug, dropAdjustmentMap = new Map()) {
   const team = teams.get(raw.franchise)?.name ?? `Team ${raw.franchise}`;
-  const { addedIds, droppedIds, bbidAmount } = parseRosterMove(raw.transaction);
+  const { addedIds, droppedIds, bbidAmount } = parseRosterMove(rosterMoveString(raw));
   const added = describePlayer(addedIds[0], players);
   const salary = Number.isFinite(bbidAmount) && bbidAmount > 100_000 ? bbidAmount : undefined;
 

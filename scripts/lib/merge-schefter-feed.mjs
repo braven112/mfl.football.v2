@@ -196,7 +196,11 @@ export function mergeHistory(theirs, ours) {
 export function mergeByPath(filePath, theirsText, oursText) {
   const isHistory = /post-history\.json$/.test(filePath);
   const isFeed = /schefter-feed\.json$/.test(filePath);
-  if (!isHistory && !isFeed) return oursText; // take ours verbatim
+  // Season archives are plain post arrays written by two lanes — the weekly
+  // archive job appends, the move-story backfill rewrites in place — so a
+  // verbatim copy would let whichever pushed second erase the other's work.
+  const isArchive = /schefter-archive\/\d{4}\.json$/.test(filePath);
+  if (!isHistory && !isFeed && !isArchive) return oursText; // take ours verbatim
 
   let theirs;
   let ours;
@@ -212,6 +216,10 @@ export function mergeByPath(filePath, theirsText, oursText) {
   }
   if (theirs === null) return oursText;
 
+  if (isArchive) {
+    if (!Array.isArray(theirs) || !Array.isArray(ours)) return oursText;
+    return JSON.stringify(mergePostArrays(theirs, ours), null, 2) + '\n';
+  }
   const merged = isHistory ? mergeHistory(theirs, ours) : mergeFeed(theirs, ours);
   return JSON.stringify(merged, null, 2) + '\n';
 }

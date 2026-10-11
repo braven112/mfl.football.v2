@@ -26,6 +26,8 @@
  *     never dropped because the model misbehaved.
  */
 
+import { rosterMoveString } from './roster-move-parse.mjs';
+
 /** Bump when the story shape or prompt changes enough to rewrite old posts. */
 export const MOVE_STORY_VERSION = 2;
 
@@ -142,7 +144,8 @@ export function buildMoveFacts(input) {
  */
 export function factsFromRawMove(raw, ctx) {
   const { players, parseRosterMove, leagueName, hasSalaries } = ctx;
-  if (!raw?.transaction || !raw?.franchise) return null;
+  const move = rosterMoveString(raw);
+  if (!move || !raw?.franchise) return null;
 
   if (raw.type === 'AUCTION_WON') {
     // "|playerId,|salary|" — read the player, price only a real salary.
@@ -161,7 +164,7 @@ export function factsFromRawMove(raw, ctx) {
     });
   }
 
-  const { addedIds, droppedIds, bbidAmount } = parseRosterMove(raw.transaction);
+  const { addedIds, droppedIds, bbidAmount } = parseRosterMove(move);
   // The scanner's own threshold: below it the "bid" is a FAAB-style token
   // amount or MFL's zero, not a salary worth printing.
   const price = hasSalaries && Number.isFinite(bbidAmount) && bbidAmount > 100_000 ? formatSalary(bbidAmount) : null;
@@ -240,10 +243,14 @@ export function parseMoveStory(text, facts, teams) {
   if (!headline || !body) return null;
   if (headline.length < 10 || headline.length > 120) return null;
   if (body.length < 20 || body.length > 420) return null;
-  const lead = facts.added[0] ?? facts.dropped[0];
-  const text2 = `${headline} ${body}`.toLowerCase();
-  if (lead.anchor && !text2.includes(lead.anchor)) return null;
-  if (/\bPlayer \d+\b/.test(text2)) return null;
+  // The move is the add AND every drop: a story that leaves one out is a
+  // different move. Anchors are lowercase; the placeholder check is not.
+  const story = `${headline} ${body}`;
+  const lower = story.toLowerCase();
+  for (const p of [...facts.added, ...facts.dropped]) {
+    if (p.anchor && !lower.includes(p.anchor)) return null;
+  }
+  if (/\bPlayer \d+\b/i.test(story)) return null;
   return { headline, body };
 }
 

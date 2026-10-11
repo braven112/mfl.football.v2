@@ -31,7 +31,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { SCHEFTER_LEAGUES, getSchefterLeague } from './lib/schefter-leagues.mjs';
 import { leagueYearFor } from './lib/schefter-league-year.mjs';
-import { parseRosterMove } from './lib/roster-move-parse.mjs';
+import { parseRosterMove, rosterMoveString } from './lib/roster-move-parse.mjs';
 import { LEAGUES as REGISTRY_LEAGUES } from '../src/config/leagues-data.mjs';
 import {
   MOVE_STORY_SUBTYPES,
@@ -108,7 +108,7 @@ export function findRawRow(post, index) {
   if (candidates.length <= 1) return candidates[0] ?? null;
   const named = post.playerIds?.[0] ?? post.bigDrop?.playerId;
   if (!named) return null;
-  const hits = candidates.filter((raw) => String(raw.transaction ?? '').split(/[|,]/).includes(named));
+  const hits = candidates.filter((raw) => rosterMoveString(raw).split(/[|,]/).includes(named));
   return hits.length === 1 ? hits[0] : null;
 }
 

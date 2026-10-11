@@ -7,7 +7,7 @@ const post = (over: Partial<SchefterPost>): SchefterPost =>
   ({
     id: 'p', timestamp: '', type: 'transaction', transactionSubType: 'FREE_AGENT', tier: 'minor',
     headline: 'h', body: 'b', franchiseIds: ['0007'], sourceTimestamp: '1790000000', league: 'afl',
-    storyVersion: 2, ...over,
+    storyVersion: 2, addedIds: ['1'], ...over,
   }) as SchefterPost;
 const row = (over: Partial<TransactionRow>): TransactionRow => ({
   id: 'r', at: 1790000000 * 1000, kind: 'free-agent', rawType: 'FREE_AGENT', franchiseId: '0007',
@@ -36,5 +36,10 @@ describe('joining a Schefter story to its MFL row', () => {
     const idx = indexMoveStories([post({ id: 'a', addedIds: ['1'] }), post({ id: 'b', addedIds: ['2'] })]);
     expect(idx.get(row({ added: ['2'] }))?.id).toBe('b');
     expect(idx.get(row({ added: ['3'] }))).toBeNull();
+  });
+
+  it('never hands the one surviving story to a same-second claim it is not about', () => {
+    const idx = indexMoveStories([post({ id: 'a', addedIds: ['1'] })]);
+    expect(idx.get(row({ added: ['2'] }))).toBeNull();
   });
 });

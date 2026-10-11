@@ -205,11 +205,16 @@ export function kindsPresentIn(
  * (every signing kind, no trades), "trades" — or null for a hand-picked mix
  * that no chip represents (a `?types=` link from before the chips).
  */
-export function activeKindChip(filters: TransactionFilters): 'all' | 'pickups' | 'trades' | null {
+export function activeKindChip(
+  filters: TransactionFilters,
+  offered: readonly TransactionKind[] = ALL_KINDS,
+): 'all' | 'pickups' | 'trades' | null {
   const same = (kinds: readonly TransactionKind[]) =>
     filters.kinds.size === kinds.length && kinds.every((k) => filters.kinds.has(k));
   if (same(ALL_KINDS)) return 'all';
-  if (same(PICKUP_KINDS)) return 'pickups';
+  // The Pickups link carries only the pickup kinds this season has, so match
+  // that subset too — a league with no auctions never selects all four.
+  if (same(PICKUP_KINDS) || same(PICKUP_KINDS.filter((k) => offered.includes(k)))) return 'pickups';
   if (same(['trade'])) return 'trades';
   return null;
 }

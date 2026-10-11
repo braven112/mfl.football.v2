@@ -47,6 +47,12 @@ describe('move facts', () => {
     expect(factsFromRawMove(fcfs, { ...ctx, hasSalaries: true })!.price).toBeNull();
   });
 
+  it("reads the AFL's field-form WAIVER rows, which carry no transaction string", () => {
+    const facts = factsFromRawMove({ type: 'WAIVER', franchise: '0007', added: '15001,', dropped: '15002,' }, ctx)!;
+    expect(facts.added.map((p) => p.id)).toEqual(['15001']);
+    expect(facts.dropped.map((p) => p.id)).toEqual(['15002']);
+  });
+
   it('declines a move with a player it cannot name', () => {
     expect(factsFromRawMove({ type: 'FREE_AGENT', franchise: '0007', transaction: '99999,|' }, ctx)).toBeNull();
   });
@@ -76,6 +82,14 @@ describe('parsing the model reply', () => {
   it('fails when the story is about someone else', () => {
     const reply = JSON.stringify({ headline: '{{TEAM:0007}} make a move', body: 'A quiet depth signing for {{TEAM:0007}} today.' });
     expect(parseMoveStory(reply, facts, teams)).toBeNull();
+  });
+
+  it('fails when the story leaves out the drop, or names a placeholder', () => {
+    const swap = factsFromRawMove({ type: 'WAIVER', franchise: '0007', transaction: '15001,|15002,' }, ctx)!;
+    const reply = (body: string) => JSON.stringify({ headline: '{{TEAM:0007}} claim Roschon Johnson', body });
+    expect(parseMoveStory(reply('I hear {{TEAM:0007}} wanted Roschon Johnson badly.'), swap, teams)).toBeNull();
+    expect(parseMoveStory(reply('Roschon Johnson in, Darnell Washington out for player 12.'), swap, teams)).toBeNull();
+    expect(parseMoveStory(reply('Roschon Johnson in, Darnell Washington out.'), swap, teams)).not.toBeNull();
   });
 
   it('keeps the template when the call fails', async () => {
