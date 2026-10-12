@@ -18,6 +18,7 @@ import {
 } from '../components/shared/standings/standings-table-config';
 import { frontTeamArt } from './front-page-art';
 import { teamAccentVar } from './team-accent-css';
+import { gradientStops } from './hero-franchise-backdrop';
 
 export type BoardBadge = 'division_winner' | 'runner_up' | 'wild_card' | null;
 
@@ -39,6 +40,8 @@ export interface BoardTeam {
   round: boolean;
   /** The franchise accent token, for a team colour used as a stripe or numeral. */
   accent: string;
+  /** The stripe over a team-colour fill: the accent, unless the fill already wears it. */
+  paintStripe: string;
   division: string;
   record: string;
   wins: number;
@@ -63,6 +66,11 @@ export interface BoardTeamConfig {
   nameMedium?: string;
   nameShort?: string;
   icon?: string;
+  color?: string;
+  colorPrimary?: string;
+  colorSecondary?: string;
+  colorTertiary?: string;
+  colorQuaternary?: string;
 }
 
 const num = (v: string | number | undefined): number => {
@@ -93,6 +101,29 @@ export interface BoardTeamOptions {
   configFor: (id: string) => BoardTeamConfig | undefined;
 }
 
+const rgb = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+const near = (a: string, b: string) => {
+  const [x, y] = [rgb(a), rgb(b)];
+  return Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]) < 90;
+};
+
+/**
+ * The stripe across a team-colour fill. The accent normally, but a team whose
+ * accent IS its fill (Smokane's green on Smokane's green) gets its next team
+ * colour the fill does not wear (Smokane's smoke). The fill is dark in both
+ * themes, so a raw config colour is safe there.
+ */
+function paintStripe(id: string, gradient: string, cfg: BoardTeamConfig | undefined): string {
+  const fill = gradientStops(gradient).map((s) => s.hex);
+  const hex = (c?: string) => (c && /^#[0-9a-f]{6}$/i.test(c) ? c.toLowerCase() : undefined);
+  const base = hex(cfg?.color) ?? hex(cfg?.colorPrimary);
+  if (!base || !fill.some((f) => near(f, base))) return teamAccentVar(id);
+  const other = [cfg?.colorSecondary, cfg?.colorTertiary, cfg?.colorQuaternary]
+    .map(hex)
+    .find((c) => c && !fill.some((f) => near(f, c)));
+  return other ?? teamAccentVar(id);
+}
+
 export function toBoardTeam(team: TeamStanding, opts: BoardTeamOptions): BoardTeam {
   const cfg = opts.configFor(team.id);
   const name = team.teamName || cfg?.name || team.fname;
@@ -118,6 +149,7 @@ export function toBoardTeam(team: TeamStanding, opts: BoardTeamOptions): BoardTe
     crestFilter: art.crestFilter,
     round: art.round,
     accent: teamAccentVar(team.id),
+    paintStripe: paintStripe(team.id, art.gradient, cfg),
     division: team.division,
     record: formatRecord(wins, losses, ties),
     wins,

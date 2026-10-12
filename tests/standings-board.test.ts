@@ -43,6 +43,16 @@ const opts = {
 };
 
 describe('toBoardTeam', () => {
+  it('stripes a team-colour fill with a colour the fill does not already wear', () => {
+    const afl = (cfg: object) => ({ ...opts, leagueSlug: 'afl-fantasy', configFor: (id: string) => ({ franchiseId: id, ...cfg }) });
+    // Smokane: green fill, green accent, so the smoke grey takes the stripe.
+    const smokane = toBoardTeam(standing('0001'), afl({ colorPrimary: '#398b6a', colorSecondary: '#e9e9e9' }));
+    expect(smokane.paintStripe).toBe('#e9e9e9');
+    // An accent unlike the fill keeps the theme-aware accent token.
+    const jew = toBoardTeam(standing('0018'), afl({ color: '#18e890', colorPrimary: '#1b3f78', colorSecondary: '#199b5d' }));
+    expect(jew.paintStripe).toBe('var(--team-accent-0018)');
+  });
+
   it('reads the seed and badge on the ladder it is given (a conference ladder for the AFL)', () => {
     const t = standing('0001', { seed: 6, conferenceSeed: 2 });
     const conf = toBoardTeam(t, { ...opts, badgeSeeding: TIERING.conferenceSeed(2) });

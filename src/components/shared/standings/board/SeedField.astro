@@ -54,7 +54,7 @@ const phoneLine = (line: string, division: string) =>
                 <Tag
                   class:list={['stb-tile', { 'stb-tile--painted': painted && !primetime }]}
                   href={team.href}
-                  style={primetime ? `background:${team.gradient}` : painted ? `--stb-team:${team.accent};background:${team.gradient}` : `--stb-team:${team.accent}`}
+                  style={primetime ? `background:${team.gradient}` : painted ? `--stb-team:${team.paintStripe};background:${team.gradient}` : `--stb-team:${team.accent}`}
                 >
                   <img
                     class:list={{ 'stb-round': team.round }}
