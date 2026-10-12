@@ -47,21 +47,24 @@ const phoneLine = (line: string, division: string) =>
             {g.teams.map(({ team, line }) => {
               const Tag = team.href ? 'a' : 'div';
               const alt = phoneLine(line, team.division);
+              // Division winners are painted in team colour in Editorial too,
+              // keeping the accent stripe; Primetime paints every tile.
+              const painted = primetime || g.band === 'division-winners';
               return (
                 <Tag
-                  class="stb-tile"
+                  class:list={['stb-tile', { 'stb-tile--painted': painted && !primetime }]}
                   href={team.href}
-                  style={primetime ? `background:${team.gradient}` : `--stb-team:${team.accent}`}
+                  style={primetime ? `background:${team.gradient}` : painted ? `--stb-team:${team.accent};background:${team.gradient}` : `--stb-team:${team.accent}`}
                 >
                   <img
                     class:list={{ 'stb-round': team.round }}
-                    src={primetime ? team.crest : team.icon}
+                    src={painted ? team.crest : team.icon}
                     alt=""
                     loading="lazy"
                     decoding="async"
                     width="96"
                     height="96"
-                    style={primetime && team.crestFilter ? `filter:${team.crestFilter}` : undefined}
+                    style={painted && team.crestFilter ? `filter:${team.crestFilter}` : undefined}
                   />
                   <span class="stb-tile__seed">{team.seed}</span>
                   {topSeedTag && team.seed === 1 && <span class="stb-tile__tag">{topSeedTag}</span>}
