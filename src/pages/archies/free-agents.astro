@@ -19,6 +19,12 @@ const calendarModules = import.meta.glob(
   '../../../data/archies/mfl-feeds/20{2[5-9],[3-9][0-9]}/calendar.json',
   { eager: true }
 );
+// Lazy: the page loads only the current league year's file, and only when it
+// renders in Primetime (position leaders, the market rail, the Opp column).
+const marketFeeds = {
+  transactions: import.meta.glob('../../../data/archies/mfl-feeds/20{2[5-9],[3-9][0-9]}/transactions.json'),
+  schedule: import.meta.glob('../../../data/archies/mfl-feeds/20{2[5-9],[3-9][0-9]}/nflSchedule-full.json'),
+};
 ---
 
 <FreeAgentsPage
@@ -28,4 +34,5 @@ const calendarModules = import.meta.glob(
   calendarModules={calendarModules}
   title="Free Agents | Archie's"
   poolNoun="Division"
+  marketFeeds={marketFeeds}
 />

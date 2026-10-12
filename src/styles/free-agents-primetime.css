@@ -1,0 +1,344 @@
+/*
+ * The Free Agents page under the Primetime site theme (layout B, "Position
+ * leaders"): a big italic headline, one team-colour card per position, and
+ * the table beside a rail of the league's market.
+ *
+ * The page overrides key off `.players-page[data-site-theme='primetime']`, so
+ * the Editorial page is untouched; the board's own blocks (`.fa-leaders`,
+ * `.fa-rail`) render only under Primetime, so they need no theme key and
+ * style the same in Storybook. Primetime carries no editorial furniture: no
+ * accent bar beside a heading, no position stripe on a row, no outlined card.
+ * Specificity note: the page's own rules are Astro-scoped (one class plus a
+ * data attribute), so every override here leads with the two-part root.
+ */
+
+.players-page[data-site-theme='primetime'],
+.fa-leaders,
+.fa-rail {
+  --fa-gap: 1.25rem;
+  --fa-radius: 0.8rem;
+  --fa-good: var(--color-success);
+  --fa-bad: var(--color-error);
+}
+
+/* ---------- header ---------- */
+.players-page[data-site-theme='primetime'] .players-hero {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 1rem 0 0.5rem;
+  overflow: visible;
+}
+.players-page[data-site-theme='primetime'] .hero-spotlight,
+.players-page[data-site-theme='primetime'] .hero-spotlight-caption {
+  display: none !important;
+}
+.players-page[data-site-theme='primetime'] .hero-title-group {
+  border-left: 0;
+  padding-left: 0;
+  align-items: center;
+}
+.players-page[data-site-theme='primetime'] .hero-title {
+  font-family: var(--font-display);
+  font-style: italic;
+  text-transform: uppercase;
+  font-size: var(--font-size-3xl);
+  line-height: 0.95;
+  letter-spacing: 0.01em;
+  color: var(--page-text);
+}
+.players-page[data-site-theme='primetime'] .hero-count { color: var(--content-text-muted); }
+
+/* ---------- section titles: condensed italic caps, no bar ---------- */
+.fa-sec,
+.players-page[data-site-theme='primetime'] .players-section-title,
+.players-page[data-site-theme='primetime'] .filters-panel-title {
+  border-left: 0;
+  padding-left: 0;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  font-size: var(--font-size-lg);
+  color: var(--page-text);
+  line-height: 1.1;
+}
+.fa-sec {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin: 0 0 0.75rem;
+}
+.fa-sec small {
+  margin-left: auto;
+  font-family: var(--font-family-base);
+  font-style: normal;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: var(--font-size-xs);
+  color: var(--content-text-muted);
+}
+.fa-empty {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--content-text-muted);
+}
+
+/* ---------- best at every position ---------- */
+.fa-leaders { margin: 0.75rem 0 var(--fa-gap); min-width: 0; }
+.players-page[data-site-theme='primetime'] .fa-leaders__row {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+.players-page[data-site-theme='primetime'] .fa-leaders__row[hidden] { display: none; }
+
+/* A broadcast fill: the club's colour into near-black, dark in BOTH themes,
+   so the text on it is always white and the crest is the dark-ground cut. */
+.fa-lead {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-height: 15rem;
+  padding: 0.9rem;
+  border-radius: var(--fa-radius);
+  color: #fff;
+  background: linear-gradient(150deg, var(--fa-team) 0%, var(--fa-team-2) 100%);
+}
+.fa-lead::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(0deg, rgb(0 0 0 / 0.55), rgb(0 0 0 / 0) 65%);
+}
+.players-page[data-site-theme='primetime'] .fa-lead__pos {
+  position: absolute;
+  z-index: -1;
+  top: -0.6rem;
+  right: -0.2rem;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 700;
+  font-size: calc(var(--font-size-3xl) * 1.5);
+  line-height: 1;
+  color: rgb(255 255 255 / 0.12);
+  pointer-events: none;
+}
+.players-page[data-site-theme='primetime'] .fa-lead__crest {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  object-fit: contain;
+}
+.players-page[data-site-theme='primetime'] .fa-lead__top {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 1.6rem;
+  min-height: 4.5rem;
+}
+.players-page[data-site-theme='primetime'] .fa-lead__head {
+  width: 5.25rem;
+  height: 3.9rem;
+  object-fit: cover;
+  object-position: top;
+  margin-bottom: -0.2rem;
+}
+.players-page[data-site-theme='primetime'] .fa-lead__proj {
+  margin-left: auto;
+  display: grid;
+  justify-items: end;
+  line-height: 1;
+}
+.players-page[data-site-theme='primetime'] .fa-lead__proj b {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: var(--font-size-2xl);
+  font-variant-numeric: tabular-nums;
+}
+.players-page[data-site-theme='primetime'] .fa-lead__proj small {
+  font-size: var(--font-size-3xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  opacity: 0.85;
+}
+.players-page[data-site-theme='primetime'] .fa-lead__name {
+  margin: 0.35rem 0 0;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: var(--font-size-lg);
+  line-height: 1;
+  color: #fff;
+}
+.players-page[data-site-theme='primetime'] .fa-lead__meta {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  opacity: 0.9;
+}
+.players-page[data-site-theme='primetime'] .fa-lead__next {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0.45rem 0 0;
+  border-top: 1px solid rgb(255 255 255 / 0.2);
+  display: grid;
+  gap: 0.15rem;
+  font-size: var(--font-size-xs);
+}
+.players-page[data-site-theme='primetime'] .fa-lead__next li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.players-page[data-site-theme='primetime'] .fa-lead__next span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.9;
+}
+.players-page[data-site-theme='primetime'] .fa-lead__next b { font-variant-numeric: tabular-nums; }
+.players-page[data-site-theme='primetime'] .fa-lead__claim {
+  margin-top: auto;
+  align-self: stretch;
+  padding: 0.45rem 0.75rem;
+  border: 0;
+  border-radius: 999px;
+  background: #fff;
+  color: #111;
+  font: inherit;
+  font-weight: 700;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+.players-page[data-site-theme='primetime'] .fa-lead__next + .fa-lead__claim,
+.players-page[data-site-theme='primetime'] .fa-lead__meta + .fa-lead__claim { margin-top: auto; }
+.players-page[data-site-theme='primetime'] .fa-lead__claim:hover { background: rgb(255 255 255 / 0.88); }
+.players-page[data-site-theme='primetime'] .fa-lead__claim:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+/* ---------- table beside the rail ---------- */
+.players-page[data-site-theme='primetime'] .fa-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 20rem;
+  gap: var(--fa-gap);
+  align-items: start;
+}
+.players-page[data-site-theme='primetime'] .fa-split__main { min-width: 0; }
+.players-page[data-site-theme='primetime'] .players-toolbar { border-bottom: 0; padding-top: 0; }
+.players-page[data-site-theme='primetime'] .table-wrapper { box-shadow: none; background: var(--card-bg); }
+.players-page[data-site-theme='primetime'] .players-table thead tr,
+.players-page[data-site-theme='primetime'] .players-table tbody tr { border-left: 0; }
+.players-page[data-site-theme='primetime'] .players-table thead { background: var(--card-bg); }
+
+.players-page[data-site-theme='primetime'] .cell-opp { white-space: nowrap; }
+.players-page[data-site-theme='primetime'] .opp-vs { display: block; font-weight: 600; }
+.players-page[data-site-theme='primetime'] .opp-when {
+  display: block;
+  font-size: var(--font-size-3xs);
+  color: var(--content-text-muted);
+}
+.players-page[data-site-theme='primetime'] .cell-rost { white-space: nowrap; }
+.players-page[data-site-theme='primetime'] .rost-meter {
+  display: inline-block;
+  vertical-align: middle;
+  width: 2.25rem;
+  height: 0.3rem;
+  margin-right: 0.4rem;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--league-accent) calc(var(--rost) * 100%), var(--content-border) 0);
+}
+.players-page[data-site-theme='primetime'] .cell-adds { color: var(--fa-good); font-weight: 600; }
+
+/* ---------- the rail ---------- */
+.fa-rail { display: grid; gap: var(--fa-gap); min-width: 0; }
+.players-page[data-site-theme='primetime'] .fa-rail__card {
+  background: var(--card-bg);
+  border-radius: var(--fa-radius);
+  padding: 1rem;
+}
+.players-page[data-site-theme='primetime'] .fa-rail__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.15rem; }
+.players-page[data-site-theme='primetime'] .fa-rail__row {
+  display: grid;
+  grid-template-columns: 1.25rem minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+}
+.players-page[data-site-theme='primetime'] .fa-rail__rank {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 700;
+  color: var(--content-text-muted);
+}
+.players-page[data-site-theme='primetime'] .fa-rail__who { display: grid; min-width: 0; line-height: 1.2; }
+.players-page[data-site-theme='primetime'] .fa-rail__who b {
+  font-size: var(--font-size-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.players-page[data-site-theme='primetime'] .fa-rail__who small { font-size: var(--font-size-3xs); color: var(--content-text-muted); }
+.players-page[data-site-theme='primetime'] .fa-rail__tag {
+  font-size: var(--font-size-3xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  padding: 0.15rem 0.4rem;
+  border-radius: 999px;
+}
+.players-page[data-site-theme='primetime'] .fa-rail__tag--free {
+  color: var(--fa-good);
+  background: color-mix(in srgb, var(--fa-good) 14%, transparent);
+}
+.players-page[data-site-theme='primetime'] .fa-rail__tag--gone {
+  color: var(--content-text-muted);
+  background: var(--content-bg-muted);
+}
+.players-page[data-site-theme='primetime'] .fa-rail__row[data-state='free'] .fa-rail__tag--gone,
+.players-page[data-site-theme='primetime'] .fa-rail__row[data-state='gone'] .fa-rail__tag--free { display: none; }
+.players-page[data-site-theme='primetime'] .fa-rail__count {
+  min-width: 2rem;
+  text-align: right;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.players-page[data-site-theme='primetime'] .fa-rail__count--hot { color: var(--fa-good); }
+.players-page[data-site-theme='primetime'] .fa-rail__count--dropped { color: var(--fa-bad); }
+
+/* ---------- narrower screens ---------- */
+@media (max-width: 1100px) {
+  .players-page[data-site-theme='primetime'] .fa-split { grid-template-columns: minmax(0, 1fr); }
+  .fa-rail { grid-template-columns: repeat(2, minmax(0, 1fr)); order: -1; }
+}
+@media (max-width: 767px) {
+  .players-page[data-site-theme='primetime'] .hero-title { font-size: var(--font-size-2xl); }
+  /* Cards scroll sideways rather than stack five deep above the table. */
+  .players-page[data-site-theme='primetime'] .fa-leaders__row {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(13rem, 78%);
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding-bottom: 0.25rem;
+  }
+  .fa-lead { scroll-snap-align: start; min-height: 14rem; }
+  .fa-rail { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 767px) {
+  /* Above the table on a phone, so each list keeps to its top five. */
+  .players-page[data-site-theme='primetime'] .fa-rail__row:nth-child(n + 6) { display: none; }
+}
+@media (max-width: 767px) {
+  /* The phone row is Player · Opp · Proj: Age gives its room to the matchup. */
+  .players-page[data-site-theme='primetime'] .players-table .col-age,
+  .players-page[data-site-theme='primetime'] .players-table .cell-age { display: none; }
+}

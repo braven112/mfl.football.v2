@@ -78,6 +78,10 @@ const ALLOWLIST: Record<string, string> = {
   'src/components/theleague/DeadMoneyPlayerCard.astro': 'dead-colors card',
   'src/pages/theleague/front-office/dead-money.astro': 'dead-colors page accents',
 
+  // Primetime Free Agents position cards: the club colour mixed 55% toward
+  // black under a bottom scrim, white text on it in both themes.
+  'src/components/shared/free-agents/FaPositionLeaders.astro': 'Primetime position-leader cards',
+
   // Client-side band/splash painters (white text on the colored area).
   'src/utils/player-modal-band.ts': 'player modal band painter',
   'src/utils/pick-reveal.ts': 'draft pick-reveal splash colors',

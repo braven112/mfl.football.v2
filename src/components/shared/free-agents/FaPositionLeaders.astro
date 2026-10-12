@@ -1,0 +1,111 @@
+---
+/**
+ * "Best at every position" — the Primetime Free Agents board's lead row: one
+ * team-colour card per position with the best healthy free agent by this
+ * week's projection, and the next two behind him.
+ *
+ * Availability is per POOL (Archie's nine divisions), and the page switches
+ * pools client-side, so every pool's row is rendered here and all but the
+ * active one are `hidden`; the page's pool switch toggles `[data-fa-pool]`.
+ *
+ * Each card is a broadcast fill — the club's colour, dark in BOTH themes — so
+ * its crest is the club's dark-ground cut (`nflLogoUrl(code, 'dark')`), never
+ * the theme swap (CLAUDE.md, Brand Book row).
+ */
+import { nflLogoUrl } from '../../../utils/live/nfl-logo-url';
+import { getNflTeamColors, mixHex } from '../../../utils/nfl-team-colors';
+import { formatKickoffCompact } from '../../../utils/rosters/phone-row';
+import type { NextGame } from '../../../utils/free-agent-market';
+
+export interface LeaderPlayer {
+  id: string;
+  name: string;
+  position: string;
+  team?: string;
+  espnId?: string | null;
+  projected?: number | null;
+}
+
+export interface LeaderPool {
+  /** Pool id, or null for a single-pool league. */
+  id: string | null;
+  groups: Array<{ position: string; players: LeaderPlayer[] }>;
+  /** True when a claim from this view would file into the viewer's own pool. */
+  claimable: boolean;
+}
+
+interface Props {
+  pools: LeaderPool[];
+  activePoolId: string | null;
+  nextGames: Map<string, NextGame>;
+  /** The viewer's clock, from viewerClockZone(). */
+  clock: { zone: string; label: string };
+  claimVerb: string;
+  /** The pool's name, for the claim sheet's subtitle. */
+  poolName: (id: string | null) => string;
+}
+
+const { pools, activePoolId, nextGames, clock, claimVerb, poolName } = Astro.props;
+
+const posLabel = (pos: string) => (pos === 'PK' ? 'K' : pos);
+const fill = (team?: string) => {
+  const { primary } = getNflTeamColors(team ?? '');
+  return `--fa-team:${primary};--fa-team-2:${mixHex(primary, '#000000', 0.55)}`;
+};
+const headshot = (p: LeaderPlayer) =>
+  p.position === 'DEF' || !p.espnId
+    ? ''
+    : `https://a.espncdn.com/i/headshots/nfl/players/full/${p.espnId}.png`;
+const matchup = (team?: string) => {
+  const g = team ? nextGames.get(team) : undefined;
+  if (!g) return '';
+  const when = formatKickoffCompact(new Date(g.kickoff * 1000).toISOString(), clock.zone, clock.label);
+  return `${g.home ? 'vs' : '@'} ${g.opponent}${when ? ` · ${when}` : ''}`;
+};
+---
+
+<section class="fa-leaders" aria-labelledby="fa-leaders-title">
+  <h2 class="fa-sec" id="fa-leaders-title">Best at every position</h2>
+  {pools.map((pool) => (
+    <div class="fa-leaders__row" data-fa-pool={pool.id ?? ''} hidden={pool.id !== activePoolId}>
+      {pool.groups.length === 0 && <p class="fa-empty">No projected free agents here this week.</p>}
+      {pool.groups.map(({ position, players: [top, ...rest] }) => {
+        const shot = headshot(top);
+        return (
+          <article class="fa-lead" style={fill(top.team)}>
+            <span class="fa-lead__pos" aria-hidden="true">{posLabel(position)}</span>
+            {top.team && <img class="fa-lead__crest" src={nflLogoUrl(top.team, 'dark')} alt="" loading="lazy" decoding="async" />}
+            <div class="fa-lead__top">
+              {shot && <img class="fa-lead__head" src={shot} alt="" loading="lazy" decoding="async" onerror="this.remove()" />}
+              <span class="fa-lead__proj"><b>{top.projected?.toFixed(1)}</b><small>proj</small></span>
+            </div>
+            <h3 class="fa-lead__name">{top.name}</h3>
+            <p class="fa-lead__meta">{posLabel(position)}{top.team ? ` · ${top.team}` : ''}{matchup(top.team) ? ` · ${matchup(top.team)}` : ''}</p>
+            {rest.length > 0 && (
+              <ul class="fa-lead__next" aria-label={`Next best at ${posLabel(position)}`}>
+                {rest.map((p) => (
+                  <li><span>{p.name}</span><b>{p.projected?.toFixed(1)}</b></li>
+                ))}
+              </ul>
+            )}
+            <button
+              type="button"
+              class="fa-lead__claim"
+              data-pa-open
+              data-pa-claimable={pool.claimable ? 'true' : 'false'}
+              data-pa-id={top.id}
+              data-pa-name={top.name}
+              data-pa-pos={top.position}
+              data-pa-team={top.team ?? ''}
+              data-pa-espn={top.espnId ?? ''}
+              data-pa-headshot={shot}
+              data-pa-franchise=""
+              data-pa-sub={pool.id ? `Free agent in the ${poolName(pool.id)}` : 'Free agent'}
+              aria-label={`${claimVerb} or watch ${top.name}`}
+            >{claimVerb}</button>
+          </article>
+        );
+      })}
+    </div>
+  ))}
+</section>
