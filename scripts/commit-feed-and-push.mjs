@@ -32,7 +32,13 @@
  *     --branch main \
  *     --message "chore: …" \
  *     --files "src/data/theleague/schefter-feed.json,data/theleague/mfl-feeds" \
- *     [--snapshot]
+ *     [--snapshot | --git-only]
+ *
+ * Only a run committing to `main` publishes to Redis: a branch run (the
+ * derived-chain and backfill lanes take `github.ref_name`) keeps its posts on
+ * its branch, as before. `--git-only` skips Redis on purpose — the archive
+ * lane, whose pruned feed must become visible together with the archive files
+ * it moved posts into, which only a deploy ships.
  */
 import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync, existsSync, mkdirSync, rmSync } from 'node:fs';
@@ -51,6 +57,7 @@ function parseArgs(argv) {
     else if (a === '--message') out.message = argv[++i];
     else if (a === '--files') out.files = argv[++i];
     else if (a === '--snapshot') out.snapshot = true;
+    else if (a === '--git-only') out.gitOnly = true;
   }
   return out;
 }
@@ -156,9 +163,9 @@ export async function publishFeedsToRedis(changes, { redis = feedStoreConfig(), 
 }
 
 async function main() {
-  const { branch, message, files, snapshot } = parseArgs(process.argv.slice(2));
+  const { branch, message, files, snapshot, gitOnly } = parseArgs(process.argv.slice(2));
   if (!branch || !message || !files) {
-    console.error('Usage: --branch <b> --message <m> --files <comma,separated,paths> [--snapshot]');
+    console.error('Usage: --branch <b> --message <m> --files <comma,separated,paths> [--snapshot | --git-only]');
     process.exit(2);
   }
   const entries = files.split(',').map((f) => f.trim()).filter(Boolean);
@@ -169,7 +176,7 @@ async function main() {
     return;
   }
 
-  const inRedis = await publishFeedsToRedis(changes);
+  const inRedis = branch === 'main' && !gitOnly ? await publishFeedsToRedis(changes) : new Map();
   try {
     if (inRedis.size && !snapshot) {
       changes = changes.filter((c) => !inRedis.has(c.path));

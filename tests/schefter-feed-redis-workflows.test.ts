@@ -63,11 +63,23 @@ describe('workflows that publish a Schefter feed', () => {
   });
 
   it.each(feedJobs)('$id gives every feed commit and the pull Redis credentials', ({ steps }) => {
-    for (const s of steps.filter((st) => commitsAFeed(st.run ?? '') || /schefter-feed-sync\.mjs pull/.test(st.run ?? ''))) {
+    // `--git-only` is the declared exception (the archive lane), not a missing env.
+    const needsRedis = (run: string) =>
+      (commitsAFeed(run) && !/--git-only\b/.test(run)) || /schefter-feed-sync\.mjs pull/.test(run);
+    for (const s of steps.filter((st) => needsRedis(st.run ?? ''))) {
       expect(Object.keys(s.env ?? {}), s.name).toEqual(
         expect.arrayContaining(['UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_TOKEN']),
       );
     }
+  });
+
+  it('only the archive lane opts out of Redis', () => {
+    const optOuts = workflows.flatMap(({ file, jobs }) =>
+      jobs.flatMap(([name, job]) =>
+        (job.steps ?? []).filter((s) => /--git-only\b/.test(s.run ?? '')).map(() => `${file}#${name}`),
+      ),
+    );
+    expect(optOuts).toEqual(['schefter-archive.yml#archive']);
   });
 
   it('exactly one job takes the daily snapshot', () => {

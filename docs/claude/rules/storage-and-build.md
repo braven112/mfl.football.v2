@@ -379,6 +379,15 @@ request, and the committed file is the backup and the fallback.
   pins both for every workflow whose `--files` names or builds a feed path.
 - **It fails open to git, never closed.** No credentials, or a Redis write
   that throws, and the feed is committed exactly as before.
+- **Only a run committing to `main` publishes.** The derived-chain and
+  backfill lanes take `github.ref_name`, so a branch run keeps its posts on
+  its branch instead of putting them on the live site.
+- **The archive lane is `--git-only`, on purpose.** Its pruned feed's
+  `archivedThroughTimestamp` hides the rotated posts, and the archive files
+  now holding them only reach the site with a deploy; published to Redis
+  first, every just-archived permalink and share card 404s until then. The
+  next writer's pull folds the watermark into Redis. It is the only opt-out
+  the workflow guard allows.
 - **The daily snapshot rides `schefter-scan.yml`** (`--snapshot`, when the
   newest feed commit is 24h old), because the Vercel cron dispatches that job
   at least hourly and a `schedule:` of its own would be dropped. One build a
