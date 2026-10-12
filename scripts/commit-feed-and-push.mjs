@@ -182,8 +182,11 @@ async function main() {
   } finally {
     // The git cycle hard-resets to origin, whose feed is the day-old snapshot.
     // Put the live feed back so a later step in this job (the announce drain,
-    // a second league's scan) reads what was just published.
-    for (const [p, feed] of inRedis) writeFileSync(p, JSON.stringify(feed, null, 2) + '\n');
+    // a second league's scan) reads what was just published. That feed comes
+    // back from this repo's own Redis key, which only this script writes.
+    for (const [p, feed] of inRedis) {
+      writeFileSync(p, JSON.stringify(feed, null, 2) + '\n'); // lgtm[js/http-to-file-access] codeql[js/http-to-file-access]
+    }
   }
 }
 

@@ -19,6 +19,7 @@
  * Dependency-free on purpose (raw REST via ./redis.mjs): it runs in workflows
  * that may not install node_modules.
  */
+import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { getRedisConfig, redisCommand } from './redis.mjs';
@@ -75,7 +76,7 @@ export async function readFeedFromRedis(redis, slug, command = redisCommand) {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function withLock(redis, slug, fn, command) {
-  const token = `${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const token = randomUUID();
   for (let i = 0; i < LOCK_ATTEMPTS; i += 1) {
     const ok = await command(redis, ['SET', lockKey(slug), token, 'NX', 'EX', String(LOCK_TTL_SECONDS)]);
     if (ok === 'OK') {
@@ -128,7 +129,13 @@ export async function mergeFeedIntoRedis(redis, slug, ours, command = redisComma
 export async function pullFeedFile(redis, slug, absPath, command = redisCommand) {
   const live = await readFeedFromRedis(redis, slug, command);
   if (!live) return false;
-  const before = fs.existsSync(absPath) ? fs.readFileSync(absPath, 'utf8') : '';
+  // One read, no exists-then-read: a missing file is just "no local copy".
+  let before = '';
+  try {
+    before = fs.readFileSync(absPath, 'utf8');
+  } catch (err) {
+    if (err?.code !== 'ENOENT') throw err;
+  }
   let local = null;
   try {
     local = before ? JSON.parse(before) : null;
@@ -139,6 +146,9 @@ export async function pullFeedFile(redis, slug, absPath, command = redisCommand)
   const after = JSON.stringify(merged, null, 2) + '\n';
   if (after === before) return false;
   fs.mkdirSync(path.dirname(absPath), { recursive: true });
-  fs.writeFileSync(absPath, after);
+  // The "network data" here is this repo's own Redis copy of the feed, which
+  // only commit-feed-and-push writes (after the league-name gate), and putting
+  // it on disk is the whole point of a pull.
+  fs.writeFileSync(absPath, after); // lgtm[js/http-to-file-access] codeql[js/http-to-file-access]
   return true;
 }
