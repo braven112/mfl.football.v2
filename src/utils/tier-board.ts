@@ -79,11 +79,16 @@ function medals(opts: TierBoardOptions): number {
 
 export function buildTierRows(teams: BoardTeam[], opts: TierBoardOptions): GroupRow[] {
   const prizes = tierPrizes(opts.leagueSlug, opts.tier);
-  const medalCount = medals(opts);
+  // A medal tier medals every paid rank (the AFL pays four), not just three.
+  const paid = prizes.findIndex((p) => !p);
+  const paidCount = paid === -1 ? prizes.length : paid;
+  const medalCount = medals(opts) ? Math.max(medals(opts), paidCount) : 0;
   let previousZone: string | null = null;
   return teams.map((team, i) => {
     const rank = i + 1;
-    const zone = zoneFor(rank, teams.length, opts);
+    // A medal tier's paid ranks are their own band, "In the money".
+    const zone: Zone | null =
+      zoneFor(rank, teams.length, opts) ?? (medalCount && prizes[i] ? { zone: 'money', label: 'In the money' } : null);
     // A zone's label goes above its first row only.
     const startsZone = zone && zone.label !== previousZone;
     previousZone = zone?.label ?? null;

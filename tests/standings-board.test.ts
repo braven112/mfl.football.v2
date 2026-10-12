@@ -107,9 +107,11 @@ describe('shortDivision', () => {
 describe('buildTierRows (the AFL tier competition)', () => {
   const twelve = Array.from({ length: 12 }, (_, i) => toBoardTeam(standing(String(i + 1).padStart(4, '0')), opts));
 
-  it('Premier League: medals 1-3, relegation playoff 9-10, relegated 11-12', () => {
+  it('Premier League: the paid ranks medalled and "In the money", relegation playoff 9-10, relegated 11-12', () => {
     const rows = buildTierRows(twelve, { tier: 'Premier League', leagueSlug: 'afl-fantasy' });
-    expect(rows[0].rank).toEqual({ kind: 'medal', n: 1, medals: 3 });
+    expect(rows[0].rank).toEqual({ kind: 'medal', n: 1, medals: 4 });
+    expect(rows.slice(0, 5).map((r) => r.zone)).toEqual(['money', 'money', 'money', 'money', undefined]);
+    expect(rows[0].zoneLabel).toEqual({ tone: 'money', text: 'In the money' });
     expect(rows.map((r) => Boolean(r.lead))).toEqual([true, ...Array(11).fill(false)]);
     expect(rows[8].zone).toBe('danger');
     expect(rows[8].zoneLabel?.text).toBe('Relegation playoff');
