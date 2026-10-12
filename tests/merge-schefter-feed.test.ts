@@ -70,6 +70,27 @@ describe('mergeFeed', () => {
     expect(mergeFeed(theirs2, ours).tradeBaitState).toEqual({ side: 'theirs' });
   });
 
+  it('keeps the tradeBaitState that CHANGED last, not the side that scanned last', () => {
+    // This run changed the state at 10:30 but, finding no new transactions,
+    // never bumped lastScanTimestamp. Origin's 11:00 scan touched only posts.
+    const ours = {
+      lastScanTimestamp: '2026-05-23T09:00:00Z',
+      tradeBaitStateAt: '2026-05-23T10:30:00Z',
+      tradeBaitState: { side: 'ours' },
+      posts: [],
+    };
+    const theirs = {
+      lastScanTimestamp: '2026-05-23T11:00:00Z',
+      tradeBaitStateAt: '2026-05-23T08:00:00Z',
+      tradeBaitState: { side: 'theirs' },
+      posts: [],
+    };
+    const merged = mergeFeed(theirs, ours);
+    expect(merged.tradeBaitState).toEqual({ side: 'ours' });
+    expect(merged.tradeBaitStateAt).toBe('2026-05-23T10:30:00Z');
+    expect(mergeFeed(ours, theirs).tradeBaitState).toEqual({ side: 'ours' });
+  });
+
   it('is idempotent when both sides are identical', () => {
     const feed = {
       lastScanTimestamp: '2026-05-23T10:00:00Z',

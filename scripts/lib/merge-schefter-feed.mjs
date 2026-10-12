@@ -100,6 +100,7 @@ const WATERMARK_KEYS = [
   'lastProcessedMflTimestamp',
   'lastEspnTimestamp',
   'lastNflWireTimestamp',
+  'tradeBaitStateAt',
 ];
 
 /**
@@ -118,10 +119,17 @@ export function mergeFeed(theirs, ours) {
   }
 
   // tradeBaitState is an opaque per-franchise object — don't field-merge it.
-  // Keep the copy from whichever side scanned most recently.
+  // Keep the copy that was CHANGED most recently: `tradeBaitStateAt` is
+  // stamped only when the state's content changes. It cannot ride on
+  // lastScanTimestamp, which a quiet scan no longer bumps (that bump alone
+  // committed and redeployed on every quiet scan) and which other writers move
+  // without touching this state — either way an unrelated write on origin would
+  // discard this run's state and re-emit the same tip. A feed written before the
+  // stamp existed falls back to lastScanTimestamp.
   if ('tradeBaitState' in t || 'tradeBaitState' in o) {
-    const oursIsNewer = maxWatermark(t.lastScanTimestamp, o.lastScanTimestamp) === o.lastScanTimestamp
-      && o.lastScanTimestamp !== undefined;
+    const stateAt = (f) => f.tradeBaitStateAt ?? f.lastScanTimestamp;
+    const oursAt = stateAt(o);
+    const oursIsNewer = oursAt !== undefined && maxWatermark(stateAt(t), oursAt) === oursAt;
     result.tradeBaitState = oursIsNewer ? o.tradeBaitState : (t.tradeBaitState ?? o.tradeBaitState);
   }
 
