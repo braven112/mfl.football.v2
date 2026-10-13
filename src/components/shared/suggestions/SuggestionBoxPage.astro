@@ -41,6 +41,8 @@ const { leagueSlug, isAuthenticated, isAdmin, userFranchiseId, teamIcons } = Ast
 const hide = Astro.locals.hideLeaguePrefix ?? false;
 const rulesPath = resolveLeaguePath(`/${leagueSlug}/rules`, hide);
 const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
+import { spriteUrlFor } from '../../../utils/sprite-url';
+const spriteUrl = spriteUrlFor(Astro.url);
 ---
 
 <TheLeagueLayout title="Suggestion Box">
@@ -50,7 +52,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
       <header class="sb-hero">
         <div class="sb-hero__icon">
           <svg class="sb-hero__svg" aria-hidden="true">
-            <use href="/assets/icons/sprite.svg#icon-commenting"></use>
+            <use href={`${spriteUrl}#icon-commenting`}></use>
           </svg>
         </div>
         <div class="sb-hero__text">
@@ -66,6 +68,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
           isAdmin={isAdmin}
           teamIcons={teamIcons}
           userFranchiseId={userFranchiseId}
+          spriteUrl={spriteUrl}
         />
       </div>
     </div>
@@ -77,7 +80,7 @@ const rulesChatPath = resolveLeaguePath(`/${leagueSlug}/rules-chat`, hide);
         <div class="sb-about-card">
           <div class="sb-about-card__icon-wrap">
             <svg class="sb-about-card__svg" aria-hidden="true">
-              <use href="/assets/icons/sprite.svg#icon-commenting"></use>
+              <use href={`${spriteUrl}#icon-commenting`}></use>
             </svg>
           </div>
           <div class="sb-about-card__title">The Board</div>

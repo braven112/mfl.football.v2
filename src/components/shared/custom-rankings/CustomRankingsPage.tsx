@@ -14,6 +14,8 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { arrayMove } from '@dnd-kit/sortable';
 import '../../../styles/loading.css';
 import RankingList from './RankingList';
+import { SpriteUrlContext } from '../../../utils/sprite-url-context';
+import { CLASSIC_SPRITE_PATH } from '../../../utils/sprite-url-client';
 import PositionFilter from './PositionFilter';
 import SaveIndicator from './SaveIndicator';
 import DraftListSync from './DraftListSync';
@@ -97,7 +99,16 @@ function getHeadshotUrl(playerId: string, espnId: string | null): string {
   return getPlayerImageUrl(playerId);
 }
 
-export default function CustomRankingsPage({
+/** The island root: provides the page's icon sprite to every row (src/utils/sprite-url-context.ts). */
+export default function CustomRankingsPage({ spriteUrl, ...props }: Props & { spriteUrl?: string }) {
+  return (
+    <SpriteUrlContext.Provider value={spriteUrl ?? CLASSIC_SPRITE_PATH}>
+      <CustomRankingsPageInner {...props} />
+    </SpriteUrlContext.Provider>
+  );
+}
+
+function CustomRankingsPageInner({
   mflPlayersJson,
   franchiseId,
   vorpMapJson,

@@ -16,7 +16,8 @@
  * Reusable panel styles are exposed as :global(.tl-hero-panel*) so any hero
  * slotting `panel` content shares one on-navy list look.
  */
-import { spriteUrl } from '../../utils/sprite-url';
+import { spriteUrlFor } from '../../utils/sprite-url';
+const spriteUrl = spriteUrlFor(Astro.url);
 import type { HeroFranchiseBackdrop } from '../../utils/hero-franchise-backdrop';
 import '../../styles/hero-franchise-backdrop.css';
 

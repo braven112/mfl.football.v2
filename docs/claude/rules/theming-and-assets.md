@@ -707,9 +707,23 @@ its own.
 
 **Symbols carry their own `viewBox`, so the wrapping `<svg viewBox>` is
 decorative.** `icon-transactions-2` is `viewBox="2 26 124 76"` — a 1.6:1 mark
-that letterboxes to about 18×11 in an 18×18 slot. That is how it already
-renders in the header; it is not a bug, but do not expect it to fill a square
+that letterboxes to about 18×11 in an 18×18 slot. That is how it
+renders in the header on the CLASSIC set (the `line` set's handshake is square); it is not a bug, but do not expect it to fill a square
 next to icons that do.
+
+## Icon sets — resolve the sprite, never write its path
+
+A league picks its icon set in the registry (`iconSet`: `'line'` or
+`'classic'`; absent = classic), and every set carries the same glyph ids
+(`tests/icon-set-parity.test.ts`). So a page must never name
+`/assets/icons/sprite.svg` — that literal is the classic set for every league,
+and nothing errors: the id exists in both sets, so the page just mixes two
+icon styles. Resolve it instead: `spriteUrlFor(Astro.url)` in `.astro`,
+`clientSpriteUrl()` in browser code (read per call — it comes from
+`<html data-sprite-url>`, which a soft navigation replaces), `useSpriteUrl()`
+in a React island whose `.astro` parent passed `spriteUrl`.
+`tests/sprite-url-guard.test.ts` fails on a literal. Adding a glyph means
+drawing it for EVERY set. Details: `docs/plans/icon-sets.md`.
 
 ## Muted text in the player card
 

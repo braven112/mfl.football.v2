@@ -68,8 +68,10 @@ const { title = 'Player actions' } = Astro.props;
   import { applyPlayerModalBand } from '../../utils/player-modal-band';
   import { NFL_TEAM_CITIES, normalizeTeamCode } from '../../utils/nfl';
   import { requestSignIn, type PlayerActionPayload, type PlayerActionSpec } from '../../utils/player-actions';
+  import { clientSpriteUrl } from '../../utils/sprite-url-client';
 
-  const SPRITE = '/assets/icons/sprite.svg#';
+  /** Read per render: the page's icon set can change on a soft navigation. */
+  const spriteHref = (id: string) => `${clientSpriteUrl()}#${id}`;
 
   let modal: HTMLElement | null = null;
   let payload: PlayerActionPayload | null = null;
@@ -111,7 +113,7 @@ const { title = 'Player actions' } = Astro.props;
     const icon = document.createElement('span');
     icon.className = 'pam-action__icon';
     icon.setAttribute('aria-hidden', 'true');
-    icon.innerHTML = `<svg aria-hidden="true"><use href="${SPRITE}${spec.icon}"></use></svg>`;
+    icon.innerHTML = `<svg aria-hidden="true"><use href="${spriteHref(spec.icon)}"></use></svg>`;
 
     const body = document.createElement('span');
     body.className = 'pam-action__body';

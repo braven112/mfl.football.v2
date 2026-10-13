@@ -123,6 +123,8 @@ const tabAttrs = (id: SheetTab): HTMLAttributes<'button'> => {
 };
 // Owner-facing copy follows the league's persona (src/utils/persona.mjs).
 const labels = await getPersonaLabels('theleague');
+import { spriteUrlFor } from '../../utils/sprite-url';
+const spriteUrl = spriteUrlFor(Astro.url);
 ---
 
 <div class:list={['player-details-modal', previewOpen && 'active', className]}>
@@ -195,7 +197,7 @@ const labels = await getPersonaLabels('theleague');
              shows up on any row/modal on the same page that also reads it. -->
         <button type="button" class="pdm-watch" id="pdm-watch" hidden>
           <span class="pdm-watch__icon" aria-hidden="true">
-            <svg aria-hidden="true"><use id="pdm-watch-icon" href="/assets/icons/sprite.svg#icon-eye" /></svg>
+            <svg aria-hidden="true"><use id="pdm-watch-icon" href={`${spriteUrl}#icon-eye`} /></svg>
           </span>
           <span class="pdm-watch__text">
             <span class="pdm-watch__label" id="pdm-watch-label">Watch player</span>
@@ -208,7 +210,7 @@ const labels = await getPersonaLabels('theleague');
              league's own: TheLeague bids, the AFL claims. -->
         <button type="button" class="pdm-claim" id="pdm-claim" hidden>
           <span class="pdm-claim__icon" aria-hidden="true">
-            <svg aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-gavel" /></svg>
+            <svg aria-hidden="true"><use href={`${spriteUrl}#icon-gavel`} /></svg>
           </span>
           <span class="pdm-claim__text">
             <span class="pdm-claim__label" id="pdm-claim-label">Claim player</span>
@@ -226,7 +228,7 @@ const labels = await getPersonaLabels('theleague');
              must not drift apart visually. -->
         <a class="pdm-claim pdm-trade" id="pdm-trade" href="#" hidden>
           <span class="pdm-claim__icon" aria-hidden="true">
-            <svg aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-transactions-2" /></svg>
+            <svg aria-hidden="true"><use href={`${spriteUrl}#icon-transactions-2`} /></svg>
           </span>
           <span class="pdm-claim__text">
             <span class="pdm-claim__label">Trade for him</span>
@@ -242,7 +244,7 @@ const labels = await getPersonaLabels('theleague');
              the in-place Claim, the same precedence the ⋮ sheet gives it. -->
         <a class="pdm-claim pdm-acq" id="pdm-acq" href="#" target="_blank" rel="noopener" hidden>
           <span class="pdm-claim__icon" aria-hidden="true">
-            <svg aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-gavel" /></svg>
+            <svg aria-hidden="true"><use href={`${spriteUrl}#icon-gavel`} /></svg>
           </span>
           <span class="pdm-claim__text">
             <span class="pdm-claim__label" id="pdm-acq-label">Bid on MyFantasyLeague</span>
@@ -1712,6 +1714,7 @@ const labels = await getPersonaLabels('theleague');
 </style>
 
 <script>
+  import { clientSpriteUrl } from '../../utils/sprite-url-client';
   import { NFL_TEAM_CITIES } from '../../utils/nfl';
   import { applyPlayerModalBand, franchiseTintHue, getFranchiseBandBrand, readFranchiseBandBrands } from '../../utils/player-modal-band';
   // The repo's one exported HTML escaper (src/utils/player-cell-html.ts) —
@@ -1873,7 +1876,7 @@ const labels = await getPersonaLabels('theleague');
       watchBtn.classList.toggle('pdm-watch--on', watched);
       watchBtn.setAttribute('aria-pressed', watched ? 'true' : 'false');
       const icon = document.getElementById('pdm-watch-icon');
-      if (icon) icon.setAttribute('href', `/assets/icons/sprite.svg#${watched ? 'icon-eye-slash' : 'icon-eye'}`);
+      if (icon) icon.setAttribute('href', `${clientSpriteUrl()}#${watched ? 'icon-eye-slash' : 'icon-eye'}`);
       const label = document.getElementById('pdm-watch-label');
       const desc = document.getElementById('pdm-watch-desc');
       if (label) label.textContent = watched ? 'Watching' : 'Watch player';

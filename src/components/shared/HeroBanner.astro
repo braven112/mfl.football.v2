@@ -64,7 +64,8 @@ const {
   allNewsLabel = 'All releases',
 } = Astro.props;
 
-import { spriteUrl } from '../../utils/sprite-url';
+import { spriteUrlFor } from '../../utils/sprite-url';
+const spriteUrl = spriteUrlFor(Astro.url);
 const iconId = icon ? `icon-${icon}` : null;
 const MULTICOLOR_ICONS = ['nfl'];
 const isMulticolor = icon ? MULTICOLOR_ICONS.includes(icon) : false;

@@ -19,7 +19,8 @@
  * button. Making one component own "how you get out of here" is what stops a
  * draft page from shipping without one.
  */
-import { spriteUrl } from '../../../utils/sprite-url';
+import { spriteUrlFor } from '../../../utils/sprite-url';
+const spriteUrl = spriteUrlFor(Astro.url);
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import Breadcrumbs from '../Breadcrumbs.astro';
 import { DRAFT_HUB_PATH, draftPagesFor, type DraftLeagueSlug } from './draft-pages';

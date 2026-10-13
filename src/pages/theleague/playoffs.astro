@@ -24,7 +24,8 @@ import {
   resolveTeamSelection,
 } from '../../utils/team-preferences';
 import { getCurrentSeasonYear } from '../../utils/league-year';
-import { spriteUrl } from '../../utils/sprite-url';
+import { spriteUrlFor } from '../../utils/sprite-url';
+const spriteUrl = spriteUrlFor(Astro.url);
 import { getLeagueBySlug } from '../../config/leagues';
 import EmptyState from '../../components/shared/states/EmptyState.astro';
 

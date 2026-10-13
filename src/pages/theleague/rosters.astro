@@ -112,7 +112,8 @@ import {
   loadLiveOddsData,
   generateDemoOddsData,
 } from '../../utils/rosters/live-odds';
-import { spriteUrl } from '../../utils/sprite-url';
+import { spriteUrlFor } from '../../utils/sprite-url';
+const spriteUrl = spriteUrlFor(Astro.url);
 import { getLeagueBySlug } from '../../config/leagues';
 import { loadInjuryMap } from '../../utils/mfl-injuries';
 import '../../styles/injury-indicator.css';
@@ -4642,6 +4643,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
 ></script>
 
 <script>
+  import { clientSpriteUrl } from '../../utils/sprite-url-client';
   import { buildPlayerCellHTML } from '../../utils/player-cell-html';
   import {
     NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD, COLLEGE_LOGO_ONERROR, COLLEGE_LOGO_ONLOAD,
@@ -8423,7 +8425,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
       const info = map.get(String(playerId));
       if (!info) return '';
       const icon =
-        `<svg aria-hidden="true" width="12" height="12"><use href="/assets/icons/sprite.svg#icon-clipboard"></use></svg>`;
+        `<svg aria-hidden="true" width="12" height="12"><use href="${clientSpriteUrl()}#icon-clipboard"></use></svg>`;
       if (info.kind === 'taxi') {
         const title =
           'The automation moves this rookie to an open practice-squad spot at the deadline — kept, not cut. Each taxi move erases one needed cut.';
@@ -8959,11 +8961,11 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
           `<span class="${prioClass}" aria-hidden="true">${priority}</span>` +
           `<div class="cdp-slate__reorder" role="group" aria-label="Reorder ${escCdp(name)}, priority ${priority} of ${total}">` +
           `<button type="button" class="cdp-arrow" data-direction="up" data-player-id="${escCdp(playerId)}" aria-label="Move ${escCdp(name)} up in cut priority"${idx === 0 ? ' disabled' : ''}>` +
-          `<svg aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-arrow-up"></use></svg></button>` +
+          `<svg aria-hidden="true"><use href="${clientSpriteUrl()}#icon-arrow-up"></use></svg></button>` +
           `<button type="button" class="cdp-arrow" data-direction="down" data-player-id="${escCdp(playerId)}" aria-label="Move ${escCdp(name)} down in cut priority"${idx === total - 1 ? ' disabled' : ''}>` +
-          `<svg aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-arrow-down"></use></svg></button>` +
+          `<svg aria-hidden="true"><use href="${clientSpriteUrl()}#icon-arrow-down"></use></svg></button>` +
           `<button type="button" class="cdp-arrow cdp-arrow--remove" data-action="unmark" data-player-id="${escCdp(playerId)}" aria-label="Remove ${escCdp(name)} from your cut list">` +
-          `<svg aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-close"></use></svg></button>` +
+          `<svg aria-hidden="true"><use href="${clientSpriteUrl()}#icon-close"></use></svg></button>` +
           `</div>` +
           `<div class="cdp-slate__player">${buildCdpPlayerCell(playerId)}</div>` +
           `<span class="cdp-slate__reason">${reason}</span>` +
@@ -9013,7 +9015,7 @@ const frontOfficeCrumb = frontOfficeCurrent === 'league-planner' ? 'League Plann
             return (
               `<li class="cdp-slate__row cdp-slate__row--auto" data-player-id="${escCdp(cut.playerId)}" draggable="${dragEnabled ? 'true' : 'false'}">` +
               `<button type="button" class="cdp-mark-btn" data-action="mark" data-player-id="${escCdp(cut.playerId)}" aria-label="Mark ${escCdp(name)} for August auto-cut at your lowest priority">` +
-              `<svg aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-plus"></use></svg>Mark</button>` +
+              `<svg aria-hidden="true"><use href="${clientSpriteUrl()}#icon-plus"></use></svg>Mark</button>` +
               `<div class="cdp-slate__player">${buildCdpPlayerCell(cut.playerId)}</div>` +
               `<span class="cdp-slate__reason"><strong>Auto-selected (last added)</strong> · ${addedTxt}mark another player to protect this one${dragHint}</span>` +
               buildCdpCapHTML(salary, penalty) +

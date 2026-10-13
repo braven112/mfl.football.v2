@@ -7,7 +7,8 @@
  * Carries `data-track-via="related"`, so /live/analytics counts the clicks it
  * sends (INSIGHT_LINK_AREAS).
  */
-import { spriteUrl } from '../../utils/sprite-url';
+import { spriteUrlFor } from '../../utils/sprite-url';
+const spriteUrl = spriteUrlFor(Astro.url);
 import { relatedPagesFor } from '../../utils/related-pages';
 
 interface Props {

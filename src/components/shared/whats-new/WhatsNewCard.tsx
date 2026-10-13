@@ -18,6 +18,7 @@ import type { EnrichedWhatsNewEntry } from '../../../utils/whats-new-helpers';
 import { WHATS_NEW_CATEGORY_LABELS } from '../../../types/whats-new';
 import type { LeagueSlug } from '../../../types/whats-new';
 import { ALL_LEAGUES, getLeagueByPath } from '../../../config/leagues';
+import { CLASSIC_SPRITE_PATH } from '../../../utils/sprite-url-client';
 
 /**
  * Domain + path shown in the thumbnail's browser-frame chrome. League-aware:
@@ -55,7 +56,7 @@ interface Props {
 
 const MULTICOLOR_ICONS = ['nfl'];
 
-export default function WhatsNewCard({ entry, featured, basePath = '/theleague', league, spriteUrl: sprite = '/assets/icons/sprite.svg' }: Props) {
+export default function WhatsNewCard({ entry, featured, basePath = '/theleague', league, spriteUrl: sprite = CLASSIC_SPRITE_PATH }: Props) {
   const iconId = entry.icon ? `icon-${entry.icon}` : null;
   const isMulticolor = entry.icon ? MULTICOLOR_ICONS.includes(entry.icon) : false;
   const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;

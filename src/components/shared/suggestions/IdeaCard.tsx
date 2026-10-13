@@ -1,5 +1,6 @@
 import React from 'react';
 import type { Idea } from '../../../types/suggestions';
+import { useSpriteUrl } from '../../../utils/sprite-url-context';
 
 interface Props {
   idea: Idea;
@@ -41,6 +42,7 @@ const STATUS_LABELS: Record<string, { label: string; className: string }> = {
 };
 
 export default function IdeaCard({ idea, teamIcon, isAdmin, isOwner, onSelect, onDelete }: Props) {
+  const spriteUrl = useSpriteUrl();
   const canDelete = isOwner || isAdmin;
   const statusInfo = STATUS_LABELS[idea.status] ?? STATUS_LABELS['open'];
 
@@ -94,7 +96,7 @@ export default function IdeaCard({ idea, teamIcon, isAdmin, isOwner, onSelect, o
       <h3 className="sb-card__title">
         {idea.category && (
           <span className={`sb-cat ${(CATEGORY_LABELS[idea.category] ?? CATEGORY_LABELS['general']).className}`}>
-            <svg className="sb-cat__icon" aria-hidden="true"><use href={`/assets/icons/sprite.svg#${(CATEGORY_LABELS[idea.category] ?? CATEGORY_LABELS['general']).spriteId}`} /></svg>
+            <svg className="sb-cat__icon" aria-hidden="true"><use href={`${spriteUrl}#${(CATEGORY_LABELS[idea.category] ?? CATEGORY_LABELS['general']).spriteId}`} /></svg>
             {' '}{(CATEGORY_LABELS[idea.category] ?? CATEGORY_LABELS['general']).label}
           </span>
         )}

@@ -19,8 +19,8 @@
  */
 
 import { calculateAge } from './age-utils';
+import { clientSpriteUrl } from './sprite-url-client';
 
-const SPRITE = '/assets/icons/sprite.svg';
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
 /**
@@ -58,7 +58,7 @@ export function createActionOption({
     const svgEl = document.createElementNS(SVG_NS, 'svg');
     svgEl.setAttribute('aria-hidden', 'true');
     const useEl = document.createElementNS(SVG_NS, 'use');
-    useEl.setAttribute('href', SPRITE + '#' + iconId);
+    useEl.setAttribute('href', clientSpriteUrl() + '#' + iconId);
     svgEl.appendChild(useEl);
     iconEl.appendChild(svgEl);
   }

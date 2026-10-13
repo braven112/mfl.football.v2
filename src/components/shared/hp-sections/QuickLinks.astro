@@ -9,7 +9,8 @@
  * CSS class prefix) are resolved from the league prop + registry so the
  * rendered output stays pixel-identical to the originals.
  */
-import { spriteUrl } from '../../../utils/sprite-url';
+import { spriteUrlFor } from '../../../utils/sprite-url';
+const spriteUrl = spriteUrlFor(Astro.url);
 import { getSearchPath, resolveLeaguePath, resolveDirectoryHref } from '../../../utils/nav-utils';
 import { getLeagueBySlug, type CanonicalLeagueSlug } from '../../../config/leagues';
 import { pathBelongsToLeague } from '../../../config/footer-config';

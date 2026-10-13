@@ -13,7 +13,8 @@
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import Breadcrumbs from '../Breadcrumbs.astro';
-import { spriteUrl } from '../../../utils/sprite-url';
+import { spriteUrlFor } from '../../../utils/sprite-url';
+const spriteUrl = spriteUrlFor(Astro.url);
 import { getVisibleGuides } from '../../../utils/guides';
 import { resolveDirectoryHref, resolveLeaguePath } from '../../../utils/nav-utils';
 import { getLeagueBySlug } from '../../../config/leagues';

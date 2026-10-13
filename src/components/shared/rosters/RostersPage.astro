@@ -32,7 +32,8 @@ import KeeperPlanner, {
   type KeeperPlannerPlayer,
   type KeeperPlannerDraftPick,
 } from '../keepers/KeeperPlanner.astro';
-import { spriteUrl } from '../../../utils/sprite-url';
+import { spriteUrlFor } from '../../../utils/sprite-url';
+const spriteUrl = spriteUrlFor(Astro.url);
 import { getCurrentWeek } from '../../../utils/current-week';
 import { nflWeekStartInstant } from '../../../utils/nfl-week-starts.mjs';
 import { formatForViewer, viewerClockZone } from '../../../utils/viewer-clock';

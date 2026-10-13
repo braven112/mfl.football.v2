@@ -121,10 +121,13 @@ const leagueLinks = ALL_LEAGUES.filter((league) => !league.bestBall).map((league
 	name: league.name,
 	href: leagueUrl(league, '/'),
 }));
+import { spriteUrlFor } from '../utils/sprite-url';
+/** The league's icon set, for client scripts and React islands (src/utils/sprite-url-client.ts). */
+const pageSpriteUrl = spriteUrlFor(Astro.url);
 ---
 
 <!DOCTYPE html>
-<html lang="en" data-league="mfl" class:list={[{ dark: themePref === 'dark' }]}>
+<html lang="en" data-sprite-url={pageSpriteUrl} data-league="mfl" class:list={[{ dark: themePref === 'dark' }]}>
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />

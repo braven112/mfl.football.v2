@@ -98,6 +98,8 @@ export default defineConfig({
       // Icon sprite — read with fs by the SSR /instructions page to list the
       // icon gallery. public/ is served statically, not bundled with functions.
       'public/assets/icons/sprite.svg',
+      // The line icon set's sprite — read with fs by src/utils/sprite-url.ts.
+      'public/assets/icons/sets/line/sprite.svg',
       // Season archives the OG renderer falls back to for posts older than
       // the active window. Enumerated (NOT globbed — includeFiles realpaths
       // each entry, so a literal '*.json' fails the whole build).

@@ -4,7 +4,8 @@
  * Shows cap space, roster count, and expiring contracts for the logged-in user.
  * Guests see a login prompt instead.
  */
-import { spriteUrl } from '../../../utils/sprite-url';
+import { spriteUrlFor } from '../../../utils/sprite-url';
+const spriteUrl = spriteUrlFor(Astro.url);
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { loginUrlForRequest } from '../../../utils/login-redirect';
 import { getLeagueBySlug } from '../../../config/leagues';

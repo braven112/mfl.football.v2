@@ -9,7 +9,8 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import Breadcrumbs from '../../components/shared/Breadcrumbs.astro';
 import { resolveDirectoryHref, resolveLeaguePath } from '../../utils/nav-utils';
 import { pathBelongsToLeague } from '../../config/footer-config';
-import { spriteUrl } from '../../utils/sprite-url';
+import { spriteUrlFor } from '../../utils/sprite-url';
+const spriteUrl = spriteUrlFor(Astro.url);
 import pageDirectory from '../../data/page-directory.json';
 
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;

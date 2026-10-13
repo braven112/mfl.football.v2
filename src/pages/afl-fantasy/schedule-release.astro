@@ -18,7 +18,8 @@ import ScheduleReleaseIsland from '../../components/shared/ScheduleRelease.tsx';
 import { getAuthUser, isAuthorizedForLeague } from '../../utils/auth';
 import { loginUrlForRequest, forbiddenPathFor } from '../../utils/login-redirect';
 import { getLeagueBySlug } from '../../config/leagues';
-import { spriteUrl } from '../../utils/sprite-url';
+import { spriteUrlFor } from '../../utils/sprite-url';
+const spriteUrl = spriteUrlFor(Astro.url);
 import '../../styles/schedule-release.css';
 
 const user = getAuthUser(Astro.request);

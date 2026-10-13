@@ -111,6 +111,8 @@ gmDisplayBody = gmDisplayBody.replace(/\n{3,}/g, '\n\n').trim();
 // can reach neither the registry nor Astro.locals.
 const whisperLoginHref = (league: string | undefined) =>
   loginUrlForRequest(Astro, getLeagueBySlug(league === 'afl' ? 'afl-fantasy' : 'theleague')!);
+import { spriteUrlFor } from '../../utils/sprite-url';
+const spriteUrl = spriteUrlFor(Astro.url);
 ---
 
 <article id={`post-${post.id}`} class={tierClass} data-post-id={post.id} data-tier={post.tier} data-post-type={post.transactionSubType ?? post.type} data-author={post.authorId ?? 'claude'} data-rumor-impression={isRumorLike ? 'true' : undefined} data-watching={isWatching ? 'true' : undefined} aria-label={`${displayName}: ${post.headline || (post.body ? stripTags(post.body).slice(0, 80) : '') || 'Post'}`}>
@@ -242,7 +244,7 @@ const whisperLoginHref = (league: string | undefined) =>
 
         {isWatching && (
           <div class="sf-post__watching" title={`${watchChipLabel}: ${watchChipNames}`}>
-            <svg class="sf-post__watching-icon" aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-eye" /></svg>
+            <svg class="sf-post__watching-icon" aria-hidden="true"><use href={`${spriteUrl}#icon-eye`} /></svg>
             <span class="sf-post__watching-label">{watchChipLabel}</span>
             <span class="sf-post__watching-names">{watchChipNames}</span>
           </div>

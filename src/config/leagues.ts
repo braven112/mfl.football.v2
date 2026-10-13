@@ -44,6 +44,13 @@ export type DemoOnlyLeagueSlug = 'keeper';
 export type HomeStyle = 'classic' | 'front-page';
 
 /**
+ * A league's icon set — see `iconSet` on the registry entry. `'classic'` is
+ * public/assets/icons/sprite.svg; any other name is
+ * public/assets/icons/sets/<name>/sprite.svg (docs/plans/icon-sets.md).
+ */
+export type IconSet = 'classic' | 'line';
+
+/**
  * A league's site theme — the visual language every themed component speaks.
  * `'editorial'` is the site's long-standing look (docs/claude/components.md
  * "Editorial Design Standard"); `'primetime'` is the broadcast look that
@@ -394,6 +401,12 @@ export interface LeagueDefinition {
    */
   homeStyle?: HomeStyle;
   /**
+   * Which icon set the league's pages draw from. Absent = `'classic'`. Every
+   * set carries the same glyph ids (tests/icon-set-parity.test.ts), so a
+   * league switches sets by changing this one value.
+   */
+  iconSet?: IconSet;
+  /**
    * The league's site theme (see `SiteTheme`). Absent means `'editorial'`.
    * Distinct from `theme`, which names the league's colour PALETTE.
    */
@@ -486,6 +499,11 @@ export function leagueSiteTheme(slug: string): SiteTheme {
 /** The league's homepage layout; `'classic'` for any league that names none. */
 export function leagueHomeStyle(slug: string): HomeStyle {
   return getLeagueBySlug(slug)?.homeStyle ?? 'classic';
+}
+
+/** The league's icon set; `'classic'` for any league that names none. */
+export function leagueIconSet(slug: string): IconSet {
+  return getLeagueBySlug(slug)?.iconSet ?? 'classic';
 }
 
 /**

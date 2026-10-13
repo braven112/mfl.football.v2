@@ -10,6 +10,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { PlayerCell } from '../PlayerCell';
 import type { RankedPlayer } from '../../../types/custom-rankings';
+import { useSpriteUrl } from '../../../utils/sprite-url-context';
 
 interface PlayerRowProps {
   player: RankedPlayer;
@@ -21,11 +22,15 @@ interface PlayerRowProps {
   onActions?: (player: RankedPlayer) => void;
 }
 
-const WATCH_MARK = (
-  <span className="pa-watch-mark" title="On your watch list">
-    <svg aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-eye" /></svg>
-  </span>
-);
+/** The watch-list eye, from the page's icon set. */
+function WatchMark() {
+  const spriteUrl = useSpriteUrl();
+  return (
+    <span className="pa-watch-mark" title="On your watch list">
+      <svg aria-hidden="true"><use href={`${spriteUrl}#icon-eye`} /></svg>
+    </span>
+  );
+}
 
 export default function PlayerRow({
   player,
@@ -86,7 +91,7 @@ export default function PlayerRow({
         nflTeam={player.nflTeam}
         mflId={player.id}
         size="compact"
-        afterName={watched ? WATCH_MARK : undefined}
+        afterName={watched ? <WatchMark /> : undefined}
       />
 
       {/* VORP chip (when enabled) */}

@@ -575,6 +575,8 @@ const primetimeJson = JSON.stringify(
 
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
+import { spriteUrlFor } from '../../../utils/sprite-url';
+const spriteUrl = spriteUrlFor(Astro.url);
 ---
 
 <TheLeagueLayout title={title}>
@@ -722,7 +724,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           <button class="col-group-btn active" data-group="stats" type="button" aria-pressed="true">Stats</button>
           <button class="col-group-btn" data-group="rankings" id="col-group-btn-rankings" type="button" aria-pressed="false">Rankings</button>
           <button class="col-group-btn col-group-btn--watch" data-group="watchlist" id="col-group-btn-watchlist" type="button" aria-pressed="false">
-            <svg class="col-group-btn__icon" aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-eye" /></svg>
+            <svg class="col-group-btn__icon" aria-hidden="true"><use href={`${spriteUrl}#icon-eye`} /></svg>
             My Watch List
           </button>
         </div>
@@ -1598,11 +1600,11 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         : '';
       const lockedForView = !rosteredForView && isLockedForView(p);
       const lockMark = lockedForView
-        ? `<span class="locked-mark" title="Locked — recently dropped. MFL won't allow adding him until the lock lifts."><svg aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-lock"></use></svg><span class="visually-hidden">Locked — recently dropped</span></span>`
+        ? `<span class="locked-mark" title="Locked — recently dropped. MFL won't allow adding him until the lock lifts."><svg aria-hidden="true"><use href="${document.documentElement.dataset.spriteUrl}#icon-lock"></use></svg><span class="visually-hidden">Locked — recently dropped</span></span>`
         : '';
       const watched = isWatchedId(p.id);
       const watchMark = watched
-        ? `<span class="pa-watch-mark" title="On your watch list"><svg aria-hidden="true"><use href="/assets/icons/sprite.svg#icon-eye"></use></svg></span>`
+        ? `<span class="pa-watch-mark" title="On your watch list"><svg aria-hidden="true"><use href="${document.documentElement.dataset.spriteUrl}#icon-eye"></use></svg></span>`
         : '';
       // `data-pa-claimable` is the PAGE's verdict, and only the page can give
       // it here: `rosteredForView` is scoped to the conference being browsed,

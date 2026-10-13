@@ -12,7 +12,8 @@
  * right, brand-red CTA. Colors fall back to AFL brand values but prefer the
  * site's CSS custom properties where they exist.
  */
-import { spriteUrl } from '../../utils/sprite-url';
+import { spriteUrlFor } from '../../utils/sprite-url';
+const spriteUrl = spriteUrlFor(Astro.url);
 import ThemeImage from './ThemeImage.astro';
 import type { HeroModel } from '../../utils/hero-casting';
 import type { HeroSecondaryLink } from '../../utils/league-hero/types';

@@ -16,6 +16,7 @@
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import CustomRankingsPageIsland from './CustomRankingsPage';
+import { spriteUrlFor } from '../../../utils/sprite-url';
 import { getLeagueYearForSlug } from '../../../utils/league-year';
 import { getPlayerMap } from '../../../utils/player-map';
 import { getLeagueContext } from '../../../utils/league-context';
@@ -246,6 +247,7 @@ for (const [id, result] of vorpResults) {
     availableIdsJson={availability ? JSON.stringify(availability.availableIds) : null}
     draftPool={availability?.pool ?? null}
     availabilityPerConference={availability?.perConference ?? false}
+    spriteUrl={spriteUrlFor(Astro.url)}
   />
   <PlayerActionModal />
 </TheLeagueLayout>

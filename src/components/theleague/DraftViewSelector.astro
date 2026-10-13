@@ -1,5 +1,6 @@
 ---
-import { spriteUrl } from '../../utils/sprite-url';
+import { spriteUrlFor } from '../../utils/sprite-url';
+const spriteUrl = spriteUrlFor(Astro.url);
 
 export interface Props {
   activeView: 'projected' | 'final';

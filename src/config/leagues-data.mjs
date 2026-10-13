@@ -29,6 +29,13 @@ export const LEAGUES = {
      */
     theme: 'theleague',
     /**
+     * Icon set — a folder under public/assets/icons/sets/, or 'classic' (the
+     * original public/assets/icons/sprite.svg). Absent = 'classic'. Every set
+     * carries the same glyph ids, so switching is this one line
+     * (docs/plans/icon-sets.md; tests/icon-set-parity.test.ts).
+     */
+    iconSet: 'line',
+    /**
      * Starting preset for the feature checkboxes (league-archetypes.mjs).
      * Code reads `features`, never this.
      */
@@ -276,6 +283,8 @@ export const LEAGUES = {
     slug: 'afl-fantasy',
     navSlug: /** @type {const} */ ('afl'),
     theme: 'afl',
+    /** Icon set — see TheLeague's entry. */
+    iconSet: 'line',
     archetype: 'deluxe-keeper',
     adminFranchiseIds: ['0001'],
     /** Schefter scanners — see TheLeague's entry for the shape. */
@@ -643,6 +652,8 @@ export const LEAGUES = {
     slug: 'archies',
     navSlug: /** @type {const} */ ('archies'),
     theme: 'archies',
+    /** Icon set — see TheLeague's entry. */
+    iconSet: 'line',
     archetype: 'contest',
     adminFranchiseIds: [],
     name: "Archie's Fantasy Football League",

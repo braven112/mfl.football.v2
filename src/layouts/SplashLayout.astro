@@ -54,10 +54,13 @@ const themePref = getThemePreference(Astro.cookies);
 const onSharedHost = isSharedAppHost(Astro.url.hostname);
 
 import StagingBanner from '../components/shared/StagingBanner.astro';
+import { spriteUrlFor } from '../utils/sprite-url';
+/** The league's icon set, for client scripts and React islands (src/utils/sprite-url-client.ts). */
+const pageSpriteUrl = spriteUrlFor(Astro.url);
 ---
 
 <!DOCTYPE html>
-<html lang="en" class:list={[{ dark: themePref === 'dark' }]}>
+<html lang="en" data-sprite-url={pageSpriteUrl} class:list={[{ dark: themePref === 'dark' }]}>
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width" />

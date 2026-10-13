@@ -14,7 +14,8 @@
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import WhatsNewListing from './WhatsNewListing';
-import { spriteUrl } from '../../../utils/sprite-url';
+import { spriteUrlFor } from '../../../utils/sprite-url';
+const spriteUrl = spriteUrlFor(Astro.url);
 // Full-history access on purpose: the archive index lists every entry ever
 // published, including those rolled out of the capped active file.
 import { getAllVisibleWhatsNewEntries } from '../../../utils/whats-new-all-entries';
