@@ -106,6 +106,8 @@ export async function loadStandingsSeason(options: {
 export interface DefendingChampion {
   name: string;
   icon: string;
+  /** The champion's franchise id, so a board can find its crest's crop style. */
+  id?: string;
 }
 
 /**
@@ -137,6 +139,7 @@ export async function loadDefendingChampions(options: {
     const current = currentById.get(champ.id);
     const eraIconUsable = champ.icon && champ.icon !== HISTORICAL_TEAM_ICON_FALLBACK;
     out[divisionName] = {
+      id: champ.id,
       name: champ.name ?? current?.name ?? '',
       icon: eraIconUsable ? champ.icon : (current?.icon ?? champ.icon),
     };

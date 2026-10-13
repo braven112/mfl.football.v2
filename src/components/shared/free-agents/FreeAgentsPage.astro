@@ -65,6 +65,15 @@ import ThemeImage from '../ThemeImage.astro';
 import { DEF_SPOTLIGHT_PLAYERS, getDefSpotlightPlayer } from '../../../data/theleague/def-spotlight-players';
 import MyRankEditor from '../../../components/shared/rankings/MyRankEditor.astro';
 import RelatedPagesCard from '../RelatedPagesCard.astro';
+import FaPositionLeaders, { type LeaderPool } from './FaPositionLeaders.astro';
+import FaMarketRail, { type RailRow } from './FaMarketRail.astro';
+import '../../../styles/free-agents-primetime.css';
+import { resolveSiteTheme } from '../../../utils/site-theme';
+import { tallyMarketMoves, isAvailableIn, positionLeaders, topMoves, nextGamesByTeam, type NextGame } from '../../../utils/free-agent-market';
+import { getCachedRecentTransactions, mergeTransactionRows } from '../../../utils/mfl-transactions-cache';
+import { loadInjuryMap } from '../../../utils/mfl-injuries';
+import { viewerClockZone } from '../../../utils/viewer-clock';
+import { formatKickoffCompact } from '../../../utils/rosters/phone-row';
 
 /** A pool's crest for the switcher; a pool without one shows its name. */
 export interface PoolLogo {
@@ -88,6 +97,16 @@ interface Props {
   poolLogos?: Record<string, PoolLogo>;
   /** The sign-in dialog's mark; defaults to the registry's `logo`. */
   signInLogo?: { src: string; alt: string };
+  /**
+   * Lazy, era-filtered globs of the league's `transactions.json` and
+   * `nflSchedule-full.json`, for the Primetime board (position leaders and
+   * the market rail). Lazy so only the current year is ever loaded, and only
+   * when the page renders in Primetime.
+   */
+  marketFeeds?: {
+    transactions: Record<string, () => Promise<unknown>>;
+    schedule: Record<string, () => Promise<unknown>>;
+  };
 }
 
 const {
@@ -99,6 +118,7 @@ const {
   poolNoun = 'Conference',
   poolLogos = {},
   signInLogo,
+  marketFeeds,
 } = Astro.props;
 
 // SSR (server-rendered) — NOT prerendered. Two constraints pull in opposite
@@ -465,13 +485,101 @@ const viewModeKey = `${league.navSlug}PlayersViewMode`;
 const claimPoolJson = JSON.stringify(claimFranchiseId ? userConfId ?? null : null);
 const leagueSlugForGate = league.slug;
 
+// ── Primetime board ──────────────────────────────────────────────────────
+// The site theme (registry `siteTheme`, or a `?theme=` preview) decides the
+// page's look. Primetime leads with the decision, not the database: the best
+// free agent at each position (by this week's projection, healthy only) and
+// the league's market over the last week. Everything here is per POOL, so
+// each pool's leaders are rendered and the client switch shows one.
+const siteTheme = resolveSiteTheme(league.slug, Astro.locals.siteThemePreview);
+const primetime = siteTheme === 'primetime';
+const MARKET_WINDOW_DAYS = 7;
+const loadYearFeed = async (glob: Record<string, () => Promise<unknown>> | undefined) => {
+  const loader = Object.entries(glob ?? {}).find(([p]) => p.includes(`/${claimYear}/`))?.[1];
+  if (!loader) return null;
+  try {
+    const mod = (await loader()) as any;
+    return mod?.default ?? mod;
+  } catch {
+    return null;
+  }
+};
+let leaderPools: LeaderPool[] = [];
+let railHot: RailRow[] = [];
+let railDropped: RailRow[] = [];
+let nextGames = new Map<string, NextGame>();
+let marketMoves = new Map<string, { adds: number; drops: number }>();
+if (primetime) {
+  const nowSec = Math.floor(snapNowRef.getTime() / 1000);
+  const [txFeed, scheduleFeed, liveTx] = await Promise.all([
+    loadYearFeed(marketFeeds?.transactions),
+    loadYearFeed(marketFeeds?.schedule),
+    // The committed feed only moves when a sync commit deploys; the last
+    // three days come live (Redis, 60s) so a claim this morning counts now.
+    getCachedRecentTransactions(String(claimYear), league.id).catch(() => null),
+  ]);
+  const staticRows = (() => {
+    const t = (txFeed as any)?.transactions?.transaction;
+    return Array.isArray(t) ? t : t ? [t] : [];
+  })();
+  marketMoves = tallyMarketMoves(
+    { transactions: { transaction: mergeTransactionRows(staticRows, liveTx) } },
+    nowSec,
+    MARKET_WINDOW_DAYS,
+  );
+  nextGames = nextGamesByTeam(scheduleFeed, nowSec);
+  const injuries = loadInjuryMap(league.slug);
+  const injuryStatus = (id: string) => injuries[id]?.injuryStatus ?? null;
+  const leaderPositions = ['QB', 'RB', 'WR', 'TE', 'DEF'].filter((pos) => poolPositions.includes(pos));
+  const poolIds: Array<string | null> = conferenceMeta?.ids?.length ? conferenceMeta.ids : [null];
+  leaderPools = poolIds.map((id) => ({
+    id,
+    groups: positionLeaders(players, id, leaderPositions, { perPosition: 3, injuryStatus }),
+    claimable: !!claimFranchiseId && (!id || id === (userConfId ?? null)),
+  }));
+  const railRow = ({ player, count }: { player: (typeof players)[number]; count: number }): RailRow => ({
+    id: player.id,
+    name: player.name,
+    position: player.position,
+    team: player.team,
+    count,
+    freeIn: (conferenceMeta?.ids ?? []).filter((id) => isAvailableIn(player, id)),
+    free: isAvailableIn(player, null),
+  });
+  railHot = topMoves(players, marketMoves, 'adds', 8).map(railRow);
+  railDropped = topMoves(players, marketMoves, 'drops', 5).map(railRow);
+}
+const kickoffClock = viewerClockZone(viewerClock, snapNowRef);
+const poolName = (id: string | null) => (id ? conferenceMeta?.names[id]?.name ?? id : '');
+// The client's extra Primetime columns: Opp (each team's next game), Adds 7d
+// and Rostered N of M. Null outside Primetime, so the Editorial table is
+// byte-for-byte what it was.
+const primetimeJson = JSON.stringify(
+  primetime
+    ? {
+        next: Object.fromEntries(
+          [...nextGames].map(([team, g]) => [
+            team,
+            {
+              opp: g.opponent,
+              home: g.home,
+              when: formatKickoffCompact(new Date(g.kickoff * 1000).toISOString(), kickoffClock.zone, kickoffClock.label),
+            },
+          ]),
+        ),
+        adds: Object.fromEntries([...marketMoves].filter(([, m]) => m.adds > 0).map(([id, m]) => [id, m.adds])),
+        pools: conferenceMeta?.ids?.length ?? 0,
+      }
+    : null,
+);
+
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 ---
 
 <TheLeagueLayout title={title}>
   <CollegeLogoDarkStyles />
-  <div class="players-page">
+  <div class="players-page" data-site-theme={siteTheme}>
     <!-- Hero -->
     <div class="players-hero">
       <div class="hero-spotlight" id="hero-spotlight" aria-hidden="true" data-def={topFaIsDef ? 'true' : 'false'} data-def-player={topFaIsDef && topFaDefStar ? 'true' : 'false'}>
@@ -585,6 +693,21 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       </nav>
     </div>
 
+    {primetime && (
+      <FaPositionLeaders
+        pools={leaderPools}
+        activePoolId={activeConfId ?? null}
+        nextGames={nextGames}
+        clock={kickoffClock}
+        claimVerb={claimVerb}
+        poolName={poolName}
+      />
+    )}
+
+    <!-- Primetime sets the table beside the market rail; under Editorial these
+         two wrappers carry no styling at all. -->
+    <div class="fa-split">
+    <div class="fa-split__main">
     <!-- Toolbar -->
     <div class="players-toolbar">
       <div class="toolbar-left">
@@ -726,6 +849,31 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
                 the claim (via the action sheet), so the column takes the
                 league's verb as its header rather than staying nameless. */}
             <th class="col-player-actions" aria-label={`${claimVerb} or watch this player`}><div class="th-content">{claimVerb}</div></th>
+            {/* Primetime puts the decision columns first: who he plays next,
+                this week's projection, how he has scored, and how the league
+                is treating him. The bio columns follow. */}
+            {primetime && (
+              <th class="col-text col-opp" title="Next opponent"><div class="th-content">Opp</div></th>
+            )}
+            {primetime && hasProjected && (
+              <th class="sortable col-num col-projected col-group--stats" data-sort="projected"><div class="th-content">Proj</div></th>
+            )}
+            {primetime && (
+              <th class="m-hide sortable col-num col-group--stats" data-sort="ppg" title="Fantasy points per game played"><div class="th-content">PPG</div></th>
+            )}
+            {primetime && hasSeasonPts && (
+              <th
+                class="m-hide sortable col-num col-group--stats"
+                data-sort="seasonPts"
+                title={`Total fantasy points, ${statsSeasonYear} season`}
+              ><div class="th-content">{statsSeasonYear} Pts</div></th>
+            )}
+            {primetime && conferenceMeta && (
+              <th class="m-hide sortable col-num col-rost" data-sort="rostCount" title={`How many of the ${conferenceMeta.ids.length} ${poolNoun.toLowerCase()}s roster him`}><div class="th-content">Rostered</div></th>
+            )}
+            {primetime && (
+              <th class="m-hide sortable col-num" data-sort="adds7" title={`Times added across the league, last ${MARKET_WINDOW_DAYS} days`}><div class="th-content">Adds 7d</div></th>
+            )}
             <th class="sortable col-age" data-sort="age"><div class="th-content">Age</div></th>
             <th class="m-hide sortable col-sm" data-sort="exp"><div class="th-content">Exp</div></th>
             <th class="m-hide sortable col-sm" data-sort="draftRd"><div class="th-content">Draft</div></th>
@@ -750,14 +898,14 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             {hasAdp && (
               <th class="m-hide sortable col-num col-group--stats" data-sort="adpDyn"><div class="th-content">ADP</div></th>
             )}
-            {hasSeasonPts && (
+            {!primetime && hasSeasonPts && (
               <th
                 class="sortable col-num col-group--stats"
                 data-sort="seasonPts"
                 title={`Total fantasy points, ${statsSeasonYear} season`}
               ><div class="th-content">{statsSeasonYear} Pts</div></th>
             )}
-            {hasProjected && (
+            {!primetime && hasProjected && (
               <th class="sortable col-num col-projected col-group--stats" data-sort="projected"><div class="th-content">Proj</div></th>
             )}
           </tr>
@@ -784,6 +932,17 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     <div class="no-data" id="no-data" style="display: none;">
       <p>No player data available yet.</p>
     </div>
+    </div>
+    {primetime && (
+      <FaMarketRail
+        leagueName={league.shortName ?? league.name}
+        hot={railHot}
+        dropped={railDropped}
+        activePoolId={activeConfId ?? null}
+        windowDays={MARKET_WINDOW_DAYS}
+      />
+    )}
+    </div>
     <RelatedPagesCard hostPath="/players" leagueSlug={leagueSlug} />
   </div>
   <PlayerDetailsModal hideContract={true} />
@@ -795,8 +954,23 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   ></script>
 </TheLeagueLayout>
 
-<script define:vars={{ snapSeasonLabel, byeWeeksJson, playerDataJson, hasProjected, hasSeasonPts, hasAdp, hasSnapCounts, defaultSort, defaultDir, mflHost, defSpotlightJson, conferenceMetaJson, activeConfIdJson, nflAvatarBgJson, nflAvatarBorderJson, nflAvatarBgFallback, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, noHeadshot, logoOnerror: NFL_LOGO_ONERROR, collegeLogoOnerror: COLLEGE_LOGO_ONERROR, collegeLogoOnload: COLLEGE_LOGO_ONLOAD, viewModeKey, claimPoolJson, leagueSlugForGate }}>
+<script define:vars={{ snapSeasonLabel, byeWeeksJson, playerDataJson, hasProjected, hasSeasonPts, hasAdp, hasSnapCounts, defaultSort, defaultDir, mflHost, defSpotlightJson, conferenceMetaJson, activeConfIdJson, nflAvatarBgJson, nflAvatarBorderJson, nflAvatarBgFallback, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, noHeadshot, logoOnerror: NFL_LOGO_ONERROR, collegeLogoOnerror: COLLEGE_LOGO_ONERROR, collegeLogoOnload: COLLEGE_LOGO_ONLOAD, viewModeKey, claimPoolJson, leagueSlugForGate, primetimeJson }}>
   const players = JSON.parse(playerDataJson);
+  // Primetime's extra columns (null under Editorial): next game by team,
+  // league-wide adds in the last week by player id, and the pool count.
+  const PRIME = JSON.parse(primetimeJson);
+  // The Primetime board's per-pool panels (position leaders) and the rail's
+  // Available / Gone tags follow the pool switch. Re-queried per call: the
+  // nodes belong to the page the ClientRouter swapped in.
+  function syncPoolPanels() {
+    document.querySelectorAll('.players-page [data-fa-pool]').forEach((el) => {
+      el.hidden = el.getAttribute('data-fa-pool') !== (activeConf || '');
+    });
+    document.querySelectorAll('.players-page [data-free-in]').forEach((el) => {
+      const pools = (el.getAttribute('data-free-in') || '').split(' ');
+      el.setAttribute('data-state', activeConf && pools.includes(activeConf) ? 'free' : 'gone');
+    });
+  }
   // Duplicate-player conference metadata (null = single shared pool).
   const conferenceMeta = JSON.parse(conferenceMetaJson);
   // Active conference view (null = single shared pool). The page shows ONE
@@ -1225,6 +1399,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         case 'snaps':     aVal = a.snaps ?? -1;     bVal = b.snaps ?? -1;     break;
         case 'snapPct':   aVal = a.snapPct ?? -1;   bVal = b.snapPct ?? -1;   break;
         case 'projected': aVal = a.projected ?? -1; bVal = b.projected ?? -1; break;
+        case 'ppg':       aVal = a.ppg ?? -99999;   bVal = b.ppg ?? -99999;   break;
+        case 'rostCount': aVal = (a.confs || []).length; bVal = (b.confs || []).length; break;
+        case 'adds7':     aVal = PRIME?.adds?.[a.id] ?? 0; bVal = PRIME?.adds?.[b.id] ?? 0; break;
         default:         aVal = a.projected ?? -1; bVal = b.projected ?? -1;
       }
       const diff = aVal - bVal;
@@ -1352,6 +1529,23 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     render();
   }
 
+  // Primetime's decision cells, in the order of its header row.
+  function primeCells(p) {
+    const na = '<span class="na">-</span>';
+    const g = PRIME.next?.[p.team];
+    let out = `<td class="cell-opp">${g ? `<span class="opp-vs">${g.home ? 'vs' : '@'} ${escapeAttr(g.opp)}</span><small class="opp-when">${escapeAttr(g.when)}</small>` : na}</td>`;
+    if (hasProjected) out += `<td class="cell-num cell-pts col-projected col-group--stats">${p.projected != null ? p.projected.toFixed(1) : na}</td>`;
+    out += `<td class="m-hide cell-num col-group--stats">${p.ppg != null ? p.ppg.toFixed(1) : na}</td>`;
+    if (hasSeasonPts) out += `<td class="m-hide cell-num col-group--stats">${p.seasonPts != null ? p.seasonPts.toFixed(1) : na}</td>`;
+    if (PRIME.pools) {
+      const n = (p.confs || []).length;
+      out += `<td class="m-hide cell-num cell-rost"><span class="rost-meter" style="--rost:${(n / PRIME.pools).toFixed(3)}" aria-hidden="true"></span>${n}/${PRIME.pools}</td>`;
+    }
+    const adds = PRIME.adds?.[p.id];
+    out += `<td class="m-hide cell-num cell-adds">${adds ? '+' + adds : na}</td>`;
+    return out;
+  }
+
   function render() {
     const tbody = document.getElementById('player-table-body');
     if (!tbody) return;
@@ -1440,6 +1634,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           </div>
         </td>
         ${kebabCell}
+        ${PRIME ? primeCells(p) : ''}
         <td class="cell-age">${p.age ?? '-'}</td>
         <td class="m-hide cell-sm">${p.exp != null ? p.exp : '-'}</td>
         <td class="m-hide cell-sm">${p.draftRd != null ? 'Rd ' + p.draftRd : '<span class="na">-</span>'}</td>
@@ -1467,10 +1662,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       if (hasAdp) {
         html += `<td class="m-hide cell-num col-group--stats">${p.adpDyn != null ? p.adpDyn.toFixed(1) : '<span class="na">-</span>'}</td>`;
       }
-      if (hasSeasonPts) {
+      if (!PRIME && hasSeasonPts) {
         html += `<td class="cell-num col-group--stats">${p.seasonPts != null ? p.seasonPts.toFixed(1) : '<span class="na">-</span>'}</td>`;
       }
-      if (hasProjected) {
+      if (!PRIME && hasProjected) {
         html += `<td class="cell-num cell-pts col-projected col-group--stats">${p.projected != null ? p.projected.toFixed(1) : '<span class="na">-</span>'}</td>`;
       }
       html += `</tr>`;
@@ -1514,7 +1709,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   }
 
   // Columns that default to descending on first click
-  const descDefaults = new Set(['projected', 'exp', 'height', 'weight', 'seasonPts', 'snapGames', 'snaps', 'snapPct']);
+  const descDefaults = new Set(['ppg', 'rostCount', 'adds7', 'projected', 'exp', 'height', 'weight', 'seasonPts', 'snapGames', 'snaps', 'snapPct']);
   // Columns that default to ascending (lower = better)
   const ascDefaults = new Set(['adpDyn', 'draftRd', 'age']);
 
@@ -1560,6 +1755,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         const conf = btn.getAttribute('data-conf');
         if (!conf || conf === activeConf) return;
         activeConf = conf;
+        syncPoolPanels();
         switcher.querySelectorAll('.conf-switch-btn').forEach((b) => {
           const on = b === btn;
           b.classList.toggle('active', on);
@@ -1755,6 +1951,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     activePosition = document.querySelector('#category-tabs .pos-pill.active')?.getAttribute('data-pos') || 'ALL';
     const domConf = document.querySelector('#conf-switcher .conf-switch-btn.active')?.getAttribute('data-conf');
     if (domConf) activeConf = domConf;
+    syncPoolPanels();
 
     filterPlayers();
   }

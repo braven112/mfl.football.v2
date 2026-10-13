@@ -1,0 +1,69 @@
+---
+/**
+ * Every team in seed order, banded by the playoff ladder — the detail behind
+ * the playoff picture. The seed column is the DIV / 2ND / WC pill under
+ * Editorial and the plain seed number under Primetime.
+ */
+import type { SiteTheme } from '../../../../config/leagues';
+import type { BoardTeam, SeedGroup } from '../../../../utils/standings-board';
+import TeamCell from './TeamCell.astro';
+import SeedMark from './SeedMark.astro';
+
+interface Props {
+  theme: SiteTheme;
+  teams: BoardTeam[];
+  /** The picture's groups, for the band rows (first seed of each band → label). */
+  groups: SeedGroup[];
+  summary?: string;
+}
+
+const { theme, teams, groups, summary } = Astro.props;
+const showVp = teams.some((t) => t.vp !== null);
+const bandAt = new Map<number, string>();
+for (const g of groups) {
+  const first = g.teams[0]?.team.seed;
+  if (first && g.kind !== 'line') bandAt.set(first, g.label);
+}
+const cols = 5 + (showVp ? 1 : 0);
+// A summary folds the table away behind a <details> toggle.
+const Wrap = summary ? 'details' : 'div';
+---
+
+<Wrap class:list={['stb-card', { 'stb-details': summary }]}>
+  {summary && <summary>{summary}</summary>}
+  <div class="stb-tbl-wrap">
+    <table class:list={['stb-table', { 'stb-table--seeded': theme === 'editorial' }]}>
+      <thead>
+        <tr>
+          <th>Seed</th>
+          <th class="stb-l">Team</th>
+          <th>W-L</th>
+          {showVp && <th>VP</th>}
+          <th class="stb-hide-sm">PF</th>
+          <th class="stb-hide-sm">Strk</th>
+        </tr>
+      </thead>
+      <tbody>
+        {teams.map((t) => (
+          <>
+            {t.seed && bandAt.has(t.seed) && (
+              <tr class="stb-band"><td colspan={cols}>{bandAt.get(t.seed)}</td></tr>
+            )}
+            <tr class:list={{ 'stb-mine': t.mine }}>
+              <td class="stb-rk">
+                {theme === 'editorial' && t.badge ? <SeedMark team={t} theme={theme} /> : t.seed}
+              </td>
+              <td class="stb-l stb-teamcell">
+                <TeamCell team={t}><small>{t.division}</small></TeamCell>
+              </td>
+              <td class="stb-num">{t.record}</td>
+              {showVp && <td class="stb-num"><b>{t.vp}</b></td>}
+              <td class="stb-num stb-hide-sm">{t.pf.toFixed(1)}</td>
+              <td class="stb-hide-sm">{t.streak}</td>
+            </tr>
+          </>
+        ))}
+      </tbody>
+    </table>
+  </div>
+</Wrap>

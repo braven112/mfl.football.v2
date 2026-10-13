@@ -14,7 +14,6 @@
  * definition — that is a different competition, not a re-sort of standings.
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
-import UnifiedStandingsTable from './StandingsTable.astro';
 import StandingsViewSelector from '../StandingsViewSelector.astro';
 import YearSelector from '../YearSelector.astro';
 import { getDivisionStandings, getLeagueStandings, getAllPlayStandings } from '../../../utils/standings';
@@ -24,6 +23,8 @@ import { madSeeds } from '../../../utils/mad-standings';
 import type { DefendingChampion, StandingsView } from '../../../utils/standings-page';
 import { standingsPageProfile } from './standings-page-profile';
 import RelatedPagesCard from '../RelatedPagesCard.astro';
+import StandingsBoard from './board/StandingsBoard.astro';
+import { resolveSiteTheme } from '../../../utils/site-theme';
 
 interface Props {
   leagueSlug: CanonicalLeagueSlug;
@@ -57,10 +58,8 @@ const {
   view,
   preferredTeamId,
   lastFetched,
-  defendingChampions = {},
-  divisionBadges = {},
   franchiseHrefs,
-  throwbackTodayNames,
+  defendingChampions,
 } = Astro.props;
 
 const seeding = getLeagueBySlug(leagueSlug)?.standingsSeeding;
@@ -94,23 +93,22 @@ const allPlayStandings = getAllPlayStandings(franchises, config, undefined, { pr
   withLeagueSeed
 );
 
-const previousYear = selectedYear - 1;
+// The site theme (registry `siteTheme`, or a `?theme=` preview) dresses the
+// standings board; the board is the page's body in both themes.
+const siteTheme = resolveSiteTheme(leagueSlug, Astro.locals.siteThemePreview);
+const boardHref = (id: string) =>
+  franchiseHrefs?.[id] ?? (profile.franchiseBaseUrl ? `${profile.franchiseBaseUrl}/${id}` : undefined);
+
 const copy = profile.copy[view];
-const shared = {
-  teamCell: 'banner' as const,
-  accent: 'league-blue' as const,
-  year: selectedYear,
-  preferredTeamId,
-  franchiseBaseUrl: profile.franchiseBaseUrl,
-  franchiseHrefs,
-  badgeSeeding: profile.badgeSeeding,
-  badgeShowsSeed: profile.badgeShowsSeed,
-};
 ---
 
 <TheLeagueLayout title={title}>
-  <div class="standings-page">
+  <div class="standings-page" data-site-theme={siteTheme}>
     <header class="standings-hero">
+      <div class="stb-season">
+        <label for="year-select">Season</label>
+        <YearSelector currentYear={selectedYear} availableYears={availableYears} />
+      </div>
       <div class="standings-hero__text">
         <h1 class="section-title">{copy.title}</h1>
         <p class="subtitle">{copy.subtitle}</p>
@@ -120,67 +118,26 @@ const shared = {
       </div>
     </header>
 
-    <div class="standings-filters">
-      <div class="filter-item">
-        <span class="filter-label">Season:</span>
-        <YearSelector currentYear={selectedYear} availableYears={availableYears} />
-      </div>
-    </div>
-
     <div class="standings-content">
       {franchises.length === 0 && (
         <p class="standings-empty">No standings yet — they appear once the season's first week is scored.</p>
       )}
 
-      {view === 'division' && (
-        <div class="division-view">
-          {divisionStandings.map(division => (
-            <UnifiedStandingsTable
-              throwbackTodayNames={throwbackTodayNames}
-              {...shared}
-              teams={division.teams}
-              columns={profile.columns.division}
-              teamCellFallback="name"
-              header={{
-                kind: 'brandedDivision',
-                title: division.name,
-                badgeSrc: divisionBadges[division.name],
-                defendingChampion: defendingChampions[division.name]
-                  ? {
-                      name: defendingChampions[division.name].name,
-                      year: previousYear,
-                      logoSrc: defendingChampions[division.name].icon,
-                    }
-                  : undefined,
-              }}
-            />
-          ))}
-        </div>
-      )}
-
-      {view === 'league' && (
-        <div class="league-view">
-          <UnifiedStandingsTable
-            throwbackTodayNames={throwbackTodayNames}
-            {...shared}
-            teams={leagueStandings}
-            columns={profile.columns.league}
-            teamCellFallback={profile.leagueTeamCellFallback}
-            tiering={profile.leagueTiering}
-          />
-        </div>
-      )}
-
-      {view === 'all_play' && (
-        <div class="all-play-view">
-          <UnifiedStandingsTable
-            throwbackTodayNames={throwbackTodayNames}
-            {...shared}
-            teams={allPlayStandings}
-            columns={profile.columns.allPlay}
-            teamCellFallback="name"
-          />
-        </div>
+      {franchises.length > 0 && (
+        <StandingsBoard
+          theme={siteTheme}
+          view={view}
+          leagueSlug={leagueSlug}
+          profile={profile}
+          divisions={divisionStandings}
+          league={leagueStandings}
+          allPlay={allPlayStandings}
+          teams={config.teams}
+          preferredTeamId={preferredTeamId}
+          hrefFor={boardHref}
+          defendingChampions={defendingChampions}
+          championYear={selectedYear - 1}
+        />
       )}
 
       {lastFetched && (
@@ -200,6 +157,7 @@ const shared = {
   }
 
   .standings-hero {
+    position: relative;
     display: grid;
     justify-content: center;
     align-items: center;
@@ -244,30 +202,6 @@ const shared = {
     }
   }
 
-  .standings-filters {
-    background: var(--card-bg, #fff);
-    border-radius: 1rem;
-    box-shadow: var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
-    padding: 1rem 1.5rem;
-    display: flex;
-    gap: 1.5rem;
-    align-items: center;
-  }
-
-  :global(html.dark) .standings-filters {
-    box-shadow:
-      0 0 0 1px var(--content-border, #555555),
-      var(--box-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
-  }
-
-  .filter-item {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    font-weight: 700;
-    color: var(--page-text, #111827);
-  }
-
   .subtitle {
     font-size: 1rem;
     color: var(--content-text-muted, #64748b);
@@ -287,13 +221,6 @@ const shared = {
     font-weight: 700;
     color: var(--page-text, #1a1a1a);
     margin: 0;
-  }
-
-  .division-view,
-  .league-view,
-  .all-play-view {
-    display: grid;
-    gap: 2rem;
   }
 
   @media (max-width: 767px) {

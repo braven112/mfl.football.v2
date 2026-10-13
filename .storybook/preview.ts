@@ -67,6 +67,9 @@ import '../src/styles/live.css';
 // is scoped to `.draft-room` / `.dr-*`, so it cannot restyle another story.
 import '../src/styles/draft-room.css';
 import '../src/styles/league-history.css';
+// The Primetime Free Agents board (position leaders, market rail). Its page
+// imports it; the board's blocks are `.fa-*`-scoped, so it restyles nothing else.
+import '../src/styles/free-agents-primetime.css';
 
 /**
  * Theme and league are BOTH pure CSS in this codebase:

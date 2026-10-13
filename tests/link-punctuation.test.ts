@@ -275,6 +275,8 @@ describe('middleware onRequest — the wiring, executed for real', () => {
       request: { method },
       url,
       locals: {} as Record<string, unknown>,
+      // The ?theme= preview reads its cookie on every SSR request.
+      cookies: { get: vi.fn(), set: vi.fn(), delete: vi.fn() },
       rewrite: vi.fn(),
       redirect: vi.fn(),
     };

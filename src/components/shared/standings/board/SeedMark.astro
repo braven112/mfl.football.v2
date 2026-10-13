@@ -1,0 +1,36 @@
+---
+/**
+ * How a row says it is in the playoff field. Editorial: the seed number on a
+ * chip coloured by how the team got in (gold division winner, accent
+ * runner-up, silver wild card) — no DIV / WC text, so the column stays narrow.
+ * Primetime: a small dot and "Seed n", so the name keeps its width.
+ */
+import type { SiteTheme } from '../../../../config/leagues';
+import type { BoardTeam } from '../../../../utils/standings-board';
+
+interface Props {
+  team: BoardTeam;
+  theme: SiteTheme;
+  /** Print the seed number (false where the league's seeding is not modelled). */
+  showSeed?: boolean;
+}
+
+const { team, theme, showSeed = true } = Astro.props;
+const LABEL = { division_winner: 'Division leader', runner_up: 'Runner-up', wild_card: 'Wild card' } as const;
+---
+
+{team.badge && theme === 'editorial' && (
+  <span
+    class={`stb-seedchip stb-seedchip--${team.badge}`}
+    title={showSeed && team.seed ? `${LABEL[team.badge]} · seed ${team.seed}` : LABEL[team.badge]}
+  >
+    <span class="stb-sr">{LABEL[team.badge]}{showSeed && team.seed ? ', seed ' : ''}</span>
+    {showSeed && team.seed ? team.seed : ''}
+  </span>
+)}
+{team.badge && theme === 'primetime' && (
+  <span class="stb-seedline" title={LABEL[team.badge]}>
+    <i class={`stb-dot stb-dot--${team.badge}`} aria-hidden="true"></i>
+    {showSeed && team.seed ? `Seed ${team.seed}` : LABEL[team.badge]}
+  </span>
+)}

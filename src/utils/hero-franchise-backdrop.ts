@@ -241,7 +241,7 @@ function sampleStops(stops: ReadonlyArray<readonly [number, number]>, t: number)
 }
 
 /** Every `#rrggbb` in a gradient, with its declared position where it has one. */
-function gradientStops(gradient: string): Array<{ hex: string; at: number | null }> {
+export function gradientStops(gradient: string): Array<{ hex: string; at: number | null }> {
   const out: Array<{ hex: string; at: number | null }> = [];
   const re = /#([0-9a-f]{6})\b\s*(?:(-?[\d.]+)%)?/gi;
   let m: RegExpExecArray | null;

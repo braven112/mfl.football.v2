@@ -1,0 +1,45 @@
+---
+/**
+ * One card per group leader, in the standings producer's order. Primetime
+ * paints each card in the team's colours; Editorial draws a white card under
+ * the team's accent stripe.
+ */
+import type { SiteTheme } from '../../../../config/leagues';
+import type { BoardTeam } from '../../../../utils/standings-board';
+import TeamName from './TeamName.astro';
+
+interface Props {
+  theme: SiteTheme;
+  items: Array<{ team: BoardTeam; top: string; line: string }>;
+}
+
+const { theme, items } = Astro.props;
+const primetime = theme === 'primetime';
+---
+
+<div class="stb-leaders">
+  {items.map(({ team, top, line }) => {
+    const Tag = team.href ? 'a' : 'div';
+    return (
+      <Tag
+        class="stb-leader"
+        href={team.href}
+        style={primetime ? `background:${team.gradient}` : `--stb-team:${team.accent}`}
+      >
+        <img
+          class:list={{ 'stb-round': team.round }}
+          src={primetime ? team.crest : team.icon}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          width="42"
+          height="42"
+          style={primetime && team.crestFilter ? `filter:${team.crestFilter}` : undefined}
+        />
+        <span class="stb-leader__div">{top}</span>
+        <b class="stb-leader__name"><TeamName team={team} size="short" /></b>
+        <span class="stb-leader__rec stb-num">{line}</span>
+      </Tag>
+    );
+  })}
+</div>
