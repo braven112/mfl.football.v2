@@ -9,6 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import Anthropic from '@anthropic-ai/sdk';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
+import { HAIKU_MODEL, HAIKU_THINKING, responseText } from '../src/utils/claude-models.mjs';
 
 const THELEAGUE_DATA_PATH = getLeagueBySlug('theleague').dataPath;
 
@@ -204,16 +205,16 @@ async function generateStory(homeTeam, awayTeam, week) {
   console.log('🤖 Calling Claude API...');
 
   const message = await anthropic.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 250,
-    temperature: 0.8,
+    model: HAIKU_MODEL,
+    thinking: HAIKU_THINKING,
+    max_tokens: 330,
     messages: [{
       role: 'user',
       content: prompt
     }]
   });
 
-  return message.content[0].text;
+  return responseText(message);
 }
 
 // Main
@@ -243,7 +244,7 @@ async function main() {
     const wordCount = story.split(/\s+/).length;
     console.log(`\n📊 Story Stats:`);
     console.log(`   Word count: ${wordCount}`);
-    console.log(`   Model: claude-haiku-4-5-20251001`);
+    console.log(`   Model: ${HAIKU_MODEL}`);
     console.log(`   Estimated cost: ~$0.002`);
 
     // Save to file
@@ -257,7 +258,7 @@ async function main() {
       story,
       metadata: {
         wordCount,
-        model: 'claude-haiku-4-5-20251001',
+        model: HAIKU_MODEL,
         generatedAt: new Date().toISOString()
       }
     };

@@ -78,6 +78,7 @@ import { sendPushFanout, broadcast } from './lib/push-fanout.mjs';
 import { getLeagueBySlug, leagueOrigin } from '../src/config/leagues-data.mjs';
 import { getPtHour, secondsUntilPtMidnight } from './lib/pt-date.mjs';
 import { sharedDivision, vetSpeculationCopy } from './lib/speculation-copy.mjs';
+import { HAIKU_MODEL, HAIKU_THINKING, responseText } from '../src/utils/claude-models.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const DRY_RUN = process.argv.includes('--dry-run');
@@ -363,8 +364,9 @@ ${JSON.stringify(
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 260,
+        model: HAIKU_MODEL,
+        thinking: HAIKU_THINKING,
+        max_tokens: 340,
         system,
         messages: [{ role: 'user', content: userMessage }],
       }),
@@ -374,7 +376,7 @@ ${JSON.stringify(
       return null;
     }
     const data = await res.json();
-    const text = (data.content?.[0]?.text ?? '').trim();
+    const text = responseText(data).trim();
     const parsed = parseAiResponse(text);
     const vetted = vetSpeculationCopy(parsed, { sharedDivision: division, divisionNames });
     if (parsed && !vetted) warn('[speculation AI] copy makes a division or team-situation claim the input does not support — using template');

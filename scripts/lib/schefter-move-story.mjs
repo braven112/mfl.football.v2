@@ -27,12 +27,13 @@
  */
 
 import { rosterMoveString } from './roster-move-parse.mjs';
+import { HAIKU_MODEL, HAIKU_THINKING, responseText } from '../../src/utils/claude-models.mjs';
 
 /** Bump when the story shape or prompt changes enough to rewrite old posts. */
 export const MOVE_STORY_VERSION = 4;
 
 /** Same model the scanner's other transaction lanes use. */
-export const MOVE_STORY_MODEL = 'claude-haiku-4-5-20251001';
+export const MOVE_STORY_MODEL = HAIKU_MODEL;
 
 /** Feed sub-types this writer covers. Trades keep their own breaking lane. */
 export const MOVE_STORY_SUBTYPES = new Set(['FREE_AGENT', 'AUCTION_WON']);
@@ -287,14 +288,14 @@ export async function writeMoveStory({ facts, teams, apiKey, fetchImpl = fetch }
           'x-api-key': apiKey,
           'anthropic-version': '2023-06-01',
         },
-        body: JSON.stringify({ model: MOVE_STORY_MODEL, max_tokens: 300, system, messages }),
+        body: JSON.stringify({ model: MOVE_STORY_MODEL, thinking: HAIKU_THINKING, max_tokens: 400, system, messages }),
       });
       if (!res.ok) {
         console.warn(`  [move-story] API returned ${res.status} — keeping template`);
         return null;
       }
       const data = await res.json();
-      const text = data?.content?.[0]?.text ?? '';
+      const text = responseText(data);
       const { story, reason } = checkMoveStory(text, facts, teams);
       if (story) return story;
       console.warn(`  [move-story] attempt ${attempt} failed: ${reason}`);

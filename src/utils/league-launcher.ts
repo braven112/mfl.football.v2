@@ -25,9 +25,10 @@ import {
 } from '../config/league-archetypes.mjs';
 import type { LeagueArchetype } from '../config/leagues';
 import { FEATURE_CATALOG, FEATURE_KEYS } from '../config/league-feature-catalog.mjs';
+import { OPUS_MODEL } from './claude-models.mjs';
 
 /** The model the review runs on. */
-export const LAUNCHER_MODEL = 'claude-opus-5-5';
+export const LAUNCHER_MODEL = OPUS_MODEL;
 
 export interface FeatureChoice {
   on: boolean;

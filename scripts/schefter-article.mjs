@@ -18,6 +18,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { HAIKU_MODEL, HAIKU_THINKING, responseText } from '../src/utils/claude-models.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 
@@ -410,8 +411,9 @@ INSTRUCTIONS:
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 6000,
+      model: HAIKU_MODEL,
+      thinking: HAIKU_THINKING,
+      max_tokens: 8000,
       system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }],
     }),
@@ -423,7 +425,7 @@ INSTRUCTIONS:
   }
 
   const resData = await res.json();
-  const text = resData.content?.[0]?.text ?? '';
+  const text = responseText(resData);
 
   const jsonMatch = text.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error('No JSON in API response');

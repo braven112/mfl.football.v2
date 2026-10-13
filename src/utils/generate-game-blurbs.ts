@@ -4,6 +4,7 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk';
+import { SONNET_MODEL, responseText } from './claude-models.mjs';
 
 export interface GameBlurbRequest {
   nflTeam1: string;
@@ -82,21 +83,22 @@ Return JSON only (no markdown):
 Constraints: Array of objects only. Fields: nflMatchup, blurb (150-200 chars), chars. No extra text.`;
 
   try {
+    // Sonnet 5.5 rejects temperature and always thinks; low effort keeps the
+    // thinking short so it does not eat the blurbs' share of max_tokens.
     const response = await client.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 2048,
-      temperature: 0.7,
+      model: SONNET_MODEL,
+      max_tokens: 4096,
+      output_config: { effort: 'low' },
       system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }]
-    });
+    } as Parameters<typeof client.messages.create>[0]);
 
-    const content = response.content[0];
-    if (content.type !== 'text') {
+    const text = responseText(response).trim();
+    if (!text) {
       throw new Error('Unexpected response type from API');
     }
 
     // Parse JSON from response
-    const text = content.text.trim();
     const jsonMatch = text.match(/\[[\s\S]*\]/);
     if (!jsonMatch) {
       console.error('[generate-blurbs] Could not parse JSON from response:', text);

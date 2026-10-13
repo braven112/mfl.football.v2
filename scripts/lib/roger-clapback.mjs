@@ -38,10 +38,11 @@
  */
 
 import { buildReplyAttachment, buildMentionAttachment } from './groupme.mjs';
+import { OPUS_MODEL } from '../../src/utils/claude-models.mjs';
 
 /** Model + endpoint. Matches the raw-fetch pattern every sibling scanner uses. */
 const API_URL = 'https://api.anthropic.com/v1/messages';
-const MODEL = 'claude-opus-5';
+const MODEL = OPUS_MODEL;
 
 // ── Rails ───────────────────────────────────────────────────────────────────
 // Roger is a nag with a live microphone; these numbers are what stop him from
@@ -358,9 +359,12 @@ export async function generateClapback({ ownerText, ownerName, factSheet, fetchI
         'Content-Type': 'application/json',
         'x-api-key': apiKey,
         'anthropic-version': '2023-06-01',
+        // Lets the API answer from another model when Opus 5.5 is overloaded.
+        'anthropic-beta': 'server-side-fallback-2026-07-01',
       },
       body: JSON.stringify({
         model: MODEL,
+        fallbacks: 'default',
         max_tokens: 1000,
         // A one-liner needs no deliberation, and low effort keeps a lane that
         // fires a handful of times a day cheap.

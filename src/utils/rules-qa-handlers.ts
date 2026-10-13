@@ -37,6 +37,7 @@ import {
   FLAG_RATE_LIMIT_MAX,
   FLAG_RATE_LIMIT_WINDOW,
 } from './rules-qa-flags';
+import { HAIKU_MODEL, HAIKU_THINKING, responseText } from './claude-models.mjs';
 
 const RATE_LIMIT_MAX = 5;
 const RATE_LIMIT_WINDOW = 3600;
@@ -104,7 +105,7 @@ export interface GenerateRulesAnswerOptions {
 /**
  * The production LLM call behind every Ask Roger answer. Exported so the eval
  * harness (tests/eval/roger.eval.ts) runs the exact same prompt assembly —
- * model, temperature, cached constitution block, date block, question wrapper.
+ * model, thinking setting, cached constitution block, date block, question wrapper.
  */
 export async function generateRulesAnswer(
   question: string,
@@ -117,9 +118,9 @@ export async function generateRulesAnswer(
   const client = new Anthropic({ apiKey });
 
   const response = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 500,
-    temperature: 0.3,
+    model: HAIKU_MODEL,
+    thinking: HAIKU_THINKING,
+    max_tokens: 650,
     system: [
       { type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } },
       { type: 'text', text: buildDateBlock(dateBlockSuffix, now) },
@@ -127,11 +128,11 @@ export async function generateRulesAnswer(
     messages: [{ role: 'user', content: wrapQuestion(question) }],
   });
 
-  const content = response.content?.[0];
-  if (!content || content.type !== 'text') {
+  const text = responseText(response);
+  if (!text) {
     throw new Error('Unexpected or empty response from Anthropic API');
   }
-  return content.text;
+  return text;
 }
 
 async function getAllQAs(redis: RedisClient | null, redisKey: string, seeds: RulesQA[]): Promise<RulesQA[]> {

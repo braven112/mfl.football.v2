@@ -99,6 +99,7 @@ import {
   warningDeadline,
 } from './lib/lineup-warnings.mjs';
 import { leagueYearFor } from './lib/schefter-league-year.mjs';
+import { HAIKU_MODEL, HAIKU_THINKING, responseText } from '../src/utils/claude-models.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const root = path.resolve(path.dirname(__filename), '..');
@@ -238,8 +239,9 @@ HARD RULES (all of them, every time):
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 150,
+        model: HAIKU_MODEL,
+        thinking: HAIKU_THINKING,
+        max_tokens: 200,
         system,
         messages: [{ role: 'user', content: userMessage }],
       }),
@@ -250,7 +252,7 @@ HARD RULES (all of them, every time):
       return fallback;
     }
     const data = await res.json();
-    const text = data?.content?.[0]?.text ?? '';
+    const text = responseText(data);
     const match = text.match(/\{[\s\S]*\}/);
     if (match) {
       const parsed = JSON.parse(match[0]);
