@@ -29,6 +29,18 @@ function decodeEntities(text: string): string {
     .replace(/&amp;/g, '&');
 }
 
+/** Drop every character inside angle brackets, counting nesting. */
+function stripTags(input: string): string {
+  let out = '';
+  let depth = 0;
+  for (const ch of input) {
+    if (ch === '<') depth++;
+    else if (ch === '>') depth = Math.max(0, depth - 1);
+    else if (depth === 0) out += ch;
+  }
+  return out;
+}
+
 export interface MflImportError {
   /** Plain-text message, no markup. */
   message: string;
@@ -69,9 +81,10 @@ export function irViolationMessage(eligible?: readonly string[]): string {
  */
 export function parseMflImportError(raw: string, opts: ParseMflImportErrorOptions): MflImportError {
   const html = decodeEntities(raw);
-  // Rendered with textContent, but strip every remaining angle bracket too so
-  // no tag can survive a nested or entity-encoded fragment.
-  const text = decodeEntities(html.replace(/<[^>]*>/g, '')).replace(/[<>]/g, '').replace(/\s+/g, ' ').trim();
+  // Rendered with textContent, but no angle bracket survives either way: a
+  // character scan drops everything inside <…> (nesting included), and any
+  // bracket a second entity pass produces is dropped outright.
+  const text = decodeEntities(stripTags(html)).replace(/[<>]/g, '').replace(/\s+/g, ' ').trim();
 
   let fixUrl: string | undefined;
   const href = html.match(/<a\s[^>]*href\s*=\s*["']([^"']+)["']/i)?.[1];
