@@ -227,6 +227,18 @@ apply to it (the splash page's `<span class="cta">` and the CSS-customization
 page's `.cta-link` pills both inherited a border, an arrow and a hover before
 they were renamed).
 
+## Nothing body-only in a layout's `<head>` — it unstyles every page
+
+The parser allows only metadata in `<head>`. The first unknown element there
+(a custom element such as `<vercel-speed-insights>`) ends `<head>` on the spot
+and opens `<body>`, and Astro injects every page stylesheet just before
+`</head>` — after that element. The CSS lands in `<body>`, stops being
+render-blocking, and the page paints unstyled for a moment (the masthead logo
+at full size, then the CSS snaps in). That shipped in Oct 2026 when
+`<SpeedInsights />` went into four layouts' `<head>`; it now sits at the end of
+`<body>`. Analytics, widgets and anything rendering a custom element go in
+`<body>`. Guard: `tests/head-custom-element-guard.test.ts`.
+
 ## Astro scoped CSS never reaches an element JS created
 
 A `<style>` block in a `.astro` file compiles to selectors that require the

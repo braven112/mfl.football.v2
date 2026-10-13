@@ -1424,6 +1424,16 @@
         "tests/playoff-bracket-index.test.ts"
       ],
       "rules": "docs/claude/rules/package-leagues.md"
+    },
+    {
+      "name": "layout-head",
+      "rules": "docs/claude/rules/theming-and-assets.md",
+      "paths": [
+        "src/layouts/*.astro"
+      ],
+      "tests": [
+        "tests/head-custom-element-guard.test.ts"
+      ]
     }
   ]
 }
