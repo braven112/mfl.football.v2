@@ -60,4 +60,30 @@ describe('icon sets', () => {
       });
     });
   }
+
+  /**
+   * A sprite is fetched as an XML document, and an XML parser STOPS at the
+   * first well-formedness error — so every symbol after it renders blank,
+   * while the ones before it keep working and hide the fault. The line set
+   * shipped without `xmlns:xlink` on its root while the Premier League mark
+   * uses `xlink:href`, which silently blanked every brand mark after it
+   * (lion, Archie, Schefter). A full parse is not available here, so this
+   * checks the error that actually happened: every namespace prefix used must
+   * be declared on the root.
+   */
+  const allSprites = [
+    ['classic', resolve(ROOT, SPRITE_REL_PATH)],
+    ...sets.map((name) => [name, resolve(SETS_DIR, name, 'sprite.svg')]),
+  ];
+  for (const [name, path] of allSprites) {
+    it(`"${name}" declares every namespace prefix it uses`, () => {
+      const svg = readFileSync(path, 'utf8');
+      const root = svg.match(/<svg\b[^>]*>/)?.[0] ?? '';
+      const used = new Set(
+        [...svg.matchAll(/\s([A-Za-z][\w-]*):[\w-]+=/g)].map((m) => m[1]).filter((p) => p !== 'xmlns' && p !== 'xml'),
+      );
+      const undeclared = [...used].filter((p) => !new RegExp(`\\sxmlns:${p}=`).test(root)).sort();
+      expect(undeclared, `declare these on the sprite's root <svg>`).toEqual([]);
+    });
+  }
 });

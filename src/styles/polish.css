@@ -177,3 +177,16 @@ html[data-league="archies"] a {
   text-decoration-color: var(--league-accent);
   text-underline-offset: 0.18em;
 }
+
+/* ── Sprite portraits that swap their own cut ────────────────────────────
+   A one-colour portrait (the Schefter mark) cannot be right on both grounds:
+   on a dark ground its line cut reads as a photo negative. So the symbol
+   carries both cuts and shows one by these two custom properties, which
+   inherit into a <use> clone even from the external sprite file — every
+   caller gets the right cut with no class or second id. A surface that is
+   dark in BOTH themes (the broadcast boards) sets the dark pair on itself.
+   docs/plans/icon-sets.md § Brand marks. */
+html.dark {
+  --icon-cut-light: none;
+  --icon-cut-dark: inline;
+}

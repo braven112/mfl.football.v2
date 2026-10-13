@@ -69,7 +69,29 @@ its current path, so nothing moves for any page or test that reads it.
 there are two cuts, the same light/dark idea as the league logos:
 `archie` is the line cut for LIGHT grounds; `archie-dark` is the solid cut
 (face filled, lines knocked out) for DARK grounds — on a dark ground the line
-cut reads as a photo negative. Swap on `html.dark` the way the logo cuts do. PayPal, Venmo and the lion are wrapped in
+cut reads as a photo negative. Swap on `html.dark` the way the logo cuts do.
+
+`schefter` (Tip Schefter's mark, Oct 2026) and `schefter-mono` are Claude
+Schefter in a suit: hand-inked over a reference portrait, not traced, with
+stubble. `schefter` has an orange-and-white striped tie in a fixed
+`#B5531F`, the only fixed colour in the drawing; `schefter-mono` is all
+`currentColor`, with a dark striped tie, and is the drop-in if a league wants
+the mark one-colour. Each SYMBOL carries both cuts and **swaps itself**:
+`<g style="display:var(--icon-cut-light, inline)">` and
+`<g style="display:var(--icon-cut-dark, none)">`, flipped by
+`html.dark { --icon-cut-light: none; --icon-cut-dark: inline }` in
+`polish.css`. Custom properties inherit into a `<use>` clone even from the
+external sprite file, so every caller gets the right cut with one id and no
+class. A surface dark in both themes sets the dark pair on itself. Archie's
+two-id cuts predate this and could move to it. The paths are traced output;
+to change the drawing, redraw and re-trace rather than hand-editing them.
+
+**A sprite must be well-formed XML.** It is fetched as a document, and the
+parser stops at the first error, blanking every symbol after it while the
+ones before keep working. The line sprite shipped without `xmlns:xlink`
+while the Premier League mark uses `xlink:href`, which blanked every brand
+mark at the end of the file; `tests/icon-set-parity.test.ts` now checks every
+prefix is declared. PayPal, Venmo and the lion are wrapped in
 `fill="currentColor"` so they take the theme colour like every other icon; the
 Premier League shield and NFL shield keep their own brand colours.
 
@@ -116,6 +138,7 @@ page wears one mark wherever it is searched from:
 | Custom Rankings | `standings` | `rank-reorder` |
 | Top Players | `bar-chart` | `jersey-star` [DECIDED]; `player-star` (person with a star) is the unused alternative |
 | Owner Activity | `activity` | `pulse` |
+| Tip Schefter (nav, search, TheLeague header) | `user-secret` / `news` | `schefter` — Claude Schefter himself [DECIDED] |
 | Roster (pinned, both leagues) | `banknote` (TheLeague) / `helmet` (AFL) | `roster` — a jersey numbered 25, a nod to the 25-man roster limit [DECIDED] |
 
 `jersey-ir` — a jersey lettered **IR** — is drawn for injured-reserve
