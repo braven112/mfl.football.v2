@@ -7,7 +7,7 @@
  * because its run happened not to. These tests pin the send-path strip, the
  * Pecking Order's own normalisation, and the committed issues.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { execSync } from 'node:child_process';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -21,6 +21,7 @@ import { postToGroupMe } from '../scripts/lib/groupme.mjs';
 import { toSlackText } from '../scripts/lib/chat.mjs';
 import { buildSpeculationGroupMeText } from '../scripts/lib/speculation-groupme.mjs';
 import { applyAIVoice } from '../scripts/lib/pecking-order-ai.mjs';
+import { postAsBot } from '../src/utils/groupme-client';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 
@@ -53,6 +54,14 @@ describe('toChatPlainText', () => {
     );
   });
 
+  it('removes any tag shape, not just a list of known ones', () => {
+    expect(toChatPlainText('<pre>details</pre>')).toBe('details');
+    expect(toChatPlainText('Above<hr>Below')).toBe('Above\nBelow');
+    expect(toChatPlainText('<img src="x.png" alt="Pigskins logo"> rule')).toBe('Pigskins logo rule');
+    expect(toChatPlainText('<custom-tag data-x="1">Hi</custom-tag><!-- note -->')).toBe('Hi');
+    expect(toChatPlainText('&copy; 2026 &bull; &trade; &frac12;')).toBe('© 2026 • ™ ½');
+  });
+
   it('leaves ordinary chat prose alone, byte for byte', () => {
     for (const text of [
       '🐔 THE PECKING ORDER — Week 5\n#1 Mariachi Ninjas — "fine"',
@@ -74,7 +83,8 @@ describe('toChatPlainText', () => {
     ]);
     const [s, len] = attachments[0].loci[0];
     expect(out.slice(s, s + len)).toBe('@Brandon');
-    expect(out).not.toMatch(/<\/?p>/);
+    // The spaces either side of the mention survive the tags around them.
+    expect(out).toBe('Hey @Brandon set your lineup');
   });
 });
 
@@ -90,6 +100,21 @@ describe('every chat send path strips HTML', () => {
       },
     });
     expect(sent).toBe('#1 Dream — "Running down the Dream remains #1."');
+  });
+
+  it('postAsBot posts plain text (behavioral, not a grep of the import)', async () => {
+    const prev = process.env.GROUPME_BOT_ID;
+    process.env.GROUPME_BOT_ID = 'bot-abc';
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}', { status: 202 }));
+    try {
+      await postAsBot('<p>Pigskins dropped 147.57.</p>');
+      const body = JSON.parse(String(fetchSpy.mock.calls[0]![1]!.body));
+      expect(body.text).toBe('Pigskins dropped 147.57.');
+    } finally {
+      fetchSpy.mockRestore();
+      if (prev === undefined) delete process.env.GROUPME_BOT_ID;
+      else process.env.GROUPME_BOT_ID = prev;
+    }
   });
 
   it('Slack text is converted before it is escaped', () => {

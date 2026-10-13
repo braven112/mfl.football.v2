@@ -133,6 +133,32 @@ Detecting "is this base URL my own apex host" must go through
 `https://theleague.us`, `https://WWW.THELEAGUE.US`, `http://...` and
 `...:443` are all the same host and must all strip.
 
+### No HTML reaches a chat — `toChatPlainText` on every send path
+
+GroupMe and Slack show a message as plain text, so a `<p>` in it prints as
+the characters `<p>` in front of every owner. The shared Schefter base prompt
+tells full articles to "Wrap paragraphs in <p> tags" (that copy renders via
+`set:html`), and lanes that reuse the block for one-sentence fields inherit the
+instruction. On 2026-10-13 TheLeague's Week 5 Pecking Order came back with
+every blurb wrapped in `<p>…</p>` and the GroupMe announcement quoted three of
+them; the AFL's run of the same code that morning happened not to, which was
+the whole difference between the two posts. Model formatting is
+nondeterministic, so no template test can catch it.
+
+- `src/utils/chat-plain-text.mjs` converts tags, comments and entities to
+  plain text and runs on the SEND path, ahead of the link-punctuation pass:
+  `postToGroupMe` (mention-aware), the speculation post, `postAsBot`, and
+  `toSlackText` (before it escapes, or Slack shows `&lt;p&gt;` literally).
+- It only treats `<` followed by a letter, `/` or `!--` as a tag, so "<3" and
+  "a < b" survive. Text with no HTML is returned byte for byte.
+- A field the page prints as TEXT (`{row.blurb}`) must not hold HTML either:
+  the Pecking Order normalises the model's output in `applyAIVoice` before
+  validating, and its prompt forbids HTML.
+- A new chat send primitive must call it; the guard fails on any file that
+  posts to `bots/post` or `chat.postMessage` outside the pinned set.
+
+Guard: `tests/chat-plain-text.test.ts`.
+
 ### Staging hosts live in `stagingDomains`, never in `domains`
 
 The per-league staging sites (`staging.theleague.us`, `staging.afl-fantasy.com`) need
