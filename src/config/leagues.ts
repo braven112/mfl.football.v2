@@ -408,6 +408,14 @@ export interface LeagueDefinition {
    * included. Absent for a league without salaries.
    */
   minimumSalary?: number;
+  /**
+   * The NFL injury designations that make a player eligible for this league's
+   * IR, as MFL enforces them (MFL does not export the setting). A player on IR
+   * without one of these is an IR violation, and MFL refuses EVERY lineup
+   * import until it is cleared — so Set Lineup warns on load
+   * (src/utils/lineup-ir-violations.ts). Absent = no warning for this league.
+   */
+  irEligibleInjuryStatuses?: readonly string[];
   features: LeagueFeatures;
 }
 
