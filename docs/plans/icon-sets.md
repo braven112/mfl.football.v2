@@ -23,7 +23,7 @@ which set is loaded.
 
 | File | What it is |
 |---|---|
-| `public/assets/icons/sets/line/sprite.svg` | The `line` set — all 122 glyph ids of the classic sprite, redrawn |
+| `public/assets/icons/sets/line/sprite.svg` | The `line` set — all 124 glyph ids of the classic sprite, redrawn |
 | `docs/plans/icon-sets/line-review.html` | Open in a browser: every classic glyph beside its `line` redraw, at size and in an active colour |
 | `tests/icon-set-parity.test.ts` | Every set under `sets/` must define EXACTLY the classic sprite's ids (wired into the `theming-and-assets` path-guard domain) |
 
@@ -54,7 +54,16 @@ its current path, so nothing moves for any page or test that reads it.
 ### Brand marks are not redrawn **[DECIDED]**
 
 `paypal`, `venmo`, `lion` (the Premier League's lion), `premier-league` and
-`nfl` keep the exact classic artwork. PayPal, Venmo and the lion are wrapped in
+`nfl` keep the exact classic artwork.
+
+`archie` and `archie-dark` are Archie's league mark, TRACED from
+`public/assets/logos/archies-head.png` (never redrawn) and added to every set
+— classic included — so they share the parity contract. Both are one colour
+(`currentColor`). A one-colour portrait cannot be right on both grounds, so
+there are two cuts, the same light/dark idea as the league logos:
+`archie` is the line cut for LIGHT grounds; `archie-dark` is the solid cut
+(face filled, lines knocked out) for DARK grounds — on a dark ground the line
+cut reads as a photo negative. Swap on `html.dark` the way the logo cuts do. PayPal, Venmo and the lion are wrapped in
 `fill="currentColor"` so they take the theme colour like every other icon; the
 Premier League shield and NFL shield keep their own brand colours.
 
