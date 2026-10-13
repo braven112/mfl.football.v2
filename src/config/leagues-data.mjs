@@ -341,6 +341,12 @@ export const LEAGUES = {
     logo: { light: '/assets/logos/afl-logo.svg', dark: '/assets/logos/afl-logo-dark.svg' },
     shareCard: { name: 'AFL Fantasy', domain: 'afl-fantasy.com', primary: '#002244' },
     mflHost: 'www44.myfantasyleague.com',
+    /**
+     * Constitution: only players listed Doubtful, Out or on the NFL's IR may
+     * sit on IR (docs/claude/afl-rules.md § Injured Reserve). MFL enforces it
+     * by refusing the lineup import — see irEligibleInjuryStatuses in leagues.ts.
+     */
+    irEligibleInjuryStatuses: ['Doubtful', 'Out', 'IR'],
     dataPath: 'data/afl-fantasy',
     domains: ['afl-fantasy.com', 'www.afl-fantasy.com'],
     /** See TheLeague entry — canonical host for absolute URLs. */

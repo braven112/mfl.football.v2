@@ -37,6 +37,8 @@ import { resolveThrowbackIdentity } from '../../../utils/throwback-identity';
 import { isThrowbackWeekForScope, type ThrowbackScope } from '../../../utils/throwback-scope';
 import { getThrowbackFranchiseBrand } from '../../../utils/franchise-brand';
 import { lineupApiPath, lineupDraftStorageKey } from '../../../utils/lineup-page-keys';
+import { findIrViolations } from '../../../utils/lineup-ir-violations';
+import { buildMflOptionUrl } from '../../../utils/mfl-url';
 import { getAllThrowbackPreferences } from '../../../utils/throwback-store';
 import { resolveSubmitButtonState } from '../../../utils/lineup-submit-state';
 import { selectBenchPlayers } from '../../../utils/lineup-bench';
@@ -653,6 +655,23 @@ const payloadJson = JSON.stringify(lineupPayload);
 // Build roster map for server-side rendering
 const rosterById = new Map(roster.map(p => [p.id, p]));
 
+// An IR violation makes MFL refuse EVERY lineup submit, so say so before the
+// owner sets anything. Only for a week still to play: a past week can't be
+// submitted anyway. MFL's IR page is option 07 (the one its own refusal links).
+const MFL_IR_OPTION = '07';
+const irViolations = weekIsPast
+  ? []
+  : findIrViolations(roster, lineupInjuries, league.irEligibleInjuryStatuses);
+const irFixUrl = irViolations.length && user?.franchiseId
+  ? `${buildMflOptionUrl({ leagueId: MFL_LEAGUE_ID, year: leagueYear, option: MFL_IR_OPTION, host: `https://${league.mflHost}` })}&F=${user.franchiseId}`
+  : null;
+const irEligibleList = (league.irEligibleInjuryStatuses ?? []).join(', ').replace(/, ([^,]*)$/, ' or $1');
+const irViolationText = irViolations.length
+  ? `${irViolations.map((v) => `${v.name} (${v.injuryStatus ?? 'no injury listed'})`).join(', ')} `
+    + `${irViolations.length === 1 ? 'is' : 'are'} on your IR but not listed ${irEligibleList}, `
+    + `so MFL won't accept a lineup until ${irViolations.length === 1 ? 'he moves' : 'they move'} off IR.`
+  : '';
+
 // ---------------------------------------------------------------------------
 // The Owners' Poll strip
 // ---------------------------------------------------------------------------
@@ -710,6 +729,19 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
       </button>
       <div class="lineup-status" role="status" aria-live="polite" id="lineup-status"></div>
     </div>
+
+    {irViolations.length > 0 && (
+      <p class="lineup-unsaved-note lineup-unsaved-note--error" role="alert">
+        <svg class="lineup-unsaved-note__icon" aria-hidden="true" width="14" height="14" viewBox="0 0 16 16">
+          <circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.2"/>
+          <path d="M8 4.75v4M8 11.1v.15" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+        <span>
+          {irViolationText}
+          {irFixUrl && <> <a class="lineup-unsaved-note__link" href={irFixUrl} target="_blank" rel="noopener">Fix it on MFL</a></>}
+        </span>
+      </p>
+    )}
 
     {fillState.mode !== 'saved' && (
       <p class:list={['lineup-unsaved-note',
@@ -892,16 +924,15 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
       </ul>
     </section>
 
-    <!-- Why the last submit failed, in words. The button alone said only
-         "Failed — Retry", which for a block like an IR violation can never
-         succeed — the owner needs MFL's reason and the page that fixes it. -->
-    <div class="lineup-submit-error" id="lineup-submit-error" role="alert" hidden>
-      <p class="lineup-submit-error__text" id="lineup-submit-error-text"></p>
-      <a class="lineup-submit-error__link" id="lineup-submit-error-link" target="_blank" rel="noopener" hidden>Fix it on MFL</a>
-    </div>
-
     <!-- Submit bar (fixed bottom) -->
     <div class="lineup-submit-bar" id="lineup-submit-bar">
+      <!-- Why the last submit failed, in words. The button alone said only
+           "Failed — Retry", which for a block like an IR violation can never
+           succeed — the owner needs MFL's reason and the page that fixes it. -->
+      <div class="lineup-submit-error" id="lineup-submit-error" role="alert" hidden>
+        <p class="lineup-submit-error__text" id="lineup-submit-error-text"></p>
+        <a class="lineup-submit-error__link" id="lineup-submit-error-link" target="_blank" rel="noopener" hidden>Fix it on MFL</a>
+      </div>
       <span class="lineup-changes" id="lineup-changes" aria-live="polite" style="display:none">
         <strong>0</strong> changes
       </span>
@@ -2567,19 +2598,22 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
   /* The icon is a checkmark — wrong on a failure. */
   .lineup-submit--error .lineup-submit__icon { display: none; }
 
+  /* Anchored to the fixed bar itself, so it always sits just above it
+     whatever height the bar ends up (safe-area padding included). */
   .lineup-submit-error {
-    position: fixed;
+    position: absolute;
     left: var(--lineup-page-px);
     right: var(--lineup-page-px);
-    bottom: calc(var(--lineup-submit-height) + 0.5rem);
-    z-index: var(--z-sticky, 100);
+    bottom: calc(100% + 0.5rem);
     display: flex;
     flex-direction: column;
     gap: 0.375rem;
     padding: 0.625rem 0.75rem;
     border: 1px solid var(--badge-error-text);
     border-radius: 8px;
-    background: var(--badge-error-bg);
+    /* The error tint is translucent in dark mode; it floats over the list, so
+       lay it on the opaque card colour or the rows show through. */
+    background: linear-gradient(var(--badge-error-bg), var(--badge-error-bg)), var(--card-bg, #ffffff);
     color: var(--badge-error-text);
     font-size: var(--font-size-sm);
     line-height: 1.4;
@@ -2974,13 +3008,6 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
       transform: translateX(-50%);
       border-radius: var(--radius-lg, 1rem) var(--radius-lg, 1rem) 0 0;
     }
-    .lineup-submit-error {
-      max-width: calc(440px - 2 * var(--lineup-page-px));
-      left: 50%;
-      right: auto;
-      width: 100%;
-      transform: translateX(-50%);
-    }
   }
 
   /* ===================================================================
@@ -3036,5 +3063,18 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     background: var(--badge-warning-bg);
     color: var(--badge-warning-text);
     border-color: var(--badge-warning-text);
+  }
+
+  .lineup-unsaved-note--error {
+    background: var(--badge-error-bg);
+    color: var(--badge-error-text);
+    border-color: var(--badge-error-text);
+  }
+
+  .lineup-unsaved-note__link {
+    color: inherit;
+    font-weight: 600;
+    text-decoration: underline;
+    white-space: nowrap;
   }
 </style>
