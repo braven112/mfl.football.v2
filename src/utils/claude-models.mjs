@@ -19,6 +19,20 @@
  */
 export const HAIKU_MODEL = 'claude-haiku-5-5';
 
+/**
+ * Opus 5.5: the eval judges, Roger's clapbacks and the League Launcher.
+ * Its default effort is medium (Opus 5's was high), so callers that relied on
+ * the old default send `output_config: { effort: 'high' }` explicitly.
+ * Thinking cannot be disabled, and sampling parameters are rejected.
+ */
+export const OPUS_MODEL = 'claude-opus-5-5';
+
+/**
+ * Sonnet 5.5: the game blurbs. Sampling parameters are rejected and thinking
+ * cannot be disabled, so the blurb call lowers effort instead.
+ */
+export const SONNET_MODEL = 'claude-sonnet-5-5';
+
 /** Send on every HAIKU_MODEL request: short-copy calls run without thinking. */
 export const HAIKU_THINKING = /** @type {const} */ ({ type: 'disabled' });
 

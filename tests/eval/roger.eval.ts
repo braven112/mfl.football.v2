@@ -28,7 +28,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import fixture from '../fixtures/roger-eval-cases.json';
 import { generateRulesAnswer } from '../../src/utils/rules-qa-handlers';
-import { HAIKU_MODEL } from '../../src/utils/claude-models.mjs';
+import { HAIKU_MODEL, OPUS_MODEL } from '../../src/utils/claude-models.mjs';
 import {
   THELEAGUE_RULES_QA_SYSTEM_PROMPT,
   THELEAGUE_RULES_QA_DATE_SUFFIX,
@@ -66,7 +66,7 @@ interface CaseResult {
 const cases = fixture.cases as EvalCase[];
 const results: CaseResult[] = [];
 
-const JUDGE_MODEL = 'claude-opus-5';
+const JUDGE_MODEL = OPUS_MODEL;
 
 /** 20:00 UTC = noon PST / 1pm PDT — safely mid-day on the intended PT calendar date. */
 function ptNoon(isoDate: string): Date {
@@ -104,6 +104,8 @@ async function judgeAnswer(c: EvalCase, answer: string): Promise<CheckResult> {
   const response = await client.messages.create({
     model: JUDGE_MODEL,
     max_tokens: 4096,
+    // Opus 5.5 defaults to medium effort; the judge was tuned at Opus 5's high.
+    output_config: { effort: 'high' },
     system: [
       { type: 'text', text: JUDGE_SYSTEM, cache_control: { type: 'ephemeral' } },
     ],

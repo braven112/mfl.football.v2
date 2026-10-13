@@ -35,6 +35,7 @@ import path, { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildFactSheet, getSystemPrompt, getUserPrompt } from '../../scripts/article-types/cut-watch.mjs';
 import { callAnthropic } from '../../scripts/article-utils/ai-client.mjs';
+import { OPUS_MODEL } from '../../src/utils/claude-models.mjs';
 import { findValueBasedAutoCutClaimsInPost } from '../../scripts/lib/cut-watch-graders.mjs';
 import { parseJudgeJson } from '../../scripts/lib/roger-graders';
 import { fixtureData, fixtureAdp } from '../fixtures/cut-watch-fixture';
@@ -42,7 +43,7 @@ import { fixtureData, fixtureAdp } from '../fixtures/cut-watch-fixture';
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, '../..');
 
-const JUDGE_MODEL = 'claude-opus-5';
+const JUDGE_MODEL = OPUS_MODEL;
 const RUNS = Math.max(1, parseInt(process.env.CUTWATCH_EVAL_RUNS ?? '3', 10) || 3);
 
 interface Article {
@@ -126,6 +127,8 @@ async function judgeArticle(factSheet: string, article: Article): Promise<JudgeV
   const response = await client.messages.create({
     model: JUDGE_MODEL,
     max_tokens: 2048,
+    // Opus 5.5 defaults to medium effort; the judge was tuned at Opus 5's high.
+    output_config: { effort: 'high' },
     system: [{ type: 'text', text: JUDGE_SYSTEM, cache_control: { type: 'ephemeral' } }],
     messages: [
       {

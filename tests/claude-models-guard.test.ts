@@ -1,6 +1,6 @@
 /**
- * Every Haiku call reads its model from src/utils/claude-models.mjs, so an
- * upgrade is one line. Haiku 5.5 also rejects what 4.5 accepted: a
+ * Every Claude call reads its model from src/utils/claude-models.mjs, so an
+ * upgrade is one line. The 5.5 models also reject what older ones accepted: a
  * `temperature`/`top_p`/`top_k` is a 400, thinking is on unless the request
  * turns it off, and the answer is not always `content[0]`. These scans keep
  * a call site from regrowing any of that.
@@ -8,7 +8,13 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
-import { HAIKU_MODEL, HAIKU_THINKING, responseText } from '../src/utils/claude-models.mjs';
+import {
+  HAIKU_MODEL,
+  HAIKU_THINKING,
+  OPUS_MODEL,
+  SONNET_MODEL,
+  responseText,
+} from '../src/utils/claude-models.mjs';
 
 const ROOT = join(__dirname, '..');
 const MODULE = 'src/utils/claude-models.mjs';
@@ -31,20 +37,23 @@ const read = (rel: string) => readFileSync(join(ROOT, rel), 'utf8');
 const self = relative(ROOT, __filename);
 
 describe('Claude model registry', () => {
-  it('no file names a Haiku model id except the registry', () => {
+  it('no file names a Claude model id except the registry', () => {
     const offenders = files.filter(
-      (f) => f !== MODULE && f !== self && /['"`]claude-haiku-[\w.@-]+['"`]/.test(read(f)),
+      (f) =>
+        f !== MODULE &&
+        f !== self &&
+        /['"`]claude-(haiku|sonnet|opus)-[\w.@-]+['"`]/.test(read(f)),
     );
     expect(offenders).toEqual([]);
   });
 
-  it('a file that calls HAIKU_MODEL sends no sampling parameters and turns thinking off', () => {
+  it('a file that calls a registry model sends no sampling parameters, and Haiku turns thinking off', () => {
     const problems: string[] = [];
     for (const f of files) {
       if (f === MODULE || f === self) continue;
       const src = read(f);
       if (!/model: (HAIKU_MODEL|MOVE_STORY_MODEL|MODEL|modelName|model)\b/.test(src)) continue;
-      if (!src.includes('HAIKU_MODEL')) continue;
+      if (!/\b(HAIKU|SONNET|OPUS)_MODEL\b/.test(src)) continue;
       if (/^\s*(temperature|top_p|top_k):/m.test(src)) problems.push(`${f}: sampling parameter`);
       // A request body (model then max_tokens) must carry the thinking setting.
       for (const m of src.matchAll(/model: HAIKU_MODEL,([\s\S]{0,160}?)max_tokens/g)) {
@@ -58,6 +67,11 @@ describe('Claude model registry', () => {
   it('is Haiku 5.5 with thinking off', () => {
     expect(HAIKU_MODEL).toBe('claude-haiku-5-5');
     expect(HAIKU_THINKING).toEqual({ type: 'disabled' });
+  });
+
+  it('is Opus 5.5 and Sonnet 5.5', () => {
+    expect(OPUS_MODEL).toBe('claude-opus-5-5');
+    expect(SONNET_MODEL).toBe('claude-sonnet-5-5');
   });
 
   it('responseText joins text blocks and skips the rest', () => {
