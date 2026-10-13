@@ -55,9 +55,8 @@ describe('every league has the report, gated', () => {
 		expect(PACKAGE_ROUTES['activity.astro']).toBeNull();
 	});
 
-	const pageDirs = ALL_LEAGUES.filter(
-		(l: any) => l.slug === 'theleague' || l.slug === 'afl-fantasy' || l.pageKit === 'package',
-	).map((l: any) => l.slug);
+	// EVERY registry league, best-ball included: "every league we create".
+	const pageDirs = ALL_LEAGUES.map((l: any) => l.slug);
 
 	it.each(pageDirs)('%s/activity.astro exists and asks the access gate', (slug) => {
 		const file = path.join(process.cwd(), 'src/pages', slug, 'activity.astro');

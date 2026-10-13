@@ -63,6 +63,9 @@ const pkgLinks = pkg
       // A page its features or data do not entitle yet (Playoffs before MFL
       // has brackets) is not linked — package-league-routes.mjs.
       .filter((l: any) => l.external || packageLinkVisible(pkg, l.path))
+      // The header row is for everyone: admin-only pages (Owner Activity) stay
+      // in the nav drawer, where NavLinks shows them to the right people.
+      .filter((l: any) => !l.platformAdminOnly && l.visibility !== 'admin')
       .slice(0, 5)
   : [];
 
